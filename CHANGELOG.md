@@ -4,52 +4,24 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
-### W6u: menus, the palette, interface announcements, and colors
+### Keys: what changed
 
-#### Keys: what changed
+- **F10 opens the menus** in the terminal, in every preset, as F10 does in Windows programs. Previous chapter, which had F10, keeps `Alt+PageUp` and `Shift+D` (browse).
+- **New keys:** `Ctrl+F9` cycles the interface announcements, `Ctrl+Shift+F9` starts and stops dictation, and `Shift+F1` says what the next key does and where it is in the menus, without running it. On a Mac they are `Cmd+F9`, `Cmd+Shift+F9`, and `Shift+F1`.
+- **New commands without a key,** in the menus and the command palette: Browse files, Batch convert, Export audio, Colors, and About.
+- **On macOS the GUI uses Mac keys,** not Ctrl renamed: Option with the arrows moves by word and paragraph, Command with the arrows goes to the ends, `Cmd+[` and `Cmd+]` go back and forward, Command runs commands, and chords with Alt and a letter are Command+Option. Nothing takes VoiceOver's Ctrl+Option. The keyboard reference has a GUI on macOS column.
+- Some terminals keep F10 for themselves; then run `menu` from the command palette (F2).
 
-- `F10` opens the menus in the terminal, in every preset, as in Windows programs. Previous chapter keeps `Alt+PageUp` and `Shift+D`.
-- New keys: `Ctrl+F9` cycles the interface announcements, `Ctrl+Shift+F9` starts and stops dictation (when it arrives), and `Shift+F1` says what the next key does.
-- On macOS the GUI uses Mac keys, not Ctrl renamed: Option with the arrows moves by word and paragraph, Command with the arrows goes to the ends, `Cmd+[` and `Cmd+]` go back and forward, Command runs commands, and chords with Alt and a letter are Command+Option. Nothing takes VoiceOver's Ctrl+Option. The keyboard reference has a GUI on macOS column.
-
-#### Menus and the palette
+### Menus and the palette
 
 - **Menus: F10.** File, Edit, View, Reading, Speech, Tools, and Help, with every command and its keys, in six languages. In the terminal they are a list: "Menus, 1 of 7, File"; Enter or Right opens, a letter moves to its item, Left goes back, Escape closes. Switches say "checked", choices their value. File, Recent documents lists what you opened last with your place in it.
-- **The command palette** says each command name first with its menu: "Export PDF, File: ...". `ep` finds Export PDF; the best matches come first. With nothing typed, your recent commands come first, said as recent. Ctrl+L lists the matches.
+- **The command palette** says each command name first with its menu: "Export PDF, File: ...". `ep` finds Export PDF; the best matches come first. With nothing typed, your recent commands come first, said as recent. Ctrl+L (or Tab in the GUI) moves to the list of matches.
 - **What does this key do** (Shift+F1) and **About** in the Help menu.
+- Menus and the palette are built from one list of commands, so both always offer the same things under the same names ([ADR-0043](docs/adr/0043-menus-and-the-palette-from-one-model.md)).
 
-#### Interface announcements
+### The file browser
 
-- **Say less about the interface:** `[accessibility] interface_announcements` (off, minimal, normal, full; Ctrl+F9) decides how much textweaver says about itself: lists opening and closing, progress, hints, and routine confirmations. Errors, questions, and answers to what you asked are always said. Automatic is minimal with a screen reader and normal when self-voicing.
-
-#### Colors and settings
-
-- **Colors** (View, Colors): a color for the reading ruler, difficult words, syllable marks, misspellings, lint marks, search matches, the selection, the focus, links, headings, the status bar, notes, and bookmarks, from named colors (blue and orange first) or `#rrggbb`, each with its contrast said ("contrast 6.2 to 1, good"). Every mark keeps its underline or bold whatever its color.
-- **The settings screen** lists the five settings you changed last at the top, says the default that Delete puts back, and says a setting's help on F1.
-- **Import settings** names the first changes before asking. A renamed setting keeps its value.
-- Numbers are grouped as your language writes them ("12.345" in German).
-
-#### Speed
-
-- Entering edit mode, and moving by line in it, says the line's first sentence or first 200 characters and "line continues", not the whole line (a 1 MB line held the first typed echo back by about a quarter of a second).
-- The terminal reader draws only when something changed, and keeps what each frame needs until the document or the view changes; the difficult-word list is no longer loaded while the aid is off.
-
-#### JSON-RPC
-
-- `insert` types text at the caret in edit mode, and is refused outside it.
-
-### W6p
-
-- **Install the GUI with the scripts.** `install-windows.ps1 -Gui`, `install-macos.sh --gui`, and `install-linux.sh --release latest --gui` install the GUI beside the reader, with a shortcut or menu entry named "textweaver window". Running the script again, or the update script, keeps it; `--no-gui` removes it.
-- **One GUI package for every Mac.** The macOS GUI is universal (Apple silicon and Intel): `textweaver-VERSION-macos-universal-gui.zip`.
-- **The GUI speaks with the Linux engines** the terminal package has (espeak-ng, speech-dispatcher, Omnivox), as soon as the GUI crate offers them; `cargo xtask gui-dist` names any it leaves out.
-- **The documentation site:** every table is named by the heading above it, so NVDA's and JAWS's table keys say which table it is; Up and Down Arrow in search say the highlighted result's title and place; a code block or table wider than the page takes focus, so the arrow keys scroll it.
-- **Screen reader guide:** Orca says every key by default; how to turn that down.
-- **For contributors:** the nightly release-mode tests run under cargo-nextest, and a test that passes only on a retry is named as flaky; a test keeps the nightly fuzz list in step with the fuzz targets; `cargo xtask release` lists every other line still naming the old version; CI's docs job keeps a build cache.
-
-### W6f: the file browser
-
-- **File, Browse files** walks through folders and archives as one list, from the File menu or the command palette. It starts on Places: the open document's folder, the start folder, the library's folders, and the drives on Windows.
+- **File, Browse files** ([ADR-0045](docs/adr/0045-a-file-browser-on-the-list-model.md)) walks through folders and archives as one list, from the File menu or the command palette. It starts on Places: the open document's folder, the start folder, the library's folders, and the drives on Windows.
 - **Rows say the name first,** then the kind and size ("notes.md, Markdown, 12 KB"), and the position last ("3 of 40"), so a Braille display shows the name in its first cells.
 - **Archives open like folders:** zip, tar, tar.gz, and 7z, and archives inside them, four deep. Nothing is unpacked; a document inside opens as `course.zip!week1/notes.md`, and its position, bookmarks, and notes stay with that path. `__MACOSX` and `.DS_Store` are left out. A damaged, too large, or too deeply nested archive is refused with a sentence.
 - **Backspace goes up** and lands on the row you left, out of an archive too. Typing filters by name.
@@ -57,26 +29,16 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Readable files only,** with Ctrl+A for every file; Ctrl+R sorts by name, date, or size.
 - **Choosing a folder** for another command: Ctrl+Enter, or the "Choose this folder" row where a terminal cannot send Ctrl+Enter. In the Mac GUI the browser's keys use Cmd.
 - The browser only opens and chooses; it never copies, moves, renames, or deletes a file.
-- **Faster opening:** a document no longer waits for earlier saves to reach the disk before it opens (up to two seconds on a slow disk), and a large document's text check runs while it loads.
-- **For contributors:** `App::choose_folder` and `App::choose_file` hand a chosen path to a command (batch conversion and audio export use them); `ListKey` gains `Details`, `ChooseHere`, `Sort`, and `ShowAll`, and JSON-RPC's `list_key` their names; `archive::list_path` and `archive::is_junk`. ADR-0045.
 
-### W6k
+### Announcements, colors, and settings
 
-- **Batch convert from the File menu.** Choose a folder in the file browser, then a format (Markdown first, then PDF, HTML, plain text, EPUB, Word, braille), then where the files go (a `converted` folder, beside each file, or another folder), and answer "Convert 48 files to PDF into ...? y or n". It runs in the background while you read, says its progress in tens of percent at most every ten seconds, and Escape asks before stopping, leaving no half-written file. At the end the counts are said, the failures are listed name first with Enter opening one, and the list is saved as `conversion-report.txt`. New messages in all six languages.
-- **EPUB, Word, braille, and PDF output of large documents is much faster.** Building the document's structure grew with the square of its size; 10 MB of Markdown now converts to EPUB in about 1 second instead of 25, and a 50,000-item list in under a second instead of 11. The output is the same.
-- **`tw convert` saves a report.** `conversion-report.txt` in the output folder (or the folder converted in place) has the summary sentence, then each failure and warning, the file's name first. Each run replaces it; `--no-report` leaves it out, and a report is never converted as a document.
-- **For contributors:** `Converter::run_plan_with` reports each file as it finishes and stops when asked, never leaving a half-written file; `tests/matrix.rs` converts a fixture for every loader to Markdown and PDF, and a new loader needs one; `cargo run --release -p textweaver-writers --example bench_blocks -- FILE` times the block tree and each writer.
+- **Say less about the interface:** `[accessibility] interface_announcements` (off, minimal, normal, full; Ctrl+F9) decides how much textweaver says about itself: lists opening and closing, progress, hints, and routine confirmations. Errors, questions, and answers to what you asked are always said. Automatic is minimal with a screen reader and normal when self-voicing.
+- **Colors** (View, Colors): a color for the reading ruler, difficult words, syllable marks, misspellings, lint marks, search matches, the selection, the focus, links, headings, the status bar, notes, and bookmarks, from named colors (blue and orange first) or `#rrggbb`, each with its contrast said ("contrast 6.2 to 1, good"). Every mark keeps its underline or bold whatever its color.
+- **The settings screen** lists the five settings you changed last at the top, says the default that Delete puts back, and says a setting's help on F1.
+- **Import settings** names the first changes before asking. A renamed setting keeps its value. Importing settings in the GUI keeps the GUI's own keys.
+- Numbers are grouped as your language writes them ("12.345" in German).
 
-### W6v: audio export
-
-- **MP3 without ffmpeg.** `tw export-audio --out book.mp3` and Export audio in the reader write MP3 themselves, with the LAME encoder built in: variable bit rate, quality 5, suited to a speaking voice, with the exact length recorded for players. The title, author, and chapters go in as ID3 chapter tags. The reader now offers FLAC, MP3, and WAV without ffmpeg; only M4B still needs it. LAME is under the GNU LGPL; `THIRD-PARTY-NOTICES.md` explains what that means.
-- **Export audio from the File menu.** Choose a format (FLAC first, then MP3 and WAV; M4B only when ffmpeg is found, and when it is not, that is said in words), then where the file goes (beside the document, or another folder chosen in the file browser), and answer "Export essay.flac with Microsoft David at 200 words a minute, into ...? y or n", which names the voice and speed used. It runs in the background while you read, says "Exporting audio, 30 percent." at most every ten seconds, and Escape asks before stopping, leaving no file behind. At the end: "Wrote essay.flac: 42 minutes and 5 seconds, 12 chapters. Open it? y or n." Only engines that can write audio files are used. New messages in all six languages.
-- **FLAC without ffmpeg.** `tw export-audio --out book.flac` writes a lossless FLAC file, about half the size of WAV, with nothing else installed. It carries the title, author, and chapters as Vorbis comments (`CHAPTER001`, `CHAPTER001NAME`, and so on).
-- **WAV files have chapters.** The title, author, and chapters go into the WAV as an ID3 tag with chapter frames, as MP3 files have them.
-- **Word times from Apple voices.** Exports with AVSpeech on macOS 14 and later carry each word's time, so word-level subtitles are exact.
-- **A voice that cannot be loaded stops the export** with the reason, instead of the audio quietly using another voice. When ffmpeg is missing for MP3 or M4B, the message now suggests `.flac` or `.wav`.
-
-### W6o: formats
+### Documents and conversion
 
 - **Obsidian notes read the way Obsidian shows them.** A callout of any type says its type first, in words ("Warning: Hot surface"), and a foldable one says once whether it starts collapsed; `[!type]` is never read. The reader and `tw convert` share one set of callout rules. Embedded notes (`![[note]]`, `![[note#Heading]]`, `![[note#^id]]`) are read in place between "Embedded from Note" and "End of embed", from the note's own folder only, two levels deep, cycles refused; embedded pictures are graphics named by their file; tags read "tag physics slash waves"; `==highlights==` are marked; `%%comments%%` are not read; block ids are kept as link targets.
 - **JSON files** read with a heading per key, so `h` moves by key, and no brackets, braces, or quotes; invalid JSON is read as plain text with a warning that says where it broke. **JSON Lines** give a heading per line.
@@ -84,10 +46,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **SVG drawings** read their title, description, titled parts, and text, or "Drawing with no description"; a drawing inside a web page is read the same way instead of being dropped.
 - **Content MathML** is read as math, and `.mml` files open as one formula.
 - **LaTeX:** macros with up to nine arguments and `\newenvironment` expand; `\bibliography` and `\printbibliography` list the cited works under "References"; `\multicolumn` and `\multirow` cells say what they span; `\includegraphics[alt=...]` is described by its alt text.
+- The design for the new formats is in [ADR-0044](docs/adr/0044-obsidian-json-svg-and-content-mathml.md).
 - Text sent to Pandoc in an older encoding is converted to UTF-8 first.
-- New messages, in all six languages: "it is not a readable JSON file", "... Jupyter notebook", "... SVG drawing", and "... MathML formula", said after "Could not open".
+- **Batch convert from the File menu.** Choose a folder in the file browser, then a format (Markdown first, then PDF, HTML, plain text, EPUB, Word, braille), then where the files go (a `converted` folder, beside each file, or another folder), and answer "Convert 48 files to PDF into ...? y or n". It runs in the background while you read, says its progress in tens of percent at most every ten seconds, and Escape asks before stopping, leaving no half-written file. At the end the counts are said, the failures are listed name first with Enter opening one, and the list is saved as `conversion-report.txt`.
+- **`tw convert` saves a report.** `conversion-report.txt` in the output folder (or the folder converted in place) has the summary sentence, then each failure and warning, the file's name first. Each run replaces it; `--no-report` leaves it out, and a report is never converted as a document.
+- New messages, in all six languages: "it is not a readable JSON file", "... Jupyter notebook", "... SVG drawing", and "... MathML formula", said after "Could not open"; and the batch conversion's questions and progress.
 
-### W6c5: PDF and OCR extras
+### PDF and OCR
 
 - **PDF comments are notes.** Sticky notes, highlights, underlines, and strike-outs from a PDF viewer become notes on the text they mark, with replies and whether they are resolved, as Word comments do: "Note: Comment by Ada Example: Cite a source for this. Reply by Bo Example: Added a citation. Resolved." A highlight with nothing typed in it says "Highlighted". Hidden notes are not read.
 - **PDF links work.** Web and email addresses are said and offered to open; a link to another part of the PDF goes to the heading there, or to the page, said as "Page 3" and its first line. Links that would run a program or a script are left out.
@@ -96,24 +61,86 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Scanned tables are tables** when their rows and columns line up, with the first row of words as the header.
 - **Captions by pattern.** "Figure 3." and "Table 2:" are found in PDFs; a table's caption names the table, a figure's caption is read as a graphic, and a caption set large or bold is no longer a heading.
 - New message, in all six languages: "Page 3", said first when a link goes to a page.
+- The design is in [ADR-0048](docs/adr/0048-pdf-annotations-links-and-forms.md).
 
-### W6d: dictation
-
-- **Dictate in edit mode** (Edit menu, the palette, or `Ctrl+Shift+F9`): what you say is typed at the cursor, phrase by phrase at each pause, with spoken commands such as "new line" and "period" applied; each phrase is one step for Undo. Outside edit mode it asks whether to turn edit mode on first.
-- **Words while you talk.** The status line shows the words Whisper is sure of as they come, starting "Dictating:", the newest last, within 40 characters for a Braille display; they are never changed once shown. By default they are said once, at each pause, so the microphone does not hear textweaver's voice; `[dictation] speak_while_recording` says them as they come.
-- **Never slower than before.** Short phrases arrive at their pause, as quickly as transcribing each phrase alone; long sentences show their first words about four seconds in. On a busy computer the words wait for the pause.
-- **Nothing is lost.** Leaving edit mode, opening or starting another document, or quitting while dictating types the last phrase first; a phrase with no words recognized says so.
-- `tw dictate --live` prints each group of words as it is committed; `--live --file` plays a recording in at speaking pace.
-- `[dictation] model_dir` names the Whisper model's folder.
-- Fixed: every resampled recording (anything not already at 16 kHz) had a garbled first fraction of a second.
-- New messages, in all six languages: "Dictating:", "Dictating. Speak, then press ... to stop.", "Finishing dictation.", "Dictation done.", "No words recognized in that phrase.", and the dictation errors.
-
-### W6b: braille formatting
+### Braille
 
 - **Tables in braille files, three ways.** `[braille] table_format` and `tw convert --table-format` choose how BRF files lay out tables: `linear` (the default, one row per line with semicolons between entries), `listed` (each row starts in cell 5 with the first column's heading and entry, and each other entry follows on its own line after its column heading and a colon), or `stairstep` (each entry two cells to the right of the one before, the column headings in a transcriber's note at the same steps). Listed and stairstep follow BANA's Braille Formats (2016), 11.16 and 11.18; a transcriber's note says how the table is laid out, a blank entry is three guide dots, and a row stays on one braille page when it fits. A table of more than four columns is listed instead of stairstep, with a warning. Every table now has a blank line before and after it (11.2.5d).
 - **Bold, italic, and underline in braille.** BRF files write the UEB typeform indicators (The Rules of Unified English Braille, 2013, section 9): a symbol indicator for one emphasized letter, a word indicator before each of one or two emphasized words (with a terminator only where the emphasis stops inside a word), and a passage indicator and terminator around three words or more. A heading all in one typeform leaves them out, since its place already shows it. Grade 2 through liblouis leaves them out for now.
 - **Capitals passages.** Three or more words in capitals get the capitals passage indicator once and the terminator after the last (the Rules, section 8), instead of a word indicator before each word; one or two capitalized words keep their word indicators.
 - New settings messages, in all six languages: "Braille tables" and its three choices.
+
+### Dictation
+
+- **Dictate in edit mode** (Edit menu, the palette, or `Ctrl+Shift+F9`), in the terminal reader and the GUI: what you say is typed at the cursor, phrase by phrase at each pause, with spoken commands such as "new line" and "period" applied; each phrase is one step for Undo. Outside edit mode it asks whether to turn edit mode on first.
+- **Words while you talk.** The status line shows the words Whisper is sure of as they come, starting "Dictating:", the newest last, within 40 characters for a Braille display; they are never changed once shown. By default they are said once, at each pause, so the microphone does not hear textweaver's voice; `[dictation] speak_while_recording` says them as they come.
+- **Never slower than before.** Short phrases arrive at their pause, as quickly as transcribing each phrase alone; long sentences show their first words about four seconds in. On a busy computer the words wait for the pause.
+- **Nothing is lost.** Leaving edit mode, opening or starting another document, or quitting while dictating types the last phrase first; a phrase with no words recognized says so.
+- Dictation streams on the Whisper model textweaver already uses; no new model ([ADR-0042](docs/adr/0042-streaming-dictation.md)).
+- `tw dictate --live` prints each group of words as it is committed; `--live --file` plays a recording in at speaking pace.
+- `[dictation] model_dir` names the Whisper model's folder.
+- Fixed: every resampled recording (anything not already at 16 kHz) had a garbled first fraction of a second.
+- New messages, in all six languages: "Dictating:", "Dictating. Speak, then press ... to stop.", "Finishing dictation.", "Dictation done.", "No words recognized in that phrase.", and the dictation errors.
+
+### Audio export
+
+- **Export audio from the File menu.** Choose a format (FLAC first, then MP3 and WAV; M4B only when ffmpeg is found, and when it is not, that is said in words), then where the file goes (beside the document, or another folder chosen in the file browser), and answer "Export essay.flac with Microsoft David at 200 words a minute, into ...? y or n", which names the voice and speed used. It runs in the background while you read, says "Exporting audio, 30 percent." at most every ten seconds, and Escape asks before stopping, leaving no file behind. At the end: "Wrote essay.flac: 42 minutes and 5 seconds, 12 chapters. Open it? y or n." Only engines that can write audio files are used. New messages in all six languages.
+- **MP3 without ffmpeg.** `tw export-audio --out book.mp3` and Export audio in the reader write MP3 themselves, with the LAME encoder built in: variable bit rate, quality 5, suited to a speaking voice, with the exact length recorded for players. The title, author, and chapters go in as ID3 chapter tags. LAME is under the GNU LGPL; `THIRD-PARTY-NOTICES.md` explains what that means.
+- **FLAC without ffmpeg.** `tw export-audio --out book.flac` writes a lossless FLAC file, about half the size of WAV, with nothing else installed. It carries the title, author, and chapters as Vorbis comments (`CHAPTER001`, `CHAPTER001NAME`, and so on).
+- **Only M4B still needs ffmpeg.** The reader offers FLAC, MP3, and WAV without it. When ffmpeg is missing for M4B (or for MP3 in a build without the built-in encoder), the message suggests `.flac` or `.wav`.
+- **WAV files have chapters.** The title, author, and chapters go into the WAV as an ID3 tag with chapter frames, as MP3 files have them.
+- **Word times from Apple voices.** Exports with AVSpeech on macOS 14 and later carry each word's time, so word-level subtitles are exact.
+- **A voice that cannot be loaded stops the export** with the reason, instead of the audio quietly using another voice.
+
+### The GUI
+
+- **Native menus** ([ADR-0046](docs/adr/0046-native-menus-in-the-gui.md)). On Windows, a standard menu bar that NVDA and JAWS read as any program's: Alt or F10 enters it, Alt with a menu's letter opens it (Alt+F for File), and each item is read with its key ("Open, Ctrl+O") and as checked or not checked. On macOS, the menu bar at the top of the screen, with each command's key as its shortcut. On Linux, and with `--list-menus`, F10 shows the menus as a list inside the window, as in the terminal. Choosing an item closes an open dialog first, as Escape would.
+- **Every command works in the window** as in the terminal reader, from the same keys, the menus, and the palette, except the three that only mean something in a terminal (scrolling by lines and line numbers). Markdown lint works in edit mode; Browse files, Batch convert, Export audio, and Dictate are in the window's menus.
+- **Starting like the terminal:** the first-run welcome and the language list, the question about hybrid mode, and unsaved work offered back. The speech engine starts in the background, so the window is ready at once.
+- **Messages said at startup wait for your screen reader,** then are said once, instead of being lost. When the window takes the focus, the screen reader says its title; in the self-voicing mode textweaver says it too.
+- **Notes, highlights, bookmarks, and search matches are drawn,** each with a shape as well as a color, and the spoken word's colors follow `[highlight]`. Exploring a formula and Speech Cursor's line keys work as in the terminal.
+- **Copy, cut, and paste** go through your system's clipboard, in edit mode too, and the selection is the one you see.
+- **Closing a dialog puts the focus back** where it was.
+- **The Colors dialog** (View, Colors, or File, Settings, Colors) says each color in words with its contrast; a small sample is drawn beside it, never the only cue. Reset all colors puts back every one.
+- **Export and import settings** use your system's Save and Open dialogs, in TOML or JSON. The font list uses the same list as every other list.
+- **Windows High Contrast:** the window draws with your contrast theme's own colors, and follows it live when you turn it on or off.
+- **On macOS the document is a read-only text area,** which VoiceOver reads with its text commands.
+- Fixed: a crash when a caret key moved onto an empty line, and a crash when a second dialog of the same kind opened.
+
+### Speed
+
+- **A key in the GUI's edit mode** takes about 2 ms instead of 24 in a 1 MB document: only the paragraph around the edit is sent to the screen reader again, not the whole window.
+- **EPUB, Word, braille, and PDF output of large documents is much faster.** Building the document's structure grew with the square of its size; 10 MB of Markdown now converts to EPUB in about 1 second instead of 25, and a 50,000-item list in under a second instead of 11. The output is the same.
+- **Faster opening:** a document no longer waits for earlier saves to reach the disk before it opens (up to two seconds on a slow disk), and a large document's text check runs while it loads.
+- Entering edit mode, and moving by line in it, says the line's first sentence or first 200 characters and "line continues", not the whole line (a 1 MB line held the first typed echo back by about a quarter of a second).
+- The terminal reader draws only when something changed, and keeps what each frame needs until the document or the view changes; the difficult-word list is no longer loaded while the aid is off.
+
+### JSON-RPC
+
+- `insert` types text at the caret in edit mode, and is refused outside it.
+- `list_key` knows the file browser's keys: `Details`, `ChooseHere`, `Sort`, and `ShowAll`.
+
+### Packages, CI, and checks
+
+- **Install the GUI with the scripts.** `install-windows.ps1 -Gui`, `install-macos.sh --gui`, and `install-linux.sh --release latest --gui` install the GUI beside the reader, with a shortcut or menu entry named "textweaver window". Running the script again, or the update script, keeps it; `--no-gui` removes it.
+- **One GUI package for every Mac.** The macOS GUI is universal (Apple silicon and Intel): `textweaver-VERSION-macos-universal-gui.zip`.
+- **The Linux GUI speaks with the Linux engines** the terminal package has (espeak-ng, speech-dispatcher, Omnivox); `cargo xtask gui-dist` names any engine it leaves out.
+- **Braille is checked by a second tool.** CI builds liblouis 3.39.0 and reads textweaver's BRF files back to print, in grades 1 and 2.
+- **Real engines in CI.** A workflow exports a document through espeak-ng on Linux, SAPI 5 and OneCore voices on Windows, and AVSpeech on macOS 14 and 15, and fails only when an engine cannot export or falls back to another; length, level, speed, and word times are reported.
+- **Screen reader checks:** the GUI's accessibility tree dump (Windows, macOS, and Linux) and the Orca session are standing checks; the NVDA session stays report-only ([ADR-0039](docs/adr/0039-automated-screen-reader-checks.md)).
+- The nightly release-mode tests run under cargo-nextest, and a test that passes only on a retry is named as flaky; a test keeps the nightly fuzz list in step with the fuzz targets, and the new formats (JSON, SVG, Obsidian, PDF comments and forms) are fuzzed every night.
+- The fake engine-host tests check the order of events, not the clock, and their pause tests run at real time, and they passed 40 runs of 40 under load.
+- `cargo xtask release` lists every other line still naming the old version; CI's docs job keeps a build cache.
+
+### For contributors
+
+- `App::choose_folder` and `App::choose_file` hand a chosen path to a command (batch conversion and audio export use them); `ListKey` gains `Details`, `ChooseHere`, `Sort`, and `ShowAll`; `archive::list_path` and `archive::is_junk` ([ADR-0045](docs/adr/0045-a-file-browser-on-the-list-model.md)).
+- `Converter::run_plan_with` reports each file as it finishes and stops when asked, never leaving a half-written file; `tests/matrix.rs` converts a fixture for every loader to Markdown and PDF, and a new loader needs one; `cargo run --release -p textweaver-writers --example bench_blocks -- FILE` times the block tree and each writer.
+
+### Documentation
+
+- **The documentation site:** every table is named by the heading above it, so NVDA's and JAWS's table keys say which table it is; Up and Down Arrow in search say the highlighted result's title and place; a code block or table wider than the page takes focus, so the arrow keys scroll it.
+- **Screen reader guide:** Orca says every key by default; how to turn that down.
 
 ## [0.1.0-alpha.5] - 2026-09-29
 
