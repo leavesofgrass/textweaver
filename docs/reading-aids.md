@@ -107,7 +107,7 @@ Three fonts are built in. They work with no download and nothing installed on yo
 - **Atkinson Hyperlegible Mono**: the same design with every letter the same width, for code.
 - **OpenDyslexic**: for readers with dyslexia. The letters are heavier at the bottom and hard to mix up.
 
-All three are free, under the SIL Open Font License. Their licences are in `third_party/fonts/`.
+All three are free, under the SIL Open Font License. Their licenses are in `third_party/fonts/`.
 
 ### All the choices
 
@@ -136,13 +136,13 @@ Font size is in points, from 6 to 144. The default is 14. Below 12, textweaver s
 - You can mark just the screen row, or the whole line when it wraps onto several rows.
 - **Mask** (off by default) dims everything outside the band. Dim text can be hard to see, so try it before you rely on it.
 
-In the terminal, the current line is underlined with a bar in the left margin. Lines in the band get a thinner bar. Nothing is shown by colour alone.
+In the terminal, the current line is underlined with a bar in the left margin. Lines in the band get a thinner bar. Nothing is shown by color alone.
 
 ## Difficult words
 
 textweaver can mark rare words, so you can look them up before you read. A word is rare when it is uncommon in everyday English.
 
-Press **Alt+Shift+J** (or run `difficult words toggle` from the palette) to mark them. You hear "Difficult words underlined." In the terminal, each difficult word is underlined, never shown by colour alone; the window underlines them with a thick line, the same rule. When verbosity is high (**Alt+Shift+V**), moving onto one with the Right or Left arrow adds "difficult word" after it: "mitochondria, difficult word". The choice is saved as `difficult_words = true` under `[reading_aids]`. See also [The textweaver window](gui.md#reading-aids).
+Press **Alt+Shift+J** (or run `difficult words toggle` from the palette) to mark them. You hear "Difficult words underlined." In the terminal, each difficult word is underlined, never shown by color alone; the window underlines them with a thick line, the same rule. When verbosity is high (**Alt+Shift+V**), moving onto one with the Right or Left arrow adds "difficult word" after it: "mitochondria, difficult word". The choice is saved as `difficult_words = true` under `[reading_aids]`. See also [The textweaver window](gui.md#reading-aids).
 
 To hear what a difficult word means as you move onto it, turn on `difficult_definitions` under `[reading_aids]` (off by default; it is also in the settings screen as "Difficult word definitions"). With difficult words marked and verbosity high, you then hear the first definition from the define-word dictionary, your glossary first: "mitochondria, difficult word: an organelle containing enzymes responsible for producing energy". Only the first part of the definition is said, at most about 100 characters. The dictionary opens quietly the first time; until it has, you hear "difficult word" alone. Without the dictionary file, nothing changes.
 
@@ -178,14 +178,14 @@ These are estimates. Other tools may give a slightly different grade.
 
 textweaver can show long words split into syllables, like `read·a·bil·i·ty`. Press **Alt+Shift+Z** (or run `syllables toggle` from the palette); you hear "Syllables shown." This helps you sound out a word. Only the screen changes. Speech, search, bookmarks, and positions use the word as it is.
 
-The separator is drawn between the letters, so the reading highlight still covers exactly the word being spoken, separators and all, and the cursor stays on the right letter. The choice is saved as `syllables = true` under `[reading_aids]`; `[reading_aids.syllable_options]` sets the separator (a middle dot by default) and which words are split. The GUI does not show syllables yet.
+The separator is drawn between the letters, so the reading highlight still covers exactly the word being spoken, separators and all, and the cursor stays on the right letter. The choice is saved as `syllables = true` under `[reading_aids]`; `[reading_aids.syllable_options]` sets the separator (a middle dot by default) and which words are split. Both the terminal reader and the GUI draw the split; only the letters shown change, so your screen reader and Braille display still read the word whole. See also [The textweaver window](gui.md#reading-aids).
 
 The split is worked out from English spelling rules, not a dictionary, so a few words split in odd places.
 
 ## See also
 
 - [Reading aids demo](site/reading-aids.html): try RSVP, bionic reading, and the ruler in a browser.
-- [Themes](themes.md): the colours the aids use, all checked for contrast.
+- [Themes](themes.md): the colors the aids use, all checked for contrast.
 - [Settings](settings.md#reading_aids): every `[reading_aids]` setting.
 - [Reading and moving around](reading.md): reading aloud and moving through a document.
 - [ADR-0022: Reading aids](adr/0022-reading-aids.md): the design, and the Star faults each aid fixes.
