@@ -9624,6 +9624,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-sync"
+version = "0.1.0-alpha.6"
+dependencies = [
+ "log",
+ "proptest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "textweaver-core",
+ "textweaver-store",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "textweaver-text"
 version = "0.1.0-alpha.6"
 dependencies = [
