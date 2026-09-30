@@ -48,6 +48,7 @@ const SECTIONS: &[(&str, &str)] = &[
     ("InterfaceSettings", "interface"),
     ("GuiSettings", "gui"),
     ("ColorSettings", "colors"),
+    ("SyncSettings", "sync"),
     // `src/reading_aids.rs`.
     ("RsvpSettings", "rsvp"),
     ("BionicOptions", "bionic_options"),

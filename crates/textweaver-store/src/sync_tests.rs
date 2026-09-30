@@ -590,7 +590,10 @@ fn t44_reconcile_before_write_newer_remote_survives() {
 #[test]
 fn t45_conflict_policy_default() {
     assert_eq!(
-        crate::Settings::default().reading.sync_conflict_policy,
+        crate::Settings::default()
+            .sync
+            .position_policy
+            .conflict_policy(),
         Newest
     );
     assert_eq!(SidecarStore::default().policy(), Newest);

@@ -373,10 +373,11 @@ fn rules() -> Vec<Rule> {
             ))
         }),
         rule!("sync_conflict_policy", "newest", |v, s| {
-            s.reading.sync_conflict_policy = ConflictPolicy::parse(want_str(v)?);
+            s.sync.position_policy =
+                crate::PositionPolicy::from_conflict_policy(ConflictPolicy::parse(want_str(v)?));
             Ok(format!(
-                "reading.sync_conflict_policy = {}",
-                s.reading.sync_conflict_policy.as_str()
+                "sync.position_policy = {}",
+                s.sync.position_policy.conflict_policy().as_str()
             ))
         }),
         rule!("tui_caret_follow_speech", true, |v, s| {
@@ -617,7 +618,7 @@ mod tests {
         assert!(matches!(get("tts_voice"), Some(SettingOutcome::Skipped(_))));
         assert_eq!(s.highlight.granularity, HighlightGranularity::Both);
         assert_eq!(s.speech.speed_presets["skim"], 900, "clamped");
-        assert_eq!(s.reading.sync_conflict_policy, ConflictPolicy::Manual);
+        assert_eq!(s.sync.position_policy, crate::PositionPolicy::Ask);
         assert!(matches!(
             get("tts_skip_code"),
             Some(SettingOutcome::Skipped(_))

@@ -117,7 +117,7 @@ fn listing(paths: &Paths, settings: &Settings) -> (Listing, Vec<ScannedDoc>) {
     let scanned = library::scan_library(&settings.library.folders, &supported());
     let lib = Library::load(&paths.library_file()).unwrap_or_default();
     let recent = Recent::load(&paths.recent_file());
-    let sidecars = SidecarStore::new(settings.reading.sync_conflict_policy);
+    let sidecars = SidecarStore::new(settings.sync.position_policy.conflict_policy());
     let states = StateStore::new(paths.state_dir());
     let local = |p: &Path| {
         states

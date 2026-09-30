@@ -215,10 +215,7 @@ fn imports_settings_state_library_keys_and_sidecars() {
     let s: Settings = SettingsStore::new(f.paths.clone()).load().0;
     assert_eq!(s.speech.rate.wpm(), 300);
     assert_eq!(s.display.theme, "nord");
-    assert_eq!(
-        s.reading.sync_conflict_policy,
-        ConflictPolicy::HighestProgress
-    );
+    assert_eq!(s.sync.position_policy, crate::PositionPolicy::Furthest);
     assert_eq!(s.library.folders, vec![f.lib.clone()]);
     assert_eq!(
         item(&r, ItemKind::Setting, "tts_voice").outcome,

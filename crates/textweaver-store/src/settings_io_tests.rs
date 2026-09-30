@@ -7,7 +7,7 @@ use textweaver_core::{
 };
 
 use super::*;
-use crate::{AppleBackend, ConflictPolicy, EciDictionaries, FootnoteMode, Paths, TableMode};
+use crate::{AppleBackend, EciDictionaries, FootnoteMode, Paths, TableMode};
 
 fn store() -> (tempfile::TempDir, SettingsStore) {
     let dir = tempfile::tempdir().unwrap();
@@ -88,7 +88,6 @@ fn everything_changed() -> Settings {
     r.nav_history_size = 80;
     r.wrap_navigation = true;
     r.cursor_follows_speech = false;
-    r.sync_conflict_policy = ConflictPolicy::Manual;
     r.citations = crate::CitationReading::Words;
     r.ocr = false;
     r.ocr_lang = "fra+eng".into();
@@ -96,6 +95,16 @@ fn everything_changed() -> Settings {
     r.math_engine = crate::MathEngine::MathCatSimpleSpeak;
     r.math_display = crate::MathDisplay::Unicode;
     r.revisions = crate::RevisionReading::Marked;
+    let y = &mut s.sync;
+    y.enabled = true;
+    y.folder = Some(PathBuf::from("/media/stick/Sync"));
+    y.device_name = "lab".into();
+    y.places = false;
+    y.notes = false;
+    y.highlights = false;
+    y.bookmarks = false;
+    y.statistics = false;
+    y.position_policy = crate::PositionPolicy::Ask;
     let d = &mut s.display;
     d.theme = "nord".into();
     d.wrap_width = 100;

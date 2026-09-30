@@ -191,7 +191,7 @@ fn build(file: &Path, paths: &Paths) -> Report {
         })
         .collect();
     let sidecar = sync::folder_for(&settings.library.folders, file).and_then(|(folder, rel)| {
-        let side = SidecarStore::new(settings.reading.sync_conflict_policy);
+        let side = SidecarStore::new(settings.sync.position_policy.conflict_policy());
         let entry = ProgressEntry::from_value(&side.progress_for(&folder, &rel)?)?;
         let (line, context) = locate(text.as_ref(), entry.offset.0);
         Some(SidecarMark {

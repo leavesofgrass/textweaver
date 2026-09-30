@@ -332,9 +332,14 @@ pub const REMOVED_SETTINGS: &[(&str, &str)] = &[(
 /// new one. A `settings.toml` or an import with the old key keeps its
 /// value under the new key, so a rename never loses what a user set
 /// (Star lost such values: its loader dropped a key missing from its
-/// defaults before its migration saw it). Empty until a key is renamed;
-/// [`rename_legacy_settings_with`] is tested with a table of its own.
-pub const RENAMED_SETTINGS: &[(&str, &str)] = &[];
+/// defaults before its migration saw it). [`rename_legacy_settings_with`]
+/// is tested with a table of its own.
+///
+/// - `reading.sync_conflict_policy` became `sync.position_policy` (the sync
+///   wave, ADR-0049); its old values `highest_progress` and `manual` read
+///   as `furthest` and `ask`.
+pub const RENAMED_SETTINGS: &[(&str, &str)] =
+    &[("reading.sync_conflict_policy", "sync.position_policy")];
 
 /// Moves the [`RENAMED_SETTINGS`] in a parsed `settings.toml` to their new
 /// keys; returns each rename done. A value already under the new key wins.
@@ -608,8 +613,6 @@ pub struct ReadingSettings {
     pub wrap_navigation: bool,
     /// Cursor follows the spoken word.
     pub cursor_follows_speech: bool,
-    /// Sidecar merge policy.
-    pub sync_conflict_policy: ConflictPolicy,
     /// Citations (`[@doe2020, p. 12]`) in continuous reading: skipped
     /// (`off`, the default) or said in words (`words`: "Doe and Roe, 2020,
     /// page 12"). Word moves and the link address key say them in words
@@ -662,7 +665,6 @@ impl Default for ReadingSettings {
             nav_history_size: 50,
             wrap_navigation: false,
             cursor_follows_speech: true,
-            sync_conflict_policy: ConflictPolicy::default(),
             citations: CitationReading::Off,
             ocr: true,
             ocr_lang: String::new(),
@@ -1281,6 +1283,94 @@ impl Default for ColorSettings {
     }
 }
 
+/// `[sync] position_policy`: which place a document resumes at when
+/// another computer has one too (ADR-0049). Replaces
+/// `reading.sync_conflict_policy`, whose values `highest_progress` and
+/// `manual` read as `furthest` and `ask`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PositionPolicy {
+    /// The place set most recently, on any computer.
+    #[default]
+    Newest,
+    /// The place furthest through the document.
+    #[serde(alias = "highest_progress")]
+    Furthest,
+    /// Ask, naming the computer: "Lab at 42 percent. Go there? Y or N".
+    #[serde(alias = "manual")]
+    Ask,
+}
+
+impl PositionPolicy {
+    /// The library sidecar's policy for the same choice.
+    pub fn conflict_policy(self) -> ConflictPolicy {
+        match self {
+            PositionPolicy::Newest => ConflictPolicy::Newest,
+            PositionPolicy::Furthest => ConflictPolicy::HighestProgress,
+            PositionPolicy::Ask => ConflictPolicy::Manual,
+        }
+    }
+
+    /// The policy for a library sidecar's policy (Star's names).
+    pub fn from_conflict_policy(p: ConflictPolicy) -> Self {
+        match p {
+            ConflictPolicy::Newest => PositionPolicy::Newest,
+            ConflictPolicy::HighestProgress => PositionPolicy::Furthest,
+            ConflictPolicy::Manual => PositionPolicy::Ask,
+        }
+    }
+}
+
+/// `[sync]`: syncing notes, highlights, bookmarks, places, and reading
+/// statistics with other computers through a folder the owner chooses
+/// (ADR-0049). Off until set up. Each group has its own switch; turning
+/// one off stops that group only.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SyncSettings {
+    /// Sync on this computer.
+    pub enabled: bool,
+    /// The sync folder: one kept in step by Syncthing, a cloud folder, or a
+    /// USB stick. Unset until sync is set up.
+    pub folder: Option<PathBuf>,
+    /// This computer's name in the sync folder and in messages ("laptop",
+    /// "lab"); empty takes "Computer 1", "Computer 2", and so on, never the
+    /// computer's own name.
+    pub device_name: String,
+    /// Sync the place in each document.
+    pub places: bool,
+    /// Sync notes.
+    pub notes: bool,
+    /// Sync highlights.
+    pub highlights: bool,
+    /// Sync bookmarks.
+    pub bookmarks: bool,
+    /// Sync reading statistics (each computer's time and sessions).
+    pub statistics: bool,
+    /// Which place a document resumes at: the newest, the furthest, or ask.
+    pub position_policy: PositionPolicy,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for SyncSettings {
+    fn default() -> Self {
+        SyncSettings {
+            enabled: false,
+            folder: None,
+            device_name: String::new(),
+            places: true,
+            notes: true,
+            highlights: true,
+            bookmarks: true,
+            statistics: true,
+            position_policy: PositionPolicy::Newest,
+            extra: toml::Table::new(),
+        }
+    }
+}
+
 /// `[braille] math_code`: the braille code math is written in (ADR-0036).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -1369,6 +1459,8 @@ pub struct Settings {
     pub gui: GuiSettings,
     /// `[colors]`
     pub colors: ColorSettings,
+    /// `[sync]`
+    pub sync: SyncSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1532,6 +1624,7 @@ impl Settings {
             interface: lenient_section("interface", table.remove("interface"), &mut w),
             gui: lenient_section("gui", table.remove("gui"), &mut w),
             colors: lenient_section("colors", table.remove("colors"), &mut w),
+            sync: lenient_section("sync", table.remove("sync"), &mut w),
             extra: table,
         };
         (s, w)
@@ -1727,9 +1820,10 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 32] = [
+pub(crate) const STRUCT_TABLES: [&str; 33] = [
     "keyboard",
     "colors",
+    "sync",
     "preview",
     "lexicon",
     "stats",
@@ -2677,9 +2771,39 @@ wrap_navigation = true
         assert_eq!(t["speech"]["rate"].as_integer(), Some(250));
         let (s, _) = Settings::from_table(t);
         assert_eq!(s.highlight.color, "yellow");
-        // No rename is pending in this version.
+        // Nothing is renamed in a file without old keys.
         let mut plain: toml::Table = "[display]\ntheme = \"nord\"\n".parse().unwrap();
         assert!(rename_legacy_settings(&mut plain).is_empty());
+    }
+
+    /// `reading.sync_conflict_policy` moved to `sync.position_policy` (the
+    /// sync wave): every old value keeps its meaning, and the old key is
+    /// not written back.
+    #[test]
+    fn the_sync_conflict_policy_moves_to_sync() {
+        for (old, new) in [
+            ("newest", PositionPolicy::Newest),
+            ("highest_progress", PositionPolicy::Furthest),
+            ("manual", PositionPolicy::Ask),
+        ] {
+            let t: toml::Table = format!("[reading]\nsync_conflict_policy = \"{old}\"\n")
+                .parse()
+                .unwrap();
+            let (s, w) = Settings::from_table(t);
+            assert!(w.is_empty(), "{w:?}");
+            assert_eq!(s.sync.position_policy, new, "{old}");
+            assert!(!s.reading.extra.contains_key("sync_conflict_policy"));
+        }
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        s.sync.position_policy = PositionPolicy::Ask;
+        s.sync.enabled = true;
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("[sync]"), "{text}");
+        assert!(text.contains("position_policy = \"ask\""), "{text}");
+        assert!(!text.contains("sync_conflict_policy"), "{text}");
+        assert_eq!(store.load().0.sync, s.sync);
     }
 
     /// `[accessibility]` and `[keyboard] preset` are stored by name, only

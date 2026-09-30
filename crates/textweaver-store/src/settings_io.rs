@@ -689,6 +689,7 @@ fn check_leaf(section: &str, key: &str, value: toml::Value) -> Result<(), String
         "accessibility" => fits::<crate::AccessibilitySettings>(key, value),
         "export" => fits::<ExportSettings>(key, value),
         "colors" => fits::<crate::ColorSettings>(key, value),
+        "sync" => fits::<crate::SyncSettings>(key, value),
         _ => Ok(()),
     }
 }
@@ -979,6 +980,7 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "interface",
         "gui",
         "colors",
+        "sync",
         "keymap",
     ]
     .iter()
