@@ -146,9 +146,9 @@ Save the file. The next time you start textweaver, it uses the new values. You o
 
 If a value is wrong, for example `math_verbosity = "loud"`, only that setting falls back to its default, and textweaver tells you: "Some settings were invalid and use their defaults: normalization.math_verbosity has an invalid value".
 
-Where these settings apply, in this version:
+Where these settings apply:
 
-- The terminal reader (`textweaver` and `tw open`), `tw speak`, and `tw export-audio` follow all three settings.
+- The terminal reader (`textweaver` and `tw open`), the GUI, `tw speak`, and `tw export-audio` all follow the three settings, because they share the same reading and speech code.
 
 ## Hear math with MathCAT
 
@@ -472,7 +472,7 @@ You can also explore a formula in your screen reader: convert the document to HT
 - `\(a+b\)` in a Markdown file is read as "(a plus b)", not as math. Markdown removes the backslash. Use `$a+b$` instead.
 - ASCIIMath in backticks is read as symbols, such as "x caret 2 slash 2". In the reader, set `` asciimath_delimiter = "`" `` in `[normalization]`; it is off by default. In a Markdown file, this still does not work, because Markdown removes the backticks around code before textweaver reads the text. It works in plain text files. For `tw convert`, add `--asciimath`.
 - A code block marked `asciimath` is read as "code block skipped". The reader skips code blocks by default (`[speech] skip_code`). With `skip_code = false` you hear the ASCIIMath source, not math.
-- Your `math_verbosity` has no effect. The experimental window app does not use it yet; try the terminal reader, `tw speak`, or `tw export-audio`. Also check the spelling: `"low"`, `"normal"`, or `"high"`, in quotes. A wrong value is reported and falls back to `"normal"`.
+- Your `math_verbosity` has no effect. Check the spelling: `"low"`, `"normal"`, or `"high"`, in quotes. A wrong value is reported and falls back to `"normal"`.
 - A formula with a mistake, such as a missing brace, is still read as far as it makes sense. `\frac{1}{` is read as "the fraction with numerator 1 and denominator". In `tw convert` output it is shown as its LaTeX source instead of MathML.
 - In the web page, a formula shows up as code. textweaver could not read it completely, so it kept your LaTeX. Look for an unknown command or a missing brace.
 - In the web page, "$5-$10" or "US$5 or US$6" became a formula. The default Markdown engine uses its own rule for dollar signs, which is looser than the reader's. Convert with `--engine comrak`, which follows the same rule as the reader, or write the second price as `\$10`.
