@@ -3128,3 +3128,26 @@ settingsio-import-question-names =
 settingsio-and-more = { $names }, and { $n } more
 
 ## End of W6u
+
+## W6d: dictation in edit mode (ADR-0042). Keep the meaning first: a
+## 40-cell Braille display shows the start of the line. $words are the
+## dictated words, $key the dictate key, $dir a folder, $error and $text
+## are passed on as they are.
+dictation-status = Dictating: { $words }
+dictation-listening = Dictating. Speak, then press { $key } to stop.
+dictation-finishing = Finishing dictation.
+dictation-done = Dictation done.
+dictation-busy = Dictation is finishing. Try again in a moment.
+dictation-needs-edit = Dictation types in edit mode. Turn on edit mode and dictate? y or n
+dictation-no-model = Dictation needs the Whisper model in { $dir }. See the voice typing guide.
+dictation-failed = Dictation failed: { $error }
+dictation-no-words = No words recognized in that phrase.
+dictation-lost = Dictation stopped before its last words were typed.
+dictation-not-typed = Dictated words not typed, edit mode is off: { $text }
+setting-dictation-speak-while-recording = Speak while dictating
+setting-dictation-speak-while-recording-help = Say dictated words as they come. Off, they are shown on the status line and said at each pause, so the microphone does not hear the voice.
+setting-dictation-model-dir = Dictation model folder
+setting-dictation-model-dir-help = The Whisper model for dictation. Not set uses whisper/rten/base.en in the data folder.
+section-dictation = Dictation
+
+## End of W6d

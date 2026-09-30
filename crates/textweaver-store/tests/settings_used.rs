@@ -44,6 +44,7 @@ const SECTIONS: &[(&str, &str)] = &[
     ("LexiconSettings", "lexicon"),
     ("StatsSettings", "stats"),
     ("SummarySettings", "summary"),
+    ("DictationSettings", "dictation"),
     ("InterfaceSettings", "interface"),
     ("GuiSettings", "gui"),
     ("ColorSettings", "colors"),

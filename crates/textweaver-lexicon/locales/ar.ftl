@@ -3365,3 +3365,26 @@ settingsio-import-question-names =
 settingsio-and-more = { $names } و{ $n } غيرها
 
 ## End of W6u
+
+## W6d: dictation in edit mode (ADR-0042). Keep the meaning first: a
+## 40-cell Braille display shows the start of the line. $words are the
+## dictated words, $key the dictate key, $dir a folder, $error and $text
+## are passed on as they are.
+dictation-status = إملاء: { $words }
+dictation-listening = الإملاء جارٍ. تكلّم، ثم اضغط { $key } للإيقاف.
+dictation-finishing = جارٍ إنهاء الإملاء.
+dictation-done = انتهى الإملاء.
+dictation-busy = الإملاء ينتهي. حاول مرة أخرى بعد لحظة.
+dictation-needs-edit = الإملاء يكتب في وضع التحرير. هل تشغّل وضع التحرير وتملي؟ y أو n
+dictation-no-model = يحتاج الإملاء إلى نموذج Whisper في { $dir }. راجع دليل الكتابة بالصوت.
+dictation-failed = فشل الإملاء: { $error }
+dictation-no-words = لم تُعرف أي كلمات في تلك العبارة.
+dictation-lost = توقف الإملاء قبل كتابة كلماته الأخيرة.
+dictation-not-typed = كلمات مُملاة لم تُكتب، وضع التحرير متوقف: { $text }
+setting-dictation-speak-while-recording = النطق أثناء الإملاء
+setting-dictation-speak-while-recording-help = نطق الكلمات المُملاة عند وصولها. عند الإيقاف تظهر في سطر الحالة وتُنطق عند كل توقف، كي لا يسمع الميكروفون الصوت.
+setting-dictation-model-dir = مجلد نموذج الإملاء
+setting-dictation-model-dir-help = نموذج Whisper للإملاء. عند عدم تعيينه يُستخدم whisper/rten/base.en في مجلد البيانات.
+section-dictation = الإملاء
+
+## End of W6d

@@ -417,6 +417,8 @@ pub struct App {
     pub(crate) announce_list_focus: bool,
     /// Menu handlers, recent commands, and the menu list (crate::menu).
     pub(crate) menu: crate::menu::MenuState,
+    /// Dictation in edit mode (crate::dictation).
+    pub(crate) dictation: crate::dictation::DictationSlot,
     /// Moves on when a list, prompt, or menu closes (crate::announce).
     pub(crate) dialog_generation: u64,
     /// What frontends ask for every frame, kept per revision
@@ -519,11 +521,13 @@ impl App {
             pending_list_focus: None,
             announce_list_focus: true,
             menu: crate::menu::MenuState::default(),
+            dictation: crate::dictation::DictationSlot::default(),
             dialog_generation: 0,
             frame_cache: crate::frame_cache::FrameCaches::default(),
         };
         app.apply_voice_settings();
         app.load_themes();
+        crate::dictation::register(&mut app);
         app
     }
 
@@ -556,6 +560,7 @@ impl App {
             || self.authoring.question.is_some()
             || self.study.question.is_some()
             || self.voices.question.is_some()
+            || self.dictation.question
     }
 
     /// Answers a pending confirmation.
@@ -578,6 +583,9 @@ impl App {
         }
         if self.voices.question.is_some() {
             return self.confirm_voice(answer);
+        }
+        if self.dictation.question {
+            return self.confirm_dictation(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
@@ -838,6 +846,7 @@ impl App {
     /// safety net, edit mode is dropped here without saving, keeping its
     /// recovery snapshot.
     pub fn open_document(&mut self, doc: Document, key: DocKey, title: String) -> Vec<Effect> {
+        self.dictation_finish();
         if self.edit.take().is_some() {
             log::warn!("a document was opened over unsaved edit mode");
         }
@@ -1051,6 +1060,7 @@ impl App {
     /// background writer (at most ten seconds, saying so when it takes more
     /// than a moment). Safe to call more than once.
     pub fn shutdown(&mut self) {
+        self.dictation_shutdown();
         if let Err(e) = self.save_position() {
             log::warn!("cannot save position: {e}");
         }
@@ -1138,6 +1148,7 @@ impl App {
             Command::SetSetting { path, value } => self.set_setting_command(&path, value),
             Command::Open(path) => {
                 self.leave_prompt();
+                self.dictation_finish();
                 self.open_command(path)
             }
             Command::Action(a) if self.describing_next_key() => self.describe_action(a),
@@ -1253,6 +1264,7 @@ impl App {
         effects.extend(self.library_tick());
         effects.extend(self.define_tick());
         effects.extend(self.voices_tick());
+        effects.extend(self.dictation_tick());
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));
         if rsvp_moved && effects.is_empty() {
@@ -1546,7 +1558,7 @@ impl App {
         }
         use ActionId as A;
         match a {
-            A::Quit => return self.quit(),
+            A::Quit => return self.dictation_finish_then(Self::quit),
             // Reading
             A::PlayPause => self.play_pause(),
             A::Stop => self.stop_action(),
@@ -1764,10 +1776,10 @@ impl App {
                 self.read_from(CharPos::ZERO);
             }
             // File and editing
-            A::NewDocument => return self.new_document(),
+            A::NewDocument => return self.dictation_finish_then(Self::new_document),
             A::Save => return self.save(None),
             A::SaveAs => return self.save_as(),
-            A::ToggleEditMode => return self.toggle_edit(),
+            A::ToggleEditMode => return self.dictation_finish_then(Self::toggle_edit),
             A::Undo
             | A::Redo
             | A::Bold

@@ -58,6 +58,17 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - Text sent to Pandoc in an older encoding is converted to UTF-8 first.
 - New messages, in all six languages: "it is not a readable JSON file", "... Jupyter notebook", "... SVG drawing", and "... MathML formula", said after "Could not open".
 
+### W6d: dictation
+
+- **Dictate in edit mode** (Edit menu, the palette, or `Ctrl+Shift+F9`): what you say is typed at the cursor, phrase by phrase at each pause, with spoken commands such as "new line" and "period" applied; each phrase is one step for Undo. Outside edit mode it asks whether to turn edit mode on first.
+- **Words while you talk.** The status line shows the words Whisper is sure of as they come, starting "Dictating:", the newest last, within 40 characters for a Braille display; they are never changed once shown. By default they are said once, at each pause, so the microphone does not hear textweaver's voice; `[dictation] speak_while_recording` says them as they come.
+- **Never slower than before.** Short phrases arrive at their pause, as quickly as transcribing each phrase alone; long sentences show their first words about four seconds in. On a busy computer the words wait for the pause.
+- **Nothing is lost.** Leaving edit mode, opening or starting another document, or quitting while dictating types the last phrase first; a phrase with no words recognized says so.
+- `tw dictate --live` prints each group of words as it is committed; `--live --file` plays a recording in at speaking pace.
+- `[dictation] model_dir` names the Whisper model's folder.
+- Fixed: every resampled recording (anything not already at 16 kHz) had a garbled first fraction of a second.
+- New messages, in all six languages: "Dictating:", "Dictating. Speak, then press ... to stop.", "Finishing dictation.", "Dictation done.", "No words recognized in that phrase.", and the dictation errors.
+
 ## [0.1.0-alpha.5] - 2026-09-29
 
 The fifth alpha. Braille comes first: every status line, list, and prompt puts the meaning in the first 40 cells, and math can be written in Nemeth or UEB braille. LaTeX, email, and web archives open without Pandoc; documents can be summarized with no model; publishing templates make APA and AMA papers with real Word footnotes; and the GUI ships in the release on every system, with syllables, the voice manager, a question dialog, and its labels in six languages.

@@ -115,6 +115,15 @@ pub trait Dictation: Send {
 
     /// What the backend is doing.
     fn state(&self) -> DictationState;
+
+    /// Ends any session, as [`cancel`](Self::cancel) does, and stops the
+    /// backend's background work, waiting at most `wait`. True when it
+    /// stopped in time. For quitting and closing a document.
+    fn shutdown(&mut self, wait: std::time::Duration) -> bool {
+        let _ = wait;
+        self.cancel();
+        true
+    }
 }
 
 /// Dictation failures.
