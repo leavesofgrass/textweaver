@@ -80,7 +80,7 @@ The reader opens these formats itself:
 - LaTeX: `.tex`, `.latex`, `.ltx`, with the files it includes from its own folder.
 - Email: `.eml`, headers first, attachments listed.
 - Web pages saved as one file: `.mhtml`, `.mht`.
-- PDF: `.pdf`, and scanned PDFs through text recognition (below).
+- PDF: `.pdf`, with comments as notes, links you can follow, and filled-in form fields read label first; scanned PDFs through text recognition (below).
 - Pictures of text: `.png`, `.jpg`, `.jpeg`, through text recognition.
 - DAISY 3 books and DTBook: `.opf`, `.xml`, `.dtbook`, and a DAISY book in a zip.
 - PowerPoint: `.pptx`, `.pptm`, `.ppsx`, `.potx`, with the speaker notes.

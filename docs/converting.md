@@ -20,6 +20,10 @@ The formats you can ask for with `--to`:
 - `epub`: an EPUB 3 book with a table of contents, real headings, and accessibility metadata.
 - `docx`: a Word document with Word's own heading styles, numbered lists, and tables whose header row repeats.
 - `brf`: a braille file for a braille display or embosser, in uncontracted (grade 1) Unified English Braille, 40 cells by 25 lines. Contracted (grade 2) braille needs a textweaver built with the `liblouis` feature and liblouis installed; without them, the file is grade 1 and the summary says so. Math is in Nemeth braille, or UEB mathematics with `--math-code ueb`, in a build with MathCAT (see [Math in braille files](math.md#math-in-braille-files)).
+
+  Tables are laid out in one of three ways, chosen with `--table-format` or `[braille] table_format`. `linear` (the default) puts each row on one line with semicolons between entries. `listed` starts each row in cell 5 with the first column's heading and entry, and puts each other entry on its own line after its column heading and a colon. `stairstep` puts each entry two cells to the right of the one before, with the column headings in a transcriber's note. Stairstep takes four columns at most; a wider table is listed instead, with a warning. Listed and stairstep follow BANA's Braille Formats (2016), 11.16 and 11.18. A transcriber's note explains the layout, an empty entry is three guide dots, and a row stays on one braille page when it fits.
+
+  Bold, italic, and underlined text carry the UEB typeform indicators: a word indicator before one or two emphasized words, and a passage indicator and terminator around three or more. Three or more words in capitals get the capitals passage indicator once, instead of a word indicator before each. Contracted (grade 2) braille leaves out the typeform indicators for now.
 - `pdf`: a tagged PDF that screen readers can move through by heading, list, and table.
 
 Some outputs come with warnings, for example "The image cat.png was not found, so its description was written instead." Each warning is read out with its file name, and the summary says how many files had warnings.
@@ -412,7 +416,7 @@ You can also convert the document you have open without leaving textweaver. Pres
 - `export pdf`: a tagged PDF.
 - `export docx`: a Word document.
 - `export epub`: an EPUB book.
-- `export brf`: braille.
+- `export brf`: braille, with tables laid out by `[braille] table_format`.
 
 The file goes next to the document, with the same name: exporting `essay.md` to PDF writes `essay.pdf` in the same folder, replacing an older export. In edit mode the text you are editing is exported, saved or not. Citations are formatted and a References section added, as with `tw convert`: from the bibliography your front matter names, the folder's `references.json`, and your own library.
 
