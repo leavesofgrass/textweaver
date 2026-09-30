@@ -512,6 +512,14 @@ impl<'a> Converter<'a> {
     /// Text from the source: Obsidian's comments left out, tags read as
     /// words, highlights marked, and a trailing block id kept aside.
     fn source_text(&mut self, t: &str) {
+        // Most text has none of Obsidian's marks: read it as it is, with
+        // no allocation (one byte scan instead of cutting it into pieces).
+        if !t.bytes().any(|b| matches!(b, b'#' | b'=' | b'%' | b'^')) {
+            if !self.in_comment {
+                self.text(t);
+            }
+            return;
+        }
         let pieces = crate::obsidian::pieces(t, self.boundary);
         let last = pieces.len().saturating_sub(1);
         for (i, piece) in pieces.into_iter().enumerate() {

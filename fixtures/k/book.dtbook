@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dtbook xmlns="http://www.daisy.org/z3986/2005/dtbook/" version="2005-3" xml:lang="en-US">
+<head><meta name="dc:Title" content="A Book of Crows"/><meta name="dc:Creator" content="Ada Example"/></head>
+<book>
+ <frontmatter><doctitle>A Book of Crows</doctitle><docauthor>Ada Example</docauthor></frontmatter>
+ <bodymatter>
+  <level1 id="ch1"><pagenum id="p1" page="normal">1</pagenum><h1>Chapter One</h1>
+   <p>Crows gather in the evening.</p>
+   <list type="ol"><li>They call.</li><li>They settle.</li></list>
+   <level2 id="s1"><h2>Where They Roost</h2><p>Near the river, in tall trees.</p></level2>
+  </level1>
+  <level1 id="ch2"><h1>Chapter Two</h1>
+   <table><caption>Counts</caption><tr><th>Year</th><th>Crows</th></tr><tr><td>2025</td><td>900</td></tr></table>
+  </level1>
+ </bodymatter>
+</book></dtbook>
