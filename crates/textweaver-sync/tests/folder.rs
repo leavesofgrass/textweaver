@@ -89,12 +89,14 @@ fn note(id: &str, text: &str) -> Note {
 
 fn bookmark(name: &str, pos: usize) -> Bookmark {
     Bookmark {
+        id: format!("bm-{name}"),
         name: name.to_owned(),
         pos: CharPos(pos),
         pct: 3,
         ts: 1_790_000_000,
         anchor: None,
         not_found: false,
+        extra: serde_json::Map::new(),
     }
 }
 
