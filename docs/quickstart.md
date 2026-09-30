@@ -130,7 +130,7 @@ textweaver remembers your place. Open the same file again and it picks up where 
 ## Tips
 
 - **Ctrl+O** opens another document.
-- **F2** opens the command palette: type part of a command's name, then press Enter.
+- **F10** opens the menus: File, Edit, View, Reading, Speech, Tools, and Help. **F2** opens the command palette: type part of a command's name, then press Enter. Both offer the same commands, under the same names.
 - **F9** turns single-key shortcuts off, so dictation or typing never triggers a command. Chords such as **Alt+P** (play or pause) still work.
 - If you use a screen reader, **Alt+Shift+A** chooses who speaks: textweaver alone (self-voicing), both (hybrid: textweaver reads documents aloud and your screen reader speaks the rest), or your screen reader alone. `textweaver --no-speech FILE` starts silent. [Using textweaver with a screen reader](screen-readers.md) explains the modes.
 - If speech stops, **Shift+F8** restarts it.
