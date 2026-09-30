@@ -125,6 +125,7 @@ nav = [
     { "ADR-0037: Extractive summaries and the RSVP flashing check" = "adr/0037-extractive-summaries.md" },
     { "ADR-0039: Automated screen-reader checks beside the listening sessions" = "adr/0039-automated-screen-reader-checks.md" },
     { "ADR-0041: Publishing templates and real Word footnotes" = "adr/0041-publishing-templates.md" },
+    { "ADR-0044: Obsidian, JSON, SVG, and content MathML" = "adr/0044-obsidian-json-svg-and-content-mathml.md" },
   ] },
   { "Interactive pages" = [
     { "Overview (interactive)" = "site/index.html" },
