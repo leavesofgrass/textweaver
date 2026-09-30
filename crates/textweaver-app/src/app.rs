@@ -1123,6 +1123,8 @@ impl App {
                 store: SettingsStore::new(paths.clone()),
                 settings: Box::new(self.settings.clone()),
             });
+            // Sync weighs a setting changed here by when it was saved.
+            self.sync.settings_saved_ms = textweaver_sync::wall_ms();
         }
         self.settings_dirty = false;
         Ok(())

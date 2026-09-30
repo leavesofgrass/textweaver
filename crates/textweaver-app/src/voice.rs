@@ -248,6 +248,10 @@ impl App {
         }
         let favourites = self.settings.speech.favorite_voices.clone();
         self.voices.manager.offer_catalog = self.piper_store().is_some();
+        // A favorite from another computer (sync) that no engine here has
+        // is listed as not on this computer, once every engine's voices
+        // are in.
+        self.voices.manager.all_engines_listed = self.voices.others.is_some();
         self.voices.manager.set_entries(entries, &favourites);
         let shown = self.voices.manager.shown_sentence_in(self.cat());
         let msg = self.msg_args("voice-manager-intro", &args!["shown" => shown]);
@@ -341,6 +345,12 @@ impl App {
                 let question = self.msg("voice-fetch-catalog-question");
                 self.ask(&question);
                 vec![Effect::Redraw]
+            }
+            Some(VoiceRow::Missing(id)) => {
+                let msg = self.msg_args("voices-missing", &args!["voice" => id.as_str()]);
+                self.tell(&msg);
+                self.pending_list_focus = Some(n);
+                self.show_voice_list()
             }
             Some(VoiceRow::Voice(_)) => {
                 let Some(e) = self.voices.manager.entry_at(n).cloned() else {
@@ -675,6 +685,18 @@ impl App {
     /// `speech.favorite_voices`, or removes it, saved at once. The list
     /// stays open, in the same order, with the item relabelled.
     pub(crate) fn toggle_favourite_voice(&mut self, n: usize) -> Vec<Effect> {
+        if let Some(VoiceRow::Missing(id)) = self.voices.manager.row(n).cloned() {
+            // A favorite not on this computer: Space takes it off the list.
+            self.settings.speech.favorite_voices.retain(|f| *f != id);
+            self.settings_dirty = true;
+            let favourites = self.settings.speech.favorite_voices.clone();
+            self.voices.manager.refresh(&favourites);
+            let msg = self.msg_args("voice-favourite-removed", &args!["voice" => id.as_str()]);
+            self.tell(&msg);
+            self.pending_list_focus =
+                Some(n.min(self.voices.manager.rows().len().saturating_sub(1)));
+            return self.show_voice_list();
+        }
         let Some(e) = self.voices.manager.entry_at(n).cloned() else {
             let msg = self.msg("voice-only-voice-favourite");
             self.tell(&msg);

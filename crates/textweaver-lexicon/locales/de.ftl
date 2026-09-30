@@ -3569,3 +3569,43 @@ choice-sync-position-policy-furthest = die weiteste
 choice-sync-position-policy-ask = fragen
 
 ## End of S4
+
+## Sync wave, S5 (see en.ftl).
+sync-settings-arrived =
+    { $n ->
+        [one] Einstellungen: 1 Änderung von { $device }.
+       *[other] Einstellungen: { $n } Änderungen von { $device }.
+    }
+sync-settings-arrived-several = Einstellungen: { $n } Änderungen von { $computers } Computern.
+sync-kept-keys-mac =
+    { $n ->
+        [one] Mac-Tasten: 1, behalten, hier nicht benutzt.
+       *[other] Mac-Tasten: { $n }, behalten, hier nicht benutzt.
+    }
+sync-kept-keys-pc =
+    { $n ->
+        [one] Windows- und Linux-Tasten: 1, behalten, hier nicht benutzt.
+       *[other] Windows- und Linux-Tasten: { $n }, behalten, hier nicht benutzt.
+    }
+sync-group-settings = Einstellungen
+sync-group-profiles = Profile
+sync-group-key-overrides = Eigene Tasten
+sync-group-words = Wortliste
+sync-group-glossary = Glossar und Aussprachen
+sync-group-favorite-voices = Lieblingsstimmen
+voices-missing-row = { $voice }, Favorit, nicht auf diesem Computer
+voices-missing = { $voice } ist nicht auf diesem Computer. Leertaste entfernt sie aus den Favoriten.
+setting-sync-settings = Einstellungen synchronisieren
+setting-sync-settings-help = Die übertragbaren Einstellungen teilen: Tempo, Satzzeichen, Design, Lesehilfen und Ähnliches. Stimme, Sprachausgabe, Zugriffsmodus, Tastenschema und Pfade bleiben auf jedem Computer.
+setting-sync-profiles = Profile synchronisieren
+setting-sync-profiles-help = Die Profile teilen; welches benutzt wird, bleibt auf jedem Computer.
+setting-sync-key-overrides = Eigene Tasten synchronisieren
+setting-sync-key-overrides-help = keymap.toml teilen. Die Tasten eines Mac werden behalten, aber unter Windows und Linux nicht benutzt, und umgekehrt.
+setting-sync-words = Wortliste synchronisieren
+setting-sync-words-help = Die Wortliste der Rechtschreibprüfung teilen.
+setting-sync-glossary = Glossar synchronisieren
+setting-sync-glossary-help = Die Einträge des Glossars und die Aussprachen teilen.
+setting-sync-favorite-voices = Lieblingsstimmen synchronisieren
+setting-sync-favorite-voices-help = Die Lieblingsstimmen teilen; eine, die dieser Computer nicht hat, wird als nicht auf diesem Computer aufgeführt.
+
+## End of S5

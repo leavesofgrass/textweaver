@@ -152,6 +152,9 @@ pub enum VoiceRow {
     EngineFilter,
     /// A voice: index into the entries.
     Voice(usize),
+    /// A favorite voice that is not on this computer (it came from another
+    /// computer through sync): listed, never chosen.
+    Missing(String),
     /// "Fetch the Piper voice list".
     FetchCatalog,
 }
@@ -165,6 +168,9 @@ pub struct VoiceManager {
     rows: Vec<VoiceRow>,
     /// Offer to fetch the Piper catalogue.
     pub offer_catalog: bool,
+    /// Every engine's voices are in the entries, so a favorite found in
+    /// none of them is not on this computer.
+    pub all_engines_listed: bool,
 }
 
 impl VoiceManager {
@@ -366,10 +372,33 @@ impl VoiceManager {
         shown.sort_by_key(|&i| rank(&self.entries[i]));
         let mut rows = vec![VoiceRow::LanguageFilter, VoiceRow::EngineFilter];
         rows.extend(shown.into_iter().map(VoiceRow::Voice));
+        // Favorites from another computer that this one does not have,
+        // after the voices, when nothing is filtered out.
+        if self.all_engines_listed && self.language.is_none() && self.engine.is_none() {
+            rows.extend(
+                self.missing_favourites(favourites)
+                    .into_iter()
+                    .map(VoiceRow::Missing),
+            );
+        }
         if self.offer_catalog {
             rows.push(VoiceRow::FetchCatalog);
         }
         self.rows = rows;
+    }
+
+    /// The favorites that match no voice in the entries.
+    pub fn missing_favourites(&self, favourites: &[String]) -> Vec<String> {
+        favourites
+            .iter()
+            .filter(|f| {
+                !self
+                    .entries
+                    .iter()
+                    .any(|e| **f == e.voice.id || f.eq_ignore_ascii_case(&e.voice.name))
+            })
+            .cloned()
+            .collect()
     }
 
     /// The row labels, to read and show. `current` is the engine and voice
@@ -399,6 +428,9 @@ impl VoiceManager {
                     &args!["engine" => self.engine_label(c)],
                 ),
                 VoiceRow::FetchCatalog => c.tr("voices-fetch-row"),
+                VoiceRow::Missing(id) => {
+                    c.fmt("voices-missing-row", &args!["voice" => id.as_str()])
+                }
                 VoiceRow::Voice(i) => {
                     let e = &self.entries[*i];
                     let fav = favourites
@@ -636,6 +668,34 @@ mod tests {
         assert_eq!(m.entry_at(2).unwrap().voice.id, "en_US-joe-medium");
         assert_eq!(m.row(0), Some(&VoiceRow::LanguageFilter));
         assert!(m.entry_at(0).is_none());
+    }
+
+    /// A favorite that came from another computer and is not installed
+    /// here is listed as such, after the voices, and is not a voice to
+    /// choose (sync wave, S5).
+    #[test]
+    fn a_favourite_not_on_this_computer_is_listed_and_not_a_voice() {
+        let mut m = manager();
+        let favs = vec!["eci:reed".to_owned(), "en_US-joe-medium".to_owned()];
+        m.refresh(&favs);
+        assert!(
+            !m.rows().iter().any(|r| matches!(r, VoiceRow::Missing(_))),
+            "not while other engines' voices may still be coming"
+        );
+        m.all_engines_listed = true;
+        m.refresh(&favs);
+        assert_eq!(m.missing_favourites(&favs), ["eci:reed"]);
+        let labels = m.labels(&favs, ("sapi", Some("zira")));
+        assert_eq!(
+            labels.last().map(String::as_str),
+            Some("eci:reed, favorite, not on this computer")
+        );
+        let n = m.rows().len() - 1;
+        assert_eq!(m.row(n), Some(&VoiceRow::Missing("eci:reed".into())));
+        assert!(m.entry_at(n).is_none(), "it cannot be chosen");
+        // A filter shows only voices this computer has.
+        m.set_engine(Some("sapi".into()), &favs);
+        assert!(!m.rows().iter().any(|r| matches!(r, VoiceRow::Missing(_))));
     }
 
     #[test]

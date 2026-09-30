@@ -3559,3 +3559,46 @@ choice-sync-position-policy-furthest = the furthest
 choice-sync-position-policy-ask = ask
 
 ## End of S4
+
+## Sync wave, S5: settings and word lists (ADR-0049). $n is a count,
+## $device a computer's name as the owner gave it, $computers a count of
+## computers, $voice a voice's id. Meaning first, within 40 cells where it
+## can be.
+sync-settings-arrived =
+    { $n ->
+        [one] Settings: 1 change from { $device }.
+       *[other] Settings: { $n } changes from { $device }.
+    }
+sync-settings-arrived-several = Settings: { $n } changes from { $computers } computers.
+sync-kept-keys-mac =
+    { $n ->
+        [one] Mac key overrides: 1, kept, not used here.
+       *[other] Mac key overrides: { $n }, kept, not used here.
+    }
+sync-kept-keys-pc =
+    { $n ->
+        [one] Windows and Linux key overrides: 1, kept, not used here.
+       *[other] Windows and Linux key overrides: { $n }, kept, not used here.
+    }
+sync-group-settings = Settings
+sync-group-profiles = Profiles
+sync-group-key-overrides = Key overrides
+sync-group-words = Word list
+sync-group-glossary = Glossary and pronunciations
+sync-group-favorite-voices = Favorite voices
+voices-missing-row = { $voice }, favorite, not on this computer
+voices-missing = { $voice } is not on this computer. Space takes it off your favorites.
+setting-sync-settings = Sync settings
+setting-sync-settings-help = Share the portable settings: rate, punctuation, theme, reading aids, and the like. The voice, the engine, the access mode, the key preset, and paths stay on each computer.
+setting-sync-profiles = Sync profiles
+setting-sync-profiles-help = Share your profiles; which one is in use stays on each computer.
+setting-sync-key-overrides = Sync key overrides
+setting-sync-key-overrides-help = Share keymap.toml. A Mac's keys are kept but not used on Windows or Linux, and the reverse.
+setting-sync-words = Sync word list
+setting-sync-words-help = Share your spelling word list.
+setting-sync-glossary = Sync glossary
+setting-sync-glossary-help = Share your glossary's entries and your pronunciations.
+setting-sync-favorite-voices = Sync favorite voices
+setting-sync-favorite-voices-help = Share your favorite voices; one this computer does not have is listed as not on this computer.
+
+## End of S5

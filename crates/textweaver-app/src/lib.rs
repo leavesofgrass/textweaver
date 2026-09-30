@@ -221,6 +221,7 @@ mod study;
 mod summary;
 mod sync;
 pub mod sync_engine;
+pub mod sync_groups;
 mod tables;
 mod tasks;
 mod templates;

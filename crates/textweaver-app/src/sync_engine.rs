@@ -67,6 +67,18 @@ pub struct Groups {
     pub bookmarks: bool,
     /// Reading statistics.
     pub statistics: bool,
+    /// Portable settings.
+    pub settings: bool,
+    /// Profile definitions.
+    pub profiles: bool,
+    /// Key overrides.
+    pub key_overrides: bool,
+    /// The personal word list.
+    pub words: bool,
+    /// The glossary and pronunciations.
+    pub glossary: bool,
+    /// Favorite voices.
+    pub favorite_voices: bool,
 }
 
 impl Groups {
@@ -77,7 +89,44 @@ impl Groups {
         highlights: true,
         bookmarks: true,
         statistics: true,
+        settings: true,
+        profiles: true,
+        key_overrides: true,
+        words: true,
+        glossary: true,
+        favorite_voices: true,
     };
+
+    /// Every group off.
+    pub const NONE: Groups = Groups {
+        places: false,
+        notes: false,
+        highlights: false,
+        bookmarks: false,
+        statistics: false,
+        settings: false,
+        profiles: false,
+        key_overrides: false,
+        words: false,
+        glossary: false,
+        favorite_voices: false,
+    };
+
+    /// Each group's name in `[sync]` (and on the command line), in the
+    /// order Set up sync lists them.
+    pub const NAMES: [&'static str; 11] = [
+        "places",
+        "notes",
+        "highlights",
+        "bookmarks",
+        "statistics",
+        "settings",
+        "profiles",
+        "key_overrides",
+        "words",
+        "glossary",
+        "favorite_voices",
+    ];
 
     /// The groups `[sync]` turns on.
     pub fn from_settings(s: &SyncSettings) -> Self {
@@ -87,7 +136,52 @@ impl Groups {
             highlights: s.highlights,
             bookmarks: s.bookmarks,
             statistics: s.statistics,
+            settings: s.settings,
+            profiles: s.profiles,
+            key_overrides: s.key_overrides,
+            words: s.words,
+            glossary: s.glossary,
+            favorite_voices: s.favorite_voices,
         }
+    }
+
+    /// Writes the switches into `[sync]`.
+    pub fn write_to(self, s: &mut SyncSettings) {
+        s.places = self.places;
+        s.notes = self.notes;
+        s.highlights = self.highlights;
+        s.bookmarks = self.bookmarks;
+        s.statistics = self.statistics;
+        s.settings = self.settings;
+        s.profiles = self.profiles;
+        s.key_overrides = self.key_overrides;
+        s.words = self.words;
+        s.glossary = self.glossary;
+        s.favorite_voices = self.favorite_voices;
+    }
+
+    /// The switch named `name` (one of [`NAMES`](Self::NAMES)).
+    pub fn get_mut(&mut self, name: &str) -> Option<&mut bool> {
+        Some(match name {
+            "places" => &mut self.places,
+            "notes" => &mut self.notes,
+            "highlights" => &mut self.highlights,
+            "bookmarks" => &mut self.bookmarks,
+            "statistics" => &mut self.statistics,
+            "settings" => &mut self.settings,
+            "profiles" => &mut self.profiles,
+            "key_overrides" => &mut self.key_overrides,
+            "words" => &mut self.words,
+            "glossary" => &mut self.glossary,
+            "favorite_voices" => &mut self.favorite_voices,
+            _ => return None,
+        })
+    }
+
+    /// Whether the switch named `name` is on.
+    pub fn get(self, name: &str) -> bool {
+        let mut g = self;
+        g.get_mut(name).is_some_and(|v| *v)
     }
 
     fn has(self, kind: MarkKind) -> bool {
@@ -112,6 +206,8 @@ pub struct EngineConfig {
     pub app_version: String,
     /// The groups that sync.
     pub groups: Groups,
+    /// This computer's system, for key overrides.
+    pub system: crate::sync_groups::KeySystem,
 }
 
 impl EngineConfig {
@@ -127,6 +223,7 @@ impl EngineConfig {
             paths: paths.clone(),
             app_version: env!("CARGO_PKG_VERSION").to_owned(),
             groups: Groups::from_settings(s),
+            system: crate::sync_groups::KeySystem::current(),
         })
     }
 }
@@ -169,6 +266,9 @@ pub struct EngineStatus {
     pub write_error: Option<String>,
     /// Why the folder could not be used.
     pub failure: Option<String>,
+    /// Key overrides from the other kind of system (a Mac's on Windows or
+    /// Linux, and the reverse), kept in the sync folder but not used here.
+    pub kept_key_overrides: usize,
 }
 
 /// Something the owner should hear once in a session.
@@ -406,6 +506,9 @@ pub enum SyncRequest {
         /// The suggestion's sync id.
         sync_id: SyncId,
     },
+    /// Merge the groups that are not about one document (settings,
+    /// profiles, keys, the word list, the glossary, favorite voices).
+    Groups(Box<crate::sync_groups::GroupsRequest>),
     /// Merge every document this computer knows, except `skip` (the open
     /// one, which the app merges itself).
     All {
@@ -435,6 +538,9 @@ pub enum SyncResponse {
     },
     /// Sync now's pass over the other documents.
     All(Box<AllOutcome>),
+    /// The groups were merged: settings, profiles, keys, the word list,
+    /// the glossary, and favorite voices.
+    Groups(Box<crate::sync_groups::GroupsOutcome>),
     /// Nothing to report (a declined suggestion, a new hash published).
     Done {
         /// How sync stands.
@@ -479,16 +585,18 @@ struct FileSig {
 /// The engine. One per app; it lives on the writer thread's side.
 #[derive(Debug, Default)]
 pub struct SyncEngine {
-    config: Option<EngineConfig>,
-    folder: Option<SyncFolder>,
+    pub(crate) config: Option<EngineConfig>,
+    pub(crate) folder: Option<SyncFolder>,
     identity: Option<Identity>,
-    clock: Option<Clock>,
+    pub(crate) clock: Option<Clock>,
     label: String,
-    labels: BTreeMap<DeviceId, String>,
+    pub(crate) labels: BTreeMap<DeviceId, String>,
     docs: HashMap<SyncId, Slot>,
+    /// Each group's merged view (`crate::sync_groups`).
+    pub(crate) groups: BTreeMap<textweaver_sync::GroupFile, crate::sync_groups::GroupSlot>,
     reported: HashSet<String>,
     index: Option<(Vec<(String, u64)>, IdentityIndex)>,
-    status: EngineStatus,
+    pub(crate) status: EngineStatus,
 }
 
 /// A local edit found by comparing the app's state with the base.
@@ -592,6 +700,9 @@ impl SyncEngine {
                 }
             }
             SyncRequest::All { skip } => SyncResponse::All(Box::new(self.sync_all(skip.as_ref()))),
+            SyncRequest::Groups(request) => {
+                SyncResponse::Groups(Box::new(self.groups_cycle(&request)))
+            }
         }
     }
 
@@ -600,6 +711,7 @@ impl SyncEngine {
         self.folder = None;
         self.clock = None;
         self.docs.clear();
+        self.groups.clear();
         self.index = None;
         self.labels.clear();
         self.config = config;
@@ -685,14 +797,14 @@ impl SyncEngine {
     }
 
     /// Adds `notice` unless it was said in this session.
-    fn notice(&mut self, notices: &mut Vec<Notice>, key: &str, notice: Notice) {
+    pub(crate) fn notice(&mut self, notices: &mut Vec<Notice>, key: &str, notice: Notice) {
         if self.reported.insert(key.to_owned()) {
             notices.push(notice);
         }
     }
 
     /// Turns the folder's problems into notices, each once per session.
-    fn problems(&mut self, problems: Vec<Problem>, notices: &mut Vec<Notice>) {
+    pub(crate) fn problems(&mut self, problems: Vec<Problem>, notices: &mut Vec<Notice>) {
         for p in problems {
             match p {
                 Problem::Damaged { device, file, .. } => {
@@ -735,7 +847,7 @@ impl SyncEngine {
     }
 
     /// Reads every computer's name.
-    fn refresh_labels(&mut self) {
+    pub(crate) fn refresh_labels(&mut self) {
         let Some(folder) = &self.folder else {
             return;
         };
@@ -752,7 +864,7 @@ impl SyncEngine {
     }
 
     /// True when the folder is open (reopening it when it came back).
-    fn ready(&mut self, notices: &mut Vec<Notice>) -> bool {
+    pub(crate) fn ready(&mut self, notices: &mut Vec<Notice>) -> bool {
         let Some(config) = &self.config else {
             return false;
         };

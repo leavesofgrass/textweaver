@@ -631,7 +631,8 @@ fn set_up_sync_chooses_the_folder_names_the_computer_and_the_groups() {
     assert!(said.any("What syncs, as laptop"), "{:?}", said.all());
     app.dispatch(Command::Choose(4));
     assert!(said.any("Statistics: off"), "{:?}", said.all());
-    app.dispatch(Command::Choose(5));
+    // Start syncing comes after the eleven groups.
+    app.dispatch(Command::Choose(11));
     assert!(said.any("Sync on, as laptop."), "{:?}", said.all());
     let s = &app.settings().sync;
     assert!(s.enabled && s.notes && !s.statistics);

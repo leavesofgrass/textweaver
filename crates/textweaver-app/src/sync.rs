@@ -28,6 +28,13 @@
 //!   reading aloud, then said at the pause. Damaged files, a newer format,
 //!   and a clock far ahead are said once a session.
 //! - **The status line** starts with "Sync" ([`App::sync_status_line`]).
+//! - **Settings and word lists** (`crate::sync_groups`): portable
+//!   settings, profiles, key overrides, the word list, the glossary and
+//!   pronunciations, and favorite voices are merged every
+//!   [`SCAN_INTERVAL`], never while reading aloud. What arrives is applied
+//!   at the pause and summed up in one message ("Settings: 3 changes from
+//!   laptop"); applying it matches the merged view, so it is never sent
+//!   back as a change of this computer's.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -48,6 +55,7 @@ use crate::sync_engine::{
     AllOutcome, Applied, CycleOutcome, EngineConfig, EngineStatus, Groups, Item, Notice,
     OtherPlace, Snapshot, StatusKind, SyncEngine, SyncRequest, SyncResponse, apply_arrivals,
 };
+use crate::sync_groups::{GroupsOutcome, GroupsRequest, KeySystem, apply_groups};
 use crate::text_util;
 use crate::writer::Job;
 
@@ -149,6 +157,15 @@ pub(crate) struct SyncState {
     last_scan: Option<Instant>,
     /// Sync now is waiting for its pass over the other documents.
     all_pending: bool,
+    /// The groups (settings, word lists, and the rest) were last merged.
+    last_groups: Option<Instant>,
+    /// Merge the groups at the next tick even if nothing seems changed.
+    groups_force: bool,
+    /// When the settings were last saved, in milliseconds since 1970; 0
+    /// until known.
+    pub(crate) settings_saved_ms: u64,
+    /// Group arrivals held while reading aloud.
+    held_groups: Option<GroupsOutcome>,
 }
 
 impl std::fmt::Debug for SyncState {
@@ -157,27 +174,37 @@ impl std::fmt::Debug for SyncState {
     }
 }
 
-/// The group names, in the order Set up sync lists them.
-const GROUP_IDS: [&str; 5] = [
-    "sync-group-places",
-    "sync-group-notes",
-    "sync-group-highlights",
-    "sync-group-bookmarks",
-    "sync-group-statistics",
-];
+/// The group names' message ids, in the order Set up sync lists them
+/// ([`Groups::NAMES`]).
+fn group_message(i: usize) -> String {
+    format!(
+        "sync-group-{}",
+        Groups::NAMES
+            .get(i)
+            .copied()
+            .unwrap_or_default()
+            .replace('_', "-")
+    )
+}
 
 fn group_value(g: &Groups, i: usize) -> bool {
-    [g.places, g.notes, g.highlights, g.bookmarks, g.statistics][i]
+    Groups::NAMES.get(i).is_some_and(|n| g.get(n))
 }
 
 fn flip_group(g: &mut Groups, i: usize) {
-    match i {
-        0 => g.places = !g.places,
-        1 => g.notes = !g.notes,
-        2 => g.highlights = !g.highlights,
-        3 => g.bookmarks = !g.bookmarks,
-        _ => g.statistics = !g.statistics,
+    if let Some(v) = Groups::NAMES.get(i).and_then(|n| g.get_mut(n)) {
+        *v = !*v;
     }
+}
+
+/// When `path` was last changed, in milliseconds since 1970; 0 when it is
+/// not there.
+fn file_ms(path: &std::path::Path) -> u64 {
+    std::fs::metadata(path)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
 }
 
 impl App {
@@ -244,6 +271,14 @@ impl App {
         }
         self.sync.status = EngineStatus::default();
         self.sync.places.clear();
+        self.sync.groups_force = true;
+        self.sync.held_groups = None;
+        if self.sync.settings_saved_ms == 0 {
+            self.sync.settings_saved_ms = self
+                .paths
+                .as_ref()
+                .map_or(0, |p| file_ms(&p.settings_file()));
+        }
         self.sync_send(SyncRequest::Configure(wanted.map(Box::new)));
         // The open document is found again in the new folder, on the next
         // tick.
@@ -395,6 +430,27 @@ impl App {
         if !self.sync_enabled() || self.sync.in_flight > 0 {
             return effects;
         }
+        // Settings and word lists: applied at the pause, merged only while
+        // not reading, so nothing changes under the voice.
+        if !reading && let Some(o) = self.sync.held_groups.take() {
+            effects.extend(self.sync_groups_done(o));
+        }
+        let groups_due = self.sync.groups_force
+            || self
+                .sync
+                .last_groups
+                .is_none_or(|t| now.saturating_duration_since(t) >= SCAN_INTERVAL);
+        if !reading && groups_due && self.sync.held_groups.is_none() {
+            self.sync.last_groups = Some(now);
+            let force = std::mem::take(&mut self.sync.groups_force);
+            let settings_ms = self.sync.settings_saved_ms;
+            self.sync_send(SyncRequest::Groups(Box::new(GroupsRequest {
+                settings: Box::new(self.settings.clone()),
+                settings_ms,
+                force,
+            })));
+            return effects;
+        }
         // The open document is not merged yet (sync just turned on, or it
         // was opened while editing): find it now.
         let unmerged = self.edit.is_none()
@@ -459,6 +515,97 @@ impl App {
             }
             SyncResponse::Cycle(o) => self.sync_cycle_done(*o),
             SyncResponse::All(o) => self.sync_all_done(&o),
+            SyncResponse::Groups(o) => {
+                if matches!(self.playback, Playback::Reading) {
+                    // Applied at the pause, with its summary.
+                    self.sync.held_groups = Some(*o);
+                    Vec::new()
+                } else {
+                    self.sync_groups_done(*o)
+                }
+            }
+        }
+    }
+
+    /// Applies what arrived for the groups (settings, profiles, keys, the
+    /// word list, the glossary, favorite voices), puts it into effect, and
+    /// sums it up in one message: "Settings: 3 changes from laptop."
+    fn sync_groups_done(&mut self, o: GroupsOutcome) -> Vec<Effect> {
+        self.sync.status = o.status.clone();
+        self.sync_notices(o.notices.clone());
+        if o.arrivals.is_empty() {
+            return Vec::new();
+        }
+        let Some(paths) = self.paths.clone() else {
+            return Vec::new();
+        };
+        let system = self
+            .sync
+            .configured
+            .as_ref()
+            .map_or_else(KeySystem::current, |c| c.system);
+        let old = self.settings.clone();
+        let applied = apply_groups(&paths, &mut self.settings, &o.arrivals, system);
+        if !applied.settings_paths.is_empty() {
+            for path in &applied.settings_paths {
+                self.settings_changed(&old, path);
+            }
+            self.settings_dirty = true;
+            if let Err(e) = self.save_settings() {
+                log::warn!("cannot save settings: {e}");
+            }
+        }
+        if applied.keys_changed {
+            self.reload_key_overrides(&paths);
+        }
+        if applied.words_changed {
+            // Read again on next use.
+            self.authoring.words = None;
+        }
+        if applied.changes == 0 {
+            return Vec::new();
+        }
+        let msg = match applied.from.as_slice() {
+            [one] => self.msg_args(
+                "sync-settings-arrived",
+                &args!["n" => applied.changes, "device" => one.as_str()],
+            ),
+            [] => {
+                let device = self.msg("sync-another-computer");
+                self.msg_args(
+                    "sync-settings-arrived",
+                    &args!["n" => applied.changes, "device" => device],
+                )
+            }
+            several => self.msg_args(
+                "sync-settings-arrived-several",
+                &args!["n" => applied.changes, "computers" => several.len()],
+            ),
+        };
+        self.sync_say(msg, Importance::Result);
+        vec![Effect::Redraw]
+    }
+
+    /// Builds the keys again from `keymap.toml`, after another computer's
+    /// key overrides arrived.
+    fn reload_key_overrides(&mut self, paths: &textweaver_store::Paths) {
+        let overrides = match textweaver_store::SettingsStore::new(paths.clone()).load_keymap() {
+            Ok(o) => o,
+            Err(e) => {
+                log::warn!("sync: cannot read the key overrides ({e})");
+                return;
+            }
+        };
+        let (mut keymap, warnings) = textweaver_keymap::Keymap::with_preset_and_overrides(
+            textweaver_keymap::Platform::current(),
+            self.keymap.frontend(),
+            crate::access::keymap_preset(self.settings.keyboard.preset),
+            &overrides,
+        );
+        keymap.set_character_keys(self.settings.keyboard.character_keys);
+        self.keymap = keymap;
+        for w in warnings {
+            log::info!("sync: {w}");
         }
     }
 
@@ -932,11 +1079,9 @@ impl App {
         let Some(setup) = self.sync.setup.clone() else {
             return vec![Effect::Redraw];
         };
-        let mut items: Vec<String> = GROUP_IDS
-            .iter()
-            .enumerate()
-            .map(|(i, id)| {
-                let name = self.msg(id);
+        let mut items: Vec<String> = (0..Groups::NAMES.len())
+            .map(|i| {
+                let name = self.msg(&group_message(i));
                 let state = self.msg(if group_value(&setup.groups, i) {
                     "common-on"
                 } else {
@@ -963,11 +1108,11 @@ impl App {
     pub(crate) fn choose_sync(&mut self, list: SyncList, n: usize) -> Vec<Effect> {
         match list {
             SyncList::Groups => {
-                if n < GROUP_IDS.len() {
+                if n < Groups::NAMES.len() {
                     if let Some(setup) = self.sync.setup.as_mut() {
                         flip_group(&mut setup.groups, n);
                         let on = group_value(&setup.groups, n);
-                        let name = self.msg(GROUP_IDS[n]);
+                        let name = self.msg(&group_message(n));
                         let state = self.msg(if on { "common-on" } else { "common-off" });
                         let msg = self
                             .msg_args("sync-group-item", &args!["name" => name, "state" => state]);
@@ -1011,11 +1156,7 @@ impl App {
         y.enabled = true;
         y.folder = Some(setup.folder);
         y.device_name = setup.name.clone();
-        y.places = setup.groups.places;
-        y.notes = setup.groups.notes;
-        y.highlights = setup.groups.highlights;
-        y.bookmarks = setup.groups.bookmarks;
-        y.statistics = setup.groups.statistics;
+        setup.groups.write_to(y);
         self.settings_dirty = true;
         if let Err(e) = self.save_settings() {
             log::warn!("cannot save settings: {e}");
@@ -1046,6 +1187,18 @@ impl App {
             } else {
                 let names = st.others.join(", ");
                 parts.push(self.msg_args("sync-status-others", &args!["names" => names]));
+            }
+            if st.kept_key_overrides > 0 {
+                let system = self
+                    .sync
+                    .configured
+                    .as_ref()
+                    .map_or_else(KeySystem::current, |c| c.system);
+                let id = match system.family() {
+                    "mac" => "sync-kept-keys-pc",
+                    _ => "sync-kept-keys-mac",
+                };
+                parts.push(self.msg_args(id, &args!["n" => st.kept_key_overrides]));
             }
             if let Some(e) = &st.write_error {
                 parts.push(self.msg_args("sync-status-error", &args!["error" => e.as_str()]));

@@ -3549,3 +3549,43 @@ choice-sync-position-policy-furthest = a mais adiantada
 choice-sync-position-policy-ask = perguntar
 
 ## End of S4
+
+## Sync wave, S5 (see en.ftl).
+sync-settings-arrived =
+    { $n ->
+        [one] Configurações: 1 mudança de { $device }.
+       *[other] Configurações: { $n } mudanças de { $device }.
+    }
+sync-settings-arrived-several = Configurações: { $n } mudanças de { $computers } computadores.
+sync-kept-keys-mac =
+    { $n ->
+        [one] Teclas do Mac: 1, guardada, sem uso aqui.
+       *[other] Teclas do Mac: { $n }, guardadas, sem uso aqui.
+    }
+sync-kept-keys-pc =
+    { $n ->
+        [one] Teclas do Windows e Linux: 1, guardada, sem uso aqui.
+       *[other] Teclas do Windows e Linux: { $n }, guardadas, sem uso aqui.
+    }
+sync-group-settings = Configurações
+sync-group-profiles = Perfis
+sync-group-key-overrides = Teclas próprias
+sync-group-words = Lista de palavras
+sync-group-glossary = Glossário e pronúncias
+sync-group-favorite-voices = Vozes favoritas
+voices-missing-row = { $voice }, favorita, não está neste computador
+voices-missing = { $voice } não está neste computador. Espaço a tira das favoritas.
+setting-sync-settings = Sincronizar configurações
+setting-sync-settings-help = Compartilhar as configurações portáteis: velocidade, pontuação, tema, ajudas de leitura e outras. A voz, o motor, o modo de acesso, o conjunto de teclas e os caminhos ficam em cada computador.
+setting-sync-profiles = Sincronizar perfis
+setting-sync-profiles-help = Compartilhar os perfis; o que está em uso fica em cada computador.
+setting-sync-key-overrides = Sincronizar teclas próprias
+setting-sync-key-overrides-help = Compartilhar keymap.toml. As teclas de um Mac são guardadas, mas não usadas no Windows nem no Linux, e o contrário.
+setting-sync-words = Sincronizar lista de palavras
+setting-sync-words-help = Compartilhar a lista de palavras da ortografia.
+setting-sync-glossary = Sincronizar glossário
+setting-sync-glossary-help = Compartilhar as entradas do glossário e as pronúncias.
+setting-sync-favorite-voices = Sincronizar vozes favoritas
+setting-sync-favorite-voices-help = Compartilhar as vozes favoritas; uma que este computador não tem aparece como não está neste computador.
+
+## End of S5

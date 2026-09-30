@@ -1281,6 +1281,36 @@ pub const INFO: &[Info] = &[
         "Sync statistics",
         "Share each computer's reading time and sessions.",
     ),
+    toggle(
+        "sync.settings",
+        "Sync settings",
+        "Share the portable settings: rate, punctuation, theme, reading aids, and the like. The voice, the engine, the access mode, the key preset, and paths stay on each computer.",
+    ),
+    toggle(
+        "sync.profiles",
+        "Sync profiles",
+        "Share your profiles; which one is in use stays on each computer.",
+    ),
+    toggle(
+        "sync.key_overrides",
+        "Sync key overrides",
+        "Share keymap.toml. A Mac's keys are kept but not used on Windows or Linux, and the reverse.",
+    ),
+    toggle(
+        "sync.words",
+        "Sync word list",
+        "Share your spelling word list.",
+    ),
+    toggle(
+        "sync.glossary",
+        "Sync glossary",
+        "Share your glossary's entries and your pronunciations.",
+    ),
+    toggle(
+        "sync.favorite_voices",
+        "Sync favorite voices",
+        "Share your favorite voices; one this computer does not have is listed as not on this computer.",
+    ),
     choice(
         "sync.position_policy",
         "Place to resume",

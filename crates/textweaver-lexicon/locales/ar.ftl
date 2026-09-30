@@ -3785,3 +3785,43 @@ choice-sync-position-policy-furthest = الأبعد
 choice-sync-position-policy-ask = السؤال
 
 ## End of S4
+
+## Sync wave, S5 (see en.ftl).
+sync-settings-arrived =
+    { $n ->
+        [one] الإعدادات: تغيير واحد من { $device }.
+       *[other] الإعدادات: تغييرات من { $device }: { $n }.
+    }
+sync-settings-arrived-several = الإعدادات: تغييرات من { $computers } حواسيب: { $n }.
+sync-kept-keys-mac =
+    { $n ->
+        [one] مفاتيح ماك: 1، محفوظ، غير مستخدم هنا.
+       *[other] مفاتيح ماك: { $n }، محفوظة، غير مستخدمة هنا.
+    }
+sync-kept-keys-pc =
+    { $n ->
+        [one] مفاتيح ويندوز ولينكس: 1، محفوظ، غير مستخدم هنا.
+       *[other] مفاتيح ويندوز ولينكس: { $n }، محفوظة، غير مستخدمة هنا.
+    }
+sync-group-settings = الإعدادات
+sync-group-profiles = الملفات الشخصية
+sync-group-key-overrides = المفاتيح المخصصة
+sync-group-words = قائمة الكلمات
+sync-group-glossary = المسرد والنطق
+sync-group-favorite-voices = الأصوات المفضلة
+voices-missing-row = { $voice }، مفضل، غير موجود على هذا الحاسوب
+voices-missing = { $voice } غير موجود على هذا الحاسوب. المسافة تزيله من المفضلة.
+setting-sync-settings = مزامنة الإعدادات
+setting-sync-settings-help = مشاركة الإعدادات القابلة للنقل: السرعة وعلامات الترقيم والسمة ووسائل القراءة وما شابهها. يبقى الصوت والمحرك ووضع الوصول ومجموعة المفاتيح والمسارات على كل حاسوب.
+setting-sync-profiles = مزامنة الملفات الشخصية
+setting-sync-profiles-help = مشاركة الملفات الشخصية؛ الملف المستخدم يبقى على كل حاسوب.
+setting-sync-key-overrides = مزامنة المفاتيح المخصصة
+setting-sync-key-overrides-help = مشاركة keymap.toml. تُحفظ مفاتيح ماك ولا تُستخدم على ويندوز أو لينكس، والعكس.
+setting-sync-words = مزامنة قائمة الكلمات
+setting-sync-words-help = مشاركة قائمة كلمات التدقيق الإملائي.
+setting-sync-glossary = مزامنة المسرد
+setting-sync-glossary-help = مشاركة مدخلات المسرد والنطق.
+setting-sync-favorite-voices = مزامنة الأصوات المفضلة
+setting-sync-favorite-voices-help = مشاركة الأصوات المفضلة؛ الصوت غير الموجود على هذا الحاسوب يُذكر أنه غير موجود على هذا الحاسوب.
+
+## End of S5
