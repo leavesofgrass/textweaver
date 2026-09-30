@@ -2,9 +2,11 @@
 //!
 //! Two short questions, each with its default first, then a yes or no:
 //!
-//! 1. **The format**: FLAC first (lossless, half WAV's size, written in
-//!    process), then WAV; MP3 and M4B only when ffmpeg is found, and the
-//!    first question says in words when it is not.
+//! 1. **The format**: FLAC first (lossless, half WAV's size), then MP3
+//!    (small, plays everywhere), then WAV, all written in process; M4B
+//!    only when ffmpeg is found, and the first question says in words
+//!    when it is not (and names MP3 too in a build without the `mp3`
+//!    feature of `textweaver-export`).
 //! 2. **Where**: beside the document (the default, `essay.flac`), or
 //!    another folder chosen in the file browser ([`App::choose_folder`]).
 //!
@@ -183,14 +185,25 @@ mod run {
             .or_else(|| list.iter().filter(writes).find(|b| !b.opt_in).cloned())
     }
 
-    /// The formats offered: FLAC and WAV always, MP3 and M4B with ffmpeg.
+    /// Every format, in the order offered.
+    pub(crate) const ALL: [AudioFormat; 4] = [
+        AudioFormat::Flac,
+        AudioFormat::Mp3,
+        AudioFormat::Wav,
+        AudioFormat::M4b,
+    ];
+
+    /// The formats offered: those written in process always, those that
+    /// need ffmpeg (M4B) only with it.
     pub(crate) fn formats(ffmpeg: bool) -> Vec<AudioFormat> {
-        let mut f = vec![AudioFormat::Flac, AudioFormat::Wav];
-        if ffmpeg {
-            f.extend([AudioFormat::Mp3, AudioFormat::M4b]);
-        }
-        f.retain(|f| ffmpeg || !f.needs_ffmpeg());
-        f
+        ALL.into_iter()
+            .filter(|f| ffmpeg || !f.needs_ffmpeg())
+            .collect()
+    }
+
+    /// The formats left out for want of ffmpeg.
+    pub(crate) fn needing_ffmpeg() -> Vec<AudioFormat> {
+        ALL.into_iter().filter(|f| f.needs_ffmpeg()).collect()
     }
 
     fn extension(f: AudioFormat) -> &'static str {
@@ -254,9 +267,14 @@ mod run {
                 "audio-format-intro",
                 &args!["name" => stem, "n" => items.len()],
             );
-            if self.audio.ffmpeg.is_none() {
+            let missing = needing_ffmpeg();
+            if self.audio.ffmpeg.is_none() && !missing.is_empty() {
+                let names: Vec<&str> = missing.iter().map(|f| f.name()).collect();
                 msg.push(' ');
-                msg.push_str(&self.msg("audio-no-ffmpeg"));
+                msg.push_str(&self.msg_args(
+                    "audio-no-ffmpeg",
+                    &args!["formats" => names.join(", "), "n" => missing.len()],
+                ));
             }
             self.list = Some(ListKind::Audio(AudioList::Format));
             self.tell(&msg);
@@ -724,17 +742,13 @@ mod run {
         }
 
         #[test]
-        fn mp3_and_m4b_only_with_ffmpeg() {
-            assert_eq!(formats(false), [AudioFormat::Flac, AudioFormat::Wav]);
+        fn m4b_only_with_ffmpeg() {
             assert_eq!(
-                formats(true),
-                [
-                    AudioFormat::Flac,
-                    AudioFormat::Wav,
-                    AudioFormat::Mp3,
-                    AudioFormat::M4b
-                ]
+                formats(false),
+                [AudioFormat::Flac, AudioFormat::Mp3, AudioFormat::Wav]
             );
+            assert_eq!(formats(true), ALL);
+            assert_eq!(needing_ffmpeg(), [AudioFormat::M4b]);
         }
 
         #[test]
@@ -745,8 +759,8 @@ mod run {
             // FLAC first; no ffmpeg, said in words (then the first item).
             assert!(
                 app.status_text().starts_with(
-                    "Export essay as audio: choose a format, 2 choices. \
-                     MP3 and M4B need ffmpeg, which was not found."
+                    "Export essay as audio: choose a format, 3 choices. \
+                     M4B needs ffmpeg, which was not found."
                 ),
                 "{}",
                 app.status_text()

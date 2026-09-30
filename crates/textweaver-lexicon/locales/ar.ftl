@@ -3574,13 +3574,13 @@ batch-thread-stopped = توقف التحويل الجماعي على نحو غي
 ## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
 ## words per minute; $length a length of time from the duration-*
 ## messages; $chapters and $n are numbers; $percent is a multiple of ten;
-## $error is passed on as it is.
+## $formats lists format names (M4B); $error is passed on as it is.
 audio-format-title = تصدير الصوت بصيغة
 audio-format-intro = تصدير { $name } صوتًا: اختر صيغة، { $n } خيارات.
-audio-no-ffmpeg = يحتاج MP3 و M4B إلى ffmpeg، ولم يُعثر عليه.
+audio-no-ffmpeg = تحتاج { $formats } إلى ffmpeg، ولم يُعثر عليه.
 audio-format-flac = FLAC: دون فقد، نحو نصف حجم WAV
 audio-format-wav = WAV: الأكبر حجمًا، يعمل في كل مكان
-audio-format-mp3 = MP3، عبر ffmpeg
+audio-format-mp3 = MP3: صغير، يعمل في كل مكان
 audio-format-m4b = كتاب صوتي M4B، عبر ffmpeg
 audio-where-title = مكان حفظ الصوت
 audio-where-intro = أين يُحفظ الصوت؟

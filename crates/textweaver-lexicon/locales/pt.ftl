@@ -3334,13 +3334,17 @@ batch-thread-stopped = A conversão em lote parou inesperadamente.
 ## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
 ## words per minute; $length a length of time from the duration-*
 ## messages; $chapters and $n are numbers; $percent is a multiple of ten;
-## $error is passed on as it is.
+## $formats lists format names (M4B); $error is passed on as it is.
 audio-format-title = Exportar áudio como
 audio-format-intro = Exportar { $name } como áudio: escolha um formato, { $n } opções.
-audio-no-ffmpeg = MP3 e M4B precisam do ffmpeg, que não foi encontrado.
+audio-no-ffmpeg =
+    { $formats } { $n ->
+        [one] precisa
+       *[other] precisam
+    } do ffmpeg, que não foi encontrado.
 audio-format-flac = FLAC: sem perdas, cerca de metade do tamanho do WAV
 audio-format-wav = WAV: o maior, toca em qualquer lugar
-audio-format-mp3 = MP3, pelo ffmpeg
+audio-format-mp3 = MP3: pequeno, toca em qualquer lugar
 audio-format-m4b = Audiolivro M4B, pelo ffmpeg
 audio-where-title = Onde fica o áudio
 audio-where-intro = Onde o áudio deve ficar?

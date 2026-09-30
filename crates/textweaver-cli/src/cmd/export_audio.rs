@@ -142,7 +142,7 @@ pub fn export_audio(
     })?;
     if format.needs_ffmpeg() && ffmpeg_path.is_none() {
         bail!(
-            "writing {} needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac or .wav",
+            "writing {} needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, or .wav",
             format.name()
         );
     }
@@ -378,7 +378,7 @@ mod tests {
     fn explains_what_cannot_be_done() {
         let dir = Scratch::new("errors");
         let reg = BackendRegistry::with_builtins();
-        let mut a = args(dir.path(), "doc.mp3");
+        let mut a = args(dir.path(), "doc.m4b");
         let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
         assert!(e.to_string().contains("needs ffmpeg"), "{e}");
         a.out = dir.path().join("doc.ogg");

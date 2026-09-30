@@ -296,14 +296,14 @@ fn gaps_cancellation_and_errors() {
     let err = export(
         &doc,
         &mut backend,
-        &dir.path().join("x.mp3"),
+        &dir.path().join("x.m4b"),
         None,
         None,
         &ExportOptions::default(),
         &mut no_progress,
     )
     .unwrap_err();
-    assert!(matches!(err, ExportError::NoFfmpeg("MP3")), "{err}");
+    assert!(matches!(err, ExportError::NoFfmpeg("M4B")), "{err}");
 }
 
 #[test]
@@ -502,6 +502,137 @@ fn wav_carries_id3_chapters() {
     assert_eq!(WavData::read(&out).unwrap().frames(), 64_000);
 }
 
+/// Decodes an MP3 file with symphonia (a test-only, pure-Rust decoder),
+/// gapless: its sample rate and the frames it holds.
+#[cfg(feature = "mp3")]
+fn decode_mp3(path: &Path) -> (u32, usize) {
+    use symphonia::core::codecs::DecoderOptions;
+    use symphonia::core::errors::Error;
+    use symphonia::core::formats::FormatOptions;
+    use symphonia::core::io::MediaSourceStream;
+    use symphonia::core::meta::MetadataOptions;
+    use symphonia::core::probe::Hint;
+    let file = std::fs::File::open(path).unwrap();
+    let mss = MediaSourceStream::new(Box::new(file), Default::default());
+    let mut hint = Hint::new();
+    hint.with_extension("mp3");
+    let formats = FormatOptions {
+        enable_gapless: true,
+        ..FormatOptions::default()
+    };
+    let probed = symphonia::default::get_probe()
+        .format(&hint, mss, &formats, &MetadataOptions::default())
+        .unwrap();
+    let mut reader = probed.format;
+    let track = reader.default_track().unwrap().clone();
+    let mut decoder = symphonia::default::get_codecs()
+        .make(&track.codec_params, &DecoderOptions::default())
+        .unwrap();
+    let mut frames = 0;
+    loop {
+        match reader.next_packet() {
+            Ok(p) if p.track_id() == track.id => frames += decoder.decode(&p).unwrap().frames(),
+            Ok(_) => {}
+            Err(Error::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => break,
+            Err(e) => panic!("{e}"),
+        }
+    }
+    (track.codec_params.sample_rate.unwrap_or(0), frames)
+}
+
+/// MP3 in process, with no ffmpeg: it decodes back to the timeline's
+/// length, and its ID3v2 tag carries the title and the chapters.
+#[cfg(feature = "mp3")]
+#[test]
+fn mp3_without_ffmpeg_decodes_back_with_its_chapters() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("book.mp3");
+    let (mut backend, _) = RecordingBackend::new();
+    let report = export(
+        &book(),
+        &mut backend,
+        &out,
+        None,
+        None,
+        &ExportOptions::default(),
+        &mut no_progress,
+    )
+    .unwrap();
+    assert_eq!(report.format, AudioFormat::Mp3);
+    assert_eq!(report.ffmpeg, None);
+    let (rate, frames) = decode_mp3(&out);
+    assert_eq!(rate, 16_000);
+    // 4 seconds at 16 kHz: 64,000 frames. The LAME tag lets the decoder
+    // drop LAME's delay and padding; one MPEG frame (576 samples at 16
+    // kHz) of slack remains for decoders that round.
+    let expected = report.timeline.duration_ms as usize * 16;
+    assert_eq!(expected, 64_000);
+    assert!(
+        frames.abs_diff(expected) <= 576,
+        "decoded {frames} frames, expected {expected}"
+    );
+    use id3::TagLike;
+    let tag = id3::Tag::read_from_path(&out).unwrap();
+    assert_eq!(tag.title(), Some("Sample Book"));
+    assert_eq!(tag.artist(), Some("Ada"));
+    let chapters: Vec<(u32, u32, String)> = tag
+        .chapters()
+        .map(|c| {
+            let title = c
+                .frames
+                .iter()
+                .find(|f| f.id() == "TIT2")
+                .and_then(|f| f.content().text())
+                .unwrap_or_default()
+                .to_owned();
+            (c.start_time, c.end_time, title)
+        })
+        .collect();
+    assert_eq!(
+        chapters,
+        [
+            (0, 2500, "Intro".to_owned()),
+            (2500, 4000, "Next".to_owned())
+        ]
+    );
+    assert_eq!(tag.tables_of_contents().count(), 1);
+    // The tag did not break the audio: it still decodes after it.
+    let left: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name())
+        .collect();
+    assert_eq!(left, ["book.mp3"]);
+}
+
+/// Real sound, not silence, survives the encoder: a tone's length and
+/// rate come back from a 22,050 Hz mono WAV.
+#[cfg(feature = "mp3")]
+#[test]
+fn mp3_encodes_a_tone_at_the_engines_rate() {
+    let dir = tempfile::tempdir().unwrap();
+    let pcm: Vec<i16> = (0..22_050)
+        .map(|i| ((i as f64 * 0.06).sin() * 12_000.0) as i16)
+        .collect();
+    let mut w = textweaver_export::wav::WavWriter::create(&dir.path().join("a.wav")).unwrap();
+    let mut bytes = Vec::new();
+    for s in &pcm {
+        bytes.extend_from_slice(&s.to_le_bytes());
+    }
+    let piece = WavData {
+        format: textweaver_export::wav::WavFormat::pcm16_mono(22_050),
+        audio: bytes,
+    };
+    w.append(&piece, Path::new("a")).unwrap();
+    w.finish().unwrap();
+    let out = dir.path().join("a.mp3");
+    textweaver_export::mp3::encode(&dir.path().join("a.wav"), &out).unwrap();
+    let (rate, frames) = decode_mp3(&out);
+    assert_eq!(rate, 22_050);
+    assert!(frames.abs_diff(22_050) <= 576, "decoded {frames} frames");
+    // Smaller than the WAV (44 KB of 16-bit samples).
+    assert!(std::fs::metadata(&out).unwrap().len() < 44_100 / 2);
+}
+
 /// MP3 and M4B through ffmpeg, when it is installed.
 #[test]
 fn ffmpeg_conversion_when_available() {
@@ -510,8 +641,12 @@ fn ffmpeg_conversion_when_available() {
         return;
     };
     let dir = tempfile::tempdir().unwrap();
+    // MP3 goes through ffmpeg only in a build without the mp3 feature.
     for name in ["book.mp3", "book.m4b"] {
         let out = dir.path().join(name);
+        if !AudioFormat::from_path(&out).is_some_and(AudioFormat::needs_ffmpeg) {
+            continue;
+        }
         let (mut backend, _) = RecordingBackend::new();
         let report = export(
             &book(),

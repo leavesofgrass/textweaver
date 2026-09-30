@@ -333,6 +333,12 @@ mail-parser = { version = "0.11.9", default-features = false, features = ["encod
 flacenc = { version = "=0.5.1", default-features = false }
 id3 = "1.17"
 claxon = "0.4.3"
+# Wave 6, W6v (the owner approved LGPL for MP3 on Tuesday, September 29,
+# 2026): MP3 in process with LAME 3.100, compiled from the source bundled in
+# mp3lame-sys and linked statically (cc on Windows, autotools elsewhere).
+# symphonia (MPL-2.0) decodes exports back in tests only.
+mp3lame-encoder = "=0.2.5"
+symphonia = { version = "0.5", default-features = false, features = ["mp3"] }
 
 # tests
 proptest = "1.11"

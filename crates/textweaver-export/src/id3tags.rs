@@ -1,4 +1,4 @@
-//! ID3v2 tags with chapters, written into WAV files (the `id3` crate).
+//! ID3v2 tags with chapters, written into WAV and MP3 files (the `id3` crate).
 //!
 //! WAV has no chapter format of its own. An `ID3 ` chunk inside the RIFF
 //! file carries the same tags MP3 files get through ffmpeg: the title
@@ -50,9 +50,9 @@ pub fn tag(title: Option<&str>, author: Option<&str>, chapters: &[Chapter]) -> T
     tag
 }
 
-/// Writes the tag into the WAV file at `path` (ID3v2.3, as ffmpeg writes
+/// Writes the tag into the WAV or MP3 file at `path` (ID3v2.3, as ffmpeg writes
 /// for MP3, for the widest player support).
-pub fn write_wav(
+pub fn write(
     path: &Path,
     title: Option<&str>,
     author: Option<&str>,

@@ -22,7 +22,8 @@ use crate::ExportError;
 pub enum AudioFormat {
     /// WAV, written directly (no ffmpeg needed).
     Wav,
-    /// MP3 through ffmpeg.
+    /// MP3, written in process (the `mp3` feature; through ffmpeg
+    /// without it).
     Mp3,
     /// An M4B audiobook with chapters through ffmpeg.
     M4b,
@@ -55,13 +56,14 @@ impl AudioFormat {
         }
     }
 
-    /// Whether writing this format needs ffmpeg in this build: MP3 and
-    /// M4B always; FLAC only when built without the `flac` feature.
+    /// Whether writing this format needs ffmpeg in this build: M4B always;
+    /// FLAC and MP3 only when built without the `flac` or `mp3` feature.
     pub fn needs_ffmpeg(self) -> bool {
         match self {
             AudioFormat::Wav => false,
             AudioFormat::Flac => !cfg!(feature = "flac"),
-            AudioFormat::Mp3 | AudioFormat::M4b => true,
+            AudioFormat::Mp3 => !cfg!(feature = "mp3"),
+            AudioFormat::M4b => true,
         }
     }
 }
@@ -182,6 +184,7 @@ mod tests {
         assert!(!AudioFormat::Wav.needs_ffmpeg());
         assert!(AudioFormat::M4b.needs_ffmpeg());
         assert_eq!(AudioFormat::Flac.needs_ffmpeg(), !cfg!(feature = "flac"));
+        assert_eq!(AudioFormat::Mp3.needs_ffmpeg(), !cfg!(feature = "mp3"));
         assert_eq!(AudioFormat::from_path(Path::new("d.ogg")), None);
         assert_eq!(AudioFormat::from_path(Path::new("noext")), None);
     }
