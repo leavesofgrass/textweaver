@@ -21,7 +21,7 @@ use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
 use textweaver_speech::Earcon;
 use textweaver_store::notes::{self as store_notes, color_name, highlight_color};
-use textweaver_store::{DocState, Highlight, Note};
+use textweaver_store::{DocState, Highlight, MarkKind, Note};
 use textweaver_text::Document;
 use textweaver_text::units::unit_at;
 
@@ -319,6 +319,7 @@ impl App {
             return vec![Effect::Redraw];
         }
         let n = s.notes.remove(i);
+        s.saved.record_deletion(MarkKind::Note, &n.id);
         let left = s.notes.len();
         self.persist_marks();
         let msg = self.msg_args("notes-deleted", &args!["text" => collapse(&n.note, 40)]);
@@ -413,6 +414,7 @@ impl App {
             });
         if let Some(i) = existing {
             let h = s.highlights.remove(i);
+            s.saved.record_deletion(MarkKind::Highlight, &h.id);
             let text = preview(&s.doc, h.range, 8);
             self.persist_marks();
             let msg = self.msg_args("notes-highlight-removed", &args!["text" => text]);
@@ -508,6 +510,7 @@ impl App {
             return vec![Effect::Redraw];
         }
         let h = s.highlights.remove(i);
+        s.saved.record_deletion(MarkKind::Highlight, &h.id);
         let text = preview(&s.doc, h.range, 8);
         self.persist_marks();
         let msg = self.msg_args("notes-highlight-removed", &args!["text" => text]);
@@ -561,6 +564,7 @@ impl App {
             return vec![Effect::Redraw];
         }
         let b = s.bookmarks.remove(i);
+        s.saved.record_deletion(MarkKind::Bookmark, &b.id);
         let left = s.bookmarks.len();
         self.persist_marks();
         let msg = self.msg_args("notes-bookmark-deleted", &args!["name" => b.name.as_str()]);
@@ -617,6 +621,7 @@ impl App {
         }
         if let Some(b) = s.bookmarks.get_mut(i) {
             b.name = name.to_owned();
+            b.ts = textweaver_store::now_ts();
         }
         self.persist_marks();
         let msg = self.msg_args(

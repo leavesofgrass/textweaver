@@ -1145,13 +1145,12 @@ fn import_bookmarks(
         };
         let pct = star::as_usize(v.get("pct")).map(|p| u8::try_from(p.min(100)).unwrap_or(100));
         let mapped = t.mapper.map_offset(offset, pct);
+        let ts = star::star_ts(v.get("ts"));
+        // The id is derived from the bookmark, so importing the same Star
+        // data on two computers gives the same id (one bookmark, not two).
         let bm = Bookmark {
-            name: name.clone(),
-            pos: mapped.pos,
-            pct: percent(mapped.pos, t.len()),
-            ts: star::star_ts(v.get("ts")),
-            anchor: None,
-            not_found: false,
+            id: Bookmark::legacy_id(name, mapped.pos, ts),
+            ..Bookmark::new(name.clone(), mapped.pos, percent(mapped.pos, t.len()), ts)
         };
         items.push(item(
             Outcome::Imported,

@@ -230,12 +230,8 @@ impl App {
             .unwrap_or_default();
         let pct = text_util::percent(&s.doc, pos);
         s.bookmarks.push(Bookmark {
-            name: name.clone(),
-            pos,
-            pct,
-            ts: textweaver_store::now_ts(),
             anchor: Some(text_util::anchor_at(&s.doc, pos)),
-            not_found: false,
+            ..Bookmark::new(name.clone(), pos, pct, textweaver_store::now_ts())
         });
         s.bookmarks.sort_by_key(|b| b.pos);
         // Saved on the writer; "set" is said once the file is written (or

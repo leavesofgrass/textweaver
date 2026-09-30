@@ -11,12 +11,16 @@
 //!   so sidecar merges can match them by id (Star assigned note ids lazily
 //!   and highlights never had one, items 17 and 18);
 //! - timestamps are Unix seconds, UTC (item 19);
-//! - one document key for everything (item 14).
+//! - one document key for everything (item 14);
+//! - new ids are 64 bits (16 hex digits, [`new_id`]) so notes made on
+//!   several computers do not collide; older 8-digit ids load and stay as
+//!   they are.
 //!
 //! [`DocState`]: crate::DocState
 //! [`EditOutcome`]: textweaver_core::EditOutcome
 
 use std::fmt;
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
@@ -225,21 +229,64 @@ pub fn collapse(text: &str, max: usize) -> String {
     out
 }
 
-/// A fresh 8-hex-digit id (Star's `uuid4().hex[:8]` shape), unique within
-/// a process and very unlikely to collide across devices.
+/// A fresh 64-bit id as 16 hex digits, for notes, highlights, and
+/// bookmarks.
+///
+/// Ids were 8 hex digits (32 bits, Star's `uuid4().hex[:8]` shape) until
+/// the sync wave; with notes arriving from other computers, 32 bits made a
+/// collision plausible in a large library. Old ids are kept as they are:
+/// they are 8 digits long, so a new id can never equal one.
+///
+/// Never repeats within a process: the id is a bijective mix of a random
+/// per-process seed plus a counter. Across computers, two ids collide only
+/// if two random 64-bit seeds happen to line up.
 pub fn new_id() -> String {
+    format!("{:016x}", next_id64())
+}
+
+/// The next 64-bit id of this process ([`new_id`]).
+fn next_id64() -> u64 {
+    static SEED: OnceLock<u64> = OnceLock::new();
     static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let seed = *SEED.get_or_init(process_seed);
+    id_from_seed(seed, COUNTER.fetch_add(1, Ordering::Relaxed))
+}
+
+/// A random seed for this process: the standard library's randomly keyed
+/// hasher (seeded by the operating system) over the time and process id.
+fn process_seed() -> u64 {
+    use std::hash::{BuildHasher, Hasher};
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_nanos());
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+    let mut h = std::collections::hash_map::RandomState::new().build_hasher();
+    h.write_u128(nanos);
+    h.write_u32(std::process::id());
+    h.finish()
+}
+
+/// The `n`th id from `seed`. Every step is a bijection on `u64` (adding an
+/// odd multiple, then the SplitMix64 finalizer), so different `n` under one
+/// seed never give the same id.
+pub(crate) fn id_from_seed(seed: u64, n: u64) -> u64 {
+    let mut z = seed.wrapping_add(n.wrapping_mul(0x9e37_79b9_7f4a_7c15));
+    z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    z ^ (z >> 31)
+}
+
+/// A stable 64-bit id derived from `parts` (16 hex digits after `prefix`),
+/// for items that are given an id when an older file is read, so reading
+/// the same file twice gives the same ids.
+pub fn stable_id64(prefix: &str, parts: &[&str]) -> String {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
-    let seed = format!("{nanos}-{n}-{}", std::process::id());
-    for b in seed.as_bytes() {
-        h ^= u64::from(*b);
-        h = h.wrapping_mul(0x0100_0000_01b3);
+    for part in parts {
+        for b in part.as_bytes().iter().chain(std::iter::once(&0u8)) {
+            h ^= u64::from(*b);
+            h = h.wrapping_mul(0x0100_0000_01b3);
+        }
     }
-    format!("{:08x}", (h ^ (h >> 32)) & 0xffff_ffff)
+    format!("{prefix}{:016x}", id_from_seed(h, 0))
 }
 
 /// A stable id derived from `parts`, for imported items that had none, so
@@ -685,10 +732,44 @@ mod tests {
     fn ids_are_unique_and_stable_ids_repeat() {
         let a = new_id();
         let b = new_id();
-        assert_eq!(a.len(), 8);
+        assert_eq!(a.len(), 16);
+        assert!(a.chars().all(|c| c.is_ascii_hexdigit()));
         assert_ne!(a, b);
         assert_eq!(stable_id("s", &["x", "y"]), stable_id("s", &["x", "y"]));
         assert_ne!(stable_id("s", &["xy", ""]), stable_id("s", &["x", "y"]));
+        // Imports keep their 8-digit form, so importing twice matches.
+        assert_eq!(stable_id("star-", &["a"]).len(), "star-".len() + 8);
+        let s64 = stable_id64("bm-", &["mark1", "3", "5"]);
+        assert_eq!(s64, stable_id64("bm-", &["mark1", "3", "5"]));
+        assert_eq!(s64.len(), "bm-".len() + 16);
+        assert_ne!(s64, stable_id64("bm-", &["mark1", "3", "6"]));
+    }
+
+    /// The owner's check for the sync wave: a million new ids, no repeat.
+    #[test]
+    fn a_million_ids_never_collide() {
+        let mut seen = std::collections::HashSet::with_capacity(1_000_000);
+        for _ in 0..1_000_000 {
+            assert!(seen.insert(new_id()), "a new id repeated");
+        }
+    }
+
+    proptest::proptest! {
+        #![proptest_config(proptest::prelude::ProptestConfig::with_cases(32))]
+
+        /// Two computers (two random seeds) making ids side by side: never
+        /// the same id twice, and every id is 16 hex digits.
+        #[test]
+        fn ids_from_two_seeds_never_collide(a in proptest::prelude::any::<u64>(), b in proptest::prelude::any::<u64>(), start in 0u64..u64::MAX / 2) {
+            let mut seen = std::collections::HashSet::new();
+            for n in start..start + 5_000 {
+                proptest::prop_assert!(seen.insert(id_from_seed(a, n)));
+                if a != b {
+                    proptest::prop_assert!(seen.insert(id_from_seed(b, n)));
+                }
+            }
+            proptest::prop_assert_eq!(format!("{:016x}", id_from_seed(a, start)).len(), 16);
+        }
     }
 
     #[test]

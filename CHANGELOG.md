@@ -4,6 +4,14 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### State files, ready for sync
+
+- **Bookmarks have ids.** Every bookmark gets a stable id, so bookmarks from two computers are matched by id, not by name. Existing bookmarks get one when their file is read, and keep their names and places.
+- **Deletions are remembered.** Deleting a note, a highlight, or a bookmark leaves a small record, so a copy from another computer cannot bring it back. An edit made after the deletion still wins.
+- **Replaced notes are kept.** When another computer's newer edit replaces a note's text, the older text is kept on this computer (the last 20 per document) and can be put back. The command for it comes with sync in the reader.
+- **Longer ids.** New notes and highlights get 64-bit ids; older ids stay as they are.
+- State files are now format 2. Every older file, and every Star import, loads unchanged.
+
 ### For contributors
 
 - **`cargo xtask regen` rebuilds every generated file** in one command: the third-party notices, the settings reference, the keyboard reference, the `docs/site` data, and the crate counts in the docs. `cargo xtask regen --check` changes nothing and reports each on one line, such as "keyboard: FAIL, out of date; run cargo xtask regen". `dev-check` runs it, so the settings reference, the docs indexes, and the notices are now checked locally as in CI.
