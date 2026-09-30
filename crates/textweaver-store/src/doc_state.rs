@@ -512,10 +512,35 @@ impl MergeReport {
     }
 }
 
-/// True when `a` wins over `b` under newest-wins: the later `ts`, and on a
-/// tie the larger serialized form, so both computers pick the same one.
-fn wins<T: Serialize>(a: &T, a_ts: i64, b: &T, b_ts: i64) -> bool {
-    match a_ts.cmp(&b_ts) {
+/// When an item was last changed: its clock stamp when the sync code gave
+/// it one (the `clock` key), else the start of its `ts` second.
+trait Versioned {
+    fn version(&self) -> ClockStamp;
+}
+
+impl Versioned for Note {
+    fn version(&self) -> ClockStamp {
+        item_clock(&self.extra).unwrap_or_else(|| ClockStamp::at_secs(self.ts))
+    }
+}
+
+impl Versioned for Highlight {
+    fn version(&self) -> ClockStamp {
+        item_clock(&self.extra).unwrap_or_else(|| ClockStamp::at_secs(self.ts))
+    }
+}
+
+impl Versioned for Bookmark {
+    fn version(&self) -> ClockStamp {
+        item_clock(&self.extra).unwrap_or_else(|| ClockStamp::at_secs(self.ts))
+    }
+}
+
+/// True when `a` wins over `b` under newest-wins: the later version
+/// ([`Versioned`]), and on a tie the larger serialized form, so both
+/// computers pick the same one.
+fn wins<T: Serialize + Versioned>(a: &T, b: &T) -> bool {
+    match a.version().cmp(&b.version()) {
         std::cmp::Ordering::Greater => true,
         std::cmp::Ordering::Less => false,
         std::cmp::Ordering::Equal => {
@@ -1108,7 +1133,7 @@ impl DocState {
             match self.note(&theirs.id).cloned() {
                 Some(mine) if mine == *theirs => {}
                 Some(mine) => {
-                    if wins(theirs, theirs.ts, &mine, mine.ts) {
+                    if wins(theirs, &mine) {
                         if mine.note != theirs.note || mine.tags != theirs.tags {
                             self.backup_note(&mine, other_name, false);
                             report.replaced_notes.push(theirs.id.clone());
@@ -1145,7 +1170,7 @@ impl DocState {
             match self.highlight(&theirs.id).cloned() {
                 Some(mine) if mine == *theirs => {}
                 Some(mine) => {
-                    if wins(theirs, theirs.ts, &mine, mine.ts) {
+                    if wins(theirs, &mine) {
                         self.put_highlight(theirs.clone());
                     }
                 }
@@ -1181,7 +1206,7 @@ impl DocState {
             .highlights
             .iter()
             .find(|x| x.range == h.range && x.id != h.id)
-            && wins(same, same.ts, &h, h.ts)
+            && wins(same, &h)
         {
             return;
         }
@@ -1208,7 +1233,7 @@ impl DocState {
                     continue;
                 }
                 Some(mine) => {
-                    if !wins(&theirs, theirs.ts, &mine, mine.ts) {
+                    if !wins(&theirs, &mine) {
                         continue;
                     }
                     self.bookmarks.retain(|b| b.id != mine.id);

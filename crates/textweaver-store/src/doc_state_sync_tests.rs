@@ -506,3 +506,34 @@ fn three_computers_converge_in_any_order() {
     assert_eq!(highlights.len(), 1);
     assert_eq!(bookmarks.len(), 1);
 }
+
+#[test]
+fn versions_compare_by_clock_stamp_when_they_carry_one() {
+    let mut a = DocState::default();
+    let n = note_from_before(&mut a, "first");
+    let stamp = |counter| {
+        serde_json::to_value(ClockStamp {
+            wall_ms: 9_000,
+            counter,
+            device: "d".into(),
+        })
+        .unwrap()
+    };
+    let mut older = n.clone();
+    older.note = "older by the clock".into();
+    older.extra.insert("clock".into(), stamp(1));
+    let mut newer = n.clone();
+    newer.note = "newer by the clock".into();
+    newer.extra.insert("clock".into(), stamp(2));
+    let mut x = DocState::default();
+    x.insert_note(older);
+    let mut y = DocState::default();
+    y.insert_note(newer);
+    // The same `ts`; the clock decides, whichever side merges.
+    let mut xy = x.clone();
+    xy.merge_marks(&y, "y");
+    let mut yx = y.clone();
+    yx.merge_marks(&x, "x");
+    assert_eq!(xy.note(&n.id).unwrap().note, "newer by the clock");
+    assert_eq!(yx.note(&n.id).unwrap().note, "newer by the clock");
+}
