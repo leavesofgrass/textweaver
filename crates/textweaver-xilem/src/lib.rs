@@ -11,6 +11,7 @@
 //! - [`rsvp`]: the RSVP panel, one word at a time under the document.
 //! - [`widgets`]: the root, panels, buttons, and the live-region announcer.
 //! - [`dialog`]: in-window dialogs: prompts and lists.
+//! - [`menus`]: the menus, native on Windows and macOS, from the app's model.
 //! - [`file_chooser`]: Open with the system's own file chooser.
 //! - [`settings_dialog`]: the settings dialog, built from the app's schema.
 //! - [`runs`]: the document as AccessKit text runs, with stable ids.
@@ -40,6 +41,7 @@ pub mod graphics;
 pub mod gui;
 pub mod keys;
 pub mod log;
+pub mod menus;
 pub mod parity;
 pub mod rsvp;
 pub mod runs;

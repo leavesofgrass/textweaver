@@ -243,7 +243,9 @@ enum OpenDialog {
     /// A prompt for a new value of the setting at this row of the settings
     /// dialog, which comes back when it closes.
     SettingEdit(SettingsOpen, usize),
-    List,
+    /// A list from the app, with the title it was shown with (a menu
+    /// list shows a new title as a submenu opens).
+    List(String),
     /// The command palette: the actions its list shows, in order.
     Palette(Vec<ActionId>),
     /// The font list.
@@ -334,6 +336,15 @@ pub struct Gui {
     /// The window's Win32 handle, for UI Automation notifications (read
     /// on first use; 0 until then or when there is none).
     hwnd: isize,
+    /// The native menus (Windows and macOS), once attached; `None` where
+    /// the menu key opens the list menu instead (ADR-0046).
+    native: Option<crate::menus::Native>,
+    /// A command ran since the menus were last compared with the model:
+    /// the next refresh builds the model's tree and updates them if it
+    /// changed (a toggle, the language, the keys, a recent document).
+    menu_dirty: bool,
+    /// What the native menus were built from ([`crate::menus::Fingerprint`]).
+    menu_key: Option<crate::menus::Fingerprint>,
     /// Load and highlight timings, for `--log` and the measurements.
     pub timings: Timings,
 }
@@ -1110,7 +1121,7 @@ impl Gui {
     /// window for each message (the live region's nodes stay, not live).
     fn notify(&mut self, ctx: &mut DriverCtx<'_>, messages: &[Message]) {
         if self.hwnd == 0 {
-            self.hwnd = window_hwnd(ctx.window(self.window_id).handle());
+            self.hwnd = hwnd_of(ctx.window(self.window_id).handle());
         }
         for m in messages {
             let result = crate::widgets::notify::raise(self.hwnd, m);
@@ -1246,35 +1257,33 @@ impl Gui {
                 .set_window_label(title.as_str());
             self.window_title = title;
         }
+        self.sync_menus();
     }
 
     fn dispatch(&mut self, ctx: &mut DriverCtx<'_>, cmd: Command) {
         if self.log {
             crate::log::line(&format!("command {cmd:?}"));
         }
-        if !self.settings_list && cmd == Command::Action(ActionId::Settings) {
-            self.open_settings(ctx, None);
-            return;
-        }
-        // The window's own commands: the text size and the font.
-        let step = match &cmd {
-            Command::Action(ActionId::TextLarger) => Some(Step::Larger),
-            Command::Action(ActionId::TextSmaller) => Some(Step::Smaller),
-            Command::Action(ActionId::TextSizeReset) => Some(Step::Reset),
-            _ => None,
+        self.menu_dirty = true;
+        // A command, pressed or chosen from a menu (`RunCommand`, which the
+        // app keeps as a recent command).
+        let (command, from_menu) = match &cmd {
+            Command::Action(a) => (Some(*a), false),
+            Command::RunCommand(a) => (Some(*a), true),
+            _ => (None, false),
         };
-        if let Some(step) = step {
-            self.text_size(ctx, step);
-            return;
-        }
-        if cmd == Command::Action(ActionId::ChooseFont) {
-            self.open_fonts(ctx);
+        if let Some(a) = command
+            && self.window_command(ctx, a)
+        {
+            if from_menu {
+                self.app.remember_command(a);
+            }
             return;
         }
         // Open Path (a key, or chosen in the palette) is the app's Open,
         // answered by typing.
         self.typed_open = match &cmd {
-            Command::Action(a) => *a == ActionId::OpenPath,
+            Command::Action(a) | Command::RunCommand(a) => *a == ActionId::OpenPath,
             Command::Answer(id) => id == ActionId::OpenPath.id(),
             _ => false,
         };
@@ -1282,6 +1291,222 @@ impl Gui {
         self.run_effects(ctx, effects);
         self.typed_open = false;
         self.refresh(ctx);
+    }
+
+    /// True for the commands the window runs itself rather than the app:
+    /// the settings and colors dialogs, the text size, the font, and, where
+    /// the menus are native, the menu key.
+    fn is_window_command(&self, a: ActionId) -> bool {
+        match a {
+            ActionId::Settings | ActionId::ColorSettings => !self.settings_list,
+            ActionId::TextLarger
+            | ActionId::TextSmaller
+            | ActionId::TextSizeReset
+            | ActionId::ChooseFont => true,
+            ActionId::Menu => self.native.is_some() && cfg!(windows),
+            _ => false,
+        }
+    }
+
+    /// Runs `a` if the window runs it itself ([`Self::is_window_command`]);
+    /// returns false for the app's commands.
+    fn window_command(&mut self, ctx: &mut DriverCtx<'_>, a: ActionId) -> bool {
+        if !self.is_window_command(a) {
+            return false;
+        }
+        match a {
+            ActionId::Settings => self.open_settings(ctx, None),
+            ActionId::ColorSettings => self.open_colors(ctx),
+            ActionId::TextLarger => self.text_size(ctx, Step::Larger),
+            ActionId::TextSmaller => self.text_size(ctx, Step::Smaller),
+            ActionId::TextSizeReset => self.text_size(ctx, Step::Reset),
+            ActionId::ChooseFont => self.open_fonts(ctx),
+            ActionId::Menu => {
+                // The native menu bar, entered as F10 enters it.
+                let hwnd = self.window_handle(ctx);
+                if !crate::menus::enter_menu_bar(hwnd, '\0') {
+                    return false;
+                }
+            }
+            _ => return false,
+        }
+        true
+    }
+
+    /// The window's Win32 handle (0 elsewhere).
+    fn window_handle(&mut self, ctx: &mut DriverCtx<'_>) -> isize {
+        if self.hwnd == 0 {
+            self.hwnd = hwnd_of(ctx.window(self.window_id).handle());
+        }
+        self.hwnd
+    }
+
+    /// Builds the native menus from the app's model and attaches them to
+    /// the window (Windows and macOS); elsewhere the menu key shows the
+    /// list menu.
+    fn attach_menus(&mut self, ctx: &mut DriverCtx<'_>) {
+        if !crate::menus::NATIVE {
+            return;
+        }
+        let started = Instant::now();
+        crate::menus::listen(self.proxy.clone(), self.window_id);
+        let key = crate::menus::Fingerprint::of(&self.app);
+        let tree = crate::menus::tree(&self.app);
+        let modelled = started.elapsed();
+        match crate::menus::Native::attach(ctx.window(self.window_id).handle(), tree) {
+            Ok(n) => {
+                if self.log {
+                    crate::log::line(&format!(
+                        "menus: native, model {:.1} ms, attached in {:.1} ms",
+                        modelled.as_secs_f64() * 1000.0,
+                        (started.elapsed() - modelled).as_secs_f64() * 1000.0
+                    ));
+                    // What the system holds, as a screen reader will read
+                    // it: each item's text, a tab, and its key.
+                    for line in n.dump() {
+                        crate::log::line(&format!("menu item: {line}"));
+                    }
+                }
+                self.native = Some(n);
+                self.menu_key = Some(key);
+            }
+            Err(e) => {
+                if self.log {
+                    crate::log::line(&format!("menus: not attached ({e}); the list menu instead"));
+                }
+            }
+        }
+    }
+
+    /// After a command: the native menus again, if what they show changed.
+    fn sync_menus(&mut self) {
+        if !std::mem::take(&mut self.menu_dirty) {
+            return;
+        }
+        let Some(native) = self.native.as_mut() else {
+            return;
+        };
+        let key = crate::menus::Fingerprint::of(&self.app);
+        if self.menu_key.as_ref() == Some(&key) {
+            return;
+        }
+        self.menu_key = Some(key);
+        let started = Instant::now();
+        let tree = crate::menus::tree(&self.app);
+        match native.update(tree) {
+            Ok(true) if self.log => crate::log::line(&format!(
+                "menus: rebuilt in {:.1} ms",
+                started.elapsed().as_secs_f64() * 1000.0
+            )),
+            Err(e) if self.log => crate::log::line(&format!("menus: not rebuilt ({e})")),
+            _ => {}
+        }
+    }
+
+    /// A menu item was chosen: an open dialog closes first (as Escape
+    /// would), then the command runs as a recent command, or the recent
+    /// document opens.
+    fn menu_picked(&mut self, ctx: &mut DriverCtx<'_>, id: &str) {
+        let Some(pick) = crate::menus::Pick::from_id(id) else {
+            return;
+        };
+        if self.log {
+            crate::log::line(&format!("menu: {pick:?}"));
+        }
+        if matches!(self.dialog, Some(OpenDialog::FileChooser(_))) {
+            // The system's file chooser is modal to the window; nothing is
+            // run behind it.
+            return;
+        }
+        self.cancel_dialog(ctx);
+        match pick {
+            crate::menus::Pick::Command(a) => self.dispatch(ctx, Command::RunCommand(a)),
+            crate::menus::Pick::Document(p) => self.dispatch(ctx, Command::Open(p)),
+        }
+    }
+
+    /// Windows, with the native menu bar: the keys that enter it as in any
+    /// Windows program. F10 (the menu key) and Alt alone are Windows' own
+    /// (winit leaves their key-up to the system when a window has a menu);
+    /// Alt with a menu's letter and Alt+Space reach the window as keys, so
+    /// the window enters the menu or the system menu itself, unless the
+    /// keymap binds the chord. Returns true when the key was taken.
+    fn native_menu_key(
+        &mut self,
+        ctx: &mut DriverCtx<'_>,
+        chord: &textweaver_app::keymap::KeyChord,
+        action: Option<ActionId>,
+    ) -> bool {
+        use textweaver_app::keymap::{Key, Modifiers};
+        if !cfg!(windows) || self.native.is_none() {
+            return false;
+        }
+        if action == Some(ActionId::Menu) && *chord == keys::menu_bar_key() {
+            // Windows enters the bar on the key's release.
+            return true;
+        }
+        if action.is_some() || chord.mods != Modifiers::ALT {
+            return false;
+        }
+        let letter = match chord.key {
+            Key::Space => ' ',
+            Key::Char(c)
+                if self
+                    .native
+                    .as_ref()
+                    .is_some_and(|n| crate::menus::access_letters(n.shown()).contains(&c)) =>
+            {
+                c
+            }
+            _ => return false,
+        };
+        let hwnd = self.window_handle(ctx);
+        let entered = crate::menus::enter_menu_bar(hwnd, letter);
+        if self.log {
+            crate::log::line(&format!("menu bar entered with {letter:?}: {entered}"));
+        }
+        entered
+    }
+
+    /// The command on row `row` of the list menu, while the app shows the
+    /// menus as a list and that row runs a command (rows are the menu's
+    /// items without its separators, as the app lists them).
+    fn menu_row_command(&self, row: usize) -> Option<ActionId> {
+        let menu = *self.app.menu_path()?.last()?;
+        self.app
+            .menu_view(menu)
+            .items
+            .into_iter()
+            .filter(|i| i.kind != textweaver_app::menu::MenuItemKind::Separator)
+            .nth(row)
+            .and_then(|i| match i.kind {
+                textweaver_app::menu::MenuItemKind::Action(a) => Some(a),
+                _ => None,
+            })
+    }
+
+    /// Closes the open dialog as Escape would.
+    fn cancel_dialog(&mut self, ctx: &mut DriverCtx<'_>) {
+        match &self.dialog {
+            None | Some(OpenDialog::FileChooser(_)) => {}
+            Some(OpenDialog::Question { .. }) => {
+                self.answer_question(ctx, textweaver_app::Confirm::No);
+            }
+            Some(OpenDialog::Settings(_)) => {
+                self.settings_dialog_action(ctx, &DialogAction::Cancel);
+            }
+            Some(OpenDialog::SettingEdit(..)) => {
+                self.setting_edit_answer(ctx, None);
+                self.settings_dialog_action(ctx, &DialogAction::Cancel);
+            }
+            Some(OpenDialog::Prompt) => self.prompt_answer(ctx, None),
+            Some(OpenDialog::FontFamily(_)) => {
+                self.font_answer(ctx, &DialogAction::Cancel);
+            }
+            Some(OpenDialog::List(_) | OpenDialog::Palette(_)) => {
+                self.answer(ctx, Command::Cancel);
+            }
+        }
     }
 
     fn run_effects(&mut self, ctx: &mut DriverCtx<'_>, effects: Vec<Effect>) {
@@ -1306,7 +1531,7 @@ impl Gui {
                 Effect::Prompt { label, purpose } => self.open_prompt(ctx, &label, purpose),
                 // The open list changed (filtered, a setting changed): show
                 // it in place, keeping focus in the dialog.
-                Effect::ShowList { .. } if matches!(self.dialog, Some(OpenDialog::List)) => {
+                Effect::ShowList { .. } if matches!(self.dialog, Some(OpenDialog::List(_))) => {
                     self.sync_list(ctx);
                 }
                 Effect::ShowList { title, items } => self.open_list(ctx, &title, items),
@@ -1480,6 +1705,13 @@ impl Gui {
         }));
     }
 
+    /// View, Colors: the settings dialog on its Colors section.
+    fn open_colors(&mut self, ctx: &mut DriverCtx<'_>) {
+        let form = SettingsForm::new(self.app.settings_schema());
+        let at = form.find(textweaver_app::COLOR_SETTINGS[0]);
+        self.open_settings(ctx, at);
+    }
+
     /// A change, an edit, or a section move from the settings form.
     fn settings_form_action(&mut self, ctx: &mut DriverCtx<'_>, a: FormAction) {
         let Some(OpenDialog::Settings(open)) = &self.dialog else {
@@ -1551,6 +1783,7 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("setting {} {change:?}", setting.path));
         }
+        self.menu_dirty = true;
         let theme_before = self.palette.name.clone();
         match settings_dialog::apply(&mut self.app, setting, change) {
             Ok(said) => {
@@ -1656,7 +1889,7 @@ impl Gui {
         let c = self.app.catalog();
         let (modal, list_id) = list_dialog(&self.palette, &c, title, items, selected, true);
         self.show_dialog(ctx, modal, list_id);
-        self.dialog = Some(OpenDialog::List);
+        self.dialog = Some(OpenDialog::List(title.to_owned()));
         if self.log {
             crate::log::line(&format!("dialog: list {title:?} with {count} items"));
         }
@@ -1801,6 +2034,19 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("list key {k:?}"));
         }
+        self.menu_dirty = true;
+        if k == textweaver_app::ListKey::Enter {
+            // Enter on a window command in the list menu: the window runs
+            // it, as it would from the palette.
+            let selected = self.app.list_model().map_or(0, |m| m.selected);
+            if self
+                .menu_row_command(selected)
+                .is_some_and(|a| self.is_window_command(a))
+            {
+                self.answer(ctx, Command::Choose(selected));
+                return;
+            }
+        }
         let effects = self.app.dispatch(Command::ListKey(k));
         self.sync_list(ctx);
         self.run_effects(ctx, effects);
@@ -1832,10 +2078,16 @@ impl Gui {
     /// Shows the app's list model in the open list dialog, or closes the
     /// dialog when the app's list is gone.
     fn sync_list(&mut self, ctx: &mut DriverCtx<'_>) {
-        if !matches!(self.dialog, Some(OpenDialog::List)) {
+        let Some(OpenDialog::List(shown)) = &self.dialog else {
             return;
-        }
+        };
         match self.app.list_model() {
+            // A new list in its place (a submenu of the list menu): shown
+            // under its own name, so the screen reader says it.
+            Some(m) if m.title != *shown => {
+                let (title, items) = (m.title.clone(), m.items.clone());
+                self.open_list(ctx, &title, items);
+            }
             Some(m) => {
                 let (items, selected) = (m.items.clone(), m.selected);
                 ctx.render_root(self.window_id)
@@ -2015,23 +2267,25 @@ impl Gui {
         if self.dialog.is_none() {
             return;
         }
-        // Commands the window runs itself, chosen in the command palette:
-        // Settings opens the dialog; the text size and font keys.
-        let palette = matches!(self.dialog, Some(OpenDialog::Palette(_)));
-        self.close_dialog(ctx);
-        let own = match &cmd {
-            Command::Answer(id) if palette => ActionId::from_id(id).filter(|a| {
-                (*a == ActionId::Settings && !self.settings_list)
-                    || (a.is_window_only() && *a != ActionId::OpenPath)
-            }),
+        // Commands the window runs itself, chosen in the command palette or
+        // in the list menu: Settings and Colors open their dialogs; the
+        // text size and font keys. They join the recent commands too.
+        let own = match (&cmd, &self.dialog) {
+            (Command::Answer(id), Some(OpenDialog::Palette(_))) => {
+                ActionId::from_id(id).filter(|a| self.is_window_command(*a))
+            }
+            (Command::Choose(i), Some(OpenDialog::List(_))) => self
+                .menu_row_command(*i)
+                .filter(|a| self.is_window_command(*a)),
             _ => None,
         };
+        self.close_dialog(ctx);
         if let Some(a) = own {
             self.muted.set(true);
             let effects = self.app.dispatch(Command::Cancel);
             self.muted.set(false);
             self.run_effects(ctx, effects);
-            self.dispatch(ctx, Command::Action(a));
+            self.dispatch(ctx, Command::RunCommand(a));
             self.refresh(ctx);
             return;
         }
@@ -2045,6 +2299,7 @@ impl Gui {
             return;
         }
         self.close_dialog(ctx);
+        self.menu_dirty = true;
         if self.app.prompt_model().is_none() {
             // The app has no prompt open (it was closed under us): answer
             // directly.
@@ -2090,6 +2345,9 @@ impl Gui {
             .flatten();
         if self.log {
             crate::log::line(&format!("key {chord} -> {action:?}"));
+        }
+        if self.native_menu_key(ctx, &chord, action) {
+            return;
         }
         if let Some(a) = action {
             self.dispatch(ctx, Command::Action(a));
@@ -2151,6 +2409,8 @@ impl Gui {
         // As in the terminal reader: startup messages follow the opening
         // message instead of cutting it off (a settings or keymap warning
         // stays assertive, so it is heard even when reading starts at once).
+        // They are warnings (a setting or key that could not be used), which
+        // interface announcements never silence.
         for m in &messages {
             self.app.announce_queued(m, Priority::Assertive);
         }
@@ -2177,6 +2437,7 @@ impl Gui {
             .get_widget_with_tag(DOC)
             .map(|w| w.id());
         ctx.render_root(self.window_id).focus_on(doc);
+        self.attach_menus(ctx);
         if read && self.app.session().is_some() {
             self.dispatch(ctx, Command::Action(ActionId::ReadFromCursor));
         }
@@ -2423,7 +2684,15 @@ impl AppDriver for Gui {
             return;
         }
         if let Some(chosen) = action.downcast_ref::<FileChosen>() {
+            self.menu_dirty = true;
             self.file_chosen(ctx, chosen);
+            return;
+        }
+        if let Some(crate::menus::MenuPicked(id)) =
+            action.downcast_ref::<crate::menus::MenuPicked>()
+        {
+            let id = id.clone();
+            self.menu_picked(ctx, &id);
             return;
         }
         if action.downcast_ref::<Tick>().is_none() {
@@ -2616,6 +2885,9 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         held_notices: Vec::new(),
         return_focus: None,
         hwnd: 0,
+        native: None,
+        menu_dirty: false,
+        menu_key: None,
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
         closed: false,
@@ -2627,7 +2899,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
 }
 
 /// The window's Win32 handle, or 0 (another system, or no handle yet).
-fn window_hwnd(window: &WinitWindow) -> isize {
+pub(crate) fn hwnd_of(window: &WinitWindow) -> isize {
     use masonry_winit::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
     match window.window_handle().map(|h| h.as_raw()) {
         Ok(RawWindowHandle::Win32(h)) => h.hwnd.get(),

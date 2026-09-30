@@ -317,6 +317,13 @@ unicode-bidi = "0.3.18"
 # at build time for the parent window's handle). MIT.
 rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] }
 
+# Wave 6, Agent W6a6: native menus in the GUI (ADR-0046): a Win32 menu bar
+# (HMENU) on Windows and the application menu on macOS, built from the app's
+# one menu model. Only on those two systems: default features off, so no
+# GTK and no libxdo (Linux shows the same model as an in-window list).
+# Apache-2.0 or MIT.
+muda = { version = "0.20.0", default-features = false }
+
 # Wave 5, Agent W5c3: email (EML) and web archives (MHTML, RFC 2557) in the
 # formats crate (ADR-0035). mail-parser is safe Rust (`forbid(unsafe_code)`)
 # and fuzzed upstream, Apache-2.0 or MIT. Default features off; `encoding_rs`
