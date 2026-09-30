@@ -368,6 +368,7 @@ pub fn blocks(doc: &Document) -> Vec<Block> {
         markers: doc.markers(),
         emitted: vec![false; doc.markers().len()],
         open: Vec::new(),
+        reach: Reach::new(doc.markers()),
     };
     let mut out = b.blocks_in(doc.full_range(), None);
     // Breaks at the very end (a closing rule) start at no char of the text.
@@ -389,6 +390,65 @@ struct TreeBuilder<'a> {
     /// A container is never entered twice on one path: a list and its only
     /// item share a range, so each finds the other inside itself.
     open: Vec<usize>,
+    /// Where the inline markers reach, to find the spans that start before
+    /// a run of text and reach into it.
+    reach: Reach,
+}
+
+/// A segment tree over the markers, in their order, holding the furthest
+/// end of the inline markers under each node. [`Reach::reaching`] finds the
+/// inline markers before an index that end after a position by visiting
+/// only the nodes that reach it, in O(k log n) for k results, where
+/// scanning every earlier marker made building the tree grow with the
+/// square of the document.
+struct Reach {
+    /// Leaves in `size..size + n`; each inner node `i` holds the larger of
+    /// its children `2i` and `2i + 1`. Non-inline markers hold 0.
+    ends: Vec<usize>,
+    size: usize,
+}
+
+impl Reach {
+    fn new(markers: &[Marker]) -> Self {
+        let size = markers.len().next_power_of_two();
+        let mut ends = vec![0; 2 * size];
+        for (i, m) in markers.iter().enumerate() {
+            if is_inline(m) {
+                ends[size + i] = m.range.end.0;
+            }
+        }
+        for i in (1..size).rev() {
+            ends[i] = ends[2 * i].max(ends[2 * i + 1]);
+        }
+        Reach { ends, size }
+    }
+
+    /// Pushes, in increasing order, the index of every inline marker
+    /// before `before` whose range ends after `pos`.
+    fn reaching(&self, before: usize, pos: usize, out: &mut Vec<usize>) {
+        self.visit(1, 0, self.size, before, pos, out);
+    }
+
+    fn visit(
+        &self,
+        node: usize,
+        lo: usize,
+        hi: usize,
+        before: usize,
+        pos: usize,
+        out: &mut Vec<usize>,
+    ) {
+        if lo >= before || self.ends[node] <= pos {
+            return;
+        }
+        if hi - lo == 1 {
+            out.push(lo);
+            return;
+        }
+        let mid = lo + (hi - lo) / 2;
+        self.visit(2 * node, lo, mid, before, pos, out);
+        self.visit(2 * node + 1, mid, hi, before, pos, out);
+    }
 }
 
 /// Containers nested deeper than this are read as plain paragraphs, so
@@ -848,16 +908,14 @@ impl TreeBuilder<'_> {
     /// Inline content of `range`: text with styled spans, `\n` as line
     /// breaks.
     fn inlines(&self, range: CharRange) -> Vec<Inline> {
-        let mut spans: Vec<&Marker> = Vec::new();
-        // Markers that start before the range but reach into it.
+        // Markers that start before the range but reach into it, in marker
+        // order.
         let lo = self
             .markers
             .partition_point(|m| m.range.start < range.start);
-        for m in &self.markers[..lo] {
-            if is_inline(m) && m.range.end > range.start {
-                spans.push(m);
-            }
-        }
+        let mut before = Vec::new();
+        self.reach.reaching(lo, range.start.0, &mut before);
+        let mut spans: Vec<&Marker> = before.into_iter().map(|j| &self.markers[j]).collect();
         for j in self.starting_in(range) {
             let m = &self.markers[j];
             if is_inline(m) && (!m.range.is_empty() || m.kind == MarkerKind::Image) {
@@ -1044,6 +1102,49 @@ mod tests {
 
     fn m(kind: MarkerKind, a: usize, b: usize) -> Marker {
         Marker::new(kind, CharRange::new(a, b))
+    }
+
+    #[test]
+    fn reach_finds_what_scanning_every_earlier_marker_finds() {
+        // A small deterministic generator (xorshift), so every run sees the
+        // same markers.
+        let mut seed = 0x9E37_79B9_7F4A_7C15u64;
+        let mut next = |n: usize| {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            (seed % n as u64) as usize
+        };
+        let kinds = [
+            MarkerKind::Bold,
+            MarkerKind::Italic,
+            MarkerKind::Link,
+            MarkerKind::Paragraph,
+            MarkerKind::Heading,
+            MarkerKind::Code,
+        ];
+        for len in [0, 1, 2, 3, 7, 64, 300] {
+            let mut markers: Vec<Marker> = (0..len)
+                .map(|_| {
+                    let a = next(500);
+                    let long = next(10) == 0;
+                    let b = a + next(if long { 400 } else { 12 });
+                    m(kinds[next(kinds.len())], a, b)
+                })
+                .collect();
+            markers.sort_by_key(Marker::sort_key);
+            let reach = Reach::new(&markers);
+            for before in 0..=len {
+                for pos in [0, 1, 50, 250, 499, 900] {
+                    let mut found = Vec::new();
+                    reach.reaching(before, pos, &mut found);
+                    let scanned: Vec<usize> = (0..before)
+                        .filter(|&j| is_inline(&markers[j]) && markers[j].range.end.0 > pos)
+                        .collect();
+                    assert_eq!(found, scanned, "len {len}, before {before}, pos {pos}");
+                }
+            }
+        }
     }
 
     #[test]
