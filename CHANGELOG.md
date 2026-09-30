@@ -86,6 +86,16 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - Text sent to Pandoc in an older encoding is converted to UTF-8 first.
 - New messages, in all six languages: "it is not a readable JSON file", "... Jupyter notebook", "... SVG drawing", and "... MathML formula", said after "Could not open".
 
+### W6c5: PDF and OCR extras
+
+- **PDF comments are notes.** Sticky notes, highlights, underlines, and strike-outs from a PDF viewer become notes on the text they mark, with replies and whether they are resolved, as Word comments do: "Note: Comment by Ada Example: Cite a source for this. Reply by Bo Example: Added a citation. Resolved." A highlight with nothing typed in it says "Highlighted". Hidden notes are not read.
+- **PDF links work.** Web and email addresses are said and offered to open; a link to another part of the PDF goes to the heading there, or to the page, said as "Page 3" and its first line. Links that would run a program or a script are left out.
+- **Filled-in PDF forms are read**, label first and then the answer: "Name: Ada Example", "Student ID, required: empty", "I agree to the terms: checked", "Signature: not signed". The printed label and the line to write on are not read twice; buttons are left out; an XFA form is named in a warning.
+- **Sideways and upside-down scans read in order.** Each scanned page is turned upright before it is recognized, judged from the page itself with nothing downloaded.
+- **Scanned tables are tables** when their rows and columns line up, with the first row of words as the header.
+- **Captions by pattern.** "Figure 3." and "Table 2:" are found in PDFs; a table's caption names the table, a figure's caption is read as a graphic, and a caption set large or bold is no longer a heading.
+- New message, in all six languages: "Page 3", said first when a link goes to a page.
+
 ### W6d: dictation
 
 - **Dictate in edit mode** (Edit menu, the palette, or `Ctrl+Shift+F9`): what you say is typed at the cursor, phrase by phrase at each pause, with spoken commands such as "new line" and "period" applied; each phrase is one step for Undo. Outside edit mode it asks whether to turn edit mode on first.

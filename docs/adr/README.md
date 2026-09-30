@@ -92,6 +92,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted; the owner's documents check is still queued.
 - [ADR-0045: A file browser on the list model](0045-a-file-browser-on-the-list-model.md): one list that enters and leaves folders and archives, rows that say the name first, members addressed as `course.zip!week1/notes.md` and never extracted, a preview read in the background, folders and files chosen for other commands, and no file ever changed.
   - Status: accepted; waiting for the terminal session.
+- [ADR-0048: PDF annotations, links and forms](0048-pdf-annotations-links-and-forms.md): a PDF's comments as notes, as in Word; its links followed to headings and pages, outside addresses said; filled-in form fields read label first, then value; sideways scans turned upright; scanned tables as tables; and captions found by pattern.
+  - Status: accepted; the owner's check 6 is still queued.
 
 ## Writing a new ADR
 
