@@ -97,6 +97,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - Fixed: every resampled recording (anything not already at 16 kHz) had a garbled first fraction of a second.
 - New messages, in all six languages: "Dictating:", "Dictating. Speak, then press ... to stop.", "Finishing dictation.", "Dictation done.", "No words recognized in that phrase.", and the dictation errors.
 
+### W6b: braille formatting
+
+- **Tables in braille files, three ways.** `[braille] table_format` and `tw convert --table-format` choose how BRF files lay out tables: `linear` (the default, one row per line with semicolons between entries), `listed` (each row starts in cell 5 with the first column's heading and entry, and each other entry follows on its own line after its column heading and a colon), or `stairstep` (each entry two cells to the right of the one before, the column headings in a transcriber's note at the same steps). Listed and stairstep follow BANA's Braille Formats (2016), 11.16 and 11.18; a transcriber's note says how the table is laid out, a blank entry is three guide dots, and a row stays on one braille page when it fits. A table of more than four columns is listed instead of stairstep, with a warning. Every table now has a blank line before and after it (11.2.5d).
+- **Bold, italic, and underline in braille.** BRF files write the UEB typeform indicators (The Rules of Unified English Braille, 2013, section 9): a symbol indicator for one emphasized letter, a word indicator before each of one or two emphasized words (with a terminator only where the emphasis stops inside a word), and a passage indicator and terminator around three words or more. A heading all in one typeform leaves them out, since its place already shows it. Grade 2 through liblouis leaves them out for now.
+- **Capitals passages.** Three or more words in capitals get the capitals passage indicator once and the terminator after the last (the Rules, section 8), instead of a word indicator before each word; one or two capitalized words keep their word indicators.
+- New settings messages, in all six languages: "Braille tables" and its three choices.
+
 ## [0.1.0-alpha.5] - 2026-09-29
 
 The fifth alpha. Braille comes first: every status line, list, and prompt puts the meaning in the first 40 cells, and math can be written in Nemeth or UEB braille. LaTeX, email, and web archives open without Pandoc; documents can be summarized with no model; publishing templates make APA and AMA papers with real Word footnotes; and the GUI ships in the release on every system, with syllables, the voice manager, a question dialog, and its labels in six languages.

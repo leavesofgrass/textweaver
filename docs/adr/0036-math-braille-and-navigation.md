@@ -2,6 +2,7 @@
 
 - Status: accepted, behind the `mathcat` feature; the order of the status line's words and braille waits for a further test session on the Braille display
 - Date: 2026-09-28
+- Status update (Wednesday, September 30, 2026): the Braille display session has not been held, so the status line's order is unchanged. The candidates to check there: the part's braille before its words, so it is in the first 40 cells; the code's name ("Nemeth:") said once when exploring starts rather than on every step; and "Exploring math:" shortened on the display, so the expression starts sooner.
 
 ## Context
 
