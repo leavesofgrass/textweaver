@@ -119,7 +119,7 @@ With `--no-speech`, reading does not take any time. When you ask the server to r
 
 ## Methods
 
-The server has 24 methods. `initialize` lists them all, so a client can check. Parameters marked optional may be left out.
+The server has 25 methods. `initialize` lists them all, so a client can check. Parameters marked optional may be left out.
 
 ### initialize: say hello and learn the version
 
@@ -253,6 +253,16 @@ It needs an open document. Parameters:
 
 Offsets past the end are treated as the end, and an `end` before `start` gives empty text. The result is `{text, start, end}`. The text is the same canonical text that `tw text` prints and that textweaver reads aloud.
 
+### insert: type text at the caret in edit mode
+
+It needs an open document and edit mode on. This is how a client, such as a dictation front end, types text as if it had been typed at the keyboard: it is one undo step and is echoed as typing is. Parameters:
+
+- `text` (string, required): the text to insert at the caret.
+
+The result is `{status, effects, position}`, the same as `action`, plus the new `position`.
+
+Errors: `-32602` when `text` is missing, and `-32004` "insert needs edit mode; run the toggle_edit_mode action first" when edit mode is off. Turn on edit mode first with `action` and `toggle_edit_mode`.
+
 ### action: run any command by name
 
 This is how a client does anything a key can do. Parameters:
@@ -288,7 +298,7 @@ Each returns `{status, effects}`, the same as `action` without `pending`.
 Since Wave 3 the list shown and its focused item are kept by textweaver itself, the same for the terminal reader, the GUI, and a client. These methods let a client move through a list with the reader's own keys and hear the same "item, 2 of 5" announcements.
 
 - `list_state` takes no parameters. It returns the list shown as `{title, items, selected, filter}`, or null when no list is shown. `selected` counts from 0; `filter` is the text typed so far in a list that filters as you type (the outline, the citation picker, the settings), else null.
-- `list_key` takes `key` (string, required): `up`, `down`, `page_up`, `page_down`, `home`, `end`, `left`, `right`, `enter`, `escape`, `backspace`, `delete`, `rename`, `introduce` (the list's introduction again), `details` (the Say Status key: in the file browser, a preview of the focused row), the file browser's `choose_here`, `sort`, and `show_all`, or one character. A character filters a list that filters, chooses by a list's own letter (`s`, `d`, `c` in Save, Discard, Cancel), or moves to the next item starting with it; a space marks an item (a favourite voice). `left` and `right` change a value in the settings list. It returns `{status, effects, list}`, where `list` is the list after the key, as `list_state` gives it.
+- `list_key` takes `key` (string, required): `up`, `down`, `page_up`, `page_down`, `home`, `end`, `left`, `right`, `enter`, `escape`, `backspace`, `delete`, `rename`, `introduce` (the list's introduction again), `details` (the Say Status key: in the file browser, a preview of the focused row), the file browser's `choose_here`, `sort`, and `show_all`, or one character. A character filters a list that filters, chooses by a list's own letter (`s`, `d`, `c` in Save, Discard, Cancel), or moves to the next item starting with it; a space marks an item (a favorite voice). `left` and `right` change a value in the settings list. It returns `{status, effects, list}`, where `list` is the list after the key, as `list_state` gives it.
 
 ### prompt_state and prompt_key: type into a prompt
 
@@ -350,6 +360,7 @@ The server's own codes:
 - `-32001`, no document: the method needs an open document. "No document is open; call open first".
 - `-32002`, open failed: the document could not be opened. The message names the file and the reason.
 - `-32003`, shut down: a request arrived after `shutdown`. "The server is shutting down; send exit".
+- `-32004`, not editing: `insert` was called outside edit mode. "insert needs edit mode; run the toggle_edit_mode action first".
 
 ## Versions
 
@@ -394,7 +405,7 @@ The server answers with its name, version, protocol, and the lists of methods an
   "id": 1,
   "jsonrpc": "2.0",
   "result": {
-    "methods": ["initialize", "open", "status", "position", "navigate", "read", "pause", "resume", "stop", "search", "text", "action", "answer", "choose", "cancel", "list_state", "list_key", "prompt_state", "prompt_key", "settings_schema", "get_setting", "set_setting", "shutdown", "exit"],
+    "methods": ["initialize", "open", "status", "position", "navigate", "read", "pause", "resume", "stop", "search", "text", "insert", "action", "answer", "choose", "cancel", "list_state", "list_key", "prompt_state", "prompt_key", "settings_schema", "get_setting", "set_setting", "shutdown", "exit"],
     "notifications": ["position", "playback", "announcement", "prompt", "list", "quit"],
     "protocol": 1,
     "server": "textweaver",
