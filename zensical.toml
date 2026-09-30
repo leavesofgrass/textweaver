@@ -128,6 +128,7 @@ nav = [
     { "ADR-0042: Streaming dictation and dictation in the reader" = "adr/0042-streaming-dictation.md" },
     { "ADR-0043: Menus and the palette from one model" = "adr/0043-menus-and-the-palette-from-one-model.md" },
     { "ADR-0044: Obsidian, JSON, SVG, and content MathML" = "adr/0044-obsidian-json-svg-and-content-mathml.md" },
+    { "ADR-0045: A file browser on the list model" = "adr/0045-a-file-browser-on-the-list-model.md" },
   ] },
   { "Interactive pages" = [
     { "Overview (interactive)" = "site/index.html" },

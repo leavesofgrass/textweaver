@@ -3160,3 +3160,128 @@ setting-dictation-model-dir-help = Le modèle Whisper de la dictée. Sans valeur
 section-dictation = Dictée
 
 ## End of W6d
+
+## W6f: the file browser. Every row and introduction starts with the name,
+## then the kind, so the first cells of a 40-cell Braille line hold what
+## matters. $name is a file or folder name; $n a number that chooses the
+## plural and $count the same number written with its separators.
+# A list item with its position after it, in the file browser.
+listmodel-item-position-last = { $item }, { $k } sur { $n }
+browse-places-title = Emplacements
+browse-places-intro =
+    { $n ->
+        [one] Emplacements, 1 emplacement.
+       *[other] Emplacements, { $n } emplacements.
+    }
+# $purpose says what the folder or file is chosen for; $intro follows.
+browse-choosing = { $purpose }. { $intro }
+browse-place-document = { $name }, le dossier du document
+browse-place-start = { $name }, dossier de départ
+browse-place-library = { $name }, dossier de la bibliothèque
+browse-place-disk = { $name }, disque
+browse-place-removable = { $name }, lecteur amovible
+browse-place-network = { $name }, lecteur réseau
+browse-place-cd = { $name }, lecteur de CD ou DVD
+browse-place-root = { $name }, le dossier racine
+browse-choose-here = Choisir ce dossier, { $name }
+browse-row-folder = { $name }, dossier
+browse-row-folder-items =
+    { $name }, dossier, { $n ->
+        [one] 1 élément
+       *[other] { $count } éléments
+    }
+# $kind is a kind below ("Markdown"); $size a size below ("12 KB").
+browse-row-file = { $name }, { $kind }, { $size }
+browse-row-kind = { $name }, { $kind }
+browse-row-hidden = { $row }, caché
+# $kind is zip, tar, tar.gz, gzip, or 7z.
+browse-kind-archive = archive { $kind }
+browse-kind-file = fichier
+browse-kind-markdown = Markdown
+browse-kind-text = texte
+browse-kind-html = page web
+browse-kind-epub = livre EPUB
+browse-kind-docx = document Word
+browse-kind-rtf = document RTF
+browse-kind-odt = texte OpenDocument
+browse-kind-latex = LaTeX
+browse-kind-eml = courriel
+browse-kind-mhtml = archive web
+browse-kind-pdf = PDF
+browse-kind-image = image
+browse-kind-daisy = livre DAISY
+browse-kind-pptx = diapositives PowerPoint
+browse-kind-sheet = feuille de calcul
+browse-kind-json = JSON
+browse-kind-notebook = carnet Jupyter
+browse-kind-svg = dessin SVG
+browse-kind-mathml = formule MathML
+browse-kind-pandoc = document lu avec Pandoc
+browse-size-bytes =
+    { $n ->
+        [one] 1 octet
+       *[other] { $count } octets
+    }
+# $size is a number, with a decimal under 10 ("3.4").
+browse-size-kb = { $size } Ko
+browse-size-mb = { $size } Mo
+browse-size-gb = { $size } Go
+browse-intro =
+    { $name }, { $n ->
+        [one] 1 élément.
+       *[other] { $count } éléments.
+    }
+browse-intro-empty = { $name } n'a rien à afficher.
+# $filter is what was typed.
+browse-intro-filtered =
+    { $name }, { $n ->
+        [one] 1 élément correspond à
+       *[other] { $count } éléments correspondent à
+    } { $filter }.
+browse-intro-in-archive = { $intro } Dans { $archive }.
+browse-intro-hidden =
+    { $intro } { $n ->
+        [one] 1 fichier caché.
+       *[other] { $count } fichiers cachés.
+    }
+browse-intro-cut = { $intro } Seuls les { $max } premiers sont affichés.
+# $preview, $choose, $sort, and $all are keys; $item the focused row.
+browse-keys = { $intro } Entrée ouvre, Retour arrière remonte, la saisie filtre. { $preview } donne un aperçu, { $choose } choisit un dossier, { $sort } trie, { $all } montre tous les fichiers. { $item }
+browse-sorted-name = Trié par nom.
+browse-sorted-date = Trié par date, le plus récent d'abord.
+browse-sorted-size = Trié par taille, le plus grand d'abord.
+browse-showing-all = Tous les fichiers sont affichés.
+browse-showing-readable = Seuls les fichiers lisibles sont affichés.
+browse-closed = Explorateur de fichiers fermé.
+browse-read-only = L'explorateur de fichiers ne fait qu'ouvrir et choisir des fichiers ; il ne les modifie jamais.
+# $key is the Choose Folder key.
+browse-choose-a-folder = Choisissez un dossier : Entrée en ouvre un, { $key } le choisit.
+browse-choose-a-file = Choisissez un fichier : Entrée en choisit un.
+browse-no-archive-folder = Un dossier dans une archive ne peut pas être choisi ; choisissez un dossier du disque.
+browse-nothing-waiting = Aucune commande n'attend de dossier ; Entrée l'ouvre.
+browse-cannot-read = { $name } n'est pas un type de fichier que textweaver sait lire.
+browse-folder-unreadable = Impossible d'ouvrir { $name } : { $reason }
+browse-archive-too-deep = { $name } est dans trop d'archives pour être ouvert.
+browse-archive-too-large = { $name } est trop gros pour être listé sans risque.
+browse-archive-unreadable = { $name } n'est pas une archive que textweaver sait lire ; elle est peut-être endommagée.
+# A document's preview: its title, then its first sentence.
+browse-preview-document = { $title }. { $sentence }
+browse-preview-no-text = { $title }. Il n'a pas de texte.
+browse-preview-failed = Impossible de donner un aperçu de { $name } : { $reason }
+# $names are the first few names inside.
+browse-preview-archive =
+    { $name } : { $n ->
+        [one] 1 fichier
+       *[other] { $count } fichiers
+    }, { $readable } lisibles. { $names }
+browse-preview-archive-folder =
+    { $name }, dossier de l'archive, { $n ->
+        [one] 1 élément.
+       *[other] { $count } éléments.
+    }
+browse-preview-folder = { $path } : { $names }
+browse-preview-folder-empty = { $path } : rien à lire ici.
+browse-preview-other = { $name }, { $size } ; textweaver ne sait pas lire ce type de fichier.
+browse-preview-path = { $path }
+
+## End of W6f

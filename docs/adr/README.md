@@ -90,6 +90,8 @@ Statuses: **accepted** is in force; **proposed** is still being tried; **superse
   - Status: accepted; waiting for the terminal session and the GUI's native menus.
 - [ADR-0044: Obsidian, JSON, SVG and content MathML in the reader](0044-obsidian-json-svg-and-content-mathml.md): Obsidian callouts, embeds, tags, and block ids read natively, with the callout rules shared with the renderer; JSON, JSON Lines, and notebooks; SVG drawings as SVG-AAM exposes them; content MathML; and LaTeX macros with arguments and bibliographies.
   - Status: accepted; the owner's documents check is still queued.
+- [ADR-0045: A file browser on the list model](0045-a-file-browser-on-the-list-model.md): one list that enters and leaves folders and archives, rows that say the name first, members addressed as `course.zip!week1/notes.md` and never extracted, a preview read in the background, folders and files chosen for other commands, and no file ever changed.
+  - Status: accepted; waiting for the terminal session.
 
 ## Writing a new ADR
 

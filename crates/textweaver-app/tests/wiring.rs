@@ -420,6 +420,9 @@ fn the_library_lists_folder_documents_and_recent_files_and_opens_them() {
     // Enter on the first opens it and puts it on the bookshelf.
     r.app.dispatch(Command::Choose(0));
     assert_eq!(r.app.session().unwrap().title, "alpha.txt");
+    // The bookshelf is written by the background writer; opening no
+    // longer waits for it on the input thread (W6f).
+    assert!(r.app.flush_writes(Duration::from_secs(10)));
     let shelf = textweaver_app::store::Library::load(&lib.paths.library_file()).unwrap();
     assert!(shelf.get(&lib.folder.join("alpha.txt")).is_some());
     assert!(shelf.get(&lib.outside).is_some());

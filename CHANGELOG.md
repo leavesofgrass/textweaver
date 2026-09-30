@@ -47,6 +47,19 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Screen reader guide:** Orca says every key by default; how to turn that down.
 - **For contributors:** the nightly release-mode tests run under cargo-nextest, and a test that passes only on a retry is named as flaky; a test keeps the nightly fuzz list in step with the fuzz targets; `cargo xtask release` lists every other line still naming the old version; CI's docs job keeps a build cache.
 
+### W6f: the file browser
+
+- **File, Browse files** walks through folders and archives as one list, from the File menu or the command palette. It starts on Places: the open document's folder, the start folder, the library's folders, and the drives on Windows.
+- **Rows say the name first,** then the kind and size ("notes.md, Markdown, 12 KB"), and the position last ("3 of 40"), so a Braille display shows the name in its first cells.
+- **Archives open like folders:** zip, tar, tar.gz, and 7z, and archives inside them, four deep. Nothing is unpacked; a document inside opens as `course.zip!week1/notes.md`, and its position, bookmarks, and notes stay with that path. `__MACOSX` and `.DS_Store` are left out. A damaged, too large, or too deeply nested archive is refused with a sentence.
+- **Backspace goes up** and lands on the row you left, out of an archive too. Typing filters by name.
+- **Alt+End previews** the focused row: a document's title and first sentence, read in the background.
+- **Readable files only,** with Ctrl+A for every file; Ctrl+R sorts by name, date, or size.
+- **Choosing a folder** for another command: Ctrl+Enter, or the "Choose this folder" row where a terminal cannot send Ctrl+Enter. In the Mac GUI the browser's keys use Cmd.
+- The browser only opens and chooses; it never copies, moves, renames, or deletes a file.
+- **Faster opening:** a document no longer waits for earlier saves to reach the disk before it opens (up to two seconds on a slow disk), and a large document's text check runs while it loads.
+- **For contributors:** `App::choose_folder` and `App::choose_file` hand a chosen path to a command (batch conversion and audio export use them); `ListKey` gains `Details`, `ChooseHere`, `Sort`, and `ShowAll`, and JSON-RPC's `list_key` their names; `archive::list_path` and `archive::is_junk`. ADR-0045.
+
 ### W6k
 
 - **EPUB, Word, braille, and PDF output of large documents is much faster.** Building the document's structure grew with the square of its size; 10 MB of Markdown now converts to EPUB in about 1 second instead of 25, and a 50,000-item list in under a second instead of 11. The output is the same.

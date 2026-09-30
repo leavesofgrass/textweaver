@@ -171,9 +171,15 @@ impl App {
         let counter = Arc::clone(&found);
         let (tx, rx) = mpsc::channel();
         let wake = self.waker_slot();
+        // The recent list and bookshelf updates queued when a document
+        // opened are written first; the scan thread waits, not the keys.
+        let written = self.writer.barrier();
         let spawned = std::thread::Builder::new()
             .name("textweaver-library-scan".into())
             .spawn(move || {
+                if let Some(w) = written {
+                    let _ = w.recv_timeout(std::time::Duration::from_secs(5));
+                }
                 let items = inputs.list(&|n| counter.store(n, Ordering::Relaxed));
                 let _ = tx.send(items);
                 wake.wake();

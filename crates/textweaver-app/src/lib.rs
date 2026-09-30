@@ -152,6 +152,7 @@ pub mod align;
 mod app;
 mod authoring;
 mod authoring_state;
+pub mod browse;
 // In-reader export, preview, and citations: the full modules with the
 // `publish` feature, stand-ins that say "not in this build" without it.
 mod announce;
