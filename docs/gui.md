@@ -58,7 +58,7 @@ The window has the same menus as the terminal reader, built from the same list o
 - **macOS:** the menu bar at the top of the screen, with each command's key as its keyboard shortcut. VoiceOver reaches it with Control+Option+M.
 - **Linux:** F10 shows the menus as a list inside the window, as the terminal does: "Menus, 1 of 7, File". Enter or Right opens a menu, a letter moves to the item with that letter, Enter runs a command, Left or Backspace goes back up, and Escape closes.
 
-Choosing a command in a menu runs it as its key would, and it joins the recent commands the command palette lists first (F2 with nothing typed). A few commands that only mean something in a terminal are left out of the window's menus (see [What only the terminal reader does](#what-only-the-terminal-reader-does)). File, Browse files opens textweaver's file browser in the window's list dialog (see [Reading](reading.md#from-the-file-browser-file-browse-files)); its keys work there as in the terminal, and the Say Status key previews the focused row. Batch conversion and audio export appear in the menus once they are part of your version, and dictation in builds that have it.
+Choosing a command in a menu runs it as its key would, and it joins the recent commands the command palette lists first (F2 with nothing typed). A few commands that only mean something in a terminal are left out of the window's menus (see [What only the terminal reader does](#what-only-the-terminal-reader-does)). File, Browse files opens textweaver's file browser in the window's list dialog (see [Reading](reading.md#from-the-file-browser-file-browse-files)); its keys work there as in the terminal, and the Say Status key previews the focused row. Batch conversion, audio export, and dictation are in the menus in the default build.
 
 ## Opening a document
 
@@ -133,11 +133,11 @@ The document window: a very long document is shown a few hundred pages at a time
 
 ## Questions
 
-When textweaver asks a yes-or-no question (a voice to download, after its size and licence; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, so your screen reader says it, and the focus is on **Yes**. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other key asks the question again.
+When textweaver asks a yes-or-no question (a voice to download, after its size and license; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, so your screen reader says it, and the focus is on **Yes**. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other key asks the question again.
 
 ## Voices
 
-**Ctrl+Shift+V** opens the voice manager, the same list as the terminal's. The first two rows filter it: Enter on "Language" or "Engine" cycles through the choices. Enter on a voice uses it and speaks a sample; on a voice you can download, textweaver reads its licence and size, then asks before downloading. Space marks a favourite; Delete removes a downloaded voice, after a yes.
+**Ctrl+Shift+V** opens the voice manager, the same list as the terminal's. The first two rows filter it: Enter on "Language" or "Engine" cycles through the choices. Enter on a voice uses it and speaks a sample; on a voice you can download, textweaver reads its license and size, then asks before downloading. Space marks a favorite; Delete removes a downloaded voice, after a yes.
 
 ## Language
 
