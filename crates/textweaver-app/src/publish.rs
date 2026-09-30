@@ -171,6 +171,19 @@ fn front_matter_bibliography(text: &str, folder: &Path) -> Option<PathBuf> {
     })
 }
 
+/// `[braille] table_format` for the BRF writer.
+pub(crate) fn braille_tables(
+    settings: &textweaver_store::Settings,
+) -> textweaver_convert::BrailleTableFormat {
+    use textweaver_convert::BrailleTableFormat as Out;
+    use textweaver_store::BrailleTableFormat as In;
+    match settings.braille.table_format {
+        In::Linear => Out::Linear,
+        In::Listed => Out::Listed,
+        In::Stairstep => Out::Stairstep,
+    }
+}
+
 impl App {
     /// The document's folder and base name.
     fn doc_place(&self) -> (Option<PathBuf>, PathBuf, String) {
@@ -275,6 +288,7 @@ impl App {
             textweaver_store::MathBrailleCode::Nemeth => textweaver_convert::MathCode::Nemeth,
             textweaver_store::MathBrailleCode::Ueb => textweaver_convert::MathCode::Ueb,
         };
+        o.write.braille.table_format = braille_tables(&self.settings);
         o.citations.user_library = self
             .paths
             .as_ref()

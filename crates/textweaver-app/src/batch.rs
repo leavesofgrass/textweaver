@@ -260,6 +260,7 @@ mod run {
                 textweaver_store::MathBrailleCode::Nemeth => textweaver_convert::MathCode::Nemeth,
                 textweaver_store::MathBrailleCode::Ueb => textweaver_convert::MathCode::Ueb,
             };
+            o.write.braille.table_format = crate::publish::braille_tables(&self.settings);
             o.citations.user_library = self
                 .paths
                 .as_ref()

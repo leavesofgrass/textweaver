@@ -63,8 +63,8 @@ pub use citations::CitationOptions;
 pub use plan::{Job, Plan};
 pub use watch::{WatchEvent, WatchOptions, watch};
 pub use writer::{
-    BrailleGrade, BrailleOptions, EpubOptions, MathCode, PageSize, PdfOptions, WriteError,
-    WriteOptions, WriteReport, Writer, Writers,
+    BrailleGrade, BrailleOptions, BrailleTableFormat, EpubOptions, MathCode, PageSize, PdfOptions,
+    WriteError, WriteOptions, WriteReport, Writer, Writers,
 };
 
 /// An output format.

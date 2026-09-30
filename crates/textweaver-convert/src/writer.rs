@@ -11,8 +11,8 @@
 
 use textweaver_writers::Format;
 pub use textweaver_writers::{
-    BrailleGrade, BrailleOptions, EpubOptions, MathCode, PageSize, PdfOptions, WriteError,
-    WriteOptions, WriteReport, Writer, writer_for,
+    BrailleGrade, BrailleOptions, BrailleTableFormat, EpubOptions, MathCode, PageSize, PdfOptions,
+    WriteError, WriteOptions, WriteReport, Writer, writer_for,
 };
 
 use crate::OutputFormat;

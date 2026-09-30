@@ -817,6 +817,16 @@ pub const INFO: &[Info] = &[
         "The braille code for math in BRF files and while exploring a formula with MathCAT: Nemeth, or UEB mathematics. It needs a build that includes MathCAT; otherwise math is written as its spoken words.",
         &[("nemeth", "Nemeth"), ("ueb", "UEB")],
     ),
+    choice(
+        "braille.table_format",
+        "Braille tables",
+        "How BRF files lay out tables: linear, one row per line with semicolons between entries; listed, each row a heading with each entry on its own line after its column heading; or stairstep, each entry two cells right of the one before, for tables of up to four columns.",
+        &[
+            ("linear", "linear"),
+            ("listed", "listed"),
+            ("stairstep", "stairstep"),
+        ],
+    ),
     // [reading_aids]
     number(
         "reading_aids.rsvp.wpm",

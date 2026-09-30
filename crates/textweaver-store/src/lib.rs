@@ -61,9 +61,9 @@ pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, BrailleSettings,
-    CitationReading, ColorSettings, CommunityLexiconSettings, CursorPlacement, DectalkSettings,
-    DictationSettings, DigitRow, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,
-    ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings, HighlightSettings,
+    BrailleTableFormat, CitationReading, ColorSettings, CommunityLexiconSettings, CursorPlacement,
+    DectalkSettings, DictationSettings, DigitRow, DisplaySettings, EciDictionaries, EciSettings,
+    EditingSettings, ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings, HighlightSettings,
     InterfaceAnnouncements, InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset,
     LexiconSettings, LibrarySettings, MathBrailleCode, MathDisplay, MathEngine,
     NormalizationSettings, OcrEngine, PiperPhonemizer, PiperSettings, PreviewSettings,

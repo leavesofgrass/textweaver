@@ -1293,6 +1293,22 @@ pub enum MathBrailleCode {
     Ueb,
 }
 
+/// `[braille] table_format`: how BRF files lay out tables (BANA's
+/// Braille Formats, 2016, section 11).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BrailleTableFormat {
+    /// One line per row, entries separated by semicolons.
+    #[default]
+    Linear,
+    /// Each row a cell-5 heading, then each entry on its own line after
+    /// its column heading (11.16).
+    Listed,
+    /// Each row's entries two cells further right, one per line (11.18);
+    /// four columns at most, wider tables listed.
+    Stairstep,
+}
+
 /// `[braille]`: braille output: BRF files and math braille on the
 /// display.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -1302,6 +1318,8 @@ pub struct BrailleSettings {
     /// formula. Needs a build with MathCAT; otherwise math is written as
     /// its spoken words in uncontracted braille.
     pub math_code: MathBrailleCode,
+    /// How tables are laid out in BRF files.
+    pub table_format: BrailleTableFormat,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -2149,6 +2167,27 @@ wrap_navigation = true
         assert_eq!(s.braille.math_code, MathBrailleCode::Nemeth);
         assert!(s.braille.extra.contains_key("future"));
         assert!(err.unwrap_or_default().contains("braille.math_code"));
+    }
+
+    /// The BRF table format (W6b): linear by default, stored only when
+    /// changed, and a bad value costs only itself.
+    #[test]
+    fn braille_table_format_default_round_trip_and_bad_value() {
+        let s = Settings::default();
+        assert_eq!(s.braille.table_format, BrailleTableFormat::Linear);
+        assert!(!s.to_minimal_toml().unwrap().contains("[braille]"));
+        let (_d, store) = store();
+        write(&store, "[braille]\ntable_format = \"stairstep\"\n");
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        assert_eq!(s.braille.table_format, BrailleTableFormat::Stairstep);
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("table_format = \"stairstep\""), "{text}");
+        write(&store, "[braille]\ntable_format = \"spiral\"\n");
+        let (s, err) = store.load();
+        assert_eq!(s.braille.table_format, BrailleTableFormat::Linear);
+        assert!(err.unwrap_or_default().contains("braille.table_format"));
     }
 
     #[test]

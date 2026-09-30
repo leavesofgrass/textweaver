@@ -20,8 +20,8 @@ use std::time::Duration;
 
 use anyhow::{Context, bail};
 use textweaver_convert::{
-    BrailleOptions, CitationOptions, ConvertOptions, Converter, MathCode, OutputFormat, PdfOptions,
-    Status, WatchOptions, WriteOptions, watch,
+    BrailleOptions, BrailleTableFormat, CitationOptions, ConvertOptions, Converter, MathCode,
+    OutputFormat, PdfOptions, Status, WatchOptions, WriteOptions, watch,
 };
 use textweaver_render::{EmbedMode, Engine, Flavor, RenderOptions, TemplateChoice};
 use textweaver_writers::Template;
@@ -120,6 +120,12 @@ pub struct Args {
     /// a build with MathCAT; otherwise math is written as spoken words.
     #[arg(long, value_name = "CODE", default_value = "nemeth", value_parser = parse_math_code)]
     pub math_code: MathCode,
+    /// BRF: how tables are laid out: linear (the default, one row per
+    /// line), listed (each entry after its column heading), or stairstep
+    /// (each entry two cells right of the one before; four columns at
+    /// most).
+    #[arg(long, value_name = "FORMAT", default_value = "linear", value_parser = parse_table_format)]
+    pub table_format: BrailleTableFormat,
     #[command(flatten)]
     pub layout: super::convert_layout::LayoutArgs,
     /// Do not save conversion-report.txt (the summary, failures, and
@@ -145,6 +151,17 @@ fn parse_math_code(s: &str) -> Result<MathCode, String> {
         "nemeth" => Ok(MathCode::Nemeth),
         "ueb" => Ok(MathCode::Ueb),
         _ => Err(format!("unknown math code {s:?}; use nemeth or ueb")),
+    }
+}
+
+fn parse_table_format(s: &str) -> Result<BrailleTableFormat, String> {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "linear" => Ok(BrailleTableFormat::Linear),
+        "listed" => Ok(BrailleTableFormat::Listed),
+        "stairstep" => Ok(BrailleTableFormat::Stairstep),
+        _ => Err(format!(
+            "unknown table format {s:?}; use linear, listed, or stairstep"
+        )),
     }
 }
 
@@ -246,6 +263,7 @@ fn command_options(args: &Args) -> ConvertOptions {
             },
             braille: BrailleOptions {
                 math_code: args.math_code,
+                table_format: args.table_format,
                 ..BrailleOptions::default()
             },
             ..WriteOptions::default()
@@ -432,5 +450,21 @@ mod tests {
         let args = parse(&["page.md", "--to", "html", "--template", "large-print"]);
         let note = template_note(&args).expect("a note for HTML");
         assert!(note.starts_with("Template large-print:"), "{note}");
+    }
+
+    #[test]
+    fn the_braille_table_format_reaches_the_writer() {
+        let o = options(&parse(&["notes.md", "--to", "brf"]));
+        assert_eq!(o.write.braille.table_format, BrailleTableFormat::Linear);
+        let o = options(&parse(&[
+            "notes.md",
+            "--to",
+            "brf",
+            "--table-format",
+            "Stairstep",
+        ]));
+        assert_eq!(o.write.braille.table_format, BrailleTableFormat::Stairstep);
+        let bad = Cli::try_parse_from(["tw", "notes.md", "--table-format", "spiral"]);
+        assert!(bad.is_err());
     }
 }
