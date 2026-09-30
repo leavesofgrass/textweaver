@@ -725,6 +725,10 @@ fn notes_add_list_jump_edit_delete_and_persist() {
     let store = StateStore::new(r.paths.state_dir());
     let state = store.load(&DocKey::for_path(&file)).unwrap();
     assert!(state.notes.is_empty() && state.highlights.is_empty());
+    // Both deletions are recorded, so a later sync merge cannot bring
+    // them back (state format 2).
+    assert_eq!(state.deleted.notes.len(), 1);
+    assert_eq!(state.deleted.highlights.len(), 1);
 }
 
 #[test]
@@ -788,6 +792,9 @@ fn bookmarks_rename_and_delete() {
         .unwrap();
     assert_eq!(state.bookmarks.len(), 1);
     assert_eq!(state.bookmarks[0].name, "chapter");
+    // Bookmarks carry ids, and the deletion is recorded (state format 2).
+    assert_eq!(state.bookmarks[0].id.len(), 16);
+    assert_eq!(state.deleted.bookmarks.len(), 1);
     // Delete the one at the cursor through the command.
     r.go(at(text, "five"));
     r.send(Command::Notes(NoteCommand::DeleteBookmark));
