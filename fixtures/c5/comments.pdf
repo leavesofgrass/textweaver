@@ -1,0 +1,107 @@
+%PDF-1.7
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /Lang (en) /Names 19 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [16 0 R 3 0 R 4 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> >> >> /Contents 17 0 R >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> >> >> /Contents 18 0 R >>
+endobj
+5 0 obj
+<< /Type /Annot /Subtype /Highlight /Rect [213.83 673.58 332.44 684.25] /QuadPoints [213.83 684.25 332.44 684.25 213.83 673.58 332.44 673.58] /Contents (Cite a source for this.) /T (Ada Example) /M (D:20260901103000Z) >>
+endobj
+6 0 obj
+<< /Type /Annot /Subtype /Text /Rect [560 676 580 692] /IRT 5 0 R /Contents (Added a citation.) /T (Bo Example) /M (D:20260902090000Z) >>
+endobj
+7 0 obj
+<< /Type /Annot /Subtype /Text /Rect [560 676 580 692] /IRT 5 0 R /State (Completed) /StateModel (Review) /T (Ada Example) /F 2 >>
+endobj
+8 0 obj
+<< /Type /Annot /Subtype /Text /Rect [540 696 560 712] /Contents (Good opening sentence.) /T (Ada Example) >>
+endobj
+9 0 obj
+<< /Type /Annot /Subtype /StrikeOut /Rect [72.00 577.58 197.33 588.25] /QuadPoints [72.00 588.25 197.33 588.25 72.00 577.58 197.33 577.58] /T (Ada Example) >>
+endobj
+10 0 obj
+<< /Type /Annot /Subtype /Text /Rect [540 600 560 616] /F 2 /Contents (Hidden note, not for reading.) >>
+endobj
+11 0 obj
+<< /Type /Annot /Subtype /Link /Rect [133.75 649.58 212.63 660.25] /A << /S /URI /URI (https://example.org/course) >> >>
+endobj
+12 0 obj
+<< /Type /Annot /Subtype /Link /Rect [347.74 625.58 410.71 636.25] /Dest [3 0 R /XYZ 0 740 0] >>
+endobj
+13 0 obj
+<< /Type /Annot /Subtype /Link /Rect [263.37 601.58 317.79 612.25] /A << /S /GoTo /D (rawdata) >> >>
+endobj
+14 0 obj
+<< /Type /Annot /Subtype /Link /Rect [160.04 553.58 205.88 564.25] /A << /S /JavaScript /JS (app.alert\(1\)) >> >>
+endobj
+15 0 obj
+<< /Length 677  >>
+stream
+BT /F2 18 Tf 72.00 740.00 Td (Where the water goes) Tj ET
+BT /F1 11 Tf 72.00 700.00 Td (The river carries water from the hills to the sea.) Tj ET
+BT /F1 11 Tf 72.00 676.00 Td (Most of the water in the river falls as rain in the spring.) Tj ET
+BT /F1 11 Tf 72.00 652.00 Td (Please read the course page before class on Monday.) Tj ET
+BT /F1 11 Tf 72.00 628.00 Td (The next section explains how the samples were taken; see Methods.) Tj ET
+BT /F1 11 Tf 72.00 604.00 Td (The raw numbers are listed on page 3, see page 3.) Tj ET
+BT /F1 11 Tf 72.00 580.00 Td (This sentence was a draft and should go.) Tj ET
+BT /F1 11 Tf 72.00 556.00 Td (A final line for the script link test.) Tj ET
+
+endstream
+endobj
+16 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> >> /XObject <<  >> >> /Contents 15 0 R /Annots [5 0 R 6 0 R 7 0 R 8 0 R 9 0 R 10 0 R 11 0 R 12 0 R 13 0 R 14 0 R] >>
+endobj
+17 0 obj
+<< /Length 232  >>
+stream
+BT /F2 18 Tf 72.00 720.00 Td (Methods) Tj ET
+BT /F1 11 Tf 72.00 690.00 Td (Samples were taken every week from three places on the river.) Tj ET
+BT /F1 11 Tf 72.00 666.00 Td (Each sample was weighed, dried, and weighed again.) Tj ET
+
+endstream
+endobj
+18 0 obj
+<< /Length 194  >>
+stream
+BT /F1 11 Tf 72.00 720.00 Td (Week one: 12.1, 11.8, and 12.4 grams of silt in each litre.) Tj ET
+BT /F1 11 Tf 72.00 696.00 Td (Week two: 10.2, 10.9, and 11.3 grams of silt in each litre.) Tj ET
+
+endstream
+endobj
+19 0 obj
+<< /Dests << /Names [(rawdata) [4 0 R /Fit]] >> >>
+endobj
+xref
+0 20
+0000000000 65535 f 
+0000000009 00000 n 
+0000000083 00000 n 
+0000000153 00000 n 
+0000000447 00000 n 
+0000000741 00000 n 
+0000000977 00000 n 
+0000001130 00000 n 
+0000001276 00000 n 
+0000001401 00000 n 
+0000001575 00000 n 
+0000001696 00000 n 
+0000001833 00000 n 
+0000001946 00000 n 
+0000002063 00000 n 
+0000002194 00000 n 
+0000002924 00000 n 
+0000003310 00000 n 
+0000003595 00000 n 
+0000003842 00000 n 
+trailer
+<< /Size 20 /Root 1 0 R >>
+startxref
+3909
+%%EOF
