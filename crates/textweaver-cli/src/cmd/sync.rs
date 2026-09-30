@@ -1,6 +1,8 @@
 //! `tw sync setup|status|now`: sync notes, highlights, bookmarks, places,
-//! and reading statistics with other computers through a folder the owner
-//! chooses (ADR-0049), from the command line. Each takes `--json`.
+//! reading statistics, portable settings, profiles, key overrides, the word
+//! list, the glossary and pronunciations, and favorite voices with other
+//! computers through a folder the owner chooses (ADR-0049), from the
+//! command line. Each takes `--json`.
 //!
 //! - `tw sync setup --folder DIR [--name NAME] [--groups places,notes,...]`
 //!   turns sync on with that folder, names this computer ("Computer 1",
@@ -8,8 +10,9 @@
 //!   name), and chooses what syncs.
 //! - `tw sync status` says how sync stands, the line the reader says:
 //!   "Sync: up to date", "Sync: folder missing, saving here".
-//! - `tw sync now` merges every document this computer knows with the
-//!   other computers' files, and publishes its own.
+//! - `tw sync now` merges every document this computer knows, and the
+//!   settings and word lists, with the other computers' files, and
+//!   publishes its own.
 //!
 //! Owner: Agent S4 (the sync wave).
 
@@ -25,6 +28,7 @@ use textweaver_app::sync_engine::{
     AllOutcome, EngineConfig, EngineStatus, Groups, Notice, StatusKind, SyncEngine, notice_text,
     status_line,
 };
+use textweaver_app::sync_groups::{GroupsRequest, KeySystem, apply_groups};
 
 /// Arguments for `tw sync`.
 #[derive(clap::Args, Debug)]
@@ -56,7 +60,7 @@ pub enum SyncCommand {
         /// This computer's name, such as laptop or lab (default: Computer 1, Computer 2, ...).
         #[arg(long)]
         name: Option<String>,
-        /// What syncs, separated by commas: places, notes, highlights, bookmarks, statistics (default: all).
+        /// What syncs, separated by commas: places, notes, highlights, bookmarks, statistics, settings, profiles, key_overrides, words, glossary, favorite_voices (default: all).
         #[arg(long, value_delimiter = ',', value_name = "GROUPS")]
         groups: Option<Vec<String>>,
         /// JSON and the home folder.
@@ -120,6 +124,10 @@ struct Report {
     /// For `now`.
     #[serde(skip_serializing_if = "Option::is_none")]
     changed: Option<usize>,
+    /// For `now`: changes to settings and word lists taken from the other
+    /// computers.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    settings_changes: Option<usize>,
 }
 
 fn state_word(k: StatusKind) -> &'static str {
@@ -152,6 +160,7 @@ fn report(
         messages: notices.iter().map(|n| notice_text(c, n).0).collect(),
         documents: None,
         changed: None,
+        settings_changes: None,
     }
 }
 
@@ -201,24 +210,21 @@ fn print(c: &Catalog, r: &Report, json: bool, out: &mut dyn Write) -> anyhow::Re
 
 /// The groups named on the command line.
 fn parse_groups(names: &[String]) -> anyhow::Result<Groups> {
-    let mut g = Groups {
-        places: false,
-        notes: false,
-        highlights: false,
-        bookmarks: false,
-        statistics: false,
-    };
+    let mut g = Groups::NONE;
     for n in names {
-        match n.trim().to_lowercase().as_str() {
-            "places" => g.places = true,
-            "notes" => g.notes = true,
-            "highlights" => g.highlights = true,
-            "bookmarks" => g.bookmarks = true,
-            "statistics" | "stats" => g.statistics = true,
-            "" => {}
-            other => bail!(
-                "unknown group {other}: use places, notes, highlights, bookmarks, or statistics"
-            ),
+        let name = n.trim().to_lowercase().replace('-', "_");
+        let name = match name.as_str() {
+            "stats" => "statistics",
+            "keys" | "keymap" => "key_overrides",
+            "voices" => "favorite_voices",
+            other => other,
+        };
+        if name.is_empty() {
+            continue;
+        }
+        match g.get_mut(name) {
+            Some(v) => *v = true,
+            None => bail!("unknown group {name}: use {}", Groups::NAMES.join(", ")),
         }
     }
     Ok(g)
@@ -262,11 +268,7 @@ fn execute(paths: &Paths, command: &SyncCommand, out: &mut dyn Write) -> anyhow:
             y.enabled = true;
             y.folder = Some(absolute(folder));
             y.device_name = name;
-            y.places = g.places;
-            y.notes = g.notes;
-            y.highlights = g.highlights;
-            y.bookmarks = g.bookmarks;
-            y.statistics = g.statistics;
+            g.write_to(y);
             store.save(&settings)?;
             let (e, notices, on) = engine(&settings, paths);
             let r = report(&c, &settings, on, e.status(), &notices);
@@ -280,9 +282,31 @@ fn execute(paths: &Paths, command: &SyncCommand, out: &mut dyn Write) -> anyhow:
         SyncCommand::Now { common } => {
             let (mut e, mut notices, on) = engine(&settings, paths);
             let mut all = AllOutcome::default();
+            let mut settings_changes = 0;
+            let mut settings_from = Vec::new();
             if on {
                 all = e.sync_all(None);
                 notices.append(&mut all.notices);
+                // Settings and word lists: merged, then applied to the
+                // files here (the settings saved only when they changed).
+                let saved_ms = std::fs::metadata(paths.settings_file())
+                    .and_then(|m| m.modified())
+                    .ok()
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
+                let mut groups = e.groups_cycle(&GroupsRequest {
+                    settings: Box::new(settings.clone()),
+                    settings_ms: saved_ms,
+                    force: true,
+                });
+                notices.append(&mut groups.notices);
+                let applied =
+                    apply_groups(paths, &mut settings, &groups.arrivals, KeySystem::current());
+                if !applied.settings_paths.is_empty() {
+                    store.save(&settings)?;
+                }
+                settings_changes = applied.changes;
+                settings_from = applied.from;
             }
             let mut r = report(&c, &settings, on, e.status(), &notices);
             if on && matches!(e.status().kind, StatusKind::Ready | StatusKind::ReadOnly) {
@@ -293,6 +317,17 @@ fn execute(paths: &Paths, command: &SyncCommand, out: &mut dyn Write) -> anyhow:
                 };
                 r.documents = Some(all.documents);
                 r.changed = Some(all.changed);
+                r.settings_changes = Some(settings_changes);
+                if settings_changes > 0 {
+                    let device = settings_from
+                        .first()
+                        .cloned()
+                        .unwrap_or_else(|| c.tr("sync-another-computer"));
+                    r.messages.push(c.fmt(
+                        "sync-settings-arrived",
+                        &args!["n" => settings_changes, "device" => device],
+                    ));
+                }
             }
             print(&c, &r, common.json, out)
         }
