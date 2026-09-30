@@ -430,6 +430,48 @@ pub fn member_path(archive: &Path, name: &str) -> PathBuf {
     PathBuf::from(s)
 }
 
+/// How many archives deep `path` reaches: 1 for an archive on disk, 2 for
+/// `outer.zip!inner.tar`, and so on; 0 when it is not a member path.
+pub fn nesting(path: &Path) -> usize {
+    if path.is_file() {
+        return 1;
+    }
+    split_member(path).map_or(0, |(_, inner)| 2 + inner.matches(SEPARATOR).count())
+}
+
+/// The files in the archive at `path` (directories left out, at most
+/// [`MAX_LISTED`] plus one): an archive on disk, or a member path naming
+/// an archive inside an archive (`course.zip!week1/extra.tar`), at most
+/// [`MAX_NESTING`] deep. For the file browser (Wave 6, W6f): nothing is
+/// extracted, and names are normalized as [`list`] does, so none climbs
+/// out of the archive.
+pub fn list_path(path: &Path) -> io::Result<Vec<Entry>> {
+    if path.is_file() {
+        return Input::File(path.to_owned()).list();
+    }
+    if nesting(path) > MAX_NESTING {
+        return Err(io::Error::other("archives are nested too deeply"));
+    }
+    Input::Bytes(read_path(path)?).list()
+}
+
+/// True for entries a file browser leaves out of an archive's listing:
+/// macOS resource forks (`__MACOSX/`), Finder's `.DS_Store`, and the
+/// thumbnail caches and folder settings Windows leaves (`Thumbs.db`,
+/// `desktop.ini`). They are never documents.
+pub fn is_junk(name: &str) -> bool {
+    let name = normalize(name);
+    if name.split('/').next() == Some("__MACOSX") {
+        return true;
+    }
+    let file = name
+        .rsplit('/')
+        .next()
+        .unwrap_or(&name)
+        .to_ascii_lowercase();
+    matches!(file.as_str(), ".ds_store" | "thumbs.db" | "desktop.ini")
+}
+
 /// Reads `inner` from `input`, following `!` into nested archives.
 fn read_nested(input: &Input, inner: &str, depth: usize) -> io::Result<Vec<u8>> {
     match input.read(inner) {
@@ -793,6 +835,65 @@ mod tests {
             let data = z.finish().unwrap().into_inner();
             let read = read_member(ArchiveKind::Zip, Cursor::new(data), "notes.txt");
             assert_eq!(read.unwrap(), body, "{method:?}");
+        }
+    }
+
+    /// The file browser lists an archive inside an archive by its member
+    /// path, and refuses one nested past the limit with a sentence.
+    #[test]
+    fn listing_follows_member_paths() {
+        let dir = tempfile::tempdir().unwrap();
+        let inner = zip_of(&[("week1/notes.md", b"# Notes"), ("week1/a.txt", b"a")]);
+        let outer = dir.path().join("course.zip");
+        std::fs::write(&outer, zip_of(&[("extra.zip", &inner), ("x.md", b"x")])).unwrap();
+        assert_eq!(nesting(&outer), 1);
+        let names: Vec<String> = list_path(&outer)
+            .unwrap()
+            .into_iter()
+            .map(|e| e.name)
+            .collect();
+        assert_eq!(names, ["extra.zip", "x.md"]);
+        let member = member_path(&outer, "extra.zip");
+        assert_eq!(nesting(&member), 2);
+        let names: Vec<String> = list_path(&member)
+            .unwrap()
+            .into_iter()
+            .map(|e| e.name)
+            .collect();
+        assert_eq!(names, ["week1/notes.md", "week1/a.txt"]);
+        assert_eq!(nesting(&dir.path().join("none.zip")), 0);
+
+        let mut deep = zip_of(&[("end.txt", b"deep")]);
+        let mut path = String::new();
+        for i in 0..=MAX_NESTING {
+            let name = format!("level{i}.zip");
+            deep = zip_of(&[(name.as_str(), &deep)]);
+            path = if path.is_empty() {
+                name
+            } else {
+                format!("{name}!{path}")
+            };
+        }
+        let top = dir.path().join("top.zip");
+        std::fs::write(&top, &deep).unwrap();
+        let err = list_path(&dir.path().join(format!("top.zip!{path}")))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("nested too deeply"), "{err}");
+    }
+
+    #[test]
+    fn junk_entries_are_known() {
+        for junk in [
+            "__MACOSX/week1/._notes.md",
+            "week1/.DS_Store",
+            "Thumbs.db",
+            "a/Desktop.ini",
+        ] {
+            assert!(is_junk(junk), "{junk}");
+        }
+        for fine in ["notes.md", "week1/.hidden.md", "MACOSX/a.md"] {
+            assert!(!is_junk(fine), "{fine}");
         }
     }
 
