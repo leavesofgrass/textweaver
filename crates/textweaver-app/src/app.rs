@@ -802,16 +802,18 @@ impl App {
         let doc = self
             .registry
             .load(&Source::Path(path.to_owned()), &self.load_options())?;
-        Ok(self.adopt_loaded(path, doc, stamp))
+        Ok(self.adopt_loaded(path, doc, stamp, None))
     }
 
     /// Makes a document loaded from `path` current: the second half of
-    /// [`open`](Self::open), shared with opening in the background.
+    /// [`open`](Self::open), shared with opening in the background, which
+    /// passes the text's stamp it computed on the loading thread.
     pub(crate) fn adopt_loaded(
         &mut self,
         path: &Path,
         mut doc: Document,
         stamp: Option<crate::disk::FileStamp>,
+        text: Option<textweaver_store::TextStamp>,
     ) -> Vec<Effect> {
         if doc.meta.path.is_none() {
             doc.meta.path = Some(path.to_owned());
@@ -824,7 +826,7 @@ impl App {
         let key = DocKey::for_path(path);
         // The recent list and the bookshelf, on the writer.
         self.record_library_open_doc(path, &title, &doc);
-        let effects = self.open_document(doc, key, title);
+        let effects = self.open_document_stamped(doc, key, title, text);
         if let Some(s) = self.session.as_mut() {
             s.disk = stamp;
         }
@@ -838,6 +840,19 @@ impl App {
     /// safety net, edit mode is dropped here without saving, keeping its
     /// recovery snapshot.
     pub fn open_document(&mut self, doc: Document, key: DocKey, title: String) -> Vec<Effect> {
+        self.open_document_stamped(doc, key, title, None)
+    }
+
+    /// [`open_document`](Self::open_document) with the text's stamp, when
+    /// the loading thread computed it (15 to 30 ms on 10 MB, off the input
+    /// thread); `None` computes it here.
+    pub(crate) fn open_document_stamped(
+        &mut self,
+        doc: Document,
+        key: DocKey,
+        title: String,
+        text: Option<textweaver_store::TextStamp>,
+    ) -> Vec<Effect> {
         if self.edit.take().is_some() {
             log::warn!("a document was opened over unsaved edit mode");
         }
@@ -856,13 +871,15 @@ impl App {
         self.list = None;
         self.spoken_log.clear();
         let mut s = Session::new(doc, key, title, self.settings.reading.nav_history_size);
-        s.text_stamp = Some(crate::relocate::text_stamp(&s.doc));
-        // The state saves queued above (the previous document, or this one
-        // on a reload) must be on disk before this reads them back.
-        if !self.writer.flush(std::time::Duration::from_secs(2)) {
-            log::warn!("the writer is slow; reading the saved state anyway");
-        }
-        let mut loaded = self.state_store().and_then(|store| store.load(&s.key));
+        s.text_stamp = Some(text.unwrap_or_else(|| crate::relocate::text_stamp(&s.doc)));
+        // A state save still queued (the previous document's, or this
+        // one's on a reload) is newer than the file: read it from the
+        // writer rather than wait for the disk on the input thread.
+        let mut loaded = self.state_store().and_then(|store| {
+            self.writer
+                .queued_state(&store, &s.key)
+                .or_else(|| store.load(&s.key))
+        });
         let mut relocated = None;
         if let Some(state) = loaded.as_mut() {
             let mut changed = false;
