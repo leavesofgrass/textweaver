@@ -456,7 +456,7 @@ tw marks essay.md
 
 ## The reading highlight
 
-While textweaver reads, the spoken word is highlighted on screen. The highlight never relies on colour alone, so it shows even with colour turned off.
+While textweaver reads, the spoken word is highlighted on screen. The highlight never relies on color alone, so it shows even with color turned off.
 
 These settings are in the `[highlight]` section of `settings.toml`:
 
@@ -465,7 +465,7 @@ These settings are in the `[highlight]` section of `settings.toml`:
 - `lead_words` (default `1`): where the highlight sits, from -5 to 5. At 1 it is on the word you hear. At 2 it runs one word ahead; at 0, one word behind. It moves only the drawn highlight, never your saved place.
 - `speed` (default `1.0`): from 0.5 to 1.5. It speeds up or slows down the highlight for engines that do not report words, where textweaver estimates the timing.
 
-- `color` and `sentence_color`: the colours of the word and sentence highlight, such as `"#ff8800"` or `"yellow"`. The terminal reader draws them over the [colour theme](themes.md) and warns when one does not stand out from the text.
+- `color` and `sentence_color`: the colors of the word and sentence highlight, such as `"#ff8800"` or `"yellow"`. The terminal reader draws them over the [color theme](themes.md) and warns when one does not stand out from the text.
 
 If the highlight runs ahead of or behind the voice with an engine that does report words, change `[speech] latency_offset_ms`. The [speech guide](speech.md) explains it.
 
@@ -630,7 +630,7 @@ textweaver --help
 - `--mode MODE`: the accessibility mode for this run, not saved: `self-voicing`, `hybrid` (textweaver reads documents aloud and your screen reader speaks messages and typing), or `screen-reader` (textweaver is silent). **Alt+Shift+A** changes the mode and saves it. See [Using textweaver with a screen reader](screen-readers.md#three-modes).
 - `--backend ID`: use this speech engine for this run, instead of the one in your settings. `tw backends` lists the engine ids. An engine that is not available falls back to the automatic choice, and textweaver says so.
 - `--home FOLDER`: keep settings, reading positions, and the log under this folder. It works like the `TEXTWEAVER_HOME` environment variable. Use it for a portable copy, or to try things without touching your own settings.
-- `--theme NAME`: use this colour theme for this run only; it is not saved. The help lists the built-in themes. You can also name a theme in your themes folder. See [Themes](themes.md).
+- `--theme NAME`: use this color theme for this run only; it is not saved. The help lists the built-in themes. You can also name a theme in your themes folder. See [Themes](themes.md).
 - `--log LEVEL`: write a log to `textweaver.log` in the state folder. The levels are `off`, `error`, `warn` (the default), `info`, `debug`, and `trace`. `--log` alone means `debug`. See [Troubleshooting](troubleshooting.md).
 - `-h` or `--help`: print the help.
 - `-V` or `--version`: print the version.

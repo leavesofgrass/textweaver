@@ -217,7 +217,7 @@ Add `--swatch` to also print sample lines in color, for sighted checking.
 
 ## See also
 
-- [Reading aids](reading-aids.md): the ruler, RSVP, and bionic reading, which use the theme's colours.
+- [Reading aids](reading-aids.md): the ruler, RSVP, and bionic reading, which use the theme's colors.
 - [Settings](settings.md#display): the `[display]` settings.
 - [Converting documents](converting.md): HTML output uses these themes.
 - [ADR-0020: Themes](adr/0020-themes.md): the design and the contrast rules. Its status update records which themes must meet AA.
