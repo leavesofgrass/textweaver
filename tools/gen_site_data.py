@@ -76,7 +76,7 @@ CRATE_ADRS = {
     "speech": ["0003", "0004", "0005"],
     "store": ["0001"],
     # ADR-0049 is on the S0 branch; the orchestrator sets ["0049"] when both merge.
-    "sync": [],
+    "sync": ["0049"],
     "keymap": ["0006"],
     "a11y": ["0006"],
     "editor": [],  # no ADR; the design is in plan section 6.6
