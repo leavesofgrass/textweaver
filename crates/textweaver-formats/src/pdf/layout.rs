@@ -69,6 +69,8 @@ pub(super) enum Content {
     Table(Table),
     /// An image with alternate text.
     Image(String),
+    /// A form field: "Label: value".
+    Field(String),
 }
 
 /// A rectangle of content on a page.
@@ -110,7 +112,7 @@ impl Block {
                 .map(|r| r.join(" "))
                 .collect::<Vec<_>>()
                 .join(" "),
-            Content::Image(alt) => alt.clone(),
+            Content::Image(alt) | Content::Field(alt) => alt.clone(),
         }
     }
 }
@@ -576,6 +578,15 @@ pub(super) fn layout(page: &PageContent, image_alts: &HashMap<u32, String>) -> P
             });
         }
     }
+    for f in &page.fields {
+        out.push(Block {
+            x0: f.x0,
+            x1: f.x1,
+            top: f.y0,
+            bottom: f.y1,
+            content: Content::Field(f.text.clone()),
+        });
+    }
     Page {
         width: page.width,
         height: page.height,
@@ -757,7 +768,7 @@ pub(super) fn remove_running(pages: &mut [Page]) {
     for p in pages.iter_mut() {
         let h = p.height;
         p.blocks.retain(|b| {
-            if !in_margin(b, h) || matches!(b.content, Content::Image(_)) {
+            if !in_margin(b, h) || matches!(b.content, Content::Image(_) | Content::Field(_)) {
                 return true;
             }
             let text = b.text();

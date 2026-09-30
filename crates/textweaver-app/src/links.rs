@@ -74,6 +74,7 @@ pub(crate) fn heading_for_anchor(doc: &Document, anchor: &str) -> Option<CharPos
             text.eq_ignore_ascii_case(want) || textweaver_text::slug::slugify(text) == want_slug
         })
         .map(|m| m.range.start)
+        .or_else(|| textweaver_formats::pdf::page_anchor(doc, want))
 }
 
 /// The local file a link target names, relative to `folder`, if it exists:
@@ -200,7 +201,11 @@ impl App {
                         )
                     })
                     .unwrap_or_default();
-                let label = self.msg("links-heading-label");
+                let label = self.msg(if textweaver_formats::pdf::is_page_anchor(anchor) {
+                    "links-page-label"
+                } else {
+                    "links-heading-label"
+                });
                 let msg = self.nav_message(Some(&label), pos, &text);
                 self.jump(pos, true, ReadAfter::Follow, &msg);
             }

@@ -3347,3 +3347,10 @@ batch-start-failed = Umwandlung konnte nicht beginnen: { $error }
 batch-thread-stopped = Die Stapelumwandlung hat unerwartet angehalten.
 
 ## End of W6k
+
+## W6c5: PDF links. Said before the first line of the page a link inside
+## a PDF goes to, when the page has no heading there (as links-heading-label
+## is for a heading).
+links-page-label = Seite
+
+## End of W6c5

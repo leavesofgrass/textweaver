@@ -96,6 +96,8 @@ pub(super) enum Kind {
     Code,
     Table(TableRows),
     Image,
+    /// A form field's line: "Label: value".
+    Field,
 }
 
 /// Table rows and whether the first is a header.
@@ -233,6 +235,21 @@ fn block_units(block: &Block, page: usize, margin: f32, cx: &Context<'_>, out: &
                 lines: t.rows.len(),
                 mcid: u32::MAX,
                 full: String::new(),
+                top: 0.0,
+                note: false,
+            });
+            return;
+        }
+        Content::Field(text) => {
+            out.push(Unit {
+                kind: Kind::Field,
+                pieces: vec![Piece::new(page, text.clone())],
+                size: 0.0,
+                bold: 0.0,
+                italic: 0.0,
+                lines: 1,
+                mcid: u32::MAX,
+                full: text.clone(),
                 top: 0.0,
                 note: false,
             });
@@ -535,6 +552,7 @@ pub(super) fn units(pages: &[Page], cx: &Context<'_>) -> (Vec<Unit>, Vec<(usize,
             let full = u.full.clone();
             u.pieces = vec![Piece::new(u.page(), full)];
         }
+        }
         // A paragraph continued on the next page skips the notes at the
         // foot of the page before (they follow it instead).
         let target = if u.note {
@@ -592,7 +610,11 @@ fn mark_notes(units: &mut [Unit], body: f32) {
 }
 
 fn heading_reason(u: &Unit, cx: &Context<'_>, outline: Option<u8>) -> Option<Why> {
-    if matches!(u.kind, Kind::Table(_) | Kind::Image | Kind::Code) || u.note {
+    if matches!(
+        u.kind,
+        Kind::Table(_) | Kind::Image | Kind::Code | Kind::Field
+    ) || u.note
+    {
         return None;
     }
     if let Some(role) = cx.roles.get(&(u.page(), u.mcid)) {
@@ -666,15 +688,17 @@ fn glue_hyphen(prev: &mut Unit, next: &mut Unit) {
 
 /// Writes the units into `b`, with `PageBreak` markers per page (label =
 /// the printed page label, `labels[page]`, or the page number) and
-/// `SectionBreak` markers for the outline.
+/// `SectionBreak` markers for the outline. Returns the pages whose
+/// `PageBreak` markers were opened, in order.
 pub(super) fn emit(
     b: &mut Builder,
     units: &[Unit],
     sections: &[(usize, usize)],
     outline: &[(String, usize, u8)],
     labels: &[String],
-) {
+) -> Vec<usize> {
     let marker = |k: MarkerKind| Marker::new(k, CharRange::empty(0));
+    let opened = std::cell::RefCell::new(Vec::new());
     let mut page: Option<(usize, OpenId)> = None;
     let mut open_sections: Vec<(u8, OpenId)> = Vec::new();
     let mut lists: Vec<(f32, OpenId)> = Vec::new();
@@ -693,6 +717,7 @@ pub(super) fn emit(
             .unwrap_or_else(|| (p + 1).to_string());
         let m = marker(MarkerKind::PageBreak).with_label(label);
         *page = Some((p, b.open(m)));
+        opened.borrow_mut().push(p);
     };
     let close_lists = |b: &mut Builder, lists: &mut Vec<(f32, OpenId)>| {
         while let Some((_, id)) = lists.pop() {
@@ -723,6 +748,14 @@ pub(super) fn emit(
                 b.paragraph_break();
                 set_page(b, u.page(), &mut page);
                 let id = b.open(marker(MarkerKind::Heading).with_level(*level));
+                b.text(&u.text());
+                b.close(id);
+                b.paragraph_break();
+            }
+            Kind::Field => {
+                b.paragraph_break();
+                set_page(b, u.page(), &mut page);
+                let id = b.open(marker(MarkerKind::Paragraph));
                 b.text(&u.text());
                 b.close(id);
                 b.paragraph_break();
@@ -819,6 +852,7 @@ pub(super) fn emit(
         }
     }
     close_lists(b, &mut lists);
+    opened.into_inner()
 }
 
 /// Writes a unit's pieces, switching the page marker between them.

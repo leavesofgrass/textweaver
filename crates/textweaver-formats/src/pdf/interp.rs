@@ -92,6 +92,8 @@ pub(super) struct PageContent {
     /// True when the glyphs were recognized (OCR), so their positions are
     /// less exact than drawn text.
     pub ocr: bool,
+    /// Form fields on the page, each read as its label and value.
+    pub fields: Vec<super::forms::FieldBox>,
 }
 
 impl PageContent {
@@ -115,6 +117,7 @@ impl PageContent {
     /// Turns the page `quarter_turns` clockwise (a recognized page read
     /// upright): its size swaps for odd turns, and [`to_page`](Self::to_page)
     /// follows.
+    #[cfg(feature = "images")]
     pub(super) fn turn(&mut self, quarter_turns: u8) {
         let (w, h) = (self.width, self.height);
         let r: Matrix = match quarter_turns % 4 {

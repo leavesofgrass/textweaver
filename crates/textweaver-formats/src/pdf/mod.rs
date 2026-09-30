@@ -25,24 +25,43 @@
 //!    outline entry (label = its title, level = its depth), and the usual
 //!    heading, paragraph, list, table, code, and image markers.
 //!
+//! 6. **Form fields** (`forms`, before the layout): each field becomes one
+//!    line where it is on the page, its label then its value ("Name: Ada
+//!    Example", "I agree: checked"), with the printed label taken out of
+//!    the text so it is not heard twice.
+//! 7. **Links and comments** (`annots` and `locate`, after the text is
+//!    built): link annotations become `Link` markers over the words they
+//!    cover (web addresses, `#heading`, or `#page=12`), and comments
+//!    (sticky notes, highlights, strike-outs, with replies and resolved
+//!    state) become [`DocumentComment`](crate::DocumentComment)s, which the
+//!    reader turns into notes. ADR-0048 explains all three.
+//!
 //! A page whose content cannot be parsed is skipped, never fatal; a
 //! password-protected PDF is refused with a clear message.
 //!
 //! Pages with no text but a picture (scans) are recognized by OCR (feature
-//! `images`, with the in-process engine under `ocr`, ADR-0026; see `ocr`): the recognized words are placed on the page
+//! `images`, with the in-process engine under `ocr`, ADR-0026; see `ocr`),
+//! turned upright first when they were scanned sideways or upside down
+//! (`textweaver_ocr::orient`): the recognized words are placed on the page
 //! as glyphs and go through the same layout. Without OCR, or when no
 //! engine can run, a PDF with no text layer loads as one sentence saying
 //! so and what is missing.
 
+mod annots;
 mod fonts;
+mod forms;
 #[cfg(feature = "images")]
 pub mod image;
 mod interp;
 mod layout;
+mod locate;
 mod metrics;
 #[cfg(feature = "images")]
 mod ocr;
 mod structure;
+
+pub use annots::{MAX_ANNOTS, is_page_anchor, page_anchor};
+pub use forms::MAX_FIELDS;
 
 use std::collections::HashMap;
 
@@ -110,7 +129,7 @@ fn convert(
     pdf: &lopdf::Document,
     #[cfg_attr(not(feature = "images"), allow(unused_variables))] bytes: &[u8],
     #[cfg_attr(not(feature = "images"), allow(unused_variables))] options: &LoadOptions,
-    #[cfg_attr(not(feature = "images"), allow(unused_variables))] meta: &mut DocumentMeta,
+    meta: &mut DocumentMeta,
 ) -> (String, Vec<textweaver_text::Marker>, usize) {
     let page_ids: Vec<ObjectId> = pdf.get_pages().into_values().collect();
     let tags = Tags::read(pdf);
@@ -150,7 +169,13 @@ fn convert(
             no_text = sentence;
         }
     }
-    if contents.iter().all(|c| c.glyphs.is_empty()) {
+    if let Some(w) = forms::apply(pdf, &page_ids, &mut contents) {
+        crate::add_warning(meta, &w);
+    }
+    if contents
+        .iter()
+        .all(|c| c.glyphs.is_empty() && c.fields.is_empty())
+    {
         let text = if page_ids.is_empty() {
             String::new()
         } else {
@@ -173,18 +198,31 @@ fn convert(
         .collect();
     let labels = page_labels(pdf, page_ids.len());
     let outline = read_outline(pdf);
-    let (text, markers) = build(pages, &roles, &outline, &labels);
+    let (text, mut markers, order) = build(pages, &roles, &outline, &labels);
+    let found = annots::read(pdf, &page_ids);
+    if !found.links.is_empty() || !found.notes.is_empty() {
+        let ix = locate::TextIndex::new(&text, &markers, &order);
+        let comments = annots::apply(&found, &contents, &ix, &mut markers);
+        crate::annotations::record(meta, comments, 0);
+    }
+    if found.truncated {
+        crate::add_warning(
+            meta,
+            "This PDF has more links and comments than textweaver reads, so only the first twenty thousand are read.",
+        );
+    }
     (text, markers, page_ids.len())
 }
 
 /// Laid-out pages as canonical text and markers: running heads removed,
-/// reading order, structure, and the page and section markers.
+/// reading order, structure, and the page and section markers. Also
+/// returns the pages whose `PageBreak` markers were made, in order.
 fn build(
     mut pages: Vec<layout::Page>,
     roles: &HashMap<(usize, u32), String>,
     outline: &[(String, usize, u8)],
     labels: &[String],
-) -> (String, Vec<textweaver_text::Marker>) {
+) -> (String, Vec<textweaver_text::Marker>, Vec<usize>) {
     layout::remove_running(&mut pages);
     for p in &mut pages {
         layout::order(p);
@@ -198,8 +236,9 @@ fn build(
     };
     let (units, sections) = structure::units(&pages, &cx);
     let mut b = Builder::new();
-    structure::emit(&mut b, &units, &sections, outline, labels);
-    b.finish()
+    let order = structure::emit(&mut b, &units, &sections, outline, labels);
+    let (text, markers) = b.finish();
+    (text, markers, order)
 }
 
 fn text_of(pdf: &lopdf::Document, o: &Object) -> Option<String> {

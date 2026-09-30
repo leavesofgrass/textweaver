@@ -3334,3 +3334,10 @@ batch-start-failed = Could not start converting: { $error }
 batch-thread-stopped = Batch conversion stopped unexpectedly.
 
 ## End of W6k
+
+## W6c5: PDF links. Said before the first line of the page a link inside
+## a PDF goes to, when the page has no heading there (as links-heading-label
+## is for a heading).
+links-page-label = Page
+
+## End of W6c5
