@@ -143,8 +143,16 @@ impl SyncedLibrary {
         if let Some(id) = known {
             return Some(id);
         }
+        // Library folders are stored resolved (symbolic links followed, and
+        // the drive path without `\\?\`), so compare the resolved path:
+        // `/var` against `/private/var` on macOS, short names on Windows.
+        let resolved = textweaver_store::library::resolve_path(path);
         let by_library = self.library_ids.iter().find_map(|(folder, lib)| {
-            let rel = path.strip_prefix(folder).ok()?;
+            let folder = textweaver_store::library::resolve_path(folder);
+            let rel = resolved
+                .strip_prefix(&folder)
+                .or_else(|_| path.strip_prefix(&folder))
+                .ok()?;
             let rel = rel
                 .components()
                 .map(|c| c.as_os_str().to_string_lossy().into_owned())
