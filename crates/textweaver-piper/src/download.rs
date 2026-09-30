@@ -69,7 +69,7 @@ impl DownloadPlan {
     }
 
     /// The confirmation to read aloud: "Download Joe, English (United
-    /// States), medium quality, 63 MB? Licence: CC0. Free to use for
+    /// States), medium quality, 63 MB? License: CC0. Free to use for
     /// anything."
     pub fn describe(&self) -> String {
         format!(
@@ -417,7 +417,7 @@ mod tests {
         assert_eq!(
             plan.describe(),
             "Download Joe, English (United States), medium quality, 63 MB? \
-             Licence: CC BY-NC-SA 4.0. Personal and non-commercial use only."
+             License: CC BY-NC-SA 4.0. Personal and non-commercial use only."
         );
     }
 
