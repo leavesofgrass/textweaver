@@ -33,7 +33,7 @@
 //! | `choose` | `{index}`: picks from the shown list | `{status, effects}` |
 //! | `cancel` | none | `{status, effects}`; also answers no to a pending question |
 //! | `list_state` | none | the list shown: `{title, items, selected, filter}`, or null |
-//! | `list_key` | `{key}`: `up`, `down`, `page_up`, `page_down`, `home`, `end`, `left`, `right`, `enter`, `escape`, `backspace`, `delete`, `rename`, or one character | `{status, effects, list}` |
+//! | `list_key` | `{key}`: `up`, `down`, `page_up`, `page_down`, `home`, `end`, `left`, `right`, `enter`, `escape`, `backspace`, `delete`, `rename`, `introduce`, `details`, the file browser's `choose_here`, `sort`, and `show_all`, or one character | `{status, effects, list}` |
 //! | `prompt_state` | none | the prompt open: `{label, purpose, text, caret}`, or null |
 //! | `prompt_key` | `{key}` as for `list_key` plus `tab`, `kill_to_start`, `kill_to_end`, `delete_word_back`; or `{text}` to set the whole text | `{status, effects, prompt}` |
 //! | `settings_schema` | none | every setting: `path`, `section`, `label`, `help`, `kind`, `default`, and its range or choices |
@@ -818,6 +818,11 @@ fn list_key(name: &str) -> Result<crate::list_model::ListKey, RpcError> {
         "backspace" => K::Backspace,
         "delete" => K::Delete,
         "rename" => K::Rename,
+        "introduce" => K::Introduce,
+        "details" => K::Details,
+        "choose_here" => K::ChooseHere,
+        "sort" => K::Sort,
+        "show_all" => K::ShowAll,
         other => return Err(RpcError::params(format!("No list key {other}"))),
     })
 }

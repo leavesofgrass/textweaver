@@ -3145,3 +3145,128 @@ settingsio-import-question-names =
 settingsio-and-more = { $names } und { $n } weitere
 
 ## End of W6u
+
+## W6f: the file browser. Every row and introduction starts with the name,
+## then the kind, so the first cells of a 40-cell Braille line hold what
+## matters. $name is a file or folder name; $n a number that chooses the
+## plural and $count the same number written with its separators.
+# A list item with its position after it, in the file browser.
+listmodel-item-position-last = { $item }, { $k } von { $n }
+browse-places-title = Orte
+browse-places-intro =
+    { $n ->
+        [one] Orte, 1 Ort.
+       *[other] Orte, { $n } Orte.
+    }
+# $purpose says what the folder or file is chosen for; $intro follows.
+browse-choosing = { $purpose }. { $intro }
+browse-place-document = { $name }, der Ordner des Dokuments
+browse-place-start = { $name }, Startordner
+browse-place-library = { $name }, Bibliotheksordner
+browse-place-disk = { $name }, Laufwerk
+browse-place-removable = { $name }, Wechseldatenträger
+browse-place-network = { $name }, Netzlaufwerk
+browse-place-cd = { $name }, CD- oder DVD-Laufwerk
+browse-place-root = { $name }, der Stammordner
+browse-choose-here = Diesen Ordner wählen, { $name }
+browse-row-folder = { $name }, Ordner
+browse-row-folder-items =
+    { $name }, Ordner, { $n ->
+        [one] 1 Eintrag
+       *[other] { $count } Einträge
+    }
+# $kind is a kind below ("Markdown"); $size a size below ("12 KB").
+browse-row-file = { $name }, { $kind }, { $size }
+browse-row-kind = { $name }, { $kind }
+browse-row-hidden = { $row }, versteckt
+# $kind is zip, tar, tar.gz, gzip, or 7z.
+browse-kind-archive = { $kind }-Archiv
+browse-kind-file = Datei
+browse-kind-markdown = Markdown
+browse-kind-text = Text
+browse-kind-html = Webseite
+browse-kind-epub = EPUB-Buch
+browse-kind-docx = Word-Dokument
+browse-kind-rtf = RTF-Dokument
+browse-kind-odt = OpenDocument-Text
+browse-kind-latex = LaTeX
+browse-kind-eml = E-Mail
+browse-kind-mhtml = Webarchiv
+browse-kind-pdf = PDF
+browse-kind-image = Bild
+browse-kind-daisy = DAISY-Buch
+browse-kind-pptx = PowerPoint-Folien
+browse-kind-sheet = Tabelle
+browse-kind-json = JSON
+browse-kind-notebook = Jupyter-Notizbuch
+browse-kind-svg = SVG-Zeichnung
+browse-kind-mathml = MathML-Formel
+browse-kind-pandoc = mit Pandoc gelesenes Dokument
+browse-size-bytes =
+    { $n ->
+        [one] 1 Byte
+       *[other] { $count } Byte
+    }
+# $size is a number, with a decimal under 10 ("3.4").
+browse-size-kb = { $size } KB
+browse-size-mb = { $size } MB
+browse-size-gb = { $size } GB
+browse-intro =
+    { $name }, { $n ->
+        [one] 1 Eintrag.
+       *[other] { $count } Einträge.
+    }
+browse-intro-empty = { $name } enthält nichts zum Anzeigen.
+# $filter is what was typed.
+browse-intro-filtered =
+    { $name }, { $n ->
+        [one] 1 Eintrag passt zu
+       *[other] { $count } Einträge passen zu
+    } { $filter }.
+browse-intro-in-archive = { $intro } In { $archive }.
+browse-intro-hidden =
+    { $intro } { $n ->
+        [one] 1 Datei ausgeblendet.
+       *[other] { $count } Dateien ausgeblendet.
+    }
+browse-intro-cut = { $intro } Nur die ersten { $max } werden angezeigt.
+# $preview, $choose, $sort, and $all are keys; $item the focused row.
+browse-keys = { $intro } Eingabe öffnet, Rücktaste geht nach oben, Tippen filtert. { $preview } zeigt eine Vorschau, { $choose } wählt einen Ordner, { $sort } sortiert, { $all } zeigt alle Dateien. { $item }
+browse-sorted-name = Nach Name sortiert.
+browse-sorted-date = Nach Datum sortiert, neueste zuerst.
+browse-sorted-size = Nach Größe sortiert, größte zuerst.
+browse-showing-all = Alle Dateien werden angezeigt.
+browse-showing-readable = Nur lesbare Dateien werden angezeigt.
+browse-closed = Dateibrowser geschlossen.
+browse-read-only = Der Dateibrowser öffnet und wählt nur Dateien; er ändert sie nie.
+# $key is the Choose Folder key.
+browse-choose-a-folder = Wählen Sie einen Ordner: Eingabe öffnet einen, { $key } wählt ihn.
+browse-choose-a-file = Wählen Sie eine Datei: Eingabe wählt eine.
+browse-no-archive-folder = Ein Ordner in einem Archiv kann nicht gewählt werden; wählen Sie einen Ordner auf dem Laufwerk.
+browse-nothing-waiting = Kein Befehl wartet auf einen Ordner; Eingabe öffnet ihn.
+browse-cannot-read = { $name } ist keine Art von Datei, die textweaver lesen kann.
+browse-folder-unreadable = { $name } konnte nicht geöffnet werden: { $reason }
+browse-archive-too-deep = { $name } steckt in zu vielen Archiven, um es zu öffnen.
+browse-archive-too-large = { $name } ist zu groß, um es sicher aufzulisten.
+browse-archive-unreadable = { $name } ist kein Archiv, das textweaver lesen kann; es ist vielleicht beschädigt.
+# A document's preview: its title, then its first sentence.
+browse-preview-document = { $title }. { $sentence }
+browse-preview-no-text = { $title }. Es enthält keinen Text.
+browse-preview-failed = Keine Vorschau für { $name }: { $reason }
+# $names are the first few names inside.
+browse-preview-archive =
+    { $name }: { $n ->
+        [one] 1 Datei
+       *[other] { $count } Dateien
+    }, { $readable } lesbar. { $names }
+browse-preview-archive-folder =
+    { $name }, Ordner im Archiv, { $n ->
+        [one] 1 Eintrag.
+       *[other] { $count } Einträge.
+    }
+browse-preview-folder = { $path }: { $names }
+browse-preview-folder-empty = { $path }: hier gibt es nichts zu lesen.
+browse-preview-other = { $name }, { $size }; textweaver kann diese Art von Datei nicht lesen.
+browse-preview-path = { $path }
+
+## End of W6f

@@ -281,6 +281,8 @@ pub(crate) enum ListKind {
     Palette(Vec<ActionId>),
     /// The menus, shown as a list (crate::menu).
     Menu,
+    /// The file browser; its rows are in `App::browse` (crate::browse).
+    Browse,
 }
 
 /// The application: the only owner of mutable state.
@@ -417,6 +419,8 @@ pub struct App {
     pub(crate) announce_list_focus: bool,
     /// Menu handlers, recent commands, and the menu list (crate::menu).
     pub(crate) menu: crate::menu::MenuState,
+    /// The file browser's place, rows, and preview (crate::browse).
+    pub(crate) browse: crate::browse::BrowseState,
     /// Moves on when a list, prompt, or menu closes (crate::announce).
     pub(crate) dialog_generation: u64,
     /// What frontends ask for every frame, kept per revision
@@ -519,9 +523,11 @@ impl App {
             pending_list_focus: None,
             announce_list_focus: true,
             menu: crate::menu::MenuState::default(),
+            browse: crate::browse::BrowseState::new(),
             dialog_generation: 0,
             frame_cache: crate::frame_cache::FrameCaches::default(),
         };
+        crate::browse::register(&mut app);
         app.apply_voice_settings();
         app.load_themes();
         app
@@ -1236,6 +1242,7 @@ impl App {
                             self.tell(&msg);
                         }
                         Some(ListKind::Authoring(l)) => self.cancel_authoring_list(l),
+                        Some(ListKind::Browse) => self.browse_cancelled(),
                         _ => {
                             let msg = self.msg("common-cancelled");
                             self.note(&msg);
@@ -1265,6 +1272,7 @@ impl App {
         self.stats_tick(now);
         let mut effects = self.poll_writes();
         effects.extend(self.opening_tick(now));
+        effects.extend(self.browse_tick());
         effects.extend(self.spell_count_tick());
         effects.extend(self.restart_tick());
         effects.extend(self.library_tick());
@@ -1440,6 +1448,7 @@ impl App {
             Some(ListKind::Settings) => return self.choose_setting(n),
             Some(ListKind::Languages(tags)) => return self.choose_language(&tags, n),
             Some(ListKind::Menu) => return self.menu_choose(n, true),
+            Some(ListKind::Browse) => return self.browse_choose(n),
             Some(ListKind::Palette(actions)) => {
                 if let Some(&a) = actions.get(n) {
                     return self.run_command(a);
