@@ -8,7 +8,7 @@ This guide is written to be read with a screen reader. Each task section starts 
 
 In the reader, open the File menu (F10 in the terminal) and choose Export audio, or find "Export audio" in the command palette. A document must be open.
 
-1. **The format.** You hear, for example, "Export essay as audio: choose a format, 2 choices." FLAC comes first: lossless and about half the size of WAV. WAV follows. MP3 and M4B are listed only when ffmpeg is installed; when it is not, you hear "MP3 and M4B need ffmpeg, which was not found." Press Enter on a format.
+1. **The format.** You hear, for example, "Export essay as audio: choose a format, 3 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then WAV. M4B is listed only when ffmpeg is installed; when it is not, you hear "M4B needs ffmpeg, which was not found." Press Enter on a format.
 2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
 3. **The question.** "Export essay.flac with Microsoft David at 200 words a minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
 
@@ -22,7 +22,7 @@ Which engine it uses: your reading engine, when it can write audio files; otherw
 
 ## Before you start
 
-You need two things: a voice that can write audio files, and, for MP3 and M4B only, the free program ffmpeg. WAV and FLAC need nothing else.
+You need two things: a voice that can write audio files, and, for M4B audiobooks only, the free program ffmpeg. WAV, FLAC, and MP3 need nothing else.
 
 ### Check that you have a voice that can write files
 
@@ -38,16 +38,17 @@ sapi: Windows SAPI5 voices. Available. Priority 500. Supports word highlighting,
 
 These engines can write files: ETI-Eloquence (`eci`), Windows SAPI5 voices (`sapi`), DECtalk (`dectalk`), eSpeak NG (`espeak`), and the two Apple engines on macOS (`nsspeech` and `avspeech`). Omnivox (`omnivox`) and Speech Dispatcher (`speechd`) can only speak aloud, so they cannot export. The silent engine (`null`) cannot export either.
 
-### WAV and FLAC always work
+### WAV, FLAC, and MP3 always work
 
-WAV and FLAC files are written by textweaver itself. You do not need anything else.
+WAV, FLAC, and MP3 files are written by textweaver itself. You do not need anything else.
 
 - WAV files are large, but every player can open them.
 - FLAC files are about half the size of WAV, with exactly the same sound (FLAC is lossless). Most music and audiobook players on phones and computers can open them.
+- MP3 files are the smallest, and every player can open them. textweaver encodes them with the LAME encoder, built in, at variable bit rate, quality 5, which suits a speaking voice. LAME is free software under the GNU LGPL; `THIRD-PARTY-NOTICES.md` says what that means for you.
 
-### MP3 and M4B need ffmpeg
+### M4B needs ffmpeg
 
-To write `.mp3` or `.m4b`, textweaver first writes a WAV and then asks ffmpeg to convert it. textweaver never downloads or bundles ffmpeg, so you install it yourself once.
+To write `.m4b`, textweaver first writes a WAV and then asks ffmpeg to convert it. textweaver never downloads or bundles ffmpeg, so you install it yourself once.
 
 textweaver looks for ffmpeg in two places, in this order:
 
@@ -116,7 +117,7 @@ The output format comes from the file name you give with `--out`:
 
 - `.wav`: a WAV file. Always works.
 - `.flac`: a FLAC file. Always works; textweaver writes it itself.
-- `.mp3`: an MP3 file. Needs ffmpeg. It is encoded with the LAME encoder at variable bit rate, quality 2.
+- `.mp3`: an MP3 file. Always works; textweaver encodes it itself with the LAME encoder, at variable bit rate, quality 5.
 - `.m4b`: an M4B audiobook (AAC audio at 64 kilobits per second). Needs ffmpeg.
 
 Capital letters in the extension are fine, so `.MP3` works too. Any other extension is refused before anything is read.
@@ -160,7 +161,7 @@ The M4B file also carries:
 - The genre "Audiobook".
 - One chapter for each heading, with the heading as its name.
 
-While ffmpeg works, and while a FLAC file is encoded, textweaver keeps the full WAV (and, for ffmpeg, a small metadata file) in a hidden folder next to the output, whose name starts with `.textweaver-export-`. The folder is removed when the export finishes. You need enough free disk space for the full WAV, which is much larger than the finished M4B.
+While ffmpeg works, and while a FLAC or MP3 file is encoded, textweaver keeps the full WAV (and, for ffmpeg, a small metadata file) in a hidden folder next to the output, whose name starts with `.textweaver-export-`. The folder is removed when the export finishes. You need enough free disk space for the full WAV, which is much larger than the finished M4B.
 
 ### How chapters are chosen
 
@@ -182,7 +183,7 @@ tw export-audio "Chapter 3.docx" --out "Chapter 3.flac"
 Every format carries the same title, author, and chapters as the M4B, each in its own kind of tag:
 
 - FLAC files: as Vorbis comments. The title is `TITLE` and `ALBUM`, the author is `ARTIST`, and each chapter is a pair, such as `CHAPTER001=00:01:30.250` for its start and `CHAPTER001NAME=Light` for its name. Audiobook players that read FLAC chapters show them.
-- MP3 files: as ID3 chapter tags.
+- MP3 files: as ID3 chapter tags (CHAP and CTOC), with the title, artist, album, and genre.
 - WAV files: as ID3 chapter tags too, in an extra part of the file that players without ID3 support skip.
 
 Players that read these chapters show them. Many simple players ignore them and play the file straight through. The JSON report lists each chapter's name, start, and end in every case (see [Get a report as JSON](#get-a-report-as-json)).
@@ -344,7 +345,7 @@ tw export-audio reading.md --out reading.wav --json
 - `out`: the audio file.
 - `format`: `wav`, `flac`, `mp3`, or `m4b`.
 - `subtitles`: the subtitle file, or `null`.
-- `ffmpeg`: the ffmpeg program used, or `null` for WAV and FLAC.
+- `ffmpeg`: the ffmpeg program used for M4B, or `null`.
 - `timeline`: everything about the audio.
 
 `timeline` holds:
@@ -375,7 +376,7 @@ tw export-audio reading.md --out reading.wav --home "E:\textweaver"
 
 Every problem is reported as one sentence starting with "Error:". These are the messages you may hear, and what to do.
 
-- "Error: writing MP3 needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac or .wav". For an M4B file it says "writing M4B". This is said before anything is read aloud. ffmpeg is not installed, or textweaver cannot find it. Install it as described in [Before you start](#before-you-start). If you just installed it, open a new terminal window. If `TEXTWEAVER_FFMPEG` is set, check that it is the full path to the program, including `ffmpeg.exe` on Windows, or remove the variable. Or export to `.flac` or `.wav`, which need nothing.
+- "Error: writing M4B needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, or .wav". This is said before anything is read aloud. ffmpeg is not installed, or textweaver cannot find it. Install it as described in [Before you start](#before-you-start). If you just installed it, open a new terminal window. If `TEXTWEAVER_FFMPEG` is set, check that it is the full path to the program, including `ffmpeg.exe` on Windows, or remove the variable. Or export to `.flac`, `.mp3`, or `.wav`, which need nothing.
 - "Error: cannot write notes.ogg: use a .wav, .flac, .mp3, or .m4b file name". Only WAV, FLAC, MP3, and M4B can be written. OGG is not available yet.
 - "Error: The voice failed on sentence 1: engine error: the voice could not be used:" followed by the reason. The voice you chose could not be loaded, so nothing was written with another voice by mistake. Run `tw voices --backend sapi` and choose a voice from the list.
 - "Error: Cannot write subtitles to notes.txt: use a .srt or .vtt file name." Give the subtitle file a `.srt` or `.vtt` extension.
