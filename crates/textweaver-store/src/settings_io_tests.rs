@@ -104,6 +104,12 @@ fn everything_changed() -> Settings {
     y.highlights = false;
     y.bookmarks = false;
     y.statistics = false;
+    y.settings = false;
+    y.profiles = false;
+    y.key_overrides = false;
+    y.words = false;
+    y.glossary = false;
+    y.favorite_voices = false;
     y.position_policy = crate::PositionPolicy::Ask;
     let d = &mut s.display;
     d.theme = "nord".into();
