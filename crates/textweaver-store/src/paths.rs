@@ -108,6 +108,12 @@ impl Paths {
             .find(|p| p.is_file())
     }
 
+    /// `sync-ids.json`: each document's sync id (ADR-0049), in the data
+    /// folder ([`crate::sync_ids`]).
+    pub fn sync_ids_file(&self) -> PathBuf {
+        self.data_dir.join(crate::sync_ids::SYNC_IDS_FILE)
+    }
+
     /// The library search cache.
     pub fn fulltext_file(&self) -> PathBuf {
         self.cache_dir.join("fulltext.json")
