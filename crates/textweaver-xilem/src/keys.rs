@@ -341,6 +341,13 @@ pub fn is_native(chord: &KeyChord, platform: Platform) -> bool {
             && (chord.mods - (Modifiers::SHIFT | Modifiers::CTRL)).is_empty())
 }
 
+/// The key Windows itself enters a window's menu bar with (F10), on its
+/// release. When the keymap's menu key is this one, the window leaves it
+/// to Windows rather than entering the bar a second time.
+pub fn menu_bar_key() -> KeyChord {
+    KeyChord::plain(TwKey::F(10))
+}
+
 /// How a chord is written for a screen reader's shortcut property
 /// (`Ctrl+O`, `Space`, `Alt+Period` is written `Alt+.`).
 pub fn shortcut_text(chord: &KeyChord) -> String {

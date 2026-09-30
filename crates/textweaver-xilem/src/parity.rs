@@ -38,6 +38,7 @@ pub fn support(action: ActionId) -> Support {
         | A::ChooseFont
         | A::Open
         | A::Settings
+        | A::ColorSettings
         | A::CommandPalette => Support::Window,
         A::ScrollDown | A::ScrollUp => Support::TerminalOnly(
             "the terminal scrolls its screen by lines; the window scrolls with the wheel \
@@ -89,7 +90,10 @@ mod tests {
                     a.is_window_only()
                         || matches!(
                             a,
-                            ActionId::Open | ActionId::Settings | ActionId::CommandPalette
+                            ActionId::Open
+                                | ActionId::Settings
+                                | ActionId::ColorSettings
+                                | ActionId::CommandPalette
                         ),
                     "{a:?}"
                 );

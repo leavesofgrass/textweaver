@@ -561,7 +561,7 @@ textweaver is built from these Rust crates. Each licence below lists the crates 
 
 Licences, with the number of crates under each:
 
-- Apache License 2.0: 550
+- Apache License 2.0: 552
 - MIT License: 186
 - Unicode License v3: 27
 - ISC License: 24
@@ -12879,6 +12879,7 @@ Used by:
 - core-graphics 0.23.2, https://github.com/servo/core-foundation-rs
 - coreaudio-rs 0.14.2, https://github.com/RustAudio/coreaudio-rs.git
 - critical-section 1.2.0, https://github.com/rust-embedded/critical-section
+- crossbeam-channel 0.5.17, https://github.com/crossbeam-rs/crossbeam
 - crossbeam-deque 0.8.8, https://github.com/crossbeam-rs/crossbeam
 - crossbeam-epoch 0.9.21, https://github.com/crossbeam-rs/crossbeam
 - crossbeam-utils 0.8.23, https://github.com/crossbeam-rs/crossbeam
@@ -12931,6 +12932,7 @@ Used by:
 - memo-map 0.3.4, https://github.com/mitsuhiko/memo-map
 - metal 0.33.0, https://github.com/gfx-rs/metal-rs
 - minijinja 2.24.0, https://github.com/mitsuhiko/minijinja
+- muda 0.20.0, https://github.com/tauri-apps/muda
 - ndarray 0.16.1, https://github.com/rust-ndarray/ndarray
 - num-bigint 0.4.8, https://github.com/rust-num/num-bigint
 - num-complex 0.4.6, https://github.com/rust-num/num-complex

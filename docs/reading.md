@@ -32,7 +32,7 @@ Press **Alt+L** to list the documents in your library folders and the files you 
 
 ### From the file browser: File, Browse files
 
-The file browser walks through folders and archives as one list, and opens what you choose. Open it from the File menu (**F10**, then File, then Browse files) or from the command palette: type `browse` and press **Enter**. It has no key of its own; give `browse_files` one in `keymap.toml` if you use it often. The GUI opens it from its command palette, in its list dialog; the GUI's File menu and its preview key come with the GUI's menus.
+The file browser walks through folders and archives as one list, and opens what you choose. Open it from the File menu (**F10**, then File, then Browse files) or from the command palette: type `browse` and press **Enter**. It has no key of its own; give `browse_files` one in `keymap.toml` if you use it often. In the GUI it opens in the window's list dialog, from the File menu or the command palette, and the Say Status key previews the focused row there too.
 
 It starts on **Places**: the open document's folder (focused), the folder you started textweaver in, your library folders, and your drives on Windows (the root folder on Linux and macOS). Each row says the name first, then what it is, so a Braille display shows the name in its first cells:
 

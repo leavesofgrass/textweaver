@@ -2606,7 +2606,6 @@ gui-text-size = Taille du texte { $size } points.
 gui-text-size-largest = Taille du texte { $size } points, la plus grande.
 gui-text-size-smallest = Taille du texte { $size } points, la plus petite.
 gui-font = Police : { $family }.
-gui-font-unchanged = Police inchangée.
 gui-font-list = Police
 
 ## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
@@ -3383,3 +3382,24 @@ audio-failed = Impossible d'exporter l'audio : { $error }
 audio-thread-stopped = L'export audio s'est arrêté de façon inattendue.
 
 ## End of W6v
+
+## W6a6: the window's menus and dialogs. Settings files chosen with the
+## system's file chooser, the Colors dialog, and the font list. $ratio is
+## a contrast ratio such as 4.8; $verdict is good, fair, or low.
+gui-settings-files = Fichiers de paramètres
+gui-settings-export-title = Exporter les paramètres
+gui-settings-import-title = Importer les paramètres
+gui-chooser-no-dialog = Le sélecteur de fichiers du système ne s'est pas ouvert. Tapez plutôt le chemin du fichier.
+gui-colors-value = { $value }, contraste { $ratio } pour 1, { $verdict }
+gui-colors-help = Gauche et Droite choisissent une couleur nommée, le bleu et l'orange d'abord. Entrée saisit un nom ou une valeur #rrggbb. Suppr remet la couleur du thème. Chaque marque garde son soulignement, sa graisse ou son symbole, quelle que soit sa couleur.
+gui-colors-reset-all = Rétablir toutes les couleurs
+gui-colors-reset-all-help = Remettre la couleur du thème pour chaque partie.
+gui-colors-reset-done = Toutes les couleurs sont de nouveau celles du thème.
+gui-colors-closed = Couleurs fermées.
+gui-font-list-intro =
+    { $n ->
+        [one] { $title }, 1 famille.
+       *[other] { $title }, { $n } familles.
+    }
+
+## End of W6a6

@@ -2800,7 +2800,6 @@ gui-text-size = حجم النص { $size } نقطة.
 gui-text-size-largest = حجم النص { $size } نقطة، وهو الأكبر.
 gui-text-size-smallest = حجم النص { $size } نقطة، وهو الأصغر.
 gui-font = الخط: { $family }.
-gui-font-unchanged = لم يتغير الخط.
 gui-font-list = الخط
 
 ## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
@@ -3611,3 +3610,24 @@ audio-failed = تعذر تصدير الصوت: { $error }
 audio-thread-stopped = توقف تصدير الصوت على نحو غير متوقع.
 
 ## End of W6v
+
+## W6a6: the window's menus and dialogs. Settings files chosen with the
+## system's file chooser, the Colors dialog, and the font list. $ratio is
+## a contrast ratio such as 4.8; $verdict is good, fair, or low.
+gui-settings-files = ملفات الإعدادات
+gui-settings-export-title = تصدير الإعدادات
+gui-settings-import-title = استيراد الإعدادات
+gui-chooser-no-dialog = لم يُفتح منتقي الملفات في النظام. اكتب مسار الملف بدلًا من ذلك.
+gui-colors-value = { $value }، التباين { $ratio } إلى 1، { $verdict }
+gui-colors-help = يختار اليسار واليمين لونًا مسمى، الأزرق والبرتقالي أولًا. ويكتب Enter اسمًا أو قيمة ‎#rrggbb. ويعيد Delete لون السمة. تحتفظ كل علامة بتسطيرها أو سماكتها أو رمزها، أيًّا كان لونها.
+gui-colors-reset-all = إعادة كل الألوان
+gui-colors-reset-all-help = إعادة لون السمة نفسه لكل جزء.
+gui-colors-reset-done = عادت كل الألوان إلى ألوان السمة.
+gui-colors-closed = أُغلقت الألوان.
+gui-font-list-intro =
+    { $n ->
+        [one] { $title }، عائلة واحدة.
+       *[other] { $title }، { $n } عائلات.
+    }
+
+## End of W6a6

@@ -172,6 +172,7 @@ mod export;
 mod extra;
 mod find_scan;
 mod frame_cache;
+mod frontend_list;
 mod goto;
 #[cfg(feature = "grammar")]
 mod grammar;

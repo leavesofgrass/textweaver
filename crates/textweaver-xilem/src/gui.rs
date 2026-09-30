@@ -35,7 +35,7 @@ use masonry_winit::app::{
 };
 use masonry_winit::winit::dpi::{LogicalSize, PhysicalPosition};
 use masonry_winit::winit::window::Window as WinitWindow;
-use textweaver_app::a11y::{Announcer as AppAnnouncer, Priority};
+use textweaver_app::a11y::{Announcer as AppAnnouncer, Importance, Priority};
 use textweaver_app::core::CharRange;
 use textweaver_app::keymap::{ActionId, Platform};
 use textweaver_app::lexicon::args;
@@ -149,6 +149,9 @@ pub struct Experiments {
     /// How announcements reach the screen reader (`--announce`); `None`
     /// follows the `[gui] announce` setting, and then the live region.
     pub announce: Option<AnnounceMode>,
+    /// The menus as a list in the window (F10), as on Linux, instead of the
+    /// system's menu bar (`--list-menus`).
+    pub list_menus: bool,
 }
 
 /// Wakes the event loop.
@@ -233,6 +236,8 @@ struct SettingsOpen {
     section: usize,
     /// The Close button.
     close: WidgetId,
+    /// The Colors dialog's Reset all colors button.
+    reset: Option<WidgetId>,
 }
 
 /// An open dialog.
@@ -243,14 +248,19 @@ enum OpenDialog {
     /// A prompt for a new value of the setting at this row of the settings
     /// dialog, which comes back when it closes.
     SettingEdit(SettingsOpen, usize),
-    List,
+    /// A list from the app, with the title it was shown with (a menu
+    /// list shows a new title as a submenu opens).
+    List(String),
     /// The command palette: the actions its list shows, in order.
     Palette(Vec<ActionId>),
-    /// The font list.
-    FontFamily(Vec<crate::font_chooser::Choice>),
     /// The system's file chooser, open on its own thread; the app's Open
     /// prompt (labelled with this) waits for its answer.
-    FileChooser(String),
+    FileChooser {
+        /// The waiting prompt's label.
+        label: String,
+        /// What the prompt is for (Open, Export or Import settings).
+        purpose: PromptPurpose,
+    },
     /// A yes-or-no question from the app, with its two buttons.
     Question {
         /// The Yes button.
@@ -303,6 +313,8 @@ pub struct Gui {
     fixed_theme: bool,
     /// Settings opens the app's list instead of the dialog.
     settings_list: bool,
+    /// The menus are the in-window list, not the system's menu bar.
+    list_menus: bool,
     /// The window title last set.
     window_title: String,
     /// The ticker starts once the window exists (in `on_start`).
@@ -334,6 +346,18 @@ pub struct Gui {
     /// The window's Win32 handle, for UI Automation notifications (read
     /// on first use; 0 until then or when there is none).
     hwnd: isize,
+    /// The native menus (Windows and macOS), once attached; `None` where
+    /// the menu key opens the list menu instead (ADR-0046).
+    native: Option<crate::menus::Native>,
+    /// A command ran since the menus were last compared with the model:
+    /// the next refresh builds the model's tree and updates them if it
+    /// changed (a toggle, the language, the keys, a recent document).
+    menu_dirty: bool,
+    /// What the native menus were built from ([`crate::menus::Fingerprint`]).
+    menu_key: Option<crate::menus::Fingerprint>,
+    /// The font list's families while it is shown (the list itself is the
+    /// app's; `App::take_frontend_choice` says which was chosen).
+    font_choices: Option<Vec<crate::font_chooser::Choice>>,
     /// Load and highlight timings, for `--log` and the measurements.
     pub timings: Timings,
 }
@@ -687,6 +711,9 @@ pub struct SettingsDialog {
     pub form: WidgetId,
     /// The Close button.
     pub close: WidgetId,
+    /// The Colors dialog's Reset all colors button (`None` in the settings
+    /// dialog).
+    pub reset: Option<WidgetId>,
 }
 
 /// The settings dialog: the sections on the left, the chosen section's
@@ -700,6 +727,9 @@ pub fn settings_dialog(
     row: usize,
 ) -> SettingsDialog {
     let c = app.catalog();
+    if form.is_colors() {
+        return colors_dialog(p, form, app, row);
+    }
     let settings_title = c.tr("settings-title");
     let sections = NewWidget::new(
         ChoiceList::new(
@@ -775,6 +805,69 @@ pub fn settings_dialog(
         modal,
         form: form_id,
         close: close_id,
+        reset: None,
+    }
+}
+
+/// View, Colors (W6a6): every color setting in one form, the reading
+/// aids' highlights first, each with a sample and its contrast said in
+/// words; a Reset all colors button puts the theme's back; Close (Escape)
+/// closes. The form's help names the keys and that color never carries
+/// meaning alone.
+fn colors_dialog(p: &Palette, form: &SettingsForm, app: &App, row: usize) -> SettingsDialog {
+    let c = app.catalog();
+    let title = form.section_title(0, &c);
+    let grid = NewWidget::new(
+        SettingsGrid::new(title.clone(), form.rows(0, app), p.clone())
+            .with_help_text(c.tr("gui-colors-help"))
+            .with_selected(row),
+    )
+    .with_tag(FORM);
+    let form_id = grid.id();
+    // The dialog's own key (not a keymap command): Escape closes it.
+    let escape = textweaver_app::keymap::KeyChord::new(
+        textweaver_app::keymap::Key::Escape,
+        textweaver_app::keymap::Modifiers::empty(),
+    );
+    let reset = NewWidget::new(
+        ActionButton::new(c.tr("gui-colors-reset-all"))
+            .with_description(c.tr("gui-colors-reset-all-help")),
+    );
+    let reset_id = reset.id();
+    let close = NewWidget::new(
+        ActionButton::new(c.tr("gui-button-close"))
+            .with_shortcut(escape.to_string())
+            .with_description(c.tr("gui-settings-close-help")),
+    );
+    let close_id = close.id();
+    let footer = Flex::row()
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .with(
+            NewWidget::new(
+                label(&c.tr("gui-settings-saved-hint"), theme::UI_TEXT, false)
+                    .accessibility_hidden(true),
+            ),
+            1.0,
+        )
+        .with_fixed(reset)
+        .with_fixed_spacer(Length::px(10.0))
+        .with_fixed(close);
+    let card = Flex::column()
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .with_fixed(NewWidget::new(
+            label(&title, 20.0, true).accessibility_hidden(true),
+        ))
+        .with_fixed_spacer(Length::px(14.0))
+        .with_fixed(grid)
+        .with_fixed_spacer(Length::px(14.0))
+        .with_fixed(NewWidget::new(footer));
+    let card = NewWidget::new(card).with_props(dialog::card_props(p));
+    let modal = NewWidget::new(Modal::new(card, title, p.clone()).with_max_width(820.0)).erased();
+    SettingsDialog {
+        modal,
+        form: form_id,
+        close: close_id,
+        reset: Some(reset_id),
     }
 }
 
@@ -1110,7 +1203,7 @@ impl Gui {
     /// window for each message (the live region's nodes stay, not live).
     fn notify(&mut self, ctx: &mut DriverCtx<'_>, messages: &[Message]) {
         if self.hwnd == 0 {
-            self.hwnd = window_hwnd(ctx.window(self.window_id).handle());
+            self.hwnd = hwnd_of(ctx.window(self.window_id).handle());
         }
         for m in messages {
             let result = crate::widgets::notify::raise(self.hwnd, m);
@@ -1235,6 +1328,13 @@ impl Gui {
         }
         self.sync_question(ctx);
         self.sync_misspellings(ctx);
+        // The font list (the app's list, the window's families): a family
+        // chosen applies; a list closed without one leaves the font alone.
+        if let Some(i) = self.app.take_frontend_choice() {
+            self.font_chosen(ctx, i);
+        } else if self.font_choices.is_some() && self.app.list_model().is_none() {
+            self.font_choices = None;
+        }
         let title = self.app.session().map_or_else(
             || "textweaver".to_owned(),
             |s| format!("{} - textweaver", s.title),
@@ -1246,35 +1346,33 @@ impl Gui {
                 .set_window_label(title.as_str());
             self.window_title = title;
         }
+        self.sync_menus();
     }
 
     fn dispatch(&mut self, ctx: &mut DriverCtx<'_>, cmd: Command) {
         if self.log {
             crate::log::line(&format!("command {cmd:?}"));
         }
-        if !self.settings_list && cmd == Command::Action(ActionId::Settings) {
-            self.open_settings(ctx, None);
-            return;
-        }
-        // The window's own commands: the text size and the font.
-        let step = match &cmd {
-            Command::Action(ActionId::TextLarger) => Some(Step::Larger),
-            Command::Action(ActionId::TextSmaller) => Some(Step::Smaller),
-            Command::Action(ActionId::TextSizeReset) => Some(Step::Reset),
-            _ => None,
+        self.menu_dirty = true;
+        // A command, pressed or chosen from a menu (`RunCommand`, which the
+        // app keeps as a recent command).
+        let (command, from_menu) = match &cmd {
+            Command::Action(a) => (Some(*a), false),
+            Command::RunCommand(a) => (Some(*a), true),
+            _ => (None, false),
         };
-        if let Some(step) = step {
-            self.text_size(ctx, step);
-            return;
-        }
-        if cmd == Command::Action(ActionId::ChooseFont) {
-            self.open_fonts(ctx);
+        if let Some(a) = command
+            && self.window_command(ctx, a)
+        {
+            if from_menu {
+                self.app.remember_command(a);
+            }
             return;
         }
         // Open Path (a key, or chosen in the palette) is the app's Open,
         // answered by typing.
         self.typed_open = match &cmd {
-            Command::Action(a) => *a == ActionId::OpenPath,
+            Command::Action(a) | Command::RunCommand(a) => *a == ActionId::OpenPath,
             Command::Answer(id) => id == ActionId::OpenPath.id(),
             _ => false,
         };
@@ -1282,6 +1380,209 @@ impl Gui {
         self.run_effects(ctx, effects);
         self.typed_open = false;
         self.refresh(ctx);
+    }
+
+    /// True for the commands the window runs itself rather than the app:
+    /// the settings and colors dialogs, the text size, the font, and, where
+    /// the menus are native, the menu key.
+    fn is_window_command(&self, a: ActionId) -> bool {
+        match a {
+            ActionId::Settings | ActionId::ColorSettings => !self.settings_list,
+            ActionId::TextLarger
+            | ActionId::TextSmaller
+            | ActionId::TextSizeReset
+            | ActionId::ChooseFont => true,
+            ActionId::Menu => self.native.is_some() && cfg!(windows),
+            _ => false,
+        }
+    }
+
+    /// Runs `a` if the window runs it itself ([`Self::is_window_command`]);
+    /// returns false for the app's commands.
+    fn window_command(&mut self, ctx: &mut DriverCtx<'_>, a: ActionId) -> bool {
+        if !self.is_window_command(a) {
+            return false;
+        }
+        match a {
+            ActionId::Settings => self.open_settings(ctx, None),
+            ActionId::ColorSettings => self.open_colors(ctx),
+            ActionId::TextLarger => self.text_size(ctx, Step::Larger),
+            ActionId::TextSmaller => self.text_size(ctx, Step::Smaller),
+            ActionId::TextSizeReset => self.text_size(ctx, Step::Reset),
+            ActionId::ChooseFont => self.open_fonts(ctx),
+            ActionId::Menu => {
+                // The native menu bar, entered as F10 enters it.
+                let hwnd = self.window_handle(ctx);
+                if !crate::menus::enter_menu_bar(hwnd, '\0') {
+                    return false;
+                }
+            }
+            _ => return false,
+        }
+        true
+    }
+
+    /// The window's Win32 handle (0 elsewhere).
+    fn window_handle(&mut self, ctx: &mut DriverCtx<'_>) -> isize {
+        if self.hwnd == 0 {
+            self.hwnd = hwnd_of(ctx.window(self.window_id).handle());
+        }
+        self.hwnd
+    }
+
+    /// Builds the native menus from the app's model and attaches them to
+    /// the window (Windows and macOS); elsewhere the menu key shows the
+    /// list menu.
+    fn attach_menus(&mut self, ctx: &mut DriverCtx<'_>) {
+        if !crate::menus::NATIVE || self.list_menus {
+            return;
+        }
+        let started = Instant::now();
+        crate::menus::listen(self.proxy.clone(), self.window_id);
+        let key = crate::menus::Fingerprint::of(&self.app);
+        let tree = crate::menus::tree(&self.app);
+        let modelled = started.elapsed();
+        match crate::menus::Native::attach(ctx.window(self.window_id).handle(), tree) {
+            Ok(n) => {
+                if self.log {
+                    crate::log::line(&format!(
+                        "menus: native, model {:.1} ms, attached in {:.1} ms",
+                        modelled.as_secs_f64() * 1000.0,
+                        (started.elapsed() - modelled).as_secs_f64() * 1000.0
+                    ));
+                    // What the system holds, as a screen reader will read
+                    // it: each item's text, a tab, and its key.
+                    for line in n.dump() {
+                        crate::log::line(&format!("menu item: {line}"));
+                    }
+                }
+                self.native = Some(n);
+                self.menu_key = Some(key);
+            }
+            Err(e) => {
+                if self.log {
+                    crate::log::line(&format!("menus: not attached ({e}); the list menu instead"));
+                }
+            }
+        }
+    }
+
+    /// After a command: the native menus again, if what they show changed.
+    fn sync_menus(&mut self) {
+        if !std::mem::take(&mut self.menu_dirty) {
+            return;
+        }
+        let Some(native) = self.native.as_mut() else {
+            return;
+        };
+        let key = crate::menus::Fingerprint::of(&self.app);
+        if self.menu_key.as_ref() == Some(&key) {
+            return;
+        }
+        self.menu_key = Some(key);
+        let started = Instant::now();
+        let tree = crate::menus::tree(&self.app);
+        match native.update(tree) {
+            Ok(true) if self.log => crate::log::line(&format!(
+                "menus: rebuilt in {:.1} ms",
+                started.elapsed().as_secs_f64() * 1000.0
+            )),
+            Err(e) if self.log => crate::log::line(&format!("menus: not rebuilt ({e})")),
+            _ => {}
+        }
+    }
+
+    /// A menu item was chosen: an open dialog closes first (as Escape
+    /// would), then the command runs as a recent command, or the recent
+    /// document opens.
+    fn menu_picked(&mut self, ctx: &mut DriverCtx<'_>, id: &str) {
+        let Some(pick) = crate::menus::Pick::from_id(id) else {
+            return;
+        };
+        if self.log {
+            crate::log::line(&format!("menu: {pick:?}"));
+        }
+        if matches!(self.dialog, Some(OpenDialog::FileChooser { .. })) {
+            // The system's file chooser is modal to the window; nothing is
+            // run behind it.
+            return;
+        }
+        self.cancel_dialog(ctx);
+        match pick {
+            crate::menus::Pick::Command(a) => self.dispatch(ctx, Command::RunCommand(a)),
+            crate::menus::Pick::Document(p) => self.dispatch(ctx, Command::Open(p)),
+        }
+    }
+
+    /// Windows, with the native menu bar: the keys that enter it as in any
+    /// Windows program. F10 (the menu key) and Alt alone are Windows' own
+    /// (winit leaves their key-up to the system when a window has a menu);
+    /// Alt with a menu's letter and Alt+Space reach the window as keys, so
+    /// the window enters the menu or the system menu itself, unless the
+    /// keymap binds the chord. Returns true when the key was taken.
+    fn native_menu_key(
+        &mut self,
+        ctx: &mut DriverCtx<'_>,
+        chord: &textweaver_app::keymap::KeyChord,
+        action: Option<ActionId>,
+    ) -> bool {
+        use textweaver_app::keymap::{Key, Modifiers};
+        if !cfg!(windows) || self.native.is_none() {
+            return false;
+        }
+        if action == Some(ActionId::Menu) && *chord == keys::menu_bar_key() {
+            // Windows enters the bar on the key's release.
+            return true;
+        }
+        if action.is_some() || chord.mods != Modifiers::ALT {
+            return false;
+        }
+        let letter = match chord.key {
+            Key::Space => ' ',
+            Key::Char(c)
+                if self
+                    .native
+                    .as_ref()
+                    .is_some_and(|n| crate::menus::access_letters(n.shown()).contains(&c)) =>
+            {
+                c
+            }
+            _ => return false,
+        };
+        let hwnd = self.window_handle(ctx);
+        let entered = crate::menus::enter_menu_bar(hwnd, letter);
+        if self.log {
+            crate::log::line(&format!("menu bar entered with {letter:?}: {entered}"));
+        }
+        entered
+    }
+
+    /// The command on row `row` of the list menu, while the app shows the
+    /// menus as a list and that row runs a command (rows are the menu's
+    /// items without its separators, as the app lists them).
+    fn menu_row_command(&self, row: usize) -> Option<ActionId> {
+        crate::menus::list_row_command(&self.app, row)
+    }
+
+    /// Closes the open dialog as Escape would.
+    fn cancel_dialog(&mut self, ctx: &mut DriverCtx<'_>) {
+        match &self.dialog {
+            None | Some(OpenDialog::FileChooser { .. }) => {}
+            Some(OpenDialog::Question { .. }) => {
+                self.answer_question(ctx, textweaver_app::Confirm::No);
+            }
+            Some(OpenDialog::Settings(_)) => {
+                self.settings_dialog_action(ctx, &DialogAction::Cancel);
+            }
+            Some(OpenDialog::SettingEdit(..)) => {
+                self.setting_edit_answer(ctx, None);
+                self.settings_dialog_action(ctx, &DialogAction::Cancel);
+            }
+            Some(OpenDialog::Prompt) => self.prompt_answer(ctx, None),
+            Some(OpenDialog::List(_) | OpenDialog::Palette(_)) => {
+                self.answer(ctx, Command::Cancel);
+            }
+        }
     }
 
     fn run_effects(&mut self, ctx: &mut DriverCtx<'_>, effects: Vec<Effect>) {
@@ -1302,11 +1603,20 @@ impl Gui {
                 Effect::Prompt {
                     label,
                     purpose: PromptPurpose::Open,
-                } if !self.typed_open => self.open_file_chooser(ctx, &label),
+                } if !self.typed_open => {
+                    self.open_file_chooser(ctx, &label, PromptPurpose::Open);
+                }
+                // Export and import settings: the system's save and open
+                // dialogs, for TOML and JSON.
+                Effect::Prompt {
+                    label,
+                    purpose:
+                        purpose @ (PromptPurpose::ExportSettings | PromptPurpose::ImportSettings),
+                } => self.open_file_chooser(ctx, &label, purpose),
                 Effect::Prompt { label, purpose } => self.open_prompt(ctx, &label, purpose),
                 // The open list changed (filtered, a setting changed): show
                 // it in place, keeping focus in the dialog.
-                Effect::ShowList { .. } if matches!(self.dialog, Some(OpenDialog::List)) => {
+                Effect::ShowList { .. } if matches!(self.dialog, Some(OpenDialog::List(_))) => {
                     self.sync_list(ctx);
                 }
                 Effect::ShowList { title, items } => self.open_list(ctx, &title, items),
@@ -1338,32 +1648,62 @@ impl Gui {
         }
     }
 
-    /// Open: the system's file chooser, on its own thread and modal to the
-    /// window. Its answer comes back as a [`FileChosen`] action; until
-    /// then the app's Open prompt waits, labelled `label_text`.
-    fn open_file_chooser(&mut self, ctx: &mut DriverCtx<'_>, label_text: &str) {
+    /// The system's file chooser, on its own thread and modal to the
+    /// window, for the app's prompt `purpose`: Open (the documents
+    /// textweaver reads), Export settings (a save dialog offering a TOML
+    /// file), or Import settings (TOML and JSON). Its answer comes back as
+    /// a [`FileChosen`] action; until then the app's prompt waits,
+    /// labelled `label_text`.
+    fn open_file_chooser(
+        &mut self,
+        ctx: &mut DriverCtx<'_>,
+        label_text: &str,
+        purpose: PromptPurpose,
+    ) {
         let c = self.app.catalog();
-        let registry = textweaver_app::formats::Registry::with_builtins();
-        let filters = file_chooser::filters(
-            &registry.extensions(),
-            &c.tr("gui-open-documents"),
-            &c.tr("gui-open-all-files"),
-        );
-        let folder = file_chooser::start_folder(self.app.session().map(|s| s.key.0.as_str()));
-        let chooser = file_chooser::Chooser::new(
+        let all = c.tr("gui-open-all-files");
+        let (title, filters, folder) = match purpose {
+            PromptPurpose::ExportSettings | PromptPurpose::ImportSettings => {
+                let title = if purpose == PromptPurpose::ExportSettings {
+                    "gui-settings-export-title"
+                } else {
+                    "gui-settings-import-title"
+                };
+                let filters = file_chooser::settings_filters(&c.tr("gui-settings-files"), &all);
+                (c.tr(title), filters, None)
+            }
+            _ => {
+                let registry = textweaver_app::formats::Registry::with_builtins();
+                let filters = file_chooser::filters(
+                    &registry.extensions(),
+                    &c.tr("gui-open-documents"),
+                    &all,
+                );
+                let folder =
+                    file_chooser::start_folder(self.app.session().map(|s| s.key.0.as_str()));
+                (c.tr("gui-open-title"), filters, folder)
+            }
+        };
+        let mut chooser = file_chooser::Chooser::new(
             ctx.window(self.window_id).handle(),
-            &c.tr("gui-open-title"),
+            &title,
             &filters,
             folder.as_deref(),
         );
+        if purpose == PromptPurpose::ExportSettings {
+            chooser = chooser.saving(file_chooser::SETTINGS_FILE_NAME);
+        }
         let proxy = self.proxy.clone();
         let window_id = self.window_id;
         chooser.show(move |chosen| {
             let _ = proxy.send_event(MasonryUserEvent::AsyncAction(window_id, Box::new(chosen)));
         });
-        self.dialog = Some(OpenDialog::FileChooser(label_text.to_owned()));
+        self.dialog = Some(OpenDialog::FileChooser {
+            label: label_text.to_owned(),
+            purpose,
+        });
         if self.log {
-            crate::log::line("dialog: system file chooser");
+            crate::log::line(&format!("dialog: system file chooser for {purpose:?}"));
         }
     }
 
@@ -1372,7 +1712,11 @@ impl Gui {
     /// a chooser that never appeared gives way to the typed prompt. The
     /// focus goes back to the document either way.
     fn file_chosen(&mut self, ctx: &mut DriverCtx<'_>, chosen: &FileChosen) {
-        let Some(OpenDialog::FileChooser(label_text)) = self.dialog.take() else {
+        let Some(OpenDialog::FileChooser {
+            label: label_text,
+            purpose,
+        }) = self.dialog.take()
+        else {
             return;
         };
         let outcome = file_chooser::outcome(chosen.path.clone(), chosen.elapsed);
@@ -1393,9 +1737,14 @@ impl Gui {
             }
             file_chooser::Outcome::Cancelled => PromptKey::Escape,
             file_chooser::Outcome::Failed => {
-                let said = self.app.catalog().tr("gui-open-no-dialog");
-                self.app.announce(&said, Priority::Assertive);
-                self.open_prompt(ctx, &label_text, PromptPurpose::Open);
+                let said = self.app.catalog().tr(if purpose == PromptPurpose::Open {
+                    "gui-open-no-dialog"
+                } else {
+                    "gui-chooser-no-dialog"
+                });
+                self.app
+                    .announce_as(&said, Priority::Assertive, Importance::Error);
+                self.open_prompt(ctx, &label_text, purpose);
                 self.refresh(ctx);
                 return;
             }
@@ -1463,13 +1812,36 @@ impl Gui {
     /// The Settings command: the settings dialog, from the app's schema.
     fn open_settings(&mut self, ctx: &mut DriverCtx<'_>, at: Option<(usize, usize)>) {
         let form = SettingsForm::new(self.app.settings_schema());
+        self.show_settings(ctx, form, at);
+    }
+
+    /// View, Colors (W6a6): the Colors dialog, every color setting in one
+    /// form, starting on the spoken word's highlight.
+    fn open_colors(&mut self, ctx: &mut DriverCtx<'_>) {
+        let form = SettingsForm::colors(self.app.settings_schema());
+        self.show_settings(ctx, form, None);
+    }
+
+    /// Shows the settings dialog (or the Colors dialog) for `form`, on
+    /// section and row `at`, or on the first section's first plain row.
+    fn show_settings(
+        &mut self,
+        ctx: &mut DriverCtx<'_>,
+        form: SettingsForm,
+        at: Option<(usize, usize)>,
+    ) {
         let (section, row) = at.unwrap_or_else(|| (0, form.first_plain_row(0)));
         let section = section.min(form.sections.len().saturating_sub(1));
         let d = settings_dialog(&self.palette, &form, &self.app, section, row);
         self.show_dialog(ctx, d.modal, d.form);
         if self.log {
             crate::log::line(&format!(
-                "dialog: settings, {} sections, section {section}, row {row}",
+                "dialog: {}, {} sections, section {section}, row {row}",
+                if form.is_colors() {
+                    "colors"
+                } else {
+                    "settings"
+                },
                 form.sections.len()
             ));
         }
@@ -1477,7 +1849,58 @@ impl Gui {
             form,
             section,
             close: d.close,
+            reset: d.reset,
         }));
+    }
+
+    /// The settings dialog again, as it was (the Colors dialog stays the
+    /// Colors dialog), on `section` and `row`.
+    fn reopen_settings(
+        &mut self,
+        ctx: &mut DriverCtx<'_>,
+        colors: bool,
+        section: usize,
+        row: usize,
+    ) {
+        let schema = self.app.settings_schema();
+        let form = if colors {
+            SettingsForm::colors(schema)
+        } else {
+            SettingsForm::new(schema)
+        };
+        self.show_settings(ctx, form, Some((section, row)));
+    }
+
+    /// Reset all colors (the Colors dialog's button): every color setting
+    /// back to the theme's, applied at once and said once.
+    fn reset_all_colors(&mut self, ctx: &mut DriverCtx<'_>) {
+        self.menu_dirty = true;
+        let mut failed = None;
+        for path in textweaver_app::COLOR_SETTINGS {
+            if let Err(e) = self.app.set_setting(path, serde_json::Value::Null) {
+                failed = Some(e);
+            }
+        }
+        if self.log {
+            crate::log::line("colors: all reset to the theme's");
+        }
+        self.refresh(ctx);
+        if let Some(OpenDialog::Settings(open)) = &self.dialog {
+            let rows = open.form.rows(open.section, &self.app);
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(FORM, |mut g| SettingsGrid::update_rows(&mut g, rows));
+        }
+        match failed {
+            Some(e) => self
+                .app
+                .announce_as(&e, Priority::Assertive, Importance::Error),
+            None => {
+                let said = self.app.catalog().tr("gui-colors-reset-done");
+                self.app
+                    .announce_as(&said, Priority::Polite, Importance::Result);
+            }
+        }
+        self.refresh(ctx);
     }
 
     /// A change, an edit, or a section move from the settings form.
@@ -1502,9 +1925,10 @@ impl Gui {
                 let c = self.app.catalog();
                 let label = setting.label_in(&c);
                 if matches!(setting.kind, textweaver_app::SettingKind::Table) {
-                    self.app.announce(
+                    self.app.announce_as(
                         &c.fmt("gui-settings-table", &args!["label" => label.as_str()]),
                         Priority::Polite,
+                        Importance::Answer,
                     );
                     self.refresh(ctx);
                     return;
@@ -1551,6 +1975,7 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("setting {} {change:?}", setting.path));
         }
+        self.menu_dirty = true;
         let theme_before = self.palette.name.clone();
         match settings_dialog::apply(&mut self.app, setting, change) {
             Ok(said) => {
@@ -1560,11 +1985,11 @@ impl Gui {
                 self.refresh(ctx);
                 if self.palette.name != theme_before {
                     // A new theme: draw the dialog again in its colours.
-                    let section = match &self.dialog {
-                        Some(OpenDialog::Settings(o)) => o.section,
-                        _ => 0,
+                    let (section, colors) = match &self.dialog {
+                        Some(OpenDialog::Settings(o)) => (o.section, o.form.is_colors()),
+                        _ => (0, false),
                     };
-                    self.open_settings(ctx, Some((section, row)));
+                    self.reopen_settings(ctx, colors, section, row);
                 }
                 let Some(OpenDialog::Settings(open)) = &self.dialog else {
                     return;
@@ -1576,10 +2001,13 @@ impl Gui {
                 ctx.render_root(self.window_id)
                     .edit_widget_with_tag(FORM, |mut g| SettingsGrid::update_rows(&mut g, rows));
                 if let Some(note) = note {
-                    self.app.announce(&note, Priority::Polite);
+                    self.app
+                        .announce_as(&note, Priority::Polite, Importance::Result);
                 }
             }
-            Err(why) => self.app.announce(&why, Priority::Assertive),
+            Err(why) => self
+                .app
+                .announce_as(&why, Priority::Assertive, Importance::Error),
         }
         self.refresh(ctx);
     }
@@ -1605,7 +2033,8 @@ impl Gui {
         });
         root.edit_widget_with_tag(SECTIONS, |mut l| ChoiceList::select(&mut l, section));
         if say && let Some(item) = item {
-            self.app.announce(&format!("{item}."), Priority::Polite);
+            self.app
+                .announce_as(&format!("{item}."), Priority::Polite, Importance::Answer);
             self.refresh(ctx);
         }
     }
@@ -1626,9 +2055,16 @@ impl Gui {
                 root.focus_on(form);
             }
             DialogAction::Cancel => {
+                let colors =
+                    matches!(&self.dialog, Some(OpenDialog::Settings(o)) if o.form.is_colors());
                 self.close_dialog(ctx);
-                let said = self.app.catalog().tr("gui-settings-closed");
-                self.app.announce(&said, Priority::Polite);
+                let said = self.app.catalog().tr(if colors {
+                    "gui-colors-closed"
+                } else {
+                    "gui-settings-closed"
+                });
+                self.app
+                    .announce_as(&said, Priority::Polite, Importance::Dialog);
                 self.refresh(ctx);
             }
             _ => {}
@@ -1644,7 +2080,7 @@ impl Gui {
         };
         let section = open.section;
         let setting = open.form.setting(section, row).cloned();
-        self.open_settings(ctx, Some((section, row)));
+        self.reopen_settings(ctx, open.form.is_colors(), section, row);
         if let (Some(text), Some(setting)) = (answer, setting) {
             self.change_setting(ctx, &setting, row, FormChange::Text(text));
         }
@@ -1656,7 +2092,7 @@ impl Gui {
         let c = self.app.catalog();
         let (modal, list_id) = list_dialog(&self.palette, &c, title, items, selected, true);
         self.show_dialog(ctx, modal, list_id);
-        self.dialog = Some(OpenDialog::List);
+        self.dialog = Some(OpenDialog::List(title.to_owned()));
         if self.log {
             crate::log::line(&format!("dialog: list {title:?} with {count} items"));
         }
@@ -1694,7 +2130,8 @@ impl Gui {
                 label(&c.tr("gui-palette-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
             ));
         let card = NewWidget::new(card).with_props(dialog::card_props(p));
-        let modal = NewWidget::new(Modal::new(card, label_text, p.clone())).erased();
+        let modal = NewWidget::new(Modal::new(card, label_text, p.clone()).with_show_matches(true))
+            .erased();
         self.show_dialog(ctx, modal, field_id);
         self.dialog = Some(OpenDialog::Palette(ids));
         if self.log {
@@ -1704,59 +2141,51 @@ impl Gui {
 
     /// The font list (Ctrl+D, the Font button): the families, bundled
     /// first, starting on the current one.
+    ///
+    /// The list is the app's (`App::show_frontend_list`), so it moves,
+    /// jumps by letter, and is announced as every other list is; the
+    /// window keeps the families and applies the one chosen
+    /// ([`Self::font_chosen`]).
     fn open_fonts(&mut self, ctx: &mut DriverCtx<'_>) {
-        let choices = crate::font_chooser::choices(&self.app.catalog(), self.installed.names());
+        let c = self.app.catalog();
+        let choices = crate::font_chooser::choices(&c, self.installed.names());
         let current = crate::fonts::doc_font(&self.app.settings().reading_aids.font);
         let items: Vec<String> = choices.iter().map(|c| c.label.clone()).collect();
         let selected = choices
             .iter()
             .position(|c| current.family.starts_with(&format!("\"{}\"", c.family)))
             .unwrap_or(0);
-        let title = self.app.catalog().tr("gui-font-list");
-        let (modal, list_id) = list_dialog(
-            &self.palette,
-            &self.app.catalog(),
-            &title,
-            items,
-            selected,
-            false,
+        let title = c.tr("gui-font-list");
+        let intro = c.fmt(
+            "gui-font-list-intro",
+            &args!["title" => title.as_str(), "n" => items.len()],
         );
-        self.show_dialog(ctx, modal, list_id);
-        self.dialog = Some(OpenDialog::FontFamily(choices));
+        let n = items.len();
+        self.font_choices = Some(choices);
+        let effects = self.app.show_frontend_list(&title, &intro, items, selected);
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
         if self.log {
-            crate::log::line("dialog: font list");
+            crate::log::line(&format!("dialog: font list, {n} families"));
         }
     }
 
-    /// The font list's answer: the family applies at once, keeping the
-    /// size, and is said ("Font: OpenDyslexic."). Returns false when the
-    /// open dialog is not the font list.
-    fn font_answer(&mut self, ctx: &mut DriverCtx<'_>, d: &DialogAction) -> bool {
-        match (&self.dialog, d) {
-            (Some(OpenDialog::FontFamily(_)), DialogAction::Cancel) => {
-                self.close_dialog(ctx);
-                let said = self.app.catalog().tr("gui-font-unchanged");
-                self.app.announce(&said, Priority::Polite);
-                self.refresh(ctx);
-                true
-            }
-            (Some(OpenDialog::FontFamily(choices)), DialogAction::Choose(i)) => {
-                let Some(family) = choices.get(*i).map(|c| c.family.clone()) else {
-                    return true;
-                };
-                self.close_dialog(ctx);
-                let new = crate::font_chooser::with_family(
-                    &self.app.settings().reading_aids.font,
-                    &family,
-                );
-                self.save_font(new);
-                let said = crate::font_chooser::font_message(&self.app.catalog(), &family);
-                self.app.announce(&said, Priority::Polite);
-                self.refresh(ctx);
-                true
-            }
-            _ => false,
-        }
+    /// A family was chosen in the font list: it applies at once, keeping
+    /// the size, and is said ("Font: OpenDyslexic.").
+    fn font_chosen(&mut self, ctx: &mut DriverCtx<'_>, i: usize) {
+        let Some(family) = self
+            .font_choices
+            .take()
+            .and_then(|c| c.get(i).map(|c| c.family.clone()))
+        else {
+            return;
+        };
+        let new = crate::font_chooser::with_family(&self.app.settings().reading_aids.font, &family);
+        self.save_font(new);
+        let said = crate::font_chooser::font_message(&self.app.catalog(), &family);
+        self.app
+            .announce_as(&said, Priority::Polite, Importance::Result);
+        self.refresh(ctx);
     }
 
     /// Ctrl+Plus, Ctrl+Minus, Ctrl+0: the next text size, saved and said
@@ -1770,7 +2199,8 @@ impl Gui {
         }
         let said = crate::font_chooser::size_message(&self.app.catalog(), size, limit);
         // Assertive: a held key says only the latest size.
-        self.app.announce(&said, Priority::Assertive);
+        self.app
+            .announce_as(&said, Priority::Assertive, Importance::Result);
         self.refresh(ctx);
     }
 
@@ -1791,7 +2221,9 @@ impl Gui {
             .app
             .catalog()
             .fmt("gui-palette-count", &args!["n" => n]);
-        self.app.announce(&said, Priority::Polite);
+        // The count answers what was typed, as a search's count does.
+        self.app
+            .announce_as(&said, Priority::Polite, Importance::Answer);
         self.refresh(ctx);
     }
 
@@ -1800,6 +2232,19 @@ impl Gui {
     fn list_key(&mut self, ctx: &mut DriverCtx<'_>, k: textweaver_app::ListKey) {
         if self.log {
             crate::log::line(&format!("list key {k:?}"));
+        }
+        self.menu_dirty = true;
+        if k == textweaver_app::ListKey::Enter {
+            // Enter on a window command in the list menu: the window runs
+            // it, as it would from the palette.
+            let selected = self.app.list_model().map_or(0, |m| m.selected);
+            if self
+                .menu_row_command(selected)
+                .is_some_and(|a| self.is_window_command(a))
+            {
+                self.answer(ctx, Command::Choose(selected));
+                return;
+            }
         }
         let effects = self.app.dispatch(Command::ListKey(k));
         self.sync_list(ctx);
@@ -1811,6 +2256,15 @@ impl Gui {
     /// list's introduction, and the Repeat Message key says the last
     /// message, as in the terminal reader. Other chords do nothing there.
     fn list_chord(&mut self, ctx: &mut DriverCtx<'_>, chord: textweaver_app::keymap::KeyChord) {
+        // The file browser's own keys (choose this folder, sort, show all),
+        // asked of the app so the key and its name stay one (ADR-0045).
+        if let Some(key) = self.app.browse_list_key_for(&chord) {
+            if self.log {
+                crate::log::line(&format!("list chord {chord} -> browser {key:?}"));
+            }
+            self.list_key(ctx, key);
+            return;
+        }
         let action = self
             .app
             .keymap()
@@ -1819,6 +2273,10 @@ impl Gui {
             crate::log::line(&format!("list chord {chord} -> {action:?}"));
         }
         match action {
+            // In the file browser, Say Status previews the focused row.
+            Some(ActionId::SayStatus) if self.app.browse_location().is_some() => {
+                self.list_key(ctx, textweaver_app::ListKey::Details);
+            }
             Some(ActionId::Help | ActionId::SayStatus) => {
                 self.list_key(ctx, textweaver_app::ListKey::Introduce);
             }
@@ -1832,10 +2290,16 @@ impl Gui {
     /// Shows the app's list model in the open list dialog, or closes the
     /// dialog when the app's list is gone.
     fn sync_list(&mut self, ctx: &mut DriverCtx<'_>) {
-        if !matches!(self.dialog, Some(OpenDialog::List)) {
+        let Some(OpenDialog::List(shown)) = &self.dialog else {
             return;
-        }
+        };
         match self.app.list_model() {
+            // A new list in its place (a submenu of the list menu): shown
+            // under its own name, so the screen reader says it.
+            Some(m) if m.title != *shown => {
+                let (title, items) = (m.title.clone(), m.items.clone());
+                self.open_list(ctx, &title, items);
+            }
             Some(m) => {
                 let (items, selected) = (m.items.clone(), m.selected);
                 ctx.render_root(self.window_id)
@@ -1937,7 +2401,10 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("window focused: {said}"));
         }
-        self.app.echo(&said);
+        // A window taking the focus is the interface's own news.
+        if self.app.interface_allows(Importance::Dialog) {
+            self.app.echo(&said);
+        }
     }
 
     /// A yes-or-no question from the app shows as a dialog while it is
@@ -2015,23 +2482,25 @@ impl Gui {
         if self.dialog.is_none() {
             return;
         }
-        // Commands the window runs itself, chosen in the command palette:
-        // Settings opens the dialog; the text size and font keys.
-        let palette = matches!(self.dialog, Some(OpenDialog::Palette(_)));
-        self.close_dialog(ctx);
-        let own = match &cmd {
-            Command::Answer(id) if palette => ActionId::from_id(id).filter(|a| {
-                (*a == ActionId::Settings && !self.settings_list)
-                    || (a.is_window_only() && *a != ActionId::OpenPath)
-            }),
+        // Commands the window runs itself, chosen in the command palette or
+        // in the list menu: Settings and Colors open their dialogs; the
+        // text size and font keys. They join the recent commands too.
+        let own = match (&cmd, &self.dialog) {
+            (Command::Answer(id), Some(OpenDialog::Palette(_))) => {
+                ActionId::from_id(id).filter(|a| self.is_window_command(*a))
+            }
+            (Command::Choose(i), Some(OpenDialog::List(_))) => self
+                .menu_row_command(*i)
+                .filter(|a| self.is_window_command(*a)),
             _ => None,
         };
+        self.close_dialog(ctx);
         if let Some(a) = own {
             self.muted.set(true);
             let effects = self.app.dispatch(Command::Cancel);
             self.muted.set(false);
             self.run_effects(ctx, effects);
-            self.dispatch(ctx, Command::Action(a));
+            self.dispatch(ctx, Command::RunCommand(a));
             self.refresh(ctx);
             return;
         }
@@ -2045,6 +2514,7 @@ impl Gui {
             return;
         }
         self.close_dialog(ctx);
+        self.menu_dirty = true;
         if self.app.prompt_model().is_none() {
             // The app has no prompt open (it was closed under us): answer
             // directly.
@@ -2091,6 +2561,9 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("key {chord} -> {action:?}"));
         }
+        if self.native_menu_key(ctx, &chord, action) {
+            return;
+        }
         if let Some(a) = action {
             self.dispatch(ctx, Command::Action(a));
         } else if let Some(cmd) = extra_lookup(&chord, layer) {
@@ -2127,7 +2600,8 @@ impl Gui {
                                 "error" => e.to_string()
                             ],
                         );
-                        self.app.announce(&said, Priority::Assertive);
+                        self.app
+                            .announce_as(&said, Priority::Assertive, Importance::Error);
                     }
                 }
                 if self.log {
@@ -2145,20 +2619,26 @@ impl Gui {
                     .app
                     .catalog()
                     .fmt("gui-no-document", &args!["key" => open.as_str()]);
-                self.app.announce(&said, Priority::Polite);
+                self.app
+                    .announce_as(&said, Priority::Polite, Importance::Tip);
             }
         }
         // As in the terminal reader: startup messages follow the opening
         // message instead of cutting it off (a settings or keymap warning
         // stays assertive, so it is heard even when reading starts at once).
+        // They are warnings (a setting or key that could not be used), which
+        // interface announcements never silence.
         for m in &messages {
             self.app.announce_queued(m, Priority::Assertive);
         }
         if self.first_run {
             // The first run: the welcome (the five keys that get a new user
-            // reading), then the language list, the system's first.
+            // reading), then the language list, the system's first. The
+            // welcome is a tip: heard unless announcements are turned down.
             let welcome = setup::welcome_text(&self.app.catalog(), self.app.keymap());
-            self.app.announce_queued(&welcome, Priority::Polite);
+            if self.app.interface_allows(Importance::Tip) {
+                self.app.announce_queued(&welcome, Priority::Polite);
+            }
             effects.extend(self.app.language_list());
         } else if self.startup_offers
             && self.app.hybrid_offer_due()
@@ -2177,6 +2657,7 @@ impl Gui {
             .get_widget_with_tag(DOC)
             .map(|w| w.id());
         ctx.render_root(self.window_id).focus_on(doc);
+        self.attach_menus(ctx);
         if read && self.app.session().is_some() {
             self.dispatch(ctx, Command::Action(ActionId::ReadFromCursor));
         }
@@ -2261,6 +2742,10 @@ impl AppDriver for Gui {
                 && open.close == widget_id
             {
                 self.settings_dialog_action(ctx, &DialogAction::Cancel);
+            } else if let Some(OpenDialog::Settings(open)) = &self.dialog
+                && open.reset == Some(widget_id)
+            {
+                self.reset_all_colors(ctx);
             } else if let Some(a) = self.buttons.by_id.get(&widget_id).copied() {
                 self.dispatch(ctx, Command::Action(a));
             }
@@ -2278,7 +2763,7 @@ impl AppDriver for Gui {
                 }
                 return;
             }
-            if self.settings_dialog_action(ctx, d) || self.font_answer(ctx, d) {
+            if self.settings_dialog_action(ctx, d) {
                 return;
             }
             match d {
@@ -2322,7 +2807,11 @@ impl AppDriver for Gui {
                                 .find(|(a, _)| Some(a) == ids.get(next))
                                 .map(|(_, d)| d);
                             if let Some(said) = said {
-                                self.app.announce(&said, Priority::Assertive);
+                                self.app.announce_as(
+                                    &said,
+                                    Priority::Assertive,
+                                    Importance::Answer,
+                                );
                             }
                             self.refresh(ctx);
                         }
@@ -2333,6 +2822,20 @@ impl AppDriver for Gui {
                 DialogAction::Complete => {
                     if matches!(self.dialog, Some(OpenDialog::Prompt)) {
                         self.prompt_key(ctx, PromptKey::Tab);
+                    }
+                    return;
+                }
+                DialogAction::ShowMatches => {
+                    // The palette's matches, in context: the focus moves
+                    // to the list, whose selected row the screen reader
+                    // reads with its place ("3 of 12").
+                    if matches!(self.dialog, Some(OpenDialog::Palette(_))) {
+                        let root = ctx.render_root(self.window_id);
+                        let list = root.get_widget_with_tag(LIST).map(|w| w.id());
+                        root.focus_on(list);
+                        if self.log {
+                            crate::log::line("palette: the list of matches");
+                        }
                     }
                     return;
                 }
@@ -2367,7 +2870,8 @@ impl AppDriver for Gui {
                     | DialogAction::Recall(_)
                     | DialogAction::Complete
                     | DialogAction::Chord(_)
-                    | DialogAction::Answer(_),
+                    | DialogAction::Answer(_)
+                    | DialogAction::ShowMatches,
                     _,
                 ) => return,
             };
@@ -2423,7 +2927,15 @@ impl AppDriver for Gui {
             return;
         }
         if let Some(chosen) = action.downcast_ref::<FileChosen>() {
+            self.menu_dirty = true;
             self.file_chosen(ctx, chosen);
+            return;
+        }
+        if let Some(crate::menus::MenuPicked(id)) =
+            action.downcast_ref::<crate::menus::MenuPicked>()
+        {
+            let id = id.clone();
+            self.menu_picked(ctx, &id);
             return;
         }
         if action.downcast_ref::<Tick>().is_none() {
@@ -2612,10 +3124,15 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         theme_key,
         system,
         settings_list: experiments.settings_list,
+        list_menus: experiments.list_menus,
         announce,
         held_notices: Vec::new(),
         return_focus: None,
         hwnd: 0,
+        native: None,
+        menu_dirty: false,
+        menu_key: None,
+        font_choices: None,
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
         closed: false,
@@ -2627,7 +3144,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
 }
 
 /// The window's Win32 handle, or 0 (another system, or no handle yet).
-fn window_hwnd(window: &WinitWindow) -> isize {
+pub(crate) fn hwnd_of(window: &WinitWindow) -> isize {
     use masonry_winit::winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
     match window.window_handle().map(|h| h.as_raw()) {
         Ok(RawWindowHandle::Win32(h)) => h.hwnd.get(),

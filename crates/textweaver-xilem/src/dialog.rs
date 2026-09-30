@@ -51,6 +51,9 @@ pub enum DialogAction {
     /// repeat the list's introduction (`ListKey::Introduce`) and the
     /// Repeat Message key says the last message, as in the terminal.
     Chord(textweaver_app::keymap::KeyChord),
+    /// Ctrl+L in the command palette (`Modal::with_show_matches`): the
+    /// focus moves to the list of matches.
+    ShowMatches,
     /// A key typed in a question (`Modal::with_answer_keys`): `y` is yes,
     /// `n` and `a` are no, any other character asks again, as in the
     /// terminal (`Command::Confirm`).
@@ -70,6 +73,9 @@ pub struct Modal {
     tab_completes: bool,
     /// A question: typed characters answer it.
     answer_keys: bool,
+    /// The command palette: the command key with L moves to its list of
+    /// matches, as Ctrl+L shows them as a list in the terminal.
+    show_matches: bool,
     /// Whose command modifier the dialog follows ([`crate::keys`]).
     platform: Platform,
 }
@@ -89,8 +95,16 @@ impl Modal {
             max_width: 600.0,
             tab_completes: false,
             answer_keys: false,
+            show_matches: false,
             platform: Platform::current(),
         }
+    }
+
+    /// The command palette: the command key with L (Ctrl+L, Command+L on
+    /// macOS) moves to the list of matches, as in the terminal's palette.
+    pub fn with_show_matches(mut self, on: bool) -> Self {
+        self.show_matches = on;
+        self
     }
 
     /// Follows `platform`'s command modifier instead of this system's.
@@ -131,7 +145,18 @@ impl Widget for Modal {
         let TextEvent::Keyboard(k) = event else {
             return;
         };
-        if k.state != KeyState::Down || crate::keys::is_command(k.modifiers, self.platform) {
+        let command = crate::keys::is_command(k.modifiers, self.platform);
+        if k.state == KeyState::Down
+            && command
+            && self.show_matches
+            && !k.modifiers.shift()
+            && matches!(&k.key, Key::Character(s) if s.eq_ignore_ascii_case("l"))
+        {
+            ctx.submit_action::<DialogAction>(DialogAction::ShowMatches);
+            ctx.set_handled();
+            return;
+        }
+        if k.state != KeyState::Down || command {
             return;
         }
         // Keys the dialog's controls left alone.

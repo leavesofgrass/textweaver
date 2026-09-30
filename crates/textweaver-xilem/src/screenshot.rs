@@ -46,6 +46,25 @@ pub struct ShotOptions {
     /// the ruler with its band, WCAG's text spacing, and RSVP). They are
     /// saved like any setting, so this needs `home`.
     pub aids: bool,
+    /// Draw the Colors dialog (W6a6), with a few colors chosen so their
+    /// samples and contrast show. Saved like any setting, so this needs
+    /// `home`.
+    pub colors: bool,
+}
+
+/// A few colors chosen for the Colors dialog's review: the blue and
+/// orange pair first, and one that is hard to see, to show the warning.
+fn choose_review_colors(app: &mut textweaver_app::App) -> Result<(), String> {
+    for (path, value) in [
+        ("highlight.color", "blue"),
+        ("highlight.sentence_color", "orange"),
+        ("colors.links", "skyblue"),
+        ("colors.headings", "gold"),
+        ("colors.difficult_words", "navy"),
+    ] {
+        app.set_setting(path, serde_json::json!(value))?;
+    }
+    Ok(())
 }
 
 /// Every reading aid on, for review: bionic reading, difficult words, the
@@ -79,8 +98,8 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
         home: opts.home.clone(),
         ..Options::default()
     };
-    if opts.aids && opts.home.is_none() {
-        return Err("the reading aids screenshot needs a home folder, so its settings are not saved into yours".into());
+    if (opts.aids || opts.colors) && opts.home.is_none() {
+        return Err("the reading aids and colors screenshots need a home folder, so their settings are not saved into yours".into());
     }
     let (mut app, _) = setup::build_app(&app_opts, Box::new(LogAnnouncer::default()));
     if let Some(file) = &opts.file {
@@ -89,6 +108,9 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
     }
     if opts.aids {
         turn_on_aids(&mut app)?;
+    }
+    if opts.colors {
+        choose_review_colors(&mut app)?;
     }
     let palette = match opts.theme.as_deref() {
         // Windows High Contrast's own colors, as the window follows them.
@@ -160,6 +182,12 @@ fn render(
         harness.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
         harness.focus_on(Some(d.form));
     }
+    if opts.colors {
+        let form = crate::settings_dialog::SettingsForm::colors(app.settings_schema());
+        let d = gui::settings_dialog(palette, &form, app, 0, 0);
+        harness.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
+        harness.focus_on(Some(d.form));
+    }
     harness
         .render()
         .save(&opts.path)
@@ -183,6 +211,7 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         settings: false,
         home: Some(dir.join("home")),
         aids: false,
+        colors: false,
     };
     // What each shot shows over the window: nothing, a list, or settings.
     const WINDOW: u8 = 0;
@@ -190,6 +219,8 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     const SETTINGS: u8 = 2;
     // The reading aids on, with RSVP under the document.
     const AIDS: u8 = 3;
+    // The Colors dialog, with a few colors chosen (W6a6).
+    const COLORS: u8 = 4;
     const NIGHT_SKY: &str = crate::system_colors::NIGHT_SKY_NAME;
     let shots = [
         ("galaxy-100.png", "galaxy", 1.0, WINDOW),
@@ -222,6 +253,10 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         ("system-contrast-100.png", NIGHT_SKY, 1.0, WINDOW),
         ("system-contrast-200.png", NIGHT_SKY, 2.0, WINDOW),
         ("system-contrast-aids-100.png", NIGHT_SKY, 1.0, AIDS),
+        ("galaxy-colors-100.png", "galaxy", 1.0, COLORS),
+        ("galaxy-colors-200.png", "galaxy", 2.0, COLORS),
+        ("galaxy-light-colors-100.png", "galaxy-light", 1.0, COLORS),
+        ("high-contrast-colors-100.png", "high-contrast", 1.0, COLORS),
     ];
     for (name, theme, scale, over) in shots {
         let mut o = base.clone();
@@ -230,8 +265,14 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         o.scale = scale;
         o.settings = over == SETTINGS;
         o.aids = over == AIDS;
-        // Each shot starts from the defaults; the aids shots save theirs.
-        o.home = Some(dir.join(if o.aids { "home-aids" } else { "home" }));
+        o.colors = over == COLORS;
+        // Each shot starts from the defaults; the aids and colors shots
+        // save theirs.
+        o.home = Some(dir.join(match over {
+            AIDS => "home-aids",
+            COLORS => "home-colors",
+            _ => "home",
+        }));
         if over == LIST {
             o.list = Some((
                 "Bookmarks".into(),

@@ -18,9 +18,12 @@ name = "textweaver-xilem"
 path = "src/main.rs"
 
 [features]
-default = ["screenshot", "renderer-vello", "publish", "lint", "dictation"]
+default = ["screenshot", "renderer-vello", "publish", "lint", "dictation", "audio-export"]
 # Dictation in edit mode (textweaver-app's `dictation`, ADR-0042).
 dictation = ["textweaver-app/dictation"]
+# File, Export audio (textweaver-app's `audio-export`, W6v): without it the
+# command is hidden from the menus and the palette.
+audio-export = ["textweaver-app/audio-export"]
 # The renderer: Vello's GPU compute renderer (the default), or Vello's
 # hybrid renderer (CPU strips, simple GPU shaders), which suits software
 # GPUs such as Mesa's llvmpipe under Xvfb in CI. With both, Vello wins.
@@ -82,6 +85,11 @@ windows = { workspace = true, features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 windows-core.workspace = true
+
+# W6a6: native menus from the app's menu model (ADR-0046), on Windows and
+# macOS only; Linux shows the menus as an in-window list.
+[target.'cfg(any(windows, target_os = "macos"))'.dependencies]
+muda.workspace = true
 
 [dev-dependencies]
 accesskit_consumer.workspace = true

@@ -9,7 +9,9 @@
 .DESCRIPTION
   The Xilem GUI draws its own widgets; AccessKit gives them to UI Automation
   as one provider per window. NVDA and JAWS read it through UIA, so this
-  report checks UIA only (there are no Win32 child windows or menus).
+  report checks UIA only. The menu bar is native (a Win32 menu, W6a6): the
+  report checks its seven menus and their access keys, and the items the
+  GUI read back from it, each with its key after a tab (AcceleratorKey).
 
   - The document: a Document control with TextPattern; its text, its
     selection (the caret) sampled every 400 ms while the silent `paced`
@@ -63,7 +65,11 @@ param(
     # Read past the document window's edge instead of the usual checks: a
     # generated document three windows long, read at 900 words per minute
     # from just before the point where the window slides (W4a2).
-    [switch] $WindowEdge
+    [switch] $WindowEdge,
+    # Also open the first menu with ExpandCollapsePattern and read its items'
+    # AcceleratorKey through UI Automation. Opening a menu may bring the
+    # window to the front, so this is for a CI runner, not a desktop in use.
+    [switch] $Menus
 )
 
 $ErrorActionPreference = 'Stop'
@@ -361,6 +367,57 @@ public static class TwXUia
             accel, help, focus, off, live, Patterns(e));
     }
 
+    /// The window's menu bar (W6a6): the MenuBar whose items are the menus
+    /// (the system menu's bar has one item, System), each item's name and
+    /// access key, read without opening a menu.
+    public static List<string> MenuBar(AutomationElement window)
+    {
+        var lines = new List<string>();
+        var bars = window.FindAll(TreeScope.Children,
+            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.MenuBar));
+        foreach (AutomationElement bar in bars)
+        {
+            var items = bar.FindAll(TreeScope.Children,
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.MenuItem));
+            if (items.Count < 2) continue;
+            foreach (AutomationElement it in items)
+                lines.Add("MenuItem " + Q(it.Current.Name) + " access key " + Q(it.Current.AccessKey));
+        }
+        return lines;
+    }
+
+    /// With -Menus: opens the menu bar item `name` with ExpandCollapsePattern,
+    /// lists the Menu's items with their AcceleratorKey, and closes it.
+    public static List<string> OpenMenu(AutomationElement window, string name)
+    {
+        var lines = new List<string>();
+        var item = window.FindFirst(TreeScope.Descendants, new AndCondition(
+            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.MenuItem),
+            new PropertyCondition(AutomationElement.NameProperty, name)));
+        object p;
+        if (item == null || !item.TryGetCurrentPattern(ExpandCollapsePattern.Pattern, out p))
+        {
+            lines.Add("(no menu " + Q(name) + " to open)");
+            return lines;
+        }
+        var ec = (ExpandCollapsePattern)p;
+        ec.Expand();
+        Thread.Sleep(600);
+        var menus = AutomationElement.RootElement.FindAll(TreeScope.Children,
+            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Menu));
+        foreach (AutomationElement m in menus)
+        {
+            lines.Add("Menu " + Q(m.Current.Name));
+            var items = m.FindAll(TreeScope.Children,
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.MenuItem));
+            foreach (AutomationElement it in items)
+                lines.Add("  MenuItem " + Q(it.Current.Name) + " accelerator " + Q(it.Current.AcceleratorKey)
+                    + " access key " + Q(it.Current.AccessKey));
+        }
+        try { ec.Collapse(); } catch (Exception) { }
+        return lines;
+    }
+
     /// The control view, depth first, text runs left out (they are the
     /// document's text, reported through TextPattern).
     public static List<string> Tree(AutomationElement root)
@@ -628,8 +685,15 @@ Say "- Launch: --background (never activated, off screen, no taskbar button) wit
 Say ""
 
 [TwXUia]::Listen()
-$scratch = Join-Path ([IO.Path]::GetTempPath()) ("tw-xuia-" + [Guid]::NewGuid().ToString('N').Substring(0, 8))
+# The GUI's home for the run, under the repository's own ignored `target`
+# folder (never the system's temporary folder, which is on the system
+# drive).
+$scratch = Join-Path (Join-Path $repo 'target') ("tw-xuia-" + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Force $scratch | Out-Null
+# The GUI's temporary files go there too: a debug build of Masonry writes
+# a full trace log to the temporary folder on every start.
+$env:TMP = $scratch
+$env:TEMP = $scratch
 $logFile = Join-Path $scratch 'gui.log'
 if ($WindowEdge) {
     # Three GUI windows (120,000 units each) of plain paragraphs, about 240
@@ -656,6 +720,10 @@ $foregroundBefore = [TwXUia]::GetForegroundWindow()
 $guiPid = [TwXUia]::LaunchInactive($Exe, $guiArgs, $repo)
 [TwXUia]::ListenFor($guiPid)
 $failures = New-Object System.Collections.Generic.List[string]
+# Found, not yet fixed, so not failures: the window coming to the front
+# after a button is pressed through UI Automation (W6a6; reproduced on
+# main before the menus existed).
+$warnings = New-Object System.Collections.Generic.List[string]
 $launchedAt = Get-Date
 # Held from the start, so the exit code can still be read if the GUI ends
 # early; reading Handle now keeps the process handle open.
@@ -695,6 +763,28 @@ try {
         Say "- Every button has its key as its AcceleratorKey, and its label as its name."
     }
     Say ""
+
+    # W6a6: the native menu bar, from the app's menu model. Its menus are
+    # read without opening them (opening one would need the foreground);
+    # their items are checked from what the GUI read back from its menu
+    # (the log, below). -Menus opens File to read its items through UI
+    # Automation too, on a machine where the foreground may move.
+    Say "### Menus (the native menu bar)"
+    Say ""
+    $bar = @([TwXUia]::MenuBar($window))
+    if ($bar.Count -eq 0) { Fence @('(no menu bar)') } else { Fence $bar }
+    if ($bar.Count -ne 7) { $failures.Add("the menu bar has $($bar.Count) menus, not 7") }
+    $noAccess = @($bar | Where-Object { $_ -notmatch 'access key "Alt\+' })
+    if ($noAccess.Count -gt 0) { $failures.Add("a menu has no access key: $($noAccess[0])") }
+    if ($Menus) {
+        $fileName = if ($bar.Count -gt 0) { ([regex]::Match($bar[0], '^MenuItem "([^"]*)"')).Groups[1].Value } else { 'File' }
+        $opened = @([TwXUia]::OpenMenu($window, $fileName))
+        Say "The first menu, opened with ExpandCollapsePattern:"
+        Say ""
+        Fence $opened
+        if (-not ($opened -match '^Menu ')) { $failures.Add('opening the first menu showed no Menu') }
+        if (-not ($opened -match 'accelerator "[^"]+"')) { $failures.Add('no menu item has an AcceleratorKey') }
+    }
 
     Say "### Document"
     Say ""
@@ -930,6 +1020,12 @@ try {
 
     Start-Sleep -Milliseconds 300
     [TwXUia]::StopLivePolling()
+    # The dialogs, the menus, and the list must not have brought the
+    # window forward either.
+    $stoleLater = [TwXUia]::IsForeground($guiPid)
+    Say "- Took the foreground by the end: $stoleLater"
+    Say ""
+    if ($stoleLater -and -not $stoleFocus) { $warnings.Add('the GUI came to the foreground after buttons were pressed through UI Automation') }
     [TwXUia]::Close($frame)
 } catch {
     # The probe stopped early, most often because the GUI exited. Say why,
@@ -967,6 +1063,72 @@ try {
     }
 }
 
+# W6a6: the command palette, in a second, silent run (a dialog closes only
+# with Escape, and the report types no keys, so the first run's font list
+# would stand in front of it). The Commands button opens it; its list is
+# the app's candidates, each read name first with its category ("Open,
+# File: Open a document. Ctrl+O."), and one row is the selected option.
+if (-not $WindowEdge) {
+    Say "### The command palette (a second run, silent; Commands button pressed; its list read with UI Automation)"
+    Say ""
+    $palHome = Join-Path $scratch 'palette'
+    $palLog = Join-Path $scratch 'palette.log'
+    $palArgs = "`"$Document`" --backend null --home `"$palHome`" --background --log-file `"$palLog`" --exit-after 60"
+    $palPid = [TwXUia]::LaunchInactive($Exe, $palArgs, $repo)
+    # Held from the start, so an early exit's code can be read.
+    $palProc = Get-Process -Id $palPid -ErrorAction SilentlyContinue
+    if ($palProc) { $null = $palProc.Handle }
+    try {
+        $pw = [TwXUia]::WaitForWindow($palPid, 30000)
+        if (-not $pw) {
+            $failures.Add('the palette run''s window did not appear')
+            $code = if ($palProc -and $palProc.HasExited) { $palProc.ExitCode } else { '(running)' }
+            Say "- The palette run's window did not appear; exit code: $code; arguments: $palArgs"
+            if (Test-Path -LiteralPath $palLog) { Fence @(Get-Content -LiteralPath $palLog | Select-Object -Last 15) }
+        } else {
+            Start-Sleep -Milliseconds 1200
+            $palFgStart = [TwXUia]::IsForeground($palPid)
+            Say "- Took the foreground on starting: $palFgStart"
+            if ($palFgStart) { $failures.Add('the palette run took the foreground on starting') }
+            if (-not [TwXUia]::PressStartingWith($pw, 'Commands')) {
+                Say "No Commands button."
+                $failures.Add('no Commands button')
+            } else {
+                Start-Sleep -Milliseconds 800
+                $plist = [TwXUia]::Find($pw, [System.Windows.Automation.ControlType]::List, 'Commands')
+                if (-not $plist) {
+                    Say "No list of commands."
+                    $failures.Add('the Commands button opened no list of commands')
+                } else {
+                    Say "- List: $([TwXUia]::Describe($plist))"
+                    $popts = [TwXUia]::Options($plist)
+                    $sample = @()
+                    foreach ($i in @(0, 1, 2, 3)) { if ($i -lt $popts.Count) { $sample += [TwXUia]::OptionLine($popts[$i]) } }
+                    Say "- $($popts.Count) commands; the first, as a screen reader finds them:"
+                    Say ""
+                    Fence $sample
+                    if ($popts.Count -lt 100) { $failures.Add("the palette lists only $($popts.Count) commands") }
+                    $selected = @($popts | Where-Object { [TwXUia]::OptionLine($_) -match ', selected' })
+                    if ($selected.Count -ne 1) { $failures.Add("the palette has $($selected.Count) selected rows, not 1") }
+                    $unnamed = @($popts | Select-Object -First 20 | Where-Object { $_.Current.Name -notmatch '^[^,]+, [^:]+: ' })
+                    if ($unnamed.Count -gt 0) { $failures.Add("a palette row is not name first with its category: $([TwXUia]::Q($unnamed[0].Current.Name))") }
+                }
+            }
+            $palFgEnd = [TwXUia]::IsForeground($palPid)
+            Say "- Took the foreground with the palette open: $palFgEnd"
+            if ($palFgEnd -and -not $palFgStart) { $warnings.Add('the palette run came to the foreground after the Commands button was pressed through UI Automation') }
+            [TwXUia]::Close([IntPtr]$pw.Current.NativeWindowHandle)
+        }
+    } finally {
+        $pp = Get-Process -Id $palPid -ErrorAction SilentlyContinue
+        if ($pp -and -not $pp.WaitForExit(15000)) {
+            Stop-Process -Id $palPid -Force
+            $failures.Add('the palette run did not exit when closed')
+        }
+    }
+    Say ""
+}
+
 Say "### Announcements: message elements (new Text elements, polled every 50 ms, with their live setting) and Notification events"
 Say ""
 $events = [TwXUia]::TakeEvents()
@@ -979,6 +1141,22 @@ Say ""
 if ($events.Count -eq 0) { $events = @('(none)') }
 Fence $events
 $guiLog = if (Test-Path -LiteralPath $logFile) { @(Get-Content -LiteralPath $logFile) } else { @() }
+# W6a6: the menu items as the window's menu holds them (read back with
+# GetMenuStringW, which is what UI Automation's MenuItem reads): each with
+# its access key (&) and, for a command with a key, the key after a tab
+# (the item's AcceleratorKey).
+$menuItems = @($guiLog | Where-Object { $_ -match '^menu item: ' } | ForEach-Object { $_.Substring(11) })
+$withKeys = @($menuItems | Where-Object { $_ -match "`t." })
+$tops = @($menuItems | ForEach-Object { ($_ -split ' > ')[0] } | Select-Object -Unique)
+Say "### Menu items (read back from the window's menu)"
+Say ""
+Say "- $($menuItems.Count) items in $($tops.Count) menus; $($withKeys.Count) show a key after a tab (AcceleratorKey)"
+Say ""
+if ($menuItems.Count -gt 0) { Fence ($menuItems | Select-Object -First 30 | ForEach-Object { [TwXUia]::Q($_) }) }
+if ($tops.Count -ne 7) { $failures.Add("the window's menu holds $($tops.Count) menus, not 7") }
+if ($withKeys.Count -lt 20) { $failures.Add("only $($withKeys.Count) menu items show a key") }
+$noAccessItem = @($menuItems | Where-Object { ($_ -split ' > ')[-1] -notmatch '&' -and $_ -notmatch "`t" -and ($_ -split ' > ')[-1] -notmatch '^\d' })
+if ($noAccessItem.Count -gt 3) { $failures.Add("menu items without an access key: $($noAccessItem[0..2] -join '; ')") }
 if ($WindowEdge) {
     # The window slid (the GUI's log says so), and the announcement made
     # after it (Pause) reached UI Automation.
@@ -1022,6 +1200,7 @@ if ($scratch -and (Split-Path -Leaf $scratch) -like 'tw-xuia-*') {
 Say "### Result"
 Say ""
 if ($failures.Count -eq 0) { Say "PASS: every check passed." } else { Say "FAIL:"; foreach ($f in $failures) { Say "- $f" } }
+if ($warnings.Count -gt 0) { Say ""; Say "Warnings (known, not yet fixed):"; foreach ($w in $warnings) { Say "- $w" } }
 
 try { [System.Windows.Automation.Automation]::RemoveAllEventHandlers() } catch { }
 $text = $report -join "`n"

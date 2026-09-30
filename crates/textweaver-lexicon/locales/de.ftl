@@ -2614,7 +2614,6 @@ gui-text-size = Textgröße { $size } Punkt.
 gui-text-size-largest = Textgröße { $size } Punkt, die größte.
 gui-text-size-smallest = Textgröße { $size } Punkt, die kleinste.
 gui-font = Schriftart: { $family }.
-gui-font-unchanged = Schriftart unverändert.
 gui-font-list = Schriftart
 
 ## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
@@ -3391,3 +3390,24 @@ audio-failed = Audio konnte nicht exportiert werden: { $error }
 audio-thread-stopped = Der Audioexport hat unerwartet angehalten.
 
 ## End of W6v
+
+## W6a6: the window's menus and dialogs. Settings files chosen with the
+## system's file chooser, the Colors dialog, and the font list. $ratio is
+## a contrast ratio such as 4.8; $verdict is good, fair, or low.
+gui-settings-files = Einstellungsdateien
+gui-settings-export-title = Einstellungen exportieren
+gui-settings-import-title = Einstellungen importieren
+gui-chooser-no-dialog = Die Dateiauswahl des Systems hat sich nicht geöffnet. Geben Sie stattdessen den Pfad der Datei ein.
+gui-colors-value = { $value }, Kontrast { $ratio } zu 1, { $verdict }
+gui-colors-help = Links und Rechts wählen eine benannte Farbe, Blau und Orange zuerst. Eingabe tippt einen Namen oder einen #rrggbb-Wert. Entf stellt die Farbe des Designs wieder her. Jede Markierung behält ihre Unterstreichung, Stärke oder ihr Symbol, welche Farbe sie auch hat.
+gui-colors-reset-all = Alle Farben zurücksetzen
+gui-colors-reset-all-help = Für jeden Teil die Farbe des Designs wiederherstellen.
+gui-colors-reset-done = Alle Farben sind wieder die des Designs.
+gui-colors-closed = Farben geschlossen.
+gui-font-list-intro =
+    { $n ->
+        [one] { $title }, 1 Schriftfamilie.
+       *[other] { $title }, { $n } Schriftfamilien.
+    }
+
+## End of W6a6

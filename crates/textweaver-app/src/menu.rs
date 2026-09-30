@@ -864,7 +864,7 @@ impl App {
     }
 
     /// Records `action` as the most recent command.
-    pub(crate) fn remember_command(&mut self, action: ActionId) {
+    pub fn remember_command(&mut self, action: ActionId) {
         if matches!(action, A::CommandPalette | A::Menu) {
             return;
         }

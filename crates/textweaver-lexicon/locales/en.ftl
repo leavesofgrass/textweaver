@@ -2590,7 +2590,6 @@ gui-text-size = Text size { $size } points.
 gui-text-size-largest = Text size { $size } points, the largest.
 gui-text-size-smallest = Text size { $size } points, the smallest.
 gui-font = Font: { $family }.
-gui-font-unchanged = Font unchanged.
 gui-font-list = Font
 
 ## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
@@ -3378,3 +3377,24 @@ audio-failed = Could not export audio: { $error }
 audio-thread-stopped = Audio export stopped unexpectedly.
 
 ## End of W6v
+
+## W6a6: the window's menus and dialogs. Settings files chosen with the
+## system's file chooser, the Colors dialog, and the font list. $ratio is
+## a contrast ratio such as 4.8; $verdict is good, fair, or low.
+gui-settings-files = Settings files
+gui-settings-export-title = Export settings
+gui-settings-import-title = Import settings
+gui-chooser-no-dialog = The system's file chooser did not open. Type the path of the file instead.
+gui-colors-value = { $value }, contrast { $ratio } to 1, { $verdict }
+gui-colors-help = Left and Right choose a named color, blue and orange first. Enter types a name or a #rrggbb value. Delete puts the theme's color back. Every mark keeps its underline, weight, or symbol, whatever its color.
+gui-colors-reset-all = Reset all colors
+gui-colors-reset-all-help = Put the theme's own color back for every part.
+gui-colors-reset-done = Every color is the theme's again.
+gui-colors-closed = Colors closed.
+gui-font-list-intro =
+    { $n ->
+        [one] { $title }, 1 family.
+       *[other] { $title }, { $n } families.
+    }
+
+## End of W6a6
