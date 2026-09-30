@@ -45,6 +45,8 @@ const TARGETS: &[(&str, &[Seeds])] = &[
     ("epub", &[seeds("fixtures/a", &["epub"], false)]),
     ("docx", &[seeds("fixtures/a", &["docx"], false)]),
     ("pdf", &[seeds("fixtures/a", &["pdf"], false)]),
+    // W6c5: links, comments, and form fields.
+    ("pdf_annots", &[seeds("fixtures/c5", &["pdf"], false)]),
     ("settings", &[]),
     ("keymap", &[]),
     ("state", &[]),

@@ -11,6 +11,7 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 - `epub`: the EPUB loader. A zip archive is loaded as it is. Anything else becomes the book's one chapter, and, after a NUL byte, its navigation document.
 - `docx`: the Word loader. A zip archive is loaded as it is. Anything else becomes `word/document.xml`, and, after a NUL byte, `word/numbering.xml`.
 - `pdf`: the PDF loader.
+- `pdf_annots`: PDF links, comments, and form fields. A PDF is loaded as it is. Anything else is split at NUL bytes into a page's content stream, its `/Annots` array, the `/AcroForm` and `/Names` dictionaries, and extra objects numbered from 10, in a one-page file with a correct cross-reference table. Every comment must lie inside the text and say something, every link must have a reference, and a page anchor must find its page or nothing.
 - `rtf`: the RTF loader, our own iterative parser with its limits on nesting, `\bin`, and `\uc`, loaded with the default options and with tracked changes said in place.
 - `odt`: the OpenDocument text loader. A zip archive is loaded as it is. Anything else becomes `content.xml`, and, after a NUL byte, `meta.xml`, in a minimal package, and is also loaded as flat `.fodt` XML. Every comment must lie inside the text.
 - `docx_revisions`: Word's comments and tracked changes. A zip archive is loaded as it is. Anything else is split at NUL bytes into `word/document.xml`, `word/comments.xml`, and `word/commentsExtended.xml`. Every comment must lie inside the text, and replies must not loop.
