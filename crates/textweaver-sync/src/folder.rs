@@ -228,7 +228,7 @@ pub struct SyncFolder {
 }
 
 /// Reads a file of at most `max` bytes.
-fn read_limited(path: &Path, max: u64) -> Result<Vec<u8>, SyncError> {
+pub(crate) fn read_limited(path: &Path, max: u64) -> Result<Vec<u8>, SyncError> {
     let io = |source| SyncError::Io {
         path: path.to_owned(),
         source,
@@ -240,7 +240,7 @@ fn read_limited(path: &Path, max: u64) -> Result<Vec<u8>, SyncError> {
     std::fs::read(path).map_err(io)
 }
 
-fn not_found(e: &SyncError) -> bool {
+pub(crate) fn not_found(e: &SyncError) -> bool {
     matches!(e, SyncError::Io { source, .. } if source.kind() == std::io::ErrorKind::NotFound)
 }
 
@@ -386,7 +386,7 @@ impl SyncFolder {
         self.device_dir(device).join(group.file_name())
     }
 
-    fn read_device_at(root: &Path, device: DeviceId) -> Result<DeviceInfo, SyncError> {
+    pub(crate) fn read_device_at(root: &Path, device: DeviceId) -> Result<DeviceInfo, SyncError> {
         let path = root
             .join(DEVICES_DIR)
             .join(device.to_string())

@@ -189,6 +189,50 @@ stats-clear-question =
 stats-cleared = Statistiques de lecture supprimées.
 stats-off-cli = Les statistiques de lecture sont désactivées : stats.enabled est à false dans les paramètres.
 
+## Continue reading and every computer's statistics (the sync wave, S6).
+
+continue-title = Reprendre la lecture
+# $n is the number of documents listed.
+continue-intro =
+    { $n ->
+        [one] Reprendre la lecture : 1 document, le plus récent d'abord.
+       *[other] Reprendre la lecture : { $n } documents, les plus récents d'abord.
+    }
+continue-empty = Rien à reprendre : aucune position.
+# One row, meaning first: the title, how far in, the computer, and how
+# long ago (continue-ago-*).
+continue-item = { $title }, { $pct } pour cent, { $device }, { $when }
+continue-this-computer = cet ordinateur
+continue-ago-now = à l'instant
+continue-ago-minutes =
+    { $n ->
+        [one] il y a 1 minute
+       *[other] il y a { $n } minutes
+    }
+continue-ago-hours =
+    { $n ->
+        [one] il y a 1 heure
+       *[other] il y a { $n } heures
+    }
+continue-ago-days =
+    { $n ->
+        [one] il y a 1 jour
+       *[other] il y a { $n } jours
+    }
+name-continue-reading = Reprendre la lecture
+action-continue-reading = Reprendre la lecture : les documents de cet ordinateur avec une position enregistrée, sur n'importe quel ordinateur, les plus récents d'abord
+# The statistics list could not wait for the sync folder.
+stats-others-slow = Autres ordinateurs omis : dossier lent.
+stats-untitled = Document sans titre
+# One computer's share of a document: $device, $time, $sessions.
+stats-computer =
+    { $sessions ->
+        [one] { $device } : { $time }, 1 session
+       *[other] { $device } : { $time }, { $sessions } sessions
+    }
+stats-by-computer-off = Par ordinateur : masqué. Entrée affiche.
+stats-by-computer-on = Par ordinateur : affiché. Entrée masque.
+
 ## Navigation. $dir is next or previous; $what is a kind-* or unit-*
 ## noun and $unit its key (heading, list-item, sentence), for languages
 ## whose words agree with the noun.

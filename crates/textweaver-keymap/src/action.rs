@@ -447,7 +447,10 @@ actions! {
         gui ["g:Ctrl+Shift+G"], term [], shared [];
     OpenLibrary = "open_library", File, "Open the library: documents in your library folders and recent files",
         gui ["g:Ctrl+Shift+B"], term ["g:Alt+L"], shared [];
-    NewDocument = "new_document", File, "Start a new document in edit mode",
+    ContinueReading = "continue_reading", File,
+        "Continue reading: the documents on this computer with a saved place, from any computer, newest first",
+        gui [], term [], shared [];
+    NewDocument ="new_document", File, "Start a new document in edit mode",
         gui ["g:Ctrl+N"], term ["g:Ctrl+N"], shared [];
     Save = "save", File, "Save (Markdown and text in place; other formats as Markdown)",
         gui ["g:Ctrl+S"], term ["g:Ctrl+S"], shared [];

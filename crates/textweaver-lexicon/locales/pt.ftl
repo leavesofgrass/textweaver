@@ -189,6 +189,50 @@ stats-clear-question =
 stats-cleared = Estatísticas de leitura removidas.
 stats-off-cli = As estatísticas de leitura estão desligadas: stats.enabled é false nas configurações.
 
+## Continue reading and every computer's statistics (the sync wave, S6).
+
+continue-title = Continuar a ler
+# $n is the number of documents listed.
+continue-intro =
+    { $n ->
+        [one] Continuar a ler: 1 documento, o mais recente primeiro.
+       *[other] Continuar a ler: { $n } documentos, os mais recentes primeiro.
+    }
+continue-empty = Nada para continuar: sem posições.
+# One row, meaning first: the title, how far in, the computer, and how
+# long ago (continue-ago-*).
+continue-item = { $title }, { $pct } por cento, { $device }, { $when }
+continue-this-computer = este computador
+continue-ago-now = agora mesmo
+continue-ago-minutes =
+    { $n ->
+        [one] há 1 minuto
+       *[other] há { $n } minutos
+    }
+continue-ago-hours =
+    { $n ->
+        [one] há 1 hora
+       *[other] há { $n } horas
+    }
+continue-ago-days =
+    { $n ->
+        [one] há 1 dia
+       *[other] há { $n } dias
+    }
+name-continue-reading = Continuar a ler
+action-continue-reading = Continuar a ler: os documentos deste computador com uma posição guardada, de qualquer computador, os mais recentes primeiro
+# The statistics list could not wait for the sync folder.
+stats-others-slow = Sem outros computadores: pasta lenta.
+stats-untitled = Documento sem título
+# One computer's share of a document: $device, $time, $sessions.
+stats-computer =
+    { $sessions ->
+        [one] { $device }: { $time }, 1 sessão
+       *[other] { $device }: { $time }, { $sessions } sessões
+    }
+stats-by-computer-off = Por computador: oculto. Enter mostra.
+stats-by-computer-on = Por computador: visível. Enter oculta.
+
 ## Navigation. $dir is next or previous; $what is a kind-* or unit-*
 ## noun and $unit its key (heading, list-item, sentence), for languages
 ## whose words agree with the noun.

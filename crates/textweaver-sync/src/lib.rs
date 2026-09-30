@@ -29,6 +29,9 @@
 //! - [`Identity`]: this computer's random id and install token, in an
 //!   install marker in the local state folder that also catches a copied
 //!   state folder.
+//! - [`FolderView`]: every computer's records read and merged, without
+//!   writing anything, for the library, "Continue reading", and the
+//!   statistics (S6).
 //!
 //! The design is ADR-0049, "Sync beyond the place".
 //!
@@ -47,6 +50,7 @@ mod identity;
 mod ids;
 pub mod merge;
 pub mod record;
+mod view;
 
 pub use clock::{AHEAD_LIMIT_MS, Clock, ClockAhead, Stamp, wall_ms};
 pub use docid::{Found, Identify, IdentityIndex, Resolved, Suggestion};
@@ -57,11 +61,12 @@ pub use identity::{
     default_label, local_names,
 };
 pub use ids::{DeviceId, ID_HEX_DIGITS, InstallToken, LibraryId, SyncId};
-pub use merge::{AddWinsSet, ChangeKind, Counter, Maximum, Register, RegisterMap};
+pub use merge::{AddWinsSet, ChangeKind, Counter, Earliest, Maximum, Register, RegisterMap};
 pub use record::{
     Change, DocIdentity, DocRecord, DocStatsRecord, FORMAT, ItemKind, MergeReport, Place, Previous,
     RecentHashes,
 };
+pub use view::FolderView;
 
 /// Errors from sync.
 #[derive(Debug, thiserror::Error)]

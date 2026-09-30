@@ -38,6 +38,7 @@ use textweaver_store::{Profiles, ReadingStats, StatsDelta};
 
 use crate::app::{App, ListKind};
 use crate::command::{Confirm, Effect, PromptPurpose};
+use crate::synced_library::{CombinedStats, SyncedLibrary, computer_line, stats_title};
 use crate::text_util;
 
 /// How often reading time is added to `stats.json` while reading.
@@ -47,6 +48,8 @@ const STATS_FLUSH: Duration = Duration::from_secs(30);
 const MAX_TICK_GAP: Duration = Duration::from_secs(5);
 /// Documents in the most-read part of the statistics list.
 const MOST_READ: usize = 10;
+/// How long the statistics list waits for the sync folder to be read.
+const SYNC_STATS_WAIT: Duration = Duration::from_millis(1500);
 
 /// What a study list's items do.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -83,6 +86,8 @@ pub(crate) enum StatsEntry {
     Document(PathBuf),
     /// Turn statistics on or off.
     Toggle,
+    /// Show or hide each computer's share of each document (S6).
+    ByComputer,
 }
 
 /// Reading time not yet added to `stats.json`.
@@ -136,6 +141,8 @@ pub(crate) struct Study {
     /// A yes-or-no question about deleting this profile.
     pub(crate) question: Option<String>,
     stats: StatsTracker,
+    /// The statistics list shows each computer's share of each document.
+    stats_by_computer: bool,
 }
 
 impl std::fmt::Debug for Study {
@@ -164,6 +171,7 @@ impl Study {
                 pending_profile: None,
                 question: None,
                 stats: StatsTracker::default(),
+                stats_by_computer: false,
             },
             warning,
         )
@@ -866,22 +874,26 @@ impl App {
         self.statistics_list()
     }
 
-    /// The statistics list, built again from `stats.json`.
+    /// The statistics list, built again from `stats.json` and, with sync
+    /// on and its statistics group on, the other computers' reading (S6):
+    /// each document's time and sessions are summed over every computer,
+    /// and each computer's share is listed under its document on request.
     fn statistics_list(&mut self) -> Vec<Effect> {
         self.stats_flush();
         self.writer.flush(Duration::from_secs(2));
-        let stats = match &self.paths {
+        let local = match &self.paths {
             Some(p) => ReadingStats::load(p).unwrap_or_default(),
             None => ReadingStats::default(),
         };
+        let (synced, slow) = self.synced_for_statistics();
+        let stats = CombinedStats::build(&local, synced.as_ref());
         let c = self.study.catalog.clone();
         let mut entries = Vec::new();
         let mut items = Vec::new();
+        entries.push(StatsEntry::Info);
         if stats.documents.is_empty() {
-            entries.push(StatsEntry::Info);
             items.push(c.tr("stats-empty"));
         } else {
-            entries.push(StatsEntry::Info);
             items.push(c.fmt(
                 "stats-total",
                 &args![
@@ -891,9 +903,13 @@ impl App {
                 ],
             ));
         }
+        if slow {
+            entries.push(StatsEntry::Info);
+            items.push(c.tr("stats-others-slow"));
+        }
         if let Some(key) = self.session.as_ref().map(|s| s.key.0.clone()) {
             entries.push(StatsEntry::Info);
-            items.push(match stats.documents.get(&key) {
+            items.push(match stats.by_key(&key) {
                 Some(d) => c.fmt(
                     "stats-current",
                     &args![
@@ -905,21 +921,13 @@ impl App {
                 None => c.tr("stats-current-none"),
             });
         }
-        for (rank, (_, d)) in stats.most_read(MOST_READ).into_iter().enumerate() {
-            let title = if d.title.is_empty() {
-                d.path
-                    .as_ref()
-                    .and_then(|p| p.file_name())
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_default()
-            } else {
-                d.title.clone()
-            };
+        let by_computer = self.study.stats_by_computer && stats.has_others();
+        for (rank, d) in stats.documents.iter().take(MOST_READ).enumerate() {
             items.push(c.fmt(
                 "stats-most-read",
                 &args![
                     "rank" => rank + 1,
-                    "title" => title,
+                    "title" => stats_title(&c, d),
                     "time" => duration(&c, d.seconds),
                     "pct" => d.furthest_percent
                 ],
@@ -928,6 +936,20 @@ impl App {
                 Some(p) => StatsEntry::Document(p.clone()),
                 None => StatsEntry::Info,
             });
+            if by_computer && d.from_others() {
+                for share in &d.computers {
+                    items.push(computer_line(&c, share));
+                    entries.push(StatsEntry::Info);
+                }
+            }
+        }
+        if stats.has_others() {
+            entries.push(StatsEntry::ByComputer);
+            items.push(c.tr(if by_computer {
+                "stats-by-computer-on"
+            } else {
+                "stats-by-computer-off"
+            }));
         }
         entries.push(StatsEntry::Toggle);
         items.push(c.tr(if self.settings.stats.enabled {
@@ -940,6 +962,33 @@ impl App {
         vec![Effect::ShowList { title, items }]
     }
 
+    /// The sync folder, read for the statistics list on a helper thread
+    /// (a USB stick or a slow network folder must not hold up the keys for
+    /// long), with sync and its statistics group on. The second value is
+    /// true when reading took too long and the list shows only this
+    /// computer's reading.
+    fn synced_for_statistics(&self) -> (Option<SyncedLibrary>, bool) {
+        let Some(paths) = self.paths.clone() else {
+            return (None, false);
+        };
+        if !self.sync_enabled() || !self.settings.sync.statistics {
+            return (None, false);
+        }
+        let settings = self.settings.clone();
+        let (tx, rx) = mpsc::channel();
+        let spawned = std::thread::Builder::new()
+            .name("textweaver-sync-stats".into())
+            .spawn(move || {
+                let _ = tx.send(SyncedLibrary::load(&paths, &settings));
+            });
+        if spawned.is_err() {
+            return (None, true);
+        }
+        match rx.recv_timeout(SYNC_STATS_WAIT) {
+            Ok(synced) => (synced, false),
+            Err(_) => (None, true),
+        }
+    }
     // ----- Lists and prompts ----------------------------------------------
 
     /// Enter on an item of a study list.
@@ -984,6 +1033,18 @@ impl App {
                     // other state.
                     self.pending_list_focus = Some(n);
                     self.statistics_list()
+                }
+                Some(StatsEntry::ByComputer) => {
+                    self.study.stats_by_computer = !self.study.stats_by_computer;
+                    self.pending_list_focus = Some(n);
+                    let list = self.statistics_list();
+                    // The row moved down past the new lines; it stays
+                    // focused.
+                    if let Some(ListKind::Study(StudyList::Statistics(e))) = &self.list {
+                        self.pending_list_focus =
+                            e.iter().position(|x| *x == StatsEntry::ByComputer);
+                    }
+                    list
                 }
                 // An information row: nothing to do, so the list stays.
                 Some(StatsEntry::Info) => {

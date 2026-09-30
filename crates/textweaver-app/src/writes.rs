@@ -119,11 +119,15 @@ impl App {
             return false;
         };
         let sync = self.library_sync.clone();
+        // With sync on, places go to the sync folder, and a library folder's
+        // old progress file is only read (ADR-0049, "The old sidecar"), so
+        // Star-style folders are still honored but not written twice.
+        let sidecar = !(self.sync_enabled() && self.settings.sync.places);
         let Some(s) = self.session.as_mut() else {
             return false;
         };
         let key = s.key.clone();
-        let path = s.doc.meta.path.clone();
+        let path = s.doc.meta.path.clone().filter(|_| sidecar);
         let pos = state.position;
         s.saved = state.clone();
         self.last_position_save = Some((Instant::now(), pos));

@@ -174,12 +174,12 @@ This comes from the code; it has not been tested on a real Mac yet.
 5. Your screen reader may take the key first. See [Using textweaver with a screen reader](screen-readers.md).
 6. Give the command a key your terminal can send, in `keymap.toml`. textweaver warns about keys a terminal cannot send.
 
-### The colours are hard to read
+### The colors are hard to read
 
-1. Press **F5** to try the next colour theme. The title line and status line change at once.
+1. Press **F5** to try the next color theme. The title line and status line change at once.
 2. Pick a theme for one run with `--theme`, for example `--theme high-contrast`. `textweaver --help` lists the themes.
-3. Turn colour off: set the `NO_COLOR` environment variable to `1`. textweaver still marks the highlight, the selection, and the cursor with bold, underline, or reverse video, never with colour alone.
-4. If colours look wrong, your terminal may report the wrong colour support. Set `TEXTWEAVER_COLOR` to `truecolor`, `256`, `16`, or `none`. It wins over `NO_COLOR`.
+3. Turn color off: set the `NO_COLOR` environment variable to `1`. textweaver still marks the highlight, the selection, and the cursor with bold, underline, or reverse video, never with color alone.
+4. If colors look wrong, your terminal may report the wrong color support. Set `TEXTWEAVER_COLOR` to `truecolor`, `256`, `16`, or `none`. It wins over `NO_COLOR`.
 
 The [themes guide](themes.md) explains themes and how to make your own.
 
@@ -243,6 +243,25 @@ When a document changes in another program (Obsidian, `git pull`, another editor
 ### Quitting says "Still saving"
 
 Saving, positions, and notes are written in the background. If the disk is slow, a network drive for example, quitting waits for the writing to finish, at most ten seconds, and says "Still saving. Please wait." Wait for it; your work is being written.
+
+### Sync folder missing
+
+The status line says "Sync: folder missing, saving here", and Sync status (Shift+F5) says the same: the sync folder chosen in Set up sync is not there. Usually that is expected, for example a USB stick that is not plugged in, or a network folder while you are away from the network.
+
+1. Nothing is lost. Your places, notes, highlights, and bookmarks are saved on this computer as usual.
+2. Plug the stick back in, or reconnect. textweaver picks the folder up again on its own and sends what changed; you do not need to restart. Tools, Sync, Sync now sends everything at once.
+3. If the folder was moved or renamed, choose it again with Tools, Sync, Set up sync, or set `[sync] folder` in `settings.toml`.
+4. If the folder is there but the status stays the same, check that the drive letter or mount point is the same as when you set sync up.
+
+### Sync: newer format, read only
+
+The status line says "Sync: newer format, read only": a newer textweaver on another computer wrote the sync folder in a format this version does not know. This computer still reads what it can, and writes nothing to the folder, so it can never damage what the newer version wrote. Your changes here are saved on this computer, and are not sent.
+
+1. Update textweaver on this computer to the version your other computers use. Sync then carries on by itself, and sends what you did here.
+2. Until then, "Continue reading", library search, and the statistics still use what this computer can read from the folder.
+3. The same message appears when the folder's `textweaver-sync/format.json` is damaged. If every computer runs the same version, look at that file: it should hold only the format number, such as `{"format": 1}`. Do not delete the folder; the other computers' data is in it.
+
+A single damaged file is different: the status says "Sync: 1 damaged file skipped", usually a file a sync service had not finished copying. It is tried again at the next change. See [Syncing between computers](sync.md#problems).
 
 ### Importing settings fails
 

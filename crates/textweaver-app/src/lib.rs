@@ -222,6 +222,7 @@ mod summary;
 mod sync;
 pub mod sync_engine;
 pub mod sync_groups;
+pub mod synced_library;
 mod tables;
 mod tasks;
 mod templates;

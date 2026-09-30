@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use textweaver_core::CharPos;
 use textweaver_store::{Anchor, Bookmark, Highlight, Note};
 
-use crate::merge::{ChangeKind, Counter, MapChange, Maximum, RegisterMap};
+use crate::merge::{ChangeKind, Counter, Earliest, MapChange, Maximum, RegisterMap};
 use crate::{DeviceId, Stamp, SyncError, SyncId};
 
 /// The format this version of textweaver writes and reads. A folder or a
@@ -177,7 +177,8 @@ pub(crate) fn is_sha256(s: &str) -> bool {
     s.len() == 64 && s.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
 }
 
-/// The detail names [`DocIdentity::details`] uses.
+/// The detail names [`DocIdentity::details`] uses: the library details
+/// (ADR-0049), newest wins per detail.
 pub mod detail {
     /// The document's title.
     pub const TITLE: &str = "title";
@@ -185,6 +186,10 @@ pub mod detail {
     pub const DOI: &str = "doi";
     /// Its ISBN, digits only (and a final `X` for an ISBN-10).
     pub const ISBN: &str = "isbn";
+    /// Its author or authors, as the document gives them.
+    pub const AUTHOR: &str = "author";
+    /// The kind of file, by the loader that reads it (`markdown`, `pdf`).
+    pub const FORMAT: &str = "format";
 }
 
 /// The longest detail value read or written, in characters.
@@ -206,10 +211,15 @@ pub struct DocIdentity {
     /// SHA-256 of the library folder's id and the path inside the folder.
     #[serde(skip_serializing_if = "RecentHashes::is_empty")]
     pub library: RecentHashes,
-    /// Title, DOI, and ISBN ([`detail`]), newest wins per detail. A DOI or
-    /// an ISBN is only ever a suggestion, never a match on its own.
+    /// Title, DOI, ISBN, author, and format ([`detail`]), newest wins per
+    /// detail. A DOI or an ISBN is only ever a suggestion, never a match on
+    /// its own.
     #[serde(skip_serializing_if = "details_empty")]
     pub details: RegisterMap<String>,
+    /// When the document was first added to a library on any computer
+    /// (milliseconds since 1970, UTC): the earliest wins (S6).
+    #[serde(skip_serializing_if = "Earliest::is_none")]
+    pub added: Earliest,
 }
 
 fn details_empty(d: &RegisterMap<String>) -> bool {
@@ -223,6 +233,7 @@ impl DocIdentity {
             && self.text.is_empty()
             && self.library.is_empty()
             && self.details.0.is_empty()
+            && self.added.is_none()
     }
 
     /// A detail's live value.
@@ -236,6 +247,7 @@ impl DocIdentity {
         self.text.merge(&other.text);
         self.library.merge(&other.library);
         self.details.merge(&other.details);
+        self.added.merge(&other.added);
     }
 
     /// Every stamp held.

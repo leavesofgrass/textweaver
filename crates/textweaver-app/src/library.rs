@@ -17,6 +17,13 @@
 //! ISBN are recorded on the bookshelf when a document opens
 //! ([`DocMetadata`]); a DOI or ISBN in the indexed text of a document never
 //! opened counts too.
+//!
+//! With sync on (the sync wave, S6), the library details other computers
+//! published fill these in too ([`SyncedLibrary::enrich`]), and **Continue
+//! reading** (`continue_reading`) lists the documents found here with a
+//! place saved on any computer, newest first. Places then go to the sync
+//! folder, and a library folder's old sidecar is only read, so folders
+//! written by an older textweaver or converted from Star still resume.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -32,6 +39,7 @@ use textweaver_text::Document;
 
 use crate::app::{App, ListKind};
 use crate::command::Effect;
+use crate::synced_library::{ContinueItem, SyncedLibrary};
 
 /// Where a document resumes, and how to say so.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -116,13 +124,7 @@ impl App {
         doc: &Document,
     ) -> textweaver_sync::docid::Details {
         let meta = document_metadata(doc);
-        // Only a title the document states: `title` falls back to the file
-        // name, which must never reach the sync folder (ADR-0049).
-        let details = textweaver_sync::docid::Details {
-            title: stated_title(doc),
-            doi: meta.doi.clone(),
-            isbn: meta.isbn.clone(),
-        };
+        let details = sync_details_from(doc, &meta);
         self.record_library_open_with(path, title, &doc.meta.format, meta);
         details
     }
@@ -207,6 +209,7 @@ impl App {
                 .as_ref()
                 .map(textweaver_store::Paths::fulltext_file),
             sync: self.library_sync.clone(),
+            synced: self.paths.clone().map(|p| (p, self.settings.clone())),
         }
     }
 
@@ -214,6 +217,18 @@ impl App {
     /// a background thread (Phase 2), with the count found shown as it
     /// goes; the list opens when the scan is done ([`library_tick`](Self::library_tick)).
     pub(crate) fn open_library(&mut self) -> Vec<Effect> {
+        self.start_library_scan(ScanMode::Library)
+    }
+
+    /// Shows "Continue reading" (`continue_reading`, S6): the documents on
+    /// this computer with a place saved here or on another computer, newest
+    /// first. The library is scanned on a background thread first, as for
+    /// the library list.
+    pub(crate) fn open_continue_reading(&mut self) -> Vec<Effect> {
+        self.start_library_scan(ScanMode::Continue)
+    }
+
+    fn start_library_scan(&mut self, mode: ScanMode) -> Vec<Effect> {
         if let Some(scan) = &self.library_scan {
             let n = scan.found.load(Ordering::Relaxed);
             let msg = self.msg_args("library-still-scanning", &args!["n" => n]);
@@ -234,8 +249,12 @@ impl App {
                 if let Some(w) = written {
                     let _ = w.recv_timeout(std::time::Duration::from_secs(5));
                 }
-                let items = inputs.list(&|n| counter.store(n, Ordering::Relaxed));
-                let _ = tx.send(items);
+                let found = |n| counter.store(n, Ordering::Relaxed);
+                let result = match mode {
+                    ScanMode::Library => ScanResult::Library(inputs.list(&found)),
+                    ScanMode::Continue => ScanResult::Continue(inputs.continue_reading(&found)),
+                };
+                let _ = tx.send(result);
                 wake.wake();
             });
         if let Err(e) = spawned {
@@ -259,8 +278,8 @@ impl App {
         let Some(scan) = &mut self.library_scan else {
             return Vec::new();
         };
-        let items = match scan.items.try_recv() {
-            Ok(list) => list,
+        let result = match scan.items.try_recv() {
+            Ok(result) => result,
             Err(TryRecvError::Empty) => {
                 if scan.shown_at.elapsed() >= PROGRESS_EVERY {
                     scan.shown_at = Instant::now();
@@ -279,7 +298,39 @@ impl App {
             }
         };
         self.library_scan = None;
-        self.show_library(items)
+        match result {
+            ScanResult::Library(items) => self.show_library(items),
+            ScanResult::Continue(items) => self.show_continue_reading(items),
+        }
+    }
+
+    /// Shows "Continue reading", each row meaning first: "Cells, 42
+    /// percent, laptop, 2 hours ago".
+    fn show_continue_reading(&mut self, items: Vec<ContinueItem>) -> Vec<Effect> {
+        if items.is_empty() {
+            let msg = self.msg("continue-empty");
+            self.tell(&msg);
+            return vec![Effect::Redraw];
+        }
+        let msg = self.msg_args("continue-intro", &args!["n" => items.len()]);
+        self.tell(&msg);
+        let now = textweaver_sync::wall_ms();
+        let c = self.cat().clone();
+        let rows = items.iter().map(|i| i.describe(&c, now)).collect();
+        let title = self.msg("continue-title");
+        self.list = Some(ListKind::Continue(
+            items.into_iter().map(|i| i.path).collect(),
+        ));
+        vec![Effect::ShowList { title, items: rows }]
+    }
+
+    /// Enter on a row of "Continue reading": opens the document, which
+    /// resumes by `[sync] position_policy`.
+    pub(crate) fn choose_continue(&mut self, paths: &[PathBuf], n: usize) -> Vec<Effect> {
+        match paths.get(n) {
+            Some(path) => self.open_command(path.clone()),
+            None => vec![Effect::Redraw],
+        }
     }
 
     /// The library list's filter typed so far, while it is shown.
@@ -355,6 +406,34 @@ impl App {
             .collect();
         self.list = Some(ListKind::Library(list));
         vec![Effect::ShowList { title, items }]
+    }
+}
+
+/// What a loaded document says about itself, for the sync folder's library
+/// details (ADR-0049): the title it states, its DOI, ISBN, author, and
+/// format. Only a title the document states (the reader's title falls back
+/// to the file name, which must never reach the sync folder), and never an
+/// author that is this computer's user or computer name (a Word file's
+/// author is often the account's name).
+pub(crate) fn sync_details(doc: &Document) -> textweaver_sync::docid::Details {
+    sync_details_from(doc, &document_metadata(doc))
+}
+
+fn sync_details_from(doc: &Document, meta: &DocMetadata) -> textweaver_sync::docid::Details {
+    let names = textweaver_sync::local_names();
+    let author = meta.author.clone().filter(|a| {
+        let a = a.to_lowercase();
+        !names
+            .iter()
+            .any(|n| n.chars().count() >= 3 && a.contains(&n.to_lowercase()))
+    });
+    textweaver_sync::docid::Details {
+        title: stated_title(doc),
+        doi: meta.doi.clone(),
+        isbn: meta.isbn.clone(),
+        author,
+        format: Some(doc.meta.format.clone()).filter(|f| !f.trim().is_empty()),
+        added_ms: None,
     }
 }
 
@@ -434,9 +513,26 @@ impl LibraryList {
 /// How often a running library scan shows its count.
 const PROGRESS_EVERY: Duration = Duration::from_secs(1);
 
+/// What a library scan is for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ScanMode {
+    /// The library list.
+    Library,
+    /// "Continue reading".
+    Continue,
+}
+
+/// What a library scan found.
+enum ScanResult {
+    /// The library list.
+    Library(LibraryList),
+    /// "Continue reading", newest first.
+    Continue(Vec<ContinueItem>),
+}
+
 /// A library scan on a background thread.
 pub(crate) struct LibraryScan {
-    items: Receiver<LibraryList>,
+    items: Receiver<ScanResult>,
     found: Arc<AtomicUsize>,
     shown_at: Instant,
 }
@@ -458,6 +554,9 @@ struct LibraryInputs {
     /// `tw library --search`'s text cache.
     fulltext: Option<PathBuf>,
     sync: LibrarySync,
+    /// Where this computer's files are and the settings, for reading the
+    /// sync folder (S6: other computers' library details and places).
+    synced: Option<(textweaver_store::Paths, textweaver_store::Settings)>,
 }
 
 impl LibraryInputs {
@@ -477,6 +576,13 @@ impl LibraryInputs {
             .as_deref()
             .map(SimpleIndex::load)
             .unwrap_or_default();
+        // What other computers know: an author, DOI, or ISBN found only
+        // there makes the filter find the document here too.
+        if let Some(synced) = self.synced_library() {
+            synced.enrich(&mut items, &|p| {
+                index.entries.get(p).map(|e| e.text.clone())
+            });
+        }
         let mut texts = std::collections::BTreeMap::new();
         for item in &mut items {
             if let Some(e) = index.entries.get(&item.path) {
@@ -490,6 +596,28 @@ impl LibraryInputs {
             }
         }
         LibraryList::new(items, texts)
+    }
+
+    /// The sync folder as read now, when sync is on and the folder is there.
+    fn synced_library(&self) -> Option<SyncedLibrary> {
+        let (paths, settings) = self.synced.as_ref()?;
+        SyncedLibrary::load(paths, settings)
+    }
+
+    /// "Continue reading": the library's documents found here, each at its
+    /// newest place from any computer, newest first.
+    fn continue_reading(&self, found: &dyn Fn(usize)) -> Vec<ContinueItem> {
+        let items = self.view(found);
+        let index = self
+            .fulltext
+            .as_deref()
+            .map(SimpleIndex::load)
+            .unwrap_or_default();
+        let synced = self.synced_library();
+        let state_dir = self.files.as_ref().map(|(_, _, d)| d.as_path());
+        crate::synced_library::continue_reading(&items, state_dir, synced.as_ref(), &|p| {
+            index.entries.get(p).map(|e| e.text.clone())
+        })
     }
 
     /// The library view: the folders scanned, the bookshelf, the recent

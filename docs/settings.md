@@ -260,7 +260,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `nav_history_size`, default `50`: how many places back and forward history keeps.
 - `wrap_navigation`, default `false`: moving past the end of the document starts again at the beginning.
 - `cursor_follows_speech`, default `true`: the cursor moves with the spoken word.
-- `sync_conflict_policy` moved to `[sync] position_policy` (below). A value you set here is moved there on its own.
+- `sync_conflict_policy` is now `[sync] position_policy` (below): `"newest"`, `"furthest"`, or `"ask"`. A value you set here moves there on its own; `"highest_progress"` becomes `"furthest"`, and `"manual"` becomes `"ask"`.
 - `citations`, default `"off"`: what continuous reading does with a citation such as `[@doe2020, p. 12]`. `"off"` skips it (an in-text citation keeps its authors); `"words"` says it in words from your library, "Doe and Roe, 2020, page 12". Alt+Shift+Q switches it. Word moves say citations in words either way. See [Citations while reading](reading.md#citations-while-reading).
 - `ocr`, default `true`: recognize the text of scanned pages and pictures (OCR). See [Scanned pages](converting.md#scanned-pages-ocr).
 - `ocr_lang`, default `""`: the language of scanned text, as Tesseract codes (`"fra"`, `"deu+eng"`) or language tags (`"fr"`). Empty means the document's own language, else English. English is read by ocrs; other languages need Tesseract.

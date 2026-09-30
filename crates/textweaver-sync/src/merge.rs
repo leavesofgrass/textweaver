@@ -12,6 +12,8 @@
 //! - [`Counter`]: one count per computer, summed (reading time, sessions).
 //!   Each computer only adds to its own count.
 //! - [`Maximum`]: the largest value any computer reported (furthest point).
+//! - [`Earliest`]: the smallest value any computer reported (when a
+//!   document was first added to a library).
 
 use std::collections::BTreeMap;
 use std::collections::btree_map::Entry;
@@ -356,6 +358,31 @@ impl Maximum {
     }
 }
 
+/// The earliest value any computer reported (when a document was first
+/// added to a library), or none yet.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct Earliest(pub Option<u64>);
+
+impl Earliest {
+    /// Nothing reported yet.
+    pub fn is_none(&self) -> bool {
+        self.0.is_none()
+    }
+
+    /// Lowers it to `v` if `v` is earlier (or nothing was reported).
+    pub fn lower(&mut self, v: u64) {
+        self.0 = Some(self.0.map_or(v, |w| w.min(v)));
+    }
+
+    /// Merges `other` in.
+    pub fn merge(&mut self, other: &Self) {
+        if let Some(v) = other.0 {
+            self.lower(v);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -451,5 +478,13 @@ mod tests {
         m.merge(&Maximum(40));
         m.raise(12);
         assert_eq!(m.0, 40);
+        let mut e = Earliest::default();
+        e.merge(&Earliest(Some(30)));
+        e.merge(&Earliest(None));
+        e.lower(40);
+        assert_eq!(e.0, Some(30));
+        let mut f = Earliest(Some(20));
+        f.merge(&e);
+        assert_eq!(f.0, Some(20), "either order gives the earliest");
     }
 }
