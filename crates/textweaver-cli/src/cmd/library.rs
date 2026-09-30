@@ -1,6 +1,11 @@
 //! `tw library`: the library's folders and documents, adding and removing
-//! folders, and searching titles, authors, DOIs, ISBNs, and text. Owner:
-//! Agent C; search by metadata, Wave 5 (W5y).
+//! folders, searching titles, authors, DOIs, ISBNs, and text, and
+//! "Continue reading" (`--continue`). Owner: Agent C; search by metadata,
+//! Wave 5 (W5y); sync, the sync wave (S6).
+//!
+//! With sync on, the details other computers published (ADR-0049) fill in
+//! a document's author, DOI, and ISBN here too, so a search finds a
+//! document by a DOI only another computer knows.
 //!
 //! A document's author, DOI, and ISBN come from the bookshelf (recorded
 //! when it opens), from a DOI or ISBN near the start of its indexed text,
@@ -11,11 +16,14 @@
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+use textweaver_app::lexicon::args;
+use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::store::fulltext::{FullTextIndex, SearchHit, SimpleIndex};
 use textweaver_app::store::library::{self, DocMetadata, LibraryItem, ScannedDoc};
 use textweaver_app::store::{
     DocKey, Library, Paths, Recent, Settings, SettingsStore, StateStore, sync::SidecarStore,
 };
+use textweaver_app::synced_library::{ContinueItem, SyncedLibrary, continue_reading};
 use textweaver_cite::Reference;
 
 /// Arguments for `tw library`.
@@ -31,6 +39,10 @@ pub struct Args {
     /// Remove a folder from the library (its files are not touched).
     #[arg(long)]
     pub remove: Option<PathBuf>,
+    /// Continue reading: the documents on this computer with a place saved
+    /// here or on another computer (with sync on), newest first.
+    #[arg(long = "continue")]
+    pub continue_reading: bool,
     /// Print JSON.
     #[arg(long)]
     pub json: bool,
@@ -127,11 +139,11 @@ fn listing(paths: &Paths, settings: &Settings) -> (Listing, Vec<ScannedDoc>) {
     };
     let mut items = library::library_view(&scanned, &lib, &recent, &sidecars, &local);
     let refs = references(paths, &settings.library.folders);
-    enrich(
-        &mut items,
-        &SimpleIndex::load(&paths.fulltext_file()),
-        &refs,
-    );
+    let index = SimpleIndex::load(&paths.fulltext_file());
+    // What other computers know first (S6): an author, DOI, or ISBN found
+    // only there makes the search find the document here too.
+    enrich_synced(&mut items, paths, settings, &index);
+    enrich(&mut items, &index, &refs);
     (
         Listing {
             folders: settings.library.folders.clone(),
@@ -186,7 +198,9 @@ fn search(paths: &Paths, settings: &Settings, query: &str) -> SearchReport {
         // Only a cache: a failed write costs a slower next search.
         let _ = index.save(&cache);
     }
-    // A DOI or ISBN in text indexed just now counts too.
+    // A DOI or ISBN in text indexed just now counts too, and so does a
+    // document another computer knows by the same text.
+    enrich_synced(&mut list.items, paths, settings, &index);
     enrich(&mut list.items, &index, &[]);
     let titles = library::filter_items(&list.items, query)
         .into_iter()
@@ -280,6 +294,45 @@ fn enrich(items: &mut [LibraryItem], index: &SimpleIndex, refs: &[Reference]) {
     }
 }
 
+/// Adds the library details other computers published (with sync on).
+fn enrich_synced(
+    items: &mut [LibraryItem],
+    paths: &Paths,
+    settings: &Settings,
+    index: &SimpleIndex,
+) {
+    if let Some(s) = SyncedLibrary::load(paths, settings) {
+        s.enrich(items, &|p| index.entries.get(p).map(|e| e.text.clone()));
+    }
+}
+
+/// `--continue`: the documents found here, each at its newest place from
+/// any computer, newest first.
+fn continue_list(paths: &Paths, settings: &Settings) -> Vec<ContinueItem> {
+    let (l, _) = listing(paths, settings);
+    let index = SimpleIndex::load(&paths.fulltext_file());
+    let synced = SyncedLibrary::load(paths, settings);
+    continue_reading(&l.items, Some(&paths.state_dir()), synced.as_ref(), &|p| {
+        index.entries.get(p).map(|e| e.text.clone())
+    })
+}
+
+fn render_continue(items: &[ContinueItem], c: &Catalog) -> String {
+    if items.is_empty() {
+        return format!("{}\n", c.tr("continue-empty"));
+    }
+    let now = textweaver_app::sync_folder::wall_ms();
+    let mut out = format!("{}\n", c.fmt("continue-intro", &args!["n" => items.len()]));
+    for i in items {
+        out.push_str(&format!(
+            "  {}\n    {}\n",
+            i.describe(c, now),
+            i.path.display()
+        ));
+    }
+    out
+}
+
 fn render_listing(l: &Listing) -> String {
     let mut out = String::new();
     if l.folders.is_empty() {
@@ -370,12 +423,19 @@ fn run_with(args: &Args, paths: &Paths) -> anyhow::Result<String> {
         json.insert("removed".into(), serde_json::to_value(&c)?);
     }
     let settings = SettingsStore::new(paths.clone()).load().0;
+    if args.continue_reading {
+        let (c, _) =
+            Catalog::for_language(&settings.interface.language, Some(&paths.locales_dir()));
+        let items = continue_list(paths, &settings);
+        out.push_str(&render_continue(&items, &c));
+        json.insert("continue".into(), serde_json::to_value(&items)?);
+    }
     if let Some(q) = args.search.as_deref().map(str::trim) {
         anyhow::ensure!(!q.is_empty(), "the search text is empty");
         let r = search(paths, &settings, q);
         out.push_str(&render_search(&r));
         json.insert("search".into(), serde_json::to_value(&r)?);
-    } else if args.add.is_none() && args.remove.is_none() {
+    } else if args.add.is_none() && args.remove.is_none() && !args.continue_reading {
         let (l, _) = listing(paths, &settings);
         out.push_str(&render_listing(&l));
         json.insert("library".into(), serde_json::to_value(&l)?);
@@ -426,6 +486,7 @@ mod tests {
             search: None,
             add: None,
             remove: None,
+            continue_reading: false,
             json: false,
         }
     }
@@ -614,6 +675,151 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(v["search"]["titles"][0]["isbn"], "9780306406157");
         assert_eq!(v["search"]["titles"][0]["author"], "Ada Example");
+    }
+
+    /// The sync wave (S6): another computer (the "laptop") published a
+    /// paper's DOI, author, and title, and its place and reading, into the
+    /// sync folder. This home (the "lab") has the same library folder,
+    /// synced with its id file, and never opened the paper.
+    fn laptop_published_a_paper(dir: &Path) -> (Paths, PathBuf) {
+        use textweaver_app::sync_folder::docid::{self, Details, Fingerprint};
+        use textweaver_app::sync_folder::record::Place;
+        use textweaver_app::sync_folder::{Clock, DocRecord, Identity, SyncFolder, SyncId};
+
+        let folder = dir.join("sync");
+        std::fs::create_dir_all(&folder).unwrap();
+        let lib_a = dir.join("laptop").join("Papers");
+        std::fs::create_dir_all(&lib_a).unwrap();
+        std::fs::write(lib_a.join("paper.md"), "The mitochondria makes energy.\n").unwrap();
+        let lib_id = docid::library_id(&lib_a).unwrap();
+        let laptop = Paths::under(&dir.join("laptop-home"));
+        let (mut identity, _) = Identity::load_or_create(&laptop.data_dir).unwrap();
+        let sync = SyncFolder::open(&folder, &mut identity, "laptop", "test")
+            .unwrap()
+            .folder;
+        let mut clock = Clock::new(sync.device());
+        let mut record = DocRecord::new(SyncId::random());
+        record.publish_identity(
+            clock.tick(),
+            &Fingerprint {
+                library_key: Some(docid::library_key(lib_id, "paper.md")),
+                ..Fingerprint::default()
+            },
+            &Details {
+                title: Some("Cell Energy".into()),
+                doi: Some("10.1000/xyz".into()),
+                author: Some("Ada Example".into()),
+                ..Details::default()
+            },
+        );
+        record.set_place(
+            clock.tick(),
+            Place {
+                pos: CharPos(10),
+                pct: 42,
+                anchor: None,
+            },
+        );
+        record.stats.seconds.add(sync.device(), 120);
+        record.stats.sessions.add(sync.device(), 2);
+        sync.write_doc(&record).unwrap();
+
+        // The lab: the same folder, arrived with its id file.
+        let lib_b = dir.join("lab").join("Course papers");
+        for rel in ["paper.md", ".textweaver/library-id.json"] {
+            let to = lib_b.join(rel);
+            std::fs::create_dir_all(to.parent().unwrap()).unwrap();
+            std::fs::copy(lib_a.join(rel), to).unwrap();
+        }
+        let lab = Paths::under(&dir.join("lab-home"));
+        let store = SettingsStore::new(lab.clone());
+        let (mut settings, _) = store.load();
+        settings.library.add_folder(&lib_b);
+        settings.sync.enabled = true;
+        settings.sync.folder = Some(folder);
+        settings.sync.device_name = "lab".into();
+        store.save(&settings).unwrap();
+        (lab, lib_b.join("paper.md"))
+    }
+
+    #[test]
+    fn a_doi_known_on_another_computer_is_found_and_continue_lists_it() {
+        let dir = TempDir::new("synced");
+        let (lab, paper) = laptop_published_a_paper(&dir.0);
+        let found = run_with(
+            &Args {
+                search: Some("doi:10.1000/XYZ".into()),
+                ..args()
+            },
+            &lab,
+        )
+        .unwrap();
+        assert!(
+            found.contains("1 document matching doi:10.1000/XYZ by title, author, DOI, or ISBN:"),
+            "{found}"
+        );
+        assert!(
+            found.contains("Cell Energy, by Ada Example, in Course papers"),
+            "{found}"
+        );
+
+        let cont = run_with(
+            &Args {
+                continue_reading: true,
+                ..args()
+            },
+            &lab,
+        )
+        .unwrap();
+        assert!(
+            cont.starts_with("Continue reading: 1 document, newest first.\n"),
+            "{cont}"
+        );
+        assert!(
+            cont.contains("  Cell Energy, 42 percent, laptop, just now\n"),
+            "{cont}"
+        );
+        assert!(cont.contains(&paper.display().to_string()), "{cont}");
+        let json = run_with(
+            &Args {
+                continue_reading: true,
+                json: true,
+                ..args()
+            },
+            &lab,
+        )
+        .unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["continue"][0]["pct"], 42);
+        assert_eq!(v["continue"][0]["device"], "laptop");
+        assert_eq!(v["continue"][0]["this_computer"], false);
+
+        // With sync off, nothing from the laptop is used.
+        let store = SettingsStore::new(lab.clone());
+        let (mut settings, _) = store.load();
+        settings.sync.enabled = false;
+        store.save(&settings).unwrap();
+        let found = run_with(
+            &Args {
+                search: Some("10.1000/xyz".into()),
+                ..args()
+            },
+            &lab,
+        )
+        .unwrap();
+        assert!(
+            found.contains("No titles, authors, DOIs, or ISBNs match"),
+            "{found}"
+        );
+        let cont = run_with(
+            &Args {
+                continue_reading: true,
+                ..args()
+            },
+            &lab,
+        )
+        .unwrap();
+        assert_eq!(cont, "Nothing to continue: no places saved.\n");
     }
 
     #[test]
