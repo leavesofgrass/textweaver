@@ -508,6 +508,15 @@ function Build-FromSource {
         }
     }
 
+    # cmake builds libopus, the Opus encoder. CMAKE may name it instead.
+    if ((Get-Command 'cmake' -ErrorAction SilentlyContinue) -or $env:CMAKE) {
+        Write-Line 'cmake is installed. It builds the Opus encoder.'
+    } elseif ($DryRun) {
+        Write-Line 'cmake was not found. A real run would stop here and explain how to install it.'
+    } else {
+        throw 'cmake was not found. It builds the Opus encoder. Install it (winget install Kitware.CMake), or set CMAKE to the full path of cmake.exe, then run this script again.'
+    }
+
     Write-Line 'Building the Windows package with cargo xtask dist. The first build takes several minutes.'
     Invoke-Native @('cargo', 'xtask', 'dist') $src
 

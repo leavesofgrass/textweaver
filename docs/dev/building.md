@@ -24,6 +24,18 @@ How to set up a machine to build textweaver: Rust, Python, and what each system 
 
 `--workspace` builds the default members, which leave out the GUI. Build the GUI only when you work on it (see below).
 
+### cmake, for Opus audio export
+
+Opus export uses libopus, which is built from source with [cmake](https://cmake.org) during the build. Install cmake 3.16 or later and make sure `cmake` is on `PATH`, or set the `CMAKE` environment variable to the full path of `cmake.exe` (on Windows, a portable cmake works). The CI runners and the development container already have it.
+
+To build without cmake, turn off the `opus` feature. Opus export then goes through ffmpeg, as M4B does:
+
+```bash
+cargo build -p textweaver-cli --no-default-features
+```
+
+For the GUI, list its other default features: `cargo build -p textweaver-xilem --no-default-features --features screenshot,renderer-vello,publish,lint,dictation,audio-export`. A build of the whole workspace, such as `cargo build --workspace`, always includes Opus, because `tw` turns it on.
+
 ## Your first contribution
 
 1. **Clone and build**, as above.
@@ -59,7 +71,7 @@ From there, [Architecture](architecture.md#the-crates) groups every crate by the
 
 ## Windows
 
-- Install Visual Studio or the Build Tools with the "Desktop development with C++" workload, for the MSVC linker.
+- Install Visual Studio or the Build Tools with the "Desktop development with C++" workload, for the MSVC linker, and cmake for the Opus encoder (`winget install Kitware.CMake`, or set `CMAKE` to a portable cmake).
 - Add the 32-bit target, which the 32-bit engine hosts need:
 
   ```powershell
@@ -70,17 +82,17 @@ From there, [Architecture](architecture.md#the-crates) groups every crate by the
 
 ## Linux
 
-The build itself needs only pkg-config and the ALSA development files. espeak-ng is loaded when textweaver starts, with no headers at build time, and speech-dispatcher is spoken to over its socket in pure Rust. The engines themselves are needed to hear them and for their real-engine tests. On Debian and Ubuntu:
+The build itself needs only pkg-config, cmake, and the ALSA development files. espeak-ng is loaded when textweaver starts, with no headers at build time, and speech-dispatcher is spoken to over its socket in pure Rust. The engines themselves are needed to hear them and for their real-engine tests. On Debian and Ubuntu:
 
 ```bash
-sudo apt install pkg-config libasound2-dev espeak-ng speech-dispatcher
+sudo apt install pkg-config cmake libasound2-dev espeak-ng speech-dispatcher
 ```
 
 `scripts/dev-check.sh` turns on every feature only when `pkg-config` finds espeak-ng, so for its full run also install `libespeak-ng-dev`. `scripts/install-linux.sh --deps-only` installs the build dependencies on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine.
 
 ## macOS
 
-Install the Xcode command line tools. The Apple speech backends need nothing else.
+Install the Xcode command line tools, and cmake for the Opus encoder (`brew install cmake`). The Apple speech backends need nothing else.
 
 ## Docker
 

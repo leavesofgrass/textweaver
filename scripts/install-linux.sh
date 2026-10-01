@@ -356,25 +356,25 @@ detect_pm() {
 }
 
 # Build dependencies for each package manager: a C toolchain, pkg-config,
-# ALSA headers (audio output), espeak-ng with its headers,
+# cmake (it builds libopus, for Opus export), ALSA headers (audio output), espeak-ng with its headers,
 # speech-dispatcher with its headers, and git and curl. No clang: nothing
 # in the terminal build uses bindgen.
 packages_for() {
   case $1 in
     apt)
-      echo "build-essential pkg-config libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev git curl ca-certificates"
+      echo "build-essential pkg-config cmake libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev git curl ca-certificates"
       ;;
     dnf | yum)
-      echo "gcc gcc-c++ make pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel git curl ca-certificates"
+      echo "gcc gcc-c++ make cmake pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel git curl ca-certificates"
       ;;
     pacman)
-      echo "base-devel pkgconf alsa-lib espeak-ng speech-dispatcher git curl ca-certificates"
+      echo "base-devel pkgconf cmake alsa-lib espeak-ng speech-dispatcher git curl ca-certificates"
       ;;
     zypper)
-      echo "gcc gcc-c++ make pkgconf-pkg-config alsa-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-module-espeak libspeechd-devel git curl ca-certificates"
+      echo "gcc gcc-c++ make cmake pkgconf-pkg-config alsa-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-module-espeak libspeechd-devel git curl ca-certificates"
       ;;
     apk)
-      echo "build-base pkgconf alsa-lib-dev espeak-ng espeak-ng-dev speech-dispatcher speech-dispatcher-dev git curl ca-certificates"
+      echo "build-base pkgconf cmake alsa-lib-dev espeak-ng espeak-ng-dev speech-dispatcher speech-dispatcher-dev git curl ca-certificates"
       ;;
     *)
       echo ""
@@ -432,6 +432,7 @@ print_generic_packages() {
   say "Install these with your package manager, then run this script again with --no-deps:"
   say "- a C compiler and make (gcc or clang)"
   say "- pkg-config"
+  say "- cmake, which builds the Opus encoder"
   say "- the ALSA development files (often alsa-lib-devel or libasound2-dev)"
   say "- espeak-ng and its development files"
   say "- speech-dispatcher and its development files, and its espeak-ng module"
@@ -598,6 +599,7 @@ check_build_tools() {
   local missing=""
   have cc || have gcc || have clang || missing="$missing a C compiler,"
   have pkg-config || have pkgconf || missing="$missing pkg-config,"
+  have cmake || missing="$missing cmake,"
   if have pkg-config && ! pkg-config --exists alsa; then
     missing="$missing the ALSA development files,"
   fi
