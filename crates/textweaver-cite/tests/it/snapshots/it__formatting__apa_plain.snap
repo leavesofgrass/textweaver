@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-cite/tests/formatting.rs
+source: crates/textweaver-cite/tests/it/formatting.rs
 expression: "render(\"apa\", OutputFormat :: Plain)"
 ---
 style: APA Style 7th edition

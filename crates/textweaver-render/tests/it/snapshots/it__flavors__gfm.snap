@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-render/tests/flavors.rs
+source: crates/textweaver-render/tests/it/flavors.rs
 expression: snapshot_text(&r)
 ---
 <h1 id="gfm-features">GFM features</h1>

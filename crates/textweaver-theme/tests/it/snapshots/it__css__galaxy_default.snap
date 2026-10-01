@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-theme/tests/css.rs
+source: crates/textweaver-theme/tests/it/css.rs
 expression: default_stylesheet()
 ---
 /* textweaver themes: Galaxy Light (light), Galaxy (dark), High Contrast (more contrast); dark unless the system says otherwise */

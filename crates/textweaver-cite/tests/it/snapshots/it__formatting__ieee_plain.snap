@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-cite/tests/formatting.rs
+source: crates/textweaver-cite/tests/it/formatting.rs
 expression: "render(\"ieee\", OutputFormat :: Plain)"
 ---
 style: IEEE Reference Guide version 11.29.2023

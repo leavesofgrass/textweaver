@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-cite/tests/formatting.rs
+source: crates/textweaver-cite/tests/it/formatting.rs
 expression: "render(\"chicago-notes\", OutputFormat :: Plain)"
 ---
 style: Chicago Manual of Style 18th edition (notes and bibliography)

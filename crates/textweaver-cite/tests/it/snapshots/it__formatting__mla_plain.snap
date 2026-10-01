@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-cite/tests/formatting.rs
+source: crates/textweaver-cite/tests/it/formatting.rs
 expression: "render(\"mla\", OutputFormat :: Plain)"
 ---
 style: MLA Handbook 9th edition (in-text citations)

@@ -234,7 +234,7 @@ fn the_cache_answers_offline_and_is_bounded() {
 }
 
 /// Hits doi.org and Open Library for real. Run with
-/// `cargo test -p textweaver-cite --test lookup -- --ignored`.
+/// `cargo test -p textweaver-cite --test it -- lookup:: --ignored`.
 #[test]
 #[ignore = "uses the network"]
 fn live_lookup() {

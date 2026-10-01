@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-cite/tests/formatting.rs
+source: crates/textweaver-cite/tests/it/formatting.rs
 expression: "render(\"harvard\", OutputFormat :: Plain)"
 ---
 style: Cite Them Right 12th edition (author-date/Harvard)

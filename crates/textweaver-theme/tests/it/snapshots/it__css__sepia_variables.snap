@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-theme/tests/css.rs
+source: crates/textweaver-theme/tests/it/css.rs
 expression: "variables(builtin::get(\"sepia\").unwrap())"
 ---
 /* textweaver theme: Sepia */

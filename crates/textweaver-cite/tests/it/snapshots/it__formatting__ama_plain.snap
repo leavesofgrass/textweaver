@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-cite/tests/formatting.rs
+source: crates/textweaver-cite/tests/it/formatting.rs
 expression: "render(\"ama\", OutputFormat :: Plain)"
 ---
 style: AMA Manual of Style 11th edition
