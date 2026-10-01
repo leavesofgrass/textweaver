@@ -707,3 +707,242 @@ fn every_sync_message_is_translated_and_fits_a_braille_line() {
         assert!(en.fmt(id, &args).starts_with("Sync: "), "{id}");
     }
 }
+
+/// Copies a folder and everything in it, as a sync service would: a file
+/// is copied only where the other copy is missing or older, so a stale
+/// copy never overwrites the computer's own newer file.
+fn copy_dir(from: &Path, to: &Path) {
+    let modified = |p: &Path| std::fs::metadata(p).and_then(|m| m.modified()).ok();
+    std::fs::create_dir_all(to).unwrap();
+    for e in std::fs::read_dir(from).unwrap().flatten() {
+        let target = to.join(e.file_name());
+        if e.path().is_dir() {
+            copy_dir(&e.path(), &target);
+        } else if modified(&target).is_none_or(|t| modified(&e.path()).is_some_and(|s| s > t)) {
+            std::fs::copy(e.path(), &target).unwrap();
+            // Keep the source's time, as a sync service does, so the copy
+            // is never taken for the newer one.
+            if let Some(t) = modified(&e.path()) {
+                let f = std::fs::File::options().write(true).open(&target).unwrap();
+                f.set_modified(t).unwrap();
+            }
+        }
+    }
+}
+
+/// Two sync folders joined, as a sync service would once both computers
+/// use it: each computer's folder is copied into the other sync folder.
+fn exchange(a: &Path, b: &Path) {
+    let devices = |p: &Path| p.join("textweaver-sync").join("devices");
+    for (from, to) in [(a, b), (b, a)] {
+        for e in std::fs::read_dir(devices(from)).unwrap().flatten() {
+            copy_dir(&e.path(), &devices(to).join(e.file_name()));
+        }
+    }
+}
+
+/// The sync id this computer's `sync-ids.json` gives `path`.
+fn sync_id_of(c: &Computer, path: &Path) -> textweaver_app::sync_folder::SyncId {
+    let paths = Paths::under(c.home.path());
+    let ids = textweaver_app::store::sync_ids::SyncIds::load(&paths.sync_ids_file());
+    ids.get(&textweaver_app::store::DocKey::for_path(path))
+        .expect("identified")
+        .sync_id
+        .parse()
+        .unwrap()
+}
+
+/// Two computers that opened one document before they ever synced gave it
+/// two ids. Once their records meet, the ids fold together: the smallest
+/// wins on both, and the notes and places of both are merged under it.
+#[test]
+fn two_ids_for_one_document_fold_into_the_smallest() {
+    use textweaver_app::sync_folder::{DocRecord, FolderView};
+
+    // Each computer syncs to a folder of its own at first.
+    let fa = tempfile::tempdir().unwrap();
+    let fb = tempfile::tempdir().unwrap();
+    let (da, pa) = copy_of(TEXT, "cells.txt");
+    let (db, pb) = copy_of(TEXT, "Cells copy.txt");
+    let mut laptop = computer(fa.path(), "laptop", |_| {});
+    let mut lab = computer(fb.path(), "lab", |_| {});
+    laptop.open(&pa);
+    laptop.add_note("Laptop note");
+    laptop.go_percent(40);
+    laptop.settle();
+    lab.open(&pb);
+    lab.add_note("Lab note");
+    lab.go_percent(70);
+    lab.settle();
+    let (id_laptop, id_lab) = (sync_id_of(&laptop, &pa), sync_id_of(&lab, &pb));
+    assert_ne!(id_laptop, id_lab, "two ids before syncing");
+    let winner = id_laptop.min(id_lab);
+
+    // The two folders are joined; each computer opens the document again.
+    exchange(fa.path(), fb.path());
+    laptop.open(&pa);
+    lab.open(&pb);
+    for _ in 0..3 {
+        exchange(fa.path(), fb.path());
+        laptop.settle();
+        lab.settle();
+    }
+
+    assert_eq!(sync_id_of(&laptop, &pa), winner);
+    assert_eq!(sync_id_of(&lab, &pb), winner);
+    let sorted = |mut v: Vec<String>| {
+        v.sort();
+        v
+    };
+    let both = vec!["Lab note".to_owned(), "Laptop note".to_owned()];
+    assert_eq!(sorted(laptop.notes()), both);
+    assert_eq!(sorted(lab.notes()), both);
+
+    // The folder holds one document, with both computers' places; the
+    // record that lost is marked folded into the winner.
+    let view = FolderView::read(fa.path()).unwrap();
+    assert_eq!(view.docs.len(), 1, "{:?}", view.docs.keys());
+    let doc = view.doc(winner).unwrap();
+    assert_eq!(doc.places_newest_first().len(), 2);
+    let loser = id_laptop.max(id_lab);
+    let devices = fa.path().join("textweaver-sync").join("devices");
+    let folded: Vec<DocRecord> = std::fs::read_dir(&devices)
+        .unwrap()
+        .flatten()
+        .filter_map(|d| std::fs::read(d.path().join("docs").join(format!("{loser}.json"))).ok())
+        .map(|b| DocRecord::from_bytes(&b).unwrap())
+        .collect();
+    assert_eq!(
+        folded.len(),
+        1,
+        "the computer that lost kept its old record"
+    );
+    assert_eq!(folded[0].folded_into, Some(winner));
+
+    laptop.quit();
+    lab.quit();
+    privacy_scan(
+        fa.path(),
+        &[laptop.home.path(), lab.home.path()],
+        &[&pa, &pb, da.path(), db.path()],
+    );
+}
+
+/// The crash window: a merge publishes what arrived before the app has
+/// saved it. If textweaver stops in between, the next session must not
+/// take the app's older version for a new edit: the arrival is sent again,
+/// and the newer edit from the other computer still wins.
+#[test]
+fn what_arrived_survives_a_crash_before_it_was_saved() {
+    use textweaver_app::store::{DocKey, StateStore};
+    use textweaver_app::sync_engine::{
+        CycleOutcome, EngineConfig, Groups, Item, Snapshot, SyncEngine, apply_arrivals,
+    };
+    use textweaver_app::sync_folder::{DocRecord, Identity};
+    use textweaver_app::sync_groups::KeySystem;
+
+    let folder = tempfile::tempdir().unwrap();
+    let (da, pa) = copy_of(TEXT, "cells.txt");
+    let (db, pb) = copy_of(TEXT, "cells.txt");
+    let mut laptop = computer(folder.path(), "laptop", |_| {});
+    let mut lab = computer(folder.path(), "lab", |_| {});
+    laptop.open(&pa);
+    laptop.add_note("First words");
+    laptop.settle();
+    lab.open(&pb);
+    assert_eq!(lab.notes(), vec!["First words".to_owned()]);
+    laptop.quit();
+
+    // The lab's newer edit, while the laptop is off.
+    std::thread::sleep(Duration::from_millis(1100));
+    lab.edit_first_note("Lab version");
+    lab.settle();
+
+    // The laptop's next session: its engine merges, and textweaver stops
+    // before the app applies and saves what arrived.
+    let paths = Paths::under(laptop.home.path());
+    let config = EngineConfig {
+        folder: folder.path().to_owned(),
+        device_name: "laptop".into(),
+        paths: paths.clone(),
+        app_version: "test".into(),
+        groups: Groups::ALL,
+        system: KeySystem::current(),
+    };
+    let key = DocKey::for_path(&pa);
+    let store = StateStore::new(paths.state_dir());
+    let mut state = store.load(&key).unwrap();
+    assert_eq!(state.notes[0].note, "First words");
+    let snapshot = Snapshot {
+        key: key.clone(),
+        state: state.clone(),
+        publish_place: false,
+    };
+    let sync_id = sync_id_of(&laptop, &pa);
+    let me = Identity::peek(&paths.data_dir).unwrap();
+    let mine = || {
+        let file = folder
+            .path()
+            .join("textweaver-sync")
+            .join("devices")
+            .join(me.to_string())
+            .join("docs")
+            .join(format!("{sync_id}.json"));
+        let r = DocRecord::from_bytes(&std::fs::read(file).unwrap()).unwrap();
+        r.notes
+            .live()
+            .map(|(_, n)| n.note.clone())
+            .collect::<Vec<_>>()
+    };
+    let note_arrival = |o: &CycleOutcome| {
+        o.arrivals.iter().find_map(|a| match &a.value {
+            Some(Item::Note(n)) => Some(n.note.clone()),
+            _ => None,
+        })
+    };
+
+    let mut first = SyncEngine::new();
+    first.configure(Some(config.clone()));
+    let o = first.cycle(sync_id, &snapshot, true).unwrap();
+    assert_eq!(note_arrival(&o).as_deref(), Some("Lab version"));
+    assert_eq!(mine(), ["Lab version"], "published with the arrival");
+    drop(first);
+
+    // After the crash: the arrival is sent again, and the laptop's older
+    // text is not published as a new edit.
+    let mut second = SyncEngine::new();
+    second.configure(Some(config.clone()));
+    let o = second.cycle(sync_id, &snapshot, true).unwrap();
+    assert_eq!(note_arrival(&o).as_deref(), Some("Lab version"));
+    assert_eq!(mine(), ["Lab version"]);
+
+    // Applied and saved, it is done: nothing arrives again, and nothing
+    // is left waiting in the local file.
+    let applied = apply_arrivals(&mut state, &o.arrivals, &mut |_| true);
+    assert_eq!(applied.replaced_notes.len(), 1);
+    store.save(&key, &state).unwrap();
+    let snapshot = Snapshot {
+        key,
+        state,
+        publish_place: false,
+    };
+    let o = second.cycle(sync_id, &snapshot, true).unwrap();
+    assert!(o.arrivals.is_empty(), "{:?}", o.arrivals);
+    drop(second);
+    let pending = std::fs::read_to_string(
+        paths
+            .data_dir
+            .join(textweaver_app::sync_pending::PENDING_FILE),
+    )
+    .unwrap();
+    assert!(!pending.contains(&sync_id.to_string()), "{pending}");
+    lab.settle();
+    assert_eq!(lab.notes(), vec!["Lab version".to_owned()]);
+
+    lab.quit();
+    privacy_scan(
+        folder.path(),
+        &[laptop.home.path(), lab.home.path()],
+        &[&pa, &pb, da.path(), db.path()],
+    );
+}

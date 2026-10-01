@@ -26,6 +26,14 @@
 //! What arrived goes back to the app as [`Arrival`]s, each with the version
 //! the app had, so the app applies it only if nothing changed meanwhile.
 //! The engine never moves the reader's cursor; places are only reported.
+//! The arrivals not applied yet are saved on this computer
+//! ([`crate::sync_pending`]) before the merged view is published, so a
+//! crash between the two never lets the app's older version win.
+//!
+//! When identifying a document folds its id into a smaller one another
+//! computer gave it ([`textweaver_sync::docid`]), its old record is marked
+//! folded and the merge goes on under the smaller id: this computer's
+//! notes, highlights, bookmarks, and place are published there.
 //!
 //! A document the app does not have open is merged the same way by
 //! [`SyncEngine::sync_all`] (Sync now, `tw sync now`), straight into its
@@ -48,6 +56,8 @@ use textweaver_sync::{
     Clock, DeviceId, DeviceInfo, DocRecord, Found, Identify, Identity, IdentityEvent,
     IdentityIndex, Problem, Stamp, SyncError, SyncFolder, SyncId,
 };
+
+use crate::sync_pending::{PendingItem, PendingJournal, kind_from_name, kind_name};
 
 /// The folder beside `state/` that keeps a copy of the state files from
 /// before the first merge, so turning sync on can be undone (ADR-0049).
@@ -597,6 +607,8 @@ pub struct SyncEngine {
     reported: HashSet<String>,
     index: Option<(Vec<(String, u64)>, IdentityIndex)>,
     pub(crate) status: EngineStatus,
+    /// The arrivals not applied yet, saved before publishing.
+    pub(crate) journal: Option<PendingJournal>,
 }
 
 /// A local edit found by comparing the app's state with the base.
@@ -714,6 +726,7 @@ impl SyncEngine {
         self.groups.clear();
         self.index = None;
         self.labels.clear();
+        self.journal = None;
         self.config = config;
         let mut notices = Vec::new();
         if self.config.is_none() {
@@ -767,6 +780,7 @@ impl SyncEngine {
                     self.notice(notices, "fresh", Notice::FreshDeviceId);
                 }
                 self.clock = Some(Clock::new(opened.folder.device()));
+                self.journal = Some(PendingJournal::load(&config.paths, opened.folder.device()));
                 self.status.kind = match opened.folder.read_only() {
                     Some(_) => StatusKind::ReadOnly,
                     None => StatusKind::Ready,
@@ -945,6 +959,9 @@ impl SyncEngine {
         {
             details.added_ms = first_added_ms(&c.paths, &identify.path);
         }
+        if let Some(old) = resolved.folded_from {
+            self.fold(old, resolved.sync_id, &mut notices);
+        }
         let publish = self.slot(resolved.sync_id).is_some_and(|slot| {
             resolved.changed
                 || slot.mine.identity.is_empty()
@@ -978,14 +995,43 @@ impl SyncEngine {
         SyncResponse::Cycle(Box::new(o))
     }
 
+    /// Folds this computer's record of `old` into `new`, a smaller id
+    /// another computer gave the same document: everything the old record
+    /// holds (every computer's place, the notes, bookmarks, highlights,
+    /// their deletions, and the statistics) is merged into the new one, and
+    /// the old record is marked folded and written. A record this computer
+    /// never published is left unwritten.
+    fn fold(&mut self, old: SyncId, new: SyncId, notices: &mut Vec<Notice>) {
+        let Some(slot) = self.slot(old) else {
+            return;
+        };
+        let mut moved = slot.mine.clone();
+        let published = slot.mine != DocRecord::new(old);
+        if published && slot.mine.fold_into(new) {
+            log::info!("sync: document {old} folded into {new}");
+            self.write(old, notices);
+        }
+        self.docs.remove(&old);
+        moved.sync_id = new;
+        moved.folded_into = None;
+        if let Some(slot) = self.slot(new) {
+            let _ = slot.mine.merge(&moved);
+        }
+        if let Some(j) = self.journal.as_mut() {
+            j.set_doc(old, Vec::new());
+        }
+    }
+
     fn reidentify(&mut self, identify: &Identify) {
         let mut notices = Vec::new();
         if !self.ready(&mut notices) {
             identify.run_logged(None::<std::iter::Empty<&str>>);
             return;
         }
-        let index = self.identity_index(&mut notices);
-        let resolved = match identify.run(None::<std::iter::Empty<&str>>, index.as_ref()) {
+        // No index: the document was identified when it opened, so its id
+        // is known, and two ids fold only when it opens, where the app
+        // takes the new id with the merge.
+        let resolved = match identify.run(None::<std::iter::Empty<&str>>, None) {
             Ok(r) => r,
             Err(e) => {
                 log::warn!("sync: cannot identify a document ({e})");
@@ -1024,13 +1070,27 @@ impl SyncEngine {
                 }
             }
             let written = mine.to_bytes().ok();
+            // Arrivals a session before this one sent and the app may not
+            // have applied (it stopped first).
+            let pending = self.journal.as_ref().map_or_else(Vec::new, |j| {
+                j.doc(sync_id)
+                    .into_iter()
+                    .filter_map(|p| {
+                        Some(Pending {
+                            kind: kind_from_name(&p.kind)?,
+                            before: p.before(),
+                            id: p.id,
+                        })
+                    })
+                    .collect()
+            });
             self.docs.insert(
                 sync_id,
                 Slot {
                     mine,
                     written,
                     others: Vec::new(),
-                    pending: Vec::new(),
+                    pending,
                 },
             );
         }
@@ -1165,8 +1225,20 @@ impl SyncEngine {
             .places
             .register(&me.to_string())
             .and_then(|r| r.value.clone().map(|v| (r.stamp, v)));
+        let saved = slot
+            .pending
+            .iter()
+            .map(|p| PendingItem::new(kind_name(p.kind), &p.id, p.before.as_ref()))
+            .collect();
         self.problems(merged.problems, &mut notices);
-        self.write(sync_id, &mut notices);
+        // What arrived is saved here before the merged view is published.
+        if self
+            .journal
+            .as_mut()
+            .is_none_or(|j| j.set_doc(sync_id, saved))
+        {
+            self.write(sync_id, &mut notices);
+        }
         let places = self.places(sync_id, groups);
         let mut o = self.outcome(&snapshot.key, sync_id);
         o.arrivals = arrivals;
