@@ -14,8 +14,21 @@
 //! thread runs its run loop, which `avspeech`'s callbacks need.
 //!
 //! Run a subset with `cargo test -p textweaver-apple --test voices -- <filter>`.
+//!
+//! `--list` answers as libtest does, so cargo-nextest can list the
+//! program on every system: one `name: test` line per test on macOS, and
+//! nothing at all elsewhere (there are no tests to run there).
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--list") {
+        // Nothing is ignored, so `--list --ignored` lists nothing.
+        #[cfg(target_os = "macos")]
+        if !args.iter().any(|a| a == "--ignored") {
+            macos::list();
+        }
+        return;
+    }
     #[cfg(target_os = "macos")]
     macos::main();
     #[cfg(not(target_os = "macos"))]
@@ -102,10 +115,16 @@ mod macos {
             return;
         }
         let filter: Option<String> = std::env::args().skip(1).find(|a| !a.starts_with('-'));
+        // cargo-nextest runs one test at a time with `--exact`.
+        let exact = std::env::args().any(|a| a == "--exact");
         let pick = move |tests: &'static [Test]| -> Vec<Test> {
             tests
                 .iter()
-                .filter(|(name, _)| filter.as_deref().is_none_or(|f| name.contains(f)))
+                .filter(|(name, _)| {
+                    filter
+                        .as_deref()
+                        .is_none_or(|f| if exact { *name == f } else { name.contains(f) })
+                })
                 .copied()
                 .collect()
         };
@@ -155,6 +174,13 @@ mod macos {
         );
         if failed > 0 {
             std::process::exit(1);
+        }
+    }
+
+    /// Prints every test as libtest's `--list` does (`name: test`).
+    pub fn list() {
+        for (name, _) in PHASE1.iter().chain(PHASE2) {
+            println!("{name}: test");
         }
     }
 
