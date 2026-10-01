@@ -3426,6 +3426,7 @@ audio-no-ffmpeg =
 audio-format-flac = FLAC : sans perte, environ moitié moins lourd que WAV
 audio-format-wav = WAV : le plus lourd, se lit partout
 audio-format-mp3 = MP3 : léger, se lit partout
+audio-format-opus = Opus : le plus léger, conçu pour la voix
 audio-format-m4b = Livre audio M4B, par ffmpeg
 audio-where-title = Où va l'audio
 audio-where-intro = Où enregistrer l'audio ?

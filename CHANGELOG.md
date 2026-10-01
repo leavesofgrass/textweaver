@@ -42,6 +42,14 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 ### For contributors
 
 - **Timing tests move the clock themselves.** The engine host's start deadline, stall timer, and sound-output reopen wait read a `Clock` that tests set by hand, and the flaky wall-clock checks (the slow-disk opening test, DECtalk's slow start) now check the order of events. The engine host's own test program and the Apple voice tests answer `--list` as cargo-nextest expects.
+
+### Audio export
+
+- **Opus files.** Export audio, in the File menu, and `tw export-audio --out book.opus` write Ogg Opus files with no ffmpeg: the smallest of the formats, about 14 MB an hour, at 32 kilobits per second in one channel. The title, author, and chapters go in as Vorbis comments, the same as FLAC. textweaver encodes them with libopus, the reference encoder, built in.
+
+### For contributors
+
+- **Building from source needs cmake** for the Opus encoder (libopus, built from bundled source). Build `textweaver-cli` or `textweaver-xilem` without the `opus` feature to do without it; Opus then goes through ffmpeg. See `docs/dev/building.md`.
 - **`cargo xtask regen` rebuilds every generated file** in one command: the third-party notices, the settings reference, the keyboard reference, the `docs/site` data, and the crate counts in the docs. `cargo xtask regen --check` changes nothing and reports each on one line, such as "keyboard: FAIL, out of date; run cargo xtask regen". `dev-check` runs it, so the settings reference, the docs indexes, and the notices are now checked locally as in CI.
 
 ## [0.1.0-alpha.6] - 2026-09-30

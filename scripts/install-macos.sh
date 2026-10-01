@@ -451,6 +451,9 @@ build_from_source() {
     if have rustup; then
       (cd "$SRC" && run_plain rustup toolchain install) || true
     fi
+    if ! have cmake && [ -z "${CMAKE:-}" ]; then
+      die "cmake was not found. It builds the Opus encoder. Install it with Homebrew (brew install cmake), then run this script again."
+    fi
     say "Building textweaver and tw in release mode with cargo xtask dist. The first build takes several minutes."
     (cd "$SRC" && run cargo xtask dist)
   fi

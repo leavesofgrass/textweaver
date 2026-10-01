@@ -3434,6 +3434,7 @@ audio-no-ffmpeg =
 audio-format-flac = FLAC: verlustfrei, etwa halb so groß wie WAV
 audio-format-wav = WAV: am größten, läuft überall
 audio-format-mp3 = MP3: klein, läuft überall
+audio-format-opus = Opus: am kleinsten, für Sprache gemacht
 audio-format-m4b = M4B-Hörbuch, über ffmpeg
 audio-where-title = Wohin das Audio kommt
 audio-where-intro = Wohin soll das Audio?

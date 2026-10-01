@@ -3665,6 +3665,7 @@ audio-no-ffmpeg = تحتاج { $formats } إلى ffmpeg، ولم يُعثر عل
 audio-format-flac = FLAC: دون فقد، نحو نصف حجم WAV
 audio-format-wav = WAV: الأكبر حجمًا، يعمل في كل مكان
 audio-format-mp3 = MP3: صغير، يعمل في كل مكان
+audio-format-opus = Opus: الأصغر حجمًا، مصمم للكلام
 audio-format-m4b = كتاب صوتي M4B، عبر ffmpeg
 audio-where-title = مكان حفظ الصوت
 audio-where-intro = أين يُحفظ الصوت؟
