@@ -252,6 +252,8 @@ The workflow runs on changes to the speech crates, weekly, and by hand. Started 
 
 A test that asserts how long something took fails on a loaded machine, however generous the limit. Check the order of events instead: that `speak` returned before the engine host was ready, that a cancelled utterance got Cancelled and never Started. When a test must wait, poll until the condition holds, with a long limit that only catches a hang, and say so in the test.
 
+A test of a timeout moves the clock itself. The engine host's start deadline, stall timer, and the reopen wait of a stalled sound output read a `textweaver_enginehost::Clock`: `Clock::manual()` stands still until the test calls `advance`, so the test checks just before the deadline and just after it, with no real waiting (`HostStart::begin_with_clock`, `HostProcess::set_clock`, `Playback::set_clock`). For the app's background writer, the test-only `Job::Hold` stalls the disk until the test releases it, so a test can check that something finished while the disk was still stalled.
+
 Silent outputs that run faster than real time make a whole utterance last a fraction of a second, and a starved output thread then plays it in one burst. A test that must act in the middle of an utterance (a pause) runs at real time, or tries again when the machine held it off too long.
 
 To trust a fix to a flaky test, run it 40 times under load: fewer runs cannot tell a 10 percent flake from a fix. The fake-host suites were checked by running 8 copies of each at once, 5 times.

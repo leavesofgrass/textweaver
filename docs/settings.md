@@ -166,6 +166,7 @@ The voice and how it speaks. [Speech engines and voices](speech.md) explains the
 - `auto_play`, default `false`: start reading as soon as a document opens.
 - `skip_code`, default `true`: do not read code blocks aloud.
 - `latency_offset_ms`, default `120`: for engines whose word events carry audio times, how many milliseconds to wait before moving the highlight, so it matches what you hear.
+- `output_device`, not set by default: the sound device speech plays on, by the id `tw backends --devices` prints. Unset, or when that device is not connected, speech plays on the system's default. The [speech guide](speech.md#choose-the-sound-device) has the steps.
 - `verbosity`, default `"normal"`: how much textweaver says about state changes and structure. `"low"`, `"normal"`, or `"high"`. Alt+Shift+V cycles it while textweaver runs, and saves it. [Reading and moving around](reading.md) has examples.
 
 ### [speech.speed_presets]
@@ -475,7 +476,7 @@ Syncing with your other computers through a folder you choose. Tools, Sync, Set 
 - `favorite_voices`: your favorite voices. One that is not installed on this computer is kept, and Choose voice lists it as "not on this computer".
 - `position_policy`, default `"newest"`: which place a document opens at when another computer has one too: `"newest"`, `"furthest"`, or `"ask"`. It replaces `[reading] sync_conflict_policy` (`"highest_progress"` reads as `"furthest"`, `"manual"` as `"ask"`), and also decides between places in a library folder's old progress file.
 
-Every setting is either **portable**, which syncs, or **machine**, which never does. Portable settings are about you as a reader: the rate, punctuation, verbosity, capitals, the reading aids, the highlight, the theme and colors, the Braille and math codes, the interface language, speed presets, and the announcement level. Machine settings belong to one computer: the speech engine and voice, the volume, the access mode and what goes with your screen reader, the NVDA or JAWS key preset, the keyboard layout, the wrap width, undo memory, every path (library folders, the glossary file, engine libraries, the sync folder), the author name written into new documents, and the sync settings themselves. The [settings reference](settings-reference.md) says for each setting whether it syncs.
+Every setting is either **portable**, which syncs, or **machine**, which never does. Portable settings are about you as a reader: the rate, punctuation, verbosity, capitals, the reading aids, the highlight, the theme and colors, the Braille and math codes, the interface language, speed presets, and the announcement level. Machine settings belong to one computer: the speech engine and voice, the volume, the sound device, the access mode and what goes with your screen reader, the NVDA or JAWS key preset, the keyboard layout, the wrap width, undo memory, every path (library folders, the glossary file, engine libraries, the sync folder), the author name written into new documents, and the sync settings themselves. The [settings reference](settings-reference.md) says for each setting whether it syncs.
 
 ## Settings profiles
 
