@@ -3,10 +3,11 @@
 //! Two short questions, each with its default first, then a yes or no:
 //!
 //! 1. **The format**: FLAC first (lossless, half WAV's size), then MP3
-//!    (small, plays everywhere), then WAV, all written in process; M4B
+//!    (small, plays everywhere), then Opus (the smallest, for speech), then
+//!    WAV, all written in process; M4B
 //!    only when ffmpeg is found, and the first question says in words
-//!    when it is not (and names MP3 too in a build without the `mp3`
-//!    feature of `textweaver-export`).
+//!    when it is not (and names MP3 or Opus too in a build without the
+//!    `mp3` or `opus` feature of `textweaver-export`).
 //! 2. **Where**: beside the document (the default, `essay.flac`), or
 //!    another folder chosen in the file browser ([`App::choose_folder`]).
 //!
@@ -186,9 +187,10 @@ mod run {
     }
 
     /// Every format, in the order offered.
-    pub(crate) const ALL: [AudioFormat; 4] = [
+    pub(crate) const ALL: [AudioFormat; 5] = [
         AudioFormat::Flac,
         AudioFormat::Mp3,
+        AudioFormat::Opus,
         AudioFormat::Wav,
         AudioFormat::M4b,
     ];
@@ -291,9 +293,7 @@ mod run {
                 AudioFormat::Wav => "audio-format-wav",
                 AudioFormat::Mp3 => "audio-format-mp3",
                 AudioFormat::M4b => "audio-format-m4b",
-                // Not offered (not in `ALL`) until the Opus encoder is
-                // fixed upstream; see W7o's status in the planning notes.
-                AudioFormat::Opus => return f.name().to_owned(),
+                AudioFormat::Opus => "audio-format-opus",
             })
         }
 
@@ -747,12 +747,22 @@ mod run {
 
         #[test]
         fn m4b_only_with_ffmpeg() {
-            assert_eq!(
-                formats(false),
-                [AudioFormat::Flac, AudioFormat::Mp3, AudioFormat::Wav]
-            );
+            // Opus is in process with the `opus` feature, else through
+            // ffmpeg like M4B.
+            let opus = cfg!(feature = "opus");
+            let mut here = vec![AudioFormat::Flac, AudioFormat::Mp3];
+            if opus {
+                here.push(AudioFormat::Opus);
+            }
+            here.push(AudioFormat::Wav);
+            assert_eq!(formats(false), here);
             assert_eq!(formats(true), ALL);
-            assert_eq!(needing_ffmpeg(), [AudioFormat::M4b]);
+            let mut missing = Vec::new();
+            if !opus {
+                missing.push(AudioFormat::Opus);
+            }
+            missing.push(AudioFormat::M4b);
+            assert_eq!(needing_ffmpeg(), missing);
         }
 
         #[test]
@@ -761,11 +771,15 @@ mod run {
             let (mut app, opened) = app_with_doc(dir.path());
             let effects = app.dispatch(Command::Action(ActionId::ExportAudio));
             // FLAC first; no ffmpeg, said in words (then the first item).
+            let intro = if cfg!(feature = "opus") {
+                "Export essay as audio: choose a format, 4 choices. \
+                 M4B needs ffmpeg, which was not found."
+            } else {
+                "Export essay as audio: choose a format, 3 choices. \
+                 Opus, M4B need ffmpeg, which was not found."
+            };
             assert!(
-                app.status_text().starts_with(
-                    "Export essay as audio: choose a format, 3 choices. \
-                     M4B needs ffmpeg, which was not found."
-                ),
+                app.status_text().starts_with(intro),
                 "{}",
                 app.status_text()
             );

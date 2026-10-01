@@ -3394,6 +3394,7 @@ audio-no-ffmpeg =
 audio-format-flac = FLAC: lossless, about half the size of WAV
 audio-format-wav = WAV: the largest, plays everywhere
 audio-format-mp3 = MP3: small, plays everywhere
+audio-format-opus = Opus: the smallest, made for speech
 audio-format-m4b = M4B audiobook, through ffmpeg
 audio-where-title = Where the audio goes
 audio-where-intro = Where should the audio go?
