@@ -349,6 +349,10 @@ claxon = "0.4.3"
 # symphonia (MPL-2.0) decodes exports back in tests only.
 mp3lame-encoder = "=0.2.5"
 symphonia = { version = "0.5", default-features = false, features = ["mp3"] }
+# Wave 7, W7o: Ogg Opus in process. opus-rs (BSD-3-Clause) is a pure-Rust
+# port of libopus; export writes the Ogg pages and the OpusTags (Vorbis
+# comment) header itself.
+opus-rs = "=0.1.34"
 
 # tests
 proptest = "1.11"

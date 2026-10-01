@@ -26,7 +26,7 @@ use textweaver_export::{
 pub struct Args {
     /// Document to read aloud.
     pub file: PathBuf,
-    /// Output file (.wav, .flac, .mp3, .m4b).
+    /// Output file (.wav, .flac, .mp3, .opus, .m4b).
     #[arg(long)]
     pub out: PathBuf,
     /// Also write subtitles (.srt or .vtt).
@@ -136,13 +136,13 @@ pub fn export_audio(
 ) -> anyhow::Result<Report> {
     let format = AudioFormat::from_path(&args.out).with_context(|| {
         format!(
-            "cannot write {}: use a .wav, .flac, .mp3, or .m4b file name",
+            "cannot write {}: use a .wav, .flac, .mp3, .opus, or .m4b file name",
             args.out.display()
         )
     })?;
     if format.needs_ffmpeg() && ffmpeg_path.is_none() {
         bail!(
-            "writing {} needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, or .wav",
+            "writing {} needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, .opus, or .wav",
             format.name()
         );
     }
@@ -384,7 +384,8 @@ mod tests {
         a.out = dir.path().join("doc.ogg");
         let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
         assert!(
-            e.to_string().contains("use a .wav, .flac, .mp3, or .m4b"),
+            e.to_string()
+                .contains("use a .wav, .flac, .mp3, .opus, or .m4b"),
             "{e}"
         );
         a.out = dir.path().join("doc.wav");
@@ -501,6 +502,36 @@ mod tests {
         assert!(!r.export.timeline.chapters.is_empty());
         let bytes = std::fs::read(&a.out).unwrap();
         assert_eq!(&bytes[..4], b"fLaC");
+        assert!(summary(&r).starts_with("Wrote "), "{}", summary(&r));
+    }
+
+    /// The sample document to Ogg Opus with no ffmpeg: an Ogg stream whose
+    /// first packet is the Opus header.
+    #[test]
+    fn opus_needs_no_ffmpeg() {
+        let dir = Scratch::new("opus");
+        let sample =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/sample.md");
+        let a = Args {
+            file: sample,
+            out: dir.path().join("sample.opus"),
+            subtitles: None,
+            ..args(dir.path(), "unused.wav")
+        };
+        let r = export_audio(
+            &a,
+            &Settings::default(),
+            &BackendRegistry::with_builtins(),
+            None,
+            &mut |_| {},
+        )
+        .unwrap();
+        assert_eq!(r.export.format, AudioFormat::Opus);
+        assert!(r.export.ffmpeg.is_none());
+        assert!(!r.export.timeline.chapters.is_empty());
+        let bytes = std::fs::read(&a.out).unwrap();
+        assert_eq!(&bytes[..4], b"OggS");
+        assert_eq!(&bytes[28..36], b"OpusHead");
         assert!(summary(&r).starts_with("Wrote "), "{}", summary(&r));
     }
 

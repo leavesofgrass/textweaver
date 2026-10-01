@@ -17,8 +17,11 @@
 //! 5. For `.flac`, the WAV is encoded in process, with the title and
 //!    chapters as Vorbis comments (`flac`, the `flac` feature). For `.mp3`,
 //!    LAME encodes it in process and the title and chapters go in an ID3v2
-//!    tag (`mp3`, the `mp3` feature). For `.m4b` (and MP3 or FLAC in a
-//!    build without those features), ffmpeg converts the WAV, with the
+//!    tag (`mp3`, the `mp3` feature). For `.opus`, `opus-rs` encodes it
+//!    in process as Ogg Opus, mono at a speech bit rate, with the title
+//!    and chapters as Vorbis comments (`opus`, the `opus` feature). For
+//!    `.m4b` (and MP3, FLAC or Opus in a build without those features),
+//!    ffmpeg converts the WAV, with the
 //!    title and chapters in its metadata ([`ffmpeg`]); without ffmpeg
 //!    those fail with a clear message and the others still work. A `.wav`
 //!    gets the title and chapters as an ID3 tag (`id3tags`, the `id3`
@@ -38,9 +41,12 @@ pub mod flac;
 pub mod id3tags;
 #[cfg(feature = "mp3")]
 pub mod mp3;
-#[cfg(any(feature = "flac", feature = "mp3"))]
+#[cfg(feature = "opus")]
+pub mod opus;
+#[cfg(any(feature = "flac", feature = "mp3", feature = "opus"))]
 pub(crate) mod pcm;
 pub mod timeline;
+pub mod vorbis;
 pub mod wav;
 
 use std::ops::ControlFlow;
@@ -63,7 +69,7 @@ pub enum ExportError {
     #[error("The {0} voice cannot write audio files.")]
     NoFileSynthesis(String),
     /// The output name has no supported extension.
-    #[error("Cannot write {0}: use a .wav, .flac, .mp3, or .m4b file name.")]
+    #[error("Cannot write {0}: use a .wav, .flac, .mp3, .opus, or .m4b file name.")]
     UnsupportedFormat(PathBuf),
     /// The FLAC encoder failed.
     #[error("The FLAC encoder failed: {0}")]
@@ -71,6 +77,9 @@ pub enum ExportError {
     /// The MP3 encoder (LAME) failed.
     #[error("The MP3 encoder failed: {0}")]
     Mp3(String),
+    /// The Opus encoder failed.
+    #[error("The Opus encoder failed: {0}")]
+    Opus(String),
     /// The tags could not be written into the file.
     #[error("Cannot write the title and chapters into {path}: {message}")]
     Tags {
@@ -84,7 +93,7 @@ pub enum ExportError {
     UnsupportedSubtitles(PathBuf),
     /// ffmpeg is needed and was not found.
     #[error(
-        "Writing {0} needs ffmpeg, which was not found. Install ffmpeg, or set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, or .wav."
+        "Writing {0} needs ffmpeg, which was not found. Install ffmpeg, or set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, .opus, or .wav."
     )]
     NoFfmpeg(&'static str),
     /// ffmpeg failed.
@@ -301,7 +310,7 @@ pub struct SubtitleRequest {
     pub cues: CueOptions,
 }
 
-/// Exports `doc` to `out` (`.wav`, `.flac`, `.mp3`, or `.m4b`, by
+/// Exports `doc` to `out` (`.wav`, `.flac`, `.mp3`, `.opus`, or `.m4b`, by
 /// extension), with optional subtitles and the title and chapters in the
 /// file's own tag format. `ffmpeg` is the converter to use for MP3 and M4B
 /// (usually [`ffmpeg::find`]); `None` makes those formats fail with a clear
@@ -366,6 +375,22 @@ pub fn export(
                 &timeline.chapters,
             );
             if let Err(e) = flac::encode(&wav_path, out, &comments) {
+                let _ = std::fs::remove_file(out);
+                return Err(e);
+            }
+            (timeline, None)
+        }
+        #[cfg(feature = "opus")]
+        (AudioFormat::Opus, None) => {
+            let work = work(out)?;
+            let wav_path = work.path().join("audio.wav");
+            let timeline = synthesize_wav(doc, backend, &wav_path, opts, progress)?;
+            let comments = vorbis::comments(
+                timeline.title.as_deref(),
+                timeline.author.as_deref(),
+                &timeline.chapters,
+            );
+            if let Err(e) = opus::encode(&wav_path, out, &comments) {
                 let _ = std::fs::remove_file(out);
                 return Err(e);
             }

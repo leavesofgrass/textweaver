@@ -212,6 +212,7 @@ mod run {
             AudioFormat::Flac => "flac",
             AudioFormat::Mp3 => "mp3",
             AudioFormat::M4b => "m4b",
+            AudioFormat::Opus => "opus",
         }
     }
 
@@ -290,6 +291,9 @@ mod run {
                 AudioFormat::Wav => "audio-format-wav",
                 AudioFormat::Mp3 => "audio-format-mp3",
                 AudioFormat::M4b => "audio-format-m4b",
+                // Not offered (not in `ALL`) until the Opus encoder is
+                // fixed upstream; see W7o's status in the planning notes.
+                AudioFormat::Opus => return f.name().to_owned(),
             })
         }
 

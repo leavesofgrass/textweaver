@@ -30,11 +30,14 @@ pub enum AudioFormat {
     /// FLAC, written in process (the `flac` feature; through ffmpeg
     /// without it).
     Flac,
+    /// Ogg Opus, written in process (the `opus` feature; through ffmpeg
+    /// without it).
+    Opus,
 }
 
 impl AudioFormat {
     /// The format for a file name's extension (`wav`, `flac`, `mp3`,
-    /// `m4b`; any case).
+    /// `opus`, `m4b`; any case).
     pub fn from_path(path: &Path) -> Option<Self> {
         let ext = path.extension()?.to_str()?.to_ascii_lowercase();
         match ext.as_str() {
@@ -42,28 +45,32 @@ impl AudioFormat {
             "flac" => Some(AudioFormat::Flac),
             "mp3" => Some(AudioFormat::Mp3),
             "m4b" => Some(AudioFormat::M4b),
+            "opus" => Some(AudioFormat::Opus),
             _ => None,
         }
     }
 
-    /// The name users see ("WAV", "FLAC", "MP3", "M4B").
+    /// The name users see ("WAV", "FLAC", "MP3", "Opus", "M4B").
     pub fn name(self) -> &'static str {
         match self {
             AudioFormat::Wav => "WAV",
             AudioFormat::Flac => "FLAC",
             AudioFormat::Mp3 => "MP3",
             AudioFormat::M4b => "M4B",
+            AudioFormat::Opus => "Opus",
         }
     }
 
     /// Whether writing this format needs ffmpeg in this build: M4B always;
-    /// FLAC and MP3 only when built without the `flac` or `mp3` feature.
+    /// FLAC, MP3 and Opus only when built without the `flac`, `mp3` or
+    /// `opus` feature.
     pub fn needs_ffmpeg(self) -> bool {
         match self {
             AudioFormat::Wav => false,
             AudioFormat::Flac => !cfg!(feature = "flac"),
             AudioFormat::Mp3 => !cfg!(feature = "mp3"),
             AudioFormat::M4b => true,
+            AudioFormat::Opus => !cfg!(feature = "opus"),
         }
     }
 }
@@ -129,6 +136,20 @@ pub fn args(wav: &Path, metadata: &Path, out: &Path, format: AudioFormat) -> Vec
             "+faststart",
         ],
         AudioFormat::Flac => &["-codec:a", "flac"],
+        // The in-process encoder's speech settings: mono, VoIP tuning,
+        // 32 kbit/s, 20 ms packets.
+        AudioFormat::Opus => &[
+            "-codec:a",
+            "libopus",
+            "-ac",
+            "1",
+            "-b:a",
+            "32k",
+            "-application",
+            "voip",
+            "-frame_duration",
+            "20",
+        ],
         AudioFormat::Wav => &[],
     };
     a.extend(codec.iter().map(OsString::from));
@@ -185,6 +206,11 @@ mod tests {
         assert!(AudioFormat::M4b.needs_ffmpeg());
         assert_eq!(AudioFormat::Flac.needs_ffmpeg(), !cfg!(feature = "flac"));
         assert_eq!(AudioFormat::Mp3.needs_ffmpeg(), !cfg!(feature = "mp3"));
+        assert_eq!(
+            AudioFormat::from_path(Path::new("f.OPUS")),
+            Some(AudioFormat::Opus)
+        );
+        assert_eq!(AudioFormat::Opus.needs_ffmpeg(), !cfg!(feature = "opus"));
         assert_eq!(AudioFormat::from_path(Path::new("d.ogg")), None);
         assert_eq!(AudioFormat::from_path(Path::new("noext")), None);
     }
