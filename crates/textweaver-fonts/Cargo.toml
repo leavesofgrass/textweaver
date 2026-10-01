@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-fonts"
-description = "Fonts for textweaver: bundled Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1), installed fonts found by family name, and font choice and resolution"
+description = "Fonts for textweaver: bundled Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1), Lexend downloaded on first choice, installed fonts found by family name, and font choice and resolution"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,9 +14,16 @@ default = ["bundled-fonts"]
 # Embed the fonts under third_party/fonts/ (1.3 MB) with include_bytes!.
 # Without it, BUNDLED is empty and callers fall back to installed fonts.
 bundled-fonts = []
+# Downloading a reading font that is not bundled (Lexend) over HTTPS, after
+# the reader says yes. Without it, a frontend can still install one through
+# its own fetcher (tests use a fake one).
+download = ["dep:ureq"]
 
 [dependencies]
 thiserror.workspace = true
+# Checking downloaded fonts against their pinned SHA-256.
+sha2.workspace = true
+ureq = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true

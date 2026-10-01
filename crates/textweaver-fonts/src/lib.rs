@@ -9,6 +9,10 @@
 //!   (on by default). All three are under the SIL Open Font License 1.1;
 //!   every family carries its licence text, which must travel with the font
 //!   (the EPUB writer puts it in the book beside the font files).
+//! - **Downloaded fonts** ([`downloaded`]): Lexend, the one reading font
+//!   that is not bundled, downloaded into the data folder the first time a
+//!   reader chooses it, after asking. Its files are pinned by URL, size,
+//!   and SHA-256; its licence (SIL OFL 1.1) ships with textweaver.
 //! - **Installed fonts** ([`system`]): the font folders of Windows, macOS,
 //!   and Linux, scanned for family and style names by reading only each
 //!   file's table directory and its `name`, `OS/2`, `head`, and `post`
@@ -35,6 +39,7 @@
 
 pub mod bundled;
 pub mod choice;
+pub mod downloaded;
 pub mod sfnt;
 pub mod system;
 
@@ -104,7 +109,8 @@ impl Style {
 pub enum FamilySource {
     /// Bundled with textweaver.
     Bundled(&'static BundledFamily),
-    /// Installed on this system.
+    /// Installed on this system, or downloaded into the data folder
+    /// ([`downloaded`]).
     Installed(FamilyFaces),
 }
 
@@ -119,11 +125,15 @@ impl FamilySource {
 }
 
 /// Finds a family by name: bundled families first (by name, key, or
-/// alias, ignoring case), then the installed fonts in `installed` (usually
-/// from [`system::scan`]).
+/// alias, ignoring case), then a font downloaded into the data folder
+/// ([`downloaded::find`]), then the installed fonts in `installed`
+/// (usually from [`system::scan`]).
 pub fn resolve_family(name: &str, installed: &[SystemFace]) -> Option<FamilySource> {
     if let Some(f) = bundled::family(name) {
         return Some(FamilySource::Bundled(f));
+    }
+    if let Some(f) = downloaded::find(name) {
+        return Some(FamilySource::Installed(f));
     }
     system::find_family(installed, name).map(FamilySource::Installed)
 }

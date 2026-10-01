@@ -13,6 +13,12 @@ Packages also carry the licence files themselves, under `licenses/`.
 - OpenDyslexic: copyright Abbie Gonzalez, with Reserved Font Name OpenDyslexic.
 - Licence: SIL Open Font License, version 1.1. The full licence for each family is below, and in `licenses/fonts/` in each package.
 
+### Lexend (downloaded when you choose it and agree; not in the packages)
+
+- A reading font, used in the GUI and for PDF and EPUB export once downloaded. Two files (Lexend Regular and Bold, 206 KB) from the Lexend project's repository at a pinned commit, each checked by SHA-256, kept in the data folder's `fonts/lexend/` with the license.
+- Copyright 2018 The Lexend Project Authors, with Reserved Font Name "RevReading Lexend".
+- License: SIL Open Font License, version 1.1. The full license is below, and in `licenses/fonts/lexend/` in each package.
+
 ### OCR models (downloaded when you agree; not in the packages)
 
 - **ocrs models** (text detection and recognition for English): by Robert Knight for the ocrs engine, trained on the HierText dataset. Licence: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0), https://creativecommons.org/licenses/by-sa/4.0/. Source: https://github.com/robertknight/ocrs-models (files `text-detection.onnx` and `text-recognition.onnx`, 12.2 MB, from ocrs-models.s3-accelerate.amazonaws.com). `tw ocr download` fetches them only after you agree, and checks each file by SHA-256. textweaver does not change them.

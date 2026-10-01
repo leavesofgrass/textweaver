@@ -10,8 +10,10 @@
 //! Atkinson Hyperlegible Mono ship with textweaver and resolve with no
 //! download. Only a reading font that is not bundled (Lexend) keeps Star's
 //! approach: [`READING_FONTS`] records its licence, home page, and the
-//! pinned download URLs Star used, and the GUI fetches it into its cache
-//! after asking (see `docs/reading-aids.md`).
+//! pinned download URLs Star used, and the app downloads it into the data
+//! folder the first time it is chosen, after asking, checking each file
+//! by size and SHA-256 ([`crate::downloaded`]; see
+//! `docs/reading-aids.md`).
 //!
 //! This module is pure: it never enumerates or loads fonts. A caller passes
 //! a predicate that says whether a family is installed, and gets back the

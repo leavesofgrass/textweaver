@@ -9202,6 +9202,7 @@ dependencies = [
  "textweaver-editor",
  "textweaver-engines",
  "textweaver-export",
+ "textweaver-fonts",
  "textweaver-formats",
  "textweaver-keymap",
  "textweaver-lexicon",
@@ -9423,8 +9424,10 @@ dependencies = [
 name = "textweaver-fonts"
 version = "0.1.0-alpha.6"
 dependencies = [
+ "sha2 0.10.9",
  "tempfile",
  "thiserror 2.0.21",
+ "ureq",
 ]
 
 [[package]]
