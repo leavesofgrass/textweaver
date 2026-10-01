@@ -4,7 +4,7 @@
 //! embedded in EPUB. Every PDF here passes krilla's PDF/UA-1 validator
 //! (on by default), or the write would fail.
 
-mod common;
+use crate::common;
 
 use common::{entries, fixture, options, sample};
 use textweaver_formats::{LoadOptions, Loader, MarkdownLoader, Source};

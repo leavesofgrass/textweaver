@@ -1,7 +1,7 @@
 //! EPUB 3 writer: package structure, semantics, accessibility metadata,
 //! a round trip through the HTML loader, and epubcheck when installed.
 
-mod common;
+use crate::common;
 
 use std::collections::{BTreeMap, BTreeSet};
 

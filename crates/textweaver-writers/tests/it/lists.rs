@@ -2,7 +2,7 @@
 //! share one range, which once sent the tree builder into endless recursion
 //! and overflowed the stack for EPUB, DOCX, BRF and PDF.
 
-mod common;
+use crate::common;
 
 use common::options;
 use textweaver_formats::{LoadOptions, Loader, MarkdownLoader, Source};

@@ -2,7 +2,7 @@
 //! (OMML), and the DOCX loader turns that back into LaTeX under `Math`
 //! markers.
 
-mod common;
+use crate::common;
 
 use common::options;
 use textweaver_core::MarkerKind;

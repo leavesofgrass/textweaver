@@ -3,7 +3,7 @@
 //! with `pdftotext` when it is installed. Skipped when the system has none
 //! of the fonts the writer looks for.
 
-mod common;
+use crate::common;
 
 use common::{options, sample, words};
 use ropey::Rope;

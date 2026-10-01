@@ -3,7 +3,7 @@
 //! back with a small WordprocessingML reader (Agent A2's DOCX loader
 //! replaces it at integration). Opening in Word is an ignored test.
 
-mod common;
+use crate::common;
 
 use std::collections::{BTreeMap, BTreeSet};
 

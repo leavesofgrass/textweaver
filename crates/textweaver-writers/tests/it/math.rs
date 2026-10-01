@@ -2,7 +2,7 @@
 //! math is typeset (never printed with its `$` delimiters), struck text is
 //! struck, and a rule is drawn.
 
-mod common;
+use crate::common;
 
 use common::{entries, options};
 use textweaver_formats::{LoadOptions, Loader, MarkdownLoader, Source};

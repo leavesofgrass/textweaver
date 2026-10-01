@@ -4,7 +4,7 @@
 //! output is read back: Word files with textweaver's own DOCX loader, PDFs
 //! with its PDF loader.
 
-mod common;
+use crate::common;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
