@@ -4,6 +4,78 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Keys: what changed
+
+- **New key: Shift+F5 says how sync stands,** and names this computer and the others. It is the same in the terminal and the GUI, on every system, Mac included.
+- **F2 in the library list** edits the focused document's details, as F2 renames in the bookmarks list.
+- **Tab and Shift+Tab** move between the fields of the details form, in the terminal and the GUI, and say each field's label and value. JSON-RPC's `prompt_key` takes `shift_tab` for it.
+- **The Say Status key previews a voice** in the voice manager: Alt+End (Option+End in the Mac GUI), as it previews the focused row in the file browser. If you changed the key in `keymap.toml`, the voice manager names yours.
+- **The voice manager lists every engine:** Alt+V in the terminal, Ctrl+Shift+V in the GUI, Cmd+Shift+V in the Mac GUI.
+- **The grammar keys work in every build:** Ctrl+F7 and Ctrl+Shift+F7 (Cmd+F7 and Cmd+Shift+F7 in the Mac GUI; Option+F7 and Option+Shift+F7 in the terminal on a Mac), and Alt+J for the fixes (Cmd+Option+J in the Mac GUI).
+- **New commands without a key,** in the menus and the command palette: Continue reading and Edit details in the File menu; Set up sync, Sync now, Go to another computer's place, Replaced notes, and Stop syncing on this computer in Tools, Sync. Give any of them a key in `keymap.toml`.
+
+### Sync between computers
+
+- **Sync through a folder you choose** ([ADR-0049](docs/adr/0049-sync-beyond-the-place.md)): a folder kept in step by Syncthing, OneDrive, Dropbox, or iCloud, or a USB stick you carry. There is no account, no server, and no network code in textweaver; it only reads and writes files there. Documents are recognized on each computer by their contents, wherever they are on disk and whatever their names. The guide is [Syncing between computers](docs/sync.md).
+- **What syncs,** each group with its own switch: reading places (one per computer), notes, highlights, bookmarks, reading statistics, settings, profiles, key overrides, the word list, the glossary and pronunciations, and favorite voices. Recent files, machine settings, caches, logs, and the documents themselves never sync.
+- **Set it up from Tools, Sync** or the command palette: choose the folder in the file browser, name this computer (never its real name; at most 40 characters, so it fits a Braille line), and choose the groups. Sync status (Shift+F5), Sync now, Go to another computer's place, Replaced notes, and Stop syncing on this computer are beside it.
+- **A place from another computer** is chosen at open by `[sync] position_policy`: `newest` (the default), `furthest`, or `ask` ("lab at 42 percent. Go there? Y or N"). You hear which computer it came from. Your place never moves on its own after that; a place that arrives while you read is only offered, once.
+- **A note edited on two computers:** the newest edit wins, and you are told which note was replaced. The text that lost is kept on this computer, the last 20 per document, and Replaced notes puts one back.
+- **Deletions are remembered.** Deleting a note, a highlight, or a bookmark leaves a small record, so a copy from another computer cannot bring it back. An edit made after the deletion still wins, and you hear so.
+- **Settings and word lists:** the portable settings (rate, punctuation, verbosity, the reading aids, the theme and colors, the Braille and math codes, the interface language, and more) sync, the newest change to each winning. The engine, the voice, the volume, the access mode, the key preset, every path, and the sync settings stay on each computer. The [settings reference](docs/settings-reference.md) says for every setting whether it syncs.
+- **Profiles keep their voice on each computer.** A profile syncs its portable settings only; the voice, the speech engine, and the access mode it was saved with stay on the computer that saved them, and an arriving profile keeps this computer's own. Which profile is in use never syncs.
+- **Key overrides** are labeled with the system they were made on. Windows and Linux share theirs; a Mac's are kept but not used on Windows or Linux, and the reverse, and Sync status counts them.
+- **Favorite voices** travel too. One not installed here is listed last in the voice manager as "not on this computer"; Enter only says so, and Space takes it off your favorites.
+- **Nothing changes mid-sentence.** Sync messages, and settings taken in from another computer, wait while textweaver reads aloud, then come as one short summary at the pause: "Settings: 3 changes from laptop." They follow your interface announcement level.
+- **A document that may be the same book:** two computers' copies with the same contents are joined at once. One that only shares a DOI or an ISBN is never matched on its own; textweaver asks first, and a no is remembered.
+- **One document, one id.** When two computers opened the same book before they ever synced, the next time it opens the two ids are joined into one, with both computers' notes, highlights, bookmarks, and places.
+- **Safe across a crash.** Changes taken in from another computer and not yet saved here are kept on this computer, so a crash or power cut in between never lets this computer's older version win.
+- **Problems are said meaning first,** on a status line that starts with "Sync": the folder missing (a USB stick that is out; everything is saved here meanwhile), a folder written by a newer textweaver (read only), another computer's clock more than a day ahead, a damaged file skipped, or a folder that cannot be written. The troubleshooting guide covers the missing folder and the newer format.
+- **Before the first merge,** this computer's reading state is copied once to `state-before-sync`, so turning sync on can be undone.
+- **Privacy:** no name, path, or computer name is written to the sync folder. Documents and computers are known by random ids and the names you chose; a title travels only when the document states one, never one made from its file name, and an author only when it is not this computer's user or computer name. The folder is not encrypted.
+- **On the command line:** `tw sync setup`, `tw sync status`, and `tw sync now`, each with `--json`.
+- **The older setting moves on its own.** `[reading] sync_conflict_policy` is now `[sync] position_policy`; `highest_progress` becomes `furthest` and `manual` becomes `ask`.
+- **The old progress file is still read.** With sync on, places go to the sync folder, and a library folder's `.textweaver/progress.json` (from an older textweaver, or converted from Star) is only read, so its places are still honored.
+- New messages for sync, in all six languages; the translations need a native speaker's review.
+
+### State files
+
+- **State files are now format 2.** Every older file, and every Star import, loads unchanged.
+- **Bookmarks have ids.** Every bookmark gets a stable id, so bookmarks from two computers are matched by id, not by name. Existing bookmarks get one when their file is read, and keep their names and places. Two bookmarks that arrive with the same name are renamed apart.
+- **Longer ids.** New notes and highlights get 64-bit ids; older ids stay as they are.
+
+### The library
+
+- **Continue reading.** A new command, in the File menu under Library and in the command palette, lists the documents on this computer with a reading place from any computer, newest first: "Cells, 42 percent, laptop, 2 hours ago". Enter opens one. Only documents found on this computer are listed. `tw library --continue` prints the same list, with `--json` too.
+- **Search by what your other computers know.** With sync on, a document's title, author, DOI, ISBN, and kind of file travel with it, so the library's filter and `tw library --search` find a document here by a DOI only another computer knew. The newest detail wins; the date it was first added keeps the earliest.
+- **Edit a document's details by hand.** Type a document's title, author, DOI, and ISBN yourself: **Edit details** in the File menu and the command palette (no key of its own) for the open document, or **F2** on a document in the library list. The form has one labeled line per field ("Author, 2 of 4"); Tab and Shift+Tab move between them and say each field's label and value, Enter saves, and Escape cancels and says so. A DOI or ISBN that is not one is said, and the form opens again on it. In the GUI each field is its own labeled dialog. What you type wins over the document's own details in the library, its filter, and `tw library --search`, and with sync on it reaches your other computers, newest edit winning per field; clearing a field brings back the document's own value. `tw library edit FILE --title ... --author ... --doi ... --isbn ...` does the same, with `--json`.
+- **Statistics from every computer.** The statistics list and `tw stats` add every computer's reading of a document together, and show each computer's share on request (`tw stats --by-computer`). If the sync folder is slow, the list does not wait, and says "Other computers skipped: folder slow."
+
+### Speech
+
+- **Speech follows the sound device.** When a headset or another device goes away, speech moves to the current default device at once and the reading goes on; before, it waited a second and only noticed while audio was waiting. Sound errors no longer print over the terminal reader's screen.
+- **Choose the sound device.** `[speech] output_device` (Output device in the settings screen) keeps speech on one device by its id, and `tw backends --devices` lists the devices with their ids. A device that is not connected falls back to the default. It applies to Eloquence, the Windows voices, DECtalk, and Piper; eSpeak NG, Speech Dispatcher, and the Apple voices play on the default device. The setting belongs to each computer and never syncs.
+- **Piper's pitch sounds cleaner.** Raising or lowering a Piper voice's pitch now uses a band-limited resampler, so a raised voice no longer has a metallic edge.
+
+### Voices
+
+- **The GUI's voice manager covers every engine.** Ctrl+Shift+V opens a dialog named "Choose a voice" with every voice on the computer (Eloquence, SAPI 5 and OneCore, DECtalk, eSpeak NG, Piper, and Apple's on macOS), with Language and Engine filter buttons, then Use voice, Preview, Favorite, Remove, and Fetch the Piper voice list. Each button has a name, its key, and a description for NVDA and JAWS.
+- **Preview a voice without choosing it.** The Say Status key (Alt+End) in the voice manager, in the terminal and the GUI, or the GUI's Preview button, speaks a sample in the focused voice, starting with its name. A voice of another engine is heard by starting that engine for the sample.
+- **Other engines' voices join the open list.** They are listed in the background when the voice manager first opens; they now appear as they arrive, with the focus kept, instead of after opening the list again. The favorites no engine here has follow them, as "not on this computer".
+- **Delete on a voice that cannot be removed** says so and leaves the voice manager open; before, it closed.
+
+### Writing
+
+- **Grammar checking is built in.** Ctrl+F7 and Ctrl+Shift+F7 (Alt+J for the fixes) now work in the terminal reader, the window, and the release packages, with no special build. It makes the programs about 11 MB larger. A build without the default features leaves it out ([Editing](docs/editing.md#building-without-grammar)).
+
+### Reading fonts
+
+- **Lexend on first choice.** Choosing Lexend, in Settings or in the window's font list, when it is not installed asks first: "Download the Lexend font, 206 KB, SIL Open Font License? y or n". On a yes, its two files come from the Lexend project at a fixed version, each checked by its SHA-256, and are kept with the license in the data folder. The window uses it at once, and PDF and EPUB output find it by name (`tw convert --font lexend`). A no keeps the choice and uses another reading font. The GUI's font list says "Lexend (download, 206 KB)" or "Lexend (downloaded)". Lexend's license now ships with textweaver.
+
+### Audio export
+
+- **Opus files.** Export audio, in the File menu, and `tw export-audio --out book.opus` write Ogg Opus files with no ffmpeg: the smallest of the formats, about 14 MB an hour, at 32 kilobits per second in one channel. The reader offers Opus after MP3: "Opus: the smallest, made for speech". The title, author, and chapters go in as Vorbis comments, the same as FLAC. textweaver encodes them with libopus, the reference encoder, built in; its BSD license is in the notices.
+
 ### Braille files
 
 - **Emphasis in contracted braille.** Grade 2 BRF files now carry the UEB indicators for bold, italic, and underline, as grade 1 files do, placed around liblouis's contractions.
@@ -14,61 +86,26 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - **Captions in six languages.** "Tabla 2:", "Abbildung 3.", "Tableau 1 -", "Tabela 4.", and "الشكل ٣:" are found as captions, as "Figure 3." and "Table 2:" were.
 
-### State files, ready for sync
+### The GUI
 
-- **Bookmarks have ids.** Every bookmark gets a stable id, so bookmarks from two computers are matched by id, not by name. Existing bookmarks get one when their file is read, and keep their names and places.
-- **Deletions are remembered.** Deleting a note, a highlight, or a bookmark leaves a small record, so a copy from another computer cannot bring it back. An edit made after the deletion still wins.
-- **Replaced notes are kept.** When another computer's newer edit replaces a note's text, the older text is kept on this computer (the last 20 per document) and can be put back. The command for it comes with sync in the reader.
-- **Longer ids.** New notes and highlights get 64-bit ids; older ids stay as they are.
-- State files are now format 2. Every older file, and every Star import, loads unchanged.
+- **The test window gives the focus back.** A window started with `--background` for automated checks hands the foreground straight back when UI Automation activates it, so a check run on your own computer no longer leaves textweaver in front of your work.
+- **Masonry's debug trace log** is written only where `MASONRY_DENSE_LOG_DIR` points, and never to the system's temporary folder; before, every debug start wrote one there.
 
-### The library across computers
+### Packages, CI, and checks
 
-- **Continue reading.** A new command, in the File menu under Library and in the command palette, lists the documents on this computer with a reading place from any computer, newest first: "Cells, 42 percent, laptop, 2 hours ago". Enter opens one. `tw library --continue` prints the same list, with `--json` too.
-- **Search by what your other computers know.** With sync on, a document's title, author, DOI, ISBN, and kind of file travel with it, so the library's filter and `tw library --search` find a document here by a DOI only another computer knew. The newest detail wins; the date it was first added keeps the earliest.
-- **Edit a document's details by hand.** Type a document's title, author, DOI, and ISBN yourself: **Edit details** in the File menu and the command palette (no key of its own) for the open document, or **F2** on a document in the library list. The form has one labeled line per field; Tab and Shift+Tab move between them and say each field's label and value, Enter saves, and Escape cancels and says so. What you type wins over the document's own details in the library, its filter, and `tw library --search`, and with sync on it reaches your other computers, newest edit winning per field. `tw library edit FILE --title ... --author ... --doi ... --isbn ...` does the same, with `--json`.
-- **Statistics from every computer.** The statistics list and `tw stats` add every computer's reading of a document together, and show each computer's share on request (`tw stats --by-computer`).
-- **The old progress file is still read.** With sync on, places go to the sync folder, and a library folder's `.textweaver/progress.json` (from an older textweaver, or converted from Star) is only read, so its places are still honored.
-
-### Reading fonts
-
-- **Lexend on first choice.** Choosing Lexend, in Settings or in the window's font list, when it is not installed asks first: "Download the Lexend font, 206 KB, SIL Open Font License? y or n". On a yes, its two files come from the Lexend project at a fixed version, each checked by its SHA-256, and are kept with the license in the data folder. The window uses it at once, and PDF and EPUB output find it by name (`tw convert --font lexend`). A no keeps the choice and uses another reading font. Lexend's license now ships with textweaver.
-
-### Writing
-
-- **Grammar checking is built in.** Ctrl+F7 and Ctrl+Shift+F7 (Alt+J for the fixes) now work in the terminal reader, the window, and the release packages, with no special build. It makes the programs about 11 MB larger. A build without the default features leaves it out.
-
-### Speech
-
-- **Speech follows the sound device.** When a headset or another device goes away, speech moves to the current default device at once and the reading goes on; before, it waited a second and only noticed while audio was waiting. Sound errors no longer print over the terminal reader's screen.
-- **Choose the sound device.** `[speech] output_device` (Output device in the settings screen) keeps speech on one device by its id, and `tw backends --devices` lists the devices with their ids. A device that is not connected falls back to the default. It applies to Eloquence, the Windows voices, DECtalk, and Piper.
-- **Piper's pitch sounds cleaner.** Raising or lowering a Piper voice's pitch now uses a band-limited resampler, so a raised voice no longer has a metallic edge.
-
-### Voices
-
-- **The GUI's voice manager covers every engine.** Ctrl+Shift+V opens a dialog with every voice on the computer (Eloquence, SAPI 5 and OneCore, DECtalk, eSpeak NG, Piper, and Apple's on macOS), with Language and Engine filter buttons, then Use voice, Preview, Favorite, Remove, and Fetch the Piper voice list. Each button has a name, its key, and a description for NVDA and JAWS.
-- **Preview a voice without choosing it.** The Say Status key (Alt+End) in the voice manager, or the GUI's Preview button, speaks a sample in the focused voice, starting with its name. A voice of another engine is heard by starting that engine for the sample.
-- **Other engines' voices join the open list.** They are listed in the background when the voice manager first opens; they now appear as they arrive, with the focus kept, instead of after opening the list again. The favorites no engine here has follow them, as "not on this computer".
-- **Delete on a voice that cannot be removed** says so and leaves the voice manager open; before, it closed.
-
-### Sync, made sturdier
-
-- **Profiles keep their voice on each computer.** A profile syncs its portable settings only; the voice, the speech engine, and the access mode it was saved with stay on the computer that saved them, and an arriving profile keeps this computer's own.
-- **One document, one id.** When two computers opened the same book before they ever synced, the next time it opens the two ids are joined into one, with both computers' notes, highlights, bookmarks, and places.
-- **Safe across a crash.** Changes taken in from another computer and not yet saved here are kept on this computer, so a crash or power cut in between never lets this computer's older version win.
+- **The install scripts check for cmake** before building from source, and say how to install it; installing a release package is unchanged.
+- The nightly fuzzes the sync record and the sync group files, 35 targets in all, and lists the Apple voice tests again.
+- CI and the nightly run each crate's tests through its one test program.
 
 ### For contributors
 
-- **Timing tests move the clock themselves.** The engine host's start deadline, stall timer, and sound-output reopen wait read a `Clock` that tests set by hand, and the flaky wall-clock checks (the slow-disk opening test, DECtalk's slow start) now check the order of events. The engine host's own test program and the Apple voice tests answer `--list` as cargo-nextest expects.
-
-### Audio export
-
-- **Opus files.** Export audio, in the File menu, and `tw export-audio --out book.opus` write Ogg Opus files with no ffmpeg: the smallest of the formats, about 14 MB an hour, at 32 kilobits per second in one channel. The title, author, and chapters go in as Vorbis comments, the same as FLAC. textweaver encodes them with libopus, the reference encoder, built in.
-
-### For contributors
-
-- **Building from source needs cmake** for the Opus encoder (libopus, built from bundled source). Build `textweaver-cli` or `textweaver-xilem` without the `opus` feature to do without it; Opus then goes through ffmpeg. See `docs/dev/building.md`.
+- **Building from source needs cmake** for the Opus encoder (libopus, built from bundled source). Build `textweaver-cli` or `textweaver-xilem` without the `opus` feature to do without it; Opus then goes through ffmpeg. The development container installs it. See `docs/dev/building.md`.
+- **One integration-test program per crate.** Every crate's integration tests are modules of `tests/it/main.rs`; a new test is a module there, never a new file in `tests/`. Run one with `cargo test -p CRATE --test it -- MODULE::`. Programs with `harness = false` stay their own. See `docs/dev/testing.md`, "Where tests go".
 - **`cargo xtask regen` rebuilds every generated file** in one command: the third-party notices, the settings reference, the keyboard reference, the `docs/site` data, and the crate counts in the docs. `cargo xtask regen --check` changes nothing and reports each on one line, such as "keyboard: FAIL, out of date; run cargo xtask regen". `dev-check` runs it, so the settings reference, the docs indexes, and the notices are now checked locally as in CI.
+- **Timing tests move the clock themselves.** The engine host's start deadline, stall timer, and sound-output reopen wait read a `Clock` that tests set by hand, and the flaky wall-clock checks (the slow-disk opening test, DECtalk's slow start) now check the order of events. The engine host's own test program and the Apple voice tests answer `--list` as cargo-nextest expects.
+- **A new crate, `textweaver-sync`,** on core and store only: the hybrid logical clock, the merge types, the record and group files, and document identity. `cargo xtask deps --check` keeps it there, and refuses a lean reader that reaches grammar checking (harper-core).
+- `cargo xtask bench --only sync-id` times document identity on a 100 MB file.
+- Rubato is built without its FFT resampler by default, so the lean reader does not compile realfft; dictation asks for it.
 
 ## [0.1.0-alpha.6] - 2026-09-30
 
