@@ -64,7 +64,8 @@ struct Args {
     #[arg(long, value_name = "PATH")]
     log_file: Option<PathBuf>,
     /// For automated checks: never activate the window, keep it off
-    /// screen, and give it no taskbar button.
+    /// screen, and give it no taskbar button. On Windows, if UI Automation
+    /// activates it all the same, it gives the foreground straight back.
     #[arg(long)]
     background: bool,
     /// While reading, select the spoken word instead of placing the caret

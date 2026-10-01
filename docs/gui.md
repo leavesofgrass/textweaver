@@ -210,7 +210,8 @@ The command-line tools (`tw vault`, `tw convert`, `tw library`, and the rest) ar
 
 ## For testers
 
-- `--background` starts the window without taking the focus, off screen, with no taskbar button, for automated checks.
+- `--background` starts the window without taking the focus, off screen, with no taskbar button, for automated checks. On Windows the window is marked as one that accessibility tools must not activate (`WS_EX_NOACTIVATE`). UI Automation still activates it on the first control pressed through it; the window then hands the foreground straight back to the window that had it, and `--log` says so. Expect a moment's flicker of focus, not a lost one.
+- A debug build writes Masonry's full trace log only when `MASONRY_DENSE_LOG_DIR` names a folder for it (for example `target\masonry-logs`); otherwise it writes none. It never goes to the system's temporary folder.
 - `--backend paced` reads silently, timing words like a real engine.
 - `crates/textweaver-xilem/tools/uia-report.ps1` reports what UI Automation sees (Windows), including the menu bar's seven menus and access keys and every menu item's text and key as the window's menu holds them; `-WindowEdge` reads past the document window's edge; `-Menus` also opens the first menu to read its items through UI Automation (opening a menu may bring the window to the front, so use it on a test machine). `tools/atspi-check.sh` does the same with AT-SPI on Linux.
 - `--log` lists the menu items the window built, one per line, with each key after a tab.
