@@ -1,7 +1,9 @@
-//! Fonts: the bundled families loaded straight into Parley (nothing is
-//! registered with the operating system), and the reader's font setting
-//! as a Parley family list.
+//! Fonts: the bundled families, and a Lexend downloaded into the data
+//! folder, loaded straight into Parley (nothing is registered with the
+//! operating system), and the reader's font setting as a Parley family
+//! list.
 
+use std::path::Path;
 use std::sync::Arc;
 
 use masonry::peniko::Blob;
@@ -22,6 +24,21 @@ pub fn bundled_blobs() -> Vec<Blob<u8>> {
     textweaver_fonts::BUNDLED
         .iter()
         .flat_map(|family| family.faces.iter())
+        .map(|face| Blob::new(Arc::new(face.data)))
+        .collect()
+}
+
+/// Every downloaded reading font in `folder` (the data folder's
+/// `fonts`) whose files match their pinned hashes, as blobs. Empty when
+/// there is no folder or nothing was downloaded.
+pub fn downloaded_blobs(folder: Option<&Path>) -> Vec<Blob<u8>> {
+    let Some(folder) = folder else {
+        return Vec::new();
+    };
+    textweaver_fonts::downloaded::DOWNLOADABLE
+        .iter()
+        .filter_map(|f| f.load_from(folder))
+        .flatten()
         .map(|face| Blob::new(Arc::new(face.data)))
         .collect()
 }
@@ -76,6 +93,25 @@ mod tests {
             .sum();
         assert_eq!(bundled_blobs().len(), n);
         assert!(n >= 12, "{n}");
+    }
+
+    #[test]
+    fn a_downloaded_lexend_is_offered_once_checked() {
+        assert!(downloaded_blobs(None).is_empty());
+        let dir = tempfile::tempdir().unwrap();
+        assert!(downloaded_blobs(Some(dir.path())).is_empty());
+        let lexend = dir.path().join("lexend");
+        std::fs::create_dir_all(&lexend).unwrap();
+        let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/w7l");
+        for f in ["Lexend-Regular.ttf", "Lexend-Bold.ttf"] {
+            std::fs::copy(fixtures.join(f), lexend.join(f)).unwrap();
+        }
+        assert_eq!(downloaded_blobs(Some(dir.path())).len(), 2);
+        // A changed file is not registered.
+        let mut data = std::fs::read(lexend.join("Lexend-Bold.ttf")).unwrap();
+        data[64] ^= 1;
+        std::fs::write(lexend.join("Lexend-Bold.ttf"), data).unwrap();
+        assert!(downloaded_blobs(Some(dir.path())).is_empty());
     }
 
     #[test]
