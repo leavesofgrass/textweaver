@@ -28,6 +28,7 @@ RUN dpkg --add-architecture i386 \
       speech-dispatcher libspeechd-dev \
       python3 python3-venv \
       pandoc \
+      cmake \
  && rm -rf /var/lib/apt/lists/*
 
 RUN rustup component add rustfmt clippy
