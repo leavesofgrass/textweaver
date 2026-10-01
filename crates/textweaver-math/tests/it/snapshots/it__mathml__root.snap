@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-math/tests/mathml.rs
+source: crates/textweaver-math/tests/it/mathml.rs
 expression: balanced(&xml)
 ---
 <math xmlns="http://www.w3.org/1998/Math/MathML" alttext="\sqrt[3]{x} + \sqrt{y}"><semantics><mrow><mroot><mi>x</mi><mn>3</mn></mroot><mo>+</mo><msqrt><mi>y</mi></msqrt></mrow><annotation encoding="application/x-tex">\sqrt[3]{x} + \sqrt{y}</annotation></semantics></math>

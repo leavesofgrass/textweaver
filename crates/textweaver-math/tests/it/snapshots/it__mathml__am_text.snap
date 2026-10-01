@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-math/tests/mathml.rs
+source: crates/textweaver-math/tests/it/mathml.rs
 expression: balanced(&xml)
 ---
 <math xmlns="http://www.w3.org/1998/Math/MathML" alttext="x &quot;if&quot; x &gt; 0"><semantics><mrow><mi>x</mi><mtext>if</mtext><mi>x</mi><mo>&gt;</mo><mn>0</mn></mrow><annotation encoding="text/x-asciimath">x &quot;if&quot; x &gt; 0</annotation></semantics></math>

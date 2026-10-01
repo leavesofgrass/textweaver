@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-math/tests/mathml.rs
+source: crates/textweaver-math/tests/it/mathml.rs
 expression: balanced(&xml)
 ---
 <math xmlns="http://www.w3.org/1998/Math/MathML" alttext="\binom{n}{k}"><semantics><mrow><mo fence="true" form="prefix">(</mo><mfrac linethickness="0"><mi>n</mi><mi>k</mi></mfrac><mo fence="true" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\binom{n}{k}</annotation></semantics></math>
