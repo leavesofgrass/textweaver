@@ -94,6 +94,16 @@ pub(crate) enum Job {
         meta: textweaver_store::library::DocMetadata,
         recent_limit: usize,
     },
+    /// Save the owner's hand edits of a document's details on the
+    /// bookshelf (W7m).
+    EditDetails {
+        library_file: PathBuf,
+        path: PathBuf,
+        /// The fields changed: a new value, or `None` for a cleared one.
+        edits: Vec<(textweaver_store::library::DetailField, Option<String>)>,
+        /// When the edit was made (milliseconds since 1970, UTC).
+        at_ms: u64,
+    },
     /// Find or make a document's sync id and keep its hashes in
     /// `sync-ids.json` (ADR-0049). Hashing a file reads all of it, so it is
     /// done here, never on the input thread.
@@ -177,6 +187,8 @@ pub(crate) enum Report {
     /// Writing a library folder's sidecar found positions that differed
     /// from another computer's, or failed: the count, or the error.
     Sidecar(Result<usize, String>),
+    /// Saving hand-edited details on the bookshelf failed (W7m).
+    DetailsFailed(String),
 }
 
 impl Job {
@@ -191,6 +203,7 @@ impl Job {
                 | Job::Settings { .. }
                 | Job::Sync { .. }
                 | Job::SyncFlush(_)
+                | Job::EditDetails { .. }
         )
     }
 }
@@ -500,6 +513,14 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
             );
             None
         }
+        Job::EditDetails {
+            library_file,
+            path,
+            edits,
+            at_ms,
+        } => record_edits(&library_file, &path, &edits, at_ms)
+            .err()
+            .map(Report::DetailsFailed),
         Job::Identify { job, text } => {
             job.run_logged(text.as_ref().map(ropey::Rope::chunks));
             None
@@ -623,6 +644,21 @@ fn record_open(
         // An unreadable library is left alone rather than overwritten.
         Err(e) => log::warn!("cannot read the library: {e}"),
     }
+}
+
+/// Saves hand-edited details on the bookshelf. An unreadable bookshelf is
+/// left alone rather than overwritten, and said.
+fn record_edits(
+    library_file: &Path,
+    path: &Path,
+    edits: &[(textweaver_store::library::DetailField, Option<String>)],
+    at_ms: u64,
+) -> Result<(), String> {
+    let mut lib = Library::load(library_file).map_err(|e| e.to_string())?;
+    if lib.record_edits(path, edits, at_ms) {
+        lib.save(library_file).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 /// Measures how long `f` took (for the writer's own tests).

@@ -17,6 +17,7 @@ mod batch;
 mod browse;
 #[cfg(feature = "publish")]
 mod citations_reading;
+mod details;
 mod edit;
 mod keys_from_keymap;
 mod language;

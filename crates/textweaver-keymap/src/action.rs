@@ -450,6 +450,9 @@ actions! {
     ContinueReading = "continue_reading", File,
         "Continue reading: the documents on this computer with a saved place, from any computer, newest first",
         gui [], term [], shared [];
+    EditDocumentDetails = "edit_document_details", File,
+        "Edit the document's details: title, author, DOI, and ISBN",
+        gui [], term [], shared [];
     NewDocument ="new_document", File, "Start a new document in edit mode",
         gui ["g:Ctrl+N"], term ["g:Ctrl+N"], shared [];
     Save = "save", File, "Save (Markdown and text in place; other formats as Markdown)",

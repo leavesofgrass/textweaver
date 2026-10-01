@@ -22,7 +22,8 @@
 //!   [`Command::PromptKey`]: characters, Backspace, Delete, the caret keys,
 //!   the Emacs-style kills, Up and Down (earlier answers to the same
 //!   prompt, or command palette matches), Tab (completes a command name or
-//!   a file path), Enter, and Escape. Typing is echoed as in edit mode. A
+//!   a file path; moves to the next field of a form), Shift+Tab (the
+//!   previous field), Enter, and Escape. Typing is echoed as in edit mode. A
 //!   GUI text field that edits its own text sends its whole text with
 //!   [`PromptKey::SetText`] and Enter with [`PromptKey::Enter`].
 //!
@@ -258,8 +259,12 @@ pub enum PromptKey {
     Up,
     /// Down: a later answer, or the next command palette match.
     Down,
-    /// Tab: completes a command name or a file path.
+    /// Tab: completes a command name or a file path; in a form (the edit
+    /// details form), moves to the next field.
     Tab,
+    /// Shift+Tab: in a form, moves to the previous field; elsewhere
+    /// nothing.
+    BackTab,
     /// Ctrl+L in the command palette: shows its matches as a list, to hear
     /// them in context; Enter runs one.
     ShowMatches,
@@ -699,10 +704,16 @@ impl App {
             }
             PromptKey::Home => mb.home(),
             PromptKey::End => mb.end(),
+            PromptKey::Tab | PromptKey::BackTab if mb.purpose == PromptPurpose::DocumentDetails => {
+                let text = mb.text();
+                let step = if key == PromptKey::Tab { 1 } else { -1 };
+                return self.details_move(text, step);
+            }
             PromptKey::Tab => {
                 self.complete_prompt();
                 return vec![Effect::Redraw];
             }
+            PromptKey::BackTab => return vec![Effect::Redraw],
             PromptKey::ShowMatches => {
                 if mb.purpose == PromptPurpose::CommandPalette {
                     let query = mb.text();

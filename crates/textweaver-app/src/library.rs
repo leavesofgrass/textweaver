@@ -32,7 +32,7 @@ use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::{Duration, Instant};
 
 use textweaver_lexicon::args;
-use textweaver_store::library::{self, DocMetadata, LibraryItem, ResumeSource};
+use textweaver_store::library::{self, DetailField, DocMetadata, LibraryItem, ResumeSource};
 use textweaver_store::sync::Resolution;
 use textweaver_store::{DocKey, DocState, Library, LibrarySync, Recent, SimpleIndex};
 use textweaver_text::Document;
@@ -384,6 +384,12 @@ impl App {
         self.list_library(list)
     }
 
+    /// Shows the library list again (after editing a document's details,
+    /// W7m).
+    pub(crate) fn reshow_library(&mut self, list: LibraryList) -> Vec<Effect> {
+        self.list_library(list)
+    }
+
     /// The library list as shown: its title (with the filter, when there is
     /// one) and the documents that pass the filter.
     fn list_library(&mut self, list: LibraryList) -> Vec<Effect> {
@@ -499,6 +505,32 @@ impl LibraryList {
                 library::item_matches(item, query, text)
             })
             .collect();
+    }
+
+    /// The document shown as item `n`, with its details.
+    pub(crate) fn item_at(&self, n: usize) -> Option<&LibraryItem> {
+        self.shown.get(n).and_then(|&i| self.items.get(i))
+    }
+
+    /// The owner edited item `n`'s details (W7m): its row shows the new
+    /// values. A cleared field keeps the value shown until the library is
+    /// read again, which shows the document's own.
+    pub(crate) fn apply_edits(&mut self, n: usize, edits: &[(DetailField, Option<String>)]) {
+        let Some(item) = self.shown.get(n).and_then(|&i| self.items.get_mut(i)) else {
+            return;
+        };
+        for (field, value) in edits {
+            item.edited.set(*field, value.clone());
+            let Some(v) = value.clone() else {
+                continue;
+            };
+            match field {
+                DetailField::Title => item.title = v,
+                DetailField::Author => item.meta.author = Some(v),
+                DetailField::Doi => item.meta.doi = Some(v),
+                DetailField::Isbn => item.meta.isbn = Some(v),
+            }
+        }
     }
 
     /// The document shown as item `n`.

@@ -221,6 +221,31 @@ continue-ago-days =
     }
 name-continue-reading = Reprendre la lecture
 action-continue-reading = Reprendre la lecture : les documents de cet ordinateur avec une position enregistrée, sur n'importe quel ordinateur, les plus récents d'abord
+name-edit-document-details = Modifier les détails
+action-edit-document-details = Modifier les détails du document : titre, auteur, DOI et ISBN
+prompt-document-details = Détails du document
+
+## Edit a document's details by hand (Wave 7, W7m).
+
+# $name is the document's title; said when the form opens.
+details-intro = Détails de { $name }. Tab change de champ, Entrée enregistre, Échap annule.
+details-label-title = Titre
+details-label-author = Auteur
+details-label-doi = DOI
+details-label-isbn = ISBN
+# A field's drawn label: its label, then $n of $total fields.
+details-prompt-label = { $label }, { $n } sur { $total }
+# Said on moving to a field: its label and value (or nav-blank).
+details-field = { $label } : { $value }
+# $fields lists the fields saved, by their labels.
+details-saved = Détails enregistrés : { $fields }.
+details-unchanged = Détails inchangés.
+details-cancelled = Annulé. Détails inchangés.
+# $text is what was typed in the DOI or ISBN field.
+details-not-a-doi = Pas un DOI : { $text }. Corrigez-le ou effacez-le.
+details-not-an-isbn = Pas un ISBN : { $text }. Corrigez-le ou effacez-le.
+details-no-file = Ce document n'a pas de fichier, donc pas de détails à modifier.
+details-save-failed = Impossible d'enregistrer les détails : { $error }
 # The statistics list could not wait for the sync folder.
 stats-others-slow = Autres ordinateurs omis : dossier lent.
 stats-untitled = Document sans titre
@@ -1299,8 +1324,8 @@ library-scan-stopped = L'analyse de la bibliothèque s'est arrêtée à cause d'
 library-empty = La bibliothèque est vide. Ajoutez un dossier avec { $command }, ou ouvrez un fichier avec { $key }.
 library-intro =
     { $n ->
-        [one] Bibliothèque, { $n } document. Tapez pour filtrer, Entrée en ouvre un.
-       *[other] Bibliothèque, { $n } documents. Tapez pour filtrer, Entrée en ouvre un.
+        [one] Bibliothèque, { $n } document. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails.
+       *[other] Bibliothèque, { $n } documents. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails.
     }
 library-title = Bibliothèque
 
