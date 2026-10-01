@@ -608,23 +608,36 @@ fn a_restart_starts_in_poll_and_stop_and_pause_work_meanwhile() {
     crash(&mut b, &mut rec);
     // `speak` returns at once; the request waits for the host in `poll`.
     let u = utt("stopped while starting", 91, 0);
-    let t = Instant::now();
+    // These checks use the order of events, not the clock, so a loaded
+    // machine cannot fail them (before, they asserted `speak` took under
+    // a second and `stop` under half a second): the host is set only when
+    // its start completes in `poll`, two seconds after it began, so a
+    // `speak` or a `stop` that waited for the start would find it up.
     b.speak(&u, &mut rec).unwrap();
     assert!(
-        t.elapsed() < Duration::from_millis(1000),
-        "{:?}",
-        t.elapsed()
+        b.host_path().is_none(),
+        "speak returned before the host was ready"
     );
-    let t = Instant::now();
     b.stop();
     b.poll(&mut rec);
-    assert!(t.elapsed() < Duration::from_millis(500));
+    assert!(
+        b.host_path().is_none(),
+        "stop took effect before the host was ready"
+    );
     assert_eq!(rec.of(u.id), [RawEvent::Cancelled]);
     // Pause while starting: silent until resumed.
     let p = utt("paused while starting", 92, 0);
     b.speak(&p, &mut rec).unwrap();
     b.pause().unwrap();
-    assert!(!pump(&mut b, &mut rec, Duration::from_millis(3500), |r| r
+    // Wait for the host (a hang check, not a speed check), then give it
+    // time to synthesize: the paused utterance stays silent.
+    let hang = Instant::now() + Duration::from_secs(20);
+    while b.host_path().is_none() && Instant::now() < hang {
+        b.poll(&mut rec);
+        std::thread::sleep(Duration::from_millis(3));
+    }
+    assert!(b.host_path().is_some(), "the host came up");
+    assert!(!pump(&mut b, &mut rec, Duration::from_millis(1000), |r| r
         .has(p.id, |e| *e == RawEvent::Started)));
     b.resume().unwrap();
     assert!(pump(

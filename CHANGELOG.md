@@ -23,8 +23,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - **Grammar checking is built in.** Ctrl+F7 and Ctrl+Shift+F7 (Alt+J for the fixes) now work in the terminal reader, the window, and the release packages, with no special build. It makes the programs about 11 MB larger. A build without the default features leaves it out.
 
+### Speech
+
+- **Speech follows the sound device.** When a headset or another device goes away, speech moves to the current default device at once and the reading goes on; before, it waited a second and only noticed while audio was waiting. Sound errors no longer print over the terminal reader's screen.
+- **Choose the sound device.** `[speech] output_device` (Output device in the settings screen) keeps speech on one device by its id, and `tw backends --devices` lists the devices with their ids. A device that is not connected falls back to the default. It applies to Eloquence, the Windows voices, DECtalk, and Piper.
+- **Piper's pitch sounds cleaner.** Raising or lowering a Piper voice's pitch now uses a band-limited resampler, so a raised voice no longer has a metallic edge.
+
 ### For contributors
 
+- **Timing tests move the clock themselves.** The engine host's start deadline, stall timer, and sound-output reopen wait read a `Clock` that tests set by hand, and the flaky wall-clock checks (the slow-disk opening test, DECtalk's slow start) now check the order of events. The engine host's own test program and the Apple voice tests answer `--list` as cargo-nextest expects.
 - **`cargo xtask regen` rebuilds every generated file** in one command: the third-party notices, the settings reference, the keyboard reference, the `docs/site` data, and the crate counts in the docs. `cargo xtask regen --check` changes nothing and reports each on one line, such as "keyboard: FAIL, out of date; run cargo xtask regen". `dev-check` runs it, so the settings reference, the docs indexes, and the notices are now checked locally as in CI.
 
 ## [0.1.0-alpha.6] - 2026-09-30

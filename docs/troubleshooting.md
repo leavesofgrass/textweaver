@@ -297,6 +297,11 @@ textweaver restarts an engine that crashes, or that plays nothing for 12 seconds
 1. Check that the sound device is connected and not in use by another program.
 2. Check the log for the reason.
 3. Try another engine with `--backend`, to see whether the problem is the engine or the device.
+4. If you chose a device in `[speech] output_device`, run `tw backends --devices`: its last line says when that device is not connected, and speech then plays on the default.
+
+### Speech plays on the wrong device
+
+Speech plays on the system's default sound device. When a headset or another device goes away, textweaver moves speech to the current default at once. To keep speech on one device, choose it by its id: `tw backends --devices` lists them, and the [speech guide](speech.md#choose-the-sound-device) has the steps. eSpeak NG, Speech Dispatcher, and the Apple voices always play on the default; choose the device in the system's own sound settings for them.
 
 If you hear "Speech stopped working", textweaver restarts speech once by itself. If it stops working again, press **Shift+F8** (Restart speech), or restart textweaver.
 

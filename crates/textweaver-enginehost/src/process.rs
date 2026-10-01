@@ -23,6 +23,7 @@ use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, TryRecvError};
 use std::time::{Duration, Instant};
 
+use crate::clock::Clock;
 use crate::orphan;
 use crate::protocol::{self, MAX_FRAME, Message};
 
@@ -60,6 +61,8 @@ pub struct HostProcess<R> {
     rx: Receiver<HostMsg<R>>,
     path: PathBuf,
     label: &'static str,
+    /// The clock the stall timer reads.
+    clock: Clock,
     last_activity: Instant,
     /// The host already failed ([`HostMsg::Closed`] was reported, or a
     /// request could not be written): shutting it down kills it at once.
@@ -143,6 +146,7 @@ impl<R: Message + Send + 'static> HostProcess<R> {
             rx,
             path: path.to_path_buf(),
             label,
+            clock: Clock::system(),
             last_activity: Instant::now(),
             failed: false,
             _reply: PhantomData,
@@ -256,12 +260,27 @@ impl<R> HostProcess<R> {
     /// Marks the host as active now: it just sent something, or was just
     /// given work, so its stall timer restarts.
     pub fn touch(&mut self) {
-        self.last_activity = Instant::now();
+        self.last_activity = self.clock.now();
     }
 
-    /// How long since the host last sent anything (or was last touched).
+    /// How long since the host last sent anything (or was last touched),
+    /// on its [`clock`](Self::set_clock).
     pub fn idle_for(&self) -> Duration {
-        self.last_activity.elapsed()
+        self.clock.since(self.last_activity)
+    }
+
+    /// Sets the clock the stall timer reads ([`Clock::system`] unless
+    /// set; tests use a [`Clock::manual`] one), and restarts the timer on
+    /// it. Waiting for a message ([`recv_timeout`](Self::recv_timeout))
+    /// still takes real time.
+    pub fn set_clock(&mut self, clock: Clock) {
+        self.clock = clock;
+        self.touch();
+    }
+
+    /// The clock the stall timer reads.
+    pub fn clock(&self) -> &Clock {
+        &self.clock
     }
 
     /// True when the host owes output (`owes`) and has been silent for

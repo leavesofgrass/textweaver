@@ -1623,6 +1623,8 @@ setting-speech-voices-by-language = Vozes por idioma
 setting-speech-voices-by-language-help = A voz de cada idioma da interface, pela marca de idioma, como es = o identificador da voz. Um idioma não listado usa a primeira voz do motor para ele.
 setting-speech-latency-offset-ms = Atraso do realce
 setting-speech-latency-offset-ms-help = Quanto tempo depois de um motor informar uma palavra o realce se move, para motores cronometrados pelo relógio do áudio.
+setting-speech-output-device = Dispositivo de saída
+setting-speech-output-device-help = O dispositivo de som em que a fala é reproduzida, pelo seu identificador; tw backends --devices lista-os. Sem definição usa o padrão do sistema, assim como um dispositivo que não está conectado.
 setting-speech-verbosity = Verbosidade
 setting-speech-verbosity-help = Quanto o textweaver diz sobre o que faz.
 choice-speech-verbosity-low = baixa

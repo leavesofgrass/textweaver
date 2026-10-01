@@ -1643,6 +1643,8 @@ setting-speech-voices-by-language = Stimmen nach Sprache
 setting-speech-voices-by-language-help = Die Stimme für jede Oberflächensprache, nach Sprachkürzel, zum Beispiel es = die Kennung der Stimme. Eine nicht aufgeführte Sprache verwendet die erste Stimme der Engine dafür.
 setting-speech-latency-offset-ms = Verzögerung der Hervorhebung
 setting-speech-latency-offset-ms-help = Wie lange nach der Meldung eines Worts durch eine Engine sich die Hervorhebung bewegt, für Engines, die nach ihrer Audiozeit getaktet sind.
+setting-speech-output-device = Ausgabegerät
+setting-speech-output-device-help = Das Audiogerät, auf dem die Sprache läuft, nach seiner Kennung; tw backends --devices listet sie auf. Nicht gesetzt verwendet das Standardgerät des Systems, ebenso ein Gerät, das nicht angeschlossen ist.
 setting-speech-verbosity = Ausführlichkeit
 setting-speech-verbosity-help = Wie viel textweaver darüber sagt, was es tut.
 choice-speech-verbosity-low = niedrig

@@ -26,6 +26,9 @@ textweaver-core.workspace = true
 textweaver-speech.workspace = true
 textweaver-store.workspace = true
 textweaver-eci.workspace = true
+# The output device for the engines whose audio textweaver plays
+# (`[speech] output_device`).
+textweaver-enginehost.workspace = true
 textweaver-sapi.workspace = true
 textweaver-dectalk.workspace = true
 textweaver-apple.workspace = true

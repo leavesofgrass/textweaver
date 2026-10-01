@@ -63,6 +63,10 @@ pub struct SpeechSettings {
     pub voices_by_language: BTreeMap<String, String>,
     /// Latency offset for audio-clock word events, in ms (Star 120).
     pub latency_offset_ms: u32,
+    /// The audio output device by its stable id (`tw backends --devices`
+    /// lists them); `None` uses the system's default. A device that is
+    /// not connected falls back to the default (Wave 7, W7h).
+    pub output_device: Option<String>,
     /// Announcement verbosity.
     pub verbosity: Verbosity,
     /// `[speech.eci]`: ETI-Eloquence through the ECI host (ADR-0007).
@@ -286,6 +290,7 @@ impl Default for SpeechSettings {
             .collect(),
             voices_by_language: BTreeMap::new(),
             latency_offset_ms: 120,
+            output_device: None,
             verbosity: Verbosity::default(),
             eci: EciSettings::default(),
             sapi: SapiSettings::default(),

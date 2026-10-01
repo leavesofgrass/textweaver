@@ -9,6 +9,9 @@
 //! every backend is probed a single time and both choices are made from
 //! that one list. The registry is configured from the user's settings, as
 //! the reader and `tw export-audio` configure it.
+//!
+//! `tw backends --devices` lists the audio output devices instead, each
+//! with the id `[speech] output_device` takes (Wave 7, W7h).
 
 use std::path::PathBuf;
 
@@ -25,6 +28,86 @@ pub struct Args {
     /// Read settings from this directory (like `TEXTWEAVER_HOME`).
     #[arg(long)]
     pub home: Option<PathBuf>,
+    /// List the audio output devices instead, with the id each one has
+    /// for `[speech] output_device`.
+    #[arg(long)]
+    pub devices: bool,
+}
+
+/// One device in `tw backends --devices --json`.
+#[derive(Debug, Serialize)]
+pub struct DeviceReport {
+    /// The id for `[speech] output_device`.
+    pub id: String,
+    /// Its name, as the system shows it.
+    pub name: String,
+    /// The system's default output now.
+    pub default: bool,
+    /// The one `[speech] output_device` chooses.
+    pub chosen: bool,
+}
+
+/// What `tw backends --devices --json` prints.
+#[derive(Debug, Serialize)]
+pub struct DevicesReport {
+    /// `[speech] output_device`, if set.
+    pub chosen: Option<String>,
+    /// Whether the chosen device is connected (true when none is chosen).
+    pub chosen_connected: bool,
+    /// The connected output devices, the default first.
+    pub devices: Vec<DeviceReport>,
+}
+
+/// The devices report for `devices` and the setting `chosen`.
+pub fn devices_report(
+    devices: Vec<textweaver_engines::OutputDevice>,
+    chosen: Option<&str>,
+) -> DevicesReport {
+    let chosen = chosen.map(str::trim).filter(|c| !c.is_empty());
+    let devices: Vec<DeviceReport> = devices
+        .into_iter()
+        .map(|d| DeviceReport {
+            chosen: chosen == Some(d.id.as_str()),
+            id: d.id,
+            name: d.name,
+            default: d.default,
+        })
+        .collect();
+    DevicesReport {
+        chosen_connected: chosen.is_none() || devices.iter().any(|d| d.chosen),
+        chosen: chosen.map(str::to_owned),
+        devices,
+    }
+}
+
+/// The lines `tw backends --devices` prints: one sentence per device,
+/// its name first and its id last, then a line when the chosen device is
+/// not connected.
+pub fn describe_devices(r: &DevicesReport) -> Vec<String> {
+    let mut lines: Vec<String> = r
+        .devices
+        .iter()
+        .map(|d| {
+            let mut s = d.name.clone();
+            if d.default {
+                s.push_str(", the default");
+            }
+            if d.chosen {
+                s.push_str(", chosen by your settings");
+            }
+            s.push_str(&format!(". Id: {}", d.id));
+            s
+        })
+        .collect();
+    if lines.is_empty() {
+        lines.push("No audio output devices found.".into());
+    }
+    if let Some(id) = r.chosen.as_deref().filter(|_| !r.chosen_connected) {
+        lines.push(format!(
+            "Not connected: {id}, which your settings choose. Speech plays on the default."
+        ));
+    }
+    lines
 }
 
 /// What `tw backends --json` prints.
@@ -130,6 +213,18 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     if let Some(m) = message {
         eprintln!("{m}");
     }
+    if args.devices {
+        let devices = textweaver_engines::output_devices().map_err(anyhow::Error::msg)?;
+        let r = devices_report(devices, settings.speech.output_device.as_deref());
+        if args.json {
+            println!("{}", serde_json::to_string_pretty(&r)?);
+        } else {
+            for line in describe_devices(&r) {
+                println!("{line}");
+            }
+        }
+        return Ok(());
+    }
     let registry = textweaver_engines::speech_registry_for(&settings);
     let r = report(&registry, Some(settings.speech.backend.as_str()));
     if args.json {
@@ -170,6 +265,47 @@ mod tests {
         assert_eq!(r.selected, "recording");
         let rec = r.backends.iter().find(|b| b.id == "recording").unwrap();
         assert!(describe(rec, r.auto, r.selected).ends_with(" Chosen by your settings."));
+    }
+
+    #[test]
+    fn devices_are_listed_name_first_with_their_ids() {
+        use textweaver_engines::OutputDevice;
+        let devices = || {
+            vec![
+                OutputDevice {
+                    id: "wasapi:{speakers}".into(),
+                    name: "Speakers (Realtek Audio)".into(),
+                    default: true,
+                },
+                OutputDevice {
+                    id: "wasapi:{headset}".into(),
+                    name: "Headset".into(),
+                    default: false,
+                },
+            ]
+        };
+        let r = devices_report(devices(), Some("wasapi:{headset}"));
+        assert!(r.chosen_connected);
+        assert_eq!(
+            describe_devices(&r),
+            [
+                "Speakers (Realtek Audio), the default. Id: wasapi:{speakers}",
+                "Headset, chosen by your settings. Id: wasapi:{headset}",
+            ]
+        );
+        let json = serde_json::to_value(&r).unwrap();
+        assert_eq!(json["devices"][1]["chosen"], true);
+        // A chosen device that is not connected is named after the list.
+        let r = devices_report(devices(), Some("wasapi:{gone}"));
+        assert!(!r.chosen_connected);
+        assert_eq!(
+            describe_devices(&r).last().unwrap(),
+            "Not connected: wasapi:{gone}, which your settings choose. Speech plays on the default."
+        );
+        // Nothing chosen, nothing found.
+        let r = devices_report(Vec::new(), Some(" "));
+        assert_eq!(r.chosen, None);
+        assert_eq!(describe_devices(&r), ["No audio output devices found."]);
     }
 
     #[test]

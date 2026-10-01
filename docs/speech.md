@@ -69,6 +69,8 @@ For a program or script, print JSON; it includes the automatic choice as `auto`:
 tw backends --json
 ```
 
+`tw backends --devices` lists the sound devices instead, for `[speech] output_device`; see [Choose the sound device](#choose-the-sound-device). It takes `--json` too.
+
 ## List the voices: tw voices
 
 ```bash
@@ -237,6 +239,7 @@ verbosity = "normal"
 - `skip_code`: do not read code blocks aloud.
 - `speed_presets`: the presets for **F8**, as above.
 - `latency_offset_ms`: how many milliseconds to delay the highlight behind an engine's reported word time. See [How exactly words are highlighted](#how-exactly-words-are-highlighted).
+- `output_device`: the sound device speech plays on, by its id. Not set by default: speech plays on the system's default device. See [Choose the sound device](#choose-the-sound-device).
 - `verbosity`: how much textweaver says about what it does: `"low"`, `"normal"`, or `"high"`. **Alt+Shift+V** cycles it while textweaver runs. See [Reading and moving around](reading.md).
 
 Both cycling keys say the new level and save it.
@@ -372,6 +375,24 @@ Eloquence, SAPI voices, and DECtalk run in small helper programs, called engine 
 - `textweaver-dectalk-host`, and on Windows `textweaver-dectalk-host-x86.exe`.
 
 If you copy only `textweaver` and `tw` somewhere else, those engines show as not available. The SAPI engine is available only when its 64-bit host is found. Environment variables can point to hosts elsewhere; see below.
+
+## Choose the sound device
+
+Speech plays on the system's default sound device unless you choose another. To choose one:
+
+1. Run `tw backends --devices`. It prints one line per connected device, its name first and its id last, such as "Headset, chosen by your settings. Id: wasapi:..." The default comes first.
+2. Copy the id into `[speech] output_device` in your settings, or set "Output device" in the settings screen.
+
+```toml
+[speech]
+output_device = "the id from tw backends --devices"
+```
+
+The id stays the same when you restart or plug the device in again. A change in the settings screen moves speech to the new device at once.
+
+When the chosen device is not connected, speech plays on the default, and `tw backends --devices` ends with a line that says so. When the device in use goes away, such as a headset unplugged or switched off, textweaver opens the sound output again at once, on the chosen device if it is back, else on the current default, and the reading goes on from where it was.
+
+The setting applies to the engines whose audio textweaver plays itself: Eloquence, the Windows SAPI and OneCore voices, DECtalk, and Piper. eSpeak NG, Speech Dispatcher, and the Apple voices play on the system's default device. The setting belongs to this computer and never syncs.
 
 ## When the engine stops or goes silent
 

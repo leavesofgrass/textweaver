@@ -19,7 +19,7 @@ use textweaver_enginehost::protocol::{
     encode_end, tag,
 };
 use textweaver_enginehost::serve::{AtEnd, Incoming, RequestReader, exit_with_parent, log_line};
-use textweaver_enginehost::{Ended, HostMsg, HostProcess, Message};
+use textweaver_enginehost::{Class, Clock, Ended, HostMsg, HostProcess, HostStart, Message, Start};
 
 /// How long any test waits for something that should happen at once.
 const DEADLINE: Duration = Duration::from_secs(10);
@@ -116,6 +116,21 @@ fn run_host(mode: &str) -> ExitCode {
         let _ = protocol::write_frame(&mut out, &[1, 0, 0, 0, 0x7f]);
         std::thread::sleep(Duration::from_secs(5));
         return ExitCode::SUCCESS;
+    }
+    match mode {
+        // Never reports Ready (an engine that never finishes starting).
+        "silent" => {
+            std::thread::sleep(Duration::from_secs(60));
+            return ExitCode::SUCCESS;
+        }
+        // Reports progress once (as ECI's dictionaries do), then nothing.
+        "progress" => {
+            let _ = protocol::write_frame(&mut out, &Reply::Pid(std::process::id()).encode());
+            let _ = out.flush();
+            std::thread::sleep(Duration::from_secs(60));
+            return ExitCode::SUCCESS;
+        }
+        _ => {}
     }
     match mode {
         // A line that is not UTF-8, then more than any pipe buffer holds,
@@ -270,18 +285,129 @@ fn a_bad_frame_closes_the_host() {
 fn a_hung_host_is_noticed_and_killed() {
     let mut h = host("hang");
     ready(&mut h);
+    // The stall timer runs on the test's clock: the checks are just
+    // before and just after the timeout, whatever the machine's load.
+    let clock = Clock::manual();
+    h.set_clock(clock.clone());
     let _ = h.send(&Speak {
         token: 1,
         samples: 1,
     });
     h.touch();
-    assert!(h.recv_timeout(Duration::from_millis(300)).is_none());
-    assert!(h.idle_for() >= Duration::from_millis(250));
-    assert!(h.stalled(true, Duration::from_millis(200)));
-    assert!(!h.stalled(false, Duration::from_millis(200)));
-    assert!(!h.stalled(true, Duration::from_secs(60)));
+    let timeout = Duration::from_secs(10);
+    clock.advance(timeout);
+    assert_eq!(h.idle_for(), timeout);
+    assert!(!h.stalled(true, timeout), "not before the timeout");
+    clock.advance(Duration::from_millis(1));
+    assert!(h.stalled(true, timeout));
+    assert!(
+        !h.stalled(false, timeout),
+        "a host that owes nothing is idle"
+    );
+    // It never answered.
+    assert!(h.try_recv().is_none());
+    // Something from the host restarts the timer.
+    h.touch();
+    assert!(!h.stalled(true, timeout));
     // Quit is ignored: shutdown waits its grace period, then kills.
     assert_eq!(h.shutdown(), Ended::KilledAfterGrace);
+}
+
+/// A start of `modes` (one candidate each) on `clock`, with a one-second
+/// deadline.
+fn start(modes: &[&'static str], clock: &Clock) -> HostStart<Reply> {
+    let candidates = modes.iter().map(|m| PathBuf::from(*m)).collect();
+    HostStart::begin_with_clock(
+        candidates,
+        Duration::from_secs(1),
+        Box::new(|mode: &std::path::Path| {
+            HostProcess::spawn(
+                &me(),
+                [std::ffi::OsStr::new("--as-host"), mode.as_os_str()],
+                "toy",
+            )
+        }),
+        clock.clone(),
+    )
+}
+
+/// The toy host's Ready is Ready, its Pid is progress.
+fn classify(r: &Reply) -> Class {
+    match r {
+        Reply::Ready(_) => Class::Ready,
+        Reply::Pid(_) => Class::Progress,
+        other => Class::Fail(format!("unexpected {other:?}")),
+    }
+}
+
+fn a_start_fails_at_its_deadline_and_tries_the_next_host() {
+    // On the test's clock: the deadline passes when the test says so.
+    let clock = Clock::manual();
+    let mut s = start(&["silent", "silent"], &clock);
+    assert!(matches!(s.poll(classify), Start::Pending));
+    clock.advance(Duration::from_millis(999));
+    assert!(matches!(s.poll(classify), Start::Pending), "not yet");
+    clock.advance(Duration::from_millis(1));
+    // The first host is given up; the second one starts with a deadline
+    // of its own.
+    assert!(matches!(s.poll(classify), Start::Pending));
+    clock.advance(Duration::from_millis(999));
+    assert!(matches!(s.poll(classify), Start::Pending));
+    clock.advance(Duration::from_millis(1));
+    match s.poll(classify) {
+        Start::Failed(why) => {
+            assert_eq!(why.matches("did not start in time").count(), 2, "{why}");
+        }
+        other => panic!("expected the start to fail, got {other:?}"),
+    }
+}
+
+fn progress_restarts_a_start_deadline() {
+    let clock = Clock::manual();
+    let mut s = start(&["progress"], &clock);
+    clock.advance(Duration::from_millis(900));
+    // Waits (in real time) for the progress report; the test's clock
+    // stands still meanwhile, so the deadline cannot pass.
+    let mut seen = 0;
+    let deadline = Instant::now() + DEADLINE;
+    while seen == 0 {
+        assert!(Instant::now() < deadline, "the progress report came");
+        let r = s.poll(|r: &Reply| {
+            let c = classify(r);
+            if c == Class::Progress {
+                seen += 1;
+            }
+            c
+        });
+        assert!(matches!(r, Start::Pending), "{r:?}");
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    // A second from the report, not from the start.
+    clock.advance(Duration::from_millis(999));
+    assert!(matches!(s.poll(classify), Start::Pending));
+    clock.advance(Duration::from_millis(1));
+    assert!(matches!(s.poll(classify), Start::Failed(_)));
+}
+
+fn a_started_host_takes_the_start_clock() {
+    let clock = Clock::manual();
+    let mut s = start(&["echo"], &clock);
+    let deadline = Instant::now() + DEADLINE;
+    let started = loop {
+        match s.poll(classify) {
+            Start::Ready(started) => break started,
+            Start::Pending => {
+                assert!(Instant::now() < deadline, "the host started");
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            Start::Failed(why) => panic!("{why}"),
+        }
+    };
+    let mut h = started.process;
+    assert_eq!(h.clock(), &clock);
+    h.touch();
+    clock.advance(Duration::from_secs(5));
+    assert_eq!(h.idle_for(), Duration::from_secs(5));
 }
 
 fn end_of_input_ends_a_stuck_host() {
@@ -427,16 +553,30 @@ fn a_missing_executable_is_an_error() {
     assert!(e.starts_with("cannot start"), "{e}");
 }
 
+/// The test-name filters among libtest-style arguments: the words that
+/// are neither options nor an option's value (`--format terse`).
+fn name_filters(args: &[String]) -> Vec<&String> {
+    const TAKES_VALUE: [&str; 5] = ["--format", "--test-threads", "--skip", "--color", "-Z"];
+    let mut out = Vec::new();
+    let mut skip_next = false;
+    for a in args.iter().skip(1) {
+        if skip_next {
+            skip_next = false;
+        } else if TAKES_VALUE.contains(&a.as_str()) {
+            skip_next = true;
+        } else if !a.starts_with('-') {
+            out.push(a);
+        }
+    }
+    out
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().collect();
     if let Some(i) = args.iter().position(|a| a == "--as-host") {
         return run_host(args.get(i + 1).map_or("echo", String::as_str));
     }
-    // `cargo test -- --list` and filters: run everything, name each test.
-    if args.iter().any(|a| a == "--list") {
-        return ExitCode::SUCCESS;
-    }
-    let tests: [(&str, fn()); 11] = [
+    let tests: [(&str, fn()); 14] = [
         (
             "speaks_and_shuts_down_cleanly",
             speaks_and_shuts_down_cleanly,
@@ -475,17 +615,47 @@ fn main() -> ExitCode {
             "an_utterance_over_the_frame_limit_is_refused_and_the_host_lives",
             an_utterance_over_the_frame_limit_is_refused_and_the_host_lives,
         ),
+        (
+            "a_start_fails_at_its_deadline_and_tries_the_next_host",
+            a_start_fails_at_its_deadline_and_tries_the_next_host,
+        ),
+        (
+            "progress_restarts_a_start_deadline",
+            progress_restarts_a_start_deadline,
+        ),
+        (
+            "a_started_host_takes_the_start_clock",
+            a_started_host_takes_the_start_clock,
+        ),
     ];
-    let filter: Vec<&String> = args
-        .iter()
-        .skip(1)
-        .filter(|a| !a.starts_with('-'))
-        .collect();
+    let filter = name_filters(&args);
+    let exact = args.iter().any(|a| a == "--exact");
+    let chosen = |name: &str| {
+        filter.is_empty()
+            || filter.iter().any(|p| {
+                if exact {
+                    name == p.as_str()
+                } else {
+                    name.contains(p.as_str())
+                }
+            })
+    };
+    // `--list` as libtest answers it, so cargo-nextest can list and run
+    // each test: one `name: test` line each, and none with `--ignored`
+    // (nothing here is ignored).
+    if args.iter().any(|a| a == "--list") {
+        if !args.iter().any(|a| a == "--ignored") {
+            for (name, _) in tests.iter().filter(|(n, _)| chosen(n)) {
+                println!("{name}: test");
+            }
+        }
+        return ExitCode::SUCCESS;
+    }
     println!("\nrunning {} tests", tests.len());
     let mut failed = 0;
     let mut passed = 0;
     for (name, f) in tests {
-        if !filter.is_empty() && !filter.iter().any(|p| name.contains(p.as_str())) {
+        if !chosen(name) {
             continue;
         }
         let ok = catch_unwind(AssertUnwindSafe(f)).is_ok();

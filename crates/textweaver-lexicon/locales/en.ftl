@@ -1612,6 +1612,8 @@ setting-speech-voices-by-language = Voices by language
 setting-speech-voices-by-language-help = The voice for each interface language, by language tag, such as es = the voice's id. A language not listed uses the engine's first voice for it.
 setting-speech-latency-offset-ms = Highlight delay
 setting-speech-latency-offset-ms-help = How long after an engine reports a word the highlight moves, for engines timed by their audio clock.
+setting-speech-output-device = Output device
+setting-speech-output-device-help = The sound device speech plays on, by its id; tw backends --devices lists them. Not set uses the system's default, and so does a device that is not connected.
 setting-speech-verbosity = Verbosity
 setting-speech-verbosity-help = How much textweaver says about what it does.
 choice-speech-verbosity-low = low

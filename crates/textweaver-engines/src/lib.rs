@@ -147,11 +147,27 @@ pub fn speech_registry() -> BackendRegistry {
     speech_registry_for(&Settings::default())
 }
 
+/// The output devices connected now, the default first, for
+/// `[speech] output_device` (empty in a build without audio output).
+pub use textweaver_enginehost::audio::{OutputDevice, output_devices};
+
+/// Plays speech on `[speech] output_device` from now on (or the
+/// system's default when it is not set or not connected), for the
+/// engines whose audio textweaver plays itself: Eloquence, SAPI and
+/// OneCore voices, DECtalk, and Piper. Outputs already open move to it.
+/// eSpeak NG, Speech Dispatcher, and the Apple voices play on the
+/// system's default. [`speech_registry_for`] calls it.
+pub fn apply_output_device(settings: &Settings) {
+    textweaver_enginehost::audio::set_output_device(settings.speech.output_device.clone());
+}
+
 /// The registry with the engines configured from `settings`: the ECI
 /// library, dictionaries, and Code Factory switch (`[speech.eci]`), SAPI's
 /// OneCore voices (`[speech.sapi]`), and which Apple engine is tried first
 /// on macOS (`[speech.apple] backend`; the other stays available below it).
+/// It also chooses the output device ([`apply_output_device`]).
 pub fn speech_registry_for(settings: &Settings) -> BackendRegistry {
+    apply_output_device(settings);
     let mut registry = BackendRegistry::with_builtins();
     let eci = eci_config(settings);
     let probe_config = eci.clone();

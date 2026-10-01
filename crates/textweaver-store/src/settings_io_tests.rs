@@ -45,6 +45,7 @@ fn everything_changed() -> Settings {
     sp.skip_code = false;
     sp.speed_presets = BTreeMap::from([("fast".to_owned(), 400)]);
     sp.latency_offset_ms = 80;
+    sp.output_device = Some("wasapi:{test-device}".into());
     sp.verbosity = Verbosity::High;
     sp.eci.dictionaries = EciDictionaries::Path("C:/dicts".into());
     sp.eci.library = Some("C:/eci/eci.dll".into());
