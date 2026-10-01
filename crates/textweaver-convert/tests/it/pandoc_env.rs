@@ -48,8 +48,14 @@ fn fake_pandoc(dir: &Path) -> PathBuf {
 /// Runs the `child` test in a new process with `TEXTWEAVER_PANDOC` set.
 fn run_child(dir: &Path, hang: bool) {
     let exe = std::env::current_exe().expect("test binary");
+    // The test's full name in the one test program: its module path
+    // without the program's name (`pandoc_env::child`).
+    let module = module_path!()
+        .split_once("::")
+        .map_or(module_path!(), |(_, m)| m);
+    let name = format!("{module}::child");
     let mut cmd = Command::new(exe);
-    cmd.args(["child", "--exact", "--ignored", "--nocapture"])
+    cmd.args([name.as_str(), "--exact", "--ignored", "--nocapture"])
         .env("TEXTWEAVER_PANDOC", fake_pandoc(dir))
         .env("TW_PANDOC_ENV_DIR", dir)
         .env_remove("TEXTWEAVER_PANDOC_TIMEOUT")
