@@ -261,6 +261,14 @@ enum OpenDialog {
         /// What the prompt is for (Open, Export or Import settings).
         purpose: PromptPurpose,
     },
+    /// The voice manager (W7v): the app's voice list, under this title,
+    /// with its filter and action buttons.
+    Voices {
+        /// The title it was shown with.
+        title: String,
+        /// Each button's id and what it does.
+        buttons: Vec<(WidgetId, crate::voices::VoiceButton)>,
+    },
     /// A yes-or-no question from the app, with its two buttons.
     Question {
         /// The Yes button.
@@ -379,7 +387,7 @@ pub struct Tree {
     buttons: Buttons,
 }
 
-fn label(text: &str, size: f32, bold: bool) -> Label {
+pub(crate) fn label(text: &str, size: f32, bold: bool) -> Label {
     let mut l = Label::new(text.to_owned())
         .with_style(StyleProperty::FontSize(size))
         .with_style(StyleProperty::FontFamily(FontFamily::Source(
@@ -1579,7 +1587,7 @@ impl Gui {
                 self.settings_dialog_action(ctx, &DialogAction::Cancel);
             }
             Some(OpenDialog::Prompt) => self.prompt_answer(ctx, None),
-            Some(OpenDialog::List(_) | OpenDialog::Palette(_)) => {
+            Some(OpenDialog::List(_) | OpenDialog::Palette(_) | OpenDialog::Voices { .. }) => {
                 self.answer(ctx, Command::Cancel);
             }
         }
@@ -1616,8 +1624,17 @@ impl Gui {
                 Effect::Prompt { label, purpose } => self.open_prompt(ctx, &label, purpose),
                 // The open list changed (filtered, a setting changed): show
                 // it in place, keeping focus in the dialog.
-                Effect::ShowList { .. } if matches!(self.dialog, Some(OpenDialog::List(_))) => {
+                Effect::ShowList { .. }
+                    if matches!(
+                        self.dialog,
+                        Some(OpenDialog::List(_) | OpenDialog::Voices { .. })
+                    ) =>
+                {
                     self.sync_list(ctx);
+                }
+                // The voice list: the voice manager, with its buttons.
+                Effect::ShowList { title, items } if self.app.voice_list_open() => {
+                    self.open_voices(ctx, &title, items);
                 }
                 Effect::ShowList { title, items } => self.open_list(ctx, &title, items),
             }
@@ -2104,6 +2121,51 @@ impl Gui {
         }
     }
 
+    /// The voice manager (W7v): the app's voice list with the filter and
+    /// action buttons beside it ([`crate::voices`]), focused on the list.
+    fn open_voices(&mut self, ctx: &mut DriverCtx<'_>, title: &str, items: Vec<String>) {
+        let count = items.len();
+        let selected = self.app.list_model().map_or(0, |m| m.selected);
+        let d = crate::voices::voice_dialog(&self.palette, &self.app, title, items, selected);
+        self.show_dialog(ctx, d.modal, d.list);
+        self.dialog = Some(OpenDialog::Voices {
+            title: title.to_owned(),
+            buttons: d.buttons,
+        });
+        if self.log {
+            crate::log::line(&format!(
+                "dialog: voice manager {title:?} with {count} voices"
+            ));
+        }
+    }
+
+    /// A button of the voice manager: the filters and Fetch run as the
+    /// app's voice controls; the others act on the focused voice as their
+    /// keys do in the list; Close is Escape.
+    fn voice_button(&mut self, ctx: &mut DriverCtx<'_>, button: crate::voices::VoiceButton) {
+        use crate::voices::VoiceButton as B;
+        use textweaver_app::ListKey as L;
+        use textweaver_app::voice_manager::VoiceControl as V;
+        if self.log {
+            crate::log::line(&format!("voice manager: {button:?}"));
+        }
+        let control = match button {
+            B::Language => V::NextLanguage,
+            B::Engine => V::NextEngine,
+            B::Fetch => V::FetchCatalog,
+            B::Use => return self.list_key(ctx, L::Enter),
+            B::Preview => return self.list_key(ctx, L::Details),
+            B::Favorite => return self.list_key(ctx, L::Char(' ')),
+            B::Remove => return self.list_key(ctx, L::Delete),
+            B::Close => return self.answer(ctx, Command::Cancel),
+        };
+        self.menu_dirty = true;
+        let effects = self.app.dispatch(Command::VoiceControl(control));
+        self.sync_list(ctx);
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
+    }
+
     /// The command palette, the GUI's menu: a filter field over the list of
     /// every command with its keys. Typing filters (and says how many
     /// match); Tab reaches the list; Enter runs the selected command.
@@ -2279,8 +2341,9 @@ impl Gui {
             crate::log::line(&format!("list chord {chord} -> {action:?}"));
         }
         match action {
-            // In the file browser, Say Status previews the focused row.
-            Some(ActionId::SayStatus) if self.app.browse_location().is_some() => {
+            // In the file browser, Say Status previews the focused row;
+            // in the voice manager, the focused voice.
+            Some(ActionId::SayStatus) if self.app.list_has_details() => {
                 self.list_key(ctx, textweaver_app::ListKey::Details);
             }
             Some(ActionId::Help | ActionId::SayStatus) => {
@@ -2296,20 +2359,37 @@ impl Gui {
     /// Shows the app's list model in the open list dialog, or closes the
     /// dialog when the app's list is gone.
     fn sync_list(&mut self, ctx: &mut DriverCtx<'_>) {
-        let Some(OpenDialog::List(shown)) = &self.dialog else {
-            return;
+        let (shown, voices_shown) = match &self.dialog {
+            Some(OpenDialog::List(t)) => (t.clone(), false),
+            Some(OpenDialog::Voices { title, .. }) => (title.clone(), true),
+            _ => return,
         };
+        let voices = self.app.voice_list_open();
         match self.app.list_model() {
-            // A new list in its place (a submenu of the list menu): shown
-            // under its own name, so the screen reader says it.
-            Some(m) if m.title != *shown => {
+            // A new list in its place (a submenu of the list menu, or the
+            // voice manager from the list menu): shown under its own name,
+            // so the screen reader says it.
+            Some(m) if m.title != shown || voices != voices_shown => {
                 let (title, items) = (m.title.clone(), m.items.clone());
-                self.open_list(ctx, &title, items);
+                if voices {
+                    self.open_voices(ctx, &title, items);
+                } else {
+                    self.open_list(ctx, &title, items);
+                }
             }
             Some(m) => {
                 let (items, selected) = (m.items.clone(), m.selected);
-                ctx.render_root(self.window_id)
-                    .edit_widget_with_tag(LIST, |mut l| ChoiceList::sync(&mut l, &items, selected));
+                let root = ctx.render_root(self.window_id);
+                root.edit_widget_with_tag(LIST, |mut l| ChoiceList::sync(&mut l, &items, selected));
+                // The filter buttons say what the list shows now.
+                if let Some(c) = self.app.voice_controls() {
+                    root.edit_widget_with_tag(crate::voices::VOICE_LANGUAGE, |mut b| {
+                        ActionButton::set_label(&mut b, c.language.clone());
+                    });
+                    root.edit_widget_with_tag(crate::voices::VOICE_ENGINE, |mut b| {
+                        ActionButton::set_label(&mut b, c.engine.clone());
+                    });
+                }
             }
             None => self.close_dialog(ctx),
         }
@@ -2752,6 +2832,10 @@ impl AppDriver for Gui {
                 && open.reset == Some(widget_id)
             {
                 self.reset_all_colors(ctx);
+            } else if let Some(OpenDialog::Voices { buttons, .. }) = &self.dialog
+                && let Some(b) = crate::voices::button_for(buttons, widget_id)
+            {
+                self.voice_button(ctx, b);
             } else if let Some(a) = self.buttons.by_id.get(&widget_id).copied() {
                 self.dispatch(ctx, Command::Action(a));
             }

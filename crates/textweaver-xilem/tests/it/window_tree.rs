@@ -610,10 +610,10 @@ fn a_question_is_a_dialog_with_yes_and_no() {
     );
 }
 
-/// The voice manager (Ctrl+Shift+V in the window) is the app's list: the
-/// language and engine filter rows first, then the voices. In its dialog,
-/// Enter, Space (a favorite), and Delete (a downloaded voice) go to the
-/// app's list model, as in the terminal.
+/// The voice manager (Ctrl+Shift+V in the window) is the app's list, with
+/// only voices in it: the language and engine filters are buttons beside
+/// it (W7v). In its dialog, Enter, Space (a favorite), and Delete (a
+/// downloaded voice) go to the app's list model, as in the terminal.
 #[test]
 fn the_voice_manager_is_the_apps_list_with_its_keys() {
     use textweaver_app::keymap::{ActionId, KeyChord};
@@ -641,19 +641,21 @@ fn the_voice_manager_is_the_apps_list_with_its_keys() {
             _ => None,
         })
         .expect("the voice list");
-    assert!(items[0].starts_with("Language: "), "{items:?}");
-    assert!(items[1].starts_with("Engine: "), "{items:?}");
+    assert!(
+        !items
+            .iter()
+            .any(|i| i.starts_with("Language: ") || i.starts_with("Engine: ")),
+        "{items:?}"
+    );
+    let controls = app.voice_controls().expect("the filters, as buttons");
+    assert!(controls.language.starts_with("Language: "));
+    assert!(controls.engine.starts_with("Engine: "));
     let mut h = harness(&app);
     let selected = app.list_model().map_or(0, |m| m.selected);
-    let (modal, list_id) = gui::list_dialog(
-        &Palette::galaxy(),
-        &app.catalog(),
-        &title,
-        items,
-        selected,
-        true,
-    );
-    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+    let d =
+        textweaver_xilem::voices::voice_dialog(&Palette::galaxy(), &app, &title, items, selected);
+    let list_id = d.list;
+    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
     h.focus_on(Some(list_id));
     let _ = h.redraw();
     let mut key = |k: Key| {
@@ -889,6 +891,7 @@ fn screenshots_are_written_at_both_scales() {
             home: Some(dir.path().join("home")),
             aids: false,
             colors: false,
+            voices: false,
         };
         textweaver_xilem::screenshot::screenshot(&o).unwrap();
         let bytes = std::fs::read(dir.path().join(name)).unwrap();

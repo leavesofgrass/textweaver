@@ -50,6 +50,9 @@ pub struct ShotOptions {
     /// samples and contrast show. Saved like any setting, so this needs
     /// `home`.
     pub colors: bool,
+    /// Draw the voice manager (W7v) with a few sample voices of several
+    /// engines (no engine is started for it).
+    pub voices: bool,
 }
 
 /// A few colors chosen for the Colors dialog's review: the blue and
@@ -188,6 +191,26 @@ fn render(
         harness.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
         harness.focus_on(Some(d.form));
     }
+    if opts.voices {
+        let items = [
+            "Reed, en-US, Eloquence, current",
+            "Microsoft Zira (OneCore), en-US, SAPI 5, OneCore, favorite",
+            "Joe (medium), en-US, Piper, medium",
+            "Paul, en-US, DECtalk",
+            "English (America), en-US, eSpeak NG",
+            "Amy (low), en-US, Piper, low, download 63 MB, non-commercial",
+            "eci:shelley, favorite, not on this computer",
+        ];
+        let d = crate::voices::voice_dialog(
+            palette,
+            app,
+            &app.catalog().tr("voice-list-title"),
+            items.iter().map(|s| (*s).to_owned()).collect(),
+            1,
+        );
+        harness.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
+        harness.focus_on(Some(d.list));
+    }
     harness
         .render()
         .save(&opts.path)
@@ -196,7 +219,8 @@ fn render(
 
 /// The screenshots for review: Galaxy, Galaxy Light, high contrast, and
 /// Windows High Contrast's own colors at 100% and 200% with a spoken word,
-/// a list dialog, and the settings dialog. Returns the files.
+/// a list dialog, the settings dialog, the Colors dialog, and the voice
+/// manager. Returns the files.
 pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
     let mut out = Vec::new();
@@ -212,6 +236,7 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         home: Some(dir.join("home")),
         aids: false,
         colors: false,
+        voices: false,
     };
     // What each shot shows over the window: nothing, a list, or settings.
     const WINDOW: u8 = 0;
@@ -221,6 +246,8 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     const AIDS: u8 = 3;
     // The Colors dialog, with a few colors chosen (W6a6).
     const COLORS: u8 = 4;
+    // The voice manager, with sample voices (W7v).
+    const VOICES: u8 = 5;
     const NIGHT_SKY: &str = crate::system_colors::NIGHT_SKY_NAME;
     let shots = [
         ("galaxy-100.png", "galaxy", 1.0, WINDOW),
@@ -257,6 +284,9 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         ("galaxy-colors-200.png", "galaxy", 2.0, COLORS),
         ("galaxy-light-colors-100.png", "galaxy-light", 1.0, COLORS),
         ("high-contrast-colors-100.png", "high-contrast", 1.0, COLORS),
+        ("galaxy-voices-100.png", "galaxy", 1.0, VOICES),
+        ("galaxy-voices-200.png", "galaxy", 2.0, VOICES),
+        ("high-contrast-voices-100.png", "high-contrast", 1.0, VOICES),
     ];
     for (name, theme, scale, over) in shots {
         let mut o = base.clone();
@@ -266,6 +296,7 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         o.settings = over == SETTINGS;
         o.aids = over == AIDS;
         o.colors = over == COLORS;
+        o.voices = over == VOICES;
         // Each shot starts from the defaults; the aids and colors shots
         // save theirs.
         o.home = Some(dir.join(match over {

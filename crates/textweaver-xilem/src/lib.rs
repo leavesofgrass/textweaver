@@ -14,6 +14,7 @@
 //! - [`menus`]: the menus, native on Windows and macOS, from the app's model.
 //! - [`file_chooser`]: Open with the system's own file chooser.
 //! - [`settings_dialog`]: the settings dialog, built from the app's schema.
+//! - [`voices`]: the voice manager, every engine's voices.
 //! - [`runs`]: the document as AccessKit text runs, with stable ids.
 //! - [`window`]: the part of a large document the view holds.
 //! - [`caret`]: caret moves that need no layout.
@@ -51,5 +52,6 @@ pub mod settings_dialog;
 pub mod setup;
 pub mod system_colors;
 pub mod theme;
+pub mod voices;
 pub mod widgets;
 pub mod window;

@@ -439,6 +439,9 @@ impl ActionButton {
             let mut child = this.ctx.get_mut(&mut this.widget.child);
             Label::set_text(&mut child, text);
         }
+        // A longer or shorter label ("Language: all languages" becoming
+        // "Language: English") needs the button measured again.
+        this.ctx.request_layout();
         this.ctx.request_accessibility_update();
     }
 
