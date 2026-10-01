@@ -13,7 +13,7 @@
   -Flush lists exactly which build folders are flush candidates, with sizes.
   -Flush -Apply removes those folders, and only those.
 
-  Safety rules (see CLAUDE.md, "Deleting files: hard rules"):
+  Safety rules:
     * Only folders on the allow-list below, under D:\textweaver\target or a
       worktree's own target folder, can ever be candidates.
     * Every candidate's full path is resolved and checked to be inside one

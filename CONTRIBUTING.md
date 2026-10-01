@@ -162,7 +162,7 @@ Some of textweaver is written with AI coding assistants, and you may use one too
 
 - Every worktree shares one git stash. Use a temporary commit to set work aside instead of a bare `git stash`.
 
-The repository's [CLAUDE.md](CLAUDE.md) holds the rules the maintainers give their own assistants.
+If you use an AI coding assistant, keep its settings and rules files out of your commits; this repository doesn't track them.
 
 ## Releases
 

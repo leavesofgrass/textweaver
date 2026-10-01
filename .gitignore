@@ -15,3 +15,7 @@ __pycache__/
 
 # Git Bash turned /target/<agent> into a Windows path when MSYS_NO_PATHCONV was unset.
 /C*/Program Files/
+
+# Claude Code rules for this machine: kept locally, never in the repository
+# (the owner, Wednesday, September 30, 2026). The master copy is in the wiki.
+/CLAUDE.md
