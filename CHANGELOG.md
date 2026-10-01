@@ -74,7 +74,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ### Audio export
 
-- **Opus files.** Export audio, in the File menu, and `tw export-audio --out book.opus` write Ogg Opus files with no ffmpeg: the smallest of the formats, about 14 MB an hour, at 32 kilobits per second in one channel. The reader offers Opus after MP3: "Opus: the smallest, made for speech". The title, author, and chapters go in as Vorbis comments, the same as FLAC. textweaver encodes them with libopus, the reference encoder, built in; its BSD license is in the notices.
+- **Opus files.** Export audio, in the File menu, and `tw export-audio --out book.opus` write Ogg Opus files with no ffmpeg: the smallest of the formats, about 14 MB an hour, at 32 kilobits per second in one channel. The reader offers Opus after MP3: "Opus: the smallest, made for speech", and the Export audio command's description names it. The title, author, and chapters go in as Vorbis comments, the same as FLAC. textweaver encodes them with libopus, the reference encoder, built in; its BSD license is in the notices.
 
 ### Braille files
 
