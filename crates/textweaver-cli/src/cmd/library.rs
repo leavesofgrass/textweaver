@@ -779,7 +779,10 @@ mod tests {
             cont.contains("  Cell Energy, 42 percent, laptop, just now\n"),
             "{cont}"
         );
-        assert!(cont.contains(&paper.display().to_string()), "{cont}");
+        // Paths are shown resolved (long names on Windows, symbolic links
+        // followed), as the library stores them.
+        let shown = library::resolve_path(&paper);
+        assert!(cont.contains(&shown.display().to_string()), "{cont}");
         let json = run_with(
             &Args {
                 continue_reading: true,
