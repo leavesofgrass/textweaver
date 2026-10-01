@@ -21,5 +21,12 @@ before committing.
   one terminator), a passage inside a sentence, and two capitalized words
   that keep their word indicators. Snapshot: `capitals.brf`. The
   indicators follow the Rules' section 8.
+- `passages.md`: three paragraphs in capitals, a heading in capitals, two
+  paragraphs in italics, bold list items, and a quotation in italics.
+  Snapshot: `passages.brf`. A passage that goes on over paragraphs is
+  opened at each and terminated once (the Rules' 8.5.5 and 9.9.1, numbered
+  the same in the third edition, 2024); each heading is capitalized by
+  itself (8.5.6); the bullet between bold list items ends each item's
+  passage, since the typeform changes there.
 
 The snapshots are 40 cells by 25 lines, with braille page numbers.

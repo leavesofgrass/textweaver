@@ -4,6 +4,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Braille files
+
+- **Emphasis in contracted braille.** Grade 2 BRF files now carry the UEB indicators for bold, italic, and underline, as grade 1 files do, placed around liblouis's contractions.
+- **Passages over paragraphs.** Capitals or emphasis that go on over several paragraphs or list items open again at the start of each and end once, after the last (UEB Rules 8.5.5 and 9.9.1). Each heading stands alone.
+
+### PDF files
+
+- **Captions in six languages.** "Tabla 2:", "Abbildung 3.", "Tableau 1 -", "Tabela 4.", and "الشكل ٣:" are found as captions, as "Figure 3." and "Table 2:" were.
+
 ### State files, ready for sync
 
 - **Bookmarks have ids.** Every bookmark gets a stable id, so bookmarks from two computers are matched by id, not by name. Existing bookmarks get one when their file is read, and keep their names and places.

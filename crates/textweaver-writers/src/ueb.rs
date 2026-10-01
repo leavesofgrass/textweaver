@@ -38,15 +38,20 @@
 //!   digits follow in the same sequence (9.4.4, 9.7.3), and the passage
 //!   indicator and terminator for three or more sequences, the terminator
 //!   after punctuation that follows the passage (9.7.2); indicators nest,
-//!   typeform outside capitals (8.6.2, 9.7.1, 9.8.1).
+//!   typeform outside capitals (8.6.2, 9.7.1, 9.8.1);
+//! - a capitals or typeform passage that goes on over several text
+//!   elements (paragraphs, list items) is opened again at the start of
+//!   each and terminated only at the end of the last (8.5.5, 9.9.1), when
+//!   the texts are given together to [`translate_series`]; the lines of
+//!   one paragraph are one element.
 //!
 //! Section numbers are those of The Rules of Unified English Braille,
 //! second edition 2013 (International Council on English Braille), whose
-//! examples the tests use in their grade 1 form.
+//! examples the tests use in their grade 1 form; the rules cited here keep
+//! their numbers in the third edition (2024).
 //!
-//! Not done: contractions (grade 2 goes through liblouis), and typeform or
-//! capitals passages continued across paragraphs (Rules 8.5.5 and 9.9):
-//! each text is its own element.
+//! Not done: contractions. Grade 2 goes through liblouis, with the
+//! typeform indicators placed here ([`typeform_segments`]).
 
 /// A translation: braille ASCII plus what could not be translated.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -179,6 +184,34 @@ pub fn strip_marks(text: &str) -> String {
         .collect()
 }
 
+/// How a text given to [`translate_series`] goes on from the one before it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Join {
+    /// A new start: nothing carries over from the text before.
+    Fresh,
+    /// The next line of the same text element (a paragraph's line after a
+    /// line break): capitals and typeform passages run on through it.
+    Line,
+    /// The next text element of a continuous passage (the next paragraph or
+    /// list item): a capitals or typeform passage that goes on into it is
+    /// opened again at its start and terminated only where it ends
+    /// (UEB Rules 8.5.5 and 9.9.1).
+    Element,
+    /// Translated by itself, and the texts before and after it join as if
+    /// it were not there (a print page number between two paragraphs).
+    Alone,
+}
+
+/// Stands for the joint between two texts of a series: a space that ends
+/// a symbols-sequence. Private-use characters, never in the output.
+const LINE_JOINT: char = '\u{E032}';
+const ELEMENT_JOINT: char = '\u{E033}';
+
+/// White space, or a joint between two texts of a series.
+fn is_space(c: char) -> bool {
+    c.is_whitespace() || c == LINE_JOINT || c == ELEMENT_JOINT
+}
+
 /// Translates print text to UEB grade 1 braille ASCII.
 ///
 /// Typeform marks ([`Typeform::open`], [`Typeform::close`]) become the
@@ -186,62 +219,202 @@ pub fn strip_marks(text: &str) -> String {
 /// close without an open runs from its start (a span divided between two
 /// lines).
 pub fn translate(text: &str) -> Translation {
-    let mut chars: Vec<char> = Vec::with_capacity(text.len());
-    let mut runs: Vec<Run> = Vec::new();
-    let mut open: [Option<(usize, usize)>; 3] = [None; 3];
-    for c in text.chars() {
-        if matches!(
-            c,
-            '\r' | '\u{AD}' | '\u{200B}'..='\u{200D}' | '\u{2060}' | '\u{FEFF}'
-        ) {
-            continue;
-        }
-        let Some((form, opens)) = Typeform::of_mark(c) else {
-            chars.push(c);
-            continue;
+    translate_series(&[(text, Join::Fresh)])
+        .pop()
+        .unwrap_or_default()
+}
+
+/// Translates texts that may go on from one another, one translation per
+/// text, in order.
+///
+/// Texts joined by [`Join::Line`] or [`Join::Element`] are planned as one
+/// stretch of print, so a capitals passage (Rule 8.5) or a typeform
+/// passage (Rule 9.4) can run from one into the next. At an element's
+/// start the passage indicator is written again and the terminator comes
+/// only after the passage's last element (Rules 8.5.5 and 9.9.1 of The
+/// Rules of Unified English Braille, second edition 2013, numbered the
+/// same in the third edition, 2024). Callers keep headings apart with
+/// [`Join::Fresh`]: each heading is capitalized by itself (8.5.6).
+pub fn translate_series(texts: &[(&str, Join)]) -> Vec<Translation> {
+    let mut out = vec![Translation::default(); texts.len()];
+    for group in series(texts) {
+        let marked = Marked::parse(texts, &group);
+        let mut plan = Plan::new(&marked.chars, marked.runs.clone(), true);
+        plan.reopen(&marked.chars);
+        plan.sort();
+        let mut t = Translator {
+            chars: &marked.chars,
+            out: String::with_capacity(marked.chars.len() + marked.chars.len() / 4),
+            unsupported: Vec::new(),
+            numeric: false,
+            single_open: false,
+            plan,
+            splits: Vec::new(),
         };
-        let slot = &mut open[form.index()];
-        match (*slot, opens) {
-            (None, true) => *slot = Some((chars.len(), 1)),
-            (Some((s, d)), true) => *slot = Some((s, d + 1)),
-            (Some((s, 1)), false) => {
+        t.run();
+        let mut from = 0;
+        let ends = t.splits.iter().copied().chain([t.out.len()]);
+        for (k, (&index, end)) in group.iter().zip(ends).enumerate() {
+            out[index].braille = t.out[from..end].to_owned();
+            if k == 0 {
+                out[index].unsupported = std::mem::take(&mut t.unsupported);
+            }
+            from = end;
+        }
+    }
+    out
+}
+
+/// A piece of a text for a translator that knows no typeform indicators,
+/// from [`typeform_segments`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Segment {
+    /// Print to translate, with its spaces; no marks left in it.
+    Print(String),
+    /// Braille ASCII to write as it is: typeform indicators, or the guide
+    /// dots of a blank table entry.
+    Braille(String),
+}
+
+/// Each text as print and the typeform indicators placed between its
+/// pieces, by the same rules as [`translate_series`] (UEB Rules 9.2 to
+/// 9.9) but without capitals, which the other translator writes itself.
+///
+/// For contracted braille through liblouis, whose command-line translator
+/// takes no typeforms: each piece of print is contracted by itself, so no
+/// contraction spans an indicator.
+pub fn typeform_segments(texts: &[(&str, Join)]) -> Vec<Vec<Segment>> {
+    let mut out = vec![Vec::new(); texts.len()];
+    for group in series(texts) {
+        let marked = Marked::parse(texts, &group);
+        let mut plan = Plan::new(&marked.chars, marked.runs.clone(), false);
+        plan.reopen(&marked.chars);
+        plan.sort();
+        let mut slot = group.iter().copied();
+        let mut index = slot.next().unwrap_or_default();
+        let mut print = String::new();
+        let mut pieces: Vec<Segment> = Vec::new();
+        let flush = |print: &mut String, pieces: &mut Vec<Segment>| {
+            if !print.is_empty() {
+                pieces.push(Segment::Print(std::mem::take(print)));
+            }
+        };
+        for (i, &c) in marked.chars.iter().chain([&'\0']).enumerate() {
+            if let Some(at) = plan.inserts.get(i).filter(|v| !v.is_empty()) {
+                flush(&mut print, &mut pieces);
+                let cells: String = at.iter().map(|ins| ins.cells.as_str()).collect();
+                pieces.push(Segment::Braille(cells));
+            }
+            if i == marked.chars.len() {
+                break;
+            }
+            match c {
+                LINE_JOINT | ELEMENT_JOINT => {
+                    flush(&mut print, &mut pieces);
+                    out[index] = std::mem::take(&mut pieces);
+                    index = slot.next().unwrap_or(index);
+                }
+                BLANK_ENTRY => {
+                    flush(&mut print, &mut pieces);
+                    pieces.push(Segment::Braille("\"\"\"".into()));
+                }
+                _ => print.push(c),
+            }
+        }
+        flush(&mut print, &mut pieces);
+        out[index] = pieces;
+    }
+    out
+}
+
+/// The series in `texts`: indices of texts planned together. A
+/// [`Join::Fresh`] text starts a new one, and each [`Join::Alone`] text is
+/// a series of its own that does not divide the one around it.
+fn series(texts: &[(&str, Join)]) -> Vec<Vec<usize>> {
+    let mut all: Vec<Vec<usize>> = Vec::new();
+    let mut current: Vec<usize> = Vec::new();
+    for (i, &(_, join)) in texts.iter().enumerate() {
+        match join {
+            Join::Alone => all.push(vec![i]),
+            Join::Fresh => {
+                if !current.is_empty() {
+                    all.push(std::mem::take(&mut current));
+                }
+                current.push(i);
+            }
+            Join::Line | Join::Element => current.push(i),
+        }
+    }
+    if !current.is_empty() {
+        all.push(current);
+    }
+    all
+}
+
+/// A series of texts as one stretch of print: its chars with joints
+/// between the texts, and its typeform runs.
+struct Marked {
+    chars: Vec<char>,
+    runs: Vec<Run>,
+}
+
+impl Marked {
+    fn parse(texts: &[(&str, Join)], group: &[usize]) -> Marked {
+        let mut chars: Vec<char> = Vec::new();
+        let mut runs: Vec<Run> = Vec::new();
+        let mut open: [Option<(usize, usize)>; 3] = [None; 3];
+        for (k, &index) in group.iter().enumerate() {
+            let (text, join) = texts[index];
+            if k > 0 {
+                chars.push(if join == Join::Element {
+                    ELEMENT_JOINT
+                } else {
+                    LINE_JOINT
+                });
+            }
+            for c in text.chars() {
+                if matches!(
+                    c,
+                    '\r' | '\u{AD}' | '\u{200B}'
+                        ..='\u{200D}' | '\u{2060}' | '\u{FEFF}' | LINE_JOINT | ELEMENT_JOINT
+                ) {
+                    continue;
+                }
+                let Some((form, opens)) = Typeform::of_mark(c) else {
+                    chars.push(c);
+                    continue;
+                };
+                let slot = &mut open[form.index()];
+                match (*slot, opens) {
+                    (None, true) => *slot = Some((chars.len(), 1)),
+                    (Some((s, d)), true) => *slot = Some((s, d + 1)),
+                    (Some((s, 1)), false) => {
+                        runs.push(Run {
+                            form,
+                            start: s,
+                            end: chars.len(),
+                        });
+                        *slot = None;
+                    }
+                    (Some((s, d)), false) => *slot = Some((s, d - 1)),
+                    (None, false) => runs.push(Run {
+                        form,
+                        start: 0,
+                        end: chars.len(),
+                    }),
+                }
+            }
+        }
+        for form in Typeform::ALL {
+            if let Some((s, _)) = open[form.index()] {
                 runs.push(Run {
                     form,
                     start: s,
                     end: chars.len(),
                 });
-                *slot = None;
             }
-            (Some((s, d)), false) => *slot = Some((s, d - 1)),
-            (None, false) => runs.push(Run {
-                form,
-                start: 0,
-                end: chars.len(),
-            }),
         }
-    }
-    for form in Typeform::ALL {
-        if let Some((s, _)) = open[form.index()] {
-            runs.push(Run {
-                form,
-                start: s,
-                end: chars.len(),
-            });
-        }
-    }
-    let plan = Plan::new(&chars, runs);
-    let mut t = Translator {
-        chars: &chars,
-        out: String::with_capacity(text.len() + text.len() / 4),
-        unsupported: Vec::new(),
-        numeric: false,
-        single_open: false,
-        plan,
-    };
-    t.run();
-    Translation {
-        braille: t.out,
-        unsupported: t.unsupported,
+        Marked { chars, runs }
     }
 }
 
@@ -273,7 +446,14 @@ struct Insert {
 struct Plan {
     inserts: Vec<Vec<Insert>>,
     in_caps_passage: Vec<bool>,
+    /// Every capitals and typeform passage: its indicator, where it starts
+    /// and ends, and its nesting rank, to open it again at each text
+    /// element it goes on into.
+    passages: Vec<(String, usize, usize, u8)>,
 }
+
+/// The nesting rank of capitals: inside every typeform (Rule 8.6.2).
+const CAPS_RANK: u8 = 3;
 
 /// A symbols-sequence: a stretch of print between spaces (char indices).
 #[derive(Clone, Copy, Debug)]
@@ -286,12 +466,12 @@ fn sequences(chars: &[char]) -> Vec<Seq> {
     let mut seqs = Vec::new();
     let mut i = 0;
     while i < chars.len() {
-        if chars[i].is_whitespace() {
+        if is_space(chars[i]) {
             i += 1;
             continue;
         }
         let start = i;
-        while i < chars.len() && !chars[i].is_whitespace() {
+        while i < chars.len() && !is_space(chars[i]) {
             i += 1;
         }
         seqs.push(Seq { start, end: i });
@@ -344,7 +524,7 @@ fn nest_end(chars: &[char], start: usize, end: usize, floor: usize) -> usize {
         let opens = match c {
             '(' | '[' | '{' | '\u{201C}' | '«' => true,
             // A straight quote opens at the start of a word.
-            '"' => at == 0 || chars[at - 1].is_whitespace() || matches!(chars[at - 1], '(' | '['),
+            '"' => at == 0 || is_space(chars[at - 1]) || matches!(chars[at - 1], '(' | '['),
             _ => false,
         };
         depth[slot] += if opens { 1 } else { -1 };
@@ -369,17 +549,59 @@ fn nest_end(chars: &[char], start: usize, end: usize, floor: usize) -> usize {
 }
 
 impl Plan {
-    fn new(chars: &[char], runs: Vec<Run>) -> Plan {
+    /// The indicators for `chars`: capitals (when `capitals` is set) and
+    /// typeforms. [`Plan::reopen`] and [`Plan::sort`] finish it.
+    fn new(chars: &[char], runs: Vec<Run>, capitals: bool) -> Plan {
         let mut plan = Plan {
             inserts: vec![Vec::new(); chars.len() + 1],
             in_caps_passage: vec![false; chars.len()],
+            passages: Vec::new(),
         };
         let seqs = sequences(chars);
-        plan.capitals(chars, &seqs);
+        if capitals {
+            plan.capitals(chars, &seqs);
+        }
         for run in merge_runs(chars, runs) {
             plan.typeform(chars, &seqs, run);
         }
-        for at in &mut plan.inserts {
+        plan
+    }
+
+    /// Opens each passage again at the start of every text element it goes
+    /// on into, so each element starts with the passage indicator and only
+    /// the last is terminated (Rules 8.5.5 and 9.9.1).
+    fn reopen(&mut self, chars: &[char]) {
+        let joints: Vec<usize> = (0..chars.len())
+            .filter(|&i| chars[i] == ELEMENT_JOINT)
+            .collect();
+        for at in joints {
+            let Some(next) = (at + 1..chars.len()).find(|&k| !is_space(chars[k])) else {
+                continue;
+            };
+            for (cells, start, end, rank) in self.passages.clone() {
+                if start >= at || end <= next {
+                    continue;
+                }
+                // A typeform passage opens before the element's first
+                // symbol; a capitals passage before its first capital, so
+                // an opening quotation mark stays outside it (8.6.2).
+                let open = if rank == CAPS_RANK {
+                    (next..end)
+                        .take_while(|&k| chars[k] != ELEMENT_JOINT)
+                        .find(|&k| chars[k].is_uppercase())
+                } else {
+                    Some(next)
+                };
+                if let Some(open) = open {
+                    self.add(open, cells, false, open, end, rank);
+                }
+            }
+        }
+    }
+
+    /// Orders the indicators at each place so they nest.
+    fn sort(&mut self) {
+        for at in &mut self.inserts {
             // Closers first, the last opened first; then openers, the
             // widest first.
             at.sort_by(|a, b| match (a.closes, b.closes) {
@@ -389,7 +611,6 @@ impl Plan {
                 (false, false) => b.end.cmp(&a.end).then(a.rank.cmp(&b.rank)),
             });
         }
-        plan
     }
 
     fn add(&mut self, at: usize, cells: String, closes: bool, start: usize, end: usize, rank: u8) {
@@ -438,8 +659,9 @@ impl Plan {
                     .find(|&k| chars[k].is_uppercase())
                     .unwrap_or(seqs[first].start);
                 let end = nest_end(chars, start, seqs[last].end, start + 1);
-                self.add(start, ",,,".into(), false, start, end, 3);
-                self.add(end, ",'".into(), true, start, end, 3);
+                self.add(start, ",,,".into(), false, start, end, CAPS_RANK);
+                self.add(end, ",'".into(), true, start, end, CAPS_RANK);
+                self.passages.push((",,,".into(), start, end, CAPS_RANK));
                 for k in start..end {
                     self.in_caps_passage[k] = true;
                 }
@@ -479,6 +701,7 @@ impl Plan {
             }
             let end = nest_end(chars, run.start, end, run.end);
             self.add(run.start, format!("{p}7"), false, run.start, end, rank);
+            self.passages.push((format!("{p}7"), run.start, end, rank));
             self.add(end, format!("{p}'"), true, run.start, end, rank);
             return;
         }
@@ -503,10 +726,10 @@ impl Plan {
 /// spaces lie between them ("*one* *two* *three*" is one passage).
 fn merge_runs(chars: &[char], mut runs: Vec<Run>) -> Vec<Run> {
     for r in &mut runs {
-        while r.start < r.end && chars[r.start].is_whitespace() {
+        while r.start < r.end && is_space(chars[r.start]) {
             r.start += 1;
         }
-        while r.end > r.start && chars[r.end - 1].is_whitespace() {
+        while r.end > r.start && is_space(chars[r.end - 1]) {
             r.end -= 1;
         }
     }
@@ -518,7 +741,7 @@ fn merge_runs(chars: &[char], mut runs: Vec<Run>) -> Vec<Run> {
             && prev.form == r.form
             && chars[prev.end.min(r.start)..r.start]
                 .iter()
-                .all(|c| c.is_whitespace())
+                .all(|&c| is_space(c))
         {
             prev.end = prev.end.max(r.end);
             continue;
@@ -538,6 +761,8 @@ struct Translator<'a> {
     /// A single quotation mark is open.
     single_open: bool,
     plan: Plan,
+    /// Where each text after the first starts in `out` (byte offsets).
+    splits: Vec<usize>,
 }
 
 /// A letter's UEB form: optional prefix (modifier or Greek indicator) and the
@@ -692,7 +917,7 @@ impl Translator<'_> {
         match self.prev(i) {
             None => true,
             Some(p) => {
-                p.is_whitespace()
+                is_space(p)
                     || matches!(
                         p,
                         '(' | '[' | '{' | '\u{2014}' | '\u{2013}' | '"' | '\u{201C}' | '\u{2018}'
@@ -728,7 +953,15 @@ impl Translator<'_> {
         while i < self.chars.len() {
             let c = self.chars[i];
             self.indicators(i);
-            if c.is_whitespace() {
+            if c == LINE_JOINT || c == ELEMENT_JOINT {
+                // The next text of the series starts here.
+                self.splits.push(self.out.len());
+                self.numeric = false;
+                if c == ELEMENT_JOINT {
+                    self.single_open = false;
+                }
+                i += 1;
+            } else if c.is_whitespace() {
                 self.out.push(if c == '\n' { '\n' } else { ' ' });
                 self.numeric = false;
                 if c == '\n' {
@@ -1060,6 +1293,149 @@ mod tests {
         // start.
         ueb_marked("an <i>open", "an .1open");
         ueb_marked("closed</i> here", ".1closed here");
+    }
+
+    /// Translates a series, the braille of each text lowercased.
+    fn series_of(texts: &[(&str, Join)]) -> Vec<String> {
+        let marked: Vec<String> = texts.iter().map(|(t, _)| marked(t)).collect();
+        let pairs: Vec<(&str, Join)> = marked
+            .iter()
+            .zip(texts)
+            .map(|(m, (_, j))| (m.as_str(), *j))
+            .collect();
+        translate_series(&pairs)
+            .into_iter()
+            .map(|t| {
+                assert!(t.unsupported.is_empty(), "{texts:?}");
+                t.braille.to_ascii_lowercase()
+            })
+            .collect()
+    }
+
+    /// Rule 8.5.5's example (The Rules of Unified English Braille, 2013;
+    /// the same rule and example in the third edition, 2024), in grade 1:
+    /// four paragraphs in capitals, each opened with the capitals passage
+    /// indicator inside its opening quotation mark, and one terminator, at
+    /// the end of the last.
+    #[test]
+    fn capitals_passages_go_on_over_paragraphs() {
+        use Join::Element;
+        let got = series_of(&[
+            (
+                "\"HE'S GETTING AWAY! HE'S OVER THERE, UNDER THE PORCH.\"",
+                Join::Fresh,
+            ),
+            (
+                "\"I SEE HIM. I'LL CUT HIM OFF FROM THE OTHER SIDE.\"",
+                Element,
+            ),
+            ("\"JUMP!\"", Element),
+            ("\"I CAUGHT HIM. I CAUGHT MY PUPPY!\"", Element),
+        ]);
+        assert_eq!(
+            got,
+            [
+                "8,,,he's getting away6 he's over there1 under the porch40",
+                "8,,,i see him4 i'll cut him off from the other side40",
+                "8,,,jump60",
+                "8,,,i caught him4 i caught my puppy6,'0",
+            ]
+        );
+        // Given apart, as before, each is its own passage, and "JUMP!"
+        // alone is one word.
+        let apart = series_of(&[("\"JUMP!\"", Join::Fresh), ("\"I SEE HIM.\"", Join::Fresh)]);
+        assert_eq!(apart, ["8,,jump60", "8,,,i see him4,'0"]);
+    }
+
+    /// Rule 9.9.1, in grade 1: a typeform passage over paragraphs is opened
+    /// at each and terminated where the typeform changes.
+    #[test]
+    fn typeform_passages_go_on_over_paragraphs() {
+        let got = series_of(&[
+            ("<i>The first paragraph in italics.</i>", Join::Fresh),
+            ("<i>The second one too.</i>", Join::Element),
+            ("<i>A third</i> and then roman.", Join::Element),
+        ]);
+        assert_eq!(
+            got,
+            [
+                ".7,the first paragraph in italics4",
+                ".7,the second one too4",
+                ".7,a third.' and then roman4",
+            ]
+        );
+        // The typeform changes at the end of a paragraph: terminated there,
+        // and the next paragraph starts plain.
+        let got = series_of(&[
+            ("<b>Three bold words.</b>", Join::Fresh),
+            ("Plain words.", Join::Element),
+        ]);
+        assert_eq!(got, ["^7,three bold words4^'", ",plain words4"]);
+        // The lines of one paragraph are one element: one indicator, one
+        // terminator.
+        let got = series_of(&[
+            ("an <i>open and", Join::Fresh),
+            ("closed</i> here", Join::Line),
+        ]);
+        assert_eq!(got, ["an .7open and", "closed.' here"]);
+    }
+
+    /// A text given alone keeps the series around it whole: a print page
+    /// number between two paragraphs of one passage.
+    #[test]
+    fn a_text_alone_does_not_divide_a_series() {
+        let got = series_of(&[
+            ("<u>Underlined from here</u>", Join::Fresh),
+            ("12", Join::Alone),
+            ("<u>to there.</u>", Join::Element),
+        ]);
+        assert_eq!(got, ["_7,underlined from here", "#ab", "_7to there4_'"]);
+    }
+
+    /// The indicators for a translator without typeforms: the same places
+    /// as in grade 1, capitals left to that translator.
+    #[test]
+    fn typeform_segments_place_the_indicators_between_print() {
+        use Segment::{Braille, Print};
+        let text = marked("Click the <b>Up One Level</b> button, <i>NOW</i>.");
+        let got = typeform_segments(&[(&text, Join::Fresh)]);
+        assert_eq!(
+            got,
+            [vec![
+                Print("Click the ".into()),
+                Braille("^7".into()),
+                Print("Up One Level".into()),
+                Braille("^'".into()),
+                Print(" button, ".into()),
+                Braille(".1".into()),
+                Print("NOW.".into()),
+            ]]
+        );
+        let first = marked("<i>One two</i>");
+        let second = marked("<i>three.</i> Four");
+        let blank = format!("a{BLANK_ENTRY}b");
+        let got = typeform_segments(&[
+            (&first, Join::Fresh),
+            (&second, Join::Element),
+            (&blank, Join::Fresh),
+        ]);
+        assert_eq!(
+            got,
+            [
+                vec![Braille(".7".into()), Print("One two".into())],
+                vec![
+                    Braille(".7".into()),
+                    Print("three.".into()),
+                    Braille(".'".into()),
+                    Print(" Four".into()),
+                ],
+                vec![
+                    Print("a".into()),
+                    Braille("\"\"\"".into()),
+                    Print("b".into()),
+                ],
+            ]
+        );
     }
 
     #[test]
