@@ -2,6 +2,7 @@
 
 - Status: accepted; the owner's check 6 is still queued.
 - Date: 2026-09-30 (Wednesday, September 30, 2026)
+- Status update (Wednesday, September 30, 2026): caption words are listed in the six languages of textweaver's messages (Spanish, French, German, Portuguese, and Arabic beside English), with Arabic-Indic digits and a number in parentheses; in Arabic, which has no capitals, a caption's number must be set apart by punctuation.
 
 ## Context
 

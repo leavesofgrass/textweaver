@@ -27,7 +27,7 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
 
 - **DAISY 3 / DTBook** (the Bookshare format), including DAISY zips. Status: done, in spine order with NCX navigation.
 - **OCR** of images and scanned PDF pages. Status: done: a pure-Rust engine runs in process by default (models are downloaded once with `tw ocr download`, checked by SHA-256), with a Tesseract subprocess as a fallback for other languages ([ADR-0026](adr/0026-ocr-and-student-formats.md)). Scans made sideways or upside down are turned upright before they are read, and scanned tables whose rows and columns line up are read as tables ([ADR-0048](adr/0048-pdf-annotations-links-and-forms.md)).
-- **Better PDF reading order:** removing running headers, footers, and page numbers, and marking captions. Status: done. Captions are marked by pattern ("Figure 3.", "Table 2:"), in English ([ADR-0010](adr/0010-pdf-loader.md), [ADR-0048](adr/0048-pdf-annotations-links-and-forms.md)).
+- **Better PDF reading order:** removing running headers, footers, and page numbers, and marking captions. Status: done. Captions are marked by pattern ("Figure 3.", "Table 2:"), in English, Spanish, French, German, Portuguese, and Arabic ([ADR-0010](adr/0010-pdf-loader.md), [ADR-0048](adr/0048-pdf-annotations-links-and-forms.md)).
 - **Archives:** ZIP and TAR, with 7z. Opening one lists its readable files, and `book.zip!inner.pdf` opens a file inside. Status: done. RAR is not planned.
 - **Opening a web page by URL.** Status: done.
 - **PPTX:** slide titles become headings, speaker notes follow each slide, and images get descriptions. Status: done.
