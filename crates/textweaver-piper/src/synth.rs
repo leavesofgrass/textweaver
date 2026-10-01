@@ -245,12 +245,93 @@ pub fn to_pcm(audio: &[f32]) -> Vec<i16> {
         .collect()
 }
 
-/// Plays `samples` `factor` times faster by linear interpolation: the
-/// pitch rises by `factor` and the length shrinks by it.
+/// Plays `samples` `factor` times faster: the pitch rises by `factor` and
+/// the length shrinks by it, to `floor(len / factor)` samples, lined up
+/// with the input (the filter's delay removed), so word positions scale by
+/// `1 / factor`.
+///
+/// The resampler is band-limited (rubato's windowed sinc, Wave 7): raising
+/// the pitch moves the voice's highest sounds above what the sample rate
+/// can hold, and they are filtered out instead of folding back as a
+/// metallic aliasing tone, as they did with the linear interpolation used
+/// before. Should the filter fail, linear interpolation is the fallback.
 pub fn resample(samples: &[i16], factor: f32) -> Vec<i16> {
-    if samples.is_empty() || factor <= 0.0 {
+    if samples.is_empty() || factor.is_nan() || factor <= 0.0 || (factor - 1.0).abs() < 1e-6 {
         return samples.to_vec();
     }
+    let out_len = ((samples.len() as f64) / f64::from(factor)).floor() as usize;
+    match band_limited(samples, 1.0 / f64::from(factor), out_len) {
+        Ok(out) => out,
+        Err(e) => {
+            log::warn!("piper: {e}; using linear interpolation for the pitch");
+            linear(samples, factor)
+        }
+    }
+}
+
+/// Resamples by `ratio` (output rate over input rate) with a windowed
+/// sinc filter, chunk by chunk, and returns `out_len` samples.
+fn band_limited(samples: &[i16], ratio: f64, out_len: usize) -> Result<Vec<i16>, String> {
+    use rubato::audioadapter_buffers::direct::InterleavedSlice;
+    use rubato::{
+        Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters, WindowFunction,
+    };
+
+    /// Input samples per step.
+    const CHUNK: usize = 1024;
+    let err = |e: &dyn std::fmt::Display| format!("cannot resample for the pitch: {e}");
+    // 128 taps: well past what speech needs, and cheap beside the model.
+    let params = SincInterpolationParameters::new(128, WindowFunction::BlackmanHarris2);
+    let mut r = Async::<f32>::new_sinc(ratio, 1.0, &params, CHUNK, 1, FixedAsync::Input)
+        .map_err(|e| err(&e))?;
+    let input: Vec<f32> = samples.iter().map(|&s| f32::from(s) / 32768.0).collect();
+    let delay = r.output_delay();
+    let wanted = out_len + delay;
+    let mut out: Vec<f32> = Vec::with_capacity(wanted + r.output_frames_max());
+    let mut buf = vec![0.0f32; r.output_frames_max()];
+    let mut padded = vec![0.0f32; r.input_frames_max()];
+    let mut pos = 0usize;
+    // Enough steps for the input and the filter's delay, and a bound in
+    // case the filter stops producing.
+    let mut steps_left = input.len() / CHUNK + delay / CHUNK.max(1) + 16;
+    while out.len() < wanted {
+        if steps_left == 0 {
+            return Err(err(&"the filter stopped producing audio"));
+        }
+        steps_left -= 1;
+        let need = r.input_frames_next();
+        let (chunk, partial): (&[f32], Option<usize>) = if pos + need <= input.len() {
+            (&input[pos..pos + need], None)
+        } else {
+            // The end: the rest, then silence to flush the delay.
+            let rest = input.len().saturating_sub(pos);
+            padded.resize(need, 0.0);
+            padded.fill(0.0);
+            padded[..rest].copy_from_slice(&input[pos.min(input.len())..]);
+            (&padded[..need], Some(rest))
+        };
+        let inp = InterleavedSlice::new(chunk, 1, need).map_err(|e| err(&e))?;
+        let frames = r.output_frames_next();
+        buf.resize(frames.max(buf.len()), 0.0);
+        let mut outp =
+            InterleavedSlice::new_mut(&mut buf[..frames], 1, frames).map_err(|e| err(&e))?;
+        let indexing = partial.map(|p| Indexing::new().partial_len(p));
+        let (used, produced) = r
+            .process_into_buffer(&inp, &mut outp, indexing.as_ref())
+            .map_err(|e| err(&e))?;
+        pos += used;
+        out.extend_from_slice(&buf[..produced]);
+    }
+    Ok(out[delay..wanted]
+        .iter()
+        // Clamped, so in range.
+        .map(|&v| (v * 32768.0).round().clamp(-32768.0, 32767.0) as i16)
+        .collect())
+}
+
+/// Plays `samples` `factor` times faster by linear interpolation (the
+/// fallback; it lets aliasing through).
+fn linear(samples: &[i16], factor: f32) -> Vec<i16> {
     let factor = f64::from(factor);
     let out_len = ((samples.len() as f64) / factor).floor() as usize;
     (0..out_len)
@@ -365,17 +446,82 @@ mod tests {
         assert!(to_pcm(&[]).is_empty());
     }
 
+    /// A sine of `hz` at 22,050 Hz, `n` samples, amplitude 16,000.
+    fn sine(hz: f64, n: usize) -> Vec<i16> {
+        (0..n)
+            .map(|i| {
+                let t = i as f64 / 22_050.0;
+                (16_000.0 * (2.0 * std::f64::consts::PI * hz * t).sin()).round() as i16
+            })
+            .collect()
+    }
+
+    /// Root mean square of `s`, skipping `edge` samples at each end.
+    fn rms(s: &[i16], edge: usize) -> f64 {
+        let s = &s[edge..s.len() - edge];
+        (s.iter().map(|&v| f64::from(v).powi(2)).sum::<f64>() / s.len() as f64).sqrt()
+    }
+
+    /// The frequency of `s` at 22,050 Hz from its rising zero crossings.
+    fn frequency(s: &[i16]) -> f64 {
+        let rising: Vec<usize> = s
+            .windows(2)
+            .enumerate()
+            .filter(|(_, w)| w[0] < 0 && w[1] >= 0)
+            .map(|(i, _)| i)
+            .collect();
+        let (first, last) = (rising[0], rising[rising.len() - 1]);
+        (rising.len() - 1) as f64 * 22_050.0 / (last - first) as f64
+    }
+
     #[test]
     fn resampling_shifts_pitch_and_length() {
         let s: Vec<i16> = (0..100).map(|i| i as i16 * 10).collect();
-        let up = resample(&s, 2.0);
-        assert_eq!(up.len(), 50);
-        assert_eq!(up[1], 20);
-        let down = resample(&s, 0.5);
-        assert_eq!(down.len(), 200);
-        assert_eq!(down[1], 5);
+        assert_eq!(resample(&s, 2.0).len(), 50);
+        assert_eq!(resample(&s, 0.5).len(), 200);
         assert_eq!(resample(&s, 1.0), s);
         assert!(resample(&[], 2.0).is_empty());
+        assert_eq!(resample(&s, 0.0), s, "a factor of 0 changes nothing");
+        // Five semitones up: 1 kHz becomes 1,335 Hz, and the audio is
+        // that much shorter.
+        let factor = 2f32.powf(5.0 / 12.0);
+        let up = resample(&sine(1000.0, 22_050), factor);
+        assert_eq!(up.len(), (22_050.0 / f64::from(factor)).floor() as usize);
+        let hz = frequency(&up);
+        assert!((hz - 1000.0 * f64::from(factor)).abs() < 5.0, "{hz} Hz");
+        // Loudness is kept away from the edges.
+        let ratio = rms(&up, 500) / rms(&sine(1000.0, 22_050), 500);
+        assert!((ratio - 1.0).abs() < 0.02, "{ratio}");
+    }
+
+    #[test]
+    fn resampling_lines_up_with_the_input() {
+        // A click stays where it was, scaled: word positions depend on it.
+        let mut s = vec![0i16; 8000];
+        s[4000] = 30_000;
+        for factor in [0.75f32, 1.5, 2.0] {
+            let out = resample(&s, factor);
+            let peak = (0..out.len())
+                .max_by_key(|&i| out[i].unsigned_abs())
+                .unwrap();
+            let expected = 4000.0 / f64::from(factor);
+            assert!((peak as f64 - expected).abs() <= 1.0, "{factor}: {peak}");
+        }
+    }
+
+    #[test]
+    fn raising_the_pitch_does_not_alias() {
+        // A 9 kHz sound raised by half lands at 13.5 kHz, above what
+        // 22,050 Hz audio holds (11,025 Hz). Band-limited, it is filtered
+        // out; linear interpolation (before) folded it back to 8.55 kHz
+        // at nearly full loudness.
+        let s = sine(9000.0, 22_050);
+        let before = rms(&s, 500);
+        let band_limited = rms(&resample(&s, 1.5), 500) / before;
+        let linear = rms(&linear(&s, 1.5), 500) / before;
+        println!("alias left: band-limited {band_limited:.4}, linear {linear:.4}");
+        assert!(band_limited < 0.05, "band-limited kept {band_limited}");
+        assert!(linear > 0.3, "linear kept {linear}");
     }
 
     #[test]

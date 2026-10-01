@@ -29,6 +29,8 @@ textweaver-speech.workspace = true
 textweaver-enginehost.workspace = true
 rten.workspace = true
 rten-tensor.workspace = true
+# The band-limited resampler for the pitch shift.
+rubato.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
