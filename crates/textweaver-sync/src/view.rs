@@ -22,11 +22,16 @@ use crate::{DeviceId, DocRecord, SyncError, SyncId};
 pub struct FolderView {
     /// Each computer's name, from its `device.json`.
     pub labels: BTreeMap<DeviceId, String>,
-    /// Each document's records from every computer, merged.
+    /// Each document's records from every computer, merged. A record
+    /// folded into a smaller id is merged into that id's
+    /// ([`DocRecord::folded_into`]).
     pub docs: BTreeMap<SyncId, DocRecord>,
     /// Files skipped because they were damaged, cut short, or from a newer
     /// textweaver.
     pub skipped: usize,
+    /// Each folded id and the id it was folded into, for
+    /// [`doc`](Self::doc) to follow.
+    pub folded: BTreeMap<SyncId, SyncId>,
 }
 
 impl FolderView {
@@ -59,7 +64,38 @@ impl FolderView {
             }
             view.read_docs(&dir.join(DOCS_DIR));
         }
+        view.fold();
         Ok(view)
+    }
+
+    /// Merges each record folded into a smaller id into that id's record,
+    /// largest id first, so a chain of folds ends in the smallest.
+    fn fold(&mut self) {
+        let folded: Vec<SyncId> = self
+            .docs
+            .iter()
+            .rev()
+            .filter(|(_, r)| r.folded_into.is_some())
+            .map(|(id, _)| *id)
+            .collect();
+        for id in folded {
+            let Some(mut record) = self.docs.remove(&id) else {
+                continue;
+            };
+            let Some(target) = record.folded_into.take() else {
+                continue;
+            };
+            self.folded.insert(id, target);
+            record.sync_id = target;
+            match self.docs.get_mut(&target) {
+                Some(merged) => {
+                    let _ = merged.merge(&record);
+                }
+                None => {
+                    self.docs.insert(target, record);
+                }
+            }
+        }
     }
 
     /// Reads and merges one computer's records.
@@ -100,9 +136,14 @@ impl FolderView {
         self.labels.get(&device).map(String::as_str)
     }
 
-    /// The merged record of `sync_id`.
+    /// The merged record of `sync_id`, or of the id it was folded into.
     pub fn doc(&self, sync_id: SyncId) -> Option<&DocRecord> {
-        self.docs.get(&sync_id)
+        let mut id = sync_id;
+        // Each fold goes to a smaller id, so this ends.
+        while let Some(next) = self.folded.get(&id) {
+            id = *next;
+        }
+        self.docs.get(&id)
     }
 
     /// The document whose hashes of `kind` include `hash`; when several do,

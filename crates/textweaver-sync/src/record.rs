@@ -93,6 +93,13 @@ pub struct DocRecord {
     /// Added without raising [`FORMAT`]: an older reader ignores it.
     #[serde(default, skip_serializing_if = "DocIdentity::is_empty")]
     pub identity: DocIdentity,
+    /// Set when this id was folded into a smaller one: two computers gave
+    /// the same document different ids before they ever synced, and the
+    /// smallest id won (W7s). The record's items live on under that id;
+    /// readers treat this record as part of it. The smallest wins when two
+    /// records disagree. Added without raising [`FORMAT`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub folded_into: Option<SyncId>,
 }
 
 /// How many hashes of each kind a record keeps: the newest, and the ones
@@ -390,7 +397,19 @@ impl DocRecord {
             highlights: RegisterMap::new(),
             stats: DocStatsRecord::default(),
             identity: DocIdentity::default(),
+            folded_into: None,
         }
+    }
+
+    /// Marks this record as folded into `target`, when `target` is smaller
+    /// than its own id and than any target it already names. Returns
+    /// whether the record changed.
+    pub fn fold_into(&mut self, target: SyncId) -> bool {
+        if target >= self.sync_id || self.folded_into.is_some_and(|t| t <= target) {
+            return false;
+        }
+        self.folded_into = Some(target);
+        true
     }
 
     /// Sets the place of the computer that made `stamp`.
@@ -454,6 +473,9 @@ impl DocRecord {
         ));
         self.stats.merge(&other.stats);
         self.identity.merge(&other.identity);
+        if let Some(t) = other.folded_into {
+            self.fold_into(t);
+        }
         Ok(report)
     }
 
@@ -474,6 +496,11 @@ impl DocRecord {
             if id.is_empty() || id.chars().count() > MAX_ITEM_ID_CHARS {
                 return Err(SyncError::Damaged("an item id is empty or too long".into()));
             }
+        }
+        if self.folded_into.is_some_and(|t| t >= self.sync_id) {
+            return Err(SyncError::Damaged(
+                "a record is folded into an id not smaller than its own".into(),
+            ));
         }
         self.identity.validate()
     }

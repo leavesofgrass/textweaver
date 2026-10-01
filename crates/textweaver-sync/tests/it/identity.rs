@@ -451,6 +451,81 @@ fn a_missing_file_is_an_error_not_a_new_id() {
     assert!(!Paths::under(home.path()).sync_ids_file().exists());
 }
 
+/// Two computers identified one document before they ever synced, each
+/// giving it an id of its own. Once their records meet, each computer
+/// identifying it again settles on the smaller id; the one whose id lost
+/// says which id it had, and its old record, marked folded, counts as the
+/// winner's everywhere.
+#[test]
+fn two_ids_made_before_syncing_fold_into_the_smallest() {
+    let sync = tempfile::tempdir().unwrap();
+    let mut laptop = Home::new("laptop", sync.path());
+    let mut lab = Home::new("lab", sync.path());
+    let text = body(300, "osmosis");
+    let a = laptop.put("Biology/osmosis.md", text.as_bytes());
+    let b = lab.put("reading/osmosis copy.md", text.as_bytes());
+
+    // Before syncing: no index, so each makes a new id.
+    let ids: Vec<docid::Resolved> = [(&laptop, &a), (&lab, &b)]
+        .into_iter()
+        .map(|(home, path)| {
+            home.job(path, &[], Details::default())
+                .run(Some([text.as_str()]), None)
+                .unwrap()
+        })
+        .collect();
+    assert!(ids.iter().all(|r| r.found == Found::New));
+    let (id_laptop, id_lab) = (ids[0].sync_id, ids[1].sync_id);
+    assert_ne!(id_laptop, id_lab);
+    let winner = id_laptop.min(id_lab);
+    laptop.publish(&ids[0], &Details::default(), 2);
+    lab.publish(&ids[1], &Details::default(), 3);
+
+    // Now each sees the other's record.
+    let again_laptop = laptop.open(&a, &[], Details::default());
+    let again_lab = lab.open(&b, &[], Details::default());
+    assert_eq!(again_laptop.sync_id, winner);
+    assert_eq!(again_lab.sync_id, winner);
+    for (r, mine) in [(&again_laptop, id_laptop), (&again_lab, id_lab)] {
+        assert_eq!(r.found, Found::Known);
+        let expected = (mine != winner).then_some(mine);
+        assert_eq!(r.folded_from, expected, "only the loser says it folded");
+        assert_eq!(r.changed, mine != winner, "the loser publishes again");
+    }
+    // Stable: a third look changes nothing.
+    let third = lab.open(&b, &[], Details::default());
+    assert_eq!((third.sync_id, third.folded_from), (winner, None));
+
+    // The loser marks its old record folded; readers count it as the
+    // winner's, and recognizing the document finds the winner.
+    let loser = id_laptop.max(id_lab);
+    let loser_home = if loser == id_laptop {
+        &mut laptop
+    } else {
+        &mut lab
+    };
+    let mut old = DocRecord::new(loser);
+    loser_home.folder.merge_doc(&mut old, &mut loser_home.clock);
+    assert!(old.fold_into(winner));
+    assert!(!old.fold_into(loser), "never into a larger id");
+    loser_home.folder.write_doc(&old).unwrap();
+    let view = textweaver_sync::FolderView::read(sync.path()).unwrap();
+    assert_eq!(view.docs.len(), 1);
+    assert_eq!(
+        view.doc(loser).map(|r| r.sync_id),
+        Some(winner),
+        "the old id leads to the winner"
+    );
+    // Both published notes n0 and n1; the lab n2 too.
+    assert_eq!(view.doc(winner).unwrap().notes.live_len(), 3);
+    let c = tempfile::tempdir().unwrap();
+    let desk_doc = c.path().join("desk.md");
+    std::fs::write(&desk_doc, &text).unwrap();
+    let mut desk = Home::new("desk", sync.path());
+    let r = desk.open(&desk_doc, &[], Details::default());
+    assert_eq!((r.found, r.sync_id), (Found::Content, winner));
+}
+
 #[test]
 fn hashes_ignore_white_space_but_not_words() {
     let a = docid::text_sha256(["Cells divide.\r\n\r\n", "  Mitosis   follows."]);
