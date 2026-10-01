@@ -10,7 +10,7 @@
 # - release: the workspace tests in release mode under cargo-nextest
 #   (.config/nextest.toml: retries, and a flaky test named), and the
 #   loaders' property tests with many more cases;
-# - msrv: `cargo check` with Rust 1.94, the rust-version in Cargo.toml;
+# - msrv: `cargo check` with Rust 1.95, the rust-version in Cargo.toml;
 # - docker: the development image built from docker/Dockerfile, and the
 #   tests run in it with every feature;
 # - soak: `cargo xtask soak`, ten minutes of randomized reading with engine
@@ -206,7 +206,7 @@ jobs:
         run: 'cargo test --locked --release -p textweaver-formats --test it -- positions:: hostile::'
 
   msrv:
-    name: MSRV (Rust 1.94)
+    name: MSRV (Rust 1.95)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -215,10 +215,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
-      - run: rustup toolchain install 1.94 --profile minimal
-      # rust-version is 1.94 because rten 0.26 (Piper, Whisper, OCR) needs
-      # it. The GUI needs 1.96 (its own rust-version) and is left out.
-      - run: cargo +1.94 check --locked --workspace --exclude textweaver-xilem
+      - run: rustup toolchain install 1.95 --profile minimal
+      # rust-version is 1.95 because harper-core 2.11 (grammar, built in by
+      # default) needs it; rten 0.26 (Piper, Whisper, OCR) needs 1.94. The GUI needs 1.96 (its own rust-version) and is left out.
+      - run: cargo +1.95 check --locked --workspace --exclude textweaver-xilem
 
   docker:
     name: Docker image and tests
