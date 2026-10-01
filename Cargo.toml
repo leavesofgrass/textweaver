@@ -81,7 +81,11 @@ default-members = [
 [workspace.package]
 version = "0.1.0-alpha.6"
 edition = "2024"
-rust-version = "1.94"
+# 1.95: harper-core 2.11.0 (grammar, on by default since Wave 7) declares no
+# rust-version but does not build with 1.94, which cannot infer the type of
+# the arrays of predicate functions it passes as slices; 1.95 builds the
+# whole default workspace. The GUI needs 1.96 (its own rust-version).
+rust-version = "1.95"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/leavesofgrass/textweaver"
 authors = ["Jon Pielaet"]
