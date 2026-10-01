@@ -4,7 +4,7 @@
 //!
 //! ```text
 //! TEXTWEAVER_PIPER_VOICE=/path/en_US-joe-medium.onnx \
-//!   cargo test -p textweaver-piper --all-features --test real_voice -- --ignored --nocapture
+//!   cargo test -p textweaver-piper --all-features --test it -- real_voice:: --ignored --nocapture
 //! ```
 //!
 //! They print the numbers `docs/adr/0023-in-process-neural-speech.md`

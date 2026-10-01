@@ -3,7 +3,7 @@
 //!
 //! ```text
 //! cargo xtask hosts
-//! TEXTWEAVER_DECTALK=1 cargo test -p textweaver-dectalk --test real_engine -- --ignored --nocapture
+//! TEXTWEAVER_DECTALK=1 cargo test -p textweaver-dectalk --test it -- real_engine:: --ignored --nocapture
 //! ```
 //!
 //! DECtalk is found as the backend finds it (`TEXTWEAVER_DECTALK_LIBRARY`,

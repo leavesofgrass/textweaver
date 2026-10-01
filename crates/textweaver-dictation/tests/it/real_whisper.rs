@@ -1,6 +1,6 @@
 //! A real Whisper program, when one is installed. Ignored unless
 //! `TEXTWEAVER_WHISPER_REAL=1`; run with
-//! `TEXTWEAVER_WHISPER_REAL=1 cargo test -p textweaver-dictation --test real_whisper -- --ignored --nocapture`.
+//! `TEXTWEAVER_WHISPER_REAL=1 cargo test -p textweaver-dictation --test it -- real_whisper:: --ignored --nocapture`.
 //!
 //! The speech comes from `espeak-ng -w` (written to a file, never played).
 //! The model is `tiny` unless `TEXTWEAVER_WHISPER_MODEL` says otherwise;

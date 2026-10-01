@@ -3,7 +3,7 @@
 //!
 //! ```text
 //! cargo build -p textweaver-sapi --bins --target i686-pc-windows-msvc --no-default-features
-//! TEXTWEAVER_SAPI=1 cargo test -p textweaver-sapi --test real_voices -- --ignored --nocapture
+//! TEXTWEAVER_SAPI=1 cargo test -p textweaver-sapi --test it -- real_voices:: --ignored --nocapture
 //! ```
 //!
 //! Only Microsoft voices and eSpeak are used (never the VW voices, which
