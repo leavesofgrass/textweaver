@@ -1226,6 +1226,7 @@ impl App {
                 None => self.list_key(key),
             },
             Command::ListFocus(n) => self.list_focus(n),
+            Command::VoiceControl(c) => self.voice_control(c),
             Command::PromptKey(key) => self.prompt_key(key),
             Command::ReplaceRange { range, text } => self.replace_range(range, &text),
             Command::SetSetting { path, value } => self.set_setting_command(&path, value),

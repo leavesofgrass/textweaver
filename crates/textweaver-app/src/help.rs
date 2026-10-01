@@ -540,6 +540,17 @@ impl App {
         named_key_in(self.cat(), &self.keymap, action)
     }
 
+    /// One key for `action` that works in a list, in a message: a chord,
+    /// never a single key (a letter jumps to an item in a list), else the
+    /// main key ([`key`](Self::key)).
+    pub(crate) fn list_key_name(&self, action: ActionId) -> String {
+        self.keymap
+            .chords_for(action)
+            .into_iter()
+            .find(|c| !c.is_text_input())
+            .map_or_else(|| self.key(action), |ch| mark_chord(self.cat(), &ch))
+    }
+
     /// Every key for `action` in a message ([`named_keys`]).
     pub(crate) fn keys(&self, action: ActionId) -> String {
         named_keys(self.cat(), &self.keymap, action)

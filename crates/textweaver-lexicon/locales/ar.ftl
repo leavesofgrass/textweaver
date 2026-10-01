@@ -1049,8 +1049,21 @@ voice-still-loading = ما زالت الأصوات قيد التحميل. تُف
 voice-list-failed = تعذّر سرد الأصوات: { $error }.
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
-voice-manager-intro = مدير الأصوات. { $shown } Enter لاستخدام صوت ونطق عينة منه، أو لتنزيله؛ Space لوضع علامة مفضّل؛ Delete لإزالة صوت مُنزَّل؛ Escape للإغلاق.
-voice-more-ready = { $n } أصوات أخرى من محركات أخرى جاهزة. اضغط Escape وافتح مدير الأصوات مجددًا لرؤيتها.
+voice-manager-intro = مدير الأصوات. { $shown } Enter لاستخدام صوت ونطق عينة منه، أو لتنزيله؛ { $preview } لمعاينة صوت؛ Space لوضع علامة مفضّل؛ Delete لإزالة صوت مُنزَّل؛ Escape للإغلاق.
+voice-more-ready =
+    { $n ->
+        [one] أُضيف إلى القائمة صوت آخر من محرك آخر.
+        [two] أُضيف إلى القائمة صوتان آخران من محركات أخرى.
+        [few] أُضيفت إلى القائمة { $n } أصوات أخرى من محركات أخرى.
+       *[other] أُضيف إلى القائمة { $n } صوتًا آخر من محركات أخرى.
+    }
+voice-preview = معاينة: { $voice }.
+voice-preview-sample = { $voice }. الثعلب البني السريع يقفز فوق الكلب الكسول.
+voice-preview-starting = معاينة: { $voice }، جارٍ تشغيل { $engine }.
+voice-preview-not-installed = { $voice } لم يُنزَّل بعد. Enter ينزّله بعد سؤال.
+voice-preview-unavailable = لا يمكن تشغيل { $engine } هنا للمعاينة. Enter ينتقل إليه.
+voice-preview-engine-failed = تعذّر تشغيل { $engine } لمعاينة { $voice }.
+voice-preview-failed = تعذّرت معاينة { $voice }: { $error }.
 # $keys names the Choose Voice key.
 voice-ready = الأصوات جاهزة. { $keys } لسردها.
 voice-fetch-catalog-question = تنزيل قائمة أصوات Piper، نحو 250 كيلوبايت، من Hugging Face؟ y أو n
@@ -3898,6 +3911,20 @@ sync-group-glossary = المسرد والنطق
 sync-group-favorite-voices = الأصوات المفضلة
 voices-missing-row = { $voice }، مفضل، غير موجود على هذا الحاسوب
 voices-missing = { $voice } غير موجود على هذا الحاسوب. المسافة تزيله من المفضلة.
+gui-voices-list = الأصوات
+gui-voices-use = استخدام الصوت
+gui-voices-use-help = استخدام الصوت المحدد وسماع عينة منه، أو تنزيله بعد سؤال.
+gui-voices-preview = معاينة
+gui-voices-preview-help = سماع عينة بالصوت المحدد دون اختياره.
+gui-voices-favorite = مفضّل
+gui-voices-favorite-help = جعل الصوت المحدد مفضّلًا، أو إلغاء ذلك. المفضّلة تأتي أولًا.
+gui-voices-remove = إزالة
+gui-voices-remove-help = إزالة صوت Piper المُنزَّل المحدد بعد سؤال.
+gui-voices-language-help = عرض أصوات اللغة التالية فقط، ثم كل اللغات مجددًا.
+gui-voices-engine-help = عرض أصوات المحرك التالي فقط، ثم كل المحركات مجددًا.
+gui-voices-fetch-help = تنزيل قائمة أصوات Piper، نحو 250 كيلوبايت، بعد سؤال.
+gui-voices-close-help = إغلاق مدير الأصوات.
+gui-voices-hint = Enter يستخدم الصوت، وSpace يضع علامة مفضّل، وEscape يغلق.
 setting-sync-settings = مزامنة الإعدادات
 setting-sync-settings-help = مشاركة الإعدادات القابلة للنقل: السرعة وعلامات الترقيم والسمة ووسائل القراءة وما شابهها. يبقى الصوت والمحرك ووضع الوصول ومجموعة المفاتيح والمسارات على كل حاسوب.
 setting-sync-profiles = مزامنة الملفات الشخصية

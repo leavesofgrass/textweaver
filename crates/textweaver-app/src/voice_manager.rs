@@ -20,6 +20,11 @@
 //! size and the licence. Space marks a favourite. Delete removes an
 //! installed Piper voice, after a yes.
 //!
+//! **In the GUI** the filters and the fetch row are controls of their own
+//! (buttons beside the list), so the list holds only voices:
+//! [`VoiceManager::separate_controls`]. The rows are the same otherwise,
+//! and so is everything a row does.
+//!
 //! This module is the model: pure data, labels, and filters, tested on
 //! its own. `voice.rs` wires it to the app. When W3a moves list state
 //! into the app's list model, [`VoiceManager`] and [`VoiceRow`] move with
@@ -159,6 +164,39 @@ pub enum VoiceRow {
     FetchCatalog,
 }
 
+/// A control of the voice manager that the GUI shows beside the list
+/// ([`VoiceManager::separate_controls`]), run with
+/// `Command::VoiceControl`. The terminal reaches the same through its
+/// rows and keys.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VoiceControl {
+    /// The Language button: show only the next language (after the last,
+    /// all of them), as Enter on the language row does.
+    NextLanguage,
+    /// The Engine button: show only the next engine, as Enter on the
+    /// engine row does.
+    NextEngine,
+    /// The Preview button: a sample in the focused voice without choosing
+    /// it, as the Say Status key does in the list.
+    Preview,
+    /// The Fetch button: download the Piper voice list, after a yes, as
+    /// Enter on the fetch row does.
+    FetchCatalog,
+}
+
+/// What the GUI's voice manager shows beside the list
+/// (`App::voice_controls`): the filter buttons' labels, and the fetch
+/// button's when the Piper voice list can be fetched.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VoiceControls {
+    /// "Language: all languages".
+    pub language: String,
+    /// "Engine: all engines".
+    pub engine: String,
+    /// "Fetch the Piper voice list from the internet", when offered.
+    pub fetch: Option<String>,
+}
+
 /// The voices of every engine, filtered by language and engine.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct VoiceManager {
@@ -171,6 +209,10 @@ pub struct VoiceManager {
     /// Every engine's voices are in the entries, so a favorite found in
     /// none of them is not on this computer.
     pub all_engines_listed: bool,
+    /// The frontend shows the filters and the fetch row as controls of
+    /// its own (the GUI's buttons), so the rows are only the voices and
+    /// the favorites not on this computer. Off in the terminal.
+    pub separate_controls: bool,
 }
 
 impl VoiceManager {
@@ -370,7 +412,11 @@ impl VoiceManager {
             (!ready, fav.unwrap_or(usize::MAX))
         };
         shown.sort_by_key(|&i| rank(&self.entries[i]));
-        let mut rows = vec![VoiceRow::LanguageFilter, VoiceRow::EngineFilter];
+        let mut rows = if self.separate_controls {
+            Vec::new()
+        } else {
+            vec![VoiceRow::LanguageFilter, VoiceRow::EngineFilter]
+        };
         rows.extend(shown.into_iter().map(VoiceRow::Voice));
         // Favorites from another computer that this one does not have,
         // after the voices, when nothing is filtered out.
@@ -381,10 +427,37 @@ impl VoiceManager {
                     .map(VoiceRow::Missing),
             );
         }
-        if self.offer_catalog {
+        if self.offer_catalog && !self.separate_controls {
             rows.push(VoiceRow::FetchCatalog);
         }
         self.rows = rows;
+    }
+
+    /// The row showing the voice remembered as `key` (`"engine:voice"`),
+    /// if it is shown.
+    pub fn row_of(&self, key: &str) -> Option<usize> {
+        (0..self.rows.len()).find(|&n| self.entry_at(n).is_some_and(|e| e.key() == key))
+    }
+
+    /// The first row with a voice on it.
+    pub fn first_voice_row(&self) -> Option<usize> {
+        (0..self.rows.len()).find(|&n| self.entry_at(n).is_some())
+    }
+
+    /// "Language: English": the language filter's row, or its button.
+    pub fn language_row_in(&self, c: &Messages) -> String {
+        c.fmt(
+            "voices-language-row",
+            &args!["language" => self.language_label(c)],
+        )
+    }
+
+    /// "Engine: all engines": the engine filter's row, or its button.
+    pub fn engine_row_in(&self, c: &Messages) -> String {
+        c.fmt(
+            "voices-engine-row",
+            &args!["engine" => self.engine_label(c)],
+        )
     }
 
     /// The favorites that match no voice in the entries.
@@ -419,14 +492,8 @@ impl VoiceManager {
         self.rows
             .iter()
             .map(|r| match r {
-                VoiceRow::LanguageFilter => c.fmt(
-                    "voices-language-row",
-                    &args!["language" => self.language_label(c)],
-                ),
-                VoiceRow::EngineFilter => c.fmt(
-                    "voices-engine-row",
-                    &args!["engine" => self.engine_label(c)],
-                ),
+                VoiceRow::LanguageFilter => self.language_row_in(c),
+                VoiceRow::EngineFilter => self.engine_row_in(c),
                 VoiceRow::FetchCatalog => c.tr("voices-fetch-row"),
                 VoiceRow::Missing(id) => {
                     c.fmt("voices-missing-row", &args!["voice" => id.as_str()])
@@ -727,6 +794,29 @@ mod tests {
         );
         assert_eq!(m.engine_filter(), None);
         assert_eq!(m.language_filter(), Some("en"));
+    }
+
+    /// The GUI's list: only voices (and favorites not on this computer);
+    /// the filters and the fetch row are buttons, labelled as the rows are.
+    #[test]
+    fn separate_controls_leave_only_voices_in_the_list() {
+        let mut m = manager();
+        m.separate_controls = true;
+        m.offer_catalog = true;
+        m.all_engines_listed = true;
+        let favs = vec!["eci:reed".to_owned()];
+        m.refresh(&favs);
+        assert!(matches!(m.row(0), Some(VoiceRow::Voice(_))));
+        assert_eq!(m.rows().len(), 5, "four voices and the missing favorite");
+        assert_eq!(m.row(4), Some(&VoiceRow::Missing("eci:reed".into())));
+        assert!(!m.rows().contains(&VoiceRow::FetchCatalog));
+        let c = Messages::english();
+        assert_eq!(m.language_row_in(&c), "Language: all languages");
+        m.next_engine(&favs);
+        assert_eq!(m.engine_row_in(&c), "Engine: SAPI 5");
+        assert_eq!(m.first_voice_row(), Some(0));
+        assert_eq!(m.row_of("sapi:hedda"), Some(1));
+        assert_eq!(m.row_of("piper:en_US-joe-medium"), None, "filtered out");
     }
 
     #[test]

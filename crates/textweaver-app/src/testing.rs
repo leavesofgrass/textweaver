@@ -74,6 +74,11 @@ impl SpeechLog {
         self.lock().params.last().cloned()
     }
 
+    /// Every set of voice parameters applied, oldest first.
+    pub fn all_params(&self) -> Vec<VoiceParams> {
+        self.lock().params.clone()
+    }
+
     /// Forgets everything recorded so far.
     pub fn clear(&self) {
         let mut l = self.lock();
@@ -87,6 +92,7 @@ impl SpeechLog {
 pub struct RecordingBackend {
     log: SpeechLog,
     params: VoiceParams,
+    id: &'static str,
 }
 
 impl RecordingBackend {
@@ -95,7 +101,15 @@ impl RecordingBackend {
         RecordingBackend {
             log,
             params: VoiceParams::default(),
+            id: "test-recording",
         }
+    }
+
+    /// The backend under another id (`test-recording` by default), to
+    /// stand in for a second engine.
+    pub fn with_id(mut self, id: &'static str) -> Self {
+        self.id = id;
+        self
     }
 }
 
@@ -128,7 +142,7 @@ fn word_bytes(text: &str) -> Vec<std::ops::Range<u32>> {
 
 impl SpeechBackend for RecordingBackend {
     fn id(&self) -> &'static str {
-        "test-recording"
+        self.id
     }
 
     fn capabilities(&self) -> Caps {
@@ -195,10 +209,15 @@ impl SpeechBackend for RecordingBackend {
 
 /// A speech service running a [`RecordingBackend`], and its log.
 pub fn recording_service() -> Result<(SpeechService, SpeechLog), SpeechError> {
+    recording_service_as("test-recording")
+}
+
+/// [`recording_service`] with the backend under the id `id`.
+pub fn recording_service_as(id: &'static str) -> Result<(SpeechService, SpeechLog), SpeechError> {
     let log = SpeechLog::default();
     let backend_log = log.clone();
     let service = SpeechService::spawn(
-        Box::new(move || Ok(Box::new(RecordingBackend::new(backend_log)) as _)),
+        Box::new(move || Ok(Box::new(RecordingBackend::new(backend_log).with_id(id)) as _)),
         ServiceConfig::default(),
     )?;
     Ok((service, log))

@@ -1114,7 +1114,11 @@ fn choose_voice_lists_the_voices_and_enter_speaks_a_sample() {
         ]
     );
     assert!(r.said.any(
-        "Voice manager. 2 voices: all languages, all engines. Enter uses a voice and speaks a sample, or downloads one; Space marks a favorite; Delete removes a downloaded voice; Escape closes."
+        "Voice manager. 2 voices: all languages, all engines. Enter uses a voice and speaks a sample, or downloads one; "
+    ));
+    // The Say Status key previews a voice (W7v).
+    assert!(r.said.any(
+        " previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes."
     ));
     // The app says the focused item after the introduction (Wave 3: the
     // list model is the app's, for every frontend): the first voice, below

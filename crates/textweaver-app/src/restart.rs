@@ -86,6 +86,12 @@ impl App {
         self.restart.starter = Some(starter);
     }
 
+    /// The frontend's way to start speech, if it gave one (the voice
+    /// manager previews another engine's voice with it).
+    pub(crate) fn speech_starter(&self) -> Option<SpeechStarter> {
+        self.restart.starter.clone()
+    }
+
     /// True when the frontend gave a way to start speech: real engines are
     /// in play (the voice manager then lists the other engines' voices).
     pub(crate) fn can_start_speech(&self) -> bool {

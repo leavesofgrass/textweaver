@@ -7,6 +7,12 @@
 //! voice (switching engine when needed), favourites, downloading and
 //! removing Piper voices, and fetching the Piper catalogue, each download
 //! only after a yes.
+//!
+//! **Preview** (the Say Status key in the list, the GUI's Preview button)
+//! speaks a sample in the focused voice without choosing it. A voice of
+//! the running engine is previewed in place (`SpeechService::preview`);
+//! another engine's voice by starting that engine on a helper thread with
+//! the frontend's own speech starter, saying the sample, and closing it.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -19,12 +25,18 @@ use textweaver_engines::piper::{Catalog, InstalledVoice, PiperError};
 use textweaver_lexicon::args;
 use textweaver_speech::Earcon;
 
-use crate::app::App;
+use crate::app::{App, ListKind};
 use crate::command::{Confirm, Effect};
+use crate::restart::SpeechStarter;
 use crate::voice_manager::{
-    PIPER, VoiceEntry, VoiceManager, VoiceRow, VoiceStatus, cached_catalog, catalog_path,
-    engine_entries, params_key, piper_entries, remember_params, remembered_params,
+    PIPER, VoiceControl, VoiceControls, VoiceEntry, VoiceManager, VoiceRow, VoiceStatus,
+    cached_catalog, catalog_path, engine_entries, params_key, piper_entries, remember_params,
+    remembered_params,
 };
+
+/// The longest a preview on another engine may play before its engine is
+/// closed.
+const PREVIEW_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
 
 /// Piper voice downloads: HTTP, so part of the app's `publish` feature.
 #[cfg(feature = "publish")]
@@ -127,6 +139,77 @@ pub(crate) struct VoicesState {
     /// background (each engine is started, asked, and closed).
     pub(crate) others: Option<Vec<VoiceEntry>>,
     pub(crate) others_rx: Option<Receiver<Vec<VoiceEntry>>>,
+    /// A preview playing on another engine.
+    pub(crate) preview: Option<OtherPreview>,
+}
+
+/// A preview on another engine, on its helper thread.
+#[derive(Debug)]
+pub(crate) struct OtherPreview {
+    /// The voice's name, for messages.
+    voice: String,
+    /// The engine's name, for messages.
+    engine: String,
+    /// Set to stop the preview and close its engine.
+    cancel: Arc<AtomicBool>,
+    /// How it ended.
+    rx: Receiver<PreviewOutcome>,
+}
+
+/// How a preview on another engine ended.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum PreviewOutcome {
+    /// It played (or was stopped).
+    Done,
+    /// The engine could not be started (another one started in its place).
+    NotStarted,
+    /// The engine failed: why.
+    Failed(String),
+}
+
+/// Starts the engine `settings` name through the frontend's `starter`,
+/// says `sample` in `voice`, and closes the engine once it has been said,
+/// `cancel` is set, or [`PREVIEW_LIMIT`] has passed. Runs on a helper
+/// thread.
+fn run_other_preview(
+    starter: &SpeechStarter,
+    settings: &textweaver_store::Settings,
+    voice: &str,
+    sample: &str,
+    cancel: &AtomicBool,
+) -> PreviewOutcome {
+    use std::sync::mpsc::RecvTimeoutError;
+    use textweaver_speech::SpeechStatus;
+    let (service, _, _) = starter(settings);
+    if service.backend_id() != settings.speech.backend {
+        return PreviewOutcome::NotStarted;
+    }
+    let sp = &settings.speech;
+    service.set_voice(Some(voice.to_owned()));
+    service.set_rate(sp.rate);
+    service.set_pitch(sp.pitch);
+    service.set_volume(sp.volume);
+    service.read(vec![textweaver_core::Utterance::announcement(sample)]);
+    let deadline = std::time::Instant::now() + PREVIEW_LIMIT;
+    loop {
+        if cancel.load(Ordering::Relaxed) || std::time::Instant::now() >= deadline {
+            service.stop();
+            return PreviewOutcome::Done;
+        }
+        match service
+            .statuses()
+            .recv_timeout(std::time::Duration::from_millis(50))
+        {
+            Ok(SpeechStatus::Finished { .. } | SpeechStatus::Stopped { .. }) => {
+                return PreviewOutcome::Done;
+            }
+            Ok(SpeechStatus::BackendError(e)) => return PreviewOutcome::Failed(e),
+            Ok(_) | Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => {
+                return PreviewOutcome::Failed(service.failure().unwrap_or_default());
+            }
+        }
+    }
 }
 
 /// Starts every other available engine on a helper thread, lists its
@@ -254,7 +337,11 @@ impl App {
         self.voices.manager.all_engines_listed = self.voices.others.is_some();
         self.voices.manager.set_entries(entries, &favourites);
         let shown = self.voices.manager.shown_sentence_in(self.cat());
-        let msg = self.msg_args("voice-manager-intro", &args!["shown" => shown]);
+        let preview = self.list_key_name(textweaver_keymap::ActionId::SayStatus);
+        let msg = self.msg_args(
+            "voice-manager-intro",
+            &args!["shown" => shown, "preview" => preview],
+        );
         self.tell(&msg);
         // Focus the voice in use, else the first voice; the filter rows
         // are above it.
@@ -301,12 +388,11 @@ impl App {
             self.voices.others_rx = None;
             let n = others.len();
             self.voices.others = Some(others);
-            if n > 0 && self.list == Some(crate::app::ListKind::Voices) {
-                let msg = self.msg_args("voice-more-ready", &args!["n" => n]);
-                self.tell(&msg);
-                effects.push(Effect::Redraw);
+            if self.list == Some(ListKind::Voices) {
+                effects.extend(self.relist_voices(n));
             }
         }
+        effects.extend(self.preview_tick());
         if !self.voices_pending || self.speech.voice_list().is_loading() {
             return effects;
         }
@@ -368,6 +454,7 @@ impl App {
     /// Uses `e`: on the running engine at once with a sample; on another
     /// engine by restarting speech with it.
     fn use_voice(&mut self, e: &VoiceEntry) -> Vec<Effect> {
+        self.cancel_other_preview();
         self.remember_voice_params();
         if e.engine == self.speech.backend_id() {
             self.select_voice(&e.voice.id, &e.voice.name);
@@ -445,6 +532,9 @@ impl App {
             _ => {
                 let msg = self.msg("voice-only-piper-removable");
                 self.tell(&msg);
+                // The list stays open where it was (before, it closed).
+                self.pending_list_focus = Some(n);
+                return self.show_voice_list();
             }
         }
         vec![Effect::Redraw]
@@ -678,6 +768,245 @@ impl App {
                 }
             },
         }
+        vec![Effect::Redraw]
+    }
+
+    /// The other engines' voices arrived while the voice list is open: the
+    /// list shows them at once, keeping the focus on the same voice, and
+    /// says how many came (W7v). Before, the list had to be opened again.
+    fn relist_voices(&mut self, n: usize) -> Vec<Effect> {
+        let textweaver_speech::VoiceList::Ready(voices) = self.speech.voice_list() else {
+            return Vec::new();
+        };
+        let selected = self.list_model.as_ref().map_or(0, |l| l.selected);
+        let keep = self.voices.manager.entry_at(selected).map(VoiceEntry::key);
+        let on_control = matches!(
+            self.voices.manager.row(selected),
+            Some(VoiceRow::LanguageFilter | VoiceRow::EngineFilter)
+        );
+        let mut entries = self.gather_voices(&voices);
+        entries.extend(self.voices.others.iter().flatten().cloned());
+        let favourites = self.settings.speech.favorite_voices.clone();
+        self.voices.manager.all_engines_listed = true;
+        self.voices.manager.set_entries(entries, &favourites);
+        let m = &self.voices.manager;
+        self.pending_list_focus = keep
+            .and_then(|k| m.row_of(&k))
+            .or(on_control.then_some(selected))
+            .or_else(|| m.first_voice_row());
+        if n > 0 {
+            let msg = self.msg_args("voice-more-ready", &args!["n" => n]);
+            self.tell(&msg);
+        }
+        self.show_voice_list()
+    }
+
+    /// Whether the voice list is shown.
+    pub fn voice_list_open(&self) -> bool {
+        self.list == Some(ListKind::Voices)
+    }
+
+    /// Whether the Say Status key acts on the focused row of the list
+    /// shown ([`crate::ListKey::Details`]): a preview of the file in the
+    /// file browser, a sample of the voice in the voice list. In other
+    /// lists it repeats the list's introduction.
+    pub fn list_has_details(&self) -> bool {
+        self.browse_location().is_some() || self.voice_list_open()
+    }
+
+    /// Shows the voice manager's filters and its fetch row as controls of
+    /// the frontend's own (`false`: the GUI's buttons, run with
+    /// `Command::VoiceControl`) or as rows of the list (`true`, the
+    /// default: the terminal).
+    pub fn set_voice_controls_in_list(&mut self, in_list: bool) {
+        self.voices.manager.separate_controls = !in_list;
+    }
+
+    /// The labels of the controls beside the voice list, while it is
+    /// shown.
+    pub fn voice_controls(&self) -> Option<VoiceControls> {
+        if !self.voice_list_open() {
+            return None;
+        }
+        let m = &self.voices.manager;
+        let c = self.cat();
+        Some(VoiceControls {
+            language: m.language_row_in(c),
+            engine: m.engine_row_in(c),
+            fetch: m.offer_catalog.then(|| c.tr("voices-fetch-row")),
+        })
+    }
+
+    /// A control beside the voice list (`Command::VoiceControl`).
+    pub(crate) fn voice_control(&mut self, control: VoiceControl) -> Vec<Effect> {
+        if !self.voice_list_open() {
+            return vec![Effect::Redraw];
+        }
+        let n = self.list_model.as_ref().map_or(0, |l| l.selected);
+        match control {
+            VoiceControl::NextLanguage | VoiceControl::NextEngine => {
+                let keep = self.voices.manager.entry_at(n).map(VoiceEntry::key);
+                let favourites = self.settings.speech.favorite_voices.clone();
+                let cat = self.catalog();
+                let said = if control == VoiceControl::NextLanguage {
+                    self.voices.manager.next_language_in(&cat, &favourites)
+                } else {
+                    self.voices.manager.next_engine_in(&cat, &favourites)
+                };
+                self.tell(&said);
+                let m = &self.voices.manager;
+                self.pending_list_focus = keep
+                    .and_then(|k| m.row_of(&k))
+                    .or_else(|| m.first_voice_row());
+                self.show_voice_list()
+            }
+            VoiceControl::Preview => self.preview_voice_row(n),
+            VoiceControl::FetchCatalog => {
+                if !self.voices.manager.offer_catalog {
+                    return vec![Effect::Redraw];
+                }
+                // As Enter on the fetch row: the list closes for the
+                // question.
+                self.list = None;
+                self.list_model = None;
+                self.voices.question = Some(VoiceQuestion::FetchCatalog);
+                let question = self.msg("voice-fetch-catalog-question");
+                self.ask(&question);
+                vec![Effect::Redraw]
+            }
+        }
+    }
+
+    /// The Say Status key in the voice list (or the GUI's Preview button):
+    /// a sample in the voice on row `n`, without choosing it. The sample
+    /// starts with the voice's name, said in that voice, so no spoken
+    /// message comes before it; the message is shown (and reaches a screen
+    /// reader). On the filter and fetch rows, the list's introduction, as
+    /// in other lists.
+    pub(crate) fn preview_voice_row(&mut self, n: usize) -> Vec<Effect> {
+        let e = match self.voices.manager.row(n).cloned() {
+            Some(VoiceRow::Voice(_)) => self.voices.manager.entry_at(n).cloned(),
+            Some(VoiceRow::Missing(id)) => {
+                let msg = self.msg_args("voices-missing", &args!["voice" => id.as_str()]);
+                self.tell(&msg);
+                return vec![Effect::Redraw];
+            }
+            Some(VoiceRow::LanguageFilter | VoiceRow::EngineFilter | VoiceRow::FetchCatalog) => {
+                return self.repeat_list_introduction();
+            }
+            None => None,
+        };
+        let Some(e) = e else {
+            return vec![Effect::Redraw];
+        };
+        if let VoiceStatus::Downloadable { .. } = e.status {
+            let msg = self.msg_args(
+                "voice-preview-not-installed",
+                &args!["voice" => e.voice.name.as_str()],
+            );
+            self.tell(&msg);
+            return vec![Effect::Redraw];
+        }
+        let sample = self.msg_args(
+            "voice-preview-sample",
+            &args!["voice" => e.voice.name.as_str()],
+        );
+        self.cancel_other_preview();
+        if e.engine == self.speech.backend_id() {
+            self.stop_speech();
+            let msg = self.msg_args("voice-preview", &args!["voice" => e.voice.name.as_str()]);
+            self.show(&msg);
+            self.speech.preview(e.voice.id.clone(), sample);
+            return vec![Effect::Redraw];
+        }
+        self.preview_on_other_engine(&e, sample)
+    }
+
+    /// Previews `e`, a voice of an engine that is not running: starts it on
+    /// a helper thread with the frontend's speech starter
+    /// ([`run_other_preview`]), with the voice's own rate and pitch.
+    fn preview_on_other_engine(&mut self, e: &VoiceEntry, sample: String) -> Vec<Effect> {
+        let Some(starter) = self.speech_starter() else {
+            let msg = self.msg_args(
+                "voice-preview-unavailable",
+                &args!["engine" => e.engine_name.as_str()],
+            );
+            self.tell(&msg);
+            return vec![Effect::Redraw];
+        };
+        self.stop_speech();
+        let mut settings = self.settings.clone();
+        settings.speech.backend = e.engine.clone();
+        settings.speech.voice = Some(e.voice.id.clone());
+        if let Some((rate, pitch)) = remembered_params(&settings, &e.key()) {
+            settings.speech.rate = rate;
+            settings.speech.pitch = pitch;
+        }
+        let cancel = Arc::new(AtomicBool::new(false));
+        let (tx, rx) = std::sync::mpsc::channel();
+        let (stop, voice) = (Arc::clone(&cancel), e.voice.id.clone());
+        let wake = self.waker_slot();
+        let spawned = std::thread::Builder::new()
+            .name("textweaver-voice-preview".into())
+            .spawn(move || {
+                let outcome = run_other_preview(&starter, &settings, &voice, &sample, &stop);
+                let _ = tx.send(outcome);
+                wake.wake();
+            });
+        if spawned.is_err() {
+            let msg = self.msg_args(
+                "voice-preview-unavailable",
+                &args!["engine" => e.engine_name.as_str()],
+            );
+            self.error(&msg);
+            return vec![Effect::Redraw];
+        }
+        self.voices.preview = Some(OtherPreview {
+            voice: e.voice.name.clone(),
+            engine: e.engine_name.clone(),
+            cancel,
+            rx,
+        });
+        let msg = self.msg_args(
+            "voice-preview-starting",
+            &args!["voice" => e.voice.name.as_str(), "engine" => e.engine_name.as_str()],
+        );
+        self.show(&msg);
+        vec![Effect::Redraw]
+    }
+
+    /// Stops a preview playing on another engine, if any.
+    fn cancel_other_preview(&mut self) {
+        if let Some(p) = self.voices.preview.take() {
+            p.cancel.store(true, Ordering::Relaxed);
+        }
+    }
+
+    /// Says how a preview on another engine ended, if it failed.
+    fn preview_tick(&mut self) -> Vec<Effect> {
+        let Some(p) = &self.voices.preview else {
+            return Vec::new();
+        };
+        let outcome = match p.rx.try_recv() {
+            Ok(o) => o,
+            Err(TryRecvError::Empty) => return Vec::new(),
+            Err(TryRecvError::Disconnected) => PreviewOutcome::Done,
+        };
+        let Some(p) = self.voices.preview.take() else {
+            return Vec::new();
+        };
+        let msg = match outcome {
+            PreviewOutcome::Done => return Vec::new(),
+            PreviewOutcome::NotStarted => self.msg_args(
+                "voice-preview-engine-failed",
+                &args!["voice" => p.voice.as_str(), "engine" => p.engine.as_str()],
+            ),
+            PreviewOutcome::Failed(e) => self.msg_args(
+                "voice-preview-failed",
+                &args!["voice" => p.voice.as_str(), "error" => e],
+            ),
+        };
+        self.error(&msg);
         vec![Effect::Redraw]
     }
 
@@ -939,6 +1268,287 @@ fn capitalize(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::app::AppConfig;
+    use crate::command::Command;
+    use crate::list_model::ListKey;
+    use crate::testing::{SpeechLog, recording_service, recording_service_as};
+    use std::sync::Mutex;
+    use textweaver_keymap::ActionId;
+
+    /// An app on the recording engine (`test-recording`, with "Test
+    /// voice" and "Second voice"), and its speech log.
+    fn app() -> (App, SpeechLog) {
+        let (speech, log) = recording_service().unwrap();
+        let app = App::new(AppConfig {
+            speech,
+            backend_name: "test-recording".into(),
+            ..AppConfig::for_tests()
+        });
+        app.wait_for_speech_thread();
+        (app, log)
+    }
+
+    /// A voice of a second engine, `test-other`.
+    fn other(id: &str, name: &str) -> VoiceEntry {
+        VoiceEntry {
+            engine: "test-other".into(),
+            engine_name: "Other engine".into(),
+            voice: textweaver_speech::Voice {
+                id: id.into(),
+                name: name.into(),
+                languages: vec!["de-DE".into()],
+                ..textweaver_speech::Voice::default()
+            },
+            status: VoiceStatus::Ready,
+        }
+    }
+
+    fn items(app: &App) -> Vec<String> {
+        app.list_model()
+            .map(|l| l.items.clone())
+            .unwrap_or_default()
+    }
+
+    fn selected(app: &App) -> usize {
+        app.list_model().map_or(usize::MAX, |l| l.selected)
+    }
+
+    /// Waits for a preview on another engine to end (at most 5 seconds).
+    fn wait_for_preview(app: &mut App) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while app.voices.preview.is_some() && std::time::Instant::now() < deadline {
+            let _ = app.tick(std::time::Instant::now());
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(app.voices.preview.is_none(), "the preview ended");
+    }
+
+    /// The GUI's voice manager: only voices in the list; the filters are
+    /// controls that keep the focus on the same voice while it is shown.
+    #[test]
+    fn separate_controls_filter_and_keep_the_focused_voice() {
+        let (mut app, _) = app();
+        app.set_voice_controls_in_list(false);
+        app.voices.others = Some(vec![other("hedda", "Hedda")]);
+        assert_eq!(app.voice_controls(), None, "only while the list is open");
+        app.dispatch(Command::Action(ActionId::ChooseVoice));
+        assert!(app.voice_list_open());
+        assert_eq!(items(&app).len(), 3, "{:?}", items(&app));
+        assert!(items(&app)[2].starts_with("Hedda, de-DE, Other engine"));
+        let c = app.voice_controls().unwrap();
+        assert_eq!(c.language, "Language: all languages");
+        assert_eq!(c.engine, "Engine: all engines");
+        assert_eq!(c.fetch, None, "no data folder, nothing to fetch");
+        app.dispatch(Command::ListKey(ListKey::Down));
+        assert_eq!(selected(&app), 1);
+        app.dispatch(Command::VoiceControl(VoiceControl::NextEngine));
+        assert!(
+            app.status_text()
+                .starts_with("2 voices: all languages, test-recording."),
+            "{}",
+            app.status_text()
+        );
+        assert_eq!(
+            app.voice_controls().unwrap().engine,
+            "Engine: test-recording"
+        );
+        assert_eq!(selected(&app), 1, "still on Second voice");
+        assert!(items(&app)[1].starts_with("Second voice"));
+        app.dispatch(Command::VoiceControl(VoiceControl::NextEngine));
+        assert_eq!(items(&app).len(), 1);
+        assert_eq!(selected(&app), 0, "the first voice shown");
+        app.dispatch(Command::VoiceControl(VoiceControl::NextLanguage));
+        assert_eq!(app.voice_controls().unwrap().language, "Language: German");
+        // Escape closes the list; a control then does nothing.
+        app.dispatch(Command::ListKey(ListKey::Escape));
+        assert!(!app.voice_list_open());
+        app.dispatch(Command::VoiceControl(VoiceControl::NextEngine));
+        assert!(app.list_model().is_none());
+    }
+
+    /// The Say Status key previews a voice of the running engine in its
+    /// own voice, without choosing it; the list stays open.
+    #[test]
+    fn preview_speaks_a_sample_without_choosing_the_voice() {
+        let (mut app, log) = app();
+        app.dispatch(Command::Action(ActionId::ChooseVoice));
+        // The introduction names the chord (Alt+End), never the single key
+        // (z), which jumps by letter in a list.
+        let intro = app.status_text().to_owned();
+        assert!(intro.contains("+End previews a voice;"), "{intro}");
+        // Terminal rows: the two filters, then the voices.
+        app.dispatch(Command::ListFocus(3));
+        app.dispatch(Command::ListKey(ListKey::Details));
+        app.wait_for_speech_thread();
+        assert_eq!(app.status_text(), "Preview: Second voice.");
+        assert_eq!(
+            log.texts().last().map(String::as_str),
+            Some("Second voice. The quick brown fox jumps over the lazy dog.")
+        );
+        let voices: Vec<Option<String>> = log.all_params().into_iter().map(|p| p.voice).collect();
+        assert!(voices.contains(&Some("second".into())), "{voices:?}");
+        assert_ne!(
+            log.params().and_then(|p| p.voice).as_deref(),
+            Some("second")
+        );
+        assert_eq!(app.settings.speech.voice, None, "not chosen");
+        assert!(app.voice_list_open());
+        // On a filter row, the key repeats the list's introduction.
+        app.dispatch(Command::ListFocus(0));
+        app.dispatch(Command::ListKey(ListKey::Details));
+        assert!(app.status_text().starts_with("Voice manager."));
+    }
+
+    /// Another engine's voice is previewed by starting that engine with
+    /// the frontend's starter, then closing it; an engine that cannot
+    /// start says so.
+    #[test]
+    fn preview_on_another_engine_starts_it_and_says_when_it_cannot() {
+        let (mut app, main_log) = app();
+        let other_log: Arc<Mutex<Option<SpeechLog>>> = Arc::default();
+        let slot = Arc::clone(&other_log);
+        let starter: SpeechStarter = Arc::new(move |s| {
+            let id = if s.speech.backend == "test-other" {
+                "test-other"
+            } else {
+                "test-recording"
+            };
+            let (svc, log) = recording_service_as(id).unwrap();
+            *slot.lock().unwrap() = Some(log);
+            (svc, "Other engine".into(), Vec::new())
+        });
+        app.set_speech_starter(starter);
+        app.set_voice_controls_in_list(false);
+        app.voices.others = Some(vec![other("hedda", "Hedda")]);
+        app.dispatch(Command::Action(ActionId::ChooseVoice));
+        app.dispatch(Command::ListFocus(2));
+        app.dispatch(Command::VoiceControl(VoiceControl::Preview));
+        assert_eq!(app.status_text(), "Preview: Hedda, starting Other engine.");
+        wait_for_preview(&mut app);
+        let log = other_log
+            .lock()
+            .unwrap()
+            .clone()
+            .expect("the engine started");
+        assert_eq!(
+            log.texts(),
+            ["Hedda. The quick brown fox jumps over the lazy dog."]
+        );
+        assert_eq!(log.params().and_then(|p| p.voice).as_deref(), Some("hedda"));
+        assert_eq!(app.settings.speech.backend, "auto", "nothing switched");
+        assert!(
+            !main_log.texts().iter().any(|t| t.starts_with("Hedda.")),
+            "not on the running engine"
+        );
+        // The engine that starts is another one: the preview says so.
+        app.voices.others = Some(vec![VoiceEntry {
+            engine: "test-missing".into(),
+            ..other("anna", "Anna")
+        }]);
+        app.dispatch(Command::ListKey(ListKey::Escape));
+        app.dispatch(Command::Action(ActionId::ChooseVoice));
+        app.dispatch(Command::ListFocus(2));
+        app.dispatch(Command::ListKey(ListKey::Details));
+        wait_for_preview(&mut app);
+        assert_eq!(
+            app.status_text(),
+            "Could not start Other engine to preview Anna."
+        );
+    }
+
+    /// A Piper voice to download, and a favorite not on this computer,
+    /// cannot be previewed, and say why.
+    #[test]
+    fn previews_of_voices_not_here_say_why() {
+        let (mut app, _) = app();
+        app.set_voice_controls_in_list(false);
+        app.settings.speech.favorite_voices = vec!["eci:reed".into()];
+        app.voices.others = Some(vec![VoiceEntry {
+            engine: PIPER.into(),
+            engine_name: "Piper neural voices".into(),
+            status: VoiceStatus::Downloadable {
+                bytes: 63_000_000,
+                licence: textweaver_engines::piper::Licence::classify("CC0"),
+            },
+            ..other("en_US-amy-low", "Amy (low)")
+        }]);
+        app.dispatch(Command::Action(ActionId::ChooseVoice));
+        let rows = items(&app);
+        assert_eq!(
+            rows.last().map(String::as_str),
+            Some("eci:reed, favorite, not on this computer")
+        );
+        app.dispatch(Command::ListFocus(2));
+        app.dispatch(Command::ListKey(ListKey::Details));
+        assert_eq!(
+            app.status_text(),
+            "Amy (low) is not downloaded yet. Enter downloads it, after a question."
+        );
+        app.dispatch(Command::ListFocus(rows.len() - 1));
+        app.dispatch(Command::ListKey(ListKey::Details));
+        assert!(
+            app.status_text()
+                .starts_with("eci:reed is not on this computer.")
+        );
+    }
+
+    /// The other engines' voices arriving while the list is open are
+    /// listed at once, with the focus kept, and a favorite no engine has
+    /// shows as not on this computer.
+    #[test]
+    fn other_engines_voices_join_the_open_list() {
+        let (mut app, _) = app();
+        app.settings.speech.favorite_voices = vec!["eci:reed".into()];
+        let (tx, rx) = std::sync::mpsc::channel();
+        app.voices.others_rx = Some(rx);
+        app.dispatch(Command::Action(ActionId::ChooseVoice));
+        assert_eq!(items(&app).len(), 4, "filters and two voices");
+        app.dispatch(Command::ListFocus(3));
+        tx.send(vec![other("hedda", "Hedda")]).unwrap();
+        let _ = app.tick(std::time::Instant::now());
+        let now = items(&app);
+        assert_eq!(now.len(), 6, "{now:?}");
+        assert!(now[4].starts_with("Hedda"));
+        assert_eq!(now[5], "eci:reed, favorite, not on this computer");
+        assert_eq!(selected(&app), 3, "still on Second voice");
+        assert!(now[3].starts_with("Second voice"));
+        assert!(
+            app.status_text()
+                .starts_with("One more voice from another engine is listed."),
+            "{}",
+            app.status_text()
+        );
+    }
+
+    /// Delete on a voice that cannot be removed says so and keeps the list
+    /// open where it was; Fetch closes it for its question.
+    #[test]
+    fn remove_keeps_the_list_and_fetch_asks() {
+        let (mut app, _) = app();
+        app.set_voice_controls_in_list(false);
+        app.dispatch(Command::Action(ActionId::ChooseVoice));
+        app.dispatch(Command::ListFocus(1));
+        app.dispatch(Command::ListKey(ListKey::Delete));
+        assert!(
+            app.status_text()
+                .starts_with("Only downloaded Piper voices can be removed."),
+            "{}",
+            app.status_text()
+        );
+        assert!(app.voice_list_open());
+        assert_eq!(selected(&app), 1);
+        app.voices.manager.offer_catalog = true;
+        assert!(app.voice_controls().unwrap().fetch.is_some());
+        app.dispatch(Command::VoiceControl(VoiceControl::FetchCatalog));
+        assert!(!app.voice_list_open());
+        assert!(app.list_model().is_none());
+        assert!(app.confirmation_pending());
+        assert!(
+            app.status_text()
+                .starts_with("Download the list of Piper voices")
+        );
+    }
 
     #[test]
     fn voice_words_read_well() {
