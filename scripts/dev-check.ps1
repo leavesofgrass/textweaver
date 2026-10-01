@@ -11,7 +11,7 @@
               --features textweaver-speech/omnivox
     doc       cargo doc --workspace --no-deps
               --features textweaver-speech/omnivox, with RUSTDOCFLAGS=-D warnings
-    pseudo    cargo test -p textweaver-app --test pseudo_locale (every
+    pseudo    cargo test -p textweaver-app --test it -- pseudo_locale:: (every
               message comes from the catalog: bracketed in en-XA, direction
               marks closed in ar-XB)
     generated cargo xtask regen --check (every generated file is current:
@@ -191,7 +191,7 @@ Invoke-CheckStep 'fmt' 'formatting' @('cargo', 'fmt', '--all', '--check')
 Invoke-CheckStep 'clippy' 'lints, warnings are errors' (@('cargo', 'clippy', '--workspace', '--all-targets') + $features + @('--', '-D', 'warnings'))
 Invoke-CheckStep 'test' 'tests' (@('cargo', 'test', '--workspace') + $features)
 Invoke-CheckStep 'doc' 'API documentation, warnings are errors' (@('cargo', 'doc', '--workspace', '--no-deps') + $features) @{ RUSTDOCFLAGS = '-D warnings' }
-Invoke-CheckStep 'pseudo' 'the interface in the pseudo-locales en-XA and ar-XB' @('cargo', 'test', '-p', 'textweaver-app', '--test', 'pseudo_locale')
+Invoke-CheckStep 'pseudo' 'the interface in the pseudo-locales en-XA and ar-XB' @('cargo', 'test', '-p', 'textweaver-app', '--test', 'it', '--', 'pseudo_locale::')
 Invoke-CheckStep 'generated' 'every generated file is current' @('cargo', 'xtask', 'regen', '--check')
 # The py launcher first: python on Windows may be the Microsoft Store stub.
 $python = @()

@@ -620,7 +620,7 @@ fn window_timings_on_ten_million_characters() {
 
 /// Measurements for the report (Wave 3, W3a): what the input thread waits
 /// for now, against the work moved off it. Run with
-/// `cargo test -p textweaver-app --test app_core -- --ignored --nocapture`.
+/// `cargo test -p textweaver-app --test it -- app_core:: --ignored --nocapture`.
 #[test]
 #[ignore = "a measurement: run it with --ignored --nocapture"]
 fn measure_work_off_the_input_thread() {

@@ -73,20 +73,40 @@ fn is_written_chord(line: &str) -> bool {
     false
 }
 
+/// Every `.rs` file under `dir`, in its folders too (the tests are in
+/// `tests/it/`, W7t), sorted so a failure lists them the same each time.
+fn rust_files(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            rust_files(&path, out);
+        } else if path.extension().is_some_and(|e| e == "rs") {
+            out.push(path);
+        }
+    }
+}
+
 #[test]
 fn tests_press_the_keymap_s_keys() {
     let crates = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
     let mut bad = Vec::new();
+    let mut checked = 0;
     for dir in ["textweaver-app", "textweaver-tui", "textweaver-xilem"] {
-        let Ok(entries) = std::fs::read_dir(crates.join(dir).join("tests")) else {
-            continue;
-        };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.extension().is_none_or(|e| e != "rs") {
-                continue;
-            }
+        let tests = crates.join(dir).join("tests");
+        let mut files = Vec::new();
+        rust_files(&tests, &mut files);
+        files.sort();
+        for path in files {
+            checked += 1;
             let name = path.file_name().unwrap().to_string_lossy().into_owned();
+            let shown = path
+                .strip_prefix(&tests)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .replace('\\', "/");
             let text = std::fs::read_to_string(&path).unwrap();
             for (n, line) in text.lines().enumerate() {
                 if !is_written_chord(line) {
@@ -96,11 +116,14 @@ fn tests_press_the_keymap_s_keys() {
                     .iter()
                     .any(|(f, needle, _)| *f == name && line.contains(needle));
                 if !allowed {
-                    bad.push(format!("{dir}/tests/{name}:{}: {}", n + 1, line.trim()));
+                    bad.push(format!("{dir}/tests/{shown}:{}: {}", n + 1, line.trim()));
                 }
             }
         }
     }
+    // The three crates hold dozens of test files; none found means the
+    // walk missed them, not that they are clean.
+    assert!(checked > 20, "only {checked} test files found");
     assert!(
         bad.is_empty(),
         "tests pressing written chords; ask the keymap for the action's key instead:\n{}",

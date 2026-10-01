@@ -24,7 +24,7 @@ Runs every check CI runs, so you can see CI's answer before you push:
   test       cargo test --workspace FEATURES
   doc        cargo doc --workspace --no-deps
              FEATURES, with RUSTDOCFLAGS="-D warnings"
-  pseudo     cargo test -p textweaver-app --test pseudo_locale (every
+  pseudo     cargo test -p textweaver-app --test it -- pseudo_locale:: (every
              message comes from the catalog: bracketed in en-XA, direction
              marks closed in ar-XB)
   generated  cargo xtask regen --check (every generated file is current:
@@ -210,7 +210,7 @@ step fmt "formatting" cargo fmt --all --check
 step clippy "lints, warnings are errors" cargo clippy --workspace --all-targets ${FEATURES[@]+"${FEATURES[@]}"} -- -D warnings
 step test "tests" cargo test --workspace ${FEATURES[@]+"${FEATURES[@]}"}
 step doc "API documentation, warnings are errors" env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps ${FEATURES[@]+"${FEATURES[@]}"}
-step pseudo "the interface in the pseudo-locales en-XA and ar-XB" cargo test -p textweaver-app --test pseudo_locale
+step pseudo "the interface in the pseudo-locales en-XA and ar-XB" cargo test -p textweaver-app --test it -- pseudo_locale::
 step generated "every generated file is current" cargo xtask regen --check
 PYTHON=""
 if have python3; then
