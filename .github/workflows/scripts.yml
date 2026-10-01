@@ -117,13 +117,13 @@ jobs:
         include:
           - image: debian:stable
             manager: 'Package manager: apt'
-            packages: 'apt-get install -y -q --no-install-recommends -o Dpkg::Progress-Fancy=0 build-essential pkg-config libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev'
+            packages: 'apt-get install -y -q --no-install-recommends -o Dpkg::Progress-Fancy=0 build-essential pkg-config cmake libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev'
           - image: fedora:latest
             manager: 'Package manager: dnf'
-            packages: 'dnf install -y gcc gcc-c++ make pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel'
+            packages: 'dnf install -y gcc gcc-c++ make cmake pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel'
           - image: archlinux:latest
             manager: 'Package manager: pacman'
-            packages: 'pacman -Syu --needed --noconfirm --noprogressbar base-devel pkgconf alsa-lib espeak-ng speech-dispatcher'
+            packages: 'pacman -Syu --needed --noconfirm --noprogressbar base-devel pkgconf cmake alsa-lib espeak-ng speech-dispatcher'
     steps:
       - uses: actions/checkout@v7
       - name: Dry run
