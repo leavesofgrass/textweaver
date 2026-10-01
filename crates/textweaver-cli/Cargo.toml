@@ -29,7 +29,7 @@ mathcat = [
 ]
 
 [dependencies]
-textweaver-app = { workspace = true, features = ["publish", "lint", "dictation"] }
+textweaver-app = { workspace = true, features = ["publish", "lint", "grammar", "dictation"] }
 # The speech backend registry (`tw backends`, `speak`, `voices`, `export-audio`).
 textweaver-engines.workspace = true
 # In-process `tw open` and `tw serve`.

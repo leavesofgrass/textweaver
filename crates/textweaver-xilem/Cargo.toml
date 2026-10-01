@@ -18,7 +18,7 @@ name = "textweaver-xilem"
 path = "src/main.rs"
 
 [features]
-default = ["screenshot", "renderer-vello", "publish", "lint", "dictation", "audio-export"]
+default = ["screenshot", "renderer-vello", "publish", "lint", "grammar", "dictation", "audio-export"]
 # Dictation in edit mode (textweaver-app's `dictation`, ADR-0042).
 dictation = ["textweaver-app/dictation"]
 # File, Export audio (textweaver-app's `audio-export`, W6v): without it the
@@ -40,8 +40,8 @@ publish = ["textweaver-app/publish"]
 # problems), as in the terminal reader: textweaver's own rules, no
 # dependencies.
 lint = ["textweaver-app/lint"]
-# Grammar checking in edit mode with harper-core, off by default as in the
-# terminal reader (it adds about 10 MB).
+# Grammar checking in edit mode with harper-core (Ctrl+F7 and
+# Ctrl+Shift+F7), on by default as in the terminal reader.
 grammar = ["textweaver-app/grammar"]
 # MathCAT math speech and navigation (ADR-0029), as in the terminal reader.
 mathcat = ["textweaver-app/mathcat"]

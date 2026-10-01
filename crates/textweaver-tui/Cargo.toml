@@ -14,7 +14,7 @@ name = "textweaver"
 path = "src/main.rs"
 
 [features]
-default = ["publish", "lint", "clipboard", "highlight", "dictation"]
+default = ["publish", "lint", "grammar", "clipboard", "highlight", "dictation"]
 # Dictation in edit mode (textweaver-app's `dictation`, ADR-0042).
 dictation = ["textweaver-app/dictation"]
 # In-reader export, preview, and citations (textweaver-app's `publish`).
@@ -28,9 +28,10 @@ clipboard = ["dep:arboard"]
 # Code blocks highlighted with syntect and bat's syntaxes (two-face);
 # colors from the theme's roles, never color alone (ADR-0032).
 highlight = ["dep:syntect", "dep:two-face"]
-# Grammar checking with harper-core (textweaver-app's `grammar`). Off by
-# default (the owner's decision): it adds about 10 MB and the burn
-# framework. Build with `--features grammar` to try it.
+# Grammar checking with harper-core (textweaver-app's `grammar`). On by
+# default and in releases since Wave 7 (the owner's decision); it adds
+# about 11 MB and the burn framework. `--no-default-features` leaves it
+# out, with the rest of the defaults.
 grammar = ["textweaver-app/grammar"]
 # Speech engines, passed through to textweaver-speech.
 espeak = ["textweaver-app/espeak", "textweaver-engines/espeak"]
