@@ -3140,7 +3140,7 @@ palette-list-intro =
     }. Enter runs one.
 action-browse-files = Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up
 action-batch-convert = Convert a folder of documents to another format, in the background
-action-export-audio = Export the document as spoken audio: MP3, FLAC, WAV, or an M4B audiobook
+action-export-audio = Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook
 action-dictate = Start or stop dictation: spoken words are typed at the cursor in edit mode
 action-color-settings = Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast
 action-cycle-interface-announcements = Cycle how much textweaver announces about itself: off, minimal, normal, or full; errors and answers are always said

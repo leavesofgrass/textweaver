@@ -495,7 +495,7 @@ actions! {
         "Convert a folder of documents to another format, in the background",
         gui [], term [], shared [];
     ExportAudio = "export_audio", File,
-        "Export the document as spoken audio: MP3, FLAC, WAV, or an M4B audiobook",
+        "Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook",
         gui [], term [], shared [];
     SyncSetup = "sync_setup", File,
         "Set up sync: choose the sync folder, name this computer, and choose what syncs",

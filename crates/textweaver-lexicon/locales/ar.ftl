@@ -3394,7 +3394,7 @@ palette-list-intro =
     }. يشغّل Enter أحدها.
 action-browse-files = تصفح الملفات والأرشيفات: يفتح Enter مجلدًا أو أرشيفًا أو مستندًا، ويصعد Backspace مستوى
 action-batch-convert = تحويل مجلد من المستندات إلى صيغة أخرى في الخلفية
-action-export-audio = تصدير المستند صوتًا منطوقًا: MP3 أو FLAC أو WAV أو كتاب صوتي M4B
+action-export-audio = تصدير المستند صوتًا منطوقًا: MP3 أو FLAC أو Opus أو WAV أو كتاب صوتي M4B
 action-dictate = بدء الإملاء أو إيقافه: تُكتب الكلمات المنطوقة عند المؤشر في وضع التحرير
 action-color-settings = فتح إعدادات الألوان: تمييز القراءة والمسطرة والعلامات وكل جزء من الشاشة، مع تباينها
 action-cycle-interface-announcements = التبديل بين مقادير ما يعلنه textweaver عن نفسه: متوقفة أو في حدها الأدنى أو عادية أو كاملة؛ تُقال الأخطاء والإجابات دائمًا
