@@ -303,7 +303,7 @@ Since Wave 3 the list shown and its focused item are kept by textweaver itself, 
 ### prompt_state and prompt_key: type into a prompt
 
 - `prompt_state` takes no parameters. It returns the prompt open as `{label, purpose, text, caret}`, or null. `caret` counts characters from the start of `text`.
-- `prompt_key` takes either `key` (string): one character, or `backspace`, `delete`, `left`, `right`, `home`, `end`, `up` and `down` (earlier answers to the same prompt, or command palette matches), `tab` (completes a command name or a file path), `kill_to_start`, `kill_to_end`, `delete_word_back`, `enter`, or `escape`; or `text` (string): the whole text of the prompt at once. It returns `{status, effects, prompt}`.
+- `prompt_key` takes either `key` (string): one character, or `backspace`, `delete`, `left`, `right`, `home`, `end`, `up` and `down` (earlier answers to the same prompt, or command palette matches), `tab` (completes a command name or a file path, or moves to the next field of the edit details form), `shift_tab` (the form's previous field), `kill_to_start`, `kill_to_end`, `delete_word_back`, `enter`, or `escape`; or `text` (string): the whole text of the prompt at once. It returns `{status, effects, prompt}`.
 
 `answer` still works: it answers the open prompt with the text you give.
 

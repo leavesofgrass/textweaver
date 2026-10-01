@@ -345,6 +345,20 @@ impl App {
         });
     }
 
+    /// The owner edited a document's details by hand (W7m): the fields
+    /// changed are published, on the writer.
+    pub(crate) fn sync_request_edit(
+        &mut self,
+        identify: textweaver_sync::Identify,
+        edits: Vec<textweaver_sync::DetailEdit>,
+    ) {
+        self.sync_ensure_configured();
+        self.sync_send(SyncRequest::EditDetails {
+            identify: Box::new(identify),
+            edits,
+        });
+    }
+
     /// A document was saved: its new hashes are published (its sync id
     /// stays), or only kept when sync is off.
     pub(crate) fn sync_document_saved(&mut self, path: &std::path::Path) {

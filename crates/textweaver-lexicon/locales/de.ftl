@@ -221,6 +221,31 @@ continue-ago-days =
     }
 name-continue-reading = Weiterlesen
 action-continue-reading = Weiterlesen: die Dokumente auf diesem Computer mit gespeicherter Stelle, von jedem Computer, neueste zuerst
+name-edit-document-details = Details bearbeiten
+action-edit-document-details = Die Details des Dokuments bearbeiten: Titel, Autor, DOI und ISBN
+prompt-document-details = Dokumentdetails
+
+## Edit a document's details by hand (Wave 7, W7m).
+
+# $name is the document's title; said when the form opens.
+details-intro = Details von { $name }. Tab wechselt, Eingabetaste speichert, Escape bricht ab.
+details-label-title = Titel
+details-label-author = Autor
+details-label-doi = DOI
+details-label-isbn = ISBN
+# A field's drawn label: its label, then $n of $total fields.
+details-prompt-label = { $label }, { $n } von { $total }
+# Said on moving to a field: its label and value (or nav-blank).
+details-field = { $label }: { $value }
+# $fields lists the fields saved, by their labels.
+details-saved = Details gespeichert: { $fields }.
+details-unchanged = Details nicht geändert.
+details-cancelled = Abgebrochen. Details nicht geändert.
+# $text is what was typed in the DOI or ISBN field.
+details-not-a-doi = Keine DOI: { $text }. Korrigieren oder leeren.
+details-not-an-isbn = Keine ISBN: { $text }. Korrigieren oder leeren.
+details-no-file = Dieses Dokument hat keine Datei, also keine Details zum Bearbeiten.
+details-save-failed = Die Details konnten nicht gespeichert werden: { $error }
 # The statistics list could not wait for the sync folder.
 stats-others-slow = Andere Computer fehlen: Ordner langsam.
 stats-untitled = Dokument ohne Titel
@@ -1307,8 +1332,8 @@ library-scan-stopped = Die Bibliotheksdurchsuchung wurde durch einen internen Fe
 library-empty = Die Bibliothek ist leer. Fügen Sie einen Ordner hinzu mit { $command }, oder öffnen Sie eine Datei mit { $key }.
 library-intro =
     { $n ->
-        [one] Bibliothek, { $n } Dokument. Tippen filtert, Eingabetaste öffnet eines.
-       *[other] Bibliothek, { $n } Dokumente. Tippen filtert, Eingabetaste öffnet eines.
+        [one] Bibliothek, { $n } Dokument. Tippen filtert, Eingabetaste öffnet eines, F2 bearbeitet Details.
+       *[other] Bibliothek, { $n } Dokumente. Tippen filtert, Eingabetaste öffnet eines, F2 bearbeitet Details.
     }
 library-title = Bibliothek
 

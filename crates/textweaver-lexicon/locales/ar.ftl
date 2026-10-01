@@ -278,6 +278,31 @@ continue-ago-days =
     }
 name-continue-reading = متابعة القراءة
 action-continue-reading = متابعة القراءة: المستندات على هذا الحاسوب التي لها موضع محفوظ، من أي حاسوب، الأحدث أولًا
+name-edit-document-details = تعديل التفاصيل
+action-edit-document-details = تعديل تفاصيل المستند: العنوان والمؤلف وDOI وISBN
+prompt-document-details = تفاصيل المستند
+
+## Edit a document's details by hand (Wave 7, W7m).
+
+# $name is the document's title; said when the form opens.
+details-intro = تفاصيل { $name }. Tab للتنقل، Enter للحفظ، Escape للإلغاء.
+details-label-title = العنوان
+details-label-author = المؤلف
+details-label-doi = DOI
+details-label-isbn = ISBN
+# A field's drawn label: its label, then $n of $total fields.
+details-prompt-label = { $label }، { $n } من { $total }
+# Said on moving to a field: its label and value (or nav-blank).
+details-field = { $label }: { $value }
+# $fields lists the fields saved, by their labels.
+details-saved = حُفظت التفاصيل: { $fields }.
+details-unchanged = لم تتغير التفاصيل.
+details-cancelled = أُلغي. لم تتغير التفاصيل.
+# $text is what was typed in the DOI or ISBN field.
+details-not-a-doi = ليس DOI: { $text }. صحّحه أو امسحه.
+details-not-an-isbn = ليس ISBN: { $text }. صحّحه أو امسحه.
+details-no-file = ليس لهذا المستند ملف، فلا تفاصيل لتعديلها.
+details-save-failed = تعذّر حفظ التفاصيل: { $error }
 # The statistics list could not wait for the sync folder.
 stats-others-slow = تُركت الحواسيب الأخرى: المجلد بطيء.
 stats-untitled = مستند بلا عنوان
@@ -1427,11 +1452,11 @@ library-scan-stopped = توقّف فحص المكتبة بخطأ داخلي.
 library-empty = المكتبة فارغة. أضف مجلدًا بـ{ $command }، أو افتح ملفًا بـ{ $key }.
 library-intro =
     { $n ->
-        [one] المكتبة، مستند واحد. اكتب للتصفية، Enter لفتح واحد.
-        [two] المكتبة، مستندان. اكتب للتصفية، Enter لفتح واحد.
-        [few] المكتبة، { $n } مستندات. اكتب للتصفية، Enter لفتح واحد.
-        [many] المكتبة، { $n } مستندًا. اكتب للتصفية، Enter لفتح واحد.
-       *[other] المكتبة، { $n } مستند. اكتب للتصفية، Enter لفتح واحد.
+        [one] المكتبة، مستند واحد. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
+        [two] المكتبة، مستندان. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
+        [few] المكتبة، { $n } مستندات. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
+        [many] المكتبة، { $n } مستندًا. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
+       *[other] المكتبة، { $n } مستند. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
     }
 library-title = المكتبة
 

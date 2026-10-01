@@ -413,7 +413,7 @@ fn the_library_lists_folder_documents_and_recent_files_and_opens_them() {
     assert!(items[2].starts_with("loose.txt, recent"), "{items:?}");
     assert!(
         r.said
-            .any("Library, 3 documents. Type to filter, Enter opens one.")
+            .any("Library, 3 documents. Type to filter, Enter opens one, F2 edits details.")
     );
     // Then the focused item (the app's list model, Wave 3).
     assert!(r.said.last().starts_with("1 of 3, "), "{}", r.said.last());

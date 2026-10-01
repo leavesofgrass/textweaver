@@ -53,7 +53,7 @@ pub mod record;
 mod view;
 
 pub use clock::{AHEAD_LIMIT_MS, Clock, ClockAhead, Stamp, wall_ms};
-pub use docid::{Found, Identify, IdentityIndex, Resolved, Suggestion};
+pub use docid::{DetailEdit, Found, Identify, IdentityIndex, Resolved, Suggestion};
 pub use folder::{DeviceInfo, DocRead, FileKind, Merged, Opened, Problem, ReadOnly, SyncFolder};
 pub use groups::{GroupChange, GroupFile, GroupRecord};
 pub use identity::{

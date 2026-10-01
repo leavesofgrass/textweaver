@@ -314,6 +314,10 @@ pub enum PromptPurpose {
     /// Answer is this computer's name for sync (Set up sync); empty keeps
     /// the one suggested.
     SyncComputerName,
+    /// Answer is one field of the edit details form (W7m): title, author,
+    /// DOI, or ISBN. Tab and Shift+Tab move between the fields; Enter
+    /// saves them all.
+    DocumentDetails,
 }
 
 impl PromptPurpose {
@@ -350,6 +354,8 @@ impl PromptPurpose {
             PromptPurpose::ExportProfiles => "Export profiles to file",
             PromptPurpose::SettingValue => "New value, Enter keeps it",
             PromptPurpose::SyncComputerName => "Name this computer, Enter keeps it",
+            // The app labels each field from the message catalog.
+            PromptPurpose::DocumentDetails => "Document details",
         }
     }
 }
