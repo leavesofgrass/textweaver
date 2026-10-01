@@ -77,12 +77,19 @@ def brf_lines(data: str) -> list[str]:
 
 
 def louis(lou: str, direction: str, table: str, lines: list[str]) -> list[str]:
-    """Runs lou_translate over `lines`, one output line per input line."""
+    """Runs lou_translate over `lines`, one output line per input line.
+
+    lou_translate reads backslash escapes in its input, so each backslash
+    is doubled. In BRF a backslash is the cell for "ou" (dots 1256); sent
+    as it is, "AL\\D1" (aloud) was an invalid escape and its whole line
+    read back as nothing, and "COL\\R$" (coloured) read "\\r" as a
+    carriage return.
+    """
     if not lines:
         return []
     done = subprocess.run(
         [lou, direction, f"en-us-brf.dis,{table}"],
-        input="\n".join(lines) + "\n",
+        input="\n".join(line.replace("\\", "\\\\") for line in lines) + "\n",
         capture_output=True,
         text=True,
         encoding="utf-8",
