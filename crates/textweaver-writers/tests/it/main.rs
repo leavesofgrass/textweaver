@@ -5,8 +5,8 @@
 //! one (W7t). Add a new integration test as a module in this folder,
 //! never as a new file directly in `tests/`.
 
-mod common;
 mod brf_formats;
+mod common;
 mod docx;
 mod docx_math;
 mod epub;
