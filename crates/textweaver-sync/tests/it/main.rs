@@ -6,6 +6,7 @@
 //! never as a new file directly in `tests/`.
 
 mod folder;
+mod groups;
 mod identity;
 mod merge_props;
 mod reader;

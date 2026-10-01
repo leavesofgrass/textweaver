@@ -33,6 +33,11 @@
 //!
 //! Favorite voices are a set; a favorite not installed on this computer is
 //! kept, and listed in Choose voice as "not on this computer".
+//!
+//! Profiles publish only their portable settings: the voice, engine,
+//! access mode, and other machine settings a profile was saved with stay
+//! on this computer, and are kept when another computer's version of the
+//! profile arrives.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -40,11 +45,14 @@ use std::time::SystemTime;
 
 use serde_json::{Value, json};
 use textweaver_store::settings_io::{json_to_toml, toml_to_json};
-use textweaver_store::sync_scope::{portable_settings, sync_group_of, with_portable};
+use textweaver_store::sync_scope::{
+    portable_settings, profile_portable, profile_with_machine, sync_group_of, with_portable,
+};
 use textweaver_store::{Paths, Profiles, Settings, SettingsStore};
 use textweaver_sync::{DeviceId, GroupFile, GroupRecord};
 
 use crate::sync_engine::{EngineStatus, Groups, Notice, SyncEngine};
+use crate::sync_pending::PendingItem;
 
 /// The settings group's map.
 pub const SETTINGS_MAP: &str = "settings";
@@ -234,7 +242,10 @@ pub fn read_local(
             let map = profiles
                 .profiles
                 .iter()
-                .map(|(name, t)| (name.clone(), toml_to_json(&toml::Value::Table(t.clone()))))
+                .map(|(name, t)| {
+                    let full = toml_to_json(&toml::Value::Table(t.clone()));
+                    (name.clone(), profile_portable(&full))
+                })
                 .collect();
             g.maps.insert(PROFILES_MAP, map);
             g.wall
@@ -586,11 +597,20 @@ impl SyncEngine {
                 }
             }
             let written = mine.to_bytes().ok();
+            // Arrivals a session before this one sent and the app may not
+            // have applied (it stopped first): saved before publishing.
+            let pending = self.journal.as_ref().map_or_else(BTreeMap::new, |j| {
+                j.group(file)
+                    .into_iter()
+                    .map(|p| ((p.kind.clone(), p.id.clone()), p.before()))
+                    .collect()
+            });
             self.groups.insert(
                 file,
                 GroupSlot {
                     mine,
                     written,
+                    pending,
                     ..GroupSlot::default()
                 },
             );
@@ -649,8 +669,20 @@ impl SyncEngine {
             .collect();
         slot.others = others;
         slot.last_local = Some(local.clone());
+        let saved = slot
+            .pending
+            .iter()
+            .map(|((name, key), before)| PendingItem::new(name, key, before.as_ref()))
+            .collect();
         self.problems(problems, notices);
-        self.write_group(file, notices);
+        // What arrived is saved here before the merged view is published.
+        if self
+            .journal
+            .as_mut()
+            .is_none_or(|j| j.set_group(file, saved))
+        {
+            self.write_group(file, notices);
+        }
         arrivals
     }
 
@@ -787,15 +819,21 @@ fn arrivals(
             if !in_scope(name, key, system) {
                 continue;
             }
+            // A profile published with machine settings (by an earlier
+            // build) arrives without them.
+            let value = match (name.as_str(), &r.value) {
+                (PROFILES_MAP, Some(v)) => Some(profile_portable(v)),
+                (_, v) => v.clone(),
+            };
             let now = here.get(key);
-            if same(name, r.value.as_ref(), now) {
+            if same(name, value.as_ref(), now) {
                 continue;
             }
             out.push(GroupArrival {
                 file,
                 name: name.clone(),
                 key: key.clone(),
-                value: r.value.clone(),
+                value,
                 previous: now.cloned(),
                 label: labels.get(&r.stamp.device).cloned(),
             });
@@ -953,16 +991,18 @@ fn apply_profiles<'a>(
     };
     let mut changed = false;
     for a in arrivals {
-        let now = profiles
+        let full = profiles
             .profiles
             .get(&a.key)
             .map(|t| toml_to_json(&toml::Value::Table(t.clone())));
-        if now != a.previous {
+        if full.as_ref().map(profile_portable) != a.previous {
             out.skipped += 1;
             continue;
         }
         match &a.value {
-            Some(v) => match json_to_toml(v, &a.key) {
+            // This computer's voice, engine, and access mode for the
+            // profile stay.
+            Some(v) => match json_to_toml(&profile_with_machine(v, full.as_ref()), &a.key) {
                 Ok(Some(toml::Value::Table(t))) => {
                     profiles.profiles.insert(a.key.clone(), t);
                 }

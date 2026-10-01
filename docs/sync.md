@@ -14,7 +14,7 @@ Each group has its own switch, so you can turn one off without turning off the r
 - **Bookmarks.**
 - **Statistics**: each computer's reading time and sessions for each document; the totals are their sum, in the statistics list and `tw stats` (below).
 - **Settings**: the portable ones, which are about you as a reader rather than the computer: rate, punctuation, verbosity, capitals, the reading aids, the highlight, the theme and colors, the Braille and math codes, the interface language, speed presets, and the announcement level. The newest change to each setting wins. The [settings reference](settings-reference.md) says for every setting whether it syncs.
-- **Profiles**: each profile's settings. Which profile is in use stays on each computer.
+- **Profiles**: each profile's portable settings. The voice, the speech engine, the access mode, and the other machine settings a profile holds stay on the computer that saved them: a profile that arrives keeps this computer's own voice, engine, and access mode for it, and a profile new to this computer uses the ones already set here. Which profile is in use stays on each computer.
 - **Key overrides**: your `keymap.toml`, each override labeled with the system it was made on. Windows and Linux share their keys, so an override made on one is used on the other. A Mac's overrides are kept but not used on Windows or Linux, and the reverse, so a Mac key never lands on a Windows keyboard.
 - **Word list**: the words you added to the spelling list. Adding a word wins; removing one is recorded, so it does not come back from a computer that had not heard.
 - **Glossary and pronunciations**: your glossary's entries and your pronunciation list, the newest change winning word by word. A glossary written as text keeps its comments and order; a changed term is replaced where it was.
@@ -99,7 +99,7 @@ Deleting a note, a highlight, or a bookmark deletes it on the other computers to
 
 ### A document that may be the same book
 
-Two copies of a book with the same contents are recognized at once. A document that only shares a DOI or an ISBN with one on another computer, such as two chapters of one book, is never matched on its own; textweaver asks: "This may be Cells from laptop, with 4 notes. Use them? Y or N". Y shares that document's notes and places; N keeps the two apart and is remembered.
+Two copies of a book with the same contents are recognized at once. If two computers each opened the book before they ever synced, each gave it an id of its own; once their files meet, the next time the book opens the two are joined into one, with both computers' notes, highlights, bookmarks, and places. Nothing is asked, and nothing is lost. A document that only shares a DOI or an ISBN with one on another computer, such as two chapters of one book, is never matched on its own; textweaver asks: "This may be Cells from laptop, with 4 notes. Use them? Y or N". Y shares that document's notes and places; N keeps the two apart and is remembered.
 
 ### Problems
 
@@ -111,6 +111,8 @@ The status line always starts with "Sync", so it reads cleanly on a Braille disp
 - "Sync: lab's clock is ahead": another computer's clock is more than a day ahead, which would let its edits win when they should not. Set that computer's clock.
 - "Sync: 1 damaged file skipped": a file could not be read, perhaps cut short by a sync still in progress. It is said once a session, and tried again at the next change.
 - "Sync: cannot write, saving here": writing to the folder failed; the reason is said once, as an error.
+
+If textweaver stops after taking in another computer's changes and before saving them here, for example in a power cut, nothing is lost: the changes it was about to save are kept on this computer, in `sync-pending.json` beside the reading state, and taken in again at the next start, and this computer's older version never wins over them. That file never syncs.
 
 Before the first merge, textweaver copies this computer's reading state to a folder named `state-before-sync` beside it, once, so turning sync on can be undone.
 

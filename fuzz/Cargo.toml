@@ -303,3 +303,13 @@ path = "fuzz_targets/sync_record.rs"
 test = false
 doc = false
 bench = false
+
+# W7s: the sync group files (settings, profiles, keys, word lists,
+# favorite voices; ADR-0049).
+
+[[bin]]
+name = "sync_group"
+path = "fuzz_targets/sync_group.rs"
+test = false
+doc = false
+bench = false

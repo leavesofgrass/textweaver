@@ -145,6 +145,12 @@ The library sidecar stays as one more source to read, so places written by an ol
 - The sync folder is readable by anyone who can read the folder; the owner chooses where it lives.
 - Sync depends on the folder being kept in step by something else. textweaver cannot tell a sync service that is paused from one that is done.
 
+## Update: Wave 7 (Wednesday, September 30, 2026)
+
+- **Profiles** publish only their portable settings. The machine settings a profile holds (the voice, the engine, the access mode) stay on the computer that saved them, and are kept when another computer's version of the profile arrives.
+- **Two ids for one document**, made before the computers ever synced, are folded together: identifying a document picks the smallest id among the records that share its content hash, text hash, or library key. The computer whose id lost merges its record into the winner's and marks the old record `folded_into`, a field added without raising the format; readers count a folded record as part of its winner. A DOI or an ISBN still never matches on its own.
+- **The crash window.** What a merge sends the app to apply is saved in the data folder (`sync-pending.json`, never synced) before the merged view is published, for documents and for the other groups alike. After a crash, the next session sends those arrivals again instead of taking the app's older version for a new edit.
+
 ## See also
 
 - [ADR-0024: App core for the GUI](0024-app-core-for-the-gui.md), for the background writer

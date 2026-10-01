@@ -117,6 +117,8 @@ const TARGETS: &[(&str, &[Seeds])] = &[
     ("obsidian", &[seeds("fixtures/o/vault", &["md"], true)]),
     // S1: a sync record (ADR-0049).
     ("sync_record", &[seeds("fixtures/s1", &["json"], false)]),
+    // W7s: the sync group files.
+    ("sync_group", &[seeds("fixtures/w7s", &["json"], false)]),
 ];
 
 /// The repository root.

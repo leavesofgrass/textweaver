@@ -25,6 +25,12 @@
 //!
 //! A map such as `speech.speed_presets` is one setting: it syncs whole, as
 //! it is stored whole in `settings.toml`.
+//!
+//! Profiles sync too, but a profile holds machine settings as well (the
+//! voice, the engine, the access mode it was saved with). Those stay on
+//! the computer that saved them: [`profile_portable`] is what a profile
+//! publishes, and [`profile_with_machine`] keeps this computer's machine
+//! values when another computer's version of a profile arrives.
 
 use std::collections::BTreeMap;
 
@@ -377,6 +383,73 @@ pub fn changed_paths(a: &Settings, b: &Settings) -> Vec<String> {
         .collect()
 }
 
+/// Splits a settings-shaped JSON table into its portable and machine
+/// parts, by each value's dotted path. A table that is not itself a
+/// setting is walked into; a value with no mark (from a newer textweaver,
+/// or typed by hand) counts as portable, so it passes through.
+fn split_table(tree: &Map<String, Value>, path: &str) -> (Map<String, Value>, Map<String, Value>) {
+    let (mut portable, mut machine) = (Map::new(), Map::new());
+    for (k, v) in tree {
+        let sub = join(path, k);
+        match (setting_scope(&sub), v) {
+            (Some(Machine), _) => {
+                machine.insert(k.clone(), v.clone());
+            }
+            (None, Value::Object(inner)) => {
+                let (p, m) = split_table(inner, &sub);
+                if !p.is_empty() {
+                    portable.insert(k.clone(), Value::Object(p));
+                }
+                if !m.is_empty() {
+                    machine.insert(k.clone(), Value::Object(m));
+                }
+            }
+            _ => {
+                portable.insert(k.clone(), v.clone());
+            }
+        }
+    }
+    (portable, machine)
+}
+
+/// Merges `from` into `into`, table by table; `from` wins a clash.
+fn merge_tables(into: &mut Map<String, Value>, from: Map<String, Value>) {
+    for (k, v) in from {
+        match (into.get_mut(&k), v) {
+            (Some(Value::Object(a)), Value::Object(b)) => merge_tables(a, b),
+            (_, v) => {
+                into.insert(k, v);
+            }
+        }
+    }
+}
+
+/// A profile (a table in `settings.toml`'s shape, as JSON) as it syncs:
+/// without its machine settings (the voice, the engine, the access mode,
+/// and every other setting marked machine). A value that is not a table
+/// is returned as it is.
+pub fn profile_portable(profile: &Value) -> Value {
+    match profile {
+        Value::Object(t) => Value::Object(split_table(t, "").0),
+        other => other.clone(),
+    }
+}
+
+/// A profile arriving from another computer (`incoming`), with the machine
+/// settings of this computer's version of it (`local`) kept: another
+/// computer never sets the voice, engine, or access mode a profile uses
+/// here. Machine settings in `incoming` are dropped.
+pub fn profile_with_machine(incoming: &Value, local: Option<&Value>) -> Value {
+    let Value::Object(t) = incoming else {
+        return incoming.clone();
+    };
+    let mut out = split_table(t, "").0;
+    if let Some(Value::Object(l)) = local {
+        merge_tables(&mut out, split_table(l, "").1);
+    }
+    Value::Object(out)
+}
+
 /// Sets the value at dotted `path` in `tree`. Returns false when a table
 /// on the way is missing.
 fn set_path(tree: &mut Map<String, Value>, path: &str, value: Value) -> bool {
@@ -499,6 +572,47 @@ mod tests {
         assert!(!portable.contains_key("speech.favorite_voices"));
         assert!(!portable.contains_key("speech.backend"));
         assert!(portable.contains_key("speech.rate"));
+    }
+
+    /// A profile publishes only its portable settings, and an arriving
+    /// version keeps this computer's voice, engine, and access mode.
+    #[test]
+    fn profiles_keep_their_machine_settings_on_their_own_computer() {
+        let laptop = serde_json::json!({
+            "speech": {"backend": "sapi", "voice": "David", "rate": 320},
+            "accessibility": {"mode": "screen-reader", "interface_announcements": "brief"},
+            "highlight": {"granularity": "word"},
+            "future": {"knob": 1},
+        });
+        let published = profile_portable(&laptop);
+        assert_eq!(
+            published,
+            serde_json::json!({
+                "speech": {"rate": 320},
+                "accessibility": {"interface_announcements": "brief"},
+                "highlight": {"granularity": "word"},
+                "future": {"knob": 1},
+            })
+        );
+        assert_eq!(profile_portable(&published), published, "idempotent");
+
+        let lab = serde_json::json!({
+            "speech": {"backend": "espeak", "voice": "en-us", "rate": 200},
+            "accessibility": {"mode": "self-voicing"},
+        });
+        // The laptop's version arrives, with a machine key smuggled in.
+        let mut incoming = published.clone();
+        incoming["speech"]["voice"] = Value::from("David");
+        let merged = profile_with_machine(&incoming, Some(&lab));
+        assert_eq!(merged["speech"]["rate"], 320);
+        assert_eq!(merged["speech"]["backend"], "espeak");
+        assert_eq!(merged["speech"]["voice"], "en-us");
+        assert_eq!(merged["accessibility"]["mode"], "self-voicing");
+        assert_eq!(merged["accessibility"]["interface_announcements"], "brief");
+        assert_eq!(profile_portable(&merged), published);
+        // A profile new here takes no machine settings at all.
+        let fresh = profile_with_machine(&incoming, None);
+        assert_eq!(fresh, published);
     }
 
     /// Portable values put into other settings change only those values,

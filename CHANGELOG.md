@@ -37,6 +37,11 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Speech follows the sound device.** When a headset or another device goes away, speech moves to the current default device at once and the reading goes on; before, it waited a second and only noticed while audio was waiting. Sound errors no longer print over the terminal reader's screen.
 - **Choose the sound device.** `[speech] output_device` (Output device in the settings screen) keeps speech on one device by its id, and `tw backends --devices` lists the devices with their ids. A device that is not connected falls back to the default. It applies to Eloquence, the Windows voices, DECtalk, and Piper.
 - **Piper's pitch sounds cleaner.** Raising or lowering a Piper voice's pitch now uses a band-limited resampler, so a raised voice no longer has a metallic edge.
+### Sync, made sturdier
+
+- **Profiles keep their voice on each computer.** A profile syncs its portable settings only; the voice, the speech engine, and the access mode it was saved with stay on the computer that saved them, and an arriving profile keeps this computer's own.
+- **One document, one id.** When two computers opened the same book before they ever synced, the next time it opens the two ids are joined into one, with both computers' notes, highlights, bookmarks, and places.
+- **Safe across a crash.** Changes taken in from another computer and not yet saved here are kept on this computer, so a crash or power cut in between never lets this computer's older version win.
 
 ### For contributors
 

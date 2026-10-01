@@ -16,7 +16,7 @@ use serde_json::json;
 use textweaver_app::a11y::{Announcer, Priority};
 use textweaver_app::core::{PunctuationLevel, Rate};
 use textweaver_app::keymap::ActionId;
-use textweaver_app::store::{Paths, Profiles, Settings, SettingsStore};
+use textweaver_app::store::{AccessMode, Paths, Profiles, Settings, SettingsStore};
 use textweaver_app::sync_engine::{EngineConfig, Groups, SyncEngine};
 use textweaver_app::sync_groups::{GroupsRequest, KeySystem, apply_groups};
 use textweaver_app::testing::recording_service;
@@ -364,6 +364,9 @@ fn profile_definitions_sync_and_the_active_profile_does_not() {
     let mut profiles = Profiles::default();
     let mut study = Settings::default();
     study.speech.rate = Rate::Wpm(200);
+    study.speech.backend = "sapi".into();
+    study.speech.voice = Some("Microsoft David".into());
+    study.accessibility.mode = AccessMode::ScreenReader;
     profiles.save_current("Study", &study).unwrap();
     assert_eq!(profiles.active.as_deref(), Some("Study"));
     profiles.save(&laptop.paths()).unwrap();
@@ -371,12 +374,62 @@ fn profile_definitions_sync_and_the_active_profile_does_not() {
 
     let theirs = Profiles::load(&lab.paths()).unwrap();
     assert_eq!(theirs.names(), ["Study"]);
-    assert_eq!(theirs.profiles["Study"], profiles.profiles["Study"]);
+    let lab_study = &theirs.profiles["Study"];
+    assert_eq!(lab_study["speech"]["rate"], toml::Value::Integer(200));
+    // The voice, the engine, and the access mode stay on the laptop.
+    assert!(lab_study["speech"].get("voice").is_none(), "{lab_study}");
+    assert!(lab_study["speech"].get("backend").is_none(), "{lab_study}");
+    assert!(
+        lab_study
+            .get("accessibility")
+            .is_none_or(|a| a.get("mode").is_none())
+    );
+    let published = group_file_of(folder.path(), "laptop", "profiles.json").unwrap();
+    let text = published.to_string();
+    assert!(!text.contains("David") && !text.contains("sapi"), "{text}");
+    assert!(!text.contains("screen-reader"), "{text}");
+    assert_eq!(
+        Profiles::load(&laptop.paths()).unwrap().profiles["Study"],
+        profiles.profiles["Study"],
+        "kept whole on the laptop"
+    );
     assert_eq!(
         theirs.active, None,
         "which one is active stays on the laptop"
     );
     assert!(lab.said.any("Settings: 1 change from laptop."));
+
+    // The lab gives the profile its own voice and engine: nothing is
+    // published, and the laptop keeps its own.
+    let mut theirs = theirs;
+    let speech = theirs
+        .profiles
+        .get_mut("Study")
+        .and_then(|t| t.get_mut("speech"))
+        .and_then(toml::Value::as_table_mut)
+        .unwrap();
+    speech.insert("backend".into(), "espeak".into());
+    speech.insert("voice".into(), "en-us".into());
+    theirs.save(&lab.paths()).unwrap();
+    settle(&mut laptop, &mut lab);
+    let laptop_study = Profiles::load(&laptop.paths()).unwrap().profiles["Study"].clone();
+    assert_eq!(
+        laptop_study["speech"]["voice"].as_str(),
+        Some("Microsoft David")
+    );
+
+    // A later change on the laptop arrives, and the lab's voice and engine
+    // stay.
+    study.speech.rate = Rate::Wpm(250);
+    profiles.save_current("Study", &study).unwrap();
+    profiles.save(&laptop.paths()).unwrap();
+    settle(&mut laptop, &mut lab);
+    let lab_study = Profiles::load(&lab.paths()).unwrap().profiles["Study"].clone();
+    assert_eq!(lab_study["speech"]["rate"], toml::Value::Integer(250));
+    assert_eq!(lab_study["speech"]["voice"].as_str(), Some("en-us"));
+    assert_eq!(lab_study["speech"]["backend"].as_str(), Some("espeak"));
+    let laptop_study = Profiles::load(&laptop.paths()).unwrap().profiles["Study"].clone();
+    assert_eq!(laptop_study["speech"]["backend"].as_str(), Some("sapi"));
 
     // Deleted on the laptop, deleted on the lab.
     profiles.delete("Study").unwrap();
@@ -514,6 +567,59 @@ fn cycle(e: &mut SyncEngine, paths: &Paths, system: KeySystem) -> usize {
     });
     apply_groups(paths, &mut settings, &o.arrivals, system);
     o.status.kept_key_overrides
+}
+
+/// The crash window for settings: a merge publishes what arrived before
+/// the app has saved it. If textweaver stops in between, the next session
+/// sends the arrival again and does not publish the older value as a new
+/// change.
+#[test]
+fn settings_that_arrived_survive_a_crash_before_they_were_saved() {
+    let folder = tempfile::tempdir().unwrap();
+    let homes: Vec<tempfile::TempDir> = (0..2).map(|_| tempfile::tempdir().unwrap()).collect();
+    let system = KeySystem::Windows;
+    let request = |s: &Settings, ms: u64| GroupsRequest {
+        settings: Box::new(s.clone()),
+        settings_ms: ms,
+        force: true,
+    };
+    let rate_arrival = |o: &textweaver_app::sync_groups::GroupsOutcome| {
+        o.arrivals
+            .iter()
+            .find(|a| a.key == "speech.rate")
+            .and_then(|a| a.value.clone())
+    };
+    let published_rate = || {
+        group_file_of(folder.path(), "laptop", "settings.json")
+            .map(|v| v["maps"]["settings"]["speech.rate"]["value"].clone())
+    };
+
+    let (mut lab, _) = engine(folder.path(), homes[0].path(), "lab", system, "");
+    let mut lab_settings = Settings::default();
+    lab_settings.speech.rate = Rate::Wpm(320);
+    lab.groups_cycle(&request(&lab_settings, 2_000_000_000_000));
+
+    // The laptop merges, and textweaver stops before the rate is applied.
+    let laptop_settings = Settings::default();
+    let (mut first, _) = engine(folder.path(), homes[1].path(), "laptop", system, "");
+    let o = first.groups_cycle(&request(&laptop_settings, 1_000));
+    assert_eq!(rate_arrival(&o), Some(json!(320)));
+    assert_eq!(published_rate(), Some(json!(320)));
+    drop(first);
+
+    // The next session: sent again, and the old rate is not published.
+    let (mut second, paths) = engine(folder.path(), homes[1].path(), "laptop", system, "");
+    let o = second.groups_cycle(&request(&laptop_settings, 1_000));
+    assert_eq!(rate_arrival(&o), Some(json!(320)));
+    assert_eq!(published_rate(), Some(json!(320)));
+
+    // Applied, it is done.
+    let mut applied = laptop_settings.clone();
+    apply_groups(&paths, &mut applied, &o.arrivals, system);
+    assert_eq!(applied.speech.rate, Rate::Wpm(320));
+    let o = second.groups_cycle(&request(&applied, 3_000));
+    assert_eq!(rate_arrival(&o), None);
+    privacy_scan(folder.path(), &[homes[0].path(), homes[1].path()]);
 }
 
 #[test]

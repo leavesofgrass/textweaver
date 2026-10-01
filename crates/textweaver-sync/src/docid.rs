@@ -23,6 +23,17 @@
 //! renamed, moved, or copied), then in the other computers' records
 //! ([`IdentityIndex`]). Failing all of them, the document gets a new id.
 //!
+//! Two computers that opened one document before they ever synced each
+//! gave it an id of their own. Once their records meet, the ids are
+//! **folded**: every time a document is identified, the smallest id among
+//! the records that share its content hash, text hash, or library key wins
+//! ([`IdentityIndex::smallest_match`]). The computer whose id lost takes the
+//! smaller one ([`Resolved::folded_from`]) and publishes its notes, places,
+//! bookmarks, and highlights under it; its old record is marked
+//! [`DocRecord::folded_into`] so readers count it as part of the winner.
+//! The computer holding the smallest id changes nothing, so every computer
+//! settles on the same id whatever order they open the document in.
+//!
 //! After an edit the id stays: the path key still maps to it, the file's
 //! new hashes replace the old ones in `sync-ids.json`, and
 //! [`Resolved::changed`] says they should be published
@@ -351,6 +362,10 @@ pub struct Resolved {
     /// Documents on other computers with the same DOI or ISBN, to ask
     /// about. Empty once another computer has this document's id.
     pub suggestions: Vec<Suggestion>,
+    /// The id this document had here before it was folded into
+    /// [`sync_id`](Self::sync_id), a smaller id another computer gave the
+    /// same document; `None` when it kept its id.
+    pub folded_from: Option<SyncId>,
 }
 
 /// One document as the other computers' records know it.
@@ -374,9 +389,11 @@ impl IdentityIndex {
         Self::default()
     }
 
-    /// Adds `device`'s record.
+    /// Adds `device`'s record. A record folded into a smaller id counts
+    /// as that id's.
     pub fn add(&mut self, device: DeviceId, record: &DocRecord) {
-        let k = self.docs.entry(record.sync_id).or_default();
+        let id = record.folded_into.unwrap_or(record.sync_id);
+        let k = self.docs.entry(id).or_default();
         k.identity.merge(&record.identity);
         if !k.devices.contains(&device) {
             k.devices.push(device);
@@ -416,6 +433,24 @@ impl IdentityIndex {
             })
             .max_by(|a, b| a.0.cmp(&b.0).then_with(|| b.1.cmp(&a.1)))
             .map(|(_, id)| id)
+    }
+
+    /// The smallest sync id among the documents whose content hashes, text
+    /// hashes, or library keys include one of `fp`'s: the id two computers'
+    /// ids for one document fold into. A DOI or an ISBN never counts.
+    pub fn smallest_match(&self, fp: &Fingerprint) -> Option<SyncId> {
+        self.docs
+            .iter()
+            .filter(|(_, k)| {
+                let has = |set: &crate::RecentHashes, h: &Option<String>| {
+                    h.as_deref().is_some_and(|h| set.contains(h))
+                };
+                has(&k.identity.content, &fp.content_sha256)
+                    || has(&k.identity.text, &fp.text_sha256)
+                    || has(&k.identity.library, &fp.library_key)
+            })
+            .map(|(id, _)| *id)
+            .min()
     }
 
     /// Documents with the same DOI or ISBN as `details`, other than
@@ -555,10 +590,24 @@ impl Identify {
             modified_ms: modified,
         };
 
-        let (sync_id, found) = match entry.as_ref().and_then(|e| e.sync_id.parse().ok()) {
+        let (mut sync_id, found) = match entry.as_ref().and_then(|e| e.sync_id.parse().ok()) {
             Some(id) => (id, Found::Known),
             None => find(&ids, &key, &fingerprint, index),
         };
+        // Two ids for one document, made before the computers ever synced:
+        // the smallest wins.
+        let mut folded_from = None;
+        if let Some(smaller) = index
+            .and_then(|ix| ix.smallest_match(&fingerprint))
+            .filter(|s| *s < sync_id)
+        {
+            // Only an id this path already had here is folded; one just
+            // found for it simply becomes the smallest.
+            if found == Found::Known {
+                folded_from = Some(sync_id);
+            }
+            sync_id = smaller;
+        }
         let changed = entry.as_ref().is_none_or(|e| {
             e.sync_id != sync_id.to_string()
                 || e.content_sha256 != fingerprint.content_sha256
@@ -595,6 +644,7 @@ impl Identify {
             fingerprint,
             changed,
             suggestions,
+            folded_from,
         })
     }
 
