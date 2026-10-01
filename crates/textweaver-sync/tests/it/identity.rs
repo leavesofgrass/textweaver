@@ -463,7 +463,7 @@ fn two_ids_made_before_syncing_fold_into_the_smallest() {
     let mut lab = Home::new("lab", sync.path());
     let text = body(300, "osmosis");
     let a = laptop.put("Biology/osmosis.md", text.as_bytes());
-    let b = lab.put("reading/osmosis copy.md", text.as_bytes());
+    let b = lab.put("reading/osmosis-copy.md", text.as_bytes());
 
     // Before syncing: no index, so each makes a new id.
     let ids: Vec<docid::Resolved> = [(&laptop, &a), (&lab, &b)]

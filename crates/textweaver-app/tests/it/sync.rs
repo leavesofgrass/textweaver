@@ -763,7 +763,7 @@ fn two_ids_for_one_document_fold_into_the_smallest() {
     let fa = tempfile::tempdir().unwrap();
     let fb = tempfile::tempdir().unwrap();
     let (da, pa) = copy_of(TEXT, "cells.txt");
-    let (db, pb) = copy_of(TEXT, "Cells copy.txt");
+    let (db, pb) = copy_of(TEXT, "cells-copy.txt");
     let mut laptop = computer(fa.path(), "laptop", |_| {});
     let mut lab = computer(fb.path(), "lab", |_| {});
     laptop.open(&pa);
