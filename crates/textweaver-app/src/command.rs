@@ -104,6 +104,10 @@ pub enum Command {
     /// The list's focus moved to item `n` in a GUI list that announces its
     /// own focus: recorded quietly.
     ListFocus(usize),
+    /// A control of the voice manager shown beside its list (the GUI's
+    /// Language, Engine, Preview, and Fetch buttons). Ignored unless the
+    /// voice list is open.
+    VoiceControl(crate::voice_manager::VoiceControl),
     /// A key pressed in the open prompt ([`App::prompt_model`]): edits its
     /// text (echoed), recalls earlier answers, completes, answers, or
     /// cancels. See [`PromptKey`].

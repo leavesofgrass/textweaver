@@ -10,4 +10,5 @@ mod colors_dialog;
 mod document_view;
 mod edit_mode;
 mod settings_dialog;
+mod voice_manager;
 mod window_tree;

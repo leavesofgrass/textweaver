@@ -955,8 +955,19 @@ voice-still-loading = The voices are still loading. The list opens when they are
 voice-list-failed = Could not list the voices: { $error }.
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
-voice-manager-intro = Voice manager. { $shown } Enter uses a voice and speaks a sample, or downloads one; Space marks a favorite; Delete removes a downloaded voice; Escape closes.
-voice-more-ready = { $n } more voices from other engines are ready. Press Escape and open the voice manager again to see them.
+voice-manager-intro = Voice manager. { $shown } Enter uses a voice and speaks a sample, or downloads one; { $preview } previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes.
+voice-more-ready =
+    { $n ->
+        [one] One more voice from another engine is listed.
+       *[other] { $n } more voices from other engines are listed.
+    }
+voice-preview = Preview: { $voice }.
+voice-preview-sample = { $voice }. The quick brown fox jumps over the lazy dog.
+voice-preview-starting = Preview: { $voice }, starting { $engine }.
+voice-preview-not-installed = { $voice } is not downloaded yet. Enter downloads it, after a question.
+voice-preview-unavailable = { $engine } cannot start here for a preview. Enter switches to it.
+voice-preview-engine-failed = Could not start { $engine } to preview { $voice }.
+voice-preview-failed = Could not preview { $voice }: { $error }.
 # $keys names the Choose Voice key.
 voice-ready = The voices are ready. { $keys } lists them.
 voice-fetch-catalog-question = Download the list of Piper voices, about 250 kilobytes, from Hugging Face? y or n
@@ -3660,6 +3671,20 @@ sync-group-glossary = Glossary and pronunciations
 sync-group-favorite-voices = Favorite voices
 voices-missing-row = { $voice }, favorite, not on this computer
 voices-missing = { $voice } is not on this computer. Space takes it off your favorites.
+gui-voices-list = Voices
+gui-voices-use = Use voice
+gui-voices-use-help = Use the focused voice and hear a sample, or download it after a question.
+gui-voices-preview = Preview
+gui-voices-preview-help = Hear a sample in the focused voice without choosing it.
+gui-voices-favorite = Favorite
+gui-voices-favorite-help = Make the focused voice a favorite, or stop it being one. Favorites come first.
+gui-voices-remove = Remove
+gui-voices-remove-help = Remove the focused downloaded Piper voice, after a question.
+gui-voices-language-help = Show only the next language's voices, then all languages again.
+gui-voices-engine-help = Show only the next engine's voices, then all engines again.
+gui-voices-fetch-help = Download the list of Piper voices, about 250 KB, after a question.
+gui-voices-close-help = Close the voice manager.
+gui-voices-hint = Enter uses the voice, Space marks a favorite, Escape closes.
 setting-sync-settings = Sync settings
 setting-sync-settings-help = Share the portable settings: rate, punctuation, theme, reading aids, and the like. The voice, the engine, the access mode, the key preset, and paths stay on each computer.
 setting-sync-profiles = Sync profiles

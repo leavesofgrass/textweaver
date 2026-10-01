@@ -986,8 +986,19 @@ voice-still-loading = Die Stimmen werden noch geladen. Die Liste öffnet sich, s
 voice-list-failed = Die Stimmen konnten nicht aufgelistet werden: { $error }.
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
-voice-manager-intro = Stimmenverwaltung. { $shown } Eingabetaste verwendet eine Stimme und spricht ein Beispiel, oder lädt eine herunter; Leertaste markiert einen Favoriten; Entf entfernt eine heruntergeladene Stimme; Escape schließt.
-voice-more-ready = { $n } weitere Stimmen von anderen Engines sind bereit. Drücken Sie Escape und öffnen Sie die Stimmenverwaltung erneut, um sie zu sehen.
+voice-manager-intro = Stimmenverwaltung. { $shown } Eingabetaste verwendet eine Stimme und spricht ein Beispiel, oder lädt eine herunter; { $preview } spielt eine Hörprobe; Leertaste markiert einen Favoriten; Entf entfernt eine heruntergeladene Stimme; Escape schließt.
+voice-more-ready =
+    { $n ->
+        [one] Eine weitere Stimme einer anderen Engine steht jetzt in der Liste.
+       *[other] { $n } weitere Stimmen von anderen Engines stehen jetzt in der Liste.
+    }
+voice-preview = Hörprobe: { $voice }.
+voice-preview-sample = { $voice }. Franz jagt im komplett verwahrlosten Taxi quer durch Bayern.
+voice-preview-starting = Hörprobe: { $voice }, { $engine } wird gestartet.
+voice-preview-not-installed = { $voice } ist noch nicht heruntergeladen. Die Eingabetaste lädt sie herunter, nach einer Frage.
+voice-preview-unavailable = { $engine } kann hier nicht für eine Hörprobe starten. Die Eingabetaste wechselt zu dieser Engine.
+voice-preview-engine-failed = { $engine } konnte für eine Hörprobe von { $voice } nicht gestartet werden.
+voice-preview-failed = Hörprobe von { $voice } nicht möglich: { $error }.
 # $keys names the Choose Voice key.
 voice-ready = Die Stimmen sind bereit. { $keys } listet sie auf.
 voice-fetch-catalog-question = Die Liste der Piper-Stimmen, etwa 250 Kilobyte, von Hugging Face herunterladen? y oder n
@@ -3667,6 +3678,20 @@ sync-group-glossary = Glossar und Aussprachen
 sync-group-favorite-voices = Lieblingsstimmen
 voices-missing-row = { $voice }, Favorit, nicht auf diesem Computer
 voices-missing = { $voice } ist nicht auf diesem Computer. Leertaste entfernt sie aus den Favoriten.
+gui-voices-list = Stimmen
+gui-voices-use = Stimme verwenden
+gui-voices-use-help = Die ausgewählte Stimme verwenden und ein Beispiel hören, oder sie nach einer Frage herunterladen.
+gui-voices-preview = Hörprobe
+gui-voices-preview-help = Ein Beispiel in der ausgewählten Stimme hören, ohne sie zu wählen.
+gui-voices-favorite = Favorit
+gui-voices-favorite-help = Die ausgewählte Stimme als Favoriten markieren oder die Markierung entfernen. Favoriten stehen zuerst.
+gui-voices-remove = Entfernen
+gui-voices-remove-help = Die ausgewählte heruntergeladene Piper-Stimme nach einer Frage entfernen.
+gui-voices-language-help = Nur die Stimmen der nächsten Sprache zeigen, danach wieder alle Sprachen.
+gui-voices-engine-help = Nur die Stimmen der nächsten Engine zeigen, danach wieder alle Engines.
+gui-voices-fetch-help = Die Liste der Piper-Stimmen, etwa 250 KB, nach einer Frage herunterladen.
+gui-voices-close-help = Die Stimmenverwaltung schließen.
+gui-voices-hint = Eingabetaste verwendet die Stimme, Leertaste markiert einen Favoriten, Escape schließt.
 setting-sync-settings = Einstellungen synchronisieren
 setting-sync-settings-help = Die übertragbaren Einstellungen teilen: Tempo, Satzzeichen, Design, Lesehilfen und Ähnliches. Stimme, Sprachausgabe, Zugriffsmodus, Tastenschema und Pfade bleiben auf jedem Computer.
 setting-sync-profiles = Profile synchronisieren

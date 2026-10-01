@@ -296,6 +296,7 @@ enum Command {
     SetNormalization(Box<NormalizeConfig>),
     SetPacing(PacingConfig),
     SpeakChar(char, Option<CharPos>),
+    Preview(String, String),
     Tone(f32, u32),
     Earcon(Earcon),
     /// The voice list arrived (from the backend's background listing).
@@ -564,6 +565,12 @@ impl SpeechService {
     /// mapped to a document position.
     pub fn speak_char(&self, c: char, at: Option<CharPos>) {
         self.post(Command::SpeakChar(c, at));
+    }
+    /// Speaks `text` once in `voice` (a voice id of this engine), then
+    /// goes back to the voice in use: the voice manager's preview. It
+    /// interrupts what is speaking, as a character does.
+    pub fn preview(&self, voice: impl Into<String>, text: impl Into<String>) {
+        self.post(Command::Preview(voice.into(), text.into()));
     }
     /// Plays a tone (ignored when the backend has no [`Caps::TONES`]).
     pub fn tone(&self, hz: f32, ms: u32) {
@@ -845,7 +852,8 @@ pub struct ServiceCore {
     reading: bool,
     /// The generation of the latest `read` (0 before the first).
     reading_generation: ReadingGeneration,
-    /// Parameters were changed for this character utterance.
+    /// Parameters were changed for this one utterance (a character at its
+    /// own rate, a voice preview); the usual ones come back when it ends.
     char_params: Option<UtteranceId>,
     last_position: Option<(UtteranceId, Option<CharRange>)>,
     events: Vec<(UtteranceId, RawEvent)>,
@@ -1086,6 +1094,7 @@ impl ServiceCore {
             Command::SetNormalization(c) => self.set_normalization(*c),
             Command::SetPacing(p) => self.set_pacing(p),
             Command::SpeakChar(c, at) => self.speak_char(c, at),
+            Command::Preview(voice, text) => self.preview(&voice, &text),
             Command::Tone(hz, ms) => self.tone(hz, ms),
             Command::Earcon(e) => self.earcon(e),
             Command::VoicesReady => self.voices_arrived(),
@@ -1350,6 +1359,26 @@ impl ServiceCore {
         if indication == CapsIndication::Pitch {
             p.pitch = p.pitch.step(self.config.caps_pitch_semitones);
         }
+        let id = self.queue.push_back(u);
+        if p != self.params {
+            if let Err(e) = self.backend.set_params(&p) {
+                self.backend_error(e.to_string());
+            }
+            self.char_params = Some(id);
+        }
+        self.pump();
+    }
+
+    /// Speaks `text` once in `voice`, interrupting what is speaking, then
+    /// goes back to the usual parameters when it ends (as
+    /// [`speak_char`](Self::speak_char) does for its rate). `voice` is a
+    /// voice id of this engine, used as it is.
+    pub fn preview(&mut self, voice: &str, text: &str) {
+        self.demote_native_pause();
+        self.interrupt();
+        let u = self.normalize(Utterance::announcement(text));
+        let mut p = self.params.clone();
+        p.voice = Some(voice.to_owned());
         let id = self.queue.push_back(u);
         if p != self.params {
             if let Err(e) = self.backend.set_params(&p) {

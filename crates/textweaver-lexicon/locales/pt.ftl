@@ -966,8 +966,19 @@ voice-still-loading = As vozes ainda estão carregando. A lista abre quando esti
 voice-list-failed = Não foi possível listar as vozes: { $error }.
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
-voice-manager-intro = Gerenciador de vozes. { $shown } Enter usa uma voz e fala uma amostra, ou baixa uma; Espaço marca uma favorita; Delete remove uma voz baixada; Escape fecha.
-voice-more-ready = { $n } mais vozes de outros motores estão prontas. Pressione Escape e abra o gerenciador de vozes de novo para vê-las.
+voice-manager-intro = Gerenciador de vozes. { $shown } Enter usa uma voz e fala uma amostra, ou baixa uma; { $preview } ouve uma prévia; Espaço marca uma favorita; Delete remove uma voz baixada; Escape fecha.
+voice-more-ready =
+    { $n ->
+        [one] Mais uma voz de outro motor está na lista.
+       *[other] Mais { $n } vozes de outros motores estão na lista.
+    }
+voice-preview = Prévia: { $voice }.
+voice-preview-sample = { $voice }. Um pequeno jabuti xereta viu dez cegonhas felizes.
+voice-preview-starting = Prévia: { $voice }, iniciando { $engine }.
+voice-preview-not-installed = { $voice } ainda não foi baixada. Enter a baixa, depois de uma pergunta.
+voice-preview-unavailable = { $engine } não pode iniciar aqui para uma prévia. Enter muda para esse motor.
+voice-preview-engine-failed = Não foi possível iniciar { $engine } para a prévia de { $voice }.
+voice-preview-failed = Não foi possível ouvir a prévia de { $voice }: { $error }.
 # $keys names the Choose Voice key.
 voice-ready = As vozes estão prontas. { $keys } as lista.
 voice-fetch-catalog-question = Baixar a lista de vozes do Piper, cerca de 250 kilobytes, do Hugging Face? y ou n
@@ -3647,6 +3658,20 @@ sync-group-glossary = Glossário e pronúncias
 sync-group-favorite-voices = Vozes favoritas
 voices-missing-row = { $voice }, favorita, não está neste computador
 voices-missing = { $voice } não está neste computador. Espaço a tira das favoritas.
+gui-voices-list = Vozes
+gui-voices-use = Usar voz
+gui-voices-use-help = Usar a voz em foco e ouvir uma amostra, ou baixá-la depois de uma pergunta.
+gui-voices-preview = Prévia
+gui-voices-preview-help = Ouvir uma amostra da voz em foco sem escolhê-la.
+gui-voices-favorite = Favorita
+gui-voices-favorite-help = Marcar a voz em foco como favorita, ou desmarcar. As favoritas vêm primeiro.
+gui-voices-remove = Remover
+gui-voices-remove-help = Remover a voz Piper baixada em foco, depois de uma pergunta.
+gui-voices-language-help = Mostrar só as vozes do próximo idioma, depois todos os idiomas de novo.
+gui-voices-engine-help = Mostrar só as vozes do próximo motor, depois todos os motores de novo.
+gui-voices-fetch-help = Baixar a lista de vozes Piper, cerca de 250 KB, depois de uma pergunta.
+gui-voices-close-help = Fechar o gerenciador de vozes.
+gui-voices-hint = Enter usa a voz, Espaço marca uma favorita, Escape fecha.
 setting-sync-settings = Sincronizar configurações
 setting-sync-settings-help = Compartilhar as configurações portáteis: velocidade, pontuação, tema, ajudas de leitura e outras. A voz, o motor, o modo de acesso, o conjunto de teclas e os caminhos ficam em cada computador.
 setting-sync-profiles = Sincronizar perfis

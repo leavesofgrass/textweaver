@@ -42,6 +42,14 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Speech follows the sound device.** When a headset or another device goes away, speech moves to the current default device at once and the reading goes on; before, it waited a second and only noticed while audio was waiting. Sound errors no longer print over the terminal reader's screen.
 - **Choose the sound device.** `[speech] output_device` (Output device in the settings screen) keeps speech on one device by its id, and `tw backends --devices` lists the devices with their ids. A device that is not connected falls back to the default. It applies to Eloquence, the Windows voices, DECtalk, and Piper.
 - **Piper's pitch sounds cleaner.** Raising or lowering a Piper voice's pitch now uses a band-limited resampler, so a raised voice no longer has a metallic edge.
+
+### Voices
+
+- **The GUI's voice manager covers every engine.** Ctrl+Shift+V opens a dialog with every voice on the computer (Eloquence, SAPI 5 and OneCore, DECtalk, eSpeak NG, Piper, and Apple's on macOS), with Language and Engine filter buttons, then Use voice, Preview, Favorite, Remove, and Fetch the Piper voice list. Each button has a name, its key, and a description for NVDA and JAWS.
+- **Preview a voice without choosing it.** The Say Status key (Alt+End) in the voice manager, or the GUI's Preview button, speaks a sample in the focused voice, starting with its name. A voice of another engine is heard by starting that engine for the sample.
+- **Other engines' voices join the open list.** They are listed in the background when the voice manager first opens; they now appear as they arrive, with the focus kept, instead of after opening the list again. The favorites no engine here has follow them, as "not on this computer".
+- **Delete on a voice that cannot be removed** says so and leaves the voice manager open; before, it closed.
+
 ### Sync, made sturdier
 
 - **Profiles keep their voice on each computer.** A profile syncs its portable settings only; the voice, the speech engine, and the access mode it was saved with stay on the computer that saved them, and an arriving profile keeps this computer's own.

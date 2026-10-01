@@ -214,7 +214,8 @@ pub enum ListKey {
     /// sends it for F1.
     Introduce,
     /// The Say Status key: in the file browser, a preview of the focused
-    /// row (crate::browse); in other lists, as [`Introduce`](Self::Introduce).
+    /// row (crate::browse); in the voice list, a sample in the focused
+    /// voice; in other lists, as [`Introduce`](Self::Introduce).
     Details,
     /// The file browser's Choose Folder key (Ctrl+Enter): the focused
     /// folder, or the one shown, goes to the command that asked for it.
@@ -546,6 +547,11 @@ impl App {
             && let Some(effects) = self.settings_list_key(key)
         {
             return effects;
+        }
+        // The Say Status key previews the focused voice (crate::voice).
+        if key == ListKey::Details && self.list == Some(crate::app::ListKind::Voices) {
+            let n = self.list_model.as_ref().map_or(0, |l| l.selected);
+            return self.preview_voice_row(n);
         }
         // Lists that filter as you type (the outline, the citation picker):
         // characters and Space add to the filter, Backspace removes one.

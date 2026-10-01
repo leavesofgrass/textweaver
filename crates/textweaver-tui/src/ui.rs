@@ -613,8 +613,9 @@ impl Tui {
                 return;
             }
             match chord(&k).and_then(|c| self.app.keymap().lookup(&c, Layer::Global)) {
-                // In the file browser, Say Status previews the focused row.
-                Some(ActionId::SayStatus) if self.app.browse_location().is_some() => {
+                // In the file browser, Say Status previews the focused row;
+                // in the voice list, the focused voice.
+                Some(ActionId::SayStatus) if self.app.list_has_details() => {
                     self.dispatch(Command::ListKey(ListKey::Details));
                     return;
                 }

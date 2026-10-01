@@ -137,7 +137,20 @@ When textweaver asks a yes-or-no question (a voice to download, after its size a
 
 ## Voices
 
-**Ctrl+Shift+V** opens the voice manager, the same list as the terminal's. The first two rows filter it: Enter on "Language" or "Engine" cycles through the choices. Enter on a voice uses it and speaks a sample; on a voice you can download, textweaver reads its license and size, then asks before downloading. Space marks a favorite; Delete removes a downloaded voice, after a yes.
+**Ctrl+Shift+V** opens the voice manager, a dialog named "Choose a voice" with every voice of every engine on this computer: Eloquence, SAPI 5 (with the OneCore voices), DECtalk, eSpeak NG, Piper, and Apple's voices on macOS. The voices are the terminal's, with the same names, filters, and favorites. The focus starts in the list, named "Voices", on the voice in use.
+
+From top to bottom, Tab moves through:
+
+- **Language** and **Engine**, two buttons that filter the list. Each press shows only the next language or engine, then all of them again, and says what is shown, for example "3 voices: English, all engines." The button's name says the filter: "Language: English".
+- **The list of voices.** Each says its name, language, engine, and tags; "favorite" for a favorite and "current" for the voice in use. Favorites come first. A Piper voice you can download says its size and license. A favorite from another computer that no engine here has is listed last as "not on this computer". The other engines' voices are listed in the background when the manager first opens; they join the list as they arrive, and you hear how many came.
+- **Use voice** (Enter in the list): uses the voice and speaks a sample. On a voice of another engine, textweaver switches engine. On a voice you can download, textweaver reads its license and size, then asks before downloading.
+- **Preview** (Alt+End in the list, the Say Status key): speaks a sample in the voice without choosing it, starting with the voice's name. A voice of another engine is previewed by starting that engine for the sample and closing it again. A voice you have not downloaded, or one not on this computer, says why it cannot be heard.
+- **Favorite** (Space in the list): makes the voice a favorite, or stops it being one.
+- **Remove** (Delete in the list): removes a downloaded Piper voice, after a yes.
+- **Fetch the Piper voice list from the internet**, when it can be fetched: asks first, then downloads the list of Piper voices, about 250 KB.
+- **Close** (Escape).
+
+Every button has its key as its shortcut and a short description, which NVDA and JAWS read as for any button.
 
 ## Language
 

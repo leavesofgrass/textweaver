@@ -1400,6 +1400,59 @@ fn speak_char_raises_pitch_for_capitals_and_restores_it() {
     assert_eq!(rig.rec.params(), normal);
 }
 
+/// The voice manager's preview: one utterance in another voice, set just
+/// before it is spoken, then the voice in use again (W7v).
+#[test]
+fn preview_speaks_once_in_another_voice_then_restores_the_voice() {
+    let mut rig = Rig::manual();
+    rig.core.set_voice(Some("zira".into()));
+    let normal = rig.rec.params();
+    rig.core.preview("david", "David. The quick brown fox.");
+    let calls = rig.rec.calls();
+    let Call::SetParams(p) = &calls[calls.len() - 2] else {
+        panic!("{calls:?}")
+    };
+    assert_eq!(p.voice.as_deref(), Some("david"));
+    assert_eq!(
+        (p.rate, p.pitch),
+        (normal.rate, normal.pitch),
+        "only the voice"
+    );
+    let u = rig.last_spoken();
+    assert_eq!(u.text, "David. The quick brown fox.");
+    assert_eq!(u.kind, UtteranceKind::Announcement);
+    // A rate change while it plays waits, and comes with the voice back.
+    rig.core.set_rate(Rate::Wpm(300));
+    assert_eq!(rig.rec.params().voice.as_deref(), Some("david"));
+    rig.rec.finish(u.id);
+    rig.step();
+    let after = rig.rec.params();
+    assert_eq!(after.voice.as_deref(), Some("zira"));
+    assert_eq!(after.rate, Rate::Wpm(300));
+}
+
+/// A preview interrupts what is speaking; stopping it restores the voice.
+#[test]
+fn a_stopped_preview_restores_the_voice() {
+    let mut rig = Rig::manual();
+    rig.core.set_voice(Some("zira".into()));
+    rig.core.say("Voice manager.", SayMode::Queue);
+    rig.core.preview("david", "David.");
+    let texts = rig.rec.spoken_texts();
+    assert_eq!(texts.last().map(String::as_str), Some("David."));
+    assert!(rig.rec.calls().iter().any(|c| matches!(c, Call::Stop)));
+    rig.core.stop();
+    assert_eq!(rig.rec.params().voice.as_deref(), Some("zira"));
+    // The voice in use needs no change: nothing is set.
+    let before = rig.rec.calls().len();
+    rig.core.preview("zira", "Zira.");
+    let set = rig.rec.calls()[before..]
+        .iter()
+        .filter(|c| matches!(c, Call::SetParams(_)))
+        .count();
+    assert_eq!(set, 0);
+}
+
 #[test]
 fn speak_char_names_punctuation_and_says_cap_without_pitch_or_tones() {
     let mut rig = Rig::new(RecordingMode::Instant, Caps::WORD_EVENTS, plain());

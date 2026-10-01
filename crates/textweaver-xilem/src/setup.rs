@@ -242,6 +242,9 @@ pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<Str
         self_voicing,
         backend_name,
     });
+    // The voice manager's filters and fetch row are buttons in the window
+    // (crate::voices), so its list holds only voices.
+    app.set_voice_controls_in_list(false);
     let run = opts.clone();
     let starter: textweaver_app::SpeechStarter =
         std::sync::Arc::new(move |s| start_speech(s, &run));
