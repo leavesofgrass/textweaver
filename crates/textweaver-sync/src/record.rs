@@ -190,6 +190,28 @@ pub mod detail {
     pub const AUTHOR: &str = "author";
     /// The kind of file, by the loader that reads it (`markdown`, `pdf`).
     pub const FORMAT: &str = "format";
+    /// The title the owner typed (Wave 7, W7m): it wins over [`TITLE`],
+    /// whatever their stamps, and is a register of its own so a computer
+    /// publishing the document's own title never replaces it.
+    pub const EDITED_TITLE: &str = "edited_title";
+    /// The author the owner typed; wins over [`AUTHOR`].
+    pub const EDITED_AUTHOR: &str = "edited_author";
+    /// The DOI the owner typed; wins over [`DOI`].
+    pub const EDITED_DOI: &str = "edited_doi";
+    /// The ISBN the owner typed; wins over [`ISBN`].
+    pub const EDITED_ISBN: &str = "edited_isbn";
+
+    /// The hand-edited detail that wins over `name`, for the four details
+    /// the owner can edit (title, author, DOI, ISBN).
+    pub fn edited(name: &str) -> Option<&'static str> {
+        match name {
+            TITLE => Some(EDITED_TITLE),
+            AUTHOR => Some(EDITED_AUTHOR),
+            DOI => Some(EDITED_DOI),
+            ISBN => Some(EDITED_ISBN),
+            _ => None,
+        }
+    }
 }
 
 /// The longest detail value read or written, in characters.
@@ -239,6 +261,20 @@ impl DocIdentity {
     /// A detail's live value.
     pub fn detail(&self, name: &str) -> Option<&str> {
         self.details.get(name).map(String::as_str)
+    }
+
+    /// A detail as the library shows it: the owner's hand-edited value
+    /// ([`detail::edited`]) when there is one, else the document's own.
+    pub fn shown_detail(&self, name: &str) -> Option<&str> {
+        detail::edited(name)
+            .and_then(|e| self.detail(e))
+            .or_else(|| self.detail(name))
+    }
+
+    /// The hand-edited register for `name` (set or cleared), with its
+    /// stamp, when the owner ever edited that detail on any computer.
+    pub fn edited_register(&self, name: &str) -> Option<&crate::Register<String>> {
+        detail::edited(name).and_then(|e| self.details.register(e))
     }
 
     /// Merges `other` in.
