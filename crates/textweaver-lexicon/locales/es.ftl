@@ -3121,7 +3121,7 @@ palette-list-intro =
     }. Intro ejecuta uno.
 action-browse-files = Explorar archivos y archivos comprimidos: Intro abre una carpeta, un archivo comprimido o un documento; Retroceso sube un nivel
 action-batch-convert = Convertir una carpeta de documentos a otro formato, en segundo plano
-action-export-audio = Exportar el documento como audio hablado: MP3, FLAC, WAV o un audiolibro M4B
+action-export-audio = Exportar el documento como audio hablado: MP3, FLAC, Opus, WAV o un audiolibro M4B
 action-dictate = Iniciar o detener el dictado: las palabras habladas se escriben en el cursor en modo de edición
 action-color-settings = Abrir las opciones de color: el resaltado de lectura, la regla, las marcas y cada parte de la pantalla, con su contraste
 action-cycle-interface-announcements = Cambiar cuánto anuncia textweaver de sí mismo: desactivados, mínimos, normales o completos; los errores y las respuestas se dicen siempre

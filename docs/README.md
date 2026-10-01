@@ -46,7 +46,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 - [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more; exporting and previewing from inside the reader.
 - [The library](library.md): library folders, recent files, sync between computers, and importing from Star.
-- [Syncing between computers](sync.md): what syncs and what never does, choosing a folder, and privacy. Planned for this wave; not in 0.1.0-alpha.6.
+- [Syncing between computers](sync.md): notes, highlights, bookmarks, places, statistics, and settings through a folder you choose; what never syncs, setting it up, what you hear, and privacy.
 - [The Obsidian vault](vault.md): exporting notes and highlights to a vault, and importing them back.
 - [Settings](settings.md): where settings live, every setting, and export, import, and reset.
 - [Settings reference](settings-reference.md): every setting with its default, label, help, and values, generated from the settings schema.

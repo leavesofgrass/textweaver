@@ -3149,7 +3149,7 @@ palette-list-intro =
     }. Entrée en exécute une.
 action-browse-files = Parcourir les fichiers et les archives : Entrée ouvre un dossier, une archive ou un document ; Retour arrière remonte
 action-batch-convert = Convertir un dossier de documents dans un autre format, en arrière-plan
-action-export-audio = Exporter le document en audio parlé : MP3, FLAC, WAV ou un livre audio M4B
+action-export-audio = Exporter le document en audio parlé : MP3, FLAC, Opus, WAV ou un livre audio M4B
 action-dictate = Démarrer ou arrêter la dictée : les mots prononcés s'écrivent au curseur en mode édition
 action-color-settings = Ouvrir les paramètres des couleurs : le surlignage de lecture, la règle, les marques et chaque partie de l'écran, avec leur contraste
 action-cycle-interface-announcements = Changer ce que textweaver annonce de lui-même : désactivées, minimales, normales ou complètes ; les erreurs et les réponses sont toujours dites

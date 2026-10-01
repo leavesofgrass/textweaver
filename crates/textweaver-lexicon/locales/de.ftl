@@ -3157,7 +3157,7 @@ palette-list-intro =
     }. Eingabe führt einen aus.
 action-browse-files = Dateien und Archive durchsuchen: Eingabe öffnet einen Ordner, ein Archiv oder ein Dokument; Rücktaste geht eine Ebene nach oben
 action-batch-convert = Einen Ordner mit Dokumenten im Hintergrund in ein anderes Format umwandeln
-action-export-audio = Das Dokument als gesprochenes Audio exportieren: MP3, FLAC, WAV oder ein M4B-Hörbuch
+action-export-audio = Das Dokument als gesprochenes Audio exportieren: MP3, FLAC, Opus, WAV oder ein M4B-Hörbuch
 action-dictate = Diktat starten oder beenden: gesprochene Wörter werden im Bearbeitungsmodus am Cursor geschrieben
 action-color-settings = Die Farbeinstellungen öffnen: Lesemarkierung, Leselineal, Markierungen und jeder Teil des Bildschirms, mit ihrem Kontrast
 action-cycle-interface-announcements = Umschalten, wie viel textweaver über sich selbst ansagt: aus, minimal, normal oder vollständig; Fehler und Antworten werden immer gesagt
