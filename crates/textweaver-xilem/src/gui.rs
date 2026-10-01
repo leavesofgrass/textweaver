@@ -358,6 +358,9 @@ pub struct Gui {
     /// The font list's families while it is shown (the list itself is the
     /// app's; `App::take_frontend_choice` says which was chosen).
     font_choices: Option<Vec<crate::font_chooser::Choice>>,
+    /// How many font downloads the app had finished when the downloaded
+    /// fonts were last registered (`App::font_downloads`).
+    font_downloads: u64,
     /// Load and highlight timings, for `--log` and the measurements.
     pub timings: Timings,
 }
@@ -1217,6 +1220,19 @@ impl Gui {
     }
 
     fn refresh(&mut self, ctx: &mut DriverCtx<'_>) {
+        if self.app.font_downloads() != self.font_downloads {
+            // A font finished downloading (Lexend): register it, and lay the
+            // text out again so a family list naming it now finds it.
+            self.font_downloads = self.app.font_downloads();
+            let root = ctx.render_root(self.window_id);
+            for blob in crate::fonts::downloaded_blobs(self.app.fonts_folder().as_deref()) {
+                let _ = root.register_fonts(blob);
+            }
+            self.shown.font = None;
+            if self.log {
+                crate::log::line("downloaded fonts registered");
+            }
+        }
         let root = ctx.render_root(self.window_id);
         let before = self.shown.state;
         if let Some(ms) = refresh_host(&self.app, &mut self.shown, root, self.log) {
@@ -2154,7 +2170,11 @@ impl Gui {
     /// ([`Self::font_chosen`]).
     fn open_fonts(&mut self, ctx: &mut DriverCtx<'_>) {
         let c = self.app.catalog();
-        let choices = crate::font_chooser::choices(&c, self.installed.names());
+        let choices = crate::font_chooser::choices(
+            &c,
+            self.installed.names(),
+            self.app.fonts_folder().as_deref(),
+        );
         let current = crate::fonts::doc_font(&self.app.settings().reading_aids.font);
         let items: Vec<String> = choices.iter().map(|c| c.label.clone()).collect();
         let selected = choices
@@ -2191,6 +2211,9 @@ impl Gui {
         let said = crate::font_chooser::font_message(&self.app.catalog(), &family);
         self.app
             .announce_as(&said, Priority::Polite, Importance::Result);
+        // Lexend, not downloaded yet: the app asks first (size and licence).
+        let asked = self.app.offer_font_download();
+        self.run_effects(ctx, asked);
         self.refresh(ctx);
     }
 
@@ -3020,9 +3043,15 @@ impl AppDriver for Gui {
             })));
             spawn_ticker(proxy, self.window_id, Arc::clone(&self.tick_ms));
         }
+        // Bundled fonts, and a Lexend downloaded in an earlier session.
+        let mut blobs = crate::fonts::bundled_blobs();
+        blobs.extend(crate::fonts::downloaded_blobs(
+            self.app.fonts_folder().as_deref(),
+        ));
+        self.font_downloads = self.app.font_downloads();
         for root in state.roots() {
-            for blob in crate::fonts::bundled_blobs() {
-                let _ = root.register_fonts(blob);
+            for blob in &blobs {
+                let _ = root.register_fonts(blob.clone());
             }
         }
     }
@@ -3151,6 +3180,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         menu_dirty: false,
         menu_key: None,
         font_choices: None,
+        font_downloads: 0,
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
         closed: false,

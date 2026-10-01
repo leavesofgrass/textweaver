@@ -26,7 +26,7 @@ pub const NOTICES: &str = "THIRD-PARTY-NOTICES.md";
 
 /// Licence files of bundled data, copied verbatim into the notices and into
 /// every package: (source, heading).
-pub const DATA_LICENCES: [(&str, &str); 7] = [
+pub const DATA_LICENCES: [(&str, &str); 8] = [
     (
         "third_party/scowl/Copyright",
         "SCOWL (spelling word levels)",
@@ -40,6 +40,10 @@ pub const DATA_LICENCES: [(&str, &str); 7] = [
         "Atkinson Hyperlegible Mono",
     ),
     ("third_party/fonts/opendyslexic/OFL.txt", "OpenDyslexic"),
+    (
+        "third_party/fonts/lexend/OFL.txt",
+        "Lexend (downloaded when chosen)",
+    ),
     (
         "third_party/lexicon/WORDNET-LICENSE",
         "Open English WordNet (define word)",

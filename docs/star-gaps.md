@@ -21,7 +21,7 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
 - **Bionic reading:** word starts in bold. Status: done.
 - **Syllable splitting:** `read·a·bil·i·ty`, shown only, by rule rather than dictionary. Status: done, in the terminal reader (Alt+Shift+Z) and drawn in the GUI.
 - **Current-line highlight.** Status: done.
-- **Reading fonts:** OpenDyslexic, Atkinson Hyperlegible, and Lexend. Status: partly. OpenDyslexic and Atkinson Hyperlegible Next and Mono are bundled, used for PDF and EPUB output, and loaded directly for the GUI, where a font-choice key cycles them. Lexend must still be installed by hand; downloading it on first choice is not yet planned.
+- **Reading fonts:** OpenDyslexic, Atkinson Hyperlegible, and Lexend. Status: done. OpenDyslexic and Atkinson Hyperlegible Next and Mono are bundled, used for PDF and EPUB output, and loaded directly for the GUI, where a font-choice key cycles them. Lexend is downloaded the first time it is chosen, as in Star, but only after asking with its size and license, and each file is checked by its SHA-256 before it is kept in the data folder; the GUI, PDF, and EPUB then use it (see [Reading aids](reading-aids.md#lexend-on-first-choice)).
 
 ## Formats and documents
 

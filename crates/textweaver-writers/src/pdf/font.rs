@@ -1,5 +1,5 @@
 //! Fonts for PDF output: the bundled families (`textweaver-fonts`),
-//! installed families found by name, and just enough of the OpenType
+//! installed families and a downloaded Lexend found by name, and just enough of the OpenType
 //! tables (`head`, `hhea`, `hmtx`, `cmap`, `OS/2`) to measure text and to
 //! know which characters a font can show.
 
@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use krilla::text::Font as KrillaFont;
-use textweaver_fonts::{FamilySource, Style, bundled, system};
+use textweaver_fonts::{FamilySource, Style, bundled, downloaded, system};
 
 use crate::{PdfOptions, WriteError};
 
@@ -406,7 +406,12 @@ struct Loaded {
 fn load_family(name: &str) -> Result<Loaded, WriteError> {
     let not_found = || {
         let bundled: Vec<&str> = bundled::BUNDLED.iter().map(|f| f.name).collect();
-        let hint = if bundled.is_empty() {
+        let hint = if let Some(f) = downloaded::downloadable(name) {
+            format!(
+                "it is not downloaded yet: choose {} as the reading font in textweaver, which offers to download it",
+                f.name
+            )
+        } else if bundled.is_empty() {
             "it is not installed".to_owned()
         } else {
             format!(
@@ -416,7 +421,8 @@ fn load_family(name: &str) -> Result<Loaded, WriteError> {
         };
         WriteError::Font(name.to_owned(), hint)
     };
-    let source = if bundled::is_bundled(name) {
+    // Bundled and downloaded families need no scan of the installed fonts.
+    let source = if bundled::is_bundled(name) || downloaded::find(name).is_some() {
         textweaver_fonts::resolve_family(name, &[])
     } else {
         textweaver_fonts::resolve_family(name, system::installed())

@@ -123,9 +123,31 @@ The choices in settings (and in HTML views) are:
   - **Lexend**: wide letter spacing, made to reduce visual stress. Home page: https://www.lexend.com/
 - **Any other font** installed on your computer.
 
-All three reading fonts are free, under the SIL Open Font License. OpenDyslexic comes with textweaver. For Atkinson Hyperlegible, textweaver uses the newer Atkinson Hyperlegible Next that comes with it, unless you have the original installed. Lexend does not come with textweaver. If you choose it and it is not installed, textweaver uses another reading font, or a plain font, so you can keep reading.
+All three reading fonts are free, under the SIL Open Font License. OpenDyslexic comes with textweaver. For Atkinson Hyperlegible, textweaver uses the newer Atkinson Hyperlegible Next that comes with it, unless you have the original installed. Lexend does not come with textweaver: textweaver downloads it the first time you choose it, after asking.
 
-textweaver never downloads fonts. When a reading font is missing, textweaver says so, names the font it uses instead, and says the missing one is free under the Open Font License. To use Lexend, install it yourself from its home page; textweaver finds it the next time it starts. (The `[reading_aids.font] fetch_missing` setting, which never did anything, was removed in 0.1.0-alpha.5.)
+### Lexend on first choice
+
+When you choose Lexend, in Settings or in the window's font list (Ctrl+D), and it is not installed, textweaver asks first:
+
+"Download the Lexend font, 206 KB, SIL Open Font License? y or n"
+
+- **y** downloads it. textweaver says "Downloading Lexend.", then "Lexend downloaded and ready." The window uses it at once.
+- **n** says "Not downloaded. Another font is used." Lexend stays your choice, and textweaver uses another reading font, or a plain font, so you can keep reading. Choosing Lexend again asks again.
+- Any other key asks the question again.
+
+The window's font list says which it is: "Lexend (download, 206 KB)" before, "Lexend (downloaded)" after. If you have Lexend installed yourself, textweaver uses that and asks nothing.
+
+What textweaver downloads, and how it checks it:
+
+- Two files, Lexend Regular and Lexend Bold, from the Lexend project's own repository at a fixed version. Nothing else is fetched, and nothing about you is sent.
+- Each file is checked by its size and its SHA-256 fingerprint before it is kept. If one does not match, nothing is kept and textweaver says so: "Lexend not downloaded:" and the reason.
+- The files are kept in textweaver's data folder, in `fonts/lexend`, with the license, `OFL.txt`. Lexend's license also comes with textweaver, in `third_party/fonts/lexend/`.
+
+Once downloaded, Lexend works everywhere textweaver uses a font: the window, PDF files (`tw convert --font lexend`), and EPUB books, which carry the font and its license inside.
+
+When there is no data folder (a session that keeps no files), textweaver says "No data folder to keep Lexend in." The lean reader, built without the `publish` feature, has no downloads and says "Font downloads are not in this build."; install Lexend yourself from its home page there, and textweaver finds it the next time it starts.
+
+(The `[reading_aids.font] fetch_missing` setting, which never did anything, was removed in 0.1.0-alpha.5. Asking first is how downloads are turned off: say n.)
 
 Font size is in points, from 6 to 144. The default is 14. Below 12, textweaver suggests a larger size.
 

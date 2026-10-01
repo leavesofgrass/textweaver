@@ -29,6 +29,10 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Statistics from every computer.** The statistics list and `tw stats` add every computer's reading of a document together, and show each computer's share on request (`tw stats --by-computer`).
 - **The old progress file is still read.** With sync on, places go to the sync folder, and a library folder's `.textweaver/progress.json` (from an older textweaver, or converted from Star) is only read, so its places are still honored.
 
+### Reading fonts
+
+- **Lexend on first choice.** Choosing Lexend, in Settings or in the window's font list, when it is not installed asks first: "Download the Lexend font, 206 KB, SIL Open Font License? y or n". On a yes, its two files come from the Lexend project at a fixed version, each checked by its SHA-256, and are kept with the license in the data folder. The window uses it at once, and PDF and EPUB output find it by name (`tw convert --font lexend`). A no keeps the choice and uses another reading font. Lexend's license now ships with textweaver.
+
 ### Writing
 
 - **Grammar checking is built in.** Ctrl+F7 and Ctrl+Shift+F7 (Alt+J for the fixes) now work in the terminal reader, the window, and the release packages, with no special build. It makes the programs about 11 MB larger. A build without the default features leaves it out.

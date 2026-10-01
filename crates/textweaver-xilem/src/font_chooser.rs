@@ -1,8 +1,9 @@
 //! The document text's font and size (the owner's session 2, ADR-0033).
 //!
 //! The font list (Ctrl+D, or the Font button) offers the families, the
-//! bundled ones first, marked "built in", then the installed ones; the
-//! choice applies at once. Ctrl+Plus, Ctrl+Minus, and Ctrl+0 step the size
+//! bundled ones first, marked "built in", then Lexend ("downloaded", or
+//! "download, 206 KB": choosing it asks before downloading, W7l), then the
+//! installed ones; the choice applies at once. Ctrl+Plus, Ctrl+Minus, and Ctrl+0 step the size
 //! through [`SIZES`]. Each change is saved in `[reading_aids.font]` and
 //! announced: "Font: Atkinson Hyperlegible Next.", "Text size 18 points.".
 //! Bold is kept as it was.
@@ -11,6 +12,7 @@
 //! chooser opens at once.
 
 use std::collections::BTreeSet;
+use std::path::Path;
 use std::sync::{Arc, OnceLock};
 
 use textweaver_app::aids::fonts::{FontFamily, FontSettings, from_store, to_store};
@@ -116,13 +118,16 @@ pub struct Choice {
     pub label: String,
 }
 
-/// The families to offer: bundled first, then installed ones
+/// The families to offer: bundled first, then the reading fonts
+/// textweaver downloads (Lexend) unless installed, then installed ones
 /// alphabetically, each once.
 ///
 /// A bundled family's label says so ("Atkinson Hyperlegible Next (built
 /// in)", `gui-font-built-in`), so a listener knows it needs nothing
-/// installed.
-pub fn choices(c: &Catalog, installed: &[String]) -> Vec<Choice> {
+/// installed; a downloadable one says whether it is downloaded in
+/// `folder` ("Lexend (downloaded)") or what choosing it downloads
+/// ("Lexend (download, 206 KB)").
+pub fn choices(c: &Catalog, installed: &[String], folder: Option<&Path>) -> Vec<Choice> {
     let mut out: Vec<Choice> = BUNDLED
         .iter()
         .map(|f| Choice {
@@ -131,6 +136,24 @@ pub fn choices(c: &Catalog, installed: &[String]) -> Vec<Choice> {
         })
         .collect();
     let mut seen: BTreeSet<String> = out.iter().map(|c| c.family.to_lowercase()).collect();
+    for f in textweaver_fonts::downloaded::DOWNLOADABLE {
+        if installed.iter().any(|n| n.eq_ignore_ascii_case(f.name)) {
+            continue; // listed with the installed families
+        }
+        let label = if folder.is_some_and(|d| f.is_installed_in(d)) {
+            c.fmt("gui-font-downloaded", &args!["family" => f.name])
+        } else {
+            c.fmt(
+                "gui-font-to-download",
+                &args!["family" => f.name, "kb" => f.kilobytes()],
+            )
+        };
+        seen.insert(f.name.to_lowercase());
+        out.push(Choice {
+            family: f.name.to_owned(),
+            label,
+        });
+    }
     let mut rest: Vec<&String> = installed.iter().collect();
     rest.sort_by_key(|n| n.to_lowercase());
     for name in rest {
@@ -192,11 +215,37 @@ mod tests {
             "arial".to_owned(),
             "Atkinson Hyperlegible Next".to_owned(),
         ];
-        let c = choices(&Catalog::english(), &installed);
+        let c = choices(&Catalog::english(), &installed, None);
         let n = BUNDLED.len();
         assert!(c[..n].iter().all(|x| x.label.ends_with(" (built in)")));
-        let names: Vec<&str> = c[n..].iter().map(|x| x.family.as_str()).collect();
+        // Lexend next, saying what choosing it downloads.
+        assert_eq!(c[n].label, "Lexend (download, 206 KB)");
+        let names: Vec<&str> = c[n + 1..].iter().map(|x| x.family.as_str()).collect();
         assert_eq!(names, vec!["arial", "Zapf"]);
+    }
+
+    #[test]
+    fn a_downloaded_or_installed_lexend_says_so() {
+        let dir = tempfile::tempdir().unwrap();
+        let lexend = dir.path().join("lexend");
+        std::fs::create_dir_all(&lexend).unwrap();
+        let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/w7l");
+        for f in ["Lexend-Regular.ttf", "Lexend-Bold.ttf"] {
+            std::fs::copy(fixtures.join(f), lexend.join(f)).unwrap();
+        }
+        let c = choices(&Catalog::english(), &[], Some(dir.path()));
+        assert!(
+            c.iter()
+                .any(|x| x.label == "Lexend (downloaded)" && x.family == "Lexend")
+        );
+        // Installed on the system: listed once, as an installed family.
+        let c = choices(&Catalog::english(), &["Lexend".to_owned()], None);
+        let lexends: Vec<&str> = c
+            .iter()
+            .filter(|x| x.family == "Lexend")
+            .map(|x| x.label.as_str())
+            .collect();
+        assert_eq!(lexends, ["Lexend"]);
     }
 
     #[test]

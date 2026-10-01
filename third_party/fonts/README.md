@@ -5,6 +5,7 @@ textweaver ships three font families so that PDF export, EPUB export, and the GU
 - `atkinson-hyperlegible-next/`: Atkinson Hyperlegible Next, by the Braille Institute of America. The default text font for PDF output. Regular, Bold, Italic, Bold Italic.
 - `atkinson-hyperlegible-mono/`: Atkinson Hyperlegible Mono, by the Braille Institute of America. The code font for PDF output. Regular, Bold, Italic, Bold Italic.
 - `opendyslexic/`: OpenDyslexic, by Abbie Gonzalez. Offered for readers with dyslexia. Regular, Bold, Italic, Bold Italic.
+- `lexend/`: the license and README of Lexend, by the Lexend Project. Lexend is not bundled: textweaver downloads it the first time a reader chooses it, after asking, and checks each file against the SHA-256 in that README. Only its license ships here, so it travels with every package as the bundled fonts' licenses do.
 
 Only these four styles of each family are kept, to limit size. Total size of the 12 font files: 1,354,240 bytes (1.29 MiB).
 

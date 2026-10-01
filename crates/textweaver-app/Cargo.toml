@@ -39,12 +39,14 @@ grammar = ["dep:harper-core"]
 # (convert, render, writers, cite, and hayagriva, comrak, minijinja,
 # krilla, ammonia, ureq), and those commands say they are not in this
 # build; `cargo xtask deps --check` holds the reader to that. It also
-# brings Piper voice downloads, the other use of HTTP in the reader.
+# brings Piper voice downloads and the Lexend download, the other uses of
+# HTTP in the reader.
 publish = [
     "dep:textweaver-cite",
     "dep:textweaver-convert",
     "dep:textweaver-render",
     "textweaver-engines/piper-download",
+    "textweaver-fonts/download",
 ]
 # Speech engines, passed through to textweaver-engines.
 espeak = ["textweaver-engines/espeak"]
@@ -74,6 +76,8 @@ textweaver-editor.workspace = true
 textweaver-engines.workspace = true
 textweaver-theme.workspace = true
 textweaver-aids.workspace = true
+# Downloading Lexend on first choice (W7l); HTTP only with `publish`.
+textweaver-fonts.workspace = true
 textweaver-math.workspace = true
 textweaver-mathcat = { workspace = true, optional = true }
 textweaver-cite = { workspace = true, optional = true }
