@@ -8,6 +8,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - **Emphasis in contracted braille.** Grade 2 BRF files now carry the UEB indicators for bold, italic, and underline, as grade 1 files do, placed around liblouis's contractions.
 - **Passages over paragraphs.** Capitals or emphasis that go on over several paragraphs or list items open again at the start of each and end once, after the last (UEB Rules 8.5.5 and 9.9.1). Each heading stands alone.
+- **Backslashes in contracted braille.** A paragraph with a backslash in it, such as a Windows path, is no longer lost or changed in grade 2: liblouis read the backslash as the start of an escape, so "C:\data" came back empty and "\n" became a line break. The backslash is now written as UEB's backslash symbol.
 
 ### PDF files
 

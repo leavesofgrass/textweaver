@@ -223,6 +223,8 @@ The braille job in `second-tool.yml` checks BRF files with [liblouis](https://li
 
 Words the writer adds on purpose, an ordered list's numbers and "checked" or "not checked" for task items, are reported as Allowed. Reading braille back is ambiguous, above all in grade 2 (a lone "m" reads back as "more"), so the limit is set by liblouis itself: the same text through liblouis alone, forward and back. A fixture fails when its file reads back more than 2 points worse than that, or below 90 percent. The job also reports, without failing, how many braille words match liblouis's own translation, and where they differ; for grade 1 that compares the two translators. `results.txt` in the `second-tool-braille` artifact has every line, the differences as Detail lines.
 
+`lou_translate` reads backslash escapes (`\n`, `\x41`) in its input, so everything sent to it, by the check and by the BRF writer, has each backslash doubled. In BRF a backslash is the "ou" cell, common in grade 2 ("AL\D1" is "aloud"); sent as it was, a line with an invalid escape read back as nothing.
+
 To run it yourself, use the development container (liblouis builds in about a minute; the program takes a few more):
 
 ```bash

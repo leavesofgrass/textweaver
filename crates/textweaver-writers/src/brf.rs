@@ -1028,6 +1028,18 @@ fn center(braille: &str, width: usize) -> Vec<String> {
 
 /// Grade 2 through liblouis's `lou_translate`.
 mod louis {
+    /// One text as one line of `lou_translate`'s input.
+    ///
+    /// Line breaks inside the text become spaces. `lou_translate` reads
+    /// backslash escapes in its input (`\n`, `\x41`, and so on), so a
+    /// print backslash is doubled: unescaped, `C:\data` came back as an
+    /// empty line (an invalid escape) and its paragraph was lost, and
+    /// `\n` in a document became a line break.
+    #[cfg(any(feature = "liblouis", test))]
+    pub(super) fn input_line(text: &str) -> String {
+        text.replace(['\n', '\r'], " ").replace('\\', "\\\\")
+    }
+
     /// Translates each text (one per line) with `table`.
     #[cfg(feature = "liblouis")]
     pub(super) fn translate(texts: &[&str], table: &str) -> Result<Vec<String>, String> {
@@ -1044,8 +1056,7 @@ mod louis {
             .map_err(|e| format!("lou_translate could not start: {e}"))?;
         let mut input = String::new();
         for t in texts {
-            // One line per text; line breaks inside a text become spaces.
-            input.push_str(&t.replace(['\n', '\r'], " "));
+            input.push_str(&input_line(t));
             input.push('\n');
         }
         let mut stdin = child.stdin.take().ok_or("no stdin")?;
@@ -1312,6 +1323,14 @@ mod tests {
     }
 
     #[test]
+    fn liblouis_input_doubles_backslashes_and_joins_lines() {
+        // lou_translate reads backslash escapes in its input.
+        assert_eq!(louis::input_line(r"C:\data \n"), r"C:\\data \\n");
+        assert_eq!(louis::input_line("one\ntwo\r\nthree"), "one two  three");
+        assert_eq!(louis::input_line("plain"), "plain");
+    }
+
+    #[test]
     fn grade_two_without_liblouis_falls_back_with_a_warning() {
         let doc = Document::from_plain_text("the cat");
         let options = WriteOptions {
@@ -1340,6 +1359,13 @@ mod tests {
             let (out, report) = brf(&doc, &options);
             assert!(out.starts_with("  ! ^1CAT"), "{out:?}");
             assert!(report.warnings.is_empty());
+            // A print backslash reaches liblouis as itself, not as an
+            // escape: it comes out as UEB's backslash, dots 456 then 16
+            // (`_*`), and its paragraph is kept.
+            let doc = Document::from_plain_text("see C:\\data now\n\nnext");
+            let (out, _) = brf(&doc, &options);
+            assert!(out.contains("SEE ,C3_*DATA N["), "{out:?}");
+            assert!(out.contains("NEXT"), "{out:?}");
             return;
         }
         assert!(out.starts_with("  THE CAT"));
