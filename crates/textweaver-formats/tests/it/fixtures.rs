@@ -167,7 +167,7 @@ fn pandoc_docx() {
 }
 
 /// Load time of every fixture (fastest of five, from memory); run with
-/// `cargo test --release -p textweaver-formats --test fixtures -- --ignored --nocapture`.
+/// `cargo test --release -p textweaver-formats --test it -- fixtures:: --ignored --nocapture`.
 #[test]
 #[ignore = "benchmark"]
 fn fixture_load_times() {

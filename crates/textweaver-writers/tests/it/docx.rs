@@ -415,7 +415,7 @@ fn styles_used_are_defined() {
 
 /// Opens the sample in Microsoft Word through COM and reads back its
 /// headings. Run with `TEXTWEAVER_WORD=1 cargo test -p textweaver-writers
-/// --test docx -- --ignored` on a Windows machine with Word.
+/// --test it -- docx:: --ignored` on a Windows machine with Word.
 #[test]
 #[ignore = "needs Microsoft Word (set TEXTWEAVER_WORD=1)"]
 fn opens_in_word() {

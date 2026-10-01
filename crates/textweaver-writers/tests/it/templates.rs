@@ -647,7 +647,7 @@ fn templated_pdf_validates_with_its_title_page() {
 
 /// Opens the APA paper in Microsoft Word through COM and reads back its
 /// footnotes, headings, and header. Run with `TEXTWEAVER_WORD=1 cargo test
-/// -p textweaver-writers --test templates -- --ignored` on Windows with
+/// -p textweaver-writers --test it -- templates:: --ignored` on Windows with
 /// Word.
 #[test]
 #[ignore = "needs Microsoft Word (set TEXTWEAVER_WORD=1)"]

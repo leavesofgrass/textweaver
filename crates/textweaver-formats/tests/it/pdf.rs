@@ -319,7 +319,7 @@ fn broken_and_protected_pdfs_fail_clearly() {
 /// Load times (fastest of five, from memory) of the PDF fixtures and of any
 /// PDFs named in `TW_PDF_BENCH` (`;`-separated; for example a large one
 /// made with `python fixtures/a/make_pdfs.py big big.pdf 300`); run with
-/// `cargo test --release -p textweaver-formats --test pdf -- --ignored --nocapture`.
+/// `cargo test --release -p textweaver-formats --test it -- pdf:: --ignored --nocapture`.
 #[test]
 #[ignore = "benchmark"]
 fn pdf_load_times() {
