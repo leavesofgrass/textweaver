@@ -361,3 +361,72 @@ fn epub_embeds_bundled_fonts_with_their_licence() {
         "{report:?}"
     );
 }
+
+/// Hands out `fixtures/w7l` for Lexend's pinned URLs: no download.
+struct FixtureFetcher;
+
+impl textweaver_fonts::downloaded::Fetcher for FixtureFetcher {
+    fn fetch(&self, url: &str, _limit: u64) -> Result<Vec<u8>, String> {
+        let name = url.rsplit('/').next().unwrap_or_default();
+        std::fs::read(fixture(&format!("../w7l/{name}"))).map_err(|e| e.to_string())
+    }
+}
+
+/// Lexend downloaded into the data folder (W7l): the PDF writer finds it
+/// by name and embeds a subset; the EPUB writer embeds both files with the
+/// license. One test, since the data folder is set for the process.
+#[test]
+fn a_downloaded_lexend_is_used_in_pdf_and_epub() {
+    use textweaver_fonts::downloaded::{LEXEND, set_folder};
+    let lexend = |pdf: PdfOptions| {
+        with_pdf(PdfOptions {
+            font_family: Some("Lexend".into()),
+            ..pdf
+        })
+    };
+    let epub = WriteOptions {
+        epub: EpubOptions {
+            font: Some("lexend".into()),
+            ..EpubOptions::default()
+        },
+        ..options()
+    };
+    let dir = tempfile::tempdir().unwrap();
+    let fonts = dir.path().join("fonts");
+    set_folder(Some(fonts.clone()));
+
+    // Not downloaded yet: the PDF says how to get it, the EPUB warns.
+    let err = write_to_vec(&sample(), Format::Pdf, &lexend(PdfOptions::default())).unwrap_err();
+    assert!(err.to_string().contains("not downloaded yet"), "{err}");
+    let (bytes, report) = write_to_vec(&sample(), Format::Epub, &epub).unwrap();
+    assert!(!entries(&bytes).keys().any(|k| k.contains("fonts/")));
+    assert!(
+        report.warnings[0].contains("Lexend was not embedded: it is not downloaded yet"),
+        "{report:?}"
+    );
+
+    LEXEND.install(&fonts, &FixtureFetcher).unwrap();
+    let (bytes, _) = pdf(&sample(), &lexend(PdfOptions::default()));
+    assert!(has(&bytes, "+Lexend-Regular"));
+    assert!(has(&bytes, "+Lexend-Bold"));
+    assert!(!has(&bytes, "+AtkinsonHyperlegibleNext-Regular"));
+
+    let (bytes, report) = write_to_vec(&sample(), Format::Epub, &epub).unwrap();
+    assert!(report.warnings.is_empty(), "{report:?}");
+    let files = entries(&bytes);
+    assert_eq!(
+        files["OEBPS/fonts/lexend/Lexend-Regular.ttf"],
+        std::fs::read(fixture("../w7l/Lexend-Regular.ttf")).unwrap()
+    );
+    assert!(files.contains_key("OEBPS/fonts/lexend/Lexend-Bold.ttf"));
+    let licence = std::str::from_utf8(&files["OEBPS/fonts/lexend/OFL.txt"]).unwrap();
+    assert!(licence.contains("RevReading Lexend"));
+    let css = std::str::from_utf8(&files["OEBPS/style.css"]).unwrap();
+    assert!(
+        css.contains("body { font-family: \"Lexend\", sans-serif; }"),
+        "{css}"
+    );
+    let opf = std::str::from_utf8(&files["OEBPS/content.opf"]).unwrap();
+    assert!(opf.contains("href=\"fonts/lexend/Lexend-Bold.ttf\" media-type=\"font/ttf\""));
+    set_folder(None);
+}

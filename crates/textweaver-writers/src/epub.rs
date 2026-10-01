@@ -12,8 +12,9 @@
 //! element.
 //!
 //! With [`EpubOptions::font`](crate::EpubOptions) or
-//! [`EpubOptions::code_font`](crate::EpubOptions), a bundled font is
-//! embedded (`OEBPS/fonts/<family>/`, with its `OFL.txt`) and named in the
+//! [`EpubOptions::code_font`](crate::EpubOptions), a bundled font, or a
+//! reading font downloaded into the data folder (Lexend), is embedded
+//! (`OEBPS/fonts/<family>/`, with its `OFL.txt`) and named in the
 //! stylesheet; reading systems may still let the reader choose another.
 //!
 //! The package metadata declares the schema.org accessibility properties
@@ -27,7 +28,10 @@ use std::collections::HashMap;
 use std::io::{Cursor, Write};
 use std::rc::Rc;
 
-use textweaver_fonts::{BundledFamily, bundled};
+use std::borrow::Cow;
+
+use textweaver_fonts::downloaded::{self, DownloadableFont, LoadedFace};
+use textweaver_fonts::{BundledFamily, Style as FontStyle, bundled};
 use textweaver_text::Document;
 use zip::CompressionMethod;
 use zip::write::SimpleFileOptions;
@@ -164,41 +168,116 @@ const CONTAINER: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 </container>
 "#;
 
-/// Bundled fonts the book embeds (SIL OFL 1.1, whose licence travels in
-/// the book beside the font files).
+/// A font file the book embeds.
+struct EmbedFace {
+    /// Bold, italic, or both.
+    style: FontStyle,
+    /// The upstream file name.
+    file_name: &'static str,
+    /// `font/ttf` or `font/otf`.
+    media_type: &'static str,
+    /// The font file: built in, or read from the data folder.
+    data: Cow<'static, [u8]>,
+}
+
+/// A family the book embeds (SIL OFL 1.1, whose license travels in the
+/// book beside the font files): a bundled one, or a reading font
+/// downloaded into the data folder (Lexend).
+struct EmbedFamily {
+    key: &'static str,
+    name: &'static str,
+    version: &'static str,
+    copyright: &'static str,
+    monospace: bool,
+    faces: Vec<EmbedFace>,
+    licence: &'static str,
+}
+
+impl EmbedFamily {
+    fn bundled(f: &'static BundledFamily) -> EmbedFamily {
+        EmbedFamily {
+            key: f.key,
+            name: f.name,
+            version: f.version,
+            copyright: f.copyright,
+            monospace: f.monospace,
+            faces: f
+                .faces
+                .iter()
+                .map(|face| EmbedFace {
+                    style: face.style,
+                    file_name: face.file_name,
+                    media_type: face.media_type(),
+                    data: Cow::Borrowed(face.data),
+                })
+                .collect(),
+            licence: f.license_text,
+        }
+    }
+
+    fn downloaded(f: &'static DownloadableFont, faces: Vec<LoadedFace>) -> EmbedFamily {
+        EmbedFamily {
+            key: f.key,
+            name: f.name,
+            version: f.version,
+            copyright: f.copyright,
+            monospace: false,
+            faces: faces
+                .into_iter()
+                .map(|face| EmbedFace {
+                    style: face.style,
+                    file_name: face.file_name,
+                    media_type: face.media_type,
+                    data: Cow::Owned(face.data),
+                })
+                .collect(),
+            licence: f.license_text,
+        }
+    }
+}
+
+/// The fonts the book embeds.
 struct EmbeddedFonts {
     /// The text family, when one was asked for.
-    text: Option<&'static BundledFamily>,
+    text: Option<Rc<EmbedFamily>>,
     /// The code family, when one was asked for.
-    code: Option<&'static BundledFamily>,
+    code: Option<Rc<EmbedFamily>>,
 }
 
 impl EmbeddedFonts {
     fn choose(options: &EpubOptions, report: &mut WriteReport) -> EmbeddedFonts {
-        let mut pick = |name: &Option<String>| -> Option<&'static BundledFamily> {
+        let mut pick = |name: &Option<String>| -> Option<Rc<EmbedFamily>> {
             let name = name.as_deref().map(str::trim).filter(|n| !n.is_empty())?;
-            let found = bundled::family(name);
-            if found.is_none() {
-                let names: Vec<&str> = bundled::BUNDLED.iter().map(|f| f.name).collect();
-                report.warn(if names.is_empty() {
-                    format!("The font {name} was not embedded: this build has no bundled fonts.")
-                } else {
-                    format!(
-                        "The font {name} was not embedded: only bundled fonts can go into an EPUB ({}).",
-                        names.join(", ")
-                    )
-                });
+            if let Some(f) = bundled::family(name) {
+                return Some(Rc::new(EmbedFamily::bundled(f)));
             }
-            found
+            if let Some((f, faces)) = downloaded::find_loaded(name) {
+                return Some(Rc::new(EmbedFamily::downloaded(f, faces)));
+            }
+            let names: Vec<&str> = bundled::BUNDLED.iter().map(|f| f.name).collect();
+            report.warn(if let Some(f) = downloaded::downloadable(name) {
+                format!(
+                    "The font {} was not embedded: it is not downloaded yet. Choose it as the reading font in textweaver, which offers to download it.",
+                    f.name
+                )
+            } else if names.is_empty() {
+                format!("The font {name} was not embedded: this build has no bundled fonts.")
+            } else {
+                format!(
+                    "The font {name} was not embedded: only bundled fonts and a downloaded Lexend can go into an EPUB ({}).",
+                    names.join(", ")
+                )
+            });
+            None
         };
         let text = pick(&options.font);
         let code = pick(&options.code_font);
         EmbeddedFonts { text, code }
     }
 
-    fn families(&self) -> Vec<&'static BundledFamily> {
-        let mut v: Vec<&'static BundledFamily> = self.text.into_iter().collect();
-        if let Some(c) = self.code
+    fn families(&self) -> Vec<&EmbedFamily> {
+        let mut v: Vec<&EmbedFamily> = self.text.as_deref().into_iter().collect();
+        if let Some(c) = self.code.as_deref()
             && !v.iter().any(|f| f.key == c.key)
         {
             v.push(c);
@@ -207,16 +286,13 @@ impl EmbeddedFonts {
     }
 
     /// (href inside `OEBPS/`, bytes) of every font file and licence.
-    fn files(&self) -> Vec<(String, &'static [u8])> {
+    fn files(&self) -> Vec<(String, &[u8])> {
         let mut out = Vec::new();
         for f in self.families() {
             for face in &f.faces {
-                out.push((format!("fonts/{}/{}", f.key, face.file_name), face.data));
+                out.push((format!("fonts/{}/{}", f.key, face.file_name), &*face.data));
             }
-            out.push((
-                format!("fonts/{}/OFL.txt", f.key),
-                f.license_text.as_bytes(),
-            ));
+            out.push((format!("fonts/{}/OFL.txt", f.key), f.licence.as_bytes()));
         }
         out
     }
@@ -229,7 +305,7 @@ impl EmbeddedFonts {
                 out.push((
                     format!("font-{}-{}", f.key, n + 1),
                     format!("fonts/{}/{}", f.key, face.file_name),
-                    face.media_type(),
+                    face.media_type,
                 ));
             }
             out.push((
@@ -260,7 +336,7 @@ impl EmbeddedFonts {
                 ));
             }
         }
-        if let Some(f) = self.text {
+        if let Some(f) = self.text.as_deref() {
             let generic = if f.monospace {
                 "monospace"
             } else {
@@ -271,7 +347,7 @@ impl EmbeddedFonts {
                 f.name
             ));
         }
-        if let Some(f) = self.code {
+        if let Some(f) = self.code.as_deref() {
             css.push_str(&format!(
                 "pre, code {{ font-family: \"{}\", monospace; }}\n",
                 f.name
@@ -280,7 +356,6 @@ impl EmbeddedFonts {
         css
     }
 }
-
 /// A readable default: reading systems and user settings override it.
 const STYLE: &str = "body { line-height: 1.5; margin: 0 4%; }
 h1, h2, h3, h4, h5, h6 { line-height: 1.25; margin: 1.2em 0 0.5em; }
