@@ -69,6 +69,33 @@ fn an_older_format_reads_as_this_one() {
     ));
 }
 
+/// The nightly's `sync_record` crash (Thursday, October 1, 2026): a note's
+/// unknown field holds a whole number too large for 64 bits, about
+/// 1.79e64, read as a float. Without serde_json's correctly rounded
+/// parsing, writing it back and reading it again changed its last digit.
+#[test]
+fn a_huge_number_in_an_unknown_field_round_trips_exactly() {
+    let crash = std::fs::read(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../fixtures/w7f/sync_record/large-number-in-unknown-field.json"
+    ))
+    .unwrap();
+    check(&crash);
+
+    let text = String::from_utf8(fixture()).unwrap().replacen(
+        "\"tags\"",
+        "\"later\":17900000022222222222222222222222222222222222222222222222222222223,\"tags\"",
+        1,
+    );
+    let r = DocRecord::from_bytes(text.as_bytes()).unwrap();
+    let later = &r.notes.get("n1").unwrap().extra["later"];
+    let back = DocRecord::from_bytes(&r.to_bytes().unwrap()).unwrap();
+    assert_eq!(&back.notes.get("n1").unwrap().extra["later"], later);
+    // The nearest double to the number as written, as Python's float() gives.
+    assert_eq!(later.as_f64(), Some(1.790_000_002_222_222e64));
+    check(text.as_bytes());
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(2000))]
 

@@ -13,7 +13,12 @@ publish.workspace = true
 textweaver-core.workspace = true
 textweaver-store.workspace = true
 serde.workspace = true
-serde_json.workspace = true
+# float_roundtrip: numbers are parsed correctly rounded, so a value in a
+# field this version does not know (kept for a newer textweaver, ADR-0049)
+# writes back and reads again exactly, however large. Not
+# arbitrary_precision, which serde cannot read numbers through in the
+# store's structs with flattened unknown fields.
+serde_json = { workspace = true, features = ["float_roundtrip"] }
 # SHA-256 of a file's bytes and of its text, for recognizing a document
 # on another computer (ADR-0049). Pure Rust.
 sha2.workspace = true

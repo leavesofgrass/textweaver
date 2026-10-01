@@ -116,9 +116,22 @@ const TARGETS: &[(&str, &[Seeds])] = &[
     ("svg", &[seeds("fixtures/o", &["svg", "mml"], false)]),
     ("obsidian", &[seeds("fixtures/o/vault", &["md"], true)]),
     // S1: a sync record (ADR-0049).
-    ("sync_record", &[seeds("fixtures/s1", &["json"], false)]),
+    // W7f: the nightly's crashing inputs, kept as seeds.
+    (
+        "sync_record",
+        &[
+            seeds("fixtures/s1", &["json"], false),
+            seeds("fixtures/w7f/sync_record", &["json"], false),
+        ],
+    ),
     // W7s: the sync group files.
-    ("sync_group", &[seeds("fixtures/w7s", &["json"], false)]),
+    (
+        "sync_group",
+        &[
+            seeds("fixtures/w7s", &["json"], false),
+            seeds("fixtures/w7f/sync_group", &["json"], false),
+        ],
+    ),
 ];
 
 /// The repository root.

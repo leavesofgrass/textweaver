@@ -188,9 +188,12 @@ impl GroupRecord {
         out
     }
 
-    /// Reads a record from a file's bytes. A truncated or damaged file is
-    /// an error, never a panic; a newer format is
-    /// [`SyncError::NewerFormat`].
+    /// Reads a record from a file's bytes: JSON in [`FORMAT`] or older. A
+    /// truncated or damaged file is an error, never a panic; a newer format
+    /// is [`SyncError::NewerFormat`]. An older file is read as this format
+    /// and written back as one, as a document's record is (ADR-0049: a
+    /// change that only adds fields keeps the version, so an older file
+    /// holds nothing this format cannot).
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, SyncError> {
         if u64::try_from(bytes.len()).unwrap_or(u64::MAX) > MAX_RECORD_BYTES {
             return Err(SyncError::TooLarge);
@@ -206,7 +209,13 @@ impl GroupRecord {
                 found: u32::try_from(format).unwrap_or(u32::MAX),
             });
         }
-        serde_json::from_value(value).map_err(|e| SyncError::Damaged(e.to_string()))
+        let mut record: GroupRecord =
+            serde_json::from_value(value).map_err(|e| SyncError::Damaged(e.to_string()))?;
+        // Merging never changes the format, so a record read from an older
+        // file would otherwise keep its number while an empty record that
+        // merged it in says this one.
+        record.format = FORMAT;
+        Ok(record)
     }
 
     /// The record as file bytes.
