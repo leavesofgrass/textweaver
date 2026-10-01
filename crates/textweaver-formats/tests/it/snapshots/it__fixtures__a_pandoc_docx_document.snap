@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-formats/tests/fixtures.rs
+source: crates/textweaver-formats/tests/it/fixtures.rs
 expression: view(&doc)
 ---
 {
@@ -17,39 +17,56 @@ expression: view(&doc)
       "kind": "paragraph",
       "range": [
         26,
-        144
+        37
+      ],
+      "text": "Test Author"
+    },
+    {
+      "kind": "heading",
+      "level": 1,
+      "range": [
+        39,
+        63
+      ],
+      "text": "Sample Markdown Document"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        65,
+        183
       ],
       "text": "This paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m."
     },
     {
       "kind": "bold",
       "range": [
-        45,
-        54
+        84,
+        93
       ],
       "text": "bold text"
     },
     {
       "kind": "italic",
       "range": [
-        56,
-        67
+        95,
+        106
       ],
       "text": "italic text"
     },
     {
       "kind": "code",
       "range": [
-        69,
-        80
+        108,
+        119
       ],
       "text": "inline code"
     },
     {
       "kind": "link",
       "range": [
-        88,
-        112
+        127,
+        151
       ],
       "reference": "https://example.org",
       "text": "link to the example site"
@@ -58,8 +75,8 @@ expression: view(&doc)
       "kind": "heading",
       "level": 2,
       "range": [
-        146,
-        151
+        185,
+        190
       ],
       "text": "Lists"
     },
@@ -67,8 +84,8 @@ expression: view(&doc)
       "kind": "list",
       "level": 1,
       "range": [
-        153,
-        252
+        192,
+        291
       ],
       "text": "First bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item"
     },
@@ -76,8 +93,8 @@ expression: view(&doc)
       "kind": "list_item",
       "level": 1,
       "range": [
-        153,
-        170
+        192,
+        209
       ],
       "text": "First bullet item"
     },
@@ -85,16 +102,16 @@ expression: view(&doc)
       "kind": "list_item",
       "level": 1,
       "range": [
-        171,
-        234
+        210,
+        242
       ],
-      "text": "Second bullet item with emphasis\nNested bullet under the second"
+      "text": "Second bullet item with emphasis"
     },
     {
       "kind": "italic",
       "range": [
-        195,
-        203
+        234,
+        242
       ],
       "text": "emphasis"
     },
@@ -102,8 +119,8 @@ expression: view(&doc)
       "kind": "list",
       "level": 2,
       "range": [
-        204,
-        234
+        243,
+        273
       ],
       "text": "Nested bullet under the second"
     },
@@ -111,8 +128,8 @@ expression: view(&doc)
       "kind": "list_item",
       "level": 2,
       "range": [
-        204,
-        234
+        243,
+        273
       ],
       "text": "Nested bullet under the second"
     },
@@ -120,8 +137,8 @@ expression: view(&doc)
       "kind": "list_item",
       "level": 1,
       "range": [
-        235,
-        252
+        274,
+        291
       ],
       "text": "Third bullet item"
     },
@@ -129,8 +146,8 @@ expression: view(&doc)
       "kind": "list",
       "level": 1,
       "range": [
-        254,
-        314
+        293,
+        353
       ],
       "text": "Step one of the procedure.\nStep two costs $5.25.\nStep three."
     },
@@ -139,8 +156,8 @@ expression: view(&doc)
       "label": "1.",
       "level": 1,
       "range": [
-        254,
-        280
+        293,
+        319
       ],
       "text": "Step one of the procedure."
     },
@@ -149,8 +166,8 @@ expression: view(&doc)
       "label": "2.",
       "level": 1,
       "range": [
-        281,
-        302
+        320,
+        341
       ],
       "text": "Step two costs $5.25."
     },
@@ -159,8 +176,8 @@ expression: view(&doc)
       "label": "3.",
       "level": 1,
       "range": [
-        303,
-        314
+        342,
+        353
       ],
       "text": "Step three."
     },
@@ -168,16 +185,16 @@ expression: view(&doc)
       "kind": "heading",
       "level": 2,
       "range": [
-        316,
-        323
+        355,
+        362
       ],
       "text": "A Table"
     },
     {
       "kind": "table",
       "range": [
-        325,
-        386
+        364,
+        425
       ],
       "text": "Name | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100"
     },
@@ -185,96 +202,96 @@ expression: view(&doc)
       "kind": "table_row",
       "label": "header",
       "range": [
-        325,
-        344
+        364,
+        383
       ],
       "text": "Name | Role | Score"
     },
     {
       "kind": "table_cell",
       "range": [
-        325,
-        329
+        364,
+        368
       ],
       "text": "Name"
     },
     {
       "kind": "table_cell",
       "range": [
-        332,
-        336
+        371,
+        375
       ],
       "text": "Role"
     },
     {
       "kind": "table_cell",
       "range": [
-        339,
-        344
+        378,
+        383
       ],
       "text": "Score"
     },
     {
       "kind": "table_row",
       "range": [
-        345,
-        364
+        384,
+        403
       ],
       "text": "Ada | Engineer | 98"
     },
     {
       "kind": "table_cell",
       "range": [
-        345,
-        348
+        384,
+        387
       ],
       "text": "Ada"
     },
     {
       "kind": "table_cell",
       "range": [
-        351,
-        359
+        390,
+        398
       ],
       "text": "Engineer"
     },
     {
       "kind": "table_cell",
       "range": [
-        362,
-        364
+        401,
+        403
       ],
       "text": "98"
     },
     {
       "kind": "table_row",
       "range": [
-        365,
-        386
+        404,
+        425
       ],
       "text": "Grace | Admiral | 100"
     },
     {
       "kind": "table_cell",
       "range": [
-        365,
-        370
+        404,
+        409
       ],
       "text": "Grace"
     },
     {
       "kind": "table_cell",
       "range": [
-        373,
-        380
+        412,
+        419
       ],
       "text": "Admiral"
     },
     {
       "kind": "table_cell",
       "range": [
-        383,
-        386
+        422,
+        425
       ],
       "text": "100"
     },
@@ -282,76 +299,82 @@ expression: view(&doc)
       "kind": "heading",
       "level": 2,
       "range": [
-        388,
-        403
+        427,
+        442
       ],
       "text": "Quotes and Code"
     },
     {
-      "kind": "quote",
-      "range": [
-        405,
-        466
-      ],
-      "text": "A block quote spans a sentence. It has a second sentence too."
-    },
-    {
       "kind": "paragraph",
       "range": [
-        405,
-        466
+        444,
+        505
       ],
       "text": "A block quote spans a sentence. It has a second sentence too."
     },
     {
       "kind": "code",
-      "label": "rust",
       "level": 1,
       "range": [
-        468,
-        504
+        507,
+        543
       ],
       "text": "fn main() {\n    println!(\"hello\");\n}"
     },
     {
-      "kind": "paragraph",
+      "kind": "table",
       "range": [
-        506,
-        539
+        545,
+        578
       ],
       "text": "A diagram of the reading pipeline"
     },
     {
-      "kind": "image",
+      "kind": "table_row",
       "range": [
-        506,
-        539
+        545,
+        578
       ],
-      "reference": "pipeline.png",
+      "text": "A diagram of the reading pipeline"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        545,
+        578
+      ],
+      "text": "A diagram of the reading pipeline"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        580,
+        613
+      ],
       "text": "A diagram of the reading pipeline"
     },
     {
       "kind": "heading",
       "level": 3,
       "range": [
-        541,
-        555
+        615,
+        629
       ],
       "text": "Deeper Heading"
     },
     {
       "kind": "paragraph",
       "range": [
-        557,
-        625
+        631,
+        699
       ],
       "text": "The final paragraph mentions a footnote.[1] It ends with a question?"
     },
     {
       "kind": "footnote",
       "range": [
-        597,
-        600
+        671,
+        674
       ],
       "reference": "1",
       "text": "[1]"
@@ -360,8 +383,8 @@ expression: view(&doc)
       "kind": "heading",
       "level": 2,
       "range": [
-        627,
-        636
+        701,
+        710
       ],
       "text": "Footnotes"
     },
@@ -369,8 +392,8 @@ expression: view(&doc)
       "kind": "footnote",
       "level": 1,
       "range": [
-        638,
-        671
+        712,
+        745
       ],
       "reference": "1",
       "text": "[1] The footnote text lives here."
@@ -378,19 +401,19 @@ expression: view(&doc)
     {
       "kind": "footnote",
       "range": [
-        638,
-        641
+        712,
+        715
       ],
       "reference": "1",
       "text": "[1]"
     }
   ],
   "meta": {
-    "author": "Test Author",
-    "format": "markdown",
+    "author": "Test AuthorTest Author",
+    "format": "docx",
     "language": null,
     "path": null,
-    "title": "Sample Markdown Document"
+    "title": "Sample Markdown DocumentSample Markdown Document"
   },
-  "text": "Sample Markdown Document\n\nThis paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m.\n\nLists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nStep three.\n\nA Table\n\nName | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100\n\nQuotes and Code\n\nA block quote spans a sentence. It has a second sentence too.\n\nfn main() {\n    println!(\"hello\");\n}\n\nA diagram of the reading pipeline\n\nDeeper Heading\n\nThe final paragraph mentions a footnote.[1] It ends with a question?\n\nFootnotes\n\n[1] The footnote text lives here."
+  "text": "Sample Markdown Document\n\nTest Author\n\nSample Markdown Document\n\nThis paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m.\n\nLists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nStep three.\n\nA Table\n\nName | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100\n\nQuotes and Code\n\nA block quote spans a sentence. It has a second sentence too.\n\nfn main() {\n    println!(\"hello\");\n}\n\nA diagram of the reading pipeline\n\nA diagram of the reading pipeline\n\nDeeper Heading\n\nThe final paragraph mentions a footnote.[1] It ends with a question?\n\nFootnotes\n\n[1] The footnote text lives here."
 }

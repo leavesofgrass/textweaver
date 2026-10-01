@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-formats/tests/fixtures.rs
+source: crates/textweaver-formats/tests/it/fixtures.rs
 expression: narration(&doc)
 ---
 [

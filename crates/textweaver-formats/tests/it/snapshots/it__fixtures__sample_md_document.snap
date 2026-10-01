@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-formats/tests/fixtures.rs
+source: crates/textweaver-formats/tests/it/fixtures.rs
 expression: view(&doc)
 ---
 {
@@ -304,18 +304,28 @@ expression: view(&doc)
       "text": "A block quote spans a sentence. It has a second sentence too."
     },
     {
-      "kind": "paragraph",
+      "kind": "code",
+      "label": "rust",
+      "level": 1,
       "range": [
         468,
-        501
+        504
+      ],
+      "text": "fn main() {\n    println!(\"hello\");\n}"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        506,
+        539
       ],
       "text": "A diagram of the reading pipeline"
     },
     {
       "kind": "image",
       "range": [
-        468,
-        501
+        506,
+        539
       ],
       "reference": "pipeline.png",
       "text": "A diagram of the reading pipeline"
@@ -324,28 +334,55 @@ expression: view(&doc)
       "kind": "heading",
       "level": 3,
       "range": [
-        503,
-        517
+        541,
+        555
       ],
       "text": "Deeper Heading"
     },
     {
       "kind": "paragraph",
       "range": [
-        519,
-        626
+        557,
+        625
       ],
-      "text": "The final paragraph mentions a footnote. (footnote: The footnote text lives here.) It ends with a question?"
+      "text": "The final paragraph mentions a footnote.[1] It ends with a question?"
+    },
+    {
+      "kind": "footnote",
+      "range": [
+        597,
+        600
+      ],
+      "reference": "1",
+      "text": "[1]"
+    },
+    {
+      "kind": "heading",
+      "level": 2,
+      "range": [
+        627,
+        636
+      ],
+      "text": "Footnotes"
     },
     {
       "kind": "footnote",
       "level": 1,
       "range": [
-        560,
-        601
+        638,
+        671
       ],
       "reference": "1",
-      "text": "(footnote: The footnote text lives here.)"
+      "text": "[1] The footnote text lives here."
+    },
+    {
+      "kind": "footnote",
+      "range": [
+        638,
+        641
+      ],
+      "reference": "1",
+      "text": "[1]"
     }
   ],
   "meta": {
@@ -355,5 +392,5 @@ expression: view(&doc)
     "path": null,
     "title": "Sample Markdown Document"
   },
-  "text": "Sample Markdown Document\n\nThis paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m.\n\nLists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nStep three.\n\nA Table\n\nName | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100\n\nQuotes and Code\n\nA block quote spans a sentence. It has a second sentence too.\n\nA diagram of the reading pipeline\n\nDeeper Heading\n\nThe final paragraph mentions a footnote. (footnote: The footnote text lives here.) It ends with a question?"
+  "text": "Sample Markdown Document\n\nThis paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m.\n\nLists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nStep three.\n\nA Table\n\nName | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100\n\nQuotes and Code\n\nA block quote spans a sentence. It has a second sentence too.\n\nfn main() {\n    println!(\"hello\");\n}\n\nA diagram of the reading pipeline\n\nDeeper Heading\n\nThe final paragraph mentions a footnote.[1] It ends with a question?\n\nFootnotes\n\n[1] The footnote text lives here."
 }

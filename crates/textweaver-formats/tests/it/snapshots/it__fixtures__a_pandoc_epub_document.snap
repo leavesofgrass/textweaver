@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-formats/tests/fixtures.rs
+source: crates/textweaver-formats/tests/it/fixtures.rs
 expression: view(&doc)
 ---
 {
@@ -20,6 +20,16 @@ expression: view(&doc)
         37
       ],
       "text": "Test Author"
+    },
+    {
+      "kind": "section_break",
+      "label": "Sample Markdown Document",
+      "level": 1,
+      "range": [
+        39,
+        662
+      ],
+      "text": "Sample Markdown Document\n\nThis paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m.\n\nLists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nStep three.\n\nA Table\n\nName | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100\n\nQuotes and Code\n\nA block quote spans a sentence. It has a second sentence too.\n\nfn main() {\n    println!(\"hello\");\n}\n\nA diagram of the reading pipeline\n\nDeeper Heading\n\nThe final paragraph mentions a footnote.1 It ends with a question?"
     },
     {
       "kind": "heading",
@@ -72,6 +82,16 @@ expression: view(&doc)
       "text": "link to the example site"
     },
     {
+      "kind": "section_break",
+      "label": "Lists",
+      "level": 2,
+      "range": [
+        185,
+        353
+      ],
+      "text": "Lists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nStep three."
+    },
+    {
       "kind": "heading",
       "level": 2,
       "range": [
@@ -103,9 +123,9 @@ expression: view(&doc)
       "level": 1,
       "range": [
         210,
-        242
+        273
       ],
-      "text": "Second bullet item with emphasis"
+      "text": "Second bullet item with emphasis\nNested bullet under the second"
     },
     {
       "kind": "italic",
@@ -180,6 +200,16 @@ expression: view(&doc)
         353
       ],
       "text": "Step three."
+    },
+    {
+      "kind": "section_break",
+      "label": "A Table",
+      "level": 2,
+      "range": [
+        355,
+        425
+      ],
+      "text": "A Table\n\nName | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100"
     },
     {
       "kind": "heading",
@@ -296,6 +326,16 @@ expression: view(&doc)
       "text": "100"
     },
     {
+      "kind": "section_break",
+      "label": "Quotes and Code",
+      "level": 2,
+      "range": [
+        427,
+        662
+      ],
+      "text": "Quotes and Code\n\nA block quote spans a sentence. It has a second sentence too.\n\nfn main() {\n    println!(\"hello\");\n}\n\nA diagram of the reading pipeline\n\nDeeper Heading\n\nThe final paragraph mentions a footnote.1 It ends with a question?"
+    },
+    {
       "kind": "heading",
       "level": 2,
       "range": [
@@ -303,6 +343,14 @@ expression: view(&doc)
         442
       ],
       "text": "Quotes and Code"
+    },
+    {
+      "kind": "quote",
+      "range": [
+        444,
+        505
+      ],
+      "text": "A block quote spans a sentence. It has a second sentence too."
     },
     {
       "kind": "paragraph",
@@ -322,98 +370,57 @@ expression: view(&doc)
       "text": "fn main() {\n    println!(\"hello\");\n}"
     },
     {
-      "kind": "table",
+      "kind": "image",
       "range": [
         545,
         578
       ],
+      "reference": "../pipeline.png",
       "text": "A diagram of the reading pipeline"
     },
     {
-      "kind": "table_row",
-      "range": [
-        545,
-        578
-      ],
-      "text": "A diagram of the reading pipeline"
-    },
-    {
-      "kind": "table_cell",
-      "range": [
-        545,
-        578
-      ],
-      "text": "A diagram of the reading pipeline"
-    },
-    {
-      "kind": "paragraph",
+      "kind": "section_break",
+      "label": "Deeper Heading",
+      "level": 3,
       "range": [
         580,
-        613
+        662
       ],
-      "text": "A diagram of the reading pipeline"
+      "text": "Deeper Heading\n\nThe final paragraph mentions a footnote.1 It ends with a question?"
     },
     {
       "kind": "heading",
       "level": 3,
       "range": [
-        615,
-        629
+        580,
+        594
       ],
       "text": "Deeper Heading"
     },
     {
       "kind": "paragraph",
       "range": [
-        631,
-        699
+        596,
+        662
       ],
-      "text": "The final paragraph mentions a footnote.[1] It ends with a question?"
+      "text": "The final paragraph mentions a footnote.1 It ends with a question?"
     },
     {
-      "kind": "footnote",
+      "kind": "link",
       "range": [
-        671,
-        674
+        636,
+        637
       ],
-      "reference": "1",
-      "text": "[1]"
-    },
-    {
-      "kind": "heading",
-      "level": 2,
-      "range": [
-        701,
-        710
-      ],
-      "text": "Footnotes"
-    },
-    {
-      "kind": "footnote",
-      "level": 1,
-      "range": [
-        712,
-        745
-      ],
-      "reference": "1",
-      "text": "[1] The footnote text lives here."
-    },
-    {
-      "kind": "footnote",
-      "range": [
-        712,
-        715
-      ],
-      "reference": "1",
-      "text": "[1]"
+      "reference": "#fn1",
+      "text": "1"
     }
   ],
   "meta": {
-    "author": "Test AuthorTest Author",
-    "format": "docx",
-    "language": null,
+    "author": "Test Author",
+    "format": "epub",
+    "language": "en-US",
     "path": null,
-    "title": "Sample Markdown DocumentSample Markdown Document"
+    "title": "Sample Markdown Document"
   },
-  "text": "Sample Markdown Document\n\nTest Author\n\nSample Markdown Document\n\nThis paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m.\n\nLists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nStep three.\n\nA Table\n\nName | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100\n\nQuotes and Code\n\nA block quote spans a sentence. It has a second sentence too.\n\nfn main() {\n    println!(\"hello\");\n}\n\nA diagram of the reading pipeline\n\nA diagram of the reading pipeline\n\nDeeper Heading\n\nThe final paragraph mentions a footnote.[1] It ends with a question?\n\nFootnotes\n\n[1] The footnote text lives here."
+  "text": "Sample Markdown Document\n\nTest Author\n\nSample Markdown Document\n\nThis paragraph has bold text, italic text, inline code, and a link to the example site. Dr. Jones arrived at 3:30 p.m.\n\nLists\n\nFirst bullet item\nSecond bullet item with emphasis\nNested bullet under the second\nThird bullet item\n\nStep one of the procedure.\nStep two costs $5.25.\nStep three.\n\nA Table\n\nName | Role | Score\nAda | Engineer | 98\nGrace | Admiral | 100\n\nQuotes and Code\n\nA block quote spans a sentence. It has a second sentence too.\n\nfn main() {\n    println!(\"hello\");\n}\n\nA diagram of the reading pipeline\n\nDeeper Heading\n\nThe final paragraph mentions a footnote.1 It ends with a question?"
 }

@@ -1,5 +1,5 @@
 ---
-source: crates/textweaver-formats/tests/pdf.rs
+source: crates/textweaver-formats/tests/it/pdf.rs
 expression: to_markdown(&doc)
 ---
 # Two Column Layout

@@ -9,7 +9,7 @@ use textweaver_formats::{LoadOptions, Registry, Source};
 use textweaver_text::Document;
 use zip::write::SimpleFileOptions;
 
-const CHAPTER: &str = include_str!("../../../fixtures/c1/mathml-chapter.xhtml");
+const CHAPTER: &str = include_str!("../../../../fixtures/c1/mathml-chapter.xhtml");
 
 fn epub(chapter: &str) -> Vec<u8> {
     let files = [
