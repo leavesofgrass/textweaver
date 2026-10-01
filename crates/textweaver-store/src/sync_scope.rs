@@ -68,6 +68,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("speech.voices_by_language", Machine),
     // The audio device's latency.
     ("speech.latency_offset_ms", Machine),
+    // A device id of this computer's audio system.
+    ("speech.output_device", Machine),
     ("speech.verbosity", Portable),
     ("speech.eci.dictionaries", Machine),
     ("speech.eci.library", Machine),

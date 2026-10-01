@@ -214,6 +214,7 @@ impl App {
         self.apply_voice_settings();
         // apply_voice_settings leaves the voice alone when none is set.
         self.speech.set_voice(self.settings.speech.voice.clone());
+        textweaver_engines::apply_output_device(&self.settings);
         // The running frontend's keys: the window's keymap stays the
         // window's (a GUI-only chord keeps working after an import).
         let (mut keymap, key_warnings) = Keymap::with_preset_and_overrides(

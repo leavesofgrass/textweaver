@@ -1789,6 +1789,8 @@ setting-speech-voices-by-language = الأصوات حسب اللغة
 setting-speech-voices-by-language-help = الصوت لكل لغة واجهة، حسب رمز اللغة، مثل es = معرّف الصوت. لغة غير مدرجة تستخدم أول صوت للمحرك لها.
 setting-speech-latency-offset-ms = تأخير التمييز
 setting-speech-latency-offset-ms-help = المدة بعد إبلاغ المحرك عن كلمة حتى يتحرك التمييز، للمحركات المؤقتة بساعة الصوت.
+setting-speech-output-device = جهاز الإخراج
+setting-speech-output-device-help = جهاز الصوت الذي يُشغَّل عليه الكلام، بمعرّفه؛ يسرد الأمر tw backends --devices الأجهزة. إن لم يُضبط يُستخدم الجهاز الافتراضي للنظام، وكذلك إن لم يكن الجهاز متصلًا.
 setting-speech-verbosity = مستوى التفصيل
 setting-speech-verbosity-help = مقدار ما يقوله textweaver عما يفعله.
 choice-speech-verbosity-low = منخفض

@@ -345,6 +345,11 @@ pub const INFO: &[Info] = &[
         (0.0, 1000.0, 10.0),
         "milliseconds",
     ),
+    optional(
+        "speech.output_device",
+        "Output device",
+        "The sound device speech plays on, by its id; tw backends --devices lists them. Not set uses the system's default, and so does a device that is not connected.",
+    ),
     choice(
         "speech.verbosity",
         "Verbosity",
@@ -1971,6 +1976,10 @@ impl App {
             self.apply_voice_settings();
             if self.settings.speech.voice != old.speech.voice {
                 self.speech.set_voice(self.settings.speech.voice.clone());
+            }
+            if self.settings.speech.output_device != old.speech.output_device {
+                // Open outputs move to the new device on their next look.
+                textweaver_engines::apply_output_device(&self.settings);
             }
         }
         if self.settings.keyboard.character_keys != old.keyboard.character_keys {
