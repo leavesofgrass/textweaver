@@ -12,6 +12,12 @@
 //! and from `tw cite`'s record of the same work: a reference in the
 //! personal library or a library folder's `references.json` with the same
 //! DOI, ISBN, or title fills what the document lacks.
+//!
+//! `tw library edit FILE --title ... --author ... --doi ... --isbn ...`
+//! (Wave 7, W7m) sets a document's details by hand: they win over the
+//! document's own, and with sync on they reach the other computers, newest
+//! wins per field. An empty value (`--author ""`) clears the hand edit, so
+//! the document's own value shows again.
 
 use std::path::{Path, PathBuf};
 
@@ -19,7 +25,9 @@ use serde::Serialize;
 use textweaver_app::lexicon::args;
 use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::store::fulltext::{FullTextIndex, SearchHit, SimpleIndex};
-use textweaver_app::store::library::{self, DocMetadata, LibraryItem, ScannedDoc};
+use textweaver_app::store::library::{
+    self, DetailField, DocMetadata, EditedDetails, LibraryItem, ScannedDoc,
+};
 use textweaver_app::store::{
     DocKey, Library, Paths, Recent, Settings, SettingsStore, StateStore, sync::SidecarStore,
 };
@@ -44,8 +52,38 @@ pub struct Args {
     #[arg(long = "continue")]
     pub continue_reading: bool,
     /// Print JSON.
-    #[arg(long)]
+    #[arg(long, global = true)]
     pub json: bool,
+    /// What to do instead of listing.
+    #[command(subcommand)]
+    pub command: Option<LibraryCommand>,
+}
+
+/// `tw library` commands.
+#[derive(clap::Subcommand, Debug)]
+pub enum LibraryCommand {
+    /// Edit a document's details by hand: its title, author, DOI, and ISBN.
+    /// An empty value clears your edit, so the document's own shows again.
+    Edit(EditArgs),
+}
+
+/// Arguments for `tw library edit`.
+#[derive(clap::Args, Debug, Default)]
+pub struct EditArgs {
+    /// The document.
+    pub file: PathBuf,
+    /// The title.
+    #[arg(long)]
+    pub title: Option<String>,
+    /// The author or authors.
+    #[arg(long)]
+    pub author: Option<String>,
+    /// The DOI, such as 10.1000/xyz or a doi.org link.
+    #[arg(long)]
+    pub doi: Option<String>,
+    /// The ISBN, with or without hyphens.
+    #[arg(long)]
+    pub isbn: Option<String>,
 }
 
 /// Most text matches listed.
@@ -409,7 +447,120 @@ fn render_search(r: &SearchReport) -> String {
     out
 }
 
+/// What `tw library edit` did.
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct EditReport {
+    /// The document, as the bookshelf keeps it.
+    path: PathBuf,
+    /// The bookshelf changed.
+    changed: bool,
+    /// The fields given, by name.
+    fields: Vec<&'static str>,
+    /// The edit was written to the sync folder (sync on).
+    published: bool,
+    /// Every hand-edited detail of the document now (this computer's).
+    edited: EditedDetails,
+    /// What was said.
+    message: String,
+}
+
+fn edit(paths: &Paths, settings: &Settings, a: &EditArgs) -> anyhow::Result<EditReport> {
+    use textweaver_app::sync_engine::{EngineConfig, SyncEngine};
+    use textweaver_app::sync_folder::{DetailEdit, Identify, docid::Details};
+
+    anyhow::ensure!(a.file.is_file(), "{} is not a file", a.file.display());
+    let (c, _) = Catalog::for_language(&settings.interface.language, Some(&paths.locales_dir()));
+    let mut edits = Vec::new();
+    for (field, value) in [
+        (DetailField::Title, &a.title),
+        (DetailField::Author, &a.author),
+        (DetailField::Doi, &a.doi),
+        (DetailField::Isbn, &a.isbn),
+    ] {
+        let Some(value) = value else {
+            continue;
+        };
+        match field.clean(value) {
+            Ok(v) => edits.push((field, v)),
+            Err(bad) => {
+                let id = if field == DetailField::Doi {
+                    "details-not-a-doi"
+                } else {
+                    "details-not-an-isbn"
+                };
+                anyhow::bail!("{}", c.fmt(id, &args!["text" => bad]));
+            }
+        }
+    }
+    anyhow::ensure!(
+        !edits.is_empty(),
+        "nothing to edit: give --title, --author, --doi, or --isbn"
+    );
+    let file = paths.library_file();
+    let mut lib = Library::load(&file)?;
+    let changed = lib.record_edits(&a.file, &edits, textweaver_app::sync_folder::wall_ms());
+    if changed {
+        lib.save(&file)?;
+    }
+    let mut published = false;
+    if let Some(config) = EngineConfig::from_settings(&settings.sync, paths) {
+        let mut engine = SyncEngine::new();
+        engine.configure(Some(config));
+        let identify = Identify {
+            ids_file: paths.sync_ids_file(),
+            path: a.file.clone(),
+            library_folders: settings.library.folders.clone(),
+            details: Details::default(),
+        };
+        let sync_edits: Vec<DetailEdit> = edits
+            .iter()
+            .map(|(f, v)| DetailEdit {
+                name: f.name(),
+                value: v.clone(),
+            })
+            .collect();
+        published = engine.edit_details(&identify, &sync_edits);
+    }
+    let entry = lib.get(&a.file);
+    let mut edited = entry.map(|e| e.edited.clone()).unwrap_or_default();
+    edited.at_ms = 0;
+    let message = if changed || published {
+        let labels: Vec<String> = edits
+            .iter()
+            .map(|(f, _)| c.tr(&format!("details-label-{}", f.name())))
+            .collect();
+        c.fmt("details-saved", &args!["fields" => labels.join(", ")])
+    } else {
+        c.tr("details-unchanged")
+    };
+    Ok(EditReport {
+        path: library::resolve_path(&a.file),
+        changed,
+        fields: edits.iter().map(|(f, _)| f.name()).collect(),
+        published,
+        edited,
+        message,
+    })
+}
+
 fn run_with(args: &Args, paths: &Paths) -> anyhow::Result<String> {
+    if let Some(LibraryCommand::Edit(a)) = &args.command {
+        let settings = SettingsStore::new(paths.clone()).load().0;
+        let r = edit(paths, &settings, a)?;
+        return Ok(if args.json {
+            format!(
+                "{}
+",
+                serde_json::to_string_pretty(&serde_json::json!({ "edit": r }))?
+            )
+        } else {
+            format!(
+                "{}
+",
+                r.message
+            )
+        });
+    }
     let mut out = String::new();
     let mut json = serde_json::Map::new();
     if let Some(folder) = &args.add {
@@ -488,6 +639,7 @@ mod tests {
             remove: None,
             continue_reading: false,
             json: false,
+            command: None,
         }
     }
 
@@ -823,6 +975,163 @@ mod tests {
         )
         .unwrap();
         assert_eq!(cont, "Nothing to continue: no places saved.\n");
+    }
+
+    fn edit_args(file: &Path) -> EditArgs {
+        EditArgs {
+            file: file.to_owned(),
+            ..EditArgs::default()
+        }
+    }
+
+    fn run_edit(paths: &Paths, a: EditArgs, json: bool) -> anyhow::Result<String> {
+        run_with(
+            &Args {
+                json,
+                command: Some(LibraryCommand::Edit(a)),
+                ..args()
+            },
+            paths,
+        )
+    }
+
+    /// Wave 7 (W7m): `tw library edit` sets a document's details by hand;
+    /// they survive, win over the document's own, and are searched; a bad
+    /// DOI is refused; an empty value clears the edit.
+    #[test]
+    fn edit_sets_details_by_hand() {
+        let dir = TempDir::new("edit");
+        let paths = Paths::under(&dir.0.join("tw"));
+        let lib = dir.0.join("Readings");
+        std::fs::create_dir_all(&lib).unwrap();
+        let doc = lib.join("scan0042.txt");
+        std::fs::write(&doc, "Cells divide by mitosis.\n").unwrap();
+        run_with(
+            &Args {
+                add: Some(lib.clone()),
+                ..args()
+            },
+            &paths,
+        )
+        .unwrap();
+
+        let out = run_edit(
+            &paths,
+            EditArgs {
+                title: Some("Cell Biology, Chapter 3".into()),
+                author: Some("Ada  Example".into()),
+                doi: Some("https://doi.org/10.1000/CELLS".into()),
+                ..edit_args(&doc)
+            },
+            false,
+        )
+        .unwrap();
+        assert_eq!(out, "Details saved: Title, Author, DOI.\n");
+        let again = run_edit(
+            &paths,
+            EditArgs {
+                title: Some("Cell Biology, Chapter 3".into()),
+                ..edit_args(&doc)
+            },
+            false,
+        )
+        .unwrap();
+        assert_eq!(again, "Details not changed.\n");
+
+        let listed = run_with(&args(), &paths).unwrap();
+        assert!(
+            listed.contains("Cell Biology, Chapter 3, by Ada Example, in Readings"),
+            "{listed}"
+        );
+        for q in ["chapter 3", "doi:10.1000/cells"] {
+            let found = run_with(
+                &Args {
+                    search: Some(q.into()),
+                    ..args()
+                },
+                &paths,
+            )
+            .unwrap();
+            assert!(found.contains("1 document matching"), "{q}: {found}");
+        }
+
+        let err = run_edit(
+            &paths,
+            EditArgs {
+                isbn: Some("12345".into()),
+                ..edit_args(&doc)
+            },
+            false,
+        )
+        .unwrap_err();
+        assert_eq!(err.to_string(), "Not an ISBN: 12345. Fix it or clear it.");
+        assert!(
+            run_edit(&paths, edit_args(&doc), false).is_err(),
+            "nothing given"
+        );
+        assert!(run_edit(&paths, edit_args(&dir.0.join("nope.txt")), false).is_err());
+
+        let json = run_edit(
+            &paths,
+            EditArgs {
+                author: Some(String::new()),
+                ..edit_args(&doc)
+            },
+            true,
+        )
+        .unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["edit"]["changed"], true);
+        assert_eq!(v["edit"]["fields"][0], "author");
+        assert_eq!(v["edit"]["published"], false, "sync is off");
+        assert_eq!(v["edit"]["edited"]["title"], "Cell Biology, Chapter 3");
+        assert!(v["edit"]["edited"].get("author").is_none(), "cleared");
+        let listed = run_with(&args(), &paths).unwrap();
+        assert!(
+            listed.contains("Cell Biology, Chapter 3, in Readings"),
+            "{listed}"
+        );
+    }
+
+    /// With sync on, the edit reaches the other computers, where it wins
+    /// over the details the document published.
+    #[test]
+    fn an_edit_is_published_to_the_sync_folder() {
+        use textweaver_app::sync_folder::FolderView;
+        use textweaver_app::sync_folder::record::detail;
+
+        let dir = TempDir::new("edit-sync");
+        let (lab, paper) = laptop_published_a_paper(&dir.0);
+        let json = run_edit(
+            &lab,
+            EditArgs {
+                title: Some("Cell Energy, revised".into()),
+                ..edit_args(&paper)
+            },
+            true,
+        )
+        .unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["edit"]["published"], true, "{json}");
+        let view = FolderView::read(&dir.0.join("sync")).unwrap();
+        let shown: Vec<_> = view
+            .docs
+            .values()
+            .filter_map(|r| r.identity.shown_detail(detail::TITLE))
+            .collect();
+        assert_eq!(shown, vec!["Cell Energy, revised"], "one record, edited");
+        let found = run_with(
+            &Args {
+                search: Some("revised".into()),
+                ..args()
+            },
+            &lab,
+        )
+        .unwrap();
+        assert!(
+            found.contains("Cell Energy, revised, by Ada Example, in Course papers"),
+            "{found}"
+        );
     }
 
     #[test]
