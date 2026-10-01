@@ -261,6 +261,109 @@ fn a_doi_search_works_on_a_second_home() {
     );
 }
 
+/// Makes `link` another spelling of the folder `target`: a symbolic link,
+/// or on Windows a junction when symbolic links need a privilege the test
+/// does not have. False when the platform allows neither.
+fn dir_link(target: &Path, link: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link).is_ok()
+    }
+    #[cfg(windows)]
+    {
+        if std::os::windows::fs::symlink_dir(target, link).is_ok() {
+            return true;
+        }
+        std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(link)
+            .arg(target)
+            .output()
+            .is_ok_and(|o| o.status.success())
+            && link.is_dir()
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = (target, link);
+        false
+    }
+}
+
+/// A library folder reached through another spelling of its path is still
+/// matched by its id: the root cause of the Windows runner failure, where
+/// the temporary folder had a short name and the stored library folder its
+/// long one. Spelled with a parent step through a folder beside it (on
+/// every platform), and through a symbolic link or a junction where the
+/// platform allows one, both for the document's path and for the library
+/// folder as stored in the settings.
+#[test]
+fn a_library_folder_spelled_another_way_is_still_matched() {
+    let folder = tempfile::tempdir().unwrap();
+    let docs = tempfile::tempdir().unwrap();
+    let lib_a = docs.path().join("laptop").join("papers");
+    std::fs::create_dir_all(&lib_a).unwrap();
+    let paper_a = lib_a.join("paper.md");
+    std::fs::write(&paper_a, PAPER).unwrap();
+    let mut laptop = computer(folder.path(), "laptop", |s| {
+        s.library.add_folder(&lib_a);
+    });
+    laptop.open(&paper_a);
+    laptop.quit();
+
+    // The library folder arrives on the lab computer, id file and all.
+    let lab_dir = docs.path().join("lab");
+    let lib_b = lab_dir.join("papers");
+    copy_dir(&lib_a, &lib_b);
+    let detour = lab_dir.join("detour");
+    std::fs::create_dir_all(&detour).unwrap();
+    let link = lab_dir.join("linked");
+    let linked = dir_link(&lib_b, &link);
+    if !linked {
+        eprintln!("no symbolic link or junction here; the parent-step spelling only");
+    }
+    // Through the folder beside the library, and back up.
+    let parent_step = detour.join(std::path::Component::ParentDir).join("papers");
+
+    // The library folder stored as it was added (resolved).
+    let lab = computer(folder.path(), "lab", |s| {
+        s.library.add_folder(&lib_b);
+    });
+    let synced = SyncedLibrary::load(&lab.paths(), lab.app.settings()).unwrap();
+    let expected = synced
+        .sync_id_for(&lib_b.join("paper.md"), None)
+        .expect("recognized by the library folder's id");
+    let mut spellings = vec![parent_step.join("paper.md")];
+    if linked {
+        spellings.push(link.join("paper.md"));
+    }
+    for path in &spellings {
+        assert_eq!(
+            synced.sync_id_for(path, None),
+            Some(expected),
+            "{} not matched",
+            path.display()
+        );
+    }
+
+    // The library folder stored in another spelling (typed by hand into
+    // the settings), and the document reached by its own path.
+    let mut stored = vec![parent_step.clone()];
+    if linked {
+        stored.push(link.clone());
+    }
+    for library in stored {
+        let mut settings = lab.app.settings().clone();
+        settings.library.folders = vec![library.clone()];
+        let synced = SyncedLibrary::load(&lab.paths(), &settings).unwrap();
+        assert_eq!(
+            synced.sync_id_for(&lib_b.join("paper.md"), None),
+            Some(expected),
+            "library folder {} not matched",
+            library.display()
+        );
+    }
+}
+
 /// "Continue reading" lists only documents found on this computer, newest
 /// place first, each row meaning first and naming the computer.
 #[test]
