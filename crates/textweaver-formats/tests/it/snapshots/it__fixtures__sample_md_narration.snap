@@ -1,0 +1,33 @@
+---
+source: crates/textweaver-formats/tests/it/fixtures.rs
+expression: narration(&doc)
+---
+[
+  "heading level 1, Sample Markdown Document",
+  "This paragraph has bold text, italic text, inline code, and a link to the example site.",
+  "Dr. Jones arrived at 3:30 p.m.",
+  "heading level 2, Lists",
+  "list with 3 items, First bullet item",
+  "Second bullet item with emphasis",
+  "list with 1 item, Nested bullet under the second",
+  "Third bullet item",
+  "list with 3 items, 1. Step one of the procedure.",
+  "2. Step two costs $5.25.",
+  "3. Step three.",
+  "heading level 2, A Table",
+  "Table with 3 columns: Name, Role, Score.",
+  "Row 1: Name is Ada, Role is Engineer, Score is 98.",
+  "Row 2: Name is Grace, Role is Admiral, Score is 100.",
+  "heading level 2, Quotes and Code",
+  "block quote, A block quote spans a sentence.",
+  "It has a second sentence too.",
+  "code block, fn main() {",
+  "println!(\"hello\");",
+  "}",
+  "graphic, A diagram of the reading pipeline",
+  "heading level 3, Deeper Heading",
+  "The final paragraph mentions a footnote. footnote 1",
+  "It ends with a question?",
+  "heading level 2, Footnotes",
+  "footnote 1 The footnote text lives here."
+]

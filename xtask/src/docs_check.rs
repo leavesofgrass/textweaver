@@ -3,7 +3,7 @@
 //! - `cargo xtask settings-doc [--check]`: regenerates
 //!   `docs/settings-reference.md` from the settings schema, or with
 //!   `--check` fails when it is out of date. The renderer lives next to the
-//!   schema, in `crates/textweaver-app/tests/settings_reference.rs`; this
+//!   schema, in `crates/textweaver-app/tests/it/settings_reference.rs`; this
 //!   runs that test, with `TEXTWEAVER_UPDATE_DOCS=1` when it should write.
 //! - `cargo xtask docs --check`: the indexes match the tree. The ADR index
 //!   (`docs/adr/README.md`) lists every ADR once, in number order, and no
@@ -48,9 +48,9 @@ pub fn settings_doc() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Runs the app crate's `settings_reference` test, which checks
-/// `docs/settings-reference.md` or, unless `check`, rewrites it. True when
-/// the test passed. It builds the app crate, so a build failure also reads
+/// Runs the `settings_reference` module of the app crate's test program,
+/// which checks `docs/settings-reference.md` or, unless `check`, rewrites
+/// it. True when the test passed. It builds the app crate, so a build failure also reads
 /// as false.
 pub fn run_settings_test(check: bool) -> anyhow::Result<bool> {
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
@@ -61,7 +61,9 @@ pub fn run_settings_test(check: bool) -> anyhow::Result<bool> {
         "-p",
         "textweaver-app",
         "--test",
-        "settings_reference",
+        "it",
+        "--",
+        "settings_reference::",
     ]);
     if check {
         cmd.env_remove("TEXTWEAVER_UPDATE_DOCS");

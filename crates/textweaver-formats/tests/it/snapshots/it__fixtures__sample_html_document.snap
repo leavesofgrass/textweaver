@@ -1,0 +1,283 @@
+---
+source: crates/textweaver-formats/tests/it/fixtures.rs
+expression: view(&doc)
+---
+{
+  "markers": [
+    {
+      "kind": "heading",
+      "level": 1,
+      "range": [
+        0,
+        20
+      ],
+      "text": "Sample HTML Document"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        22,
+        110
+      ],
+      "text": "This paragraph has strong text, emphasis, and a link. Mrs. Lee paid $3.99 on 2026-09-25."
+    },
+    {
+      "kind": "bold",
+      "range": [
+        41,
+        52
+      ],
+      "text": "strong text"
+    },
+    {
+      "kind": "italic",
+      "range": [
+        54,
+        62
+      ],
+      "text": "emphasis"
+    },
+    {
+      "kind": "link",
+      "range": [
+        70,
+        74
+      ],
+      "reference": "https://example.org",
+      "text": "link"
+    },
+    {
+      "kind": "heading",
+      "level": 2,
+      "range": [
+        112,
+        117
+      ],
+      "text": "Lists"
+    },
+    {
+      "kind": "list",
+      "level": 1,
+      "range": [
+        119,
+        147
+      ],
+      "text": "Apples\nOranges\nBlood oranges"
+    },
+    {
+      "kind": "list_item",
+      "level": 1,
+      "range": [
+        119,
+        125
+      ],
+      "text": "Apples"
+    },
+    {
+      "kind": "list_item",
+      "level": 1,
+      "range": [
+        126,
+        147
+      ],
+      "text": "Oranges\nBlood oranges"
+    },
+    {
+      "kind": "list",
+      "level": 2,
+      "range": [
+        134,
+        147
+      ],
+      "text": "Blood oranges"
+    },
+    {
+      "kind": "list_item",
+      "level": 2,
+      "range": [
+        134,
+        147
+      ],
+      "text": "Blood oranges"
+    },
+    {
+      "kind": "list",
+      "level": 1,
+      "range": [
+        149,
+        183
+      ],
+      "text": "Preheat the oven.\nBake for 20 min."
+    },
+    {
+      "kind": "list_item",
+      "label": "1.",
+      "level": 1,
+      "range": [
+        149,
+        166
+      ],
+      "text": "Preheat the oven."
+    },
+    {
+      "kind": "list_item",
+      "label": "2.",
+      "level": 1,
+      "range": [
+        167,
+        183
+      ],
+      "text": "Bake for 20 min."
+    },
+    {
+      "kind": "heading",
+      "level": 2,
+      "range": [
+        185,
+        190
+      ],
+      "text": "Table"
+    },
+    {
+      "kind": "table",
+      "label": "Scores",
+      "range": [
+        200,
+        233
+      ],
+      "text": "Name | Score\nAda | 98\nGrace | 100"
+    },
+    {
+      "kind": "table_row",
+      "label": "header",
+      "range": [
+        200,
+        212
+      ],
+      "text": "Name | Score"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        200,
+        204
+      ],
+      "text": "Name"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        207,
+        212
+      ],
+      "text": "Score"
+    },
+    {
+      "kind": "table_row",
+      "range": [
+        213,
+        221
+      ],
+      "text": "Ada | 98"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        213,
+        216
+      ],
+      "text": "Ada"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        219,
+        221
+      ],
+      "text": "98"
+    },
+    {
+      "kind": "table_row",
+      "range": [
+        222,
+        233
+      ],
+      "text": "Grace | 100"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        222,
+        227
+      ],
+      "text": "Grace"
+    },
+    {
+      "kind": "table_cell",
+      "range": [
+        230,
+        233
+      ],
+      "text": "100"
+    },
+    {
+      "kind": "heading",
+      "level": 3,
+      "range": [
+        235,
+        240
+      ],
+      "text": "Media"
+    },
+    {
+      "kind": "image",
+      "range": [
+        242,
+        263
+      ],
+      "reference": "figure.png",
+      "text": "A bar chart of scores"
+    },
+    {
+      "kind": "quote",
+      "range": [
+        265,
+        305
+      ],
+      "text": "Quoted text in a block. Second sentence."
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        265,
+        305
+      ],
+      "text": "Quoted text in a block. Second sentence."
+    },
+    {
+      "kind": "code",
+      "level": 1,
+      "range": [
+        307,
+        317
+      ],
+      "text": "let x = 1;"
+    },
+    {
+      "kind": "paragraph",
+      "range": [
+        319,
+        343
+      ],
+      "text": "Last paragraph. The end?"
+    }
+  ],
+  "meta": {
+    "author": null,
+    "format": "html",
+    "language": "en",
+    "path": null,
+    "title": "Sample HTML Document"
+  },
+  "text": "Sample HTML Document\n\nThis paragraph has strong text, emphasis, and a link. Mrs. Lee paid $3.99 on 2026-09-25.\n\nLists\n\nApples\nOranges\nBlood oranges\n\nPreheat the oven.\nBake for 20 min.\n\nTable\n\nScores\n\nName | Score\nAda | 98\nGrace | 100\n\nMedia\n\nA bar chart of scores\n\nQuoted text in a block. Second sentence.\n\nlet x = 1;\n\nLast paragraph. The end?"
+}

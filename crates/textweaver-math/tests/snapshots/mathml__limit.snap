@@ -1,5 +1,0 @@
----
-source: crates/textweaver-math/tests/mathml.rs
-expression: balanced(&xml)
----
-<math xmlns="http://www.w3.org/1998/Math/MathML" alttext="\lim_{x \to 0} \frac{\sin x}{x}"><semantics><mrow><munder><mi>lim</mi><mrow><mi>x</mi><mo>→</mo><mn>0</mn></mrow></munder><mfrac><mrow><mi>sin</mi><mo>⁡</mo><mi>x</mi></mrow><mi>x</mi></mfrac></mrow><annotation encoding="application/x-tex">\lim_{x \to 0} \frac{\sin x}{x}</annotation></semantics></math>

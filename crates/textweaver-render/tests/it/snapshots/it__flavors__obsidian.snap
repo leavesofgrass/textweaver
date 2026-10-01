@@ -1,0 +1,59 @@
+---
+source: crates/textweaver-render/tests/it/flavors.rs
+expression: snapshot_text(&r)
+---
+<h1 id="reading-notes">Reading notes</h1>
+<p>See <a class="wikilink" href="Chapter%20One.html">Chapter One</a>, <a class="wikilink" href="Chapter%20One.html#key-ideas">the key ideas</a>, and <a class="wikilink" href="#summary">Summary</a>.
+A reference to a block: <a class="wikilink" href="Chapter%20One.html#block-quote1">Chapter One: quote1</a>.</p>
+<p><img src="cover.png" alt="Book cover, a lighthouse at dusk"></p>
+<p><a class="embed" href="Chapter%20One.html#key-ideas">Chapter One: Key Ideas</a></p>
+<p id="block-idea-1">This idea matters.</p>
+<p>Tagged <span class="tag">#reading</span> and <span class="tag">#study/biology</span>, but not issue#3 or #2026.
+Some <mark>highlighted text</mark> here.</p>
+<div class="callout callout-tip" role="note">
+<p class="callout-title"><strong>Remember</strong></p>
+<p>Callouts can hold <strong>Markdown</strong>.</p>
+</div>
+<details class="callout callout-faq">
+<summary class="callout-title">Can callouts fold?</summary>
+<p>Yes, with a minus sign.</p>
+</details>
+<h2 id="summary">Summary</h2>
+<p>Energy: <math xmlns="http://www.w3.org/1998/Math/MathML" alttext="E = mc^2"><semantics><mrow><mi>E</mi><mo>=</mo><mi>m</mi><msup><mi>c</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">E = mc^2</annotation></semantics></math>.</p>
+<p><math xmlns="http://www.w3.org/1998/Math/MathML" display="block" alttext="\sum_{i=1}^{n} i = \frac{n(n+1)}{2}"><semantics><mrow><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mi>i</mi><mo>=</mo><mfrac><mrow><mi>n</mi><mrow><mo fence="true" form="prefix">(</mo><mrow><mi>n</mi><mo>+</mo><mn>1</mn></mrow><mo fence="true" form="postfix">)</mo></mrow></mrow><mn>2</mn></mfrac></mrow><annotation encoding="application/x-tex">
+\sum_{i=1}^{n} i = \frac{n(n+1)}{2}
+</annotation></semantics></math></p>
+<pre><code>[[not a link]] #not-a-tag
+</code></pre>
+
+----- facts -----
+{
+  "has_h1": true,
+  "has_math": true,
+  "meta": {
+    "aliases": [
+      "Obsidian sample"
+    ],
+    "tags": [
+      "reading",
+      "notes"
+    ]
+  },
+  "tags": [
+    "reading",
+    "study/biology"
+  ],
+  "title": "Reading notes",
+  "toc": [
+    {
+      "id": "reading-notes",
+      "level": 1,
+      "text": "Reading notes"
+    },
+    {
+      "id": "summary",
+      "level": 2,
+      "text": "Summary"
+    }
+  ]
+}

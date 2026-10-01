@@ -91,15 +91,6 @@ log.workspace = true
 # GetLogicalDrives and GetDriveTypeW, for the file browser's drives (W6f).
 windows = { workspace = true, features = ["Win32_Foundation", "Win32_Globalization", "Win32_Storage_FileSystem", "Win32_System_SystemInformation"] }
 
-# Export, preview, and citations are tested with the feature on.
-[[test]]
-name = "authoring"
-required-features = ["publish"]
-
-[[test]]
-name = "citations_reading"
-required-features = ["publish"]
-
 [dev-dependencies]
 tempfile.workspace = true
 

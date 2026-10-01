@@ -1,0 +1,5 @@
+---
+source: crates/textweaver-math/tests/it/mathml.rs
+expression: balanced(&xml)
+---
+<math xmlns="http://www.w3.org/1998/Math/MathML" alttext="\hat{x} + \overline{AB} + \vec{v}"><semantics><mrow><mover accent="true"><mi>x</mi><mo stretchy="false">^</mo></mover><mo>+</mo><mover accent="true"><mrow><mi>A</mi><mi>B</mi></mrow><mo stretchy="true">¯</mo></mover><mo>+</mo><mover accent="true"><mi>v</mi><mo stretchy="false">→</mo></mover></mrow><annotation encoding="application/x-tex">\hat{x} + \overline{AB} + \vec{v}</annotation></semantics></math>

@@ -1,0 +1,5 @@
+---
+source: crates/textweaver-math/tests/it/mathml.rs
+expression: balanced(&xml)
+---
+<math xmlns="http://www.w3.org/1998/Math/MathML" alttext="\mathbf{v} \in \mathbb{R}^n"><semantics><mrow><mi mathvariant="bold">v</mi><mo>∈</mo><msup><mi>ℝ</mi><mi>n</mi></msup></mrow><annotation encoding="application/x-tex">\mathbf{v} \in \mathbb{R}^n</annotation></semantics></math>

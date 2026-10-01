@@ -1,0 +1,29 @@
+---
+source: crates/textweaver-cite/tests/it/formatting.rs
+expression: "render(\"vancouver\", OutputFormat :: Plain)"
+---
+style: Elsevier - NLM/Vancouver (citation-sequence)
+citations:
+  [@kucsko2013] => [1]
+  [@dahl1988, p. 12] => [2]
+  [see @smyth2007, pp. 5-6; also @vangogh2020] => [see 3, also 4]
+  @muller2019 [chap. 3] => Müller J [5]
+  [@who2021; -@access2024] => [6,7]
+  [@nobody2000] => [missing reference nobody2000]
+missing: nobody2000
+bibliography of cited works:
+  [kucsko2013] [1] Kucsko G, Maurer PC, Yao NY. Nanometre-scale thermometry in a living cell. Nature 2013;500:54–8. https://doi.org/10.1038/nature12373.
+  [dahl1988] [2] Dahl R. Fantastic Mr. Fox. London: Puffin; 1988.
+  [smyth2007] [3] Smyth B. Adventures in personalized information access. In: Conati C, McCoy K, editors. User Modeling 2007, Berlin: Springer; 2007, pp. 5–6. https://doi.org/10.1007/978-3-540-74958-5_4.
+  [vangogh2020] [4] van Gogh V, The Accessible Reading Group. Screen readers and the reading of mathematics. In:. Proceedings of the Conference on Accessible Reading, Accessible Press; 2020, pp. 101–10.
+  [muller2019] [5] Müller J. Hörbücher und Sprachsynthese. PhD thesis. Universität Wien, 2019.
+  [who2021] [6] World Health Organization. World report on vision & print disability. Geneva: World Health Organization; 2021.
+  [access2024] [7] Doe J. Designing for keyboard and screen reader users. Accessibility Notes 2024. https://example.org/notes/keyboard (accessed September 1, 2026).
+whole library:
+  [kucsko2013] [1] Kucsko G, Maurer PC, Yao NY. Nanometre-scale thermometry in a living cell. Nature 2013;500:54–8. https://doi.org/10.1038/nature12373.
+  [dahl1988] [2] Dahl R. Fantastic Mr. Fox. London: Puffin; 1988.
+  [smyth2007] [3] Smyth B. Adventures in personalized information access. In: Conati C, McCoy K, editors. User Modeling 2007, Berlin: Springer; 2007, pp. 5–6. https://doi.org/10.1007/978-3-540-74958-5_4.
+  [vangogh2020] [4] van Gogh V, The Accessible Reading Group. Screen readers and the reading of mathematics. In:. Proceedings of the Conference on Accessible Reading, Accessible Press; 2020, pp. 101–10.
+  [muller2019] [5] Müller J. Hörbücher und Sprachsynthese. PhD thesis. Universität Wien, 2019.
+  [who2021] [6] World Health Organization. World report on vision & print disability. Geneva: World Health Organization; 2021.
+  [access2024] [7] Doe J. Designing for keyboard and screen reader users. Accessibility Notes 2024. https://example.org/notes/keyboard (accessed September 1, 2026).

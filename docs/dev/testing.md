@@ -28,10 +28,10 @@ The steps, in order:
 - **clippy**: `cargo clippy --workspace --all-targets` with the features for your system, and `-D warnings`. Every warning is an error.
 - **test**: `cargo test --workspace` with the same features.
 - **doc**: `cargo doc --workspace --no-deps` with `RUSTDOCFLAGS="-D warnings"`. The usual failures are a redundant link target (write ``[`X`]``, not ``[`X`](crate::X)``), a link to a private item from public docs, and square brackets in prose (put `[mm:ss]` or `[@key]` in backticks).
-- **pseudo**: `cargo test -p textweaver-app --test pseudo_locale`. The interface in the pseudo-locales en-XA and ar-XB: it fails on any message that does not come from the translation catalog ([ADR-0030](../adr/0030-interface-translations.md)). CI runs it in the docs job.
+- **pseudo**: `cargo test -p textweaver-app --test it -- pseudo_locale::`. The interface in the pseudo-locales en-XA and ar-XB: it fails on any message that does not come from the translation catalog ([ADR-0030](../adr/0030-interface-translations.md)). CI runs it in the docs job.
 - **generated**: `cargo xtask regen --check`. Every generated file is current. It runs each check below, even after one fails, and reports each on one line, meaning first, such as "notices: pass" or "site data: FAIL, out of date; run cargo xtask regen". A check whose tool is missing (cargo-about, or Python) is reported as skipped. `--only keyboard` or `--only site` selects this step. The checks, in order:
   - **notices**: `THIRD-PARTY-NOTICES.md` matches `cargo about` and the license files in `third_party/` (as `cargo xtask notices --check`). It needs `cargo-about`.
-  - **settings reference**: [the settings reference](../settings-reference.md) matches the settings schema (as `cargo xtask settings-doc --check`). It builds the app crate's `settings_reference` test.
+  - **settings reference**: [the settings reference](../settings-reference.md) matches the settings schema (as `cargo xtask settings-doc --check`). It builds the app crate's tests and runs their `settings_reference` module.
   - **keyboard**: [docs/keyboard.md](../keyboard.md) matches the keymap (as `cargo xtask keyboard --check`).
   - **site data**: the data embedded in the `docs/site` pages matches `cargo metadata`, the keymap, and the theme files (as `tools/gen_site_data.py --check`, run with `py -3` on Windows and `python3` elsewhere).
   - **docs**: the ADR index and the Decisions list in [docs/README.md](../README.md#decisions) list every ADR once, in number order; the crate counts match `crates/`; every guide ends with a "See also" section and is linked from the index (as `cargo xtask docs --check`).
@@ -102,6 +102,26 @@ The features: Linux CI uses `--all-features`, which includes `espeak`, `speechd`
 - Tests never play audio aloud. Write audio to a temporary file, or use a silent output.
 - Tests against real engines are ignored unless you ask for them with an environment variable: `TEXTWEAVER_ECI=1` (Eloquence, with licensed Voxin in the container), `TEXTWEAVER_SAPI=1` (Microsoft voices and eSpeak only), `TEXTWEAVER_APPLE=1` (macOS voices), `TEXTWEAVER_DECTALK=1` (a licensed DECtalk), `TEXTWEAVER_SPEECHD=1` (speech-dispatcher), `TEXTWEAVER_WHISPER_REAL=1` (an installed Whisper), and `TEXTWEAVER_WORD=1` (Microsoft Word opens a DOCX). Run them with `-- --ignored`.
 - Never load Code Factory's Eloquence or OpenEVV in tests, and never commit audio made by an engine. Local samples go in the git-ignored `target-local/`.
+
+### Where tests go
+
+Unit tests live beside the code, in a `#[cfg(test)] mod tests`. Integration tests, the ones that use a crate only through its public interface, go in one test program per crate:
+
+- `tests/it/main.rs` is the program. It holds only `mod` lines, one per module.
+- Each module is a file beside it: `tests/it/sync.rs` is `mod sync;`. A module that needs a feature gets `#[cfg(feature = "...")]` on its `mod` line, or `#![cfg(...)]` at the top of its file.
+- Helpers shared by several modules are a module of their own, such as `tests/it/common.rs`, used as `use crate::common;`.
+- Snapshots (`insta`) are in `tests/it/snapshots/`, named `it__<module>__<name>.snap`. Property-test regressions are beside their module, `tests/it/<module>.proptest-regressions`.
+
+**A new integration test is a module in `tests/it/`, never a new file directly in `tests/`.** Cargo makes every file in `tests/` a program of its own, and each one links the crate and all its dependencies again; on Windows the linking dominated the test build. The one exception is a program with `harness = false` in its `Cargo.toml` (the Apple voices, `textweaver-apple/tests/voices.rs`, and the engine host's `host_process.rs`), which has its own `main`.
+
+To run one module, name the program and filter by the module's path:
+
+```bash
+cargo test -p textweaver-app --test it -- sync::
+cargo test -p textweaver-app --test it -- sync::a_note_made_on_one_computer_appears_on_the_other --exact
+```
+
+A test that must be alone in its process (it changes something process-wide, such as an environment variable or a global flag) runs itself as a child process: `std::env::current_exe()` with its full name, module included, and `--exact` (see `textweaver-convert/tests/it/pandoc_env.rs`). The nightly's nextest runs every test in its own process anyway, but `cargo test` runs a program's tests on threads of one process.
 
 ## Benchmarks
 

@@ -1,0 +1,34 @@
+---
+source: crates/textweaver-formats/tests/it/fixtures.rs
+expression: narration(&doc)
+---
+[
+  "heading level 1, Sample Word Document",
+  "heading level 1, Introduction",
+  "This paragraph has bold text, italic text, underlined words, strong style, not bold, and a link to the example site.",
+  "Dr. Jones arrived at 3:30 p.m. footnote 1",
+  "It ends here.",
+  "Tab separated\nsecond line with well-known words, inserted 7 and a field.",
+  "heading level 1, Lists",
+  "list with 3 items, First bullet item",
+  "Second bullet item with emphasis",
+  "list with 1 item, Nested bullet under the second",
+  "Third bullet item",
+  "list with 3 items, 1. Step one of the procedure.",
+  "2. Step two costs $5.25.",
+  "list with 2 items, 2.a) Sub-step a.",
+  "2.b) Sub-step b.",
+  "3. Step three.",
+  "heading level 2, A Table",
+  "Table with 3 columns: Name, Role, Score.",
+  "Row 1: Name is Ada, Role is Engineer and poet, Score is 98.",
+  "Row 2: Name is Grace, Role is Admiral, Score is blank.",
+  "graphic, A diagram of the reading pipeline",
+  "heading level 2, Outline Heading",
+  "Inside a content control.",
+  "The final paragraph mentions an endnote. footnote 2",
+  "Does it end with a question?",
+  "heading level 2, Footnotes",
+  "footnote 1 The footnote text lives here.",
+  "footnote 2 An endnote at the very end."
+]

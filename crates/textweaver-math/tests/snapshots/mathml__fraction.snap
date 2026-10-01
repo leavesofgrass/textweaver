@@ -1,5 +1,0 @@
----
-source: crates/textweaver-math/tests/mathml.rs
-expression: balanced(&xml)
----
-<math xmlns="http://www.w3.org/1998/Math/MathML" alttext="\frac{a}{b}"><semantics><mfrac><mi>a</mi><mi>b</mi></mfrac><annotation encoding="application/x-tex">\frac{a}{b}</annotation></semantics></math>

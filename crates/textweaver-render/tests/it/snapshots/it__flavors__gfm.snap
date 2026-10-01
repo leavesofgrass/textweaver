@@ -1,0 +1,58 @@
+---
+source: crates/textweaver-render/tests/it/flavors.rs
+expression: snapshot_text(&r)
+---
+<h1 id="gfm-features">GFM features</h1>
+<table><thead><tr><th style="text-align: left">Name</th><th style="text-align: right">Score</th></tr></thead><tbody>
+<tr><td style="text-align: left">Ada</td><td style="text-align: right">98</td></tr>
+<tr><td style="text-align: left">Alan</td><td style="text-align: right">91</td></tr>
+</tbody></table>
+<ul>
+<li><input disabled="" type="checkbox" checked=""/>
+Write the parser</li>
+<li><input disabled="" type="checkbox"/>
+Write the tests</li>
+</ul>
+<p>This is <del>wrong</del> right. Visit <a href="http://www.example.com">www.example.com</a> or <a href="https://example.org/docs">https://example.org/docs</a>.</p>
+<p>A footnote reference<sup class="footnote-ref"><a href="#fn-note" id="fnref-note" role="doc-noteref" aria-describedby="footnote-label">1</a></sup> and another<sup class="footnote-ref"><a href="#fn-2" id="fnref-2" role="doc-noteref" aria-describedby="footnote-label">2</a></sup>, then the first again<sup class="footnote-ref"><a href="#fn-note" id="fnref-note-2" role="doc-noteref" aria-describedby="footnote-label">1</a></sup>.</p>
+<div class="callout callout-warning" role="note">
+<p class="callout-title"><strong>Warning</strong></p>
+<p>Mind the step.</p>
+</div>
+<h2 id="fine-print">Fine print</h2>
+<p>Inline <code>code</code> and a <a href="https://example.org" title="Example">link</a>.</p>
+<section class="footnotes" role="doc-endnotes" aria-labelledby="footnote-label">
+<h2 id="footnote-label">Footnotes</h2>
+<ol>
+<li id="fn-note">
+<p>The first note. <a href="#fnref-note" class="footnote-backref" role="doc-backlink" aria-label="Back to reference 1, occurrence 1">↩</a> <a href="#fnref-note-2" class="footnote-backref" role="doc-backlink" aria-label="Back to reference 1, occurrence 2">↩</a></p>
+</li>
+<li id="fn-2">
+<p>The second note. <a href="#fnref-2" class="footnote-backref" role="doc-backlink" aria-label="Back to reference 2">↩</a></p>
+</li>
+</ol>
+</section>
+
+----- facts -----
+{
+  "has_h1": true,
+  "has_math": false,
+  "meta": {
+    "lang": "en-US",
+    "title": "GFM features"
+  },
+  "tags": [],
+  "title": "GFM features",
+  "toc": [
+    {
+      "id": "gfm-features",
+      "level": 1,
+      "text": "GFM features"
+    },
+    {
+      "id": "fine-print",
+      "level": 2,
+      "text": "Fine print"
+    }
+  ]
+}

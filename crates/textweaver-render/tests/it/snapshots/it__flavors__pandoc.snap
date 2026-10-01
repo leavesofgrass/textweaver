@@ -1,0 +1,46 @@
+---
+source: crates/textweaver-render/tests/it/flavors.rs
+expression: snapshot_text(&r)
+---
+<h1 id="intro" class="lead">Introduction</h1>
+<dl>
+<dt>Apple</dt>
+<dd>A red or green fruit.</dd>
+<dt>Orange</dt>
+<dd>A citrus fruit.</dd>
+</dl>
+<div id="careful" class="warning">
+<p>This is a fenced div with <strong>Markdown</strong> inside.</p>
+<div class="note">
+<p>And a nested one.</p>
+</div>
+</div>
+<p>Here is a <span class="smallcaps">small caps</span> span and a citation <span class="citation" data-cites="doe99 roe04">(see doe99, p. 33; roe04)</span>.
+As <span class="citation" data-cites="smith2020">smith2020</span> argues, water is H<sub>2</sub>O and 2<sup>10</sup> is 1024.</p>
+<h1 id="introduction">Introduction</h1>
+<p>A second heading with the same text gets its own id.</p>
+
+----- facts -----
+{
+  "has_h1": true,
+  "has_math": false,
+  "meta": {
+    "author": "Jo Writer",
+    "date": "2026",
+    "title": "Pandoc features"
+  },
+  "tags": [],
+  "title": "Pandoc features",
+  "toc": [
+    {
+      "id": "intro",
+      "level": 1,
+      "text": "Introduction"
+    },
+    {
+      "id": "introduction",
+      "level": 1,
+      "text": "Introduction"
+    }
+  ]
+}

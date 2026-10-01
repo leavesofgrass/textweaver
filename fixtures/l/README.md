@@ -8,5 +8,5 @@
   license (CC BY-SA 4.0), <https://spec.commonmark.org/0.31.2/>.
 - `flavors/`: small Markdown documents exercising each flavor (GFM,
   Obsidian, Pandoc) and math; their rendered HTML is snapshot-tested in
-  `crates/textweaver-render/tests/flavors.rs`.
+  `crates/textweaver-render/tests/it/flavors.rs`.
 - `vault/`: a tiny Obsidian vault for embed resolution tests.

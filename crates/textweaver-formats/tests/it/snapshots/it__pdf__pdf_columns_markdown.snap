@@ -1,0 +1,23 @@
+---
+source: crates/textweaver-formats/tests/it/pdf.rs
+expression: to_markdown(&doc)
+---
+# Two Column Layout
+
+## Left Column
+
+The left column begins the article. Reading aloud helps students who find print hard to follow. A reader that highlights each word as it is spoken keeps the eyes and ears together, and a reader that remembers where the student stopped makes long assignments manageable.
+
+It ends with this sentence in the left column.
+
+## Right Column
+
+The right column continues the article. The loader rebuilds structure from the page: it finds the body text size, treats larger or bolder short lines as headings, joins wrapped lines into paragraphs, and removes the hyphens that typesetting adds at line ends.
+
+It ends with this sentence in the right column.
+
+![Figure 1. A caption that runs across both columns of the page, below the first section.]()
+
+Below the band, the left column resumes. Columns are read one after another, top to bottom, so a sentence is never interrupted by the text beside it. Running hea.
+
+Below the band, the right column ends the page. This is the last sentence.

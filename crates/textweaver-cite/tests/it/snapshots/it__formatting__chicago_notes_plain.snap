@@ -1,0 +1,29 @@
+---
+source: crates/textweaver-cite/tests/it/formatting.rs
+expression: "render(\"chicago-notes\", OutputFormat :: Plain)"
+---
+style: Chicago Manual of Style 18th edition (notes and bibliography)
+citations:
+  [@kucsko2013] => G. Kucsko et al., “Nanometre-Scale Thermometry in a Living Cell,” Nature 500, no. 7460 (2013): 54–58, https://doi.org/10.1038/nature12373.
+  [@dahl1988, p. 12] => Roald Dahl, Fantastic Mr. Fox (Puffin, 1988), 12.
+  [see @smyth2007, pp. 5-6; also @vangogh2020] => see Barry Smyth, “Adventures in Personalized Information Access,” in User Modeling 2007, ed. Cristina Conati and Kathleen McCoy, Lecture Notes in Computer Science (Springer, 2007), 5–6, https://doi.org/10.1007/978-3-540-74958-5_4; also Vincent van Gogh and The Accessible Reading Group, “Screen Readers and the Reading of Mathematics,” in Proceedings of the Conference on Accessible Reading (Accessible Press, 2020).
+  @muller2019 [chap. 3] => Jörg Müller, “Hörbücher und Sprachsynthese” (PhD thesis, Universität Wien, 2019), chap. 3.
+  [@who2021; -@access2024] => World Health Organization, World Report on Vision & Print Disability, WHO/2021.1 (World Health Organization, 2021), https://example.org/who_report?id=1&lang=en; Jane Doe, “Designing for Keyboard and Screen Reader Users,” Accessibility Notes, January 15, 2024, https://example.org/notes/keyboard.
+  [@nobody2000] => missing reference nobody2000.
+missing: nobody2000
+bibliography of cited works:
+  [dahl1988] Dahl, Roald. Fantastic Mr. Fox. Puffin, 1988.
+  [access2024] Doe, Jane. “Designing for Keyboard and Screen Reader Users.” Accessibility Notes, January 15, 2024. https://example.org/notes/keyboard.
+  [vangogh2020] Gogh, Vincent van, and The Accessible Reading Group. “Screen Readers and the Reading of Mathematics.” In Proceedings of the Conference on Accessible Reading. Accessible Press, 2020.
+  [kucsko2013] Kucsko, G., P. C. Maurer, and N. Y. Yao. “Nanometre-Scale Thermometry in a Living Cell.” Nature 500, no. 7460 (2013): 54–58. https://doi.org/10.1038/nature12373.
+  [muller2019] Müller, Jörg. “Hörbücher und Sprachsynthese.” PhD thesis, Universität Wien, 2019.
+  [smyth2007] Smyth, Barry. “Adventures in Personalized Information Access.” In User Modeling 2007, edited by Cristina Conati and Kathleen McCoy. Lecture Notes in Computer Science. Springer, 2007. https://doi.org/10.1007/978-3-540-74958-5_4.
+  [who2021] World Health Organization. World Report on Vision & Print Disability. WHO/2021.1. World Health Organization, 2021. https://example.org/who_report?id=1&lang=en.
+whole library:
+  [dahl1988] Dahl, Roald. Fantastic Mr. Fox. Puffin, 1988.
+  [access2024] Doe, Jane. “Designing for Keyboard and Screen Reader Users.” Accessibility Notes, January 15, 2024. https://example.org/notes/keyboard.
+  [vangogh2020] Gogh, Vincent van, and The Accessible Reading Group. “Screen Readers and the Reading of Mathematics.” In Proceedings of the Conference on Accessible Reading. Accessible Press, 2020.
+  [kucsko2013] Kucsko, G., P. C. Maurer, and N. Y. Yao. “Nanometre-Scale Thermometry in a Living Cell.” Nature 500, no. 7460 (2013): 54–58. https://doi.org/10.1038/nature12373.
+  [muller2019] Müller, Jörg. “Hörbücher und Sprachsynthese.” PhD thesis, Universität Wien, 2019.
+  [smyth2007] Smyth, Barry. “Adventures in Personalized Information Access.” In User Modeling 2007, edited by Cristina Conati and Kathleen McCoy. Lecture Notes in Computer Science. Springer, 2007. https://doi.org/10.1007/978-3-540-74958-5_4.
+  [who2021] World Health Organization. World Report on Vision & Print Disability. WHO/2021.1. World Health Organization, 2021. https://example.org/who_report?id=1&lang=en.

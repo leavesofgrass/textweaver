@@ -24,10 +24,13 @@ path = "junit.xml"
 
 # The engine-host suites start real child processes and time their
 # replies; more than two at once on a busy runner is what makes them
-# flaky. They run two at a time, beside the other tests.
+# flaky. They run two at a time, beside the other tests. The fake-host
+# suites are the `fake_host` modules of each crate's one test program,
+# `it` (the DECtalk, ECI, and SAPI crates); the engine host's own
+# `host_process` is a program of its own (harness = false).
 [test-groups]
 engine-hosts = { max-threads = 2 }
 
 [[profile.default.overrides]]
-filter = 'binary(fake_host) | binary(host_process)'
+filter = '(binary(it) & test(/^fake_host::/)) | binary(host_process)'
 test-group = 'engine-hosts'

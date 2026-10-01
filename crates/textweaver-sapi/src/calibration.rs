@@ -5,8 +5,8 @@
 //! on 2026-09-25 by synthesizing the same 63-word passage (several
 //! sentences, read as a document would be) at every rate and dividing its
 //! word count by the audio's duration from the first word to the end
-//! (`TEXTWEAVER_SAPI=1 cargo test -p textweaver-sapi --test real_voices
-//! calibrate -- --ignored --nocapture` prints them again).
+//! (`TEXTWEAVER_SAPI=1 cargo test -p textweaver-sapi --test it --
+//! real_voices::calibrate --ignored --nocapture` prints them again).
 //!
 //! | rate | -10 | -5 | 0 | +5 | +10 |
 //! |---|---|---|---|---|---|

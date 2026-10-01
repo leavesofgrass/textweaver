@@ -1,6 +1,6 @@
 # Fixtures for braille (BRF) formatting
 
-Used by `crates/textweaver-writers/tests/brf_formats.rs`, which writes each
+Used by `crates/textweaver-writers/tests/it/brf_formats.rs`, which writes each
 Markdown file as BRF and compares it with the reviewed snapshot beside it.
 Set `TW_BLESS=1` to write the snapshots again, then read the difference
 before committing.

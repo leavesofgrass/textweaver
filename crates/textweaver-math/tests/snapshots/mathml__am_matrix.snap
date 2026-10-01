@@ -1,5 +1,0 @@
----
-source: crates/textweaver-math/tests/mathml.rs
-expression: balanced(&xml)
----
-<math xmlns="http://www.w3.org/1998/Math/MathML" alttext="[[a,b],[c,d]]"><semantics><mrow><mo fence="true" form="prefix">[</mo><mtable><mtr><mtd><mi>a</mi></mtd><mtd><mi>b</mi></mtd></mtr><mtr><mtd><mi>c</mi></mtd><mtd><mi>d</mi></mtd></mtr></mtable><mo fence="true" form="postfix">]</mo></mrow><annotation encoding="text/x-asciimath">[[a,b],[c,d]]</annotation></semantics></math>

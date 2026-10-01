@@ -5,7 +5,7 @@
   course, instructor, date), a paper title as its only level 1 heading,
   sections at levels 2 and 3, a table, a numbered list, a footnote
   referenced twice, a second footnote, and a References section. Used by
-  `crates/textweaver-writers/tests/templates.rs` and, in every template,
+  `crates/textweaver-writers/tests/it/templates.rs` and, in every template,
   by the second-tool workflow (epubcheck and veraPDF).
 
 All names in it are placeholders.

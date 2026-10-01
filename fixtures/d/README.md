@@ -15,6 +15,6 @@
   with `TEXTWEAVER_HOME` pointed at a scratch folder so no settings are
   read or written.
 - `reading.txt`: plain prose for the scripted TUI test
-  (`crates/textweaver-tui/tests/scripted.rs`). Plain words and sentences
+  (`crates/textweaver-tui/tests/it/scripted.rs`). Plain words and sentences
   ending in ". " so every word and sentence segmentation agrees on its
   boundaries; one paragraph is longer than 80 columns so the viewport wraps.
