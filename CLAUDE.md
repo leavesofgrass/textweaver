@@ -45,7 +45,7 @@ On Saturday, September 26, 2026 an agent ran a delete, without thinking and with
    - Use `-LiteralPath` in PowerShell, and `MSYS_NO_PATHCONV=1` for Docker in Git Bash. Guard against empty variables, with `set -u` and `${VAR:?}`.
    - The guard asks the owner before any move, copy or write that contains escapes or hidden characters, and refuses such deletes.
 
-**Plain names only (the owner, Wednesday, September 30, 2026).** Never create a file or folder whose name contains control, private-use or other invisible characters; the reserved characters `: * ? " < > | \`; leading or trailing spaces; or trailing dots. Hidden characters in names are what led to the bad escape on September 26. Use letters, digits, `-`, `_` and `.`, and sanitize names that come from outside (document titles, URLs, archive members) before writing. If a tool or test would create an odd name, fix that instead.
+**Plain names only (the owner, Wednesday, September 30, 2026).** Never create a file or folder whose name contains control, private-use or other invisible characters; the reserved characters `: * ? " < > | \`; shell-special characters, above all `$` and the backtick, which Bash expands (also `! & ; # ~ ' ( ) [ ] { }` and spaces); leading or trailing spaces; or trailing dots. Hidden characters in names are what led to the bad escape on September 26. Use letters, digits, `-`, `_` and `.`, and sanitize names that come from outside (document titles, URLs, archive members) before writing. If a tool or test would create an odd name, fix that instead.
 
 **The guard.** A hook in `.claude/hooks/guard.sh` enforces this:
 
