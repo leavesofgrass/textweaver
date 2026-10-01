@@ -15,6 +15,7 @@ use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use crate::clock::Clock;
 use crate::process::{HostMsg, HostProcess};
 use crate::protocol::Message;
 
@@ -45,6 +46,10 @@ pub struct Started<R> {
 
 /// Where a start stands.
 #[derive(Debug)]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "returned once per poll and taken apart at once; boxing would only add an allocation"
+)]
 pub enum Start<R> {
     /// Still starting.
     Pending,
@@ -63,6 +68,8 @@ pub struct HostStart<R> {
     spawn: Spawner<R>,
     current: Option<(PathBuf, HostProcess<R>)>,
     timeout: Duration,
+    /// The clock the deadline is on (also given to each host started).
+    clock: Clock,
     deadline: Instant,
     early: Vec<R>,
     errors: Vec<String>,
@@ -82,12 +89,26 @@ impl<R: Message + Send + 'static> HostStart<R> {
     /// waiting). Each may take `timeout` to report `Ready`, restarted by
     /// every [`Class::Progress`] reply.
     pub fn begin(candidates: Vec<PathBuf>, timeout: Duration, spawn: Spawner<R>) -> Self {
+        Self::begin_with_clock(candidates, timeout, spawn, Clock::system())
+    }
+
+    /// [`begin`](Self::begin) with the deadline on `clock`, which each
+    /// host started also gets for its stall timer
+    /// ([`HostProcess::set_clock`]). With a [`Clock::manual`] one, a test
+    /// moves the deadline past by hand and [`poll`](Self::poll) sees it.
+    pub fn begin_with_clock(
+        candidates: Vec<PathBuf>,
+        timeout: Duration,
+        spawn: Spawner<R>,
+        clock: Clock,
+    ) -> Self {
         let mut s = HostStart {
             candidates: candidates.into(),
             spawn,
             current: None,
             timeout,
-            deadline: Instant::now() + timeout,
+            deadline: clock.now() + timeout,
+            clock,
             early: Vec::new(),
             errors: Vec::new(),
         };
@@ -99,9 +120,10 @@ impl<R: Message + Send + 'static> HostStart<R> {
     fn next_candidate(&mut self) -> bool {
         while let Some(path) = self.candidates.pop_front() {
             match (self.spawn)(&path) {
-                Ok(p) => {
+                Ok(mut p) => {
+                    p.set_clock(self.clock.clone());
                     self.current = Some((path, p));
-                    self.deadline = Instant::now() + self.timeout;
+                    self.deadline = self.clock.now() + self.timeout;
                     self.early.clear();
                     return true;
                 }
@@ -149,7 +171,7 @@ impl<R: Message + Send + 'static> HostStart<R> {
                 }
                 Class::Progress => {
                     self.early.push(r);
-                    self.deadline = Instant::now() + self.timeout;
+                    self.deadline = self.clock.now() + self.timeout;
                     None
                 }
                 Class::Fail(why) => {
@@ -178,7 +200,7 @@ impl<R: Message + Send + 'static> HostStart<R> {
                     }
                 }
                 None => {
-                    if Instant::now() >= self.deadline {
+                    if self.clock.now() >= self.deadline {
                         self.fail_current("the host did not start in time".into());
                         continue;
                     }
@@ -189,13 +211,15 @@ impl<R: Message + Send + 'static> HostStart<R> {
     }
 
     /// Waits until the host has started or every candidate has failed.
+    /// The wait is real time: as long as the clock's time left before the
+    /// deadline.
     pub fn wait(&mut self, mut classify: impl FnMut(&R) -> Class) -> Start<R> {
         loop {
-            let deadline = self.deadline;
+            let left = self.deadline.saturating_duration_since(self.clock.now());
             let Some((_, p)) = self.current.as_mut() else {
                 return self.outcome();
             };
-            match p.recv_until(deadline) {
+            match p.recv_timeout(left) {
                 Some(msg) => {
                     if let Some(done) = self.handle(msg, &mut classify) {
                         return done;

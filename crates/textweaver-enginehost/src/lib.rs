@@ -22,7 +22,9 @@
 //!   rodio with the `playback` feature, or a silent timed output);
 //! - [`wav`]: WAV writing;
 //! - [`serve`]: the host side's request reader with its stop epoch, and a
-//!   shared frame writer.
+//!   shared frame writer;
+//! - [`Clock`] ([`clock`]): the clock the start deadline, the stall
+//!   timeout and the reopen backoff read, which tests move by hand.
 //!
 //! The engine crates (`textweaver-eci`, `textweaver-sapi`) define their own
 //! request and reply types on top of [`protocol`], their host binaries on
@@ -30,6 +32,7 @@
 //! [`Playback`].
 
 pub mod audio;
+pub mod clock;
 mod orphan;
 pub mod playback;
 pub mod process;
@@ -39,6 +42,7 @@ pub mod start;
 pub mod wav;
 
 pub use audio::{AudioOutput, Feed, Player};
+pub use clock::Clock;
 pub use playback::{Captured, Playback, word_timings};
 pub use process::{Ended, HostMsg, HostProcess};
 pub use protocol::{EndStatus, Message, PROTOCOL_VERSION, ProtocolError};
