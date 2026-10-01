@@ -223,3 +223,47 @@ fn capitals_fixture_matches_its_snapshot() {
     assert!(text.contains(",,,KEEP OUT OF THE LAB,' AFTER"), "{text}");
     assert!(text.contains(",,NEW ,,YORK1"), "{text}");
 }
+
+/// Passages that go on over paragraphs and list items (The Rules of
+/// Unified English Braille, 2013, 8.5.5 and 9.9.1; numbered the same in
+/// the third edition, 2024): the passage indicator at the start of each
+/// element and one terminator, at the end of the last. Each heading is
+/// capitalized by itself (8.5.6), and a quotation stands apart.
+#[test]
+fn passages_fixture_matches_its_snapshot() {
+    let (text, report) = brf(&load("passages.md"), BrailleTableFormat::Linear);
+    assert!(report.warnings.is_empty(), "{report:?}");
+    snapshot("passages.brf", &text);
+    let lines = page_one(&text);
+    // Three paragraphs in capitals: each opened, one terminator.
+    assert!(
+        lines.contains(&"  ,,,STAY WITH YOUR GROUP AT ALL TIMES4"),
+        "{lines:#?}"
+    );
+    assert!(
+        lines.contains(&"  ,,,DO NOT FEED THE ANIMALS4"),
+        "{lines:#?}"
+    );
+    assert!(lines.contains(&"  ,,,WASH YOUR HANDS6,'"), "{lines:#?}");
+    assert_eq!(text.matches(",,,").count(), 3, "{text}");
+    let text = joined(&text);
+    // The heading in capitals is two words: word indicators, no passage.
+    assert!(text.contains(",,SAFETY ,,RULES"), "{text}");
+    // Two paragraphs in italics: opened in each, terminated once.
+    assert!(text.contains(".7,EVERY PARAGRAPH"), "{text}");
+    assert!(text.contains("GOES ON4 .7,THIS IS"), "{text}");
+    assert!(text.contains("IN ITALICS4.' _4"), "{text}");
+    // Each bold list item is its own passage: the bullet between them is
+    // not bold, so the typeform changes there.
+    assert!(
+        text.contains("_4 ^7,BRING WATER AND A HAT^' _4 ^7,WEAR"),
+        "{text}"
+    );
+    // The quotation and the paragraph after it are passages of their own.
+    assert!(
+        text.contains(".7,A QUOTATION IN ITALICS STANDS APART4.'"),
+        "{text}"
+    );
+    assert!(text.contains(".7,A PARAGRAPH AFTER"), "{text}");
+    assert!(text.contains("OF ITS OWN4.'"), "{text}");
+}

@@ -28,6 +28,12 @@
 //! - bold, italic and underlined print with the UEB typeform indicators
 //!   ([`ueb`]); a heading wholly in one typeform leaves it out, since its
 //!   placement already shows it (UEB Rules 9.1, the "CHAPTER 6" example);
+//!   in grade 2 too, placed natively around liblouis's contractions;
+//! - a capitals or typeform passage that goes on over paragraphs or list
+//!   items in a row is opened again at the start of each and terminated
+//!   once, at its end (UEB Rules 8.5.5 and 9.9.1); each heading is
+//!   capitalized by itself (8.5.6), and a quotation, table, or heading
+//!   ends the series;
 //! - code lines as they are, runovers in cell 3; block quotes two cells in;
 //! - a section break starts a new braille page; a print page break writes
 //!   the print page change indicator (a line of dots 3-6 ending in the page
@@ -49,7 +55,7 @@ use textweaver_text::Document;
 
 use crate::math::{BRAILLE_BREAK, BRAILLE_MATH, BRAILLE_NBSP};
 use crate::model::{self, Block, Inline, List, Style, Table};
-use crate::ueb::{self, BLANK_ENTRY, Typeform};
+use crate::ueb::{self, BLANK_ENTRY, Join, Segment, Typeform};
 use crate::{
     BrailleGrade, BrailleOptions, BrailleTableFormat, Format, WriteError, WriteOptions,
     WriteReport, Writer,
@@ -84,11 +90,12 @@ impl Writer for BrfWriter {
         let mut flat = Flat {
             tables: options.braille.table_format,
             listed_noted: false,
+            flow: false,
             out: &mut items,
             report: &mut report,
         };
         flat.blocks(&blocks, 0);
-        let texts: Vec<&str> = items.iter().filter_map(Item::text).collect();
+        let texts: Vec<(&str, Join)> = items.iter().filter_map(Item::text).collect();
         let translated = translate_with_math(&texts, &math, &options.braille, &mut report)?;
         let brf = layout(&items, translated, &options.braille);
         out.write_all(brf.as_bytes())?;
@@ -113,6 +120,10 @@ enum Item {
         /// transcriber's note indicators).
         before: &'static str,
         after: &'static str,
+        /// How the text goes on from the text before it: the lines of a
+        /// paragraph, and paragraphs and list items in a row, carry
+        /// capitals and typeform passages over (UEB Rules 8.5.5, 9.9.1).
+        join: Join,
     },
     /// A blank line.
     Blank,
@@ -126,10 +137,14 @@ enum Item {
 }
 
 impl Item {
-    fn text(&self) -> Option<&str> {
+    /// The print to translate, and how it joins the text before it.
+    /// Each heading is capitalized by itself (UEB Rules 8.5.6); a print
+    /// page number does not divide the passage around it.
+    fn text(&self) -> Option<(&str, Join)> {
         match self {
-            Item::Heading { text, .. } | Item::Text { text, .. } => Some(text),
-            Item::PrintPage(Some(label)) => Some(label),
+            Item::Heading { text, .. } => Some((text, Join::Fresh)),
+            Item::Text { text, join, .. } => Some((text, *join)),
+            Item::PrintPage(Some(label)) => Some((label, Join::Alone)),
             _ => None,
         }
     }
@@ -199,6 +214,7 @@ fn text_item(text: String, first: usize, runover: usize) -> Item {
         blank_before: false,
         before: "",
         after: "",
+        join: Join::Fresh,
     }
 }
 
@@ -220,6 +236,7 @@ fn note_items(lines: Vec<(String, usize, usize)>) -> Vec<Item> {
             blank_before: false,
             before: if k == 0 { NOTE_OPEN } else { "" },
             after: if k + 1 == n { NOTE_CLOSE } else { "" },
+            join: Join::Fresh,
         })
         .collect()
 }
@@ -229,13 +246,36 @@ struct Flat<'a> {
     tables: BrailleTableFormat,
     /// The listed format's transcriber's note is written.
     listed_noted: bool,
+    /// The last item pushed is a paragraph's or a list item's text, so the
+    /// next one goes on from it as the next text element.
+    flow: bool,
     out: &'a mut Vec<Item>,
     report: &'a mut WriteReport,
 }
 
 impl Flat<'_> {
+    /// Pushes an item that is not running text: it ends a series of
+    /// paragraphs and list items. A print page change does not.
     fn push(&mut self, item: Item) {
+        if !matches!(item, Item::PrintPage(_)) {
+            self.flow = false;
+        }
         self.out.push(item);
+    }
+
+    /// Pushes a paragraph's or list item's line: the first line goes on
+    /// from running text right before it as the next element, and each
+    /// later line of the same element as its next line.
+    fn push_flow(&mut self, mut item: Item, first_line: bool) {
+        if let Item::Text { join, .. } = &mut item {
+            *join = match (first_line, self.flow) {
+                (false, _) => Join::Line,
+                (true, true) => Join::Element,
+                (true, false) => Join::Fresh,
+            };
+        }
+        self.out.push(item);
+        self.flow = true;
     }
 
     fn blocks(&mut self, blocks: &[Block], indent: usize) {
@@ -249,7 +289,7 @@ impl Flat<'_> {
                     // Lines after a line break start in the runover cell.
                     for (n, line) in text_of(content).split('\n').enumerate() {
                         let first = if n == 0 { indent + 2 } else { indent };
-                        self.push(text_item(line.to_owned(), first, indent));
+                        self.push_flow(text_item(line.to_owned(), first, indent), n == 0);
                     }
                 }
                 Block::List(list) => self.list(list, indent),
@@ -271,11 +311,16 @@ impl Flat<'_> {
                     }
                 }
                 Block::Quote(inner) => {
+                    // A quotation is displayed apart: its passages neither
+                    // go on from the text before it nor into the text
+                    // after it.
+                    self.flow = false;
                     let start = self.out.len();
                     self.blocks(inner, indent + 2);
                     if let Some(Item::Text { blank_before, .. }) = self.out.get_mut(start) {
                         *blank_before = true;
                     }
+                    self.flow = false;
                 }
                 Block::Figure(img) => {
                     if !img.alt.is_empty() {
@@ -327,7 +372,7 @@ impl Flat<'_> {
             } else {
                 format!("{marker} {first_text}")
             };
-            self.push(text_item(text, indent, indent + 2));
+            self.push_flow(text_item(text, indent, indent + 2), true);
             self.blocks(rest, indent + 2);
         }
     }
@@ -480,9 +525,12 @@ fn entry(row: &[String], j: usize) -> String {
 
 /// Translates every text around its formulas' placeholders, then splices
 /// in each formula's braille. Texts without formulas are translated whole,
-/// as before.
+/// as before, each joined to the text before it as its [`Join`] says. The
+/// prose around a formula is translated in pieces, each alone, and the
+/// text after a formula's text starts afresh: no passage runs through
+/// math.
 fn translate_with_math(
-    texts: &[&str],
+    texts: &[(&str, Join)],
     math: &crate::math::MathBraille,
     options: &BrailleOptions,
     report: &mut WriteReport,
@@ -491,7 +539,7 @@ fn translate_with_math(
     // Each text as pieces; `None` for a whole text translated as it is.
     let plans: Vec<Option<Vec<Piece<'_>>>> = texts
         .iter()
-        .map(|t| {
+        .map(|(t, _)| {
             let pieces = split_placeholders(t);
             pieces
                 .iter()
@@ -499,14 +547,27 @@ fn translate_with_math(
                 .then_some(pieces)
         })
         .collect();
-    let mut prose: Vec<&str> = Vec::with_capacity(texts.len());
-    for (t, plan) in texts.iter().zip(&plans) {
+    let mut prose: Vec<(&str, Join)> = Vec::with_capacity(texts.len());
+    let mut after_math = false;
+    for (&(t, join), plan) in texts.iter().zip(&plans) {
         match plan {
-            None => prose.push(t),
-            Some(pieces) => prose.extend(pieces.iter().filter_map(|p| match p {
-                Piece::Text(s) if !s.trim().is_empty() => Some(s.trim()),
-                _ => None,
-            })),
+            None => {
+                let join = match join {
+                    Join::Line | Join::Element if after_math => Join::Fresh,
+                    other => other,
+                };
+                if join != Join::Alone {
+                    after_math = false;
+                }
+                prose.push((t, join));
+            }
+            Some(pieces) => {
+                after_math = true;
+                prose.extend(pieces.iter().filter_map(|p| match p {
+                    Piece::Text(s) if !s.trim().is_empty() => Some((s.trim(), Join::Alone)),
+                    _ => None,
+                }));
+            }
         }
     }
     let mut done = translate_all(&prose, options, report)?.into_iter();
@@ -545,12 +606,13 @@ fn push_space(s: &mut String, ws: &str) {
 
 /// Translates every text, natively or through liblouis.
 fn translate_all(
-    texts: &[&str],
+    texts: &[(&str, Join)],
     options: &BrailleOptions,
     report: &mut WriteReport,
 ) -> Result<Vec<String>, WriteError> {
     if options.grade == BrailleGrade::Two {
-        match louis_with_blanks(texts, &options.table) {
+        let contract = |pieces: &[&str]| louis::translate(pieces, &options.table);
+        match louis_with_typeforms(texts, &contract) {
             Ok(v) => return Ok(v),
             Err(why) => report.warn(format!(
                 "Contracted braille is not available ({why}), so the file is in uncontracted braille."
@@ -558,10 +620,9 @@ fn translate_all(
         }
     }
     let mut unsupported: Vec<char> = Vec::new();
-    let v = texts
-        .iter()
-        .map(|t| {
-            let tr = ueb::translate(t);
+    let v = ueb::translate_series(texts)
+        .into_iter()
+        .map(|tr| {
             for c in tr.unsupported {
                 if !unsupported.contains(&c) {
                     unsupported.push(c);
@@ -585,27 +646,48 @@ fn translate_all(
     Ok(v)
 }
 
-/// Grade 2 through liblouis. `lou_translate` knows neither the typeform
-/// marks nor the blank entry, so the marks are left out (no typeform
-/// indicators in grade 2 yet) and each blank entry's guide dots are put
-/// back between the translated pieces around it.
-fn louis_with_blanks(texts: &[&str], table: &str) -> Result<Vec<String>, String> {
-    let mut pieces: Vec<String> = Vec::new();
-    let mut counts = Vec::with_capacity(texts.len());
-    for t in texts {
-        let parts: Vec<String> = t.split(BLANK_ENTRY).map(ueb::strip_marks).collect();
-        counts.push(parts.len());
-        pieces.extend(parts);
-    }
-    let refs: Vec<&str> = pieces.iter().map(String::as_str).collect();
-    let mut done = louis::translate(&refs, table)?.into_iter();
-    Ok(counts
-        .into_iter()
-        .map(|n| {
-            (0..n)
-                .map(|_| done.next().unwrap_or_default())
-                .collect::<Vec<_>>()
-                .join("\"\"\"")
+/// A translator of plain print into contracted braille ASCII, one result
+/// per text, in order: liblouis, or a stand-in in tests.
+type Contract<'a> = dyn Fn(&[&str]) -> Result<Vec<String>, String> + 'a;
+
+/// Grade 2 through liblouis, with the UEB typeform indicators.
+/// `lou_translate` takes no typeforms and knows neither the typeform marks
+/// nor the blank entry, so [`ueb::typeform_segments`] places the
+/// indicators by the same rules as grade 1 (The Rules of Unified English
+/// Braille, 2013, 9.2 to 9.9, a passage going on over paragraphs
+/// included), liblouis contracts each stretch of print between them by
+/// itself, and the indicators and each blank entry's guide dots are put
+/// back between the contracted pieces. Capitals stay liblouis's own.
+fn louis_with_typeforms(
+    texts: &[(&str, Join)],
+    contract: &Contract<'_>,
+) -> Result<Vec<String>, String> {
+    let segments = ueb::typeform_segments(texts);
+    let prints: Vec<&str> = segments
+        .iter()
+        .flatten()
+        .filter_map(|piece| match piece {
+            Segment::Print(p) if !p.trim().is_empty() => Some(p.trim()),
+            _ => None,
+        })
+        .collect();
+    let mut done = contract(&prints)?.into_iter();
+    Ok(segments
+        .iter()
+        .map(|pieces| {
+            let mut s = String::new();
+            for piece in pieces {
+                match piece {
+                    Segment::Braille(cells) => s.push_str(cells),
+                    Segment::Print(p) if p.trim().is_empty() => push_space(&mut s, p),
+                    Segment::Print(p) => {
+                        push_space(&mut s, &p[..p.len() - p.trim_start().len()]);
+                        s.push_str(done.next().unwrap_or_default().trim());
+                        push_space(&mut s, &p[p.trim_end().len()..]);
+                    }
+                }
+            }
+            s
         })
         .collect())
 }
@@ -1177,6 +1259,58 @@ mod tests {
         assert_eq!(lines, ["IF X _<", "    Y\"<\">2", "    Z", "_>"]);
     }
 
+    /// Grade 2's typeform indicators around a stand-in for liblouis that
+    /// shows which print it was given: each stretch between indicators is
+    /// contracted by itself, the indicators and guide dots go between them,
+    /// and a passage over two paragraphs is opened in each and terminated
+    /// once (UEB Rules 9.4 and 9.9.1).
+    #[test]
+    fn grade_two_puts_typeform_indicators_around_contracted_print() {
+        let bold = Typeform::Bold;
+        let italic = Typeform::Italic;
+        let first = format!(
+            "Click the {}Up One Level{} button.",
+            bold.open(),
+            bold.close()
+        );
+        let second = format!("{}One two{}", italic.open(), italic.close());
+        let third = format!("{}three.{} Four", italic.open(), italic.close());
+        let blank = format!("a {BLANK_ENTRY} b");
+        let texts = [
+            (first.as_str(), Join::Fresh),
+            (second.as_str(), Join::Fresh),
+            (third.as_str(), Join::Element),
+            (blank.as_str(), Join::Fresh),
+        ];
+        let given = std::cell::RefCell::new(Vec::new());
+        let stand_in = |pieces: &[&str]| -> Result<Vec<String>, String> {
+            given
+                .borrow_mut()
+                .extend(pieces.iter().map(|p| p.to_string()));
+            Ok(pieces
+                .iter()
+                .map(|p| format!("<{}>", p.to_uppercase()))
+                .collect())
+        };
+        let out = louis_with_typeforms(&texts, &stand_in).unwrap();
+        assert_eq!(
+            out,
+            [
+                "<CLICK THE> ^7<UP ONE LEVEL>^' <BUTTON.>",
+                ".7<ONE TWO>",
+                ".7<THREE.>.' <FOUR>",
+                "<A> \"\"\" <B>",
+            ]
+        );
+        // No mark reaches liblouis.
+        for piece in given.borrow().iter() {
+            assert_eq!(&ueb::strip_marks(piece), piece);
+        }
+        // A failing translator is reported, so the writer falls back.
+        let failing = |_: &[&str]| -> Result<Vec<String>, String> { Err("no".into()) };
+        assert!(louis_with_typeforms(&texts, &failing).is_err());
+    }
+
     #[test]
     fn grade_two_without_liblouis_falls_back_with_a_warning() {
         let doc = Document::from_plain_text("the cat");
@@ -1192,6 +1326,19 @@ mod tests {
         if louis::available() {
             // "the" is one cell in grade 2.
             assert!(out.starts_with("  ! CAT"), "{out:?}");
+            assert!(report.warnings.is_empty());
+            // A bold word takes the bold word indicator (UEB Rules 9.3)
+            // before liblouis's contraction of it.
+            let doc = Document::new(
+                DocumentMeta::default(),
+                Rope::from_str("the cat"),
+                vec![
+                    Marker::new(MarkerKind::Paragraph, CharRange::new(0, 7)),
+                    Marker::new(MarkerKind::Bold, CharRange::new(4, 7)),
+                ],
+            );
+            let (out, report) = brf(&doc, &options);
+            assert!(out.starts_with("  ! ^1CAT"), "{out:?}");
             assert!(report.warnings.is_empty());
             return;
         }
