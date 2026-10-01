@@ -10,8 +10,8 @@ mod visual_layers;
 
 pub use render_root::{RenderRoot, RenderRootOptions, RenderRootSignal, WindowSizePolicy};
 pub use tracing_backend::{
-    TracingSubscriberHasBeenSetError, default_tracing_subscriber, try_init_test_tracing,
-    try_init_tracing,
+    DENSE_LOG_DIR_VAR, TracingSubscriberHasBeenSetError, default_tracing_subscriber,
+    try_init_test_tracing, try_init_tracing,
 };
 pub use visual_layers::{VisualLayer, VisualLayerKind, VisualLayerPlan};
 

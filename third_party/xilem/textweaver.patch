@@ -684,3 +684,126 @@ index 5fe87d8..0c1ca0d 100644
  
                  if let Some(layers) = global_state.attached_layers.remove(&state.id) {
                      for (_, layer_id) in layers {
+diff --git a/masonry_core/src/app/mod.rs b/masonry_core/src/app/mod.rs
+index 0bb460e..2e56399 100644
+--- a/masonry_core/src/app/mod.rs
++++ b/masonry_core/src/app/mod.rs
+@@ -10,8 +10,8 @@ mod visual_layers;
+ 
+ pub use render_root::{RenderRoot, RenderRootOptions, RenderRootSignal, WindowSizePolicy};
+ pub use tracing_backend::{
+-    TracingSubscriberHasBeenSetError, default_tracing_subscriber, try_init_test_tracing,
+-    try_init_tracing,
++    DENSE_LOG_DIR_VAR, TracingSubscriberHasBeenSetError, default_tracing_subscriber,
++    try_init_test_tracing, try_init_tracing,
+ };
+ pub use visual_layers::{VisualLayer, VisualLayerKind, VisualLayerPlan};
+ 
+diff --git a/masonry_core/src/app/tracing_backend.rs b/masonry_core/src/app/tracing_backend.rs
+index 510ef18..d9a428c 100644
+--- a/masonry_core/src/app/tracing_backend.rs
++++ b/masonry_core/src/app/tracing_backend.rs
+@@ -4,7 +4,9 @@
+ //! Configures a suitable default [`tracing`] implementation for a Masonry application.
+ //!
+ //! This uses a custom log format specialised for GUI applications,
+-//! and will write all logs to a temporary file in debug mode.
++//! and, in debug mode, will write all logs to a file in the folder named by
++//! the `MASONRY_DENSE_LOG_DIR` environment variable (a textweaver patch:
++//! with the variable unset, no file is written).
+ //! This also uses a default filter, which can be overwritten using `RUST_LOG`.
+ //! This will include all [`DEBUG`](tracing::Level::DEBUG) messages in debug mode,
+ //! and all [`INFO`](tracing::Level::INFO) level messages in release mode.
+@@ -30,6 +32,24 @@ use tracing_subscriber::filter::LevelFilter;
+ use tracing_subscriber::fmt::time::UtcTime;
+ use tracing_subscriber::prelude::*;
+ 
++/// The environment variable naming the folder for the full ("dense") log
++/// of a debug build (a textweaver patch). Unset or empty, no file is
++/// written.
++pub const DENSE_LOG_DIR_VAR: &str = "MASONRY_DENSE_LOG_DIR";
++
++#[cfg(not(target_arch = "wasm32"))]
++/// The folder [`DENSE_LOG_DIR_VAR`] names, if it is set and not empty.
++fn dense_log_dir() -> Option<std::path::PathBuf> {
++    dense_log_dir_from(std::env::var_os(DENSE_LOG_DIR_VAR))
++}
++
++#[cfg(not(target_arch = "wasm32"))]
++fn dense_log_dir_from(value: Option<std::ffi::OsString>) -> Option<std::path::PathBuf> {
++    value
++        .filter(|v| !v.is_empty())
++        .map(std::path::PathBuf::from)
++}
++
+ #[cfg(not(target_arch = "wasm32"))]
+ /// Get the tracing subscriber we wish to set-up for a non-web platform with the given `default_level`.
+ ///
+@@ -64,19 +84,40 @@ fn default_tracing_subscriber_native(
+         .with_filter(env_filter);
+ 
+     // We skip the layer which stores to a file in `--release` mode for performance.
+-    let log_file_layer = if cfg!(debug_assertions) {
+-        // TODO - Replace with a more targeted subscriber.
+-        // See https://github.com/linebender/xilem/issues/1556
+-
+-        let id = std::time::SystemTime::now()
+-            .duration_since(UNIX_EPOCH)
+-            .unwrap()
+-            .as_millis();
+-        let tmp_path = std::env::temp_dir().join(format!("masonry-{id:016}-dense.log"));
++    // textweaver patch: and in debug builds too, unless `MASONRY_DENSE_LOG_DIR`
++    // names the folder to write it in. Upstream wrote it to the system's
++    // temporary folder on every start and every test program, which filled
++    // the system drive; now it goes only where it is asked for.
++    let dense_log = if cfg!(debug_assertions) {
++        dense_log_dir().and_then(|dir| {
++            // TODO - Replace with a more targeted subscriber.
++            // See https://github.com/linebender/xilem/issues/1556
++            let id = std::time::SystemTime::now()
++                .duration_since(UNIX_EPOCH)
++                .map_or(0, |d| d.as_millis());
++            let path = dir.join(format!("masonry-{id:016}-dense.log"));
++            match File::create(&path) {
++                Ok(file) => Some((path, file)),
++                Err(e) => {
++                    #[allow(clippy::print_stderr, reason = "Tracing is not set up yet")]
++                    {
++                        eprintln!(
++                            "Cannot write the full Masonry log to {}: {e}",
++                            path.display()
++                        );
++                    }
++                    None
++                }
++            }
++        })
++    } else {
++        None
++    };
++    let log_file_layer = if let Some((tmp_path, file)) = dense_log {
+         // If modifying, also update the module level docs
+         let log_file_layer = tracing_subscriber::fmt::layer()
+             .with_timer(timer)
+-            .with_writer(File::create(&tmp_path).unwrap())
++            .with_writer(file)
+             // TODO - For some reason, `.with_ansi(false)` still leaves some italics in the output.
+             .with_ansi(false);
+         // Note that this layer does not use the provided filter, and instead logs all events.
+@@ -230,4 +271,16 @@ mod tests {
+         let second_result = try_init_test_tracing();
+         assert!(second_result.is_err());
+     }
++
++    #[cfg(not(target_arch = "wasm32"))]
++    #[test]
++    fn dense_log_only_where_asked() {
++        // textweaver patch: no folder, no file (never the temporary folder).
++        assert_eq!(dense_log_dir_from(None), None);
++        assert_eq!(dense_log_dir_from(Some("".into())), None);
++        assert_eq!(
++            dense_log_dir_from(Some("logs".into())),
++            Some(std::path::PathBuf::from("logs"))
++        );
++    }
+ }
