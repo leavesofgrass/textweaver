@@ -1,6 +1,6 @@
 # ADR-0032: Grammar, lint, highlighting, and clipboard crates
 
-- Status: accepted. Grammar is built only with the `grammar` feature, off by default; highlighting is on by default (decided Monday, September 28, 2026)
+- Status: accepted. Highlighting is on by default (decided Monday, September 28, 2026); grammar is on by default too since Wave 7 (Wednesday, September 30, 2026), and a build without the `grammar` feature leaves it out
 - Date: 2026-09-28
 
 ## Context
@@ -48,6 +48,8 @@ Both are on their own branches, `wave4/g-highlight-syntect` and `wave4/g-grammar
 
 **Status update (Monday, September 28, 2026):** `deny.toml` ignores RUSTSEC-2025-0141 with a reason. Highlighting is merged and on by default. Grammar is merged behind the `grammar` feature, off by default, because of its size and the burn framework.
 
+**Status update (Wednesday, September 30, 2026, Wave 7):** grammar is on by default in `textweaver-app`, `textweaver-tui`, `textweaver-xilem`, and `tw`, so the release packages have it. RUSTSEC-2025-0141 only marks bincode unmaintained, and the default build already accepts it for syntect. The `grammar` feature stays, so a build can leave it out (`--no-default-features` and the other features named), and `cargo xtask deps --check` now refuses a lean reader that reaches harper-core. Measured below.
+
 ## Measurements
 
 Release builds of the terminal reader (`cargo build --release -p textweaver-tui --bin textweaver`, thin LTO, Windows x64):
@@ -59,6 +61,11 @@ Release builds of the terminal reader (`cargo build --release -p textweaver-tui 
 
 Building grammar also compiles burn: a clean release build of the reader took 18 minutes with it and 10 without.
 
+Wave 7, with grammar on by default (`cargo build --release --locked -j 6 -p textweaver-cli --bin tw`, Windows x64, thin LTO, sccache off, each in a fresh target folder; other agents' builds shared the machine, so times can move by a few minutes):
+
+- `tw.exe` before (main at c1ae355): 64,349,696 bytes, 483 crates compiled, 849 seconds (14 minutes 9 seconds).
+- `tw.exe` with grammar: 75,445,248 bytes (11,095,552 more, 17 percent), 550 crates compiled (67 more), 1,269 seconds (21 minutes 9 seconds; 7 minutes, or about half, more).
+
 ## Consequences
 
 - The lean reader links none of these crates.
@@ -68,7 +75,7 @@ Building grammar also compiles burn: a clean release build of the reader took 18
 
 ## See also
 
-- [Editing](../editing.md): lint and the clipboard (grammar on its branch).
+- [Editing](../editing.md): grammar, lint, and the clipboard.
 - [Math](../math.md#see-math-as-unicode): math as Unicode.
 - [Notes](../notes.md): exporting notes as references.
 - [ADR-0018: Math](0018-math.md)

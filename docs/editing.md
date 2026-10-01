@@ -256,7 +256,7 @@ Your word list is `words.txt` in the data folder, one word per line; you can edi
 
 ## Grammar
 
-Grammar checking is off in the standard build, because it adds about 10 MB. To try it, build the reader with `cargo build --release -p textweaver-tui --features grammar`; without it, the keys below say that grammar checking isn't in this build.
+Grammar checking is built in: it is in the terminal reader, the window app, `tw`, and the release packages. A build made without it (see [Building without grammar](#building-without-grammar)) says "Grammar checking is not in this build." when you press the keys below.
 
 textweaver checks grammar offline with Harper, which knows American English. It looks for things such as "a apple", "the results was", a word typed twice, and a missing capital letter. Spelling is left to the spelling keys above, so a misspelled word is not reported twice.
 
@@ -264,6 +264,16 @@ textweaver checks grammar offline with Harper, which knows American English. It 
 - **Alt+J** on a grammar problem lists its fixes, then "Leave it as it is". In edit mode, **Enter** on a fix makes the change; that is one undo step.
 
 In edit mode on a Markdown file, textweaver checks the Markdown you write and leaves out code, math, and link addresses. While reading, it checks the document's text. These keys work in both.
+
+### Building without grammar
+
+Grammar checking makes each program about 11 MB larger and a clean build about 7 minutes longer, because Harper brings its dictionary, its rules, and a part-of-speech tagger. To build without it, turn off the default features and name the ones you want, for example:
+
+```bash
+cargo build --release -p textweaver-tui --no-default-features --features publish,lint,clipboard,highlight,dictation
+```
+
+`--no-default-features` alone builds the lean reader, which also leaves out export, preview, and citations ([Building](dev/building.md)).
 
 ## Markdown lint
 

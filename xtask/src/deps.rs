@@ -23,7 +23,10 @@
 //!   a lean reader stays small and starts fast (docs/roadmap.md, "Binary
 //!   size"). In-reader export, preview, and citations are the `publish`
 //!   feature (on by default and in releases); what the reader reaches only
-//!   through a feature is reported, not refused. `tw` has them all.
+//!   through a feature is reported, not refused. `tw` has them all. Nor
+//!   does the lean reader reach grammar checking (harper-core, and the
+//!   burn framework under it): that is the app's `grammar` feature, on by
+//!   default since Wave 7.
 //!
 //! Dev-dependencies are ignored except for core, since tests do not change
 //! what a crate links. Optional dependencies count only when a feature
@@ -129,6 +132,11 @@ const READER_FORBIDDEN_EXTERNAL: [&str; 7] = [
     "ammonia",
     "ureq",
 ];
+
+/// Outside crates of grammar checking (about 11 MB with the burn framework
+/// under harper-core), which the lean reader never reaches: the app's
+/// `grammar` feature, on by default, brings them.
+const READER_GRAMMAR_EXTERNAL: [&str; 1] = ["harper-core"];
 
 /// Workspace crates store may use. No exceptions: the reading-aid
 /// settings types are store's own since Wave 3 (Agent W3c), and
@@ -424,6 +432,19 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
                 ));
             }
         }
+        for bad in READER_GRAMMAR_EXTERNAL {
+            if let Some(path) = lean.external.get(bad) {
+                errors.push(format!(
+                    "{READER} reaches {bad} without its default features ({}); grammar checking belongs behind the app's `grammar` feature",
+                    path.join(" -> ")
+                ));
+            } else if let Some(path) = full.external.get(bad) {
+                notes.push(format!(
+                    "{READER} reaches {bad} through the `grammar` feature ({})",
+                    path.join(" -> ")
+                ));
+            }
+        }
     }
 
     if let Some(store) = graph.get(STORE) {
@@ -592,6 +613,50 @@ mod tests {
         g.insert("textweaver-render".into(), krate(&[CORE], &[]));
         let (errors, _) = violations(&g);
         assert_eq!(errors.len(), 1, "{errors:#?}");
+    }
+
+    /// `reader_graph` with the app's `grammar` feature (harper-core) on by
+    /// default, and the reader passing it through, as in the workspace.
+    fn grammar_graph(reader_asks_default: bool) -> Graph {
+        let mut g = reader_graph(reader_asks_default);
+        let app = g.get_mut("textweaver-app").unwrap();
+        app.deps.push(Dep {
+            optional: true,
+            ..dep("harper-core", false)
+        });
+        app.features
+            .insert("grammar".into(), vec!["dep:harper-core".into()]);
+        app.features
+            .insert("default".into(), vec!["publish".into(), "grammar".into()]);
+        let reader = g.get_mut(READER).unwrap();
+        reader
+            .features
+            .insert("grammar".into(), vec!["textweaver-app/grammar".into()]);
+        reader
+            .features
+            .insert("default".into(), vec!["publish".into(), "grammar".into()]);
+        g
+    }
+
+    #[test]
+    fn grammar_by_default_is_reported_and_refused_in_the_lean_reader() {
+        let (errors, notes) = violations(&grammar_graph(false));
+        assert!(errors.is_empty(), "{errors:#?}");
+        assert!(
+            notes.iter().any(|n| n.contains(
+                "textweaver-tui reaches harper-core through the `grammar` feature (textweaver-tui -> textweaver-app -> harper-core)"
+            )),
+            "{notes:#?}"
+        );
+        // A reader that takes the app's defaults cannot leave grammar out.
+        let (errors, _) = violations(&grammar_graph(true));
+        assert!(
+            errors
+                .iter()
+                .any(|e| e
+                    .contains("textweaver-tui reaches harper-core without its default features")),
+            "{errors:#?}"
+        );
     }
 
     #[test]
