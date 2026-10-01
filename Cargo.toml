@@ -266,7 +266,7 @@ espeak-ng = { version = "0.2", default-features = false, features = ["bundled-da
 # Microphone dictation: voice activity detection (model built in) and
 # resampling to Whisper's 16 kHz.
 earshot = "1.2"
-rubato = "5.0"
+rubato = { version = "5.0", default-features = false }
 # Download checks: SHA-256 for Hugging Face LFS files, the git blob SHA-1
 # for the small files kept in git.
 sha2 = "0.10"

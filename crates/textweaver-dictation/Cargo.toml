@@ -49,7 +49,7 @@ rten-tensor = { workspace = true, optional = true }
 rten-generate = { workspace = true, optional = true }
 rten-text = { workspace = true, optional = true }
 rustfft = { workspace = true, optional = true }
-rubato = { workspace = true, optional = true }
+rubato = { workspace = true, optional = true, features = ["fft_resampler"] }
 earshot = { workspace = true, optional = true }
 rodio = { workspace = true, optional = true, features = ["recording"] }
 
