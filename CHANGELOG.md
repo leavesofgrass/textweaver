@@ -19,6 +19,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Statistics from every computer.** The statistics list and `tw stats` add every computer's reading of a document together, and show each computer's share on request (`tw stats --by-computer`).
 - **The old progress file is still read.** With sync on, places go to the sync folder, and a library folder's `.textweaver/progress.json` (from an older textweaver, or converted from Star) is only read, so its places are still honored.
 
+### Sync, made sturdier
+
+- **Profiles keep their voice on each computer.** A profile syncs its portable settings only; the voice, the speech engine, and the access mode it was saved with stay on the computer that saved them, and an arriving profile keeps this computer's own.
+- **One document, one id.** When two computers opened the same book before they ever synced, the next time it opens the two ids are joined into one, with both computers' notes, highlights, bookmarks, and places.
+- **Safe across a crash.** Changes taken in from another computer and not yet saved here are kept on this computer, so a crash or power cut in between never lets this computer's older version win.
+
 ### For contributors
 
 - **`cargo xtask regen` rebuilds every generated file** in one command: the third-party notices, the settings reference, the keyboard reference, the `docs/site` data, and the crate counts in the docs. `cargo xtask regen --check` changes nothing and reports each on one line, such as "keyboard: FAIL, out of date; run cargo xtask regen". `dev-check` runs it, so the settings reference, the docs indexes, and the notices are now checked locally as in CI.
