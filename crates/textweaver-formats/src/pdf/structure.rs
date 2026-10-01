@@ -704,8 +704,12 @@ fn glue_hyphen(prev: &mut Unit, next: &mut Unit) {
     }
 }
 
-/// Words that start a caption, and whether it describes a picture.
+/// Words that start a caption, in lowercase, and whether it describes a
+/// picture: English, Spanish, French, German, Portuguese, and Arabic, the
+/// six languages of textweaver's own messages. Arabic captions often start
+/// with the article ("الشكل"), so both forms are listed.
 const CAPTION_WORDS: &[(&str, bool)] = &[
+    // English.
     ("figure", true),
     ("fig.", true),
     ("illustration", true),
@@ -717,7 +721,76 @@ const CAPTION_WORDS: &[(&str, bool)] = &[
     ("photo", true),
     ("table", false),
     ("tab.", false),
+    // Spanish ("fig." is above).
+    ("figura", true),
+    ("ilustración", true),
+    ("imagen", true),
+    ("gráfico", true),
+    ("gráfica", true),
+    ("diagrama", true),
+    ("mapa", true),
+    ("foto", true),
+    ("lámina", true),
+    ("tabla", false),
+    ("cuadro", false),
+    // French ("figure", "fig.", "illustration" and "photo" are above).
+    ("graphique", true),
+    ("diagramme", true),
+    ("carte", true),
+    ("planche", true),
+    ("image", true),
+    ("tableau", false),
+    // German.
+    ("abbildung", true),
+    ("abb.", true),
+    ("bild", true),
+    ("grafik", true),
+    ("diagramm", true),
+    ("karte", true),
+    ("tafel", true),
+    ("tabelle", false),
+    // Portuguese ("figura", "gráfico", "diagrama", "mapa" and "foto"
+    // are above, with Spanish).
+    ("ilustração", true),
+    ("imagem", true),
+    ("prancha", true),
+    ("tabela", false),
+    ("quadro", false),
+    // Arabic: figure, drawing, picture, chart, map; table.
+    ("شكل", true),
+    ("الشكل", true),
+    ("رسم", true),
+    ("الرسم", true),
+    ("صورة", true),
+    ("الصورة", true),
+    ("مخطط", true),
+    ("المخطط", true),
+    ("خريطة", true),
+    ("الخريطة", true),
+    ("جدول", false),
+    ("الجدول", false),
 ];
+
+/// Whether `word` starts as a caption word or a title does: with a capital
+/// letter, or a letter of a script without case (Arabic).
+fn starts_as_title(word: &str) -> bool {
+    word.chars()
+        .next()
+        .is_some_and(|c| c.is_uppercase() || (c.is_alphabetic() && !c.is_lowercase()))
+}
+
+/// `s` with Arabic-Indic and Eastern Arabic-Indic digits as ASCII digits,
+/// so "الشكل ٣" is numbered as "Figure 3" is.
+fn ascii_digits(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            '\u{0660}'..='\u{0669}' => char::from(b'0' + (c as u32 - 0x0660) as u8),
+            '\u{06F0}'..='\u{06F9}' => char::from(b'0' + (c as u32 - 0x06F0) as u8),
+            '\u{066B}' => '.',
+            _ => c,
+        })
+        .collect()
+}
 
 /// A caption's number: `3`, `2.1`, `A.4`, `3-2`, `4b`, `IV`, `S1`.
 fn caption_number(s: &str) -> bool {
@@ -743,20 +816,33 @@ fn caption_number(s: &str) -> bool {
 pub(super) fn caption_kind(text: &str, lines: usize) -> Option<bool> {
     let mut words = text.split_whitespace();
     let first = words.next()?;
+    let lower = first.to_lowercase();
     let figure = CAPTION_WORDS
         .iter()
-        .find(|(w, _)| first.eq_ignore_ascii_case(w))
+        .find(|(w, _)| lower == *w)
         .map(|&(_, f)| f)?;
-    // The word must be written as a word starts: "Figure" or "FIGURE".
-    if !first.starts_with(|c: char| c.is_uppercase()) {
+    // The word must be written as a word starts: "Figure" or "FIGURE"
+    // (Arabic has no capitals).
+    if !starts_as_title(first) {
         return None;
     }
-    let number = words.next()?;
-    let bare = number.trim_end_matches(['.', ':', '\u{2014}', '\u{2013}', '|', ',']);
+    let number = ascii_digits(words.next()?);
+    // A number in parentheses, "(3)", as Arabic captions often write it,
+    // sets the number apart as punctuation after it does.
+    let number = match number.strip_prefix('(').and_then(|n| n.split_once(')')) {
+        Some((n, "")) => return caption_number(n).then_some(figure),
+        Some((n, rest)) => format!("{n}{rest}"),
+        None => number,
+    };
+    // The Arabic comma, colon-like marks, and the full stop end a number
+    // as the Latin ones do.
+    let bare = number.trim_end_matches([
+        '.', ':', '\u{2014}', '\u{2013}', '|', ',', '\u{060C}', '\u{06D4}',
+    ]);
     if !caption_number(bare) {
         return None;
     }
-    let punctuated = bare.len() < number.len() && !number.ends_with(',');
+    let punctuated = bare.len() < number.len() && !number.ends_with([',', '\u{060C}']);
     let next = words.next();
     if punctuated {
         return Some(figure);
@@ -764,7 +850,10 @@ pub(super) fn caption_kind(text: &str, lines: usize) -> Option<bool> {
     match next {
         None => Some(figure),
         Some("-" | "\u{2013}" | "\u{2014}" | "|" | ":") => Some(figure),
-        Some(w) if w.starts_with(|c: char| c.is_uppercase()) && lines <= 4 => Some(figure),
+        // A capitalized title. A script without capitals (Arabic) cannot
+        // tell a title from a sentence ("Figure 3 shows..."), so there
+        // the number must be set apart by punctuation.
+        Some(w) if w.starts_with(char::is_uppercase) && lines <= 4 => Some(figure),
         _ => None,
     }
 }
@@ -1032,6 +1121,42 @@ mod tests {
         assert_eq!(caption_kind("Tables 2: a list", 1), None);
         assert_eq!(caption_kind("Figure it out.", 1), None);
         assert_eq!(caption_kind("Figure", 1), None);
+    }
+
+    /// Caption words in the six languages of textweaver's messages.
+    #[test]
+    fn captions_are_found_in_six_languages() {
+        // Spanish.
+        assert_eq!(caption_kind("Figura 3. El ciclo del agua", 1), Some(true));
+        assert_eq!(caption_kind("Tabla 2: Resultados por año", 1), Some(false));
+        assert_eq!(caption_kind("Cuadro 1 Datos de 2020", 1), Some(false));
+        assert_eq!(caption_kind("ILUSTRACIÓN 4: Mapa", 1), Some(true));
+        assert_eq!(caption_kind("Figura 3 muestra el ciclo.", 1), None);
+        // French.
+        assert_eq!(caption_kind("Tableau 2 \u{2013} Résultats", 1), Some(false));
+        assert_eq!(caption_kind("Graphique 5. Ventes", 1), Some(true));
+        assert_eq!(caption_kind("Tableau 2 présente les résultats.", 1), None);
+        // German.
+        assert_eq!(
+            caption_kind("Abbildung 3: Der Wasserkreislauf", 1),
+            Some(true)
+        );
+        assert_eq!(caption_kind("Abb. 4 Karte des Tals", 1), Some(true));
+        assert_eq!(caption_kind("Tabelle 2: Ergebnisse", 1), Some(false));
+        assert_eq!(caption_kind("Tabelle 2 zeigt die Ergebnisse.", 1), None);
+        // Portuguese.
+        assert_eq!(caption_kind("Tabela 1 - Dados", 1), Some(false));
+        assert_eq!(caption_kind("Ilustração 2: O ciclo", 1), Some(true));
+        assert_eq!(caption_kind("Quadro 3. Resumo", 1), Some(false));
+        // Arabic: with or without the article, Arabic-Indic or ASCII
+        // digits, a number in parentheses.
+        assert_eq!(caption_kind("الشكل ٣: دورة الماء", 1), Some(true));
+        assert_eq!(caption_kind("شكل 2. خريطة", 1), Some(true));
+        assert_eq!(caption_kind("جدول (1) النتائج", 1), Some(false));
+        assert_eq!(caption_kind("الجدول ٢", 1), Some(false));
+        // Without capitals, a word after the number may begin a sentence
+        // ("Figure 3 shows the cycle"), so it is not a caption.
+        assert_eq!(caption_kind("الشكل ٣ يوضح الدورة", 1), None);
     }
 
     #[test]
