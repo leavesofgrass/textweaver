@@ -4,7 +4,7 @@ How to set up a machine to build textweaver: Rust, Python, and what each system 
 
 ## Everyone
 
-1. Install Rust with [rustup](https://rustup.rs). You do not need to pick a version: `rust-toolchain.toml` pins Rust 1.96, and rustup installs it the first time you build. The minimum supported version is 1.94 (`rust-version` in `Cargo.toml`); the GUI needs 1.96.
+1. Install Rust with [rustup](https://rustup.rs). You do not need to pick a version: `rust-toolchain.toml` pins Rust 1.96, and rustup installs it the first time you build. The minimum supported version is 1.95 (`rust-version` in `Cargo.toml`, which grammar checking needs); the GUI needs 1.96.
 2. Install Python 3. The link checker and the site data generator need it; they use only the standard library. On Windows, install it from python.org with the `py` launcher, and run the tools with `py -3`, for example `py -3 tools/check_links.py`: `python` there may be the Microsoft Store stub, which opens the Store instead of running Python.
 3. Get the code:
 
@@ -34,7 +34,7 @@ To build without cmake, turn off the `opus` feature. Opus export then goes throu
 cargo build -p textweaver-cli --no-default-features
 ```
 
-For the GUI, list its other default features: `cargo build -p textweaver-xilem --no-default-features --features screenshot,renderer-vello,publish,lint,dictation,audio-export`. A build of the whole workspace, such as `cargo build --workspace`, always includes Opus, because `tw` turns it on.
+For the terminal reader and the GUI, list their other default features: `cargo build -p textweaver-tui --no-default-features --features publish,lint,grammar,clipboard,highlight,dictation,audio-export` and `cargo build -p textweaver-xilem --no-default-features --features screenshot,renderer-vello,publish,lint,grammar,dictation,audio-export`. A build of the whole workspace, such as `cargo build --workspace`, always includes Opus, because `tw` turns it on.
 
 ## Your first contribution
 
@@ -106,15 +106,15 @@ docker compose build dev
 
 The GUI is `textweaver-xilem`, all Rust ([ADR-0027](../adr/0027-xilem-gui.md)); it needs no C or C++ toolkit. The wxDragon spike that came before it ([ADR-0014](../adr/0014-gui-toolkit.md)) has been removed.
 
-A lean reader, without in-reader export, preview, and citations (the `publish` feature, on by default), builds with:
+A lean reader, without in-reader export, preview, and citations (the `publish` feature, on by default), grammar checking, and Export audio, builds with:
 
 ```bash
 cargo build -p textweaver-tui --no-default-features
 ```
 
-`cargo xtask deps --check` makes sure that build links none of the conversion and citation stack, and not grammar checking (harper-core).
+`cargo xtask deps --check` makes sure that build links none of the conversion and citation stack, not grammar checking (harper-core), and not audio export (`textweaver-export`, with LAME and libopus, which need a C compiler and cmake).
 
-Grammar checking (the `grammar` feature) is on by default since Wave 7, in the reader, the window app, `tw`, and the packages. It costs about 11 MB and, on a clean build, 67 more crates (harper-core and the burn framework under it). To leave only grammar out, turn off the default features and name the others: `--no-default-features --features publish,lint,clipboard,highlight,dictation` for the reader. [ADR-0032](../adr/0032-grammar-lint-highlighting-clipboard.md) has the measurements.
+Grammar checking (the `grammar` feature) is on by default since Wave 7, in the reader, the window app, `tw`, and the packages. It costs about 11 MB and, on a clean build, 67 more crates (harper-core and the burn framework under it). To leave only grammar out, turn off the default features and name the others: `--no-default-features --features publish,lint,clipboard,highlight,dictation,audio-export,opus` for the reader. [ADR-0032](../adr/0032-grammar-lint-highlighting-clipboard.md) has the measurements.
 
 ## Scripts
 

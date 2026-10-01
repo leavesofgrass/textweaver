@@ -26,7 +26,11 @@
 //!   through a feature is reported, not refused. `tw` has them all. Nor
 //!   does the lean reader reach grammar checking (harper-core, and the
 //!   burn framework under it): that is the app's `grammar` feature, on by
-//!   default since Wave 7.
+//!   default since Wave 7. Nor does it reach audio export
+//!   (`textweaver-export`, and LAME and libopus under it, which need a C
+//!   compiler and cmake): that is the app's `audio-export` and `opus`
+//!   features, on by default in the reader since Wave 7 (W7f), as in the
+//!   GUI and `tw`.
 //!
 //! Dev-dependencies are ignored except for core, since tests do not change
 //! what a crate links. Optional dependencies count only when a feature
@@ -137,6 +141,15 @@ const READER_FORBIDDEN_EXTERNAL: [&str; 7] = [
 /// under harper-core), which the lean reader never reaches: the app's
 /// `grammar` feature, on by default, brings them.
 const READER_GRAMMAR_EXTERNAL: [&str; 1] = ["harper-core"];
+
+/// The workspace crate of audio export, which the lean reader never
+/// reaches: the app's `audio-export` feature, on by default, brings it.
+const READER_AUDIO_EXPORT: &str = "textweaver-export";
+
+/// Outside crates of audio export built from C sources (LAME for MP3,
+/// libopus for Opus, which needs cmake), which the lean reader never
+/// reaches: the app's `audio-export` and `opus` features bring them.
+const READER_AUDIO_EXPORT_EXTERNAL: [&str; 2] = ["mp3lame-encoder", "opusic-c"];
 
 /// Workspace crates store may use. No exceptions: the reading-aid
 /// settings types are store's own since Wave 3 (Agent W3c), and
@@ -445,6 +458,25 @@ fn violations(graph: &Graph) -> (Vec<String>, Vec<String>) {
                 ));
             }
         }
+        let audio_internal = [READER_AUDIO_EXPORT]
+            .into_iter()
+            .map(|bad| (bad, lean.internal.get(bad), full.internal.get(bad)));
+        let audio_external = READER_AUDIO_EXPORT_EXTERNAL
+            .into_iter()
+            .map(|bad| (bad, lean.external.get(bad), full.external.get(bad)));
+        for (bad, in_lean, in_full) in audio_internal.chain(audio_external) {
+            if let Some(path) = in_lean {
+                errors.push(format!(
+                    "{READER} reaches {bad} without its default features ({}); audio export belongs behind the app's `audio-export` feature",
+                    path.join(" -> ")
+                ));
+            } else if let Some(path) = in_full {
+                notes.push(format!(
+                    "{READER} reaches {bad} through the `audio-export` feature ({})",
+                    path.join(" -> ")
+                ));
+            }
+        }
     }
 
     if let Some(store) = graph.get(STORE) {
@@ -657,6 +689,80 @@ mod tests {
                     .contains("textweaver-tui reaches harper-core without its default features")),
             "{errors:#?}"
         );
+    }
+
+    /// `reader_graph` with the app's `audio-export` and `opus` features
+    /// (textweaver-export, and libopus under it) on by default, and the
+    /// reader passing them through, as in the workspace since W7f.
+    fn audio_graph(reader_asks_default: bool) -> Graph {
+        let mut g = reader_graph(reader_asks_default);
+        let mut export = krate(&[CORE], &[]);
+        export.deps.push(Dep {
+            optional: true,
+            ..dep("opusic-c", false)
+        });
+        export
+            .features
+            .insert("opus".into(), vec!["dep:opusic-c".into()]);
+        g.insert(READER_AUDIO_EXPORT.into(), export);
+        let app = g.get_mut("textweaver-app").unwrap();
+        app.deps.push(Dep {
+            optional: true,
+            default_features: false,
+            ..dep(READER_AUDIO_EXPORT, true)
+        });
+        app.features.insert(
+            "audio-export".into(),
+            vec![format!("dep:{READER_AUDIO_EXPORT}")],
+        );
+        app.features.insert(
+            "opus".into(),
+            vec!["audio-export".into(), format!("{READER_AUDIO_EXPORT}/opus")],
+        );
+        app.features.insert(
+            "default".into(),
+            vec!["publish".into(), "audio-export".into(), "opus".into()],
+        );
+        let reader = g.get_mut(READER).unwrap();
+        reader.features.insert(
+            "audio-export".into(),
+            vec!["textweaver-app/audio-export".into()],
+        );
+        reader
+            .features
+            .insert("opus".into(), vec!["textweaver-app/opus".into()]);
+        reader.features.insert(
+            "default".into(),
+            vec!["publish".into(), "audio-export".into(), "opus".into()],
+        );
+        g
+    }
+
+    #[test]
+    fn audio_export_by_default_is_reported_and_refused_in_the_lean_reader() {
+        let (errors, notes) = violations(&audio_graph(false));
+        assert!(errors.is_empty(), "{errors:#?}");
+        assert!(
+            notes.iter().any(|n| n.contains(
+                "textweaver-tui reaches textweaver-export through the `audio-export` feature (textweaver-tui -> textweaver-app -> textweaver-export)"
+            )),
+            "{notes:#?}"
+        );
+        assert!(
+            notes.iter().any(|n| n
+                .contains("textweaver-tui reaches opusic-c through the `audio-export` feature")),
+            "{notes:#?}"
+        );
+        // A reader that takes the app's defaults cannot leave it out.
+        let (errors, _) = violations(&audio_graph(true));
+        for bad in ["textweaver-export", "opusic-c"] {
+            assert!(
+                errors.iter().any(|e| e.contains(&format!(
+                    "textweaver-tui reaches {bad} without its default features"
+                ))),
+                "{errors:#?}"
+            );
+        }
     }
 
     #[test]

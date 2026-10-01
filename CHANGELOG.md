@@ -36,6 +36,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **On the command line:** `tw sync setup`, `tw sync status`, and `tw sync now`, each with `--json`.
 - **The older setting moves on its own.** `[reading] sync_conflict_policy` is now `[sync] position_policy`; `highest_progress` becomes `furthest` and `manual` becomes `ask`.
 - **The old progress file is still read.** With sync on, places go to the sync folder, and a library folder's `.textweaver/progress.json` (from an older textweaver, or converted from Star) is only read, so its places are still honored.
+- **Values from a newer textweaver pass through exactly.** A number in a sync file that this version does not know about, however large, is written back as it was read; a very large one could change in its last digit.
+- **An older group file reads as this format,** as a document's record does, so merging it never changes the format number it is written with.
 - New messages for sync, in all six languages; the translations need a native speaker's review.
 
 ### State files
@@ -75,6 +77,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 ### Audio export
 
 - **Opus files.** Export audio, in the File menu, and `tw export-audio --out book.opus` write Ogg Opus files with no ffmpeg: the smallest of the formats, about 14 MB an hour, at 32 kilobits per second in one channel. The reader offers Opus after MP3: "Opus: the smallest, made for speech", and the Export audio command's description names it. The title, author, and chapters go in as Vorbis comments, the same as FLAC. textweaver encodes them with libopus, the reference encoder, built in; its BSD license is in the notices.
+- **Export audio in the terminal reader.** The terminal reader's File menu and command palette now have Export audio, with Opus, as the GUI and `tw` do; before, its default build left the command out. Only a lean build of the reader (`--no-default-features`) goes without it.
 
 ### Braille files
 
@@ -99,12 +102,14 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ### For contributors
 
-- **Building from source needs cmake** for the Opus encoder (libopus, built from bundled source). Build `textweaver-cli` or `textweaver-xilem` without the `opus` feature to do without it; Opus then goes through ffmpeg. The development container installs it. See `docs/dev/building.md`.
+- **Building from source needs cmake** for the Opus encoder (libopus, built from bundled source). Build `textweaver-tui`, `textweaver-cli`, or `textweaver-xilem` without the `opus` feature to do without it; Opus then goes through ffmpeg. The development container installs it. See `docs/dev/building.md`.
 - **One integration-test program per crate.** Every crate's integration tests are modules of `tests/it/main.rs`; a new test is a module there, never a new file in `tests/`. Run one with `cargo test -p CRATE --test it -- MODULE::`. Programs with `harness = false` stay their own. See `docs/dev/testing.md`, "Where tests go".
 - **`cargo xtask regen` rebuilds every generated file** in one command: the third-party notices, the settings reference, the keyboard reference, the `docs/site` data, and the crate counts in the docs. `cargo xtask regen --check` changes nothing and reports each on one line, such as "keyboard: FAIL, out of date; run cargo xtask regen". `dev-check` runs it, so the settings reference, the docs indexes, and the notices are now checked locally as in CI.
 - **Timing tests move the clock themselves.** The engine host's start deadline, stall timer, and sound-output reopen wait read a `Clock` that tests set by hand, and the flaky wall-clock checks (the slow-disk opening test, DECtalk's slow start) now check the order of events. The engine host's own test program and the Apple voice tests answer `--list` as cargo-nextest expects.
 - **A new crate, `textweaver-sync`,** on core and store only: the hybrid logical clock, the merge types, the record and group files, and document identity. `cargo xtask deps --check` keeps it there, and refuses a lean reader that reaches grammar checking (harper-core).
 - `cargo xtask bench --only sync-id` times document identity on a 100 MB file.
+- **The minimum Rust version is 1.95,** up from 1.94: grammar checking's harper-core 2.11.0, now built in by default, does not build with 1.94. The pinned toolchain stays 1.96.
+- `cargo xtask deps --check` also holds the lean reader to no audio export (`textweaver-export`, LAME, and libopus). The nightly's two sync fuzz crashes are regression tests and fuzz seeds (`fixtures/w7f`).
 - Rubato is built without its FFT resampler by default, so the lean reader does not compile realfft; dictation asks for it.
 
 ## [0.1.0-alpha.6] - 2026-09-30

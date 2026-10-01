@@ -6,7 +6,7 @@ This guide is written to be read with a screen reader. Each task section starts 
 
 ## Export audio from the reader
 
-In the reader, open the File menu (F10 in the terminal) and choose Export audio, or find "Export audio" in the command palette. A document must be open.
+In the reader, open the File menu (F10 in the terminal) and choose Export audio, or find "Export audio" in the command palette. A document must be open. Export audio is in the terminal reader, the GUI, and `tw` in every release; only a lean build of the reader, made with `--no-default-features`, leaves it out ([Building](dev/building.md)).
 
 1. **The format.** You hear, for example, "Export essay as audio: choose a format, 4 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then WAV. M4B is listed only when ffmpeg is installed; when it is not, you hear "M4B needs ffmpeg, which was not found." Press Enter on a format.
 2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
