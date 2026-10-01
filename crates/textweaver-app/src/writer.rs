@@ -132,6 +132,14 @@ pub(crate) enum Job {
     /// A disk that takes this long (tests of waiting).
     #[cfg(test)]
     Stall(Duration),
+    /// A disk that stalls until the test sends on (or drops) `release`,
+    /// or a minute passes; `done` is set when the stall ends, so a test
+    /// can tell whether anything waited for it without measuring time.
+    #[cfg(test)]
+    Hold {
+        release: Receiver<()>,
+        done: Arc<std::sync::atomic::AtomicBool>,
+    },
 }
 
 /// Why a save did not write.
@@ -550,6 +558,12 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
         #[cfg(test)]
         Job::Stall(d) => {
             std::thread::sleep(d);
+            None
+        }
+        #[cfg(test)]
+        Job::Hold { release, done } => {
+            let _ = release.recv_timeout(Duration::from_secs(60));
+            done.store(true, Ordering::Release);
             None
         }
     };

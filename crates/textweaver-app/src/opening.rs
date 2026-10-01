@@ -398,8 +398,14 @@ mod tests {
     /// W6f, from the performance lessons): with the disk stalled, a
     /// document opened again finds its position from the queued save, at
     /// once. Run with `--nocapture` for the numbers.
+    ///
+    /// The disk stays stalled until the test lets it go, so the check is
+    /// the order of events, not a time: the open finished while the stall
+    /// still held. (Before, it asserted the open took under 1.2 s, which
+    /// failed on a loaded Windows runner on Wednesday, September 30, 2026.)
     #[test]
     fn opening_does_not_wait_for_a_slow_disk() {
+        use std::sync::atomic::{AtomicBool, Ordering};
         use textweaver_core::CharPos;
         use textweaver_store::{DocKey, Paths};
 
@@ -418,9 +424,14 @@ mod tests {
         let key = DocKey("big".into());
         app.open_document(big, key.clone(), "Big".into());
         app.set_cursor(CharPos(12_345));
-        // The disk stalls; leaving the document queues its position.
-        app.writer
-            .send(crate::writer::Job::Stall(Duration::from_millis(1_500)));
+        // The disk stalls until released; leaving the document queues its
+        // position behind the stall.
+        let (release, held) = channel::<()>();
+        let stall_over = Arc::new(AtomicBool::new(false));
+        app.writer.send(crate::writer::Job::Hold {
+            release: held,
+            done: Arc::clone(&stall_over),
+        });
         app.open_document(
             textweaver_text::Document::from_plain_text("Other."),
             DocKey("other".into()),
@@ -429,19 +440,25 @@ mod tests {
         let t = Instant::now();
         app.open_document(doc(), key, "Big".into());
         let open_ms = t.elapsed().as_secs_f64() * 1000.0;
-        let t = Instant::now();
-        let waited = app.writer.flush(Duration::from_secs(2));
-        let old_wait_ms = t.elapsed().as_secs_f64() * 1000.0;
-        println!(
-            "text stamp on {} MB: {stamp_ms:.1} ms; open with the disk stalled: \
-             {open_ms:.1} ms; the wait it replaced: {old_wait_ms:.1} ms",
-            text.len() / 1_000_000
+        // The open is done, and the disk is still stalled: nothing waited
+        // for the writer.
+        assert!(
+            !stall_over.load(Ordering::Acquire),
+            "the open waited for the stalled disk"
         );
-        assert!(waited);
         let at = app.session().unwrap().cursor;
         assert!(at >= CharPos(12_300) && at <= CharPos(12_345), "{at:?}");
-        // Generous: the stall alone is 1.5 s, and the stamp is part of it.
-        assert!(open_ms < 1_200.0, "{open_ms} ms");
+        let _ = release.send(());
+        let t = Instant::now();
+        // A hang check, not a speed check.
+        assert!(app.writer.flush(Duration::from_secs(60)));
+        let rest_ms = t.elapsed().as_secs_f64() * 1000.0;
+        assert!(stall_over.load(Ordering::Acquire));
+        println!(
+            "text stamp on {} MB: {stamp_ms:.1} ms; open with the disk stalled: \
+             {open_ms:.1} ms; the queued saves after the stall: {rest_ms:.1} ms",
+            text.len() / 1_000_000
+        );
     }
 
     #[test]
