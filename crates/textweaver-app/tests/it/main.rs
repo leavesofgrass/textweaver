@@ -18,6 +18,7 @@ mod browse;
 #[cfg(feature = "publish")]
 mod citations_reading;
 mod edit;
+mod fonts;
 mod keys_from_keymap;
 mod language;
 mod pseudo_locale;

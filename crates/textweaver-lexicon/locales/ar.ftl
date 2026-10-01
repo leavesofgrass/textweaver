@@ -3886,3 +3886,15 @@ setting-sync-favorite-voices = مزامنة الأصوات المفضلة
 setting-sync-favorite-voices-help = مشاركة الأصوات المفضلة؛ الصوت غير الموجود على هذا الحاسوب يُذكر أنه غير موجود على هذا الحاسوب.
 
 ## End of S5
+
+## W7l: Lexend downloaded on first choice.
+font-download-question = تنزيل الخط { $font }، { $kb } كيلوبايت، { $licence }؟ y أو n
+font-downloading = تنزيل { $font }.
+font-downloaded = تم تنزيل { $font } وهو جاهز.
+font-download-failed = تعذّر تنزيل { $font }: { $error }.
+font-download-declined = لم يُنزَّل. يُستخدم خط آخر.
+font-download-busy = ما زال { $font } قيد التنزيل.
+font-download-no-folder = لا يوجد مجلد بيانات لحفظ { $font }.
+font-download-not-in-build = تنزيل الخطوط غير متاح في هذا الإصدار.
+gui-font-to-download = { $family } (للتنزيل، { $kb } كيلوبايت)
+gui-font-downloaded = { $family } (منزّل)

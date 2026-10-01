@@ -3655,3 +3655,15 @@ setting-sync-favorite-voices = Lieblingsstimmen synchronisieren
 setting-sync-favorite-voices-help = Die Lieblingsstimmen teilen; eine, die dieser Computer nicht hat, wird als nicht auf diesem Computer aufgeführt.
 
 ## End of S5
+
+## W7l: Lexend downloaded on first choice.
+font-download-question = Schrift { $font } herunterladen, { $kb } KB, { $licence }? y oder n
+font-downloading = { $font } wird heruntergeladen.
+font-downloaded = { $font } heruntergeladen und bereit.
+font-download-failed = { $font } nicht heruntergeladen: { $error }.
+font-download-declined = Nicht geladen. Andere Schrift aktiv.
+font-download-busy = { $font } wird noch heruntergeladen.
+font-download-no-folder = Kein Datenordner für { $font }.
+font-download-not-in-build = Keine Schrift-Downloads in diesem Build.
+gui-font-to-download = { $family } (herunterladen, { $kb } KB)
+gui-font-downloaded = { $family } (heruntergeladen)

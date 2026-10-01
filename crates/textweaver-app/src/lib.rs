@@ -171,6 +171,7 @@ mod edit;
 mod export;
 mod extra;
 mod find_scan;
+mod font_download;
 mod frame_cache;
 mod frontend_list;
 mod goto;
@@ -249,6 +250,7 @@ pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_lookup};
+pub use font_download::{InstalledCheck, fonts_folder, use_downloaded_fonts};
 pub use goto::parse_go_to;
 pub use help::{
     action_help, category_title, chords_text, chords_text_in, help_entries, key_text, named_key,
@@ -290,6 +292,7 @@ pub use textweaver_engines as engines;
 pub use textweaver_engines::apple;
 pub use textweaver_engines::eci;
 pub use textweaver_engines::piper;
+pub use textweaver_fonts as fonts;
 pub use textweaver_formats as formats;
 pub use textweaver_keymap as keymap;
 pub use textweaver_lexicon as lexicon;

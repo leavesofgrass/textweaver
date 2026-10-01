@@ -3647,3 +3647,15 @@ setting-sync-favorite-voices = Synchroniser les voix favorites
 setting-sync-favorite-voices-help = Partager les voix favorites ; une voix absente de cet ordinateur est indiquée comme telle.
 
 ## End of S5
+
+## W7l: Lexend downloaded on first choice.
+font-download-question = Télécharger la police { $font }, { $kb } Ko, { $licence } ? y ou n
+font-downloading = Téléchargement de { $font }.
+font-downloaded = { $font } téléchargée et prête.
+font-download-failed = { $font } non téléchargée : { $error }.
+font-download-declined = Non téléchargée. Autre police utilisée.
+font-download-busy = { $font } est encore en téléchargement.
+font-download-no-folder = Aucun dossier de données pour { $font }.
+font-download-not-in-build = Téléchargement de polices non inclus.
+gui-font-to-download = { $family } (à télécharger, { $kb } Ko)
+gui-font-downloaded = { $family } (téléchargée)

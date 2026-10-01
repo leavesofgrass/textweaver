@@ -274,6 +274,8 @@ fn command_options(args: &Args) -> ConvertOptions {
 
 /// Runs `tw convert`.
 pub fn run(args: Args) -> anyhow::Result<()> {
+    // A Lexend the reader downloaded is found by name (`--font lexend`).
+    textweaver_app::use_downloaded_fonts(textweaver_app::store::Paths::platform().ok().as_ref());
     let converter = Converter::new(options(&args))?;
     if let Some(note) = template_note(&args) {
         eprintln!("{note}");

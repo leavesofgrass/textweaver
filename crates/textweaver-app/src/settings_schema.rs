@@ -1951,6 +1951,11 @@ impl App {
         if !setting.internal {
             self.remember_setting(path);
         }
+        if path == "reading_aids.font.family" {
+            // A reading font that is downloaded on first choice: asked after
+            // this change is said (crate::font_download).
+            self.fonts.offer_pending = true;
+        }
         if path == "interface.language" {
             // In the new language: what happened to the voice, then the
             // title line, so the change is heard to have worked.
@@ -2009,11 +2014,19 @@ impl App {
 
     /// [`Command::SetSetting`](crate::Command::SetSetting).
     pub(crate) fn set_setting_command(&mut self, path: &str, value: Value) -> Vec<Effect> {
+        let mut asked = Vec::new();
         match self.set_setting(path, value) {
-            Ok(said) => self.tell(&said),
+            Ok(said) => {
+                self.tell(&said);
+                if self.fonts.offer_pending && !self.confirmation_pending() {
+                    asked = self.offer_font_download();
+                }
+            }
             Err(why) => self.error(&why),
         }
-        self.refresh_settings_screen()
+        let mut effects = self.refresh_settings_screen();
+        effects.extend(asked);
+        effects
     }
 
     /// The Settings command: the settings screen, with the settings changed

@@ -452,6 +452,8 @@ pub struct App {
     pub(crate) frame_cache: crate::frame_cache::FrameCaches,
     /// Sync with other computers (crate::sync, ADR-0049).
     pub(crate) sync: crate::sync::SyncState,
+    /// Downloading a reading font on first choice (crate::font_download).
+    pub(crate) fonts: crate::font_download::FontDownloads,
 }
 
 impl App {
@@ -557,7 +559,12 @@ impl App {
             dialog_generation: 0,
             frame_cache: crate::frame_cache::FrameCaches::default(),
             sync: crate::sync::SyncState::default(),
+            fonts: crate::font_download::FontDownloads::default(),
         };
+        if app.paths.is_some() {
+            // The writers find a downloaded Lexend by name.
+            crate::font_download::use_downloaded_fonts(app.paths.as_ref());
+        }
         crate::browse::register(&mut app);
         app.apply_voice_settings();
         app.load_themes();
@@ -600,6 +607,7 @@ impl App {
             || self.batch_question()
             || self.audio_question()
             || self.sync.question.is_some()
+            || self.fonts.question.is_some()
     }
 
     /// Answers a pending confirmation.
@@ -634,6 +642,9 @@ impl App {
         }
         if self.sync.question.is_some() {
             return self.confirm_sync(answer);
+        }
+        if self.fonts.question.is_some() {
+            return self.confirm_font(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
@@ -1356,6 +1367,7 @@ impl App {
         effects.extend(self.batch_tick(now));
         effects.extend(self.audio_tick(now));
         effects.extend(self.sync_tick(now));
+        effects.extend(self.font_download_tick());
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));
         if rsvp_moved && effects.is_empty() {
