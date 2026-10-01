@@ -680,6 +680,7 @@ impl Tui {
             KeyCode::Home => PromptKey::Home,
             KeyCode::End => PromptKey::End,
             KeyCode::Tab => PromptKey::Tab,
+            KeyCode::BackTab => PromptKey::BackTab,
             KeyCode::Up => PromptKey::Up,
             KeyCode::Down => PromptKey::Down,
             _ => return,

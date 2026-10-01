@@ -258,6 +258,11 @@ impl App {
                 self.sidecar_reported(result);
                 vec![Effect::Redraw]
             }
+            Report::DetailsFailed(e) => {
+                let msg = self.msg_args("details-save-failed", &args!["error" => e]);
+                self.error(&msg);
+                vec![Effect::Redraw]
+            }
         }
     }
 

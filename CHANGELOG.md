@@ -25,6 +25,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - **Continue reading.** A new command, in the File menu under Library and in the command palette, lists the documents on this computer with a reading place from any computer, newest first: "Cells, 42 percent, laptop, 2 hours ago". Enter opens one. `tw library --continue` prints the same list, with `--json` too.
 - **Search by what your other computers know.** With sync on, a document's title, author, DOI, ISBN, and kind of file travel with it, so the library's filter and `tw library --search` find a document here by a DOI only another computer knew. The newest detail wins; the date it was first added keeps the earliest.
+- **Edit a document's details by hand.** Type a document's title, author, DOI, and ISBN yourself: **Edit details** in the File menu and the command palette (no key of its own) for the open document, or **F2** on a document in the library list. The form has one labeled line per field; Tab and Shift+Tab move between them and say each field's label and value, Enter saves, and Escape cancels and says so. What you type wins over the document's own details in the library, its filter, and `tw library --search`, and with sync on it reaches your other computers, newest edit winning per field. `tw library edit FILE --title ... --author ... --doi ... --isbn ...` does the same, with `--json`.
 - **Statistics from every computer.** The statistics list and `tw stats` add every computer's reading of a document together, and show each computer's share on request (`tw stats --by-computer`).
 - **The old progress file is still read.** With sync on, places go to the sync folder, and a library folder's `.textweaver/progress.json` (from an older textweaver, or converted from Star) is only read, so its places are still honored.
 
@@ -46,6 +47,14 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 ### For contributors
 
 - **Timing tests move the clock themselves.** The engine host's start deadline, stall timer, and sound-output reopen wait read a `Clock` that tests set by hand, and the flaky wall-clock checks (the slow-disk opening test, DECtalk's slow start) now check the order of events. The engine host's own test program and the Apple voice tests answer `--list` as cargo-nextest expects.
+
+### Audio export
+
+- **Opus files.** Export audio, in the File menu, and `tw export-audio --out book.opus` write Ogg Opus files with no ffmpeg: the smallest of the formats, about 14 MB an hour, at 32 kilobits per second in one channel. The title, author, and chapters go in as Vorbis comments, the same as FLAC. textweaver encodes them with libopus, the reference encoder, built in.
+
+### For contributors
+
+- **Building from source needs cmake** for the Opus encoder (libopus, built from bundled source). Build `textweaver-cli` or `textweaver-xilem` without the `opus` feature to do without it; Opus then goes through ffmpeg. See `docs/dev/building.md`.
 - **`cargo xtask regen` rebuilds every generated file** in one command: the third-party notices, the settings reference, the keyboard reference, the `docs/site` data, and the crate counts in the docs. `cargo xtask regen --check` changes nothing and reports each on one line, such as "keyboard: FAIL, out of date; run cargo xtask regen". `dev-check` runs it, so the settings reference, the docs indexes, and the notices are now checked locally as in CI.
 
 ## [0.1.0-alpha.6] - 2026-09-30

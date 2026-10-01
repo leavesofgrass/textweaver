@@ -392,6 +392,10 @@ pub struct App {
     pub(crate) restart: crate::restart::Restart,
     /// A library scan on a background thread (crate::library).
     pub(crate) library_scan: Option<crate::library::LibraryScan>,
+    /// The edit details form, while it is open (crate::details_form).
+    pub(crate) details_form: Option<crate::details_form::DetailsForm>,
+    /// The open document's details, being read for the form.
+    pub(crate) details_load: Option<crate::details_form::DetailsLoad>,
     /// The accessibility mode in effect (`[accessibility] mode`, or
     /// `--mode` for this run).
     pub(crate) access_mode: AccessMode,
@@ -530,6 +534,8 @@ impl App {
             voices_pending: false,
             restart: crate::restart::Restart::default(),
             library_scan: None,
+            details_form: None,
+            details_load: None,
             access_mode,
             pending_hybrid: None,
             screen_say_all: None,
@@ -1301,6 +1307,9 @@ impl App {
                     self.leave_prompt();
                     return self.cancel_setting_value();
                 }
+                if self.mode.is_prompt() && self.prompt_purpose == PromptPurpose::DocumentDetails {
+                    return self.cancel_details();
+                }
                 if self.mode.is_prompt() || self.list.is_some() {
                     let list = self.list.take();
                     self.leave_prompt();
@@ -1350,6 +1359,7 @@ impl App {
         effects.extend(self.spell_count_tick());
         effects.extend(self.restart_tick());
         effects.extend(self.library_tick());
+        effects.extend(self.details_tick());
         effects.extend(self.define_tick());
         effects.extend(self.voices_tick());
         effects.extend(self.dictation_tick());
@@ -1489,6 +1499,7 @@ impl App {
             | PromptPurpose::ExportProfiles => return self.answer_study(purpose, text),
             PromptPurpose::SettingValue => return self.answer_setting_value(text),
             PromptPurpose::SyncComputerName => return self.answer_sync_name(text),
+            PromptPurpose::DocumentDetails => return self.answer_details(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {
@@ -1596,6 +1607,13 @@ impl App {
 
     /// F2 on a list item: rename a bookmark or edit a note.
     fn rename_item(&mut self, n: usize) -> Vec<Effect> {
+        // In the library, F2 edits a document's details (W7m).
+        if matches!(self.list, Some(ListKind::Library(_))) {
+            let Some(ListKind::Library(list)) = self.list.take() else {
+                return vec![Effect::Redraw];
+            };
+            return self.edit_library_details(list, n);
+        }
         match self.list.clone() {
             Some(ListKind::Bookmarks) => self.rename_bookmark_prompt(n),
             Some(ListKind::Notes) => {
@@ -1842,6 +1860,7 @@ impl App {
             A::Open | A::OpenPath => return self.prompt(PromptPurpose::Open),
             A::OpenLibrary => return self.open_library(),
             A::ContinueReading => return self.open_continue_reading(),
+            A::EditDocumentDetails => return self.edit_document_details(),
             A::ExportSettings => return self.settings_file_prompt(false),
             A::ImportSettings => return self.settings_file_prompt(true),
             // View and help

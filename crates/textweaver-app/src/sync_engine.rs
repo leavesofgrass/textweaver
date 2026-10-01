@@ -519,6 +519,14 @@ pub enum SyncRequest {
     /// Merge the groups that are not about one document (settings,
     /// profiles, keys, the word list, the glossary, favorite voices).
     Groups(Box<crate::sync_groups::GroupsRequest>),
+    /// The owner edited a document's details by hand (W7m): publish the
+    /// fields changed.
+    EditDetails {
+        /// The identification job, to find the document's sync id.
+        identify: Box<Identify>,
+        /// The fields changed.
+        edits: Vec<textweaver_sync::DetailEdit>,
+    },
     /// Merge every document this computer knows, except `skip` (the open
     /// one, which the app merges itself).
     All {
@@ -707,6 +715,12 @@ impl SyncEngine {
                 {
                     log::warn!("sync: cannot remember the answer ({e})");
                 }
+                SyncResponse::Done {
+                    status: self.status.clone(),
+                }
+            }
+            SyncRequest::EditDetails { identify, edits } => {
+                self.edit_details(&identify, &edits);
                 SyncResponse::Done {
                     status: self.status.clone(),
                 }
@@ -1050,6 +1064,71 @@ impl SyncEngine {
                 .publish_identity(stamp, &resolved.fingerprint, &identify.details);
         }
         self.write(resolved.sync_id, &mut notices);
+    }
+
+    /// Publishes the owner's hand edits of a document's details (W7m): the
+    /// document's sync id is found (or made) as when it opens, and only
+    /// the fields in `edits` are stamped, after every other computer's
+    /// stamps for it, so the edit is the newest. Returns true when the
+    /// edit was written to the sync folder.
+    ///
+    /// Reads and hashes the file when it is new here, so call it off the
+    /// input thread (the reader sends [`SyncRequest::EditDetails`]).
+    pub fn edit_details(
+        &mut self,
+        identify: &Identify,
+        edits: &[textweaver_sync::DetailEdit],
+    ) -> bool {
+        let mut notices = Vec::new();
+        if !self.ready(&mut notices) {
+            return false;
+        }
+        let index = self.identity_index(&mut notices);
+        let resolved = match identify.run(None::<std::iter::Empty<&str>>, index.as_ref()) {
+            Ok(r) => r,
+            Err(e) => {
+                log::warn!("sync: cannot identify a document to edit ({e})");
+                return false;
+            }
+        };
+        let sync_id = resolved.sync_id;
+        if self.slot(sync_id).is_none() {
+            return false;
+        }
+        // Only observed, never merged here: the open document's merge
+        // weighs the app's state against this computer's view.
+        let others = self
+            .folder
+            .as_mut()
+            .map(|f| f.read_doc(sync_id).records)
+            .unwrap_or_default();
+        let Some(clock) = self.clock.as_mut() else {
+            return false;
+        };
+        for (_, r) in &others {
+            for s in r.identity.stamps() {
+                clock.observe(s);
+            }
+        }
+        let stamp = clock.tick();
+        let Some(slot) = self.docs.get_mut(&sync_id) else {
+            return false;
+        };
+        let mut changed = slot.mine.publish_edits(stamp, edits);
+        if resolved.changed {
+            slot.mine
+                .publish_identity(stamp, &resolved.fingerprint, &identify.details);
+            changed = true;
+        }
+        if !changed {
+            return false;
+        }
+        self.write(sync_id, &mut notices);
+        self.status.write_error.is_none()
+            && self
+                .folder
+                .as_ref()
+                .is_some_and(|f| f.read_only().is_none())
     }
 
     /// The slot for `sync_id`, read from this computer's own file the first

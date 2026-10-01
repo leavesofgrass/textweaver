@@ -46,6 +46,10 @@ pub enum DialogAction {
     Recall(bool),
     /// Tab in a prompt for a path: complete it (`PromptKey::Tab`).
     Complete,
+    /// Tab (`true`) or Shift+Tab in a form of fields (the edit details
+    /// form, W7m): the next or previous field (`PromptKey::Tab` and
+    /// `PromptKey::BackTab`), which the app opens as a prompt of its own.
+    Field(bool),
     /// A chord with Ctrl or Alt, or a function key, in an app list: the
     /// driver looks it up in the keymap, so the Help and Say Status keys
     /// repeat the list's introduction (`ListKey::Introduce`) and the
@@ -71,6 +75,9 @@ pub struct Modal {
     max_width: f64,
     /// Tab completes the field (a path) instead of moving the focus.
     tab_completes: bool,
+    /// Tab and Shift+Tab move between the app's form fields instead of the
+    /// dialog's controls.
+    tab_fields: bool,
     /// A question: typed characters answer it.
     answer_keys: bool,
     /// The command palette: the command key with L moves to its list of
@@ -94,6 +101,7 @@ impl Modal {
             palette,
             max_width: 600.0,
             tab_completes: false,
+            tab_fields: false,
             answer_keys: false,
             show_matches: false,
             platform: Platform::current(),
@@ -123,6 +131,13 @@ impl Modal {
     /// Tab completes the prompt's text (a path) instead of moving the focus.
     pub fn with_tab_completion(mut self, on: bool) -> Self {
         self.tab_completes = on;
+        self
+    }
+
+    /// Tab and Shift+Tab move to the app's next and previous form field
+    /// (the edit details form) instead of the dialog's next control.
+    pub fn with_tab_fields(mut self, on: bool) -> Self {
+        self.tab_fields = on;
         self
     }
 
@@ -164,6 +179,9 @@ impl Widget for Modal {
             Key::Named(NamedKey::Escape) => DialogAction::Cancel,
             Key::Named(NamedKey::ArrowUp) if !k.modifiers.shift() => DialogAction::Recall(true),
             Key::Named(NamedKey::ArrowDown) if !k.modifiers.shift() => DialogAction::Recall(false),
+            Key::Named(NamedKey::Tab) if self.tab_fields => {
+                DialogAction::Field(!k.modifiers.shift())
+            }
             Key::Named(NamedKey::Tab) if self.tab_completes && !k.modifiers.shift() => {
                 DialogAction::Complete
             }

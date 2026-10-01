@@ -126,6 +126,8 @@ When two library-folder progress files disagree as they are written (the older, 
 
 With sync on, the library's filter and `tw library --search` also know what your other computers learned about a document: its title, author, DOI, and ISBN. So a paper opened on the laptop is found on the lab computer by its DOI, even before it is opened there. The document is found here when it was opened here before, when its library folder is itself synced between the computers (its `.textweaver/library-id.json` travels with it), or when `tw library --search` has read its text. When two computers know different details, the newest wins, detail by detail; the date a document was first added keeps the earliest.
 
+Details you type yourself ([Edit a document's details](library.md#edit-a-documents-details), F2 in the library list or `tw library edit`) travel the same way, and they win over what the document states, even when another computer opens the document later and sends its own title. When you edit the same detail on two computers, the newest edit wins; clearing an edit travels too, and the document's own value shows again.
+
 ## Reading statistics from every computer
 
 With the statistics group on, the statistics list (File, Reading statistics) and `tw stats` add every computer's reading of a document together: the time read aloud and the sessions are summed, and the furthest point is the furthest any computer reached. Each computer only ever adds to its own counts, so nothing is counted twice and nothing conflicts.

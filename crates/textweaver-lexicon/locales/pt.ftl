@@ -221,6 +221,31 @@ continue-ago-days =
     }
 name-continue-reading = Continuar a ler
 action-continue-reading = Continuar a ler: os documentos deste computador com uma posição guardada, de qualquer computador, os mais recentes primeiro
+name-edit-document-details = Editar detalhes
+action-edit-document-details = Editar os detalhes do documento: título, autor, DOI e ISBN
+prompt-document-details = Detalhes do documento
+
+## Edit a document's details by hand (Wave 7, W7m).
+
+# $name is the document's title; said when the form opens.
+details-intro = Detalhes de { $name }. Tab muda de campo, Enter guarda, Escape cancela.
+details-label-title = Título
+details-label-author = Autor
+details-label-doi = DOI
+details-label-isbn = ISBN
+# A field's drawn label: its label, then $n of $total fields.
+details-prompt-label = { $label }, { $n } de { $total }
+# Said on moving to a field: its label and value (or nav-blank).
+details-field = { $label }: { $value }
+# $fields lists the fields saved, by their labels.
+details-saved = Detalhes guardados: { $fields }.
+details-unchanged = Detalhes sem alterações.
+details-cancelled = Cancelado. Detalhes sem alterações.
+# $text is what was typed in the DOI or ISBN field.
+details-not-a-doi = Não é um DOI: { $text }. Corrija-o ou apague-o.
+details-not-an-isbn = Não é um ISBN: { $text }. Corrija-o ou apague-o.
+details-no-file = Este documento não tem ficheiro, por isso não tem detalhes para editar.
+details-save-failed = Não foi possível guardar os detalhes: { $error }
 # The statistics list could not wait for the sync folder.
 stats-others-slow = Sem outros computadores: pasta lenta.
 stats-untitled = Documento sem título
@@ -1287,8 +1312,8 @@ library-scan-stopped = O exame da biblioteca parou com um erro interno.
 library-empty = A biblioteca está vazia. Adicione uma pasta com { $command }, ou abra um arquivo com { $key }.
 library-intro =
     { $n ->
-        [one] Biblioteca, { $n } documento. Digite para filtrar, Enter abre um.
-       *[other] Biblioteca, { $n } documentos. Digite para filtrar, Enter abre um.
+        [one] Biblioteca, { $n } documento. Digite para filtrar, Enter abre um, F2 edita os detalhes.
+       *[other] Biblioteca, { $n } documentos. Digite para filtrar, Enter abre um, F2 edita os detalhes.
     }
 library-title = Biblioteca
 
@@ -3389,6 +3414,7 @@ audio-no-ffmpeg =
 audio-format-flac = FLAC: sem perdas, cerca de metade do tamanho do WAV
 audio-format-wav = WAV: o maior, toca em qualquer lugar
 audio-format-mp3 = MP3: pequeno, toca em qualquer lugar
+audio-format-opus = Opus: o menor, feito para voz
 audio-format-m4b = Audiolivro M4B, pelo ffmpeg
 audio-where-title = Onde fica o áudio
 audio-where-intro = Onde o áudio deve ficar?

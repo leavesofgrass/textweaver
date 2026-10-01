@@ -92,7 +92,7 @@ Each `docs/<sync-id>.json` holds one document's content hashes, its title, every
 - **Reading statistics.** Each computer adds only to its own counters; the totals are their sum. Statistics never conflict.
 - **Settings, key overrides, glossary, pronunciations.** Newest wins, key by key.
 - **Word list and favorite voices.** Sets, with removals recorded.
-- **Library details** (title, author, DOI, ISBN, format, first added), by sync id: newest wins per field; "first added" keeps the earliest.
+- **Library details** (title, author, DOI, ISBN, format, first added), by sync id: newest wins per field; "first added" keeps the earliest. Added in Wave 7: a title, author, DOI, or ISBN the owner types by hand is a register of its own beside the document's, so it wins over the document's own whatever their stamps; between two hand edits the newest wins, and clearing one is a deletion record.
 - **Profiles.** The definitions sync, newest wins per profile; which profile is active on a computer does not.
 
 Conflicts found when merging are reported through the sync status and the announcements below, never only logged (problem 2).

@@ -502,6 +502,127 @@ pub fn find_isbn(text: &str) -> Option<String> {
     None
 }
 
+/// A document's details as the owner typed them (Wave 7, W7m): each field
+/// set here wins over what the document says about itself, in the library
+/// list, its filter, and `tw library --search`. A field not set shows the
+/// document's own value.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EditedDetails {
+    /// The title.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    /// The author or authors.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+    /// The DOI, in [`normalize_doi`]'s form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub doi: Option<String>,
+    /// The ISBN, in [`normalize_isbn`]'s form.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isbn: Option<String>,
+    /// When the owner last saved an edit (milliseconds since 1970, UTC): a
+    /// newer edit from another computer wins over this one.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub at_ms: u64,
+}
+
+fn is_zero(n: &u64) -> bool {
+    *n == 0
+}
+
+/// A detail the owner can edit by hand.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DetailField {
+    /// The title.
+    Title,
+    /// The author or authors.
+    Author,
+    /// The DOI.
+    Doi,
+    /// The ISBN.
+    Isbn,
+}
+
+impl DetailField {
+    /// Every field, in the edit form's order.
+    pub const ALL: [DetailField; 4] = [
+        DetailField::Title,
+        DetailField::Author,
+        DetailField::Doi,
+        DetailField::Isbn,
+    ];
+
+    /// The field's name, as the sync folder's details and `--json` use it.
+    pub fn name(self) -> &'static str {
+        match self {
+            DetailField::Title => "title",
+            DetailField::Author => "author",
+            DetailField::Doi => "doi",
+            DetailField::Isbn => "isbn",
+        }
+    }
+
+    /// `value` as stored: whitespace collapsed (a title or author at most
+    /// [`TITLE_MAX_CHARS`] or [`AUTHOR_MAX_CHARS`] chars), a DOI or ISBN in
+    /// its usual form. `None` for a blank value; `Err` with the value for a
+    /// DOI or ISBN that is not one.
+    pub fn clean(self, value: &str) -> Result<Option<String>, String> {
+        let collapsed = value.split_whitespace().collect::<Vec<_>>().join(" ");
+        if collapsed.is_empty() {
+            return Ok(None);
+        }
+        match self {
+            DetailField::Title => Ok(Some(collapsed.chars().take(TITLE_MAX_CHARS).collect())),
+            DetailField::Author => Ok(Some(clean_author(&collapsed))),
+            DetailField::Doi => normalize_doi(&collapsed).map(Some).ok_or(collapsed),
+            DetailField::Isbn => normalize_isbn(&collapsed).map(Some).ok_or(collapsed),
+        }
+    }
+}
+
+impl EditedDetails {
+    /// Nothing edited.
+    pub fn is_empty(&self) -> bool {
+        self.title.is_none() && self.author.is_none() && self.doi.is_none() && self.isbn.is_none()
+    }
+
+    /// A field's hand-edited value.
+    pub fn get(&self, field: DetailField) -> Option<&str> {
+        match field {
+            DetailField::Title => self.title.as_deref(),
+            DetailField::Author => self.author.as_deref(),
+            DetailField::Doi => self.doi.as_deref(),
+            DetailField::Isbn => self.isbn.as_deref(),
+        }
+    }
+
+    /// Sets a field's hand-edited value; `None` clears it.
+    pub fn set(&mut self, field: DetailField, value: Option<String>) {
+        let slot = match field {
+            DetailField::Title => &mut self.title,
+            DetailField::Author => &mut self.author,
+            DetailField::Doi => &mut self.doi,
+            DetailField::Isbn => &mut self.isbn,
+        };
+        *slot = value;
+    }
+
+    /// `meta` with the hand-edited author, DOI, and ISBN in place of the
+    /// document's own.
+    pub fn apply_to(&self, meta: &mut DocMetadata) {
+        for (mine, edited) in [
+            (&mut meta.author, &self.author),
+            (&mut meta.doi, &self.doi),
+            (&mut meta.isbn, &self.isbn),
+        ] {
+            if edited.is_some() {
+                mine.clone_from(edited);
+            }
+        }
+    }
+}
+
 /// One bookshelf entry (Star's `library[path]`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LibraryEntry {
@@ -521,9 +642,27 @@ pub struct LibraryEntry {
     /// Author, DOI, and ISBN, when known.
     #[serde(flatten)]
     pub meta: DocMetadata,
+    /// Details the owner typed (W7m), which win over the document's own.
+    #[serde(default, skip_serializing_if = "EditedDetails::is_empty")]
+    pub edited: EditedDetails,
     /// Unknown fields, preserved.
     #[serde(flatten)]
     pub extra: serde_json::Map<String, Value>,
+}
+
+impl LibraryEntry {
+    /// The title the library shows: the owner's, else the document's.
+    pub fn shown_title(&self) -> &str {
+        self.edited.title.as_deref().unwrap_or(&self.title)
+    }
+
+    /// The author, DOI, and ISBN the library shows: the owner's where set,
+    /// else the document's.
+    pub fn shown_meta(&self) -> DocMetadata {
+        let mut m = self.meta.clone();
+        self.edited.apply_to(&mut m);
+        m
+    }
 }
 
 /// The bookshelf, `library.json`: every document opened, newest first.
@@ -592,6 +731,7 @@ impl Library {
                 added: when,
                 last_opened: when,
                 meta: DocMetadata::default(),
+                edited: EditedDetails::default(),
                 extra: serde_json::Map::new(),
             },
         };
@@ -638,6 +778,47 @@ impl Library {
         entry.meta != before
     }
 
+    /// Stores the owner's hand edits of `path`'s details (W7m): each
+    /// `(field, value)` sets that field, or clears it with `None`; fields
+    /// not listed keep their value. A document not on the bookshelf yet (a
+    /// library folder's document never opened here) is added without
+    /// changing when it was last opened. `at_ms` is when the edit was
+    /// made. Returns true when anything changed.
+    pub fn record_edits(
+        &mut self,
+        path: &Path,
+        edits: &[(DetailField, Option<String>)],
+        at_ms: u64,
+    ) -> bool {
+        let key = resolve_path(path);
+        let i = match self.entries.iter().position(|e| e.path == key) {
+            Some(i) => i,
+            None => {
+                self.entries.push(LibraryEntry {
+                    path: key,
+                    title: String::new(),
+                    format: String::new(),
+                    added: crate::now_ts(),
+                    last_opened: 0,
+                    meta: DocMetadata::default(),
+                    edited: EditedDetails::default(),
+                    extra: serde_json::Map::new(),
+                });
+                self.entries.len() - 1
+            }
+        };
+        let entry = &mut self.entries[i];
+        let before = entry.edited.clone();
+        for (field, value) in edits {
+            entry.edited.set(*field, value.clone());
+        }
+        let changed = entry.edited != before;
+        if changed {
+            entry.edited.at_ms = at_ms;
+        }
+        changed
+    }
+
     /// Removes `path`. Returns whether it was there.
     pub fn remove(&mut self, path: &Path) -> bool {
         let key = resolve_path(path);
@@ -679,9 +860,14 @@ pub struct LibraryItem {
     pub last_opened: Option<i64>,
     /// Folder or recent.
     pub source: ItemSource,
-    /// Author, DOI, and ISBN, when known (from the bookshelf).
+    /// Author, DOI, and ISBN, when known (from the bookshelf): the
+    /// owner's hand-edited values where there are some.
     #[serde(flatten)]
     pub meta: DocMetadata,
+    /// The details the owner typed (W7m), already in `title` and `meta`;
+    /// kept so the edit form knows which values are the owner's.
+    #[serde(default, skip_serializing_if = "EditedDetails::is_empty")]
+    pub edited: EditedDetails,
 }
 
 impl LibraryItem {
@@ -738,7 +924,7 @@ pub fn library_view(
         items.push(LibraryItem {
             path: doc.path.clone(),
             title: entry
-                .map(|e| e.title.clone())
+                .map(|e| e.shown_title().to_owned())
                 .filter(|t| !t.is_empty())
                 .unwrap_or_else(|| doc.title.clone()),
             folder: Some(doc.folder.clone()),
@@ -746,7 +932,8 @@ pub fn library_view(
             pct: synced.or_else(|| local_pct(&doc.path)),
             last_opened: entry.map(|e| e.last_opened),
             source: ItemSource::Folder,
-            meta: entry.map(|e| e.meta.clone()).unwrap_or_default(),
+            meta: entry.map(LibraryEntry::shown_meta).unwrap_or_default(),
+            edited: entry.map(|e| e.edited.clone()).unwrap_or_default(),
         });
     }
     let mut recents: Vec<LibraryItem> = Vec::new();
@@ -754,17 +941,18 @@ pub fn library_view(
         if seen.insert(e.path.clone()) {
             recents.push(LibraryItem {
                 path: e.path.clone(),
-                title: if e.title.is_empty() {
+                title: if e.shown_title().is_empty() {
                     stem(&e.path)
                 } else {
-                    e.title.clone()
+                    e.shown_title().to_owned()
                 },
                 folder: None,
                 rel: None,
                 pct: local_pct(&e.path),
                 last_opened: Some(e.last_opened),
                 source: ItemSource::Recent,
-                meta: e.meta.clone(),
+                meta: e.shown_meta(),
+                edited: e.edited.clone(),
             });
         }
     }
@@ -779,6 +967,7 @@ pub fn library_view(
                 last_opened: Some(r.opened),
                 source: ItemSource::Recent,
                 meta: DocMetadata::default(),
+                edited: EditedDetails::default(),
             });
         }
     }
@@ -1298,6 +1487,107 @@ mod tests {
             Some("The Mitochondria.")
         ));
         assert!(!item_matches(&items[0], "mitochondria", None));
+    }
+
+    /// Wave 7 (W7m): hand-edited details win over the document's own,
+    /// survive the document opening again, and are found by the filter;
+    /// clearing one brings the document's own value back.
+    #[test]
+    fn hand_edits_win_and_survive_a_reopen() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("library.json");
+        let paper = dir.path().join("scan0042.pdf");
+        let folder_doc = dir.path().join("Readings").join("week1.md");
+        let mut lib = Library::default();
+        lib.record_open_at(&paper, "scan0042", "pdf", 5);
+        lib.record_metadata(
+            &paper,
+            &DocMetadata {
+                author: Some("Scanner Operator".into()),
+                ..DocMetadata::default()
+            },
+        );
+        let edits = [
+            (
+                DetailField::Title,
+                Some("Cell Biology, Chapter 3".to_owned()),
+            ),
+            (DetailField::Author, Some("Ada Example".to_owned())),
+            (DetailField::Doi, Some("10.1000/cells".to_owned())),
+        ];
+        assert!(lib.record_edits(&paper, &edits, 1_000));
+        assert!(!lib.record_edits(&paper, &edits, 2_000), "no change");
+        // A document never opened here (a library folder's) is added
+        // without counting as opened.
+        assert!(lib.record_edits(
+            &folder_doc,
+            &[(DetailField::Isbn, Some("9780306406157".into()))],
+            1_500
+        ));
+        assert_eq!(lib.get(&folder_doc).unwrap().last_opened, 0);
+        // Opening again records the document's own details; the edits stay.
+        lib.record_open_at(&paper, "scan0042", "pdf", 9);
+        lib.record_metadata(
+            &paper,
+            &DocMetadata {
+                author: Some("Scanner Operator".into()),
+                ..DocMetadata::default()
+            },
+        );
+        lib.save(&file).unwrap();
+        let back = Library::load(&file).unwrap();
+        assert_eq!(back, lib);
+        let e = back.get(&paper).unwrap();
+        assert_eq!(e.title, "scan0042");
+        assert_eq!(e.shown_title(), "Cell Biology, Chapter 3");
+        assert_eq!(e.edited.at_ms, 1_000);
+        assert!(e.extra.is_empty(), "not duplicated in extra");
+        let items = library_view(
+            &[],
+            &back,
+            &Recent::default(),
+            &SidecarStore::new(ConflictPolicy::Newest),
+            &|_| None,
+        );
+        let item = items
+            .iter()
+            .find(|i| i.path == resolve_path(&paper))
+            .unwrap();
+        assert_eq!(
+            item.describe(),
+            "Cell Biology, Chapter 3, by Ada Example, recent"
+        );
+        assert_eq!(item.edited.get(DetailField::Doi), Some("10.1000/cells"));
+        for q in ["chapter 3", "ada", "doi:10.1000/CELLS"] {
+            assert_eq!(filter_items(&items, q).len(), 1, "{q}");
+        }
+        assert!(filter_items(&items, "scanner").is_empty());
+
+        // Clearing the author shows the document's own again.
+        lib.record_edits(&paper, &[(DetailField::Author, None)], 3_000);
+        assert_eq!(
+            lib.get(&paper).unwrap().shown_meta().author.as_deref(),
+            Some("Scanner Operator")
+        );
+    }
+
+    #[test]
+    fn detail_fields_clean_their_values() {
+        assert_eq!(
+            DetailField::Title.clean("  Cell \n Biology "),
+            Ok(Some("Cell Biology".into()))
+        );
+        assert_eq!(DetailField::Author.clean("   "), Ok(None));
+        assert_eq!(
+            DetailField::Doi.clean("https://doi.org/10.1000/XYZ"),
+            Ok(Some("10.1000/xyz".into()))
+        );
+        assert_eq!(
+            DetailField::Isbn.clean("978-0-306-40615-7"),
+            Ok(Some("9780306406157".into()))
+        );
+        assert_eq!(DetailField::Isbn.clean("12345"), Err("12345".into()));
+        assert_eq!(DetailField::Doi.clean("not a doi"), Err("not a doi".into()));
     }
 
     #[test]

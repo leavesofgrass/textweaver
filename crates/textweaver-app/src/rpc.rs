@@ -846,6 +846,7 @@ fn prompt_key(name: &str) -> Result<crate::list_model::PromptKey, RpcError> {
         "backspace" => K::Backspace,
         "delete" => K::Delete,
         "tab" => K::Tab,
+        "shift_tab" | "back_tab" => K::BackTab,
         "kill_to_start" => K::KillToStart,
         "kill_to_end" => K::KillToEnd,
         "delete_word_back" => K::DeleteWordBack,

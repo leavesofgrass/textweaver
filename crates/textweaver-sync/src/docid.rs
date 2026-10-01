@@ -297,6 +297,20 @@ impl Details {
     }
 }
 
+/// One library detail the owner edited by hand (Wave 7, W7m): `value` is
+/// the new value, or `None` when the owner cleared the field, so the
+/// document's own value shows again. Only the fields the owner changed are
+/// published, so editing the title never touches another computer's
+/// hand-edited author.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DetailEdit {
+    /// The detail: [`detail::TITLE`], [`detail::AUTHOR`], [`detail::DOI`],
+    /// or [`detail::ISBN`].
+    pub name: &'static str,
+    /// The value typed, or `None` for a cleared field.
+    pub value: Option<String>,
+}
+
 /// A detail as published: trimmed, not empty, at most
 /// [`crate::record::MAX_DETAIL_CHARS`] characters.
 fn clean_detail(value: Option<&str>) -> Option<String> {
@@ -462,7 +476,7 @@ impl IdentityIndex {
         declined: &[String],
     ) -> Vec<Suggestion> {
         let same = |k: &Known, name: &str, ours: Option<&str>| {
-            ours.is_some_and(|o| !o.is_empty() && k.identity.detail(name) == Some(o))
+            ours.is_some_and(|o| !o.is_empty() && k.identity.shown_detail(name) == Some(o))
         };
         self.docs
             .iter()
@@ -477,7 +491,7 @@ impl IdentityIndex {
                 };
                 Some(Suggestion {
                     sync_id: *id,
-                    title: k.identity.detail(detail::TITLE).map(str::to_owned),
+                    title: k.identity.shown_detail(detail::TITLE).map(str::to_owned),
                     devices: k.devices.clone(),
                     notes: k.notes,
                     shared,
@@ -514,6 +528,34 @@ impl DocRecord {
         if let Some(a) = details.added_ms {
             id.added.lower(a);
         }
+    }
+
+    /// Publishes the owner's hand edits at `stamp` (Wave 7, W7m): a value
+    /// sets the detail's hand-edited register, `None` clears it with a
+    /// deletion record, so the clearing travels too. Newest wins per
+    /// detail, as for every library detail. Returns whether anything
+    /// changed; edits of details that cannot be edited are ignored.
+    pub fn publish_edits(&mut self, stamp: Stamp, edits: &[DetailEdit]) -> bool {
+        let mut changed = false;
+        for e in edits {
+            let Some(name) = detail::edited(e.name) else {
+                continue;
+            };
+            let details = &mut self.identity.details;
+            match clean_detail(e.value.as_deref()) {
+                Some(v) if details.get(name) != Some(&v) => {
+                    details.set(name, stamp, v);
+                    changed = true;
+                }
+                Some(_) => {}
+                None if details.register(name).is_some_and(|r| r.value.is_some()) => {
+                    details.delete(name, stamp);
+                    changed = true;
+                }
+                None => {}
+            }
+        }
+        changed
     }
 }
 

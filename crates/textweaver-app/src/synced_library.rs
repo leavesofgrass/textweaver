@@ -27,7 +27,7 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
-use textweaver_store::library::{DocMetadata, LibraryItem};
+use textweaver_store::library::{DetailField, LibraryItem};
 use textweaver_store::sync_ids::{HashKind, SyncIds};
 use textweaver_store::{DocKey, Library, Paths, ReadingStats, Recent, Settings, StateStore};
 use textweaver_sync::docid::{library_key, read_library_id, text_sha256};
@@ -172,10 +172,12 @@ impl SyncedLibrary {
         self.view.doc(sync_id)
     }
 
-    /// A document's library details.
+    /// A document's library details: the owner's hand-edited title,
+    /// author, DOI, and ISBN where some computer has one (W7m), else the
+    /// document's own.
     pub fn details(&self, sync_id: SyncId) -> Option<SyncedDetails> {
         let id = &self.record(sync_id)?.identity;
-        let get = |name: &str| id.detail(name).map(str::to_owned);
+        let get = |name: &str| id.shown_detail(name).map(str::to_owned);
         let d = SyncedDetails {
             title: get(detail::TITLE),
             author: get(detail::AUTHOR),
@@ -193,33 +195,55 @@ impl SyncedLibrary {
     /// every computer, this one's included, so they replace the item's;
     /// a title only replaces one made from the file's name. `text` gives a
     /// document's indexed text, when it has been read.
+    ///
+    /// A hand-edited detail (W7m) wins over the document's own: this
+    /// computer's edit unless another computer's edit (or clearing) of the
+    /// same detail is newer, and then that one.
     pub fn enrich(&self, items: &mut [LibraryItem], text: &dyn Fn(&Path) -> Option<String>) {
         for item in items {
             let t = text(&item.path);
             let Some(id) = self.sync_id_for(&item.path, t.as_deref()) else {
                 continue;
             };
-            let Some(d) = self.details(id) else {
+            let Some(record) = self.record(id) else {
                 continue;
             };
-            let synced = DocMetadata {
-                author: d.author.clone(),
-                doi: d.doi.clone(),
-                isbn: d.isbn.clone(),
-            };
-            for (mine, theirs) in [
-                (&mut item.meta.author, &synced.author),
-                (&mut item.meta.doi, &synced.doi),
-                (&mut item.meta.isbn, &synced.isbn),
-            ] {
-                if theirs.is_some() {
-                    mine.clone_from(theirs);
+            let identity = &record.identity;
+            for field in DetailField::ALL {
+                let name = field.name();
+                let local = item.edited.get(field).map(str::to_owned);
+                let theirs = identity
+                    .edited_register(name)
+                    .filter(|r| local.is_none() || r.stamp.time >= item.edited.at_ms);
+                let hand = match theirs {
+                    Some(r) => {
+                        item.edited.set(field, r.value.clone());
+                        r.value.clone()
+                    }
+                    None => local,
+                };
+                let own = identity.detail(name).map(str::to_owned);
+                match field {
+                    DetailField::Title => {
+                        if let Some(title) = hand {
+                            item.title = title;
+                        } else if let Some(title) = own
+                            && item.title == file_stem(&item.path)
+                        {
+                            item.title = title;
+                        }
+                    }
+                    DetailField::Author | DetailField::Doi | DetailField::Isbn => {
+                        let mine = match field {
+                            DetailField::Author => &mut item.meta.author,
+                            DetailField::Doi => &mut item.meta.doi,
+                            _ => &mut item.meta.isbn,
+                        };
+                        if let Some(v) = hand.or(own) {
+                            *mine = Some(v);
+                        }
+                    }
                 }
-            }
-            if let Some(title) = d.title
-                && item.title == file_stem(&item.path)
-            {
-                item.title = title;
             }
         }
     }

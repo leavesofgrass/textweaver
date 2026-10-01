@@ -225,6 +225,31 @@ continue-ago-days =
     }
 name-continue-reading = Continue reading
 action-continue-reading = Continue reading: the documents on this computer with a saved place, from any computer, newest first
+name-edit-document-details = Edit details
+action-edit-document-details = Edit the document's details: title, author, DOI, and ISBN
+prompt-document-details = Document details
+
+## Edit a document's details by hand (Wave 7, W7m).
+
+# $name is the document's title; said when the form opens.
+details-intro = Details of { $name }. Tab moves, Enter saves, Escape cancels.
+details-label-title = Title
+details-label-author = Author
+details-label-doi = DOI
+details-label-isbn = ISBN
+# A field's drawn label: its label, then $n of $total fields.
+details-prompt-label = { $label }, { $n } of { $total }
+# Said on moving to a field: its label and value (or nav-blank).
+details-field = { $label }: { $value }
+# $fields lists the fields saved, by their labels.
+details-saved = Details saved: { $fields }.
+details-unchanged = Details not changed.
+details-cancelled = Cancelled. Details not changed.
+# $text is what was typed in the DOI or ISBN field.
+details-not-a-doi = Not a DOI: { $text }. Fix it or clear it.
+details-not-an-isbn = Not an ISBN: { $text }. Fix it or clear it.
+details-no-file = This document has no file, so no details to edit.
+details-save-failed = Could not save the details: { $error }
 # The statistics list could not wait for the sync folder.
 stats-others-slow = Other computers skipped: folder slow.
 stats-untitled = Untitled document
@@ -1276,8 +1301,8 @@ library-scan-stopped = The library scan stopped with an internal error.
 library-empty = The library is empty. Add a folder with { $command }, or open a file with { $key }.
 library-intro =
     { $n ->
-        [one] Library, { $n } document. Type to filter, Enter opens one.
-       *[other] Library, { $n } documents. Type to filter, Enter opens one.
+        [one] Library, { $n } document. Type to filter, Enter opens one, F2 edits details.
+       *[other] Library, { $n } documents. Type to filter, Enter opens one, F2 edits details.
     }
 library-title = Library
 
@@ -3396,6 +3421,7 @@ audio-no-ffmpeg =
 audio-format-flac = FLAC: lossless, about half the size of WAV
 audio-format-wav = WAV: the largest, plays everywhere
 audio-format-mp3 = MP3: small, plays everywhere
+audio-format-opus = Opus: the smallest, made for speech
 audio-format-m4b = M4B audiobook, through ffmpeg
 audio-where-title = Where the audio goes
 audio-where-intro = Where should the audio go?
