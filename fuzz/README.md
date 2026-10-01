@@ -112,4 +112,4 @@ cargo-fuzz saves the input under `fuzz/artifacts/TARGET/` and prints the command
 cargo +nightly fuzz run markdown fuzz/artifacts/markdown/crash-1234abcd
 ```
 
-Fix the bug, then add the input as a regular test in the crate it came from, so it stays fixed. The loaders' property tests (`crates/textweaver-formats/tests/positions.rs`) and hostile-input tests (`crates/textweaver-formats/tests/hostile.rs`, and `hostile_w3d.rs` for DAISY, PowerPoint, spreadsheets, archives, and pictures) are the place for loader cases.
+Fix the bug, then add the input as a regular test in the crate it came from, so it stays fixed. The loaders' property tests (`crates/textweaver-formats/tests/it/positions.rs`) and hostile-input tests (`crates/textweaver-formats/tests/it/hostile.rs`, and `hostile_w3d.rs` for DAISY, PowerPoint, spreadsheets, archives, and pictures) are the place for loader cases.

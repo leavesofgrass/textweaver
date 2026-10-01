@@ -97,6 +97,7 @@ Every change must work for people who do not look at the screen.
 - Every state change is announced through the app's announcer, filtered by verbosity, and routed by the accessibility mode with `textweaver_a11y::route`, so a screen reader never hears it twice.
 - Every file the app writes while it runs goes through the writer thread (`crates/textweaver-app/src/writer.rs`), never from the input thread.
 - Tests never play audio aloud. Write audio to a temporary file, or use a silent output.
+- Integration tests go in one test program per crate, `tests/it/main.rs`. A new integration test is a module there (`tests/it/<name>.rs`, with `mod <name>;` in `main.rs`), never a new file directly in `tests/`: every file there is a program of its own, which links the crate again and slows every test build. [Testing](docs/dev/testing.md#where-tests-go) has the details.
 - Fix Star's bugs rather than port them. If you keep a Star quirk on purpose, say so.
 - US English in code comments, docs, and messages ("color", "behavior").
 
