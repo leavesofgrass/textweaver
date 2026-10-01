@@ -1641,7 +1641,10 @@ impl Gui {
             .prompt_model()
             .map(textweaver_app::PromptModel::text)
             .unwrap_or_default();
-        self.show_prompt(ctx, label_text, &hint, &initial, paths);
+        // The edit details form (W7m): Tab and Shift+Tab move between its
+        // fields, each the app's prompt.
+        let fields = purpose == PromptPurpose::DocumentDetails;
+        self.show_prompt(ctx, label_text, &hint, &initial, paths, fields);
         self.dialog = Some(OpenDialog::Prompt);
         if self.log {
             crate::log::line(&format!("dialog: prompt {label_text:?}"));
@@ -1763,6 +1766,7 @@ impl Gui {
         hint: &str,
         initial: &str,
         tab_completes: bool,
+        tab_fields: bool,
     ) {
         let p = &self.palette;
         let field = NewWidget::new(
@@ -1784,7 +1788,9 @@ impl Gui {
             ));
         let card = NewWidget::new(card).with_props(dialog::card_props(p));
         let modal = NewWidget::new(
-            Modal::new(card, label_text, p.clone()).with_tab_completion(tab_completes),
+            Modal::new(card, label_text, p.clone())
+                .with_tab_completion(tab_completes)
+                .with_tab_fields(tab_fields),
         )
         .erased();
         self.show_dialog(ctx, modal, field_id);
@@ -1948,7 +1954,7 @@ impl Gui {
                 let Some(OpenDialog::Settings(open)) = self.dialog.take() else {
                     return;
                 };
-                self.show_prompt(ctx, &label_text, &hint, &initial, false);
+                self.show_prompt(ctx, &label_text, &hint, &initial, false, false);
                 self.dialog = Some(OpenDialog::SettingEdit(open, row));
                 if self.log {
                     crate::log::line(&format!("dialog: {label_text}"));
@@ -2825,6 +2831,17 @@ impl AppDriver for Gui {
                     }
                     return;
                 }
+                DialogAction::Field(next) => {
+                    if matches!(self.dialog, Some(OpenDialog::Prompt)) {
+                        let key = if *next {
+                            PromptKey::Tab
+                        } else {
+                            PromptKey::BackTab
+                        };
+                        self.prompt_key(ctx, key);
+                    }
+                    return;
+                }
                 DialogAction::ShowMatches => {
                     // The palette's matches, in context: the focus moves
                     // to the list, whose selected row the screen reader
@@ -2869,6 +2886,7 @@ impl AppDriver for Gui {
                     | DialogAction::Focus(_)
                     | DialogAction::Recall(_)
                     | DialogAction::Complete
+                    | DialogAction::Field(_)
                     | DialogAction::Chord(_)
                     | DialogAction::Answer(_)
                     | DialogAction::ShowMatches,
