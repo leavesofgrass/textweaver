@@ -72,7 +72,7 @@ jobs:
       # on any that was missed (ADR-0030). The ALSA headers are installed
       # by the step above.
       - name: Every message is in the catalog (pseudo-locale)
-        run: cargo test --locked -p textweaver-app --test pseudo_locale
+        run: 'cargo test --locked -p textweaver-app --test it -- pseudo_locale::'
 
   # Generated files and repository rules that need no build of the
   # workspace's dependencies: the keyboard reference, the dependency
@@ -171,8 +171,8 @@ jobs:
         run: |
           # An absolute Windows path: the tests run in the crate's folder.
           TEXTWEAVER_ECI_TEST_HOST="$(pwd -W)/target/i686-pc-windows-msvc/debug/textweaver-eci-host.exe" \
-            cargo test --locked -p textweaver-eci --test fake_host
-          cargo test --locked --target i686-pc-windows-msvc -p textweaver-sapi -p textweaver-dectalk --test fake_host
+            cargo test --locked -p textweaver-eci --test it -- fake_host::
+          cargo test --locked --target i686-pc-windows-msvc -p textweaver-sapi -p textweaver-dectalk --test it -- fake_host::
       - name: Docs
         run: cargo doc --locked --workspace --exclude textweaver-xilem --no-deps ${{ matrix.features }}
 
@@ -199,7 +199,7 @@ jobs:
       - name: The espeak backend against libespeak-ng (virtual output)
         env:
           TEXTWEAVER_ESPEAK_OUTPUT: virtual
-        run: cargo test --locked -p textweaver-speech --features espeak --test espeak
+        run: 'cargo test --locked -p textweaver-speech --features espeak --test it -- espeak::'
       - name: tw finds espeak-ng and writes a WAV file
         run: |
           cargo build --locked -p textweaver-cli --bin tw --features espeak
@@ -235,4 +235,4 @@ jobs:
         if: steps.voices.outputs.david == 'true'
         env:
           TEXTWEAVER_SAPI: '1'
-        run: cargo test --locked -p textweaver-sapi --test real_voices -- --ignored --nocapture david every_allowed_voice speaking_and_stopping
+        run: 'cargo test --locked -p textweaver-sapi --test it -- --ignored --nocapture real_voices::david real_voices::every_allowed_voice real_voices::speaking_and_stopping'

@@ -157,7 +157,9 @@ jobs:
           TEXTWEAVER_ESPEAK_OUTPUT: virtual
         run: |
           cargo +nightly test --locked --target x86_64-unknown-linux-gnu \
-            -p textweaver-speech --features espeak --test espeak --lib
+            -p textweaver-speech --features espeak --lib
+          cargo +nightly test --locked --target x86_64-unknown-linux-gnu \
+            -p textweaver-speech --features espeak --test it -- espeak::
           cargo +nightly test --locked --target x86_64-unknown-linux-gnu \
             -p textweaver-eci -p textweaver-dectalk
 
@@ -206,7 +208,7 @@ jobs:
       - name: Loader property tests, 2,048 cases each
         env:
           PROPTEST_CASES: '2048'
-        run: cargo test --locked --release -p textweaver-formats --test positions --test hostile
+        run: 'cargo test --locked --release -p textweaver-formats --test it -- positions:: hostile::'
 
   msrv:
     name: MSRV (Rust 1.94)
