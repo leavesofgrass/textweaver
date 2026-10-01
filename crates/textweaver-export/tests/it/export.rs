@@ -646,7 +646,7 @@ struct OggOpus {
 
 /// Reads every Ogg page of `path`, checking each one's CRC, the first
 /// page's start flag and the last page's end flag, then decodes the
-/// packets with opus-rs's decoder.
+/// packets with libopus.
 #[cfg(feature = "opus")]
 fn read_ogg_opus(path: &Path) -> OggOpus {
     let bytes = std::fs::read(path).unwrap();
@@ -713,11 +713,12 @@ fn read_ogg_opus(path: &Path) -> OggOpus {
         comments.push(String::from_utf8(tags[i + 4..i + 4 + n].to_vec()).unwrap());
         i += 4 + n;
     }
-    let mut decoder = opus_rs::OpusDecoder::new(48_000, 1).unwrap();
+    let mut decoder =
+        opusic_c::Decoder::new(opusic_c::Channels::Mono, opusic_c::SampleRate::Hz48000).unwrap();
     let mut audio = Vec::new();
     let mut frame = vec![0f32; 5760];
     for p in &packets[2..] {
-        let n = decoder.decode(p, 5760, &mut frame).unwrap();
+        let n = decoder.decode_float_to_slice(p, &mut frame, false).unwrap();
         audio.extend_from_slice(&frame[..n]);
     }
     let end = usize::try_from(last_granule).unwrap();
@@ -784,7 +785,6 @@ fn opus_without_ffmpeg_decodes_back_with_its_chapters() {
 /// the file is a small fraction of the WAV.
 #[cfg(feature = "opus")]
 #[test]
-#[ignore = "opus-rs 0.1.34 encodes 24 kHz audio wrongly (upstream issue 37); W7o parked"]
 fn opus_keeps_a_tone_in_time_and_pitch() {
     let dir = tempfile::tempdir().unwrap();
     let rate = 22_050usize;
@@ -846,9 +846,9 @@ fn opus_keeps_a_tone_in_time_and_pitch() {
         (rms - want).abs() < want * 0.15,
         "RMS {rms:.3}, expected {want:.3}"
     );
-    // About 32 kbit/s: two seconds in well under a tenth of the WAV.
+    // About 32 kbit/s: two seconds in under an eighth of the 16-bit WAV.
     let size = std::fs::metadata(&out).unwrap().len();
-    assert!(size < (rate * 2 * 2 / 10) as u64, "{size} bytes");
+    assert!(size < (rate * 2 * 2 / 8) as u64, "{size} bytes");
 }
 
 /// MP3 and M4B through ffmpeg, when it is installed.

@@ -108,7 +108,9 @@ textweaver-eci = { path = "crates/textweaver-eci" }
 textweaver-apple = { path = "crates/textweaver-apple" }
 textweaver-sapi = { path = "crates/textweaver-sapi" }
 textweaver-enginehost = { path = "crates/textweaver-enginehost" }
-textweaver-export = { path = "crates/textweaver-export" }
+# Default features off: each user picks the in-process encoders, so a build
+# without the `opus` feature needs no cmake (W7o).
+textweaver-export = { path = "crates/textweaver-export", default-features = false }
 textweaver-vault = { path = "crates/textweaver-vault" }
 textweaver-dictation = { path = "crates/textweaver-dictation" }
 textweaver-render = { path = "crates/textweaver-render" }
@@ -349,10 +351,14 @@ claxon = "0.4.3"
 # symphonia (MPL-2.0) decodes exports back in tests only.
 mp3lame-encoder = "=0.2.5"
 symphonia = { version = "0.5", default-features = false, features = ["mp3"] }
-# Wave 7, W7o: Ogg Opus in process. opus-rs (BSD-3-Clause) is a pure-Rust
-# port of libopus; export writes the Ogg pages and the OpusTags (Vorbis
-# comment) header itself.
-opus-rs = "=0.1.34"
+# Wave 7, W7o (libopus approved by the owner, Wednesday, September 30,
+# 2026): Ogg Opus in process with libopus 1.6.1, the reference encoder,
+# built from the source bundled in opusic-sys with cmake and linked
+# statically (opusic-c and opusic-sys: BSD-3-Clause). Export writes the Ogg
+# pages and the OpusTags (Vorbis comment) header itself. The pure-Rust
+# opus-rs 0.1.34 was measured first and set aside: wrong audio at 24 kHz,
+# bit rates not kept, a tone's level lost.
+opusic-c = "=1.6.1"
 
 # tests
 proptest = "1.11"

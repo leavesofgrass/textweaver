@@ -507,6 +507,7 @@ mod tests {
 
     /// The sample document to Ogg Opus with no ffmpeg: an Ogg stream whose
     /// first packet is the Opus header.
+    #[cfg(feature = "opus")]
     #[test]
     fn opus_needs_no_ffmpeg() {
         let dir = Scratch::new("opus");

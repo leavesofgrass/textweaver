@@ -17,7 +17,7 @@
 //! 5. For `.flac`, the WAV is encoded in process, with the title and
 //!    chapters as Vorbis comments (`flac`, the `flac` feature). For `.mp3`,
 //!    LAME encodes it in process and the title and chapters go in an ID3v2
-//!    tag (`mp3`, the `mp3` feature). For `.opus`, `opus-rs` encodes it
+//!    tag (`mp3`, the `mp3` feature). For `.opus`, libopus encodes it
 //!    in process as Ogg Opus, mono at a speech bit rate, with the title
 //!    and chapters as Vorbis comments (`opus`, the `opus` feature). For
 //!    `.m4b` (and MP3, FLAC or Opus in a build without those features),

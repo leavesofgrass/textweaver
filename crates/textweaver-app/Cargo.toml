@@ -10,11 +10,19 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = ["publish", "lint", "dictation", "audio-export"]
-# Export audio from the reader (Agent W6v, ADR-0011): FLAC and WAV in
-# process, MP3 and M4B through ffmpeg when it is found. Off, the Export
-# audio command stays hidden.
-audio-export = ["dep:textweaver-export"]
+default = ["publish", "lint", "dictation", "audio-export", "opus"]
+# Export audio from the reader (Agent W6v, ADR-0011): FLAC, MP3 and WAV
+# in process, M4B through ffmpeg when it is found. Off, the Export audio
+# command stays hidden.
+audio-export = [
+    "dep:textweaver-export",
+    "textweaver-export/flac",
+    "textweaver-export/id3",
+    "textweaver-export/mp3",
+]
+# Opus in process in Export audio, with libopus (W7o; building it needs
+# cmake). Off, Opus goes through ffmpeg like M4B.
+opus = ["audio-export", "textweaver-export/opus"]
 # Dictation in edit mode (Agent W6d, ADR-0042): Whisper in-process on
 # RTen with the microphone. Off, the Dictate command stays hidden.
 dictation = ["dep:textweaver-dictation"]
