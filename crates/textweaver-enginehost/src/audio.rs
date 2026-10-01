@@ -7,22 +7,84 @@
 //! stops with the audio (native pause and resume); stopping discards the
 //! queue.
 //!
-//! Two outputs exist: the default audio device through rodio (feature
-//! `playback`), and [`AudioOutput::Null`], which consumes samples on a
-//! timer without making a sound (tests; never play audio aloud in tests).
+//! Two outputs exist: an audio device through rodio (feature `playback`),
+//! and [`AudioOutput::Null`], which consumes samples on a timer without
+//! making a sound (tests; never play audio aloud in tests).
+//!
+//! The device is the one chosen with [`set_output_device`] (`[speech]
+//! output_device`, by its stable id from [`output_devices`]) when it is
+//! connected, else the system's default. When the device goes away (a
+//! headset unplugged) or its stream must be rebuilt, the player says so
+//! ([`Player::lost`]) and the playback client opens it again, which
+//! finds the current default; audio waiting in the feed is kept.
 
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use textweaver_speech::{BackendId, SpeechError};
 
+/// The output device chosen by its stable id, and a count of changes so
+/// open players notice one.
+static OUTPUT_DEVICE: Mutex<Option<String>> = Mutex::new(None);
+static OUTPUT_DEVICE_CHANGES: AtomicU64 = AtomicU64::new(0);
+
+/// Chooses the output device by its stable id ([`OutputDevice::id`]);
+/// `None` (or an empty id) uses the system's default. It applies to every
+/// device output in the process: players open on it from now on, and open
+/// ones reopen on it ([`Player::choice_changed`]). A chosen device that is
+/// not connected falls back to the default, with a line in the log.
+pub fn set_output_device(id: Option<String>) {
+    let id = id.map(|s| s.trim().to_owned()).filter(|s| !s.is_empty());
+    let mut current = OUTPUT_DEVICE.lock().unwrap_or_else(|e| e.into_inner());
+    if *current != id {
+        *current = id;
+        OUTPUT_DEVICE_CHANGES.fetch_add(1, Ordering::AcqRel);
+    }
+}
+
+/// The output device chosen with [`set_output_device`], if any.
+pub fn output_device() -> Option<String> {
+    OUTPUT_DEVICE
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
+}
+
+/// An audio output device ([`output_devices`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OutputDevice {
+    /// Its stable id, for `[speech] output_device`: the audio system's own
+    /// name for it, which stays the same across restarts and reconnects
+    /// (on Windows, `wasapi:` and the endpoint id).
+    pub id: String,
+    /// Its name, as the system shows it ("Speakers (Realtek Audio)").
+    pub name: String,
+    /// The system's default output now.
+    pub default: bool,
+}
+
+/// The output devices connected now, the default first. Empty when the
+/// build has no audio output (no `playback` feature); an error says why
+/// the list could not be read.
+pub fn output_devices() -> Result<Vec<OutputDevice>, String> {
+    #[cfg(feature = "playback")]
+    {
+        device::list()
+    }
+    #[cfg(not(feature = "playback"))]
+    {
+        Ok(Vec::new())
+    }
+}
+
 /// Where audio goes.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AudioOutput {
-    /// The default audio device (requires the `playback` feature).
+    /// An audio device: the one [`set_output_device`] chose when it is
+    /// connected, else the default (requires the `playback` feature).
     Device,
     /// Nowhere: samples are consumed at `speed` times real time, silently.
     /// A speed of 0 (or less) consumes nothing: a device that has stopped
@@ -187,6 +249,9 @@ impl Device {
     }
 }
 
+/// Why an open output was lost, set from the audio system's thread.
+type Lost = Arc<Mutex<Option<String>>>;
+
 /// A running output. Dropping it stops playback.
 pub struct Player {
     // Field order: the device (if any) closes before the timer thread stops.
@@ -194,6 +259,11 @@ pub struct Player {
     device: Option<Device>,
     stop: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
+    /// Set when the device went away or its stream must be rebuilt.
+    lost: Lost,
+    /// [`OUTPUT_DEVICE_CHANGES`] when a device output opened; `None` for
+    /// the silent output, which has no device to choose.
+    choice: Option<u64>,
 }
 
 impl std::fmt::Debug for Player {
@@ -259,22 +329,30 @@ impl Player {
             device: None,
             stop,
             thread,
+            lost: Lost::default(),
+            choice: None,
         }
     }
 
-    /// Opens the default device on its own thread and returns at once;
-    /// audio pushed meanwhile waits in the feed. A device that cannot be
-    /// opened is reported by [`failure`](Self::failure).
+    /// Opens the chosen device ([`set_output_device`]), or the default,
+    /// on its own thread and returns at once; audio pushed meanwhile waits
+    /// in the feed. A device that cannot be opened is reported by
+    /// [`failure`](Self::failure), one that goes away later by
+    /// [`lost`](Self::lost).
     #[cfg(feature = "playback")]
     fn device(backend: BackendId, feed: Arc<Feed>, sample_rate: u32) -> Result<Self, SpeechError> {
         let rate = std::num::NonZero::new(sample_rate)
             .ok_or_else(|| SpeechError::Engine("sample rate 0".into()))?;
         let (answer_tx, answer) = std::sync::mpsc::channel();
         let (close, closed) = std::sync::mpsc::channel::<()>();
+        let lost = Lost::default();
+        let choice = OUTPUT_DEVICE_CHANGES.load(Ordering::Acquire);
+        let wanted = output_device();
+        let on_error = device::on_error(backend, Arc::clone(&lost));
         std::thread::Builder::new()
             .name(format!("{backend}-audio-device"))
             .spawn(move || {
-                let mut sink = match rodio::DeviceSinkBuilder::open_default_sink() {
+                let mut sink = match device::open(wanted.as_deref(), on_error) {
                     Ok(s) => s,
                     Err(e) => {
                         let _ = answer_tx.send(Err(format!("no audio output: {e}")));
@@ -302,6 +380,8 @@ impl Player {
             }),
             stop: Arc::new(AtomicBool::new(false)),
             thread: None,
+            lost,
+            choice: Some(choice),
         })
     }
 
@@ -351,6 +431,152 @@ impl Player {
             return Some(e);
         }
         None
+    }
+
+    /// Why the open output stopped working, once the audio system said
+    /// so: its device went away (unplugged, switched off) or its stream
+    /// must be rebuilt. Opening it again finds the current device.
+    pub fn lost(&self) -> Option<String> {
+        self.lost.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+
+    /// Marks the output lost, as the audio system's error callback does
+    /// (tests).
+    #[cfg(test)]
+    pub(crate) fn mark_lost(&self, why: &str) {
+        mark_lost(&self.lost, why);
+    }
+
+    /// True when the output device was chosen again
+    /// ([`set_output_device`]) after this device output opened, so it
+    /// should open again on the new one. Always false for the silent
+    /// output.
+    pub fn choice_changed(&self) -> bool {
+        self.choice
+            .is_some_and(|c| c != OUTPUT_DEVICE_CHANGES.load(Ordering::Acquire))
+    }
+}
+
+/// Records why an output was lost; the first reason stays.
+#[cfg_attr(not(any(test, feature = "playback")), allow(dead_code))]
+fn mark_lost(lost: &Lost, why: &str) {
+    let mut slot = lost.lock().unwrap_or_else(|e| e.into_inner());
+    if slot.is_none() {
+        *slot = Some(why.to_owned());
+    }
+}
+
+/// Opening and listing devices through rodio's cpal.
+#[cfg(feature = "playback")]
+mod device {
+    use rodio::cpal::StreamError;
+    use rodio::cpal::traits::{DeviceTrait, HostTrait};
+    use rodio::{DeviceSinkBuilder, MixerDeviceSink};
+
+    use super::{Lost, OutputDevice, mark_lost};
+
+    /// The error callback for an output's stream: a device that went away
+    /// or a stream that must be rebuilt marks the output lost; other
+    /// errors (an underrun) only go to the log. Never to stderr, which is
+    /// the terminal reader's screen.
+    pub(super) fn on_error(
+        backend: &'static str,
+        lost: Lost,
+    ) -> impl FnMut(StreamError) + Send + Clone + 'static {
+        move |e: StreamError| match e {
+            StreamError::DeviceNotAvailable => {
+                mark_lost(&lost, "the audio output device went away");
+            }
+            StreamError::StreamInvalidated => {
+                mark_lost(&lost, "the audio output must be opened again");
+            }
+            other => log::debug!("{backend}: audio stream: {other}"),
+        }
+    }
+
+    /// The connected output device with stable id `id`.
+    fn find(id: &str) -> Option<rodio::cpal::Device> {
+        let id: rodio::cpal::DeviceId = id.parse().ok()?;
+        rodio::cpal::default_host().device_by_id(&id)
+    }
+
+    /// Opens the device with id `wanted` when it is connected, else the
+    /// default, else the first other device that opens.
+    pub(super) fn open(
+        wanted: Option<&str>,
+        on_error: impl FnMut(StreamError) + Send + Clone + 'static,
+    ) -> Result<MixerDeviceSink, String> {
+        if let Some(id) = wanted {
+            match find(id) {
+                Some(d) => {
+                    match DeviceSinkBuilder::from_device(d)
+                        .and_then(|b| b.with_error_callback(on_error.clone()).open_stream())
+                    {
+                        Ok(s) => return Ok(s),
+                        Err(e) => log::warn!(
+                            "cannot open the chosen audio output {id} ({e}); using the default"
+                        ),
+                    }
+                }
+                None => {
+                    log::warn!("the chosen audio output {id} is not connected; using the default")
+                }
+            }
+        }
+        let host = rodio::cpal::default_host();
+        let first = match host.default_output_device() {
+            Some(d) => DeviceSinkBuilder::from_device(d)
+                .and_then(|b| {
+                    b.with_error_callback(on_error.clone())
+                        .open_sink_or_fallback()
+                })
+                .map_err(|e| e.to_string()),
+            None => Err("there is no default output device".to_owned()),
+        };
+        first.or_else(|first| {
+            let devices = host.output_devices().map_err(|_| first.clone())?;
+            devices
+                .filter(|d| {
+                    d.description()
+                        .is_ok_and(|desc| desc.driver().is_none_or(|driver| driver != "null"))
+                })
+                .find_map(|d| {
+                    DeviceSinkBuilder::from_device(d)
+                        .and_then(|b| {
+                            b.with_error_callback(on_error.clone())
+                                .open_sink_or_fallback()
+                        })
+                        .ok()
+                })
+                .ok_or(first)
+        })
+    }
+
+    /// The connected output devices, the default first.
+    pub(super) fn list() -> Result<Vec<OutputDevice>, String> {
+        let host = rodio::cpal::default_host();
+        let default = host
+            .default_output_device()
+            .and_then(|d| d.id().ok())
+            .map(|id| id.to_string());
+        let mut out: Vec<OutputDevice> = host
+            .output_devices()
+            .map_err(|e| format!("cannot list the audio outputs: {e}"))?
+            .filter_map(|d| {
+                let id = d.id().ok()?.to_string();
+                let name = d
+                    .description()
+                    .map(|desc| desc.name().to_owned())
+                    .unwrap_or_else(|_| id.clone());
+                Some(OutputDevice {
+                    default: default.as_deref() == Some(id.as_str()),
+                    id,
+                    name,
+                })
+            })
+            .collect();
+        out.sort_by_key(|d| !d.default);
+        Ok(out)
     }
 }
 
@@ -479,11 +705,60 @@ mod tests {
         }
     }
 
+    #[test]
+    fn choosing_the_output_device_is_noticed_only_by_device_outputs() {
+        // The only test that touches the process-wide choice. The silent
+        // output has no device, so other tests' players never reopen
+        // because of it.
+        let null =
+            Player::start_for("t", AudioOutput::Null { speed: 1.0 }, Arc::default(), 8000).unwrap();
+        let before = OUTPUT_DEVICE_CHANGES.load(Ordering::Acquire);
+        set_output_device(Some("  wasapi:{0.0.0.00000000}.{1234}  ".into()));
+        assert_eq!(
+            output_device().as_deref(),
+            Some("wasapi:{0.0.0.00000000}.{1234}"),
+            "trimmed"
+        );
+        let after = OUTPUT_DEVICE_CHANGES.load(Ordering::Acquire);
+        assert_eq!(after, before + 1);
+        // The same choice again is no change.
+        set_output_device(Some("wasapi:{0.0.0.00000000}.{1234}".into()));
+        assert_eq!(OUTPUT_DEVICE_CHANGES.load(Ordering::Acquire), after);
+        assert!(!null.choice_changed());
+        // A player that opened before a change sees it.
+        let device = Player {
+            #[cfg(feature = "playback")]
+            device: None,
+            stop: Arc::default(),
+            thread: None,
+            lost: Lost::default(),
+            choice: Some(after),
+        };
+        assert!(!device.choice_changed());
+        // Empty means the default.
+        set_output_device(Some(" ".into()));
+        assert_eq!(output_device(), None);
+        assert!(device.choice_changed());
+        set_output_device(None);
+        assert_eq!(output_device(), None);
+    }
+
+    #[test]
+    fn a_lost_output_keeps_the_first_reason() {
+        let p =
+            Player::start_for("t", AudioOutput::Null { speed: 1.0 }, Arc::default(), 8000).unwrap();
+        assert_eq!(p.lost(), None);
+        p.mark_lost("the device went away");
+        p.mark_lost("the stream must be rebuilt");
+        assert_eq!(p.lost().as_deref(), Some("the device went away"));
+    }
+
     #[cfg(not(feature = "playback"))]
     #[test]
     fn without_playback_the_device_is_unavailable() {
         let e = Player::start_for("x", AudioOutput::Device, Arc::default(), 8000).unwrap_err();
         assert!(matches!(e, SpeechError::Unavailable("x", _)));
         assert_eq!(AudioOutput::default(), AudioOutput::Null { speed: 1.0 });
+        assert_eq!(output_devices(), Ok(Vec::new()));
     }
 }
