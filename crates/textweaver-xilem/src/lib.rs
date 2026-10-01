@@ -24,12 +24,15 @@
 //! - [`font_chooser`]: the font chooser's lists, ported from the spike.
 //! - [`setup`]: building the app for the GUI.
 //! - [`system_colors`]: the system's colors in a high contrast mode.
+//! - [`background`]: `--background` windows that never take the
+//!   foreground (Windows).
 //! - [`console`]: the terminal the program was started from, on Windows.
 //! - [`graphics`]: which graphics API the window draws with (opt-in).
 //! - `screenshot` (feature `screenshot`): the window drawn to a PNG.
 //!
 //! Owner: Agent W3b.
 
+pub mod background;
 pub mod caret;
 pub mod console;
 pub mod dialog;

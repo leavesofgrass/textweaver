@@ -294,6 +294,9 @@ pub struct Gui {
     /// The startup questions (hybrid mode with a screen reader running)
     /// may be asked: not in automated runs (`--background`).
     startup_offers: bool,
+    /// `--background`: on Windows the window is kept from ever taking the
+    /// foreground ([`crate::background`]).
+    background: bool,
     exit_at: Option<Instant>,
     /// The app's waker: speech statuses and finished background work post
     /// a tick at once (ADR-0024). Set when a tick is posted and not yet
@@ -2586,6 +2589,18 @@ impl Gui {
         let Some((file, read, messages)) = self.startup.take() else {
             return;
         };
+        if self.background {
+            // Before anything is opened or pressed: a window that UI
+            // Automation brings to the front gives the foreground back (W7x).
+            let hwnd = self.window_handle(ctx);
+            let guarded = crate::background::guard(hwnd, self.log);
+            if self.log && cfg!(windows) {
+                crate::log::line(&format!(
+                    "background: guarded (WS_EX_NOACTIVATE, foreground given back): {}",
+                    if guarded { "yes" } else { "no" }
+                ));
+            }
+        }
         let mut effects = Vec::new();
         match &file {
             Some(path) => {
@@ -2942,6 +2957,9 @@ impl AppDriver for Gui {
             return;
         }
         self.wake_pending.store(false, Ordering::Release);
+        if self.background {
+            crate::background::note_foreground();
+        }
         if !self.started {
             self.started = true;
             if self.log {
@@ -3108,6 +3126,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         startup: Some((opts.file.clone(), opts.read_on_start, messages)),
         first_run,
         startup_offers: !opts.background,
+        background: opts.background,
         exit_at: opts.exit_after.map(|d| Instant::now() + d),
         wake_pending: Arc::new(AtomicBool::new(false)),
         tick_ms: Arc::new(AtomicU64::new(

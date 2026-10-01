@@ -690,8 +690,9 @@ Say ""
 # drive).
 $scratch = Join-Path (Join-Path $repo 'target') ("tw-xuia-" + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Force $scratch | Out-Null
-# The GUI's temporary files go there too: a debug build of Masonry writes
-# a full trace log to the temporary folder on every start.
+# The GUI's temporary files go there too. (A debug build of Masonry wrote
+# a full trace log to the temporary folder on every start; since W7x it
+# writes one only where MASONRY_DENSE_LOG_DIR points.)
 $env:TMP = $scratch
 $env:TEMP = $scratch
 $logFile = Join-Path $scratch 'gui.log'
@@ -720,9 +721,9 @@ $foregroundBefore = [TwXUia]::GetForegroundWindow()
 $guiPid = [TwXUia]::LaunchInactive($Exe, $guiArgs, $repo)
 [TwXUia]::ListenFor($guiPid)
 $failures = New-Object System.Collections.Generic.List[string]
-# Found, not yet fixed, so not failures: the window coming to the front
-# after a button is pressed through UI Automation (W6a6; reproduced on
-# main before the menus existed).
+# Known problems that are not failures: an activation by UI Automation
+# that the window gave back at once (W7x). The window still being in front
+# when checked (W6a6's finding) is a failure again.
 $warnings = New-Object System.Collections.Generic.List[string]
 $launchedAt = Get-Date
 # Held from the start, so the exit code can still be read if the GUI ends
@@ -1025,7 +1026,7 @@ try {
     $stoleLater = [TwXUia]::IsForeground($guiPid)
     Say "- Took the foreground by the end: $stoleLater"
     Say ""
-    if ($stoleLater -and -not $stoleFocus) { $warnings.Add('the GUI came to the foreground after buttons were pressed through UI Automation') }
+    if ($stoleLater -and -not $stoleFocus) { $failures.Add('the GUI came to the foreground after buttons were pressed through UI Automation') }
     [TwXUia]::Close($frame)
 } catch {
     # The probe stopped early, most often because the GUI exited. Say why,
@@ -1116,7 +1117,7 @@ if (-not $WindowEdge) {
             }
             $palFgEnd = [TwXUia]::IsForeground($palPid)
             Say "- Took the foreground with the palette open: $palFgEnd"
-            if ($palFgEnd -and -not $palFgStart) { $warnings.Add('the palette run came to the foreground after the Commands button was pressed through UI Automation') }
+            if ($palFgEnd -and -not $palFgStart) { $failures.Add('the palette run came to the foreground after the Commands button was pressed through UI Automation') }
             [TwXUia]::Close([IntPtr]$pw.Current.NativeWindowHandle)
         }
     } finally {
@@ -1189,6 +1190,22 @@ if ($Announce -eq 'uia') {
     if ($liveChanged.Count -eq 0 -and $liveMessages.Count -eq 0) { $failures.Add('no LiveRegionChanged events and no live message elements') }
     if ($notifications.Count -gt 0) { $failures.Add('Notification events with --announce live (a screen reader would hear messages twice)') }
 }
+# W7x: the window is guarded (WS_EX_NOACTIVATE). UI Automation still
+# activates it on the first InvokePattern.Invoke; the window then gives the
+# foreground back at once and logs it (where from, the first time). Being in
+# front when checked is a failure; an activation given back is a warning.
+$guarded = @($guiLog | Where-Object { $_ -match '^background: guarded \(WS_EX_NOACTIVATE, foreground given back\): yes' })
+$palGuiLog = if ($palLog -and (Test-Path -LiteralPath $palLog)) { @(Get-Content -LiteralPath $palLog) } else { @() }
+$bothLogs = @(@($guiLog) + @($palGuiLog))
+$activated = @($bothLogs | Where-Object { $_ -match '^background: the window was activated' })
+$givenBack = @($bothLogs | Where-Object { $_ -match '^background: (foreground given back|the window was in front at a tick; foreground given back): yes' })
+Say "### Foreground"
+Say ""
+Say "- Guarded against activation (WS_EX_NOACTIVATE): $(if ($guarded.Count -gt 0) { 'yes' } else { 'no' })"
+Say "- Activated by UI Automation all the same: $($activated.Count) times; foreground given back: $($givenBack.Count) times"
+Say ""
+if ($guarded.Count -eq 0) { $failures.Add('the window was not guarded against activation') }
+if ($activated.Count -gt 0) { $warnings.Add("UI Automation activated the window $($activated.Count) times; it gave the foreground back $($givenBack.Count) times (the GUI log says where the first came from)") }
 Say "### GUI log (announcements, commands, load timing)"
 Say ""
 if ($guiLog.Count -gt 0) { Fence $guiLog } else { Fence @('(no log)') }
