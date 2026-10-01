@@ -100,7 +100,9 @@ A lean reader, without in-reader export, preview, and citations (the `publish` f
 cargo build -p textweaver-tui --no-default-features
 ```
 
-`cargo xtask deps --check` makes sure that build links none of the conversion and citation stack.
+`cargo xtask deps --check` makes sure that build links none of the conversion and citation stack, and not grammar checking (harper-core).
+
+Grammar checking (the `grammar` feature) is on by default since Wave 7, in the reader, the window app, `tw`, and the packages. It costs about 11 MB and, on a clean build, 67 more crates (harper-core and the burn framework under it). To leave only grammar out, turn off the default features and name the others: `--no-default-features --features publish,lint,clipboard,highlight,dictation` for the reader. [ADR-0032](../adr/0032-grammar-lint-highlighting-clipboard.md) has the measurements.
 
 ## Scripts
 
