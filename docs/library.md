@@ -4,7 +4,7 @@ This guide covers textweaver's library: the folders of documents you read from, 
 
 ## Open the library in the reader: Alt+L
 
-Press **Alt+L** in the terminal reader. The GUI uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Type to filter, Enter opens one."
+Press **Alt+L** in the terminal reader. The GUI uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Type to filter, Enter opens one, F2 edits details."
 
 The folders are read in the background, so a large library (up to 20,000 files) never holds up the keyboard. While it is read you may hear "Scanning the library.", and the status line counts the documents found every second; the list opens when the scan is done. Pressing **Alt+L** again meanwhile says how many have been found so far.
 
@@ -17,7 +17,7 @@ The list has every document in your library folders, then the files you opened r
 
 For example: "Cells, 25 percent, in Readings".
 
-Use **Up** and **Down** to move, **Enter** to open, and **Escape** to close. With nothing to show you hear: "The library is empty. Add a folder with tw library --add, or open a file with Ctrl+O."
+Use **Up** and **Down** to move, **Enter** to open, **F2** to edit a document's details (below), and **Escape** to close. With nothing to show you hear: "The library is empty. Add a folder with tw library --add, or open a file with Ctrl+O."
 
 ### Filter the list as you type
 
@@ -37,6 +37,43 @@ textweaver learns a document's author, DOI, and ISBN in three ways:
 - **From your other computers,** with [sync](sync.md) on. When another computer opened a document, its title, author, DOI, and ISBN travel with it, so the filter and `tw library --search` find it here by a DOI only that computer knew, even if you never opened it here. textweaver finds the document here when you opened it here before, when it is in a library folder that is itself synced between the computers (its `.textweaver/library-id.json` travels with it), or when `tw library --search` has read its text. When two computers know different details, the newest wins, detail by detail.
 
 Word and EPUB files keep their DOI or ISBN in an identifier field that textweaver does not read yet; a DOI or ISBN printed in the text is found.
+
+## Edit a document's details
+
+When a document's details are wrong or missing, such as a scan named "scan0042" with no author, you can type them yourself: its title, author, DOI, and ISBN. What you type wins over what the document says about itself, in the library list, its filter, and `tw library --search`, and it stays when the document is opened again.
+
+### In the reader
+
+There are two ways to open the form:
+
+- **For the open document:** choose **Edit details** in the File menu, under Continue reading, or type "edit details" in the command palette (F2). It has no key of its own; you can give it one in `keymap.toml`.
+- **From the library list:** move to a document and press **F2**. When you save or cancel, the list comes back on the same document, with its row changed.
+
+You hear "Details of", the document's title, then "Tab moves, Enter saves, Escape cancels." The form has four fields, one line each: Title, Author, DOI, and ISBN. Each field's label says where it is, such as "Author, 2 of 4", and starts with the field's current value.
+
+- **Tab** moves to the next field and **Shift+Tab** to the previous one. You hear the field's label and value, such as "Author: Ada Example", or "Author: blank" for an empty field. What you typed in a field is kept when you move away from it. Tab from the last field goes back to the first.
+- **Enter** saves every field you changed, from any field. You hear "Details saved:" and the fields, such as "Details saved: Title, Author." With nothing changed you hear "Details not changed."
+- **Escape** closes the form without saving anything, and you hear "Cancelled. Details not changed."
+
+A DOI or an ISBN can be typed any way it is usually written: `10.1000/xyz`, `doi:10.1000/XYZ`, a `https://doi.org/` link, or an ISBN with or without hyphens. One that is not a DOI or an ISBN is not saved: you hear, for example, "Not a DOI: 10.10/x. Fix it or clear it.", and the form opens again on that field.
+
+**Clearing a field** removes your edit, so the document's own value shows again. A field you never edited cannot hide the document's own value.
+
+In the GUI the form is a dialog with one field at a time, labeled the same way; Tab and Shift+Tab move between the fields, Enter saves, and Escape cancels.
+
+### From the command line: tw library edit
+
+```bash
+tw library edit "C:\Users\me\Readings\scan0042.pdf" --title "Cell Biology, Chapter 3" --author "Ada Example"
+tw library edit scan0042.pdf --doi 10.1000/cells --json
+tw library edit scan0042.pdf --author ""
+```
+
+Give any of `--title`, `--author`, `--doi`, and `--isbn`; the others keep their values. An empty value, such as `--author ""`, clears your edit. It prints "Details saved:" and the fields, or "Details not changed." A DOI or ISBN that is not one is refused with the same message as in the reader. With `--json` it prints the document's `path`, whether the bookshelf `changed`, the `fields` given, whether the edit was `published` to the sync folder, and every detail you have `edited`.
+
+### On your other computers
+
+With [sync](sync.md) on, what you type travels to your other computers with the document's other library details. Your edit wins over the details the document states, even when another computer opens the document later. When you edit the same detail on two computers, the newest edit wins. Clearing a detail travels too.
 
 ## Library folders
 
@@ -104,7 +141,7 @@ Every document you open goes to the front of the recent list, `recent.json` in t
 
 ## The bookshelf
 
-Every document you open is also recorded on the bookshelf, `library.json` in the data folder. Each entry holds the document's full path, its title, the kind of file, when you first opened it, when you last opened it, and its author, DOI, and ISBN when known. The bookshelf keeps up to 500 documents; past that, the ones opened longest ago are dropped. `tw migrate-star` fills it from Star's library.
+Every document you open is also recorded on the bookshelf, `library.json` in the data folder. Each entry holds the document's full path, its title, the kind of file, when you first opened it, when you last opened it, its author, DOI, and ISBN when known, and the details you typed yourself (under `edited`). The bookshelf keeps up to 500 documents; past that, the ones opened longest ago are dropped. `tw migrate-star` fills it from Star's library.
 
 ## Search every document: tw library --search
 
