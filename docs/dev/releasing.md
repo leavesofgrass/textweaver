@@ -106,6 +106,8 @@ Optional. When you want to listen, do this on the machine you use every day, wit
    - Move by sentence and heading while reading.
    - Change the rate and pitch; then choose another voice (Alt+V) and back. The first voice comes back with its own rate and pitch.
    - In the voice manager (Alt+V), move the language and engine filters with Enter on their rows.
+   - In the voice manager, press Alt+End on a voice of this engine and on one of another engine: each says its name and a sample in its own voice, and the voice in use stays as it was.
+   - In the GUI's voice manager (Ctrl+Shift+V), Tab through the Language and Engine buttons, the list, and Use voice, Preview, Favorite, Remove, and Close: each is read with its name, role, and key. Press Engine and check the list and the button's name change.
 
 5. **Piper.** With a Piper voice installed:
    - `tw backends` lists `piper` as available and says it supports word highlighting.

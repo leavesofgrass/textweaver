@@ -21,7 +21,7 @@ See the [features page](site/features.html) for the full, current list with each
 ## Being built next
 
 - **Release readiness** for the next alpha: packaging, dependency, and CI polish so each release ships cleanly on every platform.
-- **The GUI catching up to the terminal reader**, including a voice manager that covers every speech engine, not just Piper. The syllable display and the difficult-word overlay are now drawn in the GUI too.
+- **The GUI catching up to the terminal reader.** The voice manager now covers every speech engine, with preview, and the syllable display and the difficult-word overlay are drawn in the GUI too.
 - **Editable document metadata** (title, author, and the other fields the library already searches by).
 
 ## Planned
