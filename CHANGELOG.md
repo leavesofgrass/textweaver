@@ -4,6 +4,11 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### The window
+
+- **The title bar and menus follow the theme.** A dark theme such as Galaxy now gets a dark title bar, and on Windows a dark menu bar and dark drop-down menus, even when Windows itself is light; a light theme gets light ones. With Windows High Contrast on, Windows draws them in your contrast colors. See [Colors and high contrast](docs/gui.md#colors-and-high-contrast).
+- **New setting: Hide the menu bar** (`[gui] auto_hide_menu`, off by default, Windows only). The menu bar takes no room until Alt, F10, or Alt with a menu's letter shows it, and hides again when the menu closes. NVDA and JAWS still say "menu bar" on Alt and F10. See [Menus](docs/gui.md#menus).
+
 ### For contributors
 
 - **Research for the next waves.** `docs/dev/research/` holds the research reports and the wave plan for alpha.8, alpha.9, and later: a performance audit, speech engines and runtimes, text-to-speech use cases for students with disabilities, health sciences workflows, GUI and visual design, and law and standards. Nothing in it is a decision; decisions stay in the ADRs.
