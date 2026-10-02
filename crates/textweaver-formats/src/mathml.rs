@@ -25,7 +25,7 @@
 use scraper::ElementRef;
 
 use crate::omml::{
-    accent_command, delimiter, function_name, is_atom, math_text, nary_command, push, takes_limits,
+    Tex, accent_command, delimiter, function_name, is_atom, math_text, nary_command, takes_limits,
     text_mode,
 };
 
@@ -160,14 +160,14 @@ impl Conv {
 
     /// The LaTeX of `el`'s children, one after another.
     fn children(&mut self, el: ElementRef<'_>) -> String {
-        let mut out = String::new();
+        let mut out = Tex::new();
         for k in Self::kids(el) {
             let piece = self.node(k);
             if !piece.is_empty() {
-                push(&mut out, &piece);
+                out.push(&piece);
             }
         }
-        out
+        out.into_string()
     }
 
     fn node(&mut self, el: ElementRef<'_>) -> String {
@@ -321,16 +321,16 @@ impl Conv {
             .position(|k| local(k.value().name()) == "mprescripts")
             .unwrap_or(kids.len());
         let pairs = |this: &mut Self, from: usize, to: usize| -> (String, String) {
-            let (mut subs, mut sups) = (String::new(), String::new());
+            let (mut subs, mut sups) = (Tex::new(), Tex::new());
             let mut i = from;
             while i < to {
-                push(&mut subs, &this.nth(kids, i));
+                subs.push(&this.nth(kids, i));
                 if i + 1 < to {
-                    push(&mut sups, &this.nth(kids, i + 1));
+                    sups.push(&this.nth(kids, i + 1));
                 }
                 i += 2;
             }
-            (subs, sups)
+            (subs.into_string(), sups.into_string())
         };
         let (post_sub, post_sup) = pairs(self, 1, split);
         let (pre_sub, pre_sup) = pairs(self, split + 1, kids.len());
@@ -383,16 +383,17 @@ impl Conv {
             .chars()
             .filter(|c| !c.is_whitespace())
             .collect();
-        let mut inner = String::new();
+        let mut inner = Tex::new();
         for (i, k) in kids.iter().enumerate() {
             if i > 0
                 && let Some(sep) = seps.get(i - 1).or(seps.last())
             {
-                inner.push_str(&token(&sep.to_string()));
-                inner.push(' ');
+                inner.push_raw(&token(&sep.to_string()));
+                inner.push_raw(" ");
             }
-            push(&mut inner, &self.node(*k));
+            inner.push(&self.node(*k));
         }
+        let inner = inner.into_string();
         match (delimiter(open), delimiter(close)) {
             (Some(l), Some(r)) => format!("\\left{l} {inner} \\right{r}"),
             _ => format!("{} {inner} {}", token(open), token(close)),

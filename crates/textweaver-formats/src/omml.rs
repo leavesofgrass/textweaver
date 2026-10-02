@@ -60,8 +60,65 @@ fn toggle(pr: Option<Node<'_, '_>>, name: &str) -> bool {
         .is_some_and(|c| !matches!(attr(c, "val"), Some("0" | "false" | "off" | "none")))
 }
 
+/// LaTeX built piece by piece, kept apart where a piece would run into
+/// the command before it (`\alpha` then `x` gives `\alpha x`).
+///
+/// It remembers how its text ends, so each piece costs its own length.
+/// Scanning back from the end instead (W8b-ml) cost the whole run of
+/// letters before it on every piece: a 512 KB token read letter by letter
+/// was quadratic, and took minutes.
+#[derive(Debug, Default)]
+pub(crate) struct Tex {
+    s: String,
+    /// The text ends with ASCII letters.
+    in_word: bool,
+    /// Those letters follow an odd number of backslashes: a control word.
+    command: bool,
+    /// The text ends with an odd number of backslashes.
+    odd_slashes: bool,
+}
+
+impl Tex {
+    /// Empty LaTeX.
+    pub(crate) fn new() -> Self {
+        Self::default()
+    }
+
+    /// Appends `piece`, with a space first when it starts with a letter
+    /// and the text ends with a control word.
+    pub(crate) fn push(&mut self, piece: &str) {
+        if self.in_word && self.command && piece.starts_with(|c: char| c.is_ascii_alphabetic()) {
+            self.push_raw(" ");
+        }
+        self.push_raw(piece);
+    }
+
+    /// Appends `piece` as it is, never adding a space.
+    pub(crate) fn push_raw(&mut self, piece: &str) {
+        self.s.push_str(piece);
+        for c in piece.chars() {
+            if c.is_ascii_alphabetic() {
+                if !self.in_word {
+                    self.in_word = true;
+                    self.command = self.odd_slashes;
+                }
+                self.odd_slashes = false;
+            } else {
+                self.in_word = false;
+                self.odd_slashes = c == '\\' && !self.odd_slashes;
+            }
+        }
+    }
+
+    /// The LaTeX so far.
+    pub(crate) fn into_string(self) -> String {
+        self.s
+    }
+}
+
 /// Appends `piece`, with a space when it would otherwise run into the
-/// command `out` ends with (`\alpha` then `x`).
+/// command `out` ends with: the reference [`Tex::push`] is tested against.
+#[cfg(test)]
 pub(crate) fn push(out: &mut String, piece: &str) {
     if piece.starts_with(|c: char| c.is_ascii_alphabetic()) && ends_with_command(out) {
         out.push(' ');
@@ -71,6 +128,7 @@ pub(crate) fn push(out: &mut String, piece: &str) {
 
 /// Whether `s` ends with a control word (`\alpha`, but not the row break
 /// `\\` followed by letters).
+#[cfg(test)]
 fn ends_with_command(s: &str) -> bool {
     let letters = s
         .chars()
@@ -369,25 +427,25 @@ fn symbol(c: char) -> Option<&'static str> {
 /// Math run text as LaTeX. `aligned`: `&` is an alignment point (in an
 /// equation array) rather than an ampersand.
 pub(crate) fn math_text(text: &str, aligned: bool) -> String {
-    let mut out = String::new();
+    let mut out = Tex::new();
     for c in text.chars() {
         match c {
             // Function application, invisible times and separator and
             // plus, and zero-width space: layout hints with no reading.
             '\u{2061}'..='\u{2064}' | '\u{200B}' => {}
-            '&' if aligned => out.push_str(" & "),
-            '&' => out.push_str("\\&"),
-            c if c.is_whitespace() => out.push(' '),
+            '&' if aligned => out.push_raw(" & "),
+            '&' => out.push_raw("\\&"),
+            c if c.is_whitespace() => out.push_raw(" "),
             c => match symbol(c) {
-                Some(cmd) => push(&mut out, cmd),
+                Some(cmd) => out.push(cmd),
                 None => {
                     let mut buf = [0u8; 4];
-                    push(&mut out, c.encode_utf8(&mut buf));
+                    out.push(c.encode_utf8(&mut buf));
                 }
             },
         }
     }
-    out
+    out.into_string()
 }
 
 /// Text for `\text{…}`, with text-mode specials escaped.
@@ -435,19 +493,19 @@ impl Conv {
     /// Past the nesting limit: the run text of everything inside, without
     /// structure. Iterative, so no depth can overflow the stack.
     fn flat(&self, n: Node<'_, '_>) -> String {
-        let mut out = String::new();
+        let mut out = Tex::new();
         for d in n.descendants() {
             if d.is_element() && d.tag_name().name() == "t" {
-                push(&mut out, &math_text(d.text().unwrap_or(""), self.aligned));
+                out.push(&math_text(d.text().unwrap_or(""), self.aligned));
             }
         }
-        out
+        out.into_string()
     }
 
     /// The LaTeX of an element's content children, in order; properties,
     /// deleted revisions, and field codes are skipped.
     fn children(&mut self, n: Node<'_, '_>) -> String {
-        let mut out = String::new();
+        let mut out = Tex::new();
         for c in n.children().filter(Node::is_element) {
             let name = c.tag_name().name();
             if name.ends_with("Pr") || matches!(name, "del" | "moveFrom" | "delText" | "instrText")
@@ -455,9 +513,9 @@ impl Conv {
                 continue;
             }
             let piece = self.node(c);
-            push(&mut out, &piece);
+            out.push(&piece);
         }
-        out
+        out.into_string()
     }
 
     /// The LaTeX of child `name`, empty when there is none.
@@ -1046,6 +1104,44 @@ mod tests {
         let mut s = String::from("a \\\\");
         push(&mut s, "b");
         assert_eq!(s, "a \\\\b");
+    }
+
+    proptest! {
+        /// The tracked builder spaces pieces exactly as the scan back
+        /// from the end does, for any pieces of letters, backslashes, and
+        /// other characters, pushed spaced or raw.
+        #[test]
+        fn tex_matches_the_scan(
+            pieces in proptest::collection::vec((r"[ab\\{ 1&é]{0,5}", any::<bool>()), 0..40)
+        ) {
+            let mut tex = Tex::new();
+            let mut scan = String::new();
+            for (p, raw) in &pieces {
+                if *raw {
+                    tex.push_raw(p);
+                    scan.push_str(p);
+                } else {
+                    tex.push(p);
+                    push(&mut scan, p);
+                }
+            }
+            prop_assert_eq!(tex.into_string(), scan);
+        }
+    }
+
+    #[test]
+    fn a_long_run_of_letters_is_read_in_linear_time() {
+        // Each letter of a token is pushed on its own; a scan back over
+        // the run before it made this quadratic (W8b-ml).
+        let token = "x".repeat(400_000);
+        let t = std::time::Instant::now();
+        let got = math_text(&token, false);
+        assert_eq!(got, token);
+        assert!(
+            t.elapsed() < std::time::Duration::from_secs(5),
+            "took {:?}",
+            t.elapsed()
+        );
     }
 
     #[test]
