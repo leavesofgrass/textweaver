@@ -3,8 +3,8 @@
 //!
 //! Builds `textweaver` and `tw` with the `dist` profile (the release
 //! profile with fat LTO), each in a cargo run of its own so the reader
-//! gets only its own features (not `tw`'s HTTP client), the engine hosts for the platform (Windows and
-//! Linux), and stages them with the pronunciation dictionaries, the
+//! gets only its own features, the engine hosts for the platform (Windows
+//! and Linux), and stages them with the pronunciation dictionaries, the
 //! licence, the third-party notices and licence files, and the user guides
 //! in `target/dist/textweaver-VERSION-PLATFORM/`, then archives the folder:
 //! a `.zip` on Windows, a `.tar.gz` elsewhere. It fails if a notice is
@@ -439,8 +439,8 @@ pub(crate) fn cargo(root: &Path, build_dir: &Path) -> Command {
 
 /// The cargo arguments that build one user binary. Each binary gets a
 /// cargo run of its own: built together, cargo would unify their features
-/// and give the reader `tw`'s (the HTTP client behind `textweaver-formats`'
-/// `url` and `textweaver-ocr`'s `download`, which the reader leaves out).
+/// and give the reader `tw`'s, such as `textweaver-formats`' `url` and
+/// `textweaver-ocr`'s `download`, which the reader leaves out.
 fn binary_build_args(package: &str, bin: &str, target: Option<&str>) -> Vec<String> {
     let mut args: Vec<String> = [
         "build",
