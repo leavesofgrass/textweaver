@@ -24,9 +24,15 @@ pub fn byte_of(text: &str, off: usize) -> usize {
     text.char_indices().nth(off).map_or(text.len(), |(b, _)| b)
 }
 
-/// Char offset of byte index `b` in `text`.
+/// Char offset of byte index `b` in `text`. A byte inside a char counts
+/// as that char's start: the frame-time probe found a layout line start
+/// inside "é" on the 1 MB one-line corpus (W8b-i), which panicked here.
 pub fn char_of(text: &str, b: usize) -> usize {
-    text[..b.min(text.len())].chars().count()
+    let mut b = b.min(text.len());
+    while !text.is_char_boundary(b) {
+        b -= 1;
+    }
+    text[..b].chars().count()
 }
 
 /// Char offset within its paragraph, clamped to the paragraph (not its
@@ -185,6 +191,16 @@ mod tests {
 
     fn paras(t: &str) -> Vec<Paragraph> {
         paragraphs(CharPos::ZERO, t)
+    }
+
+    #[test]
+    fn a_byte_inside_a_char_counts_as_its_start() {
+        // "caf" then "é" (two bytes), then " x".
+        let t = "café x";
+        assert_eq!(char_of(t, 3), 3);
+        assert_eq!(char_of(t, 4), 3, "inside é");
+        assert_eq!(char_of(t, 5), 4);
+        assert_eq!(char_of(t, 99), 6);
     }
 
     #[test]

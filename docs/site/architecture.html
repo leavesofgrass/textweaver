@@ -323,8 +323,11 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "dependents": [],
    "deps": [
     "textweaver-app",
+    "textweaver-enginehost",
     "textweaver-formats",
     "textweaver-keymap",
+    "textweaver-piper",
+    "textweaver-sapi",
     "textweaver-sync",
     "textweaver-text"
    ],
@@ -1104,7 +1107,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-eci",
     "textweaver-engines",
     "textweaver-piper",
-    "textweaver-sapi"
+    "textweaver-sapi",
+    "xtask"
    ],
    "deps": [
     "textweaver-core",
@@ -1177,7 +1181,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-engines"
+    "textweaver-engines",
+    "xtask"
    ],
    "deps": [
     "textweaver-core",
@@ -1278,7 +1283,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-engines"
+    "textweaver-engines",
+    "xtask"
    ],
    "deps": [
     "textweaver-components",

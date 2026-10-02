@@ -15,6 +15,25 @@ fn ms(n: u64) -> Duration {
     Duration::from_millis(n)
 }
 
+#[test]
+fn word_lateness_is_summarized_in_words_and_starts_again() {
+    let mut l = Lateness::default();
+    l.step(ms(0));
+    for i in 0..9 {
+        l.step(ms(10 * (i + 1)));
+        l.word(ms(i));
+    }
+    // An idle gap between readings is not a step.
+    l.step(ms(10_000));
+    let line = l.summary();
+    assert!(
+        line.starts_with("speech timing: 9 scheduled words late by median 4.0 ms"),
+        "{line}"
+    );
+    assert!(line.contains("timer steps median 10.0 ms"), "{line}");
+    assert!(l.late_ms.is_empty() && l.step_ms.is_empty());
+}
+
 /// A config that leaves plain words untouched.
 fn plain() -> ServiceConfig {
     ServiceConfig {
