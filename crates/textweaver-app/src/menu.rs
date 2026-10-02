@@ -31,6 +31,7 @@
 //!   palette, listed first in an empty palette.
 
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use textweaver_a11y::Priority;
 use textweaver_keymap::{ActionId, KeyChord, Keymap};
@@ -779,6 +780,34 @@ fn menu_label(c: &Catalog, m: MenuId) -> String {
     c.tr(&format!("menu-{}", m.id()))
 }
 
+/// The letters the top menus' access keys must avoid, from the window's
+/// default keymap on Windows: the same in every session, so worked out once.
+static RESERVED_LETTERS: LazyLock<Vec<char>> = LazyLock::new(|| {
+    gui_alt_letters(&Keymap::defaults(
+        textweaver_keymap::Platform::Windows,
+        textweaver_keymap::Frontend::Gui,
+    ))
+});
+
+/// The settings what the menus show depends on: the language, the theme
+/// (its name is shown on Next theme), and every setting a menu item shows
+/// ([`bound_setting`]). A frontend that keeps native menus compares these,
+/// not all the settings, so a rate key does not rebuild the menus.
+pub fn menu_setting_paths() -> &'static [&'static str] {
+    static PATHS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
+        let mut out = vec!["interface.language", "display.theme"];
+        for a in ActionId::ALL {
+            if let Some(p) = bound_setting(*a)
+                && !out.contains(&p)
+            {
+                out.push(p);
+            }
+        }
+        out
+    });
+    &PATHS
+}
+
 /// Letters the GUI's `Alt` chords use, which a top menu's access key must
 /// not take, so `Alt+O` stays the outline in every language.
 pub fn gui_alt_letters(keymap: &Keymap) -> Vec<char> {
@@ -909,11 +938,7 @@ impl App {
             .iter()
             .map(|&m| split_access(&menu_label(c, m)))
             .collect();
-        let reserved = gui_alt_letters(&Keymap::defaults(
-            textweaver_keymap::Platform::Windows,
-            textweaver_keymap::Frontend::Gui,
-        ));
-        let keys = assign_access_keys(&labels, &reserved);
+        let keys = assign_access_keys(&labels, &RESERVED_LETTERS);
         labels
             .into_iter()
             .zip(keys)
@@ -1034,8 +1059,10 @@ impl App {
         let Some(path) = bound_setting(a) else {
             return (None, None);
         };
-        let schema = crate::settings_schema::SettingsSchema::generate();
-        let (Some(setting), Some(now)) = (schema.get(path), self.setting_value(path)) else {
+        let (Some(setting), Some(now)) = (
+            crate::settings_schema::base_schema().get(path),
+            self.setting_value(path),
+        ) else {
             return (None, None);
         };
         match (&setting.kind, &now) {

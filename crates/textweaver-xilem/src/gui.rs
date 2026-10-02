@@ -382,17 +382,6 @@ pub struct Gui {
     /// How many font downloads the app had finished when the downloaded
     /// fonts were last registered (`App::font_downloads`).
     font_downloads: u64,
-    /// Load and highlight timings, for `--log` and the measurements.
-    pub timings: Timings,
-}
-
-/// Measured times, in milliseconds.
-#[derive(Clone, Debug, Default)]
-pub struct Timings {
-    /// Building the window's text and runs for a document.
-    pub load_ms: Vec<(usize, f64)>,
-    /// Moving the highlight.
-    pub highlight_ms: Vec<f64>,
 }
 
 /// The pieces the tree is built from, shared by the window and the
@@ -1282,16 +1271,8 @@ impl Gui {
             }
         }
         let root = ctx.render_root(self.window_id);
-        let before = self.shown.state;
-        if let Some(ms) = refresh_host(&self.app, &mut self.shown, root, self.log) {
-            let len = self.app.session().map_or(0, |s| s.doc.len_chars());
-            self.timings.load_ms.push((len, ms));
-        }
-        if before.spoken != self.shown.state.spoken {
-            // The widget's share is measured in its accessibility pass; the
-            // edit itself is recorded here.
-            self.timings.highlight_ms.push(0.0);
-        }
+        // Loads and slow highlights are timed in `--log` (`refresh_host`).
+        let _ = refresh_host(&self.app, &mut self.shown, root, self.log);
         // Copy and Cut (the keymap's): what the app copied goes on the
         // system clipboard, as the terminal sends it with OSC 52.
         if let Some(text) = self.app.take_clipboard() {
@@ -3505,7 +3486,6 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
         closed: false,
-        timings: Timings::default(),
     };
     let default_props = theme::default_properties(&gui.palette);
     masonry_winit::app::run_with(event_loop, vec![window], gui, default_props)

@@ -1436,6 +1436,16 @@ fn json(settings: &Settings) -> Map<String, Value> {
     settings_to_json(settings).unwrap_or_default()
 }
 
+/// The schema [`SettingsSchema::generate`] makes, built once: it depends
+/// on no state, and the menus read it for every toggle they show and
+/// every change asks it first. [`App::settings_schema`] adds this session's
+/// themes to a copy.
+pub(crate) fn base_schema() -> &'static SettingsSchema {
+    static SCHEMA: std::sync::LazyLock<SettingsSchema> =
+        std::sync::LazyLock::new(SettingsSchema::generate);
+    &SCHEMA
+}
+
 impl SettingsSchema {
     /// The schema of the store's settings: every key of a default
     /// `settings.toml`, with its [`INFO`]. Keys with no entry in [`INFO`]
@@ -1897,7 +1907,7 @@ impl App {
     /// The settings schema, with this session's theme names as the theme's
     /// choices.
     pub fn settings_schema(&self) -> SettingsSchema {
-        let mut schema = SettingsSchema::generate();
+        let mut schema = base_schema().clone();
         let themes: Vec<Choice> = self
             .themes
             .names()
@@ -1923,6 +1933,13 @@ impl App {
     /// The current value of the setting at `path`, as JSON.
     pub fn setting_value(&self, path: &str) -> Option<Value> {
         get(&json(&self.settings), path).cloned()
+    }
+
+    /// The values at each of `paths`, as [`setting_value`](Self::setting_value)
+    /// gives one, from a single copy of the settings as JSON.
+    pub fn setting_values(&self, paths: &[&str]) -> Vec<Option<Value>> {
+        let tree = json(&self.settings);
+        paths.iter().map(|p| get(&tree, p).cloned()).collect()
     }
 
     /// Changes the setting at `path` to `value` (JSON; `null` puts the
