@@ -3923,6 +3923,7 @@ gui-voices-favorite = مفضّل
 gui-voices-favorite-help = جعل الصوت المحدد مفضّلًا، أو إلغاء ذلك. المفضّلة تأتي أولًا.
 gui-voices-remove = إزالة
 gui-voices-remove-help = إزالة صوت Piper المُنزَّل المحدد بعد سؤال.
+gui-voices-remove-unavailable = غير متاح
 gui-voices-language-help = عرض أصوات اللغة التالية فقط، ثم كل اللغات مجددًا.
 gui-voices-engine-help = عرض أصوات المحرك التالي فقط، ثم كل المحركات مجددًا.
 gui-voices-fetch-help = تنزيل قائمة أصوات Piper، نحو 250 كيلوبايت، بعد سؤال.

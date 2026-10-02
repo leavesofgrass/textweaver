@@ -3690,6 +3690,7 @@ gui-voices-favorite = Favorit
 gui-voices-favorite-help = Die ausgewählte Stimme als Favoriten markieren oder die Markierung entfernen. Favoriten stehen zuerst.
 gui-voices-remove = Entfernen
 gui-voices-remove-help = Die ausgewählte heruntergeladene Piper-Stimme nach einer Frage entfernen.
+gui-voices-remove-unavailable = nicht verfügbar
 gui-voices-language-help = Nur die Stimmen der nächsten Sprache zeigen, danach wieder alle Sprachen.
 gui-voices-engine-help = Nur die Stimmen der nächsten Engine zeigen, danach wieder alle Engines.
 gui-voices-fetch-help = Die Liste der Piper-Stimmen, etwa 250 KB, nach einer Frage herunterladen.

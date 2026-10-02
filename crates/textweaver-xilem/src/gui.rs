@@ -2416,9 +2416,30 @@ impl Gui {
                         ActionButton::set_label(&mut b, c.engine.clone());
                     });
                 }
+                if voices_shown {
+                    self.sync_voice_remove(ctx);
+                }
             }
             None => self.close_dialog(ctx),
         }
+    }
+
+    /// The voice manager's Remove button follows the focused voice: it is
+    /// unavailable, with the reason, on a voice that cannot be removed.
+    fn sync_voice_remove(&mut self, ctx: &mut DriverCtx<'_>) {
+        if !matches!(self.dialog, Some(OpenDialog::Voices { .. })) {
+            return;
+        }
+        let Some(row) = self.app.list_model().map(|m| m.selected) else {
+            return;
+        };
+        let why = crate::voices::remove_unavailable(&self.app, row);
+        ctx.render_root(self.window_id).edit_widget_with_tag(
+            crate::voices::VOICE_REMOVE,
+            |mut b| {
+                ActionButton::set_unavailable(&mut b, why);
+            },
+        );
     }
 
     /// Edit mode: marks the misspelled words (Alt+M finds them), once the
@@ -2903,6 +2924,7 @@ impl AppDriver for Gui {
                 DialogAction::Focus(i) => {
                     let i = *i;
                     self.dispatch(ctx, Command::ListFocus(i));
+                    self.sync_voice_remove(ctx);
                     return;
                 }
                 DialogAction::Recall(up) => {

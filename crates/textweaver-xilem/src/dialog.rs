@@ -83,6 +83,10 @@ pub struct Modal {
     /// The command palette: the command key with L moves to its list of
     /// matches, as Ctrl+L shows them as a list in the terminal.
     show_matches: bool,
+    /// Chords (Ctrl, Alt, or a function key) that no control took go to
+    /// the app as [`DialogAction::Chord`], so the Help, Say Status, and
+    /// Repeat Message keys work with the focus on a button too.
+    app_chords: bool,
     /// Whose command modifier the dialog follows ([`crate::keys`]).
     platform: Platform,
 }
@@ -104,6 +108,7 @@ impl Modal {
             tab_fields: false,
             answer_keys: false,
             show_matches: false,
+            app_chords: false,
             platform: Platform::current(),
         }
     }
@@ -112,6 +117,14 @@ impl Modal {
     /// macOS) moves to the list of matches, as in the terminal's palette.
     pub fn with_show_matches(mut self, on: bool) -> Self {
         self.show_matches = on;
+        self
+    }
+
+    /// Chords no control took (Ctrl, Alt, or a function key, as the app
+    /// list sends them) go to the app as [`DialogAction::Chord`]: the
+    /// voice manager's keys work on its buttons as in its list.
+    pub fn with_app_chords(mut self, on: bool) -> Self {
+        self.app_chords = on;
         self
     }
 
@@ -168,6 +181,16 @@ impl Widget for Modal {
             && matches!(&k.key, Key::Character(s) if s.eq_ignore_ascii_case("l"))
         {
             ctx.submit_action::<DialogAction>(DialogAction::ShowMatches);
+            ctx.set_handled();
+            return;
+        }
+        if self.app_chords
+            && k.state == KeyState::Down
+            && !k.is_composing
+            && (command || matches!(&k.key, Key::Named(n) if crate::keys::is_function_key(n)))
+            && let Some(chord) = crate::keys::chord(k, self.platform)
+        {
+            ctx.submit_action::<DialogAction>(DialogAction::Chord(chord));
             ctx.set_handled();
             return;
         }

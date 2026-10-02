@@ -3683,6 +3683,7 @@ gui-voices-favorite = Favorite
 gui-voices-favorite-help = Make the focused voice a favorite, or stop it being one. Favorites come first.
 gui-voices-remove = Remove
 gui-voices-remove-help = Remove the focused downloaded Piper voice, after a question.
+gui-voices-remove-unavailable = unavailable
 gui-voices-language-help = Show only the next language's voices, then all languages again.
 gui-voices-engine-help = Show only the next engine's voices, then all engines again.
 gui-voices-fetch-help = Download the list of Piper voices, about 250 KB, after a question.
