@@ -577,7 +577,10 @@ impl App {
             self.speech.say(text, SayMode::Interrupt);
         }
         if route.status {
-            self.show(text);
+            // A whole long line (a caret move onto a paragraph) is cut
+            // for the status line as text read in place is; the voice
+            // says all of it.
+            self.show(&crate::access::status_cut(text));
         }
     }
 

@@ -118,6 +118,7 @@ fn everything_changed() -> Settings {
     d.tab_width = 2;
     d.show_line_numbers = true;
     d.scroll_margin = 5;
+    d.hints = crate::HintsLine::Off;
     let e = &mut s.editing;
     e.autosave_recovery = false;
     e.autosave_interval_secs = 60;

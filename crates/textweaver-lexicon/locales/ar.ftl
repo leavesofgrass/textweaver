@@ -561,9 +561,10 @@ help-not-bound = غير مرتبط بمفتاح
 help-or = { $a } أو { $b }
 # A command without keys: $name is its palette name, such as list highlights.
 help-the-command = الأمر { $name }
-# One line of the keyboard shortcuts list: a category-* title, an action-*
-# help, and its keys.
-help-entry = { $category }: { $help }. { $keys }
+# One line of the keyboard shortcuts list: the command's name-* (first, so
+# type-ahead finds commands), its keys (inside a 40-cell Braille line), an
+# action-* help, and its category-* title.
+help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = أمر غير معروف: { $text }.
 help-shortcuts-intro = اختصارات لوحة المفاتيح، { $n } أمرًا. السهمان لأعلى ولأسفل للتنقل، Enter للتشغيل، Escape للإغلاق.
 help-shortcuts-title = اختصارات لوحة المفاتيح
@@ -1966,6 +1967,11 @@ setting-display-show-line-numbers = أرقام الأسطر
 setting-display-show-line-numbers-help = إظهار أرقام الأسطر.
 setting-display-scroll-margin = هامش التمرير
 setting-display-scroll-margin-help = الأسطر المُبقاة في العرض أعلى المؤشر وأسفله.
+setting-display-hints = سطر تلميحات المفاتيح
+setting-display-hints-help = هل يعرض قارئ الطرفية تلميحات المفاتيح في سطره الأخير: التلقائي يعرضها مع النطق الذاتي ويخفيها مع قارئ الشاشة. يذكر F1 وقائمة اختصارات لوحة المفاتيح المفاتيح دائمًا.
+choice-display-hints-auto = تلقائي
+choice-display-hints-on = مفعّل
+choice-display-hints-off = متوقف
 setting-editing-autosave-recovery = لقطات الاسترداد
 setting-editing-autosave-recovery-help = الاحتفاظ بنسخة من العمل غير المحفوظ وعرضها بعد تعطّل.
 setting-editing-autosave-interval-secs = فاصل اللقطات

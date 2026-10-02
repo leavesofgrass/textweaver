@@ -130,6 +130,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("display.tab_width", Portable),
     ("display.show_line_numbers", Portable),
     ("display.scroll_margin", Portable),
+    ("display.hints", Machine),
     // [editing]
     ("editing.autosave_recovery", Portable),
     ("editing.autosave_interval_secs", Portable),

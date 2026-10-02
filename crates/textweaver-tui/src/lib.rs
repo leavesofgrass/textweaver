@@ -1,11 +1,13 @@
 //! The textweaver terminal frontend: a self-voicing ratatui reader.
 //!
-//! Screen, top to bottom: a title line (document, reading state, rate,
-//! backend, line and percentage, mode); the document viewport over a window
-//! slice of the text; the status line, which shows every announcement and is
-//! the app's `StatusLineAnnouncer`; and a line of key hints that becomes the
-//! minibuffer when a prompt is open. Lists (keyboard help, bookmarks, help)
-//! appear over the document.
+//! Screen, top to bottom: a title line (document, then line and
+//! percentage, mode and "modified" outside browse mode, reading state,
+//! access mode, rate, engine; the position first in screen-reader and
+//! hybrid modes); the document viewport over a window slice of the text;
+//! the status area, which shows every announcement in full and is the
+//! app's `StatusLineAnnouncer`; and a line of key hints (`[display]
+//! hints`) that becomes the minibuffer when a prompt is open. Lists
+//! (keyboard help, bookmarks, help) appear over the document.
 //!
 //! Accessibility: the hardware cursor sits where attention is (the prompt
 //! caret, the focused list item, the Speech Cursor line, the spoken word

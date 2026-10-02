@@ -105,6 +105,17 @@ pub(crate) struct ScreenSayAll {
 /// The most characters of document text put on the status line at once.
 pub const STATUS_TEXT_LIMIT: usize = 600;
 
+/// `text` cut to at most [`STATUS_TEXT_LIMIT`] characters for the status
+/// line, at a space, with an ellipsis after the cut.
+pub(crate) fn status_cut(text: &str) -> std::borrow::Cow<'_, str> {
+    if text.chars().count() <= STATUS_TEXT_LIMIT {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    let cut: String = text.chars().take(STATUS_TEXT_LIMIT).collect();
+    let cut = cut.rsplit_once(' ').map_or(cut.as_str(), |(a, _)| a);
+    std::borrow::Cow::Owned(format!("{cut}…"))
+}
+
 /// A pause after each sentence of the screen say-all, so the screen reader
 /// finishes before the next one appears.
 pub const SENTENCE_GAP: Duration = Duration::from_millis(600);
@@ -209,12 +220,7 @@ impl App {
             .collect::<Vec<_>>()
             .join(" ");
         let text = self.screen_text(&joined);
-        if text.chars().count() <= STATUS_TEXT_LIMIT {
-            return text;
-        }
-        let cut: String = text.chars().take(STATUS_TEXT_LIMIT).collect();
-        let cut = cut.rsplit_once(' ').map_or(cut.as_str(), |(a, _)| a);
-        format!("{cut}…")
+        status_cut(&text).into_owned()
     }
 
     /// Next accessibility mode (`cycle_access_mode`), saved. The change is

@@ -9,8 +9,9 @@
 //! - **Repeat message** says the last message again, as the status line
 //!   shows it ("Opened essay. Ctrl+Q quits."), keys spoken by name.
 //! - **Say status** says the last message, then the title line's parts:
-//!   the mode, whether the document is modified, the reading state, the
-//!   position, the accessibility mode, the rate, and the speech engine.
+//!   the position, the mode and whether the document is modified (in edit
+//!   and Speech Cursor modes these come before the state), the reading
+//!   state, the accessibility mode, the rate, and the speech engine.
 //!   In an open list it says the list's introduction instead.
 //!
 //! In a list, [`ListKey::Introduce`] (F1 and the Say Status key in the
@@ -56,9 +57,11 @@ impl App {
     /// The parts of the title line after the document's name, most
     /// important first, so a 40-cell Braille display shows the meaning
     /// (the Braille pass, Wave 5): `position`, the reading state
-    /// ([`App::reading_state`]), the mode (unless browse), "modified", the
-    /// accessibility mode (unless self-voicing), the rate, and the speech
-    /// engine: "line 12 of 400, 3%, Reading". Frontends draw them joined
+    /// ([`App::reading_state`]), "modified", the accessibility mode
+    /// (unless self-voicing), the rate, and the speech engine: "line 12 of
+    /// 400, 3%, Reading". In edit and Speech Cursor modes the mode and
+    /// "modified" come before the reading state: "line 12 of 400, 3%,
+    /// Edit, modified, Ready" (Wave 8c). Frontends draw them joined
     /// with commas and drop trailing parts when narrow; "say status"
     /// speaks them.
     pub fn title_parts(&self, position: Option<&str>) -> Vec<String> {
@@ -72,15 +75,28 @@ impl App {
         if let Some(p) = position {
             parts.push(p.to_owned());
         }
-        parts.push(self.reading_state_text());
         let mode = crate::words::mode_name(self.cat(), self.mode);
-        if spoken {
-            parts.push(self.msg_args("status-mode", &args!["mode" => mode]));
-        } else if self.mode != Mode::Browse {
-            parts.push(mode);
-        }
-        if self.is_dirty() {
-            parts.push(self.msg("status-modified"));
+        let mode = if spoken {
+            Some(self.msg_args("status-mode", &args!["mode" => mode]))
+        } else {
+            (self.mode != Mode::Browse).then_some(mode)
+        };
+        // In edit and Speech Cursor modes the mode and "modified" come
+        // before the reading state, so they sit inside a 40-cell Braille
+        // line ("Line 12 of 400, 3%, Edit, modified"); in browse mode
+        // the reading state is what changes, so it comes first.
+        if self.mode != Mode::Browse {
+            parts.extend(mode);
+            if self.is_dirty() {
+                parts.push(self.msg("status-modified"));
+            }
+            parts.push(self.reading_state_text());
+        } else {
+            parts.push(self.reading_state_text());
+            parts.extend(mode);
+            if self.is_dirty() {
+                parts.push(self.msg("status-modified"));
+            }
         }
         match self.access_mode {
             AccessMode::SelfVoicing if spoken => parts.push(self.msg("status-self-voicing")),
