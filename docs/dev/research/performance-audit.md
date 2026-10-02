@@ -206,7 +206,7 @@ Three things the plan deliberately leaves alone: the rope (ADR-0034 stands; rope
 ## What I ran
 
 - `rustup toolchain install 1.96` (the pinned toolchain was not installed), then `cargo build --release -p textweaver-core -p textweaver-text -p textweaver-formats`: finished in 2 minutes 57 seconds, 229 crates compiled, 578 MB target directory.
-- `cargo xtask bench --quick --no-startup --only md-1mb`: failed after 4 minutes 31 seconds of building with "The system library `alsa` required by crate `alsa-sys` was not found" (rodio, through `textweaver-engines`). The harness needs `libasound2-dev` on Linux; worth a line in [Building](building.md) if it is not there.
+- `cargo xtask bench --quick --no-startup --only md-1mb`: failed after 4 minutes 31 seconds of building with "The system library `alsa` required by crate `alsa-sys` was not found" (rodio, through `textweaver-engines`). The harness needs `libasound2-dev` on Linux; worth a line in [Building](../building.md) if it is not there.
 - A standalone probe crate in the session's scratch folder, depending on the four crates by path with the formats crate's default features off, run on the 10 MB and 1 MB generated corpora; its output is quoted in "What the numbers say today".
 - `cargo tree -d --workspace --edges normal`: 59 crate names in more than one version.
 - `cargo bloat` is not installed and was not run.
