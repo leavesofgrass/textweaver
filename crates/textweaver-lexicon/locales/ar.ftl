@@ -2146,6 +2146,8 @@ setting-gui-announce = الإعلانات
 setting-gui-announce-help = كيف تصل رسائل النافذة إلى قارئ الشاشة، من بدء التشغيل التالي: منطقة حية، أو إشعارات UI Automation (لنظام Windows فقط).
 choice-gui-announce-live = منطقة حية
 choice-gui-announce-uia = إشعارات UI Automation
+setting-gui-auto-hide-menu = إخفاء شريط القوائم
+setting-gui-auto-hide-menu-help = Windows: يخفي شريط قوائم النافذة حتى يُظهره Alt أو F10، ويختفي مرة أخرى عند إغلاق القائمة. لا أثر له على Linux، حيث القوائم هي قائمة F10، ولا على macOS.
 
 ## الوحدات، تُقال بعد رقم.
 

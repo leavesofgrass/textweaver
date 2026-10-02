@@ -101,6 +101,9 @@ const SLOW_HIGHLIGHT_MS: f64 = 30.0;
 /// How often the window looks again while startup messages wait for a
 /// screen reader to ask for the tree.
 const HOLD_TICK: Duration = Duration::from_millis(200);
+/// How often the window looks again while a menu bar a key showed waits
+/// to hide (`gui.auto_hide_menu`).
+const MENU_TICK: Duration = Duration::from_millis(150);
 /// Misspelled words are marked once typing pauses this long.
 const SPELL_PAUSE: Duration = Duration::from_millis(500);
 /// Misspelled words are marked in documents up to this many chars (about
@@ -366,6 +369,8 @@ pub struct Gui {
     menu_dirty: bool,
     /// What the native menus were built from ([`crate::menus::Fingerprint`]).
     menu_key: Option<crate::menus::Fingerprint>,
+    /// How the title bar and menus are drawn now (W8a-m).
+    chrome: crate::dark_mode::Chrome,
     /// The font list's families while it is shown (the list itself is the
     /// app's; `App::take_frontend_choice` says which was chosen).
     font_choices: Option<Vec<crate::font_chooser::Choice>>,
@@ -1373,7 +1378,49 @@ impl Gui {
                 .set_window_label(title.as_str());
             self.window_title = title;
         }
+        self.sync_chrome(ctx);
         self.sync_menus();
+    }
+
+    /// The title bar and the menus follow the palette (W8a-m), and the
+    /// menu bar hides or shows as `gui.auto_hide_menu` says: a bar a key
+    /// showed hides again once its menu loop is over. Nothing is said.
+    fn sync_chrome(&mut self, ctx: &mut DriverCtx<'_>) {
+        let chrome = crate::dark_mode::for_palette(&self.palette);
+        if chrome != self.chrome {
+            self.chrome = chrome;
+            ctx.window(self.window_id)
+                .handle()
+                .set_theme(chrome.window_theme());
+            if let Some(n) = self.native.as_mut() {
+                n.set_chrome(chrome);
+            }
+            if self.log {
+                crate::log::line(&format!("frame: {}", chrome.name()));
+            }
+        }
+        let auto_hide = self.app.settings().gui.auto_hide_menu;
+        if let Some(n) = self.native.as_mut() {
+            n.set_auto_hide(auto_hide);
+            if n.settle() && self.log {
+                crate::log::line("menu bar hidden");
+            }
+        }
+    }
+
+    /// Shows the hidden menu bar (`gui.auto_hide_menu`) before a key or
+    /// the menu command enters it; the window then looks back soon to
+    /// hide it again.
+    fn reveal_menu_bar(&mut self) {
+        if self.native.as_mut().is_some_and(|n| n.reveal()) {
+            self.tick_ms.store(
+                u64::try_from(MENU_TICK.as_millis()).unwrap_or(150),
+                Ordering::Relaxed,
+            );
+            if self.log {
+                crate::log::line("menu bar shown");
+            }
+        }
     }
 
     fn dispatch(&mut self, ctx: &mut DriverCtx<'_>, cmd: Command) {
@@ -1439,6 +1486,7 @@ impl Gui {
             ActionId::ChooseFont => self.open_fonts(ctx),
             ActionId::Menu => {
                 // The native menu bar, entered as F10 enters it.
+                self.reveal_menu_bar();
                 let hwnd = self.window_handle(ctx);
                 if !crate::menus::enter_menu_bar(hwnd, '\0') {
                     return false;
@@ -1469,13 +1517,17 @@ impl Gui {
         let key = crate::menus::Fingerprint::of(&self.app);
         let tree = crate::menus::tree(&self.app);
         let modelled = started.elapsed();
-        match crate::menus::Native::attach(ctx.window(self.window_id).handle(), tree) {
+        let auto_hide = self.app.settings().gui.auto_hide_menu;
+        let window = ctx.window(self.window_id).handle();
+        match crate::menus::Native::attach(window, tree, self.chrome, auto_hide) {
             Ok(n) => {
                 if self.log {
                     crate::log::line(&format!(
-                        "menus: native, model {:.1} ms, attached in {:.1} ms",
+                        "menus: native, model {:.1} ms, attached in {:.1} ms, frame: {}{}",
                         modelled.as_secs_f64() * 1000.0,
-                        (started.elapsed() - modelled).as_secs_f64() * 1000.0
+                        (started.elapsed() - modelled).as_secs_f64() * 1000.0,
+                        self.chrome.name(),
+                        if auto_hide { ", hidden until Alt" } else { "" }
                     ));
                     // What the system holds, as a screen reader will read
                     // it: each item's text, a tab, and its key.
@@ -1558,7 +1610,9 @@ impl Gui {
             return false;
         }
         if action == Some(ActionId::Menu) && *chord == keys::menu_bar_key() {
-            // Windows enters the bar on the key's release.
+            // Windows enters the bar on the key's release; a hidden bar is
+            // shown first, so there is one to enter.
+            self.reveal_menu_bar();
             return true;
         }
         if action.is_some() || chord.mods != Modifiers::ALT {
@@ -1576,6 +1630,9 @@ impl Gui {
             }
             _ => return false,
         };
+        if letter != ' ' {
+            self.reveal_menu_bar();
+        }
         let hwnd = self.window_handle(ctx);
         let entered = crate::menus::enter_menu_bar(hwnd, letter);
         if self.log {
@@ -2798,6 +2855,11 @@ impl AppDriver for Gui {
     ) {
         if let Some(KeyAction(k)) = action.downcast_ref::<KeyAction>() {
             let k = k.clone();
+            if crate::menus::is_alt_alone(&k) {
+                // A hidden menu bar is shown while Alt is down, so Windows
+                // enters it when Alt is let go (W8a-m).
+                self.reveal_menu_bar();
+            }
             self.on_key(ctx, &k);
         } else if let Some(DocAction::CaretMoved {
             caret,
@@ -3121,6 +3183,10 @@ impl AppDriver for Gui {
             // back soon, to say them once it has.
             wait = wait.min(HOLD_TICK);
         }
+        if self.native.as_ref().is_some_and(|n| n.waiting()) {
+            // A menu bar a key showed hides once its menu closes.
+            wait = wait.min(MENU_TICK);
+        }
         self.tick_ms.store(
             u64::try_from(wait.as_millis()).unwrap_or(u64::MAX).max(10),
             Ordering::Relaxed,
@@ -3218,6 +3284,9 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         .with_title("textweaver")
         .with_inner_size(LogicalSize::new(1100.0, 780.0))
         .with_min_inner_size(LogicalSize::new(420.0, 320.0));
+    // The title bar follows the palette from the start (W8a-m).
+    let chrome = crate::dark_mode::for_palette(&palette);
+    attrs = attrs.with_theme(chrome.window_theme());
     if opts.background {
         // Never activated, off screen, and (on Windows) no taskbar button:
         // it cannot take focus from the person at the machine, and its
@@ -3282,6 +3351,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         native: None,
         menu_dirty: false,
         menu_key: None,
+        chrome,
         font_choices: None,
         font_downloads: 0,
         installed: crate::font_chooser::Installed::scan_in_background(),

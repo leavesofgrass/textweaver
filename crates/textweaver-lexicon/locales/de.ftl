@@ -1998,6 +1998,8 @@ setting-gui-announce = Ankündigungen
 setting-gui-announce-help = Wie die Meldungen des Fensters den Screenreader erreichen, ab dem nächsten Start: eine Live-Region, oder UI-Automation-Benachrichtigungen (nur Windows).
 choice-gui-announce-live = Live-Region
 choice-gui-announce-uia = UI-Automation-Benachrichtigungen
+setting-gui-auto-hide-menu = Menüleiste ausblenden
+setting-gui-auto-hide-menu-help = Windows: blendet die Menüleiste des Fensters aus, bis Alt oder F10 sie zeigt; sie verschwindet wieder, wenn das Menü schließt. Keine Wirkung unter Linux, dessen Menüs die F10-Liste sind, oder unter macOS.
 
 ## Units, said after a number.
 

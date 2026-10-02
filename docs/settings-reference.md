@@ -198,6 +198,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Window: the `[gui]` section
 
 - `gui.announce`: default live region (`"live"`). Announcements. How the window's messages reach the screen reader, from the next start: a live region, or UI Automation notifications (Windows only). Choices: `"live"` (live region), `"uia"` (UI Automation notifications). Stays on this computer.
+- `gui.auto_hide_menu`: default off (`false`). Hide the menu bar. Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS. On or off: `true` or `false`. Stays on this computer.
 
 ## Colors: the `[colors]` section
 

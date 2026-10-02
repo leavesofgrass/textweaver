@@ -1990,6 +1990,8 @@ setting-gui-announce = Annonces
 setting-gui-announce-help = Comment les messages de la fenêtre atteignent le lecteur d'écran, à partir du prochain démarrage : une région dynamique, ou les notifications UI Automation (Windows uniquement).
 choice-gui-announce-live = région dynamique
 choice-gui-announce-uia = notifications UI Automation
+setting-gui-auto-hide-menu = Masquer la barre de menus
+setting-gui-auto-hide-menu-help = Windows : masque la barre de menus de la fenêtre jusqu'à ce qu'Alt ou F10 l'affiche ; elle se masque de nouveau quand le menu se ferme. Sans effet sous Linux, dont les menus sont la liste F10, ni sous macOS.
 
 ## Units, said after a number.
 

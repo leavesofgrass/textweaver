@@ -25,6 +25,7 @@
 //! - [`font_chooser`]: the font chooser's lists, ported from the spike.
 //! - [`setup`]: building the app for the GUI.
 //! - [`system_colors`]: the system's colors in a high contrast mode.
+//! - [`dark_mode`]: the title bar and menus follow the theme.
 //! - [`background`]: `--background` windows that never take the
 //!   foreground (Windows).
 //! - [`console`]: the terminal the program was started from, on Windows.
@@ -36,6 +37,7 @@
 pub mod background;
 pub mod caret;
 pub mod console;
+pub mod dark_mode;
 pub mod dialog;
 pub mod document;
 pub mod file_chooser;

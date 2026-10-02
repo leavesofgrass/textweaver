@@ -1178,6 +1178,11 @@ pub const INFO: &[Info] = &[
             ("uia", "UI Automation notifications"),
         ],
     ),
+    toggle(
+        "gui.auto_hide_menu",
+        "Hide the menu bar",
+        "Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.",
+    ),
     // [colors] (W6u): open choices, a named color or #rrggbb.
     open_choice(
         "colors.ruler",

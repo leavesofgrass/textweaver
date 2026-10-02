@@ -1967,6 +1967,8 @@ setting-gui-announce = Announcements
 setting-gui-announce-help = How the window's messages reach the screen reader, from the next start: a live region, or UI Automation notifications (Windows only).
 choice-gui-announce-live = live region
 choice-gui-announce-uia = UI Automation notifications
+setting-gui-auto-hide-menu = Hide the menu bar
+setting-gui-auto-hide-menu-help = Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.
 
 ## Units, said after a number.
 

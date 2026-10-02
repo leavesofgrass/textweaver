@@ -58,6 +58,8 @@ The window has the same menus as the terminal reader, built from the same list o
 - **macOS:** the menu bar at the top of the screen, with each command's key as its keyboard shortcut. VoiceOver reaches it with Control+Option+M.
 - **Linux:** F10 shows the menus as a list inside the window, as the terminal does: "Menus, 1 of 7, File". Enter or Right opens a menu, a letter moves to the item with that letter, Enter runs a command, Left or Backspace goes back up, and Escape closes.
 
+**Hiding the menu bar (Windows).** Turn on "Hide the menu bar" in Settings, under Window (`auto_hide_menu = true` in `[gui]`), and the menu bar takes no room until you want it. Alt, F10, or Alt with a menu's letter shows it and enters it as before, so NVDA and JAWS still say "menu bar" or the menu's name; it hides again, silently, when the menu closes. Every Alt key the keymap uses still works. The bar also appears for a moment when you press Alt for one of those keys. While a dialog is open, close it before using the menus. This setting has no effect on Linux, where the menus are already the F10 list and take no room, or on macOS, whose menu bar is at the top of the screen.
+
 Choosing a command in a menu runs it as its key would, and it joins the recent commands the command palette lists first (F2 with nothing typed). A few commands that only mean something in a terminal are left out of the window's menus (see [What only the terminal reader does](#what-only-the-terminal-reader-does)). File, Browse files opens textweaver's file browser in the window's list dialog (see [Reading](reading.md#from-the-file-browser-file-browse-files)); its keys work there as in the terminal, and the Say Status key previews the focused row. Batch conversion, audio export, and dictation are in the menus in the default build.
 
 ## Opening a document
@@ -196,6 +198,8 @@ With Windows High Contrast on (Contrast themes in Windows 11), the window draws 
 
 On macOS and Linux, the system's increased-contrast setting chooses textweaver's high-contrast theme when the window starts.
 
+The title bar and the menus follow the theme too: a dark theme such as Galaxy gets a dark title bar, and on Windows a dark menu bar and dark drop-down menus, whatever Windows' own light or dark setting; a light theme gets light ones. The theme's page color decides. Changing the theme (F5, or Settings) changes them at once. With Windows High Contrast on, Windows draws them in your contrast theme's colors instead. Dark menus need Windows 10 version 1809 or later; on older versions they stay light.
+
 ### The Colors dialog
 
 View, then Colors (or File, Settings, Colors) opens every color textweaver lets you choose in one list: the spoken word's and sentence's highlights first, then the reading ruler, difficult words, syllable marks, misspellings, lint marks, search matches, the selection, the focus outline, links, headings, the status bar, notes, and bookmarks.
@@ -229,6 +233,28 @@ The command-line tools (`tw vault`, `tw convert`, `tw library`, and the rest) ar
 - `crates/textweaver-xilem/tools/uia-report.ps1` reports what UI Automation sees (Windows), including the menu bar's seven menus and access keys and every menu item's text and key as the window's menu holds them; `-WindowEdge` reads past the document window's edge; `-Menus` also opens the first menu to read its items through UI Automation (opening a menu may bring the window to the front, so use it on a test machine). `tools/atspi-check.sh` does the same with AT-SPI on Linux.
 - `--log` lists the menu items the window built, one per line, with each key after a tab.
 - `--review-screenshots FOLDER` draws the review screenshots (three themes, 100% and 200%, the dialogs, and the reading aids) without a window.
+- `--log` also says how the title bar and menus are drawn: "frame: dark", "frame: light", or "frame: system" (high contrast), at startup on the "menus: native" line and again on each change; and "menu bar shown" and "menu bar hidden" while `auto_hide_menu` is on.
+
+### Checking the title bar and menus by hand
+
+Colors cannot be heard, so the color steps need a sighted helper, a screenshot read by a color tool, or the `--log` lines above. Use a throwaway state folder (`--home %TEMP%\tw-frame`) and run the steps once with NVDA and once with JAWS.
+
+1. **Dark theme, Windows light.** In Windows Settings, Personalization, Colors, choose Light. Start `textweaver-xilem --log --home %TEMP%\tw-frame`. Expected: the log says "frame: dark"; the title bar, the menu bar, and an opened File menu are dark, with light text.
+2. **Dark theme, Windows dark.** Choose Dark in Windows and start again. Expected: the same, dark.
+3. **Light theme, Windows dark.** Press F5 until a light theme is chosen, such as Galaxy Light. Expected: "frame: light" in the log at once, and a light title bar, menu bar, and menus, though Windows is dark.
+4. **Light theme, Windows light.** Expected: light, as in step 3.
+5. **High contrast.** Turn on a Contrast theme (Left Alt+Left Shift+Print Screen). Expected: "frame: system", and the title bar and menus in the contrast theme's colors, whatever textweaver's theme. Turn it off: the frame follows the theme again.
+6. **Menus still read.** In each step, Alt, then Down: NVDA and JAWS say "menu bar", then "File" and the first item with its key, as before. Escape twice leaves.
+7. **Hiding the menu bar.** In Settings, under Window, turn on "Hide the menu bar". Expected: the bar disappears and nothing is said beyond the setting's own message. Then:
+   - Alt alone: "menu bar" is said, as before, and the bar is shown. Escape: the bar hides again, silently.
+   - F10: the same.
+   - Alt+F, Alt+E, Alt+V, and each other menu's letter: that menu opens and is read.
+   - Alt+Space: the window's system menu, as before.
+   - A key the keymap gives Alt with another key (see the [keyboard reference](keyboard.md)) still does its command; the bar may appear for a moment and hides again.
+   - Choose a command from a menu: it runs, and the bar hides.
+8. **Turn it off.** Expected: the bar is back at once, and stays.
+
+Please note which steps did not behave as expected, with the screen reader and its version, and the Windows version.
 
 ## See also
 
