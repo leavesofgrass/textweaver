@@ -50,7 +50,7 @@ use std::time::{Duration, Instant};
 use textweaver_core::UtteranceId;
 use textweaver_speech::{BackendId, EventSink, RawEvent, SpeechError, WordTiming};
 
-use crate::audio::{AudioOutput, Feed, Player};
+use crate::audio::{AudioOutput, Feed, Player, UNDERRUNS_TO_GROW, grow_output_buffer};
 use crate::clock::Clock;
 use crate::protocol::EndStatus;
 use crate::wav;
@@ -536,6 +536,25 @@ impl<W> Playback<W> {
             return;
         }
         let consumed = self.feed.consumed();
+        // An output that keeps running dry opens again with a larger
+        // buffer, but only between readings (nothing waiting in the
+        // feed), so no speech is cut off by the reopen.
+        if self
+            .player
+            .as_ref()
+            .is_some_and(|(p, _)| p.underruns() >= UNDERRUNS_TO_GROW)
+            && self.feed.pushed() == consumed
+            && let Some(ms) = grow_output_buffer()
+        {
+            log::warn!(
+                "{}: the audio output ran dry; opening it again with a {ms} ms buffer",
+                self.backend
+            );
+            self.reopen(self.clock.now());
+            self.stall.seen = None;
+            self.stall.wait = None;
+            return;
+        }
         // A device still opening is not stalled.
         let waiting = self.player.as_ref().is_some_and(|(p, _)| p.is_open())
             && self.feed.pushed() > consumed
@@ -861,6 +880,40 @@ mod tests {
         assert_eq!(p.device_reopens(), 1);
         tick(&mut p, &clock, 1);
         assert_eq!(p.device_reopens(), 2);
+    }
+
+    #[test]
+    fn an_output_that_runs_dry_grows_its_buffer_between_readings() {
+        // The audio system reported underruns (ALSA and JACK do): the
+        // output opens again with a larger buffer, but never while audio
+        // waits, so the reopen cuts nothing off. The only test that grows
+        // the process-wide buffer.
+        let (mut p, clock) = stalled_client();
+        p.enqueue(id(1, 0), 1, 0, vec![]);
+        p.on_audio(1, &[1; 100]);
+        p.on_end(1, EndStatus::Done);
+        fn player(p: &Playback<Vec<Range<u32>>>) -> &Player {
+            &p.player.as_ref().expect("open").0
+        }
+        let before = crate::audio::output_buffer_ms();
+        for _ in 0..UNDERRUNS_TO_GROW {
+            player(&p).mark_underrun();
+        }
+        tick(&mut p, &clock, 10);
+        assert_eq!(p.device_reopens(), 0, "not while audio waits");
+        p.feed().skip(100);
+        tick(&mut p, &clock, 10);
+        assert_eq!(p.device_reopens(), 1, "between readings");
+        assert_eq!(player(&p).underruns(), 0, "a fresh output");
+        let after = crate::audio::output_buffer_ms();
+        assert!(
+            after > before && after <= crate::audio::MAX_OUTPUT_BUFFER_MS,
+            "{before} -> {after}"
+        );
+        // One underrun alone does not reopen it.
+        player(&p).mark_underrun();
+        tick(&mut p, &clock, 10);
+        assert_eq!(p.device_reopens(), 1);
     }
 
     #[test]
