@@ -261,6 +261,16 @@ pub(crate) struct BrowseState {
     /// The folder textweaver started in.
     start: Option<PathBuf>,
     preview: Option<PreviewJob>,
+    /// A prompt for a path set aside while the browser chooses it (the
+    /// browse key, crate::path_prompt): Escape opens it again.
+    pub(crate) prompt: Option<crate::path_prompt::SavedPrompt>,
+    /// The frontend's browse key, named when a prompt for a path opens.
+    pub(crate) prompt_key: Option<KeyChord>,
+    /// The next prompt shown was filled by the browser.
+    pub(crate) prompt_filled: bool,
+    /// A frontend took this folder choice to its own chooser
+    /// ([`App::take_folder_choice`]): the browser is its fallback.
+    native_taken: bool,
 }
 
 impl BrowseState {
@@ -283,6 +293,10 @@ impl BrowseState {
             archive: None,
             start: std::env::current_dir().ok(),
             preview: None,
+            prompt: None,
+            prompt_key: None,
+            prompt_filled: false,
+            native_taken: false,
         }
     }
 }
@@ -925,6 +939,55 @@ impl App {
         self.start_browser(Pick::File, extensions, Some(purpose.to_owned()), Some(then))
     }
 
+    /// The folder chooser a command is waiting on, just opened on the
+    /// places ([`App::choose_folder`]): a GUI shows the system's folder
+    /// chooser instead of the browser, and answers with
+    /// [`Command::PathChosen`]. `None` once a frontend took it
+    /// ([`App::take_folder_choice`]) or the browser is in use, and for a
+    /// browser opened from a prompt with the browse key.
+    pub fn folder_choice(&self) -> Option<crate::path_prompt::FolderChoice> {
+        let waiting = self.list == Some(ListKind::Browse)
+            && self.browse.pick == Pick::Folder
+            && self.browse.then.is_some()
+            && self.browse.prompt.is_none()
+            && !self.browse.native_taken
+            && self.browse.location == Some(Location::Places);
+        if !waiting {
+            return None;
+        }
+        Some(crate::path_prompt::FolderChoice {
+            title: self.browse.purpose.clone().unwrap_or_default(),
+            folder: self.document_folder(),
+        })
+    }
+
+    /// [`App::folder_choice`], taken by a frontend that shows its own
+    /// chooser: asked again, it is `None`, so the browser shown after a
+    /// chooser that could not open is not taken over.
+    pub fn take_folder_choice(&mut self) -> Option<crate::path_prompt::FolderChoice> {
+        let choice = self.folder_choice()?;
+        self.browse.native_taken = true;
+        Some(choice)
+    }
+
+    /// [`Command::PathChosen`]: the path chosen in a system chooser hands
+    /// it to the command waiting, as the browser would; `None` (the
+    /// chooser was closed) cancels the choice.
+    pub(crate) fn path_chosen(&mut self, path: Option<PathBuf>) -> Vec<Effect> {
+        if self.list != Some(ListKind::Browse) || self.browse.then.is_none() {
+            return vec![Effect::Redraw];
+        }
+        match path {
+            Some(p) => self.chosen(p),
+            None => {
+                let _ = self.close_browser(false);
+                let msg = self.msg("common-cancelled");
+                self.note(&msg);
+                vec![Effect::Redraw]
+            }
+        }
+    }
+
     /// Where the browser is, while it is shown.
     pub fn browse_location(&self) -> Option<&Location> {
         self.browse.location.as_ref()
@@ -972,6 +1035,8 @@ impl App {
         then: Option<Chosen>,
     ) -> Vec<Effect> {
         self.leave_menu();
+        self.browse.prompt = None;
+        self.browse.native_taken = false;
         self.browse.pick = pick;
         self.browse.extensions = extensions;
         self.browse.purpose = purpose;
@@ -982,7 +1047,7 @@ impl App {
     }
 
     /// The open document's folder (an archive member's: the archive's).
-    fn document_folder(&self) -> Option<PathBuf> {
+    pub(crate) fn document_folder(&self) -> Option<PathBuf> {
         let path = self.session.as_ref()?.doc.meta.path.clone()?;
         let file = archive::split_member(&path).map_or(path, |(file, _)| file);
         file.parent().filter(|p| p.is_dir()).map(Path::to_owned)
@@ -1556,6 +1621,11 @@ impl App {
         }
         self.list_model = None;
         if say {
+            // Opened from a prompt for a path: back to the prompt, as it
+            // was (crate::path_prompt).
+            if let Some(saved) = self.browse.prompt.take() {
+                return self.restore_prompt(saved, None);
+            }
             let msg = self.msg("browse-closed");
             self.say_dialog(&msg);
         }

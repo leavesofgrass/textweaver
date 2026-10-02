@@ -3951,3 +3951,19 @@ font-download-no-folder = لا يوجد مجلد بيانات لحفظ { $font }
 font-download-not-in-build = تنزيل الخطوط غير متاح في هذا الإصدار.
 gui-font-to-download = { $family } (للتنزيل، { $kb } كيلوبايت)
 gui-font-downloaded = { $family } (منزّل)
+
+## W8a-f: منتقيات الملفات والمجلدات.
+prompt-browse-hint = { $label }. { $key } للتصفح.
+prompt-browse-file = اختر الملف: { $label }
+prompt-browse-folder = اختر المجلد: { $label }
+prompt-browse-filled = { $name } مختار. يؤكده Enter.
+chooser-type-files = ملفات { $type }
+chooser-image-title = إدراج صورة
+chooser-images = الصور
+chooser-references-title = استيراد المراجع
+chooser-reference-files = ملفات المراجع
+chooser-profiles-import-title = استيراد ملفات الإعدادات
+chooser-profiles-export-title = تصدير ملفات الإعدادات
+chooser-profile-files = ملفات تصدير الإعدادات
+gui-folder-no-dialog = لم يُفتح منتقي المجلدات في النظام. اختر المجلد من هذه القائمة.
+gui-prompt-browse-hint = يفتح { $key } متصفح الملفات.

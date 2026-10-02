@@ -3712,3 +3712,20 @@ font-download-no-folder = No data folder to keep { $font } in.
 font-download-not-in-build = Font downloads are not in this build.
 gui-font-to-download = { $family } (download, { $kb } KB)
 gui-font-downloaded = { $family } (downloaded)
+
+## W8a-f: file and folder choosers. The browse key fills a prompt for a
+## path from the file browser; the GUI names its choosers and filters.
+prompt-browse-hint = { $label }. { $key } to browse.
+prompt-browse-file = Choose the file: { $label }
+prompt-browse-folder = Choose the folder: { $label }
+prompt-browse-filled = { $name } chosen. Enter confirms.
+chooser-type-files = { $type } files
+chooser-image-title = Insert an image
+chooser-images = Images
+chooser-references-title = Import references
+chooser-reference-files = Reference files
+chooser-profiles-import-title = Import profiles
+chooser-profiles-export-title = Export profiles
+chooser-profile-files = Profile files
+gui-folder-no-dialog = The system's folder chooser did not open. Choose the folder in this list.
+gui-prompt-browse-hint = { $key } opens the file browser.

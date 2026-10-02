@@ -3718,3 +3718,19 @@ font-download-no-folder = Kein Datenordner für { $font }.
 font-download-not-in-build = Keine Schrift-Downloads in diesem Build.
 gui-font-to-download = { $family } (herunterladen, { $kb } KB)
 gui-font-downloaded = { $family } (heruntergeladen)
+
+## W8a-f: Datei- und Ordnerauswahl.
+prompt-browse-hint = { $label }. { $key } zum Durchsuchen.
+prompt-browse-file = Datei wählen: { $label }
+prompt-browse-folder = Ordner wählen: { $label }
+prompt-browse-filled = { $name } gewählt. Eingabe bestätigt.
+chooser-type-files = { $type }-Dateien
+chooser-image-title = Bild einfügen
+chooser-images = Bilder
+chooser-references-title = Literaturangaben importieren
+chooser-reference-files = Literaturdateien
+chooser-profiles-import-title = Profile importieren
+chooser-profiles-export-title = Profile exportieren
+chooser-profile-files = Profildateien
+gui-folder-no-dialog = Die Ordnerauswahl des Systems hat sich nicht geöffnet. Wählen Sie den Ordner in dieser Liste.
+gui-prompt-browse-hint = { $key } öffnet den Dateibrowser.

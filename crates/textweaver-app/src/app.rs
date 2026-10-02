@@ -1290,6 +1290,7 @@ impl App {
                 vec![Effect::Redraw]
             }
             Command::Answer(text) => self.answer(text),
+            Command::PathChosen(path) => self.path_chosen(path),
             Command::Choose(n) => self.choose(n),
             Command::FilterList(query) => self.filter_list(query),
             Command::Resize { width, height } => {
@@ -1302,6 +1303,11 @@ impl App {
                 if self.confirmation_pending() {
                     // Cancelling a question answers no.
                     return self.confirm(crate::command::Confirm::No);
+                }
+                // The file browser, opened from a prompt for a path with
+                // the browse key: back to the prompt (crate::path_prompt).
+                if self.list == Some(ListKind::Browse) && self.browse.prompt.is_some() {
+                    return self.close_browser(true);
                 }
                 if self.opening.is_some() && !self.mode.is_prompt() && self.list.is_none() {
                     return self.cancel_opening();
@@ -1429,6 +1435,7 @@ impl App {
         } else {
             crate::study::prompt_label(&self.study.catalog, purpose)
         };
+        let said = self.path_prompt_said(purpose, &label);
         if purpose == PromptPurpose::CommandPalette
             && self.settings.speech.verbosity >= Verbosity::Normal
         {
@@ -1440,7 +1447,7 @@ impl App {
             );
             self.tell(&msg);
         } else {
-            self.tell(&label);
+            self.tell(&said);
         }
         vec![Effect::Prompt { label, purpose }]
     }

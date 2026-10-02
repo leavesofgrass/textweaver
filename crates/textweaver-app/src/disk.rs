@@ -135,7 +135,9 @@ impl App {
                 }
                 self.mode = Mode::Prompt;
                 self.prompt_purpose = crate::command::PromptPurpose::SaveAs;
-                self.tell(&format!("{label}."));
+                let said = self
+                    .path_prompt_said(crate::command::PromptPurpose::SaveAs, &format!("{label}."));
+                self.tell(&said);
                 vec![Effect::Prompt {
                     label,
                     purpose: crate::command::PromptPurpose::SaveAs,

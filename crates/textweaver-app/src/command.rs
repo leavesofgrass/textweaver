@@ -37,6 +37,11 @@ pub enum Command {
     /// The user chose item `n` (0-based) of the list shown by the last
     /// [`Effect::ShowList`].
     Choose(usize),
+    /// The path picked in the system's folder chooser a GUI showed for
+    /// [`App::folder_choice`](crate::App::folder_choice), or `None` when
+    /// it was closed: the command waiting gets it, as from the file
+    /// browser (W8a-f).
+    PathChosen(Option<std::path::PathBuf>),
     /// The filter typed into a list that filters as you type (the outline,
     /// the citation picker; see [`App::list_filter`]): the whole filter
     /// text so far. The app shows the matching items again.

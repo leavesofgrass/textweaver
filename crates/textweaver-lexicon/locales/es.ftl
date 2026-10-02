@@ -3682,3 +3682,19 @@ font-download-no-folder = No hay carpeta de datos para { $font }.
 font-download-not-in-build = Esta versión no descarga fuentes.
 gui-font-to-download = { $family } (descargar, { $kb } KB)
 gui-font-downloaded = { $family } (descargada)
+
+## W8a-f: selectores de archivos y carpetas.
+prompt-browse-hint = { $label }. { $key } para explorar.
+prompt-browse-file = Elija el archivo: { $label }
+prompt-browse-folder = Elija la carpeta: { $label }
+prompt-browse-filled = { $name } elegido. Intro confirma.
+chooser-type-files = Archivos { $type }
+chooser-image-title = Insertar una imagen
+chooser-images = Imágenes
+chooser-references-title = Importar referencias
+chooser-reference-files = Archivos de referencias
+chooser-profiles-import-title = Importar perfiles
+chooser-profiles-export-title = Exportar perfiles
+chooser-profile-files = Archivos de perfiles
+gui-folder-no-dialog = El selector de carpetas del sistema no se abrió. Elija la carpeta en esta lista.
+gui-prompt-browse-hint = { $key } abre el explorador de archivos.

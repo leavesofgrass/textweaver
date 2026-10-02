@@ -3698,3 +3698,19 @@ font-download-no-folder = Sem pasta de dados para { $font }.
 font-download-not-in-build = Esta versão não baixa fontes.
 gui-font-to-download = { $family } (baixar, { $kb } KB)
 gui-font-downloaded = { $family } (baixada)
+
+## W8a-f: seletores de arquivos e pastas.
+prompt-browse-hint = { $label }. { $key } para procurar.
+prompt-browse-file = Escolha o arquivo: { $label }
+prompt-browse-folder = Escolha a pasta: { $label }
+prompt-browse-filled = { $name } escolhido. Enter confirma.
+chooser-type-files = Arquivos { $type }
+chooser-image-title = Inserir uma imagem
+chooser-images = Imagens
+chooser-references-title = Importar referências
+chooser-reference-files = Arquivos de referências
+chooser-profiles-import-title = Importar perfis
+chooser-profiles-export-title = Exportar perfis
+chooser-profile-files = Arquivos de perfis
+gui-folder-no-dialog = O seletor de pastas do sistema não abriu. Escolha a pasta nesta lista.
+gui-prompt-browse-hint = { $key } abre o navegador de arquivos.
