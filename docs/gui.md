@@ -2,17 +2,15 @@
 
 textweaver has two readers: the terminal reader, `textweaver`, and a window. They share everything that matters: the documents, the keys, the settings, the notes, and the voices. This page covers what is different about the window.
 
-The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It is new in this alpha. It reads, and since this alpha it edits too; see [Editing](#editing).
+The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It reads and it edits; see [Editing](#editing).
 
-Its crate and source binary are named `textweaver-xilem`; a downloaded [GUI package](install.md#the-gui) installs it as `textweaver-gui`. This guide uses `textweaver-xilem` for the command, since that is what `cargo build` produces; if you installed a release package, run `textweaver-gui` instead wherever this guide says `textweaver-xilem`.
+In a release package the program is `textweaver-gui`; see [the GUI package](install.md#the-gui). If you build the window yourself, `cargo build` makes `textweaver-xilem` instead; use that name where this guide says `textweaver-gui`.
 
 ## Starting it
 
 ```sh
-textweaver-xilem path/to/document.md
+textweaver-gui path/to/document.md
 ```
-
-From a release package: `textweaver-gui path/to/document.md`.
 
 With no document, it opens empty and says which key opens one (Ctrl+O).
 
@@ -31,9 +29,9 @@ Useful options:
 - `--graphics API`: draw with one graphics API only: `vulkan`, `dx12` (Windows), `metal` (macOS), or `gl`; `auto`, the default, lets the graphics library use every one it finds. On the development machine `vulkan` used about 26 MB less memory, but this depends on your graphics driver. To keep a choice, put `graphics = "vulkan"` in the `[gui]` section of `settings.toml`.
 - `--log` or `--log-file PATH`: write what the window announces and does, for a bug report.
 
-`textweaver-xilem --help` lists every option.
+`textweaver-gui --help` lists every option.
 
-On Windows the window opens with no console window beside it. Started from a terminal, `--help`, `--version`, and errors still appear in that terminal. PowerShell does not wait for a windowed program, so its output may come after the next prompt; `textweaver-xilem --help | Out-Host` waits for it. Started from a shortcut or File Explorer, a startup error is shown in a message box, and `--log-file PATH` keeps it in a file too.
+On Windows the window opens with no console window beside it. Started from a terminal, `--help`, `--version`, and errors still appear in that terminal. PowerShell does not wait for a windowed program, so its output may come after the next prompt; `textweaver-gui --help | Out-Host` waits for it. Started from a shortcut or File Explorer, a startup error is shown in a message box, and `--log-file PATH` keeps it in a file too.
 
 ## What is in the window
 
@@ -250,7 +248,7 @@ The command-line tools (`tw vault`, `tw convert`, `tw library`, and the rest) ar
 
 Colors cannot be heard, so the color steps need a sighted helper, a screenshot read by a color tool, or the `--log` lines above. Use a throwaway state folder (`--home %TEMP%\tw-frame`) and run the steps once with NVDA and once with JAWS.
 
-1. **Dark theme, Windows light.** In Windows Settings, Personalization, Colors, choose Light. Start `textweaver-xilem --log --home %TEMP%\tw-frame`. Expected: the log says "frame: dark"; the title bar, the menu bar, and an opened File menu are dark, with light text.
+1. **Dark theme, Windows light.** In Windows Settings, Personalization, Colors, choose Light. Start `textweaver-gui --log --home %TEMP%\tw-frame`. Expected: the log says "frame: dark"; the title bar, the menu bar, and an opened File menu are dark, with light text.
 2. **Dark theme, Windows dark.** Choose Dark in Windows and start again. Expected: the same, dark.
 3. **Light theme, Windows dark.** Press F5 until a light theme is chosen, such as Galaxy Light. Expected: "frame: light" in the log at once, and a light title bar, menu bar, and menus, though Windows is dark.
 4. **Light theme, Windows light.** Expected: light, as in step 3.

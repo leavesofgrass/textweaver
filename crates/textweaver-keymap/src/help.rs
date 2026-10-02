@@ -136,9 +136,9 @@ The in-app keyboard help shows the same table with your own overrides applied.
 
 ## What changed
 
-On Tuesday, September 29, 2026 (Wave 6): **F10 opens the menus** in the terminal, as F10 does in Windows programs (File, Edit, View, Reading, Speech, Tools, and Help). Previous chapter keeps `Alt+PageUp` and `Shift+D`; next chapter keeps `F11`, `Alt+PageDown`, and `d`. **On macOS the GUI uses Mac keys**, not Ctrl renamed: Option with the arrows moves by word and paragraph, Command with the arrows goes to the ends of the line and the document, Command runs commands, and nothing takes VoiceOver's Ctrl+Option (see the GUI on macOS column). New keys: `Ctrl+F9` cycles the interface announcements (off, minimal, normal, full), `Ctrl+Shift+F9` starts and stops dictation, and `Shift+F1` says what the next key does.
+In 0.1.0-alpha.6: **F10 opens the menus** in the terminal, as F10 does in Windows programs (File, Edit, View, Reading, Speech, Tools, and Help). Previous chapter keeps `Alt+PageUp` and `Shift+D`; next chapter keeps `F11`, `Alt+PageDown`, and `d`. **On macOS the GUI uses Mac keys**, not Ctrl renamed: Option with the arrows moves by word and paragraph, Command with the arrows goes to the ends of the line and the document, Command runs commands, and nothing takes VoiceOver's Ctrl+Option (see the GUI on macOS column). New keys: `Ctrl+F9` cycles the interface announcements (off, minimal, normal, full), `Ctrl+Shift+F9` starts and stops dictation, and `Shift+F1` says what the next key does.
 
-On Saturday, September 26, 2026, the default keys became the quick navigation keys of NVDA's and JAWS's browse mode. To keep the earlier keys, set `preset = \"classic\"` under `[keyboard]` in `settings.toml` (see [the classic preset](#the-classic-preset)). Old key, then where its command went, in the terminal:
+In 0.1.0-alpha.4 the default keys became the quick navigation keys of NVDA's and JAWS's browse mode. To keep the earlier keys, set `preset = \"classic\"` under `[keyboard]` in `settings.toml` (see [the classic preset](#the-classic-preset)). Old key, then where its command went, in the terminal:
 
 - `.` (next sentence): now `Alt+Down` or `Alt+.`. `.` says the current sentence.
 - `,` (previous sentence): now `Alt+Up` or `Alt+,`. `,` says the current paragraph.
