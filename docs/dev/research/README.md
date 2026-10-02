@@ -8,7 +8,7 @@ The material was gathered on Friday, October 2, 2026, by several research agents
 
 - [Next waves plan](next-waves-plan.md): the synthesis. What alpha.8, alpha.9, and later should hold, in order, with the measurement that proves each item.
 - Performance audit (`performance-audit.md`, being written): a code-level audit of the hot paths (loading, the narration plan, segmentation, the speech thread, the GUI document widget, startup, the build profile), with a ranked plan.
-- Speech engines and runtimes (`speech-engines-and-runtimes.md`, being written): neural voices and formant engines that run offline on a laptop, the Rust inference runtimes, and the speech-path latency work.
+- [Speech engines and runtimes](speech-engines-and-runtimes.md): neural voices and formant engines that run offline on a laptop, the Rust inference runtimes, and the speech-path latency work.
 - [Text-to-speech use cases](tts-use-cases.md): the research evidence on text-to-speech for students with disabilities, the product landscape, and the lessons for textweaver.
 - Health sciences use cases (`health-sciences-use-cases.md`, being written): the materials, pronunciation, numbers and units, and study workflows of medical, nursing, dental, and pharmacy students.
 - [GUI and visual design](gui-and-visual-design.md): how to make the window and the terminal reader better looking without giving up accessibility or frame time.
