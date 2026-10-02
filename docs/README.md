@@ -26,7 +26,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [The textweaver window (GUI)](gui.md): starting it, what is in the window, its keys, announcements, and the reading aids it draws.
 - [Bookmarks, notes, and highlights](notes.md): marking your place and your thoughts.
 - [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, and reading level.
-- [Themes](themes.md): the 23 built-in colour themes, following your system, and writing your own.
+- [Themes](themes.md): the 23 built-in color themes, following your system, and writing your own.
 - [Math](math.md): hearing math read aloud, and writing it in Markdown.
 
 ### Writing
@@ -69,7 +69,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
 - [Fuzzing](../fuzz/README.md): the 35 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, and email among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records and group files, and the engine-host protocol.
 - [Releasing](dev/releasing.md): making a release, the Linux AppImage, and what the packages hold.
-- [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licences.
+- [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licenses.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
 - [Roadmap](roadmap.md): what works today, what is being built next, and what is planned.
 - [Research for the next waves](dev/research/README.md): the research reports and the wave plan for alpha.8, alpha.9, and later: performance, speech engines, use cases, design, and law and standards.

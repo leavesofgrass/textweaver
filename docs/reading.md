@@ -4,7 +4,7 @@ This guide covers the terminal reader, `textweaver`: opening a document, reading
 
 Keys are the terminal defaults. Where the GUI uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key in both frontends. Many keys are single keys, such as `h` for the next heading. Those are called browse keys. They work while you read, not while you edit or type in a prompt.
 
-The browse keys follow the quick navigation keys of NVDA's and JAWS's browse mode: `h` for headings, `1` to `6` for heading levels, `l` for lists, `k` for links, and so on, with Shift for the previous one. They changed on Saturday, September 26, 2026. The [keyboard reference](keyboard.md#what-changed) lists every change, and `preset = "classic"` under `[keyboard]` brings back the earlier keys.
+The browse keys follow the quick navigation keys of NVDA's and JAWS's browse mode: `h` for headings, `1` to `6` for heading levels, `l` for lists, `k` for links, and so on, with Shift for the previous one. They changed in 0.1.0-alpha.4. The [keyboard reference](keyboard.md#what-changed) lists every change, and `preset = "classic"` under `[keyboard]` brings back the earlier keys.
 
 ## Open a document
 
@@ -246,7 +246,7 @@ On a footnote reference, **Alt+Shift+F** goes to the note; on the note, it goes 
 ### Chapters
 
 - **d**, **F11**, or **Alt+PageDown**: next chapter.
-- **Shift+D** or **Alt+PageUp**: previous chapter. More than five words into a chapter, this goes back to its start instead. (**F10** opens the menus since September 29, 2026.)
+- **Shift+D** or **Alt+PageUp**: previous chapter. More than five words into a chapter, this goes back to its start instead.
 
 Chapters are the book's sections when the document has them (EPUB chapters, Word sections, PDF bookmarks). Otherwise they are the level-1 headings. A document with neither says "This document has no chapters." Some terminal programs keep F11 for themselves; the Alt chords always work. The GUI uses only the Alt chords.
 

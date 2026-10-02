@@ -14,7 +14,7 @@ Every aid can be turned on and off, and textweaver says when it changes. The key
 - **Alt+Shift+Z**: syllables shown or hidden.
 - **Alt+Shift+J**: difficult words marked or not.
 
-In the window (`textweaver-xilem`), RSVP has its own strip under the document, so it never covers the text, and the words before and after sit to its left and right; see [The textweaver window](gui.md#reading-aids).
+In the window (`textweaver-gui`), RSVP has its own strip under the document, so it never covers the text, and the words before and after sit to its left and right; see [The textweaver window](gui.md#reading-aids).
 
 The [keyboard reference](keyboard.md) lists every key. Each aid's settings are in the `[reading_aids]` sections of `settings.toml`; [Settings](settings.md#reading_aids) lists them.
 
@@ -24,14 +24,14 @@ To try RSVP, bionic reading, and the ruler in a web browser first, open the [rea
 
 RSVP shows one word at a time in the same place on the screen. Your eyes stay still, so you do not have to track a line of text.
 
-- One letter of each word is marked, a little left of centre. Look at that letter. It is where the eye reads a word fastest, and it stays in the same column from word to word.
+- One letter of each word is marked, a little left of center. Look at that letter. It is where the eye reads a word fastest, and it stays in the same column from word to word.
 - The word before and the word after are shown above and below, in normal type. You can hide either one.
 - RSVP can run on its own timer, or follow speech.
   - On its own, it shows 300 words a minute. You can go faster or slower, from 50 to 1,500.
   - It pauses a little longer after a comma, longer after a sentence, and longer again after a paragraph. Long words stay a little longer too.
   - Following speech, it shows the word being spoken.
 - You can pause and resume. You can move by word, sentence, or paragraph. Going back a sentence goes to the start of this sentence if you are more than three words in. Otherwise it goes to the sentence before.
-- The word can sit in one of nine places: top, middle, or bottom, and left, centre, or right. The default is top centre. If the word would cover the line you are on, it moves out of the way.
+- The word can sit in one of nine places: top, middle, or bottom, and left, center, or right. The default is top center. If the word would cover the line you are on, it moves out of the way.
 - A word too long for the box ends with `…`, so you know part of it is hidden.
 - The status line says where you are: for example, "Word 12 of 300, 3 percent. Sentence 2 of 20. 300 words per minute. Paused."
 

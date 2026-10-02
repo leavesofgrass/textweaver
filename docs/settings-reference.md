@@ -103,7 +103,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 - `keyboard.character_keys`: default on (`true`). Single-key shortcuts. Browse keys such as h and period. Off, dictation and typing never trigger commands. On or off: `true` or `false`. Syncs between computers.
 - `keyboard.preset`: default screen reader style (`"default"`). Keys. The default keys: like NVDA's and JAWS's browse mode, or textweaver's earlier keys. Used from the next start. Choices: `"default"` (screen reader style), `"classic"`. Stays on this computer.
-- `keyboard.digit_row`: default automatic (`"auto"`). Digit row. How the terminal recognises the digit keys for heading levels: auto, or a French AZERTY keyboard. Choices: `"auto"` (automatic), `"azerty"` (AZERTY). Stays on this computer.
+- `keyboard.digit_row`: default automatic (`"auto"`). Digit row. How the terminal recognizes the digit keys for heading levels: auto, or a French AZERTY keyboard. Choices: `"auto"` (automatic), `"azerty"` (AZERTY). Stays on this computer.
 
 ## Accessibility: the `[accessibility]` section
 
@@ -136,7 +136,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading_aids.rsvp.long_word_max`: default 80 percent. RSVP long word most. Most extra time a long word gets, in percent. From 0 to 500 percent, in steps of 10. Syncs between computers.
 - `reading_aids.rsvp.show_previous`: default on (`true`). RSVP previous word. Show the previous word too. On or off: `true` or `false`. Syncs between computers.
 - `reading_aids.rsvp.show_next`: default on (`true`). RSVP next word. Show the next word too. On or off: `true` or `false`. Syncs between computers.
-- `reading_aids.rsvp.position`: default top centre (`"top-center"`). RSVP position. Where the RSVP word appears. Choices: `"top-left"` (top left), `"top-center"` (top centre), `"top-right"` (top right), `"center-left"` (middle left), `"center"` (middle), `"center-right"` (middle right), `"bottom-left"` (bottom left), `"bottom-center"` (bottom centre), `"bottom-right"` (bottom right). Syncs between computers.
+- `reading_aids.rsvp.position`: default top center (`"top-center"`). RSVP position. Where the RSVP word appears. Choices: `"top-left"` (top left), `"top-center"` (top center), `"top-right"` (top right), `"center-left"` (middle left), `"center"` (middle), `"center-right"` (middle right), `"bottom-left"` (bottom left), `"bottom-center"` (bottom center), `"bottom-right"` (bottom right). Syncs between computers.
 - `reading_aids.rsvp.font_size_pt`: default 48 points. RSVP size. Size of the RSVP word in the GUI. From 8 to 200 points, in steps of 2. Syncs between computers.
 - `reading_aids.rsvp.lead_words`: default 0 words. RSVP lead. With speech pacing, show this many words ahead of the word spoken. From -5 to 5 words, in steps of 1. Syncs between computers.
 - `reading_aids.bionic`: default off (`false`). Bionic reading. Draw the start of each word in bold. On or off: `true` or `false`. Syncs between computers.

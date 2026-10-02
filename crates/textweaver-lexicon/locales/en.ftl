@@ -981,7 +981,7 @@ voice-download-start-failed = Could not start the download.
 voice-reading-licence = Reading the license of { $voice }.
 voice-remove-question = Remove the voice { $voice }? y or n
 voice-only-piper-removable = Only downloaded Piper voices can be removed.
-# $plan describes the download: the voice, its size and licence.
+# $plan describes the download: the voice, its size and license.
 voice-download-question = { $plan } y or n
 voice-in-use = { $voice } is the voice in use. Choose another voice first.
 voice-removed = { $voice } removed.
@@ -993,7 +993,7 @@ voice-details-failed = Could not read the voice's details: { $error }.
 voice-download-stopped = The download stopped.
 voice-catalog-fetched = The Piper voice list has { $voices } voices in { $languages } languages. Choose Voice lists them.
 voice-catalog-failed = Could not download the voice list: { $error }.
-# $licence describes the voice's licence, in a sentence of its own.
+# $licence describes the voice's license, in a sentence of its own.
 voice-installed = { $voice } is installed. { $licence } Choose Voice lists it.
 voice-download-failed = Could not download { $voice }: { $error }.
 voice-only-voice-favourite = Only a voice can be a favorite.
@@ -1814,7 +1814,7 @@ setting-keyboard-preset-help = The default keys: like NVDA's and JAWS's browse m
 choice-keyboard-preset-default = screen reader style
 choice-keyboard-preset-classic = classic
 setting-keyboard-digit-row = Digit row
-setting-keyboard-digit-row-help = How the terminal recognises the digit keys for heading levels: auto, or a French AZERTY keyboard.
+setting-keyboard-digit-row-help = How the terminal recognizes the digit keys for heading levels: auto, or a French AZERTY keyboard.
 choice-keyboard-digit-row-auto = automatic
 choice-keyboard-digit-row-azerty = AZERTY
 setting-accessibility-mode = Accessibility mode
@@ -1865,13 +1865,13 @@ setting-reading-aids-rsvp-show-next-help = Show the next word too.
 setting-reading-aids-rsvp-position = RSVP position
 setting-reading-aids-rsvp-position-help = Where the RSVP word appears.
 choice-reading-aids-rsvp-position-top-left = top left
-choice-reading-aids-rsvp-position-top-center = top centre
+choice-reading-aids-rsvp-position-top-center = top center
 choice-reading-aids-rsvp-position-top-right = top right
 choice-reading-aids-rsvp-position-center-left = middle left
 choice-reading-aids-rsvp-position-center = middle
 choice-reading-aids-rsvp-position-center-right = middle right
 choice-reading-aids-rsvp-position-bottom-left = bottom left
-choice-reading-aids-rsvp-position-bottom-center = bottom centre
+choice-reading-aids-rsvp-position-bottom-center = bottom center
 choice-reading-aids-rsvp-position-bottom-right = bottom right
 setting-reading-aids-rsvp-font-size-pt = RSVP size
 setting-reading-aids-rsvp-font-size-pt-help = Size of the RSVP word in the GUI.
@@ -3708,7 +3708,7 @@ setting-sync-favorite-voices-help = Share your favorite voices; one this compute
 ## End of S5
 
 ## W7l: Lexend downloaded on first choice. The question names the size and
-## the licence before y or n; the rest put the font's name first.
+## the license before y or n; the rest put the font's name first.
 font-download-question = Download the { $font } font, { $kb } KB, { $licence }? y or n
 font-downloading = Downloading { $font }.
 font-downloaded = { $font } downloaded and ready.

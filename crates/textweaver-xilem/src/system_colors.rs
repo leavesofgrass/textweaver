@@ -127,6 +127,8 @@ pub fn palette(c: &SystemColors) -> Palette {
         spoken_sentence_attrs: Attrs::UNDERLINE,
         sentence_line: text,
         selection: (c.highlight_text, c.highlight),
+        // The system's own band, as its edit controls draw it.
+        field_selection: c.highlight,
         find_hit: (text, bg),
         current_find_hit: bg,
         note: bg,

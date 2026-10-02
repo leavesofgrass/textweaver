@@ -3,7 +3,7 @@
 - Status: accepted
 - Date: 2026-09-25
 - Status update (Saturday, September 26, 2026): The TUI, the app's theme cycle, and the settings moved onto this crate: the terminal reader runs Galaxy by default, cycles all 23 built-ins plus user themes with F5, and follows the system at startup. The TUI's three hand-made themes are gone. The GUI `system` theme is still future work.
-- Status update (Saturday, September 26, 2026): `[highlight] color` and `sentence_color` are laid over the theme's highlight, with a warning when the text falls below 4.5 to 1 contrast (7 to 1 in high-contrast themes). The Xilem GUI takes its colours from `Theme::rgb_table`.
+- Status update (Saturday, September 26, 2026): `[highlight] color` and `sentence_color` are laid over the theme's highlight, with a warning when the text falls below 4.5 to 1 contrast (7 to 1 in high-contrast themes). The Xilem GUI takes its colors from `Theme::rgb_table`.
 
 ## Context
 

@@ -106,6 +106,15 @@ docker compose build dev
 
 The GUI is `textweaver-xilem`, all Rust ([ADR-0027](../adr/0027-xilem-gui.md)); it needs no C or C++ toolkit. The wxDragon spike that came before it ([ADR-0014](../adr/0014-gui-toolkit.md)) has been removed.
 
+Build it and open a document with:
+
+```bash
+cargo build -p textweaver-xilem --release
+target/release/textweaver-xilem path/to/document.md
+```
+
+The program is `textweaver-xilem` (`textweaver-xilem.exe` on Windows) under `target/release/`; a release package renames the same program to `textweaver-gui`.
+
 A lean reader, without in-reader export, preview, and citations (the `publish` feature, on by default), grammar checking, and Export audio, builds with:
 
 ```bash
@@ -138,7 +147,7 @@ The `scripts/` folder has installers and helpers for every system. Each script h
 - `tools/`: helper programs, among them the link checker (`check_links.py`), the site data generator (`gen_site_data.py`), and the engine spikes.
 - `docs/`: user guides, contributor guides, the ADRs, and the interactive pages in `docs/site/`. Start at [the documentation index](../README.md).
 - `fixtures/`: sample documents for tests, and Star's reference output for them.
-- `third_party/`: pronunciation dictionaries, fonts, and word lists, each with its licence. See [third-party data](third-party-data.md).
+- `third_party/`: pronunciation dictionaries, fonts, and word lists, each with its license. See [third-party data](third-party-data.md).
 - `docker/`, `compose.yaml`, `compose.voxin.yaml`: the Linux development container.
 
 ## Documentation site
@@ -178,6 +187,6 @@ The script runs Zensical against `zensical.toml`, places the interactive pages f
 - [Testing](testing.md): the checks, the tests, and the benchmarks.
 - [Docker development container](docker.md): Linux builds and Voxin on any machine.
 - [Architecture](architecture.md): the crates and which way dependencies point.
-- [Third-party data](third-party-data.md): the bundled dictionaries, fonts, and word lists, and their licences.
+- [Third-party data](third-party-data.md): the bundled dictionaries, fonts, and word lists, and their licenses.
 - [CONTRIBUTING.md](../../CONTRIBUTING.md): how to contribute: setup, the checks, accessibility, commits, and docs.
 - [Documentation index](../README.md)

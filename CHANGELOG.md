@@ -12,6 +12,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - **The title bar and menus follow the theme.** A dark theme such as Galaxy now gets a dark title bar, and on Windows a dark menu bar and dark drop-down menus, even when Windows itself is light; a light theme gets light ones. With Windows High Contrast on, Windows draws them in your contrast colors. See [Colors and high contrast](docs/gui.md#colors-and-high-contrast).
 - **New setting: Hide the menu bar** (`[gui] auto_hide_menu`, off by default, Windows only). The menu bar takes no room until Alt, F10, or Alt with a menu's letter shows it, and hides again when the menu closes. NVDA and JAWS still say "menu bar" on Alt and F10. See [Menus](docs/gui.md#menus).
+- **Enter in the command palette runs the command you heard.** After Up or Down moved through the matches, Enter ran the first match instead of the one announced. It now runs the selected one.
+- **Shift+F1 describes the window's own commands.** "What does this key do?" followed by Ctrl+D, Ctrl+Plus, or Ctrl+, opened the font list, changed the size, or opened the settings. Now, as for every other key, you hear its name, what it does, its keys, and where it is in the menus.
+- **Shift+Y obeys single-key shortcuts.** With single-key shortcuts off (F9), Shift+Y no longer lists the highlights in the window, as in the terminal reader.
+- **A clearer message when the document on the command line cannot be opened,** the same as Ctrl+O gives, with a next step: "Could not open notes.md: there is no file named notes.md in Documents. Check the name."
+- **Typed text in a prompt follows the theme.** The command palette's filter and every typed prompt drew their text in a near-white whatever the theme, so it was faint in Galaxy Light; it now uses the theme's text color, and selected text sits on a band that keeps it readable.
+- **Play's focus ring shows.** On Play's colored fill the focus ring is now drawn in the page color, at least 3 to 1 against the fill in the four main themes.
+- **Faster menus.** A setting no menu shows, such as the rate, no longer rebuilds the menu bar, and a rebuild no longer works out the settings and the menus' reserved letters again.
 
 ### The GUI
 
@@ -32,6 +39,16 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **The system's folder chooser.** Audio export's "Another folder", the batch conversion folders, and the sync folder open the system's folder chooser in the GUI, starting in the document's folder. If it cannot open, the file browser's list chooses the folder instead.
 - **F4 browses from a prompt.** In the terminal reader, and in a typed prompt in the GUI, F4 in any prompt for a file opens the file browser; the path chosen fills the prompt, and Enter confirms it. For a file to write, F4 chooses the folder and keeps the name. Escape goes back to the prompt as it was. The prompt names the key when it opens ("Import settings from file. F4 to browse.").
 - Tab completes a path in every prompt for a file, not only Open, Save as and Insert image.
+
+### Themes
+
+- **Following the system theme again.** One F5 used to stop the theme from following the system for good. Turning "Follow the system theme" off and on again now follows it from the next start.
+
+### Documentation
+
+- US spelling throughout the English messages and the documentation ("color", "license", "center"), checked by `cargo xtask docs --check`.
+- The window is named `textweaver-gui` in the guides, the quick start gives the window's keys beside the terminal reader's, and README and CONTRIBUTING start with the window and say that the build needs cmake.
+- Dates and internal names are gone from the user guides and the keyboard reference's "What changed": they name the release instead.
 
 ### Optional components and the dictation model
 

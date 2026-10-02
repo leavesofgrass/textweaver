@@ -33,7 +33,7 @@ Everyone who takes part is asked to follow the [code of conduct](CODE_OF_CONDUCT
 
 1. Install Rust with [rustup](https://rustup.rs). You do not need to choose a version: `rust-toolchain.toml` pins it, and rustup installs it the first time you build.
 2. Install Python 3. A few checks use it, with the standard library only. On Windows, install it from python.org and run the tools with `py -3`, because `python` there may be the Microsoft Store stub.
-3. On Windows, install Visual Studio or the Build Tools with the "Desktop development with C++" workload. On Linux, install pkg-config and the ALSA development files (`libasound2-dev` on Debian and Ubuntu). On macOS, install the Xcode command line tools.
+3. On Windows, install Visual Studio or the Build Tools with the "Desktop development with C++" workload. On Linux, install pkg-config and the ALSA development files (`libasound2-dev` on Debian and Ubuntu). On macOS, install the Xcode command line tools. Install cmake 3.16 or later on every system; the Opus encoder builds from source ([Building](docs/dev/building.md#cmake-for-opus-audio-export)).
 4. Get the code, build it, and run the tests:
 
    ```bash
@@ -48,10 +48,16 @@ Everyone who takes part is asked to follow the [code of conduct](CODE_OF_CONDUCT
    cargo test --workspace
    ```
 
-5. Try the terminal reader on a document. Space starts and pauses reading, and `?` lists every key:
+5. Try the terminal reader and the window on a document. Space starts and pauses reading, and `?` lists every key:
 
    ```bash
    cargo run -p textweaver-tui -- fixtures/sample.md
+   ```
+
+   and the window:
+
+   ```bash
+   cargo run -p textweaver-xilem -- fixtures/sample.md
    ```
 
 The Docker development container has every library the workspace can use, including the Linux speech engines, so you can test Linux features from any system. [Docker development container](docs/dev/docker.md) explains it.

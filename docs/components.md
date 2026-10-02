@@ -14,7 +14,7 @@ This guide is written to be read with a screen reader. Each section starts with 
 | The PaddleOCR Latin text recognition model (experimental) | `ocr-paddle-latin` | 8.0 MB | Apache-2.0 | reading scanned pages in Latin-script languages |
 | The Lexend reading font | `lexend` | 206 KB | SIL Open Font License | the Lexend reading font |
 
-Piper voices are optional components too. The voice manager lists them from Piper's catalogue, with each voice's size and license; see [Speech](speech.md).
+Piper voices are optional components too. The voice manager lists them from Piper's catalog, with each voice's size and license; see [Speech](speech.md).
 
 The Whisper models' license is MIT, from OpenAI. The onnx-community copies textweaver downloads declare no license of their own, so textweaver says "MIT, unconfirmed".
 

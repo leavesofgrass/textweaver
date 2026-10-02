@@ -208,15 +208,17 @@ pub fn in_window(a: ActionId) -> bool {
     )
 }
 
-/// What the menus show depends on: the settings (toggles, choices, the
-/// language, the theme), the keymap, the live modes, the document open
-/// (the recent documents), and which pending commands have their module.
-/// Building the tree takes a few milliseconds (each toggle reads the
-/// settings schema); comparing this takes microseconds, so the window
-/// builds the tree again only when this changed.
+/// What the menus show depends on: the settings they show (toggles,
+/// choices, the language, the theme), the keymap, the live modes, the
+/// document open (the recent documents), and which pending commands have
+/// their module. Building the tree reads the recent documents' positions
+/// from disk; comparing this takes microseconds, so the window builds the
+/// tree again only when this changed.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Fingerprint {
-    settings: textweaver_app::store::Settings,
+    /// The settings the menus show (`menu_setting_paths`), not all of
+    /// them: a rate key changes nothing shown, so it rebuilds nothing.
+    settings: Vec<Option<serde_json::Value>>,
     keymap: textweaver_app::keymap::Keymap,
     mode: textweaver_app::Mode,
     editing: bool,
@@ -229,7 +231,7 @@ impl Fingerprint {
     /// The fingerprint of what `app`'s menus show now.
     pub fn of(app: &App) -> Fingerprint {
         Fingerprint {
-            settings: app.settings().clone(),
+            settings: app.setting_values(textweaver_app::menu::menu_setting_paths()),
             keymap: app.keymap().clone(),
             mode: app.mode(),
             editing: app.is_editing(),
@@ -1102,6 +1104,7 @@ mod tests {
         let mut app = app();
         let commands = [
             ActionId::NextSentence,
+            ActionId::RateUp,
             ActionId::BionicToggle,
             ActionId::RulerCycle,
             ActionId::ToggleEditMode,
@@ -1118,6 +1121,21 @@ mod tests {
                 assert_eq!(tree(&app), shown, "{a:?} changed the menus, not the key");
             }
         }
+    }
+
+    /// A setting no menu shows (the rate) leaves the fingerprint alone, so
+    /// a held rate key does not rebuild the menus; one a menu shows does.
+    #[test]
+    fn only_settings_the_menus_show_rebuild_them() {
+        use textweaver_app::Command;
+        let mut app = app();
+        let key = Fingerprint::of(&app);
+        let rate = app.settings().speech.rate;
+        let _ = app.dispatch(Command::Action(ActionId::RateUp));
+        assert_ne!(app.settings().speech.rate, rate, "the rate changed");
+        assert_eq!(Fingerprint::of(&app), key);
+        let _ = app.dispatch(Command::Action(ActionId::BionicToggle));
+        assert_ne!(Fingerprint::of(&app), key);
     }
 
     /// Commands whose modules have merged appear in the window's menus as

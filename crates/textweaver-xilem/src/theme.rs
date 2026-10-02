@@ -1,9 +1,9 @@
 //! textweaver's themes on Masonry's widgets.
 //!
 //! The layout, spacing, and corner radii follow Masonry's default look (the
-//! one Xilem's `to_do_mvc` example shows, which the owner liked); the colours come
+//! one Xilem's `to_do_mvc` example shows, which the owner liked); the colors come
 //! from a textweaver theme ([`Theme::rgb_table`]'s roles), Galaxy by
-//! default. Every derived colour is checked: text 4.5 to 1 on its surface
+//! default. Every derived color is checked: text 4.5 to 1 on its surface
 //! (7 to 1 in high-contrast themes) and the focus ring 3 to 1 against both
 //! the page and the panels.
 
@@ -15,7 +15,7 @@ use masonry::properties::{
     CheckmarkStrokeWidth, ContentColor, CornerRadius, Gap, Padding, PlaceholderColor,
     SelectionColor,
 };
-use masonry::widgets::{Button, Checkbox, Divider, Flex, Label, TextInput};
+use masonry::widgets::{Button, Checkbox, Divider, Flex, Label, TextArea, TextInput};
 use textweaver_theme::color::{adjust_away, contrast_ratio};
 use textweaver_theme::{Attrs, ColorRole, Rgb, StyleRole, Theme, ThemeKind};
 
@@ -34,7 +34,7 @@ pub const UI_TEXT: f32 = 15.0;
 /// The document's default text size (before the reader's font setting).
 pub const DOC_TEXT: f32 = 20.0;
 
-/// The colours the GUI draws with, derived from one theme.
+/// The colors the GUI draws with, derived from one theme.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Palette {
     /// The theme's name.
@@ -55,7 +55,7 @@ pub struct Palette {
     pub text: Rgb,
     /// Secondary text.
     pub dim_text: Rgb,
-    /// Heading colours, levels 1 to 6.
+    /// Heading colors, levels 1 to 6.
     pub headings: [Rgb; 6],
     /// Links.
     pub link: Rgb,
@@ -90,6 +90,10 @@ pub struct Palette {
     pub sentence_line: Rgb,
     /// The selection: text and band.
     pub selection: (Rgb, Rgb),
+    /// The selection band in a text field, under the field's own text
+    /// color (a field keeps its text color on the band, so the reversed
+    /// band the document draws would leave the text unreadable).
+    pub field_selection: Rgb,
     /// A search match: text and band.
     pub find_hit: (Rgb, Rgb),
     /// The search match at the caret: its band.
@@ -104,14 +108,14 @@ pub struct Palette {
     /// The caret.
     pub caret: Rgb,
     /// The reading ruler's band on the reading line (a tint of the focus
-    /// colour the text stays readable on; a bar at the line's start marks
-    /// it too, so colour is not the only cue).
+    /// color the text stays readable on; a bar at the line's start marks
+    /// it too, so color is not the only cue).
     pub ruler_focus: Rgb,
     /// The ruler's band on the lines around the reading line.
     pub ruler_band: Rgb,
 }
 
-/// `c` as a Masonry colour.
+/// `c` as a Masonry color.
 pub fn color(c: Rgb) -> Color {
     Color::from_rgb8(c.r, c.g, c.b)
 }
@@ -122,7 +126,7 @@ pub fn with_alpha(c: Rgb, alpha: f32) -> Color {
 }
 
 /// The smallest change to `c` that reaches `min` contrast against every
-/// colour in `against`, or `c` if it already does (or nothing can).
+/// color in `against`, or `c` if it already does (or nothing can).
 fn ensure(c: Rgb, against: &[Rgb], min: f64) -> Rgb {
     let mut c = c;
     for &bg in against {
@@ -162,6 +166,21 @@ impl Palette {
         let spoken = theme.resolve_style(StyleRole::SpokenWord);
         let sentence = theme.resolve_style(StyleRole::SpokenSentence);
         let selection = theme.resolve_style(StyleRole::Selection);
+        // A text field keeps its text on the selection band: the style's
+        // own band (unreversed), at the text floor against the text.
+        let field_selection = {
+            let style = theme.style(StyleRole::Selection);
+            let band = if style.attributes.reverse {
+                style.background.unwrap_or(background)
+            } else {
+                selection.background
+            };
+            ensure(
+                band,
+                &[ensure(text, &[background, surface, raised], text_min)],
+                text_min,
+            )
+        };
         let find = theme.resolve_style(StyleRole::FindHit);
         let current_find = theme.resolve_style(StyleRole::CurrentFindHit);
         let note = theme.resolve_style(StyleRole::Note);
@@ -198,6 +217,7 @@ impl Palette {
             spoken_sentence_attrs: sentence.attributes,
             sentence_line: ensure(sentence.foreground, &[sentence.background], 3.0),
             selection: (selection.foreground, selection.background),
+            field_selection,
             find_hit: (find.foreground, find.background),
             current_find_hit: current_find.background,
             note: note.background,
@@ -221,13 +241,13 @@ impl Palette {
         Palette::from_theme(textweaver_theme::builtin::default_theme())
     }
 
-    /// The colour of heading level `level` (1 to 6).
+    /// The color of heading level `level` (1 to 6).
     pub fn heading(&self, level: u8) -> Rgb {
         self.headings[usize::from(level.clamp(1, 6) - 1)]
     }
 }
 
-/// Masonry's default properties, recoloured with `p`.
+/// Masonry's default properties, recolored with `p`.
 pub fn default_properties(p: &Palette) -> DefaultProperties {
     let mut props = masonry::theme::default_property_set();
     let hc = p.kind == ThemeKind::HighContrast;
@@ -235,7 +255,7 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
     let text = color(p.text);
     let focus = color(p.focus);
 
-    // Buttons: the to_do_mvc shape, recoloured, with a 2 px focus ring.
+    // Buttons: the to_do_mvc shape, recolored, with a 2 px focus ring.
     button_props::<Button>(&mut props, p);
     button_props::<crate::widgets::ActionButton>(&mut props, p);
 
@@ -273,7 +293,7 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
     props.insert::<TextInput, _>(PlaceholderColor::new(color(p.dim_text)));
     props.insert::<TextInput, _>(CaretColor { color: text });
     props.insert::<TextInput, _>(SelectionColor {
-        color: color(p.selection.1),
+        color: color(p.field_selection),
     });
     {
         let mut stack = PropertyStack::new();
@@ -289,6 +309,18 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
         props.insert_stack::<TextInput>(stack);
     }
 
+    // The field inside a text input (the prompt), which Masonry would draw
+    // in its own near-white whatever the theme.
+    props.insert::<TextArea<true>, _>(ContentColor::new(text));
+    props.insert::<TextArea<true>, _>(CaretColor { color: text });
+    props.insert::<TextArea<true>, _>(SelectionColor {
+        color: color(p.field_selection),
+    });
+    props.insert::<TextArea<false>, _>(ContentColor::new(text));
+    props.insert::<TextArea<false>, _>(SelectionColor {
+        color: color(p.field_selection),
+    });
+
     props.insert::<Label, _>(ContentColor::new(text));
     props.insert::<Divider, _>(ContentColor::new(color(p.border)));
     props.insert::<Flex, _>(Gap::new(Length::px(GAP)));
@@ -296,7 +328,7 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
 }
 
 /// The button look for widget type `W`: Masonry's `Button` shape with the
-/// palette's colours; the `primary` class fills with the accent.
+/// palette's colors; the `primary` class fills with the accent.
 fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Palette) {
     let hc = p.kind == ThemeKind::HighContrast;
     let border_w = if hc { 2.px() } else { 1.px() };
@@ -345,13 +377,14 @@ fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Pal
         Selector::classes(&["primary"]).with_hovered(true),
         Background::Color(color(p.accent.mix(p.text, 0.15))),
     );
-    // On the accent fill, the ring is drawn in the text colour, which
-    // stands out from both the fill and the panel.
+    // On the accent fill, the ring is drawn in the page color, which
+    // stands out from the fill (at least 3 to 1, tested) where the text
+    // color can be close to it.
     stack.push_layer(
         Selector::classes(&["primary"]).with_focused(true),
         (
             BorderColor {
-                color: color(p.text),
+                color: color(p.background),
             },
             BorderWidth {
                 width: Length::px(FOCUS_WIDTH),
@@ -433,6 +466,15 @@ mod tests {
             assert!(
                 contrast_ratio(p.on_accent, p.accent) >= 4.5 - 0.01,
                 "{name}: primary button"
+            );
+            // Play's focus ring, in the page color on the accent fill.
+            let r = contrast_ratio(p.background, p.accent);
+            assert!(r >= 3.0 - 0.01, "{name}: Play's focus ring is {r:.2} to 1");
+            // Typed text on a text field's selection band.
+            let r = contrast_ratio(p.text, p.field_selection);
+            assert!(
+                r >= min - 0.01,
+                "{name}: selected field text is {r:.2} to 1"
             );
             for l in 1..=6 {
                 let r = contrast_ratio(p.heading(l), p.background);

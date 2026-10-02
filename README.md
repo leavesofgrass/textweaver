@@ -6,13 +6,15 @@ textweaver is an accessible, keyboard-first document reader and writer that spea
 
 ## Quick start
 
-Download a package for your system from the [releases page](https://github.com/leavesofgrass/textweaver/releases), or [build it](#building). Then, from the folder you extracted:
+On Windows, download the window package, `textweaver-VERSION-windows-x86_64-gui.zip`, from the [releases page](https://github.com/leavesofgrass/textweaver/releases), extract it, and run `textweaver-gui.exe`. Windows may warn once, because the program is not code-signed (see [Installing textweaver](docs/install.md#the-gui)). Press **Ctrl+O** to open a document and **Space** to hear it. **F1** opens the help, and **F3** lists every key.
+
+For the terminal reader on any system, download that system's package instead, or [build it](#building), and from the folder you extracted run:
 
 ```bash
 textweaver QUICKSTART.md
 ```
 
-Once it opens:
+It reads its own quick start aloud. Once it opens:
 
 - **Space** starts and pauses reading.
 - **h** jumps to the next heading.
@@ -32,7 +34,7 @@ Once it opens:
 
 ## Building
 
-You need Rust; rustup installs the version pinned in `rust-toolchain.toml`.
+You need Rust; rustup installs the version pinned in `rust-toolchain.toml`. You also need cmake 3.16 or later, for the Opus encoder; see [Building](docs/dev/building.md#cmake-for-opus-audio-export).
 
 ```bash
 cargo build --workspace

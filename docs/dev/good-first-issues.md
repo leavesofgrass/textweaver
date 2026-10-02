@@ -12,17 +12,6 @@ Sizes: small is a few hours; medium is about a day.
 
 ## Tooling and docs
 
-### US English in the English interface
-
-Size: small. No Rust knowledge needed beyond editing strings.
-
-The project writes US English, but some English messages and setting labels use British spellings, such as "licence" and "colour".
-
-- Where: the message values in `crates/textweaver-lexicon/locales/en.ftl`, and the English labels and help in `crates/textweaver-app/src/settings_schema.rs`.
-- Change only the text people read or hear. Keep every message id (the part before `=`), every setting key, and every Rust identifier as it is, so no one's settings break. Leave the other languages' files alone.
-- Then regenerate the settings reference with `cargo xtask settings-doc`.
-- How to check: `git grep -n -i -E "colour|licence|favourite|grey|catalogue" -- crates/textweaver-lexicon/locales/en.ftl` finds these words only in message ids (before the `=`), never in the text after it, and `cargo test -p textweaver-app -p textweaver-lexicon` passes.
-
 ### A fuzz target for plain text
 
 Size: small.

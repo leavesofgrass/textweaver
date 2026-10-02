@@ -62,7 +62,7 @@ Bundled fonts and quick wins for PDF export were wanted.
 - **Structure.** Page numbers stay footer artifacts and can be turned off. `title_page` adds a title, author, and date page (the date only when given or in the document's front matter: the writer does not know the reader's time zone, and a wrong date is worse than none). `toc` adds a "Contents" heading and a `TOC` of `TOCI` entries, each a `Link` with a link annotation to its heading's destination and the heading's page number, to `toc_depth` levels.
 - **Links.** Links to `#heading` anchors (slugs as Markdown renderers make them, or the heading text) and footnote references now jump to their target (XYZ destinations); a footnote body's own label is not a link. Anchors that point nowhere become text and are reported.
 - **Reports.** Images without a description are artifacts, as before, and are now reported so the author can add alt text.
-- **EPUB.** `EpubOptions::font` and `code_font` embed a bundled family (four files and its `OFL.txt`, `font/ttf` or `font/otf` in the manifest) with `@font-face` rules. Installed fonts are never embedded: their licences may not allow it.
+- **EPUB.** `EpubOptions::font` and `code_font` embed a bundled family (four files and its `OFL.txt`, `font/ttf` or `font/otf` in the manifest) with `@font-face` rules. Installed fonts are never embedded: their licenses may not allow it.
 - `tw convert` gains `--font`, `--code-font`, `--font-size`, `--page-size`, `--margin`, `--line-spacing`, `--large-print`, `--no-page-numbers`, `--title-page`, `--date`, `--contents`, `--contents-depth`, and `--lang` (`crates/textweaver-cli/src/cmd/convert_layout.rs`).
 
 Every PDF in the new tests passes krilla's PDF/UA-1 validator.

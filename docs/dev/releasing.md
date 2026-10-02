@@ -67,7 +67,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    Pushing the tag starts the `Release` workflow:
 
    - **Create the release.** Checks that the version in `Cargo.toml` matches the tag, then creates the GitHub release as a pre-release, with notes taken from the matching `CHANGELOG.md` section.
-   - **Windows package** (on `windows-latest`) and **macOS package** (on `macos-14`), in parallel. Each runs `cargo xtask dist`, checks the package (the binaries run, and the notices and licence files are inside), attests its build provenance, and uploads it to the release.
+   - **Windows package** (on `windows-latest`) and **macOS package** (on `macos-14`), in parallel. Each runs `cargo xtask dist`, checks the package (the binaries run, and the notices and license files are inside), attests its build provenance, and uploads it to the release.
    - **Linux AppImage and tarball, x86_64 and aarch64** (on `ubuntu-latest` and `ubuntu-22.04-arm`, in parallel with the others). Each runs `cargo xtask appimage` in the `docker/appimage` image (Ubuntu 22.04), then `docker/appimage/test-distros.sh`, which runs both packages on Debian stable and Fedora, and on Arch for x86_64 (Arch has no official arm64 image): `tw --version`, `tw backends` without and with espeak-ng, `tw text`, `--install` and `--uninstall`, and `install-linux.sh --release` with each package. Then it attests and uploads the AppImage, its `.zsync` file, and the tarball.
    - **The GUI**, in the same three jobs, after the terminal package: `cargo xtask gui-dist` (`--universal` on macOS; in the `docker/appimage` image on Linux), then a check of the files in the package, `textweaver-gui --version`, and `--screenshot`, which draws the window on the CPU with no display. On macOS it also reads a document silently with the paced backend in a background window, then closes. On Windows the checks start the program with `Start-Process -Wait`, since it is a GUI-subsystem program. The GUI's packages are attested and uploaded with the terminal's. The GUI is not yet run on other Linux distributions.
    - **SHA256SUMS.txt.** Once all the packages are uploaded, one job writes the checksums of every package on the release and attests the checksum file. The package jobs never write checksums, so they cannot race.
@@ -112,7 +112,7 @@ Optional. When you want to listen, do this on the machine you use every day, wit
 5. **Piper.** With a Piper voice installed:
    - `tw backends` lists `piper` as available and says it supports word highlighting.
    - The first word of a long paragraph starts within about a third of a second of pressing Read.
-   - In the voice manager, "Fetch the Piper voice list" asks before downloading, and a voice to download says its size and its licence before asking. Say no once, then yes once, and check the voice appears in `<data>/piper/voices/`.
+   - In the voice manager, "Fetch the Piper voice list" asks before downloading, and a voice to download says its size and its license before asking. Say no once, then yes once, and check the voice appears in `<data>/piper/voices/`.
    - Remove the downloaded voice with Delete; it asks first.
 
 6. **Dictation.** With the Whisper model in `<data>/whisper/rten/base.en` ([dictation guide](../dictation.md#whisper-inside-textweaver)), run `tw dictate --timings`, say a sentence, and press Enter. Check the text, and write down the time from Enter to the text.
@@ -131,11 +131,11 @@ Write down what you heard in the release notes' testing section, including anyth
 - `QUICKSTART.md`, `README.md`, `LICENSE`, `CHANGELOG.md`, and `INSTALL.md` at the top;
 - in `docs/`, every user guide listed under "For users" in the [documentation index](../README.md), and the offline interactive pages in `docs/site/`;
 - the platform's helper scripts (doctor, speech check, update) and their README;
-- `THIRD-PARTY-NOTICES.md`, and under `licenses/`: each bundled font's `OFL.txt`, SCOWL's `Copyright`, and the IBMTTS dictionaries' licence. `cargo xtask dist` fails if any of these is missing.
+- `THIRD-PARTY-NOTICES.md`, and under `licenses/`: each bundled font's `OFL.txt`, SCOWL's `Copyright`, and the IBMTTS dictionaries' license. `cargo xtask dist` fails if any of these is missing.
 
 ## The GUI packages
 
-`cargo xtask gui-dist` builds the GUI (`textweaver-xilem`, installed as `textweaver-gui`) with the `dist` profile, in the same build folder as `cargo xtask dist`, with the static C runtime on Windows, and with the speech engines `cargo xtask dist` builds into the terminal programs for the platform (espeak-ng, speech-dispatcher and Omnivox on Linux; Omnivox elsewhere) for each one the GUI crate declares as a feature. It names any engine it leaves out because the crate has no such feature. It stages the program with the same engine hosts, IBMTTS dictionaries, define-word dictionary, notices, and licence files as the terminal package (the same check fails if one is missing), plus Xilem's licence, the quick start, and `GUI.md`, in `target/dist/textweaver-VERSION-PLATFORM-gui/`, and then:
+`cargo xtask gui-dist` builds the GUI (`textweaver-xilem`, installed as `textweaver-gui`) with the `dist` profile, in the same build folder as `cargo xtask dist`, with the static C runtime on Windows, and with the speech engines `cargo xtask dist` builds into the terminal programs for the platform (espeak-ng, speech-dispatcher and Omnivox on Linux; Omnivox elsewhere) for each one the GUI crate declares as a feature. It names any engine it leaves out because the crate has no such feature. It stages the program with the same engine hosts, IBMTTS dictionaries, define-word dictionary, notices, and license files as the terminal package (the same check fails if one is missing), plus Xilem's license, the quick start, and `GUI.md`, in `target/dist/textweaver-VERSION-PLATFORM-gui/`, and then:
 
 - on Windows, zips it;
 - on macOS, puts the program in `textweaver.app` (signed ad hoc) and zips the folder with `ditto`. It is built for the Mac's own architecture, or with `--universal` for Apple silicon and Intel joined with `lipo`, as the release does;

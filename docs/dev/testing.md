@@ -50,7 +50,7 @@ Useful options: `--only fmt,clippy` runs some steps, `--fail-fast` stops at the 
 CI also runs two checks that `dev-check` does not. Run them yourself when you change dependencies:
 
 - **deps**: `cargo xtask deps --check`. The dependency direction between the workspace crates ([docs/dev/architecture.md](architecture.md#dependency-direction)), with cargo features resolved: the reader built with `--no-default-features` must not reach the conversion and citation stack.
-- **deny**: `cargo deny check`. Licences, advisories, duplicate versions, and sources, from `deny.toml`.
+- **deny**: `cargo deny check`. Licenses, advisories, duplicate versions, and sources, from `deny.toml`.
 
 The writers' output is also checked by other tools, in `.github/workflows/second-tool.yml`. It runs weekly and on any change to the writers. The Markdown fixtures are converted to EPUB and PDF; each EPUB is checked with epubcheck 5.4.0, and each PDF with veraPDF 1.30.2 against the PDF/UA-1 profile. Both tools come from Maven Central, pinned and checked by SHA-256. Each line of the job summary starts with Pass, Fail, Allowed, or Warning, in words. A known warning that is accepted goes in `tools/second_tool_allowlist.txt`, with its reason.
 
