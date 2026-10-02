@@ -14,7 +14,7 @@
 //! textweaver's own high-contrast theme at startup (`theme::os::probe`), as
 //! in the terminal.
 
-use textweaver_theme::{Rgb, ThemeKind};
+use textweaver_theme::{Attrs, Rgb, ThemeKind};
 
 use crate::theme::Palette;
 
@@ -120,7 +120,12 @@ pub fn palette(c: &SystemColors) -> Palette {
         accent: c.highlight,
         on_accent: c.highlight_text,
         spoken_word: (c.highlight_text, c.highlight),
+        spoken_word_attrs: Attrs::BOLD,
+        // No band under forced colors: the underline, in the system's text
+        // color, is the sentence's only mark.
         spoken_sentence: bg,
+        spoken_sentence_attrs: Attrs::UNDERLINE,
+        sentence_line: text,
         selection: (c.highlight_text, c.highlight),
         find_hit: (text, bg),
         current_find_hit: bg,

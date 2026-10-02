@@ -17,7 +17,7 @@ use masonry::properties::{
 };
 use masonry::widgets::{Button, Checkbox, Divider, Flex, Label, TextInput};
 use textweaver_theme::color::{adjust_away, contrast_ratio};
-use textweaver_theme::{ColorRole, Rgb, StyleRole, Theme, ThemeKind};
+use textweaver_theme::{Attrs, ColorRole, Rgb, StyleRole, Theme, ThemeKind};
 
 /// Space between related controls.
 pub const GAP: f64 = 8.0;
@@ -75,8 +75,19 @@ pub struct Palette {
     pub on_accent: Rgb,
     /// The spoken word: text and band.
     pub spoken_word: (Rgb, Rgb),
+    /// The spoken word's attributes besides color: how it is marked
+    /// without color (bold in every bundled theme). The window draws bold
+    /// without reflowing the line, and italic and underline as well.
+    pub spoken_word_attrs: Attrs,
     /// The band behind the spoken sentence.
     pub spoken_sentence: Rgb,
+    /// The spoken sentence's attributes besides color (underline in every
+    /// bundled theme). The window underlines the sentence in every palette
+    /// whatever these say, because its band is too faint to be the cue.
+    pub spoken_sentence_attrs: Attrs,
+    /// The color of the line under the spoken sentence: the sentence's own
+    /// text color, at least 3 to 1 against its band.
+    pub sentence_line: Rgb,
     /// The selection: text and band.
     pub selection: (Rgb, Rgb),
     /// A search match: text and band.
@@ -182,7 +193,10 @@ impl Palette {
             accent,
             on_accent,
             spoken_word: (spoken.foreground, spoken.background),
+            spoken_word_attrs: spoken.attributes,
             spoken_sentence: sentence.background,
+            spoken_sentence_attrs: sentence.attributes,
+            sentence_line: ensure(sentence.foreground, &[sentence.background], 3.0),
             selection: (selection.foreground, selection.background),
             find_hit: (find.foreground, find.background),
             current_find_hit: current_find.background,
