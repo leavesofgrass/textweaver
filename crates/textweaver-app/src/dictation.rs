@@ -25,6 +25,16 @@
 //! Outside edit mode the command asks whether to turn edit mode on first.
 //! Without the `dictation` feature the command stays hidden (it is a
 //! pending command until [`register`] gives it a handler).
+//!
+//! **The model** (W8a-w): dictation uses the Whisper model chosen in the
+//! settings (`[dictation] model`, base.en when none is chosen), an
+//! optional component (crate::components) in `whisper/rten/<model>` in
+//! the data folder, or the folder `[dictation] model_dir` names. When the
+//! model is missing, Dictate asks to download it ("Dictation needs the
+//! Whisper model, 79.3 MB, license MIT, unconfirmed. Download it now?"),
+//! and dictation starts when the download finishes. A no is remembered
+//! for the session. A damaged file, a missing file, or a missing folder
+//! is said in words, never as a blank error.
 
 use crate::app::App;
 use crate::command::Effect;
@@ -51,10 +61,17 @@ impl App {
     }
 }
 
-/// Gives the Dictate command its handler (with the `dictation` feature).
+/// Gives the Dictate and Download the dictation model commands their
+/// handlers (with the `dictation` feature).
 pub(crate) fn register(app: &mut App) {
     #[cfg(feature = "dictation")]
-    app.register_handler(textweaver_keymap::ActionId::Dictate, handler);
+    {
+        app.register_handler(textweaver_keymap::ActionId::Dictate, handler);
+        app.register_handler(
+            textweaver_keymap::ActionId::DownloadDictationModel,
+            download_handler,
+        );
+    }
     #[cfg(not(feature = "dictation"))]
     let _ = app;
 }
@@ -62,6 +79,12 @@ pub(crate) fn register(app: &mut App) {
 #[cfg(feature = "dictation")]
 fn handler(app: &mut App) -> Vec<Effect> {
     app.dictate()
+}
+
+#[cfg(feature = "dictation")]
+fn download_handler(app: &mut App) -> Vec<Effect> {
+    let id = crate::components::dictation_model_id(&app.settings).to_owned();
+    app.ask_component_download(&id, crate::components::After::Nothing)
 }
 
 /// The last words of `words` that fit in `cells` characters, whole words
@@ -131,6 +154,12 @@ mod off {
         ) -> Vec<Effect> {
             self.dictation.question = false;
             vec![Effect::Redraw]
+        }
+
+        pub(crate) fn dictation_component_changed(&mut self, _id: &str) {}
+
+        pub(crate) fn dictate_after_download(&mut self) -> Vec<Effect> {
+            Vec::new()
         }
     }
 }
@@ -265,33 +294,106 @@ mod on {
             }
         }
 
-        /// The in-process model's folder: the setting, else
-        /// `whisper/rten/base.en` in the data folder.
-        fn dictation_model_dir(&self) -> Option<PathBuf> {
-            self.settings.dictation.model_dir.clone().or_else(|| {
-                self.paths
-                    .as_ref()
-                    .map(|p| p.data_dir.join("whisper").join("rten").join("base.en"))
-            })
+        /// The in-process model's folder, when it is ready: the setting's
+        /// folder when it exists, else the chosen model's component folder
+        /// when its files are there. Otherwise says why in words, and asks
+        /// to download a missing or damaged model (once a session).
+        fn dictation_model_ready(&mut self) -> Result<PathBuf, Vec<Effect>> {
+            use crate::components::{After, Status};
+            if let Some(dir) = self.settings.dictation.model_dir.clone() {
+                if dir.is_dir() {
+                    return Ok(dir);
+                }
+                let msg = self.msg_args(
+                    "dictation-model-no-folder",
+                    &args!["dir" => dir.display().to_string()],
+                );
+                self.error(&msg);
+                return Err(vec![Effect::Redraw]);
+            }
+            let chosen = crate::components::dictation_model_id(&self.settings).to_owned();
+            let found = self
+                .component_and_dir(&chosen)
+                .or_else(|| self.component_and_dir(crate::components::WHISPER_BASE_EN));
+            let Some((c, dir)) = found else {
+                let msg = self.msg_args(
+                    "dictation-no-model",
+                    &args!["dir" => "whisper/rten/base.en"],
+                );
+                self.error(&msg);
+                return Err(vec![Effect::Redraw]);
+            };
+            match c.status_in(&dir) {
+                Status::Installed => return Ok(dir),
+                Status::Damaged(file) => {
+                    let msg = self.msg_args("dictation-model-damaged", &args!["file" => file]);
+                    self.error(&msg);
+                }
+                Status::NotInstalled | Status::Partial(_) => {}
+            }
+            if self.component_declined(&c.id) {
+                let msg = self.msg("dictation-model-declined");
+                self.tell(&msg);
+                return Err(vec![Effect::Redraw]);
+            }
+            let effects = self.ask_component_download(&c.id, After::Dictate);
+            if !self.confirmation_pending() {
+                // Not asked (no downloads in this build): say where the
+                // model goes, so it can be placed by hand.
+                let msg = self.msg_args(
+                    "dictation-no-model",
+                    &args!["dir" => dir.display().to_string()],
+                );
+                self.error(&msg);
+            }
+            Err(effects)
+        }
+
+        /// A component changed: when it is a dictation model, the backend
+        /// is let go (not while recording), so the next Dictate loads the
+        /// model again or asks for it.
+        pub(crate) fn dictation_component_changed(&mut self, id: &str) {
+            let model = crate::components::DICTATION_MODELS.contains(&id)
+                || id == crate::components::dictation_model_id(&self.settings);
+            if model
+                && !self.dictation.active()
+                && let Some(mut old) = self.dictation.backend.take()
+            {
+                old.shutdown(FINISH_WAIT);
+            }
+        }
+
+        /// The model finished downloading after the dictation question:
+        /// dictation starts, in edit mode.
+        pub(crate) fn dictate_after_download(&mut self) -> Vec<Effect> {
+            if self.is_editing() && !self.dictation.active() {
+                self.start_dictation()
+            } else {
+                Vec::new()
+            }
         }
 
         fn start_dictation(&mut self) -> Vec<Effect> {
             if self.dictation.backend.is_none() {
-                let Some(dir) = self.dictation_model_dir() else {
-                    let msg = self.msg_args(
-                        "dictation-no-model",
-                        &args!["dir" => "whisper/rten/base.en"],
-                    );
-                    self.error(&msg);
-                    return vec![Effect::Redraw];
+                let dir = match self.dictation_model_ready() {
+                    Ok(dir) => dir,
+                    Err(effects) => return effects,
                 };
                 let mut config = RtenConfig::new(&dir);
                 config.live = Some(StreamConfig::default());
                 match RtenDictation::new(config) {
                     Ok(b) => self.dictation.backend = Some(Box::new(b)),
-                    Err(_) => {
-                        let shown = dir.display().to_string();
-                        let msg = self.msg_args("dictation-no-model", &args!["dir" => shown]);
+                    Err(e) => {
+                        // The real reason, in words.
+                        log::warn!("dictation model in {}: {e}", dir.display());
+                        let msg = match e {
+                            textweaver_dictation::DictationError::ModelNotFound {
+                                file, ..
+                            } => self
+                                .msg_args("dictation-model-file-missing", &args!["file" => file]),
+                            other => self
+                                .msg_args("dictation-failed", &args!["error" => other.to_string()]),
+                        };
                         self.error(&msg);
                         return vec![Effect::Redraw];
                     }

@@ -596,6 +596,9 @@ actions! {
     Dictate = "dictate", Editing,
         "Start or stop dictation: spoken words are typed at the cursor in edit mode",
         gui ["g:Ctrl+Shift+F9"], term ["g:Ctrl+Shift+F9"], shared [];
+    DownloadDictationModel = "download_dictation_model", Editing,
+        "Download the dictation model chosen in the settings, after saying its size and license",
+        gui [], term [], shared [];
 
     // View and help
     NextTheme = "next_theme", View, "Switch to the next color theme",
@@ -647,6 +650,9 @@ actions! {
         "Press a key to hear what it does and where it is in the menus, without running it",
         gui ["g:Shift+F1"], term ["g:Shift+F1"], shared [];
     About = "about", View, "Say textweaver's version and license",
+        gui [], term [], shared [];
+    ManageComponents = "manage_components", View,
+        "Manage optional components: the models, fonts, and voices textweaver can download, with their size and license",
         gui [], term [], shared [];
     Help = "help", View, "Open the help",
         gui ["g:F1"], term ["g:F1"], shared [];

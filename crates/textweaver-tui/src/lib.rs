@@ -196,6 +196,9 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
         // The first run starts with the language list, the system's
         // language first; the hybrid mode question waits for the next run.
         tui.choose_language();
+        // Then, once nothing else is open, the optional components, none
+        // chosen (W8a-d). `tw` never shows them.
+        tui.app_mut().offer_components_on_first_run();
     } else {
         // With a screen reader: offer hybrid mode (once).
         setup::offer_hybrid_if_screen_reader(tui.app_mut(), opts);

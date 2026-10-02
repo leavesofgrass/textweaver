@@ -3682,3 +3682,90 @@ font-download-no-folder = No hay carpeta de datos para { $font }.
 font-download-not-in-build = Esta versión no descarga fuentes.
 gui-font-to-download = { $family } (descargar, { $kb } KB)
 gui-font-downloaded = { $family } (descargada)
+
+## Componentes opcionales (W8a-d, W8a-w).
+name-manage-components = Administrar componentes opcionales…
+name-download-dictation-model = Descargar el modelo de dictado
+action-manage-components = Administrar componentes opcionales: los modelos, fuentes y voces que textweaver puede descargar, con su tamaño y licencia
+action-download-dictation-model = Descargar el modelo de dictado elegido en la configuración, tras decir su tamaño y licencia
+component-feature-dictation = el dictado
+component-feature-ocr = leer páginas escaneadas
+component-feature-reading-font = una fuente de lectura
+component-feature-voice = una voz
+component-state-installed = instalado
+component-state-not-installed = no instalado
+component-state-partial = instalado en parte
+component-state-damaged = dañado
+component-state-downloading = descargando
+components-title = Componentes opcionales
+components-intro =
+    { $n ->
+        [one] 1 componente opcional. Intro para acciones.
+       *[other] { $n } componentes opcionales. Intro para acciones.
+    }
+components-item = { $title }: { $state }, { $size }, licencia { $license }, para { $features }
+components-actions-intro = { $title }: { $state }.
+components-action-download = Descargar, { $size }
+components-action-verify = Verificar los archivos
+components-action-remove = Quitar
+components-action-install-zip = Instalar desde un archivo zip…
+components-action-install-folder = Instalar desde una carpeta…
+components-install-purpose = Instalar el componente desde aquí
+component-question = ¿Descargar { $title }, { $size }, licencia { $license }? y o n
+component-remove-question = ¿Quitar { $title }? y o n
+component-downloading = Descargando. Escape lo detiene.
+component-installing = Instalando desde el archivo.
+component-verifying = Comprobando los archivos.
+component-progress = { $percent } por ciento descargado.
+component-ready = Listo: { $title }.
+component-verified = Archivos correctos: { $title }.
+component-verify-failed =
+    { $n ->
+        [one] 1 archivo no es correcto: { $files }.
+       *[other] { $n } archivos no son correctos: { $files }.
+    }
+component-removed = Quitado: { $title }.
+component-refused =
+    { $n ->
+        [one] 1 archivo omitido: { $files }.
+       *[other] { $n } archivos omitidos: { $files }.
+    }
+component-already = Ya instalado: { $title }.
+component-not-there = No instalado: { $title }.
+component-declined = No se descargó.
+component-not-in-build = Sin descargas en esta versión.
+component-no-folder = No hay carpeta de datos para él.
+component-error-fetch = No descargado: falló el origen.
+component-error-size = No instalado: tamaño incorrecto.
+component-error-hash = No instalado: un archivo no coincide.
+component-error-missing = No instalado: falta un archivo.
+component-error-cancelled = Descarga detenida; seguirá luego.
+component-error-busy = Ya se está descargando uno.
+component-error-no-source = No descargado: no tiene dirección.
+component-error-name = Rechazado: un nombre no es simple.
+component-error-manifest = La lista del espejo no se lee.
+component-error-io = No instalado: no se pudo escribir.
+components-chooser-title = Componentes opcionales
+components-chooser-intro = Extras opcionales, ninguno elegido. Espacio elige uno; Descargar los elegidos los obtiene; Escape omite.
+components-chooser-item = { $mark }: { $title }, para { $features }, { $size }, licencia { $license }
+components-chosen = Elegido
+components-not-chosen = No elegido
+components-chooser-download = Descargar los elegidos
+components-chooser-skip = Omitir por ahora
+components-chooser-skipped = Omitido; vea Administrar componentes.
+components-chooser-none = Nada elegido, nada descargado.
+dictation-model-question = El dictado necesita el modelo Whisper, { $size }, licencia { $license }. ¿Descargarlo ahora? y o n
+dictation-model-declined = Sin modelo, no hay dictado por ahora.
+dictation-model-not-in-build = Sin modelo ni descargas en esta versión.
+dictation-model-file-missing = Al modelo le falta { $file }.
+dictation-model-damaged = Modelo de dictado dañado: { $file }.
+dictation-model-no-folder = No existe la carpeta: { $dir }.
+
+## Configuración de los componentes opcionales (W8a-d, W8a-w).
+section-components = Componentes opcionales
+setting-dictation-model = Modelo de dictado
+setting-dictation-model-help = El modelo Whisper que usa el dictado cuando no hay carpeta. Descargar el modelo de dictado, en el menú Herramientas, lo obtiene.
+choice-dictation-model-whisper-base-en = base.en, el predeterminado
+choice-dictation-model-whisper-small-en = small.en, más grande y preciso
+setting-components-mirror = Espejo de componentes
+setting-components-mirror-help = De dónde vienen primero los componentes opcionales: una dirección https o una carpeta en este equipo. Vacío usa sus orígenes públicos. Nunca ponga aquí una contraseña.

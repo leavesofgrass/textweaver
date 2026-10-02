@@ -53,6 +53,7 @@ pub const PENDING: &[ActionId] = &[
     ActionId::BatchConvert,
     ActionId::ExportAudio,
     ActionId::Dictate,
+    ActionId::DownloadDictationModel,
 ];
 
 /// Commands that are deliberately in no menu: the key that opens the
@@ -535,6 +536,7 @@ impl MenuId {
             MenuId::Tools => &[
                 Do(A::CommandPalette),
                 Do(A::Dictate),
+                Do(A::DownloadDictationModel),
                 Sep,
                 Do(A::DefineWord),
                 Do(A::Summarize),
@@ -547,6 +549,7 @@ impl MenuId {
                 Do(A::Settings),
                 Do(A::ColorSettings),
                 Do(A::SettingsProfiles),
+                Do(A::ManageComponents),
                 Do(A::RestartSpeech),
             ],
             MenuId::Sync => &[

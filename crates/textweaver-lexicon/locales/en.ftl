@@ -3227,7 +3227,7 @@ dictation-not-typed = Dictated words not typed, edit mode is off: { $text }
 setting-dictation-speak-while-recording = Speak while dictating
 setting-dictation-speak-while-recording-help = Say dictated words as they come. Off, they are shown on the status line and said at each pause, so the microphone does not hear the voice.
 setting-dictation-model-dir = Dictation model folder
-setting-dictation-model-dir-help = The Whisper model for dictation. Not set uses whisper/rten/base.en in the data folder.
+setting-dictation-model-dir-help = A folder holding a Whisper model for dictation. Not set uses the dictation model below, in the data folder.
 section-dictation = Dictation
 
 ## End of W6d
@@ -3712,3 +3712,93 @@ font-download-no-folder = No data folder to keep { $font } in.
 font-download-not-in-build = Font downloads are not in this build.
 gui-font-to-download = { $family } (download, { $kb } KB)
 gui-font-downloaded = { $family } (downloaded)
+
+## Optional components (W8a-d, W8a-w): Manage optional components, the
+## first-run list, and the questions features ask. Status messages fit 40
+## Braille cells, meaning first. $title is a component's title, $size a
+## size ("79.3 MB"), $license its license, $features what needs it.
+name-manage-components = Manage optional components…
+name-download-dictation-model = Download the dictation model
+action-manage-components = Manage optional components: the models, fonts, and voices textweaver can download, with their size and license
+action-download-dictation-model = Download the dictation model chosen in the settings, after saying its size and license
+component-feature-dictation = dictation
+component-feature-ocr = reading scanned pages
+component-feature-reading-font = a reading font
+component-feature-voice = a speech voice
+component-state-installed = installed
+component-state-not-installed = not installed
+component-state-partial = partly installed
+component-state-damaged = damaged
+component-state-downloading = downloading
+components-title = Optional components
+components-intro =
+    { $n ->
+        [one] 1 optional component. Enter for actions.
+       *[other] { $n } optional components. Enter for actions.
+    }
+components-item = { $title }: { $state }, { $size }, license { $license }, for { $features }
+components-actions-intro = { $title }: { $state }.
+components-action-download = Download, { $size }
+components-action-verify = Verify the files
+components-action-remove = Remove
+components-action-install-zip = Install from a zip file…
+components-action-install-folder = Install from a folder…
+components-install-purpose = Install the component from here
+component-question = Download { $title }, { $size }, license { $license }? y or n
+component-remove-question = Remove { $title }? y or n
+component-downloading = Downloading. Escape stops it.
+component-installing = Installing from the file.
+component-verifying = Checking the files.
+component-progress = { $percent } percent downloaded.
+component-ready = Ready: { $title }.
+component-verified = Files check out: { $title }.
+component-verify-failed =
+    { $n ->
+        [one] 1 file does not check out: { $files }.
+       *[other] { $n } files do not check out: { $files }.
+    }
+component-removed = Removed: { $title }.
+component-refused =
+    { $n ->
+        [one] 1 file left out: { $files }.
+       *[other] { $n } files left out: { $files }.
+    }
+component-already = Already installed: { $title }.
+component-not-there = Not installed: { $title }.
+component-declined = Not downloaded.
+component-not-in-build = Downloads are not in this build.
+component-no-folder = No data folder to keep it in.
+component-error-fetch = Not downloaded: the source failed.
+component-error-size = Not installed: wrong file size.
+component-error-hash = Not installed: a file did not match.
+component-error-missing = Not installed: a file is missing.
+component-error-cancelled = Download stopped; it resumes later.
+component-error-busy = Already downloading one.
+component-error-no-source = Not downloaded: no address for it.
+component-error-name = Refused: a name is not plain.
+component-error-manifest = The mirror's list is unreadable.
+component-error-io = Not installed: could not write.
+components-chooser-title = Optional components
+components-chooser-intro = Optional extras, none chosen. Space chooses one; Download the chosen ones gets them; Escape skips.
+components-chooser-item = { $mark }: { $title }, for { $features }, { $size }, license { $license }
+components-chosen = Chosen
+components-not-chosen = Not chosen
+components-chooser-download = Download the chosen ones
+components-chooser-skip = Skip for now
+components-chooser-skipped = Skipped; see Manage optional components.
+components-chooser-none = Nothing chosen, nothing downloaded.
+dictation-model-question = Dictation needs the Whisper model, { $size }, license { $license }. Download it now? y or n
+dictation-model-declined = No model, so no dictation for now.
+dictation-model-not-in-build = No model; this build cannot download.
+dictation-model-file-missing = Dictation model lacks { $file }.
+dictation-model-damaged = Dictation model damaged: { $file }.
+dictation-model-no-folder = No model folder: { $dir }.
+
+## Settings for optional components (W8a-d, W8a-w).
+section-components = Optional components
+setting-dictation-model = Dictation model
+setting-dictation-model-help = The Whisper model dictation uses when no folder is set. Download the dictation model, in the Tools menu, gets it.
+choice-dictation-model-whisper-base-en = base.en, the default
+choice-dictation-model-whisper-small-en = small.en, larger and more accurate
+setting-components-mirror = Components mirror
+setting-components-mirror-help = Where optional components come from first: an https address or a folder on this computer. Empty uses their public sources. Never put a password here.
