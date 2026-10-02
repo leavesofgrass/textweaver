@@ -8,6 +8,17 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - **Links open without a shell.** On Windows a link's address was opened through `cmd /C start`, so an address with `&` in it could run a command after one "y". Links and files now open through `ShellExecuteW` on Windows, and `open` or `xdg-open` with the address as one argument on macOS and Linux. Only `http`, `https`, and `mailto` addresses and files that exist are opened; anything else (`ms-msdt:`, `javascript:`) is refused, and you hear why: "Not opened: ms-msdt link blocked."
 
+### The GUI
+
+- **The keyboard preset applies from the start.** `preset = "classic"` under `[keyboard]` now takes effect when the window opens, as in the terminal reader; before, the GUI used the default keys until a settings import or sync.
+- **The voice manager's buttons and keys.** Enter or Space presses the focused button, and the Help and Say Status keys (Alt+End) work with the focus on a button, as in the list. Remove is unavailable on a voice that cannot be removed: it says "Remove, unavailable", your screen reader says "unavailable", and its description gives the reason.
+- **The document's name on focus.** The document is named with its title first, such as "Reading check, document", so NVDA and JAWS say which document it is when the window or the document takes the focus.
+
+### The library and export
+
+- **A cleared detail shows at once.** Clearing a title, author, DOI, or ISBN you typed shows the document's own value in the library list right away, without reading the list again.
+- **Export uses the reading font.** Export to PDF or EPUB in the reader uses your reading font, a downloaded Lexend too, as `tw convert --font` does. A font that is not on this computer keeps the usual font.
+
 ### For contributors
 
 - **Research for the next waves.** `docs/dev/research/` holds the research reports and the wave plan for alpha.8, alpha.9, and later: a performance audit, speech engines and runtimes, text-to-speech use cases for students with disabilities, health sciences workflows, GUI and visual design, and law and standards. Nothing in it is a decision; decisions stay in the ADRs.
