@@ -6,7 +6,7 @@ The [interactive architecture page](../site/architecture.html) shows the same cr
 
 ## The big picture
 
-textweaver is one Cargo workspace with 35 crates and a maintenance crate, `xtask`. Two programs come out of it:
+textweaver is one Cargo workspace with 36 crates and a maintenance crate, `xtask`. Two programs come out of it:
 
 - `textweaver`, the terminal reader, built from `crates/textweaver-tui`;
 - `tw`, the command-line tool, built from `crates/textweaver-cli`.
@@ -24,6 +24,7 @@ The crates are grouped here by the part of the system they serve. For each crate
 ### Foundation
 
 - **`textweaver-core`**: shared leaf types. Positions (`CharPos`, `CharRange`), units, marker kinds, the `OffsetMap`, edits and how positions move across them, rate, pitch, and volume, the `Utterance` handed to speech, and small preference enums. ADRs: [0002](../adr/0002-text-model.md), [0005](../adr/0005-narration-and-offset-map.md). Depends on nothing in the workspace.
+- **`textweaver-components`**: optional components (W8a-d): the models, fonts, and voices textweaver downloads only after the reader agrees. One pin type (size and SHA-256, or git's blob SHA-1), the one downloader (a `.part` file in a staging folder, the check, then a rename; files that check out are kept, a stopped download resumes, a lock keeps two downloads of one component apart), install from a zip or a folder, a mirror's manifest of extra components, the fake fetcher for tests, and the neutral User-Agent. HTTP is its `download` feature, so the lean reader links no HTTP client. Depends on no workspace crate; the OCR, fonts, and Piper crates and the app depend on it. See [Optional components](../components.md).
 
 ### Documents
 

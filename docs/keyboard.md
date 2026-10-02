@@ -332,6 +332,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Check the citations: how many there are, and which keys are not in your library | palette | palette | palette | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | palette | palette | palette | `import_references` |
 | Start or stop dictation: spoken words are typed at the cursor in edit mode | `Ctrl+Shift+F9` | `Ctrl+Shift+F9` | `Cmd+Shift+F9` | `dictate` |
+| Download the dictation model chosen in the settings, after saying its size and license | palette | palette | palette | `download_dictation_model` |
 
 ## View and help
 
@@ -358,6 +359,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
 | Press a key to hear what it does and where it is in the menus, without running it | `Shift+F1` | `Shift+F1` | `Shift+F1` | `what_does_this_key_do` |
 | Say textweaver's version and license | palette | palette | palette | `about` |
+| Manage optional components: the models, fonts, and voices textweaver can download, with their size and license | palette | palette | palette | `manage_components` |
 | Open the help | `F1` | `F1` | `F1` | `help` |
 
 ## The terminal on macOS
@@ -525,5 +527,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Insert the bibliography of the works cited, at the cursor | `insert_bibliography` |
 | Check the citations: how many there are, and which keys are not in your library | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |
+| Download the dictation model chosen in the settings, after saying its size and license | `download_dictation_model` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | `color_settings` |
 | Say textweaver's version and license | `about` |
+| Manage optional components: the models, fonts, and voices textweaver can download, with their size and license | `manage_components` |

@@ -4,7 +4,20 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Optional components and the dictation model
+
+- **Dictation offers to download its model.** The first Dictate without the Whisper model asks "Dictation needs the Whisper model, 79.3 MB, license MIT, unconfirmed. Download it now? y or n". A yes downloads it, with progress said every 10 percent and Escape to stop, then dictation starts, with no restart. A no is remembered until textweaver starts again. Tools, Download the dictation model asks the same at any time, and `tw dictate download [--yes]` does it from the command line; `tw dictate` offers it when the model is missing.
+- **The real reason, in words,** when the model cannot be used: a missing file, a damaged file (the download is offered again), or a folder that does not exist, instead of one general message.
+- **The Dictation model setting** chooses Whisper base.en (the default, 79.3 MB) or small.en (251 MB, more accurate).
+- **Manage optional components** (Tools menu): every model, font, and voice textweaver can download, with whether it is installed, its size, its license, and what needs it, and Download, Verify, Remove, and Install from a zip file or a folder. `tw components list | download | verify | remove | install` does the same, and `tw info` ends with how many are installed.
+- **A first-run list** of the optional components in the window and the terminal reader, shown once, with nothing chosen: Space chooses, Download the chosen ones gets them, Escape skips.
+- **Install from a file** for computers without internet: a downloaded zip or a folder, each file checked against the same pins; anything else is refused with the reason.
+- **A mirror** (`[components] mirror` or `TEXTWEAVER_COMPONENTS_MIRROR`), tried before the public sources, may list components of its own; it can add components but never change a built-in one's pins. See [Optional components](docs/components.md).
+- **Downloads go on where they stopped,** and a folder placed by hand that already holds the right files is used as it is.
+
 ### For contributors
+
+- **One downloader** (W8a-d): the new `textweaver-components` crate pins files by size and SHA-256 and downloads them through a `.part` file, the check, and a rename, with resume, progress, cancel, a lock, and one neutral User-Agent. The OCR models, Lexend, and Piper voices moved onto it; a test in the app enforces the registry, and the fake fetcher records every request.
 
 - **Research for the next waves.** `docs/dev/research/` holds the research reports and the wave plan for alpha.8, alpha.9, and later: a performance audit, speech engines and runtimes, text-to-speech use cases for students with disabilities, health sciences workflows, GUI and visual design, and law and standards. Nothing in it is a decision; decisions stay in the ADRs.
 

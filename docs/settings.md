@@ -379,7 +379,7 @@ The font in the GUI. The terminal always uses its own font.
 - `size_pt`, default `14.0`: the size in points, from 6 to 144.
 - `weight`, default `400`: from 100 to 900. 700 is bold.
 
-`fetch_missing` was removed in 0.1.0-alpha.5: textweaver never downloads fonts. A `fetch_missing` line in an older `settings.toml` is ignored and dropped at the next save.
+`fetch_missing` was removed in 0.1.0-alpha.5: textweaver downloads a reading font (Lexend) only when you choose it and agree, so the setting did nothing. A `fetch_missing` line in an older `settings.toml` is ignored and dropped at the next save.
 
 ### [reading_aids.ruler]
 
@@ -429,7 +429,8 @@ Extractive summaries (see [Summaries](reading.md#summaries)).
 Dictating text, in edit mode, in the terminal reader and the GUI. See [Dictation](dictation.md).
 
 - `speak_while_recording`, default `false`: speak the dictated words with textweaver's own voice while the microphone is open. Off, they are shown on the status line as they come and spoken once, at each pause, so the microphone does not hear textweaver's voice.
-- `model_dir`, not set by default: the folder of the in-process Whisper model (its encoder, decoder, and `tokenizer.json`). Unset, textweaver uses `whisper/rten/base.en` in its data folder.
+- `model_dir`, not set by default: a folder holding an in-process Whisper model (its encoder, decoder, and `tokenizer.json`), used as it is. Unset, textweaver uses the model `model` chooses, in its data folder.
+- `model`, default `"whisper-base.en"`: the Whisper model dictation uses, and the one Download the dictation model and the dictation question offer: `"whisper-base.en"` (79.3 MB) or `"whisper-small.en"` (251 MB, slower and more accurate). It is kept in `whisper/rten/base.en` or `whisper/rten/small.en` in the data folder.
 
 ### [interface]
 
@@ -475,6 +476,13 @@ Syncing with your other computers through a folder you choose. Tools, Sync, Set 
 - `glossary`: your glossary's entries and your pronunciations (`[normalization] pronunciations`).
 - `favorite_voices`: your favorite voices. One that is not installed on this computer is kept, and Choose voice lists it as "not on this computer".
 - `position_policy`, default `"newest"`: which place a document opens at when another computer has one too: `"newest"`, `"furthest"`, or `"ask"`. It replaces `[reading] sync_conflict_policy` (`"highest_progress"` reads as `"furthest"`, `"manual"` as `"ask"`), and also decides between places in a library folder's old progress file.
+
+### [components]
+
+Optional components: the models, fonts, and voices textweaver can download. See [Optional components](components.md).
+
+- `mirror`, default `""`: where components come from first, before their public sources: an `https` address or a folder on this computer, holding each component's files under its id. Empty uses the public sources. The `TEXTWEAVER_COMPONENTS_MIRROR` environment variable wins over it. Never put a password or token here.
+- `chooser_shown`, default `false`: set once the first-run list of optional components has been shown, so it is shown once.
 
 Every setting is either **portable**, which syncs, or **machine**, which never does. Portable settings are about you as a reader: the rate, punctuation, verbosity, capitals, the reading aids, the highlight, the theme and colors, the Braille and math codes, the interface language, speed presets, and the announcement level. Machine settings belong to one computer: the speech engine and voice, the volume, the sound device, the access mode and what goes with your screen reader, the NVDA or JAWS key preset, the keyboard layout, the wrap width, undo memory, every path (library folders, the glossary file, engine libraries, the sync folder), the author name written into new documents, and the sync settings themselves. The [settings reference](settings-reference.md) says for each setting whether it syncs.
 

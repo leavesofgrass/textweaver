@@ -77,6 +77,8 @@ CRATE_ADRS = {
     "store": ["0001"],
     # ADR-0049 is on the S0 branch; the orchestrator sets ["0049"] when both merge.
     "sync": ["0049"],
+    # W8a-d: no ADR; the design is in the optional components guide.
+    "components": [],
     "keymap": ["0006"],
     "a11y": ["0006"],
     "editor": [],  # no ADR; the design is in plan section 6.6
@@ -113,6 +115,7 @@ CRATE_ADRS = {
 CRATE_NO_ADR_NOTE = {
     "editor": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
     "sync": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
+    "components": ("Optional components", "../components.md#for-developers"),
 }
 
 # ---------------------------------------------------------------------------
@@ -135,7 +138,7 @@ LAYERS = [
      ["speech", "engines", "enginehost", "eci", "sapi", "apple", "dectalk", "piper", "export"]),
     ("document", "Document", "The document model and what loads, speaks, and cites it.",
      ["text", "formats", "ocr", "math", "mathcat", "cite"]),
-    ("foundation", "Foundation", "Shared types that everything else builds on.", ["core"]),
+    ("foundation", "Foundation", "Shared types that everything else builds on, and the one downloader.", ["core", "components"]),
 ]
 
 # Crates that are tools rather than part of the program.

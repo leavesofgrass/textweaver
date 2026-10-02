@@ -46,6 +46,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 - [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more; exporting and previewing from inside the reader.
 - [The library](library.md): library folders, recent files, sync between computers, and importing from Star.
+- [Optional components](components.md): the models, fonts, and voices textweaver downloads only when you agree; Manage optional components, the first-run list, `tw components`, installing from a file, and a mirror.
 - [Syncing between computers](sync.md): notes, highlights, bookmarks, places, statistics, and settings through a folder you choose; what never syncs, setting it up, what you hear, and privacy.
 - [The Obsidian vault](vault.md): exporting notes and highlights to a vault, and importing them back.
 - [Settings](settings.md): where settings live, every setting, and export, import, and reset.
@@ -63,7 +64,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, the lean reader, the helper scripts, and the repository layout.
 - [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
-- [The crates](dev/architecture.md#the-crates): what each of the 35 crates does, with its ADRs.
+- [The crates](dev/architecture.md#the-crates): what each of the 36 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
 - [Fuzzing](../fuzz/README.md): the 35 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, and email among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records and group files, and the engine-host protocol.

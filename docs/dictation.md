@@ -8,7 +8,7 @@ This guide is written to be read with a screen reader. Each section starts with 
 
 You need two things, and sometimes a third:
 
-- A Whisper program. textweaver does not include one and never downloads one for you.
+- A Whisper program, or the Whisper model textweaver runs itself. textweaver does not include a Whisper program and never downloads one. It offers to download its own Whisper model when you first dictate, and downloads it only when you say yes; see [Whisper inside textweaver](#whisper-inside-textweaver).
 - A Whisper model. The model is the part that knows the language. Two of the three Whisper programs download their models by themselves. whisper.cpp needs you to download a model file.
 - ffmpeg, a program that converts audio. whisper.cpp needs it for any file that is not a WAV file. OpenAI Whisper needs it for every file.
 
@@ -330,7 +330,7 @@ With `--json`, none of the progress messages are printed; only the JSON is.
 
 ## Your audio stays on your computer
 
-textweaver sends no audio anywhere. The dictation part of textweaver has no network code at all. It runs the Whisper program on your computer and reads the text it writes.
+textweaver sends no audio anywhere. The dictation part of textweaver has no network code at all. It runs the Whisper program on your computer and reads the text it writes. Downloading the Whisper model, when you agree to it, is done by textweaver's optional components, which fetch the model files only.
 
 While it works, textweaver makes a temporary folder for the session, in your system's temporary folder, with a name starting `textweaver-dictation-`. Whisper's output, and the converted WAV file when whisper.cpp needs one, go there. The folder is deleted when the transcription ends, whether it worked or not. Your own audio file is never changed.
 
@@ -338,15 +338,32 @@ The one time the internet is used is when faster-whisper or OpenAI Whisper downl
 
 ## Whisper inside textweaver
 
-textweaver can run Whisper itself, with no Whisper program, on RTen, a model runtime written in Rust ([ADR-0023](adr/0023-in-process-neural-speech.md)). It needs three files from Hugging Face's `onnx-community/whisper-base.en` in one folder, `<data>/whisper/rten/base.en` (77 MB in all):
+textweaver can run Whisper itself, with no Whisper program, on RTen, a model runtime written in Rust ([ADR-0023](adr/0023-in-process-neural-speech.md)). It needs three files from Hugging Face's `onnx-community/whisper-base.en`, in one folder, `<data>/whisper/rten/base.en` (79.3 MB in all):
 
-- `onnx/encoder_model_int8.onnx` (23 MB);
-- `onnx/decoder_model_merged_int8.onnx` (54 MB);
+- `encoder_model_int8.onnx` (23 MB);
+- `decoder_model_merged_int8.onnx` (54 MB);
 - `tokenizer.json` (2.4 MB).
 
-The license is MIT, from OpenAI. textweaver does not download them for you yet.
+The license is MIT, from OpenAI. The onnx-community copies declare no license of their own, so textweaver says "MIT, unconfirmed".
 
-When the folder holds them, `tw dictate` uses them without being asked. `--engine rten` asks for them, and `--model-dir DIR` names another folder (`tw dictate --model-dir D:\Models\whisper-tiny.en`).
+### Getting the model
+
+textweaver offers to download the model; it never downloads it on its own.
+
+- **In the reader and the window:** the first time you dictate without the model, you hear "Dictation needs the Whisper model, 79.3 MB, license MIT, unconfirmed. Download it now? y or n". Press `y` and the download starts on its own, with its progress said every 10 percent; Escape stops it, and the next download goes on from where it stopped. When it finishes, you hear "Ready", and dictation starts. Press `n` and nothing is downloaded; you are not asked again until you start textweaver again, and Dictate says "No model, so no dictation for now."
+- **From the Tools menu:** Download the dictation model asks the same question at any time.
+- **From the command line:** `tw dictate download` says what it downloads and asks; `tw dictate download --yes` downloads without asking. When `tw dictate` finds no model, it offers the same download (`--yes` answers for it), then goes on dictating.
+- **From Manage optional components** (Tools menu, or `tw components`): the model is listed with its size and license, with Download, Verify, Remove, and Install from a file.
+
+Each file is checked against its published size and SHA-256 before it is kept, and nothing is used that does not match. The model is an optional component; see [Optional components](components.md) for the mirror and for installing from a downloaded zip or folder on a computer without internet.
+
+**Choosing a model.** The Dictation model setting chooses which Whisper model dictation uses: base.en (the default) or small.en (251 MB, slower, more accurate English). The question and Download the dictation model offer the one chosen.
+
+**Placing the model by hand.** You can still download the three files yourself and put them in `<data>/whisper/rten/base.en` (or a `onnx` folder inside it). textweaver adopts a folder that already holds the right files instead of downloading them again. `--model-dir DIR` on the command line, or the Dictation model folder setting, names another folder (`tw dictate --model-dir D:\Models\whisper-tiny.en`); a folder you name is used as it is, without the download offer.
+
+When the folder holds the model, `tw dictate` uses it without being asked, and `--engine rten` asks for it.
+
+**When the model cannot be used,** textweaver says why in words: "Dictation model lacks decoder_model_merged_int8.onnx." (a file is missing), "Dictation model damaged: tokenizer.json." (a file has the wrong size; the download is offered again), "No model folder: D:\Models\whisper" (the folder you named does not exist), or "No model; this build cannot download." (a reader built without downloads; place the files by hand).
 
 ### Dictating from the microphone
 
@@ -356,7 +373,7 @@ tw dictate
 
 Without `--file`, `tw dictate` records from your default microphone. You hear "Recording. Press Enter to stop." Speak, then press Enter. It says "Transcribing", then prints the text. Pauses are skipped: a voice detector (earshot) finds where you spoke, so long silences cost nothing and are not turned into invented words.
 
-Without the in-process model, `tw dictate` says where to put it, and you can still record with any program you like and transcribe the file with `tw dictate --file`.
+Without the in-process model, `tw dictate` offers to download it (or, when nobody can answer, says where it goes and that `tw dictate download` gets it), and you can still record with any program you like and transcribe the file with `tw dictate --file`.
 
 ### Seeing the words while you talk
 

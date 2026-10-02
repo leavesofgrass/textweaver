@@ -188,7 +188,8 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Dictation: the `[dictation]` section
 
 - `dictation.speak_while_recording`: default off (`false`). Speak while dictating. Say dictated words as they come. Off, they are shown on the status line and said at each pause, so the microphone does not hear the voice. On or off: `true` or `false`. Syncs between computers.
-- `dictation.model_dir`: default not set. Dictation model folder. The Whisper model for dictation. Not set uses whisper/rten/base.en in the data folder. Text; empty means not set. Stays on this computer.
+- `dictation.model_dir`: default not set. Dictation model folder. A folder holding a Whisper model for dictation. Not set uses the dictation model below, in the data folder. Text; empty means not set. Stays on this computer.
+- `dictation.model`: default base.en, the default (`"whisper-base.en"`). Dictation model. The Whisper model dictation uses when no folder is set. Download the dictation model, in the Tools menu, gets it. Choices: `"whisper-base.en"` (base.en, the default), `"whisper-small.en"` (small.en, larger and more accurate). Other values may be written too. Stays on this computer.
 
 ## Interface: the `[interface]` section
 
@@ -233,6 +234,10 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `sync.favorite_voices`: default on (`true`). Sync favorite voices. Share your favorite voices; one this computer does not have is listed as not on this computer. On or off: `true` or `false`. Stays on this computer.
 - `sync.position_policy`: default the newest (`"newest"`). Place to resume. Which place a document opens at when another computer has one too: the newest, the furthest, or ask. Choices: `"newest"` (the newest), `"furthest"` (the furthest), `"ask"`. Stays on this computer.
 
+## Optional components: the `[components]` section
+
+- `components.mirror`: default empty (`""`). Components mirror. Where optional components come from first: an https address or a folder on this computer. Empty uses their public sources. Never put a password here. Text. Stays on this computer.
+
 ## Kept by textweaver
 
 textweaver writes these itself, such as a question already asked. They are in the file, but not on the settings screen.
@@ -240,6 +245,7 @@ textweaver writes these itself, such as a question already asked. They are in th
 - `display.theme_explicit`: default off (`false`). Theme picked. Set when you pick a theme; it stops following the system. On or off: `true` or `false`. Syncs between computers.
 - `accessibility.hybrid_offered`: default off (`false`). Hybrid mode offered. Set once textweaver has asked whether to use hybrid mode. On or off: `true` or `false`. Stays on this computer.
 - `interface.recent_settings`: default an empty list. Recently changed settings. The settings changed last on the settings screen, listed at its top. Text; empty means not set. Stays on this computer.
+- `components.chooser_shown`: default off (`false`). Components list shown. The first-run list of optional components was shown. On or off: `true` or `false`. Stays on this computer.
 
 ## See also
 
