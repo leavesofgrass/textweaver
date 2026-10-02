@@ -2,12 +2,14 @@
 //! this platform (docs/dev/releasing.md).
 //!
 //! Builds `textweaver` and `tw` with the `dist` profile (the release
-//! profile with fat LTO), the engine hosts for the platform (Windows and
+//! profile with fat LTO), each in a cargo run of its own so the reader
+//! gets only its own features (not `tw`'s HTTP client), the engine hosts for the platform (Windows and
 //! Linux), and stages them with the pronunciation dictionaries, the
 //! licence, the third-party notices and licence files, and the user guides
 //! in `target/dist/textweaver-VERSION-PLATFORM/`, then archives the folder:
 //! a `.zip` on Windows, a `.tar.gz` elsewhere. It fails if a notice is
-//! missing from the staged folder.
+//! missing from the staged folder, or if the archive grew more than 10
+//! percent over the last release's without a note (`sizes.rs`).
 //!
 //! - Windows builds link the C runtime statically (`+crt-static`), so the
 //!   package runs without the Visual C++ redistributable. The static build
@@ -40,11 +42,12 @@ pub(crate) fn engines() -> &'static [&'static str] {
     }
 }
 
-/// The `--features` value for the user binaries.
-pub(crate) fn features() -> String {
-    BINARIES
+/// The `--features` value for one user binary's package: the platform's
+/// engines, for that package only.
+pub(crate) fn features(package: &str) -> String {
+    engines()
         .iter()
-        .flat_map(|(package, _)| engines().iter().map(move |e| format!("{package}/{e}")))
+        .map(|e| format!("{package}/{e}"))
         .collect::<Vec<_>>()
         .join(",")
 }
@@ -218,7 +221,7 @@ pub fn run() -> anyhow::Result<()> {
     let staged = stage(args.out.clone(), args.universal)?;
     let archive = archive(&staged)?;
     println!("package {}", archive.display());
-    Ok(())
+    crate::sizes::check(&eci::root(), &[archive])
 }
 
 /// A staged package folder.
@@ -434,17 +437,39 @@ pub(crate) fn cargo(root: &Path, build_dir: &Path) -> Command {
     cmd
 }
 
-fn build_binaries(root: &Path, build_dir: &Path, target: Option<&str>) -> anyhow::Result<()> {
-    let mut cmd = cargo(root, build_dir);
-    cmd.args(["build", "--locked", "--profile", PROFILE, "--features"])
-        .arg(features());
-    for (package, bin) in BINARIES {
-        cmd.args(["-p", package, "--bin", bin]);
-    }
+/// The cargo arguments that build one user binary. Each binary gets a
+/// cargo run of its own: built together, cargo would unify their features
+/// and give the reader `tw`'s (the HTTP client behind `textweaver-formats`'
+/// `url` and `textweaver-ocr`'s `download`, which the reader leaves out).
+fn binary_build_args(package: &str, bin: &str, target: Option<&str>) -> Vec<String> {
+    let mut args: Vec<String> = [
+        "build",
+        "--locked",
+        "--profile",
+        PROFILE,
+        "-p",
+        package,
+        "--bin",
+        bin,
+        "--features",
+    ]
+    .iter()
+    .map(|s| (*s).to_owned())
+    .collect();
+    args.push(features(package));
     if let Some(t) = target {
-        cmd.args(["--target", t]);
+        args.extend(["--target".to_owned(), t.to_owned()]);
     }
-    run_tool(&mut cmd).context("building textweaver and tw")
+    args
+}
+
+fn build_binaries(root: &Path, build_dir: &Path, target: Option<&str>) -> anyhow::Result<()> {
+    for (package, bin) in BINARIES {
+        let mut cmd = cargo(root, build_dir);
+        cmd.args(binary_build_args(package, bin, target));
+        run_tool(&mut cmd).with_context(|| format!("building {bin}"))?;
+    }
+    Ok(())
 }
 
 pub(crate) fn build_hosts(
@@ -584,12 +609,36 @@ mod tests {
 
     #[test]
     fn engines_follow_the_platform() {
-        let f = features();
+        let f = features("textweaver-tui");
         assert!(f.contains("textweaver-tui/omnivox"), "{f}");
-        assert!(f.contains("textweaver-cli/omnivox"), "{f}");
+        assert!(!f.contains("textweaver-cli"), "{f}");
         let linux = cfg!(target_os = "linux");
-        assert_eq!(f.contains("textweaver-cli/speechd"), linux, "{f}");
         assert_eq!(f.contains("textweaver-tui/espeak"), linux, "{f}");
+        assert_eq!(
+            features("textweaver-cli").contains("textweaver-cli/speechd"),
+            linux
+        );
+    }
+
+    /// Each user binary is built in a cargo run of its own, with only its
+    /// own package and features, so the reader never gets `tw`'s.
+    #[test]
+    fn each_binary_is_built_on_its_own() {
+        for (package, bin) in BINARIES {
+            let args = binary_build_args(package, bin, Some("x86_64-apple-darwin"));
+            let packages: Vec<&str> = args
+                .windows(2)
+                .filter(|w| w[0] == "-p")
+                .map(|w| w[1].as_str())
+                .collect();
+            assert_eq!(packages, [package], "{args:?}");
+            let at = args.iter().position(|a| a == "--features").unwrap();
+            for (other, _) in BINARIES.iter().filter(|(p, _)| *p != package) {
+                assert!(!args[at + 1].contains(other), "{args:?}");
+            }
+            assert!(args.ends_with(&["--target".into(), "x86_64-apple-darwin".into()]));
+            assert!(args.iter().any(|a| a == PROFILE), "{args:?}");
+        }
     }
 
     #[test]
