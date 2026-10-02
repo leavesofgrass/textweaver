@@ -370,7 +370,9 @@ mod counting {
 mod counting {
     /// Counts nothing.
     #[derive(Default)]
-    pub struct Window;
+    pub struct Window {
+        _nothing: (),
+    }
 
     impl Window {
         pub fn begin(&mut self) {}
