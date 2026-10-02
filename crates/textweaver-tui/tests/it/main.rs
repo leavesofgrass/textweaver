@@ -11,6 +11,7 @@ mod announce;
 mod authoring;
 mod authoring_extras;
 mod braille;
+mod braille_first;
 mod browse;
 mod edit;
 mod ending;

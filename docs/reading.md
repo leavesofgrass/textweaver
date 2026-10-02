@@ -105,14 +105,26 @@ A scanned PDF is a picture of the pages. textweaver recognizes its text (OCR) an
 
 The screen has four parts, from top to bottom.
 
-1. **The title line.** It starts with "textweaver:" and the document's title. On the right it shows, in this order: the mode when it is not plain reading (for example "Speech Cursor" or "Edit"), "modified" when there are unsaved edits, the reading state ("Reading", "Paused", or "Stopped"), the line and percentage ("line 12 of 300, 4%"), the rate ("265 wpm"), and the speech engine. On a narrow screen the last parts are left out first.
+1. **The title line.** It starts with "textweaver:" and the document's title. On the right it shows, in this order: the line and percentage ("line 12 of 300, 4%"), the reading state ("Ready" before you first read, then "Reading", "Paused", or "Stopped"), "modified" when there are unsaved edits, the accessibility mode in hybrid and screen-reader modes, the rate ("265 wpm"), and the speech engine. In edit and Speech Cursor modes the mode ("Edit" or "Speech Cursor") and "modified" come right after the percentage, before the reading state. On a narrow screen the last parts are left out first.
 2. **The document.** The text, with the spoken word highlighted while reading.
-3. **The status line.** It shows every announcement: what textweaver just said or would have said. It grows to three rows for a long message. Screen readers read it as it changes. See [Using textweaver with a screen reader](screen-readers.md).
-4. **The key hint line.** It shows a few useful keys for the current mode. When a prompt is open (Find, Go to, Open file, and so on), this line becomes the prompt, and you type there.
+3. **The status line.** It shows every announcement: what textweaver just said or would have said. It grows to as many rows as a long message needs, so nothing is cut before a screen reader or Braille display reads it. Screen readers read it as it changes. See [Using textweaver with a screen reader](screen-readers.md).
+4. **The key hint line.** It shows a few useful keys for the current mode. When a prompt is open (Find, Go to, Open file, and so on), this line becomes the prompt, and you type there. In hybrid and screen-reader modes the hints are hidden by default; see [Braille-first layout](#braille-first-layout).
 
 The terminal's cursor always sits where your attention is: on the word being spoken while reading, on the Speech Cursor line, on the prompt, on the chosen item of a list, or else on the reading cursor. Screen readers and screen magnifiers follow it.
 
-Lists, such as the help, bookmarks, notes, and the library, appear in a box over the document.
+Lists, such as the help, bookmarks, notes, and the library, appear in a box over the document when textweaver speaks for itself. In hybrid and screen-reader modes they cover the document with no box.
+
+### Braille-first layout
+
+In hybrid and screen-reader modes, the screen is laid out for a Braille display, which shows one line of about 40 cells at a time. Each line starts with its meaning in the first cell:
+
+- **The title line** starts with the position: "Line 12 of 400, 3%, Ready", then the other parts, then the document's title, without "textweaver:". In edit mode it reads "Line 12 of 400, 3%, Edit, modified, Ready", so "modified" is inside the first 40 cells.
+- **The status area** has a fixed height, big enough for the longest text textweaver puts there (600 characters), and at most half the screen. The document does not move up and down with each message, and a long line or paragraph is shown in full.
+- **Line numbers** start at the left edge ("12  Text"), and the reading ruler marks its line with underline and bold only, with no mark in a column of its own.
+- **The key hint line** is hidden, since F1, the keyboard shortcuts list (`?`), and the menus name the keys. `[display] hints = "on"` shows it again, starting at the edge. A prompt still uses that line.
+- **The empty screen**, with no document open, starts its lines at the edge.
+
+The keyboard shortcuts list leads every line with the command's name, then its keys: "Play or pause: Alt+P or Space. Play or pause reading from the current word. Reading". A first-letter jump in the list goes to a command, not a category, and the keys are inside the first 40 cells.
 
 Code blocks are drawn in the theme's code colors. When a block names its language (```` ```python ````), its keywords, strings, comments, numbers, and names get colors from the theme too, and the kinds differ by more than color: keywords are bold and comments italic. The text itself never changes. Moving the caret onto the block's first line says its language, for example "code, Python".
 

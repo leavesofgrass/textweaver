@@ -13,6 +13,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **The title bar and menus follow the theme.** A dark theme such as Galaxy now gets a dark title bar, and on Windows a dark menu bar and dark drop-down menus, even when Windows itself is light; a light theme gets light ones. With Windows High Contrast on, Windows draws them in your contrast colors. See [Colors and high contrast](docs/gui.md#colors-and-high-contrast).
 - **New setting: Hide the menu bar** (`[gui] auto_hide_menu`, off by default, Windows only). The menu bar takes no room until Alt, F10, or Alt with a menu's letter shows it, and hides again when the menu closes. NVDA and JAWS still say "menu bar" on Alt and F10. See [Menus](docs/gui.md#menus).
 
+### The terminal reader and Braille
+
+- **Status text is never cut.** The status area grows to as many rows as its text needs, counted the way it is word-wrapped. Before, it stopped at three rows, so a long line or paragraph put there in screen-reader mode lost its end before NVDA, JAWS or the Braille display saw it, and a message near a multiple of the width could lose its last word. A long line put there by a caret move is cut at 600 characters, as text read in place already was.
+- **A still screen in hybrid and screen-reader modes.** The status area keeps a fixed height there, enough for 600 characters and at most half the screen, so the document no longer moves up and down with each message.
+- **Title parts in a Braille order.** In edit and Speech Cursor modes the mode and "modified" come right after the position: "Line 12 of 400, 3%, Edit, modified, Ready", so they are inside 40 cells. Say Status and the window's position label follow. In hybrid and screen-reader modes the title line ends with the document's title alone, without "textweaver:".
+- **The keyboard shortcuts list leads with the command.** Each line reads "Play or pause: Alt+P or Space. Play or pause reading from the current word. Reading": the name, its keys, what it does, then its category. The keys are inside 40 cells, and a first-letter jump goes to a command, not a category. Both readers show the list.
+- **Cell 1 holds text in hybrid and screen-reader modes.** Line numbers start at the left edge ("12  Text"), the reading ruler marks its line with underline and bold without a mark column, and the hints and the empty screen start at the edge.
+- **New setting: the key hints line** (`[display] hints`, `"auto"` by default; stays on this computer). Automatic shows it when textweaver speaks for itself and hides it in hybrid and screen-reader modes; `"on"` and `"off"` choose. See [Braille-first layout](docs/reading.md#braille-first-layout).
+
 ### The GUI
 
 - **The keyboard preset applies from the start.** `preset = "classic"` under `[keyboard]` now takes effect when the window opens, as in the terminal reader; before, the GUI used the default keys until a settings import or sync.

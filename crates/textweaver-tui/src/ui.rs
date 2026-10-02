@@ -13,6 +13,7 @@ use textweaver_app::a11y::{CursorPlacement, Priority};
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Layer, Modifiers};
 use textweaver_app::lexicon::args;
+use textweaver_app::store::HintsLine;
 use textweaver_app::text_util::line_count;
 use textweaver_app::{
     App, CaretMove, Command, Confirm, Effect, ListKey, Mode, PromptKey, chords_text_in,
@@ -737,13 +738,31 @@ impl Tui {
         self.status_blank_until.is_some()
     }
 
+    /// `text` word-wrapped to `width` cells as the status area draws it:
+    /// one string per row, at least one. The area's height is counted
+    /// from these same rows, so no word is cut off the end (the terminal
+    /// research, QW1: rows used to be counted from the character width
+    /// but drawn word-wrapped).
+    pub fn status_rows(&self, text: &str, width: u16) -> Vec<String> {
+        let chars: Vec<char> = text.chars().collect();
+        let tab = usize::from(self.app.settings().display.tab_width);
+        layout::wrap(&chars, usize::from(width.max(1)), tab)
+            .into_iter()
+            .map(|(a, b)| chars[a..b].iter().collect())
+            .collect()
+    }
+
     /// Screen areas for a frame of `area`.
+    ///
+    /// The status area takes as many rows as its text needs, so nothing a
+    /// screen reader or Braille display should read is cut. In
+    /// screen-reader and hybrid modes it keeps a fixed height big enough
+    /// for the longest document text put there
+    /// ([`textweaver_app::STATUS_TEXT_LIMIT`] characters), at most half the
+    /// screen, so the document does not shift with each message.
     pub fn areas(&self, area: Rect) -> Areas {
-        let status_rows = {
-            let w = usize::from(area.width.max(1));
-            let len = Span::raw(self.status_line()).width();
-            u16::try_from(len.div_ceil(w).clamp(1, 3)).unwrap_or(1)
-        };
+        let needed = self.status_rows(&self.status_line(), area.width).len();
+        let status_rows = status_height(needed, area.width, area.height, self.braille_first());
         let [title, body, status, bottom] = Layout::vertical([
             Constraint::Length(1),
             Constraint::Min(1),
@@ -771,7 +790,15 @@ impl Tui {
     /// Columns left of the text: line numbers, and one for the reading
     /// ruler's mark when the ruler is on.
     fn gutter_width(&self) -> u16 {
-        self.number_width() + u16::from(self.app.ruler().mode != RulerMode::Off)
+        self.number_width() + self.ruler_column()
+    }
+
+    /// One column for the reading ruler's mark when the ruler is on, but
+    /// none in screen-reader and hybrid modes: there the mark would take
+    /// cell 1 of the Braille line, and the ruler's underline and bold
+    /// still mark the row.
+    fn ruler_column(&self) -> u16 {
+        u16::from(self.app.ruler().mode != RulerMode::Off && !self.braille_first())
     }
 
     fn text_width(&self, body: Rect) -> u16 {
@@ -903,17 +930,19 @@ impl Tui {
         let cursor = self.draw_body(f, areas.body, &theme);
         self.draw_rsvp(f, areas.body, &theme, cursor.map(|p| p.y));
         let status = self.status_to_draw(now);
-        let status = if self.rtl() {
-            crate::bidi::visual(&status).into_owned()
-        } else {
-            status
-        };
-        f.render_widget(
-            Paragraph::new(status)
-                .wrap(ratatui::widgets::Wrap { trim: false })
-                .style(theme.status),
-            areas.status,
-        );
+        let rtl = self.rtl();
+        let rows: Vec<Line<'_>> = self
+            .status_rows(&status, areas.status.width)
+            .into_iter()
+            .map(|row| {
+                if rtl {
+                    Line::from(crate::bidi::visual(&row).into_owned())
+                } else {
+                    Line::from(row)
+                }
+            })
+            .collect();
+        f.render_widget(Paragraph::new(rows).style(theme.status), areas.status);
         let prompt = self.draw_bottom(f, areas.bottom, &theme);
         let cursor = prompt.or(cursor);
         let cursor = self.draw_list(f, areas.body, &theme).or(cursor);
@@ -975,14 +1004,16 @@ impl Tui {
                 s
             }
         };
-        let name = c.fmt("tui-title", &args!["title" => title]);
+        let name = c.fmt("tui-title", &args!["title" => title.as_str()]);
         // Most important first; trailing parts are dropped when narrow.
         // The app gives them ("Ready" until the first reading, then
         // "Stopped"), so Say Status speaks the same parts.
         let mut parts = app.title_parts(position);
         let width = usize::from(area.width);
         if self.braille_first() {
-            let line = shown(braille_title(&mut parts, &name, width));
+            // The document's title alone: "textweaver: " would spend 12
+            // cells of the Braille line on the brand.
+            let line = shown(braille_title(&mut parts, &title, width));
             f.render_widget(Paragraph::new(line).style(theme.title), area);
             return;
         }
@@ -1037,18 +1068,22 @@ impl Tui {
         let Some(s) = self.app.session() else {
             let c = self.app.catalog();
             let k = |a| chords_text_in(&c, self.app.keymap(), a);
+            // A blank before each line, except where a Braille display
+            // reads it: there cell 1 holds the first letter.
+            let pad = if self.braille_first() { "" } else { " " };
             let line = |id: &str, a: ActionId| {
-                Line::from(format!(" {}", c.fmt(id, &args!["keys" => k(a)])))
+                Line::from(format!("{pad}{}", c.fmt(id, &args!["keys" => k(a)])))
             };
             let lines = vec![
                 Line::from(""),
-                Line::from(format!(" {}", c.tr("tui-empty-no-document"))),
+                Line::from(format!("{pad}{}", c.tr("tui-empty-no-document"))),
                 line("tui-empty-open", ActionId::Open),
                 line("tui-empty-help", ActionId::Help),
                 line("tui-empty-quit", ActionId::Quit),
             ];
             f.render_widget(Paragraph::new(lines).style(theme.text), area);
-            return Some(Position::new(area.x + 1, area.y + 1));
+            let x = area.x + u16::try_from(pad.len()).unwrap_or(0);
+            return Some(Position::new(x, area.y + 1));
         };
         let doc = &s.doc;
         let settings = self.app.settings();
@@ -1057,7 +1092,8 @@ impl Tui {
         let spacing = self.app.terminal_spacing();
         let numbers = self.number_width();
         let ruler = self.app.ruler();
-        let ruler_col = u16::from(ruler.mode != RulerMode::Off);
+        let ruler_col = self.ruler_column();
+        let braille = self.braille_first();
         let gutter = numbers + ruler_col;
         let width = usize::from(self.text_width(area));
         let height = usize::from(area.height);
@@ -1144,7 +1180,11 @@ impl Tui {
             let mark = RulerStyle::recommended(marks.get(i).copied().unwrap_or_default());
             let mut spans = Vec::new();
             if numbers > 0 {
-                let label = if row.first {
+                let label = if row.first && braille {
+                    // Left-aligned, so cell 1 of the Braille line is a
+                    // digit, not a blank ("12  " rather than "  12 ").
+                    format!("{:<w$}", row.line + 1, w = usize::from(numbers))
+                } else if row.first {
                     format!("{:>w$} ", row.line + 1, w = usize::from(numbers) - 1)
                 } else {
                     " ".repeat(usize::from(numbers))
@@ -1459,6 +1499,12 @@ impl Tui {
                     .min(area.width.saturating_sub(1));
             return Some(Position::new(x, area.y));
         }
+        if !self.hints_shown() {
+            // `[display] hints`: the row stays, blank, so the layout does
+            // not move when a prompt opens on it.
+            f.render_widget(Block::new().style(theme.text), area);
+            return None;
+        }
         let hints = self.hints(area.width);
         let hints = if self.rtl() {
             crate::bidi::visual(&hints).into_owned()
@@ -1469,13 +1515,29 @@ impl Tui {
         None
     }
 
+    /// Whether the bottom line shows key hints (`[display] hints`): by
+    /// default only when self-voicing. With a screen reader the row
+    /// changed on every mode switch and repeated what F1, the keyboard
+    /// shortcuts list and the menus already say (the terminal research,
+    /// question 1; the owner took the default, Friday, October 2, 2026).
+    pub fn hints_shown(&self) -> bool {
+        match self.app.settings().display.hints {
+            HintsLine::On => true,
+            HintsLine::Off => false,
+            HintsLine::Auto => !self.braille_first(),
+        }
+    }
+
     /// Key hints for the current mode, from the keymap, fitted to `width`.
+    /// A blank comes first, except in screen-reader and hybrid modes,
+    /// where cell 1 of the Braille line holds the first key.
     pub fn hints(&self, width: u16) -> String {
         let c = self.app.catalog();
+        let pad = if self.braille_first() { "" } else { " " };
         if self.app.confirmation_pending() {
             let escape = KeyChord::new(Key::Escape, Modifiers::empty()).to_string();
             return format!(
-                " {}",
+                "{pad}{}",
                 c.fmt("tui-hints-confirm", &args!["escape" => escape])
             );
         }
@@ -1536,7 +1598,7 @@ impl Tui {
             .collect();
         // Keep what fits, always ending with the last two (help and quit
         // in browse mode, the way out in Speech Cursor mode).
-        let width = usize::from(width).saturating_sub(1);
+        let width = usize::from(width).saturating_sub(pad.len());
         let n = parts.len();
         let mut keep = vec![false; n];
         let mut used = 0;
@@ -1553,7 +1615,7 @@ impl Tui {
             .zip(keep)
             .filter_map(|(p, k)| k.then_some(p.as_str()))
             .collect();
-        format!(" {}", shown.join("  "))
+        format!("{pad}{}", shown.join("  "))
     }
 
     /// Draws the list overlay; returns the focused item's position.
@@ -1638,6 +1700,81 @@ impl Tui {
 /// owner's display, a HumanWare Mantis Q40, has 40.
 pub const BRAILLE_CELLS: usize = 40;
 
+/// Braille cells `text` takes on a display reading uncontracted UEB
+/// (grade 1), for the 40-cell tests: [`BRAILLE_CELLS`] counts Braille
+/// cells, while the screen counts print characters, and they differ.
+///
+/// Counted for ASCII:
+/// - a letter, digit, space, or `, ; : . ! ? ' -` is one cell;
+/// - a capital letter takes a capital indicator before it; two or more
+///   capitals in a row take a capitals word indicator (two cells), and
+///   lowercase letters after them a capitals terminator (two cells);
+/// - a run of digits takes a numeric indicator; a `.` or `,` between
+///   digits stays inside the number; a letter a to j right after a
+///   number takes a grade 1 indicator, since it would read as a digit;
+/// - `" # $ % & ( ) * + / < = > @ [ \ ] ^ _ { | } ~` and the backtick
+///   take two cells each.
+///
+/// Anything else (non-ASCII) is counted as one cell. That is the gap:
+/// accented letters, Arabic, symbols and grade 2 contractions need the
+/// display's real table (liblouis, as NVDA and JAWS use), which the tests
+/// do not load. Grade 2 is shorter than grade 1 for words, so a line
+/// that fits here fits a contracted display too, except for non-ASCII
+/// characters a table spells with several cells.
+pub fn braille_cells(text: &str) -> usize {
+    let chars: Vec<char> = text.chars().collect();
+    let mut cells = 0;
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if c.is_ascii_uppercase() {
+            let run = chars[i..]
+                .iter()
+                .take_while(|c| c.is_ascii_uppercase())
+                .count();
+            if run == 1 {
+                cells += 1 + 1;
+            } else {
+                cells += 2 + run;
+                if chars.get(i + run).is_some_and(char::is_ascii_lowercase) {
+                    cells += 2;
+                }
+            }
+            i += run;
+            continue;
+        }
+        if c.is_ascii_digit() {
+            // The numeric indicator, then the number's digits, with a
+            // period or comma between digits kept inside it.
+            cells += 1;
+            while i < chars.len() {
+                let d = chars[i];
+                let inside = (d == '.' || d == ',')
+                    && chars.get(i + 1).is_some_and(char::is_ascii_digit)
+                    && i > 0
+                    && chars[i - 1].is_ascii_digit();
+                if d.is_ascii_digit() || inside {
+                    cells += 1;
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
+            if chars.get(i).is_some_and(|l| ('a'..='j').contains(l)) {
+                cells += 1;
+            }
+            continue;
+        }
+        cells += match c {
+            '"' | '#' | '$' | '%' | '&' | '(' | ')' | '*' | '+' | '/' | '<' | '=' | '>' | '@'
+            | '[' | '\\' | ']' | '^' | '_' | '`' | '{' | '|' | '}' | '~' => 2,
+            _ => 1,
+        };
+        i += 1;
+    }
+    cells
+}
+
 /// The most cells a prompt's label takes on the line drawn: with ": "
 /// after it, what is typed starts within [`BRAILLE_CELLS`] with room to
 /// read it.
@@ -1684,9 +1821,10 @@ pub fn prompt_line_label(label: &str) -> String {
 }
 
 /// The title line for a Braille display, `width` cells: the position and
-/// the reading state from the first cell ("Line 12 of 400, 3%, Reading"),
-/// then the rest of `parts`, then the document's `name`. Trailing parts
-/// are dropped when narrow, keeping the name.
+/// the reading state from the first cell ("Line 12 of 400, 3%, Reading",
+/// or "Line 12 of 400, 3%, Edit, modified, Ready" in edit mode), then the
+/// rest of `parts`, then the document's `name`, without the brand.
+/// Trailing parts are dropped when narrow, keeping the name.
 fn braille_title(parts: &mut Vec<String>, name: &str, width: usize) -> String {
     let compose = |parts: &[String]| {
         let mut joined = parts.join(", ");
@@ -1703,6 +1841,23 @@ fn braille_title(parts: &mut Vec<String>, name: &str, width: usize) -> String {
         line = compose(parts);
     }
     line
+}
+
+/// Rows for the status area: the `needed` rows its text wraps to, on a
+/// `width` by `height` screen. With `braille` (screen-reader and hybrid
+/// modes) at least `ceil(STATUS_TEXT_LIMIT / width)` rows, at most half
+/// the screen, so the layout stays still. Never so many that the title
+/// line, one document row, or the bottom line is lost.
+pub fn status_height(needed: usize, width: u16, height: u16, braille: bool) -> u16 {
+    let w = usize::from(width.max(1));
+    let half = usize::from(height / 2).max(1);
+    let base = if braille {
+        textweaver_app::STATUS_TEXT_LIMIT.div_ceil(w).min(half)
+    } else {
+        1
+    };
+    let most = usize::from(height.saturating_sub(3)).max(1);
+    u16::try_from(base.max(needed).clamp(1, most)).unwrap_or(1)
 }
 
 /// The text attributes a reading-ruler mark adds (colours stay the
@@ -1784,10 +1939,48 @@ mod tests {
             "265 wpm".to_owned(),
             "eSpeak NG".to_owned(),
         ];
-        let wide = braille_title(&mut parts.clone(), "textweaver: essay", 200);
+        let wide = braille_title(&mut parts.clone(), "essay", 200);
         assert!(wide.starts_with("Line 12 of 400, 3%, Reading, "), "{wide}");
-        assert!(wide.ends_with("  textweaver: essay"), "{wide}");
-        let narrow = braille_title(&mut parts, "textweaver: essay", 50);
-        assert_eq!(narrow, "Line 12 of 400, 3%, Reading  textweaver: essay");
+        assert!(wide.ends_with("  essay"), "{wide}");
+        let narrow = braille_title(&mut parts, "essay", 40);
+        assert_eq!(narrow, "Line 12 of 400, 3%, Reading  essay");
+    }
+
+    #[test]
+    fn braille_cells_count_indicators() {
+        assert_eq!(braille_cells("line"), 4);
+        // A capital indicator, then the word.
+        assert_eq!(braille_cells("Line"), 5);
+        // A numeric indicator before each number.
+        assert_eq!(braille_cells("12 of 400"), 3 + 4 + 4);
+        // Percent is two cells.
+        assert_eq!(braille_cells("3%"), 4);
+        // A capitals word indicator, and a terminator before lowercase.
+        assert_eq!(braille_cells("PDF"), 5);
+        assert_eq!(braille_cells("PDFs"), 8);
+        // A decimal stays one number; a letter a to j after it needs a
+        // grade 1 indicator.
+        assert_eq!(braille_cells("1.5"), 4);
+        assert_eq!(braille_cells("3d"), 4);
+        assert_eq!(braille_cells("Ctrl+O"), 2 + 3 + 2 + 2);
+        // Print width and cells differ: 34 characters, 40 cells.
+        let title = "Line 12 of 400, 3%, Edit, modified";
+        assert_eq!(title.len(), 34);
+        assert_eq!(braille_cells(title), 40);
+    }
+
+    #[test]
+    fn the_status_area_fits_its_wrapped_text() {
+        // Self-voicing: as many rows as the text needs, at least one.
+        assert_eq!(status_height(0, 80, 24, false), 1);
+        assert_eq!(status_height(5, 80, 24, false), 5);
+        // Never past the title line, one document row and the bottom line.
+        assert_eq!(status_height(40, 80, 24, false), 21);
+        // Braille-first: ceil(600 / 80) = 8 rows, fixed.
+        assert_eq!(status_height(1, 80, 24, true), 8);
+        assert_eq!(status_height(9, 80, 24, true), 9);
+        // At most half the screen, unless the text needs more.
+        assert_eq!(status_height(1, 40, 24, true), 12);
+        assert_eq!(status_height(1, 80, 10, true), 5);
     }
 }
