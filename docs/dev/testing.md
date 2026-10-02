@@ -143,7 +143,7 @@ Per document it also measures, each as one line of the report and one JSON key:
 
 **Stop to first audio with a real engine.** `--engine piper` or `--engine sapi` (Windows) adds the same measurement with that engine, playing to a silent output that takes samples in real time, so nothing is heard; the numbers go in the `first-audio` entry. Piper needs `TEXTWEAVER_PIPER_VOICES` naming a folder of installed voices, and is timed whenever that is set; nothing is ever downloaded, and with no voices the engine is skipped with a line that says why. The target, from the [next waves plan](research/next-waves-plan.md#principles-for-the-next-waves), is under 150 ms on a 2-core laptop with Piper.
 
-**Pathological inputs.** One generated file per loader (plain text, Markdown, HTML, LaTeX, RTF, email, MHTML, CSV, JSON, notebooks, flat ODT, SVG, MathML, DOCX, EPUB, and PDF), each holding a 512 KB token with nothing to break on, lists nested 200 deep (or the format's nearest thing: RTF groups, JSON arrays, SVG groups, MathML rows), a 2,000-row table, and a 1 MB line. Each must load and plan within a ceiling, 10 seconds by default (`--ceiling-s`), or the run fails; so does a loader that panics. A loader that refuses a file with an error passes, and says so. The fuzz targets catch crashes; this catches slowness, such as Star's 34 seconds to wrap one 5 MB token. `--no-pathological` skips them; `--only pathological` runs only them. The generators are in `xtask/src/pathological.rs`. The first run found one: in MathML, a long token inside 200 nested rows takes time that grows faster than its length (8 KB 0.1 s, 32 KB 0.7 s, 512 KB 189 s). Until the loader is fixed, the MathML input keeps its long token beside the nested rows; put it back inside with the fix.
+**Pathological inputs.** One generated file per loader (plain text, Markdown, HTML, LaTeX, RTF, email, MHTML, CSV, JSON, notebooks, flat ODT, SVG, MathML, DOCX, EPUB, and PDF), each holding a 512 KB token with nothing to break on, lists nested 200 deep (or the format's nearest thing: RTF groups, JSON arrays, SVG groups, MathML rows), a 2,000-row table, and a 1 MB line. Each must load and plan within a ceiling, 10 seconds by default (`--ceiling-s`), or the run fails; so does a loader that panics. A loader that refuses a file with an error passes, and says so. The fuzz targets catch crashes; this catches slowness, such as Star's 34 seconds to wrap one 5 MB token. `--no-pathological` skips them; `--only pathological` runs only them. The generators are in `xtask/src/pathological.rs`. The first run found one: in MathML, a long token inside 200 nested rows took time that grew with the square of its length (8 KB 0.1 s, 32 KB 0.7 s, 512 KB 189 s). The math LaTeX builder scanned back over the whole run of letters before each letter it added; Wave 8b made it linear (see the benchmark history below), and the MathML input now holds its long token inside the nested rows, so the ceiling guards the fix. `mathml_long_token_in_deep_rows_loads_in_linear_time` in the formats crate's `hostile` tests checks a 128 KB token under 5 seconds.
 
 ### The gate: a two-way ratchet
 
@@ -291,7 +291,20 @@ The "before" numbers for the alpha.8 performance work, taken with the new measur
 
 **Stop to first audio.** The reader's share (Stop, then Read from cursor, until the backend is handed the first utterance) is under 2 ms at the median on every corpus. On the recording backend playing in real time, key to first audio is 0.2 to 4 ms, of which the speech thread's own share is 0.1 to 0.3 ms; the rest is the backend's poll. With real engines on a silent output, on the 1 MB corpus: **SAPI 5 39 ms** at the median (58 ms worst), nearly all of it the engine host; **Piper 830 to 980 ms** at the median (1.0 to 1.6 s worst), on the medium Joe voice, nearly all of it the first chunk's synthesis. The target is under 150 ms on a 2-core laptop with Piper; Piper is five to six times over it on this machine, before any work on it.
 
-**Pathological inputs.** All sixteen loaders load and plan each file in 0.1 to 0.8 seconds, well under the 10-second ceiling, except one: the MathML loader took **189 seconds** with the 512 KB token inside 200 nested rows (8 KB took 0.1 s and 32 KB 0.7 s, so it grows faster than the token). The input now keeps the token beside the rows until the loader is fixed.
+**Pathological inputs.** All sixteen loaders load and plan each file in 0.1 to 0.8 seconds, well under the 10-second ceiling, except one: the MathML loader took **189 seconds** with the 512 KB token inside 200 nested rows (8 KB took 0.1 s and 32 KB 0.7 s, so it grows faster than the token). The input kept the token beside the rows until the loader was fixed, later the same day (below).
+
+### Benchmark history: Friday, October 2, 2026, the MathML loader in linear time
+
+The cause was the LaTeX builder the MathML and Word equation loaders share (`Tex` in `crates/textweaver-formats/src/omml.rs`). Before each piece it checked whether the text so far ended with a command such as `\alpha`, by scanning back over the whole run of letters at the end. Past the loader's depth limit (64), a token is read letter by letter, so each letter scanned every letter before it. The builder now remembers how its text ends; a property test checks it spaces pieces exactly as the scan did, so the LaTeX, the speech and the positions are unchanged.
+
+Taken on the same Windows machine, release build, while other agents were building. The time to load a token inside 200 nested rows (the plan took 5 ms or less up to 128 KB, before and after):
+
+- 8 KB: 29 ms before, 1.5 ms after.
+- 32 KB: 532 ms before, 2.9 ms after.
+- 128 KB: 7.2 s before, 12 ms after.
+- 512 KB: 49 ms after (the plan adds 44 ms); before, the bench measured 189 s in all.
+
+`cargo xtask bench --only pathological` with the token back inside the rows: **MathML 237 ms in all** (loaded in 89 ms), against the 10-second ceiling; the other fifteen loaders 155 to 374 ms.
 
 **GUI frame time, 200 moves each** (median, 95th percentile, worst; allocations and nodes per move):
 
