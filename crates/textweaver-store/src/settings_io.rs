@@ -981,6 +981,7 @@ pub fn reset_sections(current: &Settings) -> Vec<String> {
         "gui",
         "colors",
         "sync",
+        "components",
         "keymap",
     ]
     .iter()

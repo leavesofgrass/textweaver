@@ -216,6 +216,9 @@ fn everything_changed() -> Settings {
     s.summary.sentences = 7;
     s.dictation.speak_while_recording = true;
     s.dictation.model_dir = Some("D:/models/whisper-base.en".into());
+    s.dictation.model = "whisper-small.en".into();
+    s.components.mirror = "D:/mirror".into();
+    s.components.chooser_shown = true;
     s.interface.language = "en-XA".into();
     s.interface.rtl = crate::RtlDisplay::Off;
     s.interface.recent_settings = vec!["speech.rate".into()];
