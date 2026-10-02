@@ -341,6 +341,22 @@ pub struct ActionButton {
     /// The shortcut as written ("Ctrl+O").
     shortcut: String,
     description: String,
+    /// Why the button does nothing for now, when it does not.
+    unavailable: Option<Unavailable>,
+}
+
+/// Why a button is unavailable (W8a): it stays in the Tab order, so a
+/// screen reader can land on it and hear why, as an ARIA button with
+/// `aria-disabled` does. Its node is disabled ("unavailable" in NVDA and
+/// JAWS), its description is the reason, and its text on screen says so
+/// in words, since a dimmed color alone would carry the meaning.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Unavailable {
+    /// The word on screen after the label ("unavailable").
+    pub word: String,
+    /// The reason, read as the button's description ("Only downloaded
+    /// Piper voices can be removed.").
+    pub reason: String,
 }
 
 impl ActionButton {
@@ -352,16 +368,52 @@ impl ActionButton {
             label,
             shortcut: String::new(),
             description: String::new(),
+            unavailable: None,
         }
     }
 
-    /// The text on screen: the label, then the shortcut as written.
+    /// The text on screen: the label, the word for unavailable when it
+    /// is, then the shortcut as written ("Remove, unavailable (Delete)").
     pub fn shown_text(&self) -> String {
-        if self.shortcut.is_empty() {
-            self.label.clone()
-        } else {
-            format!("{} ({})", self.label, self.shortcut)
+        let mut text = self.label.clone();
+        if let Some(u) = &self.unavailable {
+            text.push_str(", ");
+            text.push_str(&u.word);
         }
+        if !self.shortcut.is_empty() {
+            text.push_str(&format!(" ({})", self.shortcut));
+        }
+        text
+    }
+
+    /// Starts unavailable for `why` (see [`set_unavailable`](Self::set_unavailable)).
+    /// Call it before [`with_text_color`](Self::with_text_color).
+    pub fn with_unavailable(mut self, why: Option<Unavailable>) -> Self {
+        self.unavailable = why;
+        self.child = NewWidget::new(button_text(self.shown_text())).to_pod();
+        self
+    }
+
+    /// Why the button is unavailable, or `None` when it is available.
+    pub fn unavailable(&self) -> Option<&Unavailable> {
+        self.unavailable.as_ref()
+    }
+
+    /// Makes the button unavailable for `why`, or available again with
+    /// `None`. It keeps its place in the Tab order and still reports a
+    /// press, so the app can say the reason again.
+    pub fn set_unavailable(this: &mut WidgetMut<'_, Self>, why: Option<Unavailable>) {
+        if this.widget.unavailable == why {
+            return;
+        }
+        this.widget.unavailable = why;
+        let text = this.widget.shown_text();
+        {
+            let mut child = this.ctx.get_mut(&mut this.widget.child);
+            Label::set_text(&mut child, text);
+        }
+        this.ctx.request_layout();
+        this.ctx.request_accessibility_update();
     }
 
     /// The accessible name: the label without a trailing ellipsis ("Open").
@@ -559,7 +611,10 @@ impl Widget for ActionButton {
         if !self.shortcut.is_empty() {
             node.set_keyboard_shortcut(self.shortcut.as_str());
         }
-        if !self.description.is_empty() {
+        if let Some(u) = &self.unavailable {
+            node.set_disabled();
+            node.set_description(u.reason.as_str());
+        } else if !self.description.is_empty() {
             node.set_description(self.description.as_str());
         }
         node.add_action(Action::Click);

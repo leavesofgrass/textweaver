@@ -13,9 +13,10 @@ use textweaver_app::keymap::ActionId;
 use textweaver_app::testing::recording_service;
 use textweaver_app::voice_manager::VoiceControl;
 use textweaver_app::{App, AppConfig, Command};
+use textweaver_xilem::dialog::DialogAction;
 use textweaver_xilem::gui::{self, LIST, ROOT};
 use textweaver_xilem::theme::{self, Palette};
-use textweaver_xilem::voices::{self, VOICE_ENGINE, VoiceButton, VoiceDialog};
+use textweaver_xilem::voices::{self, VOICE_ENGINE, VOICE_REMOVE, VoiceButton, VoiceDialog};
 use textweaver_xilem::widgets::{ActionButton, Pressed, Root};
 
 /// An app on the recording engine ("Test voice", "Second voice") with
@@ -175,5 +176,124 @@ fn buttons_report_themselves_and_the_filter_names_follow() {
         nodes_of(&h, Role::Button)
             .iter()
             .any(|(n, _, _)| *n == engine)
+    );
+}
+
+/// A key pressed and let go, as a keyboard sends it.
+fn press_and_release(h: &mut TestHarness<Root>, key: masonry::core::keyboard::Key) {
+    use masonry::core::TextEvent;
+    use masonry::core::keyboard::{KeyState, KeyboardEvent};
+    for state in [KeyState::Down, KeyState::Up] {
+        h.process_text_event(TextEvent::Keyboard(KeyboardEvent {
+            state,
+            key: key.clone(),
+            ..KeyboardEvent::default()
+        }));
+    }
+}
+
+/// Enter and Space press every button of the voice manager (W8a): the
+/// button reports itself once, on the key's release, and nothing else
+/// sees the key.
+#[test]
+fn enter_and_space_press_every_button() {
+    use masonry::core::keyboard::{Key, NamedKey};
+    let app = app();
+    let (mut h, d) = harness(&app);
+    for key in [Key::Named(NamedKey::Enter), Key::Character(" ".into())] {
+        for (id, which) in d.buttons.clone() {
+            h.focus_on(Some(id));
+            press_and_release(&mut h, key.clone());
+            let (action, from) = h
+                .pop_action::<Pressed>()
+                .unwrap_or_else(|| panic!("{key:?} on {which:?}"));
+            assert_eq!((action, from), (Pressed, id), "{key:?} on {which:?}");
+            assert!(h.pop_action::<Pressed>().is_none(), "once: {which:?}");
+            assert!(
+                h.pop_action::<DialogAction>().is_none(),
+                "{key:?} on {which:?} is the button's alone"
+            );
+        }
+    }
+}
+
+/// The app's keys pressed on a button reach the app, as from the list
+/// (W8a): before, keys pressed on a button did nothing. The chords are
+/// asked of the keymap.
+#[test]
+fn the_apps_keys_work_on_a_button() {
+    use textweaver_app::keymap::{Layer, Platform};
+    let app = app();
+    let (mut h, d) = harness(&app);
+    for action in [ActionId::SayStatus, ActionId::Help] {
+        let chord = app
+            .keymap()
+            .chords_for(action)
+            .into_iter()
+            .find(|c| !c.is_text_input())
+            .unwrap_or_else(|| panic!("a chord for {action:?}"));
+        assert_eq!(app.keymap().lookup(&chord, Layer::Global), Some(action));
+        for (id, which) in d.buttons.clone() {
+            h.focus_on(Some(id));
+            let ev = textweaver_xilem::keys::press(&chord, Platform::current());
+            h.process_text_event(masonry::core::TextEvent::Keyboard(ev));
+            let (got, _) = h
+                .pop_action::<DialogAction>()
+                .unwrap_or_else(|| panic!("{chord} on {which:?}"));
+            assert_eq!(got, DialogAction::Chord(chord), "{chord} on {which:?}");
+        }
+    }
+}
+
+/// Remove is unavailable on a voice that cannot be removed (only
+/// downloaded Piper voices can): its node is disabled, its description is
+/// the reason in words, and its text on screen says so beside the key. It
+/// stays in the Tab order, so a screen reader can land on it and hear why.
+#[test]
+fn remove_is_unavailable_with_its_reason_for_voices_that_cannot_be_removed() {
+    let app = app();
+    let (mut h, d) = harness(&app);
+    let c = app.catalog();
+    assert!(!app.voice_row_removable(0), "the test engine's voices stay");
+    let remove = d
+        .buttons
+        .iter()
+        .find(|(_, b)| *b == VoiceButton::Remove)
+        .map(|(id, _)| *id)
+        .expect("Remove");
+    assert_eq!(h.get_widget(VOICE_REMOVE).id(), remove);
+    let node = h.access_node(remove).expect("the Remove node");
+    assert_eq!(
+        node.label().as_deref(),
+        Some(c.tr("gui-voices-remove").as_str())
+    );
+    assert!(node.is_disabled(), "unavailable to a screen reader");
+    let reason = c.tr("voice-only-piper-removable");
+    assert_eq!(node.description().as_deref(), Some(reason.as_str()));
+    let shown = h.get_widget(VOICE_REMOVE).inner().shown_text();
+    assert_eq!(shown, "Remove, unavailable (Delete)");
+    // Still focusable, and a press still reports itself (the app then
+    // says the reason).
+    h.focus_on(Some(remove));
+    assert_eq!(h.focused_widget_id(), Some(remove));
+    press_and_release(
+        &mut h,
+        masonry::core::keyboard::Key::Named(masonry::core::keyboard::NamedKey::Enter),
+    );
+    assert!(h.pop_action::<Pressed>().is_some());
+    // Available again: the plain text and description come back.
+    h.edit_widget(VOICE_REMOVE, |mut b| {
+        ActionButton::set_unavailable(&mut b, None)
+    });
+    let _ = h.redraw();
+    let node = h.access_node(remove).expect("the Remove node");
+    assert!(!node.is_disabled());
+    assert_eq!(
+        node.description().as_deref(),
+        Some(c.tr("gui-voices-remove-help").as_str())
+    );
+    assert_eq!(
+        h.get_widget(VOICE_REMOVE).inner().shown_text(),
+        "Remove (Delete)"
     );
 }

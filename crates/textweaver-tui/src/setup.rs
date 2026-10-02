@@ -157,10 +157,10 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
                 messages.push(c.fmt("tui-setup-keymap-ignored", &args!["error" => e.to_string()]));
                 Default::default()
             });
-            let (keymap, warnings) = Keymap::with_preset_and_overrides(
+            let (keymap, warnings) = textweaver_app::startup_keymap(
+                &settings,
                 Platform::current(),
                 Frontend::Terminal,
-                textweaver_app::keymap_preset(settings.keyboard.preset),
                 &overrides,
             );
             messages.extend(warnings);
@@ -172,10 +172,11 @@ pub fn build_app_with(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Ve
                 let c = startup_catalog(&settings, None);
                 messages.push(c.fmt("tui-setup-cannot-save", &args!["error" => e]));
             }
-            let keymap = Keymap::with_preset(
+            let (keymap, _) = textweaver_app::startup_keymap(
+                &settings,
                 Platform::current(),
                 Frontend::Terminal,
-                textweaver_app::keymap_preset(settings.keyboard.preset),
+                &Default::default(),
             );
             (settings, keymap)
         }

@@ -63,6 +63,27 @@ impl std::fmt::Debug for FontDownloads {
     }
 }
 
+/// The text font the in-reader export asks the writers for, by name
+/// ([`App::export_fonts`]); `None` keeps a writer's default.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[cfg_attr(not(feature = "publish"), allow(dead_code))]
+pub(crate) struct ExportFonts {
+    /// The PDF's text family.
+    pub(crate) pdf: Option<String>,
+    /// The font the EPUB embeds.
+    pub(crate) epub: Option<String>,
+}
+
+#[cfg_attr(not(feature = "publish"), allow(dead_code))]
+impl ExportFonts {
+    fn both(name: &str) -> Self {
+        ExportFonts {
+            pdf: Some(name.to_owned()),
+            epub: Some(name.to_owned()),
+        }
+    }
+}
+
 /// The data folder's `fonts`, where downloaded fonts are kept.
 pub fn fonts_folder(paths: &textweaver_store::Paths) -> PathBuf {
     paths.data_dir.join("fonts")
@@ -129,6 +150,62 @@ impl App {
                 let faces = textweaver_fonts::system::installed();
                 names.any(|n| textweaver_fonts::system::find_family(faces, n).is_some())
             }
+        }
+    }
+
+    /// True when the family `name` is installed on this computer.
+    #[cfg_attr(not(feature = "publish"), allow(dead_code))]
+    fn family_installed(&self, name: &str) -> bool {
+        match &self.fonts.installed {
+            Some(check) => check(name),
+            None => {
+                let faces = textweaver_fonts::system::installed();
+                textweaver_fonts::system::find_family(faces, name).is_some()
+            }
+        }
+    }
+
+    /// The reading font for the in-reader PDF and EPUB export (W8a), as
+    /// the writers take it by name, as `tw convert --font` does: a bundled
+    /// font or a downloaded one (Lexend) for both, an installed one for
+    /// PDF only (an EPUB embeds only fonts whose license is known). `None`
+    /// for a generic family (sans, serif) or a font missing here, so the
+    /// writers' own defaults are used, as before.
+    #[cfg_attr(not(feature = "publish"), allow(dead_code))]
+    pub(crate) fn export_fonts(&self) -> ExportFonts {
+        use textweaver_fonts::FontFamily;
+        let family = FontFamily::from(self.settings.reading_aids.font.family.as_str());
+        let (name, names): (String, Vec<&str>) = match &family {
+            FontFamily::Reading(id) => {
+                let f = id.font();
+                if let Some(b) = f.bundled() {
+                    return ExportFonts::both(b.name);
+                }
+                let mut names = vec![f.family];
+                names.extend(f.alternates.iter().copied());
+                (f.key.to_owned(), names)
+            }
+            FontFamily::Named(n) => {
+                if let Some(b) = textweaver_fonts::bundled::family(n) {
+                    return ExportFonts::both(b.name);
+                }
+                (n.clone(), vec![n.as_str()])
+            }
+            _ => return ExportFonts::default(),
+        };
+        if let Some(d) = downloaded::downloadable(&name)
+            && self
+                .fonts_folder()
+                .is_some_and(|dir| d.is_installed_in(&dir))
+        {
+            return ExportFonts::both(d.key);
+        }
+        match names.into_iter().find(|n| self.family_installed(n)) {
+            Some(installed) => ExportFonts {
+                pdf: Some(installed.to_owned()),
+                epub: None,
+            },
+            None => ExportFonts::default(),
         }
     }
 

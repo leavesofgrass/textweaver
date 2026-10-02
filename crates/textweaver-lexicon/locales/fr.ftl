@@ -1440,6 +1440,9 @@ tasks-launch-off = l'ouverture d'autres programmes est désactivée dans une ses
 tasks-opening = Ouverture.
 # $target is a file or a web address; $error says why.
 tasks-could-not-open = Impossible d'ouvrir { $target } : { $error }
+open-refused-scheme = Non ouvert : lien { $scheme } bloqué.
+open-refused-missing = Non ouvert : fichier introuvable.
+open-refused-invalid = Non ouvert : adresse non valide.
 tasks-not-opened = Non ouvert.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = L'ouvrir ? y ou n.
@@ -2786,6 +2789,7 @@ gui-button-faster = Plus rapide
 gui-button-close = Fermer
 gui-toolbar-reading = Lecture
 gui-document = Document
+gui-document-titled = { $title }, document
 gui-list-hint = Entrée choisit, Échap ferme.
 gui-settings-sections = Sections
 gui-settings-form = Paramètres : { $section }
@@ -3681,6 +3685,7 @@ gui-voices-favorite = Favorite
 gui-voices-favorite-help = Marquer la voix sélectionnée comme favorite, ou l'enlever. Les favorites viennent en premier.
 gui-voices-remove = Supprimer
 gui-voices-remove-help = Supprimer la voix Piper téléchargée sélectionnée, après une question.
+gui-voices-remove-unavailable = indisponible
 gui-voices-language-help = Afficher seulement les voix de la langue suivante, puis toutes les langues.
 gui-voices-engine-help = Afficher seulement les voix du moteur suivant, puis tous les moteurs.
 gui-voices-fetch-help = Télécharger la liste des voix Piper, environ 250 Ko, après une question.

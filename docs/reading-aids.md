@@ -143,7 +143,7 @@ What textweaver downloads, and how it checks it:
 - Each file is checked by its size and its SHA-256 fingerprint before it is kept. If one does not match, nothing is kept and textweaver says so: "Lexend not downloaded:" and the reason.
 - The files are kept in textweaver's data folder, in `fonts/lexend`, with the license, `OFL.txt`. Lexend's license also comes with textweaver, in `third_party/fonts/lexend/`.
 
-Once downloaded, Lexend works everywhere textweaver uses a font: the window, PDF files (`tw convert --font lexend`), and EPUB books, which carry the font and its license inside.
+Once downloaded, Lexend works everywhere textweaver uses a font: the window, PDF files (`tw convert --font lexend`), and EPUB books, which carry the font and its license inside. Export to PDF or EPUB in the reader uses your reading font too, Lexend included; a font that is not on this computer leaves the export's usual font, and an installed font that textweaver does not bundle goes into PDF files only.
 
 When there is no data folder (a session that keeps no files), textweaver says "No data folder to keep Lexend in." The lean reader, built without the `publish` feature, has no downloads and says "Font downloads are not in this build."; install Lexend yourself from its home page there, and textweaver finds it the next time it starts.
 

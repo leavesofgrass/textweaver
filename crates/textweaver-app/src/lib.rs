@@ -194,6 +194,7 @@ mod mdline;
 pub mod menu;
 mod nav;
 mod notes;
+pub mod opener;
 pub mod opening;
 mod pages;
 pub mod path_complete;
@@ -243,11 +244,11 @@ mod writes;
 
 pub use access::{
     SENTENCE_GAP, STATUS_TEXT_LIMIT, access_mode_from_setting, access_mode_setting, digit_row,
-    keymap_preset, sentence_duration,
+    keymap_preset, sentence_duration, startup_keymap,
 };
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
-pub use authoring_state::{ClientFactory, Launcher, open_with_system};
+pub use authoring_state::{ClientFactory, Launcher};
 pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
 pub use export::{SubtitlePlan, subtitle_plan};
@@ -264,6 +265,7 @@ pub use math_explore::MathMove;
 #[cfg(feature = "publish")]
 pub use notes::{NotesRecords, export_notes, notes_references};
 pub use notes::{UserHighlight, parse_tags};
+pub use opener::open_with_system;
 pub use opening::{
     open_failure_message, open_failure_message_in, open_failure_reason, open_failure_reason_in,
 };

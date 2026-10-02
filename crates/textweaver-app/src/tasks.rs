@@ -112,9 +112,17 @@ impl App {
 
     /// Opens `target` with the default program, announcing failures.
     pub(crate) fn launch(&mut self, target: &str) {
+        // Only web and mail addresses and files that exist, never through
+        // a shell (W8a): anything else is refused here, in words, before
+        // any opener (the system's or a test's) sees it.
+        if let Err(refused) = crate::opener::classify(target) {
+            let msg = self.refused_message(&refused);
+            self.error(&msg);
+            return;
+        }
         let result = match (self.authoring.launcher.clone(), &self.paths) {
             (Some(launcher), _) => launcher(target),
-            (None, Some(_)) => crate::authoring_state::open_with_system(target),
+            (None, Some(_)) => crate::opener::open_with_system(target),
             (None, None) => Err(std::io::Error::other(self.msg("tasks-launch-off"))),
         };
         match result {
@@ -129,6 +137,18 @@ impl App {
                 );
                 self.error(&msg);
             }
+        }
+    }
+
+    /// Why a link or file was not opened, in words (40 cells or fewer).
+    pub(crate) fn refused_message(&self, refused: &crate::opener::Refused) -> String {
+        use crate::opener::Refused;
+        match refused {
+            Refused::Scheme(scheme) => {
+                self.msg_args("open-refused-scheme", &args!["scheme" => scheme.as_str()])
+            }
+            Refused::Missing => self.msg("open-refused-missing"),
+            Refused::Invalid => self.msg("open-refused-invalid"),
         }
     }
 

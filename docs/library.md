@@ -57,7 +57,7 @@ You hear "Details of", the document's title, then "Tab moves, Enter saves, Escap
 
 A DOI or an ISBN can be typed any way it is usually written: `10.1000/xyz`, `doi:10.1000/XYZ`, a `https://doi.org/` link, or an ISBN with or without hyphens. One that is not a DOI or an ISBN is not saved: you hear, for example, "Not a DOI: 10.10/x. Fix it or clear it.", and the form opens again on that field.
 
-**Clearing a field** removes your edit, so the document's own value shows again. A field you never edited cannot hide the document's own value.
+**Clearing a field** removes your edit, so the document's own value shows again, at once in the library list. A field you never edited cannot hide the document's own value.
 
 In the GUI the form is a dialog with one field at a time, labeled the same way; Tab and Shift+Tab move between the fields, Enter saves, and Escape cancels.
 

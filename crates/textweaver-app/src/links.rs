@@ -167,6 +167,14 @@ impl App {
                 );
                 return self.follow_local(&path);
             }
+            // Only web and mail addresses are offered (W8a): another
+            // scheme (ms-msdt:, javascript:) is refused before the question.
+            if let Err(refused) = crate::opener::classify(&target) {
+                self.speech.earcon(Earcon::Error);
+                let msg = self.refused_message(&refused);
+                self.tell(&msg);
+                return vec![Effect::Redraw];
+            }
             let kind = if lower.starts_with("mailto:") {
                 "mail"
             } else {

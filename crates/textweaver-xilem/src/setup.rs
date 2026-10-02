@@ -209,14 +209,23 @@ pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<Str
                 messages.push(c.fmt("tui-setup-keymap-ignored", &args!["error" => e.to_string()]));
                 Default::default()
             });
-            let (keymap, warnings) = Keymap::with_overrides(platform, Frontend::Gui, &overrides);
+            // The keyboard preset, then the overrides, as the terminal
+            // reader builds it (W8a: the preset was left out here).
+            let (keymap, warnings) =
+                textweaver_app::startup_keymap(&settings, platform, Frontend::Gui, &overrides);
             messages.extend(warnings);
             (settings, keymap)
         }
-        None => (
-            Settings::default(),
-            Keymap::defaults(platform, Frontend::Gui),
-        ),
+        None => {
+            let settings = Settings::default();
+            let (keymap, _) = textweaver_app::startup_keymap(
+                &settings,
+                platform,
+                Frontend::Gui,
+                &Default::default(),
+            );
+            (settings, keymap)
+        }
     };
     if let Some(voice) = &opts.voice {
         settings.speech.voice = Some(voice.clone());
@@ -280,6 +289,38 @@ mod tests {
         assert_eq!(app.backend_name(), "silent");
         assert_eq!(app.paths(), Some(&Paths::under(&dir)));
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// The keyboard preset from the settings is in effect from the start
+    /// (W8a), as in the terminal reader, not only after an import or sync.
+    #[test]
+    fn the_keyboard_preset_applies_at_startup() {
+        use textweaver_app::keymap::Preset;
+        use textweaver_app::store::KeymapPreset;
+        let dir = tempfile::tempdir().unwrap();
+        let store = SettingsStore::new(Paths::under(dir.path()));
+        let mut s = Settings::default();
+        s.keyboard.preset = KeymapPreset::Classic;
+        store.save(&s).unwrap();
+        let opts = Options {
+            no_speech: true,
+            home: Some(dir.path().to_owned()),
+            ..Options::default()
+        };
+        let (app, messages) = build_app(&opts, Box::new(LogAnnouncer::default()));
+        assert!(messages.is_empty(), "{messages:?}");
+        assert_eq!(app.keymap().preset(), Preset::Classic);
+        let classic = Keymap::with_preset(Platform::current(), Frontend::Gui, Preset::Classic);
+        assert_eq!(app.keymap().bindings(), classic.bindings());
+        // Without a settings file, the default preset.
+        let empty = tempfile::tempdir().unwrap();
+        let opts = Options {
+            no_speech: true,
+            home: Some(empty.path().to_owned()),
+            ..Options::default()
+        };
+        let (app, _) = build_app(&opts, Box::new(LogAnnouncer::default()));
+        assert_eq!(app.keymap().preset(), Preset::Default);
     }
 
     #[test]

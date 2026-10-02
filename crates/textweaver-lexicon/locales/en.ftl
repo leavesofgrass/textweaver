@@ -1417,6 +1417,9 @@ tasks-launch-off = opening other programs is off in a session that keeps no file
 tasks-opening = Opening.
 # $target is a file or a web address; $error says why.
 tasks-could-not-open = Could not open { $target }: { $error }
+open-refused-scheme = Not opened: { $scheme } link blocked.
+open-refused-missing = Not opened: the file was not found.
+open-refused-invalid = Not opened: not a valid address.
 tasks-not-opened = Not opened.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = Open it? y or n.
@@ -2777,6 +2780,7 @@ gui-button-faster = Faster
 gui-button-close = Close
 gui-toolbar-reading = Reading
 gui-document = Document
+gui-document-titled = { $title }, document
 gui-list-hint = Enter chooses, Escape closes.
 gui-settings-sections = Sections
 gui-settings-form = { $section } settings
@@ -3682,6 +3686,7 @@ gui-voices-favorite = Favorite
 gui-voices-favorite-help = Make the focused voice a favorite, or stop it being one. Favorites come first.
 gui-voices-remove = Remove
 gui-voices-remove-help = Remove the focused downloaded Piper voice, after a question.
+gui-voices-remove-unavailable = unavailable
 gui-voices-language-help = Show only the next language's voices, then all languages again.
 gui-voices-engine-help = Show only the next engine's voices, then all engines again.
 gui-voices-fetch-help = Download the list of Piper voices, about 250 KB, after a question.

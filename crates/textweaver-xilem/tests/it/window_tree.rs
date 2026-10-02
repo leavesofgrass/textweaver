@@ -90,12 +90,54 @@ fn every_control_has_a_role_and_a_name() {
         assert!(buttons.contains(&b.to_owned()), "{b} in {buttons:?}");
     }
     assert_eq!(names_of(&h, Role::Toolbar), vec!["Reading".to_owned()]);
-    assert_eq!(names_of(&h, doc_role()), vec!["Document".to_owned()]);
+    assert_eq!(
+        names_of(&h, doc_role()),
+        vec!["Sample Markdown Document, document".to_owned()]
+    );
     let status = names_of(&h, Role::Status);
     assert_eq!(status.len(), 1);
     // The terminal's title line parts, from the app (`App::title_parts`).
     assert!(status[0].contains("line 1 of"), "{status:?}");
     assert!(status[0].contains("wpm"), "{status:?}");
+}
+
+/// The window's and the document's names, for the focus announcement
+/// (the legal report's item 6, W8a): the focused document's node is named
+/// with the document's title first, so NVDA and JAWS say it when the
+/// window or the document takes the focus; the window's title (its UI
+/// Automation Name) names the document too. With no document, "Document"
+/// and "textweaver".
+#[test]
+fn the_window_and_the_document_are_named_for_the_focus() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let doc = h.get_widget(DOC).id();
+    h.focus_on(Some(doc));
+    let _ = h.redraw();
+    assert_eq!(h.focused_widget_id(), Some(doc));
+    let focused = h.access_node(doc).expect("the document's node");
+    assert_eq!(focused.role(), doc_role());
+    let name = focused.label().unwrap_or_default();
+    assert_eq!(name, "Sample Markdown Document, document");
+    // The meaning first: the title starts the name, within 40 cells.
+    assert!(name.starts_with("Sample Markdown Document"));
+    assert_eq!(
+        gui::window_title(&app),
+        "Sample Markdown Document - textweaver"
+    );
+    assert_eq!(gui::document_label(&app), name);
+
+    let empty = tempfile::tempdir().unwrap();
+    let opts = Options {
+        no_speech: true,
+        home: Some(empty.path().to_path_buf()),
+        ..Options::default()
+    };
+    let (none, _) = setup::build_app(&opts, Box::new(LogAnnouncer::default()));
+    let h = harness(&none);
+    assert_eq!(names_of(&h, doc_role()), vec!["Document".to_owned()]);
+    assert_eq!(gui::window_title(&none), "textweaver");
 }
 
 /// Every button's key comes from the keymap: its keyboard shortcut
@@ -947,7 +989,10 @@ fn themes_switch_in_place() {
     gui::apply_palette(&mut h, &light);
     let _ = h.redraw();
     // Still the same controls, now drawn light.
-    assert_eq!(names_of(&h, doc_role()), vec!["Document".to_owned()]);
+    assert_eq!(
+        names_of(&h, doc_role()),
+        vec!["Sample Markdown Document, document".to_owned()]
+    );
     let img = h.render();
     let px = img.get_pixel(4, 4);
     assert!(

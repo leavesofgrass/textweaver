@@ -28,12 +28,27 @@ use textweaver_app::voice_manager::VoiceControls;
 use crate::dialog::{self, ChoiceList, Modal};
 use crate::gui::{LIST, label, shortcut_for};
 use crate::theme::{self, Palette};
-use crate::widgets::ActionButton;
+use crate::widgets::{ActionButton, Unavailable};
 
 /// The Language filter button.
 pub const VOICE_LANGUAGE: WidgetTag<ActionButton> = WidgetTag::named("tw-voices-language");
 /// The Engine filter button.
 pub const VOICE_ENGINE: WidgetTag<ActionButton> = WidgetTag::named("tw-voices-engine");
+/// The Remove button, unavailable on a voice that cannot be removed.
+pub const VOICE_REMOVE: WidgetTag<ActionButton> = WidgetTag::named("tw-voices-remove");
+
+/// Why Remove is unavailable on row `row` of the voice list, in words, or
+/// `None` when that voice can be removed (a downloaded Piper voice).
+pub fn remove_unavailable(app: &App, row: usize) -> Option<Unavailable> {
+    if app.voice_row_removable(row) {
+        return None;
+    }
+    let c = app.catalog();
+    Some(Unavailable {
+        word: c.tr("gui-voices-remove-unavailable"),
+        reason: c.tr("voice-only-piper-removable"),
+    })
+}
 
 /// A button of the voice manager.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -157,12 +172,6 @@ pub fn voice_dialog(
         "gui-voices-favorite-help",
         VoiceButton::Favorite,
     );
-    let remove = make(
-        c.tr("gui-voices-remove"),
-        plain_key(Key::Delete),
-        "gui-voices-remove-help",
-        VoiceButton::Remove,
-    );
     let fetch = controls.fetch.map(|text| {
         make(
             text,
@@ -177,6 +186,15 @@ pub fn voice_dialog(
         "gui-voices-close-help",
         VoiceButton::Close,
     );
+    // Remove says when it is unavailable, and why (W8a).
+    let remove = NewWidget::new(
+        ActionButton::new(c.tr("gui-voices-remove"))
+            .with_shortcut(plain_key(Key::Delete))
+            .with_description(c.tr("gui-voices-remove-help"))
+            .with_unavailable(remove_unavailable(app, selected)),
+    )
+    .with_tag(VOICE_REMOVE);
+    buttons.push((remove.id(), VoiceButton::Remove));
     let list = NewWidget::new(
         ChoiceList::new(c.tr("gui-voices-list"), items, p.clone())
             .with_selected(selected)
@@ -222,7 +240,14 @@ pub fn voice_dialog(
             label(&c.tr("gui-voices-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
         ));
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
-    let modal = NewWidget::new(Modal::new(card, title, p.clone()).with_max_width(900.0)).erased();
+    // Keys pressed on a button (the Help and Say Status keys) reach the
+    // app as they do from the list.
+    let modal = NewWidget::new(
+        Modal::new(card, title, p.clone())
+            .with_max_width(900.0)
+            .with_app_chords(true),
+    )
+    .erased();
     VoiceDialog {
         modal,
         list: list_id,

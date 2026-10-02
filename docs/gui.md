@@ -148,11 +148,11 @@ From top to bottom, Tab moves through:
 - **Use voice** (Enter in the list): uses the voice and speaks a sample. On a voice of another engine, textweaver switches engine. On a voice you can download, textweaver reads its license and size, then asks before downloading.
 - **Preview** (Alt+End in the list, the Say Status key): speaks a sample in the voice without choosing it, starting with the voice's name. A voice of another engine is previewed by starting that engine for the sample and closing it again. A voice you have not downloaded, or one not on this computer, says why it cannot be heard.
 - **Favorite** (Space in the list): makes the voice a favorite, or stops it being one.
-- **Remove** (Delete in the list): removes a downloaded Piper voice, after a yes.
+- **Remove** (Delete in the list): removes a downloaded Piper voice, after a yes. On a voice that cannot be removed, the button is unavailable: it says "Remove, unavailable", your screen reader says "unavailable", and its description gives the reason, "Only downloaded Piper voices can be removed." It stays in the Tab order, so you can land on it and hear why.
 - **Fetch the Piper voice list from the internet**, when it can be fetched: asks first, then downloads the list of Piper voices, about 250 KB.
 - **Close** (Escape).
 
-Every button has its key as its shortcut and a short description, which NVDA and JAWS read as for any button.
+Every button has its key as its shortcut and a short description, which NVDA and JAWS read as for any button. Enter or Space presses the focused button. The Help key and the Say Status key (Alt+End) work with the focus on a button too, as they do in the list: Alt+End previews the voice focused in the list.
 
 ## Language
 

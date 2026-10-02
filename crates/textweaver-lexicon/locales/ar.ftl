@@ -1582,6 +1582,9 @@ tasks-launch-off = فتح برامج أخرى متوقف في جلسة لا تح
 tasks-opening = يجري الفتح.
 # $target is a file or a web address; $error says why.
 tasks-could-not-open = تعذّر فتح { $target }: { $error }
+open-refused-scheme = لم يُفتح: رابط { $scheme } محظور.
+open-refused-missing = لم يُفتح: الملف غير موجود.
+open-refused-invalid = لم يُفتح: العنوان غير صالح.
 tasks-not-opened = لم يُفتح.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = فتحه؟ y أو n.
@@ -3015,6 +3018,7 @@ gui-button-faster = أسرع
 gui-button-close = إغلاق
 gui-toolbar-reading = القراءة
 gui-document = المستند
+gui-document-titled = { $title }، المستند
 gui-list-hint = Enter للاختيار، وEscape للإغلاق.
 gui-settings-sections = الأقسام
 gui-settings-form = إعدادات { $section }
@@ -3922,6 +3926,7 @@ gui-voices-favorite = مفضّل
 gui-voices-favorite-help = جعل الصوت المحدد مفضّلًا، أو إلغاء ذلك. المفضّلة تأتي أولًا.
 gui-voices-remove = إزالة
 gui-voices-remove-help = إزالة صوت Piper المُنزَّل المحدد بعد سؤال.
+gui-voices-remove-unavailable = غير متاح
 gui-voices-language-help = عرض أصوات اللغة التالية فقط، ثم كل اللغات مجددًا.
 gui-voices-engine-help = عرض أصوات المحرك التالي فقط، ثم كل المحركات مجددًا.
 gui-voices-fetch-help = تنزيل قائمة أصوات Piper، نحو 250 كيلوبايت، بعد سؤال.

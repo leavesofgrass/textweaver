@@ -514,10 +514,20 @@ impl App {
         vec![Effect::Redraw]
     }
 
+    /// True when the voice on row `n` of the voice list can be removed:
+    /// only a downloaded Piper voice can (W8a). The GUI's Remove button
+    /// is unavailable, with the reason, on any other row.
+    pub fn voice_row_removable(&self, n: usize) -> bool {
+        self.voices
+            .manager
+            .entry_at(n)
+            .is_some_and(|e| e.engine == PIPER && e.status == VoiceStatus::Ready)
+    }
+
     /// Delete on row `n`: removes a downloaded Piper voice, after a yes.
     pub(crate) fn remove_voice_row(&mut self, n: usize) -> Vec<Effect> {
         match self.voices.manager.entry_at(n).cloned() {
-            Some(e) if e.engine == PIPER && e.status == VoiceStatus::Ready => {
+            Some(e) if self.voice_row_removable(n) => {
                 self.list = None;
                 self.voices.question = Some(VoiceQuestion::Remove(
                     e.voice.id.clone(),
