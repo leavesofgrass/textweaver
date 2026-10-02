@@ -4,6 +4,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Faster
+
+- **Speech starts and stops sooner.** The sound output now asks the audio device for a 30 ms buffer instead of leaving the size to the audio library (about 43 ms). After a stop, a restart, a skip, or a rate change, the first word is heard about 12 ms sooner, and a stop goes quiet sooner by the same amount, with every engine whose audio textweaver plays (SAPI 5, Eloquence, DECtalk, and Piper). The highlight runs closer to the sound for the same reason. A device that refuses the size gets the library's own.
+- **No stale sound after a stop, no wait before a restart.** The few milliseconds of speech the output had already taken are dropped at a stop instead of played, and new speech that arrives while the output is playing silence starts at the next sample instead of after the rest of that silence.
+- **On Linux, an output that runs dry grows its buffer.** When the audio system reports underruns (ALSA and JACK do), the output opens again between readings with twice the buffer, up to 100 ms, so speech never stutters on a slow or busy machine. Nothing is cut off by the reopen.
+
 ### For contributors
 
 - **Research for the next waves.** `docs/dev/research/` holds the research reports and the wave plan for alpha.8, alpha.9, and later: a performance audit, speech engines and runtimes, text-to-speech use cases for students with disabilities, health sciences workflows, GUI and visual design, and law and standards. Nothing in it is a decision; decisions stay in the ADRs.
