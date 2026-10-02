@@ -253,6 +253,27 @@ Taken on the same machine while three other builds were running, so single runs 
 
 **What is left.** ICU4X's segmentation (115 ms on 10 MB) is the floor for finding sentences. The rest of the plan's time is per sentence: three `enclosing` lookups, a `String` for each literal piece, and the offset map. A table of line starts would make every line lookup a binary search, but it would have to be kept up to date on every edit, which costs typing more than it saves reading; it was not done.
 
+### Benchmark history: Friday, October 2, 2026, the first instrumented numbers
+
+The "before" numbers for the alpha.8 performance work, taken with the new measurements on the same Windows machine (x86_64, 12 threads, 64 GB) while three or four other agents were building, so times moved by 30 percent or more between runs; allocation and node counts do not. `cargo xtask bench --quick` (twice), `cargo xtask bench --only md-1mb --engine sapi` with `TEXTWEAVER_PIPER_VOICES` set, and `cargo xtask frames`. The same quick run in the development container wrote the Linux baseline entry.
+
+**Segmentation, normalization, and an edit, 1 MB of Markdown.** Every sentence through `Units` 21 to 49 ms and 21,532 allocations; every word 33 to 64 ms and 37,199 allocations; the first 2,000 utterances normalized 24 to 34 ms and 133,914 allocations (67 per utterance), after 3 to 6 ms to build the pipeline; one insert in the middle 0.4 to 0.9 ms and 6 allocations, then the blank-line table rebuilt in 1.7 to 2.3 ms. On the 50,000-item list (5.7 MB): sentences 179 to 272 ms, words 268 to 468 ms and 416,434 allocations, an insert 2 ms, the blank-line rebuild 12 to 16 ms.
+
+**Stop to first audio.** The reader's share (Stop, then Read from cursor, until the backend is handed the first utterance) is under 2 ms at the median on every corpus. On the recording backend playing in real time, key to first audio is 0.2 to 4 ms, of which the speech thread's own share is 0.1 to 0.3 ms; the rest is the backend's poll. With real engines on a silent output, on the 1 MB corpus: **SAPI 5 39 ms** at the median (58 ms worst), nearly all of it the engine host; **Piper 830 to 980 ms** at the median (1.0 to 1.6 s worst), on the medium Joe voice, nearly all of it the first chunk's synthesis. The target is under 150 ms on a 2-core laptop with Piper; Piper is five to six times over it on this machine, before any work on it.
+
+**Pathological inputs.** All sixteen loaders load and plan each file in 0.1 to 0.8 seconds, well under the 10-second ceiling, except one: the MathML loader took **189 seconds** with the 512 KB token inside 200 nested rows (8 KB took 0.1 s and 32 KB 0.7 s, so it grows faster than the token). The input now keeps the token beside the rows until the loader is fixed.
+
+**GUI frame time, 200 moves each** (median, 95th percentile, worst; allocations and nodes per move):
+
+- 1 MB Markdown, plain: 1.1 to 1.3 ms, 3.8 to 7.5 ms, up to 70 ms; 612 to 630 allocations and 6.5 to 6.8 nodes. At 200 percent about the same.
+- 1 MB Markdown, every aid on: 3.2 to 4.6 ms, 8.7 to 15.8 ms, up to 78 ms; about 2,100 allocations and 8.9 nodes.
+- 1 MB one-line text, plain: **70 to 74 ms**, 122 to 179 ms, up to 550 ms; 50,200 allocations and **1,442 nodes** per move: the whole one-paragraph window's runs are rebuilt and resent on every word (the performance report's G5).
+- 1 MB one-line text, every aid on: **412 to 504 ms**, 628 to 1,524 ms, up to 2.1 s; 216,000 to 242,000 allocations and 1,549 to 1,731 nodes.
+
+Every move had the sentence band. The one-line corpus is over ADR-0027's 30 ms ceiling by two to seventeen times; the Markdown corpus is well under it. The first probe run on the one-line corpus also found a panic: a layout line start inside a two-byte character (fixed in `caret::char_of`).
+
+**Startup** (`tw`, unchanged code): `tw --version` 34 ms, `tw text` 75 ms, `tw info` on 1 MB 131 ms, `tw backends` 44 ms, at the median.
+
 Bulk conversion has its own benchmark:
 
 ```bash
