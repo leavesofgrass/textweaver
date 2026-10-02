@@ -3717,3 +3717,19 @@ font-download-no-folder = Aucun dossier de données pour { $font }.
 font-download-not-in-build = Téléchargement de polices non inclus.
 gui-font-to-download = { $family } (à télécharger, { $kb } Ko)
 gui-font-downloaded = { $family } (téléchargée)
+
+## W8a-f : sélecteurs de fichiers et de dossiers.
+prompt-browse-hint = { $label }. { $key } pour parcourir.
+prompt-browse-file = Choisissez le fichier : { $label }
+prompt-browse-folder = Choisissez le dossier : { $label }
+prompt-browse-filled = { $name } choisi. Entrée confirme.
+chooser-type-files = Fichiers { $type }
+chooser-image-title = Insérer une image
+chooser-images = Images
+chooser-references-title = Importer des références
+chooser-reference-files = Fichiers de références
+chooser-profiles-import-title = Importer des profils
+chooser-profiles-export-title = Exporter les profils
+chooser-profile-files = Fichiers de profils
+gui-folder-no-dialog = Le sélecteur de dossiers du système ne s'est pas ouvert. Choisissez le dossier dans cette liste.
+gui-prompt-browse-hint = { $key } ouvre le navigateur de fichiers.

@@ -22,6 +22,7 @@ mod edit;
 mod fonts;
 mod keys_from_keymap;
 mod language;
+mod path_choosers;
 mod pseudo_locale;
 mod quick_wins;
 mod reading_generation;

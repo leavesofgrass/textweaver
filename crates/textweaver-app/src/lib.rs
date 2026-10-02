@@ -198,6 +198,7 @@ pub mod opener;
 pub mod opening;
 mod pages;
 pub mod path_complete;
+pub mod path_prompt;
 mod playback;
 #[cfg(feature = "publish")]
 pub mod preview_server;

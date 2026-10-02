@@ -269,6 +269,10 @@ pub enum PromptKey {
     /// Ctrl+L in the command palette: shows its matches as a list, to hear
     /// them in context; Enter runs one.
     ShowMatches,
+    /// The browse key ([`crate::path_prompt::browse_key`], F4) in a prompt
+    /// for a path: the file browser chooses it, and the path fills the
+    /// prompt; elsewhere nothing (W8a-f).
+    Browse,
     /// Enter: answers the prompt with its text.
     Enter,
     /// Escape: cancels the prompt.
@@ -296,6 +300,8 @@ pub struct PromptModel {
     /// Up and Down started from an empty palette, whose recent commands
     /// come first and are said as recent.
     candidate_from_empty: bool,
+    /// Its text was chosen in the file browser (the browse key).
+    pub(crate) browsed: bool,
 }
 
 impl PromptModel {
@@ -310,7 +316,15 @@ impl PromptModel {
             candidates: Vec::new(),
             candidate: None,
             candidate_from_empty: false,
+            browsed: false,
         }
+    }
+
+    /// True when the file browser filled this prompt (its browse key,
+    /// [`PromptKey::Browse`]): a GUI shows it as typed, not through the
+    /// system's chooser again.
+    pub fn from_browser(&self) -> bool {
+        self.browsed
     }
 
     /// The text typed so far.
@@ -469,6 +483,7 @@ impl App {
                     if let Some(text) = self.pending_prompt_text.take() {
                         model.set_text(&text);
                     }
+                    model.browsed = std::mem::take(&mut self.browse.prompt_filled);
                     self.prompt_model = Some(model);
                 }
                 Effect::ShowList { title, items } => {
@@ -720,6 +735,7 @@ impl App {
                 return vec![Effect::Redraw];
             }
             PromptKey::BackTab => return vec![Effect::Redraw],
+            PromptKey::Browse => return self.browse_for_prompt(),
             PromptKey::ShowMatches => {
                 if mb.purpose == PromptPurpose::CommandPalette {
                     let query = mb.text();
@@ -833,10 +849,7 @@ impl App {
         };
         let purpose = mb.purpose;
         let typed = mb.text();
-        if matches!(
-            purpose,
-            PromptPurpose::Open | PromptPurpose::SaveAs | PromptPurpose::ImagePath
-        ) {
+        if purpose.is_path() {
             let cwd = std::env::current_dir().unwrap_or_default();
             let (done, spoken) = crate::path_complete::complete_in(self.cat(), &typed, &cwd);
             if let (Some(text), Some(mb)) = (done, self.prompt_model.as_mut()) {

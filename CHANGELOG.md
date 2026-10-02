@@ -24,6 +24,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **A cleared detail shows at once.** Clearing a title, author, DOI, or ISBN you typed shows the document's own value in the library list right away, without reading the list again.
 - **Export uses the reading font.** Export to PDF or EPUB in the reader uses your reading font, a downloaded Lexend too, as `tw convert --font` does. A font that is not on this computer keeps the usual font.
 
+### Choosing files and folders
+
+- **The system's file chooser for every file.** In the GUI, Save as (in the document's folder, offering its name), Insert image, Import references, and profile import and export now open the system's own Open or Save dialog, titled for what they do and listing only the files they read, as Open and the settings import and export already did. No more typing a full path.
+- **The system's folder chooser.** Audio export's "Another folder", the batch conversion folders, and the sync folder open the system's folder chooser in the GUI, starting in the document's folder. If it cannot open, the file browser's list chooses the folder instead.
+- **F4 browses from a prompt.** In the terminal reader, and in a typed prompt in the GUI, F4 in any prompt for a file opens the file browser; the path chosen fills the prompt, and Enter confirms it. For a file to write, F4 chooses the folder and keeps the name. Escape goes back to the prompt as it was. The prompt names the key when it opens ("Import settings from file. F4 to browse.").
+- Tab completes a path in every prompt for a file, not only Open, Save as and Insert image.
+
 ### For contributors
 
 - **Research for the next waves.** `docs/dev/research/` holds the research reports and the wave plan for alpha.8, alpha.9, and later: a performance audit, speech engines and runtimes, text-to-speech use cases for students with disabilities, health sciences workflows, GUI and visual design, and law and standards. Nothing in it is a decision; decisions stay in the ADRs.

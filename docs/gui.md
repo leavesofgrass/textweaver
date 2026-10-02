@@ -66,7 +66,18 @@ Choosing a command in a menu runs it as its key would, and it joins the recent c
 
 Open (Ctrl+O) shows your system's own file chooser: on Windows the standard Open dialog, which NVDA and JAWS know. It lists the documents textweaver reads; choose "All files" in the file type list to see everything. It starts in the folder of the document you have open. When you choose a file, the dialog closes, textweaver says "Opened" and the title, and the focus is back in the document. Escape cancels.
 
-To type a path instead, press Ctrl+Shift+G (Open Path): a one-line prompt where Tab completes the path and Up and Down recall earlier ones. If the system's file chooser cannot open (on Linux it needs the XDG desktop portal), textweaver says so and shows this prompt instead.
+To type a path instead, press Ctrl+Shift+G (Open Path): a one-line prompt where Tab completes the path, Up and Down recall earlier ones, and F4 opens textweaver's own file browser, whose choice fills the prompt for Enter to confirm. If the system's file chooser cannot open (on Linux it needs the XDG desktop portal), textweaver says so and shows this prompt instead.
+
+The other commands that ask for a file use the system's file chooser too, each titled for what it does:
+
+- **Save as** opens the system's Save dialog in the document's folder, offering the document's name. The system asks before replacing a file.
+- **Insert image** (while editing) lists images (PNG, JPEG, GIF, SVG, WebP and BMP), starting in the document's folder.
+- **Import references** lists BibTeX, RIS and CSL-JSON files.
+- **Import profiles** and **Export profiles** (in the Profiles list) use TOML and JSON; export offers `textweaver-profiles.toml`.
+
+Commands that ask for a folder use the system's folder chooser, titled with what the folder is for: audio export's "Another folder", the folders of a batch conversion, and the sync folder (Set up sync). It starts in the document's folder.
+
+When a chooser closes, the focus returns to the document, or to the next step of the command (the batch's formats, the sync computer's name). Escape cancels and says "Cancelled." If a chooser cannot open, textweaver says so and asks another way: a file's path in the one-line prompt (with F4 for the file browser), or a folder in the file browser's list.
 
 ## Text size and font
 

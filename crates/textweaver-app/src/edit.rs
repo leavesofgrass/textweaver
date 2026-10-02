@@ -544,7 +544,8 @@ impl App {
         }
         self.mode = Mode::Prompt;
         self.prompt_purpose = PromptPurpose::SaveAs;
-        self.tell(&label);
+        let said = self.path_prompt_said(PromptPurpose::SaveAs, &label);
+        self.tell(&said);
         vec![Effect::Prompt {
             label,
             purpose: PromptPurpose::SaveAs,
