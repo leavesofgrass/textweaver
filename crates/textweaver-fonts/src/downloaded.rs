@@ -3,11 +3,12 @@
 //!
 //! Each font is pinned ([`DownloadableFont`]): its files' URLs at an
 //! immutable commit of the font's own repository, their sizes, and their
-//! SHA-256 values. [`DownloadableFont::install`] fetches each file through
-//! a [`Fetcher`], checks its size and hash, writes the files and the
-//! license (`OFL.txt`) into a temporary folder, and only then moves that
-//! folder into place, so a font is either all there and checked or not
-//! there at all. The license text ships with textweaver
+//! SHA-256 values. Each is also an optional component
+//! ([`DownloadableFont::component`]), and [`DownloadableFont::install`]
+//! downloads through the shared downloader (`textweaver-components`): each
+//! file goes to a staging folder, is checked by size and hash, and only
+//! when all matched are the files and the license (`OFL.txt`) moved into
+//! place, so a font is either all there and checked or not there at all. The license text ships with textweaver
 //! (`third_party/fonts/lexend/OFL.txt`), as the bundled fonts' do.
 //!
 //! The fonts live in the data folder (`fonts/<key>/`). A frontend tells
@@ -19,14 +20,20 @@
 //!
 //! Nothing here asks the reader: the app says the size and license and
 //! waits for a yes before calling [`DownloadableFont::install`]. Tests use
-//! a fake [`Fetcher`]; only [`HttpFetcher`] (cargo feature `download`)
-//! goes to the network, with a neutral User-Agent.
+//! a fake [`Fetcher`]; only the shared HTTP fetcher (cargo feature
+//! `download`) goes to the network, with a neutral User-Agent.
 
+use std::borrow::Cow;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
+use std::sync::atomic::AtomicBool;
 
 use sha2::Digest as _;
+#[cfg(feature = "download")]
+pub use textweaver_components::HttpFetcher;
+use textweaver_components::{Component, ComponentError, FilePin, Progress, Sources};
+pub use textweaver_components::{Fetched, Fetcher, USER_AGENT};
 
 use crate::Style;
 use crate::system::{FaceRef, FamilyFaces};
@@ -137,46 +144,6 @@ pub enum DownloadError {
     },
 }
 
-/// Fetches a file. The app passes [`HttpFetcher`]; tests pass a fake that
-/// hands out fixtures.
-pub trait Fetcher: Send + Sync {
-    /// The bytes at `url`, at most `limit` of them (a longer answer is an
-    /// error).
-    fn fetch(&self, url: &str, limit: u64) -> Result<Vec<u8>, String>;
-}
-
-/// The User-Agent sent with every request: the project, nothing personal
-/// (the owner's rule).
-pub const USER_AGENT: &str = "textweaver-research (+https://github.com/leavesofgrass/textweaver)";
-
-/// Fetches over HTTPS with `ureq` (cargo feature `download`), with a
-/// neutral User-Agent and time limits.
-#[cfg(feature = "download")]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct HttpFetcher;
-
-#[cfg(feature = "download")]
-impl Fetcher for HttpFetcher {
-    fn fetch(&self, url: &str, limit: u64) -> Result<Vec<u8>, String> {
-        use std::time::Duration;
-        let agent: ureq::Agent = ureq::Agent::config_builder()
-            .timeout_connect(Some(Duration::from_secs(20)))
-            .timeout_recv_body(Some(Duration::from_secs(60)))
-            .user_agent(USER_AGENT)
-            .build()
-            .into();
-        agent
-            .get(url)
-            .call()
-            .map_err(|e| e.to_string())?
-            .body_mut()
-            .with_config()
-            .limit(limit)
-            .read_to_vec()
-            .map_err(|e| e.to_string())
-    }
-}
-
 /// SHA-256 of `data`, lowercase hex.
 pub fn sha256_hex(data: &[u8]) -> String {
     sha2::Sha256::digest(data)
@@ -190,13 +157,6 @@ fn squash(s: &str) -> String {
         .filter(|c| !matches!(c, ' ' | '-' | '_'))
         .flat_map(char::to_lowercase)
         .collect()
-}
-
-fn io_err(path: &Path) -> impl FnOnce(io::Error) -> DownloadError + '_ {
-    move |source| DownloadError::Io {
-        path: path.to_owned(),
-        source,
-    }
 }
 
 impl DownloadableFont {
@@ -281,81 +241,102 @@ impl DownloadableFont {
             .collect()
     }
 
+    /// This font as an optional component (its key as the id, the
+    /// `fonts/<key>` folder, and its license file as the notice), for the
+    /// components registry and the shared downloader.
+    pub fn component(&self) -> Component {
+        Component {
+            id: Cow::Borrowed(self.key),
+            title: Cow::Owned(format!("the {} reading font", self.name)),
+            license: Cow::Borrowed(self.license_name),
+            credit: Cow::Owned(format!("{}, {}", self.copyright, self.homepage)),
+            features: Cow::Borrowed(&[Cow::Borrowed("reading-font")]),
+            folder: Cow::Owned(format!("fonts/{}", self.key)),
+            files: Cow::Owned(
+                self.files
+                    .iter()
+                    .map(|f| FilePin::sha256(f.file_name, f.url, f.size, f.sha256))
+                    .collect(),
+            ),
+            notice: Some((Cow::Borrowed("OFL.txt"), Cow::Borrowed(self.license_text))),
+        }
+    }
+
     /// Downloads every file through `fetcher`, checks its size and hash,
     /// and installs the font with its license in `fonts_dir`, returning
-    /// the font's folder. Nothing is left behind when a file fails: the
-    /// files go into a temporary folder first, which replaces the font's
-    /// folder only when all of them matched.
+    /// the font's folder. Nothing is left in the font's folder when a file
+    /// fails: the files wait in a staging folder until all of them
+    /// matched.
     pub fn install(
         &self,
         fonts_dir: &Path,
         fetcher: &dyn Fetcher,
     ) -> Result<PathBuf, DownloadError> {
-        let mut files = Vec::with_capacity(self.files.len());
-        for f in self.files {
-            let data = fetcher
-                .fetch(f.url, f.size + 1)
-                .map_err(|reason| DownloadError::Fetch {
-                    file: f.file_name,
-                    reason,
-                })?;
-            if data.len() as u64 != f.size {
-                return Err(DownloadError::Size {
-                    file: f.file_name,
-                    got: data.len() as u64,
-                    expected: f.size,
-                });
-            }
-            if sha256_hex(&data) != f.sha256 {
-                return Err(DownloadError::Hash { file: f.file_name });
-            }
-            files.push((f.file_name, data));
-        }
-        std::fs::create_dir_all(fonts_dir).map_err(io_err(fonts_dir))?;
+        self.install_with(
+            fonts_dir,
+            fetcher,
+            &Sources::public(),
+            &mut |_| {},
+            &AtomicBool::new(false),
+        )
+    }
+
+    /// [`install`](Self::install) from `sources` (a mirror first, when
+    /// set), with progress and a way to cancel.
+    pub fn install_with(
+        &self,
+        fonts_dir: &Path,
+        fetcher: &dyn Fetcher,
+        sources: &Sources,
+        progress: &mut dyn FnMut(Progress),
+        cancel: &AtomicBool,
+    ) -> Result<PathBuf, DownloadError> {
         let dest = self.dir_in(fonts_dir);
-        let part = fonts_dir.join(format!("{}.partial", self.key));
-        if part.exists() {
-            // Left by an earlier attempt that stopped half way: only this
-            // font's own files are ever in it.
-            remove_files_then_dir(&part).map_err(io_err(&part))?;
-        }
-        std::fs::create_dir(&part).map_err(io_err(&part))?;
-        let written = (|| {
-            for (name, data) in &files {
-                std::fs::write(part.join(name), data)?;
-            }
-            std::fs::write(part.join("OFL.txt"), self.license_text)?;
-            if dest.exists() {
-                remove_files_then_dir(&dest)?;
-            }
-            std::fs::rename(&part, &dest)
-        })();
-        if let Err(e) = written {
-            let _ = remove_files_then_dir(&part);
-            return Err(DownloadError::Io {
-                path: dest,
-                source: e,
-            });
-        }
+        textweaver_components::download(
+            &self.component(),
+            &dest,
+            sources,
+            fetcher,
+            progress,
+            cancel,
+        )
+        .map_err(|e| self.download_error(e))?;
         Ok(dest)
     }
-}
 
-/// Removes the files directly inside `dir` (a font folder this module
-/// made: font files and `OFL.txt`, never subfolders), then `dir` itself.
-/// A subfolder stops it, so it can never reach anything else.
-fn remove_files_then_dir(dir: &Path) -> io::Result<()> {
-    for entry in std::fs::read_dir(dir)? {
-        let entry = entry?;
-        if entry.file_type()?.is_dir() {
-            return Err(io::Error::other(format!(
-                "{} holds a folder; left alone",
-                dir.display()
-            )));
-        }
-        std::fs::remove_file(entry.path())?;
+    /// The pinned file named `name`, with its `'static` name.
+    fn file_named(&self, name: &str) -> &'static str {
+        self.files
+            .iter()
+            .find(|f| f.file_name == name)
+            .map_or(self.key, |f| f.file_name)
     }
-    std::fs::remove_dir(dir)
+
+    fn download_error(&self, e: ComponentError) -> DownloadError {
+        match e {
+            ComponentError::Fetch { file, reason } => DownloadError::Fetch {
+                file: self.file_named(&file),
+                reason,
+            },
+            ComponentError::Size {
+                file,
+                got,
+                expected,
+            } => DownloadError::Size {
+                file: self.file_named(&file),
+                got,
+                expected,
+            },
+            ComponentError::Hash { file } => DownloadError::Hash {
+                file: self.file_named(&file),
+            },
+            ComponentError::Io { path, source } => DownloadError::Io { path, source },
+            other => DownloadError::Fetch {
+                file: self.key,
+                reason: other.to_string(),
+            },
+        }
+    }
 }
 
 /// Lexend, pinned to the Lexend project's commit `cd26b9c` (the last one
@@ -434,8 +415,7 @@ pub fn find_loaded(name: &str) -> Option<(&'static DownloadableFont, Vec<LoadedF
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
-    use std::sync::Mutex;
+    use textweaver_components::fake::FakeFetcher;
 
     fn fixture(name: &str) -> Vec<u8> {
         std::fs::read(
@@ -447,33 +427,15 @@ mod tests {
     }
 
     /// Hands out the fixtures for the pinned URLs, and records each URL.
-    #[derive(Default)]
-    struct Fake {
-        files: HashMap<String, Vec<u8>>,
-        asked: Mutex<Vec<String>>,
-    }
+    struct Fake;
 
     impl Fake {
-        fn lexend() -> Fake {
-            let mut files = HashMap::new();
+        fn lexend() -> FakeFetcher {
+            let mut fake = FakeFetcher::new();
             for f in LEXEND.files {
-                files.insert(f.url.to_owned(), fixture(f.file_name));
+                fake.insert(f.url, fixture(f.file_name));
             }
-            Fake {
-                files,
-                ..Fake::default()
-            }
-        }
-    }
-
-    impl Fetcher for Fake {
-        fn fetch(&self, url: &str, limit: u64) -> Result<Vec<u8>, String> {
-            self.asked.lock().unwrap().push(url.to_owned());
-            let data = self.files.get(url).cloned().ok_or("not found")?;
-            if data.len() as u64 > limit {
-                return Err("too large".into());
-            }
-            Ok(data)
+            fake
         }
     }
 
@@ -523,7 +485,7 @@ mod tests {
         let fake = Fake::lexend();
         let dir = LEXEND.install(&fonts, &fake).unwrap();
         assert_eq!(dir, fonts.join("lexend"));
-        assert_eq!(fake.asked.lock().unwrap().len(), 2);
+        assert_eq!(fake.request_count(), 2);
         assert!(LEXEND.is_installed_in(&fonts));
         assert_eq!(
             std::fs::read_to_string(dir.join("OFL.txt")).unwrap(),
@@ -565,7 +527,7 @@ mod tests {
         // A changed byte: same size, wrong hash.
         let mut fake = Fake::lexend();
         let url = LEXEND.files[1].url.to_owned();
-        fake.files.get_mut(&url).unwrap()[100] ^= 1;
+        fake.bytes_mut(&url).unwrap()[100] ^= 1;
         let e = LEXEND.install(&fonts, &fake).unwrap_err();
         assert_eq!(
             e.to_string(),
@@ -574,12 +536,13 @@ mod tests {
         assert!(!LEXEND.is_installed_in(&fonts));
         assert!(!fonts.join("lexend").exists());
         // Cut short.
-        fake.files.get_mut(&url).unwrap().truncate(10);
+        fake.bytes_mut(&url).unwrap().truncate(10);
         let e = LEXEND.install(&fonts, &fake).unwrap_err();
         assert_eq!(e.to_string(), "Lexend-Bold.ttf is 10 bytes, not 105564");
-        // No network.
-        let e = LEXEND.install(&fonts, &Fake::default()).unwrap_err();
-        assert_eq!(e.to_string(), "Lexend-Regular.ttf: not found");
+        // No network. The regular face, checked on the first try, waits
+        // in the staging folder, so only the bold one is asked for.
+        let e = LEXEND.install(&fonts, &FakeFetcher::new()).unwrap_err();
+        assert_eq!(e.to_string(), "Lexend-Bold.ttf: not found");
         assert!(!fonts.join("lexend").exists());
     }
 
@@ -597,7 +560,7 @@ mod tests {
     }
 
     #[test]
-    fn a_stale_partial_folder_is_replaced() {
+    fn a_stale_partial_folder_is_cleared() {
         let tmp = tempfile::tempdir().unwrap();
         let fonts = tmp.path().join("fonts");
         let part = fonts.join("lexend.partial");
@@ -606,6 +569,18 @@ mod tests {
         LEXEND.install(&fonts, &Fake::lexend()).unwrap();
         assert!(!part.exists());
         assert!(LEXEND.load_from(&fonts).is_some());
+    }
+
+    #[test]
+    fn lexend_is_a_component_with_its_licence() {
+        let c = LEXEND.component();
+        assert!(c.check_names().is_ok());
+        assert_eq!(
+            (c.id.as_ref(), c.folder.as_ref()),
+            ("lexend", "fonts/lexend")
+        );
+        assert_eq!(c.size(), LEXEND.total_bytes());
+        assert_eq!(c.notice.as_ref().unwrap().0, "OFL.txt");
     }
 
     #[test]

@@ -20,8 +20,9 @@ espeak-lib = ["textweaver-speech/espeak-phonemes"]
 # Phonemes from the pure-Rust eSpeak NG port, English data built in: the
 # fallback when libespeak-ng is not installed.
 espeak-rs = ["dep:espeak-ng"]
-# Downloading voices from Hugging Face, each file checked by its hash.
-download = ["dep:ureq", "dep:sha2", "dep:sha1"]
+# Downloading voices from Hugging Face, each file checked by its hash,
+# through the shared downloader (textweaver-components).
+download = ["dep:textweaver-components", "textweaver-components/download", "dep:sha2", "dep:sha1"]
 
 [dependencies]
 textweaver-core.workspace = true
@@ -36,7 +37,8 @@ serde_json.workspace = true
 thiserror.workspace = true
 log.workspace = true
 espeak-ng = { workspace = true, optional = true }
-ureq = { workspace = true, optional = true }
+# A voice download is an optional component (W8a-d): one downloader.
+textweaver-components = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 sha1 = { workspace = true, optional = true }
 
