@@ -43,8 +43,8 @@ pub use backends::{
 pub use normalize::{NormalizeConfig, Pipeline, TableMode};
 pub use pacing::{Clock, FakeClock, PacingConfig, SystemClock};
 pub use service::{
-    Earcon, ReadingGeneration, SayMode, ServiceConfig, ServiceCore, SpeechService, SpeechStatus,
-    Waker,
+    Earcon, FirstAudio, FirstAudioStamp, ReadingGeneration, SayMode, ServiceConfig, ServiceCore,
+    SpeechService, SpeechStatus, Waker,
 };
 pub use voices::{VoiceCache, VoiceList};
 

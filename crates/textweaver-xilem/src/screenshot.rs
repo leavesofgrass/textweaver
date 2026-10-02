@@ -72,7 +72,7 @@ fn choose_review_colors(app: &mut textweaver_app::App) -> Result<(), String> {
 
 /// Every reading aid on, for review: bionic reading, difficult words, the
 /// ruler band, WCAG 1.4.12's text spacing, and RSVP on the cursor's word.
-fn turn_on_aids(app: &mut textweaver_app::App) -> Result<(), String> {
+pub(crate) fn turn_on_aids(app: &mut textweaver_app::App) -> Result<(), String> {
     use textweaver_app::Command;
     use textweaver_app::keymap::ActionId;
     use textweaver_app::store::reading_aids::{RulerMode, TextSpacing};

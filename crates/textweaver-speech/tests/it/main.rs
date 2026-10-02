@@ -6,5 +6,6 @@
 //! never as a new file directly in `tests/`.
 
 mod espeak;
+mod first_audio;
 mod omnivox;
 mod speechd;

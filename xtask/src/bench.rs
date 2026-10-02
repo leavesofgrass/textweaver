@@ -10,17 +10,33 @@
 //! - `--file PATH` (repeatable): bench these files instead of the corpora.
 //! - `--json PATH`: also write every measurement as JSON.
 //! - `--only NAME`: run only the corpus whose name contains `NAME`.
-//! - `--baseline FILE`: compare with an earlier `--json` file, and fail
-//!   when a memory number grew more than `--max-ratio R` times (default
-//!   2). Only peak heap and allocation counts are gated: they barely vary
-//!   from run to run, while times depend on the machine and its load, so
-//!   times are reported for information only. Numbers too small to matter
-//!   (under 1 MB of peak heap, under 5,000 allocations) are not gated, and
-//!   neither is growth too small to matter (less than 1 MB, or fewer than
-//!   5,000 allocations, more than the baseline), however large its ratio.
-//!   Allocation counts are the measuring thread's own; peak heap is the
-//!   whole process's.
+//! - `--baseline FILE`: compare with a baseline. With the committed
+//!   baseline file, `xtask/bench-baseline.json`, this is the two-way
+//!   ratchet the CI gate runs (`ratchet.rs`): memory may move 25 percent
+//!   either way, times may grow 50 percent where the entry was measured on
+//!   the gate's own machine type. With an earlier `--json` report it is an
+//!   A/B comparison that fails when a memory number grew more than
+//!   `--max-ratio R` times (default 2), for trying a change locally.
+//!   Numbers too small to matter (under 1 MB of peak heap, under 5,000
+//!   allocations) are not gated, and neither is growth too small to matter
+//!   (less than 1 MB, or fewer than 5,000 allocations), however large its
+//!   ratio. Allocation counts are the measuring thread's own; peak heap is
+//!   the whole process's.
+//! - `--update-baseline --reason TEXT`: write this run into this
+//!   platform's entry of `xtask/bench-baseline.json` (on `main`, or on any
+//!   branch for a platform with no entry yet). `--gate-times` marks the
+//!   entry's times as gated: only for a run on the CI runner type.
 //! - `--no-startup`: skip the startup timings.
+//! - `--no-pathological`: skip the pathological inputs.
+//! - `--ceiling-s S`: the time ceiling per pathological input (default
+//!   10 seconds).
+//! - `--engine ID` (repeatable): also time stop-to-first-audio with a real
+//!   engine, playing to a silent output: `piper` (needs
+//!   `TEXTWEAVER_PIPER_VOICES` naming a folder of installed voices; never
+//!   downloads) or `sapi` (Windows). With `TEXTWEAVER_PIPER_VOICES` set,
+//!   Piper is timed without asking.
+//! - `--profile-plan`: only load each document and plan its narration
+//!   three times, for a profiler (the nightly profile job).
 //!
 //! Startup timings (also `cargo xtask startup` on its own): the release
 //! `tw` is built and `tw --version`, `tw text`, `tw info` (both on the
@@ -37,6 +53,21 @@
 //! - navigation: dispatch time and keystroke-to-speech latency for next
 //!   word, sentence, paragraph, and heading, idle and while reading, from
 //!   the middle of the document.
+//! - segmentation: every sentence and every word of the document through
+//!   `Units`, on their own (`sentences_ms`, `words_ms`, with peak heap and
+//!   allocations).
+//! - normalization: the first 2,000 utterances of the plan through the
+//!   default pipeline (`normalize_ms`).
+//! - edit on the loaded document: one insert in the middle with the
+//!   markers kept (`apply_ms`), and the blank-line table rebuilt after it
+//!   (`blank_lines_ms`).
+//! - stop to speak: Stop, then Read from cursor, until the backend is
+//!   handed the first utterance (`stop_to_speak`, 20 times).
+//! - stop to first audio: the same on the recording backend playing in
+//!   real time, until its first audio starts, as the speech service stamps
+//!   it (`stop_to_first_audio`; `stop_to_first_audio_service` is the
+//!   speech thread's share). With `--engine`, the same with real engines,
+//!   in the `first-audio` entry.
 //! - highlight: cost of applying one word position (`poll_speech_step`).
 //! - search: a common word, and a regular expression.
 //! - edit: entering edit mode, typing one character (per keystroke),
@@ -46,6 +77,10 @@
 //!   PDF): finding a document's sync id (ADR-0049) the first time, when the
 //!   whole file is hashed, and again, when it is unchanged; its time, the
 //!   hashing rate, and peak heap, which stays near the read buffer's size.
+//!
+//! - pathological inputs (`pathological.rs`): one generated file per
+//!   loader with a 512 KB token, lists nested 200 deep, a 2,000-row
+//!   table, and a 1 MB line, loaded and planned within a time ceiling.
 //!
 //! Peak heap is measured with a counting global allocator for each phase.
 //! The speech backend is a silent clock that records when it is asked to
@@ -73,6 +108,20 @@ pub(crate) struct Args {
     pub startup: bool,
     /// The `tw` binary for the startup timings (passed to `bench-run`).
     pub tw: Option<PathBuf>,
+    /// Write this run into the committed baseline file.
+    pub update_baseline: bool,
+    /// Why the baseline moves (required with `update_baseline`).
+    pub reason: Option<String>,
+    /// The written entry gates times (a run on the CI runner type).
+    pub gate_times: bool,
+    /// Run the pathological inputs.
+    pub pathological: bool,
+    /// Time ceiling per pathological input, in seconds.
+    pub ceiling_s: f64,
+    /// Real engines to time stop-to-first-audio with.
+    pub engines: Vec<String>,
+    /// Only load and plan, for a profiler.
+    pub profile_plan: bool,
 }
 
 impl Default for Args {
@@ -86,6 +135,13 @@ impl Default for Args {
             max_ratio: DEFAULT_MAX_RATIO,
             startup: true,
             tw: None,
+            update_baseline: false,
+            reason: None,
+            gate_times: false,
+            pathological: true,
+            ceiling_s: crate::pathological::DEFAULT_CEILING_S,
+            engines: Vec::new(),
+            profile_plan: false,
         }
     }
 }
@@ -119,10 +175,27 @@ impl Args {
                 }
                 "--no-startup" => out.startup = false,
                 "--tw" => out.tw = Some(value(&mut it, "--tw")?.into()),
+                "--update-baseline" => out.update_baseline = true,
+                "--reason" => out.reason = Some(value(&mut it, "--reason")?),
+                "--gate-times" => out.gate_times = true,
+                "--no-pathological" => out.pathological = false,
+                "--ceiling-s" => {
+                    let v = value(&mut it, "--ceiling-s")?;
+                    out.ceiling_s = v
+                        .parse()
+                        .ok()
+                        .filter(|s: &f64| s.is_finite() && *s > 0.0)
+                        .with_context(|| format!("--ceiling-s {v}: give a number of seconds"))?;
+                }
+                "--engine" => out.engines.push(value(&mut it, "--engine")?),
+                "--profile-plan" => out.profile_plan = true,
                 other => bail!(
-                    "unknown option {other} (cargo xtask bench [--quick] [--file PATH] [--json PATH] [--only NAME] [--baseline FILE] [--max-ratio R] [--no-startup])"
+                    "unknown option {other} (cargo xtask bench [--quick] [--file PATH] [--json PATH] [--only NAME] [--baseline FILE] [--max-ratio R] [--update-baseline --reason TEXT [--gate-times]] [--no-startup] [--no-pathological] [--ceiling-s S] [--engine ID] [--profile-plan])"
                 ),
             }
+        }
+        if out.update_baseline && out.reason.as_deref().is_none_or(|r| r.trim().is_empty()) {
+            bail!("--update-baseline needs --reason TEXT: why the numbers moved");
         }
         Ok(out)
     }
@@ -161,7 +234,7 @@ pub fn run() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(2).collect();
     let parsed = Args::parse(&args)?;
     let mut extra = Vec::new();
-    if parsed.startup && parsed.tw.is_none() {
+    if parsed.startup && parsed.tw.is_none() && !parsed.profile_plan {
         extra.push("--tw".to_owned());
         extra.push(build_tw()?.display().to_string());
     }
@@ -386,6 +459,9 @@ pub(crate) fn gate(report: &Value, baseline: &Path, max_ratio: f64) -> anyhow::R
         .with_context(|| format!("reading the baseline {}", baseline.display()))?;
     let base: Value = serde_json::from_str(&text)
         .with_context(|| format!("parsing the baseline {}", baseline.display()))?;
+    if crate::ratchet::is_baseline(&base) {
+        return crate::ratchet::gate(report, &base, baseline);
+    }
     let c = compare(report, &base, max_ratio);
     println!("Compared with {}:", baseline.display());
     for l in &c.lines {
@@ -814,15 +890,21 @@ mod inner {
 
     use serde_json::{Value, json};
     use textweaver_app::a11y::LogAnnouncer;
-    use textweaver_app::core::{Utterance, UtteranceKind};
+    use textweaver_app::core::{
+        CharPos, Direction, Edit, PunctuationLevel, Unit, Utterance, UtteranceKind,
+    };
     use textweaver_app::formats::{LoadOptions, Registry, Source};
     use textweaver_app::keymap::{ActionId, Frontend, Keymap, Platform};
+    use textweaver_app::speech::backend::BackendFactory;
     use textweaver_app::speech::{
-        Caps, EventSink, RawEvent, ServiceConfig, SpeechBackend, SpeechError, SpeechService, Voice,
+        Caps, EventSink, FirstAudio, NormalizeConfig, Pipeline, RawEvent, RecordingBackend,
+        RecordingMode, ServiceConfig, SpeechBackend, SpeechError, SpeechService, Voice,
         VoiceParams,
     };
     use textweaver_app::store::{Paths, Settings};
+    use textweaver_app::text::Document;
     use textweaver_app::text::narrate::NarrationPolicy;
+    use textweaver_app::text::units::Units;
     use textweaver_app::{App, AppConfig, Command, parse_go_to};
 
     use super::alloc;
@@ -1074,8 +1156,11 @@ mod inner {
             d,
         );
         r.peak("plan_all_peak_mb", "plan");
+        let sample: Vec<Utterance> = plan.iter().take(NORMALIZE_SAMPLE).cloned().collect();
         drop(plan);
-        drop(doc);
+        segmentation(&mut r, &doc);
+        normalization(&mut r, sample);
+        edit_in_place(&mut r, doc);
 
         // Open to first speech.
         let (speech, clock) = clock_service();
@@ -1166,8 +1251,31 @@ mod inner {
                 );
             }
         }
+        // Stop to speak: Stop, then Read from cursor, until the backend is
+        // handed the first utterance (the service's share of a restart).
+        app.dispatch(Command::GoTo(middle));
+        let mut restarts = Vec::new();
+        for _ in 0..20 {
+            app.dispatch(Command::Action(ActionId::Stop));
+            app.poll_speech();
+            let (_, spoke) = keystroke(
+                &mut app,
+                &clock,
+                Command::Action(ActionId::ReadFromCursor),
+                true,
+            );
+            restarts.extend(spoke);
+        }
+        r.samples(
+            "stop_to_speak",
+            "stop, then read from cursor, to speech",
+            &restarts,
+        );
         app.dispatch(Command::Action(ActionId::Stop));
         app.poll_speech();
+
+        // Stop to first audio, on a backend that plays in real time.
+        first_audio(&mut r, path, home);
 
         // Highlight updates: one word position applied at a time.
         highlight(&mut r, path, home);
@@ -1419,6 +1527,351 @@ mod inner {
         r
     }
 
+    /// Utterances of the plan normalized for `normalize_ms`.
+    const NORMALIZE_SAMPLE: usize = 2_000;
+
+    /// Every sentence, then every word, through `Units`: what the plan
+    /// and navigation pay for segmentation, on their own.
+    fn segmentation(r: &mut Report, doc: &Document) {
+        for (unit, name, label) in [
+            (Unit::Sentence, "sentences", "every sentence"),
+            (Unit::Word, "words", "every word"),
+        ] {
+            alloc::reset_peak();
+            let t = Instant::now();
+            let n = Units::new(doc, unit, CharPos(0), Direction::Forward).count();
+            let d = t.elapsed();
+            r.time(
+                &format!("{name}_ms"),
+                &format!("{label} through Units ({n})"),
+                d,
+            );
+            r.peak(&format!("{name}_peak_mb"), label);
+        }
+    }
+
+    /// The first utterances of the plan through the default normalization
+    /// pipeline, as the speech thread normalizes them before speaking.
+    fn normalization(r: &mut Report, sample: Vec<Utterance>) {
+        let t = Instant::now();
+        let pipeline = Pipeline::for_settings(
+            &NormalizeConfig::default(),
+            PunctuationLevel::default(),
+            false,
+            false,
+        );
+        r.time(
+            "normalize_pipeline_ms",
+            "build the normalization pipeline",
+            t.elapsed(),
+        );
+        let n = sample.len();
+        alloc::reset_peak();
+        let t = Instant::now();
+        let mut bytes = 0;
+        for u in sample {
+            bytes += pipeline.apply(u).text.len();
+        }
+        let d = t.elapsed();
+        std::hint::black_box(bytes);
+        r.time(
+            "normalize_ms",
+            &format!("normalize the first {n} utterances"),
+            d,
+        );
+        r.peak("normalize_peak_mb", "normalize");
+    }
+
+    /// One insert in the middle of the loaded document with its markers
+    /// kept, then the blank-line table rebuilt, as reading on after an
+    /// edit does.
+    fn edit_in_place(r: &mut Report, mut doc: Document) {
+        let _ = doc.blank_lines();
+        let middle = CharPos(doc.len_chars() / 2);
+        alloc::reset_peak();
+        let t = Instant::now();
+        let applied = doc.apply(&Edit::insert(middle, "x"));
+        let d = t.elapsed();
+        if let Err(e) = applied {
+            println!("  edit: the insert failed: {e}");
+            return;
+        }
+        r.time(
+            "apply_ms",
+            "edit: one insert in the middle, markers kept",
+            d,
+        );
+        r.peak("apply_peak_mb", "edit");
+        let t = Instant::now();
+        let blanks = doc.blank_lines().len();
+        r.time(
+            "blank_lines_ms",
+            &format!("edit: the blank-line table rebuilt ({blanks} blank lines)"),
+            t.elapsed(),
+        );
+    }
+
+    /// Reads from the middle, then `n` times: Stop, Read from cursor, and
+    /// the time to the reading's first audio as the speech service stamps
+    /// it. The first restart warms up (a voice's first run is slower) and
+    /// is not counted. Returns the key-to-audio times and the speech
+    /// thread's share of each.
+    fn restarts(
+        app: &mut App,
+        probe: &FirstAudio,
+        n: usize,
+        limit: Duration,
+    ) -> (Vec<Duration>, Vec<Duration>) {
+        app.dispatch(Command::GoTo(parse_go_to("50%").expect("50%")));
+        let (mut key, mut service) = (Vec::new(), Vec::new());
+        for i in 0..=n {
+            app.dispatch(Command::Action(ActionId::Stop));
+            app.poll_speech();
+            let last = probe.latest().map_or(0, |s| s.generation);
+            let t0 = Instant::now();
+            app.dispatch(Command::Action(ActionId::ReadFromCursor));
+            let Some(stamp) = probe.wait_for(last + 1, limit) else {
+                println!("  no audio within {} s", limit.as_secs());
+                break;
+            };
+            if i > 0 {
+                key.push(stamp.started.saturating_duration_since(t0));
+                service.push(stamp.latency());
+            }
+            // A moment of listening before the next key.
+            std::thread::sleep(Duration::from_millis(30));
+            app.poll_speech();
+        }
+        app.dispatch(Command::Action(ActionId::Stop));
+        app.poll_speech();
+        (key, service)
+    }
+
+    /// Stop to first audio on the recording backend playing in real time
+    /// (an audio-clock engine whose words arrive as their audio starts).
+    fn first_audio(r: &mut Report, path: &Path, home: &Path) {
+        let (backend, _handle) = RecordingBackend::with(
+            RecordingMode::Timed { ms_per_word: 300 },
+            RecordingBackend::DEFAULT_CAPS,
+        );
+        let Ok(speech) = SpeechService::spawn(backend.into_factory(), ServiceConfig::default())
+        else {
+            return;
+        };
+        let probe = speech.first_audio();
+        let mut app = new_app(home, speech);
+        if app.open(path).is_err() {
+            return;
+        }
+        let (key, service) = restarts(&mut app, &probe, 20, Duration::from_secs(5));
+        r.samples(
+            "stop_to_first_audio",
+            "stop, then read from cursor, to first audio (recording backend)",
+            &key,
+        );
+        r.samples(
+            "stop_to_first_audio_service",
+            "the speech thread's share of it",
+            &service,
+        );
+        app.shutdown();
+    }
+
+    /// The backend factory for a real engine playing to a silent output
+    /// that takes samples in real time, or why it cannot run here.
+    fn engine_factory(id: &str) -> Result<BackendFactory, String> {
+        use textweaver_enginehost::AudioOutput;
+        let silent = AudioOutput::Null { speed: 1.0 };
+        match id {
+            "piper" => {
+                let Some(dir) =
+                    std::env::var_os("TEXTWEAVER_PIPER_VOICES").filter(|v| !v.is_empty())
+                else {
+                    return Err(
+                        "TEXTWEAVER_PIPER_VOICES does not name a folder of installed voices (nothing is downloaded)"
+                            .into(),
+                    );
+                };
+                let voices = PathBuf::from(dir);
+                let mut config = textweaver_app::piper_config(&Settings::default());
+                if let Some(data) = voices.parent() {
+                    config.espeak_data = data.join("espeak-ng-data");
+                }
+                config.voices_dir = voices;
+                config.output = silent;
+                if !textweaver_piper::probe(&config) {
+                    return Err(format!(
+                        "no usable Piper voice in {}",
+                        config.voices_dir.display()
+                    ));
+                }
+                Ok(Box::new(textweaver_piper::factory(config)))
+            }
+            #[cfg(windows)]
+            "sapi" => {
+                let mut config = textweaver_app::sapi_config(&Settings::default());
+                config.output = silent;
+                if !textweaver_sapi::probe(&config) {
+                    return Err(
+                        "SAPI 5 has no engine host here (cargo xtask sapi-host --release)".into(),
+                    );
+                }
+                Ok(textweaver_sapi::factory(config))
+            }
+            #[cfg(not(windows))]
+            "sapi" => Err("SAPI 5 is Windows only".into()),
+            other => Err(format!("{other}: only piper and sapi are timed here")),
+        }
+    }
+
+    /// Stop to first audio with each real engine in `ids`, on `path`. An
+    /// engine that cannot run here is reported and skipped.
+    fn engines_first_audio(ids: &[String], path: &Path, home: &Path) -> Report {
+        let mut r = Report {
+            name: "first-audio".into(),
+            values: Vec::new(),
+        };
+        println!(
+            "first audio with real engines, silent output ({})",
+            path.display()
+        );
+        for id in ids {
+            let factory = match engine_factory(id) {
+                Ok(f) => f,
+                Err(why) => {
+                    println!("  {id}: skipped, {why}");
+                    continue;
+                }
+            };
+            let speech = match SpeechService::spawn(factory, ServiceConfig::default()) {
+                Ok(s) => s,
+                Err(e) => {
+                    println!("  {id}: skipped, it did not start: {e}");
+                    continue;
+                }
+            };
+            let probe = speech.first_audio();
+            let mut app = new_app(&home.join(id), speech);
+            if let Err(e) = app.open(path) {
+                println!("  {id}: cannot open {}: {e}", path.display());
+                continue;
+            }
+            let (key, service) = restarts(&mut app, &probe, 20, Duration::from_secs(10));
+            r.samples(
+                &format!("{id}_stop_to_first_audio"),
+                &format!("{id}: stop, then read from cursor, to first audio"),
+                &key,
+            );
+            r.samples(
+                &format!("{id}_stop_to_first_audio_service"),
+                &format!("{id}: the speech thread's share of it"),
+                &service,
+            );
+            app.shutdown();
+        }
+        r
+    }
+
+    /// Loads and plans each pathological input (`pathological.rs`).
+    /// Returns the report and one sentence per input over the ceiling or
+    /// that panicked.
+    fn pathological(dir: &Path, ceiling: Duration) -> anyhow::Result<(Report, Vec<String>)> {
+        let dir = dir.join("pathological");
+        std::fs::create_dir_all(&dir)?;
+        let mut r = Report {
+            name: "pathological".into(),
+            values: Vec::new(),
+        };
+        let mut over = Vec::new();
+        let registry = Registry::with_builtins();
+        println!(
+            "pathological inputs, a ceiling of {:.0} seconds each ({})",
+            ceiling.as_secs_f64(),
+            dir.display()
+        );
+        for input in crate::pathological::inputs() {
+            let p = dir.join(input.name);
+            if std::fs::read(&p).ok().as_deref() != Some(input.bytes.as_slice()) {
+                std::fs::write(&p, &input.bytes)?;
+            }
+            let key = input.loader;
+            let t = Instant::now();
+            let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| match registry
+                .load(&Source::Path(p.clone()), &LoadOptions::default())
+            {
+                Ok(doc) => {
+                    let loaded = t.elapsed();
+                    let plan = textweaver_app::text::plan(
+                        &doc,
+                        doc.full_range(),
+                        &NarrationPolicy::default(),
+                    );
+                    Ok((loaded, doc.len_chars(), plan.len()))
+                }
+                Err(e) => Err(e.to_string()),
+            }));
+            let total = t.elapsed();
+            r.values.push((format!("{key}_total_ms"), json!(ms(total))));
+            match outcome {
+                Ok(Ok((loaded, chars, utterances))) => {
+                    r.values.push((format!("{key}_load_ms"), json!(ms(loaded))));
+                    println!(
+                        "  {key} ({}): {:.0} ms in all, loaded in {:.0} ms; {chars} chars, {utterances} utterances",
+                        input.name,
+                        ms(total),
+                        ms(loaded)
+                    );
+                }
+                Ok(Err(e)) => println!(
+                    "  {key} ({}): refused in {:.0} ms: {e}",
+                    input.name,
+                    ms(total)
+                ),
+                Err(_) => {
+                    println!("  {key} ({}): the loader panicked", input.name);
+                    over.push(format!("{key} ({}): the loader panicked", input.name));
+                }
+            }
+            if total > ceiling {
+                over.push(format!(
+                    "{key} ({}): took {:.1} seconds, over the ceiling of {:.0}",
+                    input.name,
+                    total.as_secs_f64(),
+                    ceiling.as_secs_f64()
+                ));
+            }
+        }
+        println!();
+        Ok((r, over))
+    }
+
+    /// `--profile-plan`: loads each document and plans it three times,
+    /// and nothing else, so a profiler sees loading and planning.
+    fn profile_plan(docs: &[(String, PathBuf)]) {
+        let registry = Registry::with_builtins();
+        for (name, path) in docs {
+            let t = Instant::now();
+            let doc = match registry.load(&Source::Path(path.clone()), &LoadOptions::default()) {
+                Ok(d) => d,
+                Err(e) => {
+                    println!("{name}: cannot load: {e}");
+                    continue;
+                }
+            };
+            println!("{name}: loaded in {:.0} ms", ms(t.elapsed()));
+            for i in 1..=3 {
+                let t = Instant::now();
+                let plan =
+                    textweaver_app::text::plan(&doc, doc.full_range(), &NarrationPolicy::default());
+                println!(
+                    "{name}: plan {i} of 3, {} utterances, {:.0} ms",
+                    plan.len(),
+                    ms(t.elapsed())
+                );
+            }
+        }
+    }
+
     /// Cost of following speech: word positions applied one at a time.
     fn highlight(r: &mut Report, path: &Path, home: &Path) {
         let Ok((speech, log)) = textweaver_app::testing::recording_service() else {
@@ -1499,6 +1952,10 @@ mod inner {
         if let Some(o) = &only {
             docs.retain(|(n, _)| n.contains(o.as_str()));
         }
+        if args.profile_plan {
+            profile_plan(&docs);
+            return Ok(());
+        }
         let home = dir.join(format!("home-{}", std::process::id()));
         let mut all = serde_json::Map::new();
         println!(
@@ -1538,6 +1995,40 @@ mod inner {
                 Value::Object(rep.values.into_iter().collect()),
             );
         }
+        // Pathological inputs, one per loader, each within a ceiling.
+        let mut over = Vec::new();
+        if args.pathological
+            && args.files.is_empty()
+            && only
+                .as_ref()
+                .is_none_or(|o| "pathological".contains(o.as_str()))
+        {
+            let (rep, o) = pathological(&dir, Duration::from_secs_f64(args.ceiling_s))?;
+            over = o;
+            all.insert(
+                rep.name.clone(),
+                Value::Object(rep.values.into_iter().collect()),
+            );
+        }
+        // Stop to first audio with real engines (Piper whenever a voices
+        // folder is named), on the 1 MB corpus.
+        let mut engines = args.engines.clone();
+        if std::env::var_os("TEXTWEAVER_PIPER_VOICES").is_some_and(|v| !v.is_empty())
+            && !engines.iter().any(|e| e == "piper")
+        {
+            engines.push("piper".into());
+        }
+        if !engines.is_empty() {
+            let corpus = super::startup_corpus()?;
+            let rep = engines_first_audio(&engines, &corpus, &home);
+            println!();
+            if !rep.values.is_empty() {
+                all.insert(
+                    rep.name.clone(),
+                    Value::Object(rep.values.into_iter().collect()),
+                );
+            }
+        }
         let _ = std::fs::remove_dir_all(&home);
         if let Some(tw) = &args.tw {
             let corpus = super::startup_corpus()?;
@@ -1551,8 +2042,35 @@ mod inner {
             std::fs::write(&p, serde_json::to_string_pretty(&all)?)?;
             println!("wrote {}", p.display());
         }
-        if let Some(base) = &args.baseline {
+        for o in &over {
+            println!("Pathological input out of bounds: {o}");
+        }
+        if args.update_baseline {
+            if !over.is_empty() {
+                anyhow::bail!(
+                    "the baseline is not written: {} pathological inputs are out of bounds",
+                    over.len()
+                );
+            }
+            let root = super::root();
+            crate::ratchet::update(
+                &all,
+                &crate::ratchet::Update {
+                    path: &root.join(crate::ratchet::BASELINE_FILE),
+                    root: &root,
+                    reason: args.reason.as_deref(),
+                    quick,
+                    gate_times: args.gate_times,
+                },
+            )?;
+        } else if let Some(base) = &args.baseline {
             super::gate(&all, base, args.max_ratio)?;
+        }
+        if !over.is_empty() {
+            anyhow::bail!(
+                "{} pathological inputs are out of bounds (a panic, or over the ceiling)",
+                over.len()
+            );
         }
         Ok(())
     }

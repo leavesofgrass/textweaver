@@ -116,6 +116,17 @@ struct Args {
     /// into this folder and exit.
     #[arg(long, value_name = "DIR")]
     review_screenshots: Option<PathBuf>,
+    /// Read the document with no window on screen, on the silent paced
+    /// backend, and measure this many moves of the spoken word through the
+    /// whole widget tree; then exit. Needs --home. --scale sets the scale.
+    #[arg(long, value_name = "MOVES")]
+    measure_frames: Option<usize>,
+    /// For --measure-frames: every reading aid on first.
+    #[arg(long)]
+    frames_aids: bool,
+    /// For --measure-frames: also write the report as JSON to this file.
+    #[arg(long, value_name = "PATH")]
+    frames_json: Option<PathBuf>,
 }
 
 /// Parses the command line. Help and the version go to the terminal the
@@ -185,6 +196,25 @@ fn main() {
                     std::process::exit(1);
                 }
             }
+        }
+        if let Some(moves) = args.measure_frames {
+            let (Some(file), Some(home)) = (args.file.clone(), args.home.clone()) else {
+                console::report_error(
+                    "--measure-frames needs a document and --home, so no settings are saved into yours",
+                    true,
+                );
+                std::process::exit(2);
+            };
+            let mut o = textweaver_xilem::frames::FrameOptions::new(file, home);
+            o.moves = moves.clamp(1, 100_000);
+            o.scale = args.scale;
+            o.aids = args.frames_aids;
+            o.theme = args.theme.clone();
+            if let Err(e) = textweaver_xilem::frames::run(&o, args.frames_json.as_deref()) {
+                console::report_error(&e, true);
+                std::process::exit(1);
+            }
+            return;
         }
         if let Some(path) = &args.screenshot {
             let o = ShotOptions {

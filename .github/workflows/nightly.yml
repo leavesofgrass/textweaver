@@ -15,6 +15,13 @@
 #   tests run in it with every feature;
 # - soak: `cargo xtask soak`, ten minutes of randomized reading with engine
 #   host kills (xtask/src/soak.rs);
+# - profile: `perf` profiles of `tw info` and of the narration plan of the
+#   10 MB corpus, uploaded as flame graphs and as plain-text lists of the
+#   hottest functions (the list is in the job summary too);
+# - frames: the GUI frame-time probe (`cargo xtask frames`): 200 moves of
+#   the spoken word through the whole widget tree, plain and with every
+#   aid, at 100 and 200 percent; allocations and nodes per move are gated
+#   against xtask/frames-baseline.json, times are reported;
 # - features (weekly, Mondays): `cargo hack --each-feature` on the speech,
 #   formats, and writers crates.
 #
@@ -251,6 +258,106 @@ jobs:
         env:
           MINUTES: ${{ github.event.inputs.soak_minutes || '10' }}
         run: cargo xtask soak --minutes "$MINUTES"
+
+  profile:
+    name: profile (tw info and the 10 MB plan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Function names and lines in the profile: the release profile
+      # strips symbols, so this run keeps them (Cargo.toml is unchanged).
+      CARGO_PROFILE_RELEASE_STRIP: 'false'
+      CARGO_PROFILE_RELEASE_DEBUG: line-tables-only
+    steps:
+      - uses: actions/checkout@v7
+      - name: System libraries and perf
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config \
+            linux-tools-common linux-tools-generic "linux-tools-$(uname -r)"
+          sudo sysctl -w kernel.perf_event_paranoid=1
+          sudo sysctl -w kernel.kptr_restrict=0
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: profile
+      # flamegraph turns perf's samples into an SVG; pinned.
+      - name: flamegraph 0.6.14
+        run: cargo install flamegraph --locked --version 0.6.14
+      - name: Build tw and the bench (release, with symbols)
+        run: |
+          cargo build --locked --release -p textweaver-cli --bin tw
+          cargo build --locked --release -p xtask --features bench
+      # The plan run writes the corpora, the 10 MB one among them.
+      - name: Profile the 10 MB narration plan
+        run: |
+          mkdir -p profile
+          perf record -F 999 -g -o profile/plan.data -- \
+            target/release/xtask bench-run --profile-plan --only md-10mb
+          perf report -i profile/plan.data --stdio --no-children --sort symbol \
+            -g none --percent-limit 0.5 > profile/plan-top.txt
+          flamegraph --perfdata profile/plan.data -o profile/plan.svg
+      - name: Profile tw info on the 10 MB corpus
+        run: |
+          perf record -F 999 -g -o profile/tw-info.data -- \
+            target/release/tw info target/bench-corpus/md-10mb.md
+          perf report -i profile/tw-info.data --stdio --no-children --sort symbol \
+            -g none --percent-limit 0.5 > profile/tw-info-top.txt
+          flamegraph --perfdata profile/tw-info.data -o profile/tw-info.svg
+      # The flame graphs are pictures; the same profile as a list, in
+      # words, in the job summary and the artifact.
+      - name: The hottest functions, in words
+        run: |
+          for name in plan tw-info; do
+            {
+              echo "## Hottest functions: $name"
+              echo
+              grep -E '^ +[0-9.]+%' "profile/$name-top.txt" | head -25 | sed 's/^ */- /'
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: profile
+          path: |
+            profile/*.svg
+            profile/*-top.txt
+          retention-days: 30
+
+  frames:
+    name: GUI frame times (report)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y -qq --no-install-recommends \
+            libasound2-dev libespeak-ng-dev libspeechd-dev libfontconfig1-dev \
+            libxkbcommon-x11-0 libxcursor1 libxrandr2 libxi6 libx11-xcb1 \
+            libdbus-1-dev libatspi2.0-dev libx11-xcb-dev pkg-config
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: frames
+      # No window opens: the probe runs the widget passes headless.
+      # Eight runs of 200 moves; the counts are gated once the baseline
+      # file has a Linux entry, the times are reported.
+      - name: Frame times, plain and with every aid, at 100 and 200 percent
+        run: |
+          set -o pipefail
+          cargo xtask frames --json frames.json --baseline xtask/frames-baseline.json | tee frames.txt
+          {
+            echo "## GUI frame times"
+            echo
+            sed 's/^/- /' frames.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: frames
+          path: frames.json
+          retention-days: 90
 
   features:
     name: each feature (weekly)
