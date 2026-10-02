@@ -71,6 +71,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licences.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
 - [Roadmap](roadmap.md): what works today, what is being built next, and what is planned.
+- [Research for the next waves](dev/research/README.md): the research reports and the wave plan for alpha.8, alpha.9, and later: performance, speech engines, use cases, design, and law and standards.
 - [Star features not yet planned](star-gaps.md): Star features with their status in textweaver.
 - [CHANGELOG.md](../CHANGELOG.md): what changed in each release.
 
