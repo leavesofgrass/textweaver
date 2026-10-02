@@ -9,6 +9,12 @@
 //! prints the words as they are committed, one burst per line on standard
 //! error; the finished text still goes to standard output. With `--file`,
 //! the recording is played in at speaking pace, never aloud.
+//!
+//! Wave 8 (W8a-w): `tw dictate download [--yes]` downloads the Whisper
+//! model chosen in the settings (base.en by default), an optional
+//! component, after saying its size and license. When `tw dictate` finds
+//! no model it offers the same download (`--yes` answers for you), and
+//! goes on with it.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -27,7 +33,14 @@ use textweaver_dictation::{
 
 /// Arguments for `tw dictate`.
 #[derive(clap::Args, Debug)]
+#[command(args_conflicts_with_subcommands = true)]
 pub struct Args {
+    /// `download`: get the dictation model.
+    #[command(subcommand)]
+    pub action: Option<Action>,
+    /// When the in-process model is missing, download it without asking.
+    #[arg(long)]
+    pub yes: bool,
     /// Transcribe this audio file instead of the microphone.
     #[arg(long)]
     pub file: Option<PathBuf>,
@@ -80,6 +93,90 @@ pub struct Args {
     /// Print JSON.
     #[arg(long)]
     pub json: bool,
+}
+
+/// What `tw dictate` does besides dictating.
+#[derive(clap::Subcommand, Debug)]
+pub enum Action {
+    /// Download the Whisper model for dictation, after saying its size and license.
+    Download {
+        /// The model: base.en (the default, or the one chosen in the settings) or small.en.
+        #[arg(long)]
+        model: Option<String>,
+        /// Download without asking.
+        #[arg(long)]
+        yes: bool,
+    },
+}
+
+/// The model component for `name` (`base.en`, `small.en`, or a
+/// component id), else the one chosen in the settings.
+fn model_component(
+    name: Option<&str>,
+    settings: &textweaver_app::store::Settings,
+) -> anyhow::Result<textweaver_app::components::Component> {
+    use textweaver_app::components::{DICTATION_MODELS, Registry, dictation_model_id};
+    let id = match name {
+        Some(n) if n.starts_with("whisper-") => n.to_owned(),
+        Some(n) => format!("whisper-{n}"),
+        None => dictation_model_id(settings).to_owned(),
+    };
+    if !DICTATION_MODELS.contains(&id.as_str()) {
+        anyhow::bail!(
+            "{id} is not a dictation model textweaver downloads; the models are {}",
+            DICTATION_MODELS.join(", ")
+        );
+    }
+    Registry::builtin()
+        .get(&id)
+        .cloned()
+        .with_context(|| format!("{id} is not in the components registry"))
+}
+
+/// `tw dictate download`.
+fn download_model(model: Option<&str>, yes: bool) -> anyhow::Result<()> {
+    let paths = Paths::platform().context("no data folder for this user")?;
+    let settings = textweaver_app::store::SettingsStore::new(paths.clone())
+        .load()
+        .0;
+    let c = model_component(model, &settings)?;
+    let dir = textweaver_app::components::component_dir(&c, &paths.data_dir);
+    super::components::download(&c, &dir, &settings, yes)
+}
+
+/// When the in-process model is missing and nothing else was asked for,
+/// offers to download it: with `--yes`, or when standard input is a
+/// terminal and the answer is yes. Returns its folder once it is there.
+fn offer_missing_model(args: &Args) -> anyhow::Result<Option<PathBuf>> {
+    use std::io::IsTerminal as _;
+    if args.engine.is_some() || args.program.is_some() || args.model_dir.is_some() {
+        return Ok(None);
+    }
+    let Ok(paths) = Paths::platform() else {
+        return Ok(None);
+    };
+    let settings = textweaver_app::store::SettingsStore::new(paths.clone())
+        .load()
+        .0;
+    let Ok(c) = model_component(args.model.as_deref(), &settings) else {
+        return Ok(None);
+    };
+    let dir = textweaver_app::components::component_dir(&c, &paths.data_dir);
+    if RtenWhisperFiles::in_dir(&dir).is_ok() {
+        return Ok(Some(dir));
+    }
+    if !args.yes && !std::io::stdin().is_terminal() {
+        eprintln!(
+            "The Whisper model is not in {}. tw dictate download gets it ({}, license {}).",
+            dir.display(),
+            c.size_text(),
+            c.license
+        );
+        return Ok(None);
+    }
+    eprintln!("Dictation needs the Whisper model.");
+    super::components::download(&c, &dir, &settings, args.yes)?;
+    Ok(RtenWhisperFiles::in_dir(&dir).is_ok().then_some(dir))
 }
 
 #[derive(Serialize)]
@@ -316,10 +413,16 @@ fn run_rten(args: &Args, dir: PathBuf) -> anyhow::Result<()> {
 
 /// Runs `tw dictate`.
 pub fn run(args: Args) -> anyhow::Result<()> {
+    if let Some(Action::Download { model, yes }) = &args.action {
+        return download_model(model.as_deref(), *yes);
+    }
     if args.list {
         return list(args.json);
     }
     if let Some(dir) = rten_model_dir(&args) {
+        return run_rten(&args, dir);
+    }
+    if let Some(dir) = offer_missing_model(&args)? {
         return run_rten(&args, dir);
     }
     if args.live {
