@@ -18,8 +18,10 @@
 # - profile: `perf` profiles of `tw info` and of the narration plan of the
 #   10 MB corpus, uploaded as flame graphs and as plain-text lists of the
 #   hottest functions (the list is in the job summary too);
-# - frames: the GUI frame-time probe (`cargo xtask frames`), the median
-#   and worst frame while the spoken word moves, reported, not gated;
+# - frames: the GUI frame-time probe (`cargo xtask frames`): 200 moves of
+#   the spoken word through the whole widget tree, plain and with every
+#   aid, at 100 and 200 percent; allocations and nodes per move are gated
+#   against xtask/frames-baseline.json, times are reported;
 # - features (weekly, Mondays): `cargo hack --each-feature` on the speech,
 #   formats, and writers crates.
 #
@@ -340,9 +342,12 @@ jobs:
         with:
           key: frames
       # No window opens: the probe runs the widget passes headless.
-      - name: Frame times while reading the 1 MB corpus for 30 seconds
+      # Eight runs of 200 moves; the counts are gated once the baseline
+      # file has a Linux entry, the times are reported.
+      - name: Frame times, plain and with every aid, at 100 and 200 percent
         run: |
-          cargo xtask frames --seconds 30 --json frames.json | tee frames.txt
+          set -o pipefail
+          cargo xtask frames --json frames.json --baseline xtask/frames-baseline.json | tee frames.txt
           {
             echo "## GUI frame times"
             echo

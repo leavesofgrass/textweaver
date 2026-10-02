@@ -131,16 +131,66 @@ Performance is a requirement ([ADR-0001](../adr/0001-workspace-and-dependencies.
 cargo xtask bench
 ```
 
-It times opening, first speech, navigation while reading, search, and entering edit mode on generated corpora of 1 MB and 10 MB, a 50,000-item list, and a 1 MB single line, and reports peak memory and the number of allocations. It also times the start of `tw --version`, `tw text`, `tw info`, and `tw backends` (`cargo xtask startup` runs only those). `--quick` skips the 10 MB corpus, `--only NAME` runs one measurement, `--file PATH` adds your own document, and `--json PATH` writes the numbers. The September 2026 audit (kept outside the repository) describes the harness.
+It times opening, first speech, navigation while reading, search, and entering edit mode on generated corpora of 1 MB and 10 MB, a 50,000-item list, and a 1 MB single line, and reports peak memory and the number of allocations. It also times the start of `tw --version`, `tw text`, `tw info`, and `tw backends` (`cargo xtask startup` runs only those). `--quick` skips the 10 MB corpus, `--only NAME` runs one measurement, `--file PATH` adds your own document, and `--json PATH` writes the numbers. The September 2026 audit (kept outside the repository) describes the harness, and `xtask/src/bench.rs` lists every measurement.
 
-To compare with an earlier run, keep its JSON and pass it back:
+Per document it also measures, each as one line of the report and one JSON key:
+
+- **Segmentation:** every sentence and every word through `Units`, on their own (`sentences_ms`, `words_ms`, with peak heap and allocations). The plan's number hides them.
+- **Normalization:** the first 2,000 utterances of the plan through the default pipeline (`normalize_ms`, and `normalize_pipeline_ms` to build it).
+- **An edit on the loaded document:** one insert in the middle with the markers kept (`apply_ms`), then the blank-line table rebuilt (`blank_lines_ms`).
+- **Stop to speak:** Stop, then Read from cursor, until the backend is handed the first utterance, 20 times (`stop_to_speak`): the reader's share of a restart.
+- **Stop to first audio:** the same on the recording backend playing in real time, until its first audio starts, as the speech service stamps it (`stop_to_first_audio`; `stop_to_first_audio_service` is the speech thread's share). The speech service records when each reading first sounds (`SpeechService::first_audio`).
+
+**Stop to first audio with a real engine.** `--engine piper` or `--engine sapi` (Windows) adds the same measurement with that engine, playing to a silent output that takes samples in real time, so nothing is heard; the numbers go in the `first-audio` entry. Piper needs `TEXTWEAVER_PIPER_VOICES` naming a folder of installed voices, and is timed whenever that is set; nothing is ever downloaded, and with no voices the engine is skipped with a line that says why. The target, from the [next waves plan](research/next-waves-plan.md#principles-for-the-next-waves), is under 150 ms on a 2-core laptop with Piper.
+
+**Pathological inputs.** One generated file per loader (plain text, Markdown, HTML, LaTeX, RTF, email, MHTML, CSV, JSON, notebooks, flat ODT, SVG, MathML, DOCX, EPUB, and PDF), each holding a 512 KB token with nothing to break on, lists nested 200 deep (or the format's nearest thing: RTF groups, JSON arrays, SVG groups, MathML rows), a 2,000-row table, and a 1 MB line. Each must load and plan within a ceiling, 10 seconds by default (`--ceiling-s`), or the run fails; so does a loader that panics. A loader that refuses a file with an error passes, and says so. The fuzz targets catch crashes; this catches slowness, such as Star's 34 seconds to wrap one 5 MB token. `--no-pathological` skips them; `--only pathological` runs only them. The generators are in `xtask/src/pathological.rs`. The first run found one: in MathML, a long token inside 200 nested rows takes time that grows faster than its length (8 KB 0.1 s, 32 KB 0.7 s, 512 KB 189 s). Until the loader is fixed, the MathML input keeps its long token beside the nested rows; put it back inside with the fix.
+
+### The gate: a two-way ratchet
+
+CI runs `cargo xtask bench --quick --baseline xtask/bench-baseline.json` on every pull request and every push to main (`bench.yml`). The baseline is a committed file with one entry per platform; each entry is a whole report, with the date, the commit, and why it was written. The ratchet (`xtask/src/ratchet.rs`):
+
+- **Memory** (peak heap and allocation counts) fails when it grows more than 25 percent over the baseline, and also when it falls more than 25 percent below it. A gain must be written into the baseline, or the floor goes stale and a later regression hides under it.
+- **Times** fail when they grow more than 50 percent over the baseline, but only against an entry measured on the runner type the gate runs on (its `gate_times` is true), only above 5 ms, and only by more than 2 ms. Times that improve are reported, never failed: a quiet runner is not a change in the code. Disk writes, process starts, document identity, and the pathological inputs (which have their ceiling) are reported only.
+- Numbers too small to matter are not gated: peak heap under 1 MB, fewer than 5,000 allocations, or growth smaller than those.
+
+The limits are in the baseline file's `policy`, so changing them is a commit that says why. Each line of the report puts the document first and the change in words: "md-1mb.md: load_allocs grew 31 percent, from 67862 to 88900; the limit is 25 percent."
+
+**A failed run never becomes the baseline.** Only an explicit update writes it:
+
+```bash
+cargo xtask bench --quick --update-baseline --reason "the plan reuses its buffers"
+```
+
+It writes this platform's entry and keeps the others. It refuses without a reason, and refuses off `main` when the platform already has an entry; a platform's first entry may be written from any branch. Commit the file with a message that says why the numbers moved. The CI runner's own entry comes from running "Bench" by hand on main with "update the baseline" ticked and a reason: it adds `--gate-times` and uploads the new file as the `bench-baseline` artifact, to commit. Until that entry exists, the Linux entry in the file comes from the development container, with `gate_times` false: memory is gated, times are reported.
+
+To compare two local runs, as before, keep a report and pass it back; a plain report as `--baseline` is the old one-way check, which fails when memory grew more than `--max-ratio` times (2 by default):
 
 ```bash
 cargo xtask bench --quick --json before.json
 cargo xtask bench --quick --baseline before.json --max-ratio 2
 ```
 
-The comparison fails when a peak heap or an allocation count grew more than `--max-ratio` times (2 by default). Those numbers barely change from run to run; times do, so times are only reported. CI runs this on every pull request against main's numbers (`bench.yml`).
+### GUI frame times
+
+```bash
+cargo xtask frames --json frames.json
+cargo xtask frames --baseline xtask/frames-baseline.json
+```
+
+It builds the Xilem GUI in release mode with the `alloc-count` feature (a counting allocator, never in a package) and runs `textweaver-xilem --measure-frames 200` eight times: on the 1 MB corpus and on the 1 MB one-line corpus, plain and with every reading aid on (bionic reading, difficult words, syllables, the ruler with its band, text spacing, and RSVP), at 100 and 200 percent. Each run reads aloud on the silent paced backend at 900 words per minute, with no window on screen, and measures 200 moves of the spoken word the way the window makes them: the driver's refresh through `gui::Refresher` (the same `refresh_host` the window runs, which sends the spoken word and the sentence band), then Masonry's layout, paint, and accessibility passes over the whole widget tree. Per run it reports, in words, the median, 95th percentile, and worst move, the median refresh and passes, and the allocations and accessibility nodes per move; it also says how many moves had the sentence band.
+
+The counts do not move with the machine's load, so they are what the gate checks: `--baseline xtask/frames-baseline.json` runs the same two-way ratchet as the bench on `moves_allocs` and `moves_nodes` (25 percent either way), and `--update-baseline --reason TEXT` writes this platform's entry. Times are reported; on a busy machine they move by 30 percent or more. `--max-worst MS` fails any run whose worst move is over a ceiling; ADR-0027's 30 ms is the hard one. `--quick` runs the 1 MB corpus at 100 percent only. Not included: rasterizing on the GPU, the UI thread's wait for it, and the platform's accessibility adapter; those are measured by hand in a real window (below). The nightly job runs it and puts the lines in its summary.
+
+In a real window, `--log` (or `--log-file PATH`) now writes:
+
+- the startup phases, each as "startup: PHASE at N ms" from the start of `run`: settings and app, the color-scheme probe (when it runs), the widget tree, the event loop, the window shown at its first tick, and the document open;
+- every 200 highlight moves, one line with the driver's refresh time per move: median, 95th percentile, and worst. This replaces a pushed zero that nothing read.
+
+The speech service writes, at debug level (`--log debug` in the terminal reader), one line every 200 words that the audio clock scheduled: how late they fired (median and 95th percentile) and how far apart the speech thread's timer steps were. On Windows the 10 ms waits round up to the system timer tick, so a word can light up a tick late; this line measures it before anything changes.
+
+### The nightly profile
+
+The nightly job `profile` records `perf` profiles on Linux of `tw info` on the 10 MB corpus and of the narration plan of the same corpus (`cargo xtask bench-run --profile-plan --only md-10mb`, which only loads and plans), built in release mode with line tables and symbols kept. The `profile` artifact holds a flame graph of each (made by flamegraph 0.6.14, pinned) and, because a flame graph is a picture, the same profile as a plain-text list of the hottest functions; the first 25 lines of each list are in the job summary.
 
 `cargo xtask soak --minutes N` reads the 10 MB corpus with random navigation, pauses, rate changes, and edits, then from the top to the end, while a second reader's engine host is killed at random. It checks that the highlight only moves forward, reading finishes, memory stays level, and no engine host is left running. The nightly job runs it for 10 minutes.
 
