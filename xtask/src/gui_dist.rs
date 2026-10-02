@@ -21,7 +21,9 @@
 //! the terminal programs for the platform (espeak-ng, speech-dispatcher,
 //! and Omnivox on Linux; Omnivox elsewhere), for each engine feature the GUI
 //! crate declares. A feature the crate does not declare yet is named in the
-//! output and left out, so the package still builds.
+//! output and left out, so the package still builds. `--no-screenshot`
+//! builds it without the screenshot harness (see [`SCREENSHOT`] for why
+//! the package keeps it for now).
 //!
 //! Then it packages the folder:
 //!
@@ -34,6 +36,9 @@
 //! - Linux: a `.tar.gz`, and an AppImage of its own (with its `.zsync`)
 //!   when `appimagetool` and its pinned runtime are found, as
 //!   `cargo xtask appimage` finds them.
+//!
+//! Each package is checked against the size budget (`sizes.rs`), as the
+//! terminal packages are.
 //!
 //! The names end in `-gui` (`textweaver-0.1.0-linux-x86_64-gui.AppImage`)
 //! so that no pattern for the terminal packages matches them: not the
@@ -77,7 +82,17 @@ const MANIFEST: &str = "crates/textweaver-xilem/Cargo.toml";
 struct Args {
     universal: bool,
     out: Option<PathBuf>,
+    /// Leave the screenshot harness ([`SCREENSHOT`]) out of the program.
+    no_screenshot: bool,
 }
+
+/// The GUI feature that draws `--screenshot` and `--review-screenshots`
+/// with Vello's CPU renderer (`masonry_testing`, with `image`, PNG, and
+/// `oxipng`). It is a default feature, and the package keeps it for now:
+/// the release workflow's GUI checks draw a `--screenshot` with the
+/// packaged program on every platform, the only check that it renders
+/// where the runners have no usable GPU. `--no-screenshot` leaves it out.
+const SCREENSHOT: &str = "screenshot";
 
 fn parse(args: &[String]) -> anyhow::Result<Args> {
     let mut out = Args::default();
@@ -85,9 +100,10 @@ fn parse(args: &[String]) -> anyhow::Result<Args> {
     while let Some(a) = it.next() {
         match a.as_str() {
             "--universal" => out.universal = true,
+            "--no-screenshot" => out.no_screenshot = true,
             "--out" => out.out = Some(PathBuf::from(it.next().context("--out needs a directory")?)),
             other => bail!(
-                "unknown argument {other} (usage: cargo xtask gui-dist [--universal] [--out DIR])"
+                "unknown argument {other} (usage: cargo xtask gui-dist [--universal] [--no-screenshot] [--out DIR])"
             ),
         }
     }
@@ -118,6 +134,52 @@ fn declared_features(manifest: &str) -> Vec<String> {
         }
     }
     out
+}
+
+/// The features in a manifest's `default = [...]` line (on one line).
+fn default_features(manifest: &str) -> Vec<String> {
+    let mut in_features = false;
+    for line in manifest.lines() {
+        let line = line.trim();
+        if line.starts_with('[') && !line.starts_with("[\"") {
+            in_features = line == "[features]";
+            continue;
+        }
+        let Some((name, value)) = line.split_once('=') else {
+            continue;
+        };
+        if in_features && name.trim() == "default" {
+            return value
+                .trim()
+                .trim_start_matches('[')
+                .trim_end_matches(']')
+                .split(',')
+                .map(|f| f.trim().trim_matches('"').to_owned())
+                .filter(|f| !f.is_empty())
+                .collect();
+        }
+    }
+    Vec::new()
+}
+
+/// The `--features` list and whether to pass `--no-default-features`:
+/// the engine features, and with `no_screenshot` the default features but
+/// [`SCREENSHOT`], so the package keeps every other default.
+fn gui_features(
+    defaults: &[String],
+    engines: &[String],
+    no_screenshot: bool,
+) -> (Vec<String>, bool) {
+    if !no_screenshot {
+        return (engines.to_vec(), false);
+    }
+    let mut out: Vec<String> = defaults
+        .iter()
+        .filter(|f| *f != SCREENSHOT)
+        .map(|f| format!("{}/{f}", PACKAGE.0))
+        .collect();
+    out.extend(engines.iter().cloned());
+    (out, true)
 }
 
 /// The platform's engines (as in the terminal package) split into those
@@ -221,6 +283,11 @@ pub fn run() -> anyhow::Result<()> {
             missing.join(", ")
         );
     }
+    let (features, no_defaults) =
+        gui_features(&default_features(&manifest), &features, args.no_screenshot);
+    if args.no_screenshot {
+        println!("Left out: the screenshot harness (--no-screenshot)");
+    }
     let build = |target: Option<&str>| -> anyhow::Result<()> {
         let mut cmd = dist::cargo(&root, &build_dir);
         cmd.args([
@@ -233,6 +300,9 @@ pub fn run() -> anyhow::Result<()> {
             "--bin",
             PACKAGE.1,
         ]);
+        if no_defaults {
+            cmd.arg("--no-default-features");
+        }
         if !features.is_empty() {
             cmd.arg("--features").arg(features.join(","));
         }
@@ -287,7 +357,7 @@ pub fn run() -> anyhow::Result<()> {
     dist::stage_notices(&root, &stage)?;
     dist::check_notices(&stage)?;
 
-    if cfg!(target_os = "macos") {
+    let packages = if cfg!(target_os = "macos") {
         let app = stage.join("textweaver.app");
         let contents = app.join("Contents");
         fs::create_dir_all(contents.join("MacOS"))?;
@@ -307,10 +377,12 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(&zip),
         )?;
         println!("package {}", zip.display());
+        vec![zip]
     } else if cfg!(windows) {
         let zip = out.join(format!("{name}.zip"));
         dist::zip_dir(&stage, &name, &zip)?;
         println!("package {}", zip.display());
+        vec![zip]
     } else {
         let tgz = out.join(format!("{name}.tar.gz"));
         dist::run_tool(
@@ -322,9 +394,10 @@ pub fn run() -> anyhow::Result<()> {
                 .arg(&name),
         )?;
         println!("package {}", tgz.display());
-        build_appimage(&root, &stage, &out, &name)?;
-    }
-    Ok(())
+        let image = build_appimage(&root, &stage, &out, &name)?;
+        std::iter::once(tgz).chain(image).collect()
+    };
+    crate::sizes::check(&root, &packages)
 }
 
 /// Lays out the GUI's AppDir: the package under [`APPDIR_LIB`], `AppRun`,
@@ -359,13 +432,19 @@ fn build_appdir(root: &Path, package: &Path, appdir: &Path) -> anyhow::Result<()
 }
 
 /// The GUI's own AppImage, when appimagetool is available (the release
-/// workflow builds in the `docker/appimage` image, which has it).
-fn build_appimage(root: &Path, stage: &Path, out: &Path, name: &str) -> anyhow::Result<()> {
+/// workflow builds in the `docker/appimage` image, which has it). Returns
+/// the AppImage, or `None` when appimagetool was not found.
+fn build_appimage(
+    root: &Path,
+    stage: &Path,
+    out: &Path,
+    name: &str,
+) -> anyhow::Result<Option<PathBuf>> {
     let Some(tool) = appimage::find_tool() else {
         println!(
             "no AppImage: set APPIMAGETOOL (docker/appimage/fetch-tools.sh fetches it and its runtime)"
         );
-        return Ok(());
+        return Ok(None);
     };
     let runtime = appimage::find_runtime(&tool)?;
     let appdir = out.join("textweaver-gui.AppDir");
@@ -399,7 +478,7 @@ fn build_appimage(root: &Path, stage: &Path, out: &Path, name: &str) -> anyhow::
     if zsync.is_file() {
         println!("package {}", zsync.display());
     }
-    Ok(())
+    Ok(Some(image))
 }
 
 #[cfg(test)]
@@ -435,7 +514,46 @@ mod tests {
     #[test]
     fn the_gui_manifest_declares_features() {
         let manifest = fs::read_to_string(eci::root().join(MANIFEST)).unwrap();
-        assert!(declared_features(&manifest).iter().any(|f| f == "default"));
+        let declared = declared_features(&manifest);
+        assert!(declared.iter().any(|f| f == "default"));
+        let defaults = default_features(&manifest);
+        for f in [SCREENSHOT, "renderer-vello", "publish"] {
+            assert!(defaults.iter().any(|d| d == f), "{f} not in {defaults:?}");
+        }
+        // Every default is a declared feature, so the list without the
+        // harness names only real features.
+        for d in &defaults {
+            assert!(declared.contains(d), "{d} is not declared");
+        }
+    }
+
+    #[test]
+    fn the_screenshot_harness_can_be_left_out() {
+        let defaults: Vec<String> = ["screenshot", "renderer-vello", "opus"]
+            .map(String::from)
+            .to_vec();
+        let engines = vec!["textweaver-xilem/omnivox".to_owned()];
+        // By default the package keeps the defaults, the harness included.
+        assert_eq!(
+            gui_features(&defaults, &engines, false),
+            (engines.clone(), false)
+        );
+        let (f, no_defaults) = gui_features(&defaults, &engines, true);
+        assert!(no_defaults);
+        assert_eq!(
+            f,
+            [
+                "textweaver-xilem/renderer-vello",
+                "textweaver-xilem/opus",
+                "textweaver-xilem/omnivox"
+            ]
+        );
+        assert_eq!(
+            default_features("[features]\ndefault = [\"a\", \"b\"]\n[dependencies]\ndefault = 1\n"),
+            ["a", "b"]
+        );
+        assert!(default_features("[dependencies]\ndefault = [\"a\"]\n").is_empty());
+        assert!(parse(&["--no-screenshot".into()]).unwrap().no_screenshot);
     }
 
     #[test]
