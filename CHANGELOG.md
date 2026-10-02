@@ -4,6 +4,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Speech: clinical and scientific text
+
+- **Identifiers are read digit by digit.** A number after CPT, PMID, NCT, ZIP, DOI, ISBN, or phone (also telephone, tel, and fax), and a US phone number such as "503-555-0123", is read as digits: "PMID 31769816" is "PMID three one seven six nine eight one six", where it was "thirty-one million ...". The highlight follows each digit.
+- **Error-prone medical abbreviations are spelled, never expanded.** The abbreviations on The Joint Commission's "Do Not Use" list and the ISMP list of error-prone abbreviations (QD, QOD, U, IU, MS, MgSO4, cc, SC, SQ, HS, the ear and eye abbreviations, TPA, HCTZ, and others) are read letter by letter, "Q D", and no expansion, built in or your own, can replace them. "µg" is read "micrograms".
+- **Symbols outside math are named:** Greek letters ("TNF-α" is "TNF alpha"), the micro sign, the minus sign, "⇌" ("in equilibrium with"), arrows, and powers of ten ("× 10^9" is "times ten to the ninth"). Greek letters are named at every punctuation level.
+- **With Eloquence too.** The identifier rule and the error-prone list also apply to engines that read numbers and abbreviations themselves.
+
 ### For contributors
 
 - **Research for the next waves.** `docs/dev/research/` holds the research reports and the wave plan for alpha.8, alpha.9, and later: a performance audit, speech engines and runtimes, text-to-speech use cases for students with disabilities, health sciences workflows, GUI and visual design, and law and standards. Nothing in it is a decision; decisions stay in the ADRs.
