@@ -64,3 +64,61 @@ fn say_status_previews_the_focused_row() {
         "File browser fixtures. These files let you try the file browser without your own documents."
     );
 }
+
+/// W8a-f: the browse key in a prompt for a path opens the file browser,
+/// and the file chosen fills the prompt for Enter to confirm; Escape in
+/// the browser goes back to the prompt as it was.
+#[test]
+fn the_browse_key_fills_a_prompt_for_a_path() {
+    use textweaver_app::path_prompt::browse_key;
+    use textweaver_app::{Command, PromptPurpose};
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("notes.md"), "# Notes\n\nCrows.\n").unwrap();
+    std::fs::write(dir.path().join("mine.toml"), "[speech]\n").unwrap();
+    let mut app = App::new(AppConfig::for_tests());
+    app.open(&dir.path().join("notes.md")).unwrap();
+    let folder = app
+        .session()
+        .and_then(|s| s.doc.meta.path.clone())
+        .and_then(|p| p.parent().map(Path::to_path_buf))
+        .unwrap();
+    let mut tui = Tui::with_color_support(app, ColorSupport::NoColor);
+    tui.app_mut()
+        .dispatch(Command::Action(ActionId::ImportSettings));
+    // The prompt names the key, and the hint fits 40 Braille cells.
+    let hint = format!("{} to browse.", browse_key());
+    assert!(hint.chars().count() <= 40);
+    assert!(
+        tui.app().status_text().ends_with(&hint),
+        "{}",
+        tui.app().status_text()
+    );
+    tui.handle_key(plain(KeyCode::Char('x')));
+    tui.handle_key(key_event(&browse_key()));
+    assert!(tui.app().list_model().is_some());
+    assert!(tui.app().prompt_model().is_none());
+    // Escape: back to the prompt, with what was typed.
+    tui.handle_key(plain(KeyCode::Esc));
+    let m = tui.app().prompt_model().expect("the prompt again");
+    assert_eq!(
+        (m.purpose, m.text()),
+        (PromptPurpose::ImportSettings, "x".to_owned())
+    );
+    // Again, into the document's folder, and the file chosen.
+    tui.handle_key(key_event(&browse_key()));
+    tui.handle_key(plain(KeyCode::Enter));
+    let n = tui
+        .app()
+        .list_model()
+        .unwrap()
+        .items
+        .iter()
+        .position(|i| i.starts_with("mine.toml,"))
+        .unwrap();
+    tui.app_mut().dispatch(Command::ListFocus(n));
+    tui.handle_key(plain(KeyCode::Enter));
+    let m = tui.app().prompt_model().expect("the prompt, filled");
+    assert_eq!(m.purpose, PromptPurpose::ImportSettings);
+    assert_eq!(PathBuf::from(m.text()), folder.join("mine.toml"));
+    assert_eq!(tui.app().status_text(), "mine.toml chosen. Enter confirms.");
+}

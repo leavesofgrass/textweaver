@@ -253,7 +253,9 @@ impl Tui {
     /// Wraps an app, drawing at a given color level (tests; at run time
     /// [`ColorSupport::detect`] also honors `TEXTWEAVER_COLOR` and
     /// `NO_COLOR`).
-    pub fn with_color_support(app: App, support: ColorSupport) -> Self {
+    pub fn with_color_support(mut app: App, support: ColorSupport) -> Self {
+        // F4 in a prompt for a path browses for it, and the prompt says so.
+        app.set_prompt_browse_key(Some(textweaver_app::path_prompt::browse_key()));
         let theme = Theme::from_theme(&app.reading_theme(), support).with_marks(&app.mark_colors());
         let theme_key = app.reading_theme_key();
         Tui {
@@ -662,6 +664,11 @@ impl Tui {
     /// A key in the prompt: the app's prompt model handles it (Wave 3).
     fn minibuffer_key(&mut self, k: KeyEvent) {
         let ctrl = k.modifiers.contains(KeyModifiers::CONTROL);
+        // The browse key (F4): the file browser chooses the path.
+        if chord(&k) == Some(textweaver_app::path_prompt::browse_key()) {
+            self.dispatch(Command::PromptKey(PromptKey::Browse));
+            return;
+        }
         let key = match k.code {
             KeyCode::Enter => PromptKey::Enter,
             KeyCode::Esc => PromptKey::Escape,
