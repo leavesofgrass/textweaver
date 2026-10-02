@@ -407,16 +407,7 @@ impl Document {
     /// first use, so paragraph boundaries are a binary search away even in a
     /// multi-megabyte paragraph.
     pub fn blank_lines(&self) -> &[usize] {
-        self.blank_lines.get_or_init(|| {
-            let n = self.line_count();
-            self.text
-                .lines()
-                .take(n)
-                .enumerate()
-                .filter(|(_, l)| l.chars().all(char::is_whitespace))
-                .map(|(i, _)| i)
-                .collect()
-        })
+        self.blank_lines.get_or_init(|| self.all_blank_lines())
     }
 
     /// The paragraph (run of non-blank lines) containing line `line`, as its
@@ -436,16 +427,86 @@ impl Document {
     }
 
     /// Applies an edit to the text, shifts the markers (keeping them sorted),
-    /// and drops the display index and marker tables.
+    /// updates the blank-line table if it was built, and drops the display
+    /// index and marker tables.
     pub fn apply(&mut self, edit: &Edit) -> Result<EditOutcome, CoreError> {
+        let old_lines = self.text.len_lines();
         let (outcome, _inverse) = edit.apply_to_rope(&mut self.text)?;
-        // Shifting is monotone, but collapsed ranges can reorder ties.
         shift_markers(&mut self.markers, &outcome);
         self.display = OnceCell::new();
         self.tables = OnceCell::new();
-        self.blank_lines = OnceCell::new();
         self.ends_with_break = ends_with_break(&self.text);
+        if let Some(blanks) = self.blank_lines.take() {
+            let blanks = self.update_blank_lines(blanks, &outcome, old_lines);
+            self.blank_lines = OnceCell::from(blanks);
+        }
         Ok(outcome)
+    }
+
+    /// The blank-line table after an edit, from the one before it: only the
+    /// lines the edit reached are looked at again (typing on 10 MB cost a
+    /// full rebuild, 18 ms, at every keystroke that needed the table).
+    ///
+    /// The text before the edit's start is unchanged, and so is the text
+    /// from just past its end, so every line before the one holding the
+    /// start (less one, for a `\r` the edit joins to a `\n`) keeps its
+    /// number, and every line past the one holding the char after the edit
+    /// moves by the change in the line count.
+    fn update_blank_lines(
+        &self,
+        mut blanks: Vec<usize>,
+        outcome: &EditOutcome,
+        old_lines: usize,
+    ) -> Vec<usize> {
+        let len = self.text.len_chars();
+        let new_lines = self.text.len_lines();
+        let first = self
+            .text
+            .char_to_line(outcome.inserted.start.0.min(len))
+            .saturating_sub(1);
+        let new_last = self
+            .text
+            .char_to_line(outcome.inserted.end.0.saturating_add(1).min(len));
+        // Lines past `new_last` are the old lines past `old_last`.
+        let Some(old_last) = (new_last + old_lines).checked_sub(new_lines) else {
+            return self.all_blank_lines();
+        };
+        if old_last < first {
+            return self.all_blank_lines();
+        }
+        let lo = blanks.partition_point(|&l| l < first);
+        let hi = blanks.partition_point(|&l| l <= old_last);
+        let count = self.line_count();
+        let fresh: Vec<usize> = (first..=new_last.min(count.saturating_sub(1)))
+            .filter(|&l| l < count && self.line_text_is_blank(l))
+            .collect();
+        let tail = blanks.split_off(hi);
+        blanks.truncate(lo);
+        blanks.extend(fresh);
+        // Every `l` here is past `old_last`.
+        blanks.extend(
+            tail.into_iter()
+                .map(|l| l - old_last + new_last)
+                .filter(|&l| l < count),
+        );
+        blanks
+    }
+
+    /// Every blank line, by scanning the whole text.
+    fn all_blank_lines(&self) -> Vec<usize> {
+        let n = self.line_count();
+        self.text
+            .lines()
+            .take(n)
+            .enumerate()
+            .filter(|(_, l)| l.chars().all(char::is_whitespace))
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// True when line `line` of the rope holds only whitespace.
+    fn line_text_is_blank(&self, line: usize) -> bool {
+        self.text.line(line).chars().all(char::is_whitespace)
     }
 }
 
@@ -593,6 +654,29 @@ mod props {
                     let scan = d.markers().iter().filter(|m| m.kind == kind).count();
                     prop_assert_eq!(d.marker_index().count(kind, None), scan);
                 }
+            }
+        }
+
+        /// The blank-line table an edit updates is the table a full scan
+        /// of the edited text builds, for every kind of line break and
+        /// whitespace, edits that join or split `\r\n`, and edits at the
+        /// ends.
+        #[test]
+        fn updated_blank_lines_match_a_rebuild(
+            text in "[a \\t\\n\\r\\u{2028}\\u{85}\\u{0B}]{0,40}",
+            edits in proptest::collection::vec(
+                (0usize..45, 0usize..45, "[a \\n\\r\\u{2029}]{0,5}"),
+                1..8,
+            ),
+        ) {
+            let mut d = Document::new(DocumentMeta::default(), Rope::from_str(&text), Vec::new());
+            for (a, b, ins) in edits {
+                let _ = d.blank_lines();
+                let len = d.len_chars();
+                let edit = Edit::replace(CharRange::new(a.min(len), b.min(len)), ins);
+                d.apply(&edit).unwrap();
+                let fresh = Document::new(DocumentMeta::default(), d.text().clone(), Vec::new());
+                prop_assert_eq!(d.blank_lines(), fresh.blank_lines());
             }
         }
 
