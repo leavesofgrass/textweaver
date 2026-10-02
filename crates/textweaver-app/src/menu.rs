@@ -1299,9 +1299,11 @@ impl App {
         vec![Effect::Redraw]
     }
 
-    /// True while the next command key is to be described
-    /// ([`what_does_this_key_do`](Self::what_does_this_key_do)).
-    pub(crate) fn describing_next_key(&self) -> bool {
+    /// True while the next command key is to be described (Help, "What
+    /// does this key do?", Shift+F1): a frontend that runs some commands
+    /// itself sends them to [`dispatch`](Self::dispatch) instead, so they
+    /// are described, not run.
+    pub fn describing_next_key(&self) -> bool {
         self.menu.describe_next
     }
 

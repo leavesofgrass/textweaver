@@ -1157,3 +1157,45 @@ fn notes_highlights_and_matches_are_drawn() {
     // They are drawn without a panic.
     let _ = h.render();
 }
+
+/// A document named on the command line that cannot be opened is said as
+/// Ctrl+O says it, with a next step, not as a raw system error
+/// (walkthroughs QW3).
+#[test]
+fn a_missing_startup_file_gets_the_friendly_message() {
+    let dir = tempfile::tempdir().unwrap();
+    let opts = Options {
+        no_speech: true,
+        home: Some(dir.path().to_path_buf()),
+        ..Options::default()
+    };
+    let (mut app, _) = setup::build_app(&opts, Box::new(LogAnnouncer::default()));
+    let missing = dir.path().join("x.md");
+    let err = app.open(&missing).expect_err("there is no x.md");
+    let said = gui::startup_open_message(&Catalog::english(), &missing, &err);
+    assert!(said.starts_with("Could not open x.md: "), "{said}");
+    assert!(said.contains("there is no file named x.md"), "{said}");
+    assert!(said.ends_with("Check the name."), "{said}");
+}
+
+/// Shift+F1, then a command the window runs itself (the font list): the
+/// app describes it, so the window must not run it (walkthroughs QW4).
+#[test]
+fn a_described_window_command_is_described_not_run() {
+    use textweaver_app::Command;
+    use textweaver_app::keymap::ActionId;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let _ = app.dispatch(Command::Action(ActionId::WhatDoesThisKeyDo));
+    assert!(app.describing_next_key());
+    let key = Command::Action(ActionId::ChooseFont);
+    assert_eq!(
+        gui::window_command_of(&key, app.describing_next_key()),
+        None
+    );
+    let _ = app.dispatch(key);
+    assert!(!app.describing_next_key());
+    let said = app.status_text().to_owned();
+    assert!(said.starts_with("Font: "), "{said}");
+    assert!(said.contains("Keys: "), "{said}");
+}

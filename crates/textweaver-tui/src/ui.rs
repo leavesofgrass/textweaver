@@ -16,7 +16,7 @@ use textweaver_app::lexicon::args;
 use textweaver_app::text_util::line_count;
 use textweaver_app::{
     App, CaretMove, Command, Confirm, Effect, ListKey, Mode, PromptKey, chords_text_in,
-    extra_lookup,
+    extra_command, extra_lookup,
 };
 
 use crate::layout::{self, Cells, Row};
@@ -577,8 +577,7 @@ impl Tui {
             return;
         }
         // The extra single keys obey the single-key switch like the keymap.
-        let allowed = self.app.keymap().character_keys() || !c.is_text_input();
-        if allowed && let Some(cmd) = extra_lookup(&c, layer) {
+        if let Some(cmd) = extra_command(self.app.keymap(), &c, layer) {
             self.dispatch(cmd);
             return;
         }

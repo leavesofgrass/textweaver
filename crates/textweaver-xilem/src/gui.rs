@@ -42,7 +42,8 @@ use textweaver_app::lexicon::args;
 use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::store::DocKey;
 use textweaver_app::{
-    App, Command, DocWindow, Effect, Playback, PromptKey, PromptPurpose, WindowChange, extra_lookup,
+    App, AppError, Command, DocWindow, Effect, Playback, PromptKey, PromptPurpose, WindowChange,
+    extra_command,
 };
 
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
@@ -1459,11 +1460,10 @@ impl Gui {
         self.menu_dirty = true;
         // A command, pressed or chosen from a menu (`RunCommand`, which the
         // app keeps as a recent command).
-        let (command, from_menu) = match &cmd {
-            Command::Action(a) => (Some(*a), false),
-            Command::RunCommand(a) => (Some(*a), true),
-            _ => (None, false),
-        };
+        // While a key is being described (Shift+F1), the app describes
+        // it, the window's own commands too.
+        let (command, from_menu) = window_command_of(&cmd, self.app.describing_next_key())
+            .map_or((None, false), |(a, m)| (Some(a), m));
         if let Some(a) = command
             && self.window_command(ctx, a)
         {
@@ -2864,12 +2864,16 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("key {chord} -> {action:?}"));
         }
-        if self.native_menu_key(ctx, &chord, action) {
+        // A key being described (Shift+F1) is the app's, even the menu
+        // key, so it is described rather than entering the menus.
+        let describing = action.is_some() && self.app.describing_next_key();
+        if !describing && self.native_menu_key(ctx, &chord, action) {
             return;
         }
         if let Some(a) = action {
             self.dispatch(ctx, Command::Action(a));
-        } else if let Some(cmd) = extra_lookup(&chord, layer) {
+        } else if let Some(cmd) = extra_command(self.app.keymap(), &chord, layer) {
+            // The extra keys obey the single-key switch, as the keymap does.
             self.dispatch(ctx, cmd);
         }
     }
@@ -2908,13 +2912,7 @@ impl Gui {
                 match self.app.open(path) {
                     Ok(e) => effects.extend(e),
                     Err(e) => {
-                        let said = self.app.catalog().fmt(
-                            "gui-open-failed",
-                            &args![
-                                "path" => path.display().to_string(),
-                                "error" => e.to_string()
-                            ],
-                        );
+                        let said = startup_open_message(&self.app.catalog(), path, &e);
                         self.app
                             .announce_as(&said, Priority::Assertive, Importance::Error);
                     }
@@ -3245,11 +3243,16 @@ impl AppDriver for Gui {
                     let _ = self.app.dispatch(Command::PromptKey(PromptKey::SetText(q)));
                 }
                 (TextAction::Entered(text), _) => {
-                    // In the palette, Enter runs the first match.
+                    // In the palette, Enter runs the match Up and Down
+                    // moved to and announced (the first after typing).
                     let answer = match &self.dialog {
-                        Some(OpenDialog::Palette(ids)) => ids
-                            .first()
-                            .map_or_else(|| text.clone(), |a| a.id().to_owned()),
+                        Some(OpenDialog::Palette(ids)) => {
+                            let selected = ctx
+                                .render_root(self.window_id)
+                                .get_widget_with_tag(LIST)
+                                .map_or(0, |w| w.inner().selected());
+                            palette_answer(ids, selected, text)
+                        }
                         _ => text.clone(),
                     };
                     self.answer(ctx, Command::Answer(answer));
@@ -3548,6 +3551,44 @@ fn exit_watchdog(after: Duration) {
     });
 }
 
+/// What Enter answers in the command palette: the match at `selected`,
+/// the one Up and Down moved to and announced (the first after typing,
+/// since a new filter selects the first). With no matches, the typed
+/// text, which the app answers as it answers any unknown command.
+pub fn palette_answer(ids: &[ActionId], selected: usize, typed: &str) -> String {
+    ids.get(selected)
+        .or_else(|| ids.first())
+        .map_or_else(|| typed.to_owned(), |a| a.id().to_owned())
+}
+
+/// The command the window runs itself for `cmd`, if any, and whether it
+/// came from a menu. While Help, "What does this key do?" waits for a key
+/// (`describing`), a key's command goes to the app, which describes it
+/// instead of the window running it; a menu pick still runs, as in the
+/// terminal.
+pub fn window_command_of(cmd: &Command, describing: bool) -> Option<(ActionId, bool)> {
+    match cmd {
+        Command::Action(_) if describing => None,
+        Command::Action(a) => Some((*a, false)),
+        Command::RunCommand(a) => Some((*a, true)),
+        _ => None,
+    }
+}
+
+/// The message when the document named on the command line cannot be
+/// opened: the same words as Ctrl+O's ("Could not open x.md: there is no
+/// file named x.md in Notes. Check the name."), and the plain error only
+/// when the failure was in saving state, not in the file.
+pub fn startup_open_message(c: &Catalog, path: &std::path::Path, err: &AppError) -> String {
+    match err {
+        AppError::Load(e) => textweaver_app::open_failure_message_in(c, path, e),
+        AppError::Store(e) => c.fmt(
+            "gui-open-failed",
+            &args!["path" => path.display().to_string(), "error" => e.to_string()],
+        ),
+    }
+}
+
 /// Refreshes a test harness or screenshot host from `app`.
 pub fn refresh_for_tests(app: &App, host: &mut impl Host) {
     let mut shown = Shown::default();
@@ -3580,5 +3621,41 @@ impl Refresher {
     pub fn refresh(&mut self, app: &App, host: &mut impl Host) -> Option<CharRange> {
         refresh_host(app, &mut self.shown, host, false)?;
         self.shown.window.map(|w| w.range())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Enter in the palette runs the match Up and Down announced, not the
+    /// first (walkthroughs QW1).
+    #[test]
+    fn palette_enter_runs_the_selected_match() {
+        let ids = [ActionId::Open, ActionId::Settings, ActionId::ChooseFont];
+        assert_eq!(palette_answer(&ids, 2, "f"), ActionId::ChooseFont.id());
+        assert_eq!(palette_answer(&ids, 0, "f"), ActionId::Open.id());
+        // A stale index falls back to the first match.
+        assert_eq!(palette_answer(&ids, 9, "f"), ActionId::Open.id());
+        // No match: the typed text goes to the app.
+        assert_eq!(palette_answer(&[], 0, "zzz"), "zzz");
+    }
+
+    /// While Shift+F1 waits for a key, the window runs none of its own
+    /// commands from a key; a menu pick still runs (walkthroughs QW4).
+    #[test]
+    fn a_described_key_is_not_run_by_the_window() {
+        let key = Command::Action(ActionId::ChooseFont);
+        let menu = Command::RunCommand(ActionId::ChooseFont);
+        assert_eq!(
+            window_command_of(&key, false),
+            Some((ActionId::ChooseFont, false))
+        );
+        assert_eq!(window_command_of(&key, true), None);
+        assert_eq!(
+            window_command_of(&menu, true),
+            Some((ActionId::ChooseFont, true))
+        );
+        assert_eq!(window_command_of(&Command::Cancel, false), None);
     }
 }

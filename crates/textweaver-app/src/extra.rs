@@ -11,7 +11,7 @@
 
 use std::str::FromStr;
 
-use textweaver_keymap::{KeyChord, Layer};
+use textweaver_keymap::{KeyChord, Keymap, Layer};
 
 use crate::command::{Command, NoteCommand};
 
@@ -36,6 +36,16 @@ pub fn extra_lookup(chord: &KeyChord, layer: Layer) -> Option<Command> {
         .into_iter()
         .find(|(k, l, _)| k == chord && order.contains(l))
         .map(|(_, _, c)| c)
+}
+
+/// The extra command bound to `chord`, as a frontend runs it: like
+/// [`extra_lookup`], but a key that types text (`Shift+Y`) runs only while
+/// the keymap's single-key shortcuts are on, as the keymap's own keys do.
+pub fn extra_command(keymap: &Keymap, chord: &KeyChord, layer: Layer) -> Option<Command> {
+    if !keymap.character_keys() && chord.is_text_input() {
+        return None;
+    }
+    extra_lookup(chord, layer)
 }
 
 /// The chords bound to an extra command, for help text.
@@ -81,5 +91,22 @@ mod tests {
         );
         assert_eq!(extra_lookup(&a, Layer::Edit), None);
         assert_eq!(extra_chords(NoteCommand::ListHighlights).len(), 1);
+    }
+
+    /// The extra keys obey the single-key switch in every frontend: with
+    /// single-key shortcuts off, Shift+Y types a Y instead of listing the
+    /// highlights.
+    #[test]
+    fn extra_keys_obey_the_single_key_switch() {
+        let y = KeyChord::from_str("Shift+Y").unwrap();
+        for frontend in [Frontend::Terminal, Frontend::Gui] {
+            let mut km = Keymap::defaults(Platform::Windows, frontend);
+            assert_eq!(
+                extra_command(&km, &y, Layer::Browse),
+                Some(Command::Notes(NoteCommand::ListHighlights))
+            );
+            km.set_character_keys(false);
+            assert_eq!(extra_command(&km, &y, Layer::Browse), None, "{frontend:?}");
+        }
     }
 }

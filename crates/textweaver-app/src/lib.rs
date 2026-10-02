@@ -254,7 +254,7 @@ pub use authoring_state::{ClientFactory, Launcher};
 pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
 pub use export::{SubtitlePlan, subtitle_plan};
-pub use extra::{extra_bindings, extra_chords, extra_lookup};
+pub use extra::{extra_bindings, extra_chords, extra_command, extra_lookup};
 pub use font_download::{InstalledCheck, fonts_folder, use_downloaded_fonts};
 pub use goto::parse_go_to;
 pub use help::{
