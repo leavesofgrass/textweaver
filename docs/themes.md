@@ -11,7 +11,7 @@ Galaxy is textweaver's default theme and the first in the list. It is Star's def
 - Page `#1e1e1e`, text `#dadada`.
 - Headings in lavender, violet, periwinkle, and teal.
 - Links in purple (`#a882ff`), always underlined.
-- The word being spoken is dark text on a lavender band, in bold, inside an underlined sentence.
+- The word being spoken is dark text on a lavender band, in bold, inside an underlined sentence, in the terminal and in the window alike.
 
 One color changed from Star: dim text (hints, line numbers, quotes) is `#858585` instead of `#7d7d7d`, because Star's gray measured 4.0 to 1 against the page and the minimum is 4.5 to 1.
 
@@ -193,9 +193,9 @@ Keys textweaver does not know are kept, so a theme written for a newer version s
 
 ### Contrast checks
 
-When textweaver loads your theme, it measures every color against what it sits on. Text needs 4.5 to 1 (7 to 1 in a high-contrast theme); the focus band needs 3 to 1 against the page. Every highlight needs at least one attribute, and the spoken word must differ from its sentence, and the current find match from the others, by attribute and not only by color.
+When textweaver loads your theme, it measures every color against what it sits on. Text needs 4.5 to 1 (7 to 1 in a high-contrast theme); the focus band needs 3 to 1 against the page. The spoken word's band needs 3 to 1 against the page and against the sentence's band, so the word stands out within its sentence. The sentence's band has no minimum: it is a soft tint, and the underline is what marks the sentence. Every highlight needs at least one attribute, and the spoken word must differ from its sentence, and the current find match from the others, by attribute and not only by color.
 
-A theme that falls short still loads. textweaver tells you what to fix, for example: "Theme Midnight: 1 of 43 checks fail. Dim text on background: 4.0 to 1, needs 4.5 to 1."
+A theme that falls short still loads. textweaver tells you what to fix, for example: "Theme Midnight: 1 of 45 checks fail. Dim text on background: 4.0 to 1, needs 4.5 to 1."
 
 If a file has a mistake, textweaver skips that file, loads the rest, and says which key or line is wrong, for example: "midnight.toml was not loaded: colors.text: "white" is not a color; write it as #rrggbb, for example #1e1e1e."
 
