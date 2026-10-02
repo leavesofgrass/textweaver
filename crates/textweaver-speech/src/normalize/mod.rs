@@ -16,8 +16,8 @@
 //! | 2 | [`MarkdownResidue`] (and table narration) | `markdown` (off by default) | `_strip_markdown_for_tts`, load time |
 //! | 3 | [`Pronunciations`] | `use_pronunciations` + lexicon | step 1 |
 //! | 4 | [`CommunityLexicon`] (IBMTTS community dictionaries) | `community_lexicon.enabled` (off by default) | new |
-//! | 5 | [`Abbreviations`] | `abbreviations` | step 2 |
-//! | 6 | [`Numbers`] (dates, times, currency, percent, ordinals, decimals, years) | `numbers` | step 3 |
+//! | 5 | [`Abbreviations`] (error-prone ones spelled first) | `abbreviations` | step 2 |
+//! | 6 | [`Numbers`] (identifiers as digits, then dates, times, currency, percent, ordinals, decimals, years) | `numbers` | step 3 |
 //! | 7 | [`SplitCaps`] | service `split_caps` | new |
 //! | 8 | [`Punctuation`] | service punctuation level | new |
 //!
@@ -31,10 +31,12 @@
 //! [`Caps::NATIVE_NORMALIZATION`](crate::Caps::NATIVE_NORMALIZATION) (such
 //! as ETI-Eloquence, which reads numbers, dates, times, currency, and
 //! abbreviations itself) gets the pipeline without the built-in
-//! abbreviations (user abbreviations still apply), without numbers, and
-//! without the community lexicon (Eloquence loads those dictionaries
-//! itself). Markdown residue, the user's pronunciation lexicon, math, split
-//! caps, and punctuation verbosity still apply.
+//! abbreviations (user abbreviations and the error-prone list still
+//! apply), with only the identifier guard of numbers
+//! ([`Numbers::identifiers_only`]), and without the community lexicon
+//! (Eloquence loads those dictionaries itself). Markdown residue, the
+//! user's pronunciation lexicon, math, split caps, and punctuation
+//! verbosity still apply.
 //!
 //! Star's expected strings from `tests/test_ttstext.py` are ported as tests
 //! in this module, each also checking the offset map's invariants; the
@@ -53,8 +55,8 @@ pub mod words;
 use std::collections::BTreeMap;
 
 pub use abbreviations::{
-    Abbreviations, BUILTIN as BUILTIN_ABBREVIATIONS, Pronunciations, apply_pronunciations,
-    expand_abbreviations,
+    Abbreviations, BUILTIN as BUILTIN_ABBREVIATIONS, ERROR_PRONE as ERROR_PRONE_ABBREVIATIONS,
+    Pronunciations, apply_pronunciations, expand_abbreviations,
 };
 pub use community::{CommunityLexicon, CommunityLexiconConfig};
 pub use markdown::{MarkdownResidue, TableMode, strip_markdown, tables_to_narration};
@@ -218,13 +220,19 @@ impl Pipeline {
         }
         if config.abbreviations && !native {
             p.push(Box::new(Abbreviations::new(&config.abbrev_expansions)));
-        } else if config.abbreviations && !config.abbrev_expansions.is_empty() {
+        } else if config.abbreviations {
+            // The user's entries and the error-prone list: a native engine
+            // must not guess "QD" or "MS" either.
             p.push(Box::new(Abbreviations::custom_only(
                 &config.abbrev_expansions,
             )));
         }
         if config.numbers && !native {
             p.push(Box::new(Numbers::default()));
+        } else if config.numbers {
+            // A native engine reads numbers itself, but would still read
+            // "PMID 31769816" as an amount.
+            p.push(Box::new(Numbers::identifiers_only()));
         }
         if split_caps {
             p.push(Box::new(SplitCaps));

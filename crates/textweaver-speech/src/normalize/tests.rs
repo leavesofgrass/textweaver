@@ -727,6 +727,16 @@ fn token() -> impl Strategy<Value = String> {
         Just("naïve".to_owned()),
         Just("日本語".to_owned()),
         Just("—".to_owned()),
+        Just("PMID 31769816".to_owned()),
+        Just("doi:10.1016/S0140-6736(20)30183-5".to_owned()),
+        Just("(503) 555-0123".to_owned()),
+        Just("ISBN 0-8044-2957-X".to_owned()),
+        Just("q.o.d.".to_owned()),
+        Just("MgSO4".to_owned()),
+        Just("25µg".to_owned()),
+        Just("TNF-α".to_owned()),
+        Just("× 10^9".to_owned()),
+        Just("10⁻³".to_owned()),
         "[a-zA-Z]{1,7}",
         "[0-9]{1,6}",
     ]
@@ -764,4 +774,289 @@ proptest! {
             prop_assert_eq!(spoken, src);
         }
     }
+}
+
+// Health sciences: clinical reading correctness. The vectors come from
+// `docs/dev/research/health-sciences-use-cases.md`, section 3 ("Numbers,
+// units, and safety", "What an abbreviation expander must never expand",
+// and "Tests to add").
+
+/// The default pipeline at punctuation "some", on its own text.
+fn spoken(text: &str) -> String {
+    pipeline_utterance(text, &settings()).text
+}
+
+/// The section 3 table, read by the default pipeline. Rows for units,
+/// ranges, 24-hour times and chemistry are a later wave's (W8d-m); they
+/// pin today's reading, so the change shows when it comes.
+#[test]
+fn clinical_vectors() {
+    let cases = [
+        // Later: units and the dosing lexicon.
+        ("Give 5 mg q6h PRN for pain.", "Give 5 mg q6h PRN for pain."),
+        (
+            "0.5 mg, not 5.0 mg",
+            "zero point five mg, not five point zero mg",
+        ),
+        // Later: an en dash between numbers as a range.
+        ("taper over 6–8 weeks", "taper over 6–8 weeks"),
+        (
+            "95% CI 1.2–3.4; p < 0.05; p = .03",
+            "ninety-five percent CI one point two–three point four; p less than zero point zero five; p equals point zero three",
+        ),
+        // Later: chemistry and "per liter". (The space before the
+        // semicolon is the punctuation step's, unchanged here.)
+        (
+            "K+ 3.5 mEq/L; Ca2+; Na+",
+            "K plus three point five mEq slash L; Ca2 plus ; Na plus",
+        ),
+        ("25 mcg vs 25 µg", "25 mcg vs 25 micrograms"),
+        (
+            "CPT 99213; PMID 31769816; ZIP 97239",
+            "CPT nine nine two one three; PMID three one seven six nine eight one six; ZIP nine seven two three nine",
+        ),
+        (
+            "ICD-10 E11.9; NCT04368728",
+            "ICD-10 E11.9; NCT zero four three six eight seven two eight",
+        ),
+        // Later: a 24-hour time without AM or PM.
+        ("at 08:05", "at eight oh five AM"),
+        (
+            "TNF-α; 10 U insulin; QD and QOD",
+            "TNF alpha; 10 U insulin; Q D and Q O D",
+        ),
+        (
+            "38.5°C; SpO2 98%; 120/80 mmHg",
+            "thirty-eight point five degrees C; SpO2 ninety-eight percent; 120 slash 80 mmHg",
+        ),
+        (
+            "WBC 11.5 × 10^9/L",
+            "WBC eleven point five times ten to the ninth slash L",
+        ),
+        // Later: gene symbols and isotopes.
+        ("BRCA1, TP53; 99mTc; 131I", "BRCA1, TP53; 99mTc; 131I"),
+        // Later: the decimal comma by document language.
+        ("2,5%", "2,five percent"),
+    ];
+    for (input, want) in cases {
+        assert_eq!(spoken(input), want, "{input:?}");
+    }
+}
+
+#[test]
+fn identifiers_are_read_as_digits() {
+    let cases = [
+        ("CPT 99213", "CPT nine nine two one three"),
+        ("CPT code 0001F.", "CPT code zero zero zero one F."),
+        (
+            "PMID: 31769816.",
+            "PMID: three one seven six nine eight one six.",
+        ),
+        ("pmid 123", "pmid one two three"),
+        (
+            "NCT 04368728",
+            "NCT zero four three six eight seven two eight",
+        ),
+        (
+            "ZIP 97239-1234",
+            "ZIP nine seven two three nine-one two three four",
+        ),
+        ("zip code 97239", "zip code nine seven two three nine"),
+        (
+            "doi:10.1038/nature12373.",
+            "doi: one zero dot one zero three eight slash nature one two three seven three.",
+        ),
+        (
+            "See https://doi.org/10.1000/182 today",
+            "See https: slash slash doi.org slash one zero dot one zero zero zero slash one eight two today",
+        ),
+        (
+            "ISBN 978-0-306-40615-7",
+            "ISBN nine seven eight-zero-three zero six-four zero six one five-seven",
+        ),
+        (
+            "ISBN-10: 0-8044-2957-X",
+            "ISBN-10: zero-eight zero four four-two nine five seven-X",
+        ),
+        (
+            "Phone: (503) 494-8311",
+            "Phone: (five zero three) four nine four-eight three one one",
+        ),
+        ("tel. 555-0123", "tel. five five five-zero one two three"),
+        (
+            "Call 503-555-0123 or 503.555.0123.",
+            "Call five zero three-five five five-zero one two three or five zero three dot five five five dot zero one two three.",
+        ),
+    ];
+    for (input, want) in cases {
+        assert_eq!(spoken(input), want, "{input:?}");
+    }
+    // Not identifiers: amounts stay amounts.
+    for (input, want) in [
+        (
+            "In 2024 we saw 31769816 cases.",
+            "In twenty twenty-four we saw thirty-one million seven hundred sixty-nine thousand eight hundred sixteen cases.",
+        ),
+        (
+            // Not five digits: read as numbers are (here as a year).
+            "ZIP 1234 files",
+            "ZIP twelve thirty-four files",
+        ),
+        (
+            "ISBN 12345",
+            "ISBN twelve thousand three hundred forty-five",
+        ),
+        ("on 2024-03-15", "on March fifteenth, twenty twenty-four"),
+    ] {
+        assert_eq!(spoken(input), want, "{input:?}");
+    }
+}
+
+#[test]
+fn identifier_digits_highlight_themselves() {
+    let text = "See PMID 31769816 now.";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(
+        u.text,
+        "See PMID three one seven six nine eight one six now."
+    );
+    assert_eq!(highlighted(text, &u, "three"), "3");
+    assert_eq!(highlighted(text, &u, "seven"), "7");
+    assert_eq!(highlighted(text, &u, "six now"), "6 now");
+    assert_eq!(highlighted(text, &u, "PMID"), "PMID");
+    let text = "doi:10.1000/182";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(highlighted(text, &u, "dot"), ".");
+    // Every word of the identifier, as an engine reports it.
+    let text = "ZIP 97239";
+    let u = pipeline_utterance(text, &settings());
+    let mut at = 0u32;
+    let mut words: Vec<String> = Vec::new();
+    for w in u.text.split(' ') {
+        let r = u.source_for(at..at + w.len() as u32).unwrap_or_default();
+        words.push(
+            text.chars()
+                .skip(r.start.0 - 1000)
+                .take(r.end.0 - r.start.0)
+                .collect(),
+        );
+        at += w.len() as u32 + 1;
+    }
+    assert_eq!(words, ["ZIP", "9", "7", "2", "3", "9"]);
+}
+
+#[test]
+fn error_prone_abbreviations_are_spelled_never_expanded() {
+    let cases = [
+        ("Give QD.", "Give Q D."),
+        (
+            "Give QOD and q.o.d. and qod",
+            "Give Q O D and Q O D and Q O D",
+        ),
+        ("Take 1 tab q.d. Then rest.", "Take 1 tab Q D. Then rest."),
+        ("Take q.d. with food", "Take Q D with food"),
+        ("Q.D. or Q.O.D.", "Q D or Q O D."),
+        ("10 IU and 10 U", "10 I U and 10 U"),
+        ("MS, MSO4 and MgSO4", "M S, M S O 4 and M G S O 4"),
+        ("5 cc of saline", "5 C C of saline"),
+        ("give 25µg now", "give 25 micrograms now"),
+        ("SC, SQ, HS, hs, TIW", "S C, S Q, H S, H S, T I W"),
+        ("AD AS AU OD OS OU", "A D A S A U O D O S O U"),
+        ("2 drops a.u. daily", "2 drops A U daily"),
+        ("TPA and HCTZ", "T P A and H C T Z"),
+        // Everyday words and look-alikes stay as written.
+        ("SUCH AS THIS", "SUCH AS THIS"),
+        ("as is the msg; cc'd; QDs", "as is the msg; cc'd; QDs"),
+        ("Ask Dr. Lee", "Ask Doctor Lee"),
+    ];
+    for (input, want) in cases {
+        assert_eq!(spoken(input), want, "{input:?}");
+    }
+    // Neither the built-ins nor the user's entries can expand them.
+    let custom = [
+        ("QD", "every day"),
+        ("MS", "morphine sulfate"),
+        ("PRN", "as needed"),
+    ];
+    assert_eq!(abbrev("QD, MS, PRN", &custom), "Q D, M S, as needed");
+    // The spelled word highlights the abbreviation.
+    let text = "Take q.o.d. now";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(highlighted(text, &u, "Q O D"), "q.o.d.");
+    assert_eq!(highlighted(text, &u, "now"), "now");
+    for abbr in ERROR_PRONE_ABBREVIATIONS {
+        let out = abbrev(&format!("x {abbr} y"), &[]);
+        assert!(
+            out == format!("x {abbr} y") || !out.contains(abbr),
+            "{abbr:?} -> {out:?}"
+        );
+    }
+}
+
+#[test]
+fn native_engines_still_get_the_clinical_guards() {
+    let p = Pipeline::for_settings(&settings(), PunctuationLevel::Some, false, true);
+    assert!(p.names().contains(&"identifiers"));
+    assert!(p.names().contains(&"abbreviations"));
+    let (out, map) = p.apply_text("PMID 123, QD, $5 at 3:45 in 2024");
+    map.check_invariants(&out).unwrap();
+    assert_eq!(out, "PMID one two three, Q D, $5 at 3:45 in 2024");
+}
+
+#[test]
+fn symbols_outside_math_are_named() {
+    let cases = [
+        ("ΔG and β-blocker", "delta G and beta-blocker"),
+        ("5α-reductase", "5 alpha-reductase"),
+        ("(γ) and π", "(gamma) and pi"),
+        ("5 µm and 5 μm; μ", "5 micro m and 5 micro m; mu"),
+        ("−5 and 3 − 2", "minus 5 and 3 minus 2"),
+        ("A ⇌ B", "A in equilibrium with B"),
+        (
+            "10⁹ cells and 10⁻³ M",
+            "ten to the ninth cells and ten to the negative third M",
+        ),
+        (
+            "1.5 x 10^9 or 2*10^(-3)",
+            "one point five times ten to the ninth or 2 times ten to the negative third",
+        ),
+        ("box 10^9", "box ten to the ninth"),
+        ("210^3 and 10^x", "210 caret 3 and 10 caret x"),
+    ];
+    for (input, want) in cases {
+        assert_eq!(spoken(input), want, "{input:?}");
+    }
+    // Arrows when math is off; the math transform reads "→" in prose as
+    // "approaches", and that is unchanged.
+    let no_math = NormalizeConfig {
+        math: false,
+        ..settings()
+    };
+    assert_eq!(
+        pipeline_utterance("A → B", &no_math).text,
+        "A right arrow B"
+    );
+    assert_eq!(spoken("A → B"), "A approaches B");
+    // Letters are words: named at every punctuation level.
+    for level in [
+        PunctuationLevel::None,
+        PunctuationLevel::Some,
+        PunctuationLevel::All,
+    ] {
+        let (out, map) = Punctuation::new(level).apply("TNF-α");
+        map.check_invariants(&out).unwrap();
+        assert_eq!(out, "TNF alpha", "{level:?}");
+    }
+    // Highlights.
+    let text = "WBC 11.5 × 10^9/L";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(highlighted(text, &u, "ten to the ninth"), "10^9");
+    assert_eq!(highlighted(text, &u, "times"), "×");
+    let text = "TNF-α level";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(highlighted(text, &u, "alpha"), "-α");
+    assert_eq!(char_name('α'), Some("alpha"));
+    assert_eq!(char_name('µ'), Some("micro"));
+    assert_eq!(char_name('−'), Some("minus"));
+    assert_eq!(char_name('⇌'), Some("in equilibrium with"));
 }
