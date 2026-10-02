@@ -692,11 +692,12 @@ mod native {
     fn in_menu_loop(hwnd: isize) -> bool {
         use windows::Win32::Foundation::HWND;
         use windows::Win32::UI::WindowsAndMessaging::{
-            GUI_INMENUMODE, GUI_POPUPMENUMODE, GUI_SYSTEMMENUMODE, GUITHREADINFO,
-            GetGUIThreadInfo, GetWindowThreadProcessId,
+            GUI_INMENUMODE, GUI_POPUPMENUMODE, GUI_SYSTEMMENUMODE, GUITHREADINFO, GetGUIThreadInfo,
+            GetWindowThreadProcessId,
         };
         // SAFETY: this process's own window; no process id is asked for.
-        let thread = unsafe { GetWindowThreadProcessId(HWND(hwnd as *mut core::ffi::c_void), None) };
+        let thread =
+            unsafe { GetWindowThreadProcessId(HWND(hwnd as *mut core::ffi::c_void), None) };
         let mut info = GUITHREADINFO {
             cbSize: std::mem::size_of::<GUITHREADINFO>() as u32,
             ..Default::default()
