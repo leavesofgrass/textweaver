@@ -35,6 +35,8 @@
 //! abbreviations, punctuation) is not done here: the speech service applies
 //! its transform chain per utterance and composes the maps.
 
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 use textweaver_core::{
     CharPos, CharRange, Direction, MarkerKind, OffsetMap, Span, SpanKind, SpokenBuilder, Unit,
@@ -120,17 +122,19 @@ impl InlineSpeech {
     }
 }
 
-/// One step of building a sentence's spoken text.
-enum Piece {
+/// One step of building a sentence's spoken text. The texts are borrowed
+/// where they can be (fixed words, the caller's [`InlineSpeech`]), so a
+/// piece costs no allocation of its own.
+enum Piece<'a> {
     /// Spoken text with no source, anchored at a position.
-    Insert(CharPos, String),
+    Insert(CharPos, &'static str),
     /// Source replaced by spoken text.
-    Replace(CharRange, String),
+    Replace(CharRange, Cow<'a, str>),
     /// Source not spoken.
     Elide(CharRange),
 }
 
-impl Piece {
+impl Piece<'_> {
     fn start(&self) -> CharPos {
         match self {
             Piece::Insert(at, _) => *at,
@@ -179,27 +183,22 @@ pub fn plan_with(
         done_until: CharPos::ZERO,
         table: None,
         inline: kept,
+        pieces: Vec::new(),
+        prefix: String::new(),
     };
-    let sentences: Vec<CharRange> =
-        Units::new(doc, Unit::Sentence, range.start, Direction::Forward)
-            .take_while(|s| s.start < range.end)
-            .collect();
-    for s in sentences {
+    for s in Units::new(doc, Unit::Sentence, range.start, Direction::Forward)
+        .take_while(|s| s.start < range.end)
+    {
         planner.sentence(s);
     }
-    planner
-        .out
-        .into_iter()
-        .enumerate()
-        .map(|(i, (text, map))| {
-            let mut u = Utterance::with_map(text, map);
-            u.id = UtteranceId {
-                generation: 0,
-                chunk: u32::try_from(i).unwrap_or(u32::MAX),
-            };
-            u
-        })
-        .collect()
+    let mut out = planner.out;
+    for (i, u) in out.iter_mut().enumerate() {
+        u.id = UtteranceId {
+            generation: 0,
+            chunk: u32::try_from(i).unwrap_or(u32::MAX),
+        };
+    }
+    out
 }
 
 struct Planner<'a> {
@@ -207,7 +206,7 @@ struct Planner<'a> {
     index: MarkerIndex<'a>,
     policy: &'a NarrationPolicy,
     range: CharRange,
-    out: Vec<(String, OffsetMap)>,
+    out: Vec<Utterance>,
     /// Everything before this position has been planned (tables and skipped
     /// code blocks are handled whole).
     done_until: CharPos,
@@ -215,6 +214,10 @@ struct Planner<'a> {
     table: Option<TableInfo>,
     /// The caller's changes, sorted, not overlapping.
     inline: Vec<&'a InlineSpeech>,
+    /// The current sentence's pieces: one buffer for every sentence.
+    pieces: Vec<Piece<'a>>,
+    /// The current sentence's announcement: one buffer for every sentence.
+    prefix: String,
 }
 
 /// What row narration needs to know about a table.
@@ -242,7 +245,7 @@ impl TableInfo {
     }
 }
 
-impl Planner<'_> {
+impl<'a> Planner<'a> {
     fn sentence(&mut self, s: CharRange) {
         let Some(mut clip) = s.intersection(self.range) else {
             return;
@@ -281,55 +284,59 @@ impl Planner<'_> {
             self.done_until = code.range.end;
             return;
         }
-        let mut pieces = Vec::new();
-        let prefix = self.prefix_at(clip.start);
-        if !prefix.is_empty() {
-            pieces.push(Piece::Insert(clip.start, prefix));
-        }
+        // The two buffers are lent out for this sentence and given back
+        // empty, so planning a document allocates them once.
+        let mut pieces = std::mem::take(&mut self.pieces);
+        let mut prefix = std::mem::take(&mut self.prefix);
+        pieces.clear();
+        prefix.clear();
+        self.prefix_at(clip.start, &mut prefix);
         self.inline_pieces(clip, &mut pieces);
         self.caller_pieces(clip, &mut pieces);
-        let (text, map) = self.build(clip, pieces);
+        let (text, map) = self.build(clip, &prefix, &pieces);
+        pieces.clear();
+        self.pieces = pieces;
+        self.prefix = prefix;
         self.push(text, map);
     }
 
-    /// Announcements for markers starting at `at` (outermost first).
-    fn prefix_at(&self, at: CharPos) -> String {
+    /// Announcements for markers starting at `at` (outermost first),
+    /// written to `out`.
+    fn prefix_at(&self, at: CharPos, out: &mut String) {
+        use std::fmt::Write as _;
         let p = self.policy;
-        let mut out = String::new();
         for m in self.index.starting_at(at) {
-            let part = match m.kind {
+            // Writing to a String cannot fail.
+            match m.kind {
                 MarkerKind::Heading if p.announces(Verbosity::Normal) => {
-                    format!("heading level {}", m.level)
+                    let _ = write!(out, "heading level {}", m.level);
                 }
                 MarkerKind::List if p.announces(Verbosity::Normal) => {
                     let n = self.list_items(m);
-                    format!("list with {n} item{}", if n == 1 { "" } else { "s" })
+                    let _ = write!(out, "list with {n} item{}", if n == 1 { "" } else { "s" });
                 }
-                MarkerKind::ListItem if p.announce_structure => match &m.label {
-                    Some(label) => {
+                MarkerKind::ListItem if p.announce_structure => {
+                    if let Some(label) = &m.label {
                         out.push_str(label);
                         out.push(' ');
-                        continue;
                     }
-                    None => continue,
-                },
-                MarkerKind::Quote if p.announces(Verbosity::Normal) => "block quote".to_owned(),
+                    continue;
+                }
+                MarkerKind::Quote if p.announces(Verbosity::Normal) => out.push_str("block quote"),
                 MarkerKind::Code if m.level == 1 && p.announces(Verbosity::Normal) => {
-                    "code block".to_owned()
+                    out.push_str("code block");
                 }
                 MarkerKind::Image if p.announces(Verbosity::Normal) => {
-                    MarkerKind::Image.spoken_name().to_owned()
+                    out.push_str(MarkerKind::Image.spoken_name());
                 }
                 // A horizontal rule before this block: "separator".
                 MarkerKind::Rule if p.announces(Verbosity::Normal) => {
-                    MarkerKind::Rule.spoken_name().to_owned()
+                    out.push_str(MarkerKind::Rule.spoken_name());
                 }
                 _ => continue,
-            };
-            out.push_str(&part);
+            }
             out.push_str(", ");
         }
-        out
     }
 
     fn list_items(&self, list: &Marker) -> usize {
@@ -339,18 +346,18 @@ impl Planner<'_> {
     }
 
     /// Inline pieces inside a sentence: links (High) and footnote references.
-    fn inline_pieces(&self, clip: CharRange, pieces: &mut Vec<Piece>) {
+    fn inline_pieces(&self, clip: CharRange, pieces: &mut Vec<Piece<'a>>) {
         let p = self.policy;
         let search = CharRange::new(clip.start, clip.end);
         for m in self.index.starting_in(search) {
             match m.kind {
                 MarkerKind::Link if p.announces(Verbosity::High) => {
-                    pieces.push(Piece::Insert(m.range.start, "link, ".to_owned()));
+                    pieces.push(Piece::Insert(m.range.start, "link, "));
                 }
                 // Struck-through text is announced like a link: at high
                 // verbosity, before it.
                 MarkerKind::Strikethrough if p.announces(Verbosity::High) => {
-                    pieces.push(Piece::Insert(m.range.start, "strikethrough, ".to_owned()));
+                    pieces.push(Piece::Insert(m.range.start, "strikethrough, "));
                 }
                 MarkerKind::Footnote
                     if m.level == 0 && p.announce_structure && m.range.end <= clip.end =>
@@ -363,7 +370,8 @@ impl Planner<'_> {
                             .char_at(m.range.start.saturating_sub(1))
                             .is_some_and(|c| !c.is_whitespace());
                     let lead = if needs_space { " " } else { "" };
-                    pieces.push(Piece::Replace(m.range, format!("{lead}footnote {label}")));
+                    let spoken = format!("{lead}footnote {label}");
+                    pieces.push(Piece::Replace(m.range, Cow::Owned(spoken)));
                 }
                 _ => {}
             }
@@ -372,13 +380,13 @@ impl Planner<'_> {
     }
 
     /// The caller's changes inside a sentence ([`plan_with`]).
-    fn caller_pieces(&self, clip: CharRange, pieces: &mut Vec<Piece>) {
+    fn caller_pieces(&self, clip: CharRange, pieces: &mut Vec<Piece<'a>>) {
         if self.inline.is_empty() {
             return;
         }
         let first = self.inline.partition_point(|c| c.range.end <= clip.start);
         let mut added = false;
-        for c in &self.inline[first..] {
+        for &c in &self.inline[first..] {
             if c.range.start >= clip.end {
                 break;
             }
@@ -396,7 +404,7 @@ impl Planner<'_> {
                 continue;
             }
             if c.range.start >= clip.start && !c.spoken.is_empty() {
-                pieces.push(Piece::Replace(part, c.spoken.clone()));
+                pieces.push(Piece::Replace(part, Cow::Borrowed(c.spoken.as_str())));
             } else {
                 pieces.push(Piece::Elide(part));
             }
@@ -407,25 +415,37 @@ impl Planner<'_> {
         }
     }
 
-    /// Builds the spoken text of `clip` with inserts and replacements.
-    fn build(&self, clip: CharRange, pieces: Vec<Piece>) -> (String, OffsetMap) {
-        let mut b = SpokenBuilder::new();
+    /// Builds the spoken text of `clip`: `prefix` (the announcement, if
+    /// any), then the source with inserts and replacements.
+    fn build(&self, clip: CharRange, prefix: &str, pieces: &[Piece<'_>]) -> (String, OffsetMap) {
+        // Room for the source text, the announcement, and the pieces' few
+        // words, so the buffers rarely grow: one allocation each.
+        let rope = self.doc.text();
+        let end = clip.end.0.min(rope.len_chars());
+        let source_bytes = rope.char_to_byte(end) - rope.char_to_byte(clip.start.0.min(end));
+        let mut b = SpokenBuilder::with_capacity(
+            source_bytes + prefix.len() + 24 * pieces.len(),
+            2 * pieces.len() + 2,
+        );
+        b.push_inserted(prefix, clip.start);
         let mut at = clip.start;
         for piece in pieces {
             let start = piece.start().max(at);
             if start > at {
-                b.push_literal(&self.doc.slice(CharRange::new(at, start)), at);
+                push_source(self.doc, &mut b, CharRange::new(at, start));
                 at = start;
             }
             match piece {
-                Piece::Insert(_, text) => b.push_inserted(&text, at),
+                Piece::Insert(_, text) => b.push_inserted(text, at),
                 Piece::Replace(r, text) => {
+                    let r = *r;
                     if r.start >= at && r.end <= clip.end {
-                        b.push_expanded(&text, r);
+                        b.push_expanded(text, r);
                         at = r.end;
                     }
                 }
                 Piece::Elide(r) => {
+                    let r = *r;
                     if r.start >= at && r.end <= clip.end {
                         b.push_elided(r);
                         at = r.end;
@@ -434,13 +454,13 @@ impl Planner<'_> {
             }
         }
         if clip.end > at {
-            b.push_literal(&self.doc.slice(CharRange::new(at, clip.end)), at);
+            push_source(self.doc, &mut b, CharRange::new(at, clip.end));
         }
         b.finish()
     }
 
     fn push_notice(&mut self, text: &str, at: CharPos) {
-        let mut b = SpokenBuilder::new();
+        let mut b = SpokenBuilder::with_capacity(text.len(), 1);
         b.push_inserted(text, at);
         let (t, m) = b.finish();
         self.push(t, m);
@@ -451,7 +471,7 @@ impl Planner<'_> {
             return;
         }
         let max = self.policy.max_chunk_chars;
-        self.out.extend(split_long(text, map, max));
+        split_long(text, map, max, &mut self.out);
     }
 
     fn table_info(&self, table: &Marker) -> TableInfo {
@@ -591,7 +611,7 @@ impl Planner<'_> {
             if spoken_any {
                 b.push_inserted(", ", c.start);
             }
-            b.push_literal(&self.doc.slice(*c), c.start);
+            push_source(self.doc, b, *c);
             spoken_any = true;
         }
         self.finish_row(b, cells);
@@ -618,7 +638,7 @@ impl Planner<'_> {
             if c.is_empty() {
                 b.push_inserted("blank", c.start);
             } else {
-                b.push_literal(&self.doc.slice(*c), c.start);
+                push_source(self.doc, b, *c);
             }
         }
         self.finish_row(b, cells);
@@ -636,13 +656,36 @@ impl Planner<'_> {
     }
 }
 
+/// Appends the document's text of `range` as literal spoken text, straight
+/// from the rope's chunks: no `String` per piece. The builder joins the
+/// chunks into one literal span, so the map is the same as for one slice.
+fn push_source(doc: &Document, b: &mut SpokenBuilder, range: CharRange) {
+    let range = range.clamp_to(doc.len_chars());
+    if range.is_empty() {
+        return;
+    }
+    let mut at = range.start;
+    for chunk in doc.text().slice(range.to_range()).chunks() {
+        b.push_literal(chunk, at);
+        at = at.saturating_add(chunk.chars().count());
+    }
+}
+
 /// Splits an utterance longer than `max` chars at whitespace (dropping the
 /// whitespace), never inside an expanded token. A single run of more than
-/// `max` chars without whitespace is cut at a char boundary.
-fn split_long(text: String, map: OffsetMap, max: usize) -> Vec<(String, OffsetMap)> {
-    if max == 0 || text.chars().count() <= max {
-        return vec![(text, map)];
+/// `max` chars without whitespace is cut at a char boundary. The parts go
+/// straight onto `out`; parts with nothing to say are left out.
+fn split_long(text: String, map: OffsetMap, max: usize, out: &mut Vec<Utterance>) {
+    // A text no longer in bytes than `max` is no longer in chars either.
+    if max == 0 || text.len() <= max || text.chars().count() <= max {
+        out.push(Utterance::with_map(text, map));
+        return;
     }
+    let mut keep = |(t, m): (String, OffsetMap)| {
+        if !t.trim().is_empty() {
+            out.push(Utterance::with_map(t, m));
+        }
+    };
     let spans = map.spans();
     let inside_expanded = |b: usize| {
         spans.iter().any(|s| {
@@ -651,7 +694,6 @@ fn split_long(text: String, map: OffsetMap, max: usize) -> Vec<(String, OffsetMa
                 && b < s.spoken.end as usize
         })
     };
-    let mut out = Vec::new();
     let mut start = 0usize;
     loop {
         let rest = &text[start..];
@@ -696,12 +738,10 @@ fn split_long(text: String, map: OffsetMap, max: usize) -> Vec<(String, OffsetMa
         if piece_end <= start || next_start >= text.len() {
             break;
         }
-        out.push(sub_utterance(&text, &map, start, piece_end));
+        keep(sub_utterance(&text, &map, start, piece_end));
         start = next_start;
     }
-    out.push(sub_utterance(&text, &map, start, text.len()));
-    out.retain(|(t, _)| !t.trim().is_empty());
-    out
+    keep(sub_utterance(&text, &map, start, text.len()));
 }
 
 /// The part of an utterance between spoken bytes `a..b`, with its map
@@ -1094,6 +1134,48 @@ mod tests {
         );
         check(&us);
         assert!(!texts(&us).join(" ").contains('x'));
+    }
+
+    /// A sentence the rope stores in many chunks is spoken as one literal
+    /// span, exactly as one slice of it would be (the planner pushes the
+    /// rope's chunks, not a copy of the range).
+    #[test]
+    fn a_sentence_across_rope_chunks_is_one_exact_span() {
+        let body = "wörd and 😀 more ".repeat(2000);
+        let text = format!("Start. {body}end. Next one.");
+        let d = Document::from_plain_text(&text);
+        assert!(
+            d.text().chunks().count() > 4,
+            "the test needs several chunks"
+        );
+        let policy = NarrationPolicy {
+            max_chunk_chars: 0,
+            ..NarrationPolicy::default()
+        };
+        let us = plan(&d, d.full_range(), &policy);
+        check(&us);
+        // Where the rope's chunks start, in chars.
+        let mut starts = Vec::new();
+        let mut at = 0;
+        for c in d.text().chunks() {
+            starts.push(at);
+            at += c.chars().count();
+        }
+        let mut crossing = 0;
+        for u in &us {
+            let r = u.source_range().unwrap();
+            assert_eq!(d.slice(r), u.text);
+            assert_eq!(u.offset_map.spans().len(), 1);
+            assert_eq!(u.offset_map.spans()[0].kind, SpanKind::Literal);
+            if starts.iter().any(|&s| r.start.0 < s && s < r.end.0) {
+                crossing += 1;
+                // The last word maps back to its own chars.
+                let byte = u.text.rfind(' ').map_or(0, |b| b + 1);
+                let src = u.source_for(to_u32(byte)..to_u32(u.text.len()));
+                assert_eq!(src.map(|s| d.slice(s)), Some(u.text[byte..].to_owned()));
+            }
+        }
+        assert!(crossing > 0, "no utterance crossed a chunk boundary");
     }
 }
 

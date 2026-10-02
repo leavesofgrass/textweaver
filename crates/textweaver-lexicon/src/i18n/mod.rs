@@ -331,33 +331,30 @@ impl Catalog {
 
     /// The built-in translation for `lang` (or for its language, without
     /// the region), over English; `None` when there is none. Each is
-    /// parsed once.
+    /// parsed once, on first use: asking for one language parses that one
+    /// only (it parsed all of them, five times the work at startup in any
+    /// language but English).
     pub fn builtin(lang: &str) -> Option<Arc<Catalog>> {
-        static BUILT: OnceLock<Vec<(&'static str, Arc<Catalog>)>> = OnceLock::new();
+        static BUILT: [OnceLock<Arc<Catalog>>; BUILTIN.len()] =
+            [const { OnceLock::new() }; BUILTIN.len()];
         let tag = language(lang)?.tag;
         if tag == "en" {
             return Some(Catalog::english());
         }
-        let built = BUILT.get_or_init(|| {
-            BUILTIN
-                .iter()
-                .map(|(tag, text)| {
-                    let mut c = Catalog::parse(tag, text).unwrap_or_else(|errors| {
-                        // A test keeps every built-in catalog valid.
-                        for e in &errors {
-                            log::error!("{tag}.ftl: {e}");
-                        }
-                        Catalog::empty(tag)
-                    });
-                    c.fallback = Some(Catalog::english());
-                    (*tag, Arc::new(c))
-                })
-                .collect()
+        let i = BUILTIN.iter().position(|(t, _)| *t == tag)?;
+        let (tag, text) = BUILTIN[i];
+        let c = BUILT[i].get_or_init(|| {
+            let mut c = Catalog::parse(tag, text).unwrap_or_else(|errors| {
+                // A test keeps every built-in catalog valid.
+                for e in &errors {
+                    log::error!("{tag}.ftl: {e}");
+                }
+                Catalog::empty(tag)
+            });
+            c.fallback = Some(Catalog::english());
+            Arc::new(c)
         });
-        built
-            .iter()
-            .find(|(t, _)| *t == tag)
-            .map(|(_, c)| c.clone())
+        Some(c.clone())
     }
 
     fn empty(lang: &str) -> Catalog {

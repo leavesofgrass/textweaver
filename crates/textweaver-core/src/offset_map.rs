@@ -472,6 +472,17 @@ impl SpokenBuilder {
         Self::default()
     }
 
+    /// An empty builder with room for `bytes` of spoken text and `spans`
+    /// spans, so a caller that knows roughly how long the text will be
+    /// (the narration planner: the source range plus its announcements)
+    /// builds it without growing the buffers.
+    pub fn with_capacity(bytes: usize, spans: usize) -> Self {
+        SpokenBuilder {
+            text: String::with_capacity(bytes),
+            spans: Vec::with_capacity(spans),
+        }
+    }
+
     /// The spoken text built so far.
     pub fn text(&self) -> &str {
         &self.text

@@ -55,6 +55,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **No stale sound after a stop, no wait before a restart.** The few milliseconds of speech the output had already taken are dropped at a stop instead of played, and new speech that arrives while the output is playing silence starts at the next sample instead of after the rest of that silence.
 - **On Linux, an output that runs dry grows its buffer.** When the audio system reports underruns (ALSA and JACK do), the output opens again between readings with twice the buffer, up to 100 ms, so speech never stutters on a slow or busy machine. Nothing is cut off by the reopen.
 
+### Faster
+
+- **Reading starts with less work.** Planning what to say for a whole 10 MB document makes a third fewer allocations (836,038 to 538,984) and uses 11 MB less memory; the text is no longer copied out of the document piece by piece.
+- **Typing in a large document.** Each edit to a 10 MB document cost about 22 ms when the paragraph table was needed again; it now costs about 1 ms. Markers are shifted only where the edit reaches, and the table of blank lines is updated instead of rebuilt.
+- **The first Read after opening** no longer builds the paragraph and marker tables on the input thread: opening builds them while it loads (25 ms or more on 10 MB).
+- **SSML and DECtalk voices** no longer compile their markup patterns for every sentence (about 0.3 ms a sentence, on the speech thread).
+- **Starting in another language** parses only that language's messages, not all five translations (41 to 6 ms in Spanish).
+- **Loading** sizes the text once instead of growing it.
+
 ### For contributors
 
 - **One downloader** (W8a-d): the new `textweaver-components` crate pins files by size and SHA-256 and downloads them through a `.part` file, the check, and a rename, with resume, progress, cancel, a lock, and one neutral User-Agent. The OCR models, Lexend, and Piper voices moved onto it; a test in the app enforces the registry, and the fake fetcher records every request.

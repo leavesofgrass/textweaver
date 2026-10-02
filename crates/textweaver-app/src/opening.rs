@@ -261,6 +261,13 @@ impl App {
                     .load(&Source::Path(owned), &options)
                     .map(|doc| {
                         let text = crate::relocate::text_stamp(&doc);
+                        // The marker tables and the blank-line table are
+                        // built on first use; build them here, so the
+                        // first Read or move after opening does not (25
+                        // to 60 ms on 10 MB, on the input thread). Planning
+                        // the first window itself costs about 2 ms.
+                        let _ = doc.marker_index();
+                        let _ = doc.blank_lines();
                         (doc, stamp, text)
                     });
                 let _ = tx.send(result);

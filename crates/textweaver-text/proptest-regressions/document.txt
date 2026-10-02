@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 19d50dbebcf1e80342912b7bff1beef412428ba982f99e78d3af6e151ea7cb2f # shrinks to text = "\na a\n  \na\n\n\n  \naa\na\n\n a\n\n\na a\n", markers = [Marker { kind: Heading, range: CharRange { start: CharPos(15), end: CharPos(30) }, level: 0, label: None, reference: None }, Marker { kind: List, range: CharRange { start: CharPos(15), end: CharPos(15) }, level: 0, label: None, reference: None }, Marker { kind: Heading, range: CharRange { start: CharPos(3), end: CharPos(3) }, level: 0, label: None, reference: None }], edits = [(16, 0, "a")]
+cc 4351ec7542f5fd5160c7b4fadd189ee5e55b2aad23b33a8496708c9fdbd939a1 # shrinks to text = "a\naa\na   ", markers = [Marker { kind: Heading, range: CharRange { start: CharPos(2), end: CharPos(9) }, level: 0, label: None, reference: None }, Marker { kind: Heading, range: CharRange { start: CharPos(1), end: CharPos(1) }, level: 0, label: None, reference: None }, Marker { kind: Link, range: CharRange { start: CharPos(1), end: CharPos(9) }, level: 0, label: None, reference: None }], edits = [(2, 0, "a")]
