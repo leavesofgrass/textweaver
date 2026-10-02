@@ -189,7 +189,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("reading_aids.spacing.paragraph_spacing", Portable),
     ("reading_aids.spacing.letter_spacing", Portable),
     ("reading_aids.spacing.word_spacing", Portable),
-    // A font missing on a computer is named, never downloaded.
+    // A font missing on a computer is named; Lexend is downloaded there
+    // only when the reader chooses it and agrees.
     ("reading_aids.font.family", Portable),
     ("reading_aids.font.size_pt", Portable),
     ("reading_aids.font.weight", Portable),

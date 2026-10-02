@@ -330,7 +330,7 @@ pub const RESERVED_SETTINGS: &[(&str, &str)] = &[];
 /// next save leaves them out.
 pub const REMOVED_SETTINGS: &[(&str, &str)] = &[(
     "reading_aids.font.fetch_missing",
-    "textweaver never downloads fonts; a missing reading font is named, and the reading guide says where to get it",
+    "textweaver downloads a reading font (Lexend) only when you choose it and agree; a missing font is named, and the reading guide says where to get it",
 )];
 
 /// Settings whose key was renamed, as dotted paths: the old key, then the
