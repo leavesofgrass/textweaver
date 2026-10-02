@@ -289,6 +289,11 @@ impl App {
             textweaver_store::MathBrailleCode::Ueb => textweaver_convert::MathCode::Ueb,
         };
         o.write.braille.table_format = braille_tables(&self.settings);
+        // The reading font, a downloaded Lexend too, as `tw convert
+        // --font` gives it (W8a); a font missing here keeps the defaults.
+        let fonts = self.export_fonts();
+        o.write.pdf.font_family = fonts.pdf;
+        o.write.epub.font = fonts.epub;
         o.citations.user_library = self
             .paths
             .as_ref()
@@ -802,6 +807,59 @@ mod tests {
             "file:///home/ada/my%20notes/"
         );
         assert_eq!(folder_url(Path::new("D:\\notes")), "file:///D:/notes/");
+    }
+
+    /// The reading font reaches the PDF and EPUB writers' options (W8a), a
+    /// downloaded Lexend too; an installed font only the PDF's; a generic
+    /// family or a font missing here leaves the writers' defaults.
+    #[test]
+    fn export_uses_the_reading_font_when_it_is_here() {
+        let home = tempfile::tempdir().unwrap();
+        let paths = textweaver_store::Paths::under(home.path());
+        let mut app = App::new(crate::AppConfig {
+            paths: Some(paths.clone()),
+            ..crate::AppConfig::for_tests()
+        });
+        let installed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let flag = installed.clone();
+        app.set_installed_fonts_check(std::sync::Arc::new(move |name: &str| {
+            flag.load(std::sync::atomic::Ordering::SeqCst) && name == "Lexend"
+        }));
+        let src = ExportSource {
+            file: home.path().join("a.md"),
+            temp: None,
+            folder: home.path().to_owned(),
+            stem: "a".into(),
+            bibliography: None,
+        };
+        let fonts = |app: &App| {
+            let o = app.convert_options(OutputFormat::Pdf, &src);
+            (o.write.pdf.font_family, o.write.epub.font)
+        };
+        // A generic family: the writers' defaults.
+        app.settings.reading_aids.font.family = "sans".into();
+        assert_eq!(fonts(&app), (None, None));
+        // Lexend, neither downloaded nor installed: the defaults, no error.
+        app.settings.reading_aids.font.family = "lexend".into();
+        assert_eq!(fonts(&app), (None, None));
+        // Installed on this computer: the PDF's font only.
+        installed.store(true, std::sync::atomic::Ordering::SeqCst);
+        assert_eq!(fonts(&app), (Some("Lexend".into()), None));
+        installed.store(false, std::sync::atomic::Ordering::SeqCst);
+        // Downloaded into the data folder: both, by its key.
+        let dir = textweaver_fonts::downloaded::LEXEND.dir_in(&crate::fonts_folder(&paths));
+        std::fs::create_dir_all(&dir).unwrap();
+        let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/w7l");
+        for f in textweaver_fonts::downloaded::LEXEND.files {
+            std::fs::copy(fixtures.join(f.file_name), dir.join(f.file_name)).unwrap();
+        }
+        assert_eq!(fonts(&app), (Some("lexend".into()), Some("lexend".into())));
+        // A bundled reading font, when this build bundles fonts.
+        app.settings.reading_aids.font.family = "opendyslexic".into();
+        match textweaver_fonts::bundled::family("opendyslexic") {
+            Some(b) => assert_eq!(fonts(&app), (Some(b.name.into()), Some(b.name.into()))),
+            None => assert_eq!(fonts(&app), (None, None)),
+        }
     }
 
     /// Item 4 of Agent P2e: an export says it started (the command's own
