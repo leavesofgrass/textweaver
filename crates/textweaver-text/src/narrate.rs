@@ -414,7 +414,7 @@ impl Planner<'_> {
         for piece in pieces {
             let start = piece.start().max(at);
             if start > at {
-                b.push_literal(&self.doc.slice(CharRange::new(at, start)), at);
+                push_source(self.doc, &mut b, CharRange::new(at, start));
                 at = start;
             }
             match piece {
@@ -434,7 +434,7 @@ impl Planner<'_> {
             }
         }
         if clip.end > at {
-            b.push_literal(&self.doc.slice(CharRange::new(at, clip.end)), at);
+            push_source(self.doc, &mut b, CharRange::new(at, clip.end));
         }
         b.finish()
     }
@@ -591,7 +591,7 @@ impl Planner<'_> {
             if spoken_any {
                 b.push_inserted(", ", c.start);
             }
-            b.push_literal(&self.doc.slice(*c), c.start);
+            push_source(self.doc, b, *c);
             spoken_any = true;
         }
         self.finish_row(b, cells);
@@ -618,7 +618,7 @@ impl Planner<'_> {
             if c.is_empty() {
                 b.push_inserted("blank", c.start);
             } else {
-                b.push_literal(&self.doc.slice(*c), c.start);
+                push_source(self.doc, b, *c);
             }
         }
         self.finish_row(b, cells);
@@ -633,6 +633,21 @@ impl Planner<'_> {
             let at = cells.last().map_or(CharPos::ZERO, |c| c.end);
             b.push_inserted(".", at);
         }
+    }
+}
+
+/// Appends the document's text of `range` as literal spoken text, straight
+/// from the rope's chunks: no `String` per piece. The builder joins the
+/// chunks into one literal span, so the map is the same as for one slice.
+fn push_source(doc: &Document, b: &mut SpokenBuilder, range: CharRange) {
+    let range = range.clamp_to(doc.len_chars());
+    if range.is_empty() {
+        return;
+    }
+    let mut at = range.start;
+    for chunk in doc.text().slice(range.to_range()).chunks() {
+        b.push_literal(chunk, at);
+        at = at.saturating_add(chunk.chars().count());
     }
 }
 
@@ -1094,6 +1109,48 @@ mod tests {
         );
         check(&us);
         assert!(!texts(&us).join(" ").contains('x'));
+    }
+
+    /// A sentence the rope stores in many chunks is spoken as one literal
+    /// span, exactly as one slice of it would be (the planner pushes the
+    /// rope's chunks, not a copy of the range).
+    #[test]
+    fn a_sentence_across_rope_chunks_is_one_exact_span() {
+        let body = "wörd and 😀 more ".repeat(2000);
+        let text = format!("Start. {body}end. Next one.");
+        let d = Document::from_plain_text(&text);
+        assert!(
+            d.text().chunks().count() > 4,
+            "the test needs several chunks"
+        );
+        let policy = NarrationPolicy {
+            max_chunk_chars: 0,
+            ..NarrationPolicy::default()
+        };
+        let us = plan(&d, d.full_range(), &policy);
+        check(&us);
+        // Where the rope's chunks start, in chars.
+        let mut starts = Vec::new();
+        let mut at = 0;
+        for c in d.text().chunks() {
+            starts.push(at);
+            at += c.chars().count();
+        }
+        let mut crossing = 0;
+        for u in &us {
+            let r = u.source_range().unwrap();
+            assert_eq!(d.slice(r), u.text);
+            assert_eq!(u.offset_map.spans().len(), 1);
+            assert_eq!(u.offset_map.spans()[0].kind, SpanKind::Literal);
+            if starts.iter().any(|&s| r.start.0 < s && s < r.end.0) {
+                crossing += 1;
+                // The last word maps back to its own chars.
+                let byte = u.text.rfind(' ').map_or(0, |b| b + 1);
+                let src = u.source_for(to_u32(byte)..to_u32(u.text.len()));
+                assert_eq!(src.map(|s| d.slice(s)), Some(u.text[byte..].to_owned()));
+            }
+        }
+        assert!(crossing > 0, "no utterance crossed a chunk boundary");
     }
 }
 
