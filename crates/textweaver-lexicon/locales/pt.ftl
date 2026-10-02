@@ -1978,6 +1978,8 @@ setting-gui-announce = Anúncios
 setting-gui-announce-help = Como as mensagens da janela chegam ao leitor de tela, a partir do próximo início: uma região dinâmica, ou notificações de UI Automation (só Windows).
 choice-gui-announce-live = região dinâmica
 choice-gui-announce-uia = notificações de UI Automation
+setting-gui-auto-hide-menu = Ocultar a barra de menus
+setting-gui-auto-hide-menu-help = Windows: oculta a barra de menus da janela até que Alt ou F10 a mostre; ela se oculta de novo quando o menu fecha. Sem efeito no Linux, cujos menus são a lista do F10, nem no macOS.
 
 ## Units, said after a number.
 

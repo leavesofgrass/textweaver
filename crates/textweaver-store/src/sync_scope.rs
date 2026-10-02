@@ -228,6 +228,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("interface.recent_settings", Machine),
     // [gui]: how this computer's screen reader hears the window.
     ("gui.announce", Machine),
+    // Whether this computer's window hides its menu bar.
+    ("gui.auto_hide_menu", Machine),
     // [colors]
     ("colors.ruler", Portable),
     ("colors.difficult_words", Portable),

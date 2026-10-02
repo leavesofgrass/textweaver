@@ -223,6 +223,7 @@ fn everything_changed() -> Settings {
         .voices_by_language
         .insert("es".into(), "espeak:es".into());
     s.gui.announce = crate::GuiAnnounce::Uia;
+    s.gui.auto_hide_menu = true;
     let c = &mut s.colors;
     c.ruler = "orange".into();
     c.difficult_words = "blue".into();
