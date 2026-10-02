@@ -10,7 +10,8 @@
 //! - `hosts`: build every speech-engine host for this platform and install
 //!   them with the dictionaries (`--dest DIR` for a package directory).
 //! - `dist`: build a release package for this platform (`--universal` on
-//!   macOS); see `docs/dev/releasing.md`.
+//!   macOS); see `docs/dev/releasing.md`. It fails when the package grew
+//!   more than 10 percent over the last release's without a note.
 //! - `eci-host`, `sapi-host`: build one engine's hosts.
 //! - `gui-dist`: the Xilem GUI's own package: a zip on Windows, a `.app`
 //!   on macOS, a tarball and an AppImage on Linux (see `gui_dist.rs`).
@@ -29,7 +30,10 @@
 //!   (see `regen.rs`).
 //! - `release X.Y.Z [--dry-run] [--no-checks]`: set the version, date the
 //!   changelog, run the checks, commit, and tag (see `release.rs`);
-//!   `release X.Y.Z --listened` records the listening check.
+//!   `release X.Y.Z --listened` records the listening check;
+//!   `release X.Y.Z --sizes` records the published packages' sizes for
+//!   the size budget that `dist`, `gui-dist`, and `appimage` check (see
+//!   `sizes.rs`).
 //! - `soak [--minutes N]`: read the 10 MB corpus to the end with random
 //!   navigation, edits, rate changes, and engine-host kills (see `soak.rs`).
 //! - `startup [--baseline FILE --max-ratio R]`: time `tw --version`,
@@ -50,6 +54,7 @@ mod parity;
 mod regen;
 mod release;
 mod sapi;
+mod sizes;
 mod soak;
 
 #[cfg(feature = "bench")]
