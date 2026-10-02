@@ -65,6 +65,25 @@ pub fn keymap_preset(p: textweaver_store::KeymapPreset) -> textweaver_keymap::Pr
     }
 }
 
+/// The keymap a frontend starts with: the `[keyboard] preset` of
+/// `settings`, then the user's `overrides` (`keymap.toml`). The terminal
+/// reader and the GUI both build it here (W8a: the GUI left the preset
+/// out at startup). Returns the keymap and a warning for each override
+/// that could not be used.
+pub fn startup_keymap(
+    settings: &textweaver_store::Settings,
+    platform: textweaver_keymap::Platform,
+    frontend: textweaver_keymap::Frontend,
+    overrides: &std::collections::BTreeMap<String, Vec<String>>,
+) -> (textweaver_keymap::Keymap, Vec<String>) {
+    textweaver_keymap::Keymap::with_preset_and_overrides(
+        platform,
+        frontend,
+        keymap_preset(settings.keyboard.preset),
+        overrides,
+    )
+}
+
 /// The digit row for the `[keyboard] digit_row` setting.
 pub fn digit_row(d: textweaver_store::DigitRow) -> textweaver_keymap::digits::DigitRow {
     match d {
