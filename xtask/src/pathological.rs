@@ -400,17 +400,14 @@ fn svg(p: &Parts) -> String {
 }
 
 fn mathml(p: &Parts) -> String {
-    // Known slow (October 2, 2026): a long token inside the 200 nested
-    // rows takes time that grows faster than its length (8 KB 0.1 s,
-    // 32 KB 0.7 s, 512 KB 189 s, in the MathML loader's LaTeX pass). Until
-    // that is fixed the token sits beside the rows, not inside them, and
-    // the rows hold a short one. Put it back inside once the loader is
-    // linear, so the gate guards the fix.
-    let mut s = String::from("<math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n<mi>");
-    s.push_str(&p.token);
-    s.push_str("</mi>\n");
+    // The token sits inside the 200 nested rows, past the loader's depth
+    // limit, where it is read letter by letter. That took 189 s for 512 KB
+    // until W8b-ml made the LaTeX builder linear; the ceiling guards it.
+    let mut s = String::from("<math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n");
     s.push_str(&"<mrow>".repeat(DEPTH));
-    s.push_str("<mi>deep</mi>");
+    s.push_str("<mi>");
+    s.push_str(&p.token);
+    s.push_str("</mi>");
     s.push_str(&"</mrow>".repeat(DEPTH));
     s.push_str("\n<mtable>\n");
     for r in 0..ROWS / 4 {
