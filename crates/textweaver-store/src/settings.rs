@@ -330,7 +330,7 @@ pub const RESERVED_SETTINGS: &[(&str, &str)] = &[];
 /// next save leaves them out.
 pub const REMOVED_SETTINGS: &[(&str, &str)] = &[(
     "reading_aids.font.fetch_missing",
-    "textweaver never downloads fonts; a missing reading font is named, and the reading guide says where to get it",
+    "textweaver downloads a reading font (Lexend) only when you choose it and agree; a missing font is named, and the reading guide says where to get it",
 )];
 
 /// Settings whose key was renamed, as dotted paths: the old key, then the
@@ -1105,7 +1105,7 @@ impl Default for StatsSettings {
 }
 
 /// `[dictation]`: voice typing in edit mode (ADR-0042).
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DictationSettings {
     /// Speak the dictated words with textweaver's own voice while the
@@ -1114,9 +1114,42 @@ pub struct DictationSettings {
     /// not hear the voice.
     pub speak_while_recording: bool,
     /// The in-process Whisper model's folder (encoder, decoder,
-    /// `tokenizer.json`). Not set: `whisper/rten/base.en` in the data
-    /// folder.
+    /// `tokenizer.json`). Not set: the folder of the model chosen in
+    /// `model`, in the data folder (`whisper/rten/base.en`).
     pub model_dir: Option<PathBuf>,
+    /// The Whisper model dictation uses when `model_dir` is not set: an
+    /// optional component's id (`whisper-base.en`, the default, or
+    /// `whisper-small.en`). Empty means the default.
+    pub model: String,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+impl Default for DictationSettings {
+    fn default() -> Self {
+        DictationSettings {
+            speak_while_recording: false,
+            model_dir: None,
+            model: "whisper-base.en".to_owned(),
+            extra: toml::Table::new(),
+        }
+    }
+}
+
+/// `[components]`: optional components (models, fonts, voices) and where
+/// they come from (W8a-d).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ComponentsSettings {
+    /// A mirror tried before the public sources: an `https:` address or a
+    /// folder on this computer, holding each component's files under its
+    /// id. Empty: public sources only. `TEXTWEAVER_COMPONENTS_MIRROR` wins
+    /// over it. Never holds a password or token.
+    pub mirror: String,
+    /// The first-run list of optional components has been shown (it is
+    /// shown once).
+    pub chooser_shown: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1495,6 +1528,8 @@ pub struct Settings {
     pub colors: ColorSettings,
     /// `[sync]`
     pub sync: SyncSettings,
+    /// `[components]`
+    pub components: ComponentsSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1659,6 +1694,7 @@ impl Settings {
             gui: lenient_section("gui", table.remove("gui"), &mut w),
             colors: lenient_section("colors", table.remove("colors"), &mut w),
             sync: lenient_section("sync", table.remove("sync"), &mut w),
+            components: lenient_section("components", table.remove("components"), &mut w),
             extra: table,
         };
         (s, w)
@@ -1854,10 +1890,11 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 33] = [
+pub(crate) const STRUCT_TABLES: [&str; 34] = [
     "keyboard",
     "colors",
     "sync",
+    "components",
     "preview",
     "lexicon",
     "stats",

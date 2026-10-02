@@ -492,6 +492,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-a11y",
     "textweaver-aids",
     "textweaver-cite",
+    "textweaver-components",
     "textweaver-convert",
     "textweaver-core",
     "textweaver-dictation",
@@ -504,6 +505,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-lexicon",
     "textweaver-math",
     "textweaver-mathcat",
+    "textweaver-ocr",
     "textweaver-render",
     "textweaver-speech",
     "textweaver-store",
@@ -651,7 +653,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-writers",
     "textweaver-xilem"
    ],
-   "deps": [],
+   "deps": [
+    "textweaver-components"
+   ],
    "description": "Fonts for textweaver: bundled Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1), Lexend downloaded on first choice, installed fonts found by family name, and font choice and resolution",
    "dev_deps": [],
    "job": "Bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic), installed fonts found by family name, and the one place a font choice is resolved.",
@@ -1277,6 +1281,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-engines"
    ],
    "deps": [
+    "textweaver-components",
     "textweaver-core",
     "textweaver-enginehost",
     "textweaver-speech"
@@ -1421,10 +1426,13 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
+    "textweaver-app",
     "textweaver-cli",
     "textweaver-formats"
    ],
-   "deps": [],
+   "deps": [
+    "textweaver-components"
+   ],
    "description": "textweaver OCR: the pure-Rust ocrs engine in process, a Tesseract fallback, model downloads checked by SHA-256, and PDF page images",
    "dev_deps": [],
    "job": "Text recognition for scanned pages: the ocrs engine in process, Tesseract as a separate program, model downloads checked by SHA-256, and page images.",
@@ -1589,6 +1597,32 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "short": "core",
    "tool": false,
    "version": "0.1.0-alpha.7"
+  },
+  {
+   "adr_note": {
+    "href": "../components.md#for-developers",
+    "text": "Optional components"
+   },
+   "adrs": [],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app",
+    "textweaver-fonts",
+    "textweaver-ocr",
+    "textweaver-piper"
+   ],
+   "deps": [],
+   "description": "textweaver's optional components: files pinned by size and SHA-256, one downloader (a .part file, the hash, then a rename), install from a zip or a folder, and a mirror's manifest",
+   "dev_deps": [],
+   "job": "Optional components: the models, fonts, and voices textweaver can use but does not ship, and the one way they are fetched, checked, and installed (Wave 8, W8a-d).",
+   "layer": "foundation",
+   "name": "textweaver-components",
+   "path": "crates/textweaver-components",
+   "short": "components",
+   "tool": false,
+   "version": "0.1.0-alpha.7"
   }
  ],
  "generator": "tools/gen_site_data.py",
@@ -1678,9 +1712,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "name": "Document"
   },
   {
-   "about": "Shared types that everything else builds on.",
+   "about": "Shared types that everything else builds on, and the one downloader.",
    "crates": [
-    "textweaver-core"
+    "textweaver-core",
+    "textweaver-components"
    ],
    "id": "foundation",
    "name": "Foundation"

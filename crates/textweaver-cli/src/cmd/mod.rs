@@ -2,6 +2,7 @@
 
 pub mod backends;
 pub mod cite;
+pub mod components;
 pub mod convert;
 pub mod convert_layout;
 pub mod define;

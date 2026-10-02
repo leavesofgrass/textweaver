@@ -2955,6 +2955,9 @@ impl Gui {
                 self.app.announce_queued(&welcome, Priority::Polite);
             }
             effects.extend(self.app.language_list());
+            // Then, once nothing else is open, the optional components,
+            // none chosen (W8a-d).
+            self.app.offer_components_on_first_run();
         } else if self.startup_offers
             && self.app.hybrid_offer_due()
             && let Some(found) = textweaver_app::a11y::detect::detect()

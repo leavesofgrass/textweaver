@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use textweaver_app::a11y::{Announcer, Priority};
-use textweaver_app::fonts::downloaded::{Fetcher, LEXEND};
+use textweaver_app::fonts::downloaded::{Fetched, Fetcher, LEXEND};
 use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::store::Paths;
 use textweaver_app::testing::recording_service;
@@ -67,12 +67,17 @@ impl Fake {
 }
 
 impl Fetcher for Fake {
-    fn fetch(&self, url: &str, _limit: u64) -> Result<Vec<u8>, String> {
+    fn open(&self, url: &str, _from: u64) -> Result<Fetched, String> {
         self.asked.fetch_add(1, Ordering::SeqCst);
-        self.files
+        let data = self
+            .files
             .get(url)
             .cloned()
-            .ok_or_else(|| "not found".into())
+            .ok_or_else(|| "not found".to_owned())?;
+        Ok(Fetched {
+            reader: Box::new(std::io::Cursor::new(data)),
+            start: 0,
+        })
     }
 }
 

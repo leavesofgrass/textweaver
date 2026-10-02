@@ -11,7 +11,6 @@
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
@@ -77,10 +76,23 @@ pub fn find_uncached() -> Option<PathBuf> {
         .find(|p| p.is_file())
 }
 
-/// The Tesseract program, looked for once per process.
+/// The Tesseract program. Once found it is kept while it is there; when it
+/// is not found, it is looked for again after a few seconds, so one
+/// installed while textweaver runs is seen without a restart.
 pub fn find() -> Option<PathBuf> {
-    static FOUND: OnceLock<Option<PathBuf>> = OnceLock::new();
-    FOUND.get_or_init(find_uncached).clone()
+    use std::sync::Mutex;
+    use std::time::{Duration, Instant};
+    static FOUND: Mutex<Option<(Option<PathBuf>, Instant)>> = Mutex::new(None);
+    const RETRY: Duration = Duration::from_secs(5);
+    let mut cached = FOUND.lock().unwrap_or_else(|p| p.into_inner());
+    match &*cached {
+        Some((Some(p), _)) if p.is_file() => return Some(p.clone()),
+        Some((None, at)) if at.elapsed() < RETRY => return None,
+        _ => {}
+    }
+    let found = find_uncached();
+    *cached = Some((found.clone(), Instant::now()));
+    found
 }
 
 fn command(exe: &Path) -> Command {

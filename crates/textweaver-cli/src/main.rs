@@ -4,7 +4,7 @@
 //! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
 //! `convert_layout` for the PDF and EPUB layout flags), `export-audio`,
 //! `library`, `vault`, `dictate`, `marks`, `lint`, `migrate-star`, `cite`,
-//! `settings` (with `profile`), `define`, `stats`, `summarize`, `serve`, and `ocr`. Each module's docs name the ADR and crate it
+//! `settings` (with `profile`), `define`, `stats`, `summarize`, `serve`, `ocr`, and `components`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
 use anyhow::Result;
@@ -80,6 +80,8 @@ enum Cmd {
     Serve(cmd::serve::Args),
     /// Text recognition for scanned pages: engine status, model downloads, and reading a scan.
     Ocr(cmd::ocr::Args),
+    /// Optional components (models, fonts, voices): list, download, verify, remove, or install from a file.
+    Components(cmd::components::Args),
 }
 
 fn main() -> Result<()> {
@@ -111,6 +113,7 @@ fn main() -> Result<()> {
         Cmd::Sync(a) => cmd::sync::run(a),
         Cmd::Serve(a) => cmd::serve::run(a),
         Cmd::Ocr(a) => cmd::ocr::run(a),
+        Cmd::Components(a) => cmd::components::run(a),
     }
 }
 

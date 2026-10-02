@@ -1139,7 +1139,17 @@ pub const INFO: &[Info] = &[
     optional(
         "dictation.model_dir",
         "Dictation model folder",
-        "The Whisper model for dictation. Not set uses whisper/rten/base.en in the data folder.",
+        "A folder holding a Whisper model for dictation. Not set uses the dictation model below, in the data folder.",
+    ),
+    // W8a-w: the model offered for download.
+    open_choice(
+        "dictation.model",
+        "Dictation model",
+        "The Whisper model dictation uses when no folder is set. Download the dictation model, in the Tools menu, gets it.",
+        &[
+            ("whisper-base.en", "base.en, the default"),
+            ("whisper-small.en", "small.en, larger and more accurate"),
+        ],
     ),
     // [interface]
     open_choice(
@@ -1331,6 +1341,17 @@ pub const INFO: &[Info] = &[
             ("ask", "ask"),
         ],
     ),
+    // [components] (W8a-d)
+    text(
+        "components.mirror",
+        "Components mirror",
+        "Where optional components come from first: an https address or a folder on this computer. Empty uses their public sources. Never put a password here.",
+    ),
+    internal(
+        "components.chooser_shown",
+        "Components list shown",
+        "The first-run list of optional components was shown.",
+    ),
 ];
 
 /// The section title for a top-level key.
@@ -1357,6 +1378,7 @@ fn section_title(key: &str) -> &'static str {
         "gui" => "Window",
         "colors" => "Colors",
         "sync" => "Sync",
+        "components" => "Optional components",
         _ => "Other",
     }
 }

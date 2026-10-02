@@ -366,9 +366,13 @@ fn epub_embeds_bundled_fonts_with_their_licence() {
 struct FixtureFetcher;
 
 impl textweaver_fonts::downloaded::Fetcher for FixtureFetcher {
-    fn fetch(&self, url: &str, _limit: u64) -> Result<Vec<u8>, String> {
+    fn open(&self, url: &str, _from: u64) -> Result<textweaver_fonts::downloaded::Fetched, String> {
         let name = url.rsplit('/').next().unwrap_or_default();
-        std::fs::read(fixture(&format!("../w7l/{name}"))).map_err(|e| e.to_string())
+        let bytes = std::fs::read(fixture(&format!("../w7l/{name}"))).map_err(|e| e.to_string())?;
+        Ok(textweaver_fonts::downloaded::Fetched {
+            reader: Box::new(std::io::Cursor::new(bytes)),
+            start: 0,
+        })
     }
 }
 

@@ -3974,3 +3974,90 @@ chooser-profiles-export-title = تصدير ملفات الإعدادات
 chooser-profile-files = ملفات تصدير الإعدادات
 gui-folder-no-dialog = لم يُفتح منتقي المجلدات في النظام. اختر المجلد من هذه القائمة.
 gui-prompt-browse-hint = يفتح { $key } متصفح الملفات.
+
+## المكونات الاختيارية (W8a-d، W8a-w).
+name-manage-components = إدارة المكونات الاختيارية…
+name-download-dictation-model = تنزيل نموذج الإملاء
+action-manage-components = إدارة المكونات الاختيارية: النماذج والخطوط والأصوات التي يمكن لـ textweaver تنزيلها، مع حجمها وترخيصها
+action-download-dictation-model = تنزيل نموذج الإملاء المختار في الإعدادات، بعد ذكر حجمه وترخيصه
+component-feature-dictation = الإملاء
+component-feature-ocr = قراءة الصفحات الممسوحة
+component-feature-reading-font = خط للقراءة
+component-feature-voice = صوت للنطق
+component-state-installed = مثبّت
+component-state-not-installed = غير مثبّت
+component-state-partial = مثبّت جزئيًا
+component-state-damaged = تالف
+component-state-downloading = قيد التنزيل
+components-title = المكونات الاختيارية
+components-intro =
+    { $n ->
+        [one] مكوّن اختياري واحد. Enter للإجراءات.
+       *[other] { $n } مكونات اختيارية. Enter للإجراءات.
+    }
+components-item = { $title }: { $state }، { $size }، الترخيص { $license }، من أجل { $features }
+components-actions-intro = { $title }: { $state }.
+components-action-download = تنزيل، { $size }
+components-action-verify = التحقق من الملفات
+components-action-remove = إزالة
+components-action-install-zip = التثبيت من ملف zip…
+components-action-install-folder = التثبيت من مجلد…
+components-install-purpose = تثبيت المكوّن من هنا
+component-question = تنزيل { $title }، { $size }، الترخيص { $license }؟ y أو n
+component-remove-question = إزالة { $title }؟ y أو n
+component-downloading = جارٍ التنزيل. Escape يوقفه.
+component-installing = جارٍ التثبيت من الملف.
+component-verifying = جارٍ التحقق من الملفات.
+component-progress = تم تنزيل { $percent } بالمئة.
+component-ready = جاهز: { $title }.
+component-verified = الملفات سليمة: { $title }.
+component-verify-failed =
+    { $n ->
+        [one] ملف واحد غير مطابق: { $files }.
+       *[other] { $n } ملفات غير مطابقة: { $files }.
+    }
+component-removed = أُزيل: { $title }.
+component-refused =
+    { $n ->
+        [one] ملف واحد مستبعد: { $files }.
+       *[other] { $n } ملفات مستبعدة: { $files }.
+    }
+component-already = مثبّت بالفعل: { $title }.
+component-not-there = غير مثبّت: { $title }.
+component-declined = لم يُنزَّل شيء.
+component-not-in-build = لا تنزيلات في هذا الإصدار.
+component-no-folder = لا مجلد بيانات لحفظه.
+component-error-fetch = لم يُنزَّل: فشل المصدر.
+component-error-size = لم يُثبَّت: حجم ملف خاطئ.
+component-error-hash = لم يُثبَّت: ملف غير مطابق.
+component-error-missing = لم يُثبَّت: ملف مفقود.
+component-error-cancelled = توقف التنزيل؛ يُستأنف لاحقًا.
+component-error-busy = يجري تنزيل مكوّن بالفعل.
+component-error-no-source = لم يُنزَّل: لا عنوان له.
+component-error-name = مرفوض: اسم غير بسيط.
+component-error-manifest = قائمة المرآة غير مقروءة.
+component-error-io = لم يُثبَّت: تعذرت الكتابة.
+components-chooser-title = المكونات الاختيارية
+components-chooser-intro = إضافات اختيارية، لم يُختر شيء. المسافة تختار؛ تنزيل المختار يجلبها؛ Escape يتخطى.
+components-chooser-item = { $mark }: { $title }، من أجل { $features }، { $size }، الترخيص { $license }
+components-chosen = مختار
+components-not-chosen = غير مختار
+components-chooser-download = تنزيل المختار
+components-chooser-skip = تخطٍّ الآن
+components-chooser-skipped = تم التخطي؛ انظر إدارة المكونات.
+components-chooser-none = لم يُختر شيء، ولم يُنزَّل شيء.
+dictation-model-question = يحتاج الإملاء إلى نموذج Whisper، { $size }، الترخيص { $license }. تنزيله الآن؟ y أو n
+dictation-model-declined = لا نموذج، فلا إملاء الآن.
+dictation-model-not-in-build = لا نموذج ولا تنزيلات في هذا الإصدار.
+dictation-model-file-missing = ينقص النموذج { $file }.
+dictation-model-damaged = نموذج الإملاء تالف: { $file }.
+dictation-model-no-folder = لا مجلد للنموذج: { $dir }.
+
+## إعدادات المكونات الاختيارية (W8a-d، W8a-w).
+section-components = المكونات الاختيارية
+setting-dictation-model = نموذج الإملاء
+setting-dictation-model-help = نموذج Whisper الذي يستخدمه الإملاء حين لا يُحدَّد مجلد. «تنزيل نموذج الإملاء» في قائمة الأدوات يجلبه.
+choice-dictation-model-whisper-base-en = base.en، الافتراضي
+choice-dictation-model-whisper-small-en = small.en، أكبر وأدق
+setting-components-mirror = مرآة المكونات
+setting-components-mirror-help = من أين تأتي المكونات الاختيارية أولًا: عنوان https أو مجلد على هذا الحاسوب. الفارغ يستخدم مصادرها العامة. لا تضع كلمة مرور هنا أبدًا.

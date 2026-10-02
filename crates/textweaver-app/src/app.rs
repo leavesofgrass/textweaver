@@ -297,6 +297,9 @@ pub(crate) enum ListKind {
     Sync(crate::sync::SyncList),
     /// "Continue reading": the documents, by row (crate::library, S6).
     Continue(Vec<std::path::PathBuf>),
+    /// Manage optional components, one component's actions, or the
+    /// first-run list (crate::components).
+    Components(crate::components::ComponentsList),
 }
 
 /// The application: the only owner of mutable state.
@@ -461,6 +464,9 @@ pub struct App {
     pub(crate) sync: crate::sync::SyncState,
     /// Downloading a reading font on first choice (crate::font_download).
     pub(crate) fonts: crate::font_download::FontDownloads,
+    /// Optional components: the registry, questions, and downloads
+    /// (crate::components).
+    pub(crate) components: crate::components::ComponentsState,
 }
 
 impl App {
@@ -570,6 +576,7 @@ impl App {
             frame_cache: crate::frame_cache::FrameCaches::default(),
             sync: crate::sync::SyncState::default(),
             fonts: crate::font_download::FontDownloads::default(),
+            components: crate::components::ComponentsState::default(),
         };
         if app.paths.is_some() {
             // The writers find a downloaded Lexend by name.
@@ -581,6 +588,7 @@ impl App {
         crate::dictation::register(&mut app);
         crate::batch::register(&mut app);
         crate::audio_export::register(&mut app);
+        crate::components::register(&mut app);
         app
     }
 
@@ -618,6 +626,7 @@ impl App {
             || self.audio_question()
             || self.sync.question.is_some()
             || self.fonts.question.is_some()
+            || self.components.question.is_some()
     }
 
     /// Answers a pending confirmation.
@@ -655,6 +664,9 @@ impl App {
         }
         if self.fonts.question.is_some() {
             return self.confirm_font(answer);
+        }
+        if self.components.question.is_some() {
+            return self.confirm_component(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
@@ -1316,6 +1328,11 @@ impl App {
                 if self.opening.is_some() && !self.mode.is_prompt() && self.list.is_none() {
                     return self.cancel_opening();
                 }
+                // Escape while a component downloads, with nothing else
+                // open: stops it (the next download goes on from there).
+                if self.component_job_running() && !self.mode.is_prompt() && self.list.is_none() {
+                    return self.cancel_component_job();
+                }
                 // Escape while a batch converts, with nothing else open:
                 // asks before stopping it.
                 if self.batch_running() && !self.mode.is_prompt() && self.list.is_none() {
@@ -1389,6 +1406,7 @@ impl App {
         effects.extend(self.audio_tick(now));
         effects.extend(self.sync_tick(now));
         effects.extend(self.font_download_tick());
+        effects.extend(self.components_tick());
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));
         if rsvp_moved && effects.is_empty() {
@@ -1568,6 +1586,7 @@ impl App {
             Some(ListKind::Frontend) => self.choose_frontend_item(n),
             Some(ListKind::Sync(l)) => return self.choose_sync(l, n),
             Some(ListKind::Continue(paths)) => return self.choose_continue(&paths, n),
+            Some(ListKind::Components(l)) => return self.choose_component_row(l, n),
             Some(ListKind::Palette(actions)) => {
                 if let Some(&a) = actions.get(n) {
                     return self.run_command(a);
@@ -1594,6 +1613,7 @@ impl App {
                 vec![Effect::Redraw]
             }
             Some(ListKind::Study(l)) => self.delete_study_item(l, n),
+            Some(ListKind::Components(l)) => self.delete_component_row(l, n),
             _ => {
                 let msg = self.msg("study-nothing-to-delete");
                 self.tell(&msg);
@@ -1621,6 +1641,10 @@ impl App {
     fn mark_item(&mut self, n: usize) -> Vec<Effect> {
         match self.list.clone() {
             Some(ListKind::Voices) => self.toggle_favourite_voice(n),
+            Some(ListKind::Components(l)) => {
+                self.list = None;
+                self.mark_component_row(l, n)
+            }
             _ => {
                 let msg = self.msg("list-nothing-to-mark");
                 self.tell(&msg);
@@ -1906,7 +1930,12 @@ impl App {
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),
             A::Menu => return self.open_menu(),
-            A::BrowseFiles | A::BatchConvert | A::ExportAudio | A::Dictate => {
+            A::BrowseFiles
+            | A::BatchConvert
+            | A::ExportAudio
+            | A::Dictate
+            | A::DownloadDictationModel
+            | A::ManageComponents => {
                 return self.run_registered(a);
             }
             A::ColorSettings => return self.open_color_settings(),

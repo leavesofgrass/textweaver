@@ -13,9 +13,10 @@ publish.workspace = true
 default = ["ocrs"]
 # The ocrs engine on RTen, in process.
 ocrs = ["dep:ocrs", "dep:rten", "dep:rten-tensor", "dep:rten-imageproc"]
-# Model downloads over HTTPS (ureq with rustls). Off by default, so the
-# reader links no HTTP client; `tw ocr download` turns it on.
-download = ["dep:ureq"]
+# Model downloads over HTTPS, through the shared downloader
+# (textweaver-components). Off by default, so the reader links no HTTP
+# client; `tw ocr download` turns it on.
+download = ["textweaver-components/download"]
 
 [dependencies]
 thiserror.workspace = true
@@ -30,7 +31,9 @@ rten = { workspace = true, optional = true }
 rten-tensor = { workspace = true, optional = true }
 rten-imageproc = { workspace = true, optional = true }
 ocrs = { workspace = true, optional = true }
-ureq = { workspace = true, optional = true }
+# The model sets are optional components (W8a-d): one pin type, one
+# downloader.
+textweaver-components.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

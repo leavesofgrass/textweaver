@@ -10,12 +10,14 @@
 //! `TEXTWEAVER_OCR_MODELS` (which holds every set's files directly; tests
 //! use it).
 
-#[cfg(feature = "download")]
-use std::io::Read;
+use std::borrow::Cow;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 
 use sha2::{Digest, Sha256};
+use textweaver_components::{
+    Component, ComponentError, Fetcher, FilePin, Sources, StandardFetcher,
+};
 
 use crate::OcrError;
 
@@ -128,7 +130,7 @@ pub fn set_flat_dir(dir: Option<PathBuf>) {
 
 /// The folder holding every set's files directly, when one is chosen
 /// ([`set_flat_dir`] or `TEXTWEAVER_OCR_MODELS`).
-fn flat_dir() -> Option<PathBuf> {
+pub fn flat_dir() -> Option<PathBuf> {
     FLAT_DIR
         .read()
         .unwrap_or_else(|p| p.into_inner())
@@ -262,97 +264,92 @@ pub struct DownloadProgress {
     pub total: u64,
 }
 
+impl ModelSet {
+    /// This set as an optional component (`ocr-ocrs`, `ocr-paddle-latin`):
+    /// the same pins, for the components registry and the shared
+    /// downloader (W8a-d).
+    pub fn component(&self) -> Component {
+        Component {
+            id: Cow::Owned(format!("ocr-{}", self.id)),
+            title: Cow::Borrowed(self.title),
+            license: Cow::Borrowed(self.licence),
+            credit: Cow::Borrowed(self.credit),
+            features: Cow::Borrowed(&[Cow::Borrowed("ocr")]),
+            folder: Cow::Owned(format!("models/ocr/{}", self.id)),
+            files: Cow::Owned(
+                self.files
+                    .iter()
+                    .map(|f| FilePin::sha256(f.name, f.url, f.size, f.sha256))
+                    .collect(),
+            ),
+            notice: None,
+        }
+    }
+
+    /// The pinned file named `name`, with its `'static` name.
+    fn file_named(&self, name: &str) -> &'static str {
+        self.files
+            .iter()
+            .find(|f| f.name == name)
+            .map_or("models", |f| f.name)
+    }
+}
+
 /// Downloads every missing or damaged file of `set` into its folder,
-/// checking each by SHA-256 before it is kept. `progress` is called as
-/// bytes arrive; setting `cancel` stops the download (partial files are
-/// removed). Only call this after the user has agreed to the download
-/// (its size and licence are in [`ModelSet`]).
-#[cfg(feature = "download")]
+/// through the shared downloader: the mirror first when one is set
+/// (`TEXTWEAVER_COMPONENTS_MIRROR`), then the public address; each file is
+/// checked by SHA-256 before it is kept. `progress` is called as bytes
+/// arrive; setting `cancel` stops the download (a later one goes on from
+/// where it stopped). Only call this after the user has agreed to the
+/// download (its size and licence are in [`ModelSet`]). Without the
+/// `download` feature, only a mirror that is a folder on this computer
+/// works.
 pub fn download(
     set: &ModelSet,
     progress: &mut dyn FnMut(DownloadProgress),
     cancel: &AtomicBool,
 ) -> Result<(), OcrError> {
-    let dir = set.dir().ok_or(OcrError::NoDataDir)?;
-    std::fs::create_dir_all(&dir).map_err(|e| OcrError::Io(dir.clone(), e))?;
-    let total = set.size();
-    let mut done = 0u64;
-    for f in set.files {
-        let path = dir.join(f.name);
-        if std::fs::read(&path).is_ok_and(|b| verify(f, &b).is_ok()) {
-            done += f.size;
-            progress(DownloadProgress { done, total });
-            continue;
-        }
-        let bytes = fetch(
-            f,
-            &mut |n| {
-                progress(DownloadProgress {
-                    done: done + n,
-                    total,
-                })
-            },
-            cancel,
-        )?;
-        verify(f, &bytes)?;
-        let part = dir.join(format!("{}.part", f.name));
-        std::fs::write(&part, &bytes).map_err(|e| OcrError::Io(part.clone(), e))?;
-        std::fs::rename(&part, &path).map_err(|e| OcrError::Io(path.clone(), e))?;
-        done += f.size;
-        progress(DownloadProgress { done, total });
-    }
-    Ok(())
+    download_with(
+        set,
+        &Sources::from_env_or(""),
+        &StandardFetcher,
+        progress,
+        cancel,
+    )
 }
 
-#[cfg(feature = "download")]
-fn fetch(
-    f: &ModelFile,
-    progress: &mut dyn FnMut(u64),
-    cancel: &AtomicBool,
-) -> Result<Vec<u8>, OcrError> {
-    let net = |e: ureq::Error| OcrError::Download(f.name, e.to_string());
-    let agent: ureq::Agent = ureq::Agent::config_builder()
-        .timeout_global(Some(std::time::Duration::from_secs(600)))
-        .timeout_connect(Some(std::time::Duration::from_secs(30)))
-        .user_agent(concat!(
-            "textweaver/",
-            env!("CARGO_PKG_VERSION"),
-            " (+https://github.com/leavesofgrass/textweaver)"
-        ))
-        .build()
-        .into();
-    let mut resp = agent.get(f.url).call().map_err(net)?;
-    let mut reader = resp.body_mut().as_reader().take(f.size + 1);
-    let mut out = Vec::with_capacity(usize::try_from(f.size).unwrap_or(0));
-    let mut buf = vec![0u8; 64 * 1024];
-    loop {
-        if cancel.load(Ordering::Relaxed) {
-            return Err(OcrError::Cancelled);
-        }
-        let n = reader
-            .read(&mut buf)
-            .map_err(|e| OcrError::Download(f.name, e.to_string()))?;
-        if n == 0 {
-            break;
-        }
-        out.extend_from_slice(&buf[..n]);
-        progress(out.len() as u64);
-    }
-    Ok(out)
-}
-
-/// Downloading is not built in (the `download` feature is off).
-#[cfg(not(feature = "download"))]
-pub fn download(
+/// [`download`] from `sources` through `fetcher` (tests pass a fake one;
+/// `tw` passes the mirror from its settings).
+pub fn download_with(
     set: &ModelSet,
-    _progress: &mut dyn FnMut(DownloadProgress),
-    _cancel: &AtomicBool,
+    sources: &Sources,
+    fetcher: &dyn Fetcher,
+    progress: &mut dyn FnMut(DownloadProgress),
+    cancel: &AtomicBool,
 ) -> Result<(), OcrError> {
-    let _ = Ordering::Relaxed;
-    Err(OcrError::Download(
-        set.files.first().map_or("models", |f| f.name),
-        "this build of textweaver cannot download files".into(),
-    ))
+    let dir = set.dir().ok_or(OcrError::NoDataDir)?;
+    textweaver_components::download(
+        &set.component(),
+        &dir,
+        sources,
+        fetcher,
+        &mut |p| {
+            progress(DownloadProgress {
+                done: p.done,
+                total: p.total,
+            })
+        },
+        cancel,
+    )
+    .map(|_| ())
+    .map_err(|e| match e {
+        ComponentError::Cancelled => OcrError::Cancelled,
+        ComponentError::Hash { file } | ComponentError::Size { file, .. } => {
+            OcrError::Checksum(set.file_named(&file))
+        }
+        ComponentError::Fetch { file, reason } => OcrError::Download(set.file_named(&file), reason),
+        other => OcrError::Download(set.file_named(""), other.to_string()),
+    })
 }
 
 #[cfg(test)]
@@ -401,5 +398,43 @@ mod tests {
         assert_eq!(status_in(&set, dir.path()), ModelStatus::Present);
         assert!(verify(&set.files[0], b"abc").is_ok());
         assert!(verify(&set.files[0], b"abd").is_err());
+    }
+
+    #[test]
+    fn each_set_is_a_component_with_the_same_pins_and_downloads_through_it() {
+        for set in ALL {
+            let c = set.component();
+            assert!(c.check_names().is_ok(), "{}", set.id);
+            assert_eq!(c.files.len(), set.files.len());
+            for (pin, f) in c.files.iter().zip(set.files) {
+                assert_eq!((pin.name.as_ref(), pin.size), (f.name, f.size));
+                assert_eq!(pin.check.expected(), f.sha256);
+            }
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        let set = ModelSet {
+            id: "t",
+            title: "test",
+            licence: "",
+            credit: "",
+            files: &[ModelFile {
+                name: "a.bin",
+                url: "https://example.invalid/a.bin",
+                size: 3,
+                sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            }],
+        };
+        let flat = tmp.path().join("ocr");
+        set_flat_dir(Some(flat.clone()));
+        let fake = textweaver_components::fake::FakeFetcher::new()
+            .with("https://example.invalid/a.bin", b"abd".to_vec());
+        let cancel = AtomicBool::new(false);
+        let e = download_with(&set, &Sources::public(), &fake, &mut |_| {}, &cancel);
+        assert!(matches!(e, Err(OcrError::Checksum("a.bin"))), "{e:?}");
+        let fake = textweaver_components::fake::FakeFetcher::new()
+            .with("https://example.invalid/a.bin", b"abc".to_vec());
+        download_with(&set, &Sources::public(), &fake, &mut |_| {}, &cancel).unwrap();
+        assert_eq!(set.status(), ModelStatus::Present);
+        set_flat_dir(None);
     }
 }

@@ -189,7 +189,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("reading_aids.spacing.paragraph_spacing", Portable),
     ("reading_aids.spacing.letter_spacing", Portable),
     ("reading_aids.spacing.word_spacing", Portable),
-    // A font missing on a computer is named, never downloaded.
+    // A font missing on a computer is named; Lexend is downloaded there
+    // only when the reader chooses it and agrees.
     ("reading_aids.font.family", Portable),
     ("reading_aids.font.size_pt", Portable),
     ("reading_aids.font.weight", Portable),
@@ -220,6 +221,11 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // [dictation]
     ("dictation.speak_while_recording", Portable),
     ("dictation.model_dir", Machine),
+    // What is downloaded on this computer.
+    ("dictation.model", Machine),
+    // [components] (W8a-d): this computer's mirror and first run.
+    ("components.mirror", Machine),
+    ("components.chooser_shown", Machine),
     // [interface]
     ("interface.language", Portable),
     // Depends on the terminal.

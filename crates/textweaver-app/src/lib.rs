@@ -165,6 +165,7 @@ mod citations;
 mod citations;
 mod colors;
 mod command;
+pub mod components;
 mod details_form;
 mod dictation;
 pub mod disk;

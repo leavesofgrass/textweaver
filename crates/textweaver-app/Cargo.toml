@@ -47,6 +47,7 @@ publish = [
     "dep:textweaver-render",
     "textweaver-engines/piper-download",
     "textweaver-fonts/download",
+    "textweaver-components/download",
 ]
 # Speech engines, passed through to textweaver-engines.
 espeak = ["textweaver-engines/espeak"]
@@ -78,6 +79,11 @@ textweaver-theme.workspace = true
 textweaver-aids.workspace = true
 # Downloading Lexend on first choice (W7l); HTTP only with `publish`.
 textweaver-fonts.workspace = true
+# Optional components (W8a-d): the registry's pins, the one downloader,
+# and install from a file; HTTP only with `publish`.
+textweaver-components.workspace = true
+# The OCR model sets, listed in the components registry.
+textweaver-ocr.workspace = true
 textweaver-math.workspace = true
 textweaver-mathcat = { workspace = true, optional = true }
 textweaver-cite = { workspace = true, optional = true }

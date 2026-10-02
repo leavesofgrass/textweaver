@@ -79,9 +79,10 @@ pub fn from_store(saved: &saved::FontSettings) -> FontSettings {
         family: FontFamily::from(saved.family.as_str()),
         size_pt: saved.size_pt,
         weight: saved.weight,
-        // textweaver never downloads fonts; a missing reading font is
-        // named with where to get it (`[reading_aids.font] fetch_missing`
-        // was removed in Wave 5).
+        // textweaver downloads a reading font (Lexend) only when it is
+        // chosen and the reader agrees; any other missing font is named
+        // with where to get it (`[reading_aids.font] fetch_missing` was
+        // removed in Wave 5).
         fetch_missing: true,
     }
 }

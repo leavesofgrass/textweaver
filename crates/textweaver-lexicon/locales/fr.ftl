@@ -3733,3 +3733,90 @@ chooser-profiles-export-title = Exporter les profils
 chooser-profile-files = Fichiers de profils
 gui-folder-no-dialog = Le sélecteur de dossiers du système ne s'est pas ouvert. Choisissez le dossier dans cette liste.
 gui-prompt-browse-hint = { $key } ouvre le navigateur de fichiers.
+
+## Composants facultatifs (W8a-d, W8a-w).
+name-manage-components = Gérer les composants facultatifs…
+name-download-dictation-model = Télécharger le modèle de dictée
+action-manage-components = Gérer les composants facultatifs : les modèles, polices et voix que textweaver peut télécharger, avec leur taille et leur licence
+action-download-dictation-model = Télécharger le modèle de dictée choisi dans les réglages, après avoir dit sa taille et sa licence
+component-feature-dictation = la dictée
+component-feature-ocr = lire les pages numérisées
+component-feature-reading-font = une police de lecture
+component-feature-voice = une voix
+component-state-installed = installé
+component-state-not-installed = non installé
+component-state-partial = installé en partie
+component-state-damaged = endommagé
+component-state-downloading = en téléchargement
+components-title = Composants facultatifs
+components-intro =
+    { $n ->
+        [one] 1 composant facultatif. Entrée pour les actions.
+       *[other] { $n } composants facultatifs. Entrée pour les actions.
+    }
+components-item = { $title } : { $state }, { $size }, licence { $license }, pour { $features }
+components-actions-intro = { $title } : { $state }.
+components-action-download = Télécharger, { $size }
+components-action-verify = Vérifier les fichiers
+components-action-remove = Supprimer
+components-action-install-zip = Installer depuis un fichier zip…
+components-action-install-folder = Installer depuis un dossier…
+components-install-purpose = Installer le composant depuis ici
+component-question = Télécharger { $title }, { $size }, licence { $license } ? y ou n
+component-remove-question = Supprimer { $title } ? y ou n
+component-downloading = Téléchargement. Échap l'arrête.
+component-installing = Installation depuis le fichier.
+component-verifying = Vérification des fichiers.
+component-progress = { $percent } pour cent téléchargés.
+component-ready = Prêt : { $title }.
+component-verified = Fichiers corrects : { $title }.
+component-verify-failed =
+    { $n ->
+        [one] 1 fichier incorrect : { $files }.
+       *[other] { $n } fichiers incorrects : { $files }.
+    }
+component-removed = Supprimé : { $title }.
+component-refused =
+    { $n ->
+        [one] 1 fichier écarté : { $files }.
+       *[other] { $n } fichiers écartés : { $files }.
+    }
+component-already = Déjà installé : { $title }.
+component-not-there = Non installé : { $title }.
+component-declined = Rien n'a été téléchargé.
+component-not-in-build = Pas de téléchargement ici.
+component-no-folder = Aucun dossier de données pour lui.
+component-error-fetch = Non téléchargé : la source a échoué.
+component-error-size = Non installé : mauvaise taille.
+component-error-hash = Non installé : un fichier diffère.
+component-error-missing = Non installé : un fichier manque.
+component-error-cancelled = Arrêté ; reprendra plus tard.
+component-error-busy = Un téléchargement est en cours.
+component-error-no-source = Non téléchargé : pas d'adresse.
+component-error-name = Refusé : un nom n'est pas simple.
+component-error-manifest = Liste du miroir illisible.
+component-error-io = Non installé : écriture impossible.
+components-chooser-title = Composants facultatifs
+components-chooser-intro = Extras facultatifs, aucun choisi. Espace en choisit un ; Télécharger ceux choisis les obtient ; Échap passe.
+components-chooser-item = { $mark } : { $title }, pour { $features }, { $size }, licence { $license }
+components-chosen = Choisi
+components-not-chosen = Non choisi
+components-chooser-download = Télécharger ceux choisis
+components-chooser-skip = Plus tard
+components-chooser-skipped = Passé ; voir Gérer les composants.
+components-chooser-none = Rien choisi, rien téléchargé.
+dictation-model-question = La dictée a besoin du modèle Whisper, { $size }, licence { $license }. Le télécharger maintenant ? y ou n
+dictation-model-declined = Pas de modèle : dictée indisponible.
+dictation-model-not-in-build = Pas de modèle ni de téléchargement ici.
+dictation-model-file-missing = Il manque au modèle { $file }.
+dictation-model-damaged = Modèle de dictée endommagé : { $file }.
+dictation-model-no-folder = Dossier absent : { $dir }.
+
+## Réglages des composants facultatifs (W8a-d, W8a-w).
+section-components = Composants facultatifs
+setting-dictation-model = Modèle de dictée
+setting-dictation-model-help = Le modèle Whisper qu'utilise la dictée quand aucun dossier n'est réglé. Télécharger le modèle de dictée, dans le menu Outils, l'obtient.
+choice-dictation-model-whisper-base-en = base.en, par défaut
+choice-dictation-model-whisper-small-en = small.en, plus grand et plus précis
+setting-components-mirror = Miroir des composants
+setting-components-mirror-help = D'où viennent d'abord les composants facultatifs : une adresse https ou un dossier sur cet ordinateur. Vide utilise leurs sources publiques. N'y mettez jamais de mot de passe.

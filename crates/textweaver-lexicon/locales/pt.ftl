@@ -3721,3 +3721,90 @@ chooser-profiles-export-title = Exportar perfis
 chooser-profile-files = Arquivos de perfis
 gui-folder-no-dialog = O seletor de pastas do sistema não abriu. Escolha a pasta nesta lista.
 gui-prompt-browse-hint = { $key } abre o navegador de arquivos.
+
+## Componentes opcionais (W8a-d, W8a-w).
+name-manage-components = Gerenciar componentes opcionais…
+name-download-dictation-model = Baixar o modelo de ditado
+action-manage-components = Gerenciar componentes opcionais: os modelos, fontes e vozes que o textweaver pode baixar, com tamanho e licença
+action-download-dictation-model = Baixar o modelo de ditado escolhido nas configurações, depois de dizer o tamanho e a licença
+component-feature-dictation = o ditado
+component-feature-ocr = ler páginas digitalizadas
+component-feature-reading-font = uma fonte de leitura
+component-feature-voice = uma voz
+component-state-installed = instalado
+component-state-not-installed = não instalado
+component-state-partial = instalado em parte
+component-state-damaged = danificado
+component-state-downloading = baixando
+components-title = Componentes opcionais
+components-intro =
+    { $n ->
+        [one] 1 componente opcional. Enter para ações.
+       *[other] { $n } componentes opcionais. Enter para ações.
+    }
+components-item = { $title }: { $state }, { $size }, licença { $license }, para { $features }
+components-actions-intro = { $title }: { $state }.
+components-action-download = Baixar, { $size }
+components-action-verify = Verificar os arquivos
+components-action-remove = Remover
+components-action-install-zip = Instalar de um arquivo zip…
+components-action-install-folder = Instalar de uma pasta…
+components-install-purpose = Instalar o componente daqui
+component-question = Baixar { $title }, { $size }, licença { $license }? y ou n
+component-remove-question = Remover { $title }? y ou n
+component-downloading = Baixando. Escape interrompe.
+component-installing = Instalando do arquivo.
+component-verifying = Verificando os arquivos.
+component-progress = { $percent } por cento baixado.
+component-ready = Pronto: { $title }.
+component-verified = Arquivos corretos: { $title }.
+component-verify-failed =
+    { $n ->
+        [one] 1 arquivo não confere: { $files }.
+       *[other] { $n } arquivos não conferem: { $files }.
+    }
+component-removed = Removido: { $title }.
+component-refused =
+    { $n ->
+        [one] 1 arquivo deixado de fora: { $files }.
+       *[other] { $n } arquivos deixados de fora: { $files }.
+    }
+component-already = Já instalado: { $title }.
+component-not-there = Não instalado: { $title }.
+component-declined = Nada foi baixado.
+component-not-in-build = Sem downloads nesta versão.
+component-no-folder = Sem pasta de dados para ele.
+component-error-fetch = Não baixado: a origem falhou.
+component-error-size = Não instalado: tamanho errado.
+component-error-hash = Não instalado: um arquivo difere.
+component-error-missing = Não instalado: falta um arquivo.
+component-error-cancelled = Parado; continua mais tarde.
+component-error-busy = Já está baixando um.
+component-error-no-source = Não baixado: sem endereço.
+component-error-name = Recusado: um nome não é simples.
+component-error-manifest = Lista do espelho ilegível.
+component-error-io = Não instalado: falha ao gravar.
+components-chooser-title = Componentes opcionais
+components-chooser-intro = Extras opcionais, nenhum escolhido. Espaço escolhe; Baixar os escolhidos os obtém; Escape pula.
+components-chooser-item = { $mark }: { $title }, para { $features }, { $size }, licença { $license }
+components-chosen = Escolhido
+components-not-chosen = Não escolhido
+components-chooser-download = Baixar os escolhidos
+components-chooser-skip = Agora não
+components-chooser-skipped = Pulado; veja Gerenciar componentes.
+components-chooser-none = Nada escolhido, nada baixado.
+dictation-model-question = O ditado precisa do modelo Whisper, { $size }, licença { $license }. Baixar agora? y ou n
+dictation-model-declined = Sem modelo, sem ditado por enquanto.
+dictation-model-not-in-build = Sem modelo e sem downloads aqui.
+dictation-model-file-missing = Falta ao modelo { $file }.
+dictation-model-damaged = Modelo de ditado danificado: { $file }.
+dictation-model-no-folder = Pasta não existe: { $dir }.
+
+## Configurações dos componentes opcionais (W8a-d, W8a-w).
+section-components = Componentes opcionais
+setting-dictation-model = Modelo de ditado
+setting-dictation-model-help = O modelo Whisper que o ditado usa quando nenhuma pasta é definida. Baixar o modelo de ditado, no menu Ferramentas, o obtém.
+choice-dictation-model-whisper-base-en = base.en, o padrão
+choice-dictation-model-whisper-small-en = small.en, maior e mais preciso
+setting-components-mirror = Espelho de componentes
+setting-components-mirror-help = De onde vêm primeiro os componentes opcionais: um endereço https ou uma pasta neste computador. Vazio usa as origens públicas. Nunca coloque uma senha aqui.

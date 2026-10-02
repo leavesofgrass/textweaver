@@ -1,0 +1,49 @@
+# A mirror's own list of components (W8a-d), in the registry's format.
+# Every component here is made up: the names, files, sizes, and hashes
+# exist only for textweaver's tests and documentation. textweaver reads a
+# file like this at <mirror>/manifest/components.toml, and only when a
+# mirror is set.
+format = 1
+
+[[component]]
+id = "example-voice-pack"
+title = "Example voice pack"
+license = "CC0-1.0"
+credit = "Made up for textweaver's tests"
+features = ["voice"]
+
+[[component.file]]
+name = "example-voice.onnx"
+size = 3
+sha256 = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+
+[[component.file]]
+name = "example-voice.onnx.json"
+size = 2
+sha256 = "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+url = "https://example.org/example-voice.onnx.json"
+
+[[component]]
+id = "example-ocr-language"
+title = "Example OCR language"
+license = "Apache-2.0"
+credit = "Made up for textweaver's tests"
+features = ["ocr"]
+folder = "models/ocr/example-language"
+
+[[component.file]]
+name = "example-language.onnx"
+size = 3
+sha256 = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+
+# A mirror can add components, never change a built-in one: this entry is
+# refused, and Lexend keeps its own pins.
+[[component]]
+id = "lexend"
+title = "Not the real Lexend"
+license = "none"
+
+[[component.file]]
+name = "Lexend-Regular.ttf"
+size = 3
+sha256 = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"

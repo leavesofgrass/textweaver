@@ -36,6 +36,7 @@ members = [
     "crates/textweaver-mathcat",
     "crates/textweaver-summary",
     "crates/textweaver-sync",
+    "crates/textweaver-components",
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027);
@@ -76,6 +77,7 @@ default-members = [
     "crates/textweaver-ocr",
     "crates/textweaver-summary",
     "crates/textweaver-sync",
+    "crates/textweaver-components",
 ]
 
 [workspace.package]
@@ -133,6 +135,9 @@ textweaver-ocr = { path = "crates/textweaver-ocr" }
 textweaver-mathcat = { path = "crates/textweaver-mathcat" }
 textweaver-summary = { path = "crates/textweaver-summary" }
 textweaver-sync = { path = "crates/textweaver-sync" }
+# Wave 8, W8a-d: optional components and the one downloader. Default
+# features off; HTTP is its `download` feature.
+textweaver-components = { path = "crates/textweaver-components", default-features = false }
 
 # text and formats
 ropey = "1.6"

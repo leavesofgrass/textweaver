@@ -72,16 +72,16 @@ pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, BrailleSettings,
-    BrailleTableFormat, CitationReading, ColorSettings, CommunityLexiconSettings, CursorPlacement,
-    DectalkSettings, DictationSettings, DigitRow, DisplaySettings, EciDictionaries, EciSettings,
-    EditingSettings, ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings, HighlightSettings,
-    InterfaceAnnouncements, InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset,
-    LexiconSettings, LibrarySettings, MathBrailleCode, MathDisplay, MathEngine,
-    NormalizationSettings, OcrEngine, PiperPhonemizer, PiperSettings, PositionPolicy,
-    PreviewSettings, REMOVED_SETTINGS, RESERVED_SETTINGS, ReadingSettings, RememberedVoice,
-    RevisionReading, RtlDisplay, SapiSettings, SayAll, Settings, SettingsLoad, SettingsStore,
-    SpeechSettings, StatsSettings, SubtitleFormat, SummarySettings, SyncSettings, TableMode,
-    drop_removed_settings,
+    BrailleTableFormat, CitationReading, ColorSettings, CommunityLexiconSettings,
+    ComponentsSettings, CursorPlacement, DectalkSettings, DictationSettings, DigitRow,
+    DisplaySettings, EciDictionaries, EciSettings, EditingSettings, ExportSettings, FootnoteMode,
+    GuiAnnounce, GuiSettings, HighlightSettings, InterfaceAnnouncements, InterfaceSettings,
+    KeyboardSettings, KeymapOverrides, KeymapPreset, LexiconSettings, LibrarySettings,
+    MathBrailleCode, MathDisplay, MathEngine, NormalizationSettings, OcrEngine, PiperPhonemizer,
+    PiperSettings, PositionPolicy, PreviewSettings, REMOVED_SETTINGS, RESERVED_SETTINGS,
+    ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings, SayAll, Settings,
+    SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat, SummarySettings,
+    SyncSettings, TableMode, drop_removed_settings,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

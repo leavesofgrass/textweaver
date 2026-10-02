@@ -15,15 +15,17 @@ default = ["bundled-fonts"]
 # Without it, BUNDLED is empty and callers fall back to installed fonts.
 bundled-fonts = []
 # Downloading a reading font that is not bundled (Lexend) over HTTPS, after
-# the reader says yes. Without it, a frontend can still install one through
-# its own fetcher (tests use a fake one).
-download = ["dep:ureq"]
+# the reader says yes, through the shared downloader. Without it, a
+# frontend can still install one through its own fetcher (tests use a fake
+# one).
+download = ["textweaver-components/download"]
 
 [dependencies]
 thiserror.workspace = true
 # Checking downloaded fonts against their pinned SHA-256.
 sha2.workspace = true
-ureq = { workspace = true, optional = true }
+# Lexend is an optional component (W8a-d): one pin type, one downloader.
+textweaver-components.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

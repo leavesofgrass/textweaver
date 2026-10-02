@@ -19,6 +19,10 @@ Packages also carry the licence files themselves, under `licenses/`.
 - Copyright 2018 The Lexend Project Authors, with Reserved Font Name "RevReading Lexend".
 - License: SIL Open Font License, version 1.1. The full license is below, and in `licenses/fonts/lexend/` in each package.
 
+### Whisper dictation models (downloaded when you agree; not in the packages)
+
+- **Whisper base.en** (the default) and **Whisper small.en**: OpenAI's Whisper speech recognition models for English, exported to ONNX with int8 weights by onnx-community. Used for dictation, in process. Licence: MIT (OpenAI Whisper, https://github.com/openai/whisper); the onnx-community repositories declare no licence of their own, so textweaver records it as "MIT, unconfirmed". Sources: https://huggingface.co/onnx-community/whisper-base.en (79.3 MB) and https://huggingface.co/onnx-community/whisper-small.en (251 MB), each at a pinned revision: `encoder_model_int8.onnx`, `decoder_model_merged_int8.onnx`, and `tokenizer.json`. textweaver downloads a model only after you agree (the dictation question, Download the dictation model, Manage optional components, or `tw dictate download`), checks each file by SHA-256, and keeps it in the data folder's `whisper/rten/`. textweaver does not change them.
+
 ### OCR models (downloaded when you agree; not in the packages)
 
 - **ocrs models** (text detection and recognition for English): by Robert Knight for the ocrs engine, trained on the HierText dataset. Licence: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0), https://creativecommons.org/licenses/by-sa/4.0/. Source: https://github.com/robertknight/ocrs-models (files `text-detection.onnx` and `text-recognition.onnx`, 12.2 MB, from ocrs-models.s3-accelerate.amazonaws.com). `tw ocr download` fetches them only after you agree, and checks each file by SHA-256. textweaver does not change them.

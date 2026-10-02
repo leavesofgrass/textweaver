@@ -345,6 +345,13 @@ impl App {
         effects
     }
 
+    /// A downloadable font was installed or removed through Manage
+    /// optional components: the GUI registers the files again, and the
+    /// writers find it by name.
+    pub(crate) fn font_component_changed(&mut self) {
+        self.fonts.generation += 1;
+    }
+
     /// Waits up to `limit` for a font download to finish (tests).
     pub fn wait_for_font_download(&mut self, limit: std::time::Duration) -> bool {
         let start = std::time::Instant::now();

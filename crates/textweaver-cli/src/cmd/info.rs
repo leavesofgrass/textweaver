@@ -46,18 +46,38 @@ pub(crate) const SENTENCE_LIMIT: usize = 1_000_000;
 /// Runs `tw info`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     let doc = load_document(&args.file)?;
-    let facts = facts_with(&doc, &args.file, args.exact);
+    let mut facts = facts_with(&doc, &args.file, args.exact);
+    let components = components_installed();
     // Through `print_all`, so a closed pipe (`tw info --json x | head`)
     // ends quietly instead of panicking.
     if args.json {
+        if let (Some((n, all)), Some(obj)) = (components, facts.as_object_mut()) {
+            obj.insert("components".into(), json!({ "installed": n, "known": all }));
+        }
         super::print_all(&format!(
             "{}
 ",
             serde_json::to_string_pretty(&facts)?
         ))
     } else {
-        super::print_all(&describe(&facts))
+        let mut text = describe(&facts);
+        if let Some(c) = components {
+            text.push_str(&components_line(c));
+        }
+        super::print_all(&text)
     }
+}
+
+/// How many optional components are installed in this user's data
+/// folder, and how many textweaver knows (W8a-d).
+fn components_installed() -> Option<(usize, usize)> {
+    let paths = textweaver_app::store::Paths::platform().ok()?;
+    Some(textweaver_app::components::Registry::builtin().installed_count(&paths.data_dir))
+}
+
+/// The line `tw info` ends with: "Optional components: 1 of 5 installed."
+fn components_line((n, all): (usize, usize)) -> String {
+    format!("Optional components: {n} of {all} installed.\n")
 }
 
 /// Structure counts reported, as (JSON key, marker kind, block level filter).

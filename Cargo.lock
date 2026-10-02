@@ -9223,6 +9223,7 @@ dependencies = [
  "textweaver-a11y",
  "textweaver-aids",
  "textweaver-cite",
+ "textweaver-components",
  "textweaver-convert",
  "textweaver-core",
  "textweaver-dictation",
@@ -9235,6 +9236,7 @@ dependencies = [
  "textweaver-lexicon",
  "textweaver-math",
  "textweaver-mathcat",
+ "textweaver-ocr",
  "textweaver-render",
  "textweaver-speech",
  "textweaver-store",
@@ -9302,6 +9304,21 @@ dependencies = [
  "textweaver-tui",
  "textweaver-vault",
  "textweaver-writers",
+]
+
+[[package]]
+name = "textweaver-components"
+version = "0.1.0-alpha.7"
+dependencies = [
+ "log",
+ "serde",
+ "sha1",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.21",
+ "toml 1.1.6+spec-1.1.0",
+ "ureq",
+ "zip 8.6.0",
 ]
 
 [[package]]
@@ -9455,8 +9472,8 @@ version = "0.1.0-alpha.7"
 dependencies = [
  "sha2 0.10.9",
  "tempfile",
+ "textweaver-components",
  "thiserror 2.0.21",
- "ureq",
 ]
 
 [[package]]
@@ -9553,8 +9570,8 @@ dependencies = [
  "rten-tensor",
  "sha2 0.10.9",
  "tempfile",
+ "textweaver-components",
  "thiserror 2.0.21",
- "ureq",
  "zune-jpeg",
 ]
 
@@ -9573,11 +9590,11 @@ dependencies = [
  "sha1",
  "sha2 0.10.9",
  "tempfile",
+ "textweaver-components",
  "textweaver-core",
  "textweaver-enginehost",
  "textweaver-speech",
  "thiserror 2.0.21",
- "ureq",
 ]
 
 [[package]]

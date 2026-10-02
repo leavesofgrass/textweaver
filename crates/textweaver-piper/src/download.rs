@@ -7,17 +7,21 @@
 //! 2. The app reads [`DownloadPlan::describe`] to the user: name,
 //!    language, quality, size, and licence. A non-commercial licence is
 //!    said plainly.
-//! 3. When the user confirms, [`download`] fetches each file into a
-//!    temporary folder, checks its size and hash, and only then moves the
-//!    folder into the voice store. A file that does not match is deleted
-//!    and the download fails.
+//! 3. When the user confirms, [`download`] fetches the voice as an
+//!    optional component through the shared downloader
+//!    (`textweaver-components`): each file into a staging folder, checked
+//!    by its size and hash, and only then moved into the voice store. A
+//!    file that does not match is deleted and the download fails; a
+//!    stopped download goes on where it stopped.
 
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::borrow::Cow;
+use std::io::Read;
+use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::Deserialize;
 use sha1::Digest as _;
+use textweaver_components::{Component, Fetcher, FilePin, Sources, StandardFetcher};
 
 use crate::PiperError;
 use crate::catalog::{CATALOG_URL, Catalog, CatalogVoice, Licence, REPOSITORY, file_url};
@@ -189,30 +193,15 @@ pub fn verify(file: &RemoteFile, path: &Path) -> Result<(), PiperError> {
     Ok(())
 }
 
-/// The User-Agent sent with every request: the project, nothing personal.
-pub const USER_AGENT: &str = "textweaver-research (+https://github.com/leavesofgrass/textweaver)";
+/// The User-Agent sent with every request: the project, nothing personal
+/// (the shared downloader's).
+pub const USER_AGENT: &str = textweaver_components::USER_AGENT;
 
-fn agent() -> ureq::Agent {
-    ureq::Agent::config_builder()
-        .timeout_connect(Some(Duration::from_secs(20)))
-        .timeout_recv_body(Some(Duration::from_secs(60)))
-        // Neutral on purpose: no user, machine, or account names ever go
-        // out with a request (the owner's rule).
-        .user_agent(USER_AGENT)
-        .build()
-        .into()
-}
-
-fn get_text(agent: &ureq::Agent, url: &str) -> Result<String, PiperError> {
-    agent
-        .get(url)
-        .call()
-        .map_err(|e| PiperError::Download(format!("{url}: {e}")))?
-        .body_mut()
-        .with_config()
-        .limit(16 * 1024 * 1024)
-        .read_to_string()
-        .map_err(|e| PiperError::Download(format!("{url}: {e}")))
+/// Reads a small text answer (a file list, a model card, the catalogue).
+fn get_text(fetcher: &dyn Fetcher, url: &str) -> Result<String, PiperError> {
+    let bytes = textweaver_components::fetch_bytes(fetcher, url, 16 * 1024 * 1024)
+        .map_err(|e| PiperError::Download(format!("{url}: {e}")))?;
+    String::from_utf8(bytes).map_err(|e| PiperError::Download(format!("{url}: {e}")))
 }
 
 /// Downloads and parses the voice catalogue (`voices.json`, about 250 KB).
@@ -223,7 +212,7 @@ pub fn fetch_catalog() -> Result<Catalog, PiperError> {
 /// Downloads the voice catalogue: its text (to keep in the voices folder)
 /// and the parsed catalogue.
 pub fn fetch_catalog_json() -> Result<(String, Catalog), PiperError> {
-    let json = get_text(&agent(), CATALOG_URL)?;
+    let json = get_text(&StandardFetcher, CATALOG_URL)?;
     let catalog = Catalog::from_json(&json)?;
     Ok((json, catalog))
 }
@@ -231,7 +220,7 @@ pub fn fetch_catalog_json() -> Result<(String, Catalog), PiperError> {
 /// Asks Hugging Face for `voice`'s files and hashes and reads its licence.
 /// Downloads only the small `MODEL_CARD`; saves nothing.
 pub fn plan(voice: &CatalogVoice) -> Result<DownloadPlan, PiperError> {
-    let agent = agent();
+    let agent = StandardFetcher;
     let wanted: Vec<&str> = voice.files.keys().map(String::as_str).collect();
     let dir = wanted
         .first()
@@ -254,6 +243,36 @@ pub fn plan(voice: &CatalogVoice) -> Result<DownloadPlan, PiperError> {
     })
 }
 
+/// The optional component a plan downloads: `piper-<voice key>`, with
+/// each file pinned by the hash Hugging Face published for it.
+pub fn component(plan: &DownloadPlan) -> Component {
+    Component {
+        id: Cow::Owned(format!("piper-{}", plan.voice.key)),
+        title: Cow::Owned(plan.voice.describe()),
+        license: Cow::Owned(plan.licence.text.clone()),
+        credit: Cow::Owned(format!("Piper voice from {REPOSITORY}")),
+        features: Cow::Borrowed(&[Cow::Borrowed("voice")]),
+        folder: Cow::Owned(format!("voices/{}", plan.voice.key)),
+        files: Cow::Owned(
+            plan.files
+                .iter()
+                .map(|f| FilePin {
+                    name: Cow::Owned(f.name().to_owned()),
+                    url: Cow::Owned(file_url(&f.path)),
+                    size: f.size,
+                    check: match &f.check {
+                        Check::Sha256(h) => textweaver_components::Check::Sha256(h.clone().into()),
+                        Check::GitBlobSha1(h) => {
+                            textweaver_components::Check::GitBlobSha1(h.clone().into())
+                        }
+                    },
+                })
+                .collect(),
+        ),
+        notice: None,
+    }
+}
+
 /// Downloads a confirmed plan into `store`. `progress` hears bytes done
 /// and the total, and cancels the download by returning false. Nothing
 /// is installed unless every file arrived whole and matched its hash.
@@ -262,76 +281,42 @@ pub fn download(
     store: &VoiceStore,
     progress: &mut dyn FnMut(u64, u64) -> bool,
 ) -> Result<InstalledVoice, PiperError> {
+    download_with(
+        plan,
+        store,
+        &Sources::from_env_or(""),
+        &StandardFetcher,
+        progress,
+    )
+}
+
+/// [`download`] from `sources` through `fetcher` (tests pass a fake one).
+pub fn download_with(
+    plan: &DownloadPlan,
+    store: &VoiceStore,
+    sources: &Sources,
+    fetcher: &dyn Fetcher,
+    progress: &mut dyn FnMut(u64, u64) -> bool,
+) -> Result<InstalledVoice, PiperError> {
     let key = &plan.voice.key;
     let dest = store.voice_dir(key);
-    let part = store.dir().join(format!(".{key}.part"));
-    let _ = std::fs::remove_dir_all(&part);
-    std::fs::create_dir_all(&part).map_err(|e| PiperError::io(&part, e))?;
-    let result = fetch_all(plan, &part, progress);
-    if let Err(e) = result {
-        let _ = std::fs::remove_dir_all(&part);
-        return Err(e);
-    }
-    let _ = std::fs::remove_dir_all(&dest);
-    std::fs::rename(&part, &dest).map_err(|e| PiperError::io(&dest, e))?;
+    let cancel = AtomicBool::new(false);
+    textweaver_components::download(
+        &component(plan),
+        &dest,
+        sources,
+        fetcher,
+        &mut |p| {
+            if !progress(p.done, p.total) {
+                cancel.store(true, Ordering::Relaxed);
+            }
+        },
+        &cancel,
+    )
+    .map_err(|e| PiperError::Download(e.to_string()))?;
     store
         .get(key)
         .ok_or_else(|| PiperError::Download(format!("{key} is missing a model or settings file")))
-}
-
-fn fetch_all(
-    plan: &DownloadPlan,
-    dir: &Path,
-    progress: &mut dyn FnMut(u64, u64) -> bool,
-) -> Result<(), PiperError> {
-    let agent = agent();
-    let total = plan.total_bytes();
-    let mut done = 0u64;
-    for f in &plan.files {
-        let path: PathBuf = dir.join(f.name());
-        fetch(&agent, &file_url(&f.path), &path, &mut |n| {
-            progress(done + n, total)
-        })?;
-        verify(f, &path)?;
-        done += f.size;
-    }
-    Ok(())
-}
-
-fn fetch(
-    agent: &ureq::Agent,
-    url: &str,
-    path: &Path,
-    progress: &mut dyn FnMut(u64) -> bool,
-) -> Result<(), PiperError> {
-    let mut resp = agent
-        .get(url)
-        .call()
-        .map_err(|e| PiperError::Download(format!("{url}: {e}")))?;
-    let mut reader = resp
-        .body_mut()
-        .with_config()
-        .limit(4 * 1024 * 1024 * 1024)
-        .reader();
-    let mut out =
-        std::io::BufWriter::new(std::fs::File::create(path).map_err(|e| PiperError::io(path, e))?);
-    let mut buf = vec![0u8; 1 << 16];
-    let mut n = 0u64;
-    loop {
-        let got = reader
-            .read(&mut buf)
-            .map_err(|e| PiperError::Download(format!("{url}: {e}")))?;
-        if got == 0 {
-            break;
-        }
-        out.write_all(&buf[..got])
-            .map_err(|e| PiperError::io(path, e))?;
-        n += got as u64;
-        if !progress(n) {
-            return Err(PiperError::Download("cancelled".into()));
-        }
-    }
-    out.flush().map_err(|e| PiperError::io(path, e))
 }
 
 #[cfg(test)]
@@ -431,5 +416,50 @@ mod tests {
         let plan = plan(joe).unwrap();
         assert_eq!(plan.licence.text, "CC0");
         assert_eq!(plan.files.len(), 3);
+    }
+
+    #[test]
+    fn a_voice_downloads_through_the_shared_downloader() {
+        let catalog = Catalog::from_json(crate::catalog::tests::VOICES).unwrap();
+        let onnx = b"model bytes".to_vec();
+        let json = b"{}".to_vec();
+        let plan = DownloadPlan {
+            voice: catalog.get("en_US-joe-medium").unwrap().clone(),
+            files: vec![
+                RemoteFile {
+                    path: "en/en_US/joe/medium/en_US-joe-medium.onnx".into(),
+                    size: onnx.len() as u64,
+                    check: Check::Sha256(textweaver_components::sha256_hex(&onnx)),
+                },
+                RemoteFile {
+                    path: "en/en_US/joe/medium/en_US-joe-medium.onnx.json".into(),
+                    size: json.len() as u64,
+                    check: Check::GitBlobSha1(git_blob_sha1(&json)),
+                },
+            ],
+            licence: Licence::classify("CC0"),
+        };
+        let c = component(&plan);
+        assert_eq!(c.id, "piper-en_US-joe-medium");
+        assert!(c.check_names().is_ok());
+        let fake = textweaver_components::fake::FakeFetcher::new()
+            .with(file_url(&plan.files[0].path), onnx)
+            .with(file_url(&plan.files[1].path), json);
+        let tmp = tempfile::tempdir().unwrap();
+        let store = VoiceStore::new(tmp.path().join("voices"));
+        let mut last = (0, 0);
+        let v = download_with(&plan, &store, &Sources::public(), &fake, &mut |d, t| {
+            last = (d, t);
+            true
+        })
+        .unwrap();
+        assert_eq!(v.key, "en_US-joe-medium");
+        assert_eq!(last, (13, 13));
+        assert_eq!(store.installed().len(), 1);
+        // Cancelling by returning false stops it.
+        let store2 = VoiceStore::new(tmp.path().join("other"));
+        let e = download_with(&plan, &store2, &Sources::public(), &fake, &mut |_, _| false);
+        assert!(e.is_err());
+        assert!(store2.installed().is_empty());
     }
 }
