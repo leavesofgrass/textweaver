@@ -2026,6 +2026,11 @@ impl App {
             self.settings.display.theme_explicit = true;
             self.check_theme_name();
         }
+        // Turning "Follow the system theme" on again means it: a theme
+        // picked earlier (one F5) no longer stops it for good.
+        if self.settings.display.follow_os_theme && !old.display.follow_os_theme {
+            self.settings.display.theme_explicit = false;
+        }
         if top == "highlight" || self.settings.display.theme != old.display.theme {
             self.check_reading_colors();
         }

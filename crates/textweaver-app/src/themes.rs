@@ -216,6 +216,32 @@ mod tests {
         assert_eq!(app.current_theme().meta.name, "galaxy");
     }
 
+    /// One F5 stops following the system, and turning "Follow the system
+    /// theme" off and on again follows it once more (walkthroughs QW5).
+    #[test]
+    fn following_again_undoes_a_picked_theme() {
+        let mut app = App::new(AppConfig::for_tests());
+        app.next_theme();
+        assert!(app.settings().display.theme_explicit);
+        let picked = app.settings().display.theme.clone();
+        assert_eq!(app.apply_startup_theme(OsScheme::HighContrast), None);
+        app.set_setting("display.follow_os_theme", serde_json::json!(false))
+            .unwrap();
+        assert!(app.settings().display.theme_explicit, "off keeps the pick");
+        app.set_setting("display.follow_os_theme", serde_json::json!(true))
+            .unwrap();
+        assert!(!app.settings().display.theme_explicit);
+        assert_eq!(
+            app.settings().display.theme,
+            picked,
+            "no change until startup"
+        );
+        assert_eq!(
+            app.apply_startup_theme(OsScheme::HighContrast).as_deref(),
+            Some("high-contrast")
+        );
+    }
+
     #[test]
     fn user_themes_load_and_problems_are_spoken() {
         let home = tempfile::tempdir().unwrap();
