@@ -47,9 +47,9 @@ use std::ops::Range;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender, TryRecvError};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use textweaver_core::{
@@ -203,6 +203,71 @@ impl SpeechStatus {
     }
 }
 
+/// When a reading's first audio started: one stamp of the
+/// stop-to-first-audio probe (`cargo xtask bench`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FirstAudioStamp {
+    /// The reading the audio belongs to.
+    pub generation: ReadingGeneration,
+    /// When the speech thread took the command that started (or
+    /// restarted) the reading.
+    pub requested: Instant,
+    /// When the backend reported that the reading's first utterance
+    /// started to sound ([`RawEvent::Started`]): for the engines whose
+    /// audio textweaver plays, when the output took the first samples.
+    pub started: Instant,
+}
+
+impl FirstAudioStamp {
+    /// The speech thread's share: from the command to the first audio.
+    pub fn latency(&self) -> Duration {
+        self.started.saturating_duration_since(self.requested)
+    }
+}
+
+/// The latest [`FirstAudioStamp`], shared between the speech thread, which
+/// stamps it, and whoever measures (the benchmarks). Stamping costs one
+/// lock per reading; nothing in the reader reads it.
+#[derive(Clone, Debug, Default)]
+pub struct FirstAudio(Arc<(Mutex<Option<FirstAudioStamp>>, Condvar)>);
+
+impl FirstAudio {
+    /// The latest stamp, if any reading has sounded yet.
+    pub fn latest(&self) -> Option<FirstAudioStamp> {
+        *self.0.0.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// Waits up to `limit` for a stamp of reading `generation` or a later
+    /// one, and returns it; `None` when none came in time.
+    pub fn wait_for(
+        &self,
+        generation: ReadingGeneration,
+        limit: Duration,
+    ) -> Option<FirstAudioStamp> {
+        let deadline = Instant::now() + limit;
+        let (lock, ready) = &*self.0;
+        let mut slot = lock.lock().unwrap_or_else(|e| e.into_inner());
+        loop {
+            if let Some(s) = *slot
+                && s.generation >= generation
+            {
+                return Some(s);
+            }
+            let left = deadline.checked_duration_since(Instant::now())?;
+            slot = ready
+                .wait_timeout(slot, left)
+                .unwrap_or_else(|e| e.into_inner())
+                .0;
+        }
+    }
+
+    fn record(&self, stamp: FirstAudioStamp) {
+        let (lock, ready) = &*self.0;
+        *lock.lock().unwrap_or_else(|e| e.into_inner()) = Some(stamp);
+        ready.notify_all();
+    }
+}
+
 /// Service configuration.
 #[derive(Clone, Debug)]
 pub struct ServiceConfig {
@@ -345,6 +410,8 @@ pub struct SpeechService {
     voices: VoiceCache,
     /// Called after the speech thread sends statuses ([`Waker`]).
     waker: WakerSlot,
+    /// Stamped by the speech thread when a reading first sounds.
+    first_audio: FirstAudio,
 }
 
 impl std::fmt::Debug for SpeechService {
@@ -378,6 +445,8 @@ impl SpeechService {
         let thread_failure = Arc::clone(&failure);
         let waker: WakerSlot = Arc::new(Mutex::new(None));
         let fatal_waker = Arc::clone(&waker);
+        let first_audio = FirstAudio::default();
+        let thread_first_audio = first_audio.clone();
         let link = StatusLink {
             tx: status_tx,
             caps: Arc::clone(&caps),
@@ -391,7 +460,16 @@ impl SpeechService {
                 let fatal_tx = link.tx.clone();
                 let ready_fail = ready_tx.clone();
                 let outcome = catch_unwind(AssertUnwindSafe(move || {
-                    speech_thread(factory, config, clock, &rx, &ready_tx, &link, voices_tx);
+                    speech_thread(
+                        factory,
+                        config,
+                        clock,
+                        &rx,
+                        &ready_tx,
+                        &link,
+                        voices_tx,
+                        thread_first_audio,
+                    );
                 }));
                 if let Err(payload) = outcome {
                     let why = panic_message(payload.as_ref());
@@ -425,6 +503,7 @@ impl SpeechService {
             failure,
             voices,
             waker,
+            first_audio,
         })
     }
 
@@ -449,6 +528,13 @@ impl SpeechService {
     /// The backend's id.
     pub fn backend_id(&self) -> BackendId {
         self.backend_id
+    }
+
+    /// When the latest reading first sounded, for the stop-to-first-audio
+    /// probe. Take it before the handle moves into the application; the
+    /// clone sees every later stamp.
+    pub fn first_audio(&self) -> FirstAudio {
+        self.first_audio.clone()
     }
 
     /// The backend's current capabilities (for example, to announce "pitch
@@ -715,6 +801,7 @@ impl StatusLink {
 
 /// The speech thread: creates the backend, reports readiness, and runs the
 /// command loop. A panic anywhere in here is caught by the caller.
+#[allow(clippy::too_many_arguments)]
 fn speech_thread(
     factory: BackendFactory,
     config: ServiceConfig,
@@ -723,10 +810,12 @@ fn speech_thread(
     ready: &Sender<Result<(BackendId, VoiceCache), SpeechError>>,
     link: &StatusLink,
     voices_tx: Sender<Command>,
+    first_audio: FirstAudio,
 ) {
     match factory() {
         Ok(backend) => {
             let mut core = ServiceCore::new(backend, config, clock);
+            core.first_audio = first_audio;
             link.caps
                 .store(core.capabilities().bits(), Ordering::SeqCst);
             let voices = core.voice_cache().clone();
@@ -889,6 +978,11 @@ pub struct ServiceCore {
     /// When (wall clock) the reading last made progress or was handed to
     /// the engine, for [`STALL_TIMEOUT`].
     last_progress: Duration,
+    /// A reading was started or restarted and has not sounded yet: its
+    /// generation and when the command came, for [`FirstAudio`].
+    awaiting_audio: Option<(ReadingGeneration, Instant)>,
+    /// Where the first sound of each reading is stamped.
+    first_audio: FirstAudio,
 }
 
 impl std::fmt::Debug for ServiceCore {
@@ -950,6 +1044,8 @@ impl ServiceCore {
             voices,
             pending_voice: None,
             prefer_pending: false,
+            awaiting_audio: None,
+            first_audio: FirstAudio::default(),
         };
         if let Some(asked) = core.params.voice.clone() {
             core.params.voice = Some(core.resolve_voice_name(&asked));
@@ -968,6 +1064,11 @@ impl ServiceCore {
         core.out
             .retain(|s| !matches!(s, SpeechStatus::Capabilities { .. }));
         core
+    }
+
+    /// When each reading first sounded (see [`SpeechService::first_audio`]).
+    pub fn first_audio(&self) -> &FirstAudio {
+        &self.first_audio
     }
 
     /// The backend's id.
@@ -1137,6 +1238,7 @@ impl ServiceCore {
             return;
         }
         self.reading = true;
+        self.awaiting_audio = Some((generation, Instant::now()));
         self.pump();
     }
 
@@ -1149,6 +1251,7 @@ impl ServiceCore {
     }
 
     fn stop_silently(&mut self) {
+        self.awaiting_audio = None;
         self.clear_engine();
         self.backlog.clear();
         self.paused = None;
@@ -1655,6 +1758,9 @@ impl ServiceCore {
         self.backlog = backlog;
         self.reading = reading;
         self.last_position = None;
+        if reading {
+            self.awaiting_audio = Some((self.reading_generation, Instant::now()));
+        }
         self.pump();
     }
 
@@ -1993,6 +2099,13 @@ impl ServiceCore {
         let Some(u) = self.queue.submitted(id) else {
             return;
         };
+        if let Some((generation, requested)) = self.awaiting_audio.take() {
+            self.first_audio.record(FirstAudioStamp {
+                generation,
+                requested,
+                started: Instant::now(),
+            });
+        }
         let kind = u.kind;
         let words = spoken_words(&u.text);
         let now = self.clock.now();
