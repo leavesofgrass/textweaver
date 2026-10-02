@@ -1582,6 +1582,9 @@ tasks-launch-off = فتح برامج أخرى متوقف في جلسة لا تح
 tasks-opening = يجري الفتح.
 # $target is a file or a web address; $error says why.
 tasks-could-not-open = تعذّر فتح { $target }: { $error }
+open-refused-scheme = لم يُفتح: رابط { $scheme } محظور.
+open-refused-missing = لم يُفتح: الملف غير موجود.
+open-refused-invalid = لم يُفتح: العنوان غير صالح.
 tasks-not-opened = لم يُفتح.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = فتحه؟ y أو n.

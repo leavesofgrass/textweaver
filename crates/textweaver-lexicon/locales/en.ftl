@@ -1417,6 +1417,9 @@ tasks-launch-off = opening other programs is off in a session that keeps no file
 tasks-opening = Opening.
 # $target is a file or a web address; $error says why.
 tasks-could-not-open = Could not open { $target }: { $error }
+open-refused-scheme = Not opened: { $scheme } link blocked.
+open-refused-missing = Not opened: the file was not found.
+open-refused-invalid = Not opened: not a valid address.
 tasks-not-opened = Not opened.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = Open it? y or n.

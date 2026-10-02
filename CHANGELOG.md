@@ -4,6 +4,10 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Security
+
+- **Links open without a shell.** On Windows a link's address was opened through `cmd /C start`, so an address with `&` in it could run a command after one "y". Links and files now open through `ShellExecuteW` on Windows, and `open` or `xdg-open` with the address as one argument on macOS and Linux. Only `http`, `https`, and `mailto` addresses and files that exist are opened; anything else (`ms-msdt:`, `javascript:`) is refused, and you hear why: "Not opened: ms-msdt link blocked."
+
 ### For contributors
 
 - **Research for the next waves.** `docs/dev/research/` holds the research reports and the wave plan for alpha.8, alpha.9, and later: a performance audit, speech engines and runtimes, text-to-speech use cases for students with disabilities, health sciences workflows, GUI and visual design, and law and standards. Nothing in it is a decision; decisions stay in the ADRs.

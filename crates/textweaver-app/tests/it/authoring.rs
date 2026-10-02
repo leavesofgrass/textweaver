@@ -886,6 +886,43 @@ fn links_open_local_files_and_come_back() {
     assert_eq!(r.status(), "No link or footnote at the cursor.");
 }
 
+/// Opening links safely (W8a, the R4 review's first finding): a web
+/// address with `&` in it reaches the opener exactly as written (no shell
+/// reads it), while a link with another scheme (`ms-msdt:`) is refused in
+/// words, without the question, and never reaches the opener.
+#[test]
+fn links_open_only_web_and_mail_addresses_without_a_shell() {
+    let mut r = Rig::new();
+    r.open(
+        "a.md",
+        "# A\n\nSee [plain](https://example.org/page) and [amp](https://example.org/?q=1&calc) and [msdt](ms-msdt:-id) and [js](javascript:alert) here.\n",
+    );
+    r.go("plain");
+    r.act(ActionId::FollowLink);
+    r.send(Command::Confirm(Confirm::Yes));
+    r.go("amp");
+    r.act(ActionId::FollowLink);
+    assert_eq!(
+        r.status(),
+        "Open web link? y or n. https://example.org/?q=1&calc"
+    );
+    r.send(Command::Confirm(Confirm::Yes));
+    assert_eq!(
+        r.opened(),
+        ["https://example.org/page", "https://example.org/?q=1&calc"]
+    );
+    for (word, scheme) in [("msdt", "ms-msdt"), ("js", "javascript")] {
+        r.said.clear();
+        r.go(word);
+        r.act(ActionId::FollowLink);
+        let said = format!("Not opened: {scheme} link blocked.");
+        assert!(r.said.any(&said), "{:?}", r.said.all());
+        assert!(said.chars().count() <= 40, "{said}");
+        assert!(!r.app.confirmation_pending(), "no question for {scheme}");
+    }
+    assert_eq!(r.opened().len(), 2, "nothing else reached the opener");
+}
+
 #[test]
 fn footnotes_go_to_their_note_and_back() {
     let mut r = Rig::new();

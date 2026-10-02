@@ -263,31 +263,6 @@ impl std::fmt::Debug for Authoring {
     }
 }
 
-/// Opens `target` (a file path or an address) with the default program:
-/// `start` on Windows, `open` on macOS, `xdg-open` elsewhere.
-pub fn open_with_system(target: &str) -> std::io::Result<()> {
-    use std::process::{Command, Stdio};
-    let mut cmd = if cfg!(target_os = "windows") {
-        let mut c = Command::new("cmd");
-        // The empty string is `start`'s window title.
-        c.args(["/C", "start", ""]).arg(target);
-        c
-    } else if cfg!(target_os = "macos") {
-        let mut c = Command::new("open");
-        c.arg(target);
-        c
-    } else {
-        let mut c = Command::new("xdg-open");
-        c.arg(target);
-        c
-    };
-    cmd.stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map(|_| ())
-}
-
 /// A file name for speech: the name alone, else the path.
 pub(crate) fn file_name(path: &Path) -> String {
     path.file_name().map_or_else(

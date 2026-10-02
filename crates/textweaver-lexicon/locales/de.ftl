@@ -1448,6 +1448,9 @@ tasks-launch-off = andere Programme öffnen ist aus in einer Sitzung, die keine 
 tasks-opening = Wird geöffnet.
 # $target is a file or a web address; $error says why.
 tasks-could-not-open = { $target } konnte nicht geöffnet werden: { $error }
+open-refused-scheme = Nicht geöffnet: { $scheme } gesperrt.
+open-refused-missing = Nicht geöffnet: Datei nicht gefunden.
+open-refused-invalid = Nicht geöffnet: keine gültige Adresse.
 tasks-not-opened = Nicht geöffnet.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = Öffnen? y oder n.

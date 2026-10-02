@@ -1440,6 +1440,9 @@ tasks-launch-off = l'ouverture d'autres programmes est désactivée dans une ses
 tasks-opening = Ouverture.
 # $target is a file or a web address; $error says why.
 tasks-could-not-open = Impossible d'ouvrir { $target } : { $error }
+open-refused-scheme = Non ouvert : lien { $scheme } bloqué.
+open-refused-missing = Non ouvert : fichier introuvable.
+open-refused-invalid = Non ouvert : adresse non valide.
 tasks-not-opened = Non ouvert.
 # Keep the letters y and n: they are the keys that answer.
 tasks-open-it-question = L'ouvrir ? y ou n.

@@ -102,8 +102,9 @@ log.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 # GetLocalTime, for the local date in new documents from templates;
-# GetLogicalDrives and GetDriveTypeW, for the file browser's drives (W6f).
-windows = { workspace = true, features = ["Win32_Foundation", "Win32_Globalization", "Win32_Storage_FileSystem", "Win32_System_SystemInformation"] }
+# GetLogicalDrives and GetDriveTypeW, for the file browser's drives (W6f);
+# ShellExecuteW, to open links and files without a shell (W8a).
+windows = { workspace = true, features = ["Win32_Foundation", "Win32_Globalization", "Win32_Storage_FileSystem", "Win32_System_SystemInformation", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 
 [dev-dependencies]
 tempfile.workspace = true

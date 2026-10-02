@@ -194,6 +194,7 @@ mod mdline;
 pub mod menu;
 mod nav;
 mod notes;
+pub mod opener;
 pub mod opening;
 mod pages;
 pub mod path_complete;
@@ -247,7 +248,8 @@ pub use access::{
 };
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
-pub use authoring_state::{ClientFactory, Launcher, open_with_system};
+pub use authoring_state::{ClientFactory, Launcher};
+pub use opener::open_with_system;
 pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};
 pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
 pub use export::{SubtitlePlan, subtitle_plan};
