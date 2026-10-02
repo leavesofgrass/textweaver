@@ -268,6 +268,75 @@ impl FirstAudio {
     }
 }
 
+/// Scheduled words between two lateness lines in the debug log.
+const LATENESS_WORDS: usize = 200;
+
+/// How late audio-clock word highlights fire after their due time, and
+/// how far apart the speech thread's timer steps are (the performance
+/// report's W1: Windows rounds the 10 ms waits to its timer tick). Every
+/// [`LATENESS_WORDS`] scheduled words, one debug line gives the median and
+/// 95th percentile of each, then the record starts again.
+#[derive(Debug, Default)]
+struct Lateness {
+    late_ms: Vec<f64>,
+    step_ms: Vec<f64>,
+    last_step: Option<Duration>,
+}
+
+impl Lateness {
+    fn word(&mut self, late: Duration) {
+        self.late_ms.push(late.as_secs_f64() * 1000.0);
+        if self.late_ms.len() >= LATENESS_WORDS {
+            let line = self.summary();
+            log::debug!("{line}");
+        }
+    }
+
+    fn step(&mut self, now: Duration) {
+        if let Some(last) = self.last_step {
+            let gap = now.saturating_sub(last);
+            // Idle gaps (nothing playing between readings) are not steps.
+            if gap < Duration::from_secs(1) {
+                self.step_ms.push(gap.as_secs_f64() * 1000.0);
+            }
+        }
+        self.last_step = Some(now);
+    }
+
+    /// At the end of a reading: the line for the words since the last
+    /// one, if any were scheduled.
+    fn flush(&mut self) {
+        self.last_step = None;
+        if !self.late_ms.is_empty() {
+            let line = self.summary();
+            log::debug!("{line}");
+        }
+    }
+
+    /// The summary line, and a fresh start.
+    fn summary(&mut self) -> String {
+        fn at(v: &mut [f64], q: f64) -> f64 {
+            if v.is_empty() {
+                return 0.0;
+            }
+            v.sort_by(f64::total_cmp);
+            v[((v.len() - 1) as f64 * q).round() as usize]
+        }
+        let (mut late, mut steps) = (
+            std::mem::take(&mut self.late_ms),
+            std::mem::take(&mut self.step_ms),
+        );
+        format!(
+            "speech timing: {} scheduled words late by median {:.1} ms, 95th percentile {:.1} ms; timer steps median {:.1} ms, 95th percentile {:.1} ms apart",
+            late.len(),
+            at(&mut late, 0.5),
+            at(&mut late, 0.95),
+            at(&mut steps, 0.5),
+            at(&mut steps, 0.95)
+        )
+    }
+}
+
 /// Service configuration.
 #[derive(Clone, Debug)]
 pub struct ServiceConfig {
@@ -983,6 +1052,8 @@ pub struct ServiceCore {
     awaiting_audio: Option<(ReadingGeneration, Instant)>,
     /// Where the first sound of each reading is stamped.
     first_audio: FirstAudio,
+    /// How late scheduled word highlights fire, for the debug log.
+    lateness: Lateness,
 }
 
 impl std::fmt::Debug for ServiceCore {
@@ -1046,6 +1117,7 @@ impl ServiceCore {
             prefer_pending: false,
             awaiting_audio: None,
             first_audio: FirstAudio::default(),
+            lateness: Lateness::default(),
         };
         if let Some(asked) = core.params.voice.clone() {
             core.params.voice = Some(core.resolve_voice_name(&asked));
@@ -1252,6 +1324,7 @@ impl ServiceCore {
 
     fn stop_silently(&mut self) {
         self.awaiting_audio = None;
+        self.lateness.flush();
         self.clear_engine();
         self.backlog.clear();
         self.paused = None;
@@ -2186,6 +2259,7 @@ impl ServiceCore {
             self.playing = None;
             if self.reading {
                 self.reading = false;
+                self.lateness.flush();
                 self.out.push(SpeechStatus::Finished {
                     generation: self.reading_generation,
                 });
@@ -2195,13 +2269,21 @@ impl ServiceCore {
 
     fn run_timers(&mut self) {
         let now = self.clock.now();
+        let lateness = &mut self.lateness;
         let due: Vec<usize> = match &mut self.playing {
             None => return,
             Some(p) => {
                 let n = p.scheduled.partition_point(|(d, _)| *d <= now);
-                p.scheduled.drain(..n).map(|(_, w)| w).collect()
+                p.scheduled
+                    .drain(..n)
+                    .map(|(d, w)| {
+                        lateness.word(now.saturating_sub(d));
+                        w
+                    })
+                    .collect()
             }
         };
+        lateness.step(now);
         for w in due {
             self.confirm(w);
         }
