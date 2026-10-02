@@ -326,6 +326,19 @@ pub fn enter_menu_bar(hwnd: isize, key: char) -> bool {
     .is_ok()
 }
 
+/// True for Alt pressed alone (no Ctrl, Shift, or Windows key with it):
+/// the key that shows a hidden menu bar (`gui.auto_hide_menu`) before
+/// Windows enters it on the key's release.
+pub fn is_alt_alone(k: &masonry::core::keyboard::KeyboardEvent) -> bool {
+    use masonry::core::keyboard::{Key, KeyState, NamedKey};
+    let m = k.modifiers;
+    k.state == KeyState::Down
+        && k.key == Key::Named(NamedKey::Alt)
+        && !m.ctrl()
+        && !m.shift()
+        && !m.meta()
+}
+
 /// Elsewhere there is no menu bar to enter.
 #[cfg(not(windows))]
 pub fn enter_menu_bar(_hwnd: isize, _key: char) -> bool {
@@ -338,6 +351,7 @@ mod native {
     use masonry_winit::winit::window::Window as WinitWindow;
 
     use super::TopMenu;
+    use crate::dark_mode::Chrome;
 
     /// No native menus here: the menu key opens the list menu.
     pub struct Native;
@@ -347,8 +361,34 @@ mod native {
 
     impl Native {
         /// Always fails: this system shows the list menu.
-        pub fn attach(_window: &WinitWindow, _tree: Vec<TopMenu>) -> Result<Native, String> {
+        pub fn attach(
+            _window: &WinitWindow,
+            _tree: Vec<TopMenu>,
+            _chrome: Chrome,
+            _auto_hide: bool,
+        ) -> Result<Native, String> {
             Err("native menus are only on Windows and macOS".into())
+        }
+
+        /// Never called (no `Native` exists).
+        pub fn set_chrome(&mut self, _chrome: Chrome) {}
+
+        /// Never called (no `Native` exists).
+        pub fn set_auto_hide(&mut self, _on: bool) {}
+
+        /// Never called (no `Native` exists).
+        pub fn reveal(&mut self) -> bool {
+            false
+        }
+
+        /// Never called (no `Native` exists).
+        pub fn settle(&mut self) -> bool {
+            false
+        }
+
+        /// Never called (no `Native` exists).
+        pub fn waiting(&self) -> bool {
+            false
         }
 
         /// Never called (no `Native` exists).
@@ -377,6 +417,13 @@ mod native {
     use muda::{CheckMenuItem, IsMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
 
     use super::{Entry, MenuPicked, TopMenu};
+    use crate::dark_mode::Chrome;
+
+    /// How long a menu bar shown by a key (`gui.auto_hide_menu`) stays
+    /// before it may hide again, so the menu loop the key starts has time
+    /// to begin.
+    #[cfg(windows)]
+    const REVEAL_GRACE: std::time::Duration = std::time::Duration::from_millis(400);
 
     /// The native menu bar, attached to the window.
     pub struct Native {
@@ -384,6 +431,19 @@ mod native {
         shown: Vec<TopMenu>,
         #[cfg(windows)]
         hwnd: isize,
+        /// How the menus are drawn (dark, light, or the system's).
+        #[cfg(windows)]
+        chrome: Chrome,
+        /// `gui.auto_hide_menu`: the bar is hidden until a key shows it.
+        #[cfg(windows)]
+        auto_hide: bool,
+        /// The bar is hidden now.
+        #[cfg(windows)]
+        hidden: bool,
+        /// When a key showed the hidden bar; it hides again once the
+        /// menu loop is over.
+        #[cfg(windows)]
+        revealed_at: Option<std::time::Instant>,
     }
 
     /// Sends chosen items to the event loop as [`MenuPicked`]. Once per
@@ -399,9 +459,16 @@ mod native {
     }
 
     impl Native {
-        /// Builds the menus from `tree` and attaches them to `window`.
+        /// Builds the menus from `tree` and attaches them to `window`,
+        /// drawn as `chrome` says, and hidden when `auto_hide` is on
+        /// (Windows; on macOS both are the system's).
         #[allow(unsafe_code)]
-        pub fn attach(window: &WinitWindow, tree: Vec<TopMenu>) -> Result<Native, String> {
+        pub fn attach(
+            window: &WinitWindow,
+            tree: Vec<TopMenu>,
+            chrome: Chrome,
+            auto_hide: bool,
+        ) -> Result<Native, String> {
             let menu = build(&tree)?;
             #[cfg(windows)]
             {
@@ -409,21 +476,151 @@ mod native {
                 if hwnd == 0 {
                     return Err("the window has no handle".into());
                 }
+                // Dark mode is asked for before the menus exist, so the
+                // drop-down menus are made in it.
+                crate::dark_mode::prepare(hwnd, chrome);
                 // SAFETY: `hwnd` is this process's live top-level window,
                 // and `menu` is kept in `Native` for as long as it is
                 // attached (muda's window subclass points at it).
-                unsafe { menu.init_for_hwnd(hwnd) }.map_err(|e| e.to_string())?;
-                Ok(Native {
+                unsafe { menu.init_for_hwnd_with_theme(hwnd, menu_theme(chrome)) }
+                    .map_err(|e| e.to_string())?;
+                crate::dark_mode::flush_menus(hwnd);
+                let mut native = Native {
                     menu,
                     shown: tree,
                     hwnd,
-                })
+                    chrome,
+                    auto_hide: false,
+                    hidden: false,
+                    revealed_at: None,
+                };
+                native.set_auto_hide(auto_hide);
+                Ok(native)
             }
             #[cfg(target_os = "macos")]
             {
-                let _ = window;
+                let _ = (window, chrome, auto_hide);
                 menu.init_for_nsapp();
                 Ok(Native { menu, shown: tree })
+            }
+        }
+
+        /// Draws the menus as `chrome` says: on Windows the menu bar
+        /// (muda's theme) and the drop-down menus (the app's dark mode,
+        /// then the menu themes flushed). macOS's menus are the system's.
+        #[allow(unsafe_code)]
+        pub fn set_chrome(&mut self, chrome: Chrome) {
+            #[cfg(windows)]
+            {
+                if chrome == self.chrome {
+                    return;
+                }
+                self.chrome = chrome;
+                crate::dark_mode::prepare(self.hwnd, chrome);
+                // SAFETY: as in `attach`; muda only sends the window a
+                // message of its own.
+                let _ = unsafe { self.menu.set_theme_for_hwnd(self.hwnd, menu_theme(chrome)) };
+                crate::dark_mode::flush_menus(self.hwnd);
+            }
+            #[cfg(target_os = "macos")]
+            let _ = chrome;
+        }
+
+        /// `gui.auto_hide_menu` (Windows): on, the menu bar is hidden
+        /// (once no menu is open); off, it is shown. Nothing is announced
+        /// either way.
+        #[allow(unsafe_code)]
+        pub fn set_auto_hide(&mut self, on: bool) {
+            #[cfg(windows)]
+            {
+                if on == self.auto_hide {
+                    return;
+                }
+                self.auto_hide = on;
+                if on {
+                    // As if a key had shown it long enough ago: it hides
+                    // at once, or when the open menu closes.
+                    let now = std::time::Instant::now();
+                    self.revealed_at = Some(now.checked_sub(REVEAL_GRACE).unwrap_or(now));
+                    self.settle();
+                } else {
+                    self.revealed_at = None;
+                    if self.hidden {
+                        // SAFETY: as in `attach`.
+                        let _ = unsafe { self.menu.show_for_hwnd(self.hwnd) };
+                        self.hidden = false;
+                    }
+                }
+            }
+            #[cfg(target_os = "macos")]
+            let _ = on;
+        }
+
+        /// Shows the hidden menu bar, before Alt, F10, or Alt with a
+        /// menu's letter enters it, so the system's menu loop (and the
+        /// screen reader's "menu bar") works as with a bar always shown.
+        /// Returns true when it was hidden.
+        #[allow(unsafe_code)]
+        pub fn reveal(&mut self) -> bool {
+            #[cfg(windows)]
+            {
+                if !self.hidden {
+                    return false;
+                }
+                // SAFETY: as in `attach`.
+                let shown = unsafe { self.menu.show_for_hwnd(self.hwnd) }.is_ok();
+                if shown {
+                    self.hidden = false;
+                    self.revealed_at = Some(std::time::Instant::now());
+                }
+                shown
+            }
+            #[cfg(target_os = "macos")]
+            {
+                false
+            }
+        }
+
+        /// Hides the menu bar a key showed, once its menu loop is over
+        /// (no menu open, and neither Alt nor F10 held). Returns true when
+        /// it hid it.
+        #[allow(unsafe_code)]
+        pub fn settle(&mut self) -> bool {
+            #[cfg(windows)]
+            {
+                let due = self
+                    .revealed_at
+                    .is_some_and(|at| at.elapsed() >= REVEAL_GRACE);
+                if !self.auto_hide || self.hidden || !due {
+                    return false;
+                }
+                if in_menu_loop(self.hwnd) || menu_keys_held() {
+                    return false;
+                }
+                // SAFETY: as in `attach`.
+                if unsafe { self.menu.hide_for_hwnd(self.hwnd) }.is_err() {
+                    return false;
+                }
+                self.hidden = true;
+                self.revealed_at = None;
+                true
+            }
+            #[cfg(target_os = "macos")]
+            {
+                false
+            }
+        }
+
+        /// True while a menu bar a key showed waits to hide again: the
+        /// window looks back soon ([`Native::settle`]).
+        pub fn waiting(&self) -> bool {
+            #[cfg(windows)]
+            {
+                self.auto_hide && !self.hidden && self.revealed_at.is_some()
+            }
+            #[cfg(target_os = "macos")]
+            {
+                false
             }
         }
 
@@ -442,7 +639,12 @@ mod native {
                 // is dropped, and the new one is kept.
                 unsafe {
                     let _ = self.menu.remove_for_hwnd(self.hwnd);
-                    menu.init_for_hwnd(self.hwnd).map_err(|e| e.to_string())?;
+                    menu.init_for_hwnd_with_theme(self.hwnd, menu_theme(self.chrome))
+                        .map_err(|e| e.to_string())?;
+                    // A hidden bar stays hidden.
+                    if self.hidden {
+                        let _ = menu.hide_for_hwnd(self.hwnd);
+                    }
                 }
             }
             #[cfg(target_os = "macos")]
@@ -471,6 +673,55 @@ mod native {
                 Vec::new()
             }
         }
+    }
+
+    /// muda's theme for the menu bar. In high contrast the system draws it
+    /// (muda's dark bar would ignore the person's colors).
+    #[cfg(windows)]
+    fn menu_theme(chrome: Chrome) -> muda::MenuTheme {
+        match chrome {
+            Chrome::Dark => muda::MenuTheme::Dark,
+            Chrome::Light | Chrome::System => muda::MenuTheme::Light,
+        }
+    }
+
+    /// True while a menu of this window's thread is open (the menu bar,
+    /// a drop-down, or the system menu).
+    #[cfg(windows)]
+    #[allow(unsafe_code)]
+    fn in_menu_loop(hwnd: isize) -> bool {
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GUI_INMENUMODE, GUI_POPUPMENUMODE, GUI_SYSTEMMENUMODE, GUITHREADINFO,
+            GetGUIThreadInfo, GetWindowThreadProcessId,
+        };
+        // SAFETY: this process's own window; no process id is asked for.
+        let thread = unsafe { GetWindowThreadProcessId(HWND(hwnd as *mut core::ffi::c_void), None) };
+        let mut info = GUITHREADINFO {
+            cbSize: std::mem::size_of::<GUITHREADINFO>() as u32,
+            ..Default::default()
+        };
+        // SAFETY: `info` is a live GUITHREADINFO with its size set.
+        if unsafe { GetGUIThreadInfo(thread, &mut info) }.is_err() {
+            return false;
+        }
+        let menus = GUI_INMENUMODE.0 | GUI_POPUPMENUMODE.0 | GUI_SYSTEMMENUMODE.0;
+        info.flags.0 & menus != 0
+    }
+
+    /// True while Alt or F10 is held: the menu bar they showed is entered
+    /// when they are let go, so it must not hide before.
+    #[cfg(windows)]
+    #[allow(unsafe_code)]
+    fn menu_keys_held() -> bool {
+        windows_core::link!("user32.dll" "system" fn GetKeyState(key: i32) -> i16);
+        const VK_MENU: i32 = 0x12;
+        const VK_F10: i32 = 0x79;
+        // SAFETY: GetKeyState reads this thread's key state and has no
+        // other effect; the high bit is set while the key is down.
+        [VK_MENU, VK_F10]
+            .into_iter()
+            .any(|k| unsafe { GetKeyState(k) } < 0)
     }
 
     #[cfg(windows)]
