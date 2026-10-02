@@ -499,3 +499,94 @@ fn calibrate() {
         .collect();
     println!("David pitch -> median F0: {}", semis.join(", "));
 }
+
+/// Stop and restart on the real audio device, silently (volume 0), for
+/// the speech latency numbers (Wave 8b): from `stop` and a new `speak`
+/// to `Started`, which the playback client reports when the device's
+/// first callback takes the new audio. The sound follows by the device
+/// buffer's lead (the `latency` probe of `textweaver-enginehost`). Needs
+/// `TEXTWEAVER_AUDIO_PROBE=1` too, because it opens the audio device.
+#[test]
+#[ignore = "needs real SAPI voices and the audio device: TEXTWEAVER_SAPI=1 TEXTWEAVER_AUDIO_PROBE=1"]
+fn stop_and_restart_latency_on_the_real_device() {
+    use textweaver_core::Volume;
+    use textweaver_enginehost::audio::{DEFAULT_OUTPUT_BUFFER_MS, set_output_buffer_ms};
+
+    if !enabled() || std::env::var("TEXTWEAVER_AUDIO_PROBE").as_deref() != Ok("1") {
+        eprintln!("skipped: set TEXTWEAVER_AUDIO_PROBE=1 to open the real audio device");
+        return;
+    }
+    // 0 is the audio library's own buffer size: the number before Wave 8b.
+    for buffer_ms in [0, DEFAULT_OUTPUT_BUFFER_MS] {
+        set_output_buffer_ms(buffer_ms);
+        let mut b = SapiBackend::new(SapiConfig {
+            output: AudioOutput::Device,
+            ..config()
+        })
+        .unwrap();
+        let zira = voice(&b, "Microsoft Zira Desktop");
+        b.set_params(&VoiceParams {
+            voice: Some(zira.voice.id.clone()),
+            volume: Volume::new(0),
+            ..VoiceParams::default()
+        })
+        .unwrap();
+        let mut times = Vec::new();
+        let mut generation = 0;
+        for _ in 0..9 {
+            // A reading plays until its second word...
+            generation += 1;
+            let mut u = Utterance::literal(SENTENCE, CharPos(0));
+            u.id = UtteranceId {
+                generation,
+                chunk: 0,
+            };
+            let mut rec = Rec::default();
+            b.speak(&u, &mut rec).unwrap();
+            let t0 = Instant::now();
+            while t0.elapsed() < Duration::from_secs(10)
+                && rec
+                    .0
+                    .iter()
+                    .filter(|(_, e)| matches!(e, RawEvent::Word { .. }))
+                    .count()
+                    < 2
+            {
+                b.poll(&mut rec);
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            // ...and is stopped and restarted.
+            generation += 1;
+            u.id.generation = generation;
+            let mut rec = Rec::default();
+            let stop = Instant::now();
+            b.stop();
+            b.speak(&u, &mut rec).unwrap();
+            while stop.elapsed() < Duration::from_secs(10)
+                && !rec
+                    .0
+                    .iter()
+                    .any(|(id, e)| *id == u.id && *e == RawEvent::Started)
+            {
+                b.poll(&mut rec);
+                std::thread::yield_now();
+            }
+            times.push(stop.elapsed().as_secs_f64() * 1000.0);
+            b.stop();
+        }
+        times.sort_by(f64::total_cmp);
+        let name = if buffer_ms == 0 {
+            "library size".to_owned()
+        } else {
+            format!("{buffer_ms} ms buffer")
+        };
+        println!(
+            "Zira, {name}: stop and restart to the first callback, median {:.1} ms \
+             (fastest {:.1}, slowest {:.1})",
+            times[times.len() / 2],
+            times[0],
+            times[times.len() - 1]
+        );
+    }
+    set_output_buffer_ms(DEFAULT_OUTPUT_BUFFER_MS);
+}
