@@ -155,7 +155,7 @@ fn a_cancelled_download_goes_on_from_its_part_file() {
         .with_file_name("model-d.partial")
         .join("model.onnx.part");
     let kept = std::fs::metadata(&part).unwrap().len();
-    assert!(kept >= 2048 && kept < 5000, "{kept}");
+    assert!((2048..5000).contains(&kept), "{kept}");
     assert!(!dest.exists());
     // Resumed: the request asks for the rest only.
     let fake = serving(&c);
