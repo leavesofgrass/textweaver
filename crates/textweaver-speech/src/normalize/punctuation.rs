@@ -11,11 +11,20 @@
 //!   Sentence punctuation stays for prosody.
 //! - `All`: every punctuation mark is spoken by name, except an apostrophe
 //!   or hyphen inside a word ("don't", "twenty-four").
+//!
+//! At every level, symbols that are words in science and medicine are
+//! named: Greek letters ("TNF-α" is "TNF alpha", "ΔG" is "delta G"), the
+//! micro sign ("µ" is "micro"; a Greek mu before a Latin letter, "μm", is
+//! also "micro"), and powers of ten ("× 10^9" is "times ten to the ninth",
+//! "10⁻³" is "ten to the negative third"). The minus sign `−`, `⇌` ("in
+//! equilibrium with") and the arrows are named like the other symbols. Math
+//! regions are spoken by the math transform before this step and are not
+//! changed by it.
 
 use textweaver_core::{CharPos, OffsetMap, PunctuationLevel, SpokenBuilder};
 
 use super::Transform;
-use super::rewrite::{Piece, Rule, char_after, char_before, is_word};
+use super::rewrite::{Piece, Rule, char_after, char_before, is_word, then};
 
 /// `(char, name, spoken at Some)`.
 const NAMES: &[(char, &str, bool)] = &[
@@ -50,6 +59,11 @@ const NAMES: &[(char, &str, bool)] = &[
     ('±', "plus or minus", true),
     ('×', "times", true),
     ('÷', "divided by", true),
+    ('\u{2212}', "minus", true),
+    ('⇌', "in equilibrium with", true),
+    ('→', "right arrow", true),
+    ('←', "left arrow", true),
+    ('↔', "left right arrow", true),
     ('.', "dot", false),
     (',', "comma", false),
     (';', "semicolon", false),
@@ -76,17 +90,149 @@ const NAMES: &[(char, &str, bool)] = &[
     ('`', "backtick", false),
 ];
 
+/// Letters that engines skip or misread, named at every punctuation level
+/// because they are words, not punctuation: the Greek alphabet (upper case
+/// as plain names, "ΔG" is "delta G") and the micro sign.
+const LETTERS: &[(char, &str)] = &[
+    ('α', "alpha"),
+    ('β', "beta"),
+    ('γ', "gamma"),
+    ('δ', "delta"),
+    ('ε', "epsilon"),
+    ('ϵ', "epsilon"),
+    ('ζ', "zeta"),
+    ('η', "eta"),
+    ('θ', "theta"),
+    ('ϑ', "theta"),
+    ('ι', "iota"),
+    ('κ', "kappa"),
+    ('λ', "lambda"),
+    ('μ', "mu"),
+    ('ν', "nu"),
+    ('ξ', "xi"),
+    ('ο', "omicron"),
+    ('π', "pi"),
+    ('ρ', "rho"),
+    ('σ', "sigma"),
+    ('ς', "sigma"),
+    ('τ', "tau"),
+    ('υ', "upsilon"),
+    ('φ', "phi"),
+    ('ϕ', "phi"),
+    ('χ', "chi"),
+    ('ψ', "psi"),
+    ('ω', "omega"),
+    ('Α', "alpha"),
+    ('Β', "beta"),
+    ('Γ', "gamma"),
+    ('Δ', "delta"),
+    ('Ε', "epsilon"),
+    ('Ζ', "zeta"),
+    ('Η', "eta"),
+    ('Θ', "theta"),
+    ('Ι', "iota"),
+    ('Κ', "kappa"),
+    ('Λ', "lambda"),
+    ('Μ', "mu"),
+    ('Ν', "nu"),
+    ('Ξ', "xi"),
+    ('Ο', "omicron"),
+    ('Π', "pi"),
+    ('Ρ', "rho"),
+    ('Σ', "sigma"),
+    ('Τ', "tau"),
+    ('Υ', "upsilon"),
+    ('Φ', "phi"),
+    ('Χ', "chi"),
+    ('Ψ', "psi"),
+    ('Ω', "omega"),
+    ('µ', "micro"),
+];
+
 /// The spoken name of a character, for [`speak_char`](crate::SpeechService::speak_char)
-/// and punctuation verbosity: punctuation and symbols by name, whitespace as
-/// "space", "tab", "new line". `None` for letters and digits (spoken as
-/// themselves) and for characters without a name.
+/// and punctuation verbosity: punctuation and symbols by name, Greek letters
+/// and the micro sign by name, whitespace as "space", "tab", "new line".
+/// `None` for Latin letters and digits (spoken as themselves) and for
+/// characters without a name.
 pub fn char_name(c: char) -> Option<&'static str> {
     match c {
         ' ' | '\u{a0}' => Some("space"),
         '\t' => Some("tab"),
         '\n' | '\r' => Some("new line"),
-        _ => NAMES.iter().find(|(ch, _, _)| *ch == c).map(|(_, n, _)| *n),
+        _ => NAMES
+            .iter()
+            .find(|(ch, _, _)| *ch == c)
+            .map(|(_, n, _)| *n)
+            .or_else(|| letter_name(c)),
     }
+}
+
+fn letter_name(c: char) -> Option<&'static str> {
+    LETTERS.iter().find(|(ch, _)| *ch == c).map(|(_, n)| *n)
+}
+
+/// Superscript digits and minus, for "10⁹".
+fn superscript(c: char) -> Option<char> {
+    Some(match c {
+        '⁰' => '0',
+        '¹' => '1',
+        '²' => '2',
+        '³' => '3',
+        '⁴' => '4',
+        '⁵' => '5',
+        '⁶' => '6',
+        '⁷' => '7',
+        '⁸' => '8',
+        '⁹' => '9',
+        '⁻' => '-',
+        _ => return None,
+    })
+}
+
+/// Powers of ten outside math: "10^9" and "10⁹" are "ten to the ninth",
+/// "10^-3" is "ten to the negative third", and a times sign written as `x`
+/// or `*` just before one is "times" ("1.5 x 10^9"). A `×` is named by the
+/// names table (or by the math transform) as "times".
+fn powers_of_ten() -> Rule {
+    Rule::with(
+        r"(?:([xX*])[ ]?)?10(?:\^\(?([-\u{2212}]?[0-9]{1,3})\)?|([⁻]?[⁰¹²³⁴⁵⁶⁷⁸⁹]{1,3}))",
+        |c, s| {
+            let m = c.get(0)?;
+            if char_after(s, m.end()).is_some_and(char::is_alphanumeric) {
+                return None;
+            }
+            let times = match c.get(1) {
+                // A times sign stands alone: "1.5 x 10^9", not "box 10^9".
+                Some(x) => match char_before(s, x.start()) {
+                    Some(b) if b.is_alphabetic() => return None,
+                    // "2*10^3" is "2 times ten to the third".
+                    Some(b) if b.is_alphanumeric() => " times ",
+                    _ => "times ",
+                },
+                // "10" starts a number: not "210^3" or "v1.10^2".
+                None => {
+                    if char_before(s, m.start()).is_some_and(|b| b.is_alphanumeric() || b == '.') {
+                        return None;
+                    }
+                    ""
+                }
+            };
+            let exp: String = match (c.get(2), c.get(3)) {
+                (Some(e), _) => e.as_str().replace('\u{2212}', "-"),
+                (_, Some(e)) => e.as_str().chars().filter_map(superscript).collect(),
+                _ => return None,
+            };
+            let (sign, digits) = match exp.strip_prefix('-') {
+                Some(d) => ("negative ", d),
+                None => ("", exp.as_str()),
+            };
+            let n: i64 = digits.parse().ok()?;
+            Some(vec![Piece::Text(format!(
+                "{times}ten to the {sign}{}",
+                super::words::ordinal_to_words(n)
+            ))])
+        },
+    )
 }
 
 fn spoken_at(c: char, level: PunctuationLevel) -> bool {
@@ -102,6 +248,8 @@ fn spoken_at(c: char, level: PunctuationLevel) -> bool {
 /// The punctuation transform.
 pub struct Punctuation {
     level: PunctuationLevel,
+    /// Powers of ten, before the names.
+    powers: Rule,
     rule: Rule,
 }
 
@@ -121,12 +269,43 @@ impl Punctuation {
             .filter(|(c, _, _)| spoken_at(*c, level))
             .map(|(c, _, _)| regex::escape(&c.to_string()))
             .collect();
-        let pattern = format!("[{class}]");
+        let letters: String = LETTERS
+            .iter()
+            .map(|(c, _)| regex::escape(&c.to_string()))
+            .collect();
+        let pattern = format!("-?[{letters}]|[{class}]");
         let rule = Rule::with(&pattern, move |c, s| {
             let m = c.get(0)?;
-            let ch = m.as_str().chars().next()?;
             let before = char_before(s, m.start());
             let after = char_after(s, m.end());
+            let ch = m.as_str().chars().next_back()?;
+            if let Some(name) = letter_name(ch) {
+                // A letter is named at every level. "TNF-α" is "TNF alpha";
+                // "β-blocker" is "beta-blocker"; "5α" is "5 alpha".
+                let hyphen = m.as_str().starts_with('-');
+                if hyphen && !before.is_some_and(char::is_alphanumeric) {
+                    return None;
+                }
+                // "µ" or "μ" before a Latin letter is the micro prefix.
+                let name =
+                    if matches!(ch, 'µ' | 'μ') && after.is_some_and(|a| a.is_ascii_alphabetic()) {
+                        "micro"
+                    } else {
+                        name
+                    };
+                let lead = if before.is_some_and(char::is_alphanumeric) {
+                    " "
+                } else {
+                    ""
+                };
+                let trail = if after.is_some_and(char::is_alphanumeric) {
+                    " "
+                } else {
+                    ""
+                };
+                return Some(vec![Piece::Text(format!("{lead}{name}{trail}"))]);
+            }
+            let ch = m.as_str().chars().next()?;
             let inside_word = before.is_some_and(char::is_alphanumeric)
                 && after.is_some_and(char::is_alphanumeric);
             if matches!(ch, '\'' | '\u{2019}' | '-') && inside_word {
@@ -146,7 +325,11 @@ impl Punctuation {
             Some(vec![Piece::Text(format!(" {name} "))])
         })
         .padded();
-        Punctuation { level, rule }
+        Punctuation {
+            level,
+            powers: powers_of_ten(),
+            rule,
+        }
     }
 }
 
@@ -156,9 +339,16 @@ impl Transform for Punctuation {
     }
 
     fn apply(&self, input: &str) -> (String, OffsetMap) {
-        self.rule
-            .apply(input)
-            .unwrap_or_else(|| super::identity(input))
+        match self.powers.apply(input) {
+            None => self
+                .rule
+                .apply(input)
+                .unwrap_or_else(|| super::identity(input)),
+            Some(acc) => {
+                let step = self.rule.apply(&acc.0);
+                then(acc, step)
+            }
+        }
     }
 }
 

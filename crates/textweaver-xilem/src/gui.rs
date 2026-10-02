@@ -382,6 +382,45 @@ pub struct Gui {
     /// How many font downloads the app had finished when the downloaded
     /// fonts were last registered (`App::font_downloads`).
     font_downloads: u64,
+    /// Load and highlight timings, for `--log` and the measurements.
+    pub timings: Timings,
+}
+
+/// Measured times, in milliseconds.
+#[derive(Clone, Debug, Default)]
+pub struct Timings {
+    /// Building the window's text and runs for a document.
+    pub load_ms: Vec<(usize, f64)>,
+    /// Moving the highlight: the driver's refresh for each move of the
+    /// spoken word (the widget passes that follow are timed by
+    /// `--measure-frames`). Kept for [`HIGHLIGHT_SUMMARY_MOVES`] moves,
+    /// then summarized under `--log` and cleared.
+    pub highlight_ms: Vec<f64>,
+}
+
+/// Highlight moves per `--log` summary line.
+pub const HIGHLIGHT_SUMMARY_MOVES: usize = 200;
+
+impl Timings {
+    /// Records one highlight move; every [`HIGHLIGHT_SUMMARY_MOVES`] moves
+    /// returns a summary line (median, 95th percentile, worst) and starts
+    /// again, so the record never grows.
+    pub fn highlight_moved(&mut self, ms: f64) -> Option<String> {
+        self.highlight_ms.push(ms);
+        if self.highlight_ms.len() < HIGHLIGHT_SUMMARY_MOVES {
+            return None;
+        }
+        let mut v = std::mem::take(&mut self.highlight_ms);
+        v.sort_by(f64::total_cmp);
+        let at = |q: f64| v[((v.len() - 1) as f64 * q).round() as usize];
+        Some(format!(
+            "highlight: {} moves, driver refresh median {:.3} ms, 95th percentile {:.3} ms, worst {:.3} ms",
+            v.len(),
+            at(0.5),
+            at(0.95),
+            at(1.0)
+        ))
+    }
 }
 
 /// The pieces the tree is built from, shared by the window and the
@@ -1271,8 +1310,20 @@ impl Gui {
             }
         }
         let root = ctx.render_root(self.window_id);
-        // Loads and slow highlights are timed in `--log` (`refresh_host`).
-        let _ = refresh_host(&self.app, &mut self.shown, root, self.log);
+        let before = self.shown.state;
+        let started = Instant::now();
+        let loaded = refresh_host(&self.app, &mut self.shown, root, self.log);
+        let refreshed = started.elapsed().as_secs_f64() * 1000.0;
+        if let Some(ms) = loaded {
+            let len = self.app.session().map_or(0, |s| s.doc.len_chars());
+            self.timings.load_ms.push((len, ms));
+        } else if before.spoken != self.shown.state.spoken
+            && let Some(line) = self.timings.highlight_moved(refreshed)
+            && self.log
+        {
+            // The driver's share; the widget passes follow in Masonry.
+            crate::log::line(&line);
+        }
         // Copy and Cut (the keymap's): what the app copied goes on the
         // system clipboard, as the terminal sends it with OSC 52.
         if let Some(text) = self.app.take_clipboard() {
@@ -2874,6 +2925,8 @@ impl Gui {
         let Some((file, read, messages)) = self.startup.take() else {
             return;
         };
+        // The window was created, shown, and drawn before the first tick.
+        startup_phase(self.log, "window shown, first tick");
         if self.background {
             // Before anything is opened or pressed: a window that UI
             // Automation brings to the front gives the foreground back (W7x).
@@ -2904,6 +2957,7 @@ impl Gui {
                         started.elapsed().as_secs_f64() * 1000.0
                     ));
                 }
+                startup_phase(self.log, "document open");
             }
             None => {
                 // The key from the keymap, written for the screen reader
@@ -3362,8 +3416,25 @@ impl AppDriver for Gui {
 /// process itself.
 const EXIT_GRACE: Duration = Duration::from_secs(15);
 
+/// When `run` began, for the startup phases `--log` writes.
+static RUN_STARTED: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+
+/// Under `--log`, writes how long after `run` began a startup phase ended
+/// (the performance audit's startup breakdown): "startup: settings and
+/// app at 41.2 ms".
+fn startup_phase(log: bool, phase: &str) {
+    let started = *RUN_STARTED.get_or_init(Instant::now);
+    if log {
+        crate::log::line(&format!(
+            "startup: {phase} at {:.1} ms",
+            started.elapsed().as_secs_f64() * 1000.0
+        ));
+    }
+}
+
 /// Runs the GUI until the window closes.
 pub fn run(opts: GuiOptions) -> Result<(), String> {
+    let _ = RUN_STARTED.set(Instant::now());
     let queue: MessageQueue = Rc::new(RefCell::new(VecDeque::new()));
     let muted = Rc::new(Cell::new(false));
     let announcer = QueueAnnouncer {
@@ -3375,6 +3446,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     // language list, which would stand in front of what they check.
     let first_run = !opts.background && setup::is_first_run(&opts.app);
     let (mut app, mut messages) = setup::build_app(&opts.app, Box::new(announcer));
+    startup_phase(opts.log, "settings and app");
     app.set_announce_list_focus(opts.experiments.app_list_announcements);
     let mut experiments = opts.experiments;
     let wanted = experiments
@@ -3392,6 +3464,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         // The system's light, dark, or high-contrast setting, when the
         // settings ask to follow it (`display.follow_os_theme`).
         let _ = app.apply_startup_theme(textweaver_app::theme::os::probe());
+        startup_phase(opts.log, "color-scheme probe");
     }
     // Windows High Contrast: the system's own colors, while the settings
     // follow the system (`display.follow_os_theme`) and no `--theme` was
@@ -3408,6 +3481,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
     let full_passes = Rc::new(Cell::new(0));
     let tree = build_tree(&palette, font, Some(&app), full_passes, experiments);
+    startup_phase(opts.log, "widget tree");
 
     let mut attrs = WinitWindow::default_attributes()
         .with_title("textweaver")
@@ -3437,6 +3511,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         .build()
         .map_err(|e| format!("cannot start the event loop: {e}"))?;
     let proxy = event_loop.create_proxy();
+    startup_phase(opts.log, "event loop");
     if let Some(after) = opts.exit_after {
         exit_watchdog(after);
     }
@@ -3486,6 +3561,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
         closed: false,
+        timings: Timings::default(),
     };
     let default_props = theme::default_properties(&gui.palette);
     masonry_winit::app::run_with(event_loop, vec![window], gui, default_props)

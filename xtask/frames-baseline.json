@@ -1,0 +1,124 @@
+{
+  "about": "The bench gate's baseline (xtask/src/ratchet.rs). Written only by cargo xtask bench --update-baseline, in a commit that says why.",
+  "platforms": {
+    "windows-x86_64": {
+      "branch": "wave8/i-instrumentation",
+      "commit": "c6c598fc1e",
+      "cpus": 12,
+      "date": "2026-10-02",
+      "gate_times": false,
+      "quick": false,
+      "reason": "First Windows entry (W8b-i): counts per 200 moves on the owner's machine while other agents were building",
+      "report": {
+        "md-1mb.md, aids, 100 percent": {
+          "move_p50_ms": 3.2363,
+          "move_p95_ms": 8.7042,
+          "move_worst_ms": 16.7503,
+          "moves": 200,
+          "moves_allocs": 419872,
+          "moves_nodes": 1785,
+          "moves_with_sentence": 200,
+          "passes_p50_ms": 2.8597,
+          "refresh_p50_ms": 0.29960000000000003
+        },
+        "md-1mb.md, aids, 200 percent": {
+          "move_p50_ms": 4.5601,
+          "move_p95_ms": 14.5596,
+          "move_worst_ms": 59.2057,
+          "moves": 200,
+          "moves_allocs": 420795,
+          "moves_nodes": 1778,
+          "moves_with_sentence": 200,
+          "passes_p50_ms": 3.7264,
+          "refresh_p50_ms": 0.319
+        },
+        "md-1mb.md, plain, 100 percent": {
+          "move_p50_ms": 1.1359,
+          "move_p95_ms": 3.7639,
+          "move_worst_ms": 7.6642,
+          "moves": 200,
+          "moves_allocs": 122459,
+          "moves_nodes": 1370,
+          "moves_with_sentence": 200,
+          "passes_p50_ms": 0.9927,
+          "refresh_p50_ms": 0.1237
+        },
+        "md-1mb.md, plain, 200 percent": {
+          "move_p50_ms": 1.2551,
+          "move_p95_ms": 6.388,
+          "move_worst_ms": 34.566399999999994,
+          "moves": 200,
+          "moves_allocs": 122576,
+          "moves_nodes": 1370,
+          "moves_with_sentence": 200,
+          "passes_p50_ms": 1.0586,
+          "refresh_p50_ms": 0.1226
+        },
+        "one-line-1mb.txt, aids, 100 percent": {
+          "move_p50_ms": 504.0904000000001,
+          "move_p95_ms": 1523.509,
+          "move_worst_ms": 2100.956,
+          "moves": 179,
+          "moves_allocs": 43299115,
+          "moves_nodes": 309830,
+          "moves_with_sentence": 179,
+          "passes_p50_ms": 502.01949999999994,
+          "refresh_p50_ms": 1.2946
+        },
+        "one-line-1mb.txt, aids, 200 percent": {
+          "move_p50_ms": 412.0794,
+          "move_p95_ms": 628.0545,
+          "move_worst_ms": 1088.281,
+          "moves": 200,
+          "moves_allocs": 48467209,
+          "moves_nodes": 346187,
+          "moves_with_sentence": 200,
+          "passes_p50_ms": 406.6559,
+          "refresh_p50_ms": 1.3362
+        },
+        "one-line-1mb.txt, plain, 100 percent": {
+          "move_p50_ms": 73.8245,
+          "move_p95_ms": 179.0762,
+          "move_worst_ms": 550.4729000000001,
+          "moves": 200,
+          "moves_allocs": 10043724,
+          "moves_nodes": 288388,
+          "moves_with_sentence": 200,
+          "passes_p50_ms": 72.6748,
+          "refresh_p50_ms": 0.8779
+        },
+        "one-line-1mb.txt, plain, 200 percent": {
+          "move_p50_ms": 70.0815,
+          "move_p95_ms": 121.9959,
+          "move_worst_ms": 179.0099,
+          "moves": 200,
+          "moves_allocs": 10037496,
+          "moves_nodes": 288385,
+          "moves_with_sentence": 200,
+          "passes_p50_ms": 68.50729999999999,
+          "refresh_p50_ms": 0.8894000000000001
+        }
+      }
+    }
+  },
+  "policy": {
+    "alloc_floor": 5000.0,
+    "max_growth": 0.25,
+    "max_improvement": 0.25,
+    "max_time_growth": 0.5,
+    "node_floor": 100.0,
+    "peak_floor_mb": 1.0,
+    "report_only": [
+      "startup",
+      "shutdown",
+      "save_",
+      "autosave",
+      "identify",
+      "pathological",
+      "README.md",
+      "docs/"
+    ],
+    "time_floor_ms": 5.0,
+    "time_growth_floor_ms": 2.0
+  }
+}

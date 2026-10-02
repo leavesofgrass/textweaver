@@ -187,11 +187,18 @@ mod on {
 
     use super::*;
 
+    /// Makes a dictation backend from a model folder.
+    pub(crate) type BackendFactory = Box<dyn Fn(&std::path::Path) -> Box<dyn Dictation> + Send>;
+
     /// The dictation backend and the session under way.
     #[derive(Default)]
     pub(crate) struct DictationSlot {
         /// The backend, kept once made so the model stays loaded.
         pub(crate) backend: Option<Box<dyn Dictation>>,
+        /// Makes the backend from a model folder in place of the in-process
+        /// Whisper one; tests set it so no real model or microphone is
+        /// opened, even after a download drops the backend.
+        pub(crate) factory: Option<BackendFactory>,
         /// A yes-or-no question is open: turn on edit mode and dictate?
         pub(crate) question: bool,
         /// The words of the phrase being spoken, committed so far.
@@ -381,8 +388,12 @@ mod on {
                 };
                 let mut config = RtenConfig::new(&dir);
                 config.live = Some(StreamConfig::default());
-                match RtenDictation::new(config) {
-                    Ok(b) => self.dictation.backend = Some(Box::new(b)),
+                let made = match &self.dictation.factory {
+                    Some(make) => Ok(make(&dir)),
+                    None => RtenDictation::new(config).map(|b| Box::new(b) as Box<dyn Dictation>),
+                };
+                match made {
+                    Ok(b) => self.dictation.backend = Some(b),
                     Err(e) => {
                         // The real reason, in words.
                         log::warn!("dictation model in {}: {e}", dir.display());

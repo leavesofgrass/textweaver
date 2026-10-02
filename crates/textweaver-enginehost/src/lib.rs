@@ -41,7 +41,7 @@ pub mod serve;
 pub mod start;
 pub mod wav;
 
-pub use audio::{AudioOutput, Feed, Player};
+pub use audio::{AudioOutput, Feed, FeedReader, Player};
 pub use clock::Clock;
 pub use playback::{Captured, Playback, word_timings};
 pub use process::{Ended, HostMsg, HostProcess};

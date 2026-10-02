@@ -62,6 +62,43 @@ fn editing(app: &mut App) {
     assert!(app.is_editing());
 }
 
+/// A recognizer that records nothing and never opens a model or a
+/// microphone, for tests that only need dictation to start and stop.
+#[cfg(feature = "dictation")]
+#[derive(Default)]
+struct Quiet(Option<textweaver_dictation::DictationState>);
+
+#[cfg(feature = "dictation")]
+impl textweaver_dictation::Dictation for Quiet {
+    fn name(&self) -> &str {
+        "quiet"
+    }
+    fn start(
+        &mut self,
+        _input: textweaver_dictation::DictationInput,
+    ) -> Result<(), textweaver_dictation::DictationError> {
+        self.0 = Some(textweaver_dictation::DictationState::Recording);
+        Ok(())
+    }
+    fn stop(&mut self) -> Result<(), textweaver_dictation::DictationError> {
+        self.0 = Some(textweaver_dictation::DictationState::Transcribing);
+        Ok(())
+    }
+    fn cancel(&mut self) {
+        self.0 = None;
+    }
+    fn poll(&mut self) -> Vec<textweaver_dictation::DictationEvent> {
+        Vec::new()
+    }
+    fn state(&self) -> textweaver_dictation::DictationState {
+        self.0.unwrap_or(textweaver_dictation::DictationState::Idle)
+    }
+    fn shutdown(&mut self, _wait: Duration) -> bool {
+        self.0 = None;
+        true
+    }
+}
+
 /// A made-up dictation model a mirror lists: three small files with
 /// Whisper's names, in its own folder.
 fn made_up_mirror() -> (FakeFetcher, &'static str, Vec<(String, Vec<u8>)>) {
@@ -276,6 +313,14 @@ fn escape_cancels_and_the_next_download_resumes_and_is_seen_at_once() {
     let (fake, base, files) = made_up_mirror();
     let read = Arc::new(AtomicU64::new(0));
     let (mut app, said) = app_in(tmp.path(), Arc::new(Slow(fake, read.clone())));
+    // The downloaded files are made up, so no real recognizer or microphone
+    // is opened (on Windows runners that crashed the test process).
+    let made_from: Arc<Mutex<Vec<std::path::PathBuf>>> = Arc::default();
+    let made = made_from.clone();
+    app.dictation.factory = Some(Box::new(move |dir: &Path| {
+        made.lock().unwrap().push(dir.to_path_buf());
+        Box::new(Quiet::default()) as Box<dyn textweaver_dictation::Dictation>
+    }));
     let _ = app.update_settings(|s| {
         s.components.mirror = base.to_owned();
         s.dictation.model = "made-up-dictation".into();
@@ -357,10 +402,12 @@ fn escape_cancels_and_the_next_download_resumes_and_is_seen_at_once() {
     app.dispatch(Command::Action(ActionId::Dictate));
     assert!(!app.confirmation_pending(), "{:?}", said.all());
     assert!(!said.any("needs the Whisper model"), "{:?}", said.all());
+    // The recognizer was made from the folder just downloaded.
     assert!(
-        said.any("Finishing dictation.") || said.any("Dictation failed: "),
-        "{:?}",
-        said.all()
+        made_from.lock().unwrap().iter().any(|d| d == &dir),
+        "made from {:?}, downloaded to {}",
+        made_from.lock().unwrap(),
+        dir.display()
     );
 }
 

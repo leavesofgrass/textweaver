@@ -59,11 +59,30 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **A mirror** (`[components] mirror` or `TEXTWEAVER_COMPONENTS_MIRROR`), tried before the public sources, may list components of its own; it can add components but never change a built-in one's pins. See [Optional components](docs/components.md).
 - **Downloads go on where they stopped,** and a folder placed by hand that already holds the right files is used as it is.
 
+### Speech: clinical and scientific text
+
+- **Identifiers are read digit by digit.** A number after CPT, PMID, NCT, ZIP, DOI, ISBN, or phone (also telephone, tel, and fax), and a US phone number such as "503-555-0123", is read as digits: "PMID 31769816" is "PMID three one seven six nine eight one six", where it was "thirty-one million ...". The highlight follows each digit.
+- **Error-prone medical abbreviations are spelled, never expanded.** The abbreviations on The Joint Commission's "Do Not Use" list and the ISMP list of error-prone abbreviations (QD, QOD, U, IU, MS, MgSO4, cc, SC, SQ, HS, the ear and eye abbreviations, TPA, HCTZ, and others) are read letter by letter, "Q D", and no expansion, built in or your own, can replace them. "µg" is read "micrograms".
+- **Symbols outside math are named:** Greek letters ("TNF-α" is "TNF alpha"), the micro sign, the minus sign, "⇌" ("in equilibrium with"), arrows, and powers of ten ("× 10^9" is "times ten to the ninth"). Greek letters are named at every punctuation level.
+- **With Eloquence too.** The identifier rule and the error-prone list also apply to engines that read numbers and abbreviations themselves.
+
+### Faster
+
+- **Speech starts and stops sooner.** The sound output now asks the audio device for a 30 ms buffer instead of leaving the size to the audio library (about 43 ms). After a stop, a restart, a skip, or a rate change, the first word is heard about 12 ms sooner, and a stop goes quiet sooner by the same amount, with every engine whose audio textweaver plays (SAPI 5, Eloquence, DECtalk, and Piper). The highlight runs closer to the sound for the same reason. A device that refuses the size gets the library's own.
+- **No stale sound after a stop, no wait before a restart.** The few milliseconds of speech the output had already taken are dropped at a stop instead of played, and new speech that arrives while the output is playing silence starts at the next sample instead of after the rest of that silence.
+- **On Linux, an output that runs dry grows its buffer.** When the audio system reports underruns (ALSA and JACK do), the output opens again between readings with twice the buffer, up to 100 ms, so speech never stutters on a slow or busy machine. Nothing is cut off by the reopen.
+
 ### For contributors
 
 - **One downloader** (W8a-d): the new `textweaver-components` crate pins files by size and SHA-256 and downloads them through a `.part` file, the check, and a rename, with resume, progress, cancel, a lock, and one neutral User-Agent. The OCR models, Lexend, and Piper voices moved onto it; a test in the app enforces the registry, and the fake fetcher records every request.
 
 - **Research for the next waves.** `docs/dev/research/` holds the research reports and the wave plan for alpha.8, alpha.9, and later: a performance audit, speech engines and runtimes, text-to-speech use cases for students with disabilities, health sciences workflows, GUI and visual design, and law and standards. Nothing in it is a decision; decisions stay in the ADRs.
+- **The bench gate is a two-way ratchet against a committed baseline,** `xtask/bench-baseline.json`, one entry per platform. Peak heap and allocation counts fail when they grow more than 25 percent, and also when they fall more than 25 percent without the baseline being updated, so the floor never goes stale; times fail when they grow more than 50 percent, against an entry measured on the gate's own runner type. A failed run never becomes the baseline: only `cargo xtask bench --update-baseline --reason TEXT` writes it, on main (or for a platform's first entry). See `docs/dev/testing.md`, "The gate: a two-way ratchet".
+- **New bench measurements:** segmentation (`sentences_ms`, `words_ms`), normalization (`normalize_ms`), an edit on the loaded document (`apply_ms`, `blank_lines_ms`), stop to speak (`stop_to_speak`), and stop to first audio (`stop_to_first_audio`), stamped by the speech service when each reading first sounds (`SpeechService::first_audio`). `--engine piper` and `--engine sapi` time stop to first audio with a real engine on a silent output; Piper only with voices already installed, never downloading.
+- **Pathological inputs:** one generated file per loader, with a 512 KB token, lists nested 200 deep, a 2,000-row table, and a 1 MB line, must load and plan within 10 seconds each in `cargo xtask bench --quick`.
+- **`cargo xtask frames`** measures 200 moves of the spoken word through the GUI's driver and whole widget tree, with no window on screen (`textweaver-xilem --measure-frames MOVES`), on the 1 MB and one-line corpora, plain and with every reading aid on, at 100 and 200 percent: the median, 95th percentile, and worst move, and the allocations and accessibility nodes per move, in words. The counts are gated by the two-way ratchet against `xtask/frames-baseline.json`; it is the gate for the next wave's visual work.
+- **GUI `--log`** writes the startup phases with their times, and every 200 highlight moves the driver's refresh time (the old highlight timing was a zero nothing read). The speech service's debug log says, every 200 scheduled words, how late they lit up and how far apart its timer steps were (for Windows's timer tick).
+- **A nightly profile** of `tw info` and of the 10 MB narration plan, uploaded as flame graphs and as plain-text lists of the hottest functions; and the GUI frame times, reported in the nightly summary.
 
 ## [0.1.0-alpha.7] - 2026-10-01
 
