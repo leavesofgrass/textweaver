@@ -4,6 +4,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Faster
+
+- **Reading starts with less work.** Planning what to say for a whole 10 MB document makes a third fewer allocations (836,038 to 538,984) and uses 11 MB less memory; the text is no longer copied out of the document piece by piece.
+- **Typing in a large document.** Each edit to a 10 MB document cost about 22 ms when the paragraph table was needed again; it now costs about 1 ms. Markers are shifted only where the edit reaches, and the table of blank lines is updated instead of rebuilt.
+- **The first Read after opening** no longer builds the paragraph and marker tables on the input thread: opening builds them while it loads (25 ms or more on 10 MB).
+- **SSML and DECtalk voices** no longer compile their markup patterns for every sentence (about 0.3 ms a sentence, on the speech thread).
+- **Starting in another language** parses only that language's messages, not all five translations (41 to 6 ms in Spanish).
+- **Loading** sizes the text once instead of growing it.
+
 ### For contributors
 
 - **Research for the next waves.** `docs/dev/research/` holds the research reports and the wave plan for alpha.8, alpha.9, and later: a performance audit, speech engines and runtimes, text-to-speech use cases for students with disabilities, health sciences workflows, GUI and visual design, and law and standards. Nothing in it is a decision; decisions stay in the ADRs.

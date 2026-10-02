@@ -203,6 +203,39 @@ Taken on the same machine while three other builds were running, so single runs 
 
 **What is left.** ICU4X's segmentation (115 ms on 10 MB) is the floor for finding sentences. The rest of the plan's time is per sentence: three `enclosing` lookups, a `String` for each literal piece, and the offset map. A table of line starts would make every line lookup a binary search, but it would have to be kept up to date on every edit, which costs typing more than it saves reading; it was not done.
 
+### Benchmark history: October 2, 2026, the narration plan and loading
+
+Items 1 to 6 of the ranked plan in the [performance audit](research/performance-audit.md), and two from the [next waves plan](research/next-waves-plan.md). Taken on Windows (x86_64, 64 GB) while three other agents were building, so times moved by up to a factor of two between runs of the same code; allocation counts and peak heap did not move at all.
+
+**How they were taken.**
+
+- The reading paths: `cargo xtask bench --only md-10mb --no-startup --json FILE`, three runs after each change, median reported.
+- Edits, the SSML markup, and the interface catalogs, which the bench does not measure: small release probes outside the committed code. Each built once before and once after the change, and the two run alternately where times were close.
+
+**The narration plan, 10 MB of Markdown, whole document (111,125 utterances).**
+
+| Change | Allocations | Peak heap | Time (median of three) |
+| --- | --- | --- | --- |
+| Before | 836,038 | 69.7 MB | 624 ms |
+| Literal text pushed from the rope's chunks, no `String` per piece | 713,256 | 70.0 MB | 556 ms |
+| One buffer per utterance's text and map; pieces, announcement, and split reused; no per-sentence `Vec` | 538,984 | 58.8 MB | 509 ms |
+
+What is left is about two allocations per utterance (its text and its map, which the speech service keeps) and the sentence segmentation (item 9 of the audit).
+
+**Loading, 10 MB of Markdown.** The canonical text is sized from the source's length, words are counted by length when they are ASCII, and code is not copied twice: allocations 67,950 to 66,122; load 334 to 248 ms in the bench (an interleaved probe of five rounds gave 365 to 360 ms, within the noise); peak heap 72.1 to 73.1 MB, since the full-size buffer exists from the start.
+
+**Edits, 10 MB of Markdown (159,155 markers), median of 60 edits per run, three runs.**
+
+- `Document::apply`: 2.77 to 1.14 ms. Markers past the edit move by an addition, markers before it are left alone, and only the few reaching into it are mapped and re-sorted. What is left is walking the markers' 11 MB.
+- The blank-line table after an edit: rebuilt on next use, 19.3 ms, before; updated inside `apply`, under 0.05 ms, after. An edit plus the table went from 22.4 to 1.17 ms.
+
+**Opening to the first Read.** Between opening and the first Read being handed to the speech service, 25 to 35 ms in every bench run, before and after (`open_and_read_dispatch_ms` less `open_ms`). Planning the first window is not the cost: 1.9 ms for 407 utterances, 0.07 ms for two sentences, so planning a smaller first window was not done. The cost is the lazy tables: the blank-line table (23 to 48 ms under load) and the marker tables (3 to 4 ms). Opening in the background now builds both on the loading thread. The bench opens synchronously, so its number does not show this.
+
+**Speech and start-up.**
+
+- SSML and DECtalk markup compiled five regular expressions per sentence: 324 to 534 microseconds a sentence before, 4 to 7 after, on the speech thread of SSML engines.
+- The SCOWL list was already unpacked on first use (Wave 6). The interface catalogs were not: the first built-in translation asked for parsed all five. Starting in Spanish: 41 to 6 ms for the catalog; English is unchanged at 6 ms.
+
 Bulk conversion has its own benchmark:
 
 ```bash
