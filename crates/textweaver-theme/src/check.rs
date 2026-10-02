@@ -155,8 +155,8 @@ impl ContrastReport {
     }
 
     /// One short paragraph for the status line and screen readers:
-    /// `Theme Nord: all 43 checks pass.` or
-    /// `Theme Mine: 2 of 43 checks fail. Dim text on background: 4.0 to 1,
+    /// `Theme Nord: all 45 checks pass.` or
+    /// `Theme Mine: 2 of 45 checks fail. Dim text on background: 4.0 to 1,
     /// needs 4.5 to 1. …`
     pub fn summary(&self) -> String {
         let total = self.checks.len();
@@ -229,6 +229,24 @@ pub fn check(theme: &Theme) -> ContrastReport {
         bg,
         kind,
     ));
+    // The spoken word's band is a step up from the page and from the
+    // sentence band around it. The sentence band itself needs no ratio: it
+    // is a soft tint, and the sentence's underline is its cue.
+    let word = theme.resolve_style(StyleRole::SpokenWord);
+    let sentence = theme.resolve_style(StyleRole::SpokenSentence);
+    for (what, against) in [
+        ("background", bg),
+        ("spoken sentence band", sentence.background),
+    ] {
+        v.push(Check::pair(
+            format!("spoken word band against {what}"),
+            "styles.spoken_word.background".into(),
+            Requirement::NonText,
+            word.background,
+            against,
+            kind,
+        ));
+    }
     for (a, b) in [
         (StyleRole::SpokenSentence, StyleRole::SpokenWord),
         (StyleRole::FindHit, StyleRole::CurrentFindHit),

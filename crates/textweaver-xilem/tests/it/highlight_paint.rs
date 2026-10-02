@@ -1,0 +1,233 @@
+//! The reading highlights the document view paints, checked through its
+//! paint list ([`DocumentView::painted`]) rather than pixels: the spoken
+//! sentence is underlined in every palette (high contrast too), the word
+//! carries its theme attribute, marks inside the sentence stay visible, and
+//! the bold word moves nothing on the line.
+
+use std::cell::Cell;
+use std::rc::Rc;
+
+use masonry::core::{NewWidget, WidgetTag};
+use masonry_testing::{TestHarness, TestHarnessParams};
+use textweaver_app::core::{CharPos, CharRange};
+use textweaver_app::text::Document;
+use textweaver_xilem::document::{DocFont, DocMark, DocModel, DocState, DocumentView, PaintStep};
+use textweaver_xilem::system_colors;
+use textweaver_xilem::theme::{self, Palette};
+use textweaver_xilem::window::{self, WINDOW_UNITS};
+
+const DOC: WidgetTag<DocumentView> = WidgetTag::named("doc");
+
+/// A sentence long enough to wrap onto a second line in a 500 px window,
+/// then a second sentence.
+const TEXT: &str = "The quick brown fox jumps over the lazy dog while the reader \
+listens closely to every single word of this rather long sentence. A short one.";
+
+/// The end of the first sentence.
+fn first_sentence() -> CharRange {
+    let end = TEXT.find(". ").expect("two sentences") + 1;
+    CharRange::new(0, end)
+}
+
+fn harness(p: &Palette) -> TestHarness<DocumentView> {
+    let view = DocumentView::new(p.clone(), DocFont::default(), Rc::new(Cell::new(0)));
+    let mut params = TestHarnessParams::default();
+    params.window_size = (500, 400).into();
+    let mut h = TestHarness::create_with(
+        theme::default_properties(p),
+        NewWidget::new(view).with_tag(DOC),
+        params,
+    );
+    for b in textweaver_xilem::fonts::bundled_blobs() {
+        h.register_fonts(b);
+    }
+    let doc = Document::from_plain_text(TEXT);
+    let w = textweaver_app::DocWindow::with_budget(&doc, CharPos::ZERO, WINDOW_UNITS);
+    let model = DocModel {
+        paragraphs: window::window_paragraphs(&doc, w.range()),
+        spans: window::window_spans(&doc, w.range()),
+        doc_len: doc.len_chars(),
+        title: "Test".into(),
+        ..DocModel::default()
+    };
+    h.edit_root_widget(|mut d| DocumentView::set_model(&mut d, model));
+    let _ = h.redraw();
+    h
+}
+
+/// Reading the word "fox" in the first sentence.
+fn reading() -> DocState {
+    DocState {
+        caret: CharPos(16),
+        anchor: None,
+        spoken: Some(CharRange::new(16, 19)),
+        sentence: Some(first_sentence()),
+        reading: true,
+    }
+}
+
+fn read(h: &mut TestHarness<DocumentView>) -> Vec<PaintStep> {
+    h.edit_root_widget(|mut d| DocumentView::set_state(&mut d, reading()));
+    let _ = h.redraw();
+    h.root_widget().painted().to_vec()
+}
+
+/// Every palette the window can draw with: the bundled themes and the
+/// Windows contrast theme the review screenshots use.
+fn every_palette() -> Vec<Palette> {
+    let mut all: Vec<Palette> = textweaver_theme::builtin::all()
+        .iter()
+        .map(Palette::from_theme)
+        .collect();
+    all.push(system_colors::palette(&system_colors::NIGHT_SKY));
+    all
+}
+
+fn position(steps: &[PaintStep], f: impl Fn(&PaintStep) -> bool) -> Option<usize> {
+    steps.iter().position(f)
+}
+
+#[test]
+fn the_spoken_sentence_is_underlined_in_every_palette() {
+    let palettes = every_palette();
+    assert!(palettes.len() >= 24, "23 themes and high contrast");
+    for p in palettes {
+        let mut h = harness(&p);
+        let steps = read(&mut h);
+        let bands: Vec<_> = steps
+            .iter()
+            .filter_map(|s| match s {
+                PaintStep::SentenceBand(r) => Some(*r),
+                _ => None,
+            })
+            .collect();
+        let lines = h.root_widget().sentence_underlines();
+        assert!(bands.len() >= 2, "{}: the sentence wraps", p.name);
+        assert_eq!(
+            lines.len(),
+            bands.len(),
+            "{}: one underline per sentence line",
+            p.name
+        );
+        for ((u, color), band) in lines.iter().zip(&bands) {
+            assert_eq!(*color, p.sentence_line, "{}", p.name);
+            assert!(u.height() >= 1.5, "{}: {u:?}", p.name);
+            assert_eq!((u.x0, u.x1), (band.x0, band.x1), "{}", p.name);
+            assert!(
+                u.y0 > band.y0 && u.y1 <= band.y1 + 1.0,
+                "{}: the line {u:?} sits under the text in {band:?}",
+                p.name
+            );
+        }
+        // The underline is drawn after the text, the band before it.
+        let band_at = position(&steps, |s| matches!(s, PaintStep::SentenceBand(_)));
+        let text_at = position(&steps, |s| matches!(s, PaintStep::Text(_)));
+        let line_at = position(&steps, |s| matches!(s, PaintStep::SentenceUnderline(..)));
+        assert!(band_at < text_at && text_at < line_at, "{}", p.name);
+        // The word is drawn bold, as every bundled theme and the system
+        // palette ask.
+        assert!(
+            steps
+                .iter()
+                .any(|s| matches!(s, PaintStep::WordText { bold: true, .. })),
+            "{}: the word is bold",
+            p.name
+        );
+        // Not reading: no highlight is painted.
+        h.edit_root_widget(|mut d| DocumentView::set_state(&mut d, DocState::default()));
+        let _ = h.redraw();
+        assert!(h.root_widget().sentence_underlines().is_empty());
+    }
+}
+
+#[test]
+fn under_a_contrast_theme_the_underline_is_the_sentences_only_mark() {
+    let p = system_colors::palette(&system_colors::NIGHT_SKY);
+    assert_eq!(p.spoken_sentence, p.background, "no band to see");
+    assert_eq!(p.sentence_line, p.text, "the system's text color");
+    let mut h = harness(&p);
+    read(&mut h);
+    assert!(!h.root_widget().sentence_underlines().is_empty());
+}
+
+#[test]
+fn marks_inside_the_spoken_sentence_are_painted_over_its_band() {
+    let p = Palette::galaxy();
+    let mut h = harness(&p);
+    let marks = vec![
+        (CharRange::new(4, 9), DocMark::Note),
+        (CharRange::new(35, 39), DocMark::Highlight),
+        (CharRange::new(40, 44), DocMark::CurrentFindHit),
+    ];
+    h.edit_root_widget(|mut d| DocumentView::set_marks(&mut d, marks));
+    let steps = read(&mut h);
+    let last_band = steps
+        .iter()
+        .rposition(|s| matches!(s, PaintStep::SentenceBand(_)))
+        .expect("a sentence band");
+    for mark in [DocMark::Note, DocMark::Highlight, DocMark::CurrentFindHit] {
+        let band = position(
+            &steps,
+            |s| matches!(s, PaintStep::MarkBand(m, _) if *m == mark),
+        )
+        .unwrap_or_else(|| panic!("{mark:?} band painted"));
+        let shape = position(
+            &steps,
+            |s| matches!(s, PaintStep::MarkShape(m, _) if *m == mark),
+        )
+        .unwrap_or_else(|| panic!("{mark:?} shape painted"));
+        assert!(band > last_band, "{mark:?} band after the sentence band");
+        assert!(shape > last_band, "{mark:?} shape after the sentence band");
+    }
+    // The word band and the text come after the marks.
+    let word = position(&steps, |s| matches!(s, PaintStep::WordBand(_))).expect("word band");
+    let last_mark = steps
+        .iter()
+        .rposition(|s| matches!(s, PaintStep::MarkShape(..)))
+        .expect("marks");
+    assert!(word > last_mark);
+}
+
+#[test]
+fn the_bold_word_moves_nothing_on_the_line() {
+    let p = Palette::galaxy();
+    assert!(p.spoken_word_attrs.bold);
+    let mut h = harness(&p);
+    // A mark across the whole sentence: its bands are the layout's own
+    // line extents, so any reflow would change them.
+    let mark = vec![(first_sentence(), DocMark::FindHit)];
+    h.edit_root_widget(|mut d| DocumentView::set_marks(&mut d, mark));
+    let _ = h.redraw();
+    let rects = |steps: &[PaintStep]| -> Vec<_> {
+        steps
+            .iter()
+            .filter_map(|s| match s {
+                PaintStep::MarkBand(_, r) => Some(*r),
+                _ => None,
+            })
+            .collect()
+    };
+    let quiet = rects(h.root_widget().painted());
+    let paras = h.root_widget().visible_paragraphs().to_vec();
+    let steps = read(&mut h);
+    assert_eq!(rects(&steps), quiet, "line widths unchanged while reading");
+    assert_eq!(h.root_widget().visible_paragraphs(), paras.as_slice());
+    // The bold word is drawn inside its own band.
+    let band = steps
+        .iter()
+        .find_map(|s| match s {
+            PaintStep::WordBand(r) => Some(*r),
+            _ => None,
+        })
+        .expect("word band");
+    let clip = steps
+        .iter()
+        .find_map(|s| match s {
+            PaintStep::WordText {
+                clip, bold: true, ..
+            } => Some(*clip),
+            _ => None,
+        })
+        .expect("bold word");
+    assert_eq!(clip, band.inflate(3.0, 1.0));
+}

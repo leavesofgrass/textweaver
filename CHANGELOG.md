@@ -15,6 +15,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ### The GUI
 
+- **The spoken sentence is underlined and the spoken word bold.** The window drew both as color bands only, though every theme asks for an underlined sentence and a bold word, as the terminal draws them. Now the sentence has a line under it in every theme, and under a Windows contrast theme, where it had no mark at all, the line is drawn in your text color. The word is bold without moving anything on the line. Notes, highlights, and search matches inside the sentence being read no longer disappear under its band.
+- **Two new theme checks.** The spoken word's band must reach 3 to 1 against the page and against the sentence's band. Every built-in theme passes; a theme of your own that falls short still loads, and you are told what to fix.
 - **The keyboard preset applies from the start.** `preset = "classic"` under `[keyboard]` now takes effect when the window opens, as in the terminal reader; before, the GUI used the default keys until a settings import or sync.
 - **The voice manager's buttons and keys.** Enter or Space presses the focused button, and the Help and Say Status keys (Alt+End) work with the focus on a button, as in the list. Remove is unavailable on a voice that cannot be removed: it says "Remove, unavailable", your screen reader says "unavailable", and its description gives the reason.
 - **The document's name on focus.** The document is named with its title first, such as "Reading check, document", so NVDA and JAWS say which document it is when the window or the document takes the focus.
