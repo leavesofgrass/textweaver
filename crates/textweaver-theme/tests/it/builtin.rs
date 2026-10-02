@@ -47,6 +47,34 @@ fn the_required_themes_pass_every_check() {
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
+/// The two-tone highlight: in every built-in theme the spoken word's band
+/// stands 3 to 1 above the page and above the sentence's band. The
+/// sentence's band itself is a soft tint with no check of its own (the
+/// underline marks the sentence), so no theme fails for it.
+#[test]
+fn every_theme_steps_the_word_band_up_from_page_and_sentence() {
+    for t in builtin::all() {
+        let r = check(t);
+        let word: Vec<_> = r
+            .checks
+            .iter()
+            .filter(|c| c.subject.starts_with("spoken word band against"))
+            .collect();
+        assert_eq!(word.len(), 2, "{}", t.name());
+        for c in word {
+            assert!(c.passed, "{}: {}", t.name(), c.describe());
+            assert!(c.ratio.unwrap() >= 3.0, "{}: {}", t.name(), c.describe());
+        }
+        assert!(
+            !r.checks
+                .iter()
+                .any(|c| c.subject.starts_with("spoken sentence band against")),
+            "{}: no sentence band check",
+            t.name()
+        );
+    }
+}
+
 #[test]
 fn high_contrast_themes_reach_seven_to_one() {
     for name in ["contrast", "high-contrast"] {
