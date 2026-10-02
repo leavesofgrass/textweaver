@@ -108,7 +108,7 @@ Lab manuals are made in Word, exported to PDF, and rarely tagged. Tables lose th
 
 ### Journal articles in two columns
 
-The screen-reader survey literature is consistent: multi-column PDFs read across columns, equations are images, and footnotes land mid-sentence [80][81]. textweaver's band-and-column algorithm handles the common case, reads footnotes inline, deferred, or skipped (`footnote_mode`), and skips bracketed citations by default (`docs/reading.md`). Reference lists still read in full. When the layout guess is wrong on one page, the student has no way to say "read this page in page order instead".
+Screen-reader users still name PDFs as a leading barrier, and employed blind readers are advised to keep two screen readers for the documents one cannot handle [85][86]. The failure modes are consistent: multi-column PDFs read across columns, equations are images, and footnotes land mid-sentence [80][81]. textweaver's band-and-column algorithm handles the common case, reads footnotes inline, deferred, or skipped (`footnote_mode`), and skips bracketed citations by default (`docs/reading.md`). Reference lists still read in full. When the layout guess is wrong on one page, the student has no way to say "read this page in page order instead".
 
 ### Lecture slides
 
