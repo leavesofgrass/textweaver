@@ -79,6 +79,10 @@ pub struct Palette {
     pub spoken_sentence: Rgb,
     /// The selection: text and band.
     pub selection: (Rgb, Rgb),
+    /// The selection band in a text field, under the field's own text
+    /// color (a field keeps its text color on the band, so the reversed
+    /// band the document draws would leave the text unreadable).
+    pub field_selection: Rgb,
     /// A search match: text and band.
     pub find_hit: (Rgb, Rgb),
     /// The search match at the caret: its band.
@@ -151,6 +155,21 @@ impl Palette {
         let spoken = theme.resolve_style(StyleRole::SpokenWord);
         let sentence = theme.resolve_style(StyleRole::SpokenSentence);
         let selection = theme.resolve_style(StyleRole::Selection);
+        // A text field keeps its text on the selection band: the style's
+        // own band (unreversed), at the text floor against the text.
+        let field_selection = {
+            let style = theme.style(StyleRole::Selection);
+            let band = if style.attributes.reverse {
+                style.background.unwrap_or(background)
+            } else {
+                selection.background
+            };
+            ensure(
+                band,
+                &[ensure(text, &[background, surface, raised], text_min)],
+                text_min,
+            )
+        };
         let find = theme.resolve_style(StyleRole::FindHit);
         let current_find = theme.resolve_style(StyleRole::CurrentFindHit);
         let note = theme.resolve_style(StyleRole::Note);
@@ -184,6 +203,7 @@ impl Palette {
             spoken_word: (spoken.foreground, spoken.background),
             spoken_sentence: sentence.background,
             selection: (selection.foreground, selection.background),
+            field_selection,
             find_hit: (find.foreground, find.background),
             current_find_hit: current_find.background,
             note: note.background,
@@ -259,7 +279,7 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
     props.insert::<TextInput, _>(PlaceholderColor::new(color(p.dim_text)));
     props.insert::<TextInput, _>(CaretColor { color: text });
     props.insert::<TextInput, _>(SelectionColor {
-        color: color(p.selection.1),
+        color: color(p.field_selection),
     });
     {
         let mut stack = PropertyStack::new();
@@ -275,6 +295,18 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
         props.insert_stack::<TextInput>(stack);
     }
 
+    // The field inside a text input (the prompt), which Masonry would draw
+    // in its own near-white whatever the theme.
+    props.insert::<TextArea<true>, _>(ContentColor::new(text));
+    props.insert::<TextArea<true>, _>(CaretColor { color: text });
+    props.insert::<TextArea<true>, _>(SelectionColor {
+        color: color(p.field_selection),
+    });
+    props.insert::<TextArea<false>, _>(ContentColor::new(text));
+    props.insert::<TextArea<false>, _>(SelectionColor {
+        color: color(p.field_selection),
+    });
+
     props.insert::<Label, _>(ContentColor::new(text));
     props.insert::<Divider, _>(ContentColor::new(color(p.border)));
     props.insert::<Flex, _>(Gap::new(Length::px(GAP)));
@@ -282,7 +314,7 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
 }
 
 /// The button look for widget type `W`: Masonry's `Button` shape with the
-/// palette's colours; the `primary` class fills with the accent.
+/// palette's colors; the `primary` class fills with the accent.
 fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Palette) {
     let hc = p.kind == ThemeKind::HighContrast;
     let border_w = if hc { 2.px() } else { 1.px() };
@@ -331,13 +363,14 @@ fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Pal
         Selector::classes(&["primary"]).with_hovered(true),
         Background::Color(color(p.accent.mix(p.text, 0.15))),
     );
-    // On the accent fill, the ring is drawn in the text colour, which
-    // stands out from both the fill and the panel.
+    // On the accent fill, the ring is drawn in the page color, which
+    // stands out from the fill (at least 3 to 1, tested) where the text
+    // color can be close to it.
     stack.push_layer(
         Selector::classes(&["primary"]).with_focused(true),
         (
             BorderColor {
-                color: color(p.text),
+                color: color(p.background),
             },
             BorderWidth {
                 width: Length::px(FOCUS_WIDTH),
@@ -419,6 +452,15 @@ mod tests {
             assert!(
                 contrast_ratio(p.on_accent, p.accent) >= 4.5 - 0.01,
                 "{name}: primary button"
+            );
+            // Play's focus ring, in the page color on the accent fill.
+            let r = contrast_ratio(p.background, p.accent);
+            assert!(r >= 3.0 - 0.01, "{name}: Play's focus ring is {r:.2} to 1");
+            // Typed text on a text field's selection band.
+            let r = contrast_ratio(p.text, p.field_selection);
+            assert!(
+                r >= min - 0.01,
+                "{name}: selected field text is {r:.2} to 1"
             );
             for l in 1..=6 {
                 let r = contrast_ratio(p.heading(l), p.background);
