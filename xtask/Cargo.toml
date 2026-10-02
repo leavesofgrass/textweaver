@@ -9,12 +9,23 @@ publish = false
 
 [features]
 # `cargo xtask bench` builds xtask again with this feature, in release mode.
-bench = ["dep:textweaver-app", "textweaver-app/publish", "dep:textweaver-sync"]
+bench = [
+    "dep:textweaver-app",
+    "textweaver-app/publish",
+    "dep:textweaver-sync",
+    "dep:textweaver-piper",
+    "dep:textweaver-sapi",
+    "dep:textweaver-enginehost",
+]
 
 [dependencies]
 textweaver-app = { workspace = true, optional = true }
 # The document identity bench (ADR-0049).
 textweaver-sync = { workspace = true, optional = true }
+# Stop-to-first-audio with real engines on a silent output (--engine).
+textweaver-piper = { workspace = true, optional = true }
+textweaver-sapi = { workspace = true, optional = true }
+textweaver-enginehost = { workspace = true, optional = true }
 textweaver-keymap.workspace = true
 textweaver-text.workspace = true
 textweaver-formats.workspace = true
