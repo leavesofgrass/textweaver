@@ -203,6 +203,36 @@ Taken on the same machine while three other builds were running, so single runs 
 
 **What is left.** ICU4X's segmentation (115 ms on 10 MB) is the floor for finding sentences. The rest of the plan's time is per sentence: three `enclosing` lookups, a `String` for each literal piece, and the offset map. A table of line starts would make every line lookup a binary search, but it would have to be kept up to date on every edit, which costs typing more than it saves reading; it was not done.
 
+### Speech latency: Friday, October 2, 2026
+
+Wave 8b set the sound output's buffer (`crates/textweaver-enginehost/src/audio.rs`, `DEFAULT_OUTPUT_BUFFER_MS`). Before, the playback client left the size to rodio, whose `from_device` asks for about 50 ms rounded to a power of two in frames: 2,048 frames, 42.7 ms at 48 kHz. Every engine whose audio textweaver plays (SAPI 5, Eloquence, DECtalk, Piper) goes through that output.
+
+**How they were taken.** On Windows (WASAPI, shared mode, the default output at 48 kHz), with other agents' builds running, by two ignored tests that open the real device but play only silence (zero samples at zero gain):
+
+```bash
+TEXTWEAVER_AUDIO_PROBE=1 cargo test -p textweaver-enginehost --features playback --test it -- latency --ignored --nocapture
+TEXTWEAVER_SAPI=1 TEXTWEAVER_AUDIO_PROBE=1 cargo test -p textweaver-sapi --test it -- real_voices::stop_and_restart --ignored --nocapture
+```
+
+The first opens the device three times per buffer size and, each time, restarts 11 times: the feed cleared and new audio pushed at once, as from an engine that answers instantly. It reports the median time to the first callback that takes the new audio (when the playback client reports `Started`), the lead (how far the samples taken run ahead of the sound, which is the audio still in the device's buffer), and the drift of the lead over two seconds, which falls for good when a device runs dry. The time to the first sound is the first callback plus the lead; a stop is heard after the lead.
+
+**The output alone, median of the restarts.**
+
+- The library's size (before): to the first sound 42 to 45 ms (first callback 5 to 7 ms, lead 37 ms).
+- 40 ms: 40 to 41 ms (lead 35 ms).
+- 30 ms, the new default: 30 to 31 ms (first callback 5 ms, lead 25 ms).
+- 20 ms: 22 to 23 ms (lead 17 ms).
+- The drift stayed within 1 ms at every size, also while a workspace build loaded every core, so no size ran dry. With a busy machine a stream can start late, which shows as a low lead in one open (it never moves the drift); the highest of the three opens is reported.
+
+30 ms was chosen over 20 ms: it saves 12 to 14 ms on every first word and every stop, and keeps a lead of at least 18 ms over WASAPI's 10 ms period, where 20 ms keeps 11 ms. Windows does not report underruns, so the margin is the only guard there. ALSA and JACK do report them; an output that reports two opens again between readings with twice the buffer, up to 100 ms (`UNDERRUNS_TO_GROW`, `MAX_OUTPUT_BUFFER_MS`).
+
+**With SAPI 5 (Zira Desktop, volume 0),** from `stop` and a new `speak` to `Started`, median of 9, in the quietest of three runs: 18.3 ms with the library's size and 18.1 ms with 30 ms (fastest 17 ms; the busier runs gave medians of 25 to 47 ms, with single restarts up to 139 ms either way). Adding the lead, a SAPI restart is heard after about 56 ms before and 43 ms after. The engine's own time to its first audio is most of it and moves from run to run; the buffer changes what follows `Started` (the lead above), not `Started` itself. W8b-i's probe measures the same span through the speech service.
+
+**Also in this change, checked without a device.**
+
+- A push that arrives while the output plays silence is taken at the next sample, not after the rest of a 64-sample batch (up to 3 ms at 22,050 Hz), and a stop drops the samples the output had taken but not yet played (`FeedReader`, tests in `crates/textweaver-enginehost/tests/it/feed.rs`).
+- A minute of speech through a fake device with the 30 ms and the 20 ms buffer, fed by a fake engine at a real-time factor of 0.1 to 0.5 in chunks of 2,048 to 4,096 samples: zero gaps, and every sample once, in order. Time is simulated, so the test never waits.
+
 Bulk conversion has its own benchmark:
 
 ```bash

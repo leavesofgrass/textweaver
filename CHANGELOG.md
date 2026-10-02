@@ -49,6 +49,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Symbols outside math are named:** Greek letters ("TNF-α" is "TNF alpha"), the micro sign, the minus sign, "⇌" ("in equilibrium with"), arrows, and powers of ten ("× 10^9" is "times ten to the ninth"). Greek letters are named at every punctuation level.
 - **With Eloquence too.** The identifier rule and the error-prone list also apply to engines that read numbers and abbreviations themselves.
 
+### Faster
+
+- **Speech starts and stops sooner.** The sound output now asks the audio device for a 30 ms buffer instead of leaving the size to the audio library (about 43 ms). After a stop, a restart, a skip, or a rate change, the first word is heard about 12 ms sooner, and a stop goes quiet sooner by the same amount, with every engine whose audio textweaver plays (SAPI 5, Eloquence, DECtalk, and Piper). The highlight runs closer to the sound for the same reason. A device that refuses the size gets the library's own.
+- **No stale sound after a stop, no wait before a restart.** The few milliseconds of speech the output had already taken are dropped at a stop instead of played, and new speech that arrives while the output is playing silence starts at the next sample instead of after the rest of that silence.
+- **On Linux, an output that runs dry grows its buffer.** When the audio system reports underruns (ALSA and JACK do), the output opens again between readings with twice the buffer, up to 100 ms, so speech never stutters on a slow or busy machine. Nothing is cut off by the reopen.
+
 ### For contributors
 
 - **One downloader** (W8a-d): the new `textweaver-components` crate pins files by size and SHA-256 and downloads them through a `.part` file, the check, and a rename, with resume, progress, cancel, a lock, and one neutral User-Agent. The OCR models, Lexend, and Piper voices moved onto it; a test in the app enforces the registry, and the fake fetcher records every request.

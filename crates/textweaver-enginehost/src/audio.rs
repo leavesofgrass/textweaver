@@ -17,6 +17,14 @@
 //! headset unplugged) or its stream must be rebuilt, the player says so
 //! ([`Player::lost`]) and the playback client opens it again, which
 //! finds the current default; audio waiting in the feed is kept.
+//!
+//! The device output asks for a small buffer, [`DEFAULT_OUTPUT_BUFFER_MS`]
+//! (Wave 8b): every millisecond of it is heard as delay before a restart's
+//! first word and after a stop, and the playback clock runs ahead of the
+//! sound by about that much. A device that refuses the size gets the
+//! audio library's own (about 43 ms), and an output whose audio system
+//! reports that it ran dry ([`UNDERRUNS_TO_GROW`] times) is opened again
+//! with twice the buffer, up to [`MAX_OUTPUT_BUFFER_MS`].
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
@@ -27,9 +35,80 @@ use std::time::{Duration, Instant};
 use textweaver_speech::{BackendId, SpeechError};
 
 /// The output device chosen by its stable id, and a count of changes so
-/// open players notice one.
+/// open players notice one (a buffer size set with [`set_output_buffer_ms`]
+/// counts too).
 static OUTPUT_DEVICE: Mutex<Option<String>> = Mutex::new(None);
 static OUTPUT_DEVICE_CHANGES: AtomicU64 = AtomicU64::new(0);
+
+/// The output buffer a device output asks for, in milliseconds, unless
+/// set otherwise ([`set_output_buffer_ms`]). See `docs/dev/testing.md`,
+/// "Speech latency", for the measurements behind it.
+pub const DEFAULT_OUTPUT_BUFFER_MS: u32 = 30;
+
+/// The largest buffer a device output grows to after underruns (rodio's
+/// documented default).
+pub const MAX_OUTPUT_BUFFER_MS: u32 = 100;
+
+/// Underruns the audio system reports for one open output before the
+/// output is opened again with a larger buffer
+/// ([`Player::underruns`]). One alone can be a passing hiccup.
+pub const UNDERRUNS_TO_GROW: u32 = 2;
+
+/// The buffer asked for ([`set_output_buffer_ms`]).
+static OUTPUT_BUFFER_MS: AtomicU32 = AtomicU32::new(DEFAULT_OUTPUT_BUFFER_MS);
+/// The size underruns have grown the buffer to (0: not grown).
+static GROWN_BUFFER_MS: AtomicU32 = AtomicU32::new(0);
+
+/// Sets the output buffer device outputs ask for, in milliseconds; 0
+/// leaves the size to the audio library (about 43 ms, the size before
+/// Wave 8b). Open device outputs open again with it. Sizes above
+/// [`MAX_OUTPUT_BUFFER_MS`] are capped.
+pub fn set_output_buffer_ms(ms: u32) {
+    let ms = ms.min(MAX_OUTPUT_BUFFER_MS);
+    if OUTPUT_BUFFER_MS.swap(ms, Ordering::AcqRel) != ms {
+        GROWN_BUFFER_MS.store(0, Ordering::Release);
+        OUTPUT_DEVICE_CHANGES.fetch_add(1, Ordering::AcqRel);
+    }
+}
+
+/// The output buffer the next device output asks for, in milliseconds:
+/// the size set with [`set_output_buffer_ms`], or larger if underruns
+/// grew it; 0 is the audio library's own size.
+pub fn output_buffer_ms() -> u32 {
+    match OUTPUT_BUFFER_MS.load(Ordering::Acquire) {
+        0 => 0,
+        ms => ms.max(GROWN_BUFFER_MS.load(Ordering::Acquire)),
+    }
+}
+
+/// Doubles the output buffer after underruns, up to
+/// [`MAX_OUTPUT_BUFFER_MS`]; returns the new size, or `None` when it
+/// cannot grow (already the largest, or left to the audio library).
+pub fn grow_output_buffer() -> Option<u32> {
+    let now = output_buffer_ms();
+    if now == 0 || now >= MAX_OUTPUT_BUFFER_MS {
+        return None;
+    }
+    let grown = now.saturating_mul(2).min(MAX_OUTPUT_BUFFER_MS);
+    GROWN_BUFFER_MS.fetch_max(grown, Ordering::AcqRel);
+    Some(output_buffer_ms())
+}
+
+/// The buffer, in frames, for `ms` milliseconds on a device running at
+/// `device_rate` Hz, kept inside the device's own limits `range` (min,
+/// max) when it reports any. `None` for 0 ms (the audio library's size).
+pub fn output_buffer_frames(ms: u32, device_rate: u32, range: Option<(u32, u32)>) -> Option<u32> {
+    if ms == 0 || device_rate == 0 {
+        return None;
+    }
+    let frames = u32::try_from(u64::from(device_rate) * u64::from(ms) / 1000)
+        .unwrap_or(u32::MAX)
+        .max(1);
+    Some(match range {
+        Some((min, max)) if max >= min.max(1) => frames.clamp(min.max(1), max),
+        _ => frames,
+    })
+}
 
 /// Chooses the output device by its stable id ([`OutputDevice::id`]);
 /// `None` (or an empty id) uses the system's default. It applies to every
@@ -118,6 +197,11 @@ struct FeedState {
 pub struct Feed {
     state: Mutex<FeedState>,
     gain: AtomicU32,
+    /// Bumped by every push, clear and resume: a reader playing the
+    /// silent tail of its last batch looks again at once ([`FeedReader`]).
+    changes: AtomicU64,
+    /// Bumped by every clear: a reader drops the rest of its last batch.
+    clears: AtomicU64,
 }
 
 impl Default for Feed {
@@ -125,6 +209,8 @@ impl Default for Feed {
         Feed {
             state: Mutex::default(),
             gain: AtomicU32::new(1.0f32.to_bits()),
+            changes: AtomicU64::new(0),
+            clears: AtomicU64::new(0),
         }
     }
 }
@@ -141,6 +227,8 @@ impl Feed {
         let at = s.pushed;
         s.queue.extend(samples.iter().copied());
         s.pushed += samples.len() as u64;
+        drop(s);
+        self.changes.fetch_add(1, Ordering::Release);
         at
     }
 
@@ -179,11 +267,16 @@ impl Feed {
         n
     }
 
-    /// Discards everything queued; the clock jumps to the end.
+    /// Discards everything queued; the clock jumps to the end. A
+    /// [`FeedReader`] drops what it had taken but not yet played too, so
+    /// a stop is heard as soon as the device's own buffer has played.
     pub fn clear(&self) {
         let mut s = self.lock();
         s.queue.clear();
         s.consumed = s.pushed;
+        drop(s);
+        self.clears.fetch_add(1, Ordering::Release);
+        self.changes.fetch_add(1, Ordering::Release);
     }
 
     /// Samples pushed so far (where the next push starts).
@@ -199,6 +292,9 @@ impl Feed {
     /// Pauses or resumes the clock.
     pub fn set_paused(&self, paused: bool) {
         self.lock().paused = paused;
+        if !paused {
+            self.changes.fetch_add(1, Ordering::Release);
+        }
     }
 
     /// Whether the clock is paused.
@@ -264,6 +360,8 @@ pub struct Player {
     /// [`OUTPUT_DEVICE_CHANGES`] when a device output opened; `None` for
     /// the silent output, which has no device to choose.
     choice: Option<u64>,
+    /// Underruns the audio system reported for this output.
+    underruns: Arc<AtomicU32>,
 }
 
 impl std::fmt::Debug for Player {
@@ -331,6 +429,7 @@ impl Player {
             thread,
             lost: Lost::default(),
             choice: None,
+            underruns: Arc::default(),
         }
     }
 
@@ -346,13 +445,15 @@ impl Player {
         let (answer_tx, answer) = std::sync::mpsc::channel();
         let (close, closed) = std::sync::mpsc::channel::<()>();
         let lost = Lost::default();
+        let underruns = Arc::new(AtomicU32::new(0));
         let choice = OUTPUT_DEVICE_CHANGES.load(Ordering::Acquire);
         let wanted = output_device();
-        let on_error = device::on_error(backend, Arc::clone(&lost));
+        let buffer_ms = output_buffer_ms();
+        let on_error = device::on_error(backend, Arc::clone(&lost), Arc::clone(&underruns));
         std::thread::Builder::new()
             .name(format!("{backend}-audio-device"))
             .spawn(move || {
-                let mut sink = match device::open(wanted.as_deref(), on_error) {
+                let mut sink = match device::open(wanted.as_deref(), buffer_ms, on_error) {
                     Ok(s) => s,
                     Err(e) => {
                         let _ = answer_tx.send(Err(format!("no audio output: {e}")));
@@ -361,10 +462,8 @@ impl Player {
                 };
                 sink.log_on_drop(false);
                 sink.mixer().add(FeedSource {
-                    feed,
+                    reader: FeedReader::new(feed),
                     rate,
-                    buf: vec![0.0; 64],
-                    pos: 64,
                 });
                 let _ = answer_tx.send(Ok(sink.mixer().clone()));
                 // Open until the player is dropped (its sender closes).
@@ -382,6 +481,7 @@ impl Player {
             thread: None,
             lost,
             choice: Some(choice),
+            underruns,
         })
     }
 
@@ -447,10 +547,24 @@ impl Player {
         mark_lost(&self.lost, why);
     }
 
+    /// How many underruns (the device ran dry: a click or a gap) the
+    /// audio system reported for this output. Only some audio systems
+    /// report them (ALSA and JACK); always 0 for the silent output.
+    pub fn underruns(&self) -> u32 {
+        self.underruns.load(Ordering::Acquire)
+    }
+
+    /// Counts an underrun, as the audio system's error callback does
+    /// (tests).
+    #[cfg(test)]
+    pub(crate) fn mark_underrun(&self) {
+        self.underruns.fetch_add(1, Ordering::AcqRel);
+    }
+
     /// True when the output device was chosen again
-    /// ([`set_output_device`]) after this device output opened, so it
-    /// should open again on the new one. Always false for the silent
-    /// output.
+    /// ([`set_output_device`]) or the buffer size set again
+    /// ([`set_output_buffer_ms`]) after this device output opened, so it
+    /// should open again. Always false for the silent output.
     pub fn choice_changed(&self) -> bool {
         self.choice
             .is_some_and(|c| c != OUTPUT_DEVICE_CHANGES.load(Ordering::Acquire))
@@ -469,19 +583,23 @@ fn mark_lost(lost: &Lost, why: &str) {
 /// Opening and listing devices through rodio's cpal.
 #[cfg(feature = "playback")]
 mod device {
-    use rodio::cpal::StreamError;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicU32, Ordering};
+
     use rodio::cpal::traits::{DeviceTrait, HostTrait};
+    use rodio::cpal::{BufferSize, StreamError, SupportedBufferSize};
     use rodio::{DeviceSinkBuilder, MixerDeviceSink};
 
-    use super::{Lost, OutputDevice, mark_lost};
+    use super::{Lost, OutputDevice, mark_lost, output_buffer_frames};
 
     /// The error callback for an output's stream: a device that went away
-    /// or a stream that must be rebuilt marks the output lost; other
-    /// errors (an underrun) only go to the log. Never to stderr, which is
-    /// the terminal reader's screen.
+    /// or a stream that must be rebuilt marks the output lost; an underrun
+    /// is counted ([`super::Player::underruns`]); other errors only go to
+    /// the log. Never to stderr, which is the terminal reader's screen.
     pub(super) fn on_error(
         backend: &'static str,
         lost: Lost,
+        underruns: Arc<AtomicU32>,
     ) -> impl FnMut(StreamError) + Send + Clone + 'static {
         move |e: StreamError| match e {
             StreamError::DeviceNotAvailable => {
@@ -490,8 +608,59 @@ mod device {
             StreamError::StreamInvalidated => {
                 mark_lost(&lost, "the audio output must be opened again");
             }
+            StreamError::BufferUnderrun => {
+                underruns.fetch_add(1, Ordering::AcqRel);
+                log::debug!("{backend}: audio stream: an underrun");
+            }
             other => log::debug!("{backend}: audio stream: {other}"),
         }
+    }
+
+    /// The buffer, in frames, for `ms` milliseconds on `device` at its
+    /// default rate, inside the limits it reports.
+    fn frames(device: &rodio::cpal::Device, ms: u32) -> Option<u32> {
+        let config = device.default_output_config().ok()?;
+        let range = match config.buffer_size() {
+            SupportedBufferSize::Range { min, max } => Some((*min, *max)),
+            SupportedBufferSize::Unknown => None,
+        };
+        output_buffer_frames(ms, config.sample_rate(), range)
+    }
+
+    /// Opens `device` with a buffer of `ms` milliseconds (0: the audio
+    /// library's own size), falling back to the library's size when the
+    /// device refuses it, and then (with `any_config`) to the device's
+    /// other configurations.
+    fn open_on(
+        device: rodio::cpal::Device,
+        ms: u32,
+        any_config: bool,
+        on_error: impl FnMut(StreamError) + Send + Clone + 'static,
+    ) -> Result<MixerDeviceSink, String> {
+        if let Some(frames) = frames(&device, ms) {
+            match DeviceSinkBuilder::from_device(device.clone()).and_then(|b| {
+                b.with_buffer_size(BufferSize::Fixed(frames))
+                    .with_error_callback(on_error.clone())
+                    .open_stream()
+            }) {
+                Ok(s) => {
+                    log::debug!("audio output open with a {ms} ms buffer ({frames} frames)");
+                    return Ok(s);
+                }
+                Err(e) => log::warn!(
+                    "the audio output refused a {ms} ms buffer ({e}); using the audio library's own size"
+                ),
+            }
+        }
+        let b = DeviceSinkBuilder::from_device(device)
+            .map_err(|e| e.to_string())?
+            .with_error_callback(on_error);
+        if any_config {
+            b.open_sink_or_fallback()
+        } else {
+            b.open_stream()
+        }
+        .map_err(|e| e.to_string())
     }
 
     /// The connected output device with stable id `id`.
@@ -501,23 +670,21 @@ mod device {
     }
 
     /// Opens the device with id `wanted` when it is connected, else the
-    /// default, else the first other device that opens.
+    /// default, else the first other device that opens, each with a
+    /// buffer of `buffer_ms` milliseconds if it takes one.
     pub(super) fn open(
         wanted: Option<&str>,
+        buffer_ms: u32,
         on_error: impl FnMut(StreamError) + Send + Clone + 'static,
     ) -> Result<MixerDeviceSink, String> {
         if let Some(id) = wanted {
             match find(id) {
-                Some(d) => {
-                    match DeviceSinkBuilder::from_device(d)
-                        .and_then(|b| b.with_error_callback(on_error.clone()).open_stream())
-                    {
-                        Ok(s) => return Ok(s),
-                        Err(e) => log::warn!(
-                            "cannot open the chosen audio output {id} ({e}); using the default"
-                        ),
-                    }
-                }
+                Some(d) => match open_on(d, buffer_ms, false, on_error.clone()) {
+                    Ok(s) => return Ok(s),
+                    Err(e) => log::warn!(
+                        "cannot open the chosen audio output {id} ({e}); using the default"
+                    ),
+                },
                 None => {
                     log::warn!("the chosen audio output {id} is not connected; using the default")
                 }
@@ -525,12 +692,7 @@ mod device {
         }
         let host = rodio::cpal::default_host();
         let first = match host.default_output_device() {
-            Some(d) => DeviceSinkBuilder::from_device(d)
-                .and_then(|b| {
-                    b.with_error_callback(on_error.clone())
-                        .open_sink_or_fallback()
-                })
-                .map_err(|e| e.to_string()),
+            Some(d) => open_on(d, buffer_ms, true, on_error.clone()),
             None => Err("there is no default output device".to_owned()),
         };
         first.or_else(|first| {
@@ -540,14 +702,7 @@ mod device {
                     d.description()
                         .is_ok_and(|desc| desc.driver().is_none_or(|driver| driver != "null"))
                 })
-                .find_map(|d| {
-                    DeviceSinkBuilder::from_device(d)
-                        .and_then(|b| {
-                            b.with_error_callback(on_error.clone())
-                                .open_sink_or_fallback()
-                        })
-                        .ok()
-                })
+                .find_map(|d| open_on(d, buffer_ms, true, on_error.clone()).ok())
                 .ok_or(first)
         })
     }
@@ -589,13 +744,74 @@ impl Drop for Player {
     }
 }
 
+/// Reads a [`Feed`] the way an audio output does: one sample at a time,
+/// taking the feed's lock once per batch of [`FeedReader::BATCH`] samples.
+///
+/// Two rules keep a restart's first word and a stop prompt:
+/// - while it plays the silent tail of a batch (the feed had run dry), a
+///   push, a clear or a resume is picked up at the next sample, not after
+///   the rest of the silence;
+/// - a [`Feed::clear`] (a stop) drops the samples it had taken but not
+///   yet handed out, so no stale speech follows a stop.
+#[derive(Debug)]
+pub struct FeedReader {
+    feed: Arc<Feed>,
+    buf: Vec<f32>,
+    /// The next sample of `buf` to hand out.
+    pos: usize,
+    /// How many samples at the start of `buf` are real (the rest is
+    /// silence).
+    real: usize,
+    /// The feed's change and clear counts at the last batch.
+    changes: u64,
+    clears: u64,
+}
+
+impl FeedReader {
+    /// Samples per batch: the clock stays within 6 ms at 11,025 Hz (3 ms
+    /// at 22,050 Hz) while the lock is taken once per batch.
+    pub const BATCH: usize = 64;
+
+    /// A reader of `feed`, starting with an empty batch.
+    pub fn new(feed: Arc<Feed>) -> Self {
+        FeedReader {
+            changes: feed.changes.load(Ordering::Acquire),
+            clears: feed.clears.load(Ordering::Acquire),
+            feed,
+            buf: vec![0.0; Self::BATCH],
+            pos: Self::BATCH,
+            real: 0,
+        }
+    }
+
+    /// The next sample, gain applied; `None` is silence (the feed is
+    /// empty or paused), which consumes nothing.
+    pub fn read(&mut self) -> Option<f32> {
+        let refill = if self.pos < self.real {
+            self.feed.clears.load(Ordering::Acquire) != self.clears
+        } else {
+            self.pos >= self.buf.len() || self.feed.changes.load(Ordering::Acquire) != self.changes
+        };
+        if refill {
+            // The counts are read before the pull, so a push that lands
+            // during it is noticed on the next sample.
+            self.changes = self.feed.changes.load(Ordering::Acquire);
+            self.clears = self.feed.clears.load(Ordering::Acquire);
+            self.real = self.feed.pull(&mut self.buf);
+            self.pos = 0;
+        }
+        let v = self.buf[self.pos];
+        let real = self.pos < self.real;
+        self.pos += 1;
+        real.then_some(v)
+    }
+}
+
 /// An endless rodio source reading from the feed (silence when idle).
 #[cfg(feature = "playback")]
 struct FeedSource {
-    feed: Arc<Feed>,
+    reader: FeedReader,
     rate: rodio::SampleRate,
-    buf: Vec<f32>,
-    pos: usize,
 }
 
 #[cfg(feature = "playback")]
@@ -603,15 +819,7 @@ impl Iterator for FeedSource {
     type Item = rodio::Sample;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.pos >= self.buf.len() {
-            // 64-sample batches keep the clock within 6 ms at 11,025 Hz
-            // (3 ms at 22,050 Hz) while taking the lock once per batch.
-            self.feed.pull(&mut self.buf);
-            self.pos = 0;
-        }
-        let v = self.buf[self.pos];
-        self.pos += 1;
-        Some(v)
+        Some(self.reader.read().unwrap_or(0.0))
     }
 }
 
@@ -733,6 +941,7 @@ mod tests {
             thread: None,
             lost: Lost::default(),
             choice: Some(after),
+            underruns: Arc::default(),
         };
         assert!(!device.choice_changed());
         // Empty means the default.
