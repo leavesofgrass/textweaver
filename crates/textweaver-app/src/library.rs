@@ -479,6 +479,17 @@ pub(crate) struct LibraryList {
     pub(crate) filter: String,
     /// Items shown, as indexes into `items`.
     shown: Vec<usize>,
+    /// The document's own title and details, for each document with hand
+    /// edits: what its row shows when an edit is cleared (W8a).
+    own: std::collections::BTreeMap<PathBuf, OwnDetails>,
+}
+
+/// A document's own title, author, DOI, and ISBN, without the owner's
+/// hand edits.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct OwnDetails {
+    pub(crate) title: String,
+    pub(crate) meta: DocMetadata,
 }
 
 impl LibraryList {
@@ -492,7 +503,14 @@ impl LibraryList {
             items,
             texts: Arc::new(texts),
             filter: String::new(),
+            own: std::collections::BTreeMap::new(),
         }
+    }
+
+    /// With the documents' own details, for the ones with hand edits.
+    pub(crate) fn with_own(mut self, own: std::collections::BTreeMap<PathBuf, OwnDetails>) -> Self {
+        self.own = own;
+        self
     }
 
     /// Shows the items matching `query`.
@@ -513,22 +531,57 @@ impl LibraryList {
     }
 
     /// The owner edited item `n`'s details (W7m): its row shows the new
-    /// values. A cleared field keeps the value shown until the library is
-    /// read again, which shows the document's own.
+    /// values at once. A cleared field shows the document's own value at
+    /// once too (W8a; before, the old value stayed until the library was
+    /// read again).
     pub(crate) fn apply_edits(&mut self, n: usize, edits: &[(DetailField, Option<String>)]) {
         let Some(item) = self.shown.get(n).and_then(|&i| self.items.get_mut(i)) else {
             return;
         };
+        // A document edited for the first time in this list shows its own
+        // details now: keep them for a later clear. (One whose edits came
+        // only from another computer has no own values here: a cleared
+        // title falls back to the file name, a cleared detail to none.)
+        let own = self
+            .own
+            .entry(item.path.clone())
+            .or_insert_with(|| {
+                let e = &item.edited;
+                let keep = |field: DetailField, v: &Option<String>| {
+                    if e.get(field).is_some() {
+                        None
+                    } else {
+                        v.clone()
+                    }
+                };
+                OwnDetails {
+                    title: if e.title.is_some() {
+                        String::new()
+                    } else {
+                        item.title.clone()
+                    },
+                    meta: DocMetadata {
+                        author: keep(DetailField::Author, &item.meta.author),
+                        doi: keep(DetailField::Doi, &item.meta.doi),
+                        isbn: keep(DetailField::Isbn, &item.meta.isbn),
+                    },
+                }
+            })
+            .clone();
         for (field, value) in edits {
             item.edited.set(*field, value.clone());
-            let Some(v) = value.clone() else {
-                continue;
-            };
-            match field {
-                DetailField::Title => item.title = v,
-                DetailField::Author => item.meta.author = Some(v),
-                DetailField::Doi => item.meta.doi = Some(v),
-                DetailField::Isbn => item.meta.isbn = Some(v),
+            match (field, value.clone()) {
+                (DetailField::Title, Some(v)) => item.title = v,
+                (DetailField::Title, None) => {
+                    item.title = if own.title.is_empty() {
+                        file_stem_of(&item.path)
+                    } else {
+                        own.title.clone()
+                    };
+                }
+                (DetailField::Author, v) => item.meta.author = v.or(own.meta.author.clone()),
+                (DetailField::Doi, v) => item.meta.doi = v.or(own.meta.doi.clone()),
+                (DetailField::Isbn, v) => item.meta.isbn = v.or(own.meta.isbn.clone()),
             }
         }
     }
@@ -602,7 +655,7 @@ impl LibraryInputs {
     /// the filter. A DOI or ISBN in the text fills what the bookshelf
     /// lacks.
     fn list(&self, found: &dyn Fn(usize)) -> LibraryList {
-        let mut items = self.view(found);
+        let (mut items, mut own) = self.view(found);
         let index = self
             .fulltext
             .as_deref()
@@ -619,15 +672,15 @@ impl LibraryInputs {
         for item in &mut items {
             if let Some(e) = index.entries.get(&item.path) {
                 let head: String = e.text.chars().take(library::METADATA_SCAN_CHARS).collect();
-                item.meta.fill_from(&DocMetadata::from_document(
-                    None,
-                    &Default::default(),
-                    &head,
-                ));
+                let found = DocMetadata::from_document(None, &Default::default(), &head);
+                item.meta.fill_from(&found);
+                if let Some(o) = own.get_mut(&item.path) {
+                    o.meta.fill_from(&found);
+                }
                 texts.insert(item.path.clone(), e.text.to_lowercase());
             }
         }
-        LibraryList::new(items, texts)
+        LibraryList::new(items, texts).with_own(own)
     }
 
     /// The sync folder as read now, when sync is on and the folder is there.
@@ -639,7 +692,7 @@ impl LibraryInputs {
     /// "Continue reading": the library's documents found here, each at its
     /// newest place from any computer, newest first.
     fn continue_reading(&self, found: &dyn Fn(usize)) -> Vec<ContinueItem> {
-        let items = self.view(found);
+        let (items, _) = self.view(found);
         let index = self
             .fulltext
             .as_deref()
@@ -653,8 +706,15 @@ impl LibraryInputs {
     }
 
     /// The library view: the folders scanned, the bookshelf, the recent
-    /// list, and progress.
-    fn view(&self, found: &dyn Fn(usize)) -> Vec<LibraryItem> {
+    /// list, and progress; with the own details of each document that has
+    /// hand edits.
+    fn view(
+        &self,
+        found: &dyn Fn(usize),
+    ) -> (
+        Vec<LibraryItem>,
+        std::collections::BTreeMap<PathBuf, OwnDetails>,
+    ) {
         let supported = |ext: &str| self.extensions.contains(&ext);
         let scanned = library::scan_library_with(&self.folders, &supported, found);
         let (lib, recent) = match &self.files {
@@ -675,6 +735,30 @@ impl LibraryInputs {
                 .filter(DocState::has_position)
                 .map(|s| s.pct)
         };
-        library::library_view(&scanned, &lib, &recent, self.sync.sidecars(), &local)
+        let items = library::library_view(&scanned, &lib, &recent, self.sync.sidecars(), &local);
+        // The document's own details, for each one with hand edits: the
+        // bookshelf's title (else the file name) and details (W8a).
+        let own = items
+            .iter()
+            .filter(|i| !i.edited.is_empty())
+            .map(|i| {
+                let entry = lib.get(&i.path);
+                let title = entry
+                    .map(|e| e.title.clone())
+                    .filter(|t| !t.is_empty())
+                    .unwrap_or_else(|| file_stem_of(&i.path));
+                let meta = entry.map(|e| e.meta.clone()).unwrap_or_default();
+                (i.path.clone(), OwnDetails { title, meta })
+            })
+            .collect();
+        (items, own)
     }
+}
+
+/// A file's name without its extension, as the library shows a document
+/// with no title.
+fn file_stem_of(p: &Path) -> String {
+    p.file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
 }

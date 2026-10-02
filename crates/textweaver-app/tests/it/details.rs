@@ -245,6 +245,71 @@ fn the_form_edits_the_open_document_and_the_edit_survives_a_reload() {
     h.app.shutdown();
 }
 
+/// A cleared field takes effect at once in the library row (W8a): the
+/// row shows the document's own title and no author, without the list
+/// being read again, and it matches what a reread shows. Both for an edit
+/// made in this list and for one saved in an earlier session.
+#[test]
+fn a_cleared_field_takes_effect_at_once_in_the_library_row() {
+    let home = tempfile::tempdir().unwrap();
+    let docs = tempfile::tempdir().unwrap();
+    let lib = docs.path().join("Readings");
+    std::fs::create_dir_all(&lib).unwrap();
+    std::fs::write(lib.join("scan0042.txt"), SCAN).unwrap();
+    let folder = lib.clone();
+    let with_folder = move |s: &mut Settings| {
+        s.library.add_folder(&folder);
+    };
+
+    let mut h = home_at(home.path(), with_folder.clone());
+    let effects = h.act(ActionId::OpenLibrary);
+    assert_eq!(list_items(&effects), ["scan0042, in Readings"]);
+    // Set the title and the author.
+    h.app.dispatch(Command::ListKey(ListKey::Rename));
+    h.type_text("Cell Biology");
+    h.key(PromptKey::Tab);
+    h.type_text("Ada Example");
+    let effects = h.key(PromptKey::Enter);
+    assert_eq!(
+        list_items(&effects),
+        ["Cell Biology, by Ada Example, in Readings"]
+    );
+    // Clear both: the row shows the document's own title, no author.
+    h.app.dispatch(Command::ListKey(ListKey::Rename));
+    assert_eq!(h.field().1, "Cell Biology");
+    h.type_text("");
+    h.key(PromptKey::Tab);
+    assert_eq!(h.field().1, "Ada Example");
+    h.type_text("");
+    let effects = h.key(PromptKey::Enter);
+    assert_eq!(
+        list_items(&effects),
+        ["scan0042, in Readings"],
+        "the cleared fields take effect at once"
+    );
+    // The same as reading the list again.
+    h.app.dispatch(Command::Cancel);
+    h.app.wait_for_writes();
+    let effects = h.act(ActionId::OpenLibrary);
+    assert_eq!(list_items(&effects), ["scan0042, in Readings"]);
+
+    // An edit saved in an earlier session, cleared in this one.
+    h.app.dispatch(Command::ListKey(ListKey::Rename));
+    h.type_text("Cell Biology");
+    h.key(PromptKey::Enter);
+    h.app.dispatch(Command::Cancel);
+    h.app.wait_for_writes();
+    h.app.shutdown();
+    let mut h = home_at(home.path(), with_folder);
+    let effects = h.act(ActionId::OpenLibrary);
+    assert_eq!(list_items(&effects), ["Cell Biology, in Readings"]);
+    h.app.dispatch(Command::ListKey(ListKey::Rename));
+    h.type_text("");
+    let effects = h.key(PromptKey::Enter);
+    assert_eq!(list_items(&effects), ["scan0042, in Readings"]);
+    h.app.shutdown();
+}
+
 #[test]
 fn with_no_document_open_the_command_says_so() {
     let home = tempfile::tempdir().unwrap();
