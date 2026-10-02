@@ -46,6 +46,9 @@ pub enum DialogAction {
     Recall(bool),
     /// Tab in a prompt for a path: complete it (`PromptKey::Tab`).
     Complete,
+    /// The browse key (F4) in a prompt for a path: the app's file browser
+    /// chooses it (`PromptKey::Browse`, W8a-f).
+    Browse,
     /// Tab (`true`) or Shift+Tab in a form of fields (the edit details
     /// form, W7m): the next or previous field (`PromptKey::Tab` and
     /// `PromptKey::BackTab`), which the app opens as a prompt of its own.
@@ -184,6 +187,13 @@ impl Widget for Modal {
             }
             Key::Named(NamedKey::Tab) if self.tab_completes && !k.modifiers.shift() => {
                 DialogAction::Complete
+            }
+            Key::Named(_)
+                if self.tab_completes
+                    && crate::keys::chord(k, self.platform)
+                        == Some(textweaver_app::path_prompt::browse_key()) =>
+            {
+                DialogAction::Browse
             }
             Key::Character(s) if self.answer_keys => match s.chars().next() {
                 Some(ch) if !ch.is_control() && !ch.is_whitespace() => {

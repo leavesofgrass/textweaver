@@ -258,9 +258,13 @@ enum OpenDialog {
     FileChooser {
         /// The waiting prompt's label.
         label: String,
-        /// What the prompt is for (Open, Export or Import settings).
+        /// What the prompt is for (every prompt for a path, W8a-f).
         purpose: PromptPurpose,
     },
+    /// The system's folder chooser, open on its own thread, for the
+    /// app's file browser choosing a folder (audio export, batch
+    /// conversion, sync; W8a-f); the browser waits behind it.
+    FolderChooser,
     /// The voice manager (W7v): the app's voice list, under this title,
     /// with its filter and action buttons.
     Voices {
@@ -1529,7 +1533,10 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("menu: {pick:?}"));
         }
-        if matches!(self.dialog, Some(OpenDialog::FileChooser { .. })) {
+        if matches!(
+            self.dialog,
+            Some(OpenDialog::FileChooser { .. } | OpenDialog::FolderChooser)
+        ) {
             // The system's file chooser is modal to the window; nothing is
             // run behind it.
             return;
@@ -1594,7 +1601,7 @@ impl Gui {
     /// Closes the open dialog as Escape would.
     fn cancel_dialog(&mut self, ctx: &mut DriverCtx<'_>) {
         match &self.dialog {
-            None | Some(OpenDialog::FileChooser { .. }) => {}
+            None | Some(OpenDialog::FileChooser { .. } | OpenDialog::FolderChooser) => {}
             Some(OpenDialog::Question { .. }) => {
                 self.answer_question(ctx, textweaver_app::Confirm::No);
             }
@@ -1625,22 +1632,30 @@ impl Gui {
                     label,
                     purpose: PromptPurpose::CommandPalette,
                 } => self.open_palette(ctx, &label),
-                // Open: the system's file chooser, unless Open Path asked
-                // for the typed prompt.
-                Effect::Prompt {
-                    label,
-                    purpose: PromptPurpose::Open,
-                } if !self.typed_open => {
-                    self.open_file_chooser(ctx, &label, PromptPurpose::Open);
+                // A prompt for a path (Open, Save As, Insert Image, import
+                // and export of settings, profiles and references): the
+                // system's file chooser, unless Open Path asked for the
+                // typed prompt or the file browser just filled it (W8a-f).
+                Effect::Prompt { label, purpose }
+                    if file_chooser::uses_chooser(
+                        purpose,
+                        self.typed_open,
+                        self.app
+                            .prompt_model()
+                            .is_some_and(textweaver_app::PromptModel::from_browser),
+                    ) =>
+                {
+                    self.open_file_chooser(ctx, &label, purpose);
                 }
-                // Export and import settings: the system's save and open
-                // dialogs, for TOML and JSON.
-                Effect::Prompt {
-                    label,
-                    purpose:
-                        purpose @ (PromptPurpose::ExportSettings | PromptPurpose::ImportSettings),
-                } => self.open_file_chooser(ctx, &label, purpose),
                 Effect::Prompt { label, purpose } => self.open_prompt(ctx, &label, purpose),
+                // A command choosing a folder (W8a-f): the system's folder
+                // chooser, with the file browser waiting behind it as the
+                // fallback.
+                Effect::ShowList { .. } if self.app.folder_choice().is_some() => {
+                    self.open_folder_chooser(ctx);
+                }
+                Effect::ShowList { .. }
+                    if matches!(self.dialog, Some(OpenDialog::FolderChooser)) => {}
                 // The open list changed (filtered, a setting changed): show
                 // it in place, keeping focus in the dialog.
                 Effect::ShowList { .. }
@@ -1663,15 +1678,19 @@ impl Gui {
     /// A prompt from the app: its text and history are the app's
     /// `PromptModel`, which the field keeps in step with `PromptKey`s.
     fn open_prompt(&mut self, ctx: &mut DriverCtx<'_>, label_text: &str, purpose: PromptPurpose) {
-        let paths = matches!(
-            purpose,
-            PromptPurpose::Open | PromptPurpose::SaveAs | PromptPurpose::ImagePath
-        );
-        let hint = self.app.catalog().tr(if paths {
-            "gui-prompt-path-hint"
+        let paths = purpose.is_path();
+        let c = self.app.catalog();
+        let hint = if paths {
+            // The browse key (F4) opens the file browser (W8a-f).
+            let key = textweaver_app::path_prompt::browse_key().to_string();
+            format!(
+                "{} {}",
+                c.tr("gui-prompt-path-hint"),
+                c.fmt("gui-prompt-browse-hint", &args!["key" => key])
+            )
         } else {
-            "gui-prompt-hint"
-        });
+            c.tr("gui-prompt-hint")
+        };
         let initial = self
             .app
             .prompt_model()
@@ -1688,9 +1707,10 @@ impl Gui {
     }
 
     /// The system's file chooser, on its own thread and modal to the
-    /// window, for the app's prompt `purpose`: Open (the documents
-    /// textweaver reads), Export settings (a save dialog offering a TOML
-    /// file), or Import settings (TOML and JSON). Its answer comes back as
+    /// window, for the app's prompt `purpose`: its title, filters, the
+    /// name offered and the folder it starts in are the app's
+    /// [`PathPromptSpec`](textweaver_app::path_prompt::PathPromptSpec) (a
+    /// save dialog for Save As and the exports). Its answer comes back as
     /// a [`FileChosen`] action; until then the app's prompt waits,
     /// labelled `label_text`.
     fn open_file_chooser(
@@ -1699,38 +1719,30 @@ impl Gui {
         label_text: &str,
         purpose: PromptPurpose,
     ) {
-        let c = self.app.catalog();
-        let all = c.tr("gui-open-all-files");
-        let (title, filters, folder) = match purpose {
-            PromptPurpose::ExportSettings | PromptPurpose::ImportSettings => {
-                let title = if purpose == PromptPurpose::ExportSettings {
-                    "gui-settings-export-title"
-                } else {
-                    "gui-settings-import-title"
-                };
-                let filters = file_chooser::settings_filters(&c.tr("gui-settings-files"), &all);
-                (c.tr(title), filters, None)
-            }
-            _ => {
-                let registry = textweaver_app::formats::Registry::with_builtins();
-                let filters = file_chooser::filters(
-                    &registry.extensions(),
-                    &c.tr("gui-open-documents"),
-                    &all,
-                );
-                let folder =
-                    file_chooser::start_folder(self.app.session().map(|s| s.key.0.as_str()));
-                (c.tr("gui-open-title"), filters, folder)
-            }
+        let Some(spec) = self.app.path_prompt_spec(purpose) else {
+            self.open_prompt(ctx, label_text, purpose);
+            return;
         };
+        let c = self.app.catalog();
+        let registry = textweaver_app::formats::Registry::with_builtins();
+        let filters = file_chooser::spec_filters(
+            &spec,
+            &registry.extensions(),
+            &c.tr("gui-open-documents"),
+            &c.tr("gui-open-all-files"),
+        );
+        let folder = spec
+            .folder
+            .clone()
+            .or_else(|| file_chooser::start_folder(self.app.session().map(|s| s.key.0.as_str())));
         let mut chooser = file_chooser::Chooser::new(
             ctx.window(self.window_id).handle(),
-            &title,
+            &spec.title,
             &filters,
             folder.as_deref(),
         );
-        if purpose == PromptPurpose::ExportSettings {
-            chooser = chooser.saving(file_chooser::SETTINGS_FILE_NAME);
+        if matches!(spec.kind, textweaver_app::path_prompt::PathKind::Write(_)) {
+            chooser = chooser.saving(spec.file_name.as_deref().unwrap_or_default());
         }
         let proxy = self.proxy.clone();
         let window_id = self.window_id;
@@ -1751,6 +1763,10 @@ impl Gui {
     /// a chooser that never appeared gives way to the typed prompt. The
     /// focus goes back to the document either way.
     fn file_chosen(&mut self, ctx: &mut DriverCtx<'_>, chosen: &FileChosen) {
+        if matches!(self.dialog, Some(OpenDialog::FolderChooser)) {
+            self.folder_chosen(ctx, chosen);
+            return;
+        }
         let Some(OpenDialog::FileChooser {
             label: label_text,
             purpose,
@@ -1789,6 +1805,72 @@ impl Gui {
             }
         };
         let effects = self.app.dispatch(Command::PromptKey(key));
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
+    }
+
+    /// The system's folder chooser for the folder the app's file browser
+    /// is choosing (W8a-f): titled with what the folder is for, starting
+    /// in the document's folder. Its answer comes back as a
+    /// [`FileChosen`] action, like the file chooser's.
+    fn open_folder_chooser(&mut self, ctx: &mut DriverCtx<'_>) {
+        let Some(choice) = self.app.take_folder_choice() else {
+            return;
+        };
+        if self.dialog.is_some() {
+            // The list it was chosen from (audio export's "another
+            // folder") closes; focus returns after the chooser.
+            self.close_dialog(ctx);
+        }
+        let chooser = file_chooser::Chooser::new(
+            ctx.window(self.window_id).handle(),
+            &choice.title,
+            &[],
+            choice.folder.as_deref(),
+        )
+        .folders();
+        let proxy = self.proxy.clone();
+        let window_id = self.window_id;
+        chooser.show(move |chosen| {
+            let _ = proxy.send_event(MasonryUserEvent::AsyncAction(window_id, Box::new(chosen)));
+        });
+        self.dialog = Some(OpenDialog::FolderChooser);
+        if self.log {
+            crate::log::line(&format!("dialog: system folder chooser {:?}", choice.title));
+        }
+    }
+
+    /// The folder chooser's answer: the folder goes to the command waiting
+    /// (`Command::PathChosen`), a cancel cancels it, and a chooser that
+    /// never appeared gives way to the app's file browser, which chooses
+    /// the folder from the keyboard. The focus goes back to the document,
+    /// or to the next dialog the command opens.
+    fn folder_chosen(&mut self, ctx: &mut DriverCtx<'_>, chosen: &FileChosen) {
+        self.dialog = None;
+        let outcome = file_chooser::outcome(chosen.path.clone(), chosen.elapsed);
+        if self.log {
+            crate::log::line(&format!(
+                "folder chooser: {outcome:?} after {} ms",
+                chosen.elapsed.as_millis()
+            ));
+        }
+        self.close_dialog(ctx);
+        let path = match outcome {
+            file_chooser::Outcome::Chosen(path) => Some(path),
+            file_chooser::Outcome::Cancelled => None,
+            file_chooser::Outcome::Failed => {
+                let said = self.app.catalog().tr("gui-folder-no-dialog");
+                self.app
+                    .announce_as(&said, Priority::Assertive, Importance::Error);
+                if let Some(list) = self.app.list_model() {
+                    let (title, items) = (list.title.clone(), list.items.clone());
+                    self.open_list(ctx, &title, items);
+                }
+                self.refresh(ctx);
+                return;
+            }
+        };
+        let effects = self.app.dispatch(Command::PathChosen(path));
         self.run_effects(ctx, effects);
         self.refresh(ctx);
     }
@@ -2394,7 +2476,9 @@ impl Gui {
         match self.app.list_model() {
             // A new list in its place (a submenu of the list menu, or the
             // voice manager from the list menu): shown under its own name,
-            // so the screen reader says it.
+            // so the screen reader says it. A command choosing a folder
+            // gets the system's folder chooser instead (W8a-f).
+            Some(_) if self.app.folder_choice().is_some() => self.open_folder_chooser(ctx),
             Some(m) if m.title != shown || voices != voices_shown => {
                 let (title, items) = (m.title.clone(), m.items.clone());
                 if voices {
@@ -2953,6 +3037,12 @@ impl AppDriver for Gui {
                     }
                     return;
                 }
+                DialogAction::Browse => {
+                    if matches!(self.dialog, Some(OpenDialog::Prompt)) {
+                        self.prompt_key(ctx, PromptKey::Browse);
+                    }
+                    return;
+                }
                 DialogAction::Field(next) => {
                     if matches!(self.dialog, Some(OpenDialog::Prompt)) {
                         let key = if *next {
@@ -3008,6 +3098,7 @@ impl AppDriver for Gui {
                     | DialogAction::Focus(_)
                     | DialogAction::Recall(_)
                     | DialogAction::Complete
+                    | DialogAction::Browse
                     | DialogAction::Field(_)
                     | DialogAction::Chord(_)
                     | DialogAction::Answer(_)
