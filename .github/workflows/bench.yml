@@ -1,15 +1,22 @@
 # Benchmark gate: `cargo xtask bench --quick` on every pull request and
-# every push to main, compared with main's own numbers from this same job
-# (the same runner type), kept as the `bench-ubuntu-latest` artifact of the
-# newest run on main that has one. A run that failed the gate still uploads
-# its numbers, and they become the baseline: a failed push on main is the
-# signal, and the gate does not stay frozen on an old run after it.
+# every push to main, compared with the committed baseline,
+# xtask/bench-baseline.json, by the two-way ratchet in xtask/src/ratchet.rs:
 #
-# The gate fails when a peak heap or allocation count grows more than twice
-# its baseline: those barely vary from run to run. Times vary with the
-# runner and are reported in the log and the job summary for information
-# only. So are the startup timings (tw --version, text, info, backends).
-# xtask/src/bench.rs has the details.
+# - peak heap and allocation counts fail when they grow more than 25
+#   percent over the baseline, and also when they fall more than 25 percent
+#   below it, so a gain is written into the baseline and the floor never
+#   goes stale;
+# - times fail when they grow more than 50 percent, only where the
+#   baseline entry was measured on this runner type (its gate_times is
+#   true); until then they are reported in the log and the job summary;
+# - every pathological input (one per loader) must load and plan within
+#   its ceiling.
+#
+# A failed run never becomes the baseline: only `cargo xtask bench
+# --update-baseline --reason TEXT` writes it. To refresh this runner's
+# entry, run this workflow by hand on main with "update the baseline"
+# ticked and a reason; it uploads the new file as the bench-baseline
+# artifact, to commit with a message that says why.
 
 name: Bench
 
@@ -18,6 +25,14 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      update_baseline:
+        description: Measure and write this runner's baseline entry (main only), uploaded as an artifact
+        type: boolean
+        default: false
+      reason:
+        description: Why the baseline moves (required to update it)
+        default: ''
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,8 +40,6 @@ concurrency:
 
 permissions:
   contents: read
-  # Reading main's artifact from another run.
-  actions: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -47,23 +60,14 @@ jobs:
         with:
           key: bench
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - name: Main's numbers
+      - name: Bench (quick) and the two-way gate
+        if: github.event.inputs.update_baseline != 'true'
+        run: cargo xtask bench --quick --json bench.json --baseline xtask/bench-baseline.json
+      - name: Bench (quick) and a new baseline entry for this runner
+        if: github.event.inputs.update_baseline == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          ids=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow bench.yml --branch main \
-            --event push --status completed --limit 10 --json databaseId --jq '.[].databaseId')
-          for id in $ids; do
-            if gh run download "$id" --repo "$GITHUB_REPOSITORY" \
-                --name bench-ubuntu-latest --dir baseline 2>/dev/null; then
-              echo "BASELINE_FILE=baseline/bench.json" >> "$GITHUB_ENV"
-              echo "Comparing with run $id on main."
-              exit 0
-            fi
-          done
-          echo "::notice::No numbers from main yet, so nothing to compare with; this run only measures."
-      - name: Bench (quick) and gate
-        run: cargo xtask bench --quick --json bench.json --max-ratio 2 ${BASELINE_FILE:+--baseline "$BASELINE_FILE"}
+          REASON: ${{ github.event.inputs.reason }}
+        run: cargo xtask bench --quick --json bench.json --update-baseline --gate-times --reason "$REASON"
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -71,3 +75,9 @@ jobs:
           path: bench.json
           retention-days: 90
           if-no-files-found: ignore
+      - uses: actions/upload-artifact@v7
+        if: github.event.inputs.update_baseline == 'true'
+        with:
+          name: bench-baseline
+          path: xtask/bench-baseline.json
+          retention-days: 30

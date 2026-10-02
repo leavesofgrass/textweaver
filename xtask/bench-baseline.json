@@ -1,0 +1,3115 @@
+{
+  "about": "The bench gate's baseline (xtask/src/ratchet.rs). Written only by cargo xtask bench --update-baseline, in a commit that says why.",
+  "platforms": {
+    "linux-x86_64": {
+      "branch": null,
+      "commit": null,
+      "cpus": 4,
+      "date": "2026-10-02",
+      "gate_times": false,
+      "quick": true,
+      "reason": "First Linux entry (W8b-i), from the development container on the owner's machine, not the CI runner; times are not gated until the runner writes its own",
+      "report": {
+        "README.md": {
+          "apply_allocs": 5,
+          "apply_ms": 0.020902,
+          "apply_peak_mb": 4.990413665771484,
+          "autosave": {
+            "max_ms": 0.156991,
+            "mean_ms": 0.13520959999999999,
+            "n": 5,
+            "p50_ms": 0.140548
+          },
+          "autosave_allocs": 348,
+          "autosave_peak_mb": 5.550313949584961,
+          "autosave_written": {
+            "max_ms": 494.60396299999996,
+            "mean_ms": 265.5813836,
+            "n": 5,
+            "p50_ms": 277.538732
+          },
+          "blank_lines_ms": 0.021632,
+          "bytes": 2987,
+          "doc": {
+            "chars": 2601,
+            "lines": 50,
+            "markers": 56
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.044607999999999995,
+            "mean_ms": 0.0289174,
+            "n": 10,
+            "p50_ms": 0.027555
+          },
+          "edit_enter_allocs": 170,
+          "edit_enter_ms": 47.31733199999999,
+          "edit_enter_peak_mb": 5.517520904541016,
+          "edit_leave_allocs": 118,
+          "edit_leave_ms": 1.3083820000000002,
+          "edit_leave_peak_mb": 5.523014068603516,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.051462,
+            "mean_ms": 0.029829,
+            "n": 10,
+            "p50_ms": 0.029098000000000002
+          },
+          "edit_type_allocs": 419,
+          "edit_type_dispatch": {
+            "max_ms": 0.041372000000000006,
+            "mean_ms": 0.022772388888888894,
+            "n": 18,
+            "p50_ms": 0.026211
+          },
+          "edit_type_peak_mb": 5.505390167236328,
+          "edit_type_to_echo": {
+            "max_ms": 0.044835,
+            "mean_ms": 0.01005061111111111,
+            "n": 18,
+            "p50_ms": 0.006089
+          },
+          "find_rare_allocs": 993,
+          "find_rare_ms": 0.289975,
+          "find_rare_next_ms": 0.0033569999999999997,
+          "find_rare_peak_mb": 5.4966325759887695,
+          "find_word_allocs": 253,
+          "find_word_ms": 0.221278,
+          "find_word_next_ms": 0.017865,
+          "find_word_peak_mb": 5.483774185180664,
+          "highlight_step": {
+            "max_ms": 0.11151900000000001,
+            "mean_ms": 0.0016598256410256412,
+            "n": 195,
+            "p50_ms": 0.00037099999999999996
+          },
+          "load_allocs": 77,
+          "load_ms": 122.70048,
+          "load_peak_mb": 5.011549949645996,
+          "nav_idle_heading_allocs": 564,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 0.118904,
+            "mean_ms": 0.047814166666666665,
+            "n": 6,
+            "p50_ms": 0.052023
+          },
+          "nav_idle_heading_peak_mb": 5.448493003845215,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 0.094877,
+            "mean_ms": 0.0564832,
+            "n": 5,
+            "p50_ms": 0.047643
+          },
+          "nav_idle_paragraph_allocs": 535,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.032694,
+            "mean_ms": 0.01492375,
+            "n": 20,
+            "p50_ms": 0.011914
+          },
+          "nav_idle_paragraph_peak_mb": 5.444470405578613,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.028405999999999997,
+            "mean_ms": 0.0098082,
+            "n": 20,
+            "p50_ms": 0.008607
+          },
+          "nav_idle_sentence_allocs": 683,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 0.060128,
+            "mean_ms": 0.030042100000000006,
+            "n": 20,
+            "p50_ms": 0.023376
+          },
+          "nav_idle_sentence_peak_mb": 5.437921524047852,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.077522,
+            "mean_ms": 0.020498049999999997,
+            "n": 20,
+            "p50_ms": 0.015305999999999998
+          },
+          "nav_idle_word_allocs": 414,
+          "nav_idle_word_dispatch": {
+            "max_ms": 0.053375000000000006,
+            "mean_ms": 0.01933335,
+            "n": 20,
+            "p50_ms": 0.011703
+          },
+          "nav_idle_word_peak_mb": 5.428509712219238,
+          "nav_idle_word_to_speech": {
+            "max_ms": 0.151855,
+            "mean_ms": 0.0166584,
+            "n": 20,
+            "p50_ms": 0.008172
+          },
+          "nav_reading_heading_allocs": 546,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 0.303157,
+            "mean_ms": 0.127914,
+            "n": 5,
+            "p50_ms": 0.09944599999999999
+          },
+          "nav_reading_heading_peak_mb": 5.463871955871582,
+          "nav_reading_heading_to_speech": {
+            "max_ms": 0.43876400000000004,
+            "mean_ms": 0.2304545,
+            "n": 4,
+            "p50_ms": 0.195415
+          },
+          "nav_reading_paragraph_allocs": 1284,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 0.187128,
+            "mean_ms": 0.08509445454545453,
+            "n": 11,
+            "p50_ms": 0.075639
+          },
+          "nav_reading_paragraph_peak_mb": 5.460875511169434,
+          "nav_reading_paragraph_to_speech": {
+            "max_ms": 0.6143500000000001,
+            "mean_ms": 0.19622250000000002,
+            "n": 10,
+            "p50_ms": 0.15898400000000001
+          },
+          "nav_reading_sentence_allocs": 2660,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 0.272917,
+            "mean_ms": 0.09584389473684211,
+            "n": 19,
+            "p50_ms": 0.078484
+          },
+          "nav_reading_sentence_peak_mb": 5.454585075378418,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 0.387739,
+            "mean_ms": 0.16012105555555556,
+            "n": 18,
+            "p50_ms": 0.142069
+          },
+          "nav_reading_word_allocs": 412,
+          "nav_reading_word_dispatch": {
+            "max_ms": 0.075108,
+            "mean_ms": 0.031075149999999996,
+            "n": 20,
+            "p50_ms": 0.025961
+          },
+          "nav_reading_word_peak_mb": 5.448703765869141,
+          "nav_reading_word_to_speech": {
+            "max_ms": 0.19202999999999998,
+            "mean_ms": 0.05108549999999999,
+            "n": 20,
+            "p50_ms": 0.03942
+          },
+          "normalize_allocs": 2581,
+          "normalize_ms": 0.6440859999999999,
+          "normalize_peak_mb": 5.380888938903809,
+          "normalize_pipeline_ms": 71.860835,
+          "open_allocs": 557,
+          "open_and_read_dispatch_ms": 110.154934,
+          "open_ms": 109.86828999999999,
+          "open_peak_mb": 6.010793685913086,
+          "open_to_first_speech_ms": 110.296217,
+          "plan_all_allocs": 408,
+          "plan_all_ms": 0.24831799999999998,
+          "plan_all_peak_mb": 5.001187324523926,
+          "replace_all_ms": 0.126711,
+          "replace_allocs": 437,
+          "replace_count_ms": 0.104617,
+          "replace_first_ms": 0.19951100000000002,
+          "replace_peak_mb": 5.546442985534668,
+          "replace_skip_ms": 0.106641,
+          "save_dispatch": {
+            "max_ms": 0.028797,
+            "mean_ms": 0.023312400000000004,
+            "n": 5,
+            "p50_ms": 0.026693
+          },
+          "save_position": {
+            "max_ms": 0.014509,
+            "mean_ms": 0.010527,
+            "n": 5,
+            "p50_ms": 0.011072
+          },
+          "save_written": {
+            "max_ms": 468.058999,
+            "mean_ms": 333.1741048,
+            "n": 5,
+            "p50_ms": 346.337022
+          },
+          "sentences_allocs": 133,
+          "sentences_ms": 0.097101,
+          "sentences_peak_mb": 4.998695373535156,
+          "shutdown_ms": 0.069417,
+          "stop_to_first_audio": {
+            "max_ms": 0.28547,
+            "mean_ms": 0.2167003,
+            "n": 20,
+            "p50_ms": 0.225388
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.11447500000000001,
+            "mean_ms": 0.06453439999999999,
+            "n": 20,
+            "p50_ms": 0.060689
+          },
+          "stop_to_speak": {
+            "max_ms": 0.150117,
+            "mean_ms": 0.04851095,
+            "n": 20,
+            "p50_ms": 0.042163000000000006
+          },
+          "words_allocs": 197,
+          "words_ms": 0.187939,
+          "words_peak_mb": 5.003297805786133
+        },
+        "docs/reading.md": {
+          "apply_allocs": 6,
+          "apply_ms": 0.11618,
+          "apply_peak_mb": 5.229452133178711,
+          "autosave": {
+            "max_ms": 1.327046,
+            "mean_ms": 0.7571454,
+            "n": 5,
+            "p50_ms": 0.627215
+          },
+          "autosave_allocs": 716,
+          "autosave_peak_mb": 6.3457536697387695,
+          "autosave_written": {
+            "max_ms": 8.003365,
+            "mean_ms": 5.8114824,
+            "n": 5,
+            "p50_ms": 5.184454
+          },
+          "blank_lines_ms": 0.13683099999999998,
+          "bytes": 46629,
+          "doc": {
+            "chars": 43247,
+            "lines": 627,
+            "markers": 979
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.057355,
+            "mean_ms": 0.0376264,
+            "n": 10,
+            "p50_ms": 0.036622999999999996
+          },
+          "edit_enter_allocs": 353,
+          "edit_enter_ms": 13.544995,
+          "edit_enter_peak_mb": 6.138596534729004,
+          "edit_leave_allocs": 124,
+          "edit_leave_ms": 9.956794,
+          "edit_leave_peak_mb": 5.930695533752441,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.087385,
+            "mean_ms": 0.033727400000000005,
+            "n": 10,
+            "p50_ms": 0.028076
+          },
+          "edit_type_allocs": 438,
+          "edit_type_dispatch": {
+            "max_ms": 0.464089,
+            "mean_ms": 0.07574827777777778,
+            "n": 18,
+            "p50_ms": 0.036622999999999996
+          },
+          "edit_type_peak_mb": 5.934562683105469,
+          "edit_type_to_echo": {
+            "max_ms": 0.088616,
+            "mean_ms": 0.017679722222222218,
+            "n": 18,
+            "p50_ms": 0.008055
+          },
+          "find_rare_allocs": 997,
+          "find_rare_ms": 0.302175,
+          "find_rare_next_ms": 0.003417,
+          "find_rare_peak_mb": 5.76274299621582,
+          "find_word_allocs": 262,
+          "find_word_ms": 0.394691,
+          "find_word_next_ms": 0.015311,
+          "find_word_peak_mb": 5.758236885070801,
+          "highlight_step": {
+            "max_ms": 0.073335,
+            "mean_ms": 0.0012738906329113914,
+            "n": 1975,
+            "p50_ms": 0.00042100000000000004
+          },
+          "load_allocs": 228,
+          "load_ms": 131.073562,
+          "load_peak_mb": 5.464550018310547,
+          "nav_idle_heading_allocs": 25217,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 4.139374,
+            "mean_ms": 0.9621511500000001,
+            "n": 20,
+            "p50_ms": 0.723263
+          },
+          "nav_idle_heading_peak_mb": 5.751324653625488,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 0.193387,
+            "mean_ms": 0.11486129999999999,
+            "n": 20,
+            "p50_ms": 0.119927
+          },
+          "nav_idle_paragraph_allocs": 621,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.07263399999999999,
+            "mean_ms": 0.022689400000000002,
+            "n": 20,
+            "p50_ms": 0.018246000000000002
+          },
+          "nav_idle_paragraph_peak_mb": 5.653885841369629,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.06853400000000001,
+            "mean_ms": 0.020730099999999994,
+            "n": 20,
+            "p50_ms": 0.014031
+          },
+          "nav_idle_sentence_allocs": 883,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 0.077704,
+            "mean_ms": 0.04481495,
+            "n": 20,
+            "p50_ms": 0.048336
+          },
+          "nav_idle_sentence_peak_mb": 5.649197578430176,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.08070400000000001,
+            "mean_ms": 0.024747949999999998,
+            "n": 20,
+            "p50_ms": 0.020784999999999998
+          },
+          "nav_idle_word_allocs": 1034,
+          "nav_idle_word_dispatch": {
+            "max_ms": 55.283995000000004,
+            "mean_ms": 11.512486149999999,
+            "n": 20,
+            "p50_ms": 6.78141
+          },
+          "nav_idle_word_peak_mb": 5.640843391418457,
+          "nav_idle_word_to_speech": {
+            "max_ms": 0.209956,
+            "mean_ms": 0.07443930000000001,
+            "n": 20,
+            "p50_ms": 0.096775
+          },
+          "nav_reading_heading_allocs": 25219,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 10.69782,
+            "mean_ms": 1.18579755,
+            "n": 20,
+            "p50_ms": 0.688625
+          },
+          "nav_reading_heading_peak_mb": 5.758286476135254,
+          "nav_reading_heading_to_speech": {
+            "max_ms": 10.850245999999999,
+            "mean_ms": 1.2839323999999999,
+            "n": 20,
+            "p50_ms": 0.789404
+          },
+          "nav_reading_paragraph_allocs": 41575,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 10.449857999999999,
+            "mean_ms": 1.9626592500000002,
+            "n": 20,
+            "p50_ms": 1.061043
+          },
+          "nav_reading_paragraph_peak_mb": 5.817235946655273,
+          "nav_reading_paragraph_to_speech": {
+            "max_ms": 10.651581,
+            "mean_ms": 2.1251751,
+            "n": 20,
+            "p50_ms": 1.240869
+          },
+          "nav_reading_sentence_allocs": 45194,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 10.212285999999999,
+            "mean_ms": 2.0752921,
+            "n": 20,
+            "p50_ms": 1.173003
+          },
+          "nav_reading_sentence_peak_mb": 5.811347961425781,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 10.419411,
+            "mean_ms": 2.2764495499999997,
+            "n": 20,
+            "p50_ms": 1.4229
+          },
+          "nav_reading_word_allocs": 1031,
+          "nav_reading_word_dispatch": {
+            "max_ms": 28.428846,
+            "mean_ms": 7.69459545,
+            "n": 20,
+            "p50_ms": 4.612099
+          },
+          "nav_reading_word_peak_mb": 5.70490837097168,
+          "nav_reading_word_to_speech": {
+            "max_ms": 28.541112000000002,
+            "mean_ms": 7.773960150000001,
+            "n": 20,
+            "p50_ms": 4.729232
+          },
+          "normalize_allocs": 36637,
+          "normalize_ms": 5.177598000000001,
+          "normalize_peak_mb": 5.642012596130371,
+          "normalize_pipeline_ms": 10.322275000000001,
+          "open_allocs": 4307,
+          "open_and_read_dispatch_ms": 159.62277699999999,
+          "open_ms": 148.817916,
+          "open_peak_mb": 6.056924819946289,
+          "open_to_first_speech_ms": 159.778058,
+          "plan_all_allocs": 5185,
+          "plan_all_ms": 2.574891,
+          "plan_all_peak_mb": 5.361967086791992,
+          "replace_all_ms": 2.473884,
+          "replace_allocs": 2622,
+          "replace_count_ms": 1.123429,
+          "replace_first_ms": 1.890714,
+          "replace_peak_mb": 6.4549150466918945,
+          "replace_skip_ms": 2.133511,
+          "save_dispatch": {
+            "max_ms": 0.036121999999999994,
+            "mean_ms": 0.0255434,
+            "n": 5,
+            "p50_ms": 0.026814
+          },
+          "save_position": {
+            "max_ms": 0.069399,
+            "mean_ms": 0.049781399999999996,
+            "n": 5,
+            "p50_ms": 0.058866999999999996
+          },
+          "save_written": {
+            "max_ms": 62.122085,
+            "mean_ms": 30.0662198,
+            "n": 5,
+            "p50_ms": 24.966726
+          },
+          "sentences_allocs": 1571,
+          "sentences_ms": 1.37833,
+          "sentences_peak_mb": 5.265052795410156,
+          "shutdown_ms": 0.09923900000000001,
+          "stop_to_first_audio": {
+            "max_ms": 2.058844,
+            "mean_ms": 1.61582245,
+            "n": 20,
+            "p50_ms": 1.585156
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.517155,
+            "mean_ms": 0.18229555000000003,
+            "n": 20,
+            "p50_ms": 0.16144
+          },
+          "stop_to_speak": {
+            "max_ms": 9.72757,
+            "mean_ms": 1.5822499999999997,
+            "n": 20,
+            "p50_ms": 1.359744
+          },
+          "words_allocs": 2979,
+          "words_ms": 2.892501,
+          "words_peak_mb": 5.27186393737793
+        },
+        "fixtures/sample.md": {
+          "apply_allocs": 4,
+          "apply_ms": 0.016232,
+          "apply_peak_mb": 0.013014793395996094,
+          "autosave": {
+            "max_ms": 0.197773,
+            "mean_ms": 0.1462966,
+            "n": 5,
+            "p50_ms": 0.135196
+          },
+          "autosave_allocs": 319,
+          "autosave_peak_mb": 1.608419418334961,
+          "autosave_written": {
+            "max_ms": 247.650761,
+            "mean_ms": 108.3502488,
+            "n": 5,
+            "p50_ms": 76.465567
+          },
+          "blank_lines_ms": 0.013176,
+          "bytes": 877,
+          "doc": {
+            "chars": 671,
+            "lines": 38,
+            "markers": 44
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.116993,
+            "mean_ms": 0.05233790000000001,
+            "n": 10,
+            "p50_ms": 0.043396000000000004
+          },
+          "edit_enter_allocs": 148,
+          "edit_enter_ms": 230.354917,
+          "edit_enter_peak_mb": 1.590585708618164,
+          "edit_leave_allocs": 106,
+          "edit_leave_ms": 45.612418000000005,
+          "edit_leave_peak_mb": 1.5869684219360352,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.078195,
+            "mean_ms": 0.0637656,
+            "n": 10,
+            "p50_ms": 0.064307
+          },
+          "edit_type_allocs": 316,
+          "edit_type_dispatch": {
+            "max_ms": 0.817372,
+            "mean_ms": 0.0901706111111111,
+            "n": 18,
+            "p50_ms": 0.049378
+          },
+          "edit_type_peak_mb": 1.5801992416381836,
+          "edit_type_to_echo": {
+            "max_ms": 0.07713,
+            "mean_ms": 0.014983166666666665,
+            "n": 18,
+            "p50_ms": 0.009225
+          },
+          "find_rare_allocs": 990,
+          "find_rare_ms": 0.249635,
+          "find_rare_next_ms": 0.002535,
+          "find_rare_peak_mb": 1.5786714553833008,
+          "find_word_allocs": 246,
+          "find_word_ms": 0.255237,
+          "find_word_next_ms": 0.024509,
+          "find_word_peak_mb": 1.5671806335449219,
+          "highlight_step": {
+            "max_ms": 0.104458,
+            "mean_ms": 0.007593612244897959,
+            "n": 49,
+            "p50_ms": 0.002154
+          },
+          "load_allocs": 80,
+          "load_ms": 43.18002,
+          "load_peak_mb": 0.02696990966796875,
+          "nav_idle_heading_allocs": 280,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 0.155004,
+            "mean_ms": 0.06284825,
+            "n": 4,
+            "p50_ms": 0.063094
+          },
+          "nav_idle_heading_peak_mb": 1.5210275650024414,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 0.048313999999999996,
+            "mean_ms": 0.031358,
+            "n": 3,
+            "p50_ms": 0.027864999999999997
+          },
+          "nav_idle_paragraph_allocs": 592,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.065749,
+            "mean_ms": 0.0294153,
+            "n": 20,
+            "p50_ms": 0.031873
+          },
+          "nav_idle_paragraph_peak_mb": 1.5209646224975586,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.041131,
+            "mean_ms": 0.0148831,
+            "n": 20,
+            "p50_ms": 0.013696999999999999
+          },
+          "nav_idle_sentence_allocs": 641,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 0.089636,
+            "mean_ms": 0.0465615,
+            "n": 20,
+            "p50_ms": 0.046521
+          },
+          "nav_idle_sentence_peak_mb": 1.5136728286743164,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.055575,
+            "mean_ms": 0.02251175,
+            "n": 20,
+            "p50_ms": 0.02221
+          },
+          "nav_idle_word_allocs": 351,
+          "nav_idle_word_dispatch": {
+            "max_ms": 0.065248,
+            "mean_ms": 0.03629429999999999,
+            "n": 20,
+            "p50_ms": 0.037033
+          },
+          "nav_idle_word_peak_mb": 1.5081110000610352,
+          "nav_idle_word_to_speech": {
+            "max_ms": 0.152847,
+            "mean_ms": 0.02003225,
+            "n": 20,
+            "p50_ms": 0.011644
+          },
+          "nav_reading_heading_allocs": 264,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 0.26321199999999995,
+            "mean_ms": 0.13319099999999998,
+            "n": 3,
+            "p50_ms": 0.108696
+          },
+          "nav_reading_heading_peak_mb": 1.535848617553711,
+          "nav_reading_heading_to_speech": {
+            "max_ms": 0.377383,
+            "mean_ms": 0.2588825,
+            "n": 2,
+            "p50_ms": 0.377383
+          },
+          "nav_reading_paragraph_allocs": 630,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 0.222477,
+            "mean_ms": 0.12006714285714286,
+            "n": 7,
+            "p50_ms": 0.093043
+          },
+          "nav_reading_paragraph_peak_mb": 1.5328359603881836,
+          "nav_reading_paragraph_to_speech": {
+            "max_ms": 0.33015300000000003,
+            "mean_ms": 0.18456516666666667,
+            "n": 6,
+            "p50_ms": 0.166001
+          },
+          "nav_reading_sentence_allocs": 1441,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 0.268167,
+            "mean_ms": 0.14815638461538463,
+            "n": 13,
+            "p50_ms": 0.150545
+          },
+          "nav_reading_sentence_peak_mb": 1.5282459259033203,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 0.393798,
+            "mean_ms": 0.21204266666666668,
+            "n": 12,
+            "p50_ms": 0.20258
+          },
+          "nav_reading_word_allocs": 350,
+          "nav_reading_word_dispatch": {
+            "max_ms": 0.307935,
+            "mean_ms": 0.0694529,
+            "n": 20,
+            "p50_ms": 0.043135
+          },
+          "nav_reading_word_peak_mb": 1.5237855911254883,
+          "nav_reading_word_to_speech": {
+            "max_ms": 0.363827,
+            "mean_ms": 0.0895151,
+            "n": 20,
+            "p50_ms": 0.056743999999999996
+          },
+          "normalize_allocs": 1970,
+          "normalize_ms": 0.49058399999999996,
+          "normalize_peak_mb": 0.41425609588623047,
+          "normalize_pipeline_ms": 3.852532,
+          "open_allocs": 509,
+          "open_and_read_dispatch_ms": 58.246764999999996,
+          "open_ms": 57.935995,
+          "open_peak_mb": 2.0831708908081055,
+          "open_to_first_speech_ms": 58.413135999999994,
+          "plan_all_allocs": 376,
+          "plan_all_ms": 0.338105,
+          "plan_all_peak_mb": 0.02036285400390625,
+          "replace_all_ms": 0.178674,
+          "replace_allocs": 325,
+          "replace_count_ms": 0.040741,
+          "replace_first_ms": 0.110078,
+          "replace_peak_mb": 1.5961828231811523,
+          "replace_skip_ms": 0.2421,
+          "save_dispatch": {
+            "max_ms": 0.038145,
+            "mean_ms": 0.030039000000000003,
+            "n": 5,
+            "p50_ms": 0.030309
+          },
+          "save_position": {
+            "max_ms": 0.018657,
+            "mean_ms": 0.012400400000000002,
+            "n": 5,
+            "p50_ms": 0.011122
+          },
+          "save_written": {
+            "max_ms": 169.892028,
+            "mean_ms": 86.4212696,
+            "n": 5,
+            "p50_ms": 43.454778
+          },
+          "sentences_allocs": 97,
+          "sentences_ms": 0.190364,
+          "sentences_peak_mb": 0.017249107360839844,
+          "shutdown_ms": 0.12212799999999999,
+          "stop_to_first_audio": {
+            "max_ms": 0.788146,
+            "mean_ms": 0.33688749999999995,
+            "n": 20,
+            "p50_ms": 0.322621
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.14713199999999999,
+            "mean_ms": 0.098507,
+            "n": 20,
+            "p50_ms": 0.097333
+          },
+          "stop_to_speak": {
+            "max_ms": 0.188157,
+            "mean_ms": 0.05259164999999999,
+            "n": 20,
+            "p50_ms": 0.043640000000000005
+          },
+          "words_allocs": 105,
+          "words_ms": 0.46263800000000005,
+          "words_peak_mb": 0.01903057098388672
+        },
+        "list-50k-lines.md": {
+          "apply_allocs": 6,
+          "apply_ms": 3.005776,
+          "apply_peak_mb": 28.943634033203125,
+          "autosave": {
+            "max_ms": 0.361801,
+            "mean_ms": 0.1018232,
+            "n": 5,
+            "p50_ms": 0.036463
+          },
+          "autosave_allocs": 190,
+          "autosave_peak_mb": 109.75316333770752,
+          "autosave_written": {
+            "max_ms": 46.659114,
+            "mean_ms": 35.2545966,
+            "n": 5,
+            "p50_ms": 33.647779
+          },
+          "blank_lines_ms": 22.916308,
+          "bytes": 5962260,
+          "doc": {
+            "chars": 5201686,
+            "lines": 50002,
+            "markers": 100887
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.036333,
+            "mean_ms": 0.0238379,
+            "n": 10,
+            "p50_ms": 0.023046
+          },
+          "edit_enter_allocs": 6728,
+          "edit_enter_ms": 21.910133,
+          "edit_enter_peak_mb": 50.967740058898926,
+          "edit_leave_allocs": 117,
+          "edit_leave_ms": 25.301895000000002,
+          "edit_leave_peak_mb": 50.51086235046387,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.058016,
+            "mean_ms": 0.032361100000000004,
+            "n": 10,
+            "p50_ms": 0.029309
+          },
+          "edit_type_allocs": 407,
+          "edit_type_dispatch": {
+            "max_ms": 1.570358,
+            "mean_ms": 0.10653094444444444,
+            "n": 18,
+            "p50_ms": 0.023127
+          },
+          "edit_type_peak_mb": 44.0477294921875,
+          "edit_type_to_echo": {
+            "max_ms": 0.08858300000000001,
+            "mean_ms": 0.030354111111111113,
+            "n": 18,
+            "p50_ms": 0.031789
+          },
+          "find_rare_allocs": 1007,
+          "find_rare_ms": 2.924611,
+          "find_rare_next_ms": 0.008658,
+          "find_rare_peak_mb": 34.04792881011963,
+          "find_word_allocs": 274,
+          "find_word_ms": 5.134226000000001,
+          "find_word_next_ms": 0.020411000000000002,
+          "find_word_peak_mb": 34.13444423675537,
+          "highlight_step": {
+            "max_ms": 2.501092,
+            "mean_ms": 0.024551189499999997,
+            "n": 2000,
+            "p50_ms": 0.000541
+          },
+          "load_allocs": 22884,
+          "load_ms": 596.635169,
+          "load_peak_mb": 65.5408067703247,
+          "nav_idle_heading_allocs": 494,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 0.027867,
+            "mean_ms": 0.00811675,
+            "n": 20,
+            "p50_ms": 0.0061519999999999995
+          },
+          "nav_idle_heading_peak_mb": 31.915892601013184,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 0.028711999999999998,
+            "mean_ms": 0.00605705,
+            "n": 20,
+            "p50_ms": 0.004082
+          },
+          "nav_idle_paragraph_allocs": 555,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.016243,
+            "mean_ms": 0.008329850000000003,
+            "n": 20,
+            "p50_ms": 0.007405
+          },
+          "nav_idle_paragraph_peak_mb": 31.9141788482666,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.032169,
+            "mean_ms": 0.0062831,
+            "n": 20,
+            "p50_ms": 0.004412
+          },
+          "nav_idle_sentence_allocs": 2111,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 0.43290100000000004,
+            "mean_ms": 0.37796989999999997,
+            "n": 20,
+            "p50_ms": 0.376177
+          },
+          "nav_idle_sentence_peak_mb": 31.96648406982422,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.085789,
+            "mean_ms": 0.05326565000000001,
+            "n": 20,
+            "p50_ms": 0.054213
+          },
+          "nav_idle_word_allocs": 491,
+          "nav_idle_word_dispatch": {
+            "max_ms": 0.056083,
+            "mean_ms": 0.02519185,
+            "n": 20,
+            "p50_ms": 0.025251
+          },
+          "nav_idle_word_peak_mb": 31.89884090423584,
+          "nav_idle_word_to_speech": {
+            "max_ms": 0.141391,
+            "mean_ms": 0.0173872,
+            "n": 20,
+            "p50_ms": 0.010979
+          },
+          "nav_reading_heading_allocs": 40,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 0.08096300000000001,
+            "mean_ms": 0.08096300000000001,
+            "n": 1,
+            "p50_ms": 0.08096300000000001
+          },
+          "nav_reading_heading_peak_mb": 32.003292083740234,
+          "nav_reading_paragraph_allocs": 45,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 0.08727499999999999,
+            "mean_ms": 0.08727499999999999,
+            "n": 1,
+            "p50_ms": 0.08727499999999999
+          },
+          "nav_reading_paragraph_peak_mb": 32.0024299621582,
+          "nav_reading_sentence_allocs": 39266,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 13.311602,
+            "mean_ms": 6.722084649999999,
+            "n": 20,
+            "p50_ms": 3.080574
+          },
+          "nav_reading_sentence_peak_mb": 32.11386489868164,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 13.653319,
+            "mean_ms": 7.0043861,
+            "n": 20,
+            "p50_ms": 3.417063
+          },
+          "nav_reading_word_allocs": 499,
+          "nav_reading_word_dispatch": {
+            "max_ms": 0.0896,
+            "mean_ms": 0.041906700000000005,
+            "n": 20,
+            "p50_ms": 0.034999999999999996
+          },
+          "nav_reading_word_peak_mb": 31.98619556427002,
+          "nav_reading_word_to_speech": {
+            "max_ms": 0.197131,
+            "mean_ms": 0.06059194999999999,
+            "n": 20,
+            "p50_ms": 0.048101
+          },
+          "normalize_allocs": 154701,
+          "normalize_ms": 52.168063000000004,
+          "normalize_peak_mb": 22.799386978149414,
+          "normalize_pipeline_ms": 6.048864,
+          "open_allocs": 30210,
+          "open_and_read_dispatch_ms": 431.324861,
+          "open_ms": 383.517224,
+          "open_peak_mb": 65.92498397827148,
+          "open_to_first_speech_ms": 431.648277,
+          "plan_all_allocs": 266994,
+          "plan_all_ms": 968.740809,
+          "plan_all_peak_mb": 39.74869346618652,
+          "replace_all_ms": 157.233497,
+          "replace_allocs": 58167,
+          "replace_count_ms": 125.30033099999999,
+          "replace_first_ms": 154.17262200000002,
+          "replace_peak_mb": 65.30135345458984,
+          "replace_skip_ms": 172.32995200000002,
+          "save_dispatch": {
+            "max_ms": 0.049478999999999995,
+            "mean_ms": 0.0365512,
+            "n": 5,
+            "p50_ms": 0.031453
+          },
+          "save_position": {
+            "max_ms": 0.11085300000000001,
+            "mean_ms": 0.0292088,
+            "n": 5,
+            "p50_ms": 0.008548
+          },
+          "save_written": {
+            "max_ms": 110.31565499999999,
+            "mean_ms": 71.1879326,
+            "n": 5,
+            "p50_ms": 53.419421
+          },
+          "sentences_allocs": 46405,
+          "sentences_ms": 604.995243,
+          "sentences_peak_mb": 22.47288417816162,
+          "shutdown_ms": 0.073367,
+          "stop_to_first_audio": {
+            "max_ms": 3.258482,
+            "mean_ms": 2.9571115499999996,
+            "n": 20,
+            "p50_ms": 2.950148
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.629396,
+            "mean_ms": 0.25903855,
+            "n": 20,
+            "p50_ms": 0.235844
+          },
+          "stop_to_speak": {
+            "max_ms": 0.404748,
+            "mean_ms": 0.29109785,
+            "n": 20,
+            "p50_ms": 0.303193
+          },
+          "words_allocs": 416434,
+          "words_ms": 733.814989,
+          "words_peak_mb": 22.405731201171875
+        },
+        "md-1mb.md": {
+          "apply_allocs": 6,
+          "apply_ms": 0.267235,
+          "apply_peak_mb": 8.611689567565918,
+          "autosave": {
+            "max_ms": 47.922729,
+            "mean_ms": 9.9050794,
+            "n": 5,
+            "p50_ms": 0.475682
+          },
+          "autosave_allocs": 225,
+          "autosave_peak_mb": 20.468408584594727,
+          "autosave_written": {
+            "max_ms": 96.889172,
+            "mean_ms": 41.9248262,
+            "n": 5,
+            "p50_ms": 34.933836
+          },
+          "blank_lines_ms": 1.732398,
+          "bytes": 1049749,
+          "doc": {
+            "chars": 918276,
+            "lines": 7326,
+            "markers": 15659
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.051614,
+            "mean_ms": 0.0341575,
+            "n": 10,
+            "p50_ms": 0.031804000000000006
+          },
+          "edit_enter_allocs": 1400,
+          "edit_enter_ms": 6.319548999999999,
+          "edit_enter_peak_mb": 12.481304168701172,
+          "edit_leave_allocs": 142,
+          "edit_leave_ms": 2.712309,
+          "edit_leave_peak_mb": 12.564838409423828,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.053106,
+            "mean_ms": 0.042607400000000004,
+            "n": 10,
+            "p50_ms": 0.043447
+          },
+          "edit_type_allocs": 482,
+          "edit_type_dispatch": {
+            "max_ms": 2.608307,
+            "mean_ms": 0.32566788888888887,
+            "n": 18,
+            "p50_ms": 0.057204000000000005
+          },
+          "edit_type_peak_mb": 11.41476821899414,
+          "edit_type_to_echo": {
+            "max_ms": 1.80877,
+            "mean_ms": 0.17754950000000003,
+            "n": 18,
+            "p50_ms": 0.058871
+          },
+          "find_rare_allocs": 1001,
+          "find_rare_ms": 2.517557,
+          "find_rare_next_ms": 0.012755,
+          "find_rare_peak_mb": 10.290242195129395,
+          "find_word_allocs": 268,
+          "find_word_ms": 1.267467,
+          "find_word_next_ms": 0.020722,
+          "find_word_peak_mb": 10.298128128051758,
+          "highlight_step": {
+            "max_ms": 0.089028,
+            "mean_ms": 0.0013783950050968385,
+            "n": 1962,
+            "p50_ms": 0.000491
+          },
+          "load_allocs": 6622,
+          "load_ms": 55.781909,
+          "load_peak_mb": 11.817513465881348,
+          "nav_idle_heading_allocs": 56836,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 11.981164000000001,
+            "mean_ms": 4.53724515,
+            "n": 20,
+            "p50_ms": 2.052278
+          },
+          "nav_idle_heading_peak_mb": 9.369988441467285,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 0.348125,
+            "mean_ms": 0.2152435,
+            "n": 20,
+            "p50_ms": 0.221639
+          },
+          "nav_idle_paragraph_allocs": 669,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.063297,
+            "mean_ms": 0.0431189,
+            "n": 20,
+            "p50_ms": 0.039299
+          },
+          "nav_idle_paragraph_peak_mb": 9.224431037902832,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.1108,
+            "mean_ms": 0.07430719999999999,
+            "n": 20,
+            "p50_ms": 0.073098
+          },
+          "nav_idle_sentence_allocs": 917,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 0.31766500000000003,
+            "mean_ms": 0.0723017,
+            "n": 20,
+            "p50_ms": 0.058186999999999996
+          },
+          "nav_idle_sentence_peak_mb": 9.218751907348633,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.082954,
+            "mean_ms": 0.033809450000000005,
+            "n": 20,
+            "p50_ms": 0.023493999999999998
+          },
+          "nav_idle_word_allocs": 565,
+          "nav_idle_word_dispatch": {
+            "max_ms": 0.098287,
+            "mean_ms": 0.04846145,
+            "n": 20,
+            "p50_ms": 0.045251
+          },
+          "nav_idle_word_peak_mb": 9.209766387939453,
+          "nav_idle_word_to_speech": {
+            "max_ms": 0.2664,
+            "mean_ms": 0.03099965,
+            "n": 20,
+            "p50_ms": 0.014617000000000002
+          },
+          "nav_reading_heading_allocs": 56838,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 33.365602,
+            "mean_ms": 6.518563500000001,
+            "n": 20,
+            "p50_ms": 2.803982
+          },
+          "nav_reading_heading_peak_mb": 9.383899688720703,
+          "nav_reading_heading_to_speech": {
+            "max_ms": 33.565011999999996,
+            "mean_ms": 6.28321895,
+            "n": 20,
+            "p50_ms": 2.522784
+          },
+          "nav_reading_paragraph_allocs": 59943,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 12.537507999999999,
+            "mean_ms": 4.1938569,
+            "n": 20,
+            "p50_ms": 2.052067
+          },
+          "nav_reading_paragraph_peak_mb": 9.4686279296875,
+          "nav_reading_paragraph_to_speech": {
+            "max_ms": 12.834996,
+            "mean_ms": 4.5348773,
+            "n": 20,
+            "p50_ms": 2.382656
+          },
+          "nav_reading_sentence_allocs": 60324,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 12.263558000000002,
+            "mean_ms": 4.316094700000001,
+            "n": 20,
+            "p50_ms": 2.2315159999999996
+          },
+          "nav_reading_sentence_peak_mb": 9.465840339660645,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 12.532487999999999,
+            "mean_ms": 4.6742458,
+            "n": 20,
+            "p50_ms": 2.467832
+          },
+          "nav_reading_word_allocs": 564,
+          "nav_reading_word_dispatch": {
+            "max_ms": 0.113677,
+            "mean_ms": 0.05255125000000001,
+            "n": 20,
+            "p50_ms": 0.046683
+          },
+          "nav_reading_word_peak_mb": 9.323874473571777,
+          "nav_reading_word_to_speech": {
+            "max_ms": 0.286489,
+            "mean_ms": 0.08064455,
+            "n": 20,
+            "p50_ms": 0.059868
+          },
+          "normalize_allocs": 133914,
+          "normalize_ms": 62.506873000000006,
+          "normalize_peak_mb": 8.328234672546387,
+          "normalize_pipeline_ms": 14.968896,
+          "open_allocs": 10520,
+          "open_and_read_dispatch_ms": 88.935321,
+          "open_ms": 84.35148600000001,
+          "open_peak_mb": 12.90019702911377,
+          "open_to_first_speech_ms": 89.197413,
+          "plan_all_allocs": 83192,
+          "plan_all_ms": 101.148072,
+          "plan_all_peak_mb": 11.51233196258545,
+          "replace_all_ms": 43.802710000000005,
+          "replace_allocs": 11781,
+          "replace_count_ms": 39.274961,
+          "replace_first_ms": 39.668851,
+          "replace_peak_mb": 16.412711143493652,
+          "replace_skip_ms": 42.396668999999996,
+          "save_dispatch": {
+            "max_ms": 0.039819,
+            "mean_ms": 0.028426800000000002,
+            "n": 5,
+            "p50_ms": 0.029349
+          },
+          "save_position": {
+            "max_ms": 0.039268,
+            "mean_ms": 0.034268599999999996,
+            "n": 5,
+            "p50_ms": 0.035571000000000005
+          },
+          "save_written": {
+            "max_ms": 267.428739,
+            "mean_ms": 211.2182076,
+            "n": 5,
+            "p50_ms": 229.639576
+          },
+          "sentences_allocs": 21532,
+          "sentences_ms": 65.913814,
+          "sentences_peak_mb": 7.995086669921875,
+          "shutdown_ms": 0.087273,
+          "stop_to_first_audio": {
+            "max_ms": 3.122843,
+            "mean_ms": 2.2650227000000003,
+            "n": 20,
+            "p50_ms": 2.176478
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.26931900000000003,
+            "mean_ms": 0.1800621,
+            "n": 20,
+            "p50_ms": 0.175652
+          },
+          "stop_to_speak": {
+            "max_ms": 0.676218,
+            "mean_ms": 0.2219226,
+            "n": 20,
+            "p50_ms": 0.18054599999999998
+          },
+          "words_allocs": 37199,
+          "words_ms": 109.73073799999999,
+          "words_peak_mb": 7.955077171325684
+        },
+        "one-line-1mb.txt": {
+          "apply_allocs": 5,
+          "apply_ms": 0.018097,
+          "apply_peak_mb": 6.2316389083862305,
+          "autosave": {
+            "max_ms": 0.058517,
+            "mean_ms": 0.053125599999999995,
+            "n": 5,
+            "p50_ms": 0.051913
+          },
+          "autosave_allocs": 291,
+          "autosave_peak_mb": 14.907082557678223,
+          "autosave_written": {
+            "max_ms": 112.78867,
+            "mean_ms": 54.552589999999995,
+            "n": 5,
+            "p50_ms": 39.511332
+          },
+          "blank_lines_ms": 0.048657,
+          "bytes": 1048695,
+          "doc": {
+            "chars": 1036704,
+            "lines": 1,
+            "markers": 0
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.087704,
+            "mean_ms": 0.04576,
+            "n": 10,
+            "p50_ms": 0.038946999999999996
+          },
+          "edit_enter_allocs": 1245,
+          "edit_enter_ms": 1.913631,
+          "edit_enter_peak_mb": 9.819887161254883,
+          "edit_leave_allocs": 161,
+          "edit_leave_ms": 2.496471,
+          "edit_leave_peak_mb": 10.970088958740234,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.060811,
+            "mean_ms": 0.011797499999999999,
+            "n": 10,
+            "p50_ms": 0.006071999999999999
+          },
+          "edit_type_allocs": 817,
+          "edit_type_dispatch": {
+            "max_ms": 12.783717,
+            "mean_ms": 5.474103222222222,
+            "n": 18,
+            "p50_ms": 3.510591
+          },
+          "edit_type_peak_mb": 12.76904010772705,
+          "edit_type_to_echo": {
+            "max_ms": 0.41082,
+            "mean_ms": 0.06802233333333334,
+            "n": 18,
+            "p50_ms": 0.045738999999999995
+          },
+          "find_rare_allocs": 1002,
+          "find_rare_ms": 1.498544,
+          "find_rare_next_ms": 0.005722,
+          "find_rare_peak_mb": 8.737152099609375,
+          "find_word_allocs": 293,
+          "find_word_ms": 9.380424,
+          "find_word_next_ms": 5.390685,
+          "find_word_peak_mb": 12.720961570739746,
+          "highlight_step": {
+            "max_ms": 9.264185,
+            "mean_ms": 0.021266514,
+            "n": 2000,
+            "p50_ms": 0.00048100000000000004
+          },
+          "load_allocs": 1177,
+          "load_ms": 3.108681,
+          "load_peak_mb": 8.227621078491211,
+          "nav_idle_heading_allocs": 994,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 0.1655,
+            "mean_ms": 0.08093769999999999,
+            "n": 20,
+            "p50_ms": 0.07422799999999999
+          },
+          "nav_idle_heading_peak_mb": 6.74962043762207,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 0.181561,
+            "mean_ms": 0.0399362,
+            "n": 20,
+            "p50_ms": 0.027243
+          },
+          "nav_idle_paragraph_allocs": 1055,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.117775,
+            "mean_ms": 0.07829435000000001,
+            "n": 20,
+            "p50_ms": 0.074959
+          },
+          "nav_idle_paragraph_peak_mb": 6.7478742599487305,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.177713,
+            "mean_ms": 0.0918527,
+            "n": 20,
+            "p50_ms": 0.095623
+          },
+          "nav_idle_sentence_allocs": 2106,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 2.411752,
+            "mean_ms": 0.41758705,
+            "n": 20,
+            "p50_ms": 0.303805
+          },
+          "nav_idle_sentence_peak_mb": 6.753964424133301,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.226858,
+            "mean_ms": 0.0759168,
+            "n": 20,
+            "p50_ms": 0.063425
+          },
+          "nav_idle_word_allocs": 1088,
+          "nav_idle_word_dispatch": {
+            "max_ms": 7.0646889999999996,
+            "mean_ms": 1.2255581500000001,
+            "n": 20,
+            "p50_ms": 0.907547
+          },
+          "nav_idle_word_peak_mb": 8.635153770446777,
+          "nav_idle_word_to_speech": {
+            "max_ms": 7.166672,
+            "mean_ms": 0.7732097,
+            "n": 20,
+            "p50_ms": 0.196351
+          },
+          "nav_reading_heading_allocs": 65,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 0.14979800000000001,
+            "mean_ms": 0.14979800000000001,
+            "n": 1,
+            "p50_ms": 0.14979800000000001
+          },
+          "nav_reading_heading_peak_mb": 6.839791297912598,
+          "nav_reading_paragraph_allocs": 70,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 0.152053,
+            "mean_ms": 0.152053,
+            "n": 1,
+            "p50_ms": 0.152053
+          },
+          "nav_reading_paragraph_peak_mb": 6.8369293212890625,
+          "nav_reading_sentence_allocs": 38383,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 11.505601,
+            "mean_ms": 3.6365396500000005,
+            "n": 20,
+            "p50_ms": 2.063769
+          },
+          "nav_reading_sentence_peak_mb": 6.923016548156738,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 11.839461,
+            "mean_ms": 3.95240305,
+            "n": 20,
+            "p50_ms": 2.5375620000000003
+          },
+          "nav_reading_word_allocs": 1087,
+          "nav_reading_word_dispatch": {
+            "max_ms": 7.572977,
+            "mean_ms": 1.3376516999999999,
+            "n": 20,
+            "p50_ms": 0.985663
+          },
+          "nav_reading_word_peak_mb": 8.728590965270996,
+          "nav_reading_word_to_speech": {
+            "max_ms": 7.662018,
+            "mean_ms": 1.4372280499999999,
+            "n": 20,
+            "p50_ms": 1.089658
+          },
+          "normalize_allocs": 172454,
+          "normalize_ms": 44.358892,
+          "normalize_peak_mb": 7.021356582641602,
+          "normalize_pipeline_ms": 12.232524999999999,
+          "open_allocs": 2945,
+          "open_and_read_dispatch_ms": 11.067123,
+          "open_ms": 9.259504,
+          "open_peak_mb": 8.894851684570312,
+          "open_to_first_speech_ms": 16.640498,
+          "plan_all_allocs": 49285,
+          "plan_all_ms": 48.642927,
+          "plan_all_peak_mb": 9.898752212524414,
+          "replace_all_ms": 34.518781,
+          "replace_allocs": 11785,
+          "replace_count_ms": 27.291862000000002,
+          "replace_first_ms": 52.110091999999995,
+          "replace_peak_mb": 16.77267360687256,
+          "replace_skip_ms": 54.774334,
+          "save_dispatch": {
+            "max_ms": 0.042475000000000006,
+            "mean_ms": 0.0358114,
+            "n": 5,
+            "p50_ms": 0.038266
+          },
+          "save_position": {
+            "max_ms": 0.129758,
+            "mean_ms": 0.10529580000000001,
+            "n": 5,
+            "p50_ms": 0.101993
+          },
+          "save_written": {
+            "max_ms": 992.813719,
+            "mean_ms": 294.6477984,
+            "n": 5,
+            "p50_ms": 148.920829
+          },
+          "sentences_allocs": 6732,
+          "sentences_ms": 33.33514,
+          "sentences_peak_mb": 6.67806339263916,
+          "shutdown_ms": 0.094418,
+          "stop_to_first_audio": {
+            "max_ms": 2.627768,
+            "mean_ms": 2.1631042999999996,
+            "n": 20,
+            "p50_ms": 2.153813
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.289447,
+            "mean_ms": 0.2264675,
+            "n": 20,
+            "p50_ms": 0.22273400000000002
+          },
+          "stop_to_speak": {
+            "max_ms": 1.299706,
+            "mean_ms": 0.3793902000000001,
+            "n": 20,
+            "p50_ms": 0.27286699999999997
+          },
+          "words_allocs": 12696,
+          "words_ms": 30.970214,
+          "words_peak_mb": 6.667949676513672
+        },
+        "pathological": {
+          "docx_load_ms": 79.49071500000001,
+          "docx_total_ms": 294.63905800000003,
+          "eml_load_ms": 61.407745,
+          "eml_total_ms": 310.444337,
+          "epub_load_ms": 125.893329,
+          "epub_total_ms": 306.304218,
+          "html_load_ms": 89.994324,
+          "html_total_ms": 289.029512,
+          "json_load_ms": 65.251876,
+          "json_total_ms": 346.856518,
+          "latex_load_ms": 289.931206,
+          "latex_total_ms": 577.79391,
+          "markdown_load_ms": 41.019715,
+          "markdown_total_ms": 258.07426100000004,
+          "mathml_load_ms": 72.377599,
+          "mathml_total_ms": 363.55176700000004,
+          "mhtml_load_ms": 124.34075999999999,
+          "mhtml_total_ms": 416.13942599999996,
+          "notebook_load_ms": 47.324834,
+          "notebook_total_ms": 276.43667700000003,
+          "odt_load_ms": 61.352922,
+          "odt_total_ms": 256.57432800000004,
+          "pdf_load_ms": 368.306205,
+          "pdf_total_ms": 785.470105,
+          "rtf_load_ms": 59.476173,
+          "rtf_total_ms": 277.79168100000004,
+          "sheet_load_ms": 86.113677,
+          "sheet_total_ms": 818.934035,
+          "svg_load_ms": 52.075485,
+          "svg_total_ms": 406.57257699999997,
+          "text_load_ms": 5.691785,
+          "text_total_ms": 369.515151
+        },
+        "startup": {
+          "tw --version": {
+            "max_ms": 24.016316,
+            "median_ms": 20.251375,
+            "min_ms": 13.770852,
+            "n": 5
+          },
+          "tw backends": {
+            "max_ms": 40.380949,
+            "median_ms": 23.122685,
+            "min_ms": 19.771596,
+            "n": 5
+          },
+          "tw info": {
+            "max_ms": 242.413929,
+            "median_ms": 131.878713,
+            "min_ms": 118.21163299999999,
+            "n": 5
+          },
+          "tw text": {
+            "max_ms": 100.828216,
+            "median_ms": 78.905515,
+            "min_ms": 70.488451,
+            "n": 5
+          }
+        },
+        "sync-id-100mb.pdf": {
+          "bytes": 104857600,
+          "identify_again_allocs": 28,
+          "identify_again_ms": 0.12428800000000001,
+          "identify_again_peak_mb": 5.127745628356934,
+          "identify_first_allocs": 38,
+          "identify_first_ms": 407.92176,
+          "identify_first_peak_mb": 5.3748884201049805,
+          "identify_mb_per_s": 245.14504938397988
+        }
+      }
+    },
+    "windows-x86_64": {
+      "branch": "wave8/i-instrumentation",
+      "commit": "c6c598fc1e",
+      "cpus": 12,
+      "date": "2026-10-02",
+      "gate_times": false,
+      "quick": true,
+      "reason": "First Windows entry (W8b-i), measured on the owner's 64 GB machine while other agents were building; times are not gated",
+      "report": {
+        "README.md": {
+          "apply_allocs": 5,
+          "apply_ms": 0.019700000000000002,
+          "apply_peak_mb": 4.990327835083008,
+          "autosave": {
+            "max_ms": 0.13699999999999998,
+            "mean_ms": 0.11601999999999998,
+            "n": 5,
+            "p50_ms": 0.1085
+          },
+          "autosave_allocs": 348,
+          "autosave_peak_mb": 5.547361373901367,
+          "autosave_written": {
+            "max_ms": 51.1171,
+            "mean_ms": 22.24456,
+            "n": 5,
+            "p50_ms": 17.2873
+          },
+          "blank_lines_ms": 0.0208,
+          "bytes": 2987,
+          "doc": {
+            "chars": 2601,
+            "lines": 50,
+            "markers": 56
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.022,
+            "mean_ms": 0.009490000000000002,
+            "n": 10,
+            "p50_ms": 0.008
+          },
+          "edit_enter_allocs": 174,
+          "edit_enter_ms": 0.5969,
+          "edit_enter_peak_mb": 5.522703170776367,
+          "edit_leave_allocs": 119,
+          "edit_leave_ms": 0.2369,
+          "edit_leave_peak_mb": 5.519593238830566,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.031099999999999996,
+            "mean_ms": 0.0123,
+            "n": 10,
+            "p50_ms": 0.011399999999999999
+          },
+          "edit_type_allocs": 419,
+          "edit_type_dispatch": {
+            "max_ms": 0.0485,
+            "mean_ms": 0.019716666666666664,
+            "n": 18,
+            "p50_ms": 0.0187
+          },
+          "edit_type_peak_mb": 5.510157585144043,
+          "edit_type_to_echo": {
+            "max_ms": 0.0664,
+            "mean_ms": 0.029794444444444443,
+            "n": 18,
+            "p50_ms": 0.0283
+          },
+          "find_rare_allocs": 993,
+          "find_rare_ms": 0.2208,
+          "find_rare_next_ms": 0.0162,
+          "find_rare_peak_mb": 5.500962257385254,
+          "find_word_allocs": 253,
+          "find_word_ms": 0.1851,
+          "find_word_next_ms": 0.0205,
+          "find_word_peak_mb": 5.48797607421875,
+          "highlight_step": {
+            "max_ms": 0.2122,
+            "mean_ms": 0.0030394871794871795,
+            "n": 195,
+            "p50_ms": 0.00039999999999999996
+          },
+          "load_allocs": 84,
+          "load_ms": 0.7186,
+          "load_peak_mb": 5.011622428894043,
+          "nav_idle_heading_allocs": 551,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 0.6198,
+            "mean_ms": 0.1902,
+            "n": 5,
+            "p50_ms": 0.0517
+          },
+          "nav_idle_heading_peak_mb": 5.457968711853027,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 0.1079,
+            "mean_ms": 0.0791,
+            "n": 4,
+            "p50_ms": 0.10160000000000001
+          },
+          "nav_idle_paragraph_allocs": 555,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.2633,
+            "mean_ms": 0.05528500000000001,
+            "n": 20,
+            "p50_ms": 0.0408
+          },
+          "nav_idle_paragraph_peak_mb": 5.454070091247559,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.3282,
+            "mean_ms": 0.099365,
+            "n": 20,
+            "p50_ms": 0.0815
+          },
+          "nav_idle_sentence_allocs": 703,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 0.0624,
+            "mean_ms": 0.03899499999999999,
+            "n": 20,
+            "p50_ms": 0.037
+          },
+          "nav_idle_sentence_peak_mb": 5.448736190795898,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.1464,
+            "mean_ms": 0.071895,
+            "n": 20,
+            "p50_ms": 0.06849999999999999
+          },
+          "nav_idle_word_allocs": 434,
+          "nav_idle_word_dispatch": {
+            "max_ms": 0.0659,
+            "mean_ms": 0.025115,
+            "n": 20,
+            "p50_ms": 0.0203
+          },
+          "nav_idle_word_peak_mb": 5.439324378967285,
+          "nav_idle_word_to_speech": {
+            "max_ms": 0.12380000000000001,
+            "mean_ms": 0.04896,
+            "n": 20,
+            "p50_ms": 0.0365
+          },
+          "nav_reading_heading_allocs": 551,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 0.162,
+            "mean_ms": 0.0996,
+            "n": 5,
+            "p50_ms": 0.0883
+          },
+          "nav_reading_heading_peak_mb": 5.472107887268066,
+          "nav_reading_heading_to_speech": {
+            "max_ms": 0.3062,
+            "mean_ms": 0.22035,
+            "n": 4,
+            "p50_ms": 0.2596
+          },
+          "nav_reading_paragraph_allocs": 1311,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 0.1388,
+            "mean_ms": 0.07355454545454546,
+            "n": 11,
+            "p50_ms": 0.0654
+          },
+          "nav_reading_paragraph_peak_mb": 5.468928337097168,
+          "nav_reading_paragraph_to_speech": {
+            "max_ms": 0.2803,
+            "mean_ms": 0.15624,
+            "n": 10,
+            "p50_ms": 0.1427
+          },
+          "nav_reading_sentence_allocs": 2792,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 0.3568,
+            "mean_ms": 0.10206315789473684,
+            "n": 19,
+            "p50_ms": 0.0818
+          },
+          "nav_reading_sentence_peak_mb": 5.464591026306152,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 0.4299,
+            "mean_ms": 0.1743611111111111,
+            "n": 18,
+            "p50_ms": 0.1636
+          },
+          "nav_reading_word_allocs": 432,
+          "nav_reading_word_dispatch": {
+            "max_ms": 0.0412,
+            "mean_ms": 0.010539999999999999,
+            "n": 20,
+            "p50_ms": 0.008
+          },
+          "nav_reading_word_peak_mb": 5.458526611328125,
+          "nav_reading_word_to_speech": {
+            "max_ms": 0.089,
+            "mean_ms": 0.024515,
+            "n": 20,
+            "p50_ms": 0.0204
+          },
+          "normalize_allocs": 2581,
+          "normalize_ms": 0.6859000000000001,
+          "normalize_peak_mb": 5.392033576965332,
+          "normalize_pipeline_ms": 5.2977,
+          "open_allocs": 579,
+          "open_and_read_dispatch_ms": 1.6579,
+          "open_ms": 1.4066,
+          "open_peak_mb": 6.061670303344727,
+          "open_to_first_speech_ms": 10.580300000000001,
+          "plan_all_allocs": 408,
+          "plan_all_ms": 0.27530000000000004,
+          "plan_all_peak_mb": 5.001101493835449,
+          "replace_all_ms": 0.1773,
+          "replace_allocs": 437,
+          "replace_count_ms": 0.0785,
+          "replace_first_ms": 0.108,
+          "replace_peak_mb": 5.551085472106934,
+          "replace_skip_ms": 0.7924,
+          "save_dispatch": {
+            "max_ms": 0.2391,
+            "mean_ms": 0.05874,
+            "n": 5,
+            "p50_ms": 0.012
+          },
+          "save_position": {
+            "max_ms": 0.0121,
+            "mean_ms": 0.00998,
+            "n": 5,
+            "p50_ms": 0.0098
+          },
+          "save_written": {
+            "max_ms": 44.724,
+            "mean_ms": 32.300219999999996,
+            "n": 5,
+            "p50_ms": 34.011199999999995
+          },
+          "sentences_allocs": 133,
+          "sentences_ms": 0.1103,
+          "sentences_peak_mb": 4.99860954284668,
+          "shutdown_ms": 0.0265,
+          "stop_to_first_audio": {
+            "max_ms": 5.7519,
+            "mean_ms": 0.5535349999999999,
+            "n": 20,
+            "p50_ms": 0.2356
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.1717,
+            "mean_ms": 0.08946,
+            "n": 20,
+            "p50_ms": 0.0829
+          },
+          "stop_to_speak": {
+            "max_ms": 0.1008,
+            "mean_ms": 0.044950000000000004,
+            "n": 20,
+            "p50_ms": 0.039799999999999995
+          },
+          "words_allocs": 197,
+          "words_ms": 0.2252,
+          "words_peak_mb": 5.003211975097656
+        },
+        "docs/reading.md": {
+          "apply_allocs": 6,
+          "apply_ms": 0.0612,
+          "apply_peak_mb": 5.229366302490234,
+          "autosave": {
+            "max_ms": 0.8709,
+            "mean_ms": 0.8025800000000001,
+            "n": 5,
+            "p50_ms": 0.858
+          },
+          "autosave_allocs": 716,
+          "autosave_peak_mb": 6.354306221008301,
+          "autosave_written": {
+            "max_ms": 3.4046,
+            "mean_ms": 3.10086,
+            "n": 5,
+            "p50_ms": 3.1350000000000002
+          },
+          "blank_lines_ms": 0.145,
+          "bytes": 46629,
+          "doc": {
+            "chars": 43247,
+            "lines": 627,
+            "markers": 979
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.0562,
+            "mean_ms": 0.028959999999999996,
+            "n": 10,
+            "p50_ms": 0.0285
+          },
+          "edit_enter_allocs": 357,
+          "edit_enter_ms": 1.5357,
+          "edit_enter_peak_mb": 6.15504264831543,
+          "edit_leave_allocs": 125,
+          "edit_leave_ms": 0.40059999999999996,
+          "edit_leave_peak_mb": 5.9395036697387695,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.0389,
+            "mean_ms": 0.02264,
+            "n": 10,
+            "p50_ms": 0.0231
+          },
+          "edit_type_allocs": 438,
+          "edit_type_dispatch": {
+            "max_ms": 0.0494,
+            "mean_ms": 0.028533333333333338,
+            "n": 18,
+            "p50_ms": 0.027200000000000002
+          },
+          "edit_type_peak_mb": 5.947465896606445,
+          "edit_type_to_echo": {
+            "max_ms": 0.2306,
+            "mean_ms": 0.04803333333333333,
+            "n": 18,
+            "p50_ms": 0.0388
+          },
+          "find_rare_allocs": 997,
+          "find_rare_ms": 0.3392,
+          "find_rare_next_ms": 0.0036,
+          "find_rare_peak_mb": 5.77143669128418,
+          "find_word_allocs": 262,
+          "find_word_ms": 0.3905,
+          "find_word_next_ms": 0.0138,
+          "find_word_peak_mb": 5.766854286193848,
+          "highlight_step": {
+            "max_ms": 0.0424,
+            "mean_ms": 0.001293620253164556,
+            "n": 1975,
+            "p50_ms": 0.0005
+          },
+          "load_allocs": 235,
+          "load_ms": 2.7098999999999998,
+          "load_peak_mb": 5.464622497558594,
+          "nav_idle_heading_allocs": 25237,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 1.9792999999999998,
+            "mean_ms": 0.9205799999999998,
+            "n": 20,
+            "p50_ms": 0.7706
+          },
+          "nav_idle_heading_peak_mb": 5.809454917907715,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 6.1074,
+            "mean_ms": 1.10873,
+            "n": 20,
+            "p50_ms": 0.7349
+          },
+          "nav_idle_paragraph_allocs": 641,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.311,
+            "mean_ms": 0.044884999999999994,
+            "n": 20,
+            "p50_ms": 0.0249
+          },
+          "nav_idle_paragraph_peak_mb": 5.66378116607666,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.14579999999999999,
+            "mean_ms": 0.04861,
+            "n": 20,
+            "p50_ms": 0.0435
+          },
+          "nav_idle_sentence_allocs": 903,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 0.16190000000000002,
+            "mean_ms": 0.046290000000000005,
+            "n": 20,
+            "p50_ms": 0.0376
+          },
+          "nav_idle_sentence_peak_mb": 5.660086631774902,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.09780000000000001,
+            "mean_ms": 0.024225,
+            "n": 20,
+            "p50_ms": 0.019700000000000002
+          },
+          "nav_idle_word_allocs": 1064,
+          "nav_idle_word_dispatch": {
+            "max_ms": 0.5733,
+            "mean_ms": 0.16199,
+            "n": 20,
+            "p50_ms": 0.1454
+          },
+          "nav_idle_word_peak_mb": 5.651542663574219,
+          "nav_idle_word_to_speech": {
+            "max_ms": 2.0412,
+            "mean_ms": 0.51017,
+            "n": 20,
+            "p50_ms": 0.18780000000000002
+          },
+          "nav_reading_heading_allocs": 25239,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 19.5182,
+            "mean_ms": 2.359635,
+            "n": 20,
+            "p50_ms": 1.0808
+          },
+          "nav_reading_heading_peak_mb": 5.768548011779785,
+          "nav_reading_heading_to_speech": {
+            "max_ms": 19.6309,
+            "mean_ms": 2.704305,
+            "n": 20,
+            "p50_ms": 1.1892999999999998
+          },
+          "nav_reading_paragraph_allocs": 41657,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 2.1902,
+            "mean_ms": 1.4244600000000003,
+            "n": 20,
+            "p50_ms": 1.2547000000000001
+          },
+          "nav_reading_paragraph_peak_mb": 5.827558517456055,
+          "nav_reading_paragraph_to_speech": {
+            "max_ms": 2.3584,
+            "mean_ms": 1.6443600000000003,
+            "n": 20,
+            "p50_ms": 1.5357
+          },
+          "nav_reading_sentence_allocs": 45432,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 2.7574,
+            "mean_ms": 1.7774499999999995,
+            "n": 20,
+            "p50_ms": 1.6399
+          },
+          "nav_reading_sentence_peak_mb": 5.8212432861328125,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 4.5466,
+            "mean_ms": 2.149475,
+            "n": 20,
+            "p50_ms": 1.9216000000000002
+          },
+          "nav_reading_word_allocs": 1061,
+          "nav_reading_word_dispatch": {
+            "max_ms": 1.4698,
+            "mean_ms": 0.18352,
+            "n": 20,
+            "p50_ms": 0.0829
+          },
+          "nav_reading_word_peak_mb": 5.714803695678711,
+          "nav_reading_word_to_speech": {
+            "max_ms": 1.5422,
+            "mean_ms": 0.219395,
+            "n": 20,
+            "p50_ms": 0.14100000000000001
+          },
+          "normalize_allocs": 36637,
+          "normalize_ms": 12.3222,
+          "normalize_peak_mb": 5.6531572341918945,
+          "normalize_pipeline_ms": 6.647,
+          "open_allocs": 4328,
+          "open_and_read_dispatch_ms": 6.4109,
+          "open_ms": 3.2098999999999998,
+          "open_peak_mb": 6.358036994934082,
+          "open_to_first_speech_ms": 11.4921,
+          "plan_all_allocs": 5185,
+          "plan_all_ms": 2.9475000000000002,
+          "plan_all_peak_mb": 5.361881256103516,
+          "replace_all_ms": 2.5985,
+          "replace_allocs": 2622,
+          "replace_count_ms": 1.6498000000000002,
+          "replace_first_ms": 1.2539,
+          "replace_peak_mb": 6.463377952575684,
+          "replace_skip_ms": 1.2126000000000001,
+          "save_dispatch": {
+            "max_ms": 0.039799999999999995,
+            "mean_ms": 0.01728,
+            "n": 5,
+            "p50_ms": 0.0121
+          },
+          "save_position": {
+            "max_ms": 0.02,
+            "mean_ms": 0.01788,
+            "n": 5,
+            "p50_ms": 0.0167
+          },
+          "save_written": {
+            "max_ms": 31.1995,
+            "mean_ms": 21.7358,
+            "n": 5,
+            "p50_ms": 19.2466
+          },
+          "sentences_allocs": 1571,
+          "sentences_ms": 1.6866999999999999,
+          "sentences_peak_mb": 5.26496696472168,
+          "shutdown_ms": 0.0378,
+          "stop_to_first_audio": {
+            "max_ms": 10.1317,
+            "mean_ms": 2.977925,
+            "n": 20,
+            "p50_ms": 1.7959
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.5302,
+            "mean_ms": 0.1842,
+            "n": 20,
+            "p50_ms": 0.1627
+          },
+          "stop_to_speak": {
+            "max_ms": 0.2072,
+            "mean_ms": 0.13127499999999998,
+            "n": 20,
+            "p50_ms": 0.1236
+          },
+          "words_allocs": 2979,
+          "words_ms": 3.0325,
+          "words_peak_mb": 5.271778106689453
+        },
+        "fixtures/sample.md": {
+          "apply_allocs": 4,
+          "apply_ms": 0.043699999999999996,
+          "apply_peak_mb": 0.012909889221191406,
+          "autosave": {
+            "max_ms": 0.1509,
+            "mean_ms": 0.11602000000000001,
+            "n": 5,
+            "p50_ms": 0.1067
+          },
+          "autosave_allocs": 319,
+          "autosave_peak_mb": 1.6028366088867188,
+          "autosave_written": {
+            "max_ms": 4.5623000000000005,
+            "mean_ms": 2.48782,
+            "n": 5,
+            "p50_ms": 1.9604000000000001
+          },
+          "blank_lines_ms": 0.0177,
+          "bytes": 877,
+          "doc": {
+            "chars": 671,
+            "lines": 38,
+            "markers": 44
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.1523,
+            "mean_ms": 0.03844,
+            "n": 10,
+            "p50_ms": 0.022699999999999998
+          },
+          "edit_enter_allocs": 152,
+          "edit_enter_ms": 1.0913,
+          "edit_enter_peak_mb": 1.5850143432617188,
+          "edit_leave_allocs": 107,
+          "edit_leave_ms": 0.32699999999999996,
+          "edit_leave_peak_mb": 1.5837297439575195,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.3146,
+            "mean_ms": 0.08802,
+            "n": 10,
+            "p50_ms": 0.07279999999999999
+          },
+          "edit_type_allocs": 316,
+          "edit_type_dispatch": {
+            "max_ms": 0.0954,
+            "mean_ms": 0.038000000000000006,
+            "n": 18,
+            "p50_ms": 0.028900000000000002
+          },
+          "edit_type_peak_mb": 1.574803352355957,
+          "edit_type_to_echo": {
+            "max_ms": 0.0376,
+            "mean_ms": 0.00853888888888889,
+            "n": 18,
+            "p50_ms": 0.0049
+          },
+          "find_rare_allocs": 990,
+          "find_rare_ms": 0.3123,
+          "find_rare_next_ms": 0.0085,
+          "find_rare_peak_mb": 1.5751886367797852,
+          "find_word_allocs": 246,
+          "find_word_ms": 0.2127,
+          "find_word_next_ms": 0.027200000000000002,
+          "find_word_peak_mb": 1.5636978149414062,
+          "highlight_step": {
+            "max_ms": 0.5223,
+            "mean_ms": 0.016893877551020408,
+            "n": 49,
+            "p50_ms": 0.0022
+          },
+          "load_allocs": 87,
+          "load_ms": 1.2899999999999998,
+          "load_peak_mb": 0.0270233154296875,
+          "nav_idle_heading_allocs": 266,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 0.1617,
+            "mean_ms": 0.08070000000000001,
+            "n": 3,
+            "p50_ms": 0.060000000000000005
+          },
+          "nav_idle_heading_peak_mb": 1.5308656692504883,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 0.0704,
+            "mean_ms": 0.06795000000000001,
+            "n": 2,
+            "p50_ms": 0.0704
+          },
+          "nav_idle_paragraph_allocs": 612,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.322,
+            "mean_ms": 0.04849500000000001,
+            "n": 20,
+            "p50_ms": 0.0305
+          },
+          "nav_idle_paragraph_peak_mb": 1.5302343368530273,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.3998,
+            "mean_ms": 0.124515,
+            "n": 20,
+            "p50_ms": 0.0842
+          },
+          "nav_idle_sentence_allocs": 661,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 0.17980000000000002,
+            "mean_ms": 0.06276499999999999,
+            "n": 20,
+            "p50_ms": 0.0507
+          },
+          "nav_idle_sentence_peak_mb": 1.5244874954223633,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.2873,
+            "mean_ms": 0.13457000000000002,
+            "n": 20,
+            "p50_ms": 0.0974
+          },
+          "nav_idle_word_allocs": 371,
+          "nav_idle_word_dispatch": {
+            "max_ms": 0.1874,
+            "mean_ms": 0.04851500000000001,
+            "n": 20,
+            "p50_ms": 0.0336
+          },
+          "nav_idle_word_peak_mb": 1.518925666809082,
+          "nav_idle_word_to_speech": {
+            "max_ms": 0.2082,
+            "mean_ms": 0.07658999999999999,
+            "n": 20,
+            "p50_ms": 0.055600000000000004
+          },
+          "nav_reading_heading_allocs": 268,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 0.1769,
+            "mean_ms": 0.08860000000000001,
+            "n": 3,
+            "p50_ms": 0.0702
+          },
+          "nav_reading_heading_peak_mb": 1.5446033477783203,
+          "nav_reading_heading_to_speech": {
+            "max_ms": 0.2712,
+            "mean_ms": 0.2003,
+            "n": 2,
+            "p50_ms": 0.2712
+          },
+          "nav_reading_paragraph_allocs": 636,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 0.2535,
+            "mean_ms": 0.12789999999999999,
+            "n": 7,
+            "p50_ms": 0.1395
+          },
+          "nav_reading_paragraph_peak_mb": 1.540766716003418,
+          "nav_reading_paragraph_to_speech": {
+            "max_ms": 0.2964,
+            "mean_ms": 0.19938333333333333,
+            "n": 6,
+            "p50_ms": 0.23240000000000002
+          },
+          "nav_reading_sentence_allocs": 1482,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 0.9903,
+            "mean_ms": 0.2598307692307692,
+            "n": 13,
+            "p50_ms": 0.2064
+          },
+          "nav_reading_sentence_peak_mb": 1.5380687713623047,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 0.882,
+            "mean_ms": 0.2603166666666667,
+            "n": 12,
+            "p50_ms": 0.18689999999999998
+          },
+          "nav_reading_word_allocs": 370,
+          "nav_reading_word_dispatch": {
+            "max_ms": 0.1426,
+            "mean_ms": 0.039749999999999994,
+            "n": 20,
+            "p50_ms": 0.032
+          },
+          "nav_reading_word_peak_mb": 1.5336265563964844,
+          "nav_reading_word_to_speech": {
+            "max_ms": 0.18560000000000001,
+            "mean_ms": 0.058399999999999994,
+            "n": 20,
+            "p50_ms": 0.045599999999999995
+          },
+          "normalize_allocs": 1970,
+          "normalize_ms": 0.6435,
+          "normalize_peak_mb": 0.4253816604614258,
+          "normalize_pipeline_ms": 8.908,
+          "open_allocs": 529,
+          "open_and_read_dispatch_ms": 2.0584000000000002,
+          "open_ms": 1.722,
+          "open_peak_mb": 2.130176544189453,
+          "open_to_first_speech_ms": 13.0084,
+          "plan_all_allocs": 376,
+          "plan_all_ms": 0.42319999999999997,
+          "plan_all_peak_mb": 0.020257949829101562,
+          "replace_all_ms": 0.11019999999999999,
+          "replace_allocs": 325,
+          "replace_count_ms": 0.0746,
+          "replace_first_ms": 0.1007,
+          "replace_peak_mb": 1.5892791748046875,
+          "replace_skip_ms": 0.08610000000000001,
+          "save_dispatch": {
+            "max_ms": 0.0211,
+            "mean_ms": 0.014660000000000001,
+            "n": 5,
+            "p50_ms": 0.014
+          },
+          "save_position": {
+            "max_ms": 0.25980000000000003,
+            "mean_ms": 0.0658,
+            "n": 5,
+            "p50_ms": 0.0176
+          },
+          "save_written": {
+            "max_ms": 74.3851,
+            "mean_ms": 28.16282,
+            "n": 5,
+            "p50_ms": 16.718
+          },
+          "sentences_allocs": 97,
+          "sentences_ms": 0.2438,
+          "sentences_peak_mb": 0.017144203186035156,
+          "shutdown_ms": 0.0313,
+          "stop_to_first_audio": {
+            "max_ms": 1.7947,
+            "mean_ms": 0.45461,
+            "n": 20,
+            "p50_ms": 0.3654
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.30650000000000005,
+            "mean_ms": 0.153105,
+            "n": 20,
+            "p50_ms": 0.13190000000000002
+          },
+          "stop_to_speak": {
+            "max_ms": 2.0132000000000003,
+            "mean_ms": 0.5149750000000001,
+            "n": 20,
+            "p50_ms": 0.3028
+          },
+          "words_allocs": 105,
+          "words_ms": 0.4453,
+          "words_peak_mb": 0.01892566680908203
+        },
+        "list-50k-lines.md": {
+          "apply_allocs": 6,
+          "apply_ms": 2.1917999999999997,
+          "apply_peak_mb": 28.943507194519043,
+          "autosave": {
+            "max_ms": 0.12769999999999998,
+            "mean_ms": 0.041159999999999995,
+            "n": 5,
+            "p50_ms": 0.0201
+          },
+          "autosave_allocs": 190,
+          "autosave_peak_mb": 109.76364803314209,
+          "autosave_written": {
+            "max_ms": 23.938399999999998,
+            "mean_ms": 23.397340000000003,
+            "n": 5,
+            "p50_ms": 23.7043
+          },
+          "blank_lines_ms": 16.1692,
+          "bytes": 5962260,
+          "doc": {
+            "chars": 5201686,
+            "lines": 50002,
+            "markers": 100887
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.0219,
+            "mean_ms": 0.01084,
+            "n": 10,
+            "p50_ms": 0.0095
+          },
+          "edit_enter_allocs": 6733,
+          "edit_enter_ms": 26.0318,
+          "edit_enter_peak_mb": 50.97207546234131,
+          "edit_leave_allocs": 118,
+          "edit_leave_ms": 16.9158,
+          "edit_leave_peak_mb": 50.51574516296387,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.0393,
+            "mean_ms": 0.021990000000000003,
+            "n": 10,
+            "p50_ms": 0.019700000000000002
+          },
+          "edit_type_allocs": 407,
+          "edit_type_dispatch": {
+            "max_ms": 1.9837000000000002,
+            "mean_ms": 0.12080555555555555,
+            "n": 18,
+            "p50_ms": 0.0103
+          },
+          "edit_type_peak_mb": 44.05242347717285,
+          "edit_type_to_echo": {
+            "max_ms": 0.0351,
+            "mean_ms": 0.009805555555555555,
+            "n": 18,
+            "p50_ms": 0.0098
+          },
+          "find_rare_allocs": 1007,
+          "find_rare_ms": 3.1221,
+          "find_rare_next_ms": 0.011,
+          "find_rare_peak_mb": 34.05268669128418,
+          "find_word_allocs": 274,
+          "find_word_ms": 5.7297,
+          "find_word_next_ms": 0.0192,
+          "find_word_peak_mb": 34.13920211791992,
+          "highlight_step": {
+            "max_ms": 11.365200000000002,
+            "mean_ms": 0.0354225,
+            "n": 2000,
+            "p50_ms": 0.0005
+          },
+          "load_allocs": 22891,
+          "load_ms": 266.4876,
+          "load_peak_mb": 65.54071521759033,
+          "nav_idle_heading_allocs": 514,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 0.0514,
+            "mean_ms": 0.010100000000000001,
+            "n": 20,
+            "p50_ms": 0.0073
+          },
+          "nav_idle_heading_peak_mb": 31.925654411315918,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 0.0375,
+            "mean_ms": 0.005945000000000001,
+            "n": 20,
+            "p50_ms": 0.0040999999999999995
+          },
+          "nav_idle_paragraph_allocs": 575,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.022,
+            "mean_ms": 0.013615000000000002,
+            "n": 20,
+            "p50_ms": 0.011399999999999999
+          },
+          "nav_idle_paragraph_peak_mb": 31.923941612243652,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.048600000000000004,
+            "mean_ms": 0.02532,
+            "n": 20,
+            "p50_ms": 0.0203
+          },
+          "nav_idle_sentence_allocs": 2131,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 0.9541999999999999,
+            "mean_ms": 0.44632000000000005,
+            "n": 20,
+            "p50_ms": 0.3937
+          },
+          "nav_idle_sentence_peak_mb": 31.97722339630127,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.2334,
+            "mean_ms": 0.05752499999999999,
+            "n": 20,
+            "p50_ms": 0.0483
+          },
+          "nav_idle_word_allocs": 511,
+          "nav_idle_word_dispatch": {
+            "max_ms": 0.3806,
+            "mean_ms": 0.039169999999999996,
+            "n": 20,
+            "p50_ms": 0.019700000000000002
+          },
+          "nav_idle_word_peak_mb": 31.909388542175293,
+          "nav_idle_word_to_speech": {
+            "max_ms": 0.4063,
+            "mean_ms": 0.05677000000000001,
+            "n": 20,
+            "p50_ms": 0.031
+          },
+          "nav_reading_heading_allocs": 41,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 0.045899999999999996,
+            "mean_ms": 0.045899999999999996,
+            "n": 1,
+            "p50_ms": 0.045899999999999996
+          },
+          "nav_reading_heading_peak_mb": 32.011467933654785,
+          "nav_reading_paragraph_allocs": 46,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 0.0468,
+            "mean_ms": 0.0468,
+            "n": 1,
+            "p50_ms": 0.0468
+          },
+          "nav_reading_paragraph_peak_mb": 32.010666847229004,
+          "nav_reading_sentence_allocs": 40461,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 7.5095,
+            "mean_ms": 3.695825,
+            "n": 20,
+            "p50_ms": 3.4997000000000003
+          },
+          "nav_reading_sentence_peak_mb": 32.12405490875244,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 7.4599,
+            "mean_ms": 3.901325,
+            "n": 20,
+            "p50_ms": 3.6602
+          },
+          "nav_reading_word_allocs": 519,
+          "nav_reading_word_dispatch": {
+            "max_ms": 0.25589999999999996,
+            "mean_ms": 0.04042,
+            "n": 20,
+            "p50_ms": 0.0202
+          },
+          "nav_reading_word_peak_mb": 31.99595832824707,
+          "nav_reading_word_to_speech": {
+            "max_ms": 0.27,
+            "mean_ms": 0.05950999999999999,
+            "n": 20,
+            "p50_ms": 0.0336
+          },
+          "normalize_allocs": 154701,
+          "normalize_ms": 53.9433,
+          "normalize_peak_mb": 22.810490608215332,
+          "normalize_pipeline_ms": 7.8588000000000005,
+          "open_allocs": 30229,
+          "open_and_read_dispatch_ms": 218.3775,
+          "open_ms": 200.1172,
+          "open_peak_mb": 65.93624877929688,
+          "open_to_first_speech_ms": 218.6565,
+          "plan_all_allocs": 266994,
+          "plan_all_ms": 395.0119,
+          "plan_all_peak_mb": 39.74856662750244,
+          "replace_all_ms": 162.30010000000001,
+          "replace_allocs": 58167,
+          "replace_count_ms": 105.7527,
+          "replace_first_ms": 170.683,
+          "replace_peak_mb": 65.30568885803223,
+          "replace_skip_ms": 137.15550000000002,
+          "save_dispatch": {
+            "max_ms": 0.0237,
+            "mean_ms": 0.01604,
+            "n": 5,
+            "p50_ms": 0.0159
+          },
+          "save_position": {
+            "max_ms": 0.0121,
+            "mean_ms": 0.01002,
+            "n": 5,
+            "p50_ms": 0.009000000000000001
+          },
+          "save_written": {
+            "max_ms": 57.4671,
+            "mean_ms": 56.28634000000001,
+            "n": 5,
+            "p50_ms": 57.1104
+          },
+          "sentences_allocs": 46405,
+          "sentences_ms": 272.40180000000004,
+          "sentences_peak_mb": 22.47275733947754,
+          "shutdown_ms": 0.0426,
+          "stop_to_first_audio": {
+            "max_ms": 16.2241,
+            "mean_ms": 4.745970000000002,
+            "n": 20,
+            "p50_ms": 3.9921
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.504,
+            "mean_ms": 0.27466999999999997,
+            "n": 20,
+            "p50_ms": 0.2495
+          },
+          "stop_to_speak": {
+            "max_ms": 0.32699999999999996,
+            "mean_ms": 0.23855999999999997,
+            "n": 20,
+            "p50_ms": 0.2248
+          },
+          "words_allocs": 416434,
+          "words_ms": 467.8343,
+          "words_peak_mb": 22.405604362487793
+        },
+        "md-1mb.md": {
+          "apply_allocs": 6,
+          "apply_ms": 0.8863,
+          "apply_peak_mb": 8.611562728881836,
+          "autosave": {
+            "max_ms": 1.1926,
+            "mean_ms": 0.37385999999999997,
+            "n": 5,
+            "p50_ms": 0.1396
+          },
+          "autosave_allocs": 217,
+          "autosave_peak_mb": 20.47977066040039,
+          "autosave_written": {
+            "max_ms": 24.2712,
+            "mean_ms": 10.2229,
+            "n": 5,
+            "p50_ms": 6.6819999999999995
+          },
+          "blank_lines_ms": 2.2831,
+          "bytes": 1049749,
+          "doc": {
+            "chars": 918276,
+            "lines": 7326,
+            "markers": 15659
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.026699999999999998,
+            "mean_ms": 0.012939999999999998,
+            "n": 10,
+            "p50_ms": 0.0117
+          },
+          "edit_enter_allocs": 1404,
+          "edit_enter_ms": 4.1166,
+          "edit_enter_peak_mb": 12.487089157104492,
+          "edit_leave_allocs": 143,
+          "edit_leave_ms": 4.0787,
+          "edit_leave_peak_mb": 12.573657989501953,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.0628,
+            "mean_ms": 0.028559999999999995,
+            "n": 10,
+            "p50_ms": 0.0248
+          },
+          "edit_type_allocs": 482,
+          "edit_type_dispatch": {
+            "max_ms": 1.3140999999999998,
+            "mean_ms": 0.13653888888888888,
+            "n": 18,
+            "p50_ms": 0.032499999999999994
+          },
+          "edit_type_peak_mb": 11.420015335083008,
+          "edit_type_to_echo": {
+            "max_ms": 1.4511999999999998,
+            "mean_ms": 0.11964999999999998,
+            "n": 18,
+            "p50_ms": 0.0294
+          },
+          "find_rare_allocs": 1001,
+          "find_rare_ms": 1.4135,
+          "find_rare_next_ms": 0.0066,
+          "find_rare_peak_mb": 10.299394607543945,
+          "find_word_allocs": 268,
+          "find_word_ms": 1.8748,
+          "find_word_next_ms": 0.0299,
+          "find_word_peak_mb": 10.307280540466309,
+          "highlight_step": {
+            "max_ms": 0.3553,
+            "mean_ms": 0.0016559123343526997,
+            "n": 1962,
+            "p50_ms": 0.00039999999999999996
+          },
+          "load_allocs": 6629,
+          "load_ms": 30.8183,
+          "load_peak_mb": 11.817421913146973,
+          "nav_idle_heading_allocs": 56856,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 4.9514,
+            "mean_ms": 2.4170850000000006,
+            "n": 20,
+            "p50_ms": 2.1608
+          },
+          "nav_idle_heading_peak_mb": 9.375316619873047,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 5.160900000000001,
+            "mean_ms": 2.5780900000000004,
+            "n": 20,
+            "p50_ms": 2.2973
+          },
+          "nav_idle_paragraph_allocs": 689,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.183,
+            "mean_ms": 0.061735000000000005,
+            "n": 20,
+            "p50_ms": 0.0497
+          },
+          "nav_idle_paragraph_peak_mb": 9.235170364379883,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.2963,
+            "mean_ms": 0.07599500000000001,
+            "n": 20,
+            "p50_ms": 0.0517
+          },
+          "nav_idle_sentence_allocs": 937,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 0.1714,
+            "mean_ms": 0.058440000000000006,
+            "n": 20,
+            "p50_ms": 0.0434
+          },
+          "nav_idle_sentence_peak_mb": 9.229131698608398,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 0.7900999999999999,
+            "mean_ms": 0.17384999999999998,
+            "n": 20,
+            "p50_ms": 0.1002
+          },
+          "nav_idle_word_allocs": 585,
+          "nav_idle_word_dispatch": {
+            "max_ms": 0.5588000000000001,
+            "mean_ms": 0.11930999999999999,
+            "n": 20,
+            "p50_ms": 0.0726
+          },
+          "nav_idle_word_peak_mb": 9.220505714416504,
+          "nav_idle_word_to_speech": {
+            "max_ms": 0.7038,
+            "mean_ms": 0.10735999999999998,
+            "n": 20,
+            "p50_ms": 0.0539
+          },
+          "nav_reading_heading_allocs": 56858,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 3.6496,
+            "mean_ms": 2.1284549999999998,
+            "n": 20,
+            "p50_ms": 1.9569
+          },
+          "nav_reading_heading_peak_mb": 9.392667770385742,
+          "nav_reading_heading_to_speech": {
+            "max_ms": 3.1419,
+            "mean_ms": 2.237955,
+            "n": 20,
+            "p50_ms": 2.1204
+          },
+          "nav_reading_paragraph_allocs": 60039,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 2.9232,
+            "mean_ms": 2.04347,
+            "n": 20,
+            "p50_ms": 1.96
+          },
+          "nav_reading_paragraph_peak_mb": 9.47875690460205,
+          "nav_reading_paragraph_to_speech": {
+            "max_ms": 3.124,
+            "mean_ms": 2.205265,
+            "n": 20,
+            "p50_ms": 2.11
+          },
+          "nav_reading_sentence_allocs": 60424,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 3.6001000000000003,
+            "mean_ms": 2.008215,
+            "n": 20,
+            "p50_ms": 2.0574
+          },
+          "nav_reading_sentence_peak_mb": 9.475786209106445,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 3.8995,
+            "mean_ms": 2.37569,
+            "n": 20,
+            "p50_ms": 2.3487999999999998
+          },
+          "nav_reading_word_allocs": 584,
+          "nav_reading_word_dispatch": {
+            "max_ms": 1.053,
+            "mean_ms": 0.14579499999999998,
+            "n": 20,
+            "p50_ms": 0.0559
+          },
+          "nav_reading_word_peak_mb": 9.333637237548828,
+          "nav_reading_word_to_speech": {
+            "max_ms": 0.9717,
+            "mean_ms": 0.12919,
+            "n": 20,
+            "p50_ms": 0.0507
+          },
+          "normalize_allocs": 133914,
+          "normalize_ms": 33.5448,
+          "normalize_peak_mb": 8.339338302612305,
+          "normalize_pipeline_ms": 5.8075,
+          "open_allocs": 10539,
+          "open_and_read_dispatch_ms": 86.331,
+          "open_ms": 81.09779999999999,
+          "open_peak_mb": 12.212923049926758,
+          "open_to_first_speech_ms": 86.882,
+          "plan_all_allocs": 83192,
+          "plan_all_ms": 86.2696,
+          "plan_all_peak_mb": 11.512205123901367,
+          "replace_all_ms": 45.363800000000005,
+          "replace_allocs": 11781,
+          "replace_count_ms": 17.6501,
+          "replace_first_ms": 27.0984,
+          "replace_peak_mb": 16.421441078186035,
+          "replace_skip_ms": 25.1702,
+          "save_dispatch": {
+            "max_ms": 0.0307,
+            "mean_ms": 0.01796,
+            "n": 5,
+            "p50_ms": 0.0147
+          },
+          "save_position": {
+            "max_ms": 0.0269,
+            "mean_ms": 0.02208,
+            "n": 5,
+            "p50_ms": 0.0205
+          },
+          "save_written": {
+            "max_ms": 92.9243,
+            "mean_ms": 45.350319999999996,
+            "n": 5,
+            "p50_ms": 36.2144
+          },
+          "sentences_allocs": 21532,
+          "sentences_ms": 48.721599999999995,
+          "sentences_peak_mb": 7.994959831237793,
+          "shutdown_ms": 0.16699999999999998,
+          "stop_to_first_audio": {
+            "max_ms": 3.2880000000000003,
+            "mean_ms": 2.18347,
+            "n": 20,
+            "p50_ms": 2.0999
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.3879,
+            "mean_ms": 0.17018499999999998,
+            "n": 20,
+            "p50_ms": 0.159
+          },
+          "stop_to_speak": {
+            "max_ms": 4.3042,
+            "mean_ms": 1.968975,
+            "n": 20,
+            "p50_ms": 1.9404
+          },
+          "words_allocs": 37199,
+          "words_ms": 63.88290000000001,
+          "words_peak_mb": 7.954950332641602
+        },
+        "one-line-1mb.txt": {
+          "apply_allocs": 5,
+          "apply_ms": 0.0163,
+          "apply_peak_mb": 6.231512069702148,
+          "autosave": {
+            "max_ms": 0.9344,
+            "mean_ms": 0.21023999999999998,
+            "n": 5,
+            "p50_ms": 0.0295
+          },
+          "autosave_allocs": 291,
+          "autosave_peak_mb": 14.911925315856934,
+          "autosave_written": {
+            "max_ms": 10.4782,
+            "mean_ms": 6.61306,
+            "n": 5,
+            "p50_ms": 5.7645
+          },
+          "blank_lines_ms": 0.0376,
+          "bytes": 1048695,
+          "doc": {
+            "chars": 1036704,
+            "lines": 1,
+            "markers": 0
+          },
+          "edit_backspace_dispatch": {
+            "max_ms": 0.0524,
+            "mean_ms": 0.017820000000000003,
+            "n": 10,
+            "p50_ms": 0.012700000000000001
+          },
+          "edit_enter_allocs": 1245,
+          "edit_enter_ms": 13.8745,
+          "edit_enter_peak_mb": 9.824379920959473,
+          "edit_leave_allocs": 161,
+          "edit_leave_ms": 4.3738,
+          "edit_leave_peak_mb": 10.97407341003418,
+          "edit_line_down_dispatch": {
+            "max_ms": 0.022500000000000003,
+            "mean_ms": 0.00741,
+            "n": 10,
+            "p50_ms": 0.0048
+          },
+          "edit_type_allocs": 817,
+          "edit_type_dispatch": {
+            "max_ms": 23.593200000000003,
+            "mean_ms": 6.397788888888889,
+            "n": 18,
+            "p50_ms": 5.3606
+          },
+          "edit_type_peak_mb": 12.773375511169434,
+          "edit_type_to_echo": {
+            "max_ms": 23.610699999999998,
+            "mean_ms": 6.772627777777777,
+            "n": 18,
+            "p50_ms": 5.7515
+          },
+          "find_rare_allocs": 1002,
+          "find_rare_ms": 1.5539,
+          "find_rare_next_ms": 0.0582,
+          "find_rare_peak_mb": 8.745809555053711,
+          "find_word_allocs": 293,
+          "find_word_ms": 9.7507,
+          "find_word_next_ms": 19.6932,
+          "find_word_peak_mb": 12.729130744934082,
+          "highlight_step": {
+            "max_ms": 5.8631,
+            "mean_ms": 0.020249950000000013,
+            "n": 2000,
+            "p50_ms": 0.0005
+          },
+          "load_allocs": 1181,
+          "load_ms": 4.7495,
+          "load_peak_mb": 8.227494239807129,
+          "nav_idle_heading_allocs": 1014,
+          "nav_idle_heading_dispatch": {
+            "max_ms": 0.1582,
+            "mean_ms": 0.077335,
+            "n": 20,
+            "p50_ms": 0.0664
+          },
+          "nav_idle_heading_peak_mb": 6.759361267089844,
+          "nav_idle_heading_to_speech": {
+            "max_ms": 0.13119999999999998,
+            "mean_ms": 0.01981,
+            "n": 20,
+            "p50_ms": 0.0121
+          },
+          "nav_idle_paragraph_allocs": 1075,
+          "nav_idle_paragraph_dispatch": {
+            "max_ms": 0.2677,
+            "mean_ms": 0.09759500000000002,
+            "n": 20,
+            "p50_ms": 0.0824
+          },
+          "nav_idle_paragraph_peak_mb": 6.757630348205566,
+          "nav_idle_paragraph_to_speech": {
+            "max_ms": 0.2834,
+            "mean_ms": 0.120285,
+            "n": 20,
+            "p50_ms": 0.0997
+          },
+          "nav_idle_sentence_allocs": 2126,
+          "nav_idle_sentence_dispatch": {
+            "max_ms": 2.2963,
+            "mean_ms": 0.450615,
+            "n": 20,
+            "p50_ms": 0.3209
+          },
+          "nav_idle_sentence_peak_mb": 6.764697074890137,
+          "nav_idle_sentence_to_speech": {
+            "max_ms": 7.3286999999999995,
+            "mean_ms": 0.8808999999999999,
+            "n": 20,
+            "p50_ms": 0.383
+          },
+          "nav_idle_word_allocs": 1108,
+          "nav_idle_word_dispatch": {
+            "max_ms": 17.1814,
+            "mean_ms": 2.89049,
+            "n": 20,
+            "p50_ms": 1.8684
+          },
+          "nav_idle_word_peak_mb": 8.645886421203613,
+          "nav_idle_word_to_speech": {
+            "max_ms": 17.2424,
+            "mean_ms": 3.00706,
+            "n": 20,
+            "p50_ms": 2.0052999999999996
+          },
+          "nav_reading_heading_allocs": 66,
+          "nav_reading_heading_dispatch": {
+            "max_ms": 0.12000000000000001,
+            "mean_ms": 0.12000000000000001,
+            "n": 1,
+            "p50_ms": 0.12000000000000001
+          },
+          "nav_reading_heading_peak_mb": 6.847960472106934,
+          "nav_reading_paragraph_allocs": 71,
+          "nav_reading_paragraph_dispatch": {
+            "max_ms": 0.127,
+            "mean_ms": 0.127,
+            "n": 1,
+            "p50_ms": 0.127
+          },
+          "nav_reading_paragraph_peak_mb": 6.847112655639648,
+          "nav_reading_sentence_allocs": 39291,
+          "nav_reading_sentence_dispatch": {
+            "max_ms": 6.170400000000001,
+            "mean_ms": 2.928695,
+            "n": 20,
+            "p50_ms": 2.6223
+          },
+          "nav_reading_sentence_peak_mb": 6.933199882507324,
+          "nav_reading_sentence_to_speech": {
+            "max_ms": 6.1491999999999996,
+            "mean_ms": 3.3181000000000003,
+            "n": 20,
+            "p50_ms": 3.0117
+          },
+          "nav_reading_word_allocs": 1107,
+          "nav_reading_word_dispatch": {
+            "max_ms": 12.0316,
+            "mean_ms": 2.7746,
+            "n": 20,
+            "p50_ms": 1.9570999999999998
+          },
+          "nav_reading_word_peak_mb": 8.738347053527832,
+          "nav_reading_word_to_speech": {
+            "max_ms": 11.9764,
+            "mean_ms": 2.879865,
+            "n": 20,
+            "p50_ms": 2.34
+          },
+          "normalize_allocs": 172454,
+          "normalize_ms": 49.619099999999996,
+          "normalize_peak_mb": 7.0324602127075195,
+          "normalize_pipeline_ms": 7.9888,
+          "open_allocs": 2960,
+          "open_and_read_dispatch_ms": 8.914200000000001,
+          "open_ms": 6.9796,
+          "open_peak_mb": 8.831338882446289,
+          "open_to_first_speech_ms": 16.5732,
+          "plan_all_allocs": 49285,
+          "plan_all_ms": 47.0893,
+          "plan_all_peak_mb": 9.898625373840332,
+          "replace_all_ms": 40.526199999999996,
+          "replace_allocs": 11785,
+          "replace_count_ms": 21.0247,
+          "replace_first_ms": 46.346,
+          "replace_peak_mb": 16.77700901031494,
+          "replace_skip_ms": 45.222100000000005,
+          "save_dispatch": {
+            "max_ms": 0.0353,
+            "mean_ms": 0.02546,
+            "n": 5,
+            "p50_ms": 0.0251
+          },
+          "save_position": {
+            "max_ms": 0.1462,
+            "mean_ms": 0.13068,
+            "n": 5,
+            "p50_ms": 0.12689999999999999
+          },
+          "save_written": {
+            "max_ms": 69.0249,
+            "mean_ms": 47.927980000000005,
+            "n": 5,
+            "p50_ms": 46.163000000000004
+          },
+          "sentences_allocs": 6732,
+          "sentences_ms": 33.2151,
+          "sentences_peak_mb": 6.677936553955078,
+          "shutdown_ms": 0.032499999999999994,
+          "stop_to_first_audio": {
+            "max_ms": 10.786,
+            "mean_ms": 3.68508,
+            "n": 20,
+            "p50_ms": 2.6332
+          },
+          "stop_to_first_audio_service": {
+            "max_ms": 0.2591,
+            "mean_ms": 0.228715,
+            "n": 20,
+            "p50_ms": 0.2265
+          },
+          "stop_to_speak": {
+            "max_ms": 3.9029999999999996,
+            "mean_ms": 2.1220049999999997,
+            "n": 20,
+            "p50_ms": 2.3600000000000003
+          },
+          "words_allocs": 12696,
+          "words_ms": 39.3394,
+          "words_peak_mb": 6.66782283782959
+        },
+        "pathological": {
+          "docx_load_ms": 168.9813,
+          "docx_total_ms": 402.64,
+          "eml_load_ms": 53.669399999999996,
+          "eml_total_ms": 217.6309,
+          "epub_load_ms": 165.71949999999998,
+          "epub_total_ms": 372.07210000000003,
+          "html_load_ms": 60.489000000000004,
+          "html_total_ms": 228.67399999999998,
+          "json_load_ms": 69.01400000000001,
+          "json_total_ms": 374.2783,
+          "latex_load_ms": 249.4226,
+          "latex_total_ms": 450.8494,
+          "markdown_load_ms": 32.165800000000004,
+          "markdown_total_ms": 239.22289999999998,
+          "mathml_load_ms": 69.5181,
+          "mathml_total_ms": 358.11949999999996,
+          "mhtml_load_ms": 62.90610000000001,
+          "mhtml_total_ms": 218.4865,
+          "notebook_load_ms": 68.3849,
+          "notebook_total_ms": 286.5293,
+          "odt_load_ms": 200.8547,
+          "odt_total_ms": 472.1049,
+          "pdf_load_ms": 553.4447,
+          "pdf_total_ms": 1021.7476999999999,
+          "rtf_load_ms": 78.9003,
+          "rtf_total_ms": 234.2449,
+          "sheet_load_ms": 46.807300000000005,
+          "sheet_total_ms": 608.1256999999999,
+          "svg_load_ms": 43.389900000000004,
+          "svg_total_ms": 438.828,
+          "text_load_ms": 7.5572,
+          "text_total_ms": 270.4067
+        },
+        "startup": {
+          "tw --version": {
+            "max_ms": 258.0974,
+            "median_ms": 147.18429999999998,
+            "min_ms": 140.77190000000002,
+            "n": 5
+          },
+          "tw backends": {
+            "max_ms": 493.2913,
+            "median_ms": 271.32030000000003,
+            "min_ms": 230.3876,
+            "n": 5
+          },
+          "tw info": {
+            "max_ms": 594.9226,
+            "median_ms": 450.0391,
+            "min_ms": 391.51890000000003,
+            "n": 5
+          },
+          "tw text": {
+            "max_ms": 345.49150000000003,
+            "median_ms": 262.866,
+            "min_ms": 233.5496,
+            "n": 5
+          }
+        },
+        "sync-id-100mb.pdf": {
+          "bytes": 104857600,
+          "identify_again_allocs": 32,
+          "identify_again_ms": 16.8589,
+          "identify_again_peak_mb": 5.127719879150391,
+          "identify_first_allocs": 49,
+          "identify_first_ms": 101.39819999999999,
+          "identify_first_peak_mb": 5.374794006347656,
+          "identify_mb_per_s": 986.2108005862037
+        }
+      }
+    }
+  },
+  "policy": {
+    "alloc_floor": 5000.0,
+    "max_growth": 0.25,
+    "max_improvement": 0.25,
+    "max_time_growth": 0.5,
+    "node_floor": 100.0,
+    "peak_floor_mb": 1.0,
+    "report_only": [
+      "startup",
+      "shutdown",
+      "save_",
+      "autosave",
+      "identify",
+      "pathological",
+      "README.md",
+      "docs/"
+    ],
+    "time_floor_ms": 5.0,
+    "time_growth_floor_ms": 2.0
+  }
+}

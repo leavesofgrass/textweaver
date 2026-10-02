@@ -3,8 +3,11 @@
 //! - `appimage [--docker]`: the Linux AppImage and tarball (see
 //!   `appimage.rs`).
 //! - `bench`: time the reading and authoring hot paths on generated Markdown
-//!   corpora and the fixtures (release build; see `bench.rs`), and compare
-//!   them with a baseline (`--baseline FILE --max-ratio R`).
+//!   corpora, the fixtures, and pathological inputs (release build; see
+//!   `bench.rs`), and compare them with the committed baseline
+//!   (`--baseline xtask/bench-baseline.json`, the two-way ratchet in
+//!   `ratchet.rs`) or an earlier report (`--baseline FILE --max-ratio R`);
+//!   `--update-baseline --reason TEXT` writes the baseline.
 //! - `deps [--check]`: the dependency direction between workspace crates
 //!   (see `deps.rs`).
 //! - `hosts`: build every speech-engine host for this platform and install
@@ -12,6 +15,9 @@
 //! - `dist`: build a release package for this platform (`--universal` on
 //!   macOS); see `docs/dev/releasing.md`.
 //! - `eci-host`, `sapi-host`: build one engine's hosts.
+//! - `frames [--seconds N] [--json PATH]`: the GUI frame-time probe, the
+//!   median and worst frame while the spoken word moves, with no window on
+//!   screen (see `frames.rs`).
 //! - `gui-dist`: the Xilem GUI's own package: a zip on Windows, a `.app`
 //!   on macOS, a tarball and an AppImage on Linux (see `gui_dist.rs`).
 //! - `listen [--engine ID] [--text FILE] [--out DIR]`: write sample WAV
@@ -41,12 +47,15 @@ mod deps;
 mod dist;
 mod docs_check;
 mod eci;
+mod frames;
 mod fuzz_seed;
 mod gui_dist;
 mod keyboard;
 mod listen;
 mod notices;
 mod parity;
+mod pathological;
+mod ratchet;
 mod regen;
 mod release;
 mod sapi;
@@ -68,6 +77,7 @@ fn main() -> anyhow::Result<()> {
         "docs" => docs_check::run(),
         "hosts" => eci::hosts(),
         "eci-host" => eci::run(),
+        "frames" => frames::run(),
         "fuzz-seed" => fuzz_seed::run(),
         "gui-dist" => gui_dist::run(),
         "keyboard" => keyboard::run(),
@@ -84,7 +94,7 @@ fn main() -> anyhow::Result<()> {
         "startup" => bench::startup(),
         _ => {
             eprintln!(
-                "usage: cargo xtask <appimage|bench|deps|dist|docs|fuzz-seed|gui-dist|hosts|eci-host|keyboard|listen|notices|parity|regen|release|sapi-host|settings-doc|soak|startup>"
+                "usage: cargo xtask <appimage|bench|deps|dist|docs|frames|fuzz-seed|gui-dist|hosts|eci-host|keyboard|listen|notices|parity|regen|release|sapi-host|settings-doc|soak|startup>"
             );
             std::process::exit(2);
         }
