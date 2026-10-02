@@ -1707,14 +1707,19 @@ mod inner {
                 }
                 Ok(Box::new(textweaver_piper::factory(config)))
             }
+            #[cfg(windows)]
             "sapi" => {
                 let mut config = textweaver_app::sapi_config(&Settings::default());
                 config.output = silent;
                 if !textweaver_sapi::probe(&config) {
-                    return Err("SAPI 5 is not available here (Windows only)".into());
+                    return Err(
+                        "SAPI 5 has no engine host here (cargo xtask sapi-host --release)".into(),
+                    );
                 }
                 Ok(textweaver_sapi::factory(config))
             }
+            #[cfg(not(windows))]
+            "sapi" => Err("SAPI 5 is Windows only".into()),
             other => Err(format!("{other}: only piper and sapi are timed here")),
         }
     }
