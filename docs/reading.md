@@ -26,6 +26,8 @@ tw open essay.md
 
 Press **Ctrl+O**. The bottom line becomes a prompt called "Open file". Type the path and press **Enter**. Quotes around the path are removed, so a path copied with quotes works. A relative path is read from the folder you started textweaver in. Press **Escape** to cancel.
 
+Rather not type it? Press **F4** in the prompt to choose the file in the [file browser](#from-the-file-browser-file-browse-files). See [Choose a path with F4](#choose-a-path-with-f4).
+
 ### From the library: Alt+L
 
 Press **Alt+L** to list the documents in your library folders and the files you opened recently. Use **Up** and **Down** to move, and **Enter** to open one. The GUI uses **Ctrl+Shift+B**. The [library guide](library.md) explains library folders.
@@ -587,6 +589,18 @@ These keys work in every prompt, including Find, Go to, and Open file:
 - **Ctrl+A** and **Home**: to the start. **Ctrl+E** and **End**: to the end.
 - **Ctrl+U**: delete to the start. **Ctrl+K**: delete to the end. **Ctrl+W**: delete the word before the caret.
 - **Escape** or **Ctrl+G**: cancel.
+
+### Choose a path with F4
+
+Every prompt that asks for a file has **F4**, the browse key: Open file, Save as, Image file (Insert image), Import references, Import settings, Export settings, and importing and exporting profiles. When the prompt opens you hear its name and the key, such as "Import settings from file. F4 to browse."
+
+1. Press **F4**. The file browser opens on the places, saying what it is for: "Choose the file: Import settings from file". It lists folders and only the files the prompt can use (settings files are TOML and JSON, images are PNG, JPEG, GIF, SVG, WebP and BMP, references are BibTeX, RIS and CSL-JSON).
+2. Move with the browser's usual keys, and press **Enter** on the file.
+3. The prompt comes back with the full path in it, and you hear "mine.toml chosen. Enter confirms." Press **Enter** to use it, or edit it first.
+
+For a file textweaver writes (Save as, and the exports), F4 chooses the folder instead: press **Ctrl+Enter** on the folder (or choose "Choose this folder"). The prompt comes back with the name you typed, or the name offered, in that folder.
+
+**Escape** in the browser goes back to the prompt as you left it, with what you had typed. Tab completes a path in each of these prompts too.
 
 ## Help: ? and F1
 
