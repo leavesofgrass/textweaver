@@ -58,7 +58,7 @@ How the build finds its tools (`tools/build-windows.ps1`, which changes nothing 
 
 - **Text exposure**: the RichEdit's TextPattern returns the whole document (671 units for `fixtures/sample.md`, 10,049,904 for a 10-million-character file), and its selection is the spoken word while reading: sampled every 400 ms, "This", "paragraph", "bold", "italic", "inline", "and", "link", "the". Moving the caret through TextPattern (as arrow keys or a click would) and then choosing "Read current word" made the app follow it ("caret sync: control 204 -> CharPos(204)"), and Play then read from there.
 - **Naming**: the Win32 convention (a static label just before the control) names the RichEdit in both UIA and MSAA. wxDragon's `set_accessibility_label` does the opposite of what it promises on Windows: it installs a `wxAccessible` on the control, which turns the MSAA role from "editable text" into "client", drops the read-only state and the value, and leaves the UIA name as "RichEdit Control". Do not use it on native controls on Windows; use labels (and on macOS, where it sets the native label, test separately).
-- **Announcements**: every announcement arrived as a UIA notification event from the hidden label, with the text intact ("Paused.", "Heading level 2: Lists", "Line 9 of 38, 30 percent. Under heading Lists.", "Stopped."). Polite announcements map to `live_region::Priority::Medium` (UIA `CurrentThenMostRecent`: after the current utterance, superseding staler ones), assertive ones to `High` (`ImportantMostRecent`, interrupts). NVDA speaks UIA notifications (Paperback relies on it); JAWS honours the same contract but is untested here.
+- **Announcements**: every announcement arrived as a UIA notification event from the hidden label, with the text intact ("Paused.", "Heading level 2: Lists", "Line 9 of 38, 30 percent. Under heading Lists.", "Stopped."). Polite announcements map to `live_region::Priority::Medium` (UIA `CurrentThenMostRecent`: after the current utterance, superseding staler ones), assertive ones to `High` (`ImportantMostRecent`, interrupts). NVDA speaks UIA notifications (Paperback relies on it); JAWS honors the same contract but is untested here.
 - **Keyboard** (one interactive run before the non-intrusive harness existed): Space paused, `.` and `,` moved by sentence and announced the sentence, Down arrow moved the native caret, `w` made the app follow the caret and say the word, Escape (a menu accelerator) stopped, Alt+. (a menu accelerator) moved on. Ctrl+Home, left to the control, did not visibly move the caret in that run; to be checked by hand.
 
 ### What NVDA would read (from the UIA and MSAA properties; to be verified by ear)
@@ -68,7 +68,7 @@ How the build finds its tools (`tools/build-windows.ps1`, which changes nothing 
 - Tab: "Play button, Alt+P" (or "Pause"), "Stop button, Alt+S".
 - Alt: the menu bar; items read with their shortcuts ("Next sentence Alt+period").
 - NVDA+End: the status bar ("Reading at 265 words per minute. Line 5, 22%").
-- Open questions for listening: whether NVDA reports the moving selection while textweaver reads (it normally reports selection changes only after its own commands; if it does, a later phase highlights with a background colour instead of the selection); how JAWS treats the notifications; that NVDA does not re-announce the document on window re-activation (Paperback fires a focus event itself for that).
+- Open questions for listening: whether NVDA reports the moving selection while textweaver reads (it normally reports selection changes only after its own commands; if it does, a later phase highlights with a background color instead of the selection); how JAWS treats the notifications; that NVDA does not re-announce the document on window re-activation (Paperback fires a focus event itself for that).
 
 ### Large documents
 
@@ -76,7 +76,7 @@ How the build finds its tools (`tools/build-windows.ps1`, which changes nothing 
 
 ### macOS and Linux
 
-On the macOS runner the GUI builds, passes clippy and its unit tests, and launches: it opened `fixtures/sample.md` (671 characters, 671 `NSTextView` units, loaded in 72 ms), announced "Opened Sample Markdown Document." and "Reading at 265 words per minute.", read with the silent backend, and closed itself. The Windows runner produced the same UI Automation report as the development machine (text exposed, caret following, 14 notifications, the window never activated). VoiceOver behaviour needs a real Mac. Linux (GTK) was not built; wxDragon supports it and the character-unit position mapping is in place.
+On the macOS runner the GUI builds, passes clippy and its unit tests, and launches: it opened `fixtures/sample.md` (671 characters, 671 `NSTextView` units, loaded in 72 ms), announced "Opened Sample Markdown Document." and "Reading at 265 words per minute.", read with the silent backend, and closed itself. The Windows runner produced the same UI Automation report as the development machine (text exposed, caret following, 14 notifications, the window never activated). VoiceOver behavior needs a real Mac. Linux (GTK) was not built; wxDragon supports it and the character-unit position mapping is in place.
 
 ## Decision
 
@@ -92,12 +92,12 @@ Adopt wxDragon with `live-region` for the GUI, with these rules:
 ## Plan
 
 1. **Promote the spike**: `textweaver-gui` as a workspace default member once CI caches the wxWidgets tree; the `textweaver-a11y/live-region` feature (plan amendment 2) holding the announcer now in `announce.rs`.
-2. **Window slicing** for large documents (Paperback's scheme): load at most about 500,000 units, extend forward while reading, recentre on jumps; keep TextPattern offsets stable during say-all.
+2. **Window slicing** for large documents (Paperback's scheme): load at most about 500,000 units, extend forward while reading, recenter on jumps; keep TextPattern offsets stable during say-all.
 3. **Contract changes below**: a quiet cursor command for caret sync, and GUI keymap defaults that leave caret keys native.
 4. **Main-thread engines** (ADR-0003 `REQUIRES_MAIN_THREAD`): drive a `ServiceCore` from the wx timer on the main thread, using `next_wakeup` for the interval, behind the same `SpeechService` API (a local variant with a `pump` method), so `App` does not change.
 5. **Dialogs**: find, go to, bookmarks, voices, and settings as native dialogs (wx's `wxTextEntryDialog`, `wxSingleChoiceDialog`, and custom dialogs with labelled controls); the spike already routes `Effect::Prompt` and `Effect::ShowList` to them. The first custom dialog, View, Fonts (added 2026-09-25: family list with the bundled fonts first, size, Bold, live preview; `font_dialog.rs`), showed that a modal dialog takes the foreground even when the main window was started with `--background`; automated runs therefore open a dialog's controls in their own window, minimized before it is first shown (`font_dialog::open_background`), and `tools/font-dialog-report.ps1` checks that the GUI never holds the foreground. wxDragon wraps neither `wxFontEnumerator` nor `ShowWithoutActivating`; installed families come from `textweaver-fonts`' scan of the font folders.
 6. **Edit mode** on the same control (not read-only) with the editor's echo events, once edit mode lands in `App`.
-7. **Highlight**: keep selection-as-highlight if NVDA and JAWS stay quiet about it, else a background-colour highlight (`TextAttr`) that leaves the caret alone.
+7. **Highlight**: keep selection-as-highlight if NVDA and JAWS stay quiet about it, else a background-color highlight (`TextAttr`) that leaves the caret alone.
 8. **Platforms**: macOS (VoiceOver on a real Mac; menu accelerators become Cmd; `NSTextView` positions are UTF-16) and Linux (GTK, Orca; character positions).
 9. **Release builds**: wxdragon features off by default as Paperback does (`default-features = false`) to cut build time and size; a release job with the cached wxWidgets tree.
 

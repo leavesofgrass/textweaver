@@ -42,7 +42,7 @@ Only the study features' messages are in the catalog so far. Moving the rest of 
 
 ## Consequences
 
-- Define word works with no network and no Python, from a 10 MB file, which packages carry in `lexicon/`. WordNet's notice and CMUdict's licence go with it (`THIRD-PARTY-NOTICES.md`, `licenses/lexicon/`).
+- Define word works with no network and no Python, from a 10 MB file, which packages carry in `lexicon/`. WordNet's notice and CMUdict's license go with it (`THIRD-PARTY-NOTICES.md`, `licenses/lexicon/`).
 - The data file is in git. Rebuilding it changes 10 MB of history; that should happen only for a new WordNet or CMUdict release.
 - A glossary edited while textweaver runs is read again on the next lookup.
 
@@ -54,5 +54,5 @@ Only the study features' messages are in the catalog so far. Moving the rest of 
 
 ## See also
 
-- `third_party/lexicon/README.md`: the sources, sums, and licences.
+- `third_party/lexicon/README.md`: the sources, sums, and licenses.
 - [Reading guide: define a word](../reading.md#define-a-word-ctrlshiftd-or-alte)

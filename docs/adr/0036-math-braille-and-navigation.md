@@ -66,7 +66,7 @@ Measured on Windows (x86_64-pc-windows-msvc), release profile, `cargo build --re
 
 ### Dependencies
 
-No new crate. The vendored MathCAT has the same dependencies as the crates.io package, so ADR-0029's dependency checks and its exceptions (yaml-rust's advisory, libbz2-rs-sys's licence) are unchanged. `cargo deny --all-features check` (cargo-deny 0.20.2): advisories ok, bans ok, licenses ok, sources ok.
+No new crate. The vendored MathCAT has the same dependencies as the crates.io package, so ADR-0029's dependency checks and its exceptions (yaml-rust's advisory, libbz2-rs-sys's license) are unchanged. `cargo deny --all-features check` (cargo-deny 0.20.2): advisories ok, bans ok, licenses ok, sources ok.
 
 ## Consequences
 

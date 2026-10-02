@@ -26,7 +26,7 @@ A new crate, `textweaver-ocr`, holds the engines. `textweaver-formats` uses it b
   - When nothing can run, the document says what is missing and how to get it, for example: "The English text recognition models (12.2 MB, CC BY-SA 4.0) are not downloaded. To download them, run tw ocr download, or answer yes when textweaver offers them."
 - **Which pages.** Only pages with no text and at least one image are recognized; empty pages are not. A PDF with a partial text layer keeps it, and only the other pages are recognized.
 - **The page image.**
-  - A scanned page is usually one image and nothing else. That image is taken as it is, without rendering the page: a hayro interpreter "device" watches what the page draws, and hayro decodes the image, whatever its filter (JPEG, JPEG 2000, JBIG2, CCITT fax, Flate) and colour space. This takes 5 ms against 80 to 150 ms to render a page at 200 dots per inch.
+  - A scanned page is usually one image and nothing else. That image is taken as it is, without rendering the page: a hayro interpreter "device" watches what the page draws, and hayro decodes the image, whatever its filter (JPEG, JPEG 2000, JBIG2, CCITT fax, Flate) and color space. This takes 5 ms against 80 to 150 ms to render a page at 200 dots per inch.
   - A page with more than one image, with drawings, or with a turned image is rendered with hayro 0.7.1 instead.
   - This departs from the research, which suggested lopdf for the extraction. lopdf does not decode CCITT or JBIG2, the filters office scanners use most, while hayro's interpreter decodes them all.
 - **Layout.**
@@ -52,7 +52,7 @@ PaddlePaddle's official ONNX export of `latin_PP-OCRv5_mobile_rec` (8.0 MB, Apac
 
 Release build on the development machine (Windows 11), on the pages in `fixtures/w3d` (made by `make_scans.py`, with a slight tilt, paper noise, and blur). Error rates are word and character edit distances over the truth (lower is better). They were measured with `cargo run --release -p textweaver-ocr --example ocr_eval`.
 
-- **`scan-en.pdf`**, two pages at 200 dots per inch: a greyscale JPEG page, and a 1-bit CCITT G4 page.
+- **`scan-en.pdf`**, two pages at 200 dots per inch: a grayscale JPEG page, and a 1-bit CCITT G4 page.
   - ocrs: 9.6% words, 1.7% characters, 1.3 s for both pages. The errors are commas read as full stops, and a few `?` for `i`.
   - Tesseract 5.5: no errors, 1.6 s.
   - Paddle: 8.5% words, 1.9% characters, 2.5 s.

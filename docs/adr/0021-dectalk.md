@@ -7,9 +7,9 @@
 
 ## Context
 
-DECtalk is the formant synthesizer many blind users grew up with ("Perfect Paul"). Star supported it two ways (`star/tts/dectalk.py`): in process through ctypes on a `DECtalk.dll` that Star's Windows build vendored (per architecture, with `dtalk_us.dic`), speaking straight to the sound card, and through a `say`/`dtalk` command-line program. Neither reported word positions, so Star's highlight followed a timer. Star's in-process route also wrote a licence blob into shared memory before starting the engine, taken from the community DECtalk NVDA driver, so that the vendored community DLL would start.
+DECtalk is the formant synthesizer many blind users grew up with ("Perfect Paul"). Star supported it two ways (`star/tts/dectalk.py`): in process through ctypes on a `DECtalk.dll` that Star's Windows build vendored (per architecture, with `dtalk_us.dic`), speaking straight to the sound card, and through a `say`/`dtalk` command-line program. Neither reported word positions, so Star's highlight followed a timer. Star's in-process route also wrote a license blob into shared memory before starting the engine, taken from the community DECtalk NVDA driver, so that the vendored community DLL would start.
 
-DECtalk is proprietary. The community source tree on GitHub is Fonix's code; its own licence file says it may be used only under a written licence from Fonix. A DECtalk someone bought (DECtalk Software from DEC, Force Computers, or Fonix; the Access Solutions runtime; an SDK licence) is a different matter: it is theirs to use.
+DECtalk is proprietary. The community source tree on GitHub is Fonix's code; its own license file says it may be used only under a written license from Fonix. A DECtalk someone bought (DECtalk Software from DEC, Force Computers, or Fonix; the Access Solutions runtime; an SDK license) is a different matter: it is theirs to use.
 
 DECtalk support was requested, "like we did in star". textweaver already runs two proprietary engines out of process on the shared engine host (ETI-Eloquence, ADR-0007; SAPI5, ADR-0009; the host protocol, ADR-0012).
 
@@ -27,8 +27,8 @@ DECtalk support was requested, "like we did in star". textweaver already runs tw
 ## Licensing
 
 - textweaver ships no DECtalk, links none, and never downloads or fetches one, at install time or at run time.
-- textweaver does not vendor, build, or test against the community DECtalk source (its licence reserves it to Fonix's licensees). If a user points `TEXTWEAVER_DECTALK_LIBRARY` at a library, textweaver uses it as that user's choice, as it does with OpenEVV (ADR-0007).
-- textweaver does not write Star's shared-memory licence blob or any other licence data. A licensed DECtalk handles its own licensing; one that does not start is reported as not starting.
+- textweaver does not vendor, build, or test against the community DECtalk source (its license reserves it to Fonix's licensees). If a user points `TEXTWEAVER_DECTALK_LIBRARY` at a library, textweaver uses it as that user's choice, as it does with OpenEVV (ADR-0007).
+- textweaver does not write Star's shared-memory license blob or any other license data. A licensed DECtalk handles its own licensing; one that does not start is reported as not starting.
 - Engine output (audio made with DECtalk) is never committed; local samples go to git-ignored paths.
 
 ## Consequences

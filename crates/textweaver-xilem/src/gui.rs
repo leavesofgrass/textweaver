@@ -884,7 +884,7 @@ fn colors_dialog(p: &Palette, form: &SettingsForm, app: &App, row: usize) -> Set
     }
 }
 
-/// Recolours the window's own panels and the document for `p` (the
+/// Recolors the window's own panels and the document for `p` (the
 /// default properties are replaced separately).
 pub fn apply_palette(host: &mut impl Host, p: &Palette) {
     for tag in [HEADER, TOOLBAR, STATUS_BAR] {
@@ -1062,7 +1062,7 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
                 _ => DocWindow::with_budget(&s.doc, focus, WINDOW_UNITS),
             };
             // The app's window follows the focus: it slides while reading
-            // and recentres on jumps or when the text changed.
+            // and recenters on jumps or when the text changed.
             let change = w.follow_session(s, focus);
             // Bionic reading or difficult words turned on or off: the same
             // text with new spans.
@@ -2175,7 +2175,7 @@ impl Gui {
                 }
                 self.refresh(ctx);
                 if self.palette.name != theme_before {
-                    // A new theme: draw the dialog again in its colours.
+                    // A new theme: draw the dialog again in its colors.
                     let (section, colors) = match &self.dialog {
                         Some(OpenDialog::Settings(o)) => (o.section, o.form.is_colors()),
                         _ => (0, false),
@@ -2425,7 +2425,7 @@ impl Gui {
         let said = crate::font_chooser::font_message(&self.app.catalog(), &family);
         self.app
             .announce_as(&said, Priority::Polite, Importance::Result);
-        // Lexend, not downloaded yet: the app asks first (size and licence).
+        // Lexend, not downloaded yet: the app asks first (size and license).
         let asked = self.app.offer_font_download();
         self.run_effects(ctx, asked);
         self.refresh(ctx);
@@ -3576,7 +3576,7 @@ pub fn refresh_for_tests(app: &App, host: &mut impl Host) {
 }
 
 /// Keeps a test harness in step with an app across refreshes, as the
-/// window does: the document window slides or recentres, and only what
+/// window does: the document window slides or recenters, and only what
 /// changed is sent.
 #[derive(Default)]
 pub struct Refresher {

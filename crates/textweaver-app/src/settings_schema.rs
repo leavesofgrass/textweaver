@@ -734,7 +734,7 @@ pub const INFO: &[Info] = &[
     choice(
         "keyboard.digit_row",
         "Digit row",
-        "How the terminal recognises the digit keys for heading levels: auto, or a French AZERTY keyboard.",
+        "How the terminal recognizes the digit keys for heading levels: auto, or a French AZERTY keyboard.",
         &[("auto", "automatic"), ("azerty", "AZERTY")],
     ),
     // [accessibility]
@@ -894,13 +894,13 @@ pub const INFO: &[Info] = &[
         "Where the RSVP word appears.",
         &[
             ("top-left", "top left"),
-            ("top-center", "top centre"),
+            ("top-center", "top center"),
             ("top-right", "top right"),
             ("center-left", "middle left"),
             ("center", "middle"),
             ("center-right", "middle right"),
             ("bottom-left", "bottom left"),
-            ("bottom-center", "bottom centre"),
+            ("bottom-center", "bottom center"),
             ("bottom-right", "bottom right"),
         ],
     ),

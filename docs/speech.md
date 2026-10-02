@@ -137,7 +137,7 @@ Piper voices are neural voices: natural-sounding, and each a file of 20 to 140 M
 
 1. Press **Alt+V**, go to "Fetch the Piper voice list from the internet", press Enter, and answer y.
 2. Press Alt+V again. Use the language row to show your language.
-3. Press Enter on a voice to download. textweaver reads the voice's details and says, for example: "Download Joe, English (United States), medium quality, 63 MB? Licence: CC0. Free to use for anything. y or n". Answer y. You hear progress at each quarter, then "Joe is installed."
+3. Press Enter on a voice to download. textweaver reads the voice's details and says, for example: "Download Joe, English (United States), medium quality, 63 MB? License: CC0. Free to use for anything. y or n". Answer y. You hear progress at each quarter, then "Joe is installed."
 4. Press Enter on the new voice to use it.
 
 **Licenses differ from voice to voice.** Some are free for anything (`joe` is CC0; `kristin`, `norman`, and `cori` are public domain), some ask for credit (`libritts_r` is CC BY), and some are for personal, non-commercial use only (`lessac`, `ryan`, `hfc_female`). textweaver says the license before every download and does not ship any voice itself.
