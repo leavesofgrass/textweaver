@@ -169,7 +169,8 @@ pub fn convert_in(
         Embeds::new(folder.unwrap_or(Path::new(".")), Some(p))
     });
     let mut gather = (options.footnotes == FootnoteMode::Deferred).then(FootnoteCollector::default);
-    let mut c = Converter::new(Builder::new(), options, meta, footnotes, embeds);
+    let b = Builder::with_capacity(source.len());
+    let mut c = Converter::new(b, options, meta, footnotes, embeds);
     for (event, range) in Parser::new_ext(source, parser_options()).into_offset_iter() {
         if let Some(g) = gather.as_mut() {
             g.event(&event);

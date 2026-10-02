@@ -61,6 +61,17 @@ impl Builder {
         Builder::default()
     }
 
+    /// A builder with room for `bytes` of canonical text: a loader passes
+    /// its source's length (the text is rarely longer than its source), so
+    /// the text is not copied every time it doubles. On 10 MB that was 20
+    /// MB of copying.
+    pub(crate) fn with_capacity(bytes: usize) -> Self {
+        Builder {
+            text: String::with_capacity(bytes),
+            ..Builder::default()
+        }
+    }
+
     fn request(&mut self, b: Break) {
         let cur = self.pending.unwrap_or(Break::None);
         self.pending = Some(cur.max(b));
@@ -97,9 +108,15 @@ impl Builder {
 
     fn push_raw(&mut self, s: &str) {
         self.text.push_str(s);
-        self.len += s.chars().count();
-        if let Some(last) = s.chars().last() {
-            self.line_has_text = last != '\n';
+        // ASCII (most words) is one char per byte.
+        self.len += if s.is_ascii() {
+            s.len()
+        } else {
+            s.chars().count()
+        };
+        // A UTF-8 text ends with '\n' exactly when its last byte is one.
+        if let Some(&last) = s.as_bytes().last() {
+            self.line_has_text = last != b'\n';
         }
     }
 
@@ -179,7 +196,12 @@ impl Builder {
     /// Verbatim text (code): spaces and line breaks kept, leading and
     /// trailing blank lines dropped, `\r\n` normalized.
     pub(crate) fn verbatim(&mut self, s: &str) {
-        let s = s.replace("\r\n", "\n").replace('\r', "\n");
+        // Nearly all code has no '\r': borrowed, not copied twice.
+        let s: std::borrow::Cow<'_, str> = if s.contains('\r') {
+            s.replace("\r\n", "\n").replace('\r', "\n").into()
+        } else {
+            s.into()
+        };
         let s = s.trim_matches('\n');
         let s = s.trim_end();
         if s.trim().is_empty() {

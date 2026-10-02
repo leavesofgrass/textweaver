@@ -104,7 +104,8 @@ pub fn convert(
     options: &LoadOptions,
     meta: &mut DocumentMeta,
 ) -> (String, Vec<Marker>) {
-    let mut b = Builder::new();
+    // The text is rarely longer than its source: room enough, nearly always.
+    let mut b = Builder::with_capacity(source.len());
     walk_into(&mut b, source, options, meta, None);
     b.finish()
 }
