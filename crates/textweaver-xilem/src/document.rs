@@ -164,6 +164,47 @@ pub enum DocMark {
     CurrentFindHit,
 }
 
+/// One step of the reading highlights in the last paint, in the order it
+/// was drawn ([`DocumentView::painted`]). Rectangles are in the view's
+/// coordinates. Kept so tests can check what the window draws, and in what
+/// order, without reading pixels.
+///
+/// The order on each paragraph: the sentence band, the marks (band, then
+/// their line, dashes, bar or box), the word band, the text, the word in
+/// its own color with its attribute, then the line under the sentence. So a
+/// mark inside the spoken sentence stays visible while it is read, and the
+/// sentence is underlined in every palette, high contrast too.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PaintStep {
+    /// The band behind one line of the spoken sentence.
+    SentenceBand(Rect),
+    /// The band of a mark ([`DocMark`]) on one line.
+    MarkBand(DocMark, Rect),
+    /// The shape of a mark on one line: its line, dashes, bar or box (the
+    /// mark's band rectangle).
+    MarkShape(DocMark, Rect),
+    /// The band behind one line of the spoken word.
+    WordBand(Rect),
+    /// A paragraph's text.
+    Text(usize),
+    /// The spoken word's text again in its own color, inside `clip`, with
+    /// its attribute. Bold is drawn by thickening the glyphs' outlines in
+    /// place, so the line never reflows.
+    WordText {
+        /// The word's band on one line.
+        clip: Rect,
+        /// Drawn bold.
+        bold: bool,
+        /// Drawn slanted.
+        italic: bool,
+        /// Underlined.
+        underline: bool,
+    },
+    /// The line under one line of the spoken sentence, at the font's
+    /// underline position, in the sentence's text color.
+    SentenceUnderline(Rect, textweaver_theme::Rgb),
+}
+
 /// The moving state: where the caret and the highlights are.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct DocState {
@@ -311,6 +352,8 @@ pub struct DocumentView {
     /// Notes, bookmarks, the reader's highlights, and search matches
     /// ([`DocMark`]), drawn only.
     marks: Vec<(CharRange, DocMark)>,
+    /// The reading highlights of the last paint, in order.
+    painted: Vec<PaintStep>,
 
     // Layout.
     layouts: HashMap<usize, ParaLayout>,
@@ -380,6 +423,7 @@ impl DocumentView {
             label: "Document".to_owned(),
             misspelled: Vec::new(),
             marks: Vec::new(),
+            painted: Vec::new(),
             layouts: HashMap::new(),
             line_starts: Vec::new(),
             column: 0.0,
@@ -1233,6 +1277,25 @@ impl DocumentView {
         rows
     }
 
+    /// The reading highlights the last paint drew, in order: sentence and
+    /// word bands, marks, text, the word's attribute and the sentence's
+    /// underline ([`PaintStep`]).
+    pub fn painted(&self) -> &[PaintStep] {
+        &self.painted
+    }
+
+    /// The lines under the spoken sentence in the last paint, one per
+    /// visual line of the sentence on screen.
+    pub fn sentence_underlines(&self) -> Vec<(Rect, textweaver_theme::Rgb)> {
+        self.painted
+            .iter()
+            .filter_map(|s| match *s {
+                PaintStep::SentenceUnderline(r, c) => Some((r, c)),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// The reading ruler's marks for the rows on screen (empty when it is
     /// off): the reading line, the band around it, and the masked rows.
     pub fn ruler_marks(&self) -> Vec<(RowMark, f64, f64)> {
@@ -1890,6 +1953,7 @@ impl Widget for DocumentView {
             theme::PANEL_RADIUS - 2.0,
         ));
         let brushes = self.brushes();
+        let mut painted = Vec::new();
         let caret_pos = self.state.caret;
         let reading = self.state.reading;
         let spoken = self.state.spoken.filter(|_| reading);
@@ -1948,6 +2012,13 @@ impl Widget for DocumentView {
                         .collect(),
                 )
             };
+            // The spoken sentence's band first, so the marks, the word and
+            // the text inside it all draw over it.
+            let sentence_rects = sentence.and_then(band).unwrap_or_default();
+            for &r in &sentence_rects {
+                painter.fill(r, theme::color(p.spoken_sentence)).draw();
+                painted.push(PaintStep::SentenceBand(r));
+            }
             // Code backgrounds.
             for s in &self.model.spans {
                 if s.style == SpanStyle::Code
@@ -1979,6 +2050,8 @@ impl Widget for DocumentView {
                 let rects = band(r).unwrap_or_default();
                 for (k, rect) in rects.iter().enumerate() {
                     painter.fill(*rect, theme::color(fill)).draw();
+                    painted.push(PaintStep::MarkBand(mark, *rect));
+                    painted.push(PaintStep::MarkShape(mark, *rect));
                     let line = theme::color(p.text);
                     match mark {
                         DocMark::Highlight => {
@@ -2018,11 +2091,6 @@ impl Widget for DocumentView {
                     }
                 }
             }
-            if let Some(rects) = sentence.and_then(band) {
-                for r in rects {
-                    painter.fill(r, theme::color(p.spoken_sentence)).draw();
-                }
-            }
             if let Some(rects) = selection.and_then(band) {
                 for r in rects {
                     painter.fill(r, theme::color(p.selection.1)).draw();
@@ -2036,8 +2104,10 @@ impl Widget for DocumentView {
                         theme::color(p.spoken_word.1),
                     )
                     .draw();
+                painted.push(PaintStep::WordBand(*r));
             }
             render_text(painter, tf, &pl.layout, &brushes, false);
+            painted.push(PaintStep::Text(i));
             // Syllable separators, in the space left before each break,
             // on the line's baseline.
             if let Some(s) = &pl.seps {
@@ -2056,15 +2126,29 @@ impl Widget for DocumentView {
                     render_text(painter, Affine::translate(at), &s.layout, &brushes, false);
                 }
             }
-            // The spoken word's text again, in its own colour, clipped to
-            // its band (no relayout per word).
+            // The spoken word's text again, in its own colour and with its
+            // theme attribute, clipped to its band (no relayout per word:
+            // bold thickens the glyphs where they stand).
             if !word_rects.is_empty() {
-                let fg: [masonry::peniko::Brush; BRUSHES] =
-                    std::array::from_fn(|_| theme::color(p.spoken_word.0).into());
+                let a = p.spoken_word_attrs;
+                let bold = a.bold || !(a.italic || a.underline);
+                let fg = theme::color(p.spoken_word.0);
                 for r in &word_rects {
-                    painter.push_fill_clip(r.inflate(3.0, 1.0));
-                    render_text(painter, tf, &pl.layout, &fg, false);
+                    let clip = r.inflate(3.0, 1.0);
+                    painter.push_fill_clip(clip);
+                    render_emphasis(painter, tf, &pl.layout, &fg.into(), bold, a.italic);
                     painter.pop_clip();
+                    if a.underline
+                        && let Some(u) = underline_under(&pl.layout, origin, *r, self.font.size)
+                    {
+                        painter.fill(u, fg).draw();
+                    }
+                    painted.push(PaintStep::WordText {
+                        clip,
+                        bold,
+                        italic: a.italic,
+                        underline: a.underline,
+                    });
                 }
             }
             if let Some(rects) = selection.and_then(band) {
@@ -2074,6 +2158,15 @@ impl Widget for DocumentView {
                     painter.push_fill_clip(r);
                     render_text(painter, tf, &pl.layout, &fg, false);
                     painter.pop_clip();
+                }
+            }
+            // The line under the spoken sentence: its cue in every palette,
+            // and its only one under a Windows contrast theme, where the
+            // band is the page.
+            for r in &sentence_rects {
+                if let Some(u) = underline_under(&pl.layout, origin, *r, self.font.size) {
+                    painter.fill(u, theme::color(p.sentence_line)).draw();
+                    painted.push(PaintStep::SentenceUnderline(u, p.sentence_line));
                 }
             }
             // Misspelled words: a dotted underline at the text's foot.
@@ -2113,6 +2206,7 @@ impl Widget for DocumentView {
                 painter.fill(r, theme::color(p.caret)).draw();
             }
         }
+        self.painted = painted;
 
         // The ruler's mask (a typoscope): the rows outside the band dimmed.
         for &(mark, y0, y1) in &marks {
@@ -2288,4 +2382,104 @@ impl Widget for DocumentView {
     fn get_debug_text(&self) -> Option<String> {
         Some(format!("{} paragraphs", self.para_count()))
     }
+}
+
+/// The thickness the spoken word's glyph outlines grow by when drawn bold:
+/// one twenty-fourth of the font size, FreeType's synthetic bold amount.
+/// The glyphs stay where the layout put them, so nothing on the line moves.
+const SYNTHETIC_BOLD: f32 = 1.0 / 24.0;
+
+/// The slant of a synthetic italic, in degrees.
+const SYNTHETIC_ITALIC: f64 = 12.0;
+
+/// Draws `layout`'s glyphs in `brush`, bold and slanted when asked, without
+/// laying anything out again. Bold fills each glyph and strokes its outline
+/// in the same color (the renderers ignore `font_embolden`); italic skews
+/// each glyph about its own origin.
+fn render_emphasis(
+    painter: &mut Painter<'_>,
+    transform: Affine,
+    layout: &Layout<BrushIndex>,
+    brush: &masonry::peniko::Brush,
+    bold: bool,
+    italic: bool,
+) {
+    use masonry::imaging::record::Glyph;
+    use masonry::parley::PositionedLayoutItem;
+    use masonry::peniko::{Fill, Style};
+    let fill = Style::Fill(Fill::NonZero);
+    for line in layout.lines() {
+        for item in line.items() {
+            let PositionedLayoutItem::GlyphRun(glyph_run) = item else {
+                continue;
+            };
+            let run = glyph_run.run();
+            let font_size = run.font_size();
+            let skew = run.synthesis().skew().map_or(0.0, f64::from)
+                + if italic { SYNTHETIC_ITALIC } else { 0.0 };
+            let glyph_xform = (skew != 0.0).then(|| Affine::skew(skew.to_radians().tan(), 0.0));
+            let mut x = glyph_run.offset();
+            let y = glyph_run.baseline();
+            let glyphs: Vec<Glyph> = glyph_run
+                .glyphs()
+                .map(|g| {
+                    let out = Glyph {
+                        id: g.id,
+                        x: x + g.x,
+                        y: y + g.y,
+                    };
+                    x += g.advance;
+                    out
+                })
+                .collect();
+            painter
+                .glyphs(run.font(), brush)
+                .transform(transform)
+                .glyph_transform(glyph_xform)
+                .font_size(font_size)
+                .normalized_coords(run.normalized_coords())
+                .draw(&fill, &glyphs);
+            if bold {
+                let stroke = Style::Stroke(Stroke::new(f64::from(font_size * SYNTHETIC_BOLD)));
+                painter
+                    .glyphs(run.font(), brush)
+                    .transform(transform)
+                    .glyph_transform(glyph_xform)
+                    .font_size(font_size)
+                    .normalized_coords(run.normalized_coords())
+                    .draw(&stroke, &glyphs);
+            }
+        }
+    }
+}
+
+/// The rectangle of a line under `band` (one visual line of a range, in
+/// view coordinates), at the font's underline position on that line and
+/// at least 1.5 px or 0.06 em thick; `None` if no line holds it.
+fn underline_under(
+    layout: &Layout<BrushIndex>,
+    origin: Vec2,
+    band: Rect,
+    font_size: f32,
+) -> Option<Rect> {
+    use masonry::parley::PositionedLayoutItem;
+    let mid = ((band.y0 + band.y1) / 2.0 - origin.y) as f32;
+    let line = layout.lines().find(|l| {
+        let m = l.metrics();
+        m.block_min_coord <= mid && mid <= m.block_max_coord
+    })?;
+    let baseline = line.metrics().baseline;
+    let (offset, size) = line
+        .items()
+        .find_map(|item| match item {
+            PositionedLayoutItem::GlyphRun(g) => {
+                let m = g.run().metrics();
+                Some((m.underline_offset, m.underline_size))
+            }
+            PositionedLayoutItem::InlineBox(_) => None,
+        })
+        .unwrap_or((-0.1 * font_size, 0.05 * font_size));
+    let thick = f64::from(size.max(0.06 * font_size)).max(1.5);
+    let top = origin.y + f64::from(baseline - offset);
+    Some(Rect::new(band.x0, top, band.x1, top + thick))
 }
