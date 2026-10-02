@@ -10,7 +10,7 @@ The material was gathered on Friday, October 2, 2026, by several research agents
 - Performance audit (`performance-audit.md`, being written): a code-level audit of the hot paths (loading, the narration plan, segmentation, the speech thread, the GUI document widget, startup, the build profile), with a ranked plan.
 - [Speech engines and runtimes](speech-engines-and-runtimes.md): neural voices and formant engines that run offline on a laptop, the Rust inference runtimes, and the speech-path latency work.
 - [Text-to-speech use cases](tts-use-cases.md): the research evidence on text-to-speech for students with disabilities, the product landscape, and the lessons for textweaver.
-- Health sciences use cases (`health-sciences-use-cases.md`, being written): the materials, pronunciation, numbers and units, and study workflows of medical, nursing, dental, and pharmacy students.
+- [Health sciences use cases](health-sciences-use-cases.md): the materials, pronunciation, numbers and units, and study workflows of medical, nursing, dental, and pharmacy students.
 - [GUI and visual design](gui-and-visual-design.md): how to make the window and the terminal reader better looking without giving up accessibility or frame time.
 - [Law, standards, and conformance](legal-and-standards.md): the ADA, Section 504 and 508, WCAG 2.2, EN 301 549, EPUB Accessibility, PDF/UA, and what textweaver and accommodations offices need from it.
 
