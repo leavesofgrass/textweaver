@@ -241,13 +241,14 @@ mod tests {
     #[test]
     fn the_system_opener_never_uses_a_shell() {
         let t = OpenTarget::Web("https://example.com/?a=1&calc".into());
+        let on_windows = cfg!(windows);
         match system_open(&t) {
             SystemOpen::ShellExecute(text) => {
-                assert!(cfg!(windows));
+                assert!(on_windows);
                 assert_eq!(text, "https://example.com/?a=1&calc");
             }
             SystemOpen::Program { program, args } => {
-                assert!(!cfg!(windows));
+                assert!(!on_windows);
                 assert!(program == "open" || program == "xdg-open");
                 assert_eq!(args, ["https://example.com/?a=1&calc"]);
             }
