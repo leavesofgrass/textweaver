@@ -1207,9 +1207,36 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
         .map_or_else(|| "textweaver".to_owned(), |s| s.title.clone());
     if title != shown.title {
         host.edit(TITLE, |mut l| Label::set_text(&mut l, title.clone()));
+        // The document's name is its node's name, so a screen reader says
+        // it when the window or the document takes the focus (W8a).
+        let label = document_label(app);
+        host.edit(DOC, |mut d| DocumentView::set_label(&mut d, label));
         shown.title = title;
     }
     loaded
+}
+
+/// The document view's accessible name: the document's title first, then
+/// what it is ("Reading check, document"), or "Document" with none open.
+/// UI Automation's Name, which NVDA and JAWS say when the document takes
+/// the focus (the legal report's item 6).
+pub fn document_label(app: &App) -> String {
+    let c = app.catalog();
+    match app.session() {
+        Some(s) if !s.title.trim().is_empty() => {
+            c.fmt("gui-document-titled", &args!["title" => s.title.as_str()])
+        }
+        _ => c.tr("gui-document"),
+    }
+}
+
+/// The window's title and its node's name: the document's title, then
+/// textweaver ("Reading check - textweaver"), or "textweaver" alone.
+pub fn window_title(app: &App) -> String {
+    app.session().map_or_else(
+        || "textweaver".to_owned(),
+        |s| format!("{} - textweaver", s.title),
+    )
 }
 
 impl Gui {
@@ -1327,8 +1354,9 @@ impl Gui {
                 root.edit_widget_with_tag(TOOLBAR, |mut r| {
                     Region::set_label(&mut r, c.tr("gui-toolbar-reading"));
                 });
+                let doc_label = document_label(&self.app);
                 root.edit_widget_with_tag(DOC, |mut d| {
-                    DocumentView::set_label(&mut d, c.tr("gui-document"));
+                    DocumentView::set_label(&mut d, doc_label);
                 });
                 if self.log {
                     crate::log::line(&format!("labels: {}", self.lang));
@@ -1362,10 +1390,7 @@ impl Gui {
         } else if self.font_choices.is_some() && self.app.list_model().is_none() {
             self.font_choices = None;
         }
-        let title = self.app.session().map_or_else(
-            || "textweaver".to_owned(),
-            |s| format!("{} - textweaver", s.title),
-        );
+        let title = window_title(&self.app);
         if title != self.window_title {
             ctx.window(self.window_id).handle().set_title(&title);
             // AT-SPI and macOS read the title from the window's node.

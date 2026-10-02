@@ -3016,6 +3016,7 @@ gui-button-faster = أسرع
 gui-button-close = إغلاق
 gui-toolbar-reading = القراءة
 gui-document = المستند
+gui-document-titled = { $title }، المستند
 gui-list-hint = Enter للاختيار، وEscape للإغلاق.
 gui-settings-sections = الأقسام
 gui-settings-form = إعدادات { $section }

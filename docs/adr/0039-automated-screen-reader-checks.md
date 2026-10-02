@@ -105,6 +105,8 @@ New checks, in their own jobs, beside these (see [Testing](../dev/testing.md#bra
 - The session workflow builds the GUI from cold caches; its runs are sequenced with the release dry run, so runners are not contended.
 - With the dump standing, a failed build of accessibility-cli now turns the GUI job red, because the dump has no tool. It is pinned by commit and cached, so this should only happen when the pin is moved.
 
+**Update, Wave 8a.** For the failing "names the window or the document" check: the document's node is now named with the document's title first ("Reading check, document", not "Document"), so the name NVDA and JAWS say when the document takes the focus names it; the window's title and its node's name were already "Reading check - textweaver". Checked in the harness tree only. The NVDA session must pass three runs in a row before it becomes standing.
+
 ## See also
 
 - [Testing](../dev/testing.md#automated-screen-reader-checks): how to run the checks and read their reports.

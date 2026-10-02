@@ -2787,6 +2787,7 @@ gui-button-faster = Plus rapide
 gui-button-close = Fermer
 gui-toolbar-reading = Lecture
 gui-document = Document
+gui-document-titled = { $title }, document
 gui-list-hint = Entrée choisit, Échap ferme.
 gui-settings-sections = Sections
 gui-settings-form = Paramètres : { $section }
