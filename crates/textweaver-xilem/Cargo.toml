@@ -35,6 +35,9 @@ renderer-hybrid = ["masonry_winit/imaging_vello_hybrid"]
 # `--screenshot PATH`: render the window with the Vello CPU renderer, with no
 # window on screen (masonry_testing's harness).
 screenshot = ["dep:masonry_testing"]
+# The frame-time probe counts each move's allocations (`--measure-frames`,
+# `cargo xtask frames`): a counting global allocator. Never in a package.
+alloc-count = ["screenshot"]
 # Citations while writing, export (HTML, PDF, DOCX, EPUB, BRF), and the
 # browser preview, from the app (ADR-0033). On by default since edit mode:
 # they are what writing in the window needs.

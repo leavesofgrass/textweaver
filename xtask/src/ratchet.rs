@@ -59,6 +59,9 @@ pub(crate) struct Policy {
     /// Allocation counts below this, and growth smaller than it, are not
     /// gated.
     pub alloc_floor: f64,
+    /// Accessibility node counts (`*_nodes`, the frame probe) below this,
+    /// and growth smaller than it, are not gated.
+    pub node_floor: f64,
     /// Keys containing any of these are reported, never gated (disk
     /// writes, process starts).
     pub report_only: Vec<String>,
@@ -74,6 +77,7 @@ impl Default for Policy {
             time_growth_floor_ms: 2.0,
             peak_floor_mb: 1.0,
             alloc_floor: 5_000.0,
+            node_floor: 100.0,
             report_only: vec![
                 "startup".into(),
                 "shutdown".into(),
@@ -81,6 +85,9 @@ impl Default for Policy {
                 "autosave".into(),
                 "identify".into(),
                 "pathological".into(),
+                // Repository files change with the docs; the corpora do not.
+                "README.md".into(),
+                "docs/".into(),
             ],
         }
     }
@@ -99,6 +106,7 @@ impl Policy {
             time_growth_floor_ms: num("time_growth_floor_ms", d.time_growth_floor_ms),
             peak_floor_mb: num("peak_floor_mb", d.peak_floor_mb),
             alloc_floor: num("alloc_floor", d.alloc_floor),
+            node_floor: num("node_floor", d.node_floor),
             report_only: v.get("report_only").and_then(Value::as_array).map_or(
                 d.report_only,
                 |a| {
@@ -119,6 +127,7 @@ impl Policy {
             "time_growth_floor_ms": self.time_growth_floor_ms,
             "peak_floor_mb": self.peak_floor_mb,
             "alloc_floor": self.alloc_floor,
+            "node_floor": self.node_floor,
             "report_only": self.report_only,
         })
     }
@@ -142,6 +151,7 @@ pub(crate) struct Verdict {
 enum Kind {
     Peak,
     Allocs,
+    Nodes,
     Time,
 }
 
@@ -153,6 +163,9 @@ fn classify(key: &str, v: &Value) -> Option<(Kind, f64)> {
     }
     if key.ends_with("_allocs") {
         return v.as_f64().map(|n| (Kind::Allocs, n));
+    }
+    if key.ends_with("_nodes") {
+        return v.as_f64().map(|n| (Kind::Nodes, n));
     }
     if key.ends_with("_ms") {
         return v.as_f64().map(|n| (Kind::Time, n));
@@ -171,7 +184,7 @@ fn percent(ratio: f64) -> String {
 fn amount(kind: Kind, n: f64) -> String {
     match kind {
         Kind::Peak => format!("{n:.1} MB"),
-        Kind::Allocs => format!("{n:.0}"),
+        Kind::Allocs | Kind::Nodes => format!("{n:.0}"),
         Kind::Time => format!("{n:.2} ms"),
     }
 }
@@ -214,11 +227,11 @@ pub(crate) fn compare(report: &Value, base: &Value, policy: &Policy, gate_times:
                 amount(kind, now)
             );
             match kind {
-                Kind::Peak | Kind::Allocs => {
-                    let floor = if kind == Kind::Peak {
-                        policy.peak_floor_mb
-                    } else {
-                        policy.alloc_floor
+                Kind::Peak | Kind::Allocs | Kind::Nodes => {
+                    let floor = match kind {
+                        Kind::Peak => policy.peak_floor_mb,
+                        Kind::Nodes => policy.node_floor,
+                        _ => policy.alloc_floor,
                     };
                     if now.max(then) < floor || report_only {
                         continue;
@@ -567,6 +580,15 @@ mod tests {
                 .failures
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn node_counts_are_gated_like_allocations() {
+        let base = json!({"run": {"moves_nodes": 1000, "few_nodes": 20}});
+        let more = json!({"run": {"moves_nodes": 1400, "few_nodes": 90}});
+        let v = compare(&more, &base, &Policy::default(), false);
+        assert_eq!(v.failures.len(), 1, "{:?}", v.failures);
+        assert!(v.failures[0].contains("moves_nodes grew 40 percent, from 1000 to 1400"));
     }
 
     #[test]
