@@ -21,16 +21,31 @@
 //!   with "dot" (Star pinned "v1.two point three" in a test; this is the
 //!   deliberate replacement); ".5" is "point five"; decades ("the 2020s")
 //!   are plural years.
+//!
+//! **Identifiers are read as digits** (new in textweaver; Star read them as
+//! amounts). Before the rules, a guard finds the number after a label that
+//! says it is an identifier, and spells it digit by digit, so "PMID
+//! 31769816" is "PMID three one seven six nine eight one six", never "thirty-one
+//! million ...". The labels: CPT (five characters, such as "99213" or
+//! "0001F"), PMID, NCT (eight digits, also written as one word,
+//! "NCT04368728"), ZIP (five digits, or ZIP+4), DOI (`doi:`, `DOI` or a
+//! `doi.org/` link before `10.`), ISBN (ten or thirteen digits, with
+//! hyphens or spaces), and phone, telephone, tel and fax. A US phone number
+//! in its usual shapes ("503-555-0123", "(503) 555-0123", "503.555.0123")
+//! is read as digits without a label. Each digit word maps to its own
+//! digit, so the highlight follows the digits as they are read. Dots
+//! inside an identifier are read as "dot"; hyphens, slashes and letters
+//! stay as written for the punctuation step and the engine.
 
-use regex::Captures;
+use regex::{Captures, Regex};
 
 use super::Transform;
-use super::rewrite::{Piece, Rule, apply_rules, char_after, char_before};
+use super::rewrite::{Piece, Rule, apply_rules, char_after, char_before, then};
 use super::words::{
     MONTHS, decimal_digits_to_words, int_to_words, ordinal_to_words, pluralize_last_word,
     year_to_words,
 };
-use textweaver_core::OffsetMap;
+use textweaver_core::{CharPos, CharRange, OffsetMap, SpokenBuilder};
 
 fn text(s: impl Into<String>) -> Option<Vec<Piece>> {
     Some(vec![Piece::Text(s.into())])
@@ -417,30 +432,232 @@ pub(crate) fn rules() -> Vec<Rule> {
     ]
 }
 
+/// A US phone number: an optional area code in parentheses or before a
+/// separator, three digits, a separator, four digits.
+const PHONE_LABELED: &str =
+    r"(?:\+?1[ .-]?)?(?:\([0-9]{3}\)[ ]?|[0-9]{3}[ .-])?[0-9]{3}[ .-][0-9]{4}";
+/// The same without a label: the area code is required, and the
+/// separators are hyphens or dots, so a run of numbers in prose is not
+/// taken for a phone number.
+const PHONE_BARE: &str =
+    r"(?:\+1[ .-]?|1[.-])?(?:\([0-9]{3}\)[ ]?|[0-9]{3}[.-])[0-9]{3}[.-][0-9]{4}";
+
+/// The identifier pattern: a label (not spoken differently) and the
+/// identifier after it, in a named group by kind.
+fn identifier_pattern() -> String {
+    let sep = r"[ \t\u{a0}]*";
+    [
+        format!(r"(?i:\b(?:CPT|HCPCS)(?:[ ]code)?[:\x23]?{sep})(?P<cpt>[0-9]{{4}}[0-9A-Za-z])\b"),
+        format!(r"(?i:\bPMID:?{sep})(?P<pmid>[0-9]{{1,9}})\b"),
+        format!(r"(?i:\bNCT{sep})(?P<nct>[0-9]{{8}})\b"),
+        format!(r"(?i:\bZIP(?:[ ]code)?:?{sep})(?P<zip>[0-9]{{5}}(?:-[0-9]{{4}})?)\b"),
+        format!(r"(?i:(?:\bdoi:?{sep}|\bdoi\.org/))(?P<doi>10\.[0-9]{{4,9}}/\S+)"),
+        format!(r"(?i:\bISBN(?:-1[03])?:?{sep})(?P<isbn>[0-9][0-9 -]{{8,15}}[0-9Xx])\b"),
+        format!(
+            r"(?i:\b(?:phone|telephone|tel\.?|fax)(?:[ ](?:number|no\.))?:?{sep})(?P<phone>{PHONE_LABELED})\b"
+        ),
+        format!(r"(?P<bare>{PHONE_BARE})"),
+    ]
+    .join("|")
+}
+
+/// The identifier guard: spells identifiers digit by digit (see the module
+/// docs).
+struct Identifiers {
+    re: Regex,
+}
+
+impl Identifiers {
+    fn new() -> Self {
+        let re = Regex::new(&identifier_pattern())
+            .unwrap_or_else(|e| panic!("bad built-in pattern: {e}"));
+        Identifiers { re }
+    }
+
+    /// The byte range of the identifier in one match, or `None` when the
+    /// match is not one after all.
+    fn identifier(c: &Captures<'_>, s: &str) -> Option<std::ops::Range<usize>> {
+        if let Some(m) = c.name("doi") {
+            // Trailing sentence punctuation is not part of a DOI; a closing
+            // parenthesis is, when it closes one inside the DOI.
+            let mut end = m.end();
+            loop {
+                let t = &s[m.start()..end];
+                let last = t.chars().next_back()?;
+                let unbalanced = last == ')' && t.matches(')').count() > t.matches('(').count();
+                if matches!(
+                    last,
+                    '.' | ',' | ';' | ':' | '!' | '?' | '\'' | '"' | ']' | '>'
+                ) || unbalanced
+                {
+                    end -= last.len_utf8();
+                } else {
+                    break;
+                }
+            }
+            return Some(m.start()..end);
+        }
+        if let Some(m) = c.name("isbn") {
+            let digits = m
+                .as_str()
+                .chars()
+                .filter(|c| c.is_ascii_digit() || matches!(c, 'X' | 'x'))
+                .count();
+            let x_last = m
+                .as_str()
+                .char_indices()
+                .all(|(i, c)| !matches!(c, 'X' | 'x') || i + 1 == m.as_str().len());
+            return (matches!(digits, 10 | 13) && x_last).then(|| m.range());
+        }
+        if let Some(m) = c.name("bare") {
+            // Not inside a longer run of digits, words or separators.
+            let before = char_before(s, m.start());
+            let after = char_after(s, m.end());
+            let next_digit = s[m.end()..]
+                .chars()
+                .nth(1)
+                .is_some_and(|c| c.is_ascii_digit());
+            if before.is_some_and(|b| b.is_alphanumeric() || matches!(b, '-' | '.' | '/' | '+'))
+                || after.is_some_and(char::is_alphanumeric)
+                || (after.is_some_and(|a| matches!(a, '-' | '.' | '/')) && next_digit)
+            {
+                return None;
+            }
+            return Some(m.range());
+        }
+        ["cpt", "pmid", "nct", "zip", "phone"]
+            .iter()
+            .find_map(|k| c.name(k))
+            .map(|m| m.range())
+    }
+
+    /// Spells `id` (bytes of `s`, starting at char `at`): each digit as its
+    /// word, each dot as "dot", everything else as written, with spaces
+    /// between words.
+    fn spell(b: &mut SpokenBuilder, s: &str, id: std::ops::Range<usize>, at: usize) {
+        let mut prev: Option<char> = None;
+        for (k, ch) in s[id].chars().enumerate() {
+            let pos = CharPos(at + k);
+            let last_alnum = b
+                .text()
+                .chars()
+                .next_back()
+                .is_some_and(char::is_alphanumeric);
+            let letter_after_letter = ch.is_alphabetic() && prev.is_some_and(char::is_alphabetic);
+            // "doi:10.1000" is "doi: one zero ...", not "doi:one".
+            let after_colon = prev.is_none() && b.text().ends_with(':');
+            if ch.is_alphanumeric() && (last_alnum || after_colon) && !letter_after_letter {
+                b.push_inserted(" ", pos);
+            }
+            let range = CharRange::new(pos, CharPos(at + k + 1));
+            if ch.is_ascii_digit() {
+                b.push_expanded(&decimal_digits_to_words(&ch.to_string()), range);
+            } else if ch == '.' {
+                if last_alnum {
+                    b.push_inserted(" ", pos);
+                }
+                b.push_expanded("dot", range);
+            } else {
+                let mut buf = [0u8; 4];
+                b.push_literal(ch.encode_utf8(&mut buf), pos);
+            }
+            prev = Some(ch);
+        }
+    }
+
+    /// Applies the guard. `None` when there is no identifier.
+    fn apply(&self, input: &str) -> Option<(String, OffsetMap)> {
+        let mut b = SpokenBuilder::new();
+        let (mut cur, mut cur_char, mut pos) = (0usize, 0usize, 0usize);
+        let mut any = false;
+        while pos <= input.len() {
+            let Some(c) = self.re.captures_at(input, pos) else {
+                break;
+            };
+            let Some(m) = c.get(0) else {
+                break;
+            };
+            let Some(id) = Self::identifier(&c, input).filter(|id| id.start < id.end) else {
+                pos = input[m.start()..]
+                    .chars()
+                    .next()
+                    .map_or(input.len() + 1, |ch| m.start() + ch.len_utf8());
+                continue;
+            };
+            b.push_literal(&input[cur..id.start], CharPos(cur_char));
+            cur_char += input[cur..id.start].chars().count();
+            Self::spell(&mut b, input, id.clone(), cur_char);
+            cur_char += input[id.clone()].chars().count();
+            cur = id.end;
+            pos = id.end;
+            any = true;
+        }
+        if !any {
+            return None;
+        }
+        b.push_literal(&input[cur..], CharPos(cur_char));
+        Some(b.finish())
+    }
+}
+
 /// The numbers transform.
 pub struct Numbers {
+    identifiers: Identifiers,
+    /// Only the identifier guard, for engines that read numbers natively.
+    only_identifiers: bool,
     rules: Vec<Rule>,
 }
 
 impl std::fmt::Debug for Numbers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Numbers").finish_non_exhaustive()
+        f.debug_struct("Numbers")
+            .field("only_identifiers", &self.only_identifiers)
+            .finish_non_exhaustive()
     }
 }
 
 impl Default for Numbers {
     fn default() -> Self {
-        Numbers { rules: rules() }
+        Numbers {
+            identifiers: Identifiers::new(),
+            only_identifiers: false,
+            rules: rules(),
+        }
+    }
+}
+
+impl Numbers {
+    /// Only the identifier guard (identifiers read as digits), for engines
+    /// that read numbers, dates and amounts themselves but would still
+    /// read "PMID 31769816" as an amount. Its name is `identifiers`.
+    pub fn identifiers_only() -> Self {
+        Numbers {
+            identifiers: Identifiers::new(),
+            only_identifiers: true,
+            rules: Vec::new(),
+        }
     }
 }
 
 impl Transform for Numbers {
     fn name(&self) -> &'static str {
-        "numbers"
+        if self.only_identifiers {
+            "identifiers"
+        } else {
+            "numbers"
+        }
     }
 
     fn apply(&self, input: &str) -> (String, OffsetMap) {
-        apply_rules(input, &self.rules)
+        match self.identifiers.apply(input) {
+            None if self.rules.is_empty() => super::identity(input),
+            None => apply_rules(input, &self.rules),
+            Some(acc) if self.rules.is_empty() => acc,
+            Some(acc) => {
+                let step = apply_rules(&acc.0, &self.rules);
+                then(acc, Some(step))
+            }
+        }
     }
 }
 

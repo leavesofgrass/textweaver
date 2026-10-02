@@ -337,6 +337,16 @@ SQL = "sequel"
 "approx." = "approximately"
 ```
 
+### Clinical and scientific text
+
+Some things on the page must be read exactly as written, because a wrong guess changes the meaning. textweaver handles three of them:
+
+- **Identifiers are read digit by digit.** A number after CPT, PMID, NCT, ZIP, DOI, ISBN, or phone (also telephone, tel, and fax) is an identifier, not an amount. "PMID 31769816" is "PMID three one seven six nine eight one six", not "thirty-one million ...". A US phone number in its usual forms, such as "503-555-0123" or "(503) 555-0123", is read the same way without a label. Dots inside an identifier are read as "dot". The highlight moves digit by digit.
+- **Error-prone medical abbreviations are spelled, never expanded.** These are the abbreviations on The Joint Commission's "Do Not Use" list and the ISMP list of error-prone abbreviations, because they are misread and have caused harm: U, IU, QD, QOD (and q.d., q.o.d.), MS, MSO4, MgSO4, cc, SC, SQ, HS, TIW, AD, AS, AU, OD, OS, OU, and drug-name abbreviations such as TPA and HCTZ. "QD" is read "Q D" and "MgSO4" is "M G S O 4". Neither the built-in abbreviations nor your own `abbrev_expansions` can replace them. "µg" is read "micrograms", because the symbol itself is the hazard. "AS" and "AD" in text set in capitals ("SUCH AS") stay words.
+- **Symbols outside math are named.** Greek letters ("TNF-α" is "TNF alpha", "ΔG" is "delta G"), the micro sign ("µm" is "micro m"), the minus sign "−", "⇌" ("in equilibrium with"), arrows, and powers of ten ("11.5 × 10^9" is "eleven point five times ten to the ninth", "10⁻³" is "ten to the negative third"). Greek letters are named at every punctuation level, because they are words.
+
+With Eloquence, which reads numbers and abbreviations itself, the identifier rule and the error-prone list still apply, so Eloquence cannot guess either.
+
 ### The community lexicon
 
 textweaver comes with the community IBMTTS pronunciation dictionaries. Eloquence loads them itself (see `[speech.eci] dictionaries`). For other engines you can apply them as a pronunciation list:
@@ -353,7 +363,7 @@ language = "ENU"
 
 ### Engines that prepare text themselves
 
-Eloquence reads numbers, dates, times, and abbreviations itself, and does it well. With Eloquence, and with Apple's Eloquence voices, textweaver leaves those to the engine. It still removes Markdown marks and applies your pronunciations, split caps, and punctuation level. `tw backends` shows this as "reads numbers and abbreviations itself".
+Eloquence reads numbers, dates, times, and abbreviations itself, and does it well. With Eloquence, and with Apple's Eloquence voices, textweaver leaves those to the engine. It still removes Markdown marks and applies your pronunciations, split caps, and punctuation level, and it still reads identifiers digit by digit and spells error-prone medical abbreviations (see [Clinical and scientific text](#clinical-and-scientific-text)). `tw backends` shows this as "reads numbers and abbreviations itself".
 
 ## How exactly words are highlighted
 

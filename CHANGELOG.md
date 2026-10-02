@@ -42,6 +42,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **A mirror** (`[components] mirror` or `TEXTWEAVER_COMPONENTS_MIRROR`), tried before the public sources, may list components of its own; it can add components but never change a built-in one's pins. See [Optional components](docs/components.md).
 - **Downloads go on where they stopped,** and a folder placed by hand that already holds the right files is used as it is.
 
+### Speech: clinical and scientific text
+
+- **Identifiers are read digit by digit.** A number after CPT, PMID, NCT, ZIP, DOI, ISBN, or phone (also telephone, tel, and fax), and a US phone number such as "503-555-0123", is read as digits: "PMID 31769816" is "PMID three one seven six nine eight one six", where it was "thirty-one million ...". The highlight follows each digit.
+- **Error-prone medical abbreviations are spelled, never expanded.** The abbreviations on The Joint Commission's "Do Not Use" list and the ISMP list of error-prone abbreviations (QD, QOD, U, IU, MS, MgSO4, cc, SC, SQ, HS, the ear and eye abbreviations, TPA, HCTZ, and others) are read letter by letter, "Q D", and no expansion, built in or your own, can replace them. "µg" is read "micrograms".
+- **Symbols outside math are named:** Greek letters ("TNF-α" is "TNF alpha"), the micro sign, the minus sign, "⇌" ("in equilibrium with"), arrows, and powers of ten ("× 10^9" is "times ten to the ninth"). Greek letters are named at every punctuation level.
+- **With Eloquence too.** The identifier rule and the error-prone list also apply to engines that read numbers and abbreviations themselves.
+
 ### For contributors
 
 - **One downloader** (W8a-d): the new `textweaver-components` crate pins files by size and SHA-256 and downloads them through a `.part` file, the check, and a rename, with resume, progress, cancel, a lock, and one neutral User-Agent. The OCR models, Lexend, and Piper voices moved onto it; a test in the app enforces the registry, and the fake fetcher records every request.
