@@ -556,6 +556,7 @@ impl App {
     pub(crate) fn answer_save_as(&mut self, text: &str) -> Vec<Effect> {
         let then = self.save_then.take().unwrap_or(SaveThen::Stay);
         let suggested = self.suggested_path.take();
+        let confirmed = std::mem::take(&mut self.save_as_replace_confirmed);
         let trimmed = text.trim().trim_matches('"');
         let path = if trimmed.is_empty() {
             suggested
@@ -571,7 +572,14 @@ impl App {
             self.note(&msg);
             return vec![Effect::Redraw];
         };
-        self.save_as_to(path, then, false)
+        self.save_as_to(path, then, confirmed)
+    }
+
+    /// Marks the next Save As answer as already confirmed by a system save
+    /// dialog, which asks before replacing a file itself. The mark applies to
+    /// that one answer only.
+    pub fn save_as_confirmed_by_system(&mut self) {
+        self.save_as_replace_confirmed = true;
     }
 
     /// Saves under `path` (a Save As answer). Another file already there is

@@ -326,6 +326,30 @@ fn new_document_saves_as_and_adopts_the_path() {
     assert_eq!(std::fs::read_to_string(&target).unwrap(), "Draft!");
 }
 
+/// A name from a system save dialog, which asks before replacing a file
+/// itself, is not asked about again; the mark covers that one answer only.
+#[test]
+fn save_as_from_a_system_dialog_does_not_ask_again() {
+    let mut r = rig();
+    r.act(ActionId::NewDocument);
+    r.type_str("# Field Notes\n\nBody.");
+    r.act(ActionId::SaveAs);
+    let taken = r.file("taken.md", "keep me");
+    r.app.save_as_confirmed_by_system();
+    r.send(Command::Answer(taken.display().to_string()));
+    assert!(!r.app.confirmation_pending());
+    assert_eq!(
+        std::fs::read_to_string(&taken).unwrap(),
+        "# Field Notes\n\nBody."
+    );
+    // A typed answer afterwards is asked about as before.
+    r.act(ActionId::SaveAs);
+    let other = r.file("other.md", "keep me too");
+    r.send(Command::Answer(other.display().to_string()));
+    assert!(r.app.confirmation_pending());
+    assert_eq!(std::fs::read_to_string(&other).unwrap(), "keep me too");
+}
+
 /// Save As suggests a name from the first heading and asks y or n before
 /// replacing another file; n asks for another name, y replaces it.
 #[test]

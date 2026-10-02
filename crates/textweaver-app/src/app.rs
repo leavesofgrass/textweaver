@@ -345,6 +345,9 @@ pub struct App {
     pub(crate) edit: Option<EditState>,
     pub(crate) save_then: Option<SaveThen>,
     pub(crate) suggested_path: Option<PathBuf>,
+    /// The next Save As answer came from a system save dialog that already
+    /// asked before replacing a file, so the app does not ask again.
+    pub(crate) save_as_replace_confirmed: bool,
     pub(crate) replace_query: Option<String>,
     pub(crate) pending_item: Option<usize>,
     /// An action waiting for a yes or no ([`ActionId::needs_confirmation`]).
@@ -511,6 +514,7 @@ impl App {
             edit: None,
             save_then: None,
             suggested_path: None,
+            save_as_replace_confirmed: false,
             replace_query: None,
             pending_item: None,
             pending_confirm: None,
