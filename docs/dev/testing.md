@@ -235,6 +235,7 @@ What is left is about two allocations per utterance (its text and its map, which
 
 - SSML and DECtalk markup compiled five regular expressions per sentence: 324 to 534 microseconds a sentence before, 4 to 7 after, on the speech thread of SSML engines.
 - The SCOWL list was already unpacked on first use (Wave 6). The interface catalogs were not: the first built-in translation asked for parsed all five. Starting in Spanish: 41 to 6 ms for the catalog; English is unchanged at 6 ms.
+- `cargo xtask startup` after the pass, in English (no change expected there): `tw --version` 37.9 ms, `tw text` 58.3 ms, `tw info` 91.9 ms on the 1 MB corpus, `tw backends` 38.4 ms (medians of five).
 
 Bulk conversion has its own benchmark:
 
