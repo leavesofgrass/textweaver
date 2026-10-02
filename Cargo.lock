@@ -9305,6 +9305,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-components"
+version = "0.1.0-alpha.7"
+dependencies = [
+ "log",
+ "serde",
+ "sha1",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.21",
+ "toml 1.1.6+spec-1.1.0",
+ "ureq",
+ "zip 8.6.0",
+]
+
+[[package]]
 name = "textweaver-convert"
 version = "0.1.0-alpha.7"
 dependencies = [
