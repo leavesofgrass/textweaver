@@ -770,6 +770,10 @@ pub struct DisplaySettings {
     pub show_line_numbers: bool,
     /// Context lines kept above and below the cursor.
     pub scroll_margin: u16,
+    /// The terminal reader's key hints line: `auto` (shown when
+    /// self-voicing, hidden in screen-reader and hybrid modes, where the
+    /// Braille display reads the screen), `on`, or `off`.
+    pub hints: HintsLine,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -785,6 +789,7 @@ impl Default for DisplaySettings {
             tab_width: 4,
             show_line_numbers: false,
             scroll_margin: 3,
+            hints: HintsLine::default(),
             extra: toml::Table::new(),
         }
     }
@@ -1215,6 +1220,22 @@ impl Default for InterfaceSettings {
             extra: toml::Table::new(),
         }
     }
+}
+
+/// `[display] hints`: whether the terminal reader shows its key hints
+/// line at the bottom of the screen. A prompt still uses that line.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HintsLine {
+    /// Shown when self-voicing; hidden in screen-reader and hybrid modes,
+    /// where the Braille display and the screen reader read the screen
+    /// and F1, the keyboard list and the menus name the keys.
+    #[default]
+    Auto,
+    /// Always shown.
+    On,
+    /// Never shown.
+    Off,
 }
 
 /// Whether right-to-left text is reordered for display in the terminal

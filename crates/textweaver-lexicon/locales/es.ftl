@@ -469,9 +469,10 @@ help-not-bound = sin asignar
 help-or = { $a } o { $b }
 # A command without keys: $name is its palette name, such as list highlights.
 help-the-command = el comando { $name }
-# One line of the keyboard shortcuts list: a category-* title, an action-*
-# help, and its keys.
-help-entry = { $category }: { $help }. { $keys }
+# One line of the keyboard shortcuts list: the command's name-* (first, so
+# type-ahead finds commands), its keys (inside a 40-cell Braille line), an
+# action-* help, and its category-* title.
+help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Comando desconocido: { $text }.
 help-shortcuts-intro = Atajos de teclado, { $n } comandos. Arriba y Abajo se mueven, Intro ejecuta, Escape cierra.
 help-shortcuts-title = Atajos de teclado
@@ -1782,6 +1783,11 @@ setting-display-show-line-numbers = Números de línea
 setting-display-show-line-numbers-help = Mostrar los números de línea.
 setting-display-scroll-margin = Margen de desplazamiento
 setting-display-scroll-margin-help = Líneas que se mantienen visibles por encima y por debajo del cursor.
+setting-display-hints = Línea de atajos
+setting-display-hints-help = Si el lector del terminal muestra atajos de teclado en su última línea: automático los muestra con voz propia y los oculta con un lector de pantalla. F1 y la lista de atajos de teclado siempre nombran las teclas.
+choice-display-hints-auto = automático
+choice-display-hints-on = activado
+choice-display-hints-off = desactivado
 setting-editing-autosave-recovery = Instantáneas de recuperación
 setting-editing-autosave-recovery-help = Guardar una copia del trabajo sin guardar y ofrecerla después de un fallo.
 setting-editing-autosave-interval-secs = Intervalo de instantáneas

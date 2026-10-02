@@ -474,9 +474,10 @@ help-not-bound = not bound
 help-or = { $a } or { $b }
 # A command without keys: $name is its palette name, such as list highlights.
 help-the-command = the command { $name }
-# One line of the keyboard shortcuts list: a category-* title, an action-*
-# help, and its keys.
-help-entry = { $category }: { $help }. { $keys }
+# One line of the keyboard shortcuts list: the command's name-* (first, so
+# type-ahead finds commands), its keys (inside a 40-cell Braille line), an
+# action-* help, and its category-* title.
+help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Unknown command: { $text }.
 help-shortcuts-intro = Keyboard shortcuts, { $n } commands. Up and Down move, Enter runs, Escape closes.
 help-shortcuts-title = Keyboard shortcuts
@@ -1787,6 +1788,11 @@ setting-display-show-line-numbers = Line numbers
 setting-display-show-line-numbers-help = Show line numbers.
 setting-display-scroll-margin = Scroll margin
 setting-display-scroll-margin-help = Lines kept in view above and below the cursor.
+setting-display-hints = Key hints line
+setting-display-hints-help = Whether the terminal reader shows key hints on its bottom line: automatic shows them when self-voicing and hides them with a screen reader. F1 and the keyboard shortcuts list always name the keys.
+choice-display-hints-auto = automatic
+choice-display-hints-on = on
+choice-display-hints-off = off
 setting-editing-autosave-recovery = Recovery snapshots
 setting-editing-autosave-recovery-help = Keep a copy of unsaved work and offer it after a crash.
 setting-editing-autosave-interval-secs = Snapshot interval

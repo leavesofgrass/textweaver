@@ -81,6 +81,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `display.tab_width`: default 4 columns. Tab width. Columns a tab takes. From 1 to 16 columns, in steps of 1. Syncs between computers.
 - `display.show_line_numbers`: default off (`false`). Line numbers. Show line numbers. On or off: `true` or `false`. Syncs between computers.
 - `display.scroll_margin`: default 3 lines. Scroll margin. Lines kept in view above and below the cursor. From 0 to 20 lines, in steps of 1. Syncs between computers.
+- `display.hints`: default automatic (`"auto"`). Key hints line. Whether the terminal reader shows key hints on its bottom line: automatic shows them when self-voicing and hides them with a screen reader. F1 and the keyboard shortcuts list always name the keys. Choices: `"auto"` (automatic), `"on"`, `"off"`. Stays on this computer.
 
 ## Editing: the `[editing]` section
 

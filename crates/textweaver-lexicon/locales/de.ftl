@@ -505,9 +505,10 @@ help-not-bound = nicht belegt
 help-or = { $a } oder { $b }
 # A command without keys: $name is its palette name, such as list highlights.
 help-the-command = der Befehl { $name }
-# One line of the keyboard shortcuts list: a category-* title, an action-*
-# help, and its keys.
-help-entry = { $category }: { $help }. { $keys }
+# One line of the keyboard shortcuts list: the command's name-* (first, so
+# type-ahead finds commands), its keys (inside a 40-cell Braille line), an
+# action-* help, and its category-* title.
+help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Unbekannter Befehl: { $text }.
 help-shortcuts-intro = Tastenkombinationen, { $n } Befehle. Auf und Ab bewegen, Eingabetaste führt aus, Escape schließt.
 help-shortcuts-title = Tastenkombinationen
@@ -1818,6 +1819,11 @@ setting-display-show-line-numbers = Zeilennummern
 setting-display-show-line-numbers-help = Zeilennummern anzeigen.
 setting-display-scroll-margin = Bildlaufrand
 setting-display-scroll-margin-help = Zeilen, die über und unter dem Cursor sichtbar bleiben.
+setting-display-hints = Tastenhinweiszeile
+setting-display-hints-help = Ob der Terminal-Reader Tastenhinweise in seiner letzten Zeile zeigt: automatisch zeigt sie selbstsprechend und blendet sie mit einem Screenreader aus. F1 und die Liste der Tastenkombinationen nennen die Tasten immer.
+choice-display-hints-auto = automatisch
+choice-display-hints-on = an
+choice-display-hints-off = aus
 setting-editing-autosave-recovery = Wiederherstellungs-Schnappschüsse
 setting-editing-autosave-recovery-help = Eine Kopie nicht gespeicherter Arbeit aufbewahren und sie nach einem Absturz anbieten.
 setting-editing-autosave-interval-secs = Schnappschuss-Intervall

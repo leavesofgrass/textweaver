@@ -354,7 +354,11 @@ pub fn spoken_text(text: &str) -> Cow<'_, str> {
     pick_form(text, true)
 }
 
-/// Every action with its category and keys, in help order.
+/// Every action with its keys and category, in help order. Each line
+/// leads with the command's name, then its keys, so type-ahead jumps to
+/// commands and the keys sit inside a 40-cell Braille line: "Play or
+/// pause: Alt+P or Space. Play or pause reading from the current word.
+/// Reading" (Wave 8c).
 pub fn help_entries(keymap: &Keymap) -> Vec<(ActionId, String)> {
     entries_with(&Catalog::english(), keymap, chords_text_in)
 }
@@ -370,6 +374,7 @@ fn entries_with(
         c.fmt(
             "help-entry",
             &args![
+                "name" => crate::menu::action_name(c, a),
                 "category" => category_title(c, a.category()),
                 "help" => action_help(c, a),
                 "keys" => keys(c, keymap, a)
@@ -916,7 +921,7 @@ mod tests {
         let map = Keymap::defaults(Platform::Linux, Frontend::Terminal);
         assert_eq!(
             help_entries(&map)[0].1,
-            "Reading: Play or pause reading from the current word. Alt+P or Space"
+            "Play or pause: Alt+P or Space. Play or pause reading from the current word. Reading"
         );
         // Spanish help finds commands by its own words too.
         let es = Catalog::builtin("es").unwrap();

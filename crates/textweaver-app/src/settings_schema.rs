@@ -658,6 +658,12 @@ pub const INFO: &[Info] = &[
         (0.0, 20.0, 1.0),
         "lines",
     ),
+    choice(
+        "display.hints",
+        "Key hints line",
+        "Whether the terminal reader shows key hints on its bottom line: automatic shows them when self-voicing and hides them with a screen reader. F1 and the keyboard shortcuts list always name the keys.",
+        &[("auto", "automatic"), ("on", "on"), ("off", "off")],
+    ),
     // [editing]
     toggle(
         "editing.autosave_recovery",
