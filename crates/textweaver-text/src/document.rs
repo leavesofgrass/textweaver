@@ -123,6 +123,73 @@ fn ends_with_break(text: &Rope) -> bool {
     len > 0 && is_line_break(text.char(len - 1))
 }
 
+/// Shifts sorted markers by an edit and keeps them sorted, touching only
+/// what the edit can change.
+///
+/// - Markers that start after the removed range move by the edit's delta,
+///   start and end alike: a plain addition, and their order is kept.
+/// - Markers that end before it do not move.
+/// - The rest (markers that reach into the edit, a handful) are mapped by
+///   [`EditOutcome::map_range`].
+///
+/// Two neighbors can only end up out of order when one of them was
+/// mapped (ranges collapsed into the edit; an empty range there moves to
+/// the edit's start, a range starting there to its end). So only a mapped
+/// marker's neighbors are compared. When some are out of order, the slice
+/// from the first disorder to the last is widened to every marker starting
+/// within the slice's starts and sorted, which gives exactly what a full
+/// stable sort gives: equal keys share a start, so they are all in the
+/// slice and keep their order.
+fn shift_markers(markers: &mut [Marker], outcome: &EditOutcome) {
+    let removed = outcome.removed;
+    // Sorted by start: everything from `after` on starts past the edit.
+    let after = markers.partition_point(|m| m.range.start <= removed.end);
+    let (head, tail) = markers.split_at_mut(after);
+    let (from, to) = (removed.end.0, outcome.inserted.end.0);
+    for m in tail {
+        m.range.start = CharPos(m.range.start.0 - from + to);
+        m.range.end = CharPos(m.range.end.0 - from + to);
+    }
+    let mut first: Option<usize> = None;
+    let mut last = 0;
+    let mut mapped = Vec::new();
+    for (i, m) in head.iter_mut().enumerate() {
+        if m.range.end >= removed.start {
+            m.shift(outcome);
+            mapped.push(i);
+        }
+    }
+    let out_of_order = |a: &Marker, b: &Marker| a.sort_key() > b.sort_key();
+    for &i in &mapped {
+        if i > 0 && out_of_order(&markers[i - 1], &markers[i]) {
+            first = Some(first.map_or(i - 1, |f| f.min(i - 1)));
+            last = last.max(i - 1);
+        }
+        if i + 1 < markers.len() && out_of_order(&markers[i], &markers[i + 1]) {
+            first = Some(first.map_or(i, |f| f.min(i)));
+            last = last.max(i);
+        }
+    }
+    let Some(first) = first else {
+        return;
+    };
+    // Widen the slice until everything before it starts before all of it,
+    // and everything after it starts after all of it.
+    let (mut lo, mut hi) = (first, last + 2);
+    let low = markers[lo..hi].iter().map(|m| m.range.start).min();
+    let high = markers[lo..hi].iter().map(|m| m.range.start).max();
+    let (Some(low), Some(high)) = (low, high) else {
+        return;
+    };
+    while lo > 0 && markers[lo - 1].range.start >= low {
+        lo -= 1;
+    }
+    while hi < markers.len() && markers[hi].range.start <= high {
+        hi += 1;
+    }
+    markers[lo..hi].sort_by_key(Marker::sort_key);
+}
+
 /// The serialized shape of a [`Document`].
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DocumentData {
@@ -164,7 +231,10 @@ impl Document {
         for m in &mut markers {
             m.range = m.range.clamp_to(len);
         }
-        markers.sort_by_key(Marker::sort_key);
+        // Loaders that already emit sorted markers skip the sort.
+        if !markers.is_sorted_by_key(Marker::sort_key) {
+            markers.sort_by_key(Marker::sort_key);
+        }
         Document {
             meta,
             ends_with_break: ends_with_break(&text),
@@ -369,11 +439,8 @@ impl Document {
     /// and drops the display index and marker tables.
     pub fn apply(&mut self, edit: &Edit) -> Result<EditOutcome, CoreError> {
         let (outcome, _inverse) = edit.apply_to_rope(&mut self.text)?;
-        for m in &mut self.markers {
-            m.shift(&outcome);
-        }
         // Shifting is monotone, but collapsed ranges can reorder ties.
-        self.markers.sort_by_key(Marker::sort_key);
+        shift_markers(&mut self.markers, &outcome);
         self.display = OnceCell::new();
         self.tables = OnceCell::new();
         self.blank_lines = OnceCell::new();
@@ -526,6 +593,36 @@ mod props {
                     let scan = d.markers().iter().filter(|m| m.kind == kind).count();
                     prop_assert_eq!(d.marker_index().count(kind, None), scan);
                 }
+            }
+        }
+
+        /// Shifting only the markers an edit reaches, and sorting only
+        /// where it reordered them, gives exactly what mapping every marker
+        /// and a full stable sort give, ties (same range and kind, other
+        /// levels) included.
+        #[test]
+        fn partial_shift_and_sort_match_the_full_ones(
+            text in "[a-z \n]{0,40}",
+            markers in proptest::collection::vec(
+                (0usize..=40, 0usize..=40, 0usize..4, 0u8..3)
+                    .prop_map(|(a, b, k, l)| {
+                        Marker::new(MarkerKind::ALL[k], CharRange::new(a, b)).with_level(l)
+                    }),
+                0..16,
+            ),
+            edits in proptest::collection::vec((0usize..50, 0usize..50, "[a-z\n]{0,6}"), 1..6),
+        ) {
+            let mut d = Document::new(DocumentMeta::default(), Rope::from_str(&text), markers);
+            for (a, b, ins) in edits {
+                let len = d.len_chars();
+                let edit = Edit::replace(CharRange::new(a.min(len), b.min(len)), ins);
+                let mut expect: Vec<Marker> = d.markers().to_vec();
+                let outcome = d.apply(&edit).unwrap();
+                for m in &mut expect {
+                    m.shift(&outcome);
+                }
+                expect.sort_by_key(Marker::sort_key);
+                prop_assert_eq!(d.markers(), expect.as_slice());
             }
         }
 
