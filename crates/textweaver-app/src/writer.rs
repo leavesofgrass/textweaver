@@ -136,6 +136,9 @@ pub(crate) enum Job {
     Settings {
         store: SettingsStore,
         settings: Box<Settings>,
+        /// The settings as this process last loaded or saved them: only settings that
+        /// differ from these are written over the file's current values.
+        base: Box<Settings>,
     },
     /// Answer when everything sent before has been done.
     Barrier(Sender<()>),
@@ -188,8 +191,9 @@ pub(crate) enum Report {
     },
     /// Saving the settings profiles failed.
     ProfilesFailed(String),
-    /// A settings save finished.
-    Settings { result: Result<(), String> },
+    /// A settings save finished; `Ok(true)` when settings another
+    /// program wrote were kept.
+    Settings { result: Result<bool, String> },
     /// The sync engine's answer.
     Sync(SyncResponse),
     /// Writing a library folder's sidecar found positions that differed
@@ -406,6 +410,17 @@ fn run(jobs: &Receiver<Job>, reports: &Sender<Report>, wake: &WakeSlot, done: &A
         let last_settings = batch
             .iter()
             .rposition(|j| matches!(j, Job::Settings { .. }));
+        // The newest is merged against the oldest one's base, so the
+        // settings changed in the skipped saves are written too.
+        let first_base = batch.iter().find_map(|j| match j {
+            Job::Settings { base, .. } => Some(base.clone()),
+            _ => None,
+        });
+        if let (Some(i), Some(first)) = (last_settings, first_base)
+            && let Job::Settings { base, .. } = &mut batch[i]
+        {
+            *base = first;
+        }
         // A state save followed by a newer one for the same file is
         // skipped (its report still goes out, with the newer result's
         // file on disk).
@@ -564,11 +579,17 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
             .save(&paths)
             .err()
             .map(|e| Report::ProfilesFailed(e.to_string())),
-        Job::Settings { store, settings } => {
+        Job::Settings {
+            store,
+            settings,
+            base,
+        } => {
             let result = if superseded {
-                Ok(())
+                Ok(false)
             } else {
-                store.save(&settings).map_err(|e| e.to_string())
+                store
+                    .save_merged(&settings, &base)
+                    .map_err(|e| e.to_string())
             };
             Some(Report::Settings { result })
         }

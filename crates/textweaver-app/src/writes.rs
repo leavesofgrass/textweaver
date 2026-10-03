@@ -246,10 +246,18 @@ impl App {
                 Vec::new()
             }
             Report::Settings { result } => {
-                if let Err(e) = result {
-                    let msg =
-                        self.msg_args("settings-save-failed", &args!["error" => e.to_string()]);
-                    self.error(&msg);
+                match result {
+                    Err(e) => {
+                        let msg =
+                            self.msg_args("settings-save-failed", &args!["error" => e.to_string()]);
+                        self.error(&msg);
+                    }
+                    Ok(true) if !self.settings_outside_said => {
+                        self.settings_outside_said = true;
+                        let msg = self.msg("settings-outside-kept");
+                        self.tell(&msg);
+                    }
+                    Ok(_) => {}
                 }
                 vec![Effect::Redraw]
             }

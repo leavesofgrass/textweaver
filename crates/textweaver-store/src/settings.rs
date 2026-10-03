@@ -1968,6 +1968,33 @@ impl Settings {
     }
 }
 
+/// Writes into `target` every setting that differs between `before` and
+/// `after`, table by table, so settings neither side touched keep the
+/// target's values. A setting `after` no longer has is removed.
+fn merge_changes(target: &mut toml::Table, before: &toml::Table, after: &toml::Table) {
+    let keys: std::collections::BTreeSet<&String> = before.keys().chain(after.keys()).collect();
+    for key in keys {
+        match (before.get(key), after.get(key)) {
+            (Some(b), Some(a)) if b == a => {}
+            (Some(toml::Value::Table(b)), Some(toml::Value::Table(a))) => {
+                match target.get_mut(key) {
+                    Some(toml::Value::Table(t)) => merge_changes(t, b, a),
+                    _ => {
+                        target.insert(key.clone(), toml::Value::Table(a.clone()));
+                    }
+                }
+            }
+            (_, Some(a)) => {
+                target.insert(key.clone(), a.clone());
+            }
+            (Some(_), None) => {
+                target.remove(key);
+            }
+            (None, None) => {}
+        }
+    }
+}
+
 /// A value outside its supported range, clamped by
 /// [`Settings::fix_ranges`].
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -2155,6 +2182,38 @@ impl SettingsStore {
             return Ok(false);
         }
         self.save(settings).map(|()| true)
+    }
+
+    /// Saves `settings` without undoing changes another program made to
+    /// the file since `base` (the settings as this process last loaded or saved them):
+    /// only the settings that differ between `base` and `settings` are
+    /// written over the file's current values, one setting at a time, and
+    /// every other setting keeps what the file holds now (a folder added
+    /// by `tw library --add`, a second window's change). A missing or
+    /// unreadable file is written whole, as [`save`](Self::save) does.
+    /// Returns whether the file kept values that differ from `settings`.
+    pub fn save_merged(&self, settings: &Settings, base: &Settings) -> Result<bool, StoreError> {
+        let path = self.paths.settings_file();
+        let on_disk = std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|t| t.parse::<toml::Table>().ok());
+        let Some(disk_table) = on_disk else {
+            self.save(settings)?;
+            return Ok(false);
+        };
+        let parse_err = |e: toml::ser::Error| StoreError::Parse {
+            path: path.clone(),
+            message: e.to_string(),
+        };
+        let (disk, _) = Settings::from_table(disk_table);
+        let mine = toml::Table::try_from(settings).map_err(parse_err)?;
+        let before = toml::Table::try_from(base).map_err(parse_err)?;
+        let mut merged = toml::Table::try_from(&disk).map_err(parse_err)?;
+        merge_changes(&mut merged, &before, &mine);
+        let kept = merged != mine;
+        let (merged, _) = Settings::from_table(merged);
+        self.save(&merged)?;
+        Ok(kept)
     }
 
     /// Loads keymap overrides (empty when the file is missing).
@@ -2809,6 +2868,39 @@ wrap_navigation = true
         after.speech.rate = Rate::Wpm(300);
         assert!(store.save_if_changed(&after, &before).unwrap());
         assert!(store.paths().settings_file().exists());
+    }
+
+    #[test]
+    fn save_merged_keeps_settings_written_by_another_program() {
+        let (_d2, empty) = store();
+        let (_d, store) = store();
+        let base = Settings::default();
+        store.save(&base).unwrap();
+        // Another program (tw library --add) adds a folder.
+        let mut outside = base.clone();
+        outside
+            .library
+            .folders
+            .push(PathBuf::from("Readings, Fall 2026"));
+        store.save(&outside).unwrap();
+        // This process changed only the rate since it loaded.
+        let mut mine = base.clone();
+        mine.speech.rate = Rate::Wpm(300);
+        assert!(store.save_merged(&mine, &base).unwrap());
+        let (now, _) = store.load();
+        assert_eq!(now.speech.rate, Rate::Wpm(300));
+        assert_eq!(
+            now.library.folders,
+            vec![PathBuf::from("Readings, Fall 2026")]
+        );
+        // A setting this process changed wins over the file's value.
+        let mut again = mine.clone();
+        again.library.folders = vec![PathBuf::from("Notes")];
+        assert!(!store.save_merged(&again, &base).unwrap());
+        assert_eq!(store.load().0.library.folders, vec![PathBuf::from("Notes")]);
+        // With no file yet, everything is written.
+        assert!(!empty.save_merged(&mine, &base).unwrap());
+        assert_eq!(empty.load().0, mine);
     }
 
     #[test]
