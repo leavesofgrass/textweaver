@@ -66,7 +66,7 @@ pub struct ExportArgs {
     #[arg(long)]
     pub changed_only: bool,
     /// json (the default) or toml. A FILE ending in .toml means toml.
-    #[arg(long, value_enum)]
+    #[arg(long = "to", alias = "format", value_enum, value_name = "FORMAT")]
     pub format: Option<Format>,
 }
 

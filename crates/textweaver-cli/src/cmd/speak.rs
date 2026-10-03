@@ -47,7 +47,7 @@ pub struct Args {
     #[arg(long, allow_hyphen_values = true)]
     pub pitch: Option<i8>,
     /// Write audio to this file instead of playing it.
-    #[arg(long)]
+    #[arg(long = "out", short = 'o', alias = "output")]
     pub out: Option<PathBuf>,
     /// Print the utterances, offset maps, and status events as JSON.
     #[arg(long)]

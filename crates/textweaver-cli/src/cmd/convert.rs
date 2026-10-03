@@ -42,7 +42,7 @@ pub struct Args {
     pub to: OutputFormat,
     /// Output folder (default: beside each source; for --watch, a
     /// "converted" folder inside the watched folder).
-    #[arg(long)]
+    #[arg(long = "out", short = 'o', alias = "output")]
     pub out: Option<PathBuf>,
     /// Markdown engine: pulldown (fastest) or comrak (complete GFM).
     #[arg(long, default_value = "pulldown", value_parser = parse_engine)]

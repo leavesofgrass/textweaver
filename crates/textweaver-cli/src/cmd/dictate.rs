@@ -76,7 +76,7 @@ pub struct Args {
     #[arg(long)]
     pub model_file: Option<PathBuf>,
     /// The spoken language (en, de, ...); detected when not given.
-    #[arg(long)]
+    #[arg(long = "lang", alias = "language")]
     pub language: Option<String>,
     /// Start each segment on its own line with its time, `[mm:ss]`.
     #[arg(long)]
@@ -85,7 +85,7 @@ pub struct Args {
     #[arg(long)]
     pub commands: bool,
     /// Write the transcript to this file instead of printing it.
-    #[arg(long)]
+    #[arg(long = "out", short = 'o', alias = "output")]
     pub out: Option<PathBuf>,
     /// List the Whisper programs found and exit.
     #[arg(long)]

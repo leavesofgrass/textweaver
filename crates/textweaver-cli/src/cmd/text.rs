@@ -3,12 +3,12 @@
 //! Prints a document's canonical text: headings, list items, and table rows
 //! on lines of their own, paragraphs separated by a blank line.
 //!
-//! - `--format text` (default): the canonical text; with `--structure`,
+//! - `--to text` (default): the canonical text; with `--structure`,
 //!   followed by an outline of every marker (`line:column`, kind, text).
-//! - `--format markdown`: the document as Markdown (any format: a PDF's
+//! - `--to markdown`: the document as Markdown (any format: a PDF's
 //!   recovered headings, lists, and tables become Markdown).
-//! - `--format html`: the document as a standalone, accessible HTML page.
-//! - `--format json`: `{ "meta", "text" }`, plus `"markers"` with
+//! - `--to html`: the document as a standalone, accessible HTML page.
+//! - `--to json`: `{ "meta", "text" }`, plus `"markers"` with
 //!   `--structure` (each with `kind`, `start`, `end`, `line`, `column`,
 //!   `level`, `label`, `reference`, and `text`).
 
@@ -25,8 +25,11 @@ pub struct Args {
     /// Document to extract.
     pub file: PathBuf,
     /// Output format.
-    #[arg(long, value_parser = ["text", "markdown", "html", "json"], default_value = "text")]
+    #[arg(long = "to", alias = "format", value_name = "FORMAT", value_parser = ["text", "markdown", "html", "json"], default_value = "text")]
     pub format: String,
+    /// Print the document as JSON, the same as --to json.
+    #[arg(long)]
+    pub json: bool,
     /// Include markers (structure) in the output.
     #[arg(long)]
     pub structure: bool,
@@ -35,7 +38,7 @@ pub struct Args {
 /// Runs `tw text`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     let doc = load_document(&args.file)?;
-    super::print_all(&render(&doc, &args.format, args.structure)?)
+    super::print_all(&render(&doc, if args.json { "json" } else { &args.format }, args.structure)?)
 }
 
 /// Loads a document with the built-in loaders, for the read-only commands.

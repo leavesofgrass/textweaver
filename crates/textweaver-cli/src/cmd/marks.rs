@@ -1,8 +1,8 @@
 //! `tw marks`: a document's saved reading position, bookmarks, notes,
 //! highlights, and synced sidecar position. Reads only; never writes state.
-//! With `--export FORMAT`, the notes and highlights as reference records
+//! With `--to FORMAT` (once `--export FORMAT`, still accepted), the notes and highlights as reference records
 //! instead: BibTeX, BibLaTeX, RIS, or CSL-JSON (Agent W4g), to the terminal
-//! or to `--output FILE`.
+//! or to `--out FILE`.
 //! Owner: Agent C.
 
 use std::path::{Path, PathBuf};
@@ -28,10 +28,10 @@ pub struct Args {
     pub home: Option<PathBuf>,
     /// Write the notes and highlights as reference records: bibtex,
     /// biblatex, ris, or json (CSL-JSON).
-    #[arg(long, value_name = "FORMAT", conflicts_with = "json")]
+    #[arg(long = "to", alias = "export", value_name = "FORMAT", conflicts_with = "json")]
     pub export: Option<String>,
-    /// With --export: write to this file instead of the terminal.
-    #[arg(long, value_name = "FILE", requires = "export")]
+    /// With --to: write to this file instead of the terminal.
+    #[arg(long = "out", short = 'o', alias = "output", value_name = "FILE", requires = "export")]
     pub output: Option<PathBuf>,
 }
 

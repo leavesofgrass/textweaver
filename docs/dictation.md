@@ -208,10 +208,10 @@ With whisper.cpp, the model file for that size must be in one of the model folde
 ## Choose the language
 
 ```text
-tw dictate --file vorlesung.mp3 --language de
+tw dictate --file vorlesung.mp3 --lang de
 ```
 
-`--language` tells Whisper which language is spoken, as a short code: `en` for English, `de` for German, `fr` for French, `es` for Spanish, and so on. Without it, Whisper listens to the start of the recording and guesses. Giving the language is faster and avoids a wrong guess, especially for short recordings.
+`--lang` tells Whisper which language is spoken, as a short code: `en` for English, `de` for German, `fr` for French, `es` for Spanish, and so on. Without it, Whisper listens to the start of the recording and guesses. Giving the language is faster and avoids a wrong guess, especially for short recordings.
 
 ## Add times to each line
 
@@ -465,14 +465,14 @@ To write text by dictation, switch to edit mode first; see [the editing guide](e
 - "Could not start" followed by a program and a reason: the Whisper program or ffmpeg could not be run. Check the path given with `--program` or `TEXTWEAVER_WHISPER`.
 - "Whisper failed:" followed by a line from Whisper: the Whisper program stopped with an error. The line after the colon is Whisper's own last error line, or "it stopped without saying why". With OpenAI Whisper, a message about ffmpeg most likely means ffmpeg is missing; install it (see [ffmpeg](#ffmpeg)).
 - "Whisper's transcript could not be read:": Whisper finished but its result could not be read. Try again, or try another Whisper program.
-- "Dictation produced no text": Whisper heard no speech. Check that the file has speech in it and is not silent, and try `--language` if the speech is not in the language Whisper guessed.
+- "Dictation produced no text": Whisper heard no speech. Check that the file has speech in it and is not silent, and try `--lang` if the speech is not in the language Whisper guessed.
 - whisper.cpp gives an error about the WAV file: textweaver passes WAV files to whisper.cpp unchanged, and whisper.cpp expects 16 kHz audio. Convert the file to 16 kHz mono WAV with ffmpeg, for example:
 
   ```text
   ffmpeg -i lecture.wav -ar 16000 -ac 1 -c:a pcm_s16le lecture-16k.wav
   ```
 
-- The words are often wrong: try a larger `--model`, give the `--language`, and use a recording with less background noise.
+- The words are often wrong: try a larger `--model`, give the `--lang`, and use a recording with less background noise.
 - It is very slow: try a smaller `--model`, such as `tiny` or `base`. whisper.cpp and faster-whisper need no PyTorch, so they may also start faster than OpenAI Whisper.
 - Dictated text set off commands in the reader: press **F9** to turn single-key shortcuts off (see [Dictating into the reader with other software](#dictating-into-the-reader-with-other-software)).
 
