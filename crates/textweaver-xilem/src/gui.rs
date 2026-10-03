@@ -449,7 +449,7 @@ fn button(
     app: Option<&App>,
     ids: &mut HashMap<WidgetId, ActionId>,
 ) -> NewWidget<ActionButton> {
-    styled_button(text, action, app, ids, None)
+    styled_button(text, action, app, ids, false)
 }
 
 fn styled_button(
@@ -457,7 +457,7 @@ fn styled_button(
     action: ActionId,
     app: Option<&App>,
     ids: &mut HashMap<WidgetId, ActionId>,
-    text_color: Option<masonry::peniko::Color>,
+    accent_text: bool,
 ) -> NewWidget<ActionButton> {
     let shortcut = app.map(|a| shortcut_for(a, action)).unwrap_or_default();
     let help = app.map_or_else(
@@ -467,8 +467,8 @@ fn styled_button(
     let mut b = ActionButton::new(text)
         .with_shortcut(shortcut)
         .with_description(help);
-    if let Some(c) = text_color {
-        b = b.with_text_color(c);
+    if accent_text {
+        b = b.with_accent_text();
     }
     let w = NewWidget::new(b);
     ids.insert(w.id(), action);
@@ -595,7 +595,7 @@ pub fn build_tree(
         ActionId::PlayPause,
         app,
         &mut ids,
-        Some(theme::color(p.on_accent)),
+        true,
     )
     .with_tag(PLAY)
     .with_class("primary");
@@ -955,9 +955,8 @@ pub fn apply_palette(host: &mut impl Host, p: &Palette) {
     host.edit(MAIN, |mut r| {
         r.insert_prop(Background::Color(theme::color(p.background)));
     });
-    host.edit(PLAY, |mut b| {
-        ActionButton::set_text_color(&mut b, theme::color(p.on_accent));
-    });
+    // Play's text takes the theme's text-on-accent color from the default
+    // properties (`widgets::ACCENT_TEXT_CLASS`).
     host.edit(DOC, |mut d| DocumentView::set_palette(&mut d, p.clone()));
     host.edit(RSVP, |mut r| RsvpView::set_palette(&mut r, p.clone()));
 }

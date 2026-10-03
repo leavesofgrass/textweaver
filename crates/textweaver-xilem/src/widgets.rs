@@ -387,7 +387,7 @@ impl ActionButton {
     }
 
     /// Starts unavailable for `why` (see [`set_unavailable`](Self::set_unavailable)).
-    /// Call it before [`with_text_color`](Self::with_text_color).
+    /// Call it before [`with_accent_text`](Self::with_accent_text).
     pub fn with_unavailable(mut self, why: Option<Unavailable>) -> Self {
         self.unavailable = why;
         self.child = NewWidget::new(button_text(self.shown_text())).to_pod();
@@ -421,25 +421,22 @@ impl ActionButton {
         self.label.trim_end_matches('…').trim_end().to_owned()
     }
 
-    /// Draws the text in `color` (the primary button's text on the
-    /// accent).
-    pub fn with_text_color(mut self, color: masonry::peniko::Color) -> Self {
+    /// Draws the text in the theme's text-on-accent color (the primary
+    /// button's text on the accent): the label gets the
+    /// [`ACCENT_TEXT_CLASS`] class, which the theme colors, so a theme
+    /// change recolors it and a disabled button's text takes the theme's
+    /// disabled color (a local color would win over both).
+    pub fn with_accent_text(mut self) -> Self {
         let text = self.shown_text();
         self.child = NewWidget::new(button_text(text))
-            .with_props(masonry::properties::ContentColor::new(color))
+            .with_class(ACCENT_TEXT_CLASS)
             .to_pod();
         self
     }
 
-    /// Changes the text colour (a new theme).
-    pub fn set_text_color(this: &mut WidgetMut<'_, Self>, color: masonry::peniko::Color) {
-        let mut child = this.ctx.get_mut(&mut this.widget.child);
-        child.insert_prop(masonry::properties::ContentColor::new(color));
-    }
-
     /// Adds the keyboard shortcut, as written ("Ctrl+O"): the node's
     /// keyboard shortcut, and on screen. Call it before
-    /// [`with_text_color`](Self::with_text_color).
+    /// [`with_accent_text`](Self::with_accent_text).
     pub fn with_shortcut(mut self, shortcut: impl Into<String>) -> Self {
         self.shortcut = shortcut.into();
         self.child = NewWidget::new(button_text(self.shown_text())).to_pod();
@@ -632,6 +629,10 @@ impl Widget for ActionButton {
         true
     }
 }
+
+/// The class of a button text drawn on the accent (Play's), which the
+/// theme colors with its text-on-accent color ([`ActionButton::with_accent_text`]).
+pub const ACCENT_TEXT_CLASS: &str = "on-accent";
 
 /// A button's visible text: the interface font, hidden from screen
 /// readers (the button carries the name).
@@ -1033,6 +1034,50 @@ mod tests {
     use super::*;
     use masonry::core::WidgetTag;
     use masonry_testing::TestHarness;
+
+    /// Play (the primary button, its text on the accent) loses its accent
+    /// fill and its text color when disabled, as behind an open dialog,
+    /// and its text takes the theme's disabled color (design system QW3).
+    #[test]
+    fn a_disabled_primary_button_loses_its_accent() {
+        use masonry::properties::{Background, ContentColor};
+        for name in ["galaxy", "galaxy-light"] {
+            let p = crate::theme::Palette::named(name);
+            let tag: WidgetTag<ActionButton> = WidgetTag::named("play");
+            let button = NewWidget::new(ActionButton::new("Play").with_accent_text())
+                .with_tag(tag)
+                .with_class("primary");
+            let mut h = TestHarness::create(crate::theme::default_properties(&p), button);
+            let _ = h.redraw();
+            let text_color = |h: &TestHarness<ActionButton>| {
+                let b = h.get_widget(tag);
+                let child = b.children().into_iter().next().expect("the label");
+                *child.get_prop::<ContentColor>()
+            };
+            assert_eq!(
+                *h.get_widget(tag).get_prop::<Background>(),
+                Background::Color(crate::theme::color(p.accent)),
+                "{name}"
+            );
+            assert_eq!(
+                text_color(&h),
+                ContentColor::new(crate::theme::color(p.on_accent)),
+                "{name}"
+            );
+            h.edit_root_widget(|mut b| b.ctx.set_disabled(true));
+            let _ = h.redraw();
+            assert_eq!(
+                *h.get_widget(tag).get_prop::<Background>(),
+                Background::Color(crate::theme::color(p.surface)),
+                "{name}"
+            );
+            assert_eq!(
+                text_color(&h),
+                ContentColor::new(crate::theme::color(p.disabled_text)),
+                "{name}"
+            );
+        }
+    }
 
     #[test]
     fn announce_modes_have_names() {

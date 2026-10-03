@@ -438,3 +438,60 @@ fn the_form_starts_on_a_plain_setting() {
         }
     }
 }
+
+/// The chevrons beside a number or a choice do what they show: a click on
+/// the left one steps back, on the right one forward (GUI audit QW8,
+/// W8c-w). A switch's value is in words beside it.
+#[test]
+fn the_chevrons_step_the_way_they_point() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let (mut h, _) = harness_with_dialog(&app);
+    let rows = h.get_widget(FORM).inner().rows().to_vec();
+    let row = rows
+        .iter()
+        .take(4)
+        .position(|r| matches!(r.kind, RowKind::Number { .. } | RowKind::Choice))
+        .expect("a number or a choice near the top of the first section");
+    for t in rows.iter().filter(|r| matches!(r.kind, RowKind::Toggle(_))) {
+        assert!(
+            !t.value_text.is_empty(),
+            "{}: a switch says its value",
+            t.label
+        );
+    }
+    let box_ = h.get_widget(FORM).ctx().bounding_box();
+    // The x ranges a click steps back and forward in.
+    let (back, forward): (Vec<f64>, Vec<f64>) = {
+        let grid = h.get_widget(FORM).inner();
+        let xs = (0..(box_.width() as usize)).map(|x| x as f64);
+        (
+            xs.clone()
+                .filter(|&x| grid.chevron_step(row, x) == Some(false))
+                .collect(),
+            xs.filter(|&x| grid.chevron_step(row, x) == Some(true))
+                .collect(),
+        )
+    };
+    assert!(!back.is_empty() && !forward.is_empty());
+    assert!(back[back.len() - 1] < forward[0], "back is left of forward");
+    let y = box_.y0 + 46.0 * row as f64 + 23.0;
+    for (xs, forward) in [(back, false), (forward, true)] {
+        let x = box_.x0 + xs[xs.len() / 2];
+        h.mouse_move((x, y));
+        h.mouse_button_press(None);
+        h.mouse_button_release(None);
+        let mut got = None;
+        while let Some((a, _)) = h.pop_action::<FormAction>() {
+            got = Some(a);
+        }
+        assert_eq!(
+            got,
+            Some(FormAction::Change {
+                row,
+                change: FormChange::Step(forward),
+            }),
+            "a click at {x} on row {row}"
+        );
+    }
+}

@@ -536,6 +536,61 @@ fn reading_aids_are_drawn_and_leave_the_text_alone() {
     assert_ne!(light.ruler_focus, Palette::galaxy().ruler_focus);
 }
 
+/// The ruler's band rows have a bar too, half the reading line's, so the
+/// band shows by its shape and not by a tint alone; and a blank line's row
+/// is as tall as the blank line, so the band never covers the next
+/// paragraph or heading (GUI audit QW3, W8c-w).
+#[test]
+fn the_rulers_band_rows_have_a_bar_and_blank_rows_fit() {
+    use textweaver_app::Command;
+    use textweaver_app::aids::RowMark;
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::document::PaintStep;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let mut refresher = gui::Refresher::default();
+    // The band: the second step of the ruler.
+    let _ = app.dispatch(Command::Action(ActionId::RulerCycle));
+    let _ = app.dispatch(Command::Action(ActionId::RulerCycle));
+    let _ = app.dispatch(Command::Action(ActionId::NextParagraph));
+    let _ = app.dispatch(Command::Action(ActionId::NextParagraph));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let view = h.get_widget(DOC);
+    let marks = view.inner().ruler_marks();
+    assert!(marks.iter().any(|m| m.0 == RowMark::Band), "{marks:?}");
+    let bars: Vec<_> = view
+        .inner()
+        .painted()
+        .iter()
+        .filter_map(|s| match s {
+            PaintStep::RulerBar(m, r) => Some((*m, *r)),
+            _ => None,
+        })
+        .collect();
+    let marked: Vec<_> = marks
+        .iter()
+        .filter(|m| matches!(m.0, RowMark::Focus | RowMark::Band))
+        .collect();
+    assert_eq!(bars.len(), marked.len(), "one bar per marked row");
+    for ((mark, bar), (m, y0, y1)) in bars.iter().zip(&marked) {
+        assert_eq!(mark, m);
+        assert_eq!((bar.y0, bar.y1), (*y0, *y1));
+        let want = if *m == RowMark::Focus { 4.0 } else { 2.0 };
+        assert!((bar.width() - want).abs() < 1e-6, "{m:?}: {bar:?}");
+    }
+    // Rows follow one another without overlapping, blank lines included.
+    for pair in marks.windows(2) {
+        assert!(
+            pair[1].1 >= pair[0].2 - 0.5,
+            "row at {} overlaps the row ending at {}: {marks:?}",
+            pair[1].1,
+            pair[0].2
+        );
+    }
+}
+
 /// Syllables (Alt+Shift+Z) are drawn between the chars of long words, as
 /// the terminal draws them, and the text runs a screen reader gets stay the
 /// words. Turning them off takes the marks away again: a reading aid turned
