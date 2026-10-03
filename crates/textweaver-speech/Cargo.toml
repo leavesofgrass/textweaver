@@ -25,7 +25,7 @@ default = []
 # (hand-written declarations in src/backends/espeak/sys.rs), never linked:
 # building needs no espeak-ng headers, and one binary works with or without
 # libespeak-ng installed (the backend is then unavailable).
-espeak = ["espeak-phonemes"]
+espeak = ["espeak-phonemes", "dep:windows"]
 # libespeak-ng loaded the same way, for its text-to-phonemes call only
 # (Piper voices, textweaver-piper). Registers no espeak-ng backend.
 espeak-phonemes = ["dep:libloading"]
@@ -53,6 +53,12 @@ regex.workspace = true
 encoding_rs.workspace = true
 toml.workspace = true
 libloading = { workspace = true, optional = true }
+
+# libespeak-ng plays audio (WASAPI, through pcaudiolib) from its own
+# threads, which never initialize COM: the espeak-ng backend keeps the
+# process's multithreaded apartment alive so those threads can use it.
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, optional = true, features = ["Win32_System_Com"] }
 
 [dev-dependencies]
 proptest.workspace = true

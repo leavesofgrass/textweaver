@@ -100,6 +100,35 @@ unsafe extern "C" fn synth_callback(
     }
 }
 
+/// Lets libespeak-ng's own threads use COM, before it plays audio.
+///
+/// In playback mode libespeak-ng opens and writes the audio device
+/// (WASAPI, through pcaudiolib) from threads it creates itself, and those
+/// threads never initialize COM. With no apartment, opening the device
+/// fails with "CoInitialize has not been called." and a later write uses
+/// the device that never opened: the process crashes with an access
+/// violation. Keeping the multithreaded apartment alive for the whole
+/// process makes every thread without an apartment of its own an implicit
+/// member of it, so the device opens. Done once and never undone, since
+/// libespeak-ng stays loaded for the life of the process.
+#[cfg(all(windows, feature = "espeak"))]
+fn keep_com_available() {
+    static MTA: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+    MTA.get_or_init(|| {
+        // SAFETY: CoIncrementMTAUsage has no preconditions and may be called
+        // from any thread; the cookie is deliberately never handed to
+        // CoDecrementMTAUsage, so the apartment outlives every audio thread.
+        if let Err(e) = unsafe { windows::Win32::System::Com::CoIncrementMTAUsage() } {
+            log::warn!("espeak: cannot keep COM available for audio output: {e}");
+        }
+    });
+}
+
+/// COM exists only on Windows, and only the backend (feature `espeak`)
+/// plays audio.
+#[cfg(not(all(windows, feature = "espeak")))]
+fn keep_com_available() {}
+
 /// Initializes libespeak-ng in `mode` and registers the callback. Returns
 /// the sample rate.
 pub(super) fn initialize(mode: Mode) -> Result<u32, String> {
@@ -109,6 +138,9 @@ pub(super) fn initialize(mode: Mode) -> Result<u32, String> {
     };
     // libespeak-ng is loaded at run time; say why when it is missing.
     sys::load()?;
+    if mode == Mode::Playback {
+        keep_com_available();
+    }
     // SAFETY: a null path selects the installed data directory; options 0
     // disables phoneme events. Callers serialize initialization.
     let rate = unsafe { sys::espeak_Initialize(output, 0, std::ptr::null(), 0) };
