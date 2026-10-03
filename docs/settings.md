@@ -99,7 +99,7 @@ Return settings to their defaults:
 tw settings reset
 ```
 
-It says how many settings will change and asks you to type `y` first. `--yes` skips the question. To reset only one section, add `--section` and the section name. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `speech.dectalk`, `speech.piper`, `highlight`, `normalization`, `normalization.community_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `braille`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, `preview`, `lexicon`, `stats`, `summary`, `dictation`, `interface`, `gui`, `colors`, and `keymap` (your key overrides). Sections not in this list, added by a newer textweaver or a build with extra features, can be reset by name too. A reset is backed up like an import.
+It says how many settings will change and asks you to type `y` first. `--yes` skips the question. To reset only one section, add `--section` and the section name. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `speech.dectalk`, `speech.piper`, `highlight`, `normalization`, `normalization.community_lexicon`, `normalization.medical_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `braille`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, `preview`, `lexicon`, `stats`, `summary`, `dictation`, `interface`, `gui`, `colors`, and `keymap` (your key overrides). Sections not in this list, added by a newer textweaver or a build with extra features, can be reset by name too. A reset is backed up like an import.
 
 ## Example file
 
@@ -252,6 +252,13 @@ The community IBMTTS pronunciation dictionaries, used as a pronunciation list fo
 - `enabled`, default `false`: use them.
 - `dir`, not set by default: the folder with the `.dic` files. Unset, textweaver looks beside the program and in `TEXTWEAVER_ECI_DICTIONARIES`.
 - `language`, default `"ENU"`: `"ENU"` for US English or `"DEU"` for German.
+
+### [normalization.medical_lexicon]
+
+A built-in medical pronunciation list: drug names, clinical terms, eponyms, and safe dosing abbreviations such as PRN and q6h. See [Clinical and scientific text](speech.md#clinical-and-scientific-text).
+
+- `enabled`, default `false`: use it.
+- `overlay`, not set by default: your own file of medical pronunciations, written as `term = "spoken form"`, which win over the built-in ones. Unset, textweaver reads `medical-lexicon.toml` in the settings folder, if there is one.
 
 ### [reading]
 
