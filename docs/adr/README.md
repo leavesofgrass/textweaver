@@ -100,6 +100,8 @@ Unused numbers: ADR-0038, ADR-0040 and ADR-0047 were reserved in plans and never
   - Status: accepted; the owner's check 6 is still queued.
 - [ADR-0049: Sync beyond the place](0049-sync-beyond-the-place.md): notes, highlights, bookmarks, places, statistics, portable settings, and word lists synced through a folder the owner chooses, each computer writing only its own files, a hybrid logical clock, a merge rule per kind of data (the newest note edit wins, said, with a local backup), documents recognized by content, and no names or paths in the folder.
   - Status: accepted.
+- [ADR-0050: File names and formats frozen at the final alpha](0050-frozen-file-formats.md): the shapes that cannot change after the freeze: the figure description sidecar, the study pack manifest, the managed policy file and the profile lock list, the reading queue file, the plan record, and the JSON-RPC methods.
+  - Status: accepted; the JSON-RPC methods are implemented, the other shapes are reserved, not implemented.
 
 ## Writing a new ADR
 
