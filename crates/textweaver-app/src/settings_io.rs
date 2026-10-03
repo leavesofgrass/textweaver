@@ -381,7 +381,7 @@ mod tests {
         let mut a = app(&dir.path().join("a"));
         palette(&mut a, "import_settings", file.to_str().unwrap());
         a.dispatch(Command::Confirm(Confirm::No));
-        assert_eq!(a.status_text(), "Cancelled. Nothing was changed.");
+        assert_eq!(a.status_text(), "Canceled. Nothing was changed.");
         assert_eq!(a.settings().speech.rate.wpm(), 265);
 
         std::fs::write(

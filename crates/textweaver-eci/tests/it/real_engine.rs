@@ -181,7 +181,7 @@ fn speak_plays_on_the_clock_and_stop_cancels() {
     let n = rec.0.len();
     std::thread::sleep(Duration::from_millis(300));
     b.poll(&mut rec);
-    assert_eq!(rec.0.len(), n, "no events after Cancelled");
+    assert_eq!(rec.0.len(), n, "no events after Canceled");
     assert_eq!(rec.0.last().map(|e| &e.1), Some(&RawEvent::Cancelled));
 }
 

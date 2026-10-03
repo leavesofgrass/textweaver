@@ -54,7 +54,7 @@ prompt-profiles-export = Export profiles to file, for example textweaver-profile
 
 ## Common words.
 
-common-cancelled = Cancelled.
+common-cancelled = Canceled.
 # Durations: $h hours, $m minutes, $s seconds.
 duration-hours =
     { $h ->
@@ -244,7 +244,7 @@ details-field = { $label }: { $value }
 # $fields lists the fields saved, by their labels.
 details-saved = Details saved: { $fields }.
 details-unchanged = Details not changed.
-details-cancelled = Cancelled. Details not changed.
+details-cancelled = Canceled. Details not changed.
 # $text is what was typed in the DOI or ISBN field.
 details-not-a-doi = Not a DOI: { $text }. Fix it or clear it.
 details-not-an-isbn = Not an ISBN: { $text }. Fix it or clear it.
@@ -852,7 +852,7 @@ settingsio-export-failed = Could not export settings: { $error }
 # $path is the file; $error the system's reason.
 settingsio-read-failed = Could not read { $path }: { $error }
 settingsio-nothing-to-import = Nothing to import: your settings already match that file.
-settingsio-cancelled-unchanged = Cancelled. Nothing was changed.
+settingsio-cancelled-unchanged = Canceled. Nothing was changed.
 settingsio-import-failed = Could not import settings: { $error }
 # $summary lists what changed (from the settings store, in English).
 settingsio-imported = Settings imported. { $summary }

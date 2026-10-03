@@ -194,7 +194,7 @@ mod tests {
              Most read 1: Biology, 1 hour and 2 minutes, furthest point 40 percent.\n"
         );
         assert!(run_with(&paths, &args(true, false, false), "").contains("\"seconds\": 3725.0"));
-        assert!(run_with(&paths, &args(false, true, false), "n\n").ends_with("Cancelled.\n"));
+        assert!(run_with(&paths, &args(false, true, false), "n\n").ends_with("Canceled.\n"));
         assert!(paths.stats_file().exists());
         let cleared = run_with(&paths, &args(false, true, false), "y\n");
         assert!(

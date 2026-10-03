@@ -231,7 +231,7 @@ fn the_form_edits_the_open_document_and_the_edit_survives_a_reload() {
     h.type_text("Something else");
     h.key(PromptKey::Escape);
     assert!(h.app.prompt_model().is_none());
-    assert_eq!(h.said.last(), "Cancelled. Details not changed.");
+    assert_eq!(h.said.last(), "Canceled. Details not changed.");
     h.app.wait_for_writes();
     let lib = Library::load(&h.paths().library_file()).unwrap();
     assert_eq!(

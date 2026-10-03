@@ -555,7 +555,7 @@ fn find_prompt_next_previous_and_wrap() {
     ));
     fresh.app.dispatch(Command::Cancel);
     assert_eq!(fresh.app.mode(), Mode::Browse);
-    assert_eq!(fresh.said.last(), "Cancelled.");
+    assert_eq!(fresh.said.last(), "Canceled.");
 }
 
 #[test]

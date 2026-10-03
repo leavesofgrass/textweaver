@@ -355,7 +355,7 @@ fn reset(
         let mut answer = String::new();
         input.read_line(&mut answer)?;
         if !matches!(answer.trim().to_lowercase().as_str(), "y" | "yes") {
-            writeln!(out, "Cancelled. Nothing was changed.")?;
+            writeln!(out, "Canceled. Nothing was changed.")?;
             return Ok(());
         }
     }
@@ -635,10 +635,7 @@ theme = \"nord\""
             ),
             "{said}"
         );
-        assert!(
-            said.ends_with("Cancelled. Nothing was changed.\n"),
-            "{said}"
-        );
+        assert!(said.ends_with("Canceled. Nothing was changed.\n"), "{said}");
         assert_eq!(store.load().0, s);
 
         let said = tw(&store, &["reset", "--section", "display"], "y\n").unwrap();

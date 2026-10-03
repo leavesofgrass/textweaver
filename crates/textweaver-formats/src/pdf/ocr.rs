@@ -132,7 +132,7 @@ impl Outcome {
             crate::add_warning(
                 meta,
                 &format!(
-                    "Text recognition was cancelled, so {} were not read.",
+                    "Text recognition was canceled, so {} were not read.",
                     page_list(&self.cancelled)
                 ),
             );
@@ -157,7 +157,7 @@ impl Outcome {
         }
         if !self.cancelled.is_empty() && self.recognized.is_empty() {
             return Some(format!(
-                "{} Text recognition was cancelled before any page was read.",
+                "{} Text recognition was canceled before any page was read.",
                 super::NO_TEXT_LAYER
             ));
         }

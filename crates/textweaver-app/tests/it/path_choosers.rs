@@ -346,7 +346,7 @@ fn a_folder_chooser_closed_cancels_the_choice() {
     r.app.dispatch(Command::PathChosen(None));
     assert!(r.app.list_model().is_none());
     assert!(r.app.prompt_model().is_none());
-    assert!(r.said.any("Cancelled."), "{:?}", r.said.all());
+    assert!(r.said.any("Canceled."), "{:?}", r.said.all());
     // With nothing waiting, a path chosen does nothing.
     r.app.dispatch(Command::PathChosen(Some(r.folder.clone())));
     assert!(r.app.prompt_model().is_none());

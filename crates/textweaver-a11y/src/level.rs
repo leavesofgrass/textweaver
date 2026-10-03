@@ -115,7 +115,7 @@ pub enum Importance {
     /// The outcome of a command the user ran ("Bionic reading on",
     /// "Saved"), or the name of a list or menu they opened.
     Result,
-    /// A routine confirmation: a list or dialog closed, "Cancelled", a
+    /// A routine confirmation: a list or dialog closed, "Canceled", a
     /// change textweaver made by itself.
     Routine,
     /// A dialog, window, or screen opening or closing on its own.

@@ -85,7 +85,7 @@ impl std::fmt::Debug for Progress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Progress")
             .field("reports", &self.inner.is_some())
-            .field("cancelled", &self.is_cancelled())
+            .field("canceled", &self.is_cancelled())
             .finish()
     }
 }

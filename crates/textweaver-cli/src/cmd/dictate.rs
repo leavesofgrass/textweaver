@@ -276,7 +276,7 @@ fn take_event(
     match event {
         DictationEvent::Final(t) => return Ok(Some(t.clone())),
         DictationEvent::Failed { message } => anyhow::bail!("{message}"),
-        DictationEvent::Cancelled => anyhow::bail!("Dictation cancelled"),
+        DictationEvent::Cancelled => anyhow::bail!("Dictation canceled"),
         _ if json => {}
         // Live, the committed words are the progress; each phrase's
         // segment would repeat them.
@@ -455,7 +455,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             match &event {
                 DictationEvent::Final(t) => transcript = Some(t.clone()),
                 DictationEvent::Failed { message } => anyhow::bail!("{message}"),
-                DictationEvent::Cancelled => anyhow::bail!("Dictation cancelled"),
+                DictationEvent::Cancelled => anyhow::bail!("Dictation canceled"),
                 DictationEvent::Partial(seg) if !args.json => {
                     eprintln!("{}", seg.text);
                 }

@@ -130,7 +130,7 @@ fn escape_and_backspace_close_a_list() {
     assert!(app.list_model().is_some());
     list_key(&mut app, ListKey::Escape);
     assert!(app.list_model().is_none());
-    assert_eq!(said.last(), "Cancelled.");
+    assert_eq!(said.last(), "Canceled.");
     app.dispatch(Command::Action(ActionId::KeyboardHelp));
     list_key(&mut app, ListKey::Backspace);
     assert!(app.list_model().is_none());

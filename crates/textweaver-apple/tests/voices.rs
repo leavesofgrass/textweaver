@@ -500,7 +500,7 @@ mod macos {
         })?;
         for id in [u1.id, u2.id] {
             ensure(rec.count(id, |e| *e == RawEvent::Cancelled) == 1, || {
-                format!("{id:?} not cancelled")
+                format!("{id:?} not canceled")
             })?;
             ensure(rec.count(id, |e| *e == RawEvent::Finished) == 0, || {
                 format!("{id:?} finished")
@@ -803,7 +803,7 @@ mod macos {
         })?;
         for id in [u1.id, u2.id] {
             ensure(rec.count(id, |e| *e == RawEvent::Cancelled) == 1, || {
-                format!("{id:?} not cancelled")
+                format!("{id:?} not canceled")
             })?;
             ensure(rec.count(id, |e| *e == RawEvent::Finished) == 0, || {
                 format!("{id:?} finished")

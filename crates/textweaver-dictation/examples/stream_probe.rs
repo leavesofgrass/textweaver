@@ -800,7 +800,7 @@ fn report_stream(
     let (bat_med, bat_worst) = la::median_worst(batch_waits);
     println!("File {name}");
     println!(
-        "  Runs {} ({} empty, skipped; {} cancelled at the pause); run time median {costs_med:.2} s, worst {costs_worst:.2} s",
+        "  Runs {} ({} empty, skipped; {} canceled at the pause); run time median {costs_med:.2} s, worst {costs_worst:.2} s",
         r.runs, r.empty_runs, r.cancelled_runs
     );
     println!(

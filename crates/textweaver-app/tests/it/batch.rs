@@ -138,7 +138,7 @@ fn no_says_cancelled_and_nothing_is_written() {
     );
     // Escape answers no.
     app.dispatch(Command::Cancel);
-    assert_eq!(app.status_text(), "Cancelled.");
+    assert_eq!(app.status_text(), "Canceled.");
     assert!(!app.confirmation_pending());
     assert!(!notes.join("converted").exists());
 }

@@ -233,7 +233,7 @@ fn actions_that_ask_first_take_a_confirm_param() {
     );
     // `cancel` answers no.
     let r = s.result("cancel", json!({}));
-    assert_eq!(r["status"], "Cancelled.");
+    assert_eq!(r["status"], "Canceled.");
     assert_eq!(s.result("status", json!({}))["pending"], Value::Null);
     // `confirm: false` answers no at once.
     let r = s.result("action", json!({"id": "quit", "confirm": false}));

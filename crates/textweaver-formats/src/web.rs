@@ -148,7 +148,7 @@ pub(crate) fn load(
     }
     if options.progress.is_cancelled() {
         return Err(LoadError::Unsupported(
-            "opening the web page was cancelled".into(),
+            "opening the web page was canceled".into(),
         ));
     }
     let doc = from_response(registry, url, source, &content_type, body, options, true)?;

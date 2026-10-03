@@ -41,7 +41,7 @@ pub enum ComponentError {
     },
     /// The download was cancelled. A `.part` file is kept, so the next
     /// download goes on from where this one stopped.
-    #[error("the download was cancelled")]
+    #[error("the download was canceled")]
     Cancelled,
     /// Another download or install of the same component is under way, in
     /// this program or another.

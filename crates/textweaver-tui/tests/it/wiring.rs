@@ -128,7 +128,7 @@ fn the_pending_question_stays_on_the_status_line() {
     // Answered: the status line is back to plain announcements.
     h.press(ch('n'));
     assert!(!h.status().contains("y or n"), "{}", h.status());
-    assert!(h.status().contains("Cancelled."));
+    assert!(h.status().contains("Canceled."));
     assert!(h.row_text(HEIGHT - 1).contains("quit"));
     assert!(!h.tui.should_quit());
 }

@@ -136,7 +136,7 @@ pub enum ExportError {
     #[error("There is nothing to read aloud.")]
     Empty,
     /// The caller cancelled.
-    #[error("Export cancelled.")]
+    #[error("Export canceled.")]
     Cancelled,
     /// A file operation failed.
     #[error("Cannot use {path}: {message}")]

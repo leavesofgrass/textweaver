@@ -256,7 +256,7 @@ fn gaps_cancellation_and_errors() {
     )
     .unwrap_err();
     assert!(matches!(err, ExportError::Cancelled));
-    assert!(!out.exists(), "a cancelled export leaves no file");
+    assert!(!out.exists(), "a canceled export leaves no file");
 
     let mut null = textweaver_speech::NullBackend::default();
     let err = synthesize_wav(

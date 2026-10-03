@@ -422,7 +422,7 @@ fn scripted_session_with_restore() {
     // n and a abort; y quits.
     h.press(ch('n'));
     assert!(!h.tui.should_quit());
-    assert!(h.status().contains("Cancelled."));
+    assert!(h.status().contains("Canceled."));
     h.press(h.tui.key_for(ActionId::Quit));
     h.press(ch('a'));
     assert!(!h.tui.should_quit());
@@ -461,7 +461,7 @@ fn prompts_cancel_and_recall() {
     h.typed("zzz");
     h.press(key(KeyCode::Esc));
     assert!(h.tui.minibuffer().is_none());
-    assert!(h.status().starts_with("Cancelled."));
+    assert!(h.status().starts_with("Canceled."));
     h.press(ch('/'));
     h.typed("light");
     h.press(key(KeyCode::Enter));

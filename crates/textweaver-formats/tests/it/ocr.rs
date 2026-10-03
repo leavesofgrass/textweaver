@@ -158,14 +158,14 @@ fn cancelling_stops_before_the_next_page() {
     assert!(
         doc.text()
             .to_string()
-            .ends_with("Text recognition was cancelled before any page was read."),
+            .ends_with("Text recognition was canceled before any page was read."),
         "{}",
         doc.text()
     );
     assert!(
         warnings(&doc.meta)
             .iter()
-            .any(|w| w == "Text recognition was cancelled, so pages 1 to 2 were not read.")
+            .any(|w| w == "Text recognition was canceled, so pages 1 to 2 were not read.")
     );
 }
 

@@ -203,7 +203,7 @@ impl DictationEvent {
                 1 => "Transcribed 1 word".to_owned(),
                 n => format!("Transcribed {n} words"),
             }),
-            DictationEvent::Cancelled => Some("Dictation cancelled".to_owned()),
+            DictationEvent::Cancelled => Some("Dictation canceled".to_owned()),
             DictationEvent::Failed { message } => Some(message.clone()),
         }
     }

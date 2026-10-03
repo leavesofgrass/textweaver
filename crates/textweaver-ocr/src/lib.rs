@@ -67,7 +67,7 @@ pub enum OcrError {
     #[error("cannot use {0}: {1}")]
     Io(PathBuf, #[source] std::io::Error),
     /// The user cancelled.
-    #[error("text recognition was cancelled")]
+    #[error("text recognition was canceled")]
     Cancelled,
 }
 
