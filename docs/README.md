@@ -61,6 +61,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 
 - [CONTRIBUTING.md](../CONTRIBUTING.md): what textweaver is for, setting up, the checks, accessibility expectations, commit style, and how to propose a change.
 - [Good first issues](dev/good-first-issues.md): small, well-scoped tasks for a first contribution, each with where to look and how to check it.
+- [Writing messages](dev/messages.md): the style guide for everything textweaver says and shows, and the tests that keep it.
 - [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, the lean reader, the helper scripts, and the repository layout.
 - [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.

@@ -89,15 +89,16 @@ fn values_text(s: &Setting) -> Option<String> {
             if *min <= f64::MIN || *max >= f64::MAX {
                 return None;
             }
-            let unit = if unit.is_empty() {
-                String::new()
+            // The unit as said after the maximum: "From 0 to 10 rows",
+            // "From 0 to 1 second".
+            let to = if unit.is_empty() {
+                number(*max)
             } else {
-                format!(" {unit}")
+                s.describe(&serde_json::json!(*max))
             };
             Some(format!(
-                "From {} to {}{unit}, in steps of {}.",
+                "From {} to {to}, in steps of {}.",
                 number(*min),
-                number(*max),
                 number(*step)
             ))
         }
@@ -114,6 +115,11 @@ fn values_text(s: &Setting) -> Option<String> {
                     }
                 })
                 .collect();
+            // An open list with no fixed choices (the theme) says only
+            // that any value may be written.
+            if list.is_empty() {
+                return open.then(|| "Any value may be written.".to_owned());
+            }
             let mut out = format!("Choices: {}.", list.join(", "));
             if *open {
                 out.push_str(" Other values may be written too.");

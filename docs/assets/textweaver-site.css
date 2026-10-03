@@ -82,3 +82,8 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Reading comfort: about 75 characters a line (WCAG 1.4.8 asks for 80 or
+   fewer), and normal letter spacing. Tables and code keep their width. */
+.md-typeset p, .md-typeset li, .md-typeset dd { max-width: 75ch; }
+.md-typeset { letter-spacing: normal; }

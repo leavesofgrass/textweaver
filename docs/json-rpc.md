@@ -49,7 +49,7 @@ The value is a backend id, such as `eci` (ETI-Eloquence), `sapi`, `dectalk`, or 
 tw backends
 ```
 
-Without `--backend`, the server uses the `[speech] backend` setting, which is normally `auto`. If the backend you name is not available, the server uses the automatic choice and tells the client with the announcement "Speech backend sapi is not available; using …", naming the one it chose. `--backend` does nothing together with `--no-speech`.
+Without `--backend`, the server uses the `[speech] backend` setting, which is normally `auto`. If the backend you name is not available, the server uses the automatic choice and tells the client with the announcement "Speech engine sapi is not available; using …", naming the one it chose. `--backend` does nothing together with `--no-speech`.
 
 ### Keep settings in another folder with --home
 

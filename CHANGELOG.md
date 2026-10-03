@@ -65,8 +65,26 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - **Following the system theme again.** One F5 used to stop the theme from following the system for good. Turning "Follow the system theme" off and on again now follows it from the next start.
 
+### Words
+
+- **The first-run welcome names the five keys you need first, in order:** "Welcome to textweaver. Ctrl+O opens a document. Space starts and pauses reading, and Escape stops. F2 lists every command. F1 opens the help." It comes before the hint that no document is open, in the window and the terminal reader, and the quick start lists the same five keys. Help (F1) now has the command palette and the list of every key as its second and third lines.
+- **Settings read grammatically:** "1 word", "1 row", "2 words", where they said "1 words" and "1 rows". Settings that are a multiple of the font size (line height and the other spacings) and the highlight speed show the number alone, and their help says what it multiplies.
+- **Questions in the window are named by the question alone,** "Quit textweaver?", since the Yes and No buttons show the keys; the status line and the terminal reader keep "y or n". Every question ends "y or n", lower case.
+- **Reset all colors asks first:** "Reset every color to the theme's? y or n". No keeps every color, and the Colors dialog opens again where it was.
+- **Errors say what to do next.** Ten common failures gained a next step, such as "Could not save: ... Still editing. Try Save as." and "Could not scan the library: ... Check the library folders in Settings." When "Open it?" is asked again after a stray key, the whole question is asked, so you still know which file it means.
+- **The window's buttons:** Edit is now "Start editing" (its pair is "Finish editing"), Commands shows its key as F2 instead of ":", and each button's description is a short line of its own, such as "Run any command by its name.", instead of the command's full help. Stop, Slower, Faster, and the sentence buttons have no description, since their names say it.
+- **The color helps say "Choose a name, or type a hex code"** instead of "#rrggbb", which a screen reader reads as "number sign r r g g b b". The five mark colors say where they are used today: the terminal reader uses three, and the window none yet.
+- **One word for each thing:** "cursor", not "caret"; "speech engine", not "backend"; "window", not "GUI"; "version", not "build"; "words per minute"; the RSVP position "center". Messages that sent you to "Choose Voice" name the Voices command, and "Live preview on" names Reload preview automatically.
+- **Grammar:** "Table row removed." and "Horizontal rule removed." instead of "Table row added removed.", and "Could not export to PDF: ..." instead of "Exported to PDF failed: ...".
+- **The two test languages** (accented English and right-to-left test text) are no longer offered in the Interface language list. They can still be typed in `settings.toml`.
+- The Settings command's help no longer promises a filter the window's dialog does not have.
+- The new English is drafted in the five other languages too; those drafts wait for a native-speaker review.
+
 ### Documentation
 
+- **Window problems in Troubleshooting:** the window does not open or is blank, your screen reader does not read the window's messages, and the file chooser does not open.
+- **The guides match the code:** Speech Cursor in the window, self-voicing echo with `--self-voicing`, which keys ask a question again, the window's font list and size keys (no Fonts dialog), no spacing presets or warnings, Save As asking first, the export message, the font size and RSVP ranges of the Settings dialog, the settings screen's filter and recent settings as the terminal reader's, HTML's own stylesheet, and the voices key in each program.
+- **The documentation site** keeps text to about 75 characters a line, with normal letter spacing.
 - US spelling throughout the English messages and the documentation ("color", "license", "center"), checked by `cargo xtask docs --check`.
 - The window is named `textweaver-gui` in the guides, the quick start gives the window's keys beside the terminal reader's, and README and CONTRIBUTING start with the window and say that the build needs cmake.
 - Dates and internal names are gone from the user guides and the keyboard reference's "What changed": they name the release instead.
@@ -130,6 +148,11 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **No test touches the real data folders** (W8c-g): `cargo xtask sentinel record` and `check` list textweaver's platform folders, and an empty `TEXTWEAVER_HOME`, around CI's test step, and fail on any file a test added, changed, or removed there.
 - **Release checks** (W8c-g): each package job checks that its build folder holds exactly its files, and the checksums job that the published release holds exactly the 17 expected assets (`cargo xtask release-assets`). The terminal packages are smoke-tested beyond `--version` (open a fixture, `tw info`, `tw components list`, convert one file; `tools/package-smoke.sh`), and the Linux tarball and AppImage again in a clean Debian container with no network, as an unprivileged user (`tools/clean-install-smoke.sh`). The GUI checks are unchanged.
 - **Ace by DAISY in the second-tool checks** (W8c-g): every fixture EPUB is checked with Ace 1.4.6 (`@daisy/ace-cli`, locked in `tools/ace/package-lock.json`, run with no install scripts in the runner's Chrome); a critical or serious violation fails unless `tools/second_tool_allowlist.txt` names it. A converted file with no report from epubcheck, Ace, or veraPDF now fails too.
+
+- **A message style guide,** [docs/dev/messages.md](docs/dev/messages.md): twelve rules for everything textweaver says and shows, from meaning first and errors with a next step to one word for each thing and the 40-cell rule. Style tests in the lexicon crate check the English catalog; where English still breaks a rule, the test names the ids, and those lists may only shrink.
+- **Three more docs checks** in `cargo xtask docs --check`: the user guides name releases, not waves or dates; the theme count in the documentation index matches the theme files; and every image has alternative text and a "Description:" line beside it.
+- **The settings reference** reads units grammatically and no longer prints "Choices: ." for the theme.
+
 - **A size budget for the packages** (W8b-r): `cargo xtask dist`, `gui-dist`, and `appimage` print each package's size against the last release's, recorded in `xtask/package-sizes.toml`, and fail when one grew more than 10 percent without a note under `[notes]` saying why. After a release, `cargo xtask release VERSION --sizes` records the published sizes, clears the notes, and adds a "Package sizes" list to the release notes. The file starts with alpha.7's sizes.
 - **The reader is packaged without `tw`'s features** (W8b-r): `cargo xtask dist` builds `textweaver` and `tw` in separate cargo runs, so the reader no longer gets `tw`'s features through feature unification (opening a web address, the OCR model download). It saved 43 KB: the reader keeps an HTTP client of its own for citation lookups. `cargo xtask gui-dist --no-screenshot` builds the GUI package without its screenshot harness; the package keeps the harness for now, because the release workflow's GUI checks draw a `--screenshot` with it. [docs/dev/testing.md](docs/dev/testing.md#package-sizes-october-2-2026) has the sizes before and after.
 

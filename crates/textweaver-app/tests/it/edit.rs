@@ -1032,7 +1032,7 @@ fn saving_over_a_file_changed_on_disk_asks_first() {
     assert!(r.app.confirmation_pending());
     assert_eq!(
         r.said.last(),
-        "shared.md changed on disk since you opened it. Save over those changes? y or n."
+        "shared.md changed on disk since you opened it. Save over those changes? y or n"
     );
     // No keeps their version on disk and stays in edit mode.
     r.send(Command::Confirm(Confirm::No));
@@ -1090,7 +1090,7 @@ fn a_file_changed_on_disk_while_open_offers_a_reload() {
     assert!(r.app.confirmation_pending());
     assert_eq!(
         r.said.last(),
-        "watched.md changed on disk. Reload it? y or n."
+        "watched.md changed on disk. Reload it? y or n"
     );
     r.send(Command::Confirm(Confirm::Yes));
     assert!(

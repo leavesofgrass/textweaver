@@ -171,7 +171,7 @@ The file is written in the background, so a large file never holds up the keyboa
 
 Press **Alt+S** to save under a new name. The GUI uses **Ctrl+Shift+S**. The prompt suggests the current name. A name ending in `.md`, `.markdown`, `.txt`, or another plain-text or Markdown extension is kept. Any other ending becomes `.md`, so Markdown never lands in an `.html` or `.docx` file. A name without a folder goes in the same folder as the suggestion.
 
-Save As writes over a file of the same name without asking. Check the name first.
+Save As asks before it writes over a file of the same name: "notes.md already exists. Replace it? y or n". In the window, the system's Save dialog asks instead.
 
 ### New document: Ctrl+N
 
@@ -191,8 +191,8 @@ The full message starts "Could not save:" and ends "Still editing."
 
 textweaver notices when another program changes the open file, for example Obsidian, a text editor, or `git pull`.
 
-- **Before saving.** If the file changed since you opened or last saved it, nothing is written, and **Ctrl+S** asks first: the file name, then "changed on disk since you opened it. Save over those changes? y or n." Press **y** to save over them. Press **n** to keep editing without saving; you hear "Not saved. Still editing. Save As, Alt+S, keeps both versions."
-- **While reading or editing with no unsaved changes.** textweaver checks every two seconds, in the background. When the file changed, it asks: the file name, then "changed on disk. Reload it? y or n." Press **y** to load the new version, or **n** to keep the one you have ("Kept the open version."). It does not ask while it is reading aloud, while another question is open, or while you have unsaved changes.
+- **Before saving.** If the file changed since you opened or last saved it, nothing is written, and **Ctrl+S** asks first: the file name, then "changed on disk since you opened it. Save over those changes? y or n". Press **y** to save over them. Press **n** to keep editing without saving; you hear "Not saved. Still editing. Save As, Alt+S, keeps both versions."
+- **While reading or editing with no unsaved changes.** textweaver checks every two seconds, in the background. When the file changed, it asks: the file name, then "changed on disk. Reload it? y or n". Press **y** to load the new version, or **n** to keep the one you have ("Kept the open version."). It does not ask while it is reading aloud, while another question is open, or while you have unsaved changes.
 - **The next time you open it.** Your reading position, bookmarks, notes, and highlights are found again in the changed text. Each is looked for by the words it was on: first near where it was, then anywhere in the file (a paragraph that moved), then by the most similar words nearby (a word changed inside it). Anything that cannot be found is placed at the same share of the way through and marked. You hear it once when the file opens, for example "The file changed; 3 bookmarks were moved to match, 1 bookmark could not be found and is marked." The bookmark, note, and highlight lists say "not found after the file changed" for a marked one; setting it again clears the mark.
 
 ## Leaving with unsaved changes
@@ -256,7 +256,7 @@ Your word list is `words.txt` in the data folder, one word per line; you can edi
 
 ## Grammar
 
-Grammar checking is built in: it is in the terminal reader, the window app, `tw`, and the release packages. A build made without it (see [Building without grammar](#building-without-grammar)) says "Grammar checking is not in this build." when you press the keys below.
+Grammar checking is built in: it is in the terminal reader, the window app, `tw`, and the release packages. A build made without it (see [Building without grammar](#building-without-grammar)) says "Grammar checking is not in this version." when you press the keys below.
 
 textweaver checks grammar offline with Harper, which knows American English. It looks for things such as "a apple", "the results was", a word typed twice, and a missing capital letter. Spelling is left to the spelling keys above, so a misspelled word is not reported twice.
 

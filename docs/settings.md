@@ -11,13 +11,15 @@ You can also edit `settings.toml` yourself in any text editor. Close textweaver 
 Change settings without leaving textweaver: press `Shift+F10` in the terminal reader (`Ctrl+comma` in the GUI), or type `settings` in the command palette (`F2`).
 
 - Every setting is listed as its name and value, such as "Rate: 265 words per minute", speech first.
-- Type to filter: "rate" leaves the settings with "rate" in their name, section, or help. Backspace removes a letter.
+- In the terminal reader, type to filter: "rate" leaves the settings with "rate" in their name, section, or help. Backspace removes a letter.
 - Up and Down move from setting to setting.
 - Left and Right change the value: a smaller or larger number, the previous or next choice, or off and on.
 - Enter turns a switch on or off, takes the next choice, or asks you to type a value, starting from the current one. Enter with the value unchanged, or empty, keeps it, and so does Escape; for a setting that may be left unset, such as the voice, an empty answer unsets it.
 - Delete puts the default back, and says it: "Rate back to its default, 265 words per minute."
-- F1 says the setting's value, its default, and its help.
-- The five settings you changed last are at the top, each said as "recently changed", so a setting you are tuning is one key away.
+- In the terminal reader, F1 says the setting's value, its default, and its help.
+- In the terminal reader, the five settings you changed last are at the top, each said as "recently changed", so a setting you are tuning is one key away.
+
+The window's Settings dialog is described in [the window guide](gui.md); it has no filter and no recent settings yet.
 - Escape closes the screen.
 
 View, Colors (or `color settings` in the command palette) shows only the colors: the word and sentence highlights, the reading ruler, difficult words, syllable marks, misspellings, lint marks, search matches, the selection, the focus, links, headings, the status bar, notes, and bookmarks. Left and Right go through named colors, blue and orange first (they are told apart by people who confuse red and green); Enter types a name or a `#rrggbb` value; Delete puts the theme's color back. Each row says its contrast, such as "Links: orange, contrast 6.2 to 1, good". A color under 3 to 1 is used and you are told it is hard to see. Every mark keeps its underline, bold, or spoken word whatever its color, so no color carries meaning alone.
@@ -362,7 +364,7 @@ See [Reading aids](reading-aids.md).
 
 RSVP shows one word at a time.
 
-- `wpm`, default `300`: words per minute, from 50 to 1,500.
+- `wpm`, default `300`: words per minute, from 50 to 1,500 in this file; the Settings dialog starts at 60.
 - `pacing`, default `"timer"`: `"timer"` uses the words-per-minute rate. `"external"` follows speech: it shows the word being spoken.
 - `lead_words`, default `0`: when following speech, show a word this many words ahead.
 - `clause_pause`, `sentence_pause`, and `paragraph_pause`, defaults `50`, `100`, and `150`: extra time, in percent of a word's time, after a comma, a sentence, and a paragraph.
@@ -385,7 +387,7 @@ Text spacing, in multiples of the font size. In the terminal, textweaver adds bl
 The font in the GUI. The terminal always uses its own font.
 
 - `family`, default `"sans"`: `"system-ui"`, `"sans"`, `"serif"`, `"monospace"`, a reading font (`"opendyslexic"`, `"atkinson"`, `"lexend"`), or the name of any installed font.
-- `size_pt`, default `14.0`: the size in points, from 6 to 144.
+- `size_pt`, default `14.0`: the size in points, from 6 to 144 in this file; the Settings dialog and the window's size keys go up to 72.
 - `weight`, default `400`: from 100 to 900. 700 is bold.
 
 `fetch_missing` was removed in 0.1.0-alpha.5: textweaver downloads a reading font (Lexend) only when you choose it and agree, so the setting did nothing. A `fetch_missing` line in an older `settings.toml` is ignored and dropped at the next save.

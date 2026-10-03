@@ -647,12 +647,12 @@ fn voice_changes_are_announced_and_applied() {
     // Presets, fastest first: skim 350, normal 265, study 200, slow 150.
     // From 285 wpm (no preset) the next slower preset comes first.
     r.act(ActionId::CycleSpeedPreset);
-    assert_eq!(r.said.last(), "Normal, rate 265.");
+    assert_eq!(r.said.last(), "Normal, 265 words per minute.");
     r.act(ActionId::CycleSpeedPreset);
-    assert_eq!(r.said.last(), "Study, rate 200.");
+    assert_eq!(r.said.last(), "Study, 200 words per minute.");
     r.act(ActionId::CycleSpeedPreset);
     r.act(ActionId::CycleSpeedPreset);
-    assert_eq!(r.said.last(), "Skim, rate 350.");
+    assert_eq!(r.said.last(), "Skim, 350 words per minute.");
     r.act(ActionId::NextTheme);
     // Galaxy is the default; the cycle follows the theme registry.
     assert_eq!(r.said.last(), "Theme Galaxy Light.");

@@ -192,8 +192,10 @@ impl Progress {
 /// A yes or no question this module asked.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Question {
-    /// Open this file or address with the default program?
-    Open(String),
+    /// Open this file or address with the default program? The target,
+    /// and the whole question as asked, so a stray key asks it again with
+    /// what "it" is ("Wrote essay.mp3 ... Open it? y or n").
+    Open(String, String),
 }
 
 /// The authoring state.

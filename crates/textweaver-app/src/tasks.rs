@@ -106,7 +106,7 @@ impl App {
 
     /// Asks "Open it? y or n" about `target` (a file or an address).
     pub(crate) fn offer_open(&mut self, target: String, question: &str) {
-        self.authoring.question = Some(Question::Open(target));
+        self.authoring.question = Some(Question::Open(target, question.to_owned()));
         self.ask(question);
     }
 
@@ -158,17 +158,18 @@ impl App {
             return vec![Effect::Redraw];
         };
         match (q, answer) {
-            (Question::Open(target), Confirm::Yes) => {
+            (Question::Open(target, _), Confirm::Yes) => {
                 self.authoring.question = None;
                 self.launch(&target);
             }
-            (Question::Open(_), Confirm::No) => {
+            (Question::Open(..), Confirm::No) => {
                 self.authoring.question = None;
                 let msg = self.msg("tasks-not-opened");
                 self.note(&msg);
             }
-            (Question::Open(_), Confirm::Repeat) => {
-                let question = self.msg("tasks-open-it-question");
+            (Question::Open(target, question), Confirm::Repeat) => {
+                // The whole question again, so "it" is still named.
+                self.authoring.question = Some(Question::Open(target, question.clone()));
                 self.ask(&question);
             }
         }

@@ -87,11 +87,27 @@ scripts/speech-check.sh
 ### No speech at all
 
 1. Look at the title line. Its last part is the speech engine. If it says `silent`, textweaver was started with `--no-speech`, or no engine could start.
-2. Look at the status line when textweaver starts. "Speech backend X is not available; using Y." means the engine you asked for was not found. "Speech could not start" gives the reason textweaver fell silent.
+2. Look at the status line when textweaver starts. "Speech engine X is not available; using Y." means the engine you asked for was not found. "Speech could not start" gives the reason textweaver fell silent.
 3. Run `tw backends`. If only `null` is available, textweaver found no engine. On Windows, check that the engine hosts are next to the programs (see [A voice or engine is missing](#a-voice-or-engine-is-missing)). On Linux, install espeak-ng or Speech Dispatcher, or use the install script, which does.
 4. Check the volume: press **F7** a few times. "Full volume." means it is at the top. Check your system's volume too.
 5. Run `tw speak "Hello"`. If that speaks but the reader does not, check `[speech] backend` in `settings.toml`, or start with `--backend` and an engine id.
 6. Start with `--log debug`, try again, and read `textweaver.log`.
+
+### The window does not open, or it is blank
+
+1. Start it from a terminal, so any error shows there, and write a log: `textweaver-gui --log-file gui.log`. Started from a shortcut or File Explorer, a startup error is shown in a message box instead.
+2. Try another graphics interface for one run: `textweaver-gui --graphics vulkan`. The others are `dx12` (Windows), `metal` (macOS), and `gl`. To keep the one that works, put `graphics = "vulkan"` under `[gui]` in `settings.toml`.
+3. Attach `gui.log` to a bug report; see [Report a bug](#report-a-bug).
+
+### Your screen reader does not read the window's messages
+
+1. Open Settings (Ctrl+,), choose the section Window, and change Announcements. The choices are a live region (the default) and UI Automation notifications (Windows only). The change applies from the next start. To try the other one for a single run, start with `--announce uia` or `--announce live`.
+2. Check the accessibility mode: **Alt+Shift+A** changes it. In screen reader mode textweaver itself is silent, and your screen reader reads its messages.
+3. NVDA says a button's key only when its setting for reporting object shortcut keys is on (Object Presentation).
+
+### The file chooser does not open
+
+On Linux the window's Open dialog needs the XDG desktop portal. When it cannot open, textweaver says so and shows a one-line prompt for the path instead. **Ctrl+Shift+G** opens the same prompt at any time, and Tab completes the path.
 
 ### textweaver and your screen reader talk at once
 
@@ -105,7 +121,7 @@ On its first run with a screen reader, textweaver offers hybrid mode once. [Usin
 
 ### The wrong voice speaks
 
-1. In the reader, press **Alt+V** and choose the voice. The one in use says "current". The choice is saved.
+1. Press **Alt+V** in the terminal reader, or **Ctrl+Shift+V** in the window, and choose the voice. The one in use says "current". The choice is saved.
 2. Check `[speech] voice` in `settings.toml`. A voice name that matches nothing leaves the engine's default voice in use.
 3. With no voice chosen, `[speech] prefer_voice` (default `"eloquence"`) picks one whose name contains it. Set it to part of the name you want, or to `""`.
 4. Check the engine. Your voice may belong to another engine: `tw voices --backend sapi`, for example. Set `[speech] backend` to that engine.
@@ -317,7 +333,7 @@ A good report lets someone else see the same problem. Include:
    ```
 
 3. The doctor report: run the doctor script with `--out doctor.txt` (or `-Out doctor.txt` in PowerShell), as shown above, and attach the file.
-4. The log: start the reader with `--log debug`, make the problem happen, quit, and attach `textweaver.log` from the state folder.
+4. The log: start the reader with `--log debug`, make the problem happen, quit, and attach `textweaver.log` from the state folder. For the window, start it with `--log-file gui.log` and attach that file.
 5. If a document causes it, and you may share it, attach the document or a small part of it that shows the problem.
 
 Report bugs at the project's issue tracker: [github.com/leavesofgrass/textweaver/issues](https://github.com/leavesofgrass/textweaver/issues).

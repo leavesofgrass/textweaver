@@ -95,10 +95,16 @@ To build the window yourself, see [Building](dev/building.md#the-gui).
 
 ## Your first 30 seconds
 
-Once the document is open:
+The five keys the first-run welcome names, in the same order, in both the terminal reader and the window:
 
+- **Ctrl+O** opens a document.
 - **Space** starts reading, and pauses. The highlight follows each word.
 - **Escape** stops.
+- **F2** lists every command by name: type part of one, then press Enter.
+- **F1** opens the help.
+
+### More keys
+
 - **Alt+Down** and **Alt+Up** move to the next or previous sentence.
 - **p** and **Shift+P** move by paragraph. **h** jumps to the next heading, and **1** to **6** to the next heading at that level, as in NVDA and JAWS.
 - **+** and **-** make the voice faster or slower.

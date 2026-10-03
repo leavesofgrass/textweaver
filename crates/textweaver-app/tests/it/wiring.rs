@@ -555,7 +555,7 @@ fn positions_sync_through_the_library_folder() {
     r.app.open(&doc).unwrap();
     assert_eq!(r.cursor(), at(PROSE, "Kappa"));
     assert!(
-        r.said.any("another computer at") && r.said.any("Go there? Y or N"),
+        r.said.any("another computer at") && r.said.any("Go there? y or n"),
         "{:?}",
         r.said.all()
     );

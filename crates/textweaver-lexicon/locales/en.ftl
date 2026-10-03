@@ -85,7 +85,7 @@ define-intro = { $title }. Up and Down move through the senses, Enter copies one
 define-nothing-here = There is no word at the cursor.
 define-not-found = No definition found for { $word }.
 define-no-dictionary = The dictionary file is not installed, so only your glossary was searched. The reading guide says how to install it.
-define-dictionary-damaged = The dictionary file could not be read: { $error }
+define-dictionary-damaged = The dictionary file could not be read: { $error } Only your glossary is searched.
 define-glossary-problem = Your glossary could not be read: { $error }
 define-glossary-skipped =
     { $n ->
@@ -137,7 +137,7 @@ profile-exists = A profile named { $name } already exists.
 profiles-not-an-export = { $detail }
 profiles-no-persistence = Profiles are not saved in this session.
 profiles-read-failed = The profiles file could not be read, so it is treated as empty: { $error }
-profiles-save-failed = Could not save the profiles: { $error }
+profiles-save-failed = Could not save the profiles: { $error } Check that the settings folder can be written to.
 profiles-none-to-export = There are no profiles to export yet.
 profiles-exported =
     { $n ->
@@ -249,7 +249,7 @@ details-cancelled = Cancelled. Details not changed.
 details-not-a-doi = Not a DOI: { $text }. Fix it or clear it.
 details-not-an-isbn = Not an ISBN: { $text }. Fix it or clear it.
 details-no-file = This document has no file, so no details to edit.
-details-save-failed = Could not save the details: { $error }
+details-save-failed = Could not save the details: { $error } Try again.
 # The statistics list could not wait for the sync folder.
 stats-others-slow = Other computers skipped: folder slow.
 stats-untitled = Untitled document
@@ -433,7 +433,7 @@ notes-editing = Editing note: { $text }
 app-no-document-open = No document is open. Press { $key } to open one.
 app-window-only = This command works in the textweaver window.
 app-terminal-only = This command works in the terminal reader.
-settings-save-failed = Could not save settings: { $error }
+settings-save-failed = Could not save settings: { $error } Your changes stay in use until you quit.
 edit-still-editing = Still editing.
 goto-not-a-target = Not a go-to target: { $text }. Type a line number, a percentage such as 50%, start, or end.
 
@@ -781,7 +781,7 @@ action-text-smaller = Make the document text smaller
 action-text-size-reset = Return the document text to its standard size
 action-choose-font = Choose the font of the document text
 action-command-palette = Run any command by name
-action-settings = Open the settings: every option with its help, filtered as you type; Left and Right change a value
+action-settings = Open the settings: every option with its help; Left and Right change a value
 action-keyboard-help = List keyboard shortcuts
 action-help = Open the help
 
@@ -806,9 +806,9 @@ restart-restarting = Restarting speech.
 restart-not-here = Speech cannot be restarted here.
 restart-already = Speech is already restarting.
 # $error is the system's reason, in its own words.
-restart-failed = Could not restart speech: { $error }.
+restart-failed = Could not restart speech: { $error }
 restart-start-failed = Could not restart speech: starting it failed.
-restart-no-engine = No speech engine is available; { -brand } stays silent.
+restart-no-engine = No speech engine is available; { -brand } stays silent. Troubleshooting, No speech at all, has the checks.
 restart-done-silent = Speech restarted, but no speech engine is available; { -brand } stays silent.
 restart-done = Speech restarted.
 
@@ -845,13 +845,13 @@ settingsio-no-persistence = Settings are not saved in this session, so they cann
 settingsio-exported = Settings exported to { $path }.
 settingsio-export-failed = Could not export settings: { $error }
 # $path is the file; $error the system's reason.
-settingsio-read-failed = Could not read { $path }: { $error }.
+settingsio-read-failed = Could not read { $path }: { $error }
 settingsio-nothing-to-import = Nothing to import: your settings already match that file.
 settingsio-cancelled-unchanged = Cancelled. Nothing was changed.
 settingsio-import-failed = Could not import settings: { $error }
 # $summary lists what changed (from the settings store, in English).
 settingsio-imported = Settings imported. { $summary }
-settingsio-backend-next-start = The new speech backend is used from the next start.
+settingsio-backend-next-start = The new speech engine is used from the next start.
 settingsio-backed-up = The old settings were backed up.
 
 ## Opening a document: failures and opening in the background.
@@ -879,8 +879,8 @@ opening-stopped-unexpectedly = Could not open { $name }: loading stopped unexpec
 ## A build without the publish feature. "tw convert" is a command typed
 ## at the terminal: keep it as it is.
 
-lean-citations-not-in-build = Citations are not in this build of { -brand }. It was built without the publish feature.
-lean-publish-not-in-build = Export and preview are not in this build of { -brand }. It was built without the publish feature; tw convert still converts.
+lean-citations-not-in-build = Citations are not in this version of { -brand }.
+lean-publish-not-in-build = Export and preview are not in this version of { -brand }. tw convert still converts.
 
 ## The voice manager's list.
 
@@ -954,7 +954,7 @@ voices-language-zh = Chinese
 voice-sample = The quick brown fox jumps over the lazy dog.
 voice-list-title = Choose a voice
 voice-still-loading = The voices are still loading. The list opens when they are ready.
-voice-list-failed = Could not list the voices: { $error }.
+voice-list-failed = Could not list the voices: { $error }
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
 voice-manager-intro = Voice manager. { $shown } Enter uses a voice and speaks a sample, or downloads one; { $preview } previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes.
@@ -969,7 +969,7 @@ voice-preview-starting = Preview: { $voice }, starting { $engine }.
 voice-preview-not-installed = { $voice } is not downloaded yet. Enter downloads it, after a question.
 voice-preview-unavailable = { $engine } cannot start here for a preview. Enter switches to it.
 voice-preview-engine-failed = Could not start { $engine } to preview { $voice }.
-voice-preview-failed = Could not preview { $voice }: { $error }.
+voice-preview-failed = Could not preview { $voice }: { $error }
 # $keys names the Choose Voice key.
 voice-ready = The voices are ready. { $keys } lists them.
 voice-fetch-catalog-question = Download the list of Piper voices, about 250 kilobytes, from Hugging Face? y or n
@@ -987,17 +987,17 @@ voice-only-piper-removable = Only downloaded Piper voices can be removed.
 voice-download-question = { $plan } y or n
 voice-in-use = { $voice } is the voice in use. Choose another voice first.
 voice-removed = { $voice } removed.
-voice-remove-failed = Could not remove { $voice }: { $error }.
+voice-remove-failed = Could not remove { $voice }: { $error }
 voice-downloading-catalog = Downloading the Piper voice list.
 voice-downloading = Downloading { $voice }.
 voice-downloading-percent = Downloading { $voice }, { $pct } percent.
-voice-details-failed = Could not read the voice's details: { $error }.
+voice-details-failed = Could not read the voice's details: { $error }
 voice-download-stopped = The download stopped.
-voice-catalog-fetched = The Piper voice list has { $voices } voices in { $languages } languages. Choose Voice lists them.
-voice-catalog-failed = Could not download the voice list: { $error }.
+voice-catalog-fetched = The Piper voice list has { $voices } voices in { $languages } languages. The Voices command lists them.
+voice-catalog-failed = Could not download the voice list: { $error }
 # $licence describes the voice's license, in a sentence of its own.
-voice-installed = { $voice } is installed. { $licence } Choose Voice lists it.
-voice-download-failed = Could not download { $voice }: { $error }.
+voice-installed = { $voice } is installed. { $licence } The Voices command lists it.
+voice-download-failed = Could not download { $voice }: { $error } Choose the voice again to retry.
 voice-only-voice-favourite = Only a voice can be a favorite.
 voice-favourite-added = { $voice } added to favorites.
 voice-favourite-removed = { $voice } removed from favorites.
@@ -1017,7 +1017,7 @@ voice-volume-off = Volume off.
 voice-volume = Volume { $pct } percent.
 voice-no-speed-presets = No speed presets.
 # $name is the preset's name from the settings, such as "Study".
-voice-speed-preset = { $name }, rate { $wpm }.
+voice-speed-preset = { $name }, { $wpm } words per minute.
 voice-line-numbers-on = Line numbers on.
 voice-line-numbers-off = Line numbers off.
 
@@ -1054,10 +1054,10 @@ publish-auto-reload-on =
 publish-auto-reload-off = Automatic preview reloading off: press F5 in the browser after a save.
 publish-live-on = Live preview on: the preview also reloads when typing pauses.
 # "toggle preview auto reload" is the command's name in the command palette.
-publish-live-on-needs-reload = Live preview on. It works with automatic reloading, which is off; turn it on with toggle preview auto reload.
+publish-live-on-needs-reload = Live preview on. It needs automatic reloading, which is off. Turn it on with Reload preview automatically.
 publish-live-off = Live preview off: the preview reloads after saves only.
 # $error is the converter's reason.
-publish-export-failed = Exported to { $format } failed: { $error }
+publish-export-failed = Could not export to { $format }: { $error }
 publish-preview-failed = Preview failed: { $error }
 # The converter's warnings: how many, and the first one.
 publish-warnings =
@@ -1081,7 +1081,7 @@ publish-preview-updated = Preview updated.
 publish-preview-updated-press-f5 = Preview updated. Press F5 in the browser.
 publish-server-failed = Could not start the preview's reload server ({ $error }); opening the file instead.
 publish-render-failed = Could not render the text: { $error }
-publish-nothing-after-caret = Nothing to read after the caret.
+publish-nothing-after-caret = Nothing to read after the cursor.
 publish-listening = Listening to the rendered text.
 
 ## The preview's reload server: shown in the browser.
@@ -1188,7 +1188,7 @@ notes-sheet-highlighted = Highlighted, { $color }.
 
 ## Find, bookmarks, and selection.
 
-marks-cannot-search = Cannot search: { $error }.
+marks-cannot-search = Cannot search: { $error }
 # $pattern is the text searched for.
 marks-no-matches = No matches for { $pattern }.
 # The label of a match reached by Find, at high verbosity; $number is its place among $n matches.
@@ -1313,10 +1313,10 @@ listmodel-command-matches = { $n } matches: { $names }.
 
 # $n is how many documents the scan has found.
 library-still-scanning = Still scanning the library: { $n } found so far.
-library-scan-failed = Could not scan the library: { $error }.
+library-scan-failed = Could not scan the library: { $error } Check the library folders in Settings.
 library-scanning = Scanning the library.
 library-scan-progress = Scanning the library: { $n } found so far.
-library-scan-stopped = The library scan stopped with an internal error.
+library-scan-stopped = The library scan stopped unexpectedly. Open the library again to retry.
 # $command is the command line that adds a folder; $key names the Open command's key.
 library-empty = The library is empty. Add a folder with { $command }, or open a file with { $key }.
 library-intro =
@@ -1431,7 +1431,7 @@ open-refused-missing = Not opened: the file was not found.
 open-refused-invalid = Not opened: not a valid address.
 tasks-not-opened = Not opened.
 # Keep the letters y and n: they are the keys that answer.
-tasks-open-it-question = Open it? y or n.
+tasks-open-it-question = Open it? y or n
 
 ## Math exploration.
 
@@ -1484,7 +1484,7 @@ aids-bionic-off = Bionic reading off.
 aids-syllables-shown = Syllables shown.
 aids-syllables-hidden = Syllables hidden.
 aids-difficult-on = Difficult words underlined.
-aids-difficult-no-list = Difficult words on, but the word list is missing from this build.
+aids-difficult-no-list = Difficult words on, but this version has no word list.
 aids-difficult-off = Difficult words not marked.
 # Added after a word at high verbosity, following a comma.
 aids-difficult-word = difficult word
@@ -1581,7 +1581,7 @@ settings-choose-one-of = Choose one of: { $names }.
 settings-edit-table = Edit { $label } in settings.toml; it holds names and values.
 # $path is a key such as speech.rate, not translated.
 settings-no-such-setting = There is no setting { $path }.
-settings-cannot-be = { $label } cannot be that: { $error }.
+settings-cannot-be = { $label } cannot be that: { $error }
 settings-changed = { $label }, { $value }.
 settings-clamped = Out of range, so the nearest value is used.
 settings-restart-speech = Restart speech to use it.
@@ -1632,11 +1632,11 @@ setting-speech-volume-help = How loud textweaver speaks.
 setting-speech-pitch = Pitch
 setting-speech-pitch-help = Higher or lower than the voice's own pitch.
 setting-speech-voice = Voice
-setting-speech-voice-help = The voice's id; not set picks one automatically. Choose Voice lists them.
+setting-speech-voice-help = The voice's id; not set picks one automatically. The Voices command lists them.
 setting-speech-prefer-voice = Preferred voice
 setting-speech-prefer-voice-help = When no voice is set, the first voice whose name contains this, such as eloquence.
 setting-speech-favorite-voices = Favorite voices
-setting-speech-favorite-voices-help = Voices listed first in Choose Voice, by id.
+setting-speech-favorite-voices-help = Voices listed first by the Voices command, by id.
 setting-speech-punctuation = Punctuation
 setting-speech-punctuation-help = How much punctuation is spoken.
 choice-speech-punctuation-none = none
@@ -1667,7 +1667,7 @@ setting-speech-pause-paragraph-ms-help = Silence after a paragraph, shorter at f
 setting-speech-pause-list-item-ms = Pause after list items
 setting-speech-pause-list-item-ms-help = Silence after a list item, shorter at faster rates. 0 turns it off.
 setting-speech-output-device = Output device
-setting-speech-output-device-help = The sound device speech plays on, by its id; tw backends --devices lists them. Not set uses the system's default, and so does a device that is not connected.
+setting-speech-output-device-help = The sound device speech plays on, by its id. Not set, or a device that is not connected, uses the system's default.
 setting-speech-verbosity = Verbosity
 setting-speech-verbosity-help = How much textweaver says about what it does.
 choice-speech-verbosity-low = low
@@ -1698,11 +1698,11 @@ choice-highlight-granularity-both = the word and the sentence
 setting-highlight-lead-words = Highlight lead
 setting-highlight-lead-words-help = Draw the highlight this many words ahead of the word heard (1 is the word heard).
 setting-highlight-speed = Highlight speed
-setting-highlight-speed-help = Speed of the timed highlight for engines that report no words.
+setting-highlight-speed-help = Speed of the timed highlight for engines that report no words, as a multiple: 1 is normal speed.
 setting-highlight-color = Word highlight color
-setting-highlight-color-help = A color name or #rrggbb over the theme's word highlight; theme keeps the theme's.
+setting-highlight-color-help = The color behind the word being read. Choose a name, or type a hex code. Default: the theme's color.
 setting-highlight-sentence-color = Sentence highlight color
-setting-highlight-sentence-color-help = A color name or #rrggbb over the theme's sentence highlight; not set keeps the theme's.
+setting-highlight-sentence-color-help = The color behind the sentence being read. Choose a name, or type a hex code. Default: the theme's color.
 setting-normalization-math = Speak math
 setting-normalization-math-help = Speak math notation in words.
 setting-normalization-math-verbosity = Math verbosity
@@ -1772,12 +1772,12 @@ choice-reading-ocr-engine-ocrs = ocrs
 choice-reading-ocr-engine-tesseract = Tesseract
 choice-reading-ocr-engine-paddle = PaddleOCR (experimental)
 setting-reading-math-engine = Math speech
-setting-reading-math-engine-help = Which engine reads math aloud: textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a build that includes it; otherwise textweaver's own is used.
+setting-reading-math-engine-help = Which engine reads math aloud: textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a version that includes it; otherwise textweaver's own is used.
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
 setting-braille-math-code = Math braille
-setting-braille-math-code-help = The braille code for math in BRF files and while exploring a formula with MathCAT: Nemeth, or UEB mathematics. It needs a build that includes MathCAT; otherwise math is written as its spoken words.
+setting-braille-math-code-help = The braille code for math in BRF files and while exploring a formula with MathCAT: Nemeth, or UEB mathematics. It needs a version that includes MathCAT; otherwise math is written as its spoken words.
 choice-braille-math-code-nemeth = Nemeth
 choice-braille-math-code-ueb = UEB
 setting-braille-table-format = Braille tables
@@ -1822,7 +1822,7 @@ setting-editing-echo-words-help = Say each word typed.
 setting-editing-echo-deletions = Echo deletions
 setting-editing-echo-deletions-help = Say what Backspace and Delete remove.
 setting-editing-echo-lines-on-move = Echo lines
-setting-editing-echo-lines-on-move-help = Say the line when the caret moves to another line.
+setting-editing-echo-lines-on-move-help = Say the line when the cursor moves to another line.
 setting-editing-undo-steps = Undo steps
 setting-editing-undo-steps-help = Most undo steps kept while editing.
 setting-editing-undo-memory-mb = Undo memory
@@ -1892,13 +1892,13 @@ choice-reading-aids-rsvp-position-top-left = top left
 choice-reading-aids-rsvp-position-top-center = top center
 choice-reading-aids-rsvp-position-top-right = top right
 choice-reading-aids-rsvp-position-center-left = middle left
-choice-reading-aids-rsvp-position-center = middle
+choice-reading-aids-rsvp-position-center = center
 choice-reading-aids-rsvp-position-center-right = middle right
 choice-reading-aids-rsvp-position-bottom-left = bottom left
 choice-reading-aids-rsvp-position-bottom-center = bottom center
 choice-reading-aids-rsvp-position-bottom-right = bottom right
 setting-reading-aids-rsvp-font-size-pt = RSVP size
-setting-reading-aids-rsvp-font-size-pt-help = Size of the RSVP word in the GUI.
+setting-reading-aids-rsvp-font-size-pt-help = Size of the RSVP word in the window.
 setting-reading-aids-rsvp-lead-words = RSVP lead
 setting-reading-aids-rsvp-lead-words-help = With speech pacing, show this many words ahead of the word spoken.
 setting-reading-aids-bionic = Bionic reading
@@ -1910,11 +1910,11 @@ setting-reading-aids-bionic-options-min-word-len-help = Words shorter than this 
 setting-reading-aids-bionic-options-skip-numbers = Bionic skips numbers
 setting-reading-aids-bionic-options-skip-numbers-help = Leave words with digits alone.
 setting-reading-aids-bionic-options-skip-urls = Bionic skips addresses
-setting-reading-aids-bionic-options-skip-urls-help = Leave web and e-mail addresses alone.
+setting-reading-aids-bionic-options-skip-urls-help = Leave web and email addresses alone.
 setting-reading-aids-bionic-options-skip-code = Bionic skips code
 setting-reading-aids-bionic-options-skip-code-help = Leave code alone.
 setting-reading-aids-spacing-line-height = Line height
-setting-reading-aids-spacing-line-height-help = Line height in multiples of the font size; WCAG's value is 1.5.
+setting-reading-aids-spacing-line-height-help = Line height as a multiple of the font size. 1.5 is the WCAG value.
 setting-reading-aids-spacing-paragraph-spacing = Paragraph spacing
 setting-reading-aids-spacing-paragraph-spacing-help = Space after each paragraph, in multiples of the font size.
 setting-reading-aids-spacing-letter-spacing = Letter spacing
@@ -1922,7 +1922,7 @@ setting-reading-aids-spacing-letter-spacing-help = Extra space between letters, 
 setting-reading-aids-spacing-word-spacing = Word spacing
 setting-reading-aids-spacing-word-spacing-help = Extra space between words, in multiples of the font size.
 setting-reading-aids-font-family = Font
-setting-reading-aids-font-family-help = The GUI's reading font; any installed family may be typed.
+setting-reading-aids-font-family-help = The window's reading font. You can also type the name of any installed font.
 choice-reading-aids-font-family-system-ui = the system font
 choice-reading-aids-font-family-sans = sans serif
 choice-reading-aids-font-family-serif = serif
@@ -1931,7 +1931,7 @@ choice-reading-aids-font-family-atkinson = Atkinson Hyperlegible
 choice-reading-aids-font-family-opendyslexic = OpenDyslexic
 choice-reading-aids-font-family-lexend = Lexend
 setting-reading-aids-font-size-pt = Font size
-setting-reading-aids-font-size-pt-help = The GUI's font size.
+setting-reading-aids-font-size-pt-help = The window's font size.
 setting-reading-aids-font-weight = Font weight
 setting-reading-aids-font-weight-help = 400 is regular, 700 bold.
 setting-reading-aids-ruler-mode = Reading ruler
@@ -1962,7 +1962,7 @@ setting-reading-aids-syllable-options-right-min-help = Fewest letters after the 
 setting-reading-aids-syllable-options-min-word-len = Syllable shortest word
 setting-reading-aids-syllable-options-min-word-len-help = Words shorter than this are never split.
 setting-reading-aids-syllable-options-skip-urls = Syllables skip addresses
-setting-reading-aids-syllable-options-skip-urls-help = Leave web and e-mail addresses alone.
+setting-reading-aids-syllable-options-skip-urls-help = Leave web and email addresses alone.
 setting-reading-aids-syllable-options-skip-code = Syllables skip code
 setting-reading-aids-syllable-options-skip-code-help = Leave code alone.
 setting-preview-auto-reload = Reload the preview
@@ -1983,8 +1983,6 @@ choice-interface-language-fr = Français
 choice-interface-language-de = Deutsch
 choice-interface-language-pt = Português
 choice-interface-language-ar = العربية
-choice-interface-language-en-xa = test: accented
-choice-interface-language-ar-xb = test: right to left
 setting-interface-rtl = Right-to-left display
 setting-interface-rtl-help = Whether the terminal reader reorders right-to-left text for display: automatic leaves it to terminals that do it themselves. Speech and the screen reader always get the text in reading order.
 choice-interface-rtl-auto = automatic
@@ -1999,22 +1997,77 @@ setting-gui-auto-hide-menu-help = Windows: hide the window's menu bar until Alt 
 
 ## Units, said after a number.
 
-settings-unit-words-per-minute = words per minute
+settings-unit-words-per-minute =
+    { $n ->
+        [one] word per minute
+       *[other] words per minute
+    }
 settings-unit-percent = percent
-settings-unit-semitones = semitones
-settings-unit-milliseconds = milliseconds
-settings-unit-words = words
-settings-unit-times = times
-settings-unit-places = places
-settings-unit-columns = columns
-settings-unit-lines = lines
-settings-unit-seconds = seconds
-settings-unit-steps = steps
-settings-unit-megabytes = megabytes
-settings-unit-files = files
-settings-unit-letters = letters
-settings-unit-points = points
-settings-unit-rows = rows
+settings-unit-semitones =
+    { $n ->
+        [one] semitone
+       *[other] semitones
+    }
+settings-unit-milliseconds =
+    { $n ->
+        [one] millisecond
+       *[other] milliseconds
+    }
+settings-unit-words =
+    { $n ->
+        [one] word
+       *[other] words
+    }
+settings-unit-places =
+    { $n ->
+        [one] place
+       *[other] places
+    }
+settings-unit-columns =
+    { $n ->
+        [one] column
+       *[other] columns
+    }
+settings-unit-lines =
+    { $n ->
+        [one] line
+       *[other] lines
+    }
+settings-unit-seconds =
+    { $n ->
+        [one] second
+       *[other] seconds
+    }
+settings-unit-steps =
+    { $n ->
+        [one] step
+       *[other] steps
+    }
+settings-unit-megabytes =
+    { $n ->
+        [one] megabyte
+       *[other] megabytes
+    }
+settings-unit-files =
+    { $n ->
+        [one] file
+       *[other] files
+    }
+settings-unit-letters =
+    { $n ->
+        [one] letter
+       *[other] letters
+    }
+settings-unit-points =
+    { $n ->
+        [one] point
+       *[other] points
+    }
+settings-unit-rows =
+    { $n ->
+        [one] row
+       *[other] rows
+    }
 
 ## Settings sections.
 
@@ -2051,11 +2104,11 @@ edit-save-changes-title = Save changes to { $title }?
 edit-choice-save = Save, then continue
 edit-choice-discard = Discard the changes
 edit-choice-cancel = Cancel, keep editing
-edit-save-failed = Could not save: { $error }. Still editing.
+edit-save-failed = Could not save: { $error } Still editing. Try Save as.
 # The Save As prompt; $path is the suggested file.
 edit-save-as-label = Save as, Enter for { $path }
 # $name is a file name. Keep the letters y and n.
-edit-file-exists-question = { $name } already exists. Replace it? y or n.
+edit-file-exists-question = { $name } already exists. Replace it? y or n
 edit-mode-off = Edit mode off.
 edit-mode-off-discarded = Changes discarded. Edit mode off.
 # The title of a new, unsaved document.
@@ -2141,10 +2194,10 @@ edit-format-removed =
         [bulleted-list] Bulleted list removed.
         [numbered-list] Numbered list removed.
         [block-quote] Block quote removed.
-        [horizontal-rule] Horizontal rule inserted removed.
-        [table-row] Table row added removed.
+        [horizontal-rule] Horizontal rule removed.
+        [table-row] Table row removed.
         [heading-level] Heading level { $level } removed.
-        [table] Inserted a table, { $cols } columns by { $rows } rows removed.
+        [table] Table removed.
        *[heading] Heading removed.
     }
 edit-format-unchanged =
@@ -2159,10 +2212,10 @@ edit-format-unchanged =
         [bulleted-list] Bulleted list: nothing changed.
         [numbered-list] Numbered list: nothing changed.
         [block-quote] Block quote: nothing changed.
-        [horizontal-rule] Horizontal rule inserted: nothing changed.
-        [table-row] Table row added: nothing changed.
+        [horizontal-rule] Horizontal rule: nothing changed.
+        [table-row] Table row: nothing changed.
         [heading-level] Heading level { $level }: nothing changed.
-        [table] Inserted a table, { $cols } columns by { $rows } rows: nothing changed.
+        [table] Table: nothing changed.
        *[heading] Heading: nothing changed.
     }
 # Added after a formatting message; $text is the start of the selection.
@@ -2184,7 +2237,7 @@ edit-nothing-to-redo = Nothing to redo.
 edit-not-a-table-size = Not a table size: { $text }. Type columns and rows, for example 3 by 2.
 # $name is the image's file name.
 edit-image-inserted = Inserted image { $name }. Its description is selected; type to replace it.
-edit-image-failed = Could not insert the image: { $error }.
+edit-image-failed = Could not insert the image: { $error }
 # $query is the text to find.
 edit-no-matches = No matches for { $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -2254,7 +2307,7 @@ writes-not-written-in-time = Some changes could not be written in time: the disk
 writes-save-failed = Could not save: { $error }. Still editing.
 # $name is the bookmark's name, $pct where it is.
 writes-bookmark-set = Bookmark { $name } set at { $pct } percent.
-writes-bookmark-not-saved = Bookmark { $name } is set for now, but could not be saved: { $error }.
+writes-bookmark-not-saved = Bookmark { $name } is set for now, but could not be saved: { $error }
 writes-recovery-copy-failed = Could not write the recovery copy: { $error }. Save soon; { -brand } will keep trying.
 writes-recovery-copy-resumed = The recovery copy is being written again.
 # $name is the saved file's name.
@@ -2263,14 +2316,14 @@ writes-saved = Saved { $name }. Still editing.
 ## Files changed on disk. $name is a file name. Keep the letters y and
 ## n: they are the keys that answer.
 
-disk-replace-question = { $name } already exists. Replace it? y or n.
+disk-replace-question = { $name } already exists. Replace it? y or n
 # A prompt label, also said with a full stop after it.
 disk-not-replaced = Not replaced. Type another name
 # $key is the key for Save As.
 disk-not-saved = Not saved. Still editing. Save As, { $key }, keeps both versions.
 disk-kept-open-version = Kept the open version.
-disk-overwrite-question = { $name } changed on disk since you opened it. Save over those changes? y or n.
-disk-reload-question = { $name } changed on disk. Reload it? y or n.
+disk-overwrite-question = { $name } changed on disk since you opened it. Save over those changes? y or n
+disk-reload-question = { $name } changed on disk. Reload it? y or n
 
 ## Marks found again after a file changed outside textweaver.
 
@@ -2325,7 +2378,7 @@ templates-intro =
 # The title given when none is typed.
 templates-untitled = Untitled
 # $template is the template's name, $title the document's, $date today's date (2026-09-26).
-templates-created = New document from the { $template } template: { $title }. Dated { $date }. The caret is where the writing starts. Remember to save.
+templates-created = New document from the { $template } template: { $title }. Dated { $date }. The cursor is where the writing starts. Remember to save.
 
 ## Markdown structure said in edit mode, before a line's text or as it
 ## is typed.
@@ -2380,7 +2433,7 @@ authoring-language-cpp = C plus plus
 authoring-language-csharp = C sharp
 authoring-language-diff = diff
 authoring-language-plain-text = plain text
-authoring-grammar-not-in-build = Grammar checking is not in this build.
+authoring-grammar-not-in-build = Grammar checking is not in this version.
 # $count is $n with thousands separators.
 authoring-word-count-selection =
     { $n ->
@@ -2538,7 +2591,7 @@ grammar-change-failed = Could not change the text: { $error }
 
 # Said for an apostrophe when a word is spelled out letter by letter.
 spell-apostrophe = apostrophe
-spell-not-available = Spell checking is not available: this build has no word list.
+spell-not-available = Spell checking is not available: this version has no word list.
 spell-none-found = No misspellings found.
 # $count is $n with thousands separators.
 spell-no-more =
@@ -2574,7 +2627,7 @@ spell-replace-failed = Could not replace: { $error }
 spell-left-as-is = Left as it is.
 spell-added-for-session = Added { $word } to your word list for this session.
 spell-added = Added { $word } to your word list.
-spell-save-failed = Could not save your word list: { $error }
+spell-save-failed = Could not save your word list: { $error } The word is known until you quit.
 # After a save; $count is $n with thousands separators.
 spell-count =
     { $n ->
@@ -2586,16 +2639,16 @@ spell-count =
 ## The terminal reader's startup.
 
 # $wanted is the speech backend asked for, $backend the one used instead.
-tui-setup-backend-unavailable = Speech backend { $wanted } is not available; using { $backend }.
+tui-setup-backend-unavailable = Speech engine { $wanted } is not available; using { $backend }.
 # Shown inside tui-setup-speech-failed as its $error.
-tui-setup-backend-not-built = backend { $backend } is not compiled in
+tui-setup-backend-not-built = engine { $backend } is not part of this version
 tui-setup-speech-failed = Speech could not start ({ $error }); running silently.
-tui-setup-cannot-save = Cannot save settings or positions: { $error }.
-tui-setup-keymap-ignored = Keymap file ignored: { $error }.
+tui-setup-cannot-save = Cannot save settings or positions: { $error }
+tui-setup-keymap-ignored = Keymap file ignored: { $error }
 # The first-run welcome. Each value names the key for an action: $play
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
-tui-setup-welcome = Welcome to { -brand }. { $play } reads aloud and pauses, { $stop } stops, { $heading } moves to the next heading, { $help } opens the help, and { $quit } quits.
+tui-setup-welcome = Welcome to { -brand }. { $open } opens a document. { $play } starts and pauses reading, and { $stop } stops. { $palette } lists every command. { $help } opens the help.
 # Said at startup without a document. $open, $new, and $help name the
 # keys for Open, New Document, and Help.
 tui-setup-no-document = No document is open. Press { $open } to open one, { $new } for a new one, or { $help } for help.
@@ -2612,7 +2665,7 @@ tui-clip-system = Copied with the system clipboard, because this terminal cannot
 # system's own message.
 tui-clip-failed = Could not copy with the system clipboard: { $error }. Sent to the terminal instead.
 tui-clip-not-available = the system clipboard is not available
-tui-clip-not-built = this build has no system clipboard
+tui-clip-not-built = this version has no system clipboard
 
 ## The terminal reader's screen.
 
@@ -2793,7 +2846,7 @@ gui-answer-replace = Replace
 gui-question-hint = Y answers yes, N answers no, Escape answers no.
 gui-button-open = Open…
 gui-button-font = Font…
-gui-button-edit = Edit
+gui-button-edit = Start editing
 gui-button-finish-editing = Finish editing
 gui-button-settings = Settings…
 gui-button-commands = Commands…
@@ -2804,6 +2857,14 @@ gui-button-previous-sentence = Previous sentence
 gui-button-next-sentence = Next sentence
 gui-button-slower = Slower
 gui-button-faster = Faster
+# Button descriptions, read after the name: at most 40 cells, saying
+# what the name does not. The command's full help stays in F1.
+gui-hint-open = Choose a document to read.
+gui-hint-font = Choose the font of the document text.
+gui-hint-edit = Switch between reading and editing.
+gui-hint-settings = Every option, with its help.
+gui-hint-commands = Run any command by its name.
+gui-hint-play = Read from the current word, or pause.
 gui-button-close = Close
 gui-toolbar-reading = Reading
 gui-document = Document
@@ -2823,7 +2884,7 @@ gui-palette-filter = Type to filter the commands
 gui-palette-list = Commands
 gui-palette-hint = Enter runs the first match; Tab moves to the list.
 gui-no-document = No document is open. Press { $key } to open one.
-gui-open-failed = Could not open { $path }: { $error }
+gui-open-failed = Could not open { $name }: { $error }
 gui-uia-unavailable = UI Automation notifications exist only on Windows; using the live region.
 gui-rsvp = RSVP
 gui-rsvp-playing = RSVP playing, word { $n } of { $total }
@@ -2878,7 +2939,11 @@ setting-summary-sentences-help = How many sentences Summarize and tw summarize g
 setting-reading-aids-difficult-definitions = Difficult word definitions
 setting-reading-aids-difficult-definitions-help = With difficult words marked, at high verbosity also say a difficult word's first definition from the dictionary.
 section-summary = Summaries
-settings-unit-sentences = sentences
+settings-unit-sentences =
+    { $n ->
+        [one] sentence
+       *[other] sentences
+    }
 
 # W6a5: the GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
@@ -3181,31 +3246,31 @@ action-menu = Open the menus: File, Edit, View, Reading, Speech, Tools, and Help
 action-what-does-this-key-do = Press a key to hear what it does and where it is in the menus, without running it
 action-about = Say textweaver's version and license
 setting-colors-ruler = Reading ruler color
-setting-colors-ruler-help = The band of the reading ruler and the marked current line; the ruler keeps its underline or bold. A color name or #rrggbb; the theme's color by default.
+setting-colors-ruler-help = The band of the reading ruler and the marked current line; the ruler keeps its underline or bold. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-difficult-words = Difficult words color
-setting-colors-difficult-words-help = The underline of difficult words; they stay underlined and are named at high verbosity. A color name or #rrggbb; the theme's color by default.
+setting-colors-difficult-words-help = The underline of difficult words; they stay underlined and are named at high verbosity. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-syllables = Syllable marks color
-setting-colors-syllables-help = The middle dots between syllables. A color name or #rrggbb; the theme's color by default.
+setting-colors-syllables-help = The middle dots between syllables. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-misspellings = Misspellings color
-setting-colors-misspellings-help = The underline of misspelled words, in the window; they are also said. A color name or #rrggbb; the theme's color by default.
+setting-colors-misspellings-help = The underline of misspelled words, which are also said. Not used yet: the window draws the theme's color. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-lint = Lint marks color
-setting-colors-lint-help = The underline of Markdown lint and grammar problems, in the window; they are also said. A color name or #rrggbb; the theme's color by default.
+setting-colors-lint-help = The underline of Markdown lint and grammar problems, which are also said. Not used yet: the window draws the theme's color. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-find-match = Search match color
-setting-colors-find-match-help = The band behind search matches; they stay underlined. A color name or #rrggbb; the theme's color by default.
+setting-colors-find-match-help = The band behind search matches; they stay underlined. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-selection = Selection color
-setting-colors-selection-help = The band behind selected text. A color name or #rrggbb; the theme's color by default.
+setting-colors-selection-help = The band behind selected text. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-focus = Focus color
-setting-colors-focus-help = The focus outline and the focused item of a list; they stay bold. A color name or #rrggbb; the theme's color by default.
+setting-colors-focus-help = The focus outline and the focused item of a list; they stay bold. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-links = Link color
-setting-colors-links-help = The color of links; they stay underlined. A color name or #rrggbb; the theme's color by default.
+setting-colors-links-help = The color of links. Links stay underlined. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-headings = Heading color
-setting-colors-headings-help = The color of headings; they stay bold. A color name or #rrggbb; the theme's color by default.
+setting-colors-headings-help = The color of headings. Headings stay bold. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-status-bar = Status bar color
-setting-colors-status-bar-help = The band of the status and title bars. A color name or #rrggbb; the theme's color by default.
+setting-colors-status-bar-help = The band of the status and title bars. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-notes = Note color
-setting-colors-notes-help = The band behind text with a note; it stays italic and underlined. A color name or #rrggbb; the theme's color by default.
+setting-colors-notes-help = The band behind text with a note; it stays italic and underlined. Choose a name, or type a hex code. Default: the theme's color.
 setting-colors-bookmarks = Bookmark color
-setting-colors-bookmarks-help = The band behind a bookmarked word; it stays bold and underlined. A color name or #rrggbb; the theme's color by default.
+setting-colors-bookmarks-help = The band behind a bookmarked word; it stays bold and underlined. Choose a name, or type a hex code. Default: the theme's color.
 color-name-theme = the theme's color
 color-name-blue = blue
 color-name-orange = orange
@@ -3252,7 +3317,7 @@ dictation-finishing = Finishing dictation.
 dictation-done = Dictation done.
 dictation-busy = Dictation is finishing. Try again in a moment.
 dictation-needs-edit = Dictation types in edit mode. Turn on edit mode and dictate? y or n
-dictation-no-model = Dictation needs the Whisper model in { $dir }. See the voice typing guide.
+dictation-no-model = Dictation needs the Whisper model in { $dir }. See Dictation in the documentation.
 dictation-failed = Dictation failed: { $error }
 dictation-no-words = No words recognized in that phrase.
 dictation-lost = Dictation stopped before its last words were typed.
@@ -3478,7 +3543,7 @@ audio-where-beside = Beside the document, { $path }
 audio-where-choose = In another folder, chosen next
 audio-choose-folder = Choose the folder for the audio
 audio-no-engine = No speech engine here can write audio files. Install eSpeak NG, or choose another engine in the Speech menu.
-audio-confirm = Export { $name } with { $voice } at { $wpm } words a minute, into { $path }? y or n
+audio-confirm = Export { $name } with { $voice } at { $wpm } words per minute, into { $path }? y or n
 audio-started = Exporting { $name } as { $format }. Escape stops.
 audio-progress = Exporting audio, { $percent } percent.
 audio-busy = Already exporting { $name }. Escape stops.
@@ -3509,6 +3574,8 @@ gui-colors-help = Left and Right choose a named color, blue and orange first. En
 gui-colors-reset-all = Reset all colors
 gui-colors-reset-all-help = Put the theme's own color back for every part.
 gui-colors-reset-done = Every color is the theme's again.
+# Asked before Reset all colors; a yes resets them.
+colors-reset-question = Reset every color to the theme's? y or n
 gui-colors-closed = Colors closed.
 gui-font-list-intro =
     { $n ->
@@ -3583,11 +3650,11 @@ sync-arrived =
     }
 sync-resumed = { $title }: resumed at { $pct } percent, from { $device }.
 sync-place-arrived = { $device }'s place: { $pct } percent.
-sync-place-question = { $device } at { $pct } percent. Go there? Y or N
+sync-place-question = { $device } at { $pct } percent. Go there? y or n
 sync-suggestion-question =
     { $n ->
-        [one] This may be { $title } from { $device }, with 1 note. Use it? Y or N
-       *[other] This may be { $title } from { $device }, with { $n } notes. Use them? Y or N
+        [one] This may be { $title } from { $device }, with 1 note. Use the note from { $device }? y or n
+       *[other] This may be { $title } from { $device }, with { $n } notes. Use the notes from { $device }? y or n
     }
 sync-went-to-place = { $device }'s place, { $pct } percent.
 sync-kept-place = Kept this place.
@@ -3744,11 +3811,11 @@ setting-sync-favorite-voices-help = Share your favorite voices; one this compute
 font-download-question = Download the { $font } font, { $kb } KB, { $licence }? y or n
 font-downloading = Downloading { $font }.
 font-downloaded = { $font } downloaded and ready.
-font-download-failed = { $font } not downloaded: { $error }.
+font-download-failed = { $font } not downloaded: { $error }
 font-download-declined = Not downloaded. Another font is used.
 font-download-busy = { $font } is still downloading.
 font-download-no-folder = No data folder to keep { $font } in.
-font-download-not-in-build = Font downloads are not in this build.
+font-download-not-in-build = Font downloads are not in this version.
 gui-font-to-download = { $family } (download, { $kb } KB)
 gui-font-downloaded = { $family } (downloaded)
 
@@ -3822,7 +3889,7 @@ component-refused =
 component-already = Already installed: { $title }.
 component-not-there = Not installed: { $title }.
 component-declined = Not downloaded.
-component-not-in-build = Downloads are not in this build.
+component-not-in-build = Downloads are not in this version.
 component-no-folder = No data folder to keep it in.
 component-error-fetch = Not downloaded: the source failed.
 component-error-size = Not installed: wrong file size.
@@ -3845,7 +3912,7 @@ components-chooser-skipped = Skipped; see Manage optional components.
 components-chooser-none = Nothing chosen, nothing downloaded.
 dictation-model-question = Dictation needs the Whisper model, { $size }, license { $license }. Download it now? y or n
 dictation-model-declined = No model, so no dictation for now.
-dictation-model-not-in-build = No model; this build cannot download.
+dictation-model-not-in-build = No model; this version cannot download.
 dictation-model-file-missing = Dictation model lacks { $file }.
 dictation-model-damaged = Dictation model damaged: { $file }.
 dictation-model-no-folder = No model folder: { $dir }.

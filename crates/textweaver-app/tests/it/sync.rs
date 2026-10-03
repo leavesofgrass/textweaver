@@ -350,7 +350,7 @@ fn ask_really_asks_and_names_the_computer() {
     assert!(lab.app.confirmation_pending());
     let q = lab.app.pending_question().unwrap();
     assert!(
-        q.starts_with("laptop at ") && q.ends_with("Go there? Y or N"),
+        q.starts_with("laptop at ") && q.ends_with("Go there? y or n"),
         "{q}"
     );
     lab.app.dispatch(Command::Confirm(Confirm::Yes));

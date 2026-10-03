@@ -81,7 +81,7 @@ define-intro = { $title }. Auf und Ab bewegen sich durch die Bedeutungen, Eingab
 define-nothing-here = Am Cursor steht kein Wort.
 define-not-found = Keine Definition gefunden für { $word }.
 define-no-dictionary = Die Wörterbuchdatei ist nicht installiert, daher wurde nur Ihr Glossar durchsucht. Die Lesehilfe beschreibt die Installation.
-define-dictionary-damaged = Die Wörterbuchdatei konnte nicht gelesen werden: { $error }
+define-dictionary-damaged = Die Wörterbuchdatei konnte nicht gelesen werden: { $error } Nur Ihr Glossar wird durchsucht.
 define-glossary-problem = Ihr Glossar konnte nicht gelesen werden: { $error }
 define-glossary-skipped =
     { $n ->
@@ -133,7 +133,7 @@ profile-exists = Ein Profil namens { $name } existiert bereits.
 profiles-not-an-export = { $detail }
 profiles-no-persistence = Profile werden in dieser Sitzung nicht gespeichert.
 profiles-read-failed = Die Profildatei konnte nicht gelesen werden, daher wird sie als leer behandelt: { $error }
-profiles-save-failed = Die Profile konnten nicht gespeichert werden: { $error }
+profiles-save-failed = Die Profile konnten nicht gespeichert werden: { $error } Prüfen Sie, ob in den Einstellungsordner geschrieben werden kann.
 profiles-none-to-export = Es gibt noch keine Profile zu exportieren.
 profiles-exported =
     { $n ->
@@ -245,7 +245,7 @@ details-cancelled = Abgebrochen. Details nicht geändert.
 details-not-a-doi = Keine DOI: { $text }. Korrigieren oder leeren.
 details-not-an-isbn = Keine ISBN: { $text }. Korrigieren oder leeren.
 details-no-file = Dieses Dokument hat keine Datei, also keine Details zum Bearbeiten.
-details-save-failed = Die Details konnten nicht gespeichert werden: { $error }
+details-save-failed = Die Details konnten nicht gespeichert werden: { $error } Versuchen Sie es erneut.
 # The statistics list could not wait for the sync folder.
 stats-others-slow = Andere Computer fehlen: Ordner langsam.
 stats-untitled = Dokument ohne Titel
@@ -464,7 +464,7 @@ notes-editing = Notiz wird bearbeitet: { $text }
 app-no-document-open = Kein Dokument ist geöffnet. Drücken Sie { $key }, um eines zu öffnen.
 app-window-only = Dieser Befehl funktioniert im textweaver-Fenster.
 app-terminal-only = Dieser Befehl funktioniert im Terminal-Reader.
-settings-save-failed = Einstellungen konnten nicht gespeichert werden: { $error }
+settings-save-failed = Einstellungen konnten nicht gespeichert werden: { $error } Ihre Änderungen gelten, bis Sie beenden.
 edit-still-editing = Noch in Bearbeitung.
 goto-not-a-target = Kein Sprungziel: { $text }. Geben Sie eine Zeilennummer ein, einen Prozentwert wie 50%, start oder end.
 
@@ -812,7 +812,7 @@ action-text-smaller = Den Text des Dokuments verkleinern
 action-text-size-reset = Den Text des Dokuments auf die Standardgröße zurücksetzen
 action-choose-font = Die Schriftart des Dokumenttexts wählen
 action-command-palette = Jeden Befehl über seinen Namen ausführen
-action-settings = Die Einstellungen öffnen: jede Option mit ihrer Hilfe, gefiltert beim Tippen; Links und Rechts ändern einen Wert
+action-settings = Die Einstellungen öffnen: jede Option mit ihrer Hilfe; Links und Rechts ändern einen Wert
 action-keyboard-help = Tastenkombinationen auflisten
 action-help = Die Hilfe öffnen
 
@@ -837,9 +837,9 @@ restart-restarting = Sprachausgabe wird neu gestartet.
 restart-not-here = Die Sprachausgabe kann hier nicht neu gestartet werden.
 restart-already = Die Sprachausgabe wird bereits neu gestartet.
 # $error is the system's reason, in its own words.
-restart-failed = Die Sprachausgabe konnte nicht neu gestartet werden: { $error }.
+restart-failed = Die Sprachausgabe konnte nicht neu gestartet werden: { $error }
 restart-start-failed = Die Sprachausgabe konnte nicht neu gestartet werden: der Start ist fehlgeschlagen.
-restart-no-engine = Keine Sprachausgabe ist verfügbar; { -brand } bleibt stumm.
+restart-no-engine = Keine Sprachausgabe ist verfügbar; { -brand } bleibt stumm. Siehe Troubleshooting, No speech at all, in der Dokumentation.
 restart-done-silent = Sprachausgabe neu gestartet, aber keine Sprachausgabe ist verfügbar; { -brand } bleibt stumm.
 restart-done = Sprachausgabe neu gestartet.
 
@@ -876,7 +876,7 @@ settingsio-no-persistence = Einstellungen werden in dieser Sitzung nicht gespeic
 settingsio-exported = Einstellungen nach { $path } exportiert.
 settingsio-export-failed = Einstellungen konnten nicht exportiert werden: { $error }
 # $path is the file; $error the system's reason.
-settingsio-read-failed = { $path } konnte nicht gelesen werden: { $error }.
+settingsio-read-failed = { $path } konnte nicht gelesen werden: { $error }
 settingsio-nothing-to-import = Nichts zu importieren: Ihre Einstellungen stimmen bereits mit dieser Datei überein.
 settingsio-cancelled-unchanged = Abgebrochen. Nichts wurde geändert.
 settingsio-import-failed = Einstellungen konnten nicht importiert werden: { $error }
@@ -910,8 +910,8 @@ opening-stopped-unexpectedly = { $name } konnte nicht geöffnet werden: das Lade
 ## A build without the publish feature. "tw convert" is a command typed
 ## at the terminal: keep it as it is.
 
-lean-citations-not-in-build = Zitate sind in dieser Version von { -brand } nicht enthalten. Sie wurde ohne die Veröffentlichungsfunktion gebaut.
-lean-publish-not-in-build = Export und Vorschau sind in dieser Version von { -brand } nicht enthalten. Sie wurde ohne die Veröffentlichungsfunktion gebaut; tw convert wandelt weiterhin um.
+lean-citations-not-in-build = Zitate sind in dieser Version von { -brand } nicht enthalten.
+lean-publish-not-in-build = Export und Vorschau sind in dieser Version von { -brand } nicht enthalten. tw convert wandelt weiterhin um.
 
 ## The voice manager's list.
 
@@ -985,7 +985,7 @@ voices-language-zh = Chinesisch
 voice-sample = Franz jagt im komplett verwahrlosten Taxi quer durch Bayern.
 voice-list-title = Eine Stimme wählen
 voice-still-loading = Die Stimmen werden noch geladen. Die Liste öffnet sich, sobald sie bereit sind.
-voice-list-failed = Die Stimmen konnten nicht aufgelistet werden: { $error }.
+voice-list-failed = Die Stimmen konnten nicht aufgelistet werden: { $error }
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
 voice-manager-intro = Stimmenverwaltung. { $shown } Eingabetaste verwendet eine Stimme und spricht ein Beispiel, oder lädt eine herunter; { $preview } spielt eine Hörprobe; Leertaste markiert einen Favoriten; Entf entfernt eine heruntergeladene Stimme; Escape schließt.
@@ -1000,7 +1000,7 @@ voice-preview-starting = Hörprobe: { $voice }, { $engine } wird gestartet.
 voice-preview-not-installed = { $voice } ist noch nicht heruntergeladen. Die Eingabetaste lädt sie herunter, nach einer Frage.
 voice-preview-unavailable = { $engine } kann hier nicht für eine Hörprobe starten. Die Eingabetaste wechselt zu dieser Engine.
 voice-preview-engine-failed = { $engine } konnte für eine Hörprobe von { $voice } nicht gestartet werden.
-voice-preview-failed = Hörprobe von { $voice } nicht möglich: { $error }.
+voice-preview-failed = Hörprobe von { $voice } nicht möglich: { $error }
 # $keys names the Choose Voice key.
 voice-ready = Die Stimmen sind bereit. { $keys } listet sie auf.
 voice-fetch-catalog-question = Die Liste der Piper-Stimmen, etwa 250 Kilobyte, von Hugging Face herunterladen? y oder n
@@ -1018,17 +1018,17 @@ voice-only-piper-removable = Nur heruntergeladene Piper-Stimmen können entfernt
 voice-download-question = { $plan } y oder n
 voice-in-use = { $voice } ist die verwendete Stimme. Wählen Sie zuerst eine andere Stimme.
 voice-removed = { $voice } entfernt.
-voice-remove-failed = { $voice } konnte nicht entfernt werden: { $error }.
+voice-remove-failed = { $voice } konnte nicht entfernt werden: { $error }
 voice-downloading-catalog = Die Piper-Stimmenliste wird heruntergeladen.
 voice-downloading = { $voice } wird heruntergeladen.
 voice-downloading-percent = { $voice } wird heruntergeladen, { $pct } Prozent.
-voice-details-failed = Die Details der Stimme konnten nicht gelesen werden: { $error }.
+voice-details-failed = Die Details der Stimme konnten nicht gelesen werden: { $error }
 voice-download-stopped = Der Download wurde gestoppt.
-voice-catalog-fetched = Die Piper-Stimmenliste hat { $voices } Stimmen in { $languages } Sprachen. Stimme wählen listet sie auf.
-voice-catalog-failed = Die Stimmenliste konnte nicht heruntergeladen werden: { $error }.
+voice-catalog-fetched = Die Piper-Stimmenliste hat { $voices } Stimmen in { $languages } Sprachen. Der Befehl Stimmen listet sie auf.
+voice-catalog-failed = Die Stimmenliste konnte nicht heruntergeladen werden: { $error }
 # $licence describes the voice's licence, in a sentence of its own.
-voice-installed = { $voice } ist installiert. { $licence } Stimme wählen listet sie auf.
-voice-download-failed = { $voice } konnte nicht heruntergeladen werden: { $error }.
+voice-installed = { $voice } ist installiert. { $licence } Der Befehl Stimmen listet sie auf.
+voice-download-failed = { $voice } konnte nicht heruntergeladen werden: { $error } Wählen Sie die Stimme erneut, um es noch einmal zu versuchen.
 voice-only-voice-favourite = Nur eine Stimme kann ein Favorit sein.
 voice-favourite-added = { $voice } zu den Favoriten hinzugefügt.
 voice-favourite-removed = { $voice } aus den Favoriten entfernt.
@@ -1085,7 +1085,7 @@ publish-auto-reload-on =
 publish-auto-reload-off = Automatisches Neuladen der Vorschau aus: drücken Sie F5 im Browser nach einem Speichern.
 publish-live-on = Live-Vorschau an: die Vorschau lädt auch neu, wenn das Tippen pausiert.
 # "toggle preview auto reload" is the command's name in the command palette.
-publish-live-on-needs-reload = Live-Vorschau an. Sie funktioniert mit automatischem Neuladen, das aus ist; schalten Sie es ein mit Automatisches Neuladen der Vorschau umschalten.
+publish-live-on-needs-reload = Live-Vorschau an. Sie funktioniert mit automatischem Neuladen, das aus ist; schalten Sie es ein mit Vorschau automatisch neu laden.
 publish-live-off = Live-Vorschau aus: die Vorschau lädt nur nach dem Speichern neu.
 # $error is the converter's reason.
 publish-export-failed = Export nach { $format } fehlgeschlagen: { $error }
@@ -1219,7 +1219,7 @@ notes-sheet-highlighted = Hervorgehoben, { $color }.
 
 ## Find, bookmarks, and selection.
 
-marks-cannot-search = Suche nicht möglich: { $error }.
+marks-cannot-search = Suche nicht möglich: { $error }
 # $pattern is the text searched for.
 marks-no-matches = Keine Treffer für { $pattern }.
 # The label of a match reached by Find, at high verbosity; $number is its place among $n matches.
@@ -1344,10 +1344,10 @@ listmodel-command-matches = { $n } Treffer: { $names }.
 
 # $n is how many documents the scan has found.
 library-still-scanning = Die Bibliothek wird noch durchsucht: { $n } bisher gefunden.
-library-scan-failed = Die Bibliothek konnte nicht durchsucht werden: { $error }.
+library-scan-failed = Die Bibliothek konnte nicht durchsucht werden: { $error } Prüfen Sie die Bibliotheksordner in den Einstellungen.
 library-scanning = Die Bibliothek wird durchsucht.
 library-scan-progress = Die Bibliothek wird durchsucht: { $n } bisher gefunden.
-library-scan-stopped = Die Bibliotheksdurchsuchung wurde durch einen internen Fehler gestoppt.
+library-scan-stopped = Die Bibliotheksdurchsuchung wurde unerwartet gestoppt. Öffnen Sie die Bibliothek erneut, um es noch einmal zu versuchen.
 # $command is the command line that adds a folder; $key names the Open command's key.
 library-empty = Die Bibliothek ist leer. Fügen Sie einen Ordner hinzu mit { $command }, oder öffnen Sie eine Datei mit { $key }.
 library-intro =
@@ -1462,7 +1462,7 @@ open-refused-missing = Nicht geöffnet: Datei nicht gefunden.
 open-refused-invalid = Nicht geöffnet: keine gültige Adresse.
 tasks-not-opened = Nicht geöffnet.
 # Keep the letters y and n: they are the keys that answer.
-tasks-open-it-question = Öffnen? y oder n.
+tasks-open-it-question = Öffnen? y oder n
 
 ## Math exploration.
 
@@ -1612,7 +1612,7 @@ settings-choose-one-of = Wählen Sie eines von: { $names }.
 settings-edit-table = Bearbeiten Sie { $label } in settings.toml; sie enthält Namen und Werte.
 # $path is a key such as speech.rate, not translated.
 settings-no-such-setting = Es gibt keine Einstellung { $path }.
-settings-cannot-be = { $label } kann das nicht sein: { $error }.
+settings-cannot-be = { $label } kann das nicht sein: { $error }
 settings-changed = { $label }, { $value }.
 settings-clamped = Außerhalb des Bereichs, daher wird der nächstliegende Wert verwendet.
 settings-restart-speech = Starten Sie die Sprachausgabe neu, um es zu verwenden.
@@ -1663,11 +1663,11 @@ setting-speech-volume-help = Wie laut textweaver spricht.
 setting-speech-pitch = Tonhöhe
 setting-speech-pitch-help = Höher oder tiefer als die eigene Tonhöhe der Stimme.
 setting-speech-voice = Stimme
-setting-speech-voice-help = Die Kennung der Stimme; nicht gesetzt wählt automatisch eine. Stimme wählen listet sie auf.
+setting-speech-voice-help = Die Kennung der Stimme; nicht gesetzt wählt automatisch eine. Der Befehl Stimmen listet sie auf.
 setting-speech-prefer-voice = Bevorzugte Stimme
 setting-speech-prefer-voice-help = Wenn keine Stimme gesetzt ist, die erste Stimme, deren Name dies enthält, zum Beispiel eloquence.
 setting-speech-favorite-voices = Bevorzugte Stimmen
-setting-speech-favorite-voices-help = Stimmen, die in Stimme wählen zuerst aufgelistet werden, nach Kennung.
+setting-speech-favorite-voices-help = Stimmen, die der Befehl Stimmen zuerst auflistet, nach Kennung.
 setting-speech-punctuation = Interpunktion
 setting-speech-punctuation-help = Wie viel Interpunktion gesprochen wird.
 choice-speech-punctuation-none = keine
@@ -1731,9 +1731,9 @@ setting-highlight-lead-words-help = Die Hervorhebung so viele Wörter vor dem ge
 setting-highlight-speed = Hervorhebungsgeschwindigkeit
 setting-highlight-speed-help = Geschwindigkeit der zeitgesteuerten Hervorhebung für Engines, die keine Wörter melden.
 setting-highlight-color = Wort-Hervorhebungsfarbe
-setting-highlight-color-help = Ein Farbname oder #rrggbb über der Wort-Hervorhebung des Designs; Design behält die des Designs.
+setting-highlight-color-help = Die Farbe hinter dem gelesenen Wort. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-highlight-sentence-color = Satz-Hervorhebungsfarbe
-setting-highlight-sentence-color-help = Ein Farbname oder #rrggbb über der Satz-Hervorhebung des Designs; nicht gesetzt behält die des Designs.
+setting-highlight-sentence-color-help = Die Farbe hinter dem gelesenen Satz. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-normalization-math = Mathematik sprechen
 setting-normalization-math-help = Mathematische Notation in Worten sprechen.
 setting-normalization-math-verbosity = Mathematik-Ausführlichkeit
@@ -2014,8 +2014,6 @@ choice-interface-language-fr = Français
 choice-interface-language-de = Deutsch
 choice-interface-language-pt = Português
 choice-interface-language-ar = العربية
-choice-interface-language-en-xa = Test: akzentuiert
-choice-interface-language-ar-xb = Test: rechts nach links
 setting-interface-rtl = Rechts-nach-links-Anzeige
 setting-interface-rtl-help = Ob der Terminal-Reader rechts-nach-links-Text für die Anzeige neu ordnet: automatisch überlässt es Terminals, die es selbst tun. Sprachausgabe und Screenreader erhalten den Text immer in Lesereihenfolge.
 choice-interface-rtl-auto = automatisch
@@ -2030,22 +2028,65 @@ setting-gui-auto-hide-menu-help = Windows: blendet die Menüleiste des Fensters 
 
 ## Units, said after a number.
 
-settings-unit-words-per-minute = Wörter pro Minute
+settings-unit-words-per-minute =
+    { $n ->
+        [one] Wort pro Minute
+       *[other] Wörter pro Minute
+    }
 settings-unit-percent = Prozent
-settings-unit-semitones = Halbtöne
-settings-unit-milliseconds = Millisekunden
-settings-unit-words = Wörter
-settings-unit-times = Mal
-settings-unit-places = Stellen
-settings-unit-columns = Spalten
-settings-unit-lines = Zeilen
-settings-unit-seconds = Sekunden
-settings-unit-steps = Schritte
+settings-unit-semitones =
+    { $n ->
+        [one] Halbton
+       *[other] Halbtöne
+    }
+settings-unit-milliseconds =
+    { $n ->
+        [one] Millisekunde
+       *[other] Millisekunden
+    }
+settings-unit-words =
+    { $n ->
+        [one] Wort
+       *[other] Wörter
+    }
+settings-unit-places =
+    { $n ->
+        [one] Stelle
+       *[other] Stellen
+    }
+settings-unit-columns =
+    { $n ->
+        [one] Spalte
+       *[other] Spalten
+    }
+settings-unit-lines =
+    { $n ->
+        [one] Zeile
+       *[other] Zeilen
+    }
+settings-unit-seconds =
+    { $n ->
+        [one] Sekunde
+       *[other] Sekunden
+    }
+settings-unit-steps =
+    { $n ->
+        [one] Schritt
+       *[other] Schritte
+    }
 settings-unit-megabytes = Megabyte
-settings-unit-files = Dateien
+settings-unit-files =
+    { $n ->
+        [one] Datei
+       *[other] Dateien
+    }
 settings-unit-letters = Buchstaben
 settings-unit-points = Punkt
-settings-unit-rows = Zeilen
+settings-unit-rows =
+    { $n ->
+        [one] Zeile
+       *[other] Zeilen
+    }
 
 ## Settings sections.
 
@@ -2082,11 +2123,11 @@ edit-save-changes-title = Änderungen an { $title } speichern?
 edit-choice-save = Speichern, dann fortfahren
 edit-choice-discard = Die Änderungen verwerfen
 edit-choice-cancel = Abbrechen, weiter bearbeiten
-edit-save-failed = Konnte nicht speichern: { $error }. Noch in Bearbeitung.
+edit-save-failed = Konnte nicht speichern: { $error } Noch in Bearbeitung. Versuchen Sie Speichern unter.
 # The Save As prompt; $path is the suggested file.
 edit-save-as-label = Speichern unter, Eingabetaste für { $path }
 # $name is a file name. Keep the letters y and n.
-edit-file-exists-question = { $name } existiert bereits. Ersetzen? y oder n.
+edit-file-exists-question = { $name } existiert bereits. Ersetzen? y oder n
 edit-mode-off = Bearbeitungsmodus aus.
 edit-mode-off-discarded = Änderungen verworfen. Bearbeitungsmodus aus.
 # The title of a new, unsaved document.
@@ -2172,10 +2213,10 @@ edit-format-removed =
         [bulleted-list] Aufzählungsliste entfernt.
         [numbered-list] Nummerierte Liste entfernt.
         [block-quote] Blockzitat entfernt.
-        [horizontal-rule] Eingefügte horizontale Linie entfernt.
-        [table-row] Hinzugefügte Tabellenzeile entfernt.
+        [horizontal-rule] Horizontale Linie entfernt.
+        [table-row] Tabellenzeile entfernt.
         [heading-level] Überschriftsebene { $level } entfernt.
-        [table] Eingefügte Tabelle, { $cols } Spalten mal { $rows } Zeilen, entfernt.
+        [table] Tabelle entfernt.
        *[heading] Überschrift entfernt.
     }
 edit-format-unchanged =
@@ -2190,10 +2231,10 @@ edit-format-unchanged =
         [bulleted-list] Aufzählungsliste: nichts geändert.
         [numbered-list] Nummerierte Liste: nichts geändert.
         [block-quote] Blockzitat: nichts geändert.
-        [horizontal-rule] Eingefügte horizontale Linie: nichts geändert.
-        [table-row] Hinzugefügte Tabellenzeile: nichts geändert.
+        [horizontal-rule] Horizontale Linie: nichts geändert.
+        [table-row] Tabellenzeile: nichts geändert.
         [heading-level] Überschriftsebene { $level }: nichts geändert.
-        [table] Eingefügte Tabelle, { $cols } Spalten mal { $rows } Zeilen: nichts geändert.
+        [table] Tabelle: nichts geändert.
        *[heading] Überschrift: nichts geändert.
     }
 # Added after a formatting message; $text is the start of the selection.
@@ -2215,7 +2256,7 @@ edit-nothing-to-redo = Nichts zu wiederholen.
 edit-not-a-table-size = Keine Tabellengröße: { $text }. Geben Sie Spalten und Zeilen ein, zum Beispiel 3 mal 2.
 # $name is the image's file name.
 edit-image-inserted = Bild { $name } eingefügt. Seine Beschreibung ist ausgewählt; tippen Sie, um sie zu ersetzen.
-edit-image-failed = Das Bild konnte nicht eingefügt werden: { $error }.
+edit-image-failed = Das Bild konnte nicht eingefügt werden: { $error }
 # $query is the text to find.
 edit-no-matches = Keine Treffer für { $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -2285,7 +2326,7 @@ writes-not-written-in-time = Einige Änderungen konnten nicht rechtzeitig geschr
 writes-save-failed = Konnte nicht speichern: { $error }. Noch in Bearbeitung.
 # $name is the bookmark's name, $pct where it is.
 writes-bookmark-set = Lesezeichen { $name } gesetzt bei { $pct } Prozent.
-writes-bookmark-not-saved = Lesezeichen { $name } ist vorerst gesetzt, konnte aber nicht gespeichert werden: { $error }.
+writes-bookmark-not-saved = Lesezeichen { $name } ist vorerst gesetzt, konnte aber nicht gespeichert werden: { $error }
 writes-recovery-copy-failed = Die Wiederherstellungskopie konnte nicht geschrieben werden: { $error }. Speichern Sie bald; { -brand } versucht es weiter.
 writes-recovery-copy-resumed = Die Wiederherstellungskopie wird erneut geschrieben.
 # $name is the saved file's name.
@@ -2294,14 +2335,14 @@ writes-saved = { $name } gespeichert. Noch in Bearbeitung.
 ## Files changed on disk. $name is a file name. Keep the letters y and
 ## n: they are the keys that answer.
 
-disk-replace-question = { $name } existiert bereits. Ersetzen? y oder n.
+disk-replace-question = { $name } existiert bereits. Ersetzen? y oder n
 # A prompt label, also said with a full stop after it.
 disk-not-replaced = Nicht ersetzt. Geben Sie einen anderen Namen ein
 # $key is the key for Save As.
 disk-not-saved = Nicht gespeichert. Noch in Bearbeitung. Speichern unter, { $key }, behält beide Versionen.
 disk-kept-open-version = Die geöffnete Version wurde beibehalten.
-disk-overwrite-question = { $name } wurde auf der Festplatte geändert, seit Sie es geöffnet haben. Über diese Änderungen speichern? y oder n.
-disk-reload-question = { $name } wurde auf der Festplatte geändert. Neu laden? y oder n.
+disk-overwrite-question = { $name } wurde auf der Festplatte geändert, seit Sie es geöffnet haben. Über diese Änderungen speichern? y oder n
+disk-reload-question = { $name } wurde auf der Festplatte geändert. Neu laden? y oder n
 
 ## Marks found again after a file changed outside textweaver.
 
@@ -2605,7 +2646,7 @@ spell-replace-failed = Konnte nicht ersetzen: { $error }
 spell-left-as-is = So belassen, wie es ist.
 spell-added-for-session = { $word } für diese Sitzung zu Ihrer Wortliste hinzugefügt.
 spell-added = { $word } zu Ihrer Wortliste hinzugefügt.
-spell-save-failed = Ihre Wortliste konnte nicht gespeichert werden: { $error }
+spell-save-failed = Ihre Wortliste konnte nicht gespeichert werden: { $error } Das Wort gilt bis zum Beenden als bekannt.
 # After a save; $count is $n with thousands separators.
 spell-count =
     { $n ->
@@ -2621,12 +2662,12 @@ tui-setup-backend-unavailable = Sprachausgabe { $wanted } ist nicht verfügbar; 
 # Shown inside tui-setup-speech-failed as its $error.
 tui-setup-backend-not-built = Sprachausgabe { $backend } ist nicht mit eingebaut
 tui-setup-speech-failed = Die Sprachausgabe konnte nicht gestartet werden ({ $error }); läuft stumm weiter.
-tui-setup-cannot-save = Einstellungen oder Positionen können nicht gespeichert werden: { $error }.
-tui-setup-keymap-ignored = Tastenzuordnungsdatei ignoriert: { $error }.
+tui-setup-cannot-save = Einstellungen oder Positionen können nicht gespeichert werden: { $error }
+tui-setup-keymap-ignored = Tastenzuordnungsdatei ignoriert: { $error }
 # The first-run welcome. Each value names the key for an action: $play
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
-tui-setup-welcome = Willkommen bei { -brand }. { $play } liest vor und pausiert, { $stop } stoppt, { $heading } bewegt zur nächsten Überschrift, { $help } öffnet die Hilfe, und { $quit } beendet.
+tui-setup-welcome = Willkommen bei { -brand }. { $open } öffnet ein Dokument. { $play } startet und pausiert das Vorlesen, und { $stop } stoppt. { $palette } listet jeden Befehl auf. { $help } öffnet die Hilfe.
 # Said at startup without a document. $open, $new, and $help name the
 # keys for Open, New Document, and Help.
 tui-setup-no-document = Kein Dokument ist geöffnet. Drücken Sie { $open }, um eines zu öffnen, { $new } für ein neues, oder { $help } für Hilfe.
@@ -2810,7 +2851,7 @@ gui-answer-replace = Ersetzen
 gui-question-hint = Y antwortet ja, N antwortet nein, Escape antwortet nein.
 gui-button-open = Öffnen…
 gui-button-font = Schriftart…
-gui-button-edit = Bearbeiten
+gui-button-edit = Bearbeiten beginnen
 gui-button-finish-editing = Bearbeiten beenden
 gui-button-settings = Einstellungen…
 gui-button-commands = Befehle…
@@ -2821,6 +2862,12 @@ gui-button-previous-sentence = Vorheriger Satz
 gui-button-next-sentence = Nächster Satz
 gui-button-slower = Langsamer
 gui-button-faster = Schneller
+gui-hint-open = Ein Dokument zum Lesen wählen.
+gui-hint-font = Die Schrift des Dokumenttexts wählen.
+gui-hint-edit = Bearbeiten ein oder aus.
+gui-hint-settings = Jede Option, mit ihrer Hilfe.
+gui-hint-commands = Jeden Befehl per Namen ausführen.
+gui-hint-play = Vorlesen ab dem Wort, oder Pause.
 gui-button-close = Schließen
 gui-toolbar-reading = Lesen
 gui-document = Dokument
@@ -2840,7 +2887,7 @@ gui-palette-filter = Tippen, um die Befehle zu filtern
 gui-palette-list = Befehle
 gui-palette-hint = Eingabetaste führt den ersten Treffer aus; Tab wechselt zur Liste.
 gui-no-document = Kein Dokument ist geöffnet. Drücken Sie { $key }, um eines zu öffnen.
-gui-open-failed = { $path } konnte nicht geöffnet werden: { $error }
+gui-open-failed = { $name } konnte nicht geöffnet werden: { $error }
 gui-uia-unavailable = UI-Automation-Benachrichtigungen gibt es nur unter Windows; die Live-Region wird verwendet.
 gui-rsvp = RSVP
 gui-rsvp-playing = RSVP läuft, Wort { $n } von { $total }
@@ -2895,7 +2942,11 @@ setting-summary-sentences-help = Wie viele Sätze Zusammenfassen und tw summariz
 setting-reading-aids-difficult-definitions = Definitionen schwieriger Wörter
 setting-reading-aids-difficult-definitions-help = Bei markierten schwierigen Wörtern mit hoher Ausführlichkeit auch die erste Wörterbuchdefinition eines schwierigen Wortes sagen.
 section-summary = Zusammenfassungen
-settings-unit-sentences = Sätze
+settings-unit-sentences =
+    { $n ->
+        [one] Satz
+       *[other] Sätze
+    }
 
 # W6a5: the GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
@@ -3198,31 +3249,31 @@ action-menu = Die Menüs öffnen: Datei, Bearbeiten, Ansicht, Lesen, Sprache, Ex
 action-what-does-this-key-do = Eine Taste drücken, um zu hören, was sie tut und wo sie in den Menüs steht, ohne sie auszuführen
 action-about = Version und Lizenz von textweaver sagen
 setting-colors-ruler = Farbe des Leselineals
-setting-colors-ruler-help = Das Band des Leselineals und der markierten aktuellen Zeile; das Lineal behält Unterstreichung oder Fettdruck. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-ruler-help = Das Band des Leselineals und der markierten aktuellen Zeile; das Lineal behält Unterstreichung oder Fettdruck. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-difficult-words = Farbe schwieriger Wörter
-setting-colors-difficult-words-help = Die Unterstreichung schwieriger Wörter; sie bleiben unterstrichen und werden bei hoher Ausführlichkeit genannt. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-difficult-words-help = Die Unterstreichung schwieriger Wörter; sie bleiben unterstrichen und werden bei hoher Ausführlichkeit genannt. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-syllables = Farbe der Silbenzeichen
-setting-colors-syllables-help = Die Mittelpunkte zwischen den Silben. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-syllables-help = Die Mittelpunkte zwischen den Silben. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-misspellings = Farbe der Rechtschreibfehler
-setting-colors-misspellings-help = Die Unterstreichung falsch geschriebener Wörter im Fenster; sie werden auch gesagt. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-misspellings-help = Die Unterstreichung falsch geschriebener Wörter im Fenster; sie werden auch gesagt. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-lint = Farbe der Formatmarkierungen
-setting-colors-lint-help = Die Unterstreichung von Markdown- und Grammatikproblemen im Fenster; sie werden auch gesagt. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-lint-help = Die Unterstreichung von Markdown- und Grammatikproblemen im Fenster; sie werden auch gesagt. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-find-match = Farbe der Suchtreffer
-setting-colors-find-match-help = Das Band hinter Suchtreffern; sie bleiben unterstrichen. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-find-match-help = Das Band hinter Suchtreffern; sie bleiben unterstrichen. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-selection = Farbe der Auswahl
-setting-colors-selection-help = Das Band hinter ausgewähltem Text. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-selection-help = Das Band hinter ausgewähltem Text. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-focus = Farbe des Fokus
-setting-colors-focus-help = Der Fokusrahmen und der fokussierte Listeneintrag; sie bleiben fett. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-focus-help = Der Fokusrahmen und der fokussierte Listeneintrag; sie bleiben fett. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-links = Farbe der Links
-setting-colors-links-help = Die Farbe von Links; sie bleiben unterstrichen. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-links-help = Die Farbe von Links; sie bleiben unterstrichen. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-headings = Farbe der Überschriften
-setting-colors-headings-help = Die Farbe von Überschriften; sie bleiben fett. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-headings-help = Die Farbe von Überschriften; sie bleiben fett. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-status-bar = Farbe der Statusleiste
-setting-colors-status-bar-help = Das Band der Status- und Titelleisten. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-status-bar-help = Das Band der Status- und Titelleisten. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-notes = Farbe der Notizen
-setting-colors-notes-help = Das Band hinter Text mit Notiz; er bleibt kursiv und unterstrichen. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-notes-help = Das Band hinter Text mit Notiz; er bleibt kursiv und unterstrichen. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-bookmarks = Farbe der Lesezeichen
-setting-colors-bookmarks-help = Das Band hinter einem Wort mit Lesezeichen; es bleibt fett und unterstrichen. Ein Farbname oder #rrggbb; standardmäßig die Farbe des Designs.
+setting-colors-bookmarks-help = Das Band hinter einem Wort mit Lesezeichen; es bleibt fett und unterstrichen. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 color-name-theme = Farbe des Designs
 color-name-blue = Blau
 color-name-orange = Orange
@@ -3269,7 +3320,7 @@ dictation-finishing = Diktat wird abgeschlossen.
 dictation-done = Diktat fertig.
 dictation-busy = Das Diktat wird abgeschlossen. Versuchen Sie es gleich noch einmal.
 dictation-needs-edit = Das Diktat schreibt im Bearbeitungsmodus. Bearbeitungsmodus einschalten und diktieren? y oder n
-dictation-no-model = Das Diktat braucht das Whisper-Modell in { $dir }. Siehe die Anleitung zur Spracheingabe.
+dictation-no-model = Das Diktat braucht das Whisper-Modell in { $dir }. Siehe Dictation in der Dokumentation.
 dictation-failed = Diktat fehlgeschlagen: { $error }
 dictation-no-words = In diesem Satz wurden keine Wörter erkannt.
 dictation-lost = Das Diktat wurde beendet, bevor seine letzten Wörter geschrieben waren.
@@ -3522,6 +3573,7 @@ gui-colors-help = Links und Rechts wählen eine benannte Farbe, Blau und Orange 
 gui-colors-reset-all = Alle Farben zurücksetzen
 gui-colors-reset-all-help = Für jeden Teil die Farbe des Designs wiederherstellen.
 gui-colors-reset-done = Alle Farben sind wieder die des Designs.
+colors-reset-question = Jede Farbe auf die des Designs zurücksetzen? y oder n
 gui-colors-closed = Farben geschlossen.
 gui-font-list-intro =
     { $n ->
@@ -3750,7 +3802,7 @@ setting-sync-favorite-voices-help = Die Lieblingsstimmen teilen; eine, die diese
 font-download-question = Schrift { $font } herunterladen, { $kb } KB, { $licence }? y oder n
 font-downloading = { $font } wird heruntergeladen.
 font-downloaded = { $font } heruntergeladen und bereit.
-font-download-failed = { $font } nicht heruntergeladen: { $error }.
+font-download-failed = { $font } nicht heruntergeladen: { $error }
 font-download-declined = Nicht geladen. Andere Schrift aktiv.
 font-download-busy = { $font } wird noch heruntergeladen.
 font-download-no-folder = Kein Datenordner für { $font }.

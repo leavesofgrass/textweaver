@@ -382,6 +382,9 @@ pub struct Gui {
     /// How many font downloads the app had finished when the downloaded
     /// fonts were last registered (`App::font_downloads`).
     font_downloads: u64,
+    /// Reset all colors was asked from the Colors dialog on this section:
+    /// the dialog opens again there once the question is answered.
+    colors_after_question: Option<usize>,
     /// Load and highlight timings, for `--log` and the measurements.
     pub timings: Timings,
 }
@@ -460,10 +463,7 @@ fn styled_button(
     accent_text: bool,
 ) -> NewWidget<ActionButton> {
     let shortcut = app.map(|a| shortcut_for(a, action)).unwrap_or_default();
-    let help = app.map_or_else(
-        || action.help().to_owned(),
-        |a| textweaver_app::action_help(&a.catalog(), action),
-    );
+    let help = button_description(&catalog_of(app), action);
     let mut b = ActionButton::new(text)
         .with_shortcut(shortcut)
         .with_description(help);
@@ -499,6 +499,24 @@ pub fn button_label(c: &Catalog, action: ActionId, reading: bool, editing: bool)
     c.tr(id)
 }
 
+/// The short description of the button for `action` (`gui-hint-*`, at
+/// most 40 cells), which NVDA reads after the name: what the button does,
+/// in words the name does not already say. Empty, so no description at all,
+/// for Stop, Slower, Faster, and the sentence buttons, whose names say it.
+/// The command's full help stays in F1, Shift+F1, and the palette.
+pub fn button_description(c: &Catalog, action: ActionId) -> String {
+    let id = match action {
+        ActionId::Open => "gui-hint-open",
+        ActionId::ChooseFont => "gui-hint-font",
+        ActionId::ToggleEditMode => "gui-hint-edit",
+        ActionId::Settings => "gui-hint-settings",
+        ActionId::CommandPalette => "gui-hint-commands",
+        ActionId::PlayPause => "gui-hint-play",
+        _ => return String::new(),
+    };
+    c.tr(id)
+}
+
 /// The catalog for drawn labels: the app's, or English with no app (the
 /// screenshot tool's tree before an app exists).
 fn catalog_of(app: Option<&App>) -> std::sync::Arc<Catalog> {
@@ -509,9 +527,27 @@ fn catalog_of(app: Option<&App>) -> std::sync::Arc<Catalog> {
 /// written ("Ctrl+O"): the button's keyboard shortcut and its text on
 /// screen. The main key, which is the single key while single-key
 /// shortcuts are on ("Space" for Play) and a chord while they are off.
+///
+/// A lone punctuation key (":" for Commands while single-key shortcuts are
+/// on) is hard to see and is not the key people are told; the first chord
+/// that works either way ("F2") is shown instead.
 pub fn shortcut_for(app: &App, action: ActionId) -> String {
     let named = textweaver_app::named_key_in(&app.catalog(), app.keymap(), action);
-    textweaver_app::written_text(&named).into_owned()
+    let written = textweaver_app::written_text(&named).into_owned();
+    let lone_punctuation = {
+        let mut chars = written.chars();
+        matches!((chars.next(), chars.next()), (Some(ch), None) if ch.is_ascii_punctuation())
+    };
+    if lone_punctuation
+        && let Some(chord) = app
+            .keymap()
+            .chords_for(action)
+            .into_iter()
+            .find(|ch| !ch.is_text_input())
+    {
+        return chord.to_string();
+    }
+    written
 }
 
 fn panel(p: &Palette, pad_v: f64, pad_h: f64) -> PropertySet {
@@ -734,6 +770,9 @@ pub fn question_dialog(
     question: &str,
     verb: Option<textweaver_app::DestructiveVerb>,
 ) -> QuestionDialog {
+    // The name is the question alone: "Quit textweaver?", not "... y or n";
+    // the Yes and No buttons carry the keys.
+    let question = textweaver_app::text_util::question_name(question);
     use textweaver_app::DestructiveVerb as V;
     let yes_label = match verb {
         None => c.tr("gui-yes"),
@@ -1401,7 +1440,7 @@ impl Gui {
                 let root = ctx.render_root(self.window_id);
                 for (id, action) in &self.buttons.by_id {
                     let text = button_label(&c, *action, reading, editing);
-                    let help = textweaver_app::action_help(&c, *action);
+                    let help = button_description(&c, *action);
                     root.edit_widget(*id, |mut w| {
                         let mut b = w.downcast::<ActionButton>();
                         ActionButton::set_label(&mut b, text);
@@ -2139,34 +2178,19 @@ impl Gui {
         self.show_settings(ctx, form, Some((section, row)));
     }
 
-    /// Reset all colors (the Colors dialog's button): every color setting
-    /// back to the theme's, applied at once and said once.
+    /// Reset all colors (the Colors dialog's button): asks first ("Reset
+    /// every color to the theme's? y or n"); a yes puts every color setting
+    /// back to the theme's and says so once. The Colors dialog opens again
+    /// on the same section after the answer.
     fn reset_all_colors(&mut self, ctx: &mut DriverCtx<'_>) {
-        self.menu_dirty = true;
-        let mut failed = None;
-        for path in textweaver_app::COLOR_SETTINGS {
-            if let Err(e) = self.app.set_setting(path, serde_json::Value::Null) {
-                failed = Some(e);
-            }
-        }
+        let section = match &self.dialog {
+            Some(OpenDialog::Settings(open)) => open.section,
+            _ => 0,
+        };
+        self.colors_after_question = Some(section);
+        self.app.ask_reset_colors();
         if self.log {
-            crate::log::line("colors: all reset to the theme's");
-        }
-        self.refresh(ctx);
-        if let Some(OpenDialog::Settings(open)) = &self.dialog {
-            let rows = open.form.rows(open.section, &self.app);
-            ctx.render_root(self.window_id)
-                .edit_widget_with_tag(FORM, |mut g| SettingsGrid::update_rows(&mut g, rows));
-        }
-        match failed {
-            Some(e) => self
-                .app
-                .announce_as(&e, Priority::Assertive, Importance::Error),
-            None => {
-                let said = self.app.catalog().tr("gui-colors-reset-done");
-                self.app
-                    .announce_as(&said, Priority::Polite, Importance::Result);
-            }
+            crate::log::line("colors: asked to reset all");
         }
         self.refresh(ctx);
     }
@@ -2802,6 +2826,12 @@ impl Gui {
             crate::log::line(&format!("answer {answer:?}"));
         }
         self.dispatch(ctx, Command::Confirm(answer));
+        if !self.app.confirmation_pending()
+            && let Some(section) = self.colors_after_question.take()
+        {
+            self.menu_dirty = true;
+            self.reopen_settings(ctx, true, section, 0);
+        }
     }
 
     /// Shows `modal` over the window with the focus on `focus`. The first
@@ -2967,6 +2997,9 @@ impl Gui {
             }
         }
         let mut effects = Vec::new();
+        // On a first run the welcome comes first, before the empty-window
+        // hint, so "Welcome to textweaver" is the first thing heard.
+        let mut welcomed = false;
         match &file {
             Some(path) => {
                 let started = Instant::now();
@@ -2994,8 +3027,16 @@ impl Gui {
                     .app
                     .catalog()
                     .fmt("gui-no-document", &args!["key" => open.as_str()]);
-                self.app
-                    .announce_as(&said, Priority::Polite, Importance::Tip);
+                if self.first_run && self.app.interface_allows(Importance::Tip) {
+                    let welcome = setup::welcome_text(&self.app.catalog(), self.app.keymap());
+                    self.app
+                        .announce_as(&welcome, Priority::Polite, Importance::Tip);
+                    self.app.announce_queued(&said, Priority::Polite);
+                    welcomed = true;
+                } else {
+                    self.app
+                        .announce_as(&said, Priority::Polite, Importance::Tip);
+                }
             }
         }
         // As in the terminal reader: startup messages follow the opening
@@ -3011,7 +3052,7 @@ impl Gui {
             // reading), then the language list, the system's first. The
             // welcome is a tip: heard unless announcements are turned down.
             let welcome = setup::welcome_text(&self.app.catalog(), self.app.keymap());
-            if self.app.interface_allows(Importance::Tip) {
+            if !welcomed && self.app.interface_allows(Importance::Tip) {
                 self.app.announce_queued(&welcome, Priority::Polite);
             }
             effects.extend(self.app.language_list());
@@ -3602,6 +3643,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         chrome,
         font_choices: None,
         font_downloads: 0,
+        colors_after_question: None,
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
         closed: false,
@@ -3695,7 +3737,13 @@ pub fn startup_open_message(c: &Catalog, path: &std::path::Path, err: &AppError)
         AppError::Load(e) => textweaver_app::open_failure_message_in(c, path, e),
         AppError::Store(e) => c.fmt(
             "gui-open-failed",
-            &args!["path" => path.display().to_string(), "error" => e.to_string()],
+            &args![
+                "name" => path.file_name().map_or_else(
+                    || path.display().to_string(),
+                    |n| n.to_string_lossy().into_owned()
+                ),
+                "error" => e.to_string()
+            ],
         ),
     }
 }

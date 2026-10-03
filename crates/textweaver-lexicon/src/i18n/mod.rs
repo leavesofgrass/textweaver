@@ -532,4 +532,6 @@ macro_rules! args {
 }
 
 #[cfg(test)]
+mod style_tests;
+#[cfg(test)]
 mod tests;

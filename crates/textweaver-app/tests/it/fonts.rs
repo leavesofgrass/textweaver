@@ -185,7 +185,7 @@ fn a_file_that_does_not_match_is_refused() {
     app.dispatch(Command::Confirm(Confirm::Yes));
     assert!(app.wait_for_font_download(Duration::from_secs(20)));
     assert!(
-        said.any("Lexend not downloaded: Lexend-Regular.ttf does not match its published hash."),
+        said.any("Lexend not downloaded: Lexend-Regular.ttf does not match its published hash"),
         "{:?}",
         said.all()
     );

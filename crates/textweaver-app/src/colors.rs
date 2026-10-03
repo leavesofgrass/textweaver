@@ -284,6 +284,48 @@ impl App {
     pub(crate) fn open_color_settings(&mut self) -> Vec<Effect> {
         self.open_settings_screen_with(Some(is_color_setting), "colors-intro")
     }
+
+    /// Asks before every color goes back to the theme's (the window's
+    /// Reset all colors): "Reset every color to the theme's? y or n". A
+    /// yes resets them and says so; a no keeps them.
+    pub fn ask_reset_colors(&mut self) {
+        self.pending_colors_reset = true;
+        let question = self.msg("colors-reset-question");
+        self.ask(&question);
+    }
+
+    /// The answer to [`ask_reset_colors`](Self::ask_reset_colors).
+    pub(crate) fn confirm_colors_reset(&mut self, answer: crate::command::Confirm) -> Vec<Effect> {
+        use crate::command::Confirm;
+        match answer {
+            Confirm::Repeat => {
+                let question = self.msg("colors-reset-question");
+                self.ask(&question);
+            }
+            Confirm::No => {
+                self.pending_colors_reset = false;
+                let msg = self.msg("common-kept");
+                self.tell(&msg);
+            }
+            Confirm::Yes => {
+                self.pending_colors_reset = false;
+                let mut failed = None;
+                for path in COLOR_SETTINGS {
+                    if let Err(e) = self.set_setting(path, serde_json::Value::Null) {
+                        failed = Some(e);
+                    }
+                }
+                match failed {
+                    Some(e) => self.error(&e),
+                    None => {
+                        let msg = self.msg("gui-colors-reset-done");
+                        self.tell(&msg);
+                    }
+                }
+            }
+        }
+        vec![Effect::Redraw]
+    }
 }
 
 #[cfg(test)]
@@ -385,5 +427,31 @@ mod tests {
         assert_eq!(m.ruler, Some(Rgb::from_u32(0x336699)));
         assert_eq!(m.lint, None);
         assert_eq!(m.difficult_words, None);
+    }
+
+    /// Reset all colors asks first; no keeps every color, a stray key asks
+    /// again, and yes puts the theme's back and says so.
+    #[test]
+    fn reset_all_colors_asks_first() {
+        use crate::command::Confirm;
+        let mut config = AppConfig::for_tests();
+        config.settings.colors.links = "orange".into();
+        let mut app = App::new(config);
+        app.ask_reset_colors();
+        assert!(app.confirmation_pending());
+        assert_eq!(
+            app.status_text(),
+            "Reset every color to the theme's? y or n"
+        );
+        app.dispatch(Command::Confirm(Confirm::No));
+        assert!(!app.confirmation_pending());
+        assert_eq!(app.settings().colors.links, "orange");
+        app.ask_reset_colors();
+        app.dispatch(Command::Confirm(Confirm::Repeat));
+        assert!(app.confirmation_pending());
+        app.dispatch(Command::Confirm(Confirm::Yes));
+        assert!(!app.confirmation_pending());
+        assert_eq!(app.settings().colors.links, "theme");
+        assert_eq!(app.status_text(), "Every color is the theme's again.");
     }
 }

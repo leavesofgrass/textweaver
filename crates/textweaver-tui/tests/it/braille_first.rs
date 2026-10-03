@@ -291,3 +291,30 @@ fn hints_follow_the_setting_when_self_voicing() {
     h.act(ActionId::Find);
     assert!(h.bottom_row().starts_with("Find: "), "{:?}", h.bottom_row());
 }
+
+/// The window's button descriptions (`gui-hint-*`, read after a button's
+/// name) fit one 40-cell line, counted in Braille cells, in every language
+/// (`docs/dev/messages.md`, rule 11).
+#[test]
+fn window_button_hints_fit_a_braille_line() {
+    use textweaver_app::lexicon::i18n::{Catalog, LANGUAGES};
+    for lang in LANGUAGES {
+        let c = Catalog::builtin(lang.tag).unwrap_or_else(Catalog::english);
+        for id in [
+            "gui-hint-open",
+            "gui-hint-font",
+            "gui-hint-edit",
+            "gui-hint-settings",
+            "gui-hint-commands",
+            "gui-hint-play",
+        ] {
+            let text = c.tr(id);
+            assert!(
+                braille_cells(&text) <= BRAILLE_CELLS,
+                "{}: {id} takes {} cells: {text}",
+                lang.tag,
+                braille_cells(&text)
+            );
+        }
+    }
+}

@@ -274,18 +274,7 @@ pub fn is_first_run(paths: &Paths) -> bool {
 /// ([`textweaver_app::named_key_in`]): the status line shows "Ctrl+Q", the
 /// voice says "Control Q".
 pub fn welcome_text(c: &Catalog, keymap: &Keymap) -> String {
-    use textweaver_app::keymap::ActionId;
-    let k = |a| textweaver_app::named_key_in(c, keymap, a);
-    c.fmt(
-        "tui-setup-welcome",
-        &args![
-            "play" => k(ActionId::PlayPause),
-            "stop" => k(ActionId::Stop),
-            "heading" => k(ActionId::SkipNextHeading),
-            "help" => k(ActionId::Help),
-            "quit" => k(ActionId::Quit)
-        ],
-    )
+    textweaver_app::welcome_text(c, keymap)
 }
 
 /// The welcome for this run, when it is the first one under the state
@@ -475,11 +464,11 @@ mod tests {
         let written = textweaver_app::written_text;
         assert_eq!(
             spoken(&welcome),
-            "Welcome to textweaver. Space reads aloud and pauses, Escape stops, H moves to the next heading, F1 opens the help, and Control Q quits."
+            "Welcome to textweaver. Control O opens a document. Space starts and pauses reading, and Escape stops. F2 lists every command. F1 opens the help."
         );
         assert_eq!(
             written(&welcome),
-            "Welcome to textweaver. Space reads aloud and pauses, Escape stops, h moves to the next heading, F1 opens the help, and Ctrl+Q quits."
+            "Welcome to textweaver. Ctrl+O opens a document. Space starts and pauses reading, and Escape stops. F2 lists every command. F1 opens the help."
         );
         let none = no_document_text(&app.catalog(), app.keymap());
         assert_eq!(
