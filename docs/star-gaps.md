@@ -39,7 +39,7 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
   - an EPUB cover and a table-of-contents depth setting;
   - single-file HTML.
   - Status: mostly done. `tw convert` writes single-file accessible HTML (following the system's dark, light, and high-contrast settings), large-print PDF, PDF in OpenDyslexic, and a PDF table of contents with a depth option, plus APA, AMA, large-print, dyslexia-friendly, high-contrast, and manuscript templates for EPUB, Word, and PDF, with an EPUB cover. The reader exports the open document to HTML, PDF, Word, EPUB, and braille from the command palette, previews it in the browser, and starts a new document from a template with front matter and a References heading.
-- **GUI Contents and Notes panels.** Status: missing in the GUI. The terminal reader lists notes (Shift+A), moves by heading, and lists the headings with type-to-filter (the outline, Alt+O).
+- **GUI Contents and Notes panels.** Status: done. The window shows the headings (Ctrl+1) or the notes (Ctrl+2) in a panel beside the document, from the same lists as the outline (Alt+O) and the notes list; Enter goes to a row, F6 moves between the panel and the document, and the panel never takes the focus unasked (see [The Contents and Notes panels](gui.md#the-contents-and-notes-panels)). The terminal reader lists notes (Shift+A) and the headings with type-to-filter (the outline, Alt+O).
 - **Math as Unicode in the plain reading view** (`x²`, `√2`). Status: done (`[reading] math_display = "unicode"`); the LaTeX source is also available, spoken as English, and HTML output carries MathML.
 
 ## Medium priority

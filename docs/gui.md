@@ -39,14 +39,15 @@ From top to bottom:
 
 1. **The menu bar** (Windows and macOS): File, Edit, View, Reading, Speech, Tools, and Help; see [Menus](#menus).
 2. **The header,** a banner with the document's title and five buttons: Open, Font, Edit (or Finish editing), Settings, and Commands.
-3. **The document,** one control your screen reader reads as a document (on macOS, a read-only text area, which VoiceOver reads with its text commands). The caret keys are your system's own (see [Caret keys](#caret-keys)), with Shift to select. Ctrl+C (Command+C on macOS) copies the selection, and says what it copied. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
-4. **The RSVP strip,** only while RSVP is on (Alt+Shift+R). It shows one word at a time under the document, so it never covers the text or the caret.
-5. **The toolbar,** named "Reading": Play or Pause, Stop, Previous sentence, Next sentence, Slower, and Faster.
-6. **The status bar:** the last message, then what the terminal's title line shows: the reading state, "line 3 of 40, 7%", the accessibility mode, the rate, and the speech engine.
+3. **The Contents or Notes panel,** only when you show one (Ctrl+1 or Ctrl+2), to the left of the document; see [The Contents and Notes panels](#the-contents-and-notes-panels).
+4. **The document,** one control your screen reader reads as a document (on macOS, a read-only text area, which VoiceOver reads with its text commands). The caret keys are your system's own (see [Caret keys](#caret-keys)), with Shift to select. Ctrl+C (Command+C on macOS) copies the selection, and says what it copied. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
+5. **The RSVP strip,** only while RSVP is on (Alt+Shift+R). It shows one word at a time under the document, so it never covers the text or the caret.
+6. **The toolbar,** named "Reading": Play or Pause, Stop, Previous sentence, Next sentence, Slower, and Faster.
+7. **The status bar:** the last message, then what the terminal's title line shows: the reading state, "line 3 of 40, 7%", the accessibility mode, the rate, and the speech engine.
 
 Every button has a key, shown on screen with its name, for example "Open… (Ctrl+O)". Your screen reader reads it as the button's shortcut key: NVDA and JAWS say it after the name when their setting for reporting shortcut keys is on (in NVDA, Object Presentation, "Report object shortcut keys"). The name itself is only the label, "Open", so it stays short. The key comes from the keymap, so a key you change in `keymap.toml` shows here too, and F1 and the command palette list every key. While single-key shortcuts are on, a button shows its single key ("Play (Space)"); press F9 to turn them off, and the buttons show their chords instead ("Play (Ctrl+Shift+Space)").
 
-Tab and Shift+Tab move between the document and the buttons. Dialogs (settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
+Tab and Shift+Tab move between the document and the buttons. F6 and Shift+F6 move between the window's regions, as in other Windows programs: the header, the panel (when shown), the document, and the toolbar, landing on the first control of each. Dialogs (settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
 
 ## Menus
 
@@ -113,11 +114,28 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Alt+'**: say the last message again.
 - **Alt+O**: the outline. Type to filter the headings, Enter jumps to one.
 - **Ctrl+Shift+N**: the notes list.
+- **Ctrl+1** and **Ctrl+2**: the Contents and Notes panels beside the document (see [The Contents and Notes panels](#the-contents-and-notes-panels)).
+- **F6** and **Shift+F6**: the next and previous region: the header, the panel, the document, and the toolbar.
 - **Ctrl+T** and **Ctrl+Shift+T**: next and previous table. **Ctrl+Alt+arrows** move by cell in a table.
 - **k** and **Shift+K** (browse): next and previous link. **Alt+Shift+F** follows a link.
 - **Alt+Shift+A**: the accessibility mode: self-voicing, hybrid, or screen reader.
 - **F5**: the next color theme.
 - **F9**: single-key shortcuts off or on.
+
+## The Contents and Notes panels
+
+A panel beside the document keeps the document's headings, or its notes, in view while you read. It is the same list the outline (Alt+O) and the notes list (Ctrl+Shift+N) show, with the same names for each row, so the panel and the list never disagree.
+
+- **Ctrl+1** shows the Contents panel, and **Ctrl+2** the Notes panel, and moves the focus to it. Your screen reader says the list and the row with its place, for example "Contents, Methods, level 2, 3 of 12", and textweaver says "Contents open, 12 items." Pressed while you are in the panel, the same key closes it and puts you back in the document ("Contents closed."). Pressed in the document while the panel is shown, it moves the focus to the panel.
+- **Up, Down, Home, End, Page Up, Page Down,** and a letter move in the list, as in any list.
+- **Enter** moves the document to that heading or note, says where it is as the outline does, and keeps you in the panel, so you can try the next one. **Shift+Enter** moves the document there and puts you back in the document. **Escape** puts you back in the document without moving it.
+- **F6** and **Shift+F6** move between the panel, the document, the toolbar, and the header.
+- The row where the caret is has a bar beside it, and your screen reader hears ", current" after its name. While you are in the document, the panel's selected row follows the caret, so going to the panel starts where you are.
+- The panel is a navigation landmark named "Contents" or "Notes".
+
+The panel never takes the focus on its own: when the window opens with a panel, or you choose one in the settings, the focus stays where it was. The window remembers the panel you showed last (Settings, Window, "Panel beside the document"; `sidebar` in `[gui]`, one of `off`, `contents`, or `notes`). A document without headings shows "No headings." in the Contents panel; a PDF without headings lists its pages, as the outline does. In edit mode, the Contents follow the headings you type once they are parsed again, as the outline does.
+
+The panel costs nothing while it is closed. While it is open, its rows are built again only when the document, its headings, or its notes change, not as the reading highlight moves.
 
 ## Editing
 
@@ -236,7 +254,7 @@ Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's
 Every command works in the window as in the terminal reader, from the same keys, the menus, and the command palette (F2), with the same lists, questions, and messages. A few commands only mean something in a terminal, and the window's menus and command palette leave them out. If a key for one is pressed in the window (`j` or Shift+J, say), the window says "This command works in the terminal reader." and does nothing else:
 
 - `scroll_down` and `scroll_up`: the terminal scrolls its screen by lines. The window scrolls with the mouse wheel and keeps the caret in view.
-- `toggle_line_numbers`: line numbers are the terminal's margin. In the window, the status bar says the line, and Say Position (Shift+W) says it too.
+- `toggle_line_numbers`: line numbers are the terminal's margin, on F6 there. In the window, the status bar says the line, and Say Position (Shift+W) says it too; F6 moves between the window's regions instead.
 
 The command-line tools (`tw vault`, `tw convert`, `tw library`, and the rest) are the same for both readers.
 

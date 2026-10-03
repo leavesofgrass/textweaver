@@ -10,6 +10,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ### The window
 
+- **Contents and Notes panels.** Ctrl+1 shows the document's headings, and Ctrl+2 its notes, in a panel beside the document, from the same lists as the outline (Alt+O) and the notes list. Enter goes to a heading or note and stays in the panel, Shift+Enter goes and returns to the document, and Escape returns. The row at the caret is marked with a bar and ", current". The panel is a navigation landmark, never takes the focus unless its key is pressed, and costs nothing while closed. The window remembers it (`[gui] sidebar`).
+- **F6 moves between the window's regions.** F6 and Shift+F6 move between the header, the panel, the document, and the toolbar, as in other Windows programs. F6 used to turn line numbers on or off, which the window does not draw; it still does in the terminal reader.
 - **The title bar and menus follow the theme.** A dark theme such as Galaxy now gets a dark title bar, and on Windows a dark menu bar and dark drop-down menus, even when Windows itself is light; a light theme gets light ones. With Windows High Contrast on, Windows draws them in your contrast colors. See [Colors and high contrast](docs/gui.md#colors-and-high-contrast).
 - **New setting: Hide the menu bar** (`[gui] auto_hide_menu`, off by default, Windows only). The menu bar takes no room until Alt, F10, or Alt with a menu's letter shows it, and hides again when the menu closes. NVDA and JAWS still say "menu bar" on Alt and F10. See [Menus](docs/gui.md#menus).
 - **Enter in the command palette runs the command you heard.** After Up or Down moved through the matches, Enter ran the first match instead of the one announced. It now runs the selected one.
