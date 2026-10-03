@@ -140,7 +140,7 @@ fn everything_changed() -> Settings {
     let acc = &mut s.accessibility;
     acc.mode = crate::AccessMode::Hybrid;
     acc.say_all = crate::SayAll::Voice;
-    acc.quiet_screen = true;
+    acc.quiet_screen = crate::QuietScreen::On;
     acc.cursor = crate::CursorPlacement::Status;
     acc.hybrid_offered = true;
     acc.interface_announcements = crate::InterfaceAnnouncements::Full;

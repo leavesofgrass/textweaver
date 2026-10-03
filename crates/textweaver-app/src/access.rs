@@ -154,9 +154,18 @@ impl App {
     /// quiet_screen` is on and continuous reading is going on. The TUI then
     /// stops updating the title line's position.
     pub fn quiet_screen_active(&self) -> bool {
-        self.settings.accessibility.quiet_screen
+        self.quiet_screen()
             && self.playback == Playback::Reading
             && self.reading == ReadKind::Continuous
+    }
+
+    /// `[accessibility] quiet_screen` resolved for the current mode: an
+    /// explicit `true` or `false` wins; left out, it is on in hybrid mode.
+    pub fn quiet_screen(&self) -> bool {
+        self.settings
+            .accessibility
+            .quiet_screen
+            .resolve(self.access_mode == AccessMode::Hybrid)
     }
 
     /// True when the speech engine makes sound (not the silent backend).
@@ -174,8 +183,7 @@ impl App {
         };
         let ctx = RouteContext {
             voice,
-            quiet_screen: self.settings.accessibility.quiet_screen
-                && self.playback == Playback::Reading,
+            quiet_screen: self.quiet_screen() && self.playback == Playback::Reading,
         };
         textweaver_a11y::route(self.access_mode, channel, ctx)
     }
