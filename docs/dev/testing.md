@@ -283,9 +283,6 @@ The first opens the device three times per buffer size and, each time, restarts 
 - A push that arrives while the output plays silence is taken at the next sample, not after the rest of a 64-sample batch (up to 3 ms at 22,050 Hz), and a stop drops the samples the output had taken but not yet played (`FeedReader`, tests in `crates/textweaver-enginehost/tests/it/feed.rs`).
 - A minute of speech through a fake device with the 30 ms and the 20 ms buffer, fed by a fake engine at a real-time factor of 0.1 to 0.5 in chunks of 2,048 to 4,096 samples: zero gaps, and every sample once, in order. Time is simulated, so the test never waits.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 ### Piper's first audio: Friday, October 2, 2026
 
 Wave 8b's Piper work (W8b-pf). Measured on the owner's Windows machine (x86_64, 12 threads, 64 GB) while other agents were building, so single numbers move by 20 to 50 percent between runs; the medium Joe voice from a local copy (nothing downloaded), the pure-Rust phonemizer (libespeak-ng is not installed on Windows).
@@ -312,9 +309,6 @@ TEXTWEAVER_PIPER_VOICE=<folder>/en_US-joe-medium.onnx cargo test --release -p te
 
 **No gaps.** `a_paced_reading_has_no_gaps` plays six sentences in real time to a silent output: 21.7 s of audio was heard in 21.9 s, so the pacing never let the audio run dry.
 
->>>>>>> wave8/pf-piper-first-audio
-=======
->>>>>>> wave8/g-gui-long-line
 ### Benchmark history: Friday, October 2, 2026, the first instrumented numbers
 
 The "before" numbers for the alpha.8 performance work, taken with the new measurements on the same Windows machine (x86_64, 12 threads, 64 GB) while three or four other agents were building, so times moved by 30 percent or more between runs; allocation and node counts do not. `cargo xtask bench --quick` (twice), `cargo xtask bench --only md-1mb --engine sapi` with `TEXTWEAVER_PIPER_VOICES` set, and `cargo xtask frames`. The same quick run in the development container wrote the Linux baseline entry.
@@ -348,8 +342,6 @@ Taken on the same Windows machine, release build, while other agents were buildi
 Every move had the sentence band. The one-line corpus is over ADR-0027's 30 ms ceiling by two to seventeen times; the Markdown corpus is well under it. The first probe run on the one-line corpus also found a panic: a layout line start inside a two-byte character (fixed in `caret::char_of`).
 
 **Startup** (`tw`, unchanged code): `tw --version` 34 ms, `tw text` 75 ms, `tw info` on 1 MB 131 ms, `tw backends` 44 ms, at the median.
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 ### Benchmark history: October 2, 2026, the narration plan and loading
 
@@ -384,9 +376,6 @@ What is left is about two allocations per utterance (its text and its map, which
 - SSML and DECtalk markup compiled five regular expressions per sentence: 324 to 534 microseconds a sentence before, 4 to 7 after, on the speech thread of SSML engines.
 - The SCOWL list was already unpacked on first use (Wave 6). The interface catalogs were not: the first built-in translation asked for parsed all five. Starting in Spanish: 41 to 6 ms for the catalog; English is unchanged at 6 ms.
 - `cargo xtask startup` after the pass, in English (no change expected there): `tw --version` 37.9 ms, `tw text` 58.3 ms, `tw info` 91.9 ms on the 1 MB corpus, `tw backends` 38.4 ms (medians of five).
-=======
->>>>>>> wave8/pf-piper-first-audio
-=======
 
 ### GUI frame time on one long line: Friday, October 2, 2026
 
@@ -403,7 +392,6 @@ The 200 percent runs match within the machine's noise. What changed:
 - **Drawing the lines on screen.** The text, the spoken word's bold, the selection, the syllable marks, and the ruler's rows are drawn or counted for the lines on screen only (the ruler's for a screen above and below), not for every line of the paragraph.
 - **No counting from the paragraph's start.** A paragraph's char offsets and byte indices come from a table (`caret::CharBytes`) for long text that is not ASCII, at layout (each span, each syllable, each line) and in the paint.
 - **The line start inside a character** (W8b-i's panic) was Parley's: a cluster's offset in its run was a `u16`, and one long line in one style is one run, so past 64 KB the offsets wrapped and line ranges, cursors, and the word's band pointed at the wrong text. The vendored Parley now keeps a `u32` (`third_party/xilem/TEXTWEAVER.md`, item 14); `caret::char_of` keeps its guard.
->>>>>>> wave8/g-gui-long-line
 
 Bulk conversion has its own benchmark:
 
