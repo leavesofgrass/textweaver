@@ -43,6 +43,9 @@ pub struct Args {
     /// Print JSON.
     #[arg(long)]
     pub json: bool,
+    /// Use the files under this folder instead of the usual place.
+    #[arg(long, value_name = "DIR")]
+    pub home: Option<PathBuf>,
 }
 
 /// What `tw vault export` reports per document.
@@ -225,7 +228,7 @@ fn import(args: &Args, paths: &Paths) -> anyhow::Result<()> {
 
 /// Runs `tw vault`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let paths = Paths::platform()?;
+    let paths = super::paths(args.home.as_deref())?;
     match args.action.as_str() {
         "export" => export(&args, &paths),
         _ => import(&args, &paths),

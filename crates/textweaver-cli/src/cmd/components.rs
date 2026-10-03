@@ -18,7 +18,6 @@
 //! `tw` never shows the first-run list; that is the GUI's and the terminal
 //! reader's.
 
-use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
@@ -28,11 +27,14 @@ use textweaver_app::components::{
     features_text, sources,
 };
 use textweaver_app::lexicon::i18n::Catalog;
-use textweaver_app::store::{Paths, SettingsStore};
+use textweaver_app::store::SettingsStore;
 
 /// Arguments for `tw components`.
 #[derive(clap::Args, Debug)]
 pub struct Args {
+    /// Use the files under this folder instead of the usual place.
+    #[arg(long, global = true, value_name = "DIR")]
+    home: Option<PathBuf>,
     #[command(subcommand)]
     command: Sub,
 }
@@ -40,13 +42,17 @@ pub struct Args {
 #[derive(clap::Subcommand, Debug)]
 enum Sub {
     /// List the optional components: installed or not, size, license, and what each is for.
-    List,
+    List {
+        /// Print the list as JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// Download a component after saying its size and license.
     Download {
         /// The component's id (see tw components list).
         id: String,
         /// Download without asking.
-        #[arg(long)]
+        #[arg(long, short)]
         yes: bool,
     },
     /// Check installed components' files by size and SHA-256.
@@ -59,7 +65,7 @@ enum Sub {
         /// The component's id.
         id: String,
         /// Remove without asking.
-        #[arg(long)]
+        #[arg(long, short)]
         yes: bool,
     },
     /// Install a component from a downloaded zip or a folder, checked against its pins.
@@ -73,14 +79,14 @@ enum Sub {
 
 /// Runs `tw components`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let paths = Paths::platform().context("no data folder for this user")?;
+    let paths = super::paths(args.home.as_deref())?;
     let settings = SettingsStore::new(paths.clone()).load().0;
     let registry = registry_with_mirror(&settings);
     let data = paths.data_dir.clone();
     match args.command {
-        Sub::List => {
-            print!("{}", list(&registry, &data));
-            Ok(())
+        Sub::List { json: false } => super::print_all(&list(&registry, &data)),
+        Sub::List { json: true } => {
+            super::print_all(&format!("{:#}\n", list_json(&registry, &data)))
         }
         Sub::Download { id, yes } => {
             let c = named(&registry, &id)?;
@@ -161,12 +167,45 @@ fn list(registry: &Registry, data: &Path) -> String {
     out
 }
 
+/// `tw components list --json`: one object per component, and the count
+/// installed. Keys are English and never translated.
+fn list_json(registry: &Registry, data: &Path) -> serde_json::Value {
+    let items: Vec<serde_json::Value> = registry
+        .components()
+        .iter()
+        .map(|c| {
+            let dir = component_dir(c, data);
+            let (status, missing) = match c.status_in(&dir) {
+                Status::Installed => ("installed", Vec::new()),
+                Status::NotInstalled => ("not-installed", Vec::new()),
+                Status::Partial(m) => ("partial", m),
+                Status::Damaged(f) => ("damaged", vec![f]),
+            };
+            serde_json::json!({
+                "id": c.id,
+                "title": c.title,
+                "status": status,
+                "missing": missing,
+                "size": c.size(),
+                "license": c.license,
+                "features": c.features,
+                "folder": dir,
+            })
+        })
+        .collect();
+    let (installed, total) = registry.installed_count(data);
+    serde_json::json!({ "installed": installed, "total": total, "components": items })
+}
+
+/// A yes or no question on standard error, asked only on a terminal.
 fn ask(question: &str) -> anyhow::Result<bool> {
-    eprint!("{question} y or n: ");
-    std::io::stderr().flush().ok();
-    let mut answer = String::new();
-    std::io::stdin().lock().read_line(&mut answer)?;
-    Ok(answer.trim().to_ascii_lowercase().starts_with('y'))
+    let mut input = std::io::stdin().lock();
+    super::confirm(
+        &format!("{question} y or n:"),
+        &mut input,
+        super::stdin_is_terminal(),
+        "--yes",
+    )
 }
 
 /// Downloads `c` into `dir` after asking (or `yes`), with progress every

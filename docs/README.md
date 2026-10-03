@@ -63,6 +63,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [The Obsidian vault](vault.md): exporting notes and highlights to a vault, and importing them back.
 - [Settings](settings.md): where settings live, every setting, and export, import, and reset.
 - [Settings reference](settings-reference.md): every setting with its default, label, help, and values, generated from the settings schema.
+- [The command line](command-line.md): the rules every `tw` command follows: `--out`, `--to`, `--json`, `--home`, questions and `--yes`, exit codes, and error lines.
 - [Scripts](../scripts/README.md): install, update, speech check, doctor, and folder conversion.
 
 ## For contributors

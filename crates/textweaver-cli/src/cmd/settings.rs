@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Context;
 use textweaver_app::keymap::{Frontend, Keymap, Platform};
 use textweaver_app::store::{
-    ExportFormat, ExportOptions, ImportMode, ImportPlan, Paths, SettingsStore, atomic_write,
+    ExportFormat, ExportOptions, ImportMode, ImportPlan, SettingsStore, atomic_write,
 };
 
 /// Arguments for `tw settings`.
@@ -34,8 +34,12 @@ pub enum Command {
     /// Import settings from a JSON or TOML file. Everything is checked first;
     /// the old files are backed up.
     Import(ImportArgs),
-    /// Show where the settings files are.
-    Path,
+    /// Show where the settings, data, state and recovery folders and the log file are.
+    Path {
+        /// Print the paths as JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// Return settings to their defaults: all of them, or one section.
     Reset(ResetArgs),
     /// Settings profiles: named sets of voice, rate, theme, font, spacing,
@@ -66,7 +70,7 @@ pub struct ExportArgs {
     #[arg(long)]
     pub changed_only: bool,
     /// json (the default) or toml. A FILE ending in .toml means toml.
-    #[arg(long, value_enum)]
+    #[arg(long = "to", alias = "format", value_enum, value_name = "FORMAT")]
     pub format: Option<Format>,
 }
 
@@ -109,30 +113,30 @@ pub struct ResetArgs {
 
 /// Runs `tw settings`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let paths = match &args.home {
-        Some(home) => Paths::under(home),
-        None => Paths::platform()?,
-    };
+    let paths = super::paths(args.home.as_deref())?;
     let store = SettingsStore::new(paths);
     let mut input = std::io::stdin().lock();
     let mut out = std::io::stdout().lock();
-    execute(&store, args.command, &mut input, &mut out)
+    let terminal = super::stdin_is_terminal();
+    execute(&store, args.command, &mut input, terminal, &mut out)
 }
 
 /// Runs a subcommand against `store`, reading answers and `-` from
-/// `input` and writing to `out`.
+/// `input` and writing to `out`. Questions are asked only when
+/// `terminal` (standard input is a terminal).
 fn execute(
     store: &SettingsStore,
     command: Command,
     input: &mut dyn BufRead,
+    terminal: bool,
     out: &mut dyn Write,
 ) -> anyhow::Result<()> {
     match command {
         Command::Export(a) => export(store, &a, out),
         Command::Import(a) => import(store, &a, input, out),
-        Command::Path => show_paths(store, out),
-        Command::Reset(a) => reset(store, &a, input, out),
-        Command::Profile(p) => super::profiles::execute(store, p, input, out),
+        Command::Path { json } => show_paths(store, json, out),
+        Command::Reset(a) => reset(store, &a, input, terminal, out),
+        Command::Profile(p) => super::profiles::execute(store, p, input, terminal, out),
         Command::Language(a) => language(store, &a, out),
     }
 }
@@ -294,8 +298,23 @@ fn import(
     Ok(())
 }
 
-fn show_paths(store: &SettingsStore, out: &mut dyn Write) -> anyhow::Result<()> {
+fn show_paths(store: &SettingsStore, json: bool, out: &mut dyn Write) -> anyhow::Result<()> {
     let paths = store.paths();
+    let log = textweaver_app::logfile::log_path(paths);
+    if json {
+        let v = serde_json::json!({
+            "config_dir": paths.config_dir,
+            "settings_file": paths.settings_file(),
+            "keymap_file": paths.keymap_file(),
+            "data_dir": paths.data_dir,
+            "state_dir": paths.state_dir(),
+            "recovery_dir": paths.recovery_dir(),
+            "cache_dir": paths.cache_dir,
+            "log_file": log,
+        });
+        writeln!(out, "{v:#}")?;
+        return Ok(());
+    }
     let state = |p: &Path, missing: &str| {
         if p.exists() {
             "exists".to_owned()
@@ -321,6 +340,23 @@ fn show_paths(store: &SettingsStore, out: &mut dyn Write) -> anyhow::Result<()> 
         keymap.display(),
         state(&keymap, "not created yet; every key is at its default")
     )?;
+    writeln!(out, "Data folder: {}", paths.data_dir.display())?;
+    writeln!(
+        out,
+        "State folder: {} (reading places, notes and bookmarks)",
+        paths.state_dir().display()
+    )?;
+    writeln!(
+        out,
+        "Recovery folder: {} (unsaved edits kept after a crash)",
+        paths.recovery_dir().display()
+    )?;
+    writeln!(
+        out,
+        "Log file: {} ({})",
+        log.display(),
+        state(&log, "not written yet")
+    )?;
     Ok(())
 }
 
@@ -328,6 +364,7 @@ fn reset(
     store: &SettingsStore,
     a: &ResetArgs,
     input: &mut dyn BufRead,
+    terminal: bool,
     out: &mut dyn Write,
 ) -> anyhow::Result<()> {
     let section = a.section.as_deref().map(str::trim);
@@ -345,19 +382,13 @@ fn reset(
         )?;
         return Ok(());
     }
-    if !a.yes {
-        write!(
-            out,
-            "Reset {what} to their defaults? {} The current files are backed up first. Type y and press Enter to reset, or just press Enter to cancel: ",
-            plan.summary()
-        )?;
-        out.flush()?;
-        let mut answer = String::new();
-        input.read_line(&mut answer)?;
-        if !matches!(answer.trim().to_lowercase().as_str(), "y" | "yes") {
-            writeln!(out, "Canceled. Nothing was changed.")?;
-            return Ok(());
-        }
+    let question = format!(
+        "Reset {what} to their defaults? {} The current files are backed up first. y or n:",
+        plan.summary()
+    );
+    if !a.yes && !super::confirm(&question, input, terminal, "--yes")? {
+        writeln!(out, "Canceled. Nothing was changed.")?;
+        return Ok(());
     }
     let applied = store.apply(&plan)?;
     writeln!(out, "Reset {what} to their defaults. {}", plan.summary())?;
@@ -372,6 +403,7 @@ mod tests {
     use textweaver_app::store::Settings;
 
     use super::*;
+    use textweaver_app::store::Paths;
 
     struct TempDir(PathBuf);
 
@@ -414,7 +446,7 @@ mod tests {
     fn tw(store: &SettingsStore, argv: &[&str], answer: &str) -> anyhow::Result<String> {
         let mut out = Vec::new();
         let mut input = answer.as_bytes();
-        execute(store, parse(argv).command, &mut input, &mut out)?;
+        execute(store, parse(argv).command, &mut input, true, &mut out)?;
         Ok(String::from_utf8(out).unwrap())
     }
 
@@ -450,7 +482,10 @@ mod tests {
         };
         assert_eq!(r.section.as_deref(), Some("speech"));
         assert!(r.yes);
-        assert!(matches!(parse(&["path"]).command, Command::Path));
+        assert!(matches!(
+            parse(&["path"]).command,
+            Command::Path { json: false }
+        ));
         let Command::Language(l) = parse(&["language", "es"]).command else {
             panic!()
         };
@@ -628,13 +663,9 @@ theme = \"nord\""
         s.speech.rate = textweaver_app::core::Rate::Wpm(300);
         store.save(&s).unwrap();
 
+        // The question goes to standard error; the output keeps the
+        // result.
         let said = tw(&store, &["reset"], "\n").unwrap();
-        assert!(
-            said.contains(
-                "Reset all settings and key overrides to their defaults? 2 settings change."
-            ),
-            "{said}"
-        );
         assert!(said.ends_with("Canceled. Nothing was changed.\n"), "{said}");
         assert_eq!(store.load().0, s);
 
@@ -667,5 +698,22 @@ theme = \"nord\""
         store.save(&Settings::default()).unwrap();
         let said = tw(&store, &["path"], "").unwrap();
         assert!(said.contains("settings.toml (exists)"), "{said}");
+        for line in [
+            "Data folder: ",
+            "State folder: ",
+            "Recovery folder: ",
+            "Log file: ",
+        ] {
+            assert!(said.contains(line), "{line}: {said}");
+        }
+        let json: serde_json::Value =
+            serde_json::from_str(&tw(&store, &["path", "--json"], "").unwrap()).unwrap();
+        assert!(
+            json["log_file"]
+                .as_str()
+                .unwrap()
+                .ends_with("textweaver.log")
+        );
+        assert!(json["recovery_dir"].is_string());
     }
 }

@@ -7,6 +7,8 @@
 //! `settings` (with `profile`), `define`, `stats`, `summarize`, `serve`, `ocr`, and `components`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
+use std::process::ExitCode;
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
@@ -84,8 +86,24 @@ enum Cmd {
     Components(cmd::components::Args),
 }
 
-fn main() -> Result<()> {
-    let Some(command) = Cli::parse().command else {
+/// Runs `tw` and turns the result into its exit status: 0 done, 1 failed
+/// or nothing found, 2 a usage error (clap exits with 2 itself before
+/// `main` runs a command). An error is printed as one line on standard
+/// error, "Error: what failed: why. What to do." (the "Command line"
+/// page).
+fn main() -> ExitCode {
+    match run(Cli::parse()) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) if e.downcast_ref::<cmd::NothingFound>().is_some() => ExitCode::FAILURE,
+        Err(e) => {
+            eprintln!("{}", cmd::one_line(&e));
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn run(cli: Cli) -> Result<()> {
+    let Some(command) = cli.command else {
         return cmd::print_all(NO_COMMAND_HINT);
     };
     match command {

@@ -228,12 +228,30 @@ pub fn styles() -> String {
 /// `tw cite check FILE`: every citation in a document, and the keys the
 /// libraries do not have.
 pub fn check(ctx: &Context<'_>, text: &str) -> Result<String> {
+    Ok(check_keys(ctx, text)?.message)
+}
+
+/// What [`check_keys`] found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Checked {
+    /// The sentence `tw cite check` prints.
+    pub message: String,
+    /// The cited keys no library has, in the order they are first cited.
+    pub missing: Vec<String>,
+}
+
+/// [`check`], with the missing keys apart, so `tw cite check` can exit
+/// with status 1 when there are any.
+pub fn check_keys(ctx: &Context<'_>, text: &str) -> Result<Checked> {
     let libs = ctx.load_all()?;
     let layers: Vec<&Library> = libs.iter().collect();
     let source = Layered { layers: &layers };
     let cites = crate::pandoc::find_citations(text);
     if cites.is_empty() {
-        return Ok("The document has no citations.".to_owned());
+        return Ok(Checked {
+            message: "The document has no citations.".to_owned(),
+            missing: Vec::new(),
+        });
     }
     let mut missing: Vec<&str> = Vec::new();
     for item in cites.iter().flat_map(|c| &c.items) {
@@ -255,8 +273,12 @@ pub fn check(ctx: &Context<'_>, text: &str) -> Result<String> {
             },
             missing.join(", ")
         ));
+        out.push_str(" Add references with tw cite add or tw cite import.");
     }
-    Ok(out)
+    Ok(Checked {
+        message: out,
+        missing: missing.into_iter().map(str::to_owned).collect(),
+    })
 }
 
 fn empty_message(path: &Path) -> String {

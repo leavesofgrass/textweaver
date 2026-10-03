@@ -372,10 +372,7 @@ impl App {
     fn show_library(&mut self, list: LibraryList) -> Vec<Effect> {
         if list.items.is_empty() {
             let open = self.key(textweaver_keymap::ActionId::Open);
-            let msg = self.msg_args(
-                "library-empty",
-                &args!["command" => "tw library --add", "key" => open],
-            );
+            let msg = self.msg_args("library-empty", &args!["key" => open]);
             self.tell(&msg);
             return vec![Effect::Redraw];
         }

@@ -177,7 +177,7 @@ stats-most-read = Most read { $rank }: { $title }, { $time }, furthest point { $
 stats-toggle-on = Statistics are on. Enter turns them off.
 stats-toggle-off = Statistics are off. Enter turns them on.
 stats-turned-on = Reading statistics are on.
-stats-turned-off = Reading statistics are off. What was recorded is kept; tw stats --clear removes it.
+stats-turned-off = Reading statistics are off. What was recorded is kept.
 
 ## Lists.
 
@@ -202,7 +202,7 @@ continue-intro =
         [one] Continue reading: 1 document, newest first.
        *[other] Continue reading: { $n } documents, newest first.
     }
-continue-empty = Nothing to continue: no places saved.
+continue-empty = No places yet. Reading saves your place.
 # One row, meaning first: the title, how far in, the computer, and how
 # long ago (continue-ago-*).
 continue-item = { $title }, { $pct } percent, { $device }, { $when }
@@ -1109,7 +1109,7 @@ notes-item =
         [yes] { $note }, line { $line }. On: { $anchor } Not found after the file changed.
        *[no] { $note }, line { $line }. On: { $anchor }
     }
-notes-none = No notes.
+notes-none = No notes. To add one: { $key }.
 notes-list-title = Notes
 notes-list-intro =
     { $n ->
@@ -1135,7 +1135,7 @@ notes-highlight-item =
         [yes] { $text }, line { $line }, { $color }, not found after the file changed
        *[no] { $text }, line { $line }, { $color }
     }
-notes-no-highlights = No highlights.
+notes-no-highlights = No highlights. To make one: { $key }.
 notes-highlights-title = Highlights
 notes-highlights-intro =
     { $n ->
@@ -1209,7 +1209,7 @@ marks-find-wrapped =
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = Bookmark { $name } is already here.
 marks-bookmark-set = Bookmark { $name } set at { $pct } percent.
-marks-no-bookmarks = No bookmarks.
+marks-no-bookmarks = No bookmarks. To add one: { $key }.
 marks-bookmarks-intro =
     { $n ->
         [one] Bookmarks, { $n } item. Enter goes to one, Delete deletes it, F2 renames it.
@@ -1325,7 +1325,7 @@ library-scanning = Scanning the library.
 library-scan-progress = Scanning the library: { $n } found so far.
 library-scan-stopped = The library scan stopped unexpectedly. Open the library again to retry.
 # $command is the command line that adds a folder; $key names the Open command's key.
-library-empty = The library is empty. Add a folder with { $command }, or open a file with { $key }.
+library-empty = The library is empty. Add a folder in Settings, under Library folders, or open a file with { $key }.
 library-intro =
     { $n ->
         [one] Library, { $n } document. Type to filter, Enter opens one, F2 edits details.

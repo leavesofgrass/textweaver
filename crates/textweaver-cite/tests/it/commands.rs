@@ -138,7 +138,17 @@ fn folder_library_falls_back_to_the_user_library() {
     let text = "As shown [@dahl1988, p. 3] and [@nobody].";
     assert_eq!(
         commands::check(&folder, text).unwrap(),
-        "2 citations found. One key is not in the library: nobody."
+        "2 citations found. One key is not in the library: nobody. Add references with tw cite add or tw cite import."
+    );
+    assert_eq!(
+        commands::check_keys(&folder, text).unwrap().missing,
+        vec!["nobody".to_owned()]
+    );
+    assert!(
+        commands::check_keys(&folder, "As shown [@dahl1988].")
+            .unwrap()
+            .missing
+            .is_empty()
     );
     let out = commands::format(
         &folder,

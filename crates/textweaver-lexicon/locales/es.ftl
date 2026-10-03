@@ -173,7 +173,7 @@ stats-most-read = Más leído { $rank }: { $title }, { $time }, punto más lejan
 stats-toggle-on = Las estadísticas están activadas. Intro las desactiva.
 stats-toggle-off = Las estadísticas están desactivadas. Intro las activa.
 stats-turned-on = Las estadísticas de lectura están activadas.
-stats-turned-off = Las estadísticas de lectura están desactivadas. Lo registrado se conserva; tw stats --clear lo elimina.
+stats-turned-off = Las estadísticas de lectura están desactivadas. Lo registrado se conserva.
 
 ## Lists.
 
@@ -198,7 +198,7 @@ continue-intro =
         [one] Seguir leyendo: 1 documento, el más reciente primero.
        *[other] Seguir leyendo: { $n } documentos, los más recientes primero.
     }
-continue-empty = Nada que seguir: no hay posiciones.
+continue-empty = Sin posiciones aún. Leer las guarda.
 # One row, meaning first: the title, how far in, the computer, and how
 # long ago (continue-ago-*).
 continue-item = { $title }, { $pct } por ciento, { $device }, { $when }
@@ -1104,7 +1104,7 @@ notes-item =
         [yes] { $note }, línea { $line }. En: { $anchor } No se encontró después de que el archivo cambiara.
        *[no] { $note }, línea { $line }. En: { $anchor }
     }
-notes-none = Sin notas.
+notes-none = Sin notas. Para agregar una: { $key }.
 notes-list-title = Notas
 notes-list-intro =
     { $n ->
@@ -1130,7 +1130,7 @@ notes-highlight-item =
         [yes] { $text }, línea { $line }, { $color }, no encontrado después de que el archivo cambiara
        *[no] { $text }, línea { $line }, { $color }
     }
-notes-no-highlights = Sin resaltados.
+notes-no-highlights = Sin resaltados. Para crear uno: { $key }.
 notes-highlights-title = Resaltados
 notes-highlights-intro =
     { $n ->
@@ -1204,7 +1204,7 @@ marks-find-wrapped =
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = El marcador { $name } ya está aquí.
 marks-bookmark-set = Marcador { $name } puesto en el { $pct } por ciento.
-marks-no-bookmarks = Sin marcadores.
+marks-no-bookmarks = Sin marcadores. Para agregar uno: { $key }.
 marks-bookmarks-intro =
     { $n ->
         [one] Marcadores, { $n } elemento. Intro va a uno, Suprimir lo elimina, F2 lo renombra.
@@ -1320,7 +1320,7 @@ library-scanning = Explorando la biblioteca.
 library-scan-progress = Explorando la biblioteca: { $n } encontrados hasta ahora.
 library-scan-stopped = La exploración de la biblioteca se detuvo inesperadamente. Abra la biblioteca de nuevo para reintentar.
 # $command is the command line that adds a folder; $key names the Open command's key.
-library-empty = La biblioteca está vacía. Agregue una carpeta con { $command }, o abra un archivo con { $key }.
+library-empty = La biblioteca está vacía. Agregue una carpeta en Configuración, en Carpetas de la biblioteca, o abra un archivo con { $key }.
 library-intro =
     { $n ->
         [one] Biblioteca, { $n } documento. Escriba para filtrar, Intro abre uno, F2 edita los detalles.
@@ -1675,7 +1675,7 @@ setting-speech-pause-paragraph-ms-help = Silencio tras un párrafo, más corto a
 setting-speech-pause-list-item-ms = Pausa tras elementos de lista
 setting-speech-pause-list-item-ms-help = Silencio tras un elemento de lista, más corto a mayor velocidad. 0 lo desactiva.
 setting-speech-output-device = Dispositivo de salida
-setting-speech-output-device-help = El dispositivo de sonido en el que suena la voz, por su identificador; tw backends --devices los enumera. Sin definir usa el predeterminado del sistema, igual que un dispositivo que no está conectado.
+setting-speech-output-device-help = El dispositivo de sonido en el que suena la voz, por su identificador. Sin definir usa el predeterminado del sistema, igual que un dispositivo que no está conectado.
 setting-speech-verbosity = Verbosidad
 setting-speech-verbosity-help = Cuánto dice textweaver sobre lo que hace.
 choice-speech-verbosity-low = baja

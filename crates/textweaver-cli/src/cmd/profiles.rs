@@ -82,6 +82,7 @@ pub fn execute(
     store: &SettingsStore,
     command: ProfileCommand,
     input: &mut dyn BufRead,
+    terminal: bool,
     out: &mut dyn Write,
 ) -> anyhow::Result<()> {
     let c = catalog(store);
@@ -173,19 +174,10 @@ pub fn execute(
             if !profiles.profiles.contains_key(&name) {
                 return Err(problem(&c, &ProfileError::NotFound(name)));
             }
-            if !yes {
-                write!(
-                    out,
-                    "{} ",
-                    c.fmt("profile-delete-question", &args!["name" => &name])
-                )?;
-                out.flush()?;
-                let mut answer = String::new();
-                input.read_line(&mut answer)?;
-                if !answer.trim().eq_ignore_ascii_case("y") {
-                    writeln!(out, "{}", c.tr("profile-kept"))?;
-                    return Ok(());
-                }
+            let question = c.fmt("profile-delete-question", &args!["name" => &name]);
+            if !yes && !super::confirm(&question, input, terminal, "--yes")? {
+                writeln!(out, "{}", c.tr("profile-kept"))?;
+                return Ok(());
             }
             profiles.delete(&name).map_err(|e| problem(&c, &e))?;
             profiles.save(&paths)?;
@@ -258,7 +250,7 @@ mod tests {
 
     fn run(store: &SettingsStore, cmd: ProfileCommand, input: &str) -> anyhow::Result<String> {
         let mut out = Vec::new();
-        execute(store, cmd, &mut input.as_bytes(), &mut out)?;
+        execute(store, cmd, &mut input.as_bytes(), true, &mut out)?;
         Ok(String::from_utf8(out).unwrap())
     }
 
@@ -339,7 +331,7 @@ mod tests {
                 "n\n"
             )
             .unwrap(),
-            "Delete the profile Exam? y or n Kept.\n"
+            "Kept.\n"
         );
         run(
             &store,

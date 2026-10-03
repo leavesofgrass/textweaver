@@ -93,7 +93,7 @@ tw speak "The quick brown fox."
 
 `tw speak` speaks the text and says afterwards, for example, "Spoke 1 sentence with Windows SAPI5 voices." Its options:
 
-- `TEXT`: the text to speak. Leave it out when you use `--file`.
+- `TEXT`: the text to speak. Leave it out when you use `--file`. A `-` reads the text from standard input, so a pipe can feed it. To hear the clipboard: `Get-Clipboard | tw speak -` in PowerShell, `pbpaste | tw speak -` on macOS, and `wl-paste | tw speak -` (or `xclip -o -selection clipboard | tw speak -`) on Linux.
 - `--file FILE`: speak a document instead. Any file the reader opens works.
 - `--backend ID`: the engine. The default is the automatic choice. An engine that is not available falls back to the automatic choice, with a note.
 - `--voice VOICE`: the voice, by id or by plain name, such as `Zira` or `Reed`.

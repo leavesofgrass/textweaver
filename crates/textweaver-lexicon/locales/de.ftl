@@ -173,7 +173,7 @@ stats-most-read = Meistgelesen { $rank }: { $title }, { $time }, weitester Punkt
 stats-toggle-on = Statistik ist an. Eingabetaste schaltet sie aus.
 stats-toggle-off = Statistik ist aus. Eingabetaste schaltet sie ein.
 stats-turned-on = Lesestatistik ist an.
-stats-turned-off = Lesestatistik ist aus. Aufgezeichnetes bleibt erhalten; tw stats --clear entfernt es.
+stats-turned-off = Lesestatistik ist aus. Aufgezeichnetes bleibt erhalten.
 
 ## Lists.
 
@@ -198,7 +198,7 @@ continue-intro =
         [one] Weiterlesen: 1 Dokument, neuestes zuerst.
        *[other] Weiterlesen: { $n } Dokumente, neueste zuerst.
     }
-continue-empty = Nichts zum Weiterlesen: keine Stellen.
+continue-empty = Noch keine Stellen. Lesen speichert sie.
 # One row, meaning first: the title, how far in, the computer, and how
 # long ago (continue-ago-*).
 continue-item = { $title }, { $pct } Prozent, { $device }, { $when }
@@ -1140,7 +1140,7 @@ notes-item =
         [yes] { $note }, Zeile { $line }. Zu: { $anchor } Nach der Dateiänderung nicht gefunden.
        *[no] { $note }, Zeile { $line }. Zu: { $anchor }
     }
-notes-none = Keine Notizen.
+notes-none = Keine Notizen. Eine hinzufügen: { $key }.
 notes-list-title = Notizen
 notes-list-intro =
     { $n ->
@@ -1166,7 +1166,7 @@ notes-highlight-item =
         [yes] { $text }, Zeile { $line }, { $color }, nach der Dateiänderung nicht gefunden
        *[no] { $text }, Zeile { $line }, { $color }
     }
-notes-no-highlights = Keine Hervorhebungen.
+notes-no-highlights = Keine Hervorhebungen. Eine erstellen: { $key }.
 notes-highlights-title = Hervorhebungen
 notes-highlights-intro =
     { $n ->
@@ -1240,7 +1240,7 @@ marks-find-wrapped =
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = Lesezeichen { $name } ist bereits hier.
 marks-bookmark-set = Lesezeichen { $name } gesetzt bei { $pct } Prozent.
-marks-no-bookmarks = Keine Lesezeichen.
+marks-no-bookmarks = Keine Lesezeichen. Eines hinzufügen: { $key }.
 marks-bookmarks-intro =
     { $n ->
         [one] Lesezeichen, { $n } Eintrag. Eingabetaste springt zu einem, Entf löscht es, F2 benennt es um.
@@ -1356,7 +1356,7 @@ library-scanning = Die Bibliothek wird durchsucht.
 library-scan-progress = Die Bibliothek wird durchsucht: { $n } bisher gefunden.
 library-scan-stopped = Die Bibliotheksdurchsuchung wurde unerwartet gestoppt. Öffnen Sie die Bibliothek erneut, um es noch einmal zu versuchen.
 # $command is the command line that adds a folder; $key names the Open command's key.
-library-empty = Die Bibliothek ist leer. Fügen Sie einen Ordner hinzu mit { $command }, oder öffnen Sie eine Datei mit { $key }.
+library-empty = Die Bibliothek ist leer. Fügen Sie in den Einstellungen unter Bibliotheksordner einen Ordner hinzu, oder öffnen Sie eine Datei mit { $key }.
 library-intro =
     { $n ->
         [one] Bibliothek, { $n } Dokument. Tippen filtert, Eingabetaste öffnet eines, F2 bearbeitet Details.
@@ -1711,7 +1711,7 @@ setting-speech-pause-paragraph-ms-help = Stille nach einem Absatz, kürzer bei h
 setting-speech-pause-list-item-ms = Pause nach Listeneinträgen
 setting-speech-pause-list-item-ms-help = Stille nach einem Listeneintrag, kürzer bei höherem Tempo. 0 schaltet sie aus.
 setting-speech-output-device = Ausgabegerät
-setting-speech-output-device-help = Das Audiogerät, auf dem die Sprache läuft, nach seiner Kennung; tw backends --devices listet sie auf. Nicht gesetzt verwendet das Standardgerät des Systems, ebenso ein Gerät, das nicht angeschlossen ist.
+setting-speech-output-device-help = Das Audiogerät, auf dem die Sprache läuft, nach seiner Kennung. Nicht gesetzt verwendet das Standardgerät des Systems, ebenso ein Gerät, das nicht angeschlossen ist.
 setting-speech-verbosity = Ausführlichkeit
 setting-speech-verbosity-help = Wie viel textweaver darüber sagt, was es tut.
 choice-speech-verbosity-low = niedrig

@@ -250,7 +250,8 @@ impl App {
     pub(crate) fn list_bookmarks(&mut self) -> Vec<Effect> {
         let n = self.session.as_ref().map_or(0, |s| s.bookmarks.len());
         if n == 0 {
-            let msg = self.msg("marks-no-bookmarks");
+            let key = self.key(textweaver_keymap::ActionId::AddBookmark);
+            let msg = self.msg_args("marks-no-bookmarks", &args!["key" => key]);
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
@@ -296,7 +297,8 @@ impl App {
             return;
         };
         if s.bookmarks.is_empty() {
-            let msg = self.msg("marks-no-bookmarks");
+            let key = self.key(textweaver_keymap::ActionId::AddBookmark);
+            let msg = self.msg_args("marks-no-bookmarks", &args!["key" => key]);
             self.tell(&msg);
             return;
         }

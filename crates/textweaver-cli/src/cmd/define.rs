@@ -110,7 +110,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         // "No definition found for WORD." was printed above; exit 1 without
         // saying it a second time as an error.
         out.flush()?;
-        std::process::exit(1);
+        return Err(super::NothingFound.into());
     }
     Ok(())
 }

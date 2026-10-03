@@ -27,6 +27,9 @@ pub struct Args {
     /// it lacks are looked up in your personal library.
     #[arg(long, global = true, value_name = "FOLDER", conflicts_with = "library")]
     pub folder: Option<PathBuf>,
+    /// Use the files under this folder instead of the usual place.
+    #[arg(long, global = true, value_name = "DIR")]
+    pub home: Option<PathBuf>,
     /// What to do.
     #[command(subcommand)]
     pub command: CiteCommand,
@@ -56,7 +59,7 @@ pub enum CiteCommand {
         /// Keys to export; all references when none are given.
         keys: Vec<String>,
         /// Write to this file instead of standard output.
-        #[arg(long, short)]
+        #[arg(long = "out", short = 'o', alias = "output", value_name = "FILE")]
         output: Option<PathBuf>,
     },
     /// Format references with a citation style.
@@ -83,10 +86,13 @@ pub enum CiteCommand {
         #[arg(long)]
         json: bool,
     },
-    /// Remove a reference by key.
+    /// Remove a reference by key, after a yes or no.
     Remove {
         /// The citation key.
         key: String,
+        /// Do not ask.
+        #[arg(long, short)]
+        yes: bool,
     },
     /// List the built-in citation styles.
     Styles,
@@ -110,7 +116,10 @@ fn parse_output(s: &str) -> Result<OutputFormat, String> {
 
 /// Runs `tw cite`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let paths = Paths::platform().context("could not find textweaver's data folder")?;
+    let paths = match &args.home {
+        Some(h) => Paths::under(h),
+        None => Paths::platform().context("could not find textweaver's data folder")?,
+    };
     let user = user_library_path(&paths.data_dir);
     let (library, fallback) = match (&args.library, &args.folder) {
         (Some(file), _) => (file.clone(), vec![user]),
@@ -163,14 +172,28 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             commands::format(&ctx, &keys, &style, output, show)?
         }
         CiteCommand::List { json } => commands::list(&ctx, json)?.trim_end().to_owned(),
-        CiteCommand::Remove { key } => commands::remove(&ctx, &key)?,
+        CiteCommand::Remove { key, yes } => {
+            let question = format!("Remove {key} from the reference library? y or n:");
+            let mut input = std::io::stdin().lock();
+            if !yes && !super::confirm(&question, &mut input, super::stdin_is_terminal(), "--yes")?
+            {
+                format!("Kept {key}.")
+            } else {
+                commands::remove(&ctx, &key)?
+            }
+        }
         CiteCommand::Styles => commands::styles(),
         CiteCommand::Check { file } => {
             let text = std::fs::read_to_string(&file)
                 .with_context(|| format!("could not read {}", file.display()))?;
-            commands::check(&ctx, &text)?
+            let checked = commands::check_keys(&ctx, &text)?;
+            super::print_all(&format!("{}\n", checked.message))?;
+            // Missing keys are a finding: exit status 1, as search does.
+            if !checked.missing.is_empty() {
+                return Err(super::NothingFound.into());
+            }
+            return Ok(());
         }
     };
-    println!("{out}");
-    Ok(())
+    super::print_all(&format!("{out}\n"))
 }

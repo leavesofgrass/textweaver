@@ -180,10 +180,10 @@ This prints the whole library as BibTeX. `--to` takes one of these formats:
 - `ris`
 - `csl-json` (also `json`)
 
-To write a file instead of printing, add `-o` (or `--output`) and a file name:
+To write a file instead of printing, add `--out` (or `-o`) and a file name:
 
 ```bash
-tw cite export --to ris -o references.ris
+tw cite export --to ris --out references.ris
 ```
 
 You hear, for example: "Exported the references as RIS to references.ris."
@@ -224,7 +224,7 @@ tw cite list --json
 tw cite remove doe2020a
 ```
 
-This removes the reference with that key and says which one it was:
+It asks first, with a yes or no; `--yes` (or `-y`) removes it without the question, as a script needs. Then it removes the reference with that key and says which one it was:
 
 ```text
 Removed reference doe2020a: Doe, 2020. A Different Book. Key doe2020a.

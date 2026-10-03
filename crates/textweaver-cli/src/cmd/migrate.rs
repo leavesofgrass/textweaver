@@ -25,6 +25,9 @@ pub struct Args {
     /// Print the report as JSON.
     #[arg(long)]
     pub json: bool,
+    /// Use the files under this folder instead of the usual place.
+    #[arg(long, value_name = "DIR")]
+    pub home: Option<PathBuf>,
 }
 
 /// Loads documents with textweaver's loaders and composes keymap entries
@@ -90,7 +93,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         "No Star settings found in {}. Use --from with Star's configuration directory.",
         from.display()
     );
-    let paths = Paths::platform()?;
+    let paths = super::paths(args.home.as_deref())?;
     let report = migrate(&from, args.dry_run, &paths)?;
     if args.json {
         println!("{}", serde_json::to_string_pretty(&report)?);

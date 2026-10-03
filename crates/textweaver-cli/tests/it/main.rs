@@ -6,3 +6,4 @@
 //! never as a new file directly in `tests/`.
 
 mod closed_pipe;
+mod command_line;

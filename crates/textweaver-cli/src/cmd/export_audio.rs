@@ -27,7 +27,7 @@ pub struct Args {
     /// Document to read aloud.
     pub file: PathBuf,
     /// Output file (.wav, .flac, .mp3, .opus, .m4b).
-    #[arg(long)]
+    #[arg(long = "out", short = 'o', alias = "output")]
     pub out: PathBuf,
     /// Also write subtitles (.srt or .vtt).
     #[arg(long)]

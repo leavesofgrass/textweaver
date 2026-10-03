@@ -39,7 +39,7 @@ To find the folder, type:
 tw settings path
 ```
 
-It prints the folder and both files, and says whether each file exists yet. The usual places are:
+It prints the settings folder and both files, saying whether each file exists yet, then the data, state and recovery folders and the log file. `--json` prints the same paths as JSON. The usual places are:
 
 - Windows: `%APPDATA%\leavesofgrass\textweaver\config`
 - macOS: `~/Library/Application Support/org.leavesofgrass.textweaver`
@@ -60,7 +60,7 @@ tw settings export my-settings.json
 Without a file name, the export is printed instead. Other ways to export:
 
 - `--changed-only` saves only the values that differ from the defaults. This is the easiest file to read and share.
-- `--format toml` writes TOML instead of JSON. A file name ending in `.toml` does the same.
+- `--to toml` writes TOML instead of JSON. A file name ending in `.toml` does the same.
 
 A full export lists every setting. A setting that is not set, such as a voice you never chose, appears as `null`.
 
@@ -146,7 +146,7 @@ Keys are sorted and indented by two spaces, so two exports can be compared line 
 This section lists every setting in `settings.toml`, section by section. Each entry gives the name, the default, the values it takes, and what it does. You only need to write the settings you change. To see all of them with their current values, export them:
 
 ```bash
-tw settings export --format toml
+tw settings export --to toml
 ```
 
 A setting marked "not used yet" is stored and exported, but no part of textweaver reads it at present.
