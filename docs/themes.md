@@ -108,6 +108,10 @@ textweaver uses as many colors as your terminal offers:
 - 16 colors: the terminal decides what its 16 colors look like, so textweaver paints the page itself (black for dark themes, white for light) and uses only colors that stay readable in the common terminal color sets. Faint bands, such as the sentence band, are left out; the underline still shows the sentence. On light themes, headings are underlined instead of bold, because some terminals brighten bold text until it fades.
 - No color: attributes only. Headings bold, links underlined, quotes italic, the spoken word in reverse video, the sentence underlined.
 
+Inside tmux, and over SSH, a terminal usually gets 256 colors even when the terminal itself has full color. Set `TEXTWEAVER_COLOR=truecolor` if yours passes full color through.
+
+With full color or 256 colors, the title and status lines sit on the panel color, so the spoken word's band is the one strong color on the screen; with 16 colors or none they keep reverse video. The reading ruler's mask draws the text outside the band in a color most of the way toward the page, the same mask the window draws; with 16 colors or none it uses the terminal's dim attribute.
+
 To turn color off, set the `NO_COLOR` environment variable to any value, such as `1`. To choose a level yourself, set `TEXTWEAVER_COLOR` to `truecolor`, `256`, `16`, or `none`. For example, in a Linux or macOS shell:
 
 ```bash
