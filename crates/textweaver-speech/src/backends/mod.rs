@@ -175,9 +175,12 @@ impl BackendRegistry {
         Self::default()
     }
 
-    /// The built-in backends of this build: `null`, `recording`, and the
-    /// compiled-in engines (`espeak`, `omnivox`).
-    pub fn with_builtins() -> Self {
+    /// Only the test doubles, `null` and `recording`, whatever engines this
+    /// build has. Nothing is probed or started, so nothing is ever heard:
+    /// tests use this, because automatic selection from
+    /// [`with_builtins`](Self::with_builtins) reaches a real engine that
+    /// plays audio (and, on Windows, crashed the test process).
+    pub fn test_doubles() -> Self {
         let mut r = Self::new();
         r.register(
             null_info(),
@@ -196,6 +199,17 @@ impl BackendRegistry {
             || true,
             || Ok(Box::new(RecordingBackend::new().0) as Box<dyn SpeechBackend>),
         );
+        r
+    }
+
+    /// The built-in backends of this build: `null`, `recording`, and the
+    /// compiled-in engines (`espeak`, `omnivox`, `speechd`).
+    pub fn with_builtins() -> Self {
+        #[cfg_attr(
+            not(any(feature = "espeak", feature = "omnivox", feature = "speechd")),
+            allow(unused_mut)
+        )]
+        let mut r = Self::test_doubles();
         #[cfg(feature = "espeak")]
         r.register_cached(
             BackendInfo {
@@ -306,6 +320,16 @@ impl BackendRegistry {
                 ..e.info.clone()
             })
             .collect();
+        out.sort_by(|a, b| b.priority.cmp(&a.priority).then(a.id.cmp(b.id)));
+        out
+    }
+
+    /// Every registered backend as described, highest priority first,
+    /// without probing: `available` is the description's own value, and no
+    /// engine is looked for or started. Tests that check what a registry
+    /// holds use this.
+    pub fn descriptions(&self) -> Vec<BackendInfo> {
+        let mut out: Vec<BackendInfo> = self.entries.iter().map(|e| e.info.clone()).collect();
         out.sort_by(|a, b| b.priority.cmp(&a.priority).then(a.id.cmp(b.id)));
         out
     }
@@ -612,7 +636,7 @@ mod tests {
 
     #[test]
     fn registry_is_extensible() {
-        let mut r = BackendRegistry::with_builtins();
+        let mut r = BackendRegistry::test_doubles();
         r.register(
             BackendInfo {
                 id: "eci",
@@ -715,8 +739,108 @@ mod tests {
     }
 
     #[test]
+    fn test_doubles_never_reach_an_engine() {
+        let r = BackendRegistry::test_doubles();
+        let ids: Vec<&str> = r.list().iter().map(|b| b.id).collect();
+        assert_eq!(ids, ["recording", "null"]);
+        let s = r.select(Some("no-such-engine"));
+        assert_eq!(s.backend.id, "null");
+        assert!(s.fell_back);
+        assert!(r.factory("espeak").is_none());
+    }
+
+    #[test]
     fn registry_infos_carry_the_constructed_backends_caps() {
-        let r = BackendRegistry::with_builtins();
+        infos_carry_the_constructed_caps(&BackendRegistry::test_doubles());
+    }
+
+    /// The same for this build's engines. Constructing an engine loads it,
+    /// so this runs only when asked for: `TEXTWEAVER_ENGINES=1` and
+    /// `-- --ignored`.
+    #[test]
+    #[ignore = "constructs this build's real engines; set TEXTWEAVER_ENGINES=1"]
+    fn builtin_infos_carry_the_constructed_backends_caps() {
+        if std::env::var_os("TEXTWEAVER_ENGINES").is_none() {
+            return;
+        }
+        infos_carry_the_constructed_caps(&BackendRegistry::with_builtins());
+    }
+
+    /// The built-ins register the doubles and this build's engines, and
+    /// describing them probes and starts nothing.
+    #[test]
+    fn builtins_register_the_doubles_and_this_builds_engines() {
+        let ids: Vec<&str> = BackendRegistry::with_builtins()
+            .descriptions()
+            .iter()
+            .map(|b| b.id)
+            .collect();
+        assert!(ids.contains(&"null") && ids.contains(&"recording"));
+        assert_eq!(ids.contains(&"espeak"), cfg!(feature = "espeak"));
+        assert_eq!(ids.contains(&"omnivox"), cfg!(feature = "omnivox"));
+        assert_eq!(ids.contains(&"speechd"), cfg!(feature = "speechd"));
+    }
+
+    /// No test outside this file builds a registry with real engines
+    /// (`BackendRegistry::with_builtins()`, `speech_registry()`, or
+    /// `speech_registry_for(`): automatic selection from those reaches an
+    /// engine that plays audio. Tests use
+    /// [`BackendRegistry::test_doubles`]. A file's test code is its
+    /// `tests/` folders, and everything from its first `#[cfg(test)]`.
+    #[test]
+    fn no_test_outside_the_registry_reaches_a_real_engine() {
+        let crates = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let mut found = Vec::new();
+        scan_tests(&crates, false, &mut found);
+        assert!(
+            found.is_empty(),
+            "Tests must use BackendRegistry::test_doubles(), not a registry with real engines:\n{}",
+            found.join("\n")
+        );
+    }
+
+    fn scan_tests(dir: &std::path::Path, in_tests: bool, found: &mut Vec<String>) {
+        const FORBIDDEN: [&str; 3] = [
+            "BackendRegistry::with_builtins()",
+            "speech_registry()",
+            "speech_registry_for(",
+        ];
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if path.is_dir() {
+                if name == "target" || name.starts_with('.') {
+                    continue;
+                }
+                scan_tests(&path, in_tests || name == "tests", found);
+                continue;
+            }
+            if !name.ends_with(".rs") || path.ends_with("textweaver-speech/src/backends/mod.rs") {
+                continue;
+            }
+            let Ok(text) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            let mut test_code = in_tests;
+            for (n, line) in text.lines().enumerate() {
+                if line.trim_start().starts_with("#[cfg(test)]") {
+                    test_code = true;
+                }
+                if test_code
+                    && !line.trim_start().starts_with("//")
+                    && FORBIDDEN.iter().any(|f| line.contains(f))
+                {
+                    found.push(format!("{}:{}: {}", path.display(), n + 1, line.trim()));
+                }
+            }
+        }
+    }
+
+    fn infos_carry_the_constructed_caps(r: &BackendRegistry) {
         for info in r.list().into_iter().filter(|b| b.available) {
             let Some(make) = r.factory(info.id) else {
                 continue;
