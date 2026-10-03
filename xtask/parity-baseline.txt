@@ -1,0 +1,23 @@
+# Star parity: explained deltas per fixture and rule (cargo xtask parity).
+# Written by `cargo xtask parity --update-baseline`; a change fails the task.
+sample.txt abbreviation 2
+sample.txt uax29-join 8
+sample.md abbreviation 1
+sample.md code-kept 1
+sample.md footnote-heading 1
+sample.md footnote-reference 1
+sample.md front-matter 1
+sample.md list-item 5
+sample.md list-lines 2
+sample.md no-counterpart 9
+sample.md table-narration 11
+sample.md table-row 3
+sample.md uax29-join 2
+sample.html abbreviation 1
+sample.html caption 2
+sample.html code-kept 1
+sample.html list-item 4
+sample.html list-lines 2
+sample.html no-counterpart 6
+sample.html table-row 2
+sample.html uax29-join 1

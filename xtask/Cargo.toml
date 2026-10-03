@@ -30,8 +30,14 @@ textweaver-keymap.workspace = true
 textweaver-text.workspace = true
 textweaver-formats.workspace = true
 anyhow.workspace = true
+# The real data folders, placed exactly as textweaver-store places them
+# (`cargo xtask sentinel`).
+directories.workspace = true
 serde_json.workspace = true
 zip.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true
