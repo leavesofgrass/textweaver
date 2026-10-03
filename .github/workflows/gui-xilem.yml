@@ -7,6 +7,9 @@
 # On all three, the window's accessibility tree is dumped with
 # accessibility-cli (pinned by commit) and compared with main's last run;
 # the difference is in the run summary, in words (ADR-0039).
+# Each report-only step (continue-on-error) carries a comment with its
+# reason and a review point; docs/dev/testing.md, "Gates and what breaks
+# them", lists them all.
 # Review screenshots at 100% and 200% are uploaded from Linux.
 # Kept apart from ci.yml because Vello and wgpu add minutes to a cold build.
 
@@ -83,10 +86,12 @@ jobs:
           name: uia-xilem-report
           path: uia-xilem.md
       # The accessibility tree, dumped with accessibility-cli and compared
-      # with main's last run (ADR-0039). The dump is standing: a run that
-      # dumps no tree fails the job. The comparison with main stays
-      # report-only (a change is for a person to judge), and so do the
-      # tool's cache steps.
+      # with main's last run (ADR-0039). Standing: building the tool, the
+      # dump (a run that dumps no tree fails the job), the comparison step
+      # itself, and the upload. A "Changed" tree never fails: the compare
+      # script exits 0 on Changed and No baseline, and 1 only when the
+      # tree is missing, so a failure of that step is a broken check, not
+      # a changed window. Only the tool's two cache steps are report-only.
       # Restored and saved as separate steps, so the build (about eight
       # minutes) is kept even when a later step fails or the run is
       # cancelled, which skips actions/cache's end-of-job save.
@@ -95,6 +100,10 @@ jobs:
         # The tree is dumped even when a test above failed: it checks
         # something else, and the build it needs is already done.
         if: ${{ !cancelled() }}
+        # Report-only (reason recorded Friday, October 2, 2026). Why: a cache
+        # service error is not a defect; a miss builds the tool below.
+        # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
+        # design, unless the cache becomes the only way to get the tool.
         continue-on-error: true
         uses: actions/cache/restore@v6
         with:
@@ -102,7 +111,9 @@ jobs:
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Build accessibility-cli
         if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
-        continue-on-error: true
+        # Standing since Friday, October 2, 2026: the dump needs the tool,
+        # so a failed build already failed the job, with a less direct
+        # message; it now fails here, naming the cause.
         shell: bash
         env:
           # Its warnings are not ours to deny.
@@ -112,6 +123,10 @@ jobs:
             --rev "$A11Y_CLI_REV" accessibility-cli --root a11y-cli
       - name: Save accessibility-cli
         if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
+        # Report-only (reason recorded Friday, October 2, 2026). Why: saving fails
+        # when another run saved the same key first, which is harmless.
+        # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
+        # design.
         continue-on-error: true
         uses: actions/cache/save@v6
         with:
@@ -121,9 +136,10 @@ jobs:
         if: ${{ !cancelled() }}
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tools/a11y/tree-dump.ps1 -Out a11y-tree -Cli a11y-cli/bin/accessibility-cli.exe
+      # Standing since Friday, October 2, 2026 (was report-only): it fails
+      # only on a broken comparison, never on a changed tree.
       - name: Accessibility tree against main
         if: always()
-        continue-on-error: true
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -133,9 +149,10 @@ jobs:
             --current a11y-tree/tree.txt --baseline a11y-baseline/tree.txt \
             --baseline-run "$(cat a11y-baseline/run-id.txt 2>/dev/null || true)" \
             --summary "$GITHUB_STEP_SUMMARY"
+      # Standing since Friday, October 2, 2026 (was report-only, with no
+      # reason given); if-no-files-found: warn already covers a missing tree.
       - uses: actions/upload-artifact@v7
         if: always()
-        continue-on-error: true
         with:
           name: a11y-tree-windows
           path: |
@@ -183,10 +200,12 @@ jobs:
           grep -q "Reading at" gui.log
           grep -q "closed" gui.log
       # The accessibility tree, dumped with accessibility-cli and compared
-      # with main's last run (ADR-0039). The dump is standing: a run that
-      # dumps no tree fails the job. The comparison with main stays
-      # report-only (a change is for a person to judge), and so do the
-      # tool's cache steps.
+      # with main's last run (ADR-0039). Standing: building the tool, the
+      # dump (a run that dumps no tree fails the job), the comparison step
+      # itself, and the upload. A "Changed" tree never fails: the compare
+      # script exits 0 on Changed and No baseline, and 1 only when the
+      # tree is missing, so a failure of that step is a broken check, not
+      # a changed window. Only the tool's two cache steps are report-only.
       # Restored and saved as separate steps, so the build (about eight
       # minutes) is kept even when a later step fails or the run is
       # cancelled, which skips actions/cache's end-of-job save.
@@ -195,6 +214,10 @@ jobs:
         # The tree is dumped even when a test above failed: it checks
         # something else, and the build it needs is already done.
         if: ${{ !cancelled() }}
+        # Report-only (reason recorded Friday, October 2, 2026). Why: a cache
+        # service error is not a defect; a miss builds the tool below.
+        # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
+        # design, unless the cache becomes the only way to get the tool.
         continue-on-error: true
         uses: actions/cache/restore@v6
         with:
@@ -202,7 +225,9 @@ jobs:
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Build accessibility-cli
         if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
-        continue-on-error: true
+        # Standing since Friday, October 2, 2026: the dump needs the tool,
+        # so a failed build already failed the job, with a less direct
+        # message; it now fails here, naming the cause.
         shell: bash
         env:
           # Its warnings are not ours to deny.
@@ -212,6 +237,10 @@ jobs:
             --rev "$A11Y_CLI_REV" accessibility-cli --root a11y-cli
       - name: Save accessibility-cli
         if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
+        # Report-only (reason recorded Friday, October 2, 2026). Why: saving fails
+        # when another run saved the same key first, which is harmless.
+        # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
+        # design.
         continue-on-error: true
         uses: actions/cache/save@v6
         with:
@@ -222,9 +251,10 @@ jobs:
         env:
           A11Y_CLI: a11y-cli/bin/accessibility-cli
         run: bash tools/a11y/tree-dump.sh a11y-tree
+      # Standing since Friday, October 2, 2026 (was report-only): it fails
+      # only on a broken comparison, never on a changed tree.
       - name: Accessibility tree against main
         if: always()
-        continue-on-error: true
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -234,9 +264,10 @@ jobs:
             --current a11y-tree/tree.txt --baseline a11y-baseline/tree.txt \
             --baseline-run "$(cat a11y-baseline/run-id.txt 2>/dev/null || true)" \
             --summary "$GITHUB_STEP_SUMMARY"
+      # Standing since Friday, October 2, 2026 (was report-only, with no
+      # reason given); if-no-files-found: warn already covers a missing tree.
       - uses: actions/upload-artifact@v7
         if: always()
-        continue-on-error: true
         with:
           name: a11y-tree-macos
           path: |
@@ -289,10 +320,12 @@ jobs:
             echo "Fail: the AT-SPI check wrote no report." >> "$GITHUB_STEP_SUMMARY"
           fi
       # The accessibility tree, dumped with accessibility-cli and compared
-      # with main's last run (ADR-0039). The dump is standing: a run that
-      # dumps no tree fails the job. The comparison with main stays
-      # report-only (a change is for a person to judge), and so do the
-      # tool's cache steps.
+      # with main's last run (ADR-0039). Standing: building the tool, the
+      # dump (a run that dumps no tree fails the job), the comparison step
+      # itself, and the upload. A "Changed" tree never fails: the compare
+      # script exits 0 on Changed and No baseline, and 1 only when the
+      # tree is missing, so a failure of that step is a broken check, not
+      # a changed window. Only the tool's two cache steps are report-only.
       # Restored and saved as separate steps, so the build (about eight
       # minutes) is kept even when a later step fails or the run is
       # cancelled, which skips actions/cache's end-of-job save.
@@ -301,6 +334,10 @@ jobs:
         # The tree is dumped even when a test above failed: it checks
         # something else, and the build it needs is already done.
         if: ${{ !cancelled() }}
+        # Report-only (reason recorded Friday, October 2, 2026). Why: a cache
+        # service error is not a defect; a miss builds the tool below.
+        # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
+        # design, unless the cache becomes the only way to get the tool.
         continue-on-error: true
         uses: actions/cache/restore@v6
         with:
@@ -308,7 +345,9 @@ jobs:
           key: a11y-cli-${{ runner.os }}-${{ env.A11Y_CLI_REV }}
       - name: Build accessibility-cli
         if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
-        continue-on-error: true
+        # Standing since Friday, October 2, 2026: the dump needs the tool,
+        # so a failed build already failed the job, with a less direct
+        # message; it now fails here, naming the cause.
         shell: bash
         env:
           # Its warnings are not ours to deny.
@@ -318,6 +357,10 @@ jobs:
             --rev "$A11Y_CLI_REV" accessibility-cli --root a11y-cli
       - name: Save accessibility-cli
         if: ${{ !cancelled() && steps.a11y-cli.outputs.cache-hit != 'true' }}
+        # Report-only (reason recorded Friday, October 2, 2026). Why: saving fails
+        # when another run saved the same key first, which is harmless.
+        # Review: at the 0.1.0-alpha.9 readiness check. Report-only by
+        # design.
         continue-on-error: true
         uses: actions/cache/save@v6
         with:
@@ -328,9 +371,10 @@ jobs:
         env:
           A11Y_CLI: a11y-cli/bin/accessibility-cli
         run: bash tools/a11y/tree-dump.sh a11y-tree
+      # Standing since Friday, October 2, 2026 (was report-only): it fails
+      # only on a broken comparison, never on a changed tree.
       - name: Accessibility tree against main
         if: always()
-        continue-on-error: true
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -340,9 +384,10 @@ jobs:
             --current a11y-tree/tree.txt --baseline a11y-baseline/tree.txt \
             --baseline-run "$(cat a11y-baseline/run-id.txt 2>/dev/null || true)" \
             --summary "$GITHUB_STEP_SUMMARY"
+      # Standing since Friday, October 2, 2026 (was report-only, with no
+      # reason given); if-no-files-found: warn already covers a missing tree.
       - uses: actions/upload-artifact@v7
         if: always()
-        continue-on-error: true
         with:
           name: a11y-tree-linux
           path: |

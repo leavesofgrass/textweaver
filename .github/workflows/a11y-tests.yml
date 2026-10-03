@@ -12,7 +12,8 @@
 # must check fails its job (ADR-0039, after three runs in a row passed).
 # The NVDA and VoiceOver session steps are report-only (continue-on-error
 # on the step), so their jobs fail only when the GUI or the tools cannot
-# be built or installed, until ADR-0039 records them as standing.
+# be built or installed, until ADR-0039 records them as standing. Each
+# report-only step says why, and when it is reviewed, in a comment.
 #
 # NVDA and VoiceOver are installed and driven on the runners only. The
 # scripts refuse to run anywhere else, so no one's own screen reader is
@@ -118,6 +119,12 @@ jobs:
         working-directory: tools/a11y
         run: npx --no guidepup install nvda
       - name: NVDA session
+        # Report-only (reason recorded Friday, October 2, 2026). Why: the
+        # "names the window or the document on focus" must check failed in
+        # every run so far, which is the GUI's defect, not the check's
+        # (ADR-0039). Review: at the 0.1.0-alpha.9 readiness check.
+        # Promote when its must checks pass three runs in a row on main:
+        # remove this line and record the runs in ADR-0039.
         continue-on-error: true
         shell: pwsh
         run: node tools/a11y/nvda-session.mjs --exe target/debug/textweaver-xilem.exe --out nvda
@@ -199,6 +206,11 @@ jobs:
       # Lets AppleScript drive VoiceOver and turns off prompts, on this
       # runner only. If the runner cannot allow it, the session says so.
       - name: VoiceOver setup (guidepup setup --ci)
+        # Report-only (reason recorded Friday, October 2, 2026). Why: a
+        # hosted runner may refuse to let AppleScript drive VoiceOver
+        # (System Integrity Protection); the session below then says so.
+        # Review: at the 0.1.0-alpha.9 readiness check, together with the
+        # session step.
         continue-on-error: true
         working-directory: tools/a11y
         run: npx --no guidepup setup --ci 2>&1 | tee ../../voiceover-setup.log
@@ -206,6 +218,9 @@ jobs:
       # Integrity Protection, and whether AppleScript may drive VoiceOver.
       - name: VoiceOver diagnostics
         if: always()
+        # Report-only by design (reason recorded Friday, October 2, 2026):
+        # it only prints facts for the setup log, and checks nothing.
+        # Review: at the 0.1.0-alpha.9 readiness check.
         continue-on-error: true
         run: |
           {
@@ -217,6 +232,12 @@ jobs:
           } | tee -a voiceover-setup.log
       - name: VoiceOver session
         if: always()
+        # Report-only (reason recorded Friday, October 2, 2026). Why:
+        # VoiceOver could not always be started on the hosted runners
+        # (macOS 14 on the first run), so a failure may be the runner's.
+        # Review: at the 0.1.0-alpha.9 readiness check. Promote, per
+        # macOS version, when its must checks pass three runs in a row on
+        # main (ADR-0039).
         continue-on-error: true
         run: node tools/a11y/voiceover-session.mjs --exe target/debug/textweaver-xilem --out voiceover
       - uses: actions/upload-artifact@v7
