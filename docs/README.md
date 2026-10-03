@@ -1,5 +1,7 @@
 # textweaver documentation
 
+<img src="assets/textweaver-mark.svg" alt="textweaver logo: the letters t and w woven on a loom" width="128" height="128">
+
 This is the index of every textweaver document. It is grouped for three audiences:
 
 - [People who use textweaver](#for-users): reading, writing, speech, and the tools.

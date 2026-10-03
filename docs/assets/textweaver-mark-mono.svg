@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="mono-title mono-desc">
+<title id="mono-title">textweaver</title>
+<desc id="mono-desc">The loom mark drawn in a single color, for inline use and favicons. A rounded square outline holds the loom frame: posts and beams as solid bars, thin warp threads between them, and the heavy t stem with its slanted top and diamond foot. The weft is a hollow outlined ribbon that zigzags across as a pointed w. The warp threads it passes over show through the hollow ribbon as lines; the ones it passes under stop at its edges, so the weaving still reads without a second color.</desc>
+<defs>
+<mask id="mono-hole" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256"><rect width="256" height="256" fill="white"/><polyline points="40,62 94,170 128,118 162,170 216,62" fill="none" stroke="black" stroke-width="14" stroke-linejoin="miter" stroke-miterlimit="6"/></mask>
+<mask id="mono-under" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256"><rect width="256" height="256" fill="white"/><polyline points="40,62 94,170 128,118 162,170 216,62" fill="none" stroke="black" stroke-width="24" stroke-linejoin="miter" stroke-miterlimit="6"/></mask>
+</defs>
+<rect x="8" y="8" width="240" height="240" rx="44" fill="none" stroke="currentColor" stroke-width="6"/>
+<g mask="url(#mono-under)">
+<line x1="80" y1="56" x2="80" y2="200" stroke="currentColor" stroke-width="3"/>
+<line x1="112" y1="56" x2="112" y2="200" stroke="currentColor" stroke-width="3"/>
+<line x1="144" y1="56" x2="144" y2="200" stroke="currentColor" stroke-width="3"/>
+<line x1="176" y1="56" x2="176" y2="200" stroke="currentColor" stroke-width="3"/>
+<polygon points="121,20 135,28 135,174 121,174" fill="currentColor"/>
+<polygon points="128,168 141,184 128,200 115,184" fill="currentColor"/>
+</g>
+<rect x="26" y="38" width="204" height="18" rx="5" fill="currentColor"/>
+<rect x="26" y="200" width="204" height="18" rx="5" fill="currentColor"/>
+<polyline points="40,62 94,170 128,118 162,170 216,62" fill="none" stroke="currentColor" stroke-width="24" stroke-linejoin="miter" stroke-miterlimit="6" mask="url(#mono-hole)"/>
+<line x1="64" y1="56" x2="64" y2="200" stroke="currentColor" stroke-width="3"/>
+<line x1="96" y1="56" x2="96" y2="200" stroke="currentColor" stroke-width="3"/>
+<line x1="160" y1="56" x2="160" y2="200" stroke="currentColor" stroke-width="3"/>
+<line x1="192" y1="56" x2="192" y2="200" stroke="currentColor" stroke-width="3"/>
+<rect x="34" y="42" width="18" height="172" rx="5" fill="currentColor"/>
+<rect x="204" y="42" width="18" height="172" rx="5" fill="currentColor"/>
+</svg>
