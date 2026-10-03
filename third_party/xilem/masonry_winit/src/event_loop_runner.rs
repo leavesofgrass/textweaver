@@ -1216,5 +1216,10 @@ fn create_surface(
         size.height,
         wgpu::PresentMode::AutoVsync,
     ))
-    .unwrap()
+    .unwrap_or_else(|e| panic!("{GRAPHICS_FAILURE}: {e}"))
 }
+
+/// The start of the panic message when a window's drawing surface cannot
+/// be created (no graphics adapter, or none that can draw to the window),
+/// so an app's panic hook can say so in words (textweaver).
+pub const GRAPHICS_FAILURE: &str = "the window could not start its graphics";

@@ -25,6 +25,29 @@ use crate::util::bounding_box_to_rect;
 use crate::util::debug_panic;
 use crate::{TextAlign, theme};
 
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// The cursor's full blink cycle for every text area, in milliseconds;
+/// zero keeps it steady (textweaver).
+static CARET_BLINK_MS: AtomicU64 = AtomicU64::new(1000);
+
+/// Sets the cursor's full blink cycle for every text area (shown for the
+/// first half, hidden for the second), or `None` for a steady cursor, so
+/// an app can follow the system's setting (textweaver).
+pub fn set_caret_blink_period(period: Option<std::time::Duration>) {
+    let ms = period.map_or(0, |p| u64::try_from(p.as_millis()).unwrap_or(u64::MAX));
+    CARET_BLINK_MS.store(ms, Ordering::Relaxed);
+}
+
+/// The cursor's full blink cycle for every text area, or `None` when it
+/// is steady (textweaver).
+pub fn caret_blink_period() -> Option<std::time::Duration> {
+    match CARET_BLINK_MS.load(Ordering::Relaxed) {
+        0 => None,
+        ms => Some(std::time::Duration::from_millis(ms)),
+    }
+}
+
 /// `TextArea` implements the core of interactive text.
 ///
 /// It is used to implement [`TextInput`](super::TextInput) and [`Prose`](super::Prose).
@@ -456,10 +479,18 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
         _props: &mut PropertiesMut<'_>,
         interval: u64,
     ) {
-        /// The time for a complete blink cycle, in milliseconds.
-        /// For the first half (i.e. currently 0.5s) the cursor is shown, and for the second half,
-        /// it is hidden.
-        const CURSOR_BLINK_TIME: u64 = 1000;
+        // The time for a complete blink cycle, in milliseconds (textweaver:
+        // set by the app, from the system's setting). For the first half
+        // the cursor is shown, and for the second half, it is hidden. Zero
+        // keeps the cursor steady.
+        let cursor_blink_time = CARET_BLINK_MS.load(Ordering::Relaxed);
+        if cursor_blink_time == 0 {
+            if !self.anim_cursor_visible {
+                self.anim_cursor_visible = true;
+                ctx.request_paint_only();
+            }
+            return;
+        }
 
         /// The timeout, in milliseconds, after which the cursor will stop blinking (i.e. stay
         /// solid).
@@ -474,18 +505,18 @@ impl<const EDITABLE: bool> Widget for TextArea<EDITABLE> {
                 self.anim_prev_interval += interval_ms;
                 self.anim_elapsed += interval_ms;
 
-                if self.anim_prev_interval >= CURSOR_BLINK_TIME {
-                    self.anim_prev_interval = self.anim_prev_interval.rem_euclid(CURSOR_BLINK_TIME);
+                if self.anim_prev_interval >= cursor_blink_time {
+                    self.anim_prev_interval = self.anim_prev_interval.rem_euclid(cursor_blink_time);
                 }
 
                 // TODO: request timer here
                 ctx.request_anim_frame();
 
                 // Request paint only if changed.
-                if self.anim_prev_interval < CURSOR_BLINK_TIME / 2 && !self.anim_cursor_visible {
+                if self.anim_prev_interval < cursor_blink_time / 2 && !self.anim_cursor_visible {
                     self.anim_cursor_visible = true;
                     ctx.request_paint_only();
-                } else if self.anim_prev_interval >= CURSOR_BLINK_TIME / 2
+                } else if self.anim_prev_interval >= cursor_blink_time / 2
                     && self.anim_cursor_visible
                 {
                     self.anim_cursor_visible = false;

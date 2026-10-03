@@ -99,9 +99,10 @@ pub use winit;
 pub mod app {
     pub use super::app_driver::{AppDriver, DriverCtx, WgpuContext, WgpuLimits, WindowId};
     pub use super::event_loop_runner::{
-        EventLoop, EventLoopBuilder, EventLoopProxy, MasonryState, MasonryUserEvent, NewWindow,
-        Window, run, run_with,
+        EventLoop, EventLoopBuilder, EventLoopProxy, GRAPHICS_FAILURE, MasonryState,
+        MasonryUserEvent, NewWindow, Window, run, run_with,
     };
+    pub use super::vello_util::{GraphicsAdapter, graphics_adapter};
 
     pub(crate) use super::convert_winit_event::{
         masonry_resize_direction_to_winit, winit_ime_to_masonry,

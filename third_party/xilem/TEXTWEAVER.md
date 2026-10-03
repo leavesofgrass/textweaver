@@ -38,6 +38,12 @@ textweaver's own fixes, each small, each a candidate for its own pull request:
 
 15. `masonry_winit`: a redraw hands the accessibility tree update to AccessKit before it renders the frame, not after (Wave 8c, W8c-w). `redraw` rendered, presented, and waited for the GPU to finish, and only then sent the update, so the caret move that a screen reader and a Braille display follow arrived after the pixels, behind the GPU. The tree is complete before rendering starts, so the update is the same; only its timing moves. A screen magnifier may now move a few milliseconds before the pixels. The appended part of `textweaver.patch` holds it. Worth sending upstream as its own pull request: "Send the accessibility update before rendering".
 
+16. `masonry_winit`: a window whose drawing surface cannot be created panics with a message that says so, starting with `GRAPHICS_FAILURE` ("the window could not start its graphics"), instead of a bare `unwrap` (Wave 9, W9a-w; GPU report QW4). textweaver's panic hook recognizes it and says, in the listener's language, that the window could not start its graphics and that the terminal reader needs none: in a message box when the window was started from a shortcut. The appended part of `textweaver.patch` holds it.
+
+17. `masonry_winit`: the graphics adapter the first window's device was created on is kept, and `app::graphics_adapter()` returns its name, driver, graphics API and kind, with `software` true for a CPU renderer (Wave 9, W9a-w; GPU report QW2). textweaver writes it under `--log` and warns in `textweaver.log` when the adapter is a software renderer. The appended part of `textweaver.patch` holds it. Items 16 and 17 together are worth sending upstream as one pull request: "Report graphics start-up failures and the adapter in use".
+
+18. `masonry`: the cursor's blink cycle in every `TextArea` is set by the app (`widgets::set_caret_blink_period`; `None` keeps the cursor steady) instead of a fixed second (Wave 9, W9a-w; GPU report QW6). textweaver sets it from Windows' cursor blink rate, steady when that is "none", which closes upstream's "should be reading from the system settings" note. The ten-second stop is unchanged. The appended part of `textweaver.patch` holds it.
+
 ## Updating
 
 1. Pick a new upstream revision and copy the crates listed above over this folder, leaving out the same things.

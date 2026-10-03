@@ -15,6 +15,53 @@ use wgpu::{
 
 use crate::app_driver::WgpuLimits;
 
+/// The graphics adapter a window first drew with (textweaver).
+static FIRST_ADAPTER: std::sync::OnceLock<wgpu::AdapterInfo> = std::sync::OnceLock::new();
+
+/// The graphics adapter the first window's device was created on, once
+/// one has been (textweaver): its name, driver, graphics API, and kind, so
+/// an app can log it and flag a software renderer.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GraphicsAdapter {
+    /// The adapter's name, as the driver gives it.
+    pub name: String,
+    /// The driver's name and version, when the driver gives them.
+    pub driver: String,
+    /// The graphics API: Vulkan, Dx12, Metal, or Gl.
+    pub backend: String,
+    /// The kind of device: discrete, integrated, virtual, CPU, or other.
+    pub kind: String,
+    /// True when the adapter draws on the CPU (a software renderer such
+    /// as WARP or llvmpipe), which is much slower.
+    pub software: bool,
+}
+
+/// The adapter the first window draws with, or `None` before a window's
+/// surface exists (textweaver).
+pub fn graphics_adapter() -> Option<GraphicsAdapter> {
+    let info = FIRST_ADAPTER.get()?;
+    let kind = match info.device_type {
+        wgpu::DeviceType::DiscreteGpu => "discrete",
+        wgpu::DeviceType::IntegratedGpu => "integrated",
+        wgpu::DeviceType::VirtualGpu => "virtual",
+        wgpu::DeviceType::Cpu => "CPU",
+        wgpu::DeviceType::Other => "other",
+    };
+    let driver = [info.driver.as_str(), info.driver_info.as_str()]
+        .iter()
+        .filter(|s| !s.is_empty())
+        .copied()
+        .collect::<Vec<_>>()
+        .join(" ");
+    Some(GraphicsAdapter {
+        name: info.name.clone(),
+        driver,
+        backend: format!("{:?}", info.backend),
+        kind: kind.to_owned(),
+        software: info.device_type == wgpu::DeviceType::Cpu,
+    })
+}
+
 #[derive(Debug)]
 pub(crate) enum RenderSurfaceError {
     CreateSurface(wgpu::CreateSurfaceError),
@@ -299,6 +346,7 @@ impl RenderContext {
             wgpu::util::initialize_adapter_from_env_or_default(&self.instance, compatible_surface)
                 .await
                 .ok()?;
+        let _ = FIRST_ADAPTER.set(adapter.get_info());
         let supported_features = adapter.features();
         let required_limits = match &self.requested_limits {
             WgpuLimits::Default => wgpu::Limits::default(),
