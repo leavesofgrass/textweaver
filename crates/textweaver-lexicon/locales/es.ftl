@@ -1519,10 +1519,16 @@ aids-band-graduate = posgrado
 
 ## Themes.
 
+message-error = Error: { $message }
 # $name is the theme name in the settings; $used the display name of the theme used instead.
 themes-unknown = No hay ningún tema llamado { $name }; se usa { $used }.
 # $theme is the new theme's display name.
 themes-next = Tema { $theme }.
+themes-below-aa =
+    { $count ->
+        [one] Por debajo de AA: 1 comprobación no alcanza el mínimo.
+       *[other] Por debajo de AA: { $count } comprobaciones no alcanzan el mínimo.
+    }
 
 ## Accessibility modes and the first-run question.
 

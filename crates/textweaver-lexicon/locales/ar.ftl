@@ -1691,10 +1691,16 @@ aids-band-graduate = دراسات عليا
 
 ## السمات.
 
+message-error = خطأ: { $message }
 # $name is the theme name in the settings; $used the display name of the theme used instead.
 themes-unknown = لا توجد سمة باسم { $name }؛ يُستخدم { $used }.
 # $theme is the new theme's display name.
 themes-next = السمة { $theme }.
+themes-below-aa =
+    { $count ->
+        [one] أقل من AA: فحص واحد لا يبلغ الحد الأدنى.
+       *[other] أقل من AA: { $count } فحوص لا تبلغ الحد الأدنى.
+    }
 
 ## أوضاع إمكانية الوصول وسؤال أول تشغيل.
 

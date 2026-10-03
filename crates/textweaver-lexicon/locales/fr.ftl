@@ -1547,10 +1547,16 @@ aids-band-graduate = deuxième cycle universitaire
 
 ## Thèmes.
 
+message-error = Erreur : { $message }
 # $name is the theme name in the settings; $used the display name of the theme used instead.
 themes-unknown = Il n'y a aucun thème appelé { $name } ; { $used } est utilisé à la place.
 # $theme is the new theme's display name.
 themes-next = Thème { $theme }.
+themes-below-aa =
+    { $count ->
+        [one] Sous AA : 1 vérification n’atteint pas le seuil.
+       *[other] Sous AA : { $count } vérifications n’atteignent pas le seuil.
+    }
 
 ## Accessibility modes and the first-run question.
 

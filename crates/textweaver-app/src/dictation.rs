@@ -931,7 +931,7 @@ mod on {
             assert!(!app.dictation.active());
             assert_eq!(
                 app.status_text(),
-                "Dictation stopped before its last words were typed."
+                "Error: Dictation stopped before its last words were typed."
             );
         }
 

@@ -249,7 +249,7 @@ impl App {
                     stamp: Some(now),
                 });
                 let question = reload_question(self.cat(), &path);
-                self.error(&question);
+                self.ask(&question);
                 vec![Effect::Redraw]
             }
             _ => Vec::new(),

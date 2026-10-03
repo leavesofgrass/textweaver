@@ -101,8 +101,10 @@ fn open_failures_are_plain_sentences() {
     let missing = dir.path().join("nothere.md");
     tui.dispatch(Command::Open(missing.clone()));
     let status = tui.app().status_text().to_owned();
+    assert!(tui.app().status_is_error());
     assert!(
-        status.starts_with("Could not open nothere.md: there is no file named nothere.md in "),
+        status
+            .starts_with("Error: Could not open nothere.md: there is no file named nothere.md in "),
         "{status}"
     );
     assert!(status.ends_with(". Check the name."), "{status}");

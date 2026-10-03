@@ -118,15 +118,23 @@ impl App {
         Some(theme)
     }
 
-    /// F5: the next theme in the cycle. Picking a theme is an explicit
-    /// choice (it stops following the system) and is saved.
+    /// F5: the next theme in the cycle ([`textweaver_theme::builtin::CYCLE`]:
+    /// the themes that meet AA first). Picking a theme is an explicit choice
+    /// (it stops following the system) and is saved. A theme below AA says
+    /// so in words, right after its name: "Theme One Dark. Below AA: 2
+    /// checks fall short."
     pub(crate) fn next_theme(&mut self) {
         let next = self.themes.next(&self.settings.display.theme);
         let (name, spoken) = (next.meta.name.clone(), next.meta.display_name.clone());
+        let failing = textweaver_theme::check(next).failures().count();
         self.settings.display.theme = name;
         self.settings.display.theme_explicit = true;
         self.settings_dirty = true;
-        let msg = self.msg_args("themes-next", &args!["theme" => spoken.as_str()]);
+        let mut msg = self.msg_args("themes-next", &args!["theme" => spoken.as_str()]);
+        if failing > 0 {
+            msg.push(' ');
+            msg.push_str(&self.msg_args("themes-below-aa", &args!["count" => failing]));
+        }
         self.tell(&msg);
         self.check_reading_colors();
     }
@@ -142,7 +150,7 @@ mod tests {
     fn galaxy_by_default_and_unknown_names_fall_back_with_a_notice() {
         let app = App::new(AppConfig::for_tests());
         assert_eq!(app.current_theme().meta.name, "galaxy");
-        assert_eq!(app.theme_registry().names().len(), 23);
+        assert_eq!(app.theme_registry().names().len(), 24);
 
         let mut config = AppConfig::for_tests();
         config.settings.display.theme = "neon".into();
@@ -214,6 +222,28 @@ mod tests {
         let mut app = App::new(config);
         assert_eq!(app.apply_startup_theme(OsScheme::Light), None);
         assert_eq!(app.current_theme().meta.name, "galaxy");
+    }
+
+    /// F5 puts the AA themes first, and a theme below AA says so in words
+    /// right after its name.
+    #[test]
+    fn f5_names_a_theme_below_aa_in_words() {
+        let mut app = App::new(AppConfig::for_tests());
+        app.next_theme();
+        assert_eq!(app.status_text(), "Theme Galaxy Light.");
+        app.settings.display.theme = "amber".into();
+        app.next_theme();
+        assert_eq!(app.settings().display.theme, "one-dark");
+        assert_eq!(
+            app.status_text(),
+            "Theme One Dark. Below AA: 2 checks fall short."
+        );
+        app.settings.display.theme = "solarized-dark".into();
+        app.next_theme();
+        assert_eq!(
+            app.status_text(),
+            "Theme Solarized Light. Below AA: 1 check falls short."
+        );
     }
 
     /// One F5 stops following the system, and turning "Follow the system

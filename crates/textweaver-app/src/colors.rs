@@ -71,8 +71,9 @@ enum Paint {
     /// Text on the page.
     Text(&'static [ColorRole]),
     /// A mark on the page (an underline, a separator, a ruler band the
-    /// terminal draws with attributes): against the page.
-    Mark,
+    /// terminal draws with attributes): against the page. Sets the
+    /// theme's derived role of the same purpose.
+    Mark(ColorRole),
 }
 
 fn paint(path: &str) -> Paint {
@@ -95,7 +96,11 @@ fn paint(path: &str) -> Paint {
         "colors.bookmarks" => Paint::Band(StyleRole::Bookmark),
         "colors.links" => Paint::Text(&[ColorRole::Link]),
         "colors.headings" => Paint::Text(HEADINGS),
-        _ => Paint::Mark,
+        "colors.ruler" => Paint::Mark(ColorRole::Ruler),
+        "colors.difficult_words" => Paint::Mark(ColorRole::DifficultWord),
+        "colors.syllables" => Paint::Mark(ColorRole::SyllableMark),
+        "colors.misspellings" => Paint::Mark(ColorRole::Misspelling),
+        _ => Paint::Mark(ColorRole::Lint),
     }
 }
 
@@ -109,7 +114,7 @@ pub fn contrast_on(theme: &Theme, path: &str, color: Rgb) -> f64 {
             let text = theme.color(ColorRole::Text);
             contrast_ratio(text, color).max(contrast_ratio(page, color))
         }
-        Paint::Text(_) | Paint::Mark => contrast_ratio(color, page),
+        Paint::Text(_) | Paint::Mark(_) => contrast_ratio(color, page),
     }
 }
 
@@ -163,8 +168,10 @@ impl App {
     }
 
     /// Lays `[colors]` over `theme`'s roles: bands behind find matches,
-    /// the selection, focus, the status bar, notes, and bookmarks, and the
-    /// text color of links and headings. A band gets the more readable of
+    /// the selection, focus, the status bar, notes, and bookmarks; the
+    /// text color of links and headings; and the reading aids' marks (the
+    /// ruler, difficult words, syllables, misspellings, lint) on the
+    /// derived roles that hold them. A band gets the more readable of
     /// the theme's text and page colors on it, and every style keeps its
     /// attributes, so nothing is shown by color alone.
     pub(crate) fn apply_color_settings(&self, theme: &mut Theme) {
@@ -178,6 +185,11 @@ impl App {
             ("colors.bookmarks", &c.bookmarks),
             ("colors.links", &c.links),
             ("colors.headings", &c.headings),
+            ("colors.ruler", &c.ruler),
+            ("colors.difficult_words", &c.difficult_words),
+            ("colors.syllables", &c.syllables),
+            ("colors.misspellings", &c.misspellings),
+            ("colors.lint", &c.lint),
         ];
         let text = theme.color(ColorRole::Text);
         let page = theme.color(ColorRole::Background);
@@ -206,7 +218,7 @@ impl App {
                         theme.set_color(r, rgb);
                     }
                 }
-                Paint::Mark => {}
+                Paint::Mark(role) => theme.set_color(role, rgb),
             }
         }
     }
@@ -335,6 +347,19 @@ mod tests {
     use crate::{AppConfig, Command};
 
     use super::*;
+
+    /// The reading aids' mark colors reach the theme's derived roles.
+    #[test]
+    fn mark_colors_set_the_derived_roles() {
+        let mut app = App::new(AppConfig::for_tests());
+        app.settings.colors.lint = "orange".into();
+        app.settings.colors.ruler = "navy".into();
+        let t = app.reading_theme();
+        let get = |v: &str| parse_setting(v).unwrap().unwrap();
+        assert_eq!(t.color(ColorRole::Lint), get("orange"));
+        assert_eq!(t.color(ColorRole::Ruler), get("navy"));
+        assert!(!t.is_derived(ColorRole::Lint));
+    }
 
     #[test]
     fn every_color_setting_is_in_the_schema_with_the_named_colors() {

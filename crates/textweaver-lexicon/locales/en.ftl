@@ -1524,10 +1524,18 @@ aids-band-graduate = graduate
 
 ## Themes.
 
+# Put in front of every error message, so it reads as an error without color; $message is the error.
+message-error = Error: { $message }
 # $name is the theme name in the settings; $used the display name of the theme used instead.
 themes-unknown = There is no theme called { $name }; using { $used }.
 # $theme is the new theme's display name.
 themes-next = Theme { $theme }.
+# Said after the theme name when the theme falls short of WCAG AA; $count is the number of contrast checks that fail.
+themes-below-aa =
+    { $count ->
+        [one] Below AA: 1 check falls short.
+       *[other] Below AA: { $count } checks fall short.
+    }
 
 ## Accessibility modes and the first-run question.
 

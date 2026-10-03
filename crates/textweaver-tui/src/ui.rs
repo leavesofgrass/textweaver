@@ -941,7 +941,12 @@ impl Tui {
                 }
             })
             .collect();
-        f.render_widget(Paragraph::new(rows).style(theme.status), areas.status);
+        let status_style = if self.app.status_is_error() && !status.is_empty() {
+            theme.status_error
+        } else {
+            theme.status
+        };
+        f.render_widget(Paragraph::new(rows).style(status_style), areas.status);
         let prompt = self.draw_bottom(f, areas.bottom, &theme);
         let cursor = prompt.or(cursor);
         let cursor = self.draw_list(f, areas.body, &theme).or(cursor);

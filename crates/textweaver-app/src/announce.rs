@@ -207,9 +207,10 @@ mod tests {
         app.tell("Line 3, 12 percent.");
         assert_eq!(app.status_text(), "Line 3, 12 percent.");
         app.error("The file could not be read.");
-        assert_eq!(app.status_text(), "The file could not be read.");
+        assert_eq!(app.status_text(), "Error: The file could not be read.");
+        assert!(app.status_is_error());
         app.announce_as("Opened.", Priority::Polite, Importance::Result);
-        assert_eq!(app.status_text(), "The file could not be read.");
+        assert_eq!(app.status_text(), "Error: The file could not be read.");
     }
 
     #[test]
