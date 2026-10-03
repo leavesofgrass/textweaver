@@ -515,7 +515,15 @@ pub fn sync(
                     .with_shift_enter_to_parent(true),
             )
             .with_tag(SIDEBAR_LIST);
-            let hint = app.catalog().tr("gui-sidebar-hint");
+            // The panel's own key, written as the keymap writes keys.
+            let leave = textweaver_app::keymap::KeyChord::new(
+                textweaver_app::keymap::Key::Enter,
+                textweaver_app::keymap::Modifiers::SHIFT,
+            );
+            let hint = app.catalog().fmt(
+                "gui-sidebar-hint",
+                &args!["leave" => crate::keys::shortcut_text(&leave)],
+            );
             host.edit(SIDEBAR, |mut s| {
                 Sidebar::open(&mut s, &name, list, &hint, palette);
             });

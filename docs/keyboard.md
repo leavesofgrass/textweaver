@@ -339,7 +339,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Action | Terminal | GUI | GUI on macOS | Id |
 |---|---|---|---|---|
 | Switch to the next color theme | `F5` | `F5` | `F5` | `next_theme` |
-| Show or hide line numbers | `F6` | `F6` | `F6` | `toggle_line_numbers` |
+| Show or hide line numbers | `F6` | none | none | `toggle_line_numbers` |
 | Turn single-key shortcuts on or off, so dictation and typing never trigger commands | `F9` | `F9` | `F9` | `toggle_character_keys` |
 | Cycle the accessibility mode: self-voicing, hybrid, or screen reader | `Alt+Shift+A` | `Alt+Shift+A` | `Cmd+Option+Shift+A` | `cycle_access_mode` |
 | List settings profiles: switch to one, save the current settings as one, rename, delete, import, or export | `Alt+U` | `Ctrl+Shift+U` | `Cmd+Shift+U` | `settings_profiles` |
@@ -351,6 +351,10 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Make the document text smaller | none | `Ctrl+-` | `Cmd+-` | `text_smaller` |
 | Return the document text to its standard size | none | `Ctrl+0` | `Cmd+0` | `text_size_reset` |
 | Choose the font of the document text | none | `Ctrl+D` | `Cmd+T` | `choose_font` |
+| Show the Contents panel beside the document and go to it, or close it from inside it: Enter goes to a heading | none | `Ctrl+1` | `Cmd+1` | `contents_panel` |
+| Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note | none | `Ctrl+2` | `Cmd+2` | `notes_panel` |
+| Move to the next part of the window: the header, the panel, the document, or the toolbar | none | `F6` | `F6` | `next_region` |
+| Move to the previous part of the window | none | `Shift+F6` | `Shift+F6` | `previous_region` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | palette | palette | palette | `color_settings` |
 | Cycle how much textweaver announces about itself: off, minimal, normal, or full; errors and answers are always said | `Ctrl+F9` | `Ctrl+F9` | `Cmd+F9` | `cycle_interface_announcements` |
 | Open the menus: File, Edit, View, Reading, Speech, Tools, and Help | `F10` | `F10` | `F10` | `menu` |
@@ -490,10 +494,15 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | List notes | palette | has a chord | `list_notes` |
 | Highlight the selection, or the sentence at the cursor | palette | palette | `highlight_selection` |
 | Open a document by typing its path | palette | has a chord | `open_path` |
+| Show or hide line numbers | has a chord | palette | `toggle_line_numbers` |
 | Make the document text larger | palette | has a chord | `text_larger` |
 | Make the document text smaller | palette | has a chord | `text_smaller` |
 | Return the document text to its standard size | palette | has a chord | `text_size_reset` |
 | Choose the font of the document text | palette | has a chord | `choose_font` |
+| Show the Contents panel beside the document and go to it, or close it from inside it: Enter goes to a heading | palette | has a chord | `contents_panel` |
+| Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note | palette | has a chord | `notes_panel` |
+| Move to the next part of the window: the header, the panel, the document, or the toolbar | palette | has a chord | `next_region` |
+| Move to the previous part of the window | palette | has a chord | `previous_region` |
 | List keyboard shortcuts | palette | has a chord | `keyboard_help` |
 
 ## Commands without keys
