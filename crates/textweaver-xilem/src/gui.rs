@@ -449,7 +449,7 @@ fn button(
     app: Option<&App>,
     ids: &mut HashMap<WidgetId, ActionId>,
 ) -> NewWidget<ActionButton> {
-    styled_button(text, action, app, ids, None)
+    styled_button(text, action, app, ids, false)
 }
 
 fn styled_button(
@@ -457,7 +457,7 @@ fn styled_button(
     action: ActionId,
     app: Option<&App>,
     ids: &mut HashMap<WidgetId, ActionId>,
-    text_color: Option<masonry::peniko::Color>,
+    accent_text: bool,
 ) -> NewWidget<ActionButton> {
     let shortcut = app.map(|a| shortcut_for(a, action)).unwrap_or_default();
     let help = app.map_or_else(
@@ -467,8 +467,8 @@ fn styled_button(
     let mut b = ActionButton::new(text)
         .with_shortcut(shortcut)
         .with_description(help);
-    if let Some(c) = text_color {
-        b = b.with_text_color(c);
+    if accent_text {
+        b = b.with_accent_text();
     }
     let w = NewWidget::new(b);
     ids.insert(w.id(), action);
@@ -595,7 +595,7 @@ pub fn build_tree(
         ActionId::PlayPause,
         app,
         &mut ids,
-        Some(theme::color(p.on_accent)),
+        true,
     )
     .with_tag(PLAY)
     .with_class("primary");
@@ -711,22 +711,37 @@ pub fn list_dialog(
 pub struct QuestionDialog {
     /// The dialog, for [`Root::set_dialog`].
     pub modal: NewWidget<dyn Widget>,
-    /// The Yes button, which takes the focus.
+    /// The confirming button: Yes, or the verb of a destructive question.
     pub yes: WidgetId,
     /// The No button.
     pub no: WidgetId,
+    /// The button that takes the focus: Yes, or No for a question that
+    /// deletes, removes or replaces something, so Enter is the safe answer.
+    pub focus: WidgetId,
 }
 
 /// A question as a dialog: the question is the dialog's name (so a screen
-/// reader says it when the focus moves in), then Yes and No buttons whose
-/// keys are `Y` and `N`. Typing `y` or `n` anywhere in it answers, as in the
-/// terminal; Escape is no; any other character asks again.
+/// reader says it when the focus moves in), then the confirming and No
+/// buttons, whose keys are `Y` and `N`. Typing `y` or `n` anywhere in it
+/// answers, as in the terminal; Escape is no; any other character asks
+/// again. A question that destroys something (`verb`, from
+/// `App::destructive_question`) says its verb on the confirming button
+/// ("Delete", "Remove", "Replace") and starts on No, as Windows does for
+/// destructive questions (W8c-w); the others start on Yes.
 pub fn question_dialog(
     p: &Palette,
     c: &textweaver_app::lexicon::i18n::Catalog,
     question: &str,
+    verb: Option<textweaver_app::DestructiveVerb>,
 ) -> QuestionDialog {
-    let yes = NewWidget::new(ActionButton::new(c.tr("gui-yes")).with_shortcut("Y"));
+    use textweaver_app::DestructiveVerb as V;
+    let yes_label = match verb {
+        None => c.tr("gui-yes"),
+        Some(V::Delete) => c.tr("gui-answer-delete"),
+        Some(V::Remove) => c.tr("gui-answer-remove"),
+        Some(V::Replace) => c.tr("gui-answer-replace"),
+    };
+    let yes = NewWidget::new(ActionButton::new(yes_label).with_shortcut("Y"));
     let no = NewWidget::new(ActionButton::new(c.tr("gui-no")).with_shortcut("N"));
     let (yes_id, no_id) = (yes.id(), no.id());
     let buttons = Flex::row()
@@ -752,6 +767,7 @@ pub fn question_dialog(
         modal,
         yes: yes_id,
         no: no_id,
+        focus: if verb.is_some() { no_id } else { yes_id },
     }
 }
 
@@ -939,9 +955,8 @@ pub fn apply_palette(host: &mut impl Host, p: &Palette) {
     host.edit(MAIN, |mut r| {
         r.insert_prop(Background::Color(theme::color(p.background)));
     });
-    host.edit(PLAY, |mut b| {
-        ActionButton::set_text_color(&mut b, theme::color(p.on_accent));
-    });
+    // Play's text takes the theme's text-on-accent color from the default
+    // properties (`widgets::ACCENT_TEXT_CLASS`).
     host.edit(DOC, |mut d| DocumentView::set_palette(&mut d, p.clone()));
     host.edit(RSVP, |mut r| RsvpView::set_palette(&mut r, p.clone()));
 }
@@ -1496,6 +1511,17 @@ impl Gui {
         // it, the window's own commands too.
         let (command, from_menu) = window_command_of(&cmd, self.app.describing_next_key())
             .map_or((None, false), |(a, m)| (Some(a), m));
+        // A command only the terminal reader has (`j` and Shift+J scroll a
+        // screen the window does not draw): said, not run in silence.
+        if let Some(a) = command
+            && !crate::menus::in_window(a)
+        {
+            let said = self.app.catalog().tr("app-terminal-only");
+            self.app
+                .announce_as(&said, Priority::Polite, Importance::Answer);
+            self.refresh(ctx);
+            return;
+        }
         if let Some(a) = command
             && self.window_command(ctx, a)
         {
@@ -2391,7 +2417,7 @@ impl Gui {
     fn open_palette(&mut self, ctx: &mut DriverCtx<'_>, label_text: &str) {
         let p = &self.palette;
         let (ids, items): (Vec<ActionId>, Vec<String>) =
-            self.app.palette_candidates("").into_iter().unzip();
+            window_palette(&self.app, "").into_iter().unzip();
         let count = items.len();
         let c = self.app.catalog();
         let field = NewWidget::new(
@@ -2506,7 +2532,7 @@ impl Gui {
     /// The palette's filter changed: show the matches and say how many.
     fn filter_palette(&mut self, ctx: &mut DriverCtx<'_>, query: &str) {
         let (ids, items): (Vec<ActionId>, Vec<String>) =
-            self.app.palette_candidates(query).into_iter().unzip();
+            window_palette(&self.app, query).into_iter().unzip();
         let n = items.len();
         ctx.render_root(self.window_id)
             .edit_widget_with_tag(LIST, |mut l| ChoiceList::set_items(&mut l, items));
@@ -2749,8 +2775,9 @@ impl Gui {
         let showing = matches!(self.dialog, Some(OpenDialog::Question { .. }));
         if pending && !showing {
             let question = self.app.status_text().to_owned();
-            let q = question_dialog(&self.palette, &self.app.catalog(), &question);
-            self.show_dialog(ctx, q.modal, q.yes);
+            let verb = self.app.destructive_question();
+            let q = question_dialog(&self.palette, &self.app.catalog(), &question, verb);
+            self.show_dialog(ctx, q.modal, q.focus);
             self.dialog = Some(OpenDialog::Question {
                 yes: q.yes,
                 no: q.no,
@@ -3407,8 +3434,27 @@ impl AppDriver for Gui {
         }
     }
 
+    /// The close button, Alt+F4, or the system closing the window. With
+    /// unsaved edits it asks Save, Discard or Cancel first, as Ctrl+Q does
+    /// (W8c-w); Cancel keeps the window open. An open dialog closes first,
+    /// as Escape would, so the question is the one in front.
     fn on_close_requested(&mut self, _window_id: WindowId, ctx: &mut DriverCtx<'_>) {
-        self.close(ctx);
+        if self.closed || !self.app.is_dirty() {
+            self.close(ctx);
+            return;
+        }
+        if self.log {
+            crate::log::line("close requested with unsaved edits");
+        }
+        self.cancel_dialog(ctx);
+        if self.dialog.is_some() {
+            // A dialog Escape does not close (the system's file chooser):
+            // it stays, and the window with it.
+            return;
+        }
+        let effects = self.app.close_requested();
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
     }
 }
 
@@ -3445,8 +3491,12 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     // Automated runs (`--background`) skip the first run's welcome and
     // language list, which would stand in front of what they check.
     let first_run = !opts.background && setup::is_first_run(&opts.app);
-    let (mut app, mut messages) = setup::build_app(&opts.app, Box::new(announcer));
-    startup_phase(opts.log, "settings and app");
+    // The system's light, dark, or high-contrast setting picks the theme
+    // when the settings follow it and no `--theme` was given; it is read
+    // on a helper thread while the app is built (performance QW2).
+    let (mut app, mut messages) =
+        setup::build_app_following(&opts.app, Box::new(announcer), opts.theme.is_none());
+    startup_phase(opts.log, "settings, app, and color-scheme probe");
     app.set_announce_list_focus(opts.experiments.app_list_announcements);
     let mut experiments = opts.experiments;
     let wanted = experiments
@@ -3459,12 +3509,6 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     experiments.announce = Some(announce);
     if opts.log {
         crate::log::line(&format!("announce: {}", announce.name()));
-    }
-    if opts.theme.is_none() {
-        // The system's light, dark, or high-contrast setting, when the
-        // settings ask to follow it (`display.follow_os_theme`).
-        let _ = app.apply_startup_theme(textweaver_app::theme::os::probe());
-        startup_phase(opts.log, "color-scheme probe");
     }
     // Windows High Contrast: the system's own colors, while the settings
     // follow the system (`display.follow_os_theme`) and no `--theme` was
@@ -3615,6 +3659,17 @@ pub fn palette_answer(ids: &[ActionId], selected: usize, typed: &str) -> String 
     ids.get(selected)
         .or_else(|| ids.first())
         .map_or_else(|| typed.to_owned(), |a| a.id().to_owned())
+}
+
+/// The command palette's rows in the window: the app's candidates for
+/// `query`, without the commands only the terminal reader has
+/// ([`crate::menus::in_window`]), as the window's menus leave them out
+/// (W8c-w, completeness QW8).
+pub fn window_palette(app: &App, query: &str) -> Vec<(ActionId, String)> {
+    app.palette_candidates(query)
+        .into_iter()
+        .filter(|(a, _)| crate::menus::in_window(*a))
+        .collect()
 }
 
 /// The command the window runs itself for `cmd`, if any, and whether it

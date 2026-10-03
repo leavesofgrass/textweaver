@@ -55,6 +55,9 @@ pub struct Palette {
     pub text: Rgb,
     /// Secondary text.
     pub dim_text: Rgb,
+    /// The text of a disabled control (everything behind an open dialog):
+    /// at least 3 to 1 on buttons and panels.
+    pub disabled_text: Rgb,
     /// Heading colors, levels 1 to 6.
     pub headings: [Rgb; 6],
     /// Links.
@@ -202,6 +205,17 @@ impl Palette {
             border_hover,
             text: ensure(text, &[background, surface, raised], text_min),
             dim_text: ensure(theme.color(ColorRole::DimText), &[background, surface], 4.5),
+            // The secondary text, a step toward the button fill, but never
+            // under 3 to 1 on a button or a panel.
+            disabled_text: ensure(
+                ensure(
+                    theme.color(ColorRole::DimText).mix(raised, 0.2),
+                    &[raised],
+                    3.0,
+                ),
+                &[surface],
+                3.0,
+            ),
             headings,
             link: ensure(theme.color(ColorRole::Link), &[background], text_min),
             code: theme.color(ColorRole::Code),
@@ -322,6 +336,24 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
     });
 
     props.insert::<Label, _>(ContentColor::new(text));
+    {
+        // Masonry's own disabled label color (a fixed light gray, 2.06 to 1
+        // on Galaxy Light's buttons) would win over the base color; the
+        // palette's disabled text keeps 3 to 1 on buttons and panels
+        // (design system QW3).
+        let mut stack = PropertyStack::new();
+        stack.push_layer(
+            Selector::classes(&[crate::widgets::ACCENT_TEXT_CLASS]),
+            ContentColor::new(color(p.on_accent)),
+        );
+        // Last, so it wins: a disabled Play's text is not left in the
+        // text-on-accent color on a plain button.
+        stack.push_layer(
+            Selector::new().with_disabled(true),
+            ContentColor::new(color(p.disabled_text)),
+        );
+        props.insert_stack::<Label>(stack);
+    }
     props.insert::<Divider, _>(ContentColor::new(color(p.border)));
     props.insert::<Flex, _>(Gap::new(Length::px(GAP)));
     props
@@ -361,10 +393,6 @@ fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Pal
         Background::Color(color(p.raised.mix(p.text, 0.10))),
     );
     stack.push_layer(
-        Selector::new().with_disabled(true),
-        Background::Color(color(p.surface)),
-    );
-    stack.push_layer(
         Selector::classes(&["primary"]),
         (
             Background::Color(color(p.accent)),
@@ -388,6 +416,17 @@ fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Pal
             },
             BorderWidth {
                 width: Length::px(FOCUS_WIDTH),
+            },
+        ),
+    );
+    // Disabled last, since later layers win: a disabled Play loses its
+    // accent fill and border like any other button (design system QW3).
+    stack.push_layer(
+        Selector::new().with_disabled(true),
+        (
+            Background::Color(color(p.surface)),
+            BorderColor {
+                color: color(p.border),
             },
         ),
     );
@@ -480,6 +519,28 @@ mod tests {
                 let r = contrast_ratio(p.heading(l), p.background);
                 assert!(r >= min - 0.01, "{name}: heading {l} is {r:.2} to 1");
             }
+        }
+    }
+
+    /// Disabled text (the window behind an open dialog) stays readable:
+    /// at least 3 to 1 on a button and on a panel, in the four required
+    /// themes and every built-in one (design system QW3, W8c-w).
+    #[test]
+    fn disabled_text_reaches_three_to_one() {
+        for t in textweaver_theme::builtin::all() {
+            let p = Palette::from_theme(t);
+            for (what, bg) in [("button", p.raised), ("panel", p.surface)] {
+                let r = contrast_ratio(p.disabled_text, bg);
+                assert!(
+                    r >= 3.0 - 0.01,
+                    "{}: disabled text on {what} is {r:.2} to 1",
+                    p.name
+                );
+            }
+        }
+        for name in REQUIRED {
+            let p = Palette::named(name);
+            assert!(contrast_ratio(p.disabled_text, p.raised) >= 3.0 - 0.01);
         }
     }
 

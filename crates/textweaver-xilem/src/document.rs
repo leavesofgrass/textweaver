@@ -207,7 +207,15 @@ pub enum PaintStep {
     /// The line under one line of the spoken sentence, at the font's
     /// underline position, in the sentence's text color.
     SentenceUnderline(Rect, textweaver_theme::Rgb),
+    /// The reading ruler's bar at the start of one row: 4 px on the
+    /// reading line, 2 px on the band's rows around it.
+    RulerBar(RowMark, Rect),
 }
+
+/// The width of the reading ruler's bar on the reading line.
+const RULER_FOCUS_BAR: f64 = 4.0;
+/// The width of its bar on the band's rows: half the reading line's.
+const RULER_BAND_BAR: f64 = 2.0;
 
 /// The moving state: where the caret and the highlights are.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -1318,18 +1326,29 @@ impl DocumentView {
                     break;
                 }
                 let (a, b) = (p.start.0 + a, p.start.0 + b);
+                let y0 = top + f64::from(m.block_min_coord);
+                let mut y1 = top + f64::from(m.block_max_coord);
+                if p.text.is_empty() {
+                    // A blank line is laid out shorter (0.6 em) than its
+                    // one empty line: its row ends where it does, so the
+                    // band does not reach over the next paragraph or
+                    // heading (GUI audit QW3).
+                    y1 = y1.min(y + pl.height).max(y0);
+                }
                 rows.push((
                     ViewRow {
                         range: CharRange::new(a, b),
                         line: i,
                     },
-                    top + f64::from(m.block_min_coord),
-                    top + f64::from(m.block_max_coord),
+                    y0,
+                    y1,
                 ));
             }
             if !any {
-                // A blank line: one empty row at its position.
-                let h = f64::from(self.font.size) * 1.2;
+                // A blank line: one empty row at its position, as tall as
+                // the blank paragraph is laid out (0.6 em), so the band
+                // does not reach over the next paragraph or heading.
+                let h = f64::from(self.font.size) * 0.6;
                 rows.push((
                     ViewRow {
                         range: CharRange::new(p.start.0, p.start.0),
@@ -2062,21 +2081,25 @@ impl Widget for DocumentView {
         let band_x1 = (self.column_x + self.column + 12.0).min(size.width - 2.0);
         for &(mark, y0, y1) in &marks {
             let r = Rect::new(band_x0, y0, band_x1, y1);
-            match mark {
+            // The band's rows get a bar too, thinner than the reading
+            // line's, so the band shows by its shape and not by a pale
+            // tint alone (GUI audit QW3), as the terminal draws it.
+            let bar = match mark {
                 RowMark::Focus => {
                     painter
                         .fill(RoundedRect::from_rect(r, 4.0), theme::color(p.ruler_focus))
                         .draw();
-                    painter
-                        .fill(
-                            Rect::new(band_x0, y0, band_x0 + 4.0, y1),
-                            theme::color(p.focus),
-                        )
-                        .draw();
+                    RULER_FOCUS_BAR
                 }
-                RowMark::Band => painter.fill(r, theme::color(p.ruler_band)).draw(),
-                RowMark::Normal | RowMark::Masked => {}
-            }
+                RowMark::Band => {
+                    painter.fill(r, theme::color(p.ruler_band)).draw();
+                    RULER_BAND_BAR
+                }
+                RowMark::Normal | RowMark::Masked => continue,
+            };
+            let bar = Rect::new(band_x0, y0, band_x0 + bar, y1);
+            painter.fill(bar, theme::color(p.focus)).draw();
+            painted.push(PaintStep::RulerBar(mark, bar));
         }
 
         for &(i, y) in &self.visible {

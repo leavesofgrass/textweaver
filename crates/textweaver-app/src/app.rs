@@ -629,6 +629,66 @@ impl App {
             || self.components.question.is_some()
     }
 
+    /// What a yes to the open question destroys, if anything: the window
+    /// puts this verb on the confirming button and focuses No. Follows the
+    /// order in which [`Command::Confirm`] answers the questions, so the
+    /// verb is the one for the question a yes would answer.
+    pub fn destructive_question(&self) -> Option<crate::command::DestructiveVerb> {
+        use crate::command::DestructiveVerb as V;
+        use crate::disk::DiskQuestion;
+        if self.pending_hybrid.is_some() {
+            return None;
+        }
+        if let Some(q) = &self.pending_disk {
+            return match q {
+                DiskQuestion::Overwrite { .. } | DiskQuestion::SaveAsOver { .. } => {
+                    Some(V::Replace)
+                }
+                DiskQuestion::Reload { .. } => None,
+            };
+        }
+        if self.pending_import.is_some() || self.authoring.question.is_some() {
+            return None;
+        }
+        if self.study.question.is_some() {
+            // The only study question: delete a profile.
+            return Some(V::Delete);
+        }
+        if let Some(q) = &self.voices.question {
+            return matches!(q, crate::voice::VoiceQuestion::Remove(..)).then_some(V::Remove);
+        }
+        if self.dictation.question
+            || self.batch_question()
+            || self.audio_question()
+            || self.sync.question.is_some()
+            || self.fonts.question.is_some()
+        {
+            return None;
+        }
+        if let Some(q) = &self.components.question {
+            return matches!(q, crate::components::Question::Remove(_)).then_some(V::Remove);
+        }
+        if let Some((kind, _)) = &self.pending_list_delete {
+            return Some(match kind {
+                ListKind::Highlights => V::Remove,
+                _ => V::Delete,
+            });
+        }
+        (self.pending_confirm == Some(ActionId::DeleteNote)).then_some(V::Delete)
+    }
+
+    /// The window's close button, Alt+F4, or the system closing the window:
+    /// quits as Quit does, without its "Quit textweaver?" question (the
+    /// user already chose to close), but unsaved edits still ask Save,
+    /// Discard or Cancel first, and Cancel keeps the window open. Returns
+    /// [`Effect::Quit`] when the window may close now.
+    pub fn close_requested(&mut self) -> Vec<Effect> {
+        // A question still open (Quit's own, say) is dropped: closing is
+        // the answer.
+        self.pending_confirm = None;
+        self.dictation_finish_then(Self::quit)
+    }
+
     /// Answers a pending confirmation.
     fn confirm(&mut self, answer: crate::command::Confirm) -> Vec<Effect> {
         use crate::command::Confirm;
