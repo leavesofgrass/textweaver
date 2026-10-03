@@ -357,6 +357,23 @@ Bulk conversion has its own benchmark:
 cargo run --release -p textweaver-convert --example bench_convert
 ```
 
+### Package sizes: October 2, 2026
+
+The Windows packages, built with `cargo xtask dist` and `cargo xtask gui-dist` (the `dist` profile, static C runtime) on main at 9e781676 (before) and on the W8b-r branch (after), on a busy machine. Sizes in bytes; the archive is the zip that is published.
+
+| What | Before | After | Change |
+|---|---|---|---|
+| Terminal package zip | 69,724,623 | 69,706,936 | 17,687 smaller |
+| `textweaver.exe` (the reader) | 70,369,792 | 70,325,760 | 44,032 smaller |
+| `tw.exe` | 73,884,672 | 73,884,672 | none |
+| GUI package zip, with the screenshot harness (the package) | 43,466,755 | 43,466,755 | none |
+| GUI package zip, `--no-screenshot` | 43,466,755 | 43,019,825 | 446,930 smaller |
+| `textweaver-gui.exe`, `--no-screenshot` | 81,058,816 | 80,076,800 | 982,016 smaller |
+
+- **The reader built on its own** saves 43 KB, not the 1 to 3 MB the estimate gave: the reader already links an HTTP client (ureq with rustls) for citation lookups through `textweaver-cite`, so building it apart from `tw` only drops `tw`'s own features (`textweaver-formats`' `url`, `textweaver-ocr`'s `download`). `cargo tree -p textweaver-tui -i ureq -e features` shows the path.
+- **The screenshot harness** is about 1 MB of the GUI program and 0.4 MB of its zip. The package keeps it while the release workflow's GUI checks draw a `--screenshot` with it ([releasing](releasing.md#the-gui-packages)).
+- Against alpha.7's published packages (the size budget's file, `xtask/package-sizes.toml`), the terminal zip is 0.9 percent larger and the GUI zip 0.7 percent larger, well within the 10 percent budget.
+
 ## Braille, real engines, and timing
 
 These checks run on CI runners. Nothing in them plays audio or drives a screen reader.

@@ -95,6 +95,9 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ### For contributors
 
+- **A size budget for the packages** (W8b-r): `cargo xtask dist`, `gui-dist`, and `appimage` print each package's size against the last release's, recorded in `xtask/package-sizes.toml`, and fail when one grew more than 10 percent without a note under `[notes]` saying why. After a release, `cargo xtask release VERSION --sizes` records the published sizes, clears the notes, and adds a "Package sizes" list to the release notes. The file starts with alpha.7's sizes.
+- **The reader is packaged without `tw`'s features** (W8b-r): `cargo xtask dist` builds `textweaver` and `tw` in separate cargo runs, so the reader no longer gets `tw`'s features through feature unification (opening a web address, the OCR model download). It saved 43 KB: the reader keeps an HTTP client of its own for citation lookups. `cargo xtask gui-dist --no-screenshot` builds the GUI package without its screenshot harness; the package keeps the harness for now, because the release workflow's GUI checks draw a `--screenshot` with it. [docs/dev/testing.md](docs/dev/testing.md#package-sizes-october-2-2026) has the sizes before and after.
+
 - **One downloader** (W8a-d): the new `textweaver-components` crate pins files by size and SHA-256 and downloads them through a `.part` file, the check, and a rename, with resume, progress, cancel, a lock, and one neutral User-Agent. The OCR models, Lexend, and Piper voices moved onto it; a test in the app enforces the registry, and the fake fetcher records every request.
 
 - **Research for the next waves.** `docs/dev/research/` holds the research reports and the wave plan for alpha.8, alpha.9, and later: a performance audit, speech engines and runtimes, text-to-speech use cases for students with disabilities, health sciences workflows, GUI and visual design, and law and standards. Nothing in it is a decision; decisions stay in the ADRs.

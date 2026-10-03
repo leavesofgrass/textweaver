@@ -25,6 +25,15 @@
 //! version on the "Last listening check" line of the release guide, and
 //! does nothing else.
 //!
+//! `cargo xtask release X.Y.Z --sizes`, once the release's packages are
+//! published, records their sizes: it reads them with
+//! `gh release view vX.Y.Z --json assets` (or from the package files in a
+//! folder, with `--sizes-from DIR`), rewrites the size file
+//! (`xtask/package-sizes.toml`, see `sizes.rs`) and clears its notes, adds
+//! a "Package sizes" list to the version's `CHANGELOG.md` section, and
+//! writes that section to `target/release-notes-X.Y.Z.md` for
+//! `gh release edit`. It pushes and uploads nothing.
+//!
 //! The date is never typed in or guessed: it comes from the machine
 //! (`date` or PowerShell's `Get-Date`), and the weekday is computed from it.
 
@@ -62,21 +71,37 @@ struct Args {
     dry_run: bool,
     checks: bool,
     listened: bool,
+    sizes: Option<SizesFrom>,
 }
 
-const USAGE: &str =
-    "usage: cargo xtask release X.Y.Z[-PRE] [--dry-run] [--no-checks] | X.Y.Z[-PRE] --listened";
+/// Where `--sizes` reads the packages' sizes.
+#[derive(Debug, PartialEq, Eq)]
+enum SizesFrom {
+    /// The published GitHub release (`gh release view`).
+    Release,
+    /// Package files in a folder (`--sizes-from DIR`).
+    Dir(std::path::PathBuf),
+}
+
+const USAGE: &str = "usage: cargo xtask release X.Y.Z[-PRE] [--dry-run] [--no-checks] | X.Y.Z[-PRE] --listened | X.Y.Z[-PRE] --sizes | X.Y.Z[-PRE] --sizes-from DIR";
 
 fn parse(args: &[String]) -> anyhow::Result<Args> {
     let mut version = None;
     let mut dry_run = false;
     let mut checks = true;
     let mut listened = false;
-    for a in args {
+    let mut sizes = None;
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
         match a.as_str() {
             "--dry-run" => dry_run = true,
             "--no-checks" => checks = false,
             "--listened" => listened = true,
+            "--sizes" => sizes = Some(SizesFrom::Release),
+            "--sizes-from" => {
+                let dir = it.next().context("--sizes-from needs a folder")?;
+                sizes = Some(SizesFrom::Dir(dir.into()));
+            }
             s if s.starts_with('-') => bail!("unknown option {s} ({USAGE})"),
             s if version.is_none() => version = Some(s.trim_start_matches('v').to_owned()),
             s => bail!("unexpected argument {s} ({USAGE})"),
@@ -86,14 +111,18 @@ fn parse(args: &[String]) -> anyhow::Result<Args> {
     if !valid_version(&version) {
         bail!("{version} is not a version like 0.2.0 or 0.2.0-alpha.1");
     }
-    if listened && (dry_run || !checks) {
+    if listened && (dry_run || !checks || sizes.is_some()) {
         bail!("--listened only records the listening check; run it on its own ({USAGE})");
+    }
+    if sizes.is_some() && (dry_run || !checks) {
+        bail!("--sizes only records the package sizes; run it on its own ({USAGE})");
     }
     Ok(Args {
         version,
         dry_run,
         checks,
         listened,
+        sizes,
     })
 }
 
@@ -139,6 +168,9 @@ pub fn run() -> anyhow::Result<()> {
             args.version, args.version
         );
         return Ok(());
+    }
+    if let Some(from) = &args.sizes {
+        return record_sizes(&root, &args.version, from);
     }
 
     println!(
@@ -241,6 +273,10 @@ pub fn run() -> anyhow::Result<()> {
             }
         }
         println!("would commit \"Release {}\" and tag {tag}", args.version);
+        println!(
+            "after the packages are published: cargo xtask release {} --sizes",
+            args.version
+        );
         return Ok(());
     }
 
@@ -280,12 +316,148 @@ pub fn run() -> anyhow::Result<()> {
     println!("committed and tagged {tag}. Push with:");
     println!("  git push origin main");
     println!("  git push origin {tag}");
+    println!(
+        "Once the packages are on the release, record their sizes: cargo xtask release {} --sizes",
+        args.version
+    );
     Ok(())
+}
+
+/// `--sizes` and `--sizes-from DIR`: records the packages' sizes for
+/// `version` in the size file (clearing its notes) and in the release
+/// notes, the `CHANGELOG.md` section for the version, and writes that
+/// section to a file for `gh release edit`. Nothing is pushed or uploaded.
+fn record_sizes(root: &Path, version: &str, from: &SizesFrom) -> anyhow::Result<()> {
+    use crate::sizes;
+
+    let found = match from {
+        SizesFrom::Release => {
+            let tag = format!("v{version}");
+            let out = Command::new("gh")
+                .args(["release", "view", &tag, "--json", "assets"])
+                .current_dir(root)
+                .output()
+                .context("running gh (GitHub's command line tool)")?;
+            if !out.status.success() {
+                bail!(
+                    "gh release view {tag} failed: {}",
+                    String::from_utf8_lossy(&out.stderr).trim()
+                );
+            }
+            sizes::from_release_json(&String::from_utf8_lossy(&out.stdout), version)?
+        }
+        SizesFrom::Dir(dir) => sizes::from_dir(dir, version)?,
+    };
+    if found.is_empty() {
+        bail!("no packages named textweaver-{version}-* were found");
+    }
+    if let Ok(old) = sizes::read(root) {
+        for (name, note) in &old.notes {
+            println!("Note cleared: {name}: {note}");
+        }
+    }
+    let recorded = sizes::Recorded {
+        version: version.to_owned(),
+        sizes: found,
+        notes: Default::default(),
+    };
+    fs::write(root.join(sizes::FILE), sizes::render(&recorded))
+        .with_context(|| format!("writing {}", sizes::FILE))?;
+
+    let path = root.join("CHANGELOG.md");
+    let changelog = fs::read_to_string(&path).context("reading CHANGELOG.md")?;
+    let section = sizes::notes_section(version, &recorded.sizes);
+    let changelog = add_sizes_section(&changelog, version, &section)?;
+    fs::write(&path, &changelog).context("writing CHANGELOG.md")?;
+
+    let notes = crate::eci::target_dir(root).join(format!("release-notes-{version}.md"));
+    if let Some(dir) = notes.parent() {
+        fs::create_dir_all(dir)?;
+    }
+    fs::write(
+        &notes,
+        changelog_section(&changelog, version).unwrap_or_default(),
+    )
+    .with_context(|| format!("writing {}", notes.display()))?;
+
+    println!(
+        "Recorded: {} package sizes for {version} in {} and CHANGELOG.md. Commit both.",
+        recorded.sizes.len(),
+        sizes::FILE
+    );
+    print!("{section}");
+    println!("To show them on the release page:");
+    println!(
+        "  gh release edit v{version} --notes-file {}",
+        notes.display()
+    );
+    Ok(())
+}
+
+/// The body of the `## [version]` section of the changelog, without its
+/// heading.
+fn changelog_section(changelog: &str, version: &str) -> Option<String> {
+    let heading = format!("## [{version}]");
+    let mut lines = changelog.lines().skip_while(|l| !l.starts_with(&heading));
+    lines.next()?;
+    let body: Vec<&str> = lines.take_while(|l| !l.starts_with("## ")).collect();
+    Some(format!("{}\n", body.join("\n").trim()))
+}
+
+/// Puts `section` (a `### Package sizes` subsection) at the end of the
+/// `## [version]` section of the changelog, replacing one already there.
+fn add_sizes_section(changelog: &str, version: &str, section: &str) -> anyhow::Result<String> {
+    let heading = format!("## [{version}]");
+    let lines: Vec<&str> = changelog.lines().collect();
+    let start = lines
+        .iter()
+        .position(|l| l.starts_with(&heading))
+        .with_context(|| format!("CHANGELOG.md has no {heading} section"))?;
+    let end = lines[start + 1..]
+        .iter()
+        .position(|l| l.starts_with("## "))
+        .map_or(lines.len(), |i| start + 1 + i);
+    let first_line = section.lines().next().unwrap_or_default();
+    // An earlier sizes subsection runs to the next subsection or the end.
+    let mut body: Vec<&str> = Vec::new();
+    let mut skipping = false;
+    for l in &lines[start + 1..end] {
+        if *l == first_line {
+            skipping = true;
+            continue;
+        }
+        if skipping && l.starts_with("### ") {
+            skipping = false;
+        }
+        if !skipping {
+            body.push(l);
+        }
+    }
+    while body.last().is_some_and(|l| l.trim().is_empty()) {
+        body.pop();
+    }
+    let mut out: Vec<String> = lines[..=start].iter().map(|l| (*l).to_owned()).collect();
+    out.extend(body.iter().map(|l| (*l).to_owned()));
+    out.push(String::new());
+    out.extend(section.trim_end().lines().map(str::to_owned));
+    if end < lines.len() {
+        out.push(String::new());
+        out.extend(lines[end..].iter().map(|l| (*l).to_owned()));
+    }
+    let mut text = out.join("\n");
+    text.push('\n');
+    Ok(text)
 }
 
 /// Files the release rewrites or that record history by design, never
 /// listed as left behind.
-const HANDLED: [&str; 3] = ["CHANGELOG.md", "Cargo.toml", "Cargo.lock"];
+const HANDLED: [&str; 4] = [
+    "CHANGELOG.md",
+    "Cargo.toml",
+    "Cargo.lock",
+    // The last release's package sizes, rewritten by `--sizes`.
+    crate::sizes::FILE,
+];
 
 /// The `git grep -n` lines (`path:line:text`) in files the release does
 /// not update, as `path, line N: text`.
@@ -691,8 +863,22 @@ mod tests {
                 dry_run: true,
                 checks: true,
                 listened: false,
+                sizes: None,
             }
         );
+        assert_eq!(
+            parse(&["0.2.0".into(), "--sizes".into()]).unwrap().sizes,
+            Some(SizesFrom::Release)
+        );
+        assert_eq!(
+            parse(&["0.2.0".into(), "--sizes-from".into(), "dl".into()])
+                .unwrap()
+                .sizes,
+            Some(SizesFrom::Dir("dl".into()))
+        );
+        assert!(parse(&["0.2.0".into(), "--sizes-from".into()]).is_err());
+        assert!(parse(&["0.2.0".into(), "--sizes".into(), "--dry-run".into()]).is_err());
+        assert!(parse(&["0.2.0".into(), "--sizes".into(), "--listened".into()]).is_err());
         assert!(
             parse(&["0.2.0".into(), "--listened".into()])
                 .unwrap()
@@ -708,6 +894,33 @@ mod tests {
         assert!(parse(&["0.2".into()]).is_err());
         assert!(parse(&["0.2.0".into(), "0.3.0".into()]).is_err());
         assert!(parse(&["0.2.0".into(), "--push".into()]).is_err());
+    }
+
+    /// The sizes go at the end of the release's own section, once.
+    #[test]
+    fn package_sizes_join_the_release_notes() {
+        let log = "# Changelog\n\n## [Unreleased]\n\n## [1.0.0] - 2026-10-01\n\n### Speech\n\n- Faster.\n\n## [0.9.0] - 2026-09-01\n\n- Old.\n";
+        let section = "### Package sizes\n\n- `textweaver-1.0.0-windows-x86_64.zip`: 1.0 MB (1,048,576 bytes)\n";
+        let once = add_sizes_section(log, "1.0.0", section).unwrap();
+        assert_eq!(
+            once,
+            "# Changelog\n\n## [Unreleased]\n\n## [1.0.0] - 2026-10-01\n\n### Speech\n\n- Faster.\n\n### Package sizes\n\n- `textweaver-1.0.0-windows-x86_64.zip`: 1.0 MB (1,048,576 bytes)\n\n## [0.9.0] - 2026-09-01\n\n- Old.\n"
+        );
+        // Again, with new numbers: replaced, not added.
+        let section2 = section.replace("1.0 MB (1,048,576", "2.0 MB (2,097,152");
+        let twice = add_sizes_section(&once, "1.0.0", &section2).unwrap();
+        assert_eq!(twice.matches("### Package sizes").count(), 1, "{twice}");
+        assert!(
+            twice.contains("2,097,152") && !twice.contains("1,048,576"),
+            "{twice}"
+        );
+        // The last section of the file.
+        let last = add_sizes_section(log, "0.9.0", section).unwrap();
+        assert!(last.ends_with("- Old.\n\n### Package sizes\n\n- `textweaver-1.0.0-windows-x86_64.zip`: 1.0 MB (1,048,576 bytes)\n"), "{last}");
+        assert!(add_sizes_section(log, "2.0.0", section).is_err());
+        let notes = changelog_section(&once, "1.0.0").unwrap();
+        assert!(notes.starts_with("### Speech"), "{notes}");
+        assert!(notes.trim_end().ends_with("bytes)"), "{notes}");
     }
 
     #[test]

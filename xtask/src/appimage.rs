@@ -189,7 +189,7 @@ pub fn run() -> anyhow::Result<()> {
             zsync.display()
         );
     }
-    Ok(())
+    crate::sizes::check(&root, &[tarball, file])
 }
 
 /// Lays out the AppDir: the package under `usr/lib/textweaver`, `AppRun`,

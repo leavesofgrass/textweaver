@@ -1,0 +1,29 @@
+# The size of each release package, in bytes, at the last release.
+#
+# `cargo xtask dist`, `gui-dist`, and `appimage` compare each package they
+# write with its line here, and fail when one grew more than 10 percent
+# without a note below saying why. `cargo xtask release VERSION --sizes`
+# rewrites this file from the published release and clears the notes
+# (docs/dev/releasing.md, "Package sizes"). Written by that step; edit only
+# the notes by hand.
+
+version = "0.1.0-alpha.7"
+
+[sizes]
+"linux-aarch64-gui.AppImage" = 37734920
+"linux-aarch64-gui.tar.gz" = 39435795
+"linux-aarch64.AppImage" = 57477640
+"linux-aarch64.tar.gz" = 60806427
+"linux-x86_64-gui.AppImage" = 40380920
+"linux-x86_64-gui.tar.gz" = 42232216
+"linux-x86_64.AppImage" = 61901304
+"linux-x86_64.tar.gz" = 65449528
+"macos-universal-gui.zip" = 64504663
+"macos-universal.tar.gz" = 111911263
+"windows-x86_64-gui.zip" = 43175854
+"windows-x86_64.zip" = 69108008
+
+# Why a package may grow more than 10 percent before the next release, one
+# line per package: "windows-x86_64.zip" = "why". "all" covers every
+# package.
+[notes]
