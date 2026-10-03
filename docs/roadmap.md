@@ -6,7 +6,7 @@ This page is a plain-language summary of where the project stands. For the full 
 
 ## What works today
 
-- **Reading and speech.** The terminal reader (`textweaver`) and command-line tool (`tw`) read large files fast, with word highlighting that follows the audio exactly, never guessing. An all-Rust GUI, built on Xilem, runs on Windows, macOS, and Linux, with native menus and a command palette shared with the terminal reader. Speech engines: ETI-Eloquence, Windows SAPI5 voices, Apple's voices, espeak-ng, speech-dispatcher, DECtalk, and Piper neural voices with model-accurate word timing.
+- **Reading and speech.** Reading pauses briefly after headings, paragraphs, and list items, and says medical and scientific text (identifiers, units, error-prone abbreviations) the way a clinician would. The terminal reader (`textweaver`) and command-line tool (`tw`) read large files fast, with word highlighting that follows the audio exactly, never guessing. An all-Rust GUI, built on Xilem, runs on Windows, macOS, and Linux, with native menus and a command palette shared with the terminal reader. Speech engines: ETI-Eloquence, Windows SAPI5 voices, Apple's voices, espeak-ng, speech-dispatcher, DECtalk, and Piper neural voices with model-accurate word timing.
 - **The interface.** Menus (F10) and a command palette (F2) built from one shared list of commands, in six languages. A file browser walks folders and archives as one list, for opening a document or choosing a folder for another command. Batch conversion runs a whole folder to a chosen format in the background.
 - **Formats.** Text, Markdown, HTML, PDF, EPUB, DOCX, RTF, ODT (including tracked changes and comments), LaTeX, DAISY 3, PowerPoint, spreadsheets, archives, email, saved web pages, Obsidian notes, JSON, SVG drawings, content MathML, and Jupyter notebooks all open natively. OCR reads scanned PDF pages and images, in process by default, with no network access needed for the base features. PDF comments become notes, and PDF links, filled-in forms, and scanned tables are read.
 - **Writing.** Edit mode with structure-aware navigation while typing, spell check, an outline, clipboard support, find and replace, templates, citations (DOI and ISBN lookup, CSL formatting, insert-as-you-write), and dictation that types what you say, phrase by phrase, in the reader and the GUI's edit mode.
@@ -22,7 +22,7 @@ See the [features page](site/features.html) for the full, current list with each
 ## Being built next
 
 - **Release readiness** for the next alpha: packaging, dependency, and CI polish so each release ships cleanly on every platform.
-- **The GUI catching up to the terminal reader.** The voice manager now covers every speech engine, with preview, and the syllable display and the difficult-word overlay are drawn in the GUI too.
+- **The GUI catching up to the terminal reader.** The voice manager covers every speech engine, with preview; the syllable display, the difficult-word overlay, and the Contents and Notes panels are in the GUI too. What is left is polish.
 - **Stabilization:** fixes from hands-on test sessions, a long soak test, a week of clean nightly runs, and a native speaker's review of the translations.
 
 ## Planned
@@ -31,7 +31,7 @@ See the [features page](site/features.html) for the full, current list with each
 - Karaoke-style video export.
 - Quick-open for feeds, Wikipedia, and PubMed.
 - More speech engines (Coqui, Festival, Qt Speech).
-- SSML-style pauses in synthesized speech.
+- Pauses written as markup in the text (SSML style). Pauses after headings, paragraphs, and list items already work.
 - Ogg Vorbis and AAC audio export, and a cover image for audiobooks.
 - A plugin system.
 - An in-app update checker, and a guided first-run tour.

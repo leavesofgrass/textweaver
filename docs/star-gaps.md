@@ -67,7 +67,7 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
 - **Karaoke video export.** Status: missing.
 - **Feeds, Wikipedia, and PubMed** quick open. Status: missing.
 - **More engines:** Coqui, Festival, Qt speech, and cloud voices. Status: missing. speech-dispatcher, which can drive Festival, and DECtalk were added instead.
-- **SSML pauses.** Status: missing.
+- **SSML pauses.** Status: partly. Reading leaves a short silence after each heading, paragraph, and list item, which you can set ([Pauses at headings, paragraphs and list items](speech.md#pauses-at-headings-paragraphs-and-list-items)); pauses written as markup in the text itself are missing.
 - **Audio export to OGG and AAC,** and an M4B cover image. Status: partly. M4B audiobooks are AAC, and Ogg Opus files are written in process ([audio-export.md](audio-export.md)); Ogg Vorbis and the cover image are missing.
 - **Infrastructure:**
   - plugins. Status: missing.
