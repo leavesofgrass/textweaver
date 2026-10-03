@@ -39,6 +39,11 @@ pub(crate) struct FontDownloads {
     pub(crate) question: Option<&'static DownloadableFont>,
     /// The font setting changed; ask when nothing else is being asked.
     pub(crate) offer_pending: bool,
+    /// Fonts (by key) the reader said no to this session: a change made
+    /// elsewhere and noticed on a tick does not ask again (W9a-d).
+    /// Choosing the font in Settings, or a frontend's explicit
+    /// [`App::offer_font_download`], still asks: the way back.
+    pub(crate) declined: std::collections::HashSet<&'static str>,
     /// A download on a helper thread.
     job: Option<(
         &'static DownloadableFont,
@@ -209,6 +214,12 @@ impl App {
         }
     }
 
+    /// True when `family` is a downloadable font the reader declined this
+    /// session.
+    pub(crate) fn font_declined(&self, family: &str) -> bool {
+        downloaded::downloadable(family).is_some_and(|f| self.fonts.declined.contains(f.key))
+    }
+
     /// The question: "Download the Lexend font, 206 KB, SIL Open Font
     /// License? y or n".
     fn font_question(&self, font: &DownloadableFont) -> String {
@@ -268,10 +279,14 @@ impl App {
                 self.ask(&question);
             }
             Confirm::No => {
+                self.fonts.declined.insert(font.key);
                 let msg = self.msg_args("font-download-declined", &args!["font" => font.name]);
                 self.tell(&msg);
             }
-            Confirm::Yes => self.start_font_download(font),
+            Confirm::Yes => {
+                self.fonts.declined.remove(font.key);
+                self.start_font_download(font);
+            }
         }
         vec![Effect::Redraw]
     }
@@ -311,7 +326,15 @@ impl App {
     pub(crate) fn font_download_tick(&mut self) -> Vec<Effect> {
         let mut effects = Vec::new();
         if self.fonts.offer_pending && !self.confirmation_pending() {
-            effects.extend(self.offer_font_download());
+            // A change the reader did not make here (a settings dialog,
+            // a profile, sync) does not ask again about a font declined
+            // this session; choosing it in Settings does.
+            let family = self.settings.reading_aids.font.family.clone();
+            if self.font_declined(&family) {
+                self.fonts.offer_pending = false;
+            } else {
+                effects.extend(self.offer_font_download());
+            }
         }
         let Some((font, rx)) = self.fonts.job.take() else {
             return effects;

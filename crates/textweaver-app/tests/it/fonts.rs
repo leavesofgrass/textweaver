@@ -243,6 +243,23 @@ fn a_setting_changed_elsewhere_asks_on_the_next_tick() {
     assert!(said.any(QUESTION), "{:?}", said.all());
     assert!(app.confirmation_pending());
     app.dispatch(Command::Confirm(Confirm::No));
+    // Declined: remembered for the session, so a change made elsewhere
+    // does not ask again (W9a-d) ...
+    said.clear();
+    for family in ["sans", "lexend"] {
+        app.set_setting(
+            "reading_aids.font.family",
+            serde_json::Value::String(family.into()),
+        )
+        .unwrap();
+        app.tick(Instant::now());
+    }
+    assert!(!said.any(QUESTION), "{:?}", said.all());
+    assert!(!app.confirmation_pending());
+    // ... while choosing it in Settings is the way back.
+    choose(&mut app, "lexend");
+    assert!(said.any(QUESTION), "{:?}", said.all());
+    app.dispatch(Command::Confirm(Confirm::No));
 }
 
 #[test]
