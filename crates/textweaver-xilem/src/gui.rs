@@ -54,6 +54,7 @@ use crate::keys;
 use crate::rsvp::{RsvpShown, RsvpView};
 use crate::settings_dialog::{self, FormAction, FormChange, SettingsForm, SettingsGrid};
 use crate::setup::{self, Options};
+use crate::sidebar::{self, SIDEBAR, SIDEBAR_LIST, Sidebar, SidebarAction, SidebarShown};
 use crate::theme::{self, Palette};
 use crate::widgets::{
     ActionButton, AnnounceMode, Announcer, KeyAction, Message, MessageQueue, Pressed, Region, Root,
@@ -289,6 +290,10 @@ enum OpenDialog {
 /// The widget tree's toolbar buttons and what they do.
 struct Buttons {
     by_id: HashMap<WidgetId, ActionId>,
+    /// The header's buttons, in order (F6 lands on the first).
+    header: Vec<WidgetId>,
+    /// The toolbar's buttons, in order (F6 lands on Play).
+    toolbar: Vec<WidgetId>,
 }
 
 /// The driver: the app and the window's state.
@@ -299,6 +304,8 @@ pub struct Gui {
     window_id: WindowId,
     palette: Palette,
     shown: Shown,
+    /// The Contents or Notes panel as last shown ([`crate::sidebar`]).
+    sidebar: SidebarShown,
     buttons: Buttons,
     dialog: Option<OpenDialog>,
     log: bool,
@@ -612,8 +619,17 @@ pub fn build_tree(
     let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
         .with_tag(HEADER)
         .with_props(panel(p, 10.0, 16.0));
+    // Widget ids are handed out in order, so sorting them is the order the
+    // buttons were made in, which is their order on screen (for F6).
+    let in_order = |ids: &HashMap<WidgetId, ActionId>, skip: &[WidgetId]| {
+        let mut v: Vec<WidgetId> = ids.keys().copied().filter(|i| !skip.contains(i)).collect();
+        v.sort_by_key(|i| i.to_raw());
+        v
+    };
+    let header_ids = in_order(&ids, &[]);
 
-    // The document.
+    // The document, in its row with the Contents or Notes panel
+    // ([`crate::sidebar`]), which is not there until shown.
     let doc = NewWidget::new(
         DocumentView::new(p.clone(), font, Rc::clone(&full_passes))
             .with_select_spoken(experiments.select_spoken)
@@ -621,6 +637,7 @@ pub fn build_tree(
             .with_label(c.tr("gui-document")),
     )
     .with_tag(DOC);
+    let doc = NewWidget::new(Sidebar::new(doc)).with_tag(SIDEBAR);
     // RSVP, hidden until it is turned on: its own strip under the document,
     // so the word never covers the text or the caret.
     let rsvp = NewWidget::new(RsvpView::new(p.clone())).with_tag(RSVP);
@@ -671,6 +688,7 @@ pub fn build_tree(
     ))
     .with_tag(TOOLBAR)
     .with_props(panel(p, 10.0, 12.0));
+    let toolbar_ids = in_order(&ids, &header_ids);
 
     // Status bar: the latest message and the position.
     let status_text = NewWidget::new(label("", theme::UI_TEXT, false).accessibility_hidden(true))
@@ -707,7 +725,11 @@ pub fn build_tree(
     let root = NewWidget::new(Root::new(main, full_passes)).with_tag(ROOT);
     Tree {
         root,
-        buttons: Buttons { by_id: ids },
+        buttons: Buttons {
+            by_id: ids,
+            header: header_ids,
+            toolbar: toolbar_ids,
+        },
     }
 }
 
@@ -1477,6 +1499,15 @@ impl Gui {
                 crate::log::line(&format!("theme: {}", self.palette.name));
             }
         }
+        // The Contents or Notes panel follows `[gui] sidebar` and the
+        // document; closed, this reads one setting.
+        let root = ctx.render_root(self.window_id);
+        let change = sidebar::sync(&self.app, &self.palette, &mut self.sidebar, root);
+        if let Some(change) = change
+            && self.log
+        {
+            crate::log::line(&format!("panel: {change:?}"));
+        }
         self.sync_question(ctx);
         self.sync_misspellings(ctx);
         // The font list (the app's list, the window's families): a family
@@ -1591,10 +1622,77 @@ impl Gui {
             ActionId::TextLarger
             | ActionId::TextSmaller
             | ActionId::TextSizeReset
-            | ActionId::ChooseFont => true,
+            | ActionId::ChooseFont
+            | ActionId::ContentsPanel
+            | ActionId::NotesPanel
+            | ActionId::NextRegion
+            | ActionId::PreviousRegion => true,
             ActionId::Menu => self.native.is_some() && cfg!(windows),
             _ => false,
         }
+    }
+
+    /// The Contents or Notes panel key ([`sidebar::toggle`]): shows the
+    /// panel and goes to it, or closes it from inside it; says which.
+    fn panel_key(&mut self, ctx: &mut DriverCtx<'_>, panel: textweaver_app::Panel) {
+        let root = ctx.render_root(self.window_id);
+        let t = sidebar::toggle(&mut self.app, panel, &self.palette, &mut self.sidebar, root);
+        if self.log {
+            crate::log::line(&format!("panel key: {t:?}"));
+        }
+        if let Some(said) = sidebar::toggled_message(&self.app, t) {
+            let importance = if matches!(t, sidebar::Toggled::Closed(_)) {
+                Importance::Routine
+            } else {
+                Importance::Result
+            };
+            self.app.announce_as(&said, Priority::Polite, importance);
+        }
+        self.refresh(ctx);
+    }
+
+    /// F6 (`forward`) or Shift+F6: the focus moves to the next region
+    /// (header, panel, document, toolbar), as in Windows programs.
+    fn region_key(&mut self, ctx: &mut DriverCtx<'_>, forward: bool) {
+        let root = ctx.render_root(self.window_id);
+        let (list, doc) = root.get_widget_with_tag(SIDEBAR).map_or((None, None), |s| {
+            (s.inner().list_id(), Some(s.inner().doc_id()))
+        });
+        let regions = sidebar::Regions {
+            header: self.buttons.header.clone(),
+            sidebar: list,
+            document: doc,
+            toolbar: self.buttons.toolbar.clone(),
+        };
+        let to = sidebar::next_region(&regions, root.focused_widget(), forward);
+        if self.log {
+            crate::log::line(&format!("region key: to {to:?}"));
+        }
+        if to.is_some() {
+            root.focus_on(to);
+        }
+    }
+
+    /// A key or Enter in the panel's list ([`SidebarAction`], or the list's
+    /// choice): the document goes to the row, and with `leave` (or Escape,
+    /// with no row) the focus returns to the document.
+    fn panel_go(&mut self, ctx: &mut DriverCtx<'_>, row: Option<usize>, leave: bool) {
+        let root = ctx.render_root(self.window_id);
+        let effects = match row {
+            Some(i) => sidebar::go(&mut self.app, &self.sidebar, i, leave, root),
+            None => {
+                let doc = root
+                    .get_widget_with_tag(SIDEBAR)
+                    .map(|s| s.inner().doc_id());
+                root.focus_on(doc);
+                Vec::new()
+            }
+        };
+        if self.log {
+            crate::log::line(&format!("panel row {row:?}, leave {leave}"));
+        }
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
     }
 
     /// Runs `a` if the window runs it itself ([`Self::is_window_command`]);
@@ -1610,6 +1708,10 @@ impl Gui {
             ActionId::TextSmaller => self.text_size(ctx, Step::Smaller),
             ActionId::TextSizeReset => self.text_size(ctx, Step::Reset),
             ActionId::ChooseFont => self.open_fonts(ctx),
+            ActionId::ContentsPanel => self.panel_key(ctx, textweaver_app::Panel::Contents),
+            ActionId::NotesPanel => self.panel_key(ctx, textweaver_app::Panel::Notes),
+            ActionId::NextRegion => self.region_key(ctx, true),
+            ActionId::PreviousRegion => self.region_key(ctx, false),
             ActionId::Menu => {
                 // The native menu bar, entered as F10 enters it.
                 self.reveal_menu_bar();
@@ -3180,6 +3282,28 @@ impl AppDriver for Gui {
         } else if let Some(a) = action.downcast_ref::<FormAction>() {
             let a = a.clone();
             self.settings_form_action(ctx, a);
+        } else if let Some(SidebarAction::Leave { go }) = action.downcast_ref::<SidebarAction>() {
+            // Escape, or Shift+Enter (go to the row first), in the panel.
+            let row = if *go {
+                ctx.render_root(self.window_id)
+                    .get_widget_with_tag(SIDEBAR_LIST)
+                    .map(|l| l.inner().selected())
+            } else {
+                None
+            };
+            self.panel_go(ctx, row, true);
+        } else if let Some(d) = action.downcast_ref::<DialogAction>()
+            && ctx
+                .render_root(self.window_id)
+                .get_widget_with_tag(SIDEBAR)
+                .is_some_and(|s| s.inner().list_id() == Some(widget_id))
+        {
+            // The panel's list is not a dialog: Enter (or a double click)
+            // goes to the row, and the focus stays in the list.
+            if let DialogAction::Choose(i) = d {
+                let i = *i;
+                self.panel_go(ctx, Some(i), false);
+            }
         } else if let Some(d) = action.downcast_ref::<DialogAction>() {
             if matches!(self.dialog, Some(OpenDialog::Question { .. })) {
                 match d {
@@ -3608,6 +3732,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         window_id,
         palette,
         shown: Shown::default(),
+        sidebar: SidebarShown::default(),
         buttons: tree.buttons,
         dialog: None,
         log: opts.log,

@@ -72,7 +72,7 @@ fn lists_pages(items: &[OutlineItem]) -> bool {
     items.first().is_some_and(|i| i.level == 0)
 }
 
-fn outline_label(c: &Catalog, h: &OutlineItem) -> String {
+pub(crate) fn outline_label(c: &Catalog, h: &OutlineItem) -> String {
     // A page ("Page 12: its first words") has no level to say.
     if h.level == 0 {
         return h.text.clone();
@@ -324,13 +324,7 @@ impl App {
         let Some(s) = self.session.as_ref() else {
             return vec![Effect::Redraw];
         };
-        let mut items = headings(&s.doc);
-        // No headings: a paged document (a PDF) lists its pages instead
-        // (crate::pages).
-        let by_page = items.is_empty() && self.has_pages();
-        if by_page {
-            items = self.page_outline(&s.doc);
-        }
+        let (items, by_page) = self.outline_items();
         if items.is_empty() {
             let msg = self.msg("lists-no-headings");
             self.tell(&msg);
@@ -359,8 +353,22 @@ impl App {
         self.show_authoring_list(AuthoringList::Outline { items, shown })
     }
 
+    /// The outline's items: the headings, or in a paged document without
+    /// headings (a PDF) its pages ([`crate::pages`]); `true` with pages.
+    /// The outline (Alt+O) and the window's Contents panel list these.
+    pub(crate) fn outline_items(&self) -> (Vec<OutlineItem>, bool) {
+        let Some(s) = self.session.as_ref() else {
+            return (Vec::new(), false);
+        };
+        let items = headings(&s.doc);
+        if items.is_empty() && self.has_pages() {
+            return (self.page_outline(&s.doc), true);
+        }
+        (items, false)
+    }
+
     /// Jumps to a heading chosen in the outline (recorded in history).
-    fn go_to_heading(&mut self, h: &OutlineItem) {
+    pub(crate) fn go_to_heading(&mut self, h: &OutlineItem) {
         // A page in a paged document's outline.
         if h.level == 0 {
             if let Some(page) = self.page_of(h.pos) {

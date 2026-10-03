@@ -811,6 +811,10 @@ action-text-larger = Den Text des Dokuments vergrößern
 action-text-smaller = Den Text des Dokuments verkleinern
 action-text-size-reset = Den Text des Dokuments auf die Standardgröße zurücksetzen
 action-choose-font = Die Schriftart des Dokumenttexts wählen
+action-contents-panel = Den Bereich Inhalt neben dem Dokument zeigen und dorthin wechseln, oder ihn von innen schließen: Eingabetaste springt zu einer Überschrift
+action-notes-panel = Den Bereich Notizen neben dem Dokument zeigen und dorthin wechseln, oder ihn von innen schließen: Eingabetaste springt zu einer Notiz
+action-next-region = Zum nächsten Teil des Fensters: Kopfzeile, Bereich, Dokument oder Symbolleiste
+action-previous-region = Zum vorherigen Teil des Fensters
 action-command-palette = Jeden Befehl über seinen Namen ausführen
 action-settings = Die Einstellungen öffnen: jede Option mit ihrer Hilfe; Links und Rechts ändern einen Wert
 action-keyboard-help = Tastenkombinationen auflisten
@@ -2025,6 +2029,11 @@ choice-gui-announce-live = Live-Region
 choice-gui-announce-uia = UI-Automation-Benachrichtigungen
 setting-gui-auto-hide-menu = Menüleiste ausblenden
 setting-gui-auto-hide-menu-help = Windows: blendet die Menüleiste des Fensters aus, bis Alt oder F10 sie zeigt; sie verschwindet wieder, wenn das Menü schließt. Keine Wirkung unter Linux, dessen Menüs die F10-Liste sind, oder unter macOS.
+setting-gui-sidebar = Bereich neben dem Dokument
+setting-gui-sidebar-help = Der Bereich, den das Fenster neben dem Dokument zeigt: keiner, der Inhalt (die Überschriften) oder die Notizen. Die Bereichstasten ändern ihn, und das Fenster merkt sich den letzten.
+choice-gui-sidebar-off = keiner
+choice-gui-sidebar-contents = Inhalt
+choice-gui-sidebar-notes = Notizen
 
 ## Units, said after a number.
 
@@ -2873,6 +2882,18 @@ gui-toolbar-reading = Lesen
 gui-document = Dokument
 gui-document-titled = { $title }, Dokument
 gui-list-hint = Eingabetaste wählt, Escape schließt.
+gui-sidebar-contents = Inhalt
+gui-sidebar-notes = Notizen
+gui-sidebar-open =
+    { $n ->
+        [one] { $panel } offen, 1 Eintrag.
+       *[other] { $panel } offen, { $n } Einträge.
+    }
+gui-sidebar-closed = { $panel } geschlossen.
+gui-sidebar-no-headings = Keine Überschriften.
+gui-sidebar-no-notes = Keine Notizen.
+gui-sidebar-current = { $item }, aktuell
+gui-sidebar-hint = Eingabetaste springt hin. { $leave } springt und kehrt zurück. Escape kehrt zurück.
 gui-settings-sections = Bereiche
 gui-settings-form = Einstellungen: { $section }
 gui-settings-saved-hint = Änderungen wirken sofort und werden sofort gespeichert.
@@ -3186,6 +3207,10 @@ name-text-larger = Größerer Text
 name-text-smaller = Kleinerer Text
 name-text-size-reset = Standard-Textgröße
 name-choose-font = Schriftart
+name-contents-panel = Bereich Inhalt
+name-notes-panel = Bereich Notizen
+name-next-region = Nächster Teil
+name-previous-region = Vorheriger Teil
 name-color-settings = Farben
 name-cycle-interface-announcements = Oberflächenansagen
 name-menu = Menüs

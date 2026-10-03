@@ -198,6 +198,7 @@ mod notes;
 pub mod opener;
 pub mod opening;
 mod pages;
+pub mod panels;
 pub mod path_complete;
 pub mod path_prompt;
 mod playback;
@@ -273,6 +274,7 @@ pub use opener::open_with_system;
 pub use opening::{
     open_failure_message, open_failure_message_in, open_failure_reason, open_failure_reason_in,
 };
+pub use panels::{Panel, PanelEntry, current_entry};
 pub use playback::{Playback, load_options, narration_policy, structural_pauses};
 pub use restart::SpeechStarter;
 pub use settings_schema::{Setting, SettingKind, SettingsSchema};

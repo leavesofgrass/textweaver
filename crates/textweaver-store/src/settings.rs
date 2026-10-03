@@ -1317,9 +1317,26 @@ pub struct GuiSettings {
     /// the menus only as the F10 list, and macOS keeps them at the top of
     /// the screen.
     pub auto_hide_menu: bool,
+    /// The panel beside the document (Wave 8d): none, the Contents (the
+    /// headings), or the Notes. The window remembers the last one shown.
+    pub sidebar: GuiSidebar,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
+}
+
+/// The panel the window shows beside the document (`[gui] sidebar`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GuiSidebar {
+    /// No panel.
+    #[default]
+    Off,
+    /// The Contents: the document's headings (or pages), as the outline
+    /// lists them.
+    Contents,
+    /// The Notes: the document's notes, as the notes list shows them.
+    Notes,
 }
 
 /// `[colors]`: the color of each reading aid and part of the screen, over
@@ -3232,5 +3249,28 @@ wrap_navigation = true
         let (back, w) = Settings::from_table(text.parse().unwrap());
         assert!(w.is_empty(), "{w:?}");
         assert_eq!(back.gui, s.gui);
+    }
+
+    /// `[gui] sidebar` (Wave 8d): off by default and not written then; a
+    /// panel is written and read back; a bad value warns and stays off.
+    #[test]
+    fn gui_sidebar_round_trips() {
+        let d = Settings::default();
+        assert_eq!(d.gui.sidebar, GuiSidebar::Off);
+        assert!(!d.to_minimal_toml().unwrap().contains("sidebar"));
+        for (name, panel) in [
+            ("contents", GuiSidebar::Contents),
+            ("notes", GuiSidebar::Notes),
+        ] {
+            let (s, w) =
+                Settings::from_table(format!("[gui]\nsidebar = \"{name}\"\n").parse().unwrap());
+            assert!(w.is_empty(), "{w:?}");
+            assert_eq!(s.gui.sidebar, panel);
+            let text = s.to_minimal_toml().unwrap();
+            assert!(text.contains(&format!("sidebar = \"{name}\"")), "{text}");
+        }
+        let (s, w) = Settings::from_table("[gui]\nsidebar = \"left\"\n".parse().unwrap());
+        assert_eq!(w, ["gui.sidebar has an invalid value"]);
+        assert_eq!(s.gui.sidebar, GuiSidebar::Off);
     }
 }

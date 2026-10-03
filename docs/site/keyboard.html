@@ -5434,20 +5434,13 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
   {
    "action": "Show or hide line numbers",
    "category": "View and help",
-   "gui": [
-    {
-     "key": "F6",
-     "layer": "global"
-    }
-   ],
+   "gui": [],
    "id": "toggle_line_numbers",
-   "mac": [
-    {
-     "key": "F6",
-     "layer": "global"
-    }
-   ],
-   "palette_when_off": null,
+   "mac": [],
+   "palette_when_off": {
+    "gui": true,
+    "terminal": false
+   },
    "source": "keymap",
    "terminal": [
     {
@@ -5713,6 +5706,98 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "mac": [
     {
      "key": "Cmd+T",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Show the Contents panel beside the document and go to it, or close it from inside it: Enter goes to a heading",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Ctrl+1",
+     "layer": "global"
+    }
+   ],
+   "id": "contents_panel",
+   "mac": [
+    {
+     "key": "Cmd+1",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Ctrl+2",
+     "layer": "global"
+    }
+   ],
+   "id": "notes_panel",
+   "mac": [
+    {
+     "key": "Cmd+2",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Move to the next part of the window: the header, the panel, the document, or the toolbar",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "F6",
+     "layer": "global"
+    }
+   ],
+   "id": "next_region",
+   "mac": [
+    {
+     "key": "F6",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": {
+    "gui": false,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Move to the previous part of the window",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Shift+F6",
+     "layer": "global"
+    }
+   ],
+   "id": "previous_region",
+   "mac": [
+    {
+     "key": "Shift+F6",
      "layer": "global"
     }
    ],

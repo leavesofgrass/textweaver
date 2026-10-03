@@ -780,6 +780,10 @@ action-text-larger = Make the document text larger
 action-text-smaller = Make the document text smaller
 action-text-size-reset = Return the document text to its standard size
 action-choose-font = Choose the font of the document text
+action-contents-panel = Show the Contents panel beside the document and go to it, or close it from inside it: Enter goes to a heading
+action-notes-panel = Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note
+action-next-region = Move to the next part of the window: the header, the panel, the document, or the toolbar
+action-previous-region = Move to the previous part of the window
 action-command-palette = Run any command by name
 action-settings = Open the settings: every option with its help; Left and Right change a value
 action-keyboard-help = List keyboard shortcuts
@@ -1994,6 +1998,11 @@ choice-gui-announce-live = live region
 choice-gui-announce-uia = UI Automation notifications
 setting-gui-auto-hide-menu = Hide the menu bar
 setting-gui-auto-hide-menu-help = Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.
+setting-gui-sidebar = Panel beside the document
+setting-gui-sidebar-help = The panel the window shows beside the document: none, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one.
+choice-gui-sidebar-off = none
+choice-gui-sidebar-contents = Contents
+choice-gui-sidebar-notes = Notes
 
 ## Units, said after a number.
 
@@ -2870,6 +2879,18 @@ gui-toolbar-reading = Reading
 gui-document = Document
 gui-document-titled = { $title }, document
 gui-list-hint = Enter chooses, Escape closes.
+gui-sidebar-contents = Contents
+gui-sidebar-notes = Notes
+gui-sidebar-open =
+    { $n ->
+        [one] { $panel } open, 1 item.
+       *[other] { $panel } open, { $n } items.
+    }
+gui-sidebar-closed = { $panel } closed.
+gui-sidebar-no-headings = No headings.
+gui-sidebar-no-notes = No notes.
+gui-sidebar-current = { $item }, current
+gui-sidebar-hint = Enter goes there. { $leave } goes and returns. Escape returns.
 gui-settings-sections = Sections
 gui-settings-form = { $section } settings
 gui-settings-saved-hint = Changes take effect and are saved at once.
@@ -3183,6 +3204,10 @@ name-text-larger = Larger text
 name-text-smaller = Smaller text
 name-text-size-reset = Standard text size
 name-choose-font = Font
+name-contents-panel = Contents panel
+name-notes-panel = Notes panel
+name-next-region = Next region
+name-previous-region = Previous region
 name-color-settings = Colors
 name-cycle-interface-announcements = Interface announcements
 name-menu = Menus

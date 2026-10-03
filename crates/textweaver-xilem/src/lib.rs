@@ -9,6 +9,8 @@
 //! - [`document`]: the `DocumentView` widget, with the reading aids it
 //!   draws (text spacing, the ruler, bionic reading, difficult words).
 //! - [`rsvp`]: the RSVP panel, one word at a time under the document.
+//! - [`sidebar`]: the Contents and Notes panels beside the document, and
+//!   F6 between the window's regions.
 //! - [`widgets`]: the root, panels, buttons, and the live-region announcer.
 //! - [`dialog`]: in-window dialogs: prompts and lists.
 //! - [`menus`]: the menus, native on Windows and macOS, from the app's model.
@@ -59,6 +61,7 @@ pub mod runs;
 pub mod screenshot;
 pub mod settings_dialog;
 pub mod setup;
+pub mod sidebar;
 pub mod system_colors;
 pub mod theme;
 pub mod voices;

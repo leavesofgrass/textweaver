@@ -75,7 +75,7 @@ pub use settings::{
     BrailleTableFormat, CitationReading, ColorSettings, CommunityLexiconSettings,
     ComponentsSettings, CursorPlacement, DectalkSettings, DictationSettings, DigitRow,
     DisplaySettings, EciDictionaries, EciSettings, EditingSettings, ExportSettings, FootnoteMode,
-    GuiAnnounce, GuiSettings, HighlightSettings, HintsLine, InterfaceAnnouncements,
+    GuiAnnounce, GuiSettings, GuiSidebar, HighlightSettings, HintsLine, InterfaceAnnouncements,
     InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset, LexiconSettings,
     LibrarySettings, MathBrailleCode, MathDisplay, MathEngine, MedicalLexiconSettings,
     NormalizationSettings, OcrEngine, PiperPhonemizer, PiperSettings, PositionPolicy,
