@@ -1038,6 +1038,8 @@ publish-start-failed = Could not start the export: { $error }
 publish-export-error = Could not export: { $error }
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = Exporting to { $format }.
+publish-theme-title = Theme for the HTML page
+publish-theme-intro = Theme for the HTML page? { $first } first, { $n } choices. Escape cancels.
 publish-writing-preview = Writing the preview.
 publish-preview-error = Could not write the preview: { $error }
 publish-still-exporting =

@@ -138,6 +138,18 @@ pub(crate) enum ExportKind {
     PreviewLive,
 }
 
+/// What "Theme for the HTML page?" was asked for (crate::publish).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(not(feature = "publish"), allow(dead_code))]
+pub(crate) enum ThemeFor {
+    /// Export to HTML, next to the document.
+    Export,
+    /// Preview in the browser.
+    Preview,
+    /// A batch conversion to HTML: the where list comes next.
+    Batch,
+}
+
 /// A finished export or preview.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct ExportDone {
@@ -239,6 +251,9 @@ pub(crate) struct Authoring {
     pub(crate) preview_version: u64,
     /// The document folder of the preview, for its images.
     pub(crate) preview_folder: Option<PathBuf>,
+    /// The theme chosen for HTML pages this session: offered first the
+    /// next time, and used when the preview is rewritten.
+    pub(crate) html_theme: Option<String>,
 }
 
 /// Listening to the rendered text while editing.

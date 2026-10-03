@@ -6,6 +6,8 @@
 //!    ([`App::choose_folder`]).
 //! 2. **The format**, Markdown first, then PDF and the other outputs
 //!    `textweaver-convert` writes.
+//!    HTML then asks "Theme for the HTML page?", the reading theme first
+//!    (or this session's last answer); Escape cancels.
 //! 3. **Where**: a `converted` folder inside the one chosen (the default),
 //!    beside each source file, or another folder chosen in the browser.
 //!
@@ -201,6 +203,9 @@ mod run {
                 BatchList::Format => match FORMATS.get(n) {
                     Some(&f) => {
                         self.batch.format = Some(f);
+                        if f == OutputFormat::Html {
+                            return self.ask_html_theme(crate::authoring_state::ThemeFor::Batch);
+                        }
                         self.batch_where()
                     }
                     None => vec![Effect::Redraw],
@@ -227,6 +232,11 @@ mod run {
                     None => vec![Effect::Redraw],
                 },
             }
+        }
+
+        /// The theme for the HTML pages was chosen: the where list.
+        pub(crate) fn batch_theme_chosen(&mut self) -> Vec<Effect> {
+            self.batch_where()
         }
 
         /// The where list: the `converted` folder, beside the sources, or
@@ -266,6 +276,9 @@ mod run {
                 textweaver_store::MathBrailleCode::Ueb => textweaver_convert::MathCode::Ueb,
             };
             o.write.braille.table_format = crate::publish::braille_tables(&self.settings);
+            if to == OutputFormat::Html {
+                o.theme_css = Some(self.html_theme_css());
+            }
             o.citations.user_library = self
                 .paths
                 .as_ref()

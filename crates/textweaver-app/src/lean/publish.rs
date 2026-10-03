@@ -36,6 +36,16 @@ impl App {
         vec![Effect::Redraw]
     }
 
+    /// The theme question is never asked in this build.
+    pub(crate) fn choose_html_theme(
+        &mut self,
+        _purpose: crate::authoring_state::ThemeFor,
+        _names: &[String],
+        _n: usize,
+    ) -> Vec<Effect> {
+        vec![Effect::Redraw]
+    }
+
     /// `preview_in_browser`.
     pub(crate) fn preview_in_browser(&mut self) -> Vec<Effect> {
         let msg = self.msg("lean-publish-not-in-build");

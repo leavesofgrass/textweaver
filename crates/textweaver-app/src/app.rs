@@ -300,6 +300,10 @@ pub(crate) enum ListKind {
     /// Manage optional components, one component's actions, or the
     /// first-run list (crate::components).
     Components(crate::components::ComponentsList),
+    /// "Theme for the HTML page?": what it is for, and the theme names in
+    /// the order shown (crate::publish).
+    #[cfg_attr(not(feature = "publish"), allow(dead_code))]
+    HtmlTheme(crate::authoring_state::ThemeFor, Vec<String>),
 }
 
 /// The application: the only owner of mutable state.
@@ -1707,6 +1711,9 @@ impl App {
             Some(ListKind::Sync(l)) => return self.choose_sync(l, n),
             Some(ListKind::Continue(paths)) => return self.choose_continue(&paths, n),
             Some(ListKind::Components(l)) => return self.choose_component_row(l, n),
+            Some(ListKind::HtmlTheme(purpose, names)) => {
+                return self.choose_html_theme(purpose, &names, n);
+            }
             Some(ListKind::Palette(actions)) => {
                 if let Some(&a) = actions.get(n) {
                     return self.run_command(a);

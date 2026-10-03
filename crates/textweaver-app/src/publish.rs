@@ -9,9 +9,13 @@
 //!   References section added, from the bibliography the front matter
 //!   names, the folder's `references.json`, and your library. The work runs
 //!   on another thread; when it is done textweaver says where the file went
-//!   and asks "Open it? y or n".
+//!   and asks "Open it? y or n". HTML first asks "Theme for the HTML
+//!   page?": the themes, this session's last answer or else the reading
+//!   theme first and selected; Escape cancels. The page carries that
+//!   theme's colors alone, not Galaxy's light and dark pair.
 //! - **Preview in browser** writes the page, with math as MathML, to the
-//!   `preview` folder of the cache folder and opens the default browser.
+//!   `preview` folder of the cache folder and opens the default browser,
+//!   after the same theme question; rewrites keep the answer.
 //!   Each save while editing writes it again, and textweaver says "Preview
 //!   updated. Press F5 in the browser." With `[preview] auto_reload`
 //!   (palette: `toggle preview auto reload`), the page is served by a small
@@ -38,7 +42,9 @@ use textweaver_lexicon::args;
 use textweaver_speech::ReadingGeneration;
 
 use crate::app::App;
-use crate::authoring_state::{ExportDone, ExportKind, Job, Listening, Progress, file_name};
+use crate::authoring_state::{
+    ExportDone, ExportKind, Job, Listening, Progress, ThemeFor, file_name,
+};
 use crate::command::Effect;
 
 /// How much text "listen to the rendered text" plans at once, in chars.
@@ -299,6 +305,9 @@ impl App {
             .as_ref()
             .map(|p| textweaver_cite::user_library_path(&p.data_dir));
         o.citations.bibliography = src.bibliography.clone();
+        if to == OutputFormat::Html {
+            o.theme_css = Some(self.html_theme_css());
+        }
         o
     }
 
@@ -391,7 +400,90 @@ impl App {
         }
     }
 
-    /// Exports the document to `to`, next to it.
+    /// The theme names for "Theme for the HTML page?": this session's last
+    /// answer, else the reading theme, first; then every other theme in
+    /// cycle order.
+    pub(crate) fn html_theme_names(&self) -> Vec<String> {
+        let first = self
+            .authoring
+            .html_theme
+            .as_deref()
+            .and_then(|n| self.themes.get(n))
+            .unwrap_or_else(|| self.current_theme())
+            .meta
+            .name
+            .clone();
+        let mut names = vec![first.clone()];
+        names.extend(
+            self.themes
+                .names()
+                .into_iter()
+                .filter(|n| *n != first)
+                .map(str::to_owned),
+        );
+        names
+    }
+
+    /// Asks "Theme for the HTML page?" with the themes, the first selected.
+    /// Escape cancels.
+    pub(crate) fn ask_html_theme(&mut self, purpose: ThemeFor) -> Vec<Effect> {
+        let names = self.html_theme_names();
+        let items: Vec<String> = names
+            .iter()
+            .filter_map(|n| self.themes.get(n))
+            .map(|t| t.meta.display_name.clone())
+            .collect();
+        let first = items.first().cloned().unwrap_or_default();
+        let msg = self.msg_args(
+            "publish-theme-intro",
+            &args!["n" => items.len(), "first" => first],
+        );
+        self.list = Some(crate::app::ListKind::HtmlTheme(purpose, names));
+        self.tell(&msg);
+        vec![Effect::ShowList {
+            title: self.msg("publish-theme-title"),
+            items,
+        }]
+    }
+
+    /// Enter in the theme list: remembered for the session, then the
+    /// export, preview, or batch goes on.
+    pub(crate) fn choose_html_theme(
+        &mut self,
+        purpose: ThemeFor,
+        names: &[String],
+        n: usize,
+    ) -> Vec<Effect> {
+        let Some(name) = names.get(n) else {
+            return vec![Effect::Redraw];
+        };
+        self.authoring.html_theme = Some(name.clone());
+        match purpose {
+            ThemeFor::Export => self.export_now(OutputFormat::Html),
+            ThemeFor::Preview => self.preview_now(),
+            ThemeFor::Batch => self.batch_theme_chosen(),
+        }
+    }
+
+    /// The CSS for an HTML page: the theme chosen this session, else the
+    /// reading theme; the reading theme keeps the reader's highlight and
+    /// `[colors]` settings.
+    pub(crate) fn html_theme_css(&self) -> String {
+        let current = self.current_theme().meta.name.clone();
+        let chosen = self
+            .authoring
+            .html_theme
+            .as_deref()
+            .and_then(|n| self.themes.get(n))
+            .filter(|t| t.meta.name != current);
+        match chosen {
+            Some(t) => textweaver_theme::css::single_stylesheet(t),
+            None => textweaver_theme::css::single_stylesheet(&self.reading_theme()),
+        }
+    }
+
+    /// Exports the document to `to`, next to it; HTML asks for the theme
+    /// first.
     pub(crate) fn export_to(&mut self, to: OutputFormat) -> Vec<Effect> {
         if self.session.is_none() {
             let open = self.key(textweaver_keymap::ActionId::Open);
@@ -399,6 +491,14 @@ impl App {
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
+        if to == OutputFormat::Html {
+            return self.ask_html_theme(ThemeFor::Export);
+        }
+        self.export_now(to)
+    }
+
+    /// Exports the document to `to`, next to it, without asking.
+    fn export_now(&mut self, to: OutputFormat) -> Vec<Effect> {
         let src = match self.export_source() {
             Ok(s) => s,
             Err(e) => {
@@ -437,6 +537,11 @@ impl App {
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
+        self.ask_html_theme(ThemeFor::Preview)
+    }
+
+    /// Writes the preview and opens it, the theme chosen.
+    fn preview_now(&mut self) -> Vec<Effect> {
         let msg = self.msg("publish-writing-preview");
         self.tell(&msg);
         self.write_preview(ExportKind::PreviewOpen);
@@ -948,6 +1053,64 @@ mod tests {
         app.authoring_tick(t0 + Duration::from_millis(30000));
         assert!(app.status_text().starts_with("Still exporting to PDF, 30"));
         drop(tx);
+    }
+
+    /// Export to HTML asks "Theme for the HTML page?": the reading theme
+    /// first; Escape cancels with nothing written; the chosen theme's CSS is
+    /// in the page, and the answer comes first next time this session.
+    #[test]
+    fn html_export_asks_for_the_theme() {
+        use crate::command::Command;
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("essay.md");
+        std::fs::write(&file, "# Essay\n\nText.\n").unwrap();
+        let mut config = crate::AppConfig::for_tests();
+        config.settings.display.theme = "nord".into();
+        let mut app = App::new(config);
+        app.dispatch(Command::Open(file));
+        let ask = |app: &mut App| {
+            let effects = app.dispatch(Command::Action(textweaver_keymap::ActionId::ExportHtml));
+            effects
+                .iter()
+                .find_map(|e| match e {
+                    Effect::ShowList { title, items } => Some((title.clone(), items.clone())),
+                    _ => None,
+                })
+                .expect("a list")
+        };
+        let (title, items) = ask(&mut app);
+        assert_eq!(title, "Theme for the HTML page");
+        assert_eq!(items[0], "Nord");
+        assert!(
+            app.status_text().starts_with(&format!(
+                "Theme for the HTML page? Nord first, {} choices.",
+                items.len()
+            )),
+            "{}",
+            app.status_text()
+        );
+        // Escape: nothing is exported.
+        app.dispatch(Command::Cancel);
+        assert!(app.authoring.jobs.is_empty());
+        let out = dir.path().join("essay.html");
+        assert!(!out.exists());
+        // Sepia is chosen: its colors are the page's.
+        let (_, items) = ask(&mut app);
+        let n = items.iter().position(|i| i == "Sepia").unwrap();
+        app.dispatch(Command::Choose(n));
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+        while !app.authoring.jobs.is_empty() && std::time::Instant::now() < deadline {
+            let _ = app.tick(std::time::Instant::now());
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        let page = std::fs::read_to_string(&out).unwrap();
+        assert!(page.contains("/* textweaver theme: Sepia */"));
+        assert!(!page.contains("textweaver theme: Nord"));
+        // Remembered for the session: Sepia first now.
+        app.dispatch(Command::Confirm(crate::command::Confirm::No));
+        let (_, items) = ask(&mut app);
+        assert_eq!(items[0], "Sepia");
+        assert_eq!(items.iter().filter(|i| *i == "Nord").count(), 1);
     }
 
     #[test]

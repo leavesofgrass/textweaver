@@ -1134,6 +1134,8 @@ publish-start-failed = تعذّر بدء التصدير: { $error }
 publish-export-error = تعذّر التصدير: { $error }
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = التصدير إلى { $format }.
+publish-theme-title = سمة صفحة HTML
+publish-theme-intro = سمة صفحة HTML؟ { $first } أولًا، { $n } خيارات. Escape للإلغاء.
 publish-writing-preview = كتابة المعاينة.
 publish-preview-error = تعذّرت كتابة المعاينة: { $error }
 publish-still-exporting =

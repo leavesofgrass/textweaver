@@ -539,6 +539,7 @@ fn y_and_n_answer_open_it_while_a_list_is_shown() {
     let mut r = Rig::new();
     let path = r.open("essay.md", ESSAY);
     r.act(ActionId::ExportHtml);
+    r.send(Command::Choose(0));
     r.wait();
     assert!(r.app.confirmation_pending());
     r.act(ActionId::Outline);
@@ -550,6 +551,7 @@ fn y_and_n_answer_open_it_while_a_list_is_shown() {
     r.send(Command::ListKey(textweaver_app::ListKey::Escape));
 
     r.act(ActionId::ExportHtml);
+    r.send(Command::Choose(0));
     r.wait();
     r.act(ActionId::Outline);
     // Another letter moves in the list; the question still waits.
@@ -575,6 +577,10 @@ fn exports_go_next_to_the_document_and_offer_to_open() {
         (ActionId::ExportBrf, "brf"),
     ] {
         r.act(action);
+        if action == ActionId::ExportHtml {
+            // The theme question: the reading theme, first.
+            r.send(Command::Choose(0));
+        }
         r.wait();
         let out = path.with_extension(ext);
         assert!(out.is_file(), "{}", out.display());
@@ -610,6 +616,7 @@ fn exports_go_next_to_the_document_and_offer_to_open() {
     }
     // Yes opens it with the default program.
     r.act(ActionId::ExportHtml);
+    r.send(Command::Choose(0));
     r.wait();
     r.send(Command::Confirm(Confirm::Yes));
     assert_eq!(
@@ -621,6 +628,7 @@ fn exports_go_next_to_the_document_and_offer_to_open() {
     r.go("Intro");
     r.type_text("Unsaved words. ");
     r.act(ActionId::ExportHtml);
+    r.send(Command::Choose(0));
     r.wait();
     r.send(Command::Confirm(Confirm::No));
     let html = std::fs::read_to_string(path.with_extension("html")).unwrap();
@@ -636,6 +644,7 @@ fn preview_opens_the_browser_and_saving_rewrites_it() {
         "# Math\n\nThe area is $\\pi r^2$.\n\n![A cat](cat.png)\n",
     );
     r.act(ActionId::PreviewInBrowser);
+    r.send(Command::Choose(0));
     r.wait();
     let opened = r.opened();
     assert_eq!(opened.len(), 1, "{opened:?}");
@@ -679,6 +688,7 @@ fn preview_auto_reload_serves_the_page_and_reloads_after_saves() {
         r.status()
     );
     r.act(ActionId::PreviewInBrowser);
+    r.send(Command::Choose(0));
     r.wait();
     let opened = r.opened();
     assert_eq!(opened.len(), 1, "{opened:?}");

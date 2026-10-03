@@ -276,6 +276,8 @@ fn an_export_asks_before_naming_the_folder() {
     std::fs::copy(fixture(&["x", "essay.md"]), &path).unwrap();
     h.open(&path);
     h.act(ActionId::ExportHtml);
+    // "Theme for the HTML page?": Enter keeps the reading theme.
+    h.press(key(KeyCode::Enter));
     assert!(
         h.tui
             .app_mut()
