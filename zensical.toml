@@ -73,6 +73,7 @@ nav = [
     { "Building and working on textweaver" = [
       { "Contributing (on GitHub)" = "https://github.com/leavesofgrass/textweaver/blob/main/CONTRIBUTING.md" },
       { "Good first issues" = "dev/good-first-issues.md" },
+      { "Writing messages" = "dev/messages.md" },
       { "Building" = "dev/building.md" },
       { "Testing" = "dev/testing.md" },
       { "Architecture" = "dev/architecture.md" },

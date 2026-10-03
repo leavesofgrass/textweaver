@@ -88,6 +88,7 @@ Every change must work for people who do not look at the screen.
 
 - **Screen readers.** Every state change a user should know about is announced through the app's announcer, not only shown. Every string the user hears must read well aloud: no symbols a speech engine skips or spells out, and no meaning carried by layout alone.
 - **Braille displays.** Many users read one line of about 40 cells at a time. Put the meaning first on each line and message, prefer words to symbols (emoji, arrows, check marks, and box drawing often come through as noise), and keep messages short.
+- **Messages.** [Writing messages](docs/dev/messages.md) is the style guide for every word textweaver says and shows, with the tests that keep it.
 - **Color never carries meaning alone.** Pair every color with text first, such as "Pass" and "Fail" in words, then symbols or patterns if they help. This covers themes, status lines, diffs, charts, and screenshots.
 - **The keyboard.** Everything works from the keyboard. Keys come from the keymap, never hard-coded: a new action gets a default key, a help string, and a category in `crates/textweaver-keymap/src/action.rs`, and then `cargo xtask keyboard` regenerates [docs/keyboard.md](docs/keyboard.md).
 - **Say how you checked.** In your pull request, say what you checked with a screen reader, which one, and which speech engine. If you could not check something by ear, say that too; a maintainer will.
