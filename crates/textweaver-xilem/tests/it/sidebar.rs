@@ -296,5 +296,6 @@ fn the_notes_panel_lists_the_notes() {
     app.dispatch(Command::SetCursor(textweaver_app::core::CharPos(0)));
     assert_eq!(app.panel_key(Panel::Notes), key);
     let _ = sidebar::go(&mut app, &shown, 0, false, &mut h);
-    assert_eq!(Some(app.session().unwrap().cursor), app.note_position(0));
+    let s = app.session().unwrap();
+    assert_eq!(Some(s.cursor), s.notes.first().map(|n| n.range.start));
 }

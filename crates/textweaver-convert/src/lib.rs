@@ -44,7 +44,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use textweaver_formats::{LoadOptions, Loader, MarkdownLoader, Registry, Source};
@@ -1042,6 +1042,7 @@ pub use textweaver_core::fs::write_atomic;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::SystemTime;
 
     #[test]
     fn formats_parse_and_name() {
