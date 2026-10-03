@@ -36,6 +36,8 @@ textweaver's own fixes, each small, each a candidate for its own pull request:
 
 14. `parley`: a cluster's offset into its run's text (`ClusterData::text_offset`) is a `u32`, not a `u16` (Wave 8b, W8b-g). A run is text in one style, script, and font, so one very long line of plain text is one run; past 65,535 bytes the offset wrapped, and clusters, line ranges, cursors, and selection rectangles pointed at the wrong text. The frame-time probe found it as a line start inside a two-byte character on a 1 MB one-line file, and past 64 KB the spoken word's band was drawn at the wrong place. The appended part of `textweaver.patch` holds it. Worth sending upstream as its own pull request: "Allow runs longer than 64 KB".
 
+15. `masonry_winit`: a redraw hands the accessibility tree update to AccessKit before it renders the frame, not after (Wave 8c, W8c-w). `redraw` rendered, presented, and waited for the GPU to finish, and only then sent the update, so the caret move that a screen reader and a Braille display follow arrived after the pixels, behind the GPU. The tree is complete before rendering starts, so the update is the same; only its timing moves. A screen magnifier may now move a few milliseconds before the pixels. The appended part of `textweaver.patch` holds it. Worth sending upstream as its own pull request: "Send the accessibility update before rendering".
+
 ## Updating
 
 1. Pick a new upstream revision and copy the crates listed above over this folder, leaving out the same things.
