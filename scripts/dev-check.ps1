@@ -189,9 +189,10 @@ Write-Line "Features: $($features -join ' ') (the espeak feature needs libespeak
 
 Invoke-CheckStep 'fmt' 'formatting' @('cargo', 'fmt', '--all', '--check')
 Invoke-CheckStep 'clippy' 'lints, warnings are errors' (@('cargo', 'clippy', '--workspace', '--all-targets') + $features + @('--', '-D', 'warnings'))
-Invoke-CheckStep 'test' 'tests' (@('cargo', 'test', '--workspace') + $features)
+# Tests never play audio: eSpeak NG writes to a virtual output, as in CI.
+Invoke-CheckStep 'test' 'tests' (@('cargo', 'test', '--workspace') + $features) @{ TEXTWEAVER_ESPEAK_OUTPUT = 'virtual' }
 Invoke-CheckStep 'doc' 'API documentation, warnings are errors' (@('cargo', 'doc', '--workspace', '--no-deps') + $features) @{ RUSTDOCFLAGS = '-D warnings' }
-Invoke-CheckStep 'pseudo' 'the interface in the pseudo-locales en-XA and ar-XB' @('cargo', 'test', '-p', 'textweaver-app', '--test', 'it', '--', 'pseudo_locale::')
+Invoke-CheckStep 'pseudo' 'the interface in the pseudo-locales en-XA and ar-XB' @('cargo', 'test', '-p', 'textweaver-app', '--test', 'it', '--', 'pseudo_locale::') @{ TEXTWEAVER_ESPEAK_OUTPUT = 'virtual' }
 Invoke-CheckStep 'generated' 'every generated file is current' @('cargo', 'xtask', 'regen', '--check')
 # The py launcher first: python on Windows may be the Microsoft Store stub.
 $python = @()

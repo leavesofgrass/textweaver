@@ -208,9 +208,10 @@ fi
 
 step fmt "formatting" cargo fmt --all --check
 step clippy "lints, warnings are errors" cargo clippy --workspace --all-targets ${FEATURES[@]+"${FEATURES[@]}"} -- -D warnings
-step test "tests" cargo test --workspace ${FEATURES[@]+"${FEATURES[@]}"}
+# Tests never play audio: eSpeak NG writes to a virtual output, as in CI.
+step test "tests" env TEXTWEAVER_ESPEAK_OUTPUT=virtual cargo test --workspace ${FEATURES[@]+"${FEATURES[@]}"}
 step doc "API documentation, warnings are errors" env RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps ${FEATURES[@]+"${FEATURES[@]}"}
-step pseudo "the interface in the pseudo-locales en-XA and ar-XB" cargo test -p textweaver-app --test it -- pseudo_locale::
+step pseudo "the interface in the pseudo-locales en-XA and ar-XB" env TEXTWEAVER_ESPEAK_OUTPUT=virtual cargo test -p textweaver-app --test it -- pseudo_locale::
 step generated "every generated file is current" cargo xtask regen --check
 PYTHON=""
 if have python3; then
