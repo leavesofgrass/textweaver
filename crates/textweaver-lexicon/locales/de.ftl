@@ -465,6 +465,7 @@ app-no-document-open = Kein Dokument ist geöffnet. Drücken Sie { $key }, um ei
 app-window-only = Dieser Befehl funktioniert im textweaver-Fenster.
 app-terminal-only = Dieser Befehl funktioniert im Terminal-Reader.
 settings-save-failed = Einstellungen konnten nicht gespeichert werden: { $error } Ihre Änderungen gelten, bis Sie beenden.
+settings-outside-kept = Außerhalb von textweaver geänderte Einstellungen wurden beibehalten.
 edit-still-editing = Noch in Bearbeitung.
 goto-not-a-target = Kein Sprungziel: { $text }. Geben Sie eine Zeilennummer ein, einen Prozentwert wie 50%, start oder end.
 

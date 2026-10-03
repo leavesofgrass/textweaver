@@ -210,6 +210,7 @@ impl App {
             }
         };
         self.settings = plan.settings.clone();
+        self.settings_loaded = plan.settings.clone();
         self.settings_dirty = false;
         self.apply_voice_settings();
         // apply_voice_settings leaves the voice alone when none is set.

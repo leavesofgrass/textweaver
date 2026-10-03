@@ -521,6 +521,7 @@ app-no-document-open = لا يوجد مستند مفتوح. اضغط { $key } ل
 app-window-only = يعمل هذا الأمر في نافذة textweaver.
 app-terminal-only = يعمل هذا الأمر في قارئ الطرفية.
 settings-save-failed = تعذّر حفظ الإعدادات: { $error } تبقى تغييراتك سارية حتى تخرج.
+settings-outside-kept = تم الاحتفاظ بالإعدادات التي تغيّرت خارج textweaver.
 edit-still-editing = ما زلت في وضع التحرير.
 goto-not-a-target = ليس هدف انتقال: { $text }. اكتب رقم سطر، أو نسبة مئوية مثل 50%، أو start، أو end.
 

@@ -445,6 +445,7 @@ app-no-document-open = Nenhum documento está aberto. Pressione { $key } para ab
 app-window-only = Este comando funciona na janela do textweaver.
 app-terminal-only = Este comando funciona no leitor de terminal.
 settings-save-failed = Não foi possível salvar as configurações: { $error } Suas alterações continuam em uso até você sair.
+settings-outside-kept = As configurações alteradas fora do textweaver foram mantidas.
 edit-still-editing = Ainda editando.
 goto-not-a-target = Não é um destino válido: { $text }. Digite um número de linha, uma porcentagem como 50%, início ou fim.
 

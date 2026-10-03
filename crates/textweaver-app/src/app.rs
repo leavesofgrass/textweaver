@@ -311,6 +311,13 @@ pub struct App {
     pub(crate) keymap: Keymap,
     pub(crate) settings: Settings,
     pub(crate) settings_dirty: bool,
+    /// The settings as loaded, imported, or last saved: a save writes only
+    /// the settings that differ from these, keeping changes other programs
+    /// made to the file.
+    pub(crate) settings_loaded: Settings,
+    /// "Settings changed outside textweaver were kept." was said this
+    /// session.
+    pub(crate) settings_outside_said: bool,
     /// What an interface language change did to the voice, said with the
     /// change (crate::language).
     pub(crate) language_note: Option<String>,
@@ -496,6 +503,8 @@ impl App {
             announcer: config.announcer,
             status: StatusLineAnnouncer::default(),
             keymap,
+            settings_loaded: config.settings.clone(),
+            settings_outside_said: false,
             settings: config.settings,
             settings_dirty: false,
             language_note: None,
@@ -1224,6 +1233,10 @@ impl App {
             self.writer.send(crate::writer::Job::Settings {
                 store: SettingsStore::new(paths.clone()),
                 settings: Box::new(self.settings.clone()),
+                base: Box::new(std::mem::replace(
+                    &mut self.settings_loaded,
+                    self.settings.clone(),
+                )),
             });
             // Sync weighs a setting changed here by when it was saved.
             self.sync.settings_saved_ms = textweaver_sync::wall_ms();

@@ -429,6 +429,7 @@ app-no-document-open = No hay ningún documento abierto. Pulse { $key } para abr
 app-window-only = Esta orden funciona en la ventana de textweaver.
 app-terminal-only = Esta orden funciona en el lector del terminal.
 settings-save-failed = No se pudo guardar la configuración: { $error } Sus cambios siguen en uso hasta que salga.
+settings-outside-kept = Se conservó la configuración cambiada fuera de textweaver.
 edit-still-editing = Aún editando.
 goto-not-a-target = No es un destino válido: { $text }. Escriba un número de línea, un porcentaje como 50%, inicio o fin.
 
