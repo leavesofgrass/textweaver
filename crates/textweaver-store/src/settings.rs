@@ -2183,13 +2183,18 @@ impl SettingsStore {
     }
 
     /// Saves settings atomically, storing only non-default values. Call only
-    /// on an explicit change.
+    /// on an explicit change. A file that already holds exactly this text
+    /// is left alone (W9a-d): no write, no change of its modification time
+    /// for a sync service or a second window to react to.
     pub fn save(&self, settings: &Settings) -> Result<(), StoreError> {
         let path = self.paths.settings_file();
         let text = settings.to_minimal_toml().map_err(|e| StoreError::Parse {
             path: path.clone(),
             message: e.to_string(),
         })?;
+        if std::fs::read(&path).is_ok_and(|old| old == text.as_bytes()) {
+            return Ok(());
+        }
         atomic_write(&path, text.as_bytes())
     }
 
@@ -2890,6 +2895,28 @@ wrap_navigation = true
         after.speech.rate = Rate::Wpm(300);
         assert!(store.save_if_changed(&after, &before).unwrap());
         assert!(store.paths().settings_file().exists());
+    }
+
+    #[test]
+    fn an_identical_save_does_not_write() {
+        let (_d, store) = store();
+        let mut s = Settings::default();
+        s.speech.rate = Rate::Wpm(300);
+        store.save(&s).unwrap();
+        let file = store.paths().settings_file();
+        let old = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000);
+        std::fs::File::options()
+            .write(true)
+            .open(&file)
+            .unwrap()
+            .set_modified(old)
+            .unwrap();
+        store.save(&s).unwrap();
+        assert_eq!(std::fs::metadata(&file).unwrap().modified().unwrap(), old);
+        // A different value is written.
+        s.speech.rate = Rate::Wpm(310);
+        store.save(&s).unwrap();
+        assert_ne!(std::fs::metadata(&file).unwrap().modified().unwrap(), old);
     }
 
     #[test]
