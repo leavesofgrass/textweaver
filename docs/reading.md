@@ -581,6 +581,12 @@ File, Recent documents lists the last documents you opened, with your place in e
 
 Press **Shift+F1**, then any key: you hear what the key does, its keys, and where the command is in the menus ("Export PDF: Export the document as a tagged PDF next to it. Keys: the command palette. In the menus: File, Export as, Export PDF."). The key is not run.
 
+## The Help menu
+
+- **Quick start** opens the quick start guide packaged with textweaver as a document. When there is none beside the program, it offers the online page.
+- **Documentation** and **Report a problem** say their web address and ask "y or n" before a browser opens. Nothing is sent from textweaver; you write the report yourself.
+- **About textweaver** lists the facts a problem report needs, one per line: version, build, license, the speech engine in use and those found, how many optional components are installed, and the settings, data and cache folders. Include them in your report.
+
 ## The command palette: F2
 
 Press **F2** to run any command by name. **Alt+X** and **:** open it too. The GUI uses **F2** and **:**. You hear "Command. Type part of a name; Tab completes, Up and Down list matches." (at low verbosity, just "Command"); the bottom line shows "Command".

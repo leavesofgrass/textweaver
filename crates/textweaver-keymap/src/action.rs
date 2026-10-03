@@ -663,7 +663,19 @@ actions! {
     WhatDoesThisKeyDo = "what_does_this_key_do", View,
         "Press a key to hear what it does and where it is in the menus, without running it",
         gui ["g:Shift+F1"], term ["g:Shift+F1"], shared [];
-    About = "about", View, "Say textweaver's version and license",
+    About = "about", View,
+        "List the facts a problem report needs: version, build, components, speech engines, and folders",
+        gui [], term [], shared [];
+    QuickStart = "quick_start", View, "Open the quick start guide in textweaver",
+        gui [], term [], shared [];
+    Documentation = "documentation", View,
+        "Show the documentation's web address, and ask before opening it in a browser",
+        gui [], term [], shared [];
+    ReportProblem = "report_problem", View,
+        "Show where to report a problem, and ask before opening it in a browser; nothing is sent",
+        gui [], term [], shared [];
+    AskFirstRunAgain = "ask_first_run_again", View,
+        "Ask again about first-run choices: hybrid mode with a screen reader, and the optional components",
         gui [], term [], shared [];
     ManageComponents = "manage_components", View,
         "Manage optional components: the models, fonts, and voices textweaver can download, with their size and license",

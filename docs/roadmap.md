@@ -27,7 +27,7 @@ See the [features page](site/features.html) for the full, current list with each
 
 ## Not in the 0.1 series
 
-These are not planned for any 0.1 release. The [known limits](known-limits.md) page lists what does not work yet.
+The 0.1 series ends with a feature-complete final alpha. None of these is in it, and none is promised for later. The [known limits](known-limits.md) page lists what does not work yet.
 
 - Document translation.
 - Karaoke-style video export.
@@ -36,7 +36,7 @@ These are not planned for any 0.1 release. The [known limits](known-limits.md) p
 - Pauses written as markup in the text (SSML style). Pauses after headings, paragraphs, and list items already work.
 - Ogg Vorbis and AAC audio export, and a cover image for audiobooks.
 - A plugin system.
-- An in-app update checker, and a guided first-run tour.
+- An in-app update checker, and a guided first-run tour. The update scripts update an installed textweaver, and Help, Quick start opens the quick start.
 - Source code read as a structured document, rather than plain text.
 - Knowledge-graph export and concept extraction from notes.
 

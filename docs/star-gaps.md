@@ -38,7 +38,7 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
   - Word templates for APA student papers and AMA manuscripts;
   - an EPUB cover and a table-of-contents depth setting;
   - single-file HTML.
-  - Status: mostly done. `tw convert` writes single-file accessible HTML (following the system's dark, light, and high-contrast settings), large-print PDF, PDF in OpenDyslexic, and a PDF table of contents with a depth option, plus APA, AMA, large-print, dyslexia-friendly, high-contrast, and manuscript templates for EPUB, Word, and PDF, with an EPUB cover. The reader exports the open document to HTML, PDF, Word, EPUB, and braille from the command palette, previews it in the browser, and starts a new document from a template with front matter and a References heading.
+  - Status: partly. The table-of-contents depth setting is for PDF only; EPUB lists every heading level. `tw convert` writes single-file accessible HTML (following the system's dark, light, and high-contrast settings), large-print PDF, PDF in OpenDyslexic, and a PDF table of contents with a depth option, plus APA, AMA, large-print, dyslexia-friendly, high-contrast, and manuscript templates for EPUB, Word, and PDF, with an EPUB cover. The reader exports the open document to HTML, PDF, Word, EPUB, and braille from the command palette, previews it in the browser, and starts a new document from a template with front matter and a References heading.
 - **GUI Contents and Notes panels.** Status: done. The window shows the headings (Ctrl+1) or the notes (Ctrl+2) in a panel beside the document, from the same lists as the outline (Alt+O) and the notes list; Enter goes to a row, F6 moves between the panel and the document, and the panel never takes the focus unasked (see [The Contents and Notes panels](gui.md#the-contents-and-notes-panels)). The terminal reader lists notes (Shift+A) and the headings with type-to-filter (the outline, Alt+O).
 - **Math as Unicode in the plain reading view** (`x²`, `√2`). Status: done (`[reading] math_display = "unicode"`); the LaTeX source is also available, spoken as English, and HTML output carries MathML.
 
@@ -46,7 +46,7 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
 
 - **Formats:** spreadsheets (XLSX, CSV, and TSV, as tables) are done. Jupyter notebooks open natively, cell by cell ([ADR-0044](adr/0044-obsidian-json-svg-and-content-mathml.md)). Source code as a structured document is not planned; it still opens as plain text.
 - **Summarize:** extractive, with LexRank, no downloaded model. Status: done (`tw summarize`, and Summarize in the command palette; [ADR-0037](adr/0037-extractive-summaries.md)).
-- **Translate a document.** Status: missing.
+- **Translate a document.** Status: dropped; not in the 0.1 series.
 - **Difficult-word overlay,** by word frequency. Status: done, in the terminal reader (Alt+Shift+J) and drawn in the GUI, on SCOWL's word levels.
 - **Reading statistics:** time read, progress, and sessions. Status: done: time read aloud, the furthest point, and sessions per document, with a most-read list (Ctrl+Shift+Y or Alt+Y), `tw stats`, an opt-out, and Star's statistics imported ([reading.md](reading.md#reading-statistics-ctrlshifty-or-alty)).
 - **Settings profiles:** named sets of voice, theme, and spacing settings, with import and export. Status: done: named profiles of voice, rate, theme, font, spacing, highlight, and access mode, switched, saved, renamed, deleted, imported, and exported in the reader (Ctrl+Shift+U or Alt+U) and with `tw settings profile` ([settings.md](settings.md#settings-profiles)). `tw migrate-star` imports Star's profiles ([library.md](library.md#import-from-star-tw-migrate-star)).
@@ -63,20 +63,20 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
 
 ## Peripheral
 
-- **Knowledge graph and concept extraction.** Typed links between notes; exports to SVG, DOT, PlantUML, and JSON. Status: partly. Vault import and export keep typed links between notes; the graph exports and concept extraction are missing.
-- **Karaoke video export.** Status: missing.
-- **Feeds, Wikipedia, and PubMed** quick open. Status: missing.
-- **More engines:** Coqui, Festival, Qt speech, and cloud voices. Status: missing. speech-dispatcher, which can drive Festival, and DECtalk were added instead.
-- **SSML pauses.** Status: partly. Reading leaves a short silence after each heading, paragraph, and list item, which you can set ([Pauses at headings, paragraphs and list items](speech.md#pauses-at-headings-paragraphs-and-list-items)); pauses written as markup in the text itself are missing.
-- **Audio export to OGG and AAC,** and an M4B cover image. Status: partly. M4B audiobooks are AAC, and Ogg Opus files are written in process ([audio-export.md](audio-export.md)); Ogg Vorbis and the cover image are missing.
+- **Knowledge graph and concept extraction.** Typed links between notes; exports to SVG, DOT, PlantUML, and JSON. Status: partly. Vault import and export keep typed links between notes; the graph exports and concept extraction are dropped.
+- **Karaoke video export.** Status: dropped.
+- **Feeds, Wikipedia, and PubMed** quick open. Status: dropped.
+- **More engines:** Coqui, Festival, Qt speech, and cloud voices. Status: dropped. speech-dispatcher, which can drive Festival, and DECtalk were added instead.
+- **SSML pauses.** Status: partly. Reading leaves a short silence after each heading, paragraph, and list item, which you can set ([Pauses at headings, paragraphs and list items](speech.md#pauses-at-headings-paragraphs-and-list-items)); pauses written as markup in the text itself are dropped.
+- **Audio export to OGG and AAC,** and an M4B cover image. Status: partly. M4B audiobooks are AAC, and Ogg Opus files are written in process ([audio-export.md](audio-export.md)); Ogg Vorbis and the cover image are dropped.
 - **Infrastructure:**
-  - plugins. Status: missing.
-  - an update checker. Status: partly. `scripts/update.sh` and `scripts\update.ps1` update an installed textweaver; there is no check inside the program.
-  - a guided tour and a welcome page. Status: partly. The [quick start](quickstart.md) opens as a document; there is no tour.
-  - a key-code inspector. Status: missing.
+  - plugins. Status: dropped.
+  - an update checker. Status: partly. `scripts/update.sh` and `scripts\update.ps1` update an installed textweaver; a check inside the program is dropped.
+  - a guided tour and a welcome page. Status: partly. The [quick start](quickstart.md) opens as a document, from Help, Quick start; a tour is dropped.
+  - a key-code inspector. Status: partly. Help, "What does this key do?" (Shift+F1) names a command key and its menu place without running it; raw key codes are not shown.
   - line numbers and syntax highlighting in the terminal. Status: done. Line numbers (F6), and code blocks highlighted with syntect and bat's syntaxes, in colors from the theme and never color alone.
   - auto-play when a document opens. Status: done (`[speech] auto_play`).
-  - tapping Ctrl alone to pause. Status: missing.
+  - tapping Ctrl alone to pause. Status: dropped; a terminal cannot see a key being let go.
 
 ## See also
 

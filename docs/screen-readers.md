@@ -54,7 +54,7 @@ The title line shows `hybrid` or `screen reader mode` when one of those is in ef
 
 The very first run starts with the list of interface languages instead (see [Language](#language)); the question below comes on the next start.
 
-When textweaver starts, the mode has never been chosen, and a screen reader is running, it asks once: "NVDA is running. Use hybrid mode, where textweaver reads documents aloud and your screen reader speaks messages and typing? y or n". The question stays on the status line until you answer. **y** switches to hybrid and saves it. **n** or **Escape** keeps self-voicing. Either way it is not asked again; set `hybrid_offered = false` under `[accessibility]` to be asked again.
+When textweaver starts, the mode has never been chosen, and a screen reader is running, it asks once: "NVDA is running. Use hybrid mode, where textweaver reads documents aloud and your screen reader speaks messages and typing? y or n". The question stays on the status line until you answer. **y** switches to hybrid and saves it. **n** or **Escape** keeps self-voicing. Either way it is not asked again until you choose Tools, Ask again about first-run choices (or set `hybrid_offered = false` under `[accessibility]`); it then asks at the next start.
 
 How textweaver notices a screen reader:
 

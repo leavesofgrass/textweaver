@@ -556,6 +556,7 @@ impl MenuId {
                 Do(A::ColorSettings),
                 Do(A::SettingsProfiles),
                 Do(A::ManageComponents),
+                Do(A::AskFirstRunAgain),
                 Do(A::RestartSpeech),
             ],
             MenuId::Sync => &[
@@ -572,6 +573,10 @@ impl MenuId {
                 Do(A::Help),
                 Do(A::KeyboardHelp),
                 Do(A::WhatDoesThisKeyDo),
+                Sep,
+                Do(A::QuickStart),
+                Do(A::Documentation),
+                Do(A::ReportProblem),
                 Sep,
                 Do(A::About),
             ],
@@ -1359,15 +1364,6 @@ impl App {
         };
         self.tell(&msg);
         vec![Effect::Redraw]
-    }
-
-    /// Help, About: the version and the license.
-    pub(crate) fn about(&mut self) {
-        let msg = self.msg_args(
-            "menu-about",
-            &args!["version" => env!("CARGO_PKG_VERSION"), "license" => env!("CARGO_PKG_LICENSE")],
-        );
-        self.tell(&msg);
     }
 
     /// The menu path of `action` in the interface's language: "File,
