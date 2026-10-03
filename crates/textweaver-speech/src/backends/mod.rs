@@ -43,14 +43,10 @@ use serde::Serialize;
 
 use crate::backend::{BackendFactory, BackendId, BackendInfo, SpeechBackend, SpeechError, Voice};
 
-/// The program `name` (plus the platform's executable suffix) on `PATH`.
+/// The program `name` on `PATH` ([`textweaver_core::process::find_program`]).
 #[cfg_attr(not(any(feature = "omnivox", feature = "speechd")), allow(dead_code))]
 pub(crate) fn on_path(name: &str) -> Option<std::path::PathBuf> {
-    let path = std::env::var_os("PATH")?;
-    let exe = format!("{name}{}", std::env::consts::EXE_SUFFIX);
-    std::env::split_paths(&path)
-        .map(|dir| dir.join(&exe))
-        .find(|p| p.is_file())
+    textweaver_core::process::find_program(name)
 }
 
 /// A constructor for a backend, callable any number of times.

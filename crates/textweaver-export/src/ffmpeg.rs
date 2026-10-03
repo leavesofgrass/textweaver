@@ -88,18 +88,10 @@ pub fn find() -> Option<PathBuf> {
     find_on_path("ffmpeg", std::env::var_os("PATH"))
 }
 
-/// `name` in the directories of `path` (a `PATH`-style list), trying the
-/// Windows executable extension too.
+/// `name` in the directories of `path` (a `PATH`-style list), by the
+/// workspace's one rule ([`textweaver_core::process::find_program_in`]).
 pub fn find_on_path(name: &str, path: Option<OsString>) -> Option<PathBuf> {
-    let path = path?;
-    let names: Vec<String> = if cfg!(windows) {
-        vec![format!("{name}.exe"), name.to_owned()]
-    } else {
-        vec![name.to_owned()]
-    };
-    std::env::split_paths(&path)
-        .flat_map(|dir| names.iter().map(move |n| dir.join(n)))
-        .find(|p| p.is_file())
+    textweaver_core::process::find_program_in(name, &path?)
 }
 
 /// The ffmpeg arguments that turn `wav` into `out` in `format`, with

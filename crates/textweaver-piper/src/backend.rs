@@ -140,11 +140,7 @@ impl PiperConfig {
             let p = PathBuf::from(p);
             return p.is_file().then_some(p);
         }
-        let path = std::env::var_os("PATH")?;
-        let exe = format!("piper{}", std::env::consts::EXE_SUFFIX);
-        std::env::split_paths(&path)
-            .map(|d| d.join(&exe))
-            .find(|p| p.is_file())
+        textweaver_core::process::find_program("piper")
     }
 }
 

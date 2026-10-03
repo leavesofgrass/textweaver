@@ -15,6 +15,8 @@
 //! - [`Utterance`]: one chunk of text handed to the speech service.
 //! - Small preference enums shared by settings, speech, and accessibility.
 //! - [`fs`]: the one atomic file write every crate saves with.
+//! - [`process`]: finding, starting and reading other programs, with one
+//!   rule for `PATH`, no console windows, and one text-decoding rule.
 
 mod edit;
 mod error;
@@ -22,6 +24,7 @@ pub mod fs;
 mod offset_map;
 mod pos;
 mod prefs;
+pub mod process;
 mod unit;
 mod utterance;
 mod voice;

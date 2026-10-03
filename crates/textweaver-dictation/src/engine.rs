@@ -115,32 +115,11 @@ pub const WHISPER_ENGINE_ENV: &str = "TEXTWEAVER_WHISPER_ENGINE";
 /// The environment variable naming a folder of whisper.cpp model files.
 pub const WHISPER_MODELS_ENV: &str = "TEXTWEAVER_WHISPER_MODELS";
 
-/// Finds `name` in the folders of `path_var` (a `PATH` value), trying the
-/// `PATHEXT` extensions on Windows.
+/// Finds `name` in the folders of `path_var` (a `PATH` value), by the
+/// workspace's one rule ([`textweaver_core::process::find_program_in`]:
+/// the `PATHEXT` extensions first on Windows, then the bare name).
 pub fn find_on_path(name: &str, path_var: &OsStr) -> Option<PathBuf> {
-    let exts: Vec<String> = if cfg!(windows) {
-        let pathext = std::env::var("PATHEXT").unwrap_or_else(|_| ".EXE;.CMD;.BAT;.COM".into());
-        // Executable extensions first: a bare `whisper` beside
-        // `whisper.exe` is usually a shell script Windows cannot start.
-        let mut v: Vec<String> = pathext
-            .split(';')
-            .filter(|e| !e.is_empty())
-            .map(str::to_ascii_lowercase)
-            .collect();
-        v.push(String::new());
-        v
-    } else {
-        vec![String::new()]
-    };
-    for dir in std::env::split_paths(path_var) {
-        for ext in &exts {
-            let candidate = dir.join(format!("{name}{ext}"));
-            if candidate.is_file() {
-                return Some(candidate);
-            }
-        }
-    }
-    None
+    textweaver_core::process::find_program_in(name, path_var)
 }
 
 /// Every Whisper program found: the one named by `TEXTWEAVER_WHISPER`
