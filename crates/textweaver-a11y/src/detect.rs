@@ -94,35 +94,11 @@ pub fn detect() -> Option<Detected> {
     platform::detect()
 }
 
-/// Runs a command with a time limit; its stdout on success.
+/// Runs a command with a time limit and no window; its stdout on success
+/// ([`textweaver_core::process::run_with_timeout`]).
 #[cfg(not(windows))]
 fn run(program: &str, args: &[&str], limit: Duration) -> Option<String> {
-    use std::process::{Command, Stdio};
-    use std::time::Instant;
-    let mut child = Command::new(program)
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .ok()?;
-    let start = Instant::now();
-    loop {
-        match child.try_wait() {
-            Ok(Some(status)) => {
-                let out = child.wait_with_output().ok()?;
-                return status
-                    .success()
-                    .then(|| String::from_utf8_lossy(&out.stdout).into_owned());
-            }
-            Ok(None) if start.elapsed() < limit => std::thread::sleep(Duration::from_millis(5)),
-            _ => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return None;
-            }
-        }
-    }
+    textweaver_core::process::run_with_timeout(std::path::Path::new(program), args, limit)
 }
 
 /// How long one probe program may take.

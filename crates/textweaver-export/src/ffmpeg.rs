@@ -10,7 +10,7 @@
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 
 use serde::Serialize;
 
@@ -151,7 +151,7 @@ pub fn args(wav: &Path, metadata: &Path, out: &Path, format: AudioFormat) -> Vec
 
 /// Runs ffmpeg; its error output becomes the error message.
 pub fn run(ffmpeg: &Path, args: &[OsString]) -> Result<(), ExportError> {
-    let output = Command::new(ffmpeg)
+    let output = textweaver_core::process::command(ffmpeg)
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -161,7 +161,7 @@ pub fn run(ffmpeg: &Path, args: &[OsString]) -> Result<(), ExportError> {
     if output.status.success() {
         return Ok(());
     }
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = textweaver_core::process::decode_output(&output.stderr);
     let last = stderr
         .lines()
         .rev()
