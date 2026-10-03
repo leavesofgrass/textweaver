@@ -25,7 +25,9 @@ See the [features page](site/features.html) for the full, current list with each
 - **The GUI catching up to the terminal reader.** The voice manager covers every speech engine, with preview; the syllable display, the difficult-word overlay, and the Contents and Notes panels are in the GUI too. What is left is polish.
 - **Stabilization:** fixes from hands-on test sessions, a long soak test, a week of clean nightly runs, and a native speaker's review of the translations.
 
-## Planned
+## Not in the 0.1 series
+
+The 0.1 series ends with a feature-complete final alpha. None of these is in it, and none is promised for later:
 
 - Document translation.
 - Karaoke-style video export.
@@ -34,7 +36,7 @@ See the [features page](site/features.html) for the full, current list with each
 - Pauses written as markup in the text (SSML style). Pauses after headings, paragraphs, and list items already work.
 - Ogg Vorbis and AAC audio export, and a cover image for audiobooks.
 - A plugin system.
-- An in-app update checker, and a guided first-run tour.
+- An in-app update checker, and a guided first-run tour. The update scripts update an installed textweaver, and Help, Quick start opens the quick start.
 - Source code read as a structured document, rather than plain text.
 - Knowledge-graph export and concept extraction from notes.
 
