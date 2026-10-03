@@ -407,8 +407,9 @@ fn passes_epubcheck_when_available() {
         c.arg("-jar").arg(jar);
         c
     } else {
-        eprintln!(
-            "epubcheck is not installed; skipping (set EPUBCHECK_JAR or put epubcheck on the PATH)"
+        common::skip_or_fail(
+            "epubcheck",
+            "epubcheck is not installed (set EPUBCHECK_JAR or put epubcheck on the PATH)",
         );
         return;
     };

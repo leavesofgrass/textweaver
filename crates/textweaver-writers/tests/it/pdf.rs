@@ -106,7 +106,7 @@ fn sample_is_tagged_and_passes_pdf_ua_validation() {
 #[test]
 fn text_reads_back_in_order_with_pdftotext() {
     if !common::runs("pdftotext", "-v") {
-        eprintln!("pdftotext is not installed; skipping");
+        common::skip_or_fail("pdftotext", "pdftotext is not installed");
         return;
     }
     let doc = sample();
