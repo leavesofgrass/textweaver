@@ -234,6 +234,13 @@ fn everything_changed() -> Settings {
     s.gui.announce = crate::GuiAnnounce::Uia;
     s.gui.auto_hide_menu = true;
     s.gui.sidebar = crate::GuiSidebar::Notes;
+    s.gui.window = Some(crate::GuiWindow {
+        x: 30,
+        y: 40,
+        width: 900,
+        height: 640,
+        maximized: true,
+    });
     let c = &mut s.colors;
     c.ruler = "orange".into();
     c.difficult_words = "blue".into();

@@ -245,6 +245,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("gui.auto_hide_menu", Machine),
     // The panel this computer's window shows beside the document.
     ("gui.sidebar", Machine),
+    // Where this computer's window was and how big: screens differ.
+    ("gui.window", Machine),
     // [colors]
     ("colors.ruler", Portable),
     ("colors.difficult_words", Portable),
@@ -503,6 +505,25 @@ mod tests {
             unmarked.is_empty(),
             "these settings are neither portable nor machine; add them to SETTING_SCOPES: {unmarked:?}"
         );
+    }
+
+    /// The window's place and size stay on this computer, and survive a
+    /// round trip through the settings file.
+    #[test]
+    fn the_window_place_is_a_machine_setting() {
+        assert_eq!(setting_scope("gui.window"), Some(Machine));
+        let mut s = Settings::default();
+        s.gui.window = Some(crate::GuiWindow {
+            x: -1200,
+            y: 40,
+            width: 900,
+            height: 640,
+            maximized: true,
+        });
+        let text = toml::to_string(&s).expect("serialize");
+        let back: Settings = toml::from_str(&text).expect("parse");
+        assert_eq!(back.gui.window, s.gui.window);
+        assert!(!portable_settings(&s).contains_key("gui.window"));
     }
 
     /// Every mark names a setting that exists, once.

@@ -246,6 +246,10 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 - `components.mirror`: default empty (`""`). Components mirror. Where optional components come from first: an https address or a folder on this computer. Empty uses their public sources. Never put a password here. Text. Stays on this computer.
 
+## Window: the `[gui]` section
+
+- `gui.window`: default not set. Window. Text; empty means not set. Stays on this computer.
+
 ## Kept by textweaver
 
 textweaver writes these itself, such as a question already asked. They are in the file, but not on the settings screen.

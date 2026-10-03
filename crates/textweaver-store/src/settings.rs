@@ -1320,9 +1320,31 @@ pub struct GuiSettings {
     /// The panel beside the document (Wave 8d): none, the Contents (the
     /// headings), or the Notes. The window remembers the last one shown.
     pub sidebar: GuiSidebar,
+    /// Where the window was and how big, on this computer (Wave 9, W9a-w):
+    /// written when the window closes, used when it opens. A machine
+    /// setting: it never syncs, because screens differ.
+    pub window: Option<GuiWindow>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
+}
+
+/// `[gui.window]`: the window's place and size when it last closed.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct GuiWindow {
+    /// The left edge of the window's frame, in screen pixels.
+    pub x: i32,
+    /// The top edge of the window's frame, in screen pixels.
+    pub y: i32,
+    /// The width of the window's content, in logical pixels (pixels at
+    /// 100 percent scale).
+    pub width: u32,
+    /// The height of the window's content, in logical pixels.
+    pub height: u32,
+    /// The window filled the screen (maximized). The place and size are
+    /// then the ones it had before.
+    pub maximized: bool,
 }
 
 /// The panel the window shows beside the document (`[gui] sidebar`).
