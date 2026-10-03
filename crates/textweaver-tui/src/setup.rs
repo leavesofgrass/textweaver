@@ -8,7 +8,7 @@ use textweaver_app::a11y::{AccessMode, Announcer, RingAnnouncer};
 use textweaver_app::keymap::{Frontend, Keymap, Platform};
 use textweaver_app::lexicon::args;
 use textweaver_app::lexicon::i18n::Catalog;
-use textweaver_app::speech::{ServiceConfig, SpeechService};
+use textweaver_app::speech::{BackendRegistry, ServiceConfig, SpeechService};
 use textweaver_app::store::{Paths, Settings, SettingsStore};
 use textweaver_app::{App, AppConfig};
 
@@ -80,6 +80,18 @@ pub fn service_config(settings: &Settings) -> ServiceConfig {
 /// not straight to silence), else silence. Returns the service, the backend
 /// id, and messages for the user.
 pub fn start_speech(settings: &Settings, opts: &Options) -> (SpeechService, String, Vec<String>) {
+    // Engine options from `[speech.eci]`, `[speech.sapi]`, `[speech.apple]`.
+    let registry = textweaver_engines::speech_registry_for(settings);
+    start_speech_with(&registry, settings, opts)
+}
+
+/// [`start_speech`] choosing from `registry` (tests pass
+/// [`BackendRegistry::test_doubles`], so no real engine starts).
+pub fn start_speech_with(
+    registry: &BackendRegistry,
+    settings: &Settings,
+    opts: &Options,
+) -> (SpeechService, String, Vec<String>) {
     let mut messages = Vec::new();
     if opts.no_speech {
         return (SpeechService::null(), "silent".into(), messages);
@@ -89,8 +101,6 @@ pub fn start_speech(settings: &Settings, opts: &Options) -> (SpeechService, Stri
         .clone()
         .unwrap_or_else(|| settings.speech.backend.clone());
     let preference = (wanted != "auto" && !wanted.is_empty()).then_some(wanted.as_str());
-    // Engine options from `[speech.eci]`, `[speech.sapi]`, `[speech.apple]`.
-    let registry = textweaver_engines::speech_registry_for(settings);
     let info = registry.select(preference).backend;
     if let Some(p) = preference
         && info.id != p
@@ -513,8 +523,12 @@ mod tests {
             backend: Some("nonexistent".into()),
             ..Options::default()
         };
-        let (_speech, id, messages) = start_speech(&settings, &opts);
-        assert_ne!(id, "nonexistent");
-        assert!(messages[0].contains("not available"));
+        let (_speech, id, messages) =
+            start_speech_with(&BackendRegistry::test_doubles(), &settings, &opts);
+        assert_eq!(id, "null");
+        assert_eq!(
+            messages,
+            ["Speech engine nonexistent is not available; using null."]
+        );
     }
 }

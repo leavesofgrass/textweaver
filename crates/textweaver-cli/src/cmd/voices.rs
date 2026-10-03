@@ -119,7 +119,7 @@ mod tests {
         let r = voices(
             &args,
             &Settings::default(),
-            &BackendRegistry::with_builtins(),
+            &BackendRegistry::test_doubles(),
         )
         .unwrap();
         assert_eq!(r.backend.backend.id, "recording");
@@ -135,7 +135,7 @@ mod tests {
         };
         let mut settings = Settings::default();
         settings.speech.backend = "recording".into();
-        let r = voices(&args, &settings, &BackendRegistry::with_builtins()).unwrap();
+        let r = voices(&args, &settings, &BackendRegistry::test_doubles()).unwrap();
         // The recording backend is opt-in: only the settings choose it.
         assert_eq!(r.backend.backend.id, "recording");
         assert!(!r.backend.fell_back);

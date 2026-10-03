@@ -242,8 +242,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn builtins_are_listed_with_a_choice() {
-        let r = report(&BackendRegistry::with_builtins(), None);
+    fn backends_are_listed_with_a_choice() {
+        let r = report(&BackendRegistry::test_doubles(), None);
         assert!(r.backends.iter().any(|b| b.id == "null"));
         let null = r.backends.iter().find(|b| b.id == "null").unwrap();
         let line = describe(null, "null", "null");
@@ -261,7 +261,7 @@ mod tests {
         );
         let json = serde_json::to_value(&r).unwrap();
         assert!(json["backends"][0]["caps"].is_string());
-        let r = report(&BackendRegistry::with_builtins(), Some("recording"));
+        let r = report(&BackendRegistry::test_doubles(), Some("recording"));
         assert_eq!(r.selected, "recording");
         let rec = r.backends.iter().find(|b| b.id == "recording").unwrap();
         assert!(describe(rec, r.auto, r.selected).ends_with(" Chosen by your settings."));
@@ -313,7 +313,7 @@ mod tests {
         use std::sync::Arc;
         use std::sync::atomic::{AtomicUsize, Ordering};
         let probes = Arc::new(AtomicUsize::new(0));
-        let mut registry = BackendRegistry::with_builtins();
+        let mut registry = BackendRegistry::test_doubles();
         let counter = Arc::clone(&probes);
         registry.register(
             BackendInfo {

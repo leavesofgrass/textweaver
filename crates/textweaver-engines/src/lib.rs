@@ -169,6 +169,13 @@ pub fn apply_output_device(settings: &Settings) {
 pub fn speech_registry_for(settings: &Settings) -> BackendRegistry {
     apply_output_device(settings);
     let mut registry = BackendRegistry::with_builtins();
+    register_engines(&mut registry, settings);
+    registry
+}
+
+/// Adds the engines configured from `settings` (Eloquence, the Apple
+/// voices, SAPI, DECtalk, Piper) to `registry`, probing nothing.
+fn register_engines(registry: &mut BackendRegistry, settings: &Settings) {
     let eci = eci_config(settings);
     let probe_config = eci.clone();
     // Each engine is looked for at most once per process and configuration
@@ -235,7 +242,6 @@ pub fn speech_registry_for(settings: &Settings) -> BackendRegistry {
         move || textweaver_piper::probe(&probe),
         textweaver_piper::factory(piper),
     );
-    registry
 }
 
 /// The Piper backend's options: `[speech.piper]` `voices` (the voices
@@ -363,9 +369,17 @@ mod tests {
 
     use super::*;
 
+    /// The engines `settings` configures, described, over the test
+    /// doubles: nothing is probed or started.
+    fn engines_described(settings: &Settings) -> Vec<textweaver_speech::BackendInfo> {
+        let mut registry = BackendRegistry::test_doubles();
+        register_engines(&mut registry, settings);
+        registry.descriptions()
+    }
+
     #[test]
     fn eloquence_is_registered_above_the_builtins() {
-        let list = speech_registry().list();
+        let list = engines_described(&Settings::default());
         let eci = list.iter().find(|b| b.id == "eci").expect("eci registered");
         assert!(
             list.iter()
@@ -412,7 +426,7 @@ mod tests {
     fn the_preferred_apple_engine_is_tried_first() {
         let mut s = Settings::default();
         s.speech.apple.backend = AppleBackend::AvSpeech;
-        let list = speech_registry_for(&s).list();
+        let list = engines_described(&s);
         let prio = |id: &str| list.iter().find(|b| b.id == id).map(|b| b.priority);
         if textweaver_apple::available() {
             assert!(prio("avspeech") > prio("nsspeech"));
@@ -536,7 +550,7 @@ mod tests {
 
     #[test]
     fn dectalk_is_registered_below_sapi_and_eloquence() {
-        let list = speech_registry().list();
+        let list = engines_described(&Settings::default());
         let dectalk = list
             .iter()
             .find(|b| b.id == "dectalk")

@@ -348,7 +348,7 @@ mod tests {
         let r = export_audio(
             &a,
             &Settings::default(),
-            &BackendRegistry::with_builtins(),
+            &BackendRegistry::test_doubles(),
             None,
             &mut |m| messages.push(m.to_owned()),
         )
@@ -377,7 +377,7 @@ mod tests {
     #[test]
     fn explains_what_cannot_be_done() {
         let dir = Scratch::new("errors");
-        let reg = BackendRegistry::with_builtins();
+        let reg = BackendRegistry::test_doubles();
         let mut a = args(dir.path(), "doc.m4b");
         let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
         assert!(e.to_string().contains("needs ffmpeg"), "{e}");
@@ -396,14 +396,11 @@ mod tests {
 
     #[test]
     fn automatic_choice_needs_a_backend_that_writes_files() {
-        // The built-ins here: null (cannot write) and recording (opt-in).
-        let e = choose(&BackendRegistry::with_builtins(), None, None);
-        if cfg!(feature = "espeak") {
-            return;
-        }
+        // The doubles: null (cannot write) and recording (opt-in).
+        let e = choose(&BackendRegistry::test_doubles(), None, None);
         assert!(e.is_err());
         assert_eq!(
-            choose(&BackendRegistry::with_builtins(), Some("recording"), None)
+            choose(&BackendRegistry::test_doubles(), Some("recording"), None)
                 .unwrap()
                 .backend
                 .id,
@@ -444,7 +441,7 @@ mod tests {
         let r = export_audio(
             &a,
             &settings,
-            &BackendRegistry::with_builtins(),
+            &BackendRegistry::test_doubles(),
             None,
             &mut |_| {},
         )
@@ -465,10 +462,11 @@ mod tests {
 
     #[test]
     fn a_configured_backend_that_cannot_write_files_is_passed_over() {
-        let reg = BackendRegistry::with_builtins();
+        let reg = BackendRegistry::test_doubles();
         let chosen = choose(&reg, None, Some("null"));
-        // null cannot write files: the automatic choice applies instead.
-        assert!(!matches!(chosen, Ok(s) if s.backend.id == "null"));
+        // null cannot write files: the automatic choice applies instead,
+        // and among the doubles nothing can be chosen automatically.
+        assert!(chosen.is_err());
         assert_eq!(
             choose(&reg, None, Some("recording")).unwrap().backend.id,
             "recording"
@@ -491,7 +489,7 @@ mod tests {
         let r = export_audio(
             &a,
             &Settings::default(),
-            &BackendRegistry::with_builtins(),
+            &BackendRegistry::test_doubles(),
             None,
             &mut |_| {},
         )
@@ -522,7 +520,7 @@ mod tests {
         let r = export_audio(
             &a,
             &Settings::default(),
-            &BackendRegistry::with_builtins(),
+            &BackendRegistry::test_doubles(),
             None,
             &mut |_| {},
         )

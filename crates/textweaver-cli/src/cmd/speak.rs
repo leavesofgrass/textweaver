@@ -294,7 +294,7 @@ mod tests {
         settings.speech.voice = Some("rec-en-us".into());
         let mut a = args("One. Two.", "x");
         a.backend = None;
-        let r = super::speak(&a, &settings, &BackendRegistry::with_builtins()).unwrap();
+        let r = super::speak(&a, &settings, &BackendRegistry::test_doubles()).unwrap();
         // The opt-in recording backend is chosen only by the settings.
         assert_eq!(r.backend.backend.id, "recording");
         assert!(!r.backend.fell_back);
@@ -311,7 +311,7 @@ mod tests {
     fn null_backend_json_report() {
         let r = speak(
             &args("Dr. Smith paid $5. Done.", "null"),
-            &BackendRegistry::with_builtins(),
+            &BackendRegistry::test_doubles(),
         )
         .unwrap();
         assert_eq!(r.backend.backend.id, "null");
@@ -337,7 +337,7 @@ mod tests {
     fn recording_backend_reports_every_word() {
         let r = speak(
             &args("one two three", "recording"),
-            &BackendRegistry::with_builtins(),
+            &BackendRegistry::test_doubles(),
         )
         .unwrap();
         let words = r
@@ -348,11 +348,15 @@ mod tests {
         assert_eq!(words, 3);
     }
 
+    /// With only the doubles registered, the fallback is `null`: with
+    /// every built-in it would be a real engine, speaking aloud.
     #[test]
     fn unknown_backend_falls_back() {
-        // A registry with no real engines: the built-ins would fall back to
-        // whatever engine this machine has and play through its speakers.
-        let r = speak(&args("hi", "no-such-engine"), &BackendRegistry::new()).unwrap();
+        let r = speak(
+            &args("hi", "no-such-engine"),
+            &BackendRegistry::test_doubles(),
+        )
+        .unwrap();
         assert!(r.backend.fell_back);
         assert_eq!(r.backend.backend.id, "null");
         assert!(r.backend.fallback_message().is_some());
@@ -363,7 +367,7 @@ mod tests {
         let path = std::env::temp_dir().join(format!("tw-speak-test-{}.wav", std::process::id()));
         let mut a = args("Hello.", "recording");
         a.out = Some(path.clone());
-        let r = speak(&a, &BackendRegistry::with_builtins()).unwrap();
+        let r = speak(&a, &BackendRegistry::test_doubles()).unwrap();
         assert_eq!(r.out.as_deref(), Some(path.as_path()));
         // The recording backend writes one word-length of silence as WAV.
         let wav = std::fs::read(&path).unwrap();
@@ -372,7 +376,7 @@ mod tests {
         let _ = std::fs::remove_file(&path);
         let mut a = args("Hello.", "null");
         a.out = Some(path);
-        let err = speak(&a, &BackendRegistry::with_builtins()).unwrap_err();
+        let err = speak(&a, &BackendRegistry::test_doubles()).unwrap_err();
         assert!(err.to_string().contains("cannot write audio files"));
     }
 
@@ -380,6 +384,6 @@ mod tests {
     fn needs_something_to_speak() {
         let mut a = args("x", "null");
         a.text = None;
-        assert!(speak(&a, &BackendRegistry::with_builtins()).is_err());
+        assert!(speak(&a, &BackendRegistry::test_doubles()).is_err());
     }
 }

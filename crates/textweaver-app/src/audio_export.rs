@@ -700,7 +700,7 @@ mod run {
             let mut config = crate::AppConfig::for_tests();
             config.settings.speech.backend = "recording".into();
             let mut app = App::new(config);
-            app.audio.registry = Some(BackendRegistry::with_builtins());
+            app.audio.registry = Some(BackendRegistry::test_doubles());
             app.audio.ffmpeg_override = Some(None);
             let opened = Arc::new(std::sync::Mutex::new(Vec::new()));
             let o = Arc::clone(&opened);
