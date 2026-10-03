@@ -82,10 +82,7 @@ pub fn run() -> Result<()> {
     out.push_str(FOOTER);
     let args: Vec<String> = std::env::args().skip(2).collect();
     let update = args.iter().any(|a| a == "--update-baseline");
-    let path = report_path(
-        &root,
-        args.into_iter().filter(|a| a != "--update-baseline"),
-    )?;
+    let path = report_path(&root, args.into_iter().filter(|a| a != "--update-baseline"))?;
     if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
         std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
     }
@@ -105,8 +102,8 @@ pub fn run() -> Result<()> {
         println!("wrote {BASELINE}; commit it with the reason for the change");
         return Ok(());
     }
-    let committed = std::fs::read_to_string(&baseline_path)
-        .with_context(|| format!("reading {BASELINE}"))?;
+    let committed =
+        std::fs::read_to_string(&baseline_path).with_context(|| format!("reading {BASELINE}"))?;
     let changes = baseline_changes(&committed, &current);
     if !changes.is_empty() {
         for c in &changes {
@@ -116,7 +113,11 @@ pub fn run() -> Result<()> {
             "the parity deltas changed ({} {}); see {}. If the change is meant, run \
              cargo xtask parity --update-baseline and commit {BASELINE} with the reason",
             changes.len(),
-            if changes.len() == 1 { "count" } else { "counts" },
+            if changes.len() == 1 {
+                "count"
+            } else {
+                "counts"
+            },
             path.display()
         );
     }
