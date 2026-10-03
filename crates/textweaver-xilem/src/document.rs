@@ -131,7 +131,21 @@ impl DocModel {
     /// two models can keep its layout.
     fn styles_by_paragraph(&self) -> Vec<(Vec<StyledSpan>, Vec<CharPos>)> {
         let paras = &self.paragraphs;
-        let mut out = vec![(Vec::new(), Vec::new()); paras.len()];
+        let mut out: Vec<(Vec<StyledSpan>, Vec<CharPos>)> = self
+            .spans_by_paragraph()
+            .into_iter()
+            .map(|s| (s, Vec::new()))
+            .collect();
+        for &k in &self.breaks {
+            out[caret::paragraph_at(paras, k)].1.push(k);
+        }
+        out
+    }
+
+    /// The spans that touch each paragraph, in the model's order.
+    fn spans_by_paragraph(&self) -> Vec<Vec<StyledSpan>> {
+        let paras = &self.paragraphs;
+        let mut out = vec![Vec::new(); paras.len()];
         if paras.is_empty() {
             return out;
         }
@@ -139,11 +153,8 @@ impl DocModel {
             let a = caret::paragraph_at(paras, s.range.start);
             let b = caret::paragraph_at(paras, CharPos(s.range.end.0.saturating_sub(1)));
             for slot in out.iter_mut().take(b.max(a) + 1).skip(a) {
-                slot.0.push(*s);
+                slot.push(*s);
             }
-        }
-        for &k in &self.breaks {
-            out[caret::paragraph_at(paras, k)].1.push(k);
         }
         out
     }
@@ -364,6 +375,11 @@ pub struct DocumentView {
     /// The reading highlights of the last paint, in order.
     painted: Vec<PaintStep>,
 
+    /// The model's spans that touch each paragraph, built when the model
+    /// changes, so laying out or painting a paragraph looks at its own
+    /// spans only, not every span of the window.
+    para_spans: Vec<Vec<StyledSpan>>,
+
     // Layout.
     layouts: HashMap<usize, ParaLayout>,
     /// Visual line starts (char offsets) per paragraph, for the current
@@ -428,6 +444,7 @@ impl DocumentView {
             font,
             aids: DocAids::default(),
             model: DocModel::default(),
+            para_spans: Vec::new(),
             state: DocState::default(),
             select_spoken: false,
             edit_role: false,
@@ -684,6 +701,7 @@ impl DocumentView {
             }
         }
         w.model = model;
+        w.para_spans = w.model.spans_by_paragraph();
         w.layouts = new_layouts;
         w.line_starts = lines;
         w.para_runs = runs;
@@ -714,6 +732,7 @@ impl DocumentView {
         // Keep the scroll anchor on the same text when the window moves.
         let anchor_pos = w.model.paragraphs.get(w.top.0).map(|p| p.start);
         let old = std::mem::replace(&mut w.model, model);
+        w.para_spans = w.model.spans_by_paragraph();
         let mut old_layouts = std::mem::take(&mut w.layouts);
         let mut old_lines = std::mem::take(&mut w.line_starts);
         w.reset_caches();
@@ -1013,7 +1032,7 @@ impl DocumentView {
             )));
         }
         let p_end = p.start.0 + p.len_chars();
-        for s in &self.model.spans {
+        for s in self.spans_in(i) {
             if s.range.end.0 <= p.start.0 || s.range.start.0 >= p_end {
                 continue;
             }
@@ -1100,6 +1119,11 @@ impl DocumentView {
 
     /// Paragraph `i`'s syllable breaks, as char offsets inside it (never at
     /// its start or end).
+    /// The spans that touch paragraph `i` (see `para_spans`).
+    fn spans_in(&self, i: usize) -> &[StyledSpan] {
+        self.para_spans.get(i).map_or(&[], Vec::as_slice)
+    }
+
     fn breaks_in(&self, i: usize) -> Vec<usize> {
         let p = &self.model.paragraphs[i];
         let (start, len) = (p.start.0, p.len_chars());
@@ -2117,7 +2141,7 @@ impl Widget for DocumentView {
                 painted.push(PaintStep::SentenceBand(r));
             }
             // Code backgrounds.
-            for s in &self.model.spans {
+            for s in self.spans_in(i) {
                 if s.style == SpanStyle::Code
                     && let Some(rects) = band(s.range)
                 {
