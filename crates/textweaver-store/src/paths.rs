@@ -2,6 +2,9 @@ use std::path::{Path, PathBuf};
 
 use crate::StoreError;
 
+/// The medical lexicon overlay's file name in the configuration folder.
+pub const MEDICAL_OVERLAY_FILE: &str = "medical-lexicon.toml";
+
 /// Where textweaver keeps its files.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Paths {
@@ -106,6 +109,13 @@ impl Paths {
             .iter()
             .map(|n| self.config_dir.join(n))
             .find(|p| p.is_file())
+    }
+
+    /// The medical lexicon overlay read when
+    /// `[normalization.medical_lexicon] overlay` is unset:
+    /// `medical-lexicon.toml` in the configuration directory, if it exists.
+    pub fn default_medical_overlay(&self) -> Option<PathBuf> {
+        Some(self.config_dir.join(MEDICAL_OVERLAY_FILE)).filter(|p| p.is_file())
     }
 
     /// `sync-ids.json`: each document's sync id (ADR-0049), in the data

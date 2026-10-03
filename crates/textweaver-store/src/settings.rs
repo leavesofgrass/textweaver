@@ -514,6 +514,26 @@ pub struct NormalizationSettings {
     /// pronunciation dictionaries applied as a lexicon, for engines that do
     /// not normalize natively (Eloquence loads them itself).
     pub community_lexicon: CommunityLexiconSettings,
+    /// `[normalization.medical_lexicon]`: drug names, clinical terms and
+    /// safe dosing abbreviations respelled for reading aloud, with the
+    /// user's own overlay file.
+    pub medical_lexicon: MedicalLexiconSettings,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
+/// `[normalization.medical_lexicon]`. The app maps it onto the speech
+/// service's `MedicalLexiconConfig`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MedicalLexiconSettings {
+    /// Apply the lexicon (off by default).
+    pub enabled: bool,
+    /// The user's overlay file (`term = "spoken form"` lines), whose
+    /// entries win over the bundled ones; unset reads
+    /// `medical-lexicon.toml` in the configuration folder, if it exists.
+    pub overlay: Option<PathBuf>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -601,6 +621,7 @@ impl Default for NormalizationSettings {
             table_mode: TableMode::default(),
             footnote_mode: FootnoteMode::default(),
             community_lexicon: CommunityLexiconSettings::default(),
+            medical_lexicon: MedicalLexiconSettings::default(),
             extra: toml::Table::new(),
         }
     }
@@ -1664,14 +1685,18 @@ impl Settings {
         speech.piper = lenient_section("speech.piper", piper, &mut w);
         speech.voice_params = voice_params_leniently(voice_params, &mut w);
         let mut normalization_table = table.remove("normalization");
-        let lexicon = match &mut normalization_table {
-            Some(toml::Value::Table(t)) => t.remove("community_lexicon"),
-            _ => None,
+        let (lexicon, medical) = match &mut normalization_table {
+            Some(toml::Value::Table(t)) => {
+                (t.remove("community_lexicon"), t.remove("medical_lexicon"))
+            }
+            _ => (None, None),
         };
         let mut normalization: NormalizationSettings =
             lenient_section("normalization", normalization_table, &mut w);
         normalization.community_lexicon =
             lenient_section("normalization.community_lexicon", lexicon, &mut w);
+        normalization.medical_lexicon =
+            lenient_section("normalization.medical_lexicon", medical, &mut w);
         let s = Settings {
             speech,
             highlight: lenient_section("highlight", table.remove("highlight"), &mut w),
@@ -1890,7 +1915,7 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 34] = [
+pub(crate) const STRUCT_TABLES: [&str; 35] = [
     "keyboard",
     "colors",
     "sync",
@@ -1913,6 +1938,7 @@ pub(crate) const STRUCT_TABLES: [&str; 34] = [
     "export",
     "braille",
     "normalization.community_lexicon",
+    "normalization.medical_lexicon",
     "speech",
     "speech.eci",
     "speech.sapi",
@@ -2156,16 +2182,22 @@ mod tests {
         assert!(!s.normalization.community_lexicon.enabled);
         assert_eq!(s.normalization.community_lexicon.dir, None);
         assert_eq!(s.normalization.community_lexicon.language, "ENU");
+        assert!(!s.normalization.medical_lexicon.enabled);
+        assert_eq!(s.normalization.medical_lexicon.overlay, None);
         assert_eq!(s.export.subtitle_format, SubtitleFormat::Srt);
         assert!(!s.export.subtitle_word_level);
         assert!(!s.export.subtitles_with_audio);
         let text = s.to_minimal_toml().unwrap();
-        assert!(!text.contains("community_lexicon") && !text.contains("[export]"));
+        assert!(
+            !text.contains("community_lexicon")
+                && !text.contains("medical_lexicon")
+                && !text.contains("[export]")
+        );
 
         let (_d, store) = store();
         write(
             &store,
-            "[normalization]\nnumbers = false\n[normalization.community_lexicon]\nenabled = true\nlanguage = \"DEU\"\nfuture = 1\n[export]\nsubtitle_format = \"vtt\"\nsubtitle_word_level = true\nsubtitles_with_audio = true\n",
+            "[normalization]\nnumbers = false\n[normalization.community_lexicon]\nenabled = true\nlanguage = \"DEU\"\nfuture = 1\n[normalization.medical_lexicon]\nenabled = true\noverlay = \"my-terms.toml\"\n[export]\nsubtitle_format = \"vtt\"\nsubtitle_word_level = true\nsubtitles_with_audio = true\n",
         );
         let (s, err) = store.load();
         assert!(err.is_none(), "{err:?}");
@@ -2174,6 +2206,9 @@ mod tests {
         assert!(lex.enabled);
         assert_eq!(lex.language, "DEU");
         assert_eq!(lex.extra["future"].as_integer(), Some(1));
+        let medical = &s.normalization.medical_lexicon;
+        assert!(medical.enabled);
+        assert_eq!(medical.overlay, Some(PathBuf::from("my-terms.toml")));
         assert_eq!(s.export.subtitle_format, SubtitleFormat::Vtt);
         assert_eq!(s.export.subtitle_format.extension(), "vtt");
         assert!(s.export.subtitle_word_level && s.export.subtitles_with_audio);

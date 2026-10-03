@@ -67,7 +67,7 @@ pub use doc_state::{
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};
 pub use notes::{Annotation, Highlight, Note, NotesExport, Relation, RelationType};
-pub use paths::Paths;
+pub use paths::{MEDICAL_OVERLAY_FILE, Paths};
 pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
@@ -77,11 +77,11 @@ pub use settings::{
     DisplaySettings, EciDictionaries, EciSettings, EditingSettings, ExportSettings, FootnoteMode,
     GuiAnnounce, GuiSettings, HighlightSettings, InterfaceAnnouncements, InterfaceSettings,
     KeyboardSettings, KeymapOverrides, KeymapPreset, LexiconSettings, LibrarySettings,
-    MathBrailleCode, MathDisplay, MathEngine, NormalizationSettings, OcrEngine, PiperPhonemizer,
-    PiperSettings, PositionPolicy, PreviewSettings, REMOVED_SETTINGS, RESERVED_SETTINGS,
-    ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings, SayAll, Settings,
-    SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat, SummarySettings,
-    SyncSettings, TableMode, drop_removed_settings,
+    MathBrailleCode, MathDisplay, MathEngine, MedicalLexiconSettings, NormalizationSettings,
+    OcrEngine, PiperPhonemizer, PiperSettings, PositionPolicy, PreviewSettings, REMOVED_SETTINGS,
+    RESERVED_SETTINGS, ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings,
+    SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat,
+    SummarySettings, SyncSettings, TableMode, drop_removed_settings,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,
