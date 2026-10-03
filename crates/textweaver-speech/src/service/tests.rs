@@ -1885,3 +1885,233 @@ fn a_panic_while_the_backend_starts_is_an_error_from_spawn() {
         )
     );
 }
+
+// ---- structural pauses ------------------------------------------------------
+
+/// "Title." then a paragraph of two sentences, with the title's end (6) a
+/// heading's end.
+fn titled() -> (Vec<Utterance>, Vec<PauseAt>) {
+    let us = doc(0, &["Title.", "Body one.", "Body two."]);
+    let pauses = vec![PauseAt {
+        after: CharPos(6),
+        kind: crate::pauses::PauseKind::Heading,
+    }];
+    (us, pauses)
+}
+
+/// The engine calls other than parameter changes, as short strings.
+fn engine_calls(rec: &RecordingHandle) -> Vec<String> {
+    rec.calls()
+        .into_iter()
+        .filter_map(|c| match c {
+            Call::Speak(u) => Some(format!("speak {}", u.text)),
+            Call::Silence { id, ms } => Some(format!("silence {ms} after {}", id.chunk)),
+            Call::Stop => Some("stop".into()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn silences(rec: &RecordingHandle) -> usize {
+    rec.calls()
+        .iter()
+        .filter(|c| matches!(c, Call::Silence { .. }))
+        .count()
+}
+
+#[test]
+fn engines_that_play_silence_get_the_pause_after_the_right_utterance() {
+    let mut rig = Rig::manual();
+    let (us, pauses) = titled();
+    rig.core.read_with_pauses(us, pauses);
+    rig.step();
+    assert_eq!(
+        engine_calls(&rig.rec),
+        [
+            "speak Title.",
+            "silence 400 after 0",
+            "speak Body one.",
+            "speak Body two."
+        ],
+        "the lookahead is untouched: the next sentence is synthesized ahead"
+    );
+}
+
+#[test]
+fn a_zero_pause_is_no_pause() {
+    let mut rig = Rig::manual();
+    rig.core.set_pauses(PauseConfig {
+        heading_ms: 0,
+        ..PauseConfig::default()
+    });
+    let (us, pauses) = titled();
+    rig.core.read_with_pauses(us, pauses);
+    rig.step();
+    assert_eq!(silences(&rig.rec), 0);
+    // A plain read has no pauses either.
+    let mut rig = Rig::manual();
+    rig.core.read(titled().0);
+    rig.step();
+    assert_eq!(silences(&rig.rec), 0);
+}
+
+#[test]
+fn pauses_shorten_at_high_rates() {
+    let mut rig = Rig::manual();
+    rig.core.set_rate(Rate::Wpm(530));
+    let (us, pauses) = titled();
+    rig.core.read_with_pauses(us, pauses);
+    rig.step();
+    assert!(
+        engine_calls(&rig.rec).contains(&"silence 200 after 0".to_owned()),
+        "{:?}",
+        engine_calls(&rig.rec)
+    );
+}
+
+#[test]
+fn a_resumed_sentence_keeps_its_pause() {
+    let mut rig = Rig::manual();
+    let (us, pauses) = titled();
+    rig.core.read_with_pauses(us, pauses);
+    rig.step();
+    let title = rig.spoken()[0].id;
+    rig.rec.start(title);
+    rig.step();
+    rig.core.pause();
+    rig.rec.clear_calls();
+    rig.core.resume();
+    rig.step();
+    let chunk = rig.spoken()[0].id.chunk;
+    assert_eq!(
+        engine_calls(&rig.rec)[..2],
+        [
+            "speak Title.".to_owned(),
+            format!("silence 400 after {chunk}")
+        ]
+    );
+}
+
+/// A rig whose engine plays its own audio: pauses are gaps in the queue.
+fn gap_rig() -> Rig {
+    Rig::new(
+        RecordingMode::Manual,
+        RecordingBackend::DEFAULT_CAPS - Caps::SILENCE,
+        plain(),
+    )
+}
+
+/// `rig` read [`titled`] and the title has finished: the pause runs.
+fn in_the_gap(rig: &mut Rig) {
+    let (us, pauses) = titled();
+    rig.core.read_with_pauses(us, pauses);
+    rig.step();
+    assert_eq!(rig.rec.spoken_texts(), ["Title."], "held for the pause");
+    let title = rig.spoken()[0].id;
+    rig.rec.start(title);
+    rig.rec.finish(title);
+    rig.step();
+    assert_eq!(rig.rec.spoken_texts(), ["Title."], "the pause runs");
+}
+
+#[test]
+fn engines_that_play_their_own_audio_get_a_timed_gap() {
+    let mut rig = gap_rig();
+    in_the_gap(&mut rig);
+    assert!(
+        rig.core.next_wakeup().is_some_and(|w| w <= ms(400)),
+        "the service wakes for the end of the pause"
+    );
+    rig.advance(ms(399));
+    assert_eq!(rig.rec.spoken_texts(), ["Title."]);
+    let st = rig.advance(ms(1));
+    assert_eq!(rig.rec.spoken_texts(), ["Title.", "Body one.", "Body two."]);
+    assert!(!st.contains(&FIN));
+    assert_eq!(silences(&rig.rec), 0);
+}
+
+#[test]
+fn the_next_word_is_highlighted_as_soon_as_it_sounds() {
+    let mut rig = gap_rig();
+    in_the_gap(&mut rig);
+    rig.advance(ms(400));
+    let body = rig.spoken()[1].id;
+    rig.rec.start(body);
+    assert!(rig.rec.word(body, 0, None));
+    let st = rig.step();
+    assert_eq!(positions(&st), [r(7, 11)], "{st:?}");
+}
+
+#[test]
+fn stop_during_a_gap_is_immediate() {
+    let mut rig = gap_rig();
+    in_the_gap(&mut rig);
+    rig.core.stop();
+    let st = rig.step();
+    assert!(st.contains(&STOPPED), "{st:?}");
+    // A new reading starts at once, with no pause left over.
+    rig.core.read(doc(100, &["Fresh."]));
+    rig.step();
+    assert_eq!(
+        rig.rec.spoken_texts().last().map(String::as_str),
+        Some("Fresh.")
+    );
+}
+
+#[test]
+fn skipping_during_a_gap_cuts_the_pause_not_a_sentence() {
+    let mut rig = gap_rig();
+    in_the_gap(&mut rig);
+    rig.core.skip();
+    rig.step();
+    assert_eq!(rig.rec.spoken_texts(), ["Title.", "Body one.", "Body two."]);
+}
+
+#[test]
+fn pausing_during_a_gap_resumes_with_the_next_sentence_at_once() {
+    let mut rig = gap_rig();
+    in_the_gap(&mut rig);
+    rig.core.pause();
+    let st = rig.step();
+    assert!(
+        st.iter().any(|s| matches!(s, SpeechStatus::Paused { .. })),
+        "{st:?}"
+    );
+    rig.advance(ms(5000));
+    assert_eq!(rig.rec.spoken_texts(), ["Title."], "nothing while paused");
+    rig.core.resume();
+    rig.step();
+    assert_eq!(rig.rec.spoken_texts(), ["Title.", "Body one.", "Body two."]);
+}
+
+#[test]
+fn a_played_silence_delays_the_next_sentence_by_its_length() {
+    // An audio-clock engine that plays the silence: 100 ms a word.
+    let config = ServiceConfig {
+        pacing: PacingConfig {
+            latency_offset: Duration::ZERO,
+            ..PacingConfig::default()
+        },
+        ..plain()
+    };
+    let mut rig = Rig::new(
+        RecordingMode::Timed { ms_per_word: 100 },
+        RecordingBackend::DEFAULT_CAPS | Caps::AUDIO_CLOCK,
+        config,
+    );
+    let (us, pauses) = titled();
+    rig.core.read_with_pauses(us, pauses);
+    // "Title." is 100 ms, then 400 ms of silence: "Body" sounds at 500.
+    let mut seen = Vec::new();
+    for t in (0..=600).step_by(10) {
+        if t > 0 {
+            rig.clock.advance(ms(10));
+        }
+        for p in positions(&rig.step()) {
+            seen.push((t, p));
+        }
+    }
+    assert_eq!(seen.first(), Some(&(0, r(0, 5))));
+    let body = seen.iter().find(|(_, p)| *p == r(7, 11)).copied();
+    assert_eq!(body, Some((500, r(7, 11))), "{seen:?}");
+}

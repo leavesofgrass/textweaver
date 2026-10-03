@@ -40,6 +40,10 @@
 //! `stop` ends every unfinished utterance with `Cancelled` (delivered on the
 //! next `poll`).
 //!
+//! With [`Caps::SILENCE`] (in the default capabilities) `silence_after` is
+//! recorded as [`Call::Silence`], and in `Timed` mode the next utterance's
+//! audio starts that much later, as with a real playback client.
+//!
 //! Files: `synthesize_to_file` and `synthesize_utterance` write a silent WAV
 //! of one word-length per spoken word ([`RecordingBackend::FILE_MS_PER_WORD`],
 //! or `ms_per_word` in `Timed` mode) and report word `i` at
@@ -89,6 +93,13 @@ pub enum Call {
     Pause,
     /// `resume`.
     Resume,
+    /// `silence_after`: a structural pause after an utterance.
+    Silence {
+        /// The utterance the silence follows.
+        id: UtteranceId,
+        /// Its length in ms.
+        ms: u32,
+    },
     /// `tone`.
     Tone {
         /// Frequency in Hz.
@@ -114,6 +125,9 @@ struct Pending {
     /// Events not yet released (`Timed` mode holds the burst until the
     /// audio starts).
     held: Vec<RawEvent>,
+    /// Silence after the audio (`Timed` mode: the next utterance starts
+    /// this much after `timing`'s end).
+    silence: Duration,
 }
 
 #[derive(Debug, Default)]
@@ -263,13 +277,15 @@ impl std::fmt::Debug for RecordingBackend {
 }
 
 impl RecordingBackend {
-    /// Default capabilities: word events, pitch, volume, tones, and
-    /// synthesis to file. No native pause, so the service emulates it.
+    /// Default capabilities: word events, pitch, volume, tones, synthesis
+    /// to file, and silence between utterances. No native pause, so the
+    /// service emulates it.
     pub const DEFAULT_CAPS: Caps = Caps::WORD_EVENTS
         .union(Caps::PITCH)
         .union(Caps::VOLUME)
         .union(Caps::TONES)
-        .union(Caps::SYNTH_TO_FILE);
+        .union(Caps::SYNTH_TO_FILE)
+        .union(Caps::SILENCE);
 
     /// Sample rate of the silent WAV files `synthesize_to_file` writes.
     pub const FILE_SAMPLE_RATE: u32 = 16_000;
@@ -452,6 +468,7 @@ impl SpeechBackend for RecordingBackend {
                     id,
                     timing: None,
                     held: Vec::new(),
+                    silence: Duration::ZERO,
                 }),
                 RecordingMode::Instant => {
                     s.outbox.push_back((id, RawEvent::Started));
@@ -467,11 +484,12 @@ impl SpeechBackend for RecordingBackend {
                     s.outbox.push_back((id, RawEvent::Finished));
                 }
                 RecordingMode::Timed { ms_per_word } => {
-                    // Audio starts when the previous utterance's audio ends.
+                    // Audio starts when the previous utterance's audio, and
+                    // the silence after it, end.
                     let start = s
                         .pending
                         .iter()
-                        .filter_map(|p| p.timing.map(|(_, end)| end))
+                        .filter_map(|p| p.timing.map(|(_, end)| end + p.silence))
                         .max()
                         .unwrap_or(now)
                         .max(now);
@@ -490,6 +508,7 @@ impl SpeechBackend for RecordingBackend {
                         id,
                         timing: Some((start, end)),
                         held,
+                        silence: Duration::ZERO,
                     });
                 }
             }
@@ -500,6 +519,17 @@ impl SpeechBackend for RecordingBackend {
 
     fn poll(&mut self, sink: &mut dyn EventSink) {
         self.deliver(sink);
+    }
+
+    fn silence_after(&mut self, id: UtteranceId, ms: u32) {
+        let mut s = lock(&self.state);
+        if !s.caps.contains(Caps::SILENCE) {
+            return;
+        }
+        s.calls.push(Call::Silence { id, ms });
+        if let Some(p) = s.pending.iter_mut().find(|p| p.id == id) {
+            p.silence = Duration::from_millis(u64::from(ms));
+        }
     }
 
     fn stop(&mut self) {
