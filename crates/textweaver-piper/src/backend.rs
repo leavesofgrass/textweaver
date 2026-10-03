@@ -65,7 +65,8 @@ pub const CAPS: Caps = Caps::WORD_EVENTS
     .union(Caps::PAUSE)
     .union(Caps::PITCH)
     .union(Caps::VOLUME)
-    .union(Caps::SYNTH_TO_FILE);
+    .union(Caps::SYNTH_TO_FILE)
+    .union(Caps::SILENCE);
 
 /// The backend's options.
 #[derive(Clone, Debug, PartialEq)]
@@ -414,6 +415,11 @@ impl SpeechBackend for PiperBackend {
     fn poll(&mut self, sink: &mut dyn EventSink) {
         self.drain();
         self.playback.emit(sink);
+    }
+
+    fn silence_after(&mut self, id: textweaver_speech::core::UtteranceId, ms: u32) {
+        // Structural pauses play as silence in the shared playback client.
+        self.playback.silence_after(id, ms);
     }
 
     fn stop(&mut self) {

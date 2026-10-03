@@ -635,7 +635,8 @@ impl SpeechBackend for EciBackend {
             | Caps::VOLUME
             | Caps::SYNTH_TO_FILE
             | Caps::NATIVE_NORMALIZATION
-            | Caps::PLAYBACK_EVENTS;
+            | Caps::PLAYBACK_EVENTS
+            | Caps::SILENCE;
         if self.config.output == crate::AudioOutput::Device {
             caps |= Caps::TONES;
         }
@@ -737,6 +738,11 @@ impl SpeechBackend for EciBackend {
         }
         self.drain_host();
         self.playback.emit(sink);
+    }
+
+    fn silence_after(&mut self, id: textweaver_speech::core::UtteranceId, ms: u32) {
+        // Structural pauses play as silence in the shared playback client.
+        self.playback.silence_after(id, ms);
     }
 
     fn stop(&mut self) {

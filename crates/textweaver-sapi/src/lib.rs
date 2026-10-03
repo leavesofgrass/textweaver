@@ -257,6 +257,7 @@ pub fn backend_description() -> BackendInfo {
             | Caps::PITCH
             | Caps::VOLUME
             | Caps::SYNTH_TO_FILE
+            | Caps::SILENCE
             | Caps::TONES,
     }
 }

@@ -64,7 +64,8 @@ pub const CAPS: Caps = Caps::WORD_EVENTS
     .union(Caps::PITCH)
     .union(Caps::VOLUME)
     .union(Caps::SYNTH_TO_FILE)
-    .union(Caps::PLAYBACK_EVENTS);
+    .union(Caps::PLAYBACK_EVENTS)
+    .union(Caps::SILENCE);
 
 /// Backend configuration.
 #[derive(Clone, Debug, Default, PartialEq)]
