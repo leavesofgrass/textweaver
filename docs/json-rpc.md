@@ -119,7 +119,7 @@ With `--no-speech`, reading does not take any time. When you ask the server to r
 
 ## Methods
 
-The server has 25 methods. `initialize` lists them all, so a client can check. Parameters marked optional may be left out.
+The server has 29 methods. `initialize` lists them all, so a client can check. Parameters marked optional may be left out.
 
 ### initialize: say hello and learn the version
 
@@ -128,7 +128,7 @@ Parameters: none.
 The result is an object with:
 
 - `server`: always `"textweaver"`.
-- `version`: the textweaver version, such as `"0.1.0-alpha.3"`.
+- `version`: the textweaver version, such as `"0.1.0-alpha.8"`.
 - `protocol`: the protocol version, a number. It is `1`.
 - `methods`: the names of every method.
 - `notifications`: the names of every notification.
@@ -139,7 +139,7 @@ You do not have to call `initialize` first. Every method works without it.
 
 Parameters:
 
-- `path` (string, required): the file to open. A relative path is taken from the folder the server was started in.
+- `path` (string, required): what to open, as `tw open` takes it: a file, a file inside an archive (`book.zip!chapter.pdf`), or a web address. A relative path is taken from the folder the server was started in.
 
 The result is an object with:
 
@@ -158,7 +158,7 @@ The `document` object has:
 
 If edit mode is on when you call `open`, textweaver leaves edit mode first. The result then has `document` and `effects` instead of `document` and `position`, so call `position` afterwards.
 
-Errors: `-32602` when `path` is missing, and `-32002` when the file does not exist or cannot be read.
+Errors: `-32602` when `path` is missing, and `-32002` when the file does not exist, is a folder, or cannot be read.
 
 ### status: everything at once
 
@@ -253,6 +253,44 @@ It needs an open document. Parameters:
 
 Offsets past the end are treated as the end, and an `end` before `start` gives empty text. The result is `{text, start, end}`. The text is the same canonical text that `tw text` prints and that textweaver reads aloud.
 
+### outline, notes, highlights, and info: read what the reader knows
+
+These four methods only read; they change nothing and say nothing aloud. Each needs an open document and takes no parameters. Offsets are characters in the canonical text, as for `text`, and `line` counts from 1.
+
+- `outline` returns `{items, pages}`. Each item is `{level, text, char, line}`: a heading, its level from 1 to 6, its text on one line, and where it starts. In a paged document without headings, such as a PDF, the items are its pages, each with level 0, and `pages` is true.
+- `notes` returns `{notes}`, in document order. Each note is `{id, start, end, line, anchor, text, tags, color}`: `anchor` is the noted text, `text` is what the user wrote, `tags` the words written as `#tag`, and `color` a color name or null.
+- `highlights` returns `{highlights}`, in document order. Each is `{id, start, end, line, color, text}`, where `text` is the highlighted text and `color` a color name such as `"yellow"`.
+- `info` returns facts about the document: `title`, `path`, `format`, `author`, `language` (each may be null), and the counts `chars`, `words`, `lines`, `headings`, `notes`, `highlights`, and `bookmarks`. `reading_minutes` is the time to read it aloud at `rate`, the speech rate in words per minute.
+
+For example, the outline of the document in [the example session](#a-complete-example-session):
+
+```json
+{"jsonrpc": "2.0", "id": 9, "method": "outline"}
+```
+
+```json
+{
+  "id": 9,
+  "jsonrpc": "2.0",
+  "result": {
+    "items": [
+      {"char": 0, "level": 1, "line": 1, "text": "Cell biology"},
+      {"char": 90, "level": 2, "line": 5, "text": "The nucleus"}
+    ],
+    "pages": false
+  }
+}
+```
+
+And in Python, with the `call` function from [the minimal client](#a-minimal-client-in-python), a study list of every note:
+
+```python
+for note in call("notes")["notes"]:
+    print(f"Line {note['line']}: {note['anchor']}: {note['text']}")
+```
+
+Errors: `-32001` when no document is open.
+
 ### insert: type text at the caret in edit mode
 
 It needs an open document and edit mode on. This is how a client, such as a dictation front end, types text as if it had been typed at the keyboard: it is one undo step and is echoed as typing is. Parameters:
@@ -274,12 +312,43 @@ The result is an object with:
 
 - `status`: the status message after the action, the same text as its announcement.
 - `effects`: what the action asked the client to show. Each effect is `{type, params}`:
-  - `prompt`, with `params` `{label, purpose}`: a question that needs typed text, such as a Find or Go to box. `label` is what to show or say. `purpose` says what the answer is for, in lowercase with underscores: `find`, `go_to`, `open`, `command_palette`, `save_as`, `table_size`, `image_path`, `replace_find`, `replace_with`, `note_text`, `edit_note`, `rename_bookmark`, `export_settings`, `import_settings`, `citation_locator` (the page for a citation being inserted), `reference_identifier` (a DOI or ISBN to add), `import_references` (a file of references), or `template_title` (the title of a new document from a template). Answer it with `answer`.
+  - `prompt`, with `params` `{label, purpose}`: a question that needs typed text, such as a Find or Go to box. `label` is what to show or say. `purpose` says what the answer is for, in lowercase with underscores; the list of purposes is under [Prompt purposes](#prompt-purposes). Answer it with `answer`.
   - `list`, with `params` `{title, items}`: a list to choose from, such as bookmarks or notes. `items` is a list of strings. Pick one with `choose`.
   - `quit`, with empty `params`: the app quit. The server stops after sending this answer.
 - `pending`: when the action asked a yes-or-no question and you did not give `confirm`, this is `{action, question}`, for example `{"action": "quit", "question": "Quit textweaver? y or n"}`. Otherwise it is null. Answer later with another `action` call that has `confirm`, or with `cancel` for no.
 
 The notes commands return `status` and `effects` but no `pending`.
+
+#### Prompt purposes
+
+A prompt's `purpose` is one of these 26 purposes. The names are fixed: a new purpose may be added, but none is renamed or removed within protocol version 1. Treat a purpose you do not know like any other text question: show the `label` and send what the user types.
+
+- `find`: the text to find.
+- `go_to`: a line, a percentage, `start`, or `end`.
+- `open`: the document to open.
+- `command_palette`: the name of a command to run.
+- `save_as`: the file to save to; empty accepts the name in the label.
+- `table_size`: a table size such as `3 by 2` (columns by rows).
+- `image_path`: the path of an image to insert.
+- `replace_find`: the text to replace (the replacement is asked next).
+- `replace_with`: the replacement for every match.
+- `note_text`: the text of a new note.
+- `edit_note`: the new text of a note; empty keeps it.
+- `rename_bookmark`: the new name of a bookmark; empty keeps it.
+- `export_settings`: the file to export settings to.
+- `import_settings`: the settings file to import.
+- `citation_locator`: the page for a citation being inserted; empty inserts none.
+- `reference_identifier`: a DOI or ISBN to look up and add.
+- `import_references`: a BibTeX, RIS, or CSL-JSON file to import.
+- `template_title`: the title of a new document from a template.
+- `define_word`: a word to define.
+- `profile_name`: the name of a new settings profile.
+- `rename_profile`: the new name of a settings profile; empty keeps it.
+- `import_profiles`: a profile export to import.
+- `export_profiles`: the file to export the profiles to.
+- `setting_value`: a new value for the setting chosen in the settings list; empty keeps it.
+- `sync_computer_name`: this computer's name for sync; empty keeps the one suggested.
+- `document_details`: one field of the document details form (title, author, DOI, or ISBN). `prompt_key` with `tab` moves between the fields, and `answer` saves them all.
 
 The reader writes files in the background (saves, bookmarks, notes, positions). The server waits for those writes before it answers, so when an `action` such as `save` or `add_bookmark` returns, the file is on disk.
 
@@ -405,11 +474,11 @@ The server answers with its name, version, protocol, and the lists of methods an
   "id": 1,
   "jsonrpc": "2.0",
   "result": {
-    "methods": ["initialize", "open", "status", "position", "navigate", "read", "pause", "resume", "stop", "search", "text", "insert", "action", "answer", "choose", "cancel", "list_state", "list_key", "prompt_state", "prompt_key", "settings_schema", "get_setting", "set_setting", "shutdown", "exit"],
+    "methods": ["initialize", "open", "status", "position", "navigate", "read", "pause", "resume", "stop", "search", "text", "outline", "notes", "highlights", "info", "insert", "action", "answer", "choose", "cancel", "list_state", "list_key", "prompt_state", "prompt_key", "settings_schema", "get_setting", "set_setting", "shutdown", "exit"],
     "notifications": ["position", "playback", "announcement", "prompt", "list", "quit"],
     "protocol": 1,
     "server": "textweaver",
-    "version": "0.1.0-alpha.3"
+    "version": "0.1.0-alpha.8"
   }
 }
 ```
@@ -694,7 +763,7 @@ python client.py notes.md
 With the example document, opened for the first time, it prints:
 
 ```text
-Connected to textweaver 0.1.0-alpha.3 protocol 1
+Connected to textweaver 0.1.0-alpha.8 protocol 1
 Announcement: Opened Cell biology.
 Opened Cell biology with 7 lines
 Announcement: Cells are the smallest units of life.
