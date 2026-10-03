@@ -246,10 +246,6 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 - `components.mirror`: default empty (`""`). Components mirror. Where optional components come from first: an https address or a folder on this computer. Empty uses their public sources. Never put a password here. Text. Stays on this computer.
 
-## Window: the `[gui]` section
-
-- `gui.window`: default not set. Window. Text; empty means not set. Stays on this computer.
-
 ## Kept by textweaver
 
 textweaver writes these itself, such as a question already asked. They are in the file, but not on the settings screen.
@@ -257,6 +253,7 @@ textweaver writes these itself, such as a question already asked. They are in th
 - `display.theme_explicit`: default off (`false`). Theme picked. Set when you pick a theme; it stops following the system. On or off: `true` or `false`. Syncs between computers.
 - `accessibility.hybrid_offered`: default off (`false`). Hybrid mode offered. Set once textweaver has asked whether to use hybrid mode. On or off: `true` or `false`. Stays on this computer.
 - `interface.recent_settings`: default an empty list. Recently changed settings. The settings changed last on the settings screen, listed at its top. Text; empty means not set. Stays on this computer.
+- `gui.window`: default not set. Window place and size. Where the window was and how large, kept on this computer and never synced. Text; empty means not set. Stays on this computer.
 - `components.chooser_shown`: default off (`false`). Components list shown. The first-run list of optional components was shown. On or off: `true` or `false`. Stays on this computer.
 
 ## See also

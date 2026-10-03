@@ -1226,16 +1226,17 @@ fn screenshots_draw_edit_mode_no_document_the_ruler_and_the_panels() {
 fn the_first_nine_themes_keep_their_f5_order() {
     use textweaver_app::Command;
     use textweaver_app::keymap::ActionId;
+    // F5 cycles the themes that meet AA first, partners side by side.
     const FIRST_NINE: [&str; 9] = [
         "galaxy",
         "galaxy-light",
-        "one-dark",
-        "one-light",
-        "dark",
-        "light",
-        "contrast",
         "high-contrast",
-        "phosphor",
+        "contrast",
+        "lamplight",
+        "sepia",
+        "gruvbox-dark",
+        "gruvbox-light",
+        "tokyo-night",
     ];
     let dir = tempfile::tempdir().unwrap();
     let mut app = app_with_sample(dir.path());

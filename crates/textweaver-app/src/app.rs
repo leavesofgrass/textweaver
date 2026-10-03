@@ -959,6 +959,13 @@ impl App {
         }
     }
 
+    /// Announces a warning that is not an error, such as a speech engine
+    /// fallback: never silenced and assertive like [`error`](Self::error),
+    /// but without the word "Error:", since the work goes on.
+    pub(crate) fn warn(&mut self, text: &str) {
+        self.say_kind(text, Verbosity::Low, Priority::Assertive, Importance::Error);
+    }
+
     /// `text` with the localized "Error:" in front, unless it is there.
     pub(crate) fn error_text(&self, text: &str) -> String {
         let prefix = self.msg_args("message-error", &args!["message" => ""]);

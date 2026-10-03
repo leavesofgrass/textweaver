@@ -57,7 +57,7 @@ fn wait_for(log: &SpeechLog, n: usize) -> Vec<String> {
 #[test]
 fn messages_before_the_engine_is_ready_are_said_in_order_after_opened() {
     let (mut app, go, logs) = starting_app(vec![
-        "Error: Speech engine eci is not available; using test-recording.".into(),
+        "Speech engine eci is not available; using test-recording.".into(),
     ]);
     assert!(app.speech_restarting());
     app.open_document(
@@ -92,7 +92,7 @@ fn messages_before_the_engine_is_ready_are_said_in_order_after_opened() {
     assert!(said[3].starts_with("Line 1 of 1"), "{said:?}");
     assert_eq!(
         said[4],
-        "Error: Speech engine eci is not available; using test-recording."
+        "Speech engine eci is not available; using test-recording."
     );
     // Afterwards messages are spoken at once, as always.
     app.dispatch(Command::Action(ActionId::RepeatMessage));

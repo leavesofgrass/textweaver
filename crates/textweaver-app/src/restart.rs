@@ -271,8 +271,10 @@ impl App {
         self.apply_voice_settings();
         // At the first start, messages from starting the engine join the
         // ones held meanwhile, after them.
+        // They are warnings (a fallback engine was chosen): the reading goes
+        // on, so they carry no "Error:".
         for m in messages {
-            self.error(&m);
+            self.warn(&m);
         }
         if first {
             let early = std::mem::take(&mut self.restart.early);

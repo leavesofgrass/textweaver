@@ -1215,6 +1215,11 @@ pub const INFO: &[Info] = &[
         "The settings changed last on the settings screen, listed at its top.",
     ),
     // [gui]
+    internal(
+        "gui.window",
+        "Window place and size",
+        "Where the window was and how large, kept on this computer and never synced.",
+    ),
     choice(
         "gui.announce",
         "Announcements",
