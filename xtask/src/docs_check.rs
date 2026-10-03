@@ -14,8 +14,12 @@
 //!   `docs/README.md`; and US English: no British spelling from
 //!   [`BRITISH`] in the English messages (`en.ftl`, values only), `README.md`,
 //!   `CONTRIBUTING.md`, or `docs/` (outside the history and research
-//!   records, code, and link targets). Each problem is one line naming the
-//!   file and the fact.
+//!   records, code, and link targets). The user guides (`docs/*.md`, not
+//!   `docs/dev`) name releases, not internal waves or dates ([`dated_words`]);
+//!   a theme count in `docs/README.md` matches the theme files; and every
+//!   image has alternative text and a "Description:" line near it
+//!   ([`image_problems`]). Each problem is one line naming the file and the
+//!   fact.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -245,8 +249,156 @@ pub fn check(root: &Path) -> anyhow::Result<Vec<String>> {
         {
             problems.push(format!("docs/{name}: not linked from docs/README.md"));
         }
+        // A user guide names the release, never a wave or a date.
+        if !GENERATED.contains(&name.as_str()) {
+            problems.extend(dated_words(&format!("docs/{name}"), &text));
+        }
+    }
+
+    // The theme count, where the index states one.
+    let themes = file_names(&root.join("crates/textweaver-theme/themes"))?
+        .into_iter()
+        .filter(|n| n.ends_with(".toml"))
+        .count();
+    if let Some(n) = number_between(&docs_index, "the ", " built-in color themes")
+        && n != themes
+    {
+        problems.push(format!(
+            "docs/README.md: says {n} built-in themes, but crates/textweaver-theme/themes has {themes}"
+        ));
+    }
+
+    // Images: alternative text, and a description in words beside them.
+    let mut pages = vec!["README.md".to_owned()];
+    markdown_under(root, "docs", &mut pages)?;
+    for rel in pages {
+        if !RECORDS.iter().any(|r| rel.starts_with(r)) {
+            problems.extend(image_problems(&rel, &read(&rel)?));
+        }
     }
     Ok(problems)
+}
+
+const MONTHS: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
+/// Internal names and dates in a user guide, one problem line each: "Wave"
+/// and a number, "this alpha", and "since" or "on" before a month and a
+/// day. Fenced code and code spans are skipped.
+fn dated_words(rel: &str, text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut fenced = false;
+    for (i, line) in text.lines().enumerate() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            fenced = !fenced;
+            continue;
+        }
+        if fenced {
+            continue;
+        }
+        let prose = without_code_spans(line);
+        let words: Vec<&str> = prose
+            .split(|c: char| !c.is_alphanumeric())
+            .filter(|w| !w.is_empty())
+            .collect();
+        for (j, w) in words.iter().enumerate() {
+            let next = words.get(j + 1).copied().unwrap_or("");
+            let after = words.get(j + 2).copied().unwrap_or("");
+            let fact = if *w == "Wave" && next.starts_with(|c: char| c.is_ascii_digit()) {
+                Some(format!("\"Wave {next}\"; name the release instead"))
+            } else if w.eq_ignore_ascii_case("this") && next == "alpha" {
+                Some("\"this alpha\"; name the release instead".to_owned())
+            } else if (w.eq_ignore_ascii_case("since") || w.eq_ignore_ascii_case("on"))
+                && MONTHS.contains(&next)
+                && after.starts_with(|c: char| c.is_ascii_digit())
+            {
+                Some(format!(
+                    "\"{w} {next} {after}\"; name the release instead of a date"
+                ))
+            } else {
+                None
+            };
+            if let Some(f) = fact {
+                out.push(format!("{rel}:{}: {f}", i + 1));
+            }
+        }
+    }
+    out
+}
+
+/// `line` with its code spans blanked out.
+fn without_code_spans(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut code = false;
+    for c in line.chars() {
+        if c == '`' {
+            code = !code;
+            out.push(' ');
+        } else {
+            out.push(if code { ' ' } else { c });
+        }
+    }
+    out
+}
+
+/// Images in Markdown (`![alt](file)`, outside code) with no alternative
+/// text, or with no line starting "Description:" within three lines, so a
+/// screen reader user learns what the picture shows.
+fn image_problems(rel: &str, text: &str) -> Vec<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut out = Vec::new();
+    let mut fenced = false;
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+            fenced = !fenced;
+            continue;
+        }
+        if fenced {
+            continue;
+        }
+        let prose = without_code_spans(line);
+        let mut rest = prose.as_str();
+        while let Some(at) = rest.find("![") {
+            let after = &rest[at + 2..];
+            let Some(close) = after.find("](") else {
+                break;
+            };
+            if after[..close].trim().is_empty() {
+                out.push(format!(
+                    "{rel}:{}: an image with no alternative text",
+                    i + 1
+                ));
+            }
+            let from = i.saturating_sub(3);
+            let near = lines
+                .iter()
+                .skip(from)
+                .take(i + 4 - from)
+                .any(|l| l.trim_start().starts_with("Description:"));
+            if !near {
+                out.push(format!(
+                    "{rel}:{}: an image with no \"Description:\" line within 3 lines",
+                    i + 1
+                ));
+            }
+            rest = &after[close..];
+        }
+    }
+    out
 }
 
 /// Every Markdown file under `rel` (relative to `root`), as `/`-separated
@@ -510,6 +662,51 @@ voices-licence-x = { $licence } licence
             ]
         );
         assert!(british_spellings("x.md", "color, license, cancelled", false).is_empty());
+    }
+
+    #[test]
+    fn user_guides_name_releases_not_waves_or_dates() {
+        let md = "Since Wave 5, F10 opens menus.
+New in this alpha.
+It changed on September 26, 2026.
+`Wave 3` in code, and the 0.1.0-alpha.4 release, are fine.
+```
+Wave 2
+```";
+        assert_eq!(
+            dated_words("docs/x.md", md),
+            vec![
+                "docs/x.md:1: \"Wave 5\"; name the release instead",
+                "docs/x.md:2: \"this alpha\"; name the release instead",
+                "docs/x.md:3: \"on September 26\"; name the release instead of a date",
+            ]
+        );
+    }
+
+    #[test]
+    fn images_need_alternative_text_and_a_description() {
+        let md = "![](a.png)
+
+
+
+
+                  ![The window in Galaxy](b.png)
+                  Description: the document with the spoken word bold.
+
+
+
+
+                  ![Settings](c.png)
+
+                  `![code](d.png)` is not an image.";
+        assert_eq!(
+            image_problems("x.md", md),
+            vec![
+                "x.md:1: an image with no alternative text",
+                "x.md:1: an image with no \"Description:\" line within 3 lines",
+                "x.md:12: an image with no \"Description:\" line within 3 lines",
+            ]
+        );
     }
 
     #[test]

@@ -14,7 +14,7 @@ textweaver-gui path/to/document.md
 
 With no document, it opens empty and says which key opens one (Ctrl+O).
 
-The first time textweaver runs (no settings yet), the window says a short welcome with the five keys that get you reading, then shows the language list, as the terminal reader does. On a later run, if a screen reader is running and you have never chosen an accessibility mode, it asks once whether to use hybrid mode. If an earlier run left unsaved work, it offers it back. The speech engine starts in the background, so the window is ready at once; Restart Speech (Shift+F8) starts it again, and it restarts by itself once if it stops.
+The first time textweaver runs (no settings yet), the window says a short welcome with the five keys that get you reading (open, play and pause, stop, the command palette, and help), before the hint that no document is open, then shows the language list, as the terminal reader does. On a later run, if a screen reader is running and you have never chosen an accessibility mode, it asks once whether to use hybrid mode. If an earlier run left unsaved work, it offers it back. The speech engine starts in the background, so the window is ready at once; Restart Speech (Shift+F8) starts it again, and it restarts by itself once if it stops.
 
 Useful options:
 
@@ -93,7 +93,7 @@ The document moves its caret with your system's keys, and Shift with any of them
 - **Windows and Linux:** Left and Right by character, Up and Down by line, Ctrl+Left and Ctrl+Right by word, Ctrl+Up and Ctrl+Down by paragraph, Home and End to the start and end of the line, Ctrl+Home and Ctrl+End to the start and end of the document, Page Up and Page Down by screen.
 - **macOS:** Left and Right by character, Up and Down by line, Option+Left and Option+Right by word, Option+Up and Option+Down by paragraph, Command+Left and Command+Right to the start and end of the line, Command+Up and Command+Down to the start and end of the document (Home and End too), Page Up and Page Down by screen. No caret key uses Control, so VoiceOver's keys (Control+Option) are never taken.
 
-In browse mode, Home and End go to the ends of the line, as in any document window; in the terminal they go to the ends of the document, which Ctrl+Home and Ctrl+End do here. In Speech Cursor mode (Tab), Up and Down read the next and previous line and Page Up and Page Down move by paragraph, as in the terminal.
+In browse mode, Home and End go to the ends of the line, as in any document window; in the terminal they go to the ends of the document, which Ctrl+Home and Ctrl+End do here. In Speech Cursor mode (in the window, Reading, then Speech Cursor, in the menus; Tab moves the focus here), Up and Down read the next and previous line and Page Up and Page Down move by paragraph, as in the terminal.
 
 ## Keys
 
@@ -126,7 +126,7 @@ Ctrl+E, or the Edit button, turns edit mode on, as in the terminal reader: you e
 In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus mode by themselves.
 
 - **Typing** goes in at the caret, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
-- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the caret moves to, and what a Shift key added to the selection or took from it.
+- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, when the window was started with `--self-voicing`, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the caret moves to, and what a Shift key added to the selection or took from it.
 - **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the caret (on macOS, Command with each).
 - **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
 - **Tab** types a tab, or in a table moves to the next cell (Shift+Tab to the previous one), as in the terminal. **Ctrl+Tab** moves the focus out of the document, to the buttons.
@@ -144,7 +144,7 @@ The document window: a very long document is shown a few hundred pages at a time
 
 ## Questions
 
-When textweaver asks a yes-or-no question (a voice to download, after its size and license; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, so your screen reader says it, and the focus is on **Yes**. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other key asks the question again.
+When textweaver asks a yes-or-no question (a voice to download, after its size and license; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, without the "y or n" the buttons already show, so your screen reader says it, and the focus is on **Yes**. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other letter asks the question again.
 
 ## Voices
 

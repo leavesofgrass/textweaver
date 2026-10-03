@@ -67,7 +67,7 @@ When a word move (Left or Right) takes you into a note's passage, you hear the w
 
 ### Export a study sheet
 
-Press **F2** for the command palette and type `export study sheet`. textweaver writes your notes and highlights as a Markdown file next to the document, named after it: `essay.md` gives `essay-study-sheet.md`. You hear how many notes and highlights went in and where the file is, then "Open it? y or n."
+Press **F2** for the command palette and type `export study sheet`. textweaver writes your notes and highlights as a Markdown file next to the document, named after it: `essay.md` gives `essay-study-sheet.md`. You hear how many notes and highlights went in, the file's name, "Open it? y or n.", and the folder.
 
 The study sheet is grouped by the headings of the document, in order, so it follows the structure of what you read. Each passage is quoted, with your note under it:
 

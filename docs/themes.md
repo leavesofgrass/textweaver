@@ -121,7 +121,7 @@ textweaver never changes your terminal's own colors or cursor.
 
 ## HTML output
 
-Documents converted to HTML use Galaxy unless the reader's system asks for light, in which case they use Galaxy Light; they use High Contrast when the system asks for more contrast, and the system's own colors when a Windows contrast theme is on. Links are always underlined and keyboard focus always shows a ring.
+Documents converted to HTML use a stylesheet of their own, not a textweaver theme: dark text on a light page, or light text on a dark page when the reader's system asks for dark, with stronger borders and dim text at full strength when the system asks for more contrast. A browser with a Windows contrast theme on uses its own colors. Links are underlined, and keyboard focus always shows a ring.
 
 ## Writing your own theme
 

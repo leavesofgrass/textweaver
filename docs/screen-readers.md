@@ -236,7 +236,7 @@ cursor = "status"
 
 ### What a 40-cell line shows
 
-Every status line, title line, list line, and prompt line puts its key fact in the first 40 cells. A test walks a document in screen-reader mode with `cursor = "status"` and checks each line against 40 cells (`crates/textweaver-tui/tests/it/braille.rs`).
+Status, title, list, and prompt lines are written to put their key fact in the first 40 cells. Tests check about thirty terminal lines from a walk through a document in screen-reader mode with `cursor = "status"` (`crates/textweaver-tui/tests/it/braille.rs`), every prompt and menu name in all six languages, and some sync and font messages; the rest follow the [message style guide](dev/messages.md) without a test yet.
 
 - **Messages** start with what happened: "Opened essay.", "Page 12, line 400: ..." A question comes before what it is about: "Exported essay.html. Open it? y or n." and "Open web link? y or n." then the address.
 - **The title line** starts with where you are, then the reading state: "Line 12 of 400, 3%, Reading". In a PDF it names the page: "Page 12 of 30, 40%". The mode, rate, and engine follow, then the document's name. In screen-reader and hybrid modes the line starts at the first cell, with no padding.

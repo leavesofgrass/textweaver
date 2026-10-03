@@ -363,7 +363,7 @@ Each file is checked against its published size and SHA-256 before it is kept, a
 
 When the folder holds the model, `tw dictate` uses it without being asked, and `--engine rten` asks for it.
 
-**When the model cannot be used,** textweaver says why in words: "Dictation model lacks decoder_model_merged_int8.onnx." (a file is missing), "Dictation model damaged: tokenizer.json." (a file has the wrong size; the download is offered again), "No model folder: D:\Models\whisper" (the folder you named does not exist), or "No model; this build cannot download." (a reader built without downloads; place the files by hand).
+**When the model cannot be used,** textweaver says why in words: "Dictation model lacks decoder_model_merged_int8.onnx." (a file is missing), "Dictation model damaged: tokenizer.json." (a file has the wrong size; the download is offered again), "No model folder: D:\Models\whisper" (the folder you named does not exist), or "No model; this version cannot download." (a reader built without downloads; place the files by hand).
 
 ### Dictating from the microphone
 

@@ -52,13 +52,7 @@ You can set four kinds of space. Each is a multiple of the font size.
 - **Letter spacing**: extra space between letters.
 - **Word spacing**: extra space between words.
 
-There are three presets:
-
-- **Default**: line height 1.5, a small gap between paragraphs.
-- **WCAG**: the values in the WCAG text spacing guideline (line height 1.5, paragraph spacing 2, letter spacing 0.12, word spacing 0.16).
-- **Generous**: more room than WCAG.
-
-If a setting is below the WCAG value, textweaver tells you. That is information, not an error. Use what reads best for you.
+The WCAG text spacing guideline's values are line height 1.5, paragraph spacing 2, letter spacing 0.12, and word spacing 0.16; the example below sets them. textweaver does not warn about values below them: use what reads best for you.
 
 In the terminal, textweaver cannot change letter spacing or line height exactly. It uses blank lines and extra spaces instead.
 
@@ -74,21 +68,15 @@ word_spacing = 0.16
 
 ## Fonts
 
-In the GUI and in HTML views, you can choose the font, its size, and how bold it is.
+In the window you can choose the font and its size; how bold it is is set in `settings.toml`.
 
 The terminal version always uses the terminal's own font. A terminal program cannot change the font, so to read in a different font there, change it in your terminal's settings. Everything else on this page works in the terminal.
 
-### The Fonts dialog in the GUI
+### The font list and text size in the window
 
-Choose View, then Fonts (Alt, V, F). The dialog has, in this order:
-
-1. **Font family** (Alt+F): a list. The fonts that come with textweaver are first, marked "built in". After them come the fonts installed on your computer, in alphabetical order.
-2. **Size in points** (Alt+S): from 6 to 144.
-3. **Bold** (Alt+B): a check box.
-4. **Preview** (Alt+P): a sample sentence in the font you chose. It changes as you move through the list. The sentence has the letters that are easy to mix up, such as capital I, small l, and the digit 1.
-5. **OK** and **Cancel**. Enter is OK. Escape is Cancel.
-
-When you choose OK, the document text changes to the new font, textweaver remembers it, and you hear, for example, "Font: OpenDyslexic, 16 points, bold." When you cancel, you hear "Font unchanged."
+- **Ctrl+D**, or the Font button, opens the font list. The fonts that come with textweaver are first, marked "built in", then Lexend ("download, 206 KB" until it is downloaded), then the fonts installed on your computer. It is a list like textweaver's others: a letter moves to the next font starting with it, and Enter uses the font at once. You hear, for example, "Font: OpenDyslexic." Escape keeps the font you had.
+- **Ctrl+Plus** and **Ctrl+Minus** make the text larger and smaller, from 8 to 72 points, and **Ctrl+0** goes back to 14 points. You hear, for example, "Text size 18 points."
+- The Settings dialog (Ctrl+,) has the same font and size under "Reading aids".
 
 The font is saved in `settings.toml` under `[reading_aids.font]`:
 
@@ -145,11 +133,11 @@ What textweaver downloads, and how it checks it:
 
 Once downloaded, Lexend works everywhere textweaver uses a font: the window, PDF files (`tw convert --font lexend`), and EPUB books, which carry the font and its license inside. Export to PDF or EPUB in the reader uses your reading font too, Lexend included; a font that is not on this computer leaves the export's usual font, and an installed font that textweaver does not bundle goes into PDF files only.
 
-When there is no data folder (a session that keeps no files), textweaver says "No data folder to keep Lexend in." The lean reader, built without the `publish` feature, has no downloads and says "Font downloads are not in this build."; install Lexend yourself from its home page there, and textweaver finds it the next time it starts.
+When there is no data folder (a session that keeps no files), textweaver says "No data folder to keep Lexend in." The lean reader, built without the `publish` feature, has no downloads and says "Font downloads are not in this version."; install Lexend yourself from its home page there, and textweaver finds it the next time it starts.
 
 (The `[reading_aids.font] fetch_missing` setting, which never did anything, was removed in 0.1.0-alpha.5. Asking first is how downloads are turned off: say n.)
 
-Font size is in points, from 6 to 144. The default is 14. Below 12, textweaver suggests a larger size.
+Font size is in points. The default is 14. `settings.toml` takes 6 to 144; the Settings dialog and the size keys go up to 72.
 
 ## Reading ruler and current line
 

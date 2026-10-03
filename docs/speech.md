@@ -37,7 +37,7 @@ With `"auto"`, textweaver uses the available engine with the highest priority. F
 
 So an installed, licensed Eloquence is always the first choice. On macOS, `[speech.apple] backend` can put `avspeech` above `nsspeech`, or the other way round.
 
-When you name an engine, with `--backend` or in the settings, textweaver uses it if it is available. If it is not, textweaver does not fall silent: it makes the automatic choice instead and tells you. The reader says "Speech backend", the id, "is not available; using", and the engine it chose. If the chosen engine then fails to start, the reader says "Speech could not start", the reason, then "running silently."
+When you name an engine, with `--backend` or in the settings, textweaver uses it if it is available. If it is not, textweaver does not fall silent: it makes the automatic choice instead and tells you. The reader says "Speech engine", the id, "is not available; using", and the engine it chose. If the chosen engine then fails to start, the reader says "Speech could not start", the reason, then "running silently."
 
 `--no-speech` always means silent.
 
@@ -125,7 +125,7 @@ Press **Enter** on a voice. You hear "Voice", its name, then a sample: "The quic
 
 Press **Space** on a voice to make it a favorite, or to stop it being one. You hear, for example, "Microsoft Zira added to favorites." Favorites are listed first, in the order you added them, and are saved in `[speech] favorite_voices`.
 
-An engine with no voice list says "This speech engine has no voices to choose from."
+An engine that offers no voices adds none to the list; the count you hear when the list opens says how many there are.
 
 Each engine lists its voices once, when it starts, and keeps the list, so the list opens at once. The Windows voices are listed in the background (a helper program reads each registry); if you press **Alt+V** before that is done, you hear "The voices are still loading. The list opens when they are ready.", and it opens by itself when they arrive.
 

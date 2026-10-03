@@ -10,13 +10,13 @@ In the reader, open the File menu (F10 in the terminal) and choose Export audio,
 
 1. **The format.** You hear, for example, "Export essay as audio: choose a format, 4 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then WAV. M4B is listed only when ffmpeg is installed; when it is not, you hear "M4B needs ffmpeg, which was not found." Press Enter on a format.
 2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
-3. **The question.** "Export essay.flac with Microsoft David at 200 words a minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
+3. **The question.** "Export essay.flac with Microsoft David at 200 words per minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
 
 The export runs in the background, so you can keep reading. You hear "Exporting audio, 30 percent." in tens, at most every ten seconds; the interface announcements setting can quiet these. Nothing plays through your speakers.
 
 To stop, press Escape with no list or question open. You hear "Stop the export? No file is kept. y or n". Press y, and the export stops after the sentence being read; no file is left behind.
 
-At the end you hear, for example, "Wrote essay.flac: 42 minutes and 5 seconds, 12 chapters. Open it? y or n." Press y to open the file in your default player. If another list or question is open then, you hear the result without the question.
+At the end you hear, for example, "Wrote essay.flac: 42 minutes and 5 seconds, 12 chapters. Open it? y or n" Press y to open the file in your default player. If another list or question is open then, you hear the result without the question.
 
 Which engine it uses: your reading engine, when it can write audio files; otherwise the one in your `[speech] backend` setting, when it can; otherwise the best installed engine that can. Engines that can only speak aloud, such as Omnivox, are never used. The export reads the document as it was last opened, so in edit mode save and leave edit mode first to export your changes.
 
