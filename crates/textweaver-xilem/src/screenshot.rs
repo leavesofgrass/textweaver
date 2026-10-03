@@ -13,6 +13,7 @@ use masonry::core::NewWidget;
 use masonry_testing::{TestHarness, TestHarnessParams};
 use textweaver_app::a11y::LogAnnouncer;
 use textweaver_app::core::{CharPos, Unit};
+use textweaver_app::store::GuiSidebar;
 use textweaver_app::text::units::unit_at;
 
 use crate::document::{DocState, DocumentView};
@@ -53,6 +54,15 @@ pub struct ShotOptions {
     /// Draw the voice manager (W7v) with a few sample voices of several
     /// engines (no engine is started for it).
     pub voices: bool,
+    /// Start editing first, as the Edit button does (W8c-x).
+    pub edit: bool,
+    /// Show this panel beside the document (W8c-x). The Notes panel gets
+    /// two sample notes. Saved like any setting, so this needs `home`.
+    pub panel: Option<GuiSidebar>,
+    /// Turn on only the reading ruler with its band, so the band's bar
+    /// shows on its own (W8c-x). Saved like any setting, so this needs
+    /// `home`.
+    pub ruler: bool,
 }
 
 /// A few colors chosen for the Colors dialog's review: the blue and
@@ -94,6 +104,34 @@ pub(crate) fn turn_on_aids(app: &mut textweaver_app::App) -> Result<(), String> 
     Ok(())
 }
 
+/// Two sample notes for the Notes panel's review: one on the table's
+/// heading and one on the block quote.
+fn add_review_notes(app: &mut textweaver_app::App) -> Result<(), String> {
+    use textweaver_app::{Command, NoteCommand, Panel};
+    // The notes are saved, so a second shot in the same folder finds them.
+    if !app.panel_entries(Panel::Notes).is_empty() {
+        return Ok(());
+    }
+    let text = app
+        .session()
+        .map(|s| s.doc.text().to_string())
+        .ok_or("the Notes panel screenshot needs a document")?;
+    for (needle, note) in [
+        ("A Table", "Check the totals in the score column"),
+        ("A block quote", "Ask about the source of this quote"),
+    ] {
+        let Some(byte) = text.find(needle) else {
+            continue;
+        };
+        let at = CharPos(text[..byte].chars().count());
+        let _ = app.dispatch(Command::SetCursor(at));
+        let _ = app.dispatch(Command::Notes(NoteCommand::Add));
+        let _ = app.dispatch(Command::Answer(note.into()));
+    }
+    let _ = app.dispatch(Command::SetCursor(CharPos(0)));
+    Ok(())
+}
+
 /// Draws the window into `opts.path`.
 pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
     let app_opts = Options {
@@ -101,8 +139,8 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
         home: opts.home.clone(),
         ..Options::default()
     };
-    if (opts.aids || opts.colors) && opts.home.is_none() {
-        return Err("the reading aids and colors screenshots need a home folder, so their settings are not saved into yours".into());
+    if (opts.aids || opts.colors || opts.ruler || opts.panel.is_some()) && opts.home.is_none() {
+        return Err("the reading aids, ruler, colors and panel screenshots need a home folder, so their settings are not saved into yours".into());
     }
     let (mut app, _) = setup::build_app(&app_opts, Box::new(LogAnnouncer::default()));
     if let Some(file) = &opts.file {
@@ -114,6 +152,23 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
     }
     if opts.colors {
         choose_review_colors(&mut app)?;
+    }
+    if opts.ruler {
+        use textweaver_app::store::reading_aids::RulerMode;
+        app.update_settings(|s| s.reading_aids.ruler.mode = RulerMode::Ruler)
+            .map_err(|e| format!("cannot save the ruler: {e}"))?;
+    }
+    if let Some(panel) = opts.panel {
+        if panel == GuiSidebar::Notes {
+            add_review_notes(&mut app)?;
+        }
+        app.update_settings(|s| s.gui.sidebar = panel)
+            .map_err(|e| format!("cannot save the panel: {e}"))?;
+    }
+    if opts.edit {
+        use textweaver_app::Command;
+        use textweaver_app::keymap::ActionId;
+        let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
     }
     let palette = match opts.theme.as_deref() {
         // Windows High Contrast's own colors, as the window follows them.
@@ -153,6 +208,14 @@ fn render(
         harness.register_fonts(blob);
     }
     gui::refresh_for_tests(app, &mut harness);
+    // The panel beside the document, as the window shows it from the
+    // setting; it leaves the focus alone.
+    let _ = crate::sidebar::sync(
+        app,
+        palette,
+        &mut crate::sidebar::SidebarShown::default(),
+        &mut harness,
+    );
     let doc_id = harness.get_widget(DOC).id();
     harness.focus_on(Some(doc_id));
     if let (Some(at), Some(s)) = (opts.highlight_at, app.session()) {
@@ -218,9 +281,12 @@ fn render(
 }
 
 /// The screenshots for review: Galaxy, Galaxy Light, high contrast, and
-/// Windows High Contrast's own colors at 100% and 200% with a spoken word,
-/// a list dialog, the settings dialog, the Colors dialog, and the voice
-/// manager. Returns the files.
+/// Windows High Contrast's own colors at 100% and 200% with a spoken word
+/// (bold, its sentence underlined), a list dialog, the settings dialog,
+/// the Colors dialog, the voice manager, edit mode, the window with no
+/// document, the reading ruler's band, the Contents and Notes panels, and
+/// the window at three small sizes (960 by 540, 683 by 384 at 200%, and
+/// 420 by 320). Returns the files.
 pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
     let mut out = Vec::new();
@@ -237,6 +303,9 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         aids: false,
         colors: false,
         voices: false,
+        edit: false,
+        panel: None,
+        ruler: false,
     };
     // What each shot shows over the window: nothing, a list, or settings.
     const WINDOW: u8 = 0;
@@ -248,6 +317,23 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     const COLORS: u8 = 4;
     // The voice manager, with sample voices (W7v).
     const VOICES: u8 = 5;
+    // Edit mode, with the caret in the first paragraph (W8c-x).
+    const EDIT: u8 = 6;
+    // The window with no document open (W8c-x).
+    const EMPTY: u8 = 7;
+    // The Contents panel beside the document (W8c-x).
+    const CONTENTS: u8 = 8;
+    // The Notes panel, with two sample notes (W8c-x).
+    const NOTES: u8 = 9;
+    // Only the reading ruler, so its band's bar shows (W8c-x).
+    const RULER: u8 = 10;
+    // The usual review size, and the small ones (W8c-x): half of a 1920 by
+    // 1080 screen, a 1366 by 768 laptop at 200% (683 by 384 logical), and
+    // the smallest window that should still read.
+    const FULL: (u32, u32) = (1100, 780);
+    const HALF: (u32, u32) = (960, 540);
+    const LAPTOP: (u32, u32) = (683, 384);
+    const TINY: (u32, u32) = (420, 320);
     const NIGHT_SKY: &str = crate::system_colors::NIGHT_SKY_NAME;
     let shots = [
         ("galaxy-100.png", "galaxy", 1.0, WINDOW),
@@ -287,21 +373,98 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         ("galaxy-voices-100.png", "galaxy", 1.0, VOICES),
         ("galaxy-voices-200.png", "galaxy", 2.0, VOICES),
         ("high-contrast-voices-100.png", "high-contrast", 1.0, VOICES),
+        ("galaxy-edit-100.png", "galaxy", 1.0, EDIT),
+        ("galaxy-edit-200.png", "galaxy", 2.0, EDIT),
+        ("galaxy-light-edit-100.png", "galaxy-light", 1.0, EDIT),
+        ("galaxy-empty-100.png", "galaxy", 1.0, EMPTY),
+        ("galaxy-empty-200.png", "galaxy", 2.0, EMPTY),
+        ("high-contrast-empty-100.png", "high-contrast", 1.0, EMPTY),
+        ("galaxy-ruler-100.png", "galaxy", 1.0, RULER),
+        ("galaxy-ruler-200.png", "galaxy", 2.0, RULER),
+        ("galaxy-light-ruler-100.png", "galaxy-light", 1.0, RULER),
+        ("high-contrast-ruler-100.png", "high-contrast", 1.0, RULER),
+        ("galaxy-contents-100.png", "galaxy", 1.0, CONTENTS),
+        ("galaxy-contents-200.png", "galaxy", 2.0, CONTENTS),
+        (
+            "galaxy-light-contents-100.png",
+            "galaxy-light",
+            1.0,
+            CONTENTS,
+        ),
+        (
+            "high-contrast-contents-100.png",
+            "high-contrast",
+            1.0,
+            CONTENTS,
+        ),
+        ("system-contrast-contents-100.png", NIGHT_SKY, 1.0, CONTENTS),
+        ("galaxy-notes-100.png", "galaxy", 1.0, NOTES),
+        ("galaxy-notes-200.png", "galaxy", 2.0, NOTES),
+    ]
+    .map(|(name, theme, scale, over)| (name, theme, scale, over, FULL));
+    // The small windows: the window, its panel, and edit mode at each.
+    let small = [
+        ("galaxy-960x540-100.png", "galaxy", 1.0, WINDOW, HALF),
+        (
+            "galaxy-contents-960x540-100.png",
+            "galaxy",
+            1.0,
+            CONTENTS,
+            HALF,
+        ),
+        ("galaxy-edit-960x540-100.png", "galaxy", 1.0, EDIT, HALF),
+        ("galaxy-683x384-200.png", "galaxy", 2.0, WINDOW, LAPTOP),
+        (
+            "galaxy-contents-683x384-200.png",
+            "galaxy",
+            2.0,
+            CONTENTS,
+            LAPTOP,
+        ),
+        ("galaxy-edit-683x384-200.png", "galaxy", 2.0, EDIT, LAPTOP),
+        ("galaxy-420x320-100.png", "galaxy", 1.0, WINDOW, TINY),
+        (
+            "galaxy-contents-420x320-100.png",
+            "galaxy",
+            1.0,
+            CONTENTS,
+            TINY,
+        ),
+        ("galaxy-empty-420x320-100.png", "galaxy", 1.0, EMPTY, TINY),
     ];
-    for (name, theme, scale, over) in shots {
+    for (name, theme, scale, over, size) in shots.into_iter().chain(small) {
         let mut o = base.clone();
         o.path = dir.join(name);
         o.theme = Some(theme.into());
         o.scale = scale;
+        o.size = size;
         o.settings = over == SETTINGS;
         o.aids = over == AIDS;
         o.colors = over == COLORS;
         o.voices = over == VOICES;
-        // Each shot starts from the defaults; the aids and colors shots
-        // save theirs.
+        o.edit = over == EDIT;
+        o.ruler = over == RULER;
+        o.panel = match over {
+            CONTENTS => Some(GuiSidebar::Contents),
+            NOTES => Some(GuiSidebar::Notes),
+            _ => None,
+        };
+        if over == EMPTY {
+            o.file = None;
+            o.highlight_at = None;
+        }
+        if over == EDIT {
+            // A caret, not a spoken word: editing is not reading.
+            o.highlight_at = None;
+        }
+        // Each shot starts from the defaults; the shots that change a
+        // setting save theirs in their own folder.
         o.home = Some(dir.join(match over {
             AIDS => "home-aids",
             COLORS => "home-colors",
+            RULER => "home-ruler",
+            CONTENTS => "home-contents",
+            NOTES => "home-notes",
             _ => "home",
         }));
         if over == LIST {
