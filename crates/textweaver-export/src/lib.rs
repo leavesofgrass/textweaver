@@ -30,7 +30,10 @@
 //!    caption line (Star's grouping) or by word.
 //!
 //! Progress is reported per sentence, and the caller can cancel between
-//! sentences.
+//! sentences, and during encoding: the progress callback is asked again,
+//! with the last count, between encoded blocks (and every 100 ms while
+//! ffmpeg runs, which is then stopped). A stop at any step ends in
+//! [`ExportError::Cancelled`] with no output file left behind.
 
 pub mod chapters;
 pub mod cues;
@@ -49,6 +52,7 @@ pub mod timeline;
 pub mod vorbis;
 pub mod wav;
 
+use std::cell::{Cell, RefCell};
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 
@@ -270,7 +274,11 @@ fn synthesize_inner(
     }
     let duration_ms = writer.format().map_or(0, |f| f.ms(writer.frames()));
     writer.finish()?;
-    let _ = progress(Progress { done: total, total });
+    // A stop asked for during the last sentence is a stop: the file is
+    // removed by `synthesize_wav`, never reported as written.
+    if progress(Progress { done: total, total }).is_break() {
+        return Err(ExportError::Cancelled);
+    }
     let chapters = chapters::place(doc, &sentences, duration_ms, &opts.chapters);
     Ok(Timeline {
         sentences,
@@ -337,6 +345,62 @@ pub fn export(
         (true, Some(ff)) => Some(ff),
         (true, None) => return Err(ExportError::NoFfmpeg(format.name())),
     };
+    // The progress callback also answers "stop?" after synthesis, asked
+    // again with the last count it was given.
+    let last = Cell::new(Progress { done: 0, total: 0 });
+    let progress = RefCell::new(progress);
+    let mut tracked = |p: Progress| {
+        last.set(p);
+        (*progress.borrow_mut())(p)
+    };
+    let stop = || (*progress.borrow_mut())(last.get()).is_break();
+    let result = export_inner(doc, backend, out, format, ffmpeg, opts, &mut tracked, &stop)
+        .and_then(|r| {
+            if stop() {
+                Err(ExportError::Cancelled)
+            } else {
+                Ok(r)
+            }
+        });
+    let (timeline, ffmpeg_used) = match result {
+        Ok(r) => r,
+        Err(e) => {
+            if matches!(e, ExportError::Cancelled) {
+                let _ = std::fs::remove_file(out);
+            }
+            return Err(e);
+        }
+    };
+    let subtitles_path = match (subtitles_to, sub_format) {
+        (Some(req), Some(f)) => {
+            let text = subtitles(&timeline, f, &req.cues);
+            std::fs::write(&req.path, text).map_err(|e| ExportError::io(&req.path, e))?;
+            Some(req.path.clone())
+        }
+        _ => None,
+    };
+    Ok(ExportReport {
+        out: out.to_owned(),
+        format,
+        subtitles: subtitles_path,
+        ffmpeg: ffmpeg_used,
+        timeline,
+    })
+}
+
+/// The audio part of [`export`]: synthesis, then encoding, which `stop`
+/// can interrupt.
+#[allow(clippy::too_many_arguments)]
+fn export_inner(
+    doc: &Document,
+    backend: &mut dyn SpeechBackend,
+    out: &Path,
+    format: AudioFormat,
+    ffmpeg: Option<&Path>,
+    opts: &ExportOptions,
+    progress: &mut dyn FnMut(Progress) -> ControlFlow<()>,
+    stop: &dyn Fn() -> bool,
+) -> Result<(Timeline, Option<PathBuf>), ExportError> {
     // Every format but WAV is made from a WAV in a private folder beside
     // the output (removed when done).
     let work = |out: &Path| {
@@ -361,7 +425,12 @@ pub fn export(
                 &timeline.chapters,
             );
             std::fs::write(&meta_path, meta).map_err(|e| ExportError::io(&meta_path, e))?;
-            ffmpeg::run(ff, &ffmpeg::args(&wav_path, &meta_path, out, format))?;
+            if let Err(e) =
+                ffmpeg::run_with_stop(ff, &ffmpeg::args(&wav_path, &meta_path, out, format), stop)
+            {
+                let _ = std::fs::remove_file(out);
+                return Err(e);
+            }
             (timeline, Some(ff.to_owned()))
         }
         #[cfg(feature = "flac")]
@@ -374,7 +443,7 @@ pub fn export(
                 timeline.author.as_deref(),
                 &timeline.chapters,
             );
-            if let Err(e) = flac::encode(&wav_path, out, &comments) {
+            if let Err(e) = flac::encode_with_stop(&wav_path, out, &comments, stop) {
                 let _ = std::fs::remove_file(out);
                 return Err(e);
             }
@@ -390,7 +459,7 @@ pub fn export(
                 timeline.author.as_deref(),
                 &timeline.chapters,
             );
-            if let Err(e) = opus::encode(&wav_path, out, &comments) {
+            if let Err(e) = opus::encode_with_stop(&wav_path, out, &comments, stop) {
                 let _ = std::fs::remove_file(out);
                 return Err(e);
             }
@@ -401,7 +470,7 @@ pub fn export(
             let work = work(out)?;
             let wav_path = work.path().join("audio.wav");
             let timeline = synthesize_wav(doc, backend, &wav_path, opts, progress)?;
-            let written = mp3::encode(&wav_path, out).and_then(|()| {
+            let written = mp3::encode_with_stop(&wav_path, out, stop).and_then(|()| {
                 id3tags::write(
                     out,
                     timeline.title.as_deref(),
@@ -427,19 +496,5 @@ pub fn export(
             (timeline, None)
         }
     };
-    let subtitles_path = match (subtitles_to, sub_format) {
-        (Some(req), Some(f)) => {
-            let text = subtitles(&timeline, f, &req.cues);
-            std::fs::write(&req.path, text).map_err(|e| ExportError::io(&req.path, e))?;
-            Some(req.path.clone())
-        }
-        _ => None,
-    };
-    Ok(ExportReport {
-        out: out.to_owned(),
-        format,
-        subtitles: subtitles_path,
-        ffmpeg: ffmpeg_used,
-        timeline,
-    })
+    Ok((timeline, ffmpeg_used))
 }

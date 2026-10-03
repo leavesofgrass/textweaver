@@ -906,3 +906,86 @@ fn ffmpeg_conversion_when_available() {
         }
     }
 }
+
+/// A stop asked for after the last sentence, as the progress reaches
+/// `done == total`, is a stop: `Cancelled`, and no file.
+#[test]
+fn a_stop_after_the_last_sentence_leaves_no_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("late.wav");
+    let (mut backend, _) = RecordingBackend::new();
+    let err = export(
+        &book(),
+        &mut backend,
+        &out,
+        None,
+        None,
+        &ExportOptions::default(),
+        &mut |p| {
+            if p.total > 0 && p.done == p.total {
+                ControlFlow::Break(())
+            } else {
+                ControlFlow::Continue(())
+            }
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(err, ExportError::Cancelled), "{err}");
+    assert!(!out.exists(), "a stopped export leaves no file");
+}
+
+/// A stop during FLAC encoding (asked after synthesis, with the last
+/// count again) ends as `Cancelled` with no file and no subtitles, never
+/// as written.
+#[cfg(feature = "flac")]
+#[test]
+fn a_stop_during_encoding_leaves_no_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("stopped.flac");
+    let subs = textweaver_export::SubtitleRequest {
+        path: dir.path().join("stopped.vtt"),
+        cues: textweaver_export::CueOptions::default(),
+    };
+    let (mut backend, _) = RecordingBackend::new();
+    let mut at_end = 0;
+    let err = export(
+        &book(),
+        &mut backend,
+        &out,
+        Some(&subs),
+        None,
+        &ExportOptions::default(),
+        &mut |p| {
+            if p.total > 0 && p.done == p.total {
+                at_end += 1;
+            }
+            // Synthesis ends normally; the first question while encoding
+            // says stop.
+            if at_end >= 2 {
+                ControlFlow::Break(())
+            } else {
+                ControlFlow::Continue(())
+            }
+        },
+    )
+    .unwrap_err();
+    assert!(matches!(err, ExportError::Cancelled), "{err}");
+    assert!(at_end >= 2, "the encoder asked whether to stop");
+    assert!(!out.exists(), "a stopped export leaves no file");
+    assert!(!subs.path.exists(), "and no subtitles");
+    // The encoder alone, told to stop at once.
+    let wav = dir.path().join("a.wav");
+    let (mut backend, _) = RecordingBackend::new();
+    synthesize_wav(
+        &book(),
+        &mut backend,
+        &wav,
+        &ExportOptions::default(),
+        &mut no_progress,
+    )
+    .unwrap();
+    let flac = dir.path().join("a.flac");
+    let err = textweaver_export::flac::encode_with_stop(&wav, &flac, &[], &|| true).unwrap_err();
+    assert!(matches!(err, ExportError::Cancelled), "{err}");
+    assert!(!flac.exists());
+}

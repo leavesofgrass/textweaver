@@ -159,17 +159,60 @@ pub fn args(wav: &Path, metadata: &Path, out: &Path, format: AudioFormat) -> Vec
 
 /// Runs ffmpeg; its error output becomes the error message.
 pub fn run(ffmpeg: &Path, args: &[OsString]) -> Result<(), ExportError> {
-    let output = Command::new(ffmpeg)
+    run_with_stop(ffmpeg, args, &|| false)
+}
+
+/// How often a running ffmpeg is checked for a stop.
+const POLL: std::time::Duration = std::time::Duration::from_millis(100);
+
+/// [`run`], asking `stop` every 100 ms while ffmpeg works: when it says
+/// stop, ffmpeg is killed and the result is [`ExportError::Cancelled`] (the
+/// caller removes the partial file).
+pub fn run_with_stop(
+    ffmpeg: &Path,
+    args: &[OsString],
+    stop: &dyn Fn() -> bool,
+) -> Result<(), ExportError> {
+    let mut child = Command::new(ffmpeg)
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
-        .output()
+        .spawn()
         .map_err(|e| ExportError::io(ffmpeg, e))?;
-    if output.status.success() {
+    // The error output is read on its own thread, so a chatty ffmpeg never
+    // blocks on a full pipe while it is polled here.
+    let reader = child.stderr.take().map(|mut err| {
+        std::thread::spawn(move || {
+            let mut buf = Vec::new();
+            let _ = std::io::Read::read_to_end(&mut err, &mut buf);
+            buf
+        })
+    });
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) if stop() => {
+                let _ = child.kill();
+                let _ = child.wait();
+                if let Some(r) = reader {
+                    let _ = r.join();
+                }
+                return Err(ExportError::Cancelled);
+            }
+            Ok(None) => std::thread::sleep(POLL),
+            Err(e) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(ExportError::io(ffmpeg, e));
+            }
+        }
+    };
+    let stderr_bytes = reader.and_then(|r| r.join().ok()).unwrap_or_default();
+    if status.success() {
         return Ok(());
     }
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = String::from_utf8_lossy(&stderr_bytes);
     let last = stderr
         .lines()
         .rev()

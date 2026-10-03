@@ -29,6 +29,17 @@ const BLOCK: usize = 8192;
 /// Encodes the WAV at `wav` as MP3 at `out` (no tags; see
 /// [`crate::id3tags::write`]).
 pub fn encode(wav: &Path, out: &Path) -> Result<(), ExportError> {
+    encode_with_stop(wav, out, &|| false)
+}
+
+/// [`encode`], asking `stop` before each block: when it says stop, the
+/// encoding ends in [`ExportError::Cancelled`] (the caller removes the
+/// partial file).
+pub fn encode_with_stop(
+    wav: &Path,
+    out: &Path,
+    stop: &dyn Fn() -> bool,
+) -> Result<(), ExportError> {
     let mut pcm = PcmReader::open(wav, "MP3")?;
     let fail = |what: String| ExportError::Mp3(what);
     let channels = pcm.channels();
@@ -65,6 +76,9 @@ pub fn encode(wav: &Path, out: &Path) -> Result<(), ExportError> {
     let mut samples: Vec<i16> = Vec::new();
     let mut mp3: Vec<u8> = Vec::new();
     loop {
+        if stop() {
+            return Err(ExportError::Cancelled);
+        }
         let n = pcm.read(BLOCK, &mut block).map_err(io)?;
         if n == 0 {
             break;
