@@ -20,6 +20,7 @@ textweaver-formats = { workspace = true, features = ["pandoc", "bibliography"] }
 textweaver-render.workspace = true
 textweaver-writers.workspace = true
 textweaver-cite.workspace = true
+textweaver-math.workspace = true
 pulldown-cmark.workspace = true
 thiserror.workspace = true
 serde.workspace = true
@@ -28,6 +29,7 @@ log.workspace = true
 rayon.workspace = true
 walkdir.workspace = true
 notify.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

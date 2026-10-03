@@ -148,6 +148,11 @@ pub(crate) struct ExportDone {
     /// For a preview: its headings' ids and texts, in order, so a reload
     /// can land on the heading nearest the caret.
     pub(crate) headings: Vec<(String, String)>,
+    /// For an export: the conversion report beside the file, or why it
+    /// could not be saved (`None` for a preview).
+    pub(crate) report: Option<Result<PathBuf, String>>,
+    /// For an export: the items that could not be made accessible.
+    pub(crate) issues: usize,
 }
 
 /// Progress announcements for a long export: the first after

@@ -1078,6 +1078,13 @@ publish-warnings =
 # $file is the file's name, $folder its folder; $warned is empty or a
 # space and publish-warnings.
 publish-exported = Exportado para { $format }: { $file }. Abrir? y ou n. Em { $folder }.{ $warned }
+publish-report = Relatório salvo como { $file }.
+publish-report-issues =
+    { $n ->
+        [one] 1 item não acessível
+       *[other] { $n } itens não acessíveis
+    }; veja o relatório.
+publish-report-failed = Não foi possível salvar o relatório: { $error }
 publish-preview-written-served = Pré-visualização escrita. Abrindo-a no navegador. Ela recarrega por conta própria depois de cada salvamento.{ $warned }
 publish-preview-written = Pré-visualização escrita. Abrindo-a no navegador. Salvar a escreve de novo; depois pressione F5 no navegador.{ $warned }
 publish-preview-updated = Pré-visualização atualizada.
@@ -3407,8 +3414,13 @@ batch-stopped =
         [one] 1 arquivo convertido
        *[other] { $converted } arquivos convertidos
     }; { $left } não convertidos; { $failed } com falha.
-batch-report = A lista foi salva em { $path }.
-batch-report-failed = Não foi possível salvar a lista: { $error }
+batch-report = Relatório salvo em { $path }.
+batch-report-failed = Não foi possível salvar o relatório: { $error }
+batch-inaccessible =
+    { $n ->
+        [one] 1 arquivo tem
+       *[other] { $n } arquivos têm
+    } itens não acessíveis; veja o relatório.
 batch-failures-title =
     { $n ->
         [one] 1 arquivo com falha

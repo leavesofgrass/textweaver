@@ -1067,6 +1067,13 @@ publish-warnings =
 # $file is the file's name, $folder its folder; $warned is empty or a
 # space and publish-warnings.
 publish-exported = Exported { $file }. Open it? y or n. Format { $format }, in { $folder }.{ $warned }
+publish-report = Report saved as { $file }.
+publish-report-issues =
+    { $n ->
+        [one] 1 item
+       *[other] { $n } items
+    } not made accessible; see the report.
+publish-report-failed = The report could not be saved: { $error }
 publish-preview-written-served = Preview written. Opening it in the browser. It reloads by itself after each save.{ $warned }
 publish-preview-written = Preview written. Opening it in the browser. Saving writes it again; then press F5 in the browser.{ $warned }
 publish-preview-updated = Preview updated.
@@ -3414,8 +3421,13 @@ batch-stopped =
         [one] 1 file
        *[other] { $converted } files
     }; { $left } not converted; { $failed } failed.
-batch-report = The list is saved in { $path }.
-batch-report-failed = The list could not be saved: { $error }
+batch-report = Report saved in { $path }.
+batch-report-failed = The report could not be saved: { $error }
+batch-inaccessible =
+    { $n ->
+        [one] 1 file has
+       *[other] { $n } files have
+    } items not made accessible; see the report.
 batch-failures-title =
     { $n ->
         [one] 1 failed file

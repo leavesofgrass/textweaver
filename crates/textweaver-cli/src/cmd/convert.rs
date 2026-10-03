@@ -4,10 +4,14 @@
 //! Output is written for listening: one summary sentence at the end, one
 //! line per failure, and per-file lines only with `--verbose`. `--json`
 //! prints the whole summary (every file, its status and timing) instead.
-//! The same summary, with each failure and warning, is saved as
-//! `conversion-report.txt` in the output folder (or the one folder being
-//! converted in place), replacing the last run's; `--no-report` leaves it
-//! out. The exit status is 1 when any file failed.
+//! A conversion report (each source's name and SHA-256, textweaver's
+//! version, the date, and what could not be made accessible, with where it
+//! is) is saved as `conversion-report.md` in the output folder (or the one
+//! folder being converted in place), replacing the last run's, or beside
+//! each output for files named on their own (`essay.pdf.report.md`);
+//! `--report-format json` writes JSON instead, `--no-report` leaves it out,
+//! and `tw convert` says where it went. The exit status is 1 when any file
+//! failed.
 //!
 //! Pandoc citations in Markdown (`[@doe2020]`) are formatted in a CSL style
 //! (`--style`, APA by default) with a References section appended, from
@@ -21,7 +25,7 @@ use std::time::Duration;
 use anyhow::{Context, bail};
 use textweaver_convert::{
     BrailleOptions, BrailleTableFormat, CitationOptions, ConvertOptions, Converter, MathCode,
-    OutputFormat, PdfOptions, Status, WatchOptions, WriteOptions, watch,
+    OutputFormat, PdfOptions, ReportFormat, Status, WatchOptions, WriteOptions, watch,
 };
 use textweaver_render::{EmbedMode, Engine, Flavor, RenderOptions, TemplateChoice};
 use textweaver_writers::Template;
@@ -128,10 +132,13 @@ pub struct Args {
     pub table_format: BrailleTableFormat,
     #[command(flatten)]
     pub layout: super::convert_layout::LayoutArgs,
-    /// Do not save conversion-report.txt (the summary, failures, and
-    /// warnings) in the output folder.
+    /// Do not save a conversion report (where each file came from, its
+    /// SHA-256, and what could not be made accessible).
     #[arg(long)]
     pub no_report: bool,
+    /// The conversion report's format: md (Markdown, the default) or json.
+    #[arg(long, value_name = "FORMAT", default_value = "md", value_parser = parse_report_format)]
+    pub report_format: ReportFormat,
     /// Watch: seconds a file's size must hold still before converting.
     #[arg(long, default_value_t = 2.0)]
     pub stable_seconds: f64,
@@ -144,6 +151,10 @@ pub struct Args {
 fn parse_format(s: &str) -> Result<OutputFormat, String> {
     OutputFormat::parse(s)
         .ok_or_else(|| format!("unknown format {s:?}; use md, html, txt, epub, docx, brf, or pdf"))
+}
+
+fn parse_report_format(s: &str) -> Result<ReportFormat, String> {
+    ReportFormat::parse(s).ok_or_else(|| format!("unknown report format {s:?}; use md or json"))
 }
 
 fn parse_math_code(s: &str) -> Result<MathCode, String> {
@@ -268,6 +279,9 @@ fn command_options(args: &Args) -> ConvertOptions {
             },
             ..WriteOptions::default()
         }),
+        // What could not be made accessible goes in the report and the
+        // JSON summary.
+        audit: !args.no_report || args.json,
         ..ConvertOptions::default()
     }
 }
@@ -284,22 +298,16 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         return run_watch(&args, &converter);
     }
     let summary = converter.run(&args.inputs)?;
-    let report = match report_dir(&args) {
-        Some(dir) if !args.no_report => match summary.write_report(&dir) {
-            Ok(path) => Some(path),
-            Err(e) => {
-                eprintln!(
-                    "Warning: cannot save {} in {}: {e}",
-                    textweaver_convert::REPORT_FILE,
-                    dir.display()
-                );
-                None
-            }
-        },
-        _ => None,
+    let report = if args.no_report {
+        None
+    } else {
+        Some(save_report(&args, &summary))
     };
     if args.json {
         println!("{}", serde_json::to_string_pretty(&summary)?);
+        if let Some(line) = &report {
+            eprintln!("{line}");
+        }
     } else {
         for f in &summary.files {
             match &f.status {
@@ -324,8 +332,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         if args.to == OutputFormat::Brf && summary.converted > 0 {
             println!("{}", math_braille_line(args.math_code));
         }
-        if let Some(path) = report.filter(|_| summary.failed > 0 || summary.warned > 0) {
-            println!("Failures and warnings are listed in {}.", path.display());
+        if let Some(line) = report {
+            println!("{line}");
         }
     }
     if summary.failed > 0 {
@@ -334,9 +342,49 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Where `tw convert` saves its report: the output folder, or the one
-/// folder being converted in place. Files named on their own, without
-/// `--out`, get no report.
+/// Saves the conversion report and says where it is, in one sentence: in
+/// the output folder (or the one folder converted in place) for a batch,
+/// else beside each output.
+fn save_report(args: &Args, summary: &textweaver_convert::Summary) -> String {
+    let format = args.report_format;
+    if let Some(dir) = report_dir(args) {
+        return match summary.write_report(&dir, format) {
+            Ok(path) => format!("Report saved as {}.", path.display()),
+            Err(e) => format!(
+                "Warning: the report could not be saved in {}: {e}",
+                dir.display()
+            ),
+        };
+    }
+    let written = summary.write_file_reports(format);
+    let mut saved = Vec::new();
+    let mut lines = Vec::new();
+    for r in written {
+        match r {
+            Ok(path) => saved.push(path),
+            Err(e) => lines.push(format!("Warning: a report could not be saved: {e}")),
+        }
+    }
+    match saved.as_slice() {
+        [] => {}
+        [one] => lines.insert(0, format!("Report saved as {}.", one.display())),
+        many => lines.insert(
+            0,
+            format!(
+                "Reports saved beside each output, {} of them, named like {}.",
+                many.len(),
+                many[0]
+                    .file_name()
+                    .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+            ),
+        ),
+    }
+    lines.join("\n")
+}
+
+/// Where `tw convert` saves a batch's report: the output folder, or the
+/// one folder being converted in place. Files named on their own, without
+/// `--out`, get a report each, beside their output.
 fn report_dir(args: &Args) -> Option<PathBuf> {
     match (&args.out, args.inputs.as_slice()) {
         (Some(out), _) => Some(out.clone()),
@@ -442,6 +490,39 @@ mod tests {
         assert_eq!(report_dir(&parse(&["a.md"])), None);
         assert_eq!(report_dir(&parse(&[&folder, "a.md"])), None);
         assert!(parse(&[&folder, "--no-report"]).no_report);
+        assert_eq!(parse(&[&folder]).report_format, ReportFormat::Markdown);
+        assert_eq!(
+            parse(&[&folder, "--report-format", "json"]).report_format,
+            ReportFormat::Json
+        );
+        assert!(Cli::try_parse_from(["tw", "a.md", "--report-format", "txt"]).is_err());
+    }
+
+    #[test]
+    fn a_file_named_on_its_own_gets_a_report_beside_its_output() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let src = dir.path().join("essay.md");
+        std::fs::write(&src, "# Results\n\n![](chart.png)\n").expect("written");
+        let src_s = src.to_string_lossy().into_owned();
+        let args = parse(&[&src_s, "--to", "html"]);
+        let converter = Converter::new(options(&args)).expect("converter");
+        let summary = converter.run(&args.inputs).expect("ran");
+        let said = save_report(&args, &summary);
+        let report = dir.path().join("essay.html.report.md");
+        assert_eq!(said, format!("Report saved as {}.", report.display()));
+        let text = std::fs::read_to_string(&report).expect("the report");
+        assert!(
+            text.starts_with("# Conversion report for essay.md\n"),
+            "{text}"
+        );
+        assert!(
+            text.contains(
+                "1. Image without a description: chart.png. Under the heading \u{201c}Results\u{201d}, line 3."
+            ),
+            "{text}"
+        );
+        let folder = dir.path().to_string_lossy().into_owned();
+        assert!(!text.contains(&folder), "no folder in the report: {text}");
     }
 
     #[test]

@@ -10,4 +10,5 @@ mod citations;
 mod matrix;
 mod pandoc_env;
 mod progress;
+mod reports;
 mod writers;

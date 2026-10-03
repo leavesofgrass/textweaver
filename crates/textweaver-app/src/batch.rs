@@ -20,8 +20,11 @@
 //! At the end the counts are said in words ([`Importance::Answer`], never
 //! silenced), and when files failed they are listed, each "report.docx:
 //! the reason", name first for a 40-cell Braille line; Enter on one opens
-//! its source. The same summary is saved as `conversion-report.txt` in
-//! the output folder ([`textweaver_convert::REPORT_FILE`]).
+//! its source. A conversion report (each source's name and SHA-256, the
+//! version and date, and what could not be made accessible, with where it
+//! is) is saved as `conversion-report.md` in the output folder
+//! ([`textweaver_convert::REPORT_FILE`]), and the end of the run says where
+//! it is, and how many files have items not made accessible.
 //!
 //! Without the `publish` feature there is no converter, and the command
 //! stays hidden, like every pending command ([`crate::menu::PENDING`]).
@@ -92,7 +95,9 @@ mod run {
     use std::time::{Duration, Instant};
 
     use textweaver_a11y::{Importance, Priority};
-    use textweaver_convert::{ConvertOptions, Converter, OutputFormat, Plan, Status, Summary};
+    use textweaver_convert::{
+        ConvertOptions, Converter, OutputFormat, Plan, ReportFormat, Status, Summary,
+    };
     use textweaver_lexicon::args;
 
     use super::BatchList;
@@ -402,7 +407,9 @@ mod run {
                         .map_err(|e| e.to_string())
                         .map(|summary| {
                             let report = match report_dir {
-                                Some(dir) => summary.write_report(&dir).map_err(|e| e.to_string()),
+                                Some(dir) => summary
+                                    .write_report(&dir, ReportFormat::Markdown)
+                                    .map_err(|e| e.to_string()),
                                 None => Err(String::new()),
                             };
                             (summary, report)
@@ -506,8 +513,13 @@ mod run {
                     "format" => format.label()
                 ],
             );
+            if s.with_issues > 0 {
+                text.push(' ');
+                text.push_str(&self.msg_args("batch-inaccessible", &args!["n" => s.with_issues]));
+            }
+            // Where the report is, always, in words.
             match &report {
-                Ok(path) if !failures.is_empty() || s.warned > 0 => {
+                Ok(path) => {
                     text.push(' ');
                     text.push_str(
                         &self

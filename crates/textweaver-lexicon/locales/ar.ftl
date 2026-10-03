@@ -1172,6 +1172,9 @@ publish-warnings =
 # $file is the file's name, $folder its folder; $warned is empty or a
 # space and publish-warnings.
 publish-exported = صُدِّر إلى { $format }: { $file }. فتحه؟ y أو n. في { $folder }.{ $warned }
+publish-report = حُفظ التقرير باسم { $file }.
+publish-report-issues = عناصر لم تُجعل متاحة: { $n }. انظر التقرير.
+publish-report-failed = تعذّر حفظ التقرير: { $error }
 publish-preview-written-served = كُتبت المعاينة. يجري فتحها في المتصفح. تُعاد تلقائيًا بعد كل حفظ.{ $warned }
 publish-preview-written = كُتبت المعاينة. يجري فتحها في المتصفح. الحفظ يكتبها مجددًا؛ ثم اضغط F5 في المتصفح.{ $warned }
 publish-preview-updated = تحدّثت المعاينة.
@@ -3664,8 +3667,9 @@ batch-stopped =
         [one] ملف واحد
        *[other] { $converted } ملفات
     }؛ { $left } لم تُحوَّل؛ { $failed } فشلت.
-batch-report = القائمة محفوظة في { $path }.
-batch-report-failed = تعذّر حفظ القائمة: { $error }
+batch-report = حُفظ التقرير في { $path }.
+batch-report-failed = تعذّر حفظ التقرير: { $error }
+batch-inaccessible = ملفات فيها عناصر لم تُجعل متاحة: { $n }. انظر التقرير.
 batch-failures-title =
     { $n ->
         [one] ملف واحد فشل
