@@ -30,7 +30,7 @@ use std::path::PathBuf;
 
 use textweaver_eci::EciConfig;
 use textweaver_eci::dictionaries::Dictionaries;
-use textweaver_speech::normalize::CommunityLexiconConfig;
+use textweaver_speech::normalize::{CommunityLexiconConfig, MedicalLexiconConfig};
 use textweaver_speech::pacing::PacingConfig;
 use textweaver_speech::{
     BackendRegistry, NormalizeConfig, ServiceConfig, SpeechBackend, TableMode, VoiceParams,
@@ -332,6 +332,18 @@ pub fn service_config(settings: &Settings) -> ServiceConfig {
                 dir: lexicon.dir.clone(),
                 language: lexicon.language.clone(),
             },
+            medical_lexicon: MedicalLexiconConfig {
+                enabled: norm.medical_lexicon.enabled,
+                // Unset: `medical-lexicon.toml` in the configuration
+                // folder, when there is one (read only when it is on).
+                overlay: norm.medical_lexicon.overlay.clone().or_else(|| {
+                    norm.medical_lexicon
+                        .enabled
+                        .then(|| textweaver_store::Paths::platform().ok())
+                        .flatten()
+                        .and_then(|p| p.default_medical_overlay())
+                }),
+            },
             ..NormalizeConfig::default()
         },
         caps: sp.caps,
@@ -432,6 +444,16 @@ mod tests {
         assert_eq!(
             d.normalize.community_lexicon,
             CommunityLexiconConfig::default()
+        );
+        assert_eq!(d.normalize.medical_lexicon, MedicalLexiconConfig::default());
+        // The medical lexicon and its overlay file.
+        s.normalization.medical_lexicon.enabled = true;
+        s.normalization.medical_lexicon.overlay = Some(PathBuf::from("/terms.toml"));
+        let c = service_config(&s);
+        assert!(c.normalize.medical_lexicon.enabled);
+        assert_eq!(
+            c.normalize.medical_lexicon.overlay,
+            Some(PathBuf::from("/terms.toml"))
         );
     }
 

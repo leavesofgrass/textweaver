@@ -149,6 +149,8 @@ fn everything_changed() -> Settings {
     lex.enabled = true;
     lex.dir = Some("C:/dicts".into());
     lex.language = "DEU".into();
+    s.normalization.medical_lexicon.enabled = true;
+    s.normalization.medical_lexicon.overlay = Some("C:/terms/medical.toml".into());
     s.normalization.math_verbosity = textweaver_core::Verbosity::High;
     s.normalization.asciimath_delimiter = Some('`');
     s.export.subtitle_format = crate::SubtitleFormat::Vtt;

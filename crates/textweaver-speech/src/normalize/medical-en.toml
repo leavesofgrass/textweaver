@@ -1,0 +1,129 @@
+# The bundled medical lexicon, US English (normalize/medical.rs).
+#
+# Authored for textweaver and licensed with it (GPL-3.0-or-later); no
+# third-party data. The test terms and their respellings come from
+# textweaver's own health sciences report
+# (docs/dev/research/health-sciences-use-cases.md, "Twenty test terms").
+# Drug names are nonproprietary names. The Tall Man names below follow the
+# look-alike pairs of the FDA Name Differentiation Project; only the plain
+# names are listed here, written from the names themselves.
+#
+# Matching: a key in lower case matches the word in any capitalization
+# ("warfarin", "Warfarin", "WARFARIN"); a key with a capital letter matches
+# only as written ("PRN"). Whole words; a hyphenated key matches the whole
+# hyphenated word. A user overlay file in the same format wins over this
+# file. Respellings use the report's notation: syllables joined by hyphens,
+# the stressed syllable in capitals. They are to be checked by ear on each
+# engine.
+
+[pronunciations]
+# The report's twenty test terms.
+acetaminophen = "uh-SEE-tuh-MIN-uh-fen"
+atorvastatin = "uh-TOR-vuh-STAT-in"
+metoprolol = "meh-TOE-pruh-lol"
+warfarin = "WAR-fuh-rin"
+lisinopril = "lye-SIN-oh-pril"
+hydroxyzine = "hye-DROK-sih-zeen"
+hydralazine = "hye-DRAL-uh-zeen"
+ceftriaxone = "sef-try-AKS-own"
+phenytoin = "FEN-ih-toyn"
+levetiracetam = "lee-veh-tye-RASS-eh-tam"
+furosemide = "fyoo-ROH-seh-mide"
+dyspnea = "DISP-nee-uh"
+ischemia = "is-KEE-mee-uh"
+cholecystitis = "koh-lee-sis-TYE-tis"
+creatinine = "kree-AT-ih-neen"
+sphygmomanometer = "sfig-moh-muh-NOM-eh-ter"
+"guillain-barré" = "ghee-YAN bah-RAY"
+"guillain-barre" = "ghee-YAN bah-RAY"
+"sjögren" = "SHOW-grin"
+sjogren = "SHOW-grin"
+raynaud = "ray-NOH"
+ileum = "ILL-ee-um"
+ilium = "ILL-ee-um"
+wernicke = "VER-nih-kuh"
+
+# Look-alike pairs from the Tall Man list, said apart by stress.
+dopamine = "DOH-puh-meen"
+dobutamine = "doh-BYOO-tuh-meen"
+prednisone = "PRED-nih-sone"
+prednisolone = "pred-NIS-oh-lone"
+vincristine = "vin-KRIS-teen"
+vinblastine = "vin-BLAS-teen"
+bupropion = "byoo-PROH-pee-on"
+buspirone = "byoo-SPYE-rone"
+glipizide = "GLIP-ih-zide"
+glyburide = "GLYE-byoo-ride"
+tramadol = "TRAM-uh-dol"
+trazodone = "TRAZ-oh-done"
+
+# Common drugs engines read by rule.
+metformin = "met-FOR-min"
+amoxicillin = "uh-MOX-ih-SIL-in"
+ibuprofen = "eye-byoo-PROH-fen"
+omeprazole = "oh-MEP-ruh-zole"
+gabapentin = "GAB-uh-PEN-tin"
+
+[dosing]
+# Safe expansions only (report section 3). The error-prone abbreviations
+# (QD, QOD, U, IU, MS, cc, ...) are never expanded: they are spelled by the
+# abbreviations step, and an entry for one here is ignored.
+PRN = "as needed"
+PO = "by mouth"
+BID = "twice a day"
+TID = "three times a day"
+QID = "four times a day"
+NPO = "nothing by mouth"
+q4h = "every 4 hours"
+q6h = "every 6 hours"
+q8h = "every 8 hours"
+q12h = "every 12 hours"
+
+[tall_man]
+# Kept whole: split caps never cuts "hydrOXYzine" into "hydr OX Yzine", and
+# with the lexicon on a Tall Man spelling is read as its plain name.
+names = [
+    "acetazolamide",
+    "acetohexamide",
+    "alprazolam",
+    "bupropion",
+    "buspirone",
+    "chlorpromazine",
+    "chlorpropamide",
+    "clomiphene",
+    "clomipramine",
+    "clonazepam",
+    "clonidine",
+    "cycloserine",
+    "cyclosporine",
+    "daunorubicin",
+    "doxorubicin",
+    "dimenhydrinate",
+    "diphenhydramine",
+    "dobutamine",
+    "dopamine",
+    "glipizide",
+    "glyburide",
+    "hydralazine",
+    "hydroxyzine",
+    "hydromorphone",
+    "lorazepam",
+    "medroxyprogesterone",
+    "methylprednisolone",
+    "methyltestosterone",
+    "nicardipine",
+    "nifedipine",
+    "oxycodone",
+    "prednisolone",
+    "prednisone",
+    "risperidone",
+    "ropinirole",
+    "sulfadiazine",
+    "sulfisoxazole",
+    "tolazamide",
+    "tolbutamide",
+    "tramadol",
+    "trazodone",
+    "vinblastine",
+    "vincristine",
+]

@@ -58,6 +58,8 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `normalization.community_lexicon.enabled`: default off (`false`). Community lexicon. Apply the community pronunciation dictionaries for engines other than Eloquence. On or off: `true` or `false`. Syncs between computers.
 - `normalization.community_lexicon.dir`: default not set. Community lexicon folder. The folder holding the dictionary files; not set looks beside textweaver. Text; empty means not set. Stays on this computer.
 - `normalization.community_lexicon.language`: default US English (`"ENU"`). Community lexicon language. The dictionaries' language. Choices: `"ENU"` (US English), `"DEU"` (German). Other values may be written too. Syncs between computers.
+- `normalization.medical_lexicon.enabled`: default off (`false`). Medical lexicon. Read drug names, clinical terms and dosing abbreviations from a medical pronunciation list. On or off: `true` or `false`. Syncs between computers.
+- `normalization.medical_lexicon.overlay`: default not set. Medical lexicon file. Your own medical pronunciations, which win over the built-in ones; not set reads medical-lexicon.toml in the settings folder. Text; empty means not set. Stays on this computer.
 
 ## Reading: the `[reading]` section
 

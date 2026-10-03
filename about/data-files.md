@@ -46,6 +46,11 @@ Packages also carry the licence files themselves, under `licenses/`.
 - Used by the Eloquence (ECI) backend. From eigencrow/IBMTTSDictionaries, tag `v26.09`, maintained by amirsol81, x0, and thunderdrop with contributions from many people.
 - Licence: CC0 1.0 Universal (public domain dedication). The text is in `ibmtts-dictionaries/LICENSE.md` in the Windows and Linux packages.
 
+### The medical lexicon
+
+- Used by the medical pronunciation layer (`[normalization.medical_lexicon]`, off by default). The file, `crates/textweaver-speech/src/normalize/medical-en.toml`, is compiled into textweaver: 41 respellings of drug names, clinical terms, and eponyms, ten safe dosing abbreviations, and 43 Tall Man drug names.
+- Written for textweaver, under textweaver's own license (GPL-3.0-or-later); it includes no third-party data. The test terms and their respellings come from textweaver's health sciences report (`docs/dev/research/health-sciences-use-cases.md`). Drug names are nonproprietary names; the Tall Man pairs follow the FDA Name Differentiation Project, a US government publication, and only the plain names are listed.
+
 ### Citation styles and locales (hayagriva)
 
 - The `hayagriva` crate, used for citations, bundles Citation Style Language (CSL) styles and locales from the CSL project (https://citationstyles.org/).

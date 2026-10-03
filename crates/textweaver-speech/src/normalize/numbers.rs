@@ -8,8 +8,9 @@
 //!   "3:45 today" stays two words; `am`/`pm` must be whole words ("3:00
 //!   amazing"); "a.m." and "p.m." are recognized ("9:30 a.m.") and a
 //!   sentence-final "a.m." keeps its period; minutes below ten get "oh"
-//!   ("08:05" is "eight oh five AM"); hour zero is "twelve" ("00:30" is
-//!   "twelve thirty AM", where Star said "zero thirty AM"); seconds are
+//!   ("9:05" is "nine oh five AM"); hour zero with AM is "twelve"
+//!   ("00:30 AM" is "twelve thirty AM", where Star said "zero thirty
+//!   AM"; 24-hour times are below); seconds are
 //!   spoken instead of dropped; a verse reference after a book of the Bible
 //!   ("John 3:16") is read as chapter and verse, not a time.
 //! - Q2 currency: a sentence period is not eaten ("It costs $5."); more than
@@ -36,11 +37,39 @@
 //! digit, so the highlight follows the digits as they are read. Dots
 //! inside an identifier are read as "dot"; hyphens, slashes and letters
 //! stay as written for the punctuation step and the engine.
+//!
+//! **Clinical units, ranges and times** (new in textweaver; health
+//! sciences report, section 3). Before Star's rules:
+//!
+//! - a unit after a number is said in full: "5 mg" is "5 milligrams", "1
+//!   mg" "1 milligram", and mcg, ng, g, kg, mL, dL, L, mmol, mEq, mm, cm,
+//!   °C and °F likewise; a slash after the unit is "per" ("2 mg/kg/day"
+//!   is "2 milligrams per kilogram per day", "5 mmol/L" "5 millimoles per
+//!   liter");
+//! - "120/80 mmHg" is "120 over 80 millimeters of mercury", and a count
+//!   per volume "10^9/L" is "10^9 per liter";
+//! - an en dash between numbers is a range: "6–8 weeks" is "6 to 8
+//!   weeks";
+//! - a decimal comma before a unit or a percent sign ("2,5%", "2,5 mg"),
+//!   whose comma part is not three digits, is read as a decimal point;
+//!   "1,000%" is "one thousand percent".
+//!
+//! The number itself stays as written for the rules below (and for the
+//! engine, which reads small integers itself), so "5 milligrams" still
+//! highlights "5" and then "mg".
+//!
+//! **24-hour times gain no AM or PM** (a deliberate change to Star, which
+//! read "15:30" as "three thirty PM"): a time whose hour is written with a
+//! leading zero or is 13 or more, with no AM or PM after it, is read as
+//! written on a 24-hour clock: "08:05" is "eight oh five", "15:30"
+//! "fifteen thirty", "15:00" "fifteen hundred", "08:00" "oh eight
+//! hundred", and "00:30" "zero thirty". A time such as "3:45" keeps
+//! Star's reading.
 
 use regex::{Captures, Regex};
 
 use super::Transform;
-use super::rewrite::{Piece, Rule, apply_rules, char_after, char_before, then};
+use super::rewrite::{Piece, Rule, apply_rules_changed, char_after, char_before, then};
 use super::words::{
     MONTHS, decimal_digits_to_words, int_to_words, ordinal_to_words, pluralize_last_word,
     year_to_words,
@@ -250,6 +279,218 @@ fn time_words(h: i64, m: i64, s: Option<i64>, explicit: Option<char>) -> String 
     out
 }
 
+/// A 24-hour time as said aloud: "08:05" is "eight oh five", "15:30"
+/// "fifteen thirty", "15:00" "fifteen hundred", "08:00" "oh eight
+/// hundred", "00:00" "midnight". No AM or PM is added.
+fn time_words_24(h: i64, m: i64, s: Option<i64>, leading_zero: bool) -> String {
+    let secs = s.filter(|&s| s > 0);
+    if h == 0 && m == 0 && secs.is_none() {
+        return "midnight".into();
+    }
+    let mut out = int_to_words(h);
+    if m == 0 {
+        if leading_zero && h > 0 {
+            out.insert_str(0, "oh ");
+        }
+        out.push_str(" hundred");
+    } else if m < 10 {
+        out.push_str(" oh ");
+        out.push_str(&int_to_words(m));
+    } else {
+        out.push(' ');
+        out.push_str(&int_to_words(m));
+    }
+    if let Some(s) = secs {
+        out.push_str(&format!(
+            " and {} second{}",
+            int_to_words(s),
+            if s == 1 { "" } else { "s" }
+        ));
+    }
+    out
+}
+
+/// Clinical units after a number: `(symbol, singular, plural)`.
+const UNITS: &[(&str, &str, &str)] = &[
+    ("mg", "milligram", "milligrams"),
+    ("mcg", "microgram", "micrograms"),
+    ("ng", "nanogram", "nanograms"),
+    ("g", "gram", "grams"),
+    ("kg", "kilogram", "kilograms"),
+    ("mL", "milliliter", "milliliters"),
+    ("ml", "milliliter", "milliliters"),
+    ("dL", "deciliter", "deciliters"),
+    ("L", "liter", "liters"),
+    ("mmol", "millimole", "millimoles"),
+    ("mEq", "milliequivalent", "milliequivalents"),
+    ("mmHg", "millimeter of mercury", "millimeters of mercury"),
+    ("mm", "millimeter", "millimeters"),
+    ("cm", "centimeter", "centimeters"),
+    ("°C", "degree Celsius", "degrees Celsius"),
+    ("°F", "degree Fahrenheit", "degrees Fahrenheit"),
+];
+
+/// What a unit is "per" after a slash: "mg/kg" is "milligrams per
+/// kilogram", "mcg/kg/min" "micrograms per kilogram per minute".
+const PER: &[(&str, &str)] = &[
+    ("kg", "kilogram"),
+    ("g", "gram"),
+    ("L", "liter"),
+    ("dL", "deciliter"),
+    ("mL", "milliliter"),
+    ("min", "minute"),
+    ("h", "hour"),
+    ("hr", "hour"),
+    ("d", "day"),
+    ("day", "day"),
+    ("dose", "dose"),
+    ("m²", "square meter"),
+    ("m2", "square meter"),
+];
+
+/// A regex alternation of `items`, longest first, so "mmHg" is tried
+/// before "mm".
+fn alternation<'a>(items: impl Iterator<Item = &'a str>) -> String {
+    let mut v: Vec<&str> = items.collect();
+    v.sort_by_key(|s| std::cmp::Reverse(s.len()));
+    v.iter()
+        .map(|s| regex::escape(s))
+        .collect::<Vec<_>>()
+        .join("|")
+}
+
+/// " per kilogram per minute" for "/kg/min".
+fn per_words(per: &str) -> String {
+    per.split('/')
+        .filter(|p| !p.is_empty())
+        .filter_map(|p| PER.iter().find(|(sym, _)| *sym == p))
+        .map(|(_, name)| format!(" per {name}"))
+        .collect()
+}
+
+/// A number before a unit or a percent sign written with a decimal comma
+/// ("2,5"): the comma part is not three digits, so it is not a thousands
+/// separator. Returns the whole part and the decimals.
+fn decimal_comma(n: &str) -> Option<(&str, &str)> {
+    let (whole, frac) = n.split_once(',')?;
+    (!whole.is_empty()
+        && !frac.contains(',')
+        && frac.len() != 3
+        && !frac.contains('.')
+        && whole.bytes().all(|b| b.is_ascii_digit())
+        && frac.bytes().all(|b| b.is_ascii_digit()))
+    .then_some((whole, frac))
+}
+
+/// "2,5" as "two point five".
+fn decimal_comma_words(whole: &str, frac: &str) -> Option<String> {
+    Some(format!(
+        "{} point {}",
+        int_to_words(whole.parse().ok()?),
+        decimal_digits_to_words(frac)
+    ))
+}
+
+/// Clinical rules that run before the number rules, so the numbers they
+/// keep are read by those rules afterwards (health sciences report,
+/// section 3).
+fn clinical_rules() -> Vec<Rule> {
+    let per = alternation(PER.iter().map(|(s, _)| *s));
+    vec![
+        // Blood pressure: "120/80 mmHg" is "120 over 80 millimeters of
+        // mercury".
+        Rule::with(r"\b([0-9]{2,3})/([0-9]{2,3})[ \u{a0}]?mmHg", |c, s| {
+            let m = c.get(0)?;
+            if char_before(s, m.start()).is_some_and(|b| b == '/' || b == '.')
+                || char_after(s, m.end()).is_some_and(char::is_alphanumeric)
+            {
+                return None;
+            }
+            Some(vec![
+                Piece::Keep(1),
+                Piece::Text(" over ".into()),
+                Piece::Keep(2),
+                Piece::Text(" millimeters of mercury".into()),
+            ])
+        }),
+        // A count per volume: "10^9/L" is "10^9 per liter" (the power of
+        // ten is read by the punctuation step).
+        Rule::with(
+            &format!(
+                r"(10(?:\^\(?[-\u{{2212}}]?[0-9]{{1,3}}\)?|[⁻]?[⁰¹²³⁴⁵⁶⁷⁸⁹]{{1,3}}))((?:/(?:{per}))+)"
+            ),
+            |c, s| {
+                let m = c.get(0)?;
+                if char_before(s, m.start()).is_some_and(|b| b.is_alphanumeric() || b == '.')
+                    || char_after(s, m.end()).is_some_and(char::is_alphanumeric)
+                {
+                    return None;
+                }
+                Some(vec![
+                    Piece::Keep(1),
+                    Piece::Text(per_words(c.get(2)?.as_str())),
+                ])
+            },
+        ),
+        // Ranges: an en dash between numbers is "to" ("6–8 weeks").
+        Rule::with(
+            r"([0-9]+(?:\.[0-9]+)?)[ \u{a0}]?\u{2013}[ \u{a0}]?([0-9]+(?:\.[0-9]+)?)",
+            |c, s| {
+                let m = c.get(0)?;
+                let before = char_before(s, m.start());
+                let after = char_after(s, m.end());
+                if before.is_some_and(|b| b.is_alphanumeric() || matches!(b, '.' | ':' | '/' | ','))
+                    || after
+                        .is_some_and(|a| a.is_ascii_digit() || matches!(a, ':' | '/' | '\u{2013}'))
+                    || dot_digit_at(s, m.end())
+                {
+                    return None;
+                }
+                Some(vec![
+                    Piece::Keep(1),
+                    Piece::Text(" to ".into()),
+                    Piece::Keep(2),
+                ])
+            },
+        ),
+        // Units after a number: "5 mg" is "5 milligrams", "2 mg/kg" "2
+        // milligrams per kilogram".
+        Rule::with(
+            &format!(
+                r"([0-9]{{1,3}}(?:,[0-9]{{3}})+(?:\.[0-9]+)?|[0-9]+(?:[.,][0-9]+)?|\.[0-9]+)[ \u{{a0}}]?({})((?:/(?:{per}))*)",
+                alternation(UNITS.iter().map(|(s, _, _)| *s))
+            ),
+            |c, s| {
+                let m = c.get(0)?;
+                let n = c.get(1)?.as_str();
+                let before = char_before(s, m.start());
+                if before.is_some_and(|b| {
+                    b.is_alphanumeric() || matches!(b, '.' | ':' | '^' | '_' | '/' | ',')
+                }) || char_after(s, m.end()).is_some_and(char::is_alphanumeric)
+                {
+                    return None;
+                }
+                let sym = c.get(2)?.as_str();
+                let (_, one, many) = UNITS.iter().find(|(u, _, _)| *u == sym)?;
+                let unit = if n == "1" { one } else { many };
+                let per = per_words(c.get(3).map_or("", |p| p.as_str()));
+                if n.contains(',') && !n.contains('.') && n.matches(',').count() == 1 {
+                    if let Some((whole, frac)) = decimal_comma(n) {
+                        let words = decimal_comma_words(whole, frac)?;
+                        return text(format!("{words} {unit}{per}"));
+                    }
+                    // "1,500 mg" is a thousands separator; "1234,567 mg"
+                    // is neither, and stays as written.
+                    if n.split(',').next().is_some_and(|w| w.len() > 3) {
+                        return None;
+                    }
+                }
+                Some(vec![Piece::Keep(1), Piece::Text(format!(" {unit}{per}"))])
+            },
+        ),
+    ]
+}
+
 fn currency_words(symbol: &str, whole: i64, frac: Option<&str>) -> String {
     let (major, majors, minor, minors) = match symbol {
         "£" => ("pound", "pounds", "penny", "pence"),
@@ -297,6 +538,13 @@ fn dot_digit_at(s: &str, i: usize) -> bool {
 
 /// The rules, in order.
 pub(crate) fn rules() -> Vec<Rule> {
+    let mut rules = clinical_rules();
+    rules.extend(star_rules());
+    rules
+}
+
+/// Star's rules, in Star's order.
+fn star_rules() -> Vec<Rule> {
     vec![
         // 1. ISO date.
         Rule::with(
@@ -322,6 +570,12 @@ pub(crate) fn rules() -> Vec<Rule> {
                 if explicit.is_none() && c.get(3).is_none() && after_book(s, m.start()) {
                     return text(format!("{} {}", int_to_words(h), int_to_words(mi)));
                 }
+                // A 24-hour time ("08:05", "15:30") gains no AM or PM.
+                let hour = c.get(1)?.as_str();
+                let leading_zero = hour.len() == 2 && hour.starts_with('0');
+                if explicit.is_none() && (leading_zero || h >= 13) {
+                    return text(time_words_24(h, mi, num(c, 3), leading_zero));
+                }
                 let mut w = time_words(h, mi, num(c, 3), explicit);
                 if c.get(5).is_some() && sentence_ends_at(s, m.end()) {
                     w.push('.');
@@ -341,18 +595,26 @@ pub(crate) fn rules() -> Vec<Rule> {
                 ))
             },
         ),
-        // 5. Percent.
-        Rule::with(r"\b([0-9]+)(?:\.([0-9]+))?%", |c, _| {
-            let int = num(c, 1)?;
-            text(match c.get(2) {
-                None => format!("{} percent", int_to_words(int)),
-                Some(d) => format!(
-                    "{} point {} percent",
-                    int_to_words(int),
-                    decimal_digits_to_words(d.as_str())
-                ),
-            })
-        }),
+        // 5. Percent, with thousands ("1,000%") and a decimal comma
+        // ("2,5%" is "two point five percent").
+        Rule::with(
+            r"\b([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:([.,])([0-9]+))?%",
+            |c, _| {
+                let int = num(c, 1)?;
+                let comma_decimal = c.get(2).is_some_and(|sep| sep.as_str() == ",");
+                if comma_decimal && (c.get(1)?.as_str().contains(',') || c.get(3)?.len() == 3) {
+                    return None;
+                }
+                text(match c.get(3) {
+                    None => format!("{} percent", int_to_words(int)),
+                    Some(d) => format!(
+                        "{} point {} percent",
+                        int_to_words(int),
+                        decimal_digits_to_words(d.as_str())
+                    ),
+                })
+            },
+        ),
         // 6. Ordinals.
         Rule::with(r"\b([0-9]+)(?i:st|nd|rd|th)\b", |c, _| {
             text(ordinal_to_words(num(c, 1)?))
@@ -567,6 +829,10 @@ impl Identifiers {
 
     /// Applies the guard. `None` when there is no identifier.
     fn apply(&self, input: &str) -> Option<(String, OffsetMap)> {
+        // `captures_at` builds capture slots even when nothing matches.
+        if !self.re.is_match(input) {
+            return None;
+        }
         let mut b = SpokenBuilder::new();
         let (mut cur, mut cur_char, mut pos) = (0usize, 0usize, 0usize);
         let mut any = false;
@@ -649,13 +915,20 @@ impl Transform for Numbers {
     }
 
     fn apply(&self, input: &str) -> (String, OffsetMap) {
+        self.apply_changed(input)
+            .unwrap_or_else(|| super::identity(input))
+    }
+
+    fn apply_changed(&self, input: &str) -> Option<(String, OffsetMap)> {
+        // Every rule reads a digit: without one there is nothing to do.
+        if !input.bytes().any(|b| b.is_ascii_digit()) {
+            return None;
+        }
         match self.identifiers.apply(input) {
-            None if self.rules.is_empty() => super::identity(input),
-            None => apply_rules(input, &self.rules),
-            Some(acc) if self.rules.is_empty() => acc,
+            None => apply_rules_changed(input, &self.rules),
             Some(acc) => {
-                let step = apply_rules(&acc.0, &self.rules);
-                then(acc, Some(step))
+                let step = apply_rules_changed(&acc.0, &self.rules);
+                Some(then(acc, step))
             }
         }
     }

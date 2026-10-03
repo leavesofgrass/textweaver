@@ -537,6 +537,16 @@ pub const INFO: &[Info] = &[
         "The dictionaries' language.",
         &[("ENU", "US English"), ("DEU", "German")],
     ),
+    toggle(
+        "normalization.medical_lexicon.enabled",
+        "Medical lexicon",
+        "Read drug names, clinical terms and dosing abbreviations from a medical pronunciation list.",
+    ),
+    optional(
+        "normalization.medical_lexicon.overlay",
+        "Medical lexicon file",
+        "Your own medical pronunciations, which win over the built-in ones; not set reads medical-lexicon.toml in the settings folder.",
+    ),
     // [reading]
     toggle(
         "reading.auto_resume",

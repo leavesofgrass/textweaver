@@ -31,6 +31,7 @@ const SECTIONS: &[(&str, &str)] = &[
     ("HighlightSettings", "highlight"),
     ("NormalizationSettings", "normalization"),
     ("CommunityLexiconSettings", "community_lexicon"),
+    ("MedicalLexiconSettings", "medical_lexicon"),
     ("ExportSettings", "export"),
     ("BrailleSettings", "braille"),
     ("ReadingSettings", "reading"),

@@ -108,6 +108,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("normalization.community_lexicon.enabled", Portable),
     ("normalization.community_lexicon.dir", Machine),
     ("normalization.community_lexicon.language", Portable),
+    ("normalization.medical_lexicon.enabled", Portable),
+    ("normalization.medical_lexicon.overlay", Machine),
     // [reading]
     ("reading.auto_resume", Portable),
     ("reading.nav_history_size", Portable),
@@ -533,6 +535,7 @@ mod tests {
             "speech.piper.voices",
             "dictation.model_dir",
             "normalization.community_lexicon.dir",
+            "normalization.medical_lexicon.overlay",
             "sync.folder",
             "sync.device_name",
             "display.wrap_width",

@@ -339,13 +339,41 @@ SQL = "sequel"
 
 ### Clinical and scientific text
 
-Some things on the page must be read exactly as written, because a wrong guess changes the meaning. textweaver handles three of them:
+Some things on the page must be read exactly as written, because a wrong guess changes the meaning. textweaver handles four of them:
 
 - **Identifiers are read digit by digit.** A number after CPT, PMID, NCT, ZIP, DOI, ISBN, or phone (also telephone, tel, and fax) is an identifier, not an amount. "PMID 31769816" is "PMID three one seven six nine eight one six", not "thirty-one million ...". A US phone number in its usual forms, such as "503-555-0123" or "(503) 555-0123", is read the same way without a label. Dots inside an identifier are read as "dot". The highlight moves digit by digit.
 - **Error-prone medical abbreviations are spelled, never expanded.** These are the abbreviations on The Joint Commission's "Do Not Use" list and the ISMP list of error-prone abbreviations, because they are misread and have caused harm: U, IU, QD, QOD (and q.d., q.o.d.), MS, MSO4, MgSO4, cc, SC, SQ, HS, TIW, AD, AS, AU, OD, OS, OU, and drug-name abbreviations such as TPA and HCTZ. "QD" is read "Q D" and "MgSO4" is "M G S O 4". Neither the built-in abbreviations nor your own `abbrev_expansions` can replace them. "µg" is read "micrograms", because the symbol itself is the hazard. "AS" and "AD" in text set in capitals ("SUCH AS") stay words.
 - **Symbols outside math are named.** Greek letters ("TNF-α" is "TNF alpha", "ΔG" is "delta G"), the micro sign ("µm" is "micro m"), the minus sign "−", "⇌" ("in equilibrium with"), arrows, and powers of ten ("11.5 × 10^9" is "eleven point five times ten to the ninth", "10⁻³" is "ten to the negative third"). Greek letters are named at every punctuation level, because they are words.
 
+- **Units, ranges, and times are said in full.** A unit after a number is read as a word: "5 mg" is "5 milligrams", "1 mg" is "1 milligram", and mcg, ng, g, kg, mL, dL, L, mmol, mEq, mm, cm, °C, and °F the same way. A slash after the unit is "per": "2 mg/kg/day" is "2 milligrams per kilogram per day", "5 mmol/L" is "5 millimoles per liter", and "10^9/L" is "ten to the ninth per liter". "120/80 mmHg" is "120 over 80 millimeters of mercury". An en dash between numbers is a range: "6–8 weeks" is "6 to 8 weeks". A 24-hour time gains no AM or PM: "08:05" is "eight oh five", "15:30" is "fifteen thirty", and "08:00" is "oh eight hundred". A decimal comma before a unit or a percent sign, such as "2,5%", is read as a decimal point: "two point five percent".
+
 With Eloquence, which reads numbers and abbreviations itself, the identifier rule and the error-prone list still apply, so Eloquence cannot guess either.
+
+### The medical lexicon
+
+textweaver comes with a medical pronunciation list for drug names, clinical terms, and eponyms that engines get wrong, such as "warfarin", "levetiracetam", "dyspnea", "Guillain-Barré", and "Sjögren". It is off by default; turn it on in a health sciences profile:
+
+```toml
+[normalization.medical_lexicon]
+enabled = true
+```
+
+- `enabled` (default `false`): apply it.
+- `overlay`: your own file of medical pronunciations. When it is not set, textweaver reads `medical-lexicon.toml` in the settings folder, if there is one.
+
+Each word is read as a respelling, with the stressed syllable in capitals: "warfarin" is read "WAR-fuh-rin", and "hydroxyzine" and "hydralazine", a look-alike pair, are "hye-DROK-sih-zeen" and "hye-DRAL-uh-zeen". A word in any capitalization matches. It also reads safe dosing abbreviations: "PRN" is "as needed", "PO" is "by mouth", "BID" is "twice a day", and "q6h" is "every 6 hours". The error-prone abbreviations above are never expanded, by this list or by yours.
+
+Tall Man drug names, such as "hydrOXYzine" and "DOPamine", are printed with capitals to tell look-alikes apart. textweaver keeps them whole: split caps never cuts one into pieces, with the lexicon on or off, and with it on they are read as their respelling or their plain name.
+
+Your overlay file uses the same form as `[normalization.pronunciations]`: one `term = "spoken form"` per line. Its entries win over the built-in ones. A term in lower case matches any capitalization; a term with a capital letter matches only as written. For example:
+
+```toml
+warfarin = "WAR-far-in"
+metformin = "met FOR min"
+PRN = "when needed"
+```
+
+Your own `[normalization.pronunciations]` apply first, so they always win. The respellings are a starting point; if one does not sound right with your voice, put your own in the overlay file.
 
 ### The community lexicon
 

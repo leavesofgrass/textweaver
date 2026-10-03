@@ -339,14 +339,16 @@ impl Transform for Punctuation {
     }
 
     fn apply(&self, input: &str) -> (String, OffsetMap) {
+        self.apply_changed(input)
+            .unwrap_or_else(|| super::identity(input))
+    }
+
+    fn apply_changed(&self, input: &str) -> Option<(String, OffsetMap)> {
         match self.powers.apply(input) {
-            None => self
-                .rule
-                .apply(input)
-                .unwrap_or_else(|| super::identity(input)),
+            None => self.rule.apply(input),
             Some(acc) => {
                 let step = self.rule.apply(&acc.0);
-                then(acc, step)
+                Some(then(acc, step))
             }
         }
     }
@@ -363,32 +365,51 @@ impl Transform for SplitCaps {
     }
 
     fn apply(&self, input: &str) -> (String, OffsetMap) {
-        let chars: Vec<(usize, char)> = input.char_indices().collect();
-        let mut b = SpokenBuilder::new();
+        self.apply_changed(input)
+            .unwrap_or_else(|| super::identity(input))
+    }
+
+    fn apply_changed(&self, input: &str) -> Option<(String, OffsetMap)> {
+        let mut b: Option<SpokenBuilder> = None;
         let mut seg_start = 0usize; // byte
         let mut seg_char = 0usize;
-        for (k, &(i, c)) in chars.iter().enumerate() {
-            if k == 0 {
+        // The byte where the current word (letters only) starts, and the
+        // end of a Tall Man name being kept whole.
+        let mut word_start = 0usize;
+        let mut keep_until = 0usize;
+        let mut prev: Option<char> = None;
+        let mut iter = input.char_indices().enumerate().peekable();
+        while let Some((k, (i, c))) = iter.next() {
+            if !prev.is_some_and(char::is_alphabetic) {
+                word_start = i;
+            }
+            let Some(p) = prev.replace(c) else {
+                continue;
+            };
+            let next = iter.peek().map(|&(_, (_, n))| n);
+            let lower_upper = p.is_lowercase() && c.is_uppercase();
+            let acronym_end =
+                p.is_uppercase() && c.is_uppercase() && next.is_some_and(char::is_lowercase);
+            if !(lower_upper || acronym_end) || i < keep_until {
                 continue;
             }
-            let prev = chars[k - 1].1;
-            let next = chars.get(k + 1).map(|&(_, n)| n);
-            let lower_upper = prev.is_lowercase() && c.is_uppercase();
-            let acronym_end =
-                prev.is_uppercase() && c.is_uppercase() && next.is_some_and(char::is_lowercase);
-            if lower_upper || acronym_end {
-                b.push_literal(&input[seg_start..i], CharPos(seg_char));
-                b.push_inserted(" ", CharPos(k));
-                seg_start = i;
-                seg_char = k;
+            // "hydrOXYzine" and "DOPamine" are drug names: never cut.
+            let word_end = input[i..]
+                .find(|ch: char| !ch.is_alphabetic())
+                .map_or(input.len(), |n| i + n);
+            if super::medical::is_tall_man(&input[word_start..word_end]) {
+                keep_until = word_end;
+                continue;
             }
+            let b = b.get_or_insert_with(SpokenBuilder::new);
+            b.push_literal(&input[seg_start..i], CharPos(seg_char));
+            b.push_inserted(" ", CharPos(k));
+            seg_start = i;
+            seg_char = k;
         }
+        let mut b = b?;
         b.push_literal(&input[seg_start..], CharPos(seg_char));
-        let (text, map) = b.finish();
-        if map.is_empty() && !input.is_empty() {
-            return super::identity(input);
-        }
-        (text, map)
+        Some(b.finish())
     }
 }
 
