@@ -107,9 +107,43 @@ pub fn apply(backend: GraphicsBackend) -> Option<&'static str> {
     Some(name)
 }
 
+/// The power preference asked of wgpu when `WGPU_POWER_PREF` is unset:
+/// the integrated (low-power) GPU, which draws text as fast as a discrete
+/// one, wakes sooner, and saves the battery (GPU report QW3). A machine
+/// whose integrated GPU misbehaves sets `WGPU_POWER_PREF=high`.
+pub const POWER_PREF: &str = "low";
+
+/// The value to give `WGPU_POWER_PREF`, or `None` when it is already set.
+pub fn power_pref_to_set(current: Option<&std::ffi::OsStr>) -> Option<&'static str> {
+    current.is_none().then_some(POWER_PREF)
+}
+
+/// Asks wgpu for the integrated GPU ([`POWER_PREF`]) unless
+/// `WGPU_POWER_PREF` is already set. Returns true when it set it.
+///
+/// Call it only at the start of `main`, before any other thread is
+/// started: it sets an environment variable.
+pub fn prefer_low_power() -> bool {
+    let Some(value) = power_pref_to_set(std::env::var_os("WGPU_POWER_PREF").as_deref()) else {
+        return false;
+    };
+    // SAFETY: as in `apply`: `main` calls this before any thread starts.
+    #[allow(unsafe_code)]
+    unsafe {
+        std::env::set_var("WGPU_POWER_PREF", value);
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn low_power_is_asked_for_only_when_unset() {
+        assert_eq!(power_pref_to_set(None), Some("low"));
+        assert_eq!(power_pref_to_set(Some(std::ffi::OsStr::new("high"))), None);
+    }
 
     #[test]
     fn names_parse_and_map_to_wgpu() {

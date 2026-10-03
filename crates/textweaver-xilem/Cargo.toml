@@ -72,6 +72,8 @@ serde_json.workspace = true
 toml.workspace = true
 clap.workspace = true
 rfd.workspace = true
+# textweaver.log in the state folder, as the terminal reader writes it.
+log.workspace = true
 
 # `--announce uia` (W4s): UI Automation Notification events raised directly.
 # The same `windows` crate and features AccessKit's Windows adapter already

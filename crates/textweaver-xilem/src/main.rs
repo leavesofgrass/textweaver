@@ -17,6 +17,7 @@ use clap::error::ErrorKind;
 use textweaver_xilem::console;
 use textweaver_xilem::graphics::{self, GraphicsBackend};
 use textweaver_xilem::gui::{self, GuiOptions};
+use textweaver_xilem::safety::{self, StartupMessages};
 use textweaver_xilem::setup::Options;
 use textweaver_xilem::widgets::AnnounceMode;
 
@@ -31,7 +32,7 @@ fn parse_announce(s: &str) -> Result<AnnounceMode, String> {
 
 /// Read documents aloud in a window.
 #[derive(Parser, Debug)]
-#[command(name = "textweaver-xilem", version, about)]
+#[command(name = "textweaver-gui", version, about)]
 struct Args {
     /// Document to open.
     file: Option<PathBuf>,
@@ -55,7 +56,7 @@ struct Args {
     #[arg(long)]
     read: bool,
     /// Close the window after this many seconds (automated checks).
-    #[arg(long, value_name = "SECONDS")]
+    #[arg(long, value_name = "SECONDS", hide = true)]
     exit_after: Option<f64>,
     /// Log announcements, commands, keys, and timings.
     #[arg(long)]
@@ -66,24 +67,24 @@ struct Args {
     /// For automated checks: never activate the window, keep it off
     /// screen, and give it no taskbar button. On Windows, if UI Automation
     /// activates it all the same, it gives the foreground straight back.
-    #[arg(long)]
+    #[arg(long, hide = true)]
     background: bool,
     /// While reading, select the spoken word instead of placing the caret
     /// at its start. The default, kept after the first screen reader
     /// session, is a background color on the word (ADR-0028).
-    #[arg(long)]
+    #[arg(long, hide = true)]
     select_spoken: bool,
     /// Expose the document as a read-only multi-line edit instead of a
     /// Document (an experiment for listening sessions).
-    #[arg(long)]
+    #[arg(long, hide = true)]
     edit_role: bool,
     /// Let textweaver announce each list item as well as the screen reader
     /// (an experiment for listening sessions).
-    #[arg(long)]
+    #[arg(long, hide = true)]
     app_list_announcements: bool,
     /// Settings opens the app's settings list, as the terminal reader shows
     /// it, instead of the settings dialog (for comparison).
-    #[arg(long)]
+    #[arg(long, hide = true)]
     settings_list: bool,
     /// Show the menus as a list inside the window (F10), as on Linux,
     /// instead of the system's menu bar.
@@ -104,28 +105,28 @@ struct Args {
     theme: Option<String>,
     /// Draw the window into this PNG with the CPU renderer and exit; no
     /// window opens.
-    #[arg(long, value_name = "PATH")]
+    #[arg(long, value_name = "PATH", hide = true)]
     screenshot: Option<PathBuf>,
     /// Scale for --screenshot (1 is 100%, 2 is 200%).
-    #[arg(long, default_value_t = 1.0)]
+    #[arg(long, default_value_t = 1.0, hide = true)]
     scale: f64,
     /// For --screenshot: show the spoken word at this character.
-    #[arg(long, value_name = "CHAR")]
+    #[arg(long, value_name = "CHAR", hide = true)]
     highlight_at: Option<usize>,
     /// Write the review screenshots (three themes, 100% and 200%, a dialog)
     /// into this folder and exit.
-    #[arg(long, value_name = "DIR")]
+    #[arg(long, value_name = "DIR", hide = true)]
     review_screenshots: Option<PathBuf>,
     /// Read the document with no window on screen, on the silent paced
     /// backend, and measure this many moves of the spoken word through the
     /// whole widget tree; then exit. Needs --home. --scale sets the scale.
-    #[arg(long, value_name = "MOVES")]
+    #[arg(long, value_name = "MOVES", hide = true)]
     measure_frames: Option<usize>,
     /// For --measure-frames: every reading aid on first.
-    #[arg(long)]
+    #[arg(long, hide = true)]
     frames_aids: bool,
     /// For --measure-frames: also write the report as JSON to this file.
-    #[arg(long, value_name = "PATH")]
+    #[arg(long, value_name = "PATH", hide = true)]
     frames_json: Option<PathBuf>,
 }
 
@@ -171,26 +172,17 @@ fn unbuilt_message(flag: &str) -> String {
     )
 }
 
-/// A panic is written to the `--log-file` log, and to the terminal the
-/// program was started from.
-fn log_panics() {
-    let default = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |info| {
-        if textweaver_xilem::log::to_file_active() {
-            textweaver_xilem::log::line(&format!("panic: {info}"));
-        }
-        console::attach();
-        default(info);
-    }));
-}
-
 fn main() {
     // Before anything is printed: connect to the terminal, if any.
     console::attach();
     let args = parse_args();
     // Before any thread starts: it may set an environment variable.
     let gpu = graphics::apply(graphics::wanted(args.graphics, args.home.as_deref()));
-    log_panics();
+    let low_power = graphics::prefer_low_power();
+    // textweaver.log in the state folder, as the terminal reader writes it.
+    let log_message = safety::start_log(args.home.as_deref());
+    let messages = StartupMessages::load(args.home.as_deref());
+    safety::install_panic_hook(messages.clone(), args.background);
     if let Some(path) = &args.log_file
         && let Err(e) = textweaver_xilem::log::to_file(path)
     {
@@ -278,6 +270,9 @@ fn main() {
     {
         textweaver_xilem::log::line(&format!("graphics: {name}"));
     }
+    if low_power && (args.log || args.log_file.is_some()) {
+        textweaver_xilem::log::line("graphics: the integrated GPU asked for (WGPU_POWER_PREF=low)");
+    }
     // `--log` with no file writes to the terminal for the whole run; else
     // let go of the terminal, so Control C there leaves the window open.
     if !(args.log && args.log_file.is_none()) {
@@ -309,9 +304,25 @@ fn main() {
         },
         theme: args.theme,
     };
-    if let Err(e) = gui::run(opts) {
-        console::report_error(&e, background);
-        std::process::exit(1);
+    if let Some(m) = log_message {
+        console::report_error(&m, background);
+    }
+    // A panic that unwinds out of the window (after the window saved what
+    // it could, as it is dropped) ends with a sentence in words.
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| gui::run(opts))) {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => {
+            console::report_error(&e, background);
+            std::process::exit(1);
+        }
+        Err(_) => {
+            if !safety::graphics_failure_reported() {
+                let said = messages.after_crash(safety::saved_after_trouble());
+                log::error!("{said}");
+                console::report_error(&said, background);
+            }
+            std::process::exit(101);
+        }
     }
 }
 
@@ -345,6 +356,37 @@ mod tests {
             harness_flag(&parse(&["--measure-frames", "20", "--home", "h"])),
             Some("--measure-frames")
         );
+    }
+
+    /// The window's command line is textweaver-gui's, and the flags for
+    /// automated checks and listening experiments stay out of `--help`.
+    #[test]
+    fn help_names_textweaver_gui_and_hides_the_test_flags() {
+        use clap::CommandFactory;
+        let help = Args::command().render_long_help().to_string();
+        assert!(help.contains("textweaver-gui"), "{help}");
+        for hidden in [
+            "--exit-after",
+            "--background",
+            "--select-spoken",
+            "--edit-role",
+            "--app-list-announcements",
+            "--settings-list",
+            "--screenshot",
+            "--scale",
+            "--highlight-at",
+            "--review-screenshots",
+            "--measure-frames",
+            "--frames-aids",
+            "--frames-json",
+        ] {
+            assert!(!help.contains(hidden), "{hidden} is in --help");
+        }
+        for shown in ["--no-speech", "--home", "--graphics", "--log"] {
+            assert!(help.contains(shown), "{shown} is missing from --help");
+        }
+        // Hidden flags still parse.
+        assert!(parse(&["--background", "--exit-after", "2"]).background);
     }
 
     /// The error leads with the flag and says no window opened.

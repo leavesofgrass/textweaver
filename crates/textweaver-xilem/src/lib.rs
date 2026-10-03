@@ -39,6 +39,7 @@
 //! Owner: Agent W3b.
 
 pub mod background;
+pub mod blink;
 pub mod caret;
 pub mod console;
 pub mod dark_mode;
@@ -51,14 +52,18 @@ pub mod fonts;
 pub mod frames;
 pub mod graphics;
 pub mod gui;
+pub mod icon;
 pub mod keys;
 pub mod log;
 pub mod menus;
 pub mod parity;
+pub mod placement;
 pub mod rsvp;
 pub mod runs;
+pub mod safety;
 #[cfg(feature = "screenshot")]
 pub mod screenshot;
+pub mod session_end;
 pub mod settings_dialog;
 pub mod setup;
 pub mod sidebar;

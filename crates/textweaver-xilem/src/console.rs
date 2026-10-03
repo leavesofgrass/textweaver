@@ -39,7 +39,7 @@ pub fn report_error(text: &str, background: bool) {
         crate::log::line(&format!("error: {text}"));
     }
     if attach() {
-        eprintln!("textweaver-xilem: {text}");
+        eprintln!("textweaver-gui: {text}");
     } else if !background && !logged {
         imp::message_box("textweaver", text);
     }

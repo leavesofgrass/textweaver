@@ -9786,6 +9786,7 @@ version = "0.1.0-alpha.8"
 dependencies = [
  "accesskit_consumer",
  "clap",
+ "log",
  "masonry",
  "masonry_testing",
  "masonry_winit",

@@ -3072,6 +3072,7 @@ impl Gui {
     fn close(&mut self, ctx: &mut DriverCtx<'_>) {
         if !self.closed {
             self.closed = true;
+            self.remember_placement(ctx);
             self.app.shutdown();
             if self.log {
                 crate::log::line("closed");
@@ -3080,12 +3081,121 @@ impl Gui {
         ctx.exit();
     }
 
+    /// Saves the window's size, place and maximized state for the next
+    /// start, on this computer only (`[gui.window]`, a machine setting).
+    /// Automated runs (`--background`) leave them alone.
+    fn remember_placement(&mut self, ctx: &mut DriverCtx<'_>) {
+        if self.background {
+            return;
+        }
+        let window = ctx.window(self.window_id).handle();
+        let scale = window.scale_factor();
+        let inner = window.inner_size();
+        let size = (
+            f64::from(inner.width) / scale,
+            f64::from(inner.height) / scale,
+        );
+        let place = window.outer_position().ok().map(|p| (p.x, p.y));
+        let previous = self.app.settings().gui.window;
+        let now = crate::placement::capture(
+            previous,
+            place,
+            size,
+            window.is_maximized(),
+            window.is_minimized().unwrap_or(false),
+        );
+        if now != previous {
+            let _ = self.app.update_settings(|s| s.gui.window = now);
+        }
+    }
+
+    /// Puts the window back where it was when it last closed, if that
+    /// place is still on a screen (never off screen).
+    fn restore_placement(&mut self, ctx: &mut DriverCtx<'_>) {
+        if self.background {
+            return;
+        }
+        let Some(saved) = self.app.settings().gui.window else {
+            return;
+        };
+        let window = ctx.window(self.window_id).handle();
+        let screens: Vec<crate::placement::Screen> = window
+            .available_monitors()
+            .map(|m| {
+                let (p, s) = (m.position(), m.size());
+                crate::placement::Screen {
+                    x: p.x,
+                    y: p.y,
+                    width: s.width,
+                    height: s.height,
+                }
+            })
+            .collect();
+        let width = window.outer_size().width;
+        match crate::placement::initial_place(Some(&saved), width, &screens) {
+            Some((x, y)) if !saved.maximized => {
+                window.set_outer_position(PhysicalPosition::new(x, y));
+            }
+            Some(_) => {}
+            None => log::info!("the window's saved place is off every screen; not used"),
+        }
+    }
+
+    /// Under `--log`, names the graphics adapter the window draws with;
+    /// a software renderer is also written to `textweaver.log`, because
+    /// it makes the window slow.
+    fn log_adapter(&self) {
+        let Some(a) = masonry_winit::app::graphics_adapter() else {
+            return;
+        };
+        let line = format!(
+            "graphics adapter: {}, {}, {}{}",
+            a.name,
+            a.backend,
+            a.kind,
+            if a.driver.is_empty() {
+                String::new()
+            } else {
+                format!(", driver {}", a.driver)
+            }
+        );
+        if self.log {
+            crate::log::line(&line);
+        }
+        if a.software {
+            log::warn!("{line}: a software renderer, so drawing is slow");
+            if self.log {
+                crate::log::line("graphics adapter is a software renderer: drawing is slow");
+            }
+        } else {
+            log::info!("{line}");
+        }
+    }
+
+    /// Watches for the session ending (Windows), so unsaved edits get a
+    /// recovery copy before the process is ended.
+    fn watch_session_end(&mut self, ctx: &mut DriverCtx<'_>) {
+        let hwnd = self.window_handle(ctx);
+        let proxy = self.proxy.clone();
+        let window_id = self.window_id;
+        let request: crate::session_end::Request = Box::new(move || {
+            let _ = proxy.send_event(MasonryUserEvent::AsyncAction(
+                window_id,
+                Box::new(crate::session_end::SessionEnding),
+            ));
+        });
+        crate::session_end::watch(hwnd, request);
+    }
+
     fn start(&mut self, ctx: &mut DriverCtx<'_>) {
         let Some((file, read, messages)) = self.startup.take() else {
             return;
         };
         // The window was created, shown, and drawn before the first tick.
         startup_phase(self.log, "window shown, first tick");
+        self.log_adapter();
+        self.restore_placement(ctx);
+        self.watch_session_end(ctx);
         if self.background {
             // Before anything is opened or pressed: a window that UI
             // Automation brings to the front gives the foreground back (W7x).
@@ -3503,6 +3613,17 @@ impl AppDriver for Gui {
         if self.closed {
             return;
         }
+        if action
+            .downcast_ref::<crate::session_end::SessionEnding>()
+            .is_some()
+        {
+            // The session is ending: save as after a panic, and mark the
+            // window closed so nothing more is done.
+            self.closed = true;
+            crate::safety::save_after_trouble(&mut self.app);
+            crate::session_end::saved();
+            return;
+        }
         if let Some(chosen) = action.downcast_ref::<FileChosen>() {
             self.menu_dirty = true;
             self.file_chosen(ctx, chosen);
@@ -3623,6 +3744,20 @@ impl AppDriver for Gui {
     }
 }
 
+/// A window dropped without having closed is one a panic unwound through
+/// the event loop: the recovery copy, the place and the settings are saved
+/// as the terminal reader saves them after a panic.
+impl Drop for Gui {
+    fn drop(&mut self) {
+        if !self.closed {
+            self.closed = true;
+            if crate::safety::save_after_trouble(&mut self.app) {
+                crate::safety::note_saved_after_trouble();
+            }
+        }
+    }
+}
+
 /// How long `--exit-after` waits for the window to close before ending the
 /// process itself.
 const EXIT_GRACE: Duration = Duration::from_secs(15);
@@ -3689,13 +3824,31 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     let theme_key = app.reading_theme_key();
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
     let full_passes = Rc::new(Cell::new(0));
+    // The text fields' caret blinks as the system's does, or not at all.
+    crate::blink::follow_system();
     let tree = build_tree(&palette, font, Some(&app), full_passes, experiments);
     startup_phase(opts.log, "widget tree");
 
+    // The size it closed at on this computer (`[gui.window]`); the place
+    // is checked against the screens once the window exists.
+    let saved_window = if opts.background {
+        None
+    } else {
+        app.settings().gui.window
+    };
+    let (width, height) = crate::placement::initial_size(saved_window.as_ref());
+    let (min_width, min_height) = crate::placement::MIN_SIZE;
     let mut attrs = WinitWindow::default_attributes()
         .with_title("textweaver")
-        .with_inner_size(LogicalSize::new(1100.0, 780.0))
-        .with_min_inner_size(LogicalSize::new(420.0, 320.0));
+        .with_inner_size(LogicalSize::new(width, height))
+        .with_min_inner_size(LogicalSize::new(min_width, min_height))
+        .with_maximized(saved_window.is_some_and(|w| w.maximized))
+        .with_window_icon(crate::icon::window_icon(system.is_some()));
+    #[cfg(windows)]
+    {
+        use masonry_winit::winit::platform::windows::WindowAttributesExtWindows;
+        attrs = attrs.with_taskbar_icon(crate::icon::window_icon(system.is_some()));
+    }
     // The title bar follows the palette from the start (W8a-m).
     let chrome = crate::dark_mode::for_palette(&palette);
     attrs = attrs.with_theme(chrome.window_theme());
