@@ -59,7 +59,7 @@ Outputs are written to a temporary file first and then renamed, so stopping a co
 In the reader, File, Batch convert (also in the command palette as "batch convert") converts a folder without leaving textweaver. It asks three short questions, each with its usual answer first:
 
 1. **The folder.** The file browser opens on your places, with the open document's folder first. Choose a folder with the browser's choose key, or with Enter on the "Choose this folder" row inside it.
-2. **The format.** Markdown, PDF, HTML, plain text, EPUB, Word, or braille.
+2. **The format.** Markdown, PDF, HTML, plain text, EPUB, Word, or braille. HTML then asks "Theme for the HTML page?", as [export](#export-from-inside-the-reader) does.
 3. **Where the files go.** In a `converted` folder inside the one you chose (the usual answer), beside each file, or in another folder you then choose in the browser.
 
 Then textweaver says how many files it found and asks, for example, "Convert 48 files to PDF into D:\Notes\converted? y or n". Press `y` to start, `n` or Escape to cancel.
@@ -156,6 +156,8 @@ HTML output is a complete web page made from a template. Three are built in; cho
 - `fragment`: only the converted HTML, for pasting into another page.
 
 Use `--no-toc` to leave out the table of contents.
+
+The page's colors come from a [theme](themes.md). Use `--theme NAME` to choose one, for example `--theme sepia` or `--theme galaxy-light` for printing and sharing. Without it, `tw convert` uses the theme in your settings and never asks. With Galaxy, the usual theme, the page also follows the reader's system to Galaxy Light or High Contrast.
 
 You can write your own templates. They are HTML files with MiniJinja placeholders such as `{{ title }}` and `{{ content }}`. Put them in a folder and pass `--templates FOLDER --template NAME`, where the name is the file name without its extension, or give a file directly with `--template my-page.html`. Your template can start with `{% extends "default" %}` to reuse the built-in page. The placeholders are listed in the rustdoc of `textweaver_render::template`.
 
@@ -425,11 +427,13 @@ You hear "Exporting to PDF." and can go on reading or writing while it works. If
 
 You hear "Exporting to PDF." and can go on reading or writing while it works. If it takes more than two seconds you hear "Still exporting to PDF, 2 seconds.", and then again every ten seconds, never more often. When it is done you hear the file's name and a question, then the format and the folder, for example "Exported essay.pdf. Open it? y or n. Format PDF, in C:\Users\ada\Essays." Press **y** to open it with your computer's program for that kind of file, or **n** to leave it. A warning, such as an image that was not found, is read out before the question.
 
+Exporting to HTML first asks "Theme for the HTML page?" with a list of themes. Your reading theme is first and selected, so Enter keeps it; choose another, such as Galaxy Light for printing and sharing, with the arrow keys. Escape cancels the export. textweaver remembers your answer until you quit and offers it first next time.
+
 A new document that was never saved has no folder yet; its export goes to the folder textweaver was started in, like Save As suggests.
 
 ### Preview in the browser
 
-Type `preview in browser` in the palette. textweaver writes the document as a web page, with math as MathML so screen readers can read it, and opens it in your default web browser. The page is kept in the `preview` folder of textweaver's cache folder, and images and links in it still point beside your document.
+Type `preview in browser` in the palette. textweaver writes the document as a web page, with math as MathML so screen readers can read it, and opens it in your default web browser. It asks for the theme first, as an HTML export does. The page is kept in the `preview` folder of textweaver's cache folder, and images and links in it still point beside your document.
 
 While you edit, each save (**Ctrl+S**) writes the preview again and you hear "Preview updated. Press F5 in the browser." The browser does not reload by itself, so it never moves your screen reader's place. To have it reload by itself, turn on automatic reloading; see [the editing guide](editing.md#preview-in-the-browser).
 
