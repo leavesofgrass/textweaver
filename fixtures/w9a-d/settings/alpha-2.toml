@@ -1,0 +1,21 @@
+# A settings.toml as textweaver 0.1.0-alpha.2 saved it (the same keys as
+# alpha.1). Golden file for crates/textweaver-store/tests/it/settings_golden.rs.
+
+[speech]
+rate = 200
+punctuation = "none"
+latency_offset_ms = 80
+
+[highlight]
+granularity = "both"
+sentence_color = "blue"
+
+[reading]
+sync_conflict_policy = "manual"
+wrap_navigation = false
+
+[display]
+show_line_numbers = true
+
+[library]
+folders = ["D:/Readings, Fall 2026"]

@@ -1,0 +1,16 @@
+# A settings.toml as textweaver 0.1.0-alpha.6 saved it: alpha.6 added
+# dictation and the colors section. Golden file for
+# crates/textweaver-store/tests/it/settings_golden.rs.
+
+[speech]
+rate = 280
+favorite_voices = ["sapi:Zira, English (United States)"]
+
+[keyboard]
+preset = "classic"
+
+[dictation]
+speak_while_recording = true
+
+[library]
+folders = ["D:/Readings, Fall 2026", "D:/Readings; Spring 2027"]

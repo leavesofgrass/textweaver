@@ -1,0 +1,18 @@
+# A settings.toml as textweaver 0.1.0-alpha.8 saved it: alpha.8 added the
+# components section. Golden file for
+# crates/textweaver-store/tests/it/settings_golden.rs.
+
+[speech]
+rate = 265
+auto_play = true
+
+[components]
+chooser_shown = true
+
+[sync]
+enabled = true
+device_name = "Home laptop"
+
+[library]
+recent_limit = 40
+folders = ["D:/Readings, Fall 2026"]

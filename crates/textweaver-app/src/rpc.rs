@@ -19,7 +19,7 @@
 //! | Method | Params | Result |
 //! |---|---|---|
 //! | `initialize` | none | server name, version, protocol, methods, notifications |
-//! | `open` | `{path}` | the document (`title`, `path`, `format`, `length`, `lines`) and `position` |
+//! | `open` | `{path}`: a file, an archive member (`book.zip!chapter.pdf`), or a web address, as `tw open` takes | the document (`title`, `path`, `format`, `length`, `lines`) and `position` |
 //! | `status` | none | mode, playback, document, position, rate, backend, status line, pending question |
 //! | `position` | none | `{char, line, column, percent, word}` |
 //! | `navigate` | `{action}` (a navigation action id, e.g. `next_sentence`) or `{goto}` (`"12"`, `"50%"`, `"end"`) | `position` |
@@ -27,6 +27,10 @@
 //! | `pause`, `resume`, `stop` | none | `{playback}` |
 //! | `search` | `{pattern, regex?}` | `{matches: [{start, end, line}], current}`; moves to the first match at or after the cursor |
 //! | `text` | `{start?, end?}` (char offsets) | `{text, start, end}` |
+//! | `outline` | none | `{items: [{level, text, char, line}], pages}`; `pages` is true when the items are a paged document's pages (level 0) |
+//! | `notes` | none | `{notes: [{id, start, end, line, anchor, text, tags, color}]}` |
+//! | `highlights` | none | `{highlights: [{id, start, end, line, color, text}]}` |
+//! | `info` | none | title, path, format, author, language, chars, words, lines, headings, notes, highlights, bookmarks, `reading_minutes` at `rate` |
 //! | `insert` | `{text}`: typed at the caret in edit mode, as typing is (one undo step, echoed) | `{status, effects, position}`; refused outside edit mode (`NOT_EDITING`) |
 //! | `action` | `{id}`: any keymap action id or notes command name; optional `confirm` (`true` answers yes, `false` no) for an action that asks first (quit, delete note) | `{status, effects, pending}`; `pending` is `{action, question}` while a question waits, else null |
 //! | `answer` | `{text}`: answers the open prompt | `{status, effects}` |
@@ -67,7 +71,7 @@ use crate::text_util;
 pub const PROTOCOL_VERSION: u32 = 1;
 
 /// Every request method.
-pub const METHODS: [&str; 25] = [
+pub const METHODS: [&str; 29] = [
     "initialize",
     "open",
     "status",
@@ -79,6 +83,10 @@ pub const METHODS: [&str; 25] = [
     "stop",
     "search",
     "text",
+    "outline",
+    "notes",
+    "highlights",
+    "info",
     "insert",
     "action",
     "answer",
@@ -194,19 +202,39 @@ fn priority_name(p: Priority) -> &'static str {
     }
 }
 
-fn purpose_name(p: PromptPurpose) -> String {
-    format!("{p:?}")
-        .chars()
-        .enumerate()
-        .flat_map(|(i, c)| {
-            let lower = c.to_ascii_lowercase();
-            if c.is_ascii_uppercase() && i > 0 {
-                vec!['_', lower]
-            } else {
-                vec![lower]
-            }
-        })
-        .collect()
+/// The protocol's name for a prompt purpose. Pinned by hand rather than
+/// derived from the Rust name, so renaming a variant cannot change the
+/// protocol (ADR-0015); a new variant fails to compile until it is named
+/// here, and the test below fails until it is listed there too.
+fn purpose_name(p: PromptPurpose) -> &'static str {
+    match p {
+        PromptPurpose::Find => "find",
+        PromptPurpose::GoTo => "go_to",
+        PromptPurpose::Open => "open",
+        PromptPurpose::CommandPalette => "command_palette",
+        PromptPurpose::SaveAs => "save_as",
+        PromptPurpose::TableSize => "table_size",
+        PromptPurpose::ImagePath => "image_path",
+        PromptPurpose::ReplaceFind => "replace_find",
+        PromptPurpose::ReplaceWith => "replace_with",
+        PromptPurpose::NoteText => "note_text",
+        PromptPurpose::EditNote => "edit_note",
+        PromptPurpose::RenameBookmark => "rename_bookmark",
+        PromptPurpose::ExportSettings => "export_settings",
+        PromptPurpose::ImportSettings => "import_settings",
+        PromptPurpose::CitationLocator => "citation_locator",
+        PromptPurpose::ReferenceIdentifier => "reference_identifier",
+        PromptPurpose::ImportReferences => "import_references",
+        PromptPurpose::TemplateTitle => "template_title",
+        PromptPurpose::DefineWord => "define_word",
+        PromptPurpose::ProfileName => "profile_name",
+        PromptPurpose::RenameProfile => "rename_profile",
+        PromptPurpose::ImportProfiles => "import_profiles",
+        PromptPurpose::ExportProfiles => "export_profiles",
+        PromptPurpose::SettingValue => "setting_value",
+        PromptPurpose::SyncComputerName => "sync_computer_name",
+        PromptPurpose::DocumentDetails => "document_details",
+    }
 }
 
 fn notification(method: &str, params: Value) -> Value {
@@ -393,6 +421,10 @@ impl Server {
             }
             "search" => self.search(params),
             "text" => self.text(params),
+            "outline" => self.outline(),
+            "notes" => self.notes(),
+            "highlights" => self.highlights(),
+            "info" => self.info(),
             "insert" => self.insert(params),
             "action" => self.action(params),
             "answer" => {
@@ -580,13 +612,126 @@ impl Server {
         })
     }
 
+    /// The 1-based line of `pos` in the open document.
+    fn line_of(&self, pos: CharPos) -> usize {
+        self.app
+            .session()
+            .map_or(0, |s| text_util::line_of(&s.doc, pos) + 1)
+    }
+
+    /// `outline`: the headings, or a paged document's pages.
+    fn outline(&self) -> RpcResult {
+        self.need_document()?;
+        let (items, pages) = self.app.outline_items();
+        let items: Vec<Value> = items
+            .iter()
+            .map(|h| {
+                json!({
+                    "level": h.level,
+                    "text": h.text,
+                    "char": h.pos.0,
+                    "line": self.line_of(h.pos),
+                })
+            })
+            .collect();
+        Ok(json!({ "items": items, "pages": pages }))
+    }
+
+    /// `notes`: the open document's notes, in document order.
+    fn notes(&self) -> RpcResult {
+        self.need_document()?;
+        let Some(s) = self.app.session() else {
+            return Ok(json!({ "notes": [] }));
+        };
+        let notes: Vec<Value> = s
+            .notes
+            .iter()
+            .map(|n| {
+                json!({
+                    "id": n.id,
+                    "start": n.range.start.0,
+                    "end": n.range.end.0,
+                    "line": self.line_of(n.range.start),
+                    "anchor": n.anchor,
+                    "text": n.note,
+                    "tags": n.tags,
+                    "color": n.color,
+                })
+            })
+            .collect();
+        Ok(json!({ "notes": notes }))
+    }
+
+    /// `highlights`: the open document's highlights, in document order.
+    fn highlights(&self) -> RpcResult {
+        self.need_document()?;
+        let Some(s) = self.app.session() else {
+            return Ok(json!({ "highlights": [] }));
+        };
+        let highlights: Vec<Value> = s
+            .highlights
+            .iter()
+            .map(|h| {
+                json!({
+                    "id": h.id,
+                    "start": h.range.start.0,
+                    "end": h.range.end.0,
+                    "line": self.line_of(h.range.start),
+                    "color": h.color,
+                    "text": h.text,
+                })
+            })
+            .collect();
+        Ok(json!({ "highlights": highlights }))
+    }
+
+    /// `info`: facts about the open document, as `tw info` gives them for
+    /// a file.
+    fn info(&self) -> RpcResult {
+        self.need_document()?;
+        let Some(s) = self.app.session() else {
+            return Ok(Value::Null);
+        };
+        let doc = &s.doc;
+        let words = textweaver_text::units::segments(doc, textweaver_core::Unit::Word).len();
+        let wpm = self.app.settings().speech.rate.wpm().max(1);
+        let index = doc.marker_index();
+        Ok(json!({
+            "title": s.title,
+            "path": doc.meta.path.as_ref().map(|p| p.display().to_string()),
+            "format": doc.meta.format,
+            "author": doc.meta.author,
+            "language": doc.meta.language,
+            "chars": doc.len_chars(),
+            "words": words,
+            "lines": text_util::line_count(doc),
+            "headings": index.count(textweaver_core::MarkerKind::Heading, None),
+            "notes": s.notes.len(),
+            "highlights": s.highlights.len(),
+            "bookmarks": s.bookmarks.len(),
+            "reading_minutes": words.div_ceil(wpm as usize),
+            "rate": wpm,
+        }))
+    }
+
     fn open(&mut self, params: &Value) -> RpcResult {
         let path = PathBuf::from(str_param(params, "path")?);
-        if !path.is_file() {
-            return Err(RpcError::new(
-                codes::OPEN_FAILED,
-                format!("{}: no such file", path.display()),
-            ));
+        // What `tw open` accepts: a file, a member of an archive
+        // (`book.zip!chapter.pdf`), or a web address. Only plain paths are
+        // checked on disk.
+        if crate::formats::Source::Path(path.clone()).url().is_none() {
+            if !crate::formats::archive::exists(&path) {
+                return Err(RpcError::new(
+                    codes::OPEN_FAILED,
+                    format!("{}: no such file", path.display()),
+                ));
+            }
+            if path.is_dir() {
+                return Err(RpcError::new(
+                    codes::OPEN_FAILED,
+                    format!("{} is a folder, not a document", path.display()),
+                ));
+            }
         }
         if self.app.is_editing() {
             // Ask the client through the usual list, like any frontend.
@@ -1027,14 +1172,86 @@ where
 mod tests {
     use super::*;
 
+    /// Every prompt purpose and its protocol name. The protocol freezes at
+    /// the final alpha: a change here is a protocol change.
+    const PURPOSES: [(PromptPurpose, &str); 26] = [
+        (PromptPurpose::Find, "find"),
+        (PromptPurpose::GoTo, "go_to"),
+        (PromptPurpose::Open, "open"),
+        (PromptPurpose::CommandPalette, "command_palette"),
+        (PromptPurpose::SaveAs, "save_as"),
+        (PromptPurpose::TableSize, "table_size"),
+        (PromptPurpose::ImagePath, "image_path"),
+        (PromptPurpose::ReplaceFind, "replace_find"),
+        (PromptPurpose::ReplaceWith, "replace_with"),
+        (PromptPurpose::NoteText, "note_text"),
+        (PromptPurpose::EditNote, "edit_note"),
+        (PromptPurpose::RenameBookmark, "rename_bookmark"),
+        (PromptPurpose::ExportSettings, "export_settings"),
+        (PromptPurpose::ImportSettings, "import_settings"),
+        (PromptPurpose::CitationLocator, "citation_locator"),
+        (PromptPurpose::ReferenceIdentifier, "reference_identifier"),
+        (PromptPurpose::ImportReferences, "import_references"),
+        (PromptPurpose::TemplateTitle, "template_title"),
+        (PromptPurpose::DefineWord, "define_word"),
+        (PromptPurpose::ProfileName, "profile_name"),
+        (PromptPurpose::RenameProfile, "rename_profile"),
+        (PromptPurpose::ImportProfiles, "import_profiles"),
+        (PromptPurpose::ExportProfiles, "export_profiles"),
+        (PromptPurpose::SettingValue, "setting_value"),
+        (PromptPurpose::SyncComputerName, "sync_computer_name"),
+        (PromptPurpose::DocumentDetails, "document_details"),
+    ];
+
     #[test]
-    fn purpose_names_are_snake_case() {
-        assert_eq!(purpose_name(PromptPurpose::SaveAs), "save_as");
-        assert_eq!(purpose_name(PromptPurpose::Find), "find");
-        assert_eq!(
-            purpose_name(PromptPurpose::CommandPalette),
-            "command_palette"
-        );
+    fn the_26_purpose_names_are_pinned() {
+        let mut seen = std::collections::HashSet::new();
+        for (p, name) in PURPOSES {
+            assert_eq!(purpose_name(p), name, "{p:?}");
+            assert!(seen.insert(name), "{name} named twice");
+            // A new variant must be added to PURPOSES as well as the match.
+            let variant = match p {
+                PromptPurpose::Find
+                | PromptPurpose::GoTo
+                | PromptPurpose::Open
+                | PromptPurpose::CommandPalette
+                | PromptPurpose::SaveAs
+                | PromptPurpose::TableSize
+                | PromptPurpose::ImagePath
+                | PromptPurpose::ReplaceFind
+                | PromptPurpose::ReplaceWith
+                | PromptPurpose::NoteText
+                | PromptPurpose::EditNote
+                | PromptPurpose::RenameBookmark
+                | PromptPurpose::ExportSettings
+                | PromptPurpose::ImportSettings
+                | PromptPurpose::CitationLocator
+                | PromptPurpose::ReferenceIdentifier
+                | PromptPurpose::ImportReferences
+                | PromptPurpose::TemplateTitle
+                | PromptPurpose::DefineWord
+                | PromptPurpose::ProfileName
+                | PromptPurpose::RenameProfile
+                | PromptPurpose::ImportProfiles
+                | PromptPurpose::ExportProfiles
+                | PromptPurpose::SettingValue
+                | PromptPurpose::SyncComputerName
+                | PromptPurpose::DocumentDetails => name,
+            };
+            assert!(!variant.is_empty());
+        }
+    }
+
+    /// The JSON-RPC guide names every purpose, so a client author can
+    /// handle each one.
+    #[test]
+    fn the_guide_lists_every_purpose() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs/json-rpc.md");
+        let guide = std::fs::read_to_string(path).unwrap();
+        for (_, name) in PURPOSES {
+            assert!(guide.contains(&format!("`{name}`")), "{name} missing");
+        }
+        assert!(guide.contains("26 purposes"));
     }
 
     /// The messages `read_messages` passes on for `input`, with their

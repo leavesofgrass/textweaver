@@ -50,6 +50,11 @@ impl App {
     /// [`wait_for_writes`](Self::wait_for_writes)'s work.
     fn settle_writes(&mut self) -> Vec<Effect> {
         let mut effects = Vec::new();
+        // A settings change held back by the once-a-second limit is
+        // written now: the caller wants the disk current.
+        if let Err(e) = self.save_settings() {
+            log::warn!("cannot save settings: {e}");
+        }
         // A result can queue more work (a save that leaves edit mode saves
         // the position): a few rounds settle it.
         for _ in 0..4 {

@@ -1,0 +1,19 @@
+# A settings.toml as textweaver 0.1.0-alpha.3 saved it: alpha.3 added the
+# keyboard section and the engine tables under speech. Golden file for
+# crates/textweaver-store/tests/it/settings_golden.rs.
+
+[speech]
+rate = 250
+backend = "espeak"
+
+[speech.eci]
+code_factory = true
+
+[reading]
+sync_conflict_policy = "newest"
+
+[keyboard]
+character_keys = false
+
+[library]
+recent_limit = 30

@@ -442,3 +442,66 @@ fn insert_types_in_edit_mode_only() {
     assert_eq!(t["text"], "Dear Hello world.");
     assert_eq!(s.error_code("insert", json!({})), codes::INVALID_PARAMS);
 }
+
+/// The read-only methods `outline`, `notes`, `highlights`, and `info`
+/// (W9a-d), and `open` refusing a folder as `tw open` does.
+#[test]
+fn read_only_methods_report_the_document() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("cells.md");
+    std::fs::write(
+        &file,
+        "# Cell biology\n\nCells are small. They divide.\n\n## The nucleus\n\nIt holds the genes.\n",
+    )
+    .unwrap();
+    let mut s = Session {
+        server: server(&dir.path().join("home")),
+        next_id: 0,
+        notes: Vec::new(),
+    };
+    let methods = s.result("initialize", json!({}))["methods"].clone();
+    for m in ["outline", "notes", "highlights", "info"] {
+        assert!(methods.as_array().unwrap().contains(&json!(m)), "{m}");
+        assert_eq!(s.error_code(m, json!({})), codes::NO_DOCUMENT, "{m}");
+    }
+    assert_eq!(
+        s.error_code("open", json!({"path": dir.path().display().to_string()})),
+        codes::OPEN_FAILED
+    );
+    s.result("open", json!({"path": file.display().to_string()}));
+
+    let outline = s.result("outline", json!({}));
+    assert_eq!(outline["pages"], false);
+    let items = outline["items"].as_array().unwrap();
+    assert_eq!(items.len(), 2, "{outline}");
+    assert_eq!(items[0]["level"], 1);
+    assert_eq!(items[0]["text"], "Cell biology");
+    assert_eq!(items[0]["line"], 1);
+    assert_eq!(items[1]["level"], 2);
+    assert_eq!(items[1]["text"], "The nucleus");
+
+    assert_eq!(s.result("notes", json!({}))["notes"], json!([]));
+    assert_eq!(s.result("highlights", json!({}))["highlights"], json!([]));
+
+    // A note and a highlight on the sentence at the cursor.
+    s.result("navigate", json!({"action": "next_sentence"}));
+    s.result("action", json!({"id": "add_note"}));
+    s.result("answer", json!({"text": "Ask about mitosis"}));
+    s.result("action", json!({"id": "highlight_selection"}));
+    let notes = s.result("notes", json!({}))["notes"].clone();
+    assert_eq!(notes.as_array().unwrap().len(), 1, "{notes}");
+    assert_eq!(notes[0]["text"], "Ask about mitosis");
+    assert!(notes[0]["end"].as_u64() > notes[0]["start"].as_u64());
+    let highlights = s.result("highlights", json!({}))["highlights"].clone();
+    assert_eq!(highlights.as_array().unwrap().len(), 1, "{highlights}");
+    assert!(!highlights[0]["color"].as_str().unwrap().is_empty());
+
+    let info = s.result("info", json!({}));
+    assert_eq!(info["title"], "Cell biology");
+    assert_eq!(info["format"], "markdown");
+    assert_eq!(info["headings"], 2);
+    assert_eq!(info["notes"], 1);
+    assert_eq!(info["highlights"], 1);
+    assert!(info["words"].as_u64().unwrap() >= 10, "{info}");
+    assert_eq!(info["reading_minutes"], 1);
+}

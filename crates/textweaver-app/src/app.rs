@@ -23,6 +23,10 @@ use crate::playback::{Playback, ReadKind, SpeechTrack};
 use crate::text_util;
 use crate::view::Viewport;
 
+/// The shortest time between two settings saves from commands (W9a-d):
+/// a change sooner than this after the last save waits for a later tick.
+pub(crate) const SETTINGS_SAVE_INTERVAL: Duration = Duration::from_secs(1);
+
 /// Interaction mode.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Mode {
@@ -318,6 +322,10 @@ pub struct App {
     pub(crate) keymap: Keymap,
     pub(crate) settings: Settings,
     pub(crate) settings_dirty: bool,
+    /// When a settings save was last queued: changes from commands are
+    /// saved at most once per [`SETTINGS_SAVE_INTERVAL`], the rest on a
+    /// later tick or on the way out.
+    pub(crate) settings_saved_at: Option<Instant>,
     /// The settings as loaded, imported, or last saved: a save writes only
     /// the settings that differ from these, keeping changes other programs
     /// made to the file.
@@ -515,6 +523,7 @@ impl App {
             settings_outside_said: false,
             settings: config.settings,
             settings_dirty: false,
+            settings_saved_at: None,
             language_note: None,
             paths: config.paths,
             registry: Registry::with_builtins(),
@@ -1273,6 +1282,13 @@ impl App {
         if !self.settings_dirty {
             return Ok(());
         }
+        // A change undone before it was saved (rate up, then down) leaves
+        // nothing to write.
+        if self.settings == self.settings_loaded {
+            self.settings_dirty = false;
+            return Ok(());
+        }
+        self.settings_saved_at = Some(Instant::now());
         if let Some(paths) = &self.paths {
             self.writer.send(crate::writer::Job::Settings {
                 store: SettingsStore::new(paths.clone()),
@@ -1287,6 +1303,21 @@ impl App {
         }
         self.settings_dirty = false;
         Ok(())
+    }
+
+    /// [`save_settings`](Self::save_settings), at most once per
+    /// [`SETTINGS_SAVE_INTERVAL`]: a change made sooner after the last
+    /// save stays pending, and [`tick`](Self::tick) or quitting saves it.
+    /// Holding a key that changes a setting (the rate) writes the file
+    /// about once a second instead of on every repeat.
+    pub(crate) fn save_settings_throttled(&mut self, now: Instant) -> Result<(), AppError> {
+        let recent = self
+            .settings_saved_at
+            .is_some_and(|t| now.saturating_duration_since(t) < SETTINGS_SAVE_INTERVAL);
+        if recent && self.settings != self.settings_loaded {
+            return Ok(());
+        }
+        self.save_settings()
     }
 
     /// Saves everything and stops speech: what quitting does. Waits for the
@@ -1337,7 +1368,7 @@ impl App {
                 app.sync_editor_caret();
             }
             if app.settings_dirty
-                && let Err(e) = app.save_settings()
+                && let Err(e) = app.save_settings_throttled(Instant::now())
             {
                 let msg = app.msg_args("settings-save-failed", &args!["error" => e.to_string()]);
                 app.error(&msg);
@@ -1516,6 +1547,11 @@ impl App {
     /// [`tick`](Self::tick)'s work.
     pub(crate) fn tick_effects(&mut self, now: Instant) -> Vec<Effect> {
         self.stats_tick(now);
+        if self.settings_dirty
+            && let Err(e) = self.save_settings_throttled(now)
+        {
+            log::warn!("cannot save settings: {e}");
+        }
         let mut effects = self.poll_writes();
         effects.extend(self.opening_tick(now));
         effects.extend(self.browse_tick());
@@ -2175,4 +2211,41 @@ fn needs_document(a: ActionId) -> bool {
         a.category(),
         C::Reading | C::Navigation | C::SpeechCursor | C::Search | C::Bookmarks
     )
+}
+
+#[cfg(test)]
+mod settings_save_tests {
+    use super::*;
+
+    /// Settings changed by commands are saved at most once a second; the
+    /// last change waits for a tick (W9a-d), and an undone change writes
+    /// nothing.
+    #[test]
+    fn settings_are_saved_at_most_once_a_second() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(AppConfig {
+            paths: Some(Paths::under(dir.path())),
+            ..AppConfig::for_tests()
+        });
+        app.dispatch(Command::Action(ActionId::RateUp));
+        assert!(!app.settings_dirty, "the first change is saved at once");
+        let first = app.settings_saved_at.unwrap();
+        app.dispatch(Command::Action(ActionId::RateUp));
+        assert!(app.settings_dirty, "a second change at once waits");
+        assert_eq!(app.settings_saved_at, Some(first));
+        app.tick(first + Duration::from_millis(500));
+        assert!(app.settings_dirty);
+        app.tick(first + SETTINGS_SAVE_INTERVAL);
+        assert!(!app.settings_dirty, "saved on a tick a second later");
+        // Up and down again before a save: nothing to write.
+        let saved = app.settings_saved_at;
+        app.dispatch(Command::Action(ActionId::RateUp));
+        app.dispatch(Command::Action(ActionId::RateDown));
+        app.tick(Instant::now() + SETTINGS_SAVE_INTERVAL);
+        assert!(!app.settings_dirty);
+        assert_eq!(
+            app.settings_saved_at, saved,
+            "an undone change is not saved"
+        );
+    }
 }
