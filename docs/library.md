@@ -250,7 +250,7 @@ On macOS and Linux:
 export TEXTWEAVER_HOME=~/textweaver-home
 ```
 
-The reader's `--home FOLDER` option, and `--home` on `tw open`, `tw settings`, `tw speak`, `tw voices`, `tw backends`, `tw export-audio`, and `tw serve`, do the same for one run. `tw library`, `tw marks`, and `tw migrate-star` have no `--home` option; they follow `TEXTWEAVER_HOME`.
+The reader's `--home FOLDER` option, and `--home` on every `tw` command that reads or writes the data folder, do the same for one run. The [command line guide](command-line.md) lists them.
 
 ## Import from Star: tw migrate-star
 

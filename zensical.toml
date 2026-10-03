@@ -67,6 +67,7 @@ nav = [
       { "The Obsidian vault" = "vault.md" },
       { "Settings" = "settings.md" },
       { "Settings reference" = "settings-reference.md" },
+      { "The command line" = "command-line.md" },
       { "Scripts (on GitHub)" = "https://github.com/leavesofgrass/textweaver/tree/main/scripts" },
     ] },
   ] },
