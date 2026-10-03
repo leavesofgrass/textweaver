@@ -46,6 +46,11 @@ bitflags::bitflags! {
         /// so the service fires them on arrival instead of scheduling them
         /// from the utterance start plus the latency offset.
         const PLAYBACK_EVENTS = 1 << 11;
+        /// Plays silence between utterances in its own audio
+        /// ([`SpeechBackend::silence_after`]): textweaver plays the
+        /// engine's audio. Without it the service holds the next utterance
+        /// back for the pause instead (see [`crate::pauses`]).
+        const SILENCE = 1 << 12;
     }
 }
 
@@ -173,6 +178,15 @@ pub trait SpeechBackend {
     /// Delivers pending events. Default: nothing to deliver.
     fn poll(&mut self, sink: &mut dyn EventSink) {
         let _ = sink;
+    }
+    /// Plays `ms` of silence after utterance `id`, which was just handed to
+    /// [`speak`](Self::speak) (requires `SILENCE`). The silence follows
+    /// the utterance's last sample and comes before the next utterance's
+    /// first; `id`'s `Finished` still comes at its last sample, and the
+    /// next utterance's `Started` and word times at its own first sample.
+    /// `stop` drops the silence with the audio. Default: ignored.
+    fn silence_after(&mut self, id: UtteranceId, ms: u32) {
+        let _ = (id, ms);
     }
     /// Stops all speech immediately; pending utterances end with `Cancelled`.
     fn stop(&mut self);

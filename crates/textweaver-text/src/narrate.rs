@@ -30,6 +30,10 @@
 //! it for citations (`[@doe2020, p. 12]`): skipped, or said in words from
 //! the reference library.
 //!
+//! [`block_ends`] says after which utterances of a plan a heading, list
+//! item or paragraph ends, so speech can pause there (the speech service's
+//! structural pauses).
+//!
 //! Sentences longer than `max_chunk_chars` are split at whitespace, never
 //! inside a word or an expanded token. Normalization (numbers,
 //! abbreviations, punctuation) is not done here: the speech service applies
@@ -798,6 +802,104 @@ fn to_u32(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(u32::MAX)
 }
 
+/// A block of the document that ends after an utterance, for a structural
+/// pause in speech.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BlockEnd {
+    /// A heading ends.
+    Heading,
+    /// A list item ends and the next item comes next.
+    ListItem,
+    /// A paragraph ends: a blank line follows, as after a paragraph, a
+    /// table, a block quote or a code block.
+    Paragraph,
+}
+
+/// How far past an utterance [`block_ends`] looks for the blank line that
+/// ends a paragraph. A longer stretch is something skipped (a code block,
+/// a table), and the block it skipped ends in a blank line near its end.
+const BLANK_LINE_SCAN: usize = 4096;
+
+/// Where the blocks of `utterances` (a plan from [`plan`] or
+/// [`plan_with`]) end: for each utterance after which a heading, a list
+/// item or a paragraph ends and more of the plan follows, the document
+/// position where it ends (its source range's end) and which block ends
+/// there. The last utterance of the plan has none: nothing follows it.
+///
+/// A heading or list item ends when its marker ends before the next
+/// utterance starts; a paragraph ends when a blank line lies between the
+/// two. A heading wins over a paragraph, and a paragraph over a list item
+/// (the last item of a list ends the list, which is a paragraph's break).
+/// Announcements and utterances that map to no source are skipped.
+pub fn block_ends(doc: &Document, utterances: &[Utterance]) -> Vec<(CharPos, BlockEnd)> {
+    let index = doc.marker_index();
+    let ranges: Vec<CharRange> = utterances
+        .iter()
+        .filter_map(Utterance::source_range)
+        .filter(|r| !r.is_empty())
+        .collect();
+    let mut out = Vec::new();
+    for pair in ranges.windows(2) {
+        let (here, next) = (pair[0], pair[1]);
+        if next.start < here.end {
+            continue;
+        }
+        // The last char the utterance says, past trailing whitespace.
+        let mut last = here.end.saturating_sub(1);
+        while last > here.start && doc.char_at(last).is_some_and(char::is_whitespace) {
+            last = last.saturating_sub(1);
+        }
+        let ends = |kind| {
+            index
+                .enclosing(kind, last)
+                .is_some_and(|m| m.range.end <= next.start)
+        };
+        let block = if ends(MarkerKind::Heading) {
+            Some(BlockEnd::Heading)
+        } else if blank_line_between(doc, last.saturating_add(1), next.start) {
+            Some(BlockEnd::Paragraph)
+        } else if ends(MarkerKind::ListItem) {
+            Some(BlockEnd::ListItem)
+        } else {
+            None
+        };
+        if let Some(block) = block {
+            out.push((here.end, block));
+        }
+    }
+    out
+}
+
+/// True when a blank (whitespace-only) line lies in `from..to`: two line
+/// breaks with only whitespace between them. Looks at most
+/// [`BLANK_LINE_SCAN`] chars from each end of a long stretch.
+fn blank_line_between(doc: &Document, from: CharPos, to: CharPos) -> bool {
+    let scan = |a: CharPos, b: CharPos| {
+        let mut breaks = 0;
+        let mut pos = a;
+        while pos < b {
+            match doc.char_at(pos) {
+                Some('\n') => {
+                    breaks += 1;
+                    if breaks == 2 {
+                        return true;
+                    }
+                }
+                Some(c) if c.is_whitespace() => {}
+                Some(_) => breaks = 0,
+                None => return false,
+            }
+            pos = pos.saturating_add(1);
+        }
+        false
+    };
+    if to.0.saturating_sub(from.0) <= 2 * BLANK_LINE_SCAN {
+        return scan(from, to);
+    }
+    scan(from, from.saturating_add(BLANK_LINE_SCAN)) || scan(CharPos(to.0 - BLANK_LINE_SCAN), to)
+}
+
 #[cfg(test)]
 mod tests {
     use ropey::Rope;
@@ -903,6 +1005,73 @@ mod tests {
         let f = &us[7];
         let at = f.text.find("footnote").unwrap() as u32;
         assert_eq!(f.source_for(at..at + 8), Some(CharRange::new(72, 75)));
+    }
+
+    #[test]
+    fn block_ends_name_headings_items_and_paragraphs() {
+        let d = structured_doc();
+        let us = plan(&d, d.full_range(), &NarrationPolicy::default());
+        let ends = block_ends(&d, &us);
+        assert_eq!(
+            ends,
+            [
+                // "Title"
+                (CharPos(5), BlockEnd::Heading),
+                // "First": the next item follows.
+                (CharPos(12), BlockEnd::ListItem),
+                // "Second": the list ends with a blank line.
+                (CharPos(19), BlockEnd::Paragraph),
+                // The table's last row, then the code block; table rows
+                // in between run on.
+                (CharPos(49), BlockEnd::Paragraph),
+                (CharPos(61), BlockEnd::Paragraph),
+            ]
+        );
+        // Every position is where an utterance ends.
+        for (at, _) in &ends {
+            assert!(
+                us.iter()
+                    .any(|u| u.source_range().map(|r| r.end) == Some(*at))
+            );
+        }
+    }
+
+    #[test]
+    fn sentences_in_one_paragraph_run_on() {
+        let d = Document::from_plain_text("One. Two.\nThree.\n\nFour.");
+        let us = plan(&d, d.full_range(), &NarrationPolicy::default());
+        assert_eq!(texts(&us), ["One.", "Two.", "Three.", "Four."]);
+        // A line break is not a paragraph; a blank line is. Nothing
+        // follows the last utterance, so it has no pause.
+        assert_eq!(block_ends(&d, &us), [(CharPos(16), BlockEnd::Paragraph)]);
+        // Announcements in front take no part.
+        let mut led = us.clone();
+        led.insert(0, Utterance::announcement("list item"));
+        assert_eq!(block_ends(&d, &led), block_ends(&d, &us));
+        assert!(block_ends(&d, &[]).is_empty());
+    }
+
+    #[test]
+    fn a_long_skipped_stretch_still_finds_its_blank_line() {
+        let body = "x ".repeat(3 * BLANK_LINE_SCAN);
+        // The blank line only near the far end of a long stretch.
+        let text = format!("Before. {body}\n\nAfter.");
+        let d = Document::from_plain_text(&text);
+        let after = text.chars().count() - "After.".len();
+        let us = vec![
+            Utterance::literal("Before.", CharPos(0)),
+            Utterance::literal("After.", CharPos(after)),
+        ];
+        assert_eq!(block_ends(&d, &us), [(CharPos(7), BlockEnd::Paragraph)]);
+        // Nothing but words in between: no pause.
+        let text = format!("Before. {body}After.");
+        let d = Document::from_plain_text(&text);
+        let after = text.chars().count() - "After.".len();
+        let us = vec![
+            Utterance::literal("Before.", CharPos(0)),
+            Utterance::literal("After.", CharPos(after)),
+        ];
+        assert!(block_ends(&d, &us).is_empty());
     }
 
     #[test]

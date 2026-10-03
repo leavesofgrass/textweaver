@@ -1675,6 +1675,12 @@ setting-speech-voices-by-language = Voix par langue
 setting-speech-voices-by-language-help = La voix pour chaque langue de l'interface, par code de langue, par exemple es = l'identifiant de la voix. Une langue non listée utilise la première voix du moteur pour elle.
 setting-speech-latency-offset-ms = Délai du surlignage
 setting-speech-latency-offset-ms-help = Combien de temps après qu'un moteur signale un mot le surlignage se déplace, pour les moteurs synchronisés sur leur horloge audio.
+setting-speech-pause-heading-ms = Pause après les titres
+setting-speech-pause-heading-ms-help = Silence après un titre, plus court à débit rapide. 0 le désactive.
+setting-speech-pause-paragraph-ms = Pause après les paragraphes
+setting-speech-pause-paragraph-ms-help = Silence après un paragraphe, plus court à débit rapide. 0 le désactive.
+setting-speech-pause-list-item-ms = Pause après les éléments de liste
+setting-speech-pause-list-item-ms-help = Silence après un élément de liste, plus court à débit rapide. 0 le désactive.
 setting-speech-output-device = Périphérique de sortie
 setting-speech-output-device-help = Le périphérique audio sur lequel la voix est jouée, par son identifiant ; tw backends --devices les liste. Non défini utilise celui du système par défaut, de même qu'un périphérique non connecté.
 setting-speech-verbosity = Verbosité

@@ -70,6 +70,13 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **A mirror** (`[components] mirror` or `TEXTWEAVER_COMPONENTS_MIRROR`), tried before the public sources, may list components of its own; it can add components but never change a built-in one's pins. See [Optional components](docs/components.md).
 - **Downloads go on where they stopped,** and a folder placed by hand that already holds the right files is used as it is.
 
+### Speech: pauses at headings, paragraphs and list items
+
+- **Hear where a heading, a paragraph or a list item ends.** Reading now leaves a short silence after each one: 400 ms after a heading, 300 after a paragraph and 150 after a list item, shorter in proportion above 265 words per minute and never under a quarter. No words are added.
+- **New settings:** "Pause after headings", "Pause after paragraphs" and "Pause after list items" (`[speech] pause_heading_ms`, `pause_paragraph_ms`, `pause_list_item_ms`, 0 to 3000; 0 turns one off). They sync with your other settings.
+- **Every engine.** With Eloquence, Windows voices, DECtalk and Piper the pause is silence that textweaver plays between two sentences, and the next sentence is still prepared while the first is spoken, so speech starts no later. Apple voices, Speech Dispatcher and eSpeak NG get the next sentence once the pause has passed.
+- **Stop, Pause and skipping are never held up.** Stop ends a pause at once, Pause holds it, and skipping goes straight to the next sentence. The highlight stays on the last word during the pause and moves as soon as the next word sounds. See [Pauses at headings, paragraphs and list items](docs/speech.md#pauses-at-headings-paragraphs-and-list-items).
+
 ### Speech: clinical and scientific text
 
 - **Identifiers are read digit by digit.** A number after CPT, PMID, NCT, ZIP, DOI, ISBN, or phone (also telephone, tel, and fax), and a US phone number such as "503-555-0123", is read as digits: "PMID 31769816" is "PMID three one seven six nine eight one six", where it was "thirty-one million ...". The highlight follows each digit.

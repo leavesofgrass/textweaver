@@ -11,7 +11,10 @@
 //!   text while composing [`OffsetMap`](textweaver_core::OffsetMap)s.
 //! - [`pacing`]: highlight timing when an engine has no word events, and
 //!   the clocks.
-//! - [`queue`]: generations, lookahead, and cancellation by id.
+//! - [`queue`]: generations, lookahead, cancellation by id, and the timed
+//!   gap that stands in for a structural pause.
+//! - [`pauses`]: pauses at the ends of headings, paragraphs and list items,
+//!   as silence or a timed gap.
 //! - [`backends`]: `null`, `recording` (a test double, always compiled),
 //!   `espeak` (feature `espeak`), `omnivox` (feature `omnivox`),
 //!   `speechd` (feature `speechd`: speech-dispatcher with an index mark
@@ -27,6 +30,7 @@ pub mod backend;
 pub mod backends;
 pub mod normalize;
 pub mod pacing;
+pub mod pauses;
 pub mod queue;
 pub mod service;
 pub mod voices;
@@ -42,6 +46,7 @@ pub use backends::{
 };
 pub use normalize::{NormalizeConfig, Pipeline, TableMode};
 pub use pacing::{Clock, FakeClock, PacingConfig, SystemClock};
+pub use pauses::{PauseAt, PauseConfig, PauseKind, PausePlan};
 pub use service::{
     Earcon, FirstAudio, FirstAudioStamp, ReadingGeneration, SayMode, ServiceConfig, ServiceCore,
     SpeechService, SpeechStatus, Waker,

@@ -166,6 +166,7 @@ The voice and how it speaks. [Speech engines and voices](speech.md) explains the
 - `auto_play`, default `false`: start reading as soon as a document opens.
 - `skip_code`, default `true`: do not read code blocks aloud.
 - `latency_offset_ms`, default `120`: for engines whose word events carry audio times, how many milliseconds to wait before moving the highlight, so it matches what you hear.
+- `pause_heading_ms`, default `400`; `pause_paragraph_ms`, default `300`; `pause_list_item_ms`, default `150`: how many milliseconds of silence follow a heading, a paragraph, and a list item while reading, from 0 to 3000. 0 turns that pause off. Faster rates than 265 words per minute shorten them in proportion. They travel with synced settings. The [speech guide](speech.md#pauses-at-headings-paragraphs-and-list-items) explains how they work with each engine.
 - `output_device`, not set by default: the sound device speech plays on, by the id `tw backends --devices` prints. Unset, or when that device is not connected, speech plays on the system's default. The [speech guide](speech.md#choose-the-sound-device) has the steps.
 - `verbosity`, default `"normal"`: how much textweaver says about state changes and structure. `"low"`, `"normal"`, or `"high"`. Alt+Shift+V cycles it while textweaver runs, and saves it. [Reading and moving around](reading.md) has examples.
 

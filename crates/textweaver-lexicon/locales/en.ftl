@@ -1652,6 +1652,12 @@ setting-speech-voices-by-language = Voices by language
 setting-speech-voices-by-language-help = The voice for each interface language, by language tag, such as es = the voice's id. A language not listed uses the engine's first voice for it.
 setting-speech-latency-offset-ms = Highlight delay
 setting-speech-latency-offset-ms-help = How long after an engine reports a word the highlight moves, for engines timed by their audio clock.
+setting-speech-pause-heading-ms = Pause after headings
+setting-speech-pause-heading-ms-help = Silence after a heading, shorter at faster rates. 0 turns it off.
+setting-speech-pause-paragraph-ms = Pause after paragraphs
+setting-speech-pause-paragraph-ms-help = Silence after a paragraph, shorter at faster rates. 0 turns it off.
+setting-speech-pause-list-item-ms = Pause after list items
+setting-speech-pause-list-item-ms-help = Silence after a list item, shorter at faster rates. 0 turns it off.
 setting-speech-output-device = Output device
 setting-speech-output-device-help = The sound device speech plays on, by its id; tw backends --devices lists them. Not set uses the system's default, and so does a device that is not connected.
 setting-speech-verbosity = Verbosity

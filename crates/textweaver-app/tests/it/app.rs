@@ -243,6 +243,31 @@ fn reading_the_document_highlights_what_is_spoken() {
 }
 
 #[test]
+fn reading_pauses_after_each_paragraph_and_the_setting_turns_it_off() {
+    let mut r = rig(PROSE);
+    r.act(ActionId::ReadFromCursor);
+    r.wait_idle();
+    // After the last sentence of each paragraph but the last, not between
+    // sentences, and not at the end.
+    assert_eq!(
+        r.log.silences(),
+        [
+            ("Kappa lambda mu nu xi omicron.".to_owned(), 300),
+            ("Tau upsilon phi.".to_owned(), 300),
+        ]
+    );
+    r.app
+        .set_setting("speech.pause_paragraph_ms", serde_json::json!(0))
+        .unwrap();
+    r.log.clear();
+    r.go(CharPos(0));
+    r.act(ActionId::ReadFromCursor);
+    r.wait_idle();
+    assert!(r.log.silences().is_empty(), "{:?}", r.log.silences());
+    assert_eq!(r.log.spoken_ranges().last().unwrap().end.0, PROSE.len());
+}
+
+#[test]
 fn restarting_ignores_the_stale_reading() {
     let mut r = rig(PROSE);
     r.act(ActionId::ReadFromCursor);

@@ -738,8 +738,12 @@ impl SpeechBackend for SapiBackend {
     fn capabilities(&self) -> Caps {
         // The backend plays the audio itself, so word events fire when the
         // word is heard.
-        let mut caps =
-            Caps::PAUSE | Caps::PITCH | Caps::VOLUME | Caps::SYNTH_TO_FILE | Caps::PLAYBACK_EVENTS;
+        let mut caps = Caps::PAUSE
+            | Caps::PITCH
+            | Caps::VOLUME
+            | Caps::SYNTH_TO_FILE
+            | Caps::PLAYBACK_EVENTS
+            | Caps::SILENCE;
         if self.config.output == AudioOutput::Device {
             caps |= Caps::TONES;
         }
@@ -817,6 +821,11 @@ impl SpeechBackend for SapiBackend {
         }
         self.drain_hosts();
         self.playback.emit(sink);
+    }
+
+    fn silence_after(&mut self, id: textweaver_speech::core::UtteranceId, ms: u32) {
+        // Structural pauses play as silence in the shared playback client.
+        self.playback.silence_after(id, ms);
     }
 
     fn stop(&mut self) {

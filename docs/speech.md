@@ -222,6 +222,9 @@ caps = "pitch"
 auto_play = false
 skip_code = true
 latency_offset_ms = 120
+pause_heading_ms = 400
+pause_paragraph_ms = 300
+pause_list_item_ms = 150
 verbosity = "normal"
 ```
 
@@ -239,6 +242,7 @@ verbosity = "normal"
 - `skip_code`: do not read code blocks aloud.
 - `speed_presets`: the presets for **F8**, as above.
 - `latency_offset_ms`: how many milliseconds to delay the highlight behind an engine's reported word time. See [How exactly words are highlighted](#how-exactly-words-are-highlighted).
+- `pause_heading_ms`, `pause_paragraph_ms`, `pause_list_item_ms`: how long speech pauses after a heading, a paragraph and a list item, in milliseconds, from 0 to 3000. 0 turns that pause off. See [Pauses at headings, paragraphs and list items](#pauses-at-headings-paragraphs-and-list-items).
 - `output_device`: the sound device speech plays on, by its id. Not set by default: speech plays on the system's default device. See [Choose the sound device](#choose-the-sound-device).
 - `verbosity`: how much textweaver says about what it does: `"low"`, `"normal"`, or `"high"`. **Alt+Shift+V** cycles it while textweaver runs. See [Reading and moving around](reading.md).
 
@@ -392,6 +396,26 @@ language = "ENU"
 ### Engines that prepare text themselves
 
 Eloquence reads numbers, dates, times, and abbreviations itself, and does it well. With Eloquence, and with Apple's Eloquence voices, textweaver leaves those to the engine. It still removes Markdown marks and applies your pronunciations, split caps, and punctuation level, and it still reads identifiers digit by digit and spells error-prone medical abbreviations (see [Clinical and scientific text](#clinical-and-scientific-text)). `tw backends` shows this as "reads numbers and abbreviations itself".
+
+## Pauses at headings, paragraphs and list items
+
+When textweaver reads a document, it leaves a short silence after each heading, paragraph and list item, so you can hear where one ends and the next begins. At high rates this is often the first thing a listener loses. No words are added.
+
+The pauses are 400 milliseconds after a heading, 300 after a paragraph and 150 after a list item. Each is set in `[speech]` (`pause_heading_ms`, `pause_paragraph_ms`, `pause_list_item_ms`, from 0 to 3000), or in Settings as "Pause after headings", "Pause after paragraphs" and "Pause after list items". 0 turns a pause off. The lengths are for the default rate, 265 words per minute. Faster, they shorten in proportion: at 530 words per minute they are half as long, and never shorter than a quarter.
+
+How the pause is made depends on who plays the sound:
+
+- **Eloquence, Windows voices (SAPI), DECtalk and Piper.** textweaver plays these engines' audio itself, and plays the pause as silence between two sentences. The next sentence is prepared while the first is spoken, as always, so the pause adds nothing to the wait.
+- **Apple voices, Speech Dispatcher and eSpeak NG.** These engines play their own sound. textweaver waits for the sentence to end, waits out the pause, then hands the engine the next sentence.
+
+Either way:
+
+- The highlight stays on the last word of the heading or paragraph during the pause and moves to the next word as soon as it is heard.
+- **Stop** ends a pause at once, and **Pause** holds it: nothing is heard until you resume.
+- Skipping to the next sentence or heading starts it straight away, without the rest of the pause.
+- A pause comes only between two parts of what is being read. Saying one sentence or one line has none, and neither does the end of a reading.
+
+`tw speak --file` pauses the same way.
 
 ## How exactly words are highlighted
 

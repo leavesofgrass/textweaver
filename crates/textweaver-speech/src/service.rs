@@ -40,6 +40,12 @@
 //!   resumes from a moved cursor; pausing inside inserted speech ("heading
 //!   level 2") resumes at the start of that inserted speech, and reports its
 //!   anchor as `resume_at`; queued chunks are cancelled by id.
+//! - **Structural pauses.** [`SpeechService::read_with_pauses`] takes
+//!   where headings, paragraphs and list items end; the lengths come from
+//!   [`PauseConfig`]. An engine whose audio textweaver plays
+//!   ([`Caps::SILENCE`]) gets the pause as silence after the utterance; any
+//!   other gets a timed gap in the queue (see [`crate::pauses`]). Either
+//!   way the next utterance's words keep their own timing.
 //! - **Say modes, characters, tones, earcons** as documented on each method.
 
 use std::collections::VecDeque;
@@ -66,6 +72,7 @@ use crate::normalize::{self, NormalizeConfig, Pipeline};
 use crate::pacing::{
     Clock, PacingConfig, PlaybackClock, SystemClock, TimerPacer, spoken_words, word_interval,
 };
+use crate::pauses::{PauseAt, PauseConfig, PausePlan};
 use crate::queue::{DEFAULT_LOOKAHEAD, Generation, ReadingQueue};
 use crate::voices::{VoiceCache, VoiceList};
 
@@ -363,6 +370,8 @@ pub struct ServiceConfig {
     pub prefer_voice: Option<String>,
     /// Chunks handed to the engine ahead of the playing one.
     pub lookahead: usize,
+    /// Pause lengths after headings, paragraphs and list items.
+    pub pauses: PauseConfig,
 }
 
 impl Default for ServiceConfig {
@@ -378,6 +387,7 @@ impl Default for ServiceConfig {
             caps_pitch_semitones: 4,
             prefer_voice: None,
             lookahead: DEFAULT_LOOKAHEAD,
+            pauses: PauseConfig::default(),
         }
     }
 }
@@ -415,7 +425,7 @@ pub const ERROR_REPEAT_WINDOW: Duration = Duration::from_secs(3);
 #[derive(Debug)]
 enum Command {
     Say(String, SayMode),
-    Read(Vec<Utterance>, ReadingGeneration),
+    Read(Vec<Utterance>, PausePlan, ReadingGeneration),
     Stop,
     Pause,
     Resume,
@@ -429,6 +439,7 @@ enum Command {
     SetSplitCaps(bool),
     SetNormalization(Box<NormalizeConfig>),
     SetPacing(PacingConfig),
+    SetPauses(PauseConfig),
     SpeakChar(char, Option<CharPos>),
     Preview(String, String),
     Tone(f32, u32),
@@ -657,8 +668,22 @@ impl SpeechService {
     /// Returns the reading's generation, which every status about this
     /// reading carries (see [`ReadingGeneration`]).
     pub fn read(&self, utterances: Vec<Utterance>) -> ReadingGeneration {
+        self.read_with_pauses(utterances, Vec::new())
+    }
+    /// [`read`](Self::read), pausing after the utterances that end a
+    /// heading, paragraph or list item (`pauses`, by where each utterance
+    /// ends in the document), for as long as [`PauseConfig`] says.
+    pub fn read_with_pauses(
+        &self,
+        utterances: Vec<Utterance>,
+        pauses: Vec<PauseAt>,
+    ) -> ReadingGeneration {
         let generation = self.last_reading.fetch_add(1, Ordering::SeqCst) + 1;
-        self.post(Command::Read(utterances, generation));
+        self.post(Command::Read(
+            utterances,
+            PausePlan::new(pauses),
+            generation,
+        ));
         generation
     }
     /// Stops all speech.
@@ -715,6 +740,11 @@ impl SpeechService {
     /// Replaces the pacing settings (highlight speed, latency offset).
     pub fn set_pacing(&self, pacing: PacingConfig) {
         self.post(Command::SetPacing(pacing));
+    }
+    /// Replaces the pause lengths (after headings, paragraphs and list
+    /// items); they apply to utterances handed to the engine after this.
+    pub fn set_pauses(&self, pauses: PauseConfig) {
+        self.post(Command::SetPauses(pauses));
     }
     /// Speaks one character (scaled rate, caps indication), optionally
     /// mapped to a document position.
@@ -1052,6 +1082,9 @@ pub struct ServiceCore {
     awaiting_audio: Option<(ReadingGeneration, Instant)>,
     /// Where the first sound of each reading is stamped.
     first_audio: FirstAudio,
+    /// Where the current reading's headings, paragraphs and list items
+    /// end, for structural pauses.
+    pauses: PausePlan,
     /// How late scheduled word highlights fire, for the debug log.
     lateness: Lateness,
 }
@@ -1117,6 +1150,7 @@ impl ServiceCore {
             prefer_pending: false,
             awaiting_audio: None,
             first_audio: FirstAudio::default(),
+            pauses: PausePlan::default(),
             lateness: Lateness::default(),
         };
         if let Some(asked) = core.params.voice.clone() {
@@ -1233,6 +1267,13 @@ impl ServiceCore {
             return None;
         }
         let mut wait = POLL_INTERVAL;
+        if let Some(w) = self
+            .queue
+            .gap_deadline()
+            .and_then(|d| self.clock.wait_until(d))
+        {
+            wait = wait.min(w);
+        }
         if let Some(p) = &self.playing {
             let deadlines = p
                 .scheduled
@@ -1252,7 +1293,7 @@ impl ServiceCore {
     fn apply(&mut self, cmd: Command) {
         match cmd {
             Command::Say(text, mode) => self.say(&text, mode),
-            Command::Read(u, generation) => self.read_as(u, generation),
+            Command::Read(u, pauses, generation) => self.read_paused_as(u, pauses, generation),
             Command::Stop => self.stop(),
             Command::Pause => self.pause(),
             Command::Resume => self.resume(),
@@ -1266,6 +1307,7 @@ impl ServiceCore {
             Command::SetSplitCaps(on) => self.set_split_caps(on),
             Command::SetNormalization(c) => self.set_normalization(*c),
             Command::SetPacing(p) => self.set_pacing(p),
+            Command::SetPauses(p) => self.set_pauses(p),
             Command::SpeakChar(c, at) => self.speak_char(c, at),
             Command::Preview(voice, text) => self.preview(&voice, &text),
             Command::Tone(hz, ms) => self.tone(hz, ms),
@@ -1293,7 +1335,30 @@ impl ServiceCore {
     /// at once). Generations should rise; a lower one is still used as
     /// given.
     pub fn read_as(&mut self, utterances: Vec<Utterance>, generation: ReadingGeneration) {
+        self.read_paused_as(utterances, PausePlan::default(), generation);
+    }
+
+    /// [`read`](Self::read) with structural pauses: after each utterance
+    /// that ends where `pauses` says a block ends.
+    pub fn read_with_pauses(
+        &mut self,
+        utterances: Vec<Utterance>,
+        pauses: Vec<PauseAt>,
+    ) -> ReadingGeneration {
+        let generation = self.reading_generation + 1;
+        self.read_paused_as(utterances, PausePlan::new(pauses), generation);
+        generation
+    }
+
+    /// [`read_as`](Self::read_as) with a pause plan.
+    fn read_paused_as(
+        &mut self,
+        utterances: Vec<Utterance>,
+        pauses: PausePlan,
+        generation: ReadingGeneration,
+    ) {
         self.clear_engine();
+        self.pauses = pauses;
         self.paused = None;
         self.queue.start(Vec::new());
         self.backlog = utterances.into();
@@ -1397,7 +1462,7 @@ impl ServiceCore {
             backlog.drain(..j);
             utterances = backlog
                 .pop_front()
-                .map(|u| self.normalize(u))
+                .map(|u| self.normalize_keeping_pauses(u))
                 .into_iter()
                 .collect();
         } else {
@@ -1427,6 +1492,12 @@ impl ServiceCore {
         self.demote_native_pause();
         if matches!(self.paused, Some(PauseState::Emulated { .. })) {
             return self.skip();
+        }
+        // In a structural pause nothing plays: skipping cuts the pause and
+        // the next utterance starts.
+        if self.queue.cut_gap() {
+            self.pump();
+            return;
         }
         let Some(front) = self.queue.front().map(|u| u.id) else {
             return;
@@ -1691,6 +1762,12 @@ impl ServiceCore {
         self.config.pacing = pacing;
     }
 
+    /// Replaces the pause lengths; utterances handed to the engine from now
+    /// on use them.
+    pub fn set_pauses(&mut self, pauses: PauseConfig) {
+        self.config.pauses = pauses;
+    }
+
     // ---- the engine loop --------------------------------------------------
 
     /// Polls the backend, processes its events, submits lookahead, and runs
@@ -1721,6 +1798,20 @@ impl ServiceCore {
             && let Err(e) = u.offset_map.check_invariants(&u.text)
         {
             log::warn!("normalized utterance has an invalid map: {e}");
+        }
+        u
+    }
+
+    /// [`normalize`](Self::normalize) for document text, moving the
+    /// utterance's pause with it should normalization move where it ends.
+    fn normalize_keeping_pauses(&mut self, u: Utterance) -> Utterance {
+        if self.pauses.is_empty() {
+            return self.normalize(u);
+        }
+        let before = u.source_range().map(|r| r.end);
+        let u = self.normalize(u);
+        if let (Some(from), Some(to)) = (before, u.source_range().map(|r| r.end)) {
+            self.pauses.rekey(from, to);
         }
         u
     }
@@ -1844,7 +1935,7 @@ impl ServiceCore {
             let Some(u) = self.backlog.pop_front() else {
                 break;
             };
-            let u = self.normalize(u);
+            let u = self.normalize_keeping_pauses(u);
             self.queue.push_back(u);
         }
     }
@@ -1900,7 +1991,17 @@ impl ServiceCore {
     fn pump(&mut self) {
         loop {
             self.refill();
-            let batch = self.queue.to_submit();
+            // A pause is silence the engine plays, or else a gap here.
+            let silence = self.caps.contains(Caps::SILENCE);
+            let (plan, config, rate) = (&self.pauses, &self.config.pauses, self.params.rate);
+            let now = self.clock.now();
+            let batch = self.queue.to_submit_gated(now, |u| {
+                if silence {
+                    Duration::ZERO
+                } else {
+                    plan.length_after(u, config, rate)
+                }
+            });
             if batch.is_empty() {
                 break;
             }
@@ -1908,6 +2009,9 @@ impl ServiceCore {
                 let mut sink = self.sink();
                 self.engine_busy = true;
                 let result = self.backend.speak(&u, &mut sink);
+                if result.is_ok() && silence {
+                    self.silence_after(&u);
+                }
                 self.events.extend(sink.events);
                 match result {
                     Ok(()) => {
@@ -1930,6 +2034,17 @@ impl ServiceCore {
             self.drain_events();
         }
         self.finish_if_done();
+    }
+
+    /// Asks the engine for the pause after `u`, if `u` ends a block.
+    fn silence_after(&mut self, u: &Utterance) {
+        let pause = self
+            .pauses
+            .length_after(u, &self.config.pauses, self.params.rate);
+        if !pause.is_zero() {
+            let ms = u32::try_from(pause.as_millis()).unwrap_or(u32::MAX);
+            self.backend.silence_after(u.id, ms);
+        }
     }
 
     /// The engine failed [`MAX_CONSECUTIVE_FAILURES`] times in a row: stop

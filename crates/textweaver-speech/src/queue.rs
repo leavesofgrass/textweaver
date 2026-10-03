@@ -11,8 +11,14 @@
 //!   (two by default), so engines with per-utterance latency do not leave a
 //!   gap between sentences.
 //! - Queued chunks are cancelled by id.
+//! - A structural pause for an engine that plays its own audio is a *gap*
+//!   ([`ReadingQueue::to_submit_gated`]): nothing after the utterance that
+//!   ends a block is handed over until that utterance has finished and the
+//!   pause has passed. Clearing, restarting, and taking everything drop the
+//!   gap, so Stop, Pause and skipping cut it at once.
 
 use std::collections::VecDeque;
+use std::time::Duration;
 
 use textweaver_core::{Utterance, UtteranceId};
 
@@ -42,6 +48,18 @@ impl Generation {
 /// Default number of chunks handed to the engine ahead of the playing one.
 pub const DEFAULT_LOOKAHEAD: usize = 2;
 
+/// What holds submission back for a pause.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Gap {
+    /// Nothing after this submitted utterance until it completes; then the
+    /// pause, this long.
+    After(UtteranceId, Duration),
+    /// The utterance completed; the pause starts at the next submission.
+    Due(Duration),
+    /// Nothing is submitted before this time (playback clock).
+    Until(Duration),
+}
+
 /// Playing, submitted, and waiting utterances.
 #[derive(Clone, Debug)]
 pub struct ReadingQueue {
@@ -52,6 +70,8 @@ pub struct ReadingQueue {
     submitted: VecDeque<Utterance>,
     /// Not yet handed to the engine.
     waiting: VecDeque<Utterance>,
+    /// A pause holding submission back, if any.
+    gap: Option<Gap>,
 }
 
 impl Default for ReadingQueue {
@@ -70,6 +90,7 @@ impl ReadingQueue {
             next_chunk: 0,
             submitted: VecDeque::new(),
             waiting: VecDeque::new(),
+            gap: None,
         }
     }
 
@@ -127,6 +148,7 @@ impl ReadingQueue {
     pub fn clear(&mut self) -> Vec<Utterance> {
         self.generation.bump();
         self.next_chunk = 0;
+        self.gap = None;
         let mut out: Vec<Utterance> = self.submitted.drain(..).collect();
         out.extend(self.waiting.drain(..));
         out
@@ -147,6 +169,7 @@ impl ReadingQueue {
     /// reading, trimmed) under a new generation. Chunk numbers continue.
     pub fn restart(&mut self, utterances: Vec<Utterance>) -> u64 {
         self.generation.bump();
+        self.gap = None;
         self.submitted.clear();
         self.waiting.clear();
         for u in utterances {
@@ -169,21 +192,85 @@ impl ReadingQueue {
     /// submitted: enough to have the playing one plus `lookahead` in the
     /// engine.
     pub fn to_submit(&mut self) -> Vec<Utterance> {
+        self.to_submit_gated(Duration::ZERO, |_| Duration::ZERO)
+    }
+
+    /// [`to_submit`](Self::to_submit) with pauses as gaps, at `now` on the
+    /// playback clock. `pause_after` says how long to pause after an
+    /// utterance (zero for none). An utterance with a pause is the last
+    /// one handed over until it completes and the pause has passed; a
+    /// pause still running submits nothing.
+    pub fn to_submit_gated(
+        &mut self,
+        now: Duration,
+        mut pause_after: impl FnMut(&Utterance) -> Duration,
+    ) -> Vec<Utterance> {
+        match self.gap {
+            Some(Gap::After(id, _)) if self.submitted.iter().any(|u| u.id == id) => {
+                return Vec::new();
+            }
+            Some(Gap::After(..)) => self.gap = None,
+            Some(Gap::Due(pause)) => {
+                self.gap = Some(Gap::Until(now.saturating_add(pause)));
+                return Vec::new();
+            }
+            Some(Gap::Until(t)) if now < t => return Vec::new(),
+            Some(Gap::Until(_)) => self.gap = None,
+            None => {}
+        }
         let mut out = Vec::new();
         while self.submitted.len() < 1 + self.lookahead {
             let Some(u) = self.waiting.pop_front() else {
                 break;
             };
+            let pause = pause_after(&u);
+            let id = u.id;
             out.push(u.clone());
             self.submitted.push_back(u);
+            if !pause.is_zero() && !self.waiting.is_empty() {
+                self.gap = Some(Gap::After(id, pause));
+                break;
+            }
         }
         out
+    }
+
+    /// When the running pause ends (playback clock), if one runs; for the
+    /// caller's next wake-up.
+    pub fn gap_deadline(&self) -> Option<Duration> {
+        match self.gap {
+            Some(Gap::Until(t)) => Some(t),
+            _ => None,
+        }
+    }
+
+    /// True while a pause holds submission back (its utterance is still
+    /// playing, or the pause itself runs).
+    pub fn in_gap(&self) -> bool {
+        self.gap.is_some()
+    }
+
+    /// Ends a pause that is running (its utterance has finished), so the
+    /// next submission goes ahead at once. Returns false, changing
+    /// nothing, when no pause runs.
+    pub fn cut_gap(&mut self) -> bool {
+        if matches!(self.gap, Some(Gap::Due(_) | Gap::Until(_))) {
+            self.gap = None;
+            true
+        } else {
+            false
+        }
     }
 
     /// Marks `id` as done (finished, cancelled, or failed) and removes it.
     /// Returns the removed utterance, or `None` if `id` is unknown.
     pub fn complete(&mut self, id: UtteranceId) -> Option<Utterance> {
         let i = self.submitted.iter().position(|u| u.id == id)?;
+        if let Some(Gap::After(gated, pause)) = self.gap
+            && gated == id
+        {
+            self.gap = Some(Gap::Due(pause));
+        }
         self.submitted.remove(i)
     }
 
@@ -205,6 +292,7 @@ impl ReadingQueue {
     /// Removes and returns every utterance (submitted first) without bumping
     /// the generation; used when pausing to keep the remainder.
     pub fn take_all(&mut self) -> Vec<Utterance> {
+        self.gap = None;
         let mut out: Vec<Utterance> = self.submitted.drain(..).collect();
         out.extend(self.waiting.drain(..));
         out
@@ -286,6 +374,84 @@ mod tests {
         assert_eq!(q.len(), 3);
         assert!(!q.cancel(waiting_id), "already gone");
         assert!(q.iter().all(|u| u.id != sub[1].id && u.id != waiting_id));
+    }
+
+    /// A pause of 300 ms after chunk `n`.
+    fn pause_after(n: u32) -> impl FnMut(&Utterance) -> Duration {
+        move |u| {
+            if u.id.chunk == n {
+                Duration::from_millis(300)
+            } else {
+                Duration::ZERO
+            }
+        }
+    }
+
+    #[test]
+    fn a_gap_holds_what_follows_until_the_pause_has_passed() {
+        let ms = Duration::from_millis;
+        let mut q = ReadingQueue::default();
+        q.start(utts(4));
+        let first = q.to_submit_gated(ms(0), pause_after(0));
+        assert_eq!(first.len(), 1, "nothing after the pause is handed over");
+        assert!(q.in_gap());
+        assert!(q.to_submit_gated(ms(10), pause_after(0)).is_empty());
+        assert_eq!(q.gap_deadline(), None, "the pause starts at the end");
+        q.complete(first[0].id);
+        // The pause runs from the next look, on the playback clock.
+        assert!(q.to_submit_gated(ms(1000), pause_after(0)).is_empty());
+        assert_eq!(q.gap_deadline(), Some(ms(1300)));
+        assert!(q.to_submit_gated(ms(1299), pause_after(0)).is_empty());
+        let next = q.to_submit_gated(ms(1300), pause_after(0));
+        assert_eq!(
+            next.iter().map(|u| u.id.chunk).collect::<Vec<_>>(),
+            [1, 2, 3]
+        );
+        assert!(!q.in_gap());
+    }
+
+    #[test]
+    fn no_gap_after_the_last_utterance_or_for_zero() {
+        let mut q = ReadingQueue::default();
+        q.start(utts(2));
+        let all = q.to_submit_gated(Duration::ZERO, pause_after(1));
+        assert_eq!(all.len(), 2);
+        assert!(!q.in_gap(), "nothing follows the last one");
+        let mut q = ReadingQueue::default();
+        q.start(utts(3));
+        assert_eq!(
+            q.to_submit_gated(Duration::ZERO, |_| Duration::ZERO).len(),
+            3
+        );
+        assert!(!q.in_gap());
+    }
+
+    #[test]
+    fn clearing_restarting_taking_and_cutting_drop_the_gap() {
+        let start = |q: &mut ReadingQueue| {
+            q.start(utts(3));
+            let first = q.to_submit_gated(Duration::ZERO, pause_after(0));
+            q.complete(first[0].id);
+            assert!(q.in_gap());
+        };
+        let mut q = ReadingQueue::default();
+        start(&mut q);
+        q.clear();
+        assert!(!q.in_gap());
+        start(&mut q);
+        let rest = q.take_all();
+        assert!(!q.in_gap());
+        q.restart(rest);
+        assert_eq!(q.to_submit().len(), 2);
+        start(&mut q);
+        assert!(q.cut_gap());
+        assert!(!q.cut_gap(), "only once");
+        assert_eq!(q.to_submit_gated(Duration::ZERO, pause_after(0)).len(), 2);
+        // A pause whose utterance still plays is not cut: skipping that
+        // utterance restarts the queue instead.
+        q.start(utts(3));
+        q.to_submit_gated(Duration::ZERO, pause_after(0));
+        assert!(!q.cut_gap());
     }
 
     #[test]

@@ -544,6 +544,11 @@ impl SpeechBackend for DectalkBackend {
         self.playback.emit(sink);
     }
 
+    fn silence_after(&mut self, id: textweaver_speech::core::UtteranceId, ms: u32) {
+        // Structural pauses play as silence in the shared playback client.
+        self.playback.silence_after(id, ms);
+    }
+
     fn stop(&mut self) {
         // Utterances waiting for a starting host are simply not sent.
         self.pending.clear();

@@ -345,6 +345,27 @@ pub const INFO: &[Info] = &[
         (0.0, 1000.0, 10.0),
         "milliseconds",
     ),
+    number(
+        "speech.pause_heading_ms",
+        "Pause after headings",
+        "Silence after a heading, shorter at faster rates. 0 turns it off.",
+        (0.0, 3000.0, 50.0),
+        "milliseconds",
+    ),
+    number(
+        "speech.pause_paragraph_ms",
+        "Pause after paragraphs",
+        "Silence after a paragraph, shorter at faster rates. 0 turns it off.",
+        (0.0, 3000.0, 50.0),
+        "milliseconds",
+    ),
+    number(
+        "speech.pause_list_item_ms",
+        "Pause after list items",
+        "Silence after a list item, shorter at faster rates. 0 turns it off.",
+        (0.0, 3000.0, 50.0),
+        "milliseconds",
+    ),
     optional(
         "speech.output_device",
         "Output device",
@@ -2038,6 +2059,7 @@ impl App {
             let config = textweaver_engines::service_config(&self.settings);
             self.speech.set_normalization(self.speech_normalization());
             self.speech.set_pacing(config.pacing);
+            self.speech.set_pauses(config.pauses);
             self.apply_voice_settings();
             if self.settings.speech.voice != old.speech.voice {
                 self.speech.set_voice(self.settings.speech.voice.clone());

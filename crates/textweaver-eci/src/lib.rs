@@ -166,6 +166,7 @@ pub fn backend_description() -> BackendInfo {
             | Caps::SYNTH_TO_FILE
             | Caps::NATIVE_NORMALIZATION
             | Caps::PLAYBACK_EVENTS
+            | Caps::SILENCE
             | Caps::TONES,
     }
 }

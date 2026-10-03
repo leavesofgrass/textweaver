@@ -179,7 +179,9 @@ pub fn speak(
     let service = SpeechService::spawn(factory, config.clone())?;
     let p = pipeline(service.capabilities());
     let utterances: Vec<Utterance> = planned.iter().cloned().map(|u| p.apply(u)).collect();
-    let reading = service.read(planned);
+    // Pauses after headings, paragraphs and list items, as the reader has.
+    let pauses = textweaver_app::structural_pauses(&doc, &planned);
+    let reading = service.read_with_pauses(planned, pauses);
     let mut statuses = Vec::new();
     loop {
         let status = service
