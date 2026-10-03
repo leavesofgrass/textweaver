@@ -795,10 +795,11 @@ pub const INFO: &[Info] = &[
             ("voice", "with textweaver's voice"),
         ],
     ),
-    toggle(
+    choice(
         "accessibility.quiet_screen",
         "Quiet screen while reading",
-        "Keep the screen still while textweaver reads aloud.",
+        "Keep the screen still while textweaver reads aloud. On by default in hybrid mode.",
+        &[("auto", "automatic"), ("true", "on"), ("false", "off")],
     ),
     choice(
         "accessibility.cursor",
@@ -1591,7 +1592,7 @@ fn fallback_label(path: &str) -> String {
 }
 
 /// The public kind for an [`InfoKind`]; choices stored as booleans (the
-/// Eloquence dictionaries) become booleans.
+/// Eloquence dictionaries, quiet screen) become booleans.
 fn kind_of(kind: InfoKind, default: &Value) -> SettingKind {
     match kind {
         InfoKind::Toggle => SettingKind::Toggle,
@@ -1605,9 +1606,9 @@ fn kind_of(kind: InfoKind, default: &Value) -> SettingKind {
             choices: choices
                 .iter()
                 .map(|(v, label)| Choice {
-                    value: match (*v, default) {
-                        ("true", Value::Bool(_)) => Value::Bool(true),
-                        ("false", Value::Bool(_)) => Value::Bool(false),
+                    value: match *v {
+                        "true" => Value::Bool(true),
+                        "false" => Value::Bool(false),
                         _ => Value::String((*v).to_owned()),
                     },
                     label: (*label).to_owned(),

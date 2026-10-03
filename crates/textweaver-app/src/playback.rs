@@ -425,9 +425,7 @@ impl App {
         if self.read_window(start) {
             // The voice starting is the feedback; with a screen reader, or
             // a quiet screen, nothing is added to the status line.
-            if self.access_mode == AccessMode::SelfVoicing
-                && !self.settings.accessibility.quiet_screen
-            {
+            if self.access_mode == AccessMode::SelfVoicing && !self.quiet_screen() {
                 let rate = self.settings.speech.rate.wpm();
                 let msg = self.msg_args("playback-reading-at", &args!["rate" => rate]);
                 self.show(&msg);

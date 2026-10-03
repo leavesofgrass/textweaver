@@ -1011,6 +1011,71 @@ pub enum SayAll {
     Voice,
 }
 
+/// `[accessibility] quiet_screen`: keep the screen still while textweaver
+/// reads aloud. Written as `true` or `false`; left out, it follows the mode
+/// (on in hybrid mode, off in the others).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum QuietScreen {
+    /// On in hybrid mode, off in the others.
+    #[default]
+    Auto,
+    /// Always on.
+    On,
+    /// Always off.
+    Off,
+}
+
+impl QuietScreen {
+    /// Whether the screen keeps still, in hybrid mode or not.
+    pub fn resolve(self, hybrid: bool) -> bool {
+        match self {
+            QuietScreen::Auto => hybrid,
+            QuietScreen::On => true,
+            QuietScreen::Off => false,
+        }
+    }
+}
+
+impl From<bool> for QuietScreen {
+    fn from(on: bool) -> Self {
+        if on {
+            QuietScreen::On
+        } else {
+            QuietScreen::Off
+        }
+    }
+}
+
+impl Serialize for QuietScreen {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        match self {
+            QuietScreen::Auto => s.serialize_str("auto"),
+            QuietScreen::On => s.serialize_bool(true),
+            QuietScreen::Off => s.serialize_bool(false),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for QuietScreen {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Raw {
+            Bool(bool),
+            Text(String),
+        }
+        match Raw::deserialize(d)? {
+            Raw::Bool(b) => Ok(b.into()),
+            Raw::Text(t) => match t.trim().to_ascii_lowercase().as_str() {
+                "auto" | "" => Ok(QuietScreen::Auto),
+                "on" | "true" | "yes" => Ok(QuietScreen::On),
+                "off" | "false" | "no" => Ok(QuietScreen::Off),
+                _ => Err(serde::de::Error::custom("expected true, false, or auto")),
+            },
+        }
+    }
+}
+
 /// `[accessibility] cursor`: where the terminal's cursor waits.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -1039,7 +1104,8 @@ pub struct AccessibilitySettings {
     /// While textweaver reads aloud, keep the screen still: the title
     /// line's position stops updating and the text being read is not copied
     /// to the status line, so a screen reader has nothing to chatter about.
-    pub quiet_screen: bool,
+    /// Left out (`auto`), on in hybrid mode and off in the others.
+    pub quiet_screen: QuietScreen,
     /// Where the terminal's cursor waits: `follow` (the spoken word, the
     /// caret, the chosen item) or `status` (the status line, so "read
     /// current line" repeats the last message).
@@ -1060,7 +1126,7 @@ impl Default for AccessibilitySettings {
         AccessibilitySettings {
             mode: AccessMode::default(),
             say_all: SayAll::default(),
-            quiet_screen: false,
+            quiet_screen: QuietScreen::Auto,
             cursor: CursorPlacement::default(),
             hybrid_offered: false,
             interface_announcements: InterfaceAnnouncements::default(),
@@ -3166,7 +3232,15 @@ wrap_navigation = true
         let loaded = store.load_detailed();
         let a = &loaded.settings.accessibility;
         assert_eq!(a.mode, AccessMode::SelfVoicing);
-        assert!(a.quiet_screen);
+        assert_eq!(a.quiet_screen, QuietScreen::On);
+        write(&store, "[accessibility]\nquiet_screen = false\n");
+        assert_eq!(store.load().0.accessibility.quiet_screen, QuietScreen::Off);
+        // Left out, it follows the mode: on in hybrid mode only.
+        assert_eq!(d.accessibility.quiet_screen, QuietScreen::Auto);
+        assert!(QuietScreen::Auto.resolve(true));
+        assert!(!QuietScreen::Auto.resolve(false));
+        assert!(QuietScreen::On.resolve(false));
+        assert!(!QuietScreen::Off.resolve(true));
         assert_eq!(a.say_all, SayAll::Voice);
         assert_eq!(
             loaded.warnings,

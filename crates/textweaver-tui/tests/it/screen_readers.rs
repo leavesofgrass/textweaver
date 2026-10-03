@@ -123,7 +123,7 @@ fn the_cursor_can_wait_on_the_status_line() {
 #[test]
 fn a_quiet_screen_freezes_the_title_while_reading() {
     let mut s = Settings::default();
-    s.accessibility.quiet_screen = true;
+    s.accessibility.quiet_screen = textweaver_app::store::QuietScreen::On;
     s.accessibility.mode = ModeSetting::ScreenReader;
     let mut h = launch(s, 40);
     let first = h.title();

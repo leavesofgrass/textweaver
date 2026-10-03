@@ -9,7 +9,9 @@ use textweaver_app::a11y::detect::Detected;
 use textweaver_app::a11y::{AccessMode, Announcer, CursorPlacement, Priority};
 use textweaver_app::core::CharPos;
 use textweaver_app::keymap::ActionId;
-use textweaver_app::store::{AccessMode as ModeSetting, CursorPlacement as CursorSetting, SayAll};
+use textweaver_app::store::{
+    AccessMode as ModeSetting, CursorPlacement as CursorSetting, QuietScreen, SayAll,
+};
 use textweaver_app::store::{DocKey, Settings};
 use textweaver_app::testing::{SpeechLog, recording_service};
 use textweaver_app::text::Document;
@@ -333,7 +335,7 @@ fn the_first_run_offers_hybrid_once() {
 /// status line and the "reading at" note is left out.
 #[test]
 fn quiet_screen_keeps_read_text_off_the_status_line() {
-    let mut r = rig_with(TEXT, |s| s.accessibility.quiet_screen = true);
+    let mut r = rig_with(TEXT, |s| s.accessibility.quiet_screen = QuietScreen::On);
     r.act(ActionId::ReadFromCursor);
     assert_eq!(r.app.playback(), Playback::Reading);
     assert!(r.app.quiet_screen_active());
@@ -349,6 +351,30 @@ fn quiet_screen_keeps_read_text_off_the_status_line() {
         "{}",
         loud.status()
     );
+}
+
+/// Left out of the settings, quiet screen follows the mode: on in hybrid
+/// mode, off in the others. An explicit value always wins.
+#[test]
+fn quiet_screen_is_on_by_default_in_hybrid_mode_only() {
+    let reading = |r: &mut Rig| {
+        r.act(ActionId::ReadFromCursor);
+        assert_eq!(r.app.playback(), Playback::Reading);
+        r.app.quiet_screen_active()
+    };
+    assert!(reading(&mut rig(AccessMode::Hybrid)));
+    assert!(!reading(&mut rig(AccessMode::SelfVoicing)));
+    assert!(!rig(AccessMode::ScreenReader).app.quiet_screen());
+    let mut off = rig_with(TEXT, |s| {
+        s.accessibility.mode = ModeSetting::Hybrid;
+        s.accessibility.quiet_screen = QuietScreen::Off;
+    });
+    assert!(!reading(&mut off));
+    let on = rig_with(TEXT, |s| {
+        s.accessibility.mode = ModeSetting::ScreenReader;
+        s.accessibility.quiet_screen = QuietScreen::On;
+    });
+    assert!(on.app.quiet_screen());
 }
 
 #[test]

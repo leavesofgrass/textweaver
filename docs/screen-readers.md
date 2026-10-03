@@ -72,7 +72,7 @@ If textweaver gets it wrong, set `TEXTWEAVER_SCREEN_READER=0` to say there is no
 
 While textweaver reads aloud, the terminal's cursor moves to each word. If your screen reader speaks as the cursor moves, it talks over the reading. Two settings help:
 
-- `quiet_screen = true` keeps the screen still while textweaver reads continuously: the title line's position stops updating, and the text being read is not copied to the status line.
+- `quiet_screen = true` keeps the screen still while textweaver reads continuously: the title line's position stops updating, and the text being read is not copied to the status line. It is already on in hybrid mode unless you set it to `false`.
 - `cursor = "status"` parks the cursor on the status line instead of on the spoken word.
 
 ```toml
