@@ -72,8 +72,9 @@ pub enum SettingKind {
         /// Empty means not set.
         optional: bool,
     },
-    /// A list of texts (favorite voices, library folders), typed as
-    /// comma-separated items.
+    /// A list of texts (favorite voices, library folders), typed as items
+    /// separated by [`Setting::list_separator`]: commas, or semicolons for
+    /// folders, whose names may hold commas.
     List,
     /// A table of names and values (pronunciations, abbreviations, speed
     /// presets): shown with its size, edited in `settings.toml`.
@@ -294,7 +295,7 @@ pub const INFO: &[Info] = &[
     list(
         "speech.favorite_voices",
         "Favorite voices",
-        "Voices listed first by the Voices command, by id.",
+        "Voices listed first by the Voices command, by id, separated by commas.",
     ),
     choice(
         "speech.punctuation",
@@ -754,7 +755,7 @@ pub const INFO: &[Info] = &[
     list(
         "library.folders",
         "Library folders",
-        "Folders whose documents the library lists, and whose positions sync between computers.",
+        "Folders whose documents the library lists, and whose positions sync between computers; separate folders with semicolons.",
     ),
     // [keyboard]
     toggle(
@@ -1746,9 +1747,11 @@ impl Setting {
                 .map(|x| self.choice_label_in(c, x))
                 .unwrap_or_else(|| plain(v)),
             (SettingKind::List, Value::Array(items)) if items.is_empty() => c.tr("settings-none"),
-            (SettingKind::List, Value::Array(items)) => {
-                items.iter().map(plain).collect::<Vec<_>>().join(", ")
-            }
+            (SettingKind::List, Value::Array(items)) => items
+                .iter()
+                .map(plain)
+                .collect::<Vec<_>>()
+                .join(self.list_separator()),
             (SettingKind::Table, Value::Object(m)) => {
                 c.fmt("settings-entries", &args!["n" => m.len()])
             }
@@ -1757,18 +1760,34 @@ impl Setting {
         }
     }
 
+    /// What separates a list setting's items when typed or shown: "; "
+    /// for folders, whose names may hold commas (a folder named
+    /// "Readings, Fall 2026"), and ", " for everything else.
+    pub fn list_separator(&self) -> &'static str {
+        if self.path.ends_with("folders") {
+            "; "
+        } else {
+            ", "
+        }
+    }
+
     /// The value as text for a prompt: a number, the text, or the list's
-    /// items joined with commas.
+    /// items joined by [`list_separator`](Self::list_separator).
     pub fn edit_text(&self, value: &Value) -> String {
         match value {
-            Value::Array(items) => items.iter().map(plain).collect::<Vec<_>>().join(", "),
+            Value::Array(items) => items
+                .iter()
+                .map(plain)
+                .collect::<Vec<_>>()
+                .join(self.list_separator()),
             Value::Null => String::new(),
             v => plain(v),
         }
     }
 
     /// Parses text typed for this setting into a value: a number, on or
-    /// off, a choice (by value or label), text, or a comma-separated list.
+    /// off, a choice (by value or label), text, or a list separated by
+    /// [`list_separator`](Self::list_separator).
     pub fn parse(&self, text: &str) -> Result<Value, String> {
         self.parse_in(&Catalog::english(), text)
     }
@@ -1838,7 +1857,7 @@ impl Setting {
                 }
             }
             SettingKind::List => Ok(Value::Array(
-                t.split(',')
+                t.split(self.list_separator().trim())
                     .map(str::trim)
                     .filter(|s| !s.is_empty())
                     .map(|s| Value::String(s.to_owned()))
@@ -2704,12 +2723,35 @@ mod tests {
             Ok(Value::String("C:\\dicts".into()))
         );
         let folders = schema.get("library.folders").unwrap();
-        assert_eq!(folders.parse("a, b ,"), Ok(serde_json::json!(["a", "b"])));
+        assert_eq!(folders.parse("a; b ;"), Ok(serde_json::json!(["a", "b"])));
+        let voices = schema.get("speech.favorite_voices").unwrap();
+        assert_eq!(voices.parse("a, b ,"), Ok(serde_json::json!(["a", "b"])));
         let voice = schema.get("speech.voice").unwrap();
         assert_eq!(voice.parse(" "), Ok(Value::Null));
         assert_eq!(voice.describe(&Value::Null), "not set");
         assert!(schema.get("display.theme_explicit").unwrap().internal);
         assert_eq!(fallback_label("display.tab_width"), "Tab width");
+    }
+
+    #[test]
+    fn a_folder_with_a_comma_survives_a_round_trip() {
+        let schema = SettingsSchema::generate();
+        let folders = schema.get("library.folders").unwrap();
+        let typed = "Readings, Fall 2026; Notes";
+        let value = folders.parse(typed).unwrap();
+        assert_eq!(value, serde_json::json!(["Readings, Fall 2026", "Notes"]));
+        assert_eq!(folders.edit_text(&value), typed);
+        assert_eq!(folders.parse(&folders.edit_text(&value)), Ok(value.clone()));
+        // Through the settings file and back.
+        let dir = tempfile::tempdir().unwrap();
+        let store =
+            textweaver_store::SettingsStore::new(textweaver_store::Paths::under(dir.path()));
+        let mut s = textweaver_store::Settings::default();
+        s.library.folders = serde_json::from_value(value.clone()).unwrap();
+        store.save(&s).unwrap();
+        let loaded = store.load().0;
+        let back = serde_json::to_value(&loaded.library.folders).unwrap();
+        assert_eq!(folders.edit_text(&back), typed);
     }
 
     #[test]

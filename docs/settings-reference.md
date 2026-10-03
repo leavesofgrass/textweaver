@@ -12,7 +12,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.pitch`: default 0 semitones. Pitch. Higher or lower than the voice's own pitch. From -12 to 12 semitones, in steps of 1. Syncs between computers.
 - `speech.voice`: default not set. Voice. The voice's id; not set picks one automatically. The Voices command lists them. Text; empty means not set. Stays on this computer.
 - `speech.prefer_voice`: default `"eloquence"`. Preferred voice. When no voice is set, the first voice whose name contains this, such as eloquence. Text; empty means not set. Stays on this computer.
-- `speech.favorite_voices`: default an empty list. Favorite voices. Voices listed first by the Voices command, by id. A list of texts, such as `["a", "b"]`. Syncs between computers, with favorite voices.
+- `speech.favorite_voices`: default an empty list. Favorite voices. Voices listed first by the Voices command, by id, separated by commas. A list of texts, such as `["a", "b"]`. Syncs between computers, with favorite voices.
 - `speech.punctuation`: default `"some"`. Punctuation. How much punctuation is spoken. Choices: `"none"`, `"some"`, `"all"`. Syncs between computers.
 - `speech.split_caps`: default off (`false`). Split capitals. Say words joined with capitals, such as TextWeaver, as separate words. On or off: `true` or `false`. Syncs between computers.
 - `speech.caps`: default a higher pitch (`"pitch"`). Capitals. How a capital letter is marked when characters are spoken and typed. Choices: `"none"` (not marked), `"tone"` (a tone), `"pitch"` (a higher pitch), `"say_cap"` (say cap). Syncs between computers.
@@ -103,7 +103,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Library: the `[library]` section
 
 - `library.recent_limit`: default 20 files. Recent files. How many recent files are remembered. From 1 to 500 files, in steps of 5. Syncs between computers.
-- `library.folders`: default an empty list. Library folders. Folders whose documents the library lists, and whose positions sync between computers. A list of texts, such as `["a", "b"]`. Stays on this computer.
+- `library.folders`: default an empty list. Library folders. Folders whose documents the library lists, and whose positions sync between computers; separate folders with semicolons. A list of texts, such as `["a", "b"]`. Stays on this computer.
 
 ## Keyboard: the `[keyboard]` section
 
