@@ -342,6 +342,12 @@ pub struct ChoiceList {
     focus_actions: bool,
     /// Whose command modifier the list follows ([`crate::keys`]).
     platform: Platform,
+    /// The row where the reader is (the Contents panel's heading at the
+    /// caret): drawn with a bar and named with its own label (", current").
+    current: Option<(usize, String)>,
+    /// Shift+Enter is left to the widget around the list (the panel's "go
+    /// there and return to the document").
+    shift_enter_to_parent: bool,
 }
 
 impl ChoiceList {
@@ -363,7 +369,48 @@ impl ChoiceList {
             app_keys: false,
             focus_actions: false,
             platform: Platform::current(),
+            current: None,
+            shift_enter_to_parent: false,
         }
+    }
+
+    /// Leaves Shift+Enter to the widget around the list, which reads
+    /// [`selected`](Self::selected).
+    pub fn with_shift_enter_to_parent(mut self, on: bool) -> Self {
+        self.shift_enter_to_parent = on;
+        self
+    }
+
+    /// Marks row `i` as the one where the reader is: a bar before it, and
+    /// `label` as its name for screen readers ("Methods, level 2,
+    /// current"), so the mark is never the bar alone. `None` marks none.
+    pub fn set_current(this: &mut WidgetMut<'_, Self>, current: Option<(usize, String)>) {
+        if this.widget.current != current {
+            this.widget.current = current;
+            this.ctx.request_render();
+        }
+    }
+
+    /// True while the list has the keyboard focus.
+    pub fn has_focus(&self) -> bool {
+        self.focused
+    }
+
+    /// Recolors the list for `palette` (a theme change while it stays
+    /// open, as the window's panel does).
+    pub fn set_palette(this: &mut WidgetMut<'_, Self>, palette: Palette) {
+        this.widget.palette = palette;
+        this.ctx.request_render();
+    }
+
+    /// The row marked current, if any.
+    pub fn current(&self) -> Option<usize> {
+        self.current.as_ref().map(|(i, _)| *i)
+    }
+
+    /// The rows.
+    pub fn items(&self) -> &[String] {
+        &self.items
     }
 
     /// Follows `platform`'s command modifier instead of this system's.
@@ -545,6 +592,9 @@ impl Widget for ChoiceList {
             Key::Named(NamedKey::End) => Some(n - 1),
             Key::Named(NamedKey::PageDown) => Some((self.selected + page).min(n - 1)),
             Key::Named(NamedKey::PageUp) => Some(self.selected.saturating_sub(page)),
+            Key::Named(NamedKey::Enter) if self.shift_enter_to_parent && k.modifiers.shift() => {
+                return;
+            }
             Key::Named(NamedKey::Enter) => {
                 ctx.submit_action::<DialogAction>(DialogAction::Choose(self.selected));
                 ctx.set_handled();
@@ -737,6 +787,16 @@ impl Widget for ChoiceList {
             } else {
                 fg
             };
+            if self.current.as_ref().is_some_and(|(c, _)| *c == i) {
+                // The row where the reader is: a 3 px bar at its start, in
+                // the row's text color, so it shows on any fill.
+                painter
+                    .fill(
+                        RoundedRect::new(1.0, y + 6.0, 4.0, y + self.row_h - 6.0, 1.5),
+                        theme::color(text_fg),
+                    )
+                    .draw();
+            }
             if let Some(l) = &self.layouts[i] {
                 let ty = y + (self.row_h - f64::from(l.height())) / 2.0;
                 render_text(
@@ -795,7 +855,10 @@ impl Widget for ChoiceList {
         let n = self.items.len();
         for (i, item) in self.items.iter().enumerate() {
             let mut o = Node::new(Role::ListBoxOption);
-            o.set_label(item.as_str());
+            match &self.current {
+                Some((c, label)) if *c == i => o.set_label(label.as_str()),
+                _ => o.set_label(item.as_str()),
+            }
             o.set_selected(i == self.selected);
             o.add_action(Action::Focus);
             o.add_action(Action::Click);

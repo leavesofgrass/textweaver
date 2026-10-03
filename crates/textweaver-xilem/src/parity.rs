@@ -36,6 +36,10 @@ pub fn support(action: ActionId) -> Support {
         | A::TextSmaller
         | A::TextSizeReset
         | A::ChooseFont
+        | A::ContentsPanel
+        | A::NotesPanel
+        | A::NextRegion
+        | A::PreviousRegion
         | A::Open
         | A::Settings
         | A::ColorSettings

@@ -12,5 +12,6 @@ mod edit_mode;
 mod frame_theme;
 mod highlight_paint;
 mod settings_dialog;
+mod sidebar;
 mod voice_manager;
 mod window_tree;
