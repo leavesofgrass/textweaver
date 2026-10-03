@@ -24,6 +24,14 @@
 //!
 //! Pause and resume are native: the clock stops with the audio.
 //!
+//! Structural pauses ([`Playback::silence_after`]) are zero samples pushed
+//! into the feed after an utterance's last sample, when it ends: the next
+//! utterance's audio, synthesized ahead as usual, waits behind them and its
+//! start moves past them, so its `Started` and word times count from its
+//! own first sample and no word's highlight moves early. The utterance
+//! itself still finishes at its last sample. [`Playback::stop`] clears the
+//! silence with the rest of the feed, and a pause holds it like audio.
+//!
 //! An output that stops taking samples while audio waits and nothing is
 //! paused (a Bluetooth headset that went away, a device that was switched)
 //! is reopened after [`DEVICE_STALL`], whether or not a reading is in
@@ -94,6 +102,9 @@ struct Active<W> {
     waiting: Vec<i16>,
     /// The host sent `End` (or died).
     done: bool,
+    /// Samples of silence to play after the utterance's audio, not yet in
+    /// the feed (pushed when it ends).
+    silence: u64,
     started: bool,
     failed: Option<String>,
 }
@@ -287,9 +298,21 @@ impl<W> Playback<W> {
             total: 0,
             waiting: Vec::new(),
             done: false,
+            silence: 0,
             started: false,
             failed: None,
         });
+    }
+
+    /// Plays `ms` of silence after utterance `id` (a structural pause):
+    /// after its last sample, before the next utterance's first. Nothing
+    /// happens for an utterance that is not queued or has already ended
+    /// (its synthesis failed at once). See `SpeechBackend::silence_after`.
+    pub fn silence_after(&mut self, id: UtteranceId, ms: u32) {
+        let samples = u64::from(ms) * u64::from(self.sample_rate.max(1)) / 1000;
+        if let Some(a) = self.active.iter_mut().find(|a| a.id == id && !a.done) {
+            a.silence = samples;
+        }
     }
 
     /// Starts collecting `token`'s audio from host `host` instead of
@@ -344,7 +367,8 @@ impl<W> Playback<W> {
     }
 
     /// After an utterance ends, lets the next ones into the feed: pushes
-    /// their buffered audio and fixes their start positions.
+    /// their buffered audio, then the silence after each one that ended,
+    /// and fixes their start positions.
     fn advance_queue(&mut self) {
         let open = self.playing_index().unwrap_or(self.active.len());
         for a in self.active.iter_mut().take(open + 1) {
@@ -355,6 +379,9 @@ impl<W> Playback<W> {
                 let w = std::mem::take(&mut a.waiting);
                 self.feed.push(&w);
                 a.total += w.len() as u64;
+            }
+            if a.done && a.silence > 0 {
+                push_silence(&self.feed, std::mem::take(&mut a.silence));
             }
         }
     }
@@ -482,6 +509,7 @@ impl<W> Playback<W> {
             a.start = Some(played);
             a.total = 0;
             a.waiting.clear();
+            a.silence = 0;
         }
     }
 
@@ -646,6 +674,18 @@ impl<W> Playback<W> {
     pub fn close(&mut self) {
         self.feed.clear();
         self.player = None;
+    }
+}
+
+/// Pushes `samples` zero samples into `feed`, in blocks, so a long pause
+/// costs one small buffer.
+fn push_silence(feed: &Feed, samples: u64) {
+    const BLOCK: [i16; 1024] = [0; 1024];
+    let mut left = samples;
+    while left > 0 {
+        let n = usize::try_from(left.min(BLOCK.len() as u64)).unwrap_or(BLOCK.len());
+        feed.push(&BLOCK[..n]);
+        left -= n as u64;
     }
 }
 
@@ -1095,5 +1135,168 @@ mod tests {
         let a = p.next_token();
         let b = p.next_token();
         assert!(a != 0 && b != 0 && a != b);
+    }
+
+    /// The feed's next `n` samples, as the device would play them: each
+    /// sample says whether it was sound (true) or silence (false).
+    fn play(p: &Playback<Vec<Range<u32>>>, n: usize) -> Vec<bool> {
+        let mut out = vec![1.0f32; n];
+        let got = p.feed().pull(&mut out);
+        assert_eq!(got, n, "the feed held {got} samples, not {n}");
+        out.iter().map(|v| *v != 0.0).collect()
+    }
+
+    /// Runs of sound and silence, in order: (sound, length).
+    fn runs(samples: &[bool]) -> Vec<(bool, usize)> {
+        let mut out: Vec<(bool, usize)> = Vec::new();
+        for &s in samples {
+            match out.last_mut() {
+                Some((v, n)) if *v == s => *n += 1,
+                _ => out.push((s, 1)),
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn silence_plays_between_the_utterances_it_follows() {
+        // 1000 Hz: one sample per millisecond.
+        let mut p = client();
+        let mut rec = Rec::default();
+        let (a, b, c) = (id(1, 0), id(1, 1), id(1, 2));
+        p.enqueue(a, 1, 0, vec![0..5, 6..9]);
+        p.silence_after(a, 50);
+        p.enqueue(b, 2, 0, vec![0..5, 6..9]);
+        p.enqueue(c, 3, 0, vec![0..5, 6..9]);
+        p.silence_after(c, 30);
+        // b's audio arrives while a still plays, as lookahead does.
+        p.on_word(1, 0, index(0));
+        p.on_audio(1, &[1; 20]);
+        p.on_word(2, 0, index(0));
+        p.on_audio(2, &[2; 10]);
+        p.on_end(2, EndStatus::Done);
+        p.on_audio(3, &[3; 5]);
+        assert_eq!(p.feed().pushed(), 20, "b waits behind a");
+        p.on_end(1, EndStatus::Done);
+        // a, its pause, then b (no pause after b), then c so far.
+        assert_eq!(p.feed().pushed(), 20 + 50 + 10 + 5);
+        p.on_end(3, EndStatus::Done);
+        // c's pause follows its last sample, though nothing comes after it.
+        assert_eq!(p.feed().pushed(), 20 + 50 + 10 + 5 + 30);
+        assert_eq!(
+            runs(&play(&p, 115)),
+            [(true, 20), (false, 50), (true, 15), (false, 30)]
+        );
+        p.emit(&mut rec);
+        let events = rec.take();
+        assert_eq!(
+            events,
+            [
+                (a, RawEvent::Started),
+                (a, word(0..5, 0)),
+                (a, RawEvent::Finished),
+                (b, RawEvent::Started),
+                (b, word(0..5, 0)),
+                (b, RawEvent::Finished),
+                (c, RawEvent::Started),
+                (c, RawEvent::Finished),
+            ],
+            "word times count from each utterance's own first sample"
+        );
+    }
+
+    #[test]
+    fn the_next_utterance_starts_after_the_silence_not_before() {
+        let mut p = client();
+        let mut rec = Rec::default();
+        let (a, b) = (id(1, 0), id(1, 1));
+        p.enqueue(a, 1, 0, vec![0..5, 6..9]);
+        p.silence_after(a, 40);
+        p.enqueue(b, 2, 0, vec![0..5, 6..9]);
+        p.on_audio(1, &[1; 10]);
+        p.on_end(1, EndStatus::Done);
+        p.on_word(2, 0, index(0));
+        p.on_audio(2, &[2; 10]);
+        p.on_end(2, EndStatus::Done);
+        p.feed().skip(10);
+        p.emit(&mut rec);
+        assert_eq!(
+            rec.take(),
+            [(a, RawEvent::Started), (a, RawEvent::Finished)]
+        );
+        // All through the silence, b has not started and its word waits.
+        p.feed().skip(40);
+        p.emit(&mut rec);
+        assert!(rec.take().is_empty(), "nothing during the pause");
+        p.feed().skip(1);
+        p.emit(&mut rec);
+        assert_eq!(rec.take(), [(b, RawEvent::Started), (b, word(0..5, 0))]);
+    }
+
+    #[test]
+    fn zero_silence_adds_nothing() {
+        let mut p = client();
+        let (a, b) = (id(1, 0), id(1, 1));
+        p.enqueue(a, 1, 0, vec![]);
+        p.silence_after(a, 0);
+        p.enqueue(b, 2, 0, vec![]);
+        p.on_audio(1, &[1; 10]);
+        p.on_end(1, EndStatus::Done);
+        p.on_audio(2, &[2; 10]);
+        p.on_end(2, EndStatus::Done);
+        assert_eq!(runs(&play(&p, 20)), [(true, 20)]);
+    }
+
+    #[test]
+    fn stop_during_a_pause_is_immediate() {
+        let mut p = client();
+        let mut rec = Rec::default();
+        let (a, b) = (id(1, 0), id(1, 1));
+        p.enqueue(a, 1, 0, vec![]);
+        p.silence_after(a, 2000);
+        p.enqueue(b, 2, 0, vec![]);
+        p.on_audio(1, &[1; 10]);
+        p.on_end(1, EndStatus::Done);
+        p.on_audio(2, &[2; 10]);
+        // Into the pause.
+        p.feed().skip(15);
+        p.emit(&mut rec);
+        rec.take();
+        assert_eq!(p.stop(), [0]);
+        // Nothing is left to play: not the pause, not b.
+        assert_eq!(p.feed().pushed(), p.feed().consumed());
+        p.emit(&mut rec);
+        assert_eq!(rec.take(), [(b, RawEvent::Cancelled)]);
+    }
+
+    #[test]
+    fn a_pause_holds_the_silence_too() {
+        let mut p = client();
+        let (a, b) = (id(1, 0), id(1, 1));
+        p.enqueue(a, 1, 0, vec![]);
+        p.silence_after(a, 30);
+        p.enqueue(b, 2, 0, vec![]);
+        p.on_audio(1, &[1; 10]);
+        p.on_end(1, EndStatus::Done);
+        p.on_audio(2, &[2; 10]);
+        p.feed().skip(20);
+        p.pause();
+        assert_eq!(p.feed().skip(100), 0, "paused: the pause stands still");
+        p.resume();
+        // The rest of the pause, then b.
+        assert_eq!(runs(&play(&p, 30)), [(false, 20), (true, 10)]);
+    }
+
+    #[test]
+    fn silence_for_an_utterance_that_already_ended_is_ignored() {
+        let mut p = client();
+        let (a, b) = (id(1, 0), id(1, 1));
+        p.enqueue(a, 1, 0, vec![]);
+        p.on_error(1, "no voice".into());
+        p.on_end(1, EndStatus::Failed);
+        p.silence_after(a, 500);
+        p.enqueue(b, 2, 0, vec![]);
+        p.on_audio(2, &[2; 10]);
+        assert_eq!(p.feed().pushed(), 10);
     }
 }
