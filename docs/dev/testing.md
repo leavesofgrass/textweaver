@@ -283,6 +283,35 @@ The first opens the device three times per buffer size and, each time, restarts 
 - A push that arrives while the output plays silence is taken at the next sample, not after the rest of a 64-sample batch (up to 3 ms at 22,050 Hz), and a stop drops the samples the output had taken but not yet played (`FeedReader`, tests in `crates/textweaver-enginehost/tests/it/feed.rs`).
 - A minute of speech through a fake device with the 30 ms and the 20 ms buffer, fed by a fake engine at a real-time factor of 0.1 to 0.5 in chunks of 2,048 to 4,096 samples: zero gaps, and every sample once, in order. Time is simulated, so the test never waits.
 
+<<<<<<< HEAD
+=======
+### Piper's first audio: Friday, October 2, 2026
+
+Wave 8b's Piper work (W8b-pf). Measured on the owner's Windows machine (x86_64, 12 threads, 64 GB) while other agents were building, so single numbers move by 20 to 50 percent between runs; the medium Joe voice from a local copy (nothing downloaded), the pure-Rust phonemizer (libespeak-ng is not installed on Windows).
+
+```bash
+TEXTWEAVER_PIPER_VOICES=<folder of voices> cargo xtask bench --only md-1mb --engine piper --no-startup --no-pathological
+TEXTWEAVER_PIPER_VOICE=<folder>/en_US-joe-medium.onnx cargo test --release -p textweaver-piper --features espeak-rs --test it -- real_voice:: --ignored --nocapture --test-threads 1
+```
+
+**Where the time went.** On a warm model, one piece costs a phonemizer call plus a model run. The pure-Rust eSpeak port reads and parses its dictionary on every call: 86 to 90 ms however short the text. The model run grows with the text: 46 ms for 2 words, 89 ms for 6, 132 ms for 12, 231 ms for 24, 302 ms for 32 (`first_audio_by_length`). Before, the worker also synthesized as fast as it could: after the first piece it went straight on to the rest of the utterance and the two utterances of lookahead, so a Stop almost always found it inside a model run that cannot be cut short, and the next reading waited for it. The bench's restarts show exactly that: the first utterance was a 4-word sentence tail, and each Stop waited for the next 23-word sentence (about 400 ms) to finish. Nothing was reloaded at a Stop, and no resampling happens before the first sample (pitch is the only resampling, per piece).
+
+**What changed** (`crates/textweaver-piper`):
+
+- Pacing (`pace.rs`): the worker waits before each piece while the audio queued exceeds three times the piece's expected synthesis time (from the median real-time factor of the last six pieces), and never less than 1.2 s. While it waits, a Stop finds it free.
+- Phrases first (`text::phrase_break`, `Synthesizer::speak_with`): until the queued audio covers a whole sentence's margin, each piece is the first phrase of the next clause, 4 to 10 words ending before a word such as "and", "in", or "which", spoken with a comma's intonation; then whole sentences.
+- Phonemes cached and worked out ahead (`PhonemeCache`, `CachedPhonemizer`, the `prefetch` thread): a phrase and the rest of its clause come from the whole clause's phonemes when they line up word for word; the next pieces and the first clause of each lookahead utterance are phonemized in turns on their own thread; a wait for that thread ends at a Stop, and a Stop between a piece's phonemes and its model run skips the run.
+
+**Stop to first audio, before and after, median (fastest to slowest):**
+
+- `cargo xtask bench`, the 1 MB Markdown corpus, 20 restarts from the middle: before 441 ms (up to 501 ms; W8b-i measured 830 to 980 ms under a heavier load); after 189 ms (up to 294 ms).
+- The backend alone (`stop_to_first_audio`), text never spoken before: 282 ms (260 to 309 ms), which is the phonemizer call and the first phrase's model run. Restarting at the next sentence, which was handed over as lookahead: 121 ms (56 to 237 ms).
+
+**Still over 150 ms, and why.** New text costs one phonemizer call (about 90 ms here) before the first model run; with libespeak-ng installed (Linux) that call takes a few milliseconds. A Stop that lands during a model run still waits for it (at most one phrase, about 100 to 200 ms, at a reading's start). RTen's `Model` is `Sync`, so a later wave could run the next reading's first phrase beside a stale run instead of after it.
+
+**No gaps.** `a_paced_reading_has_no_gaps` plays six sentences in real time to a silent output: 21.7 s of audio was heard in 21.9 s, so the pacing never let the audio run dry.
+
+>>>>>>> wave8/pf-piper-first-audio
 ### Benchmark history: Friday, October 2, 2026, the first instrumented numbers
 
 The "before" numbers for the alpha.8 performance work, taken with the new measurements on the same Windows machine (x86_64, 12 threads, 64 GB) while three or four other agents were building, so times moved by 30 percent or more between runs; allocation and node counts do not. `cargo xtask bench --quick` (twice), `cargo xtask bench --only md-1mb --engine sapi` with `TEXTWEAVER_PIPER_VOICES` set, and `cargo xtask frames`. The same quick run in the development container wrote the Linux baseline entry.
@@ -316,6 +345,7 @@ Taken on the same Windows machine, release build, while other agents were buildi
 Every move had the sentence band. The one-line corpus is over ADR-0027's 30 ms ceiling by two to seventeen times; the Markdown corpus is well under it. The first probe run on the one-line corpus also found a panic: a layout line start inside a two-byte character (fixed in `caret::char_of`).
 
 **Startup** (`tw`, unchanged code): `tw --version` 34 ms, `tw text` 75 ms, `tw info` on 1 MB 131 ms, `tw backends` 44 ms, at the median.
+<<<<<<< HEAD
 
 ### Benchmark history: October 2, 2026, the narration plan and loading
 
@@ -350,6 +380,8 @@ What is left is about two allocations per utterance (its text and its map, which
 - SSML and DECtalk markup compiled five regular expressions per sentence: 324 to 534 microseconds a sentence before, 4 to 7 after, on the speech thread of SSML engines.
 - The SCOWL list was already unpacked on first use (Wave 6). The interface catalogs were not: the first built-in translation asked for parsed all five. Starting in Spanish: 41 to 6 ms for the catalog; English is unchanged at 6 ms.
 - `cargo xtask startup` after the pass, in English (no change expected there): `tw --version` 37.9 ms, `tw text` 58.3 ms, `tw info` 91.9 ms on the 1 MB corpus, `tw backends` 38.4 ms (medians of five).
+=======
+>>>>>>> wave8/pf-piper-first-audio
 
 Bulk conversion has its own benchmark:
 

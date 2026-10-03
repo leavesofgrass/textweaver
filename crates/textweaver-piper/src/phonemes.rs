@@ -299,6 +299,220 @@ impl IdBuilder<'_> {
     }
 }
 
+/// How many clauses [`PhonemeCache`] remembers.
+pub const CACHE_CLAUSES: usize = 512;
+
+/// Phonemes already worked out, by eSpeak voice and clause text, newest
+/// last.
+///
+/// The pure-Rust phonemizer reads and parses its dictionary on every
+/// call, about 90 ms however short the clause (Wave 8b, on the owner's
+/// machine): as long as the model run itself for a short phrase. The
+/// cache takes that off the path to the first audio whenever the text was
+/// seen before or worked out ahead: a restart at the same place, a rate
+/// or pitch change, the next sentence (handed over as lookahead), and
+/// repeated announcements ("Next heading").
+#[derive(Debug, Default)]
+pub struct PhonemeCache {
+    entries: std::collections::VecDeque<(String, String, String)>,
+    /// Clauses a thread is phonemizing now (voice, clause).
+    working: Vec<(String, String)>,
+}
+
+/// True when `part` is `whole`, or its start or its end at a word break.
+fn part_of(part: &str, whole: &str) -> bool {
+    part == whole
+        || whole
+            .strip_prefix(part)
+            .is_some_and(|rest| rest.starts_with(char::is_whitespace))
+        || whole
+            .strip_suffix(part)
+            .is_some_and(|before| before.ends_with(char::is_whitespace))
+}
+
+impl PhonemeCache {
+    /// Claims `clause` for phonemizing: false when it is known already or
+    /// another thread is phonemizing it (then [`get`](Self::get) will
+    /// have it soon).
+    pub fn start(&mut self, voice: &str, clause: &str) -> bool {
+        if self.get(voice, clause).is_some()
+            || self.working.iter().any(|(v, c)| v == voice && c == clause)
+        {
+            return false;
+        }
+        self.working.push((voice.to_owned(), clause.to_owned()));
+        true
+    }
+
+    /// Ends a claim from [`start`](Self::start), remembering the phonemes
+    /// when there are some.
+    pub fn finish(&mut self, voice: &str, clause: &str, phonemes: Option<&str>) {
+        self.working.retain(|(v, c)| !(v == voice && c == clause));
+        if let Some(p) = phonemes {
+            self.insert(voice, clause, p);
+        }
+    }
+
+    /// True while another thread is phonemizing `clause`, or a clause it
+    /// is the start or the end of.
+    pub fn coming(&self, voice: &str, clause: &str) -> bool {
+        self.working
+            .iter()
+            .any(|(v, c)| v == voice && part_of(clause, c))
+    }
+
+    /// The phonemes of `clause` in eSpeak voice `voice`, if known. A
+    /// clause that is the start or the end of a known one (the first
+    /// phrase of a long clause, spoken on its own when a reading starts,
+    /// and the rest after it) takes that clause's first or last phoneme
+    /// words, when they line up with its words one to one.
+    pub fn get(&mut self, voice: &str, clause: &str) -> Option<String> {
+        if let Some(i) = self
+            .entries
+            .iter()
+            .rposition(|(v, c, _)| v == voice && c == clause)
+        {
+            // Most recently used goes last.
+            let e = self.entries.remove(i)?;
+            let p = e.2.clone();
+            self.entries.push_back(e);
+            return Some(p);
+        }
+        let n = words(clause).len();
+        if n == 0 {
+            return None;
+        }
+        self.entries.iter().rev().find_map(|(v, c, p)| {
+            // The start of a known clause, or (the rest after its first
+            // phrase) its end, at a word break.
+            if v != voice || !part_of(clause, c) {
+                return None;
+            }
+            let head = c.starts_with(clause);
+            let groups: Vec<&str> = p.split_whitespace().collect();
+            if groups.len() != words(c).len() || n > groups.len() {
+                return None;
+            }
+            let part = if head {
+                &groups[..n]
+            } else {
+                &groups[groups.len() - n..]
+            };
+            Some(part.join(" "))
+        })
+    }
+
+    /// Remembers the phonemes of `clause` in eSpeak voice `voice`.
+    pub fn insert(&mut self, voice: &str, clause: &str, phonemes: &str) {
+        if let Some(i) = self
+            .entries
+            .iter()
+            .position(|(v, c, _)| v == voice && c == clause)
+        {
+            self.entries.remove(i);
+        }
+        if self.entries.len() >= CACHE_CLAUSES {
+            self.entries.pop_front();
+        }
+        self.entries
+            .push_back((voice.to_owned(), clause.to_owned(), phonemes.to_owned()));
+    }
+
+    /// How many clauses are remembered.
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// True when nothing is remembered.
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+}
+
+/// A shared [`PhonemeCache`].
+pub type SharedCache = std::sync::Arc<std::sync::Mutex<PhonemeCache>>;
+
+/// Locks `cache`; a panic while it was held cannot leave it invalid.
+pub fn lock_cache(cache: &SharedCache) -> std::sync::MutexGuard<'_, PhonemeCache> {
+    cache
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// A phonemizer that looks in a shared [`PhonemeCache`] first, and
+/// remembers what it works out.
+pub struct CachedPhonemizer {
+    inner: Box<dyn Phonemizer>,
+    cache: SharedCache,
+    /// True when the clause is no longer wanted (a Stop): ends a wait for
+    /// another thread's phonemes.
+    stopped: Option<Box<dyn Fn() -> bool + Send>>,
+}
+
+impl std::fmt::Debug for CachedPhonemizer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CachedPhonemizer")
+            .field("inner", &self.inner.name())
+            .finish_non_exhaustive()
+    }
+}
+
+impl CachedPhonemizer {
+    /// `inner`, looking in `cache` first.
+    pub fn new(inner: Box<dyn Phonemizer>, cache: SharedCache) -> Self {
+        CachedPhonemizer {
+            inner,
+            cache,
+            stopped: None,
+        }
+    }
+
+    /// Waits for a clause another thread is phonemizing only while
+    /// `stopped` is false; once it is true, [`Phonemizer::phonemize`]
+    /// returns [`PiperError::Stopped`] at once.
+    pub fn with_stop(mut self, stopped: impl Fn() -> bool + Send + 'static) -> Self {
+        self.stopped = Some(Box::new(stopped));
+        self
+    }
+}
+
+impl Phonemizer for CachedPhonemizer {
+    fn name(&self) -> &'static str {
+        self.inner.name()
+    }
+
+    /// The cached phonemes, or those another thread is working out (a
+    /// wait a Stop ends), or this phonemizer's own.
+    fn phonemize(&mut self, voice: &str, clause: &str) -> Result<String, PiperError> {
+        /// How often a wait looks again.
+        const STEP: std::time::Duration = std::time::Duration::from_millis(2);
+        /// The longest wait for another thread, after which this one
+        /// works it out too.
+        const MOST: std::time::Duration = std::time::Duration::from_secs(2);
+        let deadline = std::time::Instant::now() + MOST;
+        loop {
+            {
+                let mut c = lock_cache(&self.cache);
+                if let Some(p) = c.get(voice, clause) {
+                    return Ok(p);
+                }
+                if (!c.coming(voice, clause) && c.start(voice, clause))
+                    || std::time::Instant::now() > deadline
+                {
+                    break;
+                }
+            }
+            if self.stopped.as_ref().is_some_and(|s| s()) {
+                return Err(PiperError::Stopped);
+            }
+            std::thread::sleep(STEP);
+        }
+        let p = self.inner.phonemize(voice, clause);
+        lock_cache(&self.cache).finish(voice, clause, p.as_ref().ok().map(String::as_str));
+        p
+    }
+}
+
 /// Matches phoneme words to text words: for each phoneme word, the index
 /// of its text word. One to one when the counts agree; otherwise each
 /// phoneme word goes to the text word covering the same fraction of the
@@ -417,6 +631,52 @@ mod tests {
                 .map(|(_, p)| (*p).to_owned())
                 .ok_or_else(|| PiperError::Phonemes(format!("no entry for {clause:?}")))
         }
+    }
+
+    #[test]
+    fn the_cache_remembers_and_derives_a_first_phrase() {
+        let cache = SharedCache::default();
+        let mut p = CachedPhonemizer::new(
+            Box::new(Table(vec![
+                ("The bell rang at noon", "ðə bˈɛl ɹˈæŋ æt nˈuːn"),
+                ("in the old tower", "ɪn ðɪ ˈoʊld tˈaʊɚ"),
+            ])),
+            cache.clone(),
+        );
+        assert_eq!(p.name(), "table");
+        let full = p.phonemize("en-us", "The bell rang at noon").unwrap();
+        assert_eq!(full, "ðə bˈɛl ɹˈæŋ æt nˈuːn");
+        // The table has no entry for the first phrase: it comes from the
+        // whole clause, word for word.
+        assert_eq!(
+            p.phonemize("en-us", "The bell rang").unwrap(),
+            "ðə bˈɛl ɹˈæŋ"
+        );
+        // The rest of the clause after it, too.
+        assert_eq!(p.phonemize("en-us", "at noon").unwrap(), "æt nˈuːn");
+        // Only at a word break, and only in the same voice.
+        assert!(p.phonemize("en-us", "The bell ran").is_err());
+        assert!(p.phonemize("en-us", "t noon").is_err());
+        assert!(p.phonemize("en-gb", "The bell rang").is_err());
+        // Joined phoneme words (a count that differs) are never sliced.
+        lock_cache(&cache).insert("en-us", "in the old tower", "ɪnðɪ ˈoʊld tˈaʊɚ");
+        assert_eq!(lock_cache(&cache).get("en-us", "in the"), None);
+        assert_eq!(lock_cache(&cache).len(), 2);
+    }
+
+    #[test]
+    fn the_cache_forgets_the_least_recently_used() {
+        let mut c = PhonemeCache::default();
+        assert!(c.is_empty());
+        for i in 0..CACHE_CLAUSES {
+            c.insert("en-us", &format!("clause {i}"), "x");
+        }
+        // Using the oldest keeps it; the next oldest goes instead.
+        assert!(c.get("en-us", "clause 0").is_some());
+        c.insert("en-us", "one more", "y");
+        assert_eq!(c.len(), CACHE_CLAUSES);
+        assert!(c.get("en-us", "clause 0").is_some());
+        assert!(c.get("en-us", "clause 1").is_none());
     }
 
     #[test]

@@ -10,7 +10,7 @@ use crate::PiperError;
 use crate::config::VoiceConfig;
 use crate::model::PiperModel;
 use crate::phonemes::{Phonemizer, prepare, word_starts};
-use crate::text::{chunks, clauses};
+use crate::text::{Clause, chunks, clauses, phrase_break};
 
 /// The rate, in words per minute, of a Piper voice at length scale 1
 /// (`en_US-joe-medium` read plain prose at 211 to 213 wpm on Saturday,
@@ -62,6 +62,35 @@ pub enum Timing {
     Model,
     /// Spread over the audio by phoneme count (the graph gave none).
     Estimated,
+}
+
+/// The next piece of text on offer ([`Synthesizer::speak_with`]), in
+/// bytes of text.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Upcoming {
+    /// A short first phrase of the next clause, when the clause is long
+    /// and has a natural break (`text::phrase_break`).
+    pub phrase: Option<usize>,
+    /// The next clause.
+    pub clause: usize,
+    /// The rest of the sentence, from the next clause on (the same as
+    /// `clause` when it is the sentence's last).
+    pub sentence: usize,
+}
+
+/// What to synthesize next ([`Synthesizer::speak_with`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Next {
+    /// The first phrase of the next clause ([`Upcoming::phrase`]), ending
+    /// with a comma's intonation: the least work before its audio, for
+    /// the start of a reading. The next clause when it has no phrase.
+    Phrase,
+    /// The next clause on its own.
+    Clause,
+    /// The rest of the sentence in one piece: the best intonation.
+    Sentence,
+    /// Nothing more.
+    Stop,
 }
 
 /// One synthesized chunk.
@@ -163,10 +192,75 @@ impl Synthesizer {
     ) -> Result<(), PiperError> {
         let cs = clauses(text);
         for r in chunks(text, &cs) {
-            let chunk = self.synthesize_clauses(text, &cs[r], params)?;
+            let Some(chunk) = self.synthesize_clauses(text, &cs[r], params, &|| true)? else {
+                break;
+            };
             if !each(chunk) {
                 break;
             }
+        }
+        Ok(())
+    }
+
+    /// Synthesizes `text` a piece at a time, as the caller chooses: before
+    /// each piece, `next` is told the length of the next clause and of the
+    /// rest of its sentence, and answers with a clause, the rest of the
+    /// sentence, or stop. It may wait first (the backend's pacing, so the
+    /// worker is free when a Stop comes). A clause on its own keeps its
+    /// punctuation, so the voice keeps the comma's intonation; a sentence
+    /// whole sounds best. `wanted` is asked again between a piece's
+    /// phonemes and its model run, so a Stop that came meanwhile skips the
+    /// run. `each` gets each piece as it is ready (return false to stop).
+    /// Word ranges are byte offsets into `text`.
+    pub fn speak_with(
+        &mut self,
+        text: &str,
+        params: &SynthParams,
+        mut next: impl FnMut(Upcoming) -> Next,
+        wanted: impl Fn() -> bool,
+        mut each: impl FnMut(Chunk) -> bool,
+    ) -> Result<(), PiperError> {
+        let mut cs = clauses(text);
+        let mut i = 0;
+        while let Some(first) = cs.get(i) {
+            let end = cs[i..]
+                .iter()
+                .position(Clause::ends_sentence)
+                .map_or(cs.len(), |k| i + k + 1);
+            let last = &cs[end - 1];
+            let split = phrase_break(text, first);
+            let upcoming = Upcoming {
+                phrase: split.map(|at| at - first.range.start),
+                clause: first.range.len(),
+                sentence: last.range.end.saturating_sub(first.range.start),
+            };
+            let to = match next(upcoming) {
+                Next::Stop => break,
+                Next::Phrase => {
+                    if let Some(at) = split {
+                        // The phrase becomes a clause of its own, ending
+                        // with a comma's intonation; the rest follows.
+                        let rest = Clause {
+                            range: at..cs[i].range.end,
+                            end: cs[i].end,
+                        };
+                        let head = text[cs[i].range.start..at].trim_end().len();
+                        cs[i].range.end = cs[i].range.start + head;
+                        cs[i].end = Some(',');
+                        cs.insert(i + 1, rest);
+                    }
+                    i + 1
+                }
+                Next::Clause => i + 1,
+                Next::Sentence => end,
+            };
+            let Some(chunk) = self.synthesize_clauses(text, &cs[i..to], params, &wanted)? else {
+                break;
+            };
+            if !each(chunk) {
+                break;
+            }
+            i = to;
         }
         Ok(())
     }
@@ -198,20 +292,34 @@ impl Synthesizer {
     fn synthesize_clauses(
         &mut self,
         text: &str,
-        cs: &[crate::text::Clause],
+        cs: &[Clause],
         params: &SynthParams,
-    ) -> Result<Chunk, PiperError> {
+        wanted: &dyn Fn() -> bool,
+    ) -> Result<Option<Chunk>, PiperError> {
         let started = Instant::now();
         let prepared = prepare(&self.config, self.phonemizer.as_mut(), text, cs)?;
+        let phonemized = started.elapsed();
+        if !wanted() {
+            return Ok(None);
+        }
         let length_scale = params.length_scale(&self.config);
         let out = self
             .model
             .infer(&self.config, &prepared.ids, length_scale, params.speaker)?;
+        let inferred = started.elapsed();
         let pitch = params.pitch_factor();
         let mut samples = to_pcm(&out.audio);
         if (pitch - 1.0).abs() > 1e-3 {
             samples = resample(&samples, pitch);
         }
+        log::debug!(
+            "piper: chunk of {} ids, {} ms of audio: phonemes {} ms, model {} ms, after {} ms",
+            prepared.ids.len(),
+            samples.len() as u64 * 1000 / u64::from(self.sample_rate().max(1)),
+            phonemized.as_millis(),
+            (inferred - phonemized).as_millis(),
+            (started.elapsed() - inferred).as_millis()
+        );
         let n = samples.len() as f64;
         let (frames, timing) = match out.durations {
             Some(d) if d.len() == prepared.ids.len() => (d, Timing::Model),
@@ -223,13 +331,13 @@ impl Synthesizer {
             .into_iter()
             .filter_map(|(w, s)| Some((prepared.words.get(w as usize)?.clone(), s)))
             .collect();
-        Ok(Chunk {
+        Ok(Some(Chunk {
             samples,
             words,
             timing,
             exact: prepared.exact,
             elapsed: started.elapsed(),
-        })
+        }))
     }
 }
 

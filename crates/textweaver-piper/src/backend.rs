@@ -3,13 +3,31 @@
 //! A worker thread owns the loaded voice (loading a model takes a moment,
 //! and running it blocks), so the speech thread never waits
 //! (ADR-0003). `speak` sends the text to the worker and returns; the
-//! worker synthesizes it a chunk at a time (a sentence, and the first
-//! clause of a long first sentence on its own) and sends back each
-//! chunk's audio and word positions. `poll` hands them to the shared
-//! playback client from `textweaver-enginehost` (the one the ECI, SAPI,
-//! and DECtalk hosts use), which plays the audio and fires each word
-//! event as its first sample is heard (`PLAYBACK_EVENTS`). Pause is
-//! native: the playback clock stops with the audio.
+//! worker synthesizes it a piece at a time and sends back each piece's
+//! audio and word positions. `poll` hands them to the shared playback
+//! client from `textweaver-enginehost` (the one the ECI, SAPI, and DECtalk
+//! hosts use), which plays the audio and fires each word event as its
+//! first sample is heard (`PLAYBACK_EVENTS`). Pause is native: the
+//! playback clock stops with the audio.
+//!
+//! **First audio after a Stop** (Wave 8b). A model run cannot be cut
+//! short, so the worker keeps itself free and its runs short:
+//!
+//! - It synthesizes only as far ahead as it needs (`pace.rs`), so a Stop
+//!   usually finds it waiting, not in a run.
+//! - While little audio is queued (a reading's start), each piece is one
+//!   phrase (the first words of a clause up to a natural break, ending
+//!   with a comma's intonation, `text::phrase_break`); once the lead
+//!   covers it, a whole sentence, for the best intonation.
+//! - Phonemes are cached by clause
+//!   ([`PhonemeCache`](crate::phonemes::PhonemeCache)) and worked out ahead
+//!   on a thread of their own (`prefetch`), because the pure-Rust
+//!   phonemizer costs about 90 ms a call however short the clause. A wait
+//!   for that thread ends at a Stop, and a Stop between a piece's
+//!   phonemes and its model run skips the run.
+//!
+//! The model and its session stay loaded across Stops; a Stop only moves
+//! the epoch on, and the stale work is dropped.
 //!
 //! **Word timing** comes from the model's phoneme durations (`w_ceil`).
 //! A voice whose graph lacks them reports no word events, and the speech
@@ -24,6 +42,8 @@
 //! follows the other engine crates, so the app registers it in one call
 //! and it moves with the registry.
 
+use std::cell::{Cell, RefCell};
+use std::collections::VecDeque;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -33,16 +53,20 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use textweaver_core::Utterance;
-use textweaver_enginehost::{AudioOutput, EndStatus, Playback, wav};
+use textweaver_enginehost::{AudioOutput, EndStatus, Feed, Playback, wav};
 use textweaver_speech::{
     BackendId, BackendInfo, Caps, EventSink, FileSynthesis, SpeechBackend, SpeechError, Voice,
     VoiceParams,
 };
 
 use crate::config::VoiceConfig;
-use crate::phonemes::{PhonemizerChoice, phonemizer};
+use crate::pace::Pace;
+use crate::phonemes::{
+    CachedPhonemizer, Phonemizer, PhonemizerChoice, SharedCache, lock_cache, phonemizer,
+};
 use crate::store::{InstalledVoice, VoiceStore};
-use crate::synth::{SynthParams, Synthesizer, Timing};
+use crate::synth::{Next, SynthParams, Synthesizer, Timing, Upcoming};
+use crate::text::{Clause, clauses, phrase_break};
 
 /// The backend's id.
 pub const BACKEND_ID: BackendId = "piper";
@@ -178,6 +202,9 @@ enum Request {
         text: String,
         params: SynthParams,
         epoch: u64,
+        /// Played as it is made: synthesized only as far ahead as needed
+        /// (`pace.rs`). False for audio written to a file, made at once.
+        paced: bool,
     },
 }
 
@@ -212,10 +239,17 @@ pub struct PiperBackend {
     requests: Option<Sender<Request>>,
     replies: Receiver<Reply>,
     worker: Option<JoinHandle<()>>,
+    /// Clauses to phonemize ahead, on their own thread (`prefetch`).
+    prefetch: Option<Sender<Prefetch>>,
+    prefetcher: Option<JoinHandle<()>>,
     epoch: Arc<AtomicU64>,
     params: VoiceParams,
     voice: Option<(String, VoiceConfig)>,
     word_timing: bool,
+    /// The voice has loaded: its phonemes may be worked out ahead (before,
+    /// the prefetch thread's phonemizer could write the pure-Rust port's
+    /// data while the worker's does).
+    loaded: bool,
     failure: Option<String>,
 }
 
@@ -244,24 +278,46 @@ impl PiperBackend {
         let (req_tx, req_rx) = mpsc::channel();
         let (rep_tx, rep_rx) = mpsc::channel();
         let epoch = Arc::new(AtomicU64::new(0));
-        let worker = {
+        let playback = Playback::new(BACKEND_ID, config.output, 22_050);
+        let cache = SharedCache::default();
+        let (pre_tx, pre_rx) = mpsc::channel();
+        let prefetcher = {
             let epoch = Arc::clone(&epoch);
+            let cache = Arc::clone(&cache);
+            let config = config.clone();
+            std::thread::Builder::new()
+                .name("textweaver-piper-phonemes".into())
+                .spawn(move || prefetch(&config, &pre_rx, &epoch, &cache))
+                .map_err(|e| SpeechError::Io(e.to_string()))?
+        };
+        let worker = {
+            let link = WorkerLink {
+                requests: req_rx,
+                replies: rep_tx,
+                epoch: Arc::clone(&epoch),
+                feed: Arc::clone(playback.feed()),
+                cache,
+                active: Arc::new(AtomicU64::new(0)),
+            };
             let config = config.clone();
             std::thread::Builder::new()
                 .name("textweaver-piper".into())
-                .spawn(move || work(&config, &req_rx, &rep_tx, &epoch))
+                .spawn(move || work(&config, &link))
                 .map_err(|e| SpeechError::Io(e.to_string()))?
         };
         let mut b = PiperBackend {
-            playback: Playback::new(BACKEND_ID, config.output, 22_050),
+            playback,
             config,
             requests: Some(req_tx),
             replies: rep_rx,
             worker: Some(worker),
+            prefetch: Some(pre_tx),
+            prefetcher: Some(prefetcher),
             epoch,
             params: VoiceParams::default(),
             voice: None,
             word_timing: true,
+            loaded: false,
             failure: None,
         };
         b.load(&first)?;
@@ -289,6 +345,7 @@ impl PiperBackend {
         self.voice = Some((v.key.clone(), config));
         self.failure = None;
         self.word_timing = true;
+        self.loaded = false;
         self.send(Request::Load {
             key: v.key.clone(),
             onnx: v.onnx.clone(),
@@ -309,7 +366,10 @@ impl PiperBackend {
             Reply::Loaded { key, result } => {
                 if self.voice.as_ref().is_some_and(|(k, _)| *k == key) {
                     match result {
-                        Ok(timing) => self.word_timing = timing,
+                        Ok(timing) => {
+                            self.word_timing = timing;
+                            self.loaded = true;
+                        }
                         Err(e) => {
                             log::warn!("piper: {key}: {e}");
                             self.failure = Some(e);
@@ -395,6 +455,19 @@ impl SpeechBackend for PiperBackend {
     ) -> Result<(), SpeechError> {
         let token = self.playback.next_token();
         self.playback.enqueue(utterance.id, token, 0, ());
+        // Its phonemes, worked out on the side while the worker is busy
+        // with what comes before (the lookahead), so they are ready when
+        // its turn comes or a restart reads it.
+        if let (Some(tx), Some((_, voice))) = (&self.prefetch, &self.voice)
+            && self.loaded
+            && voice.uses_espeak()
+        {
+            let _ = tx.send(Prefetch {
+                epoch: self.epoch.load(Ordering::SeqCst),
+                voice: voice.espeak.voice.clone(),
+                text: utterance.text.clone(),
+            });
+        }
         if let Err(e) = self.playback.ensure_player() {
             self.playback.on_error(token, e.to_string());
             self.playback.on_end(token, EndStatus::Failed);
@@ -403,6 +476,7 @@ impl SpeechBackend for PiperBackend {
             text: utterance.text.clone(),
             params: self.synth_params(),
             epoch: self.epoch.load(Ordering::SeqCst),
+            paced: true,
         }) {
             self.playback.on_error(token, e.to_string());
             self.playback.on_end(token, EndStatus::Failed);
@@ -455,6 +529,7 @@ impl SpeechBackend for PiperBackend {
             text: utterance.text.clone(),
             params: self.synth_params(),
             epoch: self.epoch.load(Ordering::SeqCst),
+            paced: false,
         })?;
         let deadline = Instant::now() + FILE_TIMEOUT;
         while self.playback.capture_done(token) == Some(false) {
@@ -493,10 +568,14 @@ impl Drop for PiperBackend {
     fn drop(&mut self) {
         self.epoch.fetch_add(1, Ordering::SeqCst);
         self.playback.close();
-        // Closing the channel ends the worker after its current chunk.
+        // Closing the channels ends the threads after their current work.
         self.requests = None;
+        self.prefetch = None;
         if let Some(w) = self.worker.take() {
             let _ = w.join();
+        }
+        if let Some(p) = self.prefetcher.take() {
+            let _ = p.join();
         }
     }
 }
@@ -508,24 +587,232 @@ enum Engine {
     Failed(String),
 }
 
-/// The worker loop: loads voices and synthesizes utterances in order.
-fn work(
+/// What the worker thread shares with the backend.
+struct WorkerLink {
+    requests: Receiver<Request>,
+    replies: Sender<Reply>,
+    epoch: Arc<AtomicU64>,
+    /// The playback client's queue, to see how much audio it still holds
+    /// (it stays queued while paused).
+    feed: Arc<Feed>,
+    /// Phonemes worked out before, here or by `prefetch`.
+    cache: SharedCache,
+    /// The epoch of the utterance the worker is speaking.
+    active: Arc<AtomicU64>,
+}
+
+/// An utterance whose clauses `prefetch` phonemizes ahead.
+struct Prefetch {
+    /// The epoch it was spoken in: a Stop makes it stale.
+    epoch: u64,
+    /// The eSpeak voice (`en-us`).
+    voice: String,
+    text: String,
+}
+
+/// Phonemizes the clauses of each utterance as it is handed over, into
+/// the shared cache, with a phonemizer of its own, so the worker finds
+/// them ready. Only the pure-Rust phonemizer is used here: it is the slow
+/// one (about 90 ms a clause however short), and libespeak-ng (a few
+/// milliseconds) is one library state that is not safe to share between
+/// threads.
+///
+/// **Order.** The first piece of a new reading is the worker's own, worked
+/// out there at once; this thread starts after it (with the rest of the
+/// clause, when the worker speaks only its first phrase). Then it takes
+/// the utterances in turns, one clause each: the playing utterance's next
+/// clause, then the first clause of each utterance of lookahead, then the
+/// second clauses, and so on. So the next piece is ready before it is
+/// needed, and so is the next sentence, where a "next sentence" restarts.
+/// Utterances a Stop made stale are dropped; the clause in hand finishes
+/// on its own (the worker never waits for it after a Stop).
+fn prefetch(
     config: &PiperConfig,
-    requests: &Receiver<Request>,
-    replies: &Sender<Reply>,
+    jobs: &Receiver<Prefetch>,
     epoch: &AtomicU64,
+    cache: &SharedCache,
 ) {
+    // Made at the first job, so a backend that never speaks costs nothing.
+    let mut phonemizer: Option<Box<dyn Phonemizer>> = None;
+    let mut last_epoch = None;
+    // Each utterance's parts still to do.
+    let mut todo: Vec<(Prefetch, VecDeque<Range<usize>>)> = Vec::new();
+    let mut turn = 0usize;
+    loop {
+        // Everything handed over so far; a wait only when there is
+        // nothing to do.
+        let mut fresh = Vec::new();
+        if todo.is_empty() {
+            match jobs.recv() {
+                Ok(job) => fresh.push(job),
+                Err(_) => return,
+            }
+        }
+        fresh.extend(jobs.try_iter());
+        for job in fresh {
+            let mut parts: VecDeque<Range<usize>> =
+                clauses(&job.text).into_iter().map(|c| c.range).collect();
+            if last_epoch != Some(job.epoch) {
+                last_epoch = Some(job.epoch);
+                todo.clear();
+                turn = 0;
+                if let Some(range) = parts.pop_front() {
+                    let first = Clause { range, end: None };
+                    if let Some(at) = phrase_break(&job.text, &first) {
+                        parts.push_front(at..first.range.end);
+                    }
+                }
+            }
+            todo.push((job, parts));
+        }
+        let now = epoch.load(Ordering::SeqCst);
+        todo.retain(|(job, parts)| job.epoch == now && !parts.is_empty());
+        if todo.is_empty() {
+            continue;
+        }
+        if phonemizer.is_none() {
+            match crate::phonemes::phonemizer(config.phonemizer, &config.espeak_data) {
+                Ok(p) if p.name() != "libespeak-ng" => phonemizer = Some(p),
+                // Nothing for this thread to do: wait for the backend to
+                // close.
+                _ => {
+                    while jobs.recv().is_ok() {}
+                    return;
+                }
+            }
+        }
+        let Some(p) = phonemizer.as_mut() else {
+            return;
+        };
+        // In turns, one part from each utterance.
+        turn %= todo.len();
+        let (job, parts) = &mut todo[turn];
+        turn += 1;
+        let Some(text) = parts.pop_front().and_then(|r| job.text.get(r)) else {
+            continue;
+        };
+        // Known already, or the worker is on it.
+        if !lock_cache(cache).start(&job.voice, text) {
+            continue;
+        }
+        let ph = p.phonemize(&job.voice, text);
+        if let Err(e) = &ph {
+            log::debug!("piper: phonemes ahead: {e}");
+        }
+        lock_cache(cache).finish(&job.voice, text, ph.as_ref().ok().map(String::as_str));
+    }
+}
+
+/// The worker's side of the link: requests that came in while it waited
+/// are kept, in order, for after the current one.
+struct Worker<'a> {
+    link: &'a WorkerLink,
+    pending: VecDeque<Request>,
+    closed: bool,
+    pace: Pace,
+    /// The epoch the pacing state belongs to.
+    paced_epoch: u64,
+    /// Playback speed of the output (1 is real time; the silent output in
+    /// tests may run faster).
+    speed: f32,
+    /// The loaded voice's sample rate.
+    rate: u32,
+}
+
+impl Worker<'_> {
+    fn next(&mut self) -> Option<Request> {
+        if let Some(r) = self.pending.pop_front() {
+            return Some(r);
+        }
+        if self.closed {
+            return None;
+        }
+        self.link.requests.recv().ok()
+    }
+
+    fn current(&self, at: u64) -> bool {
+        self.link.epoch.load(Ordering::SeqCst) == at
+    }
+
+    /// The pacing state for a reading of epoch `at`, reset when a Stop
+    /// started a new one.
+    fn pace_for(&mut self, at: u64) {
+        if self.paced_epoch != at {
+            self.paced_epoch = at;
+            self.pace.reset();
+        }
+    }
+
+    /// Audio the output still holds, in real time.
+    fn queued(&self) -> Duration {
+        let held = self
+            .link
+            .feed
+            .pushed()
+            .saturating_sub(self.link.feed.consumed());
+        self.audio(held)
+    }
+
+    /// `samples` of the voice's audio as time at the output's speed.
+    fn audio(&self, samples: u64) -> Duration {
+        let secs = samples as f64 / f64::from(self.rate.max(1)) / f64::from(self.speed);
+        Duration::try_from_secs_f64(secs).unwrap_or(Duration::ZERO)
+    }
+
+    /// Waits while the audio queued is enough to cover a chunk of `bytes`
+    /// bytes of text (`Pace::wait`), keeping any request that comes in.
+    /// False when a Stop came (the epoch moved on) or the backend closed.
+    fn wait_to_synthesize(&mut self, at: u64, bytes: usize) -> bool {
+        /// The longest single sleep, so a Stop is seen at once.
+        const STEP: Duration = Duration::from_millis(10);
+        loop {
+            if !self.current(at) {
+                return false;
+            }
+            let wait = self.pace.wait(Instant::now(), bytes, self.queued());
+            if wait.is_zero() || self.closed {
+                return true;
+            }
+            match self.link.requests.recv_timeout(wait.min(STEP)) {
+                Ok(r) => self.pending.push_back(r),
+                Err(RecvTimeoutError::Timeout) => {}
+                Err(RecvTimeoutError::Disconnected) => {
+                    // The backend is gone: finish nothing more.
+                    self.closed = true;
+                    return false;
+                }
+            }
+        }
+    }
+}
+
+/// The worker loop: loads voices and synthesizes utterances in order.
+fn work(config: &PiperConfig, link: &WorkerLink) {
+    let speed = match config.output {
+        AudioOutput::Device => 1.0,
+        AudioOutput::Null { speed } => speed,
+    };
+    let mut w = Worker {
+        link,
+        pending: VecDeque::new(),
+        closed: false,
+        pace: Pace::default(),
+        paced_epoch: u64::MAX,
+        // A silent output that takes nothing is never waited on.
+        speed: if speed > 0.0 { speed } else { f32::INFINITY },
+        rate: 22_050,
+    };
     let mut engine = Engine::Failed("no voice is loaded".into());
-    for request in requests {
+    while let Some(request) = w.next() {
         match request {
             Request::Load { key, onnx, json } => {
-                engine = load_engine(config, &onnx, &json);
+                engine = load_engine(config, &onnx, &json, link);
                 let result = match &engine {
                     Engine::Rten(s) => Ok(s.has_word_timing()),
                     Engine::Program { .. } => Ok(false),
                     Engine::Failed(e) => Err(e.clone()),
                 };
-                if replies.send(Reply::Loaded { key, result }).is_err() {
+                if link.replies.send(Reply::Loaded { key, result }).is_err() {
                     return;
                 }
             }
@@ -534,9 +821,10 @@ fn work(
                 text,
                 params,
                 epoch: at,
+                paced,
             } => {
-                let status = speak_one(&mut engine, token, &text, &params, at, epoch, replies);
-                if replies.send(Reply::End { token, status }).is_err() {
+                let status = speak_one(&mut w, &mut engine, token, &text, &params, at, paced);
+                if link.replies.send(Reply::End { token, status }).is_err() {
                     return;
                 }
             }
@@ -544,9 +832,15 @@ fn work(
     }
 }
 
-fn load_engine(config: &PiperConfig, onnx: &Path, json: &Path) -> Engine {
-    let rten = phonemizer(config.phonemizer, &config.espeak_data)
-        .and_then(|p| Synthesizer::load(onnx, json, p));
+fn load_engine(config: &PiperConfig, onnx: &Path, json: &Path, link: &WorkerLink) -> Engine {
+    let rten = phonemizer(config.phonemizer, &config.espeak_data).and_then(|p| {
+        // A wait for phonemes the other thread is working out ends at a
+        // Stop: the epoch moved past the utterance being spoken.
+        let (epoch, active) = (Arc::clone(&link.epoch), Arc::clone(&link.active));
+        let p = CachedPhonemizer::new(p, Arc::clone(&link.cache))
+            .with_stop(move || epoch.load(Ordering::SeqCst) != active.load(Ordering::SeqCst));
+        Synthesizer::load(onnx, json, Box::new(p))
+    });
     match rten {
         Ok(s) => {
             log::info!(
@@ -579,53 +873,107 @@ fn load_engine(config: &PiperConfig, onnx: &Path, json: &Path) -> Engine {
 }
 
 fn speak_one(
+    w: &mut Worker<'_>,
     engine: &mut Engine,
     token: u64,
     text: &str,
     params: &SynthParams,
     at: u64,
-    epoch: &AtomicU64,
-    replies: &Sender<Reply>,
+    paced: bool,
 ) -> EndStatus {
-    let current = || epoch.load(Ordering::SeqCst) == at;
-    if !current() {
+    if !w.current(at) {
         return EndStatus::Aborted;
     }
+    if paced {
+        w.pace_for(at);
+    }
+    let link = w.link;
+    link.active.store(at, Ordering::SeqCst);
     let fail = |message: String| {
-        let _ = replies.send(Reply::Error { token, message });
+        let _ = link.replies.send(Reply::Error { token, message });
         EndStatus::Failed
     };
-    let mut sent = 0u64;
-    let mut aborted = false;
-    let mut send_chunk = |samples: Vec<i16>, words: Vec<(Range<u32>, u64)>| {
-        if !current() {
-            aborted = true;
+    if let Engine::Rten(s) = engine {
+        w.rate = s.sample_rate();
+    }
+    // Shared by the callbacks below: the worker (pacing), the samples sent
+    // so far, the next chunk's length, and whether a Stop cut it short.
+    let w = RefCell::new(w);
+    let sent = Cell::new(0u64);
+    let bytes = Cell::new(0usize);
+    let aborted = Cell::new(false);
+    let send_chunk = |samples: Vec<i16>, words: Vec<(Range<u32>, u64)>, elapsed: Duration| {
+        let mut w = w.borrow_mut();
+        if !w.current(at) {
+            aborted.set(true);
             return false;
         }
         for (range, sample) in words {
-            let _ = replies.send(Reply::Word {
+            let _ = link.replies.send(Reply::Word {
                 token,
                 range,
-                sample: sent + sample,
+                sample: sent.get() + sample,
             });
         }
-        sent += samples.len() as u64;
-        replies.send(Reply::Audio { token, samples }).is_ok()
+        let n = samples.len() as u64;
+        sent.set(sent.get() + n);
+        if paced {
+            let audio = w.audio(n);
+            w.pace.sent(Instant::now(), audio, elapsed, bytes.get());
+        }
+        link.replies.send(Reply::Audio { token, samples }).is_ok()
+    };
+    // Before each piece (paced only), `Pace::whole_sentence`: while the
+    // audio queued would not cover a whole sentence's synthesis, the next
+    // phrase, so the audio comes sooner and a Stop never waits long for a
+    // model run; once it would, the rest of the sentence. Either waits
+    // first while plenty is queued (`Pace::wait`). Audio for a file is
+    // made at once, a sentence at a time.
+    let next = |up: Upcoming| {
+        if !paced {
+            bytes.set(up.sentence);
+            return Next::Sentence;
+        }
+        let mut w = w.borrow_mut();
+        let (piece, len) = if w
+            .pace
+            .whole_sentence(Instant::now(), w.queued(), up.sentence)
+        {
+            (Next::Sentence, up.sentence)
+        } else {
+            (Next::Phrase, up.phrase.unwrap_or(up.clause))
+        };
+        bytes.set(len);
+        if w.wait_to_synthesize(at, len) {
+            piece
+        } else {
+            aborted.set(true);
+            Next::Stop
+        }
+    };
+    // A Stop during a piece's phonemes skips its model run.
+    let wanted = || {
+        let go = link.epoch.load(Ordering::SeqCst) == at;
+        if !go {
+            aborted.set(true);
+        }
+        go
     };
     let result = match engine {
-        Engine::Rten(s) => s.speak(text, params, |chunk| {
+        Engine::Rten(s) => s.speak_with(text, params, next, wanted, |chunk| {
             let words = match chunk.timing {
                 Timing::Model => chunk.words,
                 // Estimated words are left to the service's pacer.
                 Timing::Estimated => Vec::new(),
             };
-            send_chunk(chunk.samples, words)
+            send_chunk(chunk.samples, words, chunk.elapsed)
         }),
         Engine::Program { program, onnx } => {
             for r in Synthesizer::plan(text) {
+                let started = Instant::now();
                 match run_program(program, onnx, &text[r]) {
                     Ok(samples) => {
-                        if !send_chunk(samples, Vec::new()) {
+                        if !send_chunk(samples, Vec::new(), started.elapsed()) {
                             break;
                         }
                     }
@@ -637,8 +985,11 @@ fn speak_one(
         Engine::Failed(e) => return fail(format!("the Piper voice could not be loaded: {e}")),
     };
     match result {
+        // A Stop ended a wait for phonemes.
+        Err(crate::PiperError::Stopped) => EndStatus::Aborted,
         Err(e) => fail(e.to_string()),
-        Ok(()) if aborted => EndStatus::Aborted,
+        // A Stop cut the utterance short.
+        Ok(()) if aborted.get() => EndStatus::Aborted,
         Ok(()) => EndStatus::Done,
     }
 }
