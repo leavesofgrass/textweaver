@@ -4,6 +4,8 @@ Each ADR records one decision: its context, the choice, and its consequences. AD
 
 Statuses: **accepted** is in force; **proposed** is still being tried; **superseded** has been replaced by the ADR it names.
 
+Unused numbers: ADR-0038, ADR-0040 and ADR-0047 were reserved in plans and never written, so the list skips them. ADR-0038 was for offline translation, which was deferred; ADR-0040 for a changed Parley accessibility bridge, which [ADR-0027](0027-xilem-gui.md) found unnecessary; ADR-0047 for the audio encoder choice, which needed no record of its own. The numbers stay unused, so an old plan's mention never points at a different decision; a new ADR takes the number after the highest.
+
 ## The records
 
 - [ADR-0001: Workspace layout and dependency policy](0001-workspace-and-dependencies.md): one crate per job, one table of approved dependencies, and no async runtime in speech.
