@@ -18,7 +18,6 @@
 //! `tw` never shows the first-run list; that is the GUI's and the terminal
 //! reader's.
 
-
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 

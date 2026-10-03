@@ -38,7 +38,11 @@ pub struct Args {
 /// Runs `tw text`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     let doc = load_document(&args.file)?;
-    super::print_all(&render(&doc, if args.json { "json" } else { &args.format }, args.structure)?)
+    super::print_all(&render(
+        &doc,
+        if args.json { "json" } else { &args.format },
+        args.structure,
+    )?)
 }
 
 /// Loads a document with the built-in loaders, for the read-only commands.

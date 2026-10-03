@@ -96,6 +96,11 @@ pub(crate) fn one_line(err: &anyhow::Error) -> String {
         let text = cause.to_string();
         // One line: newlines inside a message become spaces.
         let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+        // "(os error 2)" says nothing a listener can use.
+        let text = match text.rfind(" (os error ") {
+            Some(i) if text.ends_with(')') => text[..i].to_owned(),
+            _ => text,
+        };
         let text = text.trim_end_matches('.').trim().to_owned();
         // Some wrappers repeat their source; skip a part already said.
         if text.is_empty() || parts.last().is_some_and(|p| p.ends_with(&text)) {

@@ -39,7 +39,7 @@ To find the folder, type:
 tw settings path
 ```
 
-It prints the folder and both files, and says whether each file exists yet. The usual places are:
+It prints the settings folder and both files, saying whether each file exists yet, then the data, state and recovery folders and the log file. `--json` prints the same paths as JSON. The usual places are:
 
 - Windows: `%APPDATA%\leavesofgrass\textweaver\config`
 - macOS: `~/Library/Application Support/org.leavesofgrass.textweaver`

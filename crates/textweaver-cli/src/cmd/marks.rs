@@ -28,10 +28,21 @@ pub struct Args {
     pub home: Option<PathBuf>,
     /// Write the notes and highlights as reference records: bibtex,
     /// biblatex, ris, or json (CSL-JSON).
-    #[arg(long = "to", alias = "export", value_name = "FORMAT", conflicts_with = "json")]
+    #[arg(
+        long = "to",
+        alias = "export",
+        value_name = "FORMAT",
+        conflicts_with = "json"
+    )]
     pub export: Option<String>,
     /// With --to: write to this file instead of the terminal.
-    #[arg(long = "out", short = 'o', alias = "output", value_name = "FILE", requires = "export")]
+    #[arg(
+        long = "out",
+        short = 'o',
+        alias = "output",
+        value_name = "FILE",
+        requires = "export"
+    )]
     pub output: Option<PathBuf>,
 }
 

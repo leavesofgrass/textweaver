@@ -977,10 +977,7 @@ mod tests {
             &lab,
         )
         .unwrap();
-        assert_eq!(
-            cont,
-            "No places yet. Reading saves your place.\n"
-        );
+        assert_eq!(cont, "No places yet. Reading saves your place.\n");
     }
 
     fn edit_args(file: &Path) -> EditArgs {

@@ -10,6 +10,10 @@
 //! backend, voice, rate, pitch, and volume of `[speech]` (the flags override
 //! them), normalization, punctuation, table narration, and where footnotes
 //! go. A configured voice is used only with the configured backend.
+//!
+//! `tw speak -` (or `--file -`) reads the text from standard input, so
+//! `Get-Clipboard | tw speak -` or `pbpaste | tw speak -` reads the
+//! clipboard aloud.
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -28,9 +32,9 @@ use textweaver_app::text::{Document, plan};
 /// Arguments for `tw speak`.
 #[derive(clap::Args, Debug)]
 pub struct Args {
-    /// Text to speak (omit with --file).
+    /// Text to speak (omit with --file); - reads standard input.
     pub text: Option<String>,
-    /// Speak this file instead.
+    /// Speak this file instead; - reads standard input.
     #[arg(long)]
     pub file: Option<PathBuf>,
     /// Backend id (default: the settings' backend, else auto).
@@ -74,7 +78,21 @@ pub struct Report {
 const STATUS_TIMEOUT: Duration = Duration::from_secs(60);
 
 fn load(args: &Args, settings: &Settings) -> anyhow::Result<Document> {
+    let stdin = || -> anyhow::Result<Document> {
+        let mut text = String::new();
+        std::io::Read::read_to_string(&mut std::io::stdin().lock(), &mut text)
+            .context("could not read standard input")?;
+        if text.trim().is_empty() {
+            return Err(super::Plain(
+                "Nothing to speak: standard input was empty. Pipe text in, as in echo hello | tw speak -.".into(),
+            )
+            .into());
+        }
+        Ok(Document::from_plain_text(&text))
+    };
     match (&args.text, &args.file) {
+        (Some(t), None) if t == "-" => stdin(),
+        (None, Some(f)) if f.as_os_str() == "-" => stdin(),
         (Some(t), None) => Ok(Document::from_plain_text(t)),
         (None, Some(f)) => formats::Registry::with_builtins()
             .load(
@@ -82,8 +100,14 @@ fn load(args: &Args, settings: &Settings) -> anyhow::Result<Document> {
                 &textweaver_app::load_options(settings),
             )
             .with_context(|| format!("cannot open {}", f.display())),
-        (Some(_), Some(_)) => bail!("give either TEXT or --file, not both"),
-        (None, None) => bail!("nothing to speak: give TEXT or --file"),
+        (Some(_), Some(_)) => Err(super::Plain(
+            "Two things to speak: TEXT and --file were both given. Give one of them.".into(),
+        )
+        .into()),
+        (None, None) => Err(super::Plain(
+            "Nothing to speak: no TEXT and no --file. Give text, a file with --file, or - to read standard input.".into(),
+        )
+        .into()),
     }
 }
 

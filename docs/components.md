@@ -57,6 +57,7 @@ It is the same list as Manage optional components, shown once (the `[components]
 
 ```text
 tw components list
+tw components list --json
 tw components download whisper-base.en
 tw components download whisper-base.en --yes
 tw components verify

@@ -175,7 +175,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         CiteCommand::Remove { key, yes } => {
             let question = format!("Remove {key} from the reference library? y or n:");
             let mut input = std::io::stdin().lock();
-            if !yes && !super::confirm(&question, &mut input, super::stdin_is_terminal(), "--yes")? {
+            if !yes && !super::confirm(&question, &mut input, super::stdin_is_terminal(), "--yes")?
+            {
                 format!("Kept {key}.")
             } else {
                 commands::remove(&ctx, &key)?
