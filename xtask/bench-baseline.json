@@ -2,529 +2,529 @@
   "about": "The bench gate's baseline (xtask/src/ratchet.rs). Written only by cargo xtask bench --update-baseline, in a commit that says why.",
   "platforms": {
     "linux-x86_64": {
-      "branch": null,
-      "commit": null,
+      "branch": "main",
+      "commit": "6c29e75bdd",
       "cpus": 4,
-      "date": "2026-10-02",
+      "date": "2026-10-03",
       "gate_times": false,
       "quick": true,
-      "reason": "First Linux entry (W8b-i), from the development container on the owner's machine, not the CI runner; times are not gated until the runner writes its own",
+      "reason": "Wave 8b and 8d: W8b-p cut plan and navigation allocations 34 to 43 percent; W8d-m made normalize allocation-free on unchanged text",
       "report": {
         "README.md": {
-          "apply_allocs": 5,
-          "apply_ms": 0.020902,
-          "apply_peak_mb": 4.990413665771484,
+          "apply_allocs": 9,
+          "apply_ms": 0.022454,
+          "apply_peak_mb": 5.028069496154785,
           "autosave": {
-            "max_ms": 0.156991,
-            "mean_ms": 0.13520959999999999,
+            "max_ms": 0.088911,
+            "mean_ms": 0.0675682,
             "n": 5,
-            "p50_ms": 0.140548
+            "p50_ms": 0.066799
           },
-          "autosave_allocs": 348,
-          "autosave_peak_mb": 5.550313949584961,
+          "autosave_allocs": 379,
+          "autosave_peak_mb": 5.863528251647949,
           "autosave_written": {
-            "max_ms": 494.60396299999996,
-            "mean_ms": 265.5813836,
+            "max_ms": 3.468324,
+            "mean_ms": 2.5918859999999997,
             "n": 5,
-            "p50_ms": 277.538732
+            "p50_ms": 2.392216
           },
-          "blank_lines_ms": 0.021632,
-          "bytes": 2987,
+          "blank_lines_ms": 0.00042100000000000004,
+          "bytes": 3552,
           "doc": {
-            "chars": 2601,
-            "lines": 50,
-            "markers": 56
+            "chars": 3067,
+            "lines": 52,
+            "markers": 65
           },
           "edit_backspace_dispatch": {
-            "max_ms": 0.044607999999999995,
-            "mean_ms": 0.0289174,
+            "max_ms": 0.032953,
+            "mean_ms": 0.025030199999999996,
             "n": 10,
-            "p50_ms": 0.027555
+            "p50_ms": 0.024998
           },
-          "edit_enter_allocs": 170,
-          "edit_enter_ms": 47.31733199999999,
-          "edit_enter_peak_mb": 5.517520904541016,
-          "edit_leave_allocs": 118,
-          "edit_leave_ms": 1.3083820000000002,
-          "edit_leave_peak_mb": 5.523014068603516,
+          "edit_enter_allocs": 181,
+          "edit_enter_ms": 3.965421,
+          "edit_enter_peak_mb": 5.737878799438477,
+          "edit_leave_allocs": 123,
+          "edit_leave_ms": 1.101177,
+          "edit_leave_peak_mb": 5.82965087890625,
           "edit_line_down_dispatch": {
-            "max_ms": 0.051462,
-            "mean_ms": 0.029829,
+            "max_ms": 0.042202,
+            "mean_ms": 0.0202822,
             "n": 10,
-            "p50_ms": 0.029098000000000002
+            "p50_ms": 0.019638
           },
-          "edit_type_allocs": 419,
+          "edit_type_allocs": 365,
           "edit_type_dispatch": {
-            "max_ms": 0.041372000000000006,
-            "mean_ms": 0.022772388888888894,
+            "max_ms": 0.026471,
+            "mean_ms": 0.008618277777777777,
             "n": 18,
-            "p50_ms": 0.026211
+            "p50_ms": 0.0055899999999999995
           },
-          "edit_type_peak_mb": 5.505390167236328,
+          "edit_type_peak_mb": 5.728745460510254,
           "edit_type_to_echo": {
-            "max_ms": 0.044835,
-            "mean_ms": 0.01005061111111111,
+            "max_ms": 0.033483,
+            "mean_ms": 0.005751888888888889,
             "n": 18,
-            "p50_ms": 0.006089
+            "p50_ms": 0.003124
           },
           "find_rare_allocs": 993,
-          "find_rare_ms": 0.289975,
-          "find_rare_next_ms": 0.0033569999999999997,
-          "find_rare_peak_mb": 5.4966325759887695,
+          "find_rare_ms": 0.153597,
+          "find_rare_next_ms": 0.002826,
+          "find_rare_peak_mb": 5.706472396850586,
           "find_word_allocs": 253,
-          "find_word_ms": 0.221278,
-          "find_word_next_ms": 0.017865,
-          "find_word_peak_mb": 5.483774185180664,
+          "find_word_ms": 0.166151,
+          "find_word_next_ms": 0.011412,
+          "find_word_peak_mb": 5.694309234619141,
           "highlight_step": {
-            "max_ms": 0.11151900000000001,
-            "mean_ms": 0.0016598256410256412,
-            "n": 195,
-            "p50_ms": 0.00037099999999999996
+            "max_ms": 0.058994,
+            "mean_ms": 0.001002744588744589,
+            "n": 231,
+            "p50_ms": 0.00025100000000000003
           },
-          "load_allocs": 77,
-          "load_ms": 122.70048,
-          "load_peak_mb": 5.011549949645996,
-          "nav_idle_heading_allocs": 564,
+          "load_allocs": 69,
+          "load_ms": 4.400867,
+          "load_peak_mb": 5.047150611877441,
+          "nav_idle_heading_allocs": 449,
           "nav_idle_heading_dispatch": {
-            "max_ms": 0.118904,
-            "mean_ms": 0.047814166666666665,
+            "max_ms": 0.102009,
+            "mean_ms": 0.030167166666666672,
             "n": 6,
-            "p50_ms": 0.052023
+            "p50_ms": 0.030559000000000003
           },
-          "nav_idle_heading_peak_mb": 5.448493003845215,
+          "nav_idle_heading_peak_mb": 5.657578468322754,
           "nav_idle_heading_to_speech": {
-            "max_ms": 0.094877,
-            "mean_ms": 0.0564832,
+            "max_ms": 0.047046000000000004,
+            "mean_ms": 0.0330984,
             "n": 5,
-            "p50_ms": 0.047643
+            "p50_ms": 0.038649
           },
-          "nav_idle_paragraph_allocs": 535,
+          "nav_idle_paragraph_allocs": 540,
           "nav_idle_paragraph_dispatch": {
-            "max_ms": 0.032694,
-            "mean_ms": 0.01492375,
+            "max_ms": 0.030639999999999997,
+            "mean_ms": 0.01742455,
             "n": 20,
-            "p50_ms": 0.011914
+            "p50_ms": 0.018837
           },
-          "nav_idle_paragraph_peak_mb": 5.444470405578613,
+          "nav_idle_paragraph_peak_mb": 5.650012016296387,
           "nav_idle_paragraph_to_speech": {
-            "max_ms": 0.028405999999999997,
-            "mean_ms": 0.0098082,
+            "max_ms": 0.066453,
+            "mean_ms": 0.025196350000000006,
             "n": 20,
-            "p50_ms": 0.008607
+            "p50_ms": 0.019338
           },
-          "nav_idle_sentence_allocs": 683,
+          "nav_idle_sentence_allocs": 724,
           "nav_idle_sentence_dispatch": {
-            "max_ms": 0.060128,
-            "mean_ms": 0.030042100000000006,
+            "max_ms": 0.054085,
+            "mean_ms": 0.023793699999999997,
             "n": 20,
-            "p50_ms": 0.023376
+            "p50_ms": 0.015611
           },
-          "nav_idle_sentence_peak_mb": 5.437921524047852,
+          "nav_idle_sentence_peak_mb": 5.643674850463867,
           "nav_idle_sentence_to_speech": {
-            "max_ms": 0.077522,
-            "mean_ms": 0.020498049999999997,
+            "max_ms": 0.079789,
+            "mean_ms": 0.0252627,
             "n": 20,
-            "p50_ms": 0.015305999999999998
+            "p50_ms": 0.016536
           },
-          "nav_idle_word_allocs": 414,
+          "nav_idle_word_allocs": 455,
           "nav_idle_word_dispatch": {
-            "max_ms": 0.053375000000000006,
-            "mean_ms": 0.01933335,
+            "max_ms": 0.036732,
+            "mean_ms": 0.014667999999999997,
             "n": 20,
-            "p50_ms": 0.011703
+            "p50_ms": 0.014899
           },
-          "nav_idle_word_peak_mb": 5.428509712219238,
+          "nav_idle_word_peak_mb": 5.627419471740723,
           "nav_idle_word_to_speech": {
-            "max_ms": 0.151855,
-            "mean_ms": 0.0166584,
+            "max_ms": 0.194551,
+            "mean_ms": 0.0154188,
             "n": 20,
-            "p50_ms": 0.008172
+            "p50_ms": 0.007236
           },
-          "nav_reading_heading_allocs": 546,
+          "nav_reading_heading_allocs": 432,
           "nav_reading_heading_dispatch": {
-            "max_ms": 0.303157,
-            "mean_ms": 0.127914,
+            "max_ms": 0.12963,
+            "mean_ms": 0.054387,
             "n": 5,
-            "p50_ms": 0.09944599999999999
+            "p50_ms": 0.045458
           },
-          "nav_reading_heading_peak_mb": 5.463871955871582,
+          "nav_reading_heading_peak_mb": 5.6798095703125,
           "nav_reading_heading_to_speech": {
-            "max_ms": 0.43876400000000004,
-            "mean_ms": 0.2304545,
+            "max_ms": 0.231659,
+            "mean_ms": 0.11837025,
             "n": 4,
-            "p50_ms": 0.195415
+            "p50_ms": 0.115114
           },
-          "nav_reading_paragraph_allocs": 1284,
+          "nav_reading_paragraph_allocs": 1002,
           "nav_reading_paragraph_dispatch": {
-            "max_ms": 0.187128,
-            "mean_ms": 0.08509445454545453,
+            "max_ms": 0.10244800000000001,
+            "mean_ms": 0.039841454545454555,
             "n": 11,
-            "p50_ms": 0.075639
+            "p50_ms": 0.033505
           },
-          "nav_reading_paragraph_peak_mb": 5.460875511169434,
+          "nav_reading_paragraph_peak_mb": 5.6728410720825195,
           "nav_reading_paragraph_to_speech": {
-            "max_ms": 0.6143500000000001,
-            "mean_ms": 0.19622250000000002,
+            "max_ms": 0.21240199999999998,
+            "mean_ms": 0.083923,
             "n": 10,
-            "p50_ms": 0.15898400000000001
+            "p50_ms": 0.068013
           },
-          "nav_reading_sentence_allocs": 2660,
+          "nav_reading_sentence_allocs": 2419,
           "nav_reading_sentence_dispatch": {
-            "max_ms": 0.272917,
-            "mean_ms": 0.09584389473684211,
-            "n": 19,
-            "p50_ms": 0.078484
+            "max_ms": 0.164959,
+            "mean_ms": 0.0554932,
+            "n": 20,
+            "p50_ms": 0.044265
           },
-          "nav_reading_sentence_peak_mb": 5.454585075378418,
+          "nav_reading_sentence_peak_mb": 5.668848991394043,
           "nav_reading_sentence_to_speech": {
-            "max_ms": 0.387739,
-            "mean_ms": 0.16012105555555556,
-            "n": 18,
-            "p50_ms": 0.142069
+            "max_ms": 0.23422300000000001,
+            "mean_ms": 0.09448535,
+            "n": 20,
+            "p50_ms": 0.078436
           },
-          "nav_reading_word_allocs": 412,
+          "nav_reading_word_allocs": 453,
           "nav_reading_word_dispatch": {
-            "max_ms": 0.075108,
-            "mean_ms": 0.031075149999999996,
+            "max_ms": 0.053362999999999994,
+            "mean_ms": 0.021417900000000004,
             "n": 20,
-            "p50_ms": 0.025961
+            "p50_ms": 0.019067
           },
-          "nav_reading_word_peak_mb": 5.448703765869141,
+          "nav_reading_word_peak_mb": 5.663069725036621,
           "nav_reading_word_to_speech": {
-            "max_ms": 0.19202999999999998,
-            "mean_ms": 0.05108549999999999,
+            "max_ms": 0.100243,
+            "mean_ms": 0.032244699999999994,
             "n": 20,
-            "p50_ms": 0.03942
+            "p50_ms": 0.027402
           },
-          "normalize_allocs": 2581,
-          "normalize_ms": 0.6440859999999999,
-          "normalize_peak_mb": 5.380888938903809,
-          "normalize_pipeline_ms": 71.860835,
-          "open_allocs": 557,
-          "open_and_read_dispatch_ms": 110.154934,
-          "open_ms": 109.86828999999999,
-          "open_peak_mb": 6.010793685913086,
-          "open_to_first_speech_ms": 110.296217,
-          "plan_all_allocs": 408,
-          "plan_all_ms": 0.24831799999999998,
-          "plan_all_peak_mb": 5.001187324523926,
-          "replace_all_ms": 0.126711,
-          "replace_allocs": 437,
-          "replace_count_ms": 0.104617,
-          "replace_first_ms": 0.19951100000000002,
-          "replace_peak_mb": 5.546442985534668,
-          "replace_skip_ms": 0.106641,
+          "normalize_allocs": 1272,
+          "normalize_ms": 0.451899,
+          "normalize_peak_mb": 5.588803291320801,
+          "normalize_pipeline_ms": 3.5744700000000003,
+          "open_allocs": 439,
+          "open_and_read_dispatch_ms": 6.013761000000001,
+          "open_ms": 5.845514,
+          "open_peak_mb": 6.291705131530762,
+          "open_to_first_speech_ms": 6.973027,
+          "plan_all_allocs": 284,
+          "plan_all_ms": 0.15938000000000002,
+          "plan_all_peak_mb": 5.036551475524902,
+          "replace_all_ms": 0.167123,
+          "replace_allocs": 459,
+          "replace_count_ms": 0.077199,
+          "replace_first_ms": 0.142936,
+          "replace_peak_mb": 5.860537528991699,
+          "replace_skip_ms": 0.125532,
           "save_dispatch": {
-            "max_ms": 0.028797,
-            "mean_ms": 0.023312400000000004,
+            "max_ms": 0.018406,
+            "mean_ms": 0.013544200000000001,
             "n": 5,
-            "p50_ms": 0.026693
+            "p50_ms": 0.014878
           },
           "save_position": {
-            "max_ms": 0.014509,
-            "mean_ms": 0.010527,
+            "max_ms": 0.024387,
+            "mean_ms": 0.016044799999999998,
             "n": 5,
-            "p50_ms": 0.011072
+            "p50_ms": 0.014678
           },
           "save_written": {
-            "max_ms": 468.058999,
-            "mean_ms": 333.1741048,
+            "max_ms": 15.156737,
+            "mean_ms": 6.868048400000001,
             "n": 5,
-            "p50_ms": 346.337022
+            "p50_ms": 4.863311
           },
-          "sentences_allocs": 133,
-          "sentences_ms": 0.097101,
-          "sentences_peak_mb": 4.998695373535156,
-          "shutdown_ms": 0.069417,
+          "sentences_allocs": 141,
+          "sentences_ms": 0.059305000000000004,
+          "sentences_peak_mb": 5.038269996643066,
+          "shutdown_ms": 0.081734,
           "stop_to_first_audio": {
-            "max_ms": 0.28547,
-            "mean_ms": 0.2167003,
+            "max_ms": 0.228882,
+            "mean_ms": 0.15749134999999997,
             "n": 20,
-            "p50_ms": 0.225388
+            "p50_ms": 0.154533
           },
           "stop_to_first_audio_service": {
-            "max_ms": 0.11447500000000001,
-            "mean_ms": 0.06453439999999999,
+            "max_ms": 0.050558,
+            "mean_ms": 0.03643695,
             "n": 20,
-            "p50_ms": 0.060689
+            "p50_ms": 0.035579
           },
           "stop_to_speak": {
-            "max_ms": 0.150117,
-            "mean_ms": 0.04851095,
+            "max_ms": 0.138892,
+            "mean_ms": 0.042017650000000004,
             "n": 20,
-            "p50_ms": 0.042163000000000006
+            "p50_ms": 0.032755
           },
-          "words_allocs": 197,
-          "words_ms": 0.187939,
-          "words_peak_mb": 5.003297805786133
+          "words_allocs": 217,
+          "words_ms": 0.153358,
+          "words_peak_mb": 5.041857719421387
         },
         "docs/reading.md": {
-          "apply_allocs": 6,
-          "apply_ms": 0.11618,
-          "apply_peak_mb": 5.229452133178711,
+          "apply_allocs": 8,
+          "apply_ms": 0.018074999999999997,
+          "apply_peak_mb": 5.198851585388184,
           "autosave": {
-            "max_ms": 1.327046,
-            "mean_ms": 0.7571454,
+            "max_ms": 0.370205,
+            "mean_ms": 0.33987660000000003,
             "n": 5,
-            "p50_ms": 0.627215
+            "p50_ms": 0.345888
           },
-          "autosave_allocs": 716,
-          "autosave_peak_mb": 6.3457536697387695,
+          "autosave_allocs": 730,
+          "autosave_peak_mb": 6.701869964599609,
           "autosave_written": {
-            "max_ms": 8.003365,
-            "mean_ms": 5.8114824,
+            "max_ms": 3.57699,
+            "mean_ms": 2.8576380000000006,
             "n": 5,
-            "p50_ms": 5.184454
+            "p50_ms": 2.667239
           },
-          "blank_lines_ms": 0.13683099999999998,
-          "bytes": 46629,
+          "blank_lines_ms": 0.000471,
+          "bytes": 49885,
           "doc": {
-            "chars": 43247,
-            "lines": 627,
-            "markers": 979
+            "chars": 46332,
+            "lines": 653,
+            "markers": 1013
           },
           "edit_backspace_dispatch": {
-            "max_ms": 0.057355,
-            "mean_ms": 0.0376264,
+            "max_ms": 0.036400999999999996,
+            "mean_ms": 0.0291605,
             "n": 10,
-            "p50_ms": 0.036622999999999996
+            "p50_ms": 0.029366999999999997
           },
-          "edit_enter_allocs": 353,
-          "edit_enter_ms": 13.544995,
-          "edit_enter_peak_mb": 6.138596534729004,
-          "edit_leave_allocs": 124,
-          "edit_leave_ms": 9.956794,
-          "edit_leave_peak_mb": 5.930695533752441,
+          "edit_enter_allocs": 366,
+          "edit_enter_ms": 5.429233,
+          "edit_enter_peak_mb": 6.397856712341309,
+          "edit_leave_allocs": 130,
+          "edit_leave_ms": 1.365869,
+          "edit_leave_peak_mb": 6.268618583679199,
           "edit_line_down_dispatch": {
-            "max_ms": 0.087385,
-            "mean_ms": 0.033727400000000005,
+            "max_ms": 0.052942,
+            "mean_ms": 0.030953899999999996,
             "n": 10,
-            "p50_ms": 0.028076
+            "p50_ms": 0.027363
           },
-          "edit_type_allocs": 438,
+          "edit_type_allocs": 348,
           "edit_type_dispatch": {
-            "max_ms": 0.464089,
-            "mean_ms": 0.07574827777777778,
+            "max_ms": 0.033423999999999995,
+            "mean_ms": 0.0159035,
             "n": 18,
-            "p50_ms": 0.036622999999999996
+            "p50_ms": 0.016382
           },
-          "edit_type_peak_mb": 5.934562683105469,
+          "edit_type_peak_mb": 6.107832908630371,
           "edit_type_to_echo": {
-            "max_ms": 0.088616,
-            "mean_ms": 0.017679722222222218,
+            "max_ms": 0.042687,
+            "mean_ms": 0.015371777777777778,
             "n": 18,
-            "p50_ms": 0.008055
+            "p50_ms": 0.0060090000000000005
           },
           "find_rare_allocs": 997,
-          "find_rare_ms": 0.302175,
-          "find_rare_next_ms": 0.003417,
-          "find_rare_peak_mb": 5.76274299621582,
+          "find_rare_ms": 0.195618,
+          "find_rare_next_ms": 0.003126,
+          "find_rare_peak_mb": 5.995387077331543,
           "find_word_allocs": 262,
-          "find_word_ms": 0.394691,
-          "find_word_next_ms": 0.015311,
-          "find_word_peak_mb": 5.758236885070801,
+          "find_word_ms": 0.281073,
+          "find_word_next_ms": 0.010991,
+          "find_word_peak_mb": 5.99034309387207,
           "highlight_step": {
-            "max_ms": 0.073335,
-            "mean_ms": 0.0012738906329113914,
-            "n": 1975,
-            "p50_ms": 0.00042100000000000004
+            "max_ms": 0.036359999999999996,
+            "mean_ms": 0.000755410035478966,
+            "n": 1973,
+            "p50_ms": 0.00027
           },
-          "load_allocs": 228,
-          "load_ms": 131.073562,
-          "load_peak_mb": 5.464550018310547,
-          "nav_idle_heading_allocs": 25217,
+          "load_allocs": 197,
+          "load_ms": 7.443830999999999,
+          "load_peak_mb": 5.503419876098633,
+          "nav_idle_heading_allocs": 19289,
           "nav_idle_heading_dispatch": {
-            "max_ms": 4.139374,
-            "mean_ms": 0.9621511500000001,
+            "max_ms": 0.790964,
+            "mean_ms": 0.44063205000000005,
             "n": 20,
-            "p50_ms": 0.723263
+            "p50_ms": 0.432636
           },
-          "nav_idle_heading_peak_mb": 5.751324653625488,
+          "nav_idle_heading_peak_mb": 5.981104850769043,
           "nav_idle_heading_to_speech": {
-            "max_ms": 0.193387,
-            "mean_ms": 0.11486129999999999,
+            "max_ms": 0.104822,
+            "mean_ms": 0.04814044999999999,
             "n": 20,
-            "p50_ms": 0.119927
+            "p50_ms": 0.039267
           },
-          "nav_idle_paragraph_allocs": 621,
+          "nav_idle_paragraph_allocs": 627,
           "nav_idle_paragraph_dispatch": {
-            "max_ms": 0.07263399999999999,
-            "mean_ms": 0.022689400000000002,
+            "max_ms": 0.039387,
+            "mean_ms": 0.01721185,
             "n": 20,
-            "p50_ms": 0.018246000000000002
+            "p50_ms": 0.014899
           },
-          "nav_idle_paragraph_peak_mb": 5.653885841369629,
+          "nav_idle_paragraph_peak_mb": 5.9004364013671875,
           "nav_idle_paragraph_to_speech": {
-            "max_ms": 0.06853400000000001,
-            "mean_ms": 0.020730099999999994,
+            "max_ms": 0.058019999999999995,
+            "mean_ms": 0.018907049999999998,
             "n": 20,
-            "p50_ms": 0.014031
+            "p50_ms": 0.011562999999999999
           },
-          "nav_idle_sentence_allocs": 883,
+          "nav_idle_sentence_allocs": 878,
           "nav_idle_sentence_dispatch": {
-            "max_ms": 0.077704,
-            "mean_ms": 0.04481495,
+            "max_ms": 0.06732,
+            "mean_ms": 0.029446950000000006,
             "n": 20,
-            "p50_ms": 0.048336
+            "p50_ms": 0.026982
           },
-          "nav_idle_sentence_peak_mb": 5.649197578430176,
+          "nav_idle_sentence_peak_mb": 5.8927202224731445,
           "nav_idle_sentence_to_speech": {
-            "max_ms": 0.08070400000000001,
-            "mean_ms": 0.024747949999999998,
+            "max_ms": 0.107428,
+            "mean_ms": 0.0291238,
             "n": 20,
-            "p50_ms": 0.020784999999999998
+            "p50_ms": 0.019503
           },
-          "nav_idle_word_allocs": 1034,
+          "nav_idle_word_allocs": 479,
           "nav_idle_word_dispatch": {
-            "max_ms": 55.283995000000004,
-            "mean_ms": 11.512486149999999,
+            "max_ms": 0.142966,
+            "mean_ms": 0.0223842,
             "n": 20,
-            "p50_ms": 6.78141
+            "p50_ms": 0.019979
           },
-          "nav_idle_word_peak_mb": 5.640843391418457,
+          "nav_idle_word_peak_mb": 5.861865997314453,
           "nav_idle_word_to_speech": {
-            "max_ms": 0.209956,
-            "mean_ms": 0.07443930000000001,
+            "max_ms": 0.117076,
+            "mean_ms": 0.01383385,
             "n": 20,
-            "p50_ms": 0.096775
+            "p50_ms": 0.006061
           },
-          "nav_reading_heading_allocs": 25219,
+          "nav_reading_heading_allocs": 19291,
           "nav_reading_heading_dispatch": {
-            "max_ms": 10.69782,
-            "mean_ms": 1.18579755,
+            "max_ms": 0.889538,
+            "mean_ms": 0.44451824999999995,
             "n": 20,
-            "p50_ms": 0.688625
+            "p50_ms": 0.44145300000000004
           },
-          "nav_reading_heading_peak_mb": 5.758286476135254,
+          "nav_reading_heading_peak_mb": 5.976597785949707,
           "nav_reading_heading_to_speech": {
-            "max_ms": 10.850245999999999,
-            "mean_ms": 1.2839323999999999,
+            "max_ms": 1.02387,
+            "mean_ms": 0.4831777,
             "n": 20,
-            "p50_ms": 0.789404
+            "p50_ms": 0.474458
           },
-          "nav_reading_paragraph_allocs": 41575,
+          "nav_reading_paragraph_allocs": 28261,
           "nav_reading_paragraph_dispatch": {
-            "max_ms": 10.449857999999999,
-            "mean_ms": 1.9626592500000002,
+            "max_ms": 0.9995710000000001,
+            "mean_ms": 0.61866465,
             "n": 20,
-            "p50_ms": 1.061043
+            "p50_ms": 0.593527
           },
-          "nav_reading_paragraph_peak_mb": 5.817235946655273,
+          "nav_reading_paragraph_peak_mb": 6.009868621826172,
           "nav_reading_paragraph_to_speech": {
-            "max_ms": 10.651581,
-            "mean_ms": 2.1251751,
+            "max_ms": 1.145271,
+            "mean_ms": 0.6788067499999999,
             "n": 20,
-            "p50_ms": 1.240869
+            "p50_ms": 0.6395580000000001
           },
-          "nav_reading_sentence_allocs": 45194,
+          "nav_reading_sentence_allocs": 30289,
           "nav_reading_sentence_dispatch": {
-            "max_ms": 10.212285999999999,
-            "mean_ms": 2.0752921,
+            "max_ms": 0.826597,
+            "mean_ms": 0.66976255,
             "n": 20,
-            "p50_ms": 1.173003
+            "p50_ms": 0.659324
           },
-          "nav_reading_sentence_peak_mb": 5.811347961425781,
+          "nav_reading_sentence_peak_mb": 6.0053863525390625,
           "nav_reading_sentence_to_speech": {
-            "max_ms": 10.419411,
-            "mean_ms": 2.2764495499999997,
+            "max_ms": 0.930219,
+            "mean_ms": 0.7322522,
             "n": 20,
-            "p50_ms": 1.4229
+            "p50_ms": 0.7201930000000001
           },
-          "nav_reading_word_allocs": 1031,
+          "nav_reading_word_allocs": 479,
           "nav_reading_word_dispatch": {
-            "max_ms": 28.428846,
-            "mean_ms": 7.69459545,
+            "max_ms": 0.054185,
+            "mean_ms": 0.023687799999999995,
             "n": 20,
-            "p50_ms": 4.612099
+            "p50_ms": 0.0208
           },
-          "nav_reading_word_peak_mb": 5.70490837097168,
+          "nav_reading_word_peak_mb": 5.918445587158203,
           "nav_reading_word_to_speech": {
-            "max_ms": 28.541112000000002,
-            "mean_ms": 7.773960150000001,
+            "max_ms": 0.130985,
+            "mean_ms": 0.038104849999999996,
             "n": 20,
-            "p50_ms": 4.729232
+            "p50_ms": 0.029397999999999997
           },
-          "normalize_allocs": 36637,
-          "normalize_ms": 5.177598000000001,
-          "normalize_peak_mb": 5.642012596130371,
-          "normalize_pipeline_ms": 10.322275000000001,
-          "open_allocs": 4307,
-          "open_and_read_dispatch_ms": 159.62277699999999,
-          "open_ms": 148.817916,
-          "open_peak_mb": 6.056924819946289,
-          "open_to_first_speech_ms": 159.778058,
-          "plan_all_allocs": 5185,
-          "plan_all_ms": 2.574891,
-          "plan_all_peak_mb": 5.361967086791992,
-          "replace_all_ms": 2.473884,
-          "replace_allocs": 2622,
-          "replace_count_ms": 1.123429,
-          "replace_first_ms": 1.890714,
-          "replace_peak_mb": 6.4549150466918945,
-          "replace_skip_ms": 2.133511,
+          "normalize_allocs": 8587,
+          "normalize_ms": 3.051655,
+          "normalize_peak_mb": 5.8682861328125,
+          "normalize_pipeline_ms": 3.3100349999999996,
+          "open_allocs": 2801,
+          "open_and_read_dispatch_ms": 13.146648,
+          "open_ms": 11.362121,
+          "open_peak_mb": 6.7330474853515625,
+          "open_to_first_speech_ms": 13.303891,
+          "plan_all_allocs": 3295,
+          "plan_all_ms": 1.540807,
+          "plan_all_peak_mb": 5.341522216796875,
+          "replace_all_ms": 1.401889,
+          "replace_allocs": 2832,
+          "replace_count_ms": 0.911772,
+          "replace_first_ms": 1.148228,
+          "replace_peak_mb": 6.7861738204956055,
+          "replace_skip_ms": 1.106788,
           "save_dispatch": {
-            "max_ms": 0.036121999999999994,
-            "mean_ms": 0.0255434,
+            "max_ms": 0.016531,
+            "mean_ms": 0.0125362,
             "n": 5,
-            "p50_ms": 0.026814
+            "p50_ms": 0.014218
           },
           "save_position": {
-            "max_ms": 0.069399,
-            "mean_ms": 0.049781399999999996,
+            "max_ms": 0.021481999999999998,
+            "mean_ms": 0.011227999999999998,
             "n": 5,
-            "p50_ms": 0.058866999999999996
+            "p50_ms": 0.010931
           },
           "save_written": {
-            "max_ms": 62.122085,
-            "mean_ms": 30.0662198,
+            "max_ms": 15.300246,
+            "mean_ms": 6.937538599999999,
             "n": 5,
-            "p50_ms": 24.966726
+            "p50_ms": 4.899876
           },
-          "sentences_allocs": 1571,
-          "sentences_ms": 1.37833,
-          "sentences_peak_mb": 5.265052795410156,
-          "shutdown_ms": 0.09923900000000001,
+          "sentences_allocs": 1642,
+          "sentences_ms": 0.852507,
+          "sentences_peak_mb": 5.308067321777344,
+          "shutdown_ms": 0.065166,
           "stop_to_first_audio": {
-            "max_ms": 2.058844,
-            "mean_ms": 1.61582245,
+            "max_ms": 1.3071599999999999,
+            "mean_ms": 1.02734405,
             "n": 20,
-            "p50_ms": 1.585156
+            "p50_ms": 1.028853
           },
           "stop_to_first_audio_service": {
-            "max_ms": 0.517155,
-            "mean_ms": 0.18229555000000003,
+            "max_ms": 0.118398,
+            "mean_ms": 0.0750205,
             "n": 20,
-            "p50_ms": 0.16144
+            "p50_ms": 0.072921
           },
           "stop_to_speak": {
-            "max_ms": 9.72757,
-            "mean_ms": 1.5822499999999997,
+            "max_ms": 0.099807,
+            "mean_ms": 0.0365527,
             "n": 20,
-            "p50_ms": 1.359744
+            "p50_ms": 0.02974
           },
-          "words_allocs": 2979,
-          "words_ms": 2.892501,
-          "words_peak_mb": 5.27186393737793
+          "words_allocs": 3142,
+          "words_ms": 1.533312,
+          "words_peak_mb": 5.315086364746094
         },
         "fixtures/sample.md": {
-          "apply_allocs": 4,
-          "apply_ms": 0.016232,
-          "apply_peak_mb": 0.013014793395996094,
+          "apply_allocs": 7,
+          "apply_ms": 0.021662,
+          "apply_peak_mb": 0.0129241943359375,
           "autosave": {
-            "max_ms": 0.197773,
-            "mean_ms": 0.1462966,
+            "max_ms": 0.091618,
+            "mean_ms": 0.05874840000000001,
             "n": 5,
-            "p50_ms": 0.135196
+            "p50_ms": 0.049617
           },
-          "autosave_allocs": 319,
-          "autosave_peak_mb": 1.608419418334961,
+          "autosave_allocs": 323,
+          "autosave_peak_mb": 1.8044624328613281,
           "autosave_written": {
-            "max_ms": 247.650761,
-            "mean_ms": 108.3502488,
+            "max_ms": 3.135259,
+            "mean_ms": 2.4817311999999996,
             "n": 5,
-            "p50_ms": 76.465567
+            "p50_ms": 2.332446
           },
-          "blank_lines_ms": 0.013176,
+          "blank_lines_ms": 0.000501,
           "bytes": 877,
           "doc": {
             "chars": 671,
@@ -532,247 +532,247 @@
             "markers": 44
           },
           "edit_backspace_dispatch": {
-            "max_ms": 0.116993,
-            "mean_ms": 0.05233790000000001,
+            "max_ms": 0.053655,
+            "mean_ms": 0.041054600000000004,
             "n": 10,
-            "p50_ms": 0.043396000000000004
+            "p50_ms": 0.042091
           },
           "edit_enter_allocs": 148,
-          "edit_enter_ms": 230.354917,
-          "edit_enter_peak_mb": 1.590585708618164,
+          "edit_enter_ms": 5.207344,
+          "edit_enter_peak_mb": 1.7888050079345703,
           "edit_leave_allocs": 106,
-          "edit_leave_ms": 45.612418000000005,
-          "edit_leave_peak_mb": 1.5869684219360352,
+          "edit_leave_ms": 1.506469,
+          "edit_leave_peak_mb": 1.7930431365966797,
           "edit_line_down_dispatch": {
-            "max_ms": 0.078195,
-            "mean_ms": 0.0637656,
+            "max_ms": 0.054335,
+            "mean_ms": 0.0390237,
             "n": 10,
-            "p50_ms": 0.064307
+            "p50_ms": 0.041711
           },
-          "edit_type_allocs": 316,
+          "edit_type_allocs": 334,
           "edit_type_dispatch": {
-            "max_ms": 0.817372,
-            "mean_ms": 0.0901706111111111,
+            "max_ms": 0.046780999999999996,
+            "mean_ms": 0.024343444444444442,
             "n": 18,
-            "p50_ms": 0.049378
+            "p50_ms": 0.021481
           },
-          "edit_type_peak_mb": 1.5801992416381836,
+          "edit_type_peak_mb": 1.7782115936279297,
           "edit_type_to_echo": {
-            "max_ms": 0.07713,
-            "mean_ms": 0.014983166666666665,
+            "max_ms": 0.083364,
+            "mean_ms": 0.011929833333333334,
             "n": 18,
-            "p50_ms": 0.009225
+            "p50_ms": 0.006677
           },
           "find_rare_allocs": 990,
-          "find_rare_ms": 0.249635,
-          "find_rare_next_ms": 0.002535,
-          "find_rare_peak_mb": 1.5786714553833008,
+          "find_rare_ms": 0.184058,
+          "find_rare_next_ms": 0.003516,
+          "find_rare_peak_mb": 1.777029037475586,
           "find_word_allocs": 246,
-          "find_word_ms": 0.255237,
-          "find_word_next_ms": 0.024509,
-          "find_word_peak_mb": 1.5671806335449219,
+          "find_word_ms": 0.187885,
+          "find_word_next_ms": 0.013245999999999999,
+          "find_word_peak_mb": 1.7620153427124023,
           "highlight_step": {
-            "max_ms": 0.104458,
-            "mean_ms": 0.007593612244897959,
+            "max_ms": 0.04657,
+            "mean_ms": 0.003987306122448979,
             "n": 49,
-            "p50_ms": 0.002154
+            "p50_ms": 0.001583
           },
-          "load_allocs": 80,
-          "load_ms": 43.18002,
-          "load_peak_mb": 0.02696990966796875,
-          "nav_idle_heading_allocs": 280,
+          "load_allocs": 71,
+          "load_ms": 6.870304,
+          "load_peak_mb": 0.026708602905273438,
+          "nav_idle_heading_allocs": 232,
           "nav_idle_heading_dispatch": {
-            "max_ms": 0.155004,
-            "mean_ms": 0.06284825,
+            "max_ms": 0.084304,
+            "mean_ms": 0.042435,
             "n": 4,
-            "p50_ms": 0.063094
+            "p50_ms": 0.073653
           },
-          "nav_idle_heading_peak_mb": 1.5210275650024414,
+          "nav_idle_heading_peak_mb": 1.714529037475586,
           "nav_idle_heading_to_speech": {
-            "max_ms": 0.048313999999999996,
-            "mean_ms": 0.031358,
+            "max_ms": 0.04018,
+            "mean_ms": 0.03451033333333334,
             "n": 3,
-            "p50_ms": 0.027864999999999997
+            "p50_ms": 0.036024
           },
           "nav_idle_paragraph_allocs": 592,
           "nav_idle_paragraph_dispatch": {
-            "max_ms": 0.065749,
-            "mean_ms": 0.0294153,
+            "max_ms": 0.058053,
+            "mean_ms": 0.02119355,
             "n": 20,
-            "p50_ms": 0.031873
+            "p50_ms": 0.017394
           },
-          "nav_idle_paragraph_peak_mb": 1.5209646224975586,
+          "nav_idle_paragraph_peak_mb": 1.7149419784545898,
           "nav_idle_paragraph_to_speech": {
-            "max_ms": 0.041131,
-            "mean_ms": 0.0148831,
+            "max_ms": 0.032338,
+            "mean_ms": 0.011297200000000002,
             "n": 20,
-            "p50_ms": 0.013696999999999999
+            "p50_ms": 0.007162
           },
           "nav_idle_sentence_allocs": 641,
           "nav_idle_sentence_dispatch": {
-            "max_ms": 0.089636,
-            "mean_ms": 0.0465615,
+            "max_ms": 0.11411199999999999,
+            "mean_ms": 0.03381755,
             "n": 20,
-            "p50_ms": 0.046521
+            "p50_ms": 0.02572
           },
-          "nav_idle_sentence_peak_mb": 1.5136728286743164,
+          "nav_idle_sentence_peak_mb": 1.7076501846313477,
           "nav_idle_sentence_to_speech": {
-            "max_ms": 0.055575,
-            "mean_ms": 0.02251175,
+            "max_ms": 0.108727,
+            "mean_ms": 0.03895925000000001,
             "n": 20,
-            "p50_ms": 0.02221
+            "p50_ms": 0.041403999999999996
           },
           "nav_idle_word_allocs": 351,
           "nav_idle_word_dispatch": {
-            "max_ms": 0.065248,
-            "mean_ms": 0.03629429999999999,
+            "max_ms": 0.051801,
+            "mean_ms": 0.02634055,
             "n": 20,
-            "p50_ms": 0.037033
+            "p50_ms": 0.024287
           },
-          "nav_idle_word_peak_mb": 1.5081110000610352,
+          "nav_idle_word_peak_mb": 1.6988725662231445,
           "nav_idle_word_to_speech": {
-            "max_ms": 0.152847,
-            "mean_ms": 0.02003225,
+            "max_ms": 0.136926,
+            "mean_ms": 0.014639449999999998,
             "n": 20,
-            "p50_ms": 0.011644
+            "p50_ms": 0.009599
           },
-          "nav_reading_heading_allocs": 264,
+          "nav_reading_heading_allocs": 216,
           "nav_reading_heading_dispatch": {
-            "max_ms": 0.26321199999999995,
-            "mean_ms": 0.13319099999999998,
+            "max_ms": 0.16662400000000002,
+            "mean_ms": 0.08250366666666668,
             "n": 3,
-            "p50_ms": 0.108696
+            "p50_ms": 0.062832
           },
-          "nav_reading_heading_peak_mb": 1.535848617553711,
+          "nav_reading_heading_peak_mb": 1.738001823425293,
           "nav_reading_heading_to_speech": {
-            "max_ms": 0.377383,
-            "mean_ms": 0.2588825,
+            "max_ms": 0.23476,
+            "mean_ms": 0.16055049999999998,
             "n": 2,
-            "p50_ms": 0.377383
+            "p50_ms": 0.23476
           },
-          "nav_reading_paragraph_allocs": 630,
+          "nav_reading_paragraph_allocs": 499,
           "nav_reading_paragraph_dispatch": {
-            "max_ms": 0.222477,
-            "mean_ms": 0.12006714285714286,
+            "max_ms": 0.161183,
+            "mean_ms": 0.08052371428571428,
             "n": 7,
-            "p50_ms": 0.093043
+            "p50_ms": 0.061960999999999995
           },
-          "nav_reading_paragraph_peak_mb": 1.5328359603881836,
+          "nav_reading_paragraph_peak_mb": 1.7347869873046875,
           "nav_reading_paragraph_to_speech": {
-            "max_ms": 0.33015300000000003,
-            "mean_ms": 0.18456516666666667,
+            "max_ms": 0.235956,
+            "mean_ms": 0.11731449999999999,
             "n": 6,
-            "p50_ms": 0.166001
+            "p50_ms": 0.10177599999999999
           },
-          "nav_reading_sentence_allocs": 1441,
+          "nav_reading_sentence_allocs": 1157,
           "nav_reading_sentence_dispatch": {
-            "max_ms": 0.268167,
-            "mean_ms": 0.14815638461538463,
+            "max_ms": 0.1749,
+            "mean_ms": 0.07891646153846153,
             "n": 13,
-            "p50_ms": 0.150545
+            "p50_ms": 0.080897
           },
-          "nav_reading_sentence_peak_mb": 1.5282459259033203,
+          "nav_reading_sentence_peak_mb": 1.7301158905029297,
           "nav_reading_sentence_to_speech": {
-            "max_ms": 0.393798,
-            "mean_ms": 0.21204266666666668,
+            "max_ms": 0.266026,
+            "mean_ms": 0.10507966666666667,
             "n": 12,
-            "p50_ms": 0.20258
+            "p50_ms": 0.099152
           },
           "nav_reading_word_allocs": 350,
           "nav_reading_word_dispatch": {
-            "max_ms": 0.307935,
-            "mean_ms": 0.0694529,
+            "max_ms": 0.058594,
+            "mean_ms": 0.02945125,
             "n": 20,
-            "p50_ms": 0.043135
+            "p50_ms": 0.024538
           },
-          "nav_reading_word_peak_mb": 1.5237855911254883,
+          "nav_reading_word_peak_mb": 1.726414680480957,
           "nav_reading_word_to_speech": {
-            "max_ms": 0.363827,
-            "mean_ms": 0.0895151,
+            "max_ms": 0.101346,
+            "mean_ms": 0.04111255,
             "n": 20,
-            "p50_ms": 0.056743999999999996
+            "p50_ms": 0.034807
           },
-          "normalize_allocs": 1970,
-          "normalize_ms": 0.49058399999999996,
-          "normalize_peak_mb": 0.41425609588623047,
-          "normalize_pipeline_ms": 3.852532,
-          "open_allocs": 509,
-          "open_and_read_dispatch_ms": 58.246764999999996,
-          "open_ms": 57.935995,
-          "open_peak_mb": 2.0831708908081055,
-          "open_to_first_speech_ms": 58.413135999999994,
-          "plan_all_allocs": 376,
-          "plan_all_ms": 0.338105,
-          "plan_all_peak_mb": 0.02036285400390625,
-          "replace_all_ms": 0.178674,
-          "replace_allocs": 325,
-          "replace_count_ms": 0.040741,
-          "replace_first_ms": 0.110078,
-          "replace_peak_mb": 1.5961828231811523,
-          "replace_skip_ms": 0.2421,
+          "normalize_allocs": 1112,
+          "normalize_ms": 0.37052999999999997,
+          "normalize_peak_mb": 0.5828561782836914,
+          "normalize_pipeline_ms": 3.41796,
+          "open_allocs": 389,
+          "open_and_read_dispatch_ms": 9.901624,
+          "open_ms": 9.712827,
+          "open_peak_mb": 2.337451934814453,
+          "open_to_first_speech_ms": 10.122223,
+          "plan_all_allocs": 244,
+          "plan_all_ms": 0.223013,
+          "plan_all_peak_mb": 0.018120765686035156,
+          "replace_all_ms": 0.083823,
+          "replace_allocs": 331,
+          "replace_count_ms": 0.031041000000000003,
+          "replace_first_ms": 0.085617,
+          "replace_peak_mb": 1.7909173965454102,
+          "replace_skip_ms": 0.054116000000000004,
           "save_dispatch": {
-            "max_ms": 0.038145,
-            "mean_ms": 0.030039000000000003,
+            "max_ms": 0.025970999999999998,
+            "mean_ms": 0.018425999999999998,
             "n": 5,
-            "p50_ms": 0.030309
+            "p50_ms": 0.020530000000000003
           },
           "save_position": {
-            "max_ms": 0.018657,
-            "mean_ms": 0.012400400000000002,
+            "max_ms": 0.012564,
+            "mean_ms": 0.0078512,
             "n": 5,
-            "p50_ms": 0.011122
+            "p50_ms": 0.006502
           },
           "save_written": {
-            "max_ms": 169.892028,
-            "mean_ms": 86.4212696,
+            "max_ms": 40.407736,
+            "mean_ms": 15.454581600000001,
             "n": 5,
-            "p50_ms": 43.454778
+            "p50_ms": 13.088795000000001
           },
           "sentences_allocs": 97,
-          "sentences_ms": 0.190364,
-          "sentences_peak_mb": 0.017249107360839844,
-          "shutdown_ms": 0.12212799999999999,
+          "sentences_ms": 0.085335,
+          "sentences_peak_mb": 0.01712799072265625,
+          "shutdown_ms": 0.072202,
           "stop_to_first_audio": {
-            "max_ms": 0.788146,
-            "mean_ms": 0.33688749999999995,
+            "max_ms": 0.267472,
+            "mean_ms": 0.23036884999999993,
             "n": 20,
-            "p50_ms": 0.322621
+            "p50_ms": 0.236492
           },
           "stop_to_first_audio_service": {
-            "max_ms": 0.14713199999999999,
-            "mean_ms": 0.098507,
+            "max_ms": 0.080547,
+            "mean_ms": 0.07494614999999999,
             "n": 20,
-            "p50_ms": 0.097333
+            "p50_ms": 0.076599
           },
           "stop_to_speak": {
-            "max_ms": 0.188157,
-            "mean_ms": 0.05259164999999999,
+            "max_ms": 0.131547,
+            "mean_ms": 0.036324449999999994,
             "n": 20,
-            "p50_ms": 0.043640000000000005
+            "p50_ms": 0.03122
           },
           "words_allocs": 105,
-          "words_ms": 0.46263800000000005,
-          "words_peak_mb": 0.01903057098388672
+          "words_ms": 0.405358,
+          "words_peak_mb": 0.018909454345703125
         },
         "list-50k-lines.md": {
           "apply_allocs": 6,
-          "apply_ms": 3.005776,
-          "apply_peak_mb": 28.943634033203125,
+          "apply_ms": 0.857637,
+          "apply_peak_mb": 22.048396110534668,
           "autosave": {
-            "max_ms": 0.361801,
-            "mean_ms": 0.1018232,
+            "max_ms": 0.141914,
+            "mean_ms": 0.046954800000000005,
             "n": 5,
-            "p50_ms": 0.036463
+            "p50_ms": 0.021952
           },
           "autosave_allocs": 190,
-          "autosave_peak_mb": 109.75316333770752,
+          "autosave_peak_mb": 114.25302314758301,
           "autosave_written": {
-            "max_ms": 46.659114,
-            "mean_ms": 35.2545966,
+            "max_ms": 17.32875,
+            "mean_ms": 16.4681906,
             "n": 5,
-            "p50_ms": 33.647779
+            "p50_ms": 16.609012999999997
           },
-          "blank_lines_ms": 22.916308,
+          "blank_lines_ms": 0.000581,
           "bytes": 5962260,
           "doc": {
             "chars": 5201686,
@@ -780,235 +780,235 @@
             "markers": 100887
           },
           "edit_backspace_dispatch": {
-            "max_ms": 0.036333,
-            "mean_ms": 0.0238379,
+            "max_ms": 0.028024,
+            "mean_ms": 0.0182671,
             "n": 10,
-            "p50_ms": 0.023046
+            "p50_ms": 0.016682
           },
-          "edit_enter_allocs": 6728,
-          "edit_enter_ms": 21.910133,
-          "edit_enter_peak_mb": 50.967740058898926,
+          "edit_enter_allocs": 6727,
+          "edit_enter_ms": 15.631312000000001,
+          "edit_enter_peak_mb": 49.32194519042969,
           "edit_leave_allocs": 117,
-          "edit_leave_ms": 25.301895000000002,
-          "edit_leave_peak_mb": 50.51086235046387,
+          "edit_leave_ms": 11.940885,
+          "edit_leave_peak_mb": 50.82219314575195,
           "edit_line_down_dispatch": {
-            "max_ms": 0.058016,
-            "mean_ms": 0.032361100000000004,
+            "max_ms": 0.047191000000000004,
+            "mean_ms": 0.021192100000000002,
             "n": 10,
-            "p50_ms": 0.029309
+            "p50_ms": 0.018686
           },
           "edit_type_allocs": 407,
           "edit_type_dispatch": {
-            "max_ms": 1.570358,
-            "mean_ms": 0.10653094444444444,
+            "max_ms": 0.721754,
+            "mean_ms": 0.051958722222222226,
             "n": 18,
-            "p50_ms": 0.023127
+            "p50_ms": 0.013936
           },
-          "edit_type_peak_mb": 44.0477294921875,
+          "edit_type_peak_mb": 44.3515567779541,
           "edit_type_to_echo": {
-            "max_ms": 0.08858300000000001,
-            "mean_ms": 0.030354111111111113,
+            "max_ms": 0.071704,
+            "mean_ms": 0.01977738888888889,
             "n": 18,
-            "p50_ms": 0.031789
+            "p50_ms": 0.021662
           },
           "find_rare_allocs": 1007,
-          "find_rare_ms": 2.924611,
-          "find_rare_next_ms": 0.008658,
-          "find_rare_peak_mb": 34.04792881011963,
+          "find_rare_ms": 1.549685,
+          "find_rare_next_ms": 0.005180000000000001,
+          "find_rare_peak_mb": 34.35210418701172,
           "find_word_allocs": 274,
-          "find_word_ms": 5.134226000000001,
-          "find_word_next_ms": 0.020411000000000002,
-          "find_word_peak_mb": 34.13444423675537,
+          "find_word_ms": 3.080543,
+          "find_word_next_ms": 0.008516,
+          "find_word_peak_mb": 34.43854522705078,
           "highlight_step": {
-            "max_ms": 2.501092,
-            "mean_ms": 0.024551189499999997,
+            "max_ms": 0.32357600000000003,
+            "mean_ms": 0.010403923500000002,
             "n": 2000,
-            "p50_ms": 0.000541
+            "p50_ms": 0.00026
           },
-          "load_allocs": 22884,
-          "load_ms": 596.635169,
-          "load_peak_mb": 65.5408067703247,
+          "load_allocs": 22864,
+          "load_ms": 112.05210100000001,
+          "load_peak_mb": 63.258944511413574,
           "nav_idle_heading_allocs": 494,
           "nav_idle_heading_dispatch": {
-            "max_ms": 0.027867,
-            "mean_ms": 0.00811675,
+            "max_ms": 0.025009,
+            "mean_ms": 0.01313655,
             "n": 20,
-            "p50_ms": 0.0061519999999999995
+            "p50_ms": 0.007645000000000001
           },
-          "nav_idle_heading_peak_mb": 31.915892601013184,
+          "nav_idle_heading_peak_mb": 32.22312641143799,
           "nav_idle_heading_to_speech": {
-            "max_ms": 0.028711999999999998,
-            "mean_ms": 0.00605705,
+            "max_ms": 0.04808,
+            "mean_ms": 0.0197993,
             "n": 20,
-            "p50_ms": 0.004082
+            "p50_ms": 0.012561999999999999
           },
           "nav_idle_paragraph_allocs": 555,
           "nav_idle_paragraph_dispatch": {
-            "max_ms": 0.016243,
-            "mean_ms": 0.008329850000000003,
+            "max_ms": 0.009207,
+            "mean_ms": 0.0046374499999999996,
             "n": 20,
-            "p50_ms": 0.007405
+            "p50_ms": 0.004267999999999999
           },
-          "nav_idle_paragraph_peak_mb": 31.9141788482666,
+          "nav_idle_paragraph_peak_mb": 32.22117900848389,
           "nav_idle_paragraph_to_speech": {
-            "max_ms": 0.032169,
-            "mean_ms": 0.0062831,
+            "max_ms": 0.018664,
+            "mean_ms": 0.0033111,
             "n": 20,
-            "p50_ms": 0.004412
+            "p50_ms": 0.002373
           },
           "nav_idle_sentence_allocs": 2111,
           "nav_idle_sentence_dispatch": {
-            "max_ms": 0.43290100000000004,
-            "mean_ms": 0.37796989999999997,
+            "max_ms": 0.291764,
+            "mean_ms": 0.21194705000000003,
             "n": 20,
-            "p50_ms": 0.376177
+            "p50_ms": 0.197131
           },
-          "nav_idle_sentence_peak_mb": 31.96648406982422,
+          "nav_idle_sentence_peak_mb": 32.273484230041504,
           "nav_idle_sentence_to_speech": {
-            "max_ms": 0.085789,
-            "mean_ms": 0.05326565000000001,
+            "max_ms": 0.090737,
+            "mean_ms": 0.04486299999999999,
             "n": 20,
-            "p50_ms": 0.054213
+            "p50_ms": 0.044326000000000004
           },
           "nav_idle_word_allocs": 491,
           "nav_idle_word_dispatch": {
-            "max_ms": 0.056083,
-            "mean_ms": 0.02519185,
+            "max_ms": 0.083131,
+            "mean_ms": 0.019061500000000002,
             "n": 20,
-            "p50_ms": 0.025251
+            "p50_ms": 0.017273
           },
-          "nav_idle_word_peak_mb": 31.89884090423584,
+          "nav_idle_word_peak_mb": 32.20309352874756,
           "nav_idle_word_to_speech": {
-            "max_ms": 0.141391,
-            "mean_ms": 0.0173872,
+            "max_ms": 0.152926,
+            "mean_ms": 0.0235543,
             "n": 20,
-            "p50_ms": 0.010979
+            "p50_ms": 0.015238999999999999
           },
           "nav_reading_heading_allocs": 40,
           "nav_reading_heading_dispatch": {
-            "max_ms": 0.08096300000000001,
-            "mean_ms": 0.08096300000000001,
+            "max_ms": 0.049396,
+            "mean_ms": 0.049396,
             "n": 1,
-            "p50_ms": 0.08096300000000001
+            "p50_ms": 0.049396
           },
-          "nav_reading_heading_peak_mb": 32.003292083740234,
+          "nav_reading_heading_peak_mb": 32.29185199737549,
           "nav_reading_paragraph_allocs": 45,
           "nav_reading_paragraph_dispatch": {
-            "max_ms": 0.08727499999999999,
-            "mean_ms": 0.08727499999999999,
+            "max_ms": 0.0467,
+            "mean_ms": 0.0467,
             "n": 1,
-            "p50_ms": 0.08727499999999999
+            "p50_ms": 0.0467
           },
-          "nav_reading_paragraph_peak_mb": 32.0024299621582,
-          "nav_reading_sentence_allocs": 39266,
+          "nav_reading_paragraph_peak_mb": 32.29105091094971,
+          "nav_reading_sentence_allocs": 25411,
           "nav_reading_sentence_dispatch": {
-            "max_ms": 13.311602,
-            "mean_ms": 6.722084649999999,
+            "max_ms": 1.770062,
+            "mean_ms": 1.4935588500000003,
             "n": 20,
-            "p50_ms": 3.080574
+            "p50_ms": 1.471263
           },
-          "nav_reading_sentence_peak_mb": 32.11386489868164,
+          "nav_reading_sentence_peak_mb": 32.42984199523926,
           "nav_reading_sentence_to_speech": {
-            "max_ms": 13.653319,
-            "mean_ms": 7.0043861,
+            "max_ms": 2.054496,
+            "mean_ms": 1.6668362499999998,
             "n": 20,
-            "p50_ms": 3.417063
+            "p50_ms": 1.648139
           },
           "nav_reading_word_allocs": 499,
           "nav_reading_word_dispatch": {
-            "max_ms": 0.0896,
-            "mean_ms": 0.041906700000000005,
+            "max_ms": 0.049606,
+            "mean_ms": 0.023297850000000002,
             "n": 20,
-            "p50_ms": 0.034999999999999996
+            "p50_ms": 0.02099
           },
-          "nav_reading_word_peak_mb": 31.98619556427002,
+          "nav_reading_word_peak_mb": 32.27475547790527,
           "nav_reading_word_to_speech": {
-            "max_ms": 0.197131,
-            "mean_ms": 0.06059194999999999,
+            "max_ms": 0.10379,
+            "mean_ms": 0.03613324999999999,
             "n": 20,
-            "p50_ms": 0.048101
+            "p50_ms": 0.029686999999999998
           },
-          "normalize_allocs": 154701,
-          "normalize_ms": 52.168063000000004,
-          "normalize_peak_mb": 22.799386978149414,
-          "normalize_pipeline_ms": 6.048864,
-          "open_allocs": 30210,
-          "open_and_read_dispatch_ms": 431.324861,
-          "open_ms": 383.517224,
-          "open_peak_mb": 65.92498397827148,
-          "open_to_first_speech_ms": 431.648277,
-          "plan_all_allocs": 266994,
-          "plan_all_ms": 968.740809,
-          "plan_all_peak_mb": 39.74869346618652,
-          "replace_all_ms": 157.233497,
-          "replace_allocs": 58167,
-          "replace_count_ms": 125.30033099999999,
-          "replace_first_ms": 154.17262200000002,
-          "replace_peak_mb": 65.30135345458984,
-          "replace_skip_ms": 172.32995200000002,
+          "normalize_allocs": 68651,
+          "normalize_ms": 38.495031,
+          "normalize_peak_mb": 23.09808349609375,
+          "normalize_pipeline_ms": 3.479354,
+          "open_allocs": 29474,
+          "open_and_read_dispatch_ms": 114.228271,
+          "open_ms": 102.58706500000001,
+          "open_peak_mb": 63.746036529541016,
+          "open_to_first_speech_ms": 114.79872300000001,
+          "plan_all_allocs": 159375,
+          "plan_all_ms": 168.215603,
+          "plan_all_peak_mb": 34.69221591949463,
+          "replace_all_ms": 70.462148,
+          "replace_allocs": 58168,
+          "replace_count_ms": 48.622222,
+          "replace_first_ms": 93.158393,
+          "replace_peak_mb": 65.61263847351074,
+          "replace_skip_ms": 92.088969,
           "save_dispatch": {
-            "max_ms": 0.049478999999999995,
-            "mean_ms": 0.0365512,
+            "max_ms": 0.027402999999999997,
+            "mean_ms": 0.0228624,
             "n": 5,
-            "p50_ms": 0.031453
+            "p50_ms": 0.023164999999999998
           },
           "save_position": {
-            "max_ms": 0.11085300000000001,
-            "mean_ms": 0.0292088,
+            "max_ms": 0.009098,
+            "mean_ms": 0.0063264,
             "n": 5,
-            "p50_ms": 0.008548
+            "p50_ms": 0.005631
           },
           "save_written": {
-            "max_ms": 110.31565499999999,
-            "mean_ms": 71.1879326,
+            "max_ms": 33.721778,
+            "mean_ms": 27.5824234,
             "n": 5,
-            "p50_ms": 53.419421
+            "p50_ms": 26.699756
           },
           "sentences_allocs": 46405,
-          "sentences_ms": 604.995243,
-          "sentences_peak_mb": 22.47288417816162,
-          "shutdown_ms": 0.073367,
+          "sentences_ms": 112.753619,
+          "sentences_peak_mb": 22.504976272583008,
+          "shutdown_ms": 0.066142,
           "stop_to_first_audio": {
-            "max_ms": 3.258482,
-            "mean_ms": 2.9571115499999996,
+            "max_ms": 1.9738030000000002,
+            "mean_ms": 1.8259834499999996,
             "n": 20,
-            "p50_ms": 2.950148
+            "p50_ms": 1.835889
           },
           "stop_to_first_audio_service": {
-            "max_ms": 0.629396,
-            "mean_ms": 0.25903855,
+            "max_ms": 0.326181,
+            "mean_ms": 0.28209585,
             "n": 20,
-            "p50_ms": 0.235844
+            "p50_ms": 0.280222
           },
           "stop_to_speak": {
-            "max_ms": 0.404748,
-            "mean_ms": 0.29109785,
+            "max_ms": 0.39099700000000004,
+            "mean_ms": 0.18738490000000002,
             "n": 20,
-            "p50_ms": 0.303193
+            "p50_ms": 0.173246
           },
           "words_allocs": 416434,
-          "words_ms": 733.814989,
-          "words_peak_mb": 22.405731201171875
+          "words_ms": 159.74449900000002,
+          "words_peak_mb": 22.43782329559326
         },
         "md-1mb.md": {
-          "apply_allocs": 6,
-          "apply_ms": 0.267235,
-          "apply_peak_mb": 8.611689567565918,
+          "apply_allocs": 9,
+          "apply_ms": 0.19780199999999998,
+          "apply_peak_mb": 7.568593978881836,
           "autosave": {
-            "max_ms": 47.922729,
-            "mean_ms": 9.9050794,
+            "max_ms": 0.222991,
+            "mean_ms": 0.11617859999999999,
             "n": 5,
-            "p50_ms": 0.475682
+            "p50_ms": 0.125312
           },
-          "autosave_allocs": 225,
-          "autosave_peak_mb": 20.468408584594727,
+          "autosave_allocs": 221,
+          "autosave_peak_mb": 20.77422046661377,
           "autosave_written": {
-            "max_ms": 96.889172,
-            "mean_ms": 41.9248262,
+            "max_ms": 7.385804,
+            "mean_ms": 5.9983992,
             "n": 5,
-            "p50_ms": 34.933836
+            "p50_ms": 5.948662000000001
           },
-          "blank_lines_ms": 1.732398,
+          "blank_lines_ms": 0.001312,
           "bytes": 1049749,
           "doc": {
             "chars": 918276,
@@ -1016,247 +1016,247 @@
             "markers": 15659
           },
           "edit_backspace_dispatch": {
-            "max_ms": 0.051614,
-            "mean_ms": 0.0341575,
+            "max_ms": 0.045758,
+            "mean_ms": 0.028258600000000002,
             "n": 10,
-            "p50_ms": 0.031804000000000006
+            "p50_ms": 0.028064000000000002
           },
-          "edit_enter_allocs": 1400,
-          "edit_enter_ms": 6.319548999999999,
-          "edit_enter_peak_mb": 12.481304168701172,
+          "edit_enter_allocs": 1399,
+          "edit_enter_ms": 1.846276,
+          "edit_enter_peak_mb": 12.59697151184082,
           "edit_leave_allocs": 142,
-          "edit_leave_ms": 2.712309,
-          "edit_leave_peak_mb": 12.564838409423828,
+          "edit_leave_ms": 1.8833199999999999,
+          "edit_leave_peak_mb": 12.876882553100586,
           "edit_line_down_dispatch": {
-            "max_ms": 0.053106,
-            "mean_ms": 0.042607400000000004,
+            "max_ms": 0.038765,
+            "mean_ms": 0.025122699999999998,
             "n": 10,
-            "p50_ms": 0.043447
+            "p50_ms": 0.029747000000000003
           },
           "edit_type_allocs": 482,
           "edit_type_dispatch": {
-            "max_ms": 2.608307,
-            "mean_ms": 0.32566788888888887,
+            "max_ms": 0.15514,
+            "mean_ms": 0.02125827777777778,
             "n": 18,
-            "p50_ms": 0.057204000000000005
+            "p50_ms": 0.010881
           },
-          "edit_type_peak_mb": 11.41476821899414,
+          "edit_type_peak_mb": 11.726160049438477,
           "edit_type_to_echo": {
-            "max_ms": 1.80877,
-            "mean_ms": 0.17754950000000003,
+            "max_ms": 0.165164,
+            "mean_ms": 0.014886277777777778,
             "n": 18,
-            "p50_ms": 0.058871
+            "p50_ms": 0.004684000000000001
           },
           "find_rare_allocs": 1001,
-          "find_rare_ms": 2.517557,
-          "find_rare_next_ms": 0.012755,
-          "find_rare_peak_mb": 10.290242195129395,
+          "find_rare_ms": 0.42325799999999997,
+          "find_rare_next_ms": 0.002044,
+          "find_rare_peak_mb": 10.602067947387695,
           "find_word_allocs": 268,
-          "find_word_ms": 1.267467,
-          "find_word_next_ms": 0.020722,
-          "find_word_peak_mb": 10.298128128051758,
+          "find_word_ms": 0.818541,
+          "find_word_next_ms": 0.012714000000000001,
+          "find_word_peak_mb": 10.609908103942871,
           "highlight_step": {
-            "max_ms": 0.089028,
-            "mean_ms": 0.0013783950050968385,
+            "max_ms": 0.053773999999999995,
+            "mean_ms": 0.0007882130479102945,
             "n": 1962,
-            "p50_ms": 0.000491
+            "p50_ms": 0.00027
           },
-          "load_allocs": 6622,
-          "load_ms": 55.781909,
-          "load_peak_mb": 11.817513465881348,
-          "nav_idle_heading_allocs": 56836,
+          "load_allocs": 6435,
+          "load_ms": 15.137574,
+          "load_peak_mb": 11.725715637207031,
+          "nav_idle_heading_allocs": 36694,
           "nav_idle_heading_dispatch": {
-            "max_ms": 11.981164000000001,
-            "mean_ms": 4.53724515,
+            "max_ms": 0.97295,
+            "mean_ms": 0.8716845999999998,
             "n": 20,
-            "p50_ms": 2.052278
+            "p50_ms": 0.86443
           },
-          "nav_idle_heading_peak_mb": 9.369988441467285,
+          "nav_idle_heading_peak_mb": 9.653420448303223,
           "nav_idle_heading_to_speech": {
-            "max_ms": 0.348125,
-            "mean_ms": 0.2152435,
+            "max_ms": 0.148475,
+            "mean_ms": 0.07206255,
             "n": 20,
-            "p50_ms": 0.221639
+            "p50_ms": 0.066579
           },
           "nav_idle_paragraph_allocs": 669,
           "nav_idle_paragraph_dispatch": {
-            "max_ms": 0.063297,
-            "mean_ms": 0.0431189,
+            "max_ms": 0.043965,
+            "mean_ms": 0.016476699999999997,
             "n": 20,
-            "p50_ms": 0.039299
+            "p50_ms": 0.011522000000000001
           },
-          "nav_idle_paragraph_peak_mb": 9.224431037902832,
+          "nav_idle_paragraph_peak_mb": 9.439393997192383,
           "nav_idle_paragraph_to_speech": {
-            "max_ms": 0.1108,
-            "mean_ms": 0.07430719999999999,
+            "max_ms": 0.09033300000000001,
+            "mean_ms": 0.024721350000000003,
             "n": 20,
-            "p50_ms": 0.073098
+            "p50_ms": 0.022841999999999998
           },
           "nav_idle_sentence_allocs": 917,
           "nav_idle_sentence_dispatch": {
-            "max_ms": 0.31766500000000003,
-            "mean_ms": 0.0723017,
+            "max_ms": 0.081176,
+            "mean_ms": 0.030215349999999995,
             "n": 20,
-            "p50_ms": 0.058186999999999996
+            "p50_ms": 0.026922
           },
-          "nav_idle_sentence_peak_mb": 9.218751907348633,
+          "nav_idle_sentence_peak_mb": 9.429038047790527,
           "nav_idle_sentence_to_speech": {
-            "max_ms": 0.082954,
-            "mean_ms": 0.033809450000000005,
+            "max_ms": 0.10471000000000001,
+            "mean_ms": 0.0335352,
             "n": 20,
-            "p50_ms": 0.023493999999999998
+            "p50_ms": 0.029037
           },
           "nav_idle_word_allocs": 565,
           "nav_idle_word_dispatch": {
-            "max_ms": 0.098287,
-            "mean_ms": 0.04846145,
+            "max_ms": 0.037202,
+            "mean_ms": 0.0268334,
             "n": 20,
-            "p50_ms": 0.045251
+            "p50_ms": 0.026521
           },
-          "nav_idle_word_peak_mb": 9.209766387939453,
+          "nav_idle_word_peak_mb": 9.419852256774902,
           "nav_idle_word_to_speech": {
-            "max_ms": 0.2664,
-            "mean_ms": 0.03099965,
+            "max_ms": 0.186585,
+            "mean_ms": 0.037820900000000005,
             "n": 20,
-            "p50_ms": 0.014617000000000002
+            "p50_ms": 0.034441
           },
-          "nav_reading_heading_allocs": 56838,
+          "nav_reading_heading_allocs": 36696,
           "nav_reading_heading_dispatch": {
-            "max_ms": 33.365602,
-            "mean_ms": 6.518563500000001,
+            "max_ms": 1.325131,
+            "mean_ms": 0.9111507000000001,
             "n": 20,
-            "p50_ms": 2.803982
+            "p50_ms": 0.880812
           },
-          "nav_reading_heading_peak_mb": 9.383899688720703,
+          "nav_reading_heading_peak_mb": 9.67739200592041,
           "nav_reading_heading_to_speech": {
-            "max_ms": 33.565011999999996,
-            "mean_ms": 6.28321895,
+            "max_ms": 1.442302,
+            "mean_ms": 0.9780008,
             "n": 20,
-            "p50_ms": 2.522784
+            "p50_ms": 0.95297
           },
-          "nav_reading_paragraph_allocs": 59943,
+          "nav_reading_paragraph_allocs": 39393,
           "nav_reading_paragraph_dispatch": {
-            "max_ms": 12.537507999999999,
-            "mean_ms": 4.1938569,
+            "max_ms": 1.212262,
+            "mean_ms": 0.8714883,
             "n": 20,
-            "p50_ms": 2.052067
+            "p50_ms": 0.841286
           },
-          "nav_reading_paragraph_peak_mb": 9.4686279296875,
+          "nav_reading_paragraph_peak_mb": 9.721455574035645,
           "nav_reading_paragraph_to_speech": {
-            "max_ms": 12.834996,
-            "mean_ms": 4.5348773,
+            "max_ms": 1.3689399999999998,
+            "mean_ms": 0.9726659999999999,
             "n": 20,
-            "p50_ms": 2.382656
+            "p50_ms": 0.928525
           },
-          "nav_reading_sentence_allocs": 60324,
+          "nav_reading_sentence_allocs": 39681,
           "nav_reading_sentence_dispatch": {
-            "max_ms": 12.263558000000002,
-            "mean_ms": 4.316094700000001,
+            "max_ms": 1.124212,
+            "mean_ms": 0.8608987499999999,
             "n": 20,
-            "p50_ms": 2.2315159999999996
+            "p50_ms": 0.848449
           },
-          "nav_reading_sentence_peak_mb": 9.465840339660645,
+          "nav_reading_sentence_peak_mb": 9.716144561767578,
           "nav_reading_sentence_to_speech": {
-            "max_ms": 12.532487999999999,
-            "mean_ms": 4.6742458,
+            "max_ms": 1.337329,
+            "mean_ms": 0.9849141999999999,
             "n": 20,
-            "p50_ms": 2.467832
+            "p50_ms": 0.9656899999999999
           },
           "nav_reading_word_allocs": 564,
           "nav_reading_word_dispatch": {
-            "max_ms": 0.113677,
-            "mean_ms": 0.05255125000000001,
+            "max_ms": 0.062,
+            "mean_ms": 0.03192769999999999,
             "n": 20,
-            "p50_ms": 0.046683
+            "p50_ms": 0.027674
           },
-          "nav_reading_word_peak_mb": 9.323874473571777,
+          "nav_reading_word_peak_mb": 9.608282089233398,
           "nav_reading_word_to_speech": {
-            "max_ms": 0.286489,
-            "mean_ms": 0.08064455,
+            "max_ms": 0.157349,
+            "mean_ms": 0.0486519,
             "n": 20,
-            "p50_ms": 0.059868
+            "p50_ms": 0.034973
           },
-          "normalize_allocs": 133914,
-          "normalize_ms": 62.506873000000006,
-          "normalize_peak_mb": 8.328234672546387,
-          "normalize_pipeline_ms": 14.968896,
-          "open_allocs": 10520,
-          "open_and_read_dispatch_ms": 88.935321,
-          "open_ms": 84.35148600000001,
-          "open_peak_mb": 12.90019702911377,
-          "open_to_first_speech_ms": 89.197413,
-          "plan_all_allocs": 83192,
-          "plan_all_ms": 101.148072,
-          "plan_all_peak_mb": 11.51233196258545,
-          "replace_all_ms": 43.802710000000005,
-          "replace_allocs": 11781,
-          "replace_count_ms": 39.274961,
-          "replace_first_ms": 39.668851,
-          "replace_peak_mb": 16.412711143493652,
-          "replace_skip_ms": 42.396668999999996,
+          "normalize_allocs": 47337,
+          "normalize_ms": 22.712204,
+          "normalize_peak_mb": 8.622455596923828,
+          "normalize_pipeline_ms": 3.386441,
+          "open_allocs": 9314,
+          "open_and_read_dispatch_ms": 18.86115,
+          "open_ms": 16.705205,
+          "open_peak_mb": 12.212775230407715,
+          "open_to_first_speech_ms": 19.17172,
+          "plan_all_allocs": 53322,
+          "plan_all_ms": 26.039295,
+          "plan_all_peak_mb": 10.549700736999512,
+          "replace_all_ms": 13.230349,
+          "replace_allocs": 11782,
+          "replace_count_ms": 9.140569,
+          "replace_first_ms": 17.136536,
+          "replace_peak_mb": 16.72475528717041,
+          "replace_skip_ms": 17.166469,
           "save_dispatch": {
-            "max_ms": 0.039819,
-            "mean_ms": 0.028426800000000002,
+            "max_ms": 0.0207,
+            "mean_ms": 0.018213399999999998,
             "n": 5,
-            "p50_ms": 0.029349
+            "p50_ms": 0.019207000000000002
           },
           "save_position": {
-            "max_ms": 0.039268,
-            "mean_ms": 0.034268599999999996,
+            "max_ms": 0.037854,
+            "mean_ms": 0.0277016,
             "n": 5,
-            "p50_ms": 0.035571000000000005
+            "p50_ms": 0.021762
           },
           "save_written": {
-            "max_ms": 267.428739,
-            "mean_ms": 211.2182076,
+            "max_ms": 14.871476,
+            "mean_ms": 10.0275636,
             "n": 5,
-            "p50_ms": 229.639576
+            "p50_ms": 8.947455
           },
           "sentences_allocs": 21532,
-          "sentences_ms": 65.913814,
-          "sentences_peak_mb": 7.995086669921875,
-          "shutdown_ms": 0.087273,
+          "sentences_ms": 15.165085999999999,
+          "sentences_peak_mb": 8.027178764343262,
+          "shutdown_ms": 0.071869,
           "stop_to_first_audio": {
-            "max_ms": 3.122843,
-            "mean_ms": 2.2650227000000003,
+            "max_ms": 1.356617,
+            "mean_ms": 1.2687134,
             "n": 20,
-            "p50_ms": 2.176478
+            "p50_ms": 1.268506
           },
           "stop_to_first_audio_service": {
-            "max_ms": 0.26931900000000003,
-            "mean_ms": 0.1800621,
+            "max_ms": 0.14898799999999998,
+            "mean_ms": 0.13045405000000002,
             "n": 20,
-            "p50_ms": 0.175652
+            "p50_ms": 0.13368899999999997
           },
           "stop_to_speak": {
-            "max_ms": 0.676218,
-            "mean_ms": 0.2219226,
+            "max_ms": 0.195606,
+            "mean_ms": 0.08101725000000001,
             "n": 20,
-            "p50_ms": 0.18054599999999998
+            "p50_ms": 0.074839
           },
           "words_allocs": 37199,
-          "words_ms": 109.73073799999999,
-          "words_peak_mb": 7.955077171325684
+          "words_ms": 23.378836,
+          "words_peak_mb": 7.98716926574707
         },
         "one-line-1mb.txt": {
-          "apply_allocs": 5,
-          "apply_ms": 0.018097,
-          "apply_peak_mb": 6.2316389083862305,
+          "apply_allocs": 6,
+          "apply_ms": 0.017204,
+          "apply_peak_mb": 6.263731002807617,
           "autosave": {
-            "max_ms": 0.058517,
-            "mean_ms": 0.053125599999999995,
+            "max_ms": 0.028097,
+            "mean_ms": 0.022630599999999997,
             "n": 5,
-            "p50_ms": 0.051913
+            "p50_ms": 0.020693
           },
-          "autosave_allocs": 291,
-          "autosave_peak_mb": 14.907082557678223,
+          "autosave_allocs": 296,
+          "autosave_peak_mb": 15.219386100769043,
           "autosave_written": {
-            "max_ms": 112.78867,
-            "mean_ms": 54.552589999999995,
+            "max_ms": 8.834793000000001,
+            "mean_ms": 5.742724600000001,
             "n": 5,
-            "p50_ms": 39.511332
+            "p50_ms": 4.902165
           },
-          "blank_lines_ms": 0.048657,
+          "blank_lines_ms": 0.00046100000000000004,
           "bytes": 1048695,
           "doc": {
             "chars": 1036704,
@@ -1264,285 +1264,285 @@
             "markers": 0
           },
           "edit_backspace_dispatch": {
-            "max_ms": 0.087704,
-            "mean_ms": 0.04576,
+            "max_ms": 0.029921,
+            "mean_ms": 0.019315499999999996,
             "n": 10,
-            "p50_ms": 0.038946999999999996
+            "p50_ms": 0.017115000000000002
           },
           "edit_enter_allocs": 1245,
-          "edit_enter_ms": 1.913631,
-          "edit_enter_peak_mb": 9.819887161254883,
+          "edit_enter_ms": 0.580349,
+          "edit_enter_peak_mb": 10.12881088256836,
           "edit_leave_allocs": 161,
-          "edit_leave_ms": 2.496471,
-          "edit_leave_peak_mb": 10.970088958740234,
+          "edit_leave_ms": 1.8905239999999999,
+          "edit_leave_peak_mb": 11.282803535461426,
           "edit_line_down_dispatch": {
-            "max_ms": 0.060811,
-            "mean_ms": 0.011797499999999999,
+            "max_ms": 0.025172,
+            "mean_ms": 0.0102709,
             "n": 10,
-            "p50_ms": 0.006071999999999999
+            "p50_ms": 0.006514
           },
-          "edit_type_allocs": 817,
+          "edit_type_allocs": 835,
           "edit_type_dispatch": {
-            "max_ms": 12.783717,
-            "mean_ms": 5.474103222222222,
+            "max_ms": 1.4644199999999998,
+            "mean_ms": 1.0100768888888887,
             "n": 18,
-            "p50_ms": 3.510591
+            "p50_ms": 0.950839
           },
-          "edit_type_peak_mb": 12.76904010772705,
+          "edit_type_peak_mb": 13.078042984008789,
           "edit_type_to_echo": {
-            "max_ms": 0.41082,
-            "mean_ms": 0.06802233333333334,
+            "max_ms": 0.042582,
+            "mean_ms": 0.017096166666666666,
             "n": 18,
-            "p50_ms": 0.045738999999999995
+            "p50_ms": 0.015444999999999999
           },
           "find_rare_allocs": 1002,
-          "find_rare_ms": 1.498544,
-          "find_rare_next_ms": 0.005722,
-          "find_rare_peak_mb": 8.737152099609375,
+          "find_rare_ms": 0.964577,
+          "find_rare_next_ms": 0.004158,
+          "find_rare_peak_mb": 9.048049926757812,
           "find_word_allocs": 293,
-          "find_word_ms": 9.380424,
-          "find_word_next_ms": 5.390685,
-          "find_word_peak_mb": 12.720961570739746,
+          "find_word_ms": 3.181769,
+          "find_word_next_ms": 2.565776,
+          "find_word_peak_mb": 13.031859397888184,
           "highlight_step": {
-            "max_ms": 9.264185,
-            "mean_ms": 0.021266514,
+            "max_ms": 0.23810800000000001,
+            "mean_ms": 0.006986451499999997,
             "n": 2000,
-            "p50_ms": 0.00048100000000000004
+            "p50_ms": 0.00025100000000000003
           },
           "load_allocs": 1177,
-          "load_ms": 3.108681,
-          "load_peak_mb": 8.227621078491211,
+          "load_ms": 1.643606,
+          "load_peak_mb": 8.259713172912598,
           "nav_idle_heading_allocs": 994,
           "nav_idle_heading_dispatch": {
-            "max_ms": 0.1655,
-            "mean_ms": 0.08093769999999999,
+            "max_ms": 0.20670899999999998,
+            "mean_ms": 0.0704306,
             "n": 20,
-            "p50_ms": 0.07422799999999999
+            "p50_ms": 0.052762
           },
-          "nav_idle_heading_peak_mb": 6.74962043762207,
+          "nav_idle_heading_peak_mb": 6.972871780395508,
           "nav_idle_heading_to_speech": {
-            "max_ms": 0.181561,
-            "mean_ms": 0.0399362,
+            "max_ms": 0.159924,
+            "mean_ms": 0.0184895,
             "n": 20,
-            "p50_ms": 0.027243
+            "p50_ms": 0.008403
           },
           "nav_idle_paragraph_allocs": 1055,
           "nav_idle_paragraph_dispatch": {
-            "max_ms": 0.117775,
-            "mean_ms": 0.07829435000000001,
+            "max_ms": 0.090054,
+            "mean_ms": 0.04756955,
             "n": 20,
-            "p50_ms": 0.074959
+            "p50_ms": 0.042783
           },
-          "nav_idle_paragraph_peak_mb": 6.7478742599487305,
+          "nav_idle_paragraph_peak_mb": 6.9711408615112305,
           "nav_idle_paragraph_to_speech": {
-            "max_ms": 0.177713,
-            "mean_ms": 0.0918527,
+            "max_ms": 0.15778,
+            "mean_ms": 0.018177850000000002,
             "n": 20,
-            "p50_ms": 0.095623
+            "p50_ms": 0.008111
           },
           "nav_idle_sentence_allocs": 2106,
           "nav_idle_sentence_dispatch": {
-            "max_ms": 2.411752,
-            "mean_ms": 0.41758705,
+            "max_ms": 0.197472,
+            "mean_ms": 0.15107805,
             "n": 20,
-            "p50_ms": 0.303805
+            "p50_ms": 0.143347
           },
-          "nav_idle_sentence_peak_mb": 6.753964424133301,
+          "nav_idle_sentence_peak_mb": 6.977231025695801,
           "nav_idle_sentence_to_speech": {
-            "max_ms": 0.226858,
-            "mean_ms": 0.0759168,
+            "max_ms": 0.132321,
+            "mean_ms": 0.0402347,
             "n": 20,
-            "p50_ms": 0.063425
+            "p50_ms": 0.028547
           },
           "nav_idle_word_allocs": 1088,
           "nav_idle_word_dispatch": {
-            "max_ms": 7.0646889999999996,
-            "mean_ms": 1.2255581500000001,
+            "max_ms": 0.48531799999999997,
+            "mean_ms": 0.22590640000000003,
             "n": 20,
-            "p50_ms": 0.907547
+            "p50_ms": 0.205116
           },
-          "nav_idle_word_peak_mb": 8.635153770446777,
+          "nav_idle_word_peak_mb": 8.846755027770996,
           "nav_idle_word_to_speech": {
-            "max_ms": 7.166672,
-            "mean_ms": 0.7732097,
+            "max_ms": 0.222108,
+            "mean_ms": 0.023618849999999997,
             "n": 20,
-            "p50_ms": 0.196351
+            "p50_ms": 0.009202
           },
           "nav_reading_heading_allocs": 65,
           "nav_reading_heading_dispatch": {
-            "max_ms": 0.14979800000000001,
-            "mean_ms": 0.14979800000000001,
+            "max_ms": 0.076468,
+            "mean_ms": 0.076468,
             "n": 1,
-            "p50_ms": 0.14979800000000001
+            "p50_ms": 0.076468
           },
-          "nav_reading_heading_peak_mb": 6.839791297912598,
+          "nav_reading_heading_peak_mb": 7.130566596984863,
           "nav_reading_paragraph_allocs": 70,
           "nav_reading_paragraph_dispatch": {
-            "max_ms": 0.152053,
-            "mean_ms": 0.152053,
+            "max_ms": 0.079584,
+            "mean_ms": 0.079584,
             "n": 1,
-            "p50_ms": 0.152053
+            "p50_ms": 0.079584
           },
-          "nav_reading_paragraph_peak_mb": 6.8369293212890625,
-          "nav_reading_sentence_allocs": 38383,
+          "nav_reading_paragraph_peak_mb": 7.127765655517578,
+          "nav_reading_sentence_allocs": 23986,
           "nav_reading_sentence_dispatch": {
-            "max_ms": 11.505601,
-            "mean_ms": 3.6365396500000005,
+            "max_ms": 1.366226,
+            "mean_ms": 1.0605215000000001,
             "n": 20,
-            "p50_ms": 2.063769
+            "p50_ms": 1.0172350000000001
           },
-          "nav_reading_sentence_peak_mb": 6.923016548156738,
+          "nav_reading_sentence_peak_mb": 7.219490051269531,
           "nav_reading_sentence_to_speech": {
-            "max_ms": 11.839461,
-            "mean_ms": 3.95240305,
+            "max_ms": 1.62954,
+            "mean_ms": 1.18009,
             "n": 20,
-            "p50_ms": 2.5375620000000003
+            "p50_ms": 1.1218000000000001
           },
           "nav_reading_word_allocs": 1087,
           "nav_reading_word_dispatch": {
-            "max_ms": 7.572977,
-            "mean_ms": 1.3376516999999999,
+            "max_ms": 0.585962,
+            "mean_ms": 0.21858149999999998,
             "n": 20,
-            "p50_ms": 0.985663
+            "p50_ms": 0.190378
           },
-          "nav_reading_word_peak_mb": 8.728590965270996,
+          "nav_reading_word_peak_mb": 9.019091606140137,
           "nav_reading_word_to_speech": {
-            "max_ms": 7.662018,
-            "mean_ms": 1.4372280499999999,
+            "max_ms": 0.689373,
+            "mean_ms": 0.23675594999999997,
             "n": 20,
-            "p50_ms": 1.089658
+            "p50_ms": 0.19596
           },
-          "normalize_allocs": 172454,
-          "normalize_ms": 44.358892,
-          "normalize_peak_mb": 7.021356582641602,
-          "normalize_pipeline_ms": 12.232524999999999,
-          "open_allocs": 2945,
-          "open_and_read_dispatch_ms": 11.067123,
-          "open_ms": 9.259504,
-          "open_peak_mb": 8.894851684570312,
-          "open_to_first_speech_ms": 16.640498,
-          "plan_all_allocs": 49285,
-          "plan_all_ms": 48.642927,
-          "plan_all_peak_mb": 9.898752212524414,
-          "replace_all_ms": 34.518781,
-          "replace_allocs": 11785,
-          "replace_count_ms": 27.291862000000002,
-          "replace_first_ms": 52.110091999999995,
-          "replace_peak_mb": 16.77267360687256,
-          "replace_skip_ms": 54.774334,
+          "normalize_allocs": 94043,
+          "normalize_ms": 29.691395,
+          "normalize_peak_mb": 7.316633224487305,
+          "normalize_pipeline_ms": 3.44102,
+          "open_allocs": 2289,
+          "open_and_read_dispatch_ms": 4.290903,
+          "open_ms": 2.930203,
+          "open_peak_mb": 9.136146545410156,
+          "open_to_first_speech_ms": 7.456988,
+          "plan_all_allocs": 28009,
+          "plan_all_ms": 20.668489,
+          "plan_all_peak_mb": 9.0254487991333,
+          "replace_all_ms": 12.441462,
+          "replace_allocs": 11787,
+          "replace_count_ms": 9.036534000000001,
+          "replace_first_ms": 23.069376,
+          "replace_peak_mb": 17.08494281768799,
+          "replace_skip_ms": 23.140262000000003,
           "save_dispatch": {
-            "max_ms": 0.042475000000000006,
-            "mean_ms": 0.0358114,
+            "max_ms": 0.02467,
+            "mean_ms": 0.019363799999999997,
             "n": 5,
-            "p50_ms": 0.038266
+            "p50_ms": 0.022186
           },
           "save_position": {
-            "max_ms": 0.129758,
-            "mean_ms": 0.10529580000000001,
+            "max_ms": 0.041054,
+            "mean_ms": 0.0372946,
             "n": 5,
-            "p50_ms": 0.101993
+            "p50_ms": 0.036335
           },
           "save_written": {
-            "max_ms": 992.813719,
-            "mean_ms": 294.6477984,
+            "max_ms": 22.209989999999998,
+            "mean_ms": 11.472873400000001,
             "n": 5,
-            "p50_ms": 148.920829
+            "p50_ms": 8.883358
           },
           "sentences_allocs": 6732,
-          "sentences_ms": 33.33514,
-          "sentences_peak_mb": 6.67806339263916,
-          "shutdown_ms": 0.094418,
+          "sentences_ms": 14.802506,
+          "sentences_peak_mb": 6.710155487060547,
+          "shutdown_ms": 0.066706,
           "stop_to_first_audio": {
-            "max_ms": 2.627768,
-            "mean_ms": 2.1631042999999996,
+            "max_ms": 1.620743,
+            "mean_ms": 1.39811145,
             "n": 20,
-            "p50_ms": 2.153813
+            "p50_ms": 1.390971
           },
           "stop_to_first_audio_service": {
-            "max_ms": 0.289447,
-            "mean_ms": 0.2264675,
+            "max_ms": 0.486937,
+            "mean_ms": 0.22378644999999997,
             "n": 20,
-            "p50_ms": 0.22273400000000002
+            "p50_ms": 0.20902900000000002
           },
           "stop_to_speak": {
-            "max_ms": 1.299706,
-            "mean_ms": 0.3793902000000001,
+            "max_ms": 0.383194,
+            "mean_ms": 0.15046710000000002,
             "n": 20,
-            "p50_ms": 0.27286699999999997
+            "p50_ms": 0.130796
           },
           "words_allocs": 12696,
-          "words_ms": 30.970214,
-          "words_peak_mb": 6.667949676513672
+          "words_ms": 15.470537,
+          "words_peak_mb": 6.700041770935059
         },
         "pathological": {
-          "docx_load_ms": 79.49071500000001,
-          "docx_total_ms": 294.63905800000003,
-          "eml_load_ms": 61.407745,
-          "eml_total_ms": 310.444337,
-          "epub_load_ms": 125.893329,
-          "epub_total_ms": 306.304218,
-          "html_load_ms": 89.994324,
-          "html_total_ms": 289.029512,
-          "json_load_ms": 65.251876,
-          "json_total_ms": 346.856518,
-          "latex_load_ms": 289.931206,
-          "latex_total_ms": 577.79391,
-          "markdown_load_ms": 41.019715,
-          "markdown_total_ms": 258.07426100000004,
-          "mathml_load_ms": 72.377599,
-          "mathml_total_ms": 363.55176700000004,
-          "mhtml_load_ms": 124.34075999999999,
-          "mhtml_total_ms": 416.13942599999996,
-          "notebook_load_ms": 47.324834,
-          "notebook_total_ms": 276.43667700000003,
-          "odt_load_ms": 61.352922,
-          "odt_total_ms": 256.57432800000004,
-          "pdf_load_ms": 368.306205,
-          "pdf_total_ms": 785.470105,
-          "rtf_load_ms": 59.476173,
-          "rtf_total_ms": 277.79168100000004,
-          "sheet_load_ms": 86.113677,
-          "sheet_total_ms": 818.934035,
-          "svg_load_ms": 52.075485,
-          "svg_total_ms": 406.57257699999997,
-          "text_load_ms": 5.691785,
-          "text_total_ms": 369.515151
+          "docx_load_ms": 26.055745,
+          "docx_total_ms": 96.768934,
+          "eml_load_ms": 22.195267,
+          "eml_total_ms": 100.54357399999999,
+          "epub_load_ms": 36.961537,
+          "epub_total_ms": 112.078558,
+          "html_load_ms": 23.770529,
+          "html_total_ms": 100.637786,
+          "json_load_ms": 17.127473000000002,
+          "json_total_ms": 110.71342700000001,
+          "latex_load_ms": 96.139846,
+          "latex_total_ms": 168.00236299999997,
+          "markdown_load_ms": 14.52934,
+          "markdown_total_ms": 86.231605,
+          "mathml_load_ms": 59.858483,
+          "mathml_total_ms": 161.405375,
+          "mhtml_load_ms": 25.1273,
+          "mhtml_total_ms": 104.19899000000001,
+          "notebook_load_ms": 15.704437000000002,
+          "notebook_total_ms": 89.346201,
+          "odt_load_ms": 24.640566,
+          "odt_total_ms": 99.28095300000001,
+          "pdf_load_ms": 115.485274,
+          "pdf_total_ms": 216.393065,
+          "rtf_load_ms": 23.485267,
+          "rtf_total_ms": 97.809601,
+          "sheet_load_ms": 17.324296,
+          "sheet_total_ms": 229.257241,
+          "svg_load_ms": 13.378061,
+          "svg_total_ms": 125.99670199999998,
+          "text_load_ms": 2.075964,
+          "text_total_ms": 111.215671
         },
         "startup": {
           "tw --version": {
-            "max_ms": 24.016316,
-            "median_ms": 20.251375,
-            "min_ms": 13.770852,
+            "max_ms": 6.448842,
+            "median_ms": 6.083621,
+            "min_ms": 5.824143,
             "n": 5
           },
           "tw backends": {
-            "max_ms": 40.380949,
-            "median_ms": 23.122685,
-            "min_ms": 19.771596,
+            "max_ms": 6.4402349999999995,
+            "median_ms": 6.232479,
+            "min_ms": 6.075228,
             "n": 5
           },
           "tw info": {
-            "max_ms": 242.413929,
-            "median_ms": 131.878713,
-            "min_ms": 118.21163299999999,
+            "max_ms": 45.452247,
+            "median_ms": 45.180312,
+            "min_ms": 44.276519,
             "n": 5
           },
           "tw text": {
-            "max_ms": 100.828216,
-            "median_ms": 78.905515,
-            "min_ms": 70.488451,
+            "max_ms": 25.325325,
+            "median_ms": 24.716371000000002,
+            "min_ms": 23.589382,
             "n": 5
           }
         },
         "sync-id-100mb.pdf": {
           "bytes": 104857600,
           "identify_again_allocs": 28,
-          "identify_again_ms": 0.12428800000000001,
-          "identify_again_peak_mb": 5.127745628356934,
+          "identify_again_ms": 0.058189000000000005,
+          "identify_again_peak_mb": 5.159832000732422,
           "identify_first_allocs": 38,
-          "identify_first_ms": 407.92176,
-          "identify_first_peak_mb": 5.3748884201049805,
-          "identify_mb_per_s": 245.14504938397988
+          "identify_first_ms": 62.183060999999995,
+          "identify_first_peak_mb": 5.406974792480469,
+          "identify_mb_per_s": 1608.154992563007
         }
       }
     },
