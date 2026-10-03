@@ -96,7 +96,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         super::print_all(&render(&files))?;
     }
     if files.iter().any(|(_, p)| !p.is_empty()) {
-        std::process::exit(1);
+        return Err(super::NothingFound.into());
     }
     Ok(())
 }

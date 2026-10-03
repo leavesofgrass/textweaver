@@ -69,7 +69,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     super::print_all(&lines)?;
     if hits.is_empty() {
         eprintln!("No matches for \"{}\".", args.pattern);
-        std::process::exit(1);
+        return Err(super::NothingFound.into());
     }
     eprintln!(
         "{} {}.",
