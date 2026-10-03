@@ -291,3 +291,33 @@ fn binary_files_are_refused_from_their_first_bytes() {
         b"hello".to_vec()
     );
 }
+
+/// A long token inside rows nested past the depth limit (W8b-ml): it is
+/// read letter by letter there, and the LaTeX builder scanned back over
+/// every letter before each one, so the load was quadratic (512 KB took
+/// 189 s with the plan). 128 KB took seconds even in a release build of
+/// the old code, and far longer in a test build; it now takes
+/// milliseconds.
+#[test]
+fn mathml_long_token_in_deep_rows_loads_in_linear_time() {
+    let token: String = (0..128 * 1024)
+        .map(|i| char::from(b'a' + u8::try_from(i % 26).unwrap_or(0)))
+        .collect();
+    let mml = format!(
+        "<math xmlns=\"http://www.w3.org/1998/Math/MathML\">{}<mi>{token}</mi>{}</math>",
+        "<mrow>".repeat(200),
+        "</mrow>".repeat(200)
+    );
+    let started = std::time::Instant::now();
+    let doc = load(mml.into_bytes(), "mml").unwrap();
+    let plan = textweaver_text::plan(
+        &doc,
+        doc.full_range(),
+        &textweaver_text::NarrationPolicy::default(),
+    );
+    let took = started.elapsed();
+    assert_eq!(doc.text().to_string(), format!("$${token}$$"));
+    assert_eq!(doc.marker_index().count(MarkerKind::Math, Some(1)), 1);
+    assert!(!plan.is_empty());
+    assert!(took.as_secs() < 5, "took {took:?}");
+}
