@@ -1209,6 +1209,16 @@ pub const INFO: &[Info] = &[
         "Hide the menu bar",
         "Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.",
     ),
+    choice(
+        "gui.sidebar",
+        "Panel beside the document",
+        "The panel the window shows beside the document: none, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one.",
+        &[
+            ("off", "none"),
+            ("contents", "Contents"),
+            ("notes", "Notes"),
+        ],
+    ),
     // [colors] (W6u): open choices, a named color or #rrggbb.
     open_choice(
         "colors.ruler",

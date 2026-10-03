@@ -230,6 +230,7 @@ fn everything_changed() -> Settings {
         .insert("es".into(), "espeak:es".into());
     s.gui.announce = crate::GuiAnnounce::Uia;
     s.gui.auto_hide_menu = true;
+    s.gui.sidebar = crate::GuiSidebar::Notes;
     let c = &mut s.colors;
     c.ruler = "orange".into();
     c.difficult_words = "blue".into();

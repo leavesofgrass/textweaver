@@ -775,6 +775,10 @@ action-text-larger = Agrandar el texto del documento
 action-text-smaller = Reducir el texto del documento
 action-text-size-reset = Devolver el texto del documento a su tamaño normal
 action-choose-font = Elegir la fuente del texto del documento
+action-contents-panel = Mostrar el panel Contenido junto al documento e ir a él, o cerrarlo desde dentro: Intro va a un encabezado
+action-notes-panel = Mostrar el panel Notas junto al documento e ir a él, o cerrarlo desde dentro: Intro va a una nota
+action-next-region = Ir a la siguiente parte de la ventana: la cabecera, el panel, el documento o la barra de herramientas
+action-previous-region = Ir a la parte anterior de la ventana
 action-command-palette = Ejecutar cualquier comando por su nombre
 action-settings = Abrir la configuración: cada opción con su ayuda, filtrada mientras escribe; Izquierda y Derecha cambian un valor
 action-keyboard-help = Listar los atajos de teclado
@@ -1978,6 +1982,11 @@ choice-gui-announce-live = región activa
 choice-gui-announce-uia = notificaciones de UI Automation
 setting-gui-auto-hide-menu = Ocultar la barra de menús
 setting-gui-auto-hide-menu-help = Windows: oculta la barra de menús de la ventana hasta que Alt o F10 la muestra; se oculta de nuevo al cerrar el menú. Sin efecto en Linux, cuyos menús son la lista de F10, ni en macOS.
+setting-gui-sidebar = Panel junto al documento
+setting-gui-sidebar-help = El panel que la ventana muestra junto al documento: ninguno, el Contenido (los encabezados) o las Notas. Las teclas de panel lo cambian, y la ventana recuerda el último.
+choice-gui-sidebar-off = ninguno
+choice-gui-sidebar-contents = Contenido
+choice-gui-sidebar-notes = Notas
 
 ## Units, said after a number.
 
@@ -2777,6 +2786,18 @@ gui-toolbar-reading = Lectura
 gui-document = Documento
 gui-document-titled = { $title }, documento
 gui-list-hint = Intro elige, Escape cierra.
+gui-sidebar-contents = Contenido
+gui-sidebar-notes = Notas
+gui-sidebar-open =
+    { $n ->
+        [one] { $panel } abierto, 1 elemento.
+       *[other] { $panel } abierto, { $n } elementos.
+    }
+gui-sidebar-closed = { $panel } cerrado.
+gui-sidebar-no-headings = No hay encabezados.
+gui-sidebar-no-notes = No hay notas.
+gui-sidebar-current = { $item }, actual
+gui-sidebar-hint = Intro va allí. Mayús+Intro va y vuelve. Escape vuelve.
 gui-settings-sections = Secciones
 gui-settings-form = Configuración: { $section }
 gui-settings-saved-hint = Los cambios se aplican y se guardan al momento.
@@ -3086,6 +3107,10 @@ name-text-larger = Texto más grande
 name-text-smaller = Texto más pequeño
 name-text-size-reset = Tamaño de texto normal
 name-choose-font = Fuente
+name-contents-panel = Panel Contenido
+name-notes-panel = Panel Notas
+name-next-region = Siguiente región
+name-previous-region = Región anterior
 name-color-settings = Colores
 name-cycle-interface-announcements = Avisos de la interfaz
 name-menu = Menús

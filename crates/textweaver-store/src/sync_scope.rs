@@ -239,6 +239,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("gui.announce", Machine),
     // Whether this computer's window hides its menu bar.
     ("gui.auto_hide_menu", Machine),
+    // The panel this computer's window shows beside the document.
+    ("gui.sidebar", Machine),
     // [colors]
     ("colors.ruler", Portable),
     ("colors.difficult_words", Portable),

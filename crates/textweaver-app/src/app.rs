@@ -1981,7 +1981,14 @@ impl App {
             A::SyllablesToggle => self.syllables_toggle(),
             A::DifficultWordsToggle => self.difficult_words_toggle(),
             // The window's text size and font (the GUI handles them first).
-            A::TextLarger | A::TextSmaller | A::TextSizeReset | A::ChooseFont => {
+            A::TextLarger
+            | A::TextSmaller
+            | A::TextSizeReset
+            | A::ChooseFont
+            | A::ContentsPanel
+            | A::NotesPanel
+            | A::NextRegion
+            | A::PreviousRegion => {
                 let msg = self.msg("app-window-only");
                 self.note(&msg);
             }

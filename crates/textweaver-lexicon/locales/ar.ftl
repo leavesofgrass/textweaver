@@ -867,6 +867,10 @@ action-text-larger = تكبير نص المستند
 action-text-smaller = تصغير نص المستند
 action-text-size-reset = إعادة نص المستند إلى حجمه العادي
 action-choose-font = اختيار خط نص المستند
+action-contents-panel = إظهار لوحة المحتويات بجانب المستند والانتقال إليها، أو إغلاقها من داخلها: Enter ينتقل إلى عنوان
+action-notes-panel = إظهار لوحة الملاحظات بجانب المستند والانتقال إليها، أو إغلاقها من داخلها: Enter ينتقل إلى ملاحظة
+action-next-region = الانتقال إلى الجزء التالي من النافذة: الترويسة، أو اللوحة، أو المستند، أو شريط الأدوات
+action-previous-region = الانتقال إلى الجزء السابق من النافذة
 action-command-palette = تشغيل أي أمر بالاسم
 action-settings = فتح الإعدادات: كل خيار مع مساعدته، تُصفّى أثناء الكتابة؛ يسار ويمين لتغيير قيمة
 action-keyboard-help = سرد اختصارات لوحة المفاتيح
@@ -2162,6 +2166,11 @@ choice-gui-announce-live = منطقة حية
 choice-gui-announce-uia = إشعارات UI Automation
 setting-gui-auto-hide-menu = إخفاء شريط القوائم
 setting-gui-auto-hide-menu-help = Windows: يخفي شريط قوائم النافذة حتى يُظهره Alt أو F10، ويختفي مرة أخرى عند إغلاق القائمة. لا أثر له على Linux، حيث القوائم هي قائمة F10، ولا على macOS.
+setting-gui-sidebar = اللوحة بجانب المستند
+setting-gui-sidebar-help = اللوحة التي تعرضها النافذة بجانب المستند: لا شيء، أو المحتويات (العناوين)، أو الملاحظات. مفاتيح اللوحات تغيّرها، وتتذكر النافذة آخر لوحة.
+choice-gui-sidebar-off = لا شيء
+choice-gui-sidebar-contents = المحتويات
+choice-gui-sidebar-notes = الملاحظات
 
 ## الوحدات، تُقال بعد رقم.
 
@@ -3034,6 +3043,18 @@ gui-toolbar-reading = القراءة
 gui-document = المستند
 gui-document-titled = { $title }، المستند
 gui-list-hint = Enter للاختيار، وEscape للإغلاق.
+gui-sidebar-contents = المحتويات
+gui-sidebar-notes = الملاحظات
+gui-sidebar-open =
+    { $n ->
+        [one] { $panel } مفتوحة، عنصر واحد.
+       *[other] { $panel } مفتوحة، { $n } عناصر.
+    }
+gui-sidebar-closed = { $panel } مغلقة.
+gui-sidebar-no-headings = لا توجد عناوين.
+gui-sidebar-no-notes = لا توجد ملاحظات.
+gui-sidebar-current = { $item }، الحالي
+gui-sidebar-hint = Enter ينتقل إليه. Shift+Enter ينتقل ويعود. Escape يعود.
 gui-settings-sections = الأقسام
 gui-settings-form = إعدادات { $section }
 gui-settings-saved-hint = تسري التغييرات وتُحفظ فورًا.
@@ -3359,6 +3380,10 @@ name-text-larger = نص أكبر
 name-text-smaller = نص أصغر
 name-text-size-reset = حجم النص القياسي
 name-choose-font = الخط
+name-contents-panel = لوحة المحتويات
+name-notes-panel = لوحة الملاحظات
+name-next-region = المنطقة التالية
+name-previous-region = المنطقة السابقة
 name-color-settings = الألوان
 name-cycle-interface-announcements = إعلانات الواجهة
 name-menu = القوائم

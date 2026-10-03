@@ -610,6 +610,7 @@ mod tests {
                 !a.is_palette_command()
                     && !map.preset().palette_only().contains(a)
                     && (!a.is_window_only() || frontend != Frontend::Terminal)
+                    && (!a.is_terminal_only() || frontend != Frontend::Gui)
             }) {
                 let reachable = Layer::ALL
                     .iter()
@@ -835,7 +836,9 @@ mod tests {
         // action has one on each frontend.
         for (platform, frontend, map) in all_maps() {
             for a in ActionId::ALL.iter().filter(|a| {
-                !a.is_palette_command() && (!a.is_window_only() || frontend != Frontend::Terminal)
+                !a.is_palette_command()
+                    && (!a.is_window_only() || frontend != Frontend::Terminal)
+                    && (!a.is_terminal_only() || frontend != Frontend::Gui)
             }) {
                 assert!(
                     !map.chords_for(*a).is_empty(),
@@ -851,7 +854,9 @@ mod tests {
         // mode (not fully shadowed).
         for (platform, frontend, map) in all_maps() {
             for a in ActionId::ALL.iter().filter(|a| {
-                !a.is_palette_command() && (!a.is_window_only() || frontend != Frontend::Terminal)
+                !a.is_palette_command()
+                    && (!a.is_window_only() || frontend != Frontend::Terminal)
+                    && (!a.is_terminal_only() || frontend != Frontend::Gui)
             }) {
                 let reachable = Layer::ALL
                     .iter()
@@ -870,6 +875,37 @@ mod tests {
                 assert!(!gui.chords_for(*a).is_empty(), "{a:?} on {platform:?}");
                 assert!(term.chords_for(*a).is_empty(), "{a:?} on {platform:?}");
             }
+        }
+    }
+
+    /// Line numbers are the terminal's gutter: no window key, so F6 and
+    /// Shift+F6 move between the window's regions, as in Windows programs
+    /// (Wave 8d; the conventions report's QW4).
+    #[test]
+    fn terminal_only_commands_leave_the_window_its_keys() {
+        for platform in Platform::ALL {
+            let gui = Keymap::defaults(platform, Frontend::Gui);
+            let term = Keymap::defaults(platform, Frontend::Terminal);
+            for a in ActionId::ALL.iter().filter(|a| a.is_terminal_only()) {
+                assert!(gui.chords_for(*a).is_empty(), "{a:?} on {platform:?}");
+                assert!(!term.chords_for(*a).is_empty(), "{a:?} on {platform:?}");
+                assert!(!a.is_window_only(), "{a:?}");
+            }
+            assert_eq!(
+                gui.lookup(&k("F6"), Layer::Browse),
+                Some(ActionId::NextRegion),
+                "{platform:?}"
+            );
+            assert_eq!(
+                gui.lookup(&k("Shift+F6"), Layer::Edit),
+                Some(ActionId::PreviousRegion),
+                "{platform:?}"
+            );
+            assert_eq!(
+                term.lookup(&k("F6"), Layer::Browse),
+                Some(ActionId::ToggleLineNumbers),
+                "{platform:?}"
+            );
         }
     }
 

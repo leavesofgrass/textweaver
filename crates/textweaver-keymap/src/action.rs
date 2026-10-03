@@ -603,8 +603,10 @@ actions! {
     // View and help
     NextTheme = "next_theme", View, "Switch to the next color theme",
         gui ["g:F5"], term ["g:F5"], shared [];
+    // The terminal's gutter: the window has none, and gives F6 to its
+    // regions (Wave 8d), as Windows programs do.
     ToggleLineNumbers = "toggle_line_numbers", View, "Show or hide line numbers",
-        gui ["g:F6"], term ["g:F6"], shared [];
+        gui [], term ["g:F6"], shared [];
     ToggleCharacterKeys = "toggle_character_keys", View,
         "Turn single-key shortcuts on or off, so dictation and typing never trigger commands",
         gui ["g:F9"], term ["g:F9"], shared [];
@@ -631,6 +633,18 @@ actions! {
         gui ["g:Ctrl+0"], term [], shared [];
     ChooseFont = "choose_font", View, "Choose the font of the document text",
         gui ["g:Ctrl+D"], term [], shared [];
+    ContentsPanel = "contents_panel", View,
+        "Show the Contents panel beside the document and go to it, or close it from inside it: Enter goes to a heading",
+        gui ["g:Ctrl+1"], term [], shared [];
+    NotesPanel = "notes_panel", View,
+        "Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note",
+        gui ["g:Ctrl+2"], term [], shared [];
+    NextRegion = "next_region", View,
+        "Move to the next part of the window: the header, the panel, the document, or the toolbar",
+        gui ["g:F6"], term [], shared [];
+    PreviousRegion = "previous_region", View,
+        "Move to the previous part of the window",
+        gui ["g:Shift+F6"], term [], shared [];
     ColorSettings = "color_settings", View,
         "Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast",
         gui [], term [], shared [];
@@ -729,8 +743,9 @@ impl ActionId {
         d.gui.is_empty() && d.terminal.is_empty() && d.shared.is_empty()
     }
 
-    /// True for commands only the window has: its text size and font, and
-    /// Open by typed path (the terminal's Open is a typed path already).
+    /// True for commands only the window has: its text size and font,
+    /// Open by typed path (the terminal's Open is a typed path already),
+    /// its Contents and Notes panels, and moving between its regions (F6).
     /// They have GUI keys and no terminal keys; the terminal's palette still
     /// lists them, and says where they work.
     pub fn is_window_only(self) -> bool {
@@ -741,7 +756,19 @@ impl ActionId {
                 | ActionId::TextSmaller
                 | ActionId::TextSizeReset
                 | ActionId::ChooseFont
+                | ActionId::ContentsPanel
+                | ActionId::NotesPanel
+                | ActionId::NextRegion
+                | ActionId::PreviousRegion
         )
+    }
+
+    /// True for commands only the terminal reader has keys for: line
+    /// numbers, which are the terminal's gutter. They have terminal keys
+    /// and no window keys, so F6 is the window's, for its regions; the
+    /// window's palette leaves them out.
+    pub fn is_terminal_only(self) -> bool {
+        matches!(self, ActionId::ToggleLineNumbers)
     }
 
     /// The command palette name: the id with spaces, e.g. `next sentence`.
