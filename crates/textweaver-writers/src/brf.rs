@@ -1044,10 +1044,10 @@ mod louis {
     #[cfg(feature = "liblouis")]
     pub(super) fn translate(texts: &[&str], table: &str) -> Result<Vec<String>, String> {
         use std::io::Write;
-        use std::process::{Command, Stdio};
+        use std::process::Stdio;
 
         let tables = format!("en-us-brf.dis,{table}");
-        let mut child = Command::new("lou_translate")
+        let mut child = textweaver_core::process::command("lou_translate")
             .args(["--forward", &tables])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -1068,10 +1068,10 @@ mod louis {
         if !output.status.success() {
             return Err(format!(
                 "lou_translate failed: {}",
-                String::from_utf8_lossy(&output.stderr).trim()
+                textweaver_core::process::decode_output(&output.stderr).trim()
             ));
         }
-        let text = String::from_utf8_lossy(&output.stdout);
+        let text = textweaver_core::process::decode_output(&output.stdout);
         let lines: Vec<String> = text
             .lines()
             .map(|l| crate::ueb::from_unicode(l).to_ascii_uppercase())
@@ -1091,7 +1091,7 @@ mod louis {
     /// True when `lou_translate` runs.
     #[cfg(all(test, feature = "liblouis"))]
     pub(super) fn available() -> bool {
-        std::process::Command::new("lou_translate")
+        textweaver_core::process::command("lou_translate")
             .arg("--version")
             .output()
             .is_ok_and(|o| o.status.success())

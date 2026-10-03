@@ -55,6 +55,14 @@
 //! the final text, or said in place with [`RevisionMode::Marked`].
 //!
 //! Owner: Agent A.
+//!
+// `Registry::with_pandoc` exists only with the `pandoc` feature; without it
+// the link above goes to `Registry`, so the docs build either way.
+#![cfg_attr(
+    feature = "pandoc",
+    doc = "[`Registry::with_pandoc`]: Registry::with_pandoc"
+)]
+#![cfg_attr(not(feature = "pandoc"), doc = "[`Registry::with_pandoc`]: Registry")]
 
 use std::path::{Path, PathBuf};
 

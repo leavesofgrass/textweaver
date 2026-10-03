@@ -185,14 +185,6 @@ impl App {
         self.opening.is_some()
     }
 
-    /// The file opening in the background, and for how long it has been
-    /// loading, for a frontend's progress display.
-    pub fn opening_progress(&self, now: Instant) -> Option<(&Path, Duration)> {
-        self.opening
-            .as_ref()
-            .map(|o| (o.path.as_path(), now.saturating_duration_since(o.started)))
-    }
-
     /// Sets the size from which files open in the background (default
     /// [`BACKGROUND_OPEN_BYTES`]; 0 opens every file in the background,
     /// `u64::MAX` none).

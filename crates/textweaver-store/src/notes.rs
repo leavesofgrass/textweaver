@@ -41,9 +41,6 @@ pub const RELATION_TYPES: [&str; 10] = [
     "FOLLOWS",
 ];
 
-/// The relation used for a link without a type (Star's default).
-pub const DEFAULT_RELATION: &str = "SEE_ALSO";
-
 /// How one note relates to another (Star's `RELATION_TYPES`,
 /// `star/annotations.py:153-164`). [`Relation::rel_type`] keeps the name
 /// as a string, so a type from a newer version survives a round trip;

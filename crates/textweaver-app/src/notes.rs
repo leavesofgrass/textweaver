@@ -639,11 +639,6 @@ impl App {
         }
     }
 
-    /// Position of note `i`, if any (tests and frontends).
-    pub fn note_position(&self, i: usize) -> Option<CharPos> {
-        self.session.as_ref()?.notes.get(i).map(|n| n.range.start)
-    }
-
     /// The note whose passage holds `pos`, if any.
     fn note_at(&self, pos: CharPos) -> Option<&Note> {
         let notes = &self.session.as_ref()?.notes;

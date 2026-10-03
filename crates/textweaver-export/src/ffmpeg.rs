@@ -10,7 +10,7 @@
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 
 use serde::Serialize;
 
@@ -88,18 +88,10 @@ pub fn find() -> Option<PathBuf> {
     find_on_path("ffmpeg", std::env::var_os("PATH"))
 }
 
-/// `name` in the directories of `path` (a `PATH`-style list), trying the
-/// Windows executable extension too.
+/// `name` in the directories of `path` (a `PATH`-style list), by the
+/// workspace's one rule ([`textweaver_core::process::find_program_in`]).
 pub fn find_on_path(name: &str, path: Option<OsString>) -> Option<PathBuf> {
-    let path = path?;
-    let names: Vec<String> = if cfg!(windows) {
-        vec![format!("{name}.exe"), name.to_owned()]
-    } else {
-        vec![name.to_owned()]
-    };
-    std::env::split_paths(&path)
-        .flat_map(|dir| names.iter().map(move |n| dir.join(n)))
-        .find(|p| p.is_file())
+    textweaver_core::process::find_program_in(name, &path?)
 }
 
 /// The ffmpeg arguments that turn `wav` into `out` in `format`, with
@@ -173,7 +165,7 @@ pub fn run_with_stop(
     args: &[OsString],
     stop: &dyn Fn() -> bool,
 ) -> Result<(), ExportError> {
-    let mut child = Command::new(ffmpeg)
+    let mut child = textweaver_core::process::command(ffmpeg)
         .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -212,7 +204,7 @@ pub fn run_with_stop(
     if status.success() {
         return Ok(());
     }
-    let stderr = String::from_utf8_lossy(&stderr_bytes);
+    let stderr = textweaver_core::process::decode_output(&stderr_bytes);
     let last = stderr
         .lines()
         .rev()

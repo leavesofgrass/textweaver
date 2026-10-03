@@ -427,7 +427,7 @@ fn spawn_child(job: &Job, mut cmd: Command, program: &Path) -> Result<Option<Chi
         if let Some(mut stderr) = stderr {
             let mut buf = Vec::new();
             let _ = stderr.read_to_end(&mut buf);
-            for line in String::from_utf8_lossy(&buf).lines() {
+            for line in textweaver_core::process::decode_output(&buf).lines() {
                 if !line.trim().is_empty() {
                     tail.push_back(line.trim().to_owned());
                     if tail.len() > 12 {
@@ -484,7 +484,7 @@ fn convert_for_cpp(job: &Job) -> Result<Option<PathBuf>, String> {
             "whisper.cpp reads WAV files only, and ffmpeg was not found to convert this one. Install ffmpeg, or convert the file to WAV first.".to_owned()
         })?;
     let out = job.work_dir.join("input.wav");
-    let mut cmd = Command::new(&ffmpeg);
+    let mut cmd = textweaver_core::process::command(&ffmpeg);
     cmd.arg("-nostdin")
         .arg("-hide_banner")
         .arg("-loglevel")

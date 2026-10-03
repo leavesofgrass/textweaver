@@ -1,38 +1,16 @@
-use std::io::Write;
 use std::path::Path;
 
 use crate::StoreError;
 
 /// Writes `bytes` to `path` atomically: a temp file in the same directory,
-/// flushed and synced, then renamed over the target. Creates parent
+/// synced, then renamed over the target, retrying while Windows reports
+/// the file in use ([`textweaver_core::fs::write_atomic`]). Creates parent
 /// directories as needed.
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), StoreError> {
-    let io = |source| StoreError::Io {
+    textweaver_core::fs::write_atomic(path, bytes).map_err(|source| StoreError::Io {
         path: path.to_owned(),
         source,
-    };
-    let dir = path.parent().unwrap_or(Path::new("."));
-    std::fs::create_dir_all(dir).map_err(io)?;
-    let name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    // Unique per process and per call, so two writers in one process
-    // (threads, or two stores over one directory) never share a temp file.
-    static COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    let tmp = dir.join(format!(".{name}.{}.{n}.tmp", std::process::id()));
-    let result = (|| {
-        let mut f = std::fs::File::create(&tmp)?;
-        f.write_all(bytes)?;
-        f.sync_all()?;
-        drop(f);
-        std::fs::rename(&tmp, path)
-    })();
-    if result.is_err() {
-        let _ = std::fs::remove_file(&tmp);
-    }
-    result.map_err(io)
+    })
 }
 
 /// Renames a file that exists but cannot be parsed to

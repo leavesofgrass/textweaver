@@ -19,6 +19,8 @@ ocrs = ["dep:ocrs", "dep:rten", "dep:rten-tensor", "dep:rten-imageproc"]
 download = ["textweaver-components/download"]
 
 [dependencies]
+# Finding and starting programs with the workspace's one rule.
+textweaver-core.workspace = true
 thiserror.workspace = true
 log.workspace = true
 directories.workspace = true

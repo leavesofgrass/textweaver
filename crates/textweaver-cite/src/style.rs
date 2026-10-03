@@ -174,13 +174,6 @@ impl CitationStyle {
         }
     }
 
-    /// Uses a locale for terms and dates (`en-GB`, `de-DE`) instead of the
-    /// style's default.
-    pub fn with_locale(mut self, locale: &str) -> Self {
-        self.locale = Some(LocaleCode(locale.to_owned()));
-        self
-    }
-
     /// The style's title ("American Psychological Association 7th edition").
     pub fn title(&self) -> &str {
         &self.name
@@ -202,11 +195,6 @@ impl CitationStyle {
                 }
             )
         })
-    }
-
-    /// Whether the style defines a bibliography.
-    pub fn has_bibliography(&self) -> bool {
-        self.csl.bibliography.is_some()
     }
 }
 

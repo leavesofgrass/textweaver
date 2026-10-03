@@ -17,8 +17,7 @@
 //!   `org.gnome.desktop.a11y.interface high-contrast`, then `GTK_THEME`
 //!   (a `:dark` suffix or a `HighContrast` theme).
 
-use std::process::{Command, Stdio};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::model::ThemeKind;
 
@@ -198,32 +197,10 @@ pub fn parse_linux(
     OsScheme::Unknown
 }
 
-/// Runs a command with a time limit; its stdout on success.
+/// Runs a command with a time limit and no window; its stdout on success
+/// ([`textweaver_core::process::run_with_timeout`]).
 fn run(program: &str, args: &[&str], limit: Duration) -> Option<String> {
-    let mut child = Command::new(program)
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .ok()?;
-    let start = Instant::now();
-    loop {
-        match child.try_wait() {
-            Ok(Some(status)) => {
-                let out = child.wait_with_output().ok()?;
-                return status
-                    .success()
-                    .then(|| String::from_utf8_lossy(&out.stdout).into_owned());
-            }
-            Ok(None) if start.elapsed() < limit => std::thread::sleep(Duration::from_millis(5)),
-            _ => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return None;
-            }
-        }
-    }
+    textweaver_core::process::run_with_timeout(std::path::Path::new(program), args, limit)
 }
 
 /// Reads the OS setting. Takes a few milliseconds (it starts one or two

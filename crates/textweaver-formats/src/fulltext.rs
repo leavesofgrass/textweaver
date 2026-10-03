@@ -31,12 +31,12 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
 use serde::{Deserialize, Serialize};
 use textweaver_core::Unit;
+use textweaver_core::fs::write_atomic;
 use textweaver_text::{Document, segments};
 
 use crate::{LoadOptions, Registry, Source};
@@ -452,18 +452,6 @@ fn snippet(chars: &[char], at: usize, len: usize) -> String {
         s.push('\u{2026}');
     }
     s
-}
-
-fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    let tmp = path.with_extension(format!("tmp{}", std::process::id()));
-    {
-        let mut f = fs::File::create(&tmp)?;
-        f.write_all(bytes)?;
-        f.sync_all()?;
-    }
-    fs::rename(&tmp, path).inspect_err(|_| {
-        let _ = fs::remove_file(&tmp);
-    })
 }
 
 #[cfg(test)]

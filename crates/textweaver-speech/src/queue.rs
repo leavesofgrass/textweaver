@@ -297,11 +297,6 @@ impl ReadingQueue {
         out.extend(self.waiting.drain(..));
         out
     }
-
-    /// Keeps only the not-yet-submitted utterances for which `keep` is true.
-    pub fn retain_waiting(&mut self, mut keep: impl FnMut(&Utterance) -> bool) {
-        self.waiting.retain(|u| keep(u));
-    }
 }
 
 #[cfg(test)]

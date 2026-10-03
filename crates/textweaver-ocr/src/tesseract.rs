@@ -65,13 +65,12 @@ pub fn find_uncached() -> Option<PathBuf> {
         let p = PathBuf::from(p);
         return p.is_file().then_some(p);
     }
+    if let Some(p) = textweaver_core::process::find_program("tesseract") {
+        return Some(p);
+    }
     let name = program_name();
-    let on_path = std::env::var_os("PATH")
-        .map(|p| std::env::split_paths(&p).collect::<Vec<_>>())
-        .unwrap_or_default();
-    on_path
+    install_dirs()
         .into_iter()
-        .chain(install_dirs())
         .map(|d| d.join(name))
         .find(|p| p.is_file())
 }

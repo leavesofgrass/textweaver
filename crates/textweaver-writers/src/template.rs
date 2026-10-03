@@ -148,14 +148,6 @@ impl Template {
         }
     }
 
-    /// True when the template starts with a title page (Word and PDF).
-    pub fn has_title_page(self) -> bool {
-        matches!(
-            self,
-            Template::ApaStudentPaper | Template::AmaManuscript | Template::Manuscript
-        )
-    }
-
     /// Sets `options` to the template's defaults: the template itself, a
     /// cover for EPUB, and the PDF layout (spacing, size, title page).
     /// Options set afterwards override these, so `tw convert` applies the

@@ -105,9 +105,7 @@ fn write_if_changed(path: &Path, data: &[u8]) -> io::Result<()> {
     let same = std::fs::metadata(path).is_ok_and(|m| m.len() == data.len() as u64);
     if !same {
         // Write aside and rename, so a crash never leaves half a font.
-        let tmp = path.with_extension("partial");
-        std::fs::write(&tmp, data)?;
-        std::fs::rename(&tmp, path)?;
+        textweaver_core::fs::write_atomic(path, data)?;
     }
     Ok(())
 }

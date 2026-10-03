@@ -21,6 +21,8 @@ bundled-fonts = []
 download = ["textweaver-components/download"]
 
 [dependencies]
+# The atomic write every crate saves with.
+textweaver-core.workspace = true
 thiserror.workspace = true
 # Checking downloaded fonts against their pinned SHA-256.
 sha2.workspace = true

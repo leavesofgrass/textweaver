@@ -42,7 +42,6 @@
 //! Owner: Agent L.
 
 use std::collections::HashMap;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant, SystemTime};
@@ -1035,41 +1034,10 @@ pub fn is_up_to_date(source: &Path, output: &Path) -> bool {
     }
 }
 
-/// Writes `data` to a temporary file beside `path`, then renames it over
-/// `path`, creating parent folders as needed.
-pub fn write_atomic(path: &Path, data: &[u8]) -> std::io::Result<()> {
-    if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
-        std::fs::create_dir_all(parent)?;
-    }
-    let nanos = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .map_or(0, |d| d.subsec_nanos());
-    let tmp_name = format!(
-        ".{}.{}-{}.tmp",
-        path.file_name()
-            .map_or_else(String::new, |n| n.to_string_lossy().into_owned()),
-        std::process::id(),
-        nanos
-    );
-    let tmp = path.with_file_name(tmp_name);
-    let result = (|| {
-        let mut f = std::fs::File::create(&tmp)?;
-        f.write_all(data)?;
-        f.flush()?;
-        drop(f);
-        std::fs::rename(&tmp, path)
-    })();
-    if result.is_err() {
-        let _ = std::fs::remove_file(&tmp);
-    }
-    result
-}
-
-/// Wall-clock duration helper for callers that time their own work.
-pub fn elapsed_seconds(since: Instant) -> f64 {
-    let d: Duration = since.elapsed();
-    d.as_secs_f64()
-}
+/// Writes `data` to a temporary file beside `path`, synced, then renames
+/// it over `path`, creating parent folders as needed and retrying while
+/// Windows reports the file in use ([`textweaver_core::fs::write_atomic`]).
+pub use textweaver_core::fs::write_atomic;
 
 #[cfg(test)]
 mod tests {

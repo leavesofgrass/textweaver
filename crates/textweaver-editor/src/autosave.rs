@@ -97,86 +97,19 @@ pub(crate) fn now_ts() -> i64 {
 }
 
 /// Writes `bytes` to `path` through a unique temp file in the same
-/// directory, synced, then renamed over the target.
-pub fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    write_atomic_with(path, bytes, None)
-}
-
-/// [`write_atomic`], giving the new file `permissions` (those of the file
-/// it replaces) before it is renamed into place.
-fn write_atomic_with(
-    path: &Path,
-    bytes: &[u8],
-    permissions: Option<std::fs::Permissions>,
-) -> std::io::Result<()> {
-    let dir = path
-        .parent()
-        .filter(|p| !p.as_os_str().is_empty())
-        .unwrap_or(Path::new("."));
-    std::fs::create_dir_all(dir)?;
-    let name = path
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.subsec_nanos());
-    let tmp = dir.join(format!(".{name}.{}.{nanos}.tmp", std::process::id()));
-    let result = (|| {
-        let mut f = std::fs::File::create(&tmp)?;
-        f.write_all(bytes)?;
-        f.sync_all()?;
-        drop(f);
-        if let Some(p) = permissions {
-            std::fs::set_permissions(&tmp, p)?;
-        }
-        rename_with_retry(&tmp, path)
-    })();
-    if result.is_err() {
-        let _ = std::fs::remove_file(&tmp);
-    }
-    result
-}
+/// directory, synced, then renamed over the target, retrying while Windows
+/// reports the file in use ([`textweaver_core::fs::write_atomic`]).
+pub use textweaver_core::fs::write_atomic;
 
 /// Waits between attempts to rename a saved file into place while another
-/// program has the target open (Windows only): four retries, about 0.4 s
-/// in all.
-pub const RENAME_RETRY_DELAYS_MS: [u64; 4] = [25, 50, 100, 200];
-
-/// True for the errors Windows gives while another program (Obsidian,
-/// OneDrive, an antivirus scanner, a search indexer) holds the file:
-/// access denied (5), sharing violation (32), and lock violation (33).
-fn is_transient_lock(e: &std::io::Error) -> bool {
-    cfg!(windows) && matches!(e.raw_os_error(), Some(5 | 32 | 33))
-}
-
-/// Runs `op` on `path`, retrying with a short backoff
-/// ([`RENAME_RETRY_DELAYS_MS`]) while Windows reports the file as in use.
-/// Other errors, and every error elsewhere, are returned at once.
-fn retry_while_in_use<T>(
-    path: &Path,
-    mut op: impl FnMut() -> std::io::Result<T>,
-) -> std::io::Result<T> {
-    let mut delays = RENAME_RETRY_DELAYS_MS.iter();
-    loop {
-        match op() {
-            Err(e) if is_transient_lock(&e) => match delays.next() {
-                Some(&ms) => {
-                    log::debug!("{} is in use; trying again in {ms} ms", path.display());
-                    std::thread::sleep(Duration::from_millis(ms));
-                }
-                None => return Err(e),
-            },
-            other => return other,
-        }
-    }
-}
+/// program has the target open (Windows only).
+pub use textweaver_core::fs::RENAME_RETRY_DELAYS_MS;
 
 /// Renames `from` over `to`, retrying while Windows reports the target as
-/// in use (see [`RENAME_RETRY_DELAYS_MS`]).
-pub fn rename_with_retry(from: &Path, to: &Path) -> std::io::Result<()> {
-    retry_while_in_use(to, || std::fs::rename(from, to))
-}
+/// in use.
+pub use textweaver_core::fs::rename_with_retry;
+
+use textweaver_core::fs::{retry_while_in_use, write_atomic_with_permissions};
 
 /// `<dir>/<doc_key>.json`.
 pub fn snapshot_file(dir: &Path, doc_key: &str) -> PathBuf {
@@ -547,7 +480,7 @@ pub fn save_text(path: &Path, text: &str) -> std::io::Result<()> {
                 "the file is read-only; use Save As to write a copy",
             ));
         }
-        let bytes = retry_while_in_use(&target, || std::fs::read(&target))?;
+        let bytes = retry_while_in_use(|| std::fs::read(&target))?;
         format = TextFormat::detect(&bytes);
         let body = if format.bom { &bytes[3..] } else { &bytes[..] };
         if std::str::from_utf8(body).is_err() {
@@ -559,7 +492,7 @@ pub fn save_text(path: &Path, text: &str) -> std::io::Result<()> {
         }
         permissions = Some(meta.permissions());
     }
-    write_atomic_with(&target, &format.encode(text), permissions)
+    write_atomic_with_permissions(&target, &format.encode(text), permissions)
 }
 
 #[cfg(test)]

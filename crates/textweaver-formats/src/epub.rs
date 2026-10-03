@@ -392,17 +392,35 @@ fn convert(
 }
 
 /// Gives unlabeled sections the text of their first heading.
+///
+/// The headings are read in one pass over `text`, in order of their
+/// start, with a char cursor that only moves forward (a book with
+/// thousands of headings once walked the text from its start for each).
 pub(crate) fn label_sections_by_heading(text: &str, markers: &mut [Marker]) {
-    let headings: Vec<(CharRange, String)> = markers
+    let mut ranges: Vec<CharRange> = markers
         .iter()
         .filter(|m| m.kind == MarkerKind::Heading)
-        .map(|m| {
-            let t: String = text
-                .chars()
-                .skip(m.range.start.0)
-                .take(m.range.len())
-                .collect();
-            (m.range, t.split_whitespace().collect::<Vec<_>>().join(" "))
+        .map(|m| m.range)
+        .collect();
+    ranges.sort_by_key(|r| r.start.0);
+    // (char position, byte offset) of the cursor.
+    let mut cursor = (0usize, 0usize);
+    let headings: Vec<(CharRange, String)> = ranges
+        .into_iter()
+        .map(|r| {
+            while cursor.0 < r.start.0 {
+                let Some(c) = text[cursor.1..].chars().next() else {
+                    break;
+                };
+                cursor = (cursor.0 + 1, cursor.1 + c.len_utf8());
+            }
+            let start = cursor.1;
+            let end = text[start..]
+                .char_indices()
+                .nth(r.len())
+                .map_or(text.len(), |(b, _)| start + b);
+            let t = &text[start..end];
+            (r, t.split_whitespace().collect::<Vec<_>>().join(" "))
         })
         .collect();
     for m in markers
@@ -421,6 +439,35 @@ pub(crate) fn label_sections_by_heading(text: &str, markers: &mut [Marker]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sections_take_their_first_heading_in_one_pass() {
+        // Non-ASCII before and inside the headings, headings out of order,
+        // and one past the end of the text.
+        let text = "Ça va. Über  alles\nmore\nZweite\nThird part\nend";
+        let heading = |a, b| Marker::new(MarkerKind::Heading, CharRange::new(a, b));
+        let section = |a, b| Marker::new(MarkerKind::SectionBreak, CharRange::new(a, b));
+        let mut markers = vec![
+            section(24, 46),
+            heading(24, 30),
+            section(0, 24),
+            heading(7, 18),
+            section(31, 46),
+            heading(31, 41),
+            section(46, 60),
+            heading(50, 55),
+        ];
+        label_sections_by_heading(text, &mut markers);
+        let labels: Vec<Option<&str>> = markers
+            .iter()
+            .filter(|m| m.kind == MarkerKind::SectionBreak)
+            .map(|m| m.label.as_deref())
+            .collect();
+        assert_eq!(
+            labels,
+            [Some("Zweite"), Some("Über alles"), Some("Third part"), None]
+        );
+    }
 
     #[test]
     fn nav_toc_nests_and_resolves() {
