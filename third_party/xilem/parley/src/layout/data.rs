@@ -28,8 +28,12 @@ pub(crate) struct ClusterData {
     /// otherwise, it's an offset into the glyph array with the base
     /// taken from the owning run.
     pub(crate) glyph_offset: u32,
-    /// Offset into the text for this cluster
-    pub(crate) text_offset: u16,
+    /// Offset into the text for this cluster, from its run's start. A
+    /// `u32`, not a `u16`: one run (text in one style, script, and font)
+    /// can be longer than 65,535 bytes, a very long line, and a wrapped
+    /// offset put clusters, line ranges, and cursors at the wrong text
+    /// (textweaver's change; see `TEXTWEAVER.md`).
+    pub(crate) text_offset: u32,
     /// Advance width for this cluster
     pub(crate) advance: f32,
 }
@@ -956,7 +960,7 @@ fn push_cluster(
         glyph_len: final_glyph_len,
         text_len: cluster_start_char.1.len_utf8() as u8,
         glyph_offset: final_glyph_offset,
-        text_offset: cluster_start_char.0 as u16,
+        text_offset: cluster_start_char.0 as u32,
         advance: final_advance,
     });
 }

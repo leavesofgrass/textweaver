@@ -544,3 +544,125 @@ fn on_macos_the_document_is_a_read_only_text_area() {
         assert_eq!(node.role(), Role::Document, "{p:?}");
     }
 }
+
+/// One very long line (W8b-g): Parley keeps every cluster's place past
+/// 64 KB of text in one style. Its cluster offset was a `u16`, so a line
+/// started inside a character there, and a cursor past it found no
+/// cluster at all (the frame-time probe's panic, and a misplaced word
+/// band).
+#[test]
+fn parley_keeps_its_place_past_64_kb_of_one_style() {
+    use masonry::core::{BrushIndex, StyleProperty};
+    use masonry::parley::style::FontFamily;
+    use masonry::parley::{Affinity, Cursor, FontContext, LayoutContext};
+    let text = "Caf\u{e9} cr\u{e8}me na\u{ef}ve, \u{e9}t\u{e9} words read along. ".repeat(3_000);
+    assert!(text.len() > 100_000);
+    let mut fcx = FontContext::new();
+    for b in textweaver_xilem::fonts::bundled_blobs() {
+        fcx.collection.register_fonts(b, None);
+    }
+    let mut lcx = LayoutContext::<BrushIndex>::new();
+    let mut builder = lcx.ranged_builder(&mut fcx, &text, 1.0, true);
+    builder.push_default(StyleProperty::FontFamily(FontFamily::Source(
+        textweaver_xilem::fonts::DEFAULT_STACK.into(),
+    )));
+    builder.push_default(StyleProperty::FontSize(18.0));
+    let mut layout = builder.build(&text);
+    layout.break_all_lines(Some(600.0));
+    let mut end = 0;
+    for line in layout.lines() {
+        let r = line.text_range();
+        assert_eq!(r.start, end, "lines follow each other");
+        assert!(text.is_char_boundary(r.start) && text.is_char_boundary(r.end));
+        end = r.end;
+    }
+    assert_eq!(end, text.len());
+    for b in [70_000, 100_003, text.len() - 40] {
+        let b = (b..).find(|&b| text.is_char_boundary(b)).unwrap();
+        let c = Cursor::from_byte_index(&layout, b, Affinity::Downstream);
+        assert_eq!(c.index(), b, "the cursor at byte {b}");
+    }
+}
+
+/// One very long line: a highlight move rebuilds and sends only the runs
+/// of the lines the word left and reached, the rest keep their nodes, the
+/// tree's text never changes, and the word band is drawn on screen where
+/// the word is (W8b-g).
+#[test]
+fn a_move_on_one_long_line_sends_only_its_lines() {
+    let text = "Caf\u{e9} cr\u{e8}me na\u{ef}ve, \u{e9}t\u{e9} words read along. ".repeat(6_000);
+    let doc = Document::from_plain_text(&text);
+    let start = CharPos(80_000);
+    let (mut h, w) = harness_with(&doc, start);
+    let window_text: String = doc.slice(w.range()).to_string();
+    assert!(w.range().len() > 60_000, "one long paragraph in the window");
+    let mut pos = start.0;
+    let mut before = runs(&h);
+    for k in 0..12 {
+        // The next word.
+        let off = pos - w.range().start.0;
+        let rest: String = window_text.chars().skip(off).collect();
+        let len = rest
+            .find(' ')
+            .map_or(3, |b| rest[..b].chars().count())
+            .max(1);
+        let r = CharRange::new(pos, pos + len);
+        h.edit_root_widget(|mut d| {
+            d.widget.last_nodes_sent = 0;
+            DocumentView::set_state(
+                &mut d,
+                DocState {
+                    caret: r.start,
+                    anchor: None,
+                    spoken: Some(r),
+                    sentence: Some(CharRange::new(r.start.0, r.end.0 + 30)),
+                    reading: true,
+                },
+            )
+        });
+        let _ = h.redraw();
+        let sent = h.root_widget().last_nodes_sent;
+        assert!(sent <= 8, "move {k}: {sent} nodes sent");
+        let after = runs(&h);
+        assert_eq!(
+            after.iter().map(|r| r.1.as_str()).collect::<String>(),
+            window_text
+        );
+        // Nearly every run keeps its node and text.
+        let kept = after.iter().filter(|r| before.contains(r)).count();
+        assert!(
+            after.len() - kept <= 8,
+            "move {k}: {} runs changed",
+            after.len() - kept
+        );
+        before = after;
+        let node = h.access_node(h.root_id()).unwrap();
+        let marked: Vec<String> = node
+            .children()
+            .filter(|c| c.data().background_color().is_some())
+            .map(|c| c.data().value().unwrap_or_default().to_owned())
+            .collect();
+        let word: String = window_text.chars().skip(off).take(len).collect();
+        assert_eq!(marked, vec![word], "move {k}");
+        let focus = node.text_selection_focus().unwrap();
+        assert_eq!(focus.to_global_usv_index(), off, "move {k}");
+        // The word's band is on screen.
+        let bands: Vec<_> = h
+            .root_widget()
+            .painted()
+            .iter()
+            .filter_map(|s| match s {
+                textweaver_xilem::document::PaintStep::WordBand(r) => Some(*r),
+                _ => None,
+            })
+            .collect();
+        assert!(!bands.is_empty(), "move {k}: no word band");
+        for b in bands {
+            assert!(
+                b.y0 >= 0.0 && b.y1 <= 600.0 && b.width() > 1.0,
+                "move {k}: {b:?}"
+            );
+        }
+        pos += len + 1;
+    }
+}

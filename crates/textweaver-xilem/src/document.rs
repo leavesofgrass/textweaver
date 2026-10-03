@@ -6,8 +6,12 @@
 //!   children are text runs of at most 255 characters ([`crate::runs`]).
 //!   The caret is the node's text selection; the spoken word is its own run
 //!   with a background colour; headings carry their level's size and
-//!   weight. Only the runs of paragraphs that changed are sent again, so a
-//!   highlight move costs a paragraph, not the document.
+//!   weight. Only the runs of lines that changed are sent again, so a
+//!   highlight move costs a line or two, not the paragraph, even when the
+//!   paragraph is one very long line.
+//! - **Drawing.** Only the lines of a paragraph that are on screen are
+//!   drawn, with their syllable marks and the ruler's rows, and positions
+//!   in a long paragraph are found without counting from its start.
 //! - **Windowing.** The view holds the window's paragraphs only
 //!   ([`crate::window`]); positions are document-absolute. Only the
 //!   paragraphs on screen are laid out, from a cache.
@@ -44,9 +48,9 @@ use textweaver_app::core::{CharPos, CharRange};
 use textweaver_app::keymap::KeyChord;
 use textweaver_app::keymap::Platform;
 
-use crate::caret;
+use crate::caret::{self, CharBytes};
 use crate::keys::{self, CaretStep};
-use crate::runs::{Paragraph, Run, RunMark, RunSet};
+use crate::runs::{ParaRuns, Paragraph, Run, RunMark, RunSet};
 use crate::theme::{self, Palette};
 use crate::window::{SpanStyle, StyledSpan};
 
@@ -304,6 +308,11 @@ struct ParaLayout {
     top_gap: f64,
     /// Syllable separators drawn in the paragraph, if any.
     seps: Option<SepMarks>,
+    /// Byte indices of the paragraph's chars, for lookups that do not count
+    /// from its start (a very long line).
+    bytes: CharBytes,
+    /// Each visual line's chars, as offsets into the paragraph's text.
+    lines: Vec<(usize, usize)>,
 }
 
 /// The syllable separators of a paragraph: the separator laid out once in
@@ -371,9 +380,15 @@ pub struct DocumentView {
     goal_x: Option<f32>,
 
     // Accessibility.
-    para_runs: Vec<Option<Vec<Run>>>,
-    para_ids: Vec<Option<Vec<NodeId>>>,
+    /// Each paragraph's runs, by visual line, built when first asked for.
+    para_runs: Vec<Option<ParaRuns>>,
+    /// The ids of each paragraph's runs, by line, as last sent.
+    para_ids: Vec<Option<Vec<Vec<NodeId>>>>,
+    /// Paragraphs whose runs are all sent again in the next pass.
     dirty_paras: Vec<bool>,
+    /// Lines whose runs changed since the last pass, by paragraph (a moved
+    /// highlight): only their runs are sent again.
+    changed_lines: HashMap<usize, Vec<usize>>,
     run_ids: HashMap<CharPos, NodeId>,
     ids_to_pos: HashMap<NodeId, CharPos>,
     /// The window slid: forget the ids of runs no longer shown after the
@@ -436,6 +451,7 @@ impl DocumentView {
             para_runs: Vec::new(),
             para_ids: Vec::new(),
             dirty_paras: Vec::new(),
+            changed_lines: HashMap::new(),
             run_ids: HashMap::new(),
             ids_to_pos: HashMap::new(),
             prune_ids: false,
@@ -513,6 +529,7 @@ impl DocumentView {
         self.para_runs = vec![None; n];
         self.para_ids = vec![None; n];
         self.dirty_paras = vec![true; n];
+        self.changed_lines.clear();
     }
 
     // --- Mutation from the driver.
@@ -603,9 +620,15 @@ impl DocumentView {
 
         let mut layouts = std::mem::take(&mut w.layouts);
         let old_lines = std::mem::take(&mut w.line_starts);
-        let old_runs = std::mem::take(&mut w.para_runs);
-        let old_ids = std::mem::take(&mut w.para_ids);
-        let old_dirty = std::mem::take(&mut w.dirty_paras);
+        let mut old_runs = std::mem::take(&mut w.para_runs);
+        let mut old_ids = std::mem::take(&mut w.para_ids);
+        let mut old_dirty = std::mem::take(&mut w.dirty_paras);
+        // Lines waiting to be sent go with their paragraph, sent whole.
+        for (i, _) in w.changed_lines.drain() {
+            if let Some(d) = old_dirty.get_mut(i) {
+                *d = true;
+            }
+        }
         let mut new_layouts = HashMap::new();
         let mut lines = vec![None; n_new];
         let mut runs = vec![None; n_new];
@@ -619,18 +642,24 @@ impl DocumentView {
                 new_layouts.insert(j, l);
             }
             lines[j] = old_lines.get(i).cloned().flatten();
-            ids[j] = old_ids.get(i).cloned().flatten();
+            ids[j] = old_ids.get_mut(i).and_then(Option::take);
             dirty[j] = old_dirty.get(i).copied().unwrap_or(true);
             // The prefix's runs are where they were; the suffix's are
             // rebuilt from the paragraph when next asked for.
             if i < pre {
-                runs[j] = old_runs.get(i).cloned().flatten();
+                runs[j] = old_runs.get_mut(i).and_then(Option::take);
             }
         }
         // The ids of runs in the old middle paragraphs are forgotten; the
         // suffix's ids move with their text.
         for i in old_mid {
-            for id in old_ids.get(i).cloned().flatten().unwrap_or_default() {
+            for id in old_ids
+                .get_mut(i)
+                .and_then(Option::take)
+                .into_iter()
+                .flatten()
+                .flatten()
+            {
                 if let Some(pos) = w.ids_to_pos.remove(&id) {
                     w.run_ids.remove(&pos);
                 }
@@ -868,6 +897,18 @@ impl DocumentView {
             .sum()
     }
 
+    /// The highlights the text runs carry (the spoken word).
+    fn run_marks(&self) -> Vec<(CharRange, RunMark)> {
+        self.state
+            .spoken
+            .map(|r| (r, RunMark::SpokenWord))
+            .into_iter()
+            .collect()
+    }
+
+    /// The runs over `r` changed (the spoken word moved there or away):
+    /// builds again only the lines of runs that hold it, and sends only
+    /// those in the next pass.
     fn mark_dirty(&mut self, r: CharRange) {
         let paras = &self.model.paragraphs;
         if paras.is_empty() {
@@ -875,9 +916,16 @@ impl DocumentView {
         }
         let a = caret::paragraph_at(paras, r.start);
         let b = caret::paragraph_at(paras, CharPos(r.end.0.saturating_sub(1).max(r.start.0)));
+        let marks = self.run_marks();
         for i in a..=b.min(paras.len() - 1) {
-            self.dirty_paras[i] = true;
-            self.para_runs[i] = None;
+            match self.para_runs[i].as_mut() {
+                Some(pr) => {
+                    let lines = pr.lines_touching(r);
+                    pr.rebuild(lines.clone(), &self.model.paragraphs[i].text, &marks);
+                    self.changed_lines.entry(i).or_default().extend(lines);
+                }
+                None => self.dirty_paras[i] = true,
+            }
         }
     }
 
@@ -903,6 +951,7 @@ impl DocumentView {
         let size = self.font.size;
         let sp = self.aids.spacing;
         let text = p.text.as_str();
+        let bytes = CharBytes::new(text);
         // Syllables: the separator in the paragraph's own font, laid out
         // once, before the paragraph's builder takes the contexts.
         let breaks = self.breaks_in(i);
@@ -929,7 +978,7 @@ impl DocumentView {
                 layout,
                 width,
                 baseline,
-                at: breaks.iter().map(|&k| caret::byte_of(text, k)).collect(),
+                at: breaks.iter().map(|&k| bytes.byte(text, k)).collect(),
             }
         });
         let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
@@ -968,8 +1017,8 @@ impl DocumentView {
             if s.range.end.0 <= p.start.0 || s.range.start.0 >= p_end {
                 continue;
             }
-            let a = caret::byte_of(text, s.range.start.0.saturating_sub(p.start.0));
-            let e = caret::byte_of(text, s.range.end.0.min(p_end) - p.start.0);
+            let a = bytes.byte(text, s.range.start.0.saturating_sub(p.start.0));
+            let e = bytes.byte(text, s.range.end.0.min(p_end) - p.start.0);
             if a >= e {
                 continue;
             }
@@ -1015,8 +1064,8 @@ impl DocumentView {
                 0.0
             };
             for &k in &breaks {
-                let a = caret::byte_of(text, k - 1);
-                let e = caret::byte_of(text, k);
+                let a = bytes.byte(text, k - 1);
+                let e = bytes.byte(text, k);
                 b.push(StyleProperty::LetterSpacing(base + s.width), a..e);
             }
         }
@@ -1044,6 +1093,8 @@ impl DocumentView {
             height: top_gap + text_h + after,
             top_gap,
             seps,
+            bytes,
+            lines: Vec::new(),
         }
     }
 
@@ -1077,14 +1128,20 @@ impl DocumentView {
             self.layouts
                 .retain(|&k, _| k.abs_diff(keep) < CACHE_LIMIT / 4);
         }
-        let pl = self.build_layout(i, fcx, lcx);
+        let mut pl = self.build_layout(i, fcx, lcx);
         let p = &self.model.paragraphs[i];
-        let starts: Vec<usize> = pl
+        pl.lines = pl
             .layout
             .lines()
-            .skip(1)
-            .map(|l| caret::char_of(&p.text, l.text_range().start))
+            .map(|l| {
+                let tr = l.text_range();
+                (
+                    pl.bytes.char(&p.text, tr.start),
+                    pl.bytes.char(&p.text, tr.end),
+                )
+            })
             .collect();
+        let starts: Vec<usize> = pl.lines.iter().skip(1).map(|l| l.0).collect();
         if self.line_starts[i].as_ref() != Some(&starts) {
             self.line_starts[i] = Some(starts);
             self.dirty_paras[i] = true;
@@ -1129,7 +1186,7 @@ impl DocumentView {
         let pl = self.layouts.get(&i)?;
         let p = &self.model.paragraphs[i];
         let off = pos.0.saturating_sub(p.start.0).min(p.len_chars());
-        let b = caret::byte_of(&p.text, off);
+        let b = pl.bytes.byte(&p.text, off);
         let bb =
             Cursor::from_byte_index(&pl.layout, b, Affinity::Downstream).geometry(&pl.layout, 2.0);
         let h = if p.text.is_empty() {
@@ -1236,9 +1293,13 @@ impl DocumentView {
 
     /// The visual lines on screen, as the reading ruler counts rows: each
     /// line's chars (document positions) and paragraph, and its top and
-    /// bottom in the view.
+    /// bottom in the view. Lines more than a screen above or below the view
+    /// are left out, so a paragraph of a thousand lines (one very long
+    /// line) costs only the lines near the screen; the ruler's band never
+    /// reaches that far.
     fn rows_on_screen(&self) -> Vec<(ViewRow, f64, f64)> {
         let mut rows = Vec::new();
+        let view_h = self.size.height;
         for &(i, y) in &self.visible {
             let Some(pl) = self.layouts.get(&i) else {
                 continue;
@@ -1246,11 +1307,17 @@ impl DocumentView {
             let p = &self.model.paragraphs[i];
             let top = y + pl.top_gap;
             let mut any = false;
-            for line in pl.layout.lines() {
-                let tr = line.text_range();
-                let a = p.start.0 + caret::char_of(&p.text, tr.start);
-                let b = p.start.0 + caret::char_of(&p.text, tr.end);
+            let near = (-view_h - top, 2.0 * view_h - top);
+            for (line, &(a, b)) in pl.layout.lines().zip(&pl.lines) {
+                any = true;
                 let m = line.metrics();
+                if f64::from(m.block_max_coord) < near.0 {
+                    continue;
+                }
+                if f64::from(m.block_min_coord) > near.1 {
+                    break;
+                }
+                let (a, b) = (p.start.0 + a, p.start.0 + b);
                 rows.push((
                     ViewRow {
                         range: CharRange::new(a, b),
@@ -1259,7 +1326,6 @@ impl DocumentView {
                     top + f64::from(m.block_min_coord),
                     top + f64::from(m.block_max_coord),
                 ));
-                any = true;
             }
             if !any {
                 // A blank line: one empty row at its position.
@@ -1333,7 +1399,9 @@ impl DocumentView {
         let p = &self.model.paragraphs[i];
         let line_count = pl.layout.len().max(1);
         let cur_line = {
-            let b = caret::byte_of(&p.text, pos.0.saturating_sub(p.start.0).min(p.len_chars()));
+            let b = pl
+                .bytes
+                .byte(&p.text, pos.0.saturating_sub(p.start.0).min(p.len_chars()));
             pl.layout
                 .lines()
                 .position(|l| l.text_range().contains(&b))
@@ -1361,7 +1429,7 @@ impl DocumentView {
             (l.metrics().block_min_coord + l.metrics().block_max_coord) / 2.0
         });
         let c = Cursor::from_point(&pl.layout, x, y);
-        CharPos(p.start.0 + caret::char_of(&p.text, c.index()))
+        CharPos(p.start.0 + pl.bytes.char(&p.text, c.index()))
     }
 
     fn line_edge(
@@ -1379,14 +1447,16 @@ impl DocumentView {
         self.ensure_layout(i, fcx, lcx);
         let pl = &self.layouts[&i];
         let p = &self.model.paragraphs[i];
-        let b = caret::byte_of(&p.text, pos.0.saturating_sub(p.start.0).min(p.len_chars()));
+        let b = pl
+            .bytes
+            .byte(&p.text, pos.0.saturating_sub(p.start.0).min(p.len_chars()));
         let sel = Selection::from_byte_index(&pl.layout, b, Affinity::Downstream);
         let moved = if end {
             sel.line_end(&pl.layout, false)
         } else {
             sel.line_start(&pl.layout, false)
         };
-        CharPos(p.start.0 + caret::char_of(&p.text, moved.focus().index()))
+        CharPos(p.start.0 + pl.bytes.char(&p.text, moved.focus().index()))
     }
 
     fn page(
@@ -1523,7 +1593,7 @@ impl DocumentView {
         let p = &self.model.paragraphs[i];
         let text = match self.layouts.get(&i) {
             Some(pl) => {
-                let b = caret::byte_of(&p.text, off);
+                let b = pl.bytes.byte(&p.text, off);
                 pl.layout
                     .lines()
                     .map(|l| l.text_range())
@@ -1646,7 +1716,7 @@ impl DocumentView {
                     (pos.x - self.column_x) as f32,
                     (pos.y - y - pl.top_gap) as f32,
                 );
-                return Some(CharPos(p.start.0 + caret::char_of(&p.text, c.index())));
+                return Some(CharPos(p.start.0 + pl.bytes.char(&p.text, c.index())));
             }
         }
         None
@@ -1654,22 +1724,48 @@ impl DocumentView {
 
     // --- Accessibility.
 
-    fn runs_of(&mut self, i: usize) -> &[Run] {
+    /// Paragraph `i`'s runs, built if they are not cached.
+    fn runs_of(&mut self, i: usize) -> &ParaRuns {
         if self.para_runs[i].is_none() {
-            let mut p = self.model.paragraphs[i].clone();
-            p.line_starts = self.line_starts[i].clone();
-            let mut marks = Vec::new();
-            if let Some(r) = self.state.spoken {
-                marks.push((r, RunMark::SpokenWord));
-            }
-            let set = RunSet::build(std::slice::from_ref(&p), &marks);
-            let mut runs = set.runs;
-            for r in &mut runs {
-                r.paragraph = i;
-            }
+            let marks = self.run_marks();
+            let runs = ParaRuns::new(
+                i,
+                &self.model.paragraphs[i],
+                self.line_starts[i].as_deref(),
+                &marks,
+            );
             self.para_runs[i] = Some(runs);
         }
-        self.para_runs[i].as_deref().unwrap_or(&[])
+        self.para_runs[i].get_or_insert_default()
+    }
+
+    /// The ids and nodes of one line's runs.
+    fn line_nodes(&mut self, line: &[Run], out: &mut Vec<(NodeId, Node)>) -> Vec<NodeId> {
+        let ids: Vec<NodeId> = line.iter().map(|r| self.id_for(r.start)).collect();
+        for (k, r) in line.iter().enumerate() {
+            let next = (r.continues_line && k + 1 < line.len()).then(|| ids[k + 1]);
+            let prev = (k > 0 && line[k - 1].continues_line).then(|| ids[k - 1]);
+            out.push((ids[k], self.run_node(r, next, prev)));
+        }
+        ids
+    }
+
+    /// Forgets the ids in `old` that are not in `new` (runs gone).
+    fn forget_ids(&mut self, old: &[NodeId], new: &[NodeId]) {
+        let gone: Vec<NodeId> = if new.len() > 32 {
+            let keep: std::collections::HashSet<&NodeId> = new.iter().collect();
+            old.iter()
+                .filter(|id| !keep.contains(id))
+                .copied()
+                .collect()
+        } else {
+            old.iter().filter(|id| !new.contains(id)).copied().collect()
+        };
+        for id in gone {
+            if let Some(k) = self.ids_to_pos.remove(&id) {
+                self.run_ids.remove(&k);
+            }
+        }
     }
 
     fn run_node(&self, run: &Run, next: Option<NodeId>, prev: Option<NodeId>) -> Node {
@@ -1716,15 +1812,14 @@ impl DocumentView {
             return None;
         }
         let i = caret::paragraph_at(paras, pos);
-        let runs = self.runs_of(i).to_vec();
-        let set = RunSet { runs };
-        let rp = set.position(pos);
-        let run = set.runs.get(rp.run)?;
-        let key = run.start;
+        let (key, index) = self
+            .runs_of(i)
+            .position(pos)
+            .map(|(run, index)| (run.start, index))?;
         let id = self.id_for(key);
         Some(TextPosition {
             node: id,
-            character_index: rp.index,
+            character_index: index,
         })
     }
 
@@ -1732,14 +1827,11 @@ impl DocumentView {
     fn doc_position(&mut self, tp: &TextPosition) -> Option<CharPos> {
         let start = *self.ids_to_pos.get(&tp.node)?;
         let paras = &self.model.paragraphs;
+        if paras.is_empty() {
+            return None;
+        }
         let i = caret::paragraph_at(paras, start);
-        let runs = self.runs_of(i).to_vec();
-        let set = RunSet { runs };
-        let r = set.index_of(start)?;
-        Some(set.char_pos(crate::runs::RunPos {
-            run: r,
-            index: tp.character_index,
-        }))
+        self.runs_of(i).char_pos(start, tp.character_index)
     }
 }
 
@@ -1995,12 +2087,17 @@ impl Widget for DocumentView {
             let origin = Vec2::new(self.column_x, y + pl.top_gap);
             let tf = Affine::translate(origin);
             let p_end = para.start.0 + para.len_chars();
+            // The part of the layout on screen, in its own coordinates:
+            // only those lines are drawn.
+            let on_screen = (-origin.y, size.height - origin.y);
             let band = |r: CharRange| -> Option<Vec<Rect>> {
                 if r.end.0 <= para.start.0 || r.start.0 > p_end || r.is_empty() {
                     return None;
                 }
-                let a = caret::byte_of(&para.text, r.start.0.saturating_sub(para.start.0));
-                let b = caret::byte_of(&para.text, r.end.0.min(p_end) - para.start.0);
+                let a = pl
+                    .bytes
+                    .byte(&para.text, r.start.0.saturating_sub(para.start.0));
+                let b = pl.bytes.byte(&para.text, r.end.0.min(p_end) - para.start.0);
                 let sel = Selection::new(
                     Cursor::from_byte_index(&pl.layout, a, Affinity::Downstream),
                     Cursor::from_byte_index(&pl.layout, b, Affinity::Upstream),
@@ -2106,24 +2203,25 @@ impl Widget for DocumentView {
                     .draw();
                 painted.push(PaintStep::WordBand(*r));
             }
-            render_text(painter, tf, &pl.layout, &brushes, false);
+            render_lines(painter, tf, &pl.layout, &brushes, on_screen);
             painted.push(PaintStep::Text(i));
             // Syllable separators, in the space left before each break,
-            // on the line's baseline.
+            // on the line's baseline: those of the lines on screen.
             if let Some(s) = &pl.seps {
-                for &b in &s.at {
-                    let Some(line) = pl.layout.lines().find(|l| l.text_range().contains(&b)) else {
-                        continue;
-                    };
-                    let x = Cursor::from_byte_index(&pl.layout, b, Affinity::Downstream)
-                        .geometry(&pl.layout, 1.0)
-                        .x0;
-                    let at = origin
-                        + Vec2::new(
-                            x - f64::from(s.width),
-                            f64::from(line.metrics().baseline - s.baseline),
-                        );
-                    render_text(painter, Affine::translate(at), &s.layout, &brushes, false);
+                for line in lines_within(&pl.layout, on_screen) {
+                    let tr = line.text_range();
+                    let from = s.at.partition_point(|&b| b < tr.start);
+                    for &b in s.at[from..].iter().take_while(|&&b| b < tr.end) {
+                        let x = Cursor::from_byte_index(&pl.layout, b, Affinity::Downstream)
+                            .geometry(&pl.layout, 1.0)
+                            .x0;
+                        let at = origin
+                            + Vec2::new(
+                                x - f64::from(s.width),
+                                f64::from(line.metrics().baseline - s.baseline),
+                            );
+                        render_text(painter, Affine::translate(at), &s.layout, &brushes, false);
+                    }
                 }
             }
             // The spoken word's text again, in its own colour and with its
@@ -2136,7 +2234,8 @@ impl Widget for DocumentView {
                 for r in &word_rects {
                     let clip = r.inflate(3.0, 1.0);
                     painter.push_fill_clip(clip);
-                    render_emphasis(painter, tf, &pl.layout, &fg.into(), bold, a.italic);
+                    let ys = (clip.y0 - origin.y, clip.y1 - origin.y);
+                    render_emphasis(painter, tf, &pl.layout, &fg.into(), (bold, a.italic), ys);
                     painter.pop_clip();
                     if a.underline
                         && let Some(u) = underline_under(&pl.layout, origin, *r, self.font.size)
@@ -2156,7 +2255,8 @@ impl Widget for DocumentView {
                     std::array::from_fn(|_| theme::color(p.selection.0).into());
                 for r in rects {
                     painter.push_fill_clip(r);
-                    render_text(painter, tf, &pl.layout, &fg, false);
+                    let ys = (r.y0 - origin.y, r.y1 - origin.y);
+                    render_lines(painter, tf, &pl.layout, &fg, ys);
                     painter.pop_clip();
                 }
             }
@@ -2194,7 +2294,7 @@ impl Widget for DocumentView {
                     .0
                     .saturating_sub(para.start.0)
                     .min(para.len_chars());
-                let b = caret::byte_of(&para.text, off);
+                let b = pl.bytes.byte(&para.text, off);
                 let bb = Cursor::from_byte_index(&pl.layout, b, Affinity::Downstream)
                     .geometry(&pl.layout, 2.0);
                 let h = if para.text.is_empty() {
@@ -2309,28 +2409,56 @@ impl Widget for DocumentView {
         let mut children = Vec::new();
         let mut sent = 0usize;
         let mut out: Vec<(NodeId, Node)> = Vec::new();
-        let mut forgotten = Vec::new();
+        let mut changed = std::mem::take(&mut self.changed_lines);
         for i in 0..n {
-            let rebuild = full || self.dirty_paras[i] || self.para_ids[i].is_none();
-            if !rebuild {
-                children.extend(self.para_ids[i].iter().flatten().copied());
+            let lines = changed.remove(&i);
+            let unsent = full || self.dirty_paras[i] || self.para_ids[i].is_none();
+            if !unsent && lines.is_none() {
+                children.extend(self.para_ids[i].iter().flatten().flatten().copied());
                 continue;
             }
-            let runs = self.runs_of(i).to_vec();
-            let ids: Vec<NodeId> = runs.iter().map(|r| self.id_for(r.start)).collect();
-            // Runs of this paragraph that no longer exist.
-            if let Some(old) = &self.para_ids[i] {
-                forgotten.extend(old.iter().filter(|id| !ids.contains(id)).copied());
+            self.runs_of(i);
+            // Borrowed out while its nodes are made; put back below.
+            let runs = self.para_runs[i].take().unwrap_or_default();
+            let line_count = runs.lines().len();
+            let same_lines = self.para_ids[i]
+                .as_ref()
+                .is_some_and(|ids| ids.len() == line_count);
+            let whole = unsent || !same_lines;
+            if whole {
+                // Every run of the paragraph.
+                let old: Vec<NodeId> = self.para_ids[i]
+                    .take()
+                    .into_iter()
+                    .flatten()
+                    .flatten()
+                    .collect();
+                let mut ids = Vec::with_capacity(line_count);
+                for line in runs.lines() {
+                    ids.push(self.line_nodes(line, &mut out));
+                    sent += line.len();
+                }
+                let new: Vec<NodeId> = ids.iter().flatten().copied().collect();
+                self.forget_ids(&old, &new);
+                self.para_ids[i] = Some(ids);
+                self.dirty_paras[i] = false;
+            } else if let Some(mut lines) = lines {
+                // Only the lines whose runs changed (a moved highlight).
+                lines.sort_unstable();
+                lines.dedup();
+                for g in lines.into_iter().filter(|&g| g < line_count) {
+                    let line = &runs.lines()[g];
+                    let ids = self.line_nodes(line, &mut out);
+                    sent += line.len();
+                    let old = self.para_ids[i]
+                        .as_mut()
+                        .map(|l| std::mem::replace(&mut l[g], ids.clone()))
+                        .unwrap_or_default();
+                    self.forget_ids(&old, &ids);
+                }
             }
-            for (k, r) in runs.iter().enumerate() {
-                let next = (r.continues_line && k + 1 < runs.len()).then(|| ids[k + 1]);
-                let prev = (k > 0 && runs[k - 1].continues_line).then(|| ids[k - 1]);
-                out.push((ids[k], self.run_node(r, next, prev)));
-            }
-            sent += runs.len();
-            self.dirty_paras[i] = false;
-            children.extend(ids.iter().copied());
-            self.para_ids[i] = Some(ids);
+            self.para_runs[i] = Some(runs);
+            children.extend(self.para_ids[i].iter().flatten().flatten().copied());
         }
         if n == 0 {
             // An empty document still has one (empty) run, so screen
@@ -2340,11 +2468,6 @@ impl Widget for DocumentView {
             out.push((id, self.run_node(&empty[0], None, None)));
             children.push(id);
             sent += 1;
-        }
-        for id in forgotten {
-            if let Some(k) = self.ids_to_pos.remove(&id) {
-                self.run_ids.remove(&k);
-            }
         }
         if std::mem::take(&mut self.prune_ids) {
             // After a slide: runs that left the window are gone from the
@@ -2384,6 +2507,100 @@ impl Widget for DocumentView {
     }
 }
 
+/// The lines of `layout` that reach into `ys` (the layout's own
+/// coordinates, top and bottom). Lines are in order down the layout, so
+/// the walk stops at the first line below.
+fn lines_within(
+    layout: &Layout<BrushIndex>,
+    ys: (f64, f64),
+) -> impl Iterator<Item = masonry::parley::Line<'_, BrushIndex>> {
+    layout
+        .lines()
+        .skip_while(move |l| f64::from(l.metrics().block_max_coord) < ys.0)
+        .take_while(move |l| f64::from(l.metrics().block_min_coord) <= ys.1)
+}
+
+/// Draws the lines of `layout` that reach into `ys` (layout coordinates),
+/// as Masonry's `render_text` draws them all: underlines, the glyphs, then
+/// strikethroughs. A paragraph of a thousand lines (one very long line)
+/// costs only the lines on screen.
+fn render_lines(
+    painter: &mut Painter<'_>,
+    transform: Affine,
+    layout: &Layout<BrushIndex>,
+    brushes: &[masonry::peniko::Brush],
+    ys: (f64, f64),
+) {
+    use masonry::imaging::record::Glyph;
+    use masonry::kurbo::Line;
+    use masonry::parley::PositionedLayoutItem;
+    use masonry::peniko::{Fill, Style};
+    for line in lines_within(layout, ys) {
+        for item in line.items() {
+            let PositionedLayoutItem::GlyphRun(glyph_run) = item else {
+                continue;
+            };
+            let style = glyph_run.style();
+            let run = glyph_run.run();
+            let metrics = run.metrics();
+            let x0 = f64::from(glyph_run.offset());
+            let x1 = f64::from(glyph_run.offset() + glyph_run.advance());
+            if let Some(underline) = &style.underline {
+                let offset = underline.offset.unwrap_or(metrics.underline_offset);
+                let width = underline.size.unwrap_or(metrics.underline_size);
+                let y = f64::from(glyph_run.baseline() - offset + width / 2.);
+                painter
+                    .stroke(
+                        Line::new((x0, y), (x1, y)),
+                        &Stroke::new(width.into()),
+                        &brushes[underline.brush.0],
+                    )
+                    .transform(transform)
+                    .draw();
+            }
+            let mut x = glyph_run.offset();
+            let y = glyph_run.baseline();
+            let glyph_xform = run
+                .synthesis()
+                .skew()
+                .map(|angle| Affine::skew(f64::from(angle).to_radians().tan(), 0.0));
+            let glyphs: Vec<Glyph> = glyph_run
+                .glyphs()
+                .map(|g| {
+                    let out = Glyph {
+                        id: g.id,
+                        x: x + g.x,
+                        y: y + g.y,
+                    };
+                    x += g.advance;
+                    out
+                })
+                .collect();
+            painter
+                .glyphs(run.font(), &brushes[style.brush.0])
+                .hint(false)
+                .transform(transform)
+                .glyph_transform(glyph_xform)
+                .font_size(run.font_size())
+                .normalized_coords(run.normalized_coords())
+                .draw(&Style::Fill(Fill::NonZero), &glyphs);
+            if let Some(strike) = &style.strikethrough {
+                let offset = strike.offset.unwrap_or(metrics.strikethrough_offset);
+                let width = strike.size.unwrap_or(metrics.strikethrough_size);
+                let y = f64::from(glyph_run.baseline() - offset + metrics.strikethrough_size / 2.);
+                painter
+                    .stroke(
+                        Line::new((x0, y), (x1, y)),
+                        &Stroke::new(width.into()),
+                        &brushes[strike.brush.0],
+                    )
+                    .transform(transform)
+                    .draw();
+            }
+        }
+    }
+}
+
 /// The thickness the spoken word's glyph outlines grow by when drawn bold:
 /// one twenty-fourth of the font size, FreeType's synthetic bold amount.
 /// The glyphs stay where the layout put them, so nothing on the line moves.
@@ -2395,20 +2612,21 @@ const SYNTHETIC_ITALIC: f64 = 12.0;
 /// Draws `layout`'s glyphs in `brush`, bold and slanted when asked, without
 /// laying anything out again. Bold fills each glyph and strokes its outline
 /// in the same color (the renderers ignore `font_embolden`); italic skews
-/// each glyph about its own origin.
+/// each glyph about its own origin. Only the lines reaching into `ys`
+/// (layout coordinates: the word's band) are drawn.
 fn render_emphasis(
     painter: &mut Painter<'_>,
     transform: Affine,
     layout: &Layout<BrushIndex>,
     brush: &masonry::peniko::Brush,
-    bold: bool,
-    italic: bool,
+    (bold, italic): (bool, bool),
+    ys: (f64, f64),
 ) {
     use masonry::imaging::record::Glyph;
     use masonry::parley::PositionedLayoutItem;
     use masonry::peniko::{Fill, Style};
     let fill = Style::Fill(Fill::NonZero);
-    for line in layout.lines() {
+    for line in lines_within(layout, ys) {
         for item in line.items() {
             let PositionedLayoutItem::GlyphRun(glyph_run) = item else {
                 continue;

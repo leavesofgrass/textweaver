@@ -351,6 +351,22 @@ What is left is about two allocations per utterance (its text and its map, which
 - The SCOWL list was already unpacked on first use (Wave 6). The interface catalogs were not: the first built-in translation asked for parsed all five. Starting in Spanish: 41 to 6 ms for the catalog; English is unchanged at 6 ms.
 - `cargo xtask startup` after the pass, in English (no change expected there): `tw --version` 37.9 ms, `tw text` 58.3 ms, `tw info` 91.9 ms on the 1 MB corpus, `tw backends` 38.4 ms (medians of five).
 
+### GUI frame time on one long line: Friday, October 2, 2026
+
+Wave 8b (W8b-g) fixed the one-line corpus. `cargo xtask frames`, 200 moves each, on the same machine with other agents building; "before" is the branch with the sentence underline merged, "after" this change. Median move, then allocations and nodes per move:
+
+- 1 MB one-line text, plain: before 37 ms, 56,370 allocations, 1,442 nodes; after 0.73 ms, 486 allocations, 3.0 nodes.
+- 1 MB one-line text, every aid on: before 183 ms (worst 333 ms), 380,029 allocations, 1,731 nodes; after 1.3 ms (worst 2.7 ms), 2,327 allocations, 3.0 nodes.
+- 1 MB Markdown, plain: before 0.71 ms, 690 allocations, 6.5 nodes; after 0.80 ms, 574 allocations, 3.1 nodes.
+- 1 MB Markdown, every aid on: before 1.6 ms, 2,560 allocations, 8.3 nodes; after 1.2 ms, 1,907 allocations, 3.2 nodes.
+
+The 200 percent runs match within the machine's noise. What changed:
+
+- **Runs by visual line.** A paragraph's runs are kept by line (`runs::ParaRuns`). A highlight move builds again only the lines the word left and reached, and the accessibility pass sends only those runs; the rest keep their nodes. Before, a move rebuilt and resent the whole paragraph, and on one long line that was every run in the window.
+- **Drawing the lines on screen.** The text, the spoken word's bold, the selection, the syllable marks, and the ruler's rows are drawn or counted for the lines on screen only (the ruler's for a screen above and below), not for every line of the paragraph.
+- **No counting from the paragraph's start.** A paragraph's char offsets and byte indices come from a table (`caret::CharBytes`) for long text that is not ASCII, at layout (each span, each syllable, each line) and in the paint.
+- **The line start inside a character** (W8b-i's panic) was Parley's: a cluster's offset in its run was a `u16`, and one long line in one style is one run, so past 64 KB the offsets wrapped and line ranges, cursors, and the word's band pointed at the wrong text. The vendored Parley now keeps a `u32` (`third_party/xilem/TEXTWEAVER.md`, item 14); `caret::char_of` keeps its guard.
+
 Bulk conversion has its own benchmark:
 
 ```bash
