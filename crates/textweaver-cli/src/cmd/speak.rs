@@ -350,12 +350,11 @@ mod tests {
 
     #[test]
     fn unknown_backend_falls_back() {
-        let r = speak(
-            &args("hi", "no-such-engine"),
-            &BackendRegistry::with_builtins(),
-        )
-        .unwrap();
+        // A registry with no real engines: the built-ins would fall back to
+        // whatever engine this machine has and play through its speakers.
+        let r = speak(&args("hi", "no-such-engine"), &BackendRegistry::new()).unwrap();
         assert!(r.backend.fell_back);
+        assert_eq!(r.backend.backend.id, "null");
         assert!(r.backend.fallback_message().is_some());
     }
 
