@@ -41,7 +41,7 @@ flacenc = { workspace = true, optional = true }
 id3 = { workspace = true, optional = true }
 mp3lame-encoder = { workspace = true, optional = true }
 opusic-c = { workspace = true, optional = true }
-rubato = { workspace = true, optional = true }
+rubato = { workspace = true, optional = true, features = ["fft_resampler"] }
 
 [dev-dependencies]
 claxon.workspace = true

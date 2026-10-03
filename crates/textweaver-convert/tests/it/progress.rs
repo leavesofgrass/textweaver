@@ -8,7 +8,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
-use textweaver_convert::{ConvertOptions, Converter, OutputFormat, REPORT_FILE};
+use textweaver_convert::{
+    ConvertOptions, Converter, OutputFormat, REPORT_FILE, REPORT_JSON_FILE, ReportFormat,
+};
 
 fn write(root: &Path, rel: &str, text: &str) -> PathBuf {
     let p = root.join(rel);
@@ -186,14 +188,29 @@ fn a_report_in_the_folder_is_not_converted_next_time() {
     let dir = tempfile::tempdir().expect("tempdir");
     let input = dir.path().join("in");
     tree(&input);
-    let conv = Converter::new(options(OutputFormat::Markdown, None)).expect("converter");
+    // HTML output, so Markdown files in the folder are sources: the
+    // Markdown reports must still be left alone.
+    let conv = Converter::new(options(OutputFormat::Html, None)).expect("converter");
     let s = conv.run(std::slice::from_ref(&input)).expect("run");
-    let report = s.write_report(&input).expect("report");
+    let report = s
+        .write_report(&input, ReportFormat::Markdown)
+        .expect("report");
     assert_eq!(report, input.join(REPORT_FILE));
+    let json = s.write_report(&input, ReportFormat::Json).expect("report");
+    assert_eq!(json, input.join(REPORT_JSON_FILE));
+    let own = s.write_file_reports(ReportFormat::Markdown);
+    assert!(own.iter().all(Result::is_ok), "{own:?}");
+    assert!(input.join("a.html.report.md").is_file());
     let plan = conv.plan(std::slice::from_ref(&input)).expect("plan");
     assert!(!plan.jobs.is_empty());
     assert!(
-        plan.jobs.iter().all(|j| !j.source.ends_with(REPORT_FILE)),
+        plan.jobs.iter().all(|j| {
+            let name = j
+                .source
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned());
+            !name.is_some_and(|n| n.contains("report"))
+        }),
         "{:?}",
         plan.jobs
     );

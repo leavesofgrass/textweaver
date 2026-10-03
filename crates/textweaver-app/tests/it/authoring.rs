@@ -586,6 +586,25 @@ fn exports_go_next_to_the_document_and_offer_to_open() {
             "{}",
             r.status()
         );
+        // Where the conversion report is, in words; it is beside the
+        // export and names no folder.
+        assert!(
+            r.status()
+                .ends_with(&format!("Report saved as essay.{ext}.report.md.")),
+            "{}",
+            r.status()
+        );
+        let report = std::fs::read_to_string(path.with_file_name(format!("essay.{ext}.report.md")))
+            .expect("the report beside the export");
+        assert!(
+            report.starts_with("# Conversion report for essay.md\n"),
+            "{report}"
+        );
+        let folder = path
+            .parent()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
+        assert!(!report.contains(&folder), "{report}");
         assert!(r.app.confirmation_pending());
         r.send(Command::Confirm(Confirm::No));
     }

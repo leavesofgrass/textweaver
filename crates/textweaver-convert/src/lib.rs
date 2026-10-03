@@ -56,11 +56,13 @@ use textweaver_text::Document;
 
 pub mod citations;
 mod plan;
+pub mod report;
 pub mod watch;
 pub mod writer;
 
 pub use citations::CitationOptions;
 pub use plan::{Job, Plan};
+pub use report::{Issue, IssueKind, Location, ReportFormat, file_report_path, find_issues};
 pub use watch::{WatchEvent, WatchOptions, watch};
 pub use writer::{
     BrailleGrade, BrailleOptions, BrailleTableFormat, EpubOptions, MathCode, PageSize, PdfOptions,
@@ -184,6 +186,10 @@ pub struct ConvertOptions {
     pub write: WriteOptions,
     /// How Pandoc citations in Markdown are formatted.
     pub citations: CitationOptions,
+    /// Look in each converted file for what could not be made accessible
+    /// (images without descriptions, tables that do not line up, math that
+    /// did not parse; see [`report`]), for the conversion report.
+    pub audit: bool,
 }
 
 impl Default for ConvertOptions {
@@ -202,6 +208,7 @@ impl Default for ConvertOptions {
             pandoc_timeout: None,
             write: WriteOptions::default(),
             citations: CitationOptions::default(),
+            audit: true,
         }
     }
 }
@@ -250,6 +257,9 @@ pub enum Status {
 pub struct FileResult {
     /// The source file.
     pub source: PathBuf,
+    /// The source's path inside the folder it was found in (its file name
+    /// for a file named on its own): how reports name it.
+    pub name: String,
     /// The output file (written or planned).
     pub output: PathBuf,
     /// What happened.
@@ -266,6 +276,20 @@ pub struct FileResult {
     /// each a sentence that reads well aloud.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub warnings: Vec<String>,
+    /// The source's SHA-256 in lowercase hexadecimal, for a converted file.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sha256: Option<String>,
+    /// What could not be made accessible in a converted file, in document
+    /// order (see [`report::find_issues`]).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub issues: Vec<Issue>,
+    /// Issues found but left out of `issues` (past [`report::MAX_ISSUES`]).
+    #[serde(skip_serializing_if = "is_zero")]
+    pub issues_omitted: usize,
+}
+
+fn is_zero(n: &usize) -> bool {
+    *n == 0
 }
 
 impl FileResult {
@@ -279,12 +303,16 @@ impl FileResult {
     fn skipped(job: &Job) -> Self {
         FileResult {
             source: job.source.clone(),
+            name: report::relative_name(&job.source, Some(&job.root)),
             output: job.output.clone(),
             status: Status::Skipped,
             bytes_in: 0,
             bytes_out: 0,
             micros: 0,
             warnings: Vec::new(),
+            sha256: None,
+            issues: Vec::new(),
+            issues_omitted: 0,
         }
     }
 }
@@ -297,6 +325,10 @@ struct Output {
     data: Vec<u8>,
     /// The writer's warnings.
     warnings: Vec<String>,
+    /// The source's SHA-256.
+    sha256: Option<String>,
+    /// What could not be made accessible, and how many more.
+    issues: (Vec<Issue>, usize),
 }
 
 impl Output {
@@ -305,6 +337,8 @@ impl Output {
             bytes_in: 0,
             data,
             warnings: Vec::new(),
+            sha256: None,
+            issues: (Vec::new(), 0),
         }
     }
 
@@ -327,6 +361,8 @@ pub struct Summary {
     pub failed: usize,
     /// Converted files that came with writer warnings.
     pub warned: usize,
+    /// Converted files with something that could not be made accessible.
+    pub with_issues: usize,
     /// Bytes read from converted sources.
     pub bytes_in: u64,
     /// Bytes written.
@@ -434,6 +470,14 @@ impl Summary {
         } else if self.warned > 1 {
             s.push_str(&format!(" {} files have warnings.", self.warned));
         }
+        if self.with_issues == 1 {
+            s.push_str(" 1 file has items that could not be made accessible.");
+        } else if self.with_issues > 1 {
+            s.push_str(&format!(
+                " {} files have items that could not be made accessible.",
+                self.with_issues
+            ));
+        }
         if self.failed == 0 {
             s.push_str(" No failures.");
         } else {
@@ -443,71 +487,15 @@ impl Summary {
     }
 }
 
-/// The name of the report a batch leaves in its output folder.
-pub const REPORT_FILE: &str = "conversion-report.txt";
+/// The name of the Markdown report a batch leaves in its output folder
+/// (see [`report`]).
+pub const REPORT_FILE: &str = "conversion-report.md";
 
-impl Summary {
-    /// The report of this run as plain text, for [`REPORT_FILE`]: the
-    /// summary sentence, then each failure and each file with warnings.
-    ///
-    /// Every entry starts with the file's name and what happened, so the
-    /// key fact is at the start of the line on a braille display; the full
-    /// path follows on its own line. `written` is when the report is
-    /// written, given as a UTC time on the last line.
-    pub fn report_text(&self, written: SystemTime) -> String {
-        let mut out = String::new();
-        out.push_str(&self.sentence());
-        out.push('\n');
-        let failures: Vec<&FileResult> = self.failures().collect();
-        if !failures.is_empty() {
-            out.push_str(&format!("\nFailed, {}:\n", count(failures.len(), "file")));
-            for f in failures {
-                let reason = match &f.status {
-                    Status::Failed(r) => r.as_str(),
-                    _ => "",
-                };
-                out.push_str(&format!("{}: {reason}\n", file_name(&f.source)));
-                out.push_str(&format!("  {}\n", f.source.display()));
-            }
-        }
-        let warned: Vec<&FileResult> = self.warnings().collect();
-        if !warned.is_empty() {
-            out.push_str(&format!("\nWarnings, {}:\n", count(warned.len(), "file")));
-            for f in warned {
-                for w in &f.warnings {
-                    out.push_str(&format!("{}: {w}\n", file_name(&f.source)));
-                }
-                out.push_str(&format!("  {}\n", f.source.display()));
-            }
-        }
-        let (y, mo, d, h, mi, _) = watch::utc_parts(written);
-        out.push_str(&format!(
-            "\nReport written {y:04}-{mo:02}-{d:02} at {h:02}:{mi:02} UTC.\n"
-        ));
-        out
-    }
+/// The name of the JSON report a batch leaves in its output folder, with
+/// [`ReportFormat::Json`].
+pub const REPORT_JSON_FILE: &str = "conversion-report.json";
 
-    /// Writes [`report_text`](Self::report_text) to [`REPORT_FILE`] in
-    /// `dir`, replacing any earlier report whole (never merged with it, so
-    /// entries from an older run cannot come back), and returns its path.
-    /// The file is written to a temporary name and renamed, so a reader
-    /// never sees half a report.
-    pub fn write_report(&self, dir: &Path) -> std::io::Result<PathBuf> {
-        let path = dir.join(REPORT_FILE);
-        write_atomic(&path, self.report_text(SystemTime::now()).as_bytes())?;
-        Ok(path)
-    }
-}
-
-/// A file's name for a report line, or its whole path when it has none.
-fn file_name(p: &Path) -> String {
-    p.file_name().map_or_else(
-        || p.display().to_string(),
-        |n| n.to_string_lossy().into_owned(),
-    )
-}
-
-fn count(n: usize, noun: &str) -> String {
+pub(crate) fn count(n: usize, noun: &str) -> String {
     if n == 1 {
         format!("1 {noun}")
     } else {
@@ -752,6 +740,9 @@ impl Converter {
                     if !f.warnings.is_empty() {
                         s.warned += 1;
                     }
+                    if !f.issues.is_empty() {
+                        s.with_issues += 1;
+                    }
                 }
                 Status::Skipped => s.skipped += 1,
                 Status::Failed(_) => s.failed += 1,
@@ -784,6 +775,9 @@ impl Converter {
                     bytes_in: out.bytes_in,
                     bytes_out: out.data.len() as u64,
                     warnings: out.warnings,
+                    sha256: out.sha256,
+                    issues: out.issues.0,
+                    issues_omitted: out.issues.1,
                     ..FileResult::skipped(job)
                 },
                 Err(e) => FileResult::failed(job, format!("cannot write the output: {e}")),
@@ -806,9 +800,11 @@ impl Converter {
         if is_markdown {
             let bytes = std::fs::read(&job.source).map_err(|e| format!("cannot read: {e}"))?;
             let text = decode(&bytes);
-            return Ok(self
+            let mut out = self
                 .convert_markdown(job, &text)?
-                .read_from(bytes.len() as u64));
+                .read_from(bytes.len() as u64);
+            out.sha256 = Some(report::sha256_hex(&bytes));
+            return Ok(out);
         }
         if loader.is_none() && textweaver_formats::pandoc::EXTENSIONS.contains(&ext.as_str()) {
             return Err(if self.options.pandoc {
@@ -826,6 +822,9 @@ impl Converter {
         // What the loader had to leave out (content nested too deeply).
         out.warnings
             .splice(0..0, textweaver_formats::warnings(&doc.meta));
+        // Hashed on this worker, from the file the loader just read (so it
+        // is in the system's cache).
+        out.sha256 = report::sha256_file(&job.source).ok();
         Ok(out)
     }
 
@@ -850,7 +849,10 @@ impl Converter {
 
     fn convert_markdown_text(&self, job: &Job, text: &str) -> Result<Output, String> {
         match self.options.to {
-            OutputFormat::Markdown => Ok(Output::new(text.as_bytes().to_vec())),
+            OutputFormat::Markdown => Ok(Output {
+                issues: self.markdown_issues(text),
+                ..Output::new(text.as_bytes().to_vec())
+            }),
             OutputFormat::Html => {
                 let resolver = self.resolver_for(job);
                 let rendered = textweaver_render::render_with(
@@ -858,7 +860,10 @@ impl Converter {
                     &self.options.render,
                     resolver.as_deref().map(|r| r as &dyn Resolver),
                 );
-                self.page(job, &rendered).map(Output::new)
+                Ok(Output {
+                    issues: self.markdown_issues(text),
+                    ..self.page(job, &rendered).map(Output::new)?
+                })
             }
             _ => {
                 let source = Source::Bytes {
@@ -874,8 +879,45 @@ impl Converter {
         }
     }
 
-    /// Output for a loaded document.
+    /// What could not be made accessible in Markdown text, found in the
+    /// text itself ([`report::find_markdown_issues`]), when the audit is on.
+    fn markdown_issues(&self, text: &str) -> (Vec<Issue>, usize) {
+        if self.options.audit {
+            report::find_markdown_issues(text)
+        } else {
+            (Vec::new(), 0)
+        }
+    }
+
+    /// What could not be made accessible in a loaded document.
+    fn document_issues(&self, doc: &Document) -> (Vec<Issue>, usize) {
+        if self.options.audit {
+            report::find_issues(doc)
+        } else {
+            (Vec::new(), 0)
+        }
+    }
+
+    /// Output for a loaded document, with what could not be made
+    /// accessible in it.
     fn convert_document(
+        &self,
+        job: &Job,
+        doc: &Document,
+        markdown: Option<&str>,
+    ) -> Result<Output, String> {
+        let out = self.write_document(job, doc, markdown)?;
+        // Markdown is audited from its text, where an image with no
+        // description is still seen; other sources from the document.
+        let issues = match markdown {
+            Some(text) => self.markdown_issues(text),
+            None => self.document_issues(doc),
+        };
+        Ok(Output { issues, ..out })
+    }
+
+    /// The output bytes for a loaded document.
+    fn write_document(
         &self,
         job: &Job,
         doc: &Document,
@@ -1120,13 +1162,13 @@ mod tests {
     #[test]
     fn the_report_lists_failures_and_warnings_name_first() {
         let file = |name: &str, status: Status, warnings: Vec<String>| FileResult {
-            source: PathBuf::from("notes").join(name),
-            output: PathBuf::from("out").join(name),
             status,
-            bytes_in: 0,
-            bytes_out: 0,
-            micros: 0,
             warnings,
+            ..FileResult::skipped(&Job {
+                source: PathBuf::from("notes").join(name),
+                output: PathBuf::from("out").join(name),
+                root: PathBuf::from("notes"),
+            })
         };
         let s = Summary {
             format: Some(OutputFormat::Pdf),
@@ -1149,25 +1191,41 @@ mod tests {
             ],
             ..Summary::default()
         };
-        let text = s.report_text(SystemTime::UNIX_EPOCH);
+        let text = s.report(
+            ReportFormat::Markdown,
+            Some(Path::new("out")),
+            SystemTime::UNIX_EPOCH,
+        );
         let lines: Vec<&str> = text.lines().collect();
-        assert_eq!(lines[0], s.sentence());
+        assert_eq!(lines[0], "# Conversion report");
+        assert_eq!(lines[2], s.sentence());
+        assert!(text.contains("- Written: Thursday, January 1, 1970, at 00:00 UTC\n"));
+        assert!(text.contains(&format!("- Made by: textweaver {}\n", report::VERSION)));
         let failed = lines
             .iter()
-            .position(|l| *l == "Failed, 1 file:")
+            .position(|l| *l == "## Failed, 1 file")
             .expect("a failures heading");
-        assert_eq!(lines[failed + 1], "report.docx: the file is damaged");
-        assert!(lines[failed + 2].trim_start().ends_with("report.docx"));
-        let warned = lines
+        assert_eq!(lines[failed + 2], "- report.docx: the file is damaged");
+        let b = lines
             .iter()
-            .position(|l| *l == "Warnings, 1 file:")
-            .expect("a warnings heading");
-        assert_eq!(lines[warned + 1], "b.md: An image could not be embedded.");
-        assert_eq!(
-            lines.last(),
-            Some(&"Report written 1970-01-01 at 00:00 UTC.")
+            .position(|l| *l == "### b.md")
+            .expect("a section for b.md");
+        assert_eq!(lines[b + 2], "- Result: converted to b.md");
+        assert!(text.contains("Other notes:\n\n- An image could not be embedded.\n"));
+        assert!(
+            !text.contains("notes/"),
+            "no folder outside the converted one"
         );
-        assert!(!text.contains("a.md:"), "converted files are not listed");
+        let json = s.report(
+            ReportFormat::Json,
+            Some(Path::new("out")),
+            SystemTime::UNIX_EPOCH,
+        );
+        let v: serde_json::Value = serde_json::from_str(&json).expect("JSON");
+        assert_eq!(v["written"], "1970-01-01T00:00:00Z");
+        assert_eq!(v["textweaver"], report::VERSION);
+        assert_eq!(v["files"][1]["status"], "failed");
+        assert_eq!(v["files"][1]["reason"], "the file is damaged");
     }
 
     #[test]
@@ -1177,17 +1235,18 @@ mod tests {
             format: Some(OutputFormat::Html),
             failed: 1,
             files: vec![FileResult {
-                source: PathBuf::from("old.docx"),
-                output: PathBuf::from("old.html"),
                 status: Status::Failed("the file is damaged".into()),
-                bytes_in: 0,
-                bytes_out: 0,
-                micros: 0,
-                warnings: Vec::new(),
+                ..FileResult::skipped(&Job {
+                    source: PathBuf::from("old.docx"),
+                    output: PathBuf::from("old.html"),
+                    root: PathBuf::from("."),
+                })
             }],
             ..Summary::default()
         };
-        let path = failed.write_report(dir.path()).expect("written");
+        let path = failed
+            .write_report(dir.path(), ReportFormat::Markdown)
+            .expect("written");
         assert_eq!(path, dir.path().join(REPORT_FILE));
         let clean = Summary {
             format: Some(OutputFormat::Html),
@@ -1195,10 +1254,12 @@ mod tests {
             seconds: 0.5,
             ..Summary::default()
         };
-        clean.write_report(dir.path()).expect("written again");
+        clean
+            .write_report(dir.path(), ReportFormat::Markdown)
+            .expect("written again");
         let text = std::fs::read_to_string(&path).expect("read");
         assert!(!text.contains("old.docx"), "{text}");
-        assert!(text.starts_with("Converted 1 file to HTML"), "{text}");
+        assert!(text.contains("\n\nConverted 1 file to HTML"), "{text}");
         let names: Vec<_> = std::fs::read_dir(dir.path())
             .expect("list")
             .map(|e| e.expect("entry").file_name())

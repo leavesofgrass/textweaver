@@ -68,7 +68,7 @@ The conversion runs in the background, so you can keep reading. It says when it 
 
 To stop, press Escape while nothing else is open. textweaver asks "Stop converting? Files already done are kept. y or n". A file being written when you answer yes is finished whole, no other file is started, and no file is left half-written.
 
-At the end you hear the counts, for example "Converted 42 files to PDF; 4 up to date; 2 failed." When any file failed, the failures are shown as a list, each with the file's name first and then the reason ("report.docx: parse error: not a valid DOCX (zip) file"). Enter on one opens that file. The same summary and list are saved as `conversion-report.txt` in the output folder (in the folder you chose when the files go beside their sources), as `tw convert` saves it.
+At the end you hear the counts, for example "Converted 42 files to PDF; 4 up to date; 2 failed." When any file failed, the failures are shown as a list, each with the file's name first and then the reason ("report.docx: parse error: not a valid DOCX (zip) file"). Enter on one opens that file. A [conversion report](#the-conversion-report) is saved as `conversion-report.md` in the output folder (in the folder you chose when the files go beside their sources), as `tw convert` saves it, and the end of the run always says where it is, for example "Report saved in D:\Notes\converted\conversion-report.md." When some files have images without descriptions or other items that could not be made accessible, you also hear how many, for example "3 files have items not made accessible; see the report."
 
 A file whose output is newer than the file itself is skipped, as with `tw convert`, and counted as up to date.
 
@@ -252,7 +252,8 @@ For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the 
 - `--pdf-font FILE` chooses a font file for the text of PDF output. `--font` does the same by name.
 - `--verbose` reads out every file, not only the failures and the summary.
 - `--json` prints the full result, every file with its status and timing, as JSON for scripts.
-- `--no-report` does not save `conversion-report.txt` (see [When something fails](#when-something-fails)).
+- `--report-format json` writes the [conversion report](#the-conversion-report) as JSON instead of Markdown.
+- `--no-report` does not save a conversion report.
 
 ## Formats textweaver reads
 
@@ -420,7 +421,7 @@ You can also convert the document you have open without leaving textweaver. Pres
 
 The file goes next to the document, with the same name: exporting `essay.md` to PDF writes `essay.pdf` in the same folder, replacing an older export. In edit mode the text you are editing is exported, saved or not. Citations are formatted and a References section added, as with `tw convert`: from the bibliography your front matter names, the folder's `references.json`, and your own library.
 
-You hear "Exporting to PDF." and can go on reading or writing while it works. If it takes more than two seconds you hear "Still exporting to PDF, 2 seconds.", and then again every ten seconds, never more often. When it is done you hear where the file went and a question, for example "Exported to PDF: essay.pdf in C:\Users\ada\Essays. Open it? y or n." Press **y** to open it with your computer's program for that kind of file, or **n** to leave it. A warning, such as an image that was not found, is read out before the question.
+You hear "Exporting to PDF." and can go on reading or writing while it works. If it takes more than two seconds you hear "Still exporting to PDF, 2 seconds.", and then again every ten seconds, never more often. When it is done you hear where the file went and a question, for example "Exported to PDF: essay.pdf in C:\Users\ada\Essays. Open it? y or n." Press **y** to open it with your computer's program for that kind of file, or **n** to leave it. A warning, such as an image that was not found, is read out after the question, then how many items could not be made accessible, if any, and where the [conversion report](#the-conversion-report) is: "Report saved as essay.pdf.report.md." It is beside the exported file.
 
 A new document that was never saved has no folder yet; its export goes to the folder textweaver was started in, like Save As suggests.
 
@@ -434,12 +435,57 @@ While you edit, each save (**Ctrl+S**) writes the preview again and you hear "Pr
 
 A file that cannot be converted never stops the others. After the summary, each failure is read out with its reason, for example "Failed: old.rst: no native reader for .rst files, and Pandoc is not installed". When any file fails, `tw convert` ends with exit status 1, so scripts can tell.
 
-The same list is saved as `conversion-report.txt` in the output folder, or in the folder you converted when there is no `--out`. It starts with the summary sentence, then lists each failure and each warning with the file's name first, for example "report.docx: parse error: not a valid DOCX (zip) file", and the file's full path on the next line. Each run replaces the report, so it always describes the last run; a report is never converted as a document. When anything failed or has warnings, `tw convert` says where the report is. `--no-report` leaves it out. Files named on their own, without `--out`, get no report.
+Failures are also listed in the [conversion report](#the-conversion-report), each with the file's name first, for example "report.docx: parse error: not a valid DOCX (zip) file".
 
 Two cases are refused before converting:
 
 - An output that would replace its own source, such as Markdown to Markdown in the same folder. Choose an output folder with `--out`.
 - Two sources that would write the same output, such as `notes.md` and `notes.txt` both becoming `notes.html`. Rename one of them.
+
+## The conversion report
+
+Every conversion leaves a report that says where each output came from and what in it could not be made accessible. An accommodations office can keep it in a student's file, or send it to a publisher as the list of what to fix.
+
+**Where it goes.**
+
+- A folder, or files converted with `--out`: one report for the run, `conversion-report.md` in the output folder (or in the folder you converted, when there is no `--out`), with a section for each file.
+- A file named on its own without `--out`: a report beside its output, named after it. Converting `essay.md` to PDF writes `essay.pdf.report.md`.
+- Export from inside the reader: a report beside the exported file, the same way.
+- Batch convert from the reader: `conversion-report.md`, as for a folder.
+
+Each run replaces the report it writes, so it always describes the last run. A report is never converted as a document. `tw convert` ends by saying where the report is, for example "Report saved as converted/conversion-report.md." `--report-format json` writes `conversion-report.json` (or `essay.pdf.report.json`) instead, for programs and records systems, and `--no-report` writes none. Watching a folder keeps its own log instead; see [Watch a folder](#watch-a-folder).
+
+**What it says.** The report starts with the summary sentence, then:
+
+- **About this report:** the version of textweaver that made it, the date and time it was written (from the computer's clock, in UTC, with the weekday), the output format, and the counts.
+- **Could not be made accessible:** the files with such items, and how many each has.
+- **Failed:** each failure with its reason.
+- **Files:** a section for each file, with what happened to it, the output's name, the source's SHA-256 (a fingerprint that shows the file has not changed since), and the source's size. Then the list of what could not be made accessible, and the writers' other notes, such as an image that could not be embedded or characters braille cannot show.
+
+**What it looks for.** Each item says what it is first, then where it is: the heading it is under, the print page when the source has pages (a PDF, a DAISY book, a scan), and the line: in the source for a Markdown file, where you would fix it, and in the converted text for other formats.
+
+- **Image without a description:** an image with no alt text, or only its file name as its description. Screen readers skip it or read the file name. (In HTML sources, an image with no alt text at all is left out when the page is read, so it is not listed yet.)
+- **Table whose columns do not line up:** rows with different numbers of cells. This is common in tables recognized by OCR from a scan; check the table against the original.
+- **Table without a header row:** its cells cannot be read with their column headings.
+- **Math that did not parse:** the formula is shown as written, with why it did not parse. It is written as its source, so it may read poorly.
+
+For example:
+
+```markdown
+### lab.html
+
+- Result: converted to lab.epub
+- Source SHA-256: 3f0a…
+- Source size: 512 bytes
+
+Could not be made accessible, 3 items:
+
+1. Image without a description: chart.png. Under the heading "Results", line 3.
+2. Table whose columns do not line up: 2 rows, with 2, 1 cells. Under the heading "Data", line 7.
+3. Math that did not parse: `$\left( a$`, \left without \right. Under the heading "Model", line 11.
+```
+
+**Privacy.** The report names files by their name, or their path inside the folder that was converted, never by a full path. It holds no user name or computer name, and an image is named by its file name only. Nothing is sent anywhere. `--json` on the command line prints the same facts (each file's `sha256` and `issues`) with full paths, for scripts on your own computer.
 
 ## See also
 

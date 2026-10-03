@@ -1099,6 +1099,13 @@ publish-warnings =
 # $file is the file's name, $folder its folder; $warned is empty or a
 # space and publish-warnings.
 publish-exported = Nach { $format } exportiert: { $file }. Öffnen? y oder n. In { $folder }.{ $warned }
+publish-report = Bericht gespeichert als { $file }.
+publish-report-issues =
+    { $n ->
+        [one] 1 Element
+       *[other] { $n } Elemente
+    } nicht barrierefrei; siehe Bericht.
+publish-report-failed = Der Bericht konnte nicht gespeichert werden: { $error }
 publish-preview-written-served = Vorschau geschrieben. Sie wird im Browser geöffnet. Sie lädt nach jedem Speichern von selbst neu.{ $warned }
 publish-preview-written = Vorschau geschrieben. Sie wird im Browser geöffnet. Speichern schreibt sie erneut; drücken Sie dann F5 im Browser.{ $warned }
 publish-preview-updated = Vorschau aktualisiert.
@@ -3441,8 +3448,13 @@ batch-stopped =
         [one] 1 Datei
        *[other] { $converted } Dateien
     } umgewandelt; { $left } nicht umgewandelt; { $failed } fehlgeschlagen.
-batch-report = Die Liste ist in { $path } gespeichert.
-batch-report-failed = Die Liste konnte nicht gespeichert werden: { $error }
+batch-report = Bericht gespeichert in { $path }.
+batch-report-failed = Der Bericht konnte nicht gespeichert werden: { $error }
+batch-inaccessible =
+    { $n ->
+        [one] 1 Datei hat
+       *[other] { $n } Dateien haben
+    } Inhalte, die nicht barrierefrei wurden; siehe Bericht.
 batch-failures-title =
     { $n ->
         [one] 1 fehlgeschlagene Datei

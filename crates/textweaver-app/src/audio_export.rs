@@ -659,6 +659,15 @@ mod run {
             },
         );
         match result {
+            // A stop asked for as the export finished is still a stop: the
+            // file is removed and "stopped" is said, never "wrote".
+            Ok(r) if cancel.load(Ordering::SeqCst) => {
+                let _ = std::fs::remove_file(&r.out);
+                if let Some(sub) = &r.subtitles {
+                    let _ = std::fs::remove_file(sub);
+                }
+                Err(Ended::Cancelled)
+            }
             Ok(r) => Ok(r),
             Err(textweaver_export::ExportError::Cancelled) => Err(Ended::Cancelled),
             Err(e) => Err(fail(e.to_string())),

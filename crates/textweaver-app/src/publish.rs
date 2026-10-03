@@ -31,7 +31,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 pub(crate) use textweaver_convert::OutputFormat;
-use textweaver_convert::{ConvertOptions, Converter, Job as ConvertJob, Status};
+use textweaver_convert::{ConvertOptions, Converter, Job as ConvertJob, ReportFormat, Status};
 use textweaver_core::{CharRange, Utterance};
 use textweaver_formats::{Loader, MarkdownLoader, Source};
 use textweaver_lexicon::args;
@@ -327,9 +327,27 @@ impl App {
                     if let Some(dir) = output.parent() {
                         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
                     }
+                    // Previews are rewritten on every save: no audit.
+                    let options = ConvertOptions {
+                        audit: kind == ExportKind::Export,
+                        ..options
+                    };
                     let conv = Converter::new(options).map_err(|e| e.to_string())?;
-                    let r = conv.convert_job(&job);
-                    match r.status {
+                    let mut r = conv.convert_job(&job);
+                    // An export gets its conversion report beside it; a
+                    // preview, in the cache folder, does not.
+                    let report = (kind == ExportKind::Export
+                        && matches!(r.status, Status::Converted))
+                    .then(|| {
+                        textweaver_convert::report::write_file_report(
+                            &r,
+                            Some(conv.options().to),
+                            ReportFormat::Markdown,
+                            std::time::SystemTime::now(),
+                        )
+                    });
+                    let issues = r.issues.len() + r.issues_omitted;
+                    match std::mem::replace(&mut r.status, Status::Skipped) {
                         Status::Failed(reason) => Err(reason),
                         Status::Converted | Status::Skipped => {
                             let mut headings = Vec::new();
@@ -347,6 +365,8 @@ impl App {
                                 path: output,
                                 warnings: r.warnings,
                                 headings,
+                                report,
+                                issues,
                             })
                         }
                     }
@@ -569,6 +589,8 @@ impl App {
             path,
             warnings,
             headings,
+            report,
+            issues,
         } = match result {
             Ok(x) => x,
             Err(e) => {
@@ -600,6 +622,28 @@ impl App {
         };
         match kind {
             ExportKind::Export => {
+                // What could not be made accessible, and where the report
+                // is, in words, after the warnings.
+                let mut warned = warned;
+                if issues > 0 {
+                    warned.push(' ');
+                    warned.push_str(&self.msg_args("publish-report-issues", &args!["n" => issues]));
+                }
+                match &report {
+                    Some(Ok(p)) => {
+                        warned.push(' ');
+                        warned.push_str(
+                            &self.msg_args("publish-report", &args!["file" => file_name(p)]),
+                        );
+                    }
+                    Some(Err(e)) => {
+                        warned.push(' ');
+                        warned.push_str(
+                            &self.msg_args("publish-report-failed", &args!["error" => e.clone()]),
+                        );
+                    }
+                    None => {}
+                }
                 let folder = path
                     .parent()
                     .map_or_else(String::new, |p| p.display().to_string());

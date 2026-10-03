@@ -102,15 +102,15 @@ fn a_folder_converts_to_markdown_and_the_failures_are_listed() {
         said.starts_with("Converted 2 files to Markdown; 0 up to date; 1 failed."),
         "{said}"
     );
-    assert!(said.contains("conversion-report.txt"), "{said}");
+    assert!(said.contains("conversion-report.md"), "{said}");
     // The failures, name first, in a list.
     let failed = items(&app);
     assert_eq!(failed.len(), 1, "{failed:?}");
     assert!(failed[0].starts_with("report.docx: "), "{failed:?}");
     let out = notes.join("converted");
     assert!(out.join("river.md").is_file());
-    let report = std::fs::read_to_string(out.join("conversion-report.txt")).unwrap();
-    assert!(report.contains("report.docx: "), "{report}");
+    let report = std::fs::read_to_string(out.join("conversion-report.md")).unwrap();
+    assert!(report.contains("- report.docx: "), "{report}");
     // No temporary file is left beside the outputs.
     let names: Vec<String> = std::fs::read_dir(&out)
         .unwrap()

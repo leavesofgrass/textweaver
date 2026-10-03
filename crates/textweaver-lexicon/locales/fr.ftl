@@ -1091,6 +1091,13 @@ publish-warnings =
 # $file is the file's name, $folder its folder; $warned is empty or a
 # space and publish-warnings.
 publish-exported = Exporté vers { $format } : { $file }. L'ouvrir ? y ou n. Dans { $folder }.{ $warned }
+publish-report = Rapport enregistré sous { $file }.
+publish-report-issues =
+    { $n ->
+        [one] 1 élément non accessible
+       *[other] { $n } éléments non accessibles
+    } ; voir le rapport.
+publish-report-failed = Le rapport n'a pas pu être enregistré : { $error }
 publish-preview-written-served = Aperçu écrit. Ouverture dans le navigateur. Il se recharge tout seul après chaque enregistrement.{ $warned }
 publish-preview-written = Aperçu écrit. Ouverture dans le navigateur. Un enregistrement le réécrit ; appuyez ensuite sur F5 dans le navigateur.{ $warned }
 publish-preview-updated = Aperçu mis à jour.
@@ -3433,8 +3440,13 @@ batch-stopped =
         [one] 1 fichier converti
        *[other] { $converted } fichiers convertis
     } ; { $left } non convertis ; { $failed } en échec.
-batch-report = La liste est enregistrée dans { $path }.
-batch-report-failed = La liste n'a pas pu être enregistrée : { $error }
+batch-report = Rapport enregistré dans { $path }.
+batch-report-failed = Le rapport n'a pas pu être enregistré : { $error }
+batch-inaccessible =
+    { $n ->
+        [one] 1 fichier a
+       *[other] { $n } fichiers ont
+    } des éléments non accessibles ; voir le rapport.
 batch-failures-title =
     { $n ->
         [one] 1 fichier en échec

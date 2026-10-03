@@ -25,13 +25,14 @@ pub use crate::vorbis::{chapter_time, comments, vorbis_comment_block};
 /// FLAC's metadata block type for Vorbis comments.
 const VORBIS_COMMENT: u8 = 4;
 
-/// The WAV's audio as a FLAC source.
-struct WavSource {
+/// The WAV's audio as a FLAC source, asking `stop` before each block.
+struct WavSource<'a> {
     pcm: PcmReader,
     samples: Vec<i32>,
+    stop: &'a dyn Fn() -> bool,
 }
 
-impl Source for WavSource {
+impl Source for WavSource<'_> {
     fn channels(&self) -> usize {
         self.pcm.channels()
     }
@@ -49,6 +50,12 @@ impl Source for WavSource {
         block_size: usize,
         dest: &mut F,
     ) -> Result<usize, SourceError> {
+        if (self.stop)() {
+            return Err(SourceError::from_io_error(std::io::Error::new(
+                std::io::ErrorKind::Interrupted,
+                "stopped",
+            )));
+        }
         let n = self
             .pcm
             .read(block_size, &mut self.samples)
@@ -65,9 +72,21 @@ impl Source for WavSource {
 /// Encodes the WAV at `wav` as FLAC at `out`, with `comments` as its Vorbis
 /// comment block.
 pub fn encode(wav: &Path, out: &Path, comments: &[(String, String)]) -> Result<(), ExportError> {
+    encode_with_stop(wav, out, comments, &|| false)
+}
+
+/// [`encode`], asking `stop` before each block: when it says stop, the
+/// encoding ends in [`ExportError::Cancelled`] and nothing is written.
+pub fn encode_with_stop(
+    wav: &Path,
+    out: &Path,
+    comments: &[(String, String)],
+    stop: &dyn Fn() -> bool,
+) -> Result<(), ExportError> {
     let source = WavSource {
         pcm: PcmReader::open(wav, "FLAC")?,
         samples: Vec::new(),
+        stop,
     };
     let flac_err = |what: String| ExportError::Flac(what);
     let mut config = flacenc::config::Encoder::default();
@@ -76,8 +95,17 @@ pub fn encode(wav: &Path, out: &Path, comments: &[(String, String)]) -> Result<(
         .into_verified()
         .map_err(|(_, e)| flac_err(e.to_string()))?;
     let block_size = config.block_size;
-    let mut stream = flacenc::encode_with_fixed_block_size(&config, source, block_size)
-        .map_err(|e| flac_err(e.to_string()))?;
+    let mut stream =
+        flacenc::encode_with_fixed_block_size(&config, source, block_size).map_err(|e| {
+            if stop() {
+                ExportError::Cancelled
+            } else {
+                flac_err(e.to_string())
+            }
+        })?;
+    if stop() {
+        return Err(ExportError::Cancelled);
+    }
     let vendor = format!("textweaver {}", env!("CARGO_PKG_VERSION"));
     let block = vorbis_comment_block(&vendor, comments);
     stream.add_metadata_block(

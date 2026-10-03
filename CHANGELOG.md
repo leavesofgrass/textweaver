@@ -50,6 +50,9 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 - **A cleared detail shows at once.** Clearing a title, author, DOI, or ISBN you typed shows the document's own value in the library list right away, without reading the list again.
 - **Export uses the reading font.** Export to PDF or EPUB in the reader uses your reading font, a downloaded Lexend too, as `tw convert --font` does. A font that is not on this computer keeps the usual font.
+- **Conversion reports with provenance.** `tw convert`, batch convert, and export from the reader leave a report for an accommodation file: each source's name and SHA-256, textweaver's version, the date and time from the clock, the output format, and what could not be made accessible (images without descriptions, tables whose columns do not line up or that have no header row, math that did not parse), each with the heading, page, and line where it is. A batch writes `conversion-report.md` with a section per file; a file on its own gets `essay.pdf.report.md` beside its output. `--report-format json` writes JSON, and `--no-report` writes none. The report names files only by their name inside the converted folder. textweaver always says where the report is, and how many files have items not made accessible. It replaces `conversion-report.txt`.
+- **Stop means stop in audio export.** A stop asked for while the audio is being encoded (FLAC, MP3, Opus, or through ffmpeg, which is ended) or just as the last sentence finishes now ends as "stopped" with no file left, never as written.
+- **WebVTT captions escape their text.** `<`, `&`, and `>` in caption text are written as `&lt;`, `&amp;`, and `&gt;` in WebVTT, so a cue with "x < y" or "-->" no longer breaks players. SRT is unchanged.
 
 ### Choosing files and folders
 

@@ -324,6 +324,18 @@ fn serial() -> u32 {
 /// Encodes the WAV at `wav` as Ogg Opus at `out`, with `comments` (see
 /// [`crate::vorbis::comments`]) in its `OpusTags` header.
 pub fn encode(wav: &Path, out: &Path, comments: &[(String, String)]) -> Result<(), ExportError> {
+    encode_with_stop(wav, out, comments, &|| false)
+}
+
+/// [`encode`], asking `stop` before each block: when it says stop, the
+/// encoding ends in [`ExportError::Cancelled`] (the caller removes the
+/// partial file).
+pub fn encode_with_stop(
+    wav: &Path,
+    out: &Path,
+    comments: &[(String, String)],
+    stop: &dyn Fn() -> bool,
+) -> Result<(), ExportError> {
     let mut pcm = PcmReader::open(wav, "Opus")?;
     let fail = |what: String| ExportError::Opus(what);
     let codec = |e: opusic_c::ErrorCode| ExportError::Opus(e.message().to_owned());
@@ -379,6 +391,9 @@ pub fn encode(wav: &Path, out: &Path, comments: &[(String, String)]) -> Result<(
             Ok::<(), ExportError>(())
         };
     loop {
+        if stop() {
+            return Err(ExportError::Cancelled);
+        }
         let n = pcm.read(BLOCK, &mut block).map_err(io)?;
         if n == 0 {
             break;

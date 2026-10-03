@@ -9,8 +9,9 @@
 //!   extension are treated as earlier outputs, not sources.
 //! - Only files with an extension some loader reads are taken from folders;
 //!   files named explicitly are always tried.
-//! - The report of an earlier run ([`crate::REPORT_FILE`]) is not taken
-//!   from folders.
+//! - The reports of earlier runs ([`crate::REPORT_FILE`], its JSON and
+//!   plain text forms, and a file's own `essay.pdf.report.md`) are not
+//!   taken from folders.
 //! - A job whose output would overwrite its source, or an output another
 //!   source already claims, is rejected with a reason instead of run.
 
@@ -116,7 +117,7 @@ pub(crate) fn plan(conv: &Converter, inputs: &[PathBuf]) -> Result<Plan, Convert
             }
             let path = entry.path();
             // An earlier run's report is not a document to convert.
-            if entry.file_name() == crate::REPORT_FILE {
+            if crate::report::is_report_name(&entry.file_name().to_string_lossy()) {
                 continue;
             }
             let ext = extension(path);
@@ -151,7 +152,7 @@ pub(crate) fn plan(conv: &Converter, inputs: &[PathBuf]) -> Result<Plan, Convert
             }
             let reason = format!(
                 "{} converts to the same output; rename one of them",
-                other.display()
+                crate::report::relative_name(other, Some(&job.root))
             );
             plan.rejected.push(FileResult {
                 status: Status::Failed(reason),

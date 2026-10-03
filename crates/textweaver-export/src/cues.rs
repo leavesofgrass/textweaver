@@ -296,7 +296,24 @@ pub fn format_time(ms: u64, format: SubtitleFormat) -> String {
     format!("{hh:02}:{mm:02}:{ss:02}{sep}{ms:03}")
 }
 
-/// Renders cues as an SRT or WebVTT file.
+/// WebVTT cue text with `&`, `<` and `>` escaped, as the WebVTT spec's cue
+/// text rules ask: a raw `<` starts a tag, and `-->` is forbidden in cue
+/// text (it becomes `--&gt;`). SRT has no escapes and keeps the text as is.
+pub fn vtt_escape(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// Renders cues as an SRT or WebVTT file; WebVTT cue text is escaped
+/// ([`vtt_escape`]).
 pub fn render(cues: &[Cue], format: SubtitleFormat) -> String {
     let mut out: Vec<String> = Vec::new();
     if format == SubtitleFormat::Vtt {
@@ -318,7 +335,10 @@ pub fn render(cues: &[Cue], format: SubtitleFormat) -> String {
             format_time(c.start_ms, format),
             format_time(end, format)
         ));
-        out.push(c.text.clone());
+        out.push(match format {
+            SubtitleFormat::Srt => c.text.clone(),
+            SubtitleFormat::Vtt => vtt_escape(&c.text),
+        });
         out.push(String::new());
     }
     let joined = out.join("\n");
@@ -478,6 +498,17 @@ mod tests {
                 cue(1800, 2400, "today.")
             ]
         );
+    }
+
+    #[test]
+    fn webvtt_cue_text_is_escaped_and_srt_is_not() {
+        let cues = [cue(0, 1000, "x < y & z --> w")];
+        let vtt = render(&cues, SubtitleFormat::Vtt);
+        assert!(vtt.contains("\nx &lt; y &amp; z --&gt; w\n"), "{vtt}");
+        // The only arrow left is the timing line's.
+        assert_eq!(vtt.matches("-->").count(), 1, "{vtt}");
+        let srt = render(&cues, SubtitleFormat::Srt);
+        assert!(srt.contains("\nx < y & z --> w\n"), "{srt}");
     }
 
     #[test]
