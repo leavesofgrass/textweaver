@@ -31,10 +31,17 @@ use unicode_bidi::{BidiClass, BidiInfo, bidi_class};
 /// True when right-to-left text should be reordered for display, for the
 /// setting and the terminal this runs in.
 pub fn reorders(setting: RtlDisplay, screen_reader: bool) -> bool {
+    reorders_in(setting, screen_reader, terminal_reorders())
+}
+
+/// [`reorders`] with the terminal's own reordering already probed
+/// ([`crate::terminal_info::TerminalInfo`]), so drawing reads no
+/// environment variables.
+pub fn reorders_in(setting: RtlDisplay, screen_reader: bool, terminal_reorders: bool) -> bool {
     match setting {
         RtlDisplay::On => true,
         RtlDisplay::Off => false,
-        RtlDisplay::Auto => !screen_reader && !cfg!(windows) && !terminal_reorders(),
+        RtlDisplay::Auto => !screen_reader && !cfg!(windows) && !terminal_reorders,
     }
 }
 

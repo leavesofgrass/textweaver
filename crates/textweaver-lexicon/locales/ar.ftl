@@ -2973,6 +2973,9 @@ tui-hint-find = بحث
 tui-hint-mark = وضع علامة
 tui-hint-lines = أسطر
 tui-hint-keys = مفاتيح
+tui-hint-choose = اختيار
+tui-hint-close = إغلاق
+tui-hint-back = رجوع
 # The list overlay's border: $n is the focused item's number, $count
 # the number of items.
 tui-list-title = { $n } من { $count }، { $title }

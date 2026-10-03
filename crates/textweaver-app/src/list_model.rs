@@ -646,6 +646,15 @@ impl App {
             } else {
                 "listmodel-end-of-list"
             });
+            // With the cursor on the status line, the Braille line is the
+            // status line: keep the item there after the edge message, so
+            // the display still says what the user is on.
+            let sticky = self.cursor_placement() == textweaver_a11y::CursorPlacement::Status;
+            let edge = if sticky && !text.is_empty() {
+                format!("{edge} {text}")
+            } else {
+                edge
+            };
             self.announce(&edge, Priority::Polite);
         }
         vec![Effect::Redraw]

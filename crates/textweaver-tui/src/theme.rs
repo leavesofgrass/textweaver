@@ -61,7 +61,16 @@ pub struct Theme {
     /// The reader's colors for marks no theme role holds (`[colors]`):
     /// set with [`with_marks`](Self::with_marks).
     pub marks: MarkStyles,
+    /// The foreground of rows the reading ruler masks: the text color
+    /// blended [`MASK_TOWARD_PAGE`] of the way toward the page, as the
+    /// window's overlay draws it. Unset at 16 colors and with no color,
+    /// where the mask stays the dim attribute.
+    pub masked: Option<Color>,
 }
+
+/// How far the ruler's mask moves masked text toward the page color: the
+/// window's overlay strength, so both frontends mask alike.
+pub const MASK_TOWARD_PAGE: f64 = 0.72;
 
 /// The reader's own colors for the reading aids' marks (`[colors]`), at
 /// the terminal's color level. With 16 colors or none they are unset, and
@@ -140,8 +149,24 @@ impl Theme {
         let t = TerminalTheme::new(theme, support);
         let page = t.page();
         let on_page = |s: TermStyle| style(page.patch(s));
-        let status = style(t.style(StyleRole::StatusBar));
         let panel = style(t.color(ColorRole::Surface));
+        // Quiet chrome: with colors to spare, the title and status lines
+        // sit on the panel color, not in the spoken word's band, so the
+        // reading highlight is the one strong color on screen. At 16
+        // colors and with none they keep the status bar's reverse video.
+        let rich = matches!(support, ColorSupport::TrueColor | ColorSupport::Ansi256);
+        let status = if rich {
+            panel
+        } else {
+            style(t.style(StyleRole::StatusBar))
+        };
+        let masked = if rich {
+            let ink = theme.color(ColorRole::Text);
+            let paper = theme.color(ColorRole::Background);
+            textweaver_theme::term_color(ink.mix(paper, MASK_TOWARD_PAGE), support).map(color)
+        } else {
+            None
+        };
         Theme {
             name: theme.meta.name.clone(),
             display_name: theme.meta.display_name.clone(),
@@ -167,6 +192,19 @@ impl Theme {
             list_selected: style(t.style(StyleRole::Focus)),
             code: CodeStyles::from_terminal(&t),
             marks: MarkStyles::default(),
+            masked,
+        }
+    }
+
+    /// The style a span on a masked ruler row gets, patched over `s`: the
+    /// blended foreground where this theme has one (spans on a colored
+    /// band keep theirs, so the band stays readable), else the dim
+    /// attribute.
+    pub fn mask(&self, s: Style) -> Style {
+        match self.masked {
+            Some(fg) if s.bg.is_none() || s.bg == self.text.bg => s.fg(fg),
+            Some(_) => s,
+            None => s.add_modifier(Modifier::DIM),
         }
     }
 
@@ -304,6 +342,52 @@ mod tests {
             ColorSupport::NoColor,
         );
         assert_eq!(none.text.bg, None);
+    }
+
+    #[test]
+    fn the_ruler_mask_is_a_color_with_colors_and_dim_without() {
+        let registry = Registry::builtin();
+        let galaxy = registry.resolve("galaxy").0;
+        let t = Theme::from_theme(galaxy, ColorSupport::TrueColor);
+        let masked = t.mask(t.text);
+        assert!(!masked.add_modifier.contains(Modifier::DIM));
+        let (Some(Color::Rgb(r, ..)), Some(Color::Rgb(ink, ..)), Some(Color::Rgb(paper, ..))) =
+            (masked.fg, t.text.fg, t.text.bg)
+        else {
+            panic!("truecolor styles are RGB");
+        };
+        // Between the text and the page, nearer the page.
+        let (lo, hi) = (ink.min(paper), ink.max(paper));
+        assert!(lo < r && r < hi, "{r} between {lo} and {hi}");
+        assert!(r.abs_diff(paper) < r.abs_diff(ink));
+        assert!(
+            Theme::from_theme(galaxy, ColorSupport::Ansi256)
+                .masked
+                .is_some()
+        );
+        for support in [ColorSupport::Ansi16, ColorSupport::NoColor] {
+            let t = Theme::from_theme(galaxy, support);
+            assert!(
+                t.mask(t.text).add_modifier.contains(Modifier::DIM),
+                "{support:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn quiet_chrome_off_the_spoken_words_band_reverse_kept_at_16() {
+        for theme in Registry::builtin().themes() {
+            let t = Theme::from_theme(theme, ColorSupport::TrueColor);
+            assert_ne!(t.status.bg, t.spoken_word.bg, "{}", t.name);
+            assert!(t.title.add_modifier.contains(Modifier::BOLD));
+        }
+        let registry = Registry::builtin();
+        let galaxy = registry.resolve("galaxy").0;
+        for support in [ColorSupport::Ansi16, ColorSupport::NoColor] {
+            let t = Theme::from_theme(galaxy, support);
+            let bar = style(TerminalTheme::new(galaxy, support).style(StyleRole::StatusBar));
+            assert_eq!(t.status, bar, "{support:?}");
+        }
     }
 
     #[test]

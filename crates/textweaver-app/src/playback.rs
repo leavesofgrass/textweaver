@@ -15,7 +15,7 @@ use crate::command::Effect;
 use crate::text_util;
 
 /// Whether the app is reading aloud.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Playback {
     /// Not reading.
     #[default]

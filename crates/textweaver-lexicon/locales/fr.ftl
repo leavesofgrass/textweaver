@@ -2745,6 +2745,9 @@ tui-hint-find = rechercher
 tui-hint-mark = marquer
 tui-hint-lines = lignes
 tui-hint-keys = touches
+tui-hint-choose = choisir
+tui-hint-close = fermer
+tui-hint-back = retour
 # The list overlay's border: $n is the focused item's number, $count
 # the number of items.
 tui-list-title = { $n } sur { $count }, { $title }
