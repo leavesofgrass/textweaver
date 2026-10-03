@@ -835,3 +835,31 @@ index 19ba8e61..797f2f5f 100644
          advance: final_advance,
      });
  }
+diff --git a/masonry_winit/src/event_loop_runner.rs b/masonry_winit/src/event_loop_runner.rs
+index 534f484c..f8a7281b 100644
+--- a/masonry_winit/src/event_loop_runner.rs
++++ b/masonry_winit/src/event_loop_runner.rs
+@@ -669,6 +669,13 @@ impl MasonryState {
+         }
+ 
+         let (visual_layers, tree_update) = window.render_root.redraw();
++        // textweaver: the tree update goes to AccessKit before the frame is
++        // rendered, presented and waited for, so the caret move a screen
++        // reader and a Braille display follow does not wait for the GPU.
++        // The tree is complete here; only the update's timing changes.
++        if let Some(tree_update) = tree_update {
++            window.accesskit_adapter.update_if_active(|| tree_update);
++        }
+         let overlays: Vec<_> = visual_layers
+             .overlay_layers()
+             .map(|layer| {
+@@ -699,9 +706,6 @@ impl MasonryState {
+         Self::render(surface, window, frame, &self.render_cx, &mut self.renderer);
+         #[cfg(feature = "tracy")]
+         drop(self.frame.take());
+-        if let Some(tree_update) = tree_update {
+-            window.accesskit_adapter.update_if_active(|| tree_update);
+-        }
+     }
+ 
+     // --- MARK: RENDER

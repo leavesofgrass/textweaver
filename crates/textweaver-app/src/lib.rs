@@ -252,7 +252,9 @@ pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use authoring::osc52;
 pub use authoring_state::{ClientFactory, Launcher};
 pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};
-pub use command::{CaretMove, Command, Confirm, Effect, NoteCommand, PromptPurpose};
+pub use command::{
+    CaretMove, Command, Confirm, DestructiveVerb, Effect, NoteCommand, PromptPurpose,
+};
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_command, extra_lookup};
 pub use font_download::{InstalledCheck, fonts_folder, use_downloaded_fonts};

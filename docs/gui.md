@@ -146,6 +146,12 @@ The document window: a very long document is shown a few hundred pages at a time
 
 When textweaver asks a yes-or-no question (a voice to download, after its size and license; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, so your screen reader says it, and the focus is on **Yes**. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other key asks the question again.
 
+A question that deletes, removes, or replaces something (a note, a highlight, a profile, a voice, a downloaded component, a file that already exists) starts on **No** instead, so pressing Enter keeps things as they are. Its first button says what it does, **Delete**, **Remove**, or **Replace**, rather than "Yes". The keys are the same: **Y** goes ahead, **N** and Escape keep things.
+
+## Closing the window
+
+Closing the window with its close button or Alt+F4 quits as Quit (Ctrl+Q) does, without asking "Quit textweaver?". If you have unsaved edits, it first asks the same question Ctrl+Q asks: save, discard, or cancel. Cancel keeps the window open with your edits. An open dialog closes first, as Escape would, so the question is the one in front.
+
 ## Voices
 
 **Ctrl+Shift+V** opens the voice manager, a dialog named "Choose a voice" with every voice of every engine on this computer: Eloquence, SAPI 5 (with the OneCore voices), DECtalk, eSpeak NG, Piper, and Apple's voices on macOS. The voices are the terminal's, with the same names, filters, and favorites. The focus starts in the list, named "Voices", on the voice in use.
@@ -201,7 +207,7 @@ All of these change only how text looks. Your screen reader reads the same text 
 
 ## Colors and high contrast
 
-The window starts in the theme your settings choose, and follows your system's light or dark setting as the terminal reader does (`display.follow_os_theme`, on unless you picked a theme). F5 moves to the next theme.
+The window starts in the theme your settings choose, and follows your system's light or dark setting as the terminal reader does (`display.follow_os_theme`, on unless you picked a theme). The system's setting is read while the rest of the window starts, and not at all with `--theme` or a theme you picked. F5 moves to the next theme.
 
 With Windows High Contrast on (Contrast themes in Windows 11), the window draws with your contrast theme's own colors: its page and text, its highlight for the spoken word, the selection, and the focus ring, and its link color. Turning it on or off applies at once. Marks that have a tint of their own in textweaver's themes (the reading ruler's band, notes, bookmarks, search matches) keep their shapes instead: the ruler's bar, the lines and boxes. The spoken sentence has no band then; its underline, in your contrast theme's text color, marks it. The focus ring stays visible: when the highlight color is too close to the page, the ring is drawn in the text color. `--theme`, or `follow_os_theme = false` in `[display]`, keeps textweaver's own colors.
 
@@ -221,13 +227,13 @@ Each row says its color and how well it stands out where it is drawn, as a ratio
 
 ## Settings
 
-Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's settings on the right. Every change takes effect and is saved at once. It is built from the same list as the terminal's settings screen, so every setting is in both; [Settings](settings.md) describes each one.
+Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's settings on the right. Every change takes effect and is saved at once. A switch shows its value in words beside it ("on", "off"). With a mouse, the arrows beside a number or a choice step it the way they point: the left one back, the right one forward. It is built from the same list as the terminal's settings screen, so every setting is in both; [Settings](settings.md) describes each one.
 
 **Export settings** and **Import settings** are under File, then Settings (Alt+Shift+E and Alt+Shift+I). Export opens your system's Save dialog, offering `textweaver-settings.toml`; a name ending in `.json` writes JSON instead. It writes every setting and your key changes. Import opens the system's Open dialog for a TOML or JSON file, checks it, and then asks before changing anything, naming the first changes: "Import 12 changed settings from home.toml: Rate, Theme, Link color, and 9 more? y or n". Yes applies them at once and says what changed; no leaves everything as it was. If the system's file chooser cannot open, a prompt asks for the file's path instead.
 
 ## What only the terminal reader does
 
-Every command works in the window as in the terminal reader, from the same keys, the menus, and the command palette (F2), with the same lists, questions, and messages. A few commands only mean something in a terminal, and the window's menus leave them out:
+Every command works in the window as in the terminal reader, from the same keys, the menus, and the command palette (F2), with the same lists, questions, and messages. A few commands only mean something in a terminal, and the window's menus and command palette leave them out. If a key for one is pressed in the window (`j` or Shift+J, say), the window says "This command works in the terminal reader." and does nothing else:
 
 - `scroll_down` and `scroll_up`: the terminal scrolls its screen by lines. The window scrolls with the mouse wheel and keeps the caret in view.
 - `toggle_line_numbers`: line numbers are the terminal's margin. In the window, the status bar says the line, and Say Position (Shift+W) says it too.
@@ -241,7 +247,7 @@ The command-line tools (`tw vault`, `tw convert`, `tw library`, and the rest) ar
 - `--backend paced` reads silently, timing words like a real engine.
 - `crates/textweaver-xilem/tools/uia-report.ps1` reports what UI Automation sees (Windows), including the menu bar's seven menus and access keys and every menu item's text and key as the window's menu holds them; `-WindowEdge` reads past the document window's edge; `-Menus` also opens the first menu to read its items through UI Automation (opening a menu may bring the window to the front, so use it on a test machine). `tools/atspi-check.sh` does the same with AT-SPI on Linux.
 - `--log` lists the menu items the window built, one per line, with each key after a tab.
-- `--review-screenshots FOLDER` draws the review screenshots (three themes, 100% and 200%, the dialogs, and the reading aids) without a window.
+- `--review-screenshots FOLDER` draws the review screenshots (three themes, 100% and 200%, the dialogs, and the reading aids) without a window. It, `--screenshot`, and `--measure-frames` need the `screenshot` feature (in the default build); a build without it ends with an error that names the option, and no window opens.
 - `--log` also says how the title bar and menus are drawn: "frame: dark", "frame: light", or "frame: system" (high contrast), at startup on the "menus: native" line and again on each change; and "menu bar shown" and "menu bar hidden" while `auto_hide_menu` is on.
 
 ### Checking the title bar and menus by hand

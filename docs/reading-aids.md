@@ -158,7 +158,7 @@ Font size is in points, from 6 to 144. The default is 14. Below 12, textweaver s
 - You can mark just the screen row, or the whole line when it wraps onto several rows.
 - **Mask** (off by default) dims everything outside the band. Dim text can be hard to see, so try it before you rely on it.
 
-In the terminal, the current line is underlined with a bar in the left margin. Lines in the band get a thinner bar. Nothing is shown by color alone.
+In the terminal, the current line is underlined with a bar in the left margin. Lines in the band get a thinner bar. In the window, the current line has a band with a bar at its start, and lines in the band a paler band with a thinner bar. Nothing is shown by color alone.
 
 ## Difficult words
 

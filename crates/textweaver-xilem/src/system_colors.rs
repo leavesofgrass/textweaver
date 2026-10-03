@@ -110,6 +110,8 @@ pub fn palette(c: &SystemColors) -> Palette {
         border_hover: c.highlight,
         text,
         dim_text: text,
+        // The system's own disabled text color.
+        disabled_text: c.gray_text,
         headings: [text; 6],
         link: c.hot_light,
         code: text,

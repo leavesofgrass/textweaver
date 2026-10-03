@@ -183,7 +183,7 @@ The counts do not move with the machine's load, so they are what the gate checks
 
 In a real window, `--log` (or `--log-file PATH`) now writes:
 
-- the startup phases, each as "startup: PHASE at N ms" from the start of `run`: settings and app, the color-scheme probe (when it runs), the widget tree, the event loop, the window shown at its first tick, and the document open;
+- the startup phases, each as "startup: PHASE at N ms" from the start of `run`: settings, app, and color-scheme probe (the probe runs on a helper thread while the app is built, and only when it can change the theme), the widget tree, the event loop, the window shown at its first tick, and the document open;
 - every 200 highlight moves, one line with the driver's refresh time per move: median, 95th percentile, and worst. This replaces a pushed zero that nothing read.
 
 The speech service writes, at debug level (`--log debug` in the terminal reader), one line every 200 words that the audio clock scheduled: how late they fired (median and 95th percentile) and how far apart the speech thread's timer steps were. On Windows the 10 ms waits round up to the system timer tick, so a word can light up a tick late; this line measures it before anything changes.

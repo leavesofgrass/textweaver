@@ -536,6 +536,61 @@ fn reading_aids_are_drawn_and_leave_the_text_alone() {
     assert_ne!(light.ruler_focus, Palette::galaxy().ruler_focus);
 }
 
+/// The ruler's band rows have a bar too, half the reading line's, so the
+/// band shows by its shape and not by a tint alone; and a blank line's row
+/// is as tall as the blank line, so the band never covers the next
+/// paragraph or heading (GUI audit QW3, W8c-w).
+#[test]
+fn the_rulers_band_rows_have_a_bar_and_blank_rows_fit() {
+    use textweaver_app::Command;
+    use textweaver_app::aids::RowMark;
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::document::PaintStep;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let mut refresher = gui::Refresher::default();
+    // The band: the second step of the ruler.
+    let _ = app.dispatch(Command::Action(ActionId::RulerCycle));
+    let _ = app.dispatch(Command::Action(ActionId::RulerCycle));
+    let _ = app.dispatch(Command::Action(ActionId::NextParagraph));
+    let _ = app.dispatch(Command::Action(ActionId::NextParagraph));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let view = h.get_widget(DOC);
+    let marks = view.inner().ruler_marks();
+    assert!(marks.iter().any(|m| m.0 == RowMark::Band), "{marks:?}");
+    let bars: Vec<_> = view
+        .inner()
+        .painted()
+        .iter()
+        .filter_map(|s| match s {
+            PaintStep::RulerBar(m, r) => Some((*m, *r)),
+            _ => None,
+        })
+        .collect();
+    let marked: Vec<_> = marks
+        .iter()
+        .filter(|m| matches!(m.0, RowMark::Focus | RowMark::Band))
+        .collect();
+    assert_eq!(bars.len(), marked.len(), "one bar per marked row");
+    for ((mark, bar), (m, y0, y1)) in bars.iter().zip(&marked) {
+        assert_eq!(mark, m);
+        assert_eq!((bar.y0, bar.y1), (*y0, *y1));
+        let want = if *m == RowMark::Focus { 4.0 } else { 2.0 };
+        assert!((bar.width() - want).abs() < 1e-6, "{m:?}: {bar:?}");
+    }
+    // Rows follow one another without overlapping, blank lines included.
+    for pair in marks.windows(2) {
+        assert!(
+            pair[1].1 >= pair[0].2 - 0.5,
+            "row at {} overlaps the row ending at {}: {marks:?}",
+            pair[1].1,
+            pair[0].2
+        );
+    }
+}
+
 /// Syllables (Alt+Shift+Z) are drawn between the chars of long words, as
 /// the terminal draws them, and the text runs a screen reader gets stay the
 /// words. Turning them off takes the marks away again: a reading aid turned
@@ -616,8 +671,12 @@ fn a_question_is_a_dialog_with_yes_and_no() {
     let app = app_with_sample(dir.path());
     let mut h = harness(&app);
     let question = "Download Ada Example's voice, 63 megabytes, licence CC BY 4.0? y or n.";
-    let q = gui::question_dialog(&Palette::galaxy(), &app.catalog(), question);
+    let q = gui::question_dialog(&Palette::galaxy(), &app.catalog(), question, None);
     let (yes, no) = (q.yes, q.no);
+    assert_eq!(
+        q.focus, yes,
+        "a question that destroys nothing starts on Yes"
+    );
     h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(q.modal)));
     h.focus_on(Some(yes));
     let _ = h.redraw();
@@ -650,6 +709,83 @@ fn a_question_is_a_dialog_with_yes_and_no() {
         answer(&mut h, Key::Named(NamedKey::Escape)),
         Some(DialogAction::Cancel)
     );
+}
+
+/// The window's command palette lists only commands the window runs: the
+/// terminal reader's scrolling and line numbers are left out, as the
+/// menus leave them out; a key for one says where it works (W8c-w).
+#[test]
+fn the_palette_leaves_out_terminal_only_commands() {
+    use textweaver_app::keymap::ActionId;
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let all = app.palette_candidates("");
+    let shown = gui::window_palette(&app, "");
+    for a in [
+        ActionId::ScrollDown,
+        ActionId::ScrollUp,
+        ActionId::ToggleLineNumbers,
+    ] {
+        assert!(!shown.iter().any(|(b, _)| *b == a), "{a:?} is listed");
+    }
+    // Everything else the app lists is kept, in the same order.
+    let kept: Vec<_> = all
+        .iter()
+        .filter(|(a, _)| textweaver_xilem::menus::in_window(*a))
+        .cloned()
+        .collect();
+    assert_eq!(shown, kept);
+    assert!(shown.iter().any(|(a, _)| *a == ActionId::PlayPause));
+    assert!(
+        app.palette_candidates("scroll")
+            .iter()
+            .any(|(a, _)| *a == ActionId::ScrollDown)
+    );
+    assert!(
+        !gui::window_palette(&app, "scroll")
+            .iter()
+            .any(|(a, _)| *a == ActionId::ScrollDown)
+    );
+    assert_eq!(
+        app.catalog().tr("app-terminal-only"),
+        "This command works in the terminal reader."
+    );
+}
+
+/// A question that deletes, removes or replaces something starts on No,
+/// so Enter keeps things, and its confirming button says the verb; the
+/// keys Y and N are unchanged (W8c-w).
+#[test]
+fn a_destructive_question_starts_on_no_with_a_verb() {
+    use textweaver_app::DestructiveVerb;
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    for (verb, word) in [
+        (DestructiveVerb::Delete, "Delete"),
+        (DestructiveVerb::Remove, "Remove"),
+        (DestructiveVerb::Replace, "Replace"),
+    ] {
+        let mut h = harness(&app);
+        let question = "Ada Example notes.md already exists. Replace it? y or n.";
+        let q = gui::question_dialog(&Palette::galaxy(), &app.catalog(), question, Some(verb));
+        let (yes, no) = (q.yes, q.no);
+        assert_eq!(q.focus, no, "{verb:?} starts on No");
+        h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(q.modal)));
+        h.focus_on(Some(q.focus));
+        let _ = h.redraw();
+        let buttons = names_of(&h, Role::Button);
+        assert!(buttons.contains(&word.to_owned()), "{buttons:?}");
+        assert!(!buttons.contains(&"Yes".to_owned()), "{buttons:?}");
+        assert_eq!(
+            h.access_node(yes).unwrap().data().keyboard_shortcut(),
+            Some("Y")
+        );
+        assert_eq!(
+            h.access_node(no).unwrap().data().keyboard_shortcut(),
+            Some("N")
+        );
+        assert_eq!(h.focused_widget_id(), Some(no));
+    }
 }
 
 /// The voice manager (Ctrl+Shift+V in the window) is the app's list, with

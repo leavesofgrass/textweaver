@@ -427,6 +427,7 @@ notes-editing = Editando la nota: { $text }
 # $key opens a document.
 app-no-document-open = No hay ningún documento abierto. Pulse { $key } para abrir uno.
 app-window-only = Esta orden funciona en la ventana de textweaver.
+app-terminal-only = Esta orden funciona en el lector del terminal.
 settings-save-failed = No se pudo guardar la configuración: { $error }
 edit-still-editing = Aún editando.
 goto-not-a-target = No es un destino válido: { $text }. Escriba un número de línea, un porcentaje como 50%, inicio o fin.
@@ -2754,6 +2755,9 @@ setting-editing-author-help = El autor que se escribe en los documentos nuevos h
 
 gui-yes = Sí
 gui-no = No
+gui-answer-delete = Eliminar
+gui-answer-remove = Quitar
+gui-answer-replace = Reemplazar
 gui-question-hint = Y responde sí, N responde no, Escape responde no.
 gui-button-open = Abrir…
 gui-button-font = Fuente…

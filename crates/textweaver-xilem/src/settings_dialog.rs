@@ -521,6 +521,28 @@ impl SettingsGrid {
         })
     }
 
+    /// The step a click at `x` (in the form's own coordinates) on `row`
+    /// makes when it lands on one of the row's chevrons, as they are
+    /// painted: back for the left one, forward for the right one. `None`
+    /// for other clicks and for rows without chevrons.
+    pub fn chevron_step(&self, row: usize, x: f64) -> Option<bool> {
+        let r = self.rows.get(row)?;
+        if !matches!(r.kind, RowKind::Number { .. } | RowKind::Choice) {
+            return None;
+        }
+        let w = f64::from(self.values.get(row)?.as_ref()?.width());
+        let right = self.width - ROW_PAD;
+        let left_chevron = right - ARROW_INSET - w - CHEVRON_GAP;
+        let right_chevron = right - RIGHT_CHEVRON;
+        if (x - right_chevron).abs() <= CHEVRON_HIT {
+            Some(true)
+        } else if (x - left_chevron).abs() <= CHEVRON_HIT {
+            Some(false)
+        } else {
+            None
+        }
+    }
+
     /// Enter (or a click) on `row`: a switch or choice steps; a number or
     /// text is typed.
     fn activate(&self, row: usize) -> Option<FormAction> {
@@ -723,9 +745,15 @@ impl Widget for SettingsGrid {
                 if row < self.rows.len() && local.y < self.visible_rows as f64 * ROW_H {
                     let again = row == self.selected;
                     self.set_selected(row);
-                    // A click on the value, or a second click on the row,
-                    // changes it.
-                    if (again || local.x > self.width * 0.55)
+                    // A click on a chevron steps the value the way it
+                    // points (GUI audit QW8); a click on the value, or a
+                    // second click on the row, changes it.
+                    if let Some(forward) = self.chevron_step(row, local.x) {
+                        ctx.submit_action::<FormAction>(FormAction::Change {
+                            row,
+                            change: FormChange::Step(forward),
+                        });
+                    } else if (again || local.x > self.width * 0.55)
                         && let Some(a) = self.activate(row)
                     {
                         ctx.submit_action::<FormAction>(a);
@@ -858,10 +886,10 @@ impl Widget for SettingsGrid {
                 self.labels[i] = Some(l);
             }
             if self.values[i].is_none() {
-                let text = match self.rows[i].kind {
-                    RowKind::Toggle(_) => String::new(),
-                    _ => self.rows[i].value_text.clone(),
-                };
+                // A switch's value too ("on", "off"), in words beside it,
+                // so its state never rests on the switch's color and
+                // knob alone (GUI audit QW8).
+                let text = self.rows[i].value_text.clone();
                 let max = (size.width * 0.42) as f32;
                 let l = Self::text_layout(ctx, &text, theme::UI_TEXT + 1.0, false, Some(max));
                 self.values[i] = Some(l);
@@ -941,11 +969,24 @@ impl Widget for SettingsGrid {
             }
             let right = size.width - ROW_PAD;
             match &self.rows[i].kind {
-                RowKind::Toggle(on) => paint_switch(painter, p, Point::new(right, mid), *on),
+                RowKind::Toggle(on) => {
+                    paint_switch(painter, p, Point::new(right, mid), *on);
+                    if let Some(l) = &self.values[i] {
+                        let x = right - SWITCH_W - 10.0 - f64::from(l.width());
+                        let ty = mid - f64::from(l.height()) / 2.0;
+                        render_text(
+                            painter,
+                            Affine::translate(Vec2::new(x, ty)),
+                            l,
+                            &[theme::color(p.text).into()],
+                            true,
+                        );
+                    }
+                }
                 kind => {
                     let arrows = matches!(kind, RowKind::Number { .. } | RowKind::Choice);
                     let inset = match kind {
-                        _ if arrows => 22.0,
+                        _ if arrows => ARROW_INSET,
                         RowKind::Text => 10.0,
                         _ => 0.0,
                     };
@@ -988,8 +1029,8 @@ impl Widget for SettingsGrid {
                             true,
                         );
                         if arrows {
-                            paint_chevron(painter, p, Point::new(x - 14.0, mid), false);
-                            paint_chevron(painter, p, Point::new(right - 7.0, mid), true);
+                            paint_chevron(painter, p, Point::new(x - CHEVRON_GAP, mid), false);
+                            paint_chevron(painter, p, Point::new(right - RIGHT_CHEVRON, mid), true);
                         }
                         if let Some(rgb) = self.rows[i].swatch {
                             // A sample of the color, outlined in the text
@@ -1142,8 +1183,20 @@ impl Widget for SettingsGrid {
 }
 
 /// A switch: a pill, filled with the accent when on, with its knob.
+/// A switch's width.
+const SWITCH_W: f64 = 42.0;
+
+/// How near a click must land to a chevron, across, to step the value.
+const CHEVRON_HIT: f64 = 12.0;
+/// The room right of a number's or choice's value, for its right chevron.
+const ARROW_INSET: f64 = 22.0;
+/// The left chevron's center, left of the value's start.
+const CHEVRON_GAP: f64 = 14.0;
+/// The right chevron's center, left of the row's right edge.
+const RIGHT_CHEVRON: f64 = 7.0;
+
 fn paint_switch(painter: &mut Painter<'_>, p: &Palette, right_mid: Point, on: bool) {
-    let (w, h) = (42.0, 24.0);
+    let (w, h) = (SWITCH_W, 24.0);
     let pill = RoundedRect::new(
         right_mid.x - w,
         right_mid.y - h / 2.0,

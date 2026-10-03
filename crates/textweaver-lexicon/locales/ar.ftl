@@ -519,6 +519,7 @@ notes-editing = تحرير ملاحظة: { $text }
 # $key opens a document.
 app-no-document-open = لا يوجد مستند مفتوح. اضغط { $key } لفتح واحد.
 app-window-only = يعمل هذا الأمر في نافذة textweaver.
+app-terminal-only = يعمل هذا الأمر في قارئ الطرفية.
 settings-save-failed = تعذّر حفظ الإعدادات: { $error }
 edit-still-editing = ما زلت في وضع التحرير.
 goto-not-a-target = ليس هدف انتقال: { $text }. اكتب رقم سطر، أو نسبة مئوية مثل 50%، أو start، أو end.
@@ -3011,6 +3012,9 @@ setting-editing-author-help = المؤلف الذي يُكتب في المستن
 
 gui-yes = نعم
 gui-no = لا
+gui-answer-delete = حذف
+gui-answer-remove = إزالة
+gui-answer-replace = استبدال
 gui-question-hint = Y للإجابة بنعم، وN للإجابة بلا، وEscape للإجابة بلا.
 gui-button-open = فتح…
 gui-button-font = الخط…

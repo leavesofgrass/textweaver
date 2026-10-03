@@ -148,6 +148,29 @@ fn parse_args() -> Args {
     }
 }
 
+/// The first flag given that only the `screenshot` feature runs (the
+/// review screenshots, one screenshot, the frame-time probe), if any.
+fn harness_flag(args: &Args) -> Option<&'static str> {
+    if args.review_screenshots.is_some() {
+        Some("--review-screenshots")
+    } else if args.measure_frames.is_some() {
+        Some("--measure-frames")
+    } else if args.screenshot.is_some() {
+        Some("--screenshot")
+    } else {
+        None
+    }
+}
+
+/// The error for `flag` in a build without the screenshot harness: what
+/// failed first, then why, then that no window opened.
+fn unbuilt_message(flag: &str) -> String {
+    format!(
+        "{flag} is not in this build: textweaver-gui was built without the screenshot \
+         feature. No window was opened."
+    )
+}
+
 /// A panic is written to the `--log-file` log, and to the terminal the
 /// program was started from.
 fn log_panics() {
@@ -238,6 +261,14 @@ fn main() {
             return;
         }
     }
+    // Built without the screenshot harness (the separate GUI package,
+    // W8b-r): its flags end with a clear error instead of opening a window.
+    if !cfg!(feature = "screenshot")
+        && let Some(flag) = harness_flag(&args)
+    {
+        console::report_error(&unbuilt_message(flag), args.background);
+        std::process::exit(2);
+    }
     let background = args.background;
     if let Some(name) = gpu
         && (args.log || args.log_file.is_some())
@@ -278,5 +309,46 @@ fn main() {
     if let Err(e) = gui::run(opts) {
         console::report_error(&e, background);
         std::process::exit(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(args: &[&str]) -> Args {
+        Args::try_parse_from(std::iter::once("textweaver-gui").chain(args.iter().copied()))
+            .expect("the arguments parse")
+    }
+
+    /// The harness's flags are found whichever the build, so a build
+    /// without the screenshot feature can refuse them (W8c-w).
+    #[test]
+    fn the_harness_flags_are_named() {
+        assert_eq!(harness_flag(&parse(&[])), None);
+        assert_eq!(
+            harness_flag(&parse(&["notes.md", "--theme", "galaxy"])),
+            None
+        );
+        assert_eq!(
+            harness_flag(&parse(&["--screenshot", "shot.png"])),
+            Some("--screenshot")
+        );
+        assert_eq!(
+            harness_flag(&parse(&["--review-screenshots", "shots"])),
+            Some("--review-screenshots")
+        );
+        assert_eq!(
+            harness_flag(&parse(&["--measure-frames", "20", "--home", "h"])),
+            Some("--measure-frames")
+        );
+    }
+
+    /// The error leads with the flag and says no window opened.
+    #[test]
+    fn the_unbuilt_message_leads_with_the_flag() {
+        let m = unbuilt_message("--screenshot");
+        assert!(m.starts_with("--screenshot is not in this build"), "{m}");
+        assert!(m.ends_with("No window was opened."), "{m}");
     }
 }

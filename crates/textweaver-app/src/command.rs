@@ -391,3 +391,19 @@ impl Confirm {
         }
     }
 }
+
+/// What answering yes to the open question destroys, for a frontend that
+/// shows the question as a dialog: the confirming button says this verb
+/// instead of "Yes", and the focus starts on No, so Enter is the safe
+/// answer (the keys y and n are unchanged). Questions that destroy nothing
+/// (open, download, quit, export) have none.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DestructiveVerb {
+    /// Deletes something kept (a note, a profile).
+    Delete,
+    /// Removes something kept (a highlight, a voice, a component).
+    Remove,
+    /// Replaces a file on disk (Save As onto an existing file, or saving
+    /// over a file changed since it was opened).
+    Replace,
+}
