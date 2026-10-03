@@ -32,7 +32,7 @@ textweaver never speaks on its own. Everything goes to the status line, written 
 - The word, line, or character a caret key or a "say" key reaches.
 - Text you ask to hear, such as the sentence (`.`) or the line (**Alt+Shift+L**), narrated as textweaver would say it: math in words, and tables with their headers.
 
-Continuous reading still works. By default, **Space** moves through the text a sentence at a time. Each sentence goes to the status line for your screen reader, the cursor moves with it, and the next one follows after the time textweaver's rate allows. Press **+** or **-** to match the pace to your screen reader. **Space** pauses and resumes, and **Escape** stops. To have textweaver's own voice read instead, set `say_all = "voice"`; that is the only thing it then says.
+Continuous reading still works. By default, **Space** moves through the text a sentence at a time. Each sentence goes to the status line for your screen reader, the cursor moves with it, and the next one follows after the time textweaver's rate allows. Press **+** or **-** to match the pace to your screen reader. A message that comes up while it reads, such as "Saved.", goes after the sentence on the status line, so the sentence stays first on your Braille display. **Space** pauses and resumes, and **Escape** stops. To have textweaver's own voice read instead, set `say_all = "voice"`; that is the only thing it then says.
 
 You can also move through the text yourself, by sentence (**Alt+Down**, or **Alt+.**), line (**Down**), or word (**Right**), and your screen reader reads each place from the status line.
 

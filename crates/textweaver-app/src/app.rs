@@ -914,6 +914,7 @@ impl App {
         let route = self.route(Channel::Message);
         if route.status {
             let shown = self.screen_text(&written);
+            let shown = self.after_screen_sentence(shown, priority);
             self.status.announce(&shown, priority);
         }
         self.announcer.announce(&written, priority);
@@ -924,6 +925,25 @@ impl App {
                 SayMode::Announce,
             );
         }
+    }
+
+    /// During a screen say-all, a polite message follows the sentence on
+    /// the status line, two blanks apart, so the sentence being read stays
+    /// first on the Braille line (as a waiting question already leads).
+    /// Assertive messages, and everything outside a screen say-all, show
+    /// alone.
+    fn after_screen_sentence(&mut self, shown: String, priority: Priority) -> String {
+        let Some(sa) = self.screen_say_all else {
+            return shown;
+        };
+        if priority != Priority::Polite {
+            return shown;
+        }
+        let sentence = self.narrated(sa.sentence);
+        if sentence.is_empty() || sentence == shown {
+            return shown;
+        }
+        format!("{sentence}  {shown}")
     }
 
     /// Announces an essential message (errors, "no next heading").
