@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8] - 2026-10-03
+
 This release is about speed you can measure, hearing where things end, and text from health sciences read the way a clinician would say it. Reading pauses after headings, paragraphs, and list items. Medical and scientific text, identifiers, and units are said correctly. The window gains Contents and Notes panels, F6 between its regions, and system file and folder choosers. Dictation and other models are offered as downloads. Conversions leave a report for an accommodation file. Piper answers a Stop and restart much sooner, and large documents open and edit faster. The translations of the new messages wait for a native speaker's review.
 
 ### Security
@@ -779,6 +781,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-alpha.8]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.7
 [0.1.0-alpha.6]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.6
 [0.1.0-alpha.5]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.5
