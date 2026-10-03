@@ -51,7 +51,7 @@ The first time the window or the terminal reader starts, after the language list
 - "Download the chosen ones" downloads them, one after another, with progress said every 10 percent.
 - "Skip for now" or Escape closes the list. Nothing is downloaded.
 
-It is the same list as Manage optional components, shown once (the `[components] chooser_shown` setting remembers). `tw` never shows it.
+It is the same list as Manage optional components, shown once (the `[components] chooser_shown` setting remembers). Tools, Ask again about first-run choices shows it again at the next start. `tw` never shows it.
 
 ## From the command line
 

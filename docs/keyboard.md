@@ -362,7 +362,11 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Open the settings: every option with its help; Left and Right change a value | `Shift+F10` | `Ctrl+,` | `Cmd+,` | `settings` |
 | List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
 | Press a key to hear what it does and where it is in the menus, without running it | `Shift+F1` | `Shift+F1` | `Shift+F1` | `what_does_this_key_do` |
-| Say textweaver's version and license | palette | palette | palette | `about` |
+| List the facts a problem report needs: version, build, components, speech engines, and folders | palette | palette | palette | `about` |
+| Open the quick start guide in textweaver | palette | palette | palette | `quick_start` |
+| Show the documentation's web address, and ask before opening it in a browser | palette | palette | palette | `documentation` |
+| Show where to report a problem, and ask before opening it in a browser; nothing is sent | palette | palette | palette | `report_problem` |
+| Ask again about first-run choices: hybrid mode with a screen reader, and the optional components | palette | palette | palette | `ask_first_run_again` |
 | Manage optional components: the models, fonts, and voices textweaver can download, with their size and license | palette | palette | palette | `manage_components` |
 | Open the help | `F1` | `F1` | `F1` | `help` |
 
@@ -538,5 +542,9 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |
 | Download the dictation model chosen in the settings, after saying its size and license | `download_dictation_model` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | `color_settings` |
-| Say textweaver's version and license | `about` |
+| List the facts a problem report needs: version, build, components, speech engines, and folders | `about` |
+| Open the quick start guide in textweaver | `quick_start` |
+| Show the documentation's web address, and ask before opening it in a browser | `documentation` |
+| Show where to report a problem, and ask before opening it in a browser; nothing is sent | `report_problem` |
+| Ask again about first-run choices: hybrid mode with a screen reader, and the optional components | `ask_first_run_again` |
 | Manage optional components: the models, fonts, and voices textweaver can download, with their size and license | `manage_components` |

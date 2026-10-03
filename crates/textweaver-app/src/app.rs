@@ -2137,7 +2137,11 @@ impl App {
             | A::SyncStop => return self.sync_action(a),
             A::CycleInterfaceAnnouncements => self.cycle_interface_announcements(),
             A::WhatDoesThisKeyDo => return self.what_does_this_key_do(),
-            A::About => self.about(),
+            A::About => return self.about(),
+            A::QuickStart => return self.quick_start(),
+            A::Documentation => return self.documentation(),
+            A::ReportProblem => return self.report_problem(),
+            A::AskFirstRunAgain => self.ask_first_run_again(),
             A::ReadDocument => {
                 self.stop_speech();
                 self.read_from(CharPos::ZERO);
