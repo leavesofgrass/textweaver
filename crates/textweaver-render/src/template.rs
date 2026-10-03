@@ -100,6 +100,10 @@ pub struct PageOptions {
     pub default_lang: String,
     /// Include the table of contents (when there are at least two headings).
     pub toc: bool,
+    /// The theme's properties to put in front of [`STYLESHEET`], such as
+    /// `textweaver_theme::css::single_stylesheet` of the reader's chosen
+    /// theme; `None` uses [`stylesheet`] (Galaxy).
+    pub theme_css: Option<String>,
 }
 
 impl Default for PageOptions {
@@ -108,6 +112,7 @@ impl Default for PageOptions {
             fallback_title: None,
             default_lang: "en".to_owned(),
             toc: true,
+            theme_css: None,
         }
     }
 }
@@ -254,7 +259,10 @@ impl Templates {
             tags => doc.tags.clone(),
             has_h1 => doc.has_h1,
             has_math => doc.has_math,
-            stylesheet => Value::from_safe_string(stylesheet().to_owned()),
+            stylesheet => Value::from_safe_string(match &page.theme_css {
+                Some(theme) => format!("{theme}{STYLESHEET}"),
+                None => stylesheet().to_owned(),
+            }),
             print_stylesheet => Value::from_safe_string(PRINT_STYLESHEET.to_owned()),
             generator => concat!("textweaver ", env!("CARGO_PKG_VERSION")),
         };

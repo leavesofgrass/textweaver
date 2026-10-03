@@ -189,6 +189,24 @@ fn print_and_fragment_templates() {
     assert_eq!(frag, "<p>Just text.</p>\n\n");
 }
 
+/// A theme chosen for the page replaces the default theme's properties.
+#[test]
+fn a_chosen_theme_is_the_page_stylesheet() {
+    let r = render_both("Just text.\n", Flavor::Gfm, EmbedMode::Link);
+    let page = Templates::builtin()
+        .render(
+            "default",
+            &r,
+            &PageOptions {
+                theme_css: Some("/* textweaver theme: Sepia */\n".into()),
+                ..PageOptions::default()
+            },
+        )
+        .expect("render");
+    assert!(page.contains("/* textweaver theme: Sepia */"));
+    assert!(!page.contains("textweaver themes: Galaxy Light"));
+}
+
 #[test]
 fn title_and_values_are_escaped() {
     let r = render_both(

@@ -170,6 +170,9 @@ pub struct ConvertOptions {
     pub template_dir: Option<PathBuf>,
     /// Include a table of contents in HTML pages.
     pub toc: bool,
+    /// The theme's CSS properties for HTML pages (see
+    /// [`PageOptions::theme_css`]); `None` uses Galaxy.
+    pub theme_css: Option<String>,
     /// Worker threads; `None` uses every core.
     pub jobs: Option<usize>,
     /// Convert even when the output is newer than the source.
@@ -200,6 +203,7 @@ impl Default for ConvertOptions {
             template: TemplateChoice::default(),
             template_dir: None,
             toc: true,
+            theme_css: None,
             jobs: None,
             force: false,
             load: LoadOptions::default(),
@@ -986,6 +990,7 @@ impl Converter {
         let page = PageOptions {
             fallback_title: stem(&job.source),
             toc: self.options.toc,
+            theme_css: self.options.theme_css.clone(),
             ..PageOptions::default()
         };
         self.templates
