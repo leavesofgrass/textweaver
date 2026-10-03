@@ -78,6 +78,14 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    gh attestation verify textweaver-0.1.0-alpha.7-windows-x86_64.zip --repo leavesofgrass/textweaver
    ```
 
+6. **Record the package sizes.** Once every package is on the release:
+
+   ```bash
+   cargo xtask release 0.1.0-alpha.7 --sizes
+   ```
+
+   It reads each package's size from the release (`gh release view`, read only), rewrites `xtask/package-sizes.toml` with them and clears its notes, adds a "Package sizes" list to the version's section of `CHANGELOG.md`, and writes that section to `target/release-notes-0.1.0-alpha.7.md`. Commit the two files. To show the sizes on the release page too, run the `gh release edit` command it prints. `--sizes-from DIR` reads the package files in a folder instead, such as a dry run's downloaded artifacts. See [Package sizes](#package-sizes).
+
 ## Listening checklist
 
 Optional. When you want to listen, do this on the machine you use every day, with Eloquence, SAPI 5, and Piper (and DECtalk if it is installed). Then record it with `cargo xtask release VERSION --listened`, which rewrites this line from the machine's clock:
@@ -123,7 +131,7 @@ Write down what you heard in the release notes' testing section, including anyth
 
 ## What the packages hold
 
-`cargo xtask dist` builds with the `dist` profile (the release profile with fat LTO, and symbols stripped) and writes the package to `target/dist/`. The C runtime is linked statically on Windows, so the package does not need the Visual C++ redistributable. Each package holds:
+`cargo xtask dist` builds with the `dist` profile (the release profile with fat LTO, and symbols stripped) and writes the package to `target/dist/`. It builds `textweaver` and `tw` in two cargo runs, one each: built together, cargo would unify their features and give the reader `tw`'s, such as `textweaver-formats`' `url` (opening a web address) and `textweaver-ocr`'s `download`, which the reader is meant to leave out. The reader still links an HTTP client of its own, for citation lookups (`textweaver-cite`). The C runtime is linked statically on Windows, so the package does not need the Visual C++ redistributable. Each package holds:
 
 - `textweaver` and `tw`;
 - on Windows, the engine hosts for Eloquence, SAPI5, and DECtalk, each for x64 and x86, and the IBMTTS community dictionaries;
@@ -140,6 +148,8 @@ Write down what you heard in the release notes' testing section, including anyth
 - on Windows, zips it;
 - on macOS, puts the program in `textweaver.app` (signed ad hoc) and zips the folder with `ditto`. It is built for the Mac's own architecture, or with `--universal` for Apple silicon and Intel joined with `lipo`, as the release does;
 - on Linux, writes a tarball and, when `appimagetool` and the pinned runtime are found (as for `cargo xtask appimage`), an AppImage with the folder under `usr/lib/textweaver-gui/`, its own update information, and a `.zsync` file.
+
+**The screenshot harness stays in the GUI package for now.** The GUI's default `screenshot` feature (`--screenshot` and `--review-screenshots`, drawn with Vello's CPU renderer, `image`, and `oxipng`) is the only way the release workflow can check that the packaged program draws a window: its runners have no GPU Vello can use, and the Linux check runs with no display. So the GUI checks on all three systems run `textweaver-gui --screenshot`. `cargo xtask gui-dist --no-screenshot` builds the package without it, with every other default feature; it can become the default once the release checks no longer need the harness. Review screenshots come from a developer build either way.
 
 The names end in `-gui` so that no pattern for the terminal packages matches them. That matters most for the update information inside the terminal AppImages already released (`textweaver-*-linux-ARCH.AppImage.zsync`): a GUI name matching it would be offered as an update to the terminal reader. A test in `xtask/src/gui_dist.rs` checks every such pattern against every GUI name.
 
@@ -160,6 +170,25 @@ bash docker/appimage/test-distros.sh target/dist
 ```
 
 The AppImage is not signed; its checksum is in `SHA256SUMS.txt`, and its build provenance is attested. It needs the system's ALSA library (`libasound.so.2`), which every desktop has, and warns when it is missing.
+
+## Package sizes
+
+Every package has a size budget. `xtask/package-sizes.toml` records each package's size in bytes at the last release, named without the version (`windows-x86_64.zip`, `linux-x86_64-gui.AppImage`). After writing a package, `cargo xtask dist`, `gui-dist`, and `appimage` print one line for it, meaning first:
+
+- `Size within budget:` with its size and the change in percent from the last release;
+- `Size over budget, with a note:` and the note;
+- `Size over budget:` when it grew more than 10 percent with no note. The command then fails, after the package is written, so the release workflow stops before it uploads.
+
+A package with no recorded size (a new platform, or a Mac build that is not `--universal`) is printed and passes.
+
+When a package is meant to grow, say why under `[notes]` in the file, in the same change:
+
+```toml
+[notes]
+"windows-x86_64-gui.zip" = "Opus encoding in process for Export audio"
+```
+
+A note named `"all"` covers every package. The release step (`cargo xtask release VERSION --sizes`, step 6 above) writes the new sizes and clears the notes, so each note covers one release. The sizes also go into the release notes, as a "Package sizes" list in the version's section of `CHANGELOG.md`. MB there, as in the release workflow's summaries, is 1,048,576 bytes.
 
 ## Building a package by hand (fallback)
 
