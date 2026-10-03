@@ -116,6 +116,6 @@ Adopt wxDragon with `live-region` for the GUI, with these rules:
 ## See also
 
 - [Using textweaver with a screen reader](../screen-readers.md): the terminal reader with NVDA and JAWS today.
-- [Reading aids](../reading-aids.md#the-fonts-dialog-in-the-gui): the Fonts dialog.
+- [Reading aids](../reading-aids.md#the-font-list-and-text-size-in-the-window): the font list and text size.
 - [Architecture](../dev/architecture.md): the crate map, the threads, and the path from a file to a spoken, highlighted word.
 - [Documentation index](../README.md)
