@@ -129,7 +129,7 @@ A panel beside the document keeps the document's headings, or its notes, in view
 - **Ctrl+1** shows the Contents panel, and **Ctrl+2** the Notes panel, and moves the focus to it. Your screen reader says the list and the row with its place, for example "Contents, Methods, level 2, 3 of 12", and textweaver says "Contents open, 12 items." Pressed while you are in the panel, the same key closes it and puts you back in the document ("Contents closed."). Pressed in the document while the panel is shown, it moves the focus to the panel.
 - **Up, Down, Home, End, Page Up, Page Down,** and a letter move in the list, as in any list.
 - **Enter** moves the document to that heading or note, says where it is as the outline does, and keeps you in the panel, so you can try the next one. **Shift+Enter** moves the document there and puts you back in the document. **Escape** puts you back in the document without moving it.
-- **F6** and **Shift+F6** move between the panel, the document, the toolbar, and the header.
+- **F6** and **Shift+F6** move between the header, the panel, the document, and the toolbar.
 - The row where the caret is has a bar beside it, and your screen reader hears ", current" after its name. While you are in the document, the panel's selected row follows the caret, so going to the panel starts where you are.
 - The panel is a navigation landmark named "Contents" or "Notes".
 
