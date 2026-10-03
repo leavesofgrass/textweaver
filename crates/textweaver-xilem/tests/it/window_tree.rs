@@ -1146,6 +1146,9 @@ fn screenshots_are_written_at_both_scales() {
             aids: false,
             colors: false,
             voices: false,
+            edit: false,
+            panel: None,
+            ruler: false,
         };
         textweaver_xilem::screenshot::screenshot(&o).unwrap();
         let bytes = std::fs::read(dir.path().join(name)).unwrap();
@@ -1154,6 +1157,66 @@ fn screenshots_are_written_at_both_scales() {
     let a = std::fs::metadata(dir.path().join("a.png")).unwrap().len();
     let b = std::fs::metadata(dir.path().join("b.png")).unwrap().len();
     assert!(b > a, "the 200% screenshot is larger");
+}
+
+/// The review harness's newer views (W8c-x) draw at the smallest review
+/// size: edit mode, the window with no document, the ruler alone, and
+/// each panel (the Notes panel with its sample notes).
+#[test]
+fn screenshots_draw_edit_mode_no_document_the_ruler_and_the_panels() {
+    use textweaver_app::store::GuiSidebar;
+    let dir = tempfile::tempdir().unwrap();
+    let sample = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/sample.md");
+    let base = textweaver_xilem::screenshot::ShotOptions {
+        path: dir.path().join("unused.png"),
+        file: Some(sample),
+        size: (420, 320),
+        scale: 1.0,
+        theme: Some("galaxy".into()),
+        highlight_at: None,
+        list: None,
+        settings: false,
+        home: Some(dir.path().join("home")),
+        aids: false,
+        colors: false,
+        voices: false,
+        edit: false,
+        panel: None,
+        ruler: false,
+    };
+    let mut shots = Vec::new();
+    let mut o = base.clone();
+    o.edit = true;
+    shots.push(("edit.png", o));
+    let mut o = base.clone();
+    o.file = None;
+    shots.push(("empty.png", o));
+    let mut o = base.clone();
+    o.ruler = true;
+    o.home = Some(dir.path().join("home-ruler"));
+    shots.push(("ruler.png", o));
+    for (name, panel) in [
+        ("contents.png", GuiSidebar::Contents),
+        ("notes.png", GuiSidebar::Notes),
+    ] {
+        let mut o = base.clone();
+        o.panel = Some(panel);
+        o.home = Some(dir.path().join(name.replace(".png", "")));
+        shots.push((name, o));
+    }
+    for (name, mut o) in shots {
+        o.path = dir.path().join(name);
+        textweaver_xilem::screenshot::screenshot(&o).unwrap();
+        let bytes = std::fs::read(&o.path).unwrap();
+        assert!(bytes.starts_with(b"\x89PNG"), "{name}");
+    }
+    // The panel needs a home folder, so the reader's own is never changed.
+    let mut o = base;
+    o.home = None;
+    o.panel = Some(GuiSidebar::Contents);
+    o.path = dir.path().join("refused.png");
+    let err = textweaver_xilem::screenshot::screenshot(&o).unwrap_err();
+    assert!(err.contains("home folder"), "{err}");
 }
 
 /// Star's rule since 0.1.31: new themes go after the existing ones, so the
