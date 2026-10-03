@@ -1101,7 +1101,7 @@ publish-report-issues =
         [one] 1 élément non accessible
        *[other] { $n } éléments non accessibles
     } ; voir le rapport.
-publish-report-failed = Le rapport n'a pas pu être enregistré : { $error }
+publish-report-failed = Le rapport n'a pas pu être enregistré : { $error } Vérifiez que le dossier de sortie est accessible en écriture.
 publish-preview-written-served = Aperçu écrit. Ouverture dans le navigateur. Il se recharge tout seul après chaque enregistrement.{ $warned }
 publish-preview-written = Aperçu écrit. Ouverture dans le navigateur. Un enregistrement le réécrit ; appuyez ensuite sur F5 dans le navigateur.{ $warned }
 publish-preview-updated = Aperçu mis à jour.

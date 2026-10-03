@@ -1078,7 +1078,7 @@ publish-report-issues =
         [one] 1 item
        *[other] { $n } items
     } not made accessible; see the report.
-publish-report-failed = The report could not be saved: { $error }
+publish-report-failed = The report could not be saved: { $error } Check that the output folder can be written to.
 publish-preview-written-served = Preview written. Opening it in the browser. It reloads by itself after each save.{ $warned }
 publish-preview-written = Preview written. Opening it in the browser. Saving writes it again; then press F5 in the browser.{ $warned }
 publish-preview-updated = Preview updated.

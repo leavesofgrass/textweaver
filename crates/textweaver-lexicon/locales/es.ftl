@@ -1073,7 +1073,7 @@ publish-report-issues =
         [one] 1 elemento no accesible
        *[other] { $n } elementos no accesibles
     }; vea el informe.
-publish-report-failed = No se pudo guardar el informe: { $error }
+publish-report-failed = No se pudo guardar el informe: { $error } Compruebe que se puede escribir en la carpeta de salida.
 publish-preview-written-served = Vista previa escrita. Abriéndola en el navegador. Se recarga por sí sola después de cada guardado.{ $warned }
 publish-preview-written = Vista previa escrita. Abriéndola en el navegador. Guardar la vuelve a escribir; luego pulse F5 en el navegador.{ $warned }
 publish-preview-updated = Vista previa actualizada.

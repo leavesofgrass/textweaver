@@ -1109,7 +1109,7 @@ publish-report-issues =
         [one] 1 Element
        *[other] { $n } Elemente
     } nicht barrierefrei; siehe Bericht.
-publish-report-failed = Der Bericht konnte nicht gespeichert werden: { $error }
+publish-report-failed = Der Bericht konnte nicht gespeichert werden: { $error } Prüfen Sie, ob in den Ausgabeordner geschrieben werden kann.
 publish-preview-written-served = Vorschau geschrieben. Sie wird im Browser geöffnet. Sie lädt nach jedem Speichern von selbst neu.{ $warned }
 publish-preview-written = Vorschau geschrieben. Sie wird im Browser geöffnet. Speichern schreibt sie erneut; drücken Sie dann F5 im Browser.{ $warned }
 publish-preview-updated = Vorschau aktualisiert.

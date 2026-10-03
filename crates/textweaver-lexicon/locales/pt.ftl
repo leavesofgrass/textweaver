@@ -1089,7 +1089,7 @@ publish-report-issues =
         [one] 1 item não acessível
        *[other] { $n } itens não acessíveis
     }; veja o relatório.
-publish-report-failed = Não foi possível salvar o relatório: { $error }
+publish-report-failed = Não foi possível salvar o relatório: { $error } Verifique se a pasta de saída permite gravação.
 publish-preview-written-served = Pré-visualização escrita. Abrindo-a no navegador. Ela recarrega por conta própria depois de cada salvamento.{ $warned }
 publish-preview-written = Pré-visualização escrita. Abrindo-a no navegador. Salvar a escreve de novo; depois pressione F5 no navegador.{ $warned }
 publish-preview-updated = Pré-visualização atualizada.
