@@ -4,17 +4,23 @@
 use textweaver_theme::terminal::{REFERENCE_PALETTES, xterm_rgb};
 use textweaver_theme::{
     Attrs, ColorRole, ColorSupport, Requirement, StyleRole, TermColor, TermStyle, TerminalTheme,
-    Theme, builtin, check::minimum, contrast_ratio,
+    Theme, builtin,
+    check::{minimum, role_minimum},
+    contrast_ratio,
 };
 
+type Pair = (String, TermStyle, TermColor, TermColor, f64);
+
 /// Every foreground/background pair the renderer can produce, with the
-/// style it came from and a label.
-fn pairs(tt: &TerminalTheme, theme: &Theme) -> Vec<(String, TermStyle, TermColor, TermColor)> {
+/// style it came from, a label, and the floor its class holds it to (text
+/// at the text floor, indicators at 3 to 1, decorative lines at none).
+fn pairs(tt: &TerminalTheme, theme: &Theme) -> Vec<Pair> {
     let page = tt.page();
     let (Some(pfg), Some(pbg)) = (page.fg, page.bg) else {
         return Vec::new();
     };
-    let mut v = vec![("page".to_owned(), page, pfg, pbg)];
+    let text = floor(theme);
+    let mut v = vec![("page".to_owned(), page, pfg, pbg, text)];
     for &r in ColorRole::ALL {
         let s = page.patch(tt.color(r));
         v.push((
@@ -22,6 +28,13 @@ fn pairs(tt: &TerminalTheme, theme: &Theme) -> Vec<(String, TermStyle, TermColor
             s,
             s.fg.unwrap_or(pfg),
             s.bg.unwrap_or(pbg),
+            // The inner focus line sits against the focus ring, not the
+            // page; the theme check measures it there.
+            if r == ColorRole::FocusInner {
+                0.0
+            } else {
+                role_minimum(r, theme.kind())
+            },
         ));
     }
     for &r in StyleRole::ALL {
@@ -31,6 +44,7 @@ fn pairs(tt: &TerminalTheme, theme: &Theme) -> Vec<(String, TermStyle, TermColor
             s,
             s.fg.unwrap_or(pfg),
             s.bg.unwrap_or(pbg),
+            text,
         ));
     }
     for (i, h) in theme.user_highlights.iter().enumerate() {
@@ -40,6 +54,7 @@ fn pairs(tt: &TerminalTheme, theme: &Theme) -> Vec<(String, TermStyle, TermColor
             s,
             s.fg.unwrap_or(pfg),
             s.bg.unwrap_or(pbg),
+            text,
         ));
     }
     v
@@ -54,7 +69,7 @@ fn truecolor_and_256_keep_the_floor() {
     for t in builtin::all() {
         for support in [ColorSupport::TrueColor, ColorSupport::Ansi256] {
             let tt = TerminalTheme::new(t, support);
-            for (label, _, fg, bg) in pairs(&tt, t) {
+            for (label, _, fg, bg, min) in pairs(&tt, t) {
                 if support == ColorSupport::Ansi256 {
                     for c in [fg, bg] {
                         assert!(matches!(c, TermColor::Indexed(i) if i >= 16), "{label}");
@@ -65,7 +80,7 @@ fn truecolor_and_256_keep_the_floor() {
                 if textweaver_theme::star::must_meet_aa(t.name()) {
                     let base = REFERENCE_PALETTES[0];
                     let r = contrast_ratio(fg.rgb(base), bg.rgb(base));
-                    assert!(r >= floor(t), "{} {support:?} {label}: {r:.2}", t.name());
+                    assert!(r >= min, "{} {support:?} {label}: {r:.2}", t.name());
                 }
             }
         }
@@ -76,7 +91,7 @@ fn truecolor_and_256_keep_the_floor() {
 fn sixteen_colors_pass_in_every_reference_palette_even_with_bold_brightening() {
     for t in builtin::all() {
         let tt = TerminalTheme::new(t, ColorSupport::Ansi16);
-        for (label, style, fg, bg) in pairs(&tt, t) {
+        for (label, style, fg, bg, min) in pairs(&tt, t) {
             let (TermColor::Indexed(f), TermColor::Indexed(b)) = (fg, bg) else {
                 panic!("{} {label}: 16-color output must use indexes", t.name());
             };
@@ -89,7 +104,7 @@ fn sixteen_colors_pass_in_every_reference_palette_even_with_bold_brightening() {
                 for f in fgs {
                     let r = contrast_ratio(pal[usize::from(f)], pal[usize::from(b)]);
                     assert!(
-                        r >= floor(t),
+                        r >= min,
                         "{} 16-color {label}: {f} on {b} is {r:.2}",
                         t.name()
                     );

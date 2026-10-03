@@ -20,6 +20,21 @@ expression: default_stylesheet()
   --tw-code-background: #2a2a2a;
   --tw-quote: #858585;
   --tw-error: #ff7b93;
+  --tw-raised: #363636;
+  --tw-border: #444444;
+  --tw-control-border: #737373;
+  --tw-panel-dim-text: #919191;
+  --tw-accent: #c9b6ff;
+  --tw-on-accent: #1e1e1e;
+  --tw-disabled: #858585;
+  --tw-caret: #dadada;
+  --tw-focus-inner: #1e1e1e;
+  --tw-ruler: #3c3450;
+  --tw-ruler-band: #2c2835;
+  --tw-difficult-word: #dadada;
+  --tw-syllable-mark: #dadada;
+  --tw-misspelling: #a882ff;
+  --tw-lint: #dadada;
   --tw-selection-fg: #483d6b;
   --tw-selection-bg: #dadada;
   --tw-selection-weight: inherit;
@@ -104,6 +119,21 @@ expression: default_stylesheet()
     --tw-code-background: #f2f0f9;
     --tw-quote: #727780;
     --tw-error: #c0264b;
+    --tw-raised: #e4e3eb;
+    --tw-border: #c4c6c7;
+    --tw-control-border: #898b8c;
+    --tw-panel-dim-text: #696e77;
+    --tw-accent: #6c3fd6;
+    --tw-on-accent: #ffffff;
+    --tw-disabled: #727780;
+    --tw-caret: #2e3338;
+    --tw-focus-inner: #ffffff;
+    --tw-ruler: #e2d4fb;
+    --tw-ruler-band: #f2ebfd;
+    --tw-difficult-word: #2e3338;
+    --tw-syllable-mark: #2e3338;
+    --tw-misspelling: #7c3aed;
+    --tw-lint: #2e3338;
     --tw-selection-fg: #d8caff;
     --tw-selection-bg: #2e3338;
     --tw-selection-weight: inherit;
@@ -189,6 +219,21 @@ expression: default_stylesheet()
     --tw-code-background: #141414;
     --tw-quote: #c0c0c0;
     --tw-error: #ff9a8a;
+    --tw-raised: #141414;
+    --tw-border: #ffffff;
+    --tw-control-border: #ffffff;
+    --tw-panel-dim-text: #c0c0c0;
+    --tw-accent: #ffe14d;
+    --tw-on-accent: #000000;
+    --tw-disabled: #c0c0c0;
+    --tw-caret: #ffffff;
+    --tw-focus-inner: #000000;
+    --tw-ruler: #1e2c38;
+    --tw-ruler-band: #0e141a;
+    --tw-difficult-word: #ffffff;
+    --tw-syllable-mark: #ffffff;
+    --tw-misspelling: #8ac6ff;
+    --tw-lint: #ffffff;
     --tw-selection-fg: #2a2a2a;
     --tw-selection-bg: #ffffff;
     --tw-selection-weight: inherit;
@@ -262,7 +307,7 @@ expression: default_stylesheet()
     --tw-background: Canvas;
     --tw-surface: Canvas;
     --tw-text: CanvasText;
-    --tw-dim-text: GrayText;
+    --tw-dim-text: CanvasText;
     --tw-heading1: CanvasText;
     --tw-heading2: CanvasText;
     --tw-heading3: CanvasText;
@@ -274,6 +319,21 @@ expression: default_stylesheet()
     --tw-code-background: Canvas;
     --tw-quote: CanvasText;
     --tw-error: CanvasText;
+    --tw-raised: ButtonFace;
+    --tw-border: CanvasText;
+    --tw-control-border: ButtonText;
+    --tw-panel-dim-text: CanvasText;
+    --tw-accent: Highlight;
+    --tw-on-accent: HighlightText;
+    --tw-disabled: GrayText;
+    --tw-caret: CanvasText;
+    --tw-focus-inner: Canvas;
+    --tw-ruler: Canvas;
+    --tw-ruler-band: Canvas;
+    --tw-difficult-word: CanvasText;
+    --tw-syllable-mark: CanvasText;
+    --tw-misspelling: Highlight;
+    --tw-lint: CanvasText;
     --tw-selection-fg: HighlightText;
     --tw-selection-bg: Highlight;
     --tw-spoken-word-fg: HighlightText;
@@ -314,13 +374,13 @@ code { color: var(--tw-code); background: var(--tw-code-background); }
 pre { color: var(--tw-text); background: var(--tw-code-background); }
 pre code { background: transparent; }
 blockquote { color: var(--tw-quote); border-left: 3px solid var(--tw-dim-text); padding-left: 0.75em; }
-hr { border: 0; border-top: 1px solid var(--tw-dim-text); }
-th, td { border: 1px solid var(--tw-dim-text); }
+hr { border: 0; border-top: 1px solid var(--tw-border); }
+th, td { border: 1px solid var(--tw-control-border); }
 .tw-dim { color: var(--tw-dim-text); }
 .tw-error { color: var(--tw-error); font-weight: bold; }
 .tw-panel { background: var(--tw-surface); color: var(--tw-text); }
 ::selection { color: var(--tw-selection-fg); background: var(--tw-selection-bg); }
-:focus-visible { outline: 3px solid var(--tw-focus-bg); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--tw-focus-bg); outline-offset: 1px; box-shadow: 0 0 0 1px var(--tw-focus-inner); }
 .tw-spoken-word { color: var(--tw-spoken-word-fg); background: var(--tw-spoken-word-bg); font-weight: var(--tw-spoken-word-weight); text-decoration: var(--tw-spoken-word-decoration); font-style: var(--tw-spoken-word-style); }
 .tw-spoken-sentence { color: var(--tw-spoken-sentence-fg); background: var(--tw-spoken-sentence-bg); font-weight: var(--tw-spoken-sentence-weight); text-decoration: var(--tw-spoken-sentence-decoration); font-style: var(--tw-spoken-sentence-style); }
 .tw-find-hit { color: var(--tw-find-hit-fg); background: var(--tw-find-hit-bg); font-weight: var(--tw-find-hit-weight); text-decoration: var(--tw-find-hit-decoration); font-style: var(--tw-find-hit-style); }

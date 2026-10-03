@@ -13,7 +13,7 @@
 //! the spoken word from its sentence, the current match from the others.
 
 use crate::color::{Rgb, apca_lc, contrast_ratio, spoken_ratio};
-use crate::model::{ColorRole, StyleRole, Theme, ThemeKind};
+use crate::model::{ColorRole, RoleClass, StyleRole, Theme, ThemeKind};
 
 /// What a check measures.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,6 +43,34 @@ pub fn minimum(req: Requirement, kind: ThemeKind) -> f64 {
         Requirement::LargeText => 3.0,
         Requirement::NonText => 3.0,
         Requirement::Cue | Requirement::Distinct => 0.0,
+    }
+}
+
+/// The contrast floor a role is held to by its class, against what it is
+/// drawn on ([`fill`]): text and the text on surfaces and bands at the
+/// text floor, disabled text at the 3 to 1 house floor, indicators at 3 to
+/// 1, and decorative lines at none.
+pub fn role_minimum(role: ColorRole, kind: ThemeKind) -> f64 {
+    match role.class() {
+        _ if role == ColorRole::Disabled => 3.0,
+        RoleClass::Text | RoleClass::Surface | RoleClass::Band => minimum(Requirement::Text, kind),
+        RoleClass::Indicator => minimum(Requirement::NonText, kind),
+        RoleClass::Decorative => 0.0,
+    }
+}
+
+/// How a role is drawn on its own: the color in front and the fill behind
+/// it (`None` for the page). Surfaces and bands put body text on themselves;
+/// the derived text roles sit on the panel, the accent, or a raised control.
+pub fn fill(role: ColorRole) -> (ColorRole, Option<ColorRole>) {
+    use ColorRole as C;
+    match role {
+        C::Background | C::Surface | C::Raised | C::Ruler | C::RulerBand => (C::Text, Some(role)),
+        C::CodeBackground => (C::Code, Some(role)),
+        C::PanelDimText => (role, Some(C::Surface)),
+        C::OnAccent => (role, Some(C::Accent)),
+        C::Disabled => (role, Some(C::Raised)),
+        _ => (role, None),
     }
 }
 
@@ -155,8 +183,8 @@ impl ContrastReport {
     }
 
     /// One short paragraph for the status line and screen readers:
-    /// `Theme Nord: all 45 checks pass.` or
-    /// `Theme Mine: 2 of 45 checks fail. Dim text on background: 4.0 to 1,
+    /// `Theme Nord: all 61 checks pass.` or
+    /// `Theme Mine: 2 of 61 checks fail. Dim text on background: 4.0 to 1,
     /// needs 4.5 to 1. …`
     pub fn summary(&self) -> String {
         let total = self.checks.len();
@@ -262,6 +290,7 @@ pub fn check(theme: &Theme) -> ContrastReport {
             theme.style(a).attributes != theme.style(b).attributes,
         ));
     }
+    interface_checks(theme, &mut v);
     for (i, h) in theme.user_highlights.iter().enumerate() {
         let s = theme.resolve(&h.style);
         let key = format!("user_highlights entry {} ({})", i + 1, h.name);
@@ -285,6 +314,75 @@ pub fn check(theme: &Theme) -> ContrastReport {
         display_name: theme.meta.display_name.clone(),
         checks: v,
     }
+}
+
+/// The checks for the fifteen derived roles, by class: text on each fill it
+/// is drawn on, indicators at 3 to 1 against what is beside them, bands with
+/// text on them at the floor, and the three rules (accent against surface,
+/// focus against its inner line, disabled text at the 3 to 1 house floor).
+fn interface_checks(theme: &Theme, v: &mut Vec<Check>) {
+    use ColorRole as C;
+    let kind = theme.kind();
+    let col = |r: ColorRole| theme.color(r);
+    let key = |r: ColorRole| format!("colors.{}", r.key());
+    let mut pair = |fg: ColorRole, on: ColorRole, req: Requirement, fg_key: ColorRole| {
+        v.push(Check::pair(
+            format!("{} on {}", fg.label(), on.label()),
+            key(fg_key),
+            req,
+            col(fg),
+            col(on),
+            kind,
+        ));
+    };
+    use Requirement::{NonText, Text};
+    // Text on fills.
+    pair(C::Text, C::Raised, Text, C::Raised);
+    pair(C::PanelDimText, C::Surface, Text, C::PanelDimText);
+    pair(C::OnAccent, C::Accent, Text, C::OnAccent);
+    pair(C::Text, C::Ruler, Text, C::Ruler);
+    pair(C::Text, C::RulerBand, Text, C::RulerBand);
+    // Indicators.
+    pair(C::ControlBorder, C::Surface, NonText, C::ControlBorder);
+    pair(C::ControlBorder, C::Background, NonText, C::ControlBorder);
+    pair(C::Accent, C::Surface, NonText, C::Accent);
+    for r in [
+        C::Caret,
+        C::DifficultWord,
+        C::SyllableMark,
+        C::Misspelling,
+        C::Lint,
+    ] {
+        pair(r, C::Background, NonText, r);
+    }
+    let focus = theme.resolve_style(StyleRole::Focus).background;
+    v.push(Check::pair(
+        "focus against inner focus line".into(),
+        key(C::FocusInner),
+        NonText,
+        focus,
+        col(C::FocusInner),
+        kind,
+    ));
+    // Disabled text: a 3 to 1 house floor on raised controls.
+    let mut disabled = Check::pair(
+        format!("{} on {}", C::Disabled.label(), C::Raised.label()),
+        key(C::Disabled),
+        NonText,
+        col(C::Disabled),
+        col(C::Raised),
+        kind,
+    );
+    disabled.minimum = Some(3.0);
+    disabled.passed = disabled.ratio.is_some_and(|r| r >= 3.0);
+    v.push(disabled);
+    // Decorative: the border only has to differ from the page.
+    v.push(Check::rule(
+        "border differs from background".into(),
+        key(C::Border),
+        Requirement::Distinct,
+        col(C::Border) != col(C::Background),
+    ));
 }
 
 /// Checks one pair against a requirement in a theme of this kind; for

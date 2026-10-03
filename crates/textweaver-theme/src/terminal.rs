@@ -20,13 +20,18 @@
 //!   keeps its attributes and highlights use bold, underline, and reverse
 //!   video ([`StyleRole::no_color_attributes`]).
 //!
+//! Colors are reduced by class ([`RoleClass`]): text keeps the text floor,
+//! indicators 3 to 1, and the derived roles that sit on a fill (text on the
+//! accent, a raised control, the reading ruler) keep their floor on that
+//! fill. Decorative lines only keep their color's character.
+//!
 //! In every level, each highlight carries at least one attribute, so no
 //! state depends on color alone. No level emits sequences that change the
 //! terminal's own palette or cursor.
 
-use crate::check::{Requirement, minimum};
+use crate::check::{Requirement, fill, minimum, role_minimum};
 use crate::color::{Rgb, contrast_ratio};
-use crate::model::{Attrs, ColorRole, Style, StyleRole, Theme, USER_HIGHLIGHT_NO_COLOR};
+use crate::model::{Attrs, ColorRole, RoleClass, Style, StyleRole, Theme, USER_HIGHLIGHT_NO_COLOR};
 
 /// How many colors the terminal can show.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -362,27 +367,15 @@ impl TerminalTheme {
             theme,
             ColorSupport::TrueColor,
             |r| {
-                let rgb = |r| Some(TermColor::Rgb(theme.color(r)));
-                match r {
-                    C::Background => TermStyle {
-                        fg: rgb(C::Text),
-                        bg: rgb(C::Background),
-                        attrs: Attrs::NONE,
-                    },
-                    C::Surface => TermStyle {
-                        fg: rgb(C::Text),
-                        bg: rgb(C::Surface),
-                        attrs: Attrs::NONE,
-                    },
-                    C::CodeBackground => TermStyle {
-                        fg: rgb(C::Code),
-                        bg: rgb(C::CodeBackground),
-                        attrs: Attrs::NONE,
-                    },
-                    _ => TermStyle {
-                        fg: rgb(r),
-                        bg: None,
-                        attrs: r.attributes(),
+                let rgb = |r: C| TermColor::Rgb(theme.color(r));
+                let (fg, on) = fill(r);
+                TermStyle {
+                    fg: Some(rgb(fg)),
+                    bg: on.map(rgb),
+                    attrs: if on.is_some() {
+                        Attrs::NONE
+                    } else {
+                        r.attributes()
                     },
                 }
             },
@@ -406,34 +399,42 @@ impl TerminalTheme {
             let floor = text_min.min(contrast_ratio(fg, bg));
             nearest_256(fg, Some(bg_q), floor)
         };
-        let panel = |fg: ColorRole, bg: ColorRole| {
-            let bi = if bg == C::Background {
-                page_i
+        // Bands keep the lesser of 3 to 1 and their own step from the page.
+        let fill_index = |bg: ColorRole| {
+            if bg == C::Background {
+                return page_i;
+            }
+            let b = theme.color(bg);
+            if bg.class() == RoleClass::Band {
+                nearest_256(b, Some(page_q), 3.0_f64.min(contrast_ratio(b, page_rgb)))
             } else {
-                nearest_256(theme.color(bg), None, 0.0)
-            };
-            TermStyle {
-                fg: Some(TermColor::Indexed(fg_on(
-                    theme.color(fg),
-                    theme.color(bg),
-                    xterm_rgb(bi),
-                ))),
-                bg: Some(TermColor::Indexed(bi)),
-                attrs: Attrs::NONE,
+                nearest_256(b, None, 0.0)
             }
         };
         Self::build(
             theme,
             ColorSupport::Ansi256,
-            |r| match r {
-                C::Background => panel(C::Text, C::Background),
-                C::Surface => panel(C::Text, C::Surface),
-                C::CodeBackground => panel(C::Code, C::CodeBackground),
-                _ => TermStyle {
-                    fg: Some(TermColor::Indexed(fg_on(theme.color(r), page_rgb, page_q))),
-                    bg: None,
-                    attrs: r.attributes(),
-                },
+            |r| {
+                let (fg, on) = fill(r);
+                let (bg_rgb, bi) = match on {
+                    Some(b) => (theme.color(b), fill_index(b)),
+                    None => (page_rgb, page_i),
+                };
+                let f = theme.color(fg);
+                let floor = role_minimum(r, kind).min(contrast_ratio(f, bg_rgb));
+                TermStyle {
+                    fg: Some(TermColor::Indexed(nearest_256(
+                        f,
+                        Some(xterm_rgb(bi)),
+                        floor,
+                    ))),
+                    bg: on.map(|_| TermColor::Indexed(bi)),
+                    attrs: if on.is_some() {
+                        Attrs::NONE
+                    } else {
+                        r.attributes()
+                    },
+                }
             },
             |s, fallback| {
                 let (band_rgb, band_i) = match s.background {
@@ -496,7 +497,26 @@ impl TerminalTheme {
             theme,
             ColorSupport::Ansi16,
             |r| match r {
-                C::Background | C::Surface => page,
+                C::Background | C::Surface | C::Raised => page,
+                C::Ruler | C::RulerBand | C::OnAccent
+                    if contrast_ratio(theme.color(fill_band(r)), page_rgb) >= 3.0
+                        && !bands.is_empty() =>
+                {
+                    // A strong band: a dark base color under bright white.
+                    let b = theme.color(fill_band(r));
+                    let i = bands
+                        .iter()
+                        .copied()
+                        .min_by(|&x, &y| hue_distance(x, b).total_cmp(&hue_distance(y, b)))
+                        .unwrap_or(4);
+                    TermStyle {
+                        fg: Some(TermColor::Indexed(ink_i)),
+                        bg: Some(TermColor::Indexed(i)),
+                        attrs: Attrs::NONE,
+                    }
+                }
+                // Faint bands are dropped: the page shows through.
+                C::Ruler | C::RulerBand | C::OnAccent => page,
                 C::CodeBackground => {
                     let (i, a) = text(theme.color(C::Code), Attrs::NONE);
                     TermStyle {
@@ -545,6 +565,16 @@ impl TerminalTheme {
                 }
             },
         )
+    }
+}
+
+/// The fill a band-like role is measured by at 16 colors: the band itself,
+/// or the accent for the text drawn on it.
+fn fill_band(r: ColorRole) -> ColorRole {
+    if r == ColorRole::OnAccent {
+        ColorRole::Accent
+    } else {
+        r
     }
 }
 

@@ -82,9 +82,9 @@ fn a_folder_of_themes() {
 
     // User themes follow the built-ins; a replaced built-in keeps its place.
     let names = reg.names();
-    assert_eq!(names.len(), 23 + 3);
-    assert_eq!(names[10], "nord");
-    assert_eq!(&names[23..], ["faint", "ocean", "warm"]);
+    assert_eq!(names.len(), 24 + 3);
+    assert_eq!(names[20], "nord");
+    assert_eq!(&names[24..], ["faint", "ocean", "warm"]);
     assert_eq!(reg.get("nord").unwrap().meta.description, "My Nord.");
 
     // Unknown keys survive a write.
@@ -134,8 +134,11 @@ fn oversized_files_are_refused() {
 fn cycling_and_fallback() {
     let reg = Registry::builtin();
     assert_eq!(reg.next("galaxy").name(), "galaxy-light");
-    assert_eq!(reg.next("gruvbox-light").name(), "galaxy");
-    assert_eq!(reg.previous("galaxy").name(), "gruvbox-light");
+    assert_eq!(reg.next("galaxy-light").name(), "high-contrast");
+    assert_eq!(reg.next("contrast").name(), "lamplight");
+    assert_eq!(reg.next("amber").name(), "one-dark");
+    assert_eq!(reg.next("phosphor").name(), "galaxy");
+    assert_eq!(reg.previous("galaxy").name(), "phosphor");
     // Unknown names start the cycle at the beginning (Star skipped to the
     // second theme and saved it).
     assert_eq!(reg.next("solarized").name(), "galaxy");

@@ -7,13 +7,146 @@ use textweaver_theme::{
 };
 
 #[test]
-fn all_23_star_palettes_are_built_in_in_star_order() {
+fn all_23_star_palettes_and_lamplight_are_built_in_in_f5_order() {
     let names: Vec<&str> = builtin::all().iter().map(|t| t.name()).collect();
     let star: Vec<&str> = star::PALETTES.iter().map(|p| p.name).collect();
-    assert_eq!(names.len(), 23);
-    assert_eq!(names, star);
+    assert_eq!(names.len(), 24);
+    assert_eq!(names, builtin::CYCLE.to_vec());
     assert_eq!(builtin::NAMES.to_vec(), star);
+    for n in star.iter().chain(builtin::OWN.iter()) {
+        assert!(builtin::CYCLE.contains(n), "{n} is missing from the cycle");
+    }
     assert_eq!(builtin::default_theme().name(), "galaxy");
+}
+
+/// F5 steps through the themes that meet AA first, then the ones below;
+/// light and dark partners sit side by side.
+#[test]
+fn the_cycle_puts_aa_first_and_partners_together() {
+    let passes: Vec<bool> = builtin::all().iter().map(|t| check(t).passed()).collect();
+    let first_below = passes.iter().position(|p| !p).unwrap();
+    assert_eq!(first_below, 14);
+    assert!(passes[first_below..].iter().all(|p| !p), "{passes:?}");
+    let names = builtin::CYCLE;
+    for t in builtin::all() {
+        if let Some(c) = &t.meta.counterpart {
+            let i = names.iter().position(|n| *n == t.name()).unwrap();
+            let j = names.iter().position(|n| n == c).unwrap();
+            assert_eq!(i.abs_diff(j), 1, "{} and {c} are apart", t.name());
+        }
+    }
+}
+
+#[test]
+fn lamplight_is_a_soft_dark_theme_with_aaa_body_text() {
+    let t = builtin::get("lamplight").unwrap();
+    assert_eq!(t.kind(), ThemeKind::Dark);
+    assert_eq!(t.meta.tags(), ["soft"]);
+    assert_eq!(t.meta.display_name, "Lamplight");
+    let r = check(t);
+    assert!(r.passed(), "{}", r.summary());
+    let ratio =
+        textweaver_theme::contrast_ratio(t.color(ColorRole::Text), t.color(ColorRole::Background));
+    assert!(ratio >= 7.0, "{ratio}");
+    assert!(
+        builtin::source("Lamplight")
+            .unwrap()
+            .contains(r#"tags = ["soft"]"#)
+    );
+}
+
+/// Every role is measured by at least one check, in every built-in theme
+/// and in a theme made from two colors.
+#[test]
+fn every_role_is_covered_by_a_check() {
+    let two = ThemeFile::parse("[colors]\nbackground = \"#101418\"\ntext = \"#d0d4d8\"\n").unwrap();
+    let (two, _) = resolve(&two, None, Some("two"), Repair::DerivedOnly).unwrap();
+    for t in builtin::all().iter().chain(std::iter::once(&two)) {
+        let r = check(t);
+        for &role in ColorRole::ALL {
+            let key = format!("colors.{}", role.key());
+            let on = format!(" on {}", role.label());
+            let covered = r
+                .checks
+                .iter()
+                .any(|c| c.key == key || c.subject.ends_with(&on));
+            assert!(covered, "{}: {role} has no check", t.name());
+        }
+    }
+    let r = check(&two);
+    assert!(r.passed(), "{}", r.summary());
+}
+
+/// The fifteen derived roles pass their class's check in every built-in
+/// theme, including the ones whose Star colors fall short elsewhere.
+#[test]
+fn derived_roles_pass_in_every_theme() {
+    for t in builtin::all() {
+        let r = check(t);
+        for &role in ColorRole::DERIVED {
+            assert!(t.is_derived(role), "{} {role}", t.name());
+            let key = format!("colors.{}", role.key());
+            for c in r.checks.iter().filter(|c| c.key == key) {
+                assert!(c.passed, "{}: {}", t.name(), c.describe());
+            }
+        }
+    }
+}
+
+/// The derived roles leave the file's own colors and styles alone: Galaxy
+/// resolves to exactly the 15 colors and 9 styles its file gives.
+#[test]
+fn galaxy_resolves_the_same_colors_and_styles_as_its_file() {
+    let file = ThemeFile::parse(builtin::source("galaxy").unwrap()).unwrap();
+    let g = builtin::get("galaxy").unwrap();
+    let mut given = 0;
+    for &role in ColorRole::ALL {
+        match file.colors[role.index()] {
+            Some(c) => {
+                given += 1;
+                assert_eq!(g.color(role), c, "{role}");
+                assert!(!g.is_derived(role));
+            }
+            None => assert!(role.is_derived(), "{role}"),
+        }
+    }
+    assert_eq!(given, 15);
+    for &role in StyleRole::ALL {
+        let f = &file.styles[role.index()];
+        let s = g.style(role);
+        assert_eq!(Some(s.foreground), f.foreground, "{role}");
+        assert_eq!(Some(s.background), f.background, "{role}");
+        assert_eq!(Some(s.attributes), f.attributes, "{role}");
+    }
+}
+
+/// A child theme that changes the surface derives its raised fill from its
+/// own surface, not the base's; an explicit base value is inherited; a
+/// same-named key overrides the derived value.
+#[test]
+fn a_child_rederives_from_its_own_colors() {
+    let base = builtin::get("galaxy").unwrap();
+    let f = ThemeFile::parse("[theme]\nname = \"kid\"\n[colors]\nsurface = \"#3a3040\"\n").unwrap();
+    let (kid, _) = resolve(&f, Some(base), None, Repair::DerivedOnly).unwrap();
+    assert_ne!(kid.color(ColorRole::Raised), base.color(ColorRole::Raised));
+    assert!(kid.is_derived(ColorRole::Raised));
+
+    let mut parent = base.clone();
+    parent.set_color(ColorRole::Accent, textweaver_theme::Rgb::from_u32(0xffcc00));
+    let f = ThemeFile::parse("[theme]\nname = \"kid\"\n").unwrap();
+    let (kid, _) = resolve(&f, Some(&parent), None, Repair::DerivedOnly).unwrap();
+    assert_eq!(kid.color(ColorRole::Accent).hex(), "#ffcc00");
+
+    let f = ThemeFile::parse(
+        "[colors]\nbackground = \"#000000\"\ntext = \"#ffffff\"\ncaret = \"#ff8800\"\n",
+    )
+    .unwrap();
+    let (t, _) = resolve(&f, None, Some("c"), Repair::DerivedOnly).unwrap();
+    assert_eq!(t.color(ColorRole::Caret).hex(), "#ff8800");
+    assert!(!t.is_derived(ColorRole::Caret));
+    let toml = t.to_toml_string();
+    assert!(toml.contains("caret = \"#ff8800\""));
+    assert!(!toml.contains("raised ="));
 }
 
 #[test]

@@ -7,7 +7,10 @@
 //!   chrome style ([`StyleRole`]: selection, spoken word and sentence, find
 //!   matches, bookmarks, notes, status bar, focus), plus the reader's
 //!   highlight colors. Every highlight carries a text attribute, so no state
-//!   is shown by color alone.
+//!   is shown by color alone. Fifteen interface roles (raised fills,
+//!   borders, the accent, the caret, the reading ruler, document marks) are
+//!   derived from those colors at load unless the file gives them; each
+//!   role has a [`RoleClass`] that decides its check.
 //! - Themes are TOML files ([`ThemeFile`]). Star's 23 palettes are built in
 //!   ([`builtin`], ported by [`star`]); user themes load from the config
 //!   folder's `themes/` directory ([`Registry::load_dir`]), with errors
@@ -42,8 +45,8 @@ pub use color::{Rgb, apca_lc, contrast_ratio};
 pub use error::ThemeError;
 pub use file::ThemeFile;
 pub use model::{
-    Attrs, ColorRole, Meta, Resolved, Style, StyleRole, Theme, ThemeKind, USER_HIGHLIGHT_NO_COLOR,
-    UserHighlight,
+    Attrs, ColorRole, Meta, Resolved, RoleClass, Style, StyleRole, Theme, ThemeKind,
+    USER_HIGHLIGHT_NO_COLOR, UserHighlight,
 };
 pub use os::OsScheme;
 pub use registry::{LoadReport, Registry};
