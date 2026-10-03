@@ -165,6 +165,48 @@ pub fn chunks(text: &str, clauses: &[Clause]) -> Vec<Range<usize>> {
     out
 }
 
+/// Words a phrase may end before: a phrase break before one of them
+/// sounds natural ("The library opens at nine | in the morning").
+/// Lowercase English; other languages find no break and are never split.
+const PHRASE_STARTERS: [&str; 32] = [
+    "about", "after", "and", "at", "because", "before", "between", "but", "by", "during", "for",
+    "from", "if", "in", "into", "on", "or", "over", "since", "so", "that", "through", "under",
+    "unless", "until", "when", "where", "which", "while", "who", "with", "without",
+];
+
+/// The fewest words before a phrase break, and after it.
+const PHRASE_MIN_WORDS: usize = 4;
+
+/// The most words before a phrase break.
+const PHRASE_MAX_WORDS: usize = 10;
+
+/// Where to split a long `clause` of `text` into a short first phrase
+/// and the rest: the byte where the rest starts, before the first word
+/// that starts a phrase ("and", "but", "in", "with", "which", and other
+/// common conjunctions and prepositions) with at least four words before
+/// it (at most ten) and four after it. `None` when the clause is too short or has no
+/// such word. The backend speaks the first phrase alone when a reading
+/// starts, so the first audio comes after a few words of synthesis, not a
+/// whole sentence; it ends with a comma's intonation.
+pub fn phrase_break(text: &str, clause: &Clause) -> Option<usize> {
+    let slice = text.get(clause.range.clone())?;
+    let ws = words(slice);
+    if ws.len() < 2 * PHRASE_MIN_WORDS {
+        return None;
+    }
+    let last = PHRASE_MAX_WORDS.min(ws.len() - PHRASE_MIN_WORDS);
+    (PHRASE_MIN_WORDS..=last)
+        .find(|&k| {
+            let w = &slice[ws[k].clone()];
+            // A word that starts a phrase is plain: no punctuation joins
+            // it to the word before ("rock-and-roll").
+            let before = &slice[ws[k - 1].end..ws[k].start];
+            before.chars().all(char::is_whitespace)
+                && PHRASE_STARTERS.contains(&w.to_lowercase().as_str())
+        })
+        .map(|k| clause.range.start + ws[k].start)
+}
+
 /// Length in bytes of the sentence that starts at `clauses[0]`.
 fn sentence_len(text: &str, clauses: &[Clause]) -> usize {
     let Some(first) = clauses.first() else {
@@ -250,6 +292,29 @@ mod tests {
         let t = "no punctuation at all";
         assert_eq!(chunks(t, &clauses(t)), vec![0..1]);
         assert!(chunks("", &[]).is_empty());
+    }
+
+    #[test]
+    fn a_long_clause_breaks_before_a_phrase() {
+        let t = "The library opens early at nine in the morning and closes at six.";
+        let cs = clauses(t);
+        let at = phrase_break(t, &cs[0]).unwrap();
+        assert_eq!(&t[at..], "at nine in the morning and closes at six.");
+        // Too short to split, or nowhere natural to split.
+        let t = "The library opens at nine.";
+        assert_eq!(phrase_break(t, &clauses(t)[0]), None);
+        let t = "Highlight résumé writer code heading drifts markdown reliable list code.";
+        assert_eq!(phrase_break(t, &clauses(t)[0]), None);
+        // At least four words stay after the break.
+        let t = "One two three four five six seven and eight nine.";
+        assert_eq!(phrase_break(t, &clauses(t)[0]), None);
+        // Joined words are one word ("salt-and-pepper"), and a quoted
+        // word is not a phrase start.
+        let t = "Some very old salt-and-pepper hair grew back in the early spring.";
+        let at = phrase_break(t, &clauses(t)[0]).unwrap();
+        assert_eq!(&t[at..], "in the early spring.");
+        let t = "Some very old hair said \"in\" the early spring sun.";
+        assert_eq!(phrase_break(t, &clauses(t)[0]), None);
     }
 
     proptest::proptest! {

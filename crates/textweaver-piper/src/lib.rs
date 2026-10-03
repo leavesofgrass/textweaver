@@ -31,6 +31,7 @@ pub mod config;
 #[cfg(feature = "download")]
 pub mod download;
 pub mod model;
+mod pace;
 pub mod phonemes;
 pub mod store;
 pub mod synth;
@@ -43,7 +44,7 @@ pub use catalog::{Catalog, CatalogVoice, Licence, LicenceKind};
 pub use config::VoiceConfig;
 pub use phonemes::{Phonemizer, PhonemizerChoice, phonemizer};
 pub use store::{InstalledVoice, VoiceStore};
-pub use synth::{Chunk, Measurement, SynthParams, Synthesizer, Timing, measure};
+pub use synth::{Chunk, Measurement, Next, SynthParams, Synthesizer, Timing, Upcoming, measure};
 
 /// Piper failures, each written to be read aloud.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -74,6 +75,10 @@ pub enum PiperError {
     /// A download failed or did not match its published hash.
     #[error("download: {0}")]
     Download(String),
+    /// Speech was stopped while the work waited (never shown: the
+    /// utterance just ends).
+    #[error("stopped")]
+    Stopped,
 }
 
 impl PiperError {
