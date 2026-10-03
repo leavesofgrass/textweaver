@@ -254,6 +254,30 @@ pub fn named_key(keymap: &Keymap, action: ActionId) -> String {
     named_key_in(&Catalog::english(), keymap, action)
 }
 
+/// The welcome said once on the first run, in both frontends: the five
+/// keys that get a new user reading, in the order they are needed: open a
+/// document, start and pause, stop, the command palette, and help. Each key
+/// comes from `keymap`; the palette's is a chord that works with
+/// single-key shortcuts on or off ("F2", not ":").
+pub fn welcome_text(c: &Catalog, keymap: &Keymap) -> String {
+    let k = |a| named_key_in(c, keymap, a);
+    let palette = keymap
+        .chords_for(ActionId::CommandPalette)
+        .into_iter()
+        .find(|ch| !ch.is_text_input())
+        .map_or_else(|| k(ActionId::CommandPalette), |ch| mark_chord(c, &ch));
+    c.fmt(
+        "tui-setup-welcome",
+        &args![
+            "open" => k(ActionId::Open),
+            "play" => k(ActionId::PlayPause),
+            "stop" => k(ActionId::Stop),
+            "palette" => palette,
+            "help" => k(ActionId::Help)
+        ],
+    )
+}
+
 /// [`named_key`] in the catalog's language ([`App::catalog`]).
 pub fn named_key_in(c: &Catalog, keymap: &Keymap, action: ActionId) -> String {
     main_chord(keymap, action)
@@ -682,8 +706,12 @@ impl App {
             c.fmt(id, &values)
         };
         use ActionId as A;
+        // The two ways to find everything else come right after the
+        // introduction: the command palette and the full key list.
         let items = vec![
             c.tr("help-about"),
+            line("help-palette", &[("key", k(A::CommandPalette))]),
+            line("help-all-shortcuts", &[("key", k(A::KeyboardHelp))]),
             line(
                 "help-open",
                 &[("open", k(A::Open)), ("library", k(A::OpenLibrary))],
@@ -834,8 +862,6 @@ impl App {
                     ("settings", k(A::Settings)),
                 ],
             ),
-            line("help-all-shortcuts", &[("key", k(A::KeyboardHelp))]),
-            line("help-palette", &[("key", k(A::CommandPalette))]),
             line("help-quit", &[("key", k(A::Quit))]),
         ];
         let intro = c.tr("help-intro");

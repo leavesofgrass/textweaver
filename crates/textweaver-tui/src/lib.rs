@@ -158,6 +158,12 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
     let (app, mut messages) = build_app(opts);
     messages.extend(log_message);
     let mut tui = Tui::new(app);
+    // On a first run the welcome comes first, before the empty-screen hint,
+    // so "Welcome to textweaver" is the first thing heard.
+    let catalog = tui.app().catalog();
+    let welcome = setup::first_run_message(&catalog, opts, tui.app().keymap());
+    let first_run = welcome.is_some();
+    let mut welcomed = false;
     match file {
         Some(file) => {
             if let Err(e) = tui.app_mut().open(file) {
@@ -178,7 +184,13 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
         }
         None => {
             let msg = setup::no_document_text(&tui.app().catalog(), tui.app().keymap());
-            tui.app_mut().announce(&msg, Priority::Polite);
+            if let Some(welcome) = &welcome {
+                tui.app_mut().announce(welcome, Priority::Polite);
+                tui.app_mut().announce_queued(&msg, Priority::Polite);
+                welcomed = true;
+            } else {
+                tui.app_mut().announce(&msg, Priority::Polite);
+            }
         }
     }
     // Startup messages follow the opening message instead of cutting it
@@ -188,10 +200,7 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
     for m in messages {
         tui.app_mut().announce_queued(&m, Priority::Assertive);
     }
-    let catalog = tui.app().catalog();
-    let welcome = setup::first_run_message(&catalog, opts, tui.app().keymap());
-    let first_run = welcome.is_some();
-    if let Some(welcome) = welcome {
+    if let Some(welcome) = welcome.filter(|_| !welcomed) {
         tui.app_mut().announce_queued(&welcome, Priority::Polite);
     }
     if first_run {

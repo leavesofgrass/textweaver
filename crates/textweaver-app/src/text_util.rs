@@ -235,9 +235,50 @@ pub fn char_name_text(c: &Catalog, ch: char) -> String {
     c.fmt("text-char-name", &args!["name" => key])
 }
 
+/// A question as a window dialog names it: without the trailing answer
+/// keys ("y or n", "y oder n", "Y or N", and a period after them), which
+/// the dialog's Yes and No buttons already show. "Quit textweaver? y or n"
+/// is named "Quit textweaver?". Text after the keys ("? y or n. In
+/// Documents.") keeps them, since they are not at the end.
+pub fn question_name(question: &str) -> &str {
+    let t = question.trim_end();
+    let t = t.strip_suffix('.').unwrap_or(t).trim_end();
+    let mut words = t.rsplitn(4, char::is_whitespace);
+    let (Some(n), Some(or), Some(y)) = (words.next(), words.next(), words.next()) else {
+        return question;
+    };
+    let rest = words.next().unwrap_or("");
+    let keys =
+        matches!(n, "n" | "N") && matches!(y, "y" | "Y") && (1..=6).contains(&or.chars().count());
+    if keys && !rest.trim().is_empty() {
+        rest.trim_end()
+    } else {
+        question
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn question_names_drop_the_answer_keys() {
+        assert_eq!(question_name("Quit textweaver? y or n"), "Quit textweaver?");
+        assert_eq!(question_name("Replace it? y or n."), "Replace it?");
+        assert_eq!(question_name("Go there? Y or N"), "Go there?");
+        assert_eq!(
+            question_name("textweaver beenden? y oder n"),
+            "textweaver beenden?"
+        );
+        assert_eq!(
+            question_name("Quitter textweaver ? y ou n"),
+            "Quitter textweaver ?"
+        );
+        let kept = "Exported essay.html. Open it? y or n. In Documents.";
+        assert_eq!(question_name(kept), kept);
+        assert_eq!(question_name("y or n"), "y or n");
+        assert_eq!(question_name("Say yes or no"), "Say yes or no");
+    }
 
     #[test]
     fn lines_ignore_trailing_newline() {

@@ -160,20 +160,10 @@ pub fn is_first_run(opts: &Options) -> bool {
 }
 
 /// The welcome said once, on the first run: the five keys that get a new
-/// user reading, named from the keymap in effect, as the terminal says it.
+/// user reading (open, play and pause, stop, the command palette, help),
+/// the same words as the terminal reader's.
 pub fn welcome_text(c: &Catalog, keymap: &Keymap) -> String {
-    use textweaver_app::keymap::ActionId;
-    let k = |a| textweaver_app::named_key_in(c, keymap, a);
-    c.fmt(
-        "tui-setup-welcome",
-        &args![
-            "play" => k(ActionId::PlayPause),
-            "stop" => k(ActionId::Stop),
-            "heading" => k(ActionId::SkipNextHeading),
-            "help" => k(ActionId::Help),
-            "quit" => k(ActionId::Quit)
-        ],
-    )
+    textweaver_app::welcome_text(c, keymap)
 }
 
 /// Builds the app: persistence paths, settings, the GUI keymap with the

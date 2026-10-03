@@ -81,7 +81,7 @@ fn every_control_has_a_role_and_a_name() {
         "Previous sentence",
         "Open",
         "Font",
-        "Edit",
+        "Start editing",
         "Settings",
         "Commands",
         "Slower",
@@ -166,7 +166,7 @@ fn every_button_has_its_key_from_the_keymap() {
     for (name, action) in [
         ("Open", ActionId::Open),
         ("Font", ActionId::ChooseFont),
-        ("Edit", ActionId::ToggleEditMode),
+        ("Start editing", ActionId::ToggleEditMode),
         ("Settings", ActionId::Settings),
         ("Commands", ActionId::CommandPalette),
         ("Play", ActionId::PlayPause),
@@ -200,6 +200,77 @@ fn every_button_has_its_key_from_the_keymap() {
     let b = ActionButton::new("Open…").with_shortcut("Ctrl+O");
     assert_eq!(b.shown_text(), "Open… (Ctrl+O)");
     assert_eq!(b.name(), "Open");
+    // Commands shows the key people are told (F2), never a lone ":".
+    let commands = gui::shortcut_for(&app, ActionId::CommandPalette);
+    assert!(
+        !commands.chars().all(|c| c.is_ascii_punctuation()),
+        "Commands shows {commands:?}"
+    );
+}
+
+/// The label-in-name rule (WCAG 2.5.3): each header and toolbar button's
+/// text on screen starts with its accessible name, and anything after it is
+/// a space and its keyboard shortcut in parentheses, so speech input can say
+/// what it sees.
+#[test]
+fn every_button_shows_its_name_then_its_key() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::widgets::ActionButton;
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let c = app.catalog();
+    for action in [
+        ActionId::Open,
+        ActionId::ChooseFont,
+        ActionId::ToggleEditMode,
+        ActionId::Settings,
+        ActionId::CommandPalette,
+        ActionId::PlayPause,
+        ActionId::Stop,
+        ActionId::PreviousSentence,
+        ActionId::NextSentence,
+        ActionId::RateDown,
+        ActionId::RateUp,
+    ] {
+        for (reading, editing) in [(false, false), (true, true)] {
+            let label = gui::button_label(&c, action, reading, editing);
+            let key = gui::shortcut_for(&app, action);
+            let b = ActionButton::new(label.as_str()).with_shortcut(key.as_str());
+            let shown = b.shown_text();
+            let name = b.name();
+            let visible = shown.trim_end_matches(&format!(" ({key})")[..]);
+            assert!(
+                visible.trim_end_matches('…') == name,
+                "{action:?}: shows {shown:?}, named {name:?}"
+            );
+            assert_eq!(shown, format!("{visible} ({key})"), "{action:?}");
+        }
+    }
+}
+
+/// Button descriptions are short and true (conventions research, QW2):
+/// NVDA reads a description after the name by default, so it says in a few
+/// words what the name does not, and never describes the terminal reader.
+#[test]
+fn button_descriptions_are_short_and_about_the_window() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let h = harness(&app);
+    let mut stack = vec![h.access_tree().state().root()];
+    let mut seen = 0;
+    while let Some(n) = stack.pop() {
+        stack.extend(n.children());
+        if n.role() == Role::Button {
+            let name = n.label().unwrap_or_default();
+            if let Some(d) = n.description() {
+                seen += 1;
+                assert!(d.chars().count() <= 60, "{name}: {d}");
+                assert!(!d.contains("terminal"), "{name}: {d}");
+                assert!(!d.contains("filtered as you type"), "{name}: {d}");
+            }
+        }
+    }
+    assert!(seen >= 6, "only {seen} buttons have a description");
 }
 
 #[test]
@@ -615,14 +686,19 @@ fn a_question_is_a_dialog_with_yes_and_no() {
     let dir = tempfile::tempdir().unwrap();
     let app = app_with_sample(dir.path());
     let mut h = harness(&app);
-    let question = "Download Ada Example's voice, 63 megabytes, licence CC BY 4.0? y or n.";
+    let question = "Download Ada Example's voice, 63 megabytes, license CC BY 4.0? y or n";
     let q = gui::question_dialog(&Palette::galaxy(), &app.catalog(), question);
     let (yes, no) = (q.yes, q.no);
     h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(q.modal)));
     h.focus_on(Some(yes));
     let _ = h.redraw();
+    // The dialog is named by the question alone: the Yes and No buttons
+    // show the keys, so "y or n" is not said twice.
     let dialogs = names_of(&h, Role::Dialog);
-    assert_eq!(dialogs, [question.to_owned()]);
+    assert_eq!(
+        dialogs,
+        ["Download Ada Example's voice, 63 megabytes, license CC BY 4.0?".to_owned()]
+    );
     let buttons = names_of(&h, Role::Button);
     assert!(buttons.contains(&"Yes".to_owned()) && buttons.contains(&"No".to_owned()));
     for (id, key) in [(yes, "Y"), (no, "N")] {

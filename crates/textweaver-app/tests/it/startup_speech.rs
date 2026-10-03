@@ -57,7 +57,7 @@ fn wait_for(log: &SpeechLog, n: usize) -> Vec<String> {
 #[test]
 fn messages_before_the_engine_is_ready_are_said_in_order_after_opened() {
     let (mut app, go, logs) = starting_app(vec![
-        "Speech backend eci is not available; using test-recording.".into(),
+        "Speech engine eci is not available; using test-recording.".into(),
     ]);
     assert!(app.speech_restarting());
     app.open_document(
@@ -92,7 +92,7 @@ fn messages_before_the_engine_is_ready_are_said_in_order_after_opened() {
     assert!(said[3].starts_with("Line 1 of 1"), "{said:?}");
     assert_eq!(
         said[4],
-        "Speech backend eci is not available; using test-recording."
+        "Speech engine eci is not available; using test-recording."
     );
     // Afterwards messages are spoken at once, as always.
     app.dispatch(Command::Action(ActionId::RepeatMessage));
@@ -118,4 +118,40 @@ fn a_reading_started_meanwhile_goes_on_instead() {
         "{said:?}"
     );
     assert!(!said.iter().any(|t| t.starts_with("Opened")), "{said:?}");
+}
+
+/// Nothing reads aloud on its own when a document opens (WCAG 1.4.2; the
+/// conventions research, QW7): with the default settings opening says
+/// only "Opened", and reading starts only with `[speech] auto_play`.
+#[test]
+fn opening_a_document_says_only_opened_unless_auto_play_is_on() {
+    for auto_play in [false, true] {
+        let (speech, log) = recording_service().unwrap();
+        let mut config = AppConfig::for_tests();
+        config.settings.speech.auto_play = auto_play;
+        let mut app = App::new(AppConfig {
+            speech,
+            self_voicing: true,
+            ..config
+        });
+        app.open_document(
+            Document::from_plain_text("Hello there. A second sentence."),
+            DocKey::untitled(9),
+            "Essay".into(),
+        );
+        let said = if auto_play {
+            wait_for(&log, 2)
+        } else {
+            // Give a reading that should not start time to show itself.
+            wait_for(&log, 1);
+            std::thread::sleep(Duration::from_millis(300));
+            log.texts()
+        };
+        let read = said.iter().any(|t| t.contains("Hello there"));
+        assert_eq!(read, auto_play, "auto_play {auto_play}: {said:?}");
+        if !auto_play {
+            assert_eq!(said.len(), 1, "{said:?}");
+            assert!(said[0].starts_with("Opened Essay"), "{said:?}");
+        }
+    }
 }

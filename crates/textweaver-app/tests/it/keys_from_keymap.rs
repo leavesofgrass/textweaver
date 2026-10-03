@@ -361,7 +361,10 @@ fn keys_are_spoken_by_name_and_written_on_the_status_line() {
         "{:?}",
         list.items
     );
-    app.dispatch(Command::ListKey(ListKey::Down));
+    // Below the introduction, the palette, and the list of every key.
+    for _ in 0..3 {
+        app.dispatch(Command::ListKey(ListKey::Down));
+    }
     let said = heard(&log, "Open a document");
     assert!(
         said.iter()

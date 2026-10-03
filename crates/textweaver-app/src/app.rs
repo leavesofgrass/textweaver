@@ -380,6 +380,8 @@ pub struct App {
     /// A note or highlight chosen for deletion in its list, waiting for y
     /// or n (deleting one at the cursor asks too).
     pub(crate) pending_list_delete: Option<(ListKind, usize)>,
+    /// The window's Reset all colors, waiting for y or n.
+    pub(crate) pending_colors_reset: bool,
     /// The voice manager: its list, question, and download (crate::voice).
     pub(crate) voices: crate::voice::VoicesState,
     /// Text copied or cut, waiting for the frontend
@@ -538,6 +540,7 @@ impl App {
             last_disk_check: None,
             snapshot_trouble: false,
             pending_list_delete: None,
+            pending_colors_reset: false,
             voices: crate::voice::VoicesState::default(),
             clipboard: None,
             writer: crate::writer::Writer::spawn(wake.clone()),
@@ -618,6 +621,7 @@ impl App {
             || self.pending_import.is_some()
             || self.pending_disk.is_some()
             || self.pending_list_delete.is_some()
+            || self.pending_colors_reset
             || self.authoring.question.is_some()
             || self.study.question.is_some()
             || self.voices.question.is_some()
@@ -667,6 +671,9 @@ impl App {
         }
         if self.components.question.is_some() {
             return self.confirm_component(answer);
+        }
+        if self.pending_colors_reset {
+            return self.confirm_colors_reset(answer);
         }
         if let Some((kind, n)) = self.pending_list_delete.clone() {
             return match answer {
