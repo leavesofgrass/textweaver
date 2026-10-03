@@ -103,6 +103,22 @@ The features: Linux CI uses `--all-features`, which includes `espeak`, `speechd`
 - Tests against real engines are ignored unless you ask for them with an environment variable: `TEXTWEAVER_ECI=1` (Eloquence, with licensed Voxin in the container), `TEXTWEAVER_SAPI=1` (Microsoft voices and eSpeak only), `TEXTWEAVER_APPLE=1` (macOS voices), `TEXTWEAVER_DECTALK=1` (a licensed DECtalk), `TEXTWEAVER_SPEECHD=1` (speech-dispatcher), `TEXTWEAVER_WHISPER_REAL=1` (an installed Whisper), and `TEXTWEAVER_WORD=1` (Microsoft Word opens a DOCX). Run them with `-- --ignored`.
 - Never load Code Factory's Eloquence or OpenEVV in tests, and never commit audio made by an engine. Local samples go in the git-ignored `target-local/`.
 
+### Tests that need a tool
+
+Some tests need a program the machine may not have: ffmpeg (the MP3 and M4B export, the dictation conversion), pandoc (the pandoc fallback), pdftotext, epubcheck, Tesseract, and `lou_translate` (the BRF writer's grade 2 branch). Without it, such a test prints one line, meaning first, and passes:
+
+```text
+SKIPPED, not checked: ffmpeg not found, so the MP3 and M4B conversion test
+```
+
+Where CI installs the tool, a skip would be a gate that never runs, so CI names the tools it requires in `TEXTWEAVER_REQUIRE_TOOLS`, comma-separated, and a missing one fails the test instead: `ffmpeg` on the Linux leg of `ci.yml`, `pandoc` in the nightly's Docker job, and `lou_translate` in the second-tool braille job. A new test that skips without a tool uses the same rule: call `skip_or_fail("tool", "why")` (each crate's test program has its own copy, as in `crates/textweaver-writers/tests/it/common.rs`), and add the tool to the variable where the CI job installs it.
+
+`cargo xtask regen --check` follows the same rule. A step whose tool is missing (cargo-about, or Python) is reported as "SKIPPED, not checked", and named in the summary line; with `--require-all`, which CI's docs job passes, it fails instead.
+
+### Tests never touch the real data folders
+
+A test uses a temporary folder for settings, state, and caches (`Paths::under`, or `TEXTWEAVER_HOME` set to a temporary folder for a child process), never the user's own. CI checks this around the test step on every system: `cargo xtask sentinel record FILE` lists every file in textweaver's platform folders and in an empty `TEXTWEAVER_HOME` set for the tests, and `cargo xtask sentinel check FILE` after the tests fails, naming each file added, changed, or removed. Run it in a container, not on your own machine: textweaver itself may change your real folders while the tests run.
+
 ### Where tests go
 
 Unit tests live beside the code, in a `#[cfg(test)] mod tests`. Integration tests, the ones that use a crate only through its public interface, go in one test program per crate:
@@ -500,7 +516,55 @@ Run "Screen-reader checks" (`a11y-tests.yml`) from the Actions tab, and choose a
 
 The Orca session is standing: a failed must check fails its job. The NVDA and VoiceOver sessions are report-only: a failure shows in the summary but does not fail the job, whose result comes from building the GUI and installing the tools. ADR-0039 records why each check is standing or not. The phrases NVDA spoke are in the `a11y-nvda` artifact (`phrases.json` and `report.md`), for comparison with what a listener heard in their own session.
 
-Guidepup and its setup tool are locked, with integrity hashes, in `tools/a11y/package-lock.json`. To move to a new version, change `tools/a11y/package.json` and regenerate the lock file with `npm install --package-lock-only --ignore-scripts` in `tools/a11y`, in a container or on a machine with Node. Nothing else in the project needs Node.
+Guidepup and its setup tool are locked, with integrity hashes, in `tools/a11y/package-lock.json`. To move to a new version, change `tools/a11y/package.json` and regenerate the lock file with `npm install --package-lock-only --ignore-scripts` in `tools/a11y`, in a container or on a machine with Node. The only other Node tool is Ace by DAISY, locked the same way in `tools/ace/` for the second-tool workflow.
+
+## Gates and what breaks them
+
+A gate that cannot go red is worse than none: it spends trust. So each gate was broken once on purpose, on a throwaway change that was never committed, to see it fail with the line that names the problem. This was done on Friday, October 2, and Saturday, October 3, 2026, on the branch `wave8/g-gates`, locally (nothing was pushed, so there is no run id); the CI-only gates are marked so. Repeat the walk when a gate changes, and add the result here.
+
+Each entry: the gate, then the result, then the break and the line it gave.
+
+1. **Tests (`ci.yml`): red.** A failing `assert_eq!` in `textweaver-core`: "test result: FAILED. 0 passed; 1 failed".
+2. **Clippy and fmt: red.** An unused variable: "error: unused variable: `x`". A misformatted constant: "Diff in ... textweaver-core\src\lib.rs".
+3. **Crate graph (`cargo xtask deps --check`): red.** `textweaver-theme` depending on `textweaver-convert`: "forbidden: textweaver-tui reaches textweaver-convert without its default features".
+4. **Settings docs (`settings-doc --check`): red.** The `speech.rate` line taken out of `docs/settings-reference.md` (the same comparison as a new setting with no line): "docs/settings-reference.md is out of date", with the first difference, line 10. Now also run through `regen --check --require-all` in CI.
+5. **ADR index (`cargo xtask docs --check`): red.** ADR-0039 taken out of the index: "Decisions: ADR-0039 ... is missing".
+6. **Star parity (`cargo xtask parity`): was green, fixed.** Taking `Dr.` out of the abbreviation list moved textweaver toward Star's bug, so a delta vanished, and the task only failed on unexplained deltas. It now also compares the count of each rule per fixture with `xtask/parity-baseline.txt` ("the parity deltas changed (2 counts)"), and CI's generated job runs it; no CI job ran it before.
+7. **Bench gate: red, by its own tests.** The two-way ratchet's unit tests in `xtask/src/ratchet.rs` cover growth past the slack and improvement past the slack; the full `bench --quick` was not rerun here (a release build of the app).
+8. **Soak (`cargo xtask soak`): not walked.** It needs a long release run; it stays a nightly job. To walk it, make the highlight step back once in the soak driver and run `cargo xtask soak --minutes 2`.
+9. **Site (`pages.yml`, `ci.yml` docs job): red.** A link to a missing page: "building-gone.md does not exist". An image with no `alt` in `docs/site/index.html`: "index.html: 1 problems". Dropping a page from the navigation needs Zensical: CI only, not walked.
+10. **Orca must checks (`a11y-tests.yml`): CI only, not walked.** It needs Orca under Xvfb on a runner.
+11. **Tree diff against main: reports, as designed.** A renamed button: "Changed: 1 line added and 1 line removed", "Removed: `- button "Play"`", "Added: `- button "Start"`", exit 0. A missing tree: "Fail: no tree was dumped", exit 1, which is why the comparison step is now standing.
+12. **Second tool (`second-tool.yml`): red for Ace.** An EPUB with no title and no `schema:accessMode`: "Fail: ace epub-title ... serious" and "Fail: ace metadata-accessmode ... serious" (Ace 1.4.6 in a container). A converted file with no report from a tool now fails ("no Ace report"). The BRF cell change and epubcheck need liblouis and Maven Central: CI only, not walked.
+13. **Nightly nextest: red.** A test that fails only on its first try: "TRY 1 FAIL", "TRY 2 PASS", then "1 failed" and "error: test run failed" (the `nightly` profile's `flaky-result = "fail"`).
+14. **Fuzz: CI only, not walked.** It needs nightly Rust and cargo-fuzz on Linux.
+15. **cargo-deny: red.** MIT taken out of the allowed licenses in `deny.toml` (the same check as adding a crate under a disallowed license, with nothing downloaded): "error[rejected]: failed to satisfy license requirements".
+16. **Release smoke and asset list: red.** A `tw` that prints a version but fails everything else: `tools/package-smoke.sh` says "Fail: tw text opens the fixture, exit status 3" for each command. One package missing from a build folder: `cargo xtask release-assets` says "Missing: textweaver-9.9.9-windows-x86_64-gui.zip". A partial release: "Fail: the release's assets differ from the 17 expected files". Before this wave the smoke test ran only `--version`, which the broken `tw` passed. The clean-container smoke, run on the alpha.3 tarball, failed as it should: that version has no `tw components`.
+17. **Size budget: red, by its own tests.** `sizes::judge` fails a package 10.1 percent over its recorded size without a note (`xtask/src/sizes.rs`); `cargo xtask dist` was not rerun here.
+18. **Lean build: had no gate, now red.** No CI job built the lean reader, so a broken stub stayed green until someone built it by hand. `ci.yml` now builds `textweaver-tui --no-default-features` on Linux. Renaming `OutputFormat` in `crates/textweaver-app/src/lean/publish.rs`: "error[E0432]: unresolved import `crate::publish::OutputFormat`".
+
+The gates added in this walk were broken the same way:
+
+- **Real-folder sentinel: red.** A file written into `~/.config/textweaver` between `record` and `check`: "Fail: the tests changed 1 files in the real data folders", "Added: /root/.config/textweaver/settings.toml". The full workspace suite in the container (2,981 tests) passed it.
+- **regen --require-all: red.** Without cargo-about: "FAIL: 1 of 5 step failed: notices", "notices: FAIL, not checked: cargo-about is not installed".
+- **A report-only step with no reason: red.** The `a_bare_report_only_step_is_caught` test in `xtask/src/workflows.rs`.
+
+### The report-only steps
+
+Every step with `continue-on-error` has a comment with its reason and a review point, and `cargo test -p xtask` fails on one without (`xtask/src/workflows.rs`). The review point for all of them is the 0.1.0-alpha.9 readiness check. As of October 3, 2026:
+
+- **NVDA session (`a11y-tests.yml`): report-only.** Its "names the window or the document on focus" check has failed in every run; standing after three passing runs in a row (ADR-0039).
+- **VoiceOver setup, diagnostics, and session (`a11y-tests.yml`): report-only.** A hosted runner may not let VoiceOver be driven; the diagnostics only print facts.
+- **accessibility-cli cache restore and save (`gui-xilem.yml`, three systems each): report-only by design.** A cache error is not a defect, and a miss builds the tool.
+- **The one-time Valgrind job (`engines.yml`): report-only by design.** Started by hand; its result goes into ADR-0039.
+
+Standing since this walk: building accessibility-cli, the tree comparison step (a broken comparison fails, a changed tree never does), and the tree upload, on all three systems.
+
+### Release checks
+
+- `cargo xtask release-assets --dir target/dist --platform P` in each package job: the build folder holds exactly that platform's files. The checksums job compares the published release with all 17 (`--names`): 12 packages, 4 `.zsync` files, and `SHA256SUMS.txt`. A test keeps the list in step with `xtask/package-sizes.toml`.
+- `tools/package-smoke.sh` runs the packaged `tw` on an empty `TEXTWEAVER_HOME`: `--version`, `tw text` and `tw info` on `fixtures/sample.md`, `tw components list`, `tw backends`, and a conversion to EPUB, each line Pass or Fail.
+- `tools/clean-install-smoke.sh` unpacks the Linux tarball in a Debian container started with `--network none`, as an unprivileged user with an empty home, and runs the same smoke test; then the AppImage's `tw components list` and `tw info`.
 
 ## See also
 

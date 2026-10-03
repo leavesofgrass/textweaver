@@ -101,6 +101,20 @@ pub fn runs(program: &str, arg: &str) -> bool {
         .is_ok()
 }
 
+/// Skips a test whose tool is missing, loudly, or fails it when CI says the
+/// tool must be there: `TEXTWEAVER_REQUIRE_TOOLS` names the required tools,
+/// comma-separated (`docs/dev/testing.md`, "Tests that need a tool"). A test
+/// that skips where the tool should exist is a gate that never runs.
+pub fn skip_or_fail(tool: &str, why: &str) {
+    let required = std::env::var("TEXTWEAVER_REQUIRE_TOOLS")
+        .is_ok_and(|v| v.split(',').any(|t| t.trim() == tool));
+    assert!(
+        !required,
+        "Fail: {why}, but TEXTWEAVER_REQUIRE_TOOLS requires {tool} here"
+    );
+    eprintln!("SKIPPED, not checked: {why}");
+}
+
 /// Parses XML, allowing the `<!DOCTYPE html>` of XHTML content documents.
 pub fn xml(text: &str) -> Result<roxmltree::Document<'_>, roxmltree::Error> {
     roxmltree::Document::parse_with_options(

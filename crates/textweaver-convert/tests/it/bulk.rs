@@ -223,7 +223,7 @@ fn missing_input_is_an_error() {
 #[test]
 fn pandoc_fallback_when_installed() {
     if !pandoc_available() {
-        eprintln!("pandoc not on PATH; skipping");
+        skip_or_fail("pandoc", "pandoc not on PATH, so the pandoc fallback test");
         return;
     }
     let dir = tempfile::tempdir().expect("tempdir");
@@ -332,4 +332,18 @@ fn hot_folder_converts_and_moves_sources() {
     assert_eq!(events.last().map(String::as_str), Some("Stopped watching."));
     let log = fs::read_to_string(out.join("textweaver-watch.log")).expect("log");
     assert!(log.contains("Converted early.md."), "{log}");
+}
+
+/// Skips a test whose tool is missing, loudly, or fails it when CI says the
+/// tool must be there: `TEXTWEAVER_REQUIRE_TOOLS` names the required tools,
+/// comma-separated (`docs/dev/testing.md`, "Tests that need a tool"). A test
+/// that skips where the tool should exist is a gate that never runs.
+fn skip_or_fail(tool: &str, why: &str) {
+    let required = std::env::var("TEXTWEAVER_REQUIRE_TOOLS")
+        .is_ok_and(|v| v.split(',').any(|t| t.trim() == tool));
+    assert!(
+        !required,
+        "Fail: {why}, but TEXTWEAVER_REQUIRE_TOOLS requires {tool} here"
+    );
+    eprintln!("SKIPPED, not checked: {why}");
 }

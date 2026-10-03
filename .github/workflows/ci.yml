@@ -47,26 +47,29 @@ jobs:
       # resolves (tools/check_links.py; standard library only, no network).
       - name: Links and anchors
         run: python tools/check_links.py
-      # The data embedded in docs/site/*.html matches cargo metadata,
-      # docs/keyboard.md, and the theme files.
-      - name: Site data is current
-        run: python tools/gen_site_data.py --check
       # Static accessibility checks of the docs/site pages: landmarks,
       # headings, labels, text alternatives, and references.
       - name: Site accessibility checks
         run: python tools/check_site_a11y.py
-      # The ADR index and the Decisions list match docs/adr, the crate
-      # counts match crates/, and every guide ends with See also and is
-      # linked from docs/README.md (xtask/src/docs_check.rs).
-      - name: Docs indexes and crate counts
-        run: cargo xtask docs --check
-      # docs/settings-reference.md matches the settings schema. The app
-      # crate links the audio output, which needs the ALSA headers.
-      - name: Settings reference is current
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+      # Every generated file, through the same command as dev-check
+      # (xtask/src/regen.rs), so a check added there runs here too: the
+      # third-party notices, docs/settings-reference.md, docs/keyboard.md,
+      # the data embedded in docs/site/*.html, and the ADR index, crate
+      # counts, and See also sections. --require-all: a step whose tool is
+      # missing fails here instead of being skipped (on a developer's
+      # machine it is reported as SKIPPED). The app crate links the audio
+      # output, which needs the ALSA headers; cargo-about reads each
+      # crate's license files from the registry sources, so every
+      # platform's crates are fetched first.
+      - name: Every generated file is current (regen --check --require-all)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libasound2-dev pkg-config
-          cargo xtask settings-doc --check
+          cargo fetch --locked
+          cargo xtask regen --check --require-all
       # Every message the app says or shows comes from the catalog: under
       # the en-XA pseudo-locale each one is bracketed, and the test fails
       # on any that was missed (ADR-0030). The ALSA headers are installed
@@ -95,6 +98,12 @@ jobs:
         run: cargo xtask keyboard --check
       - name: Dependency direction
         run: cargo xtask deps --check
+      # Word, sentence, and paragraph segmentation against Star's
+      # (fixtures/star-parity/): every delta explained, and the count per
+      # rule as committed in xtask/parity-baseline.txt. No CI job ran it
+      # before, and without the counts a change toward Star's bugs passed.
+      - name: Star parity
+        run: cargo xtask parity
       # cargo-about reads each crate's licence files from the registry
       # sources, so every platform's crates are fetched first.
       - name: THIRD-PARTY-NOTICES.md is current
@@ -149,8 +158,32 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Clippy
         run: cargo clippy --locked --workspace --exclude textweaver-xilem --all-targets ${{ matrix.features }}
+      # The real-folder sentinel (xtask/src/sentinel.rs): the runner's own
+      # textweaver folders, and an empty TEXTWEAVER_HOME set for the tests,
+      # are listed before the tests and compared after them. A test that
+      # wrote outside its own temporary folder fails the check, by name.
+      - name: Record the real data folders (sentinel)
+        env:
+          TEXTWEAVER_HOME: ${{ runner.temp }}/tw-sentinel-home
+        run: cargo xtask sentinel record "${{ runner.temp }}/tw-sentinel.txt"
+      # TEXTWEAVER_REQUIRE_TOOLS: on Linux ffmpeg is installed above, so
+      # the export and dictation tests that skip without it fail instead
+      # of skipping (docs/dev/testing.md, "Tests that need a tool").
       - name: Test
+        env:
+          TEXTWEAVER_REQUIRE_TOOLS: ${{ runner.os == 'Linux' && 'ffmpeg' || '' }}
+          TEXTWEAVER_HOME: ${{ runner.temp }}/tw-sentinel-home
         run: cargo test --locked --workspace --exclude textweaver-xilem ${{ matrix.features }}
+      - name: No test touched the real data folders (sentinel)
+        if: ${{ !cancelled() }}
+        run: cargo xtask sentinel check "${{ runner.temp }}/tw-sentinel.txt"
+      # The lean reader (the terminal reader with no default features,
+      # crates/textweaver-app/src/lean/): before this step no CI job built
+      # it, so a broken stub signature there stayed green until someone
+      # built it by hand. Linux only; the stubs are the same everywhere.
+      - name: The lean reader builds (no default features)
+        if: runner.os == 'Linux'
+        run: cargo build --locked -p textweaver-tui --no-default-features
       - name: Apple voice tests (macOS; synthesis only, no playback)
         if: runner.os == 'macOS'
         env:

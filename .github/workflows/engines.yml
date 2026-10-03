@@ -118,6 +118,10 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.sanitizer
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Report-only by design (reason recorded Friday, October 2, 2026): a
+    # one-time pass whose result goes into ADR-0039, started by hand.
+    # Review: at the 0.1.0-alpha.9 readiness check; remove the job once
+    # its result is recorded, or make it standing if it is run again.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7

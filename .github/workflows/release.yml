@@ -23,6 +23,14 @@
 #   terminal packages matches them, including the update information of
 #   AppImages already released.
 #
+# The terminal packages are smoke-tested beyond --version before upload
+# (tools/package-smoke.sh: open a fixture, tw info, tw components list,
+# convert one file), and the Linux tarball and AppImage again in a clean
+# container with no network (tools/clean-install-smoke.sh). Each job
+# checks that its build folder holds exactly its expected files, and the
+# checksums job that the published release holds exactly the expected
+# assets (cargo xtask release-assets).
+#
 # Dry run: start the workflow by hand with the tag left empty. It builds and
 # checks every package from the chosen branch and keeps them as workflow
 # artifacts, and creates no release, attestation, or tag.
@@ -102,10 +110,16 @@ jobs:
           foreach ($want in 'tw.exe', 'textweaver.exe', 'THIRD-PARTY-NOTICES.md', 'licenses/scowl/Copyright', 'licenses/fonts/opendyslexic/OFL.txt') {
             if (-not ($names | Where-Object { $_ -like "*/$want" })) { throw "the package lacks $want" }
           }
-          $dir = Get-ChildItem -Directory target/dist/textweaver-*-windows-x86_64 | Select-Object -First 1
-          & "$($dir.FullName)/tw.exe" --version
-          if ($LASTEXITCODE -ne 0) { throw 'tw --version failed' }
           "Windows package: $($zip.Name), $([math]::Round($zip.Length / 1MB, 1)) MB" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+      # More than --version: open a fixture, tw info, tw components list,
+      # and convert one file, on an empty TEXTWEAVER_HOME.
+      - name: Smoke-test the package's tw
+        shell: bash
+        run: |
+          for dir in target/dist/textweaver-*-windows-x86_64; do
+            [ -d "$dir" ] && break
+          done
+          bash tools/package-smoke.sh "$dir/tw.exe" fixtures/sample.md | tee -a "$GITHUB_STEP_SUMMARY"
       # The GUI's zip, built in the same folder as the terminal package, so
       # the shared dependencies compile once.
       - name: Build the GUI package
@@ -132,6 +146,9 @@ jobs:
           $p = Start-Process -FilePath $gui -ArgumentList '--screenshot', $png, 'fixtures/sample.md' -Wait -PassThru -NoNewWindow
           if ($p.ExitCode -ne 0 -or -not (Test-Path $png)) { throw "textweaver-gui --screenshot failed ($($p.ExitCode))" }
           "GUI package: $($zip.Name), $([math]::Round($zip.Length / 1MB, 1)) MB" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+      # Exactly the files this job uploads: none missing, no stray one.
+      - name: The package files are exactly the expected ones
+        run: cargo xtask release-assets --dir target/dist --platform windows
       - uses: actions/attest-build-provenance@v4
         if: env.DRY_RUN != 'true'
         with:
@@ -172,7 +189,10 @@ jobs:
           dir=$(ls -d target/dist/textweaver-*-macos-universal)
           lipo -info "$dir/tw" "$dir/textweaver"
           codesign --verify --verbose "$dir/tw" "$dir/textweaver"
-          "$dir/tw" --version
+          # More than --version: open a fixture, tw info, tw components
+          # list, and convert one file, on an empty TEXTWEAVER_HOME.
+          set -o pipefail
+          bash tools/package-smoke.sh "$dir/tw" fixtures/sample.md | tee -a "$GITHUB_STEP_SUMMARY"
           listing=$(tar -tzf target/dist/textweaver-*-macos-universal.tar.gz)
           for want in THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/fonts/opendyslexic/OFL.txt; do
             grep -q "/$want\$" <<< "$listing" || { echo "the package lacks $want"; exit 1; }
@@ -214,6 +234,9 @@ jobs:
             grep -q "Reading at" gui.log
             grep -q "closed" gui.log
           done
+      # Exactly the files this job uploads: none missing, no stray one.
+      - name: The package files are exactly the expected ones
+        run: cargo xtask release-assets --dir target/dist --platform macos
       - uses: actions/attest-build-provenance@v4
         if: env.DRY_RUN != 'true'
         with:
@@ -317,11 +340,26 @@ jobs:
                 "$image" --version
               done
             '
+      # The terminal tarball unpacked in a clean Debian container started
+      # with --network none, as an unprivileged user with an empty home:
+      # tools/package-smoke.sh (open a fixture, tw info, tw components
+      # list, convert one file), then the AppImage's tw components list
+      # and tw info. Nothing installed, nothing fetched.
+      - name: Clean-container install, no network
+        # bash with pipefail, so tee keeps the script's exit status.
+        shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: bash tools/clean-install-smoke.sh target/dist debian:stable-slim | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Package summary
         run: |
           for f in target/dist/textweaver-*-linux-${{ matrix.arch }}.* target/dist/textweaver-*-linux-${{ matrix.arch }}-gui.*; do
             echo "Linux package: $(basename "$f"), $(du -m "$f" | cut -f1) MB" | tee -a "$GITHUB_STEP_SUMMARY"
           done
+      # Exactly the files this job uploads: none missing, no stray one.
+      - run: rustup toolchain install
+      - name: The package files are exactly the expected ones
+        run: cargo xtask release-assets --dir target/dist --platform linux-${{ matrix.arch }}
       - uses: actions/attest-build-provenance@v4
         if: env.DRY_RUN != 'true'
         with:
@@ -368,6 +406,15 @@ jobs:
         run: tools/release-upload.sh "$TAG"
       - name: Fetch the checksums file
         run: gh release download "$TAG" --pattern SHA256SUMS.txt --dir sums
+      # The published release holds exactly the expected assets: every
+      # platform's packages, the .zsync files, and SHA256SUMS.txt, for
+      # this tag's version, and nothing else.
+      - run: rustup toolchain install
+      - name: The release's assets are exactly the expected ones
+        shell: bash
+        run: |
+          gh release view "$TAG" --json assets --jq '.assets[].name' > assets.txt
+          cargo xtask release-assets --names assets.txt --version "${TAG#v}" | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/attest-build-provenance@v4
         with:
           subject-path: sums/SHA256SUMS.txt

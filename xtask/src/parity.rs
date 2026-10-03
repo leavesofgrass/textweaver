@@ -15,6 +15,15 @@
 //! given with `--out <path>`. It is build output, not a tracked document. The
 //! task fails if any difference is left unexplained, so a change in
 //! segmentation cannot slip by.
+//!
+//! It also fails when the explained deltas change: the count of each rule
+//! per fixture is committed in [`BASELINE`], so a change that moves
+//! textweaver toward one of Star's bugs (dropping `Dr.` from the
+//! abbreviations makes an `abbreviation` delta vanish) fails as surely as
+//! one that adds a delta. Unexplained deltas alone left that gate blind,
+//! found by breaking it on purpose (docs/dev/testing.md, "Gates and what
+//! breaks them"). When a change is meant, `cargo xtask parity
+//! --update-baseline` rewrites the file; commit it with the reason.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -28,6 +37,8 @@ use textweaver_text::units::{ABBREVIATIONS, AMBIGUOUS_ABBREVIATIONS};
 use textweaver_text::{Document, segments};
 
 const FIXTURES: &[&str] = &["sample.txt", "sample.md", "sample.html"];
+/// The committed delta counts, relative to the workspace root.
+const BASELINE: &str = "xtask/parity-baseline.txt";
 const UNEXPLAINED: &str = "UNEXPLAINED";
 
 fn root() -> PathBuf {
@@ -42,12 +53,14 @@ pub fn run() -> Result<()> {
     let mut summary = String::new();
     let mut unexplained = 0usize;
     let mut used: BTreeSet<&'static str> = BTreeSet::new();
+    let mut per_fixture: Vec<(&str, Counts)> = Vec::new();
     for name in FIXTURES {
         let (section, row, counts) = fixture_section(&root, name)?;
         report.push_str(&section);
         summary.push_str(&row);
         unexplained += counts.unexplained;
         used.extend(counts.by_rule.keys().copied());
+        per_fixture.push((*name, counts));
     }
     let mut out = String::new();
     out.push_str(HEADER);
@@ -67,7 +80,9 @@ pub fn run() -> Result<()> {
     out.push('\n');
     out.push_str(&report);
     out.push_str(FOOTER);
-    let path = report_path(&root, std::env::args().skip(2))?;
+    let args: Vec<String> = std::env::args().skip(2).collect();
+    let update = args.iter().any(|a| a == "--update-baseline");
+    let path = report_path(&root, args.into_iter().filter(|a| a != "--update-baseline"))?;
     if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
         std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
     }
@@ -79,7 +94,115 @@ pub fn run() -> Result<()> {
             path.display()
         );
     }
+    let current = baseline_text(&per_fixture);
+    let baseline_path = root.join(BASELINE);
+    if update {
+        std::fs::write(&baseline_path, &current)
+            .with_context(|| format!("writing {}", baseline_path.display()))?;
+        println!("wrote {BASELINE}; commit it with the reason for the change");
+        return Ok(());
+    }
+    let committed =
+        std::fs::read_to_string(&baseline_path).with_context(|| format!("reading {BASELINE}"))?;
+    let changes = baseline_changes(&committed, &current);
+    if !changes.is_empty() {
+        for c in &changes {
+            println!("{c}");
+        }
+        bail!(
+            "the parity deltas changed ({} {}); see {}. If the change is meant, run \
+             cargo xtask parity --update-baseline and commit {BASELINE} with the reason",
+            changes.len(),
+            if changes.len() == 1 {
+                "count"
+            } else {
+                "counts"
+            },
+            path.display()
+        );
+    }
+    println!("Pass: the parity deltas match {BASELINE}");
     Ok(())
+}
+
+/// The committed form: one line per fixture and rule, `fixture rule count`.
+fn baseline_text(per_fixture: &[(&str, Counts)]) -> String {
+    let mut out = String::from(
+        "# Star parity: explained deltas per fixture and rule (cargo xtask parity).\n\
+         # Written by `cargo xtask parity --update-baseline`; a change fails the task.\n",
+    );
+    for (name, counts) in per_fixture {
+        for (rule, n) in &counts.by_rule {
+            let _ = writeln!(out, "{name} {rule} {n}");
+        }
+    }
+    out
+}
+
+/// Each count that differs, one line, meaning first.
+fn baseline_changes(committed: &str, current: &str) -> Vec<String> {
+    let parse = |t: &str| -> BTreeMap<(String, String), String> {
+        t.lines()
+            .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
+            .filter_map(|l| {
+                let mut p = l.split_whitespace();
+                Some((
+                    (p.next()?.to_owned(), p.next()?.to_owned()),
+                    p.next()?.to_owned(),
+                ))
+            })
+            .collect()
+    };
+    let (before, after) = (parse(committed), parse(current));
+    let keys: BTreeSet<_> = before.keys().chain(after.keys()).collect();
+    keys.into_iter()
+        .filter_map(|k| {
+            let (b, a) = (before.get(k), after.get(k));
+            (b != a).then(|| {
+                format!(
+                    "Changed: {} {}: {} deltas, was {}",
+                    k.0,
+                    k.1,
+                    a.map_or("0", String::as_str),
+                    b.map_or("0", String::as_str)
+                )
+            })
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod baseline_tests {
+    use super::*;
+
+    #[test]
+    fn a_vanished_rule_is_a_change() {
+        let committed = "# c\nsample.md abbreviation 1\nsample.md list-item 4\n";
+        assert!(baseline_changes(committed, committed).is_empty());
+        let now = "sample.md list-item 4\n";
+        assert_eq!(
+            baseline_changes(committed, now),
+            ["Changed: sample.md abbreviation: 0 deltas, was 1"]
+        );
+        let more = "sample.md abbreviation 1\nsample.md list-item 5\n";
+        assert_eq!(
+            baseline_changes(committed, more),
+            ["Changed: sample.md list-item: 5 deltas, was 4"]
+        );
+    }
+
+    #[test]
+    fn the_committed_baseline_is_well_formed() {
+        let text = std::fs::read_to_string(root().join(BASELINE)).unwrap();
+        let lines: Vec<&str> = text.lines().filter(|l| !l.starts_with('#')).collect();
+        assert!(!lines.is_empty());
+        for l in lines {
+            let p: Vec<&str> = l.split_whitespace().collect();
+            assert_eq!(p.len(), 3, "{l}");
+            assert!(FIXTURES.contains(&p[0]), "{l}");
+            assert!(p[2].parse::<usize>().is_ok(), "{l}");
+        }
+    }
 }
 
 /// Where the report goes: `--out <path>` (or `--out=<path>`) when given,

@@ -1368,6 +1368,15 @@ mod tests {
             assert!(out.contains("NEXT"), "{out:?}");
             return;
         }
+        // The second-tool workflow installs liblouis for this branch; there
+        // a fallback to the stand-in would be a gate that never ran.
+        let required = std::env::var("TEXTWEAVER_REQUIRE_TOOLS")
+            .is_ok_and(|v| v.split(',').any(|t| t.trim() == "lou_translate"));
+        assert!(
+            !required,
+            "Fail: the liblouis branch did not run (no liblouis feature or no lou_translate), \
+             but TEXTWEAVER_REQUIRE_TOOLS requires lou_translate here"
+        );
         assert!(out.starts_with("  THE CAT"));
         assert!(report.warnings[0].contains("uncontracted"));
     }

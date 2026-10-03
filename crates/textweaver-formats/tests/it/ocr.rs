@@ -190,14 +190,14 @@ fn turning_ocr_off_keeps_the_old_sentence() {
 #[test]
 fn french_goes_to_tesseract() {
     let Some(exe) = textweaver_ocr::tesseract::find() else {
-        eprintln!("skipped: Tesseract is not installed");
+        skip_or_fail("tesseract", "Tesseract is not installed");
         return;
     };
     if !textweaver_ocr::tesseract::languages(&exe)
         .iter()
         .any(|l| l == "fra")
     {
-        eprintln!("skipped: Tesseract has no French data");
+        skip_or_fail("tesseract", "Tesseract has no French data");
         return;
     }
     models();
@@ -213,4 +213,18 @@ fn french_goes_to_tesseract() {
     for word in ["numérisées", "élèves", "déjà", "Noël", "améliorent"] {
         assert!(text.contains(word), "{word} missing from:\n{text}");
     }
+}
+
+/// Skips a test whose tool is missing, loudly, or fails it when CI says the
+/// tool must be there: `TEXTWEAVER_REQUIRE_TOOLS` names the required tools,
+/// comma-separated (`docs/dev/testing.md`, "Tests that need a tool"). A test
+/// that skips where the tool should exist is a gate that never runs.
+fn skip_or_fail(tool: &str, why: &str) {
+    let required = std::env::var("TEXTWEAVER_REQUIRE_TOOLS")
+        .is_ok_and(|v| v.split(',').any(|t| t.trim() == tool));
+    assert!(
+        !required,
+        "Fail: {why}, but TEXTWEAVER_REQUIRE_TOOLS requires {tool} here"
+    );
+    eprintln!("SKIPPED, not checked: {why}");
 }

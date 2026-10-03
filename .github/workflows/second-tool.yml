@@ -1,18 +1,24 @@
 # Second-tool checks of the writers' output (ADR-0017): the EPUB files
-# checked by epubcheck and the PDF files by veraPDF with the PDF/UA-1
-# profile, the tools libraries and publishers use, on top of textweaver's
-# own checks.
+# checked by epubcheck and by Ace by DAISY (EPUB Accessibility 1.1), and
+# the PDF files by veraPDF with the PDF/UA-1 profile, the tools libraries
+# and publishers use, on top of textweaver's own checks.
 #
 # `tw` converts fixtures/sample.md and the other Markdown fixtures below,
 # one file at a time, to EPUB and to PDF. A conversion that fails, an
-# epubcheck error or fatal, and a veraPDF failed rule each fail the job,
-# unless tools/second_tool_allowlist.txt names it with a reason. Warnings
-# are reported, not failed. The reports are uploaded as the artifact
-# "second-tool-reports".
+# epubcheck error or fatal, an Ace violation of critical or serious
+# impact, and a veraPDF failed rule each fail the job, unless
+# tools/second_tool_allowlist.txt names it with a reason. Warnings (and
+# Ace's moderate and minor violations) are reported, not failed. A file
+# that converted but has no report from a tool fails too: a check that did
+# not run must not pass as "no findings". The reports are uploaded as the
+# artifact "second-tool-reports".
 #
 # Both tools come from Maven Central at pinned versions, and their files
 # are checked against the SHA-256 values below; no third-party action and
-# no secret is used. The runner's own Java and Maven run them.
+# no secret is used. The runner's own Java and Maven run them. Ace by
+# DAISY (@daisy/ace-cli) is locked, with integrity hashes, in
+# tools/ace/package-lock.json, installed with no install scripts, and runs
+# its checks in the runner's own Chrome.
 #
 # The braille job checks BRF output with liblouis, built from its release
 # tarball pinned by SHA-256 (tools/braille-check/install-liblouis.sh): the
@@ -33,6 +39,7 @@ on:
     paths:
       - .github/workflows/second-tool.yml
       - tools/second_tool_allowlist.txt
+      - tools/ace/**
       - tools/braille-check/**
       - crates/textweaver-writers/**
 
@@ -141,6 +148,35 @@ jobs:
               > "$out/reports/epubcheck-$name.txt" 2>&1 || true
           done
 
+      # Ace by DAISY: EPUB Accessibility 1.1 and axe-core's rules over each
+      # content document. docs/dev/research/legal-and-standards.md asks
+      # for every fixture EPUB to pass with no serious violation.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: tools/ace/package-lock.json
+      - name: Ace by DAISY (locked, no install scripts)
+        working-directory: tools/ace
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Ace by DAISY
+        run: |
+          set -u
+          # Puppeteer's own browser download is an install script, which
+          # is not run: Ace uses the runner's Chrome.
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          [ -n "$chrome" ] || { echo "Fail: no Chrome on the runner for Ace"; exit 1; }
+          export PUPPETEER_EXECUTABLE_PATH="$chrome"
+          out="$RUNNER_TEMP/out"
+          for f in "$out"/epub/*.epub; do
+            [ -e "$f" ] || continue
+            name="$(basename "$f" .epub)"
+            tools/ace/node_modules/.bin/ace-cli --force --outdir "$out/reports/ace-$name" "$f" \
+              > "$out/reports/ace-$name.log" 2>&1 || true
+          done
+          python3 tools/ace/results.py "$out/reports" > "$out/reports/ace-findings.txt"
+          cat "$out/reports/ace-findings.txt"
+
       - name: veraPDF
         run: |
           set -u
@@ -180,7 +216,8 @@ jobs:
           done
 
       # One line per finding, meaning first: "Fail" or "Allowed" or
-      # "Warning", the tool, the rule, the fixture, then the message.
+      # "Warning", the tool (tw, epubcheck, ace, or veraPDF), the rule, the
+      # fixture, then the message.
       - name: Results
         run: |
           python3 - <<'EOF'
@@ -208,10 +245,35 @@ jobs:
                   failures += 1
               lines.append(f"{kind}: {tool} {rule}, {fixture}: {message}")
 
+          converted = {"epub": [], "pdf": []}
           for line in open(os.path.join(out, "conversion.txt"), encoding="utf-8"):
               if line.startswith("Fail: convert "):
                   fixture = line.split()[2]
                   finding("Fail", "tw", "convert", fixture, line.strip())
+              elif line.startswith("Pass: convert "):
+                  words = line.split()
+                  converted[words[-1]].append(words[2])
+          if not converted["epub"] or not converted["pdf"]:
+              finding("Fail", "tw", "convert", "*", "no fixture converted; nothing was checked")
+
+          # Every converted file has each tool's report: a tool that did
+          # not run, or wrote nothing, must not pass as "no findings".
+          for fixture in converted["epub"]:
+              if not os.path.exists(os.path.join(out, f"epubcheck-{fixture}.txt")):
+                  finding("Fail", "epubcheck", "report", fixture, "no epubcheck report")
+              if not os.path.isdir(os.path.join(out, f"ace-{fixture}")):
+                  finding("Fail", "ace", "report", fixture, "no Ace report")
+          for fixture in converted["pdf"]:
+              if not os.path.exists(os.path.join(out, f"verapdf-{fixture}.xml")):
+                  finding("Fail", "veraPDF", "report", fixture, "no veraPDF report")
+
+          # Ace's findings, written by tools/ace/results.py, one per line.
+          ace = re.compile(r"^(Fail|Warning): ace (\S+), (\S+): (.*)$")
+          for line in open(os.path.join(out, "ace-findings.txt"), encoding="utf-8"):
+              m = ace.match(line.strip())
+              if m:
+                  kind, rule, fixture, message = m.groups()
+                  finding(kind, "ace", rule, fixture, message)
 
           pattern = re.compile(r"^(FATAL|ERROR|WARNING)\(([A-Z]+-\d+[a-z]?)\): (.*)$")
           for path in sorted(glob.glob(os.path.join(out, "epubcheck-*.txt"))):
@@ -294,8 +356,18 @@ jobs:
         with:
           key: second-tool-braille
           save-if: ${{ github.ref == 'refs/heads/main' }}
+      # TEXTWEAVER_REQUIRE_TOOLS: the grade 2 test fails, rather than
+      # falling back to its stand-in, if lou_translate is not found.
       - name: The BRF writer's tests, with liblouis installed
-        run: cargo test --locked -p textweaver-writers --features liblouis --lib brf
+        env:
+          TEXTWEAVER_REQUIRE_TOOLS: lou_translate
+        # A filter that matches no test passes with "0 passed": the count
+        # line is checked. GitHub's bash runs with pipefail, so the test's
+        # own exit status still counts.
+        run: |
+          cargo test --locked -p textweaver-writers --features liblouis --lib brf 2>&1 | tee brf-tests.txt
+          grep -Eq 'test result: ok\. [1-9][0-9]* passed' brf-tests.txt \
+            || { echo "Fail: no BRF writer test ran"; exit 1; }
       - name: BRF against liblouis
         run: sh tools/braille-check/run.sh "$RUNNER_TEMP/braille"
       - name: Summary

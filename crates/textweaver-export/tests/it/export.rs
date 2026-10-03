@@ -855,7 +855,10 @@ fn opus_keeps_a_tone_in_time_and_pitch() {
 #[test]
 fn ffmpeg_conversion_when_available() {
     let Some(ff) = ffmpeg::find() else {
-        eprintln!("ffmpeg not found; skipping the MP3 and M4B conversion test");
+        skip_or_fail(
+            "ffmpeg",
+            "ffmpeg not found, so the MP3 and M4B conversion test",
+        );
         return;
     };
     let dir = tempfile::tempdir().unwrap();
@@ -905,4 +908,18 @@ fn ffmpeg_conversion_when_available() {
             assert!(chapters.contains("Next"), "{chapters}");
         }
     }
+}
+
+/// Skips a test whose tool is missing, loudly, or fails it when CI says the
+/// tool must be there: `TEXTWEAVER_REQUIRE_TOOLS` names the required tools,
+/// comma-separated (`docs/dev/testing.md`, "Tests that need a tool"). A test
+/// that skips where the tool should exist is a gate that never runs.
+fn skip_or_fail(tool: &str, why: &str) {
+    let required = std::env::var("TEXTWEAVER_REQUIRE_TOOLS")
+        .is_ok_and(|v| v.split(',').any(|t| t.trim() == tool));
+    assert!(
+        !required,
+        "Fail: {why}, but TEXTWEAVER_REQUIRE_TOOLS requires {tool} here"
+    );
+    eprintln!("SKIPPED, not checked: {why}");
 }

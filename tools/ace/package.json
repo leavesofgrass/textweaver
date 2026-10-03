@@ -1,0 +1,13 @@
+{
+  "name": "textweaver-ace-check",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ace by DAISY for the EPUB checks of the second-tool workflow, run on CI runners only (.github/workflows/second-tool.yml). Nothing here is shipped.",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@daisy/ace-cli": "1.4.6"
+  }
+}

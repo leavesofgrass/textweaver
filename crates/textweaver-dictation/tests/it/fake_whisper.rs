@@ -347,7 +347,7 @@ fn whisper_cpp_needs_ffmpeg_for_other_formats() {
 fn whisper_cpp_converts_other_formats_with_ffmpeg_when_present() {
     let path = std::env::var_os("PATH").unwrap_or_default();
     let Some(ffmpeg) = textweaver_dictation::engine::find_on_path("ffmpeg", &path) else {
-        eprintln!("ffmpeg not on PATH; skipping the conversion test");
+        skip_or_fail("ffmpeg", "ffmpeg not on PATH, so the conversion test");
         return;
     };
     let s = Setup::new();
@@ -362,4 +362,18 @@ fn whisper_cpp_converts_other_formats_with_ffmpeg_when_present() {
     d.start(DictationInput::File(audio)).unwrap();
     let t = final_transcript(&run_to_end(&mut d));
     assert_eq!(t.text(), "Captured 16000 samples at 16000 hertz.");
+}
+
+/// Skips a test whose tool is missing, loudly, or fails it when CI says the
+/// tool must be there: `TEXTWEAVER_REQUIRE_TOOLS` names the required tools,
+/// comma-separated (`docs/dev/testing.md`, "Tests that need a tool"). A test
+/// that skips where the tool should exist is a gate that never runs.
+fn skip_or_fail(tool: &str, why: &str) {
+    let required = std::env::var("TEXTWEAVER_REQUIRE_TOOLS")
+        .is_ok_and(|v| v.split(',').any(|t| t.trim() == tool));
+    assert!(
+        !required,
+        "Fail: {why}, but TEXTWEAVER_REQUIRE_TOOLS requires {tool} here"
+    );
+    eprintln!("SKIPPED, not checked: {why}");
 }

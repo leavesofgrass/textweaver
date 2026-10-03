@@ -12349,7 +12349,9 @@ name = "xtask"
 version = "0.1.0-alpha.7"
 dependencies = [
  "anyhow",
+ "directories",
  "serde_json",
+ "tempfile",
  "textweaver-app",
  "textweaver-enginehost",
  "textweaver-formats",

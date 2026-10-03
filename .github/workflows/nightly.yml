@@ -235,9 +235,12 @@ jobs:
       - uses: actions/checkout@v7
       - name: Build the development image
         run: docker build -t textweaver-dev docker
+      # The image installs pandoc, so the pandoc fallback test must run
+      # here, not skip (TEXTWEAVER_REQUIRE_TOOLS; docs/dev/testing.md).
       - name: Tests in the image (every feature, no GUI)
         run: |
           docker run --rm -v "$PWD:/work" -w /work -e CARGO_TARGET_DIR=/work/target/docker \
+            -e TEXTWEAVER_REQUIRE_TOOLS=pandoc \
             textweaver-dev cargo test --locked --workspace --exclude textweaver-xilem --all-features --no-fail-fast
 
   soak:

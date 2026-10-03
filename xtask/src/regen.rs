@@ -1,7 +1,8 @@
 //! `cargo xtask regen [--check]`: rebuilds every generated file, in order.
 //!
 //! 1. `THIRD-PARTY-NOTICES.md` (as `cargo xtask notices`; needs
-//!    `cargo-about`, and is skipped with a note when it is missing).
+//!    `cargo-about`; without it the step is reported as skipped, and
+//!    fails under `--require-all`).
 //! 2. `docs/settings-reference.md` (as `cargo xtask settings-doc`; builds
 //!    the app crate's `settings_reference` test).
 //! 3. `docs/keyboard.md` (as `cargo xtask keyboard`).
@@ -17,7 +18,12 @@
 //! fails, and each reports one line, meaning first, such as
 //! `notices: pass` or `site data: FAIL, out of date; run cargo xtask
 //! regen`. The exit status is non-zero when any step failed. A step whose
-//! tool is not installed is reported as skipped and does not fail the run.
+//! tool is not installed is reported as "SKIPPED, not checked" and, by
+//! default, does not fail the run; the summary names it.
+//!
+//! `--require-all` (for CI, where every tool is installed) turns a skip
+//! into a failure: "notices: FAIL, not checked: cargo-about is not
+//! installed". A gate that skips silently is a gate that is never run.
 
 use std::ffi::OsString;
 use std::path::Path;
@@ -43,27 +49,60 @@ pub enum Outcome {
     Written,
     /// Checked, and out of date.
     Stale,
-    /// Not run, for the reason given.
+    /// Not run, for the reason given (a tool is missing).
     Skipped(String),
+    /// Not run although `--require-all` asked for every step: a failure.
+    Required(String),
     /// Failed, for the reason given.
     Failed(String),
 }
 
 impl Outcome {
     fn failed(&self) -> bool {
-        matches!(self, Outcome::Stale | Outcome::Failed(_))
+        matches!(
+            self,
+            Outcome::Stale | Outcome::Failed(_) | Outcome::Required(_)
+        )
     }
 }
 
 /// The usage line.
-const USAGE: &str = "usage: cargo xtask regen [--check]";
+const USAGE: &str = "usage: cargo xtask regen [--check] [--require-all]";
 
-/// The mode the arguments after `regen` ask for.
-pub fn parse_args(args: &[String]) -> anyhow::Result<Mode> {
-    match args {
-        [] => Ok(Mode::Write),
-        [a] if a == "--check" => Ok(Mode::Check),
-        _ => bail!("{USAGE}"),
+/// What the arguments after `regen` ask for.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Options {
+    /// Write or check.
+    pub mode: Mode,
+    /// A step skipped for a missing tool fails the run (CI).
+    pub require_all: bool,
+}
+
+/// The options the arguments after `regen` ask for.
+pub fn parse_args(args: &[String]) -> anyhow::Result<Options> {
+    let mut options = Options {
+        mode: Mode::Write,
+        require_all: false,
+    };
+    let mut seen_check = false;
+    for a in args {
+        match a.as_str() {
+            "--check" if !seen_check => {
+                seen_check = true;
+                options.mode = Mode::Check;
+            }
+            "--require-all" if !options.require_all => options.require_all = true,
+            _ => bail!("{USAGE}"),
+        }
+    }
+    Ok(options)
+}
+
+/// A skip becomes a failure when every step is required.
+pub fn require(outcome: Outcome, require_all: bool) -> Outcome {
+    match outcome {
+        Outcome::Skipped(why) if require_all => Outcome::Required(why),
+        other => other,
     }
 }
 
@@ -73,7 +112,8 @@ pub fn line(label: &str, outcome: &Outcome) -> String {
         Outcome::Pass => format!("{label}: pass"),
         Outcome::Written => format!("{label}: written"),
         Outcome::Stale => format!("{label}: FAIL, out of date; run cargo xtask regen"),
-        Outcome::Skipped(why) => format!("{label}: skipped, {why}"),
+        Outcome::Skipped(why) => format!("{label}: SKIPPED, not checked: {why}"),
+        Outcome::Required(why) => format!("{label}: FAIL, not checked: {why}"),
         Outcome::Failed(why) => format!("{label}: FAIL, {why}"),
     }
 }
@@ -86,17 +126,19 @@ pub fn summary(mode: Mode, results: &[(&str, Outcome)]) -> (Vec<String>, bool) {
         .filter(|(_, o)| o.failed())
         .map(|(l, _)| *l)
         .collect();
-    let skipped = results
+    let skipped: Vec<&str> = results
         .iter()
         .filter(|(_, o)| matches!(o, Outcome::Skipped(_)))
-        .count();
+        .map(|(l, _)| *l)
+        .collect();
+    let skipped_n = skipped.len();
     let total = results.len();
     let mut head = if failed.is_empty() {
         match mode {
-            Mode::Check => format!("Pass: {} of {total} checks passed", total - skipped),
+            Mode::Check => format!("Pass: {} of {total} checks passed", total - skipped_n),
             Mode::Write => format!(
                 "Done: {} of {total} steps rebuilt their files",
-                total - skipped
+                total - skipped_n
             ),
         }
     } else {
@@ -107,8 +149,11 @@ pub fn summary(mode: Mode, results: &[(&str, Outcome)]) -> (Vec<String>, bool) {
             failed.join(", ")
         )
     };
-    if skipped > 0 {
-        head.push_str(&format!(", {skipped} skipped"));
+    if skipped_n > 0 {
+        head.push_str(&format!(
+            ", {skipped_n} SKIPPED, not checked: {}",
+            skipped.join(", ")
+        ));
     }
     head.push('.');
     let mut lines = vec![head];
@@ -131,7 +176,7 @@ const STEPS: [(&str, Step); 5] = [
 /// `cargo xtask regen [--check]`.
 pub fn run() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(2).collect();
-    let mode = parse_args(&args)?;
+    let Options { mode, require_all } = parse_args(&args)?;
     let root = crate::eci::root();
     let mut results = Vec::new();
     for (label, step) in STEPS {
@@ -143,7 +188,7 @@ pub fn run() -> anyhow::Result<()> {
                 "rebuilding"
             }
         );
-        let outcome = step(&root, mode);
+        let outcome = require(step(&root, mode), require_all);
         println!("{}", line(label, &outcome));
         results.push((label, outcome));
     }
@@ -322,12 +367,45 @@ mod tests {
 
     #[test]
     fn arguments_choose_the_mode() {
-        assert_eq!(parse_args(&args(&[])).unwrap(), Mode::Write);
-        assert_eq!(parse_args(&args(&["--check"])).unwrap(), Mode::Check);
-        for bad in [&["--chek"][..], &["--check", "--check"], &["notices"]] {
+        let opts = |mode, require_all| Options { mode, require_all };
+        assert_eq!(parse_args(&args(&[])).unwrap(), opts(Mode::Write, false));
+        assert_eq!(
+            parse_args(&args(&["--check"])).unwrap(),
+            opts(Mode::Check, false)
+        );
+        assert_eq!(
+            parse_args(&args(&["--check", "--require-all"])).unwrap(),
+            opts(Mode::Check, true)
+        );
+        assert_eq!(
+            parse_args(&args(&["--require-all", "--check"])).unwrap(),
+            opts(Mode::Check, true)
+        );
+        for bad in [
+            &["--chek"][..],
+            &["--check", "--check"],
+            &["notices"],
+            &["--require-all", "--require-all"],
+        ] {
             let e = parse_args(&args(bad)).unwrap_err();
             assert_eq!(e.to_string(), USAGE);
         }
+    }
+
+    #[test]
+    fn require_all_turns_a_skip_into_a_failure() {
+        let skip = || Outcome::Skipped("cargo-about is not installed".into());
+        assert_eq!(require(skip(), false), skip());
+        let required = require(skip(), true);
+        assert!(required.failed());
+        assert_eq!(
+            line("notices", &required),
+            "notices: FAIL, not checked: cargo-about is not installed"
+        );
+        assert_eq!(require(Outcome::Pass, true), Outcome::Pass);
+        let (lines, failed) = summary(Mode::Check, &[("notices", required)]);
+        assert!(failed);
+        assert_eq!(lines[0], "FAIL: 1 of 1 step failed: notices.");
     }
 
     #[test]
@@ -343,7 +421,7 @@ mod tests {
                 "notices",
                 &Outcome::Skipped("cargo-about is not installed".into())
             ),
-            "notices: skipped, cargo-about is not installed"
+            "notices: SKIPPED, not checked: cargo-about is not installed"
         );
         assert_eq!(
             line("docs", &Outcome::Failed("2 problems".into())),
@@ -390,7 +468,10 @@ mod tests {
         ];
         let (lines, failed) = summary(Mode::Check, &results);
         assert!(!failed);
-        assert_eq!(lines[0], "Pass: 1 of 2 checks passed, 1 skipped.");
+        assert_eq!(
+            lines[0],
+            "Pass: 1 of 2 checks passed, 1 SKIPPED, not checked: notices."
+        );
         let (lines, failed) = summary(Mode::Write, &[("keyboard", Outcome::Written)]);
         assert!(!failed);
         assert_eq!(lines[0], "Done: 1 of 1 steps rebuilt their files.");

@@ -30,16 +30,22 @@
 //!   `cargo about` (see `notices.rs`).
 //! - `parity`: compare word and sentence segmentation with the Star corpus
 //!   in `fixtures/star-parity/` and write the report (Agent A).
-//! - `regen [--check]`: rebuild every generated file in order (notices,
-//!   settings reference, keyboard reference, site data, docs crate counts),
-//!   or with `--check` report each on one line and fail if any is stale
-//!   (see `regen.rs`).
+//! - `regen [--check] [--require-all]`: rebuild every generated file in
+//!   order (notices, settings reference, keyboard reference, site data,
+//!   docs crate counts), or with `--check` report each on one line and fail
+//!   if any is stale; `--require-all` (CI) fails a step whose tool is
+//!   missing instead of skipping it (see `regen.rs`).
 //! - `release X.Y.Z [--dry-run] [--no-checks]`: set the version, date the
 //!   changelog, run the checks, commit, and tag (see `release.rs`);
 //!   `release X.Y.Z --listened` records the listening check;
 //!   `release X.Y.Z --sizes` records the published packages' sizes for
 //!   the size budget that `dist`, `gui-dist`, and `appimage` check (see
 //!   `sizes.rs`).
+//! - `release-assets --dir DIR [--platform P]` or `--names FILE`: the
+//!   exact set of release files, compared with a build folder or with a
+//!   published release's asset names (see `release_assets.rs`).
+//! - `sentinel record FILE`, `sentinel check FILE`: fail when the tests
+//!   changed anything in the real data folders (see `sentinel.rs`).
 //! - `soak [--minutes N]`: read the 10 MB corpus to the end with random
 //!   navigation, edits, rate changes, and engine-host kills (see `soak.rs`).
 //! - `startup [--baseline FILE --max-ratio R]`: time `tw --version`,
@@ -62,9 +68,13 @@ mod pathological;
 mod ratchet;
 mod regen;
 mod release;
+mod release_assets;
 mod sapi;
+mod sentinel;
 mod sizes;
 mod soak;
+#[cfg(test)]
+mod workflows;
 
 #[cfg(feature = "bench")]
 #[global_allocator]
@@ -93,6 +103,8 @@ fn main() -> anyhow::Result<()> {
         "parity" => parity::run(),
         "regen" => regen::run(),
         "release" => release::run(),
+        "release-assets" => release_assets::run(),
+        "sentinel" => sentinel::run(),
         "soak" => soak::run(),
         #[cfg(feature = "bench")]
         "soak-run" => soak::run_inner(),
