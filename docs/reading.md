@@ -108,11 +108,13 @@ The screen has four parts, from top to bottom.
 1. **The title line.** It starts with "textweaver:" and the document's title. On the right it shows, in this order: the line and percentage ("line 12 of 300, 4%"), the reading state ("Ready" before you first read, then "Reading", "Paused", or "Stopped"), "modified" when there are unsaved edits, the accessibility mode in hybrid and screen-reader modes, the rate ("265 wpm"), and the speech engine. In edit and Speech Cursor modes the mode ("Edit" or "Speech Cursor") and "modified" come right after the percentage, before the reading state. On a narrow screen the last parts are left out first.
 2. **The document.** The text, with the spoken word highlighted while reading.
 3. **The status line.** It shows every announcement: what textweaver just said or would have said. It grows to as many rows as a long message needs, so nothing is cut before a screen reader or Braille display reads it. Screen readers read it as it changes. See [Using textweaver with a screen reader](screen-readers.md).
-4. **The key hint line.** It shows a few useful keys for the current mode. When a prompt is open (Find, Go to, Open file, and so on), this line becomes the prompt, and you type there. In hybrid and screen-reader modes the hints are hidden by default; see [Braille-first layout](#braille-first-layout).
+4. **The key hint line.** It shows a few useful keys for the current mode. While a list is open it shows the list's keys instead: Enter chooses, Escape closes, F1 says the list's keys, and in the menus Left goes back. When a prompt is open (Find, Go to, Open file, and so on), this line becomes the prompt, and you type there. In hybrid and screen-reader modes the hints are hidden by default; see [Braille-first layout](#braille-first-layout).
 
 The terminal's cursor always sits where your attention is: on the word being spoken while reading, on the Speech Cursor line, on the prompt, on the chosen item of a list, or else on the reading cursor. Screen readers and screen magnifiers follow it.
 
 Lists, such as the help, bookmarks, notes, and the library, appear in a box over the document when textweaver speaks for itself. In hybrid and screen-reader modes they cover the document with no box.
+
+The terminal window's own title becomes the document's name when you open one, so Alt+Tab and your screen reader's "read title" key name it. Terminals that keep a title stack, such as xterm, get their old title back when textweaver closes.
 
 ### Braille-first layout
 
@@ -619,7 +621,7 @@ For a file textweaver writes (Save as, and the exports), F4 chooses the folder i
 - **?**: list every keyboard shortcut with its current keys, including your own changes. Up and Down move, **Enter** runs the command, **Escape** closes. The GUI also opens this list with **F3**.
 - **F1**: open the help, a short list of the most useful keys.
 
-In any list: **Up** and **Down** move, **PageUp** and **PageDown** move ten items, **Home** and **End** go to the first and last, a letter jumps to the next item starting with it, **Enter** chooses, and **Escape** or **Backspace** closes. At the ends you hear "Top of list." or "End of list." **F1** or **Alt+End** says the list's introduction again (its name, how many items it has, and the keys it takes), then the item you are on, such as "3 of 12". **Alt+'** says the last message again.
+In any list: **Up** and **Down** move, **PageUp** and **PageDown** move ten items, **Home** and **End** go to the first and last, a letter jumps to the next item starting with it, **Enter** chooses, and **Escape** or **Backspace** closes. At the ends you hear "Top of list." or "End of list."; with `cursor = "status"` the status line keeps the item after it, such as "End of list. 12 of 12, Conclusion", so your Braille display still shows where you are. **F1** or **Alt+End** says the list's introduction again (its name, how many items it has, and the keys it takes), then the item you are on, such as "3 of 12". **Alt+'** says the last message again.
 
 ## Turn single-key shortcuts off: F9
 

@@ -56,6 +56,7 @@ pub mod paths;
 pub mod physical;
 pub mod setup;
 pub mod signals;
+pub mod terminal_info;
 pub mod theme;
 pub mod ui;
 pub mod widgets;
@@ -66,6 +67,13 @@ use std::time::{Duration, Instant};
 use ratatui::backend::Backend;
 use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPaste};
 use ratatui::crossterm::execute;
+use ratatui::crossterm::style::Print;
+use ratatui::crossterm::terminal::SetTitle;
+
+/// Pushes the window title onto the terminal's title stack (xterm, CSI 22;2 t).
+const TITLE_PUSH: &str = "\x1b[22;2t";
+/// Pops it back (CSI 23;2 t).
+const TITLE_POP: &str = "\x1b[23;2t";
 use ratatui::{DefaultTerminal, Terminal};
 use textweaver_app::a11y::Priority;
 use textweaver_app::lexicon::args;
@@ -126,6 +134,11 @@ pub fn frame<B: Backend>(terminal: &mut Terminal<B>, tui: &mut Tui) -> Result<Du
 pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> {
     while !tui.should_quit() && !signals::requested() {
         let wait = frame(terminal, tui)?;
+        // The window's title names the document: Alt+Tab and the screen
+        // reader's title key then say it. Written once per open.
+        if let Some(title) = tui.take_window_title() {
+            let _ = execute!(std::io::stdout(), SetTitle(title));
+        }
         // On Windows the loop waits on the console itself, so it can peek
         // at the physical keys before crossterm reads them (the digit row
         // on any layout; see `physical`).
@@ -221,10 +234,14 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
     let mut terminal = ratatui::init();
     // Pasted text arrives as one event (one undo step), not as keystrokes.
     let _ = execute!(std::io::stdout(), EnableBracketedPaste);
+    // Save the window's title (xterm's title stack, CSI 22 t), so it comes
+    // back on the way out; terminals without the stack ignore both.
+    let _ = execute!(std::io::stdout(), Print(TITLE_PUSH));
     install_panic_hook();
     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         run(&mut terminal, &mut tui)
     }));
+    let _ = execute!(std::io::stdout(), Print(TITLE_POP));
     let _ = execute!(std::io::stdout(), DisableBracketedPaste);
     ratatui::restore();
     let result = finish(&mut tui, outcome);

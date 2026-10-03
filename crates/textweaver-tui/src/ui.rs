@@ -21,6 +21,7 @@ use textweaver_app::{
 };
 
 use crate::layout::{self, Cells, Row};
+use crate::terminal_info::TerminalInfo;
 use crate::theme::Theme;
 use crate::widgets::{ListView, Minibuffer};
 use ratatui::style::Modifier;
@@ -208,6 +209,10 @@ pub struct Tui {
     /// The title line's position while it is frozen (`[accessibility]
     /// quiet_screen` during continuous reading).
     frozen_position: Option<String>,
+    /// What was probed about the terminal ([`TerminalInfo`]).
+    terminal: TerminalInfo,
+    /// The window title last handed out ([`Tui::take_window_title`]).
+    window_title: Option<String>,
     /// Physical keys peeked from the Windows console, for the digit row.
     digits: crate::physical::DigitKeys,
     /// How many times the screen was drawn ([`Tui::draws`]).
@@ -246,9 +251,35 @@ impl Tui {
     /// Wraps an app, with the terminal's color level and clipboard route
     /// detected ([`crate::clipboard::detect`]).
     pub fn new(app: App) -> Self {
-        let mut tui = Self::with_color_support(app, ColorSupport::detect());
-        tui.clipboard_route = crate::clipboard::detect_here();
+        // One probe of the terminal, said once in the log.
+        let info = TerminalInfo::detect();
+        log::info!("{}", info.log_line());
+        let mut tui = Self::with_color_support(app, info.color);
+        tui.clipboard_route = info.clipboard;
+        tui.terminal = info;
         tui
+    }
+
+    /// What was probed about the terminal at startup.
+    pub fn terminal_info(&self) -> TerminalInfo {
+        self.terminal
+    }
+
+    /// The terminal window's title when it should change: the document's
+    /// name after each open (or "textweaver" with none), else `None`, so
+    /// the title is written once per open. Control characters are left
+    /// out, so a document's title cannot end the escape sequence early.
+    pub fn take_window_title(&mut self) -> Option<String> {
+        let now = self
+            .app
+            .session()
+            .map_or("textweaver", |s| s.title.as_str());
+        if self.window_title.as_deref() == Some(now) {
+            return None;
+        }
+        let now = now.to_owned();
+        self.window_title = Some(now.clone());
+        Some(now.chars().filter(|c| !c.is_control()).collect())
     }
 
     /// Wraps an app, drawing at a given color level (tests; at run time
@@ -272,6 +303,12 @@ impl Tui {
             system_clipboard: crate::clipboard::SystemClipboard::default(),
             system_clipboard_said: false,
             frozen_position: None,
+            terminal: TerminalInfo {
+                color: support,
+                reorders_rtl: crate::bidi::terminal_reorders(),
+                clipboard: crate::clipboard::Route::Osc52,
+            },
+            window_title: None,
             digits: crate::physical::DigitKeys::default(),
             draws: 0,
             needs_draw: true,
@@ -850,7 +887,7 @@ impl Tui {
         app.status().seq.hash(&mut h);
         app.status().current.as_ref().map(String::len).hash(&mut h);
         (app.mode() as u8).hash(&mut h);
-        format!("{:?}", app.playback()).hash(&mut h);
+        app.playback().hash(&mut h);
         let vp = app.viewport();
         (vp.top_line, vp.width, vp.height).hash(&mut h);
         if let Some(s) = app.session() {
@@ -975,9 +1012,10 @@ impl Tui {
     /// True when right-to-left text is reordered for display
     /// (`[interface] rtl`; see [`crate::bidi`]).
     fn rtl(&self) -> bool {
-        crate::bidi::reorders(
+        crate::bidi::reorders_in(
             self.app.settings().interface.rtl,
             self.app.access_mode().uses_screen_reader(),
+            self.terminal.reorders_rtl,
         )
     }
 
@@ -1220,6 +1258,13 @@ impl Tui {
                 bidi_map = map;
             }
             let extra = ruler_modifier(mark);
+            if mark.dim {
+                // The mask: a blended color where the terminal has one,
+                // the dim attribute at 16 colors and none.
+                for sp in &mut text {
+                    sp.style = theme.mask(sp.style);
+                }
+            }
             if !extra.is_empty() {
                 // The reader's ruler color on the band's rows (never on
                 // the dimmed rows around it); the attributes stay.
@@ -1423,6 +1468,12 @@ impl Tui {
         let mut b = bold.partition_point(|r| r.end <= row.range.start);
         let mut d = difficult.partition_point(|r| r.end <= row.range.start);
         let mut k = aids.code.partition_point(|(r, _)| r.end <= row.range.start);
+        // Only the highlights that touch this row are tested per character
+        // (in their order, so later ones still patch over earlier ones).
+        let highlights: Vec<&textweaver_app::Highlight> = highlights
+            .iter()
+            .filter(|h| h.range.start < row.range.end && h.range.end > row.range.start)
+            .collect();
         for (i, c) in chars.enumerate() {
             let pos = CharPos(row.range.start.0 + i);
             while k < aids.code.len() && aids.code[k].0.end <= pos {
@@ -1473,7 +1524,7 @@ impl Tui {
             match layout::shown_at(aids.shown, pos) {
                 Some(Some(text)) => run.push_str(text),
                 Some(None) => {}
-                None => run.push_str(&cells.text(c)),
+                None => cells.push_text(c, &mut run),
             }
         }
         if let Some(st) = run_style {
@@ -1589,17 +1640,34 @@ impl Tui {
         // single-key shortcuts as F9 left them (a hint for a key that does
         // nothing misleads).
         let layer = self.app.mode().layer();
-        let parts: Vec<String> = hints
-            .iter()
-            .filter_map(|(a, label)| {
-                let chords = keymap.chords_in_mode(*a, layer);
-                let best = chords
-                    .iter()
-                    .find(|c| c.is_text_input() || c.mods.is_empty())
-                    .or(chords.first())?;
-                Some(format!("{best} {}", c.tr(label)))
-            })
-            .collect();
+        let best = |a: ActionId| {
+            let chords = keymap.chords_in_mode(a, layer);
+            chords
+                .iter()
+                .find(|c| c.is_text_input() || c.mods.is_empty())
+                .or(chords.first())
+                .map(ToString::to_string)
+        };
+        let parts: Vec<String> = if self.app.list_model().is_some() {
+            // An open list takes its own keys (Space marks an item there,
+            // it does not play): choose, close, the list's keys, and in
+            // the menus, back. Escape and quit stay last, as they fit.
+            let key = |k: Key| KeyChord::new(k, Modifiers::empty()).to_string();
+            let mut parts = vec![format!("{} {}", key(Key::Enter), c.tr("tui-hint-choose"))];
+            if self.app.menu_path().is_some() {
+                parts.push(format!("{} {}", key(Key::Left), c.tr("tui-hint-back")));
+            }
+            if let Some(help) = best(ActionId::Help) {
+                parts.push(format!("{help} {}", c.tr("tui-hint-keys")));
+            }
+            parts.push(format!("{} {}", key(Key::Escape), c.tr("tui-hint-close")));
+            parts
+        } else {
+            hints
+                .iter()
+                .filter_map(|(a, label)| Some(format!("{} {}", best(*a)?, c.tr(label))))
+                .collect()
+        };
         // Keep what fits, always ending with the last two (help and quit
         // in browse mode, the way out in Speech Cursor mode).
         let width = usize::from(width).saturating_sub(pad.len());
@@ -1877,9 +1945,7 @@ fn ruler_modifier(m: RulerStyle) -> Modifier {
     if m.reverse {
         out |= Modifier::REVERSED;
     }
-    if m.dim {
-        out |= Modifier::DIM;
-    }
+    // The mask (`m.dim`) is drawn by `Theme::mask`, as a color.
     out
 }
 

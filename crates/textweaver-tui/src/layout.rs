@@ -44,11 +44,24 @@ impl Cells {
 
     /// How `c` is drawn.
     pub fn text(self, c: char) -> String {
-        if c == ' ' {
-            " ".repeat(1 + self.word_extra)
-        } else {
-            display_text(c, self.tab)
-        }
+        let mut out = String::new();
+        self.push_text(c, &mut out);
+        out
+    }
+
+    /// Appends how `c` is drawn to `out`, without a `String` of its own:
+    /// the draw path calls this for every character on screen.
+    pub fn push_text(self, c: char, out: &mut String) {
+        let spaces = match c {
+            ' ' => 1 + self.word_extra,
+            '\t' => self.tab.max(1),
+            c if c.is_control() => 1,
+            c => {
+                out.push(c);
+                return;
+            }
+        };
+        out.extend(std::iter::repeat_n(' ', spaces));
     }
 }
 

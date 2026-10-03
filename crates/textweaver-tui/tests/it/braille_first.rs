@@ -318,3 +318,107 @@ fn window_button_hints_fit_a_braille_line() {
         }
     }
 }
+
+/// Wave 9 (W9c-t, terminal rank 5): with the cursor on the status line,
+/// an edge message keeps the item it stopped on, so the Braille line
+/// still says where the user is.
+#[test]
+fn an_edge_message_keeps_the_item_on_the_status_line() {
+    let mut h = launch(screen_reader(), 80, 24, Some("One line.\n"));
+    h.act(ActionId::KeyboardHelp);
+    h.press(key(KeyCode::End));
+    let item = h.tui.app().status_text().to_owned();
+    h.press(key(KeyCode::Down));
+    let status = h.tui.app().status_text().to_owned();
+    assert!(!item.is_empty());
+    assert_eq!(status, format!("End of list. {item}"));
+    // Following the cursor, the edge message stands alone, as before.
+    let mut s = screen_reader();
+    s.accessibility.cursor = CursorPlacement::Follow;
+    let mut h = launch(s, 80, 24, Some("One line.\n"));
+    h.act(ActionId::KeyboardHelp);
+    h.press(key(KeyCode::Home));
+    h.press(key(KeyCode::Up));
+    assert_eq!(h.tui.app().status_text(), "Top of list.");
+}
+
+/// During a screen say-all, a background message follows the sentence on
+/// the status line instead of replacing it (terminal rank 5, question 7).
+#[test]
+fn the_say_all_sentence_stays_first_on_the_status_line() {
+    let mut s = screen_reader();
+    s.accessibility.say_all = textweaver_app::store::SayAll::Screen;
+    let text = "The first sentence is here. The second follows it.\n";
+    let mut h = launch(s, 80, 24, Some(text));
+    h.act(ActionId::PlayPause);
+    let sentence = h.tui.app().status_text().to_owned();
+    assert!(sentence.starts_with("The first sentence"), "{sentence}");
+    h.tui.app_mut().announce("Saved.", Priority::Polite);
+    assert_eq!(h.tui.app().status_text(), format!("{sentence}  Saved."));
+    // An assertive message still shows alone.
+    h.tui
+        .app_mut()
+        .announce("Error: disk full.", Priority::Assertive);
+    assert_eq!(h.tui.app().status_text(), "Error: disk full.");
+}
+
+/// The hints line under an open list names the list's keys, not the
+/// reading keys behind it: Space marks an item there, it does not play
+/// (terminal rank 7, QW6).
+#[test]
+fn hints_under_an_open_list_match_its_keys() {
+    let mut h = launch(Settings::default(), 100, 24, Some("# One\n\nText.\n"));
+    assert!(h.tui.hints(100).contains("play"), "{}", h.tui.hints(100));
+    h.act(ActionId::KeyboardHelp);
+    assert!(h.tui.list().is_some());
+    let hints = h.tui.hints(100);
+    assert!(hints.contains("Enter choose"), "{hints}");
+    assert!(hints.contains("close"), "{hints}");
+    assert!(!hints.contains("play"), "{hints}");
+    h.act(ActionId::Menu);
+    let hints = h.tui.hints(100);
+    assert!(hints.contains("back"), "{hints}");
+}
+
+/// The status messages a reader meets most, in every language, fit one
+/// 40-cell Braille line, and an edge message leaves room for the place
+/// after it (the sticky status context). Cells are counted with the
+/// uncontracted UEB counter ([`braille_cells`]); the liblouis spike
+/// (W9c-b) can count with a real table here (microcopy rank 14,
+/// conventions rank 4; the ratio is calibrated in session S7).
+#[test]
+fn common_status_messages_fit_a_braille_line_in_every_language() {
+    use textweaver_app::lexicon::args;
+    use textweaver_app::lexicon::i18n::{Catalog, LANGUAGES};
+    for lang in LANGUAGES {
+        let c = Catalog::builtin(lang.tag).unwrap_or_else(Catalog::english);
+        let place = |k: usize| {
+            c.fmt(
+                "listmodel-item-position",
+                &args!["k" => k, "n" => 120, "item" => ""],
+            )
+        };
+        let table = [
+            ("playback-paused", c.tr("playback-paused")),
+            ("playback-stopped", c.tr("playback-stopped")),
+            ("nav-end-of-document-stop", c.tr("nav-end-of-document-stop")),
+            ("nav-top-of-document-stop", c.tr("nav-top-of-document-stop")),
+            (
+                "listmodel-end-of-list, then a place",
+                format!("{} {}", c.tr("listmodel-end-of-list"), place(120)),
+            ),
+            (
+                "listmodel-top-of-list, then a place",
+                format!("{} {}", c.tr("listmodel-top-of-list"), place(1)),
+            ),
+        ];
+        for (id, text) in table {
+            let cells = braille_cells(&text);
+            assert!(
+                cells <= BRAILLE_CELLS,
+                "{}: {id} takes {cells} cells: {text}",
+                lang.tag
+            );
+        }
+    }
+}
