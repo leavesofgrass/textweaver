@@ -1555,10 +1555,16 @@ aids-band-graduate = Hochschulabschluss
 
 ## Themes.
 
+message-error = Fehler: { $message }
 # $name is the theme name in the settings; $used the display name of the theme used instead.
 themes-unknown = Es gibt kein Design namens { $name }; { $used } wird verwendet.
 # $theme is the new theme's display name.
 themes-next = Design { $theme }.
+themes-below-aa =
+    { $count ->
+        [one] Unter AA: 1 Prüfung verfehlt den Wert.
+       *[other] Unter AA: { $count } Prüfungen verfehlen den Wert.
+    }
 
 ## Accessibility modes and the first-run question.
 

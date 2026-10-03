@@ -54,6 +54,23 @@ fn every_role_has_a_property_in_every_block() {
     assert!(!css.contains("outline: none"));
 }
 
+/// Every `var(--tw-…)` a rule reads is a property the stylesheet defines,
+/// and each role's value is its color in hex.
+#[test]
+fn every_variable_used_is_defined() {
+    let css = default_stylesheet();
+    for used in css.split("var(").skip(1) {
+        let name = used.split([')', ',']).next().unwrap().trim();
+        assert!(css.contains(&format!("{name}:")), "{name} is never defined");
+    }
+    let g = builtin::get("galaxy").unwrap();
+    let root = css.split("@media").next().unwrap();
+    for &r in ColorRole::ALL {
+        let line = format!("--tw-{}: {};", r.key().replace('_', "-"), g.color(r));
+        assert!(root.contains(&line), "{line}");
+    }
+}
+
 #[test]
 fn a_chosen_theme_does_not_follow_the_system() {
     let css = single_stylesheet(builtin::get("nord").unwrap());

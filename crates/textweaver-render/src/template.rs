@@ -37,8 +37,23 @@ use crate::{RenderError, Rendered};
 const DEFAULT: &str = include_str!("../templates/default.html");
 const PRINT: &str = include_str!("../templates/print.html");
 const FRAGMENT: &str = include_str!("../templates/fragment.html");
-/// The built-in screen stylesheet.
+/// The built-in screen rules. They read the theme's `--tw-*` properties,
+/// which [`stylesheet`] puts in front of them.
 pub const STYLESHEET: &str = include_str!("../templates/style.css");
+
+/// The screen stylesheet templates receive: the theme's properties
+/// (Galaxy, Galaxy Light when the system asks for light, High Contrast
+/// when it asks for more contrast, system colors under forced colors),
+/// then [`STYLESHEET`].
+pub fn stylesheet() -> &'static str {
+    static CSS: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    CSS.get_or_init(|| {
+        format!(
+            "{}{STYLESHEET}",
+            textweaver_theme::css::default_stylesheet()
+        )
+    })
+}
 /// The built-in print stylesheet.
 pub const PRINT_STYLESHEET: &str = include_str!("../templates/print.css");
 
@@ -239,11 +254,35 @@ impl Templates {
             tags => doc.tags.clone(),
             has_h1 => doc.has_h1,
             has_math => doc.has_math,
-            stylesheet => Value::from_safe_string(STYLESHEET.to_owned()),
+            stylesheet => Value::from_safe_string(stylesheet().to_owned()),
             print_stylesheet => Value::from_safe_string(PRINT_STYLESHEET.to_owned()),
             generator => concat!("textweaver ", env!("CARGO_PKG_VERSION")),
         };
         tmpl.render(ctx)
             .map_err(|e| RenderError::Template(format!("{name}: {e}")))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every `var(--tw-…)` the page rules read is a property the theme's
+    /// stylesheet defines, and the theme comes first.
+    #[test]
+    fn every_theme_variable_the_rules_read_exists() {
+        let theme = textweaver_theme::css::default_stylesheet();
+        let mut used = 0;
+        for rest in STYLESHEET.split("var(").skip(1) {
+            let name = rest.split([')', ',']).next().unwrap_or("").trim();
+            assert!(name.starts_with("--tw-"), "{name} is not a theme property");
+            assert!(
+                theme.contains(&format!("{name}:")),
+                "{name} is never defined"
+            );
+            used += 1;
+        }
+        assert!(used > 10, "{used}");
+        assert!(stylesheet().starts_with(&theme));
     }
 }

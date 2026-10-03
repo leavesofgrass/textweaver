@@ -25,6 +25,10 @@ pub struct Theme {
     pub title: Style,
     /// Status line.
     pub status: Style,
+    /// The status line while it shows an error: the theme's error color,
+    /// bold, on the page. The message itself begins with "Error:", so the
+    /// color is never the only mark.
+    pub status_error: Style,
     /// Key hints line.
     pub hints: Style,
     /// Minibuffer (prompt) line.
@@ -145,6 +149,7 @@ impl Theme {
             text: style(page),
             title: status.add_modifier(Modifier::BOLD),
             status,
+            status_error: on_page(t.color(ColorRole::Error)).add_modifier(Modifier::BOLD),
             hints: on_page(t.color(ColorRole::DimText)),
             minibuffer: panel,
             gutter: on_page(t.color(ColorRole::DimText)),

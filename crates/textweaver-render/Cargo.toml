@@ -31,6 +31,8 @@ textweaver-text.workspace = true
 textweaver-formats = { path = "../textweaver-formats", default-features = false }
 ammonia.workspace = true
 minijinja.workspace = true
+# The theme's --tw-* properties, read by templates/style.css.
+textweaver-theme.workspace = true
 
 [dev-dependencies]
 insta.workspace = true

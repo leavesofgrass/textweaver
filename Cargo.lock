@@ -9619,6 +9619,7 @@ dependencies = [
  "textweaver-formats",
  "textweaver-math",
  "textweaver-text",
+ "textweaver-theme",
  "thiserror 2.0.21",
 ]
 

@@ -134,6 +134,70 @@ roles! {
         Quote = ("quote", "quote"),
         /// Error messages (always bold as well, and always worded as errors).
         Error = ("error", "error"),
+        /// Buttons, fields, and the selected row: a step up from the panel.
+        /// Derived from the surface unless the file gives it.
+        Raised = ("raised", "raised surface"),
+        /// Panel edges and dividers; decorative, never the only cue.
+        Border = ("border", "border"),
+        /// Edges of buttons, fields, and switches, at 3 to 1.
+        ControlBorder = ("control_border", "control border"),
+        /// Muted text on panels, held to the text floor on the surface.
+        PanelDimText = ("panel_dim_text", "panel dim text"),
+        /// The primary button, a switch that is on, the focused row,
+        /// progress, and the RSVP pivot.
+        Accent = ("accent", "accent"),
+        /// Text drawn on the accent.
+        OnAccent = ("on_accent", "text on accent"),
+        /// Text of controls that are unavailable, at 3 to 1.
+        Disabled = ("disabled", "disabled text"),
+        /// The text caret.
+        Caret = ("caret", "caret"),
+        /// The thin line between a control and its focus ring.
+        FocusInner = ("focus_inner", "inner focus line"),
+        /// The band behind the reading line.
+        Ruler = ("ruler", "reading ruler"),
+        /// The rows around the reading line; a faint band.
+        RulerBand = ("ruler_band", "ruler band"),
+        /// The thick underline under a difficult word.
+        DifficultWord = ("difficult_word", "difficult word mark"),
+        /// The dot between syllables.
+        SyllableMark = ("syllable_mark", "syllable mark"),
+        /// The dotted underline under a misspelled word.
+        Misspelling = ("misspelling", "misspelling mark"),
+        /// The double underline under a writing suggestion.
+        Lint = ("lint", "writing suggestion mark"),
+    }
+}
+
+/// What a color is for, which decides how it is checked.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum RoleClass {
+    /// A fill that text sits on; each text color drawn on it meets the
+    /// text floor there.
+    Surface,
+    /// Text: 4.5 to 1 on each surface it is drawn on, 7 to 1 in
+    /// high-contrast themes (disabled text: 3 to 1).
+    Text,
+    /// A line, ring, bar, or dot that carries a state: 3 to 1 against the
+    /// colors beside it.
+    Indicator,
+    /// A tint behind text marking a range: text on it meets the floor. A
+    /// band is never the only cue.
+    Band,
+    /// A decorative line, such as a divider: no ratio, never the only cue.
+    Decorative,
+}
+
+impl RoleClass {
+    /// The class's name read aloud.
+    pub fn label(self) -> &'static str {
+        match self {
+            RoleClass::Surface => "surface",
+            RoleClass::Text => "text",
+            RoleClass::Indicator => "indicator",
+            RoleClass::Band => "band",
+            RoleClass::Decorative => "decorative",
+        }
     }
 }
 
@@ -163,13 +227,57 @@ roles! {
 }
 
 impl ColorRole {
-    /// True for colors drawn as text (everything except the three
-    /// backgrounds).
+    /// The fifteen roles worked out at load from the theme's own colors
+    /// when the file does not give them, in file order.
+    pub const DERIVED: &'static [ColorRole] = &[
+        ColorRole::Raised,
+        ColorRole::Border,
+        ColorRole::ControlBorder,
+        ColorRole::PanelDimText,
+        ColorRole::Accent,
+        ColorRole::OnAccent,
+        ColorRole::Disabled,
+        ColorRole::Caret,
+        ColorRole::FocusInner,
+        ColorRole::Ruler,
+        ColorRole::RulerBand,
+        ColorRole::DifficultWord,
+        ColorRole::SyllableMark,
+        ColorRole::Misspelling,
+        ColorRole::Lint,
+    ];
+
+    /// True for the roles in [`Self::DERIVED`]: derived at load unless a
+    /// `[colors]` key of the same name gives them, and never copied from a
+    /// base theme's derived value through `inherits`.
+    pub fn is_derived(self) -> bool {
+        self >= ColorRole::Raised
+    }
+
+    /// The role's class, which decides its check.
+    pub fn class(self) -> RoleClass {
+        use ColorRole as C;
+        match self {
+            C::Background | C::Surface | C::CodeBackground | C::Raised => RoleClass::Surface,
+            C::Border => RoleClass::Decorative,
+            C::ControlBorder
+            | C::Accent
+            | C::Caret
+            | C::FocusInner
+            | C::DifficultWord
+            | C::SyllableMark
+            | C::Misspelling
+            | C::Lint => RoleClass::Indicator,
+            C::Ruler | C::RulerBand => RoleClass::Band,
+            _ => RoleClass::Text,
+        }
+    }
+
+    /// True for colors drawn as text on the page: the original text roles
+    /// (everything before [`Self::DERIVED`] except the three backgrounds).
+    /// The derived text roles sit on panels, controls, or the accent.
     pub fn is_text(self) -> bool {
-        !matches!(
-            self,
-            ColorRole::Background | ColorRole::Surface | ColorRole::CodeBackground
-        )
+        !self.is_derived() && self.class() == RoleClass::Text
     }
 
     /// The heading role for level 1 to 6.
@@ -391,6 +499,18 @@ pub struct Meta {
     pub extra: Table,
 }
 
+impl Meta {
+    /// The theme's `tags` (for example `soft`), kept in the file's
+    /// `[theme]` table; empty when there are none.
+    pub fn tags(&self) -> Vec<&str> {
+        match self.extra.get("tags") {
+            Some(toml::Value::Array(a)) => a.iter().filter_map(|v| v.as_str()).collect(),
+            Some(toml::Value::String(s)) => vec![s.as_str()],
+            _ => Vec::new(),
+        }
+    }
+}
+
 /// A complete theme: every role has a color.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
@@ -398,6 +518,8 @@ pub struct Theme {
     pub meta: Meta,
     pub(crate) colors: [Rgb; ColorRole::COUNT],
     pub(crate) styles: [Style; StyleRole::COUNT],
+    /// Which roles were derived at load rather than given by the file.
+    pub(crate) derived: [bool; ColorRole::COUNT],
     /// Highlight colors offered to the reader, in menu order.
     pub user_highlights: Vec<UserHighlight>,
     /// Unknown keys in `[colors]`.
@@ -424,9 +546,17 @@ impl Theme {
         self.colors[role.index()]
     }
 
-    /// Changes one color.
+    /// Changes one color. The role counts as given from then on, so a
+    /// copied file keeps it.
     pub fn set_color(&mut self, role: ColorRole, color: Rgb) {
         self.colors[role.index()] = color;
+        self.derived[role.index()] = false;
+    }
+
+    /// True when this role was worked out at load (one of
+    /// [`ColorRole::DERIVED`] that the file did not give).
+    pub fn is_derived(&self, role: ColorRole) -> bool {
+        self.derived[role.index()]
     }
 
     /// One style as stored.
@@ -514,7 +644,11 @@ mod tests {
         for &r in StyleRole::ALL {
             assert_eq!(StyleRole::from_key(r.key()), Some(r));
         }
-        assert_eq!(ColorRole::COUNT, 15);
+        assert_eq!(ColorRole::COUNT, 30);
+        assert_eq!(ColorRole::DERIVED.len(), 15);
+        for &r in ColorRole::ALL {
+            assert_eq!(r.is_derived(), ColorRole::DERIVED.contains(&r), "{r}");
+        }
         assert_eq!(StyleRole::COUNT, 9);
         assert_eq!(ColorRole::heading(3), Some(ColorRole::Heading3));
         assert_eq!(ColorRole::heading(7), None);

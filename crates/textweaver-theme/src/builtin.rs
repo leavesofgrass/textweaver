@@ -1,6 +1,10 @@
 //! The built-in themes: Star's 23 palettes, ported and embedded as TOML
-//! files (`crates/textweaver-theme/themes/*.toml`). The files are generated
-//! from [`crate::star`] and a test keeps them in step.
+//! files (`crates/textweaver-theme/themes/*.toml`), plus textweaver's own
+//! (Lamplight). Star's files are generated from [`crate::star`] and a test
+//! keeps them in step; textweaver's own files are hand-written.
+//!
+//! [`CYCLE`] is the order F5 steps through: the themes that meet WCAG AA
+//! first, light and dark partners side by side, then the ten below AA.
 
 use std::sync::OnceLock;
 
@@ -10,9 +14,9 @@ use crate::resolve::{Repair, resolve};
 
 macro_rules! sources {
     ($($name:literal),+ $(,)?) => {
-        /// Built-in theme names in cycle order (Star's order; galaxy first).
+        /// Star's built-in theme names, in Star's order (galaxy first).
         pub const NAMES: [&str; 23] = [$($name),+];
-        const SOURCES: [(&str, &str); 23] = [
+        const STAR_SOURCES: [(&str, &str); 23] = [
             $(($name, include_str!(concat!("../themes/", $name, ".toml")))),+
         ];
     };
@@ -44,10 +48,49 @@ sources!(
     "gruvbox-light",
 );
 
+/// Built-in themes that are textweaver's own, not ported from Star.
+pub const OWN: [&str; 1] = ["lamplight"];
+
+const OWN_SOURCES: [(&str, &str); 1] = [("lamplight", include_str!("../themes/lamplight.toml"))];
+
+/// Every built-in theme in F5 order: the 14 that meet WCAG AA first, light
+/// and dark partners side by side, then the 10 below AA, partners side by
+/// side.
+pub const CYCLE: [&str; 24] = [
+    "galaxy",
+    "galaxy-light",
+    "high-contrast",
+    "contrast",
+    "lamplight",
+    "sepia",
+    "gruvbox-dark",
+    "gruvbox-light",
+    "tokyo-night",
+    "catppuccin-mocha",
+    "dracula",
+    "rose-pine",
+    "kanagawa",
+    "amber",
+    "one-dark",
+    "one-light",
+    "dark",
+    "light",
+    "solarized-dark",
+    "solarized-light",
+    "nord",
+    "everforest-dark",
+    "monokai",
+    "phosphor",
+];
+
+fn sources() -> impl Iterator<Item = &'static (&'static str, &'static str)> {
+    STAR_SOURCES.iter().chain(OWN_SOURCES.iter())
+}
+
 /// The TOML text of a built-in theme, for exporting or copying.
 pub fn source(name: &str) -> Option<&'static str> {
     let name = canonical_name(name)?;
-    SOURCES.iter().find(|(n, _)| *n == name).map(|(_, s)| *s)
+    sources().find(|(n, _)| *n == name).map(|(_, s)| *s)
 }
 
 /// The built-in name for `name`: case-insensitive, with Star's old names
@@ -58,15 +101,16 @@ pub fn canonical_name(name: &str) -> Option<&'static str> {
         .iter()
         .find(|(old, _)| *old == n)
         .map_or(n.as_str(), |(_, new)| *new);
-    NAMES.iter().copied().find(|b| *b == n)
+    CYCLE.iter().copied().find(|b| *b == n)
 }
 
-/// Every built-in theme, parsed once, in cycle order.
+/// Every built-in theme, parsed once, in F5 order ([`CYCLE`]).
 pub fn all() -> &'static [Theme] {
     static ALL: OnceLock<Vec<Theme>> = OnceLock::new();
     ALL.get_or_init(|| {
-        SOURCES
+        CYCLE
             .iter()
+            .filter_map(|name| sources().find(|(n, _)| n == name))
             .filter_map(|(name, src)| {
                 let file = ThemeFile::parse(src).ok()?;
                 resolve(&file, None, Some(name), Repair::DerivedOnly)

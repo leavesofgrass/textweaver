@@ -248,7 +248,10 @@ fn replace_range_edits_like_a_native_control() {
         range: CharRange::new(3, 9),
         text: "x".into(),
     });
-    assert!(said.last().starts_with("Cannot change characters 3 to 9"));
+    assert!(
+        said.last()
+            .starts_with("Error: Cannot change characters 3 to 9")
+    );
 }
 
 #[test]
@@ -496,7 +499,11 @@ fn large_files_open_in_the_background_and_escape_cancels() {
     std::fs::write(&missing, [0u8, 159, 146, 150, 0, 0]).unwrap();
     app.dispatch(Command::Open(missing));
     assert!(app.wait_for_open(Duration::from_secs(30)));
-    assert!(said.last().starts_with("Could not open"), "{}", said.last());
+    assert!(
+        said.last().starts_with("Error: Could not open"),
+        "{}",
+        said.last()
+    );
 }
 
 // Speech starting in the background.

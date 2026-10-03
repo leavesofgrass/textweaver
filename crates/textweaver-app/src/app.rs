@@ -308,6 +308,9 @@ pub struct App {
     pub(crate) speech: SpeechService,
     pub(crate) announcer: Box<dyn Announcer>,
     pub(crate) status: StatusLineAnnouncer,
+    /// The status line's sequence number when an error was last shown on
+    /// it, so frontends can mark the line as an error while it stays.
+    pub(crate) error_seq: Option<u64>,
     pub(crate) keymap: Keymap,
     pub(crate) settings: Settings,
     pub(crate) settings_dirty: bool,
@@ -502,6 +505,7 @@ impl App {
             speech: config.speech,
             announcer: config.announcer,
             status: StatusLineAnnouncer::default(),
+            error_seq: None,
             keymap,
             settings_loaded: config.settings.clone(),
             settings_outside_said: false,
@@ -820,6 +824,13 @@ impl App {
         self.status.current.as_deref().unwrap_or("")
     }
 
+    /// True while the status line shows an error. The text already begins
+    /// with the word "Error:"; frontends add the theme's error color and
+    /// bold, so color is never the only mark.
+    pub fn status_is_error(&self) -> bool {
+        self.error_seq == Some(self.status.seq) && !self.status_text().is_empty()
+    }
+
     /// Name of the speech backend in use.
     pub fn backend_name(&self) -> &str {
         &self.backend_name
@@ -931,9 +942,31 @@ impl App {
         );
     }
 
-    /// Announces an error ([`Importance::Error`], never silenced).
+    /// Announces an error ([`Importance::Error`], never silenced). The
+    /// message begins with the word "Error:" (in the interface language),
+    /// so it reads as an error by ear and on a Braille display, and the
+    /// status line is marked as an error ([`status_is_error`](Self::status_is_error)).
     pub(crate) fn error(&mut self, text: &str) {
-        self.say_kind(text, Verbosity::Low, Priority::Assertive, Importance::Error);
+        let marked = self.error_text(text);
+        self.say_kind(
+            &marked,
+            Verbosity::Low,
+            Priority::Assertive,
+            Importance::Error,
+        );
+        if self.status_text() == self.screen_text(&crate::help::written_text(&marked)) {
+            self.error_seq = Some(self.status.seq);
+        }
+    }
+
+    /// `text` with the localized "Error:" in front, unless it is there.
+    pub(crate) fn error_text(&self, text: &str) -> String {
+        let prefix = self.msg_args("message-error", &args!["message" => ""]);
+        let word = prefix.trim();
+        if word.is_empty() || text.trim_start().starts_with(word) {
+            return text.to_owned();
+        }
+        self.msg_args("message-error", &args!["message" => text])
     }
 
     /// Asks a yes-or-no question ("Quit textweaver? y or n"). Assertive, so

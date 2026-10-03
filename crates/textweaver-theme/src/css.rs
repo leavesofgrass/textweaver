@@ -129,18 +129,31 @@ impl SchemeSet<'static> {
     }
 }
 
+/// The system color a role takes under `forced-colors: active`. Bands
+/// (the reading ruler) drop to the page; dim text stays CanvasText, because
+/// GrayText can fall below the text floor.
+pub fn forced_color(role: ColorRole) -> &'static str {
+    use ColorRole as C;
+    match role {
+        C::Background | C::Surface | C::CodeBackground | C::FocusInner => "Canvas",
+        C::Ruler | C::RulerBand => "Canvas",
+        C::Raised => "ButtonFace",
+        C::ControlBorder => "ButtonText",
+        C::Link => "LinkText",
+        C::Accent | C::Misspelling => "Highlight",
+        C::OnAccent => "HighlightText",
+        C::Disabled => "GrayText",
+        _ => "CanvasText",
+    }
+}
+
 fn forced_colors(theme: &Theme) -> String {
     // System colors: the platform's contrast theme decides.
     let mut out = String::new();
     let i = "    ";
     let _ = writeln!(out, "{i}color-scheme: light dark;");
     for &r in ColorRole::ALL {
-        let v = match r {
-            ColorRole::Background | ColorRole::Surface | ColorRole::CodeBackground => "Canvas",
-            ColorRole::Link => "LinkText",
-            ColorRole::DimText => "GrayText",
-            _ => "CanvasText",
-        };
+        let v = forced_color(r);
         let _ = writeln!(out, "{i}{}: {v};", prop(r.key()));
     }
     for &r in StyleRole::ALL {
@@ -182,13 +195,13 @@ pub fn rules(highlight_names: &[&str]) -> String {
          pre { color: var(--tw-text); background: var(--tw-code-background); }\n\
          pre code { background: transparent; }\n\
          blockquote { color: var(--tw-quote); border-left: 3px solid var(--tw-dim-text); padding-left: 0.75em; }\n\
-         hr { border: 0; border-top: 1px solid var(--tw-dim-text); }\n\
-         th, td { border: 1px solid var(--tw-dim-text); }\n\
+         hr { border: 0; border-top: 1px solid var(--tw-border); }\n\
+         th, td { border: 1px solid var(--tw-control-border); }\n\
          .tw-dim { color: var(--tw-dim-text); }\n\
          .tw-error { color: var(--tw-error); font-weight: bold; }\n\
          .tw-panel { background: var(--tw-surface); color: var(--tw-text); }\n\
          ::selection { color: var(--tw-selection-fg); background: var(--tw-selection-bg); }\n\
-         :focus-visible { outline: 3px solid var(--tw-focus-bg); outline-offset: 2px; }\n",
+         :focus-visible { outline: 2px solid var(--tw-focus-bg); outline-offset: 1px; box-shadow: 0 0 0 1px var(--tw-focus-inner); }\n",
     );
     let class = |out: &mut String, cls: &str, key: &str| {
         let p = prop(key);

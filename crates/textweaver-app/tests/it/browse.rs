@@ -237,7 +237,7 @@ fn hostile_archives_are_refused_with_a_sentence() {
     key(&mut app, ListKey::Enter);
     assert_eq!(
         app.status_text(),
-        "broken.zip is not an archive textweaver can read; it may be damaged."
+        "Error: broken.zip is not an archive textweaver can read; it may be damaged."
     );
     assert_eq!(app.browse_location(), Some(&Location::Folder(fixtures())));
     assert!(app.list_model().is_some(), "the list stays");

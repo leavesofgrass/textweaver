@@ -600,7 +600,7 @@ fn go_to_prompt_and_targets() {
     assert_eq!(r.cursor(), at(text, "three"));
     r.act(ActionId::GoTo);
     r.app.dispatch(Command::Answer("tomorrow".into()));
-    assert!(r.said.last().starts_with("Not a go-to target"));
+    assert!(r.said.last().starts_with("Error: Not a go-to target"));
     r.act(ActionId::DocumentEnd);
     assert_eq!(r.cursor(), at(text, "four"));
     assert!(r.said.last().starts_with("End of document."));
@@ -693,7 +693,7 @@ fn keyboard_help_and_palette_come_from_the_keymap() {
     assert_eq!(r.cursor(), at(PROSE, "Kappa"));
     r.act(ActionId::CommandPalette);
     r.app.dispatch(Command::Answer("frobnicate".into()));
-    assert_eq!(r.said.last(), "Unknown command: frobnicate.");
+    assert_eq!(r.said.last(), "Error: Unknown command: frobnicate.");
     assert!(
         r.app
             .palette_candidates("bookmark")
@@ -764,7 +764,7 @@ fn no_document_is_explained() {
     app.dispatch(Command::Action(ActionId::NextSentence));
     assert!(said.last().starts_with("No document is open."));
     app.dispatch(Command::Open("definitely/missing/file.txt".into()));
-    assert!(said.last().starts_with("Could not open"));
+    assert!(said.last().starts_with("Error: Could not open"));
 }
 
 #[test]

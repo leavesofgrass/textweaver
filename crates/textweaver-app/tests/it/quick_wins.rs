@@ -142,7 +142,7 @@ fn a_dead_speech_thread_is_reported_and_the_app_goes_on() {
     assert_eq!(app.playback(), textweaver_app::Playback::Idle);
     assert!(
         app.status_text()
-            .starts_with("Speech stopped working (the engine crashed)."),
+            .starts_with("Error: Speech stopped working (the engine crashed)."),
         "{}",
         app.status_text()
     );
@@ -216,7 +216,7 @@ fn the_app_notices_a_dead_speech_thread_while_polling() {
     assert_eq!(app.playback(), textweaver_app::Playback::Idle);
     assert!(
         app.status_text()
-            .starts_with("Speech stopped working (the engine had a bug)."),
+            .starts_with("Error: Speech stopped working (the engine had a bug)."),
         "{}",
         app.status_text()
     );

@@ -423,7 +423,8 @@ fn line(out: &mut String, k: &str, v: &Value) {
 }
 
 impl From<&Theme> for ThemeFile {
-    /// A fully explicit file for a resolved theme: every key written.
+    /// A fully explicit file for a resolved theme: every key written except
+    /// the colors derived at load.
     fn from(t: &Theme) -> Self {
         let to_style = |s: &crate::model::Style| StyleFile {
             foreground: Some(s.foreground),
@@ -432,8 +433,12 @@ impl From<&Theme> for ThemeFile {
             extra: s.extra.clone(),
         };
         let mut colors = [None; ColorRole::COUNT];
+        // Derived roles are left out, so a copied file derives them again
+        // from its own colors instead of freezing these.
         for &r in ColorRole::ALL {
-            colors[r.index()] = Some(t.color(r));
+            if !t.is_derived(r) {
+                colors[r.index()] = Some(t.color(r));
+            }
         }
         ThemeFile {
             name: Some(t.meta.name.clone()),

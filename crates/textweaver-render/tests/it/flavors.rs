@@ -132,7 +132,11 @@ fn default_template_is_an_accessible_page() {
     assert!(page.contains("<title>GFM features</title>"));
     assert!(page.contains("<a class=\"skip-link\" href=\"#main\">Skip to content</a>"));
     assert!(page.contains("<main id=\"main\" tabindex=\"-1\">"));
-    assert!(page.contains("prefers-color-scheme: dark"));
+    // The theme's properties: Galaxy, Galaxy Light when the system asks
+    // for light, and system colors under forced colors.
+    assert!(page.contains("prefers-color-scheme: light"));
+    assert!(page.contains("--tw-background:"));
+    assert!(page.contains("forced-colors: active"));
     assert!(page.contains("prefers-reduced-motion: reduce"));
     assert!(page.contains("<nav class=\"toc\" aria-label=\"Table of contents\">"));
     // The document has its own h1, so the template adds none.

@@ -26,7 +26,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [The textweaver window (GUI)](gui.md): starting it, what is in the window, its keys, announcements, and the reading aids it draws.
 - [Bookmarks, notes, and highlights](notes.md): marking your place and your thoughts.
 - [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, and reading level.
-- [Themes](themes.md): the 23 built-in color themes, following your system, and writing your own.
+- [Themes](themes.md): the 24 built-in color themes, following your system, and writing your own.
 - [Math](math.md): hearing math read aloud, and writing it in Markdown.
 
 ### Writing

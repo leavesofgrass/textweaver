@@ -39,18 +39,20 @@ Names ignore case. Star's older names still work (`obsidian` means Galaxy). If a
 
 ## The built-in themes
 
-They are grouped here by kind. Each is one of Star's palettes.
+They are grouped here by kind. All but Lamplight are Star's palettes; Lamplight is textweaver's own.
 
 Not every theme has to meet the WCAG AA contrast level, as long as some do.
 
 - **Must meet AA.** Galaxy, Galaxy Light, Contrast, and High Contrast. The two high-contrast themes reach 7 to 1. Where one of Star's colors fell short in these four, it was moved by the smallest change that passes, and the theme file lists every change.
 - **Every other theme** keeps Star's colors exactly. Its theme file says whether it meets AA.
-  - Meets AA: Amber, Catppuccin Mocha, Dracula, Gruvbox Dark, Gruvbox Light, Kanagawa, Rose Pine, Sepia, and Tokyo Night.
+  - Meets AA: Amber, Catppuccin Mocha, Dracula, Gruvbox Dark, Gruvbox Light, Kanagawa, Lamplight, Rose Pine, Sepia, and Tokyo Night.
   - Falls short on some colors, often the dim text: Dark, Everforest Dark, Light, Monokai, Nord, One Dark, One Light, Phosphor, Solarized Dark, and Solarized Light.
 
 If you read by sight and need strong contrast, choose one of the themes that meets AA.
 
-F5 goes through them in a different order: Galaxy, Galaxy Light, One Dark, One Light, Dark, Light, Contrast, High Contrast, Phosphor, Dracula, Nord, Solarized Dark, Solarized Light, Gruvbox Dark, Tokyo Night, Catppuccin Mocha, Monokai, Sepia, Amber, Everforest Dark, Rose Pine, Kanagawa, and Gruvbox Light. Your own themes come after them.
+F5 goes through the themes that meet AA first, with light and dark partners side by side: Galaxy, Galaxy Light, High Contrast, Contrast, Lamplight, Sepia, Gruvbox Dark, Gruvbox Light, Tokyo Night, Catppuccin Mocha, Dracula, Rose Pine, Kanagawa, and Amber. Then come the ten below AA: One Dark, One Light, Dark, Light, Solarized Dark, Solarized Light, Nord, Everforest Dark, Monokai, and Phosphor. Your own themes come after them.
+
+When F5 picks a theme below AA, it says so in words after the name, for example "Theme One Dark. Below AA: 2 checks fall short."
 
 Dark themes:
 
@@ -69,6 +71,7 @@ Dark themes:
 13. Everforest Dark: soft greens.
 14. Rose Pine: muted rose and pine.
 15. Kanagawa.
+16. Lamplight: a soft, warm dark theme with low glare. Body text meets AAA (7.4 to 1) at about 60 percent of Galaxy's contrast, and the spoken word and sentence are an orange and blue pair. Its file has `tags = ["soft"]`.
 
 Light themes:
 
@@ -121,7 +124,7 @@ textweaver never changes your terminal's own colors or cursor.
 
 ## HTML output
 
-Documents converted to HTML use a stylesheet of their own, not a textweaver theme: dark text on a light page, or light text on a dark page when the reader's system asks for dark, with stronger borders and dim text at full strength when the system asks for more contrast. A browser with a Windows contrast theme on uses its own colors. Links are underlined, and keyboard focus always shows a ring.
+Documents converted to HTML use textweaver's themes as CSS properties named `--tw-` and the color's key (`--tw-background`, `--tw-dim-text`): Galaxy, or Galaxy Light when the reader's system asks for light, and High Contrast when it asks for more contrast. A browser with a Windows contrast theme on uses its own colors. Links are underlined, and keyboard focus always shows a ring with a thin inner line.
 
 ## Writing your own theme
 
@@ -165,6 +168,16 @@ To start from a complete copy instead, copy a built-in theme's file (in textweav
 
 `[colors]`: `background`, `surface` (lists and panels), `text`, `dim_text` (hints, line numbers, rules; used on the page only), `heading1` to `heading6`, `link`, `code`, `code_background`, `quote`, and `error`.
 
+`[colors]` can also set fifteen interface colors. You rarely need to: each is worked out from your theme's own colors when it loads, and adjusted until it passes its check. A theme that inherits another works them out again from its own colors, unless the other theme set them in its file.
+
+- Fills: `raised` (buttons, fields, the selected row).
+- Text: `panel_dim_text` (muted text on panels), `on_accent` (text on the accent), and `disabled` (unavailable controls, 3 to 1).
+- Lines and marks, each 3 to 1 against what is beside them: `control_border`, `accent`, `caret`, `focus_inner` (the thin line between a control and its focus ring), `difficult_word`, `syllable_mark`, `misspelling`, and `lint`.
+- Bands behind text: `ruler` (the reading line) and `ruler_band` (the rows around it).
+- Decoration only: `border` (panel edges and dividers).
+
+`[theme] tags` is a list of words describing a theme, such as `tags = ["soft"]`.
+
 `[styles.NAME]`, one table each for `selection`, `spoken_word`, `spoken_sentence`, `find_hit`, `current_find_hit`, `bookmark`, `note`, `status_bar`, and `focus`. Each can set:
 
 - `foreground`: the text color inside the highlight.
@@ -195,7 +208,7 @@ Keys textweaver does not know are kept, so a theme written for a newer version s
 
 When textweaver loads your theme, it measures every color against what it sits on. Text needs 4.5 to 1 (7 to 1 in a high-contrast theme); the focus band needs 3 to 1 against the page. The spoken word's band needs 3 to 1 against the page and against the sentence's band, so the word stands out within its sentence. The sentence's band has no minimum: it is a soft tint, and the underline is what marks the sentence. Every highlight needs at least one attribute, and the spoken word must differ from its sentence, and the current find match from the others, by attribute and not only by color.
 
-A theme that falls short still loads. textweaver tells you what to fix, for example: "Theme Midnight: 1 of 45 checks fail. Dim text on background: 4.0 to 1, needs 4.5 to 1."
+A theme that falls short still loads. textweaver tells you what to fix, for example: "Theme Midnight: 1 of 61 checks fail. Dim text on background: 4.0 to 1, needs 4.5 to 1."
 
 If a file has a mistake, textweaver skips that file, loads the rest, and says which key or line is wrong, for example: "midnight.toml was not loaded: colors.text: "white" is not a color; write it as #rrggbb, for example #1e1e1e."
 

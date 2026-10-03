@@ -1463,7 +1463,7 @@ mod tests {
         wait_for_preview(&mut app);
         assert_eq!(
             app.status_text(),
-            "Could not start Other engine to preview Anna."
+            "Error: Could not start Other engine to preview Anna."
         );
     }
 

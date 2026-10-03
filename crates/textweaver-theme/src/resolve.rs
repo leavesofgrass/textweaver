@@ -349,16 +349,123 @@ pub fn resolve(
             .collect(),
     };
 
+    // The interface roles, derived last from the colors and styles above.
+    let mut derived = [false; ColorRole::COUNT];
+    let given_or_base =
+        |r: ColorRole| given(r).or_else(|| base.filter(|b| !b.is_derived(r)).map(|b| b.color(r)));
+    derive_interface(&mut c, &mut derived, &styles, kind, dark, given_or_base);
+
     let theme = Theme {
         meta: meta(file, base, name, kind),
         colors: c,
         styles,
+        derived,
         user_highlights,
         colors_extra: merged(base.map(|b| &b.colors_extra), &file.colors_extra),
         styles_extra: merged(base.map(|b| &b.styles_extra), &file.styles_extra),
         extra: merged(base.map(|b| &b.extra), &file.extra),
     };
     Ok((theme, fx.adjustments))
+}
+
+/// Works out the fifteen [`ColorRole::DERIVED`] roles from the theme's own
+/// colors, each nudged until it meets its class's floor. A role the file
+/// gives (or a base theme gave explicitly) is kept as it is and reported by
+/// [`crate::check()`] instead.
+fn derive_interface(
+    c: &mut [Rgb; ColorRole::COUNT],
+    derived: &mut [bool; ColorRole::COUNT],
+    styles: &[Style; StyleRole::COUNT],
+    kind: ThemeKind,
+    dark: bool,
+    given: impl Fn(ColorRole) -> Option<Rgb>,
+) {
+    use ColorRole as C;
+    let hc = kind == ThemeKind::HighContrast;
+    let text_min = minimum(Requirement::Text, kind);
+    let ind_min = minimum(Requirement::NonText, kind);
+    let resolve = |s: &Style| -> (Rgb, Rgb) {
+        let bg = s.background.unwrap_or(c[C::Background.index()]);
+        if s.attributes.reverse {
+            (bg, s.foreground)
+        } else {
+            (s.foreground, bg)
+        }
+    };
+    let page = c[C::Background.index()];
+    let surface = c[C::Surface.index()];
+    let text = c[C::Text.index()];
+    let dim = c[C::DimText.index()];
+    let (status_fg, status_bg) = resolve(&styles[StyleRole::StatusBar.index()]);
+    let (_, focus) = resolve(&styles[StyleRole::Focus.index()]);
+
+    let mut set = |r: ColorRole, value: &dyn Fn(&[Rgb; ColorRole::COUNT]) -> Rgb| match given(r) {
+        Some(v) => c[r.index()] = v,
+        None => {
+            c[r.index()] = value(c);
+            derived[r.index()] = true;
+        }
+    };
+    set(C::Raised, &|_| {
+        let raised = if hc { surface } else { surface.mix(text, 0.07) };
+        adjust_away(raised, text, text_min).unwrap_or(raised)
+    });
+    set(C::Border, &|_| {
+        if hc {
+            text
+        } else {
+            page.mix(text, if dark { 0.20 } else { 0.28 })
+        }
+    });
+    set(C::ControlBorder, &|c| {
+        let b = if hc { text } else { c[C::Border.index()] };
+        adjust_lightness(b, &[surface, page], ind_min).unwrap_or(text)
+    });
+    set(C::PanelDimText, &|_| {
+        adjust_lightness(dim, &[surface, page], text_min).unwrap_or(text)
+    });
+    set(C::Accent, &|_| {
+        adjust_lightness(status_bg, &[surface], ind_min).unwrap_or(status_bg)
+    });
+    set(C::OnAccent, &|c| {
+        let accent = c[C::Accent.index()];
+        adjust_lightness(status_fg, &[accent], text_min).unwrap_or_else(|| {
+            if contrast_ratio(Rgb::BLACK, accent) > contrast_ratio(Rgb::WHITE, accent) {
+                Rgb::BLACK
+            } else {
+                Rgb::WHITE
+            }
+        })
+    });
+    set(C::Disabled, &|c| {
+        adjust_lightness(dim, &[c[C::Raised.index()]], 3.0).unwrap_or(dim)
+    });
+    set(C::Caret, &|_| text);
+    set(C::FocusInner, &|_| {
+        if contrast_ratio(page, focus) >= contrast_ratio(text, focus) {
+            page
+        } else {
+            text
+        }
+    });
+    set(C::Ruler, &|_| {
+        let band = page.mix(focus, 0.22);
+        adjust_away(band, text, text_min).unwrap_or(band)
+    });
+    set(C::RulerBand, &|_| {
+        let band = page.mix(focus, 0.10);
+        adjust_away(band, text, text_min).unwrap_or(band)
+    });
+    for (r, seed) in [
+        (C::DifficultWord, text),
+        (C::SyllableMark, text),
+        (C::Misspelling, focus),
+        (C::Lint, text),
+    ] {
+        set(r, &|_| {
+            adjust_lightness(seed, &[page], ind_min).unwrap_or(text)
+        });
+    }
 }
 
 fn merged(base: Option<&Table>, over: &Table) -> Table {
