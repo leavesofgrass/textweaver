@@ -24,6 +24,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [Reading and moving around](reading.md): opening files, reading aloud, moving by unit, Speech Cursor, find, go to, and history.
 - [Keyboard reference](keyboard.md): every key in the terminal and the GUI, generated from the keymap.
 - [The textweaver window (GUI)](gui.md): starting it, what is in the window, its keys, announcements, and the reading aids it draws.
+- [The window in pictures](screenshots/xilem-gui/README.md): the review screenshots, each with a description of what it shows.
 - [Bookmarks, notes, and highlights](notes.md): marking your place and your thoughts.
 - [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, and reading level.
 - [Themes](themes.md): the 24 built-in color themes, following your system, and writing your own.

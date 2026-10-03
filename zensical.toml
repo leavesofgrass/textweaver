@@ -42,6 +42,7 @@ nav = [
       { "Reading and moving around" = "reading.md" },
       { "Keyboard reference" = "keyboard.md" },
       { "The textweaver window (GUI)" = "gui.md" },
+      { "The window in pictures" = "screenshots/xilem-gui/README.md" },
       { "Bookmarks, notes, and highlights" = "notes.md" },
       { "Reading aids" = "reading-aids.md" },
       { "Themes" = "themes.md" },
