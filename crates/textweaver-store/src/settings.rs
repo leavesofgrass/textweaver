@@ -68,7 +68,7 @@ pub struct SpeechSettings {
     /// Latency offset for audio-clock word events, in ms (Star 120).
     pub latency_offset_ms: u32,
     /// Silence after a heading, in ms at the default rate (shorter at
-    /// faster rates); 0 turns it off. At most [`MAX_PAUSE_MS`].
+    /// faster rates); 0 turns it off. At most 3000.
     pub pause_heading_ms: u32,
     /// Silence after a paragraph, in ms at the default rate; 0 turns it
     /// off.
