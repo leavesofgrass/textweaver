@@ -24,8 +24,6 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.pause_heading_ms`: default 400 milliseconds. Pause after headings. Silence after a heading, shorter at faster rates. 0 turns it off. From 0 to 3000 milliseconds, in steps of 50. Syncs between computers.
 - `speech.pause_paragraph_ms`: default 300 milliseconds. Pause after paragraphs. Silence after a paragraph, shorter at faster rates. 0 turns it off. From 0 to 3000 milliseconds, in steps of 50. Syncs between computers.
 - `speech.pause_list_item_ms`: default 150 milliseconds. Pause after list items. Silence after a list item, shorter at faster rates. 0 turns it off. From 0 to 3000 milliseconds, in steps of 50. Syncs between computers.
-- `speech.output_device`: default not set. Output device. The sound device speech plays on, by its id; tw backends --devices lists them. Not set uses the system's default, and so does a device that is not connected. Text; empty means not set. Stays on this computer.
-
 - `speech.output_device`: default not set. Output device. The sound device speech plays on, by its id. Not set, or a device that is not connected, uses the system's default. Text; empty means not set. Stays on this computer.
 - `speech.verbosity`: default `"normal"`. Verbosity. How much textweaver says about what it does. Choices: `"low"`, `"normal"`, `"high"`. Syncs between computers.
 - `speech.eci.dictionaries`: default on (`true`). Eloquence dictionaries. The community pronunciation dictionaries for Eloquence: on, off, or a folder of your own. Choices: `true` (on), `false` (off). Other values may be written too. Stays on this computer.

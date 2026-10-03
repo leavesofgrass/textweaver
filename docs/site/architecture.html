@@ -658,7 +658,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-xilem"
    ],
    "deps": [
-    "textweaver-components"
+    "textweaver-components",
+    "textweaver-core"
    ],
    "description": "Fonts for textweaver: bundled Atkinson Hyperlegible Next and Mono and OpenDyslexic (SIL OFL 1.1), Lexend downloaded on first choice, installed fonts found by family name, and font choice and resolution",
    "dev_deps": [],
@@ -687,7 +688,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-tui",
     "textweaver-xilem"
    ],
-   "deps": [],
+   "deps": [
+    "textweaver-core"
+   ],
    "description": "Themes for textweaver: Star's palettes, custom themes, WCAG contrast checks, output for the TUI, GUI, and HTML",
    "dev_deps": [],
    "job": "Themes: one palette per theme, checked for WCAG contrast, and rendered for the terminal UI, the GUI, and HTML output.",
@@ -1438,7 +1441,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-formats"
    ],
    "deps": [
-    "textweaver-components"
+    "textweaver-components",
+    "textweaver-core"
    ],
    "description": "textweaver OCR: the pure-Rust ocrs engine in process, a Tesseract fallback, model downloads checked by SHA-256, and PDF page images",
    "dev_deps": [],
@@ -1581,10 +1585,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-enginehost",
     "textweaver-engines",
     "textweaver-export",
+    "textweaver-fonts",
     "textweaver-formats",
     "textweaver-keymap",
     "textweaver-math",
     "textweaver-mathcat",
+    "textweaver-ocr",
     "textweaver-piper",
     "textweaver-sapi",
     "textweaver-speech",
@@ -1592,6 +1598,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-summary",
     "textweaver-sync",
     "textweaver-text",
+    "textweaver-theme",
     "textweaver-vault",
     "textweaver-writers"
    ],
