@@ -1,10 +1,18 @@
 # textweaver quick start
 
-In 30 seconds, you can hear a document read aloud and move around in it. To practice, open this guide itself: it is a Markdown file.
+New to textweaver? [Start here, for students](start-students.md) is the shortest path. In 30 seconds, you can hear a document read aloud and move around in it. To practice, open this guide itself: it is a Markdown file.
 
 textweaver opens text, Markdown, HTML, EPUB, Word (DOCX), and PDF files.
 
-## Windows
+## Windows: the window
+
+1. Download the window package, `textweaver-VERSION-windows-x86_64-gui.zip`, from the [releases page](https://github.com/leavesofgrass/textweaver/releases). Right-click it, choose Extract All, and extract it to a folder of your own.
+2. Open the folder and run `textweaver-gui.exe`. Windows warns once, because the program is not code-signed: choose "More info", then "Run anyway".
+3. Press **Ctrl+O** to open a document and **Space** to hear it. **F1** opens the help, and **F3** lists every key.
+
+The window is described in [the window guide](gui.md). The rest of this page is for the terminal reader.
+
+## Windows: the terminal reader
 
 1. Download the Windows `.zip` from the [releases page](https://github.com/leavesofgrass/textweaver/releases). Right-click it, choose Extract All, and extract it to a folder such as `C:\textweaver`.
 2. Open that folder. Click the address bar, type `cmd`, and press Enter. A command prompt opens in the folder.

@@ -31,6 +31,14 @@ extra_javascript = ["assets/textweaver-site.js"]
 
 nav = [
   { "Home" = "README.md" },
+  { "Start here" = [
+    { "For students" = "start-students.md" },
+    { "For accommodation staff" = "start-staff.md" },
+    { "What is new" = "whats-new.md" },
+    { "Known limits" = "known-limits.md" },
+    { "Privacy" = "privacy.md" },
+    { "Accessibility statement" = "accessibility.md" },
+  ] },
   { "For users" = [
     { "Getting started" = [
       { "Quick start" = "quickstart.md" },
@@ -84,16 +92,6 @@ nav = [
       { "Third-party data" = "dev/third-party-data.md" },
       { "JSON-RPC" = "json-rpc.md" },
       { "Roadmap" = "roadmap.md" },
-      { "Research for the next waves" = [
-        { "The research index" = "dev/research/README.md" },
-        { "Next waves plan" = "dev/research/next-waves-plan.md" },
-        { "Performance audit" = "dev/research/performance-audit.md" },
-        { "Speech engines and runtimes" = "dev/research/speech-engines-and-runtimes.md" },
-        { "Text-to-speech use cases" = "dev/research/tts-use-cases.md" },
-        { "Health sciences use cases" = "dev/research/health-sciences-use-cases.md" },
-        { "GUI and visual design" = "dev/research/gui-and-visual-design.md" },
-        { "Law and standards" = "dev/research/legal-and-standards.md" },
-      ] },
       { "Star features not yet planned" = "star-gaps.md" },
       { "Changelog (on GitHub)" = "https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md" },
     ] },

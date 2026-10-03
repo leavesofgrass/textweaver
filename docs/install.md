@@ -1,6 +1,6 @@
 # Installing textweaver
 
-In a hurry? The [quick start](quickstart.md) is the short version.
+In a hurry? The [quick start](quickstart.md) is the short version. On Windows, the quickest way in is the window package: download `textweaver-VERSION-windows-x86_64-gui.zip`, extract it, and run `textweaver-gui.exe` (see [The GUI](#the-gui)).
 
 textweaver is in alpha. The newest release is 0.1.0-alpha.8. A release on GitHub has these packages:
 

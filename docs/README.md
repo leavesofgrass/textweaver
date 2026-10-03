@@ -10,6 +10,15 @@ New here? Start with the [quick start](quickstart.md).
 
 There are also [interactive pages](#interactive-pages) that explain textweaver with diagrams you can explore by keyboard. They work offline in any browser.
 
+## Start here
+
+- [For students](start-students.md): from download to hearing a document.
+- [For accommodation staff](start-staff.md): converting course material, preparing computers, and working without internet.
+- [What is new](whats-new.md): each release in plain words.
+- [Known limits](known-limits.md): what does not work yet, and what has not been tested.
+- [Privacy](privacy.md): what stays on your computer, and when textweaver uses the network.
+- [Accessibility statement](accessibility.md): what has been tested, how, and what has not.
+
 ## For users
 
 ### Getting started
