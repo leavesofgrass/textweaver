@@ -218,6 +218,13 @@ pub fn run() -> anyhow::Result<()> {
             headings.join("; ")
         ));
     }
+    let twice = duplicate_headings(&changelog);
+    if !twice.is_empty() {
+        problems.push(format!(
+            "CHANGELOG.md has headings twice; merge each pair first: {}",
+            twice.join("; ")
+        ));
+    }
     if !problems.is_empty() {
         if args.dry_run {
             for p in &problems {
@@ -683,6 +690,40 @@ fn agent_headings(changelog: &str) -> Vec<String> {
         .collect()
 }
 
+/// Headings that appear twice: a version's `## [x.y.z]` anywhere in the
+/// changelog, or an area's `### ...` within one version's section (two
+/// agents each starting "### Fixed" under `[Unreleased]`). Compared
+/// without case or surrounding spaces; each is named once.
+fn duplicate_headings(changelog: &str) -> Vec<String> {
+    let mut versions: Vec<String> = Vec::new();
+    let mut areas: Vec<String> = Vec::new();
+    let mut out: Vec<String> = Vec::new();
+    let note = |h: &str, out: &mut Vec<String>| {
+        if !out.iter().any(|o| o == h) {
+            out.push(h.to_owned());
+        }
+    };
+    for line in changelog.lines() {
+        if let Some(h) = line.strip_prefix("## ") {
+            let key = h.trim().to_lowercase();
+            if versions.contains(&key) {
+                note(line.trim(), &mut out);
+            } else {
+                versions.push(key);
+            }
+            areas.clear();
+        } else if let Some(h) = line.strip_prefix("### ") {
+            let key = h.trim().to_lowercase();
+            if areas.contains(&key) {
+                note(line.trim(), &mut out);
+            } else {
+                areas.push(key);
+            }
+        }
+    }
+    out
+}
+
 /// The byte offset of the first `[x.y.z]: http...` link definition line.
 fn first_link_line(text: &str) -> Option<usize> {
     let mut offset = 0;
@@ -839,6 +880,17 @@ fn cargo(root: &Path, args: &[&str]) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn headings_twice_are_refused_per_version_section() {
+        let changelog = "# Changelog\n\n## [Unreleased]\n\n### Fixed\n\n- a\n\n### Added\n\n- b\n\n### fixed \n\n- c\n\n## [0.1.0] - 2026-01-01\n\n### Fixed\n\n- d\n\n## [0.1.0] - 2026-01-01\n";
+        assert_eq!(
+            duplicate_headings(changelog),
+            ["### fixed", "## [0.1.0] - 2026-01-01"]
+        );
+        let clean = "## [Unreleased]\n\n### Fixed\n\n## [0.1.0]\n\n### Fixed\n";
+        assert!(duplicate_headings(clean).is_empty());
+    }
 
     #[test]
     fn mentions_the_release_does_not_update_are_listed() {
