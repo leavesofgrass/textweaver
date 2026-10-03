@@ -463,6 +463,7 @@ notes-editing = Notiz wird bearbeitet: { $text }
 # $key opens a document.
 app-no-document-open = Kein Dokument ist geöffnet. Drücken Sie { $key }, um eines zu öffnen.
 app-window-only = Dieser Befehl funktioniert im textweaver-Fenster.
+app-terminal-only = Dieser Befehl funktioniert im Terminal-Reader.
 settings-save-failed = Einstellungen konnten nicht gespeichert werden: { $error }
 edit-still-editing = Noch in Bearbeitung.
 goto-not-a-target = Kein Sprungziel: { $text }. Geben Sie eine Zeilennummer ein, einen Prozentwert wie 50%, start oder end.
@@ -2786,6 +2787,9 @@ setting-editing-author-help = Der Autor, der in neue Dokumente aus einer Vorlage
 
 gui-yes = Ja
 gui-no = Nein
+gui-answer-delete = Löschen
+gui-answer-remove = Entfernen
+gui-answer-replace = Ersetzen
 gui-question-hint = Y antwortet ja, N antwortet nein, Escape antwortet nein.
 gui-button-open = Öffnen…
 gui-button-font = Schriftart…

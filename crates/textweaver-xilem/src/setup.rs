@@ -186,6 +186,28 @@ pub fn welcome_text(c: &Catalog, keymap: &Keymap) -> String {
 /// (Restart Speech, and once by itself when the speech thread dies).
 /// `--no-speech` and the paced backend start at once.
 pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<String>) {
+    build_app_following(opts, announcer, false)
+}
+
+/// True when the system's color scheme can choose the theme at startup:
+/// `os_theme` (no `--theme` for this run), `[display] follow_os_theme` on,
+/// and no theme picked by the user (`theme_explicit`). Otherwise the probe
+/// is not run at all, as in the terminal reader.
+pub fn follows_os_theme(settings: &Settings, os_theme: bool) -> bool {
+    os_theme && settings.display.follow_os_theme && !settings.display.theme_explicit
+}
+
+/// [`build_app`], and with `os_theme` the theme the system's light, dark
+/// or high-contrast setting picks ([`follows_os_theme`]). Reading that
+/// setting starts small processes on Windows (35 to 90 ms measured for the
+/// terminal reader), so it runs on a helper thread while the keys, speech
+/// and app are built, and is joined at the end; a probe that fails or
+/// panics leaves the saved theme (performance QW2, W8c-w).
+pub fn build_app_following(
+    opts: &Options,
+    announcer: Box<dyn Announcer>,
+    os_theme: bool,
+) -> (App, Vec<String>) {
     let mut messages = Vec::new();
     let platform = Platform::current();
     let paths = match &opts.home {
@@ -227,6 +249,14 @@ pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<Str
             (settings, keymap)
         }
     };
+    let os_scheme = follows_os_theme(&settings, os_theme)
+        .then(|| {
+            std::thread::Builder::new()
+                .name("os-theme".into())
+                .spawn(textweaver_app::theme::os::probe)
+                .ok()
+        })
+        .flatten();
     if let Some(voice) = &opts.voice {
         settings.speech.voice = Some(voice.clone());
     }
@@ -262,6 +292,10 @@ pub fn build_app(opts: &Options, announcer: Box<dyn Announcer>) -> (App, Vec<Str
     } else {
         app.set_speech_starter(starter);
     }
+    // The probe gives up after 500 ms; a panic in it keeps the saved theme.
+    if let Some(scheme) = os_scheme.and_then(|probe| probe.join().ok()) {
+        let _ = app.apply_startup_theme(scheme);
+    }
     (app, messages)
 }
 
@@ -289,6 +323,43 @@ mod tests {
         assert_eq!(app.backend_name(), "silent");
         assert_eq!(app.paths(), Some(&Paths::under(&dir)));
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// The system's color scheme is read only when it can change the theme:
+    /// no `--theme`, following the system, and no theme the user picked
+    /// (W8c-w, as the terminal reader decides it).
+    #[test]
+    fn the_os_theme_is_probed_only_when_it_can_apply() {
+        let mut s = Settings::default();
+        s.display.follow_os_theme = true;
+        s.display.theme_explicit = false;
+        assert!(follows_os_theme(&s, true));
+        assert!(!follows_os_theme(&s, false), "--theme skips the probe");
+        s.display.theme_explicit = true;
+        assert!(!follows_os_theme(&s, true), "a picked theme skips it");
+        s.display.theme_explicit = false;
+        s.display.follow_os_theme = false;
+        assert!(!follows_os_theme(&s, true), "not following skips it");
+    }
+
+    /// A theme the user picked stays, with the probe asked for: it is not
+    /// run, and the saved theme is the one built.
+    #[test]
+    fn a_picked_theme_survives_the_startup_probe() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = SettingsStore::new(Paths::under(dir.path()));
+        let mut s = Settings::default();
+        s.display.theme = "solarized-light".into();
+        s.display.follow_os_theme = true;
+        s.display.theme_explicit = true;
+        store.save(&s).unwrap();
+        let opts = Options {
+            no_speech: true,
+            home: Some(dir.path().to_path_buf()),
+            ..Options::default()
+        };
+        let (app, _) = build_app_following(&opts, Box::new(LogAnnouncer::default()), true);
+        assert_eq!(app.settings().display.theme, "solarized-light");
     }
 
     /// The keyboard preset from the settings is in effect from the start

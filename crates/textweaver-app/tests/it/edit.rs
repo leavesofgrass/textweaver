@@ -497,6 +497,79 @@ fn quitting_with_changes_saves_on_request() {
     assert_eq!(std::fs::read_to_string(&file).unwrap(), "Some text.\nMore.");
 }
 
+/// The window's close button and Alt+F4 (W8c-w): no "Quit textweaver?"
+/// question, but unsaved edits ask Save, Discard or Cancel as Quit does,
+/// and Cancel keeps the window open with the edits.
+#[test]
+fn closing_the_window_asks_about_unsaved_edits_only() {
+    let mut r = rig();
+    let file = r.file("close.md", "Some text.\n");
+    r.app.open(&file).unwrap();
+    // Nothing unsaved: the window closes at once, with no question.
+    assert_eq!(r.app.close_requested(), vec![Effect::Quit]);
+    assert!(!r.app.confirmation_pending());
+
+    let mut r = rig();
+    let file = r.file("close.md", "Some text.\n");
+    r.app.open(&file).unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.type_str("New. ");
+    let effects = r.app.close_requested();
+    let Some(Effect::ShowList { items, .. }) = effects.first() else {
+        panic!("{effects:?}");
+    };
+    assert_eq!(items.len(), 3, "Save, Discard, Cancel: {items:?}");
+    assert!(!effects.contains(&Effect::Quit));
+    assert!(r.said.any("unsaved changes"));
+    // Cancel: still editing, nothing lost, the window stays.
+    let effects = r.send(Command::Choose(2));
+    assert!(!effects.contains(&Effect::Quit), "{effects:?}");
+    assert!(r.app.is_dirty());
+    assert_eq!(r.text(), "New. Some text.\n");
+    // Again, then Discard: the window closes and the file is untouched.
+    r.app.close_requested();
+    let effects = r.send(Command::Choose(1));
+    assert_eq!(effects, vec![Effect::Quit]);
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "Some text.\n");
+}
+
+/// A close while Quit's own question is open closes rather than leaving
+/// that question behind.
+#[test]
+fn closing_the_window_drops_the_quit_question() {
+    let mut r = rig();
+    let file = r.file("q.md", "Some text.\n");
+    r.app.open(&file).unwrap();
+    r.act(ActionId::Quit);
+    assert_eq!(r.app.pending_confirmation(), Some(ActionId::Quit));
+    assert_eq!(r.app.close_requested(), vec![Effect::Quit]);
+    assert_eq!(r.app.pending_confirmation(), None);
+}
+
+/// Questions that delete, remove or replace name the verb for the
+/// window's confirming button; the others have none (W8c-w).
+#[test]
+fn destructive_questions_name_their_verb() {
+    use textweaver_app::DestructiveVerb;
+    let mut r = rig();
+    let file = r.file("v.md", "Some text.\n");
+    r.app.open(&file).unwrap();
+    assert_eq!(r.app.destructive_question(), None);
+    r.act(ActionId::Quit);
+    assert!(r.app.confirmation_pending());
+    assert_eq!(
+        r.app.destructive_question(),
+        None,
+        "quitting deletes nothing"
+    );
+    r.send(Command::Confirm(Confirm::No));
+    r.act(ActionId::DeleteNote);
+    assert!(r.app.confirmation_pending());
+    assert_eq!(r.app.destructive_question(), Some(DestructiveVerb::Delete));
+    r.send(Command::Confirm(Confirm::No));
+    assert_eq!(r.app.destructive_question(), None);
+}
+
 #[test]
 fn autosave_snapshot_is_offered_after_a_crash() {
     let mut r = rig();

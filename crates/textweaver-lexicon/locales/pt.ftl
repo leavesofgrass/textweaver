@@ -443,6 +443,7 @@ notes-editing = Editando nota: { $text }
 # $key opens a document.
 app-no-document-open = Nenhum documento está aberto. Pressione { $key } para abrir um.
 app-window-only = Este comando funciona na janela do textweaver.
+app-terminal-only = Este comando funciona no leitor de terminal.
 settings-save-failed = Não foi possível salvar as configurações: { $error }
 edit-still-editing = Ainda editando.
 goto-not-a-target = Não é um destino válido: { $text }. Digite um número de linha, uma porcentagem como 50%, início ou fim.
@@ -2766,6 +2767,9 @@ setting-editing-author-help = O autor escrito nos novos documentos feitos a part
 
 gui-yes = Sim
 gui-no = Não
+gui-answer-delete = Excluir
+gui-answer-remove = Remover
+gui-answer-replace = Substituir
 gui-question-hint = Y responde sim, N responde não, Escape responde não.
 gui-button-open = Abrir…
 gui-button-font = Fonte…
