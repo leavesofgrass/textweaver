@@ -224,7 +224,7 @@ impl App {
         self.tell(&msg);
     }
 
-    fn note_item(&self, i: usize) -> Option<String> {
+    pub(crate) fn note_item(&self, i: usize) -> Option<String> {
         let s = self.session.as_ref()?;
         let n = s.notes.get(i)?;
         let line = text_util::line_of(&s.doc, n.range.start) + 1;
