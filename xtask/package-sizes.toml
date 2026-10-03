@@ -7,21 +7,21 @@
 # (docs/dev/releasing.md, "Package sizes"). Written by that step; edit only
 # the notes by hand.
 
-version = "0.1.0-alpha.7"
+version = "0.1.0-alpha.8"
 
 [sizes]
-"linux-aarch64-gui.AppImage" = 37734920
-"linux-aarch64-gui.tar.gz" = 39435795
-"linux-aarch64.AppImage" = 57477640
-"linux-aarch64.tar.gz" = 60806427
-"linux-x86_64-gui.AppImage" = 40380920
-"linux-x86_64-gui.tar.gz" = 42232216
-"linux-x86_64.AppImage" = 61901304
-"linux-x86_64.tar.gz" = 65449528
-"macos-universal-gui.zip" = 64504663
-"macos-universal.tar.gz" = 111911263
-"windows-x86_64-gui.zip" = 43175854
-"windows-x86_64.zip" = 69108008
+"linux-aarch64-gui.AppImage" = 38136328
+"linux-aarch64-gui.tar.gz" = 39869137
+"linux-aarch64.AppImage" = 58206728
+"linux-aarch64.tar.gz" = 61618186
+"linux-x86_64-gui.AppImage" = 40835576
+"linux-x86_64-gui.tar.gz" = 42714711
+"linux-x86_64.AppImage" = 62687736
+"linux-x86_64.tar.gz" = 66325497
+"macos-universal-gui.zip" = 65411740
+"macos-universal.tar.gz" = 113489596
+"windows-x86_64-gui.zip" = 43735774
+"windows-x86_64.zip" = 70080418
 
 # Why a package may grow more than 10 percent before the next release, one
 # line per package: "windows-x86_64.zip" = "why". "all" covers every

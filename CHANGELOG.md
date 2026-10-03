@@ -174,6 +174,21 @@ This release is about speed you can measure, hearing where things end, and text 
 - **GUI `--log`** writes the startup phases with their times, and every 200 highlight moves the driver's refresh time (the old highlight timing was a zero nothing read). The speech service's debug log says, every 200 scheduled words, how late they lit up and how far apart its timer steps were (for Windows's timer tick).
 - **A nightly profile** of `tw info` and of the 10 MB narration plan, uploaded as flame graphs and as plain-text lists of the hottest functions; and the GUI frame times, reported in the nightly summary.
 
+### Package sizes
+
+- `textweaver-0.1.0-alpha.8-linux-aarch64-gui.AppImage`: 36.4 MB (38,136,328 bytes)
+- `textweaver-0.1.0-alpha.8-linux-aarch64-gui.tar.gz`: 38.0 MB (39,869,137 bytes)
+- `textweaver-0.1.0-alpha.8-linux-aarch64.AppImage`: 55.5 MB (58,206,728 bytes)
+- `textweaver-0.1.0-alpha.8-linux-aarch64.tar.gz`: 58.8 MB (61,618,186 bytes)
+- `textweaver-0.1.0-alpha.8-linux-x86_64-gui.AppImage`: 38.9 MB (40,835,576 bytes)
+- `textweaver-0.1.0-alpha.8-linux-x86_64-gui.tar.gz`: 40.7 MB (42,714,711 bytes)
+- `textweaver-0.1.0-alpha.8-linux-x86_64.AppImage`: 59.8 MB (62,687,736 bytes)
+- `textweaver-0.1.0-alpha.8-linux-x86_64.tar.gz`: 63.3 MB (66,325,497 bytes)
+- `textweaver-0.1.0-alpha.8-macos-universal-gui.zip`: 62.4 MB (65,411,740 bytes)
+- `textweaver-0.1.0-alpha.8-macos-universal.tar.gz`: 108.2 MB (113,489,596 bytes)
+- `textweaver-0.1.0-alpha.8-windows-x86_64-gui.zip`: 41.7 MB (43,735,774 bytes)
+- `textweaver-0.1.0-alpha.8-windows-x86_64.zip`: 66.8 MB (70,080,418 bytes)
+
 ## [0.1.0-alpha.7] - 2026-10-01
 
 ### Keys: what changed
