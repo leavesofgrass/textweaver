@@ -247,7 +247,8 @@ impl App {
     pub(crate) fn list_notes(&mut self) -> Vec<Effect> {
         let n = self.session.as_ref().map_or(0, |s| s.notes.len());
         if n == 0 {
-            let msg = self.msg("notes-none");
+            let key = self.key(textweaver_keymap::ActionId::AddNote);
+            let msg = self.msg_args("notes-none", &args!["key" => key]);
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
@@ -290,7 +291,8 @@ impl App {
             return;
         };
         if s.notes.is_empty() {
-            let msg = self.msg("notes-none");
+            let key = self.key(textweaver_keymap::ActionId::AddNote);
+            let msg = self.msg_args("notes-none", &args!["key" => key]);
             self.tell(&msg);
             return;
         }
@@ -475,7 +477,8 @@ impl App {
         let items = self.highlight_items();
         let n = items.len();
         if n == 0 {
-            let msg = self.msg("notes-no-highlights");
+            let key = self.key(textweaver_keymap::ActionId::HighlightSelection);
+            let msg = self.msg_args("notes-no-highlights", &args!["key" => key]);
             self.tell(&msg);
             return vec![Effect::Redraw];
         }

@@ -173,7 +173,7 @@ stats-most-read = Le plus lu { $rank } : { $title }, { $time }, point le plus av
 stats-toggle-on = Les statistiques sont activées. Entrée les désactive.
 stats-toggle-off = Les statistiques sont désactivées. Entrée les active.
 stats-turned-on = Les statistiques de lecture sont activées.
-stats-turned-off = Les statistiques de lecture sont désactivées. Ce qui a été enregistré est conservé ; tw stats --clear le supprime.
+stats-turned-off = Les statistiques de lecture sont désactivées. Ce qui a été enregistré est conservé.
 
 ## Listes.
 
@@ -198,7 +198,7 @@ continue-intro =
         [one] Reprendre la lecture : 1 document, le plus récent d'abord.
        *[other] Reprendre la lecture : { $n } documents, les plus récents d'abord.
     }
-continue-empty = Rien à reprendre : aucune position.
+continue-empty = Aucune position. Lire l'enregistre.
 # One row, meaning first: the title, how far in, the computer, and how
 # long ago (continue-ago-*).
 continue-item = { $title }, { $pct } pour cent, { $device }, { $when }
@@ -1132,7 +1132,7 @@ notes-item =
         [yes] { $note }, ligne { $line }. Sur : { $anchor } Introuvable après la modification du fichier.
        *[no] { $note }, ligne { $line }. Sur : { $anchor }
     }
-notes-none = Aucune note.
+notes-none = Aucune note. Pour en ajouter une : { $key }.
 notes-list-title = Notes
 notes-list-intro =
     { $n ->
@@ -1158,7 +1158,7 @@ notes-highlight-item =
         [yes] { $text }, ligne { $line }, { $color }, introuvable après la modification du fichier
        *[no] { $text }, ligne { $line }, { $color }
     }
-notes-no-highlights = Aucun surlignage.
+notes-no-highlights = Aucun surlignage. Pour en faire un : { $key }.
 notes-highlights-title = Surlignages
 notes-highlights-intro =
     { $n ->
@@ -1232,7 +1232,7 @@ marks-find-wrapped =
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = Le signet { $name } est déjà ici.
 marks-bookmark-set = Signet { $name } posé à { $pct } pour cent.
-marks-no-bookmarks = Aucun signet.
+marks-no-bookmarks = Aucun signet. Pour en ajouter un : { $key }.
 marks-bookmarks-intro =
     { $n ->
         [one] Signets, { $n } élément. Entrée va à l'un d'eux, Suppr le supprime, F2 le renomme.
@@ -1348,7 +1348,7 @@ library-scanning = Analyse de la bibliothèque.
 library-scan-progress = Analyse de la bibliothèque : { $n } trouvés jusqu'ici.
 library-scan-stopped = L'analyse de la bibliothèque s'est arrêtée de façon inattendue. Ouvrez de nouveau la bibliothèque pour réessayer.
 # $command is the command line that adds a folder; $key names the Open command's key.
-library-empty = La bibliothèque est vide. Ajoutez un dossier avec { $command }, ou ouvrez un fichier avec { $key }.
+library-empty = La bibliothèque est vide. Ajoutez un dossier dans les Paramètres, sous Dossiers de bibliothèque, ou ouvrez un fichier avec { $key }.
 library-intro =
     { $n ->
         [one] Bibliothèque, { $n } document. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails.
@@ -1703,7 +1703,7 @@ setting-speech-pause-paragraph-ms-help = Silence après un paragraphe, plus cour
 setting-speech-pause-list-item-ms = Pause après les éléments de liste
 setting-speech-pause-list-item-ms-help = Silence après un élément de liste, plus court à débit rapide. 0 le désactive.
 setting-speech-output-device = Périphérique de sortie
-setting-speech-output-device-help = Le périphérique audio sur lequel la voix est jouée, par son identifiant ; tw backends --devices les liste. Non défini utilise celui du système par défaut, de même qu'un périphérique non connecté.
+setting-speech-output-device-help = Le périphérique audio sur lequel la voix est jouée, par son identifiant. Non défini utilise celui du système par défaut, de même qu'un périphérique non connecté.
 setting-speech-verbosity = Verbosité
 setting-speech-verbosity-help = Ce que textweaver dit de ce qu'il fait.
 choice-speech-verbosity-low = faible

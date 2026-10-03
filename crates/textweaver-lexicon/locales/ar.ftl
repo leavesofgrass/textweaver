@@ -215,7 +215,7 @@ stats-most-read = الأكثر قراءة { $rank }: { $title }، { $time }، أ
 stats-toggle-on = الإحصاءات مفعّلة. Enter لإيقافها.
 stats-toggle-off = الإحصاءات متوقفة. Enter لتفعيلها.
 stats-turned-on = إحصاءات القراءة مفعّلة.
-stats-turned-off = إحصاءات القراءة متوقفة. ما سُجِّل باقٍ؛ tw stats --clear يزيله.
+stats-turned-off = إحصاءات القراءة متوقفة. ما سُجِّل باقٍ.
 
 ## القوائم.
 
@@ -246,7 +246,7 @@ continue-intro =
         [many] متابعة القراءة: { $n } مستندًا، الأحدث أولًا.
        *[other] متابعة القراءة: { $n } مستند، الأحدث أولًا.
     }
-continue-empty = لا شيء للمتابعة: لا مواضع محفوظة.
+continue-empty = لا مواضع بعد. القراءة تحفظ موضعك.
 # One row, meaning first: the title, how far in, the computer, and how
 # long ago (continue-ago-*).
 continue-item = { $title }، { $pct } بالمئة، { $device }، { $when }
@@ -1210,7 +1210,7 @@ notes-item =
         [yes] { $note }، السطر { $line }. عند: { $anchor } لم يُعثر عليها بعد تغيّر الملف.
        *[no] { $note }، السطر { $line }. عند: { $anchor }
     }
-notes-none = لا ملاحظات.
+notes-none = لا ملاحظات. لإضافة واحدة: { $key }.
 notes-list-title = الملاحظات
 notes-list-intro =
     { $n ->
@@ -1239,7 +1239,7 @@ notes-highlight-item =
         [yes] { $text }، السطر { $line }، { $color }، لم يُعثر عليه بعد تغيّر الملف
        *[no] { $text }، السطر { $line }، { $color }
     }
-notes-no-highlights = لا تمييزات.
+notes-no-highlights = لا تمييزات. لإنشاء تمييز: { $key }.
 notes-highlights-title = التمييزات
 notes-highlights-intro =
     { $n ->
@@ -1328,7 +1328,7 @@ marks-find-wrapped =
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = الإشارة المرجعية { $name } موجودة هنا بالفعل.
 marks-bookmark-set = وُضعت الإشارة المرجعية { $name } عند { $pct } بالمئة.
-marks-no-bookmarks = لا إشارات مرجعية.
+marks-no-bookmarks = لا إشارات مرجعية. لإضافة واحدة: { $key }.
 marks-bookmarks-intro =
     { $n ->
         [one] الإشارات المرجعية، عنصر واحد. Enter للانتقال إلى أحدها، Delete لحذفها، F2 لإعادة تسميتها.
@@ -1474,7 +1474,7 @@ library-scanning = فحص المكتبة.
 library-scan-progress = فحص المكتبة: عُثر على { $n } حتى الآن.
 library-scan-stopped = توقّف فحص المكتبة على نحو غير متوقع. افتح المكتبة مرة أخرى لإعادة المحاولة.
 # $command is the command line that adds a folder; $key names the Open command's key.
-library-empty = المكتبة فارغة. أضف مجلدًا بـ{ $command }، أو افتح ملفًا بـ{ $key }.
+library-empty = المكتبة فارغة. أضف مجلدًا من الإعدادات، تحت مجلدات المكتبة، أو افتح ملفًا بـ{ $key }.
 library-intro =
     { $n ->
         [one] المكتبة، مستند واحد. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
@@ -1855,7 +1855,7 @@ setting-speech-pause-paragraph-ms-help = صمت بعد الفقرة، أقصر �
 setting-speech-pause-list-item-ms = التوقف بعد عناصر القائمة
 setting-speech-pause-list-item-ms-help = صمت بعد عنصر القائمة، أقصر عند السرعات الأعلى. القيمة 0 توقفه.
 setting-speech-output-device = جهاز الإخراج
-setting-speech-output-device-help = جهاز الصوت الذي يُشغَّل عليه الكلام، بمعرّفه؛ يسرد الأمر tw backends --devices الأجهزة. إن لم يُضبط يُستخدم الجهاز الافتراضي للنظام، وكذلك إن لم يكن الجهاز متصلًا.
+setting-speech-output-device-help = جهاز الصوت الذي يُشغَّل عليه الكلام، بمعرّفه. إن لم يُضبط يُستخدم الجهاز الافتراضي للنظام، وكذلك إن لم يكن الجهاز متصلًا.
 setting-speech-verbosity = مستوى التفصيل
 setting-speech-verbosity-help = مقدار ما يقوله textweaver عما يفعله.
 choice-speech-verbosity-low = منخفض

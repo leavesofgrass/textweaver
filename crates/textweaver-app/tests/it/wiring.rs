@@ -397,6 +397,9 @@ fn the_library_lists_folder_documents_and_recent_files_and_opens_them() {
         "{}",
         r.said.last()
     );
+    // It names a path in the app, never a command to type (W9a-c).
+    assert!(r.said.last().contains("Library folders"), "{}", r.said.last());
+    assert!(!r.said.last().contains("tw "), "{}", r.said.last());
 
     // A loose file opened once becomes a recent entry; the folder's
     // documents are listed first.

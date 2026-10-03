@@ -326,14 +326,14 @@ If you hear "Speech stopped working", textweaver restarts speech once by itself.
 A good report lets someone else see the same problem. Include:
 
 1. What you did, what you expected, and what happened instead. Quote what textweaver said, from the status line.
-2. textweaver's version:
+2. textweaver's version. In the window or the terminal reader, choose About from the command palette (in the window, also from the Help menu): it says the version. From a command line:
 
    ```bash
    tw --version
    ```
 
 3. The doctor report: run the doctor script with `--out doctor.txt` (or `-Out doctor.txt` in PowerShell), as shown above, and attach the file.
-4. The log: start the reader with `--log debug`, make the problem happen, quit, and attach `textweaver.log` from the state folder. For the window, start it with `--log-file gui.log` and attach that file.
+4. The log: start the reader with `--log debug`, make the problem happen, quit, and attach `textweaver.log` from the state folder (`tw settings path` names it). For the window, start it with `--log-file gui.log` and attach that file.
 5. If a document causes it, and you may share it, attach the document or a small part of it that shows the problem.
 
 Report bugs at the project's issue tracker: [github.com/leavesofgrass/textweaver/issues](https://github.com/leavesofgrass/textweaver/issues).

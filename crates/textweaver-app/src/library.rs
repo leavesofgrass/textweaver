@@ -374,7 +374,7 @@ impl App {
             let open = self.key(textweaver_keymap::ActionId::Open);
             let msg = self.msg_args(
                 "library-empty",
-                &args!["command" => "tw library --add", "key" => open],
+                &args!["key" => open],
             );
             self.tell(&msg);
             return vec![Effect::Redraw];
