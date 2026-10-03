@@ -110,7 +110,7 @@ impl App {
     /// window and JSON-RPC answer as the terminal does; other letters
     /// still move in the list.
     pub(crate) fn open_question_answer(&self, key: ListKey) -> Option<Confirm> {
-        if !matches!(self.authoring.question, Some(Question::Open(_))) {
+        if !matches!(self.authoring.question, Some(Question::Open(..))) {
             return None;
         }
         match key {

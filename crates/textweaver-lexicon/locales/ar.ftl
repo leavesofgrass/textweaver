@@ -99,7 +99,7 @@ define-intro = { $title }. السهمان لأعلى ولأسفل يتنقلان
 define-nothing-here = لا توجد كلمة عند المؤشر.
 define-not-found = لم يُعثر على تعريف لـ{ $word }.
 define-no-dictionary = ملف القاموس غير مثبَّت، لذا بُحث في مسردك فقط. دليل القراءة يوضح كيفية تثبيته.
-define-dictionary-damaged = تعذّرت قراءة ملف القاموس: { $error }
+define-dictionary-damaged = تعذّرت قراءة ملف القاموس: { $error } يُبحث في مسردك فقط.
 define-glossary-problem = تعذّرت قراءة مسردك: { $error }
 define-glossary-skipped =
     { $n ->
@@ -160,7 +160,7 @@ profile-exists = يوجد بالفعل ملف إعدادات باسم { $name }.
 profiles-not-an-export = { $detail }
 profiles-no-persistence = لا تُحفظ ملفات الإعدادات في هذه الجلسة.
 profiles-read-failed = تعذّرت قراءة ملف ملفات الإعدادات، لذا يُعامل كأنه فارغ: { $error }
-profiles-save-failed = تعذّر حفظ ملفات الإعدادات: { $error }
+profiles-save-failed = تعذّر حفظ ملفات الإعدادات: { $error } تحقّق من إمكانية الكتابة في مجلد الإعدادات.
 profiles-none-to-export = لا توجد ملفات إعدادات لتصديرها بعد.
 profiles-exported =
     { $n ->
@@ -302,7 +302,7 @@ details-cancelled = أُلغي. لم تتغير التفاصيل.
 details-not-a-doi = ليس DOI: { $text }. صحّحه أو امسحه.
 details-not-an-isbn = ليس ISBN: { $text }. صحّحه أو امسحه.
 details-no-file = ليس لهذا المستند ملف، فلا تفاصيل لتعديلها.
-details-save-failed = تعذّر حفظ التفاصيل: { $error }
+details-save-failed = تعذّر حفظ التفاصيل: { $error } حاول مرة أخرى.
 # The statistics list could not wait for the sync folder.
 stats-others-slow = تُركت الحواسيب الأخرى: المجلد بطيء.
 stats-untitled = مستند بلا عنوان
@@ -519,7 +519,7 @@ notes-editing = تحرير ملاحظة: { $text }
 # $key opens a document.
 app-no-document-open = لا يوجد مستند مفتوح. اضغط { $key } لفتح واحد.
 app-window-only = يعمل هذا الأمر في نافذة textweaver.
-settings-save-failed = تعذّر حفظ الإعدادات: { $error }
+settings-save-failed = تعذّر حفظ الإعدادات: { $error } تبقى تغييراتك سارية حتى تخرج.
 edit-still-editing = ما زلت في وضع التحرير.
 goto-not-a-target = ليس هدف انتقال: { $text }. اكتب رقم سطر، أو نسبة مئوية مثل 50%، أو start، أو end.
 
@@ -867,7 +867,7 @@ action-text-smaller = تصغير نص المستند
 action-text-size-reset = إعادة نص المستند إلى حجمه العادي
 action-choose-font = اختيار خط نص المستند
 action-command-palette = تشغيل أي أمر بالاسم
-action-settings = فتح الإعدادات: كل خيار مع مساعدته، تُصفّى أثناء الكتابة؛ يسار ويمين لتغيير قيمة
+action-settings = فتح الإعدادات: كل خيار مع مساعدته؛ يسار ويمين لتغيير قيمة
 action-keyboard-help = سرد اختصارات لوحة المفاتيح
 action-help = فتح المساعدة
 
@@ -894,9 +894,9 @@ restart-restarting = إعادة تشغيل الكلام.
 restart-not-here = لا يمكن إعادة تشغيل الكلام هنا.
 restart-already = الكلام تجري إعادة تشغيله بالفعل.
 # $error is the system's reason, in its own words.
-restart-failed = تعذّرت إعادة تشغيل الكلام: { $error }.
+restart-failed = تعذّرت إعادة تشغيل الكلام: { $error }
 restart-start-failed = تعذّرت إعادة تشغيل الكلام: فشل بدء تشغيله.
-restart-no-engine = لا يتوفر محرك كلام؛ يبقى { -brand } صامتًا.
+restart-no-engine = لا يتوفر محرك كلام؛ يبقى { -brand } صامتًا. راجع Troubleshooting، No speech at all، في الوثائق.
 restart-done-silent = أُعيد تشغيل الكلام، لكن لا يتوفر محرك كلام؛ يبقى { -brand } صامتًا.
 restart-done = أُعيد تشغيل الكلام.
 
@@ -936,7 +936,7 @@ settingsio-no-persistence = لا تُحفظ الإعدادات في هذه ال�
 settingsio-exported = صُدِّرت الإعدادات إلى { $path }.
 settingsio-export-failed = تعذّر تصدير الإعدادات: { $error }
 # $path is the file; $error the system's reason.
-settingsio-read-failed = تعذّرت قراءة { $path }: { $error }.
+settingsio-read-failed = تعذّرت قراءة { $path }: { $error }
 settingsio-nothing-to-import = لا شيء لاستيراده: إعداداتك مطابقة لذلك الملف بالفعل.
 settingsio-cancelled-unchanged = أُلغي. لم يتغيّر شيء.
 settingsio-import-failed = تعذّر استيراد الإعدادات: { $error }
@@ -969,8 +969,8 @@ opening-stopped-unexpectedly = تعذّر فتح { $name }: توقف التحم�
 
 ## بناء دون ميزة النشر. "tw convert" أمر يُكتب في الطرفية: أبقِ عليه كما هو.
 
-lean-citations-not-in-build = الاستشهادات غير متوفرة في نسخة { -brand } هذه. بُنيت دون ميزة النشر.
-lean-publish-not-in-build = التصدير والمعاينة غير متوفرين في نسخة { -brand } هذه. بُنيت دون ميزة النشر؛ ما زال tw convert يحوّل.
+lean-citations-not-in-build = الاستشهادات غير متوفرة في نسخة { -brand } هذه.
+lean-publish-not-in-build = التصدير والمعاينة غير متوفرين في نسخة { -brand } هذه. ما زال tw convert يحوّل.
 
 ## قائمة مدير الأصوات.
 
@@ -1047,7 +1047,7 @@ voices-language-zh = الصينية
 voice-sample = الثعلب البني السريع يقفز فوق الكلب الكسول.
 voice-list-title = اختيار صوت
 voice-still-loading = ما زالت الأصوات قيد التحميل. تُفتح القائمة عندما تكون جاهزة.
-voice-list-failed = تعذّر سرد الأصوات: { $error }.
+voice-list-failed = تعذّر سرد الأصوات: { $error }
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
 voice-manager-intro = مدير الأصوات. { $shown } Enter لاستخدام صوت ونطق عينة منه، أو لتنزيله؛ { $preview } لمعاينة صوت؛ Space لوضع علامة مفضّل؛ Delete لإزالة صوت مُنزَّل؛ Escape للإغلاق.
@@ -1064,7 +1064,7 @@ voice-preview-starting = معاينة: { $voice }، جارٍ تشغيل { $engin
 voice-preview-not-installed = { $voice } لم يُنزَّل بعد. Enter ينزّله بعد سؤال.
 voice-preview-unavailable = لا يمكن تشغيل { $engine } هنا للمعاينة. Enter ينتقل إليه.
 voice-preview-engine-failed = تعذّر تشغيل { $engine } لمعاينة { $voice }.
-voice-preview-failed = تعذّرت معاينة { $voice }: { $error }.
+voice-preview-failed = تعذّرت معاينة { $voice }: { $error }
 # $keys names the Choose Voice key.
 voice-ready = الأصوات جاهزة. { $keys } لسردها.
 voice-fetch-catalog-question = تنزيل قائمة أصوات Piper، نحو 250 كيلوبايت، من Hugging Face؟ y أو n
@@ -1082,17 +1082,17 @@ voice-only-piper-removable = يمكن إزالة أصوات Piper المُنزَ
 voice-download-question = { $plan } y أو n
 voice-in-use = { $voice } هو الصوت قيد الاستخدام. اختر صوتًا آخر أولًا.
 voice-removed = أُزيل { $voice }.
-voice-remove-failed = تعذّرت إزالة { $voice }: { $error }.
+voice-remove-failed = تعذّرت إزالة { $voice }: { $error }
 voice-downloading-catalog = تنزيل قائمة أصوات Piper.
 voice-downloading = تنزيل { $voice }.
 voice-downloading-percent = تنزيل { $voice }، { $pct } بالمئة.
-voice-details-failed = تعذّرت قراءة تفاصيل الصوت: { $error }.
+voice-details-failed = تعذّرت قراءة تفاصيل الصوت: { $error }
 voice-download-stopped = توقّف التنزيل.
-voice-catalog-fetched = تحتوي قائمة أصوات Piper على { $voices } صوتًا في { $languages } لغة. اختيار صوت يسردها.
-voice-catalog-failed = تعذّر تنزيل قائمة الأصوات: { $error }.
+voice-catalog-fetched = تحتوي قائمة أصوات Piper على { $voices } صوتًا في { $languages } لغة. يسردها أمر الأصوات.
+voice-catalog-failed = تعذّر تنزيل قائمة الأصوات: { $error }
 # $licence describes the voice's licence, in a sentence of its own.
-voice-installed = { $voice } مثبَّت. { $licence } اختيار صوت يسرده.
-voice-download-failed = تعذّر تنزيل { $voice }: { $error }.
+voice-installed = { $voice } مثبَّت. { $licence } يسرده أمر الأصوات.
+voice-download-failed = تعذّر تنزيل { $voice }: { $error } اختر الصوت مرة أخرى لإعادة المحاولة.
 voice-only-voice-favourite = يمكن أن يكون صوت فقط مفضّلًا.
 voice-favourite-added = أُضيف { $voice } إلى المفضّلة.
 voice-favourite-removed = أُزيل { $voice } من المفضّلة.
@@ -1155,7 +1155,7 @@ publish-auto-reload-on =
 publish-auto-reload-off = إعادة التحميل التلقائي للمعاينة متوقفة: اضغط F5 في المتصفح بعد الحفظ.
 publish-live-on = المعاينة الحية مفعّلة: تُعاد المعاينة أيضًا عند توقف الكتابة.
 # "toggle preview auto reload" is the command's name in the command palette.
-publish-live-on-needs-reload = المعاينة الحية مفعّلة. تعمل مع إعادة التحميل التلقائي، وهي متوقفة؛ فعّلها بأمر toggle preview auto reload.
+publish-live-on-needs-reload = المعاينة الحية مفعّلة. تعمل مع إعادة التحميل التلقائي، وهي متوقفة؛ فعّلها بأمر إعادة تحميل المعاينة تلقائيًا.
 publish-live-off = المعاينة الحية متوقفة: تُعاد المعاينة بعد الحفظ فقط.
 # $error is the converter's reason.
 publish-export-failed = فشل التصدير إلى { $format }: { $error }
@@ -1303,7 +1303,7 @@ notes-sheet-highlighted = مُيِّز، { $color }.
 
 ## البحث، والإشارات المرجعية، والتحديد.
 
-marks-cannot-search = تعذّر البحث: { $error }.
+marks-cannot-search = تعذّر البحث: { $error }
 # $pattern is the text searched for.
 marks-no-matches = لا تطابقات لـ{ $pattern }.
 # The label of a match reached by Find, at high verbosity; $number is its place among $n matches.
@@ -1458,10 +1458,10 @@ listmodel-command-matches = { $n } تطابقات: { $names }.
 
 # $n is how many documents the scan has found.
 library-still-scanning = ما زال فحص المكتبة جاريًا: عُثر على { $n } حتى الآن.
-library-scan-failed = تعذّر فحص المكتبة: { $error }.
+library-scan-failed = تعذّر فحص المكتبة: { $error } تحقّق من مجلدات المكتبة في الإعدادات.
 library-scanning = فحص المكتبة.
 library-scan-progress = فحص المكتبة: عُثر على { $n } حتى الآن.
-library-scan-stopped = توقّف فحص المكتبة بخطأ داخلي.
+library-scan-stopped = توقّف فحص المكتبة على نحو غير متوقع. افتح المكتبة مرة أخرى لإعادة المحاولة.
 # $command is the command line that adds a folder; $key names the Open command's key.
 library-empty = المكتبة فارغة. أضف مجلدًا بـ{ $command }، أو افتح ملفًا بـ{ $key }.
 library-intro =
@@ -1588,7 +1588,7 @@ open-refused-missing = لم يُفتح: الملف غير موجود.
 open-refused-invalid = لم يُفتح: العنوان غير صالح.
 tasks-not-opened = لم يُفتح.
 # Keep the letters y and n: they are the keys that answer.
-tasks-open-it-question = فتحه؟ y أو n.
+tasks-open-it-question = فتحه؟ y أو n
 
 ## استكشاف الرياضيات.
 
@@ -1746,7 +1746,7 @@ settings-choose-one-of = اختر واحدًا من: { $names }.
 settings-edit-table = حرّر { $label } في settings.toml؛ يحمل أسماء وقيمًا.
 # $path is a key such as speech.rate, not translated.
 settings-no-such-setting = لا يوجد إعداد { $path }.
-settings-cannot-be = لا يمكن أن يكون { $label } كذلك: { $error }.
+settings-cannot-be = لا يمكن أن يكون { $label } كذلك: { $error }
 settings-changed = { $label }، { $value }.
 settings-clamped = خارج النطاق، فتُستخدم أقرب قيمة.
 settings-restart-speech = أعد تشغيل الكلام لاستخدامه.
@@ -1803,11 +1803,11 @@ setting-speech-volume-help = مدى علو كلام textweaver.
 setting-speech-pitch = الحدة
 setting-speech-pitch-help = أعلى أو أدنى من حدة الصوت نفسه.
 setting-speech-voice = الصوت
-setting-speech-voice-help = معرّف الصوت؛ عدم الضبط يختار واحدًا تلقائيًا. اختيار صوت يسردها.
+setting-speech-voice-help = معرّف الصوت؛ عدم الضبط يختار واحدًا تلقائيًا. يسردها أمر الأصوات.
 setting-speech-prefer-voice = الصوت المفضّل
 setting-speech-prefer-voice-help = عند عدم ضبط صوت، أول صوت يحتوي اسمه على هذا، مثل eloquence.
 setting-speech-favorite-voices = الأصوات المفضّلة
-setting-speech-favorite-voices-help = الأصوات المسرودة أولًا في اختيار صوت، حسب المعرّف.
+setting-speech-favorite-voices-help = الأصوات المسرودة أولًا في أمر الأصوات، حسب المعرّف.
 setting-speech-punctuation = علامات الترقيم
 setting-speech-punctuation-help = مقدار علامات الترقيم المنطوقة.
 choice-speech-punctuation-none = لا شيء
@@ -1865,9 +1865,9 @@ setting-highlight-lead-words-help = رسم التمييز بهذا العدد م
 setting-highlight-speed = سرعة التمييز
 setting-highlight-speed-help = سرعة التمييز المؤقت للمحركات التي لا تبلّغ عن كلمات.
 setting-highlight-color = لون تمييز الكلمة
-setting-highlight-color-help = اسم لون أو #rrggbb فوق تمييز كلمة السمة؛ theme يبقي على لون السمة.
+setting-highlight-color-help = اللون خلف الكلمة المقروءة. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-highlight-sentence-color = لون تمييز الجملة
-setting-highlight-sentence-color-help = اسم لون أو #rrggbb فوق تمييز جملة السمة؛ عدم الضبط يبقي على لون السمة.
+setting-highlight-sentence-color-help = اللون خلف الجملة المقروءة. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-normalization-math = نطق الرياضيات
 setting-normalization-math-help = نطق رموز الرياضيات بالكلمات.
 setting-normalization-math-verbosity = تفصيل الرياضيات
@@ -2144,8 +2144,6 @@ choice-interface-language-fr = Français
 choice-interface-language-de = Deutsch
 choice-interface-language-pt = Português
 choice-interface-language-ar = العربية
-choice-interface-language-en-xa = اختبار: بحروف مشكَّلة
-choice-interface-language-ar-xb = اختبار: من اليمين إلى اليسار
 setting-interface-rtl = العرض من اليمين إلى اليسار
 setting-interface-rtl-help = هل يعيد قارئ الطرفية ترتيب النص من اليمين إلى اليسار للعرض: automatic يتركه للطرفيات التي تفعل ذلك بنفسها. الكلام وقارئ الشاشة يحصلان دائمًا على النص بترتيب القراءة.
 choice-interface-rtl-auto = تلقائي
@@ -2163,19 +2161,95 @@ setting-gui-auto-hide-menu-help = Windows: يخفي شريط قوائم النا
 settings-unit-words-per-minute = كلمة في الدقيقة
 settings-unit-percent = بالمئة
 settings-unit-semitones = نصف نغمة
-settings-unit-milliseconds = ميلي ثانية
-settings-unit-words = كلمات
-settings-unit-times = مرات
-settings-unit-places = أماكن
-settings-unit-columns = أعمدة
-settings-unit-lines = أسطر
-settings-unit-seconds = ثوانٍ
-settings-unit-steps = خطوات
+settings-unit-milliseconds =
+    { $n ->
+        [one] ميلي ثانية
+        [two] ميلي ثانية
+        [few] ميلي ثانية
+        [zero] ميلي ثانية
+       *[other] ميلي ثانية
+    }
+settings-unit-words =
+    { $n ->
+        [one] كلمة
+        [two] كلمات
+        [few] كلمات
+        [zero] كلمات
+       *[other] كلمة
+    }
+settings-unit-places =
+    { $n ->
+        [one] مكان
+        [two] أماكن
+        [few] أماكن
+        [zero] أماكن
+       *[other] مكان
+    }
+settings-unit-columns =
+    { $n ->
+        [one] عمود
+        [two] أعمدة
+        [few] أعمدة
+        [zero] أعمدة
+       *[other] عمود
+    }
+settings-unit-lines =
+    { $n ->
+        [one] سطر
+        [two] أسطر
+        [few] أسطر
+        [zero] أسطر
+       *[other] سطر
+    }
+settings-unit-seconds =
+    { $n ->
+        [one] ثانية
+        [two] ثوانٍ
+        [few] ثوانٍ
+        [zero] ثوانٍ
+       *[other] ثانية
+    }
+settings-unit-steps =
+    { $n ->
+        [one] خطوة
+        [two] خطوات
+        [few] خطوات
+        [zero] خطوات
+       *[other] خطوة
+    }
 settings-unit-megabytes = ميغابايت
-settings-unit-files = ملفات
-settings-unit-letters = حروف
-settings-unit-points = نقاط
-settings-unit-rows = صفوف
+settings-unit-files =
+    { $n ->
+        [one] ملف
+        [two] ملفات
+        [few] ملفات
+        [zero] ملفات
+       *[other] ملف
+    }
+settings-unit-letters =
+    { $n ->
+        [one] حرف
+        [two] حروف
+        [few] حروف
+        [zero] حروف
+       *[other] حرف
+    }
+settings-unit-points =
+    { $n ->
+        [one] نقطة
+        [two] نقاط
+        [few] نقاط
+        [zero] نقاط
+       *[other] نقطة
+    }
+settings-unit-rows =
+    { $n ->
+        [one] صف
+        [two] صفوف
+        [few] صفوف
+        [zero] صفوف
+       *[other] صف
+    }
 
 ## أقسام الإعدادات.
 
@@ -2212,11 +2286,11 @@ edit-save-changes-title = حفظ التغييرات في { $title }؟
 edit-choice-save = حفظ، ثم متابعة
 edit-choice-discard = تجاهل التغييرات
 edit-choice-cancel = إلغاء، متابعة التحرير
-edit-save-failed = تعذّر الحفظ: { $error }. ما زلت في وضع التحرير.
+edit-save-failed = تعذّر الحفظ: { $error } ما زلت في وضع التحرير. جرّب حفظ باسم.
 # The Save As prompt; $path is the suggested file.
 edit-save-as-label = حفظ باسم، Enter لـ{ $path }
 # $name is a file name. Keep the letters y and n.
-edit-file-exists-question = { $name } موجود بالفعل. استبداله؟ y أو n.
+edit-file-exists-question = { $name } موجود بالفعل. استبداله؟ y أو n
 edit-mode-off = وضع التحرير متوقف.
 edit-mode-off-discarded = تُجوهلت التغييرات. وضع التحرير متوقف.
 # The title of a new, unsaved document.
@@ -2308,10 +2382,10 @@ edit-format-removed =
         [bulleted-list] أُزيلت القائمة النقطية.
         [numbered-list] أُزيلت القائمة المرقّمة.
         [block-quote] أُزيل الاقتباس.
-        [horizontal-rule] أُزيل الخط الأفقي المُدرج.
-        [table-row] أُزيل صف الجدول المُضاف.
+        [horizontal-rule] أُزيل الخط الأفقي.
+        [table-row] أُزيل صف الجدول.
         [heading-level] أُزيل مستوى العنوان { $level }.
-        [table] أُزيل الجدول المُدرج، { $cols } أعمدة في { $rows } صفوف.
+        [table] أُزيل الجدول.
        *[heading] أُزيل العنوان.
     }
 edit-format-unchanged =
@@ -2326,10 +2400,10 @@ edit-format-unchanged =
         [bulleted-list] قائمة نقطية: لم يتغيّر شيء.
         [numbered-list] قائمة مرقّمة: لم يتغيّر شيء.
         [block-quote] اقتباس: لم يتغيّر شيء.
-        [horizontal-rule] أُدرج خط أفقي: لم يتغيّر شيء.
-        [table-row] أُضيف صف إلى الجدول: لم يتغيّر شيء.
+        [horizontal-rule] خط أفقي: لم يتغيّر شيء.
+        [table-row] صف الجدول: لم يتغيّر شيء.
         [heading-level] مستوى العنوان { $level }: لم يتغيّر شيء.
-        [table] أُدرج جدول، { $cols } أعمدة في { $rows } صفوف: لم يتغيّر شيء.
+        [table] الجدول: لم يتغيّر شيء.
        *[heading] عنوان: لم يتغيّر شيء.
     }
 # Added after a formatting message; $text is the start of the selection.
@@ -2351,7 +2425,7 @@ edit-nothing-to-redo = لا شيء لإعادته.
 edit-not-a-table-size = ليس حجم جدول: { $text }. اكتب أعمدة وصفوفًا، مثل 3 by 2.
 # $name is the image's file name.
 edit-image-inserted = أُدرجت الصورة { $name }. وصفها محدَّد؛ اكتب لاستبداله.
-edit-image-failed = تعذّر إدراج الصورة: { $error }.
+edit-image-failed = تعذّر إدراج الصورة: { $error }
 # $query is the text to find.
 edit-no-matches = لا تطابقات لـ{ $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -2433,7 +2507,7 @@ writes-not-written-in-time = تعذّرت كتابة بعض التغييرات �
 writes-save-failed = تعذّر الحفظ: { $error }. ما زلت في وضع التحرير.
 # $name is the bookmark's name, $pct where it is.
 writes-bookmark-set = وُضعت الإشارة المرجعية { $name } عند { $pct } بالمئة.
-writes-bookmark-not-saved = الإشارة المرجعية { $name } موضوعة الآن، لكن تعذّر حفظها: { $error }.
+writes-bookmark-not-saved = الإشارة المرجعية { $name } موضوعة الآن، لكن تعذّر حفظها: { $error }
 writes-recovery-copy-failed = تعذّرت كتابة نسخة الاسترداد: { $error }. احفظ قريبًا؛ سيواصل { -brand } المحاولة.
 writes-recovery-copy-resumed = تجري كتابة نسخة الاسترداد مجددًا.
 # $name is the saved file's name.
@@ -2442,14 +2516,14 @@ writes-saved = حُفظ { $name }. ما زلت في وضع التحرير.
 ## الملفات المتغيّرة على القرص. $name اسم ملف. أبقِ على الحرفين y وn:
 ## فهما المفتاحان للإجابة.
 
-disk-replace-question = { $name } موجود بالفعل. استبداله؟ y أو n.
+disk-replace-question = { $name } موجود بالفعل. استبداله؟ y أو n
 # A prompt label, also said with a full stop after it.
 disk-not-replaced = لم يُستبدل. اكتب اسمًا آخر
 # $key is the key for Save As.
 disk-not-saved = لم يُحفظ. ما زلت في وضع التحرير. حفظ باسم، { $key }، يبقي على النسختين.
 disk-kept-open-version = أُبقي على النسخة المفتوحة.
-disk-overwrite-question = { $name } تغيّر على القرص منذ فتحته. حفظ التغييرات فوق ذلك؟ y أو n.
-disk-reload-question = { $name } تغيّر على القرص. إعادة تحميله؟ y أو n.
+disk-overwrite-question = { $name } تغيّر على القرص منذ فتحته. حفظ التغييرات فوق ذلك؟ y أو n
+disk-reload-question = { $name } تغيّر على القرص. إعادة تحميله؟ y أو n
 
 ## علامات عُثر عليها مجددًا بعد تغيّر ملف خارج textweaver.
 
@@ -2790,7 +2864,7 @@ spell-replace-failed = تعذّر الاستبدال: { $error }
 spell-left-as-is = تُركت كما هي.
 spell-added-for-session = أُضيفت { $word } إلى قائمة كلماتك لهذه الجلسة.
 spell-added = أُضيفت { $word } إلى قائمة كلماتك.
-spell-save-failed = تعذّر حفظ قائمة كلماتك: { $error }
+spell-save-failed = تعذّر حفظ قائمة كلماتك: { $error } تبقى الكلمة معروفة حتى تخرج.
 # After a save; $count is $n with thousands separators.
 spell-count =
     { $n ->
@@ -2806,12 +2880,12 @@ tui-setup-backend-unavailable = محرك الكلام { $wanted } غير متو�
 # Shown inside tui-setup-speech-failed as its $error.
 tui-setup-backend-not-built = المحرك { $backend } غير مُدرَج في هذا البناء
 tui-setup-speech-failed = تعذّر بدء الكلام ({ $error })؛ التشغيل بصمت.
-tui-setup-cannot-save = تعذّر حفظ الإعدادات أو المواضع: { $error }.
-tui-setup-keymap-ignored = جرى تجاهل ملف خريطة المفاتيح: { $error }.
+tui-setup-cannot-save = تعذّر حفظ الإعدادات أو المواضع: { $error }
+tui-setup-keymap-ignored = جرى تجاهل ملف خريطة المفاتيح: { $error }
 # The first-run welcome. Each value names the key for an action: $play
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
-tui-setup-welcome = مرحبًا بك في { -brand }. { $play } يقرأ بصوت عالٍ ويوقف مؤقتًا، { $stop } يوقف، { $heading } ينتقل إلى العنوان التالي، { $help } يفتح المساعدة، و{ $quit } ينهي.
+tui-setup-welcome = مرحبًا بك في { -brand }. { $open } يفتح مستندًا. { $play } يبدأ القراءة ويوقفها مؤقتًا، و{ $stop } يوقفها. { $palette } يسرد كل الأوامر. { $help } يفتح المساعدة.
 # Said at startup without a document. $open, $new, and $help name the
 # keys for Open, New Document, and Help.
 tui-setup-no-document = لا يوجد مستند مفتوح. اضغط { $open } لفتح واحد، { $new } لواحد جديد، أو { $help } للمساعدة.
@@ -3010,7 +3084,7 @@ gui-no = لا
 gui-question-hint = Y للإجابة بنعم، وN للإجابة بلا، وEscape للإجابة بلا.
 gui-button-open = فتح…
 gui-button-font = الخط…
-gui-button-edit = تحرير
+gui-button-edit = بدء التحرير
 gui-button-finish-editing = إنهاء التحرير
 gui-button-settings = الإعدادات…
 gui-button-commands = الأوامر…
@@ -3021,6 +3095,12 @@ gui-button-previous-sentence = الجملة السابقة
 gui-button-next-sentence = الجملة التالية
 gui-button-slower = أبطأ
 gui-button-faster = أسرع
+gui-hint-open = اختيار مستند للقراءة.
+gui-hint-font = اختيار خط نص المستند.
+gui-hint-edit = التبديل بين القراءة والتحرير.
+gui-hint-settings = كل خيار، مع مساعدته.
+gui-hint-commands = تشغيل أي أمر باسمه.
+gui-hint-play = القراءة من الكلمة الحالية أو الإيقاف.
 gui-button-close = إغلاق
 gui-toolbar-reading = القراءة
 gui-document = المستند
@@ -3040,7 +3120,7 @@ gui-palette-filter = اكتب لتصفية الأوامر
 gui-palette-list = الأوامر
 gui-palette-hint = يشغّل Enter أول نتيجة مطابقة، وينتقل Tab إلى القائمة.
 gui-no-document = لا يوجد مستند مفتوح. اضغط { $key } لفتح مستند.
-gui-open-failed = تعذّر فتح { $path }: { $error }
+gui-open-failed = تعذّر فتح { $name }: { $error }
 gui-uia-unavailable = إشعارات UI Automation متاحة في Windows فقط؛ ستُستخدم المنطقة الحية.
 gui-rsvp = RSVP
 gui-rsvp-playing = RSVP قيد التشغيل، الكلمة { $n } من { $total }
@@ -3111,7 +3191,14 @@ setting-summary-sentences-help = عدد الجمل التي يعطيها الت�
 setting-reading-aids-difficult-definitions = تعريفات الكلمات الصعبة
 setting-reading-aids-difficult-definitions-help = عند تمييز الكلمات الصعبة، نطق التعريف الأول للكلمة الصعبة من القاموس أيضًا في مستوى التفصيل المرتفع.
 section-summary = الملخصات
-settings-unit-sentences = جمل
+settings-unit-sentences =
+    { $n ->
+        [one] جملة
+        [two] جمل
+        [few] جمل
+        [zero] جمل
+       *[other] جملة
+    }
 
 # W6a5: the GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
@@ -3414,31 +3501,31 @@ action-menu = فتح القوائم: ملف وتحرير وعرض وقراءة �
 action-what-does-this-key-do = اضغط مفتاحًا لتسمع ما يفعله وأين يوجد في القوائم دون تشغيله
 action-about = نطق إصدار textweaver وترخيصه
 setting-colors-ruler = لون مسطرة القراءة
-setting-colors-ruler-help = شريط مسطرة القراءة والسطر الحالي المحدد؛ تحتفظ المسطرة بتسطيرها أو خطها الغامق. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-ruler-help = شريط مسطرة القراءة والسطر الحالي المحدد؛ تحتفظ المسطرة بتسطيرها أو خطها الغامق. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-difficult-words = لون الكلمات الصعبة
-setting-colors-difficult-words-help = تسطير الكلمات الصعبة؛ تبقى مسطرة وتُذكر عند التفصيل العالي. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-difficult-words-help = تسطير الكلمات الصعبة؛ تبقى مسطرة وتُذكر عند التفصيل العالي. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-syllables = لون علامات المقاطع
-setting-colors-syllables-help = النقاط الوسطى بين المقاطع. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-syllables-help = النقاط الوسطى بين المقاطع. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-misspellings = لون الأخطاء الإملائية
-setting-colors-misspellings-help = تسطير الكلمات الخاطئة إملائيًا في النافذة؛ وتُقال أيضًا. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-misspellings-help = تسطير الكلمات الخاطئة إملائيًا في النافذة؛ وتُقال أيضًا. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-lint = لون علامات التنسيق
-setting-colors-lint-help = تسطير مشكلات تنسيق Markdown والنحو في النافذة؛ وتُقال أيضًا. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-lint-help = تسطير مشكلات تنسيق Markdown والنحو في النافذة؛ وتُقال أيضًا. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-find-match = لون نتائج البحث
-setting-colors-find-match-help = الشريط خلف نتائج البحث؛ تبقى مسطرة. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-find-match-help = الشريط خلف نتائج البحث؛ تبقى مسطرة. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-selection = لون التحديد
-setting-colors-selection-help = الشريط خلف النص المحدد. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-selection-help = الشريط خلف النص المحدد. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-focus = لون التركيز
-setting-colors-focus-help = إطار التركيز والعنصر المحدد في القائمة؛ يبقيان غامقين. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-focus-help = إطار التركيز والعنصر المحدد في القائمة؛ يبقيان غامقين. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-links = لون الروابط
-setting-colors-links-help = لون الروابط؛ تبقى مسطرة. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-links-help = لون الروابط؛ تبقى مسطرة. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-headings = لون العناوين
-setting-colors-headings-help = لون العناوين؛ تبقى غامقة. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-headings-help = لون العناوين؛ تبقى غامقة. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-status-bar = لون شريط الحالة
-setting-colors-status-bar-help = شريط الحالة وشريط العنوان. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-status-bar-help = شريط الحالة وشريط العنوان. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-notes = لون الملاحظات
-setting-colors-notes-help = الشريط خلف النص ذي الملاحظة؛ يبقى مائلًا ومسطرًا. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-notes-help = الشريط خلف النص ذي الملاحظة؛ يبقى مائلًا ومسطرًا. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-bookmarks = لون العلامات
-setting-colors-bookmarks-help = الشريط خلف الكلمة ذات العلامة؛ تبقى غامقة ومسطرة. اسم لون أو ‎#rrggbb؛ لون السمة افتراضيًا.
+setting-colors-bookmarks-help = الشريط خلف الكلمة ذات العلامة؛ تبقى غامقة ومسطرة. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 color-name-theme = لون السمة
 color-name-blue = أزرق
 color-name-orange = برتقالي
@@ -3485,7 +3572,7 @@ dictation-finishing = جارٍ إنهاء الإملاء.
 dictation-done = انتهى الإملاء.
 dictation-busy = الإملاء ينتهي. حاول مرة أخرى بعد لحظة.
 dictation-needs-edit = الإملاء يكتب في وضع التحرير. هل تشغّل وضع التحرير وتملي؟ y أو n
-dictation-no-model = يحتاج الإملاء إلى نموذج Whisper في { $dir }. راجع دليل الكتابة بالصوت.
+dictation-no-model = يحتاج الإملاء إلى نموذج Whisper في { $dir }. راجع Dictation في الوثائق.
 dictation-failed = فشل الإملاء: { $error }
 dictation-no-words = لم تُعرف أي كلمات في تلك العبارة.
 dictation-lost = توقف الإملاء قبل كتابة كلماته الأخيرة.
@@ -3729,6 +3816,7 @@ gui-colors-help = يختار اليسار واليمين لونًا مسمى، �
 gui-colors-reset-all = إعادة كل الألوان
 gui-colors-reset-all-help = إعادة لون السمة نفسه لكل جزء.
 gui-colors-reset-done = عادت كل الألوان إلى ألوان السمة.
+colors-reset-question = إعادة كل الألوان إلى ألوان السمة؟ y أو n
 gui-colors-closed = أُغلقت الألوان.
 gui-font-list-intro =
     { $n ->
@@ -3957,7 +4045,7 @@ setting-sync-favorite-voices-help = مشاركة الأصوات المفضلة؛
 font-download-question = تنزيل الخط { $font }، { $kb } كيلوبايت، { $licence }؟ y أو n
 font-downloading = تنزيل { $font }.
 font-downloaded = تم تنزيل { $font } وهو جاهز.
-font-download-failed = تعذّر تنزيل { $font }: { $error }.
+font-download-failed = تعذّر تنزيل { $font }: { $error }
 font-download-declined = لم يُنزَّل. يُستخدم خط آخر.
 font-download-busy = ما زال { $font } قيد التنزيل.
 font-download-no-folder = لا يوجد مجلد بيانات لحفظ { $font }.

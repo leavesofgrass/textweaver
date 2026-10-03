@@ -11,7 +11,7 @@
 //! 2. **Where**: beside the document (the default, `essay.flac`), or
 //!    another folder chosen in the file browser ([`App::choose_folder`]).
 //!
-//! Then "Export essay.flac with Microsoft David at 200 words a minute?
+//! Then "Export essay.flac with Microsoft David at 200 words per minute?
 //! y or n", naming the voice and speed the export uses: the reader's own
 //! engine when it can write audio files, else the best one that can
 //! (engines that only play, such as Omnivox, are never offered). The work
@@ -803,7 +803,7 @@ mod run {
             assert_eq!(
                 app.status_text(),
                 format!(
-                    "Export essay.flac with Recording (test double) at {} words a minute, into {folder}? y or n",
+                    "Export essay.flac with Recording (test double) at {} words per minute, into {folder}? y or n",
                     app.settings.speech.rate.wpm()
                 )
             );
@@ -812,7 +812,7 @@ mod run {
             let text = app.status_text().to_owned();
             assert!(
                 text.starts_with("Wrote essay.flac: ")
-                    && text.ends_with("2 chapters. Open it? y or n."),
+                    && text.ends_with("2 chapters. Open it? y or n"),
                 "{text}"
             );
             assert_eq!(&std::fs::read(&out).unwrap()[..4], b"fLaC");

@@ -284,7 +284,7 @@ pub const INFO: &[Info] = &[
     optional(
         "speech.voice",
         "Voice",
-        "The voice's id; not set picks one automatically. Choose Voice lists them.",
+        "The voice's id; not set picks one automatically. The Voices command lists them.",
     ),
     optional(
         "speech.prefer_voice",
@@ -294,7 +294,7 @@ pub const INFO: &[Info] = &[
     list(
         "speech.favorite_voices",
         "Favorite voices",
-        "Voices listed first in Choose Voice, by id.",
+        "Voices listed first by the Voices command, by id.",
     ),
     choice(
         "speech.punctuation",
@@ -348,7 +348,7 @@ pub const INFO: &[Info] = &[
     optional(
         "speech.output_device",
         "Output device",
-        "The sound device speech plays on, by its id; tw backends --devices lists them. Not set uses the system's default, and so does a device that is not connected.",
+        "The sound device speech plays on, by its id. Not set, or a device that is not connected, uses the system's default.",
     ),
     choice(
         "speech.verbosity",
@@ -443,20 +443,20 @@ pub const INFO: &[Info] = &[
     number(
         "highlight.speed",
         "Highlight speed",
-        "Speed of the timed highlight for engines that report no words.",
+        "Speed of the timed highlight for engines that report no words, as a multiple: 1 is normal speed.",
         (0.5, 1.5, 0.1),
-        "times",
+        "",
     ),
     open_choice(
         "highlight.color",
         "Word highlight color",
-        "A color name or #rrggbb over the theme's word highlight; theme keeps the theme's.",
+        "The color behind the word being read. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "highlight.sentence_color",
         "Sentence highlight color",
-        "A color name or #rrggbb over the theme's sentence highlight; not set keeps the theme's.",
+        "The color behind the sentence being read. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     // [normalization]
@@ -597,7 +597,7 @@ pub const INFO: &[Info] = &[
     choice(
         "reading.math_engine",
         "Math speech",
-        "Which engine reads math aloud: textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a build that includes it; otherwise textweaver's own is used.",
+        "Which engine reads math aloud: textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a version that includes it; otherwise textweaver's own is used.",
         &[
             ("builtin", "textweaver"),
             ("mathcat", "MathCAT ClearSpeak"),
@@ -691,7 +691,7 @@ pub const INFO: &[Info] = &[
     toggle(
         "editing.echo_lines_on_move",
         "Echo lines",
-        "Say the line when the caret moves to another line.",
+        "Say the line when the cursor moves to another line.",
     ),
     number(
         "editing.undo_steps",
@@ -815,7 +815,7 @@ pub const INFO: &[Info] = &[
     choice(
         "braille.math_code",
         "Math braille",
-        "The braille code for math in BRF files and while exploring a formula with MathCAT: Nemeth, or UEB mathematics. It needs a build that includes MathCAT; otherwise math is written as its spoken words.",
+        "The braille code for math in BRF files and while exploring a formula with MathCAT: Nemeth, or UEB mathematics. It needs a version that includes MathCAT; otherwise math is written as its spoken words.",
         &[("nemeth", "Nemeth"), ("ueb", "UEB")],
     ),
     choice(
@@ -903,7 +903,7 @@ pub const INFO: &[Info] = &[
             ("top-center", "top center"),
             ("top-right", "top right"),
             ("center-left", "middle left"),
-            ("center", "middle"),
+            ("center", "center"),
             ("center-right", "middle right"),
             ("bottom-left", "bottom left"),
             ("bottom-center", "bottom center"),
@@ -913,7 +913,7 @@ pub const INFO: &[Info] = &[
     number(
         "reading_aids.rsvp.font_size_pt",
         "RSVP size",
-        "Size of the RSVP word in the GUI.",
+        "Size of the RSVP word in the window.",
         (8.0, 200.0, 2.0),
         "points",
     ),
@@ -951,7 +951,7 @@ pub const INFO: &[Info] = &[
     toggle(
         "reading_aids.bionic_options.skip_urls",
         "Bionic skips addresses",
-        "Leave web and e-mail addresses alone.",
+        "Leave web and email addresses alone.",
     ),
     toggle(
         "reading_aids.bionic_options.skip_code",
@@ -961,35 +961,35 @@ pub const INFO: &[Info] = &[
     number(
         "reading_aids.spacing.line_height",
         "Line height",
-        "Line height in multiples of the font size; WCAG's value is 1.5.",
+        "Line height as a multiple of the font size. 1.5 is the WCAG value.",
         (1.0, 3.0, 0.1),
-        "times",
+        "",
     ),
     number(
         "reading_aids.spacing.paragraph_spacing",
         "Paragraph spacing",
         "Space after each paragraph, in multiples of the font size.",
         (0.0, 4.0, 0.25),
-        "times",
+        "",
     ),
     number(
         "reading_aids.spacing.letter_spacing",
         "Letter spacing",
         "Extra space between letters, in multiples of the font size.",
         (0.0, 0.5, 0.02),
-        "times",
+        "",
     ),
     number(
         "reading_aids.spacing.word_spacing",
         "Word spacing",
         "Extra space between words, in multiples of the font size.",
         (0.0, 1.0, 0.04),
-        "times",
+        "",
     ),
     open_choice(
         "reading_aids.font.family",
         "Font",
-        "The GUI's reading font; any installed family may be typed.",
+        "The window's reading font. You can also type the name of any installed font.",
         &[
             ("system-ui", "the system font"),
             ("sans", "sans serif"),
@@ -1003,7 +1003,7 @@ pub const INFO: &[Info] = &[
     number(
         "reading_aids.font.size_pt",
         "Font size",
-        "The GUI's font size.",
+        "The window's font size.",
         (6.0, 72.0, 1.0),
         "points",
     ),
@@ -1088,7 +1088,7 @@ pub const INFO: &[Info] = &[
     toggle(
         "reading_aids.syllable_options.skip_urls",
         "Syllables skip addresses",
-        "Leave web and e-mail addresses alone.",
+        "Leave web and email addresses alone.",
     ),
     toggle(
         "reading_aids.syllable_options.skip_code",
@@ -1169,8 +1169,6 @@ pub const INFO: &[Info] = &[
             ("de", "Deutsch"),
             ("pt", "Português"),
             ("ar", "العربية"),
-            ("en-XA", "test: accented"),
-            ("ar-XB", "test: right to left"),
         ],
     ),
     choice(
@@ -1203,79 +1201,79 @@ pub const INFO: &[Info] = &[
     open_choice(
         "colors.ruler",
         "Reading ruler color",
-        "The band of the reading ruler and the marked current line; the ruler keeps its underline or bold. A color name or #rrggbb; the theme's color by default.",
+        "The band of the reading ruler and the marked current line; the ruler keeps its underline or bold. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.difficult_words",
         "Difficult words color",
-        "The underline of difficult words; they stay underlined and are named at high verbosity. A color name or #rrggbb; the theme's color by default.",
+        "The underline of difficult words; they stay underlined and are named at high verbosity. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.syllables",
         "Syllable marks color",
-        "The middle dots between syllables. A color name or #rrggbb; the theme's color by default.",
+        "The middle dots between syllables. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.misspellings",
         "Misspellings color",
-        "The underline of misspelled words, in the window; they are also said. A color name or #rrggbb; the theme's color by default.",
+        "The underline of misspelled words, which are also said. Not used yet: the window draws the theme's color. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.lint",
         "Lint marks color",
-        "The underline of Markdown lint and grammar problems, in the window; they are also said. A color name or #rrggbb; the theme's color by default.",
+        "The underline of Markdown lint and grammar problems, which are also said. Not used yet: the window draws the theme's color. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.find_match",
         "Search match color",
-        "The band behind search matches; they stay underlined. A color name or #rrggbb; the theme's color by default.",
+        "The band behind search matches; they stay underlined. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.selection",
         "Selection color",
-        "The band behind selected text. A color name or #rrggbb; the theme's color by default.",
+        "The band behind selected text. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.focus",
         "Focus color",
-        "The focus outline and the focused item of a list; they stay bold. A color name or #rrggbb; the theme's color by default.",
+        "The focus outline and the focused item of a list; they stay bold. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.links",
         "Link color",
-        "The color of links; they stay underlined. A color name or #rrggbb; the theme's color by default.",
+        "The color of links. Links stay underlined. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.headings",
         "Heading color",
-        "The color of headings; they stay bold. A color name or #rrggbb; the theme's color by default.",
+        "The color of headings. Headings stay bold. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.status_bar",
         "Status bar color",
-        "The band of the status and title bars. A color name or #rrggbb; the theme's color by default.",
+        "The band of the status and title bars. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.notes",
         "Note color",
-        "The band behind text with a note; it stays italic and underlined. A color name or #rrggbb; the theme's color by default.",
+        "The band behind text with a note; it stays italic and underlined. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.bookmarks",
         "Bookmark color",
-        "The band behind a bookmarked word; it stays bold and underlined. A color name or #rrggbb; the theme's color by default.",
+        "The band behind a bookmarked word; it stays bold and underlined. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     // [sync] (ADR-0049)
@@ -1615,6 +1613,22 @@ fn value_key(v: &Value) -> String {
 
 /// Message `id` in `c`, or `english` when no catalog has it (a theme or
 /// font name, a setting added without a message).
+/// A setting's unit after `value`, in the catalog's language: "1 word" and
+/// "2 words" (`settings-unit-*`, a plural select on `$n`). A whole number
+/// chooses the plural form; a fraction reads with the general one ("1.5
+/// seconds").
+fn unit_in(c: &Catalog, unit: &str, value: f64) -> String {
+    let id = format!("settings-unit-{}", slug(unit));
+    if !c.has(&id) {
+        return unit.to_owned();
+    }
+    if value.fract() == 0.0 && value.abs() < 1e15 {
+        c.fmt(&id, &args!["n" => value as i64])
+    } else {
+        c.fmt(&id, &args!["n" => number_text(value)])
+    }
+}
+
 fn lookup(c: &Catalog, id: &str, english: &str) -> String {
     if c.has(id) {
         c.tr(id)
@@ -1676,11 +1690,12 @@ impl Setting {
             (_, Value::Null) => c.tr("settings-not-set"),
             (SettingKind::Toggle, Value::Bool(b)) => crate::words::on_off(c, *b),
             (SettingKind::Number { unit, .. }, Value::Number(n)) => {
-                let n = number_text(n.as_f64().unwrap_or_default());
+                let value = n.as_f64().unwrap_or_default();
+                let n = number_text(value);
                 if unit.is_empty() {
                     n
                 } else {
-                    let unit = lookup(c, &format!("settings-unit-{}", slug(unit)), unit);
+                    let unit = unit_in(c, unit, value);
                     c.fmt("settings-number-unit", &args!["n" => n, "unit" => unit])
                 }
             }
@@ -2667,5 +2682,45 @@ mod tests {
         assert_eq!(rate["kind"], "number");
         assert_eq!(rate["unit"], "words per minute");
         assert_eq!(rate["label"], "Rate");
+    }
+
+    /// Units read grammatically: "1 word", "2 words", "1.5 seconds", never
+    /// "1 words" (the words report, QW4), in English and the others.
+    #[test]
+    fn units_agree_with_the_number() {
+        let schema = SettingsSchema::generate();
+        let en = Catalog::english();
+        for s in &schema.settings {
+            let SettingKind::Number { unit, .. } = &s.kind else {
+                continue;
+            };
+            if unit.is_empty() {
+                continue;
+            }
+            let one = s.describe_in(&en, &serde_json::json!(1));
+            let unit_said = one.trim_start_matches("1 ");
+            let plural = [
+                "words", "rows", "times", "lines", "seconds", "steps", "points",
+            ];
+            assert!(
+                !plural.contains(&unit_said) && !unit_said.ends_with(" words per minute"),
+                "{}: {one}",
+                s.path
+            );
+        }
+        let lead = schema.get("highlight.lead_words").unwrap();
+        assert_eq!(lead.describe(&serde_json::json!(1)), "1 word");
+        assert_eq!(lead.describe(&serde_json::json!(3)), "3 words");
+        let rows = schema.get("reading_aids.ruler.rows_above").unwrap();
+        assert_eq!(rows.describe(&serde_json::json!(1)), "1 row");
+        assert_eq!(rows.describe(&serde_json::json!(0)), "0 rows");
+        // A multiple of the font size has no unit: its help says what it is.
+        let spacing = schema
+            .get("reading_aids.spacing.paragraph_spacing")
+            .unwrap();
+        assert_eq!(spacing.describe(&serde_json::json!(1)), "1");
+        let de = Catalog::builtin("de").unwrap();
+        assert_eq!(lead.describe_in(&de, &serde_json::json!(1)), "1 Wort");
+        assert_eq!(lead.describe_in(&de, &serde_json::json!(2)), "2 Wörter");
     }
 }

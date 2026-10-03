@@ -355,7 +355,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Cycle how much textweaver announces about itself: off, minimal, normal, or full; errors and answers are always said | `Ctrl+F9` | `Ctrl+F9` | `Cmd+F9` | `cycle_interface_announcements` |
 | Open the menus: File, Edit, View, Reading, Speech, Tools, and Help | `F10` | `F10` | `F10` | `menu` |
 | Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
-| Open the settings: every option with its help, filtered as you type; Left and Right change a value | `Shift+F10` | `Ctrl+,` | `Cmd+,` | `settings` |
+| Open the settings: every option with its help; Left and Right change a value | `Shift+F10` | `Ctrl+,` | `Cmd+,` | `settings` |
 | List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
 | Press a key to hear what it does and where it is in the menus, without running it | `Shift+F1` | `Shift+F1` | `Shift+F1` | `what_does_this_key_do` |
 | Say textweaver's version and license | palette | palette | palette | `about` |

@@ -18,7 +18,7 @@
 //! - **Places.** When a document opens, `[sync] position_policy` picks
 //!   another computer's place: newest or furthest resume there while
 //!   nothing has moved yet; "ask" asks, naming the computer ("lab at 42
-//!   percent. Go there? Y or N"). While reading, a place is only offered.
+//!   percent. Go there? y or n"). While reading, a place is only offered.
 //! - **Notes.** The newest edit wins; the note it replaced goes to the local
 //!   backup of replaced notes, and the owner hears which ("Cells: a note was
 //!   replaced by laptop's newer edit"). Replaced notes lists them, and Enter
