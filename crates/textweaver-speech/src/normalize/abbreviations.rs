@@ -161,6 +161,15 @@ fn neighbors(s: &str, start: usize, end: usize) -> [&str; 2] {
 /// The rule that spells error-prone abbreviations.
 fn error_prone_rule() -> Rule {
     let set: HashSet<&'static str> = ERROR_PRONE.iter().copied().collect();
+    // The pattern matches every word; only words on the list go on to the
+    // replacement (and its capture groups), so ordinary text costs no
+    // allocation.
+    let listed = set.clone();
+    let prefilter = move |m: &str| {
+        listed.contains(m)
+            || m.strip_suffix('.')
+                .is_some_and(|core| listed.contains(core))
+    };
     Rule::with(
         // A word start (the micro sign also right after a number, "25µg").
         r"((?:\b[A-Za-z]|[µμ])[A-Za-z0-9]*(?:\.[A-Za-z0-9]+)*)(\.?)",
@@ -216,6 +225,7 @@ fn error_prone_rule() -> Rule {
             Some(pieces)
         },
     )
+    .prefiltered(prefilter)
 }
 
 /// When an abbreviation may expand.
@@ -342,12 +352,17 @@ impl Transform for Abbreviations {
     }
 
     fn apply(&self, input: &str) -> (String, OffsetMap) {
+        self.apply_changed(input)
+            .unwrap_or_else(|| super::identity(input))
+    }
+
+    fn apply_changed(&self, input: &str) -> Option<(String, OffsetMap)> {
         let expand = |text: &str| self.rule.as_ref().and_then(|r| r.apply(text));
         match self.error_prone.apply(input) {
-            None => expand(input).unwrap_or_else(|| super::identity(input)),
+            None => expand(input),
             Some(acc) => {
                 let step = expand(&acc.0);
-                then(acc, step)
+                Some(then(acc, step))
             }
         }
     }
@@ -415,10 +430,12 @@ impl Transform for Pronunciations {
     }
 
     fn apply(&self, input: &str) -> (String, OffsetMap) {
-        self.rule
-            .as_ref()
-            .and_then(|r| r.apply(input))
+        self.apply_changed(input)
             .unwrap_or_else(|| super::identity(input))
+    }
+
+    fn apply_changed(&self, input: &str) -> Option<(String, OffsetMap)> {
+        self.rule.as_ref().and_then(|r| r.apply(input))
     }
 }
 

@@ -15,11 +15,12 @@
 //! | 1 | [`Math`] (`textweaver-math`, ADR-0018; MathCAT, ADR-0029) | `math`, `math_verbosity`, `asciimath_delimiter`, `math_engine` | step 4 |
 //! | 2 | [`MarkdownResidue`] (and table narration) | `markdown` (off by default) | `_strip_markdown_for_tts`, load time |
 //! | 3 | [`Pronunciations`] | `use_pronunciations` + lexicon | step 1 |
-//! | 4 | [`CommunityLexicon`] (IBMTTS community dictionaries) | `community_lexicon.enabled` (off by default) | new |
-//! | 5 | [`Abbreviations`] (error-prone ones spelled first) | `abbreviations` | step 2 |
-//! | 6 | [`Numbers`] (identifiers as digits, then dates, times, currency, percent, ordinals, decimals, years) | `numbers` | step 3 |
-//! | 7 | [`SplitCaps`] | service `split_caps` | new |
-//! | 8 | [`Punctuation`] | service punctuation level | new |
+//! | 4 | [`MedicalLexicon`] (drug names, clinical terms, dosing) | `medical_lexicon.enabled` (off by default) | new |
+//! | 5 | [`CommunityLexicon`] (IBMTTS community dictionaries) | `community_lexicon.enabled` (off by default) | new |
+//! | 6 | [`Abbreviations`] (error-prone ones spelled first) | `abbreviations` | step 2 |
+//! | 7 | [`Numbers`] (identifiers as digits, then ranges, units, dates, times, currency, percent, ordinals, decimals, years) | `numbers` | step 3 |
+//! | 8 | [`SplitCaps`] (Tall Man drug names kept whole) | service `split_caps` | new |
+//! | 9 | [`Punctuation`] | service punctuation level | new |
 //!
 //! Math runs first, where Star ran it last: `Numbers` turns `$2` into
 //! currency words, which destroyed `$2x$`, and Markdown residue removal or a
@@ -35,8 +36,14 @@
 //! apply), with only the identifier guard of numbers
 //! ([`Numbers::identifiers_only`]), and without the community lexicon
 //! (Eloquence loads those dictionaries itself). Markdown residue, the
-//! user's pronunciation lexicon, math, split caps, and punctuation
-//! verbosity still apply.
+//! user's pronunciation lexicon, the medical lexicon, math, split caps,
+//! and punctuation verbosity still apply.
+//!
+//! **Allocation.** A transform that leaves an utterance unchanged allocates
+//! nothing ([`Transform::apply_changed`] returns `None`, and its rules
+//! search without building capture groups), and the pipeline then neither
+//! copies the text nor composes a map. Most utterances pass most steps
+//! unchanged, so this is what keeps normalization cheap.
 //!
 //! Star's expected strings from `tests/test_ttstext.py` are ported as tests
 //! in this module, each also checking the offset map's invariants; the
@@ -46,6 +53,7 @@ mod abbreviations;
 pub mod community;
 mod markdown;
 mod math;
+pub mod medical;
 mod numbers;
 mod punctuation;
 pub(crate) mod rewrite;
@@ -61,6 +69,7 @@ pub use abbreviations::{
 pub use community::{CommunityLexicon, CommunityLexiconConfig};
 pub use markdown::{MarkdownResidue, TableMode, strip_markdown, tables_to_narration};
 pub use math::{Math, MathEngine, mathcat_available, normalize_math};
+pub use medical::{MedicalLexicon, MedicalLexiconConfig};
 pub use numbers::{Numbers, normalize_numbers};
 pub use punctuation::{Punctuation, SplitCaps, char_name};
 use serde::{Deserialize, Serialize};
@@ -74,6 +83,34 @@ pub trait Transform: Send + Sync {
     /// Returns the transformed text and a map from its bytes to `input` chars
     /// (positions counted from 0 within `input`).
     fn apply(&self, input: &str) -> (String, OffsetMap);
+
+    /// Like [`apply`](Self::apply), but `None` when the text is unchanged,
+    /// so a [`Pipeline`] neither copies the text nor composes an identity
+    /// map. The transforms in this module return `None` without
+    /// allocating; the default calls `apply` and returns `None` when it
+    /// gave the identity.
+    fn apply_changed(&self, input: &str) -> Option<(String, OffsetMap)> {
+        let (out, map) = self.apply(input);
+        (!is_identity(input, &out, &map)).then_some((out, map))
+    }
+}
+
+/// True when `(out, map)` is the identity of `input`: the same text in one
+/// literal span from char 0 (or no span, for empty text).
+fn is_identity(input: &str, out: &str, map: &OffsetMap) -> bool {
+    if out != input {
+        return false;
+    }
+    match map.spans() {
+        [] => input.is_empty(),
+        [s] => {
+            s.kind == textweaver_core::SpanKind::Literal
+                && s.source.start == CharPos::ZERO
+                && s.spoken.start == 0
+                && s.spoken.end as usize == out.len()
+        }
+        _ => false,
+    }
 }
 
 /// The identity output for `input`.
@@ -127,6 +164,10 @@ pub struct NormalizeConfig {
     /// engines that do not normalize natively (off by default; see
     /// [`community`]).
     pub community_lexicon: CommunityLexiconConfig,
+    /// The medical lexicon: drug names, clinical terms and safe dosing
+    /// abbreviations, with a per-user overlay (off by default; see
+    /// [`medical`]).
+    pub medical_lexicon: MedicalLexiconConfig,
 }
 
 impl Default for NormalizeConfig {
@@ -146,6 +187,7 @@ impl Default for NormalizeConfig {
             math_engine: MathEngine::Builtin,
             math_language: None,
             community_lexicon: CommunityLexiconConfig::default(),
+            medical_lexicon: MedicalLexiconConfig::default(),
         }
     }
 }
@@ -169,6 +211,7 @@ impl NormalizeConfig {
             math_engine: MathEngine::Builtin,
             math_language: None,
             community_lexicon: CommunityLexiconConfig::default(),
+            medical_lexicon: MedicalLexiconConfig::default(),
         }
     }
 }
@@ -215,6 +258,10 @@ impl Pipeline {
         if config.use_pronunciations && !config.pronunciations.is_empty() {
             p.push(Box::new(Pronunciations::new(&config.pronunciations)));
         }
+        // After the user's own entries, so the student always wins.
+        if let Some(l) = MedicalLexicon::from_config(&config.medical_lexicon) {
+            p.push(Box::new(l));
+        }
         if !native && let Some(l) = CommunityLexicon::from_config(&config.community_lexicon) {
             p.push(Box::new(l));
         }
@@ -255,20 +302,29 @@ impl Pipeline {
     /// Normalizes a string on its own, returning the text and the map from
     /// it to `text`'s chars.
     pub fn apply_text(&self, text: &str) -> (String, OffsetMap) {
-        let mut acc = identity(text);
+        let mut acc: Option<(String, OffsetMap)> = None;
         for t in &self.transforms {
-            let (out, map) = t.apply(&acc.0);
-            acc.1 = OffsetMap::compose(&acc.1, &acc.0, &map);
-            acc.0 = out;
+            let current = acc.as_ref().map_or(text, |a| a.0.as_str());
+            let Some((out, map)) = t.apply_changed(current) else {
+                continue;
+            };
+            acc = Some(match acc {
+                // The first change maps straight to `text`.
+                None => (out, map),
+                Some((mid, first)) => (out, OffsetMap::compose(&first, &mid, &map)),
+            });
         }
-        acc
+        acc.unwrap_or_else(|| identity(text))
     }
 
     /// Normalizes one utterance, composing each transform's map onto the
     /// utterance's map.
     pub fn apply(&self, mut u: Utterance) -> Utterance {
         for t in &self.transforms {
-            let (text, map) = t.apply(&u.text);
+            // Unchanged text costs nothing: no copy, no composed map.
+            let Some((text, map)) = t.apply_changed(&u.text) else {
+                continue;
+            };
             u.offset_map = if u.offset_map.is_empty() {
                 // Announcements carry no source mapping; keep it that way.
                 OffsetMap::default()

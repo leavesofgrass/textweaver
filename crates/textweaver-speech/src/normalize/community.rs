@@ -266,6 +266,11 @@ impl Transform for CommunityLexicon {
     }
 
     fn apply(&self, input: &str) -> (String, OffsetMap) {
+        self.apply_changed(input)
+            .unwrap_or_else(|| super::identity(input))
+    }
+
+    fn apply_changed(&self, input: &str) -> Option<(String, OffsetMap)> {
         let mut b = SpokenBuilder::new();
         let mut done_byte = 0usize;
         let mut done_char = 0usize;
@@ -310,10 +315,10 @@ impl Transform for CommunityLexicon {
             }
         }
         if !any {
-            return super::identity(input);
+            return None;
         }
         flush(&mut b, &mut done_byte, &mut done_char, input.len());
-        b.finish()
+        Some(b.finish())
     }
 }
 

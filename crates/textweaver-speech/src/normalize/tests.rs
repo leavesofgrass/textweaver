@@ -75,7 +75,8 @@ fn normalize_numbers_vectors() {
         ),
         ("at 12:00", "at noon"),
         ("at 00:00", "at midnight"),
-        ("at 15:30", "at three thirty PM"),
+        // Star: "at three thirty PM"; a 24-hour time gains no AM or PM.
+        ("at 15:30", "at fifteen thirty"),
         ("at 3:45 PM", "at three forty-five PM"),
         ("at 9:15 AM", "at nine fifteen AM"),
         (
@@ -104,8 +105,10 @@ fn normalize_numbers_vectors() {
 
 #[test]
 fn normalize_numbers_deliberate_changes_to_star_vectors() {
-    // Star: "at zero thirty AM"; twelve-hour clocks have no hour zero.
-    assert_eq!(numbers("at 00:30"), "at twelve thirty AM");
+    // Star: "at zero thirty AM". Written with AM it is a twelve-hour
+    // time, which has no hour zero; without, a 24-hour time.
+    assert_eq!(numbers("at 00:30 AM"), "at twelve thirty AM");
+    assert_eq!(numbers("at 00:30"), "at zero thirty");
     // Star pinned "v1.two point three"; dotted sequences are read by part.
     assert_eq!(numbers("v1.2.3"), "v 1 dot 2 dot 3");
 }
@@ -116,7 +119,8 @@ fn star_number_bugs_are_fixed() {
     assert_eq!(numbers("at 3:45 today"), "at three forty-five AM today");
     assert_eq!(numbers("3:00 amazing"), "three AM amazing");
     assert_eq!(numbers("John 3:16 says"), "John three sixteen says");
-    assert_eq!(numbers("08:05"), "eight oh five AM");
+    assert_eq!(numbers("08:05"), "eight oh five");
+    assert_eq!(numbers("9:05"), "nine oh five AM");
     assert_eq!(numbers("13:00 PM"), "one PM");
     assert_eq!(numbers("10:30:15"), "ten thirty AM and fifteen seconds");
     assert_eq!(numbers("at 9:30 a.m."), "at nine thirty AM.");
@@ -786,31 +790,34 @@ fn spoken(text: &str) -> String {
     pipeline_utterance(text, &settings()).text
 }
 
-/// The section 3 table, read by the default pipeline. Rows for units,
-/// ranges, 24-hour times and chemistry are a later wave's (W8d-m); they
-/// pin today's reading, so the change shows when it comes.
+/// The section 3 table, read by the default pipeline. Rows for gene
+/// symbols, isotopes and chemistry are a later wave's; they pin today's
+/// reading, so the change shows when it comes.
 #[test]
 fn clinical_vectors() {
     let cases = [
-        // Later: units and the dosing lexicon.
-        ("Give 5 mg q6h PRN for pain.", "Give 5 mg q6h PRN for pain."),
+        // The dosing abbreviations are the medical lexicon's
+        // (`medical_vectors`).
+        (
+            "Give 5 mg q6h PRN for pain.",
+            "Give 5 milligrams q6h PRN for pain.",
+        ),
         (
             "0.5 mg, not 5.0 mg",
-            "zero point five mg, not five point zero mg",
+            "zero point five milligrams, not five point zero milligrams",
         ),
-        // Later: an en dash between numbers as a range.
-        ("taper over 6–8 weeks", "taper over 6–8 weeks"),
+        ("taper over 6–8 weeks", "taper over 6 to 8 weeks"),
         (
             "95% CI 1.2–3.4; p < 0.05; p = .03",
-            "ninety-five percent CI one point two–three point four; p less than zero point zero five; p equals point zero three",
+            "ninety-five percent CI one point two to three point four; p less than zero point zero five; p equals point zero three",
         ),
-        // Later: chemistry and "per liter". (The space before the
-        // semicolon is the punctuation step's, unchanged here.)
+        // Later: chemistry. (The space before the semicolon is the
+        // punctuation step's, unchanged here.)
         (
             "K+ 3.5 mEq/L; Ca2+; Na+",
-            "K plus three point five mEq slash L; Ca2 plus ; Na plus",
+            "K plus three point five milliequivalents per liter; Ca2 plus ; Na plus",
         ),
-        ("25 mcg vs 25 µg", "25 mcg vs 25 micrograms"),
+        ("25 mcg vs 25 µg", "25 micrograms vs 25 micrograms"),
         (
             "CPT 99213; PMID 31769816; ZIP 97239",
             "CPT nine nine two one three; PMID three one seven six nine eight one six; ZIP nine seven two three nine",
@@ -819,24 +826,23 @@ fn clinical_vectors() {
             "ICD-10 E11.9; NCT04368728",
             "ICD-10 E11.9; NCT zero four three six eight seven two eight",
         ),
-        // Later: a 24-hour time without AM or PM.
-        ("at 08:05", "at eight oh five AM"),
+        ("at 08:05", "at eight oh five"),
         (
             "TNF-α; 10 U insulin; QD and QOD",
             "TNF alpha; 10 U insulin; Q D and Q O D",
         ),
         (
             "38.5°C; SpO2 98%; 120/80 mmHg",
-            "thirty-eight point five degrees C; SpO2 ninety-eight percent; 120 slash 80 mmHg",
+            "thirty-eight point five degrees Celsius; SpO2 ninety-eight percent; 120 over 80 millimeters of mercury",
         ),
         (
             "WBC 11.5 × 10^9/L",
-            "WBC eleven point five times ten to the ninth slash L",
+            "WBC eleven point five times ten to the ninth per liter",
         ),
         // Later: gene symbols and isotopes.
         ("BRCA1, TP53; 99mTc; 131I", "BRCA1, TP53; 99mTc; 131I"),
-        // Later: the decimal comma by document language.
-        ("2,5%", "2,five percent"),
+        // A decimal comma: the comma part is not three digits.
+        ("2,5%", "two point five percent"),
     ];
     for (input, want) in cases {
         assert_eq!(spoken(input), want, "{input:?}");
@@ -1059,4 +1065,297 @@ fn symbols_outside_math_are_named() {
     assert_eq!(char_name('µ'), Some("micro"));
     assert_eq!(char_name('−'), Some("minus"));
     assert_eq!(char_name('⇌'), Some("in equilibrium with"));
+}
+
+// Health sciences: the medical pronunciation layer (report sections 2 and 3,
+// section 7 items 3 and 5).
+
+/// The default pipeline with the medical lexicon on.
+fn medical_settings() -> NormalizeConfig {
+    NormalizeConfig {
+        medical_lexicon: MedicalLexiconConfig {
+            enabled: true,
+            overlay: None,
+        },
+        ..settings()
+    }
+}
+
+/// The report's twenty test terms, through the whole pipeline with the
+/// medical lexicon on: each read as the respelling the lexicon carries,
+/// each highlighting its own word.
+#[test]
+fn medical_vectors() {
+    let terms = [
+        ("acetaminophen", "uh-SEE-tuh-MIN-uh-fen"),
+        ("atorvastatin", "uh-TOR-vuh-STAT-in"),
+        ("metoprolol", "meh-TOE-pruh-lol"),
+        ("warfarin", "WAR-fuh-rin"),
+        ("lisinopril", "lye-SIN-oh-pril"),
+        ("hydroxyzine", "hye-DROK-sih-zeen"),
+        ("hydralazine", "hye-DRAL-uh-zeen"),
+        ("ceftriaxone", "sef-try-AKS-own"),
+        ("phenytoin", "FEN-ih-toyn"),
+        ("levetiracetam", "lee-veh-tye-RASS-eh-tam"),
+        ("furosemide", "fyoo-ROH-seh-mide"),
+        ("dyspnea", "DISP-nee-uh"),
+        ("ischemia", "is-KEE-mee-uh"),
+        ("cholecystitis", "koh-lee-sis-TYE-tis"),
+        ("creatinine", "kree-AT-ih-neen"),
+        ("sphygmomanometer", "sfig-moh-muh-NOM-eh-ter"),
+        ("Guillain-Barré", "ghee-YAN bah-RAY"),
+        ("Sjögren", "SHOW-grin"),
+        ("Raynaud", "ray-NOH"),
+        ("ileum", "ILL-ee-um"),
+        ("ilium", "ILL-ee-um"),
+        ("Wernicke", "VER-nih-kuh"),
+    ];
+    let cfg = medical_settings();
+    for (term, want) in terms {
+        let text = format!("Note {term} today.");
+        let u = pipeline_utterance(&text, &cfg);
+        assert_eq!(u.text, format!("Note {want} today."), "{term}");
+        assert_eq!(highlighted(&text, &u, want), term, "{term}");
+        assert_eq!(highlighted(&text, &u, "today"), "today", "{term}");
+    }
+    // The dosing line of the report's table, with the lexicon on.
+    assert_eq!(
+        pipeline_utterance("Give 5 mg q6h PRN for pain.", &cfg).text,
+        "Give 5 milligrams every 6 hours as needed for pain."
+    );
+    // Off by default.
+    assert_eq!(spoken("Give warfarin."), "Give warfarin.");
+    assert!(
+        !Pipeline::for_settings(&settings(), PunctuationLevel::Some, false, false)
+            .names()
+            .contains(&"medical_lexicon")
+    );
+}
+
+#[test]
+fn medical_lexicon_runs_after_the_users_entries_and_before_the_community_lexicon() {
+    let mut cfg = medical_settings();
+    cfg.pronunciations
+        .insert("warfarin".into(), "WAR farin".into());
+    cfg.community_lexicon.enabled = true;
+    let names = Pipeline::for_settings(&cfg, PunctuationLevel::Some, false, false).names();
+    let at = |n: &str| names.iter().position(|x| *x == n).unwrap();
+    assert!(at("pronunciations") < at("medical_lexicon"));
+    assert!(at("medical_lexicon") < at("abbreviations"));
+    if names.contains(&"community_lexicon") {
+        assert!(at("medical_lexicon") < at("community_lexicon"));
+    }
+    // The user's own entry wins.
+    assert_eq!(
+        pipeline_utterance("Give warfarin.", &cfg).text,
+        "Give WAR farin."
+    );
+    // Engines that normalize natively get it too.
+    let native = Pipeline::for_settings(&cfg, PunctuationLevel::Some, false, true);
+    assert!(native.names().contains(&"medical_lexicon"));
+}
+
+#[test]
+fn a_user_overlay_entry_wins_over_the_bundled_tier() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("medical-lexicon.toml");
+    std::fs::write(
+        &path,
+        "warfarin = \"WAR-far-in\"\n[dosing]\nPRN = \"when needed\"\n",
+    )
+    .unwrap();
+    let cfg = NormalizeConfig {
+        medical_lexicon: MedicalLexiconConfig {
+            enabled: true,
+            overlay: Some(path),
+        },
+        ..settings()
+    };
+    let text = "Warfarin PRN, metformin";
+    let u = pipeline_utterance(text, &cfg);
+    assert_eq!(u.text, "WAR-far-in when needed, met-FOR-min");
+    assert_eq!(highlighted(text, &u, "WAR-far-in"), "Warfarin");
+    assert_eq!(highlighted(text, &u, "when needed"), "PRN");
+}
+
+#[test]
+fn tall_man_names_are_kept_whole() {
+    // Split caps on, lexicon off: never "hydr OX Yzine".
+    let p = Pipeline::for_settings(&settings(), PunctuationLevel::Some, true, false);
+    let (out, map) = p.apply_text("Not hydrOXYzine or DOPamine, but camelCase.");
+    map.check_invariants(&out).unwrap();
+    assert_eq!(out, "Not hydrOXYzine or DOPamine, but camel Case.");
+    // Lexicon on: the respelling, or the plain name.
+    let p = Pipeline::for_settings(&medical_settings(), PunctuationLevel::Some, true, false);
+    let (out, map) = p.apply_text("hydrOXYzine, hydrALAZINE and cycloSPORINE");
+    map.check_invariants(&out).unwrap();
+    assert_eq!(out, "hye-DROK-sih-zeen, hye-DRAL-uh-zeen and cyclosporine");
+}
+
+#[test]
+fn clinical_units_are_said_in_full() {
+    let cases = [
+        ("Give 1 mg now", "Give 1 milligram now"),
+        ("Give 5mg now", "Give 5 milligrams now"),
+        ("25 mcg", "25 micrograms"),
+        ("25 µg", "25 micrograms"),
+        ("10 mL of saline", "10 milliliters of saline"),
+        ("1 mL", "1 milliliter"),
+        ("5 mmol/L", "5 millimoles per liter"),
+        ("2 mg/kg", "2 milligrams per kilogram"),
+        ("15 mg/kg/day", "15 milligrams per kilogram per day"),
+        (
+            "0.1 mcg/kg/min",
+            "zero point one micrograms per kilogram per minute",
+        ),
+        ("100 mg/dL", "100 milligrams per deciliter"),
+        ("1,500 mg", "one thousand five hundred milligrams"),
+        ("2,5 mg", "two point five milligrams"),
+        ("4 g and 70 kg", "4 grams and 70 kilograms"),
+        (
+            "37°C or 98.6 °F",
+            "37 degrees Celsius or ninety-eight point six degrees Fahrenheit",
+        ),
+        ("140 mEq/L", "140 milliequivalents per liter"),
+        ("120/80 mmHg", "120 over 80 millimeters of mercury"),
+        ("5 mm", "5 millimeters"),
+        (
+            "WBC 11.5 × 10^9/L",
+            "WBC eleven point five times ten to the ninth per liter",
+        ),
+        // Not units: part of a word, or no number before.
+        ("5 mgs and mg/kg and 5 Lb", "5 mgs and mg slash kg and 5 Lb"),
+    ];
+    for (input, want) in cases {
+        assert_eq!(spoken(input), want, "{input:?}");
+    }
+    // The number and the unit highlight themselves.
+    let text = "Give 5 mg/kg now";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(u.text, "Give 5 milligrams per kilogram now");
+    assert_eq!(highlighted(text, &u, "5"), "5");
+    assert_eq!(highlighted(text, &u, "milligrams"), " mg/kg");
+    assert_eq!(highlighted(text, &u, "now"), "now");
+    let text = "BP 120/80 mmHg.";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(highlighted(text, &u, "over"), "/");
+    assert_eq!(highlighted(text, &u, "80"), "80");
+}
+
+#[test]
+fn en_dash_ranges_are_read_as_to() {
+    let cases = [
+        ("6–8 weeks", "6 to 8 weeks"),
+        ("6 – 8 weeks", "6 to 8 weeks"),
+        ("give 6–8 mg", "give 6 to 8 milligrams"),
+        ("1.5–2.5 mL", "one point five to two point five milliliters"),
+        ("pages 12–15", "pages 12 to 15"),
+        ("1990–1995", "nineteen ninety to nineteen ninety-five"),
+        // Not ranges: a hyphen.
+        ("6-8 weeks", "6-8 weeks"),
+    ];
+    for (input, want) in cases {
+        assert_eq!(spoken(input), want, "{input:?}");
+    }
+    let text = "taper over 6–8 weeks";
+    let u = pipeline_utterance(text, &settings());
+    assert_eq!(highlighted(text, &u, "to"), "–");
+    assert_eq!(highlighted(text, &u, "8"), "8");
+}
+
+#[test]
+fn twenty_four_hour_times_gain_no_am_or_pm() {
+    let cases = [
+        ("at 08:05", "at eight oh five"),
+        ("at 15:30", "at fifteen thirty"),
+        ("at 15:00", "at fifteen hundred"),
+        ("at 08:00", "at oh eight hundred"),
+        ("at 00:30", "at zero thirty"),
+        ("at 00:00", "at midnight"),
+        (
+            "at 23:59:30",
+            "at twenty-three fifty-nine and thirty seconds",
+        ),
+        // Twelve-hour times keep their reading.
+        ("at 3:45 PM", "at three forty-five PM"),
+        ("at 8:05 a.m. today", "at eight oh five AM today"),
+        ("at 12:00", "at noon"),
+        ("John 3:16", "John three sixteen"),
+    ];
+    for (input, want) in cases {
+        assert_eq!(spoken(input), want, "{input:?}");
+    }
+}
+
+/// Offset maps stay exact through every new rule, at every punctuation
+/// level and with split caps.
+#[test]
+fn clinical_rules_keep_the_offset_map_exact() {
+    let samples = [
+        "Give 5 mg q6h PRN; 2 mg/kg/day; 120/80 mmHg; 6–8 weeks at 08:05.",
+        "hydrOXYzine 25 mg, WARFARIN 2,5 mg, Raynaud's; 10^9/L; 2,5%.",
+        "Guillain-Barré and Sjögren’s; 1,500 mg at 15:30; 37°C.",
+    ];
+    for cfg in [settings(), medical_settings()] {
+        for level in [
+            PunctuationLevel::None,
+            PunctuationLevel::Some,
+            PunctuationLevel::All,
+        ] {
+            for split in [false, true] {
+                let p = Pipeline::for_settings(&cfg, level, split, false);
+                for s in samples {
+                    let u = p.apply(Utterance::literal(s, CharPos(7)));
+                    u.offset_map
+                        .check_invariants(&u.text)
+                        .unwrap_or_else(|e| panic!("{e} for {s:?} -> {:?}", u.text));
+                    let chars: Vec<char> = s.chars().collect();
+                    for sp in u
+                        .offset_map
+                        .spans()
+                        .iter()
+                        .filter(|x| x.kind == SpanKind::Literal)
+                    {
+                        let spoken = &u.text[sp.spoken.start as usize..sp.spoken.end as usize];
+                        let src: String = chars[sp.source.start.0 - 7..sp.source.end.0 - 7]
+                            .iter()
+                            .collect();
+                        assert_eq!(spoken, src, "{s:?} -> {:?}", u.text);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// `apply_changed` agrees with `apply`, and is `None` exactly when the text
+/// is unchanged.
+#[test]
+fn apply_changed_matches_apply() {
+    let cfg = medical_settings();
+    let transforms: Vec<Box<dyn Transform>> = vec![
+        Box::new(Abbreviations::new(&BTreeMap::new())),
+        Box::new(Numbers::default()),
+        Box::new(Numbers::identifiers_only()),
+        Box::new(Punctuation::new(PunctuationLevel::Some)),
+        Box::new(SplitCaps),
+        Box::new(MedicalLexicon::from_config(&cfg.medical_lexicon).unwrap()),
+    ];
+    for s in [
+        "",
+        "plain words only",
+        "Dr. Lee gave 5 mg at 08:05, QD.",
+        "camelCase hydrOXYzine PMID 123",
+    ] {
+        for t in &transforms {
+            let full = t.apply(s);
+            match t.apply_changed(s) {
+                None => assert_eq!(full.0, s, "{} on {s:?}", t.name()),
+                Some(changed) => {
+                    assert_ne!(changed.0, s, "{} on {s:?}", t.name());
+                    assert_eq!(changed, full, "{} on {s:?}", t.name());
+                }
+            }
+        }
+    }
 }

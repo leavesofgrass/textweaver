@@ -58,10 +58,21 @@ pub(crate) fn template(t: &str) -> Vec<Piece> {
 /// one char later), `Some(pieces)` replaces it.
 pub(crate) type Replacer = dyn Fn(&Captures<'_>, &str) -> Option<Vec<Piece>> + Send + Sync;
 
+/// A cheap test on a match (its text) before its capture groups are built:
+/// `false` rejects it without allocating.
+pub(crate) type Prefilter = dyn Fn(&str) -> bool + Send + Sync;
+
 /// One substitution.
+///
+/// Applying a rule allocates nothing when it does not change the text: the
+/// search uses `find_at`, which needs no capture slots, and capture groups
+/// are built only for a match that passes the [`Prefilter`]. A rule whose
+/// pattern matches often but rarely applies (a word start, say) should
+/// have a prefilter.
 pub(crate) struct Rule {
     re: Regex,
     replace: Box<Replacer>,
+    prefilter: Option<Box<Prefilter>>,
     /// Trim a leading space of the replacement when the output already ends
     /// in whitespace (or is empty), and a trailing space when the input
     /// continues with whitespace (or ends). Replaces Star's global
@@ -95,6 +106,7 @@ impl Rule {
         Rule {
             re,
             replace: Box::new(f),
+            prefilter: None,
             pad: false,
         }
     }
@@ -108,8 +120,16 @@ impl Rule {
         Some(Rule {
             re,
             replace: Box::new(f),
+            prefilter: None,
             pad: false,
         })
+    }
+
+    /// Adds a [`Prefilter`]: a match whose text fails it is rejected before
+    /// its capture groups are built.
+    pub(crate) fn prefiltered(mut self, f: impl Fn(&str) -> bool + Send + Sync + 'static) -> Self {
+        self.prefilter = Some(Box::new(f));
+        self
     }
 
     /// Turns on space padding (see the field docs).
@@ -126,6 +146,17 @@ impl Rule {
         let mut pos = 0usize;
         let mut any = false;
         while pos <= input.len() {
+            // `find_at` allocates nothing; capture slots are built only for
+            // a match that may be replaced.
+            let Some(found) = self.re.find_at(input, pos) else {
+                break;
+            };
+            if found.start() == found.end()
+                || self.prefilter.as_ref().is_some_and(|f| !f(found.as_str()))
+            {
+                pos = next_boundary(input, found.start());
+                continue;
+            }
             let Some(caps) = self.re.captures_at(input, pos) else {
                 break;
             };
@@ -267,15 +298,23 @@ pub(crate) fn is_word(c: char) -> bool {
 /// Applies `rules` in order, each over the previous output, composing the
 /// maps. The result maps the final text to `input` chars.
 pub(crate) fn apply_rules(input: &str, rules: &[Rule]) -> (String, OffsetMap) {
-    let mut text = input.to_owned();
-    let mut map = OffsetMap::identity(input, CharPos::ZERO);
+    apply_rules_changed(input, rules).unwrap_or_else(|| super::identity(input))
+}
+
+/// [`apply_rules`], or `None` (allocating nothing) when no rule changed
+/// the text.
+pub(crate) fn apply_rules_changed(input: &str, rules: &[Rule]) -> Option<(String, OffsetMap)> {
+    let mut acc: Option<(String, OffsetMap)> = None;
     for r in rules {
-        if let Some((out, m)) = r.apply(&text) {
-            map = OffsetMap::compose(&map, &text, &m);
-            text = out;
+        let step = r.apply(acc.as_ref().map_or(input, |a| a.0.as_str()));
+        if step.is_some() {
+            acc = Some(match acc {
+                None => step?,
+                Some(a) => then(a, step),
+            });
         }
     }
-    (text, map)
+    acc
 }
 
 /// Composes a later step onto an accumulated `(text, map)`.
