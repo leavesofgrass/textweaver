@@ -21,6 +21,10 @@ use textweaver_core::{
 use crate::sync::ConflictPolicy;
 use crate::{Paths, StoreError, atomic_write};
 
+/// The longest structural pause (`[speech] pause_heading_ms` and the
+/// others), in milliseconds.
+pub const MAX_PAUSE_MS: u32 = 3000;
+
 /// Speech settings.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -63,6 +67,15 @@ pub struct SpeechSettings {
     pub voices_by_language: BTreeMap<String, String>,
     /// Latency offset for audio-clock word events, in ms (Star 120).
     pub latency_offset_ms: u32,
+    /// Silence after a heading, in ms at the default rate (shorter at
+    /// faster rates); 0 turns it off. At most [`MAX_PAUSE_MS`].
+    pub pause_heading_ms: u32,
+    /// Silence after a paragraph, in ms at the default rate; 0 turns it
+    /// off.
+    pub pause_paragraph_ms: u32,
+    /// Silence after a list item, in ms at the default rate; 0 turns it
+    /// off.
+    pub pause_list_item_ms: u32,
     /// The audio output device by its stable id (`tw backends --devices`
     /// lists them); `None` uses the system's default. A device that is
     /// not connected falls back to the default (Wave 7, W7h).
@@ -290,6 +303,9 @@ impl Default for SpeechSettings {
             .collect(),
             voices_by_language: BTreeMap::new(),
             latency_offset_ms: 120,
+            pause_heading_ms: 400,
+            pause_paragraph_ms: 300,
+            pause_list_item_ms: 150,
             output_device: None,
             verbosity: Verbosity::default(),
             eci: EciSettings::default(),
@@ -1781,6 +1797,20 @@ impl Settings {
             );
             self.speech.pitch = pitch;
         }
+        for (key, ms) in [
+            ("pause_heading_ms", &mut self.speech.pause_heading_ms),
+            ("pause_paragraph_ms", &mut self.speech.pause_paragraph_ms),
+            ("pause_list_item_ms", &mut self.speech.pause_list_item_ms),
+        ] {
+            if *ms > MAX_PAUSE_MS {
+                fix(
+                    format!("speech.{key}"),
+                    format!("{ms} is outside 0 to {MAX_PAUSE_MS} milliseconds"),
+                    MAX_PAUSE_MS.to_string(),
+                );
+                *ms = MAX_PAUSE_MS;
+            }
+        }
         for (name, wpm) in &mut self.speech.speed_presets {
             let c = (*wpm).clamp(Rate::MIN_WPM, Rate::MAX_WPM);
             if c != *wpm {
@@ -2664,6 +2694,24 @@ wrap_navigation = true
         assert_eq!(
             loaded.warnings,
             vec!["speech.volume 150 is outside 0 to 100 percent; using 100"]
+        );
+    }
+
+    #[test]
+    fn long_pauses_are_clamped_and_zero_is_kept() {
+        let (_d, store) = store();
+        write(
+            &store,
+            "[speech]\npause_heading_ms = 10000\npause_paragraph_ms = 0\n",
+        );
+        let loaded = store.load_detailed();
+        let sp = &loaded.settings.speech;
+        assert_eq!(sp.pause_heading_ms, MAX_PAUSE_MS);
+        assert_eq!(sp.pause_paragraph_ms, 0, "0 turns the pause off");
+        assert_eq!(sp.pause_list_item_ms, 150);
+        assert_eq!(
+            loaded.warnings,
+            vec!["speech.pause_heading_ms 10000 is outside 0 to 3000 milliseconds; using 3000"]
         );
     }
 

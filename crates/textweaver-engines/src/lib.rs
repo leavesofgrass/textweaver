@@ -336,6 +336,11 @@ pub fn service_config(settings: &Settings) -> ServiceConfig {
         },
         caps: sp.caps,
         prefer_voice: sp.prefer_voice.clone().filter(|p| !p.is_empty()),
+        pauses: textweaver_speech::PauseConfig {
+            heading_ms: sp.pause_heading_ms,
+            paragraph_ms: sp.pause_paragraph_ms,
+            list_item_ms: sp.pause_list_item_ms,
+        },
         ..ServiceConfig::default()
     }
 }
@@ -432,6 +437,26 @@ mod tests {
         assert_eq!(
             d.normalize.community_lexicon,
             CommunityLexiconConfig::default()
+        );
+    }
+
+    #[test]
+    fn pause_lengths_come_from_the_speech_settings() {
+        // The store's defaults are the speech crate's.
+        let d = service_config(&Settings::default());
+        assert_eq!(d.pauses, textweaver_speech::PauseConfig::default());
+        let mut s = Settings::default();
+        s.speech.pause_heading_ms = 900;
+        s.speech.pause_paragraph_ms = 0;
+        s.speech.pause_list_item_ms = 50;
+        let c = service_config(&s);
+        assert_eq!(
+            c.pauses,
+            textweaver_speech::PauseConfig {
+                heading_ms: 900,
+                paragraph_ms: 0,
+                list_item_ms: 50,
+            }
         );
     }
 

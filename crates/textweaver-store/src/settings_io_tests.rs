@@ -45,6 +45,9 @@ fn everything_changed() -> Settings {
     sp.skip_code = false;
     sp.speed_presets = BTreeMap::from([("fast".to_owned(), 400)]);
     sp.latency_offset_ms = 80;
+    sp.pause_heading_ms = 600;
+    sp.pause_paragraph_ms = 0;
+    sp.pause_list_item_ms = 250;
     sp.output_device = Some("wasapi:{test-device}".into());
     sp.verbosity = Verbosity::High;
     sp.eci.dictionaries = EciDictionaries::Path("C:/dicts".into());

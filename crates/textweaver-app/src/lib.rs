@@ -271,7 +271,7 @@ pub use opener::open_with_system;
 pub use opening::{
     open_failure_message, open_failure_message_in, open_failure_reason, open_failure_reason_in,
 };
-pub use playback::{Playback, load_options, narration_policy};
+pub use playback::{Playback, load_options, narration_policy, structural_pauses};
 pub use restart::SpeechStarter;
 pub use settings_schema::{Setting, SettingKind, SettingsSchema};
 pub use templates::local_date;

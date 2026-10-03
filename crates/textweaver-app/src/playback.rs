@@ -148,6 +148,28 @@ pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats
     }
 }
 
+/// Where a planned reading's headings, paragraphs and list items end, as
+/// the speech service's structural pauses (`[speech] pause_heading_ms` and
+/// the others say how long each is).
+pub fn structural_pauses(
+    doc: &textweaver_text::Document,
+    utterances: &[textweaver_core::Utterance],
+) -> Vec<textweaver_speech::PauseAt> {
+    use textweaver_speech::{PauseAt, PauseKind};
+    use textweaver_text::BlockEnd;
+    textweaver_text::block_ends(doc, utterances)
+        .into_iter()
+        .map(|(after, block)| PauseAt {
+            after,
+            kind: match block {
+                BlockEnd::Heading => PauseKind::Heading,
+                BlockEnd::Paragraph => PauseKind::Paragraph,
+                BlockEnd::ListItem => PauseKind::ListItem,
+            },
+        })
+        .collect()
+}
+
 /// `[reading] revisions`: how tracked changes in Word, OpenDocument, and
 /// RTF files are read. `auto` (the default) says each change in place
 /// ("deleted by Ada Example: ...") at high verbosity and reads the final
@@ -296,11 +318,21 @@ impl App {
     ) -> bool {
         let policy = self.narration_policy();
         let citations = self.citation_speech_in(range);
+        let sp = &self.settings.speech;
+        let pauses_on =
+            sp.pause_heading_ms > 0 || sp.pause_paragraph_ms > 0 || sp.pause_list_item_ms > 0;
         let Some(s) = self.session.as_mut() else {
             return false;
         };
         let range = range.clamp_to(s.doc.len_chars());
         let mut utterances = textweaver_text::plan_with(&s.doc, range, &policy, &citations);
+        // Where headings, paragraphs and list items end, for the speech
+        // service's structural pauses.
+        let pauses = if pauses_on {
+            structural_pauses(&s.doc, &utterances)
+        } else {
+            Vec::new()
+        };
         if let Some(lead) = lead.filter(|_| !utterances.is_empty()) {
             utterances.insert(0, textweaver_core::Utterance::announcement(lead));
         }
@@ -318,7 +350,7 @@ impl App {
         };
         s.spoken = None;
         s.spoken_sentence = None;
-        let generation = self.speech.read(utterances);
+        let generation = self.speech.read_with_pauses(utterances, pauses);
         self.track.follow(generation);
         self.playback = Playback::Reading;
         self.has_read = true;

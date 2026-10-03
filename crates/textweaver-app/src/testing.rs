@@ -3,13 +3,15 @@
 //! [`RecordingBackend`] implements the public `SpeechBackend` trait, records
 //! every utterance it is asked to speak, and emits `Started`, one `Word`
 //! event per word (byte ranges into the spoken text, no audio clock), and
-//! `Finished`, synchronously from `speak`. It stands in for Agent B's
+//! `Finished`, synchronously from `speak`. It plays silence between
+//! utterances ([`Caps::SILENCE`]), so structural pauses never hold a test's
+//! reading back; it records each pause instead. It stands in for Agent B's
 //! `recording` backend until that is merged, and uses only the trait, so it
 //! keeps working with B's speech service.
 
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use textweaver_core::{CharRange, Utterance, UtteranceKind};
+use textweaver_core::{CharRange, Utterance, UtteranceId, UtteranceKind};
 use textweaver_speech::{
     Caps, EventSink, RawEvent, ServiceConfig, SpeechBackend, SpeechError, SpeechService, Voice,
     VoiceParams,
@@ -24,6 +26,8 @@ struct LogInner {
     utterances: Vec<Utterance>,
     stops: usize,
     params: Vec<VoiceParams>,
+    /// Structural pauses: the utterance each follows, and its length.
+    silences: Vec<(UtteranceId, u32)>,
 }
 
 impl SpeechLog {
@@ -64,6 +68,19 @@ impl SpeechLog {
             .collect()
     }
 
+    /// The structural pauses asked for, oldest first: the text of the
+    /// utterance each follows, and its length in ms.
+    pub fn silences(&self) -> Vec<(String, u32)> {
+        let l = self.lock();
+        l.silences
+            .iter()
+            .filter_map(|(id, ms)| {
+                let u = l.utterances.iter().rev().find(|u| u.id == *id)?;
+                Some((u.text.clone(), *ms))
+            })
+            .collect()
+    }
+
     /// How many times speech was stopped.
     pub fn stops(&self) -> usize {
         self.lock().stops
@@ -84,6 +101,7 @@ impl SpeechLog {
         let mut l = self.lock();
         l.utterances.clear();
         l.stops = 0;
+        l.silences.clear();
     }
 }
 
@@ -146,7 +164,16 @@ impl SpeechBackend for RecordingBackend {
     }
 
     fn capabilities(&self) -> Caps {
-        Caps::WORD_EVENTS | Caps::PAUSE | Caps::PITCH | Caps::VOLUME | Caps::LIVE_RATE
+        Caps::WORD_EVENTS
+            | Caps::PAUSE
+            | Caps::PITCH
+            | Caps::VOLUME
+            | Caps::LIVE_RATE
+            | Caps::SILENCE
+    }
+
+    fn silence_after(&mut self, id: UtteranceId, ms: u32) {
+        self.log.lock().silences.push((id, ms));
     }
 
     fn voices(&self) -> Result<Vec<Voice>, SpeechError> {

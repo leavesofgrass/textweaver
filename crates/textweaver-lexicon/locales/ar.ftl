@@ -1831,6 +1831,12 @@ setting-speech-voices-by-language = الأصوات حسب اللغة
 setting-speech-voices-by-language-help = الصوت لكل لغة واجهة، حسب رمز اللغة، مثل es = معرّف الصوت. لغة غير مدرجة تستخدم أول صوت للمحرك لها.
 setting-speech-latency-offset-ms = تأخير التمييز
 setting-speech-latency-offset-ms-help = المدة بعد إبلاغ المحرك عن كلمة حتى يتحرك التمييز، للمحركات المؤقتة بساعة الصوت.
+setting-speech-pause-heading-ms = التوقف بعد العناوين
+setting-speech-pause-heading-ms-help = صمت بعد العنوان، أقصر عند السرعات الأعلى. القيمة 0 توقفه.
+setting-speech-pause-paragraph-ms = التوقف بعد الفقرات
+setting-speech-pause-paragraph-ms-help = صمت بعد الفقرة، أقصر عند السرعات الأعلى. القيمة 0 توقفه.
+setting-speech-pause-list-item-ms = التوقف بعد عناصر القائمة
+setting-speech-pause-list-item-ms-help = صمت بعد عنصر القائمة، أقصر عند السرعات الأعلى. القيمة 0 توقفه.
 setting-speech-output-device = جهاز الإخراج
 setting-speech-output-device-help = جهاز الصوت الذي يُشغَّل عليه الكلام، بمعرّفه؛ يسرد الأمر tw backends --devices الأجهزة. إن لم يُضبط يُستخدم الجهاز الافتراضي للنظام، وكذلك إن لم يكن الجهاز متصلًا.
 setting-speech-verbosity = مستوى التفصيل
