@@ -12,7 +12,6 @@
 //! is a miss, and a failed write is ignored by [`DocumentCache::load`].
 
 use std::fs;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
@@ -123,16 +122,7 @@ impl DocumentCache {
             document: doc.clone(),
         };
         let json = serde_json::to_vec(&entry).map_err(std::io::Error::other)?;
-        let target = self.entry_path(key);
-        let tmp = target.with_extension(format!("tmp{}", std::process::id()));
-        {
-            let mut f = fs::File::create(&tmp)?;
-            f.write_all(&json)?;
-            f.sync_all()?;
-        }
-        fs::rename(&tmp, &target).inspect_err(|_| {
-            let _ = fs::remove_file(&tmp);
-        })
+        textweaver_core::fs::write_atomic(&self.entry_path(key), &json)
     }
 
     /// Loads `source` through the cache: file sources are served from a

@@ -217,14 +217,8 @@ impl Library {
                 .map_err(|e| CiteError::io("create the folder for", path, e))?;
         }
         let text = crate::csljson::write(&self.items)?;
-        let mut tmp = path.as_os_str().to_owned();
-        tmp.push(".tmp");
-        let tmp = PathBuf::from(tmp);
-        std::fs::write(&tmp, text).map_err(|e| CiteError::io("write", &tmp, e))?;
-        std::fs::rename(&tmp, path).map_err(|e| {
-            let _ = std::fs::remove_file(&tmp);
-            CiteError::io("replace", path, e)
-        })
+        textweaver_core::fs::write_atomic(path, text.as_bytes())
+            .map_err(|e| CiteError::io("write", path, e))
     }
 
     /// All references, in the order they were added.

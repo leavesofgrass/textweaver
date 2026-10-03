@@ -9350,6 +9350,7 @@ dependencies = [
  "ropey",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 
@@ -9473,6 +9474,7 @@ dependencies = [
  "sha2 0.10.9",
  "tempfile",
  "textweaver-components",
+ "textweaver-core",
  "thiserror 2.0.21",
 ]
 

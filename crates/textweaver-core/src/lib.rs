@@ -14,9 +14,11 @@
 //! - [`Rate`], [`Pitch`], [`Volume`]: engine-independent voice parameters (ADR-0004).
 //! - [`Utterance`]: one chunk of text handed to the speech service.
 //! - Small preference enums shared by settings, speech, and accessibility.
+//! - [`fs`]: the one atomic file write every crate saves with.
 
 mod edit;
 mod error;
+pub mod fs;
 mod offset_map;
 mod pos;
 mod prefs;
