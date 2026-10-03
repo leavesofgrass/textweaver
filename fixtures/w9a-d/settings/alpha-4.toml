@@ -1,0 +1,23 @@
+# A settings.toml as textweaver 0.1.0-alpha.4 saved it: alpha.4 added
+# accessibility modes, reading aids, statistics, the interface language, and
+# the keyboard preset, whose default was then called "screen-reader".
+# Golden file for crates/textweaver-store/tests/it/settings_golden.rs.
+
+[speech]
+rate = 320
+
+[keyboard]
+preset = "screen-reader"
+
+[accessibility]
+mode = "hybrid"
+
+[reading_aids]
+bionic = true
+syllables = true
+
+[stats]
+enabled = false
+
+[interface]
+language = "es"

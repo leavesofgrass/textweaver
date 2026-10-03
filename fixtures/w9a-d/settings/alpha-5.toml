@@ -1,0 +1,19 @@
+# A settings.toml as textweaver 0.1.0-alpha.5 saved it: alpha.5 added
+# summaries, Braille, and reading_aids.font.fetch_missing, a setting since
+# removed (loading drops it). Golden file for
+# crates/textweaver-store/tests/it/settings_golden.rs.
+
+[summary]
+sentences = 7
+
+[reading_aids]
+bionic = true
+
+[reading_aids.font]
+fetch_missing = true
+
+[accessibility]
+mode = "screen-reader"
+
+[reading]
+sync_conflict_policy = "highest_progress"

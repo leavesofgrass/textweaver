@@ -1,0 +1,32 @@
+# A settings.toml as textweaver 0.1.0-alpha.1 saved it: only the values a
+# user changed, under the keys that release had. Golden file for the
+# settings migration test (crates/textweaver-store/tests/it/settings_golden.rs).
+
+[speech]
+rate = 300
+punctuation = "all"
+auto_play = true
+favorite_voices = ["espeak:en-us", "espeak:en-gb"]
+
+[highlight]
+granularity = "sentence"
+lead_words = 2
+
+[normalization]
+table_mode = "flat"
+footnote_mode = "deferred"
+
+[reading]
+auto_resume = false
+sync_conflict_policy = "highest_progress"
+
+[display]
+theme = "contrast"
+wrap_width = 72
+
+[editing]
+echo_words = false
+
+[library]
+recent_limit = 50
+folders = ["D:/Readings, Fall 2026", "D:/Lab notes"]

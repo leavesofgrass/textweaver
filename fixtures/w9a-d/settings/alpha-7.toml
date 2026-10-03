@@ -1,0 +1,13 @@
+# A settings.toml as textweaver 0.1.0-alpha.7 saved it: alpha.7 added sync,
+# with sync.position_policy replacing reading.sync_conflict_policy. A file
+# that has both keeps the new one. Golden file for
+# crates/textweaver-store/tests/it/settings_golden.rs.
+
+[reading]
+sync_conflict_policy = "manual"
+
+[sync]
+enabled = true
+device_name = "Lab computer"
+position_policy = "furthest"
+statistics = false
