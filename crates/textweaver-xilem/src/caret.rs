@@ -27,12 +27,75 @@ pub fn byte_of(text: &str, off: usize) -> usize {
 /// Char offset of byte index `b` in `text`. A byte inside a char counts
 /// as that char's start: the frame-time probe found a layout line start
 /// inside "é" on the 1 MB one-line corpus (W8b-i), which panicked here.
+/// The cause was in Parley: a cluster's offset in its run was a `u16`, so
+/// past 64 KB of text in one style it wrapped (fixed in the vendored copy,
+/// W8b-g). The guard stays, for any other layout's ranges.
 pub fn char_of(text: &str, b: usize) -> usize {
     let mut b = b.min(text.len());
     while !text.is_char_boundary(b) {
         b -= 1;
     }
     text[..b].chars().count()
+}
+
+/// Char offsets and byte indices of one paragraph's text, each found
+/// without counting from the start: ASCII text needs no table; other text
+/// longer than [`CharBytes::TABLE_FROM`] bytes keeps the byte index of
+/// each char. [`byte_of`] and [`char_of`] count from the start, which on a
+/// paragraph of a hundred thousand chars (one very long line) is a fraction
+/// of a millisecond per call, and layout and paint call them per span, per
+/// syllable, and per line (the performance report's G2 and G3).
+#[derive(Clone, Debug, Default)]
+pub struct CharBytes {
+    ascii: bool,
+    /// The byte index of each char, for long text that is not ASCII.
+    table: Option<Vec<u32>>,
+}
+
+impl CharBytes {
+    /// Shorter text is counted from the start, as [`byte_of`] does.
+    pub const TABLE_FROM: usize = 2048;
+
+    /// The index of `text`.
+    pub fn new(text: &str) -> Self {
+        let ascii = text.is_ascii();
+        let table = (!ascii && text.len() >= Self::TABLE_FROM && u32::try_from(text.len()).is_ok())
+            .then(|| text.char_indices().map(|(b, _)| b as u32).collect());
+        CharBytes { ascii, table }
+    }
+
+    /// Byte index in `text` (the text this was made from) of char offset
+    /// `off`, clamped to the end, as [`byte_of`].
+    pub fn byte(&self, text: &str, off: usize) -> usize {
+        if self.ascii {
+            return off.min(text.len());
+        }
+        match &self.table {
+            Some(t) => t.get(off).map_or(text.len(), |&b| b as usize),
+            None => byte_of(text, off),
+        }
+    }
+
+    /// Char offset of byte index `b` in `text`, as [`char_of`] (a byte
+    /// inside a char counts as that char's start).
+    pub fn char(&self, text: &str, b: usize) -> usize {
+        if self.ascii {
+            return b.min(text.len());
+        }
+        match &self.table {
+            Some(t) => {
+                let b = b.min(text.len());
+                // The last char starting at or before `b`; the end is the
+                // char count.
+                if b >= text.len() {
+                    t.len()
+                } else {
+                    t.partition_point(|&x| x as usize <= b).saturating_sub(1)
+                }
+            }
+            None => char_of(text, b),
+        }
+    }
 }
 
 /// Char offset within its paragraph, clamped to the paragraph (not its
@@ -256,5 +319,21 @@ mod tests {
         assert_eq!(next_char(&p, CharPos(100)), CharPos(101));
         assert_eq!(prev_char(&p, CharPos(100)), CharPos(100));
         assert_eq!(window_end(&p), CharPos(104));
+    }
+
+    #[test]
+    fn the_char_index_agrees_with_counting() {
+        let long = "na\u{ef}ve caf\u{e9} \u{1F600} ".repeat(300);
+        for t in [long.as_str(), "plain ascii text", "caf\u{e9} x", ""] {
+            let ix = CharBytes::new(t);
+            for off in 0..=t.chars().count() + 2 {
+                assert_eq!(ix.byte(t, off), byte_of(t, off), "{off}");
+            }
+            for b in 0..=t.len() + 2 {
+                assert_eq!(ix.char(t, b), char_of(t, b), "{b}");
+            }
+        }
+        assert!(CharBytes::new(&long).table.is_some());
+        assert!(CharBytes::new("caf\u{e9}").table.is_none());
     }
 }
