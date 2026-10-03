@@ -17,12 +17,11 @@
 //! goes on with it.
 
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use anyhow::Context;
 use serde::Serialize;
-use textweaver_app::store::Paths;
 use textweaver_dictation::rten_whisper::RtenWhisperFiles;
 use textweaver_dictation::stream::StreamConfig;
 use textweaver_dictation::{
@@ -39,8 +38,11 @@ pub struct Args {
     #[command(subcommand)]
     pub action: Option<Action>,
     /// When the in-process model is missing, download it without asking.
-    #[arg(long)]
+    #[arg(long, short)]
     pub yes: bool,
+    /// Use the files under this folder instead of the usual place.
+    #[arg(long, global = true, value_name = "DIR")]
+    pub home: Option<PathBuf>,
     /// Transcribe this audio file instead of the microphone.
     #[arg(long)]
     pub file: Option<PathBuf>,
@@ -104,7 +106,7 @@ pub enum Action {
         #[arg(long)]
         model: Option<String>,
         /// Download without asking.
-        #[arg(long)]
+        #[arg(long, short)]
         yes: bool,
     },
 }
@@ -134,8 +136,8 @@ fn model_component(
 }
 
 /// `tw dictate download`.
-fn download_model(model: Option<&str>, yes: bool) -> anyhow::Result<()> {
-    let paths = Paths::platform().context("no data folder for this user")?;
+fn download_model(model: Option<&str>, yes: bool, home: Option<&Path>) -> anyhow::Result<()> {
+    let paths = super::paths(home)?;
     let settings = textweaver_app::store::SettingsStore::new(paths.clone())
         .load()
         .0;
@@ -152,7 +154,7 @@ fn offer_missing_model(args: &Args) -> anyhow::Result<Option<PathBuf>> {
     if args.engine.is_some() || args.program.is_some() || args.model_dir.is_some() {
         return Ok(None);
     }
-    let Ok(paths) = Paths::platform() else {
+    let Ok(paths) = super::paths(args.home.as_deref()) else {
         return Ok(None);
     };
     let settings = textweaver_app::store::SettingsStore::new(paths.clone())
@@ -234,7 +236,7 @@ fn config(args: &Args) -> anyhow::Result<WhisperConfig> {
     };
     config.model_file = args.model_file.clone();
     config.language = args.language.clone();
-    if let Ok(paths) = Paths::platform() {
+    if let Ok(paths) = super::paths(args.home.as_deref()) {
         config.model_dirs.push(paths.data_dir.join("whisper"));
     }
     Ok(config)
@@ -249,7 +251,7 @@ fn rten_model_dir(args: &Args) -> Option<PathBuf> {
     }
     let dir = args.model_dir.clone().or_else(|| {
         let name = args.model.clone().unwrap_or_else(|| "base.en".into());
-        Paths::platform()
+        super::paths(args.home.as_deref())
             .ok()
             .map(|p| p.data_dir.join("whisper").join("rten").join(name))
     })?;
@@ -414,7 +416,7 @@ fn run_rten(args: &Args, dir: PathBuf) -> anyhow::Result<()> {
 /// Runs `tw dictate`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     if let Some(Action::Download { model, yes }) = &args.action {
-        return download_model(model.as_deref(), *yes);
+        return download_model(model.as_deref(), *yes, args.home.as_deref());
     }
     if args.list {
         return list(args.json);
@@ -433,7 +435,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let Some(file) = args.file.clone() else {
         anyhow::bail!(
             "Dictating from the microphone needs the in-process Whisper model in {}. Or transcribe a recording with --file AUDIO.",
-            Paths::platform()
+            super::paths(args.home.as_deref())
                 .map(|p| p
                     .data_dir
                     .join("whisper")

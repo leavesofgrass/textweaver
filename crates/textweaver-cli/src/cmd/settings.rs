@@ -109,30 +109,30 @@ pub struct ResetArgs {
 
 /// Runs `tw settings`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let paths = match &args.home {
-        Some(home) => Paths::under(home),
-        None => Paths::platform()?,
-    };
+    let paths = super::paths(args.home.as_deref())?;
     let store = SettingsStore::new(paths);
     let mut input = std::io::stdin().lock();
     let mut out = std::io::stdout().lock();
-    execute(&store, args.command, &mut input, &mut out)
+    let terminal = super::stdin_is_terminal();
+    execute(&store, args.command, &mut input, terminal, &mut out)
 }
 
 /// Runs a subcommand against `store`, reading answers and `-` from
-/// `input` and writing to `out`.
+/// `input` and writing to `out`. Questions are asked only when
+/// `terminal` (standard input is a terminal).
 fn execute(
     store: &SettingsStore,
     command: Command,
     input: &mut dyn BufRead,
+    terminal: bool,
     out: &mut dyn Write,
 ) -> anyhow::Result<()> {
     match command {
         Command::Export(a) => export(store, &a, out),
         Command::Import(a) => import(store, &a, input, out),
         Command::Path => show_paths(store, out),
-        Command::Reset(a) => reset(store, &a, input, out),
-        Command::Profile(p) => super::profiles::execute(store, p, input, out),
+        Command::Reset(a) => reset(store, &a, input, terminal, out),
+        Command::Profile(p) => super::profiles::execute(store, p, input, terminal, out),
         Command::Language(a) => language(store, &a, out),
     }
 }
@@ -328,6 +328,7 @@ fn reset(
     store: &SettingsStore,
     a: &ResetArgs,
     input: &mut dyn BufRead,
+    terminal: bool,
     out: &mut dyn Write,
 ) -> anyhow::Result<()> {
     let section = a.section.as_deref().map(str::trim);
@@ -345,19 +346,13 @@ fn reset(
         )?;
         return Ok(());
     }
-    if !a.yes {
-        write!(
-            out,
-            "Reset {what} to their defaults? {} The current files are backed up first. Type y and press Enter to reset, or just press Enter to cancel: ",
-            plan.summary()
-        )?;
-        out.flush()?;
-        let mut answer = String::new();
-        input.read_line(&mut answer)?;
-        if !matches!(answer.trim().to_lowercase().as_str(), "y" | "yes") {
-            writeln!(out, "Canceled. Nothing was changed.")?;
-            return Ok(());
-        }
+    let question = format!(
+        "Reset {what} to their defaults? {} The current files are backed up first. y or n:",
+        plan.summary()
+    );
+    if !a.yes && !super::confirm(&question, input, terminal, "--yes")? {
+        writeln!(out, "Canceled. Nothing was changed.")?;
+        return Ok(());
     }
     let applied = store.apply(&plan)?;
     writeln!(out, "Reset {what} to their defaults. {}", plan.summary())?;
@@ -414,7 +409,7 @@ mod tests {
     fn tw(store: &SettingsStore, argv: &[&str], answer: &str) -> anyhow::Result<String> {
         let mut out = Vec::new();
         let mut input = answer.as_bytes();
-        execute(store, parse(argv).command, &mut input, &mut out)?;
+        execute(store, parse(argv).command, &mut input, true, &mut out)?;
         Ok(String::from_utf8(out).unwrap())
     }
 
@@ -628,13 +623,9 @@ theme = \"nord\""
         s.speech.rate = textweaver_app::core::Rate::Wpm(300);
         store.save(&s).unwrap();
 
+        // The question goes to standard error; the output keeps the
+        // result.
         let said = tw(&store, &["reset"], "\n").unwrap();
-        assert!(
-            said.contains(
-                "Reset all settings and key overrides to their defaults? 2 settings change."
-            ),
-            "{said}"
-        );
         assert!(said.ends_with("Canceled. Nothing was changed.\n"), "{said}");
         assert_eq!(store.load().0, s);
 

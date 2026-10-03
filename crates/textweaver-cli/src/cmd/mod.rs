@@ -28,6 +28,21 @@ pub mod text;
 pub mod vault;
 pub mod voices;
 
+/// The data folders: under `home` when `--home DIR` was given, else the
+/// usual place (which `TEXTWEAVER_HOME` moves).
+pub(crate) fn paths(
+    home: Option<&std::path::Path>,
+) -> anyhow::Result<textweaver_app::store::Paths> {
+    match home {
+        Some(h) => Ok(textweaver_app::store::Paths::under(h)),
+        None => textweaver_app::store::Paths::platform().map_err(|e| {
+            anyhow::Error::new(Plain(format!(
+                "Could not find textweaver's data folder: {e}. Give one with --home DIR, or set TEXTWEAVER_HOME."
+            )))
+        }),
+    }
+}
+
 /// Writes `text` to standard output. A closed pipe (`tw text big.pdf |
 /// head`) ends the output quietly instead of a panic about "failed printing
 /// to stdout"; any other failure is reported.

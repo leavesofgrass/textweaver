@@ -54,6 +54,9 @@ pub struct Args {
     /// Print JSON.
     #[arg(long, global = true)]
     pub json: bool,
+    /// Use the files under this folder instead of the usual place.
+    #[arg(long, global = true, value_name = "DIR")]
+    pub home: Option<PathBuf>,
     /// What to do instead of listing.
     #[command(subcommand)]
     pub command: Option<LibraryCommand>,
@@ -600,9 +603,8 @@ fn run_with(args: &Args, paths: &Paths) -> anyhow::Result<String> {
 
 /// Runs `tw library`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let paths = Paths::platform()?;
-    print!("{}", run_with(&args, &paths)?);
-    Ok(())
+    let paths = super::paths(args.home.as_deref())?;
+    super::print_all(&run_with(&args, &paths)?)
 }
 
 #[cfg(test)]
@@ -639,6 +641,7 @@ mod tests {
             remove: None,
             continue_reading: false,
             json: false,
+            home: None,
             command: None,
         }
     }

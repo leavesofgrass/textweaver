@@ -48,19 +48,20 @@ pub struct Args {
 
 /// Runs `tw stats`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let paths = match &args.home {
-        Some(h) => Paths::under(h),
-        None => Paths::platform()?,
-    };
+    let paths = super::paths(args.home.as_deref())?;
     let mut input = std::io::stdin().lock();
     let mut out = std::io::stdout().lock();
-    execute(&paths, &args, &mut input, &mut out)
+    let terminal = super::stdin_is_terminal();
+    execute(&paths, &args, &mut input, terminal, &mut out)
 }
 
+/// Runs `tw stats` against `paths`; a question is asked on standard error
+/// and answered from `input`, only when `terminal`.
 fn execute(
     paths: &Paths,
     args: &Args,
     input: &mut dyn BufRead,
+    terminal: bool,
     out: &mut dyn Write,
 ) -> anyhow::Result<()> {
     let settings = SettingsStore::new(paths.clone()).load().0;
@@ -71,19 +72,10 @@ fn execute(
             writeln!(out, "{}", c.tr("stats-empty"))?;
             return Ok(());
         }
-        if !args.yes {
-            write!(
-                out,
-                "{} ",
-                c.fmt("stats-clear-question", &args!["n" => stats.documents.len()])
-            )?;
-            out.flush()?;
-            let mut answer = String::new();
-            input.read_line(&mut answer)?;
-            if !answer.trim().eq_ignore_ascii_case("y") {
-                writeln!(out, "{}", c.tr("common-cancelled"))?;
-                return Ok(());
-            }
+        let question = c.fmt("stats-clear-question", &args!["n" => stats.documents.len()]);
+        if !args.yes && !super::confirm(&question, input, terminal, "--yes")? {
+            writeln!(out, "{}", c.tr("common-cancelled"))?;
+            return Ok(());
         }
         std::fs::remove_file(paths.stats_file())?;
         writeln!(out, "{}", c.tr("stats-cleared"))?;
@@ -162,7 +154,7 @@ mod tests {
 
     fn run_with(paths: &Paths, a: &Args, input: &str) -> String {
         let mut out = Vec::new();
-        execute(paths, a, &mut input.as_bytes(), &mut out).unwrap();
+        execute(paths, a, &mut input.as_bytes(), true, &mut out).unwrap();
         String::from_utf8(out).unwrap()
     }
 
@@ -197,10 +189,8 @@ mod tests {
         assert!(run_with(&paths, &args(false, true, false), "n\n").ends_with("Canceled.\n"));
         assert!(paths.stats_file().exists());
         let cleared = run_with(&paths, &args(false, true, false), "y\n");
-        assert!(
-            cleared.starts_with("Remove the reading statistics of 1 document? y or n "),
-            "{cleared}"
-        );
+        // The question went to standard error; only the result is here.
+        assert!(!cleared.contains("y or n"), "{cleared}");
         assert!(!paths.stats_file().exists());
     }
 

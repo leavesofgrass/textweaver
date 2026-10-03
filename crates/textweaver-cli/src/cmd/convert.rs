@@ -77,6 +77,10 @@ pub struct Args {
     /// Print the summary as JSON.
     #[arg(long)]
     pub json: bool,
+    /// Use the files under this folder instead of the usual place (the
+    /// settings, the reference library, the themes, and the fonts).
+    #[arg(long, value_name = "DIR")]
+    pub home: Option<PathBuf>,
     /// Print a line for every file.
     #[arg(long, short = 'v')]
     pub verbose: bool,
@@ -268,7 +272,7 @@ fn command_options(args: &Args) -> ConvertOptions {
             enabled: !args.no_citations,
             bibliography: args.bibliography.clone(),
             style: args.style.clone(),
-            user_library: textweaver_app::store::Paths::platform()
+            user_library: super::paths(args.home.as_deref())
                 .ok()
                 .map(|p| textweaver_cite::user_library_path(&p.data_dir)),
         },
@@ -306,14 +310,14 @@ fn page_theme(
 /// Runs `tw convert`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     // A Lexend the reader downloaded is found by name (`--font lexend`).
-    textweaver_app::use_downloaded_fonts(textweaver_app::store::Paths::platform().ok().as_ref());
+    textweaver_app::use_downloaded_fonts(super::paths(args.home.as_deref()).ok().as_ref());
     let mut options = options(&args);
     if args.to == OutputFormat::Html {
-        let (settings, message) = super::export_audio::load_settings(None);
+        let (settings, message) = super::export_audio::load_settings(args.home.as_deref());
         if let Some(m) = message {
             eprintln!("{m}");
         }
-        let themes = textweaver_app::store::Paths::platform()
+        let themes = super::paths(args.home.as_deref())
             .ok()
             .map(|p| p.themes_dir());
         options.theme_css = page_theme(&args, &settings.display.theme, themes.as_deref())?;

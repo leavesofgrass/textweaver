@@ -9,7 +9,6 @@
 //! - `tw ocr read FILE` recognizes a scanned PDF or a picture and prints
 //!   the text, with progress on standard error.
 
-use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
@@ -29,14 +28,18 @@ pub struct Args {
 #[derive(clap::Subcommand, Debug)]
 enum Sub {
     /// Say which OCR engines can run.
-    Status,
+    Status {
+        /// Print the status as JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// Download a model set: ocrs (English, the default) or paddle-latin.
     Download {
         /// The set: ocrs or paddle-latin.
         #[arg(default_value = "ocrs")]
         set: String,
         /// Download without asking.
-        #[arg(long)]
+        #[arg(long, short)]
         yes: bool,
     },
     /// Recognize a scanned PDF or a picture and print its text.
@@ -55,10 +58,8 @@ enum Sub {
 /// Runs `tw ocr`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     match args.command {
-        Sub::Status => {
-            print!("{}", status());
-            Ok(())
-        }
+        Sub::Status { json: false } => super::print_all(&status()),
+        Sub::Status { json: true } => super::print_all(&format!("{:#}\n", status_json())),
         Sub::Download { set, yes } => download(&set, yes),
         Sub::Read { file, lang, engine } => read(&file, lang, &engine),
     }
@@ -108,6 +109,38 @@ fn status() -> String {
     out
 }
 
+/// `tw ocr status --json`: the model sets and Tesseract. Keys are English
+/// and never translated.
+fn status_json() -> serde_json::Value {
+    let sets: Vec<serde_json::Value> = models::ALL
+        .into_iter()
+        .map(|set| {
+            let (status, detail) = match set.status() {
+                ModelStatus::Present => ("downloaded", None),
+                ModelStatus::Missing(_) => ("not-downloaded", None),
+                ModelStatus::Damaged(f) => ("damaged", Some(f.to_string())),
+            };
+            serde_json::json!({
+                "id": set.id,
+                "title": set.title,
+                "status": status,
+                "damaged": detail,
+                "size": set.size_text(),
+                "license": set.licence,
+            })
+        })
+        .collect();
+    let tesseract = textweaver_ocr::tesseract::find().map(|exe| {
+        let languages = textweaver_ocr::tesseract::languages(&exe);
+        serde_json::json!({ "path": exe, "languages": languages })
+    });
+    serde_json::json!({
+        "models": sets,
+        "tesseract": tesseract,
+        "models_folder": models::root_dir(),
+    })
+}
+
 fn capital(s: &str) -> String {
     let mut c = s.chars();
     c.next()
@@ -127,21 +160,23 @@ fn download(name: &str, yes: bool) -> anyhow::Result<()> {
         .and_then(|f| f.url.split('/').nth(2))
         .unwrap_or("the internet");
     eprintln!(
-        "This downloads {} from {host}: {}, under the {} licence. {}",
+        "This downloads {} from {host}: {}, under the {} license. {}",
         set.title,
         set.size_text(),
         set.licence,
         set.credit
     );
-    if !yes {
-        eprint!("Download them? y or n: ");
-        std::io::stderr().flush().ok();
-        let mut answer = String::new();
-        std::io::stdin().lock().read_line(&mut answer)?;
-        if !answer.trim().to_ascii_lowercase().starts_with('y') {
-            eprintln!("Nothing was downloaded.");
-            return Ok(());
-        }
+    let mut input = std::io::stdin().lock();
+    if !yes
+        && !super::confirm(
+            "Download them? y or n:",
+            &mut input,
+            super::stdin_is_terminal(),
+            "--yes",
+        )?
+    {
+        eprintln!("Nothing was downloaded.");
+        return Ok(());
     }
     let cancel = AtomicBool::new(false);
     let mut last = u64::MAX;
