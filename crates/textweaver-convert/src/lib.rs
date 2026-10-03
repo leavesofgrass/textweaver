@@ -997,12 +997,6 @@ pub fn is_up_to_date(source: &Path, output: &Path) -> bool {
 /// Windows reports the file in use ([`textweaver_core::fs::write_atomic`]).
 pub use textweaver_core::fs::write_atomic;
 
-/// Wall-clock duration helper for callers that time their own work.
-pub fn elapsed_seconds(since: Instant) -> f64 {
-    let d: Duration = since.elapsed();
-    d.as_secs_f64()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

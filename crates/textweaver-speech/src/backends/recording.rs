@@ -150,11 +150,6 @@ impl RecordingHandle {
         lock(&self.state).calls.clone()
     }
 
-    /// Forgets the recorded calls.
-    pub fn clear_calls(&self) {
-        lock(&self.state).calls.clear();
-    }
-
     /// The utterances passed to `speak`, in order.
     pub fn spoken(&self) -> Vec<Utterance> {
         lock(&self.state)

@@ -99,12 +99,6 @@ impl UndoLimits {
         steps: 1000,
         bytes: 50 * 1024 * 1024,
     };
-
-    /// No limit.
-    pub const UNLIMITED: UndoLimits = UndoLimits {
-        steps: usize::MAX,
-        bytes: usize::MAX,
-    };
 }
 
 impl Default for UndoLimits {

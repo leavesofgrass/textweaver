@@ -138,15 +138,6 @@ impl OffsetMap {
         Some(CharRange::new(first.source.start, last.source.end))
     }
 
-    /// Shifts every source position by `delta` chars. Used when a map built
-    /// for a slice is placed at its position in the document.
-    pub fn offset_source(&mut self, delta: usize) {
-        for s in &mut self.spans {
-            s.source.start = s.source.start.saturating_add(delta);
-            s.source.end = s.source.end.saturating_add(delta);
-        }
-    }
-
     /// The source chars that produced spoken bytes `bytes`, for highlighting.
     ///
     /// Literal spans map exactly; expanded spans contribute their whole source

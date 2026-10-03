@@ -96,11 +96,6 @@ impl PiperModel {
         self.w_ceil.is_some()
     }
 
-    /// True for a multi-speaker model.
-    pub fn is_multi_speaker(&self) -> bool {
-        self.sid.is_some()
-    }
-
     /// Runs the model on `ids` with the voice's noise scales and
     /// `length_scale` (larger is slower), as speaker `speaker` in a
     /// multi-speaker model.

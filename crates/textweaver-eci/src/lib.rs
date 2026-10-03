@@ -70,20 +70,6 @@ pub const LIBRARY_ENV: &str = "TEXTWEAVER_ECI_LIBRARY";
 /// Environment variable naming the host executable.
 pub const HOST_ENV: &str = "TEXTWEAVER_ECI_HOST";
 
-/// Where the ECI library is installed on this platform, if it is: the first
-/// existing standard location (see [`discovery`]; `TEXTWEAVER_ECI_LIBRARY`
-/// is not consulted here).
-pub fn default_library_path() -> Option<PathBuf> {
-    let places = discovery::Places {
-        env_library: None,
-        ..discovery::Places::current()
-    };
-    discovery::library_candidates(None, &places)
-        .into_iter()
-        .find(|c| c.exists)
-        .map(|c| c.path)
-}
-
 /// The ECI library to load: the first existing candidate, starting with
 /// `TEXTWEAVER_ECI_LIBRARY` (see [`discovery`]).
 pub fn library_path() -> Option<PathBuf> {

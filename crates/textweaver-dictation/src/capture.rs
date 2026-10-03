@@ -170,12 +170,6 @@ impl LiveAudio {
         self.inner.1.notify_all();
     }
 
-    /// True once the audio has ended (samples may still wait to be
-    /// taken).
-    pub fn is_ended(&self) -> bool {
-        self.lock().ended
-    }
-
     /// Samples added so far.
     pub fn total(&self) -> usize {
         self.lock().total

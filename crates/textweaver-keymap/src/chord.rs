@@ -239,11 +239,6 @@ impl KeyChord {
         }
         parts.join("+")
     }
-
-    /// The chord as a Mac user says it: "Command Option period".
-    pub fn mac_spoken(&self) -> String {
-        self.spoken().replacen("Alt", "Option", 1)
-    }
 }
 
 /// Spoken names for punctuation keys.

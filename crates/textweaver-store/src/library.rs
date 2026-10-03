@@ -1092,11 +1092,6 @@ impl LibrarySync {
         &self.sidecars
     }
 
-    /// Replaces the folder list (the user added or removed one).
-    pub fn set_folders(&mut self, folders: &[PathBuf]) {
-        self.folders = folders.to_vec();
-    }
-
     /// The library folder holding `doc` and its sidecar key, or `None`
     /// outside the library.
     pub fn location(&self, doc: &Path) -> Option<(PathBuf, String)> {

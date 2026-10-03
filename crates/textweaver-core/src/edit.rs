@@ -46,11 +46,6 @@ impl Edit {
         }
     }
 
-    /// True when the edit changes nothing.
-    pub fn is_noop(&self) -> bool {
-        self.range.is_empty() && self.text.is_empty()
-    }
-
     /// Number of chars inserted.
     pub fn inserted_chars(&self) -> usize {
         self.text.chars().count()
