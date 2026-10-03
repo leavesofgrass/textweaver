@@ -60,6 +60,11 @@ pub struct Args {
     /// Folder of your own templates (HTML files with MiniJinja syntax).
     #[arg(long)]
     pub templates: Option<PathBuf>,
+    /// HTML: the theme for the page's colors, such as sepia or
+    /// galaxy-light (default: the theme in your settings; Galaxy also
+    /// follows the reader's system to Galaxy Light). Never asks.
+    #[arg(long, value_name = "NAME")]
+    pub theme: Option<String>,
     /// Worker threads (default: every core).
     #[arg(long, short = 'j')]
     pub jobs: Option<usize>,
@@ -286,11 +291,34 @@ fn command_options(args: &Args) -> ConvertOptions {
     }
 }
 
+/// The theme CSS for HTML pages: `--theme`, else the settings' theme
+/// (`settings_theme`), with user themes from `themes_dir`. Never asks, so
+/// scripts and pipes work the same as a terminal.
+fn page_theme(
+    args: &Args,
+    settings_theme: &str,
+    themes_dir: Option<&std::path::Path>,
+) -> anyhow::Result<Option<String>> {
+    textweaver_app::page_theme_css(args.theme.as_deref(), settings_theme, themes_dir)
+        .map_err(anyhow::Error::msg)
+}
+
 /// Runs `tw convert`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     // A Lexend the reader downloaded is found by name (`--font lexend`).
     textweaver_app::use_downloaded_fonts(textweaver_app::store::Paths::platform().ok().as_ref());
-    let converter = Converter::new(options(&args))?;
+    let mut options = options(&args);
+    if args.to == OutputFormat::Html {
+        let (settings, message) = super::export_audio::load_settings(None);
+        if let Some(m) = message {
+            eprintln!("{m}");
+        }
+        let themes = textweaver_app::store::Paths::platform()
+            .ok()
+            .map(|p| p.themes_dir());
+        options.theme_css = page_theme(&args, &settings.display.theme, themes.as_deref())?;
+    }
+    let converter = Converter::new(options)?;
     if let Some(note) = template_note(&args) {
         eprintln!("{note}");
     }
@@ -549,5 +577,42 @@ mod tests {
         assert_eq!(o.write.braille.table_format, BrailleTableFormat::Stairstep);
         let bad = Cli::try_parse_from(["tw", "notes.md", "--table-format", "spiral"]);
         assert!(bad.is_err());
+    }
+
+    /// `--theme` picks the page's theme; without it the settings' theme is
+    /// used, Galaxy keeps the default stylesheet, and nothing asks. An
+    /// unknown name is an error that lists the names.
+    #[test]
+    fn the_theme_comes_from_the_flag_or_the_settings() {
+        let args = parse(&["notes.md", "--to", "html", "--theme", "sepia"]);
+        let css = page_theme(&args, "galaxy", None).unwrap().unwrap();
+        assert!(css.starts_with("/* textweaver theme: Sepia */"), "{css}");
+        let plain = parse(&["notes.md", "--to", "html"]);
+        assert_eq!(page_theme(&plain, "galaxy", None).unwrap(), None);
+        let nord = page_theme(&plain, "nord", None).unwrap().unwrap();
+        assert!(nord.starts_with("/* textweaver theme: Nord */"), "{nord}");
+        let bad = parse(&["notes.md", "--to", "html", "--theme", "plaid"]);
+        let err = page_theme(&bad, "galaxy", None).unwrap_err().to_string();
+        assert!(
+            err.contains("unknown theme \"plaid\"") && err.contains("sepia"),
+            "{err}"
+        );
+    }
+
+    /// A converted page carries the chosen theme's properties.
+    #[test]
+    fn the_chosen_theme_is_in_the_page() {
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("notes.md");
+        std::fs::write(&src, "# Notes\n\nText.\n").unwrap();
+        let args = parse(&["notes.md", "--to", "html", "--theme", "sepia"]);
+        let mut o = options(&args);
+        o.theme_css = page_theme(&args, "galaxy", None).unwrap();
+        o.audit = false;
+        let summary = Converter::new(o).unwrap().run(&[src]).unwrap();
+        assert_eq!(summary.converted, 1);
+        let page = std::fs::read_to_string(dir.path().join("notes.html")).unwrap();
+        assert!(page.contains("/* textweaver theme: Sepia */"));
+        assert!(!page.contains("textweaver themes: Galaxy Light"));
     }
 }

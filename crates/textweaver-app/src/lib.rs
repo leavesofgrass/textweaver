@@ -284,6 +284,7 @@ pub use textweaver_engines::{
     service_config, speech_registry, speech_registry_for,
 };
 pub use textweaver_store::Note;
+pub use themes::page_theme_css;
 pub use view::{Highlight, HighlightKind, Viewport};
 pub use wake::{Waker, channel_waker};
 pub use window::{DocWindow, Units, WINDOW_UNITS, WindowChange};

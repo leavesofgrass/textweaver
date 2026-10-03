@@ -9,6 +9,42 @@ use textweaver_theme::{Registry, Theme};
 
 use crate::app::App;
 
+/// The theme CSS for an HTML page written outside the reader (`tw convert
+/// --to html`): the theme named `chosen` (`--theme`), else the settings'
+/// `settings_theme`, among the built-ins and the user's themes in
+/// `themes_dir`. `Ok(None)` when the settings' theme is Galaxy, the
+/// default: the page then keeps the default stylesheet, which still follows
+/// the reader's system to Galaxy Light or High Contrast. An unknown
+/// `chosen` name is an error that lists the names; an unknown settings
+/// theme falls back to Galaxy, as in the reader.
+pub fn page_theme_css(
+    chosen: Option<&str>,
+    settings_theme: &str,
+    themes_dir: Option<&std::path::Path>,
+) -> Result<Option<String>, String> {
+    let mut themes = Registry::builtin();
+    if let Some(dir) = themes_dir.filter(|d| d.is_dir()) {
+        // Damaged user theme files are skipped here; the reader says why.
+        let _ = themes.load_dir(dir);
+    }
+    let theme = match chosen {
+        Some(name) => themes.get(name).ok_or_else(|| {
+            format!(
+                "unknown theme {name:?}; use one of: {}",
+                themes.names().join(", ")
+            )
+        })?,
+        None => {
+            let (theme, _) = themes.resolve(settings_theme);
+            if theme.meta.name == textweaver_theme::DEFAULT_THEME {
+                return Ok(None);
+            }
+            theme
+        }
+    };
+    Ok(Some(textweaver_theme::css::single_stylesheet(theme)))
+}
+
 impl App {
     /// Loads user themes and checks the configured name. Problems with user
     /// theme files are spoken ([`LoadReport::summary`]); an unknown theme
