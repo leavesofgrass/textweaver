@@ -217,7 +217,7 @@ pub(crate) fn download(
     yes: bool,
 ) -> anyhow::Result<()> {
     if c.status_in(dir) == Status::Installed {
-        println!("{} is already installed in {}.", c.title, dir.display());
+        crate::cmd::outln!("{} is already installed in {}.", c.title, dir.display());
         return Ok(());
     }
     let sources = sources(settings);
@@ -256,7 +256,7 @@ pub(crate) fn download(
         &cancel,
     )
     .with_context(|| format!("{} was not downloaded", c.title))?;
-    println!(
+    crate::cmd::outln!(
         "{} is downloaded and checked, in {}.",
         c.title,
         dir.display()
@@ -274,7 +274,7 @@ fn verify(registry: &Registry, data: &Path, id: Option<&str>) -> anyhow::Result<
             .collect(),
     };
     if chosen.is_empty() {
-        println!("No components are installed.");
+        crate::cmd::outln!("No components are installed.");
         return Ok(());
     }
     let mut bad = 0;
@@ -296,7 +296,7 @@ fn verify(registry: &Registry, data: &Path, id: Option<&str>) -> anyhow::Result<
                     "does not match its published hash".to_owned()
                 }
             };
-            println!("{}: {name} {said}.", c.title);
+            crate::cmd::outln!("{}: {name} {said}.", c.title);
         }
     }
     if bad > 0 {
@@ -307,7 +307,7 @@ fn verify(registry: &Registry, data: &Path, id: Option<&str>) -> anyhow::Result<
 
 fn remove(c: &Component, dir: &Path, yes: bool) -> anyhow::Result<()> {
     if c.status_in(dir) == Status::NotInstalled {
-        println!("{} is not installed.", c.title);
+        crate::cmd::outln!("{} is not installed.", c.title);
         return Ok(());
     }
     if !yes && !ask(&format!("Remove {} from {}?", c.title, dir.display()))? {
@@ -324,13 +324,13 @@ fn remove(c: &Component, dir: &Path, yes: bool) -> anyhow::Result<()> {
     for name in names {
         let path = dir.join(name);
         if path.is_file() {
-            println!("Removing {}", path.display());
+            crate::cmd::outln!("Removing {}", path.display());
         }
     }
     let n = c
         .remove_in(dir)
         .with_context(|| format!("{} was not removed", c.title))?;
-    println!("Removed {n} files of {}.", c.title);
+    crate::cmd::outln!("Removed {n} files of {}.", c.title);
     Ok(())
 }
 
@@ -340,7 +340,7 @@ fn install(c: &Component, dir: &Path, from: &Path) -> anyhow::Result<()> {
     for (name, why) in &report.refused {
         eprintln!("Left out {name}: {why}.");
     }
-    println!(
+    crate::cmd::outln!(
         "{} is installed and checked, in {}: {} files copied, {} already there.",
         c.title,
         dir.display(),

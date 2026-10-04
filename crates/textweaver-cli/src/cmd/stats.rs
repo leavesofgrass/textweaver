@@ -50,7 +50,7 @@ pub struct Args {
 pub fn run(args: Args) -> anyhow::Result<()> {
     let paths = super::paths(args.home.as_deref())?;
     let mut input = std::io::stdin().lock();
-    let mut out = std::io::stdout().lock();
+    let mut out = super::Stdout;
     let terminal = super::stdin_is_terminal();
     execute(&paths, &args, &mut input, terminal, &mut out)
 }

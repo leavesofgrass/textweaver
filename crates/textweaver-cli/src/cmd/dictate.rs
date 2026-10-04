@@ -276,18 +276,18 @@ struct Report<'a> {
 fn list(json: bool) -> anyhow::Result<()> {
     let found = detect();
     if json {
-        println!("{}", serde_json::to_string_pretty(&found)?);
+        crate::cmd::outln!("{}", serde_json::to_string_pretty(&found)?);
         return Ok(());
     }
     if found.is_empty() {
-        println!(
+        crate::cmd::outln!(
             "No Whisper program found. Install whisper.cpp (whisper-cli), faster-whisper (whisper-ctranslate2), or OpenAI Whisper (whisper)."
         );
     }
     for d in &found {
-        println!("{}: {}", d.engine.display_name(), d.program.display());
+        crate::cmd::outln!("{}: {}", d.engine.display_name(), d.program.display());
     }
-    println!("Models: {}", WHISPER_MODELS.join(", "));
+    crate::cmd::outln!("Models: {}", WHISPER_MODELS.join(", "));
     Ok(())
 }
 
@@ -492,7 +492,7 @@ fn run_rten(args: &Args, dir: PathBuf) -> anyhow::Result<()> {
         Some(path) => {
             std::fs::write(path, format!("{out}\n")).with_context(|| path.display().to_string())?
         }
-        None => println!("{out}"),
+        None => crate::cmd::outln!("{out}"),
     }
     Ok(())
 }
@@ -580,7 +580,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         let json = serde_json::to_string_pretty(&report)?;
         match &args.out {
             Some(out) => std::fs::write(out, json).with_context(|| out.display().to_string())?,
-            None => println!("{json}"),
+            None => crate::cmd::outln!("{json}"),
         }
         return Ok(());
     }
@@ -592,7 +592,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             let mut f = std::fs::File::create(out).with_context(|| out.display().to_string())?;
             writeln!(f, "{text}")?;
         }
-        None => println!("{text}"),
+        None => crate::cmd::outln!("{text}"),
     }
     Ok(())
 }

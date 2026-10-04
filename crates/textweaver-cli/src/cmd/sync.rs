@@ -83,7 +83,7 @@ pub enum SyncCommand {
 
 /// Runs `tw sync`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let mut out = std::io::stdout().lock();
+    let mut out = super::Stdout;
     let home = match &args.command {
         SyncCommand::Setup { common, .. }
         | SyncCommand::Status { common }

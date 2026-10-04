@@ -217,10 +217,10 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         let devices = textweaver_engines::output_devices().map_err(anyhow::Error::msg)?;
         let r = devices_report(devices, settings.speech.output_device.as_deref());
         if args.json {
-            println!("{}", serde_json::to_string_pretty(&r)?);
+            crate::cmd::outln!("{}", serde_json::to_string_pretty(&r)?);
         } else {
             for line in describe_devices(&r) {
-                println!("{line}");
+                crate::cmd::outln!("{line}");
             }
         }
         return Ok(());
@@ -228,11 +228,11 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let registry = textweaver_engines::speech_registry_for(&settings);
     let r = report(&registry, Some(settings.speech.backend.as_str()));
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&r)?);
+        crate::cmd::outln!("{}", serde_json::to_string_pretty(&r)?);
         return Ok(());
     }
     for b in &r.backends {
-        println!("{}", describe(b, r.auto, r.selected));
+        crate::cmd::outln!("{}", describe(b, r.auto, r.selected));
     }
     Ok(())
 }

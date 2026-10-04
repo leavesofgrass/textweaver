@@ -151,7 +151,7 @@ fn capital(s: &str) -> String {
 fn download(name: &str, yes: bool) -> anyhow::Result<()> {
     let set = set_named(name)?;
     if set.status() == ModelStatus::Present {
-        println!("{} are already downloaded.", capital(set.title));
+        crate::cmd::outln!("{} are already downloaded.", capital(set.title));
         return Ok(());
     }
     let host = set
@@ -191,7 +191,7 @@ fn download(name: &str, yes: bool) -> anyhow::Result<()> {
         },
         &cancel,
     )?;
-    println!(
+    crate::cmd::outln!(
         "{} are downloaded and checked. Scanned pages can now be read.",
         capital(set.title)
     );
@@ -217,7 +217,7 @@ fn read(file: &Path, lang: Option<String>, engine: &str) -> anyhow::Result<()> {
     for w in warnings(&doc.meta) {
         eprintln!("{w}");
     }
-    println!("{}", doc.text());
+    crate::cmd::outln!("{}", doc.text());
     Ok(())
 }
 

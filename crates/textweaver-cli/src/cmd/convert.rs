@@ -336,7 +336,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         Some(save_report(&args, &summary))
     };
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&summary)?);
+        crate::cmd::outln!("{}", serde_json::to_string_pretty(&summary)?);
         if let Some(line) = &report {
             eprintln!("{line}");
         }
@@ -347,10 +347,14 @@ pub fn run(args: Args) -> anyhow::Result<()> {
                     eprintln!("Failed: {}: {reason}", f.source.display());
                 }
                 Status::Converted if args.verbose => {
-                    println!("Converted {} to {}", f.source.display(), f.output.display());
+                    crate::cmd::outln!(
+                        "Converted {} to {}",
+                        f.source.display(),
+                        f.output.display()
+                    );
                 }
                 Status::Skipped if args.verbose => {
-                    println!("Up to date: {}", f.output.display());
+                    crate::cmd::outln!("Up to date: {}", f.output.display());
                 }
                 _ => {}
             }
@@ -360,12 +364,12 @@ pub fn run(args: Args) -> anyhow::Result<()> {
                 eprintln!("Warning: {}: {w}", f.source.display());
             }
         }
-        println!("{}", summary.sentence());
+        crate::cmd::outln!("{}", summary.sentence());
         if args.to == OutputFormat::Brf && summary.converted > 0 {
-            println!("{}", math_braille_line(args.math_code));
+            crate::cmd::outln!("{}", math_braille_line(args.math_code));
         }
         if let Some(line) = report {
-            println!("{line}");
+            crate::cmd::outln!("{line}");
         }
     }
     if summary.failed > 0 {
@@ -454,10 +458,10 @@ fn run_watch(args: &Args, converter: &Converter) -> anyhow::Result<()> {
                         if let textweaver_convert::WatchEvent::File(r) = e
                             && let Ok(line) = serde_json::to_string(r)
                         {
-                            println!("{line}");
+                            crate::cmd::outln!("{line}");
                         }
                     } else {
-                        println!("{}", e.sentence());
+                        crate::cmd::outln!("{}", e.sentence());
                     }
                 })
             }));

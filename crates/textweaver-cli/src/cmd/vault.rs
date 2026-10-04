@@ -141,7 +141,7 @@ fn export(args: &Args, paths: &Paths) -> anyhow::Result<()> {
             #[serde(skip_serializing_if = "Option::is_none")]
             export: Option<&'a textweaver_vault::ExportReport>,
         }
-        println!(
+        crate::cmd::outln!(
             "{}",
             serde_json::to_string_pretty(&Out {
                 documents: &summaries,
@@ -152,17 +152,17 @@ fn export(args: &Args, paths: &Paths) -> anyhow::Result<()> {
     }
     for s in &summaries {
         if s.notes == 0 && s.highlights == 0 {
-            println!("{} has no notes or highlights.", s.title);
+            crate::cmd::outln!("{} has no notes or highlights.", s.title);
         } else if !s.loaded {
-            println!(
+            crate::cmd::outln!(
                 "{} could not be opened, so highlights are exported without their text.",
                 s.title
             );
         }
     }
     match report {
-        Some(r) => println!("{}", r.summary()),
-        None => println!("Nothing to export."),
+        Some(r) => crate::cmd::outln!("{}", r.summary()),
+        None => crate::cmd::outln!("Nothing to export."),
     }
     Ok(())
 }
@@ -185,11 +185,11 @@ fn import(args: &Args, paths: &Paths) -> anyhow::Result<()> {
     let read = read_vault(&args.vault, &options)?;
     if args.dry_run {
         if args.json {
-            println!("{}", serde_json::to_string_pretty(&read)?);
+            crate::cmd::outln!("{}", serde_json::to_string_pretty(&read)?);
         } else {
             let mut store = textweaver_vault::MemoryStore::new();
             let report = apply(&read, &mut store)?;
-            println!("Dry run, nothing stored. {}", report.summary());
+            crate::cmd::outln!("Dry run, nothing stored. {}", report.summary());
         }
         return Ok(());
     }
@@ -210,7 +210,7 @@ fn import(args: &Args, paths: &Paths) -> anyhow::Result<()> {
             import: &'a textweaver_vault::ImportReport,
             library: &'a [LibraryEntry],
         }
-        println!(
+        crate::cmd::outln!(
             "{}",
             serde_json::to_string_pretty(&Out {
                 import: &report,
@@ -218,9 +218,9 @@ fn import(args: &Args, paths: &Paths) -> anyhow::Result<()> {
             })?
         );
     } else {
-        println!("{}", report.summary());
+        crate::cmd::outln!("{}", report.summary());
         for (path, why) in &read.unreadable {
-            println!("Could not read {}: {why}", path.display());
+            crate::cmd::outln!("Could not read {}: {why}", path.display());
         }
     }
     Ok(())
