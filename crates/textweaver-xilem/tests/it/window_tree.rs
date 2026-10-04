@@ -1253,6 +1253,8 @@ fn no_control_leaves_the_window_at_any_review_size() {
         let root = h.access_tree().state().root();
         let mut stack = vec![root];
         let mut buttons = 0;
+        let mut names = Vec::new();
+        let mut row_tops: Vec<f64> = Vec::new();
         while let Some(n) = stack.pop() {
             stack.extend(n.children());
             if !matches!(n.role(), Role::Button) {
@@ -1261,6 +1263,10 @@ fn no_control_leaves_the_window_at_any_review_size() {
             buttons += 1;
             let name = n.label().unwrap_or_default();
             let b = n.bounding_box().expect("a button has bounds");
+            names.push(name.clone());
+            if !row_tops.iter().any(|y| (y - b.y0).abs() < 2.0) {
+                row_tops.push(b.y0);
+            }
             assert!(
                 b.x0 >= window.x0 - 0.5
                     && b.y0 >= window.y0 - 0.5
@@ -1273,7 +1279,22 @@ fn no_control_leaves_the_window_at_any_review_size() {
                 "{at}: {name:?} is smaller than 24 by 24: {b:?}"
             );
         }
-        assert_eq!(buttons, 11, "{at}: the header's five and the toolbar's six");
+        // Below 800 by 480 the folded bar keeps to two rows: the buttons
+        // that do not fit leave the screen and the tree, and Commands,
+        // which lists them all, stays.
+        let short = size.0 < 800 && size.1 < 480;
+        assert_eq!(h.get_widget(FRAME).inner().is_short(), short, "{at}");
+        if short {
+            assert!(row_tops.len() <= 2, "{at}: rows at {row_tops:?}");
+            assert!(names.iter().any(|n| n == "Commands"), "{at}: {names:?}");
+            assert!(names.iter().any(|n| n == "Play"), "{at}: {names:?}");
+            assert!(buttons <= 11, "{at}: {names:?}");
+            // The document keeps about five lines.
+            let doc = h.get_widget(DOC).ctx().bounding_box();
+            assert!(doc.height() >= 130.0, "{at}: the document {doc:?}");
+        } else {
+            assert_eq!(buttons, 11, "{at}: the header's five and the toolbar's six");
+        }
         // The status texts, in logical pixels.
         let logical = masonry::kurbo::Rect::new(0.0, 0.0, f64::from(size.0), f64::from(size.1));
         let msg = h.get_widget(gui::STATUS).ctx().bounding_box();
@@ -1311,6 +1332,33 @@ fn no_control_leaves_the_window_at_any_review_size() {
             narrow,
             "{at}: Play {play_box:?} is above the document {doc_box:?} only when folded"
         );
+    }
+}
+
+/// In the smallest window the Contents panel, which would leave the
+/// document under five lines, is hidden (not a region F6 goes to), and
+/// the document keeps the row; at the laptop size it shows.
+#[test]
+fn a_short_window_hides_the_panel_for_the_document() {
+    use textweaver_app::store::GuiSidebar;
+    use textweaver_xilem::sidebar::{self, SIDEBAR, SidebarShown};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    app.update_settings(|s| s.gui.sidebar = GuiSidebar::Contents)
+        .unwrap();
+    for (size, hidden) in [((420, 320), true), ((1100, 780), false)] {
+        let mut h = harness_at(&app, size, 1.0);
+        let p = Palette::galaxy();
+        let _ = sidebar::sync(&app, &p, &mut SidebarShown::default(), &mut h);
+        let _ = h.redraw();
+        let _ = h.redraw();
+        let s = h.get_widget(SIDEBAR);
+        assert!(s.inner().is_open(), "{size:?}");
+        assert_eq!(s.inner().shown_list_id().is_none(), hidden, "{size:?}");
+        let doc = h.get_widget(DOC).ctx().bounding_box();
+        assert!(doc.height() >= 130.0, "{size:?}: the document {doc:?}");
+        let lists = names_of(&h, Role::ListBox);
+        assert_eq!(lists.is_empty(), hidden, "{size:?}: {lists:?}");
     }
 }
 

@@ -667,7 +667,10 @@ pub fn build_tree(
             app,
             &mut ids,
         ),
-    ]);
+    ])
+    // In a short, narrow window the buttons that do not fit are hidden;
+    // Commands stays, and lists every command, those hidden too.
+    .with_keep_last();
     let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
         .with_tag(HEADER)
         .with_props(panel(p, 10.0, 16.0));
@@ -2019,7 +2022,7 @@ impl Gui {
     fn region_key(&mut self, ctx: &mut DriverCtx<'_>, forward: bool) {
         let root = ctx.render_root(self.window_id);
         let (list, doc) = root.get_widget_with_tag(SIDEBAR).map_or((None, None), |s| {
-            (s.inner().list_id(), Some(s.inner().doc_id()))
+            (s.inner().shown_list_id(), Some(s.inner().doc_id()))
         });
         let (folded, header, toolbar) =
             root.get_widget_with_tag(FRAME)

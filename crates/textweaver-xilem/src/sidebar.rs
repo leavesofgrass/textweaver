@@ -58,6 +58,10 @@ const GAP: f64 = 12.0;
 /// Below this row width, in logical pixels, the panel goes above the
 /// document instead of beside it.
 pub const STACK_WIDTH: f64 = 600.0;
+/// Stacked, the panel is hidden while the document would be shorter than
+/// this, in logical pixels (about five lines of the reading text), unless
+/// the panel has the focus: a short window keeps the document readable.
+pub const SHORT_DOC: f64 = 150.0;
 /// The least room the panel's list keeps before its hint gives way.
 const MIN_LIST: f64 = 64.0;
 
@@ -107,6 +111,9 @@ pub struct Sidebar {
     doc: WidgetPod<DocumentView>,
     /// The panel's list, while the panel is shown.
     list: Option<WidgetId>,
+    /// The panel is open but hidden: the window is too short for it and
+    /// the document ([`SHORT_DOC`]).
+    hidden: bool,
 }
 
 impl Sidebar {
@@ -116,6 +123,7 @@ impl Sidebar {
             panel: None,
             doc: doc.to_pod(),
             list: None,
+            hidden: false,
         }
     }
 
@@ -182,6 +190,24 @@ impl Sidebar {
         self.list
     }
 
+    /// The panel's list while it is on screen: not while a short window
+    /// hides it ([`SHORT_DOC`]), when it is no region to go to.
+    pub fn shown_list_id(&self) -> Option<WidgetId> {
+        self.list.filter(|_| !self.hidden)
+    }
+
+    /// Shows a panel a short window hid, before the focus goes to it; it
+    /// stays while it has the focus.
+    pub fn reveal(this: &mut WidgetMut<'_, Self>) {
+        if this.widget.hidden {
+            this.widget.hidden = false;
+            if let Some(p) = this.widget.panel.as_mut() {
+                this.ctx.set_stashed(p, false);
+            }
+            this.ctx.request_layout();
+        }
+    }
+
     /// The document view.
     pub fn doc_id(&self) -> WidgetId {
         self.doc.id()
@@ -220,7 +246,20 @@ impl Widget for Sidebar {
             ctx.place_child(&mut self.doc, Point::ORIGIN);
             return;
         };
-        if size.width < STACK_WIDTH {
+        let stacked = size.width < STACK_WIDTH;
+        let doc_h = size.height - (size.height * 0.5).max(0.0) - GAP;
+        let panel_focused =
+            ctx.has_focus_target() && ctx.focus_target_id() != Some(self.doc.id());
+        self.hidden = stacked && doc_h < SHORT_DOC && !panel_focused;
+        ctx.set_stashed(panel, self.hidden);
+        if self.hidden {
+            // Too short for both: the document alone, the panel still
+            // open (its key goes to it, and shows it).
+            ctx.run_layout(&mut self.doc, size);
+            ctx.place_child(&mut self.doc, Point::ORIGIN);
+            return;
+        }
+        if stacked {
             // A narrow window: the panel above the document, as wide as
             // the row, so neither is squeezed to a sliver; the order on
             // screen stays the order of the children (W9b-n).
@@ -648,7 +687,10 @@ pub fn toggle(
         let _ = app.update_settings(|s| s.gui.sidebar = setting_of(Some(panel)));
         let _ = sync(app, palette, shown, host);
     }
-    let list = host.edit(SIDEBAR, |s| s.widget.list_id());
+    let list = host.edit(SIDEBAR, |mut s| {
+        Sidebar::reveal(&mut s);
+        s.widget.list_id()
+    });
     host.focus(list);
     if opened {
         Toggled::Opened(panel, shown.positions.len())

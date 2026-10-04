@@ -36,6 +36,12 @@ use crate::widgets::{ActionButton, Region};
 /// audit's "about 800").
 pub const NARROW_WIDTH: f64 = 800.0;
 
+/// Below this window height, in logical pixels, the folded bar keeps to
+/// two rows (one each for the header and the toolbar, or two for the one
+/// shown): the buttons that do not fit are hidden, and the header's last
+/// button, Commands, stays, so every command is still a list away.
+pub const SHORT_HEIGHT: f64 = 480.0;
+
 /// The space between bars, and between buttons in a bar.
 const GAP: f64 = theme::GAP;
 
@@ -52,6 +58,11 @@ pub struct Flow {
     children: Vec<WidgetPod<ActionButton>>,
     push_right: Option<usize>,
     compact: bool,
+    /// At most this many rows ([`set_max_rows`](Self::set_max_rows)); the
+    /// buttons that do not fit are hidden.
+    max_rows: Option<usize>,
+    /// The last button stays shown when rows are limited.
+    keep_last: bool,
 }
 
 impl Flow {
@@ -61,13 +72,72 @@ impl Flow {
             children: buttons.into_iter().map(NewWidget::to_pod).collect(),
             push_right: None,
             compact: false,
+            max_rows: None,
+            keep_last: false,
         }
     }
 
     /// Puts the buttons from `index` on at the right end of a single row.
+    /// When the row wraps, those buttons stay together on one row.
     pub fn with_push_right(mut self, index: usize) -> Self {
         self.push_right = Some(index);
         self
+    }
+
+    /// Keeps the last button shown when [`set_max_rows`](Self::set_max_rows)
+    /// hides some (the header's Commands, which opens every command,
+    /// those hidden too).
+    pub fn with_keep_last(mut self) -> Self {
+        self.keep_last = true;
+        self
+    }
+
+    /// Limits the flow to `rows` rows (`None`: no limit). The buttons that
+    /// do not fit are hidden: off the screen, out of the Tab order and out
+    /// of the accessibility tree, so what is reached is what is seen.
+    /// Their commands stay on their keys, in the menus and in Commands.
+    pub fn set_max_rows(this: &mut WidgetMut<'_, Self>, rows: Option<usize>) {
+        if this.widget.max_rows != rows {
+            this.widget.max_rows = rows;
+            this.ctx.request_layout();
+        }
+    }
+
+    /// The buttons shown at `width`, by index, in order.
+    fn shown(&self, widths: &[f64], width: f64) -> Vec<usize> {
+        let all: Vec<usize> = (0..widths.len()).collect();
+        let Some(max) = self.max_rows.filter(|&m| m > 0) else {
+            return all;
+        };
+        let fits = |set: &[usize]| {
+            let w: Vec<f64> = set.iter().map(|&i| widths[i]).collect();
+            rows(&w, width, self.group(set)).len() <= max
+        };
+        if fits(&all) {
+            return all;
+        }
+        let n = widths.len();
+        for k in (1..n).rev() {
+            let mut set: Vec<usize> = (0..k).collect();
+            if self.keep_last && k < n {
+                set.push(n - 1);
+            }
+            if fits(&set) {
+                return set;
+            }
+        }
+        vec![0]
+    }
+
+    /// Where the buttons from [`with_push_right`](Self::with_push_right) on
+    /// start among `shown`, when all of them are shown: they are kept
+    /// together on one row.
+    fn group(&self, shown: &[usize]) -> Option<usize> {
+        let p = self.push_right?;
+        let n = self.children.len();
+        (p < n && (p..n).all(|i| shown.contains(&i)))
+            .then(|| shown.iter().position(|&i| i == p))
+            .flatten()
     }
 
     /// Hides (`true`) or shows the keys drawn on the buttons.
@@ -127,8 +197,10 @@ fn natural_size<W: Widget + ?Sized>(
 }
 
 /// Splits items of `widths` into rows no wider than `width` (at least one
-/// item a row): the index each row starts at.
-fn rows(widths: &[f64], width: f64) -> Vec<usize> {
+/// item a row): the index each row starts at. The items from `group` on
+/// start a new row together when they do not all fit on the current one
+/// (so Faster is never left alone on a row without Slower).
+fn rows(widths: &[f64], width: f64, group: Option<usize>) -> Vec<usize> {
     let mut starts = Vec::new();
     let mut x = 0.0;
     for (i, &w) in widths.iter().enumerate() {
@@ -137,7 +209,15 @@ fn rows(widths: &[f64], width: f64) -> Vec<usize> {
             x = w;
             continue;
         }
-        if x + GAP + w > width + 0.5 {
+        let w_needed = if group == Some(i) {
+            let rest = &widths[i..];
+            let together = rest.iter().sum::<f64>() + GAP * (rest.len() - 1) as f64;
+            // Only when the group fits on a row of its own.
+            if together <= width + 0.5 { together } else { w }
+        } else {
+            w
+        };
+        if x + GAP + w_needed > width + 0.5 {
             starts.push(i);
             x = w;
         } else {
@@ -197,7 +277,10 @@ impl Widget for Flow {
             Axis::Vertical => {
                 let width = cross_length.map_or(one_row, Length::get);
                 let widths: Vec<f64> = sizes.iter().map(|s| s.0).collect();
-                let starts = rows(&widths, width);
+                let shown = self.shown(&widths, width);
+                let sizes: Vec<(f64, f64)> = shown.iter().map(|&i| sizes[i]).collect();
+                let widths: Vec<f64> = sizes.iter().map(|s| s.0).collect();
+                let starts = rows(&widths, width, self.group(&shown));
                 Length::px(total(&row_heights(&sizes, &starts)))
             }
         }
@@ -226,7 +309,14 @@ impl Widget for Flow {
             sizes.push((w, h.get()));
         }
         let widths: Vec<f64> = sizes.iter().map(|s| s.0).collect();
-        let starts = rows(&widths, size.width);
+        let shown = self.shown(&widths, size.width);
+        for (i, child) in self.children.iter_mut().enumerate() {
+            ctx.set_stashed(child, !shown.contains(&i));
+        }
+        let group = self.group(&shown);
+        let sizes: Vec<(f64, f64)> = shown.iter().map(|&i| sizes[i]).collect();
+        let widths: Vec<f64> = sizes.iter().map(|s| s.0).collect();
+        let starts = rows(&widths, size.width, group);
         let heights = row_heights(&sizes, &starts);
         let single = starts.len() == 1;
         let mut y = 0.0;
@@ -234,7 +324,7 @@ impl Widget for Flow {
             let end = starts.get(r + 1).copied().unwrap_or(sizes.len());
             let row_h = heights[r];
             let mut x: f64 = 0.0;
-            let push_at = self.push_right.filter(|_| single);
+            let push_at = group.filter(|_| single);
             let right_width: f64 = match push_at {
                 Some(p) if p < end => {
                     sizes[p..end].iter().map(|s| s.0).sum::<f64>()
@@ -242,11 +332,11 @@ impl Widget for Flow {
                 }
                 _ => 0.0,
             };
-            for (i, &(w, _)) in sizes.iter().enumerate().take(end).skip(s) {
-                if push_at == Some(i) {
+            for (k, &(w, _)) in sizes.iter().enumerate().take(end).skip(s) {
+                if push_at == Some(k) {
                     x = x.max(size.width - right_width);
                 }
-                let child = &mut self.children[i];
+                let child = &mut self.children[shown[k]];
                 ctx.run_layout(child, Size::new(w, row_h));
                 ctx.place_child(child, Point::new(x, y));
                 x += w + GAP;
@@ -288,6 +378,9 @@ pub struct Frame {
     status: WidgetPod<dyn Widget>,
     announcer: WidgetPod<dyn Widget>,
     folded: bool,
+    /// Folded and shorter than [`SHORT_HEIGHT`]: the bars' rows are
+    /// limited.
+    short: bool,
     show_header: bool,
     show_toolbar: bool,
     /// The colors the bars' cards are drawn in.
@@ -314,6 +407,7 @@ impl Frame {
             status: status.erased().to_pod(),
             announcer: announcer.erased().to_pod(),
             folded: false,
+            short: false,
             show_header: true,
             show_toolbar: true,
             palette: palette.clone(),
@@ -411,7 +505,38 @@ impl Frame {
         }
         this.widget.show_header = header;
         this.widget.show_toolbar = toolbar;
+        Self::limit_rows(this);
         this.ctx.request_layout();
+    }
+
+    /// True while the folded bar is kept to two rows (a short window).
+    pub fn is_short(&self) -> bool {
+        self.short
+    }
+
+    /// Keeps the folded bar to two rows (`true`, a short window) or lets
+    /// it wrap freely.
+    pub fn set_short(this: &mut WidgetMut<'_, Self>, short: bool) {
+        if this.widget.short != short {
+            this.widget.short = short;
+            Self::limit_rows(this);
+            this.ctx.request_layout();
+        }
+    }
+
+    /// Each bar's row limit: one each while both are shown, two for the
+    /// one shown alone, none unless short.
+    fn limit_rows(this: &mut WidgetMut<'_, Self>) {
+        let w = &*this.widget;
+        let (short, both) = (w.short, w.show_header && w.show_toolbar);
+        let limit = short.then_some(if both { 1 } else { 2 });
+        for bar in [&mut this.widget.header, &mut this.widget.toolbar] {
+            let mut region = this.ctx.get_mut(bar);
+            let mut child = Region::child_mut(&mut region);
+            if let Some(mut flow) = child.try_downcast::<Flow>() {
+                Flow::set_max_rows(&mut flow, limit);
+            }
+        }
     }
 
     fn height_at<W: Widget + ?Sized>(
@@ -471,6 +596,14 @@ impl Widget for Frame {
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
         let w = size.width.max(0.0);
         let narrow = w < NARROW_WIDTH;
+        let short = narrow && size.height < SHORT_HEIGHT;
+        if short != self.short {
+            ctx.mutate_self_later(move |mut this| {
+                if let Some(mut frame) = this.try_downcast::<Frame>() {
+                    Frame::set_short(&mut frame, short);
+                }
+            });
+        }
         if narrow != self.folded {
             // The order of the children changes with the fold, which only
             // a mutation may do; this pass lays out the current order and
@@ -786,11 +919,22 @@ mod tests {
 
     #[test]
     fn rows_wrap_only_what_does_not_fit() {
-        assert_eq!(rows(&[100.0, 100.0, 100.0], 400.0), vec![0]);
-        assert_eq!(rows(&[100.0, 100.0, 100.0], 250.0), vec![0, 2]);
+        assert_eq!(rows(&[100.0, 100.0, 100.0], 400.0, None), vec![0]);
+        assert_eq!(rows(&[100.0, 100.0, 100.0], 250.0, None), vec![0, 2]);
         // A lone item wider than the bar still gets its own row.
-        assert_eq!(rows(&[500.0, 100.0], 300.0), vec![0, 1]);
-        assert!(rows(&[], 300.0).is_empty());
+        assert_eq!(rows(&[500.0, 100.0], 300.0, None), vec![0, 1]);
+        assert!(rows(&[], 300.0, None).is_empty());
+    }
+
+    #[test]
+    fn a_group_wraps_together() {
+        // Four buttons, the last two a group (Slower and Faster): the
+        // third would fit on the first row, but not with the fourth.
+        let w = [100.0, 100.0, 100.0, 100.0];
+        assert_eq!(rows(&w, 330.0, None), vec![0, 3]);
+        assert_eq!(rows(&w, 330.0, Some(2)), vec![0, 2]);
+        // A group wider than a row wraps item by item.
+        assert_eq!(rows(&w, 150.0, Some(2)), vec![0, 1, 2, 3]);
     }
 
     #[test]
