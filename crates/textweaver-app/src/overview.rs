@@ -25,10 +25,24 @@ use crate::app::App;
 use crate::authoring::count_words;
 
 impl App {
-    /// Says the document overview: title, structure counts, minutes left.
-    pub(crate) fn document_overview(&mut self) {
+    /// "About 3 minutes left.": the reading time from the cursor to the
+    /// end at the current rate (`overview-time`), for the overview and
+    /// Where am I. None with no document open.
+    pub(crate) fn time_left(&self) -> Option<String> {
         let wpm = self.settings.speech.rate.wpm().max(1) as usize;
         let at = self.reading_position();
+        let doc = &self.session.as_ref()?.doc;
+        let from = at.unwrap_or_default().clamp_to(doc.len_chars());
+        let left = CharRange::new(from, doc.end());
+        let words = count_words(doc.text().slice(left.to_range()).chars());
+        Some(self.msg_args("overview-time", &args!["minutes" => words / wpm]))
+    }
+
+    /// Says the document overview: title, structure counts, minutes left.
+    pub(crate) fn document_overview(&mut self) {
+        let Some(time) = self.time_left() else {
+            return;
+        };
         let Some(s) = self.session.as_ref() else {
             return;
         };
@@ -39,12 +53,7 @@ impl App {
         let tables = count(MarkerKind::Table, None);
         let pictures = count(MarkerKind::Image, None);
         let footnotes = count(MarkerKind::Footnote, Some(1));
-        let from = at.unwrap_or_default().clamp_to(doc.len_chars());
-        let left = CharRange::new(from, doc.end());
-        let words = count_words(doc.text().slice(left.to_range()).chars());
-        let minutes = words / wpm;
         let title = s.title.clone();
-        let time = self.msg_args("overview-time", &args!["minutes" => minutes]);
         let msg = self.msg_args(
             "overview-line",
             &args![
