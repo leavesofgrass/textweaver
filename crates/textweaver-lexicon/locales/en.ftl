@@ -1815,6 +1815,8 @@ setting-display-follow-os-theme = Follow the system theme
 setting-display-follow-os-theme-help = At startup, use a light, dark, or high-contrast theme like the system, unless you picked one.
 setting-display-wrap-width = Wrap width
 setting-display-wrap-width-help = Wrap lines at this many columns; 0 uses the whole width.
+setting-display-measure = Line length
+setting-display-measure-help = How many characters a line holds in the window, from 25 to 90; 0 fills the window. The terminal uses the wrap width.
 setting-display-tab-width = Tab width
 setting-display-tab-width-help = Columns a tab takes.
 setting-display-show-line-numbers = Line numbers
@@ -2050,6 +2052,11 @@ settings-unit-columns =
     { $n ->
         [one] column
        *[other] columns
+    }
+settings-unit-characters =
+    { $n ->
+        [one] character
+       *[other] characters
     }
 settings-unit-lines =
     { $n ->

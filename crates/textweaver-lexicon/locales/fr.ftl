@@ -1836,6 +1836,8 @@ setting-display-follow-os-theme = Suivre le thème du système
 setting-display-follow-os-theme-help = Au démarrage, utiliser un thème clair, sombre, ou à fort contraste comme le système, sauf si vous en avez choisi un.
 setting-display-wrap-width = Largeur du retour à la ligne
 setting-display-wrap-width-help = Retourner à la ligne à ce nombre de colonnes ; 0 utilise toute la largeur.
+setting-display-measure = Longueur de ligne
+setting-display-measure-help = Combien de caractères une ligne contient dans la fenêtre, de 25 à 90 ; 0 remplit la fenêtre. Le terminal utilise la largeur du retour à la ligne.
 setting-display-tab-width = Largeur de tabulation
 setting-display-tab-width-help = Colonnes qu'occupe une tabulation.
 setting-display-show-line-numbers = Numéros de ligne
@@ -2071,6 +2073,11 @@ settings-unit-columns =
     { $n ->
         [one] colonne
        *[other] colonnes
+    }
+settings-unit-characters =
+    { $n ->
+        [one] caractère
+       *[other] caractères
     }
 settings-unit-lines =
     { $n ->

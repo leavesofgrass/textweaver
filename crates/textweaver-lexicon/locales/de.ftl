@@ -1844,6 +1844,8 @@ setting-display-follow-os-theme = Dem Systemdesign folgen
 setting-display-follow-os-theme-help = Beim Start ein helles, dunkles oder kontrastreiches Design wie das System verwenden, sofern keins gewählt wurde.
 setting-display-wrap-width = Umbruchbreite
 setting-display-wrap-width-help = Zeilen bei so vielen Spalten umbrechen; 0 nutzt die ganze Breite.
+setting-display-measure = Zeilenlänge
+setting-display-measure-help = Wie viele Zeichen eine Zeile im Fenster fasst, von 25 bis 90; 0 füllt das Fenster. Das Terminal nutzt die Umbruchbreite.
 setting-display-tab-width = Tabulatorbreite
 setting-display-tab-width-help = Spalten, die ein Tabulator einnimmt.
 setting-display-show-line-numbers = Zeilennummern
@@ -2079,6 +2081,11 @@ settings-unit-columns =
     { $n ->
         [one] Spalte
        *[other] Spalten
+    }
+settings-unit-characters =
+    { $n ->
+        [one] Zeichen
+       *[other] Zeichen
     }
 settings-unit-lines =
     { $n ->

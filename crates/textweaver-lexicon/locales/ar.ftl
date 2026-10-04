@@ -1988,6 +1988,8 @@ setting-display-follow-os-theme = اتباع سمة النظام
 setting-display-follow-os-theme-help = عند بدء التشغيل، استخدام سمة فاتحة أو داكنة أو عالية التباين كالنظام، إلا إذا اخترت واحدة.
 setting-display-wrap-width = عرض الالتفاف
 setting-display-wrap-width-help = التفاف الأسطر عند هذا العدد من الأعمدة؛ 0 يستخدم العرض كاملًا.
+setting-display-measure = طول السطر
+setting-display-measure-help = عدد الأحرف التي يتسع لها السطر في النافذة، من 25 إلى 90؛ 0 يملأ النافذة. تستخدم الطرفية عرض الالتفاف.
 setting-display-tab-width = عرض علامة الجدولة
 setting-display-tab-width-help = الأعمدة التي تأخذها علامة الجدولة.
 setting-display-show-line-numbers = أرقام الأسطر
@@ -2227,6 +2229,14 @@ settings-unit-columns =
         [few] أعمدة
         [zero] أعمدة
        *[other] عمود
+    }
+settings-unit-characters =
+    { $n ->
+        [one] حرف
+        [two] أحرف
+        [few] أحرف
+        [zero] أحرف
+       *[other] حرف
     }
 settings-unit-lines =
     { $n ->

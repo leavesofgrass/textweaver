@@ -801,6 +801,10 @@ pub struct DisplaySettings {
     pub theme_explicit: bool,
     /// Wrap width in columns; 0 is the terminal width.
     pub wrap_width: u16,
+    /// The window's line length in characters, 25 to 90 (66 by default);
+    /// 0 fills the window. The window and the HTML export only: the
+    /// terminal keeps `wrap_width`.
+    pub measure: u16,
     /// Tab width.
     pub tab_width: u8,
     /// Show line numbers.
@@ -823,6 +827,7 @@ impl Default for DisplaySettings {
             follow_os_theme: true,
             theme_explicit: false,
             wrap_width: 0,
+            measure: 66,
             tab_width: 4,
             show_line_numbers: false,
             scroll_margin: 3,
