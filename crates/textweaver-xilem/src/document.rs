@@ -2330,10 +2330,14 @@ impl Widget for DocumentView {
             .draw();
         // Text stays inside the ring.
         let clip = ring + theme::FOCUS_INNER + 2.0;
-        painter.push_fill_clip(RoundedRect::from_rect(
-            size.to_rect().inset(-clip),
-            theme::PANEL_RADIUS - 2.0,
-        ));
+        let mut text_area = size.to_rect().inset(-clip);
+        if self.top != (0, 0.0) {
+            // Scrolled: the line above the first one on screen (the scroll
+            // stops on a line's top) is not drawn half into the top
+            // margin, so no heading shows cut through (W9b-n).
+            text_area.y0 = text_area.y0.max(INSET - 2.0);
+        }
+        painter.push_fill_clip(RoundedRect::from_rect(text_area, theme::PANEL_RADIUS - 2.0));
         let brushes = self.brushes();
         let mut painted = Vec::new();
         let caret_pos = self.state.caret;

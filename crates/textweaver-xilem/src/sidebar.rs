@@ -58,6 +58,8 @@ const GAP: f64 = 12.0;
 /// Below this row width, in logical pixels, the panel goes above the
 /// document instead of beside it.
 pub const STACK_WIDTH: f64 = 600.0;
+/// The least room the panel's list keeps before its hint gives way.
+const MIN_LIST: f64 = 64.0;
 
 /// The panel `setting` names, if any.
 pub fn panel_of(setting: GuiSidebar) -> Option<Panel> {
@@ -222,7 +224,7 @@ impl Widget for Sidebar {
             // A narrow window: the panel above the document, as wide as
             // the row, so neither is squeezed to a sliver; the order on
             // screen stays the order of the children (W9b-n).
-            let height = (size.height * 0.4).max(0.0);
+            let height = (size.height * 0.5).max(0.0);
             ctx.run_layout(panel, Size::new(size.width, height));
             ctx.place_child(panel, Point::ORIGIN);
             let y = height + GAP;
@@ -356,18 +358,25 @@ impl Widget for PanelView {
             .get()
         };
         let title_h = height_of(ctx, &mut self.title);
+        let top = title_h + 6.0;
+        // The keys' hint, drawn only, gives way when the list would
+        // otherwise have less than two rows (a small window).
         let hint_h = height_of(ctx, &mut self.hint);
+        let hint_fits = size.height - top - hint_h - 6.0 >= MIN_LIST;
+        ctx.set_stashed(&mut self.hint, !hint_fits);
         ctx.run_layout(&mut self.title, Size::new(w, title_h));
         ctx.place_child(&mut self.title, Point::new(4.0_f64.min(w), 0.0));
-        let top = title_h + 6.0;
-        let list_h = (size.height - top - hint_h - 6.0).max(0.0);
+        let below = if hint_fits { hint_h + 6.0 } else { 0.0 };
+        let list_h = (size.height - top - below).max(0.0);
         ctx.run_layout(&mut self.list, Size::new(w, list_h));
         ctx.place_child(&mut self.list, Point::new(0.0, top));
-        ctx.run_layout(&mut self.hint, Size::new(w, hint_h));
-        ctx.place_child(
-            &mut self.hint,
-            Point::new(0.0, (size.height - hint_h).max(top)),
-        );
+        if hint_fits {
+            ctx.run_layout(&mut self.hint, Size::new(w, hint_h));
+            ctx.place_child(
+                &mut self.hint,
+                Point::new(0.0, (size.height - hint_h).max(top)),
+            );
+        }
     }
 
     fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _p: &mut Painter<'_>) {
