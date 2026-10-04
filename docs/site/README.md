@@ -1,5 +1,6 @@
 # Interactive guide pages
 
+textweaver is a document reader and writer that speaks for itself, with roots in star, the Python reader that came before it.
 The folder `docs/site/` holds six interactive web pages about textweaver.
 They explain how textweaver is built and how to use it.
 Each page works offline, from your own disk.

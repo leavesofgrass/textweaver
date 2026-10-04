@@ -2,6 +2,8 @@
 
 <img src="assets/textweaver-logo.svg" alt="textweaver logo: the letters t and w woven on a loom" width="128" height="128">
 
+textweaver is a document reader and writer that speaks for itself. It reads aloud with a highlight that follows the spoken word, works from the keyboard in a terminal and in a window, and converts, exports, and edits documents. It is its own project, with roots in star, the Python reader that came before it.
+
 This is the index of every textweaver document. It is grouped for three audiences:
 
 - [People who use textweaver](#for-users): reading, writing, speech, and the tools.
@@ -89,6 +91,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [Roadmap](roadmap.md): what works today, what is being built next, and what is planned.
 - [Research for the next waves](dev/research/README.md): the research reports and the wave plan for alpha.8, alpha.9, and later: performance, speech engines, use cases, design, and law and standards.
 - [star features not yet planned](star-gaps.md): star features with their status in textweaver.
+- [Documentation coverage](dev/docs-coverage.md): each feature, the guide that covers it, and whether the guide passes.
 - [CHANGELOG.md](../CHANGELOG.md): what changed in each release.
 
 ## Decisions

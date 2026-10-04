@@ -1,6 +1,6 @@
 # star features not yet planned
 
-star ([its repository](https://github.com/leavesofgrass/star)) is the Python program textweaver reimplements in Rust. This page tracks star's features against textweaver's current status, for anyone comparing the two or looking for what is left to port. Priorities favor students with print disabilities, star's original audience.
+textweaver grew from star ([its repository](https://github.com/leavesofgrass/star)), the Python reader that came before it, and is now its own project. This page tracks the features star had, and what is left of them in textweaver, for anyone who used star or looks for a feature they remember. Priorities favor students with print disabilities, star's original audience.
 
 Each item has a status:
 
