@@ -33,7 +33,7 @@ impl App {
     /// About how many whole minutes of reading are left from the reading
     /// position at the current rate, for the window's status bar; `None`
     /// without a document. Counted exactly over the next
-    /// [`TIME_SAMPLE_CHARS`] chars and scaled for the rest, so it is cheap
+    /// 4,096 characters and scaled for the rest, so it is cheap
     /// enough to ask on every refresh; it changes once a minute, never per
     /// word.
     pub fn minutes_left(&self) -> Option<usize> {
