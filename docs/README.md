@@ -77,6 +77,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [Writing messages](dev/messages.md): the style guide for everything textweaver says and shows, and the tests that keep it.
 - [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, the lean reader, the helper scripts, and the repository layout.
 - [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
+- [The polish checklist and its tests](dev/checklist-tests.md): each row of the consistency, accessibility, visual, and documentation checklist, with the test that holds it or the owner's session that covers it.
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
 - [The crates](dev/architecture.md#the-crates): what each of the 36 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
