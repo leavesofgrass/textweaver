@@ -279,7 +279,9 @@ pub use opening::{
 pub use panels::{Panel, PanelEntry, current_entry};
 pub use playback::{Playback, load_options, narration_policy, structural_pauses};
 pub use restart::SpeechStarter;
-pub use settings_schema::{Setting, SettingKind, SettingsSchema};
+pub use settings_schema::{
+    Frontend, Setting, SettingKind, SettingsSchema, TERMINAL_ONLY, WINDOW_ONLY,
+};
 pub use templates::local_date;
 pub use textweaver_engines::{
     CODE_FACTORY_LIBRARY, apple_preference, dectalk_config, eci_config, piper_config, sapi_config,

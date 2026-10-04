@@ -135,6 +135,33 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 ## Reading aids: the `[reading_aids]` section
 
+- `reading_aids.spacing.line_height`: default 1.5. Line height. Line height as a multiple of the font size. 1.5 is the WCAG value. From 1 to 3, in steps of 0.1. Syncs between computers.
+- `reading_aids.spacing.paragraph_spacing`: default 1. Paragraph spacing. Space after each paragraph, in multiples of the font size. From 0 to 4, in steps of 0.25. Syncs between computers.
+- `reading_aids.spacing.letter_spacing`: default 0. Letter spacing. Extra space between letters, in multiples of the font size. From 0 to 0.5, in steps of 0.02. Syncs between computers.
+- `reading_aids.spacing.word_spacing`: default 0. Word spacing. Extra space between words, in multiples of the font size. From 0 to 1, in steps of 0.04. Syncs between computers.
+- `reading_aids.font.family`: default sans serif (`"sans"`). Font. The window's reading font. You can also type the name of any installed font. Choices: `"system-ui"` (the system font), `"sans"` (sans serif), `"serif"`, `"monospace"`, `"atkinson"` (Atkinson Hyperlegible), `"opendyslexic"` (OpenDyslexic), `"lexend"` (Lexend). Other values may be written too. Syncs between computers.
+- `reading_aids.font.size_pt`: default 14 points. Font size. The window's font size. From 6 to 72 points, in steps of 1. Syncs between computers.
+- `reading_aids.font.weight`: default 400. Font weight. 400 is regular, 700 bold. From 100 to 900, in steps of 100. Syncs between computers.
+- `reading_aids.ruler.mode`: default `"off"`. Reading ruler. Mark the current line, or a band of lines. Choices: `"off"`, `"current_line"` (current line), `"ruler"`. Syncs between computers.
+- `reading_aids.ruler.scope`: default the whole line (`"line"`). Ruler covers. A wrapped row, or the whole line. Choices: `"row"` (a row), `"line"` (the whole line). Syncs between computers.
+- `reading_aids.ruler.rows_above`: default 1 row. Ruler rows above. Rows of the band above the current one. From 0 to 10 rows, in steps of 1. Syncs between computers.
+- `reading_aids.ruler.rows_below`: default 1 row. Ruler rows below. Rows of the band below the current one. From 0 to 10 rows, in steps of 1. Syncs between computers.
+- `reading_aids.ruler.mask_outside`: default off (`false`). Ruler mask. Dim the rows outside the band. On or off: `true` or `false`. Syncs between computers.
+- `reading_aids.bionic`: default off (`false`). Bionic reading. Draw the start of each word in bold. On or off: `true` or `false`. Syncs between computers.
+- `reading_aids.bionic_options.ratio`: default 0.4. Bionic share. How much of each word is bold. From 0.1 to 0.9, in steps of 0.1. Syncs between computers.
+- `reading_aids.bionic_options.min_word_len`: default 2 letters. Bionic shortest word. Words shorter than this are left alone. From 1 to 20 letters, in steps of 1. Syncs between computers.
+- `reading_aids.bionic_options.skip_numbers`: default on (`true`). Bionic skips numbers. Leave words with digits alone. On or off: `true` or `false`. Syncs between computers.
+- `reading_aids.bionic_options.skip_urls`: default on (`true`). Bionic skips addresses. Leave web and email addresses alone. On or off: `true` or `false`. Syncs between computers.
+- `reading_aids.bionic_options.skip_code`: default on (`true`). Bionic skips code. Leave code alone. On or off: `true` or `false`. Syncs between computers.
+- `reading_aids.syllables`: default off (`false`). Syllables. Draw words split into syllables with a middle dot; speech is unchanged. On or off: `true` or `false`. Syncs between computers.
+- `reading_aids.difficult_words`: default off (`false`). Difficult words. Underline rare words, and name them on word moves at high verbosity. On or off: `true` or `false`. Syncs between computers.
+- `reading_aids.syllable_options.separator`: default `"·"`. Syllable separator. What is drawn between syllables. Text. Syncs between computers.
+- `reading_aids.syllable_options.left_min`: default 2 letters. Syllable first break. Fewest letters before the first break. From 1 to 10 letters, in steps of 1. Syncs between computers.
+- `reading_aids.syllable_options.right_min`: default 2 letters. Syllable last break. Fewest letters after the last break. From 1 to 10 letters, in steps of 1. Syncs between computers.
+- `reading_aids.syllable_options.min_word_len`: default 4 letters. Syllable shortest word. Words shorter than this are never split. From 1 to 20 letters, in steps of 1. Syncs between computers.
+- `reading_aids.syllable_options.skip_urls`: default on (`true`). Syllables skip addresses. Leave web and email addresses alone. On or off: `true` or `false`. Syncs between computers.
+- `reading_aids.syllable_options.skip_code`: default on (`true`). Syllables skip code. Leave code alone. On or off: `true` or `false`. Syncs between computers.
+- `reading_aids.difficult_definitions`: default off (`false`). Difficult word definitions. With difficult words marked, at high verbosity also say a difficult word's first definition from the dictionary. On or off: `true` or `false`. Syncs between computers.
 - `reading_aids.rsvp.wpm`: default 300 words per minute. RSVP rate. Words per minute of rapid serial visual presentation. From 60 to 1500 words per minute, in steps of 20. Syncs between computers.
 - `reading_aids.rsvp.pacing`: default its own timer (`"timer"`). RSVP pacing. What moves the RSVP word on: its own timer, or speech. Choices: `"timer"` (its own timer), `"external"` (speech). Syncs between computers.
 - `reading_aids.rsvp.clause_pause`: default 50 percent. RSVP clause pause. Extra time after a comma, colon, dash, or bracket, in percent of a word's time. From 0 to 500 percent, in steps of 10. Syncs between computers.
@@ -148,33 +175,6 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading_aids.rsvp.position`: default top center (`"top-center"`). RSVP position. Where the RSVP word appears. Choices: `"top-left"` (top left), `"top-center"` (top center), `"top-right"` (top right), `"center-left"` (middle left), `"center"`, `"center-right"` (middle right), `"bottom-left"` (bottom left), `"bottom-center"` (bottom center), `"bottom-right"` (bottom right). Syncs between computers.
 - `reading_aids.rsvp.font_size_pt`: default 48 points. RSVP size. Size of the RSVP word in the window. From 8 to 200 points, in steps of 2. Syncs between computers.
 - `reading_aids.rsvp.lead_words`: default 0 words. RSVP lead. With speech pacing, show this many words ahead of the word spoken. From -5 to 5 words, in steps of 1. Syncs between computers.
-- `reading_aids.bionic`: default off (`false`). Bionic reading. Draw the start of each word in bold. On or off: `true` or `false`. Syncs between computers.
-- `reading_aids.bionic_options.ratio`: default 0.4. Bionic share. How much of each word is bold. From 0.1 to 0.9, in steps of 0.1. Syncs between computers.
-- `reading_aids.bionic_options.min_word_len`: default 2 letters. Bionic shortest word. Words shorter than this are left alone. From 1 to 20 letters, in steps of 1. Syncs between computers.
-- `reading_aids.bionic_options.skip_numbers`: default on (`true`). Bionic skips numbers. Leave words with digits alone. On or off: `true` or `false`. Syncs between computers.
-- `reading_aids.bionic_options.skip_urls`: default on (`true`). Bionic skips addresses. Leave web and email addresses alone. On or off: `true` or `false`. Syncs between computers.
-- `reading_aids.bionic_options.skip_code`: default on (`true`). Bionic skips code. Leave code alone. On or off: `true` or `false`. Syncs between computers.
-- `reading_aids.spacing.line_height`: default 1.5. Line height. Line height as a multiple of the font size. 1.5 is the WCAG value. From 1 to 3, in steps of 0.1. Syncs between computers.
-- `reading_aids.spacing.paragraph_spacing`: default 1. Paragraph spacing. Space after each paragraph, in multiples of the font size. From 0 to 4, in steps of 0.25. Syncs between computers.
-- `reading_aids.spacing.letter_spacing`: default 0. Letter spacing. Extra space between letters, in multiples of the font size. From 0 to 0.5, in steps of 0.02. Syncs between computers.
-- `reading_aids.spacing.word_spacing`: default 0. Word spacing. Extra space between words, in multiples of the font size. From 0 to 1, in steps of 0.04. Syncs between computers.
-- `reading_aids.font.family`: default sans serif (`"sans"`). Font. The window's reading font. You can also type the name of any installed font. Choices: `"system-ui"` (the system font), `"sans"` (sans serif), `"serif"`, `"monospace"`, `"atkinson"` (Atkinson Hyperlegible), `"opendyslexic"` (OpenDyslexic), `"lexend"` (Lexend). Other values may be written too. Syncs between computers.
-- `reading_aids.font.size_pt`: default 14 points. Font size. The window's font size. From 6 to 72 points, in steps of 1. Syncs between computers.
-- `reading_aids.font.weight`: default 400. Font weight. 400 is regular, 700 bold. From 100 to 900, in steps of 100. Syncs between computers.
-- `reading_aids.ruler.mode`: default `"off"`. Reading ruler. Mark the current line, or a band of lines. Choices: `"off"`, `"current_line"` (current line), `"ruler"`. Syncs between computers.
-- `reading_aids.ruler.scope`: default the whole line (`"line"`). Ruler covers. A wrapped row, or the whole line. Choices: `"row"` (a row), `"line"` (the whole line). Syncs between computers.
-- `reading_aids.ruler.rows_above`: default 1 row. Ruler rows above. Rows of the band above the current one. From 0 to 10 rows, in steps of 1. Syncs between computers.
-- `reading_aids.ruler.rows_below`: default 1 row. Ruler rows below. Rows of the band below the current one. From 0 to 10 rows, in steps of 1. Syncs between computers.
-- `reading_aids.ruler.mask_outside`: default off (`false`). Ruler mask. Dim the rows outside the band. On or off: `true` or `false`. Syncs between computers.
-- `reading_aids.syllables`: default off (`false`). Syllables. Draw words split into syllables with a middle dot; speech is unchanged. On or off: `true` or `false`. Syncs between computers.
-- `reading_aids.difficult_words`: default off (`false`). Difficult words. Underline rare words, and name them on word moves at high verbosity. On or off: `true` or `false`. Syncs between computers.
-- `reading_aids.syllable_options.separator`: default `"·"`. Syllable separator. What is drawn between syllables. Text. Syncs between computers.
-- `reading_aids.syllable_options.left_min`: default 2 letters. Syllable first break. Fewest letters before the first break. From 1 to 10 letters, in steps of 1. Syncs between computers.
-- `reading_aids.syllable_options.right_min`: default 2 letters. Syllable last break. Fewest letters after the last break. From 1 to 10 letters, in steps of 1. Syncs between computers.
-- `reading_aids.syllable_options.min_word_len`: default 4 letters. Syllable shortest word. Words shorter than this are never split. From 1 to 20 letters, in steps of 1. Syncs between computers.
-- `reading_aids.syllable_options.skip_urls`: default on (`true`). Syllables skip addresses. Leave web and email addresses alone. On or off: `true` or `false`. Syncs between computers.
-- `reading_aids.syllable_options.skip_code`: default on (`true`). Syllables skip code. Leave code alone. On or off: `true` or `false`. Syncs between computers.
-- `reading_aids.difficult_definitions`: default off (`false`). Difficult word definitions. With difficult words marked, at high verbosity also say a difficult word's first definition from the dictionary. On or off: `true` or `false`. Syncs between computers.
 
 ## Preview: the `[preview]` section
 
