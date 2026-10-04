@@ -359,6 +359,8 @@ impl MenuId {
                 Do(A::NotesPanel),
                 Do(A::NextRegion),
                 Do(A::PreviousRegion),
+                Do(A::ToggleHeader),
+                Do(A::ToggleToolbar),
                 Sep,
                 Do(A::NextTheme),
                 Do(A::ColorSettings),
@@ -601,6 +603,8 @@ pub fn bound_setting(a: ActionId) -> Option<&'static str> {
         A::ToggleCitations => "reading.citations",
         A::TogglePreviewAutoReload => "preview.auto_reload",
         A::TogglePreviewLive => "preview.live",
+        A::ToggleHeader => "gui.header",
+        A::ToggleToolbar => "gui.toolbar",
         _ => return None,
     })
 }

@@ -1400,9 +1400,16 @@ pub enum GuiAnnounce {
 }
 
 /// `[gui]`: settings only the windowed reader (`textweaver-xilem`) reads.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GuiSettings {
+    /// Show the header, the bar of Open, Font, Edit, Settings and
+    /// Commands (Wave 9, W9b-n). On by default; the View menu turns it
+    /// off, and every command keeps its key and its menu item.
+    pub header: bool,
+    /// Show the toolbar, the bar of Play, Stop and the reading buttons
+    /// (Wave 9, W9b-n). On by default, like the header.
+    pub toolbar: bool,
     /// How announcements reach the screen reader. The live region is the
     /// default, chosen in the owner's first screen reader session.
     pub announce: GuiAnnounce,
@@ -1421,6 +1428,20 @@ pub struct GuiSettings {
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
+}
+
+impl Default for GuiSettings {
+    fn default() -> Self {
+        GuiSettings {
+            header: true,
+            toolbar: true,
+            announce: GuiAnnounce::default(),
+            auto_hide_menu: false,
+            sidebar: GuiSidebar::default(),
+            window: None,
+            extra: toml::Table::new(),
+        }
+    }
 }
 
 /// `[gui.window]`: the window's place and size when it last closed.
@@ -3475,6 +3496,26 @@ wrap_navigation = true
         let (s, w) = Settings::from_table("[gui]\nannounce = \"loud\"\n".parse().unwrap());
         assert_eq!(w, ["gui.announce has an invalid value"]);
         assert_eq!(s.gui.announce, GuiAnnounce::Live);
+    }
+
+    /// `[gui] header` and `[gui] toolbar` (W9b-n): both shown by default
+    /// and not written then; hidden, they are written and read back.
+    #[test]
+    fn gui_bars_are_shown_by_default_and_round_trip() {
+        let d = Settings::default();
+        assert!(d.gui.header && d.gui.toolbar);
+        let text = d.to_minimal_toml().unwrap();
+        assert!(
+            !text.contains("header") && !text.contains("toolbar"),
+            "{text}"
+        );
+        let (s, w) = Settings::from_table("[gui]\ntoolbar = false\n".parse().unwrap());
+        assert!(w.is_empty(), "{w:?}");
+        assert!(s.gui.header && !s.gui.toolbar);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(text.contains("toolbar = false"), "{text}");
+        let (back, _) = Settings::from_table(text.parse().unwrap());
+        assert_eq!(back.gui, s.gui);
     }
 
     /// `[gui] auto_hide_menu` (W8a-m): off by default and not written

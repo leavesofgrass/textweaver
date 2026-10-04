@@ -1253,6 +1253,16 @@ pub const INFO: &[Info] = &[
         ],
     ),
     toggle(
+        "gui.header",
+        "Show the header",
+        "Show the bar of Open, Font, Edit, Settings and Commands above the document. Off, the commands keep their keys and menu items.",
+    ),
+    toggle(
+        "gui.toolbar",
+        "Show the toolbar",
+        "Show the bar of Play, Stop and the reading buttons. Off, the commands keep their keys and menu items.",
+    ),
+    toggle(
         "gui.auto_hide_menu",
         "Hide the menu bar",
         "Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.",

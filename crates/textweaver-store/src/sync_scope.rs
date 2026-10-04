@@ -247,6 +247,10 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("gui.announce", Machine),
     // Whether this computer's window hides its menu bar.
     ("gui.auto_hide_menu", Machine),
+    // Whether this computer's window shows its header and toolbar: a
+    // small screen hides them, a large one keeps them.
+    ("gui.header", Machine),
+    ("gui.toolbar", Machine),
     // The panel this computer's window shows beside the document.
     ("gui.sidebar", Machine),
     // Where this computer's window was and how big: screens differ.

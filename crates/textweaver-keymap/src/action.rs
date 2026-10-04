@@ -639,6 +639,14 @@ actions! {
     NotesPanel = "notes_panel", View,
         "Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note",
         gui ["g:Ctrl+2"], term [], shared [];
+    // The window's bars (W9b-n): no keys of their own; the View menu and
+    // the palette reach them, and every button's command keeps its key.
+    ToggleHeader = "toggle_header", View,
+        "Show or hide the header, the bar of Open, Font, Edit, Settings and Commands",
+        gui [], term [], shared [];
+    ToggleToolbar = "toggle_toolbar", View,
+        "Show or hide the toolbar, the bar of Play, Stop and the reading buttons",
+        gui [], term [], shared [];
     NextRegion = "next_region", View,
         "Move to the next part of the window: the header, the panel, the document, or the toolbar",
         gui ["g:F6"], term [], shared [];
@@ -770,6 +778,8 @@ impl ActionId {
                 | ActionId::ChooseFont
                 | ActionId::ContentsPanel
                 | ActionId::NotesPanel
+                | ActionId::ToggleHeader
+                | ActionId::ToggleToolbar
                 | ActionId::NextRegion
                 | ActionId::PreviousRegion
         )
