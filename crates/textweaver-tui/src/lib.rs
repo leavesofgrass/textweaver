@@ -173,9 +173,13 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
     let mut tui = Tui::new(app);
     // On a first run the welcome comes first, before the empty-screen hint,
     // so "Welcome to textweaver" is the first thing heard.
+    // The first run (W9b-f): the system's language, when built in, is put
+    // into effect quietly first, so the welcome is said in it.
+    let first_run =
+        setup::first_run_message(&tui.app().catalog(), opts, tui.app().keymap()).is_some();
+    let language_due = first_run && tui.app_mut().first_run_language(None);
     let catalog = tui.app().catalog();
     let welcome = setup::first_run_message(&catalog, opts, tui.app().keymap());
-    let first_run = welcome.is_some();
     let mut welcomed = false;
     match file {
         Some(file) => {
@@ -216,16 +220,18 @@ pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
     if let Some(welcome) = welcome.filter(|_| !welcomed) {
         tui.app_mut().announce_queued(&welcome, Priority::Polite);
     }
+    // A screen reader, looked for only when the mode was never chosen.
+    let screen_reader = setup::screen_reader_to_infer(tui.app(), opts);
     if first_run {
-        // The first run starts with the language list, the system's
-        // language first; the hybrid mode question waits for the next run.
-        tui.choose_language();
-        // Then, once nothing else is open, the optional components, none
-        // chosen (W8a-d). `tw` never shows them.
-        tui.app_mut().offer_components_on_first_run();
+        // At most three skippable steps, one dialog at a time: the
+        // language list only when the system's language is not built in,
+        // hybrid mode inferred and said with a screen reader, then the
+        // optional components, none chosen (W8a-d). `tw` never shows them.
+        tui.first_run_steps(language_due, screen_reader.as_ref());
     } else {
-        // With a screen reader: offer hybrid mode (once).
-        setup::offer_hybrid_if_screen_reader(tui.app_mut(), opts);
+        // With a screen reader and no mode chosen: hybrid mode, said once.
+        tui.app_mut()
+            .startup_screen_reader_step(screen_reader.as_ref());
     }
     tui.offer_recovery();
     if let Some(msg) = signals::install() {

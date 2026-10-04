@@ -425,6 +425,18 @@ impl Tui {
         self.apply(effects);
     }
 
+    /// The first run's steps after the welcome (W9b-f,
+    /// [`App::first_run_steps`]): the language list when it is due, hybrid
+    /// mode inferred with `screen_reader`, and the optional components.
+    pub fn first_run_steps(
+        &mut self,
+        language_due: bool,
+        screen_reader: Option<&textweaver_app::a11y::detect::Detected>,
+    ) {
+        let effects = self.app.first_run_steps(language_due, screen_reader);
+        self.apply(effects);
+    }
+
     /// Dispatches a command and acts on its effects.
     pub fn dispatch(&mut self, cmd: Command) {
         self.needs_draw = true;

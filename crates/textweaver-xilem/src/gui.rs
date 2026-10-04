@@ -3473,6 +3473,15 @@ impl Gui {
             }
         }
         let mut effects = Vec::new();
+        // The first run (W9b-f): the system's language, when built in, is
+        // put into effect quietly first, so the welcome is said in it.
+        let language_due = self.first_run && self.app.first_run_language(None);
+        // A screen reader is looked for only when the mode was never
+        // chosen: on the first run, or after "Ask again about first-run
+        // choices". Not in automated runs.
+        let screen_reader = (self.startup_offers && self.app.hybrid_offer_due())
+            .then(textweaver_app::a11y::detect::detect)
+            .flatten();
         // On a first run the welcome comes first, before the empty-window
         // hint, so "Welcome to textweaver" is the first thing heard.
         let mut welcomed = false;
@@ -3510,8 +3519,11 @@ impl Gui {
                     self.app.announce_queued(&said, Priority::Polite);
                     welcomed = true;
                 } else {
+                    // How to open a document, at every level but off: with a
+                    // screen reader (minimal), an empty window is otherwise
+                    // only its title (W9b-f).
                     self.app
-                        .announce_as(&said, Priority::Polite, Importance::Tip);
+                        .announce_as(&said, Priority::Polite, Importance::Result);
                 }
             }
         }
@@ -3525,23 +3537,24 @@ impl Gui {
         }
         if self.first_run {
             // The first run: the welcome (the five keys that get a new user
-            // reading), then the language list, the system's first. The
-            // welcome is a tip: heard unless announcements are turned down.
+            // reading), then at most three skippable steps, one dialog at a
+            // time (textweaver_app::first_run): the language list only when
+            // the system's language is not built in, hybrid mode inferred
+            // and said when a screen reader runs, and the optional
+            // components, none chosen. The welcome is a tip: heard unless
+            // announcements are turned down.
             let welcome = setup::welcome_text(&self.app.catalog(), self.app.keymap());
             if !welcomed && self.app.interface_allows(Importance::Tip) {
                 self.app.announce_queued(&welcome, Priority::Polite);
             }
-            effects.extend(self.app.language_list());
-            // Then, once nothing else is open, the optional components,
-            // none chosen (W8a-d).
-            self.app.offer_components_on_first_run();
-        } else if self.startup_offers
-            && self.app.hybrid_offer_due()
-            && let Some(found) = textweaver_app::a11y::detect::detect()
-        {
+            effects.extend(
+                self.app
+                    .first_run_steps(language_due, screen_reader.as_ref()),
+            );
+        } else {
             // A screen reader is running and the mode was never chosen:
-            // ask once whether to use hybrid mode (a yes-or-no dialog).
-            let _ = self.app.offer_hybrid(&found);
+            // hybrid mode, said in one sentence, never a question.
+            self.app.startup_screen_reader_step(screen_reader.as_ref());
         }
         // Unsaved work from an earlier run, one snapshot at a time.
         effects.extend(self.app.offer_recovery());

@@ -175,6 +175,7 @@ mod edit;
 mod export;
 mod extra;
 mod find_scan;
+pub mod first_run;
 mod font_download;
 mod frame_cache;
 mod frontend_list;
