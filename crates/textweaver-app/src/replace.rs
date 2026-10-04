@@ -313,7 +313,7 @@ impl App {
         };
         self.list = None;
         let msg = match (r.replaced, r.skipped) {
-            (0, 0) => self.msg_args("replace-no-matches", &args!["query" => r.query.as_str()]),
+            (0, 0) => self.msg_args("common-no-matches", &args!["query" => r.query.as_str()]),
             (n, 0) => self.msg_args("replace-replaced", &args!["n" => n]),
             (n, k) => self.msg_args("replace-replaced-skipped", &args!["n" => n, "skipped" => k]),
         };

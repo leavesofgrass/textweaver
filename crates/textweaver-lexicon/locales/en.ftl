@@ -1053,7 +1053,7 @@ voice-line-numbers-off = Line numbers off.
 ## Export and preview from the reader. F5 is the browser's reload key,
 ## not textweaver's.
 
-publish-no-document = No document is open.
+common-no-document = No document is open.
 # Said after "Could not export:", so it starts in lower case. $path is a
 # folder or a file; $error the system's reason.
 publish-cannot-write-to = cannot write to { $path }: { $error }
@@ -1232,7 +1232,7 @@ marks-find-wrapped =
     }
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = Bookmark { $name } is already here.
-marks-bookmark-set = Bookmark { $name } set at { $pct } percent.
+common-bookmark-set = Bookmark { $name } set at { $pct } percent.
 marks-no-bookmarks = No bookmarks. To add one: { $key }.
 marks-bookmarks-intro =
     { $n ->
@@ -1364,7 +1364,7 @@ library-title = Library
 
 links-none-here = No link or footnote at the cursor.
 # $text is the link's text.
-links-no-address = The link { $text } has no address.
+common-link-no-address = The link { $text } has no address.
 # $kind is mail or web; $target is the link's address.
 links-open-question =
     { $kind ->
@@ -2340,7 +2340,7 @@ edit-not-a-table-size = Not a table size: { $text }. Type columns and rows, for 
 edit-image-inserted = Inserted image { $name }. Its description is selected; type to replace it.
 edit-image-failed = Could not insert the image: { $error }
 # $query is the text to find.
-edit-no-matches = No matches for { $query }.
+common-no-matches = No matches for { $query }.
 # $n matches of $query were found; the replacement is asked next.
 edit-replace-with =
     { $n ->
@@ -2350,8 +2350,8 @@ edit-replace-with =
 
 ## Edit mode: autosave and recovering unsaved work.
 
-edit-recovery-write-failed = Could not write the recovery copy: { $error }. Save soon; { -brand } will keep trying.
-edit-recovery-writing-again = The recovery copy is being written again.
+common-recovery-write-failed = Could not write the recovery copy: { $error }. Save soon; { -brand } will keep trying.
+common-recovery-writing-again = The recovery copy is being written again.
 # $title is the document; $when is how long ago its work was saved.
 edit-recovery-offer = { -brand } closed with unsaved changes to { $title }, saved { $when }. Recover them now? Up and Down choose, Enter confirms.
 edit-recovery-title = Recover unsaved work in { $title }?
@@ -2391,7 +2391,6 @@ replace-whole-words-now =
        *[other] Whole words only { $state }. { $n } matches.
     }
 # $query is the text that was searched for.
-replace-no-matches = No matches for { $query }.
 replace-replaced =
     { $n ->
         [one] Replaced 1 match.
@@ -2407,10 +2406,7 @@ writes-not-written-in-time = Some changes could not be written in time: the disk
 # $error is the system's reason.
 writes-save-failed = Could not save: { $error }. Still editing.
 # $name is the bookmark's name, $pct where it is.
-writes-bookmark-set = Bookmark { $name } set at { $pct } percent.
 writes-bookmark-not-saved = Bookmark { $name } is set for now, but could not be saved: { $error }
-writes-recovery-copy-failed = Could not write the recovery copy: { $error }. Save soon; { -brand } will keep trying.
-writes-recovery-copy-resumed = The recovery copy is being written again.
 # $name is the saved file's name.
 writes-saved = Saved { $name }. Still editing.
 
@@ -2501,7 +2497,7 @@ mdline-numbered-item = numbered item { $n }
 ## Moving through tables by row and cell. $dir is next (forward) or
 ## previous (backward).
 
-tables-not-in-table = Not in a table.
+common-not-in-table = Not in a table.
 tables-edge-of-table =
     { $dir ->
         [next] End of table.
@@ -2547,7 +2543,6 @@ authoring-word-count-document =
        *[other] { $count } words in the document.
     }
 # $text is the link's text.
-authoring-link-no-address = The link { $text } has no address.
 authoring-link-address = Link address: { $url }
 authoring-link-named-address = Link { $text }, address: { $url }
 authoring-no-link = No link at the cursor.
@@ -2564,7 +2559,6 @@ authoring-copied = Copied: { $text }
 authoring-copied-sentence = Copied the sentence: { $text }
 authoring-nothing-to-cut = Nothing selected to cut.
 authoring-cut = Cut: { $text }
-authoring-not-in-table = Not in a table.
 # $dir is next (moving forward) or previous.
 authoring-table-edge =
     { $dir ->
@@ -2642,7 +2636,7 @@ lint-no-earlier =
 # $message is one of the problems above.
 lint-said = Lint: { $message }
 # Added at high verbosity.
-lint-line = Line { $line }.
+common-line = Line { $line }.
 
 ## Grammar checking (Harper). $message is Harper's own message, in English.
 
@@ -2668,7 +2662,6 @@ grammar-no-earlier =
 # $key opens the fixes list.
 grammar-lists-fixes = { $key } lists fixes.
 # Added at high verbosity.
-grammar-line = Line { $line }.
 # $described is grammar-said (and its fix) without the last full stop.
 grammar-no-fix = { $described } No fix to offer.
 grammar-fixes =
@@ -2681,7 +2674,7 @@ grammar-fixes-edit =
         [one] { $words }: 1 fix. Enter makes the change.
        *[other] { $words }: { $n } fixes. Enter makes the change.
     }
-grammar-left-as-is = Left as it is.
+common-left-as-is = Left as it is.
 # $fix is the fix chosen; $key turns on edit mode.
 grammar-fix-not-editing = { $fix }. Turn on edit mode with { $key } to change the text.
 grammar-removed = Removed.
@@ -2706,7 +2699,6 @@ spell-no-earlier =
        *[other] No earlier misspelling. { $count } possible misspellings in all.
     }
 # Added at high verbosity.
-spell-line = Line { $line }.
 spell-no-misspelled-word = No misspelled word at the cursor.
 # $word is the misspelled word; $n how many suggestions follow.
 spell-suggestions =
@@ -2725,7 +2717,6 @@ spell-suggestions-edit =
 spell-replace-not-editing = { $word }. Turn on edit mode with { $key } to change the text.
 spell-replaced = Replaced with { $word }.
 spell-replace-failed = Could not replace: { $error }
-spell-left-as-is = Left as it is.
 spell-added-for-session = Added { $word } to your word list for this session.
 spell-added = Added { $word } to your word list.
 spell-save-failed = Could not save your word list: { $error } The word is known until you quit.
@@ -2775,7 +2766,6 @@ tui-clip-not-built = this version has no system clipboard
 tui-title = { -brand }: { $title }
 tui-title-no-document = no document
 # The screen without a document. $keys names the keys for the action.
-tui-empty-no-document = No document is open.
 tui-empty-open = Open one: { $keys }.
 tui-empty-help = Help: { $keys }.
 tui-empty-quit = Quit: { $keys }.
@@ -2994,7 +2984,6 @@ gui-settings-sections = Sections
 gui-settings-form = { $section } settings
 gui-settings-saved-hint = Changes take effect and are saved at once.
 gui-settings-close-help = Close the settings. Every change is already saved.
-gui-settings-closed = Settings closed.
 gui-settings-recent = Recently changed
 gui-settings-matching = Matching { $filter }
 gui-settings-table = { $label } is a table. Edit it in settings.toml.
@@ -3005,7 +2994,6 @@ gui-prompt-hint = Press Enter to accept, or Escape to cancel. Up and Down recall
 gui-palette-filter = Type to filter the commands
 gui-palette-list = Commands
 gui-palette-hint = Enter runs the first match; Tab moves to the list.
-gui-no-document = No document is open. Press { $key } to open one.
 gui-open-failed = Could not open { $name }: { $error }
 gui-uia-unavailable = UI Automation notifications exist only on Windows; using the live region.
 gui-graphics-failed = The window could not start its graphics. The terminal reader, textweaver, needs none.

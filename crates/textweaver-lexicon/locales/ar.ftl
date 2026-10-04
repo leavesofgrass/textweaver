@@ -1151,7 +1151,7 @@ voice-line-numbers-off = أرقام الأسطر متوقفة.
 ## التصدير والمعاينة من القارئ. F5 هو مفتاح إعادة التحميل في المتصفح،
 ## وليس مفتاحًا في textweaver.
 
-publish-no-document = لا يوجد مستند مفتوح.
+common-no-document = لا يوجد مستند مفتوح.
 # Said after "Could not export:", so it starts in lower case. $path is a
 # folder or a file; $error the system's reason.
 publish-cannot-write-to = تعذّرت الكتابة إلى { $path }: { $error }
@@ -1353,7 +1353,7 @@ marks-find-wrapped =
     }
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = الإشارة المرجعية { $name } موجودة هنا بالفعل.
-marks-bookmark-set = وُضعت الإشارة المرجعية { $name } عند { $pct } بالمئة.
+common-bookmark-set = وُضعت الإشارة المرجعية { $name } عند { $pct } بالمئة.
 marks-no-bookmarks = لا إشارات مرجعية. لإضافة واحدة: { $key }.
 marks-bookmarks-intro =
     { $n ->
@@ -1518,7 +1518,7 @@ library-title = المكتبة
 
 links-none-here = لا رابط أو حاشية عند المؤشر.
 # $text is the link's text.
-links-no-address = الرابط { $text } بلا عنوان.
+common-link-no-address = الرابط { $text } بلا عنوان.
 # $kind is mail or web; $target is the link's address.
 links-open-question =
     { $kind ->
@@ -2545,7 +2545,7 @@ edit-not-a-table-size = ليس حجم جدول: { $text }. اكتب أعمدة �
 edit-image-inserted = أُدرجت الصورة { $name }. وصفها محدَّد؛ اكتب لاستبداله.
 edit-image-failed = تعذّر إدراج الصورة: { $error }
 # $query is the text to find.
-edit-no-matches = لا تطابقات لـ{ $query }.
+common-no-matches = لا تطابقات لـ{ $query }.
 # $n matches of $query were found; the replacement is asked next.
 edit-replace-with =
     { $n ->
@@ -2558,8 +2558,8 @@ edit-replace-with =
 
 ## وضع التحرير: الحفظ التلقائي واسترداد العمل غير المحفوظ.
 
-edit-recovery-write-failed = تعذّرت كتابة نسخة الاسترداد: { $error }. احفظ قريبًا؛ سيواصل { -brand } المحاولة.
-edit-recovery-writing-again = تجري كتابة نسخة الاسترداد مجددًا.
+common-recovery-write-failed = تعذّرت كتابة نسخة الاسترداد: { $error }. احفظ قريبًا؛ سيواصل { -brand } المحاولة.
+common-recovery-writing-again = تجري كتابة نسخة الاسترداد مجددًا.
 # $title is the document; $when is how long ago its work was saved.
 edit-recovery-offer = أُغلق { -brand } وبه تغييرات غير محفوظة في { $title }، حُفظت { $when }. استرداده الآن؟ لأعلى ولأسفل للاختيار، Enter للتأكيد.
 edit-recovery-title = استرداد العمل غير المحفوظ في { $title }؟
@@ -2605,7 +2605,6 @@ replace-whole-words-now =
        *[other] الكلمات الكاملة فقط { $state }. { $n } تطابق.
     }
 # $query is the text that was searched for.
-replace-no-matches = لا تطابقات لـ{ $query }.
 replace-replaced =
     { $n ->
         [one] استُبدل تطابق واحد.
@@ -2624,10 +2623,7 @@ writes-not-written-in-time = تعذّرت كتابة بعض التغييرات �
 # $error is the system's reason.
 writes-save-failed = تعذّر الحفظ: { $error }. ما زلت في وضع التحرير.
 # $name is the bookmark's name, $pct where it is.
-writes-bookmark-set = وُضعت الإشارة المرجعية { $name } عند { $pct } بالمئة.
 writes-bookmark-not-saved = الإشارة المرجعية { $name } موضوعة الآن، لكن تعذّر حفظها: { $error }
-writes-recovery-copy-failed = تعذّرت كتابة نسخة الاسترداد: { $error }. احفظ قريبًا؛ سيواصل { -brand } المحاولة.
-writes-recovery-copy-resumed = تجري كتابة نسخة الاسترداد مجددًا.
 # $name is the saved file's name.
 writes-saved = حُفظ { $name }. ما زلت في وضع التحرير.
 
@@ -2728,7 +2724,7 @@ mdline-numbered-item = العنصر المرقَّم { $n }
 
 ## التنقل في الجداول صفًا وخلية. $dir هو next (للأمام) أو previous (للخلف).
 
-tables-not-in-table = لست في جدول.
+common-not-in-table = لست في جدول.
 tables-edge-of-table =
     { $dir ->
         [next] نهاية الجدول.
@@ -2780,7 +2776,6 @@ authoring-word-count-document =
        *[other] { $count } كلمة في المستند.
     }
 # $text is the link's text.
-authoring-link-no-address = الرابط { $text } بلا عنوان.
 authoring-link-address = عنوان الرابط: { $url }
 authoring-link-named-address = الرابط { $text }، العنوان: { $url }
 authoring-no-link = لا رابط عند المؤشر.
@@ -2797,7 +2792,6 @@ authoring-copied = نُسخ: { $text }
 authoring-copied-sentence = نُسخت الجملة: { $text }
 authoring-nothing-to-cut = لا شيء محدَّد لقصه.
 authoring-cut = قُصّ: { $text }
-authoring-not-in-table = لست في جدول.
 # $dir is next (moving forward) or previous.
 authoring-table-edge =
     { $dir ->
@@ -2884,7 +2878,7 @@ lint-no-earlier =
 # $message is one of the problems above.
 lint-said = Lint: { $message }
 # Added at high verbosity.
-lint-line = السطر { $line }.
+common-line = السطر { $line }.
 
 ## التدقيق النحوي (Harper). $message هي رسالة Harper نفسها، بالإنجليزية.
 
@@ -2910,7 +2904,6 @@ grammar-no-earlier =
 # $key opens the fixes list.
 grammar-lists-fixes = { $key } يسرد الإصلاحات.
 # Added at high verbosity.
-grammar-line = السطر { $line }.
 # $described is grammar-said (and its fix) without the last full stop.
 grammar-no-fix = { $described } لا إصلاح لعرضه.
 grammar-fixes =
@@ -2929,7 +2922,7 @@ grammar-fixes-edit =
         [many] { $words }: { $n } إصلاحًا. Enter لإجراء التغيير.
        *[other] { $words }: { $n } إصلاح. Enter لإجراء التغيير.
     }
-grammar-left-as-is = تُركت كما هي.
+common-left-as-is = تُركت كما هي.
 # $fix is the fix chosen; $key turns on edit mode.
 grammar-fix-not-editing = { $fix }. فعّل وضع التحرير بـ{ $key } لتغيير النص.
 grammar-removed = أُزيلت.
@@ -2954,7 +2947,6 @@ spell-no-earlier =
        *[other] لا خطأ إملائي أقدم. { $count } أخطاء إملائية محتملة في المجموع.
     }
 # Added at high verbosity.
-spell-line = السطر { $line }.
 spell-no-misspelled-word = لا كلمة خطأ إملائيًا عند المؤشر.
 # $word is the misspelled word; $n how many suggestions follow.
 spell-suggestions =
@@ -2979,7 +2971,6 @@ spell-suggestions-edit =
 spell-replace-not-editing = { $word }. فعّل وضع التحرير بـ{ $key } لتغيير النص.
 spell-replaced = استُبدلت بـ{ $word }.
 spell-replace-failed = تعذّر الاستبدال: { $error }
-spell-left-as-is = تُركت كما هي.
 spell-added-for-session = أُضيفت { $word } إلى قائمة كلماتك لهذه الجلسة.
 spell-added = أُضيفت { $word } إلى قائمة كلماتك.
 spell-save-failed = تعذّر حفظ قائمة كلماتك: { $error } تبقى الكلمة معروفة حتى تخرج.
@@ -3029,7 +3020,6 @@ tui-clip-not-built = هذه النسخة بلا حافظة نظام
 tui-title = { -brand }: { $title }
 tui-title-no-document = لا يوجد مستند
 # The screen without a document. $keys names the keys for the action.
-tui-empty-no-document = لا يوجد مستند مفتوح.
 tui-empty-open = فتح واحد: { $keys }.
 tui-empty-help = المساعدة: { $keys }.
 tui-empty-quit = إنهاء: { $keys }.
@@ -3250,7 +3240,6 @@ gui-settings-sections = الأقسام
 gui-settings-form = إعدادات { $section }
 gui-settings-saved-hint = تسري التغييرات وتُحفظ فورًا.
 gui-settings-close-help = إغلاق الإعدادات. كل تغيير محفوظ بالفعل.
-gui-settings-closed = أُغلقت الإعدادات.
 gui-settings-recent = المُغيَّرة مؤخرًا
 gui-settings-matching = المطابقة لـ { $filter }
 gui-settings-table = { $label } جدول. حرّره في settings.toml.
@@ -3261,7 +3250,6 @@ gui-prompt-hint = اضغط Enter للقبول، أو Escape للإلغاء. يس
 gui-palette-filter = اكتب لتصفية الأوامر
 gui-palette-list = الأوامر
 gui-palette-hint = يشغّل Enter أول نتيجة مطابقة، وينتقل Tab إلى القائمة.
-gui-no-document = لا يوجد مستند مفتوح. اضغط { $key } لفتح مستند.
 gui-open-failed = تعذّر فتح { $name }: { $error }
 gui-uia-unavailable = إشعارات UI Automation متاحة في Windows فقط؛ ستُستخدم المنطقة الحية.
 gui-graphics-failed = تعذّر على النافذة تشغيل الرسوميات. قارئ الطرفية textweaver لا يحتاج إليها.

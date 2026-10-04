@@ -231,26 +231,12 @@ fn errors_get_a_next_step() {
     );
 }
 
-/// Rule 7 again: one sentence, one id. These groups say the same sentence
-/// under two or three ids and wait to be merged; no new group may appear.
+/// Rule 7 again: one sentence, one id. No two ids may say the same
+/// sentence; merge them into one id instead.
 #[test]
 fn no_new_duplicate_sentences() {
-    const KNOWN: [&[&str]; 11] = [
-        &["app-no-document-open", "gui-no-document"],
-        &["publish-no-document", "tui-empty-no-document"],
-        &["marks-bookmark-set", "writes-bookmark-set"],
-        &["authoring-link-no-address", "links-no-address"],
-        &["gui-settings-closed", "settings-closed"],
-        &["edit-no-matches", "replace-no-matches"],
-        &["edit-recovery-write-failed", "writes-recovery-copy-failed"],
-        &[
-            "edit-recovery-writing-again",
-            "writes-recovery-copy-resumed",
-        ],
-        &["authoring-not-in-table", "tables-not-in-table"],
-        &["grammar-line", "lint-line", "spell-line"],
-        &["grammar-left-as-is", "spell-left-as-is"],
-    ];
+    // Every known group is merged; the list stays empty.
+    const KNOWN: [&[&str]; 0] = [];
     // Labels share their text on purpose (a menu item, a setting, and a
     // section can all be "Reading statistics").
     const LABELS: [&str; 9] = [

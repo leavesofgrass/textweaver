@@ -283,7 +283,7 @@ impl App {
         match (note, result) {
             (StateNote::Bookmark { name, pct }, Ok(())) => {
                 let msg =
-                    self.msg_args("writes-bookmark-set", &args!["name" => name, "pct" => pct]);
+                    self.msg_args("common-bookmark-set", &args!["name" => name, "pct" => pct]);
                 self.tell(&msg);
             }
             (StateNote::Bookmark { name, .. }, Err(e)) => {
@@ -319,7 +319,7 @@ impl App {
                 // between attempts, and the log keeps every one.
                 if failures == 1 {
                     let msg = self.msg_args(
-                        "writes-recovery-copy-failed",
+                        "common-recovery-write-failed",
                         &args!["error" => e.to_string()],
                     );
                     self.say_at(&msg, Verbosity::Low, Priority::Polite);
@@ -327,7 +327,7 @@ impl App {
                 self.snapshot_trouble = true;
             }
             Ok(true) if std::mem::take(&mut self.snapshot_trouble) => {
-                let msg = self.msg("writes-recovery-copy-resumed");
+                let msg = self.msg("common-recovery-writing-again");
                 self.note(&msg);
             }
             Ok(_) => {}

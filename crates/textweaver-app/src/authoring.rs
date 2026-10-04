@@ -274,7 +274,7 @@ impl App {
         };
         match found {
             Some((text, url)) if url.is_empty() => {
-                let msg = self.msg_args("authoring-link-no-address", &args!["text" => text]);
+                let msg = self.msg_args("common-link-no-address", &args!["text" => text]);
                 self.tell(&msg);
             }
             Some((text, url)) if text.trim() == url => {
@@ -416,7 +416,7 @@ impl App {
             return match dir {
                 Direction::Forward => self.insert("\t"),
                 Direction::Backward => {
-                    let msg = self.msg("authoring-not-in-table");
+                    let msg = self.msg("common-not-in-table");
                     self.tell(&msg);
                     vec![Effect::Redraw]
                 }

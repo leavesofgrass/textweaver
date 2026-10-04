@@ -1076,7 +1076,7 @@ voice-line-numbers-off = Numéros de ligne désactivés.
 ## Export et aperçu depuis le lecteur. F5 est la touche de rechargement du
 ## navigateur, pas celle de textweaver.
 
-publish-no-document = Aucun document n'est ouvert.
+common-no-document = Aucun document n'est ouvert.
 # Said after "Could not export:", so it starts in lower case. $path is a
 # folder or a file; $error the system's reason.
 publish-cannot-write-to = impossible d'écrire dans { $path } : { $error }
@@ -1255,7 +1255,7 @@ marks-find-wrapped =
     }
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = Le signet { $name } est déjà ici.
-marks-bookmark-set = Signet { $name } posé à { $pct } pour cent.
+common-bookmark-set = Signet { $name } posé à { $pct } pour cent.
 marks-no-bookmarks = Aucun signet. Pour en ajouter un : { $key }.
 marks-bookmarks-intro =
     { $n ->
@@ -1387,7 +1387,7 @@ library-title = Bibliothèque
 
 links-none-here = Aucun lien ou note de bas de page au curseur.
 # $text is the link's text.
-links-no-address = Le lien { $text } n'a pas d'adresse.
+common-link-no-address = Le lien { $text } n'a pas d'adresse.
 # $kind is mail or web; $target is the link's address.
 links-open-question =
     { $kind ->
@@ -2361,7 +2361,7 @@ edit-not-a-table-size = Ce n'est pas une taille de tableau : { $text }. Tapez co
 edit-image-inserted = Image { $name } insérée. Sa description est sélectionnée ; tapez pour la remplacer.
 edit-image-failed = Impossible d'insérer l'image : { $error }
 # $query is the text to find.
-edit-no-matches = Aucune correspondance pour { $query }.
+common-no-matches = Aucune correspondance pour { $query }.
 # $n matches of $query were found; the replacement is asked next.
 edit-replace-with =
     { $n ->
@@ -2371,8 +2371,8 @@ edit-replace-with =
 
 ## Edit mode: autosave and recovering unsaved work.
 
-edit-recovery-write-failed = Impossible d'écrire la copie de récupération : { $error }. Enregistrez bientôt ; { -brand } continuera d'essayer.
-edit-recovery-writing-again = La copie de récupération est en cours de réécriture.
+common-recovery-write-failed = Impossible d'écrire la copie de récupération : { $error }. Enregistrez bientôt ; { -brand } continuera d'essayer.
+common-recovery-writing-again = La copie de récupération est en cours de réécriture.
 # $title is the document; $when is how long ago its work was saved.
 edit-recovery-offer = { -brand } s'est fermé avec des modifications non enregistrées de { $title }, enregistrées { $when }. Les récupérer maintenant ? Haut et Bas choisissent, Entrée confirme.
 edit-recovery-title = Récupérer le travail non enregistré de { $title } ?
@@ -2412,7 +2412,6 @@ replace-whole-words-now =
        *[other] Mots entiers seulement { $state }. { $n } correspondances.
     }
 # $query is the text that was searched for.
-replace-no-matches = Aucune correspondance pour { $query }.
 replace-replaced =
     { $n ->
         [one] 1 correspondance remplacée.
@@ -2428,10 +2427,7 @@ writes-not-written-in-time = Certaines modifications n'ont pas pu être écrites
 # $error is the system's reason.
 writes-save-failed = Impossible d'enregistrer : { $error }. Toujours en cours d'édition.
 # $name is the bookmark's name, $pct where it is.
-writes-bookmark-set = Signet { $name } posé à { $pct } pour cent.
 writes-bookmark-not-saved = Le signet { $name } est posé pour l'instant, mais n'a pas pu être enregistré : { $error }
-writes-recovery-copy-failed = Impossible d'écrire la copie de récupération : { $error }. Enregistrez bientôt ; { -brand } continuera d'essayer.
-writes-recovery-copy-resumed = La copie de récupération est en cours de réécriture.
 # $name is the saved file's name.
 writes-saved = { $name } enregistré. Toujours en cours d'édition.
 
@@ -2522,7 +2518,7 @@ mdline-numbered-item = élément numéroté { $n }
 ## Moving through tables by row and cell. $dir is next (forward) or
 ## previous (backward).
 
-tables-not-in-table = Pas dans un tableau.
+common-not-in-table = Pas dans un tableau.
 tables-edge-of-table =
     { $dir ->
         [next] Fin du tableau.
@@ -2568,7 +2564,6 @@ authoring-word-count-document =
        *[other] { $count } mots dans le document.
     }
 # $text is the link's text.
-authoring-link-no-address = Le lien { $text } n'a pas d'adresse.
 authoring-link-address = Adresse du lien : { $url }
 authoring-link-named-address = Lien { $text }, adresse : { $url }
 authoring-no-link = Aucun lien au curseur.
@@ -2585,7 +2580,6 @@ authoring-copied = Copié : { $text }
 authoring-copied-sentence = Phrase copiée : { $text }
 authoring-nothing-to-cut = Rien de sélectionné à couper.
 authoring-cut = Coupé : { $text }
-authoring-not-in-table = Pas dans un tableau.
 # $dir is next (moving forward) or previous.
 authoring-table-edge =
     { $dir ->
@@ -2663,7 +2657,7 @@ lint-no-earlier =
 # $message is one of the problems above.
 lint-said = Lint : { $message }
 # Added at high verbosity.
-lint-line = Ligne { $line }.
+common-line = Ligne { $line }.
 
 ## Grammar checking (Harper). $message is Harper's own message, in English.
 
@@ -2689,7 +2683,6 @@ grammar-no-earlier =
 # $key opens the fixes list.
 grammar-lists-fixes = { $key } liste les corrections.
 # Added at high verbosity.
-grammar-line = Ligne { $line }.
 # $described is grammar-said (and its fix) without the last full stop.
 grammar-no-fix = { $described } Aucune correction à proposer.
 grammar-fixes =
@@ -2702,7 +2695,7 @@ grammar-fixes-edit =
         [one] { $words } : 1 correction. Entrée apporte la modification.
        *[other] { $words } : { $n } corrections. Entrée apporte la modification.
     }
-grammar-left-as-is = Laissé tel quel.
+common-left-as-is = Laissé tel quel.
 # $fix is the fix chosen; $key turns on edit mode.
 grammar-fix-not-editing = { $fix }. Activez le mode édition avec { $key } pour modifier le texte.
 grammar-removed = Supprimé.
@@ -2727,7 +2720,6 @@ spell-no-earlier =
        *[other] Aucune faute antérieure. { $count } fautes possibles au total.
     }
 # Added at high verbosity.
-spell-line = Ligne { $line }.
 spell-no-misspelled-word = Aucun mot mal orthographié au curseur.
 # $word is the misspelled word; $n how many suggestions follow.
 spell-suggestions =
@@ -2746,7 +2738,6 @@ spell-suggestions-edit =
 spell-replace-not-editing = { $word }. Activez le mode édition avec { $key } pour modifier le texte.
 spell-replaced = Remplacé par { $word }.
 spell-replace-failed = Impossible de remplacer : { $error }
-spell-left-as-is = Laissé tel quel.
 spell-added-for-session = { $word } ajouté à votre liste de mots pour cette session.
 spell-added = { $word } ajouté à votre liste de mots.
 spell-save-failed = Impossible d'enregistrer votre liste de mots : { $error } Le mot est reconnu jusqu'à la fermeture.
@@ -2796,7 +2787,6 @@ tui-clip-not-built = cette version n'a pas de presse-papiers système
 tui-title = { -brand } : { $title }
 tui-title-no-document = aucun document
 # The screen without a document. $keys names the keys for the action.
-tui-empty-no-document = Aucun document n'est ouvert.
 tui-empty-open = Ouvrir un document : { $keys }.
 tui-empty-help = Aide : { $keys }.
 tui-empty-quit = Quitter : { $keys }.
@@ -2999,7 +2989,6 @@ gui-settings-sections = Sections
 gui-settings-form = Paramètres : { $section }
 gui-settings-saved-hint = Les modifications s'appliquent et sont enregistrées aussitôt.
 gui-settings-close-help = Fermer les paramètres. Chaque modification est déjà enregistrée.
-gui-settings-closed = Paramètres fermés.
 gui-settings-recent = Modifiés récemment
 gui-settings-matching = Correspondant à { $filter }
 gui-settings-table = { $label } est un tableau. Modifiez-le dans settings.toml.
@@ -3010,7 +2999,6 @@ gui-prompt-hint = Appuyez sur Entrée pour valider, ou sur Échap pour annuler. 
 gui-palette-filter = Tapez pour filtrer les commandes
 gui-palette-list = Commandes
 gui-palette-hint = Entrée exécute la première correspondance ; Tab passe à la liste.
-gui-no-document = Aucun document n'est ouvert. Appuyez sur { $key } pour en ouvrir un.
 gui-open-failed = Impossible d'ouvrir { $name } : { $error }
 gui-uia-unavailable = Les notifications UI Automation n'existent que sous Windows ; la région active est utilisée.
 gui-graphics-failed = La fenêtre n'a pas pu démarrer son affichage graphique. Le lecteur en terminal, textweaver, n'en a pas besoin.

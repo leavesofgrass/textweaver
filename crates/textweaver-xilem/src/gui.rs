@@ -2745,7 +2745,7 @@ impl Gui {
                 let said = self.app.catalog().tr(if colors {
                     "gui-colors-closed"
                 } else {
-                    "gui-settings-closed"
+                    "settings-closed"
                 });
                 self.app
                     .announce_as(&said, Priority::Polite, Importance::Dialog);
@@ -3511,7 +3511,7 @@ impl Gui {
                 let said = self
                     .app
                     .catalog()
-                    .fmt("gui-no-document", &args!["key" => open.as_str()]);
+                    .fmt("app-no-document-open", &args!["key" => open.as_str()]);
                 if self.first_run && self.app.interface_allows(Importance::Tip) {
                     let welcome = setup::welcome_text(&self.app.catalog(), self.app.keymap());
                     self.app

@@ -229,7 +229,7 @@ impl App {
                 .as_ref()
                 .map_or(0, |s| text_util::line_of(&s.doc, p.range.start) + 1);
             msg.push(' ');
-            msg.push_str(&self.msg_args("grammar-line", &args!["line" => line]));
+            msg.push_str(&self.msg_args("common-line", &args!["line" => line]));
         }
         self.tell(&msg);
     }
@@ -289,7 +289,7 @@ impl App {
         n: usize,
     ) -> Vec<Effect> {
         let Some(fix) = fixes.get(n) else {
-            let msg = self.msg("grammar-left-as-is");
+            let msg = self.msg("common-left-as-is");
             self.note(&msg);
             return vec![Effect::Redraw];
         };

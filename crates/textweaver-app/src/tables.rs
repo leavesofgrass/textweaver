@@ -103,7 +103,7 @@ impl App {
         let doc = &s.doc;
         let Some(grid) = TableGrid::at(doc, pos) else {
             self.speech.earcon(Earcon::Boundary);
-            let msg = self.msg("tables-not-in-table");
+            let msg = self.msg("common-not-in-table");
             self.tell(&msg);
             return;
         };

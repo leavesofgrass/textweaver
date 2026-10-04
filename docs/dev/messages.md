@@ -60,7 +60,7 @@ Digits for numbers. Text that is spoken spells its units: "3 percent", "265 word
 - **note**, **highlight**, **bookmark**: three things.
 - A command is named by its name in the menus and the palette: "The Voices command lists them."
 - US spelling: color, center, license, favorite. `cargo xtask docs --check` checks the English catalog.
-- One sentence, one id: the same sentence under two ids waits to be merged, and no new pair may appear.
+- One sentence, one id: never put the same sentence under two ids; reuse the id that has it.
 - Tested: `english_catalog_uses_one_word_for_each_thing` and `no_new_duplicate_sentences`.
 
 ### 8. Keys come from the keymap

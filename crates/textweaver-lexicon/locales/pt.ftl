@@ -1064,7 +1064,7 @@ voice-line-numbers-off = Números de linha desligados.
 ## Export and preview from the reader. F5 is the browser's reload key,
 ## not textweaver's.
 
-publish-no-document = Nenhum documento está aberto.
+common-no-document = Nenhum documento está aberto.
 # Said after "Could not export:", so it starts in lower case. $path is a
 # folder or a file; $error the system's reason.
 publish-cannot-write-to = não é possível escrever em { $path }: { $error }
@@ -1243,7 +1243,7 @@ marks-find-wrapped =
     }
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = O marcador { $name } já está aqui.
-marks-bookmark-set = Marcador { $name } definido em { $pct } por cento.
+common-bookmark-set = Marcador { $name } definido em { $pct } por cento.
 marks-no-bookmarks = Nenhum marcador. Para adicionar um: { $key }.
 marks-bookmarks-intro =
     { $n ->
@@ -1375,7 +1375,7 @@ library-title = Biblioteca
 
 links-none-here = Nenhum link ou nota de rodapé no cursor.
 # $text is the link's text.
-links-no-address = O link { $text } não tem endereço.
+common-link-no-address = O link { $text } não tem endereço.
 # $kind is mail or web; $target is the link's address.
 links-open-question =
     { $kind ->
@@ -2349,7 +2349,7 @@ edit-not-a-table-size = Não é um tamanho de tabela: { $text }. Digite colunas 
 edit-image-inserted = Inseriu a imagem { $name }. A descrição dela está selecionada; digite para substituí-la.
 edit-image-failed = Não foi possível inserir a imagem: { $error }
 # $query is the text to find.
-edit-no-matches = Nenhuma ocorrência de { $query }.
+common-no-matches = Nenhuma ocorrência de { $query }.
 # $n matches of $query were found; the replacement is asked next.
 edit-replace-with =
     { $n ->
@@ -2359,8 +2359,8 @@ edit-replace-with =
 
 ## Edit mode: autosave and recovering unsaved work.
 
-edit-recovery-write-failed = Não foi possível escrever a cópia de recuperação: { $error }. Salve em breve; o { -brand } continuará tentando.
-edit-recovery-writing-again = A cópia de recuperação está sendo escrita de novo.
+common-recovery-write-failed = Não foi possível escrever a cópia de recuperação: { $error }. Salve em breve; o { -brand } continuará tentando.
+common-recovery-writing-again = A cópia de recuperação está sendo escrita de novo.
 # $title is the document; $when is how long ago its work was saved.
 edit-recovery-offer = O { -brand } fechou com alterações não salvas em { $title }, salvas { $when }. Recuperá-las agora? Seta para cima e para baixo escolhem, Enter confirma.
 edit-recovery-title = Recuperar o trabalho não salvo em { $title }?
@@ -2400,7 +2400,6 @@ replace-whole-words-now =
        *[other] Somente palavras inteiras { $state }. { $n } ocorrências.
     }
 # $query is the text that was searched for.
-replace-no-matches = Nenhuma ocorrência de { $query }.
 replace-replaced =
     { $n ->
         [one] Substituiu 1 ocorrência.
@@ -2416,10 +2415,7 @@ writes-not-written-in-time = Algumas alterações não puderam ser escritas a te
 # $error is the system's reason.
 writes-save-failed = Não foi possível salvar: { $error }. Ainda editando.
 # $name is the bookmark's name, $pct where it is.
-writes-bookmark-set = Marcador { $name } definido em { $pct } por cento.
 writes-bookmark-not-saved = O marcador { $name } está definido por enquanto, mas não pôde ser salvo: { $error }
-writes-recovery-copy-failed = Não foi possível escrever a cópia de recuperação: { $error }. Salve em breve; o { -brand } continuará tentando.
-writes-recovery-copy-resumed = A cópia de recuperação está sendo escrita de novo.
 # $name is the saved file's name.
 writes-saved = Salvou { $name }. Ainda editando.
 
@@ -2510,7 +2506,7 @@ mdline-numbered-item = item numerado { $n }
 ## Moving through tables by row and cell. $dir is next (forward) or
 ## previous (backward).
 
-tables-not-in-table = Fora de uma tabela.
+common-not-in-table = Fora de uma tabela.
 tables-edge-of-table =
     { $dir ->
         [next] Fim da tabela.
@@ -2556,7 +2552,6 @@ authoring-word-count-document =
        *[other] { $count } palavras no documento.
     }
 # $text is the link's text.
-authoring-link-no-address = O link { $text } não tem endereço.
 authoring-link-address = Endereço do link: { $url }
 authoring-link-named-address = Link { $text }, endereço: { $url }
 authoring-no-link = Nenhum link no cursor.
@@ -2573,7 +2568,6 @@ authoring-copied = Copiado: { $text }
 authoring-copied-sentence = Copiou a frase: { $text }
 authoring-nothing-to-cut = Nada selecionado para recortar.
 authoring-cut = Recortado: { $text }
-authoring-not-in-table = Fora de uma tabela.
 # $dir is next (moving forward) or previous.
 authoring-table-edge =
     { $dir ->
@@ -2651,7 +2645,7 @@ lint-no-earlier =
 # $message is one of the problems above.
 lint-said = Lint: { $message }
 # Added at high verbosity.
-lint-line = Linha { $line }.
+common-line = Linha { $line }.
 
 ## Grammar checking (Harper). $message is Harper's own message, in English.
 
@@ -2677,7 +2671,6 @@ grammar-no-earlier =
 # $key opens the fixes list.
 grammar-lists-fixes = { $key } lista as correções.
 # Added at high verbosity.
-grammar-line = Linha { $line }.
 # $described is grammar-said (and its fix) without the last full stop.
 grammar-no-fix = { $described } Nenhuma correção a oferecer.
 grammar-fixes =
@@ -2690,7 +2683,7 @@ grammar-fixes-edit =
         [one] { $words }: 1 correção. Enter faz a alteração.
        *[other] { $words }: { $n } correções. Enter faz a alteração.
     }
-grammar-left-as-is = Deixado como está.
+common-left-as-is = Deixado como está.
 # $fix is the fix chosen; $key turns on edit mode.
 grammar-fix-not-editing = { $fix }. Ligue o modo de edição com { $key } para alterar o texto.
 grammar-removed = Removido.
@@ -2715,7 +2708,6 @@ spell-no-earlier =
        *[other] Nenhum erro ortográfico anterior. { $count } possíveis erros ortográficos no total.
     }
 # Added at high verbosity.
-spell-line = Linha { $line }.
 spell-no-misspelled-word = Nenhuma palavra com erro ortográfico no cursor.
 # $word is the misspelled word; $n how many suggestions follow.
 spell-suggestions =
@@ -2734,7 +2726,6 @@ spell-suggestions-edit =
 spell-replace-not-editing = { $word }. Ligue o modo de edição com { $key } para alterar o texto.
 spell-replaced = Substituída por { $word }.
 spell-replace-failed = Não foi possível substituir: { $error }
-spell-left-as-is = Deixada como está.
 spell-added-for-session = Adicionou { $word } à sua lista de palavras para esta sessão.
 spell-added = Adicionou { $word } à sua lista de palavras.
 spell-save-failed = Não foi possível salvar sua lista de palavras: { $error } A palavra é reconhecida até você sair.
@@ -2784,7 +2775,6 @@ tui-clip-not-built = esta versão não tem área de transferência do sistema
 tui-title = { -brand }: { $title }
 tui-title-no-document = sem documento
 # The screen without a document. $keys names the keys for the action.
-tui-empty-no-document = Nenhum documento está aberto.
 tui-empty-open = Abrir um: { $keys }.
 tui-empty-help = Ajuda: { $keys }.
 tui-empty-quit = Sair: { $keys }.
@@ -2987,7 +2977,6 @@ gui-settings-sections = Seções
 gui-settings-form = Configurações: { $section }
 gui-settings-saved-hint = As alterações entram em vigor e são salvas na hora.
 gui-settings-close-help = Fechar as configurações. Todas as alterações já estão salvas.
-gui-settings-closed = Configurações fechadas.
 gui-settings-recent = Alterados recentemente
 gui-settings-matching = Correspondentes a { $filter }
 gui-settings-table = { $label } é uma tabela. Edite-a em settings.toml.
@@ -2998,7 +2987,6 @@ gui-prompt-hint = Pressione Enter para aceitar, ou Escape para cancelar. Seta pa
 gui-palette-filter = Digite para filtrar os comandos
 gui-palette-list = Comandos
 gui-palette-hint = Enter executa a primeira correspondência; Tab vai para a lista.
-gui-no-document = Nenhum documento está aberto. Pressione { $key } para abrir um.
 gui-open-failed = Não foi possível abrir { $name }: { $error }
 gui-uia-unavailable = As notificações do UI Automation só existem no Windows; usando a região dinâmica.
 gui-graphics-failed = A janela não conseguiu iniciar os gráficos. O leitor de terminal, textweaver, não precisa deles.
