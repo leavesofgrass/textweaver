@@ -353,6 +353,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Choose the font of the document text | none | `Ctrl+D` | `Cmd+T` | `choose_font` |
 | Show the Contents panel beside the document and go to it, or close it from inside it: Enter goes to a heading | none | `Ctrl+1` | `Cmd+1` | `contents_panel` |
 | Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note | none | `Ctrl+2` | `Cmd+2` | `notes_panel` |
+| Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | palette | palette | palette | `toggle_header` |
+| Show or hide the toolbar, the bar of Play, Stop and the reading buttons | palette | palette | palette | `toggle_toolbar` |
 | Move to the next part of the window: the header, the panel, the document, or the toolbar | none | `F6` | `F6` | `next_region` |
 | Move to the previous part of the window | none | `Shift+F6` | `Shift+F6` | `previous_region` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | palette | palette | palette | `color_settings` |
@@ -541,6 +543,8 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Check the citations: how many there are, and which keys are not in your library | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |
 | Download the dictation model chosen in the settings, after saying its size and license | `download_dictation_model` |
+| Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | `toggle_header` |
+| Show or hide the toolbar, the bar of Play, Stop and the reading buttons | `toggle_toolbar` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | `color_settings` |
 | List the facts a problem report needs: version, build, components, speech engines, and folders | `about` |
 | Open the quick start guide in textweaver | `quick_start` |

@@ -236,6 +236,8 @@ fn everything_changed() -> Settings {
         .insert("es".into(), "espeak:es".into());
     s.gui.announce = crate::GuiAnnounce::Uia;
     s.gui.auto_hide_menu = true;
+    s.gui.header = false;
+    s.gui.toolbar = false;
     s.gui.sidebar = crate::GuiSidebar::Notes;
     s.gui.window = Some(crate::GuiWindow {
         x: 30,

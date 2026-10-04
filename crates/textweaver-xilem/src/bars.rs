@@ -242,11 +242,10 @@ impl Widget for Flow {
                 }
                 _ => 0.0,
             };
-            for i in s..end {
+            for (i, &(w, _)) in sizes.iter().enumerate().take(end).skip(s) {
                 if push_at == Some(i) {
                     x = x.max(size.width - right_width);
                 }
-                let (w, _) = sizes[i];
                 let child = &mut self.children[i];
                 ctx.run_layout(child, Size::new(w, row_h));
                 ctx.place_child(child, Point::new(x, y));

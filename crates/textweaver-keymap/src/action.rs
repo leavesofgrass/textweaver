@@ -778,8 +778,6 @@ impl ActionId {
                 | ActionId::ChooseFont
                 | ActionId::ContentsPanel
                 | ActionId::NotesPanel
-                | ActionId::ToggleHeader
-                | ActionId::ToggleToolbar
                 | ActionId::NextRegion
                 | ActionId::PreviousRegion
         )
