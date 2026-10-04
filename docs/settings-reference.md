@@ -35,15 +35,15 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.dectalk.library`: default not set. DECtalk library. The DECtalk library to load; not set searches the usual places. Text; empty means not set. Stays on this computer.
 - `speech.piper.voices`: default not set. Piper voices folder. The folder of Piper voices; not set uses the piper folder in textweaver's data folder. Text; empty means not set. Stays on this computer.
 - `speech.piper.voice`: default not set. Piper voice. The Piper voice to start with, by id; not set takes the first installed. Text; empty means not set. Stays on this computer.
-- `speech.piper.phonemizer`: default automatic (`"auto"`). Piper phonemizer. How Piper turns text into sounds: the espeak-ng library when installed, that library, or textweaver's own. Choices: `"auto"` (automatic), `"library"` (espeak-ng library), `"rust"` (textweaver's own). Stays on this computer.
-- `speech.voice_params`: default none. Rate and pitch per voice. The rate and pitch each voice was last used at; choosing a voice again brings them back. A table of names and values, edited in the file. Stays on this computer.
+- `speech.piper.phonemizer`: default automatic (`"auto"`). Piper phonemizer. How Piper turns text into sounds. The espeak-ng library when installed, that library, or textweaver's own. Choices: `"auto"` (automatic), `"library"` (espeak-ng library), `"rust"` (textweaver's own). Stays on this computer.
+- `speech.voice_params`: default none. Rate and pitch per voice. The rate and pitch each voice was last used at. Choosing a voice again brings them back. A table of names and values, edited in the file. Stays on this computer.
 
 ## Highlight: the `[highlight]` section
 
 - `highlight.enabled`: default on (`true`). Highlight spoken text. Highlight the word or sentence being read. On or off: `true` or `false`. Syncs between computers.
 - `highlight.granularity`: default the word (`"word"`). Highlight. What the reading highlight covers. Choices: `"word"` (the word), `"sentence"` (the sentence), `"both"` (the word and the sentence). Syncs between computers.
 - `highlight.lead_words`: default 1 word. Highlight lead. Draw the highlight this many words ahead of the word heard (1 is the word heard). From -5 to 5 words, in steps of 1. Syncs between computers.
-- `highlight.speed`: default 1. Highlight speed. Speed of the timed highlight for engines that report no words, as a multiple: 1 is normal speed. From 0.5 to 1.5, in steps of 0.1. Syncs between computers.
+- `highlight.speed`: default 1. Highlight speed. Speed of the timed highlight for engines that report no words, as a multiple. 1 is normal speed. From 0.5 to 1.5, in steps of 0.1. Syncs between computers.
 - `highlight.color`: default the theme's color (`"theme"`). Word highlight color. The color behind the word being read. Choose a name, or type a hex code. Default: the theme's color. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too. Syncs between computers.
 - `highlight.sentence_color`: default not set. Sentence highlight color. The color behind the sentence being read. Choose a name, or type a hex code. Default: the theme's color. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too. Syncs between computers.
 
@@ -63,7 +63,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `normalization.community_lexicon.dir`: default not set. Community lexicon folder. The folder holding the dictionary files; not set looks beside textweaver. Text; empty means not set. Stays on this computer.
 - `normalization.community_lexicon.language`: default US English (`"ENU"`). Community lexicon language. The dictionaries' language. Choices: `"ENU"` (US English), `"DEU"` (German). Other values may be written too. Syncs between computers.
 - `normalization.medical_lexicon.enabled`: default off (`false`). Medical lexicon. Read drug names, clinical terms and dosing abbreviations from a medical pronunciation list. On or off: `true` or `false`. Syncs between computers.
-- `normalization.medical_lexicon.overlay`: default not set. Medical lexicon file. Your own medical pronunciations, which win over the built-in ones; not set reads medical-lexicon.toml in the settings folder. Text; empty means not set. Stays on this computer.
+- `normalization.medical_lexicon.overlay`: default not set. Medical lexicon file. Your own medical pronunciations, which win over the built-in ones. Not set reads medical-lexicon.toml in the settings folder. Text; empty means not set. Stays on this computer.
 
 ## Reading: the `[reading]` section
 
@@ -73,22 +73,22 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading.cursor_follows_speech`: default on (`true`). Cursor follows speech. The cursor moves with the word being read. On or off: `true` or `false`. Syncs between computers.
 - `reading.citations`: default skipped (`"off"`). Citations. Citations in continuous reading: skipped, or said in words. Choices: `"off"` (skipped), `"words"` (in words). Syncs between computers.
 - `reading.ocr`: default on (`true`). Recognize scanned pages. Read the text of scanned PDFs and pictures by recognizing it (OCR). On or off: `true` or `false`. Syncs between computers.
-- `reading.ocr_lang`: default the document's (`""`). Scanned text language. The language of scanned text, as Tesseract codes such as fra or deu+eng; empty means the document's own language, else English. Choices: `""` (the document's), `"eng"` (English), `"fra"` (French), `"deu"` (German), `"spa"` (Spanish). Other values may be written too. Syncs between computers.
-- `reading.ocr_engine`: default automatic (`"auto"`). OCR engine. Which engine recognizes scanned pages: ocrs for English and Tesseract for other languages, or one of them always. Choices: `"auto"` (automatic), `"ocrs"`, `"tesseract"` (Tesseract), `"paddle"` (PaddleOCR (experimental)). Stays on this computer.
-- `reading.math_engine`: default textweaver (`"builtin"`). Math speech. Which engine reads math aloud: textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a version that includes it; otherwise textweaver's own is used. Choices: `"builtin"` (textweaver), `"mathcat"` (MathCAT ClearSpeak), `"mathcat_simplespeak"` (MathCAT SimpleSpeak). Syncs between computers.
-- `reading.math_display`: default `"source"`. Math on screen. How math looks in the reading view: as its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source. Choices: `"source"`, `"unicode"` (Unicode). Syncs between computers.
-- `reading.revisions`: default automatic (`"auto"`). Tracked changes. How tracked changes in Word, OpenDocument, and RTF files are read: said in place at high verbosity (automatic), always said, or never said, reading the final text. Applies when a document is opened. Choices: `"auto"` (automatic), `"marked"` (always say them), `"final"` (final text only). Syncs between computers.
+- `reading.ocr_lang`: default the document's (`""`). Scanned text language. The language of scanned text, as Tesseract codes such as fra or deu+eng. Empty means the document's own language, else English. Choices: `""` (the document's), `"eng"` (English), `"fra"` (French), `"deu"` (German), `"spa"` (Spanish). Other values may be written too. Syncs between computers.
+- `reading.ocr_engine`: default automatic (`"auto"`). OCR engine. Which engine recognizes scanned pages. ocrs for English and Tesseract for other languages, or one of them always. Choices: `"auto"` (automatic), `"ocrs"`, `"tesseract"` (Tesseract), `"paddle"` (PaddleOCR (experimental)). Stays on this computer.
+- `reading.math_engine`: default textweaver (`"builtin"`). Math speech. Which engine reads math aloud. textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a version that includes it; otherwise textweaver's own is used. Choices: `"builtin"` (textweaver), `"mathcat"` (MathCAT ClearSpeak), `"mathcat_simplespeak"` (MathCAT SimpleSpeak). Syncs between computers.
+- `reading.math_display`: default `"source"`. Math on screen. How math looks in the reading view. As its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source. Choices: `"source"`, `"unicode"` (Unicode). Syncs between computers.
+- `reading.revisions`: default automatic (`"auto"`). Tracked changes. How tracked changes in Word, OpenDocument, and RTF files are read. Said in place at high verbosity (automatic), always said, or never said, reading the final text. Applies when a document is opened. Choices: `"auto"` (automatic), `"marked"` (always say them), `"final"` (final text only). Syncs between computers.
 
 ## Display: the `[display]` section
 
 - `display.theme`: default `"galaxy"`. Theme. The color theme. Any value may be written. Syncs between computers.
 - `display.follow_os_theme`: default on (`true`). Follow the system theme. At startup, use a light, dark, or high-contrast theme like the system, unless you picked one. On or off: `true` or `false`. Syncs between computers.
 - `display.wrap_width`: default 0 columns. Wrap width. Wrap lines at this many columns; 0 uses the whole width. From 0 to 400 columns, in steps of 10. Stays on this computer.
-- `display.measure`: default 66 characters. Line length. How many characters a line holds in the window, from 25 to 90; 0 fills the window. The terminal uses the wrap width. From 0 to 90 characters, in steps of 1. Syncs between computers.
+- `display.measure`: default 66 characters. Line length. How many characters a line holds in the window, from 25 to 90. 0 fills the window. The terminal uses the wrap width. From 0 to 90 characters, in steps of 1. Syncs between computers.
 - `display.tab_width`: default 4 columns. Tab width. Columns a tab takes. From 1 to 16 columns, in steps of 1. Syncs between computers.
 - `display.show_line_numbers`: default off (`false`). Line numbers. Show line numbers. On or off: `true` or `false`. Syncs between computers.
 - `display.scroll_margin`: default 3 lines. Scroll margin. Lines kept in view above and below the cursor. From 0 to 20 lines, in steps of 1. Syncs between computers.
-- `display.hints`: default automatic (`"auto"`). Key hints line. Whether the terminal reader shows key hints on its bottom line: automatic shows them when self-voicing and hides them with a screen reader. F1 and the keyboard shortcuts list always name the keys. Choices: `"auto"` (automatic), `"on"`, `"off"`. Stays on this computer.
+- `display.hints`: default automatic (`"auto"`). Key hints line. Whether the terminal reader shows key hints on its bottom line. Automatic shows them when self-voicing and hides them with a screen reader. F1 and the keyboard shortcuts list always name the keys. Choices: `"auto"` (automatic), `"on"`, `"off"`. Stays on this computer.
 
 ## Editing: the `[editing]` section
 
@@ -105,34 +105,34 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Library: the `[library]` section
 
 - `library.recent_limit`: default 20 files. Recent files. How many recent files are remembered. From 1 to 500 files, in steps of 5. Syncs between computers.
-- `library.folders`: default an empty list. Library folders. Folders whose documents the library lists, and whose positions sync between computers; separate folders with semicolons. A list of texts, such as `["a", "b"]`. Stays on this computer.
+- `library.folders`: default an empty list. Library folders. Folders whose documents the library lists, and whose positions sync between computers. Separate folders with semicolons. A list of texts, such as `["a", "b"]`. Stays on this computer.
 
 ## Keyboard: the `[keyboard]` section
 
 - `keyboard.character_keys`: default on (`true`). Single-key shortcuts. Browse keys such as h and period. Off, dictation and typing never trigger commands. On or off: `true` or `false`. Syncs between computers.
 - `keyboard.preset`: default screen reader style (`"default"`). Keys. The default keys: like NVDA's and JAWS's browse mode, or textweaver's earlier keys. Used from the next start. Choices: `"default"` (screen reader style), `"classic"`. Stays on this computer.
-- `keyboard.digit_row`: default automatic (`"auto"`). Digit row. How the terminal recognizes the digit keys for heading levels: auto, or a French AZERTY keyboard. Choices: `"auto"` (automatic), `"azerty"` (AZERTY). Stays on this computer.
+- `keyboard.digit_row`: default automatic (`"auto"`). Digit row. How the terminal recognizes the digit keys for heading levels. Auto, or a French AZERTY keyboard. Choices: `"auto"` (automatic), `"azerty"` (AZERTY). Stays on this computer.
 
 ## Accessibility: the `[accessibility]` section
 
 - `accessibility.mode`: default `"self-voicing"`. Accessibility mode. Self-voicing speaks everything; screen reader leaves speech to your screen reader; hybrid voices reading only. Choices: `"self-voicing"`, `"screen-reader"` (screen reader), `"hybrid"`. Stays on this computer.
-- `accessibility.say_all`: default on the status line (`"screen"`). Say all with a screen reader. Continuous reading in screen-reader mode: a sentence at a time on the status line, or textweaver's voice. Choices: `"screen"` (on the status line), `"voice"` (with textweaver's voice). Stays on this computer.
+- `accessibility.say_all`: default on the status line (`"screen"`). Say all with a screen reader. Continuous reading in screen-reader mode. A sentence at a time on the status line, or textweaver's voice. Choices: `"screen"` (on the status line), `"voice"` (with textweaver's voice). Stays on this computer.
 - `accessibility.quiet_screen`: default automatic (`"auto"`). Quiet screen while reading. Keep the screen still while textweaver reads aloud. On by default in hybrid mode. Choices: `"auto"` (automatic), `true` (on), `false` (off). Stays on this computer.
-- `accessibility.cursor`: default follows focus (`"follow"`). Cursor. Where the terminal's cursor waits: on what you are working on, or on the status line. Choices: `"follow"` (follows focus), `"status"` (on the status line). Stays on this computer.
+- `accessibility.cursor`: default follows focus (`"follow"`). Cursor. Where the terminal's cursor waits. On what you are working on, or on the status line. Choices: `"follow"` (follows focus), `"status"` (on the status line). Stays on this computer.
 - `accessibility.interface_announcements`: default automatic (`"auto"`). Interface announcements. How much textweaver says about itself: dialogs, progress, hints, and routine confirmations. Errors and answers to what you asked are always said. Automatic is minimal with a screen reader, normal when self-voicing. Choices: `"auto"` (automatic), `"off"`, `"minimal"`, `"normal"`, `"full"`. Syncs between computers.
 
 ## Export: the `[export]` section
 
 - `export.subtitle_format`: default SubRip (`"srt"`). Subtitle format. The format of subtitles written without a file name. Choices: `"srt"` (SubRip), `"vtt"` (WebVTT), `"ass"` (ASS karaoke). Syncs between computers.
-- `export.subtitle_karaoke`: default Off (`"off"`). Subtitle karaoke. How subtitle lines show the word being read: off, underlined as it is spoken (WebVTT tags), or one cue per word in bold and underline. Choices: `"off"` (Off), `"tags"` (Underline as spoken), `"lines"` (One cue per word). Syncs between computers.
+- `export.subtitle_karaoke`: default Off (`"off"`). Subtitle karaoke. How subtitle lines show the word being read. Off, underlined as it is spoken (WebVTT tags), or one cue per word in bold and underline. Choices: `"off"` (Off), `"tags"` (Underline as spoken), `"lines"` (One cue per word). Syncs between computers.
 - `export.subtitle_chapters`: default off (`false`). Chapters file. Also write a WebVTT chapters file beside the subtitles or the audio. On or off: `true` or `false`. Syncs between computers.
 - `export.subtitle_word_level`: default off (`false`). Word subtitles. One subtitle per word instead of caption lines. On or off: `true` or `false`. Syncs between computers.
 - `export.subtitles_with_audio`: default off (`false`). Subtitles with audio. Always write subtitles beside exported audio. On or off: `true` or `false`. Syncs between computers.
 
 ## Braille: the `[braille]` section
 
-- `braille.math_code`: default Nemeth (`"nemeth"`). Math braille. The braille code for math in BRF files and while exploring a formula with MathCAT: Nemeth, or UEB mathematics. It needs a version that includes MathCAT; otherwise math is written as its spoken words. Choices: `"nemeth"` (Nemeth), `"ueb"` (UEB). Syncs between computers.
-- `braille.table_format`: default `"linear"`. Braille tables. How BRF files lay out tables: linear, one row per line with semicolons between entries; listed, each row a heading with each entry on its own line after its column heading; or stairstep, each entry two cells right of the one before, for tables of up to four columns. Choices: `"linear"`, `"listed"`, `"stairstep"`. Syncs between computers.
+- `braille.math_code`: default Nemeth (`"nemeth"`). Math braille. The braille code for math in BRF files and while exploring a formula with MathCAT. Nemeth, or UEB mathematics. It needs a version that includes MathCAT; otherwise math is written as its spoken words. Choices: `"nemeth"` (Nemeth), `"ueb"` (UEB). Syncs between computers.
+- `braille.table_format`: default `"linear"`. Braille tables. How BRF files lay out tables. Linear, one row per line with semicolons between entries; listed, each row a heading with each entry on its own line after its column heading; or stairstep, each entry two cells right of the one before, for tables of up to four columns. Choices: `"linear"`, `"listed"`, `"stairstep"`. Syncs between computers.
 
 ## Reading aids: the `[reading_aids]` section
 
@@ -204,20 +204,20 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Interface: the `[interface]` section
 
 - `interface.language`: default English (`"en"`). Interface language. The language of textweaver's own words, changed at once. The voice follows it when the engine has one for it; otherwise the voice stays. Choices: `"en"` (English), `"es"` (Español), `"fr"` (Français), `"de"` (Deutsch), `"pt"` (Português), `"ar"` (العربية). Other values may be written too. Syncs between computers.
-- `interface.rtl`: default automatic (`"auto"`). Right-to-left display. Whether the terminal reader reorders right-to-left text for display: automatic leaves it to terminals that do it themselves. Speech and the screen reader always get the text in reading order. Choices: `"auto"` (automatic), `"on"`, `"off"`. Stays on this computer.
+- `interface.rtl`: default automatic (`"auto"`). Right-to-left display. Whether the terminal reader reorders right-to-left text for display. Automatic leaves it to terminals that do it themselves. Speech and the screen reader always get the text in reading order. Choices: `"auto"` (automatic), `"on"`, `"off"`. Stays on this computer.
 
 ## Window: the `[gui]` section
 
-- `gui.announce`: default live region (`"live"`). Announcements. How the window's messages reach the screen reader, from the next start: a live region, or UI Automation notifications (Windows only). Choices: `"live"` (live region), `"uia"` (UI Automation notifications). Stays on this computer.
+- `gui.announce`: default live region (`"live"`). Announcements. How the window's messages reach the screen reader, from the next start. A live region, or UI Automation notifications (Windows only). Choices: `"live"` (live region), `"uia"` (UI Automation notifications). Stays on this computer.
 - `gui.header`: default on (`true`). Show the header. Show the bar of Open, Font, Edit, Settings and Commands above the document. Off, the commands keep their keys and menu items. On or off: `true` or `false`. Stays on this computer.
 - `gui.toolbar`: default on (`true`). Show the toolbar. Show the bar of Play, Stop and the reading buttons. Off, the commands keep their keys and menu items. On or off: `true` or `false`. Stays on this computer.
-- `gui.auto_hide_menu`: default off (`false`). Hide the menu bar. Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS. On or off: `true` or `false`. Stays on this computer.
+- `gui.auto_hide_menu`: default off (`false`). Hide the menu bar. Windows: hide the window's menu bar until Alt or F10 shows it. It hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS. On or off: `true` or `false`. Stays on this computer.
 - `gui.speak_messages`: default off (`false`). Speak textweaver's messages. When textweaver reads aloud, also say its messages, typing and cursor moves in its voice, for reading by ear without a screen reader. On or off: `true` or `false`. Stays on this computer.
-- `gui.sidebar`: default none (`"off"`). Panel beside the document. The panel the window shows beside the document: none, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one. Choices: `"off"` (none), `"contents"` (Contents), `"notes"` (Notes). Stays on this computer.
+- `gui.sidebar`: default none (`"off"`). Panel beside the document. The panel the window shows beside the document. None, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one. Choices: `"off"` (none), `"contents"` (Contents), `"notes"` (Notes). Stays on this computer.
 
 ## Colors: the `[colors]` section
 
-- `colors.ruler`: default the theme's color (`"theme"`). Reading ruler color. The band of the reading ruler and the marked current line; the ruler keeps its underline or bold. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too. Syncs between computers.
+- `colors.ruler`: default the theme's color (`"theme"`). Reading ruler color. The band of the reading ruler and the marked current line. The ruler keeps its underline or bold. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too. Syncs between computers.
 - `colors.difficult_words`: default the theme's color (`"theme"`). Difficult words color. The underline of difficult words; they stay underlined and are named at high verbosity. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too. Syncs between computers.
 - `colors.syllables`: default the theme's color (`"theme"`). Syllable marks color. The middle dots between syllables. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too. Syncs between computers.
 - `colors.misspellings`: default the theme's color (`"theme"`). Misspellings color. The underline of misspelled words, which are also said. Not used yet: the window draws the theme's color. Choose a name, or type a hex code. Default: the theme's color. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too. Syncs between computers.
@@ -234,8 +234,8 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Sync: the `[sync]` section
 
 - `sync.enabled`: default off (`false`). Sync. Sync notes, highlights, bookmarks, and places with your other computers through the sync folder. Tools, Sync, Set up sync turns it on. On or off: `true` or `false`. Stays on this computer.
-- `sync.folder`: default not set. Sync folder. The folder your computers share: one kept in step by Syncthing, a cloud folder, or a USB stick. Text; empty means not set. Stays on this computer.
-- `sync.device_name`: default empty (`""`). Computer name. This computer's name in sync messages, such as laptop or lab; empty uses Computer 1, Computer 2, and so on. Text. Stays on this computer.
+- `sync.folder`: default not set. Sync folder. The folder your computers share. One kept in step by Syncthing, a cloud folder, or a USB stick. Text; empty means not set. Stays on this computer.
+- `sync.device_name`: default empty (`""`). Computer name. This computer's name in sync messages, such as laptop or lab. Empty uses Computer 1, Computer 2, and so on. Text. Stays on this computer.
 - `sync.places`: default on (`true`). Sync places. Share where you are in each document. On or off: `true` or `false`. Stays on this computer.
 - `sync.notes`: default on (`true`). Sync notes. Share notes. On or off: `true` or `false`. Stays on this computer.
 - `sync.highlights`: default on (`true`). Sync highlights. Share highlights. On or off: `true` or `false`. Stays on this computer.
@@ -246,8 +246,8 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `sync.key_overrides`: default on (`true`). Sync key overrides. Share keymap.toml. A Mac's keys are kept but not used on Windows or Linux, and the reverse. On or off: `true` or `false`. Stays on this computer.
 - `sync.words`: default on (`true`). Sync word list. Share your spelling word list. On or off: `true` or `false`. Stays on this computer.
 - `sync.glossary`: default on (`true`). Sync glossary. Share your glossary's entries and your pronunciations. On or off: `true` or `false`. Stays on this computer.
-- `sync.favorite_voices`: default on (`true`). Sync favorite voices. Share your favorite voices; one this computer does not have is listed as not on this computer. On or off: `true` or `false`. Stays on this computer.
-- `sync.position_policy`: default the newest (`"newest"`). Place to resume. Which place a document opens at when another computer has one too: the newest, the furthest, or ask. Choices: `"newest"` (the newest), `"furthest"` (the furthest), `"ask"`. Stays on this computer.
+- `sync.favorite_voices`: default on (`true`). Sync favorite voices. Share your favorite voices. One this computer does not have is listed as not on this computer. On or off: `true` or `false`. Stays on this computer.
+- `sync.position_policy`: default the newest (`"newest"`). Place to resume. Which place a document opens at when another computer has one too. The newest, the furthest, or ask. Choices: `"newest"` (the newest), `"furthest"` (the furthest), `"ask"`. Stays on this computer.
 
 ## Optional components: the `[components]` section
 
