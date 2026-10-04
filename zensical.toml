@@ -96,6 +96,18 @@ nav = [
       { "Star features not yet planned" = "star-gaps.md" },
       { "Changelog (on GitHub)" = "https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md" },
     ] },
+    # Kept for contributors, out of the user sections (every page must be
+    # in the navigation, or the site build stops).
+    { "Research reports" = [
+      { "The research index" = "dev/research/README.md" },
+      { "Next waves plan" = "dev/research/next-waves-plan.md" },
+      { "Performance audit" = "dev/research/performance-audit.md" },
+      { "Speech engines and runtimes" = "dev/research/speech-engines-and-runtimes.md" },
+      { "Text-to-speech use cases" = "dev/research/tts-use-cases.md" },
+      { "Health sciences use cases" = "dev/research/health-sciences-use-cases.md" },
+      { "GUI and visual design" = "dev/research/gui-and-visual-design.md" },
+      { "Law and standards" = "dev/research/legal-and-standards.md" },
+    ] },
   ] },
   { "Decisions" = [
     { "The ADR index" = "adr/README.md" },
