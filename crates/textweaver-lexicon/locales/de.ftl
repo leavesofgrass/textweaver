@@ -568,6 +568,7 @@ help-export = Export als HTML, PDF, Word, EPUB oder Braille, Vorschau im Browser
 help-verbosity = Wie viel gesagt wird: { $verbosity }. Wie viel Interpunktion: { $punctuation }.
 help-voice = Eine Stimme wählen: { $voice }. Sprachausgabe neu starten, wenn sie aussetzt: { $restart }.
 help-access = Mit einem Screenreader, wer spricht: { $key } wechselt zwischen Selbstsprechend, Hybrid und Screenreader-Modus.
+help-access-window = Wer liest: { $key } wechselt zwischen textweaver liest vor und mein Screenreader liest.
 help-character-keys = Einzeltasten-Kurzbefehle an oder aus, für Diktat: { $keys }. Einstellungen: { $settings }.
 help-all-shortcuts = Alle Tastenkombinationen: { $key }.
 help-palette = Jeden Befehl über seinen Namen ausführen: { $key }.
@@ -1619,6 +1620,9 @@ access-a-screen-reader = Ein Screenreader
 # access-a-screen-reader; $key names the keys that change the mode.
 access-hybrid-inferred = { $reader } läuft: textweaver liest Dokumente vor und überlässt Meldungen Ihrem Screenreader. { $key } ändert das.
 # The window's two modes, when the mode changes; $key changes it again.
+access-window-choice-reads-aloud = textweaver liest vor
+access-window-choice-screen-reader = mein Screenreader liest
+access-window-mode-help = Wer im Fenster liest: die Stimme von textweaver oder nur Ihr Screenreader.
 access-window-mode-changed =
     { $mode ->
         [screen-reader] Mein Screenreader liest: textweaver schweigt und gibt den Text an Ihren Screenreader. { $key } ändert das.

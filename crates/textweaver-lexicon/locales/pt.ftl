@@ -548,6 +548,7 @@ help-export = Exportar para HTML, PDF, Word, EPUB ou braille, pré-visualizar no
 help-verbosity = Quanto é dito: { $verbosity }. Quanta pontuação: { $punctuation }.
 help-voice = Escolher uma voz: { $voice }. Reiniciar a fala se ela parar: { $restart }.
 help-access = Com um leitor de tela, quem fala: { $key } alterna entre autofala, híbrido e modo leitor de tela.
+help-access-window = Quem lê: { $key } alterna entre textweaver lê em voz alta e meu leitor de tela lê.
 help-character-keys = Atalhos de tecla única ativados ou desativados, para ditado: { $keys }. Configurações: { $settings }.
 help-all-shortcuts = Todos os atalhos de teclado: { $key }.
 help-palette = Executar qualquer comando pelo nome: { $key }.
@@ -1599,6 +1600,9 @@ access-a-screen-reader = Um leitor de tela
 # access-a-screen-reader; $key names the keys that change the mode.
 access-hybrid-inferred = { $reader } está em execução: textweaver lê os documentos em voz alta e deixa as mensagens para seu leitor de tela. { $key } muda isso.
 # The window's two modes, when the mode changes; $key changes it again.
+access-window-choice-reads-aloud = textweaver lê em voz alta
+access-window-choice-screen-reader = meu leitor de tela lê
+access-window-mode-help = Quem lê na janela: a voz do textweaver, ou só o seu leitor de tela.
 access-window-mode-changed =
     { $mode ->
         [screen-reader] Meu leitor de tela lê: textweaver fica em silêncio e envia o texto ao seu leitor de tela. { $key } muda isso.

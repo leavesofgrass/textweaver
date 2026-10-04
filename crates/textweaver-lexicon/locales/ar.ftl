@@ -626,6 +626,7 @@ help-export = التصدير إلى HTML أو PDF أو Word أو EPUB أو بر�
 help-verbosity = مقدار ما يُقال: { $verbosity }. مقدار علامات الترقيم: { $punctuation }.
 help-voice = اختيار صوت: { $voice }. إعادة تشغيل الكلام إذا توقف: { $restart }.
 help-access = مع قارئ شاشة، من يتحدث: { $key } يبدّل بين النطق الذاتي والوضع المختلط ووضع قارئ الشاشة.
+help-access-window = من يقرأ: { $key } يبدّل بين يقرأ textweaver بصوت عالٍ وقارئ شاشتي يقرأ.
 help-character-keys = الاختصارات أحادية المفتاح تشغيلًا أو إيقافًا، للإملاء: { $keys }. الإعدادات: { $settings }.
 help-all-shortcuts = كل اختصارات لوحة المفاتيح: { $key }.
 help-palette = تشغيل أي أمر بالاسم: { $key }.
@@ -1757,6 +1758,9 @@ access-a-screen-reader = قارئ شاشة
 # access-a-screen-reader; $key names the keys that change the mode.
 access-hybrid-inferred = { $reader } قيد التشغيل: يقرأ textweaver المستندات بصوت عالٍ ويترك الرسائل لقارئ شاشتك. { $key } يغيّر ذلك.
 # The window's two modes, when the mode changes; $key changes it again.
+access-window-choice-reads-aloud = يقرأ textweaver بصوت عالٍ
+access-window-choice-screen-reader = قارئ شاشتي يقرأ
+access-window-mode-help = من يقرأ في النافذة: صوت textweaver، أو قارئ الشاشة وحده.
 access-window-mode-changed =
     { $mode ->
         [screen-reader] قارئ شاشتي يقرأ: يصمت textweaver ويرسل النص إلى قارئ شاشتك. { $key } يغيّر ذلك.

@@ -1826,6 +1826,29 @@ fn lookup(c: &Catalog, id: &str, english: &str) -> String {
     }
 }
 
+/// The accessibility mode as the window offers it: two modes, "textweaver
+/// reads aloud" (stored as hybrid; self-voicing shows as it too) and "my
+/// screen reader reads" (stored as screen-reader). `settings.toml` keeps
+/// its three values; the window's dialog and View menu show these two.
+pub(crate) fn window_access_mode(base: &Setting) -> Setting {
+    let mut s = base.clone();
+    s.frontend = Frontend::Window;
+    s.kind = SettingKind::Choice {
+        choices: vec![
+            Choice {
+                value: Value::String("hybrid".into()),
+                label: "textweaver reads aloud".into(),
+            },
+            Choice {
+                value: Value::String("screen-reader".into()),
+                label: "my screen reader reads".into(),
+            },
+        ],
+        open: false,
+    };
+    s
+}
+
 /// The first sentence of `text`: up to the first period followed by a
 /// space, unless it ends an abbreviation, a single character or a word
 /// with a period inside ("z. B.", "e.g.").
@@ -1872,10 +1895,29 @@ impl Setting {
 
     /// The help in the catalog's language (`setting-*-help`).
     pub fn help_in(&self, c: &Catalog) -> String {
+        if self.is_window_access_mode() {
+            return c.tr("access-window-mode-help");
+        }
         if self.help.is_empty() {
             return String::new();
         }
         lookup(c, &format!("setting-{}-help", slug(&self.path)), self.help)
+    }
+
+    /// True for the accessibility mode as the window offers it
+    /// ([`window_access_mode`]).
+    fn is_window_access_mode(&self) -> bool {
+        self.path == "accessibility.mode" && self.frontend == Frontend::Window
+    }
+
+    /// True when the stored `value` is shown as `choice`: the same value,
+    /// or, in the window's two modes, self-voicing shown as "textweaver
+    /// reads aloud", whose stored value is hybrid.
+    fn shows_as(&self, choice: &Value, value: &Value) -> bool {
+        choice == value
+            || (self.is_window_access_mode()
+                && choice.as_str() == Some("hybrid")
+                && value.as_str() == Some("self-voicing"))
     }
 
     /// The help's first sentence in the catalog's language: what is shown
@@ -1893,6 +1935,13 @@ impl Setting {
     /// A choice's label in the catalog's language (`choice-*`; a color
     /// setting's named colors are `color-name-*`, shared by all of them).
     pub fn choice_label_in(&self, c: &Catalog, choice: &Choice) -> String {
+        if self.is_window_access_mode() {
+            return c.tr(if choice.value.as_str() == Some("screen-reader") {
+                "access-window-choice-screen-reader"
+            } else {
+                "access-window-choice-reads-aloud"
+            });
+        }
         if crate::colors::is_color_setting(&self.path) {
             return lookup(
                 c,
@@ -1934,7 +1983,7 @@ impl Setting {
             }
             (SettingKind::Choice { choices, .. }, v) => choices
                 .iter()
-                .find(|x| &x.value == v)
+                .find(|x| self.shows_as(&x.value, v))
                 .map(|x| self.choice_label_in(c, x))
                 .unwrap_or_else(|| plain(v)),
             (SettingKind::List, Value::Array(items)) if items.is_empty() => c.tr("settings-none"),
@@ -2078,7 +2127,7 @@ impl Setting {
             }
             SettingKind::Choice { choices, .. } if !choices.is_empty() => {
                 let n = choices.len();
-                let at = choices.iter().position(|c| &c.value == value);
+                let at = choices.iter().position(|c| self.shows_as(&c.value, value));
                 let i = match (at, forward) {
                     (Some(i), true) => (i + 1) % n,
                     (Some(i), false) => (i + n - 1) % n,
@@ -2205,7 +2254,11 @@ impl App {
                 }
             })
             .collect();
+        let window = self.uses_window_modes();
         for s in &mut schema.settings {
+            if window && s.path == "accessibility.mode" {
+                *s = window_access_mode(s);
+            }
             if s.path == "display.theme"
                 && let SettingKind::Choice { choices, .. } = &mut s.kind
             {
