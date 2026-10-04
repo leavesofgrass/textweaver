@@ -96,10 +96,12 @@ mod run {
 
     use textweaver_a11y::{Importance, Priority};
     use textweaver_export::{
-        AudioFormat, CueOptions, ExportOptions, ExportReport, SubtitleRequest, ffmpeg,
+        AudioFormat, CaptionMeta, CueOptions, ExportOptions, ExportReport, Karaoke,
+        SubtitleRequest, chapters::ChapterNames, ffmpeg,
     };
     use textweaver_lexicon::args;
     use textweaver_speech::{BackendFactory, BackendInfo, BackendRegistry, Caps, VoiceParams};
+    use textweaver_store::SubtitleKaraoke;
     use textweaver_text::Document;
 
     use super::AudioList;
@@ -146,6 +148,9 @@ mod run {
         ffmpeg: Option<PathBuf>,
         options: ExportOptions,
         subtitles: Option<SubtitleRequest>,
+        /// Where the WebVTT chapters file goes (`[export]
+        /// subtitle_chapters`), if one is written.
+        chapters: Option<PathBuf>,
     }
 
     /// What the export thread sends at the end.
@@ -390,10 +395,14 @@ mod run {
             let voice = self.voice_label(&backend, &running, params.voice.as_deref());
             let wpm = self.settings.speech.rate.wpm();
             let plan = crate::export::subtitle_plan(&self.settings, &out, None, false);
+            let chapters = self.settings.export.subtitle_chapters.then(|| {
+                textweaver_export::chapters::vtt_path(plan.path.as_deref().unwrap_or(&out))
+            });
             let subtitles = plan.path.map(|path| SubtitleRequest {
                 path,
                 cues: CueOptions {
                     word_level: plan.word_level,
+                    karaoke: karaoke_setting(self.settings.export.subtitle_karaoke),
                     ..CueOptions::default()
                 },
             });
@@ -402,6 +411,16 @@ mod run {
                 normalize: config.normalize,
                 punctuation: config.punctuation,
                 split_caps: config.split_caps,
+                chapter_names: ChapterNames {
+                    untitled_document: self.msg("export-chapter-untitled"),
+                    numbered: self
+                        .msg_args("export-chapter-numbered", &args!["number" => "{number}"]),
+                },
+                captions: CaptionMeta {
+                    voice: Some(voice.clone()),
+                    words_per_minute: Some(u32::from(wpm)),
+                    ..CaptionMeta::default()
+                },
                 ..ExportOptions::default()
             };
             let plan = Plan {
@@ -416,6 +435,7 @@ mod run {
                 ffmpeg: self.audio.ffmpeg.clone(),
                 options,
                 subtitles,
+                chapters,
             };
             let question = self.audio_start_question(&plan);
             self.audio.question = Some(Question::Start(Box::new(plan)));
@@ -668,9 +688,25 @@ mod run {
                 }
                 Err(Ended::Cancelled)
             }
-            Ok(r) => Ok(r),
+            Ok(r) => {
+                if let Some(path) = &plan.chapters {
+                    let vtt = textweaver_export::chapters::vtt(&r.timeline.chapters);
+                    std::fs::write(path, vtt)
+                        .map_err(|e| fail(format!("cannot write {}: {e}", path.display())))?;
+                }
+                Ok(r)
+            }
             Err(textweaver_export::ExportError::Cancelled) => Err(Ended::Cancelled),
             Err(e) => Err(fail(e.to_string())),
+        }
+    }
+
+    /// `[export] subtitle_karaoke` as the exporter's style.
+    fn karaoke_setting(k: SubtitleKaraoke) -> Karaoke {
+        match k {
+            SubtitleKaraoke::Off => Karaoke::Off,
+            SubtitleKaraoke::Tags => Karaoke::Tags,
+            SubtitleKaraoke::Lines => Karaoke::Lines,
         }
     }
 
@@ -830,6 +866,28 @@ mod run {
                 opened.lock().unwrap().as_slice(),
                 [out.display().to_string()]
             );
+        }
+
+        #[test]
+        fn karaoke_chapters_and_the_note_follow_the_export_settings() {
+            let dir = tempfile::tempdir().unwrap();
+            let (mut app, _) = app_with_doc(dir.path());
+            app.settings.export.subtitles_with_audio = true;
+            app.settings.export.subtitle_format = textweaver_store::SubtitleFormat::Vtt;
+            app.settings.export.subtitle_karaoke = SubtitleKaraoke::Tags;
+            app.settings.export.subtitle_chapters = true;
+            app.dispatch(Command::Action(ActionId::ExportAudio));
+            app.dispatch(Command::Choose(0));
+            app.dispatch(Command::Choose(0));
+            app.dispatch(Command::Confirm(Confirm::Yes));
+            wait_until_done(&mut app);
+            let vtt = std::fs::read_to_string(dir.path().join("essay.vtt")).unwrap();
+            // The note says who reads and how fast; karaoke tags the words.
+            assert!(vtt.contains("NOTE") && vtt.contains("Recording"), "{vtt}");
+            assert!(vtt.contains("Read by Recording"), "{vtt}");
+            assert!(vtt.contains("::cue(:past)"), "{vtt}");
+            let chapters = std::fs::read_to_string(dir.path().join("essay.chapters.vtt")).unwrap();
+            assert!(chapters.contains("Light") && chapters.contains("Water"));
         }
 
         #[test]

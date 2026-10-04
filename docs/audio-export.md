@@ -386,7 +386,7 @@ The settings:
 
 A file named with `--subtitles` always wins over `subtitles_with_audio`. `--word-level` turns word cues on even when `subtitle_word_level` is `false`; there is no option to turn them off for one export when the setting is `true`.
 
-These settings are used by `tw export-audio` and by Export audio in the reader, which writes subtitles beside the audio when `subtitles_with_audio` is `true`. For now, `subtitle_karaoke` and `subtitle_chapters` apply to `tw export-audio` only.
+These settings are used by `tw export-audio` and by Export audio in the reader, which writes subtitles beside the audio when `subtitles_with_audio` is `true`, with the karaoke style of `subtitle_karaoke`, a chapters file when `subtitle_chapters` is `true`, and a note naming the voice and the rate.
 
 ## Get a report as JSON
 
