@@ -1,22 +1,22 @@
 //! Bionic reading: embolden the first part of each word so the eye has a
 //! fixation point.
 //!
-//! Star's rule (`gui/mixin_fontspacing.py`, `_bionic_word`): every run of two
+//! star's rule (`gui/mixin_fontspacing.py`, `_bionic_word`): every run of two
 //! or more letters gets its leading `round(len × 0.4)` letters in bold, at
 //! least one. textweaver keeps that as [`BionicOptions::star`] and makes the
 //! ratio and the minimum length configurable.
 //!
-//! Differences from Star, all deliberate:
+//! Differences from star, all deliberate:
 //!
 //! - Lengths count grapheme clusters, so a combining accent is never split
 //!   from its letter.
 //! - Words are UAX #29 word segments (the same rule as navigation), so
 //!   `don't` is one word, and a word with digits (`v2`, `COVID19`, `1990s`)
-//!   is skipped whole. Star's letters-only regex bolded the `COVID` of
+//!   is skipped whole. star's letters-only regex bolded the `COVID` of
 //!   `COVID19`.
 //! - URLs, email addresses, code-like tokens (`snake_case`, `a::b`, `f()`),
 //!   inline `` `code` `` spans, and, in a document, `Code` markers are
-//!   skipped. Star skipped only `<code>` elements.
+//!   skipped. star skipped only `<code>` elements.
 //!
 //! The output is a list of canonical char ranges to embolden. It never
 //! changes the text, so speech and highlighting are unaffected.
@@ -33,9 +33,9 @@ use textweaver_text::Document;
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BionicOptions {
-    /// Share of each word to embolden, from 0.1 to 0.9. Star used 0.4.
+    /// Share of each word to embolden, from 0.1 to 0.9. star used 0.4.
     pub ratio: f32,
-    /// Words shorter than this (in graphemes) are left alone. Star used 2.
+    /// Words shorter than this (in graphemes) are left alone. star used 2.
     pub min_word_len: usize,
     /// Skip words that contain a digit.
     pub skip_numbers: bool,
@@ -52,7 +52,7 @@ impl Default for BionicOptions {
 }
 
 impl BionicOptions {
-    /// Star's settings: 40 percent, words of two letters or more.
+    /// star's settings: 40 percent, words of two letters or more.
     pub fn star() -> Self {
         BionicOptions {
             ratio: 0.4,
@@ -63,7 +63,7 @@ impl BionicOptions {
         }
     }
 
-    /// Star's settings with a different fixation ratio.
+    /// star's settings with a different fixation ratio.
     pub fn with_ratio(ratio: f32) -> Self {
         BionicOptions {
             ratio,
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn star_rule() {
-        // Star: n = max(1, round(len * 0.4)).
+        // star: n = max(1, round(len * 0.4)).
         assert_eq!(fixation_len(2, 0.4), 1);
         assert_eq!(fixation_len(3, 0.4), 1);
         assert_eq!(fixation_len(4, 0.4), 2);

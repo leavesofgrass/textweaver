@@ -8,7 +8,7 @@
 
 A student reads on more than one computer: a laptop at home, a desktop in a lab, a computer borrowed for an exam. What they made while reading (notes, highlights, bookmarks, the place in each document, their word list and their settings) should follow them, without an account, a server, or a network connection inside textweaver.
 
-Today only the reading place travels, and only inside a library folder. `textweaver_store::sync` keeps one sidecar per library folder, `<folder>/.textweaver/progress.json`, keyed by each document's path inside the folder and merged by Star's rules (`reading.sync_conflict_policy`: newest, highest progress, or manual). `LibrarySync` mirrors the position there when it is saved. The sidecar also carries a `_meta` entry with a note count and some statistics, but not the notes themselves. A document outside a library folder never syncs.
+Today only the reading place travels, and only inside a library folder. `textweaver_store::sync` keeps one sidecar per library folder, `<folder>/.textweaver/progress.json`, keyed by each document's path inside the folder and merged by star's rules (`reading.sync_conflict_policy`: newest, highest progress, or manual). `LibrarySync` mirrors the position there when it is saved. The sidecar also carries a `_meta` entry with a note count and some statistics, but not the notes themselves. A document outside a library folder never syncs.
 
 Extending the sidecar to everything else would carry its problems with it:
 

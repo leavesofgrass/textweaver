@@ -5,7 +5,7 @@ use crate::{CharPos, CharRange, OffsetMap};
 /// Identifies one chunk of speech.
 ///
 /// `generation` is bumped by the speech service before every stop or restart
-/// (Star's rule); events from an older generation are dropped. `chunk` numbers
+/// (star's rule); events from an older generation are dropped. `chunk` numbers
 /// the utterances within one reading request, starting at 0.
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,

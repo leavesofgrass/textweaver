@@ -46,7 +46,7 @@ Unused numbers: ADR-0038, ADR-0040 and ADR-0047 were reserved in plans and never
   - Status: accepted, with 2 status updates.
 - [ADR-0019: Citations](0019-citations.md): the reference library, lookup, and CSL formatting.
   - Status: accepted, with 3 status updates.
-- [ADR-0020: Themes](0020-themes.md): Star's palettes, contrast rules, and output for every frontend.
+- [ADR-0020: Themes](0020-themes.md): star's palettes, contrast rules, and output for every frontend.
   - Status: accepted, with 2 status updates.
 - [ADR-0021: DECtalk through a host process](0021-dectalk.md): DECtalk with word timing, and its licensing.
   - Status: accepted, with 2 status updates.

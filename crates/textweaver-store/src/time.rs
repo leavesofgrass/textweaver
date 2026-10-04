@@ -3,8 +3,8 @@
 //! textweaver stores Unix seconds (UTC) in its own files and RFC 3339 UTC
 //! strings (`2026-09-25T14:03:07Z`) where a timestamp must compare as text,
 //! as in the sidecar, whose merge rules compare `ts` lexicographically like
-//! Star did. Star wrote zone-less local time (`2026-09-25T10:03:07`), which
-//! compares wrongly across time zones (the Star parity reference Part 3 §7 item 19).
+//! star did. star wrote zone-less local time (`2026-09-25T10:03:07`), which
+//! compares wrongly across time zones (the star parity reference Part 3 §7 item 19).
 
 /// Days since 1970-01-01 to a proleptic Gregorian `(year, month, day)`.
 /// Howard Hinnant's `civil_from_days`.
@@ -67,7 +67,7 @@ pub fn human(ts: i64) -> String {
 
 /// Parses `YYYY-MM-DD`, `YYYY-MM-DDTHH:MM:SS`, optionally followed by
 /// fractional seconds and `Z` or a `±HH:MM` offset. A string without a zone
-/// (Star's format) is read as UTC. Returns Unix seconds.
+/// (star's format) is read as UTC. Returns Unix seconds.
 pub fn parse_timestamp(s: &str) -> Option<i64> {
     let s = s.trim();
     let num = |a: usize, b: usize| -> Option<i64> {
@@ -153,7 +153,7 @@ mod tests {
         assert_eq!(
             parse_timestamp("2026-09-25T14:03:07"),
             Some(1_790_344_987),
-            "Star's zone-less form reads as UTC"
+            "star's zone-less form reads as UTC"
         );
         assert_eq!(
             parse_timestamp("2026-09-25T16:03:07.123+02:00"),

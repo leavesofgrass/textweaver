@@ -1,17 +1,17 @@
 //! RSVP: rapid serial visual presentation, one word at a time.
 //!
-//! Star showed the word being spoken in a floating panel, fed by speech
+//! star showed the word being spoken in a floating panel, fed by speech
 //! word events (`gui/mixin_playback.py:408-423`, `tui/mixin_rsvp.py`). It
 //! had no timing of its own, no recognition point, and no way to read
-//! silently. textweaver keeps Star's speech-driven mode ([`Pacing::External`])
+//! silently. textweaver keeps star's speech-driven mode ([`Pacing::External`])
 //! and adds a silent, timed mode ([`Pacing::Timer`]) with:
 //!
 //! - the optimal recognition point of each word ([`optimal_recognition_point`]),
 //!   which a frontend shows at a fixed column;
 //! - words-per-minute timing with longer pauses after clauses, sentences,
 //!   and paragraphs, and for long words;
-//! - the previous and next words as context, each switchable, as in Star;
-//! - Star's nine screen positions ([`RsvpPosition`]);
+//! - the previous and next words as context, each switchable, as in star;
+//! - star's nine screen positions ([`RsvpPosition`]);
 //! - pause, resume, and seeking by word, sentence, and paragraph.
 //!
 //! [`Rsvp`] is a pure state machine. It never reads a clock: every method
@@ -53,7 +53,7 @@ pub enum Pacing {
     /// The engine's own words-per-minute timing (silent reading).
     #[default]
     Timer,
-    /// Speech word events, through [`Rsvp::follow`] (Star's behaviour).
+    /// Speech word events, through [`Rsvp::follow`] (star's behaviour).
     /// [`Rsvp::tick`] never advances.
     External,
 }
@@ -81,18 +81,18 @@ pub struct RsvpSettings {
     pub long_word_step: u32,
     /// Most extra time a long word gets, in percent.
     pub long_word_max: u32,
-    /// Show the previous word (Star: `qt_rsvp_show_prev`).
+    /// Show the previous word (star: `qt_rsvp_show_prev`).
     pub show_previous: bool,
-    /// Show the next word (Star: `qt_rsvp_show_next`).
+    /// Show the next word (star: `qt_rsvp_show_next`).
     pub show_next: bool,
-    /// Where the word appears (Star: `qt_rsvp_position`).
+    /// Where the word appears (star: `qt_rsvp_position`).
     pub position: RsvpPosition,
-    /// Size of the word in the GUI, in points (Star: `qt_rsvp_font_size`).
-    /// Star labelled this in points but drew pixels, 25 % too small at
+    /// Size of the word in the GUI, in points (star: `qt_rsvp_font_size`).
+    /// star labelled this in points but drew pixels, 25 % too small at
     /// 96 DPI; use [`RsvpSettings::font_px`] to convert.
     pub font_size_pt: u16,
     /// With speech pacing, show this many words ahead of (positive) or
-    /// behind (negative) the spoken word (Star: `highlight_lead_words`).
+    /// behind (negative) the spoken word (star: `highlight_lead_words`).
     pub lead_words: i32,
 }
 
@@ -117,7 +117,7 @@ impl Default for RsvpSettings {
 }
 
 impl RsvpSettings {
-    /// The word size in points, clamped to Star's range, 12 to 200.
+    /// The word size in points, clamped to star's range, 12 to 200.
     pub fn clamped_font_pt(&self) -> u16 {
         self.font_size_pt.clamp(12, 200)
     }
@@ -473,7 +473,7 @@ impl Rsvp {
         self.seek(t, true, now)
     }
 
-    /// Star's rule: more than three words into the current sentence, go to
+    /// star's rule: more than three words into the current sentence, go to
     /// its start; otherwise to the start of the previous sentence.
     pub fn previous_sentence(&mut self, now: Millis) -> RsvpEvent {
         let t = self.track.get(self.index).and_then(|w| {
@@ -553,7 +553,7 @@ impl Rsvp {
         self.set_wpm(self.settings.clamped_wpm().saturating_sub(step))
     }
 
-    /// Reading progress in whole percent, rounded down (Star's rule).
+    /// Reading progress in whole percent, rounded down (star's rule).
     pub fn percent(&self) -> u32 {
         if self.is_empty() {
             return 0;

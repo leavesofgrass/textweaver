@@ -1,5 +1,5 @@
 //! Math as plain Unicode text for the reading view: `x²`, `√2`, `1⁄2`, as
-//! Star's `mathrender.py` drew it (Agent W4g).
+//! star's `mathrender.py` drew it (Agent W4g).
 //!
 //! [`to_unicode`] writes a [`Math`] tree on one line with Unicode
 //! characters only, so a terminal can show it without markup:

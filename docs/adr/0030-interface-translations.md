@@ -5,7 +5,7 @@
 
 ## Context
 
-ADR-0025 gave textweaver a message catalog in a subset of Project Fluent, with English complete for the study features only. Star, the program textweaver replaces, had Spanish, French, German, Portuguese, and Arabic catalogs for its menus (flat JSON keyed by the English text, no plurals). This work called for the whole interface in those five languages, right-to-left display, a first-run language choice, a voice per language, a live language change, and a pseudo-locale check in the development checks (the orchestration plan, kept outside the repository). The lessons from Star were to never go silent, to apply a change at once, and to give every new setting its four places.
+ADR-0025 gave textweaver a message catalog in a subset of Project Fluent, with English complete for the study features only. star, the program textweaver replaces, had Spanish, French, German, Portuguese, and Arabic catalogs for its menus (flat JSON keyed by the English text, no plurals). This work called for the whole interface in those five languages, right-to-left display, a first-run language choice, a voice per language, a live language change, and a pseudo-locale check in the development checks (the orchestration plan, kept outside the repository). The lessons from star were to never go silent, to apply a change at once, and to give every new setting its four places.
 
 ## Decision
 
@@ -27,7 +27,7 @@ About 1,540 messages in `crates/textweaver-lexicon/locales/en.ftl`, from the app
 
 ### Five built-in translations
 
-Spanish (international, formal), French (with a no-break space before `: ; ? !`), German, Portuguese (Brazilian, matching the CLDR default the plural rules use), and Arabic (Modern Standard, with six plural forms), each complete. Star's catalogs were converted by script where a string matched textweaver's English (64 strings each for the Romance languages and German, 35 for Arabic) and given to the translators as hints; the rest were translated. They are built into the program (`include_str!`); a `<tag>.ftl` in the settings folder's `locales` goes over a built-in one message by message, then English.
+Spanish (international, formal), French (with a no-break space before `: ; ? !`), German, Portuguese (Brazilian, matching the CLDR default the plural rules use), and Arabic (Modern Standard, with six plural forms), each complete. star's catalogs were converted by script where a string matched textweaver's English (64 strings each for the Romance languages and German, 35 for Arabic) and given to the translators as hints; the rest were translated. They are built into the program (`include_str!`); a `<tag>.ftl` in the settings folder's `locales` goes over a built-in one message by message, then English.
 
 Tests in `textweaver-lexicon` check that each built-in file parses, has only English's ids, uses only the values the code gives, chooses plural variants its language can produce, is complete, and, for Arabic, closes every direction mark and isolates every value. A message added to en.ftl therefore needs its five translations in the same change.
 

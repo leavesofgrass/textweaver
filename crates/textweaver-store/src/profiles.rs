@@ -21,7 +21,7 @@
 //! this version does not know are left out when it is switched to or
 //! imported, and reported.
 //!
-//! Star kept its profiles inside `settings.json` (`stats.py`); textweaver
+//! star kept its profiles inside `settings.json` (`stats.py`); textweaver
 //! keeps them apart, so exporting settings does not drag every profile
 //! along, and a profile can be shared on its own ([`Profiles::export`]).
 

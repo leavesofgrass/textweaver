@@ -151,7 +151,7 @@ fn caption_lines_split_long_sentences_by_word_times() {
 }
 
 /// A backend that writes files but reports no word timings (the trait's
-/// default `synthesize_utterance`): cues fall back to Star's weighting
+/// default `synthesize_utterance`): cues fall back to star's weighting
 /// within each sentence.
 struct NoWordTimes(RecordingBackend);
 

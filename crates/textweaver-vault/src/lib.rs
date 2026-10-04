@@ -1,5 +1,5 @@
 //! Obsidian vault import and export, ported from `star/obsidian.py`
-//! (the Star parity reference Part 3 §4.8).
+//! (the star parity reference Part 3 §4.8).
 //!
 //! - [`export_documents`] writes documents' notes and highlights into a
 //!   vault: one Markdown note per note, with front matter and its relations
@@ -45,7 +45,7 @@ pub use names::{MAX_NAME_CHARS, NameAllocator, sanitize as sanitize_name};
 pub use state::{StateStoreAnnotations, save_library};
 pub use walk::note_files;
 
-/// The tag on a vault note's node note (Star's `_NODE_TAG`).
+/// The tag on a vault note's node note (star's `_NODE_TAG`).
 pub const NODE_TAG: &str = "obsidian-note";
 
 /// The tag on the document notes textweaver writes.

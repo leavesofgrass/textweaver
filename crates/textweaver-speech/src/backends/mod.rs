@@ -1,13 +1,13 @@
 //! Engine implementations, the backend registry, and backend selection.
 //!
-//! Selection follows Star (`star/tts/manager/_selection.py`, Part 2 section 3
-//! of the Star parity reference) with its bug B11 fixed:
+//! Selection follows star (`star/tts/manager/_selection.py`, Part 2 section 3
+//! of the star parity reference) with its bug B11 fixed:
 //!
 //! 1. An explicit preference (anything but `None`, `""`, or `"auto"`) wins
 //!    when that backend is available.
 //! 2. Otherwise, including when the preferred backend is unknown or
 //!    unavailable, the highest-priority available backend that is not
-//!    opt-in is chosen. (Star fell straight to silence here.)
+//!    opt-in is chosen. (star fell straight to silence here.)
 //! 3. `null` is the final fallback.
 //!
 //! The [`BackendRegistry`] is extensible: crates outside this one (the
@@ -357,7 +357,7 @@ impl BackendRegistry {
         })
     }
 
-    /// Chooses a backend by Star's rules, with an unavailable explicit
+    /// Chooses a backend by star's rules, with an unavailable explicit
     /// preference falling back to automatic selection (not to silence).
     pub fn select(&self, preferred: Option<&str>) -> Selection {
         select_from(&self.list(), preferred)
@@ -409,12 +409,12 @@ pub fn select(preferred: Option<&str>) -> BackendInfo {
     BackendRegistry::with_builtins().select(preferred).backend
 }
 
-/// Resolves a preferred-voice substring (Star's `tts_prefer_voice`, default
+/// Resolves a preferred-voice substring (star's `tts_prefer_voice`, default
 /// "eloquence") against a voice list: voices whose lowercased
 /// `name + " " + id` contains the preference; among them the first whose
 /// language region is US, else the first match. Returns the voice id.
 ///
-/// Star matched "us" as a substring of the language, so "rus" and "aus"
+/// star matched "us" as a substring of the language, so "rus" and "aus"
 /// counted as US (quirk Q11); this checks the region subtag.
 pub fn resolve_preferred_voice(voices: &[Voice], prefer: &str) -> Option<String> {
     let prefer = prefer.trim().to_lowercase();
@@ -577,8 +577,8 @@ mod tests {
         }
     }
 
-    /// Star's selection tests (tests/test_tts.py:680-740) with Star's
-    /// priorities translated to "higher first" (Star sorted ascending).
+    /// star's selection tests (tests/test_tts.py:680-740) with star's
+    /// priorities translated to "higher first" (star sorted ascending).
     fn star_list(avail: &[&str]) -> Vec<BackendInfo> {
         let a = |id: &str| avail.contains(&id);
         vec![
@@ -622,7 +622,7 @@ mod tests {
 
     #[test]
     fn unavailable_preference_falls_back_to_auto_not_silence() {
-        // Star bug B11: an unavailable explicit backend gave silence.
+        // star bug B11: an unavailable explicit backend gave silence.
         let s = select_from(&star_list(&["pyttsx3"]), Some("piper"));
         assert_eq!(s.backend.id, "pyttsx3");
         assert!(s.fell_back);

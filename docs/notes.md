@@ -115,7 +115,7 @@ Press **y** again on a highlighted passage, with nothing selected, to remove the
 
 Highlights made in textweaver are yellow. There is no key to choose another color yet.
 
-Highlights imported from Star, or from a synced folder, can have other colors. textweaver knows five by name: yellow, green, cyan, pink, and orange. Other colors are kept and shown by their code. On screen a highlight is marked by the theme's highlight style, which never relies on color alone.
+Highlights imported from star, or from a synced folder, can have other colors. textweaver knows five by name: yellow, green, cyan, pink, and orange. Other colors are kept and shown by their code. On screen a highlight is marked by the theme's highlight style, which never relies on color alone.
 
 ### List highlights: Shift+Y
 
@@ -179,7 +179,7 @@ The JSON also has the document's state key and its history of jumps.
 
 ## Export notes as references: tw marks --to
 
-Your notes and highlights can go into a reference manager such as Zotero, or into a BibTeX file, as Star's notes export did. Each note and each highlight becomes one record:
+Your notes and highlights can go into a reference manager such as Zotero, or into a BibTeX file, as star's notes export did. Each note and each highlight becomes one record:
 
 - the title and author are the document's;
 - the passage you noted or highlighted is the record's abstract;

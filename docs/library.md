@@ -1,6 +1,6 @@
 # The library
 
-This guide covers textweaver's library: the folders of documents you read from, the list of recent files, "Continue reading", searching the text of every document at once, and the older way of keeping your reading place in step between computers through a library folder. It also covers where textweaver keeps its files, and importing your data from Star. It is for anyone with more than a few documents, and for anyone moving from Star. Syncing notes, highlights, bookmarks, places, and library details between your computers has [a guide of its own](sync.md).
+This guide covers textweaver's library: the folders of documents you read from, the list of recent files, "Continue reading", searching the text of every document at once, and the older way of keeping your reading place in step between computers through a library folder. It also covers where textweaver keeps its files, and importing your data from star. It is for anyone with more than a few documents, and for anyone moving from star. Syncing notes, highlights, bookmarks, places, and library details between your computers has [a guide of its own](sync.md).
 
 ## Open the library in the reader: Alt+L
 
@@ -77,7 +77,7 @@ With [sync](sync.md) on, what you type travels to your other computers with the 
 
 ## Library folders
 
-A library folder is an ordinary folder of documents. textweaver lists every document it can open in the folder and in all its subfolders. It skips hidden folders, its own `.textweaver` folders, Star's `.star` folders, `.obsidian`, `.git`, `node_modules`, and the recycle bin. It reads at most 20,000 files per folder. Files are never changed.
+A library folder is an ordinary folder of documents. textweaver lists every document it can open in the folder and in all its subfolders. It skips hidden folders, its own `.textweaver` folders, star's `.star` folders, `.obsidian`, `.git`, `node_modules`, and the recycle bin. It reads at most 20,000 files per folder. Files are never changed.
 
 ### Add a folder
 
@@ -145,7 +145,7 @@ Every document you open goes to the front of the recent list, `recent.json` in t
 
 ## The bookshelf
 
-Every document you open is also recorded on the bookshelf, `library.json` in the data folder. Each entry holds the document's full path, its title, the kind of file, when you first opened it, when you last opened it, its author, DOI, and ISBN when known, and the details you typed yourself (under `edited`). The bookshelf keeps up to 500 documents; past that, the ones opened longest ago are dropped. `tw migrate-star` fills it from Star's library.
+Every document you open is also recorded on the bookshelf, `library.json` in the data folder. Each entry holds the document's full path, its title, the kind of file, when you first opened it, when you last opened it, its author, DOI, and ISBN when known, and the details you typed yourself (under `edited`). The bookshelf keeps up to 500 documents; past that, the ones opened longest ago are dropped. `tw migrate-star` fills it from star's library.
 
 ## Search every document: tw library search
 
@@ -172,10 +172,10 @@ You can combine options: `--add` and `--search` in one command adds the folder, 
 
 ## The older place sync through a library folder
 
-Before [sync](sync.md), a library folder kept in step by Dropbox, OneDrive, Syncthing, or iCloud was how textweaver carried your reading place between computers, and Star did the same. That still works:
+Before [sync](sync.md), a library folder kept in step by Dropbox, OneDrive, Syncthing, or iCloud was how textweaver carried your reading place between computers, and star did the same. That still works:
 
 - **With sync off,** textweaver keeps the folder's progress file up to date, as older versions did.
-- **With sync on,** your places go to the sync folder instead, and the progress file is only read. A place an older textweaver, or Star through `tw migrate-star`, wrote there is still honored when a document opens.
+- **With sync on,** your places go to the sync folder instead, and the progress file is only read. A place an older textweaver, or star through `tw migrate-star`, wrote there is still honored when a document opens.
 
 ### What the progress file holds
 
@@ -256,9 +256,9 @@ export TEXTWEAVER_HOME=~/textweaver-home
 
 The reader's `--home FOLDER` option, and `--home` on every `tw` command that reads or writes the data folder, do the same for one run. The [command line guide](command-line.md) lists them.
 
-## Import from Star: tw migrate-star
+## Import from star: tw migrate-star
 
-`tw migrate-star` copies what you had in Star into textweaver. It only reads Star's files; it never changes them.
+`tw migrate-star` copies what you had in star into textweaver. It only reads star's files; it never changes them.
 
 ### Try it first: --dry-run
 
@@ -276,19 +276,19 @@ tw migrate-star
 
 ### Options
 
-- `--from DIR`: Star's configuration folder, the one that holds its `settings.json`. By default textweaver looks in `%APPDATA%\star` on Windows, `~/Library/Application Support/star` on macOS, and `~/.config/star` on Linux. If there is no `settings.json` there, it stops and says "No Star settings found in", the folder, then "Use --from with Star's configuration directory."
+- `--from DIR`: star's configuration folder, the one that holds its `settings.json`. By default textweaver looks in `%APPDATA%\star` on Windows, `~/Library/Application Support/star` on macOS, and `~/.config/star` on Linux. If there is no `settings.json` there, it stops and says "No star settings found in", the folder, then "Use --from with star's configuration directory."
 - `--dry-run`: report without writing anything.
 - `--json`: print the report as JSON.
 
 ### What is imported
 
-- Settings that have a textweaver equivalent, when you changed them from Star's defaults.
+- Settings that have a textweaver equivalent, when you changed them from star's defaults.
 - Library folders that still exist.
 - Window key changes, as `keymap.toml` overrides. The new key is added; the single browse keys stay.
 - For each document: the reading position, bookmarks, notes, and highlights.
 - Recent files and the bookshelf.
-- Each library folder's Star sync file, `.star/progress.json`, converted to `.textweaver/progress.json` and merged with any textweaver one.
-- Star's settings profiles, into `profiles.toml`, one report line each. A profile keeps the settings textweaver keeps in profiles and has an equivalent for: the voice, rate, and volume, the theme, and the highlight. The report line names each setting and its value, such as "Settings profiles: Study: speech.rate 200, display.theme nord", then what was left out, such as Star's line height. Switch to one with **Ctrl+Shift+U** or **Alt+U** ([settings.md](settings.md#settings-profiles)). A textweaver profile of the same name is kept.
+- Each library folder's star sync file, `.star/progress.json`, converted to `.textweaver/progress.json` and merged with any textweaver one.
+- star's settings profiles, into `profiles.toml`, one report line each. A profile keeps the settings textweaver keeps in profiles and has an equivalent for: the voice, rate, and volume, the theme, and the highlight. The report line names each setting and its value, such as "Settings profiles: Study: speech.rate 200, display.theme nord", then what was left out, such as star's line height. Switch to one with **Ctrl+Shift+U** or **Alt+U** ([settings.md](settings.md#settings-profiles)). A textweaver profile of the same name is kept.
 
 ### What is skipped
 
@@ -298,26 +298,26 @@ Each skipped item is listed with the reason. The usual reasons:
 - a document textweaver cannot open;
 - a setting with no textweaver equivalent (listed together);
 - a profile none of whose settings has a textweaver equivalent;
-- a key textweaver cannot read, or a Star shortcut for a command textweaver does not have;
-- Star's saved note searches, because textweaver does not keep those yet. (Star's reading statistics are imported, into `stats.json`.)
+- a key textweaver cannot read, or a star shortcut for a command textweaver does not have;
+- star's saved note searches, because textweaver does not keep those yet. (star's reading statistics are imported, into `stats.json`.)
 
 Running it twice imports nothing new. Where textweaver already has something, textweaver's copy wins: a newer position, a bookmark name already used, a note already there.
 
 ### How positions are mapped
 
-Star and textweaver lay out a document's text differently. For example, Star ran list items together, and textweaver keeps each on its own line. So Star's saved character positions do not point to the same places in textweaver.
+star and textweaver lay out a document's text differently. For example, star ran list items together, and textweaver keeps each on its own line. So star's saved character positions do not point to the same places in textweaver.
 
 textweaver maps each position by words:
 
-1. It finds the word Star's position was on.
-2. It lines up the words of Star's text with the words of textweaver's text, and finds the same word there.
-3. If no words line up, it uses the percentage Star saved.
+1. It finds the word star's position was on.
+2. It lines up the words of star's text with the words of textweaver's text, and finds the same word there.
+3. If no words line up, it uses the percentage star saved.
 
-Star's own cached copy of the text is used when it is still current; the report says for how many documents. Otherwise textweaver's text stands in.
+star's own cached copy of the text is used when it is still current; the report says for how many documents. Otherwise textweaver's text stands in.
 
 ### The report
 
-The report says where Star's files were, how many files were written, then a summary per kind, such as "Reading positions: 12 imported, 1 already present, 2 skipped", then every imported item and every skipped item with its reason.
+The report says where star's files were, how many files were written, then a summary per kind, such as "Reading positions: 12 imported, 1 already present, 2 skipped", then every imported item and every skipped item with its reason.
 
 ## If something goes wrong
 
@@ -326,7 +326,7 @@ The report says where Star's files were, how many files were written, then a sum
 - **The place from another computer is wrong.** Set `[sync] position_policy = "ask"`, and textweaver asks before it goes to another computer's place.
 - **A document read on another computer is not in Continue reading.** It is listed only when the document is on this computer too: opened here before, in a library folder, or among your recent files. Sync must be on for other computers' places.
 - **The library search is slow the first time.** It reads every document once; later searches are fast.
-- **`tw migrate-star` found nothing.** Use `--from` with the folder that holds Star's `settings.json`.
+- **`tw migrate-star` found nothing.** Use `--from` with the folder that holds star's `settings.json`.
 
 ## See also
 
@@ -335,5 +335,5 @@ The report says where Star's files were, how many files were written, then a sum
 - [Settings](settings.md): where settings live, and how to export and import them.
 - [Obsidian vaults](vault.md): importing a vault's documents into the library.
 - [Citations](citations.md): `tw cite`, the reference library that fills in a document's author, DOI, and ISBN when it has none of its own.
-- [ADR-0002: Text model](adr/0002-text-model.md): how positions work, and how Star's are mapped.
+- [ADR-0002: Text model](adr/0002-text-model.md): how positions work, and how star's are mapped.
 - [Documentation index](README.md)

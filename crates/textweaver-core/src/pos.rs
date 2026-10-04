@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// from the start of the canonical text.
 ///
 /// This is the canonical, persisted position type. It is compatible with the
-/// character offsets Star stores (Python `str` indices are code points too).
+/// character offsets star stores (Python `str` indices are code points too).
 /// Byte offsets and UTF-16 display units are derived from it, never persisted.
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,

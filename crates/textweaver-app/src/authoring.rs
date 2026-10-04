@@ -10,7 +10,7 @@
 //! frontend sends it to the terminal as an OSC 52 sequence
 //! ([`osc52`]), which Windows Terminal, iTerm2, kitty, WezTerm, foot,
 //! Alacritty, and xterm (when allowed) pass to the system clipboard, over
-//! SSH too, as Star did. Where the terminal cannot take OSC 52 (the old
+//! SSH too, as star did. Where the terminal cannot take OSC 52 (the old
 //! Windows console, macOS Terminal.app, VTE terminals), the terminal
 //! frontend puts the text on the system clipboard itself with `arboard`
 //! (its `clipboard` feature, Agent W4g), and says so once.

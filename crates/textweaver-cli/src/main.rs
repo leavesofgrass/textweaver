@@ -63,7 +63,7 @@ enum Cmd {
     Marks(cmd::marks::Args),
     /// Check Markdown files for problems a listener would miss: heading levels, list markers, trailing spaces, link references, bare web addresses.
     Lint(cmd::lint::Args),
-    /// Import settings and reading positions from Star.
+    /// Import settings and reading positions from star.
     #[command(name = "migrate-star")]
     MigrateStar(cmd::migrate::Args),
     /// Manage references: add by DOI or ISBN, import, export, format, list.

@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-theme"
-description = "Themes for textweaver: Star's palettes, custom themes, WCAG contrast checks, output for the TUI, GUI, and HTML"
+description = "Themes for textweaver: star's palettes, custom themes, WCAG contrast checks, output for the TUI, GUI, and HTML"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

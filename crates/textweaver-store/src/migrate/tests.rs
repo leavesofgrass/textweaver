@@ -1,5 +1,5 @@
-//! Migration tests against a synthetic Star configuration directory built
-//! here (never a real Star installation).
+//! Migration tests against a synthetic star configuration directory built
+//! here (never a real star installation).
 
 use std::path::{Path, PathBuf};
 
@@ -45,7 +45,7 @@ impl MigrationHost for FakeHost {
 
 const BOOK_MD: &str = "# Title\n\nFirst paragraph has several words.\nIt continues here.\n\n- item one\n- item two\n\nThe end of the story.";
 
-/// Star's `plain_text` for BOOK_MD: lines joined and the list narrated,
+/// star's `plain_text` for BOOK_MD: lines joined and the list narrated,
 /// so its offsets differ from textweaver's.
 const BOOK_STAR: &str = "Title\n\nFirst paragraph has several words. It continues here.\n\nList with 2 items. item one item two\n\nThe end of the story.";
 
@@ -108,7 +108,7 @@ fn fixture() -> Fixture {
     let book_s = book.to_string_lossy().into_owned();
     let missing = root.join("missing.md").to_string_lossy().into_owned();
 
-    // Star's parse cache holds the book's plain_text.
+    // star's parse cache holds the book's plain_text.
     std::fs::write(
         star.join("cache").join("0123456789abcdef_ffffffff_v1.json"),
         json!({
@@ -211,7 +211,7 @@ fn imports_settings_state_library_keys_and_sidecars() {
     let r = run(&f, false);
     let tw = book_tw();
 
-    // Settings: changed values only; Star-only values skipped with reasons.
+    // Settings: changed values only; star-only values skipped with reasons.
     let s: Settings = SettingsStore::new(f.paths.clone()).load().0;
     assert_eq!(s.speech.rate.wpm(), 300);
     assert_eq!(s.display.theme, "nord");
@@ -249,7 +249,7 @@ fn imports_settings_state_library_keys_and_sidecars() {
         Outcome::Skipped
     );
 
-    // Per-document state, mapped through Star's cached text.
+    // Per-document state, mapped through star's cached text.
     let state = StateStore::new(f.paths.state_dir())
         .load(&DocKey::for_path(&f.book))
         .unwrap();
@@ -268,7 +268,7 @@ fn imports_settings_state_library_keys_and_sidecars() {
         CharPos(char_index(&tw, "continues"))
     );
     // The note is placed by its quoted text; the one without an anchor by
-    // its word index ("First" is word 1 of Star's text).
+    // its word index ("First" is word 1 of star's text).
     let ending = state.notes.iter().find(|n| n.note == "Ending").unwrap();
     let start = char_index(&tw, "The end");
     assert_eq!(
@@ -310,13 +310,13 @@ fn imports_settings_state_library_keys_and_sidecars() {
         e.added,
         crate::time::parse_timestamp("2026-06-01T08:00:00").unwrap()
     );
-    // Star's reading statistics reach stats.json.
+    // star's reading statistics reach stats.json.
     let stats = crate::ReadingStats::load(&f.paths).unwrap();
     let (_, d) = stats.most_read(1)[0];
     assert_eq!(d.seconds, 12.5);
     assert_eq!(d.title, "The Book");
 
-    // The sidecar is converted next to Star's, which is left alone.
+    // The sidecar is converted next to star's, which is left alone.
     let side = sync::read_sidecar(&f.lib);
     let entry = sync::ProgressEntry::from_value(side.get("sub/b.md").unwrap()).unwrap();
     assert_eq!(
@@ -355,9 +355,9 @@ fn a_second_run_imports_nothing_new() {
     assert!(again.render().contains("Nothing new to write."));
 }
 
-/// State format 2 (the sync wave): a Star import loads unchanged, keeps
-/// Star's note ids, and gives a bookmark the same id on every computer
-/// that imports the same Star data, so the two copies merge as one.
+/// State format 2 (the sync wave): a star import loads unchanged, keeps
+/// star's note ids, and gives a bookmark the same id on every computer
+/// that imports the same star data, so the two copies merge as one.
 #[test]
 fn star_imports_load_unchanged_with_the_same_bookmark_ids_everywhere() {
     let laptop = fixture();
@@ -375,7 +375,7 @@ fn star_imports_load_unchanged_with_the_same_bookmark_ids_everywhere() {
     let mark = a.bookmark("mark1").unwrap();
     assert!(mark.id.starts_with("bm-"), "{}", mark.id);
     assert_eq!(b.bookmark("mark1").unwrap().id, mark.id);
-    assert!(a.note("abc12345").is_some(), "Star's own id is kept");
+    assert!(a.note("abc12345").is_some(), "star's own id is kept");
     // Loading again gives the same state, and merging the two computers'
     // imports changes nothing.
     assert_eq!(load(&laptop), a);
@@ -409,7 +409,7 @@ fn newer_textweaver_state_wins() {
     assert_eq!(back.notes.len(), 2, "notes still arrive");
 }
 
-/// Star's settings profiles (Wave 5, W5y): one report line per profile, the
+/// star's settings profiles (Wave 5, W5y): one report line per profile, the
 /// values with a textweaver equivalent kept, and textweaver's own profile
 /// of the same name kept.
 #[test]
@@ -530,5 +530,5 @@ fn missing_star_settings_is_an_error() {
         &Paths::under(&dir.path().join("tw")),
         &FakeHost,
     );
-    assert!(err.is_err(), "a JSON array is not Star's settings");
+    assert!(err.is_err(), "a JSON array is not star's settings");
 }

@@ -1,7 +1,7 @@
 # Galaxy: Purple-accented dark theme; the default.
 #
-# Ported from Star's `galaxy` palette (star/themes.py).
-# Error color: the scheme's red (#ff7b93); Star had no error color.
+# Ported from star's `galaxy` palette (star/themes.py).
+# Error color: the scheme's red (#ff7b93); star had no error color.
 # Changed to meet the contrast floor (smallest lightness change that passes):
 #   colors.dim_text: #7d7d7d -> #858585 (4.0 to 1 -> 4.5 to 1 against #1e1e1e, needs 4.5 to 1)
 #
@@ -14,7 +14,7 @@ name = "galaxy"
 display_name = "Galaxy"
 kind = "dark"
 description = "Purple-accented dark theme; the default."
-author = "Star palettes (star/themes.py); ported to textweaver"
+author = "star palettes (star/themes.py); ported to textweaver"
 origin = "star"
 counterpart = "galaxy-light"
 

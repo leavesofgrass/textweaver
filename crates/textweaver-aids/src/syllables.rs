@@ -1,9 +1,9 @@
 //! Syllable splitting for display: `read·a·bil·i·ty`.
 //!
-//! Star split words with Pyphen (Hunspell's en-US hyphenation dictionary,
+//! star split words with Pyphen (Hunspell's en-US hyphenation dictionary,
 //! `star/syllables.py`) and showed the result only on screen; speech and the
 //! word map used the untouched text. textweaver does the same, and adds what
-//! Star lacked: an [`OffsetMap`] from the display text back to canonical
+//! star lacked: an [`OffsetMap`] from the display text back to canonical
 //! positions (ADR-0005), so a highlight on the display text lands on the
 //! right chars and a click or caret in it maps back exactly.
 //!
@@ -29,14 +29,14 @@ use textweaver_text::Document;
 
 use crate::util::{SkipSet, code_marker_ranges, text_skip_ranges, word_segments};
 
-/// The middle dot Star used between syllables.
+/// The middle dot star used between syllables.
 pub const MIDDOT: &str = "\u{b7}";
 
 /// Options for [`split_text`], [`split_range`], and [`split_word`].
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SyllableOptions {
-    /// Shown between syllables. Star's default is a middle dot; a hyphen or
+    /// Shown between syllables. star's default is a middle dot; a hyphen or
     /// a thin space also work.
     pub separator: String,
     /// Fewest letters before the first break (Pyphen's default, 2).

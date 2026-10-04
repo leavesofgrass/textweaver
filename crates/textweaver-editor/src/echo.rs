@@ -3,8 +3,8 @@
 //! [`for_edit`] turns one edit into echo events: the typed character, the
 //! word a space or punctuation mark completes, and deleted text.
 //! [`for_move`] announces the new line when the cursor moves to another
-//! line, saying "blank" for an empty one (Star's Speech Cursor wording).
-//! Star had no typing echo at all.
+//! line, saying "blank" for an empty one (star's Speech Cursor wording).
+//! star had no typing echo at all.
 
 use ropey::Rope;
 use serde::{Deserialize, Serialize};

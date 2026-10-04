@@ -94,7 +94,7 @@ nav = [
       { "Third-party data" = "dev/third-party-data.md" },
       { "JSON-RPC" = "json-rpc.md" },
       { "Roadmap" = "roadmap.md" },
-      { "Star features not yet planned" = "star-gaps.md" },
+      { "star features not yet planned" = "star-gaps.md" },
       { "Changelog (on GitHub)" = "https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md" },
     ] },
     # Kept for contributors, out of the user sections (every page must be

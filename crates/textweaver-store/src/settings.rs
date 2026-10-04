@@ -1,7 +1,7 @@
 //! `settings.toml` and `keymap.toml`.
 //!
-//! The settings surface mirrors Star's reading-relevant keys
-//! (the Star parity reference, "Settings surface") grouped into TOML tables. Every
+//! The settings surface mirrors star's reading-relevant keys
+//! (the star parity reference, "Settings surface") grouped into TOML tables. Every
 //! table keeps unknown keys in `extra`, so a newer or older textweaver never
 //! loses a user's settings.
 //!
@@ -31,16 +31,16 @@ pub const MAX_PAUSE_MS: u32 = 3000;
 pub struct SpeechSettings {
     /// Backend id, or `"auto"`.
     pub backend: String,
-    /// Speaking rate (Star default 265 wpm).
+    /// Speaking rate (star default 265 wpm).
     pub rate: Rate,
     /// Volume.
     pub volume: Volume,
-    /// Pitch (Star had none).
+    /// Pitch (star had none).
     pub pitch: Pitch,
     /// Voice id; `None` resolves automatically.
     pub voice: Option<String>,
     /// Substring used to pick a default voice when `voice` is unset.
-    /// Defaults to `"eloquence"` (ETI-Eloquence), Star's default
+    /// Defaults to `"eloquence"` (ETI-Eloquence), star's default
     /// `tts_prefer_voice`; `None` means no preference and is stored as
     /// `prefer_voice = ""` so it survives a reload.
     #[serde(with = "empty_is_none")]
@@ -65,7 +65,7 @@ pub struct SpeechSettings {
     /// takes the engine's first voice for it, and with none the current
     /// voice stays (Wave 4, W4d).
     pub voices_by_language: BTreeMap<String, String>,
-    /// Latency offset for audio-clock word events, in ms (Star 120).
+    /// Latency offset for audio-clock word events, in ms (star 120).
     pub latency_offset_ms: u32,
     /// Silence after a heading, in ms at the default rate (shorter at
     /// faster rates); 0 turns it off. At most 3000.
@@ -343,7 +343,7 @@ mod empty_is_none {
 /// Settings that are stored but deliberately not read yet, as
 /// `(section.field, reason)`. A test (`tests/it/settings_used.rs`) fails when a
 /// setting is read nowhere and is not listed here, and when a listed one is
-/// read after all (Star's lesson: a stored setting must work).
+/// read after all (star's lesson: a stored setting must work).
 pub const RESERVED_SETTINGS: &[(&str, &str)] = &[];
 
 /// Settings that were removed, as `(section.key, reason)`. Loading drops
@@ -357,7 +357,7 @@ pub const REMOVED_SETTINGS: &[(&str, &str)] = &[(
 /// Settings whose key was renamed, as dotted paths: the old key, then the
 /// new one. A `settings.toml` or an import with the old key keeps its
 /// value under the new key, so a rename never loses what a user set
-/// (Star lost such values: its loader dropped a key missing from its
+/// (star lost such values: its loader dropped a key missing from its
 /// defaults before its migration saw it). [`rename_legacy_settings_with`]
 /// is tested with a table of its own.
 ///
@@ -493,7 +493,7 @@ pub enum TableMode {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FootnoteMode {
-    /// Where referenced (a no-op in Star; implemented here).
+    /// Where referenced (a no-op in star; implemented here).
     #[default]
     Inline,
     /// At the end of the section.
@@ -593,7 +593,7 @@ impl Default for CommunityLexiconSettings {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SubtitleFormat {
-    /// SubRip (`.srt`), Star's default.
+    /// SubRip (`.srt`), star's default.
     #[default]
     Srt,
     /// WebVTT (`.vtt`).
@@ -627,7 +627,7 @@ pub enum SubtitleKaraoke {
     Lines,
 }
 
-/// `[export]`: audio export (`tw export-audio`), Star's `subtitle_format`,
+/// `[export]`: audio export (`tw export-audio`), star's `subtitle_format`,
 /// `subtitle_word_level`, and `export_subtitles_with_audio`.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -636,7 +636,7 @@ pub struct ExportSettings {
     pub subtitle_format: SubtitleFormat,
     /// One subtitle cue per word instead of caption lines.
     pub subtitle_word_level: bool,
-    /// Always write subtitles beside exported audio (Star's
+    /// Always write subtitles beside exported audio (star's
     /// `export_subtitles_with_audio`), named like the audio file with the
     /// subtitle format's extension.
     pub subtitles_with_audio: bool,
@@ -702,7 +702,7 @@ pub struct ReadingSettings {
     pub math_engine: MathEngine,
     /// How math looks in the reading view: its source (`source`, the
     /// default: `$x^2$`), or Unicode (`unicode`: `x²`, `√2`, `1⁄2`), as
-    /// Star showed it. Speech and edit mode always use the source.
+    /// star showed it. Speech and edit mode always use the source.
     pub math_display: MathDisplay,
     /// How tracked changes in Word, OpenDocument, and RTF files are read
     /// (W4c2): `auto` says them in place at high verbosity and reads the
@@ -823,7 +823,7 @@ pub struct DisplaySettings {
     /// Theme name (Galaxy by default; see `docs/themes.md`).
     pub theme: String,
     /// Follow the system's light, dark, or high-contrast setting at startup
-    /// (Star's `follow_os_theme`), unless a theme was chosen explicitly.
+    /// (star's `follow_os_theme`), unless a theme was chosen explicitly.
     pub follow_os_theme: bool,
     /// Set when the user picked a theme; stops following the system.
     pub theme_explicit: bool,
@@ -871,7 +871,7 @@ impl Default for DisplaySettings {
 pub struct EditingSettings {
     /// Write recovery snapshots and offer them at startup.
     pub autosave_recovery: bool,
-    /// Seconds between snapshots while dirty (Star 20).
+    /// Seconds between snapshots while dirty (star 20).
     pub autosave_interval_secs: u32,
     /// Speak each typed character.
     pub echo_characters: bool,
@@ -1211,7 +1211,7 @@ pub struct ReadingAidsSettings {
 #[serde(default)]
 pub struct LexiconSettings {
     /// Your own glossary, looked up before the dictionary: a JSON file in
-    /// Star's custom dictionary format, or a text file of `term:
+    /// star's custom dictionary format, or a text file of `term:
     /// definition` lines. Unset uses `glossary.txt` or `glossary.json` in
     /// the configuration folder when there is one.
     pub glossary: Option<PathBuf>,
@@ -1577,7 +1577,7 @@ impl PositionPolicy {
         }
     }
 
-    /// The policy for a library sidecar's policy (Star's names).
+    /// The policy for a library sidecar's policy (star's names).
     pub fn from_conflict_policy(p: ConflictPolicy) -> Self {
         match p {
             ConflictPolicy::Newest => PositionPolicy::Newest,
@@ -1928,8 +1928,8 @@ impl Settings {
     }
 
     /// Clamps values to their supported ranges. Returns a message for each
-    /// value changed. Star validated nothing, so a bad value failed later
-    /// (the Star parity reference Part 3 §7 items 4 and 7).
+    /// value changed. star validated nothing, so a bad value failed later
+    /// (the star parity reference Part 3 §7 items 4 and 7).
     pub fn validate(&mut self) -> Vec<String> {
         self.fix_ranges()
             .into_iter()
@@ -2105,7 +2105,7 @@ impl Settings {
 
     /// The settings as TOML, keeping only values that differ from the
     /// defaults, plus every unknown key. A default that changes in a later
-    /// release therefore reaches users who never changed it (Star wrote every
+    /// release therefore reaches users who never changed it (star wrote every
     /// default and needed migrations to fix old ones, Part 3 §7 item 2).
     pub fn to_minimal_toml(&self) -> Result<String, toml::ser::Error> {
         let full = toml::Table::try_from(self)?;
@@ -2233,7 +2233,7 @@ const SETTINGS_HEADER: &str = "\
 /// Loads and saves `settings.toml` and `keymap.toml`.
 ///
 /// Nothing is written unless the caller saves: textweaver writes settings
-/// only on an explicit change (Star rewrote the whole file on every `set`,
+/// only on an explicit change (star rewrote the whole file on every `set`,
 /// Part 3 §7 item 1).
 #[derive(Clone, Debug)]
 pub struct SettingsStore {
@@ -2253,7 +2253,7 @@ impl SettingsStore {
 
     /// Loads settings. A missing file gives defaults. A corrupt file is
     /// copied aside and defaults are returned with a message for the user
-    /// (Star's behavior, kept). Invalid individual values are replaced by
+    /// (star's behavior, kept). Invalid individual values are replaced by
     /// their defaults and reported in the message too. Never panics.
     pub fn load(&self) -> (Settings, Option<String>) {
         let loaded = self.load_detailed();
@@ -2454,7 +2454,7 @@ mod tests {
     }
 
     /// Wave 2 additions for the app (Agent D3): the community lexicon and
-    /// audio export options, with Star's defaults, read leniently, and
+    /// audio export options, with star's defaults, read leniently, and
     /// stored only when changed.
     #[test]
     fn lexicon_and_export_settings_default_round_trip_and_stay_minimal() {
@@ -2749,7 +2749,7 @@ wrap_navigation = true
         assert_eq!(s.editing.autosave_interval_secs, 20);
     }
 
-    /// Star's `tts_prefer_voice` default is `"eloquence"` (ETI-Eloquence).
+    /// star's `tts_prefer_voice` default is `"eloquence"` (ETI-Eloquence).
     #[test]
     fn prefer_voice_defaults_to_eloquence_like_star() {
         let s = Settings::default();
@@ -2771,9 +2771,9 @@ wrap_navigation = true
         assert_eq!(store.load().0.speech.prefer_voice.as_deref(), Some("david"));
     }
 
-    // ---- tests/test_settings.py, ported (the Star parity reference Part 3 §1.3) ----
+    // ---- tests/test_settings.py, ported (the star parity reference Part 3 §1.3) ----
 
-    /// Star test 1, `test_save_writes_valid_json`
+    /// star test 1, `test_save_writes_valid_json`
     #[test]
     fn star_01_save_writes_valid_toml() {
         let (_d, store) = store();
@@ -2785,7 +2785,7 @@ wrap_navigation = true
         assert_eq!(table["display"]["theme"].as_str(), Some("contrast"));
     }
 
-    /// Star test 2, `test_save_leaves_no_temp_file_behind`
+    /// star test 2, `test_save_leaves_no_temp_file_behind`
     #[test]
     fn star_02_save_leaves_no_temp_file_behind() {
         let (_d, store) = store();
@@ -2793,7 +2793,7 @@ wrap_navigation = true
         assert_eq!(config_files(&store), vec!["settings.toml".to_owned()]);
     }
 
-    /// Star test 3, `test_save_is_atomic_never_truncates_existing`
+    /// star test 3, `test_save_is_atomic_never_truncates_existing`
     #[test]
     fn star_03_save_is_atomic_never_truncates_existing() {
         let (_d, store) = store();
@@ -2808,7 +2808,7 @@ wrap_navigation = true
         assert_eq!(config_files(&store), vec!["settings.toml".to_owned()]);
     }
 
-    /// Star test 4, `test_save_never_raises_on_unwritable_target`: the parent path is a
+    /// star test 4, `test_save_never_raises_on_unwritable_target`: the parent path is a
     /// regular file. textweaver returns the error instead of swallowing it,
     /// but never panics, and the target does not exist.
     #[test]
@@ -2821,7 +2821,7 @@ wrap_navigation = true
         assert!(!store.paths().settings_file().exists());
     }
 
-    /// Star test 5, `test_load_reads_preexisting_file`
+    /// star test 5, `test_load_reads_preexisting_file`
     #[test]
     fn star_05_load_reads_preexisting_file() {
         let (_d, store) = store();
@@ -2836,8 +2836,8 @@ wrap_navigation = true
         assert_eq!(s.speech.volume, Volume::default());
     }
 
-    /// Star test 6, `test_load_merges_nested_dict_with_defaults`. Deliberate change:
-    /// Star merged `speed_presets` one level deep with the defaults, so a
+    /// star test 6, `test_load_merges_nested_dict_with_defaults`. Deliberate change:
+    /// star merged `speed_presets` one level deep with the defaults, so a
     /// default preset could never be removed (Part 3 §7 item 6). A stored
     /// table replaces the default table; other settings keep their defaults.
     #[test]
@@ -2850,7 +2850,7 @@ wrap_navigation = true
         assert_eq!(s.speech.rate.wpm(), 265);
     }
 
-    /// Star test 7, `test_load_missing_file_uses_defaults`
+    /// star test 7, `test_load_missing_file_uses_defaults`
     #[test]
     fn star_07_load_missing_file_uses_defaults() {
         let (_d, store) = store();
@@ -2859,7 +2859,7 @@ wrap_navigation = true
         assert!(err.is_none());
     }
 
-    /// Star test 8, `test_load_corrupt_file_falls_back_to_defaults`
+    /// star test 8, `test_load_corrupt_file_falls_back_to_defaults`
     #[test]
     fn star_08_load_corrupt_file_falls_back_to_defaults() {
         let (_d, store) = store();
@@ -2867,7 +2867,7 @@ wrap_navigation = true
         assert_eq!(store.load().0.display.theme, "galaxy");
     }
 
-    /// Star test 9, `test_save_load_round_trip`
+    /// star test 9, `test_save_load_round_trip`
     #[test]
     fn star_09_save_load_round_trip() {
         let (_d, store) = store();
@@ -2880,7 +2880,7 @@ wrap_navigation = true
         assert_eq!(fresh.library.folders, s.library.folders);
     }
 
-    /// Star test 10, `test_corrupt_settings_backed_up_and_reported`
+    /// star test 10, `test_corrupt_settings_backed_up_and_reported`
     #[test]
     fn star_10_corrupt_settings_backed_up_and_reported() {
         let (_d, store) = store();
@@ -2900,7 +2900,7 @@ wrap_navigation = true
         assert!(err.contains(&backups[0]));
     }
 
-    /// Star test 11, `test_clean_settings_have_no_load_error`
+    /// star test 11, `test_clean_settings_have_no_load_error`
     #[test]
     fn star_11_clean_settings_have_no_load_error() {
         let (_d, store) = store();
@@ -2910,11 +2910,11 @@ wrap_navigation = true
         assert!(loaded.message().is_none());
     }
 
-    // 12. `test_every_default_key_documented` checks Star's
+    // 12. `test_every_default_key_documented` checks star's
     // docs/configuration.md. Here every settings field carries rustdoc
     // (`missing_docs` is denied in CI), the equivalent guarantee.
 
-    // ---- Fixes for Star's settings bugs (Part 3 §7) ----
+    // ---- Fixes for star's settings bugs (Part 3 §7) ----
 
     #[test]
     fn one_bad_value_does_not_reset_the_rest() {

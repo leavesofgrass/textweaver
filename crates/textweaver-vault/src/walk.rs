@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::VaultError;
 
 /// True for folders Obsidian keeps for itself: `.obsidian` (settings) and
-/// `.trash` (deleted notes), compared without regard to case (Star's
+/// `.trash` (deleted notes), compared without regard to case (star's
 /// `_skip`).
 fn skipped_dir(name: &str) -> bool {
     let lower = name.to_lowercase();

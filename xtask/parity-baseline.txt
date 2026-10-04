@@ -1,4 +1,4 @@
-# Star parity: explained deltas per fixture and rule (cargo xtask parity).
+# star parity: explained deltas per fixture and rule (cargo xtask parity).
 # Written by `cargo xtask parity --update-baseline`; a change fails the task.
 sample.txt abbreviation 2
 sample.txt uax29-join 8

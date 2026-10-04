@@ -198,5 +198,5 @@ The split is worked out from English spelling rules, not a dictionary, so a few 
 - [Themes](themes.md): the colors the aids use, all checked for contrast.
 - [Settings](settings.md#reading_aids): every `[reading_aids]` setting.
 - [Reading and moving around](reading.md): reading aloud and moving through a document.
-- [ADR-0022: Reading aids](adr/0022-reading-aids.md): the design, and the Star faults each aid fixes.
+- [ADR-0022: Reading aids](adr/0022-reading-aids.md): the design, and the star faults each aid fixes.
 - [Documentation index](README.md)

@@ -1,6 +1,6 @@
 //! What an editor needs to insert citations by keyboard and hear them.
 //!
-//! The app's "Insert citation" flow (Star: Ctrl+Alt+R) is:
+//! The app's "Insert citation" flow (star: Ctrl+Alt+R) is:
 //!
 //! 1. Build the picker with [`picker_entries`] (folder library first, then
 //!    the user library). Each entry's [`PickerEntry::label`] is one line

@@ -1,10 +1,10 @@
 //! RIS import and export.
 //!
-//! Star wrote the CSL type upper-cased as the RIS type (`TY  - ARTICLE`),
+//! star wrote the CSL type upper-cased as the RIS type (`TY  - ARTICLE`),
 //! which no reference manager recognizes; this module maps types both ways
 //! (`JOUR`, `BOOK`, `CHAP`, ...). It also reads the full date (`DA`), page
 //! ranges (`SP`/`EP`), editors, ISBN and ISSN (`SN`), keywords, and
-//! abstracts, which Star dropped, and joins wrapped continuation lines.
+//! abstracts, which star dropped, and joins wrapped continuation lines.
 
 use crate::reference::{CslDate, Name, Reference, non_empty};
 
@@ -353,7 +353,7 @@ mod tests {
 
     #[test]
     fn star_basic_record_parses() {
-        // Star's tests/test_citations.py::test_parse_ris_basic.
+        // star's tests/test_citations.py::test_parse_ris_basic.
         let refs = parse(
             "TY  - JOUR\nTI  - A Title\nAU  - Doe, Jane\nAU  - Roe, Rick\nPY  - 2019/01/01\nDO  - 10.2/y\nER  - \n",
         );

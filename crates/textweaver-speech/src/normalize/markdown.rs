@@ -2,7 +2,7 @@
 //! `star/ttstext/markdown.py` (`_strip_markdown_for_tts`, Part 2 section
 //! 5.A) and `star/ttstext/tables.py` (`_tables_to_narration`, 5.A.1).
 //!
-//! In Star these ran at load time over the whole document. In textweaver the
+//! In star these ran at load time over the whole document. In textweaver the
 //! Markdown loader (Agent A) builds canonical text from parser events, so
 //! this transform is for Markdown syntax that survives into plain text. It
 //! is off by default ([`NormalizeConfig::markdown`](super::NormalizeConfig)).
@@ -168,7 +168,7 @@ impl Transform for MarkdownResidue {
     }
 }
 
-/// Star `_strip_markdown_for_tts(md, skip_code, table_mode)`.
+/// star `_strip_markdown_for_tts(md, skip_code, table_mode)`.
 pub fn strip_markdown(md: &str, skip_code: bool, table_mode: TableMode) -> String {
     MarkdownResidue::new(skip_code, table_mode).apply(md).0
 }
@@ -296,7 +296,7 @@ impl TableWriter<'_> {
     }
 }
 
-/// Star `_tables_to_narration(text, mode)`: Markdown pipe tables become
+/// star `_tables_to_narration(text, mode)`: Markdown pipe tables become
 /// spoken sentences, with the cell text mapped to its source.
 pub fn tables_to_narration(text: &str, mode: TableMode) -> (String, OffsetMap) {
     let lines = split_lines(text);
@@ -340,7 +340,7 @@ pub fn tables_to_narration(text: &str, mode: TableMode) -> (String, OffsetMap) {
             cursor: line.char_start,
         };
         narrate_block(&mut w, &(i..j).map(row).collect::<Vec<_>>(), mode);
-        // Star's block ends with an empty line.
+        // star's block ends with an empty line.
         w.insert("\n");
         w.skip_to(block_end);
         if j < lines.len() {

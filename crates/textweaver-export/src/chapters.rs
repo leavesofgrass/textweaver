@@ -1,11 +1,11 @@
 //! Chapters from a document's structure, placed on the audio's timeline,
 //! and the ffmpeg metadata that carries them into an M4B (or MP3).
 //!
-//! Star (`star/audiobook.py`) made a chapter of every Markdown heading and
+//! star (`star/audiobook.py`) made a chapter of every Markdown heading and
 //! titled any text before the first heading after the document. Here the
 //! loaders' markers say where chapters start: every `SectionBreak` (an EPUB
 //! spine item, a DOCX section) and every `Heading` up to
-//! [`ChapterOptions::max_heading_level`] (default 6, Star's "every
+//! [`ChapterOptions::max_heading_level`] (default 6, star's "every
 //! heading"). Starts at the same place merge (a section that opens with a
 //! heading is one chapter, titled by the heading). A chapter's time is the
 //! start of the first sentence that reaches its position.
@@ -102,7 +102,7 @@ impl ChapterNames {
 }
 
 /// Places chapters on the timeline. Text before the first chapter start
-/// becomes a leading chapter titled after the document (Star's rule);
+/// becomes a leading chapter titled after the document (star's rule);
 /// untitled chapters are numbered; chapters without audio are dropped.
 /// Untitled names are English; see [`place_named`].
 pub fn place(
@@ -209,7 +209,7 @@ pub fn escape_metadata(value: &str) -> String {
 }
 
 /// An ffmpeg `;FFMETADATA1` file with the title, author, and one
-/// `[CHAPTER]` per chapter (times in ms), as Star's
+/// `[CHAPTER]` per chapter (times in ms), as star's
 /// `build_chapters_metadata` wrote.
 pub fn ffmetadata(title: Option<&str>, author: Option<&str>, chapters: &[Chapter]) -> String {
     let mut lines = vec![";FFMETADATA1".to_owned()];

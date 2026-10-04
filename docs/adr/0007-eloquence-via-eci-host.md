@@ -6,7 +6,7 @@
 
 ## Context
 
-ETI-Eloquence is the preferred voice of textweaver's primary user and of many screen-reader users (Star defaulted `tts_prefer_voice` to "eloquence"). It is proprietary and reaches users through several products: Code Factory's "Eloquence for Windows" (SAPI5 plus its ECI library), Voxin on Linux, and bundles in screen readers and reading software. The routes were measured on 2026-09-25:
+ETI-Eloquence is the preferred voice of textweaver's primary user and of many screen-reader users (star defaulted `tts_prefer_voice` to "eloquence"). It is proprietary and reaches users through several products: Code Factory's "Eloquence for Windows" (SAPI5 plus its ECI library), Voxin on Linux, and bundles in screen readers and reading software. The routes were measured on 2026-09-25:
 
 - **SAPI5.** Code Factory registers 64-bit and 32-bit SAPI5 voices ("Eloquence US English" and nine others). They speak, but through SAPI the engine reports one word-boundary event per sentence, at the wrong time, and no bookmark events. The default Microsoft voice reports every word. SAPI is therefore usable for Eloquence speech but not for word highlighting.
 - **The `tts` crate on Windows** uses WinRT/OneCore voices; Eloquence is not among them.
@@ -26,7 +26,7 @@ vdaddons\openevv\synthDrivers\_openevv\lib_64\eci.dll`); Code Factory's `eci.
 - **IBM's Embedded ViaVoice 4.3 SDK** (`evvWXP.exe`, still served from IBM's public download host) is not a free engine. Its readme and guides, read on 2026-09-25, mark it "Licensed Materials - Property of IBM" under IBM's customer and program license agreements, and describe the Windows build as "prototyping only; not supported for an end-user application". textweaver neither bundles it nor downloads it for users.
 - **No automatic installation of an unlicensed engine.** Fetching OpenEVV (or IBM's SDK) on the user's behalf at install or run time would make textweaver the means of distributing data no one can license, just later than bundling would; textweaver does not do it. It detects what the user installed and points to the licensed routes: Apple's built-in Eloquence voices on macOS, Voxin on Linux, and Code Factory on Windows.
 - **Community dictionaries.** The backend loads the community IBMTTS pronunciation dictionaries (github.com/eigencrow/IBMTTSDictionaries, CC0 1.0; main, root, and abbreviation dictionaries for US English and German), vendored at a pinned monthly release in `third_party/ibmtts-dictionaries/`, through ECI's dictionary calls (`eciNewDict`, `eciLoadDict` per volume, `eciSetDict`). On by default; the user can turn them off or point to their own directory. Hyphens reach the engine unchanged so hyphenated entries match.
-- Selection: on a machine with Eloquence installed, the `eci` backend is the highest-priority automatic choice, and `prefer_voice` defaults to "eloquence" (Star's default).
+- Selection: on a machine with Eloquence installed, the `eci` backend is the highest-priority automatic choice, and `prefer_voice` defaults to "eloquence" (star's default).
 - macOS ships Eloquence as system voices; those arrive through the native AVSpeech backend, planned for later. A SAPI5 backend (other SAPI voices, and Eloquence without the host) is also planned for later.
 
 ## Consequences

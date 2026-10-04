@@ -1000,7 +1000,7 @@ impl Tui {
         let cursor = prompt.or(cursor);
         let cursor = self.draw_list(f, areas.body, &theme).or(cursor);
         // `[accessibility] cursor = "status"`: the cursor waits at the start
-        // of the status line (as in Star), except at a prompt's caret, where
+        // of the status line (as in star), except at a prompt's caret, where
         // typing needs it.
         let cursor = if prompt.is_none() && self.app.cursor_placement() == CursorPlacement::Status {
             Some(Position::new(areas.status.x, areas.status.y))

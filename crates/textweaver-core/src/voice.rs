@@ -19,7 +19,7 @@ impl Rate {
     pub const MIN_WPM: u16 = 50;
     /// Fastest supported rate.
     pub const MAX_WPM: u16 = 900;
-    /// Star's default rate.
+    /// star's default rate.
     pub const DEFAULT_WPM: u16 = 265;
 
     /// The rate in words per minute.

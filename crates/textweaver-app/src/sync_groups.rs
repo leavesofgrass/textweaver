@@ -325,7 +325,7 @@ fn split_entry(line: &str) -> Option<(String, String)> {
 }
 
 /// A glossary file's entries by normalized term: `{"term", "senses"}`,
-/// each sense a definition, or Star's JSON object for a JSON glossary.
+/// each sense a definition, or star's JSON object for a JSON glossary.
 /// `None` when a JSON glossary is not an object.
 pub fn glossary_entries(text: &str, json: bool) -> Option<BTreeMap<String, Value>> {
     let mut out: BTreeMap<String, (String, Vec<Value>)> = BTreeMap::new();

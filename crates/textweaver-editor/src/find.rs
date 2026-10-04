@@ -1,4 +1,4 @@
-//! Find and replace in edit mode (Star's `gui/mixin_find.py`, Part 3 §4.4),
+//! Find and replace in edit mode (star's `gui/mixin_find.py`, Part 3 §4.4),
 //! with its offset bugs fixed (§7 item 35):
 //!
 //! - matches never overlap, so Replace All cannot garble self-overlapping
@@ -6,7 +6,7 @@
 //! - case-insensitive matching folds each character separately and maps
 //!   matches back to char offsets, so characters whose lowercase form has a
 //!   different length (`İ`) do not shift later matches;
-//! - positions are char offsets throughout (Star mixed code points with
+//! - positions are char offsets throughout (star mixed code points with
 //!   Qt's UTF-16 positions);
 //! - "replace one" replaces the match at the caret instead of skipping it.
 
@@ -22,7 +22,7 @@ use crate::{Editor, Selection};
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct FindOptions {
-    /// Match case exactly (Star: always case-insensitive).
+    /// Match case exactly (star: always case-insensitive).
     pub case_sensitive: bool,
     /// Match whole words only.
     pub whole_word: bool,

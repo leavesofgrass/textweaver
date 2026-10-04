@@ -150,7 +150,7 @@ pub(crate) fn timed_sentence(
             .map(|w| w.source.map_or(0, |s| rel(s.start)))
             .collect();
         // Each word's caption runs to the next word's start, so punctuation
-        // stays with its word ("today." rather than "today"), as in Star's
+        // stays with its word ("today." rather than "today"), as in star's
         // whitespace tokens; the first word also takes any leading
         // punctuation.
         let chars: Vec<char> = text.chars().collect();

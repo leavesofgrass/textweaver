@@ -226,7 +226,7 @@ With `--timestamps`, each piece of speech starts on its own line with the time i
 [00:08] There are two kinds of division.
 ```
 
-From one hour on, the time has hours too, for example `[01:02:03]`. This is the same layout Star used. It helps you find a place in a long recording.
+From one hour on, the time has hours too, for example `[01:02:03]`. This is the same layout star used. It helps you find a place in a long recording.
 
 Do not use `--timestamps` together with `--commands` for now. The spoken commands join all the lines into one, so the times end up in the middle of the text.
 

@@ -508,7 +508,7 @@ fn statistics_from_two_computers_sum() {
 }
 
 /// With sync on, a library folder's old progress file (written by an older
-/// textweaver, or converted from Star's) is still read, and places go to
+/// textweaver, or converted from star's) is still read, and places go to
 /// the sync folder instead of being written there.
 #[test]
 fn the_old_sidecar_is_still_honored() {

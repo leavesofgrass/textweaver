@@ -6,7 +6,7 @@
 
 ## Context
 
-Star had a summary command: its `summarize.py` ran sumy's LexRank with an English stemmer and stop words, and printed the top sentences. textweaver had none. Research found no maintained LexRank crate for Rust and judged the method small enough to write in-house (kept outside the repository, "Summaries"). The standing decision is that no machine-learning model is downloaded without approval, so the first part of "offline intelligence" had to work with no model at all.
+star had a summary command: its `summarize.py` ran sumy's LexRank with an English stemmer and stop words, and printed the top sentences. textweaver had none. Research found no maintained LexRank crate for Rust and judged the method small enough to write in-house (kept outside the repository, "Summaries"). The standing decision is that no machine-learning model is downloaded without approval, so the first part of "offline intelligence" had to work with no model at all.
 
 The same round of work carried two small items that touch the reading aids:
 

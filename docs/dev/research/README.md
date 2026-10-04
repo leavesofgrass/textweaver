@@ -26,7 +26,7 @@ A report listed here that is not yet in the folder is still being written; it la
 ## See also
 
 - [Roadmap](../../roadmap.md): the public summary of what comes next.
-- [Star features not yet planned](../../star-gaps.md): the feature comparison with Star.
+- [star features not yet planned](../../star-gaps.md): the feature comparison with star.
 - [Testing](../testing.md): the benchmarks and their history.
 - [Architecture](../architecture.md): the crates, threads, and the path from a file to a spoken, highlighted word.
 - [Documentation index](../../README.md)

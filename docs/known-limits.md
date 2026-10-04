@@ -47,5 +47,5 @@ textweaver does not claim to improve reading speed, comprehension, or comfort fo
 ## See also
 
 - [Roadmap](roadmap.md)
-- [Star features not yet planned](star-gaps.md)
+- [star features not yet planned](star-gaps.md)
 - [Troubleshooting](troubleshooting.md)

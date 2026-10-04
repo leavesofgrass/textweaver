@@ -1,16 +1,16 @@
 //! Pure navigation history (Paperback's `reader_core/history.rs` shape).
 //!
 //! The app records the **departure** point of every jump (one consistent
-//! rule, unlike Star's TUI and GUI). The rules, each fixing a Star bug
-//! (the Star parity reference, Part 1 §4.4):
+//! rule, unlike star's TUI and GUI). The rules, each fixing a star bug
+//! (the star parity reference, Part 1 §4.4):
 //!
 //! - Recording while browsing back discards the forward entries.
 //! - Going back from the live position remembers that position, so going
-//!   forward again returns to it (Star lost it).
+//!   forward again returns to it (star lost it).
 //! - No position is ever stored twice: recording a position already in the
-//!   history moves it to the newest place (Star pushed duplicates for
+//!   history moves it to the newest place (star pushed duplicates for
 //!   bookmark and chapter jumps).
-//! - Capacity defaults to Star's `nav_history_size` (50); the oldest entry
+//! - Capacity defaults to star's `nav_history_size` (50); the oldest entry
 //!   is dropped first.
 
 use serde::{Deserialize, Serialize};
@@ -37,7 +37,7 @@ impl Default for History {
 }
 
 impl History {
-    /// Star's `nav_history_size` default.
+    /// star's `nav_history_size` default.
     pub const DEFAULT_CAPACITY: usize = 50;
 
     /// An empty history holding at most `capacity` entries.

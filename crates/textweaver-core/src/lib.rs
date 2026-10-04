@@ -6,7 +6,7 @@
 //! editor, persistence, and the frontends:
 //!
 //! - [`CharPos`] and [`CharRange`]: canonical, persisted document positions in
-//!   Unicode scalar values (chars), compatible with Star's offsets.
+//!   Unicode scalar values (chars), compatible with star's offsets.
 //! - [`Unit`] and [`MarkerKind`]: what a reading or navigation command moves by.
 //! - [`OffsetMap`]: how spoken text maps back to source text, so highlighting is
 //!   exact after normalization (ADR-0005).

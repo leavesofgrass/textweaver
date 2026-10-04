@@ -1,6 +1,6 @@
 //! DECtalk for textweaver (ADR-0021).
 //!
-//! DECtalk is the classic formant synthesizer ("Perfect Paul"); Star
+//! DECtalk is the classic formant synthesizer ("Perfect Paul"); star
 //! supported it, and screen-reader users know its nine speakers well. It is
 //! proprietary: textweaver ships none of it, never downloads it, and never
 //! tests against the community source build. It uses a DECtalk the user

@@ -1,5 +1,5 @@
 //! Math: delimited LaTeX and ASCIIMath spoken by `textweaver-math`
-//! (ADR-0018), replacing Star's regular expressions
+//! (ADR-0018), replacing star's regular expressions
 //! (`star/ttstext/mathspeech.py`).
 //!
 //! The transform calls [`textweaver_math::speak_text`], which finds math
@@ -15,15 +15,15 @@
 //! numbers: `Numbers` reads `$2` as currency, which would destroy `$2x$`,
 //! and math speech leaves digits literal for `Numbers` to read afterwards.
 //!
-//! After the math regions, a few operator symbols that Star read in prose
+//! After the math regions, a few operator symbols that star read in prose
 //! are still spoken as words (`×` "times", `≤` "less than or equal to",
 //! `→` "approaches"), because engines drop them at low punctuation levels.
 //!
-//! Differences from Star, all deliberate (ADR-0018): math must be delimited,
+//! Differences from star, all deliberate (ADR-0018): math must be delimited,
 //! as it is in documents, so `x^2 and y^{3}` in prose stays as written while
 //! `$x^2$ and $y^{3}$` is "x squared and y cubed"; `\alpha + \beta` is
-//! "alpha plus beta" (Star left `+` to the engine); `\bar{x}` is "x bar"
-//! (Star: "x-bar"). Star's bugs Q6 to Q8 (`snake_case`, trailing `x^2`,
+//! "alpha plus beta" (star left `+` to the engine); `\bar{x}` is "x bar"
+//! (star: "x-bar"). star's bugs Q6 to Q8 (`snake_case`, trailing `x^2`,
 //! global brace stripping, `$5 and $10`) cannot occur, since only
 //! delimited regions are touched.
 //!

@@ -17,7 +17,7 @@ This page is a plain-language summary of where the project stands. For the full 
 - **Study tools.** Offline dictionary lookups, reading statistics, settings profiles, extractive summaries with no downloaded model, notes and highlights with Obsidian vault export and import, and a document's title, author, DOI, and ISBN editable by hand.
 - **Sync between computers.** Notes, highlights, bookmarks, reading places, statistics, settings, and word lists stay in step through a folder you choose, such as Syncthing or a USB stick, with no account and no server ([Syncing between computers](sync.md)).
 
-See the [features page](site/features.html) for the full, current list with each item's status, and [Star features not yet planned](star-gaps.md) for a detailed comparison with textweaver's predecessor.
+See the [features page](site/features.html) for the full, current list with each item's status, and [star features not yet planned](star-gaps.md) for a detailed comparison with textweaver's predecessor.
 
 ## Being built next
 
@@ -40,12 +40,12 @@ The 0.1 series ends with a feature-complete final alpha. None of these is in it,
 - Source code read as a structured document, rather than plain text.
 - Knowledge-graph export and concept extraction from notes.
 
-Dropped on purpose: spaced-repetition study tools (Anki-style review, FSRS scheduling, AnkiConnect sync) and cloud speech engines. [Star features not yet planned](star-gaps.md) marks each dropped item.
+Dropped on purpose: spaced-repetition study tools (Anki-style review, FSRS scheduling, AnkiConnect sync) and cloud speech engines. [star features not yet planned](star-gaps.md) marks each dropped item.
 
 ## See also
 
 - [Known limits](known-limits.md)
-- [Star features not yet planned](star-gaps.md)
+- [star features not yet planned](star-gaps.md)
 - [Releasing](dev/releasing.md)
 - [Architecture](dev/architecture.md)
 - [Documentation index](README.md)

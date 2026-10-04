@@ -76,7 +76,7 @@ pub const MAX_PAUSE_MS: u32 = 3000;
 /// ten seconds, as most SSML engines allow.
 pub const MAX_WRITTEN_PAUSE_MS: u32 = 10_000;
 
-/// The rate at which pauses have their full length: Star's and textweaver's
+/// The rate at which pauses have their full length: star's and textweaver's
 /// default rate. Faster rates shorten them in proportion.
 pub const FULL_LENGTH_WPM: u16 = 265;
 

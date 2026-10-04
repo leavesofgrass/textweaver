@@ -3,7 +3,7 @@
 //! Facts about a document: format, title, author, language, size in chars,
 //! words, sentences, lines, and paragraphs, structure counts (pages and
 //! sections of paginated and chaptered sources included), and an estimated
-//! reading time at Star's default rate of 265 words per minute.
+//! reading time at star's default rate of 265 words per minute.
 //!
 //! Counting is cheap by default. Words are counted in one pass over the
 //! text ([`count_words`]), which agrees with the reader's word units
@@ -36,7 +36,7 @@ pub struct Args {
     pub exact: bool,
 }
 
-/// Star's default reading rate, in words per minute.
+/// star's default reading rate, in words per minute.
 const DEFAULT_WPM: usize = 265;
 
 /// Documents up to this many characters get a sentence count without

@@ -10,7 +10,7 @@ textweaver had no menus. Commands were reached by their keys, the command palett
 
 Wave 6 adds menus to both frontends, gives the palette names and ranking, and adds four things the menus must show from the start: the owner's settings for colors, settings import and export, a way to turn textweaver's own announcements down, and keys on macOS that follow the Mac.
 
-Star's lessons carry over: a shortcut shown in a menu or tooltip that is not bound (Star's toolbar advertised eight keys the GUI never bound), a checkmark restored from a stored flag for a mode that was not running, settings lost across a key rename, and one untyped "announcement" event a screen reader could not filter.
+star's lessons carry over: a shortcut shown in a menu or tooltip that is not bound (star's toolbar advertised eight keys the GUI never bound), a checkmark restored from a stored flag for a mode that was not running, settings lost across a key rename, and one untyped "announcement" event a screen reader could not filter.
 
 ## Decision
 
@@ -25,7 +25,7 @@ Star's lessons carry over: a shortcut shown in a menu or tooltip that is not bou
 
 The terminal shows the model as a list on F10 (freed from previous chapter, which keeps Alt+PageUp): "Menus, 1 of 7, File", then items read name, state, keys. Enter or Right opens, a letter moves to its item as in a platform menu (it does not run it), Left or Backspace goes up, Escape closes. The GUI builds native menus from `App::menu_bar` (ADR-0046).
 
-We rejected a drawn menu bar in the terminal (a screen reader sees characters and a moving cursor, not a menu) and separate menu definitions per frontend (they drift, as Star's tooltips did).
+We rejected a drawn menu bar in the terminal (a screen reader sees characters and a moving cursor, not a menu) and separate menu definitions per frontend (they drift, as star's tooltips did).
 
 ### The palette
 
@@ -45,7 +45,7 @@ The keymap gains a macOS column of logical keys, not a Ctrl-to-Cmd swap: Option 
 
 `[colors]` holds a color for each reading aid and part of the screen (the ruler, difficult words, syllable marks, misspellings, lint marks, search matches, the selection, the focus, links, headings, the status bar, notes, and bookmarks), beside the word and sentence highlights. Each is a named color, blue and orange first, or `#rrggbb`; red and green are not offered. Colors are laid over the theme's roles, every mark keeps the attribute that is not a color, and the settings screen says each color's contrast as a ratio and a word. A color under 3 to 1 is applied and warned about, never refused silently.
 
-The settings screen lists the five settings changed last at the top, says the default Delete puts back, and says a row's help on F1. Import names its first changes before asking. Renamed keys keep their values on load and on import (`RENAMED_SETTINGS`, empty until a key is renamed, tested with a table of its own), because Star's loader dropped a key missing from its defaults before its migration saw it.
+The settings screen lists the five settings changed last at the top, says the default Delete puts back, and says a row's help on F1. Import names its first changes before asking. Renamed keys keep their values on load and on import (`RENAMED_SETTINGS`, empty until a key is renamed, tested with a table of its own), because star's loader dropped a key missing from its defaults before its migration saw it.
 
 ## Checks
 

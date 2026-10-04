@@ -1,5 +1,5 @@
 //! Punctuation verbosity, character names, and split caps (new in
-//! textweaver; Star had none of them, the model is Omnivox's).
+//! textweaver; star had none of them, the model is Omnivox's).
 //!
 //! Punctuation levels ([`PunctuationLevel`]):
 //!

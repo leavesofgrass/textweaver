@@ -4,13 +4,13 @@
 //! ([`apply_spoken_commands`]).
 //!
 //! A session goes: [`Dictation::start`] with a file or an audio capture;
-//! for a capture, [`Dictation::stop`] ends the recording (Star's "Enter:
+//! for a capture, [`Dictation::stop`] ends the recording (star's "Enter:
 //! stop and transcribe"); [`Dictation::poll`] delivers
 //! [`DictationEvent`]s: `Recording`, `Transcribing`, a `Partial` per
 //! segment, then one of `Final`, `Failed`, or `Cancelled`.
-//! [`Dictation::cancel`] (Star's Escape) ends a session at any point.
+//! [`Dictation::cancel`] (star's Escape) ends a session at any point.
 //!
-//! Ported from `star/transcribe.py` and the transcription mixins. Star ran
+//! Ported from `star/transcribe.py` and the transcription mixins. star ran
 //! Whisper in-process through Python; textweaver runs a Whisper program,
 //! so no Python is needed with whisper.cpp.
 //!

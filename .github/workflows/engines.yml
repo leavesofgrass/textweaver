@@ -110,7 +110,7 @@ jobs:
 
   # One-time check, by hand only (ADR-0039): Valgrind's memcheck over tw
   # while espeak-ng synthesizes the fixture, the audio path that crosses
-  # the FFI boundary (buffers handed to and from libespeak-ng). Star found
+  # the FFI boundary (buffers handed to and from libespeak-ng). star found
   # an espeak-ng buffer bug this way. Report-only: the result goes into
   # ADR-0039, not a standing job.
   sanitizer:

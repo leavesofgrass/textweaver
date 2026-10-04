@@ -22,18 +22,18 @@ pub enum Pacing {
     /// Words-per-minute timing (silent reading).
     #[default]
     Timer,
-    /// Speech word events (Star's behaviour).
+    /// Speech word events (star's behaviour).
     External,
 }
 
-/// `[reading_aids.rsvp] position`: one of Star's nine RSVP positions. The
-/// default is top centre, as in Star.
+/// `[reading_aids.rsvp] position`: one of star's nine RSVP positions. The
+/// default is top centre, as in star.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum RsvpPosition {
     /// Top left.
     TopLeft,
-    /// Top centre (Star's default).
+    /// Top centre (star's default).
     #[default]
     TopCenter,
     /// Top right.
@@ -75,16 +75,16 @@ pub struct RsvpSettings {
     pub long_word_step: u32,
     /// Most extra time a long word gets, in percent.
     pub long_word_max: u32,
-    /// Show the previous word (Star: `qt_rsvp_show_prev`).
+    /// Show the previous word (star: `qt_rsvp_show_prev`).
     pub show_previous: bool,
-    /// Show the next word (Star: `qt_rsvp_show_next`).
+    /// Show the next word (star: `qt_rsvp_show_next`).
     pub show_next: bool,
-    /// Where the word appears (Star: `qt_rsvp_position`).
+    /// Where the word appears (star: `qt_rsvp_position`).
     pub position: RsvpPosition,
-    /// Size of the word in the GUI, in points (Star: `qt_rsvp_font_size`).
+    /// Size of the word in the GUI, in points (star: `qt_rsvp_font_size`).
     pub font_size_pt: u16,
     /// With speech pacing, show this many words ahead of (positive) or
-    /// behind (negative) the spoken word (Star: `highlight_lead_words`).
+    /// behind (negative) the spoken word (star: `highlight_lead_words`).
     pub lead_words: i32,
 }
 
@@ -113,9 +113,9 @@ impl Default for RsvpSettings {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct BionicOptions {
-    /// Share of each word to embolden, from 0.1 to 0.9. Star used 0.4.
+    /// Share of each word to embolden, from 0.1 to 0.9. star used 0.4.
     pub ratio: f32,
-    /// Words shorter than this (in graphemes) are left alone. Star used 2.
+    /// Words shorter than this (in graphemes) are left alone. star used 2.
     pub min_word_len: usize,
     /// Skip words that contain a digit.
     pub skip_numbers: bool,
@@ -126,7 +126,7 @@ pub struct BionicOptions {
 }
 
 impl Default for BionicOptions {
-    /// Star's settings: 40 percent, words of two letters or more.
+    /// star's settings: 40 percent, words of two letters or more.
     fn default() -> Self {
         BionicOptions {
             ratio: 0.4,
@@ -143,7 +143,7 @@ impl Default for BionicOptions {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TextSpacing {
-    /// Line height, 1.0 to 3.0. Star's default and WCAG's value: 1.5.
+    /// Line height, 1.0 to 3.0. star's default and WCAG's value: 1.5.
     pub line_height: f32,
     /// Space after each paragraph, 0 to 4.
     pub paragraph_spacing: f32,
@@ -154,8 +154,8 @@ pub struct TextSpacing {
 }
 
 impl Default for TextSpacing {
-    /// Star's defaults: line height 1.5, no extra letter or word spacing,
-    /// and a modest paragraph gap (Star had none).
+    /// star's defaults: line height 1.5, no extra letter or word spacing,
+    /// and a modest paragraph gap (star had none).
     fn default() -> Self {
         TextSpacing {
             line_height: 1.5,
@@ -179,7 +179,7 @@ pub struct FontSettings {
     /// font key (`opendyslexic`, `atkinson`, `lexend`), or a family name.
     /// `textweaver-fonts` parses it (`FontFamily`).
     pub family: String,
-    /// Size in points (Star's `qt_font_size`, default 14).
+    /// Size in points (star's `qt_font_size`, default 14).
     pub size_pt: f32,
     /// Weight, 100 (thin) to 900 (black); 400 is regular, 700 bold.
     pub weight: u16,
@@ -243,9 +243,9 @@ pub enum RulerMode {
     /// No marks.
     #[default]
     Off,
-    /// Mark only the focus rows (Star's current-line highlight).
+    /// Mark only the focus rows (star's current-line highlight).
     CurrentLine,
-    /// Mark the focus rows and a band of rows around them (Star's reading
+    /// Mark the focus rows and a band of rows around them (star's reading
     /// ruler).
     Ruler,
 }
@@ -293,7 +293,7 @@ impl Default for RulerSettings {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SyllableOptions {
-    /// Shown between syllables. Star's default is a middle dot; a hyphen or
+    /// Shown between syllables. star's default is a middle dot; a hyphen or
     /// a thin space also work.
     pub separator: String,
     /// Fewest letters before the first break (Pyphen's default, 2).

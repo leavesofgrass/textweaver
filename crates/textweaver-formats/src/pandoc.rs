@@ -5,7 +5,7 @@
 //! The source is converted with `pandoc --from FORMAT --to html5
 //! --standalone --wrap=none --sandbox` and the HTML read by the HTML loader's
 //! rules, so the result has the same canonical shape as every other format.
-//! Unlike Star, which asked Pandoc for Markdown and decoded its output with
+//! Unlike star, which asked Pandoc for Markdown and decoded its output with
 //! the Windows code page (corrupting non-ASCII text, and speaking simple
 //! table dashes), the output is read as UTF-8 bytes and never re-parsed as
 //! Markdown. `--sandbox` keeps a document from making Pandoc read other
@@ -268,7 +268,7 @@ const BINARY_READERS: &[&str] = &["odt"];
 /// Latin-1) is converted to UTF-8 first, as the native loaders decode
 /// (see [`crate::encoding`]). The output side needs nothing: Pandoc
 /// writes UTF-8, and it is read as UTF-8 bytes, never with the Windows
-/// code page (Star's bug).
+/// code page (star's bug).
 fn utf8_input(from: &str, bytes: Vec<u8>) -> Vec<u8> {
     if BINARY_READERS.contains(&from) || std::str::from_utf8(&bytes).is_ok() {
         return bytes;

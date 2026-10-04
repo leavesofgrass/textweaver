@@ -1,4 +1,4 @@
-//! Pathological inputs for `cargo xtask bench` (W8b-i, from Star's
+//! Pathological inputs for `cargo xtask bench` (W8b-i, from star's
 //! 34-second hard wrap of one 5 MB token): one generated file per loader,
 //! each holding the shapes that turn a linear loader quadratic:
 //!

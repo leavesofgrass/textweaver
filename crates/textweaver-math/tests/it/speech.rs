@@ -1,5 +1,5 @@
 //! Spoken math at each verbosity, with offset-map invariants on every
-//! result, Star's math vectors, and highlight mapping checks.
+//! result, star's math vectors, and highlight mapping checks.
 
 use textweaver_core::{CharRange, Verbosity};
 use textweaver_math::{Math, SpeechOptions, Spoken, parse_asciimath, parse_latex, speak};
@@ -49,8 +49,8 @@ fn check_am(cases: &[Case]) {
     }
 }
 
-/// Star's `_normalize_math_inline` vectors (`tests/test_ttstext.py`,
-/// the Star parity reference Part 2 section 6.1). Delimited ones are in
+/// star's `_normalize_math_inline` vectors (`tests/test_ttstext.py`,
+/// the star parity reference Part 2 section 6.1). Delimited ones are in
 /// `tests/text.rs`; here each is spoken as math at normal verbosity.
 #[test]
 fn star_vectors() {
@@ -69,7 +69,7 @@ fn star_vectors() {
     // engine's punctuation setting, and "x bar" is two words, not "x-bar".
     assert_eq!(latex(r"\alpha + \beta", NORMAL), "alpha plus beta");
     assert_eq!(latex(r"\bar{x}", NORMAL), "x bar");
-    // Star bug Q7: a trailing `x^2` is "x squared", not "x to the 2".
+    // star bug Q7: a trailing `x^2` is "x squared", not "x to the 2".
     assert_eq!(latex("x^2", LOW), "x squared");
 }
 

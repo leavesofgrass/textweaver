@@ -6,7 +6,7 @@
 //! | Unit | Block segmented | Rule |
 //! |---|---|---|
 //! | Grapheme | a line with its line break (in windows when long) | UAX #29 extended grapheme clusters; graphemes tile the text |
-//! | Word | a line (in windows when long) | UAX #29 word segments that contain an alphanumeric char, with hyphenated compounds (`well-known`, `12-14`) joined into one word as Star's `\b\w[\w'-]*` does |
+//! | Word | a line (in windows when long) | UAX #29 word segments that contain an alphanumeric char, with hyphenated compounds (`well-known`, `12-14`) joined into one word as star's `\b\w[\w'-]*` does |
 //! | Sentence | a paragraph | UAX #29 sentence boundaries, refined (see below) |
 //! | Line | a line | the line without its line break; blank lines are empty ranges |
 //! | Paragraph | a run of non-blank lines | blank (whitespace-only) lines separate paragraphs |
@@ -33,14 +33,14 @@
 //! 1. A single line break inside a paragraph is a soft wrap (plain-text files
 //!    keep their lines) unless a block marker starts on the next line or the
 //!    break is inside a code block: list items, table rows, and code lines
-//!    are sentences of their own (Star ran them together, bug 4).
+//!    are sentences of their own (star ran them together, bug 4).
 //! 2. A sentence ending in an abbreviation from [`ABBREVIATIONS`] (`Dr.`,
-//!    `Mr.`, `e.g.`, `pp.`, ...) continues into the next one (Star split
+//!    `Mr.`, `e.g.`, `pp.`, ...) continues into the next one (star split
 //!    after every `Dr.`, bug 11). One ending in an entry of
 //!    [`AMBIGUOUS_ABBREVIATIONS`] (`a.m.`, `etc.`, ...) continues only when
 //!    the next one does not start with a capital letter.
 //! 3. An ellipsis (`…`) followed by whitespace and a capital letter ends a
-//!    sentence, as in Star.
+//!    sentence, as in star.
 //! 4. A footnote reference (`footnote.[1] It`) stays with the sentence it
 //!    ends; inside a code block every line is one sentence.
 //!
@@ -49,8 +49,8 @@
 //! before Wave 4, and still for graphemes and for words on lines in Thai,
 //! Lao, Khmer, Burmese, CJK, and Hangul) two to three times as fast.
 //!
-//! Sentences and words exclude surrounding whitespace. Differences from Star
-//! are measured by `cargo xtask parity` (the Star parity report).
+//! Sentences and words exclude surrounding whitespace. Differences from star
+//! are measured by `cargo xtask parity` (the star parity report).
 
 use std::borrow::Cow;
 use std::collections::VecDeque;

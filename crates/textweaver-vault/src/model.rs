@@ -78,7 +78,7 @@ pub trait AnnotationStore {
     /// Replaces the notes and highlights of the document at `doc`.
     fn save(&mut self, doc: &Path, annotations: &DocAnnotations) -> Result<(), VaultError>;
 
-    /// Adds the document at `doc` to the library (Star's `library[path]`
+    /// Adds the document at `doc` to the library (star's `library[path]`
     /// entry: title and format), or refreshes its entry.
     fn register_document(
         &mut self,
@@ -156,7 +156,7 @@ pub(crate) fn record_library(list: &mut Vec<LibraryEntry>, doc: &Path, title: &s
 
 /// A short stable id derived from `seed` (64-bit FNV-1a, 12 hex digits).
 ///
-/// Star assigned random 8-hex-digit ids. Deriving ids from a stable seed
+/// star assigned random 8-hex-digit ids. Deriving ids from a stable seed
 /// (a vault note's path, a highlight's range and color) makes re-imports
 /// and re-exports idempotent without remembering anything between runs.
 pub fn derive_id(seed: &str) -> String {

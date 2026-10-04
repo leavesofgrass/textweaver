@@ -1,14 +1,14 @@
-//! Notes and highlights: Star's annotations and user highlights
-//! (the Star parity reference Part 3 §2.3 and §2.4), stored in [`DocState`].
+//! Notes and highlights: star's annotations and user highlights
+//! (the star parity reference Part 3 §2.3 and §2.4), stored in [`DocState`].
 //!
-//! Changes from Star, all deliberate:
+//! Changes from star, all deliberate:
 //!
 //! - notes and highlights are anchored to a [`CharRange`] of the canonical
 //!   text and move across edits with the same [`EditOutcome`] as bookmarks
-//!   (Star stored a rendered-editor offset and a word index that edits and
+//!   (star stored a rendered-editor offset and a word index that edits and
 //!   display transforms invalidated, §7 items 16 and 17);
 //! - every note and highlight gets an id and a timestamp when it is created,
-//!   so sidecar merges can match them by id (Star assigned note ids lazily
+//!   so sidecar merges can match them by id (star assigned note ids lazily
 //!   and highlights never had one, items 17 and 18);
 //! - timestamps are Unix seconds, UTC (item 19);
 //! - one document key for everything (item 14);
@@ -26,7 +26,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde::{Deserialize, Serialize};
 use textweaver_core::{CharPos, CharRange, EditOutcome};
 
-/// The relation types a note can have to another note (Star's
+/// The relation types a note can have to another note (star's
 /// `RELATION_TYPES`, used by the knowledge graph and Obsidian links).
 pub const RELATION_TYPES: [&str; 10] = [
     "CONFLICTS_WITH",
@@ -41,7 +41,7 @@ pub const RELATION_TYPES: [&str; 10] = [
     "FOLLOWS",
 ];
 
-/// How one note relates to another (Star's `RELATION_TYPES`,
+/// How one note relates to another (star's `RELATION_TYPES`,
 /// `star/annotations.py:153-164`). [`Relation::rel_type`] keeps the name
 /// as a string, so a type from a newer version survives a round trip;
 /// [`Relation::relation_type`] parses it.
@@ -71,7 +71,7 @@ pub enum RelationType {
 }
 
 impl RelationType {
-    /// Every relation type, in Star's order.
+    /// Every relation type, in star's order.
     pub const ALL: [RelationType; 10] = [
         RelationType::ConflictsWith,
         RelationType::Supports,
@@ -85,7 +85,7 @@ impl RelationType {
         RelationType::Follows,
     ];
 
-    /// The stored name, as Star wrote it: `SEE_ALSO`.
+    /// The stored name, as star wrote it: `SEE_ALSO`.
     pub fn as_str(self) -> &'static str {
         match self {
             RelationType::ConflictsWith => "CONFLICTS_WITH",
@@ -117,7 +117,7 @@ impl RelationType {
         }
     }
 
-    /// Parses a relation name the way Star's `_norm_rel` does: trimmed,
+    /// Parses a relation name the way star's `_norm_rel` does: trimmed,
     /// upper-cased, spaces and hyphens turned into underscores, then matched
     /// against the known types. `see also`, `See-Also`, and `SEE_ALSO` all
     /// give [`RelationType::SeeAlso`].
@@ -138,10 +138,10 @@ impl fmt::Display for RelationType {
     }
 }
 
-/// Star's default highlight color.
+/// star's default highlight color.
 pub const DEFAULT_HIGHLIGHT_COLOR: &str = "#ffff00";
 
-/// The named highlight colors Star offered (Ctrl+Shift+1 to 5), as
+/// The named highlight colors star offered (Ctrl+Shift+1 to 5), as
 /// `(name, #rrggbb)`.
 pub const HIGHLIGHT_COLORS: [(&str, &str); 5] = [
     ("yellow", "#ffff00"),
@@ -151,14 +151,14 @@ pub const HIGHLIGHT_COLORS: [(&str, &str); 5] = [
     ("orange", "#ffa500"),
 ];
 
-/// Longest anchor kept with a note, in chars (Star: 120).
+/// Longest anchor kept with a note, in chars (star: 120).
 pub const ANCHOR_MAX_CHARS: usize = 120;
 
 /// Longest highlighted text kept with a highlight, in chars.
 pub const HIGHLIGHT_TEXT_MAX_CHARS: usize = 500;
 
 /// A relation type in canonical form: uppercase, with spaces and hyphens
-/// turned into `_` (Star's normalization for Dataview fields). `None` when
+/// turned into `_` (star's normalization for Dataview fields). `None` when
 /// it is not one of [`RELATION_TYPES`].
 pub fn normalize_relation(name: &str) -> Option<&'static str> {
     RelationType::parse(name).map(RelationType::as_str)
@@ -196,7 +196,7 @@ pub fn color_name(color: &str) -> String {
 }
 
 /// Splits a tag string on commas and whitespace, dropping a leading `#` and
-/// empty parts (Star's `_parse_tags`).
+/// empty parts (star's `_parse_tags`).
 pub fn parse_tags(raw: &str) -> Vec<String> {
     raw.split(|c: char| c == ',' || c.is_whitespace())
         .map(|p| p.trim().trim_start_matches('#').trim())
@@ -206,7 +206,7 @@ pub fn parse_tags(raw: &str) -> Vec<String> {
 }
 
 /// Collapses runs of whitespace to one space, trims, and keeps at most
-/// `max` chars (Star's anchor rule).
+/// `max` chars (star's anchor rule).
 pub fn collapse(text: &str, max: usize) -> String {
     let mut out = String::new();
     for word in text.split_whitespace() {
@@ -229,7 +229,7 @@ pub fn collapse(text: &str, max: usize) -> String {
 /// A fresh 64-bit id as 16 hex digits, for notes, highlights, and
 /// bookmarks.
 ///
-/// Ids were 8 hex digits (32 bits, Star's `uuid4().hex[:8]` shape) until
+/// Ids were 8 hex digits (32 bits, star's `uuid4().hex[:8]` shape) until
 /// the sync wave; with notes arriving from other computers, 32 bits made a
 /// collision plausible in a large library. Old ids are kept as they are:
 /// they are 8 digits long, so a new id can never equal one.
@@ -299,7 +299,7 @@ pub fn stable_id(prefix: &str, parts: &[&str]) -> String {
     format!("{prefix}{:08x}", (h ^ (h >> 32)) & 0xffff_ffff)
 }
 
-/// A typed link from one note to another (Star's `relations` entries).
+/// A typed link from one note to another (star's `relations` entries).
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Relation {
@@ -350,7 +350,7 @@ pub struct Note {
     pub created: i64,
     /// When the note was last changed (Unix seconds, UTC).
     pub ts: i64,
-    /// Unknown fields (Star's `sr_state` and anything newer), preserved.
+    /// Unknown fields (star's `sr_state` and anything newer), preserved.
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
 }
@@ -374,7 +374,7 @@ impl Default for Note {
 }
 
 impl Note {
-    /// True when the note matches a search query (Star's
+    /// True when the note matches a search query (star's
     /// `_annotation_matches`): every space-separated term must match,
     /// case-insensitively; `#term` matches a tag containing `term`; any
     /// other term must occur in the note, the anchor, or a tag. An empty
@@ -424,7 +424,7 @@ pub struct Highlight {
     pub id: String,
     /// The highlighted text's range.
     pub range: CharRange,
-    /// Color, `#rrggbb` or a CSS name (Star default `#ffff00`).
+    /// Color, `#rrggbb` or a CSS name (star default `#ffff00`).
     pub color: String,
     /// The highlighted text when it was made (whitespace collapsed, at most
     /// [`HIGHLIGHT_TEXT_MAX_CHARS`] chars), for lists and exports.
@@ -541,7 +541,7 @@ fn block_quote(text: &str) -> String {
         .join("\n")
 }
 
-/// Notes (and optionally highlights) as Markdown, after Star's default
+/// Notes (and optionally highlights) as Markdown, after star's default
 /// export: a title, a short header, then one section per note with the
 /// anchored text quoted. Written to read well aloud: no decorative symbols,
 /// dates in words-friendly `YYYY-MM-DD` form. Agent J's vault export reuses

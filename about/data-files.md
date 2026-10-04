@@ -71,7 +71,7 @@ Packages also carry the licence files themselves, under `licenses/`.
 
 ### Colour themes
 
-- Several built-in themes use the colours of published palettes: Catppuccin, Dracula, Everforest, Gruvbox, Kanagawa, Monokai, Nord, One Dark and One Light, Rosé Pine, Solarized, and Tokyo Night. Only colour values are used, taken from Star's themes. The palettes belong to their authors, and most are published under the MIT licence.
+- Several built-in themes use the colours of published palettes: Catppuccin, Dracula, Everforest, Gruvbox, Kanagawa, Monokai, Nord, One Dark and One Light, Rosé Pine, Solarized, and Tokyo Night. Only colour values are used, taken from star's themes. The palettes belong to their authors, and most are published under the MIT licence.
 
 ### LAME (MP3 export)
 

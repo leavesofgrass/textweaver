@@ -1,6 +1,6 @@
-# Star features not yet planned
+# star features not yet planned
 
-star ([its repository](https://github.com/leavesofgrass/star)) is the Python program textweaver reimplements in Rust. This page tracks Star's features against textweaver's current status, for anyone comparing the two or looking for what is left to port. Priorities favor students with print disabilities, Star's original audience.
+star ([its repository](https://github.com/leavesofgrass/star)) is the Python program textweaver reimplements in Rust. This page tracks star's features against textweaver's current status, for anyone comparing the two or looking for what is left to port. Priorities favor students with print disabilities, star's original audience.
 
 Each item has a status:
 
@@ -13,7 +13,7 @@ This page is kept current as features land; see [CHANGELOG.md](../CHANGELOG.md) 
 
 ## Reading aids
 
-Star's reading aids are described in its "Accessibility and WCAG reading aids" notes; [reading-aids.md](reading-aids.md) is textweaver's user guide to the same features.
+star's reading aids are described in its "Accessibility and WCAG reading aids" notes; [reading-aids.md](reading-aids.md) is textweaver's user guide to the same features.
 
 - **RSVP.** Shows one word at a time, at nine screen positions, with the words before and after. Status: done.
 - **Reading ruler.** A band that follows the cursor line. Status: done.
@@ -21,7 +21,7 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
 - **Bionic reading:** word starts in bold. Status: done.
 - **Syllable splitting:** `read·a·bil·i·ty`, shown only, by rule rather than dictionary. Status: done, in the terminal reader (Alt+Shift+Z) and drawn in the window.
 - **Current-line highlight.** Status: done.
-- **Reading fonts:** OpenDyslexic, Atkinson Hyperlegible, and Lexend. Status: done. OpenDyslexic and Atkinson Hyperlegible Next and Mono are bundled, used for PDF and EPUB output, and loaded directly for the window, where a font-choice key cycles them. Lexend is downloaded the first time it is chosen, as in Star, but only after asking with its size and license, and each file is checked by its SHA-256 before it is kept in the data folder; the window, PDF, and EPUB then use it (see [Reading aids](reading-aids.md#lexend-on-first-choice)).
+- **Reading fonts:** OpenDyslexic, Atkinson Hyperlegible, and Lexend. Status: done. OpenDyslexic and Atkinson Hyperlegible Next and Mono are bundled, used for PDF and EPUB output, and loaded directly for the window, where a font-choice key cycles them. Lexend is downloaded the first time it is chosen, as in star, but only after asking with its size and license, and each file is checked by its SHA-256 before it is kept in the data folder; the window, PDF, and EPUB then use it (see [Reading aids](reading-aids.md#lexend-on-first-choice)).
 
 ## Formats and documents
 
@@ -48,8 +48,8 @@ Star's reading aids are described in its "Accessibility and WCAG reading aids" n
 - **Summarize:** extractive, with LexRank, no downloaded model. Status: done (`tw summarize`, and Summarize in the command palette; [ADR-0037](adr/0037-extractive-summaries.md)).
 - **Translate a document.** Status: dropped; not in the 0.1 series.
 - **Difficult-word overlay,** by word frequency. Status: done, in the terminal reader (Alt+Shift+J) and drawn in the window, on SCOWL's word levels.
-- **Reading statistics:** time read, progress, and sessions. Status: done: time read aloud, the furthest point, and sessions per document, with a most-read list (Ctrl+Shift+Y or Alt+Y), `tw stats`, an opt-out, and Star's statistics imported ([reading.md](reading.md#reading-statistics-ctrlshifty-or-alty)).
-- **Settings profiles:** named sets of voice, theme, and spacing settings, with import and export. Status: done: named profiles of voice, rate, theme, font, spacing, highlight, and access mode, switched, saved, renamed, deleted, imported, and exported in the reader (Ctrl+Shift+U or Alt+U) and with `tw settings profile` ([settings.md](settings.md#settings-profiles)). `tw migrate-star` imports Star's profiles ([library.md](library.md#import-from-star-tw-migrate-star)).
+- **Reading statistics:** time read, progress, and sessions. Status: done: time read aloud, the furthest point, and sessions per document, with a most-read list (Ctrl+Shift+Y or Alt+Y), `tw stats`, an opt-out, and star's statistics imported ([reading.md](reading.md#reading-statistics-ctrlshifty-or-alty)).
+- **Settings profiles:** named sets of voice, theme, and spacing settings, with import and export. Status: done: named profiles of voice, rate, theme, font, spacing, highlight, and access mode, switched, saved, renamed, deleted, imported, and exported in the reader (Ctrl+Shift+U or Alt+U) and with `tw settings profile` ([settings.md](settings.md#settings-profiles)). `tw migrate-star` imports star's profiles ([library.md](library.md#import-from-star-tw-migrate-star)).
 - **Piper neural voices,** with a catalog of voices to download, and a voice manager that lists, previews, and marks favorites. Status: done for voices: Piper voices run in process on a pure-Rust ONNX runtime, with word timing read from the model ([ADR-0023](adr/0023-in-process-neural-speech.md)); Choose voice (Alt+V) lists them, speaks a sample, and marks favorites, which are listed first. The voice manager covers every engine in both readers, and previews a voice without choosing it (the Say Status key, or the window's Preview button); in the window it is a dialog with filter and action buttons ([The window](gui.md#voices)).
 - **Interface translations:** Spanish, French, German, Portuguese, and Arabic, with right-to-left layout. Status: done ([ADR-0030](adr/0030-interface-translations.md)): `[interface] language` speaks and shows textweaver's own words, lists, help, keyboard shortcuts, the command palette, and the settings screen in all six languages, the voice follows the language when the engine has one, and right-to-left text is reordered for display where the terminal does not do it itself.
 - **Clipboard copy,** including the terminal escape code that works over SSH. Status: done. Ctrl+C copies the selection, or the sentence at the cursor, through the terminal's OSC 52 code, which works over SSH; edit mode also has cut, paste, and select all. A native clipboard fallback (`arboard`) covers terminals without OSC 52 (the old Windows console, macOS Terminal, GNOME Terminal and other VTE terminals), announced the first time it is used; SSH and tmux still use the terminal's own code.

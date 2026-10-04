@@ -2,10 +2,10 @@
 //!
 //! Each command takes the text and the selection and returns the edits to
 //! apply (as one undo step) and the selection afterwards. Semantics follow
-//! Star's `star/gui/mixin_authoring.py` (the Star parity reference Part 3 §4.3)
+//! star's `star/gui/mixin_authoring.py` (the star parity reference Part 3 §4.3)
 //! with its listed bugs fixed (§7 items 30 to 33):
 //!
-//! | Command | Star | textweaver |
+//! | Command | star | textweaver |
 //! |---|---|---|
 //! | Bold, italic, underline, strikethrough, inline code | wraps; applying twice doubles the markup (`****x****`) | wraps, or unwraps when the selection is already wrapped (toggles) |
 //! | Wrap with no selection | inserts the placeholder and selects it | same |
@@ -49,7 +49,7 @@ pub enum MarkdownOp {
     CodeBlock,
     /// `[text](url)`
     Link,
-    /// `<u>underline</u>` (inline HTML, as Star wrote it).
+    /// `<u>underline</u>` (inline HTML, as star wrote it).
     Underline,
     /// `---` on its own line.
     HorizontalRule,
@@ -90,7 +90,7 @@ pub enum FormatError {
 }
 
 impl FormatError {
-    /// The message for the user (Star's wording).
+    /// The message for the user (star's wording).
     pub fn message(self) -> &'static str {
         match self {
             FormatError::NotInTable => "Put the cursor inside a table row to add a row",
@@ -150,7 +150,7 @@ fn wrapped_outside(text: &Rope, r: CharRange, open: &str, close: &str) -> bool {
     }
 }
 
-/// Star's `_qt_md_wrap`, toggling.
+/// star's `_qt_md_wrap`, toggling.
 fn wrap(text: &Rope, sel: Selection, open: &str, close: &str, placeholder: &str) -> Formatted {
     let r = sel.range().clamp_to(text.len_chars());
     let (ol, cl) = (len(open), len(close));
@@ -196,7 +196,7 @@ fn wrap(text: &Rope, sel: Selection, open: &str, close: &str, placeholder: &str)
             selection: Selection::new(s - ol, e - ol),
         };
     }
-    // Star: replace the selection with open + selection + close; the caret
+    // star: replace the selection with open + selection + close; the caret
     // ends after `close` with nothing selected.
     let end = r.end.0 + ol + cl;
     Formatted {
@@ -208,7 +208,7 @@ fn wrap(text: &Rope, sel: Selection, open: &str, close: &str, placeholder: &str)
     }
 }
 
-/// Lines `first..=last` affected by a selection: Star's block range, minus
+/// Lines `first..=last` affected by a selection: star's block range, minus
 /// a last line the selection only reaches at column 0.
 fn line_span(text: &Rope, r: CharRange) -> (usize, usize) {
     let n = text.len_chars();
@@ -272,7 +272,7 @@ fn existing(kind: LineKind, line: &str) -> Option<usize> {
     }
 }
 
-/// Star's `_qt_md_line_prefix`, toggling and skipping blank lines in a
+/// star's `_qt_md_line_prefix`, toggling and skipping blank lines in a
 /// multi-line selection.
 fn prefix_lines(text: &Rope, sel: Selection, kind: LineKind) -> Formatted {
     let r = sel.range().clamp_to(text.len_chars());
@@ -364,7 +364,7 @@ fn prefix_lines(text: &Rope, sel: Selection, kind: LineKind) -> Formatted {
     }
 }
 
-/// Star's `_qt_md_link`: `[selection or "text"](https://)`.
+/// star's `_qt_md_link`: `[selection or "text"](https://)`.
 fn link(text: &Rope, sel: Selection) -> Formatted {
     let r = sel.range().clamp_to(text.len_chars());
     let label = if r.is_empty() {
@@ -386,7 +386,7 @@ fn link(text: &Rope, sel: Selection) -> Formatted {
     }
 }
 
-/// A horizontal rule on its own line with a blank line before it (Star's
+/// A horizontal rule on its own line with a blank line before it (star's
 /// `\n---\n` made a setext heading after a text line).
 fn horizontal_rule(text: &Rope, sel: Selection) -> Formatted {
     let r = sel.range().clamp_to(text.len_chars());
@@ -410,7 +410,7 @@ fn horizontal_rule(text: &Rope, sel: Selection) -> Formatted {
     }
 }
 
-/// Star's `_md_table_skeleton(rows, cols)`: a header row `| Column 1 | ... |`,
+/// star's `_md_table_skeleton(rows, cols)`: a header row `| Column 1 | ... |`,
 /// a separator row `| --- | ... |`, and `rows` rows of empty cells. Both
 /// arguments are at least 1. Ends with a newline.
 pub fn table_skeleton(rows: usize, cols: usize) -> String {
@@ -425,7 +425,7 @@ pub fn table_skeleton(rows: usize, cols: usize) -> String {
     out
 }
 
-/// Star's `_qt_md_insert_table`: `("" at a line start, else "\n") + "\n" +
+/// star's `_qt_md_insert_table`: `("" at a line start, else "\n") + "\n" +
 /// skeleton + "\n"`, replacing the selection. Selects the first header
 /// cell's text.
 fn insert_table(text: &Rope, sel: Selection, rows: usize, cols: usize) -> Formatted {
@@ -451,7 +451,7 @@ fn is_separator_row(line: &str) -> bool {
     is_table_row(t) && t.contains('-') && t.chars().all(|c| matches!(c, '|' | '-' | ':' | ' '))
 }
 
-/// Star's `_qt_md_table_add_row`, fixed for the header line.
+/// star's `_qt_md_table_add_row`, fixed for the header line.
 fn add_table_row(text: &Rope, sel: Selection) -> Result<Formatted, FormatError> {
     let n = text.len_chars();
     let mut line = text.char_to_line(sel.head.0.min(n));
@@ -492,7 +492,7 @@ fn relative_path(target: &Path, base: &Path) -> Option<PathBuf> {
     Some(out)
 }
 
-/// The image reference Star writes: relative to the document's folder with
+/// The image reference star writes: relative to the document's folder with
 /// `/` separators, unless it climbs two or more levels (`../../`) or the
 /// drives differ, in which case the absolute path.
 pub fn image_reference(doc_path: Option<&Path>, image: &Path) -> String {
@@ -516,7 +516,7 @@ pub fn image_reference(doc_path: Option<&Path>, image: &Path) -> String {
     }
 }
 
-/// Star's `_qt_md_insert_image`: `![stem](reference)`, replacing the
+/// star's `_qt_md_insert_image`: `![stem](reference)`, replacing the
 /// selection. Selects the alt text so a description can be typed.
 pub fn insert_image(
     text: &Rope,

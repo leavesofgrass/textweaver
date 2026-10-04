@@ -5,7 +5,7 @@
 //! - whisper.cpp's `whisper-cli` (older builds: `whisper-cpp`), which needs
 //!   a `ggml-<model>.bin` file and 16 kHz WAV input;
 //! - `whisper-ctranslate2`, the command line of faster-whisper;
-//! - `whisper`, the command line of openai-whisper (what Star used through
+//! - `whisper`, the command line of openai-whisper (what star used through
 //!   Python), which shares its options with `whisper-ctranslate2`.
 //!
 //! Each prints one line per segment as it goes (`[00:01.000 --> 00:03.500]

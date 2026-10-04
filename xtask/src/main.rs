@@ -28,7 +28,7 @@
 //! - `keyboard`: regenerate `docs/keyboard.md` from the keymap (Agent C).
 //! - `notices [--check]`: regenerate `THIRD-PARTY-NOTICES.md` with
 //!   `cargo about` (see `notices.rs`).
-//! - `parity`: compare word and sentence segmentation with the Star corpus
+//! - `parity`: compare word and sentence segmentation with the star corpus
 //!   in `fixtures/star-parity/` and write the report (Agent A).
 //! - `regen [--check] [--require-all]`: rebuild every generated file in
 //!   order (notices, settings reference, keyboard reference, site data,

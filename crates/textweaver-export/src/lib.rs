@@ -30,7 +30,7 @@
 //!    gets the title and chapters as an ID3 tag (`id3tags`, the `id3`
 //!    feature).
 //! 6. Subtitles ([`cues`]) are SRT or WebVTT cues from the timeline, by
-//!    caption line (Star's grouping) or by word.
+//!    caption line (star's grouping) or by word.
 //! 7. An `.mp4` is a karaoke video ([`video`], the `video` feature): the
 //!    sentence on screen with the spoken word bold and underlined, the
 //!    WebVTT captions as a soft subtitle track, and the chapters, made by

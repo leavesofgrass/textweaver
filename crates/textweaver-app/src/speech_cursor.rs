@@ -1,6 +1,6 @@
 //! Speech Cursor (line) mode: each move reads exactly one line of canonical
 //! text, "blank" for an empty line; moves clamp and never wrap; Enter leaves
-//! and reads on (Star's TUI and GUI behavior).
+//! and reads on (star's TUI and GUI behavior).
 //!
 //! Lines are canonical-text lines, not wrapped display lines: textweaver's
 //! canonical text keeps list items, table rows, and plain-text lines on their
@@ -56,7 +56,7 @@ impl App {
     }
 
     /// Leaves the mode, putting the cursor on the first word at or after the
-    /// Speech Cursor line (Star's rule).
+    /// Speech Cursor line (star's rule).
     pub(crate) fn leave_speech_cursor(&mut self) {
         if self.mode != Mode::SpeechCursor {
             return;

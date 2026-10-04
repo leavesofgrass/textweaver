@@ -1,6 +1,6 @@
 //! Spoken commands while dictating: "new line", "period", "open quote",
 //! and so on, turned into the text they stand for. A pure transform on
-//! the transcript; Star had none.
+//! the transcript; star had none.
 //!
 //! Whisper punctuates on its own, so the transform also tidies around
 //! each command: the punctuation Whisper attached to a command word is

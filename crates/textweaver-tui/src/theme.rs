@@ -223,7 +223,7 @@ impl Theme {
         self
     }
 
-    /// The built-in theme with this name (Star's old names accepted), or
+    /// The built-in theme with this name (star's old names accepted), or
     /// Galaxy, at the detected color level.
     pub fn named(name: &str) -> Self {
         let registry = Registry::builtin();

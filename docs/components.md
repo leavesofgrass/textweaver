@@ -155,7 +155,7 @@ Every request carries the same neutral User-Agent, `textweaver-research (+https:
 
 One crate, `textweaver-components`, does every download: one pin type (size and SHA-256, or git's blob SHA-1 for Piper's small files), a `.part` file in a staging folder beside the component's folder, the check, then a rename; files that already check out are kept; a stopped download resumes with a `Range` request; progress through a callback with a cancel flag; and a lock, so two downloads of one component never run at once. HTTP is its `download` feature, so the lean reader links no HTTP client. The OCR models, Lexend, Piper voices, and the Whisper models all go through it.
 
-The registry is `textweaver_app::components::Registry`. A test in the app enforces it, as Star's dependency registry was enforced: no other crate opens HTTP for files, the downloader is called only from known sites whose components are registered with the same pins, and with an empty data folder nothing is reported installed. Tests use the fake fetcher (`textweaver_components::fake::FakeFetcher`), which records every request: a test fails if anything is fetched before a yes.
+The registry is `textweaver_app::components::Registry`. A test in the app enforces it, as star's dependency registry was enforced: no other crate opens HTTP for files, the downloader is called only from known sites whose components are registered with the same pins, and with an empty data folder nothing is reported installed. Tests use the fake fetcher (`textweaver_components::fake::FakeFetcher`), which records every request: a test fails if anything is fetched before a yes.
 
 ## See also
 

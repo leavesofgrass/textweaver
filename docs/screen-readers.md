@@ -81,7 +81,7 @@ quiet_screen = true
 cursor = "status"
 ```
 
-With `cursor = "status"`, the cursor waits at the start of the status line, as it did in Star, so your screen reader's "read current line" (**NVDA+Up**, JAWS **Insert+Up**) repeats the last message. A prompt, such as Find, still puts the cursor where you type.
+With `cursor = "status"`, the cursor waits at the start of the status line, as it did in star, so your screen reader's "read current line" (**NVDA+Up**, JAWS **Insert+Up**) repeats the last message. A prompt, such as Find, still puts the cursor where you type.
 
 ## What your screen reader can read
 

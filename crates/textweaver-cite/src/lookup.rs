@@ -2,10 +2,10 @@
 //!
 //! - **DOI**: doi.org content negotiation, asking for CSL-JSON
 //!   (`Accept: application/vnd.citationstyles.csl+json`). This works for
-//!   Crossref, DataCite, and mEDRA DOIs alike; Star asked the Crossref API
+//!   Crossref, DataCite, and mEDRA DOIs alike; star asked the Crossref API
 //!   only, so DataCite DOIs (datasets, many theses) failed.
 //! - **ISBN**: Open Library's edition records (`/isbn/<isbn>.json`) and
-//!   author records (no key needed). Star used Open Library's Books API
+//!   author records (no key needed). star used Open Library's Books API
 //!   (`/api/books?bibkeys=`), which answered 404 for every ISBN when this
 //!   was written.
 //!
@@ -128,7 +128,7 @@ pub fn normalize_isbn(s: &str) -> Option<String> {
     valid_isbn(&isbn).then_some(isbn)
 }
 
-/// Whether `s` is a checksum-valid ISBN-10 or ISBN-13 (Star's
+/// Whether `s` is a checksum-valid ISBN-10 or ISBN-13 (star's
 /// `_valid_isbn`, kept: hyphens and spaces are ignored).
 pub fn valid_isbn(s: &str) -> bool {
     let isbn: Vec<char> = s
@@ -873,7 +873,7 @@ mod tests {
 
     #[test]
     fn star_isbn_vectors() {
-        // Star's tests/test_citations.py::test_valid_isbn*.
+        // star's tests/test_citations.py::test_valid_isbn*.
         assert!(valid_isbn("0306406152"));
         assert!(valid_isbn("080442957X"));
         assert!(valid_isbn("9780306406157"));

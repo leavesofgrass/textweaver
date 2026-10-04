@@ -8,7 +8,7 @@
 
 ## Context
 
-textweaver reimplements Star (Python, 45K lines) in Rust, built by multiple contributors in parallel, so the crate boundaries have to let each one compile and test alone against a stable contract. Star's history shows the cost of the opposite: 40+ GUI and TUI mixins sharing state, and a long tail of optional dependencies.
+textweaver reimplements star (Python, 45K lines) in Rust, built by multiple contributors in parallel, so the crate boundaries have to let each one compile and test alone against a stable contract. star's history shows the cost of the opposite: 40+ GUI and TUI mixins sharing state, and a long tail of optional dependencies.
 
 ## Decision
 

@@ -133,9 +133,9 @@ impl App {
     /// Words the highlight is drawn ahead of (positive) or behind (negative)
     /// the word speech confirmed, from `highlight.lead_words`.
     ///
-    /// Star's setting counts from its playback manager's word, which lags
+    /// star's setting counts from its playback manager's word, which lags
     /// the audio by one: its default of 1 paints the word being heard
-    /// (the Star parity reference Part 2 §1.11). textweaver's positions are the
+    /// (the star parity reference Part 2 §1.11). textweaver's positions are the
     /// word being heard already, so the same numbers keep their meaning
     /// with an offset of `lead_words - 1`: 1 (the default) is exact, 2 is
     /// one word ahead, 0 one word behind.

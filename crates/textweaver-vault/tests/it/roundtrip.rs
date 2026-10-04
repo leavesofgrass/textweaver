@@ -347,7 +347,7 @@ fn state_file_bridge_round_trips_through_a_vault() {
 
 #[test]
 fn star_exported_vault_imports_as_a_graph() {
-    // A vault as Star's `export_vault` wrote it: `star_id`, unquoted front
+    // A vault as star's `export_vault` wrote it: `star_id`, unquoted front
     // matter, `## Links` with Dataview fields.
     let dir = tempfile::tempdir().unwrap();
     let vault = dir.path().to_owned();

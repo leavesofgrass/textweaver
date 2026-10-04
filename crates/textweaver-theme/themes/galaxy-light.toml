@@ -1,7 +1,7 @@
 # Galaxy Light: Galaxy's light half: purple accents on white.
 #
-# Ported from Star's `galaxy-light` palette (star/themes.py).
-# Error color: the scheme's red (#c0264b); Star had no error color.
+# Ported from star's `galaxy-light` palette (star/themes.py).
+# Error color: the scheme's red (#c0264b); star had no error color.
 # Changed to meet the contrast floor (smallest lightness change that passes):
 #   colors.dim_text: #8a8f98 -> #727780 (3.2 to 1 -> 4.5 to 1 against #ffffff, needs 4.5 to 1)
 #   colors.heading4: #1a9e8f -> #008577 (3.3 to 1 -> 4.5 to 1 against #ffffff, needs 4.5 to 1)
@@ -16,7 +16,7 @@ name = "galaxy-light"
 display_name = "Galaxy Light"
 kind = "light"
 description = "Galaxy's light half: purple accents on white."
-author = "Star palettes (star/themes.py); ported to textweaver"
+author = "star palettes (star/themes.py); ported to textweaver"
 origin = "star"
 counterpart = "galaxy"
 

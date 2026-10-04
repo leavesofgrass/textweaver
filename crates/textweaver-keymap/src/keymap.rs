@@ -971,7 +971,7 @@ mod tests {
             ("Space", ActionId::PlayPause),
             ("Escape", ActionId::Stop),
             ("Ctrl+Space", ActionId::ReadFromCursor),
-            // Star's Ctrl+= and Ctrl+- for the rate became the text size
+            // star's Ctrl+= and Ctrl+- for the rate became the text size
             // keys (the owner's session 2); the rate is on F11.
             ("F11", ActionId::RateUp),
             ("Shift+F11", ActionId::RateDown),
@@ -1026,7 +1026,7 @@ mod tests {
         }
     }
 
-    /// Star's terminal keys, in the classic preset.
+    /// star's terminal keys, in the classic preset.
     #[test]
     fn star_tui_keys_are_kept() {
         let map = Keymap::with_preset(Platform::Linux, Frontend::Terminal, Preset::Classic);
@@ -1071,7 +1071,7 @@ mod tests {
             ("F5", ActionId::NextTheme),
             ("F6", ActionId::ToggleLineNumbers),
             ("F8", ActionId::CycleSpeedPreset),
-            // Star's F10 (previous chapter) opens the menus since Wave 6, in
+            // star's F10 (previous chapter) opens the menus since Wave 6, in
             // every preset, as F10 does in Windows programs; previous
             // chapter keeps Alt+PageUp and Shift+D.
             ("F10", ActionId::Menu),
@@ -1088,7 +1088,7 @@ mod tests {
                 "{chord}"
             );
         }
-        // Star's TUI Alt chords, which never worked there (ESC ate them),
+        // star's TUI Alt chords, which never worked there (ESC ate them),
         // work here.
         assert_eq!(
             map.lookup(&k("Alt+."), Layer::Browse),
@@ -1119,7 +1119,7 @@ mod tests {
         }
     }
 
-    /// Star's `test_authoring.py` 13-15: Ctrl+B, Ctrl+I, Ctrl+K, Ctrl+U, and
+    /// star's `test_authoring.py` 13-15: Ctrl+B, Ctrl+I, Ctrl+K, Ctrl+U, and
     /// Ctrl+M each have exactly one owner in the GUI.
     #[test]
     fn authoring_chords_have_one_owner() {
@@ -1141,7 +1141,7 @@ mod tests {
         }
     }
 
-    /// Star's `test_authoring.py` 5 ("the formatting toolbar follows edit
+    /// star's `test_authoring.py` 5 ("the formatting toolbar follows edit
     /// mode"): formatting commands are reachable only in edit mode. Edit
     /// mode on and off, copying, and the typing echo work everywhere.
     #[test]
@@ -1215,12 +1215,12 @@ mod tests {
         assert_eq!(
             gui.lookup(&k("Ctrl+Shift+B"), Layer::Browse),
             Some(ActionId::OpenLibrary),
-            "Star's Library chord"
+            "star's Library chord"
         );
         assert_eq!(
             gui.lookup(&k("Ctrl+Shift+N"), Layer::Browse),
             Some(ActionId::ListNotes),
-            "Star's notes panel chord"
+            "star's notes panel chord"
         );
     }
 

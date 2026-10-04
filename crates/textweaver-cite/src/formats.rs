@@ -53,7 +53,7 @@ impl Format {
     }
 
     /// Guesses the format from content: `@type{` is BibTeX, a `TY  -` line
-    /// is RIS, `[` or `{` is CSL-JSON (Star's heuristic, kept).
+    /// is RIS, `[` or `{` is CSL-JSON (star's heuristic, kept).
     pub fn sniff(text: &str) -> Option<Format> {
         let t = text.trim_start_matches('\u{feff}').trim_start();
         if t.starts_with('[') || t.starts_with('{') {
@@ -110,7 +110,7 @@ pub fn write(refs: &[Reference], format: Format) -> Result<String> {
 }
 
 /// Reads a reference file, choosing the format by extension and then by
-/// content. Invalid UTF-8 is replaced rather than rejected, as Star did.
+/// content. Invalid UTF-8 is replaced rather than rejected, as star did.
 /// References without a key get one (see [`crate::key`]).
 pub fn read_file(path: &Path) -> Result<Vec<Reference>> {
     let bytes = std::fs::read(path).map_err(|e| CiteError::io("read", path, e))?;

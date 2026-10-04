@@ -14,7 +14,7 @@ use crate::check::{Requirement, minimum};
 use crate::color::{Rgb, contrast_ratio, spoken_ratio};
 use crate::model::{Attrs, ColorRole, StyleRole, Theme};
 
-/// Colour names accepted besides `#rrggbb` and `#rgb`: Star's highlight
+/// Colour names accepted besides `#rrggbb` and `#rgb`: star's highlight
 /// names and the common CSS ones.
 pub const NAMED_COLORS: &[(&str, u32)] = &[
     ("black", 0x000000),

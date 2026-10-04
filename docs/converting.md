@@ -80,7 +80,7 @@ tw convert Inbox --to txt --watch
 
 This is a hot folder. Files already in `Inbox` are converted first, then each new file as it arrives. Converted files go to `Inbox/converted` (or to the folder you give with `--out`). Each event is spoken as one line, for example "Converted chapter 3.docx." Press Control C to stop.
 
-It follows Star's hot-folder rules:
+It follows star's hot-folder rules:
 
 - A file is converted only after its size has stayed the same for 2 seconds, so a file that is still being copied is never read half-way. Change the wait with `--stable-seconds 5`.
 - After a successful conversion the source moves to `Inbox/processed`. Add `--keep-sources` to leave it where it is.

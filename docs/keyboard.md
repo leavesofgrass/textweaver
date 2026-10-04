@@ -53,7 +53,7 @@ Where JAWS differs:
 
 - `?` in browse mode lists the keyboard shortcuts in both frontends; the GUI also opens that list with F3.
 - F1 opens the help in both frontends.
-- In the terminal, F3 is Find next and F4 Find previous, as in Star's terminal reader, so the terminal's keyboard list is on `?` only.
+- In the terminal, F3 is Find next and F4 Find previous, as in star's terminal reader, so the terminal's keyboard list is on `?` only.
 
 ## Modes and layers
 
@@ -102,7 +102,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 - Terminals cannot send `Ctrl+H` (it is Backspace), `Ctrl+I` (Tab), `Ctrl+M` or `Ctrl+J` (Enter), `Ctrl+Shift+` a letter (it arrives as `Ctrl+` the letter), or `Ctrl` with digits and most punctuation. The terminal defaults avoid all of them; the browse keys cover what the GUI does with those chords.
 - F10 opens textweaver's menus. Some terminal programs keep F10 or F11 (full screen) for themselves; then run `menu` from the command palette (F2), and move by chapter with `Alt+PageDown` and `Alt+PageUp`.
 - `Shift` with the arrow keys extends the selection in browse mode; most terminals send these keys, but some terminal programs keep `Shift+Up` and `Shift+Down` for scrolling their own window.
-- `Alt` chords work in the terminal. Star's terminal reader lost them to the Escape key; textweaver reads them directly.
+- `Alt` chords work in the terminal. star's terminal reader lost them to the Escape key; textweaver reads them directly.
 - The keys `1` to `6` move to the next heading of that level, and Shift with the digit to the previous one, as in a screen reader's browse mode. The tables show Shift with a digit as the character a US keyboard types (`!` `@` `#` `$` `%` `^`); textweaver matches the digit key itself, whatever your layout types. On Windows (Windows Terminal and the classic console) it reads the key from the console, so every layout works, including French AZERTY, where the digit row types `&` `é` `"` without Shift. Elsewhere terminals send only the character, so textweaver knows the shifted digits of the US, UK, German, Spanish, Nordic, and Italian layouts (`"` `£` `§` `·` `¤` and `&` as well as the US ones). French AZERTY types the digits only with Shift, so outside Windows set `digit_row = "azerty"` under `[keyboard]`: then `&` `é` `"` `'` `(` `-` are the digit keys 1 to 6, and the digits typed with Shift go back.
 
 ## Reading

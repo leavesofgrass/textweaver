@@ -2,7 +2,7 @@
 //! with text spacing, for GUIs and CSS.
 //!
 //! Choosing and resolving a family is `textweaver-fonts`' job (its
-//! `choice` module): the reading fonts Star offered, each platform's
+//! `choice` module): the reading fonts star offered, each platform's
 //! fallbacks, and which family to use given what is bundled and installed.
 //! This module re-exports those types, so `textweaver_aids::FontSettings`
 //! is the same type the writers and the GUIs resolve, and adds what needs

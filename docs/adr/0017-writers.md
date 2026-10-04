@@ -10,7 +10,7 @@
 
 ## Context
 
-We wanted conversion that is fast, native Rust, and memory safe, with EPUB, DOCX, braille (BRF), and PDF outputs beyond Markdown, HTML, and text. Star exported PDF and DOCX through Pandoc or Qt and BRF through its own grade 1 table (`star/braille.py`) or liblouis. Star's grade 1 table has wrong UEB symbols (both parentheses as dots 2-3-5-6, the slash as dots 3-4, straight double quotes always as the opening quote) and drops accented letters it cannot fold. Students with print disabilities use these files with screen readers, braille displays, and embossers, so structure and accessibility metadata matter as much as the text.
+We wanted conversion that is fast, native Rust, and memory safe, with EPUB, DOCX, braille (BRF), and PDF outputs beyond Markdown, HTML, and text. star exported PDF and DOCX through Pandoc or Qt and BRF through its own grade 1 table (`star/braille.py`) or liblouis. star's grade 1 table has wrong UEB symbols (both parentheses as dots 2-3-5-6, the slash as dots 3-4, straight double quotes always as the opening quote) and drops accented letters it cannot fold. Students with print disabilities use these files with screen readers, braille displays, and embossers, so structure and accessibility metadata matter as much as the text.
 
 The workspace offers `zip`, `krilla` (PDF with tagging and PDF/UA validation), and `roxmltree`; no XML writer, font, or braille crate.
 
@@ -73,7 +73,7 @@ Every PDF in the new tests passes krilla's PDF/UA-1 validator.
 - The converter uses `Writer` itself (its separate `DocumentWriter` was removed), and calls `pdf::check_fonts(&WriteOptions)` once before a PDF batch so a missing font is one message, not one failure per file.
 - PDF output needs a font on the system. Bundling Atkinson Hyperlegible (SIL Open Font License) in the repository would make PDF output identical everywhere; that was requested.
 - PDF output no longer needs a font on the system (see the amendment). Built without `bundled-fonts`, it falls back to the installed families listed above.
-- The HTML loader skips `aside` (Star's rule for web pages), so a future EPUB loader should read `aside epub:type="footnote"` as footnote bodies to round-trip textweaver's own EPUBs.
+- The HTML loader skips `aside` (star's rule for web pages), so a future EPUB loader should read `aside epub:type="footnote"` as footnote bodies to round-trip textweaver's own EPUBs.
 - Grade 2 braille depends on liblouis until a native contraction table is written and tested against liblouis's UEB test corpus.
 - Not yet: BANA table formats beyond linear rows, typeform (bold, italic) braille indicators, the capitals passage indicator, SVG images in DOCX and PDF, MathML, real Word footnotes, and page labels in PDF from print page breaks.
 

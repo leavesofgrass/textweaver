@@ -7,7 +7,7 @@
 //! - The spine's HTML and XHTML items are read in order, each starting a new
 //!   paragraph, with the same skip list, image alt text, and structure as
 //!   [`HtmlLoader`](crate::HtmlLoader) (the EPUB 3 navigation document is not
-//!   read as content). Unlike Star, chapters are not joined with `---` rules
+//!   read as content). Unlike star, chapters are not joined with `---` rules
 //!   and no title heading is invented: the title is metadata.
 //! - The table of contents (the EPUB 3 `nav` with `epub:type="toc"`, else
 //!   the EPUB 2 NCX) becomes `SectionBreak` markers: one per entry, labeled

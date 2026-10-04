@@ -56,7 +56,7 @@ The theme of alpha.8 is instrumentation plus the two or three optimizations the 
 
 ### The GUI
 
-- **Contents and Notes panels.** The two panels Star had and the GUI lacks. Both come from list models the core already has (the outline, the notes list), shown in a sidebar that is a list widget in the accessibility tree, toggled by key, and never steals focus from the document. Where: `crates/textweaver-xilem/src/gui.rs`, with the list state in `crates/textweaver-app`. Cost: one more list in the tree; no per-frame work when closed. Size: large. Target: alpha.8.
+- **Contents and Notes panels.** The two panels star had and the GUI lacks. Both come from list models the core already has (the outline, the notes list), shown in a sidebar that is a list widget in the accessibility tree, toggled by key, and never steals focus from the document. Where: `crates/textweaver-xilem/src/gui.rs`, with the list state in `crates/textweaver-app`. Cost: one more list in the tree; no per-frame work when closed. Size: large. Target: alpha.8.
 
 ### Release
 

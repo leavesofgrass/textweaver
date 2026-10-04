@@ -14,7 +14,7 @@ use crate::{StoreError, atomic_write};
 
 /// Identifies a document across sessions.
 ///
-/// Star keyed its stores inconsistently (path, path-or-title, a hash). One
+/// star keyed its stores inconsistently (path, path-or-title, a hash). One
 /// key for everything here: the file name plus a 64-bit FNV-1a hash of the
 /// absolute path, for example `sample.md-9f3c01a2b4d5e6f7`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -551,7 +551,7 @@ fn wins<T: Serialize + Versioned>(a: &T, b: &T) -> bool {
     }
 }
 
-/// Percentage of `pos` through a document of `len` chars, floored, as Star
+/// Percentage of `pos` through a document of `len` chars, floored, as star
 /// computed it: `int(100 * offset / max(1, len))`, capped at 100.
 pub fn percent(pos: CharPos, len: usize) -> u8 {
     let pct = pos.0.saturating_mul(100) / len.max(1);
@@ -651,7 +651,7 @@ impl DocState {
     }
 
     /// Appends a history entry, skipping an entry equal to the last one and
-    /// keeping at most `cap` entries (Star's `nav_history_size`).
+    /// keeping at most `cap` entries (star's `nav_history_size`).
     pub fn push_history(&mut self, pos: CharPos, cap: usize) {
         if self.history.last() != Some(&pos) {
             self.history.push(pos);
@@ -672,7 +672,7 @@ impl DocState {
     }
 
     /// Adds a bookmark at `pos`. An empty or missing name gets the first free
-    /// `markN` (Star's rule). A bookmark with the same name is moved there:
+    /// `markN` (star's rule). A bookmark with the same name is moved there:
     /// it keeps its id and gets a new time. Bookmarks stay sorted by
     /// position. Returns the bookmark added.
     pub fn add_bookmark(&mut self, name: Option<&str>, pos: CharPos, doc_len: usize) -> Bookmark {
@@ -760,7 +760,7 @@ impl DocState {
     /// Adds a note on `range`. `anchor_text` is the text of that range (or
     /// of the word or paragraph at a point); it is kept, collapsed and
     /// shortened, so the note still reads well if the text changes. Tags are
-    /// parsed from `tags` as Star did (`#a, b c`). Notes stay in document
+    /// parsed from `tags` as star did (`#a, b c`). Notes stay in document
     /// order. Returns the new note.
     pub fn add_note(
         &mut self,
@@ -809,7 +809,7 @@ impl DocState {
         self.notes.iter().find(|n| n.id == id)
     }
 
-    /// Changes a note's text and tags. Empty text deletes the note (Star's
+    /// Changes a note's text and tags. Empty text deletes the note (star's
     /// rule). Returns false when there is no such note.
     pub fn edit_note(&mut self, id: &str, note: &str, tags: &str) -> bool {
         if note.trim().is_empty() {
@@ -844,7 +844,7 @@ impl DocState {
             .collect()
     }
 
-    /// Notes matching a search query (Star's rules, [`Note::matches`]).
+    /// Notes matching a search query (star's rules, [`Note::matches`]).
     pub fn search_notes(&self, query: &str) -> Vec<&Note> {
         self.notes.iter().filter(|n| n.matches(query)).collect()
     }
@@ -921,7 +921,7 @@ impl DocState {
         Some(h)
     }
 
-    /// Removes every highlight (Star's Clear All Highlights), recording
+    /// Removes every highlight (star's Clear All Highlights), recording
     /// each deletion. Returns how many there were.
     pub fn clear_highlights(&mut self) -> usize {
         let gone = std::mem::take(&mut self.highlights);
@@ -1365,7 +1365,7 @@ impl Inner {
 
 impl Drop for Inner {
     fn drop(&mut self) {
-        // Star's `flush_pending` was never called, so a position recorded
+        // star's `flush_pending` was never called, so a position recorded
         // just before quitting was lost (Part 3 §7 item 22). Flush on drop.
         let _ = self.flush_where(|_| true);
     }
@@ -1500,7 +1500,7 @@ impl StateStore {
     }
 
     /// Keeps the `keep` most recently saved documents and deletes the rest
-    /// (Star capped positions at 200 entries). Flushes first. Returns the
+    /// (star capped positions at 200 entries). Flushes first. Returns the
     /// number of files removed.
     pub fn prune(&self, keep: usize) -> Result<usize, StoreError> {
         self.flush()?;
@@ -1827,7 +1827,7 @@ mod tests {
         assert_eq!(md, expected);
     }
 
-    /// Star's sidecar debounce test (`test_library.py:249`), applied to the
+    /// star's sidecar debounce test (`test_library.py:249`), applied to the
     /// state store: four rapid saves give one disk write; the pending value
     /// is readable; flushing writes it.
     #[test]

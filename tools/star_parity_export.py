@@ -46,14 +46,14 @@ OUT_DIR = FIXTURES / "star-parity"
 FIXTURE_NAMES = ["sample.txt", "sample.md", "sample.html"]
 TUI_WRAP = 78  # what the TUI uses on an 80-column terminal: wrap_width 0 -> (w - 2)
 
-os.environ.setdefault("STAR_NO_AUTOINSTALL", "1")  # never let Star pip-install
+os.environ.setdefault("STAR_NO_AUTOINSTALL", "1")  # never let star pip-install
 sys.dont_write_bytecode = True  # never write __pycache__ into the star checkout
 sys.path.insert(0, str(STAR_ROOT))
 
 import star  # noqa: E402
 import star.settings as _star_settings  # noqa: E402
 
-# Pure defaults: point Settings at a file that does not exist (Star treats
+# Pure defaults: point Settings at a file that does not exist (star treats
 # FileNotFoundError as "first launch, defaults are correct").
 _star_settings.SETTINGS_FILE = OUT_DIR / "__no_such_settings__.json"
 
@@ -74,8 +74,8 @@ _PARA_SPLIT_RE = re.compile(r"\n{2,}")
 def _settings(prefer_pandoc: bool = True) -> Settings:
     s = Settings()
     # Deviation from a stock install, both side-effect avoidance only:
-    s._data["document_cache"] = False  # never read/write Star's cache dir
-    s._data["prefer_pandoc"] = prefer_pandoc  # True is Star's default
+    s._data["document_cache"] = False  # never read/write star's cache dir
+    s._data["prefer_pandoc"] = prefer_pandoc  # True is star's default
     return s
 
 
@@ -88,7 +88,7 @@ def _utf8_offsets(text: str, offsets):
 
 
 class _SentenceStub:
-    """Minimal object so Star's own TUI _build_sentence_map can run unchanged."""
+    """Minimal object so star's own TUI _build_sentence_map can run unchanged."""
 
     def __init__(self, doc):
         self.doc = doc
@@ -141,7 +141,7 @@ def build_record(doc, settings) -> dict:
     # star/tui/mixin_document.py:_build_sentence_map (0 + every match end).
     sentence_starts = [0] + [m.end() for m in _SENTENCE_SPLIT_RE.finditer(plain)]
 
-    # Word-index sentence map exactly as the TUI builds it (Star's own method).
+    # Word-index sentence map exactly as the TUI builds it (star's own method).
     tui, word_map = _tui_view(doc)
     doc.word_map = word_map
     stub = _SentenceStub(doc)
@@ -151,7 +151,7 @@ def build_record(doc, settings) -> dict:
         word_map[w].tts_offset for w in sentence_start_words if 0 <= w < len(word_map)
     ]
 
-    # Paragraph starts in the plain text (derived: Star separates paragraphs in
+    # Paragraph starts in the plain text (derived: star separates paragraphs in
     # plain_text with "\n\n"; there is no dedicated plain-text paragraph splitter).
     paragraph_starts = [0] + [m.end() for m in _PARA_SPLIT_RE.finditer(plain)] if plain else []
 
@@ -193,7 +193,7 @@ def build_record(doc, settings) -> dict:
 
 
 class _HTML2MDVoidFixed(_HTML2MD):
-    """DIAGNOSTIC ONLY - not Star behaviour.  Star's _HTML2MD puts the void
+    """DIAGNOSTIC ONLY - not star behaviour.  star's _HTML2MD puts the void
     elements meta/link/base in its _SKIP set and increments a skip counter on the
     start tag, but HTML void elements have no end tag, so the counter never
     returns to 0 and everything after an unclosed <meta ...> is dropped.  This
@@ -242,7 +242,7 @@ def main() -> int:
         "pandoc_on_path": _pandoc_version(),
         "generated": _dt.date.today().isoformat(),
         "offset_unit": "unicode code points (Python str index), end-exclusive; *_utf8 = UTF-8 bytes",
-        "settings": "Star DEFAULTS (star/settings.py) with document_cache=False",
+        "settings": "star DEFAULTS (star/settings.py) with document_cache=False",
     }
     for name in FIXTURE_NAMES:
         path = FIXTURES / name
@@ -259,7 +259,7 @@ def main() -> int:
             s2 = _settings(prefer_pandoc=False)
             d2 = load_document(str(path), s2)
             variants["native_prefer_pandoc_false"] = {
-                "note": "Star's native HTML loader (HTMLHandler -> _load_html -> _HTML2MD). "
+                "note": "star's native HTML loader (HTMLHandler -> _load_html -> _HTML2MD). "
                         "Empty because of the void-element skip bug (unclosed <meta>).",
                 **build_record(d2, s2),
             }
@@ -268,8 +268,8 @@ def main() -> int:
             p.close()
             d3 = _document_from_markdown(str(path), "html", p.result(), s2)
             variants["diagnostic_html2md_void_fix_NOT_STAR_BEHAVIOR"] = {
-                "note": "NOT Star output: _HTML2MD with meta/link/base ignored, rest of "
-                        "Star's pipeline unchanged. Shows the converter's intended shape.",
+                "note": "NOT star output: _HTML2MD with meta/link/base ignored, rest of "
+                        "star's pipeline unchanged. Shows the converter's intended shape.",
                 **build_record(d3, s2),
             }
             rec["variants"] = variants

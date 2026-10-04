@@ -1439,7 +1439,7 @@ fn screenshots_draw_edit_mode_no_document_the_ruler_and_the_panels() {
     assert!(err.contains("home folder"), "{err}");
 }
 
-/// Star's rule since 0.1.31: new themes go after the existing ones, so the
+/// star's rule since 0.1.31: new themes go after the existing ones, so the
 /// F5 cycle a reader knows never changes. The first nine, from Galaxy, in
 /// the app and in the window's palettes.
 #[test]

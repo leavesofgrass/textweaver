@@ -7,7 +7,7 @@
 
 ## Context
 
-Students write in editors (VS Code, Neovim, Emacs, Obsidian) and read in textweaver. An editor plugin, a web page, or another frontend should be able to open a document, move through it by textweaver's units, have it read aloud with textweaver's voices and highlighting, and follow along, without reimplementing any of it. Star had no such interface; its GUI and TUI each carried their own copy of the reading logic.
+Students write in editors (VS Code, Neovim, Emacs, Obsidian) and read in textweaver. An editor plugin, a web page, or another frontend should be able to open a document, move through it by textweaver's units, have it read aloud with textweaver's voices and highlighting, and follow along, without reimplementing any of it. star had no such interface; its GUI and TUI each carried their own copy of the reading logic.
 
 The app core (`textweaver-app`) is already frontend-independent: frontends send `Command`s, act on `Effect`s, and poll speech status. A protocol only has to carry those across a process boundary.
 

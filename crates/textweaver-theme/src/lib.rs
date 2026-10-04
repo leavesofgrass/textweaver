@@ -11,7 +11,7 @@
 //!   borders, the accent, the caret, the reading ruler, document marks) are
 //!   derived from those colors at load unless the file gives them; each
 //!   role has a [`RoleClass`] that decides its check.
-//! - Themes are TOML files ([`ThemeFile`]). Star's 23 palettes are built in
+//! - Themes are TOML files ([`ThemeFile`]). star's 23 palettes are built in
 //!   ([`builtin`], ported by [`star`]); user themes load from the config
 //!   folder's `themes/` directory ([`Registry::load_dir`]), with errors
 //!   reported per file and unknown keys kept.

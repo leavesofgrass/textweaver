@@ -1,7 +1,7 @@
-//! Subtitle cues (SRT and WebVTT), ported from Star's `star/tts/subtitles.py`
-//! (the Star parity reference Part 2 §5.D).
+//! Subtitle cues (SRT and WebVTT), ported from star's `star/tts/subtitles.py`
+//! (the star parity reference Part 2 §5.D).
 //!
-//! Star's rules, kept:
+//! star's rules, kept:
 //!
 //! - Caption text is split into whitespace-delimited tokens.
 //! - Sentence cues group tokens into caption lines, breaking at every
@@ -16,7 +16,7 @@
 //!
 //! Deliberate differences:
 //!
-//! - Star timed one block of text against the whole file's duration, so a
+//! - star timed one block of text against the whole file's duration, so a
 //!   cue drifted further from the audio the longer the document. Here every
 //!   sentence has its measured start and end in the audio (export
 //!   synthesizes sentence by sentence), and the length weighting only
@@ -46,7 +46,7 @@ pub struct Cue {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SubtitleFormat {
-    /// SubRip (`.srt`), Star's default.
+    /// SubRip (`.srt`), star's default.
     #[default]
     Srt,
     /// WebVTT (`.vtt`).
@@ -91,12 +91,12 @@ pub enum Karaoke {
 /// How cues are built.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct CueOptions {
-    /// One cue per word instead of caption lines (Star's
+    /// One cue per word instead of caption lines (star's
     /// `subtitle_word_level`, default off).
     pub word_level: bool,
-    /// Most tokens in one caption line (Star: 12).
+    /// Most tokens in one caption line (star: 12).
     pub max_words: usize,
-    /// Most characters in one caption line (Star: 90).
+    /// Most characters in one caption line (star: 90).
     pub max_chars: usize,
     /// Karaoke style for caption lines (off by default; ignored with
     /// `word_level`). ASS files are always karaoke by outline.
@@ -181,7 +181,7 @@ struct Token<'a> {
     end: u64,
 }
 
-/// Star's weighting: each token gets `(len + 1) / total` of `[start, end)`,
+/// star's weighting: each token gets `(len + 1) / total` of `[start, end)`,
 /// cumulatively, rounded to whole milliseconds.
 fn weighted<'a>(tokens: &[&'a str], start: u64, end: u64) -> Vec<Token<'a>> {
     let weights: Vec<u64> = tokens
@@ -296,7 +296,7 @@ impl CaptionLine {
     }
 }
 
-/// Groups one sentence's tokens into caption lines (Star's rules).
+/// Groups one sentence's tokens into caption lines (star's rules).
 fn group(tokens: &[Token<'_>], opts: &CueOptions, out: &mut Vec<CaptionLine>) {
     fn flush(cur: &mut Vec<Cue>, out: &mut Vec<CaptionLine>) {
         if let (Some(first), Some(last)) = (cur.first(), cur.last()) {
@@ -327,7 +327,7 @@ fn group(tokens: &[Token<'_>], opts: &CueOptions, out: &mut Vec<CaptionLine>) {
     flush(&mut cur, out);
 }
 
-/// The caption lines for a timeline, with each word's time (Star's line
+/// The caption lines for a timeline, with each word's time (star's line
 /// rules; [`CueOptions::word_level`] is not used here).
 pub fn lines(timeline: &Timeline, opts: &CueOptions) -> Vec<CaptionLine> {
     let mut out = Vec::new();
@@ -373,7 +373,7 @@ pub fn build(timeline: &Timeline, opts: &CueOptions) -> Vec<Cue> {
     out
 }
 
-/// Star's `_build_subtitle_cues(text, duration)`: cues for `text` spread
+/// star's `_build_subtitle_cues(text, duration)`: cues for `text` spread
 /// over `duration_ms` by token length, breaking lines at sentence ends
 /// (after `.`, `!`, `?`, or `…` followed by whitespace) as well as at
 /// `max_words` and `max_chars`. Used when only a whole file's duration is
@@ -740,7 +740,7 @@ mod tests {
         }
     }
 
-    /// Star's `_fmt_subtitle_time` vectors (tests/test_tts.py:67-81).
+    /// star's `_fmt_subtitle_time` vectors (tests/test_tts.py:67-81).
     #[test]
     fn star_time_vectors() {
         assert_eq!(format_time(0, SubtitleFormat::Srt), "00:00:00,000");
@@ -748,7 +748,7 @@ mod tests {
         assert_eq!(format_time(3_661_250, SubtitleFormat::Srt), "01:01:01,250");
     }
 
-    /// Star's `_build_subtitle_cues` vectors (tests/test_tts.py:141-181).
+    /// star's `_build_subtitle_cues` vectors (tests/test_tts.py:141-181).
     #[test]
     fn star_cue_vectors() {
         let o = CueOptions::default();
@@ -783,7 +783,7 @@ mod tests {
         assert_eq!(joined.join(" "), text);
     }
 
-    /// Star's `_format_subtitles` vectors (tests/test_tts.py:188-212).
+    /// star's `_format_subtitles` vectors (tests/test_tts.py:188-212).
     #[test]
     fn star_format_vectors() {
         let srt = render(

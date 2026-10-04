@@ -1,10 +1,10 @@
-//! Hot-folder watching, with Star's `watch_*` semantics:
+//! Hot-folder watching, with star's `watch_*` semantics:
 //!
 //! - Files already in the folder are converted at start (they may have
 //!   arrived while nothing was watching), then new ones as they appear.
 //!   Only the folder itself is watched, not subfolders.
 //! - A file is converted only once its size has stayed the same, and above
-//!   zero, for `stable` (Star's `watch_stable_seconds`, 2 seconds), checked
+//!   zero, for `stable` (star's `watch_stable_seconds`, 2 seconds), checked
 //!   every `poll` (`watch_poll_interval`, half a second), and once it can
 //!   be opened, so half-copied files are never read.
 //! - After a successful conversion the source moves to `processed/` when
@@ -16,9 +16,9 @@
 //!
 //! Filesystem events come from `notify`; the folder is also rescanned
 //! every few seconds, so a missed event (network drives) only delays a file.
-//! Deliberate difference from Star: an output with the same name is
+//! Deliberate difference from star: an output with the same name is
 //! replaced (atomically), since a file dropped again is usually a newer
-//! version, where Star wrote `name (2).md`.
+//! version, where star wrote `name (2).md`.
 
 use std::collections::HashMap;
 use std::io::Write;
@@ -31,7 +31,7 @@ use notify::{RecursiveMode, Watcher};
 
 use crate::{ConvertError, Converter, FileResult, Job, Status, extension};
 
-/// Watch settings (Star's `watch_*` settings).
+/// Watch settings (star's `watch_*` settings).
 #[derive(Clone, Debug)]
 pub struct WatchOptions {
     /// How long a file's size must hold still before it is converted.

@@ -1,15 +1,15 @@
-//! Writing documents' notes and highlights into a vault (Star's
+//! Writing documents' notes and highlights into a vault (star's
 //! `export_vault`, `star/obsidian.py:263-324`).
 //!
 //! Every note becomes one vault note, named after its anchor, with front
-//! matter and its relations as Dataview fields under `## Links` (Star's
+//! matter and its relations as Dataview fields under `## Links` (star's
 //! format, which round-trips relation types and shows the edges in
 //! Obsidian's graph). Each document also gets a document note listing its
 //! highlights as quotes with block ids and linking to its notes.
 //!
-//! Differences from Star:
+//! Differences from star:
 //! - Front matter values are quoted when needed (Part 3 §7 item 42).
-//! - The id key is `textweaver_id`; Star's `star_id` is still read on
+//! - The id key is `textweaver_id`; star's `star_id` is still read on
 //!   import.
 //! - Re-exporting updates the notes written before (found by id anywhere in
 //!   the vault, even after the user renamed or moved them) instead of
@@ -143,7 +143,7 @@ pub fn highlight_id(h: &Highlight) -> String {
 /// Notes textweaver wrote into the vault before, found by id.
 #[derive(Debug, Default)]
 struct Existing {
-    /// Note id (`textweaver_id`, or Star's `star_id`) to file.
+    /// Note id (`textweaver_id`, or star's `star_id`) to file.
     notes: HashMap<String, PathBuf>,
     /// Document id (`textweaver_doc`) to file.
     docs: HashMap<String, PathBuf>,
@@ -274,7 +274,7 @@ pub fn export_documents(
 }
 
 /// The base of a note's file name: its anchor, else its first line, else
-/// its id (Star's order).
+/// its id (star's order).
 fn note_base_name(note: &Note) -> String {
     let anchor = note.anchor.trim();
     if !anchor.is_empty() {

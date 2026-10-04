@@ -6,7 +6,7 @@
 
 ## Context
 
-Star builds the spoken text and the displayed text separately and aligns them with Python's `difflib` to find which displayed word is being spoken. Its normalization is a chain of regex substitutions that cannot report where anything came from. The inventory (the Star parity reference, kept outside the repository, speech section) found the consequences: the TUI expands abbreviations and numbers but maps engine word positions against the unexpanded text, so the highlight and the saved pause position point at the wrong word after the first expansion; the GUI avoids that by never normalizing during playback at all.
+star builds the spoken text and the displayed text separately and aligns them with Python's `difflib` to find which displayed word is being spoken. Its normalization is a chain of regex substitutions that cannot report where anything came from. The inventory (the star parity reference, kept outside the repository, speech section) found the consequences: the TUI expands abbreviations and numbers but maps engine word positions against the unexpanded text, so the highlight and the saved pause position point at the wrong word after the first expansion; the GUI avoids that by never normalizing during playback at all.
 
 ## Decision
 
@@ -31,13 +31,13 @@ Span { spoken: Range<u32>,   // bytes in the spoken text
 
 **Composition.** Every normalization `Transform` returns `(String, OffsetMap)` mapping its output to its input. `OffsetMap::compose(first, mid, second)` chains them, so after the whole pipeline the map still points into the document. Composition keeps literal spans exact, merges adjacent literals, and fuses pieces of one source token into a single expanded span.
 
-**Narration.** `text::narrate::plan(&Document, range, &NarrationPolicy)` produces sentence-sized `Utterance`s, each with an identity map onto the document, plus `Inserted` spans for structure (heading levels, table coordinates in structured table mode, list positions) according to the policy and verbosity. The speech service then runs the normalization pipeline **per utterance, never across chunks**, so a transform can never pull text from the next sentence (Star's "3:45 today" → "three forty-five AMtoday" class of bug becomes a unit-testable transform error, not an alignment failure).
+**Narration.** `text::narrate::plan(&Document, range, &NarrationPolicy)` produces sentence-sized `Utterance`s, each with an identity map onto the document, plus `Inserted` spans for structure (heading levels, table coordinates in structured table mode, list positions) according to the policy and verbosity. The speech service then runs the normalization pipeline **per utterance, never across chunks**, so a transform can never pull text from the next sentence (star's "3:45 today" → "three forty-five AMtoday" class of bug becomes a unit-testable transform error, not an alignment failure).
 
 ## Consequences
 
 - The highlight is exact after any normalization, and pause/resume positions are exact.
 - Every transform must build its output with `SpokenBuilder` (or produce an equivalent map); a transform that returns a string without a map is not accepted.
-- Normalization test vectors from Star's `tests/test_ttstext.py` are ported as expected strings, and each also asserts the map's invariants.
+- Normalization test vectors from star's `tests/test_ttstext.py` are ported as expected strings, and each also asserts the map's invariants.
 
 ## See also
 

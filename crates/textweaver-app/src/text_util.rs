@@ -52,7 +52,7 @@ pub fn is_blank(doc: &Document, range: CharRange) -> bool {
         .all(char::is_whitespace)
 }
 
-/// Floored percentage of `pos` through the document (Star's rule).
+/// Floored percentage of `pos` through the document (star's rule).
 pub fn percent(doc: &Document, pos: CharPos) -> u8 {
     let len = doc.len_chars().max(1);
     u8::try_from((pos.0.min(len) * 100) / len).unwrap_or(100)
@@ -64,7 +64,7 @@ pub fn word_containing(doc: &Document, pos: CharPos) -> Option<CharRange> {
 }
 
 /// The first word starting at or after `pos`, else the last word, else
-/// `pos` clamped (Star's restore rule, used for positions and bookmarks).
+/// `pos` clamped (star's restore rule, used for positions and bookmarks).
 pub fn first_word_at_or_after(doc: &Document, pos: CharPos) -> CharPos {
     let pos = pos.clamp_to(doc.len_chars());
     let found = if pos.0 == 0 {

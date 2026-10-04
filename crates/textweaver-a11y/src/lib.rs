@@ -20,7 +20,7 @@
 //! [`Priority`], and a text for each [`Verbosity`] level; the application
 //! words most of its messages itself (see `textweaver-app`) and sends them
 //! through the same announcer and verbosity filter. Frontends call
-//! [`Announcer::announce_event`] with the user's verbosity. Star announced
+//! [`Announcer::announce_event`] with the user's verbosity. star announced
 //! some changes only on the status bar (rate, Speech Cursor, edit mode,
 //! resume position) and gave no feedback at all for a TUI pause;
 //! textweaver announces all of them.

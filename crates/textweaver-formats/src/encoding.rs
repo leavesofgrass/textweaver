@@ -1,7 +1,7 @@
 //! Character encodings: decoding source bytes to text.
 //!
-//! Star decoded everything as UTF-8 with replacement characters and never
-//! set `Document.encoding` (the Star parity reference, Part 1 §7, quirk 10), so a
+//! star decoded everything as UTF-8 with replacement characters and never
+//! set `Document.encoding` (the star parity reference, Part 1 §7, quirk 10), so a
 //! Windows-1252 text file or a Latin-1 web page lost every accented letter.
 //! textweaver decides the encoding in this order:
 //!

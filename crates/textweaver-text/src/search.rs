@@ -1,23 +1,23 @@
 //! Find in document: plain or regex, case, whole word, wrap, direction.
 //!
-//! Decisions (each fixes a Star bug, the Star parity reference Part 1 §5):
+//! Decisions (each fixes a star bug, the star parity reference Part 1 §5):
 //!
 //! - **One haystack.** The whole canonical text is searched, so a match can
-//!   span a line break (Star's TUI searched each wrapped display line apart).
+//!   span a line break (star's TUI searched each wrapped display line apart).
 //! - **Plain search is whitespace-tolerant.** A run of whitespace in a plain
 //!   pattern matches any run of whitespace, so `"reading room"` finds
 //!   `"reading\nroom"` in a plain-text file whose lines wrap.
 //! - **Case-insensitive offsets are exact.** Matching uses Unicode case
 //!   folding on the original text, never a lowercased copy whose length can
-//!   differ (Star's `İ` bug).
+//!   differ (star's `İ` bug).
 //! - **Whole word** means the match is not preceded or followed by a letter,
 //!   digit, or underscore. It works for patterns that begin or end with
 //!   punctuation, unlike a plain `\b` wrapper.
 //! - **Matches do not overlap.** [`find_all`] reports leftmost-first,
-//!   non-overlapping matches (Star reported overlapping ones, which corrupted
+//!   non-overlapping matches (star reported overlapping ones, which corrupted
 //!   its Replace All). Next and previous step through that list.
 //! - **Backward means backward.** A backward search finds the last match
-//!   that starts before `from` (Star's `search-backward` searched forward).
+//!   that starts before `from` (star's `search-backward` searched forward).
 //! - **Regex mode** is multi-line: `^` and `$` match at line starts and ends.
 //!   An invalid pattern is an error for the caller to announce, not a silent
 //!   fallback to plain search.

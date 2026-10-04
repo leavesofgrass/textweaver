@@ -85,7 +85,7 @@ impl Pcm {
 }
 
 /// A source of recorded speech, such as a microphone: recording runs
-/// between `start` and `stop`, with no fixed length (Star's
+/// between `start` and `stop`, with no fixed length (star's
 /// `StreamRecorder`: "press Stop when you're done").
 pub trait AudioCapture: Send {
     /// Starts recording.

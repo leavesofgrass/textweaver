@@ -1,11 +1,11 @@
-//! Library search over document text (the query side of Star's
+//! Library search over document text (the query side of star's
 //! `star/fulltext.py`).
 //!
 //! [`FullTextIndex`] is the interface the library searches through. The
 //! formats crate owns text extraction and its own on-disk index; until the
 //! orchestrator wires that in, [`SimpleIndex`] is a small implementation
 //! here: extracted text per document in one JSON cache file, refreshed only
-//! for files whose size or modification time changed, searched as Star did
+//! for files whose size or modification time changed, searched as star did
 //! (case-insensitive substring, ranked by match count).
 
 use std::collections::BTreeMap;
@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::library::ScannedDoc;
 use crate::{StoreError, atomic_write};
 
-/// Characters of context on each side of a snippet's match (Star 60).
+/// Characters of context on each side of a snippet's match (star 60).
 pub const SNIPPET_CONTEXT: usize = 60;
 
 /// One document that matched a search.

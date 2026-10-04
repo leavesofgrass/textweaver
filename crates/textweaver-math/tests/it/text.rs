@@ -31,13 +31,13 @@ fn check(src: &str, out: &str, map: &OffsetMap) {
     }
 }
 
-/// Star's delimited math vectors (`tests/test_ttstext.py`).
+/// star's delimited math vectors (`tests/test_ttstext.py`).
 #[test]
 fn star_vectors() {
     assert_eq!(say(r"$\frac{a}{b}$"), "a over b");
     assert_eq!(say(r"$\sqrt{x}$"), "square root of x");
     assert_eq!(say("hello world"), "hello world");
-    // Star's undelimited vectors, delimited as they appear in documents.
+    // star's undelimited vectors, delimited as they appear in documents.
     assert_eq!(say("$x^2$ and $y^{3}$"), "x squared and y cubed");
     assert_eq!(say("$x_i$ and $x_{ij}$"), "x sub i and x sub i j");
     assert_eq!(say(r"$\alpha + \beta$"), "alpha plus beta");
@@ -48,7 +48,7 @@ fn star_vectors() {
     assert_eq!(say(r"$\bar{x}$"), "x bar");
 }
 
-/// Star's bugs Q6, Q7, Q8 and the defects table: prose is never math.
+/// star's bugs Q6, Q7, Q8 and the defects table: prose is never math.
 #[test]
 fn star_bugs_fixed() {
     for text in [

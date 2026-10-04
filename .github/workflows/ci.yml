@@ -98,11 +98,11 @@ jobs:
         run: cargo xtask keyboard --check
       - name: Dependency direction
         run: cargo xtask deps --check
-      # Word, sentence, and paragraph segmentation against Star's
+      # Word, sentence, and paragraph segmentation against star's
       # (fixtures/star-parity/): every delta explained, and the count per
       # rule as committed in xtask/parity-baseline.txt. No CI job ran it
-      # before, and without the counts a change toward Star's bugs passed.
-      - name: Star parity
+      # before, and without the counts a change toward star's bugs passed.
+      - name: star parity
         run: cargo xtask parity
       # cargo-about reads each crate's licence files from the registry
       # sources, so every platform's crates are fetched first.

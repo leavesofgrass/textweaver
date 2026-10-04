@@ -1,6 +1,6 @@
-//! `tests/test_sync.py` ported one-to-one (45 tests, the Star parity reference
+//! `tests/test_sync.py` ported one-to-one (45 tests, the star parity reference
 //! Part 3 §3.6), numbered as in the inventory, followed by the sidecar tests
-//! from `tests/test_library.py` and tests for the fixed Star bugs.
+//! from `tests/test_library.py` and tests for the fixed star bugs.
 
 use serde_json::{Value, json};
 
@@ -533,7 +533,7 @@ fn t40_conflict_default_resolution_is_unresolved() {
 
 #[test]
 fn t41_meta_key_constant_matches_library() {
-    // Star pinned `sync._META_KEY == library._META_KEY`; here one constant
+    // star pinned `sync._META_KEY == library._META_KEY`; here one constant
     // serves both the merge and the sidecar store.
     assert_eq!(META_KEY, "_meta");
     let mut m = SidecarMap::new();
@@ -776,9 +776,9 @@ fn library_legacy_sidecar_is_compatible() {
     assert_eq!(disk.keys().collect::<Vec<_>>(), vec!["old.epub", "new.md"]);
 }
 
-// ---- Fixed Star bugs ----
+// ---- Fixed star bugs ----
 
-/// Star's `record_progress` re-asserted the local entry after merging, so
+/// star's `record_progress` re-asserted the local entry after merging, so
 /// a glance at 5% on device B overwrote 80% from device A even under
 /// `highest_progress` (Part 3 §7 item 23).
 #[test]
@@ -842,7 +842,7 @@ fn fix_newest_still_writes_the_fresh_local_entry() {
     assert_eq!(read_sidecar(&folder).get("book.md").unwrap()["pct"], 5);
 }
 
-/// Star never called `flush_pending`, so a position recorded within the
+/// star never called `flush_pending`, so a position recorded within the
 /// debounce window of the last write was lost at exit (item 22).
 #[test]
 fn fix_pending_sidecar_data_is_flushed_on_drop() {

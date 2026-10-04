@@ -290,7 +290,7 @@ A single damaged file is different: the status says "Sync: 1 damaged file skippe
    ```
 
 2. Each problem names its place in the file, such as `settings.speech.rate: 5000 is outside 50 to 900 words per minute`. Fix those values and try again.
-3. "This is a Star settings file" means the file is Star's `settings.json`. Use `tw migrate-star` instead; see the [library guide](library.md).
+3. "This is a star settings file" means the file is star's `settings.json`. Use `tw migrate-star` instead; see the [library guide](library.md).
 4. A file from a newer textweaver is refused: "This file was exported by a newer textweaver". Update textweaver, or export again with fewer settings (`--changed-only`).
 5. "Your current settings file ... cannot be read" means your own `settings.toml` is damaged. Fix or move it away, then import.
 6. Close the reader before importing from the command line. Otherwise it may save its own settings over the imported ones.

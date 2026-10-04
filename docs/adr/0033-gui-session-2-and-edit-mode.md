@@ -47,7 +47,7 @@ The existing `[reading_aids.font]` settings (family, size in points, weight) alr
 - Each change is saved and said, assertively for the size keys so a held key says only the latest size: "Text size 18 points.", "Text size 72 points, the largest.", "Font: OpenDyslexic." The messages are in all six catalogs.
 - The window now takes the font from the settings on every refresh, so a change made in the Settings dialog reaches the document too.
 
-`Ctrl+=` and `Ctrl+-` were Star's rate keys in the GUI. Text size is what screen reader users expect on them, so the GUI's rate moved to **F11** and **Shift+F11**, beside volume on F7. The browse keys `+`, `=`, and `-` still change the rate, and the terminal is unchanged. The keymap test of Star's GUI chords records the change.
+`Ctrl+=` and `Ctrl+-` were star's rate keys in the GUI. Text size is what screen reader users expect on them, so the GUI's rate moved to **F11** and **Shift+F11**, beside volume on F7. The browse keys `+`, `=`, and `-` still change the rate, and the terminal is unchanged. The keymap test of star's GUI chords records the change.
 
 ### A shortcut on every control
 

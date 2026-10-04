@@ -57,7 +57,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 ### Files, the library, and settings
 
 - [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more; exporting and previewing from inside the reader.
-- [The library](library.md): library folders, recent files, sync between computers, and importing from Star.
+- [The library](library.md): library folders, recent files, sync between computers, and importing from star.
 - [Optional components](components.md): the models, fonts, and voices textweaver downloads only when you agree; Manage optional components, the first-run list, `tw components`, installing from a file, and a mirror.
 - [Syncing between computers](sync.md): notes, highlights, bookmarks, places, statistics, and settings through a folder you choose; what never syncs, setting it up, what you hear, and privacy.
 - [The Obsidian vault](vault.md): exporting notes and highlights to a vault, and importing them back.
@@ -88,7 +88,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
 - [Roadmap](roadmap.md): what works today, what is being built next, and what is planned.
 - [Research for the next waves](dev/research/README.md): the research reports and the wave plan for alpha.8, alpha.9, and later: performance, speech engines, use cases, design, and law and standards.
-- [Star features not yet planned](star-gaps.md): Star features with their status in textweaver.
+- [star features not yet planned](star-gaps.md): star features with their status in textweaver.
 - [CHANGELOG.md](../CHANGELOG.md): what changed in each release.
 
 ## Decisions
@@ -114,7 +114,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0017: Native writers](adr/0017-writers.md): EPUB 3, DOCX, BRF braille, and tagged PDF, and their accessibility checks.
 - [ADR-0018: Math](adr/0018-math.md): LaTeX and ASCIIMath parsing, MathML, and spoken math.
 - [ADR-0019: Citations](adr/0019-citations.md): the reference library, lookup, and CSL formatting.
-- [ADR-0020: Themes](adr/0020-themes.md): Star's palettes, contrast rules, and output for every frontend.
+- [ADR-0020: Themes](adr/0020-themes.md): star's palettes, contrast rules, and output for every frontend.
 - [ADR-0021: DECtalk through a host process](adr/0021-dectalk.md): DECtalk with word timing, and its licensing.
 - [ADR-0022: Reading aids](adr/0022-reading-aids.md): RSVP, bionic reading, spacing, fonts, the ruler, and more, as pure data.
 - [ADR-0023: Piper voices and Whisper dictation in-process on RTen](adr/0023-in-process-neural-speech.md): neural voices with word timing from the model, and in-process dictation, on a pure-Rust ONNX runtime.

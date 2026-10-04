@@ -18,7 +18,7 @@
 //! - [`backends`]: `null`, `recording` (a test double, always compiled),
 //!   `espeak` (feature `espeak`), `omnivox` (feature `omnivox`),
 //!   `speechd` (feature `speechd`: speech-dispatcher with an index mark
-//!   before every word), and the extensible [`BackendRegistry`] with Star's
+//!   before every word), and the extensible [`BackendRegistry`] with star's
 //!   selection rules. The out-of-process engines (Eloquence, SAPI5,
 //!   DECtalk) and Apple's voices live in their own crates and are
 //!   registered by the app.

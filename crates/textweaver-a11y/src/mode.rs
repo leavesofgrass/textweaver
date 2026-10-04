@@ -144,7 +144,7 @@ pub enum CursorPlacement {
     /// the reading.
     #[default]
     Follow,
-    /// At the start of the status line, as Star did, so a screen reader's
+    /// At the start of the status line, as star did, so a screen reader's
     /// "read current line" repeats the last message.
     Status,
 }

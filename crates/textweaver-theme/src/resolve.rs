@@ -2,7 +2,7 @@
 //!
 //! Without `inherits`, a file needs only `colors.background` and
 //! `colors.text`; every other role is worked out from the colors it has,
-//! the way Star's terminal UI derived its chrome from a ten-color palette:
+//! the way star's terminal UI derived its chrome from a ten-color palette:
 //! highlights put the page color as text on an accent band (the spoken word
 //! on heading 1, find matches on headings 3 and 2), so their legibility is
 //! the accent's own contrast. With `inherits`, missing keys come from that
@@ -10,7 +10,7 @@
 //!
 //! Colors the file does not give are always nudged until they pass. Colors
 //! the file does give are only nudged when asked ([`Repair::Explicit`], used
-//! to port Star's palettes); a user's own colors are reported by
+//! to port star's palettes); a user's own colors are reported by
 //! [`crate::check()`], never silently changed.
 
 use toml::Table;
@@ -27,7 +27,7 @@ pub enum Repair {
     /// Only colors worked out by the resolver are adjusted (user themes).
     DerivedOnly,
     /// Colors from the file are adjusted too, and each change is recorded
-    /// (built-in themes ported from Star, and the "fix contrast" action).
+    /// (built-in themes ported from star, and the "fix contrast" action).
     Explicit,
 }
 

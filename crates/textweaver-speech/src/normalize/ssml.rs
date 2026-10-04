@@ -2,7 +2,7 @@
 //!
 //! These produce engine markup, not spoken text, so they carry no offset
 //! map; an engine that takes SSML gets its word positions from marks
-//! (`Caps::SSML_MARKS`, wave 2). Fix: `'` is escaped too (Star quirk Q9).
+//! (`Caps::SSML_MARKS`, wave 2). Fix: `'` is escaped too (star quirk Q9).
 
 use std::sync::LazyLock;
 
@@ -22,7 +22,7 @@ static SEMICOLONS: LazyLock<Regex> = LazyLock::new(|| re(r";(\s+)"));
 static DASHES: LazyLock<Regex> = LazyLock::new(|| re(r"[\u{2014}\u{2013}]"));
 static DECTALK_CLAUSES: LazyLock<Regex> = LazyLock::new(|| re(r"([,;:])(\s+)"));
 
-/// Star `_text_to_ssml(text, backend, sentence_ms, clause_ms)`: escapes the
+/// star `_text_to_ssml(text, backend, sentence_ms, clause_ms)`: escapes the
 /// text and adds `<break>`s after sentences, clauses, and dashes. Text that
 /// already starts with `<speak>` is returned unchanged; `backend ==
 /// "dectalk"` gives [`text_to_dectalk`] instead.
@@ -68,7 +68,7 @@ fn semicolons(s: &str, clause_ms: u32) -> String {
         .into_owned()
 }
 
-/// Star `_text_to_dectalk(text, sentence_ms, clause_ms)`: DECtalk `[:pau]`
+/// star `_text_to_dectalk(text, sentence_ms, clause_ms)`: DECtalk `[:pau]`
 /// commands after sentences, clauses, and dashes.
 pub fn text_to_dectalk(text: &str, sentence_ms: u32, clause_ms: u32) -> String {
     let s = SENTENCE_ENDS.replace_all(text, format!("$1 [:pau {sentence_ms}] "));

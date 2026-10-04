@@ -1,6 +1,6 @@
 //! Reading level: Flesch-Kincaid grade and Flesch reading ease.
 //!
-//! Star (`tui/mixin_document.py:225-265`) split the first 50,000 chars on
+//! star (`tui/mixin_document.py:225-265`) split the first 50,000 chars on
 //! whitespace and on `[.!?]+`, so punctuation-only tokens counted as words,
 //! every `Dr.` and `e.g.` ended a sentence, and long documents were judged
 //! by their opening pages. textweaver counts the whole document (or a
@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use textweaver_core::{CharRange, Unit};
 use textweaver_text::{Document, segments_in};
 
-/// School-level band for a Flesch-Kincaid grade, as Star named them.
+/// School-level band for a Flesch-Kincaid grade, as star named them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GradeBand {
@@ -37,7 +37,7 @@ pub enum GradeBand {
 }
 
 impl GradeBand {
-    /// The band for `grade` (Star's thresholds: 6, 9, 13, 16).
+    /// The band for `grade` (star's thresholds: 6, 9, 13, 16).
     pub fn for_grade(grade: f64) -> Self {
         if grade < 6.0 {
             GradeBand::Elementary
@@ -97,12 +97,12 @@ impl ReadingLevel {
         }
     }
 
-    /// The grade for display: at least 0, as Star showed it.
+    /// The grade for display: at least 0, as star showed it.
     pub fn display_grade(&self) -> f64 {
         self.grade.max(0.0)
     }
 
-    /// The reading ease for display: 0 to 100, as Star showed it.
+    /// The reading ease for display: 0 to 100, as star showed it.
     pub fn display_ease(&self) -> f64 {
         self.ease.clamp(0.0, 100.0)
     }
@@ -145,7 +145,7 @@ fn thousands(n: usize) -> String {
 }
 
 /// Estimated syllables in one word. Words without letters (numbers) count
-/// as one, as in Star.
+/// as one, as in star.
 pub fn count_syllables(word: &str) -> usize {
     let lower: String = word
         .chars()

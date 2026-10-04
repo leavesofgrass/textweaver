@@ -8,7 +8,7 @@ textweaver is an accessible document reader and writer for students with print d
 
 Accessibility is the product, not a feature. A change that works with a mouse and a screen, but not with a screen reader, a Braille display, or the keyboard alone, is not finished.
 
-textweaver is a Rust reimplementation of [Star](https://github.com/leavesofgrass/star), an earlier reader written in Python. It is in alpha: it works, and it is changing quickly.
+textweaver is a Rust reimplementation of [star](https://github.com/leavesofgrass/star), an earlier reader written in Python. It is in alpha: it works, and it is changing quickly.
 
 ## Ways to help
 
@@ -105,7 +105,7 @@ Every change must work for people who do not look at the screen.
 - Every file the app writes while it runs goes through the writer thread (`crates/textweaver-app/src/writer.rs`), never from the input thread.
 - Tests never play audio aloud. Write audio to a temporary file, or use a silent output.
 - Integration tests go in one test program per crate, `tests/it/main.rs`. A new integration test is a module there (`tests/it/<name>.rs`, with `mod <name>;` in `main.rs`), never a new file directly in `tests/`: every file there is a program of its own, which links the crate again and slows every test build. [Testing](docs/dev/testing.md#where-tests-go) has the details.
-- Fix Star's bugs rather than port them. If you keep a Star quirk on purpose, say so.
+- Fix star's bugs rather than port them. If you keep a star quirk on purpose, say so.
 - US English in code comments, docs, and messages ("color", "behavior").
 
 The [architecture decision records](docs/adr/README.md) (ADRs) explain why the code is built as it is. If a change goes against one, say so in the pull request.
@@ -125,7 +125,7 @@ A maintainer will review it. Reviews may ask for changes; that is normal, and no
 
 - One logical change per commit.
 - The subject line starts with the area, in lower case, then a colon and a short summary in plain words: `speech: find speech-dispatcher without XDG_RUNTIME_DIR`, `docs: changelog and quick start`, `app: every action is wired`.
-- The body says why, and anything a reviewer needs to know: a measurement, a Star bug fixed, a test added.
+- The body says why, and anything a reviewer needs to know: a measurement, a star bug fixed, a test added.
 - Check any date you write against your computer's clock, and compute the weekday rather than recalling it. On Windows:
 
   ```powershell

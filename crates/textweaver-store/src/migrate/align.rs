@@ -1,28 +1,28 @@
-//! Mapping Star positions onto textweaver text by word alignment
+//! Mapping star positions onto textweaver text by word alignment
 //! (ADR-0002).
 //!
-//! Star saved positions as char offsets into its own `plain_text`, whose
+//! star saved positions as char offsets into its own `plain_text`, whose
 //! shape differs from textweaver's canonical text (single newlines joined,
 //! list items and table cells run together, tables narrated). A saved
 //! offset is mapped in three steps:
 //!
-//! 1. the offset becomes Star's word index: the first word starting at or
-//!    after it, else the last word (Star's own restore rule);
+//! 1. the offset becomes star's word index: the first word starting at or
+//!    after it, else the last word (star's own restore rule);
 //! 2. the word sequences of both texts are aligned (common prefix and
 //!    suffix, unique-word anchors, then a longest common subsequence in the
-//!    gaps), and the Star word maps to the textweaver word aligned with it,
+//!    gaps), and the star word maps to the textweaver word aligned with it,
 //!    which has the same text; an unaligned word maps to the next aligned
 //!    one;
 //! 3. with nothing aligned, the saved percentage is used.
 //!
-//! Both texts are tokenized with Star's word rule, `\b\w[\w'-]*`, so the
+//! Both texts are tokenized with star's word rule, `\b\w[\w'-]*`, so the
 //! sequences differ only where the texts do.
 
 use std::collections::HashMap;
 
 use textweaver_core::{CharPos, CharRange};
 
-/// Star's word characters: Unicode letters and digits, and `_` (Python's
+/// star's word characters: Unicode letters and digits, and `_` (Python's
 /// `\w`).
 fn is_word(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
@@ -39,7 +39,7 @@ pub struct Word {
     pub text: String,
 }
 
-/// Star's words (`\b\w[\w'-]*`): a word starts at a word character that
+/// star's words (`\b\w[\w'-]*`): a word starts at a word character that
 /// does not follow one, and runs over word characters, `'`, and `-`.
 pub fn star_words(text: &str) -> Vec<Word> {
     let mut words = Vec::new();
@@ -222,7 +222,7 @@ fn lcs(
 pub enum MapMethod {
     /// The saved word was aligned with the same word in textweaver's text.
     Aligned,
-    /// The saved word has no counterpart (Star-only narration, for
+    /// The saved word has no counterpart (star-only narration, for
     /// example); the next aligned word was used.
     Nearby,
     /// A note's quoted text was found in the document.
@@ -252,7 +252,7 @@ pub struct Mapped {
     pub method: MapMethod,
 }
 
-/// Maps positions in one Star `plain_text` onto one textweaver text.
+/// Maps positions in one star `plain_text` onto one textweaver text.
 #[derive(Clone, Debug)]
 pub struct PositionMapper {
     tw_len: usize,
@@ -268,8 +268,8 @@ pub struct PositionMapper {
 }
 
 impl PositionMapper {
-    /// A mapper from `star_text` (Star's `plain_text`, from its parse
-    /// cache) to `tw_text`. Without Star's text, `tw_text` with single
+    /// A mapper from `star_text` (star's `plain_text`, from its parse
+    /// cache) to `tw_text`. Without star's text, `tw_text` with single
     /// newlines as spaces stands in for it (the documented difference
     /// between the two); positions are then checked against the saved
     /// percentage.
@@ -316,12 +316,12 @@ impl PositionMapper {
         }
     }
 
-    /// True when Star's own text was available, so alignment is exact.
+    /// True when star's own text was available, so alignment is exact.
     pub fn exact(&self) -> bool {
         self.exact
     }
 
-    /// Share of Star's words aligned with textweaver words, 0 to 1.
+    /// Share of star's words aligned with textweaver words, 0 to 1.
     pub fn aligned_share(&self) -> f64 {
         if self.to_tw.is_empty() {
             return 0.0;
@@ -349,7 +349,7 @@ impl PositionMapper {
         }
     }
 
-    /// Maps Star word `index`.
+    /// Maps star word `index`.
     pub fn map_word(&self, index: usize, pct: Option<u8>) -> Mapped {
         if self.star_words.is_empty() || self.tw_words.is_empty() {
             return self.map_percentage(pct.unwrap_or(0));
@@ -374,15 +374,15 @@ impl PositionMapper {
         }
     }
 
-    /// Star's word index for a saved char offset: the first word starting
+    /// star's word index for a saved char offset: the first word starting
     /// at or after it, else the last word.
     pub fn star_word_at(&self, offset: usize) -> usize {
         let i = self.star_words.partition_point(|w| w.start < offset);
         i.min(self.star_words.len().saturating_sub(1))
     }
 
-    /// Maps a saved Star char offset (with its saved percentage, when
-    /// known). Without Star's own text, a result more than ten points away
+    /// Maps a saved star char offset (with its saved percentage, when
+    /// known). Without star's own text, a result more than ten points away
     /// from the saved percentage is replaced by the percentage.
     pub fn map_offset(&self, offset: usize, pct: Option<u8>) -> Mapped {
         let m = self.map_word(self.star_word_at(offset), pct);
@@ -395,8 +395,8 @@ impl PositionMapper {
         m
     }
 
-    /// Maps the end of a saved Star range: the end of the textweaver word
-    /// aligned with (or nearest to) the last Star word starting before
+    /// Maps the end of a saved star range: the end of the textweaver word
+    /// aligned with (or nearest to) the last star word starting before
     /// `offset`.
     pub fn map_end(&self, offset: usize, pct: Option<u8>) -> CharPos {
         let i = self.star_words.partition_point(|w| w.start < offset);
@@ -474,8 +474,8 @@ mod tests {
         assert_eq!((w[1].start, w[1].end), (5, 7));
     }
 
-    /// The tokenizer reproduces Star's own word tokens for every parity
-    /// fixture (`fixtures/star-parity/*.json`, exported from Star 0.1.31).
+    /// The tokenizer reproduces star's own word tokens for every parity
+    /// fixture (`fixtures/star-parity/*.json`, exported from star 0.1.31).
     #[test]
     fn star_tokenizer_reproduces_star_word_tokens() {
         let dir =
@@ -539,12 +539,12 @@ mod tests {
 
     #[test]
     fn offsets_map_through_star_text() {
-        // Star joined lines and narrated the table; textweaver keeps lines.
+        // star joined lines and narrated the table; textweaver keeps lines.
         let star = "Intro text. Table with 2 columns. Name Age. Ann 30. End here.";
         let tw = "Intro text.\n\nName\tAge\nAnn\t30\n\nEnd here.";
         let m = PositionMapper::new(tw, Some(star));
         assert!(m.exact());
-        // "End" in Star's text.
+        // "End" in star's text.
         let off = star.find("End").unwrap();
         let mapped = m.map_offset(off, Some(90));
         assert_eq!(mapped.method, MapMethod::Aligned);

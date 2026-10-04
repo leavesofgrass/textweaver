@@ -18,7 +18,7 @@ body:
     id: now
     attributes:
       label: What you do today
-      description: Another program, a workaround, or Star (textweaver's Python predecessor), if it had this.
+      description: Another program, a workaround, or star (textweaver's Python predecessor), if it had this.
   - type: dropdown
     id: frontend
     attributes:

@@ -62,13 +62,13 @@ Macros with up to nine arguments (`#1` to `#9`, the first optional when it has a
 
 ### Pandoc's input
 
-Pandoc reads text only as UTF-8. Text sent to it in another encoding (Windows-1252, UTF-16, XML declaring Latin-1) is now converted to UTF-8 first, as the native loaders decode. Its output was already read as UTF-8 bytes, never with the Windows code page, which was the bug Star shipped.
+Pandoc reads text only as UTF-8. Text sent to it in another encoding (Windows-1252, UTF-16, XML declaring Latin-1) is now converted to UTF-8 first, as the native loaders decode. Its output was already read as UTF-8 bytes, never with the Windows code page, which was the bug star shipped.
 
 ## Consequences
 
 - The canonical text version is 7: cached documents are read again.
 - New open-failure messages, in six languages: `opening-damaged-json`, `opening-damaged-notebook`, `opening-damaged-svg`, `opening-damaged-mathml`.
-- New fuzz targets `json`, `svg` (with `.mml` and inline drawings), and `obsidian`, seeded from `fixtures/o`; the unclosed `<meta charset>` page that emptied whole documents in Star is a seed of the `html` target.
+- New fuzz targets `json`, `svg` (with `.mml` and inline drawings), and `obsidian`, seeded from `fixtures/o`; the unclosed `<meta charset>` page that emptied whole documents in star is a seed of the `html` target.
 - A highlight is an underline to the writers until the core has a `Highlight` marker kind.
 - The fallback for any of these readers is plain text: every loader here is new code, and a document it cannot read opens as text with a warning (JSON) or fails with a plain message (notebooks, drawings, formulas).
 

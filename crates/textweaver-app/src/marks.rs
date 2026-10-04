@@ -1,9 +1,9 @@
 //! Find, bookmarks, and selection.
 //!
-//! Find is case-insensitive plain text (Star's behavior); a pattern written
+//! Find is case-insensitive plain text (star's behavior); a pattern written
 //! as `/regex/` is a regular expression. Matches wrap at the document ends
-//! (Star wraps search in both UIs), and the wrap is announced. Bookmarks go
-//! to the first word at or after their position (Star's GUI rule; the TUI's
+//! (star wraps search in both UIs), and the wrap is announced. Bookmarks go
+//! to the first word at or after their position (star's GUI rule; the TUI's
 //! "closest word" quirk is not kept) and wrap the same way.
 
 use textweaver_a11y::Verbosity;
@@ -209,7 +209,7 @@ impl App {
     }
 
     /// Adds a bookmark at the reading position, named `mark1`, `mark2`, ...
-    /// (the first free name, as in Star), and saves it at once.
+    /// (the first free name, as in star), and saves it at once.
     pub(crate) fn add_bookmark(&mut self) {
         let Some(pos) = self.reading_position() else {
             return;

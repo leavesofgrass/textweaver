@@ -1,5 +1,5 @@
 //! Plural categories (CLDR cardinal rules) for whole numbers, for the
-//! languages Star had catalogs for and the common right-to-left ones.
+//! languages star had catalogs for and the common right-to-left ones.
 
 /// A CLDR plural category.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

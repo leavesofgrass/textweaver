@@ -1,6 +1,6 @@
-//! The built-in themes: Star's 23 palettes, ported and embedded as TOML
+//! The built-in themes: star's 23 palettes, ported and embedded as TOML
 //! files (`crates/textweaver-theme/themes/*.toml`), plus textweaver's own
-//! (Lamplight). Star's files are generated from [`crate::star`] and a test
+//! (Lamplight). star's files are generated from [`crate::star`] and a test
 //! keeps them in step; textweaver's own files are hand-written.
 //!
 //! [`CYCLE`] is the order F5 steps through: the themes that meet WCAG AA
@@ -14,7 +14,7 @@ use crate::resolve::{Repair, resolve};
 
 macro_rules! sources {
     ($($name:literal),+ $(,)?) => {
-        /// Star's built-in theme names, in Star's order (galaxy first).
+        /// star's built-in theme names, in star's order (galaxy first).
         pub const NAMES: [&str; 23] = [$($name),+];
         const STAR_SOURCES: [(&str, &str); 23] = [
             $(($name, include_str!(concat!("../themes/", $name, ".toml")))),+
@@ -48,7 +48,7 @@ sources!(
     "gruvbox-light",
 );
 
-/// Built-in themes that are textweaver's own, not ported from Star.
+/// Built-in themes that are textweaver's own, not ported from star.
 pub const OWN: [&str; 1] = ["lamplight"];
 
 const OWN_SOURCES: [(&str, &str); 1] = [("lamplight", include_str!("../themes/lamplight.toml"))];
@@ -93,7 +93,7 @@ pub fn source(name: &str) -> Option<&'static str> {
     sources().find(|(n, _)| *n == name).map(|(_, s)| *s)
 }
 
-/// The built-in name for `name`: case-insensitive, with Star's old names
+/// The built-in name for `name`: case-insensitive, with star's old names
 /// (`obsidian` → `galaxy`) and alternate spellings (`high_contrast`).
 pub fn canonical_name(name: &str) -> Option<&'static str> {
     let n = name.trim().to_ascii_lowercase();

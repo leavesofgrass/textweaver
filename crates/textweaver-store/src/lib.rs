@@ -2,7 +2,7 @@
 //!
 //! - [`Settings`] in `settings.toml` and keymap overrides in `keymap.toml`,
 //!   written only on explicit change, atomically, preserving unknown keys,
-//!   storing only non-default values (Star rewrote `settings.json` on every
+//!   storing only non-default values (star rewrote `settings.json` on every
 //!   set, wrote every default, and dropped unknown keys).
 //! - Per-document [`DocState`] in `state/<doc-key>.json` (position,
 //!   history, bookmarks, [`notes`] and highlights), with position saves
@@ -17,7 +17,7 @@
 //!   written, with backups.
 //! - [`profiles`]: named settings profiles in `profiles.toml`, and
 //!   [`stats`]: reading statistics in `stats.json` (Agent W3e).
-//! - [`migrate`]: importing Star's settings, positions, bookmarks, notes,
+//! - [`migrate`]: importing star's settings, positions, bookmarks, notes,
 //!   highlights, recents, library, keybindings, and sidecars.
 //! - Folder sidecars (`<folder>/.textweaver/progress.json`) and their merge
 //!   rules, ported from `star/sync.py`, in [`sync`].
@@ -118,7 +118,7 @@ pub enum StoreError {
     NoConfigDir,
 }
 
-/// Current time as Unix seconds (UTC). Star stored zone-less local time
+/// Current time as Unix seconds (UTC). star stored zone-less local time
 /// strings; textweaver stores UTC seconds and converts on migration.
 pub fn now_ts() -> i64 {
     std::time::SystemTime::now()

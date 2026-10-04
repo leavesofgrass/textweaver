@@ -37,7 +37,7 @@ pub enum Preset {
     #[default]
     #[serde(alias = "screen-reader")]
     Default,
-    /// textweaver's earlier single keys (Star's, plus what Star lacked).
+    /// textweaver's earlier single keys (star's, plus what star lacked).
     Classic,
 }
 

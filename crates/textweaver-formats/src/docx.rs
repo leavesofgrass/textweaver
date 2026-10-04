@@ -1,9 +1,9 @@
 //! DOCX loader: `word/document.xml` (Office Open XML WordprocessingML) into
 //! canonical text and markers, without Pandoc.
 //!
-//! Star sent DOCX through Pandoc to Markdown when Pandoc was installed, and
+//! star sent DOCX through Pandoc to Markdown when Pandoc was installed, and
 //! on Windows decoded Pandoc's UTF-8 output with the ANSI code page, which
-//! corrupted every non-ASCII letter (the Star parity reference, Part 1 §1.5).
+//! corrupted every non-ASCII letter (the star parity reference, Part 1 §1.5).
 //! This loader reads the package directly:
 //!
 //! - **Headings**: paragraph styles named `heading 1`–`heading 9` (levels

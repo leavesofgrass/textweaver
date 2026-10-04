@@ -25,7 +25,7 @@
 //!   `settings.toml`, and validates everything before anything is written:
 //!   a wrong type or an out-of-range value is an error naming its path
 //!   (`settings.speech.rate`); unknown sections and keys are reported and
-//!   kept. A Star `settings.json` is pointed to `tw migrate-star`.
+//!   kept. A star `settings.json` is pointed to `tw migrate-star`.
 //! - **Merge** (the default) changes only what the file names; `null`
 //!   returns a setting to its default. **Replace** makes the settings (and,
 //!   when the file has a `keymap`, the key overrides) exactly the file's.
@@ -76,9 +76,9 @@ pub enum SettingsIoError {
     /// The file is JSON or TOML but not textweaver settings.
     #[error("This file does not look like textweaver settings: {0}.")]
     NotSettings(String),
-    /// The file is a Star `settings.json`.
+    /// The file is a star `settings.json`.
     #[error(
-        "This is a Star settings file. Import it with: tw migrate-star --from followed by the folder that contains it."
+        "This is a star settings file. Import it with: tw migrate-star --from followed by the folder that contains it."
     )]
     StarSettings,
     /// The file was exported by a newer textweaver.
@@ -584,7 +584,7 @@ fn parse_input(text: &str) -> Result<Map<String, Value>, SettingsIoError> {
     }
 }
 
-/// True for a Star `settings.json`: `tts_` keys, reading positions, or
+/// True for a star `settings.json`: `tts_` keys, reading positions, or
 /// keybindings, and none of textweaver's sections.
 fn looks_like_star(doc: &Map<String, Value>) -> bool {
     doc.keys().any(|k| {

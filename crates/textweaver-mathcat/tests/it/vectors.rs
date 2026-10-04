@@ -1,4 +1,4 @@
-//! MathCAT's words for the Star math vectors and a few student formulas,
+//! MathCAT's words for the star math vectors and a few student formulas,
 //! recorded from MathCAT 0.7.6-rc.3 (ADR-0029), with the offset map
 //! checked for every one.
 //!
@@ -44,7 +44,7 @@ fn check(src: &str, out: &str, map: &OffsetMap) {
     }
 }
 
-/// Star's math vectors (`tests/test_ttstext.py`), delimited as in
+/// star's math vectors (`tests/test_ttstext.py`), delimited as in
 /// documents, in ClearSpeak at normal verbosity.
 #[test]
 fn star_vectors() {

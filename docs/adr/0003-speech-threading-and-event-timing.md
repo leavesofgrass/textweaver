@@ -10,7 +10,7 @@
 
 Speech engines disagree about threads and timing. AVSpeechSynthesizer wants the main thread; WinRT speech is apartment-affine; espeak-ng is a process-wide singleton. Some engines report word boundaries with an audio-clock timestamp (espeak-ng `audio_position`), some report them as they happen, some (the Omnivox subprocess protocol, which is write-only) report nothing.
 
-Star's playback layer (`star/tts/manager/_playback.py`, inventoried in the Star parity reference, kept outside the repository) has hard-won rules, and some bugs: the `on_done` handler has no generation check, all timers share one stop event, and a late "done" from the previous sentence can kill the current highlight.
+star's playback layer (`star/tts/manager/_playback.py`, inventoried in the star parity reference, kept outside the repository) has hard-won rules, and some bugs: the `on_done` handler has no generation check, all timers share one stop event, and a late "done" from the previous sentence can kill the current highlight.
 
 ## Decision
 
@@ -24,12 +24,12 @@ Star's playback layer (`star/tts/manager/_playback.py`, inventoried in the Star 
 - Every utterance ends with exactly one `Finished` or `Cancelled`.
 
 **Generations.**
-- Every utterance carries `UtteranceId { generation, chunk }`. The service bumps the generation before every stop or restart (Star's rule).
+- Every utterance carries `UtteranceId { generation, chunk }`. The service bumps the generation before every stop or restart (star's rule).
 - The service's `EventSink` drops events from stale generations **before** the service logic sees them, so a late `Finished` or `Word` can never move the highlight of a newer reading. Backends can ask `is_current(id)` to abandon stale work.
 
 **Word timing.**
-- `RawEvent::Word { byte_range, audio_ms }`. With `audio_ms` (an `AUDIO_CLOCK` engine), the highlight is scheduled at `audio_ms + latency_offset` on the playback clock, never fired on arrival. The default latency offset is 120 ms (Star's `espeak_highlight_offset_ms`), configurable in `[speech] latency_offset_ms`.
-- Without word events, the **timer pacer** estimates one word every `60 / (effective_wpm × highlight_speed)` seconds, with Star's guards: callback timeout 1.5 s, callback dead after 6 s, at most 1 word ahead while paced and 4 unpaced (constants in `pacing::PacingConfig`, tests ported from `tests/test_highlight_pacing.py`).
+- `RawEvent::Word { byte_range, audio_ms }`. With `audio_ms` (an `AUDIO_CLOCK` engine), the highlight is scheduled at `audio_ms + latency_offset` on the playback clock, never fired on arrival. The default latency offset is 120 ms (star's `espeak_highlight_offset_ms`), configurable in `[speech] latency_offset_ms`.
+- Without word events, the **timer pacer** estimates one word every `60 / (effective_wpm × highlight_speed)` seconds, with star's guards: callback timeout 1.5 s, callback dead after 6 s, at most 1 word ahead while paced and 4 unpaced (constants in `pacing::PacingConfig`, tests ported from `tests/test_highlight_pacing.py`).
 - Byte ranges are mapped to document ranges through the utterance's `OffsetMap` (ADR-0005). Engines report UTF-8 byte offsets; espeak-ng's are converted from its own positions in the backend.
 
 **Pause and resume.** Native pause when the engine has `PAUSE`; otherwise emulated by stopping and restarting from the last callback-confirmed word (resume may repeat a word, never skips one). Edge cases:

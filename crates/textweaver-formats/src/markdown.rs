@@ -2,7 +2,7 @@
 //! lists, math, GFM alerts, wiki links, heading attributes, and front
 //! matter) parsed with pulldown-cmark into canonical text and markers.
 //!
-//! Unlike Star, which strips Markdown with regular expressions (and merges
+//! Unlike star, which strips Markdown with regular expressions (and merges
 //! headings into lists, speaks front matter, and never processes inline
 //! footnotes), the source is parsed, so:
 //!

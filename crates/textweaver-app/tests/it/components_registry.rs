@@ -1,4 +1,4 @@
-//! The components registry is enforced, as Star's optional-dependency
+//! The components registry is enforced, as star's optional-dependency
 //! registry was (W8a-d): two halves.
 //!
 //! - **Completeness:** every download goes through the shared downloader

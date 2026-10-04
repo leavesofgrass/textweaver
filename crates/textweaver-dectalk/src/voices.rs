@@ -9,7 +9,7 @@
 //!
 //! Voice ids are `dectalk:<name>` (`dectalk:paul`). A bare name (`paul`),
 //! the full name (`Perfect Paul`), or the letter (`p`) are accepted too,
-//! which also reads the voice names Star saved in its settings.
+//! which also reads the voice names star saved in its settings.
 //!
 //! **Rate.** DECtalk's `[:rate N]` is in words per minute, 75 to 600, so
 //! textweaver's canonical rate passes straight through, clamped; DECtalk's

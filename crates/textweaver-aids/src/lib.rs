@@ -1,4 +1,4 @@
-//! Reading aids for textweaver, carried forward from Star.
+//! Reading aids for textweaver, carried forward from star.
 //!
 //! Everything here is pure data in, data out: no threads, no clocks, no
 //! terminal or GUI types. The terminal UI and the GUI render the results;
@@ -6,7 +6,7 @@
 //!
 //! - [`rsvp`]: rapid serial visual presentation. One word at a time, with an
 //!   optimal recognition point, words-per-minute timing with pauses at
-//!   punctuation and long words, context words, Star's nine screen positions,
+//!   punctuation and long words, context words, star's nine screen positions,
 //!   and seeking by word, sentence, and paragraph. A state machine driven by
 //!   a clock value the caller passes in, or by speech word events.
 //! - [`bionic`]: which leading letters of each word to embolden.
@@ -15,7 +15,7 @@
 //!   (ADR-0005) so highlights stay exact.
 //! - [`level`]: Flesch-Kincaid grade and Flesch reading ease.
 //! - [`spacing`]: WCAG 1.4.12 text spacing settings, checks, and CSS.
-//! - [`fonts`]: font family, size, and weight, with the reading fonts Star
+//! - [`fonts`]: font family, size, and weight, with the reading fonts star
 //!   offered (OpenDyslexic, Atkinson Hyperlegible, Lexend), fallbacks, and CSS.
 //!   Choosing and resolving a family is `textweaver-fonts`' job; this crate
 //!   re-exports those types and adds text spacing.

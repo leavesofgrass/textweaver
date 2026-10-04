@@ -1,15 +1,15 @@
 //! Numbers, dates, times, and currency, ported from
 //! `star/ttstext/numbers.py` (`_normalize_numbers`, Part 2 section 5.B.3) in
-//! Star's order, each step a [`Rule`] with an offset map.
+//! star's order, each step a [`Rule`] with an offset map.
 //!
-//! Deliberate fixes of Star's quirks (Part 2 section 7.2):
+//! Deliberate fixes of star's quirks (Part 2 section 7.2):
 //!
 //! - Q1 times: whitespace is consumed only before an actual AM/PM, so
 //!   "3:45 today" stays two words; `am`/`pm` must be whole words ("3:00
 //!   amazing"); "a.m." and "p.m." are recognized ("9:30 a.m.") and a
 //!   sentence-final "a.m." keeps its period; minutes below ten get "oh"
 //!   ("9:05" is "nine oh five AM"); hour zero with AM is "twelve"
-//!   ("00:30 AM" is "twelve thirty AM", where Star said "zero thirty
+//!   ("00:30 AM" is "twelve thirty AM", where star said "zero thirty
 //!   AM"; 24-hour times are below); seconds are
 //!   spoken instead of dropped; a verse reference after a book of the Bible
 //!   ("John 3:16") is read as chapter and verse, not a time.
@@ -19,11 +19,11 @@
 //! - Q3 decimals and years: a sentence-final year is read ("in 2024.");
 //!   comma numbers take decimals ("1,234.5"); dotted sequences such as
 //!   versions and addresses ("v1.2.3", "192.168.1.1") are read part by part
-//!   with "dot" (Star pinned "v1.two point three" in a test; this is the
+//!   with "dot" (star pinned "v1.two point three" in a test; this is the
 //!   deliberate replacement); ".5" is "point five"; decades ("the 2020s")
 //!   are plural years.
 //!
-//! **Identifiers are read as digits** (new in textweaver; Star read them as
+//! **Identifiers are read as digits** (new in textweaver; star read them as
 //! amounts). Before the rules, a guard finds the number after a label that
 //! says it is an identifier, and spells it digit by digit, so "PMID
 //! 31769816" is "PMID three one seven six nine eight one six", never "thirty-one
@@ -39,7 +39,7 @@
 //! stay as written for the punctuation step and the engine.
 //!
 //! **Clinical units, ranges and times** (new in textweaver; health
-//! sciences report, section 3). Before Star's rules:
+//! sciences report, section 3). Before star's rules:
 //!
 //! - a unit after a number is said in full: "5 mg" is "5 milligrams", "1
 //!   mg" "1 milligram", and mcg, ng, g, kg, mL, dL, L, mmol, mEq, mm, cm,
@@ -58,13 +58,13 @@
 //! engine, which reads small integers itself), so "5 milligrams" still
 //! highlights "5" and then "mg".
 //!
-//! **24-hour times gain no AM or PM** (a deliberate change to Star, which
+//! **24-hour times gain no AM or PM** (a deliberate change to star, which
 //! read "15:30" as "three thirty PM"): a time whose hour is written with a
 //! leading zero or is 13 or more, with no AM or PM after it, is read as
 //! written on a 24-hour clock: "08:05" is "eight oh five", "15:30"
 //! "fifteen thirty", "15:00" "fifteen hundred", "08:00" "oh eight
 //! hundred", and "00:30" "zero thirty". A time such as "3:45" keeps
-//! Star's reading.
+//! star's reading.
 
 use regex::{Captures, Regex};
 
@@ -543,7 +543,7 @@ pub(crate) fn rules() -> Vec<Rule> {
     rules
 }
 
-/// Star's rules, in Star's order.
+/// star's rules, in star's order.
 fn star_rules() -> Vec<Rule> {
     vec![
         // 1. ISO date.
@@ -934,7 +934,7 @@ impl Transform for Numbers {
     }
 }
 
-/// Star `_normalize_numbers` (with the fixes listed in the module docs).
+/// star `_normalize_numbers` (with the fixes listed in the module docs).
 pub fn normalize_numbers(text: &str) -> String {
     Numbers::default().apply(text).0
 }

@@ -76,7 +76,7 @@ In short: this is the last alpha before beta 1, so it finishes and tidies what i
 
 - **Start pages** for students and staff, a known-limits page, a privacy page, an accessibility statement, and a what's new page. The quick start and install start with the window.
 - **The command line page** states the rules, and a test checks each one against `tw --help`.
-- **Honest statuses** in the roadmap and the Star comparison. The roadmap's "Planned" is now "Not in the 0.1 series".
+- **Honest statuses** in the roadmap and the star comparison. The roadmap's "Planned" is now "Not in the 0.1 series".
 - **The Help menu** reaches the quick start, the documentation, and Report a problem (which asks before a browser opens). About lists the facts a report needs.
 - **File names and formats** that beta 1 adds are frozen in ADR-0050.
 

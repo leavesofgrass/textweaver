@@ -175,7 +175,7 @@ JOB_OVERRIDES = {
     "sync": "Sync between computers through a folder the user chooses: a hybrid clock, merge rules, and one record per document, with no networking.",
     "store": "Persistence: settings (the reading-aid settings included), key overrides, per-document state with notes and highlights, recent files, and the library.",
     "vault": "Obsidian vault import and export for notes, highlights, and documents.",
-    "xtask": "Maintenance tasks run with cargo xtask: keyboard.md, benchmarks and the soak test, engine hosts, release packages and the AppImage, the dependency check, licence notices, and the Star parity report.",
+    "xtask": "Maintenance tasks run with cargo xtask: keyboard.md, benchmarks and the soak test, engine hosts, release packages and the AppImage, the dependency check, licence notices, and the star parity report.",
 }
 
 # ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ GUIDE_TITLES = {
     "notes.md": "Bookmarks, notes, and highlights guide",
     "keyboard.md": "Keyboard reference",
     "converting.md": "Converting documents guide",
-    "star-gaps.md": "What Star did that textweaver does not do yet",
+    "star-gaps.md": "What star did that textweaver does not do yet",
     "editing.md": "Editing guide",
     "citations.md": "Citations guide",
     "eloquence.md": "ETI-Eloquence guide",
@@ -374,8 +374,8 @@ FEATURES = [
         ("Sync between computers",
          "Notes, highlights, bookmarks, reading places, statistics, and settings kept in step through a folder you choose.",
          "done", "No account and no server; Shift+F5 says how sync stands.", "sync.md"),
-        ("Import from Star",
-         "tw migrate-star brings over settings and reading positions from Star.",
+        ("Import from star",
+         "tw migrate-star brings over settings and reading positions from star.",
          "done", "Run it once after installing.", "library.md"),
         ("Obsidian vault export and import",
          "Export notes and highlights to an Obsidian vault, and bring them back.",

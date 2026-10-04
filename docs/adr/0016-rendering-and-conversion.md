@@ -12,7 +12,7 @@
 
 We wanted conversion and bulk conversion that are lightning fast, native Rust, and memory safe, even at the cost of custom parsers, with Pandoc only as a fallback. The choices made: Markdown flavors GFM, Obsidian, and Pandoc Markdown; LaTeX math as MathML; MiniJinja templates; outputs Markdown, HTML, text, EPUB, DOCX, BRF, and PDF; folders converted by mirroring the tree and skipping outputs newer than their source.
 
-Star converted one file at a time on one thread, preferred Pandoc when installed (inheriting its table and escaping problems, and decoding its output with the Windows ANSI code page), wrote flat output folders with `name (2).md` collisions, and had no HTML renderer of its own (the Star parity reference, kept outside the repository, Part 1 §1.5; `star/convert.py`, `star/watch.py`).
+star converted one file at a time on one thread, preferred Pandoc when installed (inheriting its table and escaping problems, and decoding its output with the Windows ANSI code page), wrote flat output folders with `name (2).md` collisions, and had no HTML renderer of its own (the star parity reference, kept outside the repository, Part 1 §1.5; `star/convert.py`, `star/watch.py`).
 
 ## Decision
 
@@ -37,7 +37,7 @@ Star converted one file at a time on one thread, preferred Pandoc when installed
 - **Per file.** Markdown sources are rendered from their text (HTML), copied (Markdown), or loaded by `MarkdownLoader` (text, writers). Other sources load through the `textweaver-formats` registry; HTML output then goes through `formats::to_markdown` and the renderer, keeping the source's title, language, and author. Formats with no native loader go to Pandoc when it is installed, with its output decoded as UTF-8. Every failure is caught per file (including panics), so one bad file never stops a batch.
 - **Atomic writes.** Outputs are written to a hidden temporary file beside the target and renamed, so an interrupted run never leaves a partial output whose fresh timestamp would make the next run skip it.
 - **Writers.** EPUB, DOCX, BRF, and PDF go through `textweaver_writers::Writer` (`write(&Document, &WriteOptions, &mut dyn Write) -> Result<WriteReport, WriteError>`), one trait shared by both crates (the converter's own `DocumentWriter` was replaced with it; the writers' `WriteOptions` is `ConvertOptions::write`). `Writers::builtin()` registers all four; a converter built with fewer refuses the missing formats before a batch starts. The writer's `WriteReport` warnings stay with the file's result and are counted in the summary ("1 file has warnings."). PDF output looks for a font once before the batch and stops with one sentence saying what to install or name (`--pdf-font`, `TEXTWEAVER_PDF_FONT`) when there is none.
-- **Hot folder.** `watch()` keeps Star's `watch_*` semantics: convert what is present at start, then new files once their size holds still for `stable` (2 s) and they open; move sources to `processed/` (or keep them) and failures to `failed/`, never overwriting; log each attempt with a UTC timestamp to `<out>/textweaver-watch.log`. Events come from `notify` with a periodic rescan. Deliberate difference: an output with the same name is replaced atomically, where Star wrote `name (2).md`.
+- **Hot folder.** `watch()` keeps star's `watch_*` semantics: convert what is present at start, then new files once their size holds still for `stable` (2 s) and they open; move sources to `processed/` (or keep them) and failures to `failed/`, never overwriting; log each attempt with a UTC timestamp to `<out>/textweaver-watch.log`. Events come from `notify` with a periodic rescan. Deliberate difference: an output with the same name is replaced atomically, where star wrote `name (2).md`.
 
 ### Output for listening
 
@@ -66,7 +66,7 @@ Hot-path changes from profiling: text runs are merged in one linear pass and onl
 
 - **Two separate renderers** (pulldown-cmark's writer and comrak's formatter, with extensions implemented twice): rejected; output would differ between engines and every accessibility fix would be made twice.
 - **comrak only:** complete GFM, but it allocates a full AST per document; pulldown-cmark streams and is faster, so it stays the default.
-- **Pandoc for everything:** rejected for speed and native code, and by Star's experience (tables, escaping, encoding).
+- **Pandoc for everything:** rejected for speed and native code, and by star's experience (tables, escaping, encoding).
 - **KaTeX or MathJax output:** needs JavaScript or fonts at reading time; MathML is native in browsers and read by screen readers.
 - **Direct (non-atomic) writes:** about half the write cost per file on both systems, but a crash would leave a partial output newer than its source, which the next run would skip. Correctness wins.
 - **Parallel up-to-date checks:** measured 3.5 times slower than serial on NTFS with 12 threads.

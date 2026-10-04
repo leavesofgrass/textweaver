@@ -38,7 +38,7 @@ const TARGETS: &[(&str, &[Seeds])] = &[
         "html",
         &[
             seeds("fixtures", &["html"], false),
-            // Star's empty-document case: an unclosed `<meta charset>`.
+            // star's empty-document case: an unclosed `<meta charset>`.
             seeds("fixtures/o", &["html"], false),
         ],
     ),

@@ -1,4 +1,4 @@
-//! The built-in themes: Star's 23 palettes, in step with their generator,
+//! The built-in themes: star's 23 palettes, in step with their generator,
 //! round-tripping through TOML, and passing every contrast check.
 
 use textweaver_theme::{
@@ -78,7 +78,7 @@ fn every_role_is_covered_by_a_check() {
 }
 
 /// The fifteen derived roles pass their class's check in every built-in
-/// theme, including the ones whose Star colors fall short elsewhere.
+/// theme, including the ones whose star colors fall short elsewhere.
 #[test]
 fn derived_roles_pass_in_every_theme() {
     for t in builtin::all() {
@@ -165,7 +165,7 @@ fn shipped_files_match_the_generator() {
 #[test]
 fn the_required_themes_pass_every_check() {
     // The owner's policy: only Galaxy, Galaxy Light, and the high-contrast themes
-    // must meet WCAG AA; the others keep Star's colors and are labelled.
+    // must meet WCAG AA; the others keep star's colors and are labelled.
     let mut failures = Vec::new();
     for t in builtin::all()
         .iter()
@@ -223,7 +223,7 @@ fn high_contrast_themes_reach_seven_to_one() {
 
 #[test]
 fn star_colors_are_kept_where_they_passed() {
-    // Only the adjusted keys differ from Star.
+    // Only the adjusted keys differ from star.
     for p in &star::PALETTES {
         let (_, adj) = star::port(p).unwrap();
         let t = builtin::get(p.name).unwrap();
@@ -357,14 +357,14 @@ fn adjustments_table_lists_every_change() {
 
 #[test]
 fn galaxy_is_the_default_and_faithful_to_star() {
-    // The owner's theme: Star's default, modeled on Obsidian's dark palette.
+    // The owner's theme: star's default, modeled on Obsidian's dark palette.
     let g = builtin::default_theme();
     assert_eq!(g.name(), "galaxy");
     assert_eq!(textweaver_theme::DEFAULT_THEME, "galaxy");
     assert_eq!(builtin::NAMES[0], "galaxy");
     assert_eq!(g.kind(), ThemeKind::Dark);
     assert_eq!(g.meta.counterpart.as_deref(), Some("galaxy-light"));
-    // Every Star value is kept except muted, which moved from 4.05 to 4.52
+    // Every star value is kept except muted, which moved from 4.05 to 4.52
     // to 1, toward Obsidian's own muted gray.
     let (_, adj) = star::port(star::palette("galaxy").unwrap()).unwrap();
     assert_eq!(adj.len(), 1);

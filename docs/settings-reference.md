@@ -184,7 +184,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 ## Define word: the `[lexicon]` section
 
-- `lexicon.glossary`: default not set. Glossary. Your own glossary, looked up before the dictionary: term: definition lines, or Star's JSON. Not set uses glossary.txt in the settings folder. Text; empty means not set. Stays on this computer.
+- `lexicon.glossary`: default not set. Glossary. Your own glossary, looked up before the dictionary: term: definition lines, or star's JSON. Not set uses glossary.txt in the settings folder. Text; empty means not set. Stays on this computer.
 - `lexicon.data_file`: default not set. Dictionary file. The define-word dictionary, lexicon-en.twlex. Not set looks beside the program. Text; empty means not set. Stays on this computer.
 
 ## Reading statistics: the `[stats]` section

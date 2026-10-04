@@ -6,7 +6,7 @@
 //!
 //! Edit mode shows and edits the document's **source**: a plain-text file's
 //! own text (which is its canonical text, ADR-0002), a Markdown file's
-//! Markdown, and for any other format the converted Markdown (Star's rule;
+//! Markdown, and for any other format the converted Markdown (star's rule;
 //! saving it asks for a new `.md` name). While editing, the session's
 //! document *is* that text, so the viewport, highlights, reading, and
 //! navigation all work on what is on screen.
@@ -20,13 +20,13 @@
 //! are the identity. Leaving without a save restores the reading document
 //! as it was, and discarding restores the positions of the last save.
 //!
-//! # Differences from Star
+//! # Differences from star
 //!
 //! - Typing is echoed (characters, completed words, deletions, the new line
-//!   on a line move, capitals as configured); Star had no echo.
+//!   on a line move, capitals as configured); star had no echo.
 //! - Edit mode on and off, saving, undo, redo, and every formatting command
-//!   are announced; Star showed most of them only on the status bar.
-//! - Quitting with unsaved edits asks Save / Discard / Cancel (Star closed
+//!   are announced; star showed most of them only on the status bar.
+//! - Quitting with unsaved edits asks Save / Discard / Cancel (star closed
 //!   silently and relied on the snapshot, bug 38).
 //! - Saves are atomic and keep the file's BOM and line endings; converted
 //!   formats are never overwritten with Markdown (bugs 28, 29).
@@ -1859,7 +1859,7 @@ impl App {
         self.shutdown();
     }
 
-    /// Offers unsaved work found at startup (Star's recovery prompt), one
+    /// Offers unsaved work found at startup (star's recovery prompt), one
     /// snapshot at a time. Returns the list effect, or nothing when there is
     /// none or recovery is off.
     pub fn offer_recovery(&mut self) -> Vec<Effect> {

@@ -1,4 +1,4 @@
-//! Star's lesson: a stored setting must work. This test fails when a field
+//! star's lesson: a stored setting must work. This test fails when a field
 //! of a settings struct in `src/settings.rs` or `src/reading_aids.rs` is
 //! read nowhere in the workspace's sources and is not listed in
 //! [`RESERVED_SETTINGS`](textweaver_store::RESERVED_SETTINGS) with a reason.
@@ -11,7 +11,7 @@
 //! `section.field` (`settings.highlight.color`, `sp.eci.library`), or uses
 //! `alias.field` after binding the section (`let e = &settings.editing;`)
 //! or taking it as a parameter (`h: &HighlightSettings`). The settings
-//! files, import and export, the Star migration, and `tw settings` touch
+//! files, import and export, the star migration, and `tw settings` touch
 //! every field and do not count.
 
 use std::collections::BTreeMap;

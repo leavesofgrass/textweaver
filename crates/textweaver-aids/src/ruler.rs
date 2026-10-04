@@ -1,6 +1,6 @@
 //! The reading ruler and the current-line band, as data.
 //!
-//! Star had two separate aids (`gui/main_window.py:263-349`,
+//! star had two separate aids (`gui/main_window.py:263-349`,
 //! `gui/mixin_commands.py:353-362`): a thin tint behind the caret's line,
 //! and a translucent band (a typoscope) floating over the text around it.
 //! Here both are one computation: given the rows a view shows, which rows
@@ -10,13 +10,13 @@
 //! Lessons from star's accessibility audits, which the style guidance
 //! in [`TermStyle::recommended`] and the crate guide follow:
 //!
-//! - Star painted the ruler *over* the text at 22 % opacity, which pulled
+//! - star painted the ruler *over* the text at 22 % opacity, which pulled
 //!   body text below 4.5:1 on four themes. Paint bands *behind* text.
-//! - Star's current-line band reused the selection colour, 1.1 to 1.9:1
+//! - star's current-line band reused the selection colour, 1.1 to 1.9:1
 //!   against the page: invisible to many low-vision readers (WCAG 1.4.11
 //!   wants 3:1). Never mark a row by colour alone: add underline, bold,
 //!   reverse video, or a gutter mark.
-//! - Terminal dimming (SGR 2) failed contrast on every dark theme Star
+//! - Terminal dimming (SGR 2) failed contrast on every dark theme star
 //!   measured, so masking is off by default and uses dimming only when the
 //!   reader turns it on.
 
@@ -41,9 +41,9 @@ pub enum RulerMode {
     /// No marks.
     #[default]
     Off,
-    /// Mark only the focus rows (Star's current-line highlight).
+    /// Mark only the focus rows (star's current-line highlight).
     CurrentLine,
-    /// Mark the focus rows and a band of rows around them (Star's reading
+    /// Mark the focus rows and a band of rows around them (star's reading
     /// ruler).
     Ruler,
 }

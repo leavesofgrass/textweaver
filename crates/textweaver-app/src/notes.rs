@@ -1,7 +1,7 @@
 //! Notes and highlights, and bookmark rename and delete.
 //!
 //! A note is text attached to a range (the selection, else the sentence at
-//! the cursor), with `#tags` taken from its text (Star's tag rule: split on
+//! the cursor), with `#tags` taken from its text (star's tag rule: split on
 //! commas and spaces, leading `#` dropped). A highlight is a colored range.
 //! Both move with edits exactly like bookmarks (one `EditOutcome` for all,
 //! through [`DocState::shift`]), are listed accessibly (Enter jumps, Delete
@@ -13,7 +13,7 @@
 //!
 //! With the `publish` feature, [`notes_references`] and [`export_notes`]
 //! write them as reference records (BibTeX, BibLaTeX, RIS, CSL-JSON),
-//! as Star's notes export did (Agent W4g; `tw marks --export`).
+//! as star's notes export did (Agent W4g; `tw marks --export`).
 
 use textweaver_a11y::Verbosity;
 use textweaver_core::{CharPos, CharRange, Direction, EditOutcome, Unit};
@@ -34,7 +34,7 @@ use crate::text_util::{self, preview};
 /// does not clash with [`crate::Highlight`], a range drawn on screen).
 pub type UserHighlight = Highlight;
 
-/// Longest anchor kept, in characters (Star's limit).
+/// Longest anchor kept, in characters (star's limit).
 const ANCHOR_CHARS: usize = store_notes::ANCHOR_MAX_CHARS;
 
 /// Tags in a note: words starting with `#`, without the `#`, lowercase,

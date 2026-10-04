@@ -6,7 +6,7 @@
 
 ## Context
 
-The APA and AMA publishing templates, with real Word footnotes, are on the feature-complete list. Star shipped them in its publishing arc (0.1.30): four stylesheets for EPUB and HTML (large print, dyslexia-friendly, high contrast, academic manuscript) and Word reference documents (large print, dyslexia-friendly, APA student paper, AMA manuscript), all through Pandoc, with the Word reference documents generated at install time rather than kept as binary files. Two of Star's lessons carry over: Pandoc styled Word output by style name, so a template that did not define a style silently had no effect; and Star's DOCX still lacked page numbers and an APA title page.
+The APA and AMA publishing templates, with real Word footnotes, are on the feature-complete list. star shipped them in its publishing arc (0.1.30): four stylesheets for EPUB and HTML (large print, dyslexia-friendly, high contrast, academic manuscript) and Word reference documents (large print, dyslexia-friendly, APA student paper, AMA manuscript), all through Pandoc, with the Word reference documents generated at install time rather than kept as binary files. Two of star's lessons carry over: Pandoc styled Word output by style name, so a template that did not define a style silently had no effect; and star's DOCX still lacked page numbers and an APA title page.
 
 textweaver writes EPUB, DOCX, and PDF natively (ADR-0017). ADR-0017 left three items open that this ADR closes: real Word footnotes, page labels in PDF from print page breaks, and templates beyond large-print PDF.
 
@@ -20,7 +20,7 @@ A template changes the look only. Every writer keeps the structure it already ha
 
 ### Word
 
-The looks are generated in code (`template.rs`, `DocxLook`), as Star generated its reference documents, so there is no binary template in the repository and every style a document uses is defined in its `styles.xml` (a test checks both the document and footnote parts).
+The looks are generated in code (`template.rs`, `DocxLook`), as star generated its reference documents, so there is no binary template in the repository and every style a document uses is defined in its `styles.xml` (a test checks both the document and footnote parts).
 
 - **APA student paper:** Times New Roman 12, double spacing, no space between paragraphs, a half-inch first-line indent (a `Body Text` style, so table cells, lists, and footnotes are not indented), the APA 7 heading levels (centered bold; flush left bold; flush left bold italic; indented bold; indented bold italic), the page number at the top right (a `PAGE` field in `header1.xml`), and a `Bibliography` style with a half-inch hanging indent for the paragraphs under a "References" heading. The title page is a `Title` paragraph and centered lines from the front matter (author, affiliation, course, instructor, date), and the text starts with `pageBreakBefore` rather than an empty page-break paragraph.
 - **Heading levels in a paper:** when the only level 1 heading is the first block and says the title (a Markdown paper that starts `# Title`), the template's first heading look goes to level 2 and so on. The sections look like APA level 1 headings, while screen readers still hear the title as heading level 1 and each section as level 2. The outline levels never move.
@@ -66,7 +66,7 @@ The existing `--template` option takes the six names (and aliases such as `apa-s
 
 - Word files from textweaver now use real footnotes. A document whose Word text must match its source character for character sets `word_footnotes` off.
 - Templates are data in code and CSS files; a new template is one enum value, one `DocxLook`, one stylesheet, and its PDF layout.
-- Not done: a user's own Word template (`--reference-doc` in Star), page numbers in untemplated Word files, APA professional papers (running head), the HTML page picking up a publishing stylesheet (the HTML templates belong to `textweaver-render`), and a template setting in the reader.
+- Not done: a user's own Word template (`--reference-doc` in star), page numbers in untemplated Word files, APA professional papers (running head), the HTML page picking up a publishing stylesheet (the HTML templates belong to `textweaver-render`), and a template setting in the reader.
 
 ## See also
 

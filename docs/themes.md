@@ -6,14 +6,14 @@ This guide covers choosing a theme, the built-in themes, following your system's
 
 ## Galaxy, the default
 
-Galaxy is textweaver's default theme and the first in the list. It is Star's default theme, carried over faithfully: a dark theme modeled on Obsidian's dark mode, with light gray text on a near-black page and purple accents.
+Galaxy is textweaver's default theme and the first in the list. It is star's default theme, carried over faithfully: a dark theme modeled on Obsidian's dark mode, with light gray text on a near-black page and purple accents.
 
 - Page `#1e1e1e`, text `#dadada`.
 - Headings in lavender, violet, periwinkle, and teal.
 - Links in purple (`#a882ff`), always underlined.
 - The word being spoken is dark text on a lavender band, in bold, inside an underlined sentence, in the terminal and in the window alike.
 
-One color changed from Star: dim text (hints, line numbers, quotes) is `#858585` instead of `#7d7d7d`, because Star's gray measured 4.0 to 1 against the page and the minimum is 4.5 to 1.
+One color changed from star: dim text (hints, line numbers, quotes) is `#858585` instead of `#7d7d7d`, because star's gray measured 4.0 to 1 against the page and the minimum is 4.5 to 1.
 
 Galaxy's light partner is Galaxy Light. When textweaver follows your system's appearance, it switches between the two.
 
@@ -33,18 +33,18 @@ Galaxy's light partner is Galaxy Light. When textweaver follows your system's ap
   theme = "nord"
   ```
 
-Names ignore case. Star's older names still work (`obsidian` means Galaxy). If a name is not found, textweaver uses Galaxy and tells you so.
+Names ignore case. star's older names still work (`obsidian` means Galaxy). If a name is not found, textweaver uses Galaxy and tells you so.
 
 `settings.toml` is in textweaver's configuration folder: on Windows `%APPDATA%\leavesofgrass\textweaver\config`, on macOS `~/Library/Application Support/org.leavesofgrass.textweaver`, on Linux `~/.config/textweaver`. Setting `TEXTWEAVER_HOME` puts everything under one folder instead.
 
 ## The built-in themes
 
-They are grouped here by kind. All but Lamplight are Star's palettes; Lamplight is textweaver's own.
+They are grouped here by kind. All but Lamplight are star's palettes; Lamplight is textweaver's own.
 
 Not every theme has to meet the WCAG AA contrast level, as long as some do.
 
-- **Must meet AA.** Galaxy, Galaxy Light, Contrast, and High Contrast. The two high-contrast themes reach 7 to 1. Where one of Star's colors fell short in these four, it was moved by the smallest change that passes, and the theme file lists every change.
-- **Every other theme** keeps Star's colors exactly. Its theme file says whether it meets AA.
+- **Must meet AA.** Galaxy, Galaxy Light, Contrast, and High Contrast. The two high-contrast themes reach 7 to 1. Where one of star's colors fell short in these four, it was moved by the smallest change that passes, and the theme file lists every change.
+- **Every other theme** keeps star's colors exactly. Its theme file says whether it meets AA.
   - Meets AA: Amber, Catppuccin Mocha, Dracula, Gruvbox Dark, Gruvbox Light, Kanagawa, Lamplight, Rose Pine, Sepia, and Tokyo Night.
   - Falls short on some colors, often the dim text: Dark, Everforest Dark, Light, Monokai, Nord, One Dark, One Light, Phosphor, Solarized Dark, and Solarized Light.
 
@@ -58,7 +58,7 @@ Dark themes:
 
 1. Galaxy: purple accents on near black; the default.
 2. One Dark: the One Dark editor palette.
-3. Dark: Star's original dark theme.
+3. Dark: star's original dark theme.
 4. Phosphor: green monochrome, like an old terminal.
 5. Dracula.
 6. Nord: cool arctic blues.
@@ -77,7 +77,7 @@ Light themes:
 
 1. Galaxy Light: purple accents on white; Galaxy's partner.
 2. One Light.
-3. Light: Star's original light theme.
+3. Light: star's original light theme.
 4. Solarized Light.
 5. Sepia: warm paper tones for long reading.
 6. Gruvbox Light.
@@ -97,7 +97,7 @@ When following is on and you have not picked a theme yourself, textweaver matche
 - In light mode, it uses your theme's light partner, or Galaxy Light.
 - In high-contrast mode (Windows contrast themes, macOS Increase Contrast, GNOME High Contrast), it uses High Contrast.
 
-Choosing a theme yourself stops following, as in Star. It reads these settings: on Windows, the app light or dark mode and the contrast theme switch; on macOS, Appearance and Increase Contrast; on Linux, GNOME's color scheme and high-contrast settings, or `GTK_THEME`.
+Choosing a theme yourself stops following, as in star. It reads these settings: on Windows, the app light or dark mode and the contrast theme switch; on macOS, Appearance and Increase Contrast; on Linux, GNOME's color scheme and high-contrast settings, or `GTK_THEME`.
 
 ## Terminal colors
 

@@ -1249,7 +1249,7 @@ pub const INFO: &[Info] = &[
     optional(
         "lexicon.glossary",
         "Glossary",
-        "Your own glossary, looked up before the dictionary: term: definition lines, or Star's JSON. Not set uses glossary.txt in the settings folder.",
+        "Your own glossary, looked up before the dictionary: term: definition lines, or star's JSON. Not set uses glossary.txt in the settings folder.",
     ),
     optional(
         "lexicon.data_file",

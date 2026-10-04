@@ -20,7 +20,7 @@
 //!   per process ([`system::installed`]).
 //!
 //! Choosing and resolving a reading font is here too ([`choice`]): the
-//! family a reader picked, the reading fonts Star offered
+//! family a reader picked, the reading fonts star offered
 //! ([`READING_FONTS`]), each platform's fallbacks, and which family to use
 //! given what is bundled and installed ([`FontSettings::resolve`]). The
 //! reading aids, the writers, and the GUIs all resolve fonts through this

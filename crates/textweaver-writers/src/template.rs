@@ -1,4 +1,4 @@
-//! Publishing templates (ADR-0041): Star's accessible templates as
+//! Publishing templates (ADR-0041): star's accessible templates as
 //! textweaver's, for EPUB, DOCX, and PDF.
 //!
 //! A [`Template`] is a named look plus the parts a kind of document needs:

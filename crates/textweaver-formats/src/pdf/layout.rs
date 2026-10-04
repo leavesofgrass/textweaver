@@ -1,18 +1,18 @@
 //! Page layout: glyphs into lines, lines into blocks and tables, running
 //! headers and footers removed, and blocks put in reading order.
 //!
-//! Reading order is Star's column-aware reconstruction
+//! Reading order is star's column-aware reconstruction
 //! (`star/documents/pdf.py`, `_pdf_order_boxes`): blocks that span columns
 //! divide the page into bands; within a band, columns are read left to
-//! right, each top to bottom. Two refinements over Star, both found on a
+//! right, each top to bottom. Two refinements over star, both found on a
 //! browser-printed two-column page: a gutter is a strip at least 1.5% of the
-//! page wide that almost no line crosses (Star required 4% and no crossing,
+//! page wide that almost no line crosses (star required 4% and no crossing,
 //! so a short title over the gutter hid the columns), confirmed by several
 //! full lines of text on each side; and every block that crosses a gutter is
 //! a band divider, not only those 55% of the page wide. Columns are found
 //! before tables, so a table in one column never takes lines from the
 //! other, and a justified line split at wide word gaps is joined again. Running headers and footers are
-//! Star's too: text in the top or bottom tenth of the page that recurs
+//! star's too: text in the top or bottom tenth of the page that recurs
 //! (digits ignored) on at least half the pages (and at least three), and
 //! bare page numbers there ("12", "Page 12", "12 of 340", "iv").
 
@@ -726,7 +726,7 @@ fn image_alt(img: &ImageBox, alts: &HashMap<u32, String>) -> Option<String> {
     (!alt.is_empty()).then_some(alt)
 }
 
-/// Star's page-number pattern: "12", "Page 12", "12 of 340", "12/340", "iv".
+/// star's page-number pattern: "12", "Page 12", "12 of 340", "12/340", "iv".
 pub(super) fn is_page_number(text: &str) -> bool {
     let t = text.trim().to_lowercase();
     let t = t.strip_prefix("page").map_or(t.as_str(), str::trim_start);
@@ -772,7 +772,7 @@ fn in_margin(b: &Block, height: f32) -> bool {
     b.top >= 0.9 * height || b.bottom <= 0.1 * height
 }
 
-/// Removes running headers and footers and bare page numbers (Star's
+/// Removes running headers and footers and bare page numbers (star's
 /// `_pdf_running_heads_feet` and `_pdf_is_running`).
 pub(super) fn remove_running(pages: &mut [Page]) {
     let mut counts: HashMap<String, usize> = HashMap::new();
@@ -806,7 +806,7 @@ pub(super) fn remove_running(pages: &mut [Page]) {
 }
 
 /// Column x-ranges from a vertical projection of the blocks' x-extents
-/// (Star's `_pdf_detect_columns`), for pages where [`columns`] found none.
+/// (star's `_pdf_detect_columns`), for pages where [`columns`] found none.
 fn detect_columns(blocks: &[&Block], page_width: f32) -> Vec<(f32, f32)> {
     if blocks.is_empty() || page_width <= 0.0 {
         return vec![(0.0, page_width)];
@@ -851,7 +851,7 @@ fn detect_columns(blocks: &[&Block], page_width: f32) -> Vec<(f32, f32)> {
     merged
 }
 
-/// Puts a page's blocks in reading order (Star's `_pdf_order_boxes`, with
+/// Puts a page's blocks in reading order (star's `_pdf_order_boxes`, with
 /// the gutter refinements in the module docs).
 pub(super) fn order(page: &mut Page) {
     let width = page.width;

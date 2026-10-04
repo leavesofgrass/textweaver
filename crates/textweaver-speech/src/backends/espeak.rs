@@ -1,4 +1,4 @@
-//! In-process eSpeak NG (feature `espeak`), ported from Star's
+//! In-process eSpeak NG (feature `espeak`), ported from star's
 //! `ESpeakLibBackend` (`star/tts/espeak.py`, Part 2 section 2).
 //!
 //! libespeak-ng is a process-wide singleton and its calls block, so the
@@ -9,13 +9,13 @@
 //! **Word events.** libespeak-ng reports each word with `audio_position`,
 //! milliseconds into that message's audio. They are passed on as
 //! `RawEvent::Word { audio_ms }` and the service schedules the highlight at
-//! `audio_ms + latency_offset` (default 120 ms, Star's
-//! `espeak_highlight_offset_ms`), never on arrival (Star's rule, since
+//! `audio_ms + latency_offset` (default 120 ms, star's
+//! `espeak_highlight_offset_ms`), never on arrival (star's rule, since
 //! events can arrive in a burst ahead of the audio). Positions are converted
 //! to UTF-8 byte ranges of the utterance text. espeak-ng 1.52 reports
 //! 1-based *character* positions and lengths for UTF-8 input (verified in
 //! the dev container: "Café pour Émile" gives `pour` at 6 and `Émile` at 11,
-//! length 5); Star assumed bytes, which is wrong for non-ASCII text.
+//! length 5); star assumed bytes, which is wrong for non-ASCII text.
 //!
 //! **Outputs** ([`EspeakOutput`]): `Playback` lets libespeak-ng play the
 //! audio (the default). `Virtual` synthesizes in retrieval mode, discards
@@ -29,7 +29,7 @@
 //! subtitles in audio export.
 //!
 //! **Mapping** (ADR-0004): rate in wpm clamped to espeak's 80..=450 (one
-//! mapping for every espeak build, fixing Star's 0.8× CLI versus 1.0× library
+//! mapping for every espeak build, fixing star's 0.8× CLI versus 1.0× library
 //! mismatch, Q14); pitch `50 + semitones × 50 / 12` on espeak's 0..=100
 //! scale; volume percent as is (espeak's 100 is normal). No native pause
 //! (the service emulates it) and no tones.

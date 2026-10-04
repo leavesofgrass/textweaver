@@ -1,6 +1,6 @@
 //! The panel beside the document (Wave 8d): the Contents (the headings,
 //! as the outline lists them with Alt+O) or the Notes (as the notes list
-//! shows them), closing the Star gap in `docs/star-gaps.md`.
+//! shows them), closing the star gap in `docs/star-gaps.md`.
 //!
 //! - **One list model.** The rows come from the app
 //!   ([`App::panel_entries`]), with the outline's and the notes list's own

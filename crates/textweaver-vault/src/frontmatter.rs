@@ -3,11 +3,11 @@
 //! Only the subset Obsidian's Properties editor writes is understood:
 //! `key: value` scalars (plain, single- or double-quoted), flow lists
 //! (`[a, "b, c"]`), block lists (`key:` then `- item` lines), and literal or
-//! folded block scalars (`|`, `>`). Nested maps are skipped. Star parsed
+//! folded block scalars (`|`, `>`). Nested maps are skipped. star parsed
 //! with PyYAML when installed and fell back to a similar minimal parser
 //! (`star/obsidian.py:_parse_frontmatter`).
 //!
-//! Writing quotes every value that plain YAML would misread (Star wrote
+//! Writing quotes every value that plain YAML would misread (star wrote
 //! values unquoted, so a title containing `: ` or `#` produced invalid or
 //! mis-typed YAML, Part 3 §7 item 42).
 
@@ -137,7 +137,7 @@ impl FrontMatter {
 
 /// Splits a note into its front matter and body. A note has front matter
 /// only when its first line is `---` and a later line is `---` or `...`
-/// (Star's rule); otherwise the whole text is the body. A leading byte
+/// (star's rule); otherwise the whole text is the body. A leading byte
 /// order mark is ignored.
 pub fn split(text: &str) -> (FrontMatter, &str) {
     let text = text.strip_prefix('\u{feff}').unwrap_or(text);
@@ -435,7 +435,7 @@ mod tests {
         let (fm, body) = split("# Title\n\ntext");
         assert!(fm.is_empty());
         assert_eq!(body, "# Title\n\ntext");
-        // An unclosed block is not front matter (Star's rule).
+        // An unclosed block is not front matter (star's rule).
         let (fm, body) = split("---\ntitle: x\nno close");
         assert!(fm.is_empty());
         assert_eq!(body, "---\ntitle: x\nno close");
@@ -507,7 +507,7 @@ mod tests {
 
     #[test]
     fn writes_quoted_values_that_would_break_yaml() {
-        // Star bug 42: `title: Chapter 1: Intro #2` was written unquoted.
+        // star bug 42: `title: Chapter 1: Intro #2` was written unquoted.
         let mut fm = FrontMatter::new();
         fm.set_text("title", "Chapter 1: Intro #2");
         fm.set_text("plain", "Just words");

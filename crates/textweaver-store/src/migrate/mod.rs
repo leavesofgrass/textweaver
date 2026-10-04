@@ -1,9 +1,9 @@
-//! `tw migrate-star`: importing a Star installation.
+//! `tw migrate-star`: importing a star installation.
 //!
-//! Reads Star's configuration directory (never writes to it) and imports,
+//! Reads star's configuration directory (never writes to it) and imports,
 //! into textweaver's own files:
 //!
-//! - settings with a textweaver equivalent, when they differ from Star's
+//! - settings with a textweaver equivalent, when they differ from star's
 //!   defaults ([`star::apply_settings`]);
 //! - reading positions, bookmarks, notes, and highlights, each mapped onto
 //!   textweaver's text by word alignment ([`align`], ADR-0002);
@@ -14,9 +14,9 @@
 //!
 //! Every item lands in a [`MigrationReport`] as imported, unchanged, or
 //! skipped with a reason. Running the migration twice imports nothing new:
-//! existing textweaver data wins over Star's where both exist (a newer
+//! existing textweaver data wins over star's where both exist (a newer
 //! textweaver position, a bookmark name already used, a note id already
-//! present), and imported notes without a Star id get a stable one.
+//! present), and imported notes without a star id get a stable one.
 //!
 //! Loading documents and composing keymap entries belong to other crates,
 //! so the caller supplies them through [`MigrationHost`].
@@ -59,7 +59,7 @@ pub trait MigrationHost {
     /// Loads a document, or `None` when it cannot be opened.
     fn load(&self, path: &Path) -> Option<LoadedDoc>;
 
-    /// The `keymap.toml` value binding `chord` (a Star/Qt shortcut such as
+    /// The `keymap.toml` value binding `chord` (a star/Qt shortcut such as
     /// `Ctrl+Shift+P`) to `action`, keeping the action's other default
     /// keys; `None` when the chord cannot be read.
     fn keymap_entry(&self, action: &str, chord: &str) -> Option<Vec<String>>;
@@ -143,11 +143,11 @@ pub struct ReportItem {
 /// Everything the migration did or would do.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MigrationReport {
-    /// Star's configuration directory.
+    /// star's configuration directory.
     pub from: PathBuf,
     /// True when nothing was written.
     pub dry_run: bool,
-    /// Documents with Star's own text in its parse cache (exact mapping).
+    /// Documents with star's own text in its parse cache (exact mapping).
     pub star_cache_documents: usize,
     /// Files written (empty in a dry run).
     pub written: Vec<PathBuf>,
@@ -194,7 +194,7 @@ impl MigrationReport {
     /// summary line per kind, then what was imported, then what was
     /// skipped and why.
     pub fn render(&self) -> String {
-        let mut out = format!("Star configuration: {}\n", self.from.display());
+        let mut out = format!("star configuration: {}\n", self.from.display());
         if self.dry_run {
             out.push_str("Dry run: nothing was written.\n");
         } else if self.written.is_empty() {
@@ -208,7 +208,7 @@ impl MigrationReport {
         }
         if self.star_cache_documents > 0 {
             out.push_str(&format!(
-                "Star's cached text was available for {} {}.\n",
+                "star's cached text was available for {} {}.\n",
                 self.star_cache_documents,
                 if self.star_cache_documents == 1 {
                     "document"
@@ -253,7 +253,7 @@ impl MigrationReport {
 /// Migration options.
 #[derive(Clone, Debug)]
 pub struct MigrateOptions {
-    /// Star's configuration directory.
+    /// star's configuration directory.
     pub from: PathBuf,
     /// Report without writing anything.
     pub dry_run: bool,
@@ -286,7 +286,7 @@ struct Run<'a> {
     report: MigrationReport,
 }
 
-/// Why a Star document key cannot be used.
+/// Why a star document key cannot be used.
 fn unusable(key: &str) -> Option<String> {
     if key.starts_with("http://") || key.starts_with("https://") {
         return Some("a web page, not a file".to_owned());
@@ -305,7 +305,7 @@ fn obj(v: Option<&Value>) -> Option<&Map<String, Value>> {
     v.and_then(Value::as_object)
 }
 
-/// Star's profiles, by name: an object of names to settings maps, or a
+/// star's profiles, by name: an object of names to settings maps, or a
 /// list of objects with a `name` and their settings (in `settings`,
 /// `values`, or beside the name). A profile whose settings are not an
 /// object is listed with `None`, so it is reported.
@@ -487,7 +487,7 @@ impl Run<'_> {
                     ItemKind::Keybinding,
                     subject,
                     Outcome::Skipped,
-                    format!("textweaver has no command for Star's {shortcut}"),
+                    format!("textweaver has no command for star's {shortcut}"),
                 );
                 continue;
             };
@@ -749,7 +749,7 @@ impl Run<'_> {
         Ok(())
     }
 
-    /// Star's `reading_stats` (seconds, sessions, and percentage per path)
+    /// star's `reading_stats` (seconds, sessions, and percentage per path)
     /// into `stats.json`. A document textweaver already has statistics for
     /// is left alone.
     fn reading_stats(&mut self, star: &Map<String, Value>) -> Result<(), StoreError> {
@@ -821,9 +821,9 @@ impl Run<'_> {
         Ok(())
     }
 
-    /// Star's settings profiles (`profiles` in `settings.json`, saved by
-    /// Star's profile menu in `gui/mixin_presets.py`) into `profiles.toml`,
-    /// one report line per profile. Each profile maps Star's settings keys
+    /// star's settings profiles (`profiles` in `settings.json`, saved by
+    /// star's profile menu in `gui/mixin_presets.py`) into `profiles.toml`,
+    /// one report line per profile. Each profile maps star's settings keys
     /// to values; the ones with a textweaver equivalent among the profile
     /// keys ([`profiles::PROFILE_KEYS`]) are kept. A textweaver profile of
     /// the same name wins.
@@ -1146,7 +1146,7 @@ fn import_bookmarks(
         let pct = star::as_usize(v.get("pct")).map(|p| u8::try_from(p.min(100)).unwrap_or(100));
         let mapped = t.mapper.map_offset(offset, pct);
         let ts = star::star_ts(v.get("ts"));
-        // The id is derived from the bookmark, so importing the same Star
+        // The id is derived from the bookmark, so importing the same star
         // data on two computers gives the same id (one bookmark, not two).
         let bm = Bookmark {
             id: Bookmark::legacy_id(name, mapped.pos, ts),
@@ -1161,7 +1161,7 @@ fn import_bookmarks(
     }
 }
 
-/// Star annotation fields textweaver stores in named fields; the others
+/// star annotation fields textweaver stores in named fields; the others
 /// (`sr_state`, ...) are kept in [`Note::extra`].
 const NOTE_FIELDS: [&str; 10] = [
     "id",
@@ -1225,7 +1225,7 @@ fn import_notes(
             });
             continue;
         }
-        // Star's word index is exact where Star's text is known; the GUI's
+        // star's word index is exact where star's text is known; the GUI's
         // char position is a rendered-editor offset, close to it.
         let estimate = match (word_idx, char_pos) {
             (Some(w), _) => t.mapper.map_word(w, None),
@@ -1339,7 +1339,7 @@ fn import_highlights(
         items.push(item(
             Outcome::Imported,
             format!(
-                "{} highlight at {pct} percent, \u{201c}{}\u{201d}, approximate: Star stored screen offsets",
+                "{} highlight at {pct} percent, \u{201c}{}\u{201d}, approximate: star stored screen offsets",
                 notes::color_name(&color),
                 notes::collapse(&text, 40)
             ),
@@ -1355,8 +1355,8 @@ fn import_highlights(
     }
 }
 
-/// Imports a Star installation into textweaver's files under `paths`
-/// (see the module docs). Star's directory is only read. Fails when Star's
+/// Imports a star installation into textweaver's files under `paths`
+/// (see the module docs). star's directory is only read. Fails when star's
 /// `settings.json` cannot be read; problems with single items are reported
 /// in the [`MigrationReport`] instead.
 pub fn migrate_star(

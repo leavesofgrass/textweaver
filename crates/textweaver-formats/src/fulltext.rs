@@ -1,4 +1,4 @@
-//! Full-text index over loaded documents: the index side of Star's
+//! Full-text index over loaded documents: the index side of star's
 //! `star/fulltext.py`, as a small on-disk inverted index.
 //!
 //! [`FullTextIndex`] keeps, under a directory the caller chooses (the
@@ -8,16 +8,16 @@
 //!   time, word count) and an inverted index from each lowercase word to the
 //!   documents containing it with a count;
 //! - `text/<id>.txt`: each document's canonical text (at most
-//!   [`MAX_TEXT_CHARS`], as in Star), for snippets and phrase counts.
+//!   [`MAX_TEXT_CHARS`], as in star), for snippets and phrase counts.
 //!
-//! As in Star, indexing is lazy and incremental ([`FullTextIndex::refresh`]
+//! As in star, indexing is lazy and incremental ([`FullTextIndex::refresh`]
 //! re-reads only files whose size or modification time changed and drops
 //! files no longer listed), best-effort (a file that fails to load is
 //! reported and keeps its stale entry), and cancellable between files.
 //! Search is case-insensitive:
 //!
 //! - every query word must start some word of the document (so `read`
-//!   finds `reading`; Star matched substrings anywhere, which also found
+//!   finds `reading`; star matched substrings anywhere, which also found
 //!   `bread`);
 //! - documents containing the whole query as a phrase come first, ranked
 //!   by how often it occurs, then documents with all the words, ranked by
@@ -41,7 +41,7 @@ use textweaver_text::{Document, segments};
 
 use crate::{LoadOptions, Registry, Source};
 
-/// Most chars of text kept per document (Star's `_MAX_TEXT_CHARS`).
+/// Most chars of text kept per document (star's `_MAX_TEXT_CHARS`).
 pub const MAX_TEXT_CHARS: usize = 2_000_000;
 
 /// Chars of context either side of a hit in a snippet.
@@ -438,7 +438,7 @@ fn find_all(hay: &[char], needle: &[char]) -> Vec<usize> {
     out
 }
 
-/// Star's snippet: the hit with context either side, whitespace collapsed,
+/// star's snippet: the hit with context either side, whitespace collapsed,
 /// `…` where cut.
 fn snippet(chars: &[char], at: usize, len: usize) -> String {
     let start = at.saturating_sub(SNIPPET_CONTEXT);

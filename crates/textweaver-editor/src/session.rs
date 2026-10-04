@@ -1,7 +1,7 @@
 //! The authoring session: read mode and edit mode for one document, the
 //! Save / Discard / Cancel decisions, the save rule, Save As adoption,
-//! stale-load protection, and autosave snapshots. It is Star's GUI edit
-//! mode (the Star parity reference Part 3 §4.1, §4.2, §5) without a GUI, so the
+//! stale-load protection, and autosave snapshots. It is star's GUI edit
+//! mode (the star parity reference Part 3 §4.1, §4.2, §5) without a GUI, so the
 //! app can drive it from any frontend and the tests can exercise it.
 //!
 //! Decisions are two-phase so a frontend can ask asynchronously: a call
@@ -9,10 +9,10 @@
 //! [`LeaveOutcome::NeedsPath`], and the frontend calls again with the
 //! user's [`Choice`] or path.
 //!
-//! Differences from Star: New Document does not change a setting (Star
+//! Differences from star: New Document does not change a setting (star
 //! turned the preview pane on permanently, §7 item 34); leaving edit mode
 //! cleanly deletes the snapshot, and a quit with unsaved edits is reported
-//! by [`EditSession::needs_save_prompt`] so the app can ask (Star closed
+//! by [`EditSession::needs_save_prompt`] so the app can ask (star closed
 //! without asking, item 38).
 
 use std::path::{Path, PathBuf};
@@ -218,7 +218,7 @@ pub enum SessionError {
 #[derive(Clone, Debug)]
 pub struct EditSession {
     doc: DocInfo,
-    /// The document's text as last loaded or saved (Star's `doc.markdown`).
+    /// The document's text as last loaded or saved (star's `doc.markdown`).
     doc_text: String,
     editor: Option<Editor>,
     maps_stale: bool,
@@ -325,7 +325,7 @@ impl EditSession {
         &self.doc_text
     }
 
-    /// The text being edited, or the document's text in read mode (Star's
+    /// The text being edited, or the document's text in read mode (star's
     /// `_qt_live_markdown`).
     pub fn live_text(&self) -> String {
         match &self.editor {
@@ -515,7 +515,7 @@ impl EditSession {
         }
     }
 
-    /// Leaves edit mode (Ctrl+E while editing, Star's
+    /// Leaves edit mode (Ctrl+E while editing, star's
     /// `_qt_finish_editing`). Clean: leaves at once. Dirty: needs a
     /// [`Choice`]; Cancel stays, Discard leaves without saving, Save saves
     /// (asking for a path through [`LeaveOutcome::NeedsPath`] if needed)
@@ -546,7 +546,7 @@ impl EditSession {
         }
     }
 
-    /// Before opening another document or starting a new one (Star's
+    /// Before opening another document or starting a new one (star's
     /// `_qt_confirm_leave_edit_for_replace`): the same decisions as
     /// [`finish_editing`](Self::finish_editing). Proceed only on `Left`.
     pub fn confirm_leave(
@@ -626,7 +626,7 @@ impl EditSession {
         Ok(ed.apply_formatted(&f)?)
     }
 
-    /// Inserts an image reference relative to the document (Star's Insert
+    /// Inserts an image reference relative to the document (star's Insert
     /// Image), selecting the alt text.
     pub fn insert_image(&mut self, image: &Path) -> Result<Vec<EditOutcome>, SessionError> {
         let doc_path = self.doc.path.clone();
@@ -674,7 +674,7 @@ impl EditSession {
     }
 
     /// Writes the live text (unsaved edits included) to `path` as Markdown,
-    /// without changing the document (Star's Export as Markdown).
+    /// without changing the document (star's Export as Markdown).
     pub fn export(&self, path: &Path) -> Result<(), SessionError> {
         autosave::write_atomic(path, self.live_text().as_bytes()).map_err(|source| {
             SessionError::Io {
@@ -698,7 +698,7 @@ impl EditSession {
     /// Returns whether a snapshot was written.
     ///
     /// A failed write is recorded as an attempt, so the next one waits
-    /// (Star retried on every tick, about every 40 ms): the interval
+    /// (star retried on every tick, about every 40 ms): the interval
     /// doubles with each failure in a row, up to
     /// [`SNAPSHOT_BACKOFF_MAX`](Self::SNAPSHOT_BACKOFF_MAX), and resets
     /// after a success.
@@ -810,7 +810,7 @@ impl EditSession {
         Ok(true)
     }
 
-    /// A session editing recovered text (Star's `_autosave_recover`): the
+    /// A session editing recovered text (star's `_autosave_recover`): the
     /// snapshot's path and title (or "Recovered document"), in edit mode,
     /// marked unsaved.
     pub fn from_recovery(snapshot: &RecoverySnapshot) -> Self {
@@ -829,7 +829,7 @@ impl EditSession {
     }
 }
 
-/// Answers a startup recovery offer for the snapshot in `file` (Star's
+/// Answers a startup recovery offer for the snapshot in `file` (star's
 /// Yes / No prompt). Either way the snapshot file is deleted. On yes,
 /// returns a session editing the recovered text, marked unsaved; announce
 /// "Recovered unsaved work. Remember to save.".

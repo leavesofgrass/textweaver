@@ -1,6 +1,6 @@
 //! Unicode math in the reading view (`[reading] math_display = "unicode"`,
 //! Agent W4g): the frontend draws each formula as one line of Unicode
-//! (`x²`, `√2`, `1⁄2`) in place of its source, as Star's `mathrender.py`
+//! (`x²`, `√2`, `1⁄2`) in place of its source, as star's `mathrender.py`
 //! did.
 //!
 //! Only the drawing changes. The document keeps its text, so speech, the

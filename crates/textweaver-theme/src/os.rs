@@ -35,7 +35,7 @@ pub enum OsScheme {
 }
 
 impl OsScheme {
-    /// `dark`, `light`, `high-contrast`, or `unknown`, as Star wrote them.
+    /// `dark`, `light`, `high-contrast`, or `unknown`, as star wrote them.
     pub fn key(self) -> &'static str {
         match self {
             OsScheme::Dark => "dark",
@@ -56,7 +56,7 @@ impl OsScheme {
     }
 }
 
-/// Star's `theme_for_os_scheme`: dark → `galaxy`, light → `galaxy-light`,
+/// star's `theme_for_os_scheme`: dark → `galaxy`, light → `galaxy-light`,
 /// high contrast → `high-contrast`, unknown → `None` (leave the saved theme).
 pub fn theme_for_os_scheme(scheme: OsScheme) -> Option<&'static str> {
     match scheme {
@@ -78,10 +78,10 @@ pub struct ThemeFacts<'a> {
 }
 
 /// The theme to switch to when the OS scheme is `scheme` and the current
-/// theme is `current`; `None` to keep it. Improves on Star by staying within
+/// theme is `current`; `None` to keep it. Improves on star by staying within
 /// the current theme's light/dark pair (a `solarized-dark` user in light mode
 /// gets `solarized-light`, not `galaxy-light`); themes without a partner
-/// fall back to Star's mapping. A high-contrast theme is kept in high-contrast
+/// fall back to star's mapping. A high-contrast theme is kept in high-contrast
 /// mode.
 pub fn follow_os(current: Option<ThemeFacts<'_>>, scheme: OsScheme) -> Option<String> {
     let want = match scheme {
@@ -104,7 +104,7 @@ pub fn follow_os(current: Option<ThemeFacts<'_>>, scheme: OsScheme) -> Option<St
     theme_for_os_scheme(scheme).map(str::to_owned)
 }
 
-/// Star's `_maybe_follow_os_theme`: at startup, follow the OS only when
+/// star's `_maybe_follow_os_theme`: at startup, follow the OS only when
 /// following is on and the user has not picked a theme explicitly. Returns
 /// the theme to switch to, or `None` to keep `saved`. Switching this way is
 /// not an explicit choice, so the next launch follows again.

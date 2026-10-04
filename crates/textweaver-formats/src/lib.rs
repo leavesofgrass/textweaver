@@ -47,7 +47,7 @@
 //! the built-ins: a caller that wants Pandoc registers it
 //! ([`Registry::with_pandoc`]), as `tw convert` does, so the reader never
 //! runs a subprocess to open a file. It ranks below the native loaders, so
-//! it never displaces one (Star preferred Pandoc for HTML and DOCX and
+//! it never displaces one (star preferred Pandoc for HTML and DOCX and
 //! inherited its bugs).
 //!
 //! Word comments and ODT annotations travel with the document as
@@ -273,7 +273,7 @@ impl Source {
     }
 }
 
-/// Where footnotes go in the canonical text (Star's `footnote_mode`, whose
+/// Where footnotes go in the canonical text (star's `footnote_mode`, whose
 /// default `inline` did nothing at all; here every mode works).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -312,7 +312,7 @@ pub enum RevisionMode {
 #[serde(default)]
 pub struct LoadOptions {
     /// Drop code blocks (text under block `Code` markers) from the canonical
-    /// text. Inline code is kept, as in Star.
+    /// text. Inline code is kept, as in star.
     pub skip_code: bool,
     /// Where footnotes go.
     pub footnotes: FootnoteMode,

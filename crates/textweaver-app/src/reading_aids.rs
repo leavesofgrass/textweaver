@@ -193,7 +193,7 @@ impl App {
         self.tell(&msg);
     }
 
-    /// Moves the RSVP word to the next of Star's nine places; saved.
+    /// Moves the RSVP word to the next of star's nine places; saved.
     pub(crate) fn rsvp_position_next(&mut self) {
         let rs = &mut self.settings.reading_aids.rsvp;
         let position = RsvpPosition::from(rs.position).next();

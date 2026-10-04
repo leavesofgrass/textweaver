@@ -2,10 +2,10 @@
 //! ported from `star/obsidian.py` (`_WIKILINK`, `_INLINE_REL`,
 //! `_INLINE_TAG`, `_extract_links`, `_first_line`).
 //!
-//! Differences from Star, all deliberate:
+//! Differences from star, all deliberate:
 //! - Links and tags inside code (fenced blocks and inline code spans) and
 //!   inside Obsidian comments (`%% ... %%`) are ignored, as Obsidian itself
-//!   ignores them. Star counted them.
+//!   ignores them. star counted them.
 //! - A purely numeric `#123` is not a tag, as in Obsidian.
 
 use std::sync::LazyLock;
@@ -165,7 +165,7 @@ fn is_embed(text: &str, at: usize) -> bool {
 /// The relation a Dataview field name names. The regex's field name may
 /// begin earlier in the sentence (`Some text supports:: [[X]]` captures
 /// `Some text supports`), so the name's word suffixes are tried longest
-/// first. Star tried only the whole capture and lost such relations.
+/// first. star tried only the whole capture and lost such relations.
 fn field_relation(key: &str) -> Option<RelationType> {
     field_relation_at(key).map(|(rt, _)| rt)
 }
@@ -184,7 +184,7 @@ fn field_relation_at(key: &str) -> Option<(RelationType, usize)> {
 }
 
 /// Every link in `body`, in order: typed Dataview fields first as they
-/// appear, then plain wikilinks not already consumed by a field (Star's
+/// appear, then plain wikilinks not already consumed by a field (star's
 /// `_extract_links`). Embeds (`![[...]]`) are skipped.
 pub fn extract_links(body: &str) -> Vec<Link> {
     let text = mask_code(body);
@@ -267,7 +267,7 @@ pub fn inline_tags(body: &str) -> Vec<String> {
 }
 
 /// `text` with link syntax reduced to what it reads as: a relation field
-/// `supports:: [[T]]` is removed (the relation keeps it, as in Star's
+/// `supports:: [[T]]` is removed (the relation keeps it, as in star's
 /// `_first_line`), `[[T|Alias]]` becomes `Alias`, and `[[T]]` and `![[T]]`
 /// become `T`. Lines left holding only a list marker are dropped and runs
 /// of spaces collapse. The result reads well aloud and never re-introduces
@@ -327,7 +327,7 @@ fn tidy(text: &str) -> String {
 }
 
 /// The note's first line of content as a one-line summary: heading marks
-/// and link syntax removed, at most 200 chars (Star's `_first_line`).
+/// and link syntax removed, at most 200 chars (star's `_first_line`).
 pub fn first_line(body: &str) -> String {
     for line in body.lines() {
         let s = line.trim().trim_start_matches('#').trim();
@@ -371,7 +371,7 @@ mod tests {
                 link(Some(RelationType::Supports), "Gamma"),
                 link(None, "Alpha"),
                 link(None, "Beta"),
-                // An unknown field name leaves the link untyped (Star).
+                // An unknown field name leaves the link untyped (star).
                 link(None, "Delta"),
             ]
         );
@@ -409,7 +409,7 @@ mod tests {
     #[test]
     fn first_line_strips_link_syntax() {
         let body = "\n## [[Alpha]] supports:: [[Beta]] and [[Gamma|G]]\nmore";
-        // The relation field goes entirely, as in Star.
+        // The relation field goes entirely, as in star.
         assert_eq!(first_line(body), "Alpha and G");
         assert_eq!(first_line("\n\n"), "");
         let long = "x".repeat(300);

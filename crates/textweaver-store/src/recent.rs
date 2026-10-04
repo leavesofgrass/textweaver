@@ -23,7 +23,7 @@ pub struct Recent {
 }
 
 impl Recent {
-    /// Records an open: moves the path to the front (Star did not move
+    /// Records an open: moves the path to the front (star did not move
     /// existing entries; fixed) and trims to `limit`.
     ///
     /// The path is stored resolved, as document keys and library entries

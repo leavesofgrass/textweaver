@@ -1,4 +1,4 @@
-//! Writes the built-in theme files (`themes/*.toml`) from Star's palettes
+//! Writes the built-in theme files (`themes/*.toml`) from star's palettes
 //! and prints the table of contrast adjustments as Markdown.
 //!
 //! Run: `cargo run -p textweaver-theme --example generate_builtin_themes`

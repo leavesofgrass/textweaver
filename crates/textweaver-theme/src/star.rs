@@ -1,14 +1,14 @@
-//! Star's 23 palettes (`star/themes.py`, `BUILT_IN_PALETTES`), their
+//! star's 23 palettes (`star/themes.py`, `BUILT_IN_PALETTES`), their
 //! terminal error colors (`star/tui/theming.py`), and the port that turns
 //! each into a complete textweaver theme.
 //!
-//! The eleven palette keys map to roles as Star's CSS template used them:
+//! The eleven palette keys map to roles as star's CSS template used them:
 //! `bg` → background, `fg` → text, `sel` → the selection and spoken-sentence
-//! band, `h1`–`h4` → headings 1–4 (5 and 6 follow 4, as in Star's CSS),
+//! band, `h1`–`h4` → headings 1–4 (5 and 6 follow 4, as in star's CSS),
 //! `code`, `code_bg` → code and code background (and panels), `link`, and
-//! `muted` → dim text and quotes. Star had no palette key for errors; the
+//! `muted` → dim text and quotes. star had no palette key for errors; the
 //! terminal UI's `err` color is used where it had one (the fourteen
-//! community themes), and otherwise the color Star's hand-written terminal
+//! community themes), and otherwise the color star's hand-written terminal
 //! tables used (magenta, avoiding red and green, for `dark`, `light` and
 //! `contrast`; green for the monochrome `phosphor`) or the scheme's own red.
 //!
@@ -17,7 +17,7 @@
 //! two high-contrast themes) keep every value that already meets the
 //! contrast floor and nudge only the ones that fail, by the smallest
 //! lightness change that passes ([`crate::color::adjust_lightness`]). Every
-//! other palette keeps Star's colors exactly; its file says whether it meets
+//! other palette keeps star's colors exactly; its file says whether it meets
 //! AA. [`port`] returns each change.
 
 use crate::color::Rgb;
@@ -26,7 +26,7 @@ use crate::file::{StyleFile, ThemeFile};
 use crate::model::{ColorRole, StyleRole, Theme, ThemeKind};
 use crate::resolve::{Adjustment, Repair, resolve};
 
-/// One of Star's palettes, verbatim.
+/// One of star's palettes, verbatim.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct StarPalette {
     /// Theme name.
@@ -75,7 +75,7 @@ const fn p(
     }
 }
 
-/// Star's palettes in Star's cycle order (galaxy first; it is the default).
+/// star's palettes in star's cycle order (galaxy first; it is the default).
 /// Key order: bg, fg, sel, h1, h2, h3, h4, code, code_bg, link, muted.
 #[rustfmt::skip]
 pub const PALETTES: [StarPalette; 23] = [
@@ -107,11 +107,11 @@ pub const PALETTES: [StarPalette; 23] = [
 /// Where a theme's error color comes from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ErrorSource {
-    /// Star's terminal `err` color, an xterm-256 index.
+    /// star's terminal `err` color, an xterm-256 index.
     StarTerminal(u8),
-    /// Star's hand-written terminal table (magenta or green).
+    /// star's hand-written terminal table (magenta or green).
     StarTable(Rgb),
-    /// The scheme's own red; Star had none.
+    /// The scheme's own red; star had none.
     Scheme(Rgb),
 }
 
@@ -128,12 +128,12 @@ impl ErrorSource {
     pub fn describe(self) -> String {
         match self {
             ErrorSource::StarTerminal(i) => {
-                format!("Star's terminal error color (xterm {i}, {})", self.color())
+                format!("star's terminal error color (xterm {i}, {})", self.color())
             }
             ErrorSource::StarTable(c) => {
-                format!("the color Star's terminal table used for errors ({c})")
+                format!("the color star's terminal table used for errors ({c})")
             }
-            ErrorSource::Scheme(c) => format!("the scheme's red ({c}); Star had no error color"),
+            ErrorSource::Scheme(c) => format!("the scheme's red ({c}); star had no error color"),
         }
     }
 }
@@ -153,7 +153,7 @@ pub struct StarMeta {
     pub error: ErrorSource,
 }
 
-/// Metadata for a Star palette by name.
+/// Metadata for a star palette by name.
 #[rustfmt::skip]
 pub fn meta(name: &str) -> Option<StarMeta> {
     use ErrorSource::*;
@@ -170,9 +170,9 @@ pub fn meta(name: &str) -> Option<StarMeta> {
         "galaxy-light" => m("Galaxy Light", Light, "Galaxy's light half: purple accents on white.", Some("galaxy"), Scheme(Rgb::from_u32(0xc0264b))),
         "one-dark" => m("One Dark", Dark, "The One Dark editor palette.", Some("one-light"), Scheme(Rgb::from_u32(0xe06c75))),
         "one-light" => m("One Light", Light, "The One Light editor palette.", Some("one-dark"), Scheme(Rgb::from_u32(0xe45649))),
-        "dark" => m("Dark", Dark, "Star's original dark theme.", Some("light"), StarTable(Rgb::from_u32(0xf07cd0))),
-        "light" => m("Light", Light, "Star's original light theme.", Some("dark"), StarTable(Rgb::from_u32(0xa1239b))),
-        "contrast" => m("Contrast", HighContrast, "Pure yellow and cyan on black; Star's original contrast theme.", None, StarTable(Rgb::from_u32(0xff80ff))),
+        "dark" => m("Dark", Dark, "star's original dark theme.", Some("light"), StarTable(Rgb::from_u32(0xf07cd0))),
+        "light" => m("Light", Light, "star's original light theme.", Some("dark"), StarTable(Rgb::from_u32(0xa1239b))),
+        "contrast" => m("Contrast", HighContrast, "Pure yellow and cyan on black; star's original contrast theme.", None, StarTable(Rgb::from_u32(0xff80ff))),
         "high-contrast" => m("High Contrast", HighContrast, "Softened high contrast for low vision; every color at 7 to 1 or more.", None, Scheme(Rgb::from_u32(0xff9a8a))),
         "phosphor" => m("Phosphor", Dark, "Green phosphor monochrome.", None, StarTable(Rgb::from_u32(0x00ff00))),
         "dracula" => m("Dracula", Dark, "The Dracula palette.", None, StarTerminal(203)),
@@ -193,7 +193,7 @@ pub fn meta(name: &str) -> Option<StarMeta> {
     })
 }
 
-/// Star's pre-0.1.27 theme names and textweaver's earlier spellings, mapped
+/// star's pre-0.1.27 theme names and textweaver's earlier spellings, mapped
 /// to current names.
 pub const ALIASES: [(&str, &str); 6] = [
     ("obsidian", "galaxy"),
@@ -204,7 +204,7 @@ pub const ALIASES: [(&str, &str); 6] = [
     ("highcontrast", "high-contrast"),
 ];
 
-/// The theme file a palette starts from, before resolving: Star's values as
+/// The theme file a palette starts from, before resolving: star's values as
 /// explicit keys, everything else left to the resolver.
 pub fn to_file(p: &StarPalette) -> ThemeFile {
     let m = meta(p.name);
@@ -213,7 +213,7 @@ pub fn to_file(p: &StarPalette) -> ThemeFile {
         display_name: m.map(|m| m.display_name.to_owned()),
         kind: m.map(|m| m.kind),
         description: m.map(|m| m.description.to_owned()),
-        author: Some("Star palettes (star/themes.py); ported to textweaver".to_owned()),
+        author: Some("star palettes (star/themes.py); ported to textweaver".to_owned()),
         origin: Some("star".to_owned()),
         counterpart: m.and_then(|m| m.counterpart).map(str::to_owned),
         ..ThemeFile::default()
@@ -253,7 +253,7 @@ pub fn must_meet_aa(name: &str) -> bool {
 }
 
 /// Ports one palette: the complete theme and every color changed to meet
-/// the contrast floor. Only the themes in [`MUST_MEET_AA`] have Star's own
+/// the contrast floor. Only the themes in [`MUST_MEET_AA`] have star's own
 /// colors changed; the others keep them exactly.
 pub fn port(p: &StarPalette) -> Result<(Theme, Vec<Adjustment>), ThemeError> {
     let repair = if must_meet_aa(p.name) {
@@ -275,7 +275,7 @@ pub fn palette(name: &str) -> Option<&'static StarPalette> {
 pub fn generated_file(p: &StarPalette) -> Result<String, ThemeError> {
     let (theme, adjustments) = port(p)?;
     let mut s = format!(
-        "# {}: {}\n#\n# Ported from Star's `{}` palette (star/themes.py).\n",
+        "# {}: {}\n#\n# Ported from star's `{}` palette (star/themes.py).\n",
         theme.meta.display_name, theme.meta.description, p.name
     );
     if let Some(m) = meta(p.name) {
@@ -285,15 +285,15 @@ pub fn generated_file(p: &StarPalette) -> Result<String, ThemeError> {
         let report = crate::check::check(&theme);
         let failing = report.checks.iter().filter(|c| !c.passed).count();
         if failing == 0 {
-            s.push_str("# Star's colors, unchanged. Meets WCAG AA.\n");
+            s.push_str("# star's colors, unchanged. Meets WCAG AA.\n");
         } else {
             s.push_str(&format!(
-                "# Star's colors, unchanged. Does not meet WCAG AA: {failing} of {} contrast checks fall short.\n",
+                "# star's colors, unchanged. Does not meet WCAG AA: {failing} of {} contrast checks fall short.\n",
                 report.checks.len()
             ));
         }
     } else if adjustments.is_empty() {
-        s.push_str("# Every Star color meets the contrast floor unchanged.\n");
+        s.push_str("# Every star color meets the contrast floor unchanged.\n");
     } else {
         s.push_str(
             "# Changed to meet the contrast floor (smallest lightness change that passes):\n",
@@ -320,7 +320,7 @@ pub fn generated_file(p: &StarPalette) -> Result<String, ThemeError> {
     Ok(s)
 }
 
-/// Every adjustment made while porting Star's palettes, as a Markdown table
+/// Every adjustment made while porting star's palettes, as a Markdown table
 /// (theme, key, original color, new color, contrast before and after).
 pub fn adjustments_table() -> Result<String, ThemeError> {
     let mut s = String::from(

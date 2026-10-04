@@ -1,4 +1,4 @@
-//! Themes (ADR-0020, `textweaver-theme`): the built-in palettes (Star's 23,
+//! Themes (ADR-0020, `textweaver-theme`): the built-in palettes (star's 23,
 //! Galaxy first and the default) plus the user's own from the config
 //! folder's `themes/`, the `next_theme` cycle, and following the system's
 //! light, dark, or high-contrast setting at startup.
@@ -52,7 +52,7 @@ pub fn page_theme_css(
 impl App {
     /// Loads user themes and checks the configured name. Problems with user
     /// theme files are spoken ([`LoadReport::summary`]); an unknown theme
-    /// name falls back to Galaxy and says so (Star fell back silently).
+    /// name falls back to Galaxy and says so (star fell back silently).
     ///
     /// [`LoadReport::summary`]: textweaver_theme::LoadReport::summary
     pub(crate) fn load_themes(&mut self) {
@@ -82,7 +82,7 @@ impl App {
         }
     }
 
-    /// Every theme: built-ins in Star's order, then the user's.
+    /// Every theme: built-ins in star's order, then the user's.
     pub fn theme_registry(&self) -> &Registry {
         &self.themes
     }
@@ -139,7 +139,7 @@ impl App {
     }
 
     /// At startup, follows the system's scheme when `display.follow_os_theme`
-    /// is on and no theme was chosen explicitly (Star's rule). The switch is
+    /// is on and no theme was chosen explicitly (star's rule). The switch is
     /// not an explicit choice and is not saved on its own, so the next
     /// launch follows again. Returns the new theme's name, if it changed.
     pub fn apply_startup_theme(&mut self, scheme: OsScheme) -> Option<String> {

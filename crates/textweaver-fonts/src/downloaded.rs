@@ -1,5 +1,5 @@
 //! Reading fonts textweaver downloads on first choice, after asking:
-//! Lexend, the one reading font Star offered that is not bundled.
+//! Lexend, the one reading font star offered that is not bundled.
 //!
 //! Each font is pinned ([`DownloadableFont`]): its files' URLs at an
 //! immutable commit of the font's own repository, their sizes, and their
@@ -340,7 +340,7 @@ impl DownloadableFont {
 }
 
 /// Lexend, pinned to the Lexend project's commit `cd26b9c` (the last one
-/// to change its static fonts; Star pinned the same).
+/// to change its static fonts; star pinned the same).
 pub static LEXEND: DownloadableFont = DownloadableFont {
     key: "lexend",
     name: "Lexend",

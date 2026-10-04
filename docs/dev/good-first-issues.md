@@ -44,5 +44,5 @@ The category in each palette match, recent commands in an empty palette, and "wh
 - [CONTRIBUTING.md](../../CONTRIBUTING.md): setting up, the checks, and how to propose a change.
 - [Building](building.md) and [Testing](testing.md).
 - [Architecture](architecture.md): where each crate fits.
-- [Star features not yet planned](../star-gaps.md): larger gaps, for when you want more.
+- [star features not yet planned](../star-gaps.md): larger gaps, for when you want more.
 - [Documentation index](../README.md).

@@ -10,7 +10,7 @@
 //! When a key is looked up for a document, the folder library is consulted
 //! first, then the user library ([`Layered`]).
 //!
-//! Star kept citations inside `settings.json`; importing a file with a key
+//! star kept citations inside `settings.json`; importing a file with a key
 //! that already existed overwrote that entry even when it was a different
 //! work. Here an import updates an entry only when it is the same work
 //! (same DOI, same ISBN, or same key and title); a different work with a

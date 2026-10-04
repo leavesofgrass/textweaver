@@ -76,7 +76,7 @@ fn truecolor_and_256_keep_the_floor() {
                     }
                 }
                 // Only the themes that must meet WCAG AA are held to the
-                // floor; the others keep Star's colors (the owner, 2026-09-26).
+                // floor; the others keep star's colors (the owner, 2026-09-26).
                 if textweaver_theme::star::must_meet_aa(t.name()) {
                     let base = REFERENCE_PALETTES[0];
                     let r = contrast_ratio(fg.rgb(base), bg.rgb(base));
@@ -116,7 +116,7 @@ fn sixteen_colors_pass_in_every_reference_palette_even_with_bold_brightening() {
 
 #[test]
 fn sepia_headings_stay_visible_in_16_colors() {
-    // Star's sepia turned its headings bright yellow on white (1.00:1).
+    // star's sepia turned its headings bright yellow on white (1.00:1).
     let t = builtin::get("sepia").unwrap();
     let tt = TerminalTheme::new(t, ColorSupport::Ansi16);
     let h = tt.page().patch(tt.color(ColorRole::Heading1));

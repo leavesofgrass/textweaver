@@ -139,7 +139,7 @@ fn cycling_and_fallback() {
     assert_eq!(reg.next("amber").name(), "one-dark");
     assert_eq!(reg.next("phosphor").name(), "galaxy");
     assert_eq!(reg.previous("galaxy").name(), "phosphor");
-    // Unknown names start the cycle at the beginning (Star skipped to the
+    // Unknown names start the cycle at the beginning (star skipped to the
     // second theme and saved it).
     assert_eq!(reg.next("solarized").name(), "galaxy");
     assert_eq!(reg.next("OBSIDIAN").name(), "galaxy-light");

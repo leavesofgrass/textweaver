@@ -4,7 +4,7 @@ use std::fmt;
 
 use serde::Serialize;
 
-/// The Whisper model sizes offered, smallest first (Star's
+/// The Whisper model sizes offered, smallest first (star's
 /// `WHISPER_MODELS`, `star/settings.py:16`).
 pub const WHISPER_MODELS: [&str; 6] = [
     "tiny",
@@ -21,7 +21,7 @@ pub const WHISPER_MODELS: [&str; 6] = [
 pub enum WhisperModel {
     /// `tiny`: fastest, least accurate.
     Tiny,
-    /// `base`: Star's default.
+    /// `base`: star's default.
     #[default]
     Base,
     /// `small`.
@@ -104,7 +104,7 @@ impl Transcript {
             .join(" ")
     }
 
-    /// One line per segment, each starting with its time, as Star's
+    /// One line per segment, each starting with its time, as star's
     /// `transcribe_timestamps` option wrote it: `[01:05] text`, or
     /// `[01:02:03] text` past an hour.
     pub fn text_with_timestamps(&self) -> String {
@@ -130,7 +130,7 @@ impl Transcript {
     }
 }
 
-/// `[mm:ss]`, or `[hh:mm:ss]` from an hour on (Star's `_fmt_timestamp`).
+/// `[mm:ss]`, or `[hh:mm:ss]` from an hour on (star's `_fmt_timestamp`).
 pub fn format_timestamp(ms: u64) -> String {
     let s = ms / 1000;
     let (h, rem) = (s / 3600, s % 3600);

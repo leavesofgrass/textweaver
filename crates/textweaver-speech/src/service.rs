@@ -14,7 +14,7 @@
 //! - **Generations.** The generation is bumped before every stop or restart;
 //!   an [`EventSink`] drops events of stale generations before the service
 //!   logic sees them, so a late `Word` or `Finished` never moves a newer
-//!   reading's highlight (fixes Star bugs B1 and B2). Separately, every
+//!   reading's highlight (fixes star bugs B1 and B2). Separately, every
 //!   `read` gets a [`ReadingGeneration`] that its `Position`, `Paused`,
 //!   `Stopped`, and `Finished` statuses carry, so the frontend drops a
 //!   status from an older reading by comparing one number.
@@ -31,7 +31,7 @@
 //!   map into [`SpeechStatus::Position`]. Audio-clock events are scheduled at
 //!   `audio_ms + latency_offset` on the playback clock, never fired on
 //!   arrival. Engines without word events are paced by the [`TimerPacer`]
-//!   (Star's clamp rules), counting the words actually spoken.
+//!   (star's clamp rules), counting the words actually spoken.
 //! - **Pause.** Native when the engine has [`Caps::PAUSE`] (the playback
 //!   clock stops too); otherwise emulated by stopping and restarting from the
 //!   last confirmed word, which may repeat a word but never skips one.
@@ -365,7 +365,7 @@ pub struct ServiceConfig {
     /// Semitones added for capital letters when `caps` is `Pitch`.
     pub caps_pitch_semitones: i8,
     /// When `params.voice` is `None`, pick the first voice whose name or id
-    /// contains this (Star's `tts_prefer_voice`, default "eloquence"),
+    /// contains this (star's `tts_prefer_voice`, default "eloquence"),
     /// preferring a US English variant.
     pub prefer_voice: Option<String>,
     /// Chunks handed to the engine ahead of the playing one.
@@ -1651,7 +1651,7 @@ impl ServiceCore {
     }
 
     /// Sets the rate; the timer interval follows at once when the engine
-    /// changes rate live (Star bug B9), otherwise from the next utterance.
+    /// changes rate live (star bug B9), otherwise from the next utterance.
     pub fn set_rate(&mut self, rate: Rate) {
         let changed = self.params.rate != rate.clamped();
         self.params.rate = rate.clamped();

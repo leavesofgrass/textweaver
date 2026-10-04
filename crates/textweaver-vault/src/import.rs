@@ -1,5 +1,5 @@
 //! Reading a vault's notes and applying them to the annotation store
-//! (Star's `import_vault`, `star/obsidian.py:142-252`).
+//! (star's `import_vault`, `star/obsidian.py:142-252`).
 //!
 //! Every `*.md` note under the vault (except in `.obsidian` and `.trash`)
 //! is read. What happens to it depends on the mode and on what the note is:
@@ -15,12 +15,12 @@
 //!     brings back its highlights.
 //!   - Any other note becomes a document in the library plus one node note
 //!     (tag `obsidian-note`) summarizing it, whose links become relations
-//!     to other notes (Star's behavior).
+//!     to other notes (star's behavior).
 //!
 //! Links are resolved by file name, title, or alias, ignoring case; the
 //! first note registered under a name wins. A typed Dataview field
 //! (`supports:: [[X]]`) gives that relation; a plain `[[X]]` gives the
-//! chosen default (Star: `link_relation`, then `vault.default_link_relation`,
+//! chosen default (star: `link_relation`, then `vault.default_link_relation`,
 //! then `SEE_ALSO`). Embeds are ignored; duplicate (type, target) pairs
 //! give one relation. Relations are rebuilt from the files on every import,
 //! so importing twice changes nothing.
@@ -45,10 +45,10 @@ use crate::{NODE_TAG, VaultError};
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ImportMode {
-    /// Documents, notes, and relations (Star's `graph`).
+    /// Documents, notes, and relations (star's `graph`).
     #[default]
     Graph,
-    /// Only documents in the library (Star's `library`).
+    /// Only documents in the library (star's `library`).
     Library,
 }
 
@@ -116,7 +116,7 @@ pub struct VaultNote {
     pub tags: Vec<String>,
     /// Its id: `textweaver_id`, `star_id`, or one derived from its path.
     pub id: String,
-    /// Its first line of content, link syntax removed (Star's summary).
+    /// Its first line of content, link syntax removed (star's summary).
     pub summary: String,
     /// Its text without front matter, without the `## Links` section and
     /// comments, with link syntax reduced to plain words.
@@ -231,7 +231,7 @@ pub fn parse_note(path: &Path, text: &str) -> VaultNote {
 }
 
 /// Front matter `tags` (or `tag`) then inline tags, `#` stripped, without
-/// duplicates (Star's `_collect_tags`).
+/// duplicates (star's `_collect_tags`).
 fn collect_tags(fm: &FrontMatter, body: &str) -> Vec<String> {
     let mut tags: Vec<String> = Vec::new();
     let mut raw = fm.list("tags");
@@ -550,7 +550,7 @@ pub fn apply(
     Ok(report)
 }
 
-/// Creates or refreshes the node note of a plain vault note (Star's graph
+/// Creates or refreshes the node note of a plain vault note (star's graph
 /// node: position 0, anchor the title, text the summary, tag
 /// `obsidian-note`).
 /// The relations a note has after an import: the ones its file lists, plus
@@ -638,7 +638,7 @@ mod tests {
         p
     }
 
-    /// A small vault in Star's test style.
+    /// A small vault in star's test style.
     fn vault() -> (tempfile::TempDir, PathBuf) {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path().to_owned();

@@ -1,16 +1,16 @@
-//! Choosing a font: the family a reader picked, the reading fonts Star
+//! Choosing a font: the family a reader picked, the reading fonts star
 //! offered, and resolving a choice against what is bundled and installed.
 //!
-//! Star let the reader pick any family and offered three reading fonts it
+//! star let the reader pick any family and offered three reading fonts it
 //! downloaded on first use (`star/fonts.py`, `gui/mixin_fontspacing.py`):
 //! OpenDyslexic, Atkinson Hyperlegible, and Lexend, all under the SIL Open
 //! Font License 1.1. textweaver keeps that list, and bundles fonts where it
 //! can ([`bundled`], cargo feature `bundled-fonts`): OpenDyslexic, Atkinson
 //! Hyperlegible Next (which stands in for Atkinson Hyperlegible), and
 //! Atkinson Hyperlegible Mono ship with textweaver and resolve with no
-//! download. Only a reading font that is not bundled (Lexend) keeps Star's
+//! download. Only a reading font that is not bundled (Lexend) keeps star's
 //! approach: [`READING_FONTS`] records its licence, home page, and the
-//! pinned download URLs Star used, and the app downloads it into the data
+//! pinned download URLs star used, and the app downloads it into the data
 //! folder the first time it is chosen, after asking, checking each file
 //! by size and SHA-256 ([`crate::downloaded`]; see
 //! `docs/reading-aids.md`).
@@ -57,7 +57,7 @@ impl ReadingFontId {
 pub struct ReadingFont {
     /// Which font.
     pub id: ReadingFontId,
-    /// Settings key, as in Star (`qt_reading_font`).
+    /// Settings key, as in star (`qt_reading_font`).
     pub key: &'static str,
     /// The family name the files register under.
     pub family: &'static str,
@@ -70,7 +70,7 @@ pub struct ReadingFont {
     pub license: &'static str,
     /// Home page for the font and its licence.
     pub homepage: &'static str,
-    /// Font files, pinned to immutable commits (Star's URLs).
+    /// Font files, pinned to immutable commits (star's URLs).
     pub files: &'static [&'static str],
     /// The bundled family that serves this choice with no download
     /// (`textweaver-fonts`), when there is one.
@@ -105,7 +105,7 @@ macro_rules! urls {
     };
 }
 
-/// The reading fonts Star offered, in Star's order.
+/// The reading fonts star offered, in star's order.
 pub const READING_FONTS: [ReadingFont; 3] = [
     ReadingFont {
         id: ReadingFontId::OpenDyslexic,
@@ -194,7 +194,7 @@ pub enum FontFamily {
     /// The system's interface font (Segoe UI, San Francisco, and so on).
     #[default]
     SystemUi,
-    /// A plain sans-serif (Star's default: Segoe UI, Helvetica Neue, or
+    /// A plain sans-serif (star's default: Segoe UI, Helvetica Neue, or
     /// DejaVu Sans).
     Sans,
     /// A serif.
@@ -315,7 +315,7 @@ impl FontFamily {
     /// Family names to try, in order, ending with a platform sans-serif
     /// and then, when fonts are bundled, Atkinson Hyperlegible Next (so a
     /// font is always found). A reading font falls back to the other
-    /// reading fonts first (Star's order), then to sans-serif; monospace
+    /// reading fonts first (star's order), then to sans-serif; monospace
     /// tries the bundled Atkinson Hyperlegible Mono after the platform's.
     pub fn fallback_chain(&self, platform: Platform) -> Vec<String> {
         let mut out: Vec<String> = Vec::new();
@@ -377,7 +377,7 @@ pub const SMALL_SIZE_PT: f32 = 12.0;
 pub struct FontSettings {
     /// The family.
     pub family: FontFamily,
-    /// Size in points (Star's `qt_font_size`, default 14).
+    /// Size in points (star's `qt_font_size`, default 14).
     pub size_pt: f32,
     /// Weight, 100 (thin) to 900 (black); 400 is regular, 700 bold.
     pub weight: u16,

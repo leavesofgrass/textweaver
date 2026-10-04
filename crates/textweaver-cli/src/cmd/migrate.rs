@@ -1,7 +1,7 @@
-//! `tw migrate-star`: imports a Star installation's settings, reading
+//! `tw migrate-star`: imports a star installation's settings, reading
 //! positions, bookmarks, notes, highlights, recent files, library, key
 //! remaps, and library-folder sidecars into textweaver, and prints a report
-//! of everything imported or skipped. Star's own files are only read.
+//! of everything imported or skipped. star's own files are only read.
 //! Owner: Agent C.
 
 use std::path::{Path, PathBuf};
@@ -16,7 +16,7 @@ use textweaver_app::store::migrate::{
 /// Arguments for `tw migrate-star`.
 #[derive(clap::Args, Debug)]
 pub struct Args {
-    /// Star configuration directory (default: the platform location).
+    /// star configuration directory (default: the platform location).
     #[arg(long)]
     pub from: Option<PathBuf>,
     /// Show what would be imported without writing anything.
@@ -49,7 +49,7 @@ impl MigrationHost for Host {
     }
 }
 
-/// The override for binding a Star shortcut `chord` to `action`: the chord
+/// The override for binding a star shortcut `chord` to `action`: the chord
 /// in the action's usual layer, plus the action's single-key browse and
 /// Speech Cursor defaults, which an override would otherwise remove.
 fn keymap_entry(action: &str, chord: &str) -> Option<Vec<String>> {
@@ -78,7 +78,7 @@ fn migrate(from: &Path, dry_run: bool, paths: &Paths) -> anyhow::Result<Migratio
         paths,
         &Host,
     )
-    .with_context(|| format!("reading Star's settings in {}", from.display()))
+    .with_context(|| format!("reading star's settings in {}", from.display()))
 }
 
 /// Runs `tw migrate-star`.
@@ -90,7 +90,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     };
     anyhow::ensure!(
         from.join("settings.json").is_file(),
-        "No Star settings found in {}. Use --from with Star's configuration directory.",
+        "No star settings found in {}. Use --from with star's configuration directory.",
         from.display()
     );
     let paths = super::paths(args.home.as_deref())?;
@@ -136,7 +136,7 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures")
     }
 
-    /// ADR-0002 on real Star data: every word Star exported for the parity
+    /// ADR-0002 on real star data: every word star exported for the parity
     /// fixtures maps onto the same word in textweaver's text, or onto the
     /// nearest one when textweaver's text has no such word.
     #[test]
@@ -154,7 +154,7 @@ mod tests {
             let tw: Vec<char> = doc.text.chars().collect();
             let mapper = PositionMapper::new(&doc.text, Some(star_text));
             assert!(
-                // sample.md: 0.80 (Star speaks the front matter and narrates
+                // sample.md: 0.80 (star speaks the front matter and narrates
                 // the table); sample.txt: 1.00; sample.html: 0.98.
                 mapper.aligned_share() > 0.75,
                 "{name}: {:.2} aligned",
@@ -186,7 +186,7 @@ mod tests {
         assert!(keymap_entry("no_such_action", "F9").is_none());
     }
 
-    /// A synthetic Star directory: one Markdown document with a saved
+    /// A synthetic star directory: one Markdown document with a saved
     /// position, a dry run, then the real run.
     #[test]
     fn migrates_a_synthetic_star_directory() {
@@ -196,7 +196,7 @@ mod tests {
         let doc = dir.0.join("book.md");
         std::fs::write(&doc, "# Book\n\nOne two three.\n\nFour five six.\n").unwrap();
         let doc_s = doc.to_string_lossy().into_owned();
-        // Star's plain_text would be "Book\n\nOne two three.\n\nFour five
+        // star's plain_text would be "Book\n\nOne two three.\n\nFour five
         // six."; "Four" is at 21. No parse cache: textweaver's text stands
         // in, checked against the saved percentage.
         std::fs::write(

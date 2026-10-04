@@ -2,14 +2,14 @@
 
 use std::collections::HashSet;
 
-/// Longest note name, in chars (Star's limit).
+/// Longest note name, in chars (star's limit).
 pub const MAX_NAME_CHARS: usize = 120;
 
-/// A file-name-safe note name from `name` (Star's `_sanitize_filename`):
+/// A file-name-safe note name from `name` (star's `_sanitize_filename`):
 /// `<>:"/\|?*` and control characters become spaces, runs of spaces
 /// collapse, trailing dots and spaces go, at most 120 chars. Also avoids
 /// Windows' reserved device names (`CON`, `NUL`, `COM1`, ...) and
-/// Obsidian's link-breaking `[`, `]`, `#`, `^`, and `|`, which Star let
+/// Obsidian's link-breaking `[`, `]`, `#`, `^`, and `|`, which star let
 /// through. An empty result is `note`.
 pub fn sanitize(name: &str) -> String {
     let mapped: String = name
@@ -62,7 +62,7 @@ fn is_reserved(name: &str) -> bool {
 
 /// Hands out note names unique without regard to case (Windows and macOS
 /// file systems, and Obsidian's link resolution, ignore case): `Name`,
-/// then `Name 2`, `Name 3`, ... (Star's rule).
+/// then `Name 2`, `Name 3`, ... (star's rule).
 #[derive(Debug, Default)]
 pub struct NameAllocator {
     used: HashSet<String>,

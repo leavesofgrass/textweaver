@@ -1,5 +1,5 @@
 //! Rate, pitch, volume, speed presets, display toggles, and the voice
-//! manager's wiring. Every change is announced (Star showed rate changes
+//! manager's wiring. Every change is announced (star showed rate changes
 //! only visually) and marks the settings for saving on quit.
 //!
 //! The voice manager's model (rows, filters, labels, per-voice rate and
@@ -1189,7 +1189,7 @@ impl App {
         self.tell(&msg);
     }
 
-    /// Cycles the speed presets from fastest to slowest (Star's order: skim,
+    /// Cycles the speed presets from fastest to slowest (star's order: skim,
     /// normal, study, slow), starting after the preset matching the rate.
     pub(crate) fn cycle_speed_preset(&mut self) {
         let mut presets: Vec<(String, u16)> = self

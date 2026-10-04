@@ -12,7 +12,7 @@ use crate::units::{first_unit, last_unit, next_unit, prev_unit};
 /// Options for a navigation step.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NavOptions {
-    /// Wrap around the document ends (Star's `wrap` setting).
+    /// Wrap around the document ends (star's `wrap` setting).
     pub wrap: bool,
 }
 
@@ -31,9 +31,9 @@ pub struct NavTarget {
 /// starting before `from`. Marker units step between marker starts, filtered
 /// by level when one is given. With `wrap`, stepping past an end continues
 /// from the other end and `NavTarget::wrapped` is set; without it the result
-/// is `None` (Star clamps and says "No next ...").
+/// is `None` (star clamps and says "No next ...").
 ///
-/// Star's "previous sentence rewinds to the start of the current sentence
+/// star's "previous sentence rewinds to the start of the current sentence
 /// when more than three words in" is an app-level rule built on top of this
 /// (Agent D), not part of this function.
 pub fn navigate(

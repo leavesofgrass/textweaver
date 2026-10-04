@@ -146,7 +146,7 @@ The `scripts/` folder has installers and helpers for every system. Each script h
 - `scripts/`: installers, update, speech check, doctor, dev-check, and folder conversion.
 - `tools/`: helper programs, among them the link checker (`check_links.py`), the site data generator (`gen_site_data.py`), and the engine spikes.
 - `docs/`: user guides, contributor guides, the ADRs, and the interactive pages in `docs/site/`. Start at [the documentation index](../README.md).
-- `fixtures/`: sample documents for tests, and Star's reference output for them.
+- `fixtures/`: sample documents for tests, and star's reference output for them.
 - `third_party/`: pronunciation dictionaries, fonts, and word lists, each with its license. See [third-party data](third-party-data.md).
 - `docker/`, `compose.yaml`, `compose.voxin.yaml`: the Linux development container.
 

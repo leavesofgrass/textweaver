@@ -1,8 +1,8 @@
-# Star parity fixtures
+# star parity fixtures
 
-These JSON files record what **Star** (the Python reader that textweaver
+These JSON files record what **star** (the Python reader that textweaver
 reimplements) produces for the three textweaver fixtures. Use them as
-reference output when checking that textweaver matches Star, or when you
+reference output when checking that textweaver matches star, or when you
 deliberately choose to differ from it.
 
 | File | Source fixture |
@@ -13,18 +13,18 @@ deliberately choose to differ from it.
 
 ## How they were generated
 
-- **Star version:** 0.1.31 (a local copy of star, `pyproject.toml` `version = "0.1.31"`)
-- **Star commit:** `e4b4ef83355ebe4d9307c4319f6334bd1ce0936f` (the `release: 0.1.31` commit; the working tree was clean)
+- **star version:** 0.1.31 (a local copy of star, `pyproject.toml` `version = "0.1.31"`)
+- **star commit:** `e4b4ef83355ebe4d9307c4319f6334bd1ce0936f` (the `release: 0.1.31` commit; the working tree was clean)
 - **Generated:** Friday, September 25, 2026 (2026-09-25)
-- **Python:** 3.11.15, standard library only. No optional Star dependencies were installed.
+- **Python:** 3.11.15, standard library only. No optional star dependencies were installed.
 - **Pandoc on PATH:** pandoc 3.9.0.2. This matters for HTML; see below.
 - **Script:** `tools/star_parity_export.py`. To regenerate, run `python tools/star_parity_export.py STAR_CHECKOUT`, where `STAR_CHECKOUT` is the folder of a local copy of star.
 
 The script imports star read-only from the checkout it is given and does not write bytecode
 there. It redirects `star.settings.SETTINGS_FILE` to a file that does not
-exist, so every setting takes Star's built-in default (`star/settings.py`
+exist, so every setting takes star's built-in default (`star/settings.py`
 `DEFAULTS`) and the user's `settings.json` is ignored. It also sets
-`document_cache=False`, so Star never reads or writes its document cache.
+`document_cache=False`, so star never reads or writes its document cache.
 Neither change affects the output.
 
 Default settings that affect the output:
@@ -46,13 +46,13 @@ All offsets count **Unicode code points** (Python `str` indices), and every
 end offset is exclusive. The `*_utf8` arrays give the same positions as
 **UTF-8 byte offsets**, for Rust.
 
-| Field | Meaning | Star function used |
+| Field | Meaning | star function used |
 |---|---|---|
-| `title`, `format`, `markdown` | Document title, detected format, and Star's intermediate Markdown | `star.documents.load_document` (`star/documents/dispatch.py`) |
-| `plain_text` | Star's canonical TTS text (`Document.plain_text`) | `load_document` → `star.ttstext._strip_markdown_for_tts` |
+| `title`, `format`, `markdown` | Document title, detected format, and star's intermediate Markdown | `star.documents.load_document` (`star/documents/dispatch.py`) |
+| `plain_text` | star's canonical TTS text (`Document.plain_text`) | `load_document` → `star.ttstext._strip_markdown_for_tts` |
 | `word_tokens` | `[start, end, text]` for each word | `star.documents.model._WORD_TOKEN_RE` = `\b\w[\w'-]*`, the tokenizer behind `_build_word_map` |
 | `sentence_starts` | Character offsets where sentences start: `[0]` plus the end of every separator match | `star._runtime._SENTENCE_SPLIT_RE`, following `DocumentMixin._build_sentence_map` in `star/tui/mixin_document.py` |
-| `sentence_start_words` | The sentence map Star actually navigates with: word indices with duplicates removed | Star's own `DocumentMixin._build_sentence_map`, run unchanged on a stub |
+| `sentence_start_words` | The sentence map star actually navigates with: word indices with duplicates removed | star's own `DocumentMixin._build_sentence_map`, run unchanged on a stub |
 | `sentence_start_word_chars` | `tts_offset` of each entry in `sentence_start_words` | derived |
 | `paragraph_starts` | `[0]` plus the end of every `\n{2,}` run in `plain_text` | derived; see note 1 |
 | `normalized` | For each sentence: `{start, input, normalized}` | `star.ttstext._preprocess_tts_text` with default settings |
@@ -62,27 +62,27 @@ end offset is exclusive. The `*_utf8` arrays give the same positions as
 
 Notes:
 
-1. **Paragraph starts are derived, not taken from a Star function.** Star has
+1. **Paragraph starts are derived, not taken from a star function.** star has
    no plain-text paragraph splitter. `_strip_markdown_for_tts` separates
    paragraphs with `"\n\n"`, and the third alternative of
    `_SENTENCE_SPLIT_RE` treats `\n{2,}` as a boundary, so `paragraph_starts`
-   follows that same rule. Star's actual paragraph navigation works on display
+   follows that same rule. star's actual paragraph navigation works on display
    lines instead: in the TUI, blank lines separate them (`tui_view`); in the
    GUI, empty Qt text blocks do.
-2. **The `normalized` field works one sentence at a time. Star does not.**
+2. **The `normalized` field works one sentence at a time. star does not.**
    The TUI normalizes the whole slice from the start word to the end of the
    document (`star/tui/mixin_playback.py:102`), and the GUI does not
    normalize continuous playback at all (`star/gui/mixin_playback.py:90-108`).
    Speech Cursor mode normalizes one display line at a time. Any regex that
-   crosses a sentence boundary can therefore give a different result in Star.
+   crosses a sentence boundary can therefore give a different result in star.
    `normalized_full_text` is included so you can compare the whole-slice
    result.
 3. **The per-sentence text is `plain_text[start:next_start].strip()`,** with
    empty pieces skipped.
 
-## HTML: which route is "Star's"
+## HTML: which route is "star's"
 
-With the default `prefer_pandoc=True` and a Pandoc binary installed, Star
+With the default `prefer_pandoc=True` and a Pandoc binary installed, star
 converts HTML **with Pandoc** (`star/documents/dispatch.py:170-177`,
 `star/documents/pandoc.py:48-67`). The top-level fields of
 `sample.html.json` come from that route, using Pandoc 3.9.0.2. Other Pandoc
@@ -90,17 +90,17 @@ versions may produce different Markdown.
 
 `variants` records two alternatives:
 
-- **`native_prefer_pandoc_false`**: Star's own loader
+- **`native_prefer_pandoc_false`**: star's own loader
   (`HTMLHandler` → `_load_html` → `_HTML2MD`). **The result is empty.**
   `_HTML2MD` lists the void elements `meta`, `link` and `base` in `_SKIP`
   (`star/documents/html.py:8-26`) and increments a skip counter on their
   start tag (`:53-55`). Void elements never get an end tag, so after
   `<meta charset="utf-8">` the counter stays above zero and everything that
-  follows is skipped. This is what Star does on a machine without Pandoc, or
+  follows is skipped. This is what star does on a machine without Pandoc, or
   when `prefer_pandoc` is off.
-- **`diagnostic_html2md_void_fix_NOT_STAR_BEHAVIOR`**: **This is not Star
+- **`diagnostic_html2md_void_fix_NOT_STAR_BEHAVIOR`**: **This is not star
   output.** It is `_HTML2MD` with `meta`, `link` and `base` ignored, run
-  through the rest of Star's pipeline unchanged. It shows the canonical text
+  through the rest of star's pipeline unchanged. It shows the canonical text
   the native converter is meant to produce, including its other quirks: the
   title appears twice, the "Oranges" bullet is lost, `<caption>` is dropped,
   and the image runs into the block quote.
@@ -110,8 +110,8 @@ versions may produce different Markdown.
 - **GUI (Qt) paragraph, heading and table navigation data.** These depend on
   `QTextDocument` blocks, and PyQt6 is not installed in this Python. Only the
   TUI line model is exported.
-- **The EPUB/DAISY chapter list.** The fixtures contain no EPUB. Star also
+- **The EPUB/DAISY chapter list.** The fixtures contain no EPUB. star also
   never fills in chapter word indices (they are always `0`).
-- **A true per-sentence equivalent of how Star speaks.** Star never
+- **A true per-sentence equivalent of how star speaks.** star never
   normalizes one sentence at a time (note 2), so `normalized` is an
   approximation of speak-time output.

@@ -2,7 +2,7 @@
 //!
 //! ffmpeg is found through `TEXTWEAVER_FFMPEG` (a path to the program) or on
 //! `PATH`. textweaver never downloads or bundles it. The commands follow
-//! Star's (`star/tts/audio.py`, `star/audiobook.py`): MP3 with LAME at VBR
+//! star's (`star/tts/audio.py`, `star/audiobook.py`): MP3 with LAME at VBR
 //! quality 2; M4B as AAC in an MP4 container at 64 kbit/s (spoken word needs
 //! little) with `+faststart`, the chapters and title mapped from an ffmpeg
 //! metadata file. MP3 gets the same metadata, so players that read ID3
@@ -88,7 +88,7 @@ impl AudioFormat {
     }
 }
 
-/// Default AAC bitrate for M4B (Star's `DEFAULT_M4B_BITRATE`).
+/// Default AAC bitrate for M4B (star's `DEFAULT_M4B_BITRATE`).
 pub const M4B_BITRATE: &str = "64k";
 
 /// The ffmpeg program: `TEXTWEAVER_FFMPEG` if set (and it exists), else

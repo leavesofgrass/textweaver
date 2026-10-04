@@ -134,7 +134,7 @@ fn owner_checklist_callouts_embeds_json_svg_notebook() {
 
 #[test]
 fn unclosed_void_elements_keep_the_whole_page() {
-    // Star's critical bug: an unclosed `<meta charset>` emptied the page.
+    // star's critical bug: an unclosed `<meta charset>` emptied the page.
     let d = open("unclosed-meta.html");
     check(&d);
     let text = d.text().to_string();
@@ -238,7 +238,7 @@ fn hostile_obsidian_notes() {
 
 #[test]
 fn hostile_latex_past_w5c3() {
-    // Star's crash: a lone trailing backslash.
+    // star's crash: a lone trailing backslash.
     hostile("text\\", "tex", QUICK);
     hostile("\\newcommand\\x[1]{#1}\\x", "tex", QUICK);
     hostile("\\newcommand\\x[9]{#9#8#7#6#5#4#3#2#1}\\x{", "tex", QUICK);

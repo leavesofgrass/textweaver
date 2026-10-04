@@ -1,4 +1,4 @@
-//! Where the RSVP word goes on screen: Star's nine positions, the GUI
+//! Where the RSVP word goes on screen: star's nine positions, the GUI
 //! overlay's placement, and a terminal box laid out cell by cell.
 //!
 //! Lessons from star's accessibility audits (the TUI reflow and `A_DIM`
@@ -10,7 +10,7 @@
 //!   off it rather than covering it (WCAG 2.4.11, focus not obscured).
 //! - Context words are marked [`SegmentRole::Context`], not "dim": the
 //!   guidance is normal weight on the panel colour, because terminal dimming
-//!   failed contrast on every dark theme Star measured.
+//!   failed contrast on every dark theme star measured.
 
 use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
@@ -18,14 +18,14 @@ use unicode_width::UnicodeWidthStr;
 
 use super::RsvpFrame;
 
-/// One of Star's nine RSVP positions: top, middle, or bottom by left,
-/// centre, or right. The default is top centre, as in Star.
+/// One of star's nine RSVP positions: top, middle, or bottom by left,
+/// centre, or right. The default is top centre, as in star.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum RsvpPosition {
     /// Top left.
     TopLeft,
-    /// Top centre (Star's default).
+    /// Top centre (star's default).
     #[default]
     TopCenter,
     /// Top right.
@@ -45,7 +45,7 @@ pub enum RsvpPosition {
 }
 
 impl RsvpPosition {
-    /// All nine, top to bottom, left to right (Star's cycling order).
+    /// All nine, top to bottom, left to right (star's cycling order).
     pub const ALL: [RsvpPosition; 9] = [
         RsvpPosition::TopLeft,
         RsvpPosition::TopCenter,
@@ -58,7 +58,7 @@ impl RsvpPosition {
         RsvpPosition::BottomRight,
     ];
 
-    /// Star's settings key ("top-center"), also the serialized form.
+    /// star's settings key ("top-center"), also the serialized form.
     pub fn key(self) -> &'static str {
         match self {
             RsvpPosition::TopLeft => "top-left",
@@ -89,7 +89,7 @@ impl RsvpPosition {
         }
     }
 
-    /// Parses Star's key ("bottom-right"); `None` for anything else.
+    /// Parses star's key ("bottom-right"); `None` for anything else.
     pub fn from_key(key: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|p| p.key() == key.trim())
     }
@@ -105,19 +105,19 @@ impl RsvpPosition {
         (row < 3 && col < 3).then(|| Self::ALL[usize::from(row * 3 + col)])
     }
 
-    /// The next position in Star's cycling order, wrapping.
+    /// The next position in star's cycling order, wrapping.
     pub fn next(self) -> Self {
         let (r, c) = self.grid();
         Self::ALL[(usize::from(r * 3 + c) + 1) % 9]
     }
 
-    /// The previous position in Star's cycling order, wrapping.
+    /// The previous position in star's cycling order, wrapping.
     pub fn previous(self) -> Self {
         let (r, c) = self.grid();
         Self::ALL[(usize::from(r * 3 + c) + 8) % 9]
     }
 
-    /// Star's anchor fractions `(x, y)`: 0.02, 0.5, or 0.98 of the parent.
+    /// star's anchor fractions `(x, y)`: 0.02, 0.5, or 0.98 of the parent.
     /// The box's own matching point sits there (its top-left corner at 2 %,
     /// its centre at 50 %, its bottom-right corner at 98 %).
     pub fn fractions(self) -> (f64, f64) {
@@ -132,7 +132,7 @@ impl RsvpPosition {
 
     /// Top-left corner, in pixels, for a GUI overlay of `size` inside a
     /// parent of `parent` size, kept `margin` pixels inside the parent
-    /// (Star's `_RSVPOverlay._reposition`, margin 8).
+    /// (star's `_RSVPOverlay._reposition`, margin 8).
     pub fn gui_origin(self, parent: (i32, i32), size: (i32, i32), margin: i32) -> (i32, i32) {
         let (fx, fy) = self.fractions();
         let (pw, ph) = (f64::from(parent.0), f64::from(parent.1));
@@ -276,7 +276,7 @@ pub fn tui_box(frame: &RsvpFrame<'_>, area: Area, opts: &TuiBoxOptions) -> Optio
     }
     let height = rows_wanted.min(area.height);
 
-    // Place the box inside the area: flush to an edge or centred. (Star's
+    // Place the box inside the area: flush to an edge or centred. (star's
     // 2 % margins are less than a cell in a terminal.)
     let (r, c) = opts.position.grid();
     let frac = |i: u8| f64::from(i) / 2.0;
@@ -417,7 +417,7 @@ mod tests {
         assert_eq!(json, "\"center-right\"");
     }
 
-    /// Ported from Star's tests/test_rsvp.py (800 × 600 parent, 200 × 80 box).
+    /// Ported from star's tests/test_rsvp.py (800 × 600 parent, 200 × 80 box).
     #[test]
     fn gui_origin_matches_star() {
         let o = |p: RsvpPosition| p.gui_origin((800, 600), (200, 80), 8);

@@ -1,7 +1,7 @@
 //! Navigation: sentence, paragraph, structure, chapter, history, go-to, and
 //! caret moves.
 //!
-//! One history rule (fixing Star's three inconsistent ones): every jump by a
+//! One history rule (fixing star's three inconsistent ones): every jump by a
 //! sentence or larger unit, every structural jump (heading, table, list,
 //! list item, link, chapter), every find, go-to, document start or end, and
 //! bookmark jump records the departure point exactly once. Caret moves (word,
@@ -185,7 +185,7 @@ impl App {
         self.unit_jump(Unit::Sentence, Direction::Forward);
     }
 
-    /// Star's rule: more than three words into the current sentence,
+    /// star's rule: more than three words into the current sentence,
     /// previous rewinds to its start; otherwise it goes to the previous
     /// sentence.
     pub(crate) fn previous_sentence(&mut self) {
@@ -367,8 +367,8 @@ impl App {
         }
     }
 
-    /// Next or previous heading; `read` reads from it (Star's `<` `>`),
-    /// otherwise it only moves (Star's `{` `}`), resuming speech if it was
+    /// Next or previous heading; `read` reads from it (star's `<` `>`),
+    /// otherwise it only moves (star's `{` `}`), resuming speech if it was
     /// reading.
     pub(crate) fn heading(&mut self, dir: Direction, read: bool) {
         let read = if read {
@@ -480,7 +480,7 @@ impl App {
 
     /// Chapters are section breaks when the document has them (EPUB spine
     /// items, DOCX sections), otherwise level-1 headings. Previous rewinds to
-    /// the chapter start when more than five words in (Star's rule).
+    /// the chapter start when more than five words in (star's rule).
     pub(crate) fn chapter(&mut self, dir: Direction) {
         self.refresh_structure(false);
         let Some((pos, doc)) = self.here() else {
@@ -682,7 +682,7 @@ impl App {
     }
 
     /// Caret by line: to the word nearest the goal column on the next line
-    /// that has words (Star's rule), then says that line.
+    /// that has words (star's rule), then says that line.
     pub(crate) fn caret_line(&mut self, dir: Direction) {
         let Some(s) = self.session.as_ref() else {
             return;
@@ -746,7 +746,7 @@ impl App {
         self.speak_content(Channel::Caret, &text);
     }
 
-    /// Page moves: by the viewport height less four lines (Star's rule);
+    /// Page moves: by the viewport height less four lines (star's rule);
     /// reading, if any, restarts at the new place.
     pub(crate) fn page(&mut self, dir: Direction) {
         let Some(s) = self.session.as_ref() else {

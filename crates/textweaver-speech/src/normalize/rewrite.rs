@@ -1,6 +1,6 @@
 //! A small rewrite engine: regex rules whose replacements keep offset maps.
 //!
-//! Star's normalization is a chain of `re.sub` calls. Each [`Rule`] here is
+//! star's normalization is a chain of `re.sub` calls. Each [`Rule`] here is
 //! one such substitution, but its replacement is a list of [`Piece`]s: text
 //! that is spoken instead of the source ([`Piece::Text`]) and capture groups
 //! kept as they are ([`Piece::Keep`]). From that, the engine knows exactly
@@ -75,7 +75,7 @@ pub(crate) struct Rule {
     prefilter: Option<Box<Prefilter>>,
     /// Trim a leading space of the replacement when the output already ends
     /// in whitespace (or is empty), and a trailing space when the input
-    /// continues with whitespace (or ends). Replaces Star's global
+    /// continues with whitespace (or ends). Replaces star's global
     /// "collapse spaces and strip" cleanup, which moved every later offset.
     pad: bool,
 }

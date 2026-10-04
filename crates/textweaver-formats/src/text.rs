@@ -1,6 +1,6 @@
 //! Plain text loader.
 //!
-//! Plain text keeps its lines (ADR-0002): unlike Star, which ran `.txt`
+//! Plain text keeps its lines (ADR-0002): unlike star, which ran `.txt`
 //! files through its Markdown stripper and joined every single line break
 //! into a space, a line starting with `#` is not a heading and line
 //! structure survives for line navigation. Sentences still flow across the

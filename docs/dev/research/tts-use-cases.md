@@ -241,5 +241,5 @@ Three items are deliberately absent. Bionic reading and dyslexia fonts should st
 
 - [Research index](README.md)
 - [Reading aids](../../reading-aids.md): what textweaver draws today, and the keys.
-- [Star features not yet planned](../../star-gaps.md): the feature comparison this report extends.
+- [star features not yet planned](../../star-gaps.md): the feature comparison this report extends.
 - [Roadmap](../../roadmap.md): what is being built next.

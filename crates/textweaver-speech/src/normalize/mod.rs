@@ -10,7 +10,7 @@
 //!
 //! The chain, in order ([`Pipeline::for_settings`]):
 //!
-//! | # | Transform | Setting | Star |
+//! | # | Transform | Setting | star |
 //! |---|---|---|---|
 //! | 1 | [`Math`] (`textweaver-math`, ADR-0018; MathCAT, ADR-0029) | `math`, `math_verbosity`, `asciimath_delimiter`, `math_engine` | step 4 |
 //! | 2 | [`MarkdownResidue`] (and table narration) | `markdown` (off by default) | `_strip_markdown_for_tts`, load time |
@@ -22,7 +22,7 @@
 //! | 8 | [`SplitCaps`] (Tall Man drug names kept whole) | service `split_caps` | new |
 //! | 9 | [`Punctuation`] | service punctuation level | new |
 //!
-//! Math runs first, where Star ran it last: `Numbers` turns `$2` into
+//! Math runs first, where star ran it last: `Numbers` turns `$2` into
 //! currency words, which destroyed `$2x$`, and Markdown residue removal or a
 //! lexicon could rewrite parts of a formula. Math speech leaves digits
 //! literal, so `Numbers` still reads them afterwards, and every later step
@@ -45,7 +45,7 @@
 //! copies the text nor composes a map. Most utterances pass most steps
 //! unchanged, so this is what keeps normalization cheap.
 //!
-//! Star's expected strings from `tests/test_ttstext.py` are ported as tests
+//! star's expected strings from `tests/test_ttstext.py` are ported as tests
 //! in this module, each also checking the offset map's invariants; the
 //! deliberate differences are listed in each transform's module docs.
 
@@ -351,7 +351,7 @@ impl Transform for Identity {
     }
 }
 
-/// Star's speak-time pipeline `_preprocess_tts_text(text, settings)`
+/// star's speak-time pipeline `_preprocess_tts_text(text, settings)`
 /// (no punctuation step), with math moved first: math, lexicon,
 /// abbreviations, numbers.
 pub fn preprocess(text: &str, config: &NormalizeConfig) -> String {

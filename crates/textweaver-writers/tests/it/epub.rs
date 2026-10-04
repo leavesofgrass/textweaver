@@ -303,7 +303,7 @@ fn round_trips_through_the_html_loader() {
             .unwrap();
         got.extend(words(&loaded.text().to_string()));
     }
-    // The HTML loader skips `aside` (Star's skip list), so footnote bodies
+    // The HTML loader skips `aside` (star's skip list), so footnote bodies
     // are compared separately.
     let expected = words(&text_without(&doc, is_footnote_body));
     assert_eq!(got, expected);

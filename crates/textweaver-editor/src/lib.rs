@@ -6,11 +6,11 @@
 //! - [`markdown`]: formatting commands as pure `(text, selection) -> edits`
 //!   functions, ported from `star/gui/mixin_authoring.py` with its bugs
 //!   fixed (the commands toggle; see the table in that module).
-//! - [`find`]: find and replace in edit mode, without Star's offset bugs.
+//! - [`find`]: find and replace in edit mode, without star's offset bugs.
 //! - [`echo`]: what to speak while typing and moving.
 //! - [`autosave`]: snapshot policy and files, recovery scan, the save rule,
 //!   and format-preserving atomic saves.
-//! - [`session`]: read and edit mode for one document with Star's Save /
+//! - [`session`]: read and edit mode for one document with star's Save /
 //!   Discard / Cancel flow, Save As adoption, and autosave.
 //!
 //! The editor never touches a `Document`; the app applies the same edits to

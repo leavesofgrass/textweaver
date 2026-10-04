@@ -1,6 +1,6 @@
 //! Mapping from spoken text back to source text (ADR-0005).
 //!
-//! Star generated the spoken text and the displayed text separately and
+//! star generated the spoken text and the displayed text separately and
 //! re-aligned them with `difflib`, which drifted whenever normalization
 //! changed the text. textweaver builds the mapping while it builds the spoken
 //! text, so every spoken byte knows which source chars it came from.

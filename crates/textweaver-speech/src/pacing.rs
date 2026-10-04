@@ -3,10 +3,10 @@
 //!
 //! Everything here is pure and driven by an injectable [`Clock`], so it is
 //! tested with a [`FakeClock`] instead of wall time. The constants and clamp
-//! rules are Star's (`star/tts/manager/_playback.py`, inventoried in
-//! the Star parity reference Part 2 section 1):
+//! rules are star's (`star/tts/manager/_playback.py`, inventoried in
+//! the star parity reference Part 2 section 1):
 //!
-//! | Star name | Here | Value |
+//! | star name | Here | Value |
 //! |---|---|---|
 //! | timer interval | [`word_interval`] | `60 / max(1, wpm × max(0.1, highlight_speed))` s |
 //! | `_CB_TIMEOUT` | [`PacingConfig::callback_timeout`] | 1.5 s |
@@ -15,7 +15,7 @@
 //! | `_ANCHOR_TIMEOUT` | [`ANCHOR_TIMEOUT`] | 0.75 s |
 //! | `espeak_highlight_offset_ms` | [`PacingConfig::latency_offset`] | 120 ms |
 //!
-//! Star bugs fixed here (Part 2 section 7.1): the start word is painted at
+//! star bugs fixed here (Part 2 section 7.1): the start word is painted at
 //! once instead of one interval late (B13); the pacer reports the same word
 //! only once instead of on every tick (B5, deduplicated by the service); the
 //! pacer stops asking for ticks at the end of the word list (B4); and the
@@ -150,28 +150,28 @@ impl std::fmt::Debug for PlaybackClock {
     }
 }
 
-/// Star `_ANCHOR_TIMEOUT`: with an engine that reports words, the timer waits
+/// star `_ANCHOR_TIMEOUT`: with an engine that reports words, the timer waits
 /// this long for the first word event before it starts estimating.
 pub const ANCHOR_TIMEOUT: Duration = Duration::from_millis(750);
 
 /// Pacing parameters.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PacingConfig {
-    /// Star `_CB_TIMEOUT`: how long to wait for a word callback before the
+    /// star `_CB_TIMEOUT`: how long to wait for a word callback before the
     /// timer takes over.
     pub callback_timeout: Duration,
-    /// Star `_CB_DEAD`: after this long without callbacks the engine is
+    /// star `_CB_DEAD`: after this long without callbacks the engine is
     /// treated as having no word events for the rest of the utterance.
     pub callback_dead: Duration,
-    /// Star `_MAX_AHEAD` while paced: how many words the timer may run ahead
+    /// star `_MAX_AHEAD` while paced: how many words the timer may run ahead
     /// of the last confirmed word.
     pub max_ahead_paced: u32,
-    /// Star `_MAX_AHEAD` while unpaced.
+    /// star `_MAX_AHEAD` while unpaced.
     pub max_ahead_unpaced: u32,
     /// Delay added to audio-clock word events before highlighting (espeak-ng
     /// default 120 ms).
     pub latency_offset: Duration,
-    /// Star `highlight_speed` multiplier.
+    /// star `highlight_speed` multiplier.
     pub highlight_speed: f32,
 }
 
@@ -189,7 +189,7 @@ impl Default for PacingConfig {
 }
 
 /// Estimated time per word: `60 / max(1, wpm × max(0.1, highlight_speed))`
-/// seconds (Star's formula, including its guards).
+/// seconds (star's formula, including its guards).
 pub fn word_interval(wpm: u16, highlight_speed: f32) -> Duration {
     let speed = if highlight_speed.is_finite() {
         highlight_speed.max(0.1)
@@ -201,12 +201,12 @@ pub fn word_interval(wpm: u16, highlight_speed: f32) -> Duration {
     Duration::from_micros((60_000_000.0 / rate).round() as u64)
 }
 
-/// Star's highlight timer as a pure state machine.
+/// star's highlight timer as a pure state machine.
 ///
 /// The timer moves one word per interval. Engine word events ("callbacks")
 /// are fed in with [`on_callback`](Self::on_callback); they record the
 /// engine-confirmed word and pull the estimate forward. Each tick applies
-/// Star's three regimes, measured by the age of the last callback:
+/// star's three regimes, measured by the age of the last callback:
 ///
 /// - younger than `callback_timeout` (fresh): clamp back to the confirmed
 ///   word, never lead the engine;
@@ -224,9 +224,9 @@ pub struct TimerPacer {
     word_count: usize,
     /// Next word the timer would paint.
     idx: usize,
-    /// Star `_current_word_idx`: the shared estimate.
+    /// star `_current_word_idx`: the shared estimate.
     estimate: Option<usize>,
-    /// Star `_last_cb_word_idx` and `_last_cb_time`.
+    /// star `_last_cb_word_idx` and `_last_cb_time`.
     last_cb: Option<(usize, Duration)>,
     next_tick: Duration,
     /// While `Some`, waiting for the first callback until this time.
@@ -257,7 +257,7 @@ impl TimerPacer {
     }
 
     /// Starts at word `start` at time `now` and returns the word to paint at
-    /// once (Star painted it one interval late, bug B13). With
+    /// once (star painted it one interval late, bug B13). With
     /// `expect_callbacks`, the timer then waits up to [`ANCHOR_TIMEOUT`] for
     /// the first callback before estimating.
     pub fn start(&mut self, now: Duration, start: usize, expect_callbacks: bool) -> Option<usize> {
@@ -273,7 +273,7 @@ impl TimerPacer {
         }
     }
 
-    /// Records an engine-confirmed word (Star `on_word_cb`): the confirmed
+    /// Records an engine-confirmed word (star `on_word_cb`): the confirmed
     /// word is always recorded, and the estimate only moves forward.
     pub fn on_callback(&mut self, word: usize, now: Duration) {
         self.last_cb = Some((word, now));
@@ -283,14 +283,14 @@ impl TimerPacer {
         self.anchor_deadline = None;
     }
 
-    /// Sets the estimate directly (tests and restarts; Star's harness wrote
+    /// Sets the estimate directly (tests and restarts; star's harness wrote
     /// `_current_word_idx`).
     pub fn set_estimate(&mut self, word: Option<usize>) {
         self.estimate = word;
     }
 
     /// Sets the last confirmed word and when it was confirmed without moving
-    /// the estimate (tests; Star's harness wrote `_last_cb_word_idx`).
+    /// the estimate (tests; star's harness wrote `_last_cb_word_idx`).
     pub fn set_last_callback(&mut self, cb: Option<(usize, Duration)>) {
         self.last_cb = cb;
         if cb.is_some() {
@@ -375,7 +375,7 @@ impl TimerPacer {
 ///
 /// The timer counts the words the engine actually speaks, not source words,
 /// so an expansion such as "2024" spoken as "twenty twenty-four" is two
-/// timer words that both highlight "2024" (fixes Star's word-count mismatch,
+/// timer words that both highlight "2024" (fixes star's word-count mismatch,
 /// Part 2 section 7.2 N2).
 pub fn spoken_words(text: &str) -> Vec<std::ops::Range<u32>> {
     let to_u32 = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
@@ -434,16 +434,16 @@ mod tests {
     fn interval_at_default_rate() {
         let d = word_interval(265, 1.0);
         assert!((d.as_secs_f32() - 60.0 / 265.0).abs() < 1e-6);
-        // Star's guards: speed floored at 0.1, rate×speed at 1.
+        // star's guards: speed floored at 0.1, rate×speed at 1.
         assert!((word_interval(265, 0.0).as_secs_f32() - 60.0 / 26.5).abs() < 1e-4);
         assert!((word_interval(0, 1.0).as_secs_f32() - 60.0).abs() < 1e-4);
         assert!((word_interval(1200, 1.0).as_secs_f32() - 0.05).abs() < 1e-6);
     }
 
-    /// Star's test fixture: rate 1200 (interval 50 ms), 400 words, unpaced
+    /// star's test fixture: rate 1200 (interval 50 ms), 400 words, unpaced
     /// (`_MAX_AHEAD = 4`), no anchor wait. Runs the timer for `run` and
     /// returns the painted words. `engine` is called before every tick with
-    /// the tick time, to refresh callbacks like Star's background thread.
+    /// the tick time, to refresh callbacks like star's background thread.
     fn run_timer(
         pacer: &mut TimerPacer,
         start: usize,
@@ -509,7 +509,7 @@ mod tests {
             }
         });
         // Callback time 0 with the clock starting at 10 s would be the same
-        // as Star's `now - 10.0`; emulate by shifting the pacer's view.
+        // as star's `now - 10.0`; emulate by shifting the pacer's view.
         let mut q = star_pacer();
         q.set_estimate(Some(10));
         q.start(ms(10_000), 10, false);

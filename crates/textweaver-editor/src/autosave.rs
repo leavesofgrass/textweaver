@@ -1,12 +1,12 @@
 //! Autosave snapshots, crash recovery, and the save rule.
 //!
 //! Ported from `star/gui/mixin_autosave.py` and `_editing.py`
-//! (the Star parity reference Part 3 §4.2 and §5) with these fixes:
+//! (the star parity reference Part 3 §4.2 and §5) with these fixes:
 //!
 //! - snapshots are written to a unique temp file, synced, and renamed
-//!   (Star used a fixed `<key>.tmp` and no fsync, §7 item 40);
+//!   (star used a fixed `<key>.tmp` and no fsync, §7 item 40);
 //! - saves are atomic and keep the file's byte-order mark and line endings
-//!   (Star used `write_text`, dropped the BOM, and wrote CRLF on Windows,
+//!   (star used `write_text`, dropped the BOM, and wrote CRLF on Windows,
 //!   item 29);
 //! - Save never writes Markdown over a converted source (`.rst`, `.org`,
 //!   `.adoc`, `.html`, ...): only Markdown and plain-text sources are saved
@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 pub struct AutosavePolicy {
     /// Snapshots enabled.
     pub enabled: bool,
-    /// Interval between snapshots while dirty (Star: 20 s).
+    /// Interval between snapshots while dirty (star: 20 s).
     pub interval: Duration,
 }
 
@@ -74,7 +74,7 @@ pub struct RecoverySnapshot {
 
 impl RecoverySnapshot {
     /// The title to show: the stored title, else the file name, else
-    /// "Recovered document" (Star's fallback).
+    /// "Recovered document" (star's fallback).
     pub fn display_title(&self) -> String {
         self.title
             .clone()
@@ -130,7 +130,7 @@ pub fn lock_file(dir: &Path, doc_key: &str) -> PathBuf {
 }
 
 /// An exclusive lock on one document's snapshot, held by the instance
-/// editing it for as long as it edits (Star had no lock, so a second
+/// editing it for as long as it edits (star had no lock, so a second
 /// instance offered to "recover" the first one's live work, item 39).
 ///
 /// The lock is an operating-system file lock (`File::try_lock`), so it
@@ -206,7 +206,7 @@ pub fn delete_snapshot(path: &Path) -> std::io::Result<()> {
     }
 }
 
-/// Snapshots worth offering at startup, in file-name order (Star's
+/// Snapshots worth offering at startup, in file-name order (star's
 /// `_scan_snapshots`). Unreadable and malformed files are skipped, and so
 /// are snapshots another running instance is still writing (it holds their
 /// [`SnapshotLock`]). A snapshot whose file already holds exactly its text
@@ -253,7 +253,7 @@ pub enum SaveTarget {
     /// Overwrite the source file (text and Markdown sources).
     InPlace(PathBuf),
     /// Ask for a new `.md` path (everything else, including converted
-    /// formats Star overwrote in place by mistake).
+    /// formats star overwrote in place by mistake).
     SaveAsMarkdown {
         /// Suggested path: the source with a `.md` extension.
         suggested: PathBuf,
@@ -264,7 +264,7 @@ pub enum SaveTarget {
 pub const IN_PLACE_EXTENSIONS: [&str; 7] =
     ["md", "markdown", "mdown", "mkd", "mkdn", "txt", "text"];
 
-/// Star's save rule, fixed: save in place only for plain-text and Markdown
+/// star's save rule, fixed: save in place only for plain-text and Markdown
 /// sources (by loader and by extension); everything else, including
 /// `.rst`, `.org`, `.adoc`, and `.html`, becomes save-as-Markdown.
 pub fn save_target(path: &Path, loader_id: &str) -> SaveTarget {

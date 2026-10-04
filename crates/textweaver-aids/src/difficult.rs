@@ -1,6 +1,6 @@
 //! Difficult words: mark rare words so a reader can pre-scan dense text.
 //!
-//! Star (`star/vocab.py`) flagged words of four or more letters whose
+//! star (`star/vocab.py`) flagged words of four or more letters whose
 //! `wordfreq` Zipf frequency was below 4.5. The engine here does the same
 //! against any [`WordList`], and marks every occurrence with its canonical
 //! range instead of returning a set of lowercase strings.
@@ -390,13 +390,13 @@ impl WordList for ScowlList {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct DifficultOptions {
-    /// Frequency lists: words below this Zipf value are difficult. Star
+    /// Frequency lists: words below this Zipf value are difficult. star
     /// used 4.5.
     pub threshold: f32,
     /// SCOWL: words whose size is above this are difficult (35 marks the
     /// most, 80 only the rarest; default 50).
     pub max_level: u8,
-    /// Shorter words (in chars) are never marked. Star used 4.
+    /// Shorter words (in chars) are never marked. star used 4.
     pub min_len: usize,
     /// Mark words missing from a frequency list (likely rare, but also
     /// names and typos). Off by default. SCOWL lists decide this

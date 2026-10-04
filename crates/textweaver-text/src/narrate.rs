@@ -22,7 +22,7 @@
 //! in the canonical text (`" | "`) are always elided. Code blocks are
 //! skipped with `skip_code` unless the range starts inside one (the reader
 //! asked for it). Empty table cells read as "blank" in structured mode
-//! instead of shifting later values to the wrong header (Star bug 7).
+//! instead of shifting later values to the wrong header (star bug 7).
 //!
 //! [`plan_with`] also takes [`InlineSpeech`] changes from the caller: a
 //! source range spoken as other words (an `Expanded` span, so the highlight
@@ -52,7 +52,7 @@ use crate::Document;
 use crate::marker::{Marker, MarkerIndex};
 use crate::units::Units;
 
-/// How tables are read aloud (Star's `table_reading_mode`).
+/// How tables are read aloud (star's `table_reading_mode`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TableNarration {
@@ -116,7 +116,7 @@ pub struct NarrationPolicy {
     pub max_chunk_chars: usize,
     /// Announce structure ("heading level 2") before marked ranges.
     pub announce_structure: bool,
-    /// Skip text under `Code` markers (Star's `skip_code`).
+    /// Skip text under `Code` markers (star's `skip_code`).
     pub skip_code: bool,
     /// Verbosity of structure announcements.
     pub verbosity: Verbosity,

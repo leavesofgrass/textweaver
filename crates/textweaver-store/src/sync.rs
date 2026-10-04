@@ -4,18 +4,18 @@
 //! carries a sidecar keyed by each document's path relative to the folder,
 //! so reading progress travels with the files. Two devices can write the
 //! same sidecar; this module reconciles them. The merge rules are ported
-//! from `star/sync.py` with its 45 tests (the Star parity reference Part 3 §3):
+//! from `star/sync.py` with its 45 tests (the star parity reference Part 3 §3):
 //!
 //! - per-document progress entries merge by [`ConflictPolicy`];
 //! - annotation and highlight lists merge by id (a union, newest per id);
 //! - the reserved `_meta` namespace merges document by document, newest wins;
 //! - missing, empty, or corrupt input counts as empty and never panics.
 //!
-//! Changes from Star, all deliberate:
+//! Changes from star, all deliberate:
 //!
 //! - [`SidecarStore::record_progress`] no longer re-asserts the local entry
 //!   after the merge, so `highest_progress` and `manual` protect the
-//!   document being written too (Star's `record_progress` always kept the
+//!   document being written too (star's `record_progress` always kept the
 //!   local entry, Part 3 §7 item 23);
 //! - conflicts are returned to the caller instead of discarded (item 24);
 //! - pending coalesced writes are flushed on drop and on demand (item 22);
@@ -43,7 +43,7 @@ use crate::{StoreError, atomic_write};
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ConflictPolicy {
-    /// The newest timestamp wins (Star default).
+    /// The newest timestamp wins (star default).
     #[default]
     Newest,
     /// The furthest position wins.
@@ -53,14 +53,14 @@ pub enum ConflictPolicy {
 }
 
 impl ConflictPolicy {
-    /// Every policy (Star's `POLICIES`).
+    /// Every policy (star's `POLICIES`).
     pub const ALL: [ConflictPolicy; 3] = [
         ConflictPolicy::Newest,
         ConflictPolicy::HighestProgress,
         ConflictPolicy::Manual,
     ];
 
-    /// Parses a policy name. An unknown name becomes `Newest`, as in Star.
+    /// Parses a policy name. An unknown name becomes `Newest`, as in star.
     pub fn parse(name: &str) -> Self {
         match name {
             "highest_progress" => ConflictPolicy::HighestProgress,
@@ -158,12 +158,12 @@ pub const SIDECAR_DIR: &str = ".textweaver";
 /// The sidecar file name.
 pub const SIDECAR_FILE: &str = "progress.json";
 
-/// How long [`SidecarStore`] coalesces writes to one sidecar (Star 0.5 s).
+/// How long [`SidecarStore`] coalesces writes to one sidecar (star 0.5 s).
 pub const SIDECAR_DEBOUNCE: Duration = Duration::from_millis(500);
 
 /// A JSON object that keeps its key order, used for the top level of a
 /// sidecar so merges keep a stable, diff-friendly order: local keys first,
-/// then remote-only keys (Star relied on Python's ordered dicts).
+/// then remote-only keys (star relied on Python's ordered dicts).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SidecarMap(Vec<(String, Value)>);
 
@@ -174,7 +174,7 @@ impl SidecarMap {
     }
 
     /// The entries of a JSON object, in the object's order; anything else
-    /// (null, a list, a string, a number) is empty, as Star's `_as_dict`.
+    /// (null, a list, a string, a number) is empty, as star's `_as_dict`.
     pub fn from_value(value: &Value) -> Self {
         match value {
             Value::Object(m) => SidecarMap(m.iter().map(|(k, v)| (k.clone(), v.clone())).collect()),
@@ -232,7 +232,7 @@ impl SidecarMap {
         self.0.is_empty()
     }
 
-    /// The map without the reserved `_meta` namespace (Star's
+    /// The map without the reserved `_meta` namespace (star's
     /// `load_sidecar`), so callers iterating documents see only documents.
     pub fn documents(&self) -> SidecarMap {
         SidecarMap(
@@ -319,7 +319,7 @@ fn py_str(v: &Value) -> String {
     }
 }
 
-/// The comparable timestamp of an entry (Star's `_ts_key`): `ts`, else
+/// The comparable timestamp of an entry (star's `_ts_key`): `ts`, else
 /// `last_ts`, else `""`, which sorts earliest. A numeric timestamp (Unix
 /// seconds) compares as its RFC 3339 form.
 pub fn ts_key(entry: &Value) -> String {
@@ -338,7 +338,7 @@ pub fn ts_key(entry: &Value) -> String {
     }
 }
 
-/// The reading position of an entry for `highest_progress` (Star's
+/// The reading position of an entry for `highest_progress` (star's
 /// `_progress_value`): the first of `offset` and `pct` that is a number
 /// (not a bool), else -1.
 pub fn progress_value(entry: &Value) -> f64 {
@@ -356,7 +356,7 @@ pub fn progress_value(entry: &Value) -> f64 {
 }
 
 /// The newer of two entries by timestamp; `prefer` breaks exact ties
-/// (Star's `_newest`).
+/// (star's `_newest`).
 fn newest<'a>(local: &'a Value, remote: &'a Value, prefer: Prefer) -> (&'a Value, Resolution) {
     let (lt, rt) = (ts_key(local), ts_key(remote));
     let remote_wins = match rt.cmp(&lt) {
@@ -371,10 +371,10 @@ fn newest<'a>(local: &'a Value, remote: &'a Value, prefer: Prefer) -> (&'a Value
     }
 }
 
-/// Reconciles one document's entry (Star's `_merge_entry`). Returns the
+/// Reconciles one document's entry (star's `_merge_entry`). Returns the
 /// winner and the conflict, if the two sides both exist and differ. Also
 /// usable to choose between a local saved position and a sidecar one when
-/// resuming, so resume honors the policy (Star ignored it, Part 3 §7
+/// resuming, so resume honors the policy (star ignored it, Part 3 §7
 /// item 25).
 pub fn resolve_entry(
     key: &str,
@@ -412,7 +412,7 @@ pub fn resolve_entry(
     }
 }
 
-/// The id of an annotation: `str(a["id"])` when it is truthy (Star's
+/// The id of an annotation: `str(a["id"])` when it is truthy (star's
 /// `_ann_id`). `""`, `0`, `false`, and `null` count as no id.
 pub(crate) fn ann_id(ann: &Value) -> Option<String> {
     let id = ann.as_object()?.get("id")?;
@@ -427,7 +427,7 @@ pub(crate) fn ann_id(ann: &Value) -> Option<String> {
     truthy.then(|| py_str(id))
 }
 
-/// Unions two annotation or highlight lists by id, newest per id (Star's
+/// Unions two annotation or highlight lists by id, newest per id (star's
 /// `merge_annotations`). A non-list side counts as empty. Local order comes
 /// first, then remote-only ids in remote order, then id-less remote entries.
 pub fn merge_annotations(
@@ -484,7 +484,7 @@ pub fn merge_annotations(
 }
 
 /// Merges the `_meta` namespace document by document, newest wins; the
-/// policy does not apply (Star's `_merge_meta`).
+/// policy does not apply (star's `_merge_meta`).
 fn merge_meta(
     local: Option<&Value>,
     remote: Option<&Value>,
@@ -517,7 +517,7 @@ fn merge_meta(
 }
 
 /// True when a key should merge by id: either side is a list and neither
-/// is an object (Star's `_is_annotation_list`). A list against an object is
+/// is an object (star's `_is_annotation_list`). A list against an object is
 /// corruption, not an annotation collection, and goes to the entry merge,
 /// which keeps the valid object.
 pub fn is_annotation_list(local: Option<&Value>, remote: Option<&Value>) -> bool {
@@ -528,7 +528,7 @@ pub fn is_annotation_list(local: Option<&Value>, remote: Option<&Value>) -> bool
     is(local, Value::is_array) || is(remote, Value::is_array)
 }
 
-/// Reconciles two ordered sidecar maps (Star's `merge_progress`). Returns
+/// Reconciles two ordered sidecar maps (star's `merge_progress`). Returns
 /// the merged map, local keys first then remote-only keys, and every
 /// conflict with its resolution.
 pub fn merge_maps(
@@ -591,7 +591,7 @@ pub struct ProgressEntry {
     pub offset: CharPos,
     /// Percentage through the document, floored.
     pub pct: u8,
-    /// When it was saved, RFC 3339 UTC (Star: zone-less local time).
+    /// When it was saved, RFC 3339 UTC (star: zone-less local time).
     pub ts: String,
 }
 
@@ -610,7 +610,7 @@ impl ProgressEntry {
         serde_json::json!({ "offset": self.offset.0, "pct": self.pct, "ts": self.ts })
     }
 
-    /// Reads an entry, tolerating Star's shapes: a missing offset is 0, a
+    /// Reads an entry, tolerating star's shapes: a missing offset is 0, a
     /// float pct is floored, a missing ts is empty.
     pub fn from_value(v: &Value) -> Option<Self> {
         let m = v.as_object()?;
@@ -654,7 +654,7 @@ fn relative_posix(root: &Path, p: &Path) -> Option<String> {
 }
 
 /// The deepest library folder containing `path`, and the path relative to
-/// it with `/` separators (Star's `folder_for`). `None` when the document is
+/// it with `/` separators (star's `folder_for`). `None` when the document is
 /// in no library folder.
 pub fn folder_for(folders: &[PathBuf], path: &Path) -> Option<(PathBuf, String)> {
     let p = resolved(path);
@@ -678,7 +678,7 @@ pub fn folder_for(folders: &[PathBuf], path: &Path) -> Option<(PathBuf, String)>
 }
 
 /// Reads a sidecar; empty on any failure (missing, unreadable, not an
-/// object), as Star's `_read_sidecar_raw`.
+/// object), as star's `_read_sidecar_raw`.
 pub fn read_sidecar(folder: &Path) -> SidecarMap {
     std::fs::read_to_string(sidecar_file(folder))
         .ok()
@@ -687,7 +687,7 @@ pub fn read_sidecar(folder: &Path) -> SidecarMap {
 }
 
 /// Merges a local payload with the sidecar currently on disk, which a sync
-/// may have rewritten since it was read (Star's `_reconcile_before_write`).
+/// may have rewritten since it was read (star's `_reconcile_before_write`).
 /// The disk copy is the remote side; exact ties go to the local payload.
 /// With no disk copy the payload is returned unchanged.
 pub fn reconcile_before_write(
@@ -771,7 +771,7 @@ impl Drop for SidecarInner {
     }
 }
 
-/// Reads and writes library-folder sidecars with Star's coalescing, under a
+/// Reads and writes library-folder sidecars with star's coalescing, under a
 /// lock so concurrent writers cannot interleave a read-modify-write.
 /// Clones share state; the last clone dropped flushes pending writes.
 #[derive(Clone, Debug)]
@@ -823,7 +823,7 @@ impl SidecarStore {
             .unwrap_or_else(|| read_sidecar(folder))
     }
 
-    /// Document entries, without `_meta` (Star's `load_sidecar`).
+    /// Document entries, without `_meta` (star's `load_sidecar`).
     pub fn load(&self, folder: &Path) -> SidecarMap {
         self.state(folder).documents()
     }
@@ -847,7 +847,7 @@ impl SidecarStore {
     /// `folder`'s sidecar. Within the debounce window of the last write the
     /// data stays pending (readable through [`state`](Self::state));
     /// otherwise it is reconciled with the file on disk under the policy and
-    /// written. Unlike Star, the recorded entry is not forced over the merge
+    /// written. Unlike star, the recorded entry is not forced over the merge
     /// result, so `highest_progress` and `manual` hold for it too.
     pub fn record_progress(
         &self,

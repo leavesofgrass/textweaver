@@ -89,7 +89,7 @@ How import works:
 - **Unknown settings are kept.** A setting this version does not know, perhaps from a newer textweaver, is reported and saved as it is.
 - **Your old files are backed up.** Before replacing `settings.toml` or `keymap.toml`, import copies it to a file such as `settings.toml.bak-20260925-140307` (the time is UTC). Import writes each file in one step, so an interrupted import never leaves half a file.
 - **Other files work too.** You can import a TOML export, or a `settings.toml` copied from another computer.
-- **Star settings need `tw migrate-star`.** A Star `settings.json` is recognized, and import tells you to use `tw migrate-star` instead.
+- **star settings need `tw migrate-star`.** A star `settings.json` is recognized, and import tells you to use `tw migrate-star` instead.
 
 Close textweaver before you import from the command line. Otherwise the running reader may save its own settings over the imported ones when you next change something.
 
@@ -278,7 +278,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `ocr_lang`, default `""`: the language of scanned text, as Tesseract codes (`"fra"`, `"deu+eng"`) or language tags (`"fr"`). Empty means the document's own language, else English. English is read by ocrs; other languages need Tesseract.
 - `ocr_engine`, default `"auto"`: `"ocrs"`, `"tesseract"`, or `"paddle"` (experimental) to use one engine only.
 - `math_engine`, default `"builtin"`: which engine reads math aloud. `"builtin"` is textweaver's own; `"mathcat"` is MathCAT in ClearSpeak and `"mathcat_simplespeak"` MathCAT in SimpleSpeak, in the document's language. MathCAT needs a build with the `mathcat` feature; without it, textweaver's own is used. See [Hear math with MathCAT](math.md#hear-math-with-mathcat).
-- `math_display`, default `"source"`: how math looks in the reading view. `"source"` shows it as written (`$x^2$`); `"unicode"` draws each formula as one line of Unicode (`x²`, `√2`, `1⁄2`), as Star did. Speech, edit mode, and exploring a formula always use the source. See [See math as Unicode](math.md#see-math-as-unicode).
+- `math_display`, default `"source"`: how math looks in the reading view. `"source"` shows it as written (`$x^2$`); `"unicode"` draws each formula as one line of Unicode (`x²`, `√2`, `1⁄2`), as star did. Speech, edit mode, and exploring a formula always use the source. See [See math as Unicode](math.md#see-math-as-unicode).
 - `revisions`, default `"auto"`: how tracked changes in Word, OpenDocument, and RTF files are read. `"auto"` says each change in place ("deleted by Ada Example: three") at high verbosity and reads the final text otherwise; `"marked"` always says them; `"final"` never does. It applies when a document is opened. See [Converting documents](converting.md).
 
 ### [display]
@@ -422,7 +422,7 @@ The browser preview of the document you are editing (`preview in browser` in the
 
 Define word (see [the reading guide](reading.md#define-a-word-ctrlshiftd-or-alte)).
 
-- `glossary`, no default: your own glossary, looked up before the dictionary. Unset, textweaver uses `glossary.txt`, else `glossary.json`, in the settings folder when there is one. A text glossary has one `term: definition` line per sense (`term = definition` and `term - definition` work too); a JSON glossary is Star's custom dictionary format.
+- `glossary`, no default: your own glossary, looked up before the dictionary. Unset, textweaver uses `glossary.txt`, else `glossary.json`, in the settings folder when there is one. A text glossary has one `term: definition` line per sense (`term = definition` and `term - definition` work too); a JSON glossary is star's custom dictionary format.
 - `data_file`, no default: the dictionary file, `lexicon-en.twlex`. Unset, textweaver looks in the `lexicon` folder beside the program, then in its data folder.
 
 ### [stats]

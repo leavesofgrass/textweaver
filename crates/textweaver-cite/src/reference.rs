@@ -614,7 +614,7 @@ impl Reference {
     /// A one-line label for pickers and lists, readable aloud:
     /// `Doe and Roe, 2020. On X. Key doe2020.`
     ///
-    /// Star's label was `[Doe2020] Doe  (2020)  On X`: brackets and a
+    /// star's label was `[Doe2020] Doe  (2020)  On X`: brackets and a
     /// double space that screen readers either spell out or swallow.
     pub fn label(&self) -> String {
         let mut out = String::new();

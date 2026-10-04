@@ -1,10 +1,10 @@
 //! Abbreviations and the pronunciation lexicon, ported from
 //! `star/ttstext/abbreviations.py` (Part 2 sections 5.B.1 and 5.B.2).
 //!
-//! Star ran 55 case-sensitive `\b`-prefixed substitutions in list order,
+//! star ran 55 case-sensitive `\b`-prefixed substitutions in list order,
 //! then the user's. Here they are one pass (user entries first, then the
-//! built-ins in Star's order, so the first alternative that matches at a
-//! position wins, as Star's sequence did). Deliberate fixes:
+//! built-ins in star's order, so the first alternative that matches at a
+//! position wins, as star's sequence did). Deliberate fixes:
 //!
 //! - Q4: `No.`/`no.`, `p.`, and `pp.` expand only before a number ("No. 5",
 //!   "p. 12"), so "I said no." stays "no"; and "a.m."/"p.m." are left to the
@@ -14,10 +14,10 @@
 //!   5 min.").
 //! - An abbreviation expanded at the very end of a line keeps its period
 //!   ("... et cetera.").
-//! - User expansions are inserted literally (Star used them as regex
+//! - User expansions are inserted literally (star used them as regex
 //!   templates, so backslashes were interpreted).
 //! - The lexicon is one pass as well, so a replacement is never rewritten by
-//!   a shorter term (Star rewrote "congestive heart failure" when "heart" was
+//!   a shorter term (star rewrote "congestive heart failure" when "heart" was
 //!   also a term).
 //!
 //! **Error-prone abbreviations are spelled, never expanded** (new in
@@ -40,7 +40,7 @@ use super::Transform;
 use super::numbers::sentence_ends_at;
 use super::rewrite::{Piece, Rule, char_after, char_before, then};
 
-/// Star's built-in list, in source order (55 entries).
+/// star's built-in list, in source order (55 entries).
 pub const BUILTIN: [(&str, &str); 55] = [
     ("et al.", "and others"),
     ("op. cit.", "op cit"),
@@ -439,12 +439,12 @@ impl Transform for Pronunciations {
     }
 }
 
-/// Star `_expand_abbreviations(text, custom)`.
+/// star `_expand_abbreviations(text, custom)`.
 pub fn expand_abbreviations(text: &str, custom: &BTreeMap<String, String>) -> String {
     Abbreviations::new(custom).apply(text).0
 }
 
-/// Star `_apply_pronunciations(text, lexicon)`.
+/// star `_apply_pronunciations(text, lexicon)`.
 pub fn apply_pronunciations(text: &str, lexicon: &BTreeMap<String, String>) -> String {
     Pronunciations::new(lexicon).apply(text).0
 }

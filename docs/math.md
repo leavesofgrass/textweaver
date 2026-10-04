@@ -265,7 +265,7 @@ Some words have no part of the formula of their own. "power" in "x raised to the
 
 ## See math as Unicode
 
-The reading view shows math as it is written, `$x^2$`. To see it drawn instead, set `math_display = "unicode"` under `[reading]` in `settings.toml`, or choose "Math on screen" in the settings list. Each formula is then shown on one line in Unicode characters, as Star did:
+The reading view shows math as it is written, `$x^2$`. To see it drawn instead, set `math_display = "unicode"` under `[reading]` in `settings.toml`, or choose "Math on screen" in the settings list. Each formula is then shown on one line in Unicode characters, as star did:
 
 - scripts become raised or lowered characters where Unicode has them: `x²`, `aᵢ`, `x₁₀`. Where it has none, the script is written out: `x^(1⁄y)`;
 - fractions use the fraction slash: `1⁄2`, and `(a + b)⁄c` for longer parts;

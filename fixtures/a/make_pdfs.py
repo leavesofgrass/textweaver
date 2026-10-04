@@ -11,7 +11,7 @@ copyrighted text. Each fixture targets one part of the PDF loader:
   paragraphs with first-line indents and a hyphenated line end, bulleted
   and numbered lists, a small table, and bookmarks (an outline).
 - columns.pdf: a full-width title, two columns, a full-width figure
-  caption band between two column sections (Star's divider rule).
+  caption band between two column sections (star's divider rule).
 - running.pdf: three pages with a running header, page-number footers, a
   paragraph that continues across a page break, and page labels (a
   roman-numbered first page).

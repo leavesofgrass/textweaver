@@ -58,7 +58,7 @@ impl LoadReport {
     }
 }
 
-/// All themes: built-ins first in Star's order, then user themes by file
+/// All themes: built-ins first in star's order, then user themes by file
 /// name. A user theme with a built-in's name takes its place.
 #[derive(Clone, Debug)]
 pub struct Registry {
@@ -95,13 +95,13 @@ impl Registry {
         self.themes.iter().position(|t| t.meta.name == n)
     }
 
-    /// A theme by name: any case, and Star's old names accepted.
+    /// A theme by name: any case, and star's old names accepted.
     pub fn get(&self, name: &str) -> Option<&Theme> {
         self.position(name).map(|i| &self.themes[i])
     }
 
     /// The theme for `name`, or the default when there is none; the flag is
-    /// true when it fell back, so the caller can say so (Star fell back
+    /// true when it fell back, so the caller can say so (star fell back
     /// silently).
     pub fn resolve(&self, name: &str) -> (&Theme, bool) {
         match self.get(name) {
@@ -115,7 +115,7 @@ impl Registry {
     }
 
     /// The theme after `current` in cycle order. An unknown `current` gives
-    /// the first theme (Star skipped to the second).
+    /// the first theme (star skipped to the second).
     pub fn next(&self, current: &str) -> &Theme {
         self.step(current, 1)
     }

@@ -1,5 +1,5 @@
 //! Numbers as words, ported from `star/ttstext/numbers.py` (Part 2 section
-//! 5.B.3 helpers) with Star's exact wording: no "and", hyphenated tens,
+//! 5.B.3 helpers) with star's exact wording: no "and", hyphenated tens,
 //! "nineteen oh five" years.
 
 const ONES: [&str; 20] = [
@@ -97,7 +97,7 @@ fn unsigned_words(n: u64) -> String {
     n.to_string()
 }
 
-/// Star `_int_to_words`: `1234` is "one thousand two hundred thirty-four".
+/// star `_int_to_words`: `1234` is "one thousand two hundred thirty-four".
 pub fn int_to_words(n: i64) -> String {
     if n < 0 {
         format!("negative {}", unsigned_words(n.unsigned_abs()))
@@ -106,7 +106,7 @@ pub fn int_to_words(n: i64) -> String {
     }
 }
 
-/// Star `_year_to_words`: `1984` is "nineteen eighty-four", `1905` is
+/// star `_year_to_words`: `1984` is "nineteen eighty-four", `1905` is
 /// "nineteen oh five", `2000` is "two thousand"; outside `100..=2999` a
 /// plain number.
 pub fn year_to_words(y: i64) -> String {
@@ -161,7 +161,7 @@ fn unsigned_ordinal(n: u64) -> String {
     format!("{n}th")
 }
 
-/// Star `_ordinal_to_words`: `21` is "twenty-first", `100` is
+/// star `_ordinal_to_words`: `21` is "twenty-first", `100` is
 /// "one hundredth", `1000001` is "one million first".
 pub fn ordinal_to_words(n: i64) -> String {
     if n < 0 {
@@ -171,7 +171,7 @@ pub fn ordinal_to_words(n: i64) -> String {
     }
 }
 
-/// Star `_decimal_digits_to_words`: each digit on its own, "305" is
+/// star `_decimal_digits_to_words`: each digit on its own, "305" is
 /// "three zero five".
 pub fn decimal_digits_to_words(digits: &str) -> String {
     digits

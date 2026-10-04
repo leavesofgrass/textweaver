@@ -6,7 +6,7 @@
 
 ## Context
 
-Star defined words through nltk's WordNet and CMUdict corpora, which a user had to download with Python tools, and layered a JSON glossary over them (`star/dictionary.py`). It translated its Qt chrome with a small `tr()` over JSON catalogs keyed by the English text (`star/i18n.py`). Both were planned in pure Rust (the pure-Rust research, kept outside the repository, "Define word"), offline, with no Python, and interface translations were planned to start with a message catalog, English complete, a pseudo-locale, and a right-to-left check.
+star defined words through nltk's WordNet and CMUdict corpora, which a user had to download with Python tools, and layered a JSON glossary over them (`star/dictionary.py`). It translated its Qt chrome with a small `tr()` over JSON catalogs keyed by the English text (`star/i18n.py`). Both were planned in pure Rust (the pure-Rust research, kept outside the repository, "Define word"), offline, with no Python, and interface translations were planned to start with a message catalog, English complete, a pseudo-locale, and a right-to-left check.
 
 ## Decision
 
@@ -19,7 +19,7 @@ Star defined words through nltk's WordNet and CMUdict corpora, which a user had 
 - **Locality:** synsets are numbered word by word, the words with the most senses first, so `run`'s 57 senses sit in one or two blocks. A lookup unpacks one to three blocks: about a millisecond the first time, microseconds after that (16 blocks are kept per store).
 - **Morphy:** a port of WordNet's and NLTK's: the exception lists, then the suffix rules, keeping forms WordNet has in that part of speech. `running` finds `running` (noun) and `run` (verb).
 - **Pronunciation:** CMUdict's ARPAbet, stored one byte per phone, respelled for reading aloud with the stressed syllable in capitals (`RUN-ing`, `buh-NAN-uh`), since ARPAbet read by a speech engine is noise.
-- **Glossary:** Star's JSON format, or a text file of `term: definition` lines, looked up first, through the base forms too. Its senses come before WordNet's rather than replacing them.
+- **Glossary:** star's JSON format, or a text file of `term: definition` lines, looked up first, through the base forms too. Its senses come before WordNet's rather than replacing them.
 - **In the reader:** Ctrl+Shift+D (GUI) or Alt+E (terminal; Windows Terminal takes Alt+Shift+D) lists the senses for the selection or the word at the cursor; Enter copies a sense. `tw define` prints Markdown or JSON.
 
 ### Message catalog

@@ -383,7 +383,7 @@ fn nine_speakers_are_listed_and_unknown_voices_refused() {
         let s = b.synthesize("x").unwrap();
         assert_eq!(peak(&s.samples), 500 + 100 * i as u16, "{}", v.id);
     }
-    // Star's saved names work too.
+    // star's saved names work too.
     b.set_params(&VoiceParams {
         voice: Some("Paul".into()),
         ..VoiceParams::default()

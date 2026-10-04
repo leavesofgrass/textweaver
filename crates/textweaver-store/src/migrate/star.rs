@@ -1,6 +1,6 @@
-//! Reading a Star configuration directory: `settings.json`, the parse
-//! cache (for Star's `plain_text`), and the mapping of Star's settings keys
-//! onto textweaver's (the Star parity reference Part 3 §1).
+//! Reading a star configuration directory: `settings.json`, the parse
+//! cache (for star's `plain_text`), and the mapping of star's settings keys
+//! onto textweaver's (the star parity reference Part 3 §1).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -12,14 +12,14 @@ use crate::settings::{FootnoteMode, TableMode};
 use crate::sync::ConflictPolicy;
 use crate::{Settings, StoreError};
 
-/// Star's configuration directory on this platform: `%APPDATA%\star` on
+/// star's configuration directory on this platform: `%APPDATA%\star` on
 /// Windows, `~/Library/Application Support/star` on macOS, and
 /// `$XDG_CONFIG_HOME/star` (default `~/.config/star`) elsewhere.
 pub fn default_star_dir() -> Option<PathBuf> {
     directories::BaseDirs::new().map(|d| d.config_dir().join("star"))
 }
 
-/// Star's `settings.json`, parsed.
+/// star's `settings.json`, parsed.
 pub fn read_settings(dir: &Path) -> Result<Map<String, Value>, StoreError> {
     let path = dir.join("settings.json");
     let bytes = std::fs::read(&path).map_err(|source| StoreError::Io {
@@ -40,7 +40,7 @@ pub fn read_settings(dir: &Path) -> Result<Map<String, Value>, StoreError> {
     }
 }
 
-/// Star's timestamps (`2026-09-25T10:03:07`, local time without a zone)
+/// star's timestamps (`2026-09-25T10:03:07`, local time without a zone)
 /// as Unix seconds. The zone is unknown, so they are read as UTC; this
 /// shifts them by at most the local offset.
 pub fn star_ts(v: Option<&Value>) -> i64 {
@@ -62,8 +62,8 @@ pub fn as_usize(v: Option<&Value>) -> Option<usize> {
     }
 }
 
-/// Star's parse cache, `<star>/cache/*_v1.json`: each file holds one
-/// document's `plain_text`, keyed by the path Star opened. Only entries
+/// star's parse cache, `<star>/cache/*_v1.json`: each file holds one
+/// document's `plain_text`, keyed by the path star opened. Only entries
 /// whose recorded modification time still matches the file are used.
 #[derive(Clone, Debug, Default)]
 pub struct StarCache {
@@ -116,7 +116,7 @@ impl StarCache {
         self.by_path.is_empty()
     }
 
-    /// Star's `plain_text` for `doc`, when cached and still current.
+    /// star's `plain_text` for `doc`, when cached and still current.
     pub fn plain_text(&self, doc: &Path) -> Option<String> {
         let (file, mtime) = self.by_path.get(&crate::library::resolve_path(doc))?;
         let current = file_mtime(doc)?;
@@ -132,12 +132,12 @@ impl StarCache {
     }
 }
 
-/// What happened to one Star setting.
+/// What happened to one star setting.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SettingOutcome {
     /// Imported, with a description of the textweaver setting.
     Imported(String),
-    /// Same as Star's default: nothing to import.
+    /// Same as star's default: nothing to import.
     Default,
     /// Already the value textweaver has.
     Unchanged,
@@ -145,7 +145,7 @@ pub enum SettingOutcome {
     Skipped(String),
 }
 
-/// Theme renames Star applied on load (`star/themes.py`).
+/// Theme renames star applied on load (`star/themes.py`).
 fn theme_alias(name: &str) -> &str {
     match name {
         "obsidian" => "galaxy",
@@ -156,7 +156,7 @@ fn theme_alias(name: &str) -> &str {
     }
 }
 
-/// Star's `tts_backend` as a textweaver backend id.
+/// star's `tts_backend` as a textweaver backend id.
 fn backend_for(star: &str) -> Result<&'static str, String> {
     match star {
         "auto" => Ok("auto"),
@@ -195,7 +195,7 @@ fn want_str_map(v: &Value) -> Result<std::collections::BTreeMap<String, String>,
 
 type Apply = fn(&Value, &mut Settings) -> Result<String, String>;
 
-/// One Star setting textweaver imports: its key, Star's default, and how
+/// One star setting textweaver imports: its key, star's default, and how
 /// to apply a changed value.
 struct Rule {
     key: &'static str,
@@ -236,11 +236,11 @@ fn rules() -> Vec<Rule> {
             Ok(format!("speech.prefer_voice = \"{p}\""))
         }),
         rule!("tts_voice", "", |v, _s| Err(format!(
-            "voice {} is one of Star's engine ids, which textweaver's engines do not share; choose the voice again",
+            "voice {} is one of star's engine ids, which textweaver's engines do not share; choose the voice again",
             v
         ))),
         rule!("tts_favorite_voices", [], |_v, _s| Err(
-            "favorite voices are Star engine ids; star them again".to_owned()
+            "favorite voices are star engine ids; star them again".to_owned()
         )),
         rule!("tts_auto_play", false, |v, s| {
             s.speech.auto_play = want_bool(v)?;
@@ -427,7 +427,7 @@ fn rules() -> Vec<Rule> {
     ]
 }
 
-/// Star keys handled elsewhere in the migration (documents, library,
+/// star keys handled elsewhere in the migration (documents, library,
 /// keys, profiles), not by [`apply_settings`].
 pub const STATE_KEYS: [&str; 12] = [
     "reading_positions",
@@ -444,8 +444,8 @@ pub const STATE_KEYS: [&str; 12] = [
     "profiles",
 ];
 
-/// Applies the Star settings textweaver understands to `settings`. Values
-/// equal to Star's defaults are left alone, so textweaver's own defaults
+/// Applies the star settings textweaver understands to `settings`. Values
+/// equal to star's defaults are left alone, so textweaver's own defaults
 /// keep applying. Returns each handled key with what happened, and the
 /// keys textweaver has no equivalent for.
 pub fn apply_settings(
@@ -479,20 +479,20 @@ pub fn apply_settings(
     (out, unknown)
 }
 
-/// What one of Star's settings profiles became ([`apply_profile`]).
+/// What one of star's settings profiles became ([`apply_profile`]).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ProfileValues {
     /// textweaver settings the profile sets, as dotted keys
     /// (`speech.rate`).
     pub set: Vec<String>,
-    /// Star keys left out: no textweaver equivalent, or a value textweaver
+    /// star keys left out: no textweaver equivalent, or a value textweaver
     /// rejects (`qt_line_height`, `tts_rate: not a number`).
     pub left_out: Vec<String>,
 }
 
-/// Applies one of Star's settings profiles (a map of Star settings keys,
+/// Applies one of star's settings profiles (a map of star settings keys,
 /// as in `settings.json`) onto `settings`. Unlike [`apply_settings`], a
-/// value equal to Star's default is applied too: a profile sets what it
+/// value equal to star's default is applied too: a profile sets what it
 /// names.
 pub fn apply_profile(values: &Map<String, Value>, settings: &mut Settings) -> ProfileValues {
     let rules = rules();
@@ -517,9 +517,9 @@ pub fn apply_profile(values: &Map<String, Value>, settings: &mut Settings) -> Pr
     out
 }
 
-/// Star's GUI default shortcuts (the keys of its `keybindings` remaps)
-/// and the textweaver action each belongs to (the Star parity reference Part 1
-/// §6.1). Star's other shortcuts have no textweaver action.
+/// star's GUI default shortcuts (the keys of its `keybindings` remaps)
+/// and the textweaver action each belongs to (the star parity reference Part 1
+/// §6.1). star's other shortcuts have no textweaver action.
 pub const STAR_SHORTCUTS: [(&str, &str); 43] = [
     ("Ctrl+N", "new_document"),
     ("Ctrl+O", "open"),
@@ -566,7 +566,7 @@ pub const STAR_SHORTCUTS: [(&str, &str); 43] = [
     ("F7", "caret_browsing"),
 ];
 
-/// The textweaver action for one of Star's default shortcuts. Matching
+/// The textweaver action for one of star's default shortcuts. Matching
 /// ignores case and spaces (`ctrl+shift+p`).
 pub fn action_for_star_shortcut(shortcut: &str) -> Option<&'static str> {
     let norm = |s: &str| s.replace(' ', "").to_lowercase();

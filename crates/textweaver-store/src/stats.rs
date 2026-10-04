@@ -5,7 +5,7 @@
 //! The app adds to the file in small steps ([`StatsDelta`]) through its
 //! writer thread, so nothing waits on the disk; `tw stats` reads it.
 //!
-//! Differences from Star's `ReadingStats` (`stats.py`): the statistics live
+//! Differences from star's `ReadingStats` (`stats.py`): the statistics live
 //! in their own file, not in `settings.json`, so reading does not rewrite
 //! the settings; a session is an opening of a document in which you read,
 //! not every press of play; and the furthest point is kept as a position,

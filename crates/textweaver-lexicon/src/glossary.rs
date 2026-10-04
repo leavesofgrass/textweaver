@@ -2,7 +2,7 @@
 //!
 //! Two formats, chosen by the file's extension:
 //!
-//! - **JSON** (`.json`), Star's custom dictionary format: an object from
+//! - **JSON** (`.json`), star's custom dictionary format: an object from
 //!   word to either a definition string or an object with `definition`
 //!   and, optionally, `pronunciation`, `pos`, `examples`, and `synonyms`.
 //!   A list of such objects is a word with several senses.
@@ -74,7 +74,7 @@ impl Glossary {
         }
     }
 
-    /// A glossary from Star's JSON format.
+    /// A glossary from star's JSON format.
     pub fn from_json(text: &str) -> Result<Glossary, String> {
         let v: Value = serde_json::from_str(text).map_err(|e| e.to_string())?;
         let Value::Object(map) = v else {

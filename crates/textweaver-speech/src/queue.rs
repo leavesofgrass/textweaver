@@ -32,7 +32,7 @@ impl Generation {
         self.0
     }
 
-    /// Bumps the generation. Star's rule: bump before every stop or restart,
+    /// Bumps the generation. star's rule: bump before every stop or restart,
     /// so late events from the old reading are recognizably stale.
     pub fn bump(&mut self) -> u64 {
         self.0 += 1;

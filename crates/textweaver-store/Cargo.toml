@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-store"
-description = "textweaver persistence: settings, keymap file, per-document state, notes, library, sidecar merge, recent files, settings import and export, Star migration"
+description = "textweaver persistence: settings, keymap file, per-document state, notes, library, sidecar merge, recent files, settings import and export, star migration"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

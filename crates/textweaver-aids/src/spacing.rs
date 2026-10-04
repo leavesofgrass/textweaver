@@ -2,7 +2,7 @@
 //!
 //! 1.4.12 asks that nothing is lost when a reader sets line height to 1.5
 //! times the font size, paragraph spacing to 2 times, letter spacing to
-//! 0.12 times, and word spacing to 0.16 times. Star offered line height,
+//! 0.12 times, and word spacing to 0.16 times. star offered line height,
 //! letter spacing (in percent), and word spacing (in pixels), but no
 //! paragraph spacing (its audit's one gap), and its word spacing in pixels
 //! did not grow with the font. Here all four are multiples of the font
@@ -34,7 +34,7 @@ pub const WCAG_WORD_SPACING: f32 = 0.16;
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TextSpacing {
-    /// Line height, 1.0 to 3.0. Star's default and WCAG's value: 1.5.
+    /// Line height, 1.0 to 3.0. star's default and WCAG's value: 1.5.
     pub line_height: f32,
     /// Space after each paragraph, 0 to 4.
     pub paragraph_spacing: f32,
@@ -45,8 +45,8 @@ pub struct TextSpacing {
 }
 
 impl Default for TextSpacing {
-    /// Star's defaults: line height 1.5, no extra letter or word spacing,
-    /// and a modest paragraph gap (Star had none).
+    /// star's defaults: line height 1.5, no extra letter or word spacing,
+    /// and a modest paragraph gap (star had none).
     fn default() -> Self {
         TextSpacing {
             line_height: 1.5,
@@ -164,7 +164,7 @@ impl TextSpacing {
         }
     }
 
-    /// Converts Star's settings: `qt_line_height` (a multiple),
+    /// Converts star's settings: `qt_line_height` (a multiple),
     /// `qt_letter_spacing` (extra percent of the font size), and
     /// `qt_word_spacing` (extra pixels), with the font size in pixels.
     pub fn from_star(line_height: f32, letter_percent: f32, word_px: f32, font_px: f32) -> Self {
@@ -407,7 +407,7 @@ mod tests {
 
     #[test]
     fn from_star_settings() {
-        // Star: 1.5x, +12 %, +3 px at a 16 px font.
+        // star: 1.5x, +12 %, +3 px at a 16 px font.
         let s = TextSpacing::from_star(1.5, 12.0, 3.0, 16.0);
         assert_eq!(s.line_height, 1.5);
         assert!((s.letter_spacing - 0.12).abs() < 1e-6);

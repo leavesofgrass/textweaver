@@ -23,7 +23,7 @@
 //! reading** (`continue_reading`) lists the documents found here with a
 //! place saved on any computer, newest first. Places then go to the sync
 //! folder, and a library folder's old sidecar is only read, so folders
-//! written by an older textweaver or converted from Star still resume.
+//! written by an older textweaver or converted from star still resume.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

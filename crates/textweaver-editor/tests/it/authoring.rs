@@ -1,10 +1,10 @@
-//! Star's authoring tests, ported (the Star parity reference Part 3 §4.6): 31
+//! star's authoring tests, ported (the star parity reference Part 3 §4.6): 31
 //! from `tests/test_authoring.py` (`a01`..`a31`) and 25 from
 //! `tests/test_authoring_depth.py` (`d01`..`d25`). Tests of Qt widgets with
 //! no counterpart outside a GUI are listed here with the reason, and where
 //! the same guarantee can be checked without the widget it is.
 //!
-//! | Star test | Here |
+//! | star test | Here |
 //! |---|---|
 //! | a01 new document opens blank in edit mode | `a01` |
 //! | a02 new document, cancel keeps current edits | `a02` |
@@ -74,7 +74,7 @@ use textweaver_editor::{
     Choice, DocInfo, EditSession, FindOptions, LeaveOutcome, SaveOutcome, Selection, SessionError,
 };
 
-/// Star's fixture: document `/tmp/d.md` with Markdown `"# D\n\nhi"`.
+/// star's fixture: document `/tmp/d.md` with Markdown `"# D\n\nhi"`.
 fn fixture() -> EditSession {
     EditSession::new(
         DocInfo {
@@ -268,7 +268,7 @@ fn a11_link_wraps_selection_as_link_text() {
     assert_eq!(t, "[click here](https://)");
 }
 
-/// Star inserted `"\n---\n"`, giving `"above\n---\n"`, which renders as a
+/// star inserted `"\n---\n"`, giving `"above\n---\n"`, which renders as a
 /// setext heading (Part 3 §7 item 32). Fixed: a blank line comes first.
 #[test]
 fn a12_horizontal_rule_inserts_a_rule() {
@@ -504,8 +504,8 @@ fn a30_loading_a_document_clears_the_stale_maps_flag() {
 
 // ---- tests/test_authoring_depth.py ----
 
-/// Star replaced the second `alpha` because re-running a search skipped the
-/// match under the caret (Part 3 §7 item 35). Star's assertions (two
+/// star replaced the second `alpha` because re-running a search skipped the
+/// match under the caret (Part 3 §7 item 35). star's assertions (two
 /// `alpha` left, `X` present) hold; textweaver replaces the match at the
 /// caret, the first.
 #[test]
@@ -544,7 +544,7 @@ fn d03_replace_is_noop_outside_edit_mode() {
     assert_eq!(text(&s), before);
 }
 
-/// Star also forced its preview setting on (Part 3 §7 item 34); a session
+/// star also forced its preview setting on (Part 3 §7 item 34); a session
 /// has no settings to change.
 #[test]
 fn d04_new_document_opens_in_edit_mode() {
@@ -609,7 +609,7 @@ fn d09_add_table_row_matches_columns() {
     let last = t.lines().last().unwrap();
     assert_eq!(last.matches('|').count(), 4);
     assert_eq!(last, "|   |   |   |");
-    // Outside a table, Star's message.
+    // Outside a table, star's message.
     let mut s = editing("plain");
     let err = s.format(MarkdownOp::AddTableRow).unwrap_err();
     assert_eq!(
@@ -824,7 +824,7 @@ fn d25_startup_recovery_declined_drops_the_snapshot() {
 
 // ---- Behavior around the ported tests ----
 
-/// Leaving edit mode cleanly deletes the snapshot (Star's
+/// Leaving edit mode cleanly deletes the snapshot (star's
 /// `_autosave_stop(clear=True)`); a successful save does too.
 #[test]
 fn snapshots_are_cleared_on_save_and_on_leaving() {
@@ -915,7 +915,7 @@ fn formatting_is_one_undo_step_each() {
     assert_eq!(text(&s), "a\nb\nc");
 }
 
-/// Star bug 39: a second instance editing the same document neither
+/// star bug 39: a second instance editing the same document neither
 /// overwrites the first one's snapshot nor is offered it while the first
 /// is running; once the first stops, the snapshot is offered.
 #[test]

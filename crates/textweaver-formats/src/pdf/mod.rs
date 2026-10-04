@@ -9,7 +9,7 @@
 //! 2. **Lines, tables, blocks** (`layout`): glyphs become lines split at
 //!    wide gaps; aligned rows of short cells become tables; lines stack into
 //!    blocks by spacing, overlap, size, and weight.
-//! 3. **Running heads and reading order** (`layout`): Star's algorithm
+//! 3. **Running heads and reading order** (`layout`): star's algorithm
 //!    removes repeated margin text and page numbers and orders blocks column
 //!    by column within bands divided by full-width blocks.
 //! 4. **Structure** (`structure`): paragraphs with wrapped lines joined

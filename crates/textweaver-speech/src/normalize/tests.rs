@@ -1,4 +1,4 @@
-//! Star's `tests/test_ttstext.py` vectors (the Star parity reference Part 2
+//! star's `tests/test_ttstext.py` vectors (the star parity reference Part 2
 //! section 6.1), one assertion per line, plus the bug fixes of section 7.2.
 //! Every output also passes `check_invariants`, and literal spans reproduce
 //! their source.
@@ -75,7 +75,7 @@ fn normalize_numbers_vectors() {
         ),
         ("at 12:00", "at noon"),
         ("at 00:00", "at midnight"),
-        // Star: "at three thirty PM"; a 24-hour time gains no AM or PM.
+        // star: "at three thirty PM"; a 24-hour time gains no AM or PM.
         ("at 15:30", "at fifteen thirty"),
         ("at 3:45 PM", "at three forty-five PM"),
         ("at 9:15 AM", "at nine fifteen AM"),
@@ -105,11 +105,11 @@ fn normalize_numbers_vectors() {
 
 #[test]
 fn normalize_numbers_deliberate_changes_to_star_vectors() {
-    // Star: "at zero thirty AM". Written with AM it is a twelve-hour
+    // star: "at zero thirty AM". Written with AM it is a twelve-hour
     // time, which has no hour zero; without, a 24-hour time.
     assert_eq!(numbers("at 00:30 AM"), "at twelve thirty AM");
     assert_eq!(numbers("at 00:30"), "at zero thirty");
-    // Star pinned "v1.two point three"; dotted sequences are read by part.
+    // star pinned "v1.two point three"; dotted sequences are read by part.
     assert_eq!(numbers("v1.2.3"), "v 1 dot 2 dot 3");
 }
 
@@ -164,7 +164,7 @@ fn number_expansions_highlight_their_token() {
 
 #[test]
 fn strip_markdown_vectors() {
-    // T1 (:216-236). Star merged the list into the paragraph before it (Q5);
+    // T1 (:216-236). star merged the list into the paragraph before it (Q5);
     // the list stays its own paragraph here.
     let t1 = "# Heading\n\nSome **bold** and *italic* and `code` text.\n\n- item one\n- item two\n\n> a quote\n\n[link](http://x.com)\n\n```python\nprint(1)\n```\n";
     let out = md(t1, true);
@@ -376,7 +376,7 @@ fn apply_pronunciations_vectors() {
 
 #[test]
 fn normalize_math_vectors() {
-    // tests/test_ttstext.py:351-374. Star's undelimited vectors are
+    // tests/test_ttstext.py:351-374. star's undelimited vectors are
     // delimited here, as math is in documents (ADR-0018); the wording of
     // `\alpha + \beta` ("plus" is spoken) and `\bar{x}` ("x bar") changed
     // deliberately.

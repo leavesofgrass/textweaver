@@ -562,7 +562,7 @@ Up and Down move through the senses. Enter copies one to the clipboard, for a no
 
 - Inflected words find their base forms: `running` finds `running` and `run`, `geese` finds `goose`, and `wider` finds `wide`.
 - With no word at the cursor, or no document open, textweaver asks which word to define. The command palette's `define word` does the same.
-- **Your glossary** is a text file with one `term: definition` line per sense, or a JSON file in Star's format. Put it in the settings folder as `glossary.txt`, or name it with `[lexicon] glossary` ([settings.md](settings.md#lexicon)). Its senses come first, before WordNet's. An edited glossary is read again the next time you define a word.
+- **Your glossary** is a text file with one `term: definition` line per sense, or a JSON file in star's format. Put it in the settings folder as `glossary.txt`, or name it with `[lexicon] glossary` ([settings.md](settings.md#lexicon)). Its senses come first, before WordNet's. An edited glossary is read again the next time you define a word.
 - `tw define WORD` does the same from the command line, as Markdown or, with `--json`, as JSON.
 - The dictionary is a 10 MB file, `lexicon/lexicon-en.twlex`, installed beside the program. If it is missing, textweaver says so and searches your glossary only.
 
@@ -575,7 +575,7 @@ textweaver counts the time it spends reading each document aloud, the furthest p
 - the ten documents you read most (Enter opens one);
 - whether statistics are on (Enter turns them off or on).
 
-Statistics are saved every 30 seconds while reading, and when a document closes. `tw stats` prints them, `tw stats --json` prints everything, and `tw stats clear` removes them. In the reader, the last item of the list, "Remove the reading statistics", removes them too, after a yes or no; it is there once something is recorded. To stop recording, turn them off in the list or set `[stats] enabled = false` ([settings.md](settings.md#stats)). `tw migrate-star` brings Star's reading statistics over.
+Statistics are saved every 30 seconds while reading, and when a document closes. `tw stats` prints them, `tw stats --json` prints everything, and `tw stats clear` removes them. In the reader, the last item of the list, "Remove the reading statistics", removes them too, after a yes or no; it is there once something is recorded. To stop recording, turn them off in the list or set `[stats] enabled = false` ([settings.md](settings.md#stats)). `tw migrate-star` brings star's reading statistics over.
 
 ## The menus: F10
 

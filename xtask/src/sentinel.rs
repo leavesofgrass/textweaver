@@ -2,7 +2,7 @@
 //! proof that no test touched the real data folders.
 //!
 //! A test that reads or writes the user's own settings, state, or cache is
-//! a test that can clobber them (Star's and abax's tests both did). Tests
+//! a test that can clobber them (star's and abax's tests both did). Tests
 //! use a temporary folder (`Paths::under`, or `TEXTWEAVER_HOME` set to a
 //! temporary folder for a child process). CI checks that rule around the
 //! test run:

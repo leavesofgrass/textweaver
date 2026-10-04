@@ -2,7 +2,7 @@
 #
 # Linux build and test environment with every native library the workspace can
 # link: espeak-ng (feature `espeak`), ALSA (rodio, wave 2 export/tones),
-# speech-dispatcher (wave 2 backend), Python for the Star parity scripts, and
+# speech-dispatcher (wave 2 backend), Python for the star parity scripts, and
 # pandoc for the optional loader. No clang: nothing outside the GUI (which is
 # not built here) uses bindgen.
 # It is also ready for Voxin (ETI-Eloquence for Linux), mounted from an

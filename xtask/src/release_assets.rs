@@ -1,7 +1,7 @@
 //! `cargo xtask release-assets`: the exact set of files a release carries.
 //!
 //! A release that silently lost a package, or gained a stray one, is a
-//! release whose checks passed while blind (Star's release chain audit
+//! release whose checks passed while blind (star's release chain audit
 //! found 10 of 24 tags off the release commit). The release workflow
 //! compares what was built, and then what was published, with the list
 //! here, before and after upload:

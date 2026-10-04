@@ -1,7 +1,7 @@
 //! BibTeX and BibLaTeX import (through the `biblatex` crate) and export.
 //!
 //! Import resolves `@string` macros, `crossref`, month macros, and LaTeX
-//! accents (`{\"o}` becomes ö), which Star's regex parser did not. Export
+//! accents (`{\"o}` becomes ö), which star's regex parser did not. Export
 //! writes one field per line with LaTeX's special characters escaped, in
 //! either dialect: BibTeX (`journal`, `year`/`month`, `address`, `school`)
 //! or BibLaTeX (`journaltitle`, `date`, `location`, `institution`).
@@ -618,7 +618,7 @@ mod tests {
 
     #[test]
     fn star_basic_entry_parses() {
-        // Star's tests/test_citations.py::test_parse_bibtex_basic.
+        // star's tests/test_citations.py::test_parse_bibtex_basic.
         let refs = parse(
             "@article{key1,\n  title = {A Great Paper},\n  author = {Doe, Jane},\n  year = {2021},\n  booktitle = {Proc of Things},\n  doi = {10.1/x},\n}\n",
         )

@@ -1,18 +1,18 @@
 //! HTML loader: parsed with scraper (html5ever) into canonical text and
 //! markers.
 //!
-//! Star's rules kept: its skip list (`script`, `style`, `nav`, `footer`,
+//! star's rules kept: its skip list (`script`, `style`, `nav`, `footer`,
 //! `aside`, `noscript`, `svg`, `canvas`, `meta`, `link`, `base`, `iframe`,
 //! `template`, `button`, `form`) and its image text (`alt`, then `title`,
 //! then `aria-label`; a `longdesc` URL is appended as "(long description:
 //! URL)"). A deliberate `alt=""` is decorative and produces nothing.
 //!
-//! Unlike Star, a picture with no description at all (no `alt`, `title`
+//! Unlike star, a picture with no description at all (no `alt`, `title`
 //! or `aria-label`) is not dropped in silence: it becomes an empty `Image`
 //! marker, so narration says "graphic, no description", the graphic key
 //! lands on it, and reports can count it.
 //!
-//! Star's bugs fixed (the Star parity reference, Part 1 §1.4 and §7):
+//! star's bugs fixed (the star parity reference, Part 1 §1.4 and §7):
 //!
 //! - void elements such as an unclosed `<meta charset>` no longer swallow the
 //!   rest of the document (html5ever knows they have no content);
@@ -97,7 +97,7 @@ impl Loader for HtmlLoader {
     }
 }
 
-/// Star's skip list (`star/documents/html.py:8-26`).
+/// star's skip list (`star/documents/html.py:8-26`).
 const SKIP: &[&str] = &[
     "script", "style", "nav", "footer", "aside", "noscript", "svg", "canvas", "meta", "link",
     "base", "iframe", "template", "button", "form",

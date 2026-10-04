@@ -1,7 +1,7 @@
 //! The library: folders scanned for documents, the bookshelf in
 //! `library.json`, and the folder sidecars that carry reading positions
-//! between devices (Star's `star/library.py` and `star/stats.py`,
-//! the Star parity reference Part 3 §2.6 and §3).
+//! between devices (star's `star/library.py` and `star/stats.py`,
+//! the star parity reference Part 3 §2.6 and §3).
 //!
 //! A library folder is an ordinary directory; pointing textweaver at a
 //! folder synced by Dropbox, OneDrive, Syncthing, or iCloud makes the whole
@@ -10,7 +10,7 @@
 //! path relative to the folder, and chooses between that and the local
 //! position when a document opens.
 //!
-//! Changes from Star, all deliberate:
+//! Changes from star, all deliberate:
 //!
 //! - bookshelf keys are absolute paths, so one file reached through
 //!   `./a.md` and `a.md` shares one entry (Part 3 §7 item 15);
@@ -34,7 +34,7 @@ use textweaver_core::CharPos;
 use crate::sync::{self, Conflict, ConflictPolicy, Prefer, ProgressEntry, Recorded, SidecarStore};
 use crate::{DocState, LibrarySettings, Recent, StoreError, atomic_write};
 
-/// Directory names never scanned (Star's `_SKIP_DIRS`, plus textweaver's
+/// Directory names never scanned (star's `_SKIP_DIRS`, plus textweaver's
 /// own sidecar directory). Hidden directories are skipped as well.
 pub const SKIP_DIRS: [&str; 13] = [
     ".git",
@@ -52,17 +52,17 @@ pub const SKIP_DIRS: [&str; 13] = [
     "System Volume Information",
 ];
 
-/// Most files one folder scan returns (Star 20,000).
+/// Most files one folder scan returns (star 20,000).
 pub const MAX_SCAN_FILES: usize = 20_000;
 
-/// Bookshelf size that triggers eviction (Star 500).
+/// Bookshelf size that triggers eviction (star 500).
 pub const LIBRARY_CAP: usize = 500;
 
 /// Entries evicted, oldest first, when the bookshelf passes
-/// [`LIBRARY_CAP`] (Star 100).
+/// [`LIBRARY_CAP`] (star 100).
 pub const LIBRARY_EVICT: usize = 100;
 
-/// Longest stored title, in chars (Star 200).
+/// Longest stored title, in chars (star 200).
 pub const TITLE_MAX_CHARS: usize = 200;
 
 /// `path` made absolute, with Windows' `\\?\` prefix removed and, when the
@@ -136,7 +136,7 @@ fn mtime_secs(meta: &std::fs::Metadata) -> i64 {
         .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
 }
 
-/// Every supported document under `folder` (Star's `scan_folder`): hidden
+/// Every supported document under `folder` (star's `scan_folder`): hidden
 /// files and directories and [`SKIP_DIRS`] are skipped, symbolic links to
 /// directories are not followed, and at most `max_files` are returned.
 /// `supported` receives a lowercase extension without the dot.
@@ -232,7 +232,7 @@ pub fn scan_folder_with(
 
 /// Scans every library folder, drops duplicates (a folder nested in
 /// another), and sorts by folder, then relative path, case-insensitively
-/// (Star's `scan_library`).
+/// (star's `scan_library`).
 pub fn scan_library(folders: &[PathBuf], supported: &dyn Fn(&str) -> bool) -> Vec<ScannedDoc> {
     scan_library_with(folders, supported, &|_| {})
 }
@@ -273,7 +273,7 @@ pub const METADATA_SCAN_CHARS: usize = 20_000;
 pub const AUTHOR_MAX_CHARS: usize = 200;
 
 /// A document's bibliographic facts, for searching the library by them
-/// (Star's `discovery.py`): the author, the DOI, and the ISBN. Each comes
+/// (star's `discovery.py`): the author, the DOI, and the ISBN. Each comes
 /// from the document's own metadata (front matter, DOCX and EPUB
 /// properties, HTML `<meta>`), from the start of its text, or from the
 /// reference library's record of the same work (`tw cite`).
@@ -623,7 +623,7 @@ impl EditedDetails {
     }
 }
 
-/// One bookshelf entry (Star's `library[path]`).
+/// One bookshelf entry (star's `library[path]`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LibraryEntry {
     /// The document (absolute).
@@ -704,7 +704,7 @@ impl Library {
         self.entries.iter().find(|e| e.path == key)
     }
 
-    /// Records that `path` was opened now (Star's `_record_library`): adds
+    /// Records that `path` was opened now (star's `_record_library`): adds
     /// it or updates its title, format, and time, and moves it to the
     /// front. Past [`LIBRARY_CAP`] entries, the [`LIBRARY_EVICT`] least
     /// recently opened are dropped. Returns the entry as recorded.
@@ -834,7 +834,7 @@ impl Library {
 pub enum ItemSource {
     /// Found in a library folder.
     Folder,
-    /// Opened before, outside every library folder (Star's "recent").
+    /// Opened before, outside every library folder (star's "recent").
     Recent,
 }
 
@@ -896,7 +896,7 @@ impl LibraryItem {
     }
 }
 
-/// The library view (Star's Library dialog): every document in the library
+/// The library view (star's Library dialog): every document in the library
 /// folders, with its synced progress, followed by recently opened
 /// documents outside the folders, newest first. `local_pct` supplies a
 /// position for documents without a synced one (the per-document state).
@@ -984,7 +984,7 @@ fn stem(p: &Path) -> String {
 
 /// True when every word of `query` is in `item`'s title, path, author,
 /// DOI, or ISBN, or in `text` (the document's text, when the caller has
-/// it), ignoring case (Star's `discovery.py` search). A word that is a DOI
+/// it), ignoring case (star's `discovery.py` search). A word that is a DOI
 /// or an ISBN matches however it is written: `doi:10.1000/XYZ`, a
 /// `doi.org` link, `978-0-306-40615-7`, or `0306406152` for the same
 /// book's ISBN-13.
@@ -1099,7 +1099,7 @@ impl LibrarySync {
     }
 
     /// The sidecar's `_meta` entry for a document: the portable reading
-    /// stats Star synced (`seconds`, `pct`, `last_ts` from `stats`, when
+    /// stats star synced (`seconds`, `pct`, `last_ts` from `stats`, when
     /// given) and the number of notes. `None` when there is nothing to say.
     pub fn meta_entry(state: &DocState, stats: Option<&Value>) -> Option<Value> {
         let mut meta = serde_json::Map::new();

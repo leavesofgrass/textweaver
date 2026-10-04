@@ -10,8 +10,8 @@
 //! layout displaced keep chords, and the whole earlier layout is the
 //! `classic` preset ([`Preset::Classic`](crate::Preset::Classic)).
 //!
-//! GUI chords follow Star (the Star parity reference Part 1 §6), and new keys
-//! cover what Star lacked (pitch, volume, read the current unit, list and
+//! GUI chords follow star (the star parity reference Part 1 §6), and new keys
+//! cover what star lacked (pitch, volume, read the current unit, list and
 //! link navigation, bookmark stepping).
 //!
 //! Rules the defaults follow, each enforced by a test:
@@ -30,20 +30,20 @@
 //!   many layouts and types characters;
 //! - an action that quits or destroys work asks for confirmation before it
 //!   runs ([`ActionId::needs_confirmation`]); only such actions may have a
-//!   single printable key (Star's `q` quit at once, even when dictated text
+//!   single printable key (star's `q` quit at once, even when dictated text
 //!   reached the reader, WCAG 2.1.4 Character Key Shortcuts), and every
 //!   action stays usable with single-key shortcuts turned off
 //!   ([`Keymap::set_character_keys`](crate::Keymap::set_character_keys)),
 //!   through a modifier chord or the command palette.
 //!
-//! Deliberate departures from Star: Ctrl+Q (and `q` in the classic
+//! Deliberate departures from star: Ctrl+Q (and `q` in the classic
 //! preset) asks "Quit textweaver? y or n" before quitting; `Ctrl+T` means next table in the GUI
-//! and nothing in the terminal (Star's TUI used it for the voice picker,
-//! Part 1 §7 item 37); `Ctrl+S` saves in both (Star's TUI exported);
-//! Redo also answers to `Ctrl+Shift+Z` in the GUI (Star used that chord for
+//! and nothing in the terminal (star's TUI used it for the voice picker,
+//! Part 1 §7 item 37); `Ctrl+S` saves in both (star's TUI exported);
+//! Redo also answers to `Ctrl+Shift+Z` in the GUI (star used that chord for
 //! its preview pane, which textweaver does not have); in the GUI, `Ctrl+=`
 //! (Ctrl+Plus), `Ctrl+-`, and `Ctrl+0` size the text, as screen reader users
-//! expect (the owner's session 2, 2026-09-28), so Star's rate chords moved
+//! expect (the owner's session 2, 2026-09-28), so star's rate chords moved
 //! from them to `F11` and `Shift+F11`, beside volume on `F7`.
 
 use serde::{Deserialize, Serialize};

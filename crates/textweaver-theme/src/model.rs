@@ -488,7 +488,7 @@ pub struct Meta {
     pub description: String,
     /// Who made it.
     pub author: Option<String>,
-    /// Where it came from: `star` for Star's palettes, `user` for the
+    /// Where it came from: `star` for star's palettes, `user` for the
     /// themes folder.
     pub origin: String,
     /// The light or dark partner used when following the system setting.

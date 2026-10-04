@@ -309,7 +309,7 @@ impl WordTrack {
     }
 
     /// The word containing `pos`, else the first word after it, else the
-    /// last word (Star's restore rule: first word at or after).
+    /// last word (star's restore rule: first word at or after).
     pub fn word_at_or_after(&self, pos: CharPos) -> Option<usize> {
         if self.words.is_empty() {
             return None;
