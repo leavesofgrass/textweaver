@@ -289,7 +289,21 @@ impl App {
     /// text (identical to the canonical text), the Markdown file for
     /// Markdown, else the document converted to Markdown.
     fn editable_source(doc: &Document) -> (String, bool) {
+        // Pause markup was taken out of a plain-text file's canonical text:
+        // the file itself is edited, so the markup is kept as written.
+        let has_markup_pauses =
+            !textweaver_formats::pause_markup::written_pauses(&doc.meta).is_empty();
         match doc.meta.format.as_str() {
+            "text" if has_markup_pauses => {
+                let from_file =
+                    doc.meta.path.as_ref().and_then(|p| {
+                        textweaver_formats::source_text(&Source::Path(p.clone())).ok()
+                    });
+                match from_file {
+                    Some(t) => (t, false),
+                    None => (doc.text().to_string(), true),
+                }
+            }
             "text" => (doc.text().to_string(), true),
             "markdown" => {
                 let from_file =

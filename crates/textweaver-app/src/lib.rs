@@ -279,7 +279,9 @@ pub use opening::{
     open_failure_message, open_failure_message_in, open_failure_reason, open_failure_reason_in,
 };
 pub use panels::{Panel, PanelEntry, current_entry};
-pub use playback::{Playback, load_options, narration_policy, structural_pauses};
+pub use playback::{
+    Playback, load_options, narration_policy, plan_with_written_pauses, structural_pauses,
+};
 pub use restart::SpeechStarter;
 pub use settings_schema::{Setting, SettingKind, SettingsSchema};
 pub use templates::local_date;

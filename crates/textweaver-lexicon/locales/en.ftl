@@ -1701,6 +1701,8 @@ setting-speech-pause-paragraph-ms = Pause after paragraphs
 setting-speech-pause-paragraph-ms-help = Silence after a paragraph, shorter at faster rates. 0 turns it off.
 setting-speech-pause-list-item-ms = Pause after list items
 setting-speech-pause-list-item-ms-help = Silence after a list item, shorter at faster rates. 0 turns it off.
+setting-speech-markup-pauses = Pauses written as markup
+setting-speech-markup-pauses-help = Read pause markup in a document, such as <break time="1s"/>, as a pause. Turn it off for documents that quote such markup.
 setting-speech-output-device = Output device
 setting-speech-output-device-help = The sound device speech plays on, by its id. Not set, or a device that is not connected, uses the system's default.
 setting-speech-verbosity = Verbosity

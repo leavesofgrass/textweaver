@@ -1710,6 +1710,8 @@ setting-speech-pause-paragraph-ms = Pausa após parágrafos
 setting-speech-pause-paragraph-ms-help = Silêncio após um parágrafo, mais curto em velocidades maiores. 0 o desativa.
 setting-speech-pause-list-item-ms = Pausa após itens de lista
 setting-speech-pause-list-item-ms-help = Silêncio após um item de lista, mais curto em velocidades maiores. 0 o desativa.
+setting-speech-markup-pauses = Pausas escritas como marcação
+setting-speech-markup-pauses-help = Lê a marcação de pausa de um documento, como <break time="1s"/>, como uma pausa. Desative para documentos que citam essa marcação.
 setting-speech-output-device = Dispositivo de saída
 setting-speech-output-device-help = O dispositivo de som em que a fala é reproduzida, pelo seu identificador. Sem definição usa o padrão do sistema, assim como um dispositivo que não está conectado.
 setting-speech-verbosity = Verbosidade

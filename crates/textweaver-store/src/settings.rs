@@ -76,6 +76,10 @@ pub struct SpeechSettings {
     /// Silence after a list item, in ms at the default rate; 0 turns it
     /// off.
     pub pause_list_item_ms: u32,
+    /// Read SSML-style pause markup in a document's text
+    /// (`<break time="500ms"/>`) as a pause instead of as text. Off for
+    /// documents that quote SSML.
+    pub markup_pauses: bool,
     /// The audio output device by its stable id (`tw backends --devices`
     /// lists them); `None` uses the system's default. A device that is
     /// not connected falls back to the default (Wave 7, W7h).
@@ -306,6 +310,7 @@ impl Default for SpeechSettings {
             pause_heading_ms: 400,
             pause_paragraph_ms: 300,
             pause_list_item_ms: 150,
+            markup_pauses: true,
             output_device: None,
             verbosity: Verbosity::default(),
             eci: EciSettings::default(),

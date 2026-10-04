@@ -1730,6 +1730,8 @@ setting-speech-pause-paragraph-ms = Pause nach Absätzen
 setting-speech-pause-paragraph-ms-help = Stille nach einem Absatz, kürzer bei höherem Tempo. 0 schaltet sie aus.
 setting-speech-pause-list-item-ms = Pause nach Listeneinträgen
 setting-speech-pause-list-item-ms-help = Stille nach einem Listeneintrag, kürzer bei höherem Tempo. 0 schaltet sie aus.
+setting-speech-markup-pauses = Als Markup geschriebene Pausen
+setting-speech-markup-pauses-help = Pausen-Markup in einem Dokument, etwa <break time="1s"/>, als Pause lesen. Für Dokumente ausschalten, die solches Markup zitieren.
 setting-speech-output-device = Ausgabegerät
 setting-speech-output-device-help = Das Audiogerät, auf dem die Sprache läuft, nach seiner Kennung. Nicht gesetzt verwendet das Standardgerät des Systems, ebenso ein Gerät, das nicht angeschlossen ist.
 setting-speech-verbosity = Ausführlichkeit

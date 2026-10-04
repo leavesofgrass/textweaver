@@ -1876,6 +1876,8 @@ setting-speech-pause-paragraph-ms = التوقف بعد الفقرات
 setting-speech-pause-paragraph-ms-help = صمت بعد الفقرة، أقصر عند السرعات الأعلى. القيمة 0 توقفه.
 setting-speech-pause-list-item-ms = التوقف بعد عناصر القائمة
 setting-speech-pause-list-item-ms-help = صمت بعد عنصر القائمة، أقصر عند السرعات الأعلى. القيمة 0 توقفه.
+setting-speech-markup-pauses = التوقفات المكتوبة كترميز
+setting-speech-markup-pauses-help = قراءة ترميز التوقف في المستند، مثل <break time="1s"/>، كتوقف. أوقفه للمستندات التي تقتبس هذا الترميز.
 setting-speech-output-device = جهاز الإخراج
 setting-speech-output-device-help = جهاز الصوت الذي يُشغَّل عليه الكلام، بمعرّفه. إن لم يُضبط يُستخدم الجهاز الافتراضي للنظام، وكذلك إن لم يكن الجهاز متصلًا.
 setting-speech-verbosity = مستوى التفصيل
