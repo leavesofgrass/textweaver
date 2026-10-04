@@ -38,8 +38,9 @@ pub struct Options {
     pub backend: Option<String>,
     /// Keep all state under this directory (like `TEXTWEAVER_HOME`).
     pub home: Option<PathBuf>,
-    /// Speak announcements with the reading voice as well as sending them to
-    /// the screen reader.
+    /// Speak textweaver's messages with its voice as well as sending them to
+    /// the screen reader, for this run: the [gui] speak_messages switch,
+    /// not saved.
     pub self_voicing: bool,
     /// Voice id or name for this run (see `tw voices`); not saved.
     pub voice: Option<String>,
@@ -261,16 +262,20 @@ pub fn build_app_following(
         start_speech(&settings, opts)
     };
     messages.extend(speech_messages);
-    let self_voicing = opts.self_voicing && (in_background || backend_name != "silent");
     let mut app = App::new(AppConfig {
         settings,
         keymap,
         speech,
         paths,
         announcer,
-        self_voicing,
+        self_voicing: false,
         backend_name,
     });
+    // The window's two modes, "textweaver reads aloud" and "my screen
+    // reader reads", with the switch that speaks messages ([gui]
+    // speak_messages, or --self-voicing for this run). Before speech
+    // starts in the background, which keeps the choice across a restart.
+    app.use_window_modes(opts.self_voicing);
     // The voice manager's filters and fetch row are buttons in the window
     // (crate::voices), so its list holds only voices.
     app.set_voice_controls_in_list(false);

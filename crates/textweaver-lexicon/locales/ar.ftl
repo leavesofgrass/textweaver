@@ -1752,6 +1752,17 @@ access-hybrid-declined = البقاء في وضع النطق الذاتي. { $ke
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
 access-hybrid-question = { $reader } قيد التشغيل. استخدام الوضع المختلط، حيث يقرأ textweaver المستندات بصوت عالٍ وينطق قارئ شاشتك الرسائل والكتابة؟ y أو n
 access-a-screen-reader = قارئ شاشة
+# On the first run with a screen reader and no mode chosen: hybrid mode is
+# used, not asked. $reader is the screen reader found (NVDA, JAWS), or
+# access-a-screen-reader; $key names the keys that change the mode.
+access-hybrid-inferred = { $reader } قيد التشغيل: يقرأ textweaver المستندات بصوت عالٍ ويترك الرسائل لقارئ شاشتك. { $key } يغيّر ذلك.
+# The window's two modes, when the mode changes; $key changes it again.
+access-window-mode-changed =
+    { $mode ->
+        [screen-reader] قارئ شاشتي يقرأ: يصمت textweaver ويرسل النص إلى قارئ شاشتك. { $key } يغيّر ذلك.
+        [speaks-messages] يقرأ textweaver بصوت عالٍ وينطق رسائله. { $key } يغيّر ذلك.
+       *[reads-aloud] يقرأ textweaver بصوت عالٍ؛ تذهب الرسائل إلى قارئ شاشتك. { $key } يغيّر ذلك.
+    }
 
 ## الحروف والتحديدات، كما تُنطق.
 
@@ -2245,6 +2256,8 @@ setting-gui-toolbar = إظهار شريط الأدوات
 setting-gui-toolbar-help = يُظهر شريط أزرار القراءة. عند إيقافه تحتفظ الأوامر بمفاتيحها وعناصر قوائمها.
 setting-gui-auto-hide-menu = إخفاء شريط القوائم
 setting-gui-auto-hide-menu-help = Windows: يخفي شريط قوائم النافذة حتى يُظهره Alt أو F10، ويختفي مرة أخرى عند إغلاق القائمة. لا أثر له على Linux، حيث القوائم هي قائمة F10، ولا على macOS.
+setting-gui-speak-messages = نطق رسائل textweaver
+setting-gui-speak-messages-help = عندما يقرأ textweaver بصوت عالٍ، ينطق أيضًا رسائله والكتابة وحركات المؤشر بصوته، للقراءة بالسمع دون قارئ شاشة.
 setting-gui-sidebar = اللوحة بجانب المستند
 setting-gui-sidebar-help = اللوحة التي تعرضها النافذة بجانب المستند: لا شيء، أو المحتويات (العناوين)، أو الملاحظات. مفاتيح اللوحات تغيّرها، وتتذكر النافذة آخر لوحة.
 choice-gui-sidebar-off = لا شيء

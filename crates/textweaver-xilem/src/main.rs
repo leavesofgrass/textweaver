@@ -49,7 +49,8 @@ struct Args {
     /// Keep settings and reading positions under this directory.
     #[arg(long)]
     home: Option<PathBuf>,
-    /// Also speak announcements with the reading voice.
+    /// Speak textweaver's messages with its voice for this run, as the
+    /// "Speak textweaver's messages" setting does ([gui] speak_messages).
     #[arg(long)]
     self_voicing: bool,
     /// Start reading once the document is open.

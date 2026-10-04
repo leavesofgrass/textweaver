@@ -1585,6 +1585,17 @@ access-hybrid-declined = Staying in self-voicing mode. { $key } changes the mode
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
 access-hybrid-question = { $reader } is running. Use hybrid mode, where textweaver reads documents aloud and your screen reader speaks messages and typing? y or n
 access-a-screen-reader = A screen reader
+# On the first run with a screen reader and no mode chosen: hybrid mode is
+# used, not asked. $reader is the screen reader found (NVDA, JAWS), or
+# access-a-screen-reader; $key names the keys that change the mode.
+access-hybrid-inferred = { $reader } is running: textweaver reads documents aloud and leaves messages to your screen reader. { $key } changes this.
+# The window's two modes, when the mode changes; $key changes it again.
+access-window-mode-changed =
+    { $mode ->
+        [screen-reader] My screen reader reads: textweaver stays silent and sends the text to your screen reader. { $key } changes this.
+        [speaks-messages] textweaver reads aloud and speaks its messages. { $key } changes this.
+       *[reads-aloud] textweaver reads aloud; messages go to your screen reader. { $key } changes this.
+    }
 
 ## Characters and selections, as spoken.
 
@@ -2070,6 +2081,8 @@ setting-gui-toolbar = Show the toolbar
 setting-gui-toolbar-help = Show the bar of Play, Stop and the reading buttons. Off, the commands keep their keys and menu items.
 setting-gui-auto-hide-menu = Hide the menu bar
 setting-gui-auto-hide-menu-help = Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.
+setting-gui-speak-messages = Speak textweaver's messages
+setting-gui-speak-messages-help = When textweaver reads aloud, also say its messages, typing and caret moves in its voice, for reading by ear without a screen reader.
 setting-gui-sidebar = Panel beside the document
 setting-gui-sidebar-help = The panel the window shows beside the document: none, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one.
 choice-gui-sidebar-off = none

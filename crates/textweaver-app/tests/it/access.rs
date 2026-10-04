@@ -384,3 +384,72 @@ fn cursor_placement_comes_from_the_settings() {
     let r = rig_with(TEXT, |s| s.accessibility.cursor = CursorSetting::Status);
     assert_eq!(r.app.cursor_placement(), CursorPlacement::Status);
 }
+
+/// The window's two modes (W9b-f): "textweaver reads aloud" leaves
+/// messages to the screen reader unless "Speak textweaver's messages" is
+/// on; the mode key moves between it and "my screen reader reads", and the
+/// change is said in words that are true in the window.
+#[test]
+fn the_window_has_two_modes_and_a_speak_messages_switch() {
+    let mut r = rig(AccessMode::SelfVoicing);
+    r.app.use_window_modes(false);
+    assert!(r.app.uses_window_modes());
+    // Off by default: a message is not voiced, though the mode is
+    // self-voicing ("textweaver reads aloud").
+    assert!(!r.app.settings().gui.speak_messages, "off by default");
+    assert!(!r.app.speaks_messages());
+    r.app.announce("Hello.", Priority::Polite);
+    assert!(r.spoken().is_empty(), "{:?}", r.spoken());
+    // The key moves to "my screen reader reads", saved.
+    r.act(ActionId::CycleAccessMode);
+    assert_eq!(r.app.access_mode(), AccessMode::ScreenReader);
+    assert_eq!(
+        r.app.settings().accessibility.mode,
+        ModeSetting::ScreenReader
+    );
+    assert!(r.status().starts_with("My screen reader reads:"), "{}", r.status());
+    // And back: "textweaver reads aloud", saved as hybrid; never a third.
+    r.act(ActionId::CycleAccessMode);
+    assert_eq!(r.app.access_mode(), AccessMode::Hybrid);
+    assert_eq!(r.app.settings().accessibility.mode, ModeSetting::Hybrid);
+    assert!(
+        r.status().starts_with("textweaver reads aloud; messages go to your screen reader."),
+        "{}",
+        r.status()
+    );
+    r.act(ActionId::CycleAccessMode);
+    assert_eq!(r.app.access_mode(), AccessMode::ScreenReader);
+    r.act(ActionId::CycleAccessMode);
+    // The switch on: messages are spoken while textweaver reads aloud.
+    r.log.clear();
+    r.app
+        .set_setting("gui.speak_messages", serde_json::json!(true))
+        .unwrap();
+    assert!(r.app.speaks_messages());
+    assert_eq!(r.app.access_mode(), AccessMode::SelfVoicing);
+    r.log.clear();
+    r.app.announce("Hello again.", Priority::Polite);
+    assert!(
+        r.spoken().iter().any(|s| s.contains("Hello again.")),
+        "{:?}",
+        r.spoken()
+    );
+    // "My screen reader reads" keeps textweaver silent, switch or not.
+    r.act(ActionId::CycleAccessMode);
+    assert_eq!(r.app.access_mode(), AccessMode::ScreenReader);
+    assert!(!r.app.speaks_messages());
+    // The terminal reader keeps its three modes.
+    let mut t = rig(AccessMode::SelfVoicing);
+    t.act(ActionId::CycleAccessMode);
+    assert_ne!(t.app.access_mode(), AccessMode::SelfVoicing);
+    assert!(!t.app.uses_window_modes());
+}
+
+/// `--self-voicing` in the window is the switch for one run: not saved.
+#[test]
+fn self_voicing_for_a_run_is_the_switch_unsaved() {
+    let mut r = rig(AccessMode::SelfVoicing);
+    r.app.use_window_modes(true);
+    assert!(r.app.speaks_messages());
+    assert!(!r.app.settings().gui.speak_messages);
+}

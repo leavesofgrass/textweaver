@@ -1606,6 +1606,17 @@ access-hybrid-declined = Maintien du mode autonome. { $key } change le mode.
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
 access-hybrid-question = { $reader } est en cours d'exécution. Utiliser le mode hybride, où textweaver lit les documents à voix haute et votre lecteur d'écran dit les messages et la frappe ? y ou n
 access-a-screen-reader = Un lecteur d'écran
+# On the first run with a screen reader and no mode chosen: hybrid mode is
+# used, not asked. $reader is the screen reader found (NVDA, JAWS), or
+# access-a-screen-reader; $key names the keys that change the mode.
+access-hybrid-inferred = { $reader } est en cours d'exécution : textweaver lit les documents à voix haute et laisse les messages à votre lecteur d'écran. { $key } change cela.
+# The window's two modes, when the mode changes; $key changes it again.
+access-window-mode-changed =
+    { $mode ->
+        [screen-reader] Mon lecteur d'écran lit : textweaver se tait et envoie le texte à votre lecteur d'écran. { $key } change cela.
+        [speaks-messages] textweaver lit à voix haute et dit ses messages. { $key } change cela.
+       *[reads-aloud] textweaver lit à voix haute ; les messages vont à votre lecteur d'écran. { $key } change cela.
+    }
 
 ## Characters and selections, as spoken.
 
@@ -2091,6 +2102,8 @@ setting-gui-toolbar = Afficher la barre d'outils
 setting-gui-toolbar-help = Affiche la barre des boutons de lecture. Désactivée, les commandes gardent leurs touches et leurs éléments de menu.
 setting-gui-auto-hide-menu = Masquer la barre de menus
 setting-gui-auto-hide-menu-help = Windows : masque la barre de menus de la fenêtre jusqu'à ce qu'Alt ou F10 l'affiche ; elle se masque de nouveau quand le menu se ferme. Sans effet sous Linux, dont les menus sont la liste F10, ni sous macOS.
+setting-gui-speak-messages = Dire les messages de textweaver
+setting-gui-speak-messages-help = Quand textweaver lit à voix haute, dire aussi ses messages, la frappe et les déplacements du curseur avec sa voix, pour lire à l'oreille sans lecteur d'écran.
 setting-gui-sidebar = Panneau à côté du document
 setting-gui-sidebar-help = Le panneau que la fenêtre affiche à côté du document : aucun, le Sommaire (les titres) ou les Notes. Les touches de panneau le changent, et la fenêtre retient le dernier.
 choice-gui-sidebar-off = aucun
