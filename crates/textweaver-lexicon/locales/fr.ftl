@@ -3642,6 +3642,7 @@ audio-format-flac = FLAC : sans perte, environ moitié moins lourd que WAV
 audio-format-wav = WAV : le plus lourd, se lit partout
 audio-format-mp3 = MP3 : léger, se lit partout
 audio-format-opus = Opus : le plus léger, conçu pour la voix
+audio-format-ogg = Ogg Vorbis : léger et ouvert, se lit dans la plupart des lecteurs
 audio-format-m4b = Livre audio M4B, par ffmpeg
 audio-format-html = Page de lecture : texte et audio, un seul fichier
 audio-where-title = Où va l'audio

@@ -40,7 +40,7 @@ textweaver-tui.workspace = true
 textweaver-vault.workspace = true
 # Whisper in-process on RTen and the microphone (ADR-0023).
 textweaver-dictation = { workspace = true, features = ["rten", "mic"] }
-textweaver-export = { workspace = true, features = ["flac", "id3", "mp3", "read-along"] }
+textweaver-export = { workspace = true, features = ["flac", "id3", "mp3", "read-along", "vorbis"] }
 # Agent L: `tw convert`.
 textweaver-convert.workspace = true
 textweaver-writers.workspace = true
