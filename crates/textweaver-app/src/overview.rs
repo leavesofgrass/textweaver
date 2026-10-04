@@ -24,7 +24,35 @@ use textweaver_text::ReadingPass;
 use crate::app::App;
 use crate::authoring::count_words;
 
+/// The most chars [`App::minutes_left`] counts words in; past it, the rest
+/// is estimated from that sample, so the status bar's time costs the same
+/// on a book as on a page.
+const TIME_SAMPLE_CHARS: usize = 4096;
+
 impl App {
+    /// About how many whole minutes of reading are left from the reading
+    /// position at the current rate, for the window's status bar; `None`
+    /// without a document. Counted exactly over the next
+    /// [`TIME_SAMPLE_CHARS`] chars and scaled for the rest, so it is cheap
+    /// enough to ask on every refresh; it changes once a minute, never per
+    /// word.
+    pub fn minutes_left(&self) -> Option<usize> {
+        let wpm = self.settings.speech.rate.wpm().max(1) as usize;
+        let at = self.reading_position();
+        let doc = &self.session.as_ref()?.doc;
+        let from = at.unwrap_or_default().clamp_to(doc.len_chars());
+        let left = doc.len_chars() - from.0;
+        let take = left.min(TIME_SAMPLE_CHARS);
+        let sample = CharRange::new(from.0, from.0 + take);
+        let words = count_words(doc.text().slice(sample.to_range()).chars());
+        let words = if take < left {
+            words * left / take.max(1)
+        } else {
+            words
+        };
+        Some(words / wpm)
+    }
+
     /// Says the document overview: title, structure counts, minutes left.
     pub(crate) fn document_overview(&mut self) {
         let wpm = self.settings.speech.rate.wpm().max(1) as usize;

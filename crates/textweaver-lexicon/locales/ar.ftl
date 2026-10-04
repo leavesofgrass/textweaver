@@ -514,6 +514,13 @@ status-hybrid = مختلط
 status-screen-reader = وضع قارئ الشاشة
 status-rate-spoken = { $wpm } كلمة في الدقيقة
 status-rate = { $wpm } ك/د
+# The window's status bar, last: reading time left at the current rate.
+status-time-left =
+    { $minutes ->
+        [0] أقل من دقيقة متبقية
+        [one] دقيقة واحدة متبقية
+       *[other] { $minutes } دقيقة متبقية
+    }
 status-no-document = لا يوجد مستند
 # $parts are the title line's parts, joined with commas.
 status-said = { $title }: { $parts }.
