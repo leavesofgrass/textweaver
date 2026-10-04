@@ -78,6 +78,9 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("speech.pause_heading_ms", Portable),
     ("speech.pause_paragraph_ms", Portable),
     ("speech.pause_list_item_ms", Portable),
+    // Whether written pause markup is read as a pause: how the reader
+    // listens.
+    ("speech.markup_pauses", Portable),
     // A device id of this computer's audio system.
     ("speech.output_device", Machine),
     ("speech.verbosity", Portable),

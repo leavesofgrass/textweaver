@@ -225,6 +225,7 @@ latency_offset_ms = 120
 pause_heading_ms = 400
 pause_paragraph_ms = 300
 pause_list_item_ms = 150
+markup_pauses = true
 verbosity = "normal"
 ```
 
@@ -243,6 +244,7 @@ verbosity = "normal"
 - `speed_presets`: the presets for **F8**, as above.
 - `latency_offset_ms`: how many milliseconds to delay the highlight behind an engine's reported word time. See [How exactly words are highlighted](#how-exactly-words-are-highlighted).
 - `pause_heading_ms`, `pause_paragraph_ms`, `pause_list_item_ms`: how long speech pauses after a heading, a paragraph and a list item, in milliseconds, from 0 to 3000. 0 turns that pause off. See [Pauses at headings, paragraphs and list items](#pauses-at-headings-paragraphs-and-list-items).
+- `markup_pauses`, default `true`: read pause markup in a document, such as `<break time="1s"/>`, as a pause. See [Pauses written in the text](#pauses-written-in-the-text).
 - `output_device`: the sound device speech plays on, by its id. Not set by default: speech plays on the system's default device. See [Choose the sound device](#choose-the-sound-device).
 - `verbosity`: how much textweaver says about what it does: `"low"`, `"normal"`, or `"high"`. **Alt+Shift+V** cycles it while textweaver runs. See [Reading and moving around](reading.md).
 
@@ -416,6 +418,19 @@ Either way:
 - A pause comes only between two parts of what is being read. Saying one sentence or one line has none, and neither does the end of a reading.
 
 `tw speak --file` pauses the same way.
+
+## Pauses written in the text
+
+A document can ask for a pause itself, with SSML-style markup in its text:
+
+- `<break time="500ms"/>` or `<break time="1s"/>`: a pause of that length, up to 10 seconds.
+- `<break strength="medium"/>`: a pause by strength. `x-weak` is 250 milliseconds, `weak` 500, `medium` 750, `strong` 1000 and `x-strong` 1250. `none` is no pause. A bare `<break/>` is `medium`.
+
+textweaver reads each break as a pause of that length where it stands, with every engine, the same way as the pauses above. Written pauses keep their length at every rate, and the structural pause settings do not change them. A break the text cannot be read from, such as `time="soon"`, stays as written.
+
+The markup is never spoken and never shown: the reading view and the Braille display show the text without it, and the highlight stays on the right words. Breaks are read in plain text, Markdown and HTML files. In Edit mode you see and edit the markup as written, and saving keeps it.
+
+For a document that quotes SSML as an example, turn this off: `markup_pauses = false` in `[speech]`, or "Pauses written as markup" in Settings. Plain text then shows and reads the markup as text; Markdown and HTML leave the tag out, as other unknown tags. Reopen the document after changing it.
 
 ## How exactly words are highlighted
 

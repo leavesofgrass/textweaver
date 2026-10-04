@@ -440,6 +440,11 @@ pub const INFO: &[Info] = &[
         (0.0, 3000.0, 50.0),
         "milliseconds",
     ),
+    toggle(
+        "speech.markup_pauses",
+        "Pauses written as markup",
+        "Read pause markup in a document, such as <break time=\"1s\"/>, as a pause. Turn it off for documents that quote such markup.",
+    ),
     optional(
         "speech.output_device",
         "Output device",

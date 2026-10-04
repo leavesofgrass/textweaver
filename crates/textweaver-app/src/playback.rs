@@ -144,6 +144,7 @@ pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats
         ocr: ocr_options(&settings.reading),
         revisions: revision_mode(settings),
         name_skipped_commands: settings.speech.verbosity >= Verbosity::High,
+        keep_pause_markup: !settings.speech.markup_pauses,
         ..textweaver_formats::LoadOptions::default()
     }
 }
@@ -168,6 +169,72 @@ pub fn structural_pauses(
             },
         })
         .collect()
+}
+
+/// [`textweaver_text::plan_with`], cut at every pause written as markup in
+/// the document (`<break time="500ms"/>`, recorded by the loader), with a
+/// pause of the written length after the utterance that ends at each
+/// break. A document with no written pauses is planned in one piece, as
+/// before. The pauses come after any structural pause at the same place
+/// in the list, so the written length wins.
+pub fn plan_with_written_pauses(
+    doc: &textweaver_text::Document,
+    range: textweaver_core::CharRange,
+    policy: &textweaver_text::NarrationPolicy,
+    inline: &[textweaver_text::InlineSpeech],
+) -> (
+    Vec<textweaver_core::Utterance>,
+    Vec<textweaver_speech::PauseAt>,
+) {
+    use textweaver_core::{CharRange, UtteranceId, UtteranceKind};
+    use textweaver_speech::{PauseAt, PauseKind};
+    let range = range.clamp_to(doc.len_chars());
+    let breaks: Vec<_> = textweaver_formats::pause_markup::written_pauses(&doc.meta)
+        .into_iter()
+        .filter(|p| p.at > range.start && p.at <= range.end)
+        .collect();
+    if breaks.is_empty() {
+        return (
+            textweaver_text::plan_with(doc, range, policy, inline),
+            Vec::new(),
+        );
+    }
+    let mut out = Vec::new();
+    let mut pauses = Vec::new();
+    let mut from = range.start;
+    let mut cuts = breaks
+        .iter()
+        .map(|b| (b.at, Some(b.ms)))
+        .collect::<Vec<_>>();
+    cuts.push((range.end, None));
+    for (to, ms) in cuts {
+        if to > from {
+            let part = textweaver_text::plan_with(doc, CharRange::new(from, to), policy, inline);
+            out.extend(part);
+            from = to;
+        }
+        // The pause follows the last text read before the break.
+        let Some(ms) = ms else { continue };
+        let end = out
+            .iter()
+            .rev()
+            .filter(|u| u.kind == UtteranceKind::Text)
+            .find_map(|u| u.source_range())
+            .map(|r| r.end);
+        if let Some(after) = end {
+            pauses.push(PauseAt {
+                after,
+                kind: PauseKind::Written { ms },
+            });
+        }
+    }
+    for (i, u) in out.iter_mut().enumerate() {
+        u.id = UtteranceId {
+            generation: 0,
+            chunk: u32::try_from(i).unwrap_or(u32::MAX),
+        };
+    }
+    (out, pauses)
 }
 
 /// `[reading] revisions`: how tracked changes in Word, OpenDocument, and
@@ -334,14 +401,18 @@ impl App {
             return false;
         };
         let range = range.clamp_to(s.doc.len_chars());
-        let mut utterances = textweaver_text::plan_with(&s.doc, range, &policy, &citations);
+        // Cut where the document has pauses written as markup.
+        let (mut utterances, written) =
+            plan_with_written_pauses(&s.doc, range, &policy, &citations);
         // Where headings, paragraphs and list items end, for the speech
-        // service's structural pauses.
-        let pauses = if pauses_on {
+        // service's structural pauses; a written pause at the same place
+        // comes later, so it wins.
+        let mut pauses = if pauses_on {
             structural_pauses(&s.doc, &utterances)
         } else {
             Vec::new()
         };
+        pauses.extend(written);
         if let Some(lead) = lead.filter(|_| !utterances.is_empty()) {
             utterances.insert(0, textweaver_core::Utterance::announcement(lead));
         }

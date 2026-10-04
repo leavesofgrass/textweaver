@@ -27,10 +27,21 @@ impl Loader for TextLoader {
         &["txt", "text", "log"]
     }
 
-    fn load(&self, source: &Source, _options: &LoadOptions) -> Result<Document, LoadError> {
+    fn load(&self, source: &Source, options: &LoadOptions) -> Result<Document, LoadError> {
         let decoded = decode_source(source, None)?;
-        let mut doc = Document::from_plain_text(&decoded.text);
+        let stripped = (!options.keep_pause_markup)
+            .then(|| crate::pause_markup::strip(&decoded.text))
+            .filter(|(_, pauses)| !pauses.is_empty());
+        let (text, pauses) = match stripped {
+            Some((text, pauses)) => (std::borrow::Cow::Owned(text), pauses),
+            None => (
+                std::borrow::Cow::Borrowed(decoded.text.as_str()),
+                Vec::new(),
+            ),
+        };
+        let mut doc = Document::from_plain_text(&text);
         doc.meta = meta_for(source, self.id());
+        crate::pause_markup::record(&mut doc.meta, pauses);
         doc.meta.title = title_from_path(source);
         note_encoding(&mut doc.meta, &decoded);
         Ok(doc)

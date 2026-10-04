@@ -21,7 +21,6 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 ## Reading and speech
 
-- **Pauses written as markup** in the text (SSML style) are not read. Pauses after headings, paragraphs, and list items work.
 - **Cloud voices, Coqui, Festival, and Qt Speech** are not offered.
 - **Eloquence and DECtalk** need your own licensed copy. textweaver does not include them.
 - **Source code** opens as plain text. It is not read as a structured document.

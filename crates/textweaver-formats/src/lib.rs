@@ -93,6 +93,7 @@ mod omml;
 mod package;
 #[cfg(feature = "pandoc")]
 pub mod pandoc;
+pub mod pause_markup;
 #[cfg(feature = "pdf")]
 pub mod pdf;
 pub mod pptx;
@@ -192,7 +193,7 @@ pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 7;
+pub const CANONICAL_VERSION: u32 = 8;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -323,6 +324,10 @@ pub struct LoadOptions {
     /// ("(command hl)" in LaTeX), for high verbosity. Off: only the
     /// document's warnings name them.
     pub name_skipped_commands: bool,
+    /// Keep SSML-style pause markup (`<break time="500ms"/>`) as text
+    /// instead of reading it as a pause (`[speech] markup_pauses = false`,
+    /// for documents that quote SSML). See [`pause_markup`].
+    pub keep_pause_markup: bool,
     /// Progress reports and cancelling (not part of the cache key).
     #[serde(skip)]
     pub progress: Progress,

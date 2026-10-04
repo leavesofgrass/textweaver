@@ -27,7 +27,7 @@ use textweaver_app::speech::{
     resolve_voice,
 };
 use textweaver_app::store::Settings;
-use textweaver_app::text::{Document, plan};
+use textweaver_app::text::Document;
 
 /// Arguments for `tw speak`.
 #[derive(clap::Args, Debug)]
@@ -141,10 +141,12 @@ pub fn speak(
     registry: &BackendRegistry,
 ) -> anyhow::Result<Report> {
     let doc = load(args, settings)?;
-    let planned = plan(
+    // Cut where the document has pauses written as markup.
+    let (planned, written) = textweaver_app::plan_with_written_pauses(
         &doc,
         CharRange::new(0, doc.len_chars()),
         &textweaver_app::narration_policy(settings),
+        &[],
     );
     let asked = args
         .backend
@@ -204,7 +206,8 @@ pub fn speak(
     let p = pipeline(service.capabilities());
     let utterances: Vec<Utterance> = planned.iter().cloned().map(|u| p.apply(u)).collect();
     // Pauses after headings, paragraphs and list items, as the reader has.
-    let pauses = textweaver_app::structural_pauses(&doc, &planned);
+    let mut pauses = textweaver_app::structural_pauses(&doc, &planned);
+    pauses.extend(written);
     let reading = service.read_with_pauses(planned, pauses);
     let mut statuses = Vec::new();
     loop {
