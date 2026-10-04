@@ -1911,6 +1911,17 @@ setting-export-subtitle-word-level = Wort-Untertitel
 setting-export-subtitle-word-level-help = Ein Untertitel pro Wort statt Untertitelzeilen.
 setting-export-subtitles-with-audio = Untertitel mit Audio
 setting-export-subtitles-with-audio-help = Immer Untertitel neben exportiertem Audio schreiben.
+choice-export-subtitle-format-ass = ASS-Karaoke
+setting-export-subtitle-karaoke = Untertitel-Karaoke
+setting-export-subtitle-karaoke-help = Wie Untertitelzeilen das gelesene Wort zeigen: aus, beim Sprechen unterstrichen (WebVTT-Tags) oder ein Untertitel pro Wort, fett und unterstrichen.
+choice-export-subtitle-karaoke-off = Aus
+choice-export-subtitle-karaoke-tags = Beim Sprechen unterstreichen
+choice-export-subtitle-karaoke-lines = Ein Untertitel pro Wort
+setting-export-subtitle-chapters = Kapiteldatei
+setting-export-subtitle-chapters-help = Zusätzlich eine WebVTT-Kapiteldatei neben die Untertitel oder das Audio schreiben.
+# Names for chapters the document leaves untitled, in audio export.
+export-chapter-untitled = Hörbuch
+export-chapter-numbered = Kapitel { $number }
 setting-reading-aids-rsvp-wpm = RSVP-Geschwindigkeit
 setting-reading-aids-rsvp-wpm-help = Wörter pro Minute der schnellen sequenziellen visuellen Darstellung.
 setting-reading-aids-rsvp-pacing = RSVP-Taktung

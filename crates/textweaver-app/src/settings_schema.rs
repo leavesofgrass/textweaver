@@ -832,7 +832,22 @@ pub const INFO: &[Info] = &[
         "export.subtitle_format",
         "Subtitle format",
         "The format of subtitles written without a file name.",
-        &[("srt", "SubRip"), ("vtt", "WebVTT")],
+        &[("srt", "SubRip"), ("vtt", "WebVTT"), ("ass", "ASS karaoke")],
+    ),
+    choice(
+        "export.subtitle_karaoke",
+        "Subtitle karaoke",
+        "How subtitle lines show the word being read: off, underlined as it is spoken (WebVTT tags), or one cue per word in bold and underline.",
+        &[
+            ("off", "Off"),
+            ("tags", "Underline as spoken"),
+            ("lines", "One cue per word"),
+        ],
+    ),
+    toggle(
+        "export.subtitle_chapters",
+        "Chapters file",
+        "Also write a WebVTT chapters file beside the subtitles or the audio.",
     ),
     toggle(
         "export.subtitle_word_level",

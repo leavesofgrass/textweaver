@@ -1891,6 +1891,17 @@ setting-export-subtitle-word-level = Legendas por palavra
 setting-export-subtitle-word-level-help = Uma legenda por palavra em vez de linhas de legenda.
 setting-export-subtitles-with-audio = Legendas com áudio
 setting-export-subtitles-with-audio-help = Sempre escrever legendas junto com o áudio exportado.
+choice-export-subtitle-format-ass = Karaokê ASS
+setting-export-subtitle-karaoke = Karaokê nas legendas
+setting-export-subtitle-karaoke-help = Como as linhas de legenda mostram a palavra lida: desligado, sublinhada ao ser falada (marcas WebVTT) ou uma legenda por palavra, em negrito e sublinhado.
+choice-export-subtitle-karaoke-off = Desligado
+choice-export-subtitle-karaoke-tags = Sublinhar ao falar
+choice-export-subtitle-karaoke-lines = Uma legenda por palavra
+setting-export-subtitle-chapters = Arquivo de capítulos
+setting-export-subtitle-chapters-help = Também escrever um arquivo de capítulos WebVTT junto às legendas ou ao áudio.
+# Names for chapters the document leaves untitled, in audio export.
+export-chapter-untitled = Audiolivro
+export-chapter-numbered = Capítulo { $number }
 setting-reading-aids-rsvp-wpm = Velocidade do RSVP
 setting-reading-aids-rsvp-wpm-help = Palavras por minuto da apresentação visual serial rápida.
 setting-reading-aids-rsvp-pacing = Ritmo do RSVP

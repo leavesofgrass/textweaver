@@ -1882,6 +1882,17 @@ setting-export-subtitle-word-level = Word subtitles
 setting-export-subtitle-word-level-help = One subtitle per word instead of caption lines.
 setting-export-subtitles-with-audio = Subtitles with audio
 setting-export-subtitles-with-audio-help = Always write subtitles beside exported audio.
+choice-export-subtitle-format-ass = ASS karaoke
+setting-export-subtitle-karaoke = Subtitle karaoke
+setting-export-subtitle-karaoke-help = How subtitle lines show the word being read: off, underlined as it is spoken (WebVTT tags), or one cue per word in bold and underline.
+choice-export-subtitle-karaoke-off = Off
+choice-export-subtitle-karaoke-tags = Underline as spoken
+choice-export-subtitle-karaoke-lines = One cue per word
+setting-export-subtitle-chapters = Chapters file
+setting-export-subtitle-chapters-help = Also write a WebVTT chapters file beside the subtitles or the audio.
+# Names for chapters the document leaves untitled, in audio export.
+export-chapter-untitled = Audiobook
+export-chapter-numbered = Chapter { $number }
 setting-reading-aids-rsvp-wpm = RSVP rate
 setting-reading-aids-rsvp-wpm-help = Words per minute of rapid serial visual presentation.
 setting-reading-aids-rsvp-pacing = RSVP pacing
