@@ -9473,6 +9473,7 @@ version = "0.1.0-alpha.8"
 dependencies = [
  "claxon",
  "flacenc",
+ "hayro",
  "id3",
  "log",
  "mp3lame-encoder",
@@ -9483,6 +9484,7 @@ dependencies = [
  "symphonia",
  "tempfile",
  "textweaver-core",
+ "textweaver-fonts",
  "textweaver-render",
  "textweaver-speech",
  "textweaver-text",

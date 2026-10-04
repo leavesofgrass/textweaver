@@ -184,11 +184,8 @@ fn without_ffmpeg_the_video_says_why() {
         &mut |_| ControlFlow::Continue(()),
     )
     .unwrap_err();
-    assert!(matches!(err, ExportError::NoFfmpeg("MP4 video")), "{err}");
-    assert!(
-        err.to_string()
-            .starts_with("Writing MP4 video needs ffmpeg")
-    );
+    assert!(matches!(err, ExportError::NoFfmpeg("MP4")), "{err}");
+    assert!(err.to_string().starts_with("Writing MP4 needs ffmpeg"));
     assert!(rec.spoken_texts().is_empty(), "nothing was read aloud");
     assert!(!out.exists());
 }

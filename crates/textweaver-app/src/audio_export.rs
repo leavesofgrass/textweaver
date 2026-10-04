@@ -50,6 +50,36 @@ pub(crate) enum AudioList {
 #[cfg(feature = "audio-export")]
 pub(crate) use run::AudioState;
 
+/// The karaoke video's colors: `theme`'s page (background) and text.
+#[cfg(feature = "audio-export")]
+pub fn video_options(theme: &textweaver_theme::Theme) -> textweaver_export::VideoOptions {
+    use textweaver_theme::ColorRole;
+    let rgb = |role| {
+        let c = theme.color(role);
+        [c.r, c.g, c.b]
+    };
+    textweaver_export::VideoOptions {
+        page: rgb(ColorRole::Background),
+        text: rgb(ColorRole::Text),
+    }
+}
+
+/// The karaoke video's colors for `tw export-audio`: the settings' theme
+/// (`settings_theme`), among the built-ins and the user's themes in
+/// `themes_dir`; an unknown name falls back to Galaxy, as in the reader.
+#[cfg(feature = "audio-export")]
+pub fn video_options_for(
+    settings_theme: &str,
+    themes_dir: Option<&std::path::Path>,
+) -> textweaver_export::VideoOptions {
+    let mut themes = textweaver_theme::Registry::builtin();
+    if let Some(dir) = themes_dir.filter(|d| d.is_dir()) {
+        let _ = themes.load_dir(dir);
+    }
+    let (theme, _) = themes.resolve(settings_theme);
+    video_options(theme)
+}
+
 /// The words on a read-along page's controls, from `catalog` (the
 /// interface language), for the reader's export and `tw export-audio`.
 #[cfg(feature = "audio-export")]
@@ -225,17 +255,18 @@ mod run {
     }
 
     /// Every format, in the order offered.
-    pub(crate) const ALL: [AudioFormat; 6] = [
+    pub(crate) const ALL: [AudioFormat; 7] = [
         AudioFormat::Flac,
         AudioFormat::Mp3,
         AudioFormat::Opus,
         AudioFormat::Ogg,
         AudioFormat::Wav,
         AudioFormat::M4b,
+        AudioFormat::Mp4,
     ];
 
     /// The formats offered: those written in process always, those that
-    /// need ffmpeg (M4B) only with it.
+    /// need ffmpeg (M4B and the video) only with it.
     pub(crate) fn formats(ffmpeg: bool) -> Vec<AudioFormat> {
         ALL.into_iter()
             .filter(|f| ffmpeg || !f.needs_ffmpeg())
@@ -255,6 +286,7 @@ mod run {
             AudioFormat::M4b => "m4b",
             AudioFormat::Opus => "opus",
             AudioFormat::Ogg => "ogg",
+            AudioFormat::Mp4 => "mp4",
         }
     }
 
@@ -338,6 +370,7 @@ mod run {
                 AudioFormat::M4b => "audio-format-m4b",
                 AudioFormat::Opus => "audio-format-opus",
                 AudioFormat::Ogg => "audio-format-ogg",
+                AudioFormat::Mp4 => "audio-format-mp4",
             })
         }
 
@@ -470,6 +503,7 @@ mod run {
                     words_per_minute: Some(u32::from(wpm)),
                     ..CaptionMeta::default()
                 },
+                video: super::video_options(&self.reading_theme()),
                 ..ExportOptions::default()
             };
             let page = self.audio.page.then(|| {
@@ -879,7 +913,7 @@ mod run {
             if !opus {
                 missing.push(AudioFormat::Opus);
             }
-            missing.push(AudioFormat::M4b);
+            missing.extend([AudioFormat::M4b, AudioFormat::Mp4]);
             assert_eq!(needing_ffmpeg(), missing);
         }
 
@@ -891,10 +925,10 @@ mod run {
             // FLAC first; no ffmpeg, said in words (then the first item).
             let intro = if cfg!(feature = "opus") {
                 "Export essay as audio: choose a format, 6 choices. \
-                 M4B needs ffmpeg, which was not found."
+                 M4B, MP4 need ffmpeg, which was not found."
             } else {
                 "Export essay as audio: choose a format, 5 choices. \
-                 Opus, M4B need ffmpeg, which was not found."
+                 Opus, M4B, MP4 need ffmpeg, which was not found."
             };
             assert!(
                 app.status_text().starts_with(intro),

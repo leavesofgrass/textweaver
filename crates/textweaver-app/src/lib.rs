@@ -253,7 +253,7 @@ pub use access::{
 };
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 #[cfg(feature = "audio-export")]
-pub use audio_export::read_along_labels;
+pub use audio_export::{read_along_labels, video_options, video_options_for};
 pub use authoring::osc52;
 pub use authoring_state::{ClientFactory, Launcher};
 pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};

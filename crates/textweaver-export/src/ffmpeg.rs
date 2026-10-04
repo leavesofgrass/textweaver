@@ -59,7 +59,7 @@ impl AudioFormat {
     }
 
     /// The name users see ("WAV", "FLAC", "MP3", "Opus", "Ogg Vorbis",
-    /// "M4B", "MP4 video").
+    /// "M4B", "MP4").
     pub fn name(self) -> &'static str {
         match self {
             AudioFormat::Wav => "WAV",
@@ -68,7 +68,7 @@ impl AudioFormat {
             AudioFormat::M4b => "M4B",
             AudioFormat::Opus => "Opus",
             AudioFormat::Ogg => "Ogg Vorbis",
-            AudioFormat::Mp4 => "MP4 video",
+            AudioFormat::Mp4 => "MP4",
         }
     }
 
