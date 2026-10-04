@@ -86,6 +86,7 @@ nav = [
       { "Writing messages" = "dev/messages.md" },
       { "Building" = "dev/building.md" },
       { "Testing" = "dev/testing.md" },
+      { "The polish checklist and its tests" = "dev/checklist-tests.md" },
       { "Architecture" = "dev/architecture.md" },
       { "Docker development container" = "dev/docker.md" },
       { "Fuzzing (on GitHub)" = "https://github.com/leavesofgrass/textweaver/tree/main/fuzz" },

@@ -25,6 +25,7 @@ mod fonts;
 mod idea_cards;
 mod keys_from_keymap;
 mod language;
+mod list_contract;
 mod markup_pauses;
 mod path_choosers;
 mod pseudo_locale;
