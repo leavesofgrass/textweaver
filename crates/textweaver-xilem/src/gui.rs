@@ -1337,6 +1337,15 @@ pub fn marks_in(app: &App, window: CharRange) -> Vec<(CharRange, crate::document
 /// spoken word and sentence themselves (the defaults: both, no lead). Only
 /// drawn: the caret a screen reader follows stays on the spoken word.
 pub fn highlight_shown(app: &App) -> Option<HighlightShown> {
+    highlight_shown_for(app, app.shown_spoken())
+}
+
+/// [`highlight_shown`] for a spoken word and sentence given as drawn (the
+/// review screenshots' reading position, which no speech confirmed).
+pub fn highlight_shown_for(
+    app: &App,
+    (word, sentence): (Option<CharRange>, Option<CharRange>),
+) -> Option<HighlightShown> {
     use textweaver_app::core::HighlightGranularity as G;
     let h = &app.settings().highlight;
     if h.enabled && h.granularity == G::Both && app.highlight_lead() == 0 {
@@ -1345,7 +1354,6 @@ pub fn highlight_shown(app: &App) -> Option<HighlightShown> {
     if !h.enabled {
         return Some(HighlightShown::default());
     }
-    let (word, sentence) = app.shown_spoken();
     Some(HighlightShown {
         word: word.filter(|_| matches!(h.granularity, G::Word | G::Both)),
         sentence: match h.granularity {

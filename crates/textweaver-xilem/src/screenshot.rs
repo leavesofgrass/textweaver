@@ -139,6 +139,15 @@ fn add_review_notes(app: &mut textweaver_app::App) -> Result<(), String> {
 
 /// Draws the window into `opts.path`.
 pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
+    harness(opts)?
+        .render()
+        .save(&opts.path)
+        .map_err(|e| format!("cannot write {}: {e}", opts.path.display()))
+}
+
+/// The window as [`screenshot`] draws it, in Masonry's test harness, ready
+/// to render.
+fn harness(opts: &ShotOptions) -> Result<TestHarness<Root>, String> {
     let app_opts = Options {
         no_speech: true,
         home: opts.home.clone(),
@@ -151,6 +160,11 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
     if let Some(file) = &opts.file {
         app.open(file)
             .map_err(|e| format!("cannot open {}: {e}", file.display()))?;
+    }
+    if opts.highlight_at.is_some() && opts.home.is_some() {
+        // The review draws the sentence's underline too: `[highlight]
+        // granularity = "both"` (the default, "word", draws the word only).
+        app.set_setting("highlight.granularity", serde_json::json!("both"))?;
     }
     if opts.aids {
         turn_on_aids(&mut app)?;
@@ -196,15 +210,15 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
         Rc::new(Cell::new(0)),
         Default::default(),
     );
-    render(&app, tree.root, &palette, opts)
+    build(&app, tree.root, &palette, opts)
 }
 
-fn render(
+fn build(
     app: &textweaver_app::App,
     root: NewWidget<Root>,
     palette: &Palette,
     opts: &ShotOptions,
-) -> Result<(), String> {
+) -> Result<TestHarness<Root>, String> {
     let (w, h) = opts.size;
     let scale = opts.scale.clamp(0.5, 4.0);
     let mut params = TestHarnessParams::default();
@@ -237,7 +251,14 @@ fn render(
             sentence: unit_at(&s.doc, pos, Unit::Sentence),
             reading: true,
         };
-        harness.edit_widget(DOC, |mut d| DocumentView::set_state(&mut d, state));
+        // What the highlight draws follows `[highlight]` from the app's
+        // spoken word (W9a-v), which no speech confirmed here: draw it
+        // from this position instead, as the window would while reading.
+        let shown = gui::highlight_shown_for(app, (state.spoken, state.sentence));
+        harness.edit_widget(DOC, |mut d| {
+            DocumentView::set_state(&mut d, state);
+            DocumentView::set_highlight_shown(&mut d, shown);
+        });
     }
     if let Some((title, items)) = &opts.list {
         let (modal, list_id) = gui::list_dialog(
@@ -296,10 +317,7 @@ fn render(
         harness.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
         harness.focus_on(Some(d.list));
     }
-    harness
-        .render()
-        .save(&opts.path)
-        .map_err(|e| format!("cannot write {}: {e}", opts.path.display()))
+    Ok(harness)
 }
 
 /// The screenshots for review: Galaxy, Galaxy Light, high contrast, and
@@ -533,4 +551,51 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         out.push(o.path);
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::document::PaintStep;
+
+    fn options(home: &Path) -> ShotOptions {
+        ShotOptions {
+            path: PathBuf::new(),
+            file: Some(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/sample.md")),
+            size: (1100, 780),
+            scale: 1.0,
+            theme: Some("galaxy".into()),
+            highlight_at: Some(120),
+            list: None,
+            settings: false,
+            home: Some(home.to_path_buf()),
+            aids: false,
+            colors: false,
+            voices: false,
+            edit: false,
+            panel: None,
+            ruler: false,
+            reading: false,
+            settings_filter: None,
+        }
+    }
+
+    /// The review pictures' reading position draws the spoken word's band
+    /// and its sentence's underline (the alpha.9 review found neither).
+    #[test]
+    fn review_reading_position_draws_word_and_sentence() {
+        let home = tempfile::tempdir().expect("temp dir");
+        let mut h = harness(&options(home.path())).expect("harness");
+        let _ = h.render();
+        let painted = h.get_widget(DOC).inner().painted().to_vec();        assert!(
+            painted.iter().any(|s| matches!(s, PaintStep::WordBand(_))),
+            "no word band in {painted:?}"
+        );
+        assert!(
+            painted
+                .iter()
+                .any(|s| matches!(s, PaintStep::SentenceUnderline(..))),
+            "no sentence underline in {painted:?}"
+        );
+    }
 }
