@@ -118,6 +118,7 @@ fn everything_changed() -> Settings {
     let d = &mut s.display;
     d.theme = "nord".into();
     d.wrap_width = 100;
+    d.measure = 72;
     d.tab_width = 2;
     d.show_line_numbers = true;
     d.scroll_margin = 5;
