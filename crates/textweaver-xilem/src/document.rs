@@ -467,6 +467,9 @@ pub struct DocumentView {
     size: Size,
     /// Scroll anchor: a paragraph and how far down it the view starts.
     top: (usize, f64),
+    /// The last scroll went down, so the anchor snaps to the next line
+    /// boundary rather than the one above ([`DocumentView::snap_top`]).
+    scrolled_down: bool,
     /// Paragraphs on screen and their top y, from the last layout.
     visible: Vec<(usize, f64)>,
     follow: bool,
@@ -542,6 +545,7 @@ impl DocumentView {
             column_x: 0.0,
             size: Size::ZERO,
             top: (0, 0.0),
+            scrolled_down: false,
             visible: Vec::new(),
             follow: true,
             goal_x: None,
@@ -1443,6 +1447,7 @@ impl DocumentView {
             self.scroll_to(focus, view_h, fcx, lcx);
         }
         self.normalize_top(fcx, lcx);
+        self.snap_top();
         let mut y = INSET - self.top.1;
         let mut i = self.top.0;
         while i < n && y < view_h {
@@ -1475,6 +1480,36 @@ impl DocumentView {
             } else {
                 break;
             }
+        }
+    }
+
+    /// Moves the anchor to a line boundary (W9b-n), so the view's first
+    /// line is never cut through at the top: the next boundary after a
+    /// scroll down, else the one above. A boundary is the paragraph's top
+    /// or a line's top.
+    fn snap_top(&mut self) {
+        let down = std::mem::take(&mut self.scrolled_down);
+        let (i, off) = self.top;
+        if off <= 0.0 {
+            return;
+        }
+        let Some(pl) = self.layouts.get(&i) else {
+            return;
+        };
+        let mut bounds = vec![0.0];
+        bounds.extend(
+            pl.layout
+                .lines()
+                .map(|l| pl.top_gap + f64::from(l.metrics().block_min_coord)),
+        );
+        if down {
+            if let Some(&b) = bounds.iter().find(|&&b| b >= off - 0.5) {
+                self.top.1 = b;
+            } else if i + 1 < self.para_count() {
+                self.top = (i + 1, 0.0);
+            }
+        } else if let Some(&b) = bounds.iter().rev().find(|&&b| b <= off + 0.5) {
+            self.top.1 = b;
         }
     }
 
@@ -1707,6 +1742,7 @@ impl DocumentView {
         let pos = self.move_lines(if down { lines } else { -lines }, fcx, lcx);
         // Scroll by the same page, so the caret keeps its place on screen.
         self.top.1 += if down { view } else { -view };
+        self.scrolled_down = down;
         pos
     }
 
@@ -2118,6 +2154,7 @@ impl Widget for DocumentView {
                 let px = delta.to_pixel_delta(line, page);
                 let LogicalPosition { y, .. } = px.to_logical::<f64>(scale);
                 self.top.1 -= y;
+                self.scrolled_down = y < 0.0;
                 ctx.request_layout();
                 ctx.request_render();
                 ctx.set_handled();
