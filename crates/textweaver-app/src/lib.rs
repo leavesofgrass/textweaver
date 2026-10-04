@@ -252,6 +252,8 @@ pub use access::{
     keymap_preset, sentence_duration, startup_keymap,
 };
 pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
+#[cfg(feature = "audio-export")]
+pub use audio_export::read_along_labels;
 pub use authoring::osc52;
 pub use authoring_state::{ClientFactory, Launcher};
 pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};

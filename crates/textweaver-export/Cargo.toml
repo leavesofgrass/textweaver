@@ -10,7 +10,7 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = ["flac", "id3", "mp3", "opus"]
+default = ["flac", "id3", "mp3", "opus", "read-along"]
 # Passed through so the container can export with espeak-ng in tests.
 espeak = ["textweaver-speech/espeak"]
 # FLAC written in process (pure Rust), with tags and chapters as Vorbis
@@ -27,6 +27,10 @@ mp3 = ["dep:mp3lame-encoder", "id3"]
 opus = ["dep:opusic-c", "dep:rubato"]
 # ID3v2 tags and chapters (CHAP and CTOC) in WAV files.
 id3 = ["dep:id3"]
+# The read-along page: one offline HTML file with the text, the MP3 inside,
+# and word-synced highlighting (the writers' sync spans, the page rules,
+# and the theme's CSS).
+read-along = ["dep:textweaver-writers", "dep:textweaver-render", "dep:textweaver-theme"]
 
 [dependencies]
 textweaver-core.workspace = true
@@ -42,6 +46,9 @@ id3 = { workspace = true, optional = true }
 mp3lame-encoder = { workspace = true, optional = true }
 opusic-c = { workspace = true, optional = true }
 rubato = { workspace = true, optional = true, features = ["fft_resampler"] }
+textweaver-writers = { workspace = true, optional = true }
+textweaver-render = { workspace = true, optional = true }
+textweaver-theme = { workspace = true, optional = true }
 
 [dev-dependencies]
 claxon.workspace = true

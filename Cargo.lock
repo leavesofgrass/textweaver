@@ -9464,8 +9464,11 @@ dependencies = [
  "symphonia",
  "tempfile",
  "textweaver-core",
+ "textweaver-render",
  "textweaver-speech",
  "textweaver-text",
+ "textweaver-theme",
+ "textweaver-writers",
  "thiserror 2.0.21",
 ]
 

@@ -1944,6 +1944,17 @@ setting-export-subtitle-chapters-help = Zusätzlich eine WebVTT-Kapiteldatei neb
 # Names for chapters the document leaves untitled, in audio export.
 export-chapter-untitled = Hörbuch
 export-chapter-numbered = Kapitel { $number }
+# The read-along page (tw export-audio essay.md --out essay.html).
+readalong-skip = Zum Text springen
+readalong-controls = Audio
+readalong-play = Abspielen
+readalong-pause = Pause
+readalong-back = Einen Satz zurück
+readalong-forward = Einen Satz vor
+readalong-follow = Mitlesen
+readalong-speed = Tempo
+readalong-contents = Inhalt
+readalong-play-section = Abschnitt abspielen: { $title }
 setting-reading-aids-rsvp-wpm = RSVP-Geschwindigkeit
 setting-reading-aids-rsvp-wpm-help = Wörter pro Minute der schnellen sequenziellen visuellen Darstellung.
 setting-reading-aids-rsvp-pacing = RSVP-Taktung
@@ -3628,6 +3639,7 @@ audio-format-wav = WAV: am größten, läuft überall
 audio-format-mp3 = MP3: klein, läuft überall
 audio-format-opus = Opus: am kleinsten, für Sprache gemacht
 audio-format-m4b = M4B-Hörbuch, über ffmpeg
+audio-format-html = Mitlese-Seite: Text und Audio, eine Datei
 audio-where-title = Wohin das Audio kommt
 audio-where-intro = Wohin soll das Audio?
 audio-where-beside = Neben das Dokument, { $path }

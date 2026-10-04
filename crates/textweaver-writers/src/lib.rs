@@ -36,6 +36,7 @@ mod math;
 pub mod model;
 pub mod pdf;
 mod resource;
+pub mod sync;
 pub mod template;
 pub mod ueb;
 mod xml;

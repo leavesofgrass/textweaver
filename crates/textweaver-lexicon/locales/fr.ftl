@@ -1936,6 +1936,17 @@ setting-export-subtitle-chapters-help = Écrire aussi un fichier de chapitres We
 # Names for chapters the document leaves untitled, in audio export.
 export-chapter-untitled = Livre audio
 export-chapter-numbered = Chapitre { $number }
+# The read-along page (tw export-audio essay.md --out essay.html).
+readalong-skip = Aller au texte
+readalong-controls = Audio
+readalong-play = Lire
+readalong-pause = Pause
+readalong-back = Phrase précédente
+readalong-forward = Phrase suivante
+readalong-follow = Suivre la lecture
+readalong-speed = Vitesse
+readalong-contents = Sommaire
+readalong-play-section = Lire la section : { $title }
 setting-reading-aids-rsvp-wpm = Débit RSVP
 setting-reading-aids-rsvp-wpm-help = Mots par minute de la présentation visuelle en série rapide (RSVP).
 setting-reading-aids-rsvp-pacing = Rythme du RSVP
@@ -3632,6 +3643,7 @@ audio-format-wav = WAV : le plus lourd, se lit partout
 audio-format-mp3 = MP3 : léger, se lit partout
 audio-format-opus = Opus : le plus léger, conçu pour la voix
 audio-format-m4b = Livre audio M4B, par ffmpeg
+audio-format-html = Page de lecture : texte et audio, un seul fichier
 audio-where-title = Où va l'audio
 audio-where-intro = Où enregistrer l'audio ?
 audio-where-beside = À côté du document, { $path }

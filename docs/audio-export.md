@@ -8,7 +8,7 @@ This guide is written to be read with a screen reader. Each task section starts 
 
 In the reader, open the File menu (F10 in the terminal) and choose Export audio, or find "Export audio" in the command palette. A document must be open. Export audio is in the terminal reader, the GUI, and `tw` in every release; only a lean build of the reader, made with `--no-default-features`, leaves it out ([Building](dev/building.md)).
 
-1. **The format.** You hear, for example, "Export essay as audio: choose a format, 4 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then WAV. M4B is listed only when ffmpeg is installed; when it is not, you hear "M4B needs ffmpeg, which was not found." Press Enter on a format.
+1. **The format.** You hear, for example, "Export essay as audio: choose a format, 5 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then WAV. M4B is listed only when ffmpeg is installed; when it is not, you hear "M4B needs ffmpeg, which was not found." Last comes "Read-along page: text and audio, one file", which writes `essay.html` (see [Make a read-along page](#make-a-read-along-page)). Press Enter on a format.
 2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
 3. **The question.** "Export essay.flac with Microsoft David at 200 words per minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
 
@@ -190,6 +190,28 @@ Every format carries the same title, author, and chapters as the M4B, each in it
 - WAV files: as ID3 chapter tags too, in an extra part of the file that players without ID3 support skip.
 
 Players that read these chapters show them. Many simple players ignore them and play the file straight through. The JSON report lists each chapter's name, start, and end in every case (see [Get a report as JSON](#get-a-report-as-json)).
+
+## Make a read-along page
+
+```
+tw export-audio essay.md --out essay.html
+```
+
+An `.html` file name writes a read-along page instead of an audio file: one web page that holds the document as real text, its audio inside as MP3, and a mark on the sentence and the word being read as it plays. Open it in any web browser; it needs no internet connection and no other file, so you can send it, post it to a course site, or open it on a phone. In the reader, choose "Read-along page: text and audio, one file", the last format in Export audio.
+
+The text stays text, so a screen reader, a Braille display, zoom, reflow, and your own fonts all work on it. The page uses your reading theme (`[display] theme`); with the default theme it follows the system's light or dark setting.
+
+- **The audio control.** The browser's own player, at the top of the page.
+- **The buttons.** Play (Pause while playing), Back a sentence, Forward a sentence, and Follow along. Tab reaches each one; Enter or Space presses it.
+- **Follow along.** On by default: the page scrolls to keep the sentence being read in view. Press it to turn scrolling off; a screen reader says "pressed" or "not pressed". With reduced motion set in the system, the page jumps instead of scrolling smoothly.
+- **Speed.** A list from 0.75 to 2 times.
+- **Contents.** For a document with chapters, a "Play section" button for each, such as "Play section: Photosynthesis".
+- **Click a sentence** to start reading there.
+- **What you see.** The sentence being read is underlined and tinted; the word being read is bold, underlined, and outlined in the theme's spoken-word colors. In a forced-colors (high contrast) mode the word uses the system highlight colors. Color alone never carries the mark.
+- **With a screen reader.** The page never moves your focus and never speaks on its own, so your screen reader reads where you are while the audio plays.
+- **Without scripts.** The text and the audio control still work; only the buttons and the marks are missing.
+
+The page is about a third larger than the MP3 would be on its own. The subtitle and chapters settings work as for audio files.
 
 ## Add subtitles
 
@@ -386,7 +408,7 @@ The settings:
 
 A file named with `--subtitles` always wins over `subtitles_with_audio`. `--word-level` turns word cues on even when `subtitle_word_level` is `false`; there is no option to turn them off for one export when the setting is `true`.
 
-These settings are used by `tw export-audio` and by Export audio in the reader, which writes subtitles beside the audio when `subtitles_with_audio` is `true`. For now, `subtitle_karaoke` and `subtitle_chapters` apply to `tw export-audio` only.
+These settings are used by `tw export-audio` and by Export audio in the reader, which writes subtitles beside the audio when `subtitles_with_audio` is `true`, with the karaoke style of `subtitle_karaoke`, a chapters file when `subtitle_chapters` is `true`, and a note naming the voice and the rate.
 
 ## Get a report as JSON
 
