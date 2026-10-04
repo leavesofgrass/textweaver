@@ -31,6 +31,10 @@
 //!    feature).
 //! 6. Subtitles ([`cues`]) are SRT or WebVTT cues from the timeline, by
 //!    caption line (Star's grouping) or by word.
+//! 7. An `.mp4` is a karaoke video ([`video`], the `video` feature): the
+//!    sentence on screen with the spoken word bold and underlined, the
+//!    WebVTT captions as a soft subtitle track, and the chapters, made by
+//!    ffmpeg from frames textweaver draws.
 //!
 //! Progress is reported per sentence, and the caller can cancel between
 //! sentences, and during encoding: the progress callback is asked again,
@@ -61,6 +65,7 @@ pub(crate) mod pcm;
 #[cfg(feature = "read-along")]
 pub mod readalong;
 pub mod timeline;
+pub mod video;
 pub mod vorbis;
 pub mod wav;
 
@@ -77,6 +82,7 @@ pub use chapters::{ChapterNames, ChapterOptions};
 pub use cues::{CaptionLine, CaptionMeta, Cue, CueOptions, Karaoke, SubtitleFormat};
 pub use ffmpeg::AudioFormat;
 pub use timeline::{Chapter, TimedSentence, TimedWord, Timeline};
+pub use video::{VideoOptions, VideoStats};
 
 /// Export failures. Every message reads as a sentence.
 #[derive(Debug, thiserror::Error)]
@@ -85,7 +91,7 @@ pub enum ExportError {
     #[error("The {0} voice cannot write audio files.")]
     NoFileSynthesis(String),
     /// The output name has no supported extension.
-    #[error("Cannot write {0}: use a .wav, .flac, .mp3, .opus, .ogg, or .m4b file name.")]
+    #[error("Cannot write {0}: use a .wav, .flac, .mp3, .opus, .ogg, .m4b, or .mp4 file name.")]
     UnsupportedFormat(PathBuf),
     /// The FLAC encoder failed.
     #[error("The FLAC encoder failed: {0}")]
@@ -118,6 +124,12 @@ pub enum ExportError {
     /// ffmpeg failed.
     #[error("ffmpeg failed: {0}")]
     Ffmpeg(String),
+    /// This build cannot draw video frames (built without `video`).
+    #[error("This build of textweaver cannot write video. Export audio instead.")]
+    NoVideo,
+    /// The video frames could not be drawn.
+    #[error("Cannot draw the video: {0}.")]
+    Video(String),
     /// The engine failed on one sentence.
     #[error("The voice failed on sentence {sentence}: {source}")]
     Speech {
@@ -194,6 +206,8 @@ pub struct ExportOptions {
     /// What the subtitle file says about itself (a WebVTT `NOTE`, the ASS
     /// title); the title defaults to the document's.
     pub captions: CaptionMeta,
+    /// The colors of an `.mp4` karaoke video (the reader's theme).
+    pub video: VideoOptions,
 }
 
 /// Progress through an export, reported before each sentence and once at
@@ -332,6 +346,8 @@ pub struct ExportReport {
     pub subtitles: Option<PathBuf>,
     /// The ffmpeg used for conversion, if any.
     pub ffmpeg: Option<PathBuf>,
+    /// Frames sent and drawn, for an `.mp4` video.
+    pub video: Option<VideoStats>,
     /// Sentences, words, and chapters with their times.
     pub timeline: Timeline,
 }
@@ -372,6 +388,9 @@ pub fn export(
         (true, Some(ff)) => Some(ff),
         (true, None) => return Err(ExportError::NoFfmpeg(format.name())),
     };
+    if format == AudioFormat::Mp4 && !cfg!(feature = "video") {
+        return Err(ExportError::NoVideo);
+    }
     // The progress callback also answers "stop?" after synthesis, asked
     // again with the last count it was given.
     let last = Cell::new(Progress { done: 0, total: 0 });
@@ -389,7 +408,7 @@ pub fn export(
                 Ok(r)
             }
         });
-    let (timeline, ffmpeg_used) = match result {
+    let (timeline, ffmpeg_used, video_stats) = match result {
         Ok(r) => r,
         Err(e) => {
             if matches!(e, ExportError::Cancelled) {
@@ -415,6 +434,7 @@ pub fn export(
         format,
         subtitles: subtitles_path,
         ffmpeg: ffmpeg_used,
+        video: video_stats,
         timeline,
     })
 }
@@ -431,7 +451,7 @@ fn export_inner(
     opts: &ExportOptions,
     progress: &mut dyn FnMut(Progress) -> ControlFlow<()>,
     stop: &dyn Fn() -> bool,
-) -> Result<(Timeline, Option<PathBuf>), ExportError> {
+) -> Result<(Timeline, Option<PathBuf>, Option<VideoStats>), ExportError> {
     // Every format but WAV is made from a WAV in a private folder beside
     // the output (removed when done).
     let work = |out: &Path| {
@@ -445,6 +465,42 @@ fn export_inner(
             .map_err(|e| ExportError::io(dir, e))
     };
     let (timeline, ffmpeg_used) = match (format, ffmpeg) {
+        #[cfg(feature = "video")]
+        (AudioFormat::Mp4, Some(ff)) => {
+            let work = work(out)?;
+            let wav_path = work.path().join("audio.wav");
+            let meta_path = work.path().join("metadata.txt");
+            let vtt_path = work.path().join("captions.vtt");
+            let timeline = synthesize_wav(doc, backend, &wav_path, opts, progress)?;
+            let meta = chapters::ffmetadata(
+                timeline.title.as_deref(),
+                timeline.author.as_deref(),
+                &timeline.chapters,
+            );
+            std::fs::write(&meta_path, meta).map_err(|e| ExportError::io(&meta_path, e))?;
+            let mut captions = opts.captions.clone();
+            if captions.title.is_none() {
+                captions.title = timeline.title.clone();
+            }
+            let vtt = cues::render_file(
+                &timeline,
+                SubtitleFormat::Vtt,
+                &CueOptions::default(),
+                Some(&captions),
+            );
+            std::fs::write(&vtt_path, vtt).map_err(|e| ExportError::io(&vtt_path, e))?;
+            let stats = video::encode_with_stop(
+                ff,
+                &timeline,
+                &wav_path,
+                &vtt_path,
+                &meta_path,
+                out,
+                &opts.video,
+                stop,
+            )?;
+            return Ok((timeline, Some(ff.to_owned()), Some(stats)));
+        }
         (_, Some(ff)) => {
             let work = work(out)?;
             let wav_path = work.path().join("audio.wav");
@@ -543,5 +599,5 @@ fn export_inner(
             (timeline, None)
         }
     };
-    Ok((timeline, ffmpeg_used))
+    Ok((timeline, ffmpeg_used, None))
 }
