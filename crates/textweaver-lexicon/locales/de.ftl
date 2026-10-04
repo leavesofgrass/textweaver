@@ -229,7 +229,7 @@ name-edit-document-details = Details bearbeiten
 action-edit-document-details = Die Details des Dokuments bearbeiten: Titel, Autor, DOI und ISBN
 prompt-document-details = Dokumentdetails
 
-## Edit a document's details by hand (Wave 7, W7m).
+## Edit a document's details by hand.
 
 # $name is the document's title; said when the form opens.
 details-intro = Details von { $name }. Tab wechselt, Eingabetaste speichert, Escape bricht ab.
@@ -2858,7 +2858,7 @@ gui-text-size-smallest = Textgröße { $size } Punkt, die kleinste.
 gui-font = Schriftart: { $family }.
 gui-font-list = Schriftart
 
-## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## The Braille pass: pages in paged documents such as a PDF.
 ## $page and $n are page numbers, $label a printed page label such as iv,
 ## $pages the number of pages. Keep the page first: a 40-cell Braille
 ## display shows the start of the line.
@@ -2899,7 +2899,7 @@ prompt-go-to-pages = Gehe zu Seite, oder Zeile 12, Prozent, start oder end
 goto-not-a-target-pages = Kein Sprungziel: { $text }. Geben Sie eine Seitenzahl ein, Zeile und eine Zahl, einen Prozentwert wie 50%, start oder end.
 goto-word-page = Seite
 
-## Wave 5 (W5y): der Bibliotheksfilter, das Wörterbuch und die Geschwindigkeiten.
+## Der Bibliotheksfilter, das Wörterbuch und die Geschwindigkeiten.
 
 # The library list filtered: $shown of $n documents match $filter.
 library-title-filtered = Bibliothek, { $shown } von { $n } stimmen mit { $filter } überein
@@ -2919,7 +2919,7 @@ library-filter-matched =
     }
 # Said once when define word is used while the dictionary file is still opening.
 define-still-loading = Das Wörterbuch wird noch geladen.
-# Von W5y hinzugefügte Einstellungen.
+# Einstellungen.
 setting-speech-dectalk-library = DECtalk-Bibliothek
 setting-speech-dectalk-library-help = Die zu ladende DECtalk-Bibliothek; nicht gesetzt sucht an den üblichen Orten.
 setting-speech-piper-voices = Ordner der Piper-Stimmen
@@ -2936,7 +2936,7 @@ setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zul
 setting-editing-author = Autor
 setting-editing-author-help = Der Autor, der in neue Dokumente aus einer Vorlage geschrieben wird; leer lässt ihn frei.
 
-## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
 
 gui-yes = Ja
@@ -3022,7 +3022,7 @@ gui-palette-count =
 gui-settings-form-help = Pfeil nach oben und unten wechseln zwischen Einstellungen. Pfeil nach links und rechts ändern eine. Die Eingabetaste gibt einen neuen Wert ein. Entf stellt den Standard wieder her. { $next } und { $previous } wechseln den Bereich. Tippen filtert. F1 sagt die Hilfe.
 gui-settings-press-enter = Drücken Sie die Eingabetaste, um einen neuen Wert für { $label } einzugeben.
 gui-font-built-in = { $family } (eingebaut)
-## Wave 5 (W5s): summaries and difficult-word definitions.
+## Summaries and difficult-word definitions.
 
 action-summarize = Die Auswahl, das Kapitel oder das Dokument zusammenfassen: die zentralsten Sätze in einer Liste; Eingabe geht zu einem
 # The summary list's title: $n sentences of the whole document.
@@ -3063,18 +3063,18 @@ settings-unit-sentences =
        *[other] Sätze
     }
 
-# W6a5: the GUI. Said in textweaver's own voice when the window takes the
+# The GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }, { -brand }.
 
-## Wave 6 (W6o): opening the new formats. Said after "Could not open NAME:", so
+## Opening the new formats. Said after "Could not open NAME:", so
 ## each starts in lower case.
 opening-damaged-json = es ist keine lesbare JSON-Datei; sie ist möglicherweise zu groß.
 opening-damaged-notebook = es ist kein lesbares Jupyter-Notebook; es ist möglicherweise beschädigt oder zu groß.
 opening-damaged-svg = es ist keine lesbare SVG-Zeichnung; sie ist möglicherweise beschädigt oder zu groß.
 opening-damaged-mathml = es ist keine lesbare MathML-Formel; sie ist möglicherweise beschädigt oder zu groß.
 
-## W6u: menus, the command palette, interface announcements, colors, and settings
+## Menus, the command palette, interface announcements, colors, and settings
 
 ## Menu titles; the top menus mark their access key with &.
 
@@ -3430,9 +3430,8 @@ settingsio-import-question-names =
     }
 settingsio-and-more = { $names } und { $n } weitere
 
-## End of W6u
 
-## W6d: dictation in edit mode (ADR-0042). Keep the meaning first: a
+## Dictation in edit mode (ADR-0042). Keep the meaning first: a
 ## 40-cell Braille display shows the start of the line. $words are the
 ## dictated words, $key the dictate key, $dir a folder, $error and $text
 ## are passed on as they are.
@@ -3453,9 +3452,8 @@ setting-dictation-model-dir = Ordner des Diktatmodells
 setting-dictation-model-dir-help = Das Whisper-Modell für das Diktat. Nicht gesetzt: whisper/rten/base.en im Datenordner.
 section-dictation = Diktat
 
-## End of W6d
 
-## W6f: the file browser. Every row and introduction starts with the name,
+## The file browser. Every row and introduction starts with the name,
 ## then the kind, so the first cells of a 40-cell Braille line hold what
 ## matters. $name is a file or folder name; $n a number that chooses the
 ## plural and $count the same number written with its separators.
@@ -3578,9 +3576,8 @@ browse-preview-folder-empty = { $path }: hier gibt es nichts zu lesen.
 browse-preview-other = { $name }, { $size }; textweaver kann diese Art von Datei nicht lesen.
 browse-preview-path = { $path }
 
-## End of W6f
 
-## W6k: batch conversion (File, Batch convert). Keep the meaning first.
+## Batch conversion (File, Batch convert). Keep the meaning first.
 batch-choose-source = Wählen Sie den Ordner zum Umwandeln
 batch-choose-output = Wählen Sie den Ordner für die umgewandelten Dateien
 batch-format-title = Umwandeln in
@@ -3637,9 +3634,8 @@ batch-failure-item = { $name }: { $reason }
 batch-start-failed = Umwandlung konnte nicht beginnen: { $error }
 batch-thread-stopped = Die Stapelumwandlung hat unerwartet angehalten.
 
-## End of W6k
 
-## W6v: audio export (File, Export audio). Keep the meaning first: a
+## Audio export (File, Export audio). Keep the meaning first: a
 ## 40-cell Braille display shows the start of the line. $name is a file
 ## name (essay.flac); $path a folder or a file's full path; $format a
 ## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
@@ -3684,9 +3680,8 @@ audio-subtitles = Untertitel in { $name }.
 audio-failed = Audio konnte nicht exportiert werden: { $error }
 audio-thread-stopped = Der Audioexport hat unerwartet angehalten.
 
-## End of W6v
 
-## W6a6: the window's menus and dialogs. Settings files chosen with the
+## The window's menus and dialogs. Settings files chosen with the
 ## system's file chooser, the Colors dialog, and the font list. $ratio is
 ## a contrast ratio such as 4.8; $verdict is good, fair, or low.
 gui-settings-files = Einstellungsdateien
@@ -3706,14 +3701,12 @@ gui-font-list-intro =
        *[other] { $title }, { $n } Schriftfamilien.
     }
 
-## End of W6a6
 
-## W6c5: PDF links. Said before the first line of the page a link inside
+## PDF links. Said before the first line of the page a link inside
 ## a PDF goes to, when the page has no heading there (as links-heading-label
 ## is for a heading). $page is the page's printed number or label (12, iv).
 links-page-label = Seite { $page }
 
-## End of W6c5
 
 ## Sync wave, S4: sync in the reader (ADR-0049).
 sync-status-off = Sync: aus
@@ -3923,7 +3916,7 @@ setting-sync-favorite-voices-help = Die Lieblingsstimmen teilen. Eine, die diese
 
 ## End of S5
 
-## W7l: Lexend downloaded on first choice.
+## Lexend downloaded on first choice.
 font-download-question = Schrift { $font } herunterladen, { $kb } KB, { $licence }? y oder n
 font-downloading = { $font } wird heruntergeladen.
 font-downloaded = { $font } heruntergeladen und bereit.
@@ -3935,7 +3928,7 @@ font-download-not-in-build = Keine Schrift-Downloads in diesem Build.
 gui-font-to-download = { $family } (herunterladen, { $kb } KB)
 gui-font-downloaded = { $family } (heruntergeladen)
 
-## W8a-f: Datei- und Ordnerauswahl.
+## Datei- und Ordnerauswahl.
 prompt-browse-hint = { $label }. { $key } zum Durchsuchen.
 prompt-browse-file = Datei wählen: { $label }
 prompt-browse-folder = Ordner wählen: { $label }
@@ -3951,7 +3944,7 @@ chooser-profile-files = Profildateien
 gui-folder-no-dialog = Die Ordnerauswahl des Systems hat sich nicht geöffnet. Wählen Sie den Ordner in dieser Liste.
 gui-prompt-browse-hint = { $key } öffnet den Dateibrowser.
 
-## Optionale Komponenten (W8a-d, W8a-w).
+## Optionale Komponenten.
 name-manage-components = Optionale Komponenten verwalten…
 name-download-dictation-model = Diktiermodell herunterladen
 action-manage-components = Optionale Komponenten verwalten: die Modelle, Schriften und Stimmen, die textweaver herunterladen kann, mit Größe und Lizenz
@@ -4029,7 +4022,7 @@ dictation-model-file-missing = Dem Modell fehlt { $file }.
 dictation-model-damaged = Diktiermodell beschädigt: { $file }.
 dictation-model-no-folder = Kein Modellordner: { $dir }.
 
-## Einstellungen der optionalen Komponenten (W8a-d, W8a-w).
+## Einstellungen der optionalen Komponenten.
 section-components = Optionale Komponenten
 setting-dictation-model = Diktiermodell
 setting-dictation-model-help = Das Whisper-Modell, das das Diktieren nutzt, wenn kein Ordner gesetzt ist. Diktiermodell herunterladen im Menü Extras holt es.

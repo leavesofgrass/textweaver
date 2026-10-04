@@ -286,7 +286,7 @@ name-edit-document-details = تعديل التفاصيل
 action-edit-document-details = تعديل تفاصيل المستند: العنوان والمؤلف وDOI وISBN
 prompt-document-details = تفاصيل المستند
 
-## Edit a document's details by hand (Wave 7, W7m).
+## Edit a document's details by hand.
 
 # $name is the document's title; said when the form opens.
 details-intro = تفاصيل { $name }. Tab للتنقل، Enter للحفظ، Escape للإلغاء.
@@ -3095,7 +3095,7 @@ gui-text-size-smallest = حجم النص { $size } نقطة، وهو الأصغ�
 gui-font = الخط: { $family }.
 gui-font-list = الخط
 
-## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## The Braille pass: pages in paged documents such as a PDF.
 ## $page and $n are page numbers, $label a printed page label such as iv,
 ## $pages the number of pages. Keep the page first: a 40-cell Braille
 ## display shows the start of the line.
@@ -3148,7 +3148,7 @@ prompt-go-to-pages = الانتقال إلى صفحة، أو السطر 12، أ�
 goto-not-a-target-pages = ليس هدف انتقال: { $text }. اكتب رقم صفحة، أو كلمة line ورقمًا، أو نسبة مئوية مثل 50%، أو start، أو end.
 goto-word-page = صفحة
 
-## Wave 5 (W5y): تصفية المكتبة والقاموس والسرعات.
+## تصفية المكتبة والقاموس والسرعات.
 
 # The library list filtered: $shown of $n documents match $filter.
 library-title-filtered = المكتبة، { $shown } من { $n } يطابق { $filter }
@@ -3174,7 +3174,7 @@ library-filter-matched =
     }
 # Said once when define word is used while the dictionary file is still opening.
 define-still-loading = ما زال القاموس قيد التحميل.
-# إعدادات أضافها W5y.
+# إعدادات.
 setting-speech-dectalk-library = مكتبة DECtalk
 setting-speech-dectalk-library-help = مكتبة DECtalk المراد تحميلها؛ عدم الضبط يبحث في الأماكن المعتادة.
 setting-speech-piper-voices = مجلد أصوات Piper
@@ -3191,7 +3191,7 @@ setting-speech-voice-params-help = السرعة وطبقة الصوت اللتا
 setting-editing-author = المؤلف
 setting-editing-author-help = المؤلف الذي يُكتب في المستندات الجديدة المنشأة من قالب؛ تركه فارغًا يبقيه خاليًا.
 
-## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
 
 gui-yes = نعم
@@ -3284,7 +3284,7 @@ gui-palette-count =
 gui-settings-form-help = ينتقل السهمان لأعلى ولأسفل بين الإعدادات. ويغيّر السهمان لليسار ولليمين إعدادًا. ويكتب Enter قيمة جديدة. ويعيد Delete القيمة الافتراضية. ويغيّر { $next } و{ $previous } القسم. اكتب للتصفية. ويقول F1 التعليمات.
 gui-settings-press-enter = اضغط Enter لكتابة قيمة جديدة لـ { $label }.
 gui-font-built-in = { $family } (مضمّن)
-## Wave 5 (W5s): summaries and difficult-word definitions.
+## Summaries and difficult-word definitions.
 
 action-summarize = تلخيص التحديد أو الفصل أو المستند: أهم جمله في قائمة؛ Enter ينتقل إلى إحداها
 # The summary list's title: $n sentences of the whole document.
@@ -3337,18 +3337,18 @@ settings-unit-sentences =
        *[other] جملة
     }
 
-# W6a5: the GUI. Said in textweaver's own voice when the window takes the
+# The GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }، { -brand }.
 
-## Wave 6 (W6o): opening the new formats. Said after "Could not open NAME:", so
+## Opening the new formats. Said after "Could not open NAME:", so
 ## each starts in lower case.
 opening-damaged-json = ليس ملف JSON قابلًا للقراءة؛ قد يكون كبيرًا جدًا.
 opening-damaged-notebook = ليس دفتر Jupyter قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
 opening-damaged-svg = ليس رسمًا بصيغة SVG قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
 opening-damaged-mathml = ليست صيغة MathML قابلة للقراءة؛ قد تكون تالفة أو كبيرة جدًا.
 
-## W6u: menus, the command palette, interface announcements, colors, and settings
+## Menus, the command palette, interface announcements, colors, and settings
 
 ## Menu titles; the top menus mark their access key with &.
 
@@ -3704,9 +3704,8 @@ settingsio-import-question-names =
     }
 settingsio-and-more = { $names } و{ $n } غيرها
 
-## End of W6u
 
-## W6d: dictation in edit mode (ADR-0042). Keep the meaning first: a
+## Dictation in edit mode (ADR-0042). Keep the meaning first: a
 ## 40-cell Braille display shows the start of the line. $words are the
 ## dictated words, $key the dictate key, $dir a folder, $error and $text
 ## are passed on as they are.
@@ -3727,9 +3726,8 @@ setting-dictation-model-dir = مجلد نموذج الإملاء
 setting-dictation-model-dir-help = نموذج Whisper للإملاء. عند عدم تعيينه يُستخدم whisper/rten/base.en في مجلد البيانات.
 section-dictation = الإملاء
 
-## End of W6d
 
-## W6f: the file browser. Every row and introduction starts with the name,
+## The file browser. Every row and introduction starts with the name,
 ## then the kind, so the first cells of a 40-cell Braille line hold what
 ## matters. $name is a file or folder name; $n a number that chooses the
 ## plural and $count the same number written with its separators.
@@ -3852,9 +3850,8 @@ browse-preview-folder-empty = { $path }: لا شيء للقراءة هنا.
 browse-preview-other = { $name }، { $size }؛ لا يستطيع textweaver قراءة هذا النوع من الملفات.
 browse-preview-path = { $path }
 
-## End of W6f
 
-## W6k: batch conversion (File, Batch convert). Keep the meaning first.
+## Batch conversion (File, Batch convert). Keep the meaning first.
 batch-choose-source = اختر المجلد المراد تحويله
 batch-choose-output = اختر مجلد الملفات المحوّلة
 batch-format-title = التحويل إلى
@@ -3907,9 +3904,8 @@ batch-failure-item = { $name }: { $reason }
 batch-start-failed = تعذّر بدء التحويل: { $error }
 batch-thread-stopped = توقف التحويل الجماعي على نحو غير متوقع.
 
-## End of W6k
 
-## W6v: audio export (File, Export audio). Keep the meaning first: a
+## Audio export (File, Export audio). Keep the meaning first: a
 ## 40-cell Braille display shows the start of the line. $name is a file
 ## name (essay.flac); $path a folder or a file's full path; $format a
 ## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
@@ -3950,9 +3946,8 @@ audio-subtitles = الترجمة في { $name }.
 audio-failed = تعذر تصدير الصوت: { $error }
 audio-thread-stopped = توقف تصدير الصوت على نحو غير متوقع.
 
-## End of W6v
 
-## W6a6: the window's menus and dialogs. Settings files chosen with the
+## The window's menus and dialogs. Settings files chosen with the
 ## system's file chooser, the Colors dialog, and the font list. $ratio is
 ## a contrast ratio such as 4.8; $verdict is good, fair, or low.
 gui-settings-files = ملفات الإعدادات
@@ -3972,14 +3967,12 @@ gui-font-list-intro =
        *[other] { $title }، { $n } عائلات.
     }
 
-## End of W6a6
 
-## W6c5: PDF links. Said before the first line of the page a link inside
+## PDF links. Said before the first line of the page a link inside
 ## a PDF goes to, when the page has no heading there (as links-heading-label
 ## is for a heading). $page is the page's printed number or label (12, iv).
 links-page-label = صفحة { $page }
 
-## End of W6c5
 
 ## Sync wave, S4: sync in the reader (ADR-0049).
 sync-status-off = المزامنة: متوقفة
@@ -4189,7 +4182,7 @@ setting-sync-favorite-voices-help = مشاركة الأصوات المفضلة. 
 
 ## End of S5
 
-## W7l: Lexend downloaded on first choice.
+## Lexend downloaded on first choice.
 font-download-question = تنزيل الخط { $font }، { $kb } كيلوبايت، { $licence }؟ y أو n
 font-downloading = تنزيل { $font }.
 font-downloaded = تم تنزيل { $font } وهو جاهز.
@@ -4201,7 +4194,7 @@ font-download-not-in-build = تنزيل الخطوط غير متاح في هذا
 gui-font-to-download = { $family } (للتنزيل، { $kb } كيلوبايت)
 gui-font-downloaded = { $family } (منزّل)
 
-## W8a-f: منتقيات الملفات والمجلدات.
+## منتقيات الملفات والمجلدات.
 prompt-browse-hint = { $label }. { $key } للتصفح.
 prompt-browse-file = اختر الملف: { $label }
 prompt-browse-folder = اختر المجلد: { $label }
@@ -4217,7 +4210,7 @@ chooser-profile-files = ملفات تصدير الإعدادات
 gui-folder-no-dialog = لم يُفتح منتقي المجلدات في النظام. اختر المجلد من هذه القائمة.
 gui-prompt-browse-hint = يفتح { $key } متصفح الملفات.
 
-## المكونات الاختيارية (W8a-d، W8a-w).
+## المكونات الاختيارية.
 name-manage-components = إدارة المكونات الاختيارية…
 name-download-dictation-model = تنزيل نموذج الإملاء
 action-manage-components = إدارة المكونات الاختيارية: النماذج والخطوط والأصوات التي يمكن لـ textweaver تنزيلها، مع حجمها وترخيصها
@@ -4295,7 +4288,7 @@ dictation-model-file-missing = ينقص النموذج { $file }.
 dictation-model-damaged = نموذج الإملاء تالف: { $file }.
 dictation-model-no-folder = لا مجلد للنموذج: { $dir }.
 
-## إعدادات المكونات الاختيارية (W8a-d، W8a-w).
+## إعدادات المكونات الاختيارية.
 section-components = المكونات الاختيارية
 setting-dictation-model = نموذج الإملاء
 setting-dictation-model-help = نموذج Whisper الذي يستخدمه الإملاء حين لا يُحدَّد مجلد. «تنزيل نموذج الإملاء» في قائمة الأدوات يجلبه.
