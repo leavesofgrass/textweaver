@@ -736,7 +736,9 @@ impl Widget for ChoiceList {
                 b.push_default(StyleProperty::FontFamily(FontFamily::Source(
                     crate::fonts::DEFAULT_STACK.into(),
                 )));
-                b.push_default(StyleProperty::FontSize(theme::UI_TEXT + 1.0));
+                b.push_default(StyleProperty::FontSize(theme::ui_size(
+                    theme::UI_TEXT + 1.0,
+                )));
                 b.push_default(StyleProperty::LineHeight(LineHeight::FontSizeRelative(1.3)));
                 b.push_default(StyleProperty::Brush(BrushIndex(0)));
                 let mut l = b.build(text);

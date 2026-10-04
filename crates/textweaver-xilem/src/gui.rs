@@ -47,7 +47,9 @@ use textweaver_app::{
 };
 
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
-use crate::document::{CaretEcho, DocAction, DocAids, DocFont, DocModel, DocState, DocumentView};
+use crate::document::{
+    CaretEcho, DocAction, DocAids, DocFont, DocModel, DocState, DocumentView, HighlightShown,
+};
 use crate::file_chooser::{self, FileChosen};
 use crate::font_chooser::Step;
 use crate::keys;
@@ -201,6 +203,8 @@ struct Shown {
     /// The reading aids' settings the model's spans were built with.
     aid_spans: Option<AidSpansKey>,
     aids: DocAids,
+    /// What the reading highlight draws ([`highlight_shown`]).
+    highlight: Option<HighlightShown>,
     rsvp: Option<RsvpShown>,
     /// The document font, from `[reading_aids.font]`.
     font: Option<DocFont>,
@@ -443,7 +447,7 @@ pub struct Tree {
 
 pub(crate) fn label(text: &str, size: f32, bold: bool) -> Label {
     let mut l = Label::new(text.to_owned())
-        .with_style(StyleProperty::FontSize(size))
+        .with_style(StyleProperty::FontSize(theme::ui_size(size)))
         .with_style(StyleProperty::FontFamily(FontFamily::Source(
             crate::fonts::DEFAULT_STACK.into(),
         )));
@@ -1092,6 +1096,30 @@ pub fn marks_in(app: &App, window: CharRange) -> Vec<(CharRange, crate::document
         .collect()
 }
 
+/// What the reading highlight draws (`[highlight] enabled`, `granularity`,
+/// and `lead_words`, as the terminal draws it), or `None` when that is the
+/// spoken word and sentence themselves (the defaults: both, no lead). Only
+/// drawn: the caret a screen reader follows stays on the spoken word.
+pub fn highlight_shown(app: &App) -> Option<HighlightShown> {
+    use textweaver_app::core::HighlightGranularity as G;
+    let h = &app.settings().highlight;
+    if h.enabled && h.granularity == G::Both && app.highlight_lead() == 0 {
+        return None;
+    }
+    if !h.enabled {
+        return Some(HighlightShown::default());
+    }
+    let (word, sentence) = app.shown_spoken();
+    Some(HighlightShown {
+        word: word.filter(|_| matches!(h.granularity, G::Word | G::Both)),
+        sentence: match h.granularity {
+            G::Sentence => sentence.or(word),
+            G::Both => sentence,
+            G::Word => None,
+        },
+    })
+}
+
 /// The document view's state from the app.
 pub fn state_for(app: &App) -> DocState {
     let Some(s) = app.session() else {
@@ -1265,6 +1293,7 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     let aids = DocAids {
         spacing: (&app.settings().reading_aids.spacing).into(),
         ruler: app.ruler(),
+        measure: app.settings().display.measure,
     };
     if aids != shown.aids {
         host.edit(DOC, |mut d| DocumentView::set_aids(&mut d, aids));
@@ -1275,6 +1304,15 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     if rsvp != shown.rsvp {
         host.edit(RSVP, |mut r| RsvpView::set_shown(&mut r, rsvp.clone()));
         shown.rsvp = rsvp;
+    }
+    // `[highlight] enabled`, `granularity`, and `lead_words`: what the
+    // reading highlight draws.
+    let drawn = highlight_shown(app);
+    if drawn != shown.highlight {
+        host.edit(DOC, |mut d| {
+            DocumentView::set_highlight_shown(&mut d, drawn)
+        });
+        shown.highlight = drawn;
     }
     let state = state_for(app);
     if state != shown.state {
@@ -1499,6 +1537,11 @@ impl Gui {
                 crate::log::line(&format!("theme: {}", self.palette.name));
             }
         }
+        // The Colors dialog measures against what is drawn: a theme the
+        // command line chose, or the system's high contrast colors.
+        let drawn = (self.fixed_theme || self.system.is_some())
+            .then_some((self.palette.background, self.palette.text));
+        self.app.set_drawn_colors(drawn);
         // The Contents or Notes panel follows `[gui] sidebar` and the
         // document; closed, this reads one setting.
         let root = ctx.render_root(self.window_id);
@@ -2175,7 +2218,9 @@ impl Gui {
         let field = NewWidget::new(
             TextArea::new_editable(initial)
                 .with_accessible_label(label_text.to_owned())
-                .with_style(StyleProperty::FontSize(theme::UI_TEXT + 2.0)),
+                .with_style(StyleProperty::FontSize(theme::ui_size(
+                    theme::UI_TEXT + 2.0,
+                ))),
         )
         .with_tag(PROMPT_FIELD);
         let field_id = field.id();
@@ -2549,7 +2594,9 @@ impl Gui {
         let field = NewWidget::new(
             TextArea::new_editable("")
                 .with_accessible_label(label_text.to_owned())
-                .with_style(StyleProperty::FontSize(theme::UI_TEXT + 2.0)),
+                .with_style(StyleProperty::FontSize(theme::ui_size(
+                    theme::UI_TEXT + 2.0,
+                ))),
         )
         .with_tag(PROMPT_FIELD);
         let field_id = field.id();
@@ -2810,7 +2857,8 @@ impl Gui {
             if self.spell_marked.take().is_some() {
                 ctx.render_root(self.window_id)
                     .edit_widget_with_tag(DOC, |mut d| {
-                        DocumentView::set_misspelled(&mut d, Vec::new())
+                        DocumentView::set_misspelled(&mut d, Vec::new());
+                        DocumentView::set_lint(&mut d, Vec::new());
                     });
             }
             self.spell_seen = None;
@@ -2829,15 +2877,21 @@ impl Gui {
         }
         let started = Instant::now();
         let ranges = self.app.misspelled_ranges();
+        // Markdown lint's problems, drawn with a double underline.
+        let lint = self.app.lint_ranges();
         if self.log {
             crate::log::line(&format!(
-                "misspellings: {} in {:.1} ms",
+                "misspellings: {}, lint: {} in {:.1} ms",
                 ranges.len(),
+                lint.len(),
                 started.elapsed().as_secs_f64() * 1000.0
             ));
         }
         ctx.render_root(self.window_id)
-            .edit_widget_with_tag(DOC, |mut d| DocumentView::set_misspelled(&mut d, ranges));
+            .edit_widget_with_tag(DOC, |mut d| {
+                DocumentView::set_misspelled(&mut d, ranges);
+                DocumentView::set_lint(&mut d, lint);
+            });
         self.spell_marked = Some(key);
         self.spell_seen = None;
     }
@@ -3781,6 +3835,11 @@ fn startup_phase(log: bool, phase: &str) {
 /// Runs the GUI until the window closes.
 pub fn run(opts: GuiOptions) -> Result<(), String> {
     let _ = RUN_STARTED.set(Instant::now());
+    // The platform's interface text size, read beside the app's startup.
+    let text_scale = std::thread::Builder::new()
+        .name("text-scale".into())
+        .spawn(textweaver_app::theme::os::text_scale)
+        .ok();
     let queue: MessageQueue = Rc::new(RefCell::new(VecDeque::new()));
     let muted = Rc::new(Cell::new(false));
     let announcer = QueueAnnouncer {
@@ -3797,6 +3856,12 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
     let (mut app, mut messages) =
         setup::build_app_following(&opts.app, Box::new(announcer), opts.theme.is_none());
     startup_phase(opts.log, "settings, app, and color-scheme probe");
+    if let Some(scale) = text_scale.and_then(|t| t.join().ok()) {
+        theme::set_text_scale(scale);
+        if opts.log {
+            crate::log::line(&format!("interface text scale: {scale:.2}"));
+        }
+    }
     app.set_announce_list_focus(opts.experiments.app_list_announcements);
     let mut experiments = opts.experiments;
     let wanted = experiments

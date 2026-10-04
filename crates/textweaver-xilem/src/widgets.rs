@@ -643,7 +643,9 @@ fn button_text(text: String) -> Label {
         .with_style(StyleProperty::FontFamily(FontFamily::Source(
             crate::fonts::DEFAULT_STACK.into(),
         )))
-        .with_style(StyleProperty::FontSize(crate::theme::UI_TEXT))
+        .with_style(StyleProperty::FontSize(crate::theme::ui_size(
+            crate::theme::UI_TEXT,
+        )))
         .accessibility_hidden(true)
 }
 

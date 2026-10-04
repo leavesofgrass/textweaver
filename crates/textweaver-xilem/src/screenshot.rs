@@ -178,6 +178,11 @@ pub fn screenshot(opts: &ShotOptions) -> Result<(), String> {
         Some(name) => Palette::named(name),
         None => Palette::from_theme(&app.reading_theme()),
     };
+    // The Colors dialog measures against the palette drawn (GUI audit
+    // QW9), not the saved theme.
+    if opts.theme.is_some() {
+        app.set_drawn_colors(Some((palette.background, palette.text)));
+    }
     let font = crate::fonts::doc_font(&app.settings().reading_aids.font);
     let tree = gui::build_tree(
         &palette,

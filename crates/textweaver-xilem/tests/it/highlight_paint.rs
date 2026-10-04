@@ -179,13 +179,168 @@ fn marks_inside_the_spoken_sentence_are_painted_over_its_band() {
         assert!(band > last_band, "{mark:?} band after the sentence band");
         assert!(shape > last_band, "{mark:?} shape after the sentence band");
     }
-    // The word band and the text come after the marks.
+    // Design system E's order: every band, then the word band, the text,
+    // then every shape, so no band covers a line or a box.
     let word = position(&steps, |s| matches!(s, PaintStep::WordBand(_))).expect("word band");
-    let last_mark = steps
+    let text = position(&steps, |s| matches!(s, PaintStep::Text(_))).expect("text");
+    let last_band = steps
         .iter()
-        .rposition(|s| matches!(s, PaintStep::MarkShape(..)))
+        .rposition(|s| matches!(s, PaintStep::MarkBand(..)))
         .expect("marks");
-    assert!(word > last_mark);
+    let first_shape = position(&steps, |s| matches!(s, PaintStep::MarkShape(..))).expect("marks");
+    assert!(last_band < word && word < text && text < first_shape);
+}
+
+/// A model of [`TEXT`] with a difficult word ("quick") and syllable
+/// breaks in "reader" and "closely".
+fn harness_with_aids(p: &Palette) -> TestHarness<DocumentView> {
+    use textweaver_xilem::window::{SpanStyle, StyledSpan};
+    let mut h = harness(p);
+    let doc = Document::from_plain_text(TEXT);
+    let w = textweaver_app::DocWindow::with_budget(&doc, CharPos::ZERO, WINDOW_UNITS);
+    let mut spans = window::window_spans(&doc, w.range());
+    spans.push(StyledSpan {
+        range: CharRange::new(4, 9),
+        style: SpanStyle::Difficult,
+    });
+    let reader = TEXT.find("reader").expect("reader");
+    let closely = TEXT.find("closely").expect("closely");
+    let model = DocModel {
+        paragraphs: window::window_paragraphs(&doc, w.range()),
+        spans,
+        doc_len: doc.len_chars(),
+        title: "Test".into(),
+        breaks: vec![CharPos(reader + 4), CharPos(closely + 5)],
+        separator: "\u{b7}".into(),
+    };
+    h.edit_root_widget(|mut d| DocumentView::set_model(&mut d, model));
+    let _ = h.redraw();
+    h
+}
+
+/// Every mark the window draws has its shape (design system E), in the
+/// paint order the table gives, and each reading aid's mark is drawn in its
+/// own color from the palette (the theme's role, or `[colors]`), in every
+/// palette, the system's contrast colors too.
+#[test]
+fn every_mark_shape_is_painted_in_order() {
+    use textweaver_xilem::document::AidMark;
+    for p in every_palette() {
+        let mut h = harness_with_aids(&p);
+        let marks = vec![
+            (CharRange::new(20, 25), DocMark::Highlight),
+            (CharRange::new(26, 30), DocMark::Note),
+            (CharRange::new(31, 34), DocMark::Bookmark),
+            (CharRange::new(35, 39), DocMark::FindHit),
+            (CharRange::new(40, 44), DocMark::CurrentFindHit),
+        ];
+        h.edit_root_widget(|mut d| {
+            DocumentView::set_marks(&mut d, marks.clone());
+            DocumentView::set_misspelled(&mut d, vec![CharRange::new(45, 50)]);
+            DocumentView::set_lint(&mut d, vec![CharRange::new(51, 58)]);
+        });
+        let steps = read(&mut h);
+        for (_, mark) in &marks {
+            assert!(
+                steps
+                    .iter()
+                    .any(|s| matches!(s, PaintStep::MarkShape(m, _) if m == mark)),
+                "{}: {mark:?} has its shape",
+                p.name
+            );
+        }
+        let aid = |want: AidMark| -> Vec<(usize, textweaver_theme::Rgb)> {
+            steps
+                .iter()
+                .enumerate()
+                .filter_map(|(i, s)| match s {
+                    PaintStep::Aid(m, _, c) if *m == want => Some((i, *c)),
+                    _ => None,
+                })
+                .collect()
+        };
+        for (want, color) in [
+            (AidMark::DifficultWord, p.difficult_word),
+            (AidMark::Syllable, p.syllable_mark),
+            (AidMark::Misspelling, p.misspelling),
+            (AidMark::Lint, p.lint),
+        ] {
+            let found = aid(want);
+            assert!(!found.is_empty(), "{}: {want:?} drawn", p.name);
+            assert!(
+                found.iter().all(|(_, c)| *c == color),
+                "{}: {want:?} in its color",
+                p.name
+            );
+        }
+        assert_eq!(aid(AidMark::Syllable).len(), 2, "{}: two dots", p.name);
+        // The order: bands, the word band, the text, the shapes and the
+        // aids' lines, then the sentence's line, the misspelling's dots.
+        let text = position(&steps, |s| matches!(s, PaintStep::Text(_))).expect("text");
+        let word = position(&steps, |s| matches!(s, PaintStep::WordBand(_))).expect("word");
+        let last_band = steps
+            .iter()
+            .rposition(|s| matches!(s, PaintStep::MarkBand(..)))
+            .expect("bands");
+        let first_shape =
+            position(&steps, |s| matches!(s, PaintStep::MarkShape(..))).expect("shapes");
+        let lint = aid(AidMark::Lint)[0].0;
+        let sentence_line = position(&steps, |s| matches!(s, PaintStep::SentenceUnderline(..)))
+            .expect("sentence line");
+        let dots = aid(AidMark::Misspelling)[0].0;
+        assert!(last_band < word && word < text, "{}", p.name);
+        assert!(text < first_shape && first_shape < lint, "{}", p.name);
+        assert!(lint < sentence_line && sentence_line < dots, "{}", p.name);
+    }
+}
+
+/// Under the system's contrast colors every band is the page, so the
+/// marks' shapes and the sentence's underline are what is seen: all are
+/// still drawn.
+#[test]
+fn under_system_colors_the_shapes_are_drawn_where_bands_are_the_page() {
+    let p = system_colors::palette(&system_colors::NIGHT_SKY);
+    assert_eq!(p.user_highlight, p.background);
+    assert_eq!(p.spoken_sentence, p.background);
+    let mut h = harness(&p);
+    let marks = vec![
+        (CharRange::new(20, 25), DocMark::Highlight),
+        (CharRange::new(26, 30), DocMark::Note),
+    ];
+    h.edit_root_widget(|mut d| DocumentView::set_marks(&mut d, marks));
+    let steps = read(&mut h);
+    let shapes = steps
+        .iter()
+        .filter(|s| matches!(s, PaintStep::MarkShape(..)))
+        .count();
+    assert_eq!(shapes, 2);
+    assert!(!h.root_widget().sentence_underlines().is_empty());
+}
+
+/// The reading aids' colors come from the theme's derived roles, which
+/// `[colors]` sets: a color chosen there is the one the window draws.
+#[test]
+fn the_aids_colors_follow_the_theme_roles() {
+    use textweaver_theme::{ColorRole, Rgb};
+    let mut t = textweaver_theme::builtin::default_theme().clone();
+    let orange = Rgb::from_u32(0xff8800);
+    let blue = Rgb::from_u32(0x3366ff);
+    t.set_color(ColorRole::Misspelling, orange);
+    t.set_color(ColorRole::Lint, blue);
+    t.set_color(ColorRole::DifficultWord, orange);
+    t.set_color(ColorRole::SyllableMark, blue);
+    t.set_color(ColorRole::Ruler, blue);
+    let p = Palette::from_theme(&t);
+    assert_eq!(
+        (
+            p.misspelling,
+            p.lint,
+            p.difficult_word,
+            p.syllable_mark,
+            p.ruler_focus
+        ),
+        (orange, blue, orange, blue, blue)
+    );
 }
 
 #[test]
