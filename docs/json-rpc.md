@@ -128,7 +128,7 @@ Parameters: none.
 The result is an object with:
 
 - `server`: always `"textweaver"`.
-- `version`: the textweaver version, such as `"0.1.0-alpha.8"`.
+- `version`: the textweaver version, such as `"0.1.0-alpha.9"`.
 - `protocol`: the protocol version, a number. It is `1`.
 - `methods`: the names of every method.
 - `notifications`: the names of every notification.
@@ -478,7 +478,7 @@ The server answers with its name, version, protocol, and the lists of methods an
     "notifications": ["position", "playback", "announcement", "prompt", "list", "quit"],
     "protocol": 1,
     "server": "textweaver",
-    "version": "0.1.0-alpha.8"
+    "version": "0.1.0-alpha.9"
   }
 }
 ```
@@ -763,7 +763,7 @@ python client.py notes.md
 With the example document, opened for the first time, it prints:
 
 ```text
-Connected to textweaver 0.1.0-alpha.8 protocol 1
+Connected to textweaver 0.1.0-alpha.9 protocol 1
 Announcement: Opened Cell biology.
 Opened Cell biology with 7 lines
 Announcement: Cells are the smallest units of life.
