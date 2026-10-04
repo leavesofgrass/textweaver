@@ -122,8 +122,8 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Export: the `[export]` section
 
 - `export.subtitle_format`: default SubRip (`"srt"`). Subtitle format. The format of subtitles written without a file name. Choices: `"srt"` (SubRip), `"vtt"` (WebVTT), `"ass"` (ASS karaoke). Syncs between computers.
-- `export.subtitle_karaoke`: default Off (`"off"`). Subtitle karaoke. How subtitle lines show the word being read: off, underlined as it is spoken (WebVTT tags), or one cue per word in bold and underline. Choices: `"off"` (Off), `"tags"` (Underline as spoken), `"lines"` (One cue per word). Stays on this computer.
-- `export.subtitle_chapters`: default off (`false`). Chapters file. Also write a WebVTT chapters file beside the subtitles or the audio. On or off: `true` or `false`. Stays on this computer.
+- `export.subtitle_karaoke`: default Off (`"off"`). Subtitle karaoke. How subtitle lines show the word being read: off, underlined as it is spoken (WebVTT tags), or one cue per word in bold and underline. Choices: `"off"` (Off), `"tags"` (Underline as spoken), `"lines"` (One cue per word). Syncs between computers.
+- `export.subtitle_chapters`: default off (`false`). Chapters file. Also write a WebVTT chapters file beside the subtitles or the audio. On or off: `true` or `false`. Syncs between computers.
 - `export.subtitle_word_level`: default off (`false`). Word subtitles. One subtitle per word instead of caption lines. On or off: `true` or `false`. Syncs between computers.
 - `export.subtitles_with_audio`: default off (`false`). Subtitles with audio. Always write subtitles beside exported audio. On or off: `true` or `false`. Syncs between computers.
 

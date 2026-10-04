@@ -2466,7 +2466,7 @@ mod tests {
         // A bad value costs only itself.
         write(
             &store,
-            "[normalization.community_lexicon]\nenabled = \"yes\"\nlanguage = \"DEU\"\n[export]\nsubtitle_format = \"ass\"\nsubtitle_word_level = true\n",
+            "[normalization.community_lexicon]\nenabled = \"yes\"\nlanguage = \"DEU\"\n[export]\nsubtitle_format = \"sub\"\nsubtitle_word_level = true\n",
         );
         let (s, _) = store.load();
         assert!(!s.normalization.community_lexicon.enabled);
