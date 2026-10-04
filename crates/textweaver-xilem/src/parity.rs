@@ -100,6 +100,10 @@ mod tests {
                                 | ActionId::Settings
                                 | ActionId::ColorSettings
                                 | ActionId::CommandPalette
+                                // The bars' commands: the window's own,
+                                // with no keys (so not window-only).
+                                | ActionId::ToggleHeader
+                                | ActionId::ToggleToolbar
                         ),
                     "{a:?}"
                 );
