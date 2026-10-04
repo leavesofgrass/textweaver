@@ -27,10 +27,49 @@ use masonry::core::{
     TextEvent, Update, UpdateCtx, Widget, WidgetMut, WidgetPod,
 };
 use masonry::imaging::Painter;
-use masonry::kurbo::{Axis, Point, Size};
+use masonry::kurbo::{Axis, Point, RoundedRect, Size, Stroke};
 use masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 use masonry::widgets::Label;
 use textweaver_app::a11y::Priority;
+
+// --- The outer focus ring.
+
+/// How far a control's outer focus ring reaches past its border: the inner
+/// line and a high-contrast ring.
+const FOCUS_RING_ROOM: f64 = crate::theme::FOCUS_INNER + crate::theme::FOCUS_WIDTH + 1.0;
+
+/// The focus ring a control draws outside its border when it has the
+/// focus (design system D): a 1 px line in `inner` touching the border,
+/// then `width` px of `outer` (2 px, 3 px in high contrast). A ring of no
+/// width draws nothing.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct FocusRing {
+    /// The thin line next to the border.
+    pub inner: masonry::peniko::Color,
+    /// The ring.
+    pub outer: masonry::peniko::Color,
+    /// The ring's width in logical pixels.
+    pub width: f64,
+}
+
+impl masonry::core::Property for FocusRing {
+    fn static_default() -> &'static Self {
+        static DEFAULT: FocusRing = FocusRing {
+            inner: masonry::peniko::Color::TRANSPARENT,
+            outer: masonry::peniko::Color::TRANSPARENT,
+            width: 0.0,
+        };
+        &DEFAULT
+    }
+}
+
+impl Default for FocusRing {
+    fn default() -> Self {
+        *<Self as masonry::core::Property>::static_default()
+    }
+}
+
+impl masonry::core::UsesProperty<FocusRing> for ActionButton {}
 
 // --- Root.
 
@@ -589,9 +628,47 @@ impl Widget for ActionButton {
         let origin = ((size - child_size).to_vec2() * 0.5).to_point();
         ctx.place_child(&mut self.child, origin);
         ctx.derive_baselines(&self.child);
+        // Room for the outer focus ring.
+        ctx.set_paint_insets(FOCUS_RING_ROOM);
     }
 
-    fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _p: &mut Painter<'_>) {
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
+        if !ctx.is_focus_target() {
+            return;
+        }
+        // The outer focus ring (design system D): a 1 px line in the inner
+        // focus color touching the border, which stays, then the ring.
+        let cache = ctx.property_cache();
+        let ring = *props.get::<FocusRing>(cache);
+        let radius = props
+            .get::<masonry::properties::CornerRadius>(cache)
+            .radius
+            .get();
+        if ring.width <= 0.0 {
+            return;
+        }
+        let bb = ctx.border_box();
+        let inner = crate::theme::FOCUS_INNER;
+        painter
+            .stroke(
+                RoundedRect::from_rect(bb.inflate(inner / 2.0, inner / 2.0), radius + inner / 2.0),
+                &Stroke::new(inner),
+                ring.inner,
+            )
+            .draw();
+        let out = inner + ring.width / 2.0;
+        painter
+            .stroke(
+                RoundedRect::from_rect(bb.inflate(out, out), radius + out),
+                &Stroke::new(ring.width),
+                ring.outer,
+            )
+            .draw();
     }
 
     fn accessibility_role(&self) -> Role {

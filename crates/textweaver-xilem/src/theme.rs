@@ -331,8 +331,15 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
     let focus = color(p.focus);
 
     // Buttons: the to_do_mvc shape, recolored, with a 2 px focus ring.
-    button_props::<Button>(&mut props, p);
-    button_props::<crate::widgets::ActionButton>(&mut props, p);
+    button_props::<Button>(&mut props, p, false);
+    button_props::<crate::widgets::ActionButton>(&mut props, p, true);
+    // The window's own buttons draw the outer ring: the border stays, a
+    // 1 px inner line, then the ring (design system D).
+    props.insert::<crate::widgets::ActionButton, _>(crate::widgets::FocusRing {
+        inner: color(p.focus_inner),
+        outer: color(p.focus),
+        width: ring_width(p),
+    });
 
     // Checkboxes.
     props.insert::<Checkbox, _>(Background::Color(color(p.raised)));
@@ -421,8 +428,15 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
 }
 
 /// The button look for widget type `W`: Masonry's `Button` shape with the
-/// palette's colors; the `primary` class fills with the accent.
-fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Palette) {
+/// palette's colors; the `primary` class fills with the accent. With
+/// `outer_ring`, the focus is the widget's own outer ring
+/// ([`crate::widgets::FocusRing`]) and the border stays; else the border
+/// turns into the ring.
+fn button_props<W: masonry::core::Widget>(
+    props: &mut DefaultProperties,
+    p: &Palette,
+    outer_ring: bool,
+) {
     let hc = p.kind == ThemeKind::HighContrast;
     let border_w = if hc { 2.px() } else { 1.px() };
     let focus = color(p.focus);
@@ -450,7 +464,9 @@ fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Pal
             color: color(p.border_hover),
         },
     );
-    stack.push_layer(Selector::new().with_focused(true), ring);
+    if !outer_ring {
+        stack.push_layer(Selector::new().with_focused(true), ring);
+    }
     stack.push_layer(
         Selector::new().with_active(true),
         Background::Color(color(p.raised.mix(p.text, 0.10))),
@@ -471,17 +487,19 @@ fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Pal
     // On the accent fill, the ring is drawn in the page color, which
     // stands out from the fill (at least 3 to 1, tested) where the text
     // color can be close to it.
-    stack.push_layer(
-        Selector::classes(&["primary"]).with_focused(true),
-        (
-            BorderColor {
-                color: color(p.background),
-            },
-            BorderWidth {
-                width: Length::px(FOCUS_WIDTH),
-            },
-        ),
-    );
+    if !outer_ring {
+        stack.push_layer(
+            Selector::classes(&["primary"]).with_focused(true),
+            (
+                BorderColor {
+                    color: color(p.background),
+                },
+                BorderWidth {
+                    width: Length::px(FOCUS_WIDTH),
+                },
+            ),
+        );
+    }
     // Disabled last, since later layers win: a disabled Play loses its
     // accent fill and border like any other button (design system QW3).
     stack.push_layer(
