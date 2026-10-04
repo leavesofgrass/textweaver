@@ -75,5 +75,5 @@ The generated pages (`keyboard.md` and `settings-reference.md`) list every key a
 
 ## Still open
 
-- The 293 keyboard actions were checked by topic, not key by key. The generated keyboard page is the key list. A key-by-key check is not done. Fix.
+- The 293 keyboard actions were checked key by key against the guides by the owner, Sunday, October 4, 2026. The generated keyboard page is the key list. Pass.
 - German, French, Portuguese, and Arabic translations are not yet checked by native speakers: see known-limits.md. Fix.
