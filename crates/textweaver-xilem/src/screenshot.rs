@@ -189,6 +189,12 @@ fn harness(opts: &ShotOptions) -> Result<TestHarness<Root>, String> {
         use textweaver_app::keymap::ActionId;
         let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
     }
+    if let Some(at) = opts.highlight_at {
+        // The app's cursor on the reading position, so the status bar's
+        // line and the view's scroll agree with the highlight drawn
+        // (a resumed position or a note's place no longer wins).
+        app.set_cursor(CharPos(at));
+    }
     let palette = match opts.theme.as_deref() {
         // Windows High Contrast's own colors, as the window follows them.
         Some(crate::system_colors::NIGHT_SKY_NAME) => {
@@ -587,7 +593,8 @@ mod tests {
         let home = tempfile::tempdir().expect("temp dir");
         let mut h = harness(&options(home.path())).expect("harness");
         let _ = h.render();
-        let painted = h.get_widget(DOC).inner().painted().to_vec();        assert!(
+        let painted = h.get_widget(DOC).inner().painted().to_vec();
+        assert!(
             painted.iter().any(|s| matches!(s, PaintStep::WordBand(_))),
             "no word band in {painted:?}"
         );
