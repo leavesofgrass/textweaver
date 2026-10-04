@@ -240,7 +240,7 @@ Compare the result with the line for that file in `SHA256SUMS.txt`.
 
 ## Building from source
 
-The [README](../README.md#building) has the build commands, and [CONTRIBUTING.md](../CONTRIBUTING.md) has the full set-up for contributors.
+[Building](dev/building.md) has the build commands, and [CONTRIBUTING.md](../CONTRIBUTING.md) has the full set-up for contributors.
 
 ## See also
 

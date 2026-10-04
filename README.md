@@ -2,59 +2,94 @@
 
 <img src="docs/assets/textweaver-logo.svg" alt="textweaver logo: the letters t and w woven on a loom" width="128" height="128">
 
-textweaver is an accessible, keyboard-first document reader and writer that speaks: it reads documents aloud with a highlight that follows the spoken word exactly, moves by character, word, sentence, heading, table, and more, and echoes what you type while you write Markdown. It is built first for screen-reader users and for students with print disabilities, and it is a Rust reimplementation of the core of [star](https://github.com/leavesofgrass/star). It runs on Windows, macOS, and Linux.
+textweaver reads documents out loud. As it reads, it highlights each word as it is spoken. You can also use it to write, and it speaks the letters and words you type.
 
-> **Status: alpha.** textweaver is ready for testing, not yet for daily reliance. The newest release is 0.1.0-alpha.8. See [CHANGELOG.md](CHANGELOG.md), [what is new](docs/whats-new.md), and [known limits](docs/known-limits.md).
+It is made first for people who use a screen reader, and for students who find print hard to read. It runs on Windows, Mac, and Linux.
 
-Start here: [students](docs/start-students.md), [accommodation staff](docs/start-staff.md), [privacy](docs/privacy.md), and the [accessibility statement](docs/accessibility.md).
+Status: alpha. It is ready for testing, but not yet for every day. See [known limits](docs/known-limits.md).
 
-## Quick start
+## Get textweaver on Windows
 
-On Windows, download the window package, `textweaver-VERSION-windows-x86_64-gui.zip`, from the [releases page](https://github.com/leavesofgrass/textweaver/releases), extract it, and run `textweaver-gui.exe`. Windows may warn once, because the program is not code-signed (see [Installing textweaver](docs/install.md#the-gui)). Press **Ctrl+O** to open a document and **Space** to hear it. **F1** opens the help, and **F3** lists every key.
+You will download one file, unpack it, and run the program.
 
-For the terminal reader on any system, download that system's package instead, or [build it](#building), and from the folder you extracted run:
+1. Go to the [releases page](https://github.com/leavesofgrass/textweaver/releases). Choose the latest release.
+2. Find the file whose name ends in `windows-x86_64-gui.zip`. Download it.
+3. Open your Downloads folder. Right-click the file.
+4. Choose "Extract All". Then choose a folder of your own, and finish.
+5. Open that folder. Run `textweaver-gui.exe`.
+6. Windows may warn you the first time, because the program is not code-signed. Choose "More info". Then choose "Run anyway".
 
-```bash
-textweaver QUICKSTART.md
-```
+The window opens. You are ready for the first steps below.
 
-It reads its own quick start aloud. Once it opens:
+## Your first steps
 
-- **Space** starts and pauses reading.
-- **h** jumps to the next heading.
-- **Ctrl+E** switches to edit mode, to write.
-- **?** lists every key.
+1. Press Ctrl+O. A box opens to choose a file.
+2. Choose a document, such as a Word file, a PDF, or a text file. Press Enter. textweaver says "Opened" and the title.
+3. Press Space. textweaver starts reading out loud. The highlight follows each word.
+4. Press Space again to pause. Press Space once more to go on.
+5. Press Escape to stop.
+6. Press F1 for help.
+7. Press F2 to see the list of every command. Type a few letters of a command's name. Press Enter to run it.
+8. Press Ctrl+Q to quit. textweaver asks "Quit textweaver? y or n". Press y.
 
-[docs/quickstart.md](docs/quickstart.md) has your first 30 seconds in full, for every system and the GUI. [Installing textweaver](docs/install.md) covers every package and how to check a download.
+textweaver remembers your place. Open the same file later, and it picks up where you left off.
 
-## What it does
+## More keys to try
 
-- Reads text, Markdown, HTML, EPUB, Word, RTF, OpenDocument, LaTeX, email, saved web pages, PDF, DAISY, PowerPoint, spreadsheets, and archives aloud, with OCR for scans and pictures.
-- Moves by character, word, sentence, line, paragraph, heading, table, list, or link, and remembers your place when you reopen a file.
-- Edits Markdown with typing echo, spell check, an outline, and citations.
-- Exports audio, braille, and other formats, and keeps a library and reading notes.
-- Speaks math aloud, and works alongside a screen reader, or in place of one.
-- Comes as a terminal reader (`textweaver`), a command-line tool (`tw`), and a native GUI (`textweaver-gui`), sharing documents, keys, settings, and voices.
+- Alt+Down: next sentence.
+- Alt+Up: previous sentence.
+- h: next heading.
+- Plus: faster voice. Minus: slower voice.
+- Ctrl+E: switch between reading and writing.
+- Ctrl+S: save what you wrote.
 
-## Building
+## If you use a screen reader
 
-You need Rust; rustup installs the version pinned in `rust-toolchain.toml`. You also need cmake 3.16 or later, for the Opus encoder; see [Building](docs/dev/building.md#cmake-for-opus-audio-export).
+textweaver can speak by itself, or work with NVDA or JAWS. Press Alt+Shift+A to choose who speaks. [Using textweaver with a screen reader](docs/screen-readers.md) explains the choices.
 
-```bash
-cargo build --workspace
-cargo test --workspace
-```
+## Mac and Linux
 
-On Linux, the build needs pkg-config and the ALSA development files (`libasound2-dev` on Debian and Ubuntu); [docs/dev/docker.md](docs/dev/docker.md) has a container with everything. [docs/dev/building.md](docs/dev/building.md) has the full setup for every system.
+For both, go to the [releases page](https://github.com/leavesofgrass/textweaver/releases) and choose the latest release.
 
-## Contributing
+On a Mac:
 
-We'd love your help. [CONTRIBUTING.md](CONTRIBUTING.md) covers the code rules, the checks (`scripts/dev-check.sh`), and how to send a change.
+1. Download the file ending in `macos-universal-gui.zip`. Double-click it to unpack it.
+2. Open the unpacked folder. Run `textweaver-gui`.
+3. Your Mac may block it the first time. [Installing textweaver](docs/install.md#the-gui) tells you how to allow it.
 
-## Documentation
+On Linux:
 
-The [documentation index](docs/README.md) lists every guide, grouped for users, contributors, and design decisions. The [interactive pages](docs/site/index.html) explain the architecture, the speech pipeline, the keyboard, and the reading aids with diagrams you can explore by keyboard; open `docs/site/index.html` in any browser, offline.
+1. Download the file ending in `linux-x86_64-gui.AppImage`. For an ARM computer, choose the one with `aarch64` instead.
+2. Make it runnable. In a terminal, type `chmod +x` and the file name. Press Enter.
+3. Run the file.
+
+The Mac and Linux windows are built and checked automatically, but no one has tested them with a screen reader yet. The terminal reader, below, is a good choice there.
+
+## The terminal reader
+
+The terminal reader runs in a text window. It has no mouse and no pictures. Many people who use a screen reader prefer it.
+
+1. On the releases page, download the file for your computer. Its name has no `-gui` in it. It ends in `windows-x86_64.zip`, `macos-universal.tar.gz`, or `linux-x86_64.AppImage`.
+2. Unpack it, and open a terminal in that folder.
+3. Type `textweaver QUICKSTART.md` and press Enter.
+
+textweaver reads its own quick start out loud. Press Space to start and pause. Press ? to list every key.
+
+## Learn more
+
+- [Quick start](docs/quickstart.md): your first 30 seconds, in full.
+- [Start here, for students](docs/start-students.md).
+- [The textweaver window](docs/gui.md).
+- [Every key](docs/keyboard.md).
+- [Installing textweaver](docs/install.md): every package, and scripts that install for you.
+- [Privacy](docs/privacy.md) and the [accessibility statement](docs/accessibility.md).
+- [What is new](docs/whats-new.md) and the [changelog](CHANGELOG.md).
+- Building from source, and everything for developers: [Building](docs/dev/building.md), [Contributing](CONTRIBUTING.md), and the [documentation index](docs/README.md).
+
+## Where it came from
+
+textweaver grew out of star and the owner's other work, and now has a life of its own.
 
 ## License
 
-GPL-3.0-or-later, like star. See [LICENSE](LICENSE).
+GPL-3.0-or-later. See [LICENSE](LICENSE).
