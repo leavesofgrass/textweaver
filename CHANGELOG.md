@@ -92,6 +92,21 @@ In short: this is the last alpha before beta 1, so it finishes and tidies what i
 - **Checklist tests** cover every list and dialog (named, modal, labeled) and prompts and the position line in 40 Braille cells. `docs/dev/checklist-tests.md` maps each checklist row to its test.
 - **Comments** in the message catalogs no longer name waves or agents.
 
+### Package sizes
+
+- `textweaver-0.1.0-alpha.9-linux-aarch64-gui.AppImage`: 37.0 MB (38,816,264 bytes)
+- `textweaver-0.1.0-alpha.9-linux-aarch64-gui.tar.gz`: 38.8 MB (40,664,840 bytes)
+- `textweaver-0.1.0-alpha.9-linux-aarch64.AppImage`: 56.3 MB (59,054,600 bytes)
+- `textweaver-0.1.0-alpha.9-linux-aarch64.tar.gz`: 59.6 MB (62,492,875 bytes)
+- `textweaver-0.1.0-alpha.9-linux-x86_64-gui.AppImage`: 39.7 MB (41,589,240 bytes)
+- `textweaver-0.1.0-alpha.9-linux-x86_64-gui.tar.gz`: 41.6 MB (43,570,381 bytes)
+- `textweaver-0.1.0-alpha.9-linux-x86_64.AppImage`: 60.6 MB (63,531,512 bytes)
+- `textweaver-0.1.0-alpha.9-linux-x86_64.tar.gz`: 64.2 MB (67,290,407 bytes)
+- `textweaver-0.1.0-alpha.9-macos-universal-gui.zip`: 63.7 MB (66,806,013 bytes)
+- `textweaver-0.1.0-alpha.9-macos-universal.tar.gz`: 109.9 MB (115,282,022 bytes)
+- `textweaver-0.1.0-alpha.9-windows-x86_64-gui.zip`: 42.4 MB (44,471,409 bytes)
+- `textweaver-0.1.0-alpha.9-windows-x86_64.zip`: 67.7 MB (70,986,837 bytes)
+
 ## [0.1.0-alpha.8] - 2026-10-03
 
 This release is about speed you can measure, hearing where things end, and text from health sciences read the way a clinician would say it. Reading pauses after headings, paragraphs, and list items. Medical and scientific text, identifiers, and units are said correctly. The window gains Contents and Notes panels, F6 between its regions, and system file and folder choosers. Dictation and other models are offered as downloads. Conversions leave a report for an accommodation file. Piper answers a Stop and restart much sooner, and large documents open and edit faster. The translations of the new messages wait for a native speaker's review.
