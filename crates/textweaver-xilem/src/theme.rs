@@ -44,6 +44,9 @@ pub fn ring_width(p: &Palette) -> f64 {
 /// Interface text size, in logical pixels, before the platform's text
 /// scale ([`ui_size`]).
 pub const UI_TEXT: f32 = 15.0;
+/// A button's key text, "(Ctrl+O)": a step smaller than [`UI_TEXT`], so
+/// the key is there to read but quieter than the label.
+pub const UI_KEY_TEXT: f32 = 13.0;
 
 /// The platform's interface text scale in hundredths (Windows' "Text
 /// size", GNOME's text scaling factor), set once at startup.
@@ -410,6 +413,17 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
         // palette's disabled text keeps 3 to 1 on buttons and panels
         // (design system QW3).
         let mut stack = PropertyStack::new();
+        // A button's key: the dim text color where it keeps 4.5 to 1 on
+        // the button, else the text color (never quieter than readable).
+        let key = if contrast_ratio(p.dim_text, p.raised) >= 4.5 {
+            p.dim_text
+        } else {
+            p.text
+        };
+        stack.push_layer(
+            Selector::classes(&[crate::widgets::KEY_TEXT_CLASS]),
+            ContentColor::new(color(key)),
+        );
         stack.push_layer(
             Selector::classes(&[crate::widgets::ACCENT_TEXT_CLASS]),
             ContentColor::new(color(p.on_accent)),

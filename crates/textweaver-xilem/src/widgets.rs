@@ -374,8 +374,19 @@ pub struct Pressed;
 /// shortcut keys" setting is on, and it is on screen, written ("Open…
 /// (Ctrl+O)"). The name is the label only ("Open"): the owner found the key
 /// in the name wordy (Monday, September 28, 2026).
+///
+/// The key on screen is its own, quieter text (smaller, in the theme's
+/// dim text color where that keeps 4.5 to 1), and the window's bars hide
+/// it below [`crate::bars::NARROW_WIDTH`] ([`set_show_key`](Self::set_show_key)).
+/// The key property never changes with it.
 pub struct ActionButton {
     child: WidgetPod<Label>,
+    /// The key on screen, "(Ctrl+O)", or empty.
+    key: WidgetPod<Label>,
+    /// False while the key is hidden on screen (a narrow window).
+    show_key: bool,
+    /// Drawn on the accent (Play's text).
+    accent: bool,
     label: String,
     /// The shortcut as written ("Ctrl+O").
     shortcut: String,
@@ -404,6 +415,11 @@ impl ActionButton {
         let label = label.into();
         ActionButton {
             child: NewWidget::new(button_text(label.clone())).to_pod(),
+            key: NewWidget::new(key_text(String::new()))
+                .with_class(KEY_TEXT_CLASS)
+                .to_pod(),
+            show_key: true,
+            accent: false,
             label,
             shortcut: String::new(),
             description: String::new(),
@@ -414,22 +430,80 @@ impl ActionButton {
     /// The text on screen: the label, the word for unavailable when it
     /// is, then the shortcut as written ("Remove, unavailable (Delete)").
     pub fn shown_text(&self) -> String {
+        let main = self.main_text();
+        let key = self.key_shown();
+        if key.is_empty() {
+            main
+        } else {
+            format!("{main} {key}")
+        }
+    }
+
+    /// The label and the word for unavailable, without the key.
+    fn main_text(&self) -> String {
         let mut text = self.label.clone();
         if let Some(u) = &self.unavailable {
             text.push_str(", ");
             text.push_str(&u.word);
         }
-        if !self.shortcut.is_empty() {
-            text.push_str(&format!(" ({})", self.shortcut));
-        }
         text
     }
 
+    /// The key as drawn, "(Ctrl+O)", or empty.
+    fn key_shown(&self) -> String {
+        if self.shortcut.is_empty() {
+            String::new()
+        } else {
+            format!("({})", self.shortcut)
+        }
+    }
+
+    /// Builds both texts again, before the button is in the tree.
+    fn rebuild(&mut self) {
+        let mut main = NewWidget::new(button_text(self.main_text()));
+        let mut key = NewWidget::new(key_text(self.key_shown())).with_class(KEY_TEXT_CLASS);
+        if self.accent {
+            main = main.with_class(ACCENT_TEXT_CLASS);
+            key = key.with_class(ACCENT_TEXT_CLASS);
+        }
+        self.child = main.to_pod();
+        self.key = key.to_pod();
+    }
+
+    /// Sets both texts in place, once the button is in the tree.
+    fn retext(this: &mut WidgetMut<'_, Self>) {
+        let main = this.widget.main_text();
+        let key = this.widget.key_shown();
+        {
+            let mut child = this.ctx.get_mut(&mut this.widget.child);
+            Label::set_text(&mut child, main);
+        }
+        {
+            let mut child = this.ctx.get_mut(&mut this.widget.key);
+            Label::set_text(&mut child, key);
+        }
+        this.ctx.request_layout();
+        this.ctx.request_accessibility_update();
+    }
+
+    /// Shows or hides the key on screen (the bars hide it in a narrow
+    /// window). The key property, which screen readers say, stays.
+    pub fn set_show_key(this: &mut WidgetMut<'_, Self>, show: bool) {
+        if this.widget.show_key != show {
+            this.widget.show_key = show;
+            this.ctx.request_layout();
+        }
+    }
+
+    /// True while the key is drawn (it has one and it is not hidden).
+    pub fn key_drawn(&self) -> bool {
+        self.show_key && !self.shortcut.is_empty()
+    }
+
     /// Starts unavailable for `why` (see [`set_unavailable`](Self::set_unavailable)).
-    /// Call it before [`with_accent_text`](Self::with_accent_text).
     pub fn with_unavailable(mut self, why: Option<Unavailable>) -> Self {
         self.unavailable = why;
-        self.child = NewWidget::new(button_text(self.shown_text())).to_pod();
+        self.rebuild();
         self
     }
 
@@ -446,13 +520,7 @@ impl ActionButton {
             return;
         }
         this.widget.unavailable = why;
-        let text = this.widget.shown_text();
-        {
-            let mut child = this.ctx.get_mut(&mut this.widget.child);
-            Label::set_text(&mut child, text);
-        }
-        this.ctx.request_layout();
-        this.ctx.request_accessibility_update();
+        Self::retext(this);
     }
 
     /// The accessible name: the label without a trailing ellipsis ("Open").
@@ -466,19 +534,16 @@ impl ActionButton {
     /// change recolors it and a disabled button's text takes the theme's
     /// disabled color (a local color would win over both).
     pub fn with_accent_text(mut self) -> Self {
-        let text = self.shown_text();
-        self.child = NewWidget::new(button_text(text))
-            .with_class(ACCENT_TEXT_CLASS)
-            .to_pod();
+        self.accent = true;
+        self.rebuild();
         self
     }
 
     /// Adds the keyboard shortcut, as written ("Ctrl+O"): the node's
-    /// keyboard shortcut, and on screen. Call it before
-    /// [`with_accent_text`](Self::with_accent_text).
+    /// keyboard shortcut, and on screen.
     pub fn with_shortcut(mut self, shortcut: impl Into<String>) -> Self {
         self.shortcut = shortcut.into();
-        self.child = NewWidget::new(button_text(self.shown_text())).to_pod();
+        self.rebuild();
         self
     }
 
@@ -489,13 +554,7 @@ impl ActionButton {
             return;
         }
         this.widget.shortcut = shortcut;
-        let text = this.widget.shown_text();
-        {
-            let mut child = this.ctx.get_mut(&mut this.widget.child);
-            Label::set_text(&mut child, text);
-        }
-        this.ctx.request_layout();
-        this.ctx.request_accessibility_update();
+        Self::retext(this);
     }
 
     /// The shortcut as written, or empty.
@@ -522,15 +581,9 @@ impl ActionButton {
             return;
         }
         this.widget.label = label;
-        let text = this.widget.shown_text();
-        {
-            let mut child = this.ctx.get_mut(&mut this.widget.child);
-            Label::set_text(&mut child, text);
-        }
         // A longer or shorter label ("Language: all languages" becoming
         // "Language: English") needs the button measured again.
-        this.ctx.request_layout();
-        this.ctx.request_accessibility_update();
+        Self::retext(this);
     }
 
     /// The name.
@@ -603,6 +656,7 @@ impl Widget for ActionButton {
 
     fn register_children(&mut self, ctx: &mut RegisterCtx<'_>) {
         ctx.register_child(&mut self.child);
+        ctx.register_child(&mut self.key);
     }
 
     fn measure(
@@ -610,23 +664,63 @@ impl Widget for ActionButton {
         ctx: &mut MeasureCtx<'_>,
         _props: &PropertiesRef<'_>,
         axis: Axis,
-        len_req: LenReq,
-        cross_length: Option<Length>,
+        _len_req: LenReq,
+        _cross_length: Option<Length>,
     ) -> Length {
-        let context = LayoutSize::maybe(axis.cross(), cross_length);
-        let child =
-            ctx.compute_length(&mut self.child, len_req.into(), context, axis, cross_length);
+        // Both texts at their natural size, on one line.
+        let context = LayoutSize::maybe(axis.cross(), None);
+        let main = ctx.compute_length(
+            &mut self.child,
+            LenReq::MaxContent.into(),
+            context,
+            axis,
+            None,
+        );
+        let key = if self.key_drawn() {
+            ctx.compute_length(
+                &mut self.key,
+                LenReq::MaxContent.into(),
+                context,
+                axis,
+                None,
+            )
+        } else {
+            Length::ZERO
+        };
         match axis {
-            Axis::Horizontal => child.max(Length::px(64.0)),
-            Axis::Vertical => child.max(Length::px(22.0)),
+            Axis::Horizontal => {
+                let gap = if self.key_drawn() { KEY_GAP } else { 0.0 };
+                Length::px(main.get() + gap + key.get()).max(Length::px(64.0))
+            }
+            Axis::Vertical => main.max(key).max(Length::px(22.0)),
         }
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
-        let child_size = ctx.compute_size(&mut self.child, SizeDef::fit(size), size.into());
-        ctx.run_layout(&mut self.child, child_size);
-        let origin = ((size - child_size).to_vec2() * 0.5).to_point();
+        let main = ctx.compute_size(&mut self.child, SizeDef::fit(size), size.into());
+        let shown = self.key_drawn();
+        ctx.set_stashed(&mut self.key, !shown);
+        let key = if shown {
+            let k = ctx.compute_size(&mut self.key, SizeDef::fit(size), size.into());
+            ctx.run_layout(&mut self.key, k);
+            k
+        } else {
+            Size::ZERO
+        };
+        ctx.run_layout(&mut self.child, main);
+        let gap = if shown { KEY_GAP } else { 0.0 };
+        let total = main.width + gap + key.width;
+        let x = ((size.width - total) * 0.5).max(0.0);
+        let origin = Point::new(x, ((size.height - main.height) * 0.5).max(0.0));
         ctx.place_child(&mut self.child, origin);
+        if shown {
+            let kx = x + main.width + gap;
+            // The key sits on the label's baseline, so the smaller text
+            // reads as one line with it.
+            let ky = ((size.height - key.height) * 0.5).max(0.0)
+                + (main.height - key.height).max(0.0) * 0.25;
+            ctx.place_child(&mut self.key, Point::new(kx, ky));
+        }
         ctx.derive_baselines(&self.child);
         // Room for the outer focus ring.
         ctx.set_paint_insets(FOCUS_RING_ROOM);
@@ -695,7 +789,7 @@ impl Widget for ActionButton {
     }
 
     fn children_ids(&self) -> ChildrenIds {
-        ChildrenIds::from_slice(&[self.child.id()])
+        ChildrenIds::from_slice(&[self.child.id(), self.key.id()])
     }
 
     fn propagates_pointer_interaction(&self) -> bool {
@@ -710,6 +804,28 @@ impl Widget for ActionButton {
 /// The class of a button text drawn on the accent (Play's), which the
 /// theme colors with its text-on-accent color ([`ActionButton::with_accent_text`]).
 pub const ACCENT_TEXT_CLASS: &str = "on-accent";
+
+/// The class of a button's key text, "(Ctrl+O)", which the theme draws in
+/// its dim text color where that keeps 4.5 to 1 on the button.
+pub const KEY_TEXT_CLASS: &str = "key-text";
+
+/// The space between a button's label and its key.
+const KEY_GAP: f64 = 6.0;
+
+/// A button's key text: smaller than the label, hidden from screen readers
+/// (the key is the node's keyboard shortcut property).
+fn key_text(text: String) -> Label {
+    use masonry::core::StyleProperty;
+    use masonry::parley::style::FontFamily;
+    Label::new(text)
+        .with_style(StyleProperty::FontFamily(FontFamily::Source(
+            crate::fonts::DEFAULT_STACK.into(),
+        )))
+        .with_style(StyleProperty::FontSize(crate::theme::ui_size(
+            crate::theme::UI_KEY_TEXT,
+        )))
+        .accessibility_hidden(true)
+}
 
 /// A button's visible text: the interface font, hidden from screen
 /// readers (the button carries the name).
