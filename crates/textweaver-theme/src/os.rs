@@ -197,6 +197,46 @@ pub fn parse_linux(
     OsScheme::Unknown
 }
 
+/// The interface text scale from Windows' "Text size" (`TextScaleFactor`
+/// under `HKCU\SOFTWARE\Microsoft\Accessibility`, 100 to 225 percent):
+/// 1.0 to 2.25, and 1.0 when it is not set.
+pub fn parse_text_scale_windows(percent: Option<u32>) -> f64 {
+    percent.map_or(1.0, |p| f64::from(p.clamp(100, 225)) / 100.0)
+}
+
+/// The interface text scale from GNOME's `text-scaling-factor` (the output
+/// of `gsettings get org.gnome.desktop.interface text-scaling-factor`,
+/// such as `1.25`): 1.0 to 2.25, and 1.0 when it is not set.
+pub fn parse_text_scale_gnome(output: Option<&str>) -> f64 {
+    output
+        .and_then(|s| s.trim().parse::<f64>().ok())
+        .filter(|f| f.is_finite())
+        .map_or(1.0, |f| f.clamp(1.0, 2.25))
+}
+
+/// Reads the platform's interface text size (Windows' "Text size", GNOME's
+/// text scaling factor), as a factor from 1.0 to 2.25; 1.0 elsewhere or
+/// when it cannot be read. Takes a few milliseconds (one small process);
+/// call it at startup.
+pub fn text_scale() -> f64 {
+    let limit = Duration::from_millis(500);
+    if cfg!(windows) {
+        let key = r"HKCU\SOFTWARE\Microsoft\Accessibility";
+        let v = run("reg", &["query", key, "/v", "TextScaleFactor"], limit)
+            .and_then(|o| parse_reg_number(&o, "TextScaleFactor"));
+        parse_text_scale_windows(v)
+    } else if cfg!(target_os = "macos") {
+        1.0
+    } else {
+        let out = run(
+            "gsettings",
+            &["get", "org.gnome.desktop.interface", "text-scaling-factor"],
+            limit,
+        );
+        parse_text_scale_gnome(out.as_deref())
+    }
+}
+
 /// Runs a command with a time limit and no window; its stdout on success
 /// ([`textweaver_core::process::run_with_timeout`]).
 fn run(program: &str, args: &[&str], limit: Duration) -> Option<String> {
@@ -246,6 +286,19 @@ pub fn probe() -> OsScheme {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn text_scale_reads_both_platforms() {
+        let out = "\r\nHKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Accessibility\r\n    TextScaleFactor    REG_DWORD    0x96\r\n\r\n";
+        let v = parse_reg_number(out, "TextScaleFactor");
+        assert_eq!(v, Some(150));
+        assert!((parse_text_scale_windows(v) - 1.5).abs() < 1e-9);
+        assert!((parse_text_scale_windows(None) - 1.0).abs() < 1e-9);
+        assert!((parse_text_scale_windows(Some(400)) - 2.25).abs() < 1e-9);
+        assert!((parse_text_scale_gnome(Some("1.25\n")) - 1.25).abs() < 1e-9);
+        assert!((parse_text_scale_gnome(Some("0.5")) - 1.0).abs() < 1e-9);
+        assert!((parse_text_scale_gnome(None) - 1.0).abs() < 1e-9);
+    }
 
     #[test]
     fn star_mapping() {
