@@ -446,7 +446,7 @@ fn run_rten(args: &Args, dir: PathBuf) -> anyhow::Result<()> {
         }
     }
     let transcript = transcript.unwrap_or_default();
-    write_captions(&args, &transcript, args.json)?;
+    write_captions(args, &transcript, args.json)?;
     let timings = d.last_timings();
     if args.timings
         && let Some(t) = timings
