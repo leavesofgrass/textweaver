@@ -2,6 +2,22 @@
 
 This page tells students and readers, in plain words, what each release brought. The [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) has every detail, and it is the record to trust if the two differ.
 
+## 0.1.0-alpha.9
+
+In short: the window is easier to start and to read, and a document can become a read-along page, a video, or Vorbis audio.
+
+- A short first run, at most three steps, each one skippable. If a screen reader is running, textweaver reads less on its own.
+- A Reading settings dialog gathers the reading choices in one place.
+- The window works in narrow sizes, and list bullets and numbers are drawn.
+- Written pauses in a document, such as a break tag, are honored by every speech engine.
+- Export audio can write a read-along web page that highlights each word as it plays.
+- With ffmpeg installed, Export audio can also make a video with captions and chapters.
+- Audio can be written as Ogg Vorbis.
+- Where am I tells you the time left in the document.
+- HTML pages ask which theme to use.
+- The command line follows one set of rules, with short one-line errors.
+- Help reaches the guides, and there are start pages for students and staff, a list of known limits, and an accessibility statement.
+
 ## 0.1.0-alpha.8
 
 In short: reading is faster, stops sound where things end, and medical and science text is said the way a clinician would say it.
