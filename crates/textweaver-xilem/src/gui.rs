@@ -60,7 +60,8 @@ use crate::setup::{self, Options};
 use crate::sidebar::{self, SIDEBAR, SIDEBAR_LIST, Sidebar, SidebarAction, SidebarShown};
 use crate::theme::{self, Palette};
 use crate::widgets::{
-    ActionButton, AnnounceMode, Announcer, KeyAction, Message, MessageQueue, Pressed, Region, Root,
+    ActionButton, AnnounceMode, Announcer, FocusFrame, KeyAction, Message, MessageQueue, Pressed,
+    Region, Root,
 };
 use crate::window::{self, WINDOW_UNITS};
 
@@ -94,6 +95,8 @@ pub const LIST: WidgetTag<ChoiceList> = WidgetTag::named("tw-list");
 pub const SECTIONS: WidgetTag<ChoiceList> = WidgetTag::named("tw-settings-sections");
 /// The settings dialog's form.
 pub const FORM: WidgetTag<SettingsGrid> = WidgetTag::named("tw-settings-form");
+/// The open dialog's Close button (every kind has one; W9b-d).
+pub const DIALOG_CLOSE: WidgetTag<ActionButton> = WidgetTag::named("tw-dialog-close");
 /// The RSVP panel, under the document.
 pub const RSVP: WidgetTag<RsvpView> = WidgetTag::named("tw-rsvp");
 
@@ -575,6 +578,53 @@ fn panel(p: &Palette, pad_v: f64, pad_h: f64) -> PropertySet {
         .into()
 }
 
+// --- One dialog style (W9b-d): title, footer, Close.
+
+/// A dialog's title as drawn: 20 px, bold, hidden from screen readers,
+/// since the dialog's name says it.
+fn dialog_title(text: &str) -> NewWidget<Label> {
+    NewWidget::new(label(text, dialog::TITLE_SIZE, true).accessibility_hidden(true))
+}
+
+/// The Close button every dialog has: Escape is its key, and pressing it
+/// closes the dialog as Escape does ([`DIALOG_CLOSE`]). `help` is its
+/// description, or none where the name says it all.
+fn close_button(c: &Catalog, help: Option<String>) -> NewWidget<ActionButton> {
+    // The dialog's own key (not a keymap command): Escape closes it.
+    let escape = textweaver_app::keymap::KeyChord::new(
+        textweaver_app::keymap::Key::Escape,
+        textweaver_app::keymap::Modifiers::empty(),
+    );
+    let mut b = ActionButton::new(c.tr("gui-button-close")).with_shortcut(escape.to_string());
+    if let Some(help) = help {
+        b = b.with_description(help);
+    }
+    NewWidget::new(b).with_tag(DIALOG_CLOSE)
+}
+
+/// A dialog's footer: its hint (drawn, hidden from screen readers, which
+/// hear the dialog's own introduction) and its buttons, Close last.
+fn dialog_footer(hint: &str, buttons: Vec<NewWidget<ActionButton>>) -> NewWidget<Flex> {
+    let mut row = Flex::row().cross_axis_alignment(CrossAxisAlignment::Center);
+    if hint.is_empty() {
+        row = row.with_spacer(1.0);
+    } else {
+        row = row.with(
+            NewWidget::new(label(hint, theme::UI_TEXT, false).accessibility_hidden(true))
+                .with_props(LineBreaking::WordWrap),
+            1.0,
+        );
+    }
+    let n = buttons.len();
+    for (i, b) in buttons.into_iter().enumerate() {
+        row = row.with_fixed(b);
+        if i + 1 < n {
+            row = row.with_fixed_spacer(Length::px(10.0));
+        }
+    }
+    NewWidget::new(row)
+}
+
 /// Builds the window's widget tree.
 pub fn build_tree(
     palette: &Palette,
@@ -732,16 +782,97 @@ pub fn list_dialog(
     let list_id = list.id();
     let card = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .with_fixed(NewWidget::new(
-            label(title, 18.0, true).accessibility_hidden(true),
-        ))
-        .with_fixed(list)
-        .with_fixed(NewWidget::new(
-            label(&c.tr("gui-list-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
+        .with_fixed(dialog_title(title))
+        .with(list, 1.0)
+        .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
+        .with_fixed(dialog_footer(
+            &c.tr("gui-list-hint"),
+            vec![close_button(c, None)],
         ));
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
     let modal = NewWidget::new(Modal::new(card, title, p.clone())).erased();
     (modal, list_id)
+}
+
+/// A one-field prompt labelled `label_text`, starting with `initial`: the
+/// title, the field, and a footer with `hint` and Close. Returns the
+/// dialog and the field's id (to focus it).
+pub fn prompt_dialog(
+    p: &Palette,
+    c: &Catalog,
+    label_text: &str,
+    hint: &str,
+    initial: &str,
+    tab_completes: bool,
+    tab_fields: bool,
+) -> (NewWidget<dyn Widget>, WidgetId) {
+    let field = NewWidget::new(
+        TextArea::new_editable(initial)
+            .with_accessible_label(label_text.to_owned())
+            .with_style(StyleProperty::FontSize(theme::ui_size(
+                theme::UI_TEXT + 2.0,
+            ))),
+    )
+    .with_tag(PROMPT_FIELD);
+    let field_id = field.id();
+    // The hint is drawn once, under the field, never again as the
+    // field's placeholder (W9b-d).
+    let input = NewWidget::new(FocusFrame::new(NewWidget::new(TextInput::from_text_area(
+        field,
+    ))));
+    let card = Flex::column()
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .with_fixed(dialog_title(label_text))
+        .with_fixed(input)
+        .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
+        .with_fixed(dialog_footer(hint, vec![close_button(c, None)]));
+    let card = NewWidget::new(card).with_props(dialog::card_props(p));
+    let modal = NewWidget::new(
+        Modal::new(card, label_text, p.clone())
+            .with_tab_completion(tab_completes)
+            .with_tab_fields(tab_fields),
+    )
+    .erased();
+    (modal, field_id)
+}
+
+/// The command palette as a dialog: a filter field over the list of
+/// `items`, and a footer with its hint and Close. Returns the dialog and
+/// the field's id (to focus it).
+pub fn palette_dialog(
+    p: &Palette,
+    c: &Catalog,
+    label_text: &str,
+    items: Vec<String>,
+) -> (NewWidget<dyn Widget>, WidgetId) {
+    let field = NewWidget::new(
+        TextArea::new_editable("")
+            .with_accessible_label(label_text.to_owned())
+            .with_style(StyleProperty::FontSize(theme::ui_size(
+                theme::UI_TEXT + 2.0,
+            ))),
+    )
+    .with_tag(PROMPT_FIELD);
+    let field_id = field.id();
+    let input = NewWidget::new(FocusFrame::new(NewWidget::new(
+        TextInput::from_text_area(field).with_placeholder(c.tr("gui-palette-filter")),
+    )));
+    let list =
+        NewWidget::new(ChoiceList::new(c.tr("gui-palette-list"), items, p.clone())).with_tag(LIST);
+    let card = Flex::column()
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .with_fixed(dialog_title(label_text))
+        .with_fixed(input)
+        .with(list, 1.0)
+        .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
+        .with_fixed(dialog_footer(
+            &c.tr("gui-palette-hint"),
+            vec![close_button(c, None)],
+        ));
+    let card = NewWidget::new(card).with_props(dialog::card_props(p));
+    let modal =
+        NewWidget::new(Modal::new(card, label_text, p.clone()).with_show_matches(true)).erased();
+    (modal, field_id)
 }
 
 /// A yes-or-no question from the app (a download, a removal, a file
@@ -792,14 +923,18 @@ pub fn question_dialog(
         .with_fixed(no);
     let card = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .with_fixed(NewWidget::new(
-            label(question, 18.0, false).accessibility_hidden(true),
-        ))
+        .with_fixed(
+            NewWidget::new(label(question, dialog::TITLE_SIZE, true).accessibility_hidden(true))
+                .with_props(LineBreaking::WordWrap),
+        )
         .with_fixed_spacer(Length::px(10.0))
-        .with_fixed(NewWidget::new(
-            label(&c.tr("gui-question-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
-        ))
-        .with_fixed_spacer(Length::px(14.0))
+        .with_fixed(
+            NewWidget::new(
+                label(&c.tr("gui-question-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
+            )
+            .with_props(LineBreaking::WordWrap),
+        )
+        .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
         .with_fixed(NewWidget::new(buttons));
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
     let modal =
@@ -866,50 +1001,33 @@ pub fn settings_dialog(
                 &args!["next" => next, "previous" => previous],
             )
         })
-        .with_selected(row),
+        .with_selected(row)
+        .with_filtering(!form.filter().is_empty()),
     )
     .with_tag(FORM);
     let form_id = grid.id();
-    // The dialog's own key (not a keymap command): Escape closes it.
-    let escape = textweaver_app::keymap::KeyChord::new(
-        textweaver_app::keymap::Key::Escape,
-        textweaver_app::keymap::Modifiers::empty(),
-    );
-    let close = NewWidget::new(
-        ActionButton::new(c.tr("gui-button-close"))
-            .with_shortcut(escape.to_string())
-            .with_description(c.tr("gui-settings-close-help")),
-    );
+    let close = close_button(&c, Some(c.tr("gui-settings-close-help")));
     let close_id = close.id();
     let body = Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Start)
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .with_fixed(NewWidget::new(
             SizedBox::new(sections).width(Length::px(250.0)),
         ))
         .with_fixed_spacer(Length::px(20.0))
         .with(grid, 1.0);
-    let footer = Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .with(
-            NewWidget::new(
-                label(&c.tr("gui-settings-saved-hint"), theme::UI_TEXT, false)
-                    .accessibility_hidden(true),
-            ),
-            1.0,
-        )
-        .with_fixed(close);
+    let footer = dialog_footer(&c.tr("gui-settings-saved-hint"), vec![close]);
     let card = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .with_fixed(NewWidget::new(
-            label(&settings_title, 20.0, true).accessibility_hidden(true),
-        ))
+        .with_fixed(dialog_title(&settings_title))
         .with_fixed_spacer(Length::px(14.0))
-        .with_fixed(NewWidget::new(body))
-        .with_fixed_spacer(Length::px(14.0))
-        .with_fixed(NewWidget::new(footer));
+        .with(NewWidget::new(body), 1.0)
+        .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
+        .with_fixed(footer);
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
-    let modal =
-        NewWidget::new(Modal::new(card, settings_title, p.clone()).with_max_width(960.0)).erased();
+    let modal = NewWidget::new(
+        Modal::new(card, settings_title, p.clone()).with_max_width(dialog::WIDTH_FORM),
+    )
+    .erased();
     SettingsDialog {
         modal,
         form: form_id,
@@ -933,45 +1051,25 @@ fn colors_dialog(p: &Palette, form: &SettingsForm, app: &App, row: usize) -> Set
     )
     .with_tag(FORM);
     let form_id = grid.id();
-    // The dialog's own key (not a keymap command): Escape closes it.
-    let escape = textweaver_app::keymap::KeyChord::new(
-        textweaver_app::keymap::Key::Escape,
-        textweaver_app::keymap::Modifiers::empty(),
-    );
     let reset = NewWidget::new(
         ActionButton::new(c.tr("gui-colors-reset-all"))
             .with_description(c.tr("gui-colors-reset-all-help")),
     );
     let reset_id = reset.id();
-    let close = NewWidget::new(
-        ActionButton::new(c.tr("gui-button-close"))
-            .with_shortcut(escape.to_string())
-            .with_description(c.tr("gui-settings-close-help")),
-    );
+    let close = close_button(&c, Some(c.tr("gui-settings-close-help")));
     let close_id = close.id();
-    let footer = Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .with(
-            NewWidget::new(
-                label(&c.tr("gui-settings-saved-hint"), theme::UI_TEXT, false)
-                    .accessibility_hidden(true),
-            ),
-            1.0,
-        )
-        .with_fixed(reset)
-        .with_fixed_spacer(Length::px(10.0))
-        .with_fixed(close);
+    let footer = dialog_footer(&c.tr("gui-settings-saved-hint"), vec![reset, close]);
     let card = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .with_fixed(NewWidget::new(
-            label(&title, 20.0, true).accessibility_hidden(true),
-        ))
+        .with_fixed(dialog_title(&title))
         .with_fixed_spacer(Length::px(14.0))
-        .with_fixed(grid)
-        .with_fixed_spacer(Length::px(14.0))
-        .with_fixed(NewWidget::new(footer));
+        .with(grid, 1.0)
+        .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
+        .with_fixed(footer);
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
-    let modal = NewWidget::new(Modal::new(card, title, p.clone()).with_max_width(820.0)).erased();
+    let modal =
+        NewWidget::new(Modal::new(card, title, p.clone()).with_max_width(dialog::WIDTH_FORM))
+            .erased();
     SettingsDialog {
         modal,
         form: form_id,
@@ -1002,6 +1100,17 @@ pub trait Host {
         tag: WidgetTag<W>,
         f: impl FnOnce(WidgetMut<'_, W>) -> R,
     ) -> R;
+    /// The widget with the keyboard focus.
+    fn focus_now(&self) -> Option<WidgetId>;
+    /// Moves the keyboard focus to `id`.
+    fn move_focus(&mut self, id: Option<WidgetId>);
+    /// True while the widget `id` is in the tree.
+    fn has_widget(&self, id: WidgetId) -> bool;
+    /// The id of the widget with `tag`, if it is in the tree.
+    fn id_of<W: Widget + masonry::core::FromDynWidget + ?Sized>(
+        &self,
+        tag: WidgetTag<W>,
+    ) -> Option<WidgetId>;
 }
 
 impl Host for RenderRoot {
@@ -1011,6 +1120,21 @@ impl Host for RenderRoot {
         f: impl FnOnce(WidgetMut<'_, W>) -> R,
     ) -> R {
         self.edit_widget_with_tag(tag, f)
+    }
+    fn focus_now(&self) -> Option<WidgetId> {
+        self.focused_widget()
+    }
+    fn move_focus(&mut self, id: Option<WidgetId>) {
+        self.focus_on(id);
+    }
+    fn has_widget(&self, id: WidgetId) -> bool {
+        self.get_widget(id).is_some()
+    }
+    fn id_of<W: Widget + masonry::core::FromDynWidget + ?Sized>(
+        &self,
+        tag: WidgetTag<W>,
+    ) -> Option<WidgetId> {
+        self.get_widget_with_tag(tag).map(|w| w.id())
     }
 }
 
@@ -1023,6 +1147,49 @@ impl<RW: Widget> Host for masonry_testing::TestHarness<RW> {
     ) -> R {
         self.edit_widget(tag, f)
     }
+    fn focus_now(&self) -> Option<WidgetId> {
+        self.focused_widget_id()
+    }
+    fn move_focus(&mut self, id: Option<WidgetId>) {
+        self.focus_on(id);
+    }
+    fn has_widget(&self, id: WidgetId) -> bool {
+        self.try_get_widget(id).is_some()
+    }
+    fn id_of<W: Widget + masonry::core::FromDynWidget + ?Sized>(
+        &self,
+        tag: WidgetTag<W>,
+    ) -> Option<WidgetId> {
+        Some(self.get_widget(tag).id())
+    }
+}
+
+/// Shows `modal` over the window with the focus on `focus`. The first
+/// dialog over the window remembers in `back` where the focus was, so
+/// closing it ([`close_dialog_in`]) puts the focus back there (a toolbar
+/// button, or the document); a dialog opened from another keeps the
+/// first one's place.
+pub fn open_dialog_in(
+    host: &mut impl Host,
+    modal: NewWidget<dyn Widget>,
+    focus: WidgetId,
+    back: &mut Option<WidgetId>,
+) {
+    let open = host.edit(ROOT, |r| r.widget.has_dialog());
+    if !open {
+        *back = host.focus_now();
+    }
+    host.edit(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+    host.move_focus(Some(focus));
+}
+
+/// Closes the dialog; the focus goes back to `back`, where it was before
+/// the dialog opened, or to the document when that is gone.
+pub fn close_dialog_in(host: &mut impl Host, back: &mut Option<WidgetId>) {
+    host.edit(ROOT, |mut r| Root::set_dialog(&mut r, None));
+    let back = back.take().filter(|id| host.has_widget(*id));
+    let doc = host.id_of(DOC);
+    host.move_focus(back.or(doc));
 }
 
 /// The document view's model for the window `w` of the session's document.
@@ -2244,33 +2411,16 @@ impl Gui {
         tab_completes: bool,
         tab_fields: bool,
     ) {
-        let p = &self.palette;
-        let field = NewWidget::new(
-            TextArea::new_editable(initial)
-                .with_accessible_label(label_text.to_owned())
-                .with_style(StyleProperty::FontSize(theme::ui_size(
-                    theme::UI_TEXT + 2.0,
-                ))),
-        )
-        .with_tag(PROMPT_FIELD);
-        let field_id = field.id();
-        let input = NewWidget::new(TextInput::from_text_area(field).with_placeholder(hint));
-        let card = Flex::column()
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .with_fixed(NewWidget::new(
-                label(label_text, 18.0, true).accessibility_hidden(true),
-            ))
-            .with_fixed(input)
-            .with_fixed(NewWidget::new(
-                label(hint, theme::UI_TEXT, false).accessibility_hidden(true),
-            ));
-        let card = NewWidget::new(card).with_props(dialog::card_props(p));
-        let modal = NewWidget::new(
-            Modal::new(card, label_text, p.clone())
-                .with_tab_completion(tab_completes)
-                .with_tab_fields(tab_fields),
-        )
-        .erased();
+        let c = self.app.catalog();
+        let (modal, field_id) = prompt_dialog(
+            &self.palette,
+            &c,
+            label_text,
+            hint,
+            initial,
+            tab_completes,
+            tab_fields,
+        );
         self.show_dialog(ctx, modal, field_id);
     }
 
@@ -2295,7 +2445,8 @@ impl Gui {
 
     /// The Settings command: the settings dialog, from the app's schema.
     fn open_settings(&mut self, ctx: &mut DriverCtx<'_>, at: Option<(usize, usize)>) {
-        let form = SettingsForm::new(self.app.settings_schema());
+        // The recent block first, so it opens on the last-changed setting.
+        let form = SettingsForm::for_window(&self.app);
         self.show_settings(ctx, form, at);
     }
 
@@ -2342,16 +2493,10 @@ impl Gui {
     fn reopen_settings(
         &mut self,
         ctx: &mut DriverCtx<'_>,
-        colors: bool,
+        form: SettingsForm,
         section: usize,
         row: usize,
     ) {
-        let schema = self.app.settings_schema();
-        let form = if colors {
-            SettingsForm::colors(schema)
-        } else {
-            SettingsForm::new(schema)
-        };
         self.show_settings(ctx, form, Some((section, row)));
     }
 
@@ -2429,7 +2574,78 @@ impl Gui {
                 };
                 self.change_setting(ctx, &setting, row, change);
             }
+            FormAction::Type(text) => {
+                let query = format!("{}{text}", open.form.filter());
+                self.filter_settings(ctx, &query);
+            }
+            FormAction::Backspace => {
+                let mut query = open.form.filter().to_owned();
+                if query.pop().is_some() {
+                    self.filter_settings(ctx, &query);
+                }
+            }
+            FormAction::ClearFilter => self.filter_settings(ctx, ""),
+            FormAction::Help(row) => {
+                let rows = open.form.rows(section, &self.app);
+                if let Some(r) = rows.get(row) {
+                    // "Rate, 265 words per minute. How fast ...": what the
+                    // setting is now, then its help (W9b-d).
+                    let said = if r.help.is_empty() {
+                        format!("{}, {}.", r.label, r.value_text)
+                    } else {
+                        format!("{}, {}. {}", r.label, r.value_text, r.help)
+                    };
+                    self.app
+                        .announce_as(&said, Priority::Polite, Importance::Answer);
+                    self.refresh(ctx);
+                }
+            }
         }
+    }
+
+    /// Types `query` as the settings dialog's filter (W9b-d): the first
+    /// section becomes the settings it matches, the form shows them, and
+    /// how many match is said in words. An empty query brings the
+    /// sections back and says so.
+    fn filter_settings(&mut self, ctx: &mut DriverCtx<'_>, query: &str) {
+        let c = self.app.catalog();
+        let Some(OpenDialog::Settings(open)) = &mut self.dialog else {
+            return;
+        };
+        if open.form.is_colors() {
+            return;
+        }
+        open.form.set_filter(query, &c);
+        open.section = 0;
+        let items = open.form.section_items(&c);
+        let title = open.form.form_label(0, &c);
+        let rows = open.form.rows(0, &self.app);
+        let total = open.form.settings_in(0).len();
+        let n = open.form.match_count();
+        let filtering = !query.is_empty();
+        let root = ctx.render_root(self.window_id);
+        root.edit_widget_with_tag(SECTIONS, |mut l| {
+            ChoiceList::set_items(&mut l, items);
+            ChoiceList::select(&mut l, 0);
+        });
+        root.edit_widget_with_tag(FORM, |mut g| {
+            SettingsGrid::set_section(&mut g, title, rows, 0);
+            SettingsGrid::set_filtering(&mut g, filtering);
+        });
+        let said = if !filtering {
+            let shown = self.app.settings_schema().in_window().count();
+            c.fmt("settings-filter-cleared", &args!["n" => shown])
+        } else if n == 0 {
+            c.fmt("settings-filter-none", &args!["query" => query])
+        } else {
+            c.fmt("settings-filter-match", &args!["n" => n])
+        };
+        if self.log {
+            crate::log::line(&format!("settings filter {query:?}: {n} of {total}"));
+        }
+        self.app
+            .announce_as(&said, Priority::Polite, Importance::Answer);
+        self.refresh(ctx);
     }
 
     /// Changes a setting through the app and shows its new value; says only
@@ -2454,11 +2670,10 @@ impl Gui {
                 self.refresh(ctx);
                 if self.palette.name != theme_before {
                     // A new theme: draw the dialog again in its colors.
-                    let (section, colors) = match &self.dialog {
-                        Some(OpenDialog::Settings(o)) => (o.section, o.form.is_colors()),
-                        _ => (0, false),
-                    };
-                    self.reopen_settings(ctx, colors, section, row);
+                    if let Some(OpenDialog::Settings(o)) = &self.dialog {
+                        let (form, section) = (o.form.clone(), o.section);
+                        self.reopen_settings(ctx, form, section, row);
+                    }
                 }
                 let Some(OpenDialog::Settings(open)) = &self.dialog else {
                     return;
@@ -2549,7 +2764,7 @@ impl Gui {
         };
         let section = open.section;
         let setting = open.form.setting(section, row).cloned();
-        self.reopen_settings(ctx, open.form.is_colors(), section, row);
+        self.reopen_settings(ctx, open.form, section, row);
         if let (Some(text), Some(setting)) = (answer, setting) {
             self.change_setting(ctx, &setting, row, FormChange::Text(text));
         }
@@ -2616,38 +2831,11 @@ impl Gui {
     /// every command with its keys. Typing filters (and says how many
     /// match); Tab reaches the list; Enter runs the selected command.
     fn open_palette(&mut self, ctx: &mut DriverCtx<'_>, label_text: &str) {
-        let p = &self.palette;
         let (ids, items): (Vec<ActionId>, Vec<String>) =
             window_palette(&self.app, "").into_iter().unzip();
         let count = items.len();
         let c = self.app.catalog();
-        let field = NewWidget::new(
-            TextArea::new_editable("")
-                .with_accessible_label(label_text.to_owned())
-                .with_style(StyleProperty::FontSize(theme::ui_size(
-                    theme::UI_TEXT + 2.0,
-                ))),
-        )
-        .with_tag(PROMPT_FIELD);
-        let field_id = field.id();
-        let input = NewWidget::new(
-            TextInput::from_text_area(field).with_placeholder(c.tr("gui-palette-filter")),
-        );
-        let list = NewWidget::new(ChoiceList::new(c.tr("gui-palette-list"), items, p.clone()))
-            .with_tag(LIST);
-        let card = Flex::column()
-            .cross_axis_alignment(CrossAxisAlignment::Stretch)
-            .with_fixed(NewWidget::new(
-                label(label_text, 18.0, true).accessibility_hidden(true),
-            ))
-            .with_fixed(input)
-            .with_fixed(list)
-            .with_fixed(NewWidget::new(
-                label(&c.tr("gui-palette-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
-            ));
-        let card = NewWidget::new(card).with_props(dialog::card_props(p));
-        let modal = NewWidget::new(Modal::new(card, label_text, p.clone()).with_show_matches(true))
-            .erased();
+        let (modal, field_id) = palette_dialog(&self.palette, &c, label_text, items);
         self.show_dialog(ctx, modal, field_id);
         self.dialog = Some(OpenDialog::Palette(ids));
         if self.log {
@@ -3016,7 +3204,12 @@ impl Gui {
             && let Some(section) = self.colors_after_question.take()
         {
             self.menu_dirty = true;
-            self.reopen_settings(ctx, true, section, 0);
+            self.reopen_settings(
+                ctx,
+                SettingsForm::colors(self.app.settings_schema()),
+                section,
+                0,
+            );
         }
     }
 
@@ -3030,14 +3223,7 @@ impl Gui {
         focus: WidgetId,
     ) {
         let root = ctx.render_root(self.window_id);
-        let open = root
-            .get_widget_with_tag(ROOT)
-            .is_some_and(|r| r.inner().has_dialog());
-        if !open {
-            self.return_focus = root.focused_widget();
-        }
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
-        root.focus_on(Some(focus));
+        open_dialog_in(root, modal, focus, &mut self.return_focus);
     }
 
     /// Closes the dialog; the focus goes back where it was before the
@@ -3045,13 +3231,7 @@ impl Gui {
     fn close_dialog(&mut self, ctx: &mut DriverCtx<'_>) {
         self.dialog = None;
         let root = ctx.render_root(self.window_id);
-        root.edit_widget_with_tag(ROOT, |mut r| Root::set_dialog(&mut r, None));
-        let back = self
-            .return_focus
-            .take()
-            .filter(|id| root.get_widget(*id).is_some());
-        let doc = root.get_widget_with_tag(DOC).map(|w| w.id());
-        root.focus_on(back.or(doc));
+        close_dialog_in(root, &mut self.return_focus);
     }
 
     fn answer(&mut self, ctx: &mut DriverCtx<'_>, cmd: Command) {
@@ -3447,7 +3627,14 @@ impl AppDriver for Gui {
             self.run_effects(ctx, effects);
             self.refresh(ctx);
         } else if action.downcast_ref::<Pressed>().is_some() {
-            if let Some(OpenDialog::Question { yes, no }) = &self.dialog {
+            let close = ctx
+                .render_root(self.window_id)
+                .get_widget_with_tag(DIALOG_CLOSE)
+                .map(|w| w.id());
+            if self.dialog.is_some() && close == Some(widget_id) {
+                // Every dialog's Close: as Escape (W9b-d).
+                self.cancel_dialog(ctx);
+            } else if let Some(OpenDialog::Question { yes, no }) = &self.dialog {
                 let answer = if *yes == widget_id {
                     Some(textweaver_app::Confirm::Yes)
                 } else if *no == widget_id {

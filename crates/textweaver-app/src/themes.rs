@@ -9,6 +9,10 @@ use textweaver_theme::{Registry, Theme};
 
 use crate::app::App;
 
+/// Built-in themes that are soft dark themes (low glare, muted contrast),
+/// said as "Lamplight, soft dark" wherever they are named.
+pub const SOFT_DARK: [&str; 1] = ["lamplight"];
+
 /// The theme CSS for an HTML page written outside the reader (`tw convert
 /// --to html`): the theme named `chosen` (`--theme`), else the settings'
 /// `settings_theme`, among the built-ins and the user's themes in
@@ -154,6 +158,16 @@ impl App {
         Some(theme)
     }
 
+    /// A theme's name as said and listed: its display name, and for the
+    /// soft dark theme, what it is ("Lamplight, soft dark").
+    pub(crate) fn theme_name_in_words(&self, name: &str, display: &str) -> String {
+        if SOFT_DARK.contains(&name) {
+            self.msg_args("themes-soft-dark-name", &args!["theme" => display])
+        } else {
+            display.to_owned()
+        }
+    }
+
     /// F5: the next theme in the cycle ([`textweaver_theme::builtin::CYCLE`]:
     /// the themes that meet AA first). Picking a theme is an explicit choice
     /// (it stops following the system) and is saved. A theme below AA says
@@ -161,7 +175,8 @@ impl App {
     /// checks fall short."
     pub(crate) fn next_theme(&mut self) {
         let next = self.themes.next(&self.settings.display.theme);
-        let (name, spoken) = (next.meta.name.clone(), next.meta.display_name.clone());
+        let name = next.meta.name.clone();
+        let spoken = self.theme_name_in_words(&name, &next.meta.display_name);
         let failing = textweaver_theme::check(next).failures().count();
         self.settings.display.theme = name;
         self.settings.display.theme_explicit = true;
@@ -279,6 +294,36 @@ mod tests {
         assert_eq!(
             app.status_text(),
             "Theme Solarized Light. Below AA: 1 check falls short."
+        );
+    }
+
+    /// Lamplight is said as a soft dark theme, and the Theme setting's
+    /// choices say in words whether each meets AA (W9b-d).
+    #[test]
+    fn themes_are_grouped_by_aa_and_lamplight_is_soft_dark() {
+        let mut app = App::new(AppConfig::for_tests());
+        app.settings.display.theme = "contrast".into();
+        app.next_theme();
+        assert_eq!(app.settings().display.theme, "lamplight");
+        assert_eq!(app.status_text(), "Theme Lamplight, soft dark.");
+        let schema = app.settings_schema();
+        let crate::SettingKind::Choice { choices, .. } = &schema.get("display.theme").unwrap().kind
+        else {
+            panic!("the theme is a choice");
+        };
+        let labels: Vec<&str> = choices.iter().map(|c| c.label.as_str()).collect();
+        assert_eq!(labels[0], "Galaxy, meets AA");
+        assert!(
+            labels.contains(&"Lamplight, soft dark, meets AA"),
+            "{labels:?}"
+        );
+        assert!(labels.contains(&"One Dark, below AA"), "{labels:?}");
+        // Every theme that meets AA comes before every one below it.
+        let first_below = labels.iter().position(|l| l.ends_with("below AA")).unwrap();
+        assert!(
+            labels[first_below..]
+                .iter()
+                .all(|l| l.ends_with("below AA"))
         );
     }
 

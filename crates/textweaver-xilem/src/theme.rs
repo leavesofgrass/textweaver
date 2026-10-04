@@ -41,6 +41,37 @@ pub fn ring_width(p: &Palette) -> f64 {
         FOCUS_WIDTH
     }
 }
+
+/// The double focus ring drawn inside `rect` by a widget that fills its
+/// space (a list, a form's row): from the edge in, the ring
+/// ([`ring_width`], in the focus color), then a 1 px line in the inner
+/// focus color, so the ring shows against any fill. The same two strokes
+/// the window's buttons draw outside their border (design system D).
+pub fn paint_ring_inside(
+    painter: &mut masonry::imaging::Painter<'_>,
+    rect: masonry::kurbo::Rect,
+    radius: f64,
+    p: &Palette,
+) {
+    use masonry::kurbo::{RoundedRect, Stroke};
+    let w = ring_width(p);
+    painter
+        .stroke(
+            RoundedRect::from_rect(rect.inset(-w / 2.0), radius),
+            &Stroke::new(w),
+            color(p.focus),
+        )
+        .draw();
+    let i = w + FOCUS_INNER / 2.0;
+    painter
+        .stroke(
+            RoundedRect::from_rect(rect.inset(-i), (radius - w).max(1.0)),
+            &Stroke::new(FOCUS_INNER),
+            color(p.focus_inner),
+        )
+        .draw();
+}
+
 /// Interface text size, in logical pixels, before the platform's text
 /// scale ([`ui_size`]).
 pub const UI_TEXT: f32 = 15.0;
@@ -339,6 +370,13 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
     // The window's own buttons draw the outer ring: the border stays, a
     // 1 px inner line, then the ring (design system D).
     props.insert::<crate::widgets::ActionButton, _>(crate::widgets::FocusRing {
+        inner: color(p.focus_inner),
+        outer: color(p.focus),
+        width: ring_width(p),
+    });
+    // Masonry's text fields draw the same ring through a frame around
+    // them (`widgets::FocusFrame`), as the dialogs' prompts use them.
+    props.insert::<crate::widgets::FocusFrame, _>(crate::widgets::FocusRing {
         inner: color(p.focus_inner),
         outer: color(p.focus),
         width: ring_width(p),

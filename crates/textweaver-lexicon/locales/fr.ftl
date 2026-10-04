@@ -1581,6 +1581,9 @@ message-error = Erreur : { $message }
 themes-unknown = Il n'y a aucun thème appelé { $name } ; { $used } est utilisé à la place.
 # $theme is the new theme's display name.
 themes-next = Thème { $theme }.
+themes-soft-dark-name = { $theme }, sombre doux
+themes-choice-aa = { $theme }, conforme AA
+themes-choice-below-aa = { $theme }, sous AA
 themes-below-aa =
     { $count ->
         [one] Sous AA : 1 vérification n’atteint pas le seuil.
@@ -2982,6 +2985,8 @@ gui-settings-form = Paramètres : { $section }
 gui-settings-saved-hint = Les modifications s'appliquent et sont enregistrées aussitôt.
 gui-settings-close-help = Fermer les paramètres. Chaque modification est déjà enregistrée.
 gui-settings-closed = Paramètres fermés.
+gui-settings-recent = Modifiés récemment
+gui-settings-matching = Correspondant à { $filter }
 gui-settings-table = { $label } est un tableau. Modifiez-le dans settings.toml.
 gui-setting-new-value = Nouvelle valeur pour { $label }
 gui-setting-value-hint = Appuyez sur Entrée pour valider, ou sur Échap pour revenir.
@@ -3011,7 +3016,7 @@ gui-palette-count =
         [one] 1 commande.
        *[other] { $n } commandes.
     }
-gui-settings-form-help = Haut et Bas passent d'un paramètre à l'autre. Gauche et Droite en changent un. Entrée tape une nouvelle valeur. Suppr remet la valeur par défaut. { $next } et { $previous } changent de section.
+gui-settings-form-help = Haut et Bas passent d'un paramètre à l'autre. Gauche et Droite en changent un. Entrée tape une nouvelle valeur. Suppr remet la valeur par défaut. { $next } et { $previous } changent de section. Tapez pour filtrer. F1 dit l'aide.
 gui-settings-press-enter = Appuyez sur Entrée pour taper une nouvelle valeur pour { $label }.
 gui-font-built-in = { $family } (intégrée)
 ## Wave 5 (W5s): summaries and difficult-word definitions.

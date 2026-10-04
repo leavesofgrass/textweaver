@@ -2,10 +2,14 @@
 //! `Dialog` role, a name, and focus kept inside it. Two kinds:
 //!
 //! - a prompt (find, go to, open, the command palette): a labelled text
-//!   field with OK and Cancel;
+//!   field, Enter to accept;
 //! - a list (bookmarks, help, voices, the library): a [`ChoiceList`] with
 //!   the `ListBox` role, arrow keys, Home and End, Page Up and Page Down,
 //!   first-letter search, Enter to choose, and Escape to close.
+//!
+//! Every kind has one style: a 20 px bold title ([`TITLE_SIZE`]), a hint
+//! and a Close button in its footer, so a mouse user can always leave it,
+//! Escape always closes it, and the focus goes back where it was.
 //!
 //! In-window dialogs never take the foreground from another program, so
 //! automated runs with `--background` can open them too.
@@ -67,6 +71,23 @@ pub enum DialogAction {
     Answer(textweaver_app::Confirm),
 }
 
+// --- One dialog style (W9b-d).
+
+/// Every dialog's title as drawn: 20 px, bold. The dialog's name says it,
+/// so the drawn title is hidden from screen readers.
+pub const TITLE_SIZE: f32 = 20.0;
+
+/// The gap above a dialog's footer (its hint and buttons).
+pub const FOOTER_GAP: f64 = 8.0;
+
+/// The widest a dialog of text is: a prompt, a list, a question.
+pub const WIDTH_TEXT: f64 = 600.0;
+
+/// The widest a dialog of forms is: Settings, Colors, the reading form,
+/// the voice manager. One rule: a form is this wide, the rest
+/// [`WIDTH_TEXT`].
+pub const WIDTH_FORM: f64 = 960.0;
+
 // --- Modal.
 
 /// A modal card centred over the window, over a dimmed page. It measures
@@ -106,7 +127,7 @@ impl Modal {
             card: card.erased().to_pod(),
             label: label.into(),
             palette,
-            max_width: 600.0,
+            max_width: WIDTH_TEXT,
             tab_completes: false,
             tab_fields: false,
             answer_keys: false,
@@ -157,7 +178,8 @@ impl Modal {
         self
     }
 
-    /// The card's widest width, in logical pixels (600 by default).
+    /// The card's widest width, in logical pixels ([`WIDTH_TEXT`] by
+    /// default, [`WIDTH_FORM`] for a form).
     pub fn with_max_width(mut self, width: f64) -> Self {
         self.max_width = width;
         self
@@ -866,13 +888,8 @@ impl Widget for ChoiceList {
                 .draw();
         }
         if self.focused {
-            painter
-                .stroke(
-                    RoundedRect::from_rect(size.to_rect().inset(-1.0), theme::RADIUS),
-                    &Stroke::new(theme::FOCUS_WIDTH),
-                    theme::color(p.focus),
-                )
-                .draw();
+            // The double ring (design system D), inside the list's edge.
+            theme::paint_ring_inside(painter, size.to_rect(), theme::RADIUS, p);
         }
     }
 

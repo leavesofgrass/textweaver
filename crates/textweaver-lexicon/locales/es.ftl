@@ -1553,6 +1553,9 @@ message-error = Error: { $message }
 themes-unknown = No hay ningún tema llamado { $name }; se usa { $used }.
 # $theme is the new theme's display name.
 themes-next = Tema { $theme }.
+themes-soft-dark-name = { $theme }, oscuro suave
+themes-choice-aa = { $theme }, cumple AA
+themes-choice-below-aa = { $theme }, por debajo de AA
 themes-below-aa =
     { $count ->
         [one] Por debajo de AA: 1 comprobación no alcanza el mínimo.
@@ -2954,6 +2957,8 @@ gui-settings-form = Configuración: { $section }
 gui-settings-saved-hint = Los cambios se aplican y se guardan al momento.
 gui-settings-close-help = Cerrar la configuración. Cada cambio ya está guardado.
 gui-settings-closed = Configuración cerrada.
+gui-settings-recent = Cambiados hace poco
+gui-settings-matching = Coinciden con { $filter }
 gui-settings-table = { $label } es una tabla. Edítela en settings.toml.
 gui-setting-new-value = Nuevo valor para { $label }
 gui-setting-value-hint = Pulse Intro para aceptar, o Escape para volver.
@@ -2983,7 +2988,7 @@ gui-palette-count =
         [one] 1 comando.
        *[other] { $n } comandos.
     }
-gui-settings-form-help = Arriba y Abajo pasan de un ajuste a otro. Izquierda y Derecha cambian uno. Intro escribe un valor nuevo. Suprimir restablece el valor predeterminado. { $next } y { $previous } cambian de sección.
+gui-settings-form-help = Arriba y Abajo pasan de un ajuste a otro. Izquierda y Derecha cambian uno. Intro escribe un valor nuevo. Suprimir restablece el valor predeterminado. { $next } y { $previous } cambian de sección. Escribe para filtrar. F1 dice la ayuda.
 gui-settings-press-enter = Pulse Intro para escribir un valor nuevo para { $label }.
 gui-font-built-in = { $family } (incluida)
 ## Wave 5 (W5s): summaries and difficult-word definitions.

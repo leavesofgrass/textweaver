@@ -1589,6 +1589,9 @@ message-error = Fehler: { $message }
 themes-unknown = Es gibt kein Design namens { $name }; { $used } wird verwendet.
 # $theme is the new theme's display name.
 themes-next = Design { $theme }.
+themes-soft-dark-name = { $theme }, sanft dunkel
+themes-choice-aa = { $theme }, erfüllt AA
+themes-choice-below-aa = { $theme }, unter AA
 themes-below-aa =
     { $count ->
         [one] Unter AA: 1 Prüfung verfehlt den Wert.
@@ -2978,6 +2981,8 @@ gui-settings-form = Einstellungen: { $section }
 gui-settings-saved-hint = Änderungen wirken sofort und werden sofort gespeichert.
 gui-settings-close-help = Die Einstellungen schließen. Jede Änderung ist bereits gespeichert.
 gui-settings-closed = Einstellungen geschlossen.
+gui-settings-recent = Zuletzt geändert
+gui-settings-matching = Passend zu { $filter }
 gui-settings-table = { $label } ist eine Tabelle. Bearbeiten Sie sie in settings.toml.
 gui-setting-new-value = Neuer Wert für { $label }
 gui-setting-value-hint = Eingabetaste übernimmt, Escape geht zurück.
@@ -3007,7 +3012,7 @@ gui-palette-count =
         [one] 1 Befehl.
        *[other] { $n } Befehle.
     }
-gui-settings-form-help = Pfeil nach oben und unten wechseln zwischen Einstellungen. Pfeil nach links und rechts ändern eine. Die Eingabetaste gibt einen neuen Wert ein. Entf stellt den Standard wieder her. { $next } und { $previous } wechseln den Bereich.
+gui-settings-form-help = Pfeil nach oben und unten wechseln zwischen Einstellungen. Pfeil nach links und rechts ändern eine. Die Eingabetaste gibt einen neuen Wert ein. Entf stellt den Standard wieder her. { $next } und { $previous } wechseln den Bereich. Tippen filtert. F1 sagt die Hilfe.
 gui-settings-press-enter = Drücken Sie die Eingabetaste, um einen neuen Wert für { $label } einzugeben.
 gui-font-built-in = { $family } (eingebaut)
 ## Wave 5 (W5s): summaries and difficult-word definitions.

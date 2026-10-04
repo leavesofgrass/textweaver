@@ -108,6 +108,79 @@ pub struct Setting {
     /// Kept by textweaver itself (a question already asked, a theme picked
     /// by hand): in the schema, but not on the settings screen.
     pub internal: bool,
+    /// The frontends it does something in. A setting for one frontend
+    /// only is left off the other's settings screen; `settings.toml`,
+    /// `tw settings` and JSON-RPC keep every setting.
+    pub frontend: Frontend,
+}
+
+/// The frontends a setting does something in.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Frontend {
+    /// The terminal reader and the window.
+    #[default]
+    Both,
+    /// The terminal reader only (wrap width, the cursor's place).
+    Terminal,
+    /// The window only (its bars, its line length).
+    Window,
+}
+
+impl Frontend {
+    /// True when the setting does something in the window.
+    pub fn in_window(self) -> bool {
+        self != Frontend::Terminal
+    }
+
+    /// True when the setting does something in the terminal reader.
+    pub fn in_terminal(self) -> bool {
+        self != Frontend::Window
+    }
+
+    /// Its name in the JSON schema: "both", "terminal" or "window".
+    pub fn name(self) -> &'static str {
+        match self {
+            Frontend::Both => "both",
+            Frontend::Terminal => "terminal",
+            Frontend::Window => "window",
+        }
+    }
+}
+
+/// The settings only the terminal reader uses: the window's settings
+/// dialog leaves them out (the window's code never reads them).
+pub const TERMINAL_ONLY: &[&str] = &[
+    "display.wrap_width",
+    "display.tab_width",
+    "display.show_line_numbers",
+    "display.scroll_margin",
+    "display.hints",
+    "keyboard.digit_row",
+    "accessibility.cursor",
+    "interface.rtl",
+];
+
+/// The settings only the window uses: the terminal's settings screen
+/// leaves them out.
+pub const WINDOW_ONLY: &[&str] = &[
+    "display.measure",
+    "gui.announce",
+    "gui.header",
+    "gui.toolbar",
+    "gui.auto_hide_menu",
+];
+
+/// Where the reading aids go on a settings screen, first to last: the
+/// spacing, the font and the ruler first, RSVP last (W9b-d).
+fn aids_rank(path: &str) -> u8 {
+    let rest = path.strip_prefix("reading_aids.").unwrap_or(path);
+    match rest.split('.').next().unwrap_or_default() {
+        "spacing" => 0,
+        "font" => 1,
+        "ruler" => 2,
+        "rsvp" => 9,
+        _ => 5,
+    }
 }
 
 /// Every setting, in the store's order.
@@ -1549,6 +1622,17 @@ impl SettingsSchema {
                 .position(|i| i.path == path)
                 .unwrap_or(usize::MAX)
         });
+        // The reading aids: spacing, font and ruler first, RSVP last.
+        if let (Some(first), Some(last)) = (
+            found
+                .iter()
+                .position(|(p, _)| p.starts_with("reading_aids.")),
+            found
+                .iter()
+                .rposition(|(p, _)| p.starts_with("reading_aids.")),
+        ) {
+            found[first..=last].sort_by_key(|(p, _)| aids_rank(p));
+        }
         let settings = found
             .into_iter()
             .map(|(path, default)| {
@@ -1563,7 +1647,15 @@ impl SettingsSchema {
                     ),
                     None => ("", "", infer(&default), false),
                 };
+                let frontend = if TERMINAL_ONLY.contains(&path.as_str()) {
+                    Frontend::Terminal
+                } else if WINDOW_ONLY.contains(&path.as_str()) {
+                    Frontend::Window
+                } else {
+                    Frontend::Both
+                };
                 Setting {
+                    frontend,
                     kind: kind_of(kind, &default),
                     label: if label.is_empty() {
                         // Leaked once per unknown key; the tests keep this
@@ -1592,6 +1684,12 @@ impl SettingsSchema {
     /// textweaver keeps for itself).
     pub fn visible(&self) -> impl Iterator<Item = &Setting> {
         self.settings.iter().filter(|s| !s.internal)
+    }
+
+    /// The settings shown in the window's settings dialog: the visible
+    /// ones that do something in the window.
+    pub fn in_window(&self) -> impl Iterator<Item = &Setting> {
+        self.visible().filter(|s| s.frontend.in_window())
     }
 
     /// The schema as JSON, for JSON-RPC's `settings_schema`: each setting
@@ -1718,6 +1816,29 @@ fn lookup(c: &Catalog, id: &str, english: &str) -> String {
 }
 
 impl Setting {
+    /// True when `query` matches the setting, as the settings screens
+    /// filter as you type: its label, section, path, help and unit, in
+    /// English and in `c`'s language. An empty query matches every one.
+    pub fn matches(&self, c: &Catalog, query: &str) -> bool {
+        let unit = match &self.kind {
+            SettingKind::Number { unit, .. } => unit,
+            _ => "",
+        };
+        crate::lists::matches(
+            &format!(
+                "{} {} {} {} {unit} {} {} {}",
+                self.label,
+                self.section,
+                self.path,
+                self.help,
+                self.label_in(c),
+                self.section_in(c),
+                self.help_in(c)
+            ),
+            query,
+        )
+    }
+
     /// The label in the catalog's language ("Rate"; `setting-*`).
     pub fn label_in(&self, c: &Catalog) -> String {
         lookup(c, &format!("setting-{}", slug(&self.path)), self.label)
@@ -1945,6 +2066,10 @@ impl Setting {
         m.insert("help".into(), Value::String(self.help.into()));
         m.insert("default".into(), self.default.clone());
         m.insert("internal".into(), Value::Bool(self.internal));
+        m.insert(
+            "frontend".into(),
+            Value::String(self.frontend.name().into()),
+        );
         let kind = match &self.kind {
             SettingKind::Toggle => "toggle",
             SettingKind::Number {
@@ -2032,7 +2157,16 @@ impl App {
             .names()
             .into_iter()
             .map(|name| {
-                let label = self.themes.resolve(name).0.meta.display_name.clone();
+                // Grouped in words (W9b-d): the themes that meet AA come
+                // first in the cycle and say so; the rest say "below AA".
+                let theme = self.themes.resolve(name).0;
+                let shown = self.theme_name_in_words(name, &theme.meta.display_name);
+                let id = if textweaver_theme::check(theme).failures().count() == 0 {
+                    "themes-choice-aa"
+                } else {
+                    "themes-choice-below-aa"
+                };
+                let label = self.msg_args(id, &args!["theme" => shown.as_str()]);
                 Choice {
                     value: Value::String(name.to_owned()),
                     label,
@@ -2241,7 +2375,9 @@ impl App {
         };
         let query = screen.filter.clone();
         let scope = screen.scope;
-        let visible = |s: &Setting| !s.internal && scope.is_none_or(|f| f(&s.path));
+        let visible = |s: &Setting| {
+            !s.internal && s.frontend.in_terminal() && scope.is_none_or(|f| f(&s.path))
+        };
         let mut shown: Vec<usize> = Vec::new();
         if query.trim().is_empty() && scope.is_none() {
             for path in recent_paths.iter().take(RECENT_SETTINGS) {
@@ -2258,25 +2394,7 @@ impl App {
         screen.recent = shown.len();
         shown.extend((0..screen.schema.settings.len()).filter(|&i| {
             let s = &screen.schema.settings[i];
-            let unit = match &s.kind {
-                SettingKind::Number { unit, .. } => unit,
-                _ => "",
-            };
-            // English and the interface's language both match.
-            visible(s)
-                && crate::lists::matches(
-                    &format!(
-                        "{} {} {} {} {unit} {} {} {}",
-                        s.label,
-                        s.section,
-                        s.path,
-                        s.help,
-                        s.label_in(&c),
-                        s.section_in(&c),
-                        s.help_in(&c)
-                    ),
-                    &query,
-                )
+            visible(s) && s.matches(&c, &query)
         }));
         screen.shown = shown;
     }

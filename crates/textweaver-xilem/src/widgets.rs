@@ -359,6 +359,113 @@ impl Widget for Region {
     }
 }
 
+// --- FocusFrame.
+
+/// Draws the outer double focus ring ([`FocusRing`]) around a Masonry
+/// control that has none of its own (the text field of a prompt or the
+/// command palette), while the control or anything in it has the focus.
+/// The control's own border stays; the frame adds nothing to the
+/// accessibility tree but a plain container.
+pub struct FocusFrame {
+    child: WidgetPod<dyn Widget>,
+}
+
+impl FocusFrame {
+    /// A frame around `child`.
+    pub fn new(child: NewWidget<impl Widget + ?Sized>) -> Self {
+        FocusFrame {
+            child: child.erased().to_pod(),
+        }
+    }
+}
+
+impl masonry::core::UsesProperty<FocusRing> for FocusFrame {}
+
+impl Widget for FocusFrame {
+    type Action = NoAction;
+
+    fn register_children(&mut self, ctx: &mut RegisterCtx<'_>) {
+        ctx.register_child(&mut self.child);
+    }
+
+    fn update(&mut self, ctx: &mut UpdateCtx<'_>, _props: &mut PropertiesMut<'_>, event: &Update) {
+        if matches!(
+            event,
+            Update::ChildFocusChanged(_) | Update::FocusChanged(_)
+        ) {
+            ctx.request_paint_only();
+        }
+    }
+
+    fn measure(
+        &mut self,
+        ctx: &mut MeasureCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        axis: Axis,
+        len_req: LenReq,
+        cross_length: Option<Length>,
+    ) -> Length {
+        let context = LayoutSize::maybe(axis.cross(), cross_length);
+        ctx.compute_length(&mut self.child, len_req.into(), context, axis, cross_length)
+    }
+
+    fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
+        ctx.run_layout(&mut self.child, size);
+        ctx.place_child(&mut self.child, Point::ORIGIN);
+        ctx.derive_baselines(&self.child);
+        ctx.set_paint_insets(FOCUS_RING_ROOM);
+    }
+
+    fn paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        props: &PropertiesRef<'_>,
+        painter: &mut Painter<'_>,
+    ) {
+        if !ctx.has_focus_target() {
+            return;
+        }
+        let ring = *props.get::<FocusRing>(ctx.property_cache());
+        if ring.width <= 0.0 {
+            return;
+        }
+        let bb = ctx.border_box();
+        let radius = crate::theme::RADIUS;
+        let inner = crate::theme::FOCUS_INNER;
+        painter
+            .stroke(
+                RoundedRect::from_rect(bb.inflate(inner / 2.0, inner / 2.0), radius + inner / 2.0),
+                &Stroke::new(inner),
+                ring.inner,
+            )
+            .draw();
+        let out = inner + ring.width / 2.0;
+        painter
+            .stroke(
+                RoundedRect::from_rect(bb.inflate(out, out), radius + out),
+                &Stroke::new(ring.width),
+                ring.outer,
+            )
+            .draw();
+    }
+
+    fn accessibility_role(&self) -> Role {
+        Role::GenericContainer
+    }
+
+    fn accessibility(
+        &mut self,
+        _ctx: &mut AccessCtx<'_>,
+        _props: &PropertiesRef<'_>,
+        _node: &mut Node,
+    ) {
+    }
+
+    fn children_ids(&self) -> ChildrenIds {
+        ChildrenIds::from_slice(&[self.child.id()])
+    }
+}
+
 // --- ActionButton.
 
 /// An [`ActionButton`] was pressed.
