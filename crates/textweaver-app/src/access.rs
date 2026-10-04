@@ -235,6 +235,10 @@ impl App {
     /// announced the way the old mode announced things, so whoever was
     /// listening hears it.
     pub(crate) fn cycle_access_mode(&mut self) {
+        if self.window_modes.is_some() {
+            self.cycle_window_mode();
+            return;
+        }
         let new = self.access_mode.next();
         let msg = self.msg_args("access-mode-changed", &args!["mode" => new.id()]);
         self.tell(&msg);
@@ -244,6 +248,128 @@ impl App {
         self.access_mode = new;
         self.settings.accessibility.mode = access_mode_setting(new);
         self.settings_dirty = true;
+    }
+
+    // ---- The window's two modes (W9b-f) ----
+
+    /// Uses the window's two modes: "textweaver reads aloud" (the
+    /// `[accessibility] mode` setting self-voicing or hybrid) and "my
+    /// screen reader reads" (screen-reader), with the `[gui]
+    /// speak_messages` switch, or `speak_messages` for this run
+    /// (`--self-voicing`). The GUI calls it once, after building the app.
+    pub fn use_window_modes(&mut self, speak_messages: bool) {
+        self.window_modes = Some(speak_messages);
+        self.apply_window_mode();
+    }
+
+    /// True when the window's two modes are in use ([`App::use_window_modes`]).
+    pub fn uses_window_modes(&self) -> bool {
+        self.window_modes.is_some()
+    }
+
+    /// True when textweaver's voice says its messages in the window: "speak
+    /// textweaver's messages" is on (or `--self-voicing`) and the mode is
+    /// "textweaver reads aloud".
+    pub fn speaks_messages(&self) -> bool {
+        self.window_modes.is_some()
+            && self.access_mode == AccessMode::SelfVoicing
+            && self.self_voicing
+    }
+
+    /// Puts the window's mode into effect from the settings. "My screen
+    /// reader reads" is screen-reader mode. "textweaver reads aloud" with
+    /// messages spoken is self-voicing with the voice saying messages;
+    /// without, the saved mode as it is: self-voicing voices caret moves
+    /// and reading (for reading by ear), hybrid leaves caret moves to the
+    /// screen reader. Messages always reach the screen reader.
+    pub(crate) fn apply_window_mode(&mut self) {
+        let Some(for_run) = self.window_modes else {
+            return;
+        };
+        let saved = self.settings.accessibility.mode;
+        let speak = (for_run || self.settings.gui.speak_messages) && self.backend_name != "silent";
+        if saved == textweaver_store::AccessMode::ScreenReader {
+            self.access_mode = AccessMode::ScreenReader;
+            self.self_voicing = false;
+        } else if speak {
+            self.access_mode = AccessMode::SelfVoicing;
+            self.self_voicing = true;
+        } else {
+            self.access_mode = access_mode_from_setting(saved);
+            self.self_voicing = false;
+        }
+    }
+
+    /// The window's mode, in words, for `access-window-mode-changed`.
+    fn window_mode_id(&self) -> &'static str {
+        if self.access_mode == AccessMode::ScreenReader {
+            "screen-reader"
+        } else if self.speaks_messages() {
+            "speaks-messages"
+        } else {
+            "reads-aloud"
+        }
+    }
+
+    /// `cycle_access_mode` in the window: between "textweaver reads aloud"
+    /// and "my screen reader reads", saved. Coming back from the screen
+    /// reader's mode saves hybrid, which leaves caret moves to the screen
+    /// reader that was reading. Said the way the old mode said things.
+    fn cycle_window_mode(&mut self) {
+        let to_screen = self.access_mode != AccessMode::ScreenReader;
+        let saved = if to_screen {
+            textweaver_store::AccessMode::ScreenReader
+        } else {
+            textweaver_store::AccessMode::Hybrid
+        };
+        if self.playback != Playback::Idle {
+            self.stop_speech();
+        }
+        self.settings.accessibility.mode = saved;
+        self.settings_dirty = true;
+        let (old_mode, old_voiced) = (self.access_mode, self.self_voicing);
+        self.apply_window_mode();
+        let key = self.keys(textweaver_keymap::ActionId::CycleAccessMode);
+        let msg = self.msg_args(
+            "access-window-mode-changed",
+            &args!["mode" => self.window_mode_id(), "key" => key.as_str()],
+        );
+        // The old mode's way of saying it: whoever was listening hears it.
+        let new_voiced = std::mem::replace(&mut self.self_voicing, old_voiced);
+        let new_mode = std::mem::replace(&mut self.access_mode, old_mode);
+        self.tell(&msg);
+        self.access_mode = new_mode;
+        self.self_voicing = new_voiced;
+    }
+
+    /// The first-run step for a screen reader (W9b-f): when one is running
+    /// and the mode was never chosen, textweaver starts in hybrid mode
+    /// (documents in its voice, messages for the screen reader) and says so
+    /// in one sentence with the key that changes it, instead of asking.
+    /// Returns true when it chose.
+    pub fn infer_hybrid(&mut self, found: &Detected) -> bool {
+        if !self.hybrid_offer_due() {
+            return false;
+        }
+        self.settings.accessibility.mode = textweaver_store::AccessMode::Hybrid;
+        self.settings.accessibility.hybrid_offered = true;
+        self.settings_dirty = true;
+        if self.window_modes.is_some() {
+            self.apply_window_mode();
+        } else {
+            self.access_mode = AccessMode::Hybrid;
+        }
+        let reader = found
+            .name
+            .clone()
+            .unwrap_or_else(|| self.msg("access-a-screen-reader"));
+        let key = self.keys(textweaver_keymap::ActionId::CycleAccessMode);
+        let msg = self.msg_args(
+            "access-hybrid-inferred",
+            &args!["reader" => reader, "key" => key.as_str()],
+        );
+        self.announce_queued(&msg, Priority::Polite);
+        true
     }
 
     // ---- The first-run question ----

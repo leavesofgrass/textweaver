@@ -1000,9 +1000,13 @@ mod tests {
             ("Ctrl+O", ActionId::Open),
             ("Ctrl+Q", ActionId::Quit),
             ("F2", ActionId::CommandPalette),
-            ("F3", ActionId::KeyboardHelp),
+            // Find next and previous on F3, as in other Windows programs
+            // (W9b-f); the keyboard list keeps ? and the Help menu.
+            ("F3", ActionId::FindNext),
+            ("Shift+F3", ActionId::FindPrevious),
             ("F5", ActionId::NextTheme),
-            ("Tab", ActionId::SpeechCursorToggle),
+            // Tab moves the focus in the window; Speech Cursor has a chord.
+            ("Alt+Shift+S", ActionId::SpeechCursorToggle),
         ] {
             assert_eq!(
                 map.lookup(&k(chord), Layer::Browse),
@@ -1165,7 +1169,7 @@ mod tests {
 
     /// Wave 1 requests: Shift+arrows select in browse mode on both
     /// frontends, `read_paragraph` exists, terminal F3 stays Find next, and
-    /// keyboard help is `?` (plus F3 in the GUI) with F1 for the help.
+    /// keyboard help is `?` with F1 for the help; F3 is Find next in both (W9b-f).
     #[test]
     fn wave2_selection_help_and_notes_keys() {
         for (_, frontend, map) in all_maps() {
@@ -1206,7 +1210,7 @@ mod tests {
         let gui = Keymap::defaults(Platform::Windows, Frontend::Gui);
         assert_eq!(
             gui.lookup(&k("F3"), Layer::Browse),
-            Some(ActionId::KeyboardHelp)
+            Some(ActionId::FindNext)
         );
         assert_eq!(
             gui.lookup(&k("Ctrl+Shift+B"), Layer::Browse),
@@ -1267,10 +1271,9 @@ mod tests {
                 map.lookup(&k("Shift+Tab"), Layer::Edit),
                 Some(ActionId::PreviousTableCell)
             );
-            assert_eq!(
-                map.lookup(&k("Tab"), Layer::Browse),
-                Some(ActionId::SpeechCursorToggle)
-            );
+            // Tab moves the focus in the window (W9b-f).
+            let tab = (frontend == Frontend::Terminal).then_some(ActionId::SpeechCursorToggle);
+            assert_eq!(map.lookup(&k("Tab"), Layer::Browse), tab);
             assert_eq!(
                 map.lookup(&k("Shift+F9"), Layer::Edit),
                 Some(ActionId::CycleTypingEcho)

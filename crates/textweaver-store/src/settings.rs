@@ -1423,6 +1423,11 @@ pub struct GuiSettings {
     /// the menus only as the F10 list, and macOS keeps them at the top of
     /// the screen.
     pub auto_hide_menu: bool,
+    /// Speak textweaver's messages with its own voice as well as sending
+    /// them to the screen reader (Wave 9, W9b-f): for someone who reads by
+    /// ear without a screen reader. Off by default; with it on, "textweaver
+    /// reads aloud" also voices messages, typing and caret moves.
+    pub speak_messages: bool,
     /// The panel beside the document (Wave 8d): none, the Contents (the
     /// headings), or the Notes. The window remembers the last one shown.
     pub sidebar: GuiSidebar,
@@ -1442,6 +1447,7 @@ impl Default for GuiSettings {
             toolbar: true,
             announce: GuiAnnounce::default(),
             auto_hide_menu: false,
+            speak_messages: false,
             sidebar: GuiSidebar::default(),
             window: None,
             extra: toml::Table::new(),

@@ -208,7 +208,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 
 | Action | Terminal | GUI | GUI on macOS | Id |
 |---|---|---|---|---|
-| Enter or leave Speech Cursor (line) mode | `Tab` (browse), `Tab` (speech cursor) | `Tab` (browse), `Tab` (speech cursor) | `Tab` (browse), `Tab` (speech cursor) | `speech_cursor_toggle` |
+| Enter or leave Speech Cursor (line) mode | `Tab` (browse), `Tab` (speech cursor) | `Alt+Shift+S` (browse), `Alt+Shift+S` (speech cursor) | `Cmd+Option+Shift+S` (browse), `Cmd+Option+Shift+S` (speech cursor) | `speech_cursor_toggle` |
 | Speech Cursor: read the next line | `Down` (speech cursor), `j` (speech cursor) | `Down` (speech cursor), `j` (speech cursor) | `Down` (speech cursor), `j` (speech cursor) | `speech_cursor_next_line` |
 | Speech Cursor: read the previous line | `Up` (speech cursor), `k` (speech cursor) | `Up` (speech cursor), `k` (speech cursor) | `Up` (speech cursor), `k` (speech cursor) | `speech_cursor_previous_line` |
 | Speech Cursor: read the current line again | `r` (speech cursor) | `r` (speech cursor) | `r` (speech cursor) | `speech_cursor_reread_line` |
@@ -235,8 +235,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Action | Terminal | GUI | GUI on macOS | Id |
 |---|---|---|---|---|
 | Find text in the document | `Ctrl+F`, `/` (browse) | `Ctrl+F`, `/` (browse) | `Cmd+F`, `/` (browse) | `find` |
-| Find the next match | `F3`, `n` (browse) | `n` (browse) | `n` (browse) | `find_next` |
-| Find the previous match | `F4`, `Shift+N` (browse) | `Shift+N` (browse) | `Shift+N` (browse) | `find_previous` |
+| Find the next match | `F3`, `n` (browse) | `F3`, `n` (browse) | `F3`, `n` (browse) | `find_next` |
+| Find the previous match | `F4`, `Shift+N` (browse) | `Shift+F3`, `Shift+N` (browse) | `Shift+F3`, `Shift+N` (browse) | `find_previous` |
 | Move to the next misspelled word, and spell it | `Alt+M` | `Alt+M` | `Cmd+;` | `next_misspelling` |
 | Move to the previous misspelled word, and spell it | `Alt+Shift+M` | `Alt+Shift+M` | `Cmd+Option+Shift+M` | `previous_misspelling` |
 | List suggestions for the misspelled word at the cursor, or add it to your word list | `Alt+J` | `Alt+J` | `Cmd+Option+J` | `spelling_suggestions` |
@@ -365,7 +365,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Open the menus: File, Edit, View, Reading, Speech, Tools, and Help | `F10` | `F10` | `F10` | `menu` |
 | Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
 | Open the settings: every option with its help; Left and Right change a value | `Shift+F10` | `Ctrl+,` | `Cmd+,` | `settings` |
-| List keyboard shortcuts | `?` (browse) | `F3`, `?` (browse) | `F3`, `?` (browse) | `keyboard_help` |
+| List keyboard shortcuts | `?` (browse) | `?` (browse) | `?` (browse) | `keyboard_help` |
 | Press a key to hear what it does and where it is in the menus, without running it | `Shift+F1` | `Shift+F1` | `Shift+F1` | `what_does_this_key_do` |
 | List the facts a problem report needs: version, build, components, speech engines, and folders | palette | palette | palette | `about` |
 | Open the quick start guide in textweaver | palette | palette | palette | `quick_start` |
@@ -495,8 +495,6 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Speech Cursor: read the current line again | palette | palette | `speech_cursor_reread_line` |
 | Speak faster | palette | has a chord | `rate_up` |
 | Speak slower | palette | has a chord | `rate_down` |
-| Find the next match | has a chord | palette | `find_next` |
-| Find the previous match | has a chord | palette | `find_previous` |
 | Add a bookmark at the cursor | palette | has a chord | `add_bookmark` |
 | List bookmarks | palette | palette | `list_bookmarks` |
 | Move to the next bookmark | palette | palette | `next_bookmark` |
@@ -513,7 +511,7 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note | palette | has a chord | `notes_panel` |
 | Move to the next part of the window: the header, the panel, the document, or the toolbar | palette | has a chord | `next_region` |
 | Move to the previous part of the window | palette | has a chord | `previous_region` |
-| List keyboard shortcuts | palette | has a chord | `keyboard_help` |
+| List keyboard shortcuts | palette | palette | `keyboard_help` |
 
 ## Commands without keys
 

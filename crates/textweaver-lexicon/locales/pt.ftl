@@ -1594,6 +1594,17 @@ access-hybrid-declined = Permanecendo no modo autofala. { $key } muda o modo.
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
 access-hybrid-question = { $reader } está em execução. Usar o modo híbrido, em que o textweaver lê documentos em voz alta e seu leitor de tela fala mensagens e digitação? y ou n
 access-a-screen-reader = Um leitor de tela
+# On the first run with a screen reader and no mode chosen: hybrid mode is
+# used, not asked. $reader is the screen reader found (NVDA, JAWS), or
+# access-a-screen-reader; $key names the keys that change the mode.
+access-hybrid-inferred = { $reader } está em execução: textweaver lê os documentos em voz alta e deixa as mensagens para seu leitor de tela. { $key } muda isso.
+# The window's two modes, when the mode changes; $key changes it again.
+access-window-mode-changed =
+    { $mode ->
+        [screen-reader] Meu leitor de tela lê: textweaver fica em silêncio e envia o texto ao seu leitor de tela. { $key } muda isso.
+        [speaks-messages] textweaver lê em voz alta e fala suas mensagens. { $key } muda isso.
+       *[reads-aloud] textweaver lê em voz alta; as mensagens vão para seu leitor de tela. { $key } muda isso.
+    }
 
 ## Characters and selections, as spoken.
 
@@ -2081,6 +2092,8 @@ setting-gui-toolbar = Mostrar a barra de ferramentas
 setting-gui-toolbar-help = Mostra a barra dos botões de leitura. Desativada, os comandos mantêm suas teclas e itens de menu.
 setting-gui-auto-hide-menu = Ocultar a barra de menus
 setting-gui-auto-hide-menu-help = Windows: oculta a barra de menus da janela até que Alt ou F10 a mostre; ela se oculta de novo quando o menu fecha. Sem efeito no Linux, cujos menus são a lista do F10, nem no macOS.
+setting-gui-speak-messages = Falar as mensagens do textweaver
+setting-gui-speak-messages-help = Quando o textweaver lê em voz alta, falar também as mensagens, a digitação e os movimentos do cursor com a voz dele, para ler de ouvido sem leitor de tela.
 setting-gui-sidebar = Painel ao lado do documento
 setting-gui-sidebar-help = O painel que a janela mostra ao lado do documento: nenhum, o Sumário (os títulos) ou as Notas. As teclas de painel o mudam, e a janela lembra o último.
 choice-gui-sidebar-off = nenhum

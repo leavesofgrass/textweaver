@@ -1614,6 +1614,17 @@ access-hybrid-declined = Bleibt im Selbstsprechend-Modus. { $key } wechselt den 
 # $reader is the screen reader found (NVDA, JAWS), or access-a-screen-reader.
 access-hybrid-question = { $reader } läuft. Hybrid-Modus verwenden, bei dem textweaver Dokumente vorliest und Ihr Screenreader Meldungen und Tippen spricht? y oder n
 access-a-screen-reader = Ein Screenreader
+# On the first run with a screen reader and no mode chosen: hybrid mode is
+# used, not asked. $reader is the screen reader found (NVDA, JAWS), or
+# access-a-screen-reader; $key names the keys that change the mode.
+access-hybrid-inferred = { $reader } läuft: textweaver liest Dokumente vor und überlässt Meldungen Ihrem Screenreader. { $key } ändert das.
+# The window's two modes, when the mode changes; $key changes it again.
+access-window-mode-changed =
+    { $mode ->
+        [screen-reader] Mein Screenreader liest: textweaver schweigt und gibt den Text an Ihren Screenreader. { $key } ändert das.
+        [speaks-messages] textweaver liest vor und spricht seine Meldungen. { $key } ändert das.
+       *[reads-aloud] textweaver liest vor; Meldungen gehen an Ihren Screenreader. { $key } ändert das.
+    }
 
 ## Characters and selections, as spoken.
 
@@ -2101,6 +2112,8 @@ setting-gui-toolbar = Symbolleiste anzeigen
 setting-gui-toolbar-help = Zeigt die Leiste der Lese-Schaltflächen. Aus, behalten die Befehle ihre Tasten und Menüeinträge.
 setting-gui-auto-hide-menu = Menüleiste ausblenden
 setting-gui-auto-hide-menu-help = Windows: blendet die Menüleiste des Fensters aus, bis Alt oder F10 sie zeigt; sie verschwindet wieder, wenn das Menü schließt. Keine Wirkung unter Linux, dessen Menüs die F10-Liste sind, oder unter macOS.
+setting-gui-speak-messages = Meldungen von textweaver sprechen
+setting-gui-speak-messages-help = Wenn textweaver vorliest, auch seine Meldungen, Eingaben und Cursorbewegungen mit seiner Stimme sprechen, zum Hören ohne Screenreader.
 setting-gui-sidebar = Bereich neben dem Dokument
 setting-gui-sidebar-help = Der Bereich, den das Fenster neben dem Dokument zeigt: keiner, der Inhalt (die Überschriften) oder die Notizen. Die Bereichstasten ändern ihn, und das Fenster merkt sich den letzten.
 choice-gui-sidebar-off = keiner

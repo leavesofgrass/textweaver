@@ -8,7 +8,7 @@ textweaver opens text, Markdown, HTML, EPUB, Word (DOCX), and PDF files.
 
 1. Download the window package, `textweaver-VERSION-windows-x86_64-gui.zip`, from the [releases page](https://github.com/leavesofgrass/textweaver/releases). Right-click it, choose Extract All, and extract it to a folder of your own.
 2. Open the folder and run `textweaver-gui.exe`. Windows warns once, because the program is not code-signed: choose "More info", then "Run anyway".
-3. Press **Ctrl+O** to open a document and **Space** to hear it. **F1** opens the help, and **F3** lists every key.
+3. Press **Ctrl+O** to open a document and **Space** to hear it. **F1** opens the help, and **?** lists every key.
 
 The window is described in [the window guide](gui.md). The rest of this page is for the terminal reader.
 
@@ -116,7 +116,7 @@ The five keys the first-run welcome names, in the same order, in both the termin
 - **Alt+Down** and **Alt+Up** move to the next or previous sentence.
 - **p** and **Shift+P** move by paragraph. **h** jumps to the next heading, and **1** to **6** to the next heading at that level, as in NVDA and JAWS.
 - **+** and **-** make the voice faster or slower.
-- **Tab** turns Speech Cursor mode on and off in the terminal reader. In the window, choose Reading, then Speech Cursor, in the menus (F10); Tab moves between the document and the buttons there. In the mode, the Up and Down arrows read one line at a time.
+- **Tab** turns Speech Cursor mode on and off in the terminal reader. In the window, press **Alt+Shift+S** (or Reading, then Speech Cursor, in the menus); Tab moves between the document and the buttons there. In the mode, the Up and Down arrows read one line at a time.
 - **Shift+W** says where you are: the line, the percentage, the word number, and the heading.
 - **?** lists every key. **F1** opens the help.
 - **Ctrl+Q** quits. textweaver asks "Quit textweaver? y or n". Press **y** to quit, or **n** to stay. With the classic keys (`[keyboard] preset = "classic"`), **q** quits too, after the same question.

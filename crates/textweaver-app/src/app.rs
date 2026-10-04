@@ -370,6 +370,9 @@ pub struct App {
     pub(crate) speech_caps: textweaver_speech::Caps,
     pub(crate) view: Viewport,
     pub(crate) self_voicing: bool,
+    /// The window's two modes (W9b-f): Some in the GUI, holding
+    /// --self-voicing (speak messages for this run).
+    pub(crate) window_modes: Option<bool>,
     pub(crate) backend_name: String,
     pub(crate) spoken_log: Vec<CharRange>,
     pub(crate) edit: Option<EditState>,
@@ -553,6 +556,7 @@ impl App {
             speech_caps,
             view: Viewport::default(),
             self_voicing: config.self_voicing,
+            window_modes: None,
             backend_name: config.backend_name,
             spoken_log: Vec::new(),
             edit: None,

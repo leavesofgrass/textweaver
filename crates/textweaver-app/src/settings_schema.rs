@@ -168,6 +168,7 @@ pub const WINDOW_ONLY: &[&str] = &[
     "gui.header",
     "gui.toolbar",
     "gui.auto_hide_menu",
+    "gui.speak_messages",
 ];
 
 /// Where the reading aids go on a settings screen, first to last: the
@@ -1345,6 +1346,11 @@ pub const INFO: &[Info] = &[
         "Hide the menu bar",
         "Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.",
     ),
+    toggle(
+        "gui.speak_messages",
+        "Speak textweaver's messages",
+        "When textweaver reads aloud, also say its messages, typing and cursor moves in its voice, for reading by ear without a screen reader.",
+    ),
     choice(
         "gui.sidebar",
         "Panel beside the document",
@@ -2297,6 +2303,12 @@ impl App {
         if self.settings.accessibility.mode != old.accessibility.mode {
             self.access_mode =
                 crate::access::access_mode_from_setting(self.settings.accessibility.mode);
+        }
+        if self.settings.accessibility.mode != old.accessibility.mode
+            || self.settings.gui.speak_messages != old.gui.speak_messages
+        {
+            // The window's two modes and its switch (W9b-f).
+            self.apply_window_mode();
         }
         if self.settings.display.theme != old.display.theme {
             self.settings.display.theme_explicit = true;

@@ -333,6 +333,21 @@ pub fn offer_hybrid_if_screen_reader(app: &mut App, opts: &Options) -> bool {
     }
 }
 
+/// The screen reader running, when the mode was never chosen and no
+/// `--mode` was given for this run: the first run (and a start after "Ask
+/// again about first-run choices") then uses hybrid mode and says so
+/// ([`App::infer_hybrid`]) instead of asking. `None` otherwise, without
+/// looking.
+pub fn screen_reader_to_infer(
+    app: &App,
+    opts: &Options,
+) -> Option<textweaver_app::a11y::detect::Detected> {
+    if run_mode(opts).is_some() || !app.hybrid_offer_due() {
+        return None;
+    }
+    textweaver_app::a11y::detect::detect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
