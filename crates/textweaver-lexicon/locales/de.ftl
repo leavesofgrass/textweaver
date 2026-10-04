@@ -187,6 +187,8 @@ stats-clear-question =
        *[other] Lesestatistik von { $n } Dokumenten entfernen? y oder n
     }
 stats-cleared = Lesestatistik entfernt.
+stats-clear-item = Lesestatistik entfernen
+stats-clear-failed = Die Lesestatistik konnte nicht entfernt werden: { $error }. Prüfen Sie, ob in den Datenordner geschrieben werden kann.
 stats-off-cli = Die Lesestatistik ist aus: stats.enabled ist in den Einstellungen false.
 
 ## Continue reading and every computer's statistics (the sync wave, S6).

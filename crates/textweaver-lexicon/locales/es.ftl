@@ -187,6 +187,8 @@ stats-clear-question =
        *[other] ¿Eliminar las estadísticas de lectura de { $n } documentos? y o n
     }
 stats-cleared = Estadísticas de lectura eliminadas.
+stats-clear-item = Eliminar las estadísticas de lectura
+stats-clear-failed = No se pudieron eliminar las estadísticas de lectura: { $error }. Compruebe que se puede escribir en la carpeta de datos.
 stats-off-cli = Las estadísticas de lectura están desactivadas: stats.enabled es false en la configuración.
 
 ## Continue reading and every computer's statistics (the sync wave, S6).

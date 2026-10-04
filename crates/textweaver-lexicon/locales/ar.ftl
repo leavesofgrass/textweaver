@@ -232,6 +232,8 @@ stats-clear-question =
        *[other] إزالة إحصاءات القراءة لـ{ $n } مستند؟ y أو n
     }
 stats-cleared = أُزيلت إحصاءات القراءة.
+stats-clear-item = إزالة إحصاءات القراءة
+stats-clear-failed = تعذّرت إزالة إحصاءات القراءة: { $error }. تحقّق من إمكانية الكتابة في مجلد البيانات.
 stats-off-cli = إحصاءات القراءة متوقفة: stats.enabled هو false في الإعدادات.
 
 ## Continue reading and every computer's statistics (the sync wave, S6).

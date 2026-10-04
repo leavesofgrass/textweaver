@@ -191,6 +191,8 @@ stats-clear-question =
        *[other] Remove the reading statistics of { $n } documents? y or n
     }
 stats-cleared = Reading statistics removed.
+stats-clear-item = Remove the reading statistics
+stats-clear-failed = Could not remove the reading statistics: { $error }. Check that the data folder can be written.
 stats-off-cli = Reading statistics are off: stats.enabled is false in the settings.
 
 ## Continue reading and every computer's statistics (the sync wave, S6).

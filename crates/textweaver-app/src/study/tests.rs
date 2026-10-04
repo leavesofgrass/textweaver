@@ -289,9 +289,12 @@ fn reading_time_is_counted_and_listed() {
     assert!(list(&e).is_some(), "{e:?}");
     assert_eq!(app.list_model().map(|l| l.selected), Some(1));
 
+    // With statistics recorded, the last item removes them.
+    assert_eq!(items.last().unwrap(), "Remove the reading statistics");
+
     // Turning statistics off stops the counting; the list stays, on the
     // row, which now says how to turn them on.
-    let toggle = items.len() - 1;
+    let toggle = items.len() - 2;
     let e = app.dispatch(Command::Choose(toggle));
     assert!(app.status_text().starts_with("Reading statistics are off."));
     assert!(!app.settings().stats.enabled);
@@ -312,6 +315,27 @@ fn reading_time_is_counted_and_listed() {
     app.wait_for_writes();
     let stats = ReadingStats::load(&Paths::under(&home)).unwrap();
     assert_eq!(stats.total_seconds(), 4.0);
+
+    // The last item asks first; no keeps the file, yes removes it.
+    let clear = items.len() - 1;
+    app.dispatch(Command::Action(ActionId::ReadingStatistics));
+    app.dispatch(Command::Choose(clear));
+    assert!(app.confirmation_pending());
+    assert_eq!(
+        app.status_text(),
+        "Remove the reading statistics of 1 document? y or n"
+    );
+    app.dispatch(Command::Confirm(Confirm::No));
+    assert!(!app.confirmation_pending());
+    assert!(Paths::under(&home).stats_file().exists());
+    app.dispatch(Command::Action(ActionId::ReadingStatistics));
+    app.dispatch(Command::Choose(clear));
+    app.dispatch(Command::Confirm(Confirm::Yes));
+    assert_eq!(app.status_text(), "Reading statistics removed.");
+    assert!(!Paths::under(&home).stats_file().exists());
+    // With nothing recorded, the remove item is gone.
+    let (_, items) = list(&app.dispatch(Command::Action(ActionId::ReadingStatistics))).unwrap();
+    assert!(items.last().unwrap().starts_with("Statistics are off."));
 }
 
 #[test]
