@@ -120,7 +120,7 @@ The terminal window's own title becomes the document's name when you open one, s
 
 In hybrid and screen-reader modes, the screen is laid out for a Braille display, which shows one line of about 40 cells at a time. Each line starts with its meaning in the first cell:
 
-- **The title line** starts with the position: "Line 12 of 400, 3%, Ready", then the other parts, then the document's title, without "textweaver:". In edit mode it reads "Line 12 of 400, 3%, Edit, modified, Ready", so "modified" is inside the first 40 cells.
+- **The title line** starts with the position: "Line 12 of 400, 3%, Ready", then the other parts, then the document's title, without "textweaver:". In edit mode it reads "Line 212 of 400, Edit, modified, Ready, 51%": the percentage moves to the end, so "modified" is inside the first 40 cells even at three-digit lines. The window's status bar shows the same parts, also starting with a capital.
 - **The status area** has a fixed height, big enough for the longest text textweaver puts there (600 characters), and at most half the screen. The document does not move up and down with each message, and a long line or paragraph is shown in full.
 - **Line numbers** start at the left edge ("12  Text"), and the reading ruler marks its line with underline and bold only, with no mark in a column of its own.
 - **The key hint line** is hidden, since F1, the keyboard shortcuts list (`?`), and the menus name the keys. `[display] hints = "on"` shows it again, starting at the edge. A prompt still uses that line.

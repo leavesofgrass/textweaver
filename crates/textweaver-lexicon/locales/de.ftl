@@ -449,8 +449,8 @@ playback-speech-error = Fehler der Sprachausgabe: { $error }
 
 ## The title line and Say Status.
 
-# The title line's position; % is shown, not said.
-status-position = Zeile { $line } von { $lines }, { $pct }%
+# The title line's position.
+status-position = Zeile { $line } von { $lines }
 status-mode = Modus { $mode }
 status-modified = geändert
 status-self-voicing = Selbstsprechend
@@ -2872,7 +2872,7 @@ gui-font-list = Schriftart
 
 status-page = Seite { $page } von { $pages }
 status-page-labelled = Seite { $label }, { $n } von { $pages }
-status-position-page = { $page }, { $pct }%
+status-percent = { $pct }%
 pages-position = Seite { $page } von { $pages }.
 pages-position-labelled = Seite { $label }, { $n } von { $pages }.
 pages-none = Dieses Dokument hat keine Seiten.

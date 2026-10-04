@@ -418,8 +418,8 @@ playback-speech-error = Speech error: { $error }
 
 ## The title line and Say Status.
 
-# The title line's position; % is shown, not said.
-status-position = line { $line } of { $lines }, { $pct }%
+# The title line's position.
+status-position = line { $line } of { $lines }
 status-mode = { $mode } mode
 status-modified = modified
 status-self-voicing = self-voicing
@@ -2860,11 +2860,12 @@ gui-font-list = Font
 ## $pages the number of pages. Keep the page first: a 40-cell Braille
 ## display shows the start of the line.
 
-# On the title line, before the percentage.
+# On the title line, in place of status-position.
 status-page = page { $page } of { $pages }
 status-page-labelled = page { $label }, { $n } of { $pages }
-# $page is status-page or status-page-labelled; % is shown, not said.
-status-position-page = { $page }, { $pct }%
+# The title line's percentage, after the place (in edit and Speech Cursor
+# modes after the mode, "modified" and the reading state); % is shown, not said.
+status-percent = { $pct }%
 # Said first by the position report.
 pages-position = Page { $page } of { $pages }.
 pages-position-labelled = Page { $label }, { $n } of { $pages }.

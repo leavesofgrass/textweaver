@@ -505,8 +505,8 @@ playback-speech-error = خطأ في الكلام: { $error }
 
 ## سطر العنوان وقول الحالة.
 
-# The title line's position; % is shown, not said.
-status-position = السطر { $line } من { $lines }، { $pct }%
+# The title line's position.
+status-position = السطر { $line } من { $lines }
 status-mode = وضع { $mode }
 status-modified = مُعدَّل
 status-self-voicing = نطق ذاتي
@@ -3109,7 +3109,7 @@ gui-font-list = الخط
 
 status-page = الصفحة { $page } من { $pages }
 status-page-labelled = الصفحة { $label }، { $n } من { $pages }
-status-position-page = { $page }، { $pct }%
+status-percent = { $pct }%
 pages-position = الصفحة { $page } من { $pages }.
 pages-position-labelled = الصفحة { $label }، { $n } من { $pages }.
 pages-none = لا صفحات في هذا المستند.
