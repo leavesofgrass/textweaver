@@ -177,7 +177,8 @@ fn no_dialog_control_leaves_a_small_window() {
         for kind in KINDS {
             // The voice manager's eight buttons and list do not fit 320
             // pixels high yet; it is checked at the laptop size only (a
-            // known gap, in the report).
+            // known defect, held by the ignored
+            // `the_voice_manager_fits_the_smallest_window`).
             if kind == "voices" && size.1 < 384 {
                 continue;
             }
@@ -230,4 +231,177 @@ fn no_dialog_control_leaves_a_small_window() {
             assert!(seen > 0, "{at}: no controls found");
         }
     }
+}
+
+/// The title a reader hears for each kind, as [`build`] opens it; the
+/// settings dialog takes its title from the catalog, and the colors and
+/// voice dialogs are only checked for a name.
+fn title_of(kind: &str, app: &App) -> String {
+    match kind {
+        "list" => "Bookmarks".into(),
+        "prompt" => "Go to line".into(),
+        "palette" => "Commands".into(),
+        "question" => "Remove the voice?".into(),
+        "settings" => app.catalog().tr("settings-title"),
+        "colors" | "voices" => String::new(),
+        _ => unreachable!("{kind}"),
+    }
+}
+
+/// True when the node of `id`, or a parent of it, is hidden from readers.
+fn hidden_from_readers(h: &TestHarness<Root>, id: WidgetId) -> bool {
+    let mut n = h.access_node(id);
+    while let Some(node) = n {
+        if node.is_hidden() {
+            return true;
+        }
+        n = node.parent();
+    }
+    false
+}
+
+/// The rest of the dialog contract (checklist row C1, W9e-c): every kind
+/// is one modal dialog, named by its title or question; while it is open,
+/// the window behind it is hidden from readers and disabled, and after it
+/// closes the window is back.
+#[test]
+fn every_dialog_is_modal_named_and_hides_the_window_behind() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    for kind in KINDS {
+        let mut h = window(&app, (1100, 780), 1.0);
+        let play = h.get_widget(gui::PLAY).id();
+        let (modal, focus) = build(kind, &app);
+        let mut back = None;
+        gui::open_dialog_in(&mut h, modal, focus, &mut back);
+        let _ = h.redraw();
+        let mut dialogs = Vec::new();
+        let mut stack = vec![h.access_tree().state().root()];
+        while let Some(n) = stack.pop() {
+            stack.extend(n.children());
+            if n.role() == Role::Dialog {
+                dialogs.push((n.label().unwrap_or_default(), n.is_modal()));
+            }
+        }
+        assert_eq!(dialogs.len(), 1, "{kind}: one dialog: {dialogs:?}");
+        let (name, modal) = &dialogs[0];
+        assert!(*modal, "{kind}: the dialog is modal");
+        assert!(!name.trim().is_empty(), "{kind}: the dialog has a name");
+        let title = title_of(kind, &app);
+        assert!(
+            name.starts_with(&title),
+            "{kind}: named {name:?}, not by its title {title:?}"
+        );
+        // The window behind: Play is disabled and hidden from readers.
+        assert!(
+            h.get_widget(gui::PLAY).ctx().is_disabled(),
+            "{kind}: Play is still enabled behind the dialog"
+        );
+        assert!(
+            hidden_from_readers(&h, play),
+            "{kind}: the window behind is not hidden"
+        );
+        gui::close_dialog_in(&mut h, &mut back);
+        let _ = h.redraw();
+        assert!(
+            !hidden_from_readers(&h, play),
+            "{kind}: the window stays hidden after closing"
+        );
+        assert!(
+            !h.get_widget(gui::PLAY).ctx().is_disabled(),
+            "{kind}: Play stays disabled after closing"
+        );
+    }
+}
+
+/// Every action button under `w`.
+fn action_buttons<'a>(
+    w: masonry::core::WidgetRef<'a, dyn Widget>,
+    out: &mut Vec<masonry::core::WidgetRef<'a, textweaver_xilem::widgets::ActionButton>>,
+) {
+    if let Some(b) = w.downcast::<textweaver_xilem::widgets::ActionButton>() {
+        out.push(b);
+    }
+    for c in w.children() {
+        action_buttons(c, out);
+    }
+}
+
+/// Label in name inside every dialog (WCAG 2.5.3, checklist row C4):
+/// each button's text on screen starts with its accessible name, the name
+/// holds no key ("Close", not "Close (Escape)"), and the tree carries the
+/// same name.
+#[test]
+fn every_dialog_button_shows_its_name_and_keeps_its_key_out_of_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    for kind in KINDS {
+        let mut h = window(&app, (1100, 780), 1.0);
+        let (modal, focus) = build(kind, &app);
+        let mut back = None;
+        gui::open_dialog_in(&mut h, modal, focus, &mut back);
+        let _ = h.redraw();
+        let mut found = Vec::new();
+        action_buttons(h.root_widget().as_dyn(), &mut found);
+        // The header's five and the toolbar's six, then the dialog's own.
+        assert!(found.len() > 11, "{kind}: no dialog buttons");
+        for b in found {
+            let w = b.inner();
+            let name = w.name();
+            let shown = w.shown_text();
+            let key = w.shortcut();
+            assert!(
+                shown.starts_with(&name),
+                "{kind}: shows {shown:?}, named {name:?}"
+            );
+            // A one-letter answer key ("Y" for Yes) is the name's own letter.
+            if key.chars().count() > 1 {
+                assert!(
+                    !name.contains(key),
+                    "{kind}: the key {key:?} is inside the name {name:?}"
+                );
+            }
+            if let Some(node) = h.access_node(b.id()) {
+                assert_eq!(
+                    node.label().unwrap_or_default(),
+                    name,
+                    "{kind}: the tree's name differs from the button's"
+                );
+            }
+        }
+    }
+}
+
+/// The voice manager at the smallest window, 420 by 320: its eight
+/// buttons and its list do not fit 320 pixels high yet, so the bounds test
+/// (checklist row V3) checks it at the laptop size only.
+#[test]
+#[ignore = "defect: the voice manager's controls leave a 420 by 320 window (W9e-c)"]
+fn the_voice_manager_fits_the_smallest_window() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let mut h = window(&app, (420, 320), 1.0);
+    let (modal, focus) = build("voices", &app);
+    let mut back = None;
+    gui::open_dialog_in(&mut h, modal, focus, &mut back);
+    let _ = h.redraw();
+    let _ = h.redraw();
+    let window = masonry::kurbo::Rect::new(0.0, 0.0, 420.0, 320.0);
+    let mut stack = vec![h.access_tree().state().root()];
+    let mut outside = Vec::new();
+    while let Some(n) = stack.pop() {
+        if !matches!(n.role(), Role::ListBox | Role::Group) {
+            stack.extend(n.children());
+        }
+        if !matches!(n.role(), Role::Button | Role::ListBox | Role::TextInput) {
+            continue;
+        }
+        let Some(b) = n.bounding_box() else {
+            continue;
+        };
+        if b.x0 < -0.5 || b.y0 < -0.5 || b.x1 > window.x1 + 0.5 || b.y1 > window.y1 + 0.5 {
+            outside.push(format!("{:?} at {b:?}", n.label().unwrap_or_default()));
+        }
+    }
+    assert!(outside.is_empty(), "outside the window: {outside:#?}");
 }
