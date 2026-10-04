@@ -93,7 +93,7 @@ pub enum ExportError {
         message: String,
     },
     /// The subtitle name has no supported extension.
-    #[error("Cannot write subtitles to {0}: use a .srt or .vtt file name.")]
+    #[error("Cannot write subtitles to {0}: use a .srt, .vtt, or .ass file name.")]
     UnsupportedSubtitles(PathBuf),
     /// ffmpeg is needed and was not found.
     #[error(
