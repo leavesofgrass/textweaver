@@ -213,6 +213,12 @@ actions! {
         gui ["g:Alt+Shift+O"], term ["g:Alt+Shift+O"], shared [];
     ReadingLevel = "reading_level", Reading, "Say the reading level of the document or the selection",
         gui ["g:Alt+Shift+G"], term ["g:Alt+Shift+G"], shared [];
+    DocumentOverview = "document_overview", Reading,
+        "Say the document's title, how many headings, tables, pictures, and footnotes it has, and about how many minutes are left",
+        gui [], term [], shared [];
+    ReadingPass = "reading_pass", Reading,
+        "Change what reading says: the full text, the first sentence of each paragraph with the headings, or the headings only",
+        gui [], term [], shared ["b:Shift+F"];
     DefineWord = "define_word", Reading,
         "Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation",
         gui ["g:Ctrl+Shift+D"], term ["g:Alt+E"], shared [];

@@ -23,7 +23,8 @@ pub use document::{DisplayIndex, Document, DocumentData, DocumentMeta};
 pub use history::History;
 pub use marker::{HEADER_ROW_LABEL, Marker, MarkerIndex, MarkerTables};
 pub use narrate::{
-    BlockEnd, InlineSpeech, NarrationPolicy, TableNarration, block_ends, plan, plan_with,
+    BlockEnd, InlineSpeech, NarrationPolicy, ReadingPass, TableNarration, block_ends, plan,
+    plan_with,
 };
 pub use navigate::{GoTo, NavOptions, NavTarget, ParseGoToError, go_to, go_to_checked, navigate};
 pub use search::{SearchError, SearchQuery, find, find_all};

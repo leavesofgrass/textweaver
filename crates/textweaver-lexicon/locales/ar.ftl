@@ -323,6 +323,24 @@ stats-by-computer-on = كل حاسوب: ظاهر. Enter يخفيه.
 ## التي تحتاج كلماتها إلى مطابقة الاسم.
 
 nav-blank = فارغ
+# Said for a picture that has no description (no alternative text).
+nav-no-description = بلا وصف
+# The document overview: the title first, then the counts. $time is overview-time.
+overview-line = { $title }. العناوين: { $headings }، الجداول: { $tables }، الصور: { $pictures }، الحواشي: { $footnotes }. { $time }
+# Reading time left from the cursor at the current rate.
+overview-time =
+    { $minutes ->
+        [0] تبقى أقل من دقيقة.
+        [one] تبقى دقيقة واحدة تقريبًا.
+        [two] تبقى دقيقتان تقريبًا.
+        [few] تبقى { $minutes } دقائق تقريبًا.
+       *[other] تبقى { $minutes } دقيقة تقريبًا.
+    }
+# Said when the reading pass changes and as reading starts in a skim. $pass is a reading-pass-* name.
+reading-pass-changed = النمط: { $pass }.
+reading-pass-full = النص كاملًا
+reading-pass-first-sentences = الجمل الأولى
+reading-pass-headings = العناوين
 # High verbosity: $label is a structure label ("Heading level 2").
 nav-message-at-labelled = { $label }، السطر { $line }، { $pct } بالمئة: { $content }
 nav-message-at = السطر { $line }، { $pct } بالمئة: { $content }
@@ -703,6 +721,8 @@ action-rsvp-faster = تسريع العرض السريع للكلمات
 action-rsvp-slower = إبطاء العرض السريع للكلمات
 action-rsvp-position-next = نقل كلمة العرض السريع إلى الموضع التالي على الشاشة
 action-reading-level = نطق مستوى قراءة المستند أو التحديد
+action-document-overview = قول عنوان المستند، وعدد العناوين والجداول والصور والحواشي فيه، وكم دقيقة تبقى تقريبًا
+action-reading-pass = تغيير ما تقوله القراءة: النص كاملًا، أو الجملة الأولى من كل فقرة مع العناوين، أو العناوين فقط
 action-define-word = تعريف الكلمة عند المؤشر، أو الكلمات المحددة: المعاني والأمثلة والمرادفات والنطق
 action-toggle-citations = تشغيل أو إيقاف الاستشهادات في القراءة المتواصلة: الإيقاف يتخطاها، والتشغيل ينطقها بالكلمات
 action-explore-math = استكشاف الرياضيات عند المؤشر حدًا حدًا: الأسهم للتنقل، لأسفل للدخول في جزء، لأعلى للخروج منه، Escape للمغادرة
@@ -3324,6 +3344,8 @@ name-rsvp-faster = RSVP أسرع
 name-rsvp-slower = RSVP أبطأ
 name-rsvp-position-next = نقل كلمة RSVP
 name-reading-level = مستوى القراءة
+name-document-overview = نظرة عامة على المستند
+name-reading-pass = نمط القراءة
 name-define-word = تعريف الكلمة
 name-summarize = تلخيص
 name-toggle-citations = قراءة الاستشهادات

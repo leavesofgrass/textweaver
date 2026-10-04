@@ -347,7 +347,12 @@ impl App {
         match navigate(doc, pos, unit, dir, opts) {
             Some(t) => {
                 let label = Self::marker_label(self.cat(), doc, kind, t.range);
-                let content = Self::marker_content(doc, kind, t.range);
+                // An empty graphic is a picture with no description.
+                let content = if kind == MarkerKind::Image && t.range.is_empty() {
+                    self.msg("nav-no-description")
+                } else {
+                    Self::marker_content(doc, kind, t.range)
+                };
                 let mut msg = self.nav_message(Some(&label), t.range.start, &content);
                 if t.wrapped {
                     msg = self.msg_args("nav-wrapped", &args!["message" => msg]);

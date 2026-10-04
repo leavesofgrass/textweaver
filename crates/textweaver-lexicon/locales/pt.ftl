@@ -263,6 +263,22 @@ stats-by-computer-on = Por computador: visível. Enter oculta.
 ## whose words agree with the noun.
 
 nav-blank = em branco
+# Said for a picture that has no description (no alternative text).
+nav-no-description = sem descrição
+# The document overview: the title first, then the counts. $time is overview-time.
+overview-line = { $title }. Títulos: { $headings }, tabelas: { $tables }, imagens: { $pictures }, notas de rodapé: { $footnotes }. { $time }
+# Reading time left from the cursor at the current rate.
+overview-time =
+    { $minutes ->
+        [0] Falta menos de um minuto.
+        [one] Falta cerca de 1 minuto.
+       *[other] Faltam cerca de { $minutes } minutos.
+    }
+# Said when the reading pass changes and as reading starts in a skim. $pass is a reading-pass-* name.
+reading-pass-changed = Passagem: { $pass }.
+reading-pass-full = texto inteiro
+reading-pass-first-sentences = primeiras frases
+reading-pass-headings = títulos
 # High verbosity: $label is a structure label ("Heading level 2").
 nav-message-at-labelled = { $label }, linha { $line }, { $pct } por cento: { $content }
 nav-message-at = Linha { $line }, { $pct } por cento: { $content }
@@ -627,6 +643,8 @@ action-rsvp-faster = RSVP mais rápido
 action-rsvp-slower = RSVP mais devagar
 action-rsvp-position-next = Mover a palavra do RSVP para o próximo lugar na tela
 action-reading-level = Dizer o nível de leitura do documento ou da seleção
+action-document-overview = Dizer o título do documento, quantos títulos, tabelas, imagens e notas de rodapé tem, e cerca de quantos minutos faltam
+action-reading-pass = Mudar o que a leitura diz: o texto inteiro, a primeira frase de cada parágrafo com os títulos, ou só os títulos
 action-define-word = Definir a palavra no cursor, ou as palavras selecionadas: sentidos, exemplos, sinônimos e pronúncia
 action-toggle-citations = Ligar ou desligar as citações na leitura contínua: desligado as ignora, ligado as diz por extenso
 action-explore-math = Explorar a matemática no cursor, termo por termo: as setas movem, para baixo entra em uma parte, para cima sai, Escape sai
@@ -3047,6 +3065,8 @@ name-rsvp-faster = RSVP mais rápido
 name-rsvp-slower = RSVP mais lento
 name-rsvp-position-next = Mover a palavra RSVP
 name-reading-level = Nível de leitura
+name-document-overview = Visão geral do documento
+name-reading-pass = Passagem de leitura
 name-define-word = Definir palavra
 name-summarize = Resumir
 name-toggle-citations = Ler citações

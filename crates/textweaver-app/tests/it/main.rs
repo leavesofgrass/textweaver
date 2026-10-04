@@ -22,6 +22,7 @@ mod components_registry;
 mod details;
 mod edit;
 mod fonts;
+mod idea_cards;
 mod keys_from_keymap;
 mod language;
 mod path_choosers;

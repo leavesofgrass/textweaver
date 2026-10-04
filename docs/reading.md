@@ -172,6 +172,16 @@ An empty line is read as "blank". Pressing **Space** right after one of these ke
 - **;** or **Alt+;**: read again from the start of the current sentence.
 - **r** or **Ctrl+R**: read again from the start of the current paragraph.
 
+### Skim: reading passes, Shift+F
+
+To get the gist of a long chapter before reading it properly, change the reading pass. Press **Shift+F**, or choose **Reading pass** in the Reading menu or the command palette. Each press moves to the next pass, and you hear its name:
+
+- "Pass: first sentences." Reading says the headings and the first sentence of each paragraph, list item, and table row.
+- "Pass: headings." Reading says only the headings.
+- "Pass: full text." Reading says everything again.
+
+In a skim, reading from the cursor or from the start begins by naming the pass, every time, so a skim is never taken for the whole text. The pass changes only reading on: the keys that read one sentence, paragraph, or line still read it in full. The pass lasts until you change it or quit; the next time you start textweaver, reading says the full text. (The `skim` speed preset is something else: a reading speed.)
+
 ## Move around
 
 Every move says where you arrived. When you are not reading, you hear a short preview of the text, up to eight words. While reading, textweaver jumps and keeps reading from the new place; the preview goes to the status line only, because the reading itself is what you hear.
@@ -229,7 +239,7 @@ The outline works while reading and while editing; in edit mode it lists the hea
 - **k** or **u**: next link. **Shift+K** or **Shift+U**: previous link.
 - **q**: next block quote. **Shift+Q**: previous block quote.
 - **s**: next separator (a horizontal rule). **Shift+S**: previous separator.
-- **g**: next graphic (an image, read by its alt text). **Shift+G**: previous graphic.
+- **g**: next graphic (an image, read by its alt text). **Shift+G**: previous graphic. A picture with no description at all is not skipped: you hear "Graphic, no description", and reading says "graphic, no description" where it is. A picture marked as decorative (`alt=""` in a web page) stays silent.
 - **d**: next section or chapter. **Shift+D**: previous one. See [Chapters](#chapters).
 
 A table is announced with its row count ("Table, 3 rows"). A list is announced with its item count ("List, 5 items"). A numbered list item is read with its number ("3. Buy milk"). A nested item says its level ("List item, level 2").
@@ -437,6 +447,10 @@ You hear "Back, line", the number, and a preview. With nothing to go back to, yo
 There is one rule for what counts as a jump. Every move by a sentence or anything larger records the place you left, once. That includes paragraphs, headings, tables, lists, list items, links, chapters, finds, go to, the start or end of the document, bookmarks, and notes. Moves by word, line, or page, scrolling, and Speech Cursor line moves are not recorded. Going back and forward are not recorded either.
 
 The history keeps the last 50 places. Change that with `[reading] nav_history_size`. It is saved with the document, so it is still there when you open the document again.
+
+## Document overview
+
+Choose **Document overview** in the Say menu (under Reading) or the command palette. You hear the title, then how many headings, tables, pictures, and footnotes the document has, then about how long reading the rest takes at your current rate: "Cells. Headings: 12, tables: 3, pictures: 4, footnotes: 21. About 38 minutes left." The time counts from the cursor.
 
 ## Where am I: Shift+W or Alt+Shift+Y
 

@@ -10,6 +10,7 @@
 //! | List (at its first item) | — | "list with 3 items, " | same |
 //! | Ordered list item number | "2. " | "2. " | "2. " |
 //! | Block quote, code block, graphic (at their start) | — | "block quote, " … | same |
+//! | Graphic with no description (an empty `Image` marker) | — | "graphic, no description, " | same |
 //! | Link (at its start) | — | — | "link, " |
 //! | Footnote reference `[1]` | "footnote 1" | "footnote 1" | "footnote 1" |
 //! | Table, structured | "Name is Ada, …" | "Table with 3 columns: …" then "Row 1: Name is Ada, …" | "… and 2 rows: …", "Row 1 of 2: …" |
@@ -64,6 +65,48 @@ pub enum TableNarration {
     Skip,
 }
 
+/// Which sentences a reading pass says (a skim of the document).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReadingPass {
+    /// Every sentence.
+    #[default]
+    Full,
+    /// Headings, and the first sentence of each paragraph, list item and
+    /// table row.
+    FirstSentences,
+    /// Headings only.
+    Headings,
+}
+
+impl ReadingPass {
+    /// Every pass, in cycle order.
+    pub const ALL: [ReadingPass; 3] = [
+        ReadingPass::Full,
+        ReadingPass::FirstSentences,
+        ReadingPass::Headings,
+    ];
+
+    /// The pass after this one, wrapping around.
+    pub fn next(self) -> ReadingPass {
+        match self {
+            ReadingPass::Full => ReadingPass::FirstSentences,
+            ReadingPass::FirstSentences => ReadingPass::Headings,
+            ReadingPass::Headings => ReadingPass::Full,
+        }
+    }
+
+    /// Its name in settings and catalogs: `full`, `first-sentences`,
+    /// `headings`.
+    pub fn key(self) -> &'static str {
+        match self {
+            ReadingPass::Full => "full",
+            ReadingPass::FirstSentences => "first-sentences",
+            ReadingPass::Headings => "headings",
+        }
+    }
+}
+
 /// How a range is turned into utterances.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -79,6 +122,8 @@ pub struct NarrationPolicy {
     pub verbosity: Verbosity,
     /// How tables are read.
     pub table_mode: TableNarration,
+    /// Which sentences are said: all, or a skim ([`ReadingPass`]).
+    pub pass: ReadingPass,
 }
 
 impl Default for NarrationPolicy {
@@ -89,6 +134,7 @@ impl Default for NarrationPolicy {
             skip_code: false,
             verbosity: Verbosity::Normal,
             table_mode: TableNarration::default(),
+            pass: ReadingPass::Full,
         }
     }
 }
@@ -129,6 +175,13 @@ impl InlineSpeech {
 /// One step of building a sentence's spoken text. The texts are borrowed
 /// where they can be (fixed words, the caller's [`InlineSpeech`]), so a
 /// piece costs no allocation of its own.
+/// What a picture with no description (an empty `Image` marker) is called,
+/// before the text after it.
+const NO_DESCRIPTION: &str = "graphic, no description";
+
+/// [`NO_DESCRIPTION`] inside a sentence.
+const NO_DESCRIPTION_INLINE: &str = "graphic, no description, ";
+
 enum Piece<'a> {
     /// Spoken text with no source, anchored at a position.
     Insert(CharPos, &'static str),
@@ -193,7 +246,9 @@ pub fn plan_with(
     for s in Units::new(doc, Unit::Sentence, range.start, Direction::Forward)
         .take_while(|s| s.start < range.end)
     {
-        planner.sentence(s);
+        if planner.in_pass(s) {
+            planner.sentence(s);
+        }
     }
     let mut out = planner.out;
     for (i, u) in out.iter_mut().enumerate() {
@@ -250,6 +305,53 @@ impl TableInfo {
 }
 
 impl<'a> Planner<'a> {
+    /// True when the reading pass says the sentence `s`.
+    fn in_pass(&self, s: CharRange) -> bool {
+        let pass = self.policy.pass;
+        if pass == ReadingPass::Full {
+            return true;
+        }
+        let doc = self.doc;
+        let mut at = s.start.max(self.range.start);
+        while at < s.end && doc.char_at(at).is_some_and(char::is_whitespace) {
+            at = at.saturating_add(1);
+        }
+        if self.index.enclosing(MarkerKind::Heading, at).is_some() {
+            return true;
+        }
+        if pass == ReadingPass::Headings {
+            return false;
+        }
+        // The first sentence of a block: only spaces back to the start of
+        // the document, a blank line, or a line where a block starts.
+        let blank = |c: Option<char>| matches!(c, Some(' ' | '\t'));
+        let mut p = at;
+        while p > CharPos::ZERO && blank(doc.char_at(p.saturating_sub(1))) {
+            p = p.saturating_sub(1);
+        }
+        if p == CharPos::ZERO {
+            return true;
+        }
+        if doc.char_at(p.saturating_sub(1)) != Some('\n') {
+            return false;
+        }
+        let mut q = p.saturating_sub(1);
+        while q > CharPos::ZERO && blank(doc.char_at(q.saturating_sub(1))) {
+            q = q.saturating_sub(1);
+        }
+        q == CharPos::ZERO
+            || doc.char_at(q.saturating_sub(1)) == Some('\n')
+            || self.index.starting_at(p).iter().any(|m| {
+                matches!(
+                    m.kind,
+                    MarkerKind::Paragraph
+                        | MarkerKind::ListItem
+                        | MarkerKind::TableRow
+                        | MarkerKind::Quote
+                )
+            })
+    }
+
     fn sentence(&mut self, s: CharRange) {
         let Some(mut clip) = s.intersection(self.range) else {
             return;
@@ -330,6 +432,10 @@ impl<'a> Planner<'a> {
                 MarkerKind::Code if m.level == 1 && p.announces(Verbosity::Normal) => {
                     out.push_str("code block");
                 }
+                // An empty graphic is a picture with no description.
+                MarkerKind::Image if m.range.is_empty() && p.announces(Verbosity::Normal) => {
+                    out.push_str(NO_DESCRIPTION);
+                }
                 MarkerKind::Image if p.announces(Verbosity::Normal) => {
                     out.push_str(MarkerKind::Image.spoken_name());
                 }
@@ -357,6 +463,15 @@ impl<'a> Planner<'a> {
             match m.kind {
                 MarkerKind::Link if p.announces(Verbosity::High) => {
                     pieces.push(Piece::Insert(m.range.start, "link, "));
+                }
+                // A picture with no description inside a sentence (one at
+                // its start is in the prefix).
+                MarkerKind::Image
+                    if m.range.is_empty()
+                        && m.range.start > clip.start
+                        && p.announces(Verbosity::Normal) =>
+                {
+                    pieces.push(Piece::Insert(m.range.start, NO_DESCRIPTION_INLINE));
                 }
                 // Struck-through text is announced like a link: at high
                 // verbosity, before it.
@@ -1072,6 +1187,69 @@ mod tests {
             Utterance::literal("After.", CharPos(after)),
         ];
         assert!(block_ends(&d, &us).is_empty());
+    }
+
+    #[test]
+    fn reading_passes_skim_by_first_sentences_or_headings() {
+        let text = "Title\n\nOne. Two. Three.\n\nFour. Five.\n- Six. Seven.";
+        let r = |a: usize, b: usize| CharRange::new(a, b);
+        let markers = vec![
+            Marker::new(MarkerKind::Heading, r(0, 5)).with_level(1),
+            Marker::new(MarkerKind::ListItem, r(37, 50)).with_level(1),
+        ];
+        let d = Document::new(DocumentMeta::default(), Rope::from_str(text), markers);
+        let first = NarrationPolicy {
+            pass: ReadingPass::FirstSentences,
+            ..NarrationPolicy::default()
+        };
+        let us = plan(&d, d.full_range(), &first);
+        check(&us);
+        assert_eq!(
+            texts(&us),
+            ["heading level 1, Title", "One.", "Four.", "- Six."]
+        );
+        let heads = NarrationPolicy {
+            pass: ReadingPass::Headings,
+            ..NarrationPolicy::default()
+        };
+        assert_eq!(
+            texts(&plan(&d, d.full_range(), &heads)),
+            ["heading level 1, Title"]
+        );
+        // Full is every sentence, as before.
+        assert_eq!(
+            plan(&d, d.full_range(), &NarrationPolicy::default()).len(),
+            8
+        );
+        assert_eq!(ReadingPass::Headings.next(), ReadingPass::Full);
+    }
+
+    #[test]
+    fn a_graphic_with_no_description_is_said() {
+        let text = "Before after.
+
+End.";
+        let r = |a: usize, b: usize| CharRange::new(a, b);
+        let markers = vec![
+            Marker::new(MarkerKind::Image, r(7, 7)),
+            Marker::new(MarkerKind::Image, r(15, 15)),
+        ];
+        let d = Document::new(DocumentMeta::default(), Rope::from_str(text), markers);
+        let us = plan(&d, d.full_range(), &NarrationPolicy::default());
+        check(&us);
+        assert_eq!(
+            texts(&us),
+            [
+                "Before graphic, no description, after.",
+                "graphic, no description, End."
+            ]
+        );
+        let low = NarrationPolicy {
+            verbosity: Verbosity::Low,
+            ..NarrationPolicy::default()
+        };
+        let us = plan(&d, d.full_range(), &low);
+        assert_eq!(texts(&us), ["Before after.", "End."]);
     }
 
     #[test]
