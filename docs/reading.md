@@ -454,7 +454,7 @@ Choose **Document overview** in the Say menu (under Reading) or the command pale
 
 ## Where am I: Shift+W or Alt+Shift+Y
 
-Press **Shift+W**, or **Alt+Shift+Y** from any mode. You hear the line, the number of lines, and the percentage, for example "Line 12 of 300, 4 percent." In a PDF, or any other paged format, the page comes first: "Page 12 of 30. Line 400 of 2000, 20 percent." In a table you also hear where in it: "Table, row 2 of 5, column 3 of 4." At normal verbosity you also hear the word number and the heading above you: "Under heading Methods." At high verbosity you also hear the document's title and the mode, when it is not plain reading. This works in edit mode too, on the headings as you have written them.
+Press **Shift+W**, or **Alt+Shift+Y** from any mode. You hear the line, the number of lines, and the percentage, for example "Line 12 of 300, 4 percent." In a PDF, or any other paged format, the page comes first: "Page 12 of 30. Line 400 of 2000, 20 percent." In a table you also hear where in it: "Table, row 2 of 5, column 3 of 4." At normal verbosity you also hear the word number and the heading above you: "Under heading Methods." It ends with the time left at your current rate: "About 3 minutes left." The window's status bar shows the same time left, and changes it once a minute. At high verbosity you also hear the document's title and the mode, when it is not plain reading. This works in edit mode too, on the headings as you have written them.
 
 ## Hear it again: ' and z
 
