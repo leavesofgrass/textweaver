@@ -1,0 +1,40 @@
+/* The read-along page, after the theme and the page rules. */
+.tw-bar { position: sticky; top: 0; z-index: 1; background: var(--tw-background); padding: 0.5rem 0; border-bottom: 1px solid var(--tw-control-border); }
+.tw-title { font-size: 1.25rem; margin: 0 0 0.5rem; }
+.tw-bar audio { width: 100%; }
+#tw-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
+#tw-controls[hidden] { display: none; }
+#tw-controls button, #tw-controls select { font: inherit; padding: 0.35rem 0.75rem; min-height: 2.75rem; color: var(--tw-text); background: var(--tw-code-background); border: 1px solid var(--tw-control-border); border-radius: 4px; }
+#tw-follow[aria-pressed="true"] { border-width: 3px; font-weight: bold; }
+#tw-controls nav { flex-basis: 100%; }
+#tw-controls nav h2 { font-size: 1rem; margin: 0.25rem 0; }
+#tw-controls nav ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+/* The sentence: underlined and tinted. */
+.tw-s.tw-now {
+  background: var(--tw-spoken-sentence-bg);
+  color: var(--tw-spoken-sentence-fg);
+  text-decoration: underline;
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.2em;
+}
+/* The word: the theme's spoken word band, bold, underlined and outlined,
+   so it never rests on color alone. */
+.tw-w.tw-word {
+  background: var(--tw-spoken-word-bg);
+  color: var(--tw-spoken-word-fg);
+  font-weight: bold;
+  text-decoration: underline;
+  text-decoration-thickness: 0.15em;
+  text-underline-offset: 0.2em;
+  outline: 2px solid currentColor;
+  border-radius: 2px;
+}
+@media (forced-colors: active) {
+  .tw-s.tw-now { background: Canvas; color: CanvasText; text-decoration-color: CanvasText; }
+  .tw-w.tw-word { forced-color-adjust: none; background: Highlight; color: HighlightText; outline-color: HighlightText; }
+  #tw-follow[aria-pressed="true"] { border-color: Highlight; }
+}
+@media print {
+  .tw-bar { position: static; }
+  #tw-controls, .tw-bar audio { display: none; }
+}

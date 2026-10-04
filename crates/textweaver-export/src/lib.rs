@@ -48,6 +48,8 @@ pub mod mp3;
 pub mod opus;
 #[cfg(any(feature = "flac", feature = "mp3", feature = "opus"))]
 pub(crate) mod pcm;
+#[cfg(feature = "read-along")]
+pub mod readalong;
 pub mod timeline;
 pub mod vorbis;
 pub mod wav;
