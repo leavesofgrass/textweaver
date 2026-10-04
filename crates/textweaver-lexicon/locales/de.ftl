@@ -223,6 +223,8 @@ continue-ago-days =
     }
 name-continue-reading = Weiterlesen
 action-continue-reading = Weiterlesen: die Dokumente auf diesem Computer mit gespeicherter Stelle, von jedem Computer, neueste zuerst
+name-add-library-folder = Ordner zur Bibliothek hinzufügen
+action-add-library-folder = Einen Ordner zur Bibliothek hinzufügen: im Dateibrowser auswählen
 name-edit-document-details = Details bearbeiten
 action-edit-document-details = Die Details des Dokuments bearbeiten: Titel, Autor, DOI und ISBN
 prompt-document-details = Dokumentdetails
@@ -1379,6 +1381,9 @@ library-scan-progress = Die Bibliothek wird durchsucht: { $n } bisher gefunden.
 library-scan-stopped = Die Bibliotheksdurchsuchung wurde unerwartet gestoppt. Öffnen Sie die Bibliothek erneut, um es noch einmal zu versuchen.
 # $command is the command line that adds a folder; $key names the Open command's key.
 library-empty = Die Bibliothek ist leer. Fügen Sie in den Einstellungen unter Bibliotheksordner einen Ordner hinzu, oder öffnen Sie eine Datei mit { $key }.
+library-add-folder-choose = Wählen Sie den Ordner, der zur Bibliothek hinzugefügt wird
+library-folder-added = { $name } wurde zur Bibliothek hinzugefügt. Öffnen Sie die Bibliothek, um seine Dokumente zu sehen.
+library-folder-already = { $name } ist bereits in der Bibliothek.
 library-intro =
     { $n ->
         [one] Bibliothek, { $n } Dokument. Tippen filtert, Eingabetaste öffnet eines, F2 bearbeitet Details.

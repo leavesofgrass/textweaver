@@ -456,6 +456,11 @@ actions! {
     ContinueReading = "continue_reading", File,
         "Continue reading: the documents on this computer with a saved place, from any computer, newest first",
         gui [], term [], shared [];
+    // W9a-c (completeness rank 16): no key of its own; the File menu and
+    // the palette reach it in both frontends.
+    AddLibraryFolder = "add_library_folder", File,
+        "Add a folder to the library: choose it in the file browser",
+        gui [], term [], shared [];
     EditDocumentDetails = "edit_document_details", File,
         "Edit the document's details: title, author, DOI, and ISBN",
         gui [], term [], shared [];

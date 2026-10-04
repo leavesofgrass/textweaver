@@ -223,6 +223,8 @@ continue-ago-days =
     }
 name-continue-reading = Continuar a ler
 action-continue-reading = Continuar a ler: os documentos deste computador com uma posição guardada, de qualquer computador, os mais recentes primeiro
+name-add-library-folder = Adicionar uma pasta à biblioteca
+action-add-library-folder = Adicionar uma pasta à biblioteca: escolha-a no navegador de arquivos
 name-edit-document-details = Editar detalhes
 action-edit-document-details = Editar os detalhes do documento: título, autor, DOI e ISBN
 prompt-document-details = Detalhes do documento
@@ -1359,6 +1361,9 @@ library-scan-progress = Examinando a biblioteca: { $n } encontrados até agora.
 library-scan-stopped = O exame da biblioteca parou inesperadamente. Abra a biblioteca de novo para tentar outra vez.
 # $command is the command line that adds a folder; $key names the Open command's key.
 library-empty = A biblioteca está vazia. Adicione uma pasta nas Configurações, em Pastas da biblioteca, ou abra um arquivo com { $key }.
+library-add-folder-choose = Escolha a pasta a adicionar à biblioteca
+library-folder-added = { $name } foi adicionada à biblioteca. Abra a biblioteca para ver os seus documentos.
+library-folder-already = { $name } já está na biblioteca.
 library-intro =
     { $n ->
         [one] Biblioteca, { $n } documento. Digite para filtrar, Enter abre um, F2 edita os detalhes.

@@ -280,6 +280,8 @@ continue-ago-days =
     }
 name-continue-reading = متابعة القراءة
 action-continue-reading = متابعة القراءة: المستندات على هذا الحاسوب التي لها موضع محفوظ، من أي حاسوب، الأحدث أولًا
+name-add-library-folder = إضافة مجلد إلى المكتبة
+action-add-library-folder = إضافة مجلد إلى المكتبة: اختره في مستعرض الملفات
 name-edit-document-details = تعديل التفاصيل
 action-edit-document-details = تعديل تفاصيل المستند: العنوان والمؤلف وDOI وISBN
 prompt-document-details = تفاصيل المستند
@@ -1499,6 +1501,9 @@ library-scan-progress = فحص المكتبة: عُثر على { $n } حتى ا�
 library-scan-stopped = توقّف فحص المكتبة على نحو غير متوقع. افتح المكتبة مرة أخرى لإعادة المحاولة.
 # $command is the command line that adds a folder; $key names the Open command's key.
 library-empty = المكتبة فارغة. أضف مجلدًا من الإعدادات، تحت مجلدات المكتبة، أو افتح ملفًا بـ{ $key }.
+library-add-folder-choose = اختر المجلد الذي ستضيفه إلى المكتبة
+library-folder-added = أُضيف { $name } إلى المكتبة. افتح المكتبة لترى مستنداته.
+library-folder-already = { $name } موجود في المكتبة بالفعل.
 library-intro =
     { $n ->
         [one] المكتبة، مستند واحد. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.

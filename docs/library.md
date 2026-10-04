@@ -79,7 +79,11 @@ With [sync](sync.md) on, what you type travels to your other computers with the 
 
 A library folder is an ordinary folder of documents. textweaver lists every document it can open in the folder and in all its subfolders. It skips hidden folders, its own `.textweaver` folders, Star's `.star` folders, `.obsidian`, `.git`, `node_modules`, and the recycle bin. It reads at most 20,000 files per folder. Files are never changed.
 
-### Add a folder: tw library add
+### Add a folder
+
+In the reader, in the window or the terminal, choose **Add a folder to the library** in the File menu, or type its name in the command palette. The file browser opens on your places; go to the folder and choose it with **Ctrl+Enter**, or the "Choose this folder" row. You hear, for example, "Added Readings to the library. Open the library to see its documents." Choosing a folder already there says it is "already in the library".
+
+On the command line:
 
 ```bash
 tw library add C:\Users\me\Readings

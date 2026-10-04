@@ -2108,6 +2108,7 @@ impl App {
             A::Open | A::OpenPath => return self.prompt(PromptPurpose::Open),
             A::OpenLibrary => return self.open_library(),
             A::ContinueReading => return self.open_continue_reading(),
+            A::AddLibraryFolder => return self.add_library_folder(),
             A::EditDocumentDetails => return self.edit_document_details(),
             A::ExportSettings => return self.settings_file_prompt(false),
             A::ImportSettings => return self.settings_file_prompt(true),

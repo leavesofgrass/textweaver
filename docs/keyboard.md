@@ -269,6 +269,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Open a document by typing its path | none | `Ctrl+Shift+G` | `Cmd+Shift+G` | `open_path` |
 | Open the library: documents in your library folders and recent files | `Alt+L` | `Ctrl+Shift+B` | `Cmd+Shift+B` | `open_library` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | palette | palette | palette | `continue_reading` |
+| Add a folder to the library: choose it in the file browser | palette | palette | palette | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | palette | palette | palette | `edit_document_details` |
 | Start a new document in edit mode | `Ctrl+N` | `Ctrl+N` | `Cmd+N` | `new_document` |
 | Save (Markdown and text in place; other formats as Markdown) | `Ctrl+S` | `Ctrl+S` | `Cmd+S` | `save` |
@@ -525,6 +526,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
+| Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |
 | Start a new document from a template, with a title, author, date, and References heading | `new_from_template` |
 | Export the document as a web page (HTML) next to it | `export_html` |

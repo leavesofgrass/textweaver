@@ -228,6 +228,33 @@ impl App {
         self.start_library_scan(ScanMode::Continue)
     }
 
+    /// "Add a folder to the library", in both frontends (W9a-c): the file
+    /// browser chooses the folder, and it joins `[library] folders`, as
+    /// `tw library add` does.
+    pub(crate) fn add_library_folder(&mut self) -> Vec<Effect> {
+        let purpose = self.msg("library-add-folder-choose");
+        self.choose_folder(&purpose, |app, folder| app.library_folder_chosen(&folder))
+    }
+
+    /// Adds `folder` to the library folders, once, and says so.
+    pub(crate) fn library_folder_chosen(&mut self, folder: &Path) -> Vec<Effect> {
+        let (stored, added) = self.settings.library.add_folder(folder);
+        let name = stored.file_name().map_or_else(
+            || stored.display().to_string(),
+            |n| n.to_string_lossy().into_owned(),
+        );
+        let id = if added {
+            self.settings_dirty = true;
+            self.library_sync = Self::make_library_sync(&self.settings);
+            "library-folder-added"
+        } else {
+            "library-folder-already"
+        };
+        let msg = self.msg_args(id, &args!["name" => name]);
+        self.tell(&msg);
+        vec![Effect::Redraw]
+    }
+
     fn start_library_scan(&mut self, mode: ScanMode) -> Vec<Effect> {
         if let Some(scan) = &self.library_scan {
             let n = scan.found.load(Ordering::Relaxed);
