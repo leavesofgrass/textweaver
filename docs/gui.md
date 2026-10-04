@@ -12,9 +12,9 @@ In a release package the program is `textweaver-gui`; see [the GUI package](inst
 textweaver-gui path/to/document.md
 ```
 
-With no document, it opens empty and says which key opens one (Ctrl+O).
+With no document, it opens empty and says which key opens one (Ctrl+O), at every announcement level but off.
 
-The first time textweaver runs (no settings yet), the window says a short welcome with the five keys that get you reading (open, play and pause, stop, the command palette, and help), before the hint that no document is open, then shows the language list, as the terminal reader does. On a later run, if a screen reader is running and you have never chosen an accessibility mode, it asks once whether to use hybrid mode. If an earlier run left unsaved work, it offers it back. The speech engine starts in the background, so the window is ready at once; Restart Speech (Shift+F8) starts it again, and it restarts by itself once if it stops.
+The first time textweaver runs (no settings yet), the window says a short welcome with the five keys that get you reading (open, play and pause, stop, the command palette, and help), before the hint that no document is open. Then come at most three steps, one at a time, each skipped with Escape: the language list, only when the system's language is not one of the six textweaver speaks (when it is, textweaver uses it without asking); if a screen reader is running, textweaver reads documents aloud and leaves its messages to the screen reader, and says so in one sentence with the key that changes it (it never asks); and the optional components, with nothing chosen and nothing downloaded unless you choose. The terminal reader does the same. Ask again about first-run choices (Tools) brings the last two back at the next start. If an earlier run left unsaved work, it offers it back. The speech engine starts in the background, so the window is ready at once; Restart Speech (Shift+F8) starts it again, and it restarts by itself once if it stops.
 
 Useful options:
 
@@ -96,7 +96,7 @@ The document moves its caret with your system's keys, and Shift with any of them
 - **Windows and Linux:** Left and Right by character, Up and Down by line, Ctrl+Left and Ctrl+Right by word, Ctrl+Up and Ctrl+Down by paragraph, Home and End to the start and end of the line, Ctrl+Home and Ctrl+End to the start and end of the document, Page Up and Page Down by screen.
 - **macOS:** Left and Right by character, Up and Down by line, Option+Left and Option+Right by word, Option+Up and Option+Down by paragraph, Command+Left and Command+Right to the start and end of the line, Command+Up and Command+Down to the start and end of the document (Home and End too), Page Up and Page Down by screen. No caret key uses Control, so VoiceOver's keys (Control+Option) are never taken.
 
-In browse mode, Home and End go to the ends of the line, as in any document window; in the terminal they go to the ends of the document, which Ctrl+Home and Ctrl+End do here. In Speech Cursor mode (in the window, Reading, then Speech Cursor, in the menus; Tab moves the focus here), Up and Down read the next and previous line and Page Up and Page Down move by paragraph, as in the terminal.
+In browse mode, Home and End go to the ends of the line, as in any document window; in the terminal they go to the ends of the document, which Ctrl+Home and Ctrl+End do here. In Speech Cursor mode (Alt+Shift+S, or Reading, then Speech Cursor, in the menus; Tab moves the focus here, as in any window, and is the terminal's key), Up and Down read the next and previous line and Page Up and Page Down move by paragraph, as in the terminal.
 
 ## Keys
 
@@ -112,6 +112,8 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Ctrl+,**: settings.
 - **F2**: the command palette, every command by name, each with its category and key ("Export PDF, File: ..."). Type to filter; Up and Down say each match; Tab or Ctrl+L moves to the list of matches, where your screen reader reads each with its place; Enter runs one. With nothing typed, the commands you ran last from the palette or the menus come first, marked "recent".
 - **F1**: help. In a list, F1 repeats the list's introduction.
+- **F3** and **Shift+F3**: the next and previous match of the last search (Ctrl+F), as in other Windows programs. The list of every key is on **?** (browse) and in the Help menu.
+- **Alt+Shift+S**: Speech Cursor mode on or off. Tab moves the focus, as in any window.
 - **Alt+End**: say the last message and the status. In a list, it repeats the list's introduction too.
 - **Alt+'**: say the last message again.
 - **Alt+O**: the outline. Type to filter the headings, Enter jumps to one.
@@ -120,7 +122,7 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **F6** and **Shift+F6**: the next and previous region: the header, the panel, the document, and the toolbar.
 - **Ctrl+T** and **Ctrl+Shift+T**: next and previous table. **Ctrl+Alt+arrows** move by cell in a table.
 - **k** and **Shift+K** (browse): next and previous link. **Alt+Shift+F** follows a link.
-- **Alt+Shift+A**: the accessibility mode: self-voicing, hybrid, or screen reader.
+- **Alt+Shift+A**: the window's mode, one of two: "textweaver reads aloud" (documents in textweaver's voice, its messages for your screen reader) or "my screen reader reads" (textweaver is silent, and your screen reader reads the text). The **Speak textweaver's messages** setting (Settings, Window), off by default, has textweaver say its messages, typing and caret moves too, for reading by ear without a screen reader; `--self-voicing` turns it on for one run.
 - **F5**: the next color theme.
 - **F9**: single-key shortcuts off or on.
 
@@ -146,7 +148,7 @@ Ctrl+E, or the Edit button, turns edit mode on, as in the terminal reader: you e
 In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus mode by themselves.
 
 - **Typing** goes in at the caret, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
-- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. In the self-voicing mode, when the window was started with `--self-voicing`, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the caret moves to, and what a Shift key added to the selection or took from it.
+- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. With **Speak textweaver's messages** on, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the caret moves to, and what a Shift key added to the selection or took from it.
 - **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the caret (on macOS, Command with each).
 - **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
 - **Tab** types a tab, or in a table moves to the next cell (Shift+Tab to the previous one), as in the terminal. **Ctrl+Tab** moves the focus out of the document, to the buttons.
@@ -164,7 +166,7 @@ The document window: a very long document is shown a few hundred pages at a time
 
 ## Questions
 
-When textweaver asks a yes-or-no question (a voice to download, after its size and license; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, without the "y or n" the buttons already show, so your screen reader says it, and the focus is on **Yes**. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other letter asks the question again.
+When textweaver asks a yes-or-no question (a voice to download, after its size and license; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, without the "y or n" the buttons already show, so your screen reader says it, and the focus is on **Yes**; a question that deletes, removes or replaces something names its verb on the button ("Delete") and starts on **No**, so Enter is the safe answer. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other letter asks the question again.
 
 A question that deletes, removes, or replaces something (a note, a highlight, a profile, a voice, a downloaded component, a file that already exists) starts on **No** instead, so pressing Enter keeps things as they are. Its first button says what it does, **Delete**, **Remove**, or **Replace**, rather than "Yes". The keys are the same: **Y** goes ahead, **N** and Escape keep things.
 
@@ -204,7 +206,7 @@ The setting is `announce` in the `[gui]` section of `settings.toml`; see [Settin
 
 Messages said while the window starts ("Opened", the title, "Reading at") wait until your screen reader has asked for the window's contents, then are said once. Before, they could be lost when the window was quicker than the screen reader.
 
-When the window takes the focus (Alt+Tab, a click), your screen reader says the window's title, which is the document's title and "textweaver", then the document. In the self-voicing mode, textweaver says the document's title and its name in its own voice.
+When the window takes the focus (Alt+Tab, a click), your screen reader says the window's title, which is the document's title and "textweaver", then the document. With **Speak textweaver's messages** on, textweaver says the document's title and its name in its own voice.
 
 How much textweaver says about its own interface is yours to choose: `[accessibility] interface_announcements`, or Ctrl+F9 to step through off, minimal, normal, and full. The window's messages follow it as the terminal's do. Errors and the answers to what you asked (a count, the font you chose) are always said; a dialog closing, the hint that no document is open, and the first run's welcome are said from normal up. In the screen reader and hybrid modes it starts at minimal, since your screen reader already says what opens and closes.
 

@@ -15,7 +15,7 @@ Other systems: see [Installing textweaver](install.md).
 
 1. Press **Ctrl+O**, and choose a file.
 2. Press **Space** to start and pause reading.
-3. Press **F1** for help. Press **F3** for every key.
+3. Press **F1** for help. Press **?** for every key.
 
 ## What it opens
 

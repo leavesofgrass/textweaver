@@ -341,9 +341,9 @@ You hear the match number, the count, and the line, for example "Match 2 of 5:" 
 ### Next and previous match
 
 - **F3** or **n**: next match.
-- **F4** or **Shift+N**: previous match.
+- **F4** or **Shift+N**: previous match (**Shift+F3** in the window).
 
-At the end, the search wraps and says "Wrapped to top." or "Wrapped to bottom." If you have not searched yet, these keys open the Find prompt. The GUI uses **n** and **Shift+N** only, because it keeps **F3** for the keyboard list.
+At the end, the search wraps and says "Wrapped to top." or "Wrapped to bottom." If you have not searched yet, these keys open the Find prompt. The window uses **F3** and **Shift+F3**, as other Windows programs do, besides **n** and **Shift+N**.
 
 ### Clear the search
 
@@ -638,7 +638,7 @@ For a file textweaver writes (Save as, and the exports), F4 chooses the folder i
 
 ## Help: ? and F1
 
-- **?**: list every keyboard shortcut with its current keys, including your own changes. Up and Down move, **Enter** runs the command, **Escape** closes. The GUI also opens this list with **F3**.
+- **?**: list every keyboard shortcut with its current keys, including your own changes. Up and Down move, **Enter** runs the command, **Escape** closes. In the window, the Help menu opens it too.
 - **F1**: open the help, a short list of the most useful keys.
 
 In any list: **Up** and **Down** move, **PageUp** and **PageDown** move ten items, **Home** and **End** go to the first and last, a letter jumps to the next item starting with it, **Enter** chooses, and **Escape** or **Backspace** closes. At the ends you hear "Top of list." or "End of list."; with `cursor = "status"` the status line keeps the item after it, such as "End of list. 12 of 12, Conclusion", so your Braille display still shows where you are. **F1** or **Alt+End** says the list's introduction again (its name, how many items it has, and the keys it takes), then the item you are on, such as "3 of 12". **Alt+'** says the last message again.
