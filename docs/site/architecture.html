@@ -547,7 +547,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "dependents": [
     "textweaver-app",
     "textweaver-cli",
-    "textweaver-convert"
+    "textweaver-convert",
+    "textweaver-export"
    ],
    "deps": [
     "textweaver-formats",
@@ -614,7 +615,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "default_member": true,
    "dependents": [
     "textweaver-cli",
-    "textweaver-convert"
+    "textweaver-convert",
+    "textweaver-export"
    ],
    "deps": [
     "textweaver-core",
@@ -686,6 +688,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "default_member": true,
    "dependents": [
     "textweaver-app",
+    "textweaver-export",
     "textweaver-render",
     "textweaver-tui",
     "textweaver-xilem"
@@ -1326,8 +1329,11 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ],
    "deps": [
     "textweaver-core",
+    "textweaver-render",
     "textweaver-speech",
-    "textweaver-text"
+    "textweaver-text",
+    "textweaver-theme",
+    "textweaver-writers"
    ],
    "description": "Audio and subtitle export for textweaver: WAV, FLAC, MP3, Ogg Opus, M4B via ffmpeg, SRT/VTT cues, chapters",
    "dev_deps": [],

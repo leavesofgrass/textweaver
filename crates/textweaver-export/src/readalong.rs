@@ -515,7 +515,7 @@ mod tests {
                 assert_eq!(left.len(), 1);
             }
             // Without the in-process encoder, MP3 needs ffmpeg.
-            Err(ExportError::NoFfmpeg(_)) => assert!(!cfg!(feature = "mp3")),
+            Err(ExportError::NoFfmpeg(_)) if !cfg!(feature = "mp3") => {}
             Err(e) => panic!("{e}"),
         }
     }
