@@ -385,7 +385,14 @@ fn add_a_folder_to_the_library_through_the_browser() {
         "{:?}",
         r.said.all()
     );
-    assert_eq!(r.app.settings().library.folders, vec![r.folder.clone()]);
+    // The app keeps the canonical path (macOS /private/var, Windows long
+    // names), so compare canonical forms.
+    let folders = r.app.settings().library.folders.clone();
+    assert_eq!(folders.len(), 1);
+    assert_eq!(
+        std::fs::canonicalize(&folders[0]).unwrap(),
+        std::fs::canonicalize(&r.folder).unwrap()
+    );
     r.app.dispatch(Command::Action(ActionId::AddLibraryFolder));
     r.key(ListKey::ChooseHere);
     assert!(r.said.any("course is already in the library."));
