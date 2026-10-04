@@ -365,3 +365,29 @@ fn the_browser_from_a_prompt_is_not_a_folder_choice() {
     r.app.dispatch(Command::Action(ActionId::BrowseFiles));
     assert_eq!(r.app.folder_choice(), None);
 }
+
+/// "Add a folder to the library" (W9a-c), a command in both frontends:
+/// the browser opens on the places, the folder chosen joins the library
+/// folders once, and a second time says it is already there.
+#[test]
+fn add_a_folder_to_the_library_through_the_browser() {
+    let mut r = rig();
+    r.app.dispatch(Command::Action(ActionId::AddLibraryFolder));
+    assert!(
+        r.said.any("Choose the folder to add to the library"),
+        "{:?}",
+        r.said.all()
+    );
+    // The places, with the document's folder focused: choose it.
+    r.key(ListKey::ChooseHere);
+    assert!(
+        r.said.any("Added course to the library."),
+        "{:?}",
+        r.said.all()
+    );
+    assert_eq!(r.app.settings().library.folders, vec![r.folder.clone()]);
+    r.app.dispatch(Command::Action(ActionId::AddLibraryFolder));
+    r.key(ListKey::ChooseHere);
+    assert!(r.said.any("course is already in the library."));
+    assert_eq!(r.app.settings().library.folders.len(), 1);
+}

@@ -348,7 +348,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
                 } else {
                     format!("{n} notes and highlights")
                 };
-                println!(
+                crate::cmd::outln!(
                     "Wrote {what} as {} to {}.",
                     format.display_name(),
                     out.display()
@@ -360,9 +360,9 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
     let report = build(&args.file, &paths);
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&report)?);
+        crate::cmd::outln!("{}", serde_json::to_string_pretty(&report)?);
     } else {
-        print!("{}", render(&report));
+        crate::cmd::out!("{}", render(&report));
     }
     Ok(())
 }

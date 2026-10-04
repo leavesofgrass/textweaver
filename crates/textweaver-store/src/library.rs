@@ -504,7 +504,7 @@ pub fn find_isbn(text: &str) -> Option<String> {
 
 /// A document's details as the owner typed them (Wave 7, W7m): each field
 /// set here wins over what the document says about itself, in the library
-/// list, its filter, and `tw library --search`. A field not set shows the
+/// list, its filter, and `tw library search`. A field not set shows the
 /// document's own value.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EditedDetails {

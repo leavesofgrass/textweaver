@@ -187,6 +187,8 @@ stats-clear-question =
        *[other] Supprimer les statistiques de lecture de { $n } documents ? y ou n
     }
 stats-cleared = Statistiques de lecture supprimées.
+stats-clear-item = Supprimer les statistiques de lecture
+stats-clear-failed = Impossible de supprimer les statistiques de lecture : { $error }. Vérifiez que le dossier de données est accessible en écriture.
 stats-off-cli = Les statistiques de lecture sont désactivées : stats.enabled est à false dans les paramètres.
 
 ## Continue reading and every computer's statistics (the sync wave, S6).
@@ -221,6 +223,8 @@ continue-ago-days =
     }
 name-continue-reading = Reprendre la lecture
 action-continue-reading = Reprendre la lecture : les documents de cet ordinateur avec une position enregistrée, sur n'importe quel ordinateur, les plus récents d'abord
+name-add-library-folder = Ajouter un dossier à la bibliothèque
+action-add-library-folder = Ajouter un dossier à la bibliothèque : le choisir dans le navigateur de fichiers
 name-edit-document-details = Modifier les détails
 action-edit-document-details = Modifier les détails du document : titre, auteur, DOI et ISBN
 prompt-document-details = Détails du document
@@ -1369,6 +1373,9 @@ library-scan-progress = Analyse de la bibliothèque : { $n } trouvés jusqu'ici.
 library-scan-stopped = L'analyse de la bibliothèque s'est arrêtée de façon inattendue. Ouvrez de nouveau la bibliothèque pour réessayer.
 # $command is the command line that adds a folder; $key names the Open command's key.
 library-empty = La bibliothèque est vide. Ajoutez un dossier dans les Paramètres, sous Dossiers de bibliothèque, ou ouvrez un fichier avec { $key }.
+library-add-folder-choose = Choisissez le dossier à ajouter à la bibliothèque
+library-folder-added = { $name } a été ajouté à la bibliothèque. Ouvrez la bibliothèque pour voir ses documents.
+library-folder-already = { $name } est déjà dans la bibliothèque.
 library-intro =
     { $n ->
         [one] Bibliothèque, { $n } document. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails.

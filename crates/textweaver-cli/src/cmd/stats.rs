@@ -31,26 +31,44 @@ pub struct Args {
     /// How many of the most read documents to list.
     #[arg(long, default_value_t = 10, value_name = "N")]
     pub top: usize,
-    /// Remove every statistic recorded, after a yes or no.
-    #[arg(long)]
+    /// The old spelling of `tw stats clear`, kept hidden through beta 1.
+    #[arg(long, hide = true)]
     pub clear: bool,
-    /// With --clear, do not ask.
-    #[arg(long, short)]
+    /// With the old `--clear`, do not ask.
+    #[arg(long, short, hide = true)]
     pub yes: bool,
     /// Under each document read on more than one computer, a line per
     /// computer with its share (with sync on).
     #[arg(long)]
     pub by_computer: bool,
     /// Use the files under this folder instead of the usual place.
-    #[arg(long, value_name = "DIR")]
+    #[arg(long, global = true, value_name = "DIR")]
     pub home: Option<PathBuf>,
+    /// What to do instead of listing.
+    #[command(subcommand)]
+    pub command: Option<StatsCommand>,
+}
+
+/// `tw stats` commands.
+#[derive(clap::Subcommand, Debug)]
+pub enum StatsCommand {
+    /// Remove every statistic recorded, after a yes or no.
+    Clear {
+        /// Do not ask.
+        #[arg(long, short)]
+        yes: bool,
+    },
 }
 
 /// Runs `tw stats`.
-pub fn run(args: Args) -> anyhow::Result<()> {
+pub fn run(mut args: Args) -> anyhow::Result<()> {
+    if let Some(StatsCommand::Clear { yes }) = args.command.take() {
+        args.clear = true;
+        args.yes |= yes;
+    }
     let paths = super::paths(args.home.as_deref())?;
     let mut input = std::io::stdin().lock();
-    let mut out = std::io::stdout().lock();
+    let mut out = super::Stdout;
     let terminal = super::stdin_is_terminal();
     execute(&paths, &args, &mut input, terminal, &mut out)
 }
@@ -149,6 +167,7 @@ mod tests {
             yes,
             by_computer: false,
             home: None,
+            command: None,
         }
     }
 

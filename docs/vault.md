@@ -279,10 +279,10 @@ Library mode adds every vault note to textweaver's library as a document, and do
 To keep a vault's notes in your library as it changes, with new notes found and searchable, add the vault as a library folder instead:
 
 ```powershell
-tw library --add "D:\Notes\Biology"
+tw library add "D:\Notes\Biology"
 ```
 
-That adds every Markdown note in the vault, skips the `.obsidian` folder, and makes the notes searchable with `tw library --search`. See [the library guide](library.md).
+That adds every Markdown note in the vault, skips the `.obsidian` folder, and makes the notes searchable with `tw library search`. See [the library guide](library.md).
 
 ## Bring your Obsidian edits back
 
@@ -360,7 +360,7 @@ See [the converting guide](converting.md#markdown-flavors) for every option.
 - **"Unknown relation ...".** The name given to `--link-relation` is not one of the ten kinds. Use a name from the list in the message.
 - **A note appears as `Name 2`.** A note with that name was already in the folder, often a note of your own. textweaver never overwrites it, so it picks a new name. Rename either note in Obsidian if you like; the next export finds textweaver's note by its id.
 - **Changes made in Obsidian disappeared.** The notes were exported again before the vault was imported. Export replaces the files it wrote. Always import first.
-- **Imported notes do not appear in the library.** Check that the import was not a dry run, and that the sentence says "documents added to the library". A vault note already in the library keeps its place and is not counted again. To have new notes found as the vault grows, add the vault as a library folder with `tw library --add`.
+- **Imported notes do not appear in the library.** Check that the import was not a dry run, and that the sentence says "documents added to the library". A vault note already in the library keeps its place and is not counted again. To have new notes found as the vault grows, add the vault as a library folder with `tw library add`.
 - **A dry run reports more than the real import did.** A dry run compares against an empty textweaver, so it counts notes and highlights you already have as new.
 - **Links stored by an import point to the wrong place.** The vault was given as a relative path, such as `Biology`. Import again with the full path.
 - **An option seems to do nothing.** Options for export are ignored by import, and the other way round. Check the list in [Options for tw vault](#options-for-tw-vault).

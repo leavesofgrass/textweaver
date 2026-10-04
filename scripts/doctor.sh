@@ -244,6 +244,11 @@ report() {
     else
       say "textweaver: not found beside tw"
     fi
+    if [ -x "$dir/textweaver-gui" ]; then
+      say "Window version: $(first_line "$dir/textweaver-gui" --version)"
+    else
+      say "Window (textweaver-gui): not installed beside tw"
+    fi
     local manifest
     for manifest in "$dir/../../share/textweaver/install-manifest.txt" "$dir/../share/textweaver/install-manifest.txt"; do
       if [ -f "$manifest" ]; then
@@ -259,6 +264,14 @@ report() {
     say ""
     say "Speech engines (tw backends):"
     indent "$TW" backends
+
+    say ""
+    say "Optional components (tw components list):"
+    indent "$TW" components list
+
+    say ""
+    say "Text recognition (tw ocr status):"
+    indent "$TW" ocr status
 
     say ""
     say "Engine hosts beside the programs, in $(tilde "$dir"):"

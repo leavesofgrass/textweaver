@@ -88,6 +88,8 @@ pub(crate) enum StatsEntry {
     Toggle,
     /// Show or hide each computer's share of each document (S6).
     ByComputer,
+    /// Remove this computer's statistics, after a question (W9a-c, QW13).
+    Clear,
 }
 
 /// Reading time not yet added to `stats.json`.
@@ -140,6 +142,8 @@ pub(crate) struct Study {
     pending_profile: Option<String>,
     /// A yes-or-no question about deleting this profile.
     pub(crate) question: Option<String>,
+    /// A yes-or-no question about removing the reading statistics.
+    pub(crate) stats_question: bool,
     stats: StatsTracker,
     /// The statistics list shows each computer's share of each document.
     stats_by_computer: bool,
@@ -170,6 +174,7 @@ impl Study {
                 profiles: None,
                 pending_profile: None,
                 question: None,
+                stats_question: false,
                 stats: StatsTracker::default(),
                 stats_by_computer: false,
             },
@@ -742,8 +747,12 @@ impl App {
         }
     }
 
-    /// Answers a yes-or-no question about deleting a profile.
+    /// Answers a yes-or-no question about deleting a profile, or about
+    /// removing the reading statistics.
     pub(crate) fn confirm_study(&mut self, answer: Confirm) -> Vec<Effect> {
+        if self.study.stats_question {
+            return self.confirm_stats_clear(answer);
+        }
         let Some(name) = self.study.question.clone() else {
             return vec![Effect::Redraw];
         };
@@ -777,6 +786,61 @@ impl App {
     }
 
     // ----- Statistics ------------------------------------------------------
+
+    /// This computer's statistics as saved, after the time not yet added.
+    fn local_stats(&mut self) -> ReadingStats {
+        self.stats_flush();
+        self.writer.flush(Duration::from_secs(2));
+        match &self.paths {
+            Some(p) => ReadingStats::load(p).unwrap_or_default(),
+            None => ReadingStats::default(),
+        }
+    }
+
+    /// The question before removing the statistics, as `tw stats clear`
+    /// asks it: how many documents, y or n.
+    fn stats_clear_question(&mut self) -> String {
+        let n = self.local_stats().documents.len();
+        self.msg_args("stats-clear-question", &args!["n" => n])
+    }
+
+    /// Answers the question about removing the reading statistics: yes
+    /// removes `stats.json` (the time not yet added goes with it), no
+    /// keeps it.
+    fn confirm_stats_clear(&mut self, answer: Confirm) -> Vec<Effect> {
+        match answer {
+            Confirm::Yes => {
+                self.study.stats_question = false;
+                self.stats_flush();
+                self.writer.flush(Duration::from_secs(2));
+                let removed = match &self.paths {
+                    Some(p) => match std::fs::remove_file(p.stats_file()) {
+                        Ok(()) => Ok(()),
+                        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                        Err(e) => Err(e),
+                    },
+                    None => Ok(()),
+                };
+                match removed {
+                    Ok(()) => self.tell(&self.msg("stats-cleared")),
+                    Err(e) => {
+                        let m =
+                            self.msg_args("stats-clear-failed", &args!["error" => e.to_string()]);
+                        self.error(&m);
+                    }
+                }
+            }
+            Confirm::No => {
+                self.study.stats_question = false;
+                self.tell(&self.msg("common-cancelled"));
+            }
+            Confirm::Repeat => {
+                let q = self.stats_clear_question();
+                self.ask(&q);
+            }
+        }
+        vec![Effect::Redraw]
+    }
 
     /// Starts counting for the document just opened.
     pub(crate) fn stats_open(&mut self) {
@@ -880,12 +944,7 @@ impl App {
     /// each document's time and sessions are summed over every computer,
     /// and each computer's share is listed under its document on request.
     fn statistics_list(&mut self) -> Vec<Effect> {
-        self.stats_flush();
-        self.writer.flush(Duration::from_secs(2));
-        let local = match &self.paths {
-            Some(p) => ReadingStats::load(p).unwrap_or_default(),
-            None => ReadingStats::default(),
-        };
+        let local = self.local_stats();
         let (synced, slow) = self.synced_for_statistics();
         let stats = CombinedStats::build(&local, synced.as_ref());
         let c = self.study.catalog.clone();
@@ -958,6 +1017,11 @@ impl App {
         } else {
             "stats-toggle-off"
         }));
+        // Last, when this computer has statistics: remove them.
+        if !local.documents.is_empty() {
+            entries.push(StatsEntry::Clear);
+            items.push(c.tr("stats-clear-item"));
+        }
         let title = c.tr("stats-title");
         self.list = Some(ListKind::Study(StudyList::Statistics(entries)));
         vec![Effect::ShowList { title, items }]
@@ -1046,6 +1110,13 @@ impl App {
                             e.iter().position(|x| *x == StatsEntry::ByComputer);
                     }
                     list
+                }
+                Some(StatsEntry::Clear) => {
+                    self.list = None;
+                    self.study.stats_question = true;
+                    let q = self.stats_clear_question();
+                    self.ask(&q);
+                    vec![Effect::Redraw]
                 }
                 // An information row: nothing to do, so the list stays.
                 Some(StatsEntry::Info) => {

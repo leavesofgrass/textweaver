@@ -420,9 +420,9 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         eprintln!("{msg}");
     }
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&report)?);
+        crate::cmd::outln!("{}", serde_json::to_string_pretty(&report)?);
     } else {
-        println!("{}", summary(&report));
+        crate::cmd::outln!("{}", summary(&report));
     }
     Ok(())
 }

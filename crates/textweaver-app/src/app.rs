@@ -661,6 +661,7 @@ impl App {
             || self.pending_colors_reset
             || self.authoring.question.is_some()
             || self.study.question.is_some()
+            || self.study.stats_question
             || self.voices.question.is_some()
             || self.dictation.question
             || self.batch_question()
@@ -691,8 +692,11 @@ impl App {
         if self.pending_import.is_some() || self.authoring.question.is_some() {
             return None;
         }
+        if self.study.stats_question {
+            return Some(V::Remove);
+        }
         if self.study.question.is_some() {
-            // The only study question: delete a profile.
+            // The other study question: delete a profile.
             return Some(V::Delete);
         }
         if let Some(q) = &self.voices.question {
@@ -745,7 +749,7 @@ impl App {
         if self.authoring.question.is_some() {
             return self.confirm_authoring(answer);
         }
-        if self.study.question.is_some() {
+        if self.study.question.is_some() || self.study.stats_question {
             return self.confirm_study(answer);
         }
         if self.voices.question.is_some() {
@@ -2104,6 +2108,7 @@ impl App {
             A::Open | A::OpenPath => return self.prompt(PromptPurpose::Open),
             A::OpenLibrary => return self.open_library(),
             A::ContinueReading => return self.open_continue_reading(),
+            A::AddLibraryFolder => return self.add_library_folder(),
             A::EditDocumentDetails => return self.edit_document_details(),
             A::ExportSettings => return self.settings_file_prompt(false),
             A::ImportSettings => return self.settings_file_prompt(true),

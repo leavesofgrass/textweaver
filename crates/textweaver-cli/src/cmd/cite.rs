@@ -45,11 +45,17 @@ pub enum CiteCommand {
         /// Seconds to wait for an answer.
         #[arg(long, default_value_t = 15)]
         timeout: u64,
+        /// Print the result as JSON.
+        #[arg(long)]
+        json: bool,
     },
     /// Import references from a BibTeX, BibLaTeX, RIS, or CSL-JSON file.
     Import {
         /// The file (.bib, .ris, or .json).
         file: PathBuf,
+        /// Print the result as JSON.
+        #[arg(long)]
+        json: bool,
     },
     /// Export the library, or some keys, as BibTeX, BibLaTeX, RIS, or CSL-JSON.
     Export {
@@ -61,6 +67,9 @@ pub enum CiteCommand {
         /// Write to this file instead of standard output.
         #[arg(long = "out", short = 'o', alias = "output", value_name = "FILE")]
         output: Option<PathBuf>,
+        /// With --out, print the result as JSON.
+        #[arg(long, requires = "output")]
+        json: bool,
     },
     /// Format references with a citation style.
     Format {
@@ -93,13 +102,23 @@ pub enum CiteCommand {
         /// Do not ask.
         #[arg(long, short)]
         yes: bool,
+        /// Print the result as JSON.
+        #[arg(long)]
+        json: bool,
     },
     /// List the built-in citation styles.
-    Styles,
+    Styles {
+        /// Print the styles as JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// List a document's citations whose keys are not in the library.
     Check {
         /// A Markdown or text document with Pandoc citations (`[@key]`).
         file: PathBuf,
+        /// Print the result as JSON.
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -138,19 +157,29 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         client: &client,
     };
     let out = match args.command {
-        CiteCommand::Add { identifier, .. } => commands::add(&ctx, &identifier)?,
-        CiteCommand::Import { file } => commands::import(&ctx, &file)?,
-        CiteCommand::Export { to, keys, output } => {
+        CiteCommand::Add {
+            identifier, json, ..
+        } => as_json(json, "added", commands::add(&ctx, &identifier)?)?,
+        CiteCommand::Import { file, json } => {
+            as_json(json, "imported", commands::import(&ctx, &file)?)?
+        }
+        CiteCommand::Export {
+            to,
+            keys,
+            output,
+            json,
+        } => {
             let text = commands::export(&ctx, to, &keys)?;
             match output {
                 Some(path) => {
                     std::fs::write(&path, &text)
                         .with_context(|| format!("could not write {}", path.display()))?;
-                    format!(
+                    let message = format!(
                         "Exported the references as {} to {}.",
                         to.display_name(),
                         path.display()
-                    )
+                    );
+                    as_json(json, "exported", message)?
                 }
                 None => text.trim_end().to_owned(),
             }
@@ -172,22 +201,37 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             commands::format(&ctx, &keys, &style, output, show)?
         }
         CiteCommand::List { json } => commands::list(&ctx, json)?.trim_end().to_owned(),
-        CiteCommand::Remove { key, yes } => {
+        CiteCommand::Remove { key, yes, json } => {
             let question = format!("Remove {key} from the reference library? y or n:");
             let mut input = std::io::stdin().lock();
             if !yes && !super::confirm(&question, &mut input, super::stdin_is_terminal(), "--yes")?
             {
-                format!("Kept {key}.")
+                as_json(json, "kept", format!("Kept {key}."))?
             } else {
-                commands::remove(&ctx, &key)?
+                as_json(json, "removed", commands::remove(&ctx, &key)?)?
             }
         }
-        CiteCommand::Styles => commands::styles(),
-        CiteCommand::Check { file } => {
+        CiteCommand::Styles { json: false } => commands::styles(),
+        CiteCommand::Styles { json: true } => {
+            let styles: Vec<serde_json::Value> = textweaver_cite::builtin_styles()
+                .into_iter()
+                .map(|s| serde_json::json!({ "name": s.name, "title": s.title }))
+                .collect();
+            serde_json::to_string_pretty(&serde_json::json!({ "styles": styles }))?
+        }
+        CiteCommand::Check { file, json } => {
             let text = std::fs::read_to_string(&file)
                 .with_context(|| format!("could not read {}", file.display()))?;
             let checked = commands::check_keys(&ctx, &text)?;
-            super::print_all(&format!("{}\n", checked.message))?;
+            let line = if json {
+                serde_json::to_string_pretty(&serde_json::json!({
+                    "missing": checked.missing,
+                    "message": checked.message,
+                }))?
+            } else {
+                checked.message.clone()
+            };
+            super::print_all(&format!("{line}\n"))?;
             // Missing keys are a finding: exit status 1, as search does.
             if !checked.missing.is_empty() {
                 return Err(super::NothingFound.into());
@@ -196,4 +240,17 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         }
     };
     super::print_all(&format!("{out}\n"))
+}
+
+/// `message` as it is printed: the sentence itself, or with `--json` an
+/// object naming what happened (`added`, `imported`, `exported`,
+/// `removed`, `kept`) with the sentence beside it. The keys are English.
+fn as_json(json: bool, action: &str, message: String) -> anyhow::Result<String> {
+    if !json {
+        return Ok(message);
+    }
+    Ok(serde_json::to_string_pretty(&serde_json::json!({
+        "action": action,
+        "message": message,
+    }))?)
 }

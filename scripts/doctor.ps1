@@ -204,6 +204,9 @@ if ($Tw) {
     Add-Line "tw version: $(Get-FirstLine $Tw @('--version'))"
     $tv = Join-Path $dir 'textweaver.exe'
     if (Test-Path -LiteralPath $tv) { Add-Line "textweaver version: $(Get-FirstLine $tv @('--version'))" } else { Add-Line 'textweaver.exe: not found beside tw.exe' }
+    # The window: beside tw.exe (the window's zip), or in gui\ (the installer's -Gui).
+    $gui = @((Join-Path $dir 'textweaver-gui.exe'), (Join-Path (Join-Path $dir 'gui') 'textweaver-gui.exe')) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if ($gui) { Add-Line "Window version: $(Get-FirstLine $gui @('--version')), at $gui" } else { Add-Line 'Window (textweaver-gui.exe): not installed beside tw.exe or in its gui folder' }
     $manifest = Join-Path $dir 'install-manifest.txt'
     if (Test-Path -LiteralPath $manifest) {
         $kind = (Select-String -LiteralPath $manifest -Pattern '^kind=(.*)$' | Select-Object -First 1).Matches.Groups[1].Value
@@ -221,6 +224,14 @@ if ($Tw) {
     Add-Line
     Add-Line 'Speech engines (tw backends):'
     Add-Output $Tw @('backends')
+
+    Add-Line
+    Add-Line 'Optional components (tw components list):'
+    Add-Output $Tw @('components', 'list')
+
+    Add-Line
+    Add-Line 'Text recognition (tw ocr status):'
+    Add-Output $Tw @('ocr', 'status')
 
     Add-Line
     Add-Line "Engine hosts beside tw.exe, in ${dir}:"

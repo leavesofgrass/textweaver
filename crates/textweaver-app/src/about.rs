@@ -139,11 +139,7 @@ impl App {
         } else {
             c.fmt("about-engines", &args!["engines" => found.join(", ")])
         });
-        let (installed, known) = self.component_registry().installed_count(&paths.data_dir);
-        facts.push(c.fmt(
-            "about-components",
-            &args!["installed" => installed, "known" => known],
-        ));
+        facts.push(self.component_registry().status_line(&c, &paths.data_dir));
         for (id, dir) in [
             ("about-folder-settings", &paths.config_dir),
             ("about-folder-data", &paths.data_dir),

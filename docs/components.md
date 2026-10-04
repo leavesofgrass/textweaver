@@ -72,7 +72,7 @@ tw components install whisper-base.en D:\Downloads\whisper-base.en.zip
 - `remove ID` asks (or `--yes`), prints each path it removes, then removes the component's own files and nothing else.
 - `install ID PATH` installs from a zip or a folder.
 
-`tw dictate download` downloads the dictation model chosen in the settings, and `tw dictate` offers it when it is missing. `tw ocr download` downloads an OCR model set. `tw info` ends with how many optional components are installed.
+`tw dictate download` downloads the dictation model chosen in the settings, and `tw dictate` offers it when it is missing. `tw ocr download` downloads an OCR model set the same way as `tw components download ocr-ocrs`: the mirror first, every file checked. `tw info` ends with how many optional components are installed.
 
 ## Installing from a file
 

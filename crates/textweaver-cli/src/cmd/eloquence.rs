@@ -105,22 +105,22 @@ pub fn report() -> Report {
 /// Runs `tw eloquence`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     if args.guide {
-        print!("{GUIDE}");
+        crate::cmd::out!("{GUIDE}");
         return Ok(());
     }
     let r = report();
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&r)?);
+        crate::cmd::outln!("{}", serde_json::to_string_pretty(&r)?);
         return Ok(());
     }
-    println!("{}", r.status);
-    println!("Searched:");
+    crate::cmd::outln!("{}", r.status);
+    crate::cmd::outln!("Searched:");
     for s in &r.searched {
         let state = if s.found { "found" } else { "not found" };
-        println!("  {} ({}): {state}", s.path, s.product);
+        crate::cmd::outln!("  {} ({}): {state}", s.path, s.product);
     }
     for step in &r.next_steps {
-        println!("{step}");
+        crate::cmd::outln!("{step}");
     }
     Ok(())
 }

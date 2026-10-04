@@ -191,6 +191,8 @@ stats-clear-question =
        *[other] Remove the reading statistics of { $n } documents? y or n
     }
 stats-cleared = Reading statistics removed.
+stats-clear-item = Remove the reading statistics
+stats-clear-failed = Could not remove the reading statistics: { $error }. Check that the data folder can be written.
 stats-off-cli = Reading statistics are off: stats.enabled is false in the settings.
 
 ## Continue reading and every computer's statistics (the sync wave, S6).
@@ -225,6 +227,8 @@ continue-ago-days =
     }
 name-continue-reading = Continue reading
 action-continue-reading = Continue reading: the documents on this computer with a saved place, from any computer, newest first
+name-add-library-folder = Add a folder to the library
+action-add-library-folder = Add a folder to the library: choose it in the file browser
 name-edit-document-details = Edit details
 action-edit-document-details = Edit the document's details: title, author, DOI, and ISBN
 prompt-document-details = Document details
@@ -1346,6 +1350,9 @@ library-scan-progress = Scanning the library: { $n } found so far.
 library-scan-stopped = The library scan stopped unexpectedly. Open the library again to retry.
 # $command is the command line that adds a folder; $key names the Open command's key.
 library-empty = The library is empty. Add a folder in Settings, under Library folders, or open a file with { $key }.
+library-add-folder-choose = Choose the folder to add to the library
+library-folder-added = Added { $name } to the library. Open the library to see its documents.
+library-folder-already = { $name } is already in the library.
 library-intro =
     { $n ->
         [one] Library, { $n } document. Type to filter, Enter opens one, F2 edits details.

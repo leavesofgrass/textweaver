@@ -96,9 +96,9 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let paths = super::paths(args.home.as_deref())?;
     let report = migrate(&from, args.dry_run, &paths)?;
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&report)?);
+        crate::cmd::outln!("{}", serde_json::to_string_pretty(&report)?);
     } else {
-        print!("{}", report.render());
+        crate::cmd::out!("{}", report.render());
     }
     Ok(())
 }

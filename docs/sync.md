@@ -120,11 +120,11 @@ When two library-folder progress files disagree as they are written (the older, 
 
 ## Continue reading
 
-**Continue reading**, in the File menu under Library and in the command palette, lists the documents on this computer with a reading place from any computer, newest first, one row each, meaning first: "Cells, 42 percent, laptop, 2 hours ago". Enter opens the document, which resumes by `position_policy`. Only documents found on this computer are listed: opened here before, in a library folder, or among the recent files. A document read only on the laptop, and not on this computer at all, is left out. With the places group off, only this computer's own places are used. [The library guide](library.md#continue-reading) has the details, and `tw library --continue` prints the same list.
+**Continue reading**, in the File menu under Library and in the command palette, lists the documents on this computer with a reading place from any computer, newest first, one row each, meaning first: "Cells, 42 percent, laptop, 2 hours ago". Enter opens the document, which resumes by `position_policy`. Only documents found on this computer are listed: opened here before, in a library folder, or among the recent files. A document read only on the laptop, and not on this computer at all, is left out. With the places group off, only this computer's own places are used. [The library guide](library.md#continue-reading) has the details, and `tw library continue` prints the same list.
 
 ## Library details and search
 
-With sync on, the library's filter and `tw library --search` also know what your other computers learned about a document: its title, author, DOI, and ISBN. So a paper opened on the laptop is found on the lab computer by its DOI, even before it is opened there. The document is found here when it was opened here before, when its library folder is itself synced between the computers (its `.textweaver/library-id.json` travels with it), or when `tw library --search` has read its text. When two computers know different details, the newest wins, detail by detail; the date a document was first added keeps the earliest.
+With sync on, the library's filter and `tw library search` also know what your other computers learned about a document: its title, author, DOI, and ISBN. So a paper opened on the laptop is found on the lab computer by its DOI, even before it is opened there. The document is found here when it was opened here before, when its library folder is itself synced between the computers (its `.textweaver/library-id.json` travels with it), or when `tw library search` has read its text. When two computers know different details, the newest wins, detail by detail; the date a document was first added keeps the earliest.
 
 Details you type yourself ([Edit a document's details](library.md#edit-a-documents-details), F2 in the library list or `tw library edit`) travel the same way, and they win over what the document states, even when another computer opens the document later and sends its own title. When you edit the same detail on two computers, the newest edit wins; clearing an edit travels too, and the document's own value shows again.
 
@@ -143,11 +143,12 @@ The same actions are on the command line, each with `--json` for scripts, and `-
 - `tw sync setup --folder DIR [--name NAME] [--groups places,notes,highlights,bookmarks,statistics,settings,profiles,key_overrides,words,glossary,favorite_voices]`
 - `tw sync status`: the status line, this computer, and the others.
 - `tw sync now`: merges every document this computer knows, and the settings and word lists, and says how many documents took changes and how many settings changed (`settings_changes` in `--json`).
+- `tw sync stop`: stops syncing on this computer, as "Stop syncing on this computer" in the reader does. The sync folder is left as it is.
 
 Three other commands read the sync folder too, and change nothing in it:
 
-- `tw library --continue`: Continue reading, newest first.
-- `tw library --search WORDS`: finds documents by what your other computers know about them too.
+- `tw library continue`: Continue reading, newest first.
+- `tw library search WORDS`: finds documents by what your other computers know about them too.
 - `tw stats --by-computer`: every computer's reading, summed, with a line per computer.
 
 ## Privacy

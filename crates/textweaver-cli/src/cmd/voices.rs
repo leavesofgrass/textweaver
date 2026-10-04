@@ -90,17 +90,17 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         eprintln!("{msg}");
     }
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&report)?);
+        crate::cmd::outln!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(());
     }
     let n = report.voices.len();
-    println!(
+    crate::cmd::outln!(
         "{} has {n} voice{}.",
         report.backend.backend.name,
         if n == 1 { "" } else { "s" }
     );
     for v in &report.voices {
-        println!("{}", describe(v));
+        crate::cmd::outln!("{}", describe(v));
     }
     Ok(())
 }

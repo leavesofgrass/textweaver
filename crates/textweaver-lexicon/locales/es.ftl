@@ -187,6 +187,8 @@ stats-clear-question =
        *[other] ¿Eliminar las estadísticas de lectura de { $n } documentos? y o n
     }
 stats-cleared = Estadísticas de lectura eliminadas.
+stats-clear-item = Eliminar las estadísticas de lectura
+stats-clear-failed = No se pudieron eliminar las estadísticas de lectura: { $error }. Compruebe que se puede escribir en la carpeta de datos.
 stats-off-cli = Las estadísticas de lectura están desactivadas: stats.enabled es false en la configuración.
 
 ## Continue reading and every computer's statistics (the sync wave, S6).
@@ -221,6 +223,8 @@ continue-ago-days =
     }
 name-continue-reading = Seguir leyendo
 action-continue-reading = Seguir leyendo: los documentos de este equipo con una posición guardada, de cualquier equipo, los más recientes primero
+name-add-library-folder = Añadir una carpeta a la biblioteca
+action-add-library-folder = Añadir una carpeta a la biblioteca: elíjala en el explorador de archivos
 name-edit-document-details = Editar detalles
 action-edit-document-details = Editar los detalles del documento: título, autor, DOI e ISBN
 prompt-document-details = Detalles del documento
@@ -1341,6 +1345,9 @@ library-scan-progress = Explorando la biblioteca: { $n } encontrados hasta ahora
 library-scan-stopped = La exploración de la biblioteca se detuvo inesperadamente. Abra la biblioteca de nuevo para reintentar.
 # $command is the command line that adds a folder; $key names the Open command's key.
 library-empty = La biblioteca está vacía. Agregue una carpeta en Configuración, en Carpetas de la biblioteca, o abra un archivo con { $key }.
+library-add-folder-choose = Elija la carpeta que se añadirá a la biblioteca
+library-folder-added = { $name } se añadió a la biblioteca. Abra la biblioteca para ver sus documentos.
+library-folder-already = { $name } ya está en la biblioteca.
 library-intro =
     { $n ->
         [one] Biblioteca, { $n } documento. Escriba para filtrar, Intro abre uno, F2 edita los detalles.

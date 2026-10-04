@@ -69,7 +69,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         eprintln!("{}", catalog.tr("define-no-dictionary"));
     }
     let dict = Dictionary { glossary, lexicon };
-    let mut out = std::io::stdout().lock();
+    let mut out = super::Stdout;
     if args.complete {
         let Some(l) = &dict.lexicon else {
             anyhow::bail!("no dictionary file");

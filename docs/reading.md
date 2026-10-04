@@ -575,7 +575,7 @@ textweaver counts the time it spends reading each document aloud, the furthest p
 - the ten documents you read most (Enter opens one);
 - whether statistics are on (Enter turns them off or on).
 
-Statistics are saved every 30 seconds while reading, and when a document closes. `tw stats` prints them, `tw stats --json` prints everything, and `tw stats --clear` removes them. To stop recording, turn them off in the list or set `[stats] enabled = false` ([settings.md](settings.md#stats)). `tw migrate-star` brings Star's reading statistics over.
+Statistics are saved every 30 seconds while reading, and when a document closes. `tw stats` prints them, `tw stats --json` prints everything, and `tw stats clear` removes them. In the reader, the last item of the list, "Remove the reading statistics", removes them too, after a yes or no; it is there once something is recorded. To stop recording, turn them off in the list or set `[stats] enabled = false` ([settings.md](settings.md#stats)). `tw migrate-star` brings Star's reading statistics over.
 
 ## The menus: F10
 

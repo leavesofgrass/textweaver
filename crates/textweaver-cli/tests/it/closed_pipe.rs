@@ -88,3 +88,34 @@ fn no_arguments_prints_a_short_hint() {
         assert!(help.contains(command), "{command}: {help}");
     }
 }
+
+/// Every command writes through `tw`'s one standard output writer, so a
+/// closed pipe never panics, whichever command is printing (W9a-c). The
+/// output here is small, but the read end is closed before `tw` writes,
+/// so the first write already meets the closed pipe.
+#[test]
+fn every_command_ends_quietly_on_a_closed_pipe() {
+    let dir = tempfile::tempdir().unwrap();
+    let home = dir.path().to_str().unwrap();
+    let doc = big_document(dir.path());
+    let doc = doc.to_str().unwrap();
+    let runs: Vec<Vec<&str>> = vec![
+        vec!["eloquence"],
+        vec!["backends"],
+        vec!["text", doc],
+        vec!["summarize", doc],
+        vec!["settings", "path", "--home", home],
+        vec!["settings", "export", "--home", home],
+        vec!["stats", "--home", home],
+        vec!["components", "list", "--home", home],
+        vec!["library", "list", "--home", home],
+        vec!["cite", "list", "--home", home],
+        vec!["ocr", "status"],
+    ];
+    for args in runs {
+        let (status, err) = run_with_closed_stdout(&args);
+        assert!(!err.contains("panicked"), "{args:?}: {err}");
+        assert!(!err.contains("failed printing"), "{args:?}: {err}");
+        assert!(status.code().is_some(), "{args:?}: {status:?}: {err}");
+    }
+}

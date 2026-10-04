@@ -1,4 +1,4 @@
-//! `tw sync setup|status|now`: sync notes, highlights, bookmarks, places,
+//! `tw sync setup|status|now|stop`: sync notes, highlights, bookmarks, places,
 //! reading statistics, portable settings, profiles, key overrides, the word
 //! list, the glossary and pronunciations, and favorite voices with other
 //! computers through a folder the owner chooses (ADR-0049), from the
@@ -13,6 +13,8 @@
 //! - `tw sync now` merges every document this computer knows, and the
 //!   settings and word lists, with the other computers' files, and
 //!   publishes its own.
+//! - `tw sync stop` stops syncing on this computer, as the reader's
+//!   "Stop syncing on this computer" does; the sync folder is left as it is (W9a-c, QW3).
 //!
 //! Owner: Agent S4 (the sync wave).
 
@@ -79,15 +81,22 @@ pub enum SyncCommand {
         #[command(flatten)]
         common: Common,
     },
+    /// Stop syncing on this computer; the sync folder is left as it is.
+    Stop {
+        /// JSON and the home folder.
+        #[command(flatten)]
+        common: Common,
+    },
 }
 
 /// Runs `tw sync`.
 pub fn run(args: Args) -> anyhow::Result<()> {
-    let mut out = std::io::stdout().lock();
+    let mut out = super::Stdout;
     let home = match &args.command {
         SyncCommand::Setup { common, .. }
         | SyncCommand::Status { common }
-        | SyncCommand::Now { common } => common.home.clone(),
+        | SyncCommand::Now { common }
+        | SyncCommand::Stop { common } => common.home.clone(),
     };
     let paths = match &home {
         Some(h) => Paths::under(h),
@@ -279,6 +288,19 @@ fn execute(paths: &Paths, command: &SyncCommand, out: &mut dyn Write) -> anyhow:
             let r = report(&c, &settings, on, e.status(), &notices);
             print(&c, &r, common.json, out)
         }
+        SyncCommand::Stop { common } => {
+            let message = if settings.sync.enabled {
+                settings.sync.enabled = false;
+                store.save(&settings)?;
+                c.tr("sync-stopped")
+            } else {
+                c.tr("sync-already-off")
+            };
+            let (e, notices, on) = engine(&settings, paths);
+            let mut r = report(&c, &settings, on, e.status(), &notices);
+            r.messages.insert(0, message);
+            print(&c, &r, common.json, out)
+        }
         SyncCommand::Now { common } => {
             let (mut e, mut notices, on) = engine(&settings, paths);
             let mut all = AllOutcome::default();
@@ -413,6 +435,27 @@ mod tests {
                 .unwrap()
                 .starts_with("Sync: up to date")
         );
+
+        // Stop: off here, the folder kept; a second stop says so.
+        let said = run_in(
+            home.path(),
+            &SyncCommand::Stop {
+                common: common(false),
+            },
+        );
+        assert!(said.starts_with("Sync off here."), "{said}");
+        let settings = SettingsStore::new(Paths::under(home.path())).load().0;
+        assert!(!settings.sync.enabled);
+        assert!(folder.path().is_dir());
+        let json = run_in(
+            home.path(),
+            &SyncCommand::Stop {
+                common: common(true),
+            },
+        );
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["enabled"], false);
+        assert_eq!(v["messages"][0], "Sync is already off here.");
     }
 
     #[test]

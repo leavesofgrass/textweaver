@@ -13,7 +13,7 @@
 //!
 //! The library list **filters as you type** (Wave 5, W5y): each word typed
 //! must be in a document's title, path, author, DOI, or ISBN, or in its
-//! text when `tw library --search` has indexed it. The author, DOI, and
+//! text when `tw library search` has indexed it. The author, DOI, and
 //! ISBN are recorded on the bookshelf when a document opens
 //! ([`DocMetadata`]); a DOI or ISBN in the indexed text of a document never
 //! opened counts too.
@@ -226,6 +226,33 @@ impl App {
     /// the library list.
     pub(crate) fn open_continue_reading(&mut self) -> Vec<Effect> {
         self.start_library_scan(ScanMode::Continue)
+    }
+
+    /// "Add a folder to the library", in both frontends (W9a-c): the file
+    /// browser chooses the folder, and it joins `[library] folders`, as
+    /// `tw library add` does.
+    pub(crate) fn add_library_folder(&mut self) -> Vec<Effect> {
+        let purpose = self.msg("library-add-folder-choose");
+        self.choose_folder(&purpose, |app, folder| app.library_folder_chosen(&folder))
+    }
+
+    /// Adds `folder` to the library folders, once, and says so.
+    pub(crate) fn library_folder_chosen(&mut self, folder: &Path) -> Vec<Effect> {
+        let (stored, added) = self.settings.library.add_folder(folder);
+        let name = stored.file_name().map_or_else(
+            || stored.display().to_string(),
+            |n| n.to_string_lossy().into_owned(),
+        );
+        let id = if added {
+            self.settings_dirty = true;
+            self.library_sync = Self::make_library_sync(&self.settings);
+            "library-folder-added"
+        } else {
+            "library-folder-already"
+        };
+        let msg = self.msg_args(id, &args!["name" => name]);
+        self.tell(&msg);
+        vec![Effect::Redraw]
     }
 
     fn start_library_scan(&mut self, mode: ScanMode) -> Vec<Effect> {
@@ -469,7 +496,7 @@ pub(crate) fn document_metadata(doc: &Document) -> DocMetadata {
 pub(crate) struct LibraryList {
     /// Every document, in the library's order.
     items: Vec<LibraryItem>,
-    /// Indexed text by document, lowercase (from `tw library --search`'s
+    /// Indexed text by document, lowercase (from `tw library search`'s
     /// cache), for the filter.
     texts: Arc<std::collections::BTreeMap<PathBuf, String>>,
     /// The filter typed so far.
@@ -633,7 +660,7 @@ struct LibraryInputs {
     folders: Vec<PathBuf>,
     extensions: Vec<&'static str>,
     files: Option<(PathBuf, PathBuf, PathBuf)>,
-    /// `tw library --search`'s text cache.
+    /// `tw library search`'s text cache.
     fulltext: Option<PathBuf>,
     sync: LibrarySync,
     /// Where this computer's files are and the settings, for reading the

@@ -104,10 +104,11 @@ const PRINTS_FACTS: &[&str] = &[
     "components",
 ];
 
-/// Commands that read or write the data folder. `tw ocr` keeps its
-/// models in their own folder and is not listed.
+/// Commands that read or write the data folder. `tw ocr` takes `--home`
+/// on `status` and `download`, where its models are.
 const TOUCHES_DATA: &[&str] = &[
     "open",
+    "ocr",
     "speak",
     "voices",
     "backends",
@@ -136,7 +137,20 @@ fn the_option_rules_hold_for_every_command() {
     let mut problems = Vec::new();
     for (name, text) in &all {
         for line in option_lines(text) {
-            for old in ["--output", "--format", "--export ", "--language"] {
+            for old in [
+                "--output",
+                "--format",
+                "--export ",
+                "--language",
+                // Verbs are subcommands: `tw library add`, `tw stats
+                // clear`, `tw dictate list`.
+                "--add ",
+                "--remove ",
+                "--search ",
+                "--continue",
+                "--clear",
+                "--list",
+            ] {
                 if line.contains(old) {
                     problems.push(format!("{name}: shows {old}: {line}"));
                 }
@@ -172,6 +186,41 @@ fn old_spellings_still_work_as_hidden_aliases() {
     assert_eq!(new.stdout, old.stdout);
     let flag = tw_in(home.path(), &["text", doc, "--json"], "");
     assert_eq!(new.stdout, flag.stdout);
+}
+
+#[test]
+fn verbs_are_subcommands_and_the_old_flags_still_work() {
+    let home = tempfile::tempdir().unwrap();
+    let folder = home.path().join("books");
+    std::fs::create_dir(&folder).unwrap();
+    std::fs::write(
+        folder.join("a.md"),
+        "# Title
+
+Some text.
+",
+    )
+    .unwrap();
+    let folder = folder.to_str().unwrap();
+    let new = tw_in(home.path(), &["library", "add", folder, "--json"], "");
+    assert!(new.status.success(), "{new:?}");
+    let old = tw_in(home.path(), &["library", "--remove", folder, "--json"], "");
+    assert!(old.status.success(), "{old:?}");
+    let again = tw_in(home.path(), &["library", "--add", folder, "--json"], "");
+    assert_eq!(new.stdout, again.stdout);
+    let listed = tw_in(home.path(), &["library", "list"], "");
+    let plain = tw_in(home.path(), &["library"], "");
+    assert_eq!(listed.stdout, plain.stdout);
+    let found = tw_in(home.path(), &["library", "search", "Title"], "");
+    assert!(found.status.success(), "{found:?}");
+    let new = tw_in(home.path(), &["stats", "clear", "--yes"], "");
+    let old = tw_in(home.path(), &["stats", "--clear", "--yes"], "");
+    assert!(new.status.success(), "{new:?}");
+    assert_eq!(new.stdout, old.stdout);
+    let new = tw_in(home.path(), &["dictate", "list", "--json"], "");
+    let old = tw_in(home.path(), &["dictate", "--list", "--json"], "");
+    assert!(new.status.success(), "{new:?}");
+    assert_eq!(new.stdout, old.stdout);
 }
 
 #[test]
@@ -214,6 +263,57 @@ fn cite_check_exits_1_when_keys_are_missing() {
 }
 
 #[test]
+fn cite_prints_json_on_every_subcommand_that_prints_facts() {
+    let home = tempfile::tempdir().unwrap();
+    let doc = home.path().join("essay.md");
+    std::fs::write(&doc, "As shown [@nobody2020].\n").unwrap();
+    let doc = doc.to_str().unwrap();
+    let out = tw_in(home.path(), &["cite", "check", doc, "--json"], "");
+    assert_eq!(out.status.code(), Some(1), "{out:?}");
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["missing"][0], "nobody2020");
+    let out = tw_in(home.path(), &["cite", "styles", "--json"], "");
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert!(v["styles"].as_array().is_some_and(|a| a.len() > 3), "{v}");
+    let bib = home.path().join("refs.bib");
+    std::fs::write(
+        &bib,
+        "@book{example2020, title={A Placeholder Book}, author={Example, Ada}, year={2020}}\n",
+    )
+    .unwrap();
+    let out = tw_in(
+        home.path(),
+        &["cite", "import", bib.to_str().unwrap(), "--json"],
+        "",
+    );
+    assert!(out.status.success(), "{out:?}");
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["action"], "imported");
+    let out = tw_in(
+        home.path(),
+        &["cite", "remove", "example2020", "--yes", "--json"],
+        "",
+    );
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["action"], "removed", "{v}");
+}
+
+#[test]
+fn ocr_status_uses_the_data_folder_from_home() {
+    let home = tempfile::tempdir().unwrap();
+    let h = home.path().to_str().unwrap();
+    let out = tw_in(home.path(), &["ocr", "status", "--json", "--home", h], "");
+    assert!(out.status.success(), "{out:?}");
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    let folder = v["models_folder"].as_str().unwrap_or_default().to_owned();
+    assert!(
+        folder.starts_with(h) || std::env::var_os("TEXTWEAVER_OCR_MODELS").is_some(),
+        "{folder}"
+    );
+    assert_eq!(v["models"][0]["status"], "not-downloaded");
+}
+
+#[test]
 fn no_question_without_a_terminal() {
     let home = tempfile::tempdir().unwrap();
     let out = tw_in(home.path(), &["cite", "remove", "doe2020"], "y\n");
@@ -243,4 +343,11 @@ fn components_list_prints_json() {
     let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
     assert!(v["components"].as_array().is_some_and(|a| !a.is_empty()));
     assert_eq!(v["installed"], 0);
+    // The one components status line ends the list, as in tw info and
+    // About: "Components: 0 of 12 installed."
+    let total = v["total"].as_u64().unwrap();
+    let line = format!("Components: 0 of {total} installed.");
+    let out = tw_in(home.path(), &["components", "list"], "");
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(text.lines().last(), Some(line.as_str()), "{text}");
 }

@@ -43,18 +43,91 @@ pub(crate) fn paths(
     }
 }
 
-/// Writes `text` to standard output. A closed pipe (`tw text big.pdf |
-/// head`) ends the output quietly instead of a panic about "failed printing
-/// to stdout"; any other failure is reported.
+/// Set once standard output's reader has gone (`tw search x | head`):
+/// every later write is dropped quietly.
+static PIPE_CLOSED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// `tw`'s one standard output writer. Every command writes its results
+/// through it, directly or through [`out!`] and [`outln!`]. A closed pipe
+/// ends the output quietly: the write succeeds, and the rest of the
+/// output is dropped, so the command still finishes its work (a save, a
+/// download) and exits with its own status. Any other failure is
+/// returned.
+pub(crate) struct Stdout;
+
+impl std::io::Write for Stdout {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        use std::sync::atomic::Ordering;
+        if PIPE_CLOSED.load(Ordering::Relaxed) {
+            return Ok(buf.len());
+        }
+        match std::io::stdout().lock().write(buf) {
+            Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
+                PIPE_CLOSED.store(true, Ordering::Relaxed);
+                Ok(buf.len())
+            }
+            other => other,
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        use std::sync::atomic::Ordering;
+        if PIPE_CLOSED.load(Ordering::Relaxed) {
+            return Ok(());
+        }
+        match std::io::stdout().lock().flush() {
+            Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
+                PIPE_CLOSED.store(true, Ordering::Relaxed);
+                Ok(())
+            }
+            other => other,
+        }
+    }
+}
+
+/// Writes formatted text to [`Stdout`], for [`out!`] and [`outln!`]. A
+/// failure other than a closed pipe (a full disk under a redirect) ends
+/// `tw` with its one error line and status 1, as `println!` would have
+/// panicked.
+pub(crate) fn write_out(args: std::fmt::Arguments<'_>) {
+    use std::io::Write as _;
+    if let Err(e) = Stdout.write_fmt(args) {
+        eprintln!(
+            "{}",
+            one_line(&anyhow::Error::new(e).context("Could not write the output"))
+        );
+        std::process::exit(1);
+    }
+}
+
+/// `print!` through `tw`'s one standard output writer, [`Stdout`].
+macro_rules! out {
+    ($($arg:tt)*) => {
+        $crate::cmd::write_out(format_args!($($arg)*))
+    };
+}
+
+/// `println!` through `tw`'s one standard output writer, [`Stdout`].
+macro_rules! outln {
+    () => {
+        $crate::cmd::write_out(format_args!("\n"))
+    };
+    ($($arg:tt)*) => {
+        $crate::cmd::write_out(format_args!("{}\n", format_args!($($arg)*)))
+    };
+}
+
+pub(crate) use {out, outln};
+
+/// Writes `text` to standard output through [`Stdout`]. A closed pipe
+/// (`tw text big.pdf | head`) ends the output quietly instead of a panic
+/// about "failed printing to stdout"; any other failure is reported.
 pub(crate) fn print_all(text: &str) -> anyhow::Result<()> {
     use std::io::Write as _;
-    let mut out = std::io::stdout().lock();
-    let result = out.write_all(text.as_bytes()).and_then(|()| out.flush());
-    match result {
-        Ok(()) => Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => Ok(()),
-        Err(e) => Err(e.into()),
-    }
+    let mut out = Stdout;
+    out.write_all(text.as_bytes())?;
+    out.flush()?;
+    Ok(())
 }
 
 /// An error that ends `tw` with exit status 1 without printing anything

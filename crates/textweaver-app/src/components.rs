@@ -213,6 +213,12 @@ impl Registry {
         self.list[..self.builtin].iter().any(|c| c.id == id)
     }
 
+    /// The one components status line for `data_dir`, as
+    /// [`status_line`] says it.
+    pub fn status_line(&self, c: &Catalog, data_dir: &Path) -> String {
+        status_line(c, self.installed_count(data_dir))
+    }
+
     /// How many are installed under `data_dir`, and how many are known.
     pub fn installed_count(&self, data_dir: &Path) -> (usize, usize) {
         let n = self
@@ -234,6 +240,17 @@ pub fn component_dir(component: &Component, data_dir: &Path) -> PathBuf {
         return flat;
     }
     component.dir_in(data_dir)
+}
+
+/// The one components status line, "Components: 3 of 12 installed",
+/// from `(installed, known)`. About in both frontends, `tw info`, `tw
+/// components list`, and the doctor scripts (through `tw components
+/// list`) all say it this way (W9a-c).
+pub fn status_line(c: &Catalog, (installed, known): (usize, usize)) -> String {
+    c.fmt(
+        "about-components",
+        &args!["installed" => installed, "known" => known],
+    )
 }
 
 /// Where components come from with these settings: the mirror
