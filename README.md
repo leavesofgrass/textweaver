@@ -63,7 +63,7 @@ On Linux:
 2. Make it runnable. In a terminal, type `chmod +x` and the file name. Press Enter.
 3. Run the file.
 
-The Mac and Linux windows have had basic testing with VoiceOver and Orca, but not every release is tested by a person yet. If something does not work, the terminal reader, below, is a good choice there.
+The Mac and Linux windows have had basic testing with VoiceOver and Orca, and more testing with both is planned. Not every release is tested by a person yet. If something does not work, the terminal reader, below, is a good choice there.
 
 ## The terminal reader
 
