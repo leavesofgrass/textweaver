@@ -59,7 +59,7 @@ A live region (`widgets.rs`, `Announcer`): an invisible widget whose children ar
 ### Themes and fonts
 
 - `theme.rs` maps a textweaver theme onto Masonry's default properties: Galaxy by default. Panels have a surface color, a hairline border, 10-pixel corners, and a soft shadow; buttons and fields have 6-pixel corners; focus is a 2-pixel ring. Unit tests hold Galaxy, Galaxy Light, Contrast, and High Contrast to 4.5 to 1 for text (7 to 1 in high contrast) and 3 to 1 for the focus ring against the page, the panels, and the buttons.
-- Review screenshots, drawn with `textweaver-xilem --review-screenshots DIR` (Vello's CPU renderer, no window): Galaxy, Galaxy Light, and High Contrast at 100% and 200%, a list dialog at both scales, and the settings dialog in Galaxy (at both scales), Galaxy Light, and High Contrast, in [docs/screenshots/xilem-gui](../screenshots/xilem-gui/).
+- Review screenshots, drawn with `textweaver-xilem --review-screenshots DIR` (Vello's CPU renderer, no window): Galaxy, Galaxy Light, and High Contrast at 100% and 200%, a list dialog at both scales, and the settings dialog in Galaxy (at both scales), Galaxy Light, and High Contrast. The full review set is working material and is kept outside the repository; a curated set is in [the window in pictures](../window-in-pictures.md).
 - The bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic) are loaded straight into Parley's font collection; nothing is registered with the operating system, so macOS needs no bundle folder for them. The reader's `[reading_aids.font]` setting becomes a Parley family list.
 
 ### The accessibility bar, and how it is checked

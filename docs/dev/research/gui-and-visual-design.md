@@ -21,7 +21,7 @@ The patterns, and how textweaver stands against them today:
 
 | Pattern | textweaver GUI today | Verdict |
 |---|---|---|
-| A calm canvas with a 60 to 75 character measure and generous margins | `MAX_COLUMN` 820 px and `INSET` 28 px in `crates/textweaver-xilem/src/document.rs`, centered, about 70 characters at the default size | Has it; `docs/screenshots/xilem-gui/galaxy-100.png` shows a clean column. |
+| A calm canvas with a 60 to 75 character measure and generous margins | `MAX_COLUMN` 820 px and `INSET` 28 px in `crates/textweaver-xilem/src/document.rs`, centered, about 70 characters at the default size | Has it; the review screenshot `galaxy-100.png` shows a clean column. (The review set is now kept outside the repository; a curated set is in `docs/window-in-pictures.md`.) |
 | A persistent but quiet toolbar | Five text buttons above, six below, every label carrying its key, such as "Open… (Ctrl+O)" (`docs/gui.md`) | Has it, loudly. At 200 percent (`galaxy-200.png`) the keys in the labels fill the width. |
 | A floating "now reading" indicator | The word band and the caret on the spoken word; the status bar says "line 1 of 34, 0%" | Partly. No marker stays where reading stopped. |
 | Two tone highlight (word plus sentence) | `styles.spoken_word` and `styles.spoken_sentence` in every theme (`crates/textweaver-theme/themes/galaxy.toml`): bold word on a lavender band inside an underlined sentence band | Has it, and it is the best part of the design. In `high-contrast-100.png` the sentence band nearly vanishes against black. |
