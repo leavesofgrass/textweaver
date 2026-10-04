@@ -39,7 +39,7 @@ pub struct Options {
     /// Keep all state under this directory (like `TEXTWEAVER_HOME`).
     pub home: Option<PathBuf>,
     /// Speak textweaver's messages with its voice as well as sending them to
-    /// the screen reader, for this run: the [gui] speak_messages switch,
+    /// the screen reader, for this run: the `[gui] speak_messages` switch,
     /// not saved.
     pub self_voicing: bool,
     /// Voice id or name for this run (see `tw voices`); not saved.
