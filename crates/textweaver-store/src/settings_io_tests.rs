@@ -74,7 +74,7 @@ fn everything_changed() -> Settings {
         .insert("new_engine_option".into(), toml::Value::String("x".into()));
     let h = &mut s.highlight;
     h.enabled = false;
-    h.granularity = HighlightGranularity::Both;
+    h.granularity = HighlightGranularity::Sentence;
     h.lead_words = -2;
     h.speed = 0.7;
     h.color = "#ff8800".into();

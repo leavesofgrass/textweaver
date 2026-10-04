@@ -41,7 +41,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Highlight: the `[highlight]` section
 
 - `highlight.enabled`: default on (`true`). Highlight spoken text. Highlight the word or sentence being read. On or off: `true` or `false`. Syncs between computers.
-- `highlight.granularity`: default the word (`"word"`). Highlight. What the reading highlight covers. Choices: `"word"` (the word), `"sentence"` (the sentence), `"both"` (the word and the sentence). Syncs between computers.
+- `highlight.granularity`: default the word and the sentence (`"both"`). Highlight. What the reading highlight covers. Choices: `"word"` (the word), `"sentence"` (the sentence), `"both"` (the word and the sentence). Syncs between computers.
 - `highlight.lead_words`: default 1 word. Highlight lead. Draw the highlight this many words ahead of the word heard (1 is the word heard). From -5 to 5 words, in steps of 1. Syncs between computers.
 - `highlight.speed`: default 1. Highlight speed. Speed of the timed highlight for engines that report no words, as a multiple. 1 is normal speed. From 0.5 to 1.5, in steps of 0.1. Syncs between computers.
 - `highlight.color`: default the theme's color (`"theme"`). Word highlight color. The color behind the word being read. Choose a name, or type a hex code. Default: the theme's color. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too. Syncs between computers.

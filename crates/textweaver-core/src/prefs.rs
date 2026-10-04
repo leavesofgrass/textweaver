@@ -22,11 +22,13 @@ pub enum PunctuationLevel {
 #[serde(rename_all = "snake_case")]
 pub enum HighlightGranularity {
     /// Highlight the word being spoken.
-    #[default]
     Word,
     /// Highlight the sentence being spoken.
     Sentence,
-    /// Highlight the sentence and, within it, the word.
+    /// Highlight the sentence and, within it, the word: the default (the
+    /// owner's decision, first Wave 9 seed question 8), as the window drew
+    /// before Wave 9.
+    #[default]
     Both,
 }
 

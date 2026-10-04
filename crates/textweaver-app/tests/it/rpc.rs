@@ -405,7 +405,7 @@ fn lists_prompts_and_settings_over_json_rpc() {
         codes::INVALID_PARAMS
     );
     let r = s.result("get_setting", json!({"path": "highlight.granularity"}));
-    assert_eq!(r["spoken"], "the word");
+    assert_eq!(r["spoken"], "the word and the sentence");
 }
 
 /// `insert` types at the caret in edit mode and is refused outside it
