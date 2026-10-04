@@ -17,6 +17,11 @@
 //!   shallower depth starts. So "next chapter" follows the book's own table
 //!   of contents, and nested entries nest. Without a table of contents,
 //!   every spine item is a level-1 section labeled by its first heading.
+//! - Print page numbers become `PageBreak` markers labeled with the printed
+//!   number, as in PDF and DAISY: the content's `epub:type="pagebreak"` and
+//!   `role="doc-pagebreak"` elements, and the ids the EPUB 3 page list (or
+//!   the EPUB 2 NCX `pageList`) names. Each page runs to the next, across
+//!   chapters, and the numbers themselves are not read aloud.
 //! - MathML is read as math (EPUB 3; ADR-0029): each `<math>` becomes LaTeX
 //!   with its delimiters under a `Math` marker, as in the Markdown and DOCX
 //!   loaders, so speech reads it as math (through MathCAT when the math
@@ -90,6 +95,8 @@ struct Book {
     /// Content documents in reading order (member paths).
     spine: Vec<String>,
     toc: Vec<TocEntry>,
+    /// The page list: each entry's title is a printed page number.
+    pages: Vec<TocEntry>,
 }
 
 fn text_of(node: roxmltree::Node<'_, '_>) -> String {
@@ -188,12 +195,19 @@ fn read_book(pkg: &mut Package) -> Result<Book, LoadError> {
         && let Some(text) = pkg.read_text(&nav)?
     {
         book.toc = nav_toc(&text, dir_of(&nav));
+        book.pages = nav_page_list(&text, dir_of(&nav));
     }
     if book.toc.is_empty()
+        && let Some(ncx) = &ncx_path
+        && let Some(text) = pkg.read_text(ncx)?
+    {
+        book.toc = ncx_toc(&text, dir_of(ncx))?;
+    }
+    if book.pages.is_empty()
         && let Some(ncx) = ncx_path
         && let Some(text) = pkg.read_text(&ncx)?
     {
-        book.toc = ncx_toc(&text, dir_of(&ncx))?;
+        book.pages = ncx_page_list(&text, dir_of(&ncx))?;
     }
     Ok(book)
 }
@@ -278,6 +292,53 @@ fn nav_toc(text: &str, base: &str) -> Vec<TocEntry> {
     out
 }
 
+/// The EPUB 3 navigation document's page list (`epub:type="page-list"`
+/// or `role="doc-pagelist"`): links to where each print page starts.
+fn nav_page_list(text: &str, base: &str) -> Vec<TocEntry> {
+    use scraper::Html;
+    let html = Html::parse_document(text);
+    let Some(nav) = html.root_element().descendent_elements().find(|e| {
+        e.value().name() == "nav"
+            && (e
+                .attr("epub:type")
+                .is_some_and(|t| t.split_whitespace().any(|t| t == "page-list"))
+                || e.attr("role") == Some("doc-pagelist"))
+    }) else {
+        return Vec::new();
+    };
+    nav.descendent_elements()
+        .filter(|e| e.value().name() == "a")
+        .filter_map(|a| {
+            let (file, fragment) = resolve(base, a.attr("href")?);
+            Some(TocEntry {
+                title: crate::html::page_label(&a.text().collect::<String>()),
+                file,
+                fragment,
+                depth: 1,
+            })
+        })
+        .collect()
+}
+
+/// An EPUB 2 NCX `pageList`: its `pageTarget`s, in order.
+fn ncx_page_list(text: &str, base: &str) -> Result<Vec<TocEntry>, LoadError> {
+    let xml = parse_xml(text)?;
+    Ok(xml
+        .descendants()
+        .filter(|n| n.tag_name().name() == "pageTarget")
+        .filter_map(|t| {
+            let src = child(t, "content")?.attribute("src")?;
+            let (file, fragment) = resolve(base, src);
+            Some(TocEntry {
+                title: crate::html::page_label(&child(t, "navLabel").map(text_of)?),
+                file,
+                fragment,
+                depth: 1,
+            })
+        })
+        .collect())
+}
+
 /// Entries of an EPUB 2 NCX `navMap`.
 fn ncx_toc(text: &str, base: &str) -> Result<Vec<TocEntry>, LoadError> {
     let xml = parse_xml(text)?;
@@ -356,6 +417,7 @@ fn convert(
     };
     let mut b = Builder::new();
     let mut sections = Sections { open: Vec::new() };
+    let mut pages = crate::html::Pages::default();
     for file in &book.spine {
         let Some(text) = pkg.read_text(file)? else {
             continue;
@@ -369,6 +431,12 @@ fn convert(
                 _ => at_start.push(e),
             }
         }
+        pages.by_id = book
+            .pages
+            .iter()
+            .filter(|p| &p.file == file && !p.title.is_empty())
+            .filter_map(|p| Some((p.fragment.clone()?, p.title.clone())))
+            .collect();
         b.paragraph_break();
         for e in at_start {
             sections.open(&mut b, e);
@@ -381,11 +449,19 @@ fn convert(
                 }
             }
         };
-        crate::html::walk_epub_into(&mut b, &text, options, &mut scratch, Some(&mut hook));
+        pages = crate::html::walk_epub_into(
+            &mut b,
+            &text,
+            options,
+            &mut scratch,
+            Some(&mut hook),
+            std::mem::take(&mut pages),
+        );
         for w in crate::warnings(&scratch) {
             crate::add_warning(meta, &w);
         }
     }
+    pages.close(&mut b);
     let (text, mut markers) = b.finish();
     label_sections_by_heading(&text, &mut markers);
     Ok((text, markers))

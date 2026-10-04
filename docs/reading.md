@@ -363,7 +363,7 @@ Line numbers are lines of the document's text, as in Speech Cursor mode. Press *
 
 ### Pages in a PDF
 
-A PDF, and any other paged format, carries its printed page labels. **Say Position** (**Shift+W**) and the title line name the page first: "Page 12 of 30." When the document has no headings, the outline (**Alt+O**) lists its pages instead: "Page 12: its first words," one per page.
+A PDF, and any other paged format, carries its printed page labels. That includes a DAISY book, a slide deck, and an EPUB or web page that marks its print page numbers, as most textbooks from accessible-format publishers do: the numbers are not read aloud, but **Ctrl+G** then `p 112` goes to print page 112. **Say Position** (**Shift+W**) and the title line name the page first: "Page 12 of 30." When the document has no headings, the outline (**Alt+O**) lists its pages instead: "Page 12: its first words," one per page.
 
 ## Citations while reading
 

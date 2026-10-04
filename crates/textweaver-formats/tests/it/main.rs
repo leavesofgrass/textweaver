@@ -15,6 +15,7 @@ mod hostile;
 mod hostile_w3d;
 mod ocr;
 mod ocr_missing;
+mod page_numbers;
 mod pdf;
 mod positions;
 mod w6o;
