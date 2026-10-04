@@ -282,7 +282,7 @@ fn gaps_cancellation_and_errors() {
     let err = export(
         &doc,
         &mut backend,
-        &dir.path().join("x.ogg"),
+        &dir.path().join("x.aac"),
         None,
         None,
         &ExportOptions::default(),
@@ -291,7 +291,7 @@ fn gaps_cancellation_and_errors() {
     .unwrap_err();
     assert!(
         err.to_string()
-            .contains("use a .wav, .flac, .mp3, .opus, or .m4b"),
+            .contains("use a .wav, .flac, .mp3, .opus, .ogg, or .m4b"),
         "{err}"
     );
     let err = export(
@@ -1005,4 +1005,94 @@ fn a_stop_during_encoding_leaves_no_file() {
     let err = textweaver_export::flac::encode_with_stop(&wav, &flac, &[], &|| true).unwrap_err();
     assert!(matches!(err, ExportError::Cancelled), "{err}");
     assert!(!flac.exists());
+}
+
+/// Ogg Vorbis in process, with no ffmpeg: the file opens with an Ogg page
+/// (the `OggS` capture pattern, the stream's first page) holding the Vorbis
+/// identification header with the engine's rate and channel count; the
+/// comment header carries the title and chapters; and decoded back, the
+/// audio is as long as the timeline.
+#[cfg(feature = "vorbis")]
+#[test]
+fn ogg_vorbis_without_ffmpeg_reads_back_with_its_header_and_chapters() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = dir.path().join("book.ogg");
+    let (mut backend, _) = RecordingBackend::new();
+    let report = export(
+        &book(),
+        &mut backend,
+        &out,
+        None,
+        None,
+        &ExportOptions::default(),
+        &mut no_progress,
+    )
+    .unwrap();
+    assert_eq!(report.format, AudioFormat::Ogg);
+    assert_eq!(report.ffmpeg, None);
+    assert_eq!(report.timeline.duration_ms, 4000);
+
+    let bytes = std::fs::read(&out).unwrap();
+    // The first page: capture pattern, version 0, the start-of-stream flag,
+    // and one packet, the identification header.
+    assert_eq!(&bytes[..4], b"OggS");
+    assert_eq!(bytes[4], 0);
+    assert_eq!(bytes[5], 0x02);
+    let segs = usize::from(bytes[26]);
+    let id = &bytes[27 + segs..];
+    assert_eq!(&id[..7], b"\x01vorbis");
+    let u32_at = |b: &[u8], i: usize| u32::from_le_bytes(b[i..i + 4].try_into().unwrap());
+    assert_eq!(u32_at(id, 7), 0, "Vorbis version");
+    assert_eq!(id[11], 1, "channels");
+    assert_eq!(u32_at(id, 12), 16_000, "sample rate");
+
+    // The comment header follows on the next page.
+    let second = 27
+        + segs
+        + bytes[27..27 + segs]
+            .iter()
+            .map(|&b| usize::from(b))
+            .sum::<usize>();
+    assert_eq!(&bytes[second..second + 4], b"OggS");
+    let segs2 = usize::from(bytes[second + 26]);
+    let tags = &bytes[second + 27 + segs2..];
+    assert_eq!(&tags[..7], b"\x03vorbis");
+    let vendor = u32_at(tags, 7) as usize;
+    let mut i = 11 + vendor;
+    let count = u32_at(tags, i);
+    i += 4;
+    let mut comments = Vec::new();
+    for _ in 0..count {
+        let n = u32_at(tags, i) as usize;
+        comments.push(String::from_utf8(tags[i + 4..i + 4 + n].to_vec()).unwrap());
+        i += 4 + n;
+    }
+    assert_eq!(
+        comments,
+        [
+            "TITLE=Sample Book",
+            "ALBUM=Sample Book",
+            "ARTIST=Ada",
+            "GENRE=Audiobook",
+            "CHAPTER001=00:00:00.000",
+            "CHAPTER001NAME=Intro",
+            "CHAPTER002=00:00:02.500",
+            "CHAPTER002NAME=Next",
+        ]
+    );
+
+    // Decoded back: 4 seconds at 16 kHz, mono.
+    let mut decoder = vorbis_rs::VorbisDecoder::new(std::fs::File::open(&out).unwrap()).unwrap();
+    assert_eq!(decoder.sampling_frequency().get(), 16_000);
+    assert_eq!(decoder.channels().get(), 1);
+    let mut frames = 0;
+    while let Some(block) = decoder.decode_audio_block().unwrap() {
+        frames += block.samples()[0].len();
+    }
+    assert_eq!(frames, 64_000);
+    let left: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name())
+        .collect();
+    assert_eq!(left, ["book.ogg"]);
 }
