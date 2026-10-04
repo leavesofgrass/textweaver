@@ -183,9 +183,9 @@ invalid_link_anchors = false
 
 [project.theme]
 language = "en"
-# The loom mark: color in the header, one color for the browser tab.
-logo = "assets/textweaver-mark.svg"
-favicon = "assets/textweaver-mark-mono.svg"
+# The logo: color in the header, one color for the browser tab.
+logo = "assets/textweaver-logo.svg"
+favicon = "assets/textweaver-logo-mono.svg"
 # No web fonts: the site uses the reader's own system fonts and makes no
 # request to a font service.
 font = false

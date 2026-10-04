@@ -1,6 +1,6 @@
 # textweaver
 
-<img src="docs/assets/textweaver-mark.svg" alt="textweaver logo: the letters t and w woven on a loom" width="128" height="128">
+<img src="docs/assets/textweaver-logo.svg" alt="textweaver logo: the letters t and w woven on a loom" width="128" height="128">
 
 textweaver is an accessible, keyboard-first document reader and writer that speaks: it reads documents aloud with a highlight that follows the spoken word exactly, moves by character, word, sentence, heading, table, and more, and echoes what you type while you write Markdown. It is built first for screen-reader users and for students with print disabilities, and it is a Rust reimplementation of the core of [Star](https://github.com/leavesofgrass/star). It runs on Windows, macOS, and Linux.
 

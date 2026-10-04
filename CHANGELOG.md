@@ -43,7 +43,7 @@ In short: this is the last alpha before beta 1, so it finishes and tidies what i
 - **Keys.** Alt+Shift+A, F3 and Shift+F3 for Find next and previous, and Alt+Shift+S for Speech Cursor.
 - **Dialogs** share one style with a Close button in every kind. Settings filters as you type, F1 gives the long help, and a recent block comes first. Themes show "meets AA" or "below AA" in words, and Lamplight is listed as a soft dark theme.
 - **Trouble is kept.** The window writes a log file, saves your place after a failure, and says in words when graphics cannot start. It uses a low-power graphics adapter, remembers its place and size on this computer, and follows the system's caret blink.
-- **A lettermark icon,** and the loom mark in the documents and the site.
+- **A lettermark icon,** and the logo in the documents and the site.
 
 ### The terminal reader
 
