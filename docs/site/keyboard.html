@@ -3036,22 +3036,22 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Speech Cursor",
    "gui": [
     {
-     "key": "Tab",
+     "key": "Alt+Shift+S",
      "layer": "browse"
     },
     {
-     "key": "Tab",
+     "key": "Alt+Shift+S",
      "layer": "speech_cursor"
     }
    ],
    "id": "speech_cursor_toggle",
    "mac": [
     {
-     "key": "Tab",
+     "key": "Cmd+Alt+Shift+S",
      "layer": "browse"
     },
     {
-     "key": "Tab",
+     "key": "Cmd+Alt+Shift+S",
      "layer": "speech_cursor"
     }
    ],
@@ -3594,6 +3594,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Search",
    "gui": [
     {
+     "key": "F3",
+     "layer": "global"
+    },
+    {
      "key": "n",
      "layer": "browse"
     }
@@ -3601,14 +3605,15 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "id": "find_next",
    "mac": [
     {
+     "key": "F3",
+     "layer": "global"
+    },
+    {
      "key": "n",
      "layer": "browse"
     }
    ],
-   "palette_when_off": {
-    "gui": true,
-    "terminal": false
-   },
+   "palette_when_off": null,
    "source": "keymap",
    "terminal": [
     {
@@ -3626,6 +3631,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Search",
    "gui": [
     {
+     "key": "Shift+F3",
+     "layer": "global"
+    },
+    {
      "key": "Shift+N",
      "layer": "browse"
     }
@@ -3633,14 +3642,15 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "id": "find_previous",
    "mac": [
     {
+     "key": "Shift+F3",
+     "layer": "global"
+    },
+    {
      "key": "Shift+N",
      "layer": "browse"
     }
    ],
-   "palette_when_off": {
-    "gui": true,
-    "terminal": false
-   },
+   "palette_when_off": null,
    "source": "keymap",
    "terminal": [
     {
@@ -6007,10 +6017,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "View and help",
    "gui": [
     {
-     "key": "F3",
-     "layer": "global"
-    },
-    {
      "key": "?",
      "layer": "browse"
     }
@@ -6018,16 +6024,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "id": "keyboard_help",
    "mac": [
     {
-     "key": "F3",
-     "layer": "global"
-    },
-    {
      "key": "?",
      "layer": "browse"
     }
    ],
    "palette_when_off": {
-    "gui": false,
+    "gui": true,
     "terminal": true
    },
    "source": "keymap",

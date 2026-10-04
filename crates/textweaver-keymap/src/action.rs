@@ -359,7 +359,7 @@ actions! {
 
     // Speech Cursor
     SpeechCursorToggle = "speech_cursor_toggle", SpeechCursor, "Enter or leave Speech Cursor (line) mode",
-        gui [], term [], shared ["b:Tab", "s:Tab"];
+        gui ["b:Alt+Shift+S", "s:Alt+Shift+S"], term ["b:Tab", "s:Tab"], shared [];
     SpeechCursorNextLine = "speech_cursor_next_line", SpeechCursor, "Speech Cursor: read the next line",
         gui [], term [], shared ["s:Down", "s:j"];
     SpeechCursorPreviousLine = "speech_cursor_previous_line", SpeechCursor, "Speech Cursor: read the previous line",
@@ -398,9 +398,9 @@ actions! {
     Find = "find", Search, "Find text in the document",
         gui ["g:Ctrl+F"], term ["g:Ctrl+F"], shared ["b:/"];
     FindNext = "find_next", Search, "Find the next match",
-        gui [], term ["g:F3"], shared ["b:n"];
+        gui ["g:F3"], term ["g:F3"], shared ["b:n"];
     FindPrevious = "find_previous", Search, "Find the previous match",
-        gui [], term ["g:F4"], shared ["b:Shift+N"];
+        gui ["g:Shift+F3"], term ["g:F4"], shared ["b:Shift+N"];
     NextMisspelling = "next_misspelling", Search, "Move to the next misspelled word, and spell it",
         gui ["g:Alt+M"], term ["g:Alt+M"], shared [];
     PreviousMisspelling = "previous_misspelling", Search, "Move to the previous misspelled word, and spell it",
@@ -678,7 +678,7 @@ actions! {
         "Open the settings: every option with its help; Left and Right change a value",
         gui ["g:Ctrl+,"], term ["g:Shift+F10"], shared [];
     KeyboardHelp = "keyboard_help", View, "List keyboard shortcuts",
-        gui ["g:F3"], term [], shared ["b:?"];
+        gui [], term [], shared ["b:?"];
     WhatDoesThisKeyDo = "what_does_this_key_do", View,
         "Press a key to hear what it does and where it is in the menus, without running it",
         gui ["g:Shift+F1"], term ["g:Shift+F1"], shared [];
