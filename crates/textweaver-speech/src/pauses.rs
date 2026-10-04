@@ -26,6 +26,12 @@
 //! lengths come from `[speech]` settings ([`PauseConfig`]). A pause is keyed
 //! by where its utterance ends in the document, which a resume that trims
 //! the utterance's start does not change.
+//!
+//! A pause written as markup in the document (`<break time="500ms"/>`) is
+//! planned the same way, as [`PauseKind::Written`] with its own length: the
+//! caller cuts the utterance where the break was, and every engine pauses
+//! there by the same two routes. eSpeak NG gets plain text, never SSML, so
+//! a document's own angle brackets are never read as markup.
 
 use std::collections::HashMap;
 use std::time::Duration;
@@ -43,6 +49,14 @@ pub enum PauseKind {
     Paragraph,
     /// A list item.
     ListItem,
+    /// A pause written as markup in the document's text (an SSML-style
+    /// `<break>`), `ms` long at every rate and whatever the structural
+    /// pause settings say.
+    Written {
+        /// The written length, in milliseconds (clamped to
+        /// [`MAX_WRITTEN_PAUSE_MS`]).
+        ms: u32,
+    },
 }
 
 /// A pause after the utterance that ends at `after` in the document.
@@ -57,6 +71,10 @@ pub struct PauseAt {
 /// The longest pause, in milliseconds. Longer settings are clamped to it,
 /// so a pause can never look like a stalled engine.
 pub const MAX_PAUSE_MS: u32 = 3000;
+
+/// The longest pause written as markup in a document, in milliseconds:
+/// ten seconds, as most SSML engines allow.
+pub const MAX_WRITTEN_PAUSE_MS: u32 = 10_000;
 
 /// The rate at which pauses have their full length: Star's and textweaver's
 /// default rate. Faster rates shorten them in proportion.
@@ -108,17 +126,22 @@ impl PauseConfig {
             PauseKind::Heading => self.heading_ms,
             PauseKind::Paragraph => self.paragraph_ms,
             PauseKind::ListItem => self.list_item_ms,
+            PauseKind::Written { ms } => return ms.min(MAX_WRITTEN_PAUSE_MS),
         };
         ms.min(MAX_PAUSE_MS)
     }
 
     /// How long the pause after `kind` lasts at `rate`: the configured
     /// length up to [`FULL_LENGTH_WPM`], shorter in proportion above it,
-    /// and never below [`MIN_RATE_SCALE`] of it. Zero stays zero.
+    /// and never below [`MIN_RATE_SCALE`] of it. Zero stays zero. A
+    /// written pause keeps its written length at every rate.
     pub fn length(&self, kind: PauseKind, rate: Rate) -> Duration {
         let ms = self.ms(kind);
         if ms == 0 {
             return Duration::ZERO;
+        }
+        if matches!(kind, PauseKind::Written { .. }) {
+            return Duration::from_millis(u64::from(ms));
         }
         let wpm = f32::from(rate.wpm().max(1));
         let scale = (f32::from(FULL_LENGTH_WPM) / wpm).clamp(MIN_RATE_SCALE, 1.0);
@@ -233,6 +256,23 @@ mod tests {
             ..PauseConfig::default()
         };
         assert_eq!(c.ms(PauseKind::Heading), MAX_PAUSE_MS);
+    }
+
+    #[test]
+    fn written_pauses_keep_their_length_at_any_rate_and_any_setting() {
+        let w = PauseKind::Written { ms: 1500 };
+        assert_eq!(
+            PauseConfig::OFF.length(w, Rate::Wpm(800)),
+            Duration::from_millis(1500)
+        );
+        assert_eq!(
+            PauseConfig::default().ms(PauseKind::Written { ms: 60_000 }),
+            MAX_WRITTEN_PAUSE_MS
+        );
+        assert_eq!(
+            PauseConfig::default().length(PauseKind::Written { ms: 0 }, Rate::default()),
+            Duration::ZERO
+        );
     }
 
     #[test]
