@@ -83,6 +83,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `display.theme`: default `"galaxy"`. Theme. The color theme. Any value may be written. Syncs between computers.
 - `display.follow_os_theme`: default on (`true`). Follow the system theme. At startup, use a light, dark, or high-contrast theme like the system, unless you picked one. On or off: `true` or `false`. Syncs between computers.
 - `display.wrap_width`: default 0 columns. Wrap width. Wrap lines at this many columns; 0 uses the whole width. From 0 to 400 columns, in steps of 10. Stays on this computer.
+- `display.measure`: default 66 characters. Line length. How many characters a line holds in the window, from 25 to 90; 0 fills the window. The terminal uses the wrap width. From 0 to 90 characters, in steps of 1. Syncs between computers.
 - `display.tab_width`: default 4 columns. Tab width. Columns a tab takes. From 1 to 16 columns, in steps of 1. Syncs between computers.
 - `display.show_line_numbers`: default off (`false`). Line numbers. Show line numbers. On or off: `true` or `false`. Syncs between computers.
 - `display.scroll_margin`: default 3 lines. Scroll margin. Lines kept in view above and below the cursor. From 0 to 20 lines, in steps of 1. Syncs between computers.

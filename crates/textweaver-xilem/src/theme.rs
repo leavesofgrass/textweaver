@@ -27,10 +27,46 @@ pub const PAD: f64 = 16.0;
 pub const RADIUS: f64 = 6.0;
 /// Corner radius of panels and dialogs.
 pub const PANEL_RADIUS: f64 = 10.0;
-/// Width of the focus ring.
+/// Width of the focus ring (3 px in high contrast; [`ring_width`]).
 pub const FOCUS_WIDTH: f64 = 2.0;
-/// Interface text size, in logical pixels.
+/// Width of the line between a control and its focus ring, in the
+/// palette's `focus_inner` color, so the ring shows against any fill.
+pub const FOCUS_INNER: f64 = 1.0;
+
+/// The focus ring's width in `p`: 2 px, 3 px in high contrast.
+pub fn ring_width(p: &Palette) -> f64 {
+    if p.kind == ThemeKind::HighContrast {
+        FOCUS_WIDTH + 1.0
+    } else {
+        FOCUS_WIDTH
+    }
+}
+/// Interface text size, in logical pixels, before the platform's text
+/// scale ([`ui_size`]).
 pub const UI_TEXT: f32 = 15.0;
+
+/// The platform's interface text scale in hundredths (Windows' "Text
+/// size", GNOME's text scaling factor), set once at startup.
+static TEXT_SCALE: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(100);
+
+/// Sets the interface text scale (1.0 to 2.25; design system C1): every
+/// interface size is multiplied by it. The document keeps the reader's
+/// own size.
+pub fn set_text_scale(scale: f64) {
+    let hundredths = (scale.clamp(1.0, 2.25) * 100.0).round() as u32;
+    TEXT_SCALE.store(hundredths, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The interface text scale in effect.
+pub fn text_scale() -> f32 {
+    TEXT_SCALE.load(std::sync::atomic::Ordering::Relaxed) as f32 / 100.0
+}
+
+/// An interface text size (logical pixels) times the platform's text
+/// scale.
+pub fn ui_size(size: f32) -> f32 {
+    size * text_scale()
+}
 /// The document's default text size (before the reader's font setting).
 pub const DOC_TEXT: f32 = 20.0;
 
@@ -116,6 +152,24 @@ pub struct Palette {
     pub ruler_focus: Rgb,
     /// The ruler's band on the lines around the reading line.
     pub ruler_band: Rgb,
+    /// The edges of buttons, fields, and switches: 3 to 1 against the
+    /// panel and the page (the theme's `control_border` role).
+    pub control_border: Rgb,
+    /// The thin line between a control and its focus ring, so the ring
+    /// shows against any fill (the theme's `focus_inner` role).
+    pub focus_inner: Rgb,
+    /// The thick underline under a difficult word (`difficult_word`,
+    /// or `[colors] difficult_words`).
+    pub difficult_word: Rgb,
+    /// The dot between syllables (`syllable_mark`, or `[colors]
+    /// syllables`).
+    pub syllable_mark: Rgb,
+    /// The dotted underline under a misspelled word (`misspelling`, or
+    /// `[colors] misspellings`).
+    pub misspelling: Rgb,
+    /// The double underline under a writing suggestion (`lint`, or
+    /// `[colors] lint`).
+    pub lint: Rgb,
 }
 
 /// `c` as a Masonry color.
@@ -238,8 +292,15 @@ impl Palette {
             bookmark: bookmark.background,
             user_highlight,
             caret: text,
-            ruler_focus: ensure(background.mix(focus, 0.22), &[text], text_min),
-            ruler_band: ensure(background.mix(focus, 0.10), &[text], text_min),
+            // The theme's derived roles (W9a-t), which `[colors]` sets.
+            ruler_focus: theme.color(ColorRole::Ruler),
+            ruler_band: theme.color(ColorRole::RulerBand),
+            control_border: theme.color(ColorRole::ControlBorder),
+            focus_inner: theme.color(ColorRole::FocusInner),
+            difficult_word: theme.color(ColorRole::DifficultWord),
+            syllable_mark: theme.color(ColorRole::SyllableMark),
+            misspelling: theme.color(ColorRole::Misspelling),
+            lint: theme.color(ColorRole::Lint),
         }
     }
 
@@ -270,13 +331,20 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
     let focus = color(p.focus);
 
     // Buttons: the to_do_mvc shape, recolored, with a 2 px focus ring.
-    button_props::<Button>(&mut props, p);
-    button_props::<crate::widgets::ActionButton>(&mut props, p);
+    button_props::<Button>(&mut props, p, false);
+    button_props::<crate::widgets::ActionButton>(&mut props, p, true);
+    // The window's own buttons draw the outer ring: the border stays, a
+    // 1 px inner line, then the ring (design system D).
+    props.insert::<crate::widgets::ActionButton, _>(crate::widgets::FocusRing {
+        inner: color(p.focus_inner),
+        outer: color(p.focus),
+        width: ring_width(p),
+    });
 
     // Checkboxes.
     props.insert::<Checkbox, _>(Background::Color(color(p.raised)));
     props.insert::<Checkbox, _>(BorderColor {
-        color: color(p.border_hover),
+        color: color(p.control_border),
     });
     props.insert::<Checkbox, _>(CheckmarkColor { color: text });
     props.insert::<Checkbox, _>(CheckmarkStrokeWidth { width: 2.0 });
@@ -301,7 +369,7 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
     });
     props.insert::<TextInput, _>(BorderWidth { width: border_w });
     props.insert::<TextInput, _>(BorderColor {
-        color: color(p.border_hover),
+        color: color(p.control_border),
     });
     props.insert::<TextInput, _>(Background::Color(color(p.background)));
     props.insert::<TextInput, _>(PlaceholderColor::new(color(p.dim_text)));
@@ -360,8 +428,15 @@ pub fn default_properties(p: &Palette) -> DefaultProperties {
 }
 
 /// The button look for widget type `W`: Masonry's `Button` shape with the
-/// palette's colors; the `primary` class fills with the accent.
-fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Palette) {
+/// palette's colors; the `primary` class fills with the accent. With
+/// `outer_ring`, the focus is the widget's own outer ring
+/// ([`crate::widgets::FocusRing`]) and the border stays; else the border
+/// turns into the ring.
+fn button_props<W: masonry::core::Widget>(
+    props: &mut DefaultProperties,
+    p: &Palette,
+    outer_ring: bool,
+) {
     let hc = p.kind == ThemeKind::HighContrast;
     let border_w = if hc { 2.px() } else { 1.px() };
     let focus = color(p.focus);
@@ -371,8 +446,10 @@ fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Pal
     });
     props.insert::<W, _>(BorderWidth { width: border_w });
     props.insert::<W, _>(Background::Color(color(p.raised)));
+    // Control edges at 3 to 1 against the panel and the page (design
+    // system rank 3), not the decorative border.
     props.insert::<W, _>(BorderColor {
-        color: color(p.border),
+        color: color(p.control_border),
     });
     let ring = (
         BorderColor { color: focus },
@@ -387,7 +464,9 @@ fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Pal
             color: color(p.border_hover),
         },
     );
-    stack.push_layer(Selector::new().with_focused(true), ring);
+    if !outer_ring {
+        stack.push_layer(Selector::new().with_focused(true), ring);
+    }
     stack.push_layer(
         Selector::new().with_active(true),
         Background::Color(color(p.raised.mix(p.text, 0.10))),
@@ -408,17 +487,19 @@ fn button_props<W: masonry::core::Widget>(props: &mut DefaultProperties, p: &Pal
     // On the accent fill, the ring is drawn in the page color, which
     // stands out from the fill (at least 3 to 1, tested) where the text
     // color can be close to it.
-    stack.push_layer(
-        Selector::classes(&["primary"]).with_focused(true),
-        (
-            BorderColor {
-                color: color(p.background),
-            },
-            BorderWidth {
-                width: Length::px(FOCUS_WIDTH),
-            },
-        ),
-    );
+    if !outer_ring {
+        stack.push_layer(
+            Selector::classes(&["primary"]).with_focused(true),
+            (
+                BorderColor {
+                    color: color(p.background),
+                },
+                BorderWidth {
+                    width: Length::px(FOCUS_WIDTH),
+                },
+            ),
+        );
+    }
     // Disabled last, since later layers win: a disabled Play loses its
     // accent fill and border like any other button (design system QW3).
     stack.push_layer(

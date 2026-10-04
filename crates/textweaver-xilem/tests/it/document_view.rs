@@ -666,3 +666,87 @@ fn a_move_on_one_long_line_sends_only_its_lines() {
         pos += len + 1;
     }
 }
+
+/// A view of `text` in a window `width` logical pixels wide, at `size`
+/// pixels and `measure` characters.
+fn measured(text: &str, width: u32, size: f32, measure: u16) -> TestHarness<DocumentView> {
+    let p = Palette::galaxy();
+    let font = DocFont {
+        size,
+        ..DocFont::default()
+    };
+    let view = DocumentView::new(p.clone(), font, Rc::new(Cell::new(0)));
+    let mut params = TestHarnessParams::default();
+    params.window_size = (width, 700).into();
+    let mut h = TestHarness::create_with(
+        theme::default_properties(&p),
+        NewWidget::new(view).with_tag(DOC),
+        params,
+    );
+    for b in textweaver_xilem::fonts::bundled_blobs() {
+        h.register_fonts(b);
+    }
+    let doc = Document::from_plain_text(text);
+    let w = DocWindow::with_budget(&doc, CharPos::ZERO, WINDOW_UNITS);
+    let model = DocModel {
+        paragraphs: window::window_paragraphs(&doc, w.range()),
+        spans: window::window_spans(&doc, w.range()),
+        doc_len: doc.len_chars(),
+        title: "Test".into(),
+        ..DocModel::default()
+    };
+    h.edit_root_widget(|mut d| {
+        DocumentView::set_model(&mut d, model);
+        let aids = textweaver_xilem::document::DocAids {
+            measure,
+            ..Default::default()
+        };
+        DocumentView::set_aids(&mut d, aids);
+    });
+    let _ = h.redraw();
+    h
+}
+
+/// Plain English prose, long enough to wrap many times.
+const PROSE: &str = "Reading on a screen is easier when a line is neither too long nor too \
+short. The eye has to find the start of the next line, and a long line makes that hard, \
+while a short one breaks every phrase. Typographers have long said that a line of about \
+sixty six characters is a comfortable measure for continuous reading, and this paragraph \
+is here to be wrapped at that measure in the window.";
+
+/// `[display] measure`: at 14 and 24 points (18.67 and 32 px) the first
+/// line holds about the measure's characters, the column grows with the
+/// font, and 0 fills the window (design system C4).
+#[test]
+fn the_measure_sets_the_line_length_at_any_size() {
+    let mut columns = Vec::new();
+    for size in [18.67_f32, 32.0] {
+        let h = measured(PROSE, 1400, size, 66);
+        let lines = h.root_widget().line_lengths(0).expect("laid out");
+        let first = lines[0];
+        assert!(
+            (55..=72).contains(&first),
+            "at {size} px the first line holds {first} chars: {lines:?}"
+        );
+        columns.push(h.root_widget().column_width());
+    }
+    assert!(columns[1] > columns[0] * 1.5, "{columns:?}");
+    // 0 fills the window, less its insets.
+    let h = measured(PROSE, 1400, 18.67, 0);
+    assert!(h.root_widget().column_width() > 1300.0);
+}
+
+/// A 25-character measure wraps near 25 characters.
+#[test]
+fn a_twenty_five_character_column_wraps_near_twenty_five() {
+    let h = measured(PROSE, 1000, 18.67, 25);
+    let lines = h.root_widget().line_lengths(0).expect("laid out");
+    let body = &lines[..lines.len() - 1];
+    assert!(body.len() > 10, "{lines:?}");
+    for &n in body {
+        // A line of narrow letters holds a few more; its trailing space counts.
+        assert!((14..=30).contains(&n), "a line of {n} chars: {lines:?}");
+    }
+    let avg = body.iter().sum::<usize>() as f64 / body.len() as f64;
+    assert!((19.0..=26.0).contains(&avg), "average {avg}: {lines:?}");
+}

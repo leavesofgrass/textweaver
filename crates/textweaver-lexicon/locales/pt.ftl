@@ -1824,6 +1824,8 @@ setting-display-follow-os-theme = Seguir o tema do sistema
 setting-display-follow-os-theme-help = Na inicialização, usar um tema claro, escuro ou de alto contraste como o do sistema, a menos que você tenha escolhido um.
 setting-display-wrap-width = Largura da quebra de linha
 setting-display-wrap-width-help = Quebrar linhas nesta quantidade de colunas; 0 usa a largura inteira.
+setting-display-measure = Comprimento da linha
+setting-display-measure-help = Quantos caracteres cabem em uma linha da janela, de 25 a 90; 0 preenche a janela. O terminal usa a largura da quebra de linha.
 setting-display-tab-width = Largura da tabulação
 setting-display-tab-width-help = Colunas que uma tabulação ocupa.
 setting-display-show-line-numbers = Números de linha
@@ -2059,6 +2061,11 @@ settings-unit-columns =
     { $n ->
         [one] coluna
        *[other] colunas
+    }
+settings-unit-characters =
+    { $n ->
+        [one] caractere
+       *[other] caracteres
     }
 settings-unit-lines =
     { $n ->

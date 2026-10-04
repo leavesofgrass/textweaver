@@ -32,12 +32,12 @@ use textweaver_app::lexicon::args;
 
 use crate::theme::{self, Palette};
 
-/// The panel's height while RSVP shows, in logical pixels.
-const HEIGHT: f64 = 104.0;
-/// The word's size.
-const WORD_SIZE: f32 = 40.0;
-/// The context words' size.
-const CONTEXT_SIZE: f32 = 18.0;
+/// The panel's height, in multiples of the word's size (design system C2).
+const HEIGHT_RATIO: f64 = 2.6;
+/// The context words' size, in multiples of the word's.
+const CONTEXT_RATIO: f32 = 0.45;
+/// The word's size before the setting is read (48 points, the default).
+const DEFAULT_WORD_SIZE: f32 = 64.0;
 
 /// What the panel shows: the word, split at its pivot, the words around
 /// it when RSVP shows them, and the status.
@@ -59,6 +59,11 @@ pub struct RsvpShown {
     pub name: String,
     /// Where the word sits across the panel, 0 (left) to 1 (right).
     pub x: f64,
+    /// The word's size in logical pixels, from `[reading_aids.rsvp]
+    /// font_size_pt`; the context words and the panel follow it.
+    pub size: f32,
+    /// The reading font's family list.
+    pub family: String,
 }
 
 impl RsvpShown {
@@ -82,6 +87,9 @@ impl RsvpShown {
             status: c.fmt(id, &args!["n" => f.index + 1, "total" => f.total]),
             name: c.tr("gui-rsvp"),
             x: position.fractions().0,
+            // Points to logical pixels (96 per inch, 72 points per inch).
+            size: f32::from(app.settings().reading_aids.rsvp.font_size_pt.max(8)) * 4.0 / 3.0,
+            family: crate::fonts::doc_font(&app.settings().reading_aids.font).family,
         })
     }
 
@@ -166,6 +174,7 @@ impl RsvpView {
 
     fn build(
         ctx: &mut LayoutCtx<'_>,
+        family: &str,
         text: &str,
         size: f32,
         brush: usize,
@@ -173,8 +182,9 @@ impl RsvpView {
     ) -> Layout<BrushIndex> {
         let (fcx, lcx) = ctx.text_contexts();
         let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
+        // The reading font, as the document uses it.
         b.push_default(StyleProperty::FontFamily(FontFamily::Source(
-            crate::fonts::DEFAULT_STACK.into(),
+            family.to_owned().into(),
         )));
         b.push_default(StyleProperty::FontSize(size));
         b.push_default(StyleProperty::Brush(BrushIndex(brush)));
@@ -208,7 +218,9 @@ impl Widget for RsvpView {
         _cross: Option<Length>,
     ) -> Length {
         match (axis, self.shown.is_some()) {
-            (Axis::Vertical, true) => Length::px(HEIGHT),
+            (Axis::Vertical, true) => Length::px(
+                HEIGHT_RATIO * f64::from(self.shown.as_ref().map_or(DEFAULT_WORD_SIZE, |s| s.size)),
+            ),
             (Axis::Vertical, false) => Length::ZERO,
             (Axis::Horizontal, _) => match len_req {
                 LenReq::FitContent(space) => space,
@@ -224,15 +236,26 @@ impl Widget for RsvpView {
         let word = s.word();
         let a = s.before.len();
         let pivot = a..a + s.pivot.len();
-        self.word = Some(Self::build(ctx, &word, WORD_SIZE, B_TEXT, Some(pivot)));
+        let family = if s.family.is_empty() {
+            crate::fonts::DEFAULT_STACK
+        } else {
+            s.family.as_str()
+        };
+        let size = if s.size > 0.0 {
+            s.size
+        } else {
+            DEFAULT_WORD_SIZE
+        };
+        let context = size * CONTEXT_RATIO;
+        self.word = Some(Self::build(ctx, family, &word, size, B_TEXT, Some(pivot)));
         self.previous = s
             .previous
             .as_deref()
-            .map(|t| Self::build(ctx, t, CONTEXT_SIZE, B_CONTEXT, None));
+            .map(|t| Self::build(ctx, family, t, context, B_CONTEXT, None));
         self.next = s
             .next
             .as_deref()
-            .map(|t| Self::build(ctx, t, CONTEXT_SIZE, B_CONTEXT, None));
+            .map(|t| Self::build(ctx, family, t, context, B_CONTEXT, None));
     }
 
     fn paint(
@@ -246,10 +269,18 @@ impl Widget for RsvpView {
         };
         let p = &self.palette;
         let size = ctx.content_box().size();
-        let card = RoundedRect::from_rect(size.to_rect().inset(-4.0), theme::PANEL_RADIUS);
+        // A panel like the others (design system D): no inset, and a 2 px
+        // border in high contrast.
+        let hc = p.kind == textweaver_theme::ThemeKind::HighContrast;
+        let edge = if hc { 2.0 } else { 1.0 };
+        let card = RoundedRect::from_rect(size.to_rect(), theme::PANEL_RADIUS);
         painter.fill(card, theme::color(p.surface)).draw();
         painter
-            .stroke(card, &Stroke::new(1.0), theme::color(p.border))
+            .stroke(
+                RoundedRect::from_rect(size.to_rect().inset(-edge / 2.0), theme::PANEL_RADIUS),
+                &Stroke::new(edge),
+                theme::color(p.border),
+            )
             .draw();
         let brushes = self.brushes();
         // The word: its pivot at the chosen place across the panel, as RSVP

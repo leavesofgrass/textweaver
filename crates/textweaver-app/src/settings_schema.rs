@@ -672,6 +672,13 @@ pub const INFO: &[Info] = &[
         "columns",
     ),
     number(
+        "display.measure",
+        "Line length",
+        "How many characters a line holds in the window, from 25 to 90; 0 fills the window. The terminal uses the wrap width.",
+        (0.0, 90.0, 1.0),
+        "characters",
+    ),
+    number(
         "display.tab_width",
         "Tab width",
         "Columns a tab takes.",

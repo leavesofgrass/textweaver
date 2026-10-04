@@ -147,3 +147,35 @@ fn the_dialog_has_the_form_and_its_buttons() {
         "{action:?}"
     );
 }
+
+/// The Colors dialog measures each color against the page the window
+/// draws (a theme from the command line, or the system's contrast
+/// colors), not the saved theme: navy links are low on Galaxy's dark page
+/// and good on a white one.
+#[test]
+fn the_colors_dialog_reads_the_theme_drawn() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app(dir.path());
+    app.set_setting("colors.links", serde_json::Value::String("navy".into()))
+        .unwrap();
+    let (saved, _) = app.color_contrast("colors.links").unwrap();
+    assert!(saved < 3.0, "navy on Galaxy: {saved}");
+    let light = Palette::named("galaxy-light");
+    app.set_drawn_colors(Some((light.background, light.text)));
+    let (drawn, word) = app.color_contrast("colors.links").unwrap();
+    assert!(drawn > 4.5, "navy on Galaxy Light: {drawn}");
+    let form = SettingsForm::colors(app.settings_schema());
+    let row = form
+        .settings_in(0)
+        .iter()
+        .position(|s| s.path == "colors.links")
+        .unwrap();
+    assert!(form.rows(0, &app)[row].value_text.contains(&word));
+    // The reading ruler is a band in the window: its row measures the
+    // text on it.
+    app.set_drawn_colors(None);
+    app.set_setting("colors.ruler", serde_json::Value::String("navy".into()))
+        .unwrap();
+    let (ruler, _) = app.color_contrast("colors.ruler").unwrap();
+    assert!(ruler > 4.5, "Galaxy's text on a navy band: {ruler}");
+}

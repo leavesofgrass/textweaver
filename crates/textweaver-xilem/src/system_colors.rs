@@ -139,6 +139,12 @@ pub fn palette(c: &SystemColors) -> Palette {
         caret: text,
         ruler_focus: bg,
         ruler_band: bg,
+        control_border: c.button_text,
+        focus_inner: bg,
+        difficult_word: text,
+        syllable_mark: text,
+        misspelling: text,
+        lint: text,
     }
 }
 

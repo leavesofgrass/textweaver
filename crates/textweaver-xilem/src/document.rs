@@ -54,11 +54,19 @@ use crate::runs::{ParaRuns, Paragraph, Run, RunMark, RunSet};
 use crate::theme::{self, Palette};
 use crate::window::{SpanStyle, StyledSpan};
 
-/// Widest text column, in logical pixels: about 70 characters at the
-/// default size, a comfortable line for reading.
-const MAX_COLUMN: f64 = 820.0;
-/// Space around the text column.
-const INSET: f64 = 28.0;
+/// Space around the text column (design system C3: on the 4 px scale).
+const INSET: f64 = 24.0;
+/// The narrowest column the measure gives, in logical pixels (a window
+/// narrower than this keeps its own width).
+const MIN_COLUMN: f64 = 200.0;
+/// The line length's range in characters (`[display] measure`); 0 fills
+/// the window.
+pub const MEASURE_RANGE: (u16, u16) = (25, 90);
+/// The default line length in characters.
+pub const DEFAULT_MEASURE: u16 = 66;
+/// The text whose width, divided by its length, is the average advance
+/// the measure counts in: every letter once, and eight spaces.
+const PANGRAM: &str = "the quick brown fox jumps over the lazy dog";
 /// Paragraph layouts kept before the cache is trimmed.
 const CACHE_LIMIT: usize = 600;
 /// Scroll distance of one wheel line.
@@ -70,7 +78,9 @@ const B_H1: usize = 2;
 const B_LINK: usize = 8;
 const B_CODE: usize = 9;
 const B_QUOTE: usize = 10;
-const BRUSHES: usize = 11;
+const B_DIFFICULT: usize = 11;
+const B_SYLLABLE: usize = 12;
+const BRUSHES: usize = 13;
 
 /// The reading font.
 #[derive(Clone, Debug, PartialEq)]
@@ -97,13 +107,39 @@ impl Default for DocFont {
 /// reading ruler. Bionic reading and difficult words arrive as styled
 /// spans in the model. All of them are drawn only; the text runs a screen
 /// reader gets do not change.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DocAids {
     /// Line height, paragraph, letter, and word spacing, in multiples of
     /// the font size.
     pub spacing: TextSpacing,
     /// Off, the current line, or the ruler band (and the mask around it).
     pub ruler: RulerSettings,
+    /// The line length in characters (`[display] measure`), 25 to 90; 0
+    /// fills the window. The column is this many times the reading font's
+    /// average advance, so it follows the size and spacing.
+    pub measure: u16,
+}
+
+impl Default for DocAids {
+    fn default() -> Self {
+        DocAids {
+            spacing: TextSpacing::default(),
+            ruler: RulerSettings::default(),
+            measure: DEFAULT_MEASURE,
+        }
+    }
+}
+
+/// What the reading highlight draws when it is not the spoken word and
+/// sentence themselves (`[highlight] enabled`, `granularity`, and
+/// `lead_words`). Drawn only: the caret a screen reader follows while
+/// reading stays on the word being spoken.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct HighlightShown {
+    /// The word drawn, if any.
+    pub word: Option<CharRange>,
+    /// The sentence drawn, if any.
+    pub sentence: Option<CharRange>,
 }
 
 /// What the document view shows: the window's text and its styles.
@@ -184,11 +220,14 @@ pub enum DocMark {
 /// coordinates. Kept so tests can check what the window draws, and in what
 /// order, without reading pixels.
 ///
-/// The order on each paragraph: the sentence band, the marks (band, then
-/// their line, dashes, bar or box), the word band, the text, the word in
-/// its own color with its attribute, then the line under the sentence. So a
-/// mark inside the spoken sentence stays visible while it is read, and the
-/// sentence is underlined in every palette, high contrast too.
+/// The order on each paragraph (design system E): the sentence band, code
+/// backgrounds, the marks' bands, the selection band, the word band, the
+/// text, the word in its own color with its attribute, then every line,
+/// box, bar, and dot (the marks' shapes, syllable dots, the double line of
+/// a writing suggestion), then the line under the sentence, the dots under
+/// a misspelling, and the caret. So no band covers a shape, a mark inside
+/// the spoken sentence stays visible while it is read, and the sentence is
+/// underlined in every palette, high contrast too.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PaintStep {
     /// The band behind one line of the spoken sentence.
@@ -221,6 +260,23 @@ pub enum PaintStep {
     /// The reading ruler's bar at the start of one row: 4 px on the
     /// reading line, 2 px on the band's rows around it.
     RulerBar(RowMark, Rect),
+    /// A reading aid's line or dots over one line of text, in its color
+    /// (the theme's role, or `[colors]`): the rectangle they fill.
+    Aid(AidMark, Rect, textweaver_theme::Rgb),
+}
+
+/// The reading aids' marks drawn as lines and dots ([`PaintStep::Aid`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AidMark {
+    /// A difficult word: an underline 0.1 em thick.
+    DifficultWord,
+    /// A syllable separator: a middle dot between syllables.
+    Syllable,
+    /// A misspelled word: 2 px dots every 4 px at its foot.
+    Misspelling,
+    /// A writing suggestion (lint or grammar): a double underline, two
+    /// 1 px lines 2 px apart.
+    Lint,
 }
 
 /// The width of the reading ruler's bar on the reading line.
@@ -348,6 +404,10 @@ struct SepMarks {
     /// Byte offsets in the paragraph's text of the chars the separator is
     /// drawn before.
     at: Vec<usize>,
+    /// Where each separator is drawn, worked out once at layout (not on
+    /// every paint): its visual line, and its origin in the layout's
+    /// coordinates. In line order.
+    placed: Vec<(usize, Vec2)>,
 }
 
 /// The document view widget. See the module documentation.
@@ -380,6 +440,15 @@ pub struct DocumentView {
     /// Notes, bookmarks, the reader's highlights, and search matches
     /// ([`DocMark`]), drawn only.
     marks: Vec<(CharRange, DocMark)>,
+    /// Writing suggestions (edit mode, Markdown lint), drawn with a double
+    /// underline. Paint only.
+    lint: Vec<CharRange>,
+    /// What the reading highlight draws when it is not the spoken word and
+    /// sentence ([`HighlightShown`]); `None` draws them.
+    shown: Option<HighlightShown>,
+    /// The reading font's average advance with the current spacing, in
+    /// logical pixels ([`PANGRAM`]); `None` until measured again.
+    advance: Option<f64>,
     /// The reading highlights of the last paint, in order.
     painted: Vec<PaintStep>,
 
@@ -463,6 +532,9 @@ impl DocumentView {
             label: "Document".to_owned(),
             misspelled: Vec::new(),
             marks: Vec::new(),
+            lint: Vec::new(),
+            shown: None,
+            advance: None,
             painted: Vec::new(),
             layouts: HashMap::new(),
             line_starts: Vec::new(),
@@ -540,6 +612,8 @@ impl DocumentView {
             c(p.link),
             c(p.code),
             c(p.quote),
+            c(p.difficult_word),
+            c(p.syllable_mark),
         ]
     }
 
@@ -840,6 +914,7 @@ impl DocumentView {
     pub fn set_font(this: &mut WidgetMut<'_, Self>, font: DocFont) {
         if this.widget.font != font {
             this.widget.font = font;
+            this.widget.advance = None;
             this.widget.reset_caches();
             this.widget.follow = true;
             this.ctx.request_layout();
@@ -854,7 +929,10 @@ impl DocumentView {
         if w.aids == aids {
             return;
         }
-        let relayout = w.aids.spacing != aids.spacing;
+        if w.aids.spacing != aids.spacing {
+            w.advance = None;
+        }
+        let relayout = w.aids.spacing != aids.spacing || w.aids.measure != aids.measure;
         w.aids = aids;
         if relayout {
             w.reset_caches();
@@ -882,6 +960,38 @@ impl DocumentView {
             this.widget.marks = marks;
             this.ctx.request_render();
         }
+    }
+
+    /// The writing suggestions to mark (edit mode on Markdown): a double
+    /// underline, a shape no other mark has. Only drawn; Ctrl+F8 finds
+    /// them and says them.
+    pub fn set_lint(this: &mut WidgetMut<'_, Self>, ranges: Vec<CharRange>) {
+        if this.widget.lint != ranges {
+            this.widget.lint = ranges;
+            this.ctx.request_render();
+        }
+    }
+
+    /// What the reading highlight draws, when not the spoken word and
+    /// sentence themselves (`None`). Only drawn.
+    pub fn set_highlight_shown(this: &mut WidgetMut<'_, Self>, shown: Option<HighlightShown>) {
+        if this.widget.shown != shown {
+            this.widget.shown = shown;
+            this.ctx.request_render();
+        }
+    }
+
+    /// The text column's width in logical pixels, for tests.
+    pub fn column_width(&self) -> f64 {
+        self.column
+    }
+
+    /// The chars on each visual line of paragraph `i` as laid out, for
+    /// tests; `None` before it is laid out.
+    pub fn line_lengths(&self, i: usize) -> Option<Vec<usize>> {
+        self.layouts
+            .get(&i)
+            .map(|pl| pl.lines.iter().map(|(a, b)| b - a).collect())
     }
 
     /// The marks drawn, for tests.
@@ -994,9 +1104,9 @@ impl DocumentView {
             if p.heading.is_some() || self.font.bold {
                 sb.push_default(StyleProperty::FontWeight(FontWeight::BOLD));
             }
-            sb.push_default(StyleProperty::Brush(BrushIndex(
-                p.heading.map_or(B_TEXT, |l| B_H1 + usize::from(l - 1)),
-            )));
+            // In the syllable mark's color (the theme's role, or
+            // `[colors] syllables`), a glyph that is its own cue.
+            sb.push_default(StyleProperty::Brush(BrushIndex(B_SYLLABLE)));
             let mut layout = sb.build(sep);
             layout.break_all_lines(None);
             let width = layout.full_width();
@@ -1006,6 +1116,7 @@ impl DocumentView {
                 width,
                 baseline,
                 at: breaks.iter().map(|&k| bytes.byte(text, k)).collect(),
+                placed: Vec::new(),
             }
         });
         let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
@@ -1074,10 +1185,16 @@ impl DocumentView {
                 SpanStyle::Strikethrough => b.push(StyleProperty::Strikethrough(true), a..e),
                 SpanStyle::Bionic => b.push(StyleProperty::FontWeight(FontWeight::BOLD), a..e),
                 SpanStyle::Difficult => {
-                    // A thicker underline than a link's, in the text's own
-                    // colour: the shape carries the meaning, not a colour.
+                    // A thicker underline than a link's (0.1 em), in the
+                    // difficult word mark's color (the theme's role, or
+                    // `[colors] difficult_words`): the shape carries the
+                    // meaning, not the color.
                     b.push(StyleProperty::Underline(true), a..e);
                     b.push(StyleProperty::UnderlineSize(Some(size * 0.1)), a..e);
+                    b.push(
+                        StyleProperty::UnderlineBrush(Some(BrushIndex(B_DIFFICULT))),
+                        a..e,
+                    );
                 }
             }
         }
@@ -1173,6 +1290,22 @@ impl DocumentView {
                 )
             })
             .collect();
+        // The syllable separators' places, once per layout.
+        if let Some(seps) = pl.seps.as_mut() {
+            let mut placed = Vec::with_capacity(seps.at.len());
+            for (n, line) in pl.layout.lines().enumerate() {
+                let tr = line.text_range();
+                let from = seps.at.partition_point(|&b| b < tr.start);
+                let y = f64::from(line.metrics().baseline - seps.baseline);
+                for &b in seps.at[from..].iter().take_while(|&&b| b < tr.end) {
+                    let x = Cursor::from_byte_index(&pl.layout, b, Affinity::Downstream)
+                        .geometry(&pl.layout, 1.0)
+                        .x0;
+                    placed.push((n, Vec2::new(x - f64::from(seps.width), y)));
+                }
+            }
+            seps.placed = placed;
+        }
         let starts: Vec<usize> = pl.lines.iter().skip(1).map(|l| l.0).collect();
         if self.line_starts[i].as_ref() != Some(&starts) {
             self.line_starts[i] = Some(starts);
@@ -1230,6 +1363,66 @@ impl DocumentView {
             i,
             Rect::new(bb.x0, pl.top_gap + bb.y0, bb.x1, pl.top_gap + bb.y0 + h),
         ))
+    }
+
+    /// The reading font's average advance with the current letter and
+    /// word spacing: [`PANGRAM`] laid out once, its width divided by its
+    /// length. Cached until the font or the spacing changes.
+    fn average_advance(
+        &mut self,
+        fcx: &mut FontContext,
+        lcx: &mut LayoutContext<BrushIndex>,
+    ) -> f64 {
+        if let Some(a) = self.advance {
+            return a;
+        }
+        let size = self.font.size;
+        let sp = self.aids.spacing;
+        let mut b = lcx.ranged_builder(fcx, PANGRAM, 1.0, true);
+        b.push_default(StyleProperty::FontFamily(FontFamily::Source(
+            self.font.family.clone().into(),
+        )));
+        b.push_default(StyleProperty::FontSize(size));
+        if self.font.bold {
+            b.push_default(StyleProperty::FontWeight(FontWeight::BOLD));
+        }
+        if sp.letter_spacing > 0.0 {
+            b.push_default(StyleProperty::LetterSpacing(size * sp.letter_spacing));
+        }
+        if sp.word_spacing > 0.0 {
+            b.push_default(StyleProperty::WordSpacing(size * sp.word_spacing));
+        }
+        let mut layout = b.build(PANGRAM);
+        layout.break_all_lines(None);
+        let chars = PANGRAM.chars().count() as f64;
+        let mut a = f64::from(layout.full_width()) / chars;
+        if !(a.is_finite() && a > 0.0) {
+            // No font answered: about half an em, as an estimate.
+            a = f64::from(size) * 0.5;
+        }
+        self.advance = Some(a);
+        a
+    }
+
+    /// The text column for a view `width` wide: the measure times the
+    /// average advance, at least [`MIN_COLUMN`], and never wider than the
+    /// window less its insets; the whole width when the measure is 0.
+    fn column_for(
+        &mut self,
+        width: f64,
+        fcx: &mut FontContext,
+        lcx: &mut LayoutContext<BrushIndex>,
+    ) -> f64 {
+        let room = (width - 2.0 * INSET).max(80.0);
+        if self.aids.measure == 0 {
+            return room;
+        }
+        let m = f64::from(self.aids.measure.clamp(MEASURE_RANGE.0, MEASURE_RANGE.1));
+        // Room for the last glyph's spacing: a line of `m` average chars
+        // fits.
+        (m * self.average_advance(fcx, lcx) + 1.0)
+            .max(MIN_COLUMN)
+            .min(room)
     }
 
     /// Lays out the paragraphs from the scroll anchor down, filling the
@@ -2034,9 +2227,15 @@ impl Widget for DocumentView {
         len_req: LenReq,
         _cross: Option<Length>,
     ) -> Length {
-        // Fills what it is given; asks for a comfortable column.
+        // Fills what it is given; asks for the measure's column (an
+        // estimate until the font is measured).
+        let column = match (self.aids.measure, self.advance) {
+            (0, _) => 1200.0,
+            (m, Some(a)) => f64::from(m) * a,
+            (m, None) => f64::from(m) * f64::from(self.font.size) * 0.5,
+        };
         let want = match axis {
-            Axis::Horizontal => MAX_COLUMN + 2.0 * INSET,
+            Axis::Horizontal => column.max(MIN_COLUMN) + 2.0 * INSET,
             Axis::Vertical => 400.0,
         };
         match len_req {
@@ -2047,7 +2246,8 @@ impl Widget for DocumentView {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
-        let column = (size.width - 2.0 * INSET).clamp(80.0, MAX_COLUMN);
+        let (fcx, lcx) = ctx.text_contexts();
+        let column = self.column_for(size.width, fcx, lcx);
         if (column - self.column).abs() > 0.5 {
             self.column = column;
             self.layouts.clear();
@@ -2058,7 +2258,6 @@ impl Widget for DocumentView {
         }
         self.column_x = ((size.width - column) / 2.0).max(INSET).floor();
         self.size = size;
-        let (fcx, lcx) = ctx.text_contexts();
         self.layout_view(fcx, lcx);
         ctx.set_clip_path(size.to_rect());
     }
@@ -2073,26 +2272,41 @@ impl Widget for DocumentView {
         let size = ctx.content_box().size();
         let card = RoundedRect::from_rect(size.to_rect(), theme::PANEL_RADIUS);
         painter.fill(card, theme::color(p.background)).draw();
-        if !self.focused {
-            painter
-                .stroke(
-                    RoundedRect::from_rect(size.to_rect().inset(-0.5), theme::PANEL_RADIUS),
-                    &Stroke::new(1.0),
-                    theme::color(p.border),
-                )
-                .draw();
-        }
+        // The focus ring (design system D): drawn inside the view, which
+        // fills its space, so from the edge in: the ring, a 1 px line in
+        // the inner focus color, then the border, which stays.
+        let ring = theme::ring_width(&p);
+        let border_at = if self.focused {
+            ring + theme::FOCUS_INNER
+        } else {
+            0.0
+        };
+        painter
+            .stroke(
+                RoundedRect::from_rect(
+                    size.to_rect().inset(-(border_at + 0.5)),
+                    theme::PANEL_RADIUS,
+                ),
+                &Stroke::new(1.0),
+                theme::color(p.border),
+            )
+            .draw();
         // Text stays inside the ring.
+        let clip = ring + theme::FOCUS_INNER + 2.0;
         painter.push_fill_clip(RoundedRect::from_rect(
-            size.to_rect().inset(-(theme::FOCUS_WIDTH + 1.0)),
+            size.to_rect().inset(-clip),
             theme::PANEL_RADIUS - 2.0,
         ));
         let brushes = self.brushes();
         let mut painted = Vec::new();
         let caret_pos = self.state.caret;
         let reading = self.state.reading;
-        let spoken = self.state.spoken.filter(|_| reading);
-        let sentence = self.state.sentence.filter(|_| reading);
+        let (word, sentence) = match self.shown {
+            Some(s) => (s.word, s.sentence),
+            None => (self.state.spoken, self.state.sentence),
+        };
+        let spoken = word.filter(|_| reading);
+        let sentence = sentence.filter(|_| reading);
         let selection = self
             .state
             .anchor
@@ -2137,6 +2351,7 @@ impl Widget for DocumentView {
             // The part of the layout on screen, in its own coordinates:
             // only those lines are drawn.
             let on_screen = (-origin.y, size.height - origin.y);
+            let touches = |r: CharRange| r.end.0 > para.start.0 && r.start.0 < p_end;
             let band = |r: CharRange| -> Option<Vec<Rect>> {
                 if r.end.0 <= para.start.0 || r.start.0 > p_end || r.is_empty() {
                     return None;
@@ -2156,14 +2371,13 @@ impl Widget for DocumentView {
                         .collect(),
                 )
             };
-            // The spoken sentence's band first, so the marks, the word and
-            // the text inside it all draw over it.
+            // Bands, from the faintest up: the spoken sentence, code, the
+            // marks, the selection, then the word.
             let sentence_rects = sentence.and_then(band).unwrap_or_default();
             for &r in &sentence_rects {
                 painter.fill(r, theme::color(p.spoken_sentence)).draw();
                 painted.push(PaintStep::SentenceBand(r));
             }
-            // Code backgrounds.
             for s in self.spans_in(i) {
                 if s.style == SpanStyle::Code
                     && let Some(rects) = band(s.range)
@@ -2178,12 +2392,15 @@ impl Widget for DocumentView {
                     }
                 }
             }
-            // The reader's marks and the search matches: a band, and a
-            // shape of their own.
-            for &(r, mark) in &self.marks {
-                if r.end.0 <= para.start.0 || r.start.0 > p_end {
-                    continue;
-                }
+            // The reader's marks and the search matches: their bands now,
+            // their shapes over the text below.
+            let mark_rects: Vec<(DocMark, Vec<Rect>)> = self
+                .marks
+                .iter()
+                .filter(|(r, _)| r.end.0 > para.start.0 && r.start.0 <= p_end)
+                .map(|&(r, mark)| (mark, band(r).unwrap_or_default()))
+                .collect();
+            for (mark, rects) in &mark_rects {
                 let fill = match mark {
                     DocMark::Highlight => p.user_highlight,
                     DocMark::Note => p.note,
@@ -2191,54 +2408,14 @@ impl Widget for DocumentView {
                     DocMark::FindHit => p.find_hit.1,
                     DocMark::CurrentFindHit => p.current_find_hit,
                 };
-                let rects = band(r).unwrap_or_default();
-                for (k, rect) in rects.iter().enumerate() {
+                for rect in rects {
                     painter.fill(*rect, theme::color(fill)).draw();
-                    painted.push(PaintStep::MarkBand(mark, *rect));
-                    painted.push(PaintStep::MarkShape(mark, *rect));
-                    let line = theme::color(p.text);
-                    match mark {
-                        DocMark::Highlight => {
-                            painter
-                                .fill(Rect::new(rect.x0, rect.y1 - 2.0, rect.x1, rect.y1), line)
-                                .draw();
-                        }
-                        DocMark::Note => {
-                            let mut x = rect.x0;
-                            while x < rect.x1 {
-                                let end = (x + 6.0).min(rect.x1);
-                                painter
-                                    .fill(Rect::new(x, rect.y1 - 2.0, end, rect.y1), line)
-                                    .draw();
-                                x += 10.0;
-                            }
-                        }
-                        DocMark::Bookmark if k == 0 => {
-                            painter
-                                .fill(
-                                    Rect::new(rect.x0 - 4.0, rect.y0, rect.x0 - 1.0, rect.y1),
-                                    line,
-                                )
-                                .draw();
-                        }
-                        DocMark::Bookmark => {}
-                        DocMark::FindHit | DocMark::CurrentFindHit => {
-                            let w = if mark == DocMark::CurrentFindHit {
-                                2.5
-                            } else {
-                                1.0
-                            };
-                            painter
-                                .stroke(rect.inflate(1.0, 0.0), &Stroke::new(w), line)
-                                .draw();
-                        }
-                    }
+                    painted.push(PaintStep::MarkBand(*mark, *rect));
                 }
             }
-            if let Some(rects) = selection.and_then(band) {
-                for r in rects {
-                    painter.fill(r, theme::color(p.selection.1)).draw();
-                }
+            let selection_rects = selection.and_then(band).unwrap_or_default();
+            for r in &selection_rects {
+                painter.fill(*r, theme::color(p.selection.1)).draw();
             }
             let word_rects = spoken.and_then(band).unwrap_or_default();
             for r in &word_rects {
@@ -2250,24 +2427,13 @@ impl Widget for DocumentView {
                     .draw();
                 painted.push(PaintStep::WordBand(*r));
             }
+            // The text, with its links' and difficult words' underlines.
             render_lines(painter, tf, &pl.layout, &brushes, on_screen);
             painted.push(PaintStep::Text(i));
-            // Syllable separators, in the space left before each break,
-            // on the line's baseline: those of the lines on screen.
-            if let Some(s) = &pl.seps {
-                for line in lines_within(&pl.layout, on_screen) {
-                    let tr = line.text_range();
-                    let from = s.at.partition_point(|&b| b < tr.start);
-                    for &b in s.at[from..].iter().take_while(|&&b| b < tr.end) {
-                        let x = Cursor::from_byte_index(&pl.layout, b, Affinity::Downstream)
-                            .geometry(&pl.layout, 1.0)
-                            .x0;
-                        let at = origin
-                            + Vec2::new(
-                                x - f64::from(s.width),
-                                f64::from(line.metrics().baseline - s.baseline),
-                            );
-                        render_text(painter, Affine::translate(at), &s.layout, &brushes, false);
+            for s in self.spans_in(i) {
+                if s.style == SpanStyle::Difficult && touches(s.range) {
+                    for r in band(s.range).unwrap_or_default() {
+                        painted.push(PaintStep::Aid(AidMark::DifficultWord, r, p.difficult_word));
                     }
                 }
             }
@@ -2297,14 +2463,92 @@ impl Widget for DocumentView {
                     });
                 }
             }
-            if let Some(rects) = selection.and_then(band) {
+            if !selection_rects.is_empty() {
                 let fg: [masonry::peniko::Brush; BRUSHES] =
                     std::array::from_fn(|_| theme::color(p.selection.0).into());
-                for r in rects {
-                    painter.push_fill_clip(r);
+                for r in &selection_rects {
+                    painter.push_fill_clip(*r);
                     let ys = (r.y0 - origin.y, r.y1 - origin.y);
                     render_lines(painter, tf, &pl.layout, &fg, ys);
                     painter.pop_clip();
+                }
+            }
+            // Every line, box, bar, and dot, over the text and the bands.
+            let line = theme::color(p.text);
+            for (mark, rects) in &mark_rects {
+                for (k, rect) in rects.iter().enumerate() {
+                    painted.push(PaintStep::MarkShape(*mark, *rect));
+                    match mark {
+                        DocMark::Highlight => {
+                            painter
+                                .fill(Rect::new(rect.x0, rect.y1 - 2.0, rect.x1, rect.y1), line)
+                                .draw();
+                        }
+                        DocMark::Note => {
+                            let mut x = rect.x0;
+                            while x < rect.x1 {
+                                let end = (x + 6.0).min(rect.x1);
+                                painter
+                                    .fill(Rect::new(x, rect.y1 - 2.0, end, rect.y1), line)
+                                    .draw();
+                                x += 10.0;
+                            }
+                        }
+                        DocMark::Bookmark if k == 0 => {
+                            painter
+                                .fill(
+                                    Rect::new(rect.x0 - 4.0, rect.y0, rect.x0 - 1.0, rect.y1),
+                                    line,
+                                )
+                                .draw();
+                        }
+                        DocMark::Bookmark => {}
+                        DocMark::FindHit | DocMark::CurrentFindHit => {
+                            let w = if *mark == DocMark::CurrentFindHit {
+                                2.5
+                            } else {
+                                1.0
+                            };
+                            painter
+                                .stroke(rect.inflate(1.0, 0.0), &Stroke::new(w), line)
+                                .draw();
+                        }
+                    }
+                }
+            }
+            // Syllable separators, placed at layout, on the lines on
+            // screen.
+            if let Some(s) = &pl.seps {
+                let (first, last) = line_span_within(&pl.layout, on_screen);
+                let from = s.placed.partition_point(|&(n, _)| n < first);
+                for &(_, at) in s.placed[from..].iter().take_while(|&&(n, _)| n < last) {
+                    render_text(
+                        painter,
+                        Affine::translate(origin + at),
+                        &s.layout,
+                        &brushes,
+                        false,
+                    );
+                    let r = Rect::new(0.0, 0.0, f64::from(s.width), 1.0) + origin + at;
+                    painted.push(PaintStep::Aid(AidMark::Syllable, r, p.syllable_mark));
+                }
+            }
+            // Writing suggestions: a double underline, two 1 px lines 2 px
+            // apart at the text's foot.
+            for &r in &self.lint {
+                if !touches(r) {
+                    continue;
+                }
+                let c = theme::color(p.lint);
+                for rect in band(r).unwrap_or_default() {
+                    let lines = Rect::new(rect.x0, rect.y1 - 4.0, rect.x1, rect.y1);
+                    painter
+                        .fill(Rect::new(rect.x0, rect.y1 - 4.0, rect.x1, rect.y1 - 3.0), c)
+                        .draw();
+                    painter
+                        .fill(Rect::new(rect.x0, rect.y1 - 1.0, rect.x1, rect.y1), c)
+                        .draw();
+                    painted.push(PaintStep::Aid(AidMark::Lint, lines, p.lint));
                 }
             }
             // The line under the spoken sentence: its cue in every palette,
@@ -2316,20 +2560,24 @@ impl Widget for DocumentView {
                     painted.push(PaintStep::SentenceUnderline(u, p.sentence_line));
                 }
             }
-            // Misspelled words: a dotted underline at the text's foot.
+            // Misspelled words: 2 px dots every 4 px at the text's foot.
             for &r in &self.misspelled {
-                if r.end.0 <= para.start.0 || r.start.0 >= p_end {
+                if !touches(r) {
                     continue;
                 }
+                let c = theme::color(p.misspelling);
                 for rect in band(r).unwrap_or_default() {
                     let y = rect.y1 - 2.5;
                     let mut x = rect.x0;
                     while x + 2.0 <= rect.x1 {
-                        painter
-                            .fill(Rect::new(x, y, x + 2.0, y + 2.0), theme::color(p.focus))
-                            .draw();
+                        painter.fill(Rect::new(x, y, x + 2.0, y + 2.0), c).draw();
                         x += 4.0;
                     }
+                    painted.push(PaintStep::Aid(
+                        AidMark::Misspelling,
+                        Rect::new(rect.x0, y, rect.x1, y + 2.0),
+                        p.misspelling,
+                    ));
                 }
             }
             // The caret, when the view has focus.
@@ -2379,7 +2627,7 @@ impl Widget for DocumentView {
             let track_h = size.height - 16.0;
             let h = ((b - a) * track_h).max(28.0).min(track_h);
             let y = 8.0 + a * (track_h - h).max(0.0) / (1.0 - (b - a)).max(0.001);
-            let x = size.width - 7.0;
+            let x = size.width - 7.0 - clip + 2.0;
             painter
                 .fill(
                     RoundedRect::new(
@@ -2396,14 +2644,22 @@ impl Widget for DocumentView {
 
         painter.pop_clip();
 
-        // The focus ring.
         if self.focused {
-            let r = size.to_rect().inset(-1.0 - theme::FOCUS_WIDTH / 2.0);
             painter
                 .stroke(
-                    RoundedRect::from_rect(r, theme::PANEL_RADIUS),
-                    &Stroke::new(theme::FOCUS_WIDTH),
+                    RoundedRect::from_rect(size.to_rect().inset(-ring / 2.0), theme::PANEL_RADIUS),
+                    &Stroke::new(ring),
                     theme::color(p.focus),
+                )
+                .draw();
+            painter
+                .stroke(
+                    RoundedRect::from_rect(
+                        size.to_rect().inset(-(ring + theme::FOCUS_INNER / 2.0)),
+                        theme::PANEL_RADIUS - ring,
+                    ),
+                    &Stroke::new(theme::FOCUS_INNER),
+                    theme::color(p.focus_inner),
                 )
                 .draw();
         }
@@ -2565,6 +2821,25 @@ fn lines_within(
         .lines()
         .skip_while(move |l| f64::from(l.metrics().block_max_coord) < ys.0)
         .take_while(move |l| f64::from(l.metrics().block_min_coord) <= ys.1)
+}
+
+/// The visual lines of `layout` that reach into `ys`, as a range of
+/// line indices (first, past the last).
+fn line_span_within(layout: &Layout<BrushIndex>, ys: (f64, f64)) -> (usize, usize) {
+    let mut first = None;
+    let mut last = 0;
+    for (n, l) in layout.lines().enumerate() {
+        let m = l.metrics();
+        if f64::from(m.block_max_coord) < ys.0 {
+            continue;
+        }
+        if f64::from(m.block_min_coord) > ys.1 {
+            break;
+        }
+        first.get_or_insert(n);
+        last = n + 1;
+    }
+    (first.unwrap_or(0), last)
 }
 
 /// Draws the lines of `layout` that reach into `ys` (layout coordinates),

@@ -104,14 +104,14 @@ fn paint(path: &str) -> Paint {
     }
 }
 
-/// The contrast a color reaches where `path` paints it on `theme`: for a
-/// band, the better of the theme's text and page colors on it (the one
-/// drawn there); for text and marks, against the page.
-pub fn contrast_on(theme: &Theme, path: &str, color: Rgb) -> f64 {
-    let page = theme.color(ColorRole::Background);
+/// The contrast a color reaches where `path` paints it on a `page` with
+/// `text`: for a band, the better of the text and page colors on it (the
+/// one drawn there); for text and marks, against the page. The reading
+/// ruler is a band in the window (its bar is the cue), so its row
+/// measures the text on it, like the other bands.
+fn contrast_with(page: Rgb, text: Rgb, path: &str, color: Rgb) -> f64 {
     match paint(path) {
-        Paint::Band(_) => {
-            let text = theme.color(ColorRole::Text);
+        Paint::Band(_) | Paint::Mark(ColorRole::Ruler) => {
             contrast_ratio(text, color).max(contrast_ratio(page, color))
         }
         Paint::Text(_) | Paint::Mark(_) => contrast_ratio(color, page),
@@ -253,8 +253,22 @@ impl App {
         let value = self.setting_value(path)?;
         let text = value.as_str()?;
         let rgb = parse_setting(text).ok()??;
-        let ratio = contrast_on(self.current_theme(), path, rgb);
+        let theme = self.current_theme();
+        let (page, text) = self.drawn_colors.unwrap_or((
+            theme.color(ColorRole::Background),
+            theme.color(ColorRole::Text),
+        ));
+        let ratio = contrast_with(page, text, path, rgb);
         Some((ratio, contrast_word(self.cat(), ratio)))
+    }
+
+    /// The page and text colors a frontend draws with when they are not
+    /// the current theme's: a theme its command line chose, or the
+    /// system's high contrast colors. The Colors view then measures each
+    /// color against what is on the screen, not the saved theme. `None`
+    /// goes back to the theme's.
+    pub fn set_drawn_colors(&mut self, colors: Option<(Rgb, Rgb)>) {
+        self.drawn_colors = colors;
     }
 
     /// A color setting's row on the settings screen: its label, value,

@@ -133,6 +133,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("display.theme_explicit", Portable),
     // The terminal's or window's width.
     ("display.wrap_width", Machine),
+    // A reading preference, like the font size.
+    ("display.measure", Portable),
     ("display.tab_width", Portable),
     ("display.show_line_numbers", Portable),
     ("display.scroll_margin", Portable),

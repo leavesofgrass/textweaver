@@ -404,6 +404,9 @@ pub struct App {
     pub(crate) pending_list_delete: Option<(ListKind, usize)>,
     /// The window's Reset all colors, waiting for y or n.
     pub(crate) pending_colors_reset: bool,
+    /// The page and text colors a frontend draws with when they are not
+    /// the theme's ([`App::set_drawn_colors`]).
+    pub(crate) drawn_colors: Option<(textweaver_theme::Rgb, textweaver_theme::Rgb)>,
     /// The voice manager: its list, question, and download (crate::voice).
     pub(crate) voices: crate::voice::VoicesState,
     /// Text copied or cut, waiting for the frontend
@@ -567,6 +570,7 @@ impl App {
             snapshot_trouble: false,
             pending_list_delete: None,
             pending_colors_reset: false,
+            drawn_colors: None,
             voices: crate::voice::VoicesState::default(),
             clipboard: None,
             writer: crate::writer::Writer::spawn(wake.clone()),

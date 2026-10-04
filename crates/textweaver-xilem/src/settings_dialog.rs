@@ -587,7 +587,7 @@ impl SettingsGrid {
         b.push_default(StyleProperty::FontFamily(FontFamily::Source(
             crate::fonts::DEFAULT_STACK.into(),
         )));
-        b.push_default(StyleProperty::FontSize(size));
+        b.push_default(StyleProperty::FontSize(theme::ui_size(size)));
         b.push_default(StyleProperty::LineHeight(LineHeight::FontSizeRelative(1.3)));
         b.push_default(StyleProperty::Brush(BrushIndex(0)));
         if bold {
