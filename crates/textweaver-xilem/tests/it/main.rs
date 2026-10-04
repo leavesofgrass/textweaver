@@ -7,6 +7,7 @@
 
 mod announcements;
 mod colors_dialog;
+mod dialogs;
 mod document_view;
 mod edit_mode;
 mod frame_theme;

@@ -2936,6 +2936,8 @@ gui-settings-form = Configuración: { $section }
 gui-settings-saved-hint = Los cambios se aplican y se guardan al momento.
 gui-settings-close-help = Cerrar la configuración. Cada cambio ya está guardado.
 gui-settings-closed = Configuración cerrada.
+gui-settings-recent = Cambiados hace poco
+gui-settings-matching = Coinciden con { $filter }
 gui-settings-table = { $label } es una tabla. Edítela en settings.toml.
 gui-setting-new-value = Nuevo valor para { $label }
 gui-setting-value-hint = Pulse Intro para aceptar, o Escape para volver.
@@ -2965,7 +2967,7 @@ gui-palette-count =
         [one] 1 comando.
        *[other] { $n } comandos.
     }
-gui-settings-form-help = Arriba y Abajo pasan de un ajuste a otro. Izquierda y Derecha cambian uno. Intro escribe un valor nuevo. Suprimir restablece el valor predeterminado. { $next } y { $previous } cambian de sección.
+gui-settings-form-help = Arriba y Abajo pasan de un ajuste a otro. Izquierda y Derecha cambian uno. Intro escribe un valor nuevo. Suprimir restablece el valor predeterminado. { $next } y { $previous } cambian de sección. Escribe para filtrar. F1 dice la ayuda.
 gui-settings-press-enter = Pulse Intro para escribir un valor nuevo para { $label }.
 gui-font-built-in = { $family } (incluida)
 ## Wave 5 (W5s): summaries and difficult-word definitions.

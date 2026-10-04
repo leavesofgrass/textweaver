@@ -174,32 +174,87 @@ pub enum FormChange {
     Number(f64),
 }
 
+/// The first section of the settings dialog while nothing is typed: the
+/// settings changed last, most recent first (W9b-d).
+const RECENT: &str = "\u{1}recent";
+
+/// The first section while a filter is typed: every setting it matches.
+const MATCHING: &str = "\u{1}matching";
+
+/// The reading settings form (W9b-d): the settings a reader changes most,
+/// in one form, as the Colors dialog has the colors. The rate first; the
+/// font, the four spacings, then the page and the aids.
+pub const READING_SETTINGS: &[&str] = &[
+    "speech.rate",
+    "reading_aids.font.family",
+    "reading_aids.font.size_pt",
+    "reading_aids.font.weight",
+    "reading_aids.spacing.line_height",
+    "reading_aids.spacing.word_spacing",
+    "reading_aids.spacing.letter_spacing",
+    "reading_aids.spacing.paragraph_spacing",
+    "display.theme",
+    "highlight.granularity",
+    "highlight.color",
+    "highlight.sentence_color",
+    "reading_aids.ruler.mode",
+    "reading_aids.ruler.mask_outside",
+    "reading_aids.bionic",
+    "reading_aids.syllables",
+];
+
+/// Which form a [`SettingsForm`] is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FormKind {
+    /// The settings dialog: every section.
+    Settings,
+    /// View, Colors: every color setting.
+    Colors,
+    /// The reading settings form: [`READING_SETTINGS`].
+    Reading,
+}
+
 /// The dialog's sections, in the schema's order, and their settings.
 #[derive(Clone, Debug)]
 pub struct SettingsForm {
     schema: SettingsSchema,
-    /// Section titles ("Speech", "Display").
+    /// Section titles ("Speech", "Display"). The settings dialog's first
+    /// section can be its recent block or the settings a filter matches
+    /// ([`Self::special_section`]).
     pub sections: Vec<&'static str>,
-    /// The Colors dialog (View, Colors): one section of every color
-    /// setting, in the app's order (the spoken word first).
-    colors: bool,
+    kind: FormKind,
+    /// The settings changed last (`interface.recent_settings`).
+    recent: Vec<String>,
+    /// The filter typed in the form, and the settings it matches.
+    filter: String,
+    matching: Vec<String>,
 }
 
 impl SettingsForm {
-    /// The form for `schema` (from `App::settings_schema`), leaving out the
-    /// settings textweaver keeps for itself.
+    /// The window's settings form for `schema` (from
+    /// `App::settings_schema`), leaving out the settings textweaver keeps
+    /// for itself and those only the terminal reader uses.
     pub fn new(schema: SettingsSchema) -> Self {
-        let mut sections: Vec<&'static str> = Vec::new();
-        for s in schema.visible() {
-            if !sections.contains(&s.section) {
-                sections.push(s.section);
-            }
-        }
-        SettingsForm {
+        let mut form = SettingsForm {
             schema,
-            sections,
-            colors: false,
-        }
+            sections: Vec::new(),
+            kind: FormKind::Settings,
+            recent: Vec::new(),
+            filter: String::new(),
+            matching: Vec::new(),
+        };
+        form.fill_sections();
+        form
+    }
+
+    /// The settings dialog as the window opens it: [`Self::new`] with the
+    /// settings changed last as its first section, so it opens on the
+    /// last-changed setting.
+    pub fn for_window(app: &App) -> Self {
+        let mut form = Self::new(app.settings_schema());
+        form.recent = app.settings().interface.recent_settings.clone();
+        form.fill_sections();
+        form
     }
 
     /// The Colors dialog's form (W6a6): every color setting in one
@@ -209,13 +264,97 @@ impl SettingsForm {
         SettingsForm {
             schema,
             sections: vec!["Colors"],
-            colors: true,
+            kind: FormKind::Colors,
+            recent: Vec::new(),
+            filter: String::new(),
+            matching: Vec::new(),
+        }
+    }
+
+    /// The reading settings form (W9b-d): [`READING_SETTINGS`] in one
+    /// section, with the spacing presets and the voice manager beside it.
+    pub fn reading(schema: SettingsSchema) -> Self {
+        SettingsForm {
+            schema,
+            sections: vec!["Reading"],
+            kind: FormKind::Reading,
+            recent: Vec::new(),
+            filter: String::new(),
+            matching: Vec::new(),
         }
     }
 
     /// True for the Colors dialog's form.
     pub fn is_colors(&self) -> bool {
-        self.colors
+        self.kind == FormKind::Colors
+    }
+
+    /// True for the reading settings form.
+    pub fn is_reading(&self) -> bool {
+        self.kind == FormKind::Reading
+    }
+
+    /// The filter typed in the form ("" for none).
+    pub fn filter(&self) -> &str {
+        &self.filter
+    }
+
+    /// Types `query` as the form's filter, in `c`'s language and English:
+    /// the first section becomes the settings it matches, which can be
+    /// none. An empty query brings the recent block back.
+    pub fn set_filter(&mut self, query: &str, c: &Catalog) {
+        self.filter = query.to_owned();
+        self.matching = if query.trim().is_empty() {
+            Vec::new()
+        } else {
+            self.schema
+                .in_window()
+                .filter(|s| s.matches(c, query))
+                .map(|s| s.path.clone())
+                .collect()
+        };
+        self.fill_sections();
+    }
+
+    /// How many settings the filter matches.
+    pub fn match_count(&self) -> usize {
+        self.matching.len()
+    }
+
+    /// True when section `i` is the recent block or the filter's matches,
+    /// not a section of the schema.
+    pub fn special_section(&self, i: usize) -> bool {
+        matches!(self.sections.get(i), Some(&RECENT | &MATCHING))
+    }
+
+    fn fill_sections(&mut self) {
+        if self.kind != FormKind::Settings {
+            return;
+        }
+        let mut sections: Vec<&'static str> = Vec::new();
+        if !self.filter.trim().is_empty() {
+            sections.push(MATCHING);
+        } else if self
+            .recent
+            .iter()
+            .any(|p| self.schema.in_window().any(|s| &s.path == p))
+        {
+            sections.push(RECENT);
+        }
+        for s in self.schema.in_window() {
+            if !sections.contains(&s.section) {
+                sections.push(s.section);
+            }
+        }
+        self.sections = sections;
+    }
+
+    fn by_paths<'a>(&'a self, paths: &'a [impl AsRef<str>]) -> Vec<&'a Setting> {
+        paths
+            .iter()
+            .filter_map(|p| self.schema.get(p.as_ref()))
+            .filter(|s| !s.internal && s.frontend.in_window())
+            .collect()
     }
 
     /// The settings in section `i`, in order.
@@ -223,16 +362,25 @@ impl SettingsForm {
         let Some(title) = self.sections.get(i) else {
             return Vec::new();
         };
-        if self.colors {
-            return textweaver_app::COLOR_SETTINGS
-                .iter()
-                .filter_map(|p| self.schema.get(p))
-                .collect();
+        match self.kind {
+            FormKind::Colors => return self.by_paths(&textweaver_app::COLOR_SETTINGS),
+            FormKind::Reading => return self.by_paths(READING_SETTINGS),
+            FormKind::Settings => {}
         }
-        self.schema
-            .visible()
-            .filter(|s| s.section == *title)
-            .collect()
+        match *title {
+            RECENT => {
+                let n = textweaver_app::settings_schema::RECENT_SETTINGS;
+                let mut v = self.by_paths(&self.recent);
+                v.truncate(n);
+                v
+            }
+            MATCHING => self.by_paths(&self.matching),
+            _ => self
+                .schema
+                .in_window()
+                .filter(|s| s.section == *title)
+                .collect(),
+        }
     }
 
     /// The setting shown at `row` of section `section`.
@@ -258,8 +406,20 @@ impl SettingsForm {
 
     /// Section `i`'s title in the catalog's language ("Speech").
     pub fn section_title(&self, i: usize, c: &Catalog) -> String {
-        if self.colors {
-            return c.tr("section-colors");
+        match self.kind {
+            FormKind::Colors => return c.tr("section-colors"),
+            FormKind::Reading => return c.tr("gui-reading-form"),
+            FormKind::Settings => {}
+        }
+        match self.sections.get(i) {
+            Some(&RECENT) => return c.tr("gui-settings-recent"),
+            Some(&MATCHING) => {
+                return c.fmt(
+                    "gui-settings-matching",
+                    &args!["filter" => self.filter.as_str()],
+                );
+            }
+            _ => {}
         }
         self.settings_in(i).first().map_or_else(
             || self.sections.get(i).copied().unwrap_or_default().to_owned(),
@@ -300,12 +460,14 @@ impl SettingsForm {
 
     /// Where the setting at `path` is: its section and row.
     pub fn find(&self, path: &str) -> Option<(usize, usize)> {
-        (0..self.sections.len()).find_map(|sec| {
-            self.settings_in(sec)
-                .iter()
-                .position(|s| s.path == path)
-                .map(|row| (sec, row))
-        })
+        (0..self.sections.len())
+            .filter(|&i| !self.special_section(i))
+            .find_map(|sec| {
+                self.settings_in(sec)
+                    .iter()
+                    .position(|s| s.path == path)
+                    .map(|row| (sec, row))
+            })
     }
 }
 
@@ -363,6 +525,14 @@ pub enum FormAction {
     },
     /// Move to the next (1) or previous (-1) section.
     Section(isize),
+    /// Text typed in the form: it adds to the filter (W9b-d).
+    Type(String),
+    /// Backspace: the filter's last letter goes.
+    Backspace,
+    /// Escape while a filter is typed: the filter goes, the dialog stays.
+    ClearFilter,
+    /// F1 on the setting at `row`: its name, value and help, said.
+    Help(usize),
 }
 
 const ROW_H: f64 = 46.0;
@@ -388,6 +558,8 @@ pub struct SettingsGrid {
     values: Vec<Option<Layout<BrushIndex>>>,
     help: Option<(usize, Layout<BrushIndex>)>,
     width: f64,
+    /// A filter is typed: Escape clears it instead of closing.
+    filtering: bool,
 }
 
 impl SettingsGrid {
@@ -409,7 +581,19 @@ impl SettingsGrid {
             values: vec![None; n],
             help: None,
             width: 0.0,
+            filtering: false,
         }
+    }
+
+    /// Escape clears the typed filter (`true`) or closes the dialog.
+    pub fn with_filtering(mut self, on: bool) -> Self {
+        self.filtering = on;
+        self
+    }
+
+    /// Whether a filter is typed (see [`Self::with_filtering`]).
+    pub fn set_filtering(this: &mut WidgetMut<'_, Self>, on: bool) {
+        this.widget.filtering = on;
     }
 
     /// How to use the form, said as its description (`gui-settings-form-help`).
@@ -506,19 +690,6 @@ impl SettingsGrid {
         let help =
             !self.rows.is_empty() && self.help.as_ref().is_none_or(|(r, _)| *r != self.selected);
         rows || help
-    }
-
-    fn first_letter(&self, c: char) -> Option<usize> {
-        let c = c.to_lowercase().next()?;
-        let n = self.rows.len();
-        (1..=n).map(|k| (self.selected + k) % n).find(|&i| {
-            self.rows[i]
-                .label
-                .chars()
-                .next()
-                .and_then(|f| f.to_lowercase().next())
-                == Some(c)
-        })
     }
 
     /// The step a click at `x` (in the form's own coordinates) on `row`
@@ -649,6 +820,24 @@ impl Widget for SettingsGrid {
             ctx.set_handled();
             return;
         }
+        // Typing filters, as on the terminal's settings screen (W9b-d);
+        // F1 says the focused setting's help.
+        let filter_action = match &k.key {
+            Key::Named(NamedKey::F1) if !self.rows.is_empty() => {
+                Some(FormAction::Help(self.selected))
+            }
+            Key::Named(NamedKey::Backspace) => Some(FormAction::Backspace),
+            Key::Named(NamedKey::Escape) if self.filtering => Some(FormAction::ClearFilter),
+            Key::Character(s) if s != " " && s.chars().all(|c| !c.is_control()) => {
+                Some(FormAction::Type(s.to_string()))
+            }
+            _ => None,
+        };
+        if let Some(a) = filter_action {
+            ctx.submit_action::<FormAction>(a);
+            ctx.set_handled();
+            return;
+        }
         let n = self.rows.len();
         if n == 0 {
             return;
@@ -712,12 +901,6 @@ impl Widget for SettingsGrid {
                 }),
                 _ => None,
             },
-            Key::Character(s) => {
-                if let Some(i) = s.chars().next().and_then(|c| self.first_letter(c)) {
-                    self.set_selected(i);
-                }
-                None
-            }
             _ => return,
         };
         if let Some(a) = action {
@@ -930,18 +1113,18 @@ impl Widget for SettingsGrid {
                 // The focus ring, or (unfocused) a hairline, so the row stays
                 // visible where the raised colour is the page's (high
                 // contrast).
-                let (width, colour) = if self.focused {
-                    (theme::FOCUS_WIDTH, p.focus)
+                if self.focused {
+                    // The double ring (design system D).
+                    theme::paint_ring_inside(painter, row, theme::RADIUS, p);
                 } else {
-                    (1.0, p.border)
-                };
-                painter
-                    .stroke(
-                        RoundedRect::from_rect(row.inset(-1.0), theme::RADIUS),
-                        &Stroke::new(width),
-                        theme::color(colour),
-                    )
-                    .draw();
+                    painter
+                        .stroke(
+                            RoundedRect::from_rect(row.inset(-1.0), theme::RADIUS),
+                            &Stroke::new(1.0),
+                            theme::color(p.border),
+                        )
+                        .draw();
+                }
             } else if i + 1 < last {
                 // A hairline between settings.
                 let line_y = y + ROW_H - 0.5;

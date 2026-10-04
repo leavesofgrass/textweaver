@@ -70,7 +70,13 @@ fn every_visible_setting_is_in_one_section() {
     let shown: usize = (0..form.sections.len())
         .map(|i| form.settings_in(i).len())
         .sum();
-    assert_eq!(shown, schema.visible().count());
+    // Every setting that does something in the window; none of the
+    // terminal's own.
+    assert_eq!(shown, schema.in_window().count());
+    assert_eq!(
+        schema.visible().count() - shown,
+        textweaver_app::TERMINAL_ONLY.len()
+    );
     let rate = form.find("speech.rate").expect("the rate is in the form");
     assert_eq!(
         form.setting(rate.0, rate.1).map(|s| s.path.as_str()),
@@ -494,4 +500,62 @@ fn the_chevrons_step_the_way_they_point() {
             "a click at {x} on row {row}"
         );
     }
+}
+
+/// Typing in the form filters every section's settings (W9b-d): the
+/// first section becomes the matches, the count is known, and the keys
+/// reach the driver as filter actions; F1 asks for the focused help.
+#[test]
+fn typing_filters_the_settings_and_f1_asks_for_help() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let c = app.catalog();
+    let mut form = SettingsForm::for_window(&app);
+    form.set_filter("rate", &c);
+    assert!(form.special_section(0));
+    assert_eq!(form.section_title(0, &c), "Matching rate");
+    let paths: Vec<&str> = form
+        .settings_in(0)
+        .iter()
+        .map(|s| s.path.as_str())
+        .collect();
+    assert!(paths.contains(&"speech.rate"), "{paths:?}");
+    assert_eq!(form.match_count(), paths.len());
+    // Terminal-only settings never match in the window.
+    form.set_filter("scroll margin", &c);
+    assert_eq!(form.match_count(), 0);
+    assert!(form.find("display.wrap_width").is_none());
+    assert!(app.settings_schema().get("display.wrap_width").is_some());
+    // Cleared: the schema's sections again.
+    form.set_filter("", &c);
+    assert!(!form.special_section(0));
+    // The keys in the form.
+    let (mut h, _form) = harness_with_dialog(&app);
+    h.process_text_event(TextEvent::key_down(Key::Character("r".into())));
+    let (a, _) = h.pop_action::<FormAction>().expect("a filter key");
+    assert_eq!(a, FormAction::Type("r".into()));
+    h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::Backspace)));
+    let (a, _) = h.pop_action::<FormAction>().expect("Backspace");
+    assert_eq!(a, FormAction::Backspace);
+    h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::F1)));
+    let (a, _) = h.pop_action::<FormAction>().expect("F1");
+    assert_eq!(a, FormAction::Help(0));
+}
+
+/// The settings changed last come first, so the dialog opens on the
+/// last-changed setting (W9b-d).
+#[test]
+fn the_dialog_opens_on_the_last_changed_setting() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app(dir.path());
+    assert!(!SettingsForm::for_window(&app).special_section(0));
+    let rate = app.settings_schema().get("speech.rate").unwrap().clone();
+    settings_dialog::apply(&mut app, &rate, FormChange::Step(true)).unwrap();
+    let form = SettingsForm::for_window(&app);
+    let c = app.catalog();
+    assert_eq!(form.section_title(0, &c), "Recently changed");
+    assert_eq!(
+        form.setting(0, 0).map(|s| s.path.as_str()),
+        Some("speech.rate")
+    );
 }

@@ -203,25 +203,15 @@ pub fn voice_dialog(
     .with_tag(LIST);
     let list_id = list.id();
     let gap = Length::px(10.0);
-    let filters = Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .with_fixed(language)
-        .with_fixed_spacer(gap)
-        .with_fixed(engine);
-    let actions = Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .with_fixed(use_voice)
-        .with_fixed_spacer(gap)
-        .with_fixed(preview)
-        .with_fixed_spacer(gap)
-        .with_fixed(favorite)
-        .with_fixed_spacer(gap)
-        .with_fixed(remove);
-    let mut footer = Flex::row().cross_axis_alignment(CrossAxisAlignment::Center);
+    // The rows wrap in a narrow window (W9b-d), as the window's bars do.
+    let filters = crate::bars::Flow::new(vec![language, engine]);
+    let actions = crate::bars::Flow::new(vec![use_voice, preview, favorite, remove]);
+    let mut last = Vec::new();
     if let Some(fetch) = fetch {
-        footer = footer.with_fixed(fetch);
+        last.push(fetch);
     }
-    let footer = footer.with_spacer(1.0).with_fixed(close);
+    last.push(close);
+    let footer = crate::bars::Flow::new(last);
     let card = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
         .with_fixed(NewWidget::new(
@@ -230,7 +220,7 @@ pub fn voice_dialog(
         .with_fixed_spacer(Length::px(12.0))
         .with_fixed(NewWidget::new(filters))
         .with_fixed_spacer(gap)
-        .with_fixed(list)
+        .with(list, 1.0)
         .with_fixed_spacer(gap)
         .with_fixed(NewWidget::new(actions))
         .with_fixed_spacer(gap)
@@ -244,7 +234,7 @@ pub fn voice_dialog(
     // app as they do from the list.
     let modal = NewWidget::new(
         Modal::new(card, title, p.clone())
-            .with_max_width(900.0)
+            .with_max_width(dialog::WIDTH_FORM)
             .with_app_chords(true),
     )
     .erased();

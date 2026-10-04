@@ -3215,6 +3215,8 @@ gui-settings-form = إعدادات { $section }
 gui-settings-saved-hint = تسري التغييرات وتُحفظ فورًا.
 gui-settings-close-help = إغلاق الإعدادات. كل تغيير محفوظ بالفعل.
 gui-settings-closed = أُغلقت الإعدادات.
+gui-settings-recent = المُغيَّرة مؤخرًا
+gui-settings-matching = المطابقة لـ { $filter }
 gui-settings-table = { $label } جدول. حرّره في settings.toml.
 gui-setting-new-value = قيمة جديدة لـ { $label }
 gui-setting-value-hint = اضغط Enter للقبول، أو Escape للرجوع.
@@ -3251,7 +3253,7 @@ gui-palette-count =
         [many] { $n } أمرًا.
        *[other] { $n } أمر.
     }
-gui-settings-form-help = ينتقل السهمان لأعلى ولأسفل بين الإعدادات. ويغيّر السهمان لليسار ولليمين إعدادًا. ويكتب Enter قيمة جديدة. ويعيد Delete القيمة الافتراضية. ويغيّر { $next } و{ $previous } القسم.
+gui-settings-form-help = ينتقل السهمان لأعلى ولأسفل بين الإعدادات. ويغيّر السهمان لليسار ولليمين إعدادًا. ويكتب Enter قيمة جديدة. ويعيد Delete القيمة الافتراضية. ويغيّر { $next } و{ $previous } القسم. اكتب للتصفية. ويقول F1 التعليمات.
 gui-settings-press-enter = اضغط Enter لكتابة قيمة جديدة لـ { $label }.
 gui-font-built-in = { $family } (مضمّن)
 ## Wave 5 (W5s): summaries and difficult-word definitions.
