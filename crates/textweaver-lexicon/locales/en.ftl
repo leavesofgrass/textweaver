@@ -4085,3 +4085,21 @@ about-quick-start-online = Quick start not found beside textweaver. Open { $addr
 about-docs-question = Documentation: { $address }. Open it in your browser? y or n
 about-report-question = Report a problem: { $address }. Nothing is sent. Open it in your browser? y or n
 about-first-run-again = First-run choices reset; asked at the next start.
+
+## W9b-x: the reading settings (View, Reading settings): the settings a
+## reader changes most, in one form, with the two spacing presets. $n is a
+## number of settings.
+name-reading-form = Reading settings
+action-reading-form = Open the reading settings: rate, font, spacing, line length, theme, highlight, ruler, bionic reading, and syllables
+reading-form-intro = Reading settings, { $n } settings. Left and Right change a value, Enter types one, Delete puts the default back, F1 says the help.
+reading-form-spacing-wcag-done = Spacing set to the WCAG values.
+reading-form-spacing-generous-done = Spacing set to Generous, wider than WCAG.
+gui-reading-form-help = Up and Down move, Left and Right change a value, Enter types one, F1 says the help.
+gui-reading-voices = Voices
+gui-reading-voices-help = Open the voice manager.
+gui-reading-wcag = WCAG spacing
+gui-reading-wcag-help = Set the four spacings to the WCAG values.
+gui-reading-generous = Generous spacing
+gui-reading-generous-help = Set the four spacings wider than WCAG.
+gui-reading-closed = Reading settings closed.
+## End of W9b-x

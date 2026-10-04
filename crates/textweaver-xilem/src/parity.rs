@@ -45,6 +45,7 @@ pub fn support(action: ActionId) -> Support {
         | A::Open
         | A::Settings
         | A::ColorSettings
+        | A::ReadingForm
         | A::CommandPalette => Support::Window,
         A::ScrollDown | A::ScrollUp => Support::TerminalOnly(
             "the terminal scrolls its screen by lines; the window scrolls with the wheel \
@@ -99,6 +100,7 @@ mod tests {
                             ActionId::Open
                                 | ActionId::Settings
                                 | ActionId::ColorSettings
+                                | ActionId::ReadingForm
                                 | ActionId::CommandPalette
                                 // The bars' commands: the window's own,
                                 // with no keys (so not window-only).

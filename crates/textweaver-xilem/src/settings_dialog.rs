@@ -192,6 +192,8 @@ enum FormKind {
     Settings,
     /// View, Colors: every color setting.
     Colors,
+    /// View, Reading settings: the reading settings.
+    Reading,
 }
 
 /// The dialog's sections, in the schema's order, and their settings.
@@ -254,6 +256,24 @@ impl SettingsForm {
     /// True for the Colors dialog's form.
     pub fn is_colors(&self) -> bool {
         self.kind == FormKind::Colors
+    }
+
+    /// The Reading settings dialog's form (W9b-d): the settings a reader
+    /// changes most, in one section ([`textweaver_app::READING_SETTINGS`]).
+    pub fn reading(schema: SettingsSchema) -> Self {
+        SettingsForm {
+            schema,
+            sections: vec!["Reading settings"],
+            kind: FormKind::Reading,
+            recent: Vec::new(),
+            filter: String::new(),
+            matching: Vec::new(),
+        }
+    }
+
+    /// True for the Reading settings dialog's form.
+    pub fn is_reading(&self) -> bool {
+        self.kind == FormKind::Reading
     }
 
     /// The filter typed in the form ("" for none).
@@ -326,6 +346,7 @@ impl SettingsForm {
         };
         match self.kind {
             FormKind::Colors => return self.by_paths(&textweaver_app::COLOR_SETTINGS),
+            FormKind::Reading => return self.by_paths(&textweaver_app::READING_SETTINGS),
             FormKind::Settings => {}
         }
         match *title {
@@ -369,6 +390,7 @@ impl SettingsForm {
     pub fn section_title(&self, i: usize, c: &Catalog) -> String {
         match self.kind {
             FormKind::Colors => return c.tr("section-colors"),
+            FormKind::Reading => return c.tr("name-reading-form"),
             FormKind::Settings => {}
         }
         match self.sections.get(i) {

@@ -254,6 +254,8 @@ struct SettingsOpen {
     close: WidgetId,
     /// The Colors dialog's Reset all colors button.
     reset: Option<WidgetId>,
+    /// The Reading settings dialog's own buttons.
+    reading: Vec<(WidgetId, ReadingButton)>,
 }
 
 /// An open dialog.
@@ -966,6 +968,17 @@ pub struct SettingsDialog {
     /// The Colors dialog's Reset all colors button (`None` in the settings
     /// dialog).
     pub reset: Option<WidgetId>,
+    /// The Reading settings dialog's own buttons (none in the others).
+    pub reading: Vec<(WidgetId, ReadingButton)>,
+}
+
+/// A button of the Reading settings dialog (W9b-d).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ReadingButton {
+    /// Open the voice manager (the Voices command).
+    Voices,
+    /// Set the four spacings to a preset.
+    Spacing(textweaver_app::SpacingPreset),
 }
 
 /// The settings dialog: the sections on the left, the chosen section's
@@ -981,6 +994,9 @@ pub fn settings_dialog(
     let c = app.catalog();
     if form.is_colors() {
         return colors_dialog(p, form, app, row);
+    }
+    if form.is_reading() {
+        return reading_dialog(p, form, app, row);
     }
     let settings_title = c.tr("settings-title");
     let sections = NewWidget::new(
@@ -1041,6 +1057,7 @@ pub fn settings_dialog(
         form: form_id,
         close: close_id,
         reset: None,
+        reading: Vec::new(),
     }
 }
 
@@ -1083,6 +1100,70 @@ fn colors_dialog(p: &Palette, form: &SettingsForm, app: &App, row: usize) -> Set
         form: form_id,
         close: close_id,
         reset: Some(reset_id),
+        reading: Vec::new(),
+    }
+}
+
+/// View, Reading settings (W9b-d): the settings a reader changes most in
+/// one form (rate, font, spacing, line length, theme, highlight, ruler,
+/// bionic reading, syllables), then Voices (the voice manager, beside the
+/// rate's meaning), the WCAG and Generous spacing presets, and Close
+/// (Escape). The rows are the Settings form's rows.
+fn reading_dialog(p: &Palette, form: &SettingsForm, app: &App, row: usize) -> SettingsDialog {
+    let c = app.catalog();
+    let title = form.section_title(0, &c);
+    let grid = NewWidget::new(
+        SettingsGrid::new(title.clone(), form.rows(0, app), p.clone())
+            .with_help_text(c.tr("gui-reading-form-help"))
+            .with_selected(row),
+    )
+    .with_tag(FORM);
+    let form_id = grid.id();
+    let mut reading = Vec::new();
+    let mut make = |name: &str, help: &str, which: ReadingButton| {
+        let b = NewWidget::new(ActionButton::new(c.tr(name)).with_description(c.tr(help)));
+        reading.push((b.id(), which));
+        b
+    };
+    let voices = make(
+        "gui-reading-voices",
+        "gui-reading-voices-help",
+        ReadingButton::Voices,
+    );
+    let wcag = make(
+        "gui-reading-wcag",
+        "gui-reading-wcag-help",
+        ReadingButton::Spacing(textweaver_app::SpacingPreset::Wcag),
+    );
+    let generous = make(
+        "gui-reading-generous",
+        "gui-reading-generous-help",
+        ReadingButton::Spacing(textweaver_app::SpacingPreset::Generous),
+    );
+    // The row wraps in a narrow window, as the window's bars do.
+    let buttons = crate::bars::Flow::new(vec![voices, wcag, generous]);
+    let close = close_button(&c, Some(c.tr("gui-settings-close-help")));
+    let close_id = close.id();
+    let footer = dialog_footer(&c.tr("gui-settings-saved-hint"), vec![close]);
+    let card = Flex::column()
+        .cross_axis_alignment(CrossAxisAlignment::Stretch)
+        .with_fixed(dialog_title(&title))
+        .with_fixed_spacer(Length::px(14.0))
+        .with(grid, 1.0)
+        .with_fixed_spacer(Length::px(10.0))
+        .with_fixed(NewWidget::new(buttons))
+        .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
+        .with_fixed(footer);
+    let card = NewWidget::new(card).with_props(dialog::card_props(p));
+    let modal =
+        NewWidget::new(Modal::new(card, title, p.clone()).with_max_width(dialog::WIDTH_FORM))
+            .erased();
+    SettingsDialog {
+        modal,
+        form: form_id,
+        close: close_id,
+        reset: None,
+        reading,
     }
 }
 
@@ -1848,7 +1929,9 @@ impl Gui {
     /// the menus are native, the menu key.
     fn is_window_command(&self, a: ActionId) -> bool {
         match a {
-            ActionId::Settings | ActionId::ColorSettings => !self.settings_list,
+            ActionId::Settings | ActionId::ColorSettings | ActionId::ReadingForm => {
+                !self.settings_list
+            }
             ActionId::TextLarger
             | ActionId::TextSmaller
             | ActionId::TextSizeReset
@@ -1982,6 +2065,7 @@ impl Gui {
         match a {
             ActionId::Settings => self.open_settings(ctx, None),
             ActionId::ColorSettings => self.open_colors(ctx),
+            ActionId::ReadingForm => self.open_reading(ctx),
             ActionId::TextLarger => self.text_size(ctx, Step::Larger),
             ActionId::TextSmaller => self.text_size(ctx, Step::Smaller),
             ActionId::TextSizeReset => self.text_size(ctx, Step::Reset),
@@ -2497,6 +2581,49 @@ impl Gui {
         self.show_settings(ctx, form, None);
     }
 
+    /// View, Reading settings (W9b-d): the reading settings in one form,
+    /// starting on the rate.
+    fn open_reading(&mut self, ctx: &mut DriverCtx<'_>) {
+        let form = SettingsForm::reading(self.app.settings_schema());
+        self.show_settings(ctx, form, None);
+    }
+
+    /// A button of the Reading settings dialog: Voices closes it and opens
+    /// the voice manager; a spacing preset sets the four spacings, shows
+    /// them in the form, and says so once.
+    fn reading_button(&mut self, ctx: &mut DriverCtx<'_>, b: ReadingButton) {
+        if self.log {
+            crate::log::line(&format!("reading button {b:?}"));
+        }
+        match b {
+            ReadingButton::Voices => {
+                self.close_dialog(ctx);
+                self.dispatch(ctx, Command::Action(ActionId::ChooseVoice));
+            }
+            ReadingButton::Spacing(preset) => {
+                self.menu_dirty = true;
+                match self.app.apply_spacing_preset(preset) {
+                    Ok(said) => {
+                        self.refresh(ctx);
+                        if let Some(OpenDialog::Settings(open)) = &self.dialog {
+                            let rows = open.form.rows(open.section, &self.app);
+                            ctx.render_root(self.window_id)
+                                .edit_widget_with_tag(FORM, |mut g| {
+                                    SettingsGrid::update_rows(&mut g, rows);
+                                });
+                        }
+                        self.app
+                            .announce_as(&said, Priority::Polite, Importance::Result);
+                    }
+                    Err(why) => self
+                        .app
+                        .announce_as(&why, Priority::Assertive, Importance::Error),
+                }
+                self.refresh(ctx);
+            }
+        }
+    }
+
     /// Shows the settings dialog (or the Colors dialog) for `form`, on
     /// section and row `at`, or on the first section's first plain row.
     fn show_settings(
@@ -2514,6 +2641,8 @@ impl Gui {
                 "dialog: {}, {} sections, section {section}, row {row}",
                 if form.is_colors() {
                     "colors"
+                } else if form.is_reading() {
+                    "reading"
                 } else {
                     "settings"
                 },
@@ -2525,6 +2654,7 @@ impl Gui {
             section,
             close: d.close,
             reset: d.reset,
+            reading: d.reading,
         }));
     }
 
@@ -2652,7 +2782,7 @@ impl Gui {
         let Some(OpenDialog::Settings(open)) = &mut self.dialog else {
             return;
         };
-        if open.form.is_colors() {
+        if open.form.is_colors() || open.form.is_reading() {
             return;
         }
         open.form.set_filter(query, &c);
@@ -2779,14 +2909,13 @@ impl Gui {
                 root.focus_on(form);
             }
             DialogAction::Cancel => {
-                let colors =
-                    matches!(&self.dialog, Some(OpenDialog::Settings(o)) if o.form.is_colors());
+                let closed = match &self.dialog {
+                    Some(OpenDialog::Settings(o)) if o.form.is_colors() => "gui-colors-closed",
+                    Some(OpenDialog::Settings(o)) if o.form.is_reading() => "gui-reading-closed",
+                    _ => "settings-closed",
+                };
                 self.close_dialog(ctx);
-                let said = self.app.catalog().tr(if colors {
-                    "gui-colors-closed"
-                } else {
-                    "settings-closed"
-                });
+                let said = self.app.catalog().tr(closed);
                 self.app
                     .announce_as(&said, Priority::Polite, Importance::Dialog);
                 self.refresh(ctx);
@@ -2827,7 +2956,20 @@ impl Gui {
     fn open_voices(&mut self, ctx: &mut DriverCtx<'_>, title: &str, items: Vec<String>) {
         let count = items.len();
         let selected = self.app.list_model().map_or(0, |m| m.selected);
-        let d = crate::voices::voice_dialog(&self.palette, &self.app, title, items, selected);
+        // Compact in a short window (down to 420 by 320).
+        let short = {
+            let window = ctx.window(self.window_id).handle();
+            f64::from(window.inner_size().height) / window.scale_factor()
+                < crate::voices::SHORT_HEIGHT
+        };
+        let d = crate::voices::voice_dialog_fit(
+            &self.palette,
+            &self.app,
+            title,
+            items,
+            selected,
+            short,
+        );
         self.show_dialog(ctx, d.modal, d.list);
         self.dialog = Some(OpenDialog::Voices {
             title: title.to_owned(),
@@ -3706,6 +3848,14 @@ impl AppDriver for Gui {
                 && open.reset == Some(widget_id)
             {
                 self.reset_all_colors(ctx);
+            } else if let Some(OpenDialog::Settings(open)) = &self.dialog
+                && let Some(b) = open
+                    .reading
+                    .iter()
+                    .find(|(id, _)| *id == widget_id)
+                    .map(|(_, b)| *b)
+            {
+                self.reading_button(ctx, b);
             } else if let Some(OpenDialog::Voices { buttons, .. }) = &self.dialog
                 && let Some(b) = crate::voices::button_for(buttons, widget_id)
             {

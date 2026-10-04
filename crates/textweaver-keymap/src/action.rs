@@ -667,6 +667,9 @@ actions! {
     ColorSettings = "color_settings", View,
         "Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast",
         gui [], term [], shared [];
+    ReadingForm = "reading_form", View,
+        "Open the reading settings: rate, font, spacing, line length, theme, highlight, ruler, bionic reading, and syllables",
+        gui [], term [], shared [];
     CycleInterfaceAnnouncements = "cycle_interface_announcements", View,
         "Cycle how much textweaver announces about itself: off, minimal, normal, or full; errors and answers are always said",
         gui ["g:Ctrl+F9"], term ["g:Ctrl+F9"], shared [];

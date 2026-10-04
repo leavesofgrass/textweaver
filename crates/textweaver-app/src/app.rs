@@ -2153,6 +2153,7 @@ impl App {
                 return self.run_registered(a);
             }
             A::ColorSettings => return self.open_color_settings(),
+            A::ReadingForm => return self.open_reading_form(),
             A::SyncSetup
             | A::SyncStatus
             | A::SyncNow

@@ -4336,3 +4336,19 @@ about-quick-start-online = لم يوجد البدء السريع بجانب text
 about-docs-question = التوثيق: { $address }. فتحه في المتصفح؟ y أو n
 about-report-question = الإبلاغ عن مشكلة: { $address }. لا يُرسل شيء. فتحه في المتصفح؟ y أو n
 about-first-run-again = أُعيد ضبط خيارات التشغيل الأول؛ تُسأل عند التشغيل التالي.
+
+## W9b-x: إعدادات القراءة (عرض، إعدادات القراءة).
+name-reading-form = إعدادات القراءة
+action-reading-form = فتح إعدادات القراءة: السرعة والخط والتباعد وطول السطر والسمة والتمييز والمسطرة والقراءة البيونية والمقاطع
+reading-form-intro = إعدادات القراءة، { $n } إعدادات. يغيّر اليسار واليمين قيمة، ويكتب Enter قيمة، ويعيد Delete القيمة الافتراضية، ويقول F1 المساعدة.
+reading-form-spacing-wcag-done = ضُبط التباعد على قيم WCAG.
+reading-form-spacing-generous-done = ضُبط التباعد على الواسع، أوسع من WCAG.
+gui-reading-form-help = يتنقل الأعلى والأسفل، ويغيّر اليسار واليمين قيمة، ويكتب Enter قيمة، ويقول F1 المساعدة.
+gui-reading-voices = الأصوات
+gui-reading-voices-help = فتح مدير الأصوات.
+gui-reading-wcag = تباعد WCAG
+gui-reading-wcag-help = ضبط التباعدات الأربعة على قيم WCAG.
+gui-reading-generous = تباعد واسع
+gui-reading-generous-help = ضبط التباعدات الأربعة أوسع من WCAG.
+gui-reading-closed = أُغلقت إعدادات القراءة.
+## End of W9b-x
