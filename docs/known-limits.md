@@ -33,7 +33,6 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 ## Output
 
-- **Video with captions** (karaoke-style) is not offered.
 - **A cover image for audiobooks** is not added.
 
 ## Study tools

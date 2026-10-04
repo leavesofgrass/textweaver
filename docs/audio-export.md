@@ -1,6 +1,6 @@
 # Exporting audio and subtitles
 
-Export audio, in the reader's File menu, and `tw export-audio`, from a terminal, read a document aloud into an audio file, so you can listen to it later on a phone, a music player, or a book player. It can write a WAV file, a FLAC file, an MP3 file, an Opus file, an Ogg Vorbis file, or an M4B audiobook, each with one chapter for each heading. It can also write subtitles: a caption file that shows each sentence, or each word, at the moment it is spoken. This is for anyone who wants to take a reading with them, for example a student who wants an audiobook of this week's chapters, or a teacher who wants captions that follow the spoken text.
+Export audio, in the reader's File menu, and `tw export-audio`, from a terminal, read a document aloud into an audio file, so you can listen to it later on a phone, a music player, or a book player. It can write a WAV file, a FLAC file, an MP3 file, an Opus file, an Ogg Vorbis file, or an M4B audiobook, each with one chapter for each heading, and an MP4 video that shows the text with the spoken word marked. It can also write subtitles: a caption file that shows each sentence, or each word, at the moment it is spoken. This is for anyone who wants to take a reading with them, for example a student who wants an audiobook of this week's chapters, or a teacher who wants captions that follow the spoken text.
 
 This guide is written to be read with a screen reader. Each task section starts with the command, then explains it. [Export audio from the reader](#export-audio-from-the-reader) comes first; the rest of the guide is about `tw export-audio`, whose settings the reader shares.
 
@@ -8,7 +8,7 @@ This guide is written to be read with a screen reader. Each task section starts 
 
 In the reader, open the File menu (F10 in the terminal) and choose Export audio, or find "Export audio" in the command palette. A document must be open. Export audio is in the terminal reader, the GUI, and `tw` in every release; only a lean build of the reader, made with `--no-default-features`, leaves it out ([Building](dev/building.md)).
 
-1. **The format.** You hear, for example, "Export essay as audio: choose a format, 6 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then Ogg Vorbis: small and open, and most players open it. Then WAV. M4B is listed only when ffmpeg is installed; when it is not, you hear "M4B needs ffmpeg, which was not found." Last comes "Read-along page: text and audio, one file", which writes `essay.html` (see [Make a read-along page](#make-a-read-along-page)). Press Enter on a format.
+1. **The format.** You hear, for example, "Export essay as audio: choose a format, 6 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then Ogg Vorbis: small and open, and most players open it. Then WAV. M4B and "Video with captions: MP4, needs ffmpeg" are listed only when ffmpeg is installed; when it is not, you hear "M4B, MP4 need ffmpeg, which was not found." (see [Make a video with captions](#make-a-video-with-captions)). Last comes "Read-along page: text and audio, one file", which writes `essay.html` (see [Make a read-along page](#make-a-read-along-page)). Press Enter on a format.
 2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
 3. **The question.** "Export essay.flac with Microsoft David at 200 words per minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
 
@@ -22,7 +22,7 @@ Which engine it uses: your reading engine, when it can write audio files; otherw
 
 ## Before you start
 
-You need two things: a voice that can write audio files, and, for M4B audiobooks only, the free program ffmpeg. WAV, FLAC, MP3, Opus, and Ogg Vorbis need nothing else.
+You need two things: a voice that can write audio files, and, for M4B audiobooks and MP4 videos only, the free program ffmpeg. WAV, FLAC, MP3, Opus, and Ogg Vorbis need nothing else.
 
 ### Check that you have a voice that can write files
 
@@ -50,7 +50,7 @@ WAV, FLAC, MP3, Opus, and Ogg Vorbis files are written by textweaver itself. You
 
 ### M4B needs ffmpeg
 
-To write `.m4b`, textweaver first writes a WAV and then asks ffmpeg to convert it. textweaver never downloads or bundles ffmpeg, so you install it yourself once.
+To write `.m4b` or `.mp4`, textweaver first writes a WAV and then asks ffmpeg to convert it. textweaver never downloads or bundles ffmpeg, so you install it yourself once.
 
 textweaver looks for ffmpeg in two places, in this order:
 
@@ -214,6 +214,23 @@ The text stays text, so a screen reader, a Braille display, zoom, reflow, and yo
 - **Without scripts.** The text and the audio control still work; only the buttons and the marks are missing.
 
 The page is about a third larger than the MP3 would be on its own. The subtitle and chapters settings work as for audio files.
+
+## Make a video with captions
+
+```
+tw export-audio essay.md --out essay.mp4
+```
+
+An `.mp4` file name writes a karaoke video: the document read aloud, with the sentence being read on screen and the word being read in bold and underlined. Students asked for it, to play a reading on a class screen, post it to a course site, or watch it on a phone. In the reader, choose "Video with captions: MP4, needs ffmpeg" in Export audio. It needs ffmpeg, like M4B (see [M4B needs ffmpeg](#m4b-needs-ffmpeg)): without ffmpeg the format is not listed, and you hear "M4B, MP4 need ffmpeg, which was not found."
+
+- **What you see.** A 1280 by 720 picture in your reading theme's page and text colors (`[display] theme`), in the bundled Atkinson Hyperlegible Next font. The whole sentence is shown, wrapped to fit; a very long sentence shows the lines around the word being read. The spoken word is bold and underlined, so the mark is a shape, never a color.
+- **The captions.** The video carries the WebVTT captions as a soft subtitle track, which players can turn on and off and screen readers in some players can read. They are the same caption lines as `--subtitles essay.vtt`.
+- **The chapters.** One chapter for each heading, as in an M4B, so players with a chapter list can jump.
+- **The sound.** AAC at 96 kilobits per second.
+- **The picture.** H.264, with ffmpeg's libx264 encoder when it has one, otherwise the system's own H.264 encoder that ffmpeg offers (Media Foundation on Windows, VideoToolbox on macOS), otherwise OpenH264, and as a last resort MPEG-4. The picture changes only when the spoken word changes, ten times a second at most, so the file stays small: a little more than the M4B would be.
+- **How long it takes.** textweaver reads the whole document first, as for any audio file, then draws the frames and has ffmpeg encode them. The encode takes a few minutes for an hour of speech, with no progress messages of its own. A stop during the encode is honored: ffmpeg is stopped and no file is left behind.
+
+`--subtitles` and `--chapters` still write their own files beside the video.
 
 ## Add subtitles
 
