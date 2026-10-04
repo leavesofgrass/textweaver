@@ -332,6 +332,16 @@ impl App {
             .unwrap_or_default()
     }
 
+    /// Edit mode on Markdown: where the lint problems are, for the
+    /// window's double underline (Ctrl+F8 finds and says them). Empty
+    /// otherwise.
+    pub fn lint_ranges(&self) -> Vec<CharRange> {
+        if self.edit.is_none() || !self.authoring.structure.markdown {
+            return Vec::new();
+        }
+        self.lint_problems().into_iter().map(|p| p.range).collect()
+    }
+
     /// Ctrl+F8 and Ctrl+Shift+F8: the next or previous lint problem, in
     /// edit mode on Markdown; selects it and says it.
     pub(crate) fn lint_step(&mut self, dir: Direction) {

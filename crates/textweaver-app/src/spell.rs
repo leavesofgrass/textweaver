@@ -283,6 +283,12 @@ impl App {
         self.misspellings().into_iter().map(|w| w.range).collect()
     }
 
+    /// Where the lint problems are: none in a build without Markdown lint.
+    #[cfg(not(feature = "lint"))]
+    pub fn lint_ranges(&self) -> Vec<CharRange> {
+        Vec::new()
+    }
+
     /// Alt+M and Alt+Shift+M: the next or previous misspelled word.
     pub(crate) fn misspelling_step(&mut self, dir: Direction) {
         if ScowlList::builtin().is_none() {
