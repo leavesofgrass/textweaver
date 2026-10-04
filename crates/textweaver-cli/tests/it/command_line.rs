@@ -136,7 +136,20 @@ fn the_option_rules_hold_for_every_command() {
     let mut problems = Vec::new();
     for (name, text) in &all {
         for line in option_lines(text) {
-            for old in ["--output", "--format", "--export ", "--language"] {
+            for old in [
+                "--output",
+                "--format",
+                "--export ",
+                "--language",
+                // Verbs are subcommands: `tw library add`, `tw stats
+                // clear`, `tw dictate list`.
+                "--add ",
+                "--remove ",
+                "--search ",
+                "--continue",
+                "--clear",
+                "--list",
+            ] {
                 if line.contains(old) {
                     problems.push(format!("{name}: shows {old}: {line}"));
                 }
@@ -172,6 +185,41 @@ fn old_spellings_still_work_as_hidden_aliases() {
     assert_eq!(new.stdout, old.stdout);
     let flag = tw_in(home.path(), &["text", doc, "--json"], "");
     assert_eq!(new.stdout, flag.stdout);
+}
+
+#[test]
+fn verbs_are_subcommands_and_the_old_flags_still_work() {
+    let home = tempfile::tempdir().unwrap();
+    let folder = home.path().join("books");
+    std::fs::create_dir(&folder).unwrap();
+    std::fs::write(
+        folder.join("a.md"),
+        "# Title
+
+Some text.
+",
+    )
+    .unwrap();
+    let folder = folder.to_str().unwrap();
+    let new = tw_in(home.path(), &["library", "add", folder, "--json"], "");
+    assert!(new.status.success(), "{new:?}");
+    let old = tw_in(home.path(), &["library", "--remove", folder, "--json"], "");
+    assert!(old.status.success(), "{old:?}");
+    let again = tw_in(home.path(), &["library", "--add", folder, "--json"], "");
+    assert_eq!(new.stdout, again.stdout);
+    let listed = tw_in(home.path(), &["library", "list"], "");
+    let plain = tw_in(home.path(), &["library"], "");
+    assert_eq!(listed.stdout, plain.stdout);
+    let found = tw_in(home.path(), &["library", "search", "Title"], "");
+    assert!(found.status.success(), "{found:?}");
+    let new = tw_in(home.path(), &["stats", "clear", "--yes"], "");
+    let old = tw_in(home.path(), &["stats", "--clear", "--yes"], "");
+    assert!(new.status.success(), "{new:?}");
+    assert_eq!(new.stdout, old.stdout);
+    let new = tw_in(home.path(), &["dictate", "list", "--json"], "");
+    let old = tw_in(home.path(), &["dictate", "--list", "--json"], "");
+    assert!(new.status.success(), "{new:?}");
+    assert_eq!(new.stdout, old.stdout);
 }
 
 #[test]

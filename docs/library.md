@@ -17,7 +17,7 @@ The list has every document in your library folders, then the files you opened r
 
 For example: "Cells, 25 percent, in Readings".
 
-Use **Up** and **Down** to move, **Enter** to open, **F2** to edit a document's details (below), and **Escape** to close. With nothing to show you hear: "The library is empty. Add a folder with tw library --add, or open a file with Ctrl+O."
+Use **Up** and **Down** to move, **Enter** to open, **F2** to edit a document's details (below), and **Escape** to close. With nothing to show you hear: "The library is empty. Add a folder in Settings, under Library folders, or open a file with Ctrl+O."
 
 ### Filter the list as you type
 
@@ -25,22 +25,22 @@ Type in the list to filter it. Each word you type must be in a document's title,
 
 A DOI or an ISBN matches however it is written: `10.1000/xyz`, `doi:10.1000/XYZ`, a `https://doi.org/` link, `978-0-306-40615-7`, or the same book's ten-digit ISBN.
 
-The text of a document counts once `tw library --search` has read it (below); the list uses what that search keeps in the cache, and never reads documents itself.
+The text of a document counts once `tw library search` has read it (below); the list uses what that search keeps in the cache, and never reads documents itself.
 
 ## Search by author, DOI, and ISBN
 
 textweaver learns a document's author, DOI, and ISBN in three ways:
 
 - **When you open it.** The author comes from the document's own details: Markdown front matter (`author`, `doi`, `isbn`), a Word or EPUB file's author, or a web page's `<meta>` tags (`citation_doi`, `dc.identifier`). A DOI or an ISBN printed near the start of the text counts too, such as a paper's DOI on its first page or a book's ISBN on its copyright page. An ISBN counts only after the word "ISBN". These go on the bookshelf, below.
-- **From its text,** once `tw library --search` has read it, for documents you have not opened yet.
+- **From its text,** once `tw library search` has read it, for documents you have not opened yet.
 - **From your reference library.** When `tw cite` has a record of the same work (the same DOI or ISBN, or the same title when it is at least twelve letters long), its authors, DOI, and ISBN fill in what the document lacks. Both your personal `references.json` and each library folder's `references.json` count.
-- **From your other computers,** with [sync](sync.md) on. When another computer opened a document, its title, author, DOI, and ISBN travel with it, so the filter and `tw library --search` find it here by a DOI only that computer knew, even if you never opened it here. textweaver finds the document here when you opened it here before, when it is in a library folder that is itself synced between the computers (its `.textweaver/library-id.json` travels with it), or when `tw library --search` has read its text. When two computers know different details, the newest wins, detail by detail.
+- **From your other computers,** with [sync](sync.md) on. When another computer opened a document, its title, author, DOI, and ISBN travel with it, so the filter and `tw library search` find it here by a DOI only that computer knew, even if you never opened it here. textweaver finds the document here when you opened it here before, when it is in a library folder that is itself synced between the computers (its `.textweaver/library-id.json` travels with it), or when `tw library search` has read its text. When two computers know different details, the newest wins, detail by detail.
 
 Word and EPUB files keep their DOI or ISBN in an identifier field that textweaver does not read yet; a DOI or ISBN printed in the text is found.
 
 ## Edit a document's details
 
-When a document's details are wrong or missing, such as a scan named "scan0042" with no author, you can type them yourself: its title, author, DOI, and ISBN. What you type wins over what the document says about itself, in the library list, its filter, and `tw library --search`, and it stays when the document is opened again.
+When a document's details are wrong or missing, such as a scan named "scan0042" with no author, you can type them yourself: its title, author, DOI, and ISBN. What you type wins over what the document says about itself, in the library list, its filter, and `tw library search`, and it stays when the document is opened again.
 
 ### In the reader
 
@@ -79,18 +79,18 @@ With [sync](sync.md) on, what you type travels to your other computers with the 
 
 A library folder is an ordinary folder of documents. textweaver lists every document it can open in the folder and in all its subfolders. It skips hidden folders, its own `.textweaver` folders, Star's `.star` folders, `.obsidian`, `.git`, `node_modules`, and the recycle bin. It reads at most 20,000 files per folder. Files are never changed.
 
-### Add a folder: tw library --add
+### Add a folder: tw library add
 
 ```bash
-tw library --add C:\Users\me\Readings
+tw library add C:\Users\me\Readings
 ```
 
 You hear, for example, "Added folder Readings with 12 documents". Adding the same folder again says it is "already in the library". A path that is not a folder is refused.
 
-### Remove a folder: tw library --remove
+### Remove a folder: tw library remove
 
 ```bash
-tw library --remove C:\Users\me\Readings
+tw library remove C:\Users\me\Readings
 ```
 
 It says "Removed", the folder, then "from the library; its files are unchanged".
@@ -129,8 +129,8 @@ Only documents found on this computer are listed: one you read only on another c
 From the command line:
 
 ```bash
-tw library --continue
-tw library --continue --json
+tw library continue
+tw library continue --json
 ```
 
 `--continue` prints the same rows, each with its path on the next line. With `--json`, each document has its `path`, `title`, `pct`, the `device` name, `this_computer`, and `when_ms` (when the place was saved, in milliseconds since 1970, UTC).
@@ -143,15 +143,15 @@ Every document you open goes to the front of the recent list, `recent.json` in t
 
 Every document you open is also recorded on the bookshelf, `library.json` in the data folder. Each entry holds the document's full path, its title, the kind of file, when you first opened it, when you last opened it, its author, DOI, and ISBN when known, and the details you typed yourself (under `edited`). The bookshelf keeps up to 500 documents; past that, the ones opened longest ago are dropped. `tw migrate-star` fills it from Star's library.
 
-## Search every document: tw library --search
+## Search every document: tw library search
 
 ```bash
-tw library --search mitochondria
+tw library search mitochondria
 ```
 
 `--search` looks in two places:
 
-- titles, paths, authors, DOIs, and ISBNs: the number of documents "matching" your words "by title, author, DOI, or ISBN", then each one. For example, `tw library --search 10.1000/xyz` finds the paper with that DOI;
+- titles, paths, authors, DOIs, and ISBNs: the number of documents "matching" your words "by title, author, DOI, or ISBN", then each one. For example, `tw library search 10.1000/xyz` finds the paper with that DOI;
 - the text of every document in the library folders and every recent file that still exists: "Text matches in", the number of documents, then each document with its number of matches and a short passage. The documents with the most matches come first. At most 50 are listed.
 
 The first search reads every document, which takes a while for a large library. textweaver keeps what it read in `fulltext.json` in the cache folder, and later searches read only the documents that changed. If a document cannot be read, the search says how many were skipped.
@@ -161,7 +161,7 @@ The first search reads every document, which takes a while for a large library. 
 Every `tw library` form prints JSON instead with `--json`:
 
 ```bash
-tw library --search mitochondria --json
+tw library search mitochondria --json
 ```
 
 You can combine options: `--add` and `--search` in one command adds the folder, then searches.

@@ -34,7 +34,7 @@ use textweaver_dictation::{
 #[derive(clap::Args, Debug)]
 #[command(args_conflicts_with_subcommands = true)]
 pub struct Args {
-    /// `download`: get the dictation model.
+    /// `list` the Whisper programs, or `download` the dictation model.
     #[command(subcommand)]
     pub action: Option<Action>,
     /// When the in-process model is missing, download it without asking.
@@ -89,8 +89,8 @@ pub struct Args {
     /// Write the transcript to this file instead of printing it.
     #[arg(long = "out", short = 'o', alias = "output")]
     pub out: Option<PathBuf>,
-    /// List the Whisper programs found and exit.
-    #[arg(long)]
+    /// The old spelling of `tw dictate list`, kept hidden through beta 1.
+    #[arg(long, hide = true)]
     pub list: bool,
     /// Print JSON.
     #[arg(long)]
@@ -183,6 +183,12 @@ fn write_captions(args: &Args, transcript: &Transcript, quiet: bool) -> anyhow::
 /// What `tw dictate` does besides dictating.
 #[derive(clap::Subcommand, Debug)]
 pub enum Action {
+    /// List the Whisper programs found.
+    List {
+        /// Print JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// Download the Whisper model for dictation, after saying its size and license.
     Download {
         /// The model: base.en (the default, or the one chosen in the settings) or small.en.
@@ -501,6 +507,9 @@ fn run_rten(args: &Args, dir: PathBuf) -> anyhow::Result<()> {
 pub fn run(args: Args) -> anyhow::Result<()> {
     if let Some(Action::Download { model, yes }) = &args.action {
         return download_model(model.as_deref(), *yes, args.home.as_deref());
+    }
+    if let Some(Action::List { json }) = &args.action {
+        return list(*json || args.json);
     }
     if args.list {
         return list(args.json);

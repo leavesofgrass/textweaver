@@ -7,6 +7,7 @@
 | Rule | What it means |
 |---|---|
 | Inputs | The file, folder or text a command works on comes first, without a flag: `tw text essay.md`. |
+| Actions | An action is a word after the command, not an option: `tw library add FOLDER`, `tw stats clear`, `tw dictate list`. |
 | Output | `--out PATH` writes to a file or folder; `-o` is its short form. |
 | Format | `--to FORMAT` names what is written: `tw convert --to pdf`, `tw text --to markdown`, `tw cite export --to ris`, `tw marks essay.md --to bibtex`. |
 | JSON | `--json` prints the facts as JSON on every command that prints facts. JSON keys are English and never translated. |
@@ -16,6 +17,19 @@
 | Exit status | 0 done; 1 failed or nothing found; 2 the command was typed wrong. |
 | Errors | One line on standard error: "Error: what failed: why. What to do." |
 | Results | Results go to standard output; progress and questions go to standard error. |
+
+## Actions
+
+A command that does more than one thing takes the action as a word after its name, and each action has its own `--help`:
+
+```bash
+tw library add Readings
+tw library search mitochondria
+tw stats clear
+tw dictate list --json
+```
+
+`tw library` alone still lists the library, and `tw stats` alone still prints the statistics. The older option spellings still work for now, and will be removed after beta 1: `tw library --add`, `--remove`, `--search` and `--continue`, `tw stats --clear`, and `tw dictate --list`.
 
 ## Output and format
 
@@ -38,7 +52,7 @@ textweaver keeps your settings, places, notes and libraries in its data folders.
 
 ## Questions
 
-A command that removes or downloads something asks first: `tw cite remove`, `tw stats --clear`, `tw settings reset`, `tw settings profile delete`, `tw components download` and `remove`, `tw ocr download` and `tw dictate download`. The question goes to standard error and ends with "y or n"; type `y` or `yes`, in any case, and press Enter. Anything else keeps things as they are.
+A command that removes or downloads something asks first: `tw cite remove`, `tw stats clear`, `tw settings reset`, `tw settings profile delete`, `tw components download` and `remove`, `tw ocr download` and `tw dictate download`. The question goes to standard error and ends with "y or n"; type `y` or `yes`, in any case, and press Enter. Anything else keeps things as they are.
 
 A question needs a terminal. When standard input is a pipe or a file, as in a script, `tw` never waits for an answer: it stops with exit status 1 and says "Add --yes to go ahead without a question." Add `-y` or `--yes` when you mean it.
 

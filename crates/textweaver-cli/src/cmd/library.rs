@@ -37,19 +37,21 @@ use textweaver_cite::Reference;
 /// Arguments for `tw library`.
 #[derive(clap::Args, Debug)]
 pub struct Args {
-    /// Search the library: titles, paths, authors, DOIs, ISBNs, and
-    /// document text.
-    #[arg(long)]
+    /// The old spelling of `tw library search TEXT`, kept hidden through
+    /// beta 1.
+    #[arg(long, hide = true)]
     pub search: Option<String>,
-    /// Add a folder to the library.
-    #[arg(long)]
+    /// The old spelling of `tw library add FOLDER`, kept hidden through
+    /// beta 1.
+    #[arg(long, hide = true)]
     pub add: Option<PathBuf>,
-    /// Remove a folder from the library (its files are not touched).
-    #[arg(long)]
+    /// The old spelling of `tw library remove FOLDER`, kept hidden through
+    /// beta 1.
+    #[arg(long, hide = true)]
     pub remove: Option<PathBuf>,
-    /// Continue reading: the documents on this computer with a place saved
-    /// here or on another computer (with sync on), newest first.
-    #[arg(long = "continue")]
+    /// The old spelling of `tw library continue`, kept hidden through
+    /// beta 1.
+    #[arg(long = "continue", hide = true)]
     pub continue_reading: bool,
     /// Print JSON.
     #[arg(long, global = true)]
@@ -65,6 +67,28 @@ pub struct Args {
 /// `tw library` commands.
 #[derive(clap::Subcommand, Debug)]
 pub enum LibraryCommand {
+    /// List the library's folders and documents (what `tw library` alone
+    /// prints).
+    List,
+    /// Add a folder to the library.
+    Add {
+        /// The folder.
+        folder: PathBuf,
+    },
+    /// Remove a folder from the library (its files are not touched).
+    Remove {
+        /// The folder.
+        folder: PathBuf,
+    },
+    /// Search the library: titles, paths, authors, DOIs, ISBNs, and
+    /// document text.
+    Search {
+        /// The text to find.
+        text: String,
+    },
+    /// Continue reading: the documents on this computer with a place saved
+    /// here or on another computer (with sync on), newest first.
+    Continue,
     /// Edit a document's details by hand: its title, author, DOI, and ISBN.
     /// An empty value clears your edit, so the document's own shows again.
     Edit(EditArgs),
@@ -377,7 +401,7 @@ fn render_continue(items: &[ContinueItem], c: &Catalog) -> String {
 fn render_listing(l: &Listing) -> String {
     let mut out = String::new();
     if l.folders.is_empty() {
-        out.push_str("No library folders. Add one with tw library --add FOLDER.\n");
+        out.push_str("No library folders. Add one with tw library add FOLDER.\n");
     } else {
         out.push_str(&format!(
             "{} library folder{}:\n",
@@ -601,8 +625,23 @@ fn run_with(args: &Args, paths: &Paths) -> anyhow::Result<String> {
     }
 }
 
+/// Turns a verb (`tw library add FOLDER`) into the fields its old flag
+/// spelling (`--add FOLDER`) set, so both run the same way.
+fn normalize(mut args: Args) -> Args {
+    match args.command.take() {
+        Some(LibraryCommand::Add { folder }) => args.add = Some(folder),
+        Some(LibraryCommand::Remove { folder }) => args.remove = Some(folder),
+        Some(LibraryCommand::Search { text }) => args.search = Some(text),
+        Some(LibraryCommand::Continue) => args.continue_reading = true,
+        Some(LibraryCommand::List) | None => {}
+        edit @ Some(LibraryCommand::Edit(_)) => args.command = edit,
+    }
+    args
+}
+
 /// Runs `tw library`.
 pub fn run(args: Args) -> anyhow::Result<()> {
+    let args = normalize(args);
     let paths = super::paths(args.home.as_deref())?;
     super::print_all(&run_with(&args, &paths)?)
 }

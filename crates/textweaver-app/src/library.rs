@@ -13,7 +13,7 @@
 //!
 //! The library list **filters as you type** (Wave 5, W5y): each word typed
 //! must be in a document's title, path, author, DOI, or ISBN, or in its
-//! text when `tw library --search` has indexed it. The author, DOI, and
+//! text when `tw library search` has indexed it. The author, DOI, and
 //! ISBN are recorded on the bookshelf when a document opens
 //! ([`DocMetadata`]); a DOI or ISBN in the indexed text of a document never
 //! opened counts too.
@@ -469,7 +469,7 @@ pub(crate) fn document_metadata(doc: &Document) -> DocMetadata {
 pub(crate) struct LibraryList {
     /// Every document, in the library's order.
     items: Vec<LibraryItem>,
-    /// Indexed text by document, lowercase (from `tw library --search`'s
+    /// Indexed text by document, lowercase (from `tw library search`'s
     /// cache), for the filter.
     texts: Arc<std::collections::BTreeMap<PathBuf, String>>,
     /// The filter typed so far.
@@ -633,7 +633,7 @@ struct LibraryInputs {
     folders: Vec<PathBuf>,
     extensions: Vec<&'static str>,
     files: Option<(PathBuf, PathBuf, PathBuf)>,
-    /// `tw library --search`'s text cache.
+    /// `tw library search`'s text cache.
     fulltext: Option<PathBuf>,
     sync: LibrarySync,
     /// Where this computer's files are and the settings, for reading the

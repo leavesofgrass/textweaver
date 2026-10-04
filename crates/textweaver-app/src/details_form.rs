@@ -15,7 +15,7 @@
 //! and with sync on, as the record's hand-edited details
 //! ([`crate::sync_engine::SyncRequest::EditDetails`]), newest wins per
 //! field. The hand-edited values win over the document's own in the
-//! library list, its filter, and `tw library --search`. Clearing a field
+//! library list, its filter, and `tw library search`. Clearing a field
 //! removes the hand edit, so the document's own value shows again.
 //!
 //! [`Library::record_edits`]: textweaver_store::Library::record_edits

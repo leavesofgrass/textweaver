@@ -115,7 +115,7 @@ sudo apt install ffmpeg
 
 Three environment variables change how textweaver finds Whisper. You do not need any of them when your Whisper program is on your `PATH` and its models are in one of the usual folders.
 
-- `TEXTWEAVER_WHISPER`: the full path of a Whisper program to use. It is tried before anything on the `PATH`. textweaver uses it only if the file exists and it can tell which Whisper program it is. Otherwise it is skipped without a message, so check with `tw dictate --list`.
+- `TEXTWEAVER_WHISPER`: the full path of a Whisper program to use. It is tried before anything on the `PATH`. textweaver uses it only if the file exists and it can tell which Whisper program it is. Otherwise it is skipped without a message, so check with `tw dictate list`.
 - `TEXTWEAVER_WHISPER_ENGINE`: which kind of program `TEXTWEAVER_WHISPER` is, when its file name does not tell: `cpp`, `faster`, or `openai`. The longer names `whisper.cpp`, `faster-whisper`, and `openai-whisper` work too. It applies only to the program in `TEXTWEAVER_WHISPER`.
 - `TEXTWEAVER_WHISPER_MODELS`: a folder of whisper.cpp model files. It is the first folder searched. The other programs ignore it.
 
@@ -140,7 +140,7 @@ $env:TEXTWEAVER_WHISPER_ENGINE = "cpp"
 ## Check which Whisper program textweaver finds
 
 ```text
-tw dictate --list
+tw dictate list
 ```
 
 This lists every Whisper program textweaver found, in the order it would use them, and then the model sizes. It records nothing and transcribes nothing. On a Windows computer with only OpenAI Whisper installed, you see two lines like these (the folder depends on where Python put the program):
@@ -162,7 +162,7 @@ Models: tiny, base, small, medium, large-v3, large-v3-turbo
 For scripts, add `--json`:
 
 ```text
-tw dictate --list --json
+tw dictate list --json
 ```
 
 This prints a list with one entry per program. Each entry has `engine`, which is `cpp`, `faster`, or `openai`, and `program`, the path. When nothing is found, the list is empty: `[]`.
@@ -465,8 +465,8 @@ To write text by dictation, switch to edit mode first; see [the editing guide](e
 
 ## If something goes wrong
 
-- "No Whisper program found." from `tw dictate --list`, or "Speech recognition needs Whisper, which was not found." from a transcription: textweaver found no Whisper program. Install one (see [Install a Whisper program](#install-a-whisper-program)), then open a new terminal so it sees the new `PATH`. Or set `TEXTWEAVER_WHISPER` to the program, or give it with `--program`. You also get the second message when you ask with `--engine` for a kind of program that is not installed, even if another kind is.
-- `TEXTWEAVER_WHISPER` seems to be ignored: textweaver skips it without a message when the file does not exist, or when it cannot tell which kind of program it is. Check the path, set `TEXTWEAVER_WHISPER_ENGINE`, and run `tw dictate --list` to see what is found.
+- "No Whisper program found." from `tw dictate list`, or "Speech recognition needs Whisper, which was not found." from a transcription: textweaver found no Whisper program. Install one (see [Install a Whisper program](#install-a-whisper-program)), then open a new terminal so it sees the new `PATH`. Or set `TEXTWEAVER_WHISPER` to the program, or give it with `--program`. You also get the second message when you ask with `--engine` for a kind of program that is not installed, even if another kind is.
+- `TEXTWEAVER_WHISPER` seems to be ignored: textweaver skips it without a message when the file does not exist, or when it cannot tell which kind of program it is. Check the path, set `TEXTWEAVER_WHISPER_ENGINE`, and run `tw dictate list` to see what is found.
 - "The Whisper model "base" was not found. Download ggml-base.bin into one of:" followed by a list of folders: whisper.cpp needs its model file. Download the file it names into one of the folders it lists, or give the file with `--model-file`. This is checked before anything is transcribed.
 - "The Whisper model "base" was not found. Download" followed by a file path and "into one of: the folder given": the file you gave with `--model-file` does not exist. Check the path.
 - "Name the program's engine with --engine cpp, faster, or openai": the file name you gave with `--program` does not say which kind of Whisper program it is. Add `--engine`.

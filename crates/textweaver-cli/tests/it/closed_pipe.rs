@@ -108,7 +108,7 @@ fn every_command_ends_quietly_on_a_closed_pipe() {
         vec!["settings", "export", "--home", home],
         vec!["stats", "--home", home],
         vec!["components", "list", "--home", home],
-        vec!["library", "--home", home],
+        vec!["library", "list", "--home", home],
         vec!["cite", "list", "--home", home],
         vec!["ocr", "status"],
     ];

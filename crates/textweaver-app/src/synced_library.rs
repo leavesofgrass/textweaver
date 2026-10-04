@@ -12,7 +12,7 @@
 //! 1. `sync-ids.json` (the document was opened here);
 //! 2. its library folder's id and its path inside the folder, when the
 //!    folder's id file is there (a library folder synced between computers);
-//! 3. the hash of its text, when `tw library --search` has read it.
+//! 3. the hash of its text, when `tw library search` has read it.
 //!
 //! No step reads or hashes a whole file, so a large library stays quick.
 //!
@@ -190,7 +190,7 @@ impl SyncedLibrary {
     }
 
     /// Adds what other computers know to the library's items, so the
-    /// filter and `tw library --search` find a document by an author, DOI,
+    /// filter and `tw library search` find a document by an author, DOI,
     /// or ISBN known elsewhere. The synced details are the newest, from
     /// every computer, this one's included, so they replace the item's;
     /// a title only replaces one made from the file's name. `text` gives a

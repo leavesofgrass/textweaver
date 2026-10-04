@@ -428,7 +428,7 @@ Define word (see [the reading guide](reading.md#define-a-word-ctrlshiftd-or-alte
 
 Reading statistics (see [the reading guide](reading.md#reading-statistics-ctrlshifty-or-alty)).
 
-- `enabled`, default `true`: count the time textweaver reads each document aloud, the furthest point, and the sessions, in `stats.json` in the data folder. Off, nothing more is recorded; what was recorded stays until `tw stats --clear`.
+- `enabled`, default `true`: count the time textweaver reads each document aloud, the furthest point, and the sessions, in `stats.json` in the data folder. Off, nothing more is recorded; what was recorded stays until `tw stats clear`.
 
 ### [summary]
 
