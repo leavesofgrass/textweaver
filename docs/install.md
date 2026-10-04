@@ -2,7 +2,7 @@
 
 In a hurry? The [quick start](quickstart.md) is the short version. On Windows, the quickest way in is the window package: download `textweaver-VERSION-windows-x86_64-gui.zip`, extract it, and run `textweaver-gui.exe` (see [The GUI](#the-gui)).
 
-textweaver is in alpha. The newest release is 0.1.0-alpha.8. A release on GitHub has these packages:
+textweaver is in alpha. The newest release is 0.1.0-alpha.9. A release on GitHub has these packages:
 
 - `textweaver-VERSION-windows-x86_64.zip`
 - `textweaver-VERSION-macos-universal.tar.gz`, for Apple silicon and Intel Macs
@@ -132,7 +132,7 @@ The macOS build is not notarized by Apple yet, because notarization needs a paid
 2. Remove the quarantine flag that the browser added. Replace the folder name with the one you extracted:
 
    ```bash
-   xattr -dr com.apple.quarantine textweaver-0.1.0-alpha.8-macos-universal
+   xattr -dr com.apple.quarantine textweaver-0.1.0-alpha.9-macos-universal
    ```
 
    If you skip this, macOS says the program "cannot be opened because Apple cannot check it for malicious software". In that case open System Settings, go to Privacy & Security, and choose "Open Anyway" next to the message about `tw` or `textweaver`. Then run the program again.
@@ -221,13 +221,13 @@ Each GUI package holds `textweaver-gui`, and on Windows and Linux the same engin
 Each release has a `SHA256SUMS.txt` file. To check a download on Windows:
 
 ```powershell
-certutil -hashfile textweaver-0.1.0-alpha.8-windows-x86_64.zip SHA256
+certutil -hashfile textweaver-0.1.0-alpha.9-windows-x86_64.zip SHA256
 ```
 
 On macOS:
 
 ```bash
-shasum -a 256 textweaver-0.1.0-alpha.8-macos-universal.tar.gz
+shasum -a 256 textweaver-0.1.0-alpha.9-macos-universal.tar.gz
 ```
 
 On Linux:

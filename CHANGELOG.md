@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-alpha.9] - 2026-10-04
+
 In short: this is the last alpha before beta 1, so it finishes and tidies what is there. The window gains a reading settings dialog, a narrow layout, drawn list markers, and a first run of at most three skippable steps. Documents can be exported as a read-along web page, as Ogg Vorbis audio, and as an MP4 video with the spoken word marked. Captions gain karaoke tags and chapters. The command line follows one set of rules. Themes are checked for contrast, and the result is said in words. Written pauses are honored in every speech engine. The documentation has start pages for students and staff, a known-limits page, and an accessibility statement.
 
 ### Reading and speech
@@ -882,6 +884,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-alpha.9]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.9
 [0.1.0-alpha.8]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.7
 [0.1.0-alpha.6]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.6
