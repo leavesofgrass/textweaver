@@ -54,6 +54,8 @@ pub(crate) struct Builder {
     /// The pending space was requested by [`close_punct`](Self::close_punct):
     /// it is dropped if the next word starts with closing punctuation.
     soft_space: bool,
+    /// Pauses written as markup, where the text had reached.
+    pauses: Vec<crate::pause_markup::WrittenPause>,
 }
 
 impl Builder {
@@ -382,6 +384,20 @@ impl Builder {
             self.text(text);
             self.close(body);
         }
+    }
+
+    /// A pause written as markup (`<break>`), `ms` long, after the text
+    /// written so far.
+    pub(crate) fn pause(&mut self, ms: u32) {
+        self.pauses.push(crate::pause_markup::WrittenPause {
+            at: textweaver_core::CharPos(self.len),
+            ms,
+        });
+    }
+
+    /// The pauses written so far, taken out of the builder.
+    pub(crate) fn take_pauses(&mut self) -> Vec<crate::pause_markup::WrittenPause> {
+        std::mem::take(&mut self.pauses)
     }
 
     /// The canonical text and its markers; open markers are closed.

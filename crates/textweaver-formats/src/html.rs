@@ -119,6 +119,7 @@ pub fn convert(
     // The text is rarely longer than its source: room enough, nearly always.
     let mut b = Builder::with_capacity(source.len());
     walk_into(&mut b, source, options, meta, None);
+    crate::pause_markup::record(meta, b.take_pauses());
     b.finish()
 }
 
@@ -598,6 +599,15 @@ impl Walker<'_> {
                 self.paragraph_break();
             }
             "br" => self.line_break(),
+            // A pause written as SSML-style markup; the parser may have put
+            // the text after it inside it, which is read as usual.
+            "break" if !self.options.keep_pause_markup => {
+                let ms = crate::pause_markup::break_ms(el.attr("time"), el.attr("strength"));
+                if let Some(ms) = ms {
+                    self.b.pause(ms);
+                }
+                self.children(el);
+            }
             "hr" => self.paragraph_break(),
             "ul" | "ol" | "menu" => self.list(el, name == "ol"),
             "li" => self.list_item(el),

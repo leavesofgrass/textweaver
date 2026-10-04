@@ -183,6 +183,7 @@ pub fn convert_in(
     c.deferred_footnotes();
     let ids = std::mem::take(&mut c.block_ids);
     crate::obsidian::set_block_ids(c.meta, &ids);
+    crate::pause_markup::record(c.meta, c.b.take_pauses());
     c.b.finish()
 }
 
@@ -771,6 +772,11 @@ impl<'a> Converter<'a> {
             .to_ascii_lowercase();
         match name.as_str() {
             "br" => self.b.line_break(),
+            "break" if !closing && !self.options.keep_pause_markup => {
+                if let Some(ms) = crate::pause_markup::tag_ms(inner) {
+                    self.b.pause(ms);
+                }
+            }
             "img" if !closing => {
                 let alt = html_attr(inner, "alt").unwrap_or_default();
                 if !alt.trim().is_empty() {
