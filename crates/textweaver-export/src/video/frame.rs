@@ -199,7 +199,6 @@ mod tests {
         VideoOptions {
             page: [255, 255, 255],
             text: [0, 0, 0],
-            ..VideoOptions::default()
         }
     }
 
@@ -266,7 +265,6 @@ mod tests {
         let mut r = FrameRenderer::new(&VideoOptions {
             page: [10, 20, 30],
             text: [200, 200, 200],
-            ..VideoOptions::default()
         })
         .unwrap();
         let f = r.draw(None, None);
