@@ -1,7 +1,8 @@
 //! `tw export-audio`. Owner: Agent B2.
 //!
 //! Reads a document aloud into an audio file (`.wav`, or `.mp3` and `.m4b`
-//! through ffmpeg) with optional subtitles (`.srt` or `.vtt`), through any
+//! through ffmpeg) or a karaoke video with captions (`.mp4`, through
+//! ffmpeg) with optional subtitles (`.srt` or `.vtt`), through any
 //! backend that can write audio files (ADR-0011). Without `--backend`, the
 //! highest-priority available backend that can write files is used, so an
 //! engine that can only play (Omnivox, speech-dispatcher) is passed over.
@@ -30,7 +31,8 @@ pub struct Args {
     pub file: PathBuf,
     /// Output file (.wav, .flac, .mp3, .opus, .ogg, .m4b), or .html for a
     /// read-along page: the text with the MP3 inside, the spoken word
-    /// marked as it plays.
+    /// marked as it plays; or .mp4 for a video with captions (needs
+    /// ffmpeg): the text on screen, the spoken word bold and underlined.
     #[arg(long = "out", short = 'o', alias = "output")]
     pub out: PathBuf,
     /// Also write subtitles (.srt, .vtt, or .ass karaoke).
@@ -199,7 +201,7 @@ pub fn export_audio(
     } else {
         AudioFormat::from_path(&args.out).with_context(|| {
             format!(
-                "cannot write {}: use a .wav, .flac, .mp3, .opus, .ogg, or .m4b file name, or .html for a read-along page",
+                "cannot write {}: use a .wav, .flac, .mp3, .opus, .ogg, or .m4b file name, .mp4 for a video with captions, or .html for a read-along page",
                 args.out.display()
             )
         })?
@@ -281,6 +283,12 @@ pub fn export_audio(
         Some(v) => format!("{v} ({})", selection.backend.name),
         None => selection.backend.name.to_string(),
     };
+    let themes = args
+        .home
+        .as_deref()
+        .map(Paths::under)
+        .or_else(|| Paths::platform().ok())
+        .map(|p| p.themes_dir());
     let options = ExportOptions {
         narration: textweaver_app::narration_policy(settings),
         normalize: config.normalize,
@@ -292,6 +300,8 @@ pub fn export_audio(
             words_per_minute: Some(u32::from(params.rate.wpm())),
             ..CaptionMeta::default()
         },
+        // The video in the reader's theme: its page and text colors.
+        video: textweaver_app::video_options_for(&settings.display.theme, themes.as_deref()),
         ..ExportOptions::default()
     };
     let mut last_tenth = 0;
@@ -304,12 +314,6 @@ pub fn export_audio(
         ControlFlow::Continue(())
     };
     let report = if page {
-        let themes = args
-            .home
-            .as_deref()
-            .map(Paths::under)
-            .or_else(|| Paths::platform().ok())
-            .map(|p| p.themes_dir());
         let theme_css =
             textweaver_app::page_theme_css(None, &settings.display.theme, themes.as_deref())
                 .map_err(anyhow::Error::msg)?;
@@ -579,6 +583,9 @@ mod tests {
         let mut a = args(dir.path(), "doc.m4b");
         let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
         assert!(e.to_string().contains("needs ffmpeg"), "{e}");
+        a.out = dir.path().join("doc.mp4");
+        let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
+        assert!(e.to_string().starts_with("writing MP4 needs ffmpeg"), "{e}");
         a.out = dir.path().join("doc.aac");
         let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
         assert!(

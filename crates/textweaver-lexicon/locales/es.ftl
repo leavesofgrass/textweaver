@@ -3643,6 +3643,7 @@ audio-format-mp3 = MP3: pequeño, se reproduce en todas partes
 audio-format-opus = Opus: el más pequeño, pensado para la voz
 audio-format-ogg = Ogg Vorbis: pequeño y abierto, se reproduce en la mayoría de los reproductores
 audio-format-m4b = Audiolibro M4B, mediante ffmpeg
+audio-format-mp4 = Vídeo con subtítulos: MP4, necesita ffmpeg
 audio-format-html = Página de lectura: texto y audio, un archivo
 audio-where-title = Dónde va el audio
 audio-where-intro = ¿Dónde debe ir el audio?

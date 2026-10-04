@@ -3671,6 +3671,7 @@ audio-format-mp3 = MP3 : léger, se lit partout
 audio-format-opus = Opus : le plus léger, conçu pour la voix
 audio-format-ogg = Ogg Vorbis : léger et ouvert, se lit dans la plupart des lecteurs
 audio-format-m4b = Livre audio M4B, par ffmpeg
+audio-format-mp4 = Vidéo avec sous-titres : MP4, demande ffmpeg
 audio-format-html = Page de lecture : texte et audio, un seul fichier
 audio-where-title = Où va l'audio
 audio-where-intro = Où enregistrer l'audio ?

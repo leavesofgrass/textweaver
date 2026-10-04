@@ -7,3 +7,5 @@
 
 mod espeak_export;
 mod export;
+#[cfg(feature = "video")]
+mod video;

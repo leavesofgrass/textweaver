@@ -3670,6 +3670,7 @@ audio-format-mp3 = MP3: small, plays everywhere
 audio-format-opus = Opus: the smallest, made for speech
 audio-format-ogg = Ogg Vorbis: small and open, plays in most players
 audio-format-m4b = M4B audiobook, through ffmpeg
+audio-format-mp4 = Video with captions: MP4, needs ffmpeg
 audio-format-html = Read-along page: text and audio, one file
 audio-where-title = Where the audio goes
 audio-where-intro = Where should the audio go?

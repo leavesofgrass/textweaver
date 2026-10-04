@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-export"
-description = "Audio and subtitle export for textweaver: WAV, FLAC, MP3, Ogg Opus, Ogg Vorbis, M4B via ffmpeg, SRT/VTT cues, chapters"
+description = "Audio and subtitle export for textweaver: WAV, FLAC, MP3, Ogg Opus, Ogg Vorbis, M4B and karaoke MP4 video via ffmpeg, SRT/VTT cues, chapters"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,7 +10,7 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = ["flac", "id3", "mp3", "opus", "vorbis", "read-along"]
+default = ["flac", "id3", "mp3", "opus", "vorbis", "read-along", "video"]
 # Passed through so the container can export with espeak-ng in tests.
 espeak = ["textweaver-speech/espeak"]
 # FLAC written in process (pure Rust), with tags and chapters as Vorbis
@@ -36,6 +36,10 @@ id3 = ["dep:id3"]
 # and word-synced highlighting (the writers' sync spans, the page rules,
 # and the theme's CSS).
 read-along = ["dep:textweaver-writers", "dep:textweaver-render", "dep:textweaver-theme"]
+# The karaoke video (MP4 through ffmpeg): frames drawn in process with the
+# bundled reading font and the 2D rasterizer hayro already brings
+# (vello_cpu), so nothing new is built.
+video = ["dep:hayro", "dep:textweaver-fonts"]
 
 [dependencies]
 textweaver-core.workspace = true
@@ -55,6 +59,8 @@ rubato = { workspace = true, optional = true, features = ["fft_resampler"] }
 textweaver-writers = { workspace = true, optional = true }
 textweaver-render = { workspace = true, optional = true }
 textweaver-theme = { workspace = true, optional = true }
+hayro = { workspace = true, optional = true }
+textweaver-fonts = { workspace = true, optional = true }
 
 [dev-dependencies]
 claxon.workspace = true

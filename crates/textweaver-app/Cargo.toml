@@ -21,6 +21,7 @@ audio-export = [
     "textweaver-export/mp3",
     "textweaver-export/read-along",
     "textweaver-export/vorbis",
+    "textweaver-export/video",
 ]
 # Opus in process in Export audio, with libopus (W7o; building it needs
 # cmake). Off, Opus goes through ffmpeg like M4B.

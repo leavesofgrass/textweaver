@@ -36,11 +36,14 @@ pub enum AudioFormat {
     /// Ogg Vorbis, written in process (the `vorbis` feature; through
     /// ffmpeg without it).
     Ogg,
+    /// A karaoke video with captions and chapters (MP4 through ffmpeg; the
+    /// frames are drawn with the `video` feature).
+    Mp4,
 }
 
 impl AudioFormat {
     /// The format for a file name's extension (`wav`, `flac`, `mp3`,
-    /// `opus`, `ogg`, `m4b`; any case).
+    /// `opus`, `ogg`, `m4b`, `mp4`; any case).
     pub fn from_path(path: &Path) -> Option<Self> {
         let ext = path.extension()?.to_str()?.to_ascii_lowercase();
         match ext.as_str() {
@@ -50,12 +53,13 @@ impl AudioFormat {
             "m4b" => Some(AudioFormat::M4b),
             "opus" => Some(AudioFormat::Opus),
             "ogg" => Some(AudioFormat::Ogg),
+            "mp4" => Some(AudioFormat::Mp4),
             _ => None,
         }
     }
 
     /// The name users see ("WAV", "FLAC", "MP3", "Opus", "Ogg Vorbis",
-    /// "M4B").
+    /// "M4B", "MP4").
     pub fn name(self) -> &'static str {
         match self {
             AudioFormat::Wav => "WAV",
@@ -64,10 +68,12 @@ impl AudioFormat {
             AudioFormat::M4b => "M4B",
             AudioFormat::Opus => "Opus",
             AudioFormat::Ogg => "Ogg Vorbis",
+            AudioFormat::Mp4 => "MP4",
         }
     }
 
-    /// Whether writing this format needs ffmpeg in this build: M4B always;
+    /// Whether writing this format needs ffmpeg in this build: M4B and MP4
+    /// video always;
     /// FLAC, MP3, Opus and Ogg Vorbis only when built without the `flac`,
     /// `mp3`, `opus` or `vorbis` feature.
     pub fn needs_ffmpeg(self) -> bool {
@@ -75,7 +81,7 @@ impl AudioFormat {
             AudioFormat::Wav => false,
             AudioFormat::Flac => !cfg!(feature = "flac"),
             AudioFormat::Mp3 => !cfg!(feature = "mp3"),
-            AudioFormat::M4b => true,
+            AudioFormat::M4b | AudioFormat::Mp4 => true,
             AudioFormat::Opus => !cfg!(feature = "opus"),
             AudioFormat::Ogg => !cfg!(feature = "vorbis"),
         }
@@ -151,7 +157,8 @@ pub fn args(wav: &Path, metadata: &Path, out: &Path, format: AudioFormat) -> Vec
         ],
         // The in-process encoder's quality (`oggenc -q 3`).
         AudioFormat::Ogg => &["-codec:a", "libvorbis", "-qscale:a", "3"],
-        AudioFormat::Wav => &[],
+        // Video has its own arguments (`video::args`).
+        AudioFormat::Wav | AudioFormat::Mp4 => &[],
     };
     a.extend(codec.iter().map(OsString::from));
     a.push(out.into());
@@ -181,26 +188,47 @@ pub fn run_with_stop(
         .stderr(Stdio::piped())
         .spawn()
         .map_err(|e| ExportError::io(ffmpeg, e))?;
-    // The error output is read on its own thread, so a chatty ffmpeg never
-    // blocks on a full pipe while it is polled here.
-    let reader = child.stderr.take().map(|mut err| {
+    let reader = drain(child.stderr.take());
+    wait_with_stop(child, reader, ffmpeg, stop)
+}
+
+/// The thread that reads a running ffmpeg's error output, so a chatty
+/// ffmpeg never blocks on a full pipe while it is polled.
+pub(crate) type Drain = Option<std::thread::JoinHandle<Vec<u8>>>;
+
+/// Starts reading `err` on its own thread.
+pub(crate) fn drain(err: Option<std::process::ChildStderr>) -> Drain {
+    err.map(|mut err| {
         std::thread::spawn(move || {
             let mut buf = Vec::new();
             let _ = std::io::Read::read_to_end(&mut err, &mut buf);
             buf
         })
-    });
+    })
+}
+
+/// Kills a stopped ffmpeg and waits for it: the result of a stop.
+pub(crate) fn kill(mut child: std::process::Child, reader: Drain) -> ExportError {
+    let _ = child.kill();
+    let _ = child.wait();
+    if let Some(r) = reader {
+        let _ = r.join();
+    }
+    ExportError::Cancelled
+}
+
+/// Waits for ffmpeg to finish, asking `stop` every 100 ms; its last line
+/// of error output becomes the error when it fails.
+pub(crate) fn wait_with_stop(
+    mut child: std::process::Child,
+    reader: Drain,
+    ffmpeg: &Path,
+    stop: &dyn Fn() -> bool,
+) -> Result<(), ExportError> {
     let status = loop {
         match child.try_wait() {
             Ok(Some(status)) => break status,
-            Ok(None) if stop() => {
-                let _ = child.kill();
-                let _ = child.wait();
-                if let Some(r) = reader {
-                    let _ = r.join();
-                }
-                return Err(ExportError::Cancelled);
-            }
+            Ok(None) if stop() => return Err(kill(child, reader)),
             Ok(None) => std::thread::sleep(POLL),
             Err(e) => {
                 let _ = child.kill();
@@ -260,6 +288,11 @@ mod tests {
             Some(AudioFormat::Ogg)
         );
         assert_eq!(AudioFormat::Ogg.needs_ffmpeg(), !cfg!(feature = "vorbis"));
+        assert_eq!(
+            AudioFormat::from_path(Path::new("v.MP4")),
+            Some(AudioFormat::Mp4)
+        );
+        assert!(AudioFormat::Mp4.needs_ffmpeg());
         assert_eq!(AudioFormat::from_path(Path::new("g.oga")), None);
         assert_eq!(AudioFormat::from_path(Path::new("noext")), None);
     }

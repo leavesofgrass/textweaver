@@ -291,7 +291,7 @@ fn gaps_cancellation_and_errors() {
     .unwrap_err();
     assert!(
         err.to_string()
-            .contains("use a .wav, .flac, .mp3, .opus, .ogg, or .m4b"),
+            .contains("use a .wav, .flac, .mp3, .opus, .ogg, .m4b, or .mp4"),
         "{err}"
     );
     let err = export(
