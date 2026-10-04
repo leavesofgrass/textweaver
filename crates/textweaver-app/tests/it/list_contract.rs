@@ -89,7 +89,13 @@ fn settle(app: &mut App) {
 /// Actions left out of the sweep, with the reason.
 fn skipped(a: ActionId) -> bool {
     // Quitting ends the app; the rest of the sweep would run on nothing.
-    matches!(a, ActionId::Quit)
+    // The two cycling keys open no list, but change the announcement
+    // level every later list would be checked at: at `minimal` (a screen
+    // reader) a list closing is not said, by design.
+    matches!(
+        a,
+        ActionId::Quit | ActionId::CycleAccessMode | ActionId::CycleInterfaceAnnouncements
+    )
 }
 
 /// "k of n" as the list says it, first or (in the file browser) last.
@@ -100,17 +106,11 @@ fn says_place(line: &str, k: usize, n: usize) -> bool {
 
 /// Defects the sweep found (W9e-c), as the action and the start of the
 /// failure's text. [`every_list_keeps_the_list_contract`] leaves them
-/// out; the ignored [`the_known_list_defects_are_fixed`] holds them until
-/// they are fixed. Take a line off when its fix lands.
-const KNOWN: &[(&str, &str)] = &[
-    // The file browser's Say Status key says nothing on a Places row.
-    ("AddLibraryFolder", "the Say Status key says nothing"),
-    ("BrowseFiles", "the Say Status key says nothing"),
-    ("BatchConvert", "the Say Status key says nothing"),
-    // Escape closes these without a word.
-    ("SettingsProfiles", "Escape closes it without a word"),
-    ("ColorSettings", "Escape closes it without a word"),
-];
+/// out; [`the_known_list_defects_are_fixed`] (ignored while this holds
+/// any) checks them all. Take a line off when its fix lands. Empty: the
+/// Places rows' Say Status key and the profiles and colors lists' Escape
+/// were fixed in W9f.
+const KNOWN: &[(&str, &str)] = &[];
 
 fn known(failure: &str) -> bool {
     KNOWN.iter().any(|(action, what)| {
@@ -125,7 +125,6 @@ fn every_list_keeps_the_list_contract() {
 }
 
 #[test]
-#[ignore = "defects: the file browser's Say Status key is silent on Places; Escape is silent in the profiles and colors lists (W9e-c)"]
 fn the_known_list_defects_are_fixed() {
     let failures = sweep();
     assert!(failures.is_empty(), "{failures:#?}");

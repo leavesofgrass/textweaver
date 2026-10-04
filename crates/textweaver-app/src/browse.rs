@@ -1695,6 +1695,14 @@ impl App {
                 "browse-preview-archive-folder",
                 &args!["name" => shown_name(&row.name), "n" => items.unwrap_or(0), "count" => crate::words::grouped(&c, items.unwrap_or(0))],
             )),
+            // A place has no preview: say the row and its place, as the
+            // list says it.
+            RowKind::Place(_) => Some(
+                self.list_model
+                    .as_ref()
+                    .and_then(|l| l.spoken_item_text(&c))
+                    .unwrap_or_else(|| row.text(&c, &self.location_name())),
+            ),
             _ => None,
         };
         if let Some(text) = at_once {
