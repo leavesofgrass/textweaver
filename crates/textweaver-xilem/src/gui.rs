@@ -27,7 +27,7 @@ use masonry::core::{
 use masonry::layout::Length;
 use masonry::parley::style::{FontFamily, FontWeight};
 use masonry::properties::types::CrossAxisAlignment;
-use masonry::properties::{Background, Padding};
+use masonry::properties::{Background, LineBreaking, Padding};
 use masonry::widgets::{Flex, Label, SizedBox, TextArea, TextInput};
 use masonry_winit::app::{
     AppDriver, DriverCtx, EventLoop, EventLoopProxy, MasonryState, MasonryUserEvent, NewWindow,
@@ -46,6 +46,7 @@ use textweaver_app::{
     extra_command,
 };
 
+use crate::bars::{FRAME, Flow, Frame, StatusRow};
 use crate::dialog::{self, ChoiceList, DialogAction, Modal};
 use crate::document::{
     CaretEcho, DocAction, DocAids, DocFont, DocModel, DocState, DocumentView, HighlightShown,
@@ -79,8 +80,6 @@ pub const STATUS: WidgetTag<Label> = WidgetTag::named("tw-status");
 pub const STATUS_BAR: WidgetTag<Region> = WidgetTag::named("tw-status-bar");
 /// The position in the status bar.
 pub const POSITION: WidgetTag<Label> = WidgetTag::named("tw-position");
-/// The document's title in the header.
-pub const TITLE: WidgetTag<Label> = WidgetTag::named("tw-title");
 /// The header panel.
 pub const HEADER: WidgetTag<Region> = WidgetTag::named("tw-header");
 /// The toolbar panel.
@@ -192,6 +191,8 @@ impl AppAnnouncer for QueueAnnouncer {
 /// What the window last showed, to update only what changed.
 #[derive(Default)]
 struct Shown {
+    /// The header and toolbar shown (`[gui] header`, `[gui] toolbar`).
+    bars: Option<(bool, bool)>,
     /// The document shown: its key and text revision.
     doc: Option<(DocKey, u64)>,
     window: Option<DocWindow>,
@@ -587,39 +588,31 @@ pub fn build_tree(
     let c = catalog_of(app);
     let l = |a| button_label(&c, a, false, false);
 
-    // Header: the document's title and the commands.
-    let title = NewWidget::new(label("textweaver", 18.0, true)).with_tag(TITLE);
-    let header = Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .with(title, 1.0)
-        .with_fixed(button(&l(ActionId::Open), ActionId::Open, app, &mut ids))
-        .with_fixed(button(
+    // Header: the commands. The document's title is the window's title,
+    // so the header no longer says it a second time (W9b-n).
+    let header = Flow::new(vec![
+        button(&l(ActionId::Open), ActionId::Open, app, &mut ids),
+        button(
             &l(ActionId::ChooseFont),
             ActionId::ChooseFont,
             app,
             &mut ids,
-        ))
-        .with_fixed(
-            button(
-                &l(ActionId::ToggleEditMode),
-                ActionId::ToggleEditMode,
-                app,
-                &mut ids,
-            )
-            .with_tag(EDIT),
-        )
-        .with_fixed(button(
-            &l(ActionId::Settings),
-            ActionId::Settings,
+        ),
+        button(
+            &l(ActionId::ToggleEditMode),
+            ActionId::ToggleEditMode,
             app,
             &mut ids,
-        ))
-        .with_fixed(button(
+        )
+        .with_tag(EDIT),
+        button(&l(ActionId::Settings), ActionId::Settings, app, &mut ids),
+        button(
             &l(ActionId::CommandPalette),
             ActionId::CommandPalette,
             app,
             &mut ids,
-        ));
+        ),
+    ]);
     let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
         .with_tag(HEADER)
         .with_props(panel(p, 10.0, 16.0));
@@ -656,35 +649,25 @@ pub fn build_tree(
     )
     .with_tag(PLAY)
     .with_class("primary");
-    let toolbar = Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .with_fixed(play)
-        .with_fixed(button(&l(ActionId::Stop), ActionId::Stop, app, &mut ids))
-        .with_fixed(button(
+    let toolbar = Flow::new(vec![
+        play,
+        button(&l(ActionId::Stop), ActionId::Stop, app, &mut ids),
+        button(
             &l(ActionId::PreviousSentence),
             ActionId::PreviousSentence,
             app,
             &mut ids,
-        ))
-        .with_fixed(button(
+        ),
+        button(
             &l(ActionId::NextSentence),
             ActionId::NextSentence,
             app,
             &mut ids,
-        ))
-        .with_spacer(1.0)
-        .with_fixed(button(
-            &l(ActionId::RateDown),
-            ActionId::RateDown,
-            app,
-            &mut ids,
-        ))
-        .with_fixed(button(
-            &l(ActionId::RateUp),
-            ActionId::RateUp,
-            app,
-            &mut ids,
-        ));
+        ),
+        button(&l(ActionId::RateDown), ActionId::RateDown, app, &mut ids),
+        button(&l(ActionId::RateUp), ActionId::RateUp, app, &mut ids),
+    ])
+    .with_push_right(4);
     let toolbar = NewWidget::new(Region::new(
         NewWidget::new(toolbar),
         Role::Toolbar,
@@ -696,13 +679,12 @@ pub fn build_tree(
 
     // Status bar: the latest message and the position.
     let status_text = NewWidget::new(label("", theme::UI_TEXT, false).accessibility_hidden(true))
-        .with_tag(STATUS);
+        .with_tag(STATUS)
+        .with_props(LineBreaking::WordWrap);
     let position = NewWidget::new(label("", theme::UI_TEXT, false).accessibility_hidden(true))
-        .with_tag(POSITION);
-    let status = Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .with(status_text, 1.0)
-        .with_fixed(position);
+        .with_tag(POSITION)
+        .with_props(LineBreaking::WordWrap);
+    let status = StatusRow::new(status_text, position);
     let status = NewWidget::new(Region::new(NewWidget::new(status), Role::Status, ""))
         .with_tag(STATUS_BAR)
         .with_props(panel(p, 8.0, 16.0));
@@ -711,16 +693,10 @@ pub fn build_tree(
     let announcer =
         NewWidget::new(Announcer::new(Rc::clone(&full_passes)).with_mode(mode)).with_tag(ANNOUNCER);
 
-    let column = Flex::column()
-        .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .with_fixed(header)
-        .with(doc, 1.0)
-        .with_fixed(rsvp)
-        .with_fixed(toolbar)
-        .with_fixed(status)
-        .with_fixed(announcer);
+    let column = NewWidget::new(Frame::new(header, doc, rsvp, toolbar, status, announcer, p))
+        .with_tag(FRAME);
     let main = NewWidget::new(Region::new(
-        NewWidget::new(column).with_props(Padding::all(Length::px(theme::PAD))),
+        column.with_props(Padding::all(Length::px(theme::PAD))),
         Role::GenericContainer,
         "",
     ))
@@ -1007,16 +983,8 @@ fn colors_dialog(p: &Palette, form: &SettingsForm, app: &App, row: usize) -> Set
 /// Recolors the window's own panels and the document for `p` (the
 /// default properties are replaced separately).
 pub fn apply_palette(host: &mut impl Host, p: &Palette) {
-    for tag in [HEADER, TOOLBAR, STATUS_BAR] {
-        host.edit(tag, |mut r| {
-            let (bg, border, bw, radius, shadow) = theme::panel_props(p);
-            r.insert_prop(bg);
-            r.insert_prop(border);
-            r.insert_prop(bw);
-            r.insert_prop(radius);
-            r.insert_prop(shadow);
-        });
-    }
+    // The bars' cards, flat while folded (a narrow window).
+    host.edit(FRAME, |mut f| Frame::set_palette(&mut f, p));
     host.edit(MAIN, |mut r| {
         r.insert_prop(Background::Color(theme::color(p.background)));
     });
@@ -1177,6 +1145,11 @@ pub fn sync_caret(
 /// milliseconds when the document's text (or window) was rebuilt.
 fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -> Option<f64> {
     let mut loaded = None;
+    let bars = (app.settings().gui.header, app.settings().gui.toolbar);
+    if shown.bars != Some(bars) {
+        apply_bars(app, host);
+        shown.bars = Some(bars);
+    }
     match app.session() {
         None => {
             if shown.doc.take().is_some() {
@@ -1358,7 +1331,6 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
         .session()
         .map_or_else(|| "textweaver".to_owned(), |s| s.title.clone());
     if title != shown.title {
-        host.edit(TITLE, |mut l| Label::set_text(&mut l, title.clone()));
         // The document's name is its node's name, so a screen reader says
         // it when the window or the document takes the focus (W8a).
         let label = document_label(app);
@@ -1366,6 +1338,14 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
         shown.title = title;
     }
     loaded
+}
+
+/// Shows or hides the header and the toolbar as `[gui] header` and
+/// `[gui] toolbar` say.
+pub fn apply_bars(app: &App, host: &mut impl Host) {
+    let gui = &app.settings().gui;
+    let (header, toolbar) = (gui.header, gui.toolbar);
+    host.edit(FRAME, |mut f| Frame::set_bars(&mut f, header, toolbar));
 }
 
 /// The document view's accessible name: the document's title first, then
@@ -1668,6 +1648,8 @@ impl Gui {
             | ActionId::ChooseFont
             | ActionId::ContentsPanel
             | ActionId::NotesPanel
+            | ActionId::ToggleHeader
+            | ActionId::ToggleToolbar
             | ActionId::NextRegion
             | ActionId::PreviousRegion => true,
             ActionId::Menu => self.native.is_some() && cfg!(windows),
@@ -1694,6 +1676,43 @@ impl Gui {
         self.refresh(ctx);
     }
 
+    /// The View menu's Header (`header`) or Toolbar command: shows or hides
+    /// that bar (`[gui] header`, `[gui] toolbar`) and says which. A bar
+    /// hidden with the focus in it hands the focus to the document.
+    fn bar_key(&mut self, ctx: &mut DriverCtx<'_>, header: bool) {
+        let gui = &self.app.settings().gui;
+        let on = if header { !gui.header } else { !gui.toolbar };
+        let _ = self.app.update_settings(|s| {
+            if header {
+                s.gui.header = on;
+            } else {
+                s.gui.toolbar = on;
+            }
+        });
+        let root = ctx.render_root(self.window_id);
+        let ids = if header {
+            &self.buttons.header
+        } else {
+            &self.buttons.toolbar
+        };
+        if !on && root.focused_widget().is_some_and(|f| ids.contains(&f)) {
+            let doc = root
+                .get_widget_with_tag(SIDEBAR)
+                .map(|s| s.inner().doc_id());
+            root.focus_on(doc);
+        }
+        let key = match (header, on) {
+            (true, true) => "gui-header-shown",
+            (true, false) => "gui-header-hidden",
+            (false, true) => "gui-toolbar-shown",
+            (false, false) => "gui-toolbar-hidden",
+        };
+        let said = self.app.catalog().tr(key);
+        self.app
+            .announce_as(&said, Priority::Polite, Importance::Result);
+        self.refresh(ctx);
+    }
+
     /// F6 (`forward`) or Shift+F6: the focus moves to the next region
     /// (header, panel, document, toolbar), as in Windows programs.
     fn region_key(&mut self, ctx: &mut DriverCtx<'_>, forward: bool) {
@@ -1701,11 +1720,20 @@ impl Gui {
         let (list, doc) = root.get_widget_with_tag(SIDEBAR).map_or((None, None), |s| {
             (s.inner().list_id(), Some(s.inner().doc_id()))
         });
+        let (folded, header, toolbar) =
+            root.get_widget_with_tag(FRAME)
+                .map_or((false, true, true), |f| {
+                    let f = f.inner();
+                    (f.is_folded(), f.header_shown(), f.toolbar_shown())
+                });
+        // A hidden bar is not a region.
+        let shown = |on: bool, ids: &Vec<WidgetId>| if on { ids.clone() } else { Vec::new() };
         let regions = sidebar::Regions {
-            header: self.buttons.header.clone(),
+            header: shown(header, &self.buttons.header),
             sidebar: list,
             document: doc,
-            toolbar: self.buttons.toolbar.clone(),
+            toolbar: shown(toolbar, &self.buttons.toolbar),
+            folded,
         };
         let to = sidebar::next_region(&regions, root.focused_widget(), forward);
         if self.log {
@@ -1753,6 +1781,8 @@ impl Gui {
             ActionId::ChooseFont => self.open_fonts(ctx),
             ActionId::ContentsPanel => self.panel_key(ctx, textweaver_app::Panel::Contents),
             ActionId::NotesPanel => self.panel_key(ctx, textweaver_app::Panel::Notes),
+            ActionId::ToggleHeader => self.bar_key(ctx, true),
+            ActionId::ToggleToolbar => self.bar_key(ctx, false),
             ActionId::NextRegion => self.region_key(ctx, true),
             ActionId::PreviousRegion => self.region_key(ctx, false),
             ActionId::Menu => {

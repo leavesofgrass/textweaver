@@ -2123,6 +2123,8 @@ impl App {
             | A::ChooseFont
             | A::ContentsPanel
             | A::NotesPanel
+            | A::ToggleHeader
+            | A::ToggleToolbar
             | A::NextRegion
             | A::PreviousRegion => {
                 let msg = self.msg("app-window-only");

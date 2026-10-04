@@ -39,6 +39,7 @@
 //! Owner: Agent W3b.
 
 pub mod background;
+pub mod bars;
 pub mod blink;
 pub mod caret;
 pub mod console;

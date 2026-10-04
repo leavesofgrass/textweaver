@@ -51,10 +51,15 @@ pub const SIDEBAR: WidgetTag<Sidebar> = WidgetTag::named("tw-sidebar");
 pub const SIDEBAR_LIST: WidgetTag<ChoiceList> = WidgetTag::named("tw-sidebar-list");
 
 /// The panel's width, in logical pixels: about 30 characters of the
-/// interface text, at most 45 percent of the row.
+/// interface text, at most 40 percent of the row.
 pub const PANEL_WIDTH: f64 = 300.0;
 /// The space between the panel and the document.
 const GAP: f64 = 12.0;
+/// Below this row width, in logical pixels, the panel goes above the
+/// document instead of beside it.
+pub const STACK_WIDTH: f64 = 600.0;
+/// The least room the panel's list keeps before its hint gives way.
+const MIN_LIST: f64 = 64.0;
 
 /// The panel `setting` names, if any.
 pub fn panel_of(setting: GuiSidebar) -> Option<Panel> {
@@ -215,7 +220,22 @@ impl Widget for Sidebar {
             ctx.place_child(&mut self.doc, Point::ORIGIN);
             return;
         };
-        let width = PANEL_WIDTH.min(size.width * 0.45).max(0.0);
+        if size.width < STACK_WIDTH {
+            // A narrow window: the panel above the document, as wide as
+            // the row, so neither is squeezed to a sliver; the order on
+            // screen stays the order of the children (W9b-n).
+            let height = (size.height * 0.5).max(0.0);
+            ctx.run_layout(panel, Size::new(size.width, height));
+            ctx.place_child(panel, Point::ORIGIN);
+            let y = height + GAP;
+            ctx.run_layout(
+                &mut self.doc,
+                Size::new(size.width, (size.height - y).max(0.0)),
+            );
+            ctx.place_child(&mut self.doc, Point::new(0.0, y));
+            return;
+        }
+        let width = PANEL_WIDTH.min(size.width * 0.4).max(0.0);
         ctx.run_layout(panel, Size::new(width, size.height));
         ctx.place_child(panel, Point::ORIGIN);
         let x = width + GAP;
@@ -264,10 +284,12 @@ pub struct PanelView {
 impl PanelView {
     fn new(name: &str, list: NewWidget<ChoiceList>, hint: &str) -> Self {
         let title = crate::gui::label(name, theme::UI_TEXT + 2.0, true).accessibility_hidden(true);
+        // The title wraps rather than being cut at the panel's edge.
+        let title = NewWidget::new(title).with_props(LineBreaking::WordWrap);
         let hint = crate::gui::label(hint, theme::UI_TEXT - 1.0, false).accessibility_hidden(true);
         PanelView {
             name: name.to_owned(),
-            title: NewWidget::new(title).to_pod(),
+            title: title.to_pod(),
             list: list.to_pod(),
             hint: NewWidget::new(hint)
                 .with_props(LineBreaking::WordWrap)
@@ -336,18 +358,25 @@ impl Widget for PanelView {
             .get()
         };
         let title_h = height_of(ctx, &mut self.title);
+        let top = title_h + 6.0;
+        // The keys' hint, drawn only, gives way when the list would
+        // otherwise have less than two rows (a small window).
         let hint_h = height_of(ctx, &mut self.hint);
+        let hint_fits = size.height - top - hint_h - 6.0 >= MIN_LIST;
+        ctx.set_stashed(&mut self.hint, !hint_fits);
         ctx.run_layout(&mut self.title, Size::new(w, title_h));
         ctx.place_child(&mut self.title, Point::new(4.0_f64.min(w), 0.0));
-        let top = title_h + 6.0;
-        let list_h = (size.height - top - hint_h - 6.0).max(0.0);
+        let below = if hint_fits { hint_h + 6.0 } else { 0.0 };
+        let list_h = (size.height - top - below).max(0.0);
         ctx.run_layout(&mut self.list, Size::new(w, list_h));
         ctx.place_child(&mut self.list, Point::new(0.0, top));
-        ctx.run_layout(&mut self.hint, Size::new(w, hint_h));
-        ctx.place_child(
-            &mut self.hint,
-            Point::new(0.0, (size.height - hint_h).max(top)),
-        );
+        if hint_fits {
+            ctx.run_layout(&mut self.hint, Size::new(w, hint_h));
+            ctx.place_child(
+                &mut self.hint,
+                Point::new(0.0, (size.height - hint_h).max(top)),
+            );
+        }
     }
 
     fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _p: &mut Painter<'_>) {
@@ -681,16 +710,24 @@ pub struct Regions {
     pub document: Option<WidgetId>,
     /// The toolbar's buttons.
     pub toolbar: Vec<WidgetId>,
+    /// The header and the toolbar are folded into one bar above the
+    /// document (a narrow window, [`crate::bars::Frame`]): the toolbar
+    /// comes second, as on screen.
+    pub folded: bool,
 }
 
 impl Regions {
-    fn ordered(&self) -> [Vec<WidgetId>; 4] {
-        [
-            self.header.clone(),
-            self.sidebar.into_iter().collect(),
-            self.document.into_iter().collect(),
-            self.toolbar.clone(),
-        ]
+    /// The regions in order on screen, and where the document is.
+    fn ordered(&self) -> ([Vec<WidgetId>; 4], usize) {
+        let header = self.header.clone();
+        let sidebar = self.sidebar.into_iter().collect();
+        let document = self.document.into_iter().collect();
+        let toolbar = self.toolbar.clone();
+        if self.folded {
+            ([header, toolbar, sidebar, document], 3)
+        } else {
+            ([header, sidebar, document, toolbar], 2)
+        }
     }
 }
 
@@ -702,10 +739,10 @@ pub fn next_region(
     focused: Option<WidgetId>,
     forward: bool,
 ) -> Option<WidgetId> {
-    let all = regions.ordered();
+    let (all, doc) = regions.ordered();
     let at = focused
         .and_then(|f| all.iter().position(|r| r.contains(&f)))
-        .unwrap_or(2);
+        .unwrap_or(doc);
     let n = all.len();
     (1..=n)
         .map(|k| {
@@ -739,6 +776,7 @@ mod tests {
             sidebar: None,
             document: Some(doc),
             toolbar: toolbar.clone(),
+            folded: false,
         };
         // No panel: document, toolbar, header, document.
         assert_eq!(next_region(&r, Some(doc), true), Some(toolbar[0]));
@@ -753,6 +791,15 @@ mod tests {
         assert_eq!(next_region(&r, Some(list), false), Some(header[0]));
         // Focus unknown: from the document.
         assert_eq!(next_region(&r, None, true), Some(toolbar[0]));
+        // Folded (a narrow window): header, toolbar, panel, document, as
+        // on screen; a hidden bar has no buttons and is skipped.
+        r.folded = true;
+        assert_eq!(next_region(&r, Some(header[0]), true), Some(toolbar[0]));
+        assert_eq!(next_region(&r, Some(toolbar[1]), true), Some(list));
+        assert_eq!(next_region(&r, Some(doc), true), Some(header[0]));
+        assert_eq!(next_region(&r, None, true), Some(header[0]));
+        r.header.clear();
+        assert_eq!(next_region(&r, Some(doc), true), Some(toolbar[0]));
     }
 
     #[test]

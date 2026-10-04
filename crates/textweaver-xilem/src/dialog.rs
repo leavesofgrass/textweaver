@@ -320,6 +320,36 @@ impl Widget for Modal {
 /// Rows kept laid out around the visible ones.
 const ROW_PAD: f64 = 10.0;
 
+/// The longest start of `text` that `fits` with an ellipsis after it,
+/// ending at a word where one is in the second half ("Introduction to
+/// the…"), else mid-word. `text` itself when it fits; "…" at the least.
+pub fn ellipsize(text: &str, mut fits: impl FnMut(&str) -> bool) -> String {
+    if fits(text) {
+        return text.to_owned();
+    }
+    let cuts: Vec<usize> = text.char_indices().map(|(i, _)| i).skip(1).collect();
+    let with = |n: usize| format!("{}…", text[..n].trim_end());
+    // Binary search for the longest prefix that fits.
+    let (mut lo, mut hi) = (0usize, cuts.len());
+    while lo < hi {
+        let mid = (lo + hi).div_ceil(2);
+        if fits(&with(cuts[mid - 1])) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    if lo == 0 {
+        return "…".to_owned();
+    }
+    let end = cuts[lo - 1];
+    let prefix = &text[..end];
+    match prefix.rfind(char::is_whitespace) {
+        Some(w) if w >= end / 2 && w > 0 => with(w),
+        _ => with(end),
+    }
+}
+
 /// A list of choices: one focusable `ListBox` whose options are AccessKit
 /// nodes (not widgets), with the selected one reported as selected and
 /// the list's active descendant.
@@ -731,18 +761,30 @@ impl Widget for ChoiceList {
         let (fcx, lcx) = ctx.text_contexts();
         for i in self.top..last {
             if self.layouts[i].is_none() {
+                let mut build = |text: &str| {
+                    let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
+                    b.push_default(StyleProperty::FontFamily(FontFamily::Source(
+                        crate::fonts::DEFAULT_STACK.into(),
+                    )));
+                    b.push_default(StyleProperty::FontSize(theme::ui_size(
+                        theme::UI_TEXT + 1.0,
+                    )));
+                    b.push_default(StyleProperty::LineHeight(LineHeight::FontSizeRelative(1.3)));
+                    b.push_default(StyleProperty::Brush(BrushIndex(0)));
+                    let mut l = b.build(text);
+                    l.break_all_lines(None);
+                    l
+                };
+                // A row too long for the list ends with an ellipsis at a
+                // word, never a hard cut; its option keeps the whole text
+                // as its name (W9b-n).
+                let room = (size.width - 2.0 * ROW_PAD - 8.0).max(0.0) as f32;
                 let text = self.items[i].as_str();
-                let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
-                b.push_default(StyleProperty::FontFamily(FontFamily::Source(
-                    crate::fonts::DEFAULT_STACK.into(),
-                )));
-                b.push_default(StyleProperty::FontSize(theme::ui_size(
-                    theme::UI_TEXT + 1.0,
-                )));
-                b.push_default(StyleProperty::LineHeight(LineHeight::FontSizeRelative(1.3)));
-                b.push_default(StyleProperty::Brush(BrushIndex(0)));
-                let mut l = b.build(text);
-                l.break_all_lines(None);
+                let mut l = build(text);
+                if l.width() > room {
+                    let shown = ellipsize(text, |t| build(t).width() <= room);
+                    l = build(&shown);
+                }
                 self.layouts[i] = Some(l);
             }
         }
@@ -907,4 +949,22 @@ pub fn card_props(p: &Palette) -> impl Into<masonry::core::PropertySet> {
         shadow,
         Padding::all(Length::px(22.0)),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ellipsize;
+
+    #[test]
+    fn a_long_row_ends_with_an_ellipsis_at_a_word() {
+        let fits = |n: usize| move |t: &str| t.chars().count() <= n;
+        assert_eq!(ellipsize("Short", fits(10)), "Short");
+        assert_eq!(
+            ellipsize("Introduction to the history of reading", fits(22)),
+            "Introduction to the…"
+        );
+        // One long word is cut inside it, still with the ellipsis.
+        assert_eq!(ellipsize("Antidisestablishment", fits(8)), "Antidis…");
+        assert_eq!(ellipsize("Word", fits(0)), "…");
+    }
 }
