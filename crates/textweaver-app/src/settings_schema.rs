@@ -2809,9 +2809,18 @@ mod tests {
     #[test]
     fn the_short_help_is_the_first_sentence() {
         assert_eq!(first_sentence("One. Two."), "One.");
-        assert_eq!(first_sentence("From 25 to 90. 0 fills it."), "From 25 to 90.");
-        assert_eq!(first_sentence("Codes, z. B. deu. Leer."), "Codes, z. B. deu.");
-        assert_eq!(first_sentence("Such as e.g. this. More."), "Such as e.g. this.");
+        assert_eq!(
+            first_sentence("From 25 to 90. 0 fills it."),
+            "From 25 to 90."
+        );
+        assert_eq!(
+            first_sentence("Codes, z. B. deu. Leer."),
+            "Codes, z. B. deu."
+        );
+        assert_eq!(
+            first_sentence("Such as e.g. this. More."),
+            "Such as e.g. this."
+        );
         assert_eq!(first_sentence("Which one. ocrs or not."), "Which one.");
         assert_eq!(first_sentence("Only one."), "Only one.");
     }
