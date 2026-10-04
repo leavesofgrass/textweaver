@@ -263,6 +263,16 @@ In the terminal, the same command shows the settings screen with only these sett
 
 **Export settings** and **Import settings** are under File, then Settings (Alt+Shift+E and Alt+Shift+I). Export opens your system's Save dialog, offering `textweaver-settings.toml`; a name ending in `.json` writes JSON instead. It writes every setting and your key changes. Import opens the system's Open dialog for a TOML or JSON file, checks it, and then asks before changing anything, naming the first changes: "Import 12 changed settings from home.toml: Rate, Theme, Link color, and 9 more? y or n". Yes applies them at once and says what changed; no leaves everything as it was. If the system's file chooser cannot open, a prompt asks for the file's path instead.
 
+## Size, place, and when something goes wrong
+
+- **The window remembers its size and place** on this computer. It opens where it closed, and whether it was maximized. A place on a screen that is no longer connected is not used, so the window never opens where you cannot see it. This is kept for each computer and is not synced.
+- **Text follows the system's text size.** Interface text grows with the Windows "Text size" setting or the GNOME text scaling factor.
+- **The caret blinks as the system's does,** or not at all when the system says so.
+- **The window asks for the integrated graphics adapter** when the computer has one, because it draws text as fast and saves the battery. To use the fast adapter instead, set the environment variable `WGPU_POWER_PREF` to `high`.
+- **A log file.** The window writes warnings and errors to `textweaver.log` in the state folder, as the terminal reader does. [Troubleshooting](troubleshooting.md#the-log-file) says where it is.
+- **After a failure,** the window saves your unsaved edits as a recovery copy, and saves your place and settings. At the next start it offers the work back (see [Recovering unsaved work](editing.md#recovering-unsaved-work)). Signing out, shutting down, or restarting does the same.
+- **If graphics cannot start,** the window says so in words. Started from a shortcut, it shows a message box. See [The window does not open, or it is blank](troubleshooting.md#the-window-does-not-open-or-it-is-blank).
+
 ## What only the terminal reader does
 
 Every command works in the window as in the terminal reader, from the same keys, the menus, and the command palette (F2), with the same lists, questions, and messages. A few commands only mean something in a terminal, and the window's menus and command palette leave them out. If a key for one is pressed in the window (`j` or Shift+J, say), the window says "This command works in the terminal reader." and does nothing else:
