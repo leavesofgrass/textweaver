@@ -248,8 +248,7 @@ impl Widget for Sidebar {
         };
         let stacked = size.width < STACK_WIDTH;
         let doc_h = size.height - (size.height * 0.5).max(0.0) - GAP;
-        let panel_focused =
-            ctx.has_focus_target() && ctx.focus_target_id() != Some(self.doc.id());
+        let panel_focused = ctx.has_focus_target() && ctx.focus_target_id() != Some(self.doc.id());
         self.hidden = stacked && doc_h < SHORT_DOC && !panel_focused;
         ctx.set_stashed(panel, self.hidden);
         if self.hidden {

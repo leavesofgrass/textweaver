@@ -39,9 +39,7 @@ use masonry::core::{
 };
 use masonry::dpi::{LogicalPosition, PhysicalPosition};
 use masonry::imaging::Painter;
-use masonry::kurbo::{
-    Affine, Axis, BezPath, Circle, Point, Rect, RoundedRect, Size, Stroke, Vec2,
-};
+use masonry::kurbo::{Affine, Axis, BezPath, Circle, Point, Rect, RoundedRect, Size, Stroke, Vec2};
 use masonry::layout::{LenReq, Length};
 use masonry::parley::style::{FontFamily, FontStyle, FontWeight, LineHeight};
 use masonry::parley::{Affinity, Cursor, FontContext, Layout, LayoutContext, Selection};
