@@ -70,14 +70,57 @@ pub fn starts(doc: &Document, opts: &ChapterOptions) -> Vec<(CharPos, String)> {
     merged
 }
 
+/// The names chapters get when the document gives none, in the interface
+/// language (the catalogs' `export-chapter-*` messages). English by
+/// default.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ChapterNames {
+    /// The leading chapter's title when the document has no title.
+    pub untitled_document: String,
+    /// An untitled chapter's name, with `{number}` where its number goes.
+    pub numbered: String,
+}
+
+impl Default for ChapterNames {
+    fn default() -> Self {
+        ChapterNames {
+            untitled_document: "Audiobook".to_owned(),
+            numbered: "Chapter {number}".to_owned(),
+        }
+    }
+}
+
+impl ChapterNames {
+    /// The name of untitled chapter `n` (from 1).
+    pub fn number(&self, n: usize) -> String {
+        if self.numbered.contains("{number}") {
+            self.numbered.replace("{number}", &n.to_string())
+        } else {
+            format!("{} {n}", self.numbered.trim())
+        }
+    }
+}
+
 /// Places chapters on the timeline. Text before the first chapter start
 /// becomes a leading chapter titled after the document (Star's rule);
 /// untitled chapters are numbered; chapters without audio are dropped.
+/// Untitled names are English; see [`place_named`].
 pub fn place(
     doc: &Document,
     sentences: &[TimedSentence],
     duration_ms: u64,
     opts: &ChapterOptions,
+) -> Vec<Chapter> {
+    place_named(doc, sentences, duration_ms, opts, &ChapterNames::default())
+}
+
+/// [`place`] with the names for untitled chapters given.
+pub fn place_named(
+    doc: &Document,
+    sentences: &[TimedSentence],
+    duration_ms: u64,
+    opts: &ChapterOptions,
+    names: &ChapterNames,
 ) -> Vec<Chapter> {
     if duration_ms == 0 || sentences.is_empty() {
         return Vec::new();
@@ -87,7 +130,7 @@ pub fn place(
         .title
         .clone()
         .filter(|t| !t.trim().is_empty())
-        .unwrap_or_else(|| "Audiobook".to_owned());
+        .unwrap_or_else(|| names.untitled_document.clone());
     // The time at which reading reaches `pos`.
     let time_of = |pos: CharPos| {
         sentences
@@ -110,7 +153,7 @@ pub fn place(
             continue; // no audio of its own (two headings in one sentence)
         }
         let title = if title.trim().is_empty() {
-            format!("Chapter {}", chapters.len() + 1)
+            names.number(chapters.len() + 1)
         } else {
             title.clone()
         };
@@ -122,6 +165,30 @@ pub fn place(
         });
     }
     chapters
+}
+
+/// A WebVTT chapters file (`NAME.chapters.vtt`): one cue per chapter,
+/// its title as the cue text (escaped), for a player's chapter menu.
+pub fn vtt(chapters: &[Chapter]) -> String {
+    let cues: Vec<crate::Cue> = chapters
+        .iter()
+        .map(|c| crate::Cue {
+            start_ms: c.start_ms,
+            end_ms: c.end_ms,
+            text: c.title.clone(),
+        })
+        .collect();
+    crate::cues::render(&cues, crate::SubtitleFormat::Vtt)
+}
+
+/// The chapters file beside `subtitles` or the audio: `essay.vtt` and
+/// `essay.mp3` both give `essay.chapters.vtt`.
+pub fn vtt_path(beside: &std::path::Path) -> std::path::PathBuf {
+    let stem = beside
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "captions".to_owned());
+    beside.with_file_name(format!("{stem}.chapters.vtt"))
 }
 
 /// Escapes a value for ffmpeg's metadata file: `=`, `;`, `#`, `\`, and
@@ -262,6 +329,51 @@ mod tests {
         assert_eq!(c.len(), 1);
         assert_eq!((c[0].title.as_str(), c[0].end_ms), ("Audiobook", 500));
         assert!(place(&d, &[], 0, &ChapterOptions::default()).is_empty());
+        let german = ChapterNames {
+            untitled_document: "Hörbuch".into(),
+            numbered: "Kapitel {number}".into(),
+        };
+        let c = place_named(
+            &d,
+            &[sentence(0, 10, 0, 500)],
+            500,
+            &ChapterOptions::default(),
+            &german,
+        );
+        assert_eq!(c[0].title, "Hörbuch");
+        assert_eq!(german.number(3), "Kapitel 3");
+        let bare = ChapterNames {
+            numbered: "Capítulo".into(),
+            ..ChapterNames::default()
+        };
+        assert_eq!(bare.number(2), "Capítulo 2");
+    }
+
+    #[test]
+    fn chapters_file_is_webvtt_with_a_cue_per_chapter() {
+        let chapters = [
+            Chapter {
+                title: "Photosynthesis".into(),
+                source_start: CharPos::ZERO,
+                start_ms: 0,
+                end_ms: 2750,
+            },
+            Chapter {
+                title: "Light & dark".into(),
+                source_start: CharPos(40),
+                start_ms: 2750,
+                end_ms: 4000,
+            },
+        ];
+        assert_eq!(
+            vtt(&chapters),
+            "WEBVTT\n\n00:00:00.000 --> 00:00:02.750\nPhotosynthesis\n\n\
+             00:00:02.750 --> 00:00:04.000\nLight &amp; dark\n"
+        );
+        assert_eq!(
+            vtt_path(std::path::Path::new("out/essay.mp3")),
+            std::path::Path::new("out/essay.chapters.vtt")
+        );
     }
 
     #[test]

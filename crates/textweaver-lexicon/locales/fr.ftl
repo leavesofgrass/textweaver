@@ -1905,6 +1905,17 @@ setting-export-subtitle-word-level = Sous-titres par mot
 setting-export-subtitle-word-level-help = Un sous-titre par mot au lieu de lignes de légende.
 setting-export-subtitles-with-audio = Sous-titres avec l'audio
 setting-export-subtitles-with-audio-help = Toujours écrire les sous-titres à côté de l'audio exporté.
+choice-export-subtitle-format-ass = Karaoké ASS
+setting-export-subtitle-karaoke = Karaoké des sous-titres
+setting-export-subtitle-karaoke-help = Comment les lignes de sous-titres montrent le mot lu : désactivé, souligné une fois prononcé (balises WebVTT) ou un sous-titre par mot, en gras et souligné.
+choice-export-subtitle-karaoke-off = Désactivé
+choice-export-subtitle-karaoke-tags = Souligner une fois prononcé
+choice-export-subtitle-karaoke-lines = Un sous-titre par mot
+setting-export-subtitle-chapters = Fichier de chapitres
+setting-export-subtitle-chapters-help = Écrire aussi un fichier de chapitres WebVTT à côté des sous-titres ou de l'audio.
+# Names for chapters the document leaves untitled, in audio export.
+export-chapter-untitled = Livre audio
+export-chapter-numbered = Chapitre { $number }
 setting-reading-aids-rsvp-wpm = Débit RSVP
 setting-reading-aids-rsvp-wpm-help = Mots par minute de la présentation visuelle en série rapide (RSVP).
 setting-reading-aids-rsvp-pacing = Rythme du RSVP

@@ -95,6 +95,89 @@ pub struct Args {
     /// Print JSON.
     #[arg(long)]
     pub json: bool,
+    /// Also write captions of the transcript (.srt, .vtt, or .ass), one
+    /// cue per segment, long segments split into caption lines.
+    #[arg(long, value_name = "FILE")]
+    pub captions: Option<PathBuf>,
+    /// Karaoke in the captions (word times are estimated by word length).
+    #[arg(long, value_enum, default_value_t = super::export_audio::KaraokeArg::Off)]
+    pub karaoke: super::export_audio::KaraokeArg,
+}
+
+/// The note every machine caption file carries.
+pub const MACHINE_CAPTIONS: &str = "Machine captions: check before sharing.";
+
+/// Captions for a transcript in `format`: a cue per segment (a long one
+/// split by the caption line rules), with a note saying they are machine
+/// captions, and that word times are estimated when karaoke is on.
+pub fn captions_text(
+    transcript: &Transcript,
+    format: textweaver_export::SubtitleFormat,
+    karaoke: textweaver_export::Karaoke,
+) -> String {
+    use textweaver_export::{CaptionMeta, CueOptions, Karaoke, TimedSentence, Timeline, cues};
+    let sentences: Vec<TimedSentence> = transcript
+        .segments
+        .iter()
+        .filter(|s| !s.text.trim().is_empty())
+        .map(|s| TimedSentence {
+            start_ms: s.start_ms,
+            end_ms: s.end_ms,
+            source: None,
+            text: s.text.trim().to_owned(),
+            spoken: s.text.trim().to_owned(),
+            words: Vec::new(),
+        })
+        .collect();
+    let timeline = Timeline {
+        duration_ms: sentences.last().map_or(0, |s| s.end_ms),
+        sentences,
+        ..Timeline::default()
+    };
+    let mut notes = vec![MACHINE_CAPTIONS.to_owned()];
+    if karaoke != Karaoke::Off || format == textweaver_export::SubtitleFormat::Ass {
+        notes.push("Word times are estimated.".to_owned());
+    }
+    let meta = CaptionMeta {
+        voice: None,
+        notes,
+        ..CaptionMeta::default()
+    };
+    let opts = CueOptions {
+        karaoke,
+        ..CueOptions::default()
+    };
+    cues::render_file(&timeline, format, &opts, Some(&meta))
+}
+
+/// Writes `--captions` when asked, and says so on standard error unless
+/// `quiet`.
+fn write_captions(args: &Args, transcript: &Transcript, quiet: bool) -> anyhow::Result<()> {
+    let Some(path) = &args.captions else {
+        return Ok(());
+    };
+    let format = textweaver_export::SubtitleFormat::from_path(path).with_context(|| {
+        format!(
+            "cannot write captions to {}: use a .srt, .vtt, or .ass file name",
+            path.display()
+        )
+    })?;
+    let text = captions_text(transcript, format, args.karaoke.into());
+    let count = match format {
+        textweaver_export::SubtitleFormat::Ass => text.matches("\nDialogue: ").count(),
+        _ => text.matches(" --> ").count(),
+    };
+    std::fs::write(path, text).with_context(|| path.display().to_string())?;
+    if !quiet {
+        let end = transcript.segments.last().map_or(0, |s| s.end_ms);
+        eprintln!(
+            "Wrote {}: {}, {count} caption{}. {MACHINE_CAPTIONS}",
+            path.display(),
+            super::export_audio::spoken_duration(end),
+            if count == 1 { "" } else { "s" }
+        );
+    }
+    Ok(())
 }
 
 /// What `tw dictate` does besides dictating.
@@ -363,6 +446,7 @@ fn run_rten(args: &Args, dir: PathBuf) -> anyhow::Result<()> {
         }
     }
     let transcript = transcript.unwrap_or_default();
+    write_captions(args, &transcript, args.json)?;
     let timings = d.last_timings();
     if args.timings
         && let Some(t) = timings
@@ -476,6 +560,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         std::thread::sleep(Duration::from_millis(50));
     }
     let transcript = transcript.unwrap_or_default();
+    write_captions(&args, &transcript, args.json)?;
     let mut text = if args.timestamps {
         transcript.text_with_timestamps()
     } else {
@@ -510,4 +595,76 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         None => println!("{text}"),
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use textweaver_dictation::Segment;
+    use textweaver_export::{Karaoke, SubtitleFormat};
+
+    fn seg(start_ms: u64, end_ms: u64, text: &str) -> Segment {
+        Segment {
+            start_ms,
+            end_ms,
+            text: text.into(),
+        }
+    }
+
+    /// A two-segment transcript, as the fake Whisper program gives.
+    fn two() -> Transcript {
+        Transcript {
+            segments: vec![
+                seg(0, 1500, "Hello from the test."),
+                seg(1500, 3000, "Second segment < here."),
+            ],
+        }
+    }
+
+    #[test]
+    fn two_segments_give_two_cues_with_the_machine_note() {
+        let vtt = captions_text(&two(), SubtitleFormat::Vtt, Karaoke::Off);
+        assert_eq!(
+            vtt,
+            "WEBVTT\n\nNOTE\nMachine captions: check before sharing. Made by textweaver.\n\n\
+             00:00:00.000 --> 00:00:01.500\nHello from the test.\n\n\
+             00:00:01.500 --> 00:00:03.000\nSecond segment &lt; here.\n"
+        );
+        let srt = captions_text(&two(), SubtitleFormat::Srt, Karaoke::Off);
+        assert!(srt.starts_with("1\n00:00:00,000 --> 00:00:01,500\nHello from the test.\n\n2\n"));
+        assert!(!srt.contains("NOTE"));
+    }
+
+    #[test]
+    fn a_long_segment_splits_at_twelve_words() {
+        let words: Vec<String> = (1..=15).map(|i| format!("w{i}")).collect();
+        let t = Transcript {
+            segments: vec![seg(0, 15_000, &words.join(" "))],
+        };
+        let srt = captions_text(&t, SubtitleFormat::Srt, Karaoke::Off);
+        let cues: Vec<&str> = srt
+            .split("\n\n")
+            .map(|c| c.lines().last().unwrap_or_default())
+            .collect();
+        assert_eq!(cues.len(), 2, "{srt}");
+        assert_eq!(cues[0].split(' ').count(), 12);
+        assert_eq!(cues[1], "w13 w14 w15");
+    }
+
+    #[test]
+    fn karaoke_captions_say_word_times_are_estimated() {
+        let vtt = captions_text(&two(), SubtitleFormat::Vtt, Karaoke::Lines);
+        assert!(
+            vtt.replace('\n', " ")
+                .contains("Machine captions: check before sharing. Word times are estimated."),
+            "{vtt}"
+        );
+        assert!(vtt.contains("<b><u>Hello</u></b> from the test."), "{vtt}");
+        let ass = captions_text(&two(), SubtitleFormat::Ass, Karaoke::Off);
+        assert!(
+            ass.contains("; Machine captions: check before sharing."),
+            "{ass}"
+        );
+        assert_eq!(ass.matches("\nDialogue: ").count(), 2);
+    }
 }

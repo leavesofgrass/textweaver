@@ -61,8 +61,8 @@ use textweaver_core::{CharRange, PunctuationLevel};
 use textweaver_speech::{Caps, NormalizeConfig, Pipeline, SpeechBackend, SpeechError};
 use textweaver_text::{Document, NarrationPolicy, plan};
 
-pub use chapters::ChapterOptions;
-pub use cues::{Cue, CueOptions, SubtitleFormat};
+pub use chapters::{ChapterNames, ChapterOptions};
+pub use cues::{CaptionLine, CaptionMeta, Cue, CueOptions, Karaoke, SubtitleFormat};
 pub use ffmpeg::AudioFormat;
 pub use timeline::{Chapter, TimedSentence, TimedWord, Timeline};
 
@@ -93,7 +93,7 @@ pub enum ExportError {
         message: String,
     },
     /// The subtitle name has no supported extension.
-    #[error("Cannot write subtitles to {0}: use a .srt or .vtt file name.")]
+    #[error("Cannot write subtitles to {0}: use a .srt, .vtt, or .ass file name.")]
     UnsupportedSubtitles(PathBuf),
     /// ffmpeg is needed and was not found.
     #[error(
@@ -174,6 +174,11 @@ pub struct ExportOptions {
     pub gap_ms: u64,
     /// Which markers start chapters.
     pub chapters: ChapterOptions,
+    /// Names for untitled chapters, in the interface language.
+    pub chapter_names: ChapterNames,
+    /// What the subtitle file says about itself (a WebVTT `NOTE`, the ASS
+    /// title); the title defaults to the document's.
+    pub captions: CaptionMeta,
 }
 
 /// Progress through an export, reported before each sentence and once at
@@ -279,7 +284,13 @@ fn synthesize_inner(
     if progress(Progress { done: total, total }).is_break() {
         return Err(ExportError::Cancelled);
     }
-    let chapters = chapters::place(doc, &sentences, duration_ms, &opts.chapters);
+    let chapters = chapters::place_named(
+        doc,
+        &sentences,
+        duration_ms,
+        &opts.chapters,
+        &opts.chapter_names,
+    );
     Ok(Timeline {
         sentences,
         duration_ms,
@@ -289,9 +300,10 @@ fn synthesize_inner(
     })
 }
 
-/// Renders subtitles for a timeline.
+/// Renders subtitles for a timeline, with no note (see
+/// [`cues::render_file`]).
 pub fn subtitles(timeline: &Timeline, format: SubtitleFormat, opts: &CueOptions) -> String {
-    cues::render(&cues::build(timeline, opts), format)
+    cues::render_file(timeline, format, opts, None)
 }
 
 /// What [`export`] wrote.
@@ -373,7 +385,11 @@ pub fn export(
     };
     let subtitles_path = match (subtitles_to, sub_format) {
         (Some(req), Some(f)) => {
-            let text = subtitles(&timeline, f, &req.cues);
+            let mut meta = opts.captions.clone();
+            if meta.title.is_none() {
+                meta.title = timeline.title.clone();
+            }
+            let text = cues::render_file(&timeline, f, &req.cues, Some(&meta));
             std::fs::write(&req.path, text).map_err(|e| ExportError::io(&req.path, e))?;
             Some(req.path.clone())
         }

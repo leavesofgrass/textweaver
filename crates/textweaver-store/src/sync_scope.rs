@@ -171,6 +171,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("export.subtitle_format", Portable),
     ("export.subtitle_word_level", Portable),
     ("export.subtitles_with_audio", Portable),
+    ("export.subtitle_karaoke", Portable),
+    ("export.subtitle_chapters", Portable),
     // [braille]
     ("braille.math_code", Portable),
     ("braille.table_format", Portable),

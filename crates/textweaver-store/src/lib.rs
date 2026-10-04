@@ -81,8 +81,8 @@ pub use settings::{
     MedicalLexiconSettings, NormalizationSettings, OcrEngine, PiperPhonemizer, PiperSettings,
     PositionPolicy, PreviewSettings, QuietScreen, REMOVED_SETTINGS, RESERVED_SETTINGS,
     ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings, SayAll, Settings,
-    SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat, SummarySettings,
-    SyncSettings, TableMode, drop_removed_settings,
+    SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, SubtitleFormat, SubtitleKaraoke,
+    SummarySettings, SyncSettings, TableMode, drop_removed_settings,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

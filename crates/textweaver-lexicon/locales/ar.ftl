@@ -2057,6 +2057,17 @@ setting-export-subtitle-word-level = ترجمة نصية بالكلمة
 setting-export-subtitle-word-level-help = ترجمة نصية واحدة لكل كلمة بدلًا من أسطر تعليق.
 setting-export-subtitles-with-audio = الترجمة النصية مع الصوت
 setting-export-subtitles-with-audio-help = كتابة الترجمة النصية دائمًا بجانب الصوت المصدَّر.
+choice-export-subtitle-format-ass = كاريوكي ASS
+setting-export-subtitle-karaoke = كاريوكي الترجمة النصية
+setting-export-subtitle-karaoke-help = كيف تُظهر أسطر الترجمة النصية الكلمة المقروءة: متوقف، أو تسطير الكلمة عند نطقها (وسوم WebVTT)، أو ترجمة نصية لكل كلمة بخط عريض مسطَّر.
+choice-export-subtitle-karaoke-off = متوقف
+choice-export-subtitle-karaoke-tags = تسطير عند النطق
+choice-export-subtitle-karaoke-lines = ترجمة نصية لكل كلمة
+setting-export-subtitle-chapters = ملف الفصول
+setting-export-subtitle-chapters-help = كتابة ملف فصول WebVTT أيضًا بجانب الترجمة النصية أو الصوت.
+# Names for chapters the document leaves untitled, in audio export.
+export-chapter-untitled = كتاب صوتي
+export-chapter-numbered = الفصل { $number }
 setting-reading-aids-rsvp-wpm = سرعة العرض السريع
 setting-reading-aids-rsvp-wpm-help = كلمات في الدقيقة للعرض المتتابع السريع.
 setting-reading-aids-rsvp-pacing = إيقاع العرض السريع

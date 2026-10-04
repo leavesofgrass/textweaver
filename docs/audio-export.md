@@ -201,6 +201,7 @@ This writes the audio and a subtitle file next to it. The format comes from the 
 
 - `.srt`: SubRip, the most widely supported format.
 - `.vtt`: WebVTT, the format web pages use. The file starts with the line `WEBVTT`.
+- `.ass`: Advanced SubStation Alpha, with karaoke by outline (see [Karaoke subtitles](#karaoke-subtitles)).
 
 Any other extension is refused with a message, before any audio is made.
 
@@ -236,7 +237,7 @@ How captions are made:
 tw export-audio reading.md --out reading.wav --subtitles reading.vtt --word-level
 ```
 
-`--word-level` gives each word its own cue, instead of whole caption lines. This suits tools that highlight one word at a time, like karaoke. This is the start of the real WebVTT file from the example document:
+`--word-level` gives each word its own cue, instead of whole caption lines. This suits tools that highlight one word at a time. This is the start of the real WebVTT file from the example document, without its `NOTE` block (see [The note in each subtitle file](#the-note-in-each-subtitle-file)):
 
 ```text
 WEBVTT
@@ -264,6 +265,60 @@ Some engines report the exact moment each word sounds in the file. With them, wo
 - Apple's AVSpeechSynthesizer (`avspeech`) on macOS 14 and later, which reports where each word starts in the audio it writes.
 
 The classic Apple engine (`nsspeech`) and the SAPI Eloquence voices can write files but do not report word times. With them, word cues are estimated. Each sentence's start and end are still measured. The time between them is shared among its words by length, so longer words get more time. Sentence captions from these engines are just as accurate as from any other engine, because they depend only on the measured sentence times.
+
+## Karaoke subtitles
+
+Karaoke subtitles show the whole caption line and mark the word being read. The mark is always a shape: an underline, bold and underline, or an outline. It never depends on color alone. There are three ways to get them.
+
+**Underline as spoken** (`--karaoke tags`, WebVTT only):
+
+```bash
+tw export-audio essay.md --out essay.mp3 --subtitles essay.vtt --karaoke tags
+```
+
+Each word after the first in a line gets a timestamp tag, and a `STYLE` block underlines the words already spoken. Players that do not understand the tags show the plain line. SRT has no tags, so an SRT file stays plain. An illustration, for a document titled Photosynthesis with no heading, read at an even 250 milliseconds a word:
+
+```text
+WEBVTT
+
+STYLE
+::cue(:past) {
+  text-decoration: underline;
+}
+
+NOTE
+Photosynthesis. Read by Recording (test double), 240 words a
+minute. Made by textweaver.
+
+00:00:00.000 --> 00:00:01.250
+Plants <00:00:00.250>make <00:00:00.500>food <00:00:00.750>from <00:00:01.000>light.
+```
+
+**One cue per word** (`--karaoke lines`, WebVTT or SRT): every word gets its own cue showing the whole line, with that word in bold and underline. This works in the most players, YouTube included. A player that reads or brailles each cue repeats the line once per word, so it is never the default.
+
+```text
+00:00:00.000 --> 00:00:00.250
+<b><u>Plants</u></b> make food from light.
+
+00:00:00.250 --> 00:00:00.500
+Plants <b><u>make</u></b> food from light.
+```
+
+**ASS karaoke** (`--subtitles essay.ass`): an Advanced SubStation Alpha file for players built on libass, such as mpv and VLC. Unread words are white with no outline; each word gains a 3 pixel black outline and turns yellow as it is reached. The `\ko` tag carries each word's time in hundredths of a second.
+
+`--word-level` wins over `--karaoke`: one word per cue, with no line around it.
+
+### The note in each subtitle file
+
+Every WebVTT file textweaver writes now starts with a `NOTE` block that players do not show: the title, the voice and engine, the rate in words a minute, and "Made by textweaver." An ASS file has the same line as a comment and the title as its `Title`. The language belongs to the player's track settings, not the file, so it is not written.
+
+## Write a chapters file
+
+```bash
+tw export-audio essay.md --out essay.mp3 --subtitles essay.vtt --chapters essay.chapters.vtt
+```
+
+This also writes a WebVTT chapters file: one cue per chapter, with the chapter's title as its text. Web players use it for a chapter menu. The chapters are the same ones written into an M4B. A document with no headings has one chapter named after its title. When it has no title either, the chapter is named in the interface language ("Audiobook", "Hörbuch", "Audiolibro" and so on), and untitled chapters are numbered the same way ("Chapter 2", "Kapitel 2").
 
 ## Choose the engine, voice, rate, and pitch
 
@@ -317,17 +372,21 @@ The `[export]` settings let you have subtitles without typing `--subtitles` each
 subtitles_with_audio = true
 subtitle_format = "vtt"
 subtitle_word_level = false
+subtitle_karaoke = "off"
+subtitle_chapters = false
 ```
 
-The three settings:
+The settings:
 
 - `subtitles_with_audio`: `true` or `false`. The default is `false`. When `true`, every export also writes subtitles next to the audio, with the same name and the subtitle format's extension. Exporting `book.mp3` then also writes `book.srt`.
-- `subtitle_format`: `"srt"` or `"vtt"`. The default is `"srt"`. It is used only for the file `subtitles_with_audio` names. A file you name with `--subtitles` always uses its own extension.
+- `subtitle_format`: `"srt"`, `"vtt"`, or `"ass"`. The default is `"srt"`. It is used only for the file `subtitles_with_audio` names. A file you name with `--subtitles` always uses its own extension.
 - `subtitle_word_level`: `true` or `false`. The default is `false`. When `true`, subtitles always have one cue per word, as if you had added `--word-level`.
+- `subtitle_karaoke`: `"off"`, `"tags"`, or `"lines"`. The default is `"off"`. It is the karaoke style when you do not give `--karaoke`.
+- `subtitle_chapters`: `true` or `false`. The default is `false`. When `true`, every export also writes a chapters file beside the subtitles (or beside the audio when there are none), named like it with `.chapters.vtt`: `book.vtt` gives `book.chapters.vtt`.
 
 A file named with `--subtitles` always wins over `subtitles_with_audio`. `--word-level` turns word cues on even when `subtitle_word_level` is `false`; there is no option to turn them off for one export when the setting is `true`.
 
-These settings are used by `tw export-audio` and by Export audio in the reader, which writes subtitles beside the audio when `subtitles_with_audio` is `true`.
+These settings are used by `tw export-audio` and by Export audio in the reader, which writes subtitles beside the audio when `subtitles_with_audio` is `true`. For now, `subtitle_karaoke` and `subtitle_chapters` apply to `tw export-audio` only.
 
 ## Get a report as JSON
 
@@ -382,7 +441,7 @@ Every problem is reported as one sentence starting with "Error:". These are the 
 - "Error: writing M4B needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, .opus, or .wav". This is said before anything is read aloud. ffmpeg is not installed, or textweaver cannot find it. Install it as described in [Before you start](#before-you-start). If you just installed it, open a new terminal window. If `TEXTWEAVER_FFMPEG` is set, check that it is the full path to the program, including `ffmpeg.exe` on Windows, or remove the variable. Or export to `.flac`, `.mp3`, `.opus`, or `.wav`, which need nothing.
 - "Error: cannot write notes.ogg: use a .wav, .flac, .mp3, .opus, or .m4b file name". Only WAV, FLAC, MP3, Opus, and M4B can be written. For a small file of speech, use `.opus`; Ogg Vorbis (`.ogg`) is not written.
 - "Error: The voice failed on sentence 1: engine error: the voice could not be used:" followed by the reason. The voice you chose could not be loaded, so nothing was written with another voice by mistake. Run `tw voices --backend sapi` and choose a voice from the list.
-- "Error: Cannot write subtitles to notes.txt: use a .srt or .vtt file name." Give the subtitle file a `.srt` or `.vtt` extension.
+- "Error: Cannot write subtitles to notes.txt: use a .srt, .vtt, or .ass file name." Give the subtitle file a `.srt`, `.vtt`, or `.ass` extension.
 - "Error: no installed voice can write audio files; install espeak-ng, or choose one with --backend". textweaver found no engine that can write files. Run `tw backends` and look for "audio files". On Windows, the SAPI5 voices usually can. On Linux, install eSpeak NG; see [the speech guide](speech.md).
 - "Error: Silent (no audio) cannot write audio files; choose another voice with --backend". The engine chosen cannot write files. The name at the start is the engine's, for example "Omnivox speech server". This also happens when you name an engine with `--backend` that is not installed and the automatic choice falls on an engine that cannot write files. Run `tw backends`, and name an engine that is available and lists "audio files".
 - "Error: cannot open reading.md", followed by the reason. The document was not found or could not be read. Check the name and folder. Put quotation marks around a name with spaces.

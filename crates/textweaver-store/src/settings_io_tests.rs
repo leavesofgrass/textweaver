@@ -160,6 +160,8 @@ fn everything_changed() -> Settings {
     s.export.subtitle_format = crate::SubtitleFormat::Vtt;
     s.export.subtitle_word_level = true;
     s.export.subtitles_with_audio = true;
+    s.export.subtitle_karaoke = crate::SubtitleKaraoke::Lines;
+    s.export.subtitle_chapters = true;
     s.braille.math_code = crate::MathBrailleCode::Ueb;
     s.braille.table_format = crate::BrailleTableFormat::Listed;
     let a = &mut s.reading_aids;

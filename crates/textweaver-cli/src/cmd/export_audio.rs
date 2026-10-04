@@ -15,10 +15,12 @@ use anyhow::{Context, bail};
 use serde::Serialize;
 use textweaver_app::core::{Pitch, Rate};
 use textweaver_app::formats;
+use textweaver_app::lexicon::i18n::{Arg, Catalog};
 use textweaver_app::speech::{BackendRegistry, Caps, Selection, VoiceParams, resolve_voice};
-use textweaver_app::store::{Paths, Settings, SettingsStore};
+use textweaver_app::store::{Paths, Settings, SettingsStore, SubtitleKaraoke};
 use textweaver_export::{
-    AudioFormat, CueOptions, ExportOptions, ExportReport, SubtitleRequest, export, ffmpeg,
+    AudioFormat, CaptionMeta, ChapterNames, CueOptions, ExportOptions, ExportReport, Karaoke,
+    SubtitleRequest, export, ffmpeg,
 };
 
 /// Arguments for `tw export-audio`.
@@ -29,12 +31,21 @@ pub struct Args {
     /// Output file (.wav, .flac, .mp3, .opus, .m4b).
     #[arg(long = "out", short = 'o', alias = "output")]
     pub out: PathBuf,
-    /// Also write subtitles (.srt or .vtt).
+    /// Also write subtitles (.srt, .vtt, or .ass karaoke).
     #[arg(long)]
     pub subtitles: Option<PathBuf>,
     /// One subtitle cue per word instead of caption lines.
     #[arg(long)]
     pub word_level: bool,
+    /// Karaoke in subtitle lines: off, tags (WebVTT, spoken words
+    /// underlined), or lines (a cue per word in bold and underline).
+    /// Default: `[export] subtitle_karaoke`.
+    #[arg(long, value_enum)]
+    pub karaoke: Option<KaraokeArg>,
+    /// Also write a WebVTT chapters file here. With `[export]
+    /// subtitle_chapters`, one is written beside the subtitles or the audio.
+    #[arg(long, value_name = "FILE")]
+    pub chapters: Option<PathBuf>,
     /// Backend id (default: the best available one that can write files).
     #[arg(long)]
     pub backend: Option<String>,
@@ -58,6 +69,49 @@ pub struct Args {
     pub home: Option<PathBuf>,
 }
 
+/// `--karaoke`: how subtitle lines show the word being read.
+#[derive(clap::ValueEnum, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum KaraokeArg {
+    /// Plain caption lines.
+    #[default]
+    Off,
+    /// WebVTT timestamp tags, spoken words underlined.
+    Tags,
+    /// A cue per word: the line with that word in bold and underline.
+    Lines,
+}
+
+impl From<KaraokeArg> for Karaoke {
+    fn from(k: KaraokeArg) -> Self {
+        match k {
+            KaraokeArg::Off => Karaoke::Off,
+            KaraokeArg::Tags => Karaoke::Tags,
+            KaraokeArg::Lines => Karaoke::Lines,
+        }
+    }
+}
+
+/// `[export] subtitle_karaoke` as the exporter's style.
+pub fn karaoke_setting(k: SubtitleKaraoke) -> Karaoke {
+    match k {
+        SubtitleKaraoke::Off => Karaoke::Off,
+        SubtitleKaraoke::Tags => Karaoke::Tags,
+        SubtitleKaraoke::Lines => Karaoke::Lines,
+    }
+}
+
+/// Names for untitled chapters in the interface language.
+pub fn chapter_names(language: &str) -> ChapterNames {
+    let (c, _) = Catalog::for_language(language, None);
+    ChapterNames {
+        untitled_document: c.tr("export-chapter-untitled"),
+        numbered: c.fmt(
+            "export-chapter-numbered",
+            &[("number", Arg::Str("{number}".into()))],
+        ),
+    }
+}
+
 /// What `tw export-audio --json` prints.
 #[derive(Debug, Serialize)]
 pub struct Report {
@@ -65,6 +119,8 @@ pub struct Report {
     pub backend: Selection,
     /// What was written, with the timeline.
     pub export: ExportReport,
+    /// The WebVTT chapters file, if one was written.
+    pub chapters: Option<PathBuf>,
 }
 
 /// Picks the backend: the one asked for (falling back to automatic
@@ -196,18 +252,38 @@ pub fn export_audio(
         args.subtitles.as_deref(),
         args.word_level,
     );
+    let karaoke = args.karaoke.map_or_else(
+        || karaoke_setting(settings.export.subtitle_karaoke),
+        Karaoke::from,
+    );
+    let chapters_to = args.chapters.clone().or_else(|| {
+        settings.export.subtitle_chapters.then(|| {
+            textweaver_export::chapters::vtt_path(plan.path.as_deref().unwrap_or(&args.out))
+        })
+    });
     let subtitles = plan.path.map(|path| SubtitleRequest {
         path,
         cues: CueOptions {
             word_level: plan.word_level,
+            karaoke,
             ..CueOptions::default()
         },
     });
+    let voice_name = match &params.voice {
+        Some(v) => format!("{v} ({})", selection.backend.name),
+        None => selection.backend.name.to_string(),
+    };
     let options = ExportOptions {
         narration: textweaver_app::narration_policy(settings),
         normalize: config.normalize,
         punctuation: config.punctuation,
         split_caps: config.split_caps,
+        chapter_names: chapter_names(&settings.interface.language),
+        captions: CaptionMeta {
+            voice: Some(voice_name),
+            words_per_minute: Some(u32::from(params.rate.wpm())),
+            ..CaptionMeta::default()
+        },
         ..ExportOptions::default()
     };
     let mut last_tenth = 0;
@@ -227,9 +303,21 @@ pub fn export_audio(
             ControlFlow::Continue(())
         },
     )?;
+    let chapters = match chapters_to {
+        Some(path) => {
+            std::fs::write(
+                &path,
+                textweaver_export::chapters::vtt(&report.timeline.chapters),
+            )
+            .with_context(|| format!("cannot write {}", path.display()))?;
+            Some(path)
+        }
+        None => None,
+    };
     Ok(Report {
         backend: selection,
         export: report,
+        chapters,
     })
 }
 
@@ -248,6 +336,9 @@ pub fn summary(r: &Report) -> String {
     );
     if let Some(sub) = &r.export.subtitles {
         s.push_str(&format!(" Subtitles in {}.", sub.display()));
+    }
+    if let Some(ch) = &r.chapters {
+        s.push_str(&format!(" Chapters in {}.", ch.display()));
     }
     s
 }
@@ -330,6 +421,8 @@ mod tests {
             out: dir.join(out),
             subtitles: Some(dir.join("doc.srt")),
             word_level: false,
+            karaoke: None,
+            chapters: None,
             backend: Some("recording".into()),
             voice: Some("Recording US".into()),
             rate: Some(200),
@@ -338,6 +431,48 @@ mod tests {
             quiet: true,
             home: None,
         }
+    }
+
+    #[test]
+    fn karaoke_tags_a_note_and_a_chapters_file() {
+        let dir = Scratch::new("karaoke");
+        let mut a = args(dir.path(), "doc.wav");
+        a.subtitles = Some(dir.path().join("doc.vtt"));
+        a.karaoke = Some(KaraokeArg::Tags);
+        let mut settings = Settings::default();
+        settings.export.subtitle_chapters = true;
+        let r = export_audio(
+            &a,
+            &settings,
+            &BackendRegistry::test_doubles(),
+            None,
+            &mut |_| {},
+        )
+        .unwrap();
+        let vtt = std::fs::read_to_string(dir.path().join("doc.vtt")).unwrap();
+        assert!(vtt.contains("::cue(:past)"), "{vtt}");
+        assert!(vtt.contains("\nNOTE\n"), "{vtt}");
+        assert!(
+            vtt.replace('\n', " ")
+                .contains("(Recording (test double)), 200 words a minute. Made by textweaver."),
+            "{vtt}"
+        );
+        assert!(vtt.contains("Hello <00:00:"), "{vtt}");
+        let chapters = dir.path().join("doc.chapters.vtt");
+        assert_eq!(r.chapters.as_deref(), Some(chapters.as_path()));
+        let ch = std::fs::read_to_string(&chapters).unwrap();
+        assert!(ch.starts_with("WEBVTT\n\n00:00:00.000 --> "), "{ch}");
+        assert!(ch.ends_with("\nIntro\n"), "{ch}");
+        assert!(summary(&r).ends_with(&format!(" Chapters in {}.", chapters.display())));
+    }
+
+    #[test]
+    fn chapter_names_follow_the_interface_language() {
+        let de = chapter_names("de");
+        assert_eq!(de.untitled_document, "Hörbuch");
+        assert_eq!(de.number(2), "Kapitel 2");
+        assert_eq!(chapter_names("en").number(4), "Chapter 4");
+        assert_eq!(chapter_names("es").untitled_document, "Audiolibro");
     }
 
     #[test]
@@ -430,6 +565,8 @@ mod tests {
             out: dir.path().join("book.wav"),
             subtitles: None,
             word_level: false,
+            karaoke: None,
+            chapters: None,
             backend: None,
             voice: None,
             rate: None,

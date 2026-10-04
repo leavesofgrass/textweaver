@@ -51,18 +51,41 @@ pub enum SubtitleFormat {
     Srt,
     /// WebVTT (`.vtt`).
     Vtt,
+    /// Advanced SubStation Alpha (`.ass`), karaoke by outline (`\ko`).
+    Ass,
 }
 
 impl SubtitleFormat {
-    /// The format for a file name's extension (`srt` or `vtt`, any case).
+    /// The format for a file name's extension (`srt`, `vtt` or `ass`, any
+    /// case).
     pub fn from_path(path: &std::path::Path) -> Option<Self> {
         let ext = path.extension()?.to_str()?.to_ascii_lowercase();
         match ext.as_str() {
             "srt" => Some(SubtitleFormat::Srt),
             "vtt" => Some(SubtitleFormat::Vtt),
+            "ass" => Some(SubtitleFormat::Ass),
             _ => None,
         }
     }
+}
+
+/// How caption lines show the word being read. Every style is a shape
+/// (underline, bold, outline), never a color alone.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Karaoke {
+    /// Plain caption lines.
+    #[default]
+    Off,
+    /// WebVTT timestamp tags before each word after a line's first, with a
+    /// `STYLE` block underlining the words already spoken. Players without
+    /// tag support show the plain line. SRT has no tags and stays plain.
+    Tags,
+    /// A cue per word showing the whole line with that word in bold and
+    /// underline. The most portable karaoke, but a player that voices or
+    /// brailles each cue repeats the line once per word, so it is never the
+    /// default.
+    Lines,
 }
 
 /// How cues are built.
@@ -75,6 +98,9 @@ pub struct CueOptions {
     pub max_words: usize,
     /// Most characters in one caption line (Star: 90).
     pub max_chars: usize,
+    /// Karaoke style for caption lines (off by default; ignored with
+    /// `word_level`). ASS files are always karaoke by outline.
+    pub karaoke: Karaoke,
 }
 
 impl Default for CueOptions {
@@ -83,7 +109,67 @@ impl Default for CueOptions {
             word_level: false,
             max_words: 12,
             max_chars: 90,
+            karaoke: Karaoke::Off,
         }
+    }
+}
+
+/// What a caption file says about itself: a WebVTT `NOTE` block, or the
+/// ASS script's `Title` and comment.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+pub struct CaptionMeta {
+    /// The document's title.
+    pub title: Option<String>,
+    /// Who reads it: the voice and engine, as people say them.
+    pub voice: Option<String>,
+    /// The reading rate in words per minute.
+    pub words_per_minute: Option<u32>,
+    /// Further sentences for the note, such as "Machine captions: check
+    /// before sharing."
+    pub notes: Vec<String>,
+}
+
+impl CaptionMeta {
+    /// The note's sentences in one line: the title, who reads it and how
+    /// fast, the notes, then "Made by textweaver." Newlines become spaces
+    /// and `-->` (forbidden in a WebVTT note) becomes `->`.
+    pub fn sentences(&self) -> String {
+        let clean = |s: &str| {
+            let s: String = s
+                .chars()
+                .map(|c| if c.is_control() { ' ' } else { c })
+                .collect();
+            let s = s.split_whitespace().collect::<Vec<_>>().join(" ");
+            s.replace("-->", "->")
+        };
+        let end = |s: String| {
+            if s.ends_with(['.', '!', '?', ':']) {
+                s
+            } else {
+                format!("{s}.")
+            }
+        };
+        let mut parts: Vec<String> = Vec::new();
+        if let Some(t) = self.title.as_deref().map(clean).filter(|t| !t.is_empty()) {
+            parts.push(end(t));
+        }
+        match (
+            self.voice.as_deref().map(clean).filter(|v| !v.is_empty()),
+            self.words_per_minute,
+        ) {
+            (Some(v), Some(w)) => parts.push(format!("Read by {v}, {w} words a minute.")),
+            (Some(v), None) => parts.push(end(format!("Read by {v}"))),
+            (None, Some(w)) => parts.push(format!("Read at {w} words a minute.")),
+            (None, None) => {}
+        }
+        for n in &self.notes {
+            let n = clean(n);
+            if !n.is_empty() {
+                parts.push(end(n));
+            }
+        }
+        parts.push("Made by textweaver.".to_owned());
+        parts.join(" ")
     }
 }
 
@@ -181,39 +267,76 @@ fn token_spans(text: &str) -> Vec<(usize, &str)> {
     out
 }
 
+/// One caption line with the times of its words, the shape the karaoke
+/// renderers need ([`lines`]).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct CaptionLine {
+    /// Start, in ms from the start of the audio.
+    pub start_ms: u64,
+    /// End, in ms.
+    pub end_ms: u64,
+    /// The line's words in order, each with its own start and end.
+    pub words: Vec<Cue>,
+}
+
+impl CaptionLine {
+    /// The line as one plain cue (its words joined by spaces).
+    pub fn cue(&self) -> Cue {
+        Cue {
+            start_ms: self.start_ms,
+            end_ms: self.end_ms,
+            text: self.text(),
+        }
+    }
+
+    /// The line's text.
+    pub fn text(&self) -> String {
+        let words: Vec<&str> = self.words.iter().map(|w| w.text.as_str()).collect();
+        words.join(" ")
+    }
+}
+
 /// Groups one sentence's tokens into caption lines (Star's rules).
-fn group(tokens: &[Token<'_>], opts: &CueOptions, out: &mut Vec<Cue>) {
-    let mut cur: Vec<&str> = Vec::new();
-    let mut cur_start = 0;
-    let mut cur_end = 0;
+fn group(tokens: &[Token<'_>], opts: &CueOptions, out: &mut Vec<CaptionLine>) {
+    fn flush(cur: &mut Vec<Cue>, out: &mut Vec<CaptionLine>) {
+        if let (Some(first), Some(last)) = (cur.first(), cur.last()) {
+            out.push(CaptionLine {
+                start_ms: first.start_ms,
+                end_ms: last.end_ms,
+                words: std::mem::take(cur),
+            });
+        }
+    }
+    let mut cur: Vec<Cue> = Vec::new();
     let mut cur_chars = 0;
     for t in tokens {
         let len = t.text.chars().count();
         let too_long = !cur.is_empty()
             && (cur.len() >= opts.max_words || cur_chars + len + 1 > opts.max_chars);
         if too_long {
-            out.push(Cue {
-                start_ms: cur_start,
-                end_ms: cur_end,
-                text: cur.join(" "),
-            });
-            cur.clear();
+            flush(&mut cur, out);
             cur_chars = 0;
         }
-        if cur.is_empty() {
-            cur_start = t.start;
-        }
-        cur.push(t.text);
-        cur_end = t.end;
+        cur.push(Cue {
+            start_ms: t.start,
+            end_ms: t.end,
+            text: t.text.to_owned(),
+        });
         cur_chars += len + 1;
     }
-    if !cur.is_empty() {
-        out.push(Cue {
-            start_ms: cur_start,
-            end_ms: cur_end,
-            text: cur.join(" "),
-        });
+    flush(&mut cur, out);
+}
+
+/// The caption lines for a timeline, with each word's time (Star's line
+/// rules; [`CueOptions::word_level`] is not used here).
+pub fn lines(timeline: &Timeline, opts: &CueOptions) -> Vec<CaptionLine> {
+    let mut out = Vec::new();
+    for s in &timeline.sentences {
+        if !s.text.is_empty() {
+            group(&sentence_tokens(s), opts, &mut out);
+        }
     }
+    out
 }
 
 /// The cues for a timeline.
@@ -242,7 +365,9 @@ pub fn build(timeline: &Timeline, opts: &CueOptions) -> Vec<Cue> {
                 }
             }
         } else {
-            group(&sentence_tokens(s), opts, &mut out);
+            let mut lines = Vec::new();
+            group(&sentence_tokens(s), opts, &mut lines);
+            out.extend(lines.iter().map(CaptionLine::cue));
         }
     }
     out
@@ -270,7 +395,7 @@ pub fn from_text(text: &str, duration_ms: u64, opts: &CueOptions) -> Vec<Cue> {
             })
             .collect();
     }
-    let mut out = Vec::new();
+    let mut out: Vec<CaptionLine> = Vec::new();
     let mut sentence: Vec<Token<'_>> = Vec::new();
     for t in tokens {
         let ends = t.text.ends_with(['.', '!', '?', '\u{2026}']);
@@ -281,19 +406,33 @@ pub fn from_text(text: &str, duration_ms: u64, opts: &CueOptions) -> Vec<Cue> {
         }
     }
     group(&sentence, opts, &mut out);
-    out
+    out.iter().map(CaptionLine::cue).collect()
 }
 
-/// `HH:MM:SS,mmm` (SRT) or `HH:MM:SS.mmm` (WebVTT).
+/// `HH:MM:SS,mmm` (SRT), `HH:MM:SS.mmm` (WebVTT), or `H:MM:SS.cc` (ASS,
+/// rounded to the nearest centisecond).
 pub fn format_time(ms: u64, format: SubtitleFormat) -> String {
+    if format == SubtitleFormat::Ass {
+        let cs = centis(ms);
+        let (h, rest) = (cs / 360_000, cs % 360_000);
+        let (m, rest) = (rest / 6000, rest % 6000);
+        let (s, cs) = (rest / 100, rest % 100);
+        return format!("{h}:{m:02}:{s:02}.{cs:02}");
+    }
     let (hh, rest) = (ms / 3_600_000, ms % 3_600_000);
     let (mm, rest) = (rest / 60_000, rest % 60_000);
     let (ss, ms) = (rest / 1000, rest % 1000);
-    let sep = match format {
-        SubtitleFormat::Srt => ',',
-        SubtitleFormat::Vtt => '.',
+    let sep = if format == SubtitleFormat::Srt {
+        ','
+    } else {
+        '.'
     };
     format!("{hh:02}:{mm:02}:{ss:02}{sep}{ms:03}")
+}
+
+/// Milliseconds rounded to whole centiseconds.
+fn centis(ms: u64) -> u64 {
+    (ms + 5) / 10
 }
 
 /// WebVTT cue text with `&`, `<` and `>` escaped, as the WebVTT spec's cue
@@ -312,37 +451,280 @@ pub fn vtt_escape(text: &str) -> String {
     out
 }
 
-/// Renders cues as an SRT or WebVTT file; WebVTT cue text is escaped
-/// ([`vtt_escape`]).
-pub fn render(cues: &[Cue], format: SubtitleFormat) -> String {
-    let mut out: Vec<String> = Vec::new();
-    if format == SubtitleFormat::Vtt {
-        out.push("WEBVTT".into());
-        out.push(String::new());
-    }
-    for (i, c) in cues.iter().enumerate() {
-        // Players reject cues that end before they start.
-        let end = if c.end_ms <= c.start_ms {
-            c.start_ms + 50
-        } else {
-            c.end_ms
-        };
+/// A cue's end, stretched to 50 ms after its start when it is not after it
+/// (players reject cues that end before they start).
+fn end_of(start: u64, end: u64) -> u64 {
+    if end <= start { start + 50 } else { end }
+}
+
+/// Writes `(start, end, finished text)` cues as SRT or WebVTT after the
+/// header blocks (`WEBVTT`, `STYLE`, `NOTE`) in `head`.
+fn write_cues(
+    head: Vec<String>,
+    cues: impl IntoIterator<Item = (u64, u64, String)>,
+    format: SubtitleFormat,
+) -> String {
+    let mut out = head;
+    for (i, (start, end, text)) in cues.into_iter().enumerate() {
         if format == SubtitleFormat::Srt {
             out.push((i + 1).to_string());
         }
         out.push(format!(
             "{} --> {}",
-            format_time(c.start_ms, format),
-            format_time(end, format)
+            format_time(start, format),
+            format_time(end_of(start, end), format)
         ));
-        out.push(match format {
-            SubtitleFormat::Srt => c.text.clone(),
-            SubtitleFormat::Vtt => vtt_escape(&c.text),
-        });
+        out.push(text);
         out.push(String::new());
     }
     let joined = out.join("\n");
     format!("{}\n", joined.trim())
+}
+
+/// Renders cues as an SRT, WebVTT or ASS file; WebVTT cue text is escaped
+/// ([`vtt_escape`]). An ASS file made here has no karaoke (see
+/// [`render_file`]).
+pub fn render(cues: &[Cue], format: SubtitleFormat) -> String {
+    match format {
+        SubtitleFormat::Ass => {
+            let lines: Vec<CaptionLine> = cues
+                .iter()
+                .map(|c| CaptionLine {
+                    start_ms: c.start_ms,
+                    end_ms: c.end_ms,
+                    words: vec![c.clone()],
+                })
+                .collect();
+            render_ass(&lines, None, false)
+        }
+        SubtitleFormat::Srt => write_cues(
+            Vec::new(),
+            cues.iter().map(|c| (c.start_ms, c.end_ms, c.text.clone())),
+            format,
+        ),
+        SubtitleFormat::Vtt => write_cues(
+            vtt_head(false, None),
+            cues.iter()
+                .map(|c| (c.start_ms, c.end_ms, vtt_escape(&c.text))),
+            format,
+        ),
+    }
+}
+
+/// The WebVTT header: `WEBVTT`, then a `STYLE` block underlining spoken
+/// words when `past_underline`, then a `NOTE` block from `meta`.
+fn vtt_head(past_underline: bool, meta: Option<&CaptionMeta>) -> Vec<String> {
+    let mut head = vec!["WEBVTT".to_owned(), String::new()];
+    if past_underline {
+        head.extend(
+            [
+                "STYLE",
+                "::cue(:past) {",
+                "  text-decoration: underline;",
+                "}",
+                "",
+            ]
+            .map(str::to_owned),
+        );
+    }
+    if let Some(meta) = meta {
+        head.push("NOTE".to_owned());
+        head.extend(wrap(&meta.sentences(), 60));
+        head.push(String::new());
+    }
+    head
+}
+
+/// Breaks `text` into lines of at most `width` chars at spaces (a longer
+/// word stands on its own line).
+fn wrap(text: &str, width: usize) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+    let mut cur = String::new();
+    for word in text.split_whitespace() {
+        if !cur.is_empty() && cur.chars().count() + 1 + word.chars().count() > width {
+            lines.push(std::mem::take(&mut cur));
+        }
+        if !cur.is_empty() {
+            cur.push(' ');
+        }
+        cur.push_str(word);
+    }
+    if !cur.is_empty() {
+        lines.push(cur);
+    }
+    lines
+}
+
+/// A caption line with a WebVTT timestamp tag before each word after the
+/// first. Tags rise strictly and stay inside the cue (WebVTT 4.2.2): a word
+/// whose time would not is left untagged.
+fn vtt_tagged(line: &CaptionLine) -> String {
+    let end = end_of(line.start_ms, line.end_ms);
+    let mut prev = line.start_ms;
+    let mut s = String::new();
+    for (i, w) in line.words.iter().enumerate() {
+        if i > 0 {
+            s.push(' ');
+            let t = w.start_ms.max(prev + 1);
+            if t < end {
+                s.push('<');
+                s.push_str(&format_time(t, SubtitleFormat::Vtt));
+                s.push('>');
+                prev = t;
+            }
+        }
+        s.push_str(&vtt_escape(&w.text));
+    }
+    s
+}
+
+/// One cue per word of `line`: the whole line with that word in bold and
+/// underline.
+fn word_line_cues(line: &CaptionLine, format: SubtitleFormat) -> Vec<(u64, u64, String)> {
+    let esc = |t: &str| match format {
+        SubtitleFormat::Vtt => vtt_escape(t),
+        _ => t.to_owned(),
+    };
+    (0..line.words.len())
+        .map(|i| {
+            let text: Vec<String> = line
+                .words
+                .iter()
+                .enumerate()
+                .map(|(j, w)| {
+                    if i == j {
+                        format!("<b><u>{}</u></b>", esc(&w.text))
+                    } else {
+                        esc(&w.text)
+                    }
+                })
+                .collect();
+            let w = &line.words[i];
+            (w.start_ms, w.end_ms, text.join(" "))
+        })
+        .collect()
+}
+
+/// ASS dialogue text: braces (which start override blocks) become
+/// parentheses, and a backslash (which starts `\N` and the like) becomes
+/// the look-alike U+29F5, so the text never turns into tags.
+fn ass_escape(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            '{' => '(',
+            '}' => ')',
+            '\\' => '\u{29F5}',
+            c if c.is_control() => ' ',
+            c => c,
+        })
+        .collect()
+}
+
+/// The ASS style: unread words white with no outline; a reached word turns
+/// yellow (#FFE14D, High Contrast's word band) and gains a 3 px black
+/// outline, a shape cue as well as a color one.
+const ASS_HEAD: &str = "ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Reading,Atkinson Hyperlegible Next,48,&H004DE1FF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,3,0,2,64,64,48,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+";
+
+/// Renders caption lines as an ASS script. With `karaoke`, each word gets
+/// `\ko` with its duration in centiseconds, taken from rounded absolute
+/// times so the durations sum to the line.
+fn render_ass(lines: &[CaptionLine], meta: Option<&CaptionMeta>, karaoke: bool) -> String {
+    let mut out = String::from("[Script Info]\n");
+    let made = meta.map_or_else(|| "Made by textweaver.".to_owned(), CaptionMeta::sentences);
+    out.push_str(&format!("; {}\n", ass_escape(&made)));
+    if let Some(title) = meta
+        .and_then(|m| m.title.as_deref())
+        .map(ass_escape)
+        .map(|t| t.trim().to_owned())
+        .filter(|t| !t.is_empty())
+    {
+        out.push_str(&format!("Title: {title}\n"));
+    }
+    out.push_str(ASS_HEAD);
+    for line in lines {
+        let end = end_of(line.start_ms, line.end_ms);
+        let mut text = String::new();
+        for (i, w) in line.words.iter().enumerate() {
+            if karaoke {
+                let next = line.words.get(i + 1).map_or(end, |n| n.start_ms.min(end));
+                let d = centis(next).saturating_sub(centis(w.start_ms));
+                text.push_str(&format!("{{\\ko{d}}}"));
+            }
+            text.push_str(&ass_escape(&w.text));
+            if i + 1 < line.words.len() {
+                text.push(' ');
+            }
+        }
+        out.push_str(&format!(
+            "Dialogue: 0,{},{},Reading,,0,0,0,,{text}\n",
+            format_time(line.start_ms, SubtitleFormat::Ass),
+            format_time(end, SubtitleFormat::Ass)
+        ));
+    }
+    out
+}
+
+/// Renders a timeline's captions as a whole file: the cues by `opts`
+/// (lines, words, or karaoke), with a WebVTT `NOTE` block or the ASS
+/// script's title and comment from `meta` when given. ASS is always karaoke
+/// by outline; SRT has no timestamp tags, so `Karaoke::Tags` leaves it
+/// plain.
+pub fn render_file(
+    timeline: &Timeline,
+    format: SubtitleFormat,
+    opts: &CueOptions,
+    meta: Option<&CaptionMeta>,
+) -> String {
+    if format == SubtitleFormat::Ass {
+        return render_ass(&lines(timeline, opts), meta, true);
+    }
+    let karaoke = if opts.word_level {
+        Karaoke::Off
+    } else {
+        opts.karaoke
+    };
+    let tags = karaoke == Karaoke::Tags && format == SubtitleFormat::Vtt;
+    let head = match format {
+        SubtitleFormat::Vtt => vtt_head(tags, meta),
+        _ => Vec::new(),
+    };
+    let escape = |t: &str| match format {
+        SubtitleFormat::Vtt => vtt_escape(t),
+        _ => t.to_owned(),
+    };
+    match karaoke {
+        Karaoke::Lines => {
+            let cues: Vec<(u64, u64, String)> = lines(timeline, opts)
+                .iter()
+                .flat_map(|l| word_line_cues(l, format))
+                .collect();
+            write_cues(head, cues, format)
+        }
+        Karaoke::Tags if tags => write_cues(
+            head,
+            lines(timeline, opts)
+                .iter()
+                .map(|l| (l.start_ms, l.end_ms, vtt_tagged(l))),
+            format,
+        ),
+        _ => write_cues(
+            head,
+            build(timeline, opts)
+                .into_iter()
+                .map(|c| (c.start_ms, c.end_ms, escape(&c.text))),
+            format,
+        ),
+    }
 }
 
 #[cfg(test)]
@@ -523,5 +905,191 @@ mod tests {
             Some(SubtitleFormat::Vtt)
         );
         assert_eq!(SubtitleFormat::from_path(Path::new("a.txt")), None);
+        assert_eq!(
+            SubtitleFormat::from_path(Path::new("a.Ass")),
+            Some(SubtitleFormat::Ass)
+        );
+    }
+
+    /// A sentence whose words each take 250 ms from `start` (the recording
+    /// double's pace in `docs/audio-export.md`).
+    fn paced(text: &str, start: u64) -> TimedSentence {
+        let mut words = Vec::new();
+        let mut t = start;
+        for (at, tok) in token_spans(text) {
+            words.push(word(tok, (at, at + tok.chars().count()), t, t + 250));
+            t += 250;
+        }
+        sentence(text, start, t, words)
+    }
+
+    /// The research report's "Photosynthesis" fixture.
+    fn photosynthesis() -> (Timeline, CaptionMeta) {
+        let t = Timeline {
+            sentences: vec![
+                paced("Plants make food from light.", 0),
+                paced("They need water and carbon dioxide.", 1250),
+            ],
+            duration_ms: 2750,
+            title: Some("Photosynthesis".into()),
+            ..Timeline::default()
+        };
+        let meta = CaptionMeta {
+            title: t.title.clone(),
+            voice: Some("Recording (test double)".into()),
+            words_per_minute: Some(240),
+            notes: Vec::new(),
+        };
+        (t, meta)
+    }
+
+    #[test]
+    fn webvtt_karaoke_tags_match_the_report() {
+        let (t, meta) = photosynthesis();
+        let opts = CueOptions {
+            karaoke: Karaoke::Tags,
+            ..CueOptions::default()
+        };
+        let vtt = render_file(&t, SubtitleFormat::Vtt, &opts, Some(&meta));
+        let expected = "WEBVTT
+
+STYLE
+::cue(:past) {
+  text-decoration: underline;
+}
+
+NOTE
+Photosynthesis. Read by Recording (test double), 240 words a
+minute. Made by textweaver.
+
+00:00:00.000 --> 00:00:01.250
+Plants <00:00:00.250>make <00:00:00.500>food <00:00:00.750>from <00:00:01.000>light.
+
+00:00:01.250 --> 00:00:02.750
+They <00:00:01.500>need <00:00:01.750>water <00:00:02.000>and <00:00:02.250>carbon <00:00:02.500>dioxide.
+";
+        assert_eq!(vtt, expected);
+        // SRT has no tags: plain lines.
+        let srt = render_file(&t, SubtitleFormat::Srt, &opts, Some(&meta));
+        assert!(srt.contains("\nPlants make food from light.\n"), "{srt}");
+        assert!(!srt.contains('<') && !srt.contains("NOTE"), "{srt}");
+    }
+
+    #[test]
+    fn timestamp_tags_rise_strictly_inside_the_cue() {
+        // Two words at the cue's start and one at its end: the second is
+        // nudged a millisecond on, the third is left untagged.
+        let words = vec![
+            word("a", (0, 1), 1000, 1000),
+            word("b", (2, 3), 1000, 1000),
+            word("c&", (4, 6), 2000, 2000),
+        ];
+        let t = Timeline {
+            sentences: vec![sentence("a b c&", 1000, 2000, words)],
+            duration_ms: 2000,
+            ..Timeline::default()
+        };
+        let opts = CueOptions {
+            karaoke: Karaoke::Tags,
+            ..CueOptions::default()
+        };
+        let vtt = render_file(&t, SubtitleFormat::Vtt, &opts, None);
+        assert!(
+            vtt.ends_with("00:00:01.000 --> 00:00:02.000\na <00:00:01.001>b c&amp;\n"),
+            "{vtt}"
+        );
+        assert!(!vtt.contains("NOTE"));
+    }
+
+    #[test]
+    fn word_lines_bold_and_underline_one_word_per_cue() {
+        let (t, meta) = photosynthesis();
+        let opts = CueOptions {
+            karaoke: Karaoke::Lines,
+            ..CueOptions::default()
+        };
+        let vtt = render_file(&t, SubtitleFormat::Vtt, &opts, Some(&meta));
+        assert!(vtt.contains(
+            "\n00:00:00.000 --> 00:00:00.250\n<b><u>Plants</u></b> make food from light.\n\n\
+             00:00:00.250 --> 00:00:00.500\nPlants <b><u>make</u></b> food from light.\n"
+        ));
+        assert_eq!(vtt.matches(" --> ").count(), 11, "{vtt}");
+        assert!(!vtt.contains("STYLE"), "only tags need the style block");
+        // Escaping applies to the words, never to the tags.
+        let amp = Timeline {
+            sentences: vec![paced("Salt & pepper", 0)],
+            duration_ms: 750,
+            ..Timeline::default()
+        };
+        let vtt = render_file(&amp, SubtitleFormat::Vtt, &opts, None);
+        assert!(vtt.contains("Salt <b><u>&amp;</u></b> pepper"), "{vtt}");
+        let srt = render_file(&amp, SubtitleFormat::Srt, &opts, None);
+        assert!(srt.contains("1\n00:00:00,000 --> 00:00:00,250\n<b><u>Salt</u></b> & pepper"));
+    }
+
+    #[test]
+    fn word_level_wins_over_karaoke() {
+        let (t, _) = photosynthesis();
+        let opts = CueOptions {
+            word_level: true,
+            karaoke: Karaoke::Lines,
+            ..CueOptions::default()
+        };
+        let vtt = render_file(&t, SubtitleFormat::Vtt, &opts, None);
+        assert!(
+            vtt.contains("\n00:00:00.000 --> 00:00:00.250\nPlants\n"),
+            "{vtt}"
+        );
+        assert!(!vtt.contains("<b>"));
+    }
+
+    #[test]
+    fn ass_karaoke_matches_the_report() {
+        let (t, meta) = photosynthesis();
+        let ass = render_file(&t, SubtitleFormat::Ass, &CueOptions::default(), Some(&meta));
+        assert!(ass.starts_with(
+            "[Script Info]\n; Photosynthesis. Read by Recording (test double), 240 words a minute. Made by textweaver.\nTitle: Photosynthesis\nScriptType: v4.00+\n"
+        ), "{ass}");
+        assert!(ass.contains("Style: Reading,Atkinson Hyperlegible Next,48,&H004DE1FF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,3,0,2,64,64,48,1\n"));
+        assert!(ass.ends_with(
+            "Dialogue: 0,0:00:00.00,0:00:01.25,Reading,,0,0,0,,{\\ko25}Plants {\\ko25}make {\\ko25}food {\\ko25}from {\\ko25}light.\n\
+             Dialogue: 0,0:00:01.25,0:00:02.75,Reading,,0,0,0,,{\\ko25}They {\\ko25}need {\\ko25}water {\\ko25}and {\\ko25}carbon {\\ko25}dioxide.\n"
+        ), "{ass}");
+    }
+
+    #[test]
+    fn ass_durations_sum_to_the_line_and_text_never_becomes_tags() {
+        // Uneven times that do not fall on centiseconds.
+        let words = vec![word("{x}", (0, 3), 3, 337), word("a\\N", (4, 7), 337, 1001)];
+        let t = Timeline {
+            sentences: vec![sentence("{x} a\\N", 3, 1004, words)],
+            duration_ms: 1004,
+            ..Timeline::default()
+        };
+        let ass = render_file(&t, SubtitleFormat::Ass, &CueOptions::default(), None);
+        let line = ass.lines().last().unwrap_or_default();
+        assert_eq!(
+            line,
+            "Dialogue: 0,0:00:00.00,0:00:01.00,Reading,,0,0,0,,{\\ko34}(x) {\\ko66}a\u{29F5}N"
+        );
+        assert!(!ass.contains("Title:"));
+    }
+
+    #[test]
+    fn note_text_is_one_safe_paragraph() {
+        let meta = CaptionMeta {
+            title: Some("A --> B\n\nC".into()),
+            voice: None,
+            words_per_minute: None,
+            notes: vec!["Machine captions: check before sharing.".into()],
+        };
+        assert_eq!(
+            meta.sentences(),
+            "A -> B C. Machine captions: check before sharing. Made by textweaver."
+        );
+        let vtt = render(&[cue(0, 1000, "hi")], SubtitleFormat::Vtt);
+        assert!(!vtt.contains("NOTE"));
+        let ass = render(&[cue(0, 1000, "hi")], SubtitleFormat::Ass);
+        assert!(ass.ends_with(",Reading,,0,0,0,,hi\n"), "{ass}");
     }
 }

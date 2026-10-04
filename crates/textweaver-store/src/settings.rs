@@ -593,6 +593,8 @@ pub enum SubtitleFormat {
     Srt,
     /// WebVTT (`.vtt`).
     Vtt,
+    /// Advanced SubStation Alpha (`.ass`), always karaoke by outline.
+    Ass,
 }
 
 impl SubtitleFormat {
@@ -601,8 +603,23 @@ impl SubtitleFormat {
         match self {
             SubtitleFormat::Srt => "srt",
             SubtitleFormat::Vtt => "vtt",
+            SubtitleFormat::Ass => "ass",
         }
     }
+}
+
+/// How caption lines show the word being read (`[export]
+/// subtitle_karaoke`). Every style is a shape, never a color alone.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SubtitleKaraoke {
+    /// Plain caption lines.
+    #[default]
+    Off,
+    /// WebVTT timestamp tags, spoken words underlined.
+    Tags,
+    /// A cue per word, the line with that word in bold and underline.
+    Lines,
 }
 
 /// `[export]`: audio export (`tw export-audio`), Star's `subtitle_format`,
@@ -618,6 +635,12 @@ pub struct ExportSettings {
     /// `export_subtitles_with_audio`), named like the audio file with the
     /// subtitle format's extension.
     pub subtitles_with_audio: bool,
+    /// Karaoke in subtitle lines: off, WebVTT timestamp tags, or a cue per
+    /// word.
+    pub subtitle_karaoke: SubtitleKaraoke,
+    /// Also write a WebVTT chapters file (`NAME.chapters.vtt`) beside the
+    /// subtitles or the audio.
+    pub subtitle_chapters: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -2448,7 +2471,7 @@ mod tests {
         // A bad value costs only itself.
         write(
             &store,
-            "[normalization.community_lexicon]\nenabled = \"yes\"\nlanguage = \"DEU\"\n[export]\nsubtitle_format = \"ass\"\nsubtitle_word_level = true\n",
+            "[normalization.community_lexicon]\nenabled = \"yes\"\nlanguage = \"DEU\"\n[export]\nsubtitle_format = \"sub\"\nsubtitle_word_level = true\n",
         );
         let (s, _) = store.load();
         assert!(!s.normalization.community_lexicon.enabled);
