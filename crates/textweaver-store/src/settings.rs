@@ -1224,7 +1224,7 @@ pub struct LexiconSettings {
 #[serde(default)]
 pub struct StatsSettings {
     /// Keep reading statistics. On by default; off stops recording (what
-    /// is recorded stays until `tw stats --clear`).
+    /// is recorded stays until `tw stats clear`).
     pub enabled: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
@@ -2331,7 +2331,7 @@ impl SettingsStore {
     /// only the settings that differ between `base` and `settings` are
     /// written over the file's current values, one setting at a time, and
     /// every other setting keeps what the file holds now (a folder added
-    /// by `tw library --add`, a second window's change). A missing or
+    /// by `tw library add`, a second window's change). A missing or
     /// unreadable file is written whole, as [`save`](Self::save) does.
     /// Returns whether the file kept values that differ from `settings`.
     pub fn save_merged(&self, settings: &Settings, base: &Settings) -> Result<bool, StoreError> {
@@ -3040,7 +3040,7 @@ wrap_navigation = true
         let (_d, store) = store();
         let base = Settings::default();
         store.save(&base).unwrap();
-        // Another program (tw library --add) adds a folder.
+        // Another program (tw library add) adds a folder.
         let mut outside = base.clone();
         outside
             .library

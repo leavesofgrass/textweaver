@@ -104,10 +104,11 @@ const PRINTS_FACTS: &[&str] = &[
     "components",
 ];
 
-/// Commands that read or write the data folder. `tw ocr` keeps its
-/// models in their own folder and is not listed.
+/// Commands that read or write the data folder. `tw ocr` takes `--home`
+/// on `status` and `download`, where its models are.
 const TOUCHES_DATA: &[&str] = &[
     "open",
+    "ocr",
     "speak",
     "voices",
     "backends",
@@ -259,6 +260,57 @@ fn cite_check_exits_1_when_keys_are_missing() {
     std::fs::write(&doc, "No citations here.\n").unwrap();
     let out = tw_in(home.path(), &["cite", "check", doc.to_str().unwrap()], "");
     assert_eq!(out.status.code(), Some(0), "{out:?}");
+}
+
+#[test]
+fn cite_prints_json_on_every_subcommand_that_prints_facts() {
+    let home = tempfile::tempdir().unwrap();
+    let doc = home.path().join("essay.md");
+    std::fs::write(&doc, "As shown [@nobody2020].\n").unwrap();
+    let doc = doc.to_str().unwrap();
+    let out = tw_in(home.path(), &["cite", "check", doc, "--json"], "");
+    assert_eq!(out.status.code(), Some(1), "{out:?}");
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["missing"][0], "nobody2020");
+    let out = tw_in(home.path(), &["cite", "styles", "--json"], "");
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert!(v["styles"].as_array().is_some_and(|a| a.len() > 3), "{v}");
+    let bib = home.path().join("refs.bib");
+    std::fs::write(
+        &bib,
+        "@book{example2020, title={A Placeholder Book}, author={Example, Ada}, year={2020}}\n",
+    )
+    .unwrap();
+    let out = tw_in(
+        home.path(),
+        &["cite", "import", bib.to_str().unwrap(), "--json"],
+        "",
+    );
+    assert!(out.status.success(), "{out:?}");
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["action"], "imported");
+    let out = tw_in(
+        home.path(),
+        &["cite", "remove", "example2020", "--yes", "--json"],
+        "",
+    );
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(v["action"], "removed", "{v}");
+}
+
+#[test]
+fn ocr_status_uses_the_data_folder_from_home() {
+    let home = tempfile::tempdir().unwrap();
+    let h = home.path().to_str().unwrap();
+    let out = tw_in(home.path(), &["ocr", "status", "--json", "--home", h], "");
+    assert!(out.status.success(), "{out:?}");
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    let folder = v["models_folder"].as_str().unwrap_or_default().to_owned();
+    assert!(
+        folder.starts_with(h) || std::env::var_os("TEXTWEAVER_OCR_MODELS").is_some(),
+        "{folder}"
+    );
+    assert_eq!(v["models"][0]["status"], "not-downloaded");
 }
 
 #[test]

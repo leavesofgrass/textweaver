@@ -5,18 +5,23 @@
 //!   experimental PaddleOCR Latin model), and Tesseract with its languages.
 //! - `tw ocr download [ocrs|paddle-latin]` downloads a model set after
 //!   saying what it is (size, licence, source) and asking; `--yes` answers
-//!   for you. Each file is checked by SHA-256 before it is kept.
+//!   for you. It goes through the components path (W9a-c), as `tw
+//!   components download ocr-ocrs` does: the mirror is tried first, and
+//!   each file is checked by SHA-256 before it is kept.
+//! - `--home DIR` on `status` and `download` uses the models under that
+//!   data folder.
 //! - `tw ocr read FILE` recognizes a scanned PDF or a picture and prints
 //!   the text, with progress on standard error.
 
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicBool;
 
 use anyhow::{Context, bail};
+use textweaver_app::components::{Status, component_dir};
 use textweaver_app::formats::{
     LoadOptions, OcrEngineChoice, OcrOptions, Progress, Registry, Source, warnings,
 };
-use textweaver_ocr::{ModelStatus, models};
+use textweaver_app::store::SettingsStore;
+use textweaver_ocr::models;
 
 /// Arguments for `tw ocr`.
 #[derive(clap::Args, Debug)]
@@ -32,6 +37,9 @@ enum Sub {
         /// Print the status as JSON.
         #[arg(long)]
         json: bool,
+        /// Use the models under this data folder instead of the usual place.
+        #[arg(long, value_name = "DIR")]
+        home: Option<PathBuf>,
     },
     /// Download a model set: ocrs (English, the default) or paddle-latin.
     Download {
@@ -41,6 +49,9 @@ enum Sub {
         /// Download without asking.
         #[arg(long, short)]
         yes: bool,
+        /// Use the models under this data folder instead of the usual place.
+        #[arg(long, value_name = "DIR")]
+        home: Option<PathBuf>,
     },
     /// Recognize a scanned PDF or a picture and print its text.
     Read {
@@ -58,9 +69,15 @@ enum Sub {
 /// Runs `tw ocr`.
 pub fn run(args: Args) -> anyhow::Result<()> {
     match args.command {
-        Sub::Status { json: false } => super::print_all(&status()),
-        Sub::Status { json: true } => super::print_all(&format!("{:#}\n", status_json())),
-        Sub::Download { set, yes } => download(&set, yes),
+        Sub::Status { json, home } => {
+            let data = super::paths(home.as_deref())?.data_dir;
+            if json {
+                super::print_all(&format!("{:#}\n", status_json(&data)))
+            } else {
+                super::print_all(&status(&data))
+            }
+        }
+        Sub::Download { set, yes, home } => download(&set, yes, home.as_deref()),
         Sub::Read { file, lang, engine } => read(&file, lang, &engine),
     }
 }
@@ -72,19 +89,31 @@ fn set_named(name: &str) -> anyhow::Result<models::ModelSet> {
         .with_context(|| format!("{name} is not a model set; the sets are ocrs and paddle-latin"))
 }
 
-/// What `tw ocr status` prints.
-fn status() -> String {
+/// A model set's state in the data folder `data`, through the components
+/// path, as `tw components list` sees it.
+fn set_status(set: &models::ModelSet, data: &Path) -> Status {
+    let c = set.component();
+    c.status_in(&component_dir(&c, data))
+}
+
+/// The folder every model set lives under, for the data folder `data`.
+fn models_folder(data: &Path) -> PathBuf {
+    models::flat_dir().unwrap_or_else(|| data.join("models").join("ocr"))
+}
+
+/// What `tw ocr status` prints, for the data folder `data`.
+fn status(data: &Path) -> String {
     let mut out = String::new();
     for set in models::ALL {
-        let state = match set.status() {
-            ModelStatus::Present => "downloaded".to_owned(),
-            ModelStatus::Missing(_) => format!(
+        let state = match set_status(&set, data) {
+            Status::Installed => "downloaded".to_owned(),
+            Status::NotInstalled | Status::Partial(_) => format!(
                 "not downloaded ({}, {}); run tw ocr download {}",
                 set.size_text(),
                 set.licence,
                 set.id
             ),
-            ModelStatus::Damaged(f) => {
+            Status::Damaged(f) => {
                 format!("damaged ({f}); run tw ocr download {} again", set.id)
             }
         };
@@ -103,22 +132,23 @@ fn status() -> String {
             "Tesseract: not installed. It reads languages other than English; install it with its language data.\n",
         ),
     }
-    if let Some(dir) = models::root_dir() {
-        out.push_str(&format!("Models folder: {}\n", dir.display()));
-    }
+    out.push_str(&format!(
+        "Models folder: {}\n",
+        models_folder(data).display()
+    ));
     out
 }
 
 /// `tw ocr status --json`: the model sets and Tesseract. Keys are English
 /// and never translated.
-fn status_json() -> serde_json::Value {
+fn status_json(data: &Path) -> serde_json::Value {
     let sets: Vec<serde_json::Value> = models::ALL
         .into_iter()
         .map(|set| {
-            let (status, detail) = match set.status() {
-                ModelStatus::Present => ("downloaded", None),
-                ModelStatus::Missing(_) => ("not-downloaded", None),
-                ModelStatus::Damaged(f) => ("damaged", Some(f.to_string())),
+            let (status, detail) = match set_status(&set, data) {
+                Status::Installed => ("downloaded", None),
+                Status::NotInstalled | Status::Partial(_) => ("not-downloaded", None),
+                Status::Damaged(f) => ("damaged", Some(f)),
             };
             serde_json::json!({
                 "id": set.id,
@@ -137,7 +167,7 @@ fn status_json() -> serde_json::Value {
     serde_json::json!({
         "models": sets,
         "tesseract": tesseract,
-        "models_folder": models::root_dir(),
+        "models_folder": models_folder(data),
     })
 }
 
@@ -148,53 +178,19 @@ fn capital(s: &str) -> String {
         .unwrap_or_default()
 }
 
-fn download(name: &str, yes: bool) -> anyhow::Result<()> {
+/// `tw ocr download SET`: the set's component, downloaded through the
+/// components path (the mirror first, every file checked), as `tw
+/// components download ocr-SET` does.
+fn download(name: &str, yes: bool, home: Option<&Path>) -> anyhow::Result<()> {
     let set = set_named(name)?;
-    if set.status() == ModelStatus::Present {
-        crate::cmd::outln!("{} are already downloaded.", capital(set.title));
-        return Ok(());
+    let paths = super::paths(home)?;
+    let settings = SettingsStore::new(paths.clone()).load().0;
+    let c = set.component();
+    let dir = component_dir(&c, &paths.data_dir);
+    super::components::download(&c, &dir, &settings, yes)?;
+    if c.status_in(&dir) == Status::Installed {
+        eprintln!("Scanned pages can now be read.");
     }
-    let host = set
-        .files
-        .first()
-        .and_then(|f| f.url.split('/').nth(2))
-        .unwrap_or("the internet");
-    eprintln!(
-        "This downloads {} from {host}: {}, under the {} license. {}",
-        set.title,
-        set.size_text(),
-        set.licence,
-        set.credit
-    );
-    let mut input = std::io::stdin().lock();
-    if !yes
-        && !super::confirm(
-            "Download them? y or n:",
-            &mut input,
-            super::stdin_is_terminal(),
-            "--yes",
-        )?
-    {
-        eprintln!("Nothing was downloaded.");
-        return Ok(());
-    }
-    let cancel = AtomicBool::new(false);
-    let mut last = u64::MAX;
-    models::download(
-        &set,
-        &mut |p| {
-            let percent = p.done * 100 / p.total.max(1);
-            if percent / 10 != last / 10 {
-                last = percent;
-                eprintln!("{percent} percent");
-            }
-        },
-        &cancel,
-    )?;
-    crate::cmd::outln!(
-        "{} are downloaded and checked. Scanned pages can now be read.",
-        capital(set.title)
-    );
     Ok(())
 }
 
@@ -229,7 +225,8 @@ mod tests {
     fn sets_are_named_and_status_reads_well() {
         assert_eq!(set_named("OCRS").unwrap().id, "ocrs");
         assert!(set_named("gpt").is_err());
-        let s = status();
+        let dir = tempfile::tempdir().unwrap();
+        let s = status(dir.path());
         assert!(
             s.starts_with("The ocrs text recognition models for English: "),
             "{s}"
