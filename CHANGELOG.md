@@ -4,6 +4,93 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+In short: this is the last alpha before beta 1, so it finishes and tidies what is there. The window gains a reading settings dialog, a narrow layout, drawn list markers, and a first run of at most three skippable steps. Documents can be exported as a read-along web page, as Ogg Vorbis audio, and as an MP4 video with the spoken word marked. Captions gain karaoke tags and chapters. The command line follows one set of rules. Themes are checked for contrast, and the result is said in words. Written pauses are honored in every speech engine. The documentation has start pages for students and staff, a known-limits page, and an accessibility statement.
+
+### Reading and speech
+
+- **Written pauses.** `<break time>` and `<break strength>` in a document are read as pauses of that length in every speech engine. The markup is removed before speech and screen. New setting: `[speech] markup_pauses`.
+- **Reading passes.** Shift+F reads the full text, the first sentences only, or the headings only.
+- **Document overview.** A short spoken summary of what the document holds.
+- **Pictures without a description** are read as "graphic, no description" instead of being skipped.
+- **Print page numbers** are read back from EPUB and HTML files that carry them.
+- **Where am I** ends with the time left at the current rate. The window's status bar shows the same time left, changing once a minute.
+- **Say Status on a Places row** answers Alt+End, like every other list.
+
+### Documents and conversion
+
+- **HTML pages ask which theme to use.** Export, preview, and batch to HTML ask "Theme for the HTML page?", starting from your reading theme or your last answer; Escape cancels. `tw convert --theme NAME` picks one without asking. The page uses the theme's own colors.
+- **Add a folder to the library** is a command in the window and in the terminal reader.
+- **Clear the reading statistics** from the reader, not only from the command line.
+
+### Audio, video and captions
+
+- **The read-along page.** Export audio can write one HTML file that holds the text, the audio, and word-by-word highlighting. It works offline, has named buttons, and uses no live region.
+- **Ogg Vorbis.** Export audio writes `.ogg` as Vorbis (libvorbis, built in). `.opus` stays Ogg Opus.
+- **Karaoke video.** With ffmpeg on the PATH, Export audio writes an MP4 with the spoken word in bold and underlined, a caption track, and chapters. The format is hidden when ffmpeg is missing.
+- **Richer captions.** WebVTT gains karaoke tags, word lines, and a NOTE block that names the voice and rate. ASS gains karaoke by outline. Chapter files and localized chapter names are written. `tw export-audio --karaoke --chapters` and the Export settings choose them.
+- **Captions from dictation.** `tw dictate --captions` writes caption files from Whisper's segments, marked as machine captions.
+
+### The window
+
+- **The Reading settings dialog** gathers the 17 reading rows, with Voices and the WCAG and Generous spacing presets. It fits a 420 by 320 window.
+- **A narrow layout.** Below 800 pixels the bars wrap and fold, key labels are hidden but kept, panels stack, and the status bar never overlaps. The View menu has Header and Toolbar commands.
+- **The measure.** New setting `[display] measure` sets the line length (66 characters by default, 25 to 90, 0 fills the window).
+- **Drawn structure.** List bullets, numbers, and nesting are drawn, as are the empty-window hint, an Editing badge with a dashed border, and a play-shaped mark for "reading from here". Text for screen readers is unchanged.
+- **Marks and focus.** Every mark shape follows the design system's order, and the five mark colors come from the theme. Control borders reach 3 to 1, and buttons and the document get a double focus ring. Highlight granularity, lead words, and the on-off setting apply in the window.
+- **Interface text follows** the Windows and GNOME text scale. The RSVP panel follows the font size and the reading font.
+- **First run** has at most three skippable steps and infers hybrid mode when a screen reader is running. "Ask again about first-run choices" is in the Help menu.
+- **Two modes, named.** "textweaver reads aloud" and "my screen reader reads", in the View menu and Settings, with a "Speak textweaver's messages" choice.
+- **Keys.** Alt+Shift+A, F3 and Shift+F3 for Find next and previous, and Alt+Shift+S for Speech Cursor.
+- **Dialogs** share one style with a Close button in every kind. Settings filters as you type, F1 gives the long help, and a recent block comes first. Themes show "meets AA" or "below AA" in words, and Lamplight is listed as a soft dark theme.
+- **Trouble is kept.** The window writes a log file, saves your place after a failure, and says in words when graphics cannot start. It uses a low-power graphics adapter, remembers its place and size on this computer, and follows the system's caret blink.
+- **A lettermark icon,** and the loom mark in the documents and the site.
+
+### The terminal reader
+
+- **Quiet screen is on by default in hybrid mode** (`QuietScreen` auto, on, or off).
+- **Sticky status context.** An edge message keeps the item it belongs to, and say-all keeps the sentence first.
+- **Quieter and leaner.** List hints, a terminal title that is the document's name, one terminal probe at start, and a leaner redraw. The ruler mask is a blended color.
+- **The title line keeps "modified" inside 40 cells** at line numbers of three digits.
+- **The reading ruler shows its edges** in High Contrast.
+
+### The command line
+
+- **One rule set.** Errors take one line and end with a next step. Exit codes are 0 for success, 1 for a failure, and 2 for wrong use. `--out`, `--to`, `--lang`, `--json`, `--home`, and `-y` mean the same everywhere, and old spellings still work as hidden aliases. Questions go to standard error.
+- **Verbs as subcommands** in `library`, `stats`, and `dictate`. `tw sync stop` stops syncing. `tw speak -` reads standard input. `tw cite check` exits 1 when a citation is bad. `tw settings path` lists every folder. `tw open` and the read-only `outline`, `notes`, `highlights`, and `info` are in JSON-RPC.
+- **One standard output writer** that ends quietly when a pipe closes. One components status line, and the doctor reports the window, components, and OCR.
+- **Messages for window users** no longer name `tw`; they name the place in the app.
+
+### Languages
+
+- **Fewer, clearer messages.** Eleven duplicate message groups are merged, Settings help is one short sentence with F1 for the rest, and the guides say "cursor", "speech engine", and "the window" throughout.
+- **US spelling** in messages ("Canceled"). The new English text waits for a native-speaker review of the five translations.
+
+### Settings and data
+
+- **Settings written by another program are kept** when textweaver saves. Saves happen at most once a second, and identical writes are skipped.
+- **Library folders** are typed with semicolons, so a name such as "Readings, Fall 2026" keeps its comma.
+- **A declined font download** is not asked again in the same session.
+- **Settings from alpha.1 to alpha.8 still load,** checked against kept sample files.
+
+### Documentation
+
+- **Start pages** for students and staff, a known-limits page, a privacy page, an accessibility statement, and a what's new page. The quick start and install start with the window.
+- **The command line page** states the rules, and a test checks each one against `tw --help`.
+- **Honest statuses** in the roadmap and the Star comparison. The roadmap's "Planned" is now "Not in the 0.1 series".
+- **The Help menu** reaches the quick start, the documentation, and Report a problem (which asks before a browser opens). About lists the facts a report needs.
+- **File names and formats** that beta 1 adds are frozen in ADR-0050.
+
+### Packages and the build
+
+- **Packages:** the window's zip is unchanged. Ogg Vorbis adds libvorbis (BSD-3-Clause), built from source.
+- **Tests never reach a real speech engine.** They choose from test doubles, and the development check runs eSpeak NG silent.
+- **The release tool refuses** a changelog that has the same heading twice.
+
+### For contributors
+
+- **Checklist tests** cover every list and dialog (named, modal, labeled) and prompts and the position line in 40 Braille cells. `docs/dev/checklist-tests.md` maps each checklist row to its test.
+- **Comments** in the message catalogs no longer name waves or agents.
+
 ## [0.1.0-alpha.8] - 2026-10-03
 
 This release is about speed you can measure, hearing where things end, and text from health sciences read the way a clinician would say it. Reading pauses after headings, paragraphs, and list items. Medical and scientific text, identifiers, and units are said correctly. The window gains Contents and Notes panels, F6 between its regions, and system file and folder choosers. Dictation and other models are offered as downloads. Conversions leave a report for an accommodation file. Piper answers a Stop and restart much sooner, and large documents open and edit faster. The translations of the new messages wait for a native speaker's review.
