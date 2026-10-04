@@ -143,6 +143,7 @@ The same actions are on the command line, each with `--json` for scripts, and `-
 - `tw sync setup --folder DIR [--name NAME] [--groups places,notes,highlights,bookmarks,statistics,settings,profiles,key_overrides,words,glossary,favorite_voices]`
 - `tw sync status`: the status line, this computer, and the others.
 - `tw sync now`: merges every document this computer knows, and the settings and word lists, and says how many documents took changes and how many settings changed (`settings_changes` in `--json`).
+- `tw sync stop`: stops syncing on this computer, as "Stop syncing on this computer" in the reader does. The sync folder is left as it is.
 
 Three other commands read the sync folder too, and change nothing in it:
 
