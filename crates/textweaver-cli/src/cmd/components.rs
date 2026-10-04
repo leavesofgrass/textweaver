@@ -162,8 +162,12 @@ fn list(registry: &Registry, data: &Path) -> String {
             c.id
         ));
     }
-    let (n, all) = registry.installed_count(data);
-    out.push_str(&format!("{n} of {all} installed.\n"));
+    // The one components status line, as tw info, About and the doctor
+    // scripts say it.
+    out.push_str(&format!(
+        "{}.\n",
+        registry.status_line(&Catalog::english(), data)
+    ));
     out
 }
 

@@ -58,7 +58,7 @@ These three commands read your `settings.toml`, as the reader does, so they use 
 
 The `scripts` folder has two checking scripts. The [scripts guide](../scripts/README.md) describes every option.
 
-The doctor writes one plain-text report to paste into a bug report: your system, your terminal, the screen reader if one is running, where textweaver is installed, `tw backends`, whether the engine hosts sit beside the programs, and the optional tools. It reads no file contents and shows only the names of `TEXTWEAVER_` variables that are set. On Windows:
+The doctor writes one plain-text report to paste into a bug report: your system, your terminal, the screen reader if one is running, where textweaver and the window are installed, `tw backends`, the optional components with one line such as "Components: 3 of 12 installed", text recognition, whether the engine hosts sit beside the programs, and the optional tools. It reads no file contents and shows only the names of `TEXTWEAVER_` variables that are set. On Windows:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\doctor.ps1 -Out doctor.txt

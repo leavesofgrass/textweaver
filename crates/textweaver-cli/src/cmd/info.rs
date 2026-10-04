@@ -75,9 +75,11 @@ fn components_installed() -> Option<(usize, usize)> {
     Some(textweaver_app::components::Registry::builtin().installed_count(&paths.data_dir))
 }
 
-/// The line `tw info` ends with: "Optional components: 1 of 5 installed."
-fn components_line((n, all): (usize, usize)) -> String {
-    format!("Optional components: {n} of {all} installed.\n")
+/// The line `tw info` ends with, the one components status line:
+/// "Components: 1 of 5 installed."
+fn components_line(count: (usize, usize)) -> String {
+    let c = textweaver_app::lexicon::i18n::Catalog::english();
+    format!("{}.\n", textweaver_app::components::status_line(&c, count))
 }
 
 /// Structure counts reported, as (JSON key, marker kind, block level filter).

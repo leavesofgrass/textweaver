@@ -343,4 +343,11 @@ fn components_list_prints_json() {
     let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
     assert!(v["components"].as_array().is_some_and(|a| !a.is_empty()));
     assert_eq!(v["installed"], 0);
+    // The one components status line ends the list, as in tw info and
+    // About: "Components: 0 of 12 installed."
+    let total = v["total"].as_u64().unwrap();
+    let line = format!("Components: 0 of {total} installed.");
+    let out = tw_in(home.path(), &["components", "list"], "");
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(text.lines().last(), Some(line.as_str()), "{text}");
 }

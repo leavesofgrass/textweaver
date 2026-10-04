@@ -126,8 +126,8 @@ One plain-text report to paste into a bug report. It covers:
 - the terminal, `TERM`, and `COLORTERM`;
 - the locale, and the screen reader if one is running;
 - the Rust toolchain;
-- where textweaver is installed, and `tw settings path`;
-- `tw backends`;
+- where textweaver is installed, the window's version when it is installed, and `tw settings path`;
+- `tw backends`, `tw components list` (ending with "Components: 3 of 12 installed"), and `tw ocr status`;
 - whether the engine hosts and dictionaries sit beside the programs;
 - the optional tools.
 
