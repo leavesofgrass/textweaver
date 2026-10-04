@@ -269,7 +269,7 @@ fn title_of(kind: &str, app: &App) -> String {
         "palette" => "Commands".into(),
         "question" => "Remove the voice?".into(),
         "settings" => app.catalog().tr("settings-title"),
-        "colors" | "voices" => String::new(),
+        "colors" | "voices" | "reading" => String::new(),
         _ => unreachable!("{kind}"),
     }
 }
@@ -398,15 +398,15 @@ fn every_dialog_button_shows_its_name_and_keeps_its_key_out_of_it() {
     }
 }
 
-/// The voice manager at the smallest window, 420 by 320: its eight
-/// buttons and its list do not fit 320 pixels high yet, so the bounds test
-/// (checklist row V3) checks it at the laptop size only.
+/// The voice manager at the smallest window, 420 by 320, in its compact
+/// layout: every control stays inside the window (checklist row V3).
 #[test]
 fn the_voice_manager_fits_the_smallest_window() {
     let dir = tempfile::tempdir().unwrap();
     let app = app(dir.path());
     let mut h = window(&app, (420, 320), 1.0);
-    let (modal, focus) = build("voices", &app);
+    // Built for the window's height, as the window does: compact below 480.
+    let (modal, focus) = build_for("voices", &app, 320);
     let mut back = None;
     gui::open_dialog_in(&mut h, modal, focus, &mut back);
     let _ = h.redraw();
