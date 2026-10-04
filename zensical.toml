@@ -92,6 +92,7 @@ nav = [
       { "Fuzzing (on GitHub)" = "https://github.com/leavesofgrass/textweaver/tree/main/fuzz" },
       { "Releasing" = "dev/releasing.md" },
       { "Third-party data" = "dev/third-party-data.md" },
+      { "Documentation coverage" = "dev/docs-coverage.md" },
       { "JSON-RPC" = "json-rpc.md" },
       { "Roadmap" = "roadmap.md" },
       { "star features not yet planned" = "star-gaps.md" },

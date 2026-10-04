@@ -8,7 +8,7 @@ Each problem below is a heading that says what you notice. Under it are the step
 
 ### The log file
 
-The terminal reader writes warnings and errors to a log file, `textweaver.log`, in the state folder. The state folder is `state` inside the data folder; the [library guide](library.md) says where that is on each system. With `TEXTWEAVER_HOME` or `--home`, it is `data\state` under that folder.
+The terminal reader and the window write warnings and errors to a log file, `textweaver.log`, in the state folder. The state folder is `state` inside the data folder; the [library guide](library.md) says where that is on each system. With `TEXTWEAVER_HOME` or `--home`, it is `data\state` under that folder.
 
 The log is written by `textweaver`, `tw open`, and `tw serve`. Other `tw` commands print their errors in the terminal instead.
 

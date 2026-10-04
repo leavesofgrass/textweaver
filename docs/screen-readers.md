@@ -149,13 +149,13 @@ These are the settings to look at in NVDA and JAWS for each mode. Names and keys
 
 ### VoiceOver (macOS)
 
-- textweaver runs in Terminal.app. VoiceOver reads new text in Terminal as it appears. Untested on a real Mac.
+- textweaver runs in Terminal.app. VoiceOver reads new text in Terminal as it appears. Basic functionality has had some testing; more extensive testing is planned.
 - textweaver's **Alt** chords, such as **Alt+P** and **Alt+Shift+A**, need the Option key to act as Alt (Meta). In Terminal, open Settings, Profiles, Keyboard, and turn on "Use Option as Meta key". Untested.
 - VoiceOver's own keys use **Control+Option**; textweaver's terminal keys use no **Ctrl+Alt** chords, so there is no clash by default.
 
 ### Orca (Linux)
 
-- textweaver runs in GNOME Terminal and other terminals. Orca reads new text in terminals as it appears. Untested.
+- textweaver runs in GNOME Terminal and other terminals. Orca reads new text in terminals as it appears. Basic functionality has had some testing; more extensive testing is planned.
 - Orca's typing echo is in Orca Preferences, Echo: on for hybrid and screen-reader modes, off for self-voicing.
 - Orca also says each key you press by default, including modifiers ("left control", "space"), so every textweaver command is announced before textweaver answers. To hear only textweaver's answer, turn off key echo in Orca Preferences, Echo ("Enable key echo"), or leave only the kinds of keys you want spoken ticked. This is Orca's own setting; textweaver does not change it.
 
