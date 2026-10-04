@@ -6,7 +6,7 @@ These pictures show the textweaver window (`textweaver-gui`) for a sighted desig
 textweaver-gui --review-screenshots FOLDER fixtures/sample.md
 ```
 
-Every picture uses the sample document, `fixtures/sample.md`, and a fresh settings folder. Unless a description says otherwise, the window is 1100 by 780 pixels. The harness asks for a reading position on the word "Jones" in the first paragraph, but the Wave 9 pictures do not show its highlight (see "Problems still visible" below). File names give the theme, what is shown, the size when it is not the usual one, and the scale (100 or 200 percent).
+Every picture uses the sample document, `fixtures/sample.md`, and a fresh settings folder. Unless a description says otherwise, the window is 1100 by 780 pixels. The harness puts the reading position on the word "Jones" in the first paragraph: the spoken word has its band, and its sentence ("Dr. Jones arrived at 3:30 p.m.") a paler band and an underline. For the pictures, `[highlight] granularity` is "both"; the default, "word", draws the word only. File names give the theme, what is shown, the size when it is not the usual one, and the scale (100 or 200 percent).
 
 The themes are Galaxy (the default, dark), Galaxy Light, High Contrast (black, white and yellow), Lamplight (the soft dark theme, warm brown and amber), and "system contrast", which is Windows High Contrast's own "Night sky" colors as the window follows them.
 
@@ -20,24 +20,24 @@ All pictures were redrawn on Sunday, October 4, 2026, after Wave 9's last visual
 - Below 800 pixels wide, the header and the toolbar fold into one bar above the document, and the buttons hide their keys. The overflow that alpha.8's small pictures showed is gone.
 - The status bar's two texts go on two lines when they do not fit on one, instead of overlapping, and the position adds the time left ("under a minute left").
 - The window with no document says so in the document area: "No document is open. Press Ctrl+O to open one."
+- Redrawn again on Sunday, October 4, 2026, after the visual fixes: the reading position's highlight shows again; bullets are drawn as shapes (a disc, a ring for the nested one, a square deeper); edit mode shows the source's own dashes with no drawn bullet; at 420 by 320 the bar keeps to two rows and the Contents panel gives way to the document; at 960 by 540 Slower and Faster wrap together.
 - New pictures: the Reading settings dialog, Settings with a filter typed, Lamplight, and the window at 780 by 540 with the bars folded.
 
 ## Problems still visible
 
 - Pass: no button runs past the window's edge at any review size.
-- Fail: the spoken word's highlight and its sentence's underline do not show, though the harness sets them. Either the harness's way of setting them or the document view's drawing changed in Wave 9; this needs a look before the pictures of the highlight can be trusted again.
-- Fail: the nested bullet ("Nested bullet under the second") is drawn as a missing-glyph box, not a hollow bullet, in every theme. The bundled font seems to lack that character.
-- Fail: in edit mode, each list line shows a drawn bullet before its source's own dash ("• - First bullet item").
-- Fail: at 420 by 320, the folded bar takes four rows of buttons, so the document area is one line tall, and with the Contents panel open, the panel and the document are each less than a line tall and no heading shows.
-- Minor: at 683 by 384 with the Contents panel, the document's title wraps and only its second line, "Document", shows at the top.
-- Minor: at 960 by 540 the toolbar wraps, leaving Faster alone on a second row.
-- Minor: the Notes picture's status bar says "Resumed at 60 percent" and "Line 24 of 34", while the document shows its top.
+- Pass: the spoken word's band and its sentence's underline show in every theme.
+- Pass: bullets are shapes, so there is no missing-glyph box, and edit mode draws no bullets.
+- Pass: at 420 by 320 the bar takes two rows and the document about four lines.
+- Minor: at 420 by 320 some buttons are hidden (Start editing, Settings, Next sentence, Slower and Faster). Their keys work, and Commands lists them all.
+- Minor: at 683 by 384 with the Contents panel, the document's title wraps and only its second line, "Document", shows at the top, because the view scrolls to the reading position.
+- Minor: the Notes picture's status message is the last sample note added ("Note added on: A block quote spans a sentence.").
 
 ## The window while reading
 
 ![Galaxy at 100 percent: the sample document's title, first paragraph and bullet list, Play highlighted](galaxy-100.png)
 
-Description: dark gray window. The header has the buttons Open, Font, Start editing, Settings and Commands, each with its key. The document fills the middle in a centered column, framed in purple because it has the focus: the purple title "Sample Markdown Document", a paragraph with bold, italic, code and a link, the heading "Lists", three bullets with a nested one, and a numbered list. The reading toolbar below has Play (filled purple, the main action), Stop, Previous sentence, Next sentence, Slower and Faster. The status bar says "Opened Sample Markdown Document." on the left and "Line 1 of 34, 0%, Ready, 265 wpm, silent, under a minute left" on the right.
+Description: dark gray window. The header has the buttons Open, Font, Start editing, Settings and Commands, each with its key. The document fills the middle in a centered column, framed in purple because it has the focus: the purple title "Sample Markdown Document", a paragraph with bold, italic, code and a link, the heading "Lists", three bullets with a nested one, and a numbered list. The reading toolbar below has Play (filled purple, the main action), Stop, Previous sentence, Next sentence, Slower and Faster. The word "Jones" has a solid lilac band, and its sentence a paler purple band with a line under it. The status bar says "Opened Sample Markdown Document." on the left and "Line 3 of 34, 18%, Ready, 265 wpm, silent, under a minute left" on the right.
 
 ![Galaxy theme at 200 percent: the same reading view, twice the size](galaxy-200.png)
 
@@ -93,7 +93,7 @@ Description: the empty window in High Contrast: black, with white borders around
 
 ![Edit mode in Galaxy at 100 percent: Markdown source in a dashed frame with an Editing badge](galaxy-edit-100.png)
 
-Description: after Start editing, the document's frame turns dashed and an "Editing" badge sits in its top right corner. The document shows its Markdown source: the front matter between two lines of dashes, then "# Sample Markdown Document" with the caret after the number sign. Markup stays visible and styled (bold, italic, code and the link). The header's button now says "Finish editing (Ctrl+E)", and the status bar says "Edit mode on. Save: Ctrl+S. Finish: Ctrl+E. # Sample Markdown Document" and "Line 6 of 45, Edit, Ready, 7%".
+Description: after Start editing, the document's frame turns dashed and an "Editing" badge sits in its top right corner. The document shows its Markdown source: the front matter between two lines of dashes, then "# Sample Markdown Document" with the caret after the number sign. Markup stays visible and styled (bold, italic, code and the link), and list lines start with their own dashes, with no drawn bullet. The header's button now says "Finish editing (Ctrl+E)", and the status bar says "Edit mode on. Save: Ctrl+S. Finish: Ctrl+E. # Sample Markdown Document" and "Line 6 of 45, Edit, Ready, 7%".
 
 ![Edit mode in Galaxy at 200 percent: the Markdown source, twice the size](galaxy-edit-200.png)
 
@@ -153,7 +153,7 @@ Description: the Contents panel in Windows Night sky colors.
 
 ![Notes panel in Galaxy at 100 percent: two sample notes listed beside the document](galaxy-notes-100.png)
 
-Description: a panel titled Notes lists two notes: "Check the totals in the score column" and "Ask about the source of this quote", each cut short with an ellipsis by the panel's width; the second is selected. The panel's foot has the same hint as Contents.
+Description: a panel titled Notes lists two notes: "Check the totals in the score column" and "Ask about the source of this quote", each cut short with an ellipsis by the panel's width; the first is selected. The panel's foot has the same hint as Contents. The status bar says "Note added on: A block quote spans a sentence." and "Line 3 of 34, 18%", where the reading position is.
 
 ![Notes panel in Galaxy at 200 percent: the two notes, twice the size](galaxy-notes-200.png)
 
@@ -163,9 +163,9 @@ Description: the Notes panel at 200 percent.
 
 These show how the window fits small screens. Below 800 pixels wide, the header and the toolbar fold into one bar above the document, and the buttons hide their keys. Problems are listed under each picture and in "Problems still visible".
 
-![Window at 960 by 540, Galaxy at 100 percent: the reading view, the toolbar wrapped onto two rows](galaxy-960x540-100.png)
+![Window at 960 by 540, Galaxy at 100 percent: the reading view, Slower and Faster on the toolbar's second row](galaxy-960x540-100.png)
 
-Description: half of a 1920 by 1080 screen. The header and the toolbar are still separate and every button keeps its key; the toolbar wraps, so Faster sits alone on a second row. The document shows its title, first paragraph and the "Lists" heading.
+Description: half of a 1920 by 1080 screen. The header and the toolbar are still separate and every button keeps its key; the toolbar wraps, and Slower and Faster go to its second row together. The document shows its title, first paragraph and the "Lists" heading.
 
 ![Contents panel at 960 by 540, Galaxy at 100 percent: all five headings still fit](galaxy-contents-960x540-100.png)
 
@@ -195,17 +195,17 @@ Description: the Contents panel at the laptop size shows four headings above its
 
 Description: edit mode at the laptop size. The document shows the front matter's author line and the title with the caret; the status bar's two texts sit on two lines.
 
-![Window at 420 by 320, Galaxy at 100 percent: four rows of buttons, a document one line tall](galaxy-420x320-100.png)
+![Window at 420 by 320, Galaxy at 100 percent: two rows of buttons, about four lines of document](galaxy-420x320-100.png)
 
-Description: the smallest review size. Every button is on screen, in four rows. Problem: the document area is one line tall, showing part of the first paragraph, and the status bar takes three lines.
+Description: the smallest review size. Below 480 pixels high, the folded bar keeps to two rows: Open, Font and Commands, then Play, Stop and Previous sentence. The other buttons are hidden from the screen, the Tab order and the screen reader; their keys still work, and Commands lists every command. The document shows about four lines, with "Jones" highlighted, and the status bar takes three lines.
 
-![Contents panel at 420 by 320, Galaxy at 100 percent: panel title only, no headings, a sliver of document](galaxy-contents-420x320-100.png)
+![Contents panel at 420 by 320, Galaxy at 100 percent: the panel gives way, the document as without it](galaxy-contents-420x320-100.png)
 
-Description: the Contents panel at 420 by 320. Problem: the panel sits above the document, shows only its title "Contents" and no heading, and the document under it is a sliver less than a line tall.
+Description: the Contents panel is open, but at 420 by 320 the document would be under five lines with it, so the panel is hidden and the window looks as without it. The panel's key shows it again and moves the focus there; while it has the focus, it stays above the document.
 
-![No document at 420 by 320, Galaxy at 100 percent: four rows of buttons and the open-a-document hint](galaxy-empty-420x320-100.png)
+![No document at 420 by 320, Galaxy at 100 percent: two rows of buttons and the open-a-document hint](galaxy-empty-420x320-100.png)
 
-Description: the empty window at 420 by 320: four rows of buttons, then "No document is open. Press Ctrl+O to open one." on two lines, and "Ready, 265 wpm, silent" in the status bar.
+Description: the empty window at 420 by 320: two rows of buttons, then "No document is open. Press Ctrl+O to open one." on two lines, and "Ready, 265 wpm, silent" in the status bar.
 
 ## Dialogs
 
