@@ -94,3 +94,37 @@ fn a_reading_pass_is_named_and_skims_continuous_reading() {
     act(&mut app, ActionId::ReadingPass);
     assert_eq!(app.status_text(), "Pass: full text.");
 }
+
+#[test]
+fn the_time_left_changes_by_the_minute_never_by_the_word() {
+    // W9b-r: the window's status bar ends with the time left. Over 200
+    // one-word moves it changes only when a whole minute passes, and the
+    // position only when a whole percent does.
+    let text = "word ".repeat(6000);
+    let mut app = App::new(AppConfig::for_tests());
+    app.open_document(
+        Document::from_plain_text(&text),
+        DocKey::untitled(1),
+        "T".into(),
+    );
+    let wpm = app.settings().speech.rate.wpm().max(1) as usize;
+    assert_eq!(app.minutes_left(), Some(6000 / wpm));
+    let (mut minutes, mut position) = (app.minutes_left(), app.title_position());
+    let (mut minute_changes, mut position_changes) = (0, 0);
+    for k in 1..=200 {
+        app.dispatch(Command::SetCursor(textweaver_app::core::CharPos(k * 5)));
+        let m = app.minutes_left();
+        assert!(m <= minutes, "the time left never grows going forward");
+        minute_changes += usize::from(m != minutes);
+        minutes = m;
+        let p = app.title_position();
+        position_changes += usize::from(p != position);
+        position = p;
+    }
+    // 200 words: at most one minute more than 200 / wpm, and 1,000 of
+    // 30,000 chars: at most four whole percents.
+    assert!(minute_changes <= 200 / wpm + 1, "{minute_changes}");
+    assert!(position_changes <= 4, "{position_changes}");
+    let empty = App::new(AppConfig::for_tests());
+    assert_eq!(empty.minutes_left(), None);
+}

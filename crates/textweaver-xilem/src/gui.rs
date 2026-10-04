@@ -202,6 +202,9 @@ struct Shown {
     state: DocState,
     status: String,
     position: String,
+    /// The minutes left last shown, and their words (the status bar's last
+    /// part), so the words are built once a minute, not on every refresh.
+    time_left: Option<(usize, String)>,
     reading: bool,
     title: String,
     /// The reading aids' settings the model's spans were built with.
@@ -681,7 +684,12 @@ pub fn build_tree(
         DocumentView::new(p.clone(), font, Rc::clone(&full_passes))
             .with_select_spoken(experiments.select_spoken)
             .with_edit_role(experiments.edit_role)
-            .with_label(c.tr("gui-document")),
+            .with_label(c.tr("gui-document"))
+            .with_empty_hint(
+                app.map(empty_hint)
+                    .unwrap_or_else(|| c.fmt("gui-no-document", &args!["key" => "Ctrl+O"])),
+            )
+            .with_editing_word(c.tr("section-editing")),
     )
     .with_tag(DOC);
     let doc = NewWidget::new(Sidebar::new(doc)).with_tag(SIDEBAR);
@@ -1192,6 +1200,15 @@ pub fn close_dialog_in(host: &mut impl Host, back: &mut Option<WidgetId>) {
     host.move_focus(back.or(doc));
 }
 
+/// What the empty window draws and its document node describes: how to
+/// open a document, with the key from the keymap ("No document is open.
+/// Press Ctrl+O to open one.").
+pub fn empty_hint(app: &App) -> String {
+    let open = textweaver_app::named_key(app.keymap(), ActionId::Open);
+    app.catalog()
+        .fmt("gui-no-document", &args!["key" => open.as_str()])
+}
+
 /// The document view's model for the window `w` of the session's document.
 pub fn model_for(app: &App, w: CharRange) -> Option<DocModel> {
     let s = app.session()?;
@@ -1482,7 +1499,24 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     }
     // The terminal's title line, from the app: the mode, the reading
     // state, "line 3 of 40, 7%", the access mode, the rate, the engine.
-    let position = app.title_parts(app.title_position().as_deref()).join(", ");
+    let mut position = app.title_parts(app.title_position().as_deref()).join(", ");
+    // Time left goes last, so a 40-cell Braille line still starts with the
+    // position; it changes once a minute, never per word.
+    match app.minutes_left() {
+        Some(m) => {
+            if shown.time_left.as_ref().is_none_or(|(k, _)| *k != m) {
+                let words = app
+                    .catalog()
+                    .fmt("status-time-left", &args!["minutes" => m]);
+                shown.time_left = Some((m, words));
+            }
+            if let Some((_, words)) = &shown.time_left {
+                position.push_str(", ");
+                position.push_str(words);
+            }
+        }
+        None => shown.time_left = None,
+    }
     if position != shown.position {
         host.edit(POSITION, |mut l| Label::set_text(&mut l, position.clone()));
         shown.position = position;
@@ -1658,8 +1692,14 @@ impl Gui {
                     Region::set_label(&mut r, c.tr("gui-toolbar-reading"));
                 });
                 let doc_label = document_label(&self.app);
+                // The time left is said again in the new language.
+                self.shown.time_left = None;
+                let hint = empty_hint(&self.app);
+                let editing_word = c.tr("section-editing");
                 root.edit_widget_with_tag(DOC, |mut d| {
                     DocumentView::set_label(&mut d, doc_label);
+                    DocumentView::set_empty_hint(&mut d, hint);
+                    DocumentView::set_editing_word(&mut d, editing_word);
                 });
                 if self.log {
                     crate::log::line(&format!("labels: {}", self.lang));

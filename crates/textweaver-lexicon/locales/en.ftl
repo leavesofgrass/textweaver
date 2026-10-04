@@ -427,6 +427,13 @@ status-hybrid = hybrid
 status-screen-reader = screen reader mode
 status-rate-spoken = { $wpm } words per minute
 status-rate = { $wpm } wpm
+# The window's status bar, last: reading time left at the current rate.
+status-time-left =
+    { $minutes ->
+        [0] under a minute left
+        [one] 1 minute left
+       *[other] { $minutes } minutes left
+    }
 status-no-document = No document
 # $parts are the title line's parts, joined with commas.
 status-said = { $title }: { $parts }.
