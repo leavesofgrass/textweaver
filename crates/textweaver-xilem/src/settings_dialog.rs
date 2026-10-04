@@ -76,8 +76,11 @@ pub struct FormRow {
     pub path: String,
     /// The label, shown and spoken.
     pub label: String,
-    /// One or two sentences of help (the control's description).
+    /// The help's first sentence: shown under the form and given as the
+    /// control's description.
     pub help: String,
+    /// The whole help, said by F1.
+    pub full_help: String,
     /// How it is shown and changed.
     pub kind: RowKind,
     /// The value as shown and said ("300 words per minute", "Galaxy").
@@ -135,7 +138,8 @@ impl FormRow {
         FormRow {
             path: setting.path.clone(),
             label: setting.label_in(c),
-            help: setting.help_in(c),
+            help: setting.short_help_in(c),
+            full_help: setting.help_in(c),
             kind,
             value_text: setting.describe_in(c, value),
             swatch: None,
@@ -1384,6 +1388,7 @@ mod tests {
             path: "x".into(),
             label: label.into(),
             help: String::new(),
+            full_help: String::new(),
             kind: RowKind::Choice,
             value_text: value_text.into(),
             swatch: None,

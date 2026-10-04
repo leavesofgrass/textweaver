@@ -506,7 +506,7 @@ pub const INFO: &[Info] = &[
     choice(
         "speech.piper.phonemizer",
         "Piper phonemizer",
-        "How Piper turns text into sounds: the espeak-ng library when installed, that library, or textweaver's own.",
+        "How Piper turns text into sounds. The espeak-ng library when installed, that library, or textweaver's own.",
         &[
             ("auto", "automatic"),
             ("library", "espeak-ng library"),
@@ -516,7 +516,7 @@ pub const INFO: &[Info] = &[
     table(
         "speech.voice_params",
         "Rate and pitch per voice",
-        "The rate and pitch each voice was last used at; choosing a voice again brings them back.",
+        "The rate and pitch each voice was last used at. Choosing a voice again brings them back.",
     ),
     // [highlight]
     toggle(
@@ -544,7 +544,7 @@ pub const INFO: &[Info] = &[
     number(
         "highlight.speed",
         "Highlight speed",
-        "Speed of the timed highlight for engines that report no words, as a multiple: 1 is normal speed.",
+        "Speed of the timed highlight for engines that report no words, as a multiple. 1 is normal speed.",
         (0.5, 1.5, 0.1),
         "",
     ),
@@ -646,7 +646,7 @@ pub const INFO: &[Info] = &[
     optional(
         "normalization.medical_lexicon.overlay",
         "Medical lexicon file",
-        "Your own medical pronunciations, which win over the built-in ones; not set reads medical-lexicon.toml in the settings folder.",
+        "Your own medical pronunciations, which win over the built-in ones. Not set reads medical-lexicon.toml in the settings folder.",
     ),
     // [reading]
     toggle(
@@ -685,7 +685,7 @@ pub const INFO: &[Info] = &[
     open_choice(
         "reading.ocr_lang",
         "Scanned text language",
-        "The language of scanned text, as Tesseract codes such as fra or deu+eng; empty means the document's own language, else English.",
+        "The language of scanned text, as Tesseract codes such as fra or deu+eng. Empty means the document's own language, else English.",
         &[
             ("", "the document's"),
             ("eng", "English"),
@@ -697,7 +697,7 @@ pub const INFO: &[Info] = &[
     choice(
         "reading.ocr_engine",
         "OCR engine",
-        "Which engine recognizes scanned pages: ocrs for English and Tesseract for other languages, or one of them always.",
+        "Which engine recognizes scanned pages. ocrs for English and Tesseract for other languages, or one of them always.",
         &[
             ("auto", "automatic"),
             ("ocrs", "ocrs"),
@@ -708,7 +708,7 @@ pub const INFO: &[Info] = &[
     choice(
         "reading.math_engine",
         "Math speech",
-        "Which engine reads math aloud: textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a version that includes it; otherwise textweaver's own is used.",
+        "Which engine reads math aloud. textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a version that includes it; otherwise textweaver's own is used.",
         &[
             ("builtin", "textweaver"),
             ("mathcat", "MathCAT ClearSpeak"),
@@ -718,13 +718,13 @@ pub const INFO: &[Info] = &[
     choice(
         "reading.math_display",
         "Math on screen",
-        "How math looks in the reading view: as its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source.",
+        "How math looks in the reading view. As its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source.",
         &[("source", "source"), ("unicode", "Unicode")],
     ),
     choice(
         "reading.revisions",
         "Tracked changes",
-        "How tracked changes in Word, OpenDocument, and RTF files are read: said in place at high verbosity (automatic), always said, or never said, reading the final text. Applies when a document is opened.",
+        "How tracked changes in Word, OpenDocument, and RTF files are read. Said in place at high verbosity (automatic), always said, or never said, reading the final text. Applies when a document is opened.",
         &[
             ("auto", "automatic"),
             ("marked", "always say them"),
@@ -753,7 +753,7 @@ pub const INFO: &[Info] = &[
     number(
         "display.measure",
         "Line length",
-        "How many characters a line holds in the window, from 25 to 90; 0 fills the window. The terminal uses the wrap width.",
+        "How many characters a line holds in the window, from 25 to 90. 0 fills the window. The terminal uses the wrap width.",
         (0.0, 90.0, 1.0),
         "characters",
     ),
@@ -779,7 +779,7 @@ pub const INFO: &[Info] = &[
     choice(
         "display.hints",
         "Key hints line",
-        "Whether the terminal reader shows key hints on its bottom line: automatic shows them when self-voicing and hides them with a screen reader. F1 and the keyboard shortcuts list always name the keys.",
+        "Whether the terminal reader shows key hints on its bottom line. Automatic shows them when self-voicing and hides them with a screen reader. F1 and the keyboard shortcuts list always name the keys.",
         &[("auto", "automatic"), ("on", "on"), ("off", "off")],
     ),
     // [editing]
@@ -841,7 +841,7 @@ pub const INFO: &[Info] = &[
     list(
         "library.folders",
         "Library folders",
-        "Folders whose documents the library lists, and whose positions sync between computers; separate folders with semicolons.",
+        "Folders whose documents the library lists, and whose positions sync between computers. Separate folders with semicolons.",
     ),
     // [keyboard]
     toggle(
@@ -858,7 +858,7 @@ pub const INFO: &[Info] = &[
     choice(
         "keyboard.digit_row",
         "Digit row",
-        "How the terminal recognizes the digit keys for heading levels: auto, or a French AZERTY keyboard.",
+        "How the terminal recognizes the digit keys for heading levels. Auto, or a French AZERTY keyboard.",
         &[("auto", "automatic"), ("azerty", "AZERTY")],
     ),
     // [accessibility]
@@ -875,7 +875,7 @@ pub const INFO: &[Info] = &[
     choice(
         "accessibility.say_all",
         "Say all with a screen reader",
-        "Continuous reading in screen-reader mode: a sentence at a time on the status line, or textweaver's voice.",
+        "Continuous reading in screen-reader mode. A sentence at a time on the status line, or textweaver's voice.",
         &[
             ("screen", "on the status line"),
             ("voice", "with textweaver's voice"),
@@ -890,7 +890,7 @@ pub const INFO: &[Info] = &[
     choice(
         "accessibility.cursor",
         "Cursor",
-        "Where the terminal's cursor waits: on what you are working on, or on the status line.",
+        "Where the terminal's cursor waits. On what you are working on, or on the status line.",
         &[
             ("follow", "follows focus"),
             ("status", "on the status line"),
@@ -923,7 +923,7 @@ pub const INFO: &[Info] = &[
     choice(
         "export.subtitle_karaoke",
         "Subtitle karaoke",
-        "How subtitle lines show the word being read: off, underlined as it is spoken (WebVTT tags), or one cue per word in bold and underline.",
+        "How subtitle lines show the word being read. Off, underlined as it is spoken (WebVTT tags), or one cue per word in bold and underline.",
         &[
             ("off", "Off"),
             ("tags", "Underline as spoken"),
@@ -949,13 +949,13 @@ pub const INFO: &[Info] = &[
     choice(
         "braille.math_code",
         "Math braille",
-        "The braille code for math in BRF files and while exploring a formula with MathCAT: Nemeth, or UEB mathematics. It needs a version that includes MathCAT; otherwise math is written as its spoken words.",
+        "The braille code for math in BRF files and while exploring a formula with MathCAT. Nemeth, or UEB mathematics. It needs a version that includes MathCAT; otherwise math is written as its spoken words.",
         &[("nemeth", "Nemeth"), ("ueb", "UEB")],
     ),
     choice(
         "braille.table_format",
         "Braille tables",
-        "How BRF files lay out tables: linear, one row per line with semicolons between entries; listed, each row a heading with each entry on its own line after its column heading; or stairstep, each entry two cells right of the one before, for tables of up to four columns.",
+        "How BRF files lay out tables. Linear, one row per line with semicolons between entries; listed, each row a heading with each entry on its own line after its column heading; or stairstep, each entry two cells right of the one before, for tables of up to four columns.",
         &[
             ("linear", "linear"),
             ("listed", "listed"),
@@ -1308,7 +1308,7 @@ pub const INFO: &[Info] = &[
     choice(
         "interface.rtl",
         "Right-to-left display",
-        "Whether the terminal reader reorders right-to-left text for display: automatic leaves it to terminals that do it themselves. Speech and the screen reader always get the text in reading order.",
+        "Whether the terminal reader reorders right-to-left text for display. Automatic leaves it to terminals that do it themselves. Speech and the screen reader always get the text in reading order.",
         &[("auto", "automatic"), ("on", "on"), ("off", "off")],
     ),
     internal(
@@ -1325,7 +1325,7 @@ pub const INFO: &[Info] = &[
     choice(
         "gui.announce",
         "Announcements",
-        "How the window's messages reach the screen reader, from the next start: a live region, or UI Automation notifications (Windows only).",
+        "How the window's messages reach the screen reader, from the next start. A live region, or UI Automation notifications (Windows only).",
         &[
             ("live", "live region"),
             ("uia", "UI Automation notifications"),
@@ -1344,7 +1344,7 @@ pub const INFO: &[Info] = &[
     toggle(
         "gui.auto_hide_menu",
         "Hide the menu bar",
-        "Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.",
+        "Windows: hide the window's menu bar until Alt or F10 shows it. It hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.",
     ),
     toggle(
         "gui.speak_messages",
@@ -1354,7 +1354,7 @@ pub const INFO: &[Info] = &[
     choice(
         "gui.sidebar",
         "Panel beside the document",
-        "The panel the window shows beside the document: none, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one.",
+        "The panel the window shows beside the document. None, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one.",
         &[
             ("off", "none"),
             ("contents", "Contents"),
@@ -1365,7 +1365,7 @@ pub const INFO: &[Info] = &[
     open_choice(
         "colors.ruler",
         "Reading ruler color",
-        "The band of the reading ruler and the marked current line; the ruler keeps its underline or bold. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.",
+        "The band of the reading ruler and the marked current line. The ruler keeps its underline or bold. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
@@ -1449,12 +1449,12 @@ pub const INFO: &[Info] = &[
     optional(
         "sync.folder",
         "Sync folder",
-        "The folder your computers share: one kept in step by Syncthing, a cloud folder, or a USB stick.",
+        "The folder your computers share. One kept in step by Syncthing, a cloud folder, or a USB stick.",
     ),
     text(
         "sync.device_name",
         "Computer name",
-        "This computer's name in sync messages, such as laptop or lab; empty uses Computer 1, Computer 2, and so on.",
+        "This computer's name in sync messages, such as laptop or lab. Empty uses Computer 1, Computer 2, and so on.",
     ),
     toggle(
         "sync.places",
@@ -1497,12 +1497,12 @@ pub const INFO: &[Info] = &[
     toggle(
         "sync.favorite_voices",
         "Sync favorite voices",
-        "Share your favorite voices; one this computer does not have is listed as not on this computer.",
+        "Share your favorite voices. One this computer does not have is listed as not on this computer.",
     ),
     choice(
         "sync.position_policy",
         "Place to resume",
-        "Which place a document opens at when another computer has one too: the newest, the furthest, or ask.",
+        "Which place a document opens at when another computer has one too. The newest, the furthest, or ask.",
         &[
             ("newest", "the newest"),
             ("furthest", "the furthest"),
@@ -1826,6 +1826,21 @@ fn lookup(c: &Catalog, id: &str, english: &str) -> String {
     }
 }
 
+/// The first sentence of `text`: up to the first period followed by a
+/// space, unless it ends an abbreviation, a single character or a word
+/// with a period inside ("z. B.", "e.g.").
+fn first_sentence(text: &str) -> &str {
+    let mut from = 0;
+    while let Some(i) = text[from..].find(". ").map(|i| i + from) {
+        let word = text[..i].rsplit(' ').next().unwrap_or_default();
+        if !word.contains('.') && word.chars().count() > 1 {
+            return &text[..=i];
+        }
+        from = i + 2;
+    }
+    text
+}
+
 impl Setting {
     /// True when `query` matches the setting, as the settings screens
     /// filter as you type: its label, section, path, help and unit, in
@@ -1861,6 +1876,12 @@ impl Setting {
             return String::new();
         }
         lookup(c, &format!("setting-{}-help", slug(&self.path)), self.help)
+    }
+
+    /// The help's first sentence in the catalog's language: what is shown
+    /// under the row and said as its description. F1 says the whole help.
+    pub fn short_help_in(&self, c: &Catalog) -> String {
+        first_sentence(&self.help_in(c)).to_owned()
     }
 
     /// The section title in the catalog's language (`section-*`).
@@ -2655,7 +2676,7 @@ impl App {
                     &args![
                         "label" => s.label_in(&c),
                         "value" => s.describe_in(&c, &now),
-                        "help" => s.help_in(&c)
+                        "help" => s.short_help_in(&c)
                     ],
                 );
                 self.tell(&msg);
@@ -2732,6 +2753,16 @@ fn restart_note(path: &str) -> Option<&'static str> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_short_help_is_the_first_sentence() {
+        assert_eq!(first_sentence("One. Two."), "One.");
+        assert_eq!(first_sentence("From 25 to 90. 0 fills it."), "From 25 to 90.");
+        assert_eq!(first_sentence("Codes, z. B. deu. Leer."), "Codes, z. B. deu.");
+        assert_eq!(first_sentence("Such as e.g. this. More."), "Such as e.g. this.");
+        assert_eq!(first_sentence("Which one. ocrs or not."), "Which one.");
+        assert_eq!(first_sentence("Only one."), "Only one.");
+    }
+
     use super::*;
 
     /// Every key of `settings.toml` has an [`INFO`] entry, and every entry

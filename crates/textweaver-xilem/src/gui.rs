@@ -2590,10 +2590,10 @@ impl Gui {
                 if let Some(r) = rows.get(row) {
                     // "Rate, 265 words per minute. How fast ...": what the
                     // setting is now, then its help (W9b-d).
-                    let said = if r.help.is_empty() {
+                    let said = if r.full_help.is_empty() {
                         format!("{}, {}.", r.label, r.value_text)
                     } else {
-                        format!("{}, {}. {}", r.label, r.value_text, r.help)
+                        format!("{}, {}. {}", r.label, r.value_text, r.full_help)
                     };
                     self.app
                         .announce_as(&said, Priority::Polite, Importance::Answer);

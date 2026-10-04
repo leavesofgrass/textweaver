@@ -80,6 +80,7 @@ Use real plural selects ("1 note", "2 notes"), never "(s)". Zero says "No notes.
 The key fact is in cells 1 to 40. A prompt label plus eight typed letters fits. A menu name fits. A question comes before what it is about. A status-like result fits whole, or its first 40 cells already carry the outcome. Count Braille cells, not characters: capitals and digits take extra cells in uncontracted braille, and `textweaver_tui::ui::braille_cells` counts them.
 
 - The window's button descriptions (`gui-hint-*`) fit 40 cells and say what the name does not; Stop, Slower, Faster, and the sentence buttons have none, since their names say it. The full help stays in F1, Shift+F1, and the palette. Tested: `button_hints_are_short_in_every_language`, and in cells by `window_button_hints_fit_a_braille_line` in the terminal's tests.
+- A setting's help starts with one sentence of at most fifteen words. The window shows that sentence under the form and gives it as the row's description; F1 says the whole help, and the settings reference prints it. Tested: `setting_helps_start_with_a_short_sentence`, whose list `LONG_FIRST_SENTENCE` may only shrink.
 - A button's accessible name is its label without the key in parentheses; the key is its keyboard shortcut. A lone punctuation key is never shown as the key: Commands shows "(F2)", not "(:)".
 
 ### 12. What the tests check, and what they do not
@@ -92,7 +93,7 @@ Checked:
 - The style rules above, on the English catalog (`style_tests.rs`).
 - 40 cells: about thirty terminal lines, every prompt and menu name in six languages, some sync and font messages, and the window's button descriptions.
 
-Not checked yet, so a reviewer reads for them: meaning first, casing, units in spoken text, and the length of setting helps (aim for one sentence of up to fifteen words).
+Not checked yet, so a reviewer reads for them: meaning first, casing, and units in spoken text.
 
 ## Translations
 
