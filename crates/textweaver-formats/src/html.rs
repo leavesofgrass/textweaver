@@ -4,8 +4,13 @@
 //! Star's rules kept: its skip list (`script`, `style`, `nav`, `footer`,
 //! `aside`, `noscript`, `svg`, `canvas`, `meta`, `link`, `base`, `iframe`,
 //! `template`, `button`, `form`) and its image text (`alt`, then `title`,
-//! then `aria-label`; an empty result is decorative and produces nothing; a
-//! `longdesc` URL is appended as "(long description: URL)").
+//! then `aria-label`; a `longdesc` URL is appended as "(long description:
+//! URL)"). A deliberate `alt=""` is decorative and produces nothing.
+//!
+//! Unlike Star, a picture with no description at all (no `alt`, `title`
+//! or `aria-label`) is not dropped in silence: it becomes an empty `Image`
+//! marker, so narration says "graphic, no description", the graphic key
+//! lands on it, and reports can count it.
 //!
 //! Star's bugs fixed (the Star parity reference, Part 1 §1.4 and §7):
 //!
@@ -24,6 +29,13 @@
 //! An inline `<svg>` drawing is not dropped with the rest of the skip list:
 //! it is one graphic named by its `aria-label` or its `<title>` (ADR-0044).
 //!
+//! Print page numbers (`epub:type="pagebreak"` or `role="doc-pagebreak"`,
+//! and the ids an EPUB 3 page list names) are not read aloud: each starts a
+//! `PageBreak` marker labeled with the printed number (its `title`, else its
+//! `aria-label`, else its text, without a leading "Page"), whose range is
+//! that page's text, as DAISY and PDF pages are. So "go to page 112" works
+//! in EPUB and HTML too.
+//!
 //! MathML (`<math>`) is read as math, in web pages as in EPUB 3 (W5c3,
 //! ADR-0035): LaTeX with its delimiters under a `Math` marker, as
 //! `mathml.rs` describes.
@@ -37,7 +49,7 @@ use scraper::{ElementRef, Html, Node};
 use textweaver_core::{CharRange, MarkerKind};
 use textweaver_text::{Document, DocumentMeta, HEADER_ROW_LABEL, Marker};
 
-use crate::builder::Builder;
+use crate::builder::{Builder, OpenId};
 use crate::{
     LoadError, LoadOptions, Loader, Source, decode_bytes, encoding, meta_for, note_encoding,
     title_from_path,
@@ -133,7 +145,16 @@ pub(crate) fn walk_resolved_into<'a>(
     meta: &mut DocumentMeta,
     resolve: Resolver<'a>,
 ) {
-    walk(b, source, options, meta, None, false, Some(resolve));
+    walk(
+        b,
+        source,
+        options,
+        meta,
+        None,
+        false,
+        Some(resolve),
+        Pages::default(),
+    );
 }
 
 /// Called with each element `id` (and `<a name>`) as the walker reaches it,
@@ -150,21 +171,85 @@ pub(crate) fn walk_into<'a>(
     meta: &mut DocumentMeta,
     on_anchor: Option<AnchorHook<'a>>,
 ) {
-    walk(b, source, options, meta, on_anchor, false, None);
+    walk(
+        b,
+        source,
+        options,
+        meta,
+        on_anchor,
+        false,
+        None,
+        Pages::default(),
+    );
+}
+
+/// Print pages across the documents of one book: the open `PageBreak`
+/// marker, which runs on into the next chapter until the next page starts,
+/// and the page labels an EPUB 3 page list gives by element id.
+#[derive(Debug, Default)]
+pub(crate) struct Pages {
+    /// The open `PageBreak` marker.
+    open: Option<OpenId>,
+    /// Page labels by element id, for the chapter being read.
+    pub(crate) by_id: std::collections::HashMap<String, String>,
+}
+
+impl Pages {
+    /// Starts a page labeled `label` (a blank label is left off).
+    fn start(&mut self, b: &mut Builder, label: &str) {
+        self.close(b);
+        let mut m = marker(MarkerKind::PageBreak);
+        let label = page_label(label);
+        if !label.is_empty() {
+            m = m.with_label(label);
+        }
+        self.open = Some(b.open(m));
+    }
+
+    /// Ends the open page, if any.
+    pub(crate) fn close(&mut self, b: &mut Builder) {
+        if let Some(id) = self.open.take() {
+            b.close(id);
+        }
+    }
+}
+
+/// A printed page number from a page break's label: spaces collapsed and a
+/// leading "Page" dropped ("Page 112" and "112" are both page 112).
+pub(crate) fn page_label(raw: &str) -> String {
+    let s = collapse(raw);
+    match s.get(..5) {
+        Some(head) if head.eq_ignore_ascii_case("page ") && s.len() > 5 => s[5..].to_owned(),
+        _ => s,
+    }
+}
+
+/// True for a print page break: `epub:type="pagebreak"` or
+/// `role="doc-pagebreak"`.
+fn is_page_break(el: &ElementRef<'_>) -> bool {
+    let has = |attr: &str, token: &str| {
+        el.attr(attr)
+            .is_some_and(|v| v.split_whitespace().any(|t| t.eq_ignore_ascii_case(token)))
+    };
+    has("epub:type", "pagebreak") || has("role", "doc-pagebreak")
 }
 
 /// [`walk_into`] for an EPUB 3 chapter: an `epub:switch` reads its MathML
 /// case, or else its default. (MathML is read as math in every page.)
+/// Print pages carry on from chapter to chapter: `pages` comes back with
+/// the last page still open, for the next chapter; the caller closes it.
 pub(crate) fn walk_epub_into<'a>(
     b: &'a mut Builder,
     source: &str,
     options: &'a LoadOptions,
     meta: &mut DocumentMeta,
     on_anchor: Option<AnchorHook<'a>>,
-) {
-    walk(b, source, options, meta, on_anchor, true, None);
+    pages: Pages,
+) -> Pages {
+    walk(b, source, options, meta, on_anchor, true, None, pages)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn walk<'a>(
     b: &'a mut Builder,
     source: &str,
@@ -173,8 +258,16 @@ fn walk<'a>(
     on_anchor: Option<AnchorHook<'a>>,
     epub: bool,
     resolve: Option<Resolver<'a>>,
-) {
-    let html = Html::parse_document(source);
+    pages: Pages,
+) -> Pages {
+    // An EPUB chapter is XHTML: `<span id="p12"/>` is an empty element
+    // there, but the HTML parser would hold the rest of the chapter inside it.
+    let source = if epub {
+        expand_self_closing(source)
+    } else {
+        std::borrow::Cow::Borrowed(source)
+    };
+    let html = Html::parse_document(&source);
     let root = html.root_element();
     if let Some(lang) = root.attr("lang").or_else(|| root.attr("xml:lang"))
         && !lang.trim().is_empty()
@@ -191,6 +284,7 @@ fn walk<'a>(
         flattened: false,
         epub,
         resolve,
+        pages,
     };
     for child in root.child_elements() {
         if child.value().name() == "head" {
@@ -202,6 +296,72 @@ fn walk<'a>(
     if w.flattened {
         crate::add_warning(meta, crate::NESTING_WARNING);
     }
+    // A web page's last page ends with it; a book's runs on.
+    if !epub {
+        w.pages.close(w.b);
+    }
+    w.pages
+}
+
+/// XHTML's self-closed elements (`<span id="p12"/>`) written out as an
+/// empty pair (`<span id="p12"></span>`), so the HTML parser reads them as
+/// XML does. Void elements (`<br/>`) are left alone. Borrowed when there is
+/// nothing to change.
+pub(crate) fn expand_self_closing(source: &str) -> std::borrow::Cow<'_, str> {
+    const VOID: &[&str] = &[
+        "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param",
+        "source", "track", "wbr",
+    ];
+    if !source.contains("/>") {
+        return std::borrow::Cow::Borrowed(source);
+    }
+    let bytes = source.as_bytes();
+    let mut out = String::new();
+    let mut copied = 0;
+    let mut i = 0;
+    while let Some(off) = source[i..].find('<') {
+        let start = i + off;
+        i = start + 1;
+        if !bytes.get(i).is_some_and(u8::is_ascii_alphabetic) {
+            continue;
+        }
+        let name_end = source[i..]
+            .find(|c: char| c.is_ascii_whitespace() || c == '/' || c == '>')
+            .map_or(source.len(), |n| i + n);
+        // The tag's end, skipping quoted attribute values.
+        let mut quote = None;
+        let mut end = None;
+        for (k, &c) in bytes.iter().enumerate().skip(name_end) {
+            match quote {
+                Some(q) if c == q => quote = None,
+                Some(_) => {}
+                None if c == b'"' || c == b'\'' => quote = Some(c),
+                None if c == b'>' => {
+                    end = Some(k);
+                    break;
+                }
+                None => {}
+            }
+        }
+        let Some(end) = end else { break };
+        i = end + 1;
+        let name = &source[start + 1..name_end];
+        if bytes[end - 1] == b'/' && !VOID.iter().any(|v| v.eq_ignore_ascii_case(name)) {
+            if out.is_empty() {
+                out.reserve(source.len() + source.len() / 16);
+            }
+            out.push_str(&source[copied..end - 1]);
+            out.push_str("></");
+            out.push_str(name);
+            out.push('>');
+            copied = end + 1;
+        }
+    }
+    if copied == 0 {
+        return std::borrow::Cow::Borrowed(source);
+    }
+    out.push_str(&source[copied..]);
+    std::borrow::Cow::Owned(out)
 }
 
 /// The ids (and `<a name>` anchors) present in an HTML document.
@@ -271,6 +431,8 @@ struct Walker<'a> {
     epub: bool,
     /// Resolves links and pictures (web archives and email).
     resolve: Option<Resolver<'a>>,
+    /// Print pages (see [`Pages`]).
+    pages: Pages,
 }
 
 fn marker(kind: MarkerKind) -> Marker {
@@ -379,6 +541,29 @@ impl Walker<'_> {
             {
                 hook(n, self.b);
             }
+        }
+        // A print page break starts a page and is not read; a page list
+        // entry starts one at the element it names, which is read.
+        if is_page_break(&el) {
+            let label = el
+                .attr("id")
+                .and_then(|id| self.pages.by_id.get(id).cloned())
+                .or_else(|| {
+                    ["title", "aria-label"]
+                        .iter()
+                        .filter_map(|a| el.attr(a))
+                        .map(collapse)
+                        .find(|s| !s.is_empty())
+                })
+                .unwrap_or_else(|| collapse(&el.text().collect::<String>()));
+            self.pages.start(self.b, &label);
+            return;
+        }
+        if let Some(label) = el
+            .attr("id")
+            .and_then(|id| self.pages.by_id.get(id).cloned())
+        {
+            self.pages.start(self.b, &label);
         }
         if name == "svg" && !is_hidden(&el) {
             return self.svg(el);
@@ -607,15 +792,23 @@ impl Walker<'_> {
                 .map(collapse)
                 .filter(|d| !d.is_empty())
         });
-        let Some(alt) = alt else {
-            return;
-        };
         let mut m = marker(MarkerKind::Image);
         if let Some(r) = &resolved {
             m = m.with_reference(r.target.clone());
         } else if let Some(src) = el.attr("src") {
             m = m.with_reference(src);
         }
+        let Some(alt) = alt else {
+            // `alt=""` (or a blank title) marks it decorative: silent.
+            // No text alternative at all: an empty marker, "no description".
+            if ["alt", "title", "aria-label"]
+                .iter()
+                .all(|a| el.attr(a).is_none())
+            {
+                self.b.point(m);
+            }
+            return;
+        };
         // A picture's words never run into the words beside it
         // ("a cell" and "A nucleus", not "a cellA nucleus").
         self.b.space();
@@ -854,6 +1047,20 @@ mod tests {
     }
 
     #[test]
+    fn xhtml_self_closed_elements_are_empty() {
+        assert_eq!(
+            expand_self_closing(
+                r#"<p>a<span id="p1" title="a/>b"/>b<br/><svg><path d="M0"/></svg></p>"#
+            ),
+            r#"<p>a<span id="p1" title="a/>b"></span>b<br/><svg><path d="M0"></path></svg></p>"#
+        );
+        assert!(matches!(
+            expand_self_closing("<p>no change<br/></p>"),
+            std::borrow::Cow::Borrowed(_)
+        ));
+    }
+
+    #[test]
     fn images_skip_lists_and_hidden_content() {
         let d = load(
             "<nav>Menu</nav><img src=a.png alt=\"A chart\"><blockquote><p>Quoted.</p></blockquote><img src=s.gif alt=\"\"><img src=t.png title=\"Titled\"><p hidden>secret</p><span aria-hidden=true>x</span><footer>f</footer><form>q</form>",
@@ -861,6 +1068,30 @@ mod tests {
         assert_eq!(d.text().to_string(), "A chart\n\nQuoted.\n\nTitled");
         assert_eq!(kinds(&d, MarkerKind::Image), ["A chart", "Titled"]);
         assert_eq!(kinds(&d, MarkerKind::Quote), ["Quoted."]);
+    }
+
+    #[test]
+    fn a_picture_with_no_description_is_an_empty_graphic() {
+        let d = load(
+            "<p>Before <img src=fig1.png> after.</p><p><img src=deco.gif alt=\"\"></p><img src=fig2.png><p>End.</p>",
+        );
+        assert_eq!(d.text().to_string(), "Before after.\n\nEnd.");
+        let images: Vec<_> = d
+            .marker_index()
+            .iter(MarkerKind::Image, None)
+            .map(|m| (m.range.is_empty(), m.reference.clone().unwrap_or_default()))
+            .collect();
+        assert_eq!(
+            images,
+            [(true, "fig1.png".to_owned()), (true, "fig2.png".to_owned())]
+        );
+        // Each sits where the text after it starts.
+        let at: Vec<usize> = d
+            .marker_index()
+            .iter(MarkerKind::Image, None)
+            .map(|m| m.range.start.0)
+            .collect();
+        assert_eq!(at, [7, 15]);
     }
 
     #[test]

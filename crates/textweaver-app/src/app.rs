@@ -356,6 +356,11 @@ pub struct App {
     pub(crate) list_intro: Option<String>,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
+    /// Which sentences continuous reading says (crate::overview); for
+    /// the session only.
+    pub(crate) reading_pass: textweaver_text::ReadingPass,
+    /// Set as continuous reading starts: its first window names a skim.
+    pub(crate) pass_lead_pending: bool,
     pub(crate) track: SpeechTrack,
     /// Where continuous reading goes on when the planned window finishes.
     pub(crate) continue_from: Option<CharPos>,
@@ -540,6 +545,8 @@ impl App {
             list_intro: None,
             pause_origin: None,
             reading: ReadKind::Continuous,
+            reading_pass: textweaver_text::ReadingPass::Full,
+            pass_lead_pending: false,
             track: SpeechTrack::default(),
             continue_from: None,
             planned_end: None,
@@ -1939,6 +1946,8 @@ impl App {
             A::RsvpSlower => self.rsvp_rate(false),
             A::RsvpPositionNext => self.rsvp_position_next(),
             A::ReadingLevel => self.say_reading_level(),
+            A::DocumentOverview => self.document_overview(),
+            A::ReadingPass => self.cycle_reading_pass(),
             A::DefineWord => return self.define_word(),
             A::Summarize => return self.summarize(),
             A::ReadingStatistics => return self.reading_statistics(),

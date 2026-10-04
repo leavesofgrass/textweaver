@@ -263,6 +263,22 @@ stats-by-computer-on = Par ordinateur : affiché. Entrée masque.
 ## whose words agree with the noun.
 
 nav-blank = vide
+# Said for a picture that has no description (no alternative text).
+nav-no-description = aucune description
+# The document overview: the title first, then the counts. $time is overview-time.
+overview-line = { $title }. Titres : { $headings }, tableaux : { $tables }, images : { $pictures }, notes : { $footnotes }. { $time }
+# Reading time left from the cursor at the current rate.
+overview-time =
+    { $minutes ->
+        [0] Il reste moins d'une minute.
+        [one] Il reste environ 1 minute.
+       *[other] Il reste environ { $minutes } minutes.
+    }
+# Said when the reading pass changes and as reading starts in a skim. $pass is a reading-pass-* name.
+reading-pass-changed = Passe : { $pass }.
+reading-pass-full = texte entier
+reading-pass-first-sentences = premières phrases
+reading-pass-headings = titres
 # High verbosity: $label is a structure label ("Heading level 2").
 nav-message-at-labelled = { $label }, ligne { $line }, { $pct } pour cent : { $content }
 nav-message-at = Ligne { $line }, { $pct } pour cent : { $content }
@@ -639,6 +655,8 @@ action-rsvp-faster = RSVP plus vite
 action-rsvp-slower = RSVP plus lent
 action-rsvp-position-next = Déplacer le mot du RSVP vers la prochaine position à l'écran
 action-reading-level = Dire le niveau de lecture du document ou de la sélection
+action-document-overview = Dire le titre du document, combien il a de titres, de tableaux, d'images et de notes, et environ combien de minutes il reste
+action-reading-pass = Changer ce que dit la lecture : le texte entier, la première phrase de chaque paragraphe avec les titres, ou seulement les titres
 action-define-word = Définir le mot au curseur, ou les mots sélectionnés : sens, exemples, synonymes, et prononciation
 action-toggle-citations = Activer ou désactiver les citations en lecture continue : désactivé les ignore, activé les dit en mots
 action-explore-math = Explorer la formule mathématique au curseur terme par terme : les flèches déplacent, Bas entre dans une partie, Haut en sort, Échap quitte
@@ -3077,6 +3095,8 @@ name-rsvp-faster = RSVP plus rapide
 name-rsvp-slower = RSVP plus lent
 name-rsvp-position-next = Déplacer le mot RSVP
 name-reading-level = Niveau de lecture
+name-document-overview = Aperçu du document
+name-reading-pass = Passe de lecture
 name-define-word = Définir le mot
 name-summarize = Résumer
 name-toggle-citations = Lire les citations

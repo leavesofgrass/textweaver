@@ -263,6 +263,22 @@ stats-by-computer-on = Je Computer: an. Eingabetaste verbirgt.
 ## whose words agree with the noun.
 
 nav-blank = leer
+# Said for a picture that has no description (no alternative text).
+nav-no-description = keine Beschreibung
+# The document overview: the title first, then the counts. $time is overview-time.
+overview-line = { $title }. Überschriften: { $headings }, Tabellen: { $tables }, Bilder: { $pictures }, Fußnoten: { $footnotes }. { $time }
+# Reading time left from the cursor at the current rate.
+overview-time =
+    { $minutes ->
+        [0] Weniger als eine Minute übrig.
+        [one] Etwa 1 Minute übrig.
+       *[other] Etwa { $minutes } Minuten übrig.
+    }
+# Said when the reading pass changes and as reading starts in a skim. $pass is a reading-pass-* name.
+reading-pass-changed = Durchgang: { $pass }.
+reading-pass-full = ganzer Text
+reading-pass-first-sentences = erste Sätze
+reading-pass-headings = Überschriften
 # High verbosity: $label is a structure label ("Heading level 2").
 nav-message-at-labelled = { $label }, Zeile { $line }, { $pct } Prozent: { $content }
 nav-message-at = Zeile { $line }, { $pct } Prozent: { $content }
@@ -647,6 +663,8 @@ action-rsvp-faster = RSVP schneller
 action-rsvp-slower = RSVP langsamer
 action-rsvp-position-next = Das RSVP-Wort an die nächste Stelle auf dem Bildschirm bewegen
 action-reading-level = Das Leseniveau des Dokuments oder der Auswahl sagen
+action-document-overview = Den Titel des Dokuments sagen, wie viele Überschriften, Tabellen, Bilder und Fußnoten es hat, und wie viele Minuten ungefähr noch bleiben
+action-reading-pass = Ändern, was das Lesen sagt: den ganzen Text, den ersten Satz jedes Absatzes mit den Überschriften oder nur die Überschriften
 action-define-word = Das Wort am Cursor oder die ausgewählten Wörter definieren: Bedeutungen, Beispiele, Synonyme und Aussprache
 action-toggle-citations = Zitate beim fortlaufenden Lesen ein- oder ausschalten: aus überspringt sie, an sagt sie in Worten
 action-explore-math = Die Mathematik am Cursor Term für Term erkunden: Pfeile bewegen, Ab geht in einen Teil hinein, Auf kommt heraus, Escape verlässt
@@ -3073,6 +3091,8 @@ name-rsvp-faster = RSVP schneller
 name-rsvp-slower = RSVP langsamer
 name-rsvp-position-next = RSVP-Wort verschieben
 name-reading-level = Lesestufe
+name-document-overview = Dokumentübersicht
+name-reading-pass = Lesedurchgang
 name-define-word = Wort erklären
 name-summarize = Zusammenfassen
 name-toggle-citations = Zitate lesen

@@ -263,6 +263,22 @@ stats-by-computer-on = Cada equipo: visible. Intro lo oculta.
 ## whose words agree with the noun.
 
 nav-blank = en blanco
+# Said for a picture that has no description (no alternative text).
+nav-no-description = sin descripción
+# The document overview: the title first, then the counts. $time is overview-time.
+overview-line = { $title }. Encabezados: { $headings }, tablas: { $tables }, imágenes: { $pictures }, notas al pie: { $footnotes }. { $time }
+# Reading time left from the cursor at the current rate.
+overview-time =
+    { $minutes ->
+        [0] Queda menos de un minuto.
+        [one] Queda alrededor de 1 minuto.
+       *[other] Quedan alrededor de { $minutes } minutos.
+    }
+# Said when the reading pass changes and as reading starts in a skim. $pass is a reading-pass-* name.
+reading-pass-changed = Pasada: { $pass }.
+reading-pass-full = texto completo
+reading-pass-first-sentences = primeras oraciones
+reading-pass-headings = encabezados
 # High verbosity: $label is a structure label ("Heading level 2").
 nav-message-at-labelled = { $label }, línea { $line }, { $pct } por ciento: { $content }
 nav-message-at = Línea { $line }, { $pct } por ciento: { $content }
@@ -611,6 +627,8 @@ action-rsvp-faster = RSVP más rápido
 action-rsvp-slower = RSVP más lento
 action-rsvp-position-next = Mover la palabra de RSVP al siguiente lugar de la pantalla
 action-reading-level = Decir el nivel de lectura del documento o de la selección
+action-document-overview = Decir el título del documento, cuántos encabezados, tablas, imágenes y notas al pie tiene, y unos cuántos minutos quedan
+action-reading-pass = Cambiar lo que dice la lectura: el texto completo, la primera oración de cada párrafo con los encabezados, o solo los encabezados
 action-define-word = Definir la palabra en el cursor, o las palabras seleccionadas: acepciones, ejemplos, sinónimos y pronunciación
 action-toggle-citations = Activar o desactivar las citas en la lectura continua: desactivado las omite, activado las dice en palabras
 action-explore-math = Explorar las matemáticas en el cursor, término por término: las flechas mueven, Abajo entra en una parte, Arriba sale, Escape termina
@@ -3049,6 +3067,8 @@ name-rsvp-faster = RSVP más rápido
 name-rsvp-slower = RSVP más lento
 name-rsvp-position-next = Mover la palabra RSVP
 name-reading-level = Nivel de lectura
+name-document-overview = Resumen del documento
+name-reading-pass = Pasada de lectura
 name-define-word = Definir palabra
 name-summarize = Resumir
 name-toggle-citations = Leer citas

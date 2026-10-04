@@ -132,6 +132,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | RSVP slower | `Alt+Shift+Down`, `Alt+Shift+PageDown` | `Alt+Shift+Down`, `Alt+Shift+PageDown` | `Option+Shift+Down`, `Option+Shift+PageDown` | `rsvp_slower` |
 | Move the RSVP word to the next place on the screen | `Alt+Shift+O` | `Alt+Shift+O` | `Cmd+Option+Shift+O` | `rsvp_position_next` |
 | Say the reading level of the document or the selection | `Alt+Shift+G` | `Alt+Shift+G` | `Cmd+Option+Shift+G` | `reading_level` |
+| Say the document's title, how many headings, tables, pictures, and footnotes it has, and about how many minutes are left | palette | palette | palette | `document_overview` |
+| Change what reading says: the full text, the first sentence of each paragraph with the headings, or the headings only | `Shift+F` (browse) | `Shift+F` (browse) | `Shift+F` (browse) | `reading_pass` |
 | Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation | `Alt+E` | `Ctrl+Shift+D` | `Cmd+Shift+D` | `define_word` |
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | palette | palette | palette | `summarize` |
 | Turn citations on or off in continuous reading: off skips them, on says them in words | `Alt+Shift+Q` | `Alt+Shift+Q` | `Cmd+Option+Shift+C` | `toggle_citations` |
@@ -454,6 +456,7 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Read the whole document from the start | palette | palette | `read_document` |
 | Say the paragraph at the cursor without moving | palette | palette | `read_paragraph` |
 | Read the selected text | palette | palette | `read_selection` |
+| Change what reading says: the full text, the first sentence of each paragraph with the headings, or the headings only | palette | palette | `reading_pass` |
 | Read from the next heading | palette | has a chord | `next_heading` |
 | Read from the previous heading | palette | has a chord | `previous_heading` |
 | Move to the next heading without reading | has a chord | palette | `skip_next_heading` |
@@ -515,6 +518,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 
 | Action | Id |
 |---|---|
+| Say the document's title, how many headings, tables, pictures, and footnotes it has, and about how many minutes are left | `document_overview` |
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |

@@ -230,7 +230,10 @@ fn inserts(doc: &Document, flavor: Flavor, page_marks: bool) -> Vec<Insert> {
             ),
             (Flavor::Html, MarkerKind::Image) => {
                 let alt = doc.slice(m.range);
-                let tag = if r.is_empty() {
+                let tag = if m.range.is_empty() {
+                    // No description: no `alt`, which would say decorative.
+                    format!("<img src=\"{}\">", attr(r))
+                } else if r.is_empty() {
                     format!(
                         "<span role=\"img\" aria-label=\"{}\">{}</span>",
                         attr(&alt),

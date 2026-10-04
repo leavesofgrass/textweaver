@@ -213,7 +213,7 @@ Every template adds a cover to an EPUB book: an image with the title and author 
 
 ### Print page numbers in PDF
 
-When a document has print page numbers, as a DAISY book, an EPUB with a page list, or a scanned PDF does, each page of the PDF is labeled with the print page its first line belongs to, the way a printed book numbers its pages. A PDF reader's "go to page" then takes the print page number and opens the page where that print page is under way, and "Page 3 of 20, print page 42" appears at the foot of the page. A title page and table of contents before the first print page are numbered i, ii, and so on.
+When a document has print page numbers, as a DAISY book, a scanned PDF, or an EPUB or web page that marks them (with a page list, or with page-break markers) does, each page of the PDF is labeled with the print page its first line belongs to, the way a printed book numbers its pages. A PDF reader's "go to page" then takes the print page number and opens the page where that print page is under way, and "Page 3 of 20, print page 42" appears at the foot of the page. A title page and table of contents before the first print page are numbered i, ii, and so on.
 
 ## PDF and EPUB layout
 

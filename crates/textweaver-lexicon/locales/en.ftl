@@ -267,6 +267,22 @@ stats-by-computer-on = Each computer: shown. Enter hides it.
 ## whose words agree with the noun.
 
 nav-blank = blank
+# Said for a picture that has no description (no alternative text).
+nav-no-description = no description
+# The document overview: the title first, then the counts. $time is overview-time.
+overview-line = { $title }. Headings: { $headings }, tables: { $tables }, pictures: { $pictures }, footnotes: { $footnotes }. { $time }
+# Reading time left from the cursor at the current rate.
+overview-time =
+    { $minutes ->
+        [0] Less than a minute left.
+        [one] About 1 minute left.
+       *[other] About { $minutes } minutes left.
+    }
+# Said when the reading pass changes and as reading starts in a skim. $pass is a reading-pass-* name.
+reading-pass-changed = Pass: { $pass }.
+reading-pass-full = full text
+reading-pass-first-sentences = first sentences
+reading-pass-headings = headings
 # High verbosity: $label is a structure label ("Heading level 2").
 nav-message-at-labelled = { $label }, line { $line }, { $pct } percent: { $content }
 nav-message-at = Line { $line }, { $pct } percent: { $content }
@@ -616,6 +632,8 @@ action-rsvp-faster = RSVP faster
 action-rsvp-slower = RSVP slower
 action-rsvp-position-next = Move the RSVP word to the next place on the screen
 action-reading-level = Say the reading level of the document or the selection
+action-document-overview = Say the document's title, how many headings, tables, pictures, and footnotes it has, and about how many minutes are left
+action-reading-pass = Change what reading says: the full text, the first sentence of each paragraph with the headings, or the headings only
 action-define-word = Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation
 action-toggle-citations = Turn citations on or off in continuous reading: off skips them, on says them in words
 action-explore-math = Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves
@@ -3072,6 +3090,8 @@ name-rsvp-faster = RSVP faster
 name-rsvp-slower = RSVP slower
 name-rsvp-position-next = Move the RSVP word
 name-reading-level = Reading level
+name-document-overview = Document overview
+name-reading-pass = Reading pass
 name-define-word = Define word
 name-summarize = Summarize
 name-toggle-citations = Read citations

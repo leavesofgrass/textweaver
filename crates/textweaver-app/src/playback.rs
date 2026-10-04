@@ -316,7 +316,16 @@ impl App {
         kind: ReadKind,
         lead: Option<&str>,
     ) -> bool {
-        let policy = self.narration_policy();
+        let mut policy = self.narration_policy();
+        // A reading pass skims continuous reading only: reading the
+        // current sentence or paragraph still says it.
+        let mut pass_lead = None;
+        if kind == ReadKind::Continuous {
+            policy.pass = self.reading_pass;
+            if std::mem::take(&mut self.pass_lead_pending) {
+                pass_lead = self.reading_pass_lead();
+            }
+        }
         let citations = self.citation_speech_in(range);
         let sp = &self.settings.speech;
         let pauses_on =
@@ -335,6 +344,9 @@ impl App {
         };
         if let Some(lead) = lead.filter(|_| !utterances.is_empty()) {
             utterances.insert(0, textweaver_core::Utterance::announcement(lead));
+        }
+        if let Some(lead) = pass_lead.filter(|_| !utterances.is_empty()) {
+            utterances.insert(0, textweaver_core::Utterance::announcement(&lead));
         }
         self.continue_from = None;
         if utterances.is_empty() {
@@ -414,6 +426,7 @@ impl App {
         // Reading was asked for, even in screen-reader mode or when the
         // rest is blank: the title line says "Stopped" from now on.
         self.has_read = true;
+        self.pass_lead_pending = true;
         if self.screen_say_all_wanted() {
             // Screen-reader mode: a sentence at a time on the status line.
             if !self.start_screen_say_all(start, std::time::Instant::now()) {
