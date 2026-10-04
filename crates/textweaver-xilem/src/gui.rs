@@ -687,7 +687,7 @@ pub fn build_tree(
             .with_label(c.tr("gui-document"))
             .with_empty_hint(
                 app.map(empty_hint)
-                    .unwrap_or_else(|| c.fmt("gui-no-document", &args!["key" => "Ctrl+O"])),
+                    .unwrap_or_else(|| c.fmt("app-no-document-open", &args!["key" => "Ctrl+O"])),
             )
             .with_editing_word(c.tr("section-editing")),
     )
@@ -1206,7 +1206,7 @@ pub fn close_dialog_in(host: &mut impl Host, back: &mut Option<WidgetId>) {
 pub fn empty_hint(app: &App) -> String {
     let open = textweaver_app::named_key(app.keymap(), ActionId::Open);
     app.catalog()
-        .fmt("gui-no-document", &args!["key" => open.as_str()])
+        .fmt("app-no-document-open", &args!["key" => open.as_str()])
 }
 
 /// The document view's model for the window `w` of the session's document.
