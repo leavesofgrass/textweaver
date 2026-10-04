@@ -140,7 +140,7 @@ The library sidecar stays as one more source to read, so places written by an ol
 - The folder grows with the number of computers: each keeps a full copy. For a student's library this is kilobytes to a few megabytes per computer. Merge cost grows with the library; merging is by document, and only changed files are read again.
 - A note edited on two computers offline keeps only the newest text in the synced notes; the older one is in the local backup of the computer that had it, and the owner hears which note was replaced.
 - Deletion records stay in the files, so a deleted note's id and stamp remain there, though not its text.
-- The state format changes (bookmark ids, deletion records, 64-bit note ids, sync ids). That work is scheduled before the state format freezes at the final alpha.
+- The state format changes (bookmark ids, deletion records, 64-bit note ids, sync ids). Old state files keep loading as the format grows.
 - A computer with a clock far in the future can win edits it should not, until its clock is fixed; the sync status names it.
 - The sync folder is readable by anyone who can read the folder; the owner chooses where it lives.
 - Sync depends on the folder being kept in step by something else. textweaver cannot tell a sync service that is paused from one that is done.

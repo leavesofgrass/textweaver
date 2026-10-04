@@ -1172,8 +1172,8 @@ where
 mod tests {
     use super::*;
 
-    /// Every prompt purpose and its protocol name. The protocol freezes at
-    /// the final alpha: a change here is a protocol change.
+    /// Every prompt purpose and its protocol name: a change here is a
+    /// protocol change, so clients are told (see the protocol version rule).
     const PURPOSES: [(PromptPurpose, &str); 26] = [
         (PromptPurpose::Find, "find"),
         (PromptPurpose::GoTo, "go_to"),

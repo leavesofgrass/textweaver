@@ -144,7 +144,6 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0046: Native menus in the GUI](adr/0046-native-menus-in-the-gui.md): the window's menus from the app's one model, native on Windows and macOS, a list on Linux, with the keys shown and handled by the keymap alone.
 - [ADR-0048: PDF annotations, links and forms](adr/0048-pdf-annotations-links-and-forms.md): PDF comments as notes, links, filled-in forms, captions, and sideways and tabular scans.
 - [ADR-0049: Sync beyond the place](adr/0049-sync-beyond-the-place.md): notes, highlights, bookmarks, places, and portable settings synced through a folder you choose, each computer writing only its own files, with no account or server.
-- [ADR-0050: File names and formats frozen at the final alpha](adr/0050-frozen-file-formats.md): the names and shapes of the figure descriptions, study packs, the managed policy file, the reading queue, reading plans, and the JSON-RPC methods, settled before the freeze.
 
 ## Interactive pages
 
