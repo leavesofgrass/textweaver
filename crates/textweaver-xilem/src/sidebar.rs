@@ -51,10 +51,13 @@ pub const SIDEBAR: WidgetTag<Sidebar> = WidgetTag::named("tw-sidebar");
 pub const SIDEBAR_LIST: WidgetTag<ChoiceList> = WidgetTag::named("tw-sidebar-list");
 
 /// The panel's width, in logical pixels: about 30 characters of the
-/// interface text, at most 45 percent of the row.
+/// interface text, at most 40 percent of the row.
 pub const PANEL_WIDTH: f64 = 300.0;
 /// The space between the panel and the document.
 const GAP: f64 = 12.0;
+/// Below this row width, in logical pixels, the panel goes above the
+/// document instead of beside it.
+pub const STACK_WIDTH: f64 = 600.0;
 
 /// The panel `setting` names, if any.
 pub fn panel_of(setting: GuiSidebar) -> Option<Panel> {
@@ -215,7 +218,22 @@ impl Widget for Sidebar {
             ctx.place_child(&mut self.doc, Point::ORIGIN);
             return;
         };
-        let width = PANEL_WIDTH.min(size.width * 0.45).max(0.0);
+        if size.width < STACK_WIDTH {
+            // A narrow window: the panel above the document, as wide as
+            // the row, so neither is squeezed to a sliver; the order on
+            // screen stays the order of the children (W9b-n).
+            let height = (size.height * 0.4).max(0.0);
+            ctx.run_layout(panel, Size::new(size.width, height));
+            ctx.place_child(panel, Point::ORIGIN);
+            let y = height + GAP;
+            ctx.run_layout(
+                &mut self.doc,
+                Size::new(size.width, (size.height - y).max(0.0)),
+            );
+            ctx.place_child(&mut self.doc, Point::new(0.0, y));
+            return;
+        }
+        let width = PANEL_WIDTH.min(size.width * 0.4).max(0.0);
         ctx.run_layout(panel, Size::new(width, size.height));
         ctx.place_child(panel, Point::ORIGIN);
         let x = width + GAP;
@@ -264,10 +282,12 @@ pub struct PanelView {
 impl PanelView {
     fn new(name: &str, list: NewWidget<ChoiceList>, hint: &str) -> Self {
         let title = crate::gui::label(name, theme::UI_TEXT + 2.0, true).accessibility_hidden(true);
+        // The title wraps rather than being cut at the panel's edge.
+        let title = NewWidget::new(title).with_props(LineBreaking::WordWrap);
         let hint = crate::gui::label(hint, theme::UI_TEXT - 1.0, false).accessibility_hidden(true);
         PanelView {
             name: name.to_owned(),
-            title: NewWidget::new(title).to_pod(),
+            title: title.to_pod(),
             list: list.to_pod(),
             hint: NewWidget::new(hint)
                 .with_props(LineBreaking::WordWrap)
