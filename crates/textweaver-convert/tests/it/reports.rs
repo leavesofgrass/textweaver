@@ -35,8 +35,7 @@ fn sample(dir: &Path) -> std::path::PathBuf {
         "# Clean\n\n![A cat on a mat](cat.png)\n",
     )
     .expect("write");
-    // An image with no description at all. (The HTML loader leaves such
-    // an image out of the document, so it is a Markdown image here.)
+    // An image with no description at all, as a Markdown image.
     fs::write(input.join("scan.md"), "# Scan\n\n![](figures/scan.png)\n").expect("write");
     input
 }

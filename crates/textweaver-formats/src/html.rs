@@ -4,8 +4,13 @@
 //! Star's rules kept: its skip list (`script`, `style`, `nav`, `footer`,
 //! `aside`, `noscript`, `svg`, `canvas`, `meta`, `link`, `base`, `iframe`,
 //! `template`, `button`, `form`) and its image text (`alt`, then `title`,
-//! then `aria-label`; an empty result is decorative and produces nothing; a
-//! `longdesc` URL is appended as "(long description: URL)").
+//! then `aria-label`; a `longdesc` URL is appended as "(long description:
+//! URL)"). A deliberate `alt=""` is decorative and produces nothing.
+//!
+//! Unlike Star, a picture with no description at all (no `alt`, `title`
+//! or `aria-label`) is not dropped in silence: it becomes an empty `Image`
+//! marker, so narration says "graphic, no description", the graphic key
+//! lands on it, and reports can count it.
 //!
 //! Star's bugs fixed (the Star parity reference, Part 1 §1.4 and §7):
 //!
@@ -787,15 +792,23 @@ impl Walker<'_> {
                 .map(collapse)
                 .filter(|d| !d.is_empty())
         });
-        let Some(alt) = alt else {
-            return;
-        };
         let mut m = marker(MarkerKind::Image);
         if let Some(r) = &resolved {
             m = m.with_reference(r.target.clone());
         } else if let Some(src) = el.attr("src") {
             m = m.with_reference(src);
         }
+        let Some(alt) = alt else {
+            // `alt=""` (or a blank title) marks it decorative: silent.
+            // No text alternative at all: an empty marker, "no description".
+            if ["alt", "title", "aria-label"]
+                .iter()
+                .all(|a| el.attr(a).is_none())
+            {
+                self.b.point(m);
+            }
+            return;
+        };
         // A picture's words never run into the words beside it
         // ("a cell" and "A nucleus", not "a cellA nucleus").
         self.b.space();
@@ -1055,6 +1068,30 @@ mod tests {
         assert_eq!(d.text().to_string(), "A chart\n\nQuoted.\n\nTitled");
         assert_eq!(kinds(&d, MarkerKind::Image), ["A chart", "Titled"]);
         assert_eq!(kinds(&d, MarkerKind::Quote), ["Quoted."]);
+    }
+
+    #[test]
+    fn a_picture_with_no_description_is_an_empty_graphic() {
+        let d = load(
+            "<p>Before <img src=fig1.png> after.</p><p><img src=deco.gif alt=\"\"></p><img src=fig2.png><p>End.</p>",
+        );
+        assert_eq!(d.text().to_string(), "Before after.\n\nEnd.");
+        let images: Vec<_> = d
+            .marker_index()
+            .iter(MarkerKind::Image, None)
+            .map(|m| (m.range.is_empty(), m.reference.clone().unwrap_or_default()))
+            .collect();
+        assert_eq!(
+            images,
+            [(true, "fig1.png".to_owned()), (true, "fig2.png".to_owned())]
+        );
+        // Each sits where the text after it starts.
+        let at: Vec<usize> = d
+            .marker_index()
+            .iter(MarkerKind::Image, None)
+            .map(|m| m.range.start.0)
+            .collect();
+        assert_eq!(at, [7, 15]);
     }
 
     #[test]
