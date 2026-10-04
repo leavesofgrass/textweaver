@@ -216,6 +216,7 @@ mod publish;
 #[path = "lean/publish.rs"]
 mod publish;
 mod reading_aids;
+mod reading_form;
 mod relocate;
 mod replace;
 mod restart;
@@ -283,6 +284,7 @@ pub use panels::{Panel, PanelEntry, current_entry};
 pub use playback::{
     Playback, load_options, narration_policy, plan_with_written_pauses, structural_pauses,
 };
+pub use reading_form::{READING_SETTINGS, SpacingPreset, is_reading_setting};
 pub use restart::SpeechStarter;
 pub use settings_schema::{
     Frontend, Setting, SettingKind, SettingsSchema, TERMINAL_ONLY, WINDOW_ONLY,

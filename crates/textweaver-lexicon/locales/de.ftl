@@ -4085,3 +4085,19 @@ about-quick-start-online = Schnellstart nicht neben textweaver gefunden. { $addr
 about-docs-question = Dokumentation: { $address }. Im Browser öffnen? y oder n
 about-report-question = Problem melden: { $address }. Nichts wird gesendet. Im Browser öffnen? y oder n
 about-first-run-again = Fragen zum ersten Start zurückgesetzt; beim nächsten Start.
+
+## W9b-x: die Leseeinstellungen (Ansicht, Leseeinstellungen).
+name-reading-form = Leseeinstellungen
+action-reading-form = Die Leseeinstellungen öffnen: Geschwindigkeit, Schrift, Abstände, Zeilenlänge, Design, Markierung, Leselineal, bionisches Lesen und Silben
+reading-form-intro = Leseeinstellungen, { $n } Einstellungen. Links und Rechts ändern einen Wert, Eingabe tippt einen, Entf stellt den Standard wieder her, F1 sagt die Hilfe.
+reading-form-spacing-wcag-done = Abstände auf die WCAG-Werte gesetzt.
+reading-form-spacing-generous-done = Abstände auf Großzügig gesetzt, weiter als WCAG.
+gui-reading-form-help = Auf und Ab bewegen, Links und Rechts ändern einen Wert, Eingabe tippt einen, F1 sagt die Hilfe.
+gui-reading-voices = Stimmen
+gui-reading-voices-help = Die Stimmenverwaltung öffnen.
+gui-reading-wcag = WCAG-Abstände
+gui-reading-wcag-help = Die vier Abstände auf die WCAG-Werte setzen.
+gui-reading-generous = Großzügige Abstände
+gui-reading-generous-help = Die vier Abstände weiter als WCAG setzen.
+gui-reading-closed = Leseeinstellungen geschlossen.
+## End of W9b-x

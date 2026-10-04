@@ -4077,3 +4077,19 @@ about-quick-start-online = Início rápido não encontrado junto ao textweaver. 
 about-docs-question = Documentação: { $address }. Abrir no navegador? y ou n
 about-report-question = Relatar um problema: { $address }. Nada é enviado. Abrir no navegador? y ou n
 about-first-run-again = Escolhas da primeira execução redefinidas; perguntadas no próximo início.
+
+## W9b-x: as configurações de leitura (Exibir, Configurações de leitura).
+name-reading-form = Configurações de leitura
+action-reading-form = Abrir as configurações de leitura: velocidade, fonte, espaçamento, comprimento da linha, tema, destaque, régua, leitura biônica e sílabas
+reading-form-intro = Configurações de leitura, { $n } configurações. Esquerda e Direita mudam um valor, Enter digita um, Delete volta ao padrão, F1 diz a ajuda.
+reading-form-spacing-wcag-done = Espaçamento nos valores da WCAG.
+reading-form-spacing-generous-done = Espaçamento amplo, maior que a WCAG.
+gui-reading-form-help = Cima e Baixo movem, Esquerda e Direita mudam um valor, Enter digita um, F1 diz a ajuda.
+gui-reading-voices = Vozes
+gui-reading-voices-help = Abrir o gerenciador de vozes.
+gui-reading-wcag = Espaçamento WCAG
+gui-reading-wcag-help = Pôr os quatro espaçamentos nos valores da WCAG.
+gui-reading-generous = Espaçamento amplo
+gui-reading-generous-help = Pôr os quatro espaçamentos maiores que a WCAG.
+gui-reading-closed = Configurações de leitura fechadas.
+## End of W9b-x

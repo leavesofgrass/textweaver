@@ -251,6 +251,16 @@ Each row says its color and how well it stands out where it is drawn, as a ratio
 
 Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's settings on the right. Every change takes effect and is saved at once. A switch shows its value in words beside it ("on", "off"). With a mouse, the arrows beside a number or a choice step it the way they point: the left one back, the right one forward. It is built from the same list as the terminal's settings screen, so every setting is in both; [Settings](settings.md) describes each one.
 
+### The Reading settings dialog
+
+View, then Reading settings (or Tools, Reading settings) opens the settings you change most while reading, in one list with the same rows as the Settings dialog: the rate; the font, its size and weight; line height, paragraph spacing, word spacing and letter spacing; the line length; the theme; what the highlight covers and its word and sentence colors; the reading ruler and its mask; bionic reading; and syllables. Below the list:
+
+- **Voices** closes the dialog and opens the voice manager.
+- **WCAG spacing** sets the four spacings to the values WCAG names (line height 1.5, paragraph spacing 2, letter spacing 0.12, word spacing 0.16), and **Generous spacing** to wider ones (2, 2.5, 0.15, 0.3). It says which, once, and the rows show the new values.
+- **Close** (Escape) closes it.
+
+In the terminal, the same command shows the settings screen with only these settings, as View, Colors does for the colors. The line length is the window's own, so the terminal lists the other sixteen.
+
 **Export settings** and **Import settings** are under File, then Settings (Alt+Shift+E and Alt+Shift+I). Export opens your system's Save dialog, offering `textweaver-settings.toml`; a name ending in `.json` writes JSON instead. It writes every setting and your key changes. Import opens the system's Open dialog for a TOML or JSON file, checks it, and then asks before changing anything, naming the first changes: "Import 12 changed settings from home.toml: Rate, Theme, Link color, and 9 more? y or n". Yes applies them at once and says what changed; no leaves everything as it was. If the system's file chooser cannot open, a prompt asks for the file's path instead.
 
 ## What only the terminal reader does
