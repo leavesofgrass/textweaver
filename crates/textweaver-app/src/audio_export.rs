@@ -7,7 +7,10 @@
 //!    WAV, all written in process; M4B
 //!    only when ffmpeg is found, and the first question says in words
 //!    when it is not (and names MP3 or Opus too in a build without the
-//!    `mp3` or `opus` feature of `textweaver-export`).
+//!    `mp3` or `opus` feature of `textweaver-export`). Last comes the
+//!    read-along page (`essay.html`): the text with the MP3 inside and
+//!    the spoken word marked as it plays, in the reading theme
+//!    ([`textweaver_export::readalong`]).
 //! 2. **Where**: beside the document (the default, `essay.flac`), or
 //!    another folder chosen in the file browser ([`App::choose_folder`]).
 //!
@@ -45,6 +48,30 @@ pub(crate) enum AudioList {
 
 #[cfg(feature = "audio-export")]
 pub(crate) use run::AudioState;
+
+/// The words on a read-along page's controls, from `catalog` (the
+/// interface language), for the reader's export and `tw export-audio`.
+#[cfg(feature = "audio-export")]
+pub fn read_along_labels(
+    catalog: &textweaver_lexicon::i18n::Catalog,
+) -> textweaver_export::readalong::PageLabels {
+    use textweaver_lexicon::i18n::Arg;
+    textweaver_export::readalong::PageLabels {
+        skip: catalog.tr("readalong-skip"),
+        controls: catalog.tr("readalong-controls"),
+        play: catalog.tr("readalong-play"),
+        pause: catalog.tr("readalong-pause"),
+        back: catalog.tr("readalong-back"),
+        forward: catalog.tr("readalong-forward"),
+        follow: catalog.tr("readalong-follow"),
+        speed: catalog.tr("readalong-speed"),
+        contents: catalog.tr("readalong-contents"),
+        play_section: catalog.fmt(
+            "readalong-play-section",
+            &[("title", Arg::Str("{title}".into()))],
+        ),
+    }
+}
 
 #[cfg(not(feature = "audio-export"))]
 #[derive(Default)]
@@ -97,7 +124,7 @@ mod run {
     use textweaver_a11y::{Importance, Priority};
     use textweaver_export::{
         AudioFormat, CaptionMeta, CueOptions, ExportOptions, ExportReport, Karaoke,
-        SubtitleRequest, chapters::ChapterNames, ffmpeg,
+        SubtitleRequest, chapters::ChapterNames, ffmpeg, readalong::PageOptions,
     };
     use textweaver_lexicon::args;
     use textweaver_speech::{BackendFactory, BackendInfo, BackendRegistry, Caps, VoiceParams};
@@ -117,6 +144,8 @@ mod run {
         /// The formats offered this time, in order.
         formats: Vec<AudioFormat>,
         format: Option<AudioFormat>,
+        /// The read-along page was chosen (MP3 inside an HTML file).
+        page: bool,
         /// The ffmpeg found when the export began.
         ffmpeg: Option<PathBuf>,
         question: Option<Question>,
@@ -148,6 +177,9 @@ mod run {
         ffmpeg: Option<PathBuf>,
         options: ExportOptions,
         subtitles: Option<SubtitleRequest>,
+        /// The read-along page's look and words, when the audio goes
+        /// into one.
+        page: Option<Box<PageOptions>>,
         /// Where the WebVTT chapters file goes (`[export]
         /// subtitle_chapters`), if one is written.
         chapters: Option<PathBuf>,
@@ -264,13 +296,16 @@ mod run {
             self.audio.formats = formats(ffmpeg.is_some());
             self.audio.ffmpeg = ffmpeg;
             self.audio.format = None;
-            let items: Vec<String> = self
+            self.audio.page = false;
+            let mut items: Vec<String> = self
                 .audio
                 .formats
                 .clone()
                 .into_iter()
                 .map(|f| self.format_item(f))
                 .collect();
+            // Last: the read-along page, the text with the MP3 inside.
+            items.push(self.msg("audio-format-html"));
             let mut msg = self.msg_args(
                 "audio-format-intro",
                 &args!["name" => stem, "n" => items.len()],
@@ -306,7 +341,12 @@ mod run {
         fn default_audio_out(&self) -> Option<PathBuf> {
             let (_, folder, stem) = self.audio_source()?;
             let f = self.audio.format?;
-            Some(folder.join(format!("{stem}.{}", extension(f))))
+            let ext = if self.audio.page {
+                "html"
+            } else {
+                extension(f)
+            };
+            Some(folder.join(format!("{stem}.{ext}")))
         }
 
         /// Enter in an audio export list.
@@ -315,6 +355,11 @@ mod run {
                 AudioList::Format => match self.audio.formats.get(n) {
                     Some(&f) => {
                         self.audio.format = Some(f);
+                        self.audio_where()
+                    }
+                    None if n == self.audio.formats.len() => {
+                        self.audio.format = Some(AudioFormat::Mp3);
+                        self.audio.page = true;
                         self.audio_where()
                     }
                     None => vec![Effect::Redraw],
@@ -423,6 +468,16 @@ mod run {
                 },
                 ..ExportOptions::default()
             };
+            let page = self.audio.page.then(|| {
+                Box::new(PageOptions {
+                    theme_css: Some(textweaver_theme::css::single_stylesheet(
+                        &self.reading_theme(),
+                    )),
+                    lang: self.settings.interface.language.clone(),
+                    fallback_title: out.file_stem().map(|s| s.to_string_lossy().into_owned()),
+                    labels: crate::read_along_labels(self.cat()),
+                })
+            });
             let plan = Plan {
                 doc,
                 out,
@@ -435,6 +490,7 @@ mod run {
                 ffmpeg: self.audio.ffmpeg.clone(),
                 options,
                 subtitles,
+                page,
                 chapters,
             };
             let question = self.audio_start_question(&plan);
@@ -661,23 +717,36 @@ mod run {
                 plan.backend.name
             )));
         }
-        let result = textweaver_export::export(
-            &plan.doc,
-            backend.as_mut(),
-            &plan.out,
-            plan.subtitles.as_ref(),
-            plan.ffmpeg.as_deref(),
-            &plan.options,
-            &mut |p| {
-                total.store(p.total, Ordering::Relaxed);
-                done.store(p.done, Ordering::Relaxed);
-                if cancel.load(Ordering::SeqCst) {
-                    ControlFlow::Break(())
-                } else {
-                    ControlFlow::Continue(())
-                }
-            },
-        );
+        let mut progress = |p: textweaver_export::Progress| {
+            total.store(p.total, Ordering::Relaxed);
+            done.store(p.done, Ordering::Relaxed);
+            if cancel.load(Ordering::SeqCst) {
+                ControlFlow::Break(())
+            } else {
+                ControlFlow::Continue(())
+            }
+        };
+        let result = match &plan.page {
+            Some(page) => textweaver_export::readalong::export_page(
+                &plan.doc,
+                backend.as_mut(),
+                &plan.out,
+                plan.subtitles.as_ref(),
+                plan.ffmpeg.as_deref(),
+                &plan.options,
+                page,
+                &mut progress,
+            ),
+            None => textweaver_export::export(
+                &plan.doc,
+                backend.as_mut(),
+                &plan.out,
+                plan.subtitles.as_ref(),
+                plan.ffmpeg.as_deref(),
+                &plan.options,
+                &mut progress,
+            ),
+        };
         match result {
             // A stop asked for as the export finished is still a stop: the
             // file is removed and "stopped" is said, never "wrote".
@@ -817,10 +886,10 @@ mod run {
             let effects = app.dispatch(Command::Action(ActionId::ExportAudio));
             // FLAC first; no ffmpeg, said in words (then the first item).
             let intro = if cfg!(feature = "opus") {
-                "Export essay as audio: choose a format, 4 choices. \
+                "Export essay as audio: choose a format, 5 choices. \
                  M4B needs ffmpeg, which was not found."
             } else {
-                "Export essay as audio: choose a format, 3 choices. \
+                "Export essay as audio: choose a format, 4 choices. \
                  Opus, M4B need ffmpeg, which was not found."
             };
             assert!(
@@ -888,6 +957,42 @@ mod run {
             assert!(vtt.contains("::cue(:past)"), "{vtt}");
             let chapters = std::fs::read_to_string(dir.path().join("essay.chapters.vtt")).unwrap();
             assert!(chapters.contains("Light") && chapters.contains("Water"));
+        }
+
+        #[test]
+        fn the_read_along_page_is_the_last_choice_and_holds_text_and_audio() {
+            let dir = tempfile::tempdir().unwrap();
+            let (mut app, _) = app_with_doc(dir.path());
+            let effects = app.dispatch(Command::Action(ActionId::ExportAudio));
+            let items = effects
+                .iter()
+                .find_map(|e| match e {
+                    Effect::ShowList { items, .. } => Some(items.clone()),
+                    _ => None,
+                })
+                .unwrap();
+            assert_eq!(
+                items.last().map(String::as_str),
+                Some("Read-along page: text and audio, one file")
+            );
+            app.dispatch(Command::Choose(items.len() - 1));
+            app.dispatch(Command::Choose(0));
+            assert!(
+                app.status_text().starts_with("Export essay.html with "),
+                "{}",
+                app.status_text()
+            );
+            app.dispatch(Command::Confirm(Confirm::Yes));
+            wait_until_done(&mut app);
+            let text = app.status_text().to_owned();
+            assert!(text.starts_with("Wrote essay.html: "), "{text}");
+            let html = std::fs::read_to_string(dir.path().join("essay.html")).unwrap();
+            assert!(html.contains("data:audio/mpeg;base64,"));
+            assert!(html.contains(">Play section: Water</button>"), "{html}");
+            assert!(html.contains("id=\"s0\"") && html.contains("id=\"w0\""));
+            assert!(html.contains(".tw-spoken-word"));
+            // Only the document and the page: the MP3 went inside.
+            assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2);
         }
 
         #[test]
