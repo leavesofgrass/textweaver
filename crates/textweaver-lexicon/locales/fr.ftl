@@ -441,8 +441,8 @@ playback-speech-error = Erreur de synthèse vocale : { $error }
 
 ## The title line and Say Status.
 
-# The title line's position; % is shown, not said.
-status-position = ligne { $line } sur { $lines }, { $pct }%
+# The title line's position.
+status-position = ligne { $line } sur { $lines }
 status-mode = mode { $mode }
 status-modified = modifié
 status-self-voicing = autonome
@@ -2876,7 +2876,7 @@ gui-font-list = Police
 
 status-page = page { $page } sur { $pages }
 status-page-labelled = page { $label }, { $n } sur { $pages }
-status-position-page = { $page }, { $pct }%
+status-percent = { $pct }%
 pages-position = Page { $page } sur { $pages }.
 pages-position-labelled = Page { $label }, { $n } sur { $pages }.
 pages-none = Ce document n'a pas de pages.

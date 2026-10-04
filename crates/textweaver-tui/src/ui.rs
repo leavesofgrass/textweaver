@@ -208,7 +208,7 @@ pub struct Tui {
     system_clipboard_said: bool,
     /// The title line's position while it is frozen (`[accessibility]
     /// quiet_screen` during continuous reading).
-    frozen_position: Option<String>,
+    frozen_position: Option<Vec<String>>,
     /// What was probed about the terminal ([`TerminalInfo`]).
     terminal: TerminalInfo,
     /// The window title last handed out ([`Tui::take_window_title`]).
@@ -1034,7 +1034,7 @@ impl Tui {
     /// The title line's "line 3 of 40, 7%": frozen while
     /// [`App::quiet_screen_active`], so a screen reader that reads the
     /// changing screen does not hear it tick over as textweaver reads.
-    fn title_position(&mut self) -> Option<String> {
+    fn title_position(&mut self) -> Option<Vec<String>> {
         let now = self.app.title_position()?;
         if self.app.quiet_screen_active() {
             Some(self.frozen_position.get_or_insert(now).clone())
@@ -1044,7 +1044,13 @@ impl Tui {
         }
     }
 
-    fn draw_title(&self, f: &mut Frame<'_>, area: Rect, theme: &Theme, position: Option<&str>) {
+    fn draw_title(
+        &self,
+        f: &mut Frame<'_>,
+        area: Rect,
+        theme: &Theme,
+        position: Option<&[String]>,
+    ) {
         let app = &self.app;
         let c = app.catalog();
         let title = app
@@ -1906,7 +1912,7 @@ pub fn prompt_line_label(label: &str) -> String {
 
 /// The title line for a Braille display, `width` cells: the position and
 /// the reading state from the first cell ("Line 12 of 400, 3%, Reading",
-/// or "Line 12 of 400, 3%, Edit, modified, Ready" in edit mode), then the
+/// or "Line 212 of 400, Edit, modified, Ready, 51%" in edit mode), then the
 /// rest of `parts`, then the document's `name`, without the brand.
 /// Trailing parts are dropped when narrow, keeping the name.
 fn braille_title(parts: &mut Vec<String>, name: &str, width: usize) -> String {

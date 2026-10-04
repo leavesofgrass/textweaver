@@ -32,48 +32,64 @@ use crate::app::{App, Mode};
 use crate::command::Effect;
 
 impl App {
-    /// The position the title line shows: "line 3 of 40, 7%", or in a
-    /// paged document (a PDF) "page 12 of 30, 40%"; `None` without a
-    /// document.
-    pub fn title_position(&self) -> Option<String> {
+    /// The position the title line shows, as its place and its
+    /// percentage: `["line 3 of 40", "7%"]`, or in a paged document (a
+    /// PDF) `["page 12 of 30", "40%"]`; `None` without a document.
+    pub fn title_position(&self) -> Option<Vec<String>> {
         let s = self.session.as_ref()?;
-        if let Some(page) = self.page_of(s.cursor) {
-            let page = self.page_words(&page, "status-page", "status-page-labelled");
-            return Some(self.msg_args(
-                "status-position-page",
-                &args!["page" => page, "pct" => s.percent()],
-            ));
-        }
-        Some(self.msg_args(
-            "status-position",
-            &args![
-                "line" => s.line() + 1,
-                "lines" => crate::text_util::line_count(&s.doc),
-                "pct" => s.percent()
-            ],
-        ))
+        let place = match self.page_of(s.cursor) {
+            Some(page) => self.page_words(&page, "status-page", "status-page-labelled"),
+            None => self.msg_args(
+                "status-position",
+                &args![
+                    "line" => s.line() + 1,
+                    "lines" => crate::text_util::line_count(&s.doc)
+                ],
+            ),
+        };
+        let pct = self.msg_args("status-percent", &args!["pct" => s.percent()]);
+        Some(vec![place, pct])
     }
 
     /// The parts of the title line after the document's name, most
     /// important first, so a 40-cell Braille display shows the meaning
-    /// (the Braille pass, Wave 5): `position`, the reading state
+    /// (the Braille pass, Wave 5): the place and percentage from
+    /// `position` ([`App::title_position`]), the reading state
     /// ([`App::reading_state`]), "modified", the accessibility mode
-    /// (unless self-voicing), the rate, and the speech engine: "line 12 of
-    /// 400, 3%, Reading". In edit and Speech Cursor modes the mode and
-    /// "modified" come before the reading state: "line 12 of 400, 3%,
-    /// Edit, modified, Ready" (Wave 8c). Frontends draw them joined
-    /// with commas and drop trailing parts when narrow; "say status"
-    /// speaks them.
-    pub fn title_parts(&self, position: Option<&str>) -> Vec<String> {
-        self.status_parts(position, false)
+    /// (unless self-voicing), the rate, and the speech engine: "Line 12
+    /// of 400, 3%, Reading". In edit and Speech Cursor modes the mode and
+    /// "modified" come right after the place, and the percentage after
+    /// the reading state: "Line 212 of 400, Edit, modified, Ready, 51%"
+    /// (Wave 9). The first part starts with a capital, as the line does.
+    /// Frontends draw them joined with commas and drop trailing parts
+    /// when narrow; "say status" speaks them.
+    pub fn title_parts(&self, position: Option<&[String]>) -> Vec<String> {
+        let mut parts = self.status_parts(position, false);
+        if let Some(first) = parts.first_mut()
+            && let Some(c) = first.chars().next()
+        {
+            let upper: String = c.to_uppercase().collect();
+            first.replace_range(..c.len_utf8(), &upper);
+        }
+        parts
     }
 
     /// The title line's parts; `spoken` names every mode (browse and
-    /// self-voicing too) and says the rate in words.
-    fn status_parts(&self, position: Option<&str>, spoken: bool) -> Vec<String> {
+    /// self-voicing too), says the rate in words, and keeps the
+    /// percentage after the place.
+    fn status_parts(&self, position: Option<&[String]>, spoken: bool) -> Vec<String> {
         let mut parts = Vec::new();
-        if let Some(p) = position {
-            parts.push(p.to_owned());
+        let (place, pct) = match position {
+            Some([place, rest @ ..]) => (Some(place.clone()), rest.to_vec()),
+            _ => (None, Vec::new()),
+        };
+        parts.extend(place);
+        // On the drawn line in edit and Speech Cursor modes the
+        // percentage waits until after the reading state, so the mode and
+        // "modified" fit a 40-cell Braille line at three-digit lines.
+        let pct_late = !spoken && self.mode != Mode::Browse;
+        if !pct_late {
+            parts.extend(pct.iter().cloned());
         }
         let mode = crate::words::mode_name(self.cat(), self.mode);
         let mode = if spoken {
@@ -83,7 +99,7 @@ impl App {
         };
         // In edit and Speech Cursor modes the mode and "modified" come
         // before the reading state, so they sit inside a 40-cell Braille
-        // line ("Line 12 of 400, 3%, Edit, modified"); in browse mode
+        // line ("Line 212 of 400, Edit, modified"); in browse mode
         // the reading state is what changes, so it comes first.
         if self.mode != Mode::Browse {
             parts.extend(mode);
@@ -91,6 +107,9 @@ impl App {
                 parts.push(self.msg("status-modified"));
             }
             parts.push(self.reading_state_text());
+            if pct_late {
+                parts.extend(pct);
+            }
         } else {
             parts.push(self.reading_state_text());
             parts.extend(mode);

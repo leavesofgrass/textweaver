@@ -487,11 +487,11 @@ fn the_window_position_line_puts_its_key_facts_inside_forty_cells() {
     within_forty_cells("window position, edit", &l, ", Edit, modified");
 }
 
-/// Edit mode at a three-digit line: "line 212 of 400, 51%, Edit,
-/// modified" ends at cell 41, one past the line, in the window and the
-/// terminal alike (they share `App::title_parts`).
+/// Edit mode at a three-digit line: the percentage moves after the
+/// reading state, so "Line 212 of 400, Edit, modified" ends inside 40
+/// cells, in the window and the terminal alike (they share
+/// `App::title_parts`), and the line starts with a capital in both.
 #[test]
-#[ignore = "defect: in edit mode at a three-digit line, \"modified\" ends at Braille cell 41 (W9e-c)"]
 fn the_position_line_keeps_modified_inside_forty_cells_at_long_lines() {
     let text: String = (1..=400).map(|i| format!("Line number {i}.\n")).collect();
     let mut h = launch(screen_reader(), 80, 24, Some(&text));
@@ -501,4 +501,5 @@ fn the_position_line_keeps_modified_inside_forty_cells_at_long_lines() {
     let app = h.tui.app();
     let l = app.title_parts(app.title_position().as_deref()).join(", ");
     within_forty_cells("window position, edit", &l, ", Edit, modified");
+    assert!(l.starts_with("Line 212 of 400, Edit, modified, "), "{l}");
 }
