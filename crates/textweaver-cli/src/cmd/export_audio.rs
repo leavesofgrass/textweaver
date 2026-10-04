@@ -20,7 +20,7 @@ use textweaver_app::speech::{BackendRegistry, Caps, Selection, VoiceParams, reso
 use textweaver_app::store::{Paths, Settings, SettingsStore, SubtitleKaraoke};
 use textweaver_export::{
     AudioFormat, CaptionMeta, ChapterNames, CueOptions, ExportOptions, ExportReport, Karaoke,
-    SubtitleRequest, export, ffmpeg,
+    SubtitleRequest, export, ffmpeg, readalong,
 };
 
 /// Arguments for `tw export-audio`.
@@ -28,7 +28,9 @@ use textweaver_export::{
 pub struct Args {
     /// Document to read aloud.
     pub file: PathBuf,
-    /// Output file (.wav, .flac, .mp3, .opus, .m4b).
+    /// Output file (.wav, .flac, .mp3, .opus, .m4b), or .html for a
+    /// read-along page: the text with the MP3 inside, the spoken word
+    /// marked as it plays.
     #[arg(long = "out", short = 'o', alias = "output")]
     pub out: PathBuf,
     /// Also write subtitles (.srt, .vtt, or .ass karaoke).
@@ -190,12 +192,18 @@ pub fn export_audio(
     ffmpeg_path: Option<PathBuf>,
     progress: &mut dyn FnMut(&str),
 ) -> anyhow::Result<Report> {
-    let format = AudioFormat::from_path(&args.out).with_context(|| {
-        format!(
-            "cannot write {}: use a .wav, .flac, .mp3, .opus, or .m4b file name",
-            args.out.display()
-        )
-    })?;
+    // An .html file is the read-along page, with the MP3 inside.
+    let page = readalong::is_page(&args.out);
+    let format = if page {
+        AudioFormat::Mp3
+    } else {
+        AudioFormat::from_path(&args.out).with_context(|| {
+            format!(
+                "cannot write {}: use a .wav, .flac, .mp3, .opus, or .m4b file name, or .html for a read-along page",
+                args.out.display()
+            )
+        })?
+    };
     if format.needs_ffmpeg() && ffmpeg_path.is_none() {
         bail!(
             "writing {} needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, .opus, or .wav",
@@ -287,22 +295,55 @@ pub fn export_audio(
         ..ExportOptions::default()
     };
     let mut last_tenth = 0;
-    let report = export(
-        &doc,
-        backend.as_mut(),
-        &args.out,
-        subtitles.as_ref(),
-        ffmpeg_path.as_deref(),
-        &options,
-        &mut |p| {
-            let tenth = p.percent() / 10;
-            if p.total > 0 && tenth > last_tenth && p.done < p.total {
-                last_tenth = tenth;
-                progress(&format!("{} percent done.", tenth * 10));
-            }
-            ControlFlow::Continue(())
-        },
-    )?;
+    let mut on_progress = |p: textweaver_export::Progress| {
+        let tenth = p.percent() / 10;
+        if p.total > 0 && tenth > last_tenth && p.done < p.total {
+            last_tenth = tenth;
+            progress(&format!("{} percent done.", tenth * 10));
+        }
+        ControlFlow::Continue(())
+    };
+    let report = if page {
+        let themes = args
+            .home
+            .as_deref()
+            .map(Paths::under)
+            .or_else(|| Paths::platform().ok())
+            .map(|p| p.themes_dir());
+        let theme_css =
+            textweaver_app::page_theme_css(None, &settings.display.theme, themes.as_deref())
+                .map_err(anyhow::Error::msg)?;
+        let (catalog, _) = Catalog::for_language(&settings.interface.language, None);
+        let page_opts = readalong::PageOptions {
+            theme_css,
+            lang: settings.interface.language.clone(),
+            fallback_title: args
+                .file
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned()),
+            labels: textweaver_app::read_along_labels(&catalog),
+        };
+        readalong::export_page(
+            &doc,
+            backend.as_mut(),
+            &args.out,
+            subtitles.as_ref(),
+            ffmpeg_path.as_deref(),
+            &options,
+            &page_opts,
+            &mut on_progress,
+        )?
+    } else {
+        export(
+            &doc,
+            backend.as_mut(),
+            &args.out,
+            subtitles.as_ref(),
+            ffmpeg_path.as_deref(),
+            &options,
+            &mut on_progress,
+        )?
+    };
     let chapters = match chapters_to {
         Some(path) => {
             std::fs::write(
@@ -431,6 +472,28 @@ mod tests {
             quiet: true,
             home: None,
         }
+    }
+
+    #[test]
+    fn an_html_out_writes_the_read_along_page() {
+        let dir = Scratch::new("readalong");
+        let mut a = args(dir.path(), "doc.html");
+        a.subtitles = None;
+        let r = export_audio(
+            &a,
+            &Settings::default(),
+            &BackendRegistry::test_doubles(),
+            None,
+            &mut |_| {},
+        )
+        .unwrap();
+        assert_eq!(r.export.out, dir.path().join("doc.html"));
+        let html = std::fs::read_to_string(dir.path().join("doc.html")).unwrap();
+        assert!(html.contains("data:audio/mpeg;base64,"));
+        assert!(html.contains("id=\"s0\"") && html.contains("id=\"w0\""));
+        assert!(html.contains(">Back a sentence</button>"));
+        assert!(html.contains("Hello"));
+        assert!(!dir.path().join("doc.mp3").exists());
     }
 
     #[test]
