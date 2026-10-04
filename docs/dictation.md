@@ -230,6 +230,18 @@ From one hour on, the time has hours too, for example `[01:02:03]`. This is the 
 
 Do not use `--timestamps` together with `--commands` for now. The spoken commands join all the lines into one, so the times end up in the middle of the text.
 
+## Make captions of a recording
+
+```bash
+tw dictate --file lecture.wav --captions lecture.vtt
+```
+
+With `--captions`, textweaver also writes a caption file of the transcript. The format comes from the extension: `.srt`, `.vtt`, or `.ass`. Each piece of speech Whisper finds becomes a caption, and a long one is split into lines of at most 12 words and 90 characters, as for [audio export](audio-export.md). When it is done, you hear how long the recording is and how many captions were written, then "Machine captions: check before sharing."
+
+That warning is also written into the file, in its `NOTE` block (WebVTT) or its comment line (ASS). Whisper makes mistakes, and captions you publish should be accurate, so read them through and correct them before you share them.
+
+Add `--karaoke lines` for one caption per word with that word in bold and underline, or `--karaoke tags` for WebVTT timestamp tags that underline words as they are spoken (see [Karaoke subtitles](audio-export.md#karaoke-subtitles)). Whisper gives times for each piece of speech, not for each word, so word times are shared out by word length and the note says they are estimated.
+
 ## Use spoken commands
 
 ```text
