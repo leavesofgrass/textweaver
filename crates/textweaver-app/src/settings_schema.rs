@@ -2157,7 +2157,16 @@ impl App {
             .names()
             .into_iter()
             .map(|name| {
-                let label = self.themes.resolve(name).0.meta.display_name.clone();
+                // Grouped in words (W9b-d): the themes that meet AA come
+                // first in the cycle and say so; the rest say "below AA".
+                let theme = self.themes.resolve(name).0;
+                let shown = self.theme_name_in_words(name, &theme.meta.display_name);
+                let id = if textweaver_theme::check(theme).failures().count() == 0 {
+                    "themes-choice-aa"
+                } else {
+                    "themes-choice-below-aa"
+                };
+                let label = self.msg_args(id, &args!["theme" => shown.as_str()]);
                 Choice {
                     value: Value::String(name.to_owned()),
                     label,

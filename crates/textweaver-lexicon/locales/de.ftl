@@ -1582,6 +1582,9 @@ message-error = Fehler: { $message }
 themes-unknown = Es gibt kein Design namens { $name }; { $used } wird verwendet.
 # $theme is the new theme's display name.
 themes-next = Design { $theme }.
+themes-soft-dark-name = { $theme }, sanft dunkel
+themes-choice-aa = { $theme }, erfüllt AA
+themes-choice-below-aa = { $theme }, unter AA
 themes-below-aa =
     { $count ->
         [one] Unter AA: 1 Prüfung verfehlt den Wert.

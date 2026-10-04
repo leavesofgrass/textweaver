@@ -1552,6 +1552,9 @@ message-error = Error: { $message }
 themes-unknown = There is no theme called { $name }; using { $used }.
 # $theme is the new theme's display name.
 themes-next = Theme { $theme }.
+themes-soft-dark-name = { $theme }, soft dark
+themes-choice-aa = { $theme }, meets AA
+themes-choice-below-aa = { $theme }, below AA
 # Said after the theme name when the theme falls short of WCAG AA; $count is the number of contrast checks that fail.
 themes-below-aa =
     { $count ->

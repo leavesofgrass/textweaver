@@ -1720,6 +1720,9 @@ message-error = خطأ: { $message }
 themes-unknown = لا توجد سمة باسم { $name }؛ يُستخدم { $used }.
 # $theme is the new theme's display name.
 themes-next = السمة { $theme }.
+themes-soft-dark-name = { $theme }، داكن هادئ
+themes-choice-aa = { $theme }، يستوفي AA
+themes-choice-below-aa = { $theme }، دون AA
 themes-below-aa =
     { $count ->
         [one] أقل من AA: فحص واحد لا يبلغ الحد الأدنى.

@@ -1562,6 +1562,9 @@ message-error = Erro: { $message }
 themes-unknown = Não há tema chamado { $name }; usando { $used }.
 # $theme is the new theme's display name.
 themes-next = Tema { $theme }.
+themes-soft-dark-name = { $theme }, escuro suave
+themes-choice-aa = { $theme }, atende AA
+themes-choice-below-aa = { $theme }, abaixo de AA
 themes-below-aa =
     { $count ->
         [one] Abaixo de AA: 1 verificação não atinge o mínimo.

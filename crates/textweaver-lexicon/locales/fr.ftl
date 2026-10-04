@@ -1574,6 +1574,9 @@ message-error = Erreur : { $message }
 themes-unknown = Il n'y a aucun thème appelé { $name } ; { $used } est utilisé à la place.
 # $theme is the new theme's display name.
 themes-next = Thème { $theme }.
+themes-soft-dark-name = { $theme }, sombre doux
+themes-choice-aa = { $theme }, conforme AA
+themes-choice-below-aa = { $theme }, sous AA
 themes-below-aa =
     { $count ->
         [one] Sous AA : 1 vérification n’atteint pas le seuil.
