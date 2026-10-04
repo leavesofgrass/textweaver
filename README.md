@@ -77,7 +77,7 @@ textweaver reads its own quick start out loud. Press Space to start and pause. P
 
 ## Languages
 
-textweaver speaks and shows its menus and messages in English, Spanish, German, French, Portuguese, and Arabic. Native speakers have checked the Spanish. The other translations have not been checked yet, so if a word sounds wrong, please tell us. Use Help, then Report a problem.
+textweaver speaks and shows its menus and messages in English, Spanish, German, French, Portuguese, and Arabic. Native speakers have checked the English and the Spanish. The German, French, Portuguese, and Arabic have not been checked yet, so if a word sounds wrong, please tell us. Use Help, then Report a problem.
 
 ## Learn more
 
