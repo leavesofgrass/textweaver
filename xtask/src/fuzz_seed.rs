@@ -292,8 +292,8 @@ mod tests {
     fn seed_names_keep_folders_apart() {
         let root = Path::new("/repo");
         assert_eq!(
-            seed_name(root, Path::new("/repo/fixtures/l/vault/sub/Chapter One.md")),
-            "fixtures_l_vault_sub_Chapter_One.md"
+            seed_name(root, Path::new("/repo/fixtures/l/vault/sub/Two Words.md")),
+            "fixtures_l_vault_sub_Two_Words.md"
         );
     }
 }

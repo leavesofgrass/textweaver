@@ -87,7 +87,7 @@ fn obsidian_with_links() {
     let r = render_both(&fixture("obsidian.md"), Flavor::Obsidian, EmbedMode::Link);
     assert!(
         r.html
-            .contains("href=\"Chapter%20One.html#key-ideas\">the key ideas</a>")
+            .contains("href=\"chapter-one.html#key-ideas\">the key ideas</a>")
     );
     assert!(
         r.html
@@ -101,7 +101,7 @@ fn obsidian_with_links() {
 #[test]
 fn obsidian_with_inline_embeds() {
     let r = render_both(&fixture("obsidian.md"), Flavor::Obsidian, EmbedMode::Inline);
-    assert!(r.html.contains("aria-label=\"Embedded note: Chapter One\""));
+    assert!(r.html.contains("aria-label=\"Embedded note: chapter-one\""));
     assert!(r.html.contains("Light keeps ships off the rocks."));
     assert!(!r.html.contains("Not part of the key ideas."));
 }

@@ -3,10 +3,10 @@ source: crates/textweaver-render/tests/it/flavors.rs
 expression: snapshot_text(&r)
 ---
 <h1 id="reading-notes">Reading notes</h1>
-<p>See <a class="wikilink" href="Chapter%20One.html">Chapter One</a>, <a class="wikilink" href="Chapter%20One.html#key-ideas">the key ideas</a>, and <a class="wikilink" href="#summary">Summary</a>.
-A reference to a block: <a class="wikilink" href="Chapter%20One.html#block-quote1">Chapter One: quote1</a>.</p>
+<p>See <a class="wikilink" href="chapter-one.html">chapter-one</a>, <a class="wikilink" href="chapter-one.html#key-ideas">the key ideas</a>, and <a class="wikilink" href="#summary">Summary</a>.
+A reference to a block: <a class="wikilink" href="chapter-one.html#block-quote1">chapter-one: quote1</a>.</p>
 <p><img src="cover.png" alt="Book cover, a lighthouse at dusk"></p>
-<p><a class="embed" href="Chapter%20One.html#key-ideas">Chapter One: Key Ideas</a></p>
+<p><a class="embed" href="chapter-one.html#key-ideas">chapter-one: Key Ideas</a></p>
 <p id="block-idea-1">This idea matters.</p>
 <p>Tagged <span class="tag">#reading</span> and <span class="tag">#study/biology</span>, but not issue#3 or #2026.
 Some <mark>highlighted text</mark> here.</p>

@@ -6,12 +6,12 @@ aliases:
 
 # Reading notes
 
-See [[Chapter One]], [[Chapter One#Key Ideas|the key ideas]], and [[#Summary]].
-A reference to a block: [[Chapter One#^quote1]].
+See [[chapter-one]], [[chapter-one#Key Ideas|the key ideas]], and [[#Summary]].
+A reference to a block: [[chapter-one#^quote1]].
 
 ![[cover.png|Book cover, a lighthouse at dusk]]
 
-![[Chapter One#Key Ideas]]
+![[chapter-one#Key Ideas]]
 
 This idea matters. ^idea-1
 
