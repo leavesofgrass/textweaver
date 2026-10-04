@@ -48,6 +48,7 @@ fn everything_changed() -> Settings {
     sp.pause_heading_ms = 600;
     sp.pause_paragraph_ms = 0;
     sp.pause_list_item_ms = 250;
+    sp.markup_pauses = false;
     sp.output_device = Some("wasapi:{test-device}".into());
     sp.verbosity = Verbosity::High;
     sp.eci.dictionaries = EciDictionaries::Path("C:/dicts".into());

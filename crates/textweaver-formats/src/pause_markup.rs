@@ -292,7 +292,7 @@ mod tests {
 
     fn load(text: &str, hint: &str, keep: bool) -> textweaver_text::Document {
         let src = crate::Source::Bytes {
-            data: text.as_bytes().to_vec().into(),
+            data: text.as_bytes().to_vec(),
             hint: hint.into(),
         };
         let options = crate::LoadOptions {

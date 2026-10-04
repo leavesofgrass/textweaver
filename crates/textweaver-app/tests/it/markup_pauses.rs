@@ -18,7 +18,7 @@ const THREE: &str =
 
 fn load(text: &str, settings: &Settings) -> Document {
     let src = Source::Bytes {
-        data: text.as_bytes().to_vec().into(),
+        data: text.as_bytes().to_vec(),
         hint: "txt".into(),
     };
     Registry::with_builtins()
