@@ -97,7 +97,7 @@ fn every_control_has_a_role_and_a_name() {
     let status = names_of(&h, Role::Status);
     assert_eq!(status.len(), 1);
     // The terminal's title line parts, from the app (`App::title_parts`).
-    assert!(status[0].contains("line 1 of"), "{status:?}");
+    assert!(status[0].contains("Line 1 of"), "{status:?}");
     assert!(status[0].contains("wpm"), "{status:?}");
 }
 
@@ -1182,6 +1182,8 @@ fn screenshots_are_written_at_both_scales() {
             edit: false,
             panel: None,
             ruler: false,
+            reading: false,
+            settings_filter: None,
         };
         textweaver_xilem::screenshot::screenshot(&o).unwrap();
         let bytes = std::fs::read(dir.path().join(name)).unwrap();
@@ -1351,6 +1353,8 @@ fn screenshots_draw_edit_mode_no_document_the_ruler_and_the_panels() {
         edit: false,
         panel: None,
         ruler: false,
+        reading: false,
+        settings_filter: None,
     };
     let mut shots = Vec::new();
     let mut o = base.clone();

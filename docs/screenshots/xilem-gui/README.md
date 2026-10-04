@@ -6,15 +6,38 @@ These pictures show the textweaver window (`textweaver-gui`) for a sighted desig
 textweaver-gui --review-screenshots FOLDER fixtures/sample.md
 ```
 
-Every picture uses the sample document, `fixtures/sample.md`, and a fresh settings folder. Unless a description says otherwise, the window is 1100 by 780 pixels, and the reading position is on the word "Jones" in the first paragraph: the spoken word is bold on a solid band, and its sentence is underlined on a lighter band. File names give the theme, what is shown, the size when it is not the usual one, and the scale (100 or 200 percent).
+Every picture uses the sample document, `fixtures/sample.md`, and a fresh settings folder. Unless a description says otherwise, the window is 1100 by 780 pixels. The harness asks for a reading position on the word "Jones" in the first paragraph, but the Wave 9 pictures do not show its highlight (see "Problems still visible" below). File names give the theme, what is shown, the size when it is not the usual one, and the scale (100 or 200 percent).
 
-The themes are Galaxy (the default, dark), Galaxy Light, High Contrast (black, white and yellow), and "system contrast", which is Windows High Contrast's own "Night sky" colors as the window follows them.
+The themes are Galaxy (the default, dark), Galaxy Light, High Contrast (black, white and yellow), Lamplight (the soft dark theme, warm brown and amber), and "system contrast", which is Windows High Contrast's own "Night sky" colors as the window follows them.
+
+## What changed since alpha.8
+
+All pictures were redrawn on Sunday, October 4, 2026, after Wave 9's last visual change.
+
+- The header no longer shows the document's title; it holds only the buttons Open, Font, Start editing, Settings and Commands, each with its key.
+- The document sits in a centered column of about 66 characters, with real list markers: bullets, and numbers for numbered lists.
+- Edit mode draws the document's frame dashed and shows an "Editing" badge in its top right corner.
+- Below 800 pixels wide, the header and the toolbar fold into one bar above the document, and the buttons hide their keys. The overflow that alpha.8's small pictures showed is gone.
+- The status bar's two texts go on two lines when they do not fit on one, instead of overlapping, and the position adds the time left ("under a minute left").
+- The window with no document says so in the document area: "No document is open. Press Ctrl+O to open one."
+- New pictures: the Reading settings dialog, Settings with a filter typed, Lamplight, and the window at 780 by 540 with the bars folded.
+
+## Problems still visible
+
+- Pass: no button runs past the window's edge at any review size.
+- Fail: the spoken word's highlight and its sentence's underline do not show, though the harness sets them. Either the harness's way of setting them or the document view's drawing changed in Wave 9; this needs a look before the pictures of the highlight can be trusted again.
+- Fail: the nested bullet ("Nested bullet under the second") is drawn as a missing-glyph box, not a hollow bullet, in every theme. The bundled font seems to lack that character.
+- Fail: in edit mode, each list line shows a drawn bullet before its source's own dash ("• - First bullet item").
+- Fail: at 420 by 320, the folded bar takes four rows of buttons, so the document area is one line tall, and with the Contents panel open, the panel and the document are each less than a line tall and no heading shows.
+- Minor: at 683 by 384 with the Contents panel, the document's title wraps and only its second line, "Document", shows at the top.
+- Minor: at 960 by 540 the toolbar wraps, leaving Faster alone on a second row.
+- Minor: the Notes picture's status bar says "Resumed at 60 percent" and "Line 24 of 34", while the document shows its top.
 
 ## The window while reading
 
-![Galaxy theme at 100 percent: reading the sample document, the spoken word Jones bold, its sentence underlined](galaxy-100.png)
+![Galaxy at 100 percent: the sample document's title, first paragraph and bullet list, Play highlighted](galaxy-100.png)
 
-Description: dark purple-gray window. The header has the document's title and the buttons Open, Font, Start editing, Settings and Commands, each with its key. The document fills the middle, framed in purple because it has the focus. The reading toolbar below has Play (filled purple, the main action), Stop, Previous sentence, Next sentence, Slower and Faster. The status bar says "Opened Sample Markdown Document." on the left and "line 1 of 34, 0%, Ready, 265 wpm, silent" on the right.
+Description: dark gray window. The header has the buttons Open, Font, Start editing, Settings and Commands, each with its key. The document fills the middle in a centered column, framed in purple because it has the focus: the purple title "Sample Markdown Document", a paragraph with bold, italic, code and a link, the heading "Lists", three bullets with a nested one, and a numbered list. The reading toolbar below has Play (filled purple, the main action), Stop, Previous sentence, Next sentence, Slower and Faster. The status bar says "Opened Sample Markdown Document." on the left and "Line 1 of 34, 0%, Ready, 265 wpm, silent, under a minute left" on the right.
 
 ![Galaxy theme at 200 percent: the same reading view, twice the size](galaxy-200.png)
 
@@ -44,11 +67,19 @@ Description: the window in Windows High Contrast's Night sky colors: black backg
 
 Description: the Night sky view at 200 percent.
 
+![Lamplight theme at 100 percent: the reading view in warm cream text on dark brown, amber headings](lamplight-100.png)
+
+Description: the reading view in Lamplight, the soft dark theme: dark brown panels, cream text, amber headings and an amber Play button, light blue links, and a pale blue frame on the document.
+
+![Lamplight theme at 200 percent: the Lamplight reading view, twice the size](lamplight-200.png)
+
+Description: the Lamplight reading view at 200 percent.
+
 ## The window with no document
 
-![No document open, Galaxy at 100 percent: empty document area and the title textweaver](galaxy-empty-100.png)
+![No document open, Galaxy at 100 percent: the hint No document is open, press Ctrl+O to open one](galaxy-empty-100.png)
 
-Description: the window before any document is open. The header's title is "textweaver", the document area is an empty purple frame, and the status bar says only "Ready, 265 wpm, silent" on the right.
+Description: the window before any document is open. The document area is an empty purple frame whose first line says "No document is open. Press Ctrl+O to open one." The status bar says only "Ready, 265 wpm, silent" on the right.
 
 ![No document open, Galaxy at 200 percent: empty window twice the size](galaxy-empty-200.png)
 
@@ -60,9 +91,9 @@ Description: the empty window in High Contrast: black, with white borders around
 
 ## Edit mode
 
-![Edit mode in Galaxy at 100 percent: the Markdown source with the caret before the title](galaxy-edit-100.png)
+![Edit mode in Galaxy at 100 percent: Markdown source in a dashed frame with an Editing badge](galaxy-edit-100.png)
 
-Description: after Start editing, the document shows its Markdown source: the front matter between two lines of dashes, then "# Sample Markdown Document" with the caret after the number sign. Markup stays visible and styled (bold, italic, code and the link). The header's button now says "Finish editing (Ctrl+E)", and the status bar says "Edit mode on. Save: Ctrl+S. Finish: Ctrl+E." and "line 6 of 45, 7%, Edit".
+Description: after Start editing, the document's frame turns dashed and an "Editing" badge sits in its top right corner. The document shows its Markdown source: the front matter between two lines of dashes, then "# Sample Markdown Document" with the caret after the number sign. Markup stays visible and styled (bold, italic, code and the link). The header's button now says "Finish editing (Ctrl+E)", and the status bar says "Edit mode on. Save: Ctrl+S. Finish: Ctrl+E. # Sample Markdown Document" and "Line 6 of 45, Edit, Ready, 7%".
 
 ![Edit mode in Galaxy at 200 percent: the Markdown source, twice the size](galaxy-edit-200.png)
 
@@ -72,9 +103,13 @@ Description: edit mode at 200 percent.
 
 Description: edit mode in Galaxy Light.
 
+![Edit mode in Lamplight at 100 percent: the Markdown source on dark brown, with the Editing badge](lamplight-edit-100.png)
+
+Description: edit mode in Lamplight, with the dashed frame and the "Editing" badge.
+
 ## The spoken sentence's underline
 
-Every reading picture above shows it: the sentence being read is underlined in the sentence's text color and sits on a light band, and the spoken word is bold on a solid band. The underline is drawn in every theme, High Contrast and Night sky too, so the sentence never depends on its band color alone.
+By design, the sentence being read is underlined in the sentence's text color and sits on a light band, and the spoken word is bold on a solid band, in every theme, so the sentence never depends on its band color alone. The Wave 9 pictures do not show it; see "Problems still visible".
 
 ## The reading ruler
 
@@ -98,7 +133,7 @@ Description: the reading ruler in High Contrast: a dark blue-gray band on black,
 
 ![Contents panel in Galaxy at 100 percent: the five headings beside the document, the first one current](galaxy-contents-100.png)
 
-Description: a panel titled Contents sits left of the document. It lists "Sample Markdown Document, level 1" (marked current with a bar and a frame), "Lists, level 2", "A Table, level 2", "Quotes and Code, level 2" and "Deeper Heading, level 3". At its foot: "Enter goes there. Shift+Enter goes and returns. Escape returns." The document keeps the focus.
+Description: a panel titled Contents sits left of the document. It lists "Sample Markdown Document, level 1" (marked current with a bar and a frame, its text cut short with an ellipsis), "Lists, level 2", "A Table, level 2", "Quotes and Code, level 2" and "Deeper Heading, level 3". At its foot: "Enter goes there. Shift+Enter goes and returns. Escape returns." The document keeps the focus.
 
 ![Contents panel in Galaxy at 200 percent: the panel and the document, twice the size](galaxy-contents-200.png)
 
@@ -118,7 +153,7 @@ Description: the Contents panel in Windows Night sky colors.
 
 ![Notes panel in Galaxy at 100 percent: two sample notes listed beside the document](galaxy-notes-100.png)
 
-Description: a panel titled Notes lists two notes: "Check the totals in the score column" and "Ask about the source of this quote", each followed by its place, which the panel's width cuts off. The status bar shows the last note added.
+Description: a panel titled Notes lists two notes: "Check the totals in the score column" and "Ask about the source of this quote", each cut short with an ellipsis by the panel's width; the second is selected. The panel's foot has the same hint as Contents.
 
 ![Notes panel in Galaxy at 200 percent: the two notes, twice the size](galaxy-notes-200.png)
 
@@ -126,11 +161,11 @@ Description: the Notes panel at 200 percent.
 
 ## Small windows
 
-These show how the window fits small screens. Some show layout problems, listed under each.
+These show how the window fits small screens. Below 800 pixels wide, the header and the toolbar fold into one bar above the document, and the buttons hide their keys. Problems are listed under each picture and in "Problems still visible".
 
-![Window at 960 by 540, Galaxy at 100 percent: the reading view with the title cut short](galaxy-960x540-100.png)
+![Window at 960 by 540, Galaxy at 100 percent: the reading view, the toolbar wrapped onto two rows](galaxy-960x540-100.png)
 
-Description: half of a 1920 by 1080 screen. Everything is reachable, but the header's title is cut to "Sample Mark", and the Faster button runs past the toolbar's right edge.
+Description: half of a 1920 by 1080 screen. The header and the toolbar are still separate and every button keeps its key; the toolbar wraps, so Faster sits alone on a second row. The document shows its title, first paragraph and the "Lists" heading.
 
 ![Contents panel at 960 by 540, Galaxy at 100 percent: all five headings still fit](galaxy-contents-960x540-100.png)
 
@@ -138,31 +173,39 @@ Description: the Contents panel at 960 by 540. All five headings fit, and the do
 
 ![Edit mode at 960 by 540, Galaxy at 100 percent: Markdown source in a short document area](galaxy-edit-960x540-100.png)
 
-Description: edit mode at 960 by 540.
+Description: edit mode at 960 by 540, with the dashed frame and the "Editing" badge.
 
-![Window at 683 by 384 and 200 percent, Galaxy: buttons overflow and cover the title](galaxy-683x384-200.png)
+![Window at 780 by 540, Galaxy at 100 percent: the folded bar, two rows of buttons above the document](galaxy-780x540-100.png)
 
-Description: a 1366 by 768 laptop screen at 200 percent. Problems: the header's buttons are wider than the window, so the Open button covers the title and Commands is off the right edge; the toolbar shows only Play, Stop, Previous sentence and Next sentence, with Slower and Faster off screen; the heading at the top of the document is cut through the middle.
+Description: just under the folding width. One bar above the document holds two rows of buttons without their keys: Open, Font, Start editing, Settings and Commands, then Play, Stop, Previous sentence and Next sentence, with Slower and Faster at the right. The document shows the title, first paragraph and the start of the list, and the status bar fits on one line.
 
-![Contents panel at 683 by 384 and 200 percent: only two headings show](galaxy-contents-683x384-200.png)
+![Edit mode at 780 by 540, Galaxy at 100 percent: the folded bar over the Markdown source](galaxy-edit-780x540-100.png)
 
-Description: the Contents panel at the laptop size. The panel shows two headings above its hint, and the document beside it shows one paragraph.
+Description: edit mode at 780 by 540, with the folded bar, the dashed frame and the "Editing" badge.
 
-![Edit mode at 683 by 384 and 200 percent: status bar texts overlap](galaxy-edit-683x384-200.png)
+![Window at 683 by 384 and 200 percent, Galaxy: the folded bar in two rows, every button on screen](galaxy-683x384-200.png)
 
-Description: edit mode at the laptop size. Problem: the status bar's message and position are drawn over each other.
+Description: a 1366 by 768 laptop screen at 200 percent. The folded bar shows every button in two rows. The document shows the title, the first paragraph and the "Lists" heading. The status bar's message and position sit on two lines.
 
-![Window at 420 by 320, Galaxy at 100 percent: header, toolbar and status bar overflow](galaxy-420x320-100.png)
+![Contents panel at 683 by 384 and 200 percent: four headings, the document title cut to its second line](galaxy-contents-683x384-200.png)
 
-Description: the smallest review size. Problems: the header's buttons cover the title and run off the right edge, the toolbar shows only Play, Stop and part of Previous sentence, the status bar's two texts overlap, and the document area is about two lines tall.
+Description: the Contents panel at the laptop size shows four headings above its hint. Problem: the document's title wraps, and only its second line, "Document", shows at the top.
 
-![Contents panel at 420 by 320, Galaxy at 100 percent: the panel shows no headings](galaxy-contents-420x320-100.png)
+![Edit mode at 683 by 384 and 200 percent: the source with the Editing badge, status on two lines](galaxy-edit-683x384-200.png)
 
-Description: the Contents panel at 420 by 320. Problem: the panel's hint takes all its height, so no heading shows, and the document beside it is very narrow.
+Description: edit mode at the laptop size. The document shows the front matter's author line and the title with the caret; the status bar's two texts sit on two lines.
 
-![No document at 420 by 320, Galaxy at 100 percent: empty window with overflowing buttons](galaxy-empty-420x320-100.png)
+![Window at 420 by 320, Galaxy at 100 percent: four rows of buttons, a document one line tall](galaxy-420x320-100.png)
 
-Description: the empty window at 420 by 320, with the same header and toolbar overflow.
+Description: the smallest review size. Every button is on screen, in four rows. Problem: the document area is one line tall, showing part of the first paragraph, and the status bar takes three lines.
+
+![Contents panel at 420 by 320, Galaxy at 100 percent: panel title only, no headings, a sliver of document](galaxy-contents-420x320-100.png)
+
+Description: the Contents panel at 420 by 320. Problem: the panel sits above the document, shows only its title "Contents" and no heading, and the document under it is a sliver less than a line tall.
+
+![No document at 420 by 320, Galaxy at 100 percent: four rows of buttons and the open-a-document hint](galaxy-empty-420x320-100.png)
+
+Description: the empty window at 420 by 320: four rows of buttons, then "No document is open. Press Ctrl+O to open one." on two lines, and "Ready, 265 wpm, silent" in the status bar.
 
 ## Dialogs
 
@@ -176,7 +219,7 @@ Description: the Bookmarks dialog at 200 percent.
 
 ![Settings dialog in Galaxy at 100 percent: the speech section, on the speech rate](galaxy-settings-100.png)
 
-Description: the Settings dialog over the dimmed window. The sections are listed on the left with their counts ("Speech, 30 settings" first). On the right, the Speech settings, with Rate selected at "265 words per minute" between its two arrows; Split capitals shows its switch with "off" in words. The selected setting's description, "How fast textweaver speaks.", is under the list.
+Description: the Settings dialog over the dimmed window. The sections are listed on the left with their counts ("Speech, 31 settings" first). On the right, the Speech settings, from Speech engine ("automatic") down, with Rate selected at "265 words per minute" between its two arrows; Split capitals shows its switch with "off" in words. The selected setting's description, "How fast textweaver speaks.", is under the list.
 
 ![Settings dialog in Galaxy at 200 percent: the settings, twice the size](galaxy-settings-200.png)
 
@@ -189,6 +232,26 @@ Description: the Settings dialog in Galaxy Light.
 ![Settings dialog in High Contrast at 100 percent: the settings in white on black](high-contrast-settings-100.png)
 
 Description: the Settings dialog in High Contrast.
+
+![Settings dialog in Lamplight at 100 percent: the speech settings on a dark brown dialog](lamplight-settings-100.png)
+
+Description: the Settings dialog in Lamplight, with Rate selected and framed in pale blue.
+
+![Settings with the filter voice typed, Galaxy at 100 percent: Matching voice, 16 settings, first](galaxy-filter-100.png)
+
+Description: the Settings dialog with "voice" typed as a filter. The first section is now "Matching voice, 16 settings", selected, and the other sections follow. On the right: Pitch (selected, "0 semitones"), Voice, Preferred voice, Favorite voices, Voices by language, OneCore voices ("on" with its switch), Piper voices folder, Piper voice, and Rate and pitch per voice. The filter's text itself is not drawn; the section's name says what was typed.
+
+![Reading settings dialog in Galaxy at 100 percent: nine reading settings and three buttons](galaxy-reading-100.png)
+
+Description: a dialog titled "Reading settings" with one list: Rate (selected, "265 words per minute"), Font ("sans serif"), Font size ("14 points"), Font weight ("400"), Line height ("1.5"), Paragraph spacing ("1"), Word spacing ("0"), Letter spacing ("0") and Line length ("66 characters"), each between two arrows. Under the list, the selected setting's description, "How fast textweaver speaks." Then the buttons Voices, WCAG spacing and Generous spacing, the line "Changes take effect and are saved at once.", and "Close (Escape)".
+
+![Reading settings dialog in Galaxy at 200 percent: the reading settings, twice the size](galaxy-reading-200.png)
+
+Description: the Reading settings dialog at 200 percent.
+
+![Reading settings dialog in High Contrast at 100 percent: the reading settings in white on black](high-contrast-reading-100.png)
+
+Description: the Reading settings dialog in High Contrast.
 
 ![Colors dialog in Galaxy at 100 percent: chosen colors with samples and contrast](galaxy-colors-100.png)
 

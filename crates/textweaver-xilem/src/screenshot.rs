@@ -63,6 +63,11 @@ pub struct ShotOptions {
     /// shows on its own (W8c-x). Saved like any setting, so this needs
     /// `home`.
     pub ruler: bool,
+    /// Draw the Reading settings dialog (W9b-d) instead of Settings.
+    pub reading: bool,
+    /// With `settings`: this filter typed in the form (W9b-d), so the first
+    /// section is the settings it matches.
+    pub settings_filter: Option<String>,
 }
 
 /// A few colors chosen for the Colors dialog's review: the blue and
@@ -247,9 +252,21 @@ fn render(
         harness.focus_on(Some(list_id));
     }
     if opts.settings {
-        let form = crate::settings_dialog::SettingsForm::new(app.settings_schema());
-        let (section, row) = form.find("speech.rate").unwrap_or((0, 0));
+        let mut form = crate::settings_dialog::SettingsForm::new(app.settings_schema());
+        let (section, row) = match &opts.settings_filter {
+            Some(query) => {
+                form.set_filter(query, &app.catalog());
+                (0, 0)
+            }
+            None => form.find("speech.rate").unwrap_or((0, 0)),
+        };
         let d = gui::settings_dialog(palette, &form, app, section, row);
+        harness.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
+        harness.focus_on(Some(d.form));
+    }
+    if opts.reading {
+        let form = crate::settings_dialog::SettingsForm::reading(app.settings_schema());
+        let d = gui::settings_dialog(palette, &form, app, 0, 0);
         harness.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(d.modal)));
         harness.focus_on(Some(d.form));
     }
@@ -289,9 +306,10 @@ fn render(
 /// Windows High Contrast's own colors at 100% and 200% with a spoken word
 /// (bold, its sentence underlined), a list dialog, the settings dialog,
 /// the Colors dialog, the voice manager, edit mode, the window with no
-/// document, the reading ruler's band, the Contents and Notes panels, and
-/// the window at three small sizes (960 by 540, 683 by 384 at 200%, and
-/// 420 by 320). Returns the files.
+/// document, the reading ruler's band, the Contents and Notes panels, the
+/// Reading settings dialog, Settings with a filter, Lamplight, and the
+/// window at four small sizes (960 by 540, 780 by 540 with the bars
+/// folded, 683 by 384 at 200%, and 420 by 320). Returns the files.
 pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
     let mut out = Vec::new();
@@ -311,6 +329,8 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         edit: false,
         panel: None,
         ruler: false,
+        reading: false,
+        settings_filter: None,
     };
     // What each shot shows over the window: nothing, a list, or settings.
     const WINDOW: u8 = 0;
@@ -332,6 +352,10 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     const NOTES: u8 = 9;
     // Only the reading ruler, so its band's bar shows (W8c-x).
     const RULER: u8 = 10;
+    // The Reading settings dialog (W9b-d).
+    const READING: u8 = 11;
+    // Settings with a filter typed (W9b-d).
+    const FILTER: u8 = 12;
     // The usual review size, and the small ones (W8c-x): half of a 1920 by
     // 1080 screen, a 1366 by 768 laptop at 200% (683 by 384 logical), and
     // the smallest window that should still read.
@@ -339,6 +363,7 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
     const HALF: (u32, u32) = (960, 540);
     const LAPTOP: (u32, u32) = (683, 384);
     const TINY: (u32, u32) = (420, 320);
+    const FOLD: (u32, u32) = (780, 540);
     const NIGHT_SKY: &str = crate::system_colors::NIGHT_SKY_NAME;
     let shots = [
         ("galaxy-100.png", "galaxy", 1.0, WINDOW),
@@ -405,6 +430,21 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         ("system-contrast-contents-100.png", NIGHT_SKY, 1.0, CONTENTS),
         ("galaxy-notes-100.png", "galaxy", 1.0, NOTES),
         ("galaxy-notes-200.png", "galaxy", 2.0, NOTES),
+        // Wave 9: the Reading settings dialog, Settings with a filter,
+        // and Lamplight, the soft dark theme.
+        ("galaxy-reading-100.png", "galaxy", 1.0, READING),
+        ("galaxy-reading-200.png", "galaxy", 2.0, READING),
+        (
+            "high-contrast-reading-100.png",
+            "high-contrast",
+            1.0,
+            READING,
+        ),
+        ("galaxy-filter-100.png", "galaxy", 1.0, FILTER),
+        ("lamplight-100.png", "lamplight", 1.0, WINDOW),
+        ("lamplight-200.png", "lamplight", 2.0, WINDOW),
+        ("lamplight-edit-100.png", "lamplight", 1.0, EDIT),
+        ("lamplight-settings-100.png", "lamplight", 1.0, SETTINGS),
     ]
     .map(|(name, theme, scale, over)| (name, theme, scale, over, FULL));
     // The small windows: the window, its panel, and edit mode at each.
@@ -436,6 +476,9 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
             TINY,
         ),
         ("galaxy-empty-420x320-100.png", "galaxy", 1.0, EMPTY, TINY),
+        // Just under the width where the bars fold into one (W9a-w).
+        ("galaxy-780x540-100.png", "galaxy", 1.0, WINDOW, FOLD),
+        ("galaxy-edit-780x540-100.png", "galaxy", 1.0, EDIT, FOLD),
     ];
     for (name, theme, scale, over, size) in shots.into_iter().chain(small) {
         let mut o = base.clone();
@@ -443,7 +486,9 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         o.theme = Some(theme.into());
         o.scale = scale;
         o.size = size;
-        o.settings = over == SETTINGS;
+        o.settings = over == SETTINGS || over == FILTER;
+        o.settings_filter = (over == FILTER).then(|| "voice".to_owned());
+        o.reading = over == READING;
         o.aids = over == AIDS;
         o.colors = over == COLORS;
         o.voices = over == VOICES;

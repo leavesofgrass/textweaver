@@ -1286,8 +1286,11 @@ pub fn close_dialog_in(host: &mut impl Host, back: &mut Option<WidgetId>) {
 /// Press Ctrl+O to open one.").
 pub fn empty_hint(app: &App) -> String {
     let open = textweaver_app::named_key(app.keymap(), ActionId::Open);
-    app.catalog()
-        .fmt("app-no-document-open", &args!["key" => open.as_str()])
+    // The key's marks are kept out of the screen ("Ctrl+O", not its marks).
+    let hint = app
+        .catalog()
+        .fmt("app-no-document-open", &args!["key" => open.as_str()]);
+    textweaver_app::written_text(&hint).into_owned()
 }
 
 /// The document view's model for the window `w` of the session's document.

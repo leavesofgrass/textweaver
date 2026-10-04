@@ -249,6 +249,8 @@ fn main() {
                 edit: false,
                 panel: None,
                 ruler: false,
+                reading: false,
+                settings_filter: None,
             };
             if let Err(e) = screenshot(&o) {
                 console::report_error(&e.to_string(), true);
