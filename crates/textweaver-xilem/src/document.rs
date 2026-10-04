@@ -39,7 +39,9 @@ use masonry::core::{
 };
 use masonry::dpi::{LogicalPosition, PhysicalPosition};
 use masonry::imaging::Painter;
-use masonry::kurbo::{Affine, Axis, BezPath, Point, Rect, RoundedRect, Size, Stroke, Vec2};
+use masonry::kurbo::{
+    Affine, Axis, BezPath, Circle, Point, Rect, RoundedRect, Size, Stroke, Vec2,
+};
 use masonry::layout::{LenReq, Length};
 use masonry::parley::style::{FontFamily, FontStyle, FontWeight, LineHeight};
 use masonry::parley::{Affinity, Cursor, FontContext, Layout, LayoutContext, Selection};
@@ -50,7 +52,7 @@ use textweaver_app::keymap::Platform;
 
 use crate::caret::{self, CharBytes};
 use crate::keys::{self, CaretStep};
-use crate::runs::{ParaRuns, Paragraph, Run, RunMark, RunSet};
+use crate::runs::{Bullet, ParaRuns, Paragraph, Run, RunMark, RunSet};
 use crate::theme::{self, Palette};
 use crate::window::{SpanStyle, StyledSpan};
 
@@ -244,6 +246,9 @@ pub enum PaintStep {
     /// A list item's bullet or number at this depth (from 1), in the
     /// hanging indent left of its text: the box it is drawn in.
     ListMarker(u8, Rect),
+    /// A bullet drawn as a shape (a disc, a ring or a square by depth)
+    /// inside its [`PaintStep::ListMarker`] box: the square it fills.
+    Bullet(Bullet, Rect),
     /// The empty window's hint (no document is open), drawn in the
     /// document's place: the box it is drawn in.
     Hint(Rect),
@@ -986,6 +991,14 @@ impl DocumentView {
         if this.widget.editing != on {
             this.widget.editing = on;
             this.widget.state.anchor = None;
+            // List markers and their indent are drawn in reading mode
+            // only: lay the text out again (the nodes keep their ids).
+            let w = &mut *this.widget;
+            w.layouts.clear();
+            w.line_starts.iter_mut().for_each(|l| *l = None);
+            w.para_runs.iter_mut().for_each(|r| *r = None);
+            w.dirty_paras.iter_mut().for_each(|d| *d = true);
+            w.follow = true;
             this.ctx.request_accessibility_update();
             // The badge is laid out in the next layout pass.
             this.ctx.request_layout();
@@ -1217,11 +1230,20 @@ impl DocumentView {
         // A list item: its hanging indent by depth, and its bullet or
         // number in the body font, laid out once (drawn only).
         let em = f64::from(size);
-        let indent = p.list.as_ref().map_or(0.0, |l| {
+        // In edit mode the source's own dash or number shows, so the list
+        // is not drawn: no hanging indent and no marker.
+        let list = p.list.as_ref().filter(|_| !self.editing);
+        let indent = list.map_or(0.0, |l| {
             (f64::from(l.level.max(1)) * em * LIST_INDENT_EM).min(self.column / 2.0)
         });
-        let marker = p.list.as_ref().map(|l| {
-            let glyph = l.glyph();
+        let marker = list.map(|l| {
+            // A bullet is drawn as a shape, in the box of the disc glyph
+            // (which every bundled font has), so it sits where text would.
+            let glyph = if l.bullet().is_some() {
+                "\u{2022}"
+            } else {
+                l.glyph()
+            };
             let mut mb = lcx.ranged_builder(fcx, glyph, 1.0, true);
             mb.push_default(StyleProperty::FontFamily(FontFamily::Source(
                 self.font.family.clone().into(),
@@ -2666,10 +2688,41 @@ impl Widget for DocumentView {
             painted.push(PaintStep::Text(i));
             // A list item's bullet or number, in the hanging indent.
             if let (Some((m, at)), Some(item)) = (&pl.marker, &para.list) {
-                render_text(painter, Affine::translate(origin + *at), m, &brushes, false);
                 let r = Rect::new(0.0, 0.0, f64::from(m.full_width()), f64::from(m.height()))
                     + origin
                     + *at;
+                match item.bullet() {
+                    Some(shape) => {
+                        let baseline = m.lines().next().map_or(0.0, |l| l.metrics().baseline);
+                        let em = f64::from(self.font.size);
+                        let dot = bullet_box(r, r.y0 + f64::from(baseline), em);
+                        let color = theme::color(p.text);
+                        match shape {
+                            Bullet::Disc => {
+                                painter
+                                    .fill(Circle::new(dot.center(), dot.width() / 2.0), color)
+                                    .draw();
+                            }
+                            Bullet::Circle => {
+                                let w = (em * 0.07).max(1.0);
+                                painter
+                                    .stroke(
+                                        Circle::new(dot.center(), (dot.width() - w) / 2.0),
+                                        &Stroke::new(w),
+                                        color,
+                                    )
+                                    .draw();
+                            }
+                            Bullet::Square => {
+                                painter.fill(dot, color).draw();
+                            }
+                        }
+                        painted.push(PaintStep::Bullet(shape, dot));
+                    }
+                    None => {
+                        render_text(painter, Affine::translate(origin + *at), m, &brushes, false)
+                    }
+                }
                 painted.push(PaintStep::ListMarker(item.level, r));
             }
             for s in self.spans_in(i) {
@@ -3319,6 +3372,15 @@ fn render_emphasis(
 /// The rectangle of a line under `band` (one visual line of a range, in
 /// view coordinates), at the font's underline position on that line and
 /// at least 1.5 px or 0.06 em thick; `None` if no line holds it.
+/// The square a bullet shape fills: centered in the marker's box `r`
+/// across, and on the middle of the lowercase letters (about half an x
+/// height above `baseline`) down, a third of the font size `em` wide.
+fn bullet_box(r: Rect, baseline: f64, em: f64) -> Rect {
+    let side = (em * 0.34).max(3.0);
+    let center = Point::new(r.center().x, baseline - em * 0.26);
+    Rect::from_center_size(center, (side, side))
+}
+
 fn underline_under(
     layout: &Layout<BrushIndex>,
     origin: Vec2,

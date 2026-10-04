@@ -85,6 +85,31 @@ impl ListMark {
             },
         }
     }
+
+    /// The bullet's shape by depth, `None` for a numbered item. The view
+    /// draws bullets as shapes, not glyphs: the bundled reading fonts lack
+    /// the circle and the square, which came out as missing-glyph boxes.
+    pub fn bullet(&self) -> Option<Bullet> {
+        match &self.label {
+            Some(_) => None,
+            None => Some(match self.level.max(1) % 3 {
+                1 => Bullet::Disc,
+                2 => Bullet::Circle,
+                _ => Bullet::Square,
+            }),
+        }
+    }
+}
+
+/// A bullet's shape, by the list's depth, as browsers draw them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Bullet {
+    /// A filled circle (depth 1, 4, ...).
+    Disc,
+    /// A hollow circle, a ring (depth 2, 5, ...).
+    Circle,
+    /// A filled square (depth 3, 6, ...).
+    Square,
 }
 
 impl Paragraph {

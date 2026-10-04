@@ -807,6 +807,46 @@ fn list_items_draw_their_bullets_numbers_and_nesting() {
     }
     // Drawn only: the screen reader's text is the document's, unchanged.
     assert_eq!(doc_text(&h), doc.text().to_string());
+    // Bullets are shapes, not glyphs the font may lack: a disc at depth
+    // 1 and a square at depth 3, each inside its marker's box.
+    use textweaver_xilem::runs::Bullet;
+    let bullets: Vec<(Bullet, masonry::kurbo::Rect)> = steps
+        .iter()
+        .filter_map(|s| match s {
+            PaintStep::Bullet(b, r) => Some((*b, *r)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        bullets.iter().map(|b| b.0).collect::<Vec<_>>(),
+        [Bullet::Disc, Bullet::Square]
+    );
+    for ((_, dot), (_, r)) in bullets.iter().zip([markers[0], markers[2]]) {
+        assert!(dot.width() > 2.0 && dot.x0 >= r.x0 - 1.0 && dot.x1 <= r.x1 + 1.0);
+        assert!(dot.y0 >= r.y0 && dot.y1 <= r.y1, "{dot:?} in {r:?}");
+    }
+}
+
+#[test]
+fn edit_mode_draws_no_list_markers() {
+    use textweaver_xilem::document::PaintStep;
+    let doc = nested_list();
+    let (mut h, _) = harness_with(&doc, CharPos::ZERO);
+    let has_markers = |h: &TestHarness<DocumentView>| {
+        h.root_widget()
+            .painted()
+            .iter()
+            .any(|s| matches!(s, PaintStep::ListMarker(..) | PaintStep::Bullet(..)))
+    };
+    assert!(has_markers(&h));
+    // The source's own dashes and numbers show while editing.
+    h.edit_root_widget(|mut d| DocumentView::set_editing(&mut d, true));
+    let _ = h.redraw();
+    assert!(!has_markers(&h));
+    h.edit_root_widget(|mut d| DocumentView::set_editing(&mut d, false));
+    let _ = h.redraw();
+    assert!(has_markers(&h));
+    assert_eq!(doc_text(&h), doc.text().to_string());
 }
 
 #[test]
