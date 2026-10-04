@@ -434,7 +434,12 @@ pub fn review_set(dir: &Path, file: &Path) -> Result<Vec<PathBuf>, String> {
         // and Lamplight, the soft dark theme.
         ("galaxy-reading-100.png", "galaxy", 1.0, READING),
         ("galaxy-reading-200.png", "galaxy", 2.0, READING),
-        ("high-contrast-reading-100.png", "high-contrast", 1.0, READING),
+        (
+            "high-contrast-reading-100.png",
+            "high-contrast",
+            1.0,
+            READING,
+        ),
         ("galaxy-filter-100.png", "galaxy", 1.0, FILTER),
         ("lamplight-100.png", "lamplight", 1.0, WINDOW),
         ("lamplight-200.png", "lamplight", 2.0, WINDOW),
