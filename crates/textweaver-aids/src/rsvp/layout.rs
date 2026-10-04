@@ -1,8 +1,8 @@
 //! Where the RSVP word goes on screen: Star's nine positions, the GUI
 //! overlay's placement, and a terminal box laid out cell by cell.
 //!
-//! Lessons from Star's audits (`D:\star\wiki`, "star TUI reflow and A_DIM
-//! audit", "star WCAG perceivable operable audit") built in here:
+//! Lessons from star's accessibility audits (the TUI reflow and `A_DIM`
+//! audit, and the WCAG perceivable and operable audit) built in here:
 //!
 //! - The terminal box is capped to the area, and a word too long for it is
 //!   cut with a visible `…` instead of silently losing its tail.

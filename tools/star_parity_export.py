@@ -1,18 +1,22 @@
-"""One-off parity export: run Star's own document pipeline over textweaver's
+"""One-off parity export: run star's own document pipeline over textweaver's
 fixtures and dump the canonical text, word tokens, sentence starts, paragraph
 starts and speak-time normalization as JSON.
 
-Usage (from anywhere; Python 3.11, no third-party packages needed):
+Usage (from the repository root; Python 3.11, no third-party packages needed):
 
-    python D:\\textweaver\\tools\\star_parity_export.py
+    python tools/star_parity_export.py STAR_CHECKOUT
 
-Reads   D:\\textweaver\\fixtures\\sample.{txt,md,html}
-Writes  D:\\textweaver\\fixtures\\star-parity\\<fixture-name>.json
+STAR_CHECKOUT is the folder of a local copy of star (the repository root, which
+holds the ``star`` package).
 
-Star is imported read-only from D:\\star (sys.path insert).  Nothing in D:\\star is
-modified.  Star's user settings file is NOT read (SETTINGS_FILE is redirected to
-a path that does not exist, so every setting is Star's built-in default) and the
-document cache is disabled so Star never reads or writes its cache directory.
+Reads   fixtures/sample.{txt,md,html}
+Writes  fixtures/star-parity/<fixture-name>.json
+
+star is imported read-only from STAR_CHECKOUT (sys.path insert).  Nothing in the
+star checkout is modified.  star's user settings file is NOT read (SETTINGS_FILE
+is redirected to a path that does not exist, so every setting is star's built-in
+default) and the document cache is disabled so star never reads or writes its
+cache directory.
 
 All offsets are Python ``str`` indices, i.e. Unicode code points, end-exclusive.
 Parallel ``*_utf8`` arrays give the same offsets as UTF-8 byte offsets for Rust.
@@ -28,7 +32,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-STAR_ROOT = Path(r"D:\star")
+if len(sys.argv) != 2 or sys.argv[1] in ("-h", "--help"):
+    print("usage: python tools/star_parity_export.py STAR_CHECKOUT", file=sys.stderr)
+    print("STAR_CHECKOUT: the folder of a local copy of star", file=sys.stderr)
+    sys.exit(2)
+STAR_ROOT = Path(sys.argv[1]).resolve()
+if not (STAR_ROOT / "star" / "__init__.py").is_file():
+    print(f"not a star checkout (no star/__init__.py): {STAR_ROOT}", file=sys.stderr)
+    sys.exit(2)
 TW_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = TW_ROOT / "fixtures"
 OUT_DIR = FIXTURES / "star-parity"
@@ -36,7 +47,7 @@ FIXTURE_NAMES = ["sample.txt", "sample.md", "sample.html"]
 TUI_WRAP = 78  # what the TUI uses on an 80-column terminal: wrap_width 0 -> (w - 2)
 
 os.environ.setdefault("STAR_NO_AUTOINSTALL", "1")  # never let Star pip-install
-sys.dont_write_bytecode = True  # never write __pycache__ into D:\star
+sys.dont_write_bytecode = True  # never write __pycache__ into the star checkout
 sys.path.insert(0, str(STAR_ROOT))
 
 import star  # noqa: E402

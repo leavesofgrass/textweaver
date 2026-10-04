@@ -13,14 +13,14 @@ deliberately choose to differ from it.
 
 ## How they were generated
 
-- **Star version:** 0.1.31 (`D:\star`, `pyproject.toml` `version = "0.1.31"`)
+- **Star version:** 0.1.31 (a local copy of star, `pyproject.toml` `version = "0.1.31"`)
 - **Star commit:** `e4b4ef83355ebe4d9307c4319f6334bd1ce0936f` (the `release: 0.1.31` commit; the working tree was clean)
 - **Generated:** Friday, September 25, 2026 (2026-09-25)
 - **Python:** 3.11.15, standard library only. No optional Star dependencies were installed.
 - **Pandoc on PATH:** pandoc 3.9.0.2. This matters for HTML; see below.
-- **Script:** `tools/star_parity_export.py`. To regenerate, run `python tools\star_parity_export.py`.
+- **Script:** `tools/star_parity_export.py`. To regenerate, run `python tools/star_parity_export.py STAR_CHECKOUT`, where `STAR_CHECKOUT` is the folder of a local copy of star.
 
-The script imports Star read-only from `D:\star` and does not write bytecode
+The script imports star read-only from the checkout it is given and does not write bytecode
 there. It redirects `star.settings.SETTINGS_FILE` to a file that does not
 exist, so every setting takes Star's built-in default (`star/settings.py`
 `DEFAULTS`) and the user's `settings.json` is ignored. It also sets

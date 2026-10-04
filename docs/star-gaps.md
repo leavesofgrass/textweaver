@@ -1,6 +1,6 @@
 # Star features not yet planned
 
-Star (`D:\star`) is the Python program textweaver reimplements in Rust. This page tracks Star's features against textweaver's current status, for anyone comparing the two or looking for what is left to port. Priorities favor students with print disabilities, Star's original audience.
+star ([its repository](https://github.com/leavesofgrass/star)) is the Python program textweaver reimplements in Rust. This page tracks Star's features against textweaver's current status, for anyone comparing the two or looking for what is left to port. Priorities favor students with print disabilities, Star's original audience.
 
 Each item has a status:
 

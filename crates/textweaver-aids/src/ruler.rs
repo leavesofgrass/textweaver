@@ -7,7 +7,7 @@
 //! are the focus, which are the band around it, and (optionally) which are
 //! masked outside it. The frontend decides how each mark looks.
 //!
-//! Lessons from Star's audits (`D:\star\wiki`), which the style guidance
+//! Lessons from star's accessibility audits, which the style guidance
 //! in [`TermStyle::recommended`] and the crate guide follow:
 //!
 //! - Star painted the ruler *over* the text at 22 % opacity, which pulled
