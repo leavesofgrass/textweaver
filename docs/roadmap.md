@@ -13,7 +13,7 @@ This page is a plain-language summary of where the project stands. For the full 
 - **Output.** `tw convert` and in-reader export write HTML, EPUB, DOCX, braille (BRF), and tagged PDF, including publishing templates (APA and AMA manuscripts, large print, dyslexia-friendly, high contrast) and audio export with subtitles and chapters. FLAC, WAV, MP3, and Opus audio export need nothing else installed; only M4B still needs ffmpeg.
 - **Math.** LaTeX and ASCIIMath are parsed, spoken, shown as MathML, and available in Nemeth and UEB braille.
 - **Reading aids.** RSVP, bionic reading, a reading ruler, text spacing, dyslexia-friendly fonts, difficult-word marking, reading level, and syllable display, all drawn in the terminal reader and the GUI.
-- **Accessibility.** Three accessibility modes (self-voicing, hybrid, and screen-reader), listened to with NVDA and JAWS and a Braille display on Windows, with automated accessibility checks on Windows and Linux on every release. VoiceOver on macOS and Orca on Linux have not been listened to yet. See the [accessibility statement](accessibility.md). Six interface languages, including right-to-left layout. Braille output carries typeform and capitals indicators, and tables in three layouts.
+- **Accessibility.** Three accessibility modes (self-voicing, hybrid, and screen-reader), listened to with NVDA and JAWS and a Braille display on Windows, with automated accessibility checks on Windows and Linux on every release. VoiceOver on macOS and Orca on Linux have had some basic testing, and more extensive testing is planned. See the [accessibility statement](accessibility.md). Six interface languages, including right-to-left layout. Braille output carries typeform and capitals indicators, and tables in three layouts.
 - **Study tools.** Offline dictionary lookups, reading statistics, settings profiles, extractive summaries with no downloaded model, notes and highlights with Obsidian vault export and import, and a document's title, author, DOI, and ISBN editable by hand.
 - **Sync between computers.** Notes, highlights, bookmarks, reading places, statistics, settings, and word lists stay in step through a folder you choose, such as Syncthing or a USB stick, with no account and no server ([Syncing between computers](sync.md)).
 
@@ -23,7 +23,7 @@ See the [features page](site/features.html) for the full, current list with each
 
 - **Release readiness** for the next alpha: packaging, dependency, and CI polish so each release ships cleanly on every platform.
 - **The GUI catching up to the terminal reader.** The voice manager covers every speech engine, with preview; the syllable display, the difficult-word overlay, and the Contents and Notes panels are in the GUI too. What is left is polish.
-- **Stabilization:** fixes from hands-on test sessions, a long soak test, a week of clean nightly runs, and a native speaker's review of the translations.
+- **Stabilization:** fixes from hands-on test sessions, a long soak test, a week of clean nightly runs, and native-speaker review of the German, French, Portuguese, and Arabic translations (English and Spanish are checked).
 
 ## Not in the 0.1 series
 

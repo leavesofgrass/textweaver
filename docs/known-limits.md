@@ -5,7 +5,7 @@ textweaver is in alpha. This page says plainly what it does not do yet, or does 
 ## What is tested, and what is not
 
 - **Windows with a screen reader** is the system that has been listened to: NVDA and JAWS, and a 40-cell Braille display. Two listening sessions went through the window.
-- **macOS and Linux** packages are built and checked by computer on every release. No one has listened to them with VoiceOver or Orca yet.
+- **macOS and Linux** packages are built and checked by computer on every release. Some basic testing has been done with VoiceOver and Orca, but not every release gets a listening test with them yet. More extensive testing is planned.
 - **Other Braille displays and cell widths** have not been tried.
 - **Settings marked "not yet verified"** in [the screen reader guide](screen-readers.md) have not been tried by ear.
 
@@ -16,7 +16,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 - **Not code-signed.** Windows warns the first time you start it. On a Mac you remove the quarantine flag once. See [Installing textweaver](install.md).
 - **No update check inside the program.** Update with the scripts, or download the new release.
 - **No first-run tour.** The [quick start](quickstart.md) is a document you open and read.
-- **Some translations are not reviewed.** The interface has six languages. The newest messages in the five translations wait for a native speaker's review.
+- **Some translations are not reviewed.** The interface has six languages. Native speakers have checked English and Spanish. German, French, Portuguese, and Arabic have not been checked yet. Feedback on any translation is welcome: use Help, Report a problem, or the [issue tracker](https://github.com/leavesofgrass/textweaver/issues).
 - **Alpha means anything may change.** Settings, keys, and file formats can change between releases. Read the [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) before you update.
 
 ## Reading and speech

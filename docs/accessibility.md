@@ -22,7 +22,7 @@ textweaver is in alpha. This statement describes release 0.1.0-alpha.8.
 
 ## What has not been tested
 
-- macOS with VoiceOver, and Linux with Orca. The packages are built and checked by computer only.
+- macOS with VoiceOver, and Linux with Orca, beyond basic functionality. Some basic testing has been done with both, but not every release gets a listening test with them, and the packages are otherwise built and checked by computer. More extensive testing with both is planned. NVDA and JAWS on Windows are tested by hand by the owner every day.
 - Braille displays other than the one named above, and other cell widths.
 - The settings marked "not yet verified" in [the screen reader guide](screen-readers.md).
 - Other screen readers, such as Narrator.
