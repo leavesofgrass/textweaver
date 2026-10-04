@@ -662,6 +662,39 @@ fn the_rulers_band_rows_have_a_bar_and_blank_rows_fit() {
     }
 }
 
+/// In High Contrast the ruler's bands are the page's own color, so lines
+/// in the focus color mark the reading line's and the band's edges; other
+/// themes draw none (alpha.8 screenshots).
+#[test]
+fn the_ruler_shows_its_edges_in_high_contrast() {
+    use textweaver_app::Command;
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::document::PaintStep;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let mut refresher = gui::Refresher::default();
+    let _ = app.dispatch(Command::Action(ActionId::RulerCycle));
+    let _ = app.dispatch(Command::Action(ActionId::RulerCycle));
+    let _ = app.dispatch(Command::Action(ActionId::NextParagraph));
+    let _ = app.dispatch(Command::Action(ActionId::NextParagraph));
+    let _ = refresher.refresh(&app, &mut h);
+    let _ = h.redraw();
+    let edges = |h: &TestHarness<Root>| {
+        h.get_widget(DOC)
+            .inner()
+            .painted()
+            .iter()
+            .filter(|s| matches!(s, PaintStep::RulerEdge(_)))
+            .count()
+    };
+    assert_eq!(edges(&h), 0, "Galaxy's bands show by their tint");
+    gui::apply_palette(&mut h, &Palette::named("high-contrast"));
+    let _ = h.redraw();
+    // The reading line's top and bottom, and the band's.
+    assert!(edges(&h) >= 3, "{}", edges(&h));
+}
+
 /// Syllables (Alt+Shift+Z) are drawn between the chars of long words, as
 /// the terminal draws them, and the text runs a screen reader gets stay the
 /// words. Turning them off takes the marks away again: a reading aid turned

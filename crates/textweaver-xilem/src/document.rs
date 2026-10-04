@@ -272,6 +272,10 @@ pub enum PaintStep {
     /// The reading ruler's bar at the start of one row: 4 px on the
     /// reading line, 2 px on the band's rows around it.
     RulerBar(RowMark, Rect),
+    /// A 1 px line at the top or bottom of the reading line or the ruler's
+    /// band, in the focus color, where the bands are the page's own color
+    /// (High Contrast).
+    RulerEdge(Rect),
     /// A reading aid's line or dots over one line of text, in its color
     /// (the theme's role, or `[colors]`): the rectangle they fill.
     Aid(AidMark, Rect, textweaver_theme::Rgb),
@@ -2536,6 +2540,38 @@ impl Widget for DocumentView {
             let bar = Rect::new(band_x0, y0, band_x0 + bar, y1);
             painter.fill(bar, theme::color(p.focus)).draw();
             painted.push(PaintStep::RulerBar(mark, bar));
+        }
+        // Where the bands cannot be told from the page (High Contrast,
+        // whose bands are the page's own color), 1 px lines in the focus
+        // color mark the reading line's top and bottom and the band's,
+        // so the ruler shows by its shape (alpha.8 screenshots).
+        let faint = |c: textweaver_theme::Rgb| {
+            textweaver_theme::color::contrast_ratio(c, p.background) < 1.2
+        };
+        let high_contrast = p.kind == textweaver_theme::ThemeKind::HighContrast;
+        if high_contrast || (faint(p.ruler_focus) && faint(p.ruler_band)) {
+            let marked = || {
+                marks
+                    .iter()
+                    .filter(|m| matches!(m.0, RowMark::Focus | RowMark::Band))
+            };
+            let mut edges: Vec<f64> = Vec::new();
+            if let Some(f) = marks.iter().find(|m| m.0 == RowMark::Focus) {
+                edges.extend([f.1, f.2]);
+            }
+            if let (Some(top), Some(bottom)) = (
+                marked().map(|m| m.1).reduce(f64::min),
+                marked().map(|m| m.2).reduce(f64::max),
+            ) {
+                edges.extend([top, bottom]);
+            }
+            edges.sort_by(f64::total_cmp);
+            edges.dedup_by(|a, b| (*a - *b).abs() < 0.5);
+            for y in edges {
+                let line = Rect::new(band_x0, y - 0.5, band_x1, y + 0.5);
+                painter.fill(line, theme::color(p.focus)).draw();
+                painted.push(PaintStep::RulerEdge(line));
+            }
         }
 
         for &(i, y) in &self.visible {
