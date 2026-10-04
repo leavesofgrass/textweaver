@@ -1,6 +1,6 @@
 # Exporting audio and subtitles
 
-Export audio, in the reader's File menu, and `tw export-audio`, from a terminal, read a document aloud into an audio file, so you can listen to it later on a phone, a music player, or a book player. It can write a WAV file, a FLAC file, an MP3 file, an Opus file, or an M4B audiobook, each with one chapter for each heading. It can also write subtitles: a caption file that shows each sentence, or each word, at the moment it is spoken. This is for anyone who wants to take a reading with them, for example a student who wants an audiobook of this week's chapters, or a teacher who wants captions that follow the spoken text.
+Export audio, in the reader's File menu, and `tw export-audio`, from a terminal, read a document aloud into an audio file, so you can listen to it later on a phone, a music player, or a book player. It can write a WAV file, a FLAC file, an MP3 file, an Opus file, an Ogg Vorbis file, or an M4B audiobook, each with one chapter for each heading. It can also write subtitles: a caption file that shows each sentence, or each word, at the moment it is spoken. This is for anyone who wants to take a reading with them, for example a student who wants an audiobook of this week's chapters, or a teacher who wants captions that follow the spoken text.
 
 This guide is written to be read with a screen reader. Each task section starts with the command, then explains it. [Export audio from the reader](#export-audio-from-the-reader) comes first; the rest of the guide is about `tw export-audio`, whose settings the reader shares.
 
@@ -8,7 +8,7 @@ This guide is written to be read with a screen reader. Each task section starts 
 
 In the reader, open the File menu (F10 in the terminal) and choose Export audio, or find "Export audio" in the command palette. A document must be open. Export audio is in the terminal reader, the GUI, and `tw` in every release; only a lean build of the reader, made with `--no-default-features`, leaves it out ([Building](dev/building.md)).
 
-1. **The format.** You hear, for example, "Export essay as audio: choose a format, 5 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then WAV. M4B is listed only when ffmpeg is installed; when it is not, you hear "M4B needs ffmpeg, which was not found." Last comes "Read-along page: text and audio, one file", which writes `essay.html` (see [Make a read-along page](#make-a-read-along-page)). Press Enter on a format.
+1. **The format.** You hear, for example, "Export essay as audio: choose a format, 6 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then Ogg Vorbis: small and open, and most players open it. Then WAV. M4B is listed only when ffmpeg is installed; when it is not, you hear "M4B needs ffmpeg, which was not found." Last comes "Read-along page: text and audio, one file", which writes `essay.html` (see [Make a read-along page](#make-a-read-along-page)). Press Enter on a format.
 2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
 3. **The question.** "Export essay.flac with Microsoft David at 200 words per minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
 
@@ -22,7 +22,7 @@ Which engine it uses: your reading engine, when it can write audio files; otherw
 
 ## Before you start
 
-You need two things: a voice that can write audio files, and, for M4B audiobooks only, the free program ffmpeg. WAV, FLAC, MP3, and Opus need nothing else.
+You need two things: a voice that can write audio files, and, for M4B audiobooks only, the free program ffmpeg. WAV, FLAC, MP3, Opus, and Ogg Vorbis need nothing else.
 
 ### Check that you have a voice that can write files
 
@@ -38,14 +38,15 @@ sapi: Windows SAPI5 voices. Available. Priority 500. Supports word highlighting,
 
 These engines can write files: ETI-Eloquence (`eci`), Windows SAPI5 voices (`sapi`), DECtalk (`dectalk`), eSpeak NG (`espeak`), and the two Apple engines on macOS (`nsspeech` and `avspeech`). Omnivox (`omnivox`) and Speech Dispatcher (`speechd`) can only speak aloud, so they cannot export. The silent engine (`null`) cannot export either.
 
-### WAV, FLAC, MP3, and Opus always work
+### WAV, FLAC, MP3, Opus, and Ogg Vorbis always work
 
-WAV, FLAC, MP3, and Opus files are written by textweaver itself. You do not need anything else.
+WAV, FLAC, MP3, Opus, and Ogg Vorbis files are written by textweaver itself. You do not need anything else.
 
 - WAV files are large, but every player can open them.
 - FLAC files are about half the size of WAV, with exactly the same sound (FLAC is lossless). Most music and audiobook players on phones and computers can open them.
 - MP3 files are the smallest, and every player can open them. textweaver encodes them with the LAME encoder, built in, at variable bit rate, quality 5, which suits a speaking voice. LAME is free software under the GNU LGPL; `THIRD-PARTY-NOTICES.md` says what that means for you.
 - Opus files are the smallest of all: about 14 MB for an hour of speech, a quarter of the MP3. textweaver encodes them with libopus, the reference Opus encoder, built in: one channel at 32 kilobits per second, as an Ogg Opus file (`.opus`). Most phones, browsers, and VLC play them; some older car stereos and music players do not. libopus is free software under a BSD license.
+- Ogg Vorbis files (`.ogg`) are small, and use an open format that most players, browsers, and VLC open, including some that do not play Opus. textweaver encodes them with libvorbis, built in, at quality 3 (the usual default of the `oggenc` tool), keeping the voice's own sample rate and channels. libvorbis and libogg are free software under a BSD license.
 
 ### M4B needs ffmpeg
 
@@ -120,6 +121,7 @@ The output format comes from the file name you give with `--out`:
 - `.flac`: a FLAC file. Always works; textweaver writes it itself.
 - `.mp3`: an MP3 file. Always works; textweaver encodes it itself with the LAME encoder, at variable bit rate, quality 5.
 - `.opus`: an Ogg Opus file. Always works; textweaver encodes it itself with libopus, in one channel at 32 kilobits per second, at 48 kHz (the voice's audio is converted to that rate).
+- `.ogg`: an Ogg Vorbis file. Always works; textweaver encodes it itself with libvorbis, at quality 3, at the voice's own sample rate.
 - `.m4b`: an M4B audiobook (AAC audio at 64 kilobits per second). Needs ffmpeg.
 
 Capital letters in the extension are fine, so `.MP3` works too. Any other extension is refused before anything is read.
@@ -163,7 +165,7 @@ The M4B file also carries:
 - The genre "Audiobook".
 - One chapter for each heading, with the heading as its name.
 
-While ffmpeg works, and while a FLAC, MP3, or Opus file is encoded, textweaver keeps the full WAV (and, for ffmpeg, a small metadata file) in a hidden folder next to the output, whose name starts with `.textweaver-export-`. The folder is removed when the export finishes. You need enough free disk space for the full WAV, which is much larger than the finished M4B.
+While ffmpeg works, and while a FLAC, MP3, Opus, or Ogg Vorbis file is encoded, textweaver keeps the full WAV (and, for ffmpeg, a small metadata file) in a hidden folder next to the output, whose name starts with `.textweaver-export-`. The folder is removed when the export finishes. You need enough free disk space for the full WAV, which is much larger than the finished M4B.
 
 ### How chapters are chosen
 
@@ -176,7 +178,7 @@ While ffmpeg works, and while a FLAC, MP3, or Opus file is encoded, textweaver k
 
 There is no option yet to choose which heading levels make chapters.
 
-### Chapters in FLAC, MP3, Opus, and WAV files
+### Chapters in FLAC, MP3, Opus, Ogg Vorbis, and WAV files
 
 ```bash
 tw export-audio "Chapter 3.docx" --out "Chapter 3.flac"
@@ -185,7 +187,7 @@ tw export-audio "Chapter 3.docx" --out "Chapter 3.flac"
 Every format carries the same title, author, and chapters as the M4B, each in its own kind of tag:
 
 - FLAC files: as Vorbis comments. The title is `TITLE` and `ALBUM`, the author is `ARTIST`, and each chapter is a pair, such as `CHAPTER001=00:01:30.250` for its start and `CHAPTER001NAME=Light` for its name. Audiobook players that read FLAC chapters show them.
-- Opus files: as the same Vorbis comments as FLAC, in the file's comment header.
+- Opus and Ogg Vorbis files: as the same Vorbis comments as FLAC, in the file's comment header.
 - MP3 files: as ID3 chapter tags (CHAP and CTOC), with the title, artist, album, and genre.
 - WAV files: as ID3 chapter tags too, in an extra part of the file that players without ID3 support skip.
 
@@ -460,8 +462,8 @@ tw export-audio reading.md --out reading.wav --home "E:\textweaver"
 
 Every problem is reported as one sentence starting with "Error:". These are the messages you may hear, and what to do.
 
-- "Error: writing M4B needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, .opus, or .wav". This is said before anything is read aloud. ffmpeg is not installed, or textweaver cannot find it. Install it as described in [Before you start](#before-you-start). If you just installed it, open a new terminal window. If `TEXTWEAVER_FFMPEG` is set, check that it is the full path to the program, including `ffmpeg.exe` on Windows, or remove the variable. Or export to `.flac`, `.mp3`, `.opus`, or `.wav`, which need nothing.
-- "Error: cannot write notes.ogg: use a .wav, .flac, .mp3, .opus, or .m4b file name". Only WAV, FLAC, MP3, Opus, and M4B can be written. For a small file of speech, use `.opus`; Ogg Vorbis (`.ogg`) is not written.
+- "Error: writing M4B needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, .opus, .ogg, or .wav". This is said before anything is read aloud. ffmpeg is not installed, or textweaver cannot find it. Install it as described in [Before you start](#before-you-start). If you just installed it, open a new terminal window. If `TEXTWEAVER_FFMPEG` is set, check that it is the full path to the program, including `ffmpeg.exe` on Windows, or remove the variable. Or export to `.flac`, `.mp3`, `.opus`, `.ogg`, or `.wav`, which need nothing.
+- "Error: cannot write notes.aac: use a .wav, .flac, .mp3, .opus, .ogg, or .m4b file name". Only WAV, FLAC, MP3, Opus, Ogg Vorbis, and M4B can be written. For a small file of speech, use `.opus` or `.ogg`.
 - "Error: The voice failed on sentence 1: engine error: the voice could not be used:" followed by the reason. The voice you chose could not be loaded, so nothing was written with another voice by mistake. Run `tw voices --backend sapi` and choose a voice from the list.
 - "Error: Cannot write subtitles to notes.txt: use a .srt, .vtt, or .ass file name." Give the subtitle file a `.srt`, `.vtt`, or `.ass` extension.
 - "Error: no installed voice can write audio files; install espeak-ng, or choose one with --backend". textweaver found no engine that can write files. Run `tw backends` and look for "audio files". On Windows, the SAPI5 voices usually can. On Linux, install eSpeak NG; see [the speech guide](speech.md).
@@ -475,7 +477,7 @@ Every problem is reported as one sentence starting with "Error:". These are the 
 
 Other problems:
 
-- The chapters are missing in your player. Many simple players ignore the chapters in FLAC, MP3, Opus, and WAV files. Export to `.m4b` and use an audiobook player.
+- The chapters are missing in your player. Many simple players ignore the chapters in FLAC, MP3, Opus, Ogg Vorbis, and WAV files. Export to `.m4b` and use an audiobook player.
 - The captions are a little behind the voice at the start of a heading. That is the spoken announcement, such as "heading level 1", which has no caption. Set `[speech] verbosity` to `low` if you do not want headings announced in the audio.
 - Word cues do not match the words exactly. Your engine does not report word times, so they are estimated. See [Which engines time each word exactly](#which-engines-time-each-word-exactly).
 - The voice is not the one you use in the reader. Your `[speech] voice` is used only with the engine in `[speech] backend`. Name the voice with `--voice`.
