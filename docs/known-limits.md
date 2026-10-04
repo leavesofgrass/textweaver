@@ -34,7 +34,6 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 ## Output
 
-- **Ogg Vorbis** audio is not written. FLAC, WAV, MP3, and Opus are; M4B needs ffmpeg.
 - **Video with captions** (karaoke-style) is not offered.
 - **A cover image for audiobooks** is not added.
 

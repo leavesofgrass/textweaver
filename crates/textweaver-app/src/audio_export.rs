@@ -4,7 +4,8 @@
 //!
 //! 1. **The format**: FLAC first (lossless, half WAV's size), then MP3
 //!    (small, plays everywhere), then Opus (the smallest, for speech), then
-//!    WAV, all written in process; M4B
+//!    Ogg Vorbis (small, open, plays in most players), then WAV, all written
+//!    in process; M4B
 //!    only when ffmpeg is found, and the first question says in words
 //!    when it is not (and names MP3 or Opus too in a build without the
 //!    `mp3` or `opus` feature of `textweaver-export`). Last comes the
@@ -224,10 +225,11 @@ mod run {
     }
 
     /// Every format, in the order offered.
-    pub(crate) const ALL: [AudioFormat; 5] = [
+    pub(crate) const ALL: [AudioFormat; 6] = [
         AudioFormat::Flac,
         AudioFormat::Mp3,
         AudioFormat::Opus,
+        AudioFormat::Ogg,
         AudioFormat::Wav,
         AudioFormat::M4b,
     ];
@@ -252,6 +254,7 @@ mod run {
             AudioFormat::Mp3 => "mp3",
             AudioFormat::M4b => "m4b",
             AudioFormat::Opus => "opus",
+            AudioFormat::Ogg => "ogg",
         }
     }
 
@@ -334,6 +337,7 @@ mod run {
                 AudioFormat::Mp3 => "audio-format-mp3",
                 AudioFormat::M4b => "audio-format-m4b",
                 AudioFormat::Opus => "audio-format-opus",
+                AudioFormat::Ogg => "audio-format-ogg",
             })
         }
 
@@ -868,7 +872,7 @@ mod run {
             if opus {
                 here.push(AudioFormat::Opus);
             }
-            here.push(AudioFormat::Wav);
+            here.extend([AudioFormat::Ogg, AudioFormat::Wav]);
             assert_eq!(formats(false), here);
             assert_eq!(formats(true), ALL);
             let mut missing = Vec::new();
@@ -886,10 +890,10 @@ mod run {
             let effects = app.dispatch(Command::Action(ActionId::ExportAudio));
             // FLAC first; no ffmpeg, said in words (then the first item).
             let intro = if cfg!(feature = "opus") {
-                "Export essay as audio: choose a format, 5 choices. \
+                "Export essay as audio: choose a format, 6 choices. \
                  M4B needs ffmpeg, which was not found."
             } else {
-                "Export essay as audio: choose a format, 4 choices. \
+                "Export essay as audio: choose a format, 5 choices. \
                  Opus, M4B need ffmpeg, which was not found."
             };
             assert!(

@@ -3911,6 +3911,7 @@ audio-format-flac = FLAC: دون فقد، نحو نصف حجم WAV
 audio-format-wav = WAV: الأكبر حجمًا، يعمل في كل مكان
 audio-format-mp3 = MP3: صغير، يعمل في كل مكان
 audio-format-opus = Opus: الأصغر حجمًا، مصمم للكلام
+audio-format-ogg = Ogg Vorbis: صغير ومفتوح، يعمل في معظم المشغلات
 audio-format-m4b = كتاب صوتي M4B، عبر ffmpeg
 audio-format-html = صفحة القراءة: النص والصوت في ملف واحد
 audio-where-title = مكان حفظ الصوت

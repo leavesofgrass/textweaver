@@ -28,7 +28,7 @@ use textweaver_export::{
 pub struct Args {
     /// Document to read aloud.
     pub file: PathBuf,
-    /// Output file (.wav, .flac, .mp3, .opus, .m4b), or .html for a
+    /// Output file (.wav, .flac, .mp3, .opus, .ogg, .m4b), or .html for a
     /// read-along page: the text with the MP3 inside, the spoken word
     /// marked as it plays.
     #[arg(long = "out", short = 'o', alias = "output")]
@@ -199,14 +199,14 @@ pub fn export_audio(
     } else {
         AudioFormat::from_path(&args.out).with_context(|| {
             format!(
-                "cannot write {}: use a .wav, .flac, .mp3, .opus, or .m4b file name, or .html for a read-along page",
+                "cannot write {}: use a .wav, .flac, .mp3, .opus, .ogg, or .m4b file name, or .html for a read-along page",
                 args.out.display()
             )
         })?
     };
     if format.needs_ffmpeg() && ffmpeg_path.is_none() {
         bail!(
-            "writing {} needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, .opus, or .wav",
+            "writing {} needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, .opus, .ogg, or .wav",
             format.name()
         );
     }
@@ -579,11 +579,11 @@ mod tests {
         let mut a = args(dir.path(), "doc.m4b");
         let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
         assert!(e.to_string().contains("needs ffmpeg"), "{e}");
-        a.out = dir.path().join("doc.ogg");
+        a.out = dir.path().join("doc.aac");
         let e = export_audio(&a, &Settings::default(), &reg, None, &mut |_| {}).unwrap_err();
         assert!(
             e.to_string()
-                .contains("use a .wav, .flac, .mp3, .opus, or .m4b"),
+                .contains("use a .wav, .flac, .mp3, .opus, .ogg, or .m4b"),
             "{e}"
         );
         a.out = dir.path().join("doc.wav");
@@ -732,6 +732,34 @@ mod tests {
         assert_eq!(&bytes[..4], b"OggS");
         assert_eq!(&bytes[28..36], b"OpusHead");
         assert!(summary(&r).starts_with("Wrote "), "{}", summary(&r));
+    }
+
+    /// `tw export-audio --out x.ogg` with no ffmpeg: an Ogg stream whose
+    /// first packet is the Vorbis identification header.
+    #[test]
+    fn ogg_vorbis_needs_no_ffmpeg() {
+        let dir = Scratch::new("ogg");
+        let sample =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/sample.md");
+        let a = Args {
+            file: sample,
+            out: dir.path().join("sample.ogg"),
+            subtitles: None,
+            ..args(dir.path(), "unused.wav")
+        };
+        let r = export_audio(
+            &a,
+            &Settings::default(),
+            &BackendRegistry::test_doubles(),
+            None,
+            &mut |_| {},
+        )
+        .unwrap();
+        assert_eq!(r.export.format, AudioFormat::Ogg);
+        assert!(r.export.ffmpeg.is_none());
+        let bytes = std::fs::read(&a.out).unwrap();
+        assert_eq!(&bytes[..4], b"OggS");
+        assert_eq!(&bytes[28..35], b"\x01vorbis");
     }
 
     #[test]

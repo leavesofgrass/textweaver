@@ -1,5 +1,5 @@
 //! Reading the joined WAV back in blocks, for the in-process encoders
-//! (FLAC, MP3).
+//! (FLAC, MP3, Opus, Ogg Vorbis).
 //!
 //! Engines write 8, 16, 24 and 32-bit PCM and 32 and 64-bit float; each
 //! sample is read as an integer of at most 24 bits

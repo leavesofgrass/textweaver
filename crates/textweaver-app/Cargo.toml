@@ -11,8 +11,8 @@ publish.workspace = true
 
 [features]
 default = ["publish", "lint", "grammar", "dictation", "audio-export", "opus"]
-# Export audio from the reader (Agent W6v, ADR-0011): FLAC, MP3 and WAV
-# in process, M4B through ffmpeg when it is found. Off, the Export audio
+# Export audio from the reader (Agent W6v, ADR-0011): FLAC, MP3, Ogg Vorbis
+# (W9x-o) and WAV in process, M4B through ffmpeg when it is found. Off, the Export audio
 # command stays hidden.
 audio-export = [
     "dep:textweaver-export",
@@ -20,6 +20,7 @@ audio-export = [
     "textweaver-export/id3",
     "textweaver-export/mp3",
     "textweaver-export/read-along",
+    "textweaver-export/vorbis",
 ]
 # Opus in process in Export audio, with libopus (W7o; building it needs
 # cmake). Off, Opus goes through ffmpeg like M4B.

@@ -33,11 +33,14 @@ pub enum AudioFormat {
     /// Ogg Opus, written in process (the `opus` feature; through ffmpeg
     /// without it).
     Opus,
+    /// Ogg Vorbis, written in process (the `vorbis` feature; through
+    /// ffmpeg without it).
+    Ogg,
 }
 
 impl AudioFormat {
     /// The format for a file name's extension (`wav`, `flac`, `mp3`,
-    /// `opus`, `m4b`; any case).
+    /// `opus`, `ogg`, `m4b`; any case).
     pub fn from_path(path: &Path) -> Option<Self> {
         let ext = path.extension()?.to_str()?.to_ascii_lowercase();
         match ext.as_str() {
@@ -46,11 +49,13 @@ impl AudioFormat {
             "mp3" => Some(AudioFormat::Mp3),
             "m4b" => Some(AudioFormat::M4b),
             "opus" => Some(AudioFormat::Opus),
+            "ogg" => Some(AudioFormat::Ogg),
             _ => None,
         }
     }
 
-    /// The name users see ("WAV", "FLAC", "MP3", "Opus", "M4B").
+    /// The name users see ("WAV", "FLAC", "MP3", "Opus", "Ogg Vorbis",
+    /// "M4B").
     pub fn name(self) -> &'static str {
         match self {
             AudioFormat::Wav => "WAV",
@@ -58,12 +63,13 @@ impl AudioFormat {
             AudioFormat::Mp3 => "MP3",
             AudioFormat::M4b => "M4B",
             AudioFormat::Opus => "Opus",
+            AudioFormat::Ogg => "Ogg Vorbis",
         }
     }
 
     /// Whether writing this format needs ffmpeg in this build: M4B always;
-    /// FLAC, MP3 and Opus only when built without the `flac`, `mp3` or
-    /// `opus` feature.
+    /// FLAC, MP3, Opus and Ogg Vorbis only when built without the `flac`,
+    /// `mp3`, `opus` or `vorbis` feature.
     pub fn needs_ffmpeg(self) -> bool {
         match self {
             AudioFormat::Wav => false,
@@ -71,6 +77,7 @@ impl AudioFormat {
             AudioFormat::Mp3 => !cfg!(feature = "mp3"),
             AudioFormat::M4b => true,
             AudioFormat::Opus => !cfg!(feature = "opus"),
+            AudioFormat::Ogg => !cfg!(feature = "vorbis"),
         }
     }
 }
@@ -142,6 +149,8 @@ pub fn args(wav: &Path, metadata: &Path, out: &Path, format: AudioFormat) -> Vec
             "-frame_duration",
             "20",
         ],
+        // The in-process encoder's quality (`oggenc -q 3`).
+        AudioFormat::Ogg => &["-codec:a", "libvorbis", "-qscale:a", "3"],
         AudioFormat::Wav => &[],
     };
     a.extend(codec.iter().map(OsString::from));
@@ -246,7 +255,12 @@ mod tests {
             Some(AudioFormat::Opus)
         );
         assert_eq!(AudioFormat::Opus.needs_ffmpeg(), !cfg!(feature = "opus"));
-        assert_eq!(AudioFormat::from_path(Path::new("d.ogg")), None);
+        assert_eq!(
+            AudioFormat::from_path(Path::new("d.Ogg")),
+            Some(AudioFormat::Ogg)
+        );
+        assert_eq!(AudioFormat::Ogg.needs_ffmpeg(), !cfg!(feature = "vorbis"));
+        assert_eq!(AudioFormat::from_path(Path::new("g.oga")), None);
         assert_eq!(AudioFormat::from_path(Path::new("noext")), None);
     }
 
