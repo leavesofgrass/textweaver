@@ -51,11 +51,17 @@ fn window(app: &App, size: (u32, u32), scale: f64) -> TestHarness<Root> {
 }
 
 /// Every kind of dialog, by name, with the widget that takes the focus.
-const KINDS: [&str; 7] = [
-    "list", "prompt", "palette", "question", "settings", "colors", "voices",
+const KINDS: [&str; 8] = [
+    "list", "prompt", "palette", "question", "settings", "colors", "reading", "voices",
 ];
 
 fn build(kind: &str, app: &App) -> (NewWidget<dyn Widget>, WidgetId) {
+    build_for(kind, app, 780)
+}
+
+/// [`build`] for a window `height` logical pixels high (the voice manager
+/// is compact in a short one).
+fn build_for(kind: &str, app: &App, height: u32) -> (NewWidget<dyn Widget>, WidgetId) {
     let p = Palette::galaxy();
     let c = app.catalog();
     let items: Vec<String> = (1..=30).map(|i| format!("Bookmark {i}")).collect();
@@ -75,18 +81,20 @@ fn build(kind: &str, app: &App) -> (NewWidget<dyn Widget>, WidgetId) {
             let q = gui::question_dialog(&p, &c, "Remove the voice? y or n", None);
             (q.modal, q.focus)
         }
-        "settings" | "colors" => {
+        "settings" | "colors" | "reading" => {
             let schema = app.settings_schema();
-            let form = if kind == "colors" {
-                SettingsForm::colors(schema)
-            } else {
-                SettingsForm::for_window(app)
+            let form = match kind {
+                "colors" => SettingsForm::colors(schema),
+                "reading" => SettingsForm::reading(schema),
+                _ => SettingsForm::for_window(app),
             };
             let d = gui::settings_dialog(&p, &form, app, 0, 0);
             (d.modal, d.form)
         }
         "voices" => {
-            let d = textweaver_xilem::voices::voice_dialog(&p, app, "Voices", items, 0);
+            use textweaver_xilem::voices;
+            let short = f64::from(height) < voices::SHORT_HEIGHT;
+            let d = voices::voice_dialog_fit(&p, app, "Voices", items, 0, short);
             (d.modal, d.list)
         }
         _ => unreachable!("{kind}"),
@@ -165,6 +173,31 @@ fn every_dialog_has_a_close_escape_closes_and_focus_returns() {
     }
 }
 
+/// View, Reading settings: the reading settings in one form, the rate
+/// first, then Voices, the two spacing presets, and Close.
+#[test]
+fn the_reading_form_lists_the_reading_settings_and_its_buttons() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let form = SettingsForm::reading(app.settings_schema());
+    assert!(form.is_reading());
+    let rows = form.rows(0, &app);
+    assert_eq!(rows.len(), textweaver_app::READING_SETTINGS.len());
+    assert_eq!(rows[0].label, "Rate");
+    let mut h = window(&app, (1100, 780), 1.0);
+    let (modal, focus) = build("reading", &app);
+    let mut back = None;
+    gui::open_dialog_in(&mut h, modal, focus, &mut back);
+    let _ = h.redraw();
+    let mut buttons = dialog_buttons(&h);
+    buttons.sort();
+    assert_eq!(
+        buttons,
+        ["Close", "Generous spacing", "Voices", "WCAG spacing"],
+        "{buttons:?}"
+    );
+}
+
 /// The dialog half of the bounds test (W9b-n's
 /// `no_control_leaves_the_window_at_any_review_size`): at the smallest
 /// window and a 1366 by 768 laptop at 200 percent, every button of every
@@ -175,14 +208,8 @@ fn no_dialog_control_leaves_a_small_window() {
     let app = app(dir.path());
     for (size, scale) in [((420, 320), 1.0), ((683, 384), 2.0)] {
         for kind in KINDS {
-            // The voice manager's eight buttons and list do not fit 320
-            // pixels high yet; it is checked at the laptop size only (a
-            // known gap, in the report).
-            if kind == "voices" && size.1 < 384 {
-                continue;
-            }
             let mut h = window(&app, size, scale);
-            let (modal, focus) = build(kind, &app);
+            let (modal, focus) = build_for(kind, &app, size.1);
             let mut back = None;
             gui::open_dialog_in(&mut h, modal, focus, &mut back);
             let _ = h.redraw();

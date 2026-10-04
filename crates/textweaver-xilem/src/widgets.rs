@@ -602,6 +602,14 @@ impl ActionButton {
         }
     }
 
+    /// Shows or hides the key on screen, before the button is in the tree
+    /// (a compact dialog hides it). The key property, which screen readers
+    /// say, stays.
+    pub fn with_show_key(mut self, show: bool) -> Self {
+        self.show_key = show;
+        self
+    }
+
     /// True while the key is drawn (it has one and it is not hidden).
     pub fn key_drawn(&self) -> bool {
         self.show_key && !self.shortcut.is_empty()

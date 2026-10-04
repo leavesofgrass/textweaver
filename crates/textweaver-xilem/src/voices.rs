@@ -19,6 +19,7 @@
 
 use masonry::core::{NewWidget, Widget, WidgetId, WidgetTag};
 use masonry::layout::Length;
+use masonry::properties::Padding;
 use masonry::properties::types::CrossAxisAlignment;
 use masonry::widgets::Flex;
 use textweaver_app::App;
@@ -109,6 +110,10 @@ fn plain_key(key: Key) -> String {
     KeyChord::new(key, Modifiers::empty()).to_string()
 }
 
+/// Below this window height, in logical pixels, the voice manager is
+/// compact ([`voice_dialog_fit()`]).
+pub const SHORT_HEIGHT: f64 = 480.0;
+
 /// The voice manager for the app's voice list: its `title` and `items`
 /// (the voices, as the app labels them), focused on `selected`.
 pub fn voice_dialog(
@@ -117,6 +122,23 @@ pub fn voice_dialog(
     title: &str,
     items: Vec<String>,
     selected: usize,
+) -> VoiceDialog {
+    voice_dialog_fit(p, app, title, items, selected, false)
+}
+
+/// [`voice_dialog()`], compact when `short` (a window under
+/// [`SHORT_HEIGHT`], down to 420 by 320): the drawn title and hint are
+/// left out (the dialog's name and the buttons' descriptions still say
+/// them), the buttons hide their keys on screen and take less padding, and
+/// the buttons under the list share one wrapping row, so the list keeps
+/// room for a few voices. The order of the controls is the same.
+pub fn voice_dialog_fit(
+    p: &Palette,
+    app: &App,
+    title: &str,
+    items: Vec<String>,
+    selected: usize,
+    short: bool,
 ) -> VoiceDialog {
     let c = app.catalog();
     let controls = app.voice_controls().unwrap_or_else(|| VoiceControls {
@@ -131,12 +153,22 @@ pub fn voice_dialog(
         fetch: None,
     });
     let mut buttons = Vec::new();
+    // Compact: less padding, still well over 24 by 24 (WCAG 2.5.8), as
+    // the window's folded bars.
+    let compact = |w: NewWidget<ActionButton>| {
+        if short {
+            w.with_props(Padding::from_vh(Length::px(5.0), Length::px(12.0)))
+        } else {
+            w
+        }
+    };
     let mut make = |text: String, shortcut: String, help: &str, which: VoiceButton| {
-        let w = NewWidget::new(
+        let w = compact(NewWidget::new(
             ActionButton::new(text)
                 .with_shortcut(shortcut)
-                .with_description(c.tr(help)),
-        );
+                .with_description(c.tr(help))
+                .with_show_key(!short),
+        ));
         buttons.push((w.id(), which));
         w
     };
@@ -187,13 +219,16 @@ pub fn voice_dialog(
         VoiceButton::Close,
     );
     // Remove says when it is unavailable, and why (W8a).
-    let remove = NewWidget::new(
-        ActionButton::new(c.tr("gui-voices-remove"))
-            .with_shortcut(plain_key(Key::Delete))
-            .with_description(c.tr("gui-voices-remove-help"))
-            .with_unavailable(remove_unavailable(app, selected)),
-    )
-    .with_tag(VOICE_REMOVE);
+    let remove = compact(
+        NewWidget::new(
+            ActionButton::new(c.tr("gui-voices-remove"))
+                .with_shortcut(plain_key(Key::Delete))
+                .with_description(c.tr("gui-voices-remove-help"))
+                .with_unavailable(remove_unavailable(app, selected))
+                .with_show_key(!short),
+        )
+        .with_tag(VOICE_REMOVE),
+    );
     buttons.push((remove.id(), VoiceButton::Remove));
     let list = NewWidget::new(
         ChoiceList::new(c.tr("gui-voices-list"), items, p.clone())
@@ -202,34 +237,45 @@ pub fn voice_dialog(
     )
     .with_tag(LIST);
     let list_id = list.id();
-    let gap = Length::px(10.0);
+    let gap = Length::px(if short { 6.0 } else { 10.0 });
     // The rows wrap in a narrow window (W9b-d), as the window's bars do.
     let filters = crate::bars::Flow::new(vec![language, engine]);
-    let actions = crate::bars::Flow::new(vec![use_voice, preview, favorite, remove]);
+    let mut actions = vec![use_voice, preview, favorite, remove];
     let mut last = Vec::new();
     if let Some(fetch) = fetch {
         last.push(fetch);
     }
     last.push(close);
-    let footer = crate::bars::Flow::new(last);
-    let card = Flex::column()
-        .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .with_fixed(NewWidget::new(
-            label(title, 20.0, true).accessibility_hidden(true),
-        ))
-        .with_fixed_spacer(Length::px(12.0))
+    let mut card = Flex::column().cross_axis_alignment(CrossAxisAlignment::Stretch);
+    if !short {
+        card = card
+            .with_fixed(NewWidget::new(
+                label(title, dialog::TITLE_SIZE, true).accessibility_hidden(true),
+            ))
+            .with_fixed_spacer(Length::px(12.0));
+    }
+    card = card
         .with_fixed(NewWidget::new(filters))
         .with_fixed_spacer(gap)
         .with(list, 1.0)
-        .with_fixed_spacer(gap)
-        .with_fixed(NewWidget::new(actions))
-        .with_fixed_spacer(gap)
-        .with_fixed(NewWidget::new(footer))
-        .with_fixed_spacer(gap)
-        .with_fixed(NewWidget::new(
-            label(&c.tr("gui-voices-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
-        ));
-    let card = NewWidget::new(card).with_props(dialog::card_props(p));
+        .with_fixed_spacer(gap);
+    if short {
+        actions.extend(last);
+        card = card.with_fixed(NewWidget::new(crate::bars::Flow::new(actions)));
+    } else {
+        card = card
+            .with_fixed(NewWidget::new(crate::bars::Flow::new(actions)))
+            .with_fixed_spacer(gap)
+            .with_fixed(NewWidget::new(crate::bars::Flow::new(last)))
+            .with_fixed_spacer(gap)
+            .with_fixed(NewWidget::new(
+                label(&c.tr("gui-voices-hint"), theme::UI_TEXT, false).accessibility_hidden(true),
+            ));
+    }
+    let mut card = NewWidget::new(card).with_props(dialog::card_props(p));
+    if short {
+        card = card.with_props(Padding::all(Length::px(12.0)));
+    }
     // Keys pressed on a button (the Help and Say Status keys) reach the
     // app as they do from the list.
     let modal = NewWidget::new(
