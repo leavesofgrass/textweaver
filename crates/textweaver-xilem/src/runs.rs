@@ -52,10 +52,39 @@ pub struct Paragraph {
     pub has_break: bool,
     /// Heading level (1 to 6), when the paragraph is a heading.
     pub heading: Option<u8>,
+    /// Its list item, when the paragraph starts one: drawn only (a bullet
+    /// or number in the hanging indent); its text and runs do not change.
+    pub list: Option<ListMark>,
     /// Where its visual lines start, as char offsets into `text` (sorted,
     /// without 0), when the paragraph has been laid out. `None`: not laid
     /// out; the paragraph is then one line for accessibility.
     pub line_starts: Option<Vec<usize>>,
+}
+
+/// A list item's mark, from the document's `ListItem` marker: its depth
+/// and, for an ordered item, its number.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ListMark {
+    /// The nesting depth, from 1.
+    pub level: u8,
+    /// The ordered item's label ("2."); `None` draws a bullet.
+    pub label: Option<String>,
+}
+
+impl ListMark {
+    /// What is drawn before the item: its number, or a bullet by depth (a
+    /// disc, a circle, then a square, as browsers draw them), so the
+    /// nesting shows by shape as well as by indent.
+    pub fn glyph(&self) -> &str {
+        match &self.label {
+            Some(l) => l.as_str(),
+            None => match self.level.max(1) % 3 {
+                1 => "\u{2022}",
+                2 => "\u{25E6}",
+                _ => "\u{25AA}",
+            },
+        }
+    }
 }
 
 impl Paragraph {
@@ -584,6 +613,7 @@ pub fn paragraphs(start: CharPos, text: &str) -> Vec<Paragraph> {
                     text: t.to_owned(),
                     has_break: true,
                     heading: None,
+                    list: None,
                     line_starts: None,
                 });
                 pos += n + 1;
@@ -596,6 +626,7 @@ pub fn paragraphs(start: CharPos, text: &str) -> Vec<Paragraph> {
                         text: rest.to_owned(),
                         has_break: false,
                         heading: None,
+                        list: None,
                         line_starts: None,
                     });
                 }

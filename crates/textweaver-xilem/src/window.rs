@@ -102,6 +102,28 @@ pub fn window_paragraphs(doc: &Document, window: CharRange) -> Vec<Paragraph> {
             }
         }
     }
+    // List items: the item starting in each paragraph (the deepest, when a
+    // nested one starts there too), with its depth and number.
+    let mut items = index
+        .starting_in(window)
+        .iter()
+        .filter(|m| m.kind == MarkerKind::ListItem)
+        .peekable();
+    for p in &mut paras {
+        let end = (p.start.0 + p.span_chars()).max(p.start.0 + 1);
+        while items.peek().is_some_and(|m| m.range.start.0 < p.start.0) {
+            items.next();
+        }
+        while let Some(m) = items.next_if(|m| m.range.start.0 < end) {
+            let level = m.level.max(1);
+            if p.list.as_ref().is_none_or(|l| level > l.level) {
+                p.list = Some(runs::ListMark {
+                    level,
+                    label: m.label.clone(),
+                });
+            }
+        }
+    }
     paras
 }
 
@@ -160,5 +182,28 @@ mod tests {
         assert_eq!(spans.len(), 2);
         assert_eq!(spans[0].range, CharRange::new(3, 5));
         assert_eq!(spans[1].range, CharRange::new(17, 19));
+    }
+
+    #[test]
+    fn paragraphs_know_their_list_items() {
+        use textweaver_app::text::{DocumentMeta, Marker};
+        // "Intro", a bullet item with a nested numbered item, then text.
+        let text = "Intro\nApples\nGreen ones\nDone.";
+        let markers = vec![
+            Marker::new(MarkerKind::ListItem, CharRange::new(6, 23)).with_level(1),
+            Marker::new(MarkerKind::ListItem, CharRange::new(13, 23))
+                .with_level(2)
+                .with_label("2."),
+        ];
+        let doc = Document::new(DocumentMeta::default(), text.into(), markers);
+        let paras = window_paragraphs(&doc, doc.full_range());
+        let marks: Vec<Option<(u8, &str)>> = paras
+            .iter()
+            .map(|p| p.list.as_ref().map(|l| (l.level, l.glyph())))
+            .collect();
+        assert_eq!(
+            marks,
+            vec![None, Some((1, "\u{2022}")), Some((2, "2.")), None]
+        );
     }
 }

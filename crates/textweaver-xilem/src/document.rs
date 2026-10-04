@@ -39,7 +39,7 @@ use masonry::core::{
 };
 use masonry::dpi::{LogicalPosition, PhysicalPosition};
 use masonry::imaging::Painter;
-use masonry::kurbo::{Affine, Axis, Point, Rect, RoundedRect, Size, Stroke, Vec2};
+use masonry::kurbo::{Affine, Axis, BezPath, Point, Rect, RoundedRect, Size, Stroke, Vec2};
 use masonry::layout::{LenReq, Length};
 use masonry::parley::style::{FontFamily, FontStyle, FontWeight, LineHeight};
 use masonry::parley::{Affinity, Cursor, FontContext, Layout, LayoutContext, Selection};
@@ -241,6 +241,18 @@ pub enum PaintStep {
     WordBand(Rect),
     /// A paragraph's text.
     Text(usize),
+    /// A list item's bullet or number at this depth (from 1), in the
+    /// hanging indent left of its text: the box it is drawn in.
+    ListMarker(u8, Rect),
+    /// The empty window's hint (no document is open), drawn in the
+    /// document's place: the box it is drawn in.
+    Hint(Rect),
+    /// The edit-mode badge, the word "Editing" in a box in the top right
+    /// corner: the box.
+    Badge(Rect),
+    /// The "reading from here" mark: a play-shaped triangle in the left
+    /// margin on the caret's line while not reading, where Play starts.
+    ReadingFrom(Rect),
     /// The spoken word's text again in its own color, inside `clip`, with
     /// its attribute. Bold is drawn by thickening the glyphs' outlines in
     /// place, so the line never reflows.
@@ -388,7 +400,20 @@ struct ParaLayout {
     bytes: CharBytes,
     /// Each visual line's chars, as offsets into the paragraph's text.
     lines: Vec<(usize, usize)>,
+    /// How far the text starts right of the column (a list item's hanging
+    /// indent); 0 for other paragraphs. The layout's own coordinates start
+    /// there, so hit testing, the caret and the bands add it back.
+    indent: f64,
+    /// A list item's bullet or number, laid out once, and its origin
+    /// relative to the text's (left of it, on the first line's baseline).
+    marker: Option<(Layout<BrushIndex>, Vec2)>,
 }
+
+/// The hanging indent of one list level, in multiples of the font size.
+const LIST_INDENT_EM: f64 = 1.75;
+/// The space between a list item's marker and its text, in multiples of the
+/// font size.
+const LIST_GAP_EM: f64 = 0.4;
 
 /// The syllable separators of a paragraph: the separator laid out once in
 /// the paragraph's font, and where it goes. The char before each break is
@@ -494,6 +519,16 @@ pub struct DocumentView {
     seen_full: u64,
     /// Nodes sent in the last pass, when measuring.
     pub last_nodes_sent: usize,
+
+    /// What the view draws when no document is open; also the node's
+    /// description then, so the screen reader has what is drawn.
+    empty_hint: String,
+    /// The hint laid out, while no document is open.
+    hint_layout: Option<Layout<BrushIndex>>,
+    /// The word drawn in the corner in edit mode ("Editing").
+    editing_word: String,
+    /// The word laid out, in edit mode.
+    badge_layout: Option<Layout<BrushIndex>>,
 }
 
 impl std::fmt::Debug for DocumentView {
@@ -559,7 +594,57 @@ impl DocumentView {
             full_passes,
             seen_full: u64::MAX,
             last_nodes_sent: 0,
+            empty_hint: String::new(),
+            hint_layout: None,
+            editing_word: String::new(),
+            badge_layout: None,
         }
+    }
+
+    /// What the view draws, and its node describes, when no document is
+    /// open ("No document is open. Press Ctrl+O to open one."), in the
+    /// interface language.
+    pub fn with_empty_hint(mut self, hint: impl Into<String>) -> Self {
+        self.empty_hint = hint.into();
+        self
+    }
+
+    /// A new empty-window hint (the interface language or the key changed).
+    pub fn set_empty_hint(this: &mut WidgetMut<'_, Self>, hint: impl Into<String>) {
+        let hint = hint.into();
+        if this.widget.empty_hint != hint {
+            this.widget.empty_hint = hint;
+            this.ctx.request_layout();
+            this.ctx.request_accessibility_update();
+        }
+    }
+
+    /// The word drawn in the corner in edit mode ("Editing"), in the
+    /// interface language.
+    pub fn with_editing_word(mut self, word: impl Into<String>) -> Self {
+        self.editing_word = word.into();
+        self
+    }
+
+    /// A new edit-mode word (the interface language changed).
+    pub fn set_editing_word(this: &mut WidgetMut<'_, Self>, word: impl Into<String>) {
+        let word = word.into();
+        if this.widget.editing_word != word {
+            this.widget.editing_word = word;
+            this.ctx.request_layout();
+        }
+    }
+
+    /// The empty-window hint, when it was drawn in the last paint (no
+    /// document is open).
+    pub fn hint_shown(&self) -> Option<&str> {
+        (self.hint_layout.is_some() && self.model.paragraphs.is_empty())
+            .then_some(self.empty_hint.as_str())
+    }
+
+    /// The edit-mode badge's word, when the view draws it (edit mode).
+    pub fn badge_shown(&self) -> Option<&str> {
+        (self.editing && self.badge_layout.is_some()).then_some(self.editing_word.as_str())
     }
 
     /// Selects the spoken word while reading, instead of placing a caret on
@@ -898,6 +983,8 @@ impl DocumentView {
             this.widget.editing = on;
             this.widget.state.anchor = None;
             this.ctx.request_accessibility_update();
+            // The badge is laid out in the next layout pass.
+            this.ctx.request_layout();
             this.ctx.request_render();
         }
     }
@@ -1123,6 +1210,27 @@ impl DocumentView {
                 placed: Vec::new(),
             }
         });
+        // A list item: its hanging indent by depth, and its bullet or
+        // number in the body font, laid out once (drawn only).
+        let em = f64::from(size);
+        let indent = p.list.as_ref().map_or(0.0, |l| {
+            (f64::from(l.level.max(1)) * em * LIST_INDENT_EM).min(self.column / 2.0)
+        });
+        let marker = p.list.as_ref().map(|l| {
+            let glyph = l.glyph();
+            let mut mb = lcx.ranged_builder(fcx, glyph, 1.0, true);
+            mb.push_default(StyleProperty::FontFamily(FontFamily::Source(
+                self.font.family.clone().into(),
+            )));
+            mb.push_default(StyleProperty::FontSize(size));
+            mb.push_default(StyleProperty::Brush(BrushIndex(B_TEXT)));
+            if self.font.bold {
+                mb.push_default(StyleProperty::FontWeight(FontWeight::BOLD));
+            }
+            let mut layout = mb.build(glyph);
+            layout.break_all_lines(None);
+            layout
+        });
         let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
         b.push_default(StyleProperty::FontFamily(FontFamily::Source(
             self.font.family.clone().into(),
@@ -1218,8 +1326,16 @@ impl DocumentView {
             }
         }
         let mut layout = b.build(text);
-        layout.break_all_lines(Some(self.column as f32));
-        let em = f64::from(size);
+        layout.break_all_lines(Some((self.column - indent) as f32));
+        // The marker sits right-aligned in the indent, on the first line's
+        // baseline.
+        let marker = marker.map(|m| {
+            let base =
+                |l: &Layout<BrushIndex>| l.lines().next().map_or(0.0, |l| l.metrics().baseline);
+            let x = -(em * LIST_GAP_EM) - f64::from(m.full_width());
+            let y = f64::from(base(&layout) - base(&m));
+            (m, Vec2::new(x, y))
+        });
         let text_h = if text.is_empty() {
             em * 0.6
         } else {
@@ -1243,6 +1359,8 @@ impl DocumentView {
             seps,
             bytes,
             lines: Vec::new(),
+            indent,
+            marker,
         }
     }
 
@@ -1365,7 +1483,12 @@ impl DocumentView {
         };
         Some((
             i,
-            Rect::new(bb.x0, pl.top_gap + bb.y0, bb.x1, pl.top_gap + bb.y0 + h),
+            Rect::new(
+                pl.indent + bb.x0,
+                pl.top_gap + bb.y0,
+                pl.indent + bb.x1,
+                pl.top_gap + bb.y0 + h,
+            ),
         ))
     }
 
@@ -1699,7 +1822,9 @@ impl DocumentView {
         let y = pl.layout.get(line).map_or(0.0, |l| {
             (l.metrics().block_min_coord + l.metrics().block_max_coord) / 2.0
         });
-        let c = Cursor::from_point(&pl.layout, x, y);
+        // The goal is in the column's coordinates, so a move into a list
+        // item keeps the same place on screen.
+        let c = Cursor::from_point(&pl.layout, x - pl.indent as f32, y);
         CharPos(p.start.0 + pl.bytes.char(&p.text, c.index()))
     }
 
@@ -1985,7 +2110,7 @@ impl DocumentView {
                 let p = &self.model.paragraphs[i];
                 let c = Cursor::from_point(
                     &pl.layout,
-                    (pos.x - self.column_x) as f32,
+                    (pos.x - self.column_x - pl.indent) as f32,
                     (pos.y - y - pl.top_gap) as f32,
                 );
                 return Some(CharPos(p.start.0 + pl.bytes.char(&p.text, c.index())));
@@ -2295,6 +2420,30 @@ impl Widget for DocumentView {
         }
         self.column_x = ((size.width - column) / 2.0).max(INSET).floor();
         self.size = size;
+        // No document: the hint, in the reading font, wrapped to the column.
+        self.hint_layout =
+            (self.model.paragraphs.is_empty() && !self.empty_hint.is_empty()).then(|| {
+                let size = self.font.size;
+                plain_layout(
+                    fcx,
+                    lcx,
+                    &self.empty_hint,
+                    &self.font.family,
+                    size,
+                    Some(column),
+                )
+            });
+        // Edit mode: the word in the corner, at the interface's size.
+        self.badge_layout = (self.editing && !self.editing_word.is_empty()).then(|| {
+            plain_layout(
+                fcx,
+                lcx,
+                &self.editing_word,
+                crate::fonts::DEFAULT_STACK,
+                theme::UI_TEXT,
+                None,
+            )
+        });
         self.layout_view(fcx, lcx);
         ctx.set_clip_path(size.to_rect());
     }
@@ -2318,13 +2467,21 @@ impl Widget for DocumentView {
         } else {
             0.0
         };
+        // In edit mode the border is dashed and heavier, beside the word
+        // "Editing" in the corner, so the mode shows by shape and by word,
+        // not by color.
+        let border = if self.editing {
+            Stroke::new(2.0).with_dashes(0.0, [8.0, 5.0])
+        } else {
+            Stroke::new(1.0)
+        };
         painter
             .stroke(
                 RoundedRect::from_rect(
-                    size.to_rect().inset(-(border_at + 0.5)),
+                    size.to_rect().inset(-(border_at + border.width / 2.0)),
                     theme::PANEL_RADIUS,
                 ),
-                &Stroke::new(1.0),
+                &border,
                 theme::color(p.border),
             )
             .draw();
@@ -2386,7 +2543,7 @@ impl Widget for DocumentView {
                 continue;
             };
             let para = &self.model.paragraphs[i];
-            let origin = Vec2::new(self.column_x, y + pl.top_gap);
+            let origin = Vec2::new(self.column_x + pl.indent, y + pl.top_gap);
             let tf = Affine::translate(origin);
             let p_end = para.start.0 + para.len_chars();
             // The part of the layout on screen, in its own coordinates:
@@ -2471,6 +2628,14 @@ impl Widget for DocumentView {
             // The text, with its links' and difficult words' underlines.
             render_lines(painter, tf, &pl.layout, &brushes, on_screen);
             painted.push(PaintStep::Text(i));
+            // A list item's bullet or number, in the hanging indent.
+            if let (Some((m, at)), Some(item)) = (&pl.marker, &para.list) {
+                render_text(painter, Affine::translate(origin + *at), m, &brushes, false);
+                let r = Rect::new(0.0, 0.0, f64::from(m.full_width()), f64::from(m.height()))
+                    + origin
+                    + *at;
+                painted.push(PaintStep::ListMarker(item.level, r));
+            }
             for s in self.spans_in(i) {
                 if s.style == SpanStyle::Difficult && touches(s.range) {
                     for r in band(s.range).unwrap_or_default() {
@@ -2625,7 +2790,7 @@ impl Widget for DocumentView {
             let para_end = CharPos(para.start.0 + para.span_chars());
             let in_para = caret_pos.0 >= para.start.0
                 && (caret_pos.0 < para_end.0 || (i + 1 == self.model.paragraphs.len()));
-            if self.focused && in_para && !reading {
+            if in_para && !reading {
                 let off = caret_pos
                     .0
                     .saturating_sub(para.start.0)
@@ -2639,8 +2804,44 @@ impl Widget for DocumentView {
                     bb.y1 - bb.y0
                 };
                 let r = Rect::new(bb.x0, bb.y0, bb.x0 + 2.0, bb.y0 + h) + origin;
-                painter.fill(r, theme::color(p.caret)).draw();
+                if self.focused {
+                    painter.fill(r, theme::color(p.caret)).draw();
+                }
+                // "Reading from here": a play-shaped triangle in the left
+                // margin on the caret's line, where Play starts, shown with
+                // or without the focus (reading mode only; the caret is the
+                // node's selection, so a screen reader has it already).
+                if !self.editing {
+                    let x1 = self.column_x - 14.0;
+                    let s = (h * 0.5).clamp(6.0, 12.0);
+                    let cy = r.y0 + h / 2.0;
+                    if x1 - s >= 2.0 {
+                        let mut tri = BezPath::new();
+                        tri.move_to((x1 - s, cy - s / 2.0 - 1.0));
+                        tri.line_to((x1, cy));
+                        tri.line_to((x1 - s, cy + s / 2.0 + 1.0));
+                        tri.close_path();
+                        painter.fill(tri, theme::color(p.text)).draw();
+                        painted.push(PaintStep::ReadingFrom(Rect::new(
+                            x1 - s,
+                            cy - s / 2.0 - 1.0,
+                            x1,
+                            cy + s / 2.0 + 1.0,
+                        )));
+                    }
+                }
             }
+        }
+        // No document: how to open one, where the text would start.
+        if let Some(h) = self
+            .hint_layout
+            .as_ref()
+            .filter(|_| self.model.paragraphs.is_empty())
+        {
+            let at = Vec2::new(self.column_x, INSET);
+            render_text(painter, Affine::translate(at), h, &brushes, false);
+            let r = Rect::new(0.0, 0.0, f64::from(h.width()), f64::from(h.height())) + at;
+            painted.push(PaintStep::Hint(r));
         }
         self.painted = painted;
 
@@ -2684,6 +2885,26 @@ impl Widget for DocumentView {
         }
 
         painter.pop_clip();
+        // Outside the text's clip, which starts lower once scrolled.
+        // Edit mode: the word in a box in the top right corner.
+        if let Some(b) = self.badge_layout.as_ref().filter(|_| self.editing) {
+            let (w, h) = (f64::from(b.width()), f64::from(b.height()));
+            let x1 = size.width - clip - 4.0;
+            let r = Rect::new(x1 - w - 12.0, clip + 2.0, x1, clip + 2.0 + h + 4.0);
+            painter
+                .fill(RoundedRect::from_rect(r, 4.0), theme::color(p.background))
+                .draw();
+            painter
+                .stroke(
+                    RoundedRect::from_rect(r, 4.0),
+                    &Stroke::new(1.0),
+                    theme::color(p.border),
+                )
+                .draw();
+            let at = Vec2::new(r.x0 + 6.0, r.y0 + 2.0);
+            render_text(painter, Affine::translate(at), b, &brushes, false);
+            self.painted.push(PaintStep::Badge(r));
+        }
 
         if self.focused {
             painter
@@ -2742,6 +2963,10 @@ impl Widget for DocumentView {
         node.set_label(self.label.as_str());
         if !self.model.title.is_empty() {
             node.set_description(self.model.title.as_str());
+        } else if self.model.paragraphs.is_empty() && !self.empty_hint.is_empty() {
+            // What the empty window draws, read with the node's name when it
+            // takes the focus.
+            node.set_description(self.empty_hint.as_str());
         }
         node.add_action(Action::SetTextSelection);
         node.add_action(Action::ScrollIntoView);
@@ -2881,6 +3106,27 @@ fn line_span_within(layout: &Layout<BrushIndex>, ys: (f64, f64)) -> (usize, usiz
         last = n + 1;
     }
     (first.unwrap_or(0), last)
+}
+
+/// `text` laid out in one style in the text color, wrapped at `width` when
+/// given: the empty window's hint and the edit-mode badge.
+fn plain_layout(
+    fcx: &mut FontContext,
+    lcx: &mut LayoutContext<BrushIndex>,
+    text: &str,
+    family: &str,
+    size: f32,
+    width: Option<f64>,
+) -> Layout<BrushIndex> {
+    let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
+    b.push_default(StyleProperty::FontFamily(FontFamily::Source(
+        family.to_owned().into(),
+    )));
+    b.push_default(StyleProperty::FontSize(size));
+    b.push_default(StyleProperty::Brush(BrushIndex(B_TEXT)));
+    let mut layout = b.build(text);
+    layout.break_all_lines(width.map(|w| w as f32));
+    layout
 }
 
 /// Draws the lines of `layout` that reach into `ys` (layout coordinates),

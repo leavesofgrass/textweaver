@@ -750,3 +750,125 @@ fn a_twenty_five_character_column_wraps_near_twenty_five() {
     let avg = body.iter().sum::<usize>() as f64 / body.len() as f64;
     assert!((19.0..=26.0).contains(&avg), "average {avg}: {lines:?}");
 }
+
+/// A list three deep: a bullet item, a numbered item inside it, and a
+/// bullet inside that, then a paragraph.
+fn nested_list() -> Document {
+    use textweaver_app::core::MarkerKind;
+    use textweaver_app::text::{DocumentMeta, Marker};
+    let text = "Fruit\nApples\nGreen ones\nTart\nAfter the list.";
+    let item =
+        |a, b, level| Marker::new(MarkerKind::ListItem, CharRange::new(a, b)).with_level(level);
+    let markers = vec![
+        item(6, 28, 1),
+        item(13, 28, 2).with_label("2."),
+        item(24, 28, 3),
+    ];
+    Document::new(DocumentMeta::default(), text.into(), markers)
+}
+
+#[test]
+fn list_items_draw_their_bullets_numbers_and_nesting() {
+    use textweaver_xilem::document::{DocMark, PaintStep};
+    let doc = nested_list();
+    let (mut h, _) = harness_with(&doc, CharPos::ZERO);
+    // A highlight on each item's first letter shows where its text starts.
+    let firsts = [6, 13, 24, 29];
+    let marks = firsts
+        .iter()
+        .map(|&a| (CharRange::new(a, a + 1), DocMark::Highlight))
+        .collect();
+    h.edit_root_widget(|mut d| DocumentView::set_marks(&mut d, marks));
+    let _ = h.redraw();
+    let steps = h.root_widget().painted().to_vec();
+    let markers: Vec<(u8, masonry::kurbo::Rect)> = steps
+        .iter()
+        .filter_map(|s| match s {
+            PaintStep::ListMarker(level, r) => Some((*level, *r)),
+            _ => None,
+        })
+        .collect();
+    let starts: Vec<f64> = steps
+        .iter()
+        .filter_map(|s| match s {
+            PaintStep::MarkBand(DocMark::Highlight, r) => Some(r.x0),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(markers.iter().map(|m| m.0).collect::<Vec<_>>(), [1, 2, 3]);
+    assert_eq!(starts.len(), 4);
+    // Each level is indented further, and its marker hangs left of its
+    // text; the paragraph after the list is back at the column's edge.
+    assert!(starts[0] < starts[1] && starts[1] < starts[2], "{starts:?}");
+    assert!(starts[3] < starts[0], "{starts:?}");
+    for (k, (_, r)) in markers.iter().enumerate() {
+        assert!(r.x1 < starts[k], "marker {k} hangs left of its text");
+        assert!(r.x0 > starts[3] - 1.0, "marker {k} stays in the column");
+    }
+    // Drawn only: the screen reader's text is the document's, unchanged.
+    assert_eq!(doc_text(&h), doc.text().to_string());
+}
+
+#[test]
+fn the_empty_window_draws_its_hint_and_describes_it() {
+    use textweaver_xilem::document::PaintStep;
+    let p = Palette::galaxy();
+    let hint = "No document is open. Press Ctrl+O to open one.";
+    let view = DocumentView::new(p.clone(), DocFont::default(), Rc::new(Cell::new(0)))
+        .with_empty_hint(hint);
+    let mut h = TestHarness::create(theme::default_properties(&p), NewWidget::new(view));
+    let _ = h.redraw();
+    assert_eq!(h.root_widget().hint_shown(), Some(hint));
+    assert!(
+        h.root_widget()
+            .painted()
+            .iter()
+            .any(|s| matches!(s, PaintStep::Hint(r) if r.width() > 0.0))
+    );
+    let node = h.access_node(h.root_id()).unwrap();
+    assert_eq!(node.description().as_deref(), Some(hint));
+    // A document opens: the hint goes.
+    let doc = Document::from_plain_text("Some text.");
+    let model = DocModel {
+        paragraphs: window::window_paragraphs(&doc, doc.full_range()),
+        doc_len: doc.len_chars(),
+        title: "Test".into(),
+        ..DocModel::default()
+    };
+    h.edit_root_widget(|mut d| DocumentView::set_model(&mut d, model));
+    let _ = h.redraw();
+    assert_eq!(h.root_widget().hint_shown(), None);
+    assert!(
+        !h.root_widget()
+            .painted()
+            .iter()
+            .any(|s| matches!(s, PaintStep::Hint(_)))
+    );
+}
+
+#[test]
+fn edit_mode_draws_the_word_editing_and_reading_mode_marks_where_play_starts() {
+    use textweaver_xilem::document::PaintStep;
+    let doc = Document::from_plain_text("One two three.\nFour five.");
+    let (mut h, _) = harness_with(&doc, CharPos::ZERO);
+    h.edit_root_widget(|mut d| DocumentView::set_editing_word(&mut d, "Editing"));
+    let _ = h.redraw();
+    let steps = h.root_widget().painted().to_vec();
+    // Reading mode, not reading: the "reading from here" triangle, no badge.
+    assert!(steps.iter().any(|s| matches!(s, PaintStep::ReadingFrom(_))));
+    assert!(!steps.iter().any(|s| matches!(s, PaintStep::Badge(_))));
+    assert_eq!(h.root_widget().badge_shown(), None);
+    h.edit_root_widget(|mut d| DocumentView::set_editing(&mut d, true));
+    let _ = h.redraw();
+    let steps = h.root_widget().painted().to_vec();
+    assert_eq!(h.root_widget().badge_shown(), Some("Editing"));
+    assert!(
+        steps
+            .iter()
+            .any(|s| matches!(s, PaintStep::Badge(r) if r.width() > 0.0))
+    );
+    assert!(!steps.iter().any(|s| matches!(s, PaintStep::ReadingFrom(_))));
+    // The mode is in the node's role too, as before.
+    let node = h.access_node(h.root_id()).unwrap();
+    assert_eq!(node.role(), Role::MultilineTextInput);
+}
