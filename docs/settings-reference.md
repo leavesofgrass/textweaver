@@ -211,7 +211,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `gui.header`: default on (`true`). Show the header. Show the bar of Open, Font, Edit, Settings and Commands above the document. Off, the commands keep their keys and menu items. On or off: `true` or `false`. Stays on this computer.
 - `gui.toolbar`: default on (`true`). Show the toolbar. Show the bar of Play, Stop and the reading buttons. Off, the commands keep their keys and menu items. On or off: `true` or `false`. Stays on this computer.
 - `gui.auto_hide_menu`: default off (`false`). Hide the menu bar. Windows: hide the window's menu bar until Alt or F10 shows it; it hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS. On or off: `true` or `false`. Stays on this computer.
-- `gui.speak_messages`: default off (`false`). Speak textweaver's messages. When textweaver reads aloud, also say its messages, typing and caret moves in its voice, for reading by ear without a screen reader. On or off: `true` or `false`. Stays on this computer.
+- `gui.speak_messages`: default off (`false`). Speak textweaver's messages. When textweaver reads aloud, also say its messages, typing and cursor moves in its voice, for reading by ear without a screen reader. On or off: `true` or `false`. Stays on this computer.
 - `gui.sidebar`: default none (`"off"`). Panel beside the document. The panel the window shows beside the document: none, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one. Choices: `"off"` (none), `"contents"` (Contents), `"notes"` (Notes). Stays on this computer.
 
 ## Colors: the `[colors]` section

@@ -121,9 +121,7 @@ mod tests {
     /// many dialogs came, one at a time.
     fn escape_each(app: &mut App, effects: Vec<Effect>) -> usize {
         let mut steps = 0;
-        let mut shown = effects
-            .iter()
-            .any(|e| matches!(e, Effect::ShowList { .. }));
+        let mut shown = effects.iter().any(|e| matches!(e, Effect::ShowList { .. }));
         for _ in 0..10 {
             if !shown {
                 let e = app.tick(std::time::Instant::now());

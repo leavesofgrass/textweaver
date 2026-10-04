@@ -122,7 +122,7 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **F6** and **Shift+F6**: the next and previous region: the header, the panel, the document, and the toolbar.
 - **Ctrl+T** and **Ctrl+Shift+T**: next and previous table. **Ctrl+Alt+arrows** move by cell in a table.
 - **k** and **Shift+K** (browse): next and previous link. **Alt+Shift+F** follows a link.
-- **Alt+Shift+A**: the window's mode, one of two: "textweaver reads aloud" (documents in textweaver's voice, its messages for your screen reader) or "my screen reader reads" (textweaver is silent, and your screen reader reads the text). The **Speak textweaver's messages** setting (Settings, Window), off by default, has textweaver say its messages, typing and caret moves too, for reading by ear without a screen reader; `--self-voicing` turns it on for one run.
+- **Alt+Shift+A**: the window's mode, one of two: "textweaver reads aloud" (documents in textweaver's voice, its messages for your screen reader) or "my screen reader reads" (textweaver is silent, and your screen reader reads the text). The **Speak textweaver's messages** setting (Settings, Window), off by default, has textweaver say its messages, typing and cursor moves too, for reading by ear without a screen reader; `--self-voicing` turns it on for one run.
 - **F5**: the next color theme.
 - **F9**: single-key shortcuts off or on.
 

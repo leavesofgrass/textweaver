@@ -407,13 +407,18 @@ fn the_window_has_two_modes_and_a_speak_messages_switch() {
         r.app.settings().accessibility.mode,
         ModeSetting::ScreenReader
     );
-    assert!(r.status().starts_with("My screen reader reads:"), "{}", r.status());
+    assert!(
+        r.status().starts_with("My screen reader reads:"),
+        "{}",
+        r.status()
+    );
     // And back: "textweaver reads aloud", saved as hybrid; never a third.
     r.act(ActionId::CycleAccessMode);
     assert_eq!(r.app.access_mode(), AccessMode::Hybrid);
     assert_eq!(r.app.settings().accessibility.mode, ModeSetting::Hybrid);
     assert!(
-        r.status().starts_with("textweaver reads aloud; messages go to your screen reader."),
+        r.status()
+            .starts_with("textweaver reads aloud; messages go to your screen reader."),
         "{}",
         r.status()
     );

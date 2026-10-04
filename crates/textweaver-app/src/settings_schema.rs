@@ -1344,7 +1344,7 @@ pub const INFO: &[Info] = &[
     toggle(
         "gui.speak_messages",
         "Speak textweaver's messages",
-        "When textweaver reads aloud, also say its messages, typing and caret moves in its voice, for reading by ear without a screen reader.",
+        "When textweaver reads aloud, also say its messages, typing and cursor moves in its voice, for reading by ear without a screen reader.",
     ),
     choice(
         "gui.sidebar",
