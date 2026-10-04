@@ -63,7 +63,7 @@ On Linux:
 2. Make it runnable. In a terminal, type `chmod +x` and the file name. Press Enter.
 3. Run the file.
 
-The Mac and Linux windows are built and checked automatically, but no one has tested them with a screen reader yet. The terminal reader, below, is a good choice there.
+The Mac and Linux windows have had basic testing with VoiceOver and Orca, but not every release is tested by a person yet. If something does not work, the terminal reader, below, is a good choice there.
 
 ## The terminal reader
 
@@ -74,6 +74,10 @@ The terminal reader runs in a text window. It has no mouse and no pictures. Many
 3. Type `textweaver QUICKSTART.md` and press Enter.
 
 textweaver reads its own quick start out loud. Press Space to start and pause. Press ? to list every key.
+
+## Languages
+
+textweaver speaks and shows its menus and messages in English, Spanish, German, French, Portuguese, and Arabic. Native speakers have checked the Spanish. The other translations have not been checked yet, so if a word sounds wrong, please tell us. Use Help, then Report a problem.
 
 ## Learn more
 
