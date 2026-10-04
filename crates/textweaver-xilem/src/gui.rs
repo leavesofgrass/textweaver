@@ -2612,7 +2612,7 @@ impl Gui {
         let Some(OpenDialog::Settings(open)) = &mut self.dialog else {
             return;
         };
-        if open.form.is_colors() || open.form.is_reading() {
+        if open.form.is_colors() {
             return;
         }
         open.form.set_filter(query, &c);

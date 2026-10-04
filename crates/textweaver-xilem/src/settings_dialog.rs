@@ -181,28 +181,6 @@ const RECENT: &str = "\u{1}recent";
 /// The first section while a filter is typed: every setting it matches.
 const MATCHING: &str = "\u{1}matching";
 
-/// The reading settings form (W9b-d): the settings a reader changes most,
-/// in one form, as the Colors dialog has the colors. The rate first; the
-/// font, the four spacings, then the page and the aids.
-pub const READING_SETTINGS: &[&str] = &[
-    "speech.rate",
-    "reading_aids.font.family",
-    "reading_aids.font.size_pt",
-    "reading_aids.font.weight",
-    "reading_aids.spacing.line_height",
-    "reading_aids.spacing.word_spacing",
-    "reading_aids.spacing.letter_spacing",
-    "reading_aids.spacing.paragraph_spacing",
-    "display.theme",
-    "highlight.granularity",
-    "highlight.color",
-    "highlight.sentence_color",
-    "reading_aids.ruler.mode",
-    "reading_aids.ruler.mask_outside",
-    "reading_aids.bionic",
-    "reading_aids.syllables",
-];
-
 /// Which form a [`SettingsForm`] is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum FormKind {
@@ -210,8 +188,6 @@ enum FormKind {
     Settings,
     /// View, Colors: every color setting.
     Colors,
-    /// The reading settings form: [`READING_SETTINGS`].
-    Reading,
 }
 
 /// The dialog's sections, in the schema's order, and their settings.
@@ -271,27 +247,9 @@ impl SettingsForm {
         }
     }
 
-    /// The reading settings form (W9b-d): [`READING_SETTINGS`] in one
-    /// section, with the spacing presets and the voice manager beside it.
-    pub fn reading(schema: SettingsSchema) -> Self {
-        SettingsForm {
-            schema,
-            sections: vec!["Reading"],
-            kind: FormKind::Reading,
-            recent: Vec::new(),
-            filter: String::new(),
-            matching: Vec::new(),
-        }
-    }
-
     /// True for the Colors dialog's form.
     pub fn is_colors(&self) -> bool {
         self.kind == FormKind::Colors
-    }
-
-    /// True for the reading settings form.
-    pub fn is_reading(&self) -> bool {
-        self.kind == FormKind::Reading
     }
 
     /// The filter typed in the form ("" for none).
@@ -364,7 +322,6 @@ impl SettingsForm {
         };
         match self.kind {
             FormKind::Colors => return self.by_paths(&textweaver_app::COLOR_SETTINGS),
-            FormKind::Reading => return self.by_paths(READING_SETTINGS),
             FormKind::Settings => {}
         }
         match *title {
@@ -408,7 +365,6 @@ impl SettingsForm {
     pub fn section_title(&self, i: usize, c: &Catalog) -> String {
         match self.kind {
             FormKind::Colors => return c.tr("section-colors"),
-            FormKind::Reading => return c.tr("gui-reading-form"),
             FormKind::Settings => {}
         }
         match self.sections.get(i) {
