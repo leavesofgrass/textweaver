@@ -227,7 +227,7 @@ impl App {
         let s = self
             .session
             .as_ref()
-            .ok_or_else(|| self.msg("publish-no-document"))?;
+            .ok_or_else(|| self.msg("common-no-document"))?;
         let (path, folder, stem) = self.doc_place();
         let editing = self.edit.is_some();
         if !editing && let Some(p) = path.as_ref().filter(|p| p.is_file()) {

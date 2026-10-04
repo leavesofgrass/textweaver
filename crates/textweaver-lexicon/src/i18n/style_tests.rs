@@ -231,26 +231,12 @@ fn errors_get_a_next_step() {
     );
 }
 
-/// Rule 7 again: one sentence, one id. These groups say the same sentence
-/// under two or three ids and wait to be merged; no new group may appear.
+/// Rule 7 again: one sentence, one id. No two ids may say the same
+/// sentence; merge them into one id instead.
 #[test]
 fn no_new_duplicate_sentences() {
-    const KNOWN: [&[&str]; 11] = [
-        &["app-no-document-open", "gui-no-document"],
-        &["publish-no-document", "tui-empty-no-document"],
-        &["marks-bookmark-set", "writes-bookmark-set"],
-        &["authoring-link-no-address", "links-no-address"],
-        &["gui-settings-closed", "settings-closed"],
-        &["edit-no-matches", "replace-no-matches"],
-        &["edit-recovery-write-failed", "writes-recovery-copy-failed"],
-        &[
-            "edit-recovery-writing-again",
-            "writes-recovery-copy-resumed",
-        ],
-        &["authoring-not-in-table", "tables-not-in-table"],
-        &["grammar-line", "lint-line", "spell-line"],
-        &["grammar-left-as-is", "spell-left-as-is"],
-    ];
+    // Every known group is merged; the list stays empty.
+    const KNOWN: [&[&str]; 0] = [];
     // Labels share their text on purpose (a menu item, a setting, and a
     // section can all be "Reading statistics").
     const LABELS: [&str; 9] = [
@@ -289,6 +275,50 @@ fn no_new_duplicate_sentences() {
     assert!(
         new.is_empty(),
         "the same sentence under two ids (messages.md, rule 7): {new:?}"
+    );
+}
+
+/// Rule 11 for settings: the help's first sentence, shown under the row and
+/// given as its description, has at most fifteen words. The rest of the
+/// help is said by F1 and kept in the settings reference. These helps
+/// still start with a longer sentence and may only become fewer.
+#[test]
+fn setting_helps_start_with_a_short_sentence() {
+    const LONG_FIRST_SENTENCE: [&str; 6] = [
+        "setting-display-follow-os-theme-help",
+        "setting-gui-speak-messages-help",
+        "setting-highlight-lead-words-help",
+        "setting-reading-aids-difficult-definitions-help",
+        "setting-speech-latency-offset-ms-help",
+        "setting-speech-voices-by-language-help",
+    ];
+    let end = regex::Regex::new(r"[^.\s]{2,}(\.) ").unwrap();
+    let mut new = Vec::new();
+    let mut fixed = Vec::new();
+    for (id, v) in messages() {
+        if !(id.starts_with("setting-") && id.ends_with("-help")) {
+            continue;
+        }
+        let first = match end.captures(&v).and_then(|c| c.get(1)) {
+            Some(m) => &v[..m.end()],
+            None => v.as_str(),
+        };
+        let words = plain(first).split_whitespace().count();
+        let listed = LONG_FIRST_SENTENCE.contains(&id.as_str());
+        if words > 15 && !listed {
+            new.push(format!("{id}: {words} words"));
+        }
+        if words <= 15 && listed {
+            fixed.push(id);
+        }
+    }
+    assert!(
+        new.is_empty(),
+        "a setting help's first sentence over fifteen words (messages.md, rule 11): {new:?}"
+    );
+    assert!(
+        fixed.is_empty(),
+        "these now start short: take them off LONG_FIRST_SENTENCE: {fixed:?}"
     );
 }
 

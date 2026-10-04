@@ -854,7 +854,14 @@ impl App {
                     ("restart", k(A::RestartSpeech)),
                 ],
             ),
-            line("help-access", &[("key", k(A::CycleAccessMode))]),
+            line(
+                if self.uses_window_modes() {
+                    "help-access-window"
+                } else {
+                    "help-access"
+                },
+                &[("key", k(A::CycleAccessMode))],
+            ),
             line(
                 "help-character-keys",
                 &[

@@ -411,7 +411,7 @@ impl App {
         let mut msg = self.msg_args("lint-said", &args!["message" => p.message.as_str()]);
         if self.settings.speech.verbosity >= textweaver_a11y::Verbosity::High {
             msg.push(' ');
-            msg.push_str(&self.msg_args("lint-line", &args!["line" => line]));
+            msg.push_str(&self.msg_args("common-line", &args!["line" => line]));
         }
         self.tell(&msg);
     }

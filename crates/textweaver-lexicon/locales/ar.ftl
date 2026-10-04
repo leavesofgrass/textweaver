@@ -286,7 +286,7 @@ name-edit-document-details = تعديل التفاصيل
 action-edit-document-details = تعديل تفاصيل المستند: العنوان والمؤلف وDOI وISBN
 prompt-document-details = تفاصيل المستند
 
-## Edit a document's details by hand (Wave 7, W7m).
+## Edit a document's details by hand.
 
 # $name is the document's title; said when the form opens.
 details-intro = تفاصيل { $name }. Tab للتنقل، Enter للحفظ، Escape للإلغاء.
@@ -633,6 +633,7 @@ help-export = التصدير إلى HTML أو PDF أو Word أو EPUB أو بر�
 help-verbosity = مقدار ما يُقال: { $verbosity }. مقدار علامات الترقيم: { $punctuation }.
 help-voice = اختيار صوت: { $voice }. إعادة تشغيل الكلام إذا توقف: { $restart }.
 help-access = مع قارئ شاشة، من يتحدث: { $key } يبدّل بين النطق الذاتي والوضع المختلط ووضع قارئ الشاشة.
+help-access-window = من يقرأ: { $key } يبدّل بين يقرأ textweaver بصوت عالٍ وقارئ شاشتي يقرأ.
 help-character-keys = الاختصارات أحادية المفتاح تشغيلًا أو إيقافًا، للإملاء: { $keys }. الإعدادات: { $settings }.
 help-all-shortcuts = كل اختصارات لوحة المفاتيح: { $key }.
 help-palette = تشغيل أي أمر بالاسم: { $key }.
@@ -1158,7 +1159,7 @@ voice-line-numbers-off = أرقام الأسطر متوقفة.
 ## التصدير والمعاينة من القارئ. F5 هو مفتاح إعادة التحميل في المتصفح،
 ## وليس مفتاحًا في textweaver.
 
-publish-no-document = لا يوجد مستند مفتوح.
+common-no-document = لا يوجد مستند مفتوح.
 # Said after "Could not export:", so it starts in lower case. $path is a
 # folder or a file; $error the system's reason.
 publish-cannot-write-to = تعذّرت الكتابة إلى { $path }: { $error }
@@ -1360,7 +1361,7 @@ marks-find-wrapped =
     }
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = الإشارة المرجعية { $name } موجودة هنا بالفعل.
-marks-bookmark-set = وُضعت الإشارة المرجعية { $name } عند { $pct } بالمئة.
+common-bookmark-set = وُضعت الإشارة المرجعية { $name } عند { $pct } بالمئة.
 marks-no-bookmarks = لا إشارات مرجعية. لإضافة واحدة: { $key }.
 marks-bookmarks-intro =
     { $n ->
@@ -1525,7 +1526,7 @@ library-title = المكتبة
 
 links-none-here = لا رابط أو حاشية عند المؤشر.
 # $text is the link's text.
-links-no-address = الرابط { $text } بلا عنوان.
+common-link-no-address = الرابط { $text } بلا عنوان.
 # $kind is mail or web; $target is the link's address.
 links-open-question =
     { $kind ->
@@ -1764,6 +1765,9 @@ access-a-screen-reader = قارئ شاشة
 # access-a-screen-reader; $key names the keys that change the mode.
 access-hybrid-inferred = { $reader } قيد التشغيل: يقرأ textweaver المستندات بصوت عالٍ ويترك الرسائل لقارئ شاشتك. { $key } يغيّر ذلك.
 # The window's two modes, when the mode changes; $key changes it again.
+access-window-choice-reads-aloud = يقرأ textweaver بصوت عالٍ
+access-window-choice-screen-reader = قارئ شاشتي يقرأ
+access-window-mode-help = من يقرأ في النافذة: صوت textweaver، أو قارئ الشاشة وحده.
 access-window-mode-changed =
     { $mode ->
         [screen-reader] قارئ شاشتي يقرأ: يصمت textweaver ويرسل النص إلى قارئ شاشتك. { $key } يغيّر ذلك.
@@ -1983,7 +1987,7 @@ choice-normalization-community-lexicon-language-deu = الألمانية
 setting-normalization-medical-lexicon-enabled = المعجم الطبي
 setting-normalization-medical-lexicon-enabled-help = قراءة أسماء الأدوية والمصطلحات السريرية واختصارات الجرعات من قائمة نطق طبية.
 setting-normalization-medical-lexicon-overlay = ملف المعجم الطبي
-setting-normalization-medical-lexicon-overlay-help = نطقك الطبي الخاص، وله الأولوية على المدمج؛ عدم الضبط يقرأ medical-lexicon.toml في مجلد الإعدادات.
+setting-normalization-medical-lexicon-overlay-help = نطقك الطبي الخاص، وله الأولوية على المدمج. عدم الضبط يقرأ medical-lexicon.toml في مجلد الإعدادات.
 setting-reading-auto-resume = استئناف من حيث توقفت
 setting-reading-auto-resume-help = العودة إلى الموضع المحفوظ عند فتح مستند.
 setting-reading-nav-history-size = سجل الرجوع
@@ -1999,38 +2003,38 @@ choice-reading-citations-words = بالكلمات
 setting-reading-ocr = التعرف على الصفحات الممسوحة
 setting-reading-ocr-help = قراءة نص ملفات PDF والصور الممسوحة ضوئيًا بالتعرف عليه (OCR).
 setting-reading-ocr-lang = لغة النص الممسوح
-setting-reading-ocr-lang-help = لغة النص الممسوح ضوئيًا، برموز Tesseract مثل fra أو deu+eng؛ الفراغ يعني لغة المستند نفسها، وإلا الإنجليزية.
+setting-reading-ocr-lang-help = لغة النص الممسوح ضوئيًا، برموز Tesseract مثل fra أو deu+eng. الفراغ يعني لغة المستند نفسها، وإلا الإنجليزية.
 choice-reading-ocr-lang- = لغة المستند
 choice-reading-ocr-lang-eng = الإنجليزية
 choice-reading-ocr-lang-fra = الفرنسية
 choice-reading-ocr-lang-deu = الألمانية
 choice-reading-ocr-lang-spa = الإسبانية
 setting-reading-ocr-engine = محرك OCR
-setting-reading-ocr-engine-help = أي محرك يتعرف على الصفحات الممسوحة: ocrs للإنجليزية وTesseract للغات الأخرى، أو أحدهما دائمًا.
+setting-reading-ocr-engine-help = أي محرك يتعرف على الصفحات الممسوحة. ocrs للإنجليزية وTesseract للغات الأخرى، أو أحدهما دائمًا.
 choice-reading-ocr-engine-auto = تلقائي
 choice-reading-ocr-engine-ocrs = ocrs
 choice-reading-ocr-engine-tesseract = Tesseract
 choice-reading-ocr-engine-paddle = PaddleOCR (تجريبي)
 setting-reading-math-engine = نطق الرياضيات
-setting-reading-math-engine-help = أي محرك يقرأ الرياضيات بصوت عالٍ: محرك textweaver الخاص، أو MathCAT بنمط ClearSpeak أو SimpleSpeak، بلغة المستند. يحتاج MathCAT نسخة تتضمنه؛ وإلا يُستخدم محرك textweaver الخاص.
+setting-reading-math-engine-help = أي محرك يقرأ الرياضيات بصوت عالٍ. محرك textweaver الخاص، أو MathCAT بنمط ClearSpeak أو SimpleSpeak، بلغة المستند. يحتاج MathCAT نسخة تتضمنه؛ وإلا يُستخدم محرك textweaver الخاص.
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
 setting-braille-math-code = برايل الرياضيات
-setting-braille-math-code-help = رمز برايل للرياضيات في ملفات BRF وعند استكشاف معادلة باستخدام MathCAT: نيميث أو رياضيات UEB. يحتاج إلى نسخة تتضمن MathCAT؛ وإلا تُكتب الرياضيات بكلماتها المنطوقة.
+setting-braille-math-code-help = رمز برايل للرياضيات في ملفات BRF وعند استكشاف معادلة باستخدام MathCAT. نيميث أو رياضيات UEB. يحتاج إلى نسخة تتضمن MathCAT؛ وإلا تُكتب الرياضيات بكلماتها المنطوقة.
 choice-braille-math-code-nemeth = Nemeth
 choice-braille-math-code-ueb = UEB
 setting-braille-table-format = جداول برايل
-setting-braille-table-format-help = كيف ترتب ملفات BRF الجداول: خطي، صف واحد في كل سطر مع فواصل منقوطة بين الإدخالات؛ أو مسرد، كل صف عنوان وكل إدخال في سطر خاص بعد عنوان عموده؛ أو متدرج، كل إدخال بعد الذي قبله بخليتين إلى اليمين، للجداول ذات أربعة أعمدة على الأكثر.
+setting-braille-table-format-help = كيف ترتب ملفات BRF الجداول. خطي، صف واحد في كل سطر مع فواصل منقوطة بين الإدخالات؛ أو مسرد، كل صف عنوان وكل إدخال في سطر خاص بعد عنوان عموده؛ أو متدرج، كل إدخال بعد الذي قبله بخليتين إلى اليمين، للجداول ذات أربعة أعمدة على الأكثر.
 choice-braille-table-format-linear = خطي
 choice-braille-table-format-listed = مسرد
 choice-braille-table-format-stairstep = متدرج
 setting-reading-math-display = الرياضيات على الشاشة
-setting-reading-math-display-help = كيف تبدو الرياضيات في عرض القراءة: كمصدرها، مثل x^2، أو بيونيكود، مثل x بأس علوي 2. الكلام ووضع التحرير يستخدمان المصدر دائمًا.
+setting-reading-math-display-help = كيف تبدو الرياضيات في عرض القراءة. كمصدرها، مثل x^2، أو بيونيكود، مثل x بأس علوي 2. الكلام ووضع التحرير يستخدمان المصدر دائمًا.
 choice-reading-math-display-source = المصدر
 choice-reading-math-display-unicode = يونيكود
 setting-reading-revisions = التغييرات المتعقبة
-setting-reading-revisions-help = كيف تُقرأ التغييرات المتعقبة في ملفات Word وOpenDocument وRTF: تُقال في مكانها عند الإسهاب العالي (تلقائي)، أو دائمًا، أو أبدًا مع قراءة النص النهائي. يُطبَّق عند فتح المستند.
+setting-reading-revisions-help = كيف تُقرأ التغييرات المتعقبة في ملفات Word وOpenDocument وRTF. تُقال في مكانها عند الإسهاب العالي (تلقائي)، أو دائمًا، أو أبدًا مع قراءة النص النهائي. يُطبَّق عند فتح المستند.
 choice-reading-revisions-auto = تلقائي
 choice-reading-revisions-marked = قلها دائمًا
 choice-reading-revisions-final = النص النهائي فقط
@@ -2041,7 +2045,7 @@ setting-display-follow-os-theme-help = عند بدء التشغيل، استخد
 setting-display-wrap-width = عرض الالتفاف
 setting-display-wrap-width-help = التفاف الأسطر عند هذا العدد من الأعمدة؛ 0 يستخدم العرض كاملًا.
 setting-display-measure = طول السطر
-setting-display-measure-help = عدد الأحرف التي يتسع لها السطر في النافذة، من 25 إلى 90؛ 0 يملأ النافذة. تستخدم الطرفية عرض الالتفاف.
+setting-display-measure-help = عدد الأحرف التي يتسع لها السطر في النافذة، من 25 إلى 90. 0 يملأ النافذة. تستخدم الطرفية عرض الالتفاف.
 setting-display-tab-width = عرض علامة الجدولة
 setting-display-tab-width-help = الأعمدة التي تأخذها علامة الجدولة.
 setting-display-show-line-numbers = أرقام الأسطر
@@ -2049,7 +2053,7 @@ setting-display-show-line-numbers-help = إظهار أرقام الأسطر.
 setting-display-scroll-margin = هامش التمرير
 setting-display-scroll-margin-help = الأسطر المُبقاة في العرض أعلى المؤشر وأسفله.
 setting-display-hints = سطر تلميحات المفاتيح
-setting-display-hints-help = هل يعرض قارئ الطرفية تلميحات المفاتيح في سطره الأخير: التلقائي يعرضها مع النطق الذاتي ويخفيها مع قارئ الشاشة. يذكر F1 وقائمة اختصارات لوحة المفاتيح المفاتيح دائمًا.
+setting-display-hints-help = هل يعرض قارئ الطرفية تلميحات المفاتيح في سطره الأخير. التلقائي يعرضها مع النطق الذاتي ويخفيها مع قارئ الشاشة. يذكر F1 وقائمة اختصارات لوحة المفاتيح المفاتيح دائمًا.
 choice-display-hints-auto = تلقائي
 choice-display-hints-on = مفعّل
 choice-display-hints-off = متوقف
@@ -2072,7 +2076,7 @@ setting-editing-undo-memory-mb-help = أكثر ذاكرة قد يستخدمها 
 setting-library-recent-limit = الملفات الأخيرة
 setting-library-recent-limit-help = عدد الملفات الأخيرة المتذكَّرة.
 setting-library-folders = مجلدات المكتبة
-setting-library-folders-help = المجلدات التي تسرد المكتبة مستنداتها، وتُزامَن مواضعها بين الحواسيب؛ افصل بين المجلدات بفواصل منقوطة.
+setting-library-folders-help = المجلدات التي تسرد المكتبة مستنداتها، وتُزامَن مواضعها بين الحواسيب. افصل بين المجلدات بفواصل منقوطة.
 setting-keyboard-character-keys = الاختصارات أحادية المفتاح
 setting-keyboard-character-keys-help = مفاتيح تصفح مثل h ونقطة. عند الإيقاف، لا يفعّل الإملاء والكتابة أي أوامر أبدًا.
 setting-keyboard-preset = المفاتيح
@@ -2080,7 +2084,7 @@ setting-keyboard-preset-help = المفاتيح الافتراضية: كوضع �
 choice-keyboard-preset-default = بأسلوب قارئ الشاشة
 choice-keyboard-preset-classic = كلاسيكية
 setting-keyboard-digit-row = صف الأرقام
-setting-keyboard-digit-row-help = كيف تتعرف الطرفية على مفاتيح الأرقام لمستويات العناوين: تلقائي، أو لوحة مفاتيح AZERTY فرنسية.
+setting-keyboard-digit-row-help = كيف تتعرف الطرفية على مفاتيح الأرقام لمستويات العناوين. تلقائي، أو لوحة مفاتيح AZERTY فرنسية.
 choice-keyboard-digit-row-auto = تلقائي
 choice-keyboard-digit-row-azerty = AZERTY
 setting-accessibility-mode = وضع إمكانية الوصول
@@ -2089,7 +2093,7 @@ choice-accessibility-mode-self-voicing = نطق ذاتي
 choice-accessibility-mode-screen-reader = قارئ شاشة
 choice-accessibility-mode-hybrid = مختلط
 setting-accessibility-say-all = القراءة الكاملة مع قارئ شاشة
-setting-accessibility-say-all-help = القراءة المتواصلة في وضع قارئ الشاشة: جملة تلو الأخرى على سطر الحالة، أو بصوت textweaver.
+setting-accessibility-say-all-help = القراءة المتواصلة في وضع قارئ الشاشة. جملة تلو الأخرى على سطر الحالة، أو بصوت textweaver.
 choice-accessibility-say-all-screen = على سطر الحالة
 choice-accessibility-say-all-voice = بصوت textweaver
 setting-accessibility-quiet-screen = شاشة هادئة أثناء القراءة
@@ -2098,7 +2102,7 @@ choice-accessibility-quiet-screen-auto = تلقائي
 choice-accessibility-quiet-screen-true = مفعّلة
 choice-accessibility-quiet-screen-false = متوقفة
 setting-accessibility-cursor = المؤشر
-setting-accessibility-cursor-help = أين ينتظر مؤشر الطرفية: على ما تعمل عليه، أو على سطر الحالة.
+setting-accessibility-cursor-help = أين ينتظر مؤشر الطرفية. على ما تعمل عليه، أو على سطر الحالة.
 choice-accessibility-cursor-follow = يتبع التركيز
 choice-accessibility-cursor-status = على سطر الحالة
 setting-export-subtitle-format = صيغة الترجمة النصية
@@ -2111,7 +2115,7 @@ setting-export-subtitles-with-audio = الترجمة النصية مع الصو�
 setting-export-subtitles-with-audio-help = كتابة الترجمة النصية دائمًا بجانب الصوت المصدَّر.
 choice-export-subtitle-format-ass = كاريوكي ASS
 setting-export-subtitle-karaoke = كاريوكي الترجمة النصية
-setting-export-subtitle-karaoke-help = كيف تُظهر أسطر الترجمة النصية الكلمة المقروءة: متوقف، أو تسطير الكلمة عند نطقها (وسوم WebVTT)، أو ترجمة نصية لكل كلمة بخط عريض مسطَّر.
+setting-export-subtitle-karaoke-help = كيف تُظهر أسطر الترجمة النصية الكلمة المقروءة. متوقف، أو تسطير الكلمة عند نطقها (وسوم WebVTT)، أو ترجمة نصية لكل كلمة بخط عريض مسطَّر.
 choice-export-subtitle-karaoke-off = متوقف
 choice-export-subtitle-karaoke-tags = تسطير عند النطق
 choice-export-subtitle-karaoke-lines = ترجمة نصية لكل كلمة
@@ -2251,12 +2255,12 @@ choice-interface-language-de = Deutsch
 choice-interface-language-pt = Português
 choice-interface-language-ar = العربية
 setting-interface-rtl = العرض من اليمين إلى اليسار
-setting-interface-rtl-help = هل يعيد قارئ الطرفية ترتيب النص من اليمين إلى اليسار للعرض: automatic يتركه للطرفيات التي تفعل ذلك بنفسها. الكلام وقارئ الشاشة يحصلان دائمًا على النص بترتيب القراءة.
+setting-interface-rtl-help = هل يعيد قارئ الطرفية ترتيب النص من اليمين إلى اليسار للعرض. Automatic يتركه للطرفيات التي تفعل ذلك بنفسها. الكلام وقارئ الشاشة يحصلان دائمًا على النص بترتيب القراءة.
 choice-interface-rtl-auto = تلقائي
 choice-interface-rtl-on = مفعّل
 choice-interface-rtl-off = متوقف
 setting-gui-announce = الإعلانات
-setting-gui-announce-help = كيف تصل رسائل النافذة إلى قارئ الشاشة، من بدء التشغيل التالي: منطقة حية، أو إشعارات UI Automation (لنظام Windows فقط).
+setting-gui-announce-help = كيف تصل رسائل النافذة إلى قارئ الشاشة، من بدء التشغيل التالي. منطقة حية، أو إشعارات UI Automation (لنظام Windows فقط).
 choice-gui-announce-live = منطقة حية
 choice-gui-announce-uia = إشعارات UI Automation
 setting-gui-header = إظهار الترويسة
@@ -2268,7 +2272,7 @@ setting-gui-auto-hide-menu-help = Windows: يخفي شريط قوائم النا
 setting-gui-speak-messages = نطق رسائل textweaver
 setting-gui-speak-messages-help = عندما يقرأ textweaver بصوت عالٍ، ينطق أيضًا رسائله والكتابة وحركات المؤشر بصوته، للقراءة بالسمع دون قارئ شاشة.
 setting-gui-sidebar = اللوحة بجانب المستند
-setting-gui-sidebar-help = اللوحة التي تعرضها النافذة بجانب المستند: لا شيء، أو المحتويات (العناوين)، أو الملاحظات. مفاتيح اللوحات تغيّرها، وتتذكر النافذة آخر لوحة.
+setting-gui-sidebar-help = اللوحة التي تعرضها النافذة بجانب المستند. لا شيء، أو المحتويات (العناوين)، أو الملاحظات. مفاتيح اللوحات تغيّرها، وتتذكر النافذة آخر لوحة.
 choice-gui-sidebar-off = لا شيء
 choice-gui-sidebar-contents = المحتويات
 choice-gui-sidebar-notes = الملاحظات
@@ -2552,7 +2556,7 @@ edit-not-a-table-size = ليس حجم جدول: { $text }. اكتب أعمدة �
 edit-image-inserted = أُدرجت الصورة { $name }. وصفها محدَّد؛ اكتب لاستبداله.
 edit-image-failed = تعذّر إدراج الصورة: { $error }
 # $query is the text to find.
-edit-no-matches = لا تطابقات لـ{ $query }.
+common-no-matches = لا تطابقات لـ{ $query }.
 # $n matches of $query were found; the replacement is asked next.
 edit-replace-with =
     { $n ->
@@ -2565,8 +2569,8 @@ edit-replace-with =
 
 ## وضع التحرير: الحفظ التلقائي واسترداد العمل غير المحفوظ.
 
-edit-recovery-write-failed = تعذّرت كتابة نسخة الاسترداد: { $error }. احفظ قريبًا؛ سيواصل { -brand } المحاولة.
-edit-recovery-writing-again = تجري كتابة نسخة الاسترداد مجددًا.
+common-recovery-write-failed = تعذّرت كتابة نسخة الاسترداد: { $error }. احفظ قريبًا؛ سيواصل { -brand } المحاولة.
+common-recovery-writing-again = تجري كتابة نسخة الاسترداد مجددًا.
 # $title is the document; $when is how long ago its work was saved.
 edit-recovery-offer = أُغلق { -brand } وبه تغييرات غير محفوظة في { $title }، حُفظت { $when }. استرداده الآن؟ لأعلى ولأسفل للاختيار، Enter للتأكيد.
 edit-recovery-title = استرداد العمل غير المحفوظ في { $title }؟
@@ -2612,7 +2616,6 @@ replace-whole-words-now =
        *[other] الكلمات الكاملة فقط { $state }. { $n } تطابق.
     }
 # $query is the text that was searched for.
-replace-no-matches = لا تطابقات لـ{ $query }.
 replace-replaced =
     { $n ->
         [one] استُبدل تطابق واحد.
@@ -2631,10 +2634,7 @@ writes-not-written-in-time = تعذّرت كتابة بعض التغييرات �
 # $error is the system's reason.
 writes-save-failed = تعذّر الحفظ: { $error }. ما زلت في وضع التحرير.
 # $name is the bookmark's name, $pct where it is.
-writes-bookmark-set = وُضعت الإشارة المرجعية { $name } عند { $pct } بالمئة.
 writes-bookmark-not-saved = الإشارة المرجعية { $name } موضوعة الآن، لكن تعذّر حفظها: { $error }
-writes-recovery-copy-failed = تعذّرت كتابة نسخة الاسترداد: { $error }. احفظ قريبًا؛ سيواصل { -brand } المحاولة.
-writes-recovery-copy-resumed = تجري كتابة نسخة الاسترداد مجددًا.
 # $name is the saved file's name.
 writes-saved = حُفظ { $name }. ما زلت في وضع التحرير.
 
@@ -2735,7 +2735,7 @@ mdline-numbered-item = العنصر المرقَّم { $n }
 
 ## التنقل في الجداول صفًا وخلية. $dir هو next (للأمام) أو previous (للخلف).
 
-tables-not-in-table = لست في جدول.
+common-not-in-table = لست في جدول.
 tables-edge-of-table =
     { $dir ->
         [next] نهاية الجدول.
@@ -2787,7 +2787,6 @@ authoring-word-count-document =
        *[other] { $count } كلمة في المستند.
     }
 # $text is the link's text.
-authoring-link-no-address = الرابط { $text } بلا عنوان.
 authoring-link-address = عنوان الرابط: { $url }
 authoring-link-named-address = الرابط { $text }، العنوان: { $url }
 authoring-no-link = لا رابط عند المؤشر.
@@ -2804,7 +2803,6 @@ authoring-copied = نُسخ: { $text }
 authoring-copied-sentence = نُسخت الجملة: { $text }
 authoring-nothing-to-cut = لا شيء محدَّد لقصه.
 authoring-cut = قُصّ: { $text }
-authoring-not-in-table = لست في جدول.
 # $dir is next (moving forward) or previous.
 authoring-table-edge =
     { $dir ->
@@ -2891,7 +2889,7 @@ lint-no-earlier =
 # $message is one of the problems above.
 lint-said = Lint: { $message }
 # Added at high verbosity.
-lint-line = السطر { $line }.
+common-line = السطر { $line }.
 
 ## التدقيق النحوي (Harper). $message هي رسالة Harper نفسها، بالإنجليزية.
 
@@ -2917,7 +2915,6 @@ grammar-no-earlier =
 # $key opens the fixes list.
 grammar-lists-fixes = { $key } يسرد الإصلاحات.
 # Added at high verbosity.
-grammar-line = السطر { $line }.
 # $described is grammar-said (and its fix) without the last full stop.
 grammar-no-fix = { $described } لا إصلاح لعرضه.
 grammar-fixes =
@@ -2936,7 +2933,7 @@ grammar-fixes-edit =
         [many] { $words }: { $n } إصلاحًا. Enter لإجراء التغيير.
        *[other] { $words }: { $n } إصلاح. Enter لإجراء التغيير.
     }
-grammar-left-as-is = تُركت كما هي.
+common-left-as-is = تُركت كما هي.
 # $fix is the fix chosen; $key turns on edit mode.
 grammar-fix-not-editing = { $fix }. فعّل وضع التحرير بـ{ $key } لتغيير النص.
 grammar-removed = أُزيلت.
@@ -2961,7 +2958,6 @@ spell-no-earlier =
        *[other] لا خطأ إملائي أقدم. { $count } أخطاء إملائية محتملة في المجموع.
     }
 # Added at high verbosity.
-spell-line = السطر { $line }.
 spell-no-misspelled-word = لا كلمة خطأ إملائيًا عند المؤشر.
 # $word is the misspelled word; $n how many suggestions follow.
 spell-suggestions =
@@ -2986,7 +2982,6 @@ spell-suggestions-edit =
 spell-replace-not-editing = { $word }. فعّل وضع التحرير بـ{ $key } لتغيير النص.
 spell-replaced = استُبدلت بـ{ $word }.
 spell-replace-failed = تعذّر الاستبدال: { $error }
-spell-left-as-is = تُركت كما هي.
 spell-added-for-session = أُضيفت { $word } إلى قائمة كلماتك لهذه الجلسة.
 spell-added = أُضيفت { $word } إلى قائمة كلماتك.
 spell-save-failed = تعذّر حفظ قائمة كلماتك: { $error } تبقى الكلمة معروفة حتى تخرج.
@@ -3036,7 +3031,6 @@ tui-clip-not-built = هذه النسخة بلا حافظة نظام
 tui-title = { -brand }: { $title }
 tui-title-no-document = لا يوجد مستند
 # The screen without a document. $keys names the keys for the action.
-tui-empty-no-document = لا يوجد مستند مفتوح.
 tui-empty-open = فتح واحد: { $keys }.
 tui-empty-help = المساعدة: { $keys }.
 tui-empty-quit = إنهاء: { $keys }.
@@ -3108,7 +3102,7 @@ gui-text-size-smallest = حجم النص { $size } نقطة، وهو الأصغ�
 gui-font = الخط: { $family }.
 gui-font-list = الخط
 
-## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## The Braille pass: pages in paged documents such as a PDF.
 ## $page and $n are page numbers, $label a printed page label such as iv,
 ## $pages the number of pages. Keep the page first: a 40-cell Braille
 ## display shows the start of the line.
@@ -3161,7 +3155,7 @@ prompt-go-to-pages = الانتقال إلى صفحة، أو السطر 12، أ�
 goto-not-a-target-pages = ليس هدف انتقال: { $text }. اكتب رقم صفحة، أو كلمة line ورقمًا، أو نسبة مئوية مثل 50%، أو start، أو end.
 goto-word-page = صفحة
 
-## Wave 5 (W5y): تصفية المكتبة والقاموس والسرعات.
+## تصفية المكتبة والقاموس والسرعات.
 
 # The library list filtered: $shown of $n documents match $filter.
 library-title-filtered = المكتبة، { $shown } من { $n } يطابق { $filter }
@@ -3187,7 +3181,7 @@ library-filter-matched =
     }
 # Said once when define word is used while the dictionary file is still opening.
 define-still-loading = ما زال القاموس قيد التحميل.
-# إعدادات أضافها W5y.
+# إعدادات.
 setting-speech-dectalk-library = مكتبة DECtalk
 setting-speech-dectalk-library-help = مكتبة DECtalk المراد تحميلها؛ عدم الضبط يبحث في الأماكن المعتادة.
 setting-speech-piper-voices = مجلد أصوات Piper
@@ -3195,16 +3189,16 @@ setting-speech-piper-voices-help = مجلد أصوات Piper؛ عدم الضبط
 setting-speech-piper-voice = صوت Piper
 setting-speech-piper-voice-help = صوت Piper للبدء به، حسب المعرّف؛ عدم الضبط يأخذ أول صوت مثبَّت.
 setting-speech-piper-phonemizer = المحوِّل الصوتي لـ Piper
-setting-speech-piper-phonemizer-help = كيف يحوّل Piper النص إلى أصوات: مكتبة espeak-ng إن كانت مثبَّتة، أو تلك المكتبة، أو محوِّل textweaver.
+setting-speech-piper-phonemizer-help = كيف يحوّل Piper النص إلى أصوات. مكتبة espeak-ng إن كانت مثبَّتة، أو تلك المكتبة، أو محوِّل textweaver.
 choice-speech-piper-phonemizer-auto = تلقائي
 choice-speech-piper-phonemizer-library = مكتبة espeak-ng
 choice-speech-piper-phonemizer-rust = محوِّل textweaver
 setting-speech-voice-params = السرعة وطبقة الصوت لكل صوت
-setting-speech-voice-params-help = السرعة وطبقة الصوت اللتان استُخدم بهما كل صوت آخر مرة؛ اختيار الصوت مجددًا يعيدهما.
+setting-speech-voice-params-help = السرعة وطبقة الصوت اللتان استُخدم بهما كل صوت آخر مرة. اختيار الصوت مجددًا يعيدهما.
 setting-editing-author = المؤلف
 setting-editing-author-help = المؤلف الذي يُكتب في المستندات الجديدة المنشأة من قالب؛ تركه فارغًا يبقيه خاليًا.
 
-## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
 
 gui-yes = نعم
@@ -3257,7 +3251,6 @@ gui-settings-sections = الأقسام
 gui-settings-form = إعدادات { $section }
 gui-settings-saved-hint = تسري التغييرات وتُحفظ فورًا.
 gui-settings-close-help = إغلاق الإعدادات. كل تغيير محفوظ بالفعل.
-gui-settings-closed = أُغلقت الإعدادات.
 gui-settings-recent = المُغيَّرة مؤخرًا
 gui-settings-matching = المطابقة لـ { $filter }
 gui-settings-table = { $label } جدول. حرّره في settings.toml.
@@ -3268,7 +3261,6 @@ gui-prompt-hint = اضغط Enter للقبول، أو Escape للإلغاء. يس
 gui-palette-filter = اكتب لتصفية الأوامر
 gui-palette-list = الأوامر
 gui-palette-hint = يشغّل Enter أول نتيجة مطابقة، وينتقل Tab إلى القائمة.
-gui-no-document = لا يوجد مستند مفتوح. اضغط { $key } لفتح مستند.
 gui-open-failed = تعذّر فتح { $name }: { $error }
 gui-uia-unavailable = إشعارات UI Automation متاحة في Windows فقط؛ ستُستخدم المنطقة الحية.
 gui-graphics-failed = تعذّر على النافذة تشغيل الرسوميات. قارئ الطرفية textweaver لا يحتاج إليها.
@@ -3299,7 +3291,7 @@ gui-palette-count =
 gui-settings-form-help = ينتقل السهمان لأعلى ولأسفل بين الإعدادات. ويغيّر السهمان لليسار ولليمين إعدادًا. ويكتب Enter قيمة جديدة. ويعيد Delete القيمة الافتراضية. ويغيّر { $next } و{ $previous } القسم. اكتب للتصفية. ويقول F1 التعليمات.
 gui-settings-press-enter = اضغط Enter لكتابة قيمة جديدة لـ { $label }.
 gui-font-built-in = { $family } (مضمّن)
-## Wave 5 (W5s): summaries and difficult-word definitions.
+## Summaries and difficult-word definitions.
 
 action-summarize = تلخيص التحديد أو الفصل أو المستند: أهم جمله في قائمة؛ Enter ينتقل إلى إحداها
 # The summary list's title: $n sentences of the whole document.
@@ -3352,18 +3344,18 @@ settings-unit-sentences =
        *[other] جملة
     }
 
-# W6a5: the GUI. Said in textweaver's own voice when the window takes the
+# The GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }، { -brand }.
 
-## Wave 6 (W6o): opening the new formats. Said after "Could not open NAME:", so
+## Opening the new formats. Said after "Could not open NAME:", so
 ## each starts in lower case.
 opening-damaged-json = ليس ملف JSON قابلًا للقراءة؛ قد يكون كبيرًا جدًا.
 opening-damaged-notebook = ليس دفتر Jupyter قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
 opening-damaged-svg = ليس رسمًا بصيغة SVG قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
 opening-damaged-mathml = ليست صيغة MathML قابلة للقراءة؛ قد تكون تالفة أو كبيرة جدًا.
 
-## W6u: menus, the command palette, interface announcements, colors, and settings
+## Menus, the command palette, interface announcements, colors, and settings
 
 ## Menu titles; the top menus mark their access key with &.
 
@@ -3660,7 +3652,7 @@ action-menu = فتح القوائم: ملف وتحرير وعرض وقراءة �
 action-what-does-this-key-do = اضغط مفتاحًا لتسمع ما يفعله وأين يوجد في القوائم دون تشغيله
 action-about = عرض المعلومات التي يحتاجها بلاغ المشكلة: الإصدار والبناء والمكونات ومحركات الكلام والمجلدات
 setting-colors-ruler = لون مسطرة القراءة
-setting-colors-ruler-help = شريط مسطرة القراءة والسطر الحالي المحدد؛ تحتفظ المسطرة بتسطيرها أو خطها الغامق. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
+setting-colors-ruler-help = شريط مسطرة القراءة والسطر الحالي المحدد. تحتفظ المسطرة بتسطيرها أو خطها الغامق. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-difficult-words = لون الكلمات الصعبة
 setting-colors-difficult-words-help = تسطير الكلمات الصعبة؛ تبقى مسطرة وتُذكر عند التفصيل العالي. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-colors-syllables = لون علامات المقاطع
@@ -3719,9 +3711,8 @@ settingsio-import-question-names =
     }
 settingsio-and-more = { $names } و{ $n } غيرها
 
-## End of W6u
 
-## W6d: dictation in edit mode (ADR-0042). Keep the meaning first: a
+## Dictation in edit mode (ADR-0042). Keep the meaning first: a
 ## 40-cell Braille display shows the start of the line. $words are the
 ## dictated words, $key the dictate key, $dir a folder, $error and $text
 ## are passed on as they are.
@@ -3742,9 +3733,8 @@ setting-dictation-model-dir = مجلد نموذج الإملاء
 setting-dictation-model-dir-help = نموذج Whisper للإملاء. عند عدم تعيينه يُستخدم whisper/rten/base.en في مجلد البيانات.
 section-dictation = الإملاء
 
-## End of W6d
 
-## W6f: the file browser. Every row and introduction starts with the name,
+## The file browser. Every row and introduction starts with the name,
 ## then the kind, so the first cells of a 40-cell Braille line hold what
 ## matters. $name is a file or folder name; $n a number that chooses the
 ## plural and $count the same number written with its separators.
@@ -3867,9 +3857,8 @@ browse-preview-folder-empty = { $path }: لا شيء للقراءة هنا.
 browse-preview-other = { $name }، { $size }؛ لا يستطيع textweaver قراءة هذا النوع من الملفات.
 browse-preview-path = { $path }
 
-## End of W6f
 
-## W6k: batch conversion (File, Batch convert). Keep the meaning first.
+## Batch conversion (File, Batch convert). Keep the meaning first.
 batch-choose-source = اختر المجلد المراد تحويله
 batch-choose-output = اختر مجلد الملفات المحوّلة
 batch-format-title = التحويل إلى
@@ -3922,9 +3911,8 @@ batch-failure-item = { $name }: { $reason }
 batch-start-failed = تعذّر بدء التحويل: { $error }
 batch-thread-stopped = توقف التحويل الجماعي على نحو غير متوقع.
 
-## End of W6k
 
-## W6v: audio export (File, Export audio). Keep the meaning first: a
+## Audio export (File, Export audio). Keep the meaning first: a
 ## 40-cell Braille display shows the start of the line. $name is a file
 ## name (essay.flac); $path a folder or a file's full path; $format a
 ## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
@@ -3965,9 +3953,8 @@ audio-subtitles = الترجمة في { $name }.
 audio-failed = تعذر تصدير الصوت: { $error }
 audio-thread-stopped = توقف تصدير الصوت على نحو غير متوقع.
 
-## End of W6v
 
-## W6a6: the window's menus and dialogs. Settings files chosen with the
+## The window's menus and dialogs. Settings files chosen with the
 ## system's file chooser, the Colors dialog, and the font list. $ratio is
 ## a contrast ratio such as 4.8; $verdict is good, fair, or low.
 gui-settings-files = ملفات الإعدادات
@@ -3987,14 +3974,12 @@ gui-font-list-intro =
        *[other] { $title }، { $n } عائلات.
     }
 
-## End of W6a6
 
-## W6c5: PDF links. Said before the first line of the page a link inside
+## PDF links. Said before the first line of the page a link inside
 ## a PDF goes to, when the page has no heading there (as links-heading-label
 ## is for a heading). $page is the page's printed number or label (12, iv).
 links-page-label = صفحة { $page }
 
-## End of W6c5
 
 ## Sync wave, S4: sync in the reader (ADR-0049).
 sync-status-off = المزامنة: متوقفة
@@ -4128,9 +4113,9 @@ section-sync = المزامنة
 setting-sync-enabled = المزامنة
 setting-sync-enabled-help = مشاركة الملاحظات والتظليلات والعلامات المرجعية والمواضع مع حواسيبك الأخرى عبر مجلد المزامنة. الأدوات، المزامنة، إعداد المزامنة يشغّلها.
 setting-sync-folder = مجلد المزامنة
-setting-sync-folder-help = المجلد الذي تتشاركه حواسيبك: مجلد يحدّثه Syncthing، أو مجلد سحابي، أو ذاكرة USB.
+setting-sync-folder-help = المجلد الذي تتشاركه حواسيبك. مجلد يحدّثه Syncthing، أو مجلد سحابي، أو ذاكرة USB.
 setting-sync-device-name = اسم الحاسوب
-setting-sync-device-name-help = اسم هذا الحاسوب في رسائل المزامنة، مثل laptop أو lab؛ الفارغ يستخدم Computer 1 وComputer 2 وهكذا.
+setting-sync-device-name-help = اسم هذا الحاسوب في رسائل المزامنة، مثل laptop أو lab. الفارغ يستخدم Computer 1 وComputer 2 وهكذا.
 setting-sync-places = مزامنة المواضع
 setting-sync-places-help = مشاركة موضعك في كل مستند.
 setting-sync-notes = مزامنة الملاحظات
@@ -4142,7 +4127,7 @@ setting-sync-bookmarks-help = مشاركة العلامات المرجعية.
 setting-sync-statistics = مزامنة الإحصاءات
 setting-sync-statistics-help = مشاركة وقت القراءة والجلسات لكل حاسوب.
 setting-sync-position-policy = موضع الاستئناف
-setting-sync-position-policy-help = الموضع الذي يُفتح عنده المستند حين يكون لحاسوب آخر موضع أيضًا: الأحدث، أو الأبعد، أو السؤال.
+setting-sync-position-policy-help = الموضع الذي يُفتح عنده المستند حين يكون لحاسوب آخر موضع أيضًا. الأحدث، أو الأبعد، أو السؤال.
 choice-sync-position-policy-newest = الأحدث
 choice-sync-position-policy-furthest = الأبعد
 choice-sync-position-policy-ask = السؤال
@@ -4200,11 +4185,11 @@ setting-sync-words-help = مشاركة قائمة كلمات التدقيق ال
 setting-sync-glossary = مزامنة المسرد
 setting-sync-glossary-help = مشاركة مدخلات المسرد والنطق.
 setting-sync-favorite-voices = مزامنة الأصوات المفضلة
-setting-sync-favorite-voices-help = مشاركة الأصوات المفضلة؛ الصوت غير الموجود على هذا الحاسوب يُذكر أنه غير موجود على هذا الحاسوب.
+setting-sync-favorite-voices-help = مشاركة الأصوات المفضلة. الصوت غير الموجود على هذا الحاسوب يُذكر أنه غير موجود على هذا الحاسوب.
 
 ## End of S5
 
-## W7l: Lexend downloaded on first choice.
+## Lexend downloaded on first choice.
 font-download-question = تنزيل الخط { $font }، { $kb } كيلوبايت، { $licence }؟ y أو n
 font-downloading = تنزيل { $font }.
 font-downloaded = تم تنزيل { $font } وهو جاهز.
@@ -4216,7 +4201,7 @@ font-download-not-in-build = تنزيل الخطوط غير متاح في هذا
 gui-font-to-download = { $family } (للتنزيل، { $kb } كيلوبايت)
 gui-font-downloaded = { $family } (منزّل)
 
-## W8a-f: منتقيات الملفات والمجلدات.
+## منتقيات الملفات والمجلدات.
 prompt-browse-hint = { $label }. { $key } للتصفح.
 prompt-browse-file = اختر الملف: { $label }
 prompt-browse-folder = اختر المجلد: { $label }
@@ -4232,7 +4217,7 @@ chooser-profile-files = ملفات تصدير الإعدادات
 gui-folder-no-dialog = لم يُفتح منتقي المجلدات في النظام. اختر المجلد من هذه القائمة.
 gui-prompt-browse-hint = يفتح { $key } متصفح الملفات.
 
-## المكونات الاختيارية (W8a-d، W8a-w).
+## المكونات الاختيارية.
 name-manage-components = إدارة المكونات الاختيارية…
 name-download-dictation-model = تنزيل نموذج الإملاء
 action-manage-components = إدارة المكونات الاختيارية: النماذج والخطوط والأصوات التي يمكن لـ textweaver تنزيلها، مع حجمها وترخيصها
@@ -4310,7 +4295,7 @@ dictation-model-file-missing = ينقص النموذج { $file }.
 dictation-model-damaged = نموذج الإملاء تالف: { $file }.
 dictation-model-no-folder = لا مجلد للنموذج: { $dir }.
 
-## إعدادات المكونات الاختيارية (W8a-d، W8a-w).
+## إعدادات المكونات الاختيارية.
 section-components = المكونات الاختيارية
 setting-dictation-model = نموذج الإملاء
 setting-dictation-model-help = نموذج Whisper الذي يستخدمه الإملاء حين لا يُحدَّد مجلد. «تنزيل نموذج الإملاء» في قائمة الأدوات يجلبه.

@@ -1082,6 +1082,14 @@ impl App {
         ) else {
             return (None, None);
         };
+        // The window shows its two modes, not the three stored ones.
+        let window_mode;
+        let setting = if path == "accessibility.mode" && self.uses_window_modes() {
+            window_mode = crate::settings_schema::window_access_mode(setting);
+            &window_mode
+        } else {
+            setting
+        };
         match (&setting.kind, &now) {
             (crate::settings_schema::SettingKind::Toggle, serde_json::Value::Bool(b)) => {
                 (Some(*b), None)

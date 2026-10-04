@@ -242,7 +242,7 @@ impl App {
             pct,
         };
         if !self.save_state(note) {
-            let msg = self.msg_args("marks-bookmark-set", &args!["name" => name, "pct" => pct]);
+            let msg = self.msg_args("common-bookmark-set", &args!["name" => name, "pct" => pct]);
             self.tell(&msg);
         }
     }

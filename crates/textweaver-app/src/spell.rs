@@ -340,7 +340,7 @@ impl App {
         let mut msg = format!("{}. {}.", w.text, spelled(self.cat(), &w.text));
         if self.settings.speech.verbosity >= textweaver_a11y::Verbosity::High {
             msg.push(' ');
-            msg.push_str(&self.msg_args("spell-line", &args!["line" => line]));
+            msg.push_str(&self.msg_args("common-line", &args!["line" => line]));
         }
         self.tell(&msg);
     }
@@ -433,7 +433,7 @@ impl App {
             }
             SpellChoice::Add => self.add_word(word),
             SpellChoice::Ignore => {
-                let msg = self.msg("spell-left-as-is");
+                let msg = self.msg("common-left-as-is");
                 self.note(&msg);
             }
         }

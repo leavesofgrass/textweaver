@@ -8,7 +8,7 @@ You can also edit `settings.toml` yourself in any text editor. Close textweaver 
 
 ## The settings screen
 
-Change settings without leaving textweaver: press `Shift+F10` in the terminal reader (`Ctrl+comma` in the GUI), or type `settings` in the command palette (`F2`).
+Change settings without leaving textweaver: press `Shift+F10` in the terminal reader (`Ctrl+comma` in the window), or type `settings` in the command palette (`F2`).
 
 - Every setting is listed as its name and value, such as "Rate: 265 words per minute", speech first.
 - In the terminal reader, type to filter: "rate" leaves the settings with "rate" in their name, section, or help. Backspace removes a letter.
@@ -326,10 +326,10 @@ See [The library](library.md).
 
 How textweaver shares the work with a screen reader. See [Using textweaver with a screen reader](screen-readers.md).
 
-- `mode`, default `"self-voicing"`: `"self-voicing"` (textweaver speaks everything), `"hybrid"` (textweaver reads documents aloud; your screen reader speaks messages, typing, and caret moves from the status line), or `"screen-reader"` (textweaver is silent). Alt+Shift+A cycles and saves it; `--mode` sets it for one run; `--no-speech` is screen-reader mode.
+- `mode`, default `"self-voicing"`: `"self-voicing"` (textweaver speaks everything), `"hybrid"` (textweaver reads documents aloud; your screen reader speaks messages, typing, and cursor moves from the status line), or `"screen-reader"` (textweaver is silent). Alt+Shift+A cycles and saves it; `--mode` sets it for one run; `--no-speech` is screen-reader mode.
 - `say_all`, default `"screen"`: continuous reading in screen-reader mode. `"screen"` moves a sentence at a time and puts each sentence on the status line at textweaver's rate; `"voice"` reads with textweaver's voice.
 - `quiet_screen`, on by default in hybrid mode and off in the other modes: while textweaver reads aloud, the title line's position stays still and the text being read is not copied to the status line. Set `true` or `false` to choose for every mode; leave it out (or set `"auto"`) to follow the mode.
-- `cursor`, default `"follow"`: where the terminal's cursor waits. `"follow"` puts it on the spoken word, the caret, or the chosen item; `"status"` puts it on the status line, so your screen reader's "read current line" repeats the last message.
+- `cursor`, default `"follow"`: where the terminal's cursor waits. `"follow"` puts it on the spoken word, the editing cursor, or the chosen item; `"status"` puts it on the status line, so your screen reader's "read current line" repeats the last message.
 - `hybrid_offered`, default `false`: set after textweaver has asked, on its first run with a screen reader, whether to use hybrid mode. Set it back to `false` to be asked again.
 - `interface_announcements`, default `"auto"`: how much textweaver says about itself: `"off"`, `"minimal"`, `"normal"`, or `"full"`; `"auto"` is minimal in screen-reader and hybrid modes and normal when self-voicing. Errors, questions, and answers to what you asked are always said. Ctrl+F9 cycles it. See [Interface announcements](reading.md#interface-announcements-ctrlf9).
 
@@ -353,8 +353,8 @@ Braille output: BRF files and math braille on the display. See [Math in braille 
 See [Reading aids](reading-aids.md).
 
 - `bionic`, default `false`: bionic reading, the start of each word in bold. Alt+Shift+B turns it on and off.
-- `syllables`, default `false`: show long words split into syllables, `read·a·bil·i·ty`. Alt+Shift+Z turns it on and off. Both the terminal reader and the GUI draw it.
-- `difficult_words`, default `false`: underline rare words (SCOWL sizes above 50), and name them on word moves at high verbosity. Alt+Shift+J turns it on and off. Both the terminal reader and the GUI draw it.
+- `syllables`, default `false`: show long words split into syllables, `read·a·bil·i·ty`. Alt+Shift+Z turns it on and off. Both the terminal reader and the window draw it.
+- `difficult_words`, default `false`: underline rare words (SCOWL sizes above 50), and name them on word moves at high verbosity. Alt+Shift+J turns it on and off. Both the terminal reader and the window draw it.
 
 ### [reading_aids.bionic_options]
 
@@ -373,7 +373,7 @@ RSVP shows one word at a time.
 - `long_word_len`, default `8`, `long_word_step`, default `10`, and `long_word_max`, default `80`: a word longer than `long_word_len` letters gets `long_word_step` percent more time per extra letter, up to `long_word_max` percent.
 - `position`, default `"top-center"`: where the word box sits. `"top-left"`, `"top-center"`, `"top-right"`, `"center-left"`, `"center"`, `"center-right"`, `"bottom-left"`, `"bottom-center"`, or `"bottom-right"`.
 - `show_previous` and `show_next`, default `true`: show the word before and the word after.
-- `font_size_pt`, default `48`: the word's size in the GUI. The terminal uses its own font.
+- `font_size_pt`, default `48`: the word's size in the window. The terminal uses its own font.
 
 ### [reading_aids.spacing]
 
@@ -386,7 +386,7 @@ Text spacing, in multiples of the font size. In the terminal, textweaver adds bl
 
 ### [reading_aids.font]
 
-The font in the GUI. The terminal always uses its own font.
+The font in the window. The terminal always uses its own font.
 
 - `family`, default `"sans"`: `"system-ui"`, `"sans"`, `"serif"`, `"monospace"`, a reading font (`"opendyslexic"`, `"atkinson"`, `"lexend"`), or the name of any installed font.
 - `size_pt`, default `14.0`: the size in points, from 6 to 144 in this file; the Settings dialog and the window's size keys go up to 72.
@@ -415,7 +415,7 @@ For the syllable display (`syllables` above).
 
 The browser preview of the document you are editing (`preview in browser` in the palette). See [the editing guide](editing.md#preview-in-the-browser).
 
-- `auto_reload`, default `false`: reload the page by itself after each save, through a small server on this computer only (127.0.0.1, with a secret in the address), landing on the heading nearest the caret. Off, textweaver says "Preview updated. Press F5 in the browser." A reload moves your screen reader's place in the page, which is why it is off. The palette's `toggle preview auto reload` switches it.
+- `auto_reload`, default `false`: reload the page by itself after each save, through a small server on this computer only (127.0.0.1, with a secret in the address), landing on the heading nearest the cursor. Off, textweaver says "Preview updated. Press F5 in the browser." A reload moves your screen reader's place in the page, which is why it is off. The palette's `toggle preview auto reload` switches it.
 - `live`, default `false`: with `auto_reload`, also reload when typing pauses for a second. The palette's `toggle preview live` switches it.
 
 ### [lexicon]
@@ -439,7 +439,7 @@ Extractive summaries (see [Summaries](reading.md#summaries)).
 
 ### [dictation]
 
-Dictating text, in edit mode, in the terminal reader and the GUI. See [Dictation](dictation.md).
+Dictating text, in edit mode, in the terminal reader and the window. See [Dictation](dictation.md).
 
 - `speak_while_recording`, default `false`: speak the dictated words with textweaver's own voice while the microphone is open. Off, they are shown on the status line as they come and spoken once, at each pause, so the microphone does not hear textweaver's voice.
 - `model_dir`, not set by default: a folder holding an in-process Whisper model (its encoder, decoder, and `tokenizer.json`), used as it is. Unset, textweaver uses the model `model` chooses, in its data folder.
@@ -504,7 +504,7 @@ Every setting is either **portable**, which syncs, or **machine**, which never d
 
 A profile is a named set of the settings you change together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; and the access mode. Keep one for studying and one for skimming, or one for each person who shares the computer.
 
-- In the reader, **Ctrl+Shift+U** in the GUI or **Alt+U** in the terminal lists your profiles. Enter switches to one; its settings take effect at once and are saved. F2 renames a profile, and Delete deletes one after a yes or no. The last items save the current settings as a new profile, save them into the profile in use, and import and export profiles.
+- In the reader, **Ctrl+Shift+U** in the window or **Alt+U** in the terminal lists your profiles. Enter switches to one; its settings take effect at once and are saved. F2 renames a profile, and Delete deletes one after a yes or no. The last items save the current settings as a new profile, save them into the profile in use, and import and export profiles.
 - From the command line:
 
   ```sh

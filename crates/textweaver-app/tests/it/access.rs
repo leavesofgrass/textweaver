@@ -390,6 +390,34 @@ fn cursor_placement_comes_from_the_settings() {
 /// on; the mode key moves between it and "my screen reader reads", and the
 /// change is said in words that are true in the window.
 #[test]
+fn the_window_shows_its_two_modes_not_the_three_stored() {
+    let v = |s: &str| serde_json::Value::from(s);
+    let mut r = rig(AccessMode::SelfVoicing);
+    let schema = r.app.settings_schema();
+    let s = schema.get("accessibility.mode").expect("the mode setting");
+    assert_eq!(
+        s.describe(&v("hybrid")),
+        "hybrid",
+        "the terminal keeps three"
+    );
+    r.app.use_window_modes(false);
+    let schema = r.app.settings_schema();
+    let s = schema.get("accessibility.mode").expect("the mode setting");
+    assert_eq!(s.describe(&v("self-voicing")), "textweaver reads aloud");
+    assert_eq!(s.describe(&v("hybrid")), "textweaver reads aloud");
+    assert_eq!(s.describe(&v("screen-reader")), "my screen reader reads");
+    // One step from either reading-aloud value reaches the screen reader's.
+    assert_eq!(
+        s.stepped(&v("self-voicing"), true),
+        Some(v("screen-reader"))
+    );
+    assert_eq!(s.stepped(&v("screen-reader"), true), Some(v("hybrid")));
+    assert!(!s.help.is_empty());
+    let c = textweaver_app::lexicon::i18n::Catalog::english();
+    assert!(s.help_in(&c).starts_with("Who reads"), "{}", s.help_in(&c));
+}
+
+#[test]
 fn the_window_has_two_modes_and_a_speak_messages_switch() {
     let mut r = rig(AccessMode::SelfVoicing);
     r.app.use_window_modes(false);

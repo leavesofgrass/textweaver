@@ -2630,10 +2630,10 @@ impl Gui {
                 if let Some(r) = rows.get(row) {
                     // "Rate, 265 words per minute. How fast ...": what the
                     // setting is now, then its help (W9b-d).
-                    let said = if r.help.is_empty() {
+                    let said = if r.full_help.is_empty() {
                         format!("{}, {}.", r.label, r.value_text)
                     } else {
-                        format!("{}, {}. {}", r.label, r.value_text, r.help)
+                        format!("{}, {}. {}", r.label, r.value_text, r.full_help)
                     };
                     self.app
                         .announce_as(&said, Priority::Polite, Importance::Answer);
@@ -2785,7 +2785,7 @@ impl Gui {
                 let said = self.app.catalog().tr(if colors {
                     "gui-colors-closed"
                 } else {
-                    "gui-settings-closed"
+                    "settings-closed"
                 });
                 self.app
                     .announce_as(&said, Priority::Polite, Importance::Dialog);
@@ -3551,7 +3551,7 @@ impl Gui {
                 let said = self
                     .app
                     .catalog()
-                    .fmt("gui-no-document", &args!["key" => open.as_str()]);
+                    .fmt("app-no-document-open", &args!["key" => open.as_str()]);
                 if self.first_run && self.app.interface_allows(Importance::Tip) {
                     let welcome = setup::welcome_text(&self.app.catalog(), self.app.keymap());
                     self.app

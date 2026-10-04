@@ -1130,7 +1130,7 @@ impl Tui {
             };
             let lines = vec![
                 Line::from(""),
-                Line::from(format!("{pad}{}", c.tr("tui-empty-no-document"))),
+                Line::from(format!("{pad}{}", c.tr("common-no-document"))),
                 line("tui-empty-open", ActionId::Open),
                 line("tui-empty-help", ActionId::Help),
                 line("tui-empty-quit", ActionId::Quit),

@@ -149,7 +149,7 @@ impl App {
         };
         let target = target.trim().to_owned();
         if target.is_empty() {
-            let msg = self.msg_args("links-no-address", &args!["text" => text.trim()]);
+            let msg = self.msg_args("common-link-no-address", &args!["text" => text.trim()]);
             self.tell(&msg);
             return vec![Effect::Redraw];
         }

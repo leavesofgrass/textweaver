@@ -439,17 +439,17 @@ In edit mode, press **Alt+C**. textweaver says how many references there are, fo
 2. Press **Enter** on the reference you want.
 3. textweaver asks "Page or other locator, for example 12 or chapter 2; Enter for none". Type a page (`12`), pages (`3-5` or `pp. 3-5`), or another division (`chapter 2`, `section 4.1`), or press **Enter** for none. If textweaver cannot read what you typed, it says so and asks again.
 
-The citation goes in at the caret, for example `[@doe2020, p. 12]`, with a space before it when it follows a word. You hear what went in: "Inserted citation of Doe and Roe, 2020, page 12." With the caret inside a citation already, the new reference joins it: `[@doe2020, p. 12; @roe2021]`. Each insertion is one undo step.
+The citation goes in at the cursor, for example `[@doe2020, p. 12]`, with a space before it when it follows a word. You hear what went in: "Inserted citation of Doe and Roe, 2020, page 12." With the cursor inside a citation already, the new reference joins it: `[@doe2020, p. 12; @roe2021]`. Each insertion is one undo step.
 
 ### Add a reference by DOI or ISBN: Alt+B
 
-Press **Alt+B** in the terminal, or **Alt+Shift+D** in the GUI (Windows Terminal keeps **Alt+Shift+D** for splitting its window, so the terminal key moved; see [the screen reader guide](screen-readers.md#windows-terminal-keys-that-clash)), or run `add reference` from the command palette, and type a DOI (`10.1038/nature12373`, or its doi.org address) or an ISBN. You hear "Looking up" and the identifier; you can go on reading or writing. When the answer comes, you hear, for example, "Added reference kucsko2013. Kucsko, Maurer, and Yao, 2013. Nanometre-scale thermometry in a living cell." The reference goes into the folder's `references.json` when the document's folder has one, else into your own library. Lookups use the same cache as `tw cite add`, so an identifier looked up before works offline.
+Press **Alt+B** in the terminal, or **Alt+Shift+D** in the window (Windows Terminal keeps **Alt+Shift+D** for splitting its window, so the terminal key moved; see [the screen reader guide](screen-readers.md#windows-terminal-keys-that-clash)), or run `add reference` from the command palette, and type a DOI (`10.1038/nature12373`, or its doi.org address) or an ISBN. You hear "Looking up" and the identifier; you can go on reading or writing. When the answer comes, you hear, for example, "Added reference kucsko2013. Kucsko, Maurer, and Yao, 2013. Nanometre-scale thermometry in a living cell." The reference goes into the folder's `references.json` when the document's folder has one, else into your own library. Lookups use the same cache as `tw cite add`, so an identifier looked up before works offline.
 
 ### Commands from the palette
 
 Press **F2** and type part of the name:
 
-- `insert bibliography`: in edit mode, inserts at the caret the formatted entries of every work the document cites, in APA style, or in the style the front matter names with `csl: mla`. You hear how many entries went in and any keys that are not in a library. Put the caret under your References heading first.
+- `insert bibliography`: in edit mode, inserts at the cursor the formatted entries of every work the document cites, in APA style, or in the style the front matter names with `csl: mla`. You hear how many entries went in and any keys that are not in a library. Put the cursor under your References heading first.
 - `check citations`: the same check as `tw cite check`, on the text you are reading or writing, for example "3 citations found. Every key is in the library."
 - `import references`: asks for a BibTeX, BibLaTeX, RIS, or CSL-JSON file and imports it into your own library, as `tw cite import` does.
 

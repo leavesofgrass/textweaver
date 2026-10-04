@@ -857,6 +857,26 @@ fn say_position_reports_line_and_percent() {
 }
 
 #[test]
+fn where_am_i_says_the_time_left() {
+    let said = Said::default();
+    let (mut config, _log) = make_config(&said);
+    config.settings.speech.rate = textweaver_app::core::Rate::Wpm(200);
+    let mut app = App::new(config);
+    let text = "word ".repeat(600);
+    app.open_document(
+        Document::from_plain_text(text.trim_end()),
+        DocKey::untitled(1),
+        "Test".into(),
+    );
+    app.dispatch(Command::Action(ActionId::SayPosition));
+    assert!(
+        said.last().ends_with("About 3 minutes left."),
+        "{}",
+        said.last()
+    );
+}
+
+#[test]
 fn highlight_granularity_word_sentence_both() {
     use textweaver_app::HighlightKind;
     use textweaver_app::core::HighlightGranularity;

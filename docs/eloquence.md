@@ -22,7 +22,7 @@ textweaver picks Eloquence automatically when it finds a licensed engine, and us
 
 Apple includes the Eloquence voices in macOS 13 Ventura and later, in each language they support. Nothing needs to be bought or installed.
 
-1. Start textweaver or `tw` as usual. The Apple speech backends list the Eloquence voices with the rest of the system voices.
+1. Start textweaver or `tw` as usual. The Apple speech engines list the Eloquence voices with the rest of the system voices.
 2. Choose Reed with `--voice Reed`, or set it once in your settings file:
 
    ```toml

@@ -229,7 +229,7 @@ name-edit-document-details = Details bearbeiten
 action-edit-document-details = Die Details des Dokuments bearbeiten: Titel, Autor, DOI und ISBN
 prompt-document-details = Dokumentdetails
 
-## Edit a document's details by hand (Wave 7, W7m).
+## Edit a document's details by hand.
 
 # $name is the document's title; said when the form opens.
 details-intro = Details von { $name }. Tab wechselt, Eingabetaste speichert, Escape bricht ab.
@@ -575,6 +575,7 @@ help-export = Export als HTML, PDF, Word, EPUB oder Braille, Vorschau im Browser
 help-verbosity = Wie viel gesagt wird: { $verbosity }. Wie viel Interpunktion: { $punctuation }.
 help-voice = Eine Stimme wählen: { $voice }. Sprachausgabe neu starten, wenn sie aussetzt: { $restart }.
 help-access = Mit einem Screenreader, wer spricht: { $key } wechselt zwischen Selbstsprechend, Hybrid und Screenreader-Modus.
+help-access-window = Wer liest: { $key } wechselt zwischen textweaver liest vor und mein Screenreader liest.
 help-character-keys = Einzeltasten-Kurzbefehle an oder aus, für Diktat: { $keys }. Einstellungen: { $settings }.
 help-all-shortcuts = Alle Tastenkombinationen: { $key }.
 help-palette = Jeden Befehl über seinen Namen ausführen: { $key }.
@@ -1091,7 +1092,7 @@ voice-line-numbers-off = Zeilennummern aus.
 ## Export and preview from the reader. F5 is the browser's reload key,
 ## not textweaver's.
 
-publish-no-document = Kein Dokument ist geöffnet.
+common-no-document = Kein Dokument ist geöffnet.
 # Said after "Could not export:", so it starts in lower case. $path is a
 # folder or a file; $error the system's reason.
 publish-cannot-write-to = kann nicht nach { $path } schreiben: { $error }
@@ -1270,7 +1271,7 @@ marks-find-wrapped =
     }
 # $name is the bookmark's name, such as mark1.
 marks-bookmark-already-here = Lesezeichen { $name } ist bereits hier.
-marks-bookmark-set = Lesezeichen { $name } gesetzt bei { $pct } Prozent.
+common-bookmark-set = Lesezeichen { $name } gesetzt bei { $pct } Prozent.
 marks-no-bookmarks = Keine Lesezeichen. Eines hinzufügen: { $key }.
 marks-bookmarks-intro =
     { $n ->
@@ -1402,7 +1403,7 @@ library-title = Bibliothek
 
 links-none-here = Kein Link oder keine Fußnote am Cursor.
 # $text is the link's text.
-links-no-address = Der Link { $text } hat keine Adresse.
+common-link-no-address = Der Link { $text } hat keine Adresse.
 # $kind is mail or web; $target is the link's address.
 links-open-question =
     { $kind ->
@@ -1626,6 +1627,9 @@ access-a-screen-reader = Ein Screenreader
 # access-a-screen-reader; $key names the keys that change the mode.
 access-hybrid-inferred = { $reader } läuft: textweaver liest Dokumente vor und überlässt Meldungen Ihrem Screenreader. { $key } ändert das.
 # The window's two modes, when the mode changes; $key changes it again.
+access-window-choice-reads-aloud = textweaver liest vor
+access-window-choice-screen-reader = mein Screenreader liest
+access-window-mode-help = Wer im Fenster liest: die Stimme von textweaver oder nur Ihr Screenreader.
 access-window-mode-changed =
     { $mode ->
         [screen-reader] Mein Screenreader liest: textweaver schweigt und gibt den Text an Ihren Screenreader. { $key } ändert das.
@@ -1837,7 +1841,7 @@ choice-normalization-community-lexicon-language-deu = Deutsch
 setting-normalization-medical-lexicon-enabled = Medizinisches Lexikon
 setting-normalization-medical-lexicon-enabled-help = Arzneimittelnamen, klinische Begriffe und Dosierungsabkürzungen aus einer medizinischen Aussprachliste lesen.
 setting-normalization-medical-lexicon-overlay = Datei des medizinischen Lexikons
-setting-normalization-medical-lexicon-overlay-help = Ihre eigenen medizinischen Aussprachen, die Vorrang vor den eingebauten haben; nicht gesetzt liest medical-lexicon.toml im Einstellungsordner.
+setting-normalization-medical-lexicon-overlay-help = Ihre eigenen medizinischen Aussprachen, die Vorrang vor den eingebauten haben. Nicht gesetzt liest medical-lexicon.toml im Einstellungsordner.
 setting-reading-auto-resume = Fortsetzen, wo aufgehört wurde
 setting-reading-auto-resume-help = Zur gespeicherten Position zurückkehren, wenn ein Dokument geöffnet wird.
 setting-reading-nav-history-size = Verlauf zurück
@@ -1853,38 +1857,38 @@ choice-reading-citations-words = in Worten
 setting-reading-ocr = Gescannte Seiten erkennen
 setting-reading-ocr-help = Den Text gescannter PDFs und Bilder durch Erkennung lesen (OCR).
 setting-reading-ocr-lang = Sprache des gescannten Texts
-setting-reading-ocr-lang-help = Die Sprache des gescannten Texts, als Tesseract-Kürzel wie fra oder deu+eng; leer bedeutet die Sprache des Dokuments, sonst Englisch.
+setting-reading-ocr-lang-help = Die Sprache des gescannten Texts, als Tesseract-Kürzel wie fra oder deu+eng. Leer bedeutet die Sprache des Dokuments, sonst Englisch.
 choice-reading-ocr-lang- = die des Dokuments
 choice-reading-ocr-lang-eng = Englisch
 choice-reading-ocr-lang-fra = Französisch
 choice-reading-ocr-lang-deu = Deutsch
 choice-reading-ocr-lang-spa = Spanisch
 setting-reading-ocr-engine = OCR-Engine
-setting-reading-ocr-engine-help = Welche Engine gescannte Seiten erkennt: ocrs für Englisch und Tesseract für andere Sprachen, oder eine davon immer.
+setting-reading-ocr-engine-help = Welche Engine gescannte Seiten erkennt. ocrs für Englisch und Tesseract für andere Sprachen, oder eine davon immer.
 choice-reading-ocr-engine-auto = automatisch
 choice-reading-ocr-engine-ocrs = ocrs
 choice-reading-ocr-engine-tesseract = Tesseract
 choice-reading-ocr-engine-paddle = PaddleOCR (experimentell)
 setting-reading-math-engine = Mathematik-Sprachausgabe
-setting-reading-math-engine-help = Welche Engine Mathematik vorliest: die eigene von textweaver, oder MathCAT in ClearSpeak oder SimpleSpeak, in der Sprache des Dokuments. MathCAT braucht eine Version, die es enthält; sonst wird die eigene von textweaver verwendet.
+setting-reading-math-engine-help = Welche Engine Mathematik vorliest. Die eigene von textweaver, oder MathCAT in ClearSpeak oder SimpleSpeak, in der Sprache des Dokuments. MathCAT braucht eine Version, die es enthält; sonst wird die eigene von textweaver verwendet.
 choice-reading-math-engine-builtin = textweaver
 choice-reading-math-engine-mathcat = MathCAT ClearSpeak
 choice-reading-math-engine-mathcat-simplespeak = MathCAT SimpleSpeak
 setting-braille-math-code = Mathematik-Braille
-setting-braille-math-code-help = Der Braille-Code für Mathematik in BRF-Dateien und beim Erkunden einer Formel mit MathCAT: Nemeth oder UEB-Mathematik. Braucht eine Version, die MathCAT enthält; sonst wird Mathematik mit ihren gesprochenen Wörtern geschrieben.
+setting-braille-math-code-help = Der Braille-Code für Mathematik in BRF-Dateien und beim Erkunden einer Formel mit MathCAT. Nemeth oder UEB-Mathematik. Braucht eine Version, die MathCAT enthält; sonst wird Mathematik mit ihren gesprochenen Wörtern geschrieben.
 choice-braille-math-code-nemeth = Nemeth
 choice-braille-math-code-ueb = UEB
 setting-braille-table-format = Braille-Tabellen
-setting-braille-table-format-help = Wie BRF-Dateien Tabellen anordnen: linear, eine Zeile pro Tabellenzeile mit Semikolons zwischen den Einträgen; aufgelistet, jede Tabellenzeile als Überschrift und jeder Eintrag in einer eigenen Zeile nach seiner Spaltenüberschrift; oder gestuft, jeder Eintrag zwei Zellen weiter rechts als der vorige, für Tabellen mit bis zu vier Spalten.
+setting-braille-table-format-help = Wie BRF-Dateien Tabellen anordnen. Linear, eine Zeile pro Tabellenzeile mit Semikolons zwischen den Einträgen; aufgelistet, jede Tabellenzeile als Überschrift und jeder Eintrag in einer eigenen Zeile nach seiner Spaltenüberschrift; oder gestuft, jeder Eintrag zwei Zellen weiter rechts als der vorige, für Tabellen mit bis zu vier Spalten.
 choice-braille-table-format-linear = linear
 choice-braille-table-format-listed = aufgelistet
 choice-braille-table-format-stairstep = gestuft
 setting-reading-math-display = Mathematik auf dem Bildschirm
-setting-reading-math-display-help = Wie Mathematik in der Leseansicht aussieht: als Quelltext, wie x^2, oder als Unicode, wie x mit hochgestellter 2. Sprache und Bearbeitungsmodus verwenden immer den Quelltext.
+setting-reading-math-display-help = Wie Mathematik in der Leseansicht aussieht. Als Quelltext, wie x^2, oder als Unicode, wie x mit hochgestellter 2. Sprache und Bearbeitungsmodus verwenden immer den Quelltext.
 choice-reading-math-display-source = Quelltext
 choice-reading-math-display-unicode = Unicode
 setting-reading-revisions = Nachverfolgte Änderungen
-setting-reading-revisions-help = Wie nachverfolgte Änderungen in Word-, OpenDocument- und RTF-Dateien gelesen werden: an Ort und Stelle angesagt bei hoher Ausführlichkeit (automatisch), immer, oder nie, dann wird der endgültige Text gelesen. Gilt beim Öffnen eines Dokuments.
+setting-reading-revisions-help = Wie nachverfolgte Änderungen in Word-, OpenDocument- und RTF-Dateien gelesen werden. An Ort und Stelle angesagt bei hoher Ausführlichkeit (automatisch), immer, oder nie, dann wird der endgültige Text gelesen. Gilt beim Öffnen eines Dokuments.
 choice-reading-revisions-auto = automatisch
 choice-reading-revisions-marked = immer ansagen
 choice-reading-revisions-final = nur endgültiger Text
@@ -1895,7 +1899,7 @@ setting-display-follow-os-theme-help = Beim Start ein helles, dunkles oder kontr
 setting-display-wrap-width = Umbruchbreite
 setting-display-wrap-width-help = Zeilen bei so vielen Spalten umbrechen; 0 nutzt die ganze Breite.
 setting-display-measure = Zeilenlänge
-setting-display-measure-help = Wie viele Zeichen eine Zeile im Fenster fasst, von 25 bis 90; 0 füllt das Fenster. Das Terminal nutzt die Umbruchbreite.
+setting-display-measure-help = Wie viele Zeichen eine Zeile im Fenster fasst, von 25 bis 90. 0 füllt das Fenster. Das Terminal nutzt die Umbruchbreite.
 setting-display-tab-width = Tabulatorbreite
 setting-display-tab-width-help = Spalten, die ein Tabulator einnimmt.
 setting-display-show-line-numbers = Zeilennummern
@@ -1903,7 +1907,7 @@ setting-display-show-line-numbers-help = Zeilennummern anzeigen.
 setting-display-scroll-margin = Bildlaufrand
 setting-display-scroll-margin-help = Zeilen, die über und unter dem Cursor sichtbar bleiben.
 setting-display-hints = Tastenhinweiszeile
-setting-display-hints-help = Ob der Terminal-Reader Tastenhinweise in seiner letzten Zeile zeigt: automatisch zeigt sie selbstsprechend und blendet sie mit einem Screenreader aus. F1 und die Liste der Tastenkombinationen nennen die Tasten immer.
+setting-display-hints-help = Ob der Terminal-Reader Tastenhinweise in seiner letzten Zeile zeigt. Automatisch zeigt sie selbstsprechend und blendet sie mit einem Screenreader aus. F1 und die Liste der Tastenkombinationen nennen die Tasten immer.
 choice-display-hints-auto = automatisch
 choice-display-hints-on = an
 choice-display-hints-off = aus
@@ -1926,7 +1930,7 @@ setting-editing-undo-memory-mb-help = Meister Speicher, den der Rückgängig-Ver
 setting-library-recent-limit = Zuletzt verwendete Dateien
 setting-library-recent-limit-help = Wie viele zuletzt verwendete Dateien gemerkt werden.
 setting-library-folders = Bibliotheksordner
-setting-library-folders-help = Ordner, deren Dokumente die Bibliothek auflistet und deren Positionen zwischen Computern synchronisiert werden; Ordner durch Semikolons trennen.
+setting-library-folders-help = Ordner, deren Dokumente die Bibliothek auflistet und deren Positionen zwischen Computern synchronisiert werden. Ordner durch Semikolons trennen.
 setting-keyboard-character-keys = Einzeltasten-Kurzbefehle
 setting-keyboard-character-keys-help = Durchsuch-Tasten wie h und Punkt. Aus, dann lösen Diktat und Tippen nie Befehle aus.
 setting-keyboard-preset = Tasten
@@ -1934,7 +1938,7 @@ setting-keyboard-preset-help = Die Standardtasten: wie der Durchsuchmodus von NV
 choice-keyboard-preset-default = Screenreader-Stil
 choice-keyboard-preset-classic = klassisch
 setting-keyboard-digit-row = Zifferreihe
-setting-keyboard-digit-row-help = Wie das Terminal die Zifferntasten für Überschriftsebenen erkennt: automatisch, oder eine französische AZERTY-Tastatur.
+setting-keyboard-digit-row-help = Wie das Terminal die Zifferntasten für Überschriftsebenen erkennt. Automatisch, oder eine französische AZERTY-Tastatur.
 choice-keyboard-digit-row-auto = automatisch
 choice-keyboard-digit-row-azerty = AZERTY
 setting-accessibility-mode = Zugänglichkeitsmodus
@@ -1943,7 +1947,7 @@ choice-accessibility-mode-self-voicing = Selbstsprechend
 choice-accessibility-mode-screen-reader = Screenreader
 choice-accessibility-mode-hybrid = Hybrid
 setting-accessibility-say-all = Alles vorlesen mit einem Screenreader
-setting-accessibility-say-all-help = Fortlaufendes Lesen im Screenreader-Modus: satzweise auf der Statuszeile, oder mit der Stimme von textweaver.
+setting-accessibility-say-all-help = Fortlaufendes Lesen im Screenreader-Modus. Satzweise auf der Statuszeile, oder mit der Stimme von textweaver.
 choice-accessibility-say-all-screen = auf der Statuszeile
 choice-accessibility-say-all-voice = mit der Stimme von textweaver
 setting-accessibility-quiet-screen = Ruhiger Bildschirm beim Lesen
@@ -1952,7 +1956,7 @@ choice-accessibility-quiet-screen-auto = automatisch
 choice-accessibility-quiet-screen-true = an
 choice-accessibility-quiet-screen-false = aus
 setting-accessibility-cursor = Cursor
-setting-accessibility-cursor-help = Wo der Cursor des Terminals wartet: bei dem, woran Sie arbeiten, oder auf der Statuszeile.
+setting-accessibility-cursor-help = Wo der Cursor des Terminals wartet. Bei dem, woran Sie arbeiten, oder auf der Statuszeile.
 choice-accessibility-cursor-follow = folgt dem Fokus
 choice-accessibility-cursor-status = auf der Statuszeile
 setting-export-subtitle-format = Untertitelformat
@@ -1965,7 +1969,7 @@ setting-export-subtitles-with-audio = Untertitel mit Audio
 setting-export-subtitles-with-audio-help = Immer Untertitel neben exportiertem Audio schreiben.
 choice-export-subtitle-format-ass = ASS-Karaoke
 setting-export-subtitle-karaoke = Untertitel-Karaoke
-setting-export-subtitle-karaoke-help = Wie Untertitelzeilen das gelesene Wort zeigen: aus, beim Sprechen unterstrichen (WebVTT-Tags) oder ein Untertitel pro Wort, fett und unterstrichen.
+setting-export-subtitle-karaoke-help = Wie Untertitelzeilen das gelesene Wort zeigen. Aus, beim Sprechen unterstrichen (WebVTT-Tags) oder ein Untertitel pro Wort, fett und unterstrichen.
 choice-export-subtitle-karaoke-off = Aus
 choice-export-subtitle-karaoke-tags = Beim Sprechen unterstreichen
 choice-export-subtitle-karaoke-lines = Ein Untertitel pro Wort
@@ -2105,12 +2109,12 @@ choice-interface-language-de = Deutsch
 choice-interface-language-pt = Português
 choice-interface-language-ar = العربية
 setting-interface-rtl = Rechts-nach-links-Anzeige
-setting-interface-rtl-help = Ob der Terminal-Reader rechts-nach-links-Text für die Anzeige neu ordnet: automatisch überlässt es Terminals, die es selbst tun. Sprachausgabe und Screenreader erhalten den Text immer in Lesereihenfolge.
+setting-interface-rtl-help = Ob der Terminal-Reader rechts-nach-links-Text für die Anzeige neu ordnet. Automatisch überlässt es Terminals, die es selbst tun. Sprachausgabe und Screenreader erhalten den Text immer in Lesereihenfolge.
 choice-interface-rtl-auto = automatisch
 choice-interface-rtl-on = an
 choice-interface-rtl-off = aus
 setting-gui-announce = Ankündigungen
-setting-gui-announce-help = Wie die Meldungen des Fensters den Screenreader erreichen, ab dem nächsten Start: eine Live-Region, oder UI-Automation-Benachrichtigungen (nur Windows).
+setting-gui-announce-help = Wie die Meldungen des Fensters den Screenreader erreichen, ab dem nächsten Start. Eine Live-Region, oder UI-Automation-Benachrichtigungen (nur Windows).
 choice-gui-announce-live = Live-Region
 choice-gui-announce-uia = UI-Automation-Benachrichtigungen
 setting-gui-header = Kopfzeile anzeigen
@@ -2118,11 +2122,11 @@ setting-gui-header-help = Zeigt die Leiste der Befehle über dem Dokument. Aus, 
 setting-gui-toolbar = Symbolleiste anzeigen
 setting-gui-toolbar-help = Zeigt die Leiste der Lese-Schaltflächen. Aus, behalten die Befehle ihre Tasten und Menüeinträge.
 setting-gui-auto-hide-menu = Menüleiste ausblenden
-setting-gui-auto-hide-menu-help = Windows: blendet die Menüleiste des Fensters aus, bis Alt oder F10 sie zeigt; sie verschwindet wieder, wenn das Menü schließt. Keine Wirkung unter Linux, dessen Menüs die F10-Liste sind, oder unter macOS.
+setting-gui-auto-hide-menu-help = Windows: blendet die Menüleiste des Fensters aus, bis Alt oder F10 sie zeigt. Sie verschwindet wieder, wenn das Menü schließt. Keine Wirkung unter Linux, dessen Menüs die F10-Liste sind, oder unter macOS.
 setting-gui-speak-messages = Meldungen von textweaver sprechen
 setting-gui-speak-messages-help = Wenn textweaver vorliest, auch seine Meldungen, Eingaben und Cursorbewegungen mit seiner Stimme sprechen, zum Hören ohne Screenreader.
 setting-gui-sidebar = Bereich neben dem Dokument
-setting-gui-sidebar-help = Der Bereich, den das Fenster neben dem Dokument zeigt: keiner, der Inhalt (die Überschriften) oder die Notizen. Die Bereichstasten ändern ihn, und das Fenster merkt sich den letzten.
+setting-gui-sidebar-help = Der Bereich, den das Fenster neben dem Dokument zeigt. Keiner, der Inhalt (die Überschriften) oder die Notizen. Die Bereichstasten ändern ihn, und das Fenster merkt sich den letzten.
 choice-gui-sidebar-off = keiner
 choice-gui-sidebar-contents = Inhalt
 choice-gui-sidebar-notes = Notizen
@@ -2364,7 +2368,7 @@ edit-not-a-table-size = Keine Tabellengröße: { $text }. Geben Sie Spalten und 
 edit-image-inserted = Bild { $name } eingefügt. Seine Beschreibung ist ausgewählt; tippen Sie, um sie zu ersetzen.
 edit-image-failed = Das Bild konnte nicht eingefügt werden: { $error }
 # $query is the text to find.
-edit-no-matches = Keine Treffer für { $query }.
+common-no-matches = Keine Treffer für { $query }.
 # $n matches of $query were found; the replacement is asked next.
 edit-replace-with =
     { $n ->
@@ -2374,8 +2378,8 @@ edit-replace-with =
 
 ## Edit mode: autosave and recovering unsaved work.
 
-edit-recovery-write-failed = Die Wiederherstellungskopie konnte nicht geschrieben werden: { $error }. Speichern Sie bald; { -brand } versucht es weiter.
-edit-recovery-writing-again = Die Wiederherstellungskopie wird erneut geschrieben.
+common-recovery-write-failed = Die Wiederherstellungskopie konnte nicht geschrieben werden: { $error }. Speichern Sie bald; { -brand } versucht es weiter.
+common-recovery-writing-again = Die Wiederherstellungskopie wird erneut geschrieben.
 # $title is the document; $when is how long ago its work was saved.
 edit-recovery-offer = { -brand } wurde mit ungespeicherten Änderungen an { $title } geschlossen, gespeichert { $when }. Jetzt wiederherstellen? Auf und Ab wählen, Eingabetaste bestätigt.
 edit-recovery-title = Ungespeicherte Arbeit in { $title } wiederherstellen?
@@ -2415,7 +2419,6 @@ replace-whole-words-now =
        *[other] Nur ganze Wörter { $state }. { $n } Treffer.
     }
 # $query is the text that was searched for.
-replace-no-matches = Keine Treffer für { $query }.
 replace-replaced =
     { $n ->
         [one] 1 Treffer ersetzt.
@@ -2431,10 +2434,7 @@ writes-not-written-in-time = Einige Änderungen konnten nicht rechtzeitig geschr
 # $error is the system's reason.
 writes-save-failed = Konnte nicht speichern: { $error }. Noch in Bearbeitung.
 # $name is the bookmark's name, $pct where it is.
-writes-bookmark-set = Lesezeichen { $name } gesetzt bei { $pct } Prozent.
 writes-bookmark-not-saved = Lesezeichen { $name } ist vorerst gesetzt, konnte aber nicht gespeichert werden: { $error }
-writes-recovery-copy-failed = Die Wiederherstellungskopie konnte nicht geschrieben werden: { $error }. Speichern Sie bald; { -brand } versucht es weiter.
-writes-recovery-copy-resumed = Die Wiederherstellungskopie wird erneut geschrieben.
 # $name is the saved file's name.
 writes-saved = { $name } gespeichert. Noch in Bearbeitung.
 
@@ -2525,7 +2525,7 @@ mdline-numbered-item = nummerierter Eintrag { $n }
 ## Moving through tables by row and cell. $dir is next (forward) or
 ## previous (backward).
 
-tables-not-in-table = Nicht in einer Tabelle.
+common-not-in-table = Nicht in einer Tabelle.
 tables-edge-of-table =
     { $dir ->
         [next] Ende der Tabelle.
@@ -2571,7 +2571,6 @@ authoring-word-count-document =
        *[other] { $count } Wörter im Dokument.
     }
 # $text is the link's text.
-authoring-link-no-address = Der Link { $text } hat keine Adresse.
 authoring-link-address = Link-Adresse: { $url }
 authoring-link-named-address = Link { $text }, Adresse: { $url }
 authoring-no-link = Kein Link am Cursor.
@@ -2588,7 +2587,6 @@ authoring-copied = Kopiert: { $text }
 authoring-copied-sentence = Den Satz kopiert: { $text }
 authoring-nothing-to-cut = Nichts zum Ausschneiden ausgewählt.
 authoring-cut = Ausgeschnitten: { $text }
-authoring-not-in-table = Nicht in einer Tabelle.
 # $dir is next (moving forward) or previous.
 authoring-table-edge =
     { $dir ->
@@ -2666,7 +2664,7 @@ lint-no-earlier =
 # $message is one of the problems above.
 lint-said = Lint: { $message }
 # Added at high verbosity.
-lint-line = Zeile { $line }.
+common-line = Zeile { $line }.
 
 ## Grammar checking (Harper). $message is Harper's own message, in English.
 
@@ -2692,7 +2690,6 @@ grammar-no-earlier =
 # $key opens the fixes list.
 grammar-lists-fixes = { $key } listet Korrekturen auf.
 # Added at high verbosity.
-grammar-line = Zeile { $line }.
 # $described is grammar-said (and its fix) without the last full stop.
 grammar-no-fix = { $described } Keine Korrektur verfügbar.
 grammar-fixes =
@@ -2705,7 +2702,7 @@ grammar-fixes-edit =
         [one] { $words }: 1 Korrektur. Eingabetaste nimmt die Änderung vor.
        *[other] { $words }: { $n } Korrekturen. Eingabetaste nimmt die Änderung vor.
     }
-grammar-left-as-is = So belassen, wie es ist.
+common-left-as-is = So belassen, wie es ist.
 # $fix is the fix chosen; $key turns on edit mode.
 grammar-fix-not-editing = { $fix }. Schalten Sie den Bearbeitungsmodus mit { $key } ein, um den Text zu ändern.
 grammar-removed = Entfernt.
@@ -2730,7 +2727,6 @@ spell-no-earlier =
        *[other] Kein früherer Rechtschreibfehler. { $count } mögliche Rechtschreibfehler insgesamt.
     }
 # Added at high verbosity.
-spell-line = Zeile { $line }.
 spell-no-misspelled-word = Kein falsch geschriebenes Wort am Cursor.
 # $word is the misspelled word; $n how many suggestions follow.
 spell-suggestions =
@@ -2749,7 +2745,6 @@ spell-suggestions-edit =
 spell-replace-not-editing = { $word }. Schalten Sie den Bearbeitungsmodus mit { $key } ein, um den Text zu ändern.
 spell-replaced = Ersetzt durch { $word }.
 spell-replace-failed = Konnte nicht ersetzen: { $error }
-spell-left-as-is = So belassen, wie es ist.
 spell-added-for-session = { $word } für diese Sitzung zu Ihrer Wortliste hinzugefügt.
 spell-added = { $word } zu Ihrer Wortliste hinzugefügt.
 spell-save-failed = Ihre Wortliste konnte nicht gespeichert werden: { $error } Das Wort gilt bis zum Beenden als bekannt.
@@ -2799,7 +2794,6 @@ tui-clip-not-built = diese Version hat keine Systemzwischenablage
 tui-title = { -brand }: { $title }
 tui-title-no-document = kein Dokument
 # The screen without a document. $keys names the keys for the action.
-tui-empty-no-document = Kein Dokument ist geöffnet.
 tui-empty-open = Eines öffnen: { $keys }.
 tui-empty-help = Hilfe: { $keys }.
 tui-empty-quit = Beenden: { $keys }.
@@ -2871,7 +2865,7 @@ gui-text-size-smallest = Textgröße { $size } Punkt, die kleinste.
 gui-font = Schriftart: { $family }.
 gui-font-list = Schriftart
 
-## The Braille pass (Wave 5, W5x): pages in paged documents such as a PDF.
+## The Braille pass: pages in paged documents such as a PDF.
 ## $page and $n are page numbers, $label a printed page label such as iv,
 ## $pages the number of pages. Keep the page first: a 40-cell Braille
 ## display shows the start of the line.
@@ -2912,7 +2906,7 @@ prompt-go-to-pages = Gehe zu Seite, oder Zeile 12, Prozent, start oder end
 goto-not-a-target-pages = Kein Sprungziel: { $text }. Geben Sie eine Seitenzahl ein, Zeile und eine Zahl, einen Prozentwert wie 50%, start oder end.
 goto-word-page = Seite
 
-## Wave 5 (W5y): der Bibliotheksfilter, das Wörterbuch und die Geschwindigkeiten.
+## Der Bibliotheksfilter, das Wörterbuch und die Geschwindigkeiten.
 
 # The library list filtered: $shown of $n documents match $filter.
 library-title-filtered = Bibliothek, { $shown } von { $n } stimmen mit { $filter } überein
@@ -2932,7 +2926,7 @@ library-filter-matched =
     }
 # Said once when define word is used while the dictionary file is still opening.
 define-still-loading = Das Wörterbuch wird noch geladen.
-# Von W5y hinzugefügte Einstellungen.
+# Einstellungen.
 setting-speech-dectalk-library = DECtalk-Bibliothek
 setting-speech-dectalk-library-help = Die zu ladende DECtalk-Bibliothek; nicht gesetzt sucht an den üblichen Orten.
 setting-speech-piper-voices = Ordner der Piper-Stimmen
@@ -2940,16 +2934,16 @@ setting-speech-piper-voices-help = Der Ordner der Piper-Stimmen; nicht gesetzt n
 setting-speech-piper-voice = Piper-Stimme
 setting-speech-piper-voice-help = Die Piper-Stimme zum Start, nach ID; nicht gesetzt nimmt die erste installierte.
 setting-speech-piper-phonemizer = Piper-Phonemisierer
-setting-speech-piper-phonemizer-help = Wie Piper Text in Laute umwandelt: die espeak-ng-Bibliothek, wenn installiert, diese Bibliothek oder der von textweaver.
+setting-speech-piper-phonemizer-help = Wie Piper Text in Laute umwandelt. Die espeak-ng-Bibliothek, wenn installiert, diese Bibliothek oder der von textweaver.
 choice-speech-piper-phonemizer-auto = automatisch
 choice-speech-piper-phonemizer-library = espeak-ng-Bibliothek
 choice-speech-piper-phonemizer-rust = der von textweaver
 setting-speech-voice-params = Tempo und Tonhöhe je Stimme
-setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zuletzt genutzt wurde; wird die Stimme wieder gewählt, kehren sie zurück.
+setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zuletzt genutzt wurde. Wird die Stimme wieder gewählt, kehren sie zurück.
 setting-editing-author = Autor
 setting-editing-author-help = Der Autor, der in neue Dokumente aus einer Vorlage geschrieben wird; leer lässt ihn frei.
 
-## The window (GUI), Wave 5 (W5a4): drawn labels, hints, and questions.
+## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
 
 gui-yes = Ja
@@ -3002,7 +2996,6 @@ gui-settings-sections = Bereiche
 gui-settings-form = Einstellungen: { $section }
 gui-settings-saved-hint = Änderungen wirken sofort und werden sofort gespeichert.
 gui-settings-close-help = Die Einstellungen schließen. Jede Änderung ist bereits gespeichert.
-gui-settings-closed = Einstellungen geschlossen.
 gui-settings-recent = Zuletzt geändert
 gui-settings-matching = Passend zu { $filter }
 gui-settings-table = { $label } ist eine Tabelle. Bearbeiten Sie sie in settings.toml.
@@ -3013,7 +3006,6 @@ gui-prompt-hint = Eingabetaste übernimmt, Escape bricht ab. Pfeil nach oben und
 gui-palette-filter = Tippen, um die Befehle zu filtern
 gui-palette-list = Befehle
 gui-palette-hint = Eingabetaste führt den ersten Treffer aus; Tab wechselt zur Liste.
-gui-no-document = Kein Dokument ist geöffnet. Drücken Sie { $key }, um eines zu öffnen.
 gui-open-failed = { $name } konnte nicht geöffnet werden: { $error }
 gui-uia-unavailable = UI-Automation-Benachrichtigungen gibt es nur unter Windows; die Live-Region wird verwendet.
 gui-graphics-failed = Das Fenster konnte seine Grafik nicht starten. Der Terminal-Leser textweaver braucht keine.
@@ -3037,7 +3029,7 @@ gui-palette-count =
 gui-settings-form-help = Pfeil nach oben und unten wechseln zwischen Einstellungen. Pfeil nach links und rechts ändern eine. Die Eingabetaste gibt einen neuen Wert ein. Entf stellt den Standard wieder her. { $next } und { $previous } wechseln den Bereich. Tippen filtert. F1 sagt die Hilfe.
 gui-settings-press-enter = Drücken Sie die Eingabetaste, um einen neuen Wert für { $label } einzugeben.
 gui-font-built-in = { $family } (eingebaut)
-## Wave 5 (W5s): summaries and difficult-word definitions.
+## Summaries and difficult-word definitions.
 
 action-summarize = Die Auswahl, das Kapitel oder das Dokument zusammenfassen: die zentralsten Sätze in einer Liste; Eingabe geht zu einem
 # The summary list's title: $n sentences of the whole document.
@@ -3078,18 +3070,18 @@ settings-unit-sentences =
        *[other] Sätze
     }
 
-# W6a5: the GUI. Said in textweaver's own voice when the window takes the
+# The GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }, { -brand }.
 
-## Wave 6 (W6o): opening the new formats. Said after "Could not open NAME:", so
+## Opening the new formats. Said after "Could not open NAME:", so
 ## each starts in lower case.
 opening-damaged-json = es ist keine lesbare JSON-Datei; sie ist möglicherweise zu groß.
 opening-damaged-notebook = es ist kein lesbares Jupyter-Notebook; es ist möglicherweise beschädigt oder zu groß.
 opening-damaged-svg = es ist keine lesbare SVG-Zeichnung; sie ist möglicherweise beschädigt oder zu groß.
 opening-damaged-mathml = es ist keine lesbare MathML-Formel; sie ist möglicherweise beschädigt oder zu groß.
 
-## W6u: menus, the command palette, interface announcements, colors, and settings
+## Menus, the command palette, interface announcements, colors, and settings
 
 ## Menu titles; the top menus mark their access key with &.
 
@@ -3386,7 +3378,7 @@ action-menu = Die Menüs öffnen: Datei, Bearbeiten, Ansicht, Lesen, Sprache, Ex
 action-what-does-this-key-do = Eine Taste drücken, um zu hören, was sie tut und wo sie in den Menüs steht, ohne sie auszuführen
 action-about = Die Angaben für eine Fehlermeldung auflisten: Version, Build, Komponenten, Sprachausgaben und Ordner
 setting-colors-ruler = Farbe des Leselineals
-setting-colors-ruler-help = Das Band des Leselineals und der markierten aktuellen Zeile; das Lineal behält Unterstreichung oder Fettdruck. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
+setting-colors-ruler-help = Das Band des Leselineals und der markierten aktuellen Zeile. Das Lineal behält Unterstreichung oder Fettdruck. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-difficult-words = Farbe schwieriger Wörter
 setting-colors-difficult-words-help = Die Unterstreichung schwieriger Wörter; sie bleiben unterstrichen und werden bei hoher Ausführlichkeit genannt. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-colors-syllables = Farbe der Silbenzeichen
@@ -3445,9 +3437,8 @@ settingsio-import-question-names =
     }
 settingsio-and-more = { $names } und { $n } weitere
 
-## End of W6u
 
-## W6d: dictation in edit mode (ADR-0042). Keep the meaning first: a
+## Dictation in edit mode (ADR-0042). Keep the meaning first: a
 ## 40-cell Braille display shows the start of the line. $words are the
 ## dictated words, $key the dictate key, $dir a folder, $error and $text
 ## are passed on as they are.
@@ -3468,9 +3459,8 @@ setting-dictation-model-dir = Ordner des Diktatmodells
 setting-dictation-model-dir-help = Das Whisper-Modell für das Diktat. Nicht gesetzt: whisper/rten/base.en im Datenordner.
 section-dictation = Diktat
 
-## End of W6d
 
-## W6f: the file browser. Every row and introduction starts with the name,
+## The file browser. Every row and introduction starts with the name,
 ## then the kind, so the first cells of a 40-cell Braille line hold what
 ## matters. $name is a file or folder name; $n a number that chooses the
 ## plural and $count the same number written with its separators.
@@ -3593,9 +3583,8 @@ browse-preview-folder-empty = { $path }: hier gibt es nichts zu lesen.
 browse-preview-other = { $name }, { $size }; textweaver kann diese Art von Datei nicht lesen.
 browse-preview-path = { $path }
 
-## End of W6f
 
-## W6k: batch conversion (File, Batch convert). Keep the meaning first.
+## Batch conversion (File, Batch convert). Keep the meaning first.
 batch-choose-source = Wählen Sie den Ordner zum Umwandeln
 batch-choose-output = Wählen Sie den Ordner für die umgewandelten Dateien
 batch-format-title = Umwandeln in
@@ -3652,9 +3641,8 @@ batch-failure-item = { $name }: { $reason }
 batch-start-failed = Umwandlung konnte nicht beginnen: { $error }
 batch-thread-stopped = Die Stapelumwandlung hat unerwartet angehalten.
 
-## End of W6k
 
-## W6v: audio export (File, Export audio). Keep the meaning first: a
+## Audio export (File, Export audio). Keep the meaning first: a
 ## 40-cell Braille display shows the start of the line. $name is a file
 ## name (essay.flac); $path a folder or a file's full path; $format a
 ## format's name (FLAC, MP3); $voice a voice's or engine's name; $wpm is
@@ -3699,9 +3687,8 @@ audio-subtitles = Untertitel in { $name }.
 audio-failed = Audio konnte nicht exportiert werden: { $error }
 audio-thread-stopped = Der Audioexport hat unerwartet angehalten.
 
-## End of W6v
 
-## W6a6: the window's menus and dialogs. Settings files chosen with the
+## The window's menus and dialogs. Settings files chosen with the
 ## system's file chooser, the Colors dialog, and the font list. $ratio is
 ## a contrast ratio such as 4.8; $verdict is good, fair, or low.
 gui-settings-files = Einstellungsdateien
@@ -3721,14 +3708,12 @@ gui-font-list-intro =
        *[other] { $title }, { $n } Schriftfamilien.
     }
 
-## End of W6a6
 
-## W6c5: PDF links. Said before the first line of the page a link inside
+## PDF links. Said before the first line of the page a link inside
 ## a PDF goes to, when the page has no heading there (as links-heading-label
 ## is for a heading). $page is the page's printed number or label (12, iv).
 links-page-label = Seite { $page }
 
-## End of W6c5
 
 ## Sync wave, S4: sync in the reader (ADR-0049).
 sync-status-off = Sync: aus
@@ -3862,9 +3847,9 @@ section-sync = Sync
 setting-sync-enabled = Sync
 setting-sync-enabled-help = Notizen, Markierungen, Lesezeichen und Stellen über den Sync-Ordner mit Ihren anderen Computern teilen. Werkzeuge, Sync, Sync einrichten schaltet es ein.
 setting-sync-folder = Sync-Ordner
-setting-sync-folder-help = Der Ordner, den Ihre Computer teilen: einer, den Syncthing abgleicht, ein Cloud-Ordner oder ein USB-Stick.
+setting-sync-folder-help = Der Ordner, den Ihre Computer teilen. Einer, den Syncthing abgleicht, ein Cloud-Ordner oder ein USB-Stick.
 setting-sync-device-name = Computername
-setting-sync-device-name-help = Der Name dieses Computers in Sync-Meldungen, etwa Laptop oder Labor; leer ergibt Computer 1, Computer 2 und so weiter.
+setting-sync-device-name-help = Der Name dieses Computers in Sync-Meldungen, etwa Laptop oder Labor. Leer ergibt Computer 1, Computer 2 und so weiter.
 setting-sync-places = Stellen synchronisieren
 setting-sync-places-help = Teilen, wo Sie in jedem Dokument sind.
 setting-sync-notes = Notizen synchronisieren
@@ -3876,7 +3861,7 @@ setting-sync-bookmarks-help = Lesezeichen teilen.
 setting-sync-statistics = Statistik synchronisieren
 setting-sync-statistics-help = Lesezeit und Sitzungen jedes Computers teilen.
 setting-sync-position-policy = Stelle zum Fortsetzen
-setting-sync-position-policy-help = Bei welcher Stelle ein Dokument öffnet, wenn ein anderer Computer auch eine hat: die neueste, die weiteste oder fragen.
+setting-sync-position-policy-help = Bei welcher Stelle ein Dokument öffnet, wenn ein anderer Computer auch eine hat. Die neueste, die weiteste oder fragen.
 choice-sync-position-policy-newest = die neueste
 choice-sync-position-policy-furthest = die weiteste
 choice-sync-position-policy-ask = fragen
@@ -3934,11 +3919,11 @@ setting-sync-words-help = Die Wortliste der Rechtschreibprüfung teilen.
 setting-sync-glossary = Glossar synchronisieren
 setting-sync-glossary-help = Die Einträge des Glossars und die Aussprachen teilen.
 setting-sync-favorite-voices = Lieblingsstimmen synchronisieren
-setting-sync-favorite-voices-help = Die Lieblingsstimmen teilen; eine, die dieser Computer nicht hat, wird als nicht auf diesem Computer aufgeführt.
+setting-sync-favorite-voices-help = Die Lieblingsstimmen teilen. Eine, die dieser Computer nicht hat, wird als nicht auf diesem Computer aufgeführt.
 
 ## End of S5
 
-## W7l: Lexend downloaded on first choice.
+## Lexend downloaded on first choice.
 font-download-question = Schrift { $font } herunterladen, { $kb } KB, { $licence }? y oder n
 font-downloading = { $font } wird heruntergeladen.
 font-downloaded = { $font } heruntergeladen und bereit.
@@ -3950,7 +3935,7 @@ font-download-not-in-build = Keine Schrift-Downloads in diesem Build.
 gui-font-to-download = { $family } (herunterladen, { $kb } KB)
 gui-font-downloaded = { $family } (heruntergeladen)
 
-## W8a-f: Datei- und Ordnerauswahl.
+## Datei- und Ordnerauswahl.
 prompt-browse-hint = { $label }. { $key } zum Durchsuchen.
 prompt-browse-file = Datei wählen: { $label }
 prompt-browse-folder = Ordner wählen: { $label }
@@ -3966,7 +3951,7 @@ chooser-profile-files = Profildateien
 gui-folder-no-dialog = Die Ordnerauswahl des Systems hat sich nicht geöffnet. Wählen Sie den Ordner in dieser Liste.
 gui-prompt-browse-hint = { $key } öffnet den Dateibrowser.
 
-## Optionale Komponenten (W8a-d, W8a-w).
+## Optionale Komponenten.
 name-manage-components = Optionale Komponenten verwalten…
 name-download-dictation-model = Diktiermodell herunterladen
 action-manage-components = Optionale Komponenten verwalten: die Modelle, Schriften und Stimmen, die textweaver herunterladen kann, mit Größe und Lizenz
@@ -4044,7 +4029,7 @@ dictation-model-file-missing = Dem Modell fehlt { $file }.
 dictation-model-damaged = Diktiermodell beschädigt: { $file }.
 dictation-model-no-folder = Kein Modellordner: { $dir }.
 
-## Einstellungen der optionalen Komponenten (W8a-d, W8a-w).
+## Einstellungen der optionalen Komponenten.
 section-components = Optionale Komponenten
 setting-dictation-model = Diktiermodell
 setting-dictation-model-help = Das Whisper-Modell, das das Diktieren nutzt, wenn kein Ordner gesetzt ist. Diktiermodell herunterladen im Menü Extras holt es.

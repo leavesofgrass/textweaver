@@ -2,7 +2,7 @@
 
 textweaver has aids that make text easier to see and follow. They change how text looks, never what it says. Speech, search, bookmarks, and notes always use the real text.
 
-Every aid can be turned on and off, and textweaver says when it changes. The keys, in both the terminal and the GUI, are:
+Every aid can be turned on and off, and textweaver says when it changes. The keys, in both the terminal and the window, are:
 
 - **Alt+Shift+R**: show or hide RSVP, starting from the cursor.
 - **Alt+Shift+P**: start or pause RSVP.
@@ -188,7 +188,7 @@ These are estimates. Other tools may give a slightly different grade.
 
 textweaver can show long words split into syllables, like `read·a·bil·i·ty`. Press **Alt+Shift+Z** (or run `syllables toggle` from the palette); you hear "Syllables shown." This helps you sound out a word. Only the screen changes. Speech, search, bookmarks, and positions use the word as it is.
 
-The separator is drawn between the letters, so the reading highlight still covers exactly the word being spoken, separators and all, and the cursor stays on the right letter. The choice is saved as `syllables = true` under `[reading_aids]`; `[reading_aids.syllable_options]` sets the separator (a middle dot by default) and which words are split. Both the terminal reader and the GUI draw the split; only the letters shown change, so your screen reader and Braille display still read the word whole. See also [The textweaver window](gui.md#reading-aids).
+The separator is drawn between the letters, so the reading highlight still covers exactly the word being spoken, separators and all, and the cursor stays on the right letter. The choice is saved as `syllables = true` under `[reading_aids]`; `[reading_aids.syllable_options]` sets the separator (a middle dot by default) and which words are split. Both the terminal reader and the window draw the split; only the letters shown change, so your screen reader and Braille display still read the word whole. See also [The textweaver window](gui.md#reading-aids).
 
 The split is worked out from English spelling rules, not a dictionary, so a few words split in odd places.
 

@@ -835,6 +835,11 @@ impl App {
                 msg.push(' ');
                 msg.push_str(&self.msg_args("nav-position-heading", &args!["heading" => text]));
             }
+            // The time left at the current rate: "About 3 minutes left."
+            if let Some(time) = self.time_left() {
+                msg.push(' ');
+                msg.push_str(&time);
+            }
         }
         if self.settings.speech.verbosity >= Verbosity::High {
             msg.push_str(&format!(" {}.", s.title));

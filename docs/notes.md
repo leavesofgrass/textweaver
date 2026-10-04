@@ -2,7 +2,7 @@
 
 This guide covers the three ways to mark what you read: bookmarks (named places), notes (your own text attached to a passage), and highlights (passages marked in color). It is for students and anyone who studies with textweaver. It also covers where they are kept, how to list them from the command line, and how to take them to Obsidian.
 
-Keys are the terminal defaults. Most are single browse keys, which work while reading. Where the GUI uses a different key, this guide says so. With single-key shortcuts turned off (**F9**), run these commands from the command palette (**F2**) by the names given here.
+Keys are the terminal defaults. Most are single browse keys, which work while reading. Where the window uses a different key, this guide says so. With single-key shortcuts turned off (**F9**), run these commands from the command palette (**F2**) by the names given here.
 
 ## Bookmarks
 
@@ -10,7 +10,7 @@ A bookmark is a named place in a document.
 
 ### Add a bookmark: m
 
-Press **m**. The bookmark goes on the word being read, or on the word at the cursor. It is named `mark1`, `mark2`, and so on, using the first free name. You hear "Bookmark mark1 set at 42 percent." If a bookmark is already on that word, you hear "Bookmark", its name, "is already here." The GUI also has **Ctrl+M**.
+Press **m**. The bookmark goes on the word being read, or on the word at the cursor. It is named `mark1`, `mark2`, and so on, using the first free name. You hear "Bookmark mark1 set at 42 percent." If a bookmark is already on that word, you hear "Bookmark", its name, "is already here." The window also has **Ctrl+M**.
 
 ### Move between bookmarks: b and Shift+B
 
@@ -87,7 +87,7 @@ Highlights are listed the same way, with their color. A new document that was ne
 
 ### List notes: Shift+A
 
-Press **Shift+A**. The GUI also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it." Each item says the note, the line, and the passage.
+Press **Shift+A**. The window also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it." Each item says the note, the line, and the passage.
 
 In the list:
 

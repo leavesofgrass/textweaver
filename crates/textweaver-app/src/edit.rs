@@ -1797,7 +1797,7 @@ impl App {
                 });
             if n == 0 {
                 self.speech.earcon(Earcon::Error);
-                let msg = self.msg_args("edit-no-matches", &args!["query" => text]);
+                let msg = self.msg_args("common-no-matches", &args!["query" => text]);
                 self.tell(&msg);
                 return vec![Effect::Redraw];
             }
@@ -1829,7 +1829,7 @@ impl App {
                 // between attempts, and the log keeps every one.
                 if failures == 1 {
                     let msg = self.msg_args(
-                        "edit-recovery-write-failed",
+                        "common-recovery-write-failed",
                         &args!["error" => e.to_string()],
                     );
                     self.say_at(&msg, Verbosity::Low, Priority::Polite);
@@ -1837,7 +1837,7 @@ impl App {
                 self.snapshot_trouble = true;
             }
             Ok(true) if std::mem::take(&mut self.snapshot_trouble) => {
-                let msg = self.msg("edit-recovery-writing-again");
+                let msg = self.msg("common-recovery-writing-again");
                 self.note(&msg);
             }
             Ok(_) => {}
