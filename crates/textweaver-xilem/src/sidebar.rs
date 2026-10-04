@@ -681,16 +681,24 @@ pub struct Regions {
     pub document: Option<WidgetId>,
     /// The toolbar's buttons.
     pub toolbar: Vec<WidgetId>,
+    /// The header and the toolbar are folded into one bar above the
+    /// document (a narrow window, [`crate::bars::Frame`]): the toolbar
+    /// comes second, as on screen.
+    pub folded: bool,
 }
 
 impl Regions {
-    fn ordered(&self) -> [Vec<WidgetId>; 4] {
-        [
-            self.header.clone(),
-            self.sidebar.into_iter().collect(),
-            self.document.into_iter().collect(),
-            self.toolbar.clone(),
-        ]
+    /// The regions in order on screen, and where the document is.
+    fn ordered(&self) -> ([Vec<WidgetId>; 4], usize) {
+        let header = self.header.clone();
+        let sidebar = self.sidebar.into_iter().collect();
+        let document = self.document.into_iter().collect();
+        let toolbar = self.toolbar.clone();
+        if self.folded {
+            ([header, toolbar, sidebar, document], 3)
+        } else {
+            ([header, sidebar, document, toolbar], 2)
+        }
     }
 }
 
@@ -702,10 +710,10 @@ pub fn next_region(
     focused: Option<WidgetId>,
     forward: bool,
 ) -> Option<WidgetId> {
-    let all = regions.ordered();
+    let (all, doc) = regions.ordered();
     let at = focused
         .and_then(|f| all.iter().position(|r| r.contains(&f)))
-        .unwrap_or(2);
+        .unwrap_or(doc);
     let n = all.len();
     (1..=n)
         .map(|k| {
@@ -739,6 +747,7 @@ mod tests {
             sidebar: None,
             document: Some(doc),
             toolbar: toolbar.clone(),
+            folded: false,
         };
         // No panel: document, toolbar, header, document.
         assert_eq!(next_region(&r, Some(doc), true), Some(toolbar[0]));
@@ -753,6 +762,15 @@ mod tests {
         assert_eq!(next_region(&r, Some(list), false), Some(header[0]));
         // Focus unknown: from the document.
         assert_eq!(next_region(&r, None, true), Some(toolbar[0]));
+        // Folded (a narrow window): header, toolbar, panel, document, as
+        // on screen; a hidden bar has no buttons and is skipped.
+        r.folded = true;
+        assert_eq!(next_region(&r, Some(header[0]), true), Some(toolbar[0]));
+        assert_eq!(next_region(&r, Some(toolbar[1]), true), Some(list));
+        assert_eq!(next_region(&r, Some(doc), true), Some(header[0]));
+        assert_eq!(next_region(&r, None, true), Some(header[0]));
+        r.header.clear();
+        assert_eq!(next_region(&r, Some(doc), true), Some(toolbar[0]));
     }
 
     #[test]

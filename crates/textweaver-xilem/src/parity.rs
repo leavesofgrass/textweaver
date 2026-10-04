@@ -38,6 +38,8 @@ pub fn support(action: ActionId) -> Support {
         | A::ChooseFont
         | A::ContentsPanel
         | A::NotesPanel
+        | A::ToggleHeader
+        | A::ToggleToolbar
         | A::NextRegion
         | A::PreviousRegion
         | A::Open

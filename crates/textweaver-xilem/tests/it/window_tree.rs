@@ -1159,6 +1159,141 @@ fn screenshots_are_written_at_both_scales() {
     assert!(b > a, "the 200% screenshot is larger");
 }
 
+/// The window at `size` (logical pixels) and `scale`, with a long status
+/// message, laid out until the bars have folded or unfolded.
+fn harness_at(app: &textweaver_app::App, size: (u32, u32), scale: f64) -> TestHarness<Root> {
+    let p = Palette::galaxy();
+    let tree = gui::build_tree(
+        &p,
+        Default::default(),
+        Some(app),
+        Rc::new(Cell::new(0)),
+        Default::default(),
+    );
+    let mut params = TestHarnessParams::default();
+    params.window_size = (
+        (f64::from(size.0) * scale) as u32,
+        (f64::from(size.1) * scale) as u32,
+    )
+        .into();
+    params.scale_factor = scale;
+    let mut h = TestHarness::create_with(theme::default_properties(&p), tree.root, params);
+    gui::refresh_for_tests(app, &mut h);
+    let _ = h.redraw();
+    let _ = h.redraw();
+    h
+}
+
+/// The bounds test (W9b-n): at the review sizes, from the largest to a
+/// 1366 by 768 laptop at 200 percent and the smallest window, every
+/// control is inside the window and at least 24 by 24 (WCAG 2.5.8), the
+/// status texts never overlap, and below 800 px the bars fold into one,
+/// above the document, with their keys hidden on screen but still the
+/// buttons' key property.
+#[test]
+fn no_control_leaves_the_window_at_any_review_size() {
+    use textweaver_xilem::bars::FRAME;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    // The longest status the window shows, with the position beside it.
+    app.announce(
+        "Speed reading is on: one word at a time under the document. Press the same key again to turn it off.",
+        textweaver_app::a11y::Priority::Polite,
+    );
+    for (size, scale) in [
+        ((1100, 780), 1.0),
+        ((960, 540), 1.0),
+        ((683, 384), 2.0),
+        ((420, 320), 1.0),
+    ] {
+        let h = harness_at(&app, size, scale);
+        let at = format!("{}x{} at {}%", size.0, size.1, scale * 100.0);
+        let window = masonry::kurbo::Rect::new(
+            0.0,
+            0.0,
+            f64::from(size.0) * scale,
+            f64::from(size.1) * scale,
+        );
+        // Every control a screen reader finds, by its bounds on screen.
+        let root = h.access_tree().state().root();
+        let mut stack = vec![root];
+        let mut buttons = 0;
+        while let Some(n) = stack.pop() {
+            stack.extend(n.children());
+            if !matches!(n.role(), Role::Button) {
+                continue;
+            }
+            buttons += 1;
+            let name = n.label().unwrap_or_default();
+            let b = n.bounding_box().expect("a button has bounds");
+            assert!(
+                b.x0 >= window.x0 - 0.5
+                    && b.y0 >= window.y0 - 0.5
+                    && b.x1 <= window.x1 + 0.5
+                    && b.y1 <= window.y1 + 0.5,
+                "{at}: {name:?} at {b:?} leaves the window {window:?}"
+            );
+            assert!(
+                b.width() >= 24.0 * scale - 0.5 && b.height() >= 24.0 * scale - 0.5,
+                "{at}: {name:?} is smaller than 24 by 24: {b:?}"
+            );
+        }
+        assert_eq!(buttons, 11, "{at}: the header's five and the toolbar's six");
+        // The status texts, in logical pixels.
+        let logical = masonry::kurbo::Rect::new(0.0, 0.0, f64::from(size.0), f64::from(size.1));
+        let msg = h.get_widget(gui::STATUS).ctx().bounding_box();
+        let pos = h.get_widget(gui::POSITION).ctx().bounding_box();
+        assert!(
+            msg.intersect(pos).area() <= 0.0,
+            "{at}: the message {msg:?} overlaps the position {pos:?}"
+        );
+        for (what, r) in [("message", msg), ("position", pos)] {
+            assert!(
+                r.x0 >= -0.5
+                    && r.y0 >= -0.5
+                    && r.x1 <= logical.x1 + 0.5
+                    && r.y1 <= logical.y1 + 0.5,
+                "{at}: the {what} {r:?} leaves the window"
+            );
+        }
+        // Folded below 800 px, with the keys hidden on screen only.
+        let narrow = size.0 < 800;
+        assert_eq!(h.get_widget(FRAME).inner().is_folded(), narrow, "{at}");
+        let play = h.get_widget(gui::PLAY);
+        assert_eq!(
+            play.inner().key_drawn(),
+            !narrow,
+            "{at}: Play's key on screen"
+        );
+        assert!(
+            !play.inner().shortcut().is_empty(),
+            "{at}: Play keeps its key"
+        );
+        let play_box = play.ctx().bounding_box();
+        let doc_box = h.get_widget(DOC).ctx().bounding_box();
+        assert_eq!(
+            play_box.y1 <= doc_box.y0 + 0.5,
+            narrow,
+            "{at}: Play {play_box:?} is above the document {doc_box:?} only when folded"
+        );
+    }
+}
+
+/// The View menu's Header and Toolbar commands hide and show their bars:
+/// a hidden bar's buttons leave the window and the accessibility tree,
+/// and the setting is remembered.
+#[test]
+fn the_header_and_toolbar_can_be_hidden() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    app.update_settings(|s| s.gui.toolbar = false).unwrap();
+    let h = harness(&app);
+    let names = names_of(&h, Role::Button);
+    assert!(names.iter().any(|n| n == "Open"), "{names:?}");
+    assert!(!names.iter().any(|n| n == "Play"), "{names:?}");
+    assert_eq!(names.len(), 5, "{names:?}");
+}
+
 /// The review harness's newer views (W8c-x) draw at the smallest review
 /// size: edit mode, the window with no document, the ruler alone, and
 /// each panel (the Notes panel with its sample notes).
