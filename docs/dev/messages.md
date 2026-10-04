@@ -52,7 +52,7 @@ Digits for numbers. Text that is spoken spells its units: "3 percent", "265 word
 ### 7. One word for each thing
 
 - **document**: what you read. **file**: what is on disk.
-- **cursor**, never "caret", in messages. (The window guide says "caret" for the editing insertion point, which is NVDA's word.)
+- **cursor**, never "caret", in messages and in the guides. "Caret" stays only as the name of the ^ character.
 - **speech engine**, never "backend". **voice**: one named voice.
 - **window**, never "GUI". **terminal reader**: the other program.
 - **version**, never "build" ("Citations are not in this version of textweaver.").

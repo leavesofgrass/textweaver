@@ -2,7 +2,7 @@
 
 This guide covers edit mode in the terminal reader: typing with spoken feedback, Markdown formatting commands, undo, find and replace, saving, and getting back unsaved work after a crash. It is for anyone who writes or corrects documents in textweaver.
 
-Keys are the terminal defaults. Where the GUI uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key.
+Keys are the terminal defaults. Where the window uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key.
 
 ## Start and finish editing: Ctrl+E
 
@@ -29,7 +29,7 @@ In edit mode every key that is not a command types. Single-key reading keys such
 ## Type and move
 
 - Letters, digits, and punctuation type as usual. **Enter** starts a new line. **Tab** types a tab.
-- **Backspace** deletes the character before the caret. **Delete** deletes the one after it. A character is what you see as one: an emoji with its skin tone, a flag, or a letter with its accent is deleted whole.
+- **Backspace** deletes the character before the cursor. **Delete** deletes the one after it. A character is what you see as one: an emoji with its skin tone, a flag, or a letter with its accent is deleted whole.
 - **Left** and **Right**: move by character. You hear the character.
 - **Ctrl+Left** and **Ctrl+Right**: move by word. You hear the word.
 - **Up** and **Down**: move by line. You hear the new line.
@@ -43,8 +43,8 @@ At the edges you hear "Start of line.", "End of line.", "Top of document.", or "
 More editing keys:
 
 - **Ctrl+A**: select all the text. You hear "Selected all" and the number of words.
-- **Alt+Backspace**: delete the word before the caret. The GUI uses **Ctrl+Backspace**.
-- **Ctrl+Delete**: delete the word after the caret.
+- **Alt+Backspace**: delete the word before the cursor. The window uses **Ctrl+Backspace**.
+- **Ctrl+Delete**: delete the word after the cursor.
 - **Ctrl+C**: copy the selection. **Ctrl+X**: cut it. Both go to your computer's clipboard through the terminal; see [Copy, cut, and paste](#copy-cut-and-paste).
 - **Ctrl+V**: paste. See [Copy, cut, and paste](#copy-cut-and-paste).
 
@@ -54,7 +54,7 @@ You hear what the word keys deleted, for example "three deleted."
 
 The reading keys that move by structure work in edit mode too, on the Markdown as you have written it so far:
 
-- **Alt+H** and **Alt+Shift+H**: the next and previous heading. The caret lands on the heading's text, after the `#` marks.
+- **Alt+H** and **Alt+Shift+H**: the next and previous heading. The cursor lands on the heading's text, after the `#` marks.
 - **Alt+O**: the outline, a list of the headings you can filter by typing; see [the reading guide](reading.md#the-outline-alto).
 - **Alt+Shift+Y**: where am I, with the heading you are under.
 - The table keys, **Ctrl+Alt** with the arrows, move by row and cell in a Markdown table and say the column header.
@@ -102,32 +102,32 @@ caps = "say_cap"
 
 ## Markdown commands
 
-Each command changes the selection, or the line the caret is on. Each one is announced: for example "Bold." when it adds the marks, or "Bold removed." when the text was already bold. The commands toggle, so pressing a key twice undoes it. With nothing selected, bold, italic, and the other wrapping commands insert placeholder text and select it, so you can type over it.
+Each command changes the selection, or the line the cursor is on. Each one is announced: for example "Bold." when it adds the marks, or "Bold removed." when the text was already bold. The commands toggle, so pressing a key twice undoes it. With nothing selected, bold, italic, and the other wrapping commands insert placeholder text and select it, so you can type over it.
 
 - Bold: **Ctrl+B**. Writes `**text**`.
-- Italic: **Alt+I**. The GUI uses **Ctrl+I**. Writes `*text*`.
+- Italic: **Alt+I**. The window uses **Ctrl+I**. Writes `*text*`.
 - Underline: **Ctrl+U**. Writes `<u>text</u>`, because Markdown has no underline.
-- Strikethrough: **Alt+D**. The GUI uses **Ctrl+Shift+X**. Writes `~~text~~`.
-- Inline code: `` Alt+` ``, that is Alt with the backtick key. The GUI uses `` Ctrl+` ``. Writes the text between backticks.
-- Code block: **Alt+K**. The GUI uses **Ctrl+Shift+K**. Fences the selected lines.
+- Strikethrough: **Alt+D**. The window uses **Ctrl+Shift+X**. Writes `~~text~~`.
+- Inline code: `` Alt+` ``, that is Alt with the backtick key. The window uses `` Ctrl+` ``. Writes the text between backticks.
+- Code block: **Alt+K**. The window uses **Ctrl+Shift+K**. Fences the selected lines.
 - Link: **Ctrl+K**. Writes `[text](https://)`. With nothing selected, `text` is selected so you can type the link text. With a selection, the address is selected so you can type it.
-- Heading: **Alt+1**. The GUI uses **Ctrl+Alt+1**. Each press raises the level of the current line by one: level 1, then 2, up to 6. Pressing it on a level-6 heading removes the heading. You hear "Heading level 2." and so on.
-- Bulleted list: **Alt+8**. The GUI uses **Ctrl+Shift+L**. Puts `- ` before each selected line.
-- Numbered list: **Alt+7**. The GUI uses **Ctrl+Shift+O**. Numbers each selected line. Bulleted and numbered lists turn into each other.
-- Block quote: **Alt+9**. The GUI uses **Ctrl+Shift+Q**. Puts `> ` before each selected line.
-- Horizontal rule: **Alt+R**. The GUI uses **Ctrl+Shift+R**. Inserts `---` on its own line.
-- Insert a table: **Alt+T**. The GUI uses **Ctrl+Shift+A**. textweaver asks "Table size, columns by rows, for example 3 by 2". Type the columns, then the rows, as `3 by 2`, `3x2`, or `3 2`. Enter alone makes 2 by 2. Up to 20 columns and 100 rows. The first header cell is selected afterwards.
-- Add a table row: **Alt+W**. The GUI uses **Ctrl+Shift+Enter**. Adds an empty row to the table at the caret; the caret goes to its first cell.
-- Insert an image: **Alt+G**. The GUI uses **Ctrl+Shift+I**. textweaver asks for the image file. It writes `![name](path)` and selects the description, so you can type a better one.
+- Heading: **Alt+1**. The window uses **Ctrl+Alt+1**. Each press raises the level of the current line by one: level 1, then 2, up to 6. Pressing it on a level-6 heading removes the heading. You hear "Heading level 2." and so on.
+- Bulleted list: **Alt+8**. The window uses **Ctrl+Shift+L**. Puts `- ` before each selected line.
+- Numbered list: **Alt+7**. The window uses **Ctrl+Shift+O**. Numbers each selected line. Bulleted and numbered lists turn into each other.
+- Block quote: **Alt+9**. The window uses **Ctrl+Shift+Q**. Puts `> ` before each selected line.
+- Horizontal rule: **Alt+R**. The window uses **Ctrl+Shift+R**. Inserts `---` on its own line.
+- Insert a table: **Alt+T**. The window uses **Ctrl+Shift+A**. textweaver asks "Table size, columns by rows, for example 3 by 2". Type the columns, then the rows, as `3 by 2`, `3x2`, or `3 2`. Enter alone makes 2 by 2. Up to 20 columns and 100 rows. The first header cell is selected afterwards.
+- Add a table row: **Alt+W**. The window uses **Ctrl+Shift+Enter**. Adds an empty row to the table at the cursor; the cursor goes to its first cell.
+- Insert an image: **Alt+G**. The window uses **Ctrl+Shift+I**. textweaver asks for the image file. It writes `![name](path)` and selects the description, so you can type a better one.
 
-The Alt chords in the terminal replace GUI chords that terminals cannot send, such as **Ctrl+I**, which arrives as Tab.
+The Alt chords in the terminal replace window chords that terminals cannot send, such as **Ctrl+I**, which arrives as Tab.
 
 Writing citations and math has its own guides: [citations](citations.md) and [math](math.md).
 
 ## Undo and redo
 
 - **Ctrl+Z**: undo.
-- **Ctrl+Y**: redo. The GUI also has **Ctrl+Shift+Z**.
+- **Ctrl+Y**: redo. The window also has **Ctrl+Shift+Z**.
 
 Typing and deleting are grouped into word-sized steps, so one undo removes about one word. Every formatting command, a paste, and a Replace All are each one step. You hear "Undo." or "Redo." and the current line. With nothing left, you hear "Nothing to undo." or "Nothing to redo."
 
@@ -135,12 +135,12 @@ textweaver keeps the last 1,000 steps, or 50 MB of them, whichever comes first; 
 
 ## Find and replace: Alt+F
 
-Press **Alt+F** in edit mode. The GUI uses **Ctrl+Shift+F**.
+Press **Alt+F** in edit mode. The window uses **Ctrl+Shift+F**.
 
 1. The prompt says "Replace, find what". Type the text to find and press **Enter**. You hear how many matches there are, then "Replace with?"
 2. Type the new text and press **Enter**.
 
-textweaver then goes through the matches one at a time, starting at the caret. Each match is selected, and you hear where it is and its line, for example "Match 2 of 5, line 12: the cat sat on the mat." A short list asks what to do. Press a letter, or move with Up and Down and press Enter:
+textweaver then goes through the matches one at a time, starting at the cursor. Each match is selected, and you hear where it is and its line, for example "Match 2 of 5, line 12: the cat sat on the mat." A short list asks what to do. Press a letter, or move with Up and Down and press Enter:
 
 - **r**, "Replace this one": replaces it and goes to the next match.
 - **s**, "Skip this one": leaves it and goes to the next match.
@@ -169,7 +169,7 @@ The file is written in the background, so a large file never holds up the keyboa
 
 ### Save As: Alt+S
 
-Press **Alt+S** to save under a new name. The GUI uses **Ctrl+Shift+S**. The prompt suggests the current name. A name ending in `.md`, `.markdown`, `.txt`, or another plain-text or Markdown extension is kept. Any other ending becomes `.md`, so Markdown never lands in an `.html` or `.docx` file. A name without a folder goes in the same folder as the suggestion.
+Press **Alt+S** to save under a new name. The window uses **Ctrl+Shift+S**. The prompt suggests the current name. A name ending in `.md`, `.markdown`, `.txt`, or another plain-text or Markdown extension is kept. Any other ending becomes `.md`, so Markdown never lands in an `.html` or `.docx` file. A name without a folder goes in the same folder as the suggestion.
 
 Save As asks before it writes over a file of the same name: "notes.md already exists. Replace it? y or n". In the window, the system's Save dialog asks instead.
 
@@ -240,7 +240,7 @@ Pasting into a prompt, such as Find, puts the text in the prompt.
 
 ## Citations
 
-In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+B** (GUI **Alt+Shift+D**) adds a reference by DOI or ISBN. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
+In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+B** (window **Alt+Shift+D**) adds a reference by DOI or ISBN. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
 
 ## Spelling
 
@@ -299,7 +299,7 @@ tw lint essay.md notes.md
 
 ## Listen to the rendered text
 
-In edit mode, type `listen rendered` in the command palette. textweaver reads from the caret what a reader of your finished document hears: no `#`, `*`, or link addresses, and citations formatted, such as "(Doe & Roe, 2020, p. 12)". You stay in edit mode, and the highlight follows in your Markdown. **Escape** stops. Outside edit mode it reads from the cursor, as **Enter** does.
+In edit mode, type `listen rendered` in the command palette. textweaver reads from the cursor what a reader of your finished document hears: no `#`, `*`, or link addresses, and citations formatted, such as "(Doe & Roe, 2020, p. 12)". You stay in edit mode, and the highlight follows in your Markdown. **Escape** stops. Outside edit mode it reads from the cursor, as **Enter** does.
 
 ## Export and preview
 
@@ -317,7 +317,7 @@ auto_reload = true
 live = false
 ```
 
-Then run `preview in browser` again. The page now comes from a small web server that textweaver runs on your own computer only (the address starts `http://127.0.0.1:`, with a random secret in it, so no other computer or program can read your document). After each save the page reloads by itself, then scrolls to the heading nearest your caret and puts the focus there, so your screen reader lands near the place you edited. You hear "Preview updated."
+Then run `preview in browser` again. The page now comes from a small web server that textweaver runs on your own computer only (the address starts `http://127.0.0.1:`, with a random secret in it, so no other computer or program can read your document). After each save the page reloads by itself, then scrolls to the heading nearest your cursor and puts the focus there, so your screen reader lands near the place you edited. You hear "Preview updated."
 
 - A reload still resets your screen reader's place in the page to that heading, which is why automatic reloading is off by default.
 - `toggle preview live` (or `live = true`) also reloads the page when you pause typing for a second, without saving. It needs automatic reloading on. Live reloads are shown on the status line and not spoken.
@@ -347,7 +347,7 @@ The date is today's date on your computer, in your time zone. The author comes f
 author = "Jo Writer"
 ```
 
-The caret starts under the first section heading, and the document is new and unsaved: save it with **Ctrl+S**.
+The cursor starts under the first section heading, and the document is new and unsaved: save it with **Ctrl+S**.
 
 Your own templates are Markdown files in the `templates` folder of the configuration folder (the folder that holds `settings.toml`; the [settings guide](settings.md) says where). Write `{{title}}`, `{{author}}`, and `{{date}}` where those should go. The file name, without `.md`, is the template's name in the list.
 

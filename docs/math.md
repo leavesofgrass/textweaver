@@ -207,7 +207,7 @@ This builds the reader with MathCAT. MathCAT's rules are built into the program,
 tw speak --backend null --json 'The area is $x^2$.'
 ```
 
-This shows the words textweaver would send to the speech engine, without making any sound. `--backend null` is the silent backend. `--json` prints the spoken text and its map back to your text.
+This shows the words textweaver would send to the speech engine, without making any sound. `--backend null` is the silent speech engine. `--json` prints the spoken text and its map back to your text.
 
 Put the text in single quotes. In PowerShell and in bash, single quotes stop the shell from treating `$x` as a variable.
 
@@ -233,7 +233,7 @@ How to read it:
 - The two `elided` spans are the dollar signs. They are in your text but not spoken.
 - The `expanded` span says that the word "squared" (spoken bytes 14 to 21) stands for `^2` (source characters 14 to 16).
 
-`tw speak` uses your `math_verbosity`, so the JSON above follows your setting. You can also check it with `tw export-audio` and the `recording` backend, a test backend that plays nothing and writes a placeholder audio file:
+`tw speak` uses your `math_verbosity`, so the JSON above follows your setting. You can also check it with `tw export-audio` and the `recording` speech engine, a test engine that plays nothing and writes a placeholder audio file:
 
 ```powershell
 tw export-audio sample.txt --out sample.wav --backend recording --json

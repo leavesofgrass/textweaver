@@ -4,7 +4,7 @@ This guide covers textweaver's library: the folders of documents you read from, 
 
 ## Open the library in the reader: Alt+L
 
-Press **Alt+L** in the terminal reader. The GUI uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Type to filter, Enter opens one, F2 edits details."
+Press **Alt+L** in the terminal reader. The window uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Type to filter, Enter opens one, F2 edits details."
 
 The folders are read in the background, so a large library (up to 20,000 files) never holds up the keyboard. While it is read you may hear "Scanning the library.", and the status line counts the documents found every second; the list opens when the scan is done. Pressing **Alt+L** again meanwhile says how many have been found so far.
 
@@ -59,7 +59,7 @@ A DOI or an ISBN can be typed any way it is usually written: `10.1000/xyz`, `doi
 
 **Clearing a field** removes your edit, so the document's own value shows again, at once in the library list. A field you never edited cannot hide the document's own value.
 
-In the GUI the form is a dialog with one field at a time, labeled the same way; Tab and Shift+Tab move between the fields, Enter saves, and Escape cancels.
+In the window the form is a dialog with one field at a time, labeled the same way; Tab and Shift+Tab move between the fields, Enter saves, and Escape cancels.
 
 ### From the command line: tw library edit
 
@@ -284,7 +284,7 @@ tw migrate-star
 
 - Settings that have a textweaver equivalent, when you changed them from Star's defaults.
 - Library folders that still exist.
-- GUI key changes, as `keymap.toml` overrides. The new key is added; the single browse keys stay.
+- Window key changes, as `keymap.toml` overrides. The new key is added; the single browse keys stay.
 - For each document: the reading position, bookmarks, notes, and highlights.
 - Recent files and the bookshelf.
 - Each library folder's Star sync file, `.star/progress.json`, converted to `.textweaver/progress.json` and merged with any textweaver one.

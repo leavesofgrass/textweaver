@@ -114,7 +114,7 @@ On Linux the window's Open dialog needs the XDG desktop portal. When it cannot o
 textweaver speaks for itself by default. With a screen reader running, choose who speaks:
 
 1. Press **Alt+Shift+A** to cycle the accessibility mode: self-voicing, hybrid, and screen reader. You hear the new mode, and it is saved.
-2. **Hybrid** leaves messages, typing echo, and caret moves to your screen reader, and textweaver reads documents aloud. **Screen reader** mode makes textweaver silent.
+2. **Hybrid** leaves messages, typing echo, and cursor moves to your screen reader, and textweaver reads documents aloud. **Screen reader** mode makes textweaver silent.
 3. To try a mode for one run, start with `--mode hybrid` or `--mode screen-reader`. `--no-speech` is screen reader mode.
 
 On its first run with a screen reader, textweaver offers hybrid mode once. [Using textweaver with a screen reader](screen-readers.md) explains the modes and the screen reader settings that help.

@@ -1,6 +1,6 @@
 # Using textweaver with a screen reader
 
-This guide is for people who use a screen reader, such as JAWS, NVDA, VoiceOver, or Orca, and want to use textweaver's terminal reader alongside it. It explains the three accessibility modes, how to stop hearing things twice, what your screen reader can read, the settings to try in NVDA and JAWS, which terminals to use, and which keys may clash. It also covers braille displays, with a checklist for a 40-cell display, and the GUI, and ends with a checklist for trying each mode.
+This guide is for people who use a screen reader, such as JAWS, NVDA, VoiceOver, or Orca, and want to use textweaver's terminal reader alongside it. It explains the three accessibility modes, how to stop hearing things twice, what your screen reader can read, the settings to try in NVDA and JAWS, which terminals to use, and which keys may clash. It also covers braille displays, with a checklist for a 40-cell display, and the window, and ends with a checklist for trying each mode.
 
 textweaver's keys are the same in every mode. See [Reading and moving around](reading.md) and the [keyboard reference](keyboard.md).
 
@@ -12,7 +12,7 @@ textweaver can speak with its own voice, write on its status line, or both. A sc
 
 ### Self-voicing
 
-textweaver speaks everything with its own voice: reading, messages such as "Paused." or "Heading level 2: Methods", typing echo, and the word or line a caret key reaches. Each message is also written on the status line.
+textweaver speaks everything with its own voice: reading, messages such as "Paused." or "Heading level 2: Methods", typing echo, and the word or line a cursor key reaches. Each message is also written on the status line.
 
 This is the default, and it is what textweaver always did. Choose it when you use textweaver without a screen reader, or when you quiet your screen reader in the terminal (see [Avoid hearing things twice](#avoid-hearing-things-twice)).
 
@@ -20,7 +20,7 @@ This is the default, and it is what textweaver always did. Choose it when you us
 
 textweaver reads documents aloud: continuous reading, and reading a character, word, sentence, line, paragraph, or selection. That reading includes the narration only textweaver can do: math in words, table rows with their headers, citations, and structure such as "heading level 2" and "list with 3 items".
 
-Your screen reader does the rest from the status line and the cursor: messages, typing echo, and caret moves. textweaver does not speak those, and it does not copy what it reads aloud onto the status line.
+Your screen reader does the rest from the status line and the cursor: messages, typing echo, and cursor moves. textweaver does not speak those, and it does not copy what it reads aloud onto the status line.
 
 Hybrid is recommended when a screen reader is running. You keep textweaver's voice and rate for long reading, and your screen reader's voice for everything else.
 
@@ -29,7 +29,7 @@ Hybrid is recommended when a screen reader is running. You keep textweaver's voi
 textweaver never speaks on its own. Everything goes to the status line, written for your screen reader:
 
 - Messages, moves, and questions, as in the other modes.
-- The word, line, or character a caret key or a "say" key reaches.
+- The word, line, or character a cursor key or a "say" key reaches.
 - Text you ask to hear, such as the sentence (`.`) or the line (**Alt+Shift+L**), narrated as textweaver would say it: math in words, and tables with their headers.
 
 Continuous reading still works. By default, **Space** moves through the text a sentence at a time. Each sentence goes to the status line for your screen reader, the cursor moves with it, and the next one follows after the time textweaver's rate allows. Press **+** or **-** to match the pace to your screen reader. A message that comes up while it reads, such as "Saved.", goes after the sentence on the status line, so the sentence stays first on your Braille display. **Space** pauses and resumes, and **Escape** stops. To have textweaver's own voice read instead, set `say_all = "voice"`; that is the only thing it then says.
@@ -81,7 +81,7 @@ quiet_screen = true
 cursor = "status"
 ```
 
-With `cursor = "status"`, the cursor waits at the start of the status line, as it did in Star, so your screen reader's "read current line" (**NVDA+Up**, JAWS **Insert+Up**) repeats the last message. A prompt, such as Find, still puts the cursor at its caret, where you type.
+With `cursor = "status"`, the cursor waits at the start of the status line, as it did in Star, so your screen reader's "read current line" (**NVDA+Up**, JAWS **Insert+Up**) repeats the last message. A prompt, such as Find, still puts the cursor where you type.
 
 ## What your screen reader can read
 
@@ -90,11 +90,11 @@ textweaver is built so that everything it would say is also on the screen, in sc
 - **The status line** is the line above the bottom line. Messages go there: moves, modes, settings, errors, and questions such as "Quit textweaver? y or n". Screen readers that read new text in a terminal read it as it changes. While a yes-or-no question waits, it stays on the status line in front of any other message.
 - **Math** on the status line is written in words for a screen reader, as textweaver would say it: `$x^2$` becomes "x squared".
 - **Repeated messages.** A terminal screen reader speaks the status line only when it changes. When the same message comes twice in a row, such as "No next heading." after pressing **h** twice at the end, textweaver blanks the status line for 150 milliseconds first, so the message changes and is read again.
-- **The cursor.** With `cursor = "follow"`, the default, textweaver parks the terminal's cursor where your attention is: on the chosen item of a list, on the caret of a prompt, on the Speech Cursor line, on the word being read, or else on the reading cursor. Screen readers, braille displays, and magnifiers that follow the cursor follow it there.
+- **The cursor.** With `cursor = "follow"`, the default, textweaver parks the terminal's cursor where your attention is: on the chosen item of a list, where you type in a prompt, on the Speech Cursor line, on the word being read, or else on the reading cursor. Screen readers, braille displays, and magnifiers that follow the cursor follow it there.
 - **Lists.** The help, the keyboard shortcuts, bookmarks, notes, the library, and the voices appear in a box over the document. When a list opens, the status line says what it is and how to use it, followed by the first item. As you press **Up** and **Down**, the status line shows the chosen item.
-- **The prompt line.** The bottom line shows the prompt and what you type, with the cursor at the caret. Find, Go to, Open file, the command palette, and the note prompt all use it. In hybrid and screen-reader modes textweaver does not echo typing; your screen reader does.
+- **The prompt line.** The bottom line shows the prompt and what you type, with the cursor where you type. Find, Go to, Open file, the command palette, and the note prompt all use it. In hybrid and screen-reader modes textweaver does not echo typing; your screen reader does.
 - **Moves.** After a sentence, paragraph, heading, table, link, find, go to, or bookmark jump, the status line shows where you arrived, with a preview of the text.
-- **Caret keys.** **Right** and **Left** put the word on the status line; **Down** and **Up** put the whole line there. **c** puts the character's name there.
+- **Cursor keys.** **Right** and **Left** put the word on the status line; **Down** and **Up** put the whole line there. **c** puts the character's name there.
 - **Where am I.** **Shift+W** puts the line, the percentage, and the heading on the status line.
 
 How much textweaver says is set by `[speech] verbosity`. See [Reading and moving around](reading.md).
@@ -179,7 +179,7 @@ Windows Terminal keeps some keys for itself, so textweaver never sees them. Thes
 - **Alt+Shift+Up** and **Alt+Shift+Down** resize panes. In textweaver they make RSVP faster and slower; **Alt+Shift+PageUp** and **Alt+Shift+PageDown** do the same and reach textweaver.
 - **F11** and **Alt+Enter** switch full screen. In textweaver **F11** is the next chapter. Use **Alt+PageDown** and **Alt+PageUp** for chapters.
 - **Ctrl+C** copies when text is selected in Windows Terminal; otherwise textweaver gets it and copies. **Ctrl+V** pastes, which textweaver takes as pasted text.
-- **Alt+Shift+D**, **Alt+Shift+minus**, and **Alt+Shift+plus** split the window into panes. So the terminal adds a reference by DOI or ISBN with **Alt+B** (the GUI keeps **Alt+Shift+D**), and "add reference" is in the command palette (**F2**). Pitch is **Alt+=** and **Alt+-**: pressing Shift by mistake splits the window.
+- **Alt+Shift+D**, **Alt+Shift+minus**, and **Alt+Shift+plus** split the window into panes. So the terminal adds a reference by DOI or ISBN with **Alt+B** (the window keeps **Alt+Shift+D**), and "add reference" is in the command palette (**F2**). Pitch is **Alt+=** and **Alt+-**: pressing Shift by mistake splits the window.
 - **Ctrl+Alt+Left** moves to the previous pane in Windows Terminal 1.24 (`Terminal.MoveFocusPrevious` in its defaults). In textweaver it is the previous cell in a table row; with one pane open Windows Terminal may pass it on, **not yet verified**, or run `table previous column` from the palette or give it another key in `keymap.toml`. The other **Ctrl+Alt** arrows are not bound by Windows Terminal, but some graphics drivers rotate the screen with them, and a screen reader may keep them for its own table commands.
 - textweaver's newer chords were checked against the same list and do not clash: **Alt+Shift+Q** (citations), **Alt+Shift+X** (explore math), **Alt+Shift+Z** (syllables), **Alt+Shift+J** (difficult words), **Alt+B** (add a reference), **F12** and **Shift+F12** (notes), **Ctrl+Down** and **Ctrl+Up** (paragraphs), and **Alt+Shift+PageUp** and **Alt+Shift+PageDown** (RSVP).
 - **Alt+Space** opens the window menu. textweaver does not use it.
@@ -221,7 +221,7 @@ textweaver's own words (messages, lists, help, and settings) are in English, Spa
 
 ## Braille displays
 
-textweaver draws no braille of its own, in the terminal or in the GUI. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. This section is written for a 40-cell display, the HumanWare Mantis Q40, with NVDA or JAWS on Windows.
+textweaver draws no braille of its own, in the terminal or in the window. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. This section is written for a 40-cell display, the HumanWare Mantis Q40, with NVDA or JAWS on Windows.
 
 ### Set up textweaver for the display
 
@@ -276,14 +276,14 @@ In Settings Center (**Insert+6**), Braille group. **Every item here is not yet v
 
 ### What has been tried
 
-- **Tried in testing:** a 40-cell Mantis Q40 through NVDA and JAWS on Windows, reading the status line, messages, and moving by unit in the terminal reader, before this layout; and, in the GUI, the document control, the settings dialog, and edit mode, across two sessions. The layout above waits for the checklist.
+- **Tried in testing:** a 40-cell Mantis Q40 through NVDA and JAWS on Windows, reading the status line, messages, and moving by unit in the terminal reader, before this layout; and, in the window, the document control, the settings dialog, and edit mode, across two sessions. The layout above waits for the checklist.
 - **Not tried:** other cell widths, other display models, Orca's braille on Linux, and VoiceOver's on macOS.
 - **The BRF writer** (`tw convert --to brf`, see [Converting documents](converting.md)) is a separate feature: a grade 1, or grade 2 with the `liblouis` feature, braille file you save and read on a notetaker or emboss, not the live display output above. A BRF from a document with math writes the math in Nemeth or UEB mathematics; see [Math in braille files](math.md#math-in-braille-files).
 - If your combination behaves differently from this, add it to the checklist below and let the project know what you found.
 
 ## The GUI
 
-textweaver also has a window, written entirely in Rust with AccessKit for screen readers. It shares documents, keys, settings, notes, and voices with the terminal reader, and it has been checked with NVDA, JAWS, and a braille display on Windows. [The GUI guide](gui.md) covers it in full: starting it, the file chooser, edit mode, how messages reach your screen reader (a live region, or UI Automation notifications), and the spoken word's highlight. [ADR-0027](adr/0027-xilem-gui.md), [ADR-0028](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033](adr/0033-gui-session-2-and-edit-mode.md) record what was checked.
+textweaver also has a window, written entirely in Rust with AccessKit for screen readers. It shares documents, keys, settings, notes, and voices with the terminal reader, and it has been checked with NVDA, JAWS, and a braille display on Windows. [The window guide](gui.md) covers it in full: starting it, the file chooser, edit mode, how messages reach your screen reader (a live region, or UI Automation notifications), and the spoken word's highlight. [ADR-0027](adr/0027-xilem-gui.md), [ADR-0028](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033](adr/0033-gui-session-2-and-edit-mode.md) record what was checked.
 
 ## Checklist: try each mode with JAWS and NVDA
 
@@ -310,7 +310,7 @@ Screen reader settings: dynamic content (NVDA) or screen echo "all" (JAWS) on; t
 ### Screen reader (`--mode screen-reader`, or `--no-speech`)
 
 1. Press **Alt+.**, then **.**. Expected: your screen reader reads the preview, then the sentence; textweaver never speaks.
-2. In `fixtures/o/math-sample.md`, press **.** on a formula. Expected: your screen reader reads the math in words, not dollar signs and carets.
+2. In `fixtures/o/math-sample.md`, press **.** on a formula. Expected: your screen reader reads the math in words, not dollar signs and caret symbols.
 3. Press **Space**. Expected: your screen reader reads the document a sentence at a time, and the cursor moves along. Press **+** or **-** to change the pace, **Space** to pause and resume, **Escape** to stop.
 4. With `say_all = "voice"` under `[accessibility]`, press **Space** again. Expected: textweaver's voice reads instead.
 
@@ -348,8 +348,8 @@ Please note which steps did not behave as expected, with the screen reader, its 
 - [Keyboard reference](keyboard.md): every key, what changed, the classic preset, and what terminals cannot send.
 - [Settings](settings.md): the `[accessibility]` settings and `[keyboard] preset`.
 - [Converting documents](converting.md): the `brf` braille output, and the other formats `tw convert` writes.
-- [The GUI guide](gui.md): the window in full, including edit mode and the file chooser.
+- [The window guide](gui.md): the window in full, including edit mode and the file chooser.
 - [Troubleshooting](troubleshooting.md): common problems and how to report a bug.
 - [ADR-0006: Keymap, actions, and announcements](adr/0006-keymap-and-actions.md): how announcements reach the status line.
-- [ADR-0014: GUI toolkit](adr/0014-gui-toolkit.md): the GUI preview and what was checked.
+- [ADR-0014: GUI toolkit](adr/0014-gui-toolkit.md): the window preview and what was checked.
 - [Documentation index](README.md)

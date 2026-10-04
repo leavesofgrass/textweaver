@@ -43,13 +43,13 @@ Nothing is spoken. The client still receives every announcement and every playba
 tw serve --stdio --backend sapi
 ```
 
-The value is a backend id, such as `eci` (ETI-Eloquence), `sapi`, `dectalk`, or `null`. See the list your computer has:
+The value is a speech engine id, such as `eci` (ETI-Eloquence), `sapi`, `dectalk`, or `null`. See the list your computer has:
 
 ```bash
 tw backends
 ```
 
-Without `--backend`, the server uses the `[speech] backend` setting, which is normally `auto`. If the backend you name is not available, the server uses the automatic choice and tells the client with the announcement "Speech engine sapi is not available; using …", naming the one it chose. `--backend` does nothing together with `--no-speech`.
+Without `--backend`, the server uses the `[speech] backend` setting, which is normally `auto`. If the speech engine you name is not available, the server uses the automatic choice and tells the client with the announcement "Speech engine sapi is not available; using …", naming the one it chose. `--backend` does nothing together with `--no-speech`.
 
 ### Keep settings in another folder with --home
 
@@ -171,7 +171,7 @@ The result is an object with:
 - `document`: the same object `open` returns, or null when no document is open.
 - `position`: the same object `position` returns, or null.
 - `rate`: the reading rate in words per minute.
-- `backend`: the speech backend id, or `"silent"` with `--no-speech`.
+- `backend`: the speech engine id, or `"silent"` with `--no-speech`.
 - `status`: the last status message, the same text the terminal reader shows on its status line. It is empty at first.
 - `pending`: the yes-or-no question waiting for an answer, or null. See [action](#action-run-any-command-by-name).
 
@@ -291,11 +291,11 @@ for note in call("notes")["notes"]:
 
 Errors: `-32001` when no document is open.
 
-### insert: type text at the caret in edit mode
+### insert: type text at the cursor in edit mode
 
 It needs an open document and edit mode on. This is how a client, such as a dictation front end, types text as if it had been typed at the keyboard: it is one undo step and is echoed as typing is. Parameters:
 
-- `text` (string, required): the text to insert at the caret.
+- `text` (string, required): the text to insert at the cursor.
 
 The result is `{status, effects, position}`, the same as `action`, plus the new `position`.
 
@@ -364,7 +364,7 @@ Each returns `{status, effects}`, the same as `action` without `pending`.
 
 ### list_state and list_key: move through a list as the reader does
 
-The list shown and its focused item are kept by textweaver itself, the same for the terminal reader, the GUI, and a client. These methods let a client move through a list with the reader's own keys and hear the same "item, 2 of 5" announcements.
+The list shown and its focused item are kept by textweaver itself, the same for the terminal reader, the window, and a client. These methods let a client move through a list with the reader's own keys and hear the same "item, 2 of 5" announcements.
 
 - `list_state` takes no parameters. It returns the list shown as `{title, items, selected, filter}`, or null when no list is shown. `selected` counts from 0; `filter` is the text typed so far in a list that filters as you type (the outline, the citation picker, the settings), else null.
 - `list_key` takes `key` (string, required): `up`, `down`, `page_up`, `page_down`, `home`, `end`, `left`, `right`, `enter`, `escape`, `backspace`, `delete`, `rename`, `introduce` (the list's introduction again), `details` (the Say Status key: in the file browser, a preview of the focused row), the file browser's `choose_here`, `sort`, and `show_all`, or one character. A character filters a list that filters, chooses by a list's own letter (`s`, `d`, `c` in Save, Discard, Cancel), or moves to the next item starting with it; a space marks an item (a favorite voice). `left` and `right` change a value in the settings list. It returns `{status, effects, list}`, where `list` is the list after the key, as `list_state` gives it.
@@ -783,13 +783,13 @@ This client only reads while it waits for an answer. A real client, such as an e
 - **The user hears two voices.** Both textweaver and the user's screen reader are speaking. Start the server with `--no-speech` and pass the announcements to the screen reader. See [the screen reader guide](screen-readers.md).
 - **A prompt or list opened, but the client was not told.** Actions run through `navigate` or `read` do not return their effects. Run them with `action`, then use `answer`, `choose`, or `cancel`. `cancel` always closes whatever is open.
 - **Highlighting is off by a few characters in JavaScript or VS Code.** Positions count Unicode characters, and those tools count UTF-16 units. Convert before highlighting.
-- **No speech, and an announcement says the backend is not available.** Run `tw backends` to see which engines work on this computer, and see [the troubleshooting guide](troubleshooting.md).
+- **No speech, and an announcement says the speech engine is not available.** Run `tw backends` to see which engines work on this computer, and see [the troubleshooting guide](troubleshooting.md).
 - **You need more detail.** The server writes nothing but protocol messages to standard output, and nothing to standard error. Problems are written to the log file, `textweaver.log`, in the state folder (with `--home`, that is the `data\state` folder inside it). Set the `TEXTWEAVER_LOG` environment variable to `debug` before starting the server to log more.
 
 ## See also
 
 - [ADR-0015: JSON-RPC server](adr/0015-json-rpc.md): the design decision behind `tw serve`.
-- [Architecture](dev/architecture.md): how the server shares the app core with the terminal reader and the GUI.
+- [Architecture](dev/architecture.md): how the server shares the app core with the terminal reader and the window.
 - [Keyboard reference](keyboard.md): every action id you can pass to `action` and `navigate`.
 - [Using textweaver with a screen reader](screen-readers.md): `--no-speech` and working with JAWS, NVDA, VoiceOver, and Orca.
 - [Troubleshooting](troubleshooting.md): the log file and common problems.

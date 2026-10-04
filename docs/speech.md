@@ -4,7 +4,7 @@ This guide covers how textweaver speaks: the speech engines it can use, how it c
 
 ## The engines
 
-textweaver calls a speech engine a backend. Each has a short id, used by `--backend` and in settings.
+Each speech engine has a short id, used by `--backend` and by the `backend` setting.
 
 - `eci`: ETI-Eloquence, through its engine library (ECI). Windows and Linux. It runs in a small helper program, the ECI host, so a 32-bit Eloquence works with 64-bit textweaver. textweaver does not include Eloquence; the [Eloquence guide](eloquence.md) explains how to get it. Eloquence reads numbers, dates, and abbreviations itself.
 - `sapi`: Windows SAPI5 voices, including the OneCore voices (Microsoft David, Zira, Mark). Windows only. Each voice runs in a helper program: the 64-bit host for 64-bit voices, and the 32-bit host for older 32-bit-only voices.
@@ -46,7 +46,7 @@ When you name an engine, with `--backend` or in the settings, textweaver uses it
 With a screen reader running, you may not want textweaver to speak everything. `[accessibility] mode` decides:
 
 - `"self-voicing"` (the default): textweaver speaks everything.
-- `"hybrid"`: textweaver reads documents aloud; your screen reader speaks messages, typing, and caret moves from the status line.
+- `"hybrid"`: textweaver reads documents aloud; your screen reader speaks messages, typing, and cursor moves from the status line.
 - `"screen-reader"`: textweaver never speaks. `--no-speech` starts in this mode.
 
 **Alt+Shift+A** cycles the mode and saves it, and `--mode` sets it for one run. `tw serve` always speaks for itself, unless you start it with `--no-speech`. [Using textweaver with a screen reader](screen-readers.md) explains each mode.
@@ -108,7 +108,7 @@ To write a whole document to an audio file with subtitles, use `tw export-audio`
 
 ## Choose a voice in the reader: Alt+V
 
-Press **Alt+V**. The GUI uses **Ctrl+Shift+V**, and shows the filters and the actions as buttons beside the list (see [the GUI guide](gui.md#voices)). This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Alt+End previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes." Alt+End is the Say Status key; if you changed it in `keymap.toml`, the voice manager names your key.
+Press **Alt+V**. The window uses **Ctrl+Shift+V**, and shows the filters and the actions as buttons beside the list (see [the window guide](gui.md#voices)). This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Alt+End previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes." Alt+End is the Say Status key; if you changed it in `keymap.toml`, the voice manager names your key.
 
 This is the voice for reading documents. textweaver's own words (messages, lists, help, and settings) have a separate choice, the interface language, in six languages: English, Spanish, French, German, Brazilian Portuguese, and Arabic. `[speech.voices_by_language]` picks which voice speaks each interface language, so switching the interface to Spanish can switch to a Spanish voice automatically. See [`[interface] language`](settings.md#interface) in the settings guide for how to choose it and how textweaver falls back when no voice exists for it.
 
@@ -161,7 +161,7 @@ The rate is in words per minute, from 50 to 900. The default is 265.
 - **+** or **=**: faster by 20.
 - **-**: slower by 20.
 
-The GUI also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size. You hear the new rate, for example "285 words per minute." At the limits you hear "Fastest rate." or "Slowest rate." Each engine turns words per minute into its own scale, so the same rate sounds about the same on every engine.
+The window also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size. You hear the new rate, for example "285 words per minute." At the limits you hear "Fastest rate." or "Slowest rate." Each engine turns words per minute into its own scale, so the same rate sounds about the same on every engine.
 
 ### Speed presets: F8
 

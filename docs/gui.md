@@ -1,10 +1,10 @@
-# The textweaver window (GUI)
+# The textweaver window
 
 textweaver has two readers: the terminal reader, `textweaver`, and a window. They share everything that matters: the documents, the keys, the settings, the notes, and the voices. This page covers what is different about the window.
 
 The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It reads and it edits; see [Editing](#editing).
 
-In a release package the program is `textweaver-gui`; see [the GUI package](install.md#the-gui). If you build the window yourself, `cargo build` makes `textweaver-xilem` instead; use that name where this guide says `textweaver-gui`.
+In a release package the program is `textweaver-gui`; see [the window package](install.md#the-gui). If you build the window yourself, `cargo build` makes `textweaver-xilem` instead; use that name where this guide says `textweaver-gui`.
 
 ## Starting it
 
@@ -23,7 +23,7 @@ Useful options:
 - `--voice ID` and `--backend ID`: the voice or speech engine for this run (see `tw voices` and `tw backends`).
 - `--no-speech`: run silently.
 - `--announce live` or `--announce uia`: how messages reach your screen reader, for this run (see [Announcements](#announcements)).
-- `--select-spoken`: while reading, select the spoken word instead of only moving the caret to it (see [The spoken word](#the-spoken-word)).
+- `--select-spoken`: while reading, select the spoken word instead of only moving the cursor to it (see [The spoken word](#the-spoken-word)).
 - `--home FOLDER`: keep settings and reading positions in this folder, as `TEXTWEAVER_HOME` does.
 - `--list-menus`: show the menus as a list inside the window (F10), as on Linux, instead of the system's menu bar.
 - `--graphics API`: draw with one graphics API only: `vulkan`, `dx12` (Windows), `metal` (macOS), or `gl`; `auto`, the default, lets the graphics library use every one it finds. On the development machine `vulkan` used about 26 MB less memory, but this depends on your graphics driver. To keep a choice, put `graphics = "vulkan"` in the `[gui]` section of `settings.toml`.
@@ -40,8 +40,8 @@ From top to bottom:
 1. **The menu bar** (Windows and macOS): File, Edit, View, Reading, Speech, Tools, and Help; see [Menus](#menus).
 2. **The header,** a banner with five buttons: Open, Font, Edit (or Finish editing), Settings, and Commands. The document's title is the window's title.
 3. **The Contents or Notes panel,** only when you show one (Ctrl+1 or Ctrl+2), to the left of the document; see [The Contents and Notes panels](#the-contents-and-notes-panels).
-4. **The document,** one control your screen reader reads as a document (on macOS, a read-only text area, which VoiceOver reads with its text commands). The caret keys are your system's own (see [Caret keys](#caret-keys)), with Shift to select. Ctrl+C (Command+C on macOS) copies the selection, and says what it copied. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
-5. **The RSVP strip,** only while RSVP is on (Alt+Shift+R). It shows one word at a time under the document, so it never covers the text or the caret.
+4. **The document,** one control your screen reader reads as a document (on macOS, a read-only text area, which VoiceOver reads with its text commands). The cursor keys are your system's own (see [Cursor keys](#cursor-keys)), with Shift to select. Ctrl+C (Command+C on macOS) copies the selection, and says what it copied. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
+5. **The RSVP strip,** only while RSVP is on (Alt+Shift+R). It shows one word at a time under the document, so it never covers the text or the cursor.
 6. **The toolbar,** named "Reading": Play or Pause, Stop, Previous sentence, Next sentence, Slower, and Faster.
 7. **The status bar:** the last message, then what the terminal's title line shows: the reading state, "line 3 of 40, 7%", the accessibility mode, the rate, and the speech engine.
 
@@ -89,18 +89,18 @@ When a chooser closes, the focus returns to the document, or to the next step of
 
 Each change is said, for example "Text size 18 points." or "Font: OpenDyslexic.", and saved in `[reading_aids.font]` (see [Settings](settings.md)). The size steps one point at a time around the usual sizes and more quickly above 16 points, from 8 up to 72 points. The Settings dialog changes the same settings, under "Reading aids".
 
-## Caret keys
+## Cursor keys
 
-The document moves its caret with your system's keys, and Shift with any of them selects:
+The document moves its cursor with your system's keys, and Shift with any of them selects:
 
 - **Windows and Linux:** Left and Right by character, Up and Down by line, Ctrl+Left and Ctrl+Right by word, Ctrl+Up and Ctrl+Down by paragraph, Home and End to the start and end of the line, Ctrl+Home and Ctrl+End to the start and end of the document, Page Up and Page Down by screen.
-- **macOS:** Left and Right by character, Up and Down by line, Option+Left and Option+Right by word, Option+Up and Option+Down by paragraph, Command+Left and Command+Right to the start and end of the line, Command+Up and Command+Down to the start and end of the document (Home and End too), Page Up and Page Down by screen. No caret key uses Control, so VoiceOver's keys (Control+Option) are never taken.
+- **macOS:** Left and Right by character, Up and Down by line, Option+Left and Option+Right by word, Option+Up and Option+Down by paragraph, Command+Left and Command+Right to the start and end of the line, Command+Up and Command+Down to the start and end of the document (Home and End too), Page Up and Page Down by screen. No cursor key uses Control, so VoiceOver's keys (Control+Option) are never taken.
 
 In browse mode, Home and End go to the ends of the line, as in any document window; in the terminal they go to the ends of the document, which Ctrl+Home and Ctrl+End do here. In Speech Cursor mode (Alt+Shift+S, or Reading, then Speech Cursor, in the menus; Tab moves the focus here, as in any window, and is the terminal's key), Up and Down read the next and previous line and Page Up and Page Down move by paragraph, as in the terminal.
 
 ## Keys
 
-The window uses the same keymap as the terminal reader, with a few chords the terminal cannot send. The [keyboard reference](keyboard.md) lists every key, with a column for the GUI. The ones you will use most:
+The window uses the same keymap as the terminal reader, with a few chords the terminal cannot send. The [keyboard reference](keyboard.md) lists every key, with a column for the window. The ones you will use most:
 
 - **Space** (browse) or **Ctrl+Shift+Space**: play or pause.
 - **Escape**: stop.
@@ -134,7 +134,7 @@ A panel beside the document keeps the document's headings, or its notes, in view
 - **Up, Down, Home, End, Page Up, Page Down,** and a letter move in the list, as in any list.
 - **Enter** moves the document to that heading or note, says where it is as the outline does, and keeps you in the panel, so you can try the next one. **Shift+Enter** moves the document there and puts you back in the document. **Escape** puts you back in the document without moving it.
 - **F6** and **Shift+F6** move between the header, the panel, the document, and the toolbar.
-- The row where the caret is has a bar beside it, and your screen reader hears ", current" after its name. While you are in the document, the panel's selected row follows the caret, so going to the panel starts where you are.
+- The row where the cursor is has a bar beside it, and your screen reader hears ", current" after its name. While you are in the document, the panel's selected row follows the cursor, so going to the panel starts where you are.
 - The panel is a navigation landmark named "Contents" or "Notes".
 
 The panel never takes the focus on its own: when the window opens with a panel, or you choose one in the settings, the focus stays where it was. The window remembers the panel you showed last (Settings, Window, "Panel beside the document"; `sidebar` in `[gui]`, one of `off`, `contents`, or `notes`). A document without headings shows "No headings." in the Contents panel; a PDF without headings lists its pages, as the outline does. In edit mode, the Contents follow the headings you type once they are parsed again, as the outline does.
@@ -147,9 +147,9 @@ Ctrl+E, or the Edit button, turns edit mode on, as in the terminal reader: you e
 
 In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus mode by themselves.
 
-- **Typing** goes in at the caret, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
-- **Your screen reader echoes** what you type, and reads the caret and the selection as they move. With **Speak textweaver's messages** on, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the caret moves to, and what a Shift key added to the selection or took from it.
-- **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the caret (on macOS, Command with each).
+- **Typing** goes in at the cursor, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
+- **Your screen reader echoes** what you type, and reads the cursor and the selection as they move. With **Speak textweaver's messages** on, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the cursor moves to, and what a Shift key added to the selection or took from it.
+- **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the cursor (on macOS, Command with each).
 - **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
 - **Tab** types a tab, or in a table moves to the next cell (Shift+Tab to the previous one), as in the terminal. **Ctrl+Tab** moves the focus out of the document, to the buttons.
 - **Markdown lint:** Ctrl+F8 moves to the next lint problem (a skipped heading level, a mixed list marker, a bare web address) and says it; Ctrl+Shift+F8 goes back. Ctrl+F7 moves to the next grammar problem and Ctrl+Shift+F7 to the previous one, as in the terminal ([Editing](editing.md#grammar)).
@@ -160,7 +160,7 @@ In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus
 
 ## The spoken word
 
-While textweaver reads, the spoken word has its own background color, and the caret sits at its start, so your screen reader and Braille display follow the reading. This is the default, chosen after the first screen reader session. `--select-spoken` selects the word instead, for anyone who prefers it.
+While textweaver reads, the spoken word has its own background color, and the cursor sits at its start, so your screen reader and Braille display follow the reading. This is the default, chosen after the first screen reader session. `--select-spoken` selects the word instead, for anyone who prefers it.
 
 The document window: a very long document is shown a few hundred pages at a time, around where you are. When reading reaches the edge, the window moves on by itself. The text that stays keeps its place, so your screen reader does not lose it.
 
@@ -215,13 +215,13 @@ How much textweaver says about its own interface is yours to choose: `[accessibi
 The window draws the same [reading aids](reading-aids.md) as the terminal, with the same keys:
 
 - **Text spacing:** line height, paragraph spacing, and letter and word spacing, in `[reading_aids.spacing]`. The window uses the exact values; the terminal rounds them to whole rows and spaces.
-- **The reading ruler** (Alt+Shift+U): off, the current line, or the ruler. The reading line gets a band with a bar at its start, the lines around it a paler band, and with `mask_outside` the rest is dimmed. It follows the caret, and the spoken word while reading.
+- **The reading ruler** (Alt+Shift+U): off, the current line, or the ruler. The reading line gets a band with a bar at its start, the lines around it a paler band, and with `mask_outside` the rest is dimmed. It follows the cursor, and the spoken word while reading.
 - **Bionic reading** (Alt+Shift+B): the start of each word in bold.
 - **Difficult words** (Alt+Shift+J): underlined with a thick line, never marked by color alone.
-- **Syllables** (Alt+Shift+Z): long words drawn split into syllables with a middle dot, "read·a·bil·i·ty", as in the terminal. The dot is only drawn: the words keep their letters, so your screen reader and Braille display read "readability", and the caret and the spoken word stay where they were. The separator and when words are split are in `[reading_aids.syllable_options]`.
+- **Syllables** (Alt+Shift+Z): long words drawn split into syllables with a middle dot, "read·a·bil·i·ty", as in the terminal. The dot is only drawn: the words keep their letters, so your screen reader and Braille display read "readability", and the cursor and the spoken word stay where they were. The separator and when words are split are in `[reading_aids.syllable_options]`.
 - **RSVP** (Alt+Shift+R, then Alt+Shift+P to play): one word at a time in its own strip under the document. The word before and after sit to its left and right. The marked letter is bold and underlined as well as colored. RSVP's nine places move the word left, center, or right in the strip.
 
-**Notes, highlights, bookmarks, and search matches** are drawn too, each with a shape as well as a color, so no color carries it alone: your highlights have a solid line under them, text with a note a dashed line, a bookmark a bar before it, a search match a box around it, and the match at the caret a heavier box. While you listen, the spoken sentence is underlined and the spoken word is bold, on top of their bands, as in the terminal. The bold is drawn in place, so the line never shifts as the word moves. Marks inside the sentence stay visible while it is read. The spoken word's and sentence's colors follow `[highlight] color` and `sentence_color`, as in the terminal.
+**Notes, highlights, bookmarks, and search matches** are drawn too, each with a shape as well as a color, so no color carries it alone: your highlights have a solid line under them, text with a note a dashed line, a bookmark a bar before it, a search match a box around it, and the match at the cursor a heavier box. While you listen, the spoken sentence is underlined and the spoken word is bold, on top of their bands, as in the terminal. The bold is drawn in place, so the line never shifts as the word moves. Marks inside the sentence stay visible while it is read. The spoken word's and sentence's colors follow `[highlight] color` and `sentence_color`, as in the terminal.
 
 **Exploring a formula** (Alt+Shift+X) works as in the terminal: Right and Left move to the next and previous part, Down goes into a part and Up out of it, Home and End go to the first and last, Space or Enter says it again, and Escape leaves. Any other key leaves the formula and does what it usually does.
 
@@ -257,7 +257,7 @@ Settings (Ctrl+,) opens a dialog: the sections on the left, the chosen section's
 
 Every command works in the window as in the terminal reader, from the same keys, the menus, and the command palette (F2), with the same lists, questions, and messages. A few commands only mean something in a terminal, and the window's menus and command palette leave them out. If a key for one is pressed in the window (`j` or Shift+J, say), the window says "This command works in the terminal reader." and does nothing else:
 
-- `scroll_down` and `scroll_up`: the terminal scrolls its screen by lines. The window scrolls with the mouse wheel and keeps the caret in view.
+- `scroll_down` and `scroll_up`: the terminal scrolls its screen by lines. The window scrolls with the mouse wheel and keeps the cursor in view.
 - `toggle_line_numbers`: line numbers are the terminal's margin, on F6 there. In the window, the status bar says the line, and Say Position (Shift+W) says it too; F6 moves between the window's regions instead.
 
 The command-line tools (`tw vault`, `tw convert`, `tw library`, and the rest) are the same for both readers.
@@ -298,5 +298,5 @@ Please note which steps did not behave as expected, with the screen reader and i
 - [Keyboard reference](keyboard.md)
 - [Reading aids](reading-aids.md)
 - [Using textweaver with a screen reader](screen-readers.md)
-- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md), [ADR-0028: the Xilem GUI after the first listening session](adr/0028-xilem-gui-after-the-session.md), [ADR-0033: the GUI after further accessibility testing, and edit mode](adr/0033-gui-session-2-and-edit-mode.md), and [ADR-0046: native menus in the GUI](adr/0046-native-menus-in-the-gui.md)
+- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md), [ADR-0028: the Xilem GUI after the first listening session](adr/0028-xilem-gui-after-the-session.md), [ADR-0033: the window after further accessibility testing, and edit mode](adr/0033-gui-session-2-and-edit-mode.md), and [ADR-0046: native menus in the window](adr/0046-native-menus-in-the-gui.md)
 - [ADR-0043: menus and the palette from one model](adr/0043-menus-and-the-palette-from-one-model.md)
