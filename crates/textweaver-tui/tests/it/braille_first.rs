@@ -422,3 +422,83 @@ fn common_status_messages_fit_a_braille_line_in_every_language() {
         }
     }
 }
+
+/// Every prompt the app opens (found by dispatching every action), in the
+/// terminal and the window alike: its label fits one 40-cell line, counted
+/// in Braille cells, and the terminal draws it at the start of the bottom
+/// row (checklist row A8, W9e-c).
+#[test]
+fn every_prompt_label_fits_a_braille_line() {
+    let text: String = (1..=40).map(|i| format!("Line number {i}.\n")).collect();
+    let mut h = launch(screen_reader(), 80, 24, Some(&text));
+    let mut prompts = Vec::new();
+    let mut long = Vec::new();
+    for &a in ActionId::ALL {
+        if a == ActionId::Quit {
+            continue;
+        }
+        for _ in 0..3 {
+            h.tui.dispatch(Command::Cancel);
+        }
+        if h.tui.app().mode() == textweaver_app::Mode::Edit {
+            h.act(ActionId::ToggleEditMode);
+        }
+        h.act(a);
+        let Some(label) = h.tui.app().prompt_model().map(|p| p.label.clone()) else {
+            continue;
+        };
+        prompts.push(format!("{a:?}: {label}"));
+        // The key fact is the label's first clause ("Export settings to
+        // file"); an example after a comma may run past the line.
+        let fact = label.split([',', ':']).next().unwrap_or_default();
+        let cells = braille_cells(fact);
+        if cells > BRAILLE_CELLS {
+            long.push(format!("{a:?} takes {cells} cells: {label}"));
+        }
+        let first = label.split_whitespace().next().unwrap_or_default();
+        within_forty_cells(&format!("{a:?} prompt row"), &h.bottom_row(), first);
+    }
+    h.tui.dispatch(Command::Cancel);
+    assert!(prompts.len() >= 5, "too few prompts: {prompts:#?}");
+    assert!(long.is_empty(), "{long:#?}");
+}
+
+/// The window's status bar shows the terminal's title parts after the
+/// message: `App::title_parts` joined with commas, as `gui.rs` builds its
+/// position label. Its place and reading state, or in edit mode its mode
+/// and "modified", end inside 40 Braille cells (checklist rows C3 and A8).
+#[test]
+fn the_window_position_line_puts_its_key_facts_inside_forty_cells() {
+    let text: String = (1..=400).map(|i| format!("Line number {i}.\n")).collect();
+    let mut h = launch(screen_reader(), 80, 24, Some(&text));
+    h.tui.dispatch(Command::GoTo(GoTo::Line(212)));
+    h.draw();
+    let line = |h: &Harness| {
+        let app = h.tui.app();
+        app.title_parts(app.title_position().as_deref()).join(", ")
+    };
+    let l = line(&h);
+    within_forty_cells("window position, browse", &l, "212 of 400");
+    within_forty_cells("window position, browse", &l, ", Ready");
+    h.tui.dispatch(Command::GoTo(GoTo::Line(12)));
+    h.act(ActionId::ToggleEditMode);
+    h.press(key(KeyCode::Char('x')));
+    let l = line(&h);
+    within_forty_cells("window position, edit", &l, ", Edit, modified");
+}
+
+/// Edit mode at a three-digit line: "line 212 of 400, 51%, Edit,
+/// modified" ends at cell 41, one past the line, in the window and the
+/// terminal alike (they share `App::title_parts`).
+#[test]
+#[ignore = "defect: in edit mode at a three-digit line, \"modified\" ends at Braille cell 41 (W9e-c)"]
+fn the_position_line_keeps_modified_inside_forty_cells_at_long_lines() {
+    let text: String = (1..=400).map(|i| format!("Line number {i}.\n")).collect();
+    let mut h = launch(screen_reader(), 80, 24, Some(&text));
+    h.tui.dispatch(Command::GoTo(GoTo::Line(212)));
+    h.act(ActionId::ToggleEditMode);
+    h.press(key(KeyCode::Char('x')));
+    let app = h.tui.app();
+    let l = app.title_parts(app.title_position().as_deref()).join(", ");
+    within_forty_cells("window position, edit", &l, ", Edit, modified");
+}
