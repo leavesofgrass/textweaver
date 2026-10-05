@@ -9817,6 +9817,7 @@ dependencies = [
  "masonry_testing",
  "masonry_winit",
  "muda",
+ "png",
  "rfd",
  "serde_json",
  "tempfile",
