@@ -8,7 +8,7 @@ You can also edit `settings.toml` yourself in any text editor. Close textweaver 
 
 ## The settings screen
 
-Change settings without leaving textweaver: press `Shift+F10` in the terminal reader (`Ctrl+comma` in the textweaver app), or type `settings` in the command palette (`F2`).
+Change settings without leaving textweaver: press `Shift+F10` in the terminal reader (`Ctrl+comma` in the window), or type `settings` in the command palette (`F2`).
 
 - Every setting is listed as its name and value, such as "Rate: 265 words per minute", speech first.
 - In the terminal reader, type to filter: "rate" leaves the settings with "rate" in their name, section, or help. Backspace removes a letter.
@@ -19,7 +19,7 @@ Change settings without leaving textweaver: press `Shift+F10` in the terminal re
 - In the terminal reader, F1 says the setting's value, its default, and its help.
 - In the terminal reader, the five settings you changed last are at the top, each said as "recently changed", so a setting you are tuning is one key away.
 
-The app's Settings dialog is described in [the app guide](gui.md); it has no filter and no recent settings yet.
+The window's Settings dialog is described in [the window guide](gui.md); it has no filter and no recent settings yet.
 - Escape closes the screen.
 
 View, Colors (or `color settings` in the command palette) shows only the colors: the word and sentence highlights, the reading ruler, difficult words, syllable marks, misspellings, lint marks, search matches, the selection, the focus, links, headings, the status bar, notes, and bookmarks. Left and Right go through named colors, blue and orange first (they are told apart by people who confuse red and green); Enter types a name or a `#rrggbb` value; Delete puts the theme's color back. Each row says its contrast, such as "Links: orange, contrast 6.2 to 1, good". A color under 3 to 1 is used and you are told it is hard to see. Every mark keeps its underline, bold, or spoken word whatever its color, so no color carries meaning alone.
@@ -287,7 +287,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `follow_os_theme`, default `true`: match the system's light, dark, or high-contrast setting at startup, unless you chose a theme.
 - `theme_explicit`, default `false`: set by textweaver when you choose a theme; it stops following the system.
 - `wrap_width`, default `0`: wrap lines at this many columns. 0 means the width of the terminal.
-- `measure`, default `66`: the app's line length in characters, from 25 to 90. The column is this many average characters of the reading font at its size and spacing, so it grows with the text; 0 fills the app. The terminal uses `wrap_width` instead.
+- `measure`, default `66`: the window's line length in characters, from 25 to 90. The column is this many average characters of the reading font at its size and spacing, so it grows with the text; 0 fills the window. The terminal uses `wrap_width` instead.
 - `tab_width`, default `4`: columns per tab.
 - `show_line_numbers`, default `false`: show line numbers. F6 turns them on and off.
 - `scroll_margin`, default `3`: lines kept visible above and below the cursor.
@@ -353,8 +353,8 @@ Braille output: BRF files and math braille on the display. See [Math in braille 
 See [Reading aids](reading-aids.md).
 
 - `bionic`, default `false`: bionic reading, the start of each word in bold. Alt+Shift+B turns it on and off.
-- `syllables`, default `false`: show long words split into syllables, `read·a·bil·i·ty`. Alt+Shift+Z turns it on and off. Both the terminal reader and the app draw it.
-- `difficult_words`, default `false`: underline rare words (SCOWL sizes above 50), and name them on word moves at high verbosity. Alt+Shift+J turns it on and off. Both the terminal reader and the app draw it.
+- `syllables`, default `false`: show long words split into syllables, `read·a·bil·i·ty`. Alt+Shift+Z turns it on and off. Both the terminal reader and the window draw it.
+- `difficult_words`, default `false`: underline rare words (SCOWL sizes above 50), and name them on word moves at high verbosity. Alt+Shift+J turns it on and off. Both the terminal reader and the window draw it.
 
 ### [reading_aids.bionic_options]
 
@@ -373,7 +373,7 @@ RSVP shows one word at a time.
 - `long_word_len`, default `8`, `long_word_step`, default `10`, and `long_word_max`, default `80`: a word longer than `long_word_len` letters gets `long_word_step` percent more time per extra letter, up to `long_word_max` percent.
 - `position`, default `"top-center"`: where the word box sits. `"top-left"`, `"top-center"`, `"top-right"`, `"center-left"`, `"center"`, `"center-right"`, `"bottom-left"`, `"bottom-center"`, or `"bottom-right"`.
 - `show_previous` and `show_next`, default `true`: show the word before and the word after.
-- `font_size_pt`, default `48`: the word's size in the app. The terminal uses its own font.
+- `font_size_pt`, default `48`: the word's size in the window. The terminal uses its own font.
 
 ### [reading_aids.spacing]
 
@@ -386,10 +386,10 @@ Text spacing, in multiples of the font size. In the terminal, textweaver adds bl
 
 ### [reading_aids.font]
 
-The font in the app. The terminal always uses its own font.
+The font in the window. The terminal always uses its own font.
 
 - `family`, default `"sans"`: `"system-ui"`, `"sans"`, `"serif"`, `"monospace"`, a reading font (`"opendyslexic"`, `"atkinson"`, `"lexend"`), or the name of any installed font.
-- `size_pt`, default `14.0`: the size in points, from 6 to 144 in this file; the Settings dialog and the app's size keys go up to 72.
+- `size_pt`, default `14.0`: the size in points, from 6 to 144 in this file; the Settings dialog and the window's size keys go up to 72.
 - `weight`, default `400`: from 100 to 900. 700 is bold.
 
 `fetch_missing` was removed in 0.1.0-alpha.5: textweaver downloads a reading font (Lexend) only when you choose it and agree, so the setting did nothing. A `fetch_missing` line in an older `settings.toml` is ignored and dropped at the next save.
@@ -439,7 +439,7 @@ Extractive summaries (see [Summaries](reading.md#summaries)).
 
 ### [dictation]
 
-Dictating text, in edit mode, in the terminal reader and the app. See [Dictation](dictation.md).
+Dictating text, in edit mode, in the terminal reader and the window. See [Dictation](dictation.md).
 
 - `speak_while_recording`, default `false`: speak the dictated words with textweaver's own voice while the microphone is open. Off, they are shown on the status line as they come and spoken once, at each pause, so the microphone does not hear textweaver's voice.
 - `model_dir`, not set by default: a folder holding an in-process Whisper model (its encoder, decoder, and `tokenizer.json`), used as it is. Unset, textweaver uses the model `model` chooses, in its data folder.
@@ -452,9 +452,9 @@ Dictating text, in edit mode, in the terminal reader and the app. See [Dictation
 
 ### [gui]
 
-Settings only the app (`textweaver-gui`) reads. In the settings dialog they are under "Window".
+Settings only the window (`textweaver-gui`) reads. In the settings dialog they are under "Window".
 
-- `announce`, default `"live"`: how the app's messages reach the screen reader, from the next start. `"live"` uses a live region, which NVDA and JAWS both speak. `"uia"` raises UI Automation notifications instead (Windows only; elsewhere the live region is used). `--announce live` or `--announce uia` on the command line wins over the setting for one run.
+- `announce`, default `"live"`: how the window's messages reach the screen reader, from the next start. `"live"` uses a live region, which NVDA and JAWS both speak. `"uia"` raises UI Automation notifications instead (Windows only; elsewhere the live region is used). `--announce live` or `--announce uia` on the command line wins over the setting for one run.
 - `auto_hide_menu`, default `false`: on Windows, hide the menu bar until Alt, F10, or Alt with a menu's letter shows it; it hides again when the menu closes, and nothing is announced then. It applies at once and stays on this computer. It has no effect on Linux (the menus are the F10 list) or macOS. See [Menus](gui.md#menus).
 
 ### [colors]
@@ -464,8 +464,8 @@ The color of each reading aid and part of the screen, over the theme's own (View
 - `ruler`: the reading ruler and the current-line band.
 - `difficult_words`: the underline of difficult words.
 - `syllables`: the marks between syllables.
-- `misspellings`: the underline of misspelled words, in the app.
-- `lint`: the underline of Markdown lint and grammar problems, in the app.
+- `misspellings`: the underline of misspelled words, in the window.
+- `lint`: the underline of Markdown lint and grammar problems, in the window.
 - `find_match`: the band behind search matches.
 - `selection`: the band behind selected text.
 - `focus`: the focus outline and the focused item of a list.
@@ -504,7 +504,7 @@ Every setting is either **portable**, which syncs, or **machine**, which never d
 
 A profile is a named set of the settings you change together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; and the access mode. Keep one for studying and one for skimming, or one for each person who shares the computer.
 
-- In the reader, **Ctrl+Shift+U** in the app or **Alt+U** in the terminal lists your profiles. Enter switches to one; its settings take effect at once and are saved. F2 renames a profile, and Delete deletes one after a yes or no. The last items save the current settings as a new profile, save them into the profile in use, and import and export profiles.
+- In the reader, **Ctrl+Shift+U** in the window or **Alt+U** in the terminal lists your profiles. Enter switches to one; its settings take effect at once and are saved. F2 renames a profile, and Delete deletes one after a yes or no. The last items save the current settings as a new profile, save them into the profile in use, and import and export profiles.
 - From the command line:
 
   ```sh

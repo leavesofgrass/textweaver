@@ -4,7 +4,7 @@ textweaver is in alpha. This page says plainly what it does not do yet, or does 
 
 ## What is tested, and what is not
 
-- **Windows with a screen reader** is the system that has been listened to: NVDA and JAWS, and a 40-cell Braille display. Two listening sessions went through the textweaver app.
+- **Windows with a screen reader** is the system that has been listened to: NVDA and JAWS, and a 40-cell Braille display. Two listening sessions went through the window.
 - **macOS and Linux** packages are built and checked by computer on every release. Some basic testing has been done with VoiceOver and Orca, but not every release gets a listening test with them yet. More extensive testing is planned.
 - **Other Braille displays and cell widths** have not been tried.
 - **Settings marked "not yet verified"** in [the screen reader guide](screen-readers.md) have not been tried by ear.

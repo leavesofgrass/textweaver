@@ -2,7 +2,7 @@
 
 This guide covers edit mode in the terminal reader: typing with spoken feedback, Markdown formatting commands, undo, find and replace, saving, and getting back unsaved work after a crash. It is for anyone who writes or corrects documents in textweaver.
 
-Keys are the terminal defaults. Where the textweaver app uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key.
+Keys are the terminal defaults. Where the window uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key.
 
 ## Start and finish editing: Ctrl+E
 
@@ -43,7 +43,7 @@ At the edges you hear "Start of line.", "End of line.", "Top of document.", or "
 More editing keys:
 
 - **Ctrl+A**: select all the text. You hear "Selected all" and the number of words.
-- **Alt+Backspace**: delete the word before the cursor. The app uses **Ctrl+Backspace**.
+- **Alt+Backspace**: delete the word before the cursor. The window uses **Ctrl+Backspace**.
 - **Ctrl+Delete**: delete the word after the cursor.
 - **Ctrl+C**: copy the selection. **Ctrl+X**: cut it. Both go to your computer's clipboard through the terminal; see [Copy, cut, and paste](#copy-cut-and-paste).
 - **Ctrl+V**: paste. See [Copy, cut, and paste](#copy-cut-and-paste).
@@ -105,20 +105,20 @@ caps = "say_cap"
 Each command changes the selection, or the line the cursor is on. Each one is announced: for example "Bold." when it adds the marks, or "Bold removed." when the text was already bold. The commands toggle, so pressing a key twice undoes it. With nothing selected, bold, italic, and the other wrapping commands insert placeholder text and select it, so you can type over it.
 
 - Bold: **Ctrl+B**. Writes `**text**`.
-- Italic: **Alt+I**. The app uses **Ctrl+I**. Writes `*text*`.
+- Italic: **Alt+I**. The window uses **Ctrl+I**. Writes `*text*`.
 - Underline: **Ctrl+U**. Writes `<u>text</u>`, because Markdown has no underline.
-- Strikethrough: **Alt+D**. The app uses **Ctrl+Shift+X**. Writes `~~text~~`.
-- Inline code: `` Alt+` ``, that is Alt with the backtick key. The app uses `` Ctrl+` ``. Writes the text between backticks.
-- Code block: **Alt+K**. The app uses **Ctrl+Shift+K**. Fences the selected lines.
+- Strikethrough: **Alt+D**. The window uses **Ctrl+Shift+X**. Writes `~~text~~`.
+- Inline code: `` Alt+` ``, that is Alt with the backtick key. The window uses `` Ctrl+` ``. Writes the text between backticks.
+- Code block: **Alt+K**. The window uses **Ctrl+Shift+K**. Fences the selected lines.
 - Link: **Ctrl+K**. Writes `[text](https://)`. With nothing selected, `text` is selected so you can type the link text. With a selection, the address is selected so you can type it.
-- Heading: **Alt+1**. The app uses **Ctrl+Alt+1**. Each press raises the level of the current line by one: level 1, then 2, up to 6. Pressing it on a level-6 heading removes the heading. You hear "Heading level 2." and so on.
-- Bulleted list: **Alt+8**. The app uses **Ctrl+Shift+L**. Puts `- ` before each selected line.
-- Numbered list: **Alt+7**. The app uses **Ctrl+Shift+O**. Numbers each selected line. Bulleted and numbered lists turn into each other.
-- Block quote: **Alt+9**. The app uses **Ctrl+Shift+Q**. Puts `> ` before each selected line.
-- Horizontal rule: **Alt+R**. The app uses **Ctrl+Shift+R**. Inserts `---` on its own line.
-- Insert a table: **Alt+T**. The app uses **Ctrl+Shift+A**. textweaver asks "Table size, columns by rows, for example 3 by 2". Type the columns, then the rows, as `3 by 2`, `3x2`, or `3 2`. Enter alone makes 2 by 2. Up to 20 columns and 100 rows. The first header cell is selected afterwards.
-- Add a table row: **Alt+W**. The app uses **Ctrl+Shift+Enter**. Adds an empty row to the table at the cursor; the cursor goes to its first cell.
-- Insert an image: **Alt+G**. The app uses **Ctrl+Shift+I**. textweaver asks for the image file. It writes `![name](path)` and selects the description, so you can type a better one.
+- Heading: **Alt+1**. The window uses **Ctrl+Alt+1**. Each press raises the level of the current line by one: level 1, then 2, up to 6. Pressing it on a level-6 heading removes the heading. You hear "Heading level 2." and so on.
+- Bulleted list: **Alt+8**. The window uses **Ctrl+Shift+L**. Puts `- ` before each selected line.
+- Numbered list: **Alt+7**. The window uses **Ctrl+Shift+O**. Numbers each selected line. Bulleted and numbered lists turn into each other.
+- Block quote: **Alt+9**. The window uses **Ctrl+Shift+Q**. Puts `> ` before each selected line.
+- Horizontal rule: **Alt+R**. The window uses **Ctrl+Shift+R**. Inserts `---` on its own line.
+- Insert a table: **Alt+T**. The window uses **Ctrl+Shift+A**. textweaver asks "Table size, columns by rows, for example 3 by 2". Type the columns, then the rows, as `3 by 2`, `3x2`, or `3 2`. Enter alone makes 2 by 2. Up to 20 columns and 100 rows. The first header cell is selected afterwards.
+- Add a table row: **Alt+W**. The window uses **Ctrl+Shift+Enter**. Adds an empty row to the table at the cursor; the cursor goes to its first cell.
+- Insert an image: **Alt+G**. The window uses **Ctrl+Shift+I**. textweaver asks for the image file. It writes `![name](path)` and selects the description, so you can type a better one.
 
 The Alt chords in the terminal replace window chords that terminals cannot send, such as **Ctrl+I**, which arrives as Tab.
 
@@ -127,7 +127,7 @@ Writing citations and math has its own guides: [citations](citations.md) and [ma
 ## Undo and redo
 
 - **Ctrl+Z**: undo.
-- **Ctrl+Y**: redo. The app also has **Ctrl+Shift+Z**.
+- **Ctrl+Y**: redo. The window also has **Ctrl+Shift+Z**.
 
 Typing and deleting are grouped into word-sized steps, so one undo removes about one word. Every formatting command, a paste, and a Replace All are each one step. You hear "Undo." or "Redo." and the current line. With nothing left, you hear "Nothing to undo." or "Nothing to redo."
 
@@ -135,7 +135,7 @@ textweaver keeps the last 1,000 steps, or 50 MB of them, whichever comes first; 
 
 ## Find and replace: Alt+F
 
-Press **Alt+F** in edit mode. The app uses **Ctrl+Shift+F**.
+Press **Alt+F** in edit mode. The window uses **Ctrl+Shift+F**.
 
 1. The prompt says "Replace, find what". Type the text to find and press **Enter**. You hear how many matches there are, then "Replace with?"
 2. Type the new text and press **Enter**.
@@ -169,9 +169,9 @@ The file is written in the background, so a large file never holds up the keyboa
 
 ### Save As: Alt+S
 
-Press **Alt+S** to save under a new name. The app uses **Ctrl+Shift+S**. The prompt suggests the current name. A name ending in `.md`, `.markdown`, `.txt`, or another plain-text or Markdown extension is kept. Any other ending becomes `.md`, so Markdown never lands in an `.html` or `.docx` file. A name without a folder goes in the same folder as the suggestion.
+Press **Alt+S** to save under a new name. The window uses **Ctrl+Shift+S**. The prompt suggests the current name. A name ending in `.md`, `.markdown`, `.txt`, or another plain-text or Markdown extension is kept. Any other ending becomes `.md`, so Markdown never lands in an `.html` or `.docx` file. A name without a folder goes in the same folder as the suggestion.
 
-Save As asks before it writes over a file of the same name: "notes.md already exists. Replace it? y or n". In the app, the system's Save dialog asks instead.
+Save As asks before it writes over a file of the same name: "notes.md already exists. Replace it? y or n". In the window, the system's Save dialog asks instead.
 
 ### New document: Ctrl+N
 
@@ -240,7 +240,7 @@ Pasting into a prompt, such as Find, puts the text in the prompt.
 
 ## Citations
 
-In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+B** (app **Alt+Shift+D**) adds a reference by DOI or ISBN. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
+In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+B** (window **Alt+Shift+D**) adds a reference by DOI or ISBN. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
 
 ## Spelling
 
@@ -256,7 +256,7 @@ Your word list is `words.txt` in the data folder, one word per line; you can edi
 
 ## Grammar
 
-Grammar checking is built in: it is in the terminal reader, the app app, `tw`, and the release packages. A build made without it (see [Building without grammar](#building-without-grammar)) says "Grammar checking is not in this version." when you press the keys below.
+Grammar checking is built in: it is in the terminal reader, the window app, `tw`, and the release packages. A build made without it (see [Building without grammar](#building-without-grammar)) says "Grammar checking is not in this version." when you press the keys below.
 
 textweaver checks grammar offline with Harper, which knows American English. It looks for things such as "a apple", "the results was", a word typed twice, and a missing capital letter. Spelling is left to the spelling keys above, so a misspelled word is not reported twice.
 

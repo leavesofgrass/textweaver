@@ -148,7 +148,7 @@ If a value is wrong, for example `math_verbosity = "loud"`, only that setting fa
 
 Where these settings apply:
 
-- The terminal reader (`textweaver` and `tw open`), the textweaver app, `tw speak`, and `tw export-audio` all follow the three settings, because they share the same reading and speech code.
+- The terminal reader (`textweaver` and `tw open`), the GUI, `tw speak`, and `tw export-audio` all follow the three settings, because they share the same reading and speech code.
 
 ## Hear math with MathCAT
 

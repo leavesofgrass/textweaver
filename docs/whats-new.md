@@ -4,11 +4,11 @@ This page tells students and readers, in plain words, what each release brought.
 
 ## 0.1.0-alpha.9
 
-In short: the textweaver app is easier to start and to read, and a document can become a read-along page, a video, or Vorbis audio.
+In short: the window is easier to start and to read, and a document can become a read-along page, a video, or Vorbis audio.
 
 - A short first run, at most three steps, each one skippable. If a screen reader is running, textweaver reads less on its own.
 - A Reading settings dialog gathers the reading choices in one place.
-- The app works in narrow sizes, and list bullets and numbers are drawn.
+- The window works in narrow sizes, and list bullets and numbers are drawn.
 - Written pauses in a document, such as a break tag, are honored by every speech engine.
 - Export audio can write a read-along web page that highlights each word as it plays.
 - With ffmpeg installed, Export audio can also make a video with captions and chapters.
@@ -24,10 +24,10 @@ In short: reading is faster, stops sound where things end, and medical and scien
 
 - Reading pauses after headings, paragraphs, and list items.
 - Medical and science text, identifiers, and units are said correctly.
-- The app has a Contents panel (Ctrl+1) and a Notes panel (Ctrl+2) beside the document. F6 moves between the parts of the app.
-- Closing the app with unsaved edits now asks first, so you do not lose work.
+- The window has a Contents panel (Ctrl+1) and a Notes panel (Ctrl+2) beside the document. F6 moves between the parts of the window.
+- Closing the window with unsaved edits now asks first, so you do not lose work.
 - Questions about deleting or replacing start on No, so a stray Enter keeps your things.
-- The app's menus and title bar follow your theme.
+- The window's menus and title bar follow your theme.
 - Dictation and other models are offered as downloads, and only when you say yes.
 - Converting a folder leaves a report you can keep with an accommodation file.
 - Large documents open and edit faster.
@@ -57,11 +57,11 @@ In short: menus and a file browser, and more kinds of documents.
 - PDF comments become notes, PDF links and filled-in forms are read, and sideways scans are turned upright.
 - Braille files carry bold, italic, and underline, and tables in three layouts.
 - Dictation works while you edit, and shows words as you talk.
-- The app has native menus and draws notes and highlights with shapes as well as color.
+- The window has native menus and draws notes and highlights with shapes as well as color.
 
 ## Earlier releases
 
-Releases before alpha.6 built the reader, the app, speech engines, OCR, and the writers. Read the [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) for them.
+Releases before alpha.6 built the reader, the window, speech engines, OCR, and the writers. Read the [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) for them.
 
 ## See also
 

@@ -8,7 +8,7 @@ Each problem below is a heading that says what you notice. Under it are the step
 
 ### The log file
 
-The terminal reader and the textweaver app write warnings and errors to a log file, `textweaver.log`, in the state folder. The state folder is `state` inside the data folder; the [library guide](library.md) says where that is on each system. With `TEXTWEAVER_HOME` or `--home`, it is `data\state` under that folder.
+The terminal reader and the window write warnings and errors to a log file, `textweaver.log`, in the state folder. The state folder is `state` inside the data folder; the [library guide](library.md) says where that is on each system. With `TEXTWEAVER_HOME` or `--home`, it is `data\state` under that folder.
 
 The log is written by `textweaver`, `tw open`, and `tw serve`. Other `tw` commands print their errors in the terminal instead.
 
@@ -58,7 +58,7 @@ These three commands read your `settings.toml`, as the reader does, so they use 
 
 The `scripts` folder has two checking scripts. The [scripts guide](../scripts/README.md) describes every option.
 
-The doctor writes one plain-text report to paste into a bug report: your system, your terminal, the screen reader if one is running, where textweaver and the app are installed, `tw backends`, the optional components with one line such as "Components: 3 of 12 installed", text recognition, whether the engine hosts sit beside the programs, and the optional tools. It reads no file contents and shows only the names of `TEXTWEAVER_` variables that are set. On Windows:
+The doctor writes one plain-text report to paste into a bug report: your system, your terminal, the screen reader if one is running, where textweaver and the window are installed, `tw backends`, the optional components with one line such as "Components: 3 of 12 installed", text recognition, whether the engine hosts sit beside the programs, and the optional tools. It reads no file contents and shows only the names of `TEXTWEAVER_` variables that are set. On Windows:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\doctor.ps1 -Out doctor.txt
@@ -93,13 +93,13 @@ scripts/speech-check.sh
 5. Run `tw speak "Hello"`. If that speaks but the reader does not, check `[speech] backend` in `settings.toml`, or start with `--backend` and an engine id.
 6. Start with `--log debug`, try again, and read `textweaver.log`.
 
-### The app does not open, or it is blank
+### The window does not open, or it is blank
 
 1. Start it from a terminal, so any error shows there, and write a log: `textweaver-gui --log-file gui.log`. Started from a shortcut or File Explorer, a startup error is shown in a message box instead.
 2. Try another graphics interface for one run: `textweaver-gui --graphics vulkan`. The others are `dx12` (Windows), `metal` (macOS), and `gl`. To keep the one that works, put `graphics = "vulkan"` under `[gui]` in `settings.toml`.
 3. Attach `gui.log` to a bug report; see [Report a bug](#report-a-bug).
 
-### Your screen reader does not read the app's messages
+### Your screen reader does not read the window's messages
 
 1. Open Settings (Ctrl+,), choose the section Window, and change Announcements. The choices are a live region (the default) and UI Automation notifications (Windows only). The change applies from the next start. To try the other one for a single run, start with `--announce uia` or `--announce live`.
 2. Check the accessibility mode: **Alt+Shift+A** changes it. In screen reader mode textweaver itself is silent, and your screen reader reads its messages.
@@ -107,7 +107,7 @@ scripts/speech-check.sh
 
 ### The file chooser does not open
 
-On Linux the app's Open dialog needs the XDG desktop portal. When it cannot open, textweaver says so and shows a one-line prompt for the path instead. **Ctrl+Shift+G** opens the same prompt at any time, and Tab completes the path.
+On Linux the window's Open dialog needs the XDG desktop portal. When it cannot open, textweaver says so and shows a one-line prompt for the path instead. **Ctrl+Shift+G** opens the same prompt at any time, and Tab completes the path.
 
 ### textweaver and your screen reader talk at once
 
@@ -121,7 +121,7 @@ On its first run with a screen reader, textweaver offers hybrid mode once. [Usin
 
 ### The wrong voice speaks
 
-1. Press **Alt+V** in the terminal reader, or **Ctrl+Shift+V** in the app, and choose the voice. The one in use says "current". The choice is saved.
+1. Press **Alt+V** in the terminal reader, or **Ctrl+Shift+V** in the window, and choose the voice. The one in use says "current". The choice is saved.
 2. Check `[speech] voice` in `settings.toml`. A voice name that matches nothing leaves the engine's default voice in use.
 3. With no voice chosen, `[speech] prefer_voice` (default `"eloquence"`) picks one whose name contains it. Set it to part of the name you want, or to `""`.
 4. Check the engine. Your voice may belong to another engine: `tw voices --backend sapi`, for example. Set `[speech] backend` to that engine.
@@ -326,14 +326,14 @@ If you hear "Speech stopped working", textweaver restarts speech once by itself.
 A good report lets someone else see the same problem. Include:
 
 1. What you did, what you expected, and what happened instead. Quote what textweaver said, from the status line.
-2. textweaver's version. In the app or the terminal reader, choose About from the command palette (in the app, also from the Help menu): it says the version. From a command line:
+2. textweaver's version. In the window or the terminal reader, choose About from the command palette (in the window, also from the Help menu): it says the version. From a command line:
 
    ```bash
    tw --version
    ```
 
 3. The doctor report: run the doctor script with `--out doctor.txt` (or `-Out doctor.txt` in PowerShell), as shown above, and attach the file.
-4. The log: start the reader with `--log debug`, make the problem happen, quit, and attach `textweaver.log` from the state folder (`tw settings path` names it). For the app, start it with `--log-file gui.log` and attach that file.
+4. The log: start the reader with `--log debug`, make the problem happen, quit, and attach `textweaver.log` from the state folder (`tw settings path` names it). For the window, start it with `--log-file gui.log` and attach that file.
 5. If a document causes it, and you may share it, attach the document or a small part of it that shows the problem.
 
 Report bugs at the project's issue tracker: [github.com/leavesofgrass/textweaver/issues](https://github.com/leavesofgrass/textweaver/issues).

@@ -40,11 +40,11 @@ The list names each component, meaning first: "Whisper base.en, English dictatio
 - **Remove**: asks first, then removes the component's own files, and its folder when nothing else is in it. A file you put there yourself stays.
 - **Install from a zip file…** and **Install from a folder…**: see [Installing from a file](#installing-from-a-file).
 
-Delete on a component asks to remove it. A change is seen at once by every feature: a downloaded model is used by the next Dictate, a removed one is asked for again, and the app registers a downloaded font, with no restart.
+Delete on a component asks to remove it. A change is seen at once by every feature: a downloaded model is used by the next Dictate, a removed one is asked for again, and the window registers a downloaded font, with no restart.
 
 ## The first-run list
 
-The first time the app or the terminal reader starts, after the language list, textweaver shows the optional components once, with nothing chosen:
+The first time the window or the terminal reader starts, after the language list, textweaver shows the optional components once, with nothing chosen:
 
 - Each item says whether it is chosen, in words, then what it is, what it is for, its size, and its license: "Not chosen: Whisper base.en, English dictation, for dictation, 79.3 MB, license MIT, unconfirmed".
 - Space (or Enter) chooses an item or takes it back, and says "Chosen" or "Not chosen".

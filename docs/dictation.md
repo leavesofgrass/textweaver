@@ -362,7 +362,7 @@ The license is MIT, from OpenAI. The onnx-community copies declare no license of
 
 textweaver offers to download the model; it never downloads it on its own.
 
-- **In the reader and the textweaver app:** the first time you dictate without the model, you hear "Dictation needs the Whisper model, 79.3 MB, license MIT, unconfirmed. Download it now? y or n". Press `y` and the download starts on its own, with its progress said every 10 percent; Escape stops it, and the next download goes on from where it stopped. When it finishes, you hear "Ready", and dictation starts. Press `n` and nothing is downloaded; you are not asked again until you start textweaver again, and Dictate says "No model, so no dictation for now."
+- **In the reader and the window:** the first time you dictate without the model, you hear "Dictation needs the Whisper model, 79.3 MB, license MIT, unconfirmed. Download it now? y or n". Press `y` and the download starts on its own, with its progress said every 10 percent; Escape stops it, and the next download goes on from where it stopped. When it finishes, you hear "Ready", and dictation starts. Press `n` and nothing is downloaded; you are not asked again until you start textweaver again, and Dictate says "No model, so no dictation for now."
 - **From the Tools menu:** Download the dictation model asks the same question at any time.
 - **From the command line:** `tw dictate download` says what it downloads and asks; `tw dictate download --yes` downloads without asking. When `tw dictate` finds no model, it offers the same download (`--yes` answers for it), then goes on dictating.
 - **From Manage optional components** (Tools menu, or `tw components`): the model is listed with its size and license, with Download, Verify, Remove, and Install from a file.
@@ -457,7 +457,7 @@ character_keys = false
 
 You can dictate into textweaver with speech recognition software that types for you, such as Windows Voice Access, Dragon, or macOS Dictation. That software types letters as if you pressed the keys. In reading mode, many single letters and punctuation keys are shortcuts, so dictated text could set off commands.
 
-To stop that, turn single-key shortcuts off. Press **F9**, in the app or in the terminal version. You hear "Single-key shortcuts off." Press **F9** again to turn them back on, and you hear "Single-key shortcuts on." You can also run `toggle character keys` from the command palette (**F2**), or put the setting above in `settings.toml`. textweaver remembers the choice.
+To stop that, turn single-key shortcuts off. Press **F9**, in the window or in the terminal version. You hear "Single-key shortcuts off." Press **F9** again to turn them back on, and you hear "Single-key shortcuts on." You can also run `toggle character keys` from the command palette (**F2**), or put the setting above in `settings.toml`. textweaver remembers the choice.
 
 While single-key shortcuts are off, letters, punctuation, and Space never trigger commands in any mode. Shortcuts with Ctrl or Alt, the arrow keys, the function keys, and the command palette still work. Quitting always asks first, so a stray keystroke cannot close your document.
 

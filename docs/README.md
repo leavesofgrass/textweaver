@@ -2,7 +2,7 @@
 
 <img src="assets/textweaver-logo.svg" alt="textweaver logo: the letters t and w woven on a loom" width="128" height="128">
 
-textweaver is a document reader and writer that speaks for itself. It reads aloud with a highlight that follows the spoken word, works from the keyboard in a terminal and in the textweaver app, and converts, exports, and edits documents. It is its own project, with roots in star, the Python reader that came before it.
+textweaver is a document reader and writer that speaks for itself. It reads aloud with a highlight that follows the spoken word, works from the keyboard in a terminal and in a window, and converts, exports, and edits documents. It is its own project, with roots in star, the Python reader that came before it.
 
 This is the index of every textweaver document. It is grouped for three audiences:
 
@@ -35,9 +35,9 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 ### Reading
 
 - [Reading and moving around](reading.md): opening files, reading aloud, moving by unit, Speech Cursor, find, go to, and history.
-- [Keyboard reference](keyboard.md): every key in the terminal and the app, generated from the keymap.
-- [The textweaver app](gui.md): starting it, what is in the app, its keys, announcements, and the reading aids it draws.
-- [The app in pictures](window-in-pictures.md): eight pictures of the app, each with a description of what it shows.
+- [Keyboard reference](keyboard.md): every key in the terminal and the GUI, generated from the keymap.
+- [The textweaver window (GUI)](gui.md): starting it, what is in the window, its keys, announcements, and the reading aids it draws.
+- [The window in pictures](window-in-pictures.md): eight pictures of the window, each with a description of what it shows.
 - [Bookmarks, notes, and highlights](notes.md): marking your place and your thoughts.
 - [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, and reading level.
 - [Themes](themes.md): the 24 built-in color themes, following your system, and writing your own.
@@ -77,7 +77,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [CONTRIBUTING.md](../CONTRIBUTING.md): what textweaver is for, setting up, the checks, accessibility expectations, commit style, and how to propose a change.
 - [Good first issues](dev/good-first-issues.md): small, well-scoped tasks for a first contribution, each with where to look and how to check it.
 - [Writing messages](dev/messages.md): the style guide for everything textweaver says and shows, and the tests that keep it.
-- [Building](dev/building.md): Rust, Python, what each system needs, Docker, the app, the lean reader, the helper scripts, and the repository layout.
+- [Building](dev/building.md): Rust, Python, what each system needs, Docker, the GUI, the lean reader, the helper scripts, and the repository layout.
 - [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
 - [The polish checklist and its tests](dev/checklist-tests.md): each row of the consistency, accessibility, visual, and documentation checklist, with the test that holds it or the owner's session that covers it.
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
@@ -125,12 +125,12 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0025: Define word offline, and the message catalog](adr/0025-lexicon-and-message-catalog.md): Open English WordNet and CMUdict in an fst and zstd file, and a Fluent-subset catalog with pseudo-locales.
 - [ADR-0026: OCR, and formats for students](adr/0026-ocr-and-student-formats.md): OCR of scanned pages (ocrs in process, Tesseract as the fallback), DAISY, PowerPoint, spreadsheets, archives, and web pages.
 - [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md): the all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit; our own document widget, the pinned versions, and the accessibility checks.
-- [ADR-0028: The Xilem GUI after the first listening session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the app's memory goes.
+- [ADR-0028: The Xilem GUI after the first listening session](adr/0028-xilem-gui-after-the-session.md): two ways to announce, every list option in the tree, and where the GUI's memory goes.
 - [ADR-0029: MathCAT speech](adr/0029-mathcat-speech.md): MathCAT as a second math speech engine, EPUB 3 MathML read as math, and what waits for math braille.
 - [ADR-0030: Interface translations](adr/0030-interface-translations.md): every message from the catalog, five built-in languages, right-to-left display, and a voice per language.
 - [ADR-0031: Native RTF, ODT, and Word revisions](adr/0031-native-rtf-odt-and-word-revisions.md): RTF and OpenDocument without Pandoc, comments as notes, tracked changes, and limits for zip packages.
 - [ADR-0032: Grammar, lint, highlighting, and clipboard crates](adr/0032-grammar-lint-highlighting-clipboard.md): the authoring extras' crates, and two held for later review.
-- [ADR-0033: The GUI after further accessibility testing, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the app.
+- [ADR-0033: The GUI after further accessibility testing, and edit mode](adr/0033-gui-session-2-and-edit-mode.md): the file chooser, text size and font keys, a key on every button, and edit mode in the window.
 - [ADR-0034: The rope after measurement](adr/0034-rope-after-measurement.md): stay on ropey 1.6; ropey 2 and crop measured, and when to look again.
 - [ADR-0035: Native LaTeX subset, and email and web archives](adr/0035-latex-email-and-web-archives.md): LaTeX, email, and web archives read natively, and MathML in web pages.
 - [ADR-0036: Math braille and navigation on MathCAT](adr/0036-math-braille-and-navigation.md): Nemeth and UEB math in braille files, and exploring a formula with MathCAT and its braille.
@@ -141,7 +141,7 @@ Each ADR records one decision: the context, the choice, and its consequences. A 
 - [ADR-0043: Menus and the palette from one model](adr/0043-menus-and-the-palette-from-one-model.md): menus from one model, the palette's names and ranking, interface announcements, macOS keys, and colors.
 - [ADR-0044: Obsidian, JSON, SVG and content MathML in the reader](adr/0044-obsidian-json-svg-and-content-mathml.md): Obsidian notes, JSON and notebooks, SVG drawings, content MathML, and more LaTeX, read natively.
 - [ADR-0045: A file browser on the list model](adr/0045-a-file-browser-on-the-list-model.md): folders and archives browsed as one list, a preview, and choosing folders for other commands; it never changes a file.
-- [ADR-0046: Native menus in the GUI](adr/0046-native-menus-in-the-gui.md): the app's menus from the app's one model, native on Windows and macOS, a list on Linux, with the keys shown and handled by the keymap alone.
+- [ADR-0046: Native menus in the GUI](adr/0046-native-menus-in-the-gui.md): the window's menus from the app's one model, native on Windows and macOS, a list on Linux, with the keys shown and handled by the keymap alone.
 - [ADR-0048: PDF annotations, links and forms](adr/0048-pdf-annotations-links-and-forms.md): PDF comments as notes, links, filled-in forms, captions, and sideways and tabular scans.
 - [ADR-0049: Sync beyond the place](adr/0049-sync-beyond-the-place.md): notes, highlights, bookmarks, places, and portable settings synced through a folder you choose, each computer writing only its own files, with no account or server.
 

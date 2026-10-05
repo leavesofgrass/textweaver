@@ -4,13 +4,13 @@ New to textweaver? [Start here, for students](start-students.md) is the shortest
 
 textweaver opens text, Markdown, HTML, EPUB, Word (DOCX), and PDF files.
 
-## Windows: the textweaver app
+## Windows: the window
 
-1. Download the app package, `textweaver-VERSION-windows-x86_64-gui.zip`, from the [releases page](https://github.com/leavesofgrass/textweaver/releases). Right-click it, choose Extract All, and extract it to a folder of your own.
+1. Download the window package, `textweaver-VERSION-windows-x86_64-gui.zip`, from the [releases page](https://github.com/leavesofgrass/textweaver/releases). Right-click it, choose Extract All, and extract it to a folder of your own.
 2. Open the folder and run `textweaver-gui.exe`. Windows warns once, because the program is not code-signed: choose "More info", then "Run anyway".
 3. Press **Ctrl+O** to open a document and **Space** to hear it. **F1** opens the help, and **?** lists every key.
 
-The app is described in [the app guide](gui.md). The rest of this page is for the terminal reader.
+The window is described in [the window guide](gui.md). The rest of this page is for the terminal reader.
 
 ## Windows: the terminal reader
 
@@ -93,17 +93,17 @@ If the AppImage says FUSE is missing, the script installs the plain tarball inst
 
 textweaver speaks with espeak-ng when the `espeak-ng` package is installed, or through speech-dispatcher. `tw backends` lists the engines it found.
 
-## The app
+## The GUI
 
-textweaver also has an app, `textweaver-gui`: a native, screen-reader-accessible program that shares documents, keys, settings, and voices with the terminal reader. It is its own download, in packages whose names end in `-gui` (see [Installing textweaver](install.md#the-app)). It is supported on Windows; the macOS and Linux packages are built and checked automatically, but no one has listened to them with a screen reader yet.
+textweaver also has a window, `textweaver-gui`: a native, screen-reader-accessible GUI that shares documents, keys, settings, and voices with the terminal reader. It is its own download, in packages whose names end in `-gui` (see [Installing textweaver](install.md#the-gui)). It is supported on Windows; the macOS and Linux packages are built and checked automatically, but no one has listened to them with a screen reader yet.
 
-To build the app yourself, see [Building](dev/building.md#the-gui).
+To build the window yourself, see [Building](dev/building.md#the-gui).
 
-[The textweaver app](gui.md) covers what is in the app, its keys, and its announcements.
+[The textweaver window (GUI)](gui.md) covers what is in the window, its keys, and its announcements.
 
 ## Your first 30 seconds
 
-The five keys the first-run welcome names, in the same order, in both the terminal reader and the app:
+The five keys the first-run welcome names, in the same order, in both the terminal reader and the window:
 
 - **Ctrl+O** opens a document.
 - **Space** starts reading, and pauses. The highlight follows each word.
@@ -116,7 +116,7 @@ The five keys the first-run welcome names, in the same order, in both the termin
 - **Alt+Down** and **Alt+Up** move to the next or previous sentence.
 - **p** and **Shift+P** move by paragraph. **h** jumps to the next heading, and **1** to **6** to the next heading at that level, as in NVDA and JAWS.
 - **+** and **-** make the voice faster or slower.
-- **Tab** turns Speech Cursor mode on and off in the terminal reader. In the app, press **Alt+Shift+S** (or Reading, then Speech Cursor, in the menus); Tab moves between the document and the buttons there. In the mode, the Up and Down arrows read one line at a time.
+- **Tab** turns Speech Cursor mode on and off in the terminal reader. In the window, press **Alt+Shift+S** (or Reading, then Speech Cursor, in the menus); Tab moves between the document and the buttons there. In the mode, the Up and Down arrows read one line at a time.
 - **Shift+W** says where you are: the line, the percentage, the word number, and the heading.
 - **?** lists every key. **F1** opens the help.
 - **Ctrl+Q** quits. textweaver asks "Quit textweaver? y or n". Press **y** to quit, or **n** to stay. With the classic keys (`[keyboard] preset = "classic"`), **q** quits too, after the same question.
@@ -135,11 +135,11 @@ textweaver remembers your place. Open the same file again and it picks up where 
 
 - **Ctrl+O** opens another document.
 - **F10** opens the menus: File, Edit, View, Reading, Speech, Tools, and Help. **F2** opens the command palette: type part of a command's name, then press Enter. Both offer the same commands, under the same names.
-- **F9** turns single-key shortcuts off, so dictation or typing never triggers a command. Chords still work: **Alt+P** plays or pauses in the terminal reader, and **Ctrl+Shift+Space** in the app.
+- **F9** turns single-key shortcuts off, so dictation or typing never triggers a command. Chords still work: **Alt+P** plays or pauses in the terminal reader, and **Ctrl+Shift+Space** in the window.
 - If you use a screen reader, **Alt+Shift+A** chooses who speaks: textweaver alone (self-voicing), both (hybrid: textweaver reads documents aloud and your screen reader speaks the rest), or your screen reader alone. `textweaver --no-speech FILE` starts silent. [Using textweaver with a screen reader](screen-readers.md) explains the modes.
 - If speech stops, **Shift+F8** restarts it.
-- textweaver speaks and shows its own words in English, Spanish, French, German, Portuguese, or Arabic. The first run starts with the list of languages; later, choose "Interface language" in the settings screen (**Shift+F10** in the terminal reader, **Ctrl+,** in the app), or run `tw settings language es`.
-- `tw speak "Hello"` checks your voice. `tw voices` lists your voices, and `tw backends` lists the speech engines textweaver found. In the terminal reader, **Alt+V** lists the voices, and in the app **Ctrl+Shift+V** does; Enter chooses one and speaks a sample.
+- textweaver speaks and shows its own words in English, Spanish, French, German, Portuguese, or Arabic. The first run starts with the list of languages; later, choose "Interface language" in the settings screen (**Shift+F10** in the terminal reader, **Ctrl+,** in the window), or run `tw settings language es`.
+- `tw speak "Hello"` checks your voice. `tw voices` lists your voices, and `tw backends` lists the speech engines textweaver found. In the terminal reader, **Alt+V** lists the voices, and in the window **Ctrl+Shift+V** does; Enter chooses one and speaks a sample.
 - Something went wrong? Warnings and errors are written to `textweaver.log` in the state folder (next to your reading positions). Start with `textweaver --log debug FILE` to log more, or `--log off` to log nothing. [Troubleshooting](troubleshooting.md) covers the common problems.
 
 ## Next steps
