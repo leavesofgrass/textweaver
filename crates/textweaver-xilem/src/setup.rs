@@ -162,9 +162,15 @@ pub fn is_first_run(opts: &Options) -> bool {
 
 /// The welcome said once, on the first run: the five keys that get a new
 /// user reading (open, play and pause, stop, the command palette, help),
-/// the same words as the terminal reader's.
+/// the same words as the terminal reader's. On Windows, whose menu bar is
+/// hidden by default until Alt or F10 shows it (`gui.auto_hide_menu`), it
+/// names the menus too.
 pub fn welcome_text(c: &Catalog, keymap: &Keymap) -> String {
-    textweaver_app::welcome_text(c, keymap)
+    if cfg!(windows) {
+        textweaver_app::welcome_text_with_menus(c, keymap)
+    } else {
+        textweaver_app::welcome_text(c, keymap)
+    }
 }
 
 /// Builds the app: persistence paths, settings, the GUI keymap with the

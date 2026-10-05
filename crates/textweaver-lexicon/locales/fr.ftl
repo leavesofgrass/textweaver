@@ -2773,6 +2773,7 @@ tui-setup-keymap-ignored = Fichier de touches ignoré : { $error }
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
 tui-setup-welcome = Bienvenue dans { -brand }. { $open } ouvre un document. { $play } lance et met en pause la lecture, et { $stop } l'arrête. { $palette } liste toutes les commandes. { $help } ouvre l'aide.
+gui-setup-welcome-menus = Bienvenue dans { -brand }. { $open } ouvre un document. { $play } lit et met en pause, { $stop } arrête. { $palette } liste toutes les commandes, Alt ou { $menu } les menus. { $help } ouvre l'aide.
 # Said at startup without a document. $open, $new, and $help name the
 # keys for Open, New Document, and Help.
 tui-setup-no-document = Aucun document n'est ouvert. Appuyez sur { $open } pour en ouvrir un, { $new } pour un nouveau, ou { $help } pour de l'aide.

@@ -455,7 +455,7 @@ Dictating text, in edit mode, in the terminal reader and the window. See [Dictat
 Settings only the window (`textweaver-gui`) reads. In the settings dialog they are under "Window".
 
 - `announce`, default `"live"`: how the window's messages reach the screen reader, from the next start. `"live"` uses a live region, which NVDA and JAWS both speak. `"uia"` raises UI Automation notifications instead (Windows only; elsewhere the live region is used). `--announce live` or `--announce uia` on the command line wins over the setting for one run.
-- `auto_hide_menu`, default `false`: on Windows, hide the menu bar until Alt, F10, or Alt with a menu's letter shows it; it hides again when the menu closes, and nothing is announced then. It applies at once and stays on this computer. It has no effect on Linux (the menus are the F10 list) or macOS. See [Menus](gui.md#menus).
+- `auto_hide_menu`, default `true`: on Windows, hide the menu bar until Alt, F10, or Alt with a menu's letter shows it; it hides again when the menu closes, and nothing is announced then. It applies at once and stays on this computer. It has no effect on Linux (the menus are the F10 list) or macOS. See [Menus](gui.md#menus).
 
 ### [colors]
 

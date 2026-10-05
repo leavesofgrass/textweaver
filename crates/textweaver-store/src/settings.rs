@@ -1418,10 +1418,12 @@ pub struct GuiSettings {
     /// How announcements reach the screen reader. The live region is the
     /// default, chosen in the owner's first screen reader session.
     pub announce: GuiAnnounce,
-    /// Hide the menu bar until Alt or F10 shows it (W8a-m). Off by default.
-    /// Windows hides its menu bar; elsewhere it has no effect: Linux shows
-    /// the menus only as the F10 list, and macOS keeps them at the top of
-    /// the screen.
+    /// Hide the menu bar until Alt or F10 shows it (W8a-m). On by default
+    /// since alpha.9 (the owner's decision): Windows hides its menu bar;
+    /// elsewhere it has no effect, so the default is the same everywhere
+    /// and the generated reference does not depend on the system: Linux
+    /// shows the menus only as the F10 list, and macOS keeps them at the
+    /// top of the screen. A saved `false` is kept.
     pub auto_hide_menu: bool,
     /// Speak textweaver's messages with its own voice as well as sending
     /// them to the screen reader (Wave 9, W9b-f): for someone who reads by
@@ -1446,7 +1448,7 @@ impl Default for GuiSettings {
             header: true,
             toolbar: true,
             announce: GuiAnnounce::default(),
-            auto_hide_menu: false,
+            auto_hide_menu: true,
             speak_messages: false,
             sidebar: GuiSidebar::default(),
             window: None,
@@ -3529,18 +3531,18 @@ wrap_navigation = true
         assert_eq!(back.gui, s.gui);
     }
 
-    /// `[gui] auto_hide_menu` (W8a-m): off by default and not written
-    /// then; on, it is written and read back.
+    /// `[gui] auto_hide_menu` (W8a-m): on by default and not written
+    /// then; a saved `false` is kept, written, and read back.
     #[test]
     fn gui_auto_hide_menu_round_trips() {
         let d = Settings::default();
-        assert!(!d.gui.auto_hide_menu);
+        assert!(d.gui.auto_hide_menu);
         assert!(!d.to_minimal_toml().unwrap().contains("auto_hide_menu"));
-        let (s, w) = Settings::from_table("[gui]\nauto_hide_menu = true\n".parse().unwrap());
+        let (s, w) = Settings::from_table("[gui]\nauto_hide_menu = false\n".parse().unwrap());
         assert!(w.is_empty(), "{w:?}");
-        assert!(s.gui.auto_hide_menu);
+        assert!(!s.gui.auto_hide_menu);
         let text = s.to_minimal_toml().unwrap();
-        assert!(text.contains("auto_hide_menu = true"), "{text}");
+        assert!(text.contains("auto_hide_menu = false"), "{text}");
         let (back, w) = Settings::from_table(text.parse().unwrap());
         assert!(w.is_empty(), "{w:?}");
         assert_eq!(back.gui, s.gui);
