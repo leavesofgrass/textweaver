@@ -295,7 +295,7 @@ impl Default for SpeechSettings {
             split_caps: false,
             caps: CapsIndication::default(),
             auto_play: false,
-            skip_code: true,
+            skip_code: false,
             speed_presets: [
                 ("skim", 350),
                 ("normal", 265),
@@ -2744,7 +2744,7 @@ wrap_navigation = true
         assert_eq!(s.speech.speed_presets["slow"], 150);
         assert_eq!(s.display.theme, "galaxy");
         assert!(s.reading.auto_resume);
-        assert!(s.speech.skip_code);
+        assert!(!s.speech.skip_code);
         assert_eq!(s.library.recent_limit, 20);
         assert_eq!(s.editing.autosave_interval_secs, 20);
     }

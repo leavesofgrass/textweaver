@@ -42,7 +42,7 @@ fn everything_changed() -> Settings {
     sp.split_caps = true;
     sp.caps = CapsIndication::SayCap;
     sp.auto_play = true;
-    sp.skip_code = false;
+    sp.skip_code = true;
     sp.speed_presets = BTreeMap::from([("fast".to_owned(), 400)]);
     sp.latency_offset_ms = 80;
     sp.pause_heading_ms = 600;

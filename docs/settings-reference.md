@@ -17,7 +17,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.split_caps`: default off (`false`). Split capitals. Say words joined with capitals, such as TextWeaver, as separate words. On or off: `true` or `false`. Syncs between computers.
 - `speech.caps`: default a higher pitch (`"pitch"`). Capitals. How a capital letter is marked when characters are spoken and typed. Choices: `"none"` (not marked), `"tone"` (a tone), `"pitch"` (a higher pitch), `"say_cap"` (say cap). Syncs between computers.
 - `speech.auto_play`: default off (`false`). Read on opening. Start reading when a document opens. On or off: `true` or `false`. Syncs between computers.
-- `speech.skip_code`: default on (`true`). Skip code blocks. Do not speak code blocks. On or off: `true` or `false`. Syncs between computers.
+- `speech.skip_code`: default off (`false`). Skip code blocks. Do not speak code blocks. On or off: `true` or `false`. Syncs between computers.
 - `speech.speed_presets`: default 4 entries. Speed presets. Named rates that F8 cycles through. A table of names and values, edited in the file. Syncs between computers.
 - `speech.voices_by_language`: default none. Voices by language. The voice for each interface language, by language tag, such as es = the voice's id. A language not listed uses the engine's first voice for it. A table of names and values, edited in the file. Stays on this computer.
 - `speech.latency_offset_ms`: default 120 milliseconds. Highlight delay. How long after an engine reports a word the highlight moves, for engines timed by their audio clock. From 0 to 1000 milliseconds, in steps of 10. Stays on this computer.

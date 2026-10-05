@@ -34,18 +34,20 @@ fn wait_idle(app: &mut App, limit: Duration) {
 
 #[test]
 fn a_reading_that_starts_with_a_skipped_code_block_is_followed() {
-    // The first utterance is "code block skipped" (skip_code is on by
-    // default), anchored at the code block; the wave 1 guess from positions
+    // The first utterance is "code block skipped" (skip_code turned on
+    // here; it is off by default), anchored at the code block; the wave 1 guess from positions
     // rejected the whole reading, so the highlight never moved and the app
     // stayed in Reading after speech ended.
     let text = "Intro words here.\n\n```\ncode line\n```\n\nAfter the code we keep reading. And more words.\n";
     let doc = markdown(text);
     let canonical = doc.text().to_string();
     let (speech, log) = recording_service().unwrap();
-    let mut app = App::new(AppConfig {
+    let mut config = AppConfig {
         speech,
         ..AppConfig::for_tests()
-    });
+    };
+    config.settings.speech.skip_code = true;
+    let mut app = App::new(config);
     app.open_document(doc, DocKey::untitled(1), "T".into());
     let blank = canonical.find("\n\n").unwrap() + 1;
     app.dispatch(Command::GoTo(GoTo::Char(CharPos(blank))));
