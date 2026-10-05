@@ -34,6 +34,7 @@ use std::ffi::{c_char, c_int, c_long, c_void};
 use std::path::{Path, PathBuf};
 
 use libloading::Library;
+use textweaver_enginehost::serve::log_line;
 
 use super::{DictLoad, Engine, EngineInfo, EnginePiece, SynthEvent};
 use crate::protocol::PresetInfo;
@@ -196,6 +197,8 @@ pub struct EciEngine {
     dict_dir: Option<PathBuf>,
     /// One dictionary per dialect used so far.
     dicts: Vec<(u32, Hand)>,
+    /// Dictionary volumes left out (ECI numbers).
+    skip_volumes: Vec<u8>,
 }
 
 impl std::fmt::Debug for EciEngine {
@@ -278,6 +281,7 @@ impl EciEngine {
             dialect: 0,
             dict_dir: dictionaries,
             dicts: Vec::new(),
+            skip_volumes: Vec::new(),
         };
         // Voxin rejects an output buffer until a callback is registered.
         // SAFETY: `callback` matches ECI's callback signature and ignores
@@ -309,6 +313,12 @@ impl EciEngine {
         let dialect = unsafe { (engine.api.get_param)(h, param::LANGUAGE_DIALECT) };
         engine.dialect = u32::try_from(dialect).unwrap_or(0);
         Ok(engine)
+    }
+
+    /// Leaves out these dictionary volumes (ECI numbers: 0 main, 1 root,
+    /// 2 abbreviations) from now on.
+    pub fn skip_dictionary_volumes(&mut self, volumes: &[u8]) {
+        self.skip_volumes = volumes.to_vec();
     }
 
     fn error(&self, what: &str) -> String {
@@ -447,7 +457,10 @@ impl Engine for EciEngine {
                 if hd.is_null() {
                     return loads;
                 }
-                for (volume, file) in crate::dictionaries::files_for(&dir, dialect) {
+                for (volume, file) in crate::dictionaries::files_for(&dir, dialect)
+                    .into_iter()
+                    .filter(|(v, _)| !self.skip_volumes.contains(&(*v as u8)))
+                {
                     let load = |path: &Path| match path_c_string(path) {
                         // SAFETY: `hd` is this engine's dictionary, the
                         // volume is 0..=2, and `name` is NUL-terminated and
@@ -457,7 +470,14 @@ impl Engine for EciEngine {
                         },
                         None => DICT_ACCESS_ERROR,
                     };
+                    let started = std::time::Instant::now();
                     let mut status = load(&file);
+                    log_line(&format!(
+                        "textweaver-eci-host: dictionary {} (volume {}) loaded in {} ms, status {status}",
+                        file.display(),
+                        volume as u8,
+                        started.elapsed().as_millis()
+                    ));
                     if status == DICT_ACCESS_ERROR && file.is_file() {
                         // The engine cannot open a file we can: Voxin's
                         // 32-bit engine fails on some file systems (large

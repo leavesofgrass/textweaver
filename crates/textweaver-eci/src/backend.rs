@@ -38,6 +38,7 @@ use textweaver_speech::{
 };
 
 use crate::calibration::{self, RatePoint};
+use crate::dictionaries::Dictionaries;
 use crate::discovery::{self, LibraryChoice};
 use crate::host::DictLoad;
 use crate::language;
@@ -79,6 +80,17 @@ fn host_args(config: &EciConfig, library: Option<&Path>, path: &Path) -> Vec<std
     }
     if let Some(dir) = crate::dictionaries::find_dir(&config.dictionaries, Some(path)) {
         args.extend(["--dictionaries".into(), dir.into()]);
+        if library.is_some_and(|l| discovery::Product::from_path(l) == discovery::Product::OpenEvv)
+        {
+            // OpenEVV 0.3.0 takes about a minute to load the English root
+            // dictionary (68,000 entries; measured October 5, 2026), far
+            // past the start deadline: the engine started silent. Its main
+            // and abbreviation dictionaries load in milliseconds.
+            args.extend([
+                "--skip-dictionary-volume".into(),
+                (crate::dictionaries::Volume::Root as u8).to_string().into(),
+            ]);
+        }
     }
     args.extend(config.host_args.iter().cloned());
     args
@@ -288,7 +300,7 @@ impl EciBackend {
         let config = self.config.clone();
         let start = HostStart::begin(
             candidates,
-            READY_TIMEOUT,
+            self.config.ready_timeout.unwrap_or(READY_TIMEOUT),
             Box::new(move |path: &Path| {
                 HostProcess::spawn(path, host_args(&config, lib_path.as_deref(), path), "eci")
             }),
@@ -327,6 +339,20 @@ impl EciBackend {
             }
             Start::Failed(why) => {
                 self.starting = None;
+                if self.config.dictionaries != Dictionaries::Off {
+                    // An engine that cannot load the pronunciation
+                    // dictionaries in time (or chokes on one) must not
+                    // leave Eloquence silent: start it again without them.
+                    // What was queued waits for that host.
+                    log::warn!(
+                        "eci: the host did not start with the pronunciation dictionaries ({why}); starting it without them"
+                    );
+                    self.config.dictionaries = Dictionaries::Off;
+                    match self.begin_host() {
+                        Ok(()) => return self.poll_start(wait),
+                        Err(e) => log::warn!("eci: the host did not start again: {e}"),
+                    }
+                }
                 self.pending.clear();
                 log::warn!("eci: the host did not start: {why}");
                 self.playback
@@ -823,6 +849,38 @@ impl Drop for EciBackend {
 mod tests {
     use super::*;
     use crate::discovery::{LibraryCandidate, Product, Source};
+
+    /// OpenEVV's root dictionary takes about a minute to load, so the host
+    /// leaves it out; other engines load every volume.
+    #[test]
+    fn openevv_hosts_leave_out_the_root_dictionary() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = EciConfig {
+            dictionaries: Dictionaries::Dir(dir.path().to_path_buf()),
+            ..EciConfig::default()
+        };
+        let host = Path::new("textweaver-eci-host");
+        let skip = |lib: &str| {
+            host_args(&config, Some(Path::new(lib)), host)
+                .iter()
+                .any(|a| a == "--skip-dictionary-volume")
+        };
+        assert!(skip(r"C:\Program Files\OpenEVV\lib\x86_64\eci.dll"));
+        assert!(!skip("/usr/lib/libvoxin.so.1"));
+        let off = EciConfig {
+            dictionaries: Dictionaries::Off,
+            ..EciConfig::default()
+        };
+        assert!(
+            !host_args(
+                &off,
+                Some(Path::new(r"C:\Program Files\OpenEVV\eci.dll")),
+                host
+            )
+            .iter()
+            .any(|a| a == "--skip-dictionary-volume")
+        );
+    }
 
     /// A backend whose engine lists no dialects (as some ECI builds), with
     /// an `eci.ini` next to its library, and no host.

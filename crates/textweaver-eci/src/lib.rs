@@ -100,6 +100,9 @@ pub struct EciConfig {
     /// How long the engine may go silent while it owes audio before it is
     /// treated as hung; `None` uses [`STALL_TIMEOUT`] (10 s).
     pub stall_timeout: Option<std::time::Duration>,
+    /// How long a new host may take to report it is ready; `None` uses
+    /// the backend's 10 seconds (tests shorten it).
+    pub ready_timeout: Option<std::time::Duration>,
     /// More arguments for the host (tests: the fake engine's
     /// `--start-delay-ms`).
     pub host_args: Vec<std::ffi::OsString>,

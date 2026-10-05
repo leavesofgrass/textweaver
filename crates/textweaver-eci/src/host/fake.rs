@@ -26,6 +26,12 @@ pub struct FakeConfig {
     pub block: usize,
     /// Dictionary directory; files found there are reported as loaded.
     pub dictionaries: Option<std::path::PathBuf>,
+    /// Dictionary volumes left out (ECI numbers: 0 main, 1 root, 2
+    /// abbreviations).
+    pub skip_volumes: Vec<u8>,
+    /// How long loading each dictionary file takes (tests: an engine that
+    /// loads a large dictionary slowly, as OpenEVV 0.3.0 does).
+    pub dictionary_delay: std::time::Duration,
 }
 
 impl Default for FakeConfig {
@@ -34,6 +40,8 @@ impl Default for FakeConfig {
             samples_per_byte: 400,
             block: 1024,
             dictionaries: None,
+            skip_volumes: Vec::new(),
+            dictionary_delay: std::time::Duration::ZERO,
         }
     }
 }
@@ -124,13 +132,18 @@ impl Engine for FakeEngine {
             return Vec::new();
         }
         self.loaded.push(self.dialect);
+        let delay = self.config.dictionary_delay;
         crate::dictionaries::files_for(dir, self.dialect)
             .into_iter()
-            .map(|(v, p)| super::DictLoad {
-                dialect: self.dialect,
-                volume: v as u8,
-                status: 0,
-                path: p.display().to_string(),
+            .filter(|(v, _)| !self.config.skip_volumes.contains(&(*v as u8)))
+            .map(|(v, p)| {
+                std::thread::sleep(delay);
+                super::DictLoad {
+                    dialect: self.dialect,
+                    volume: v as u8,
+                    status: 0,
+                    path: p.display().to_string(),
+                }
             })
             .collect()
     }
