@@ -113,35 +113,17 @@ pub fn start_speech(settings: &Settings, opts: &Options) -> (SpeechService, Stri
             }
         };
     }
-    let preference = (wanted != "auto" && !wanted.is_empty()).then_some(wanted.as_str());
     let registry = textweaver_app::engines::speech_registry_for(settings);
-    let info = registry.select(preference).backend;
-    if let Some(p) = preference
-        && info.id != p
-    {
-        let c = startup_catalog(settings, opts);
-        messages.push(c.fmt(
-            "tui-setup-backend-unavailable",
-            &args!["wanted" => p, "backend" => info.id],
-        ));
-    }
-    let spawned = registry
-        .factory(info.id)
-        .ok_or_else(|| {
-            startup_catalog(settings, opts)
-                .fmt("tui-setup-backend-not-built", &args!["backend" => info.id])
-        })
-        .and_then(|factory| {
-            SpeechService::spawn(factory, service_config(settings)).map_err(|e| e.to_string())
-        });
-    match spawned {
-        Ok(service) => (service, info.id.to_owned(), messages),
-        Err(e) => {
-            let c = startup_catalog(settings, opts);
-            messages.push(c.fmt("tui-setup-speech-failed", &args!["error" => e]));
-            (SpeechService::null(), "silent".into(), messages)
-        }
-    }
+    // The chosen engine, else the next one that starts, else silence; one
+    // sentence says which engine failed and which one speaks.
+    let (service, id, said) = textweaver_app::start_speech_service(
+        &registry,
+        Some(wanted.as_str()),
+        &service_config(settings),
+        &startup_catalog(settings, opts),
+    );
+    messages.extend(said);
+    (service, id, messages)
 }
 
 /// True when the state folder `opts` chooses has no settings, no keys, and

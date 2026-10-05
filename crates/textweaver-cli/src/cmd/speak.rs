@@ -23,8 +23,8 @@ use serde::Serialize;
 use textweaver_app::core::{CharRange, Pitch, Rate, Utterance};
 use textweaver_app::formats;
 use textweaver_app::speech::{
-    BackendRegistry, Caps, Pipeline, Selection, ServiceConfig, SpeechService, SpeechStatus,
-    resolve_voice,
+    BackendRegistry, Caps, Pipeline, Selection, ServiceConfig, SpeechBackend, SpeechService,
+    SpeechStatus, resolve_voice,
 };
 use textweaver_app::store::Settings;
 use textweaver_app::text::Document;
@@ -66,12 +66,21 @@ pub struct Args {
 pub struct Report {
     /// The backend used and whether the request fell back.
     pub backend: Selection,
+    /// The engines tried before it that did not start, one sentence each.
+    pub failed: Vec<String>,
     /// The utterances as spoken: normalized text and offset maps.
     pub utterances: Vec<Utterance>,
     /// Every status the service reported, in order (empty with `--out`).
     pub statuses: Vec<SpeechStatus>,
     /// The audio file written, with `--out`.
     pub out: Option<PathBuf>,
+}
+
+/// The engine `tw speak` started: the speech service, or (with `--out`)
+/// the backend itself.
+enum Engine {
+    Service(SpeechService),
+    Direct(Box<dyn SpeechBackend>),
 }
 
 /// How long to wait for the next status before giving up.
@@ -152,11 +161,59 @@ pub fn speak(
         .backend
         .as_deref()
         .or(Some(settings.speech.backend.as_str()));
-    let selection = registry.select(asked);
-    let factory = registry
-        .factory(selection.backend.id)
-        .with_context(|| format!("backend {} is not built in", selection.backend.id))?;
-    let config = config(args, settings, selection.backend.id);
+    // The asked-for engine, else the next one that starts (the owner's
+    // rule: speak one way or another if at all possible). With --out, an
+    // engine that cannot write files counts as one that did not start.
+    let started = registry
+        .start_first(asked, |factory, info| {
+            let config = config(args, settings, info.id);
+            if args.out.is_none() {
+                return SpeechService::spawn(factory, config.clone())
+                    .map(|s| (Engine::Service(s), config))
+                    .map_err(|e| e.to_string());
+            }
+            let mut backend = factory().map_err(|e| e.to_string())?;
+            if !backend.capabilities().contains(Caps::SYNTH_TO_FILE) {
+                return Err(format!(
+                    "backend {} cannot write audio files; try --backend espeak",
+                    info.id
+                ));
+            }
+            let mut params = config.params.clone();
+            if let Some(asked) = &params.voice {
+                // Plain names ("Zira", "Reed") resolve to the backend's voice id.
+                let voices = backend.voices().unwrap_or_default();
+                if let Some(id) = resolve_voice(&voices, asked) {
+                    params.voice = Some(id);
+                }
+            }
+            backend.set_params(&params).map_err(|e| e.to_string())?;
+            Ok((Engine::Direct(backend), config))
+        })
+        .map_err(|failed| {
+            let why = failed
+                .last()
+                .map_or_else(|| "no speech engine".to_owned(), |f| f.error.clone());
+            anyhow::anyhow!("{why}")
+        })?;
+    let requested = asked
+        .map(str::trim)
+        .filter(|p| !p.is_empty() && !p.eq_ignore_ascii_case("auto"))
+        .map(str::to_owned);
+    let fell_back = requested
+        .as_deref()
+        .is_some_and(|r| r != started.backend.id);
+    let selection = Selection {
+        backend: started.backend.clone(),
+        requested,
+        fell_back,
+    };
+    let failed: Vec<String> = started
+        .failed
+        .iter()
+        .map(|f| format!("{} could not start: {}", f.backend.name, f.error))
+        .collect();
+    let (engine, config) = started.value;
     let pipeline = |caps: Caps| {
         Pipeline::for_settings(
             &config.normalize,
@@ -166,43 +223,29 @@ pub fn speak(
         )
     };
 
-    if let Some(out) = &args.out {
-        let mut backend = factory()?;
-        let mut params = config.params.clone();
-        if let Some(asked) = &params.voice {
-            // Plain names ("Zira", "Reed") resolve to the backend's voice id.
-            let voices = backend.voices().unwrap_or_default();
-            if let Some(id) = resolve_voice(&voices, asked) {
-                params.voice = Some(id);
-            }
+    let service = match engine {
+        Engine::Service(service) => service,
+        Engine::Direct(mut backend) => {
+            let out = args.out.as_ref().context("no output file")?;
+            let p = pipeline(backend.capabilities());
+            let utterances: Vec<Utterance> = planned.into_iter().map(|u| p.apply(u)).collect();
+            let text = utterances
+                .iter()
+                .map(|u| u.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
+            backend
+                .synthesize_to_file(&text, out)
+                .with_context(|| format!("cannot write {}", out.display()))?;
+            return Ok(Report {
+                backend: selection,
+                failed,
+                utterances,
+                statuses: Vec::new(),
+                out: Some(out.clone()),
+            });
         }
-        backend.set_params(&params)?;
-        let caps = backend.capabilities();
-        if !caps.contains(Caps::SYNTH_TO_FILE) {
-            bail!(
-                "backend {} cannot write audio files; try --backend espeak",
-                selection.backend.id
-            );
-        }
-        let p = pipeline(caps);
-        let utterances: Vec<Utterance> = planned.into_iter().map(|u| p.apply(u)).collect();
-        let text = utterances
-            .iter()
-            .map(|u| u.text.as_str())
-            .collect::<Vec<_>>()
-            .join(" ");
-        backend
-            .synthesize_to_file(&text, out)
-            .with_context(|| format!("cannot write {}", out.display()))?;
-        return Ok(Report {
-            backend: selection,
-            utterances,
-            statuses: Vec::new(),
-            out: Some(out.clone()),
-        });
-    }
-
-    let service = SpeechService::spawn(factory, config.clone())?;
+    };
     let p = pipeline(service.capabilities());
     let utterances: Vec<Utterance> = planned.iter().cloned().map(|u| p.apply(u)).collect();
     // Pauses after headings, paragraphs and list items, as the reader has.
@@ -240,6 +283,7 @@ pub fn speak(
     }
     Ok(Report {
         backend: selection,
+        failed,
         utterances,
         statuses,
         out: None,
@@ -254,6 +298,9 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
     let registry = textweaver_engines::speech_registry_for(&settings);
     let report = speak(&args, &settings, &registry)?;
+    for f in &report.failed {
+        eprintln!("{f}.");
+    }
     if let Some(msg) = report.backend.fallback_message() {
         eprintln!("{msg}");
     }

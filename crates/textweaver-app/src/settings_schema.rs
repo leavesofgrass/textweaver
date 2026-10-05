@@ -2264,6 +2264,18 @@ impl App {
             {
                 choices.clone_from(&themes);
             }
+            if s.path == "speech.backend"
+                && let SettingKind::Choice { choices, .. } = &mut s.kind
+            {
+                // Only the engines that can exist on this system: no Apple
+                // speech on Windows, no SAPI 5 on Linux. (The settings
+                // reference, generated, lists them all.)
+                choices.retain(|c| {
+                    c.value
+                        .as_str()
+                        .is_none_or(textweaver_speech::backends::exists_on_this_os)
+                });
+            }
         }
         schema
     }

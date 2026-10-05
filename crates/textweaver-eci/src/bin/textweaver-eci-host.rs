@@ -2,14 +2,20 @@
 //!
 //! ```text
 //! textweaver-eci-host [--library PATH] [--sample-rate HZ] [--dictionaries DIR]
-//!                     [--engine eci|fake] [--start-delay-ms MS]
+//!                     [--skip-dictionary-volume N]... [--engine eci|fake]
+//!                     [--start-delay-ms MS] [--dictionary-delay-ms MS]
 //! ```
 //!
 //! `--start-delay-ms` (fake engine only, for tests) waits before starting,
-//! like a cold engine loading its dictionaries.
+//! like a cold engine. `--dictionary-delay-ms` (fake engine only) waits
+//! that long for each dictionary file, like an engine that loads a large
+//! dictionary slowly (OpenEVV 0.3.0 takes about a minute for the English
+//! root dictionary).
 //!
 //! `--dictionaries` loads the pronunciation dictionaries in `DIR` (see
 //! `textweaver_eci::dictionaries`); without it none are loaded.
+//! `--skip-dictionary-volume` leaves out one volume (0 main, 1 root,
+//! 2 abbreviations); it may be given more than once.
 //!
 //! Speaks the framed protocol of `textweaver_eci::protocol` on stdin and
 //! stdout; logs go to stderr. The library path defaults to
@@ -20,6 +26,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::time::Duration;
 
 use textweaver_eci::host::{self, fake, ffi};
 use textweaver_eci::protocol::{self, Reply};
@@ -29,8 +36,22 @@ struct Args {
     library: Option<PathBuf>,
     sample_rate: Option<u32>,
     dictionaries: Option<PathBuf>,
+    skip_volumes: Vec<u8>,
     fake: bool,
     start_delay_ms: u64,
+    dictionary_delay_ms: u64,
+}
+
+const USAGE: &str = "usage: textweaver-eci-host [--library PATH] [--sample-rate HZ] \
+     [--dictionaries DIR] [--skip-dictionary-volume N]... [--engine eci|fake] \
+     [--start-delay-ms MS] [--dictionary-delay-ms MS]";
+
+fn number<T: std::str::FromStr>(
+    it: &mut impl Iterator<Item = String>,
+    flag: &str,
+) -> Result<T, String> {
+    let v = it.next().ok_or_else(|| format!("{flag} needs a number"))?;
+    v.parse().map_err(|_| format!("bad number {v} for {flag}"))
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -38,8 +59,10 @@ fn parse_args() -> Result<Args, String> {
         library: None,
         sample_rate: None,
         dictionaries: None,
+        skip_volumes: Vec::new(),
         fake: false,
         start_delay_ms: 0,
+        dictionary_delay_ms: 0,
     };
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
@@ -47,30 +70,25 @@ fn parse_args() -> Result<Args, String> {
             "--library" => {
                 args.library = Some(it.next().ok_or("--library needs a path")?.into());
             }
-            "--sample-rate" => {
-                let v = it.next().ok_or("--sample-rate needs a number")?;
-                args.sample_rate = Some(v.parse().map_err(|_| format!("bad sample rate {v}"))?);
-            }
+            "--sample-rate" => args.sample_rate = Some(number(&mut it, "--sample-rate")?),
             "--dictionaries" => {
                 args.dictionaries =
                     Some(it.next().ok_or("--dictionaries needs a directory")?.into());
             }
-            "--start-delay-ms" => {
-                let v = it.next().ok_or("--start-delay-ms needs a number")?;
-                args.start_delay_ms = v.parse().map_err(|_| format!("bad delay {v}"))?;
+            "--skip-dictionary-volume" => {
+                args.skip_volumes
+                    .push(number(&mut it, "--skip-dictionary-volume")?);
+            }
+            "--start-delay-ms" => args.start_delay_ms = number(&mut it, "--start-delay-ms")?,
+            "--dictionary-delay-ms" => {
+                args.dictionary_delay_ms = number(&mut it, "--dictionary-delay-ms")?;
             }
             "--engine" => match it.next().as_deref() {
                 Some("eci") => args.fake = false,
                 Some("fake") => args.fake = true,
                 other => return Err(format!("unknown engine {other:?}")),
             },
-            "--help" | "-h" => {
-                return Err(
-                    "usage: textweaver-eci-host [--library PATH] [--sample-rate HZ] \
-                     [--dictionaries DIR] [--engine eci|fake] [--start-delay-ms MS]"
-                        .into(),
-                );
-            }
+            "--help" | "-h" => return Err(USAGE.into()),
             other => return Err(format!("unknown argument {other}")),
         }
     }
@@ -93,9 +111,11 @@ fn main() -> ExitCode {
     let stdin = std::io::stdin();
     let mut stdout = std::io::BufWriter::with_capacity(64 * 1024, std::io::stdout().lock());
     let result = if args.fake {
-        std::thread::sleep(std::time::Duration::from_millis(args.start_delay_ms));
+        std::thread::sleep(Duration::from_millis(args.start_delay_ms));
         let mut engine = fake::FakeEngine::new(fake::FakeConfig {
             dictionaries: args.dictionaries,
+            skip_volumes: args.skip_volumes,
+            dictionary_delay: Duration::from_millis(args.dictionary_delay_ms),
             ..fake::FakeConfig::default()
         });
         host::run(&mut engine, stdin, &mut stdout, AtEnd::host())
@@ -114,6 +134,7 @@ fn main() -> ExitCode {
             Ok(e) => e,
             Err(e) => return fail(e),
         };
+        engine.skip_dictionary_volumes(&args.skip_volumes);
         host::run(&mut engine, stdin, &mut stdout, AtEnd::host())
     };
     match result {

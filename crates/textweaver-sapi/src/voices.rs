@@ -339,6 +339,15 @@ pub fn to_voice(token: &VoiceToken, arch: Arch) -> Voice {
         name.push_str(" (OneCore)");
         tags.push("OneCore".to_owned());
     }
+    // OpenEVV's voices also run directly, through the Eloquence engine
+    // ("Eloquence (OpenEVV, direct)"): say which way this one goes.
+    if Family::of(token) == Family::OpenEvv {
+        name.push_str(if name.to_lowercase().contains("openevv") {
+            " (through SAPI 5)"
+        } else {
+            " (OpenEVV, through SAPI 5)"
+        });
+    }
     if arch == Arch::X86 {
         name.push_str(" (32-bit)");
         tags.push("32-bit".to_owned());
@@ -469,8 +478,9 @@ mod tests {
         assert!(d.has_tag(TAG_ELOQUENCE));
         assert!(!d.has_tag(TAG_NO_WORD_TIMING));
         assert_eq!(d.vendor, "OpenEVV");
-        // Listed like any other voice: name unchanged, no warning.
-        assert_eq!(d.voice.name, "OpenEVV Eloquence Reed");
+        // No warning; the name says it goes through SAPI 5, as against
+        // the Eloquence engine's own "Eloquence (OpenEVV, direct)".
+        assert_eq!(d.voice.name, "OpenEVV Eloquence Reed (through SAPI 5)");
         assert_eq!(d.voice.id, format!("x64:{}", openevv_reed().token_id));
         // Recognized by vendor alone, or by name alone.
         let mut by_vendor = openevv_reed();

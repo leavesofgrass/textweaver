@@ -604,6 +604,37 @@ fn dictionaries_load_per_language_and_can_be_turned_off() {
     assert!(off.dictionary_loads().is_empty());
 }
 
+/// The 0.1.0-alpha.9 regression: OpenEVV 0.3.0 takes about a minute to
+/// load the English root dictionary, the host reported nothing meanwhile,
+/// the start deadline passed ("the host did not start in time"), and
+/// Eloquence never spoke. Now a host that cannot start with the
+/// dictionaries is started again without them, and speaks.
+#[test]
+fn a_host_too_slow_with_its_dictionaries_starts_again_without_them() {
+    let mut b = EciBackend::new(EciConfig {
+        dictionaries: Dictionaries::Dir(repo_dictionaries()),
+        // Each dictionary file takes longer than the whole start deadline.
+        host_args: vec!["--dictionary-delay-ms".into(), "3000".into()],
+        ready_timeout: Some(Duration::from_millis(1000)),
+        ..config(8.0)
+    })
+    .expect("Eloquence starts without the slow dictionaries");
+    assert!(b.dictionary_loads().is_empty());
+    assert_eq!(b.synthesize("hello there").unwrap().words.len(), 2);
+}
+
+#[test]
+fn a_skipped_dictionary_volume_is_not_loaded() {
+    let mut b = EciBackend::new(EciConfig {
+        dictionaries: Dictionaries::Dir(repo_dictionaries()),
+        host_args: vec!["--skip-dictionary-volume".into(), "1".into()],
+        ..config(8.0)
+    })
+    .unwrap();
+    let volumes: Vec<u8> = b.dictionary_loads().iter().map(|l| l.volume).collect();
+    assert_eq!(volumes, [0, 2]);
+}
+
 #[test]
 fn an_utterance_over_the_frame_limit_is_refused_and_the_host_keeps_working() {
     // Before: the 17 MB request reached the host, whose reader failed on

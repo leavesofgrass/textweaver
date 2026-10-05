@@ -2752,9 +2752,9 @@ spell-count =
 
 # $wanted is the speech backend asked for, $backend the one used instead.
 tui-setup-backend-unavailable = O motor de fala { $wanted } não está disponível; usando { $backend }.
-# Shown inside tui-setup-speech-failed as its $error.
-tui-setup-backend-not-built = o motor { $backend } não foi compilado
 tui-setup-speech-failed = A fala não pôde iniciar ({ $error }); executando em silêncio.
+speech-engine-fallback = { $failed } não pôde iniciar; { $engine } está falando no lugar.
+speech-engine-fallback-silent = { $failed } não pôde iniciar e nenhum outro motor de fala está disponível; { -brand } fica em silêncio.
 tui-setup-cannot-save = Não é possível salvar configurações ou posições: { $error }
 tui-setup-keymap-ignored = Arquivo de teclas ignorado: { $error }
 # The first-run welcome. Each value names the key for an action: $play

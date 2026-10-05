@@ -87,8 +87,8 @@ scripts/speech-check.sh
 ### No speech at all
 
 1. Look at the title line. Its last part is the speech engine. If it says `silent`, textweaver was started with `--no-speech`, or no engine could start.
-2. Look at the status line when textweaver starts. "Speech engine X is not available; using Y." means the engine you asked for was not found. "Speech could not start" gives the reason textweaver fell silent.
-3. Run `tw backends`. If only `null` is available, textweaver found no engine. On Windows, check that the engine hosts are next to the programs (see [A voice or engine is missing](#a-voice-or-engine-is-missing)). On Linux, install espeak-ng or Speech Dispatcher, or use the install script, which does.
+2. Look at the status line when textweaver starts. "Speech engine X is not available; using Y." means the engine you asked for was not found. "X could not start; Y is speaking instead." means an engine was found but failed, and textweaver moved on to the next one; the log says why. textweaver is silent only when every engine on the computer failed, and then says which ones did.
+3. Run `tw backends`. It lists the engines that can run on your system; an engine marked "Not installed" was not found. If only `null` is available, textweaver found no engine. On Windows, check that the engine hosts are next to the programs (see [A voice or engine is missing](#a-voice-or-engine-is-missing)). On Linux, install espeak-ng or Speech Dispatcher, or use the install script, which does.
 4. Check the volume: press **F7** a few times. "Full volume." means it is at the top. Check your system's volume too.
 5. Run `tw speak "Hello"`. If that speaks but the reader does not, check `[speech] backend` in `settings.toml`, or start with `--backend` and an engine id.
 6. Start with `--log debug`, try again, and read `textweaver.log`.

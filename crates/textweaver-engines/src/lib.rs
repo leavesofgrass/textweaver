@@ -178,6 +178,7 @@ pub fn speech_registry_for(settings: &Settings) -> BackendRegistry {
 fn register_engines(registry: &mut BackendRegistry, settings: &Settings) {
     let eci = eci_config(settings);
     let probe_config = eci.clone();
+    let label_config = eci.clone();
     // Each engine is looked for at most once per process and configuration
     // (the registry caches the probe); describing it probes nothing.
     registry.register_cached(
@@ -189,6 +190,15 @@ fn register_engines(registry: &mut BackendRegistry, settings: &Settings) {
                 .map(|b| Box::new(b) as Box<dyn SpeechBackend>)
         },
     );
+    // "Eloquence (OpenEVV, direct)": which library, and that textweaver
+    // drives it directly, not through SAPI 5 (OpenEVV also registers
+    // SAPI 5 voices, listed under the SAPI 5 engine).
+    registry.set_label("eci", move || {
+        let choice = textweaver_eci::discovery::diagnose(&label_config)
+            .library
+            .ok()?;
+        Some(eci_label(choice.candidate.product, &choice.candidate.path))
+    });
     let preferred_apple = apple_preference(settings);
     let top_apple = textweaver_apple::backends()
         .iter()
@@ -226,12 +236,21 @@ fn register_engines(registry: &mut BackendRegistry, settings: &Settings) {
     // DECtalk (ADR-0021): only a copy the user installed, below SAPI.
     let dectalk = dectalk_config(settings);
     let probe = dectalk.clone();
+    let label_config = dectalk.clone();
     registry.register_cached(
         textweaver_dectalk::backend_description(),
         format!("{dectalk:?}"),
         move || textweaver_dectalk::probe(&probe),
         move || (textweaver_dectalk::factory(dectalk.clone()))(),
     );
+    // DECtalk builds differ (the 4.x SDK, the open-source 5.0 builds):
+    // the library found says which.
+    registry.set_label("dectalk", move || {
+        let choice = textweaver_dectalk::discovery::diagnose(&label_config)
+            .library
+            .ok()?;
+        Some(format!("DECtalk ({})", choice.candidate.path.display()))
+    });
     // Piper neural voices (ADR-0023), in-process on RTen: available once a
     // voice is installed, below DECtalk and above the built-in engines.
     let piper = piper_config(settings);
@@ -242,6 +261,17 @@ fn register_engines(registry: &mut BackendRegistry, settings: &Settings) {
         move || textweaver_piper::probe(&probe),
         textweaver_piper::factory(piper),
     );
+}
+
+/// Eloquence's name with its source: the product ("Eloquence (OpenEVV,
+/// direct)", "Eloquence (Voxin, direct)"), or the library's path for one
+/// textweaver does not recognize.
+pub fn eci_label(product: textweaver_eci::discovery::Product, library: &std::path::Path) -> String {
+    use textweaver_eci::discovery::Product;
+    match product {
+        Product::Unknown => format!("Eloquence ({}, direct)", library.display()),
+        p => format!("Eloquence ({}, direct)", p.name()),
+    }
 }
 
 /// The Piper backend's options: `[speech.piper]` `voices` (the voices
