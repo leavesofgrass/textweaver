@@ -525,7 +525,7 @@ mod tests {
         assert_eq!(id, "null");
         assert_eq!(
             messages,
-            ["Speech engine nonexistent is not available; using null."]
+            ["Speech engine nonexistent is not available; using Silent (no audio)."]
         );
     }
 }
