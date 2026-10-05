@@ -372,6 +372,37 @@ fn screen_reader_actions_on_a_setting_reach_the_form() {
     assert_eq!(h.get_widget(SECTIONS).inner().selected(), 1);
 }
 
+/// The section list draws each section's title alone ("Speech"), and its
+/// options are named with the count ("Speech, 31 settings"), which NVDA
+/// and JAWS read: the count is for the screen reader, not the eye.
+#[test]
+fn section_counts_are_spoken_not_drawn() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let (h, form) = harness_with_dialog(&app);
+    let c = app.catalog();
+    let titles = form.section_titles(&c);
+    let names = form.section_items(&c);
+    assert_eq!(titles.len(), names.len());
+    let list = h.get_widget(SECTIONS);
+    assert_eq!(list.inner().items(), titles.as_slice(), "drawn text");
+    for (title, name) in titles.iter().zip(&names) {
+        assert!(!title.contains("setting"), "{title}");
+        assert!(name.starts_with(&format!("{title}, ")), "{name}");
+        assert!(
+            name.ends_with(" settings") || name.ends_with(" setting"),
+            "{name}"
+        );
+    }
+    let node = h.access_node(list.id()).unwrap();
+    let spoken: Vec<String> = node
+        .children()
+        .map(|o| o.label().unwrap_or_default())
+        .collect();
+    assert_eq!(spoken, names, "accessible names");
+    assert_eq!(list.inner().name(0), Some(names[0].as_str()));
+}
+
 /// In Spanish (`[interface] language = "es"`), the window's drawn labels,
 /// the settings dialog's sections, labels, and values are Spanish, and a
 /// change is announced once: the form shows the new value, so the app's

@@ -1005,9 +1005,10 @@ pub fn settings_dialog(
     let sections = NewWidget::new(
         ChoiceList::new(
             c.tr("gui-settings-sections"),
-            form.section_items(&c),
+            form.section_titles(&c),
             p.clone(),
         )
+        .with_names(form.section_items(&c))
         .with_selected(section)
         .with_focus_actions(true),
     )
@@ -2812,7 +2813,8 @@ impl Gui {
         }
         open.form.set_filter(query, &c);
         open.section = 0;
-        let items = open.form.section_items(&c);
+        let items = open.form.section_titles(&c);
+        let names = open.form.section_items(&c);
         let title = open.form.form_label(0, &c);
         let rows = open.form.rows(0, &self.app);
         let total = open.form.settings_in(0).len();
@@ -2820,7 +2822,7 @@ impl Gui {
         let filtering = !query.is_empty();
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(SECTIONS, |mut l| {
-            ChoiceList::set_items(&mut l, items);
+            ChoiceList::set_named_items(&mut l, items, names);
             ChoiceList::select(&mut l, 0);
         });
         root.edit_widget_with_tag(FORM, |mut g| {

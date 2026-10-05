@@ -377,6 +377,10 @@ pub fn ellipsize(text: &str, mut fits: impl FnMut(&str) -> bool) -> String {
 /// the list's active descendant.
 pub struct ChoiceList {
     items: Vec<String>,
+    /// Each row's accessible name, when it says more than the row's text
+    /// (the settings' sections: "Speech, 31 settings" for the screen
+    /// reader, "Speech" on screen). Empty: the text is the name.
+    names: Vec<String>,
     selected: usize,
     label: String,
     palette: Palette,
@@ -408,6 +412,7 @@ impl ChoiceList {
         let n = items.len();
         ChoiceList {
             items,
+            names: Vec::new(),
             selected: 0,
             label: label.into(),
             palette,
@@ -491,11 +496,27 @@ impl ChoiceList {
         if w.items != items {
             w.layouts = (0..items.len()).map(|_| None).collect();
             w.items = items.to_vec();
+            w.names.clear();
             w.top = 0;
             this.ctx.request_layout();
         }
         w.set_selected(selected);
         this.ctx.request_render();
+    }
+
+    /// Names each row for screen readers with `names` (same order as the
+    /// items) while the rows show their shorter text.
+    pub fn with_names(mut self, names: Vec<String>) -> Self {
+        self.names = names;
+        self
+    }
+
+    /// Row `i`'s accessible name: its own name, or its text.
+    pub fn name(&self, i: usize) -> Option<&str> {
+        self.names
+            .get(i)
+            .or_else(|| self.items.get(i))
+            .map(String::as_str)
     }
 
     /// Starts on item `i`.
@@ -511,9 +532,16 @@ impl ChoiceList {
 
     /// Replaces the items (a filtered list), selecting the first.
     pub fn set_items(this: &mut WidgetMut<'_, Self>, items: Vec<String>) {
+        Self::set_named_items(this, items, Vec::new());
+    }
+
+    /// Replaces the items and their accessible names
+    /// ([`with_names`](Self::with_names)), selecting the first.
+    pub fn set_named_items(this: &mut WidgetMut<'_, Self>, items: Vec<String>, names: Vec<String>) {
         let w = &mut *this.widget;
         w.layouts = (0..items.len()).map(|_| None).collect();
         w.items = items;
+        w.names = names;
         w.selected = 0;
         w.top = 0;
         this.ctx.request_layout();
@@ -918,7 +946,7 @@ impl Widget for ChoiceList {
             let mut o = Node::new(Role::ListBoxOption);
             match &self.current {
                 Some((c, label)) if *c == i => o.set_label(label.as_str()),
-                _ => o.set_label(item.as_str()),
+                _ => o.set_label(self.names.get(i).unwrap_or(item).as_str()),
             }
             o.set_selected(i == self.selected);
             o.add_action(Action::Focus);

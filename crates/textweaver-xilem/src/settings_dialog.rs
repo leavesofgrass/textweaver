@@ -417,7 +417,17 @@ impl SettingsForm {
         )
     }
 
-    /// The section list's items: each title with how many settings it has.
+    /// The section list's rows as drawn: each section's title alone
+    /// ("Speech"). The count is for screen readers ([`Self::section_items`]).
+    pub fn section_titles(&self, c: &Catalog) -> Vec<String> {
+        (0..self.sections.len())
+            .map(|i| self.section_title(i, c))
+            .collect()
+    }
+
+    /// The section list's accessible names: each title with how many
+    /// settings it has ("Speech, 31 settings"), what NVDA and JAWS read;
+    /// the screen shows only the title ([`Self::section_titles`]).
     pub fn section_items(&self, c: &Catalog) -> Vec<String> {
         (0..self.sections.len())
             .map(|i| {
