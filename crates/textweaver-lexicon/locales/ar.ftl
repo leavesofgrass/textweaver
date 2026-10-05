@@ -2997,9 +2997,9 @@ spell-count =
 
 # $wanted is the speech backend asked for, $backend the one used instead.
 tui-setup-backend-unavailable = محرك الكلام { $wanted } غير متوفر؛ يُستخدم { $backend }.
-# Shown inside tui-setup-speech-failed as its $error.
-tui-setup-backend-not-built = المحرك { $backend } غير مُدرَج في هذا البناء
 tui-setup-speech-failed = تعذّر بدء الكلام ({ $error })؛ التشغيل بصمت.
+speech-engine-fallback = تعذّر بدء { $failed }؛ يتحدث { $engine } بدلًا منه.
+speech-engine-fallback-silent = تعذّر بدء { $failed } ولا يتوفر محرك كلام آخر؛ يبقى { -brand } صامتًا.
 tui-setup-cannot-save = تعذّر حفظ الإعدادات أو المواضع: { $error }
 tui-setup-keymap-ignored = جرى تجاهل ملف خريطة المفاتيح: { $error }
 # The first-run welcome. Each value names the key for an action: $play

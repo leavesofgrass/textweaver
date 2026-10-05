@@ -224,6 +224,7 @@ pub mod rpc;
 pub mod settings_io;
 pub mod settings_schema;
 mod speech_cursor;
+pub mod speech_start;
 mod spell;
 mod status;
 mod structure;
@@ -289,6 +290,7 @@ pub use restart::SpeechStarter;
 pub use settings_schema::{
     Frontend, Setting, SettingKind, SettingsSchema, TERMINAL_ONLY, WINDOW_ONLY,
 };
+pub use speech_start::start_speech_service;
 pub use templates::local_date;
 pub use textweaver_engines::{
     CODE_FACTORY_LIBRARY, apple_preference, dectalk_config, eci_config, piper_config, sapi_config,

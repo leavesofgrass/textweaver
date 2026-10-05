@@ -27,6 +27,7 @@
 
 #[cfg(feature = "espeak-phonemes")]
 pub mod espeak;
+mod fallback;
 mod null;
 #[cfg(feature = "omnivox")]
 pub mod omnivox;
@@ -37,6 +38,7 @@ pub mod speechd;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 
+pub use fallback::{StartFailure, Started, start_order_from};
 pub use null::NullBackend;
 pub use recording::{Call, RecordingBackend, RecordingHandle, RecordingMode};
 use serde::Serialize;
@@ -47,6 +49,21 @@ use crate::backend::{BackendFactory, BackendId, BackendInfo, SpeechBackend, Spee
 #[cfg_attr(not(any(feature = "omnivox", feature = "speechd")), allow(dead_code))]
 pub(crate) fn on_path(name: &str) -> Option<std::path::PathBuf> {
     textweaver_core::process::find_program(name)
+}
+
+/// True when engine `id` can exist on this operating system: SAPI 5 only
+/// on Windows, Apple speech only on macOS, Speech Dispatcher only on
+/// Linux and the other Unix systems. Engines that run anywhere (Eloquence,
+/// DECtalk, Piper, eSpeak NG) and unknown ids are true. Lists the user
+/// sees leave the others out; an engine that can exist here but is not
+/// installed stays listed, as not installed.
+pub fn exists_on_this_os(id: &str) -> bool {
+    match id {
+        "sapi" => cfg!(windows),
+        "nsspeech" | "avspeech" => cfg!(target_os = "macos"),
+        "speechd" => cfg!(all(unix, not(target_os = "macos"))),
+        _ => true,
+    }
 }
 
 /// A constructor for a backend, callable any number of times.
@@ -114,6 +131,29 @@ pub struct RegisteredBackend {
     pub probe: AvailabilityProbe,
     /// Constructor, run on the speech thread through a [`BackendFactory`].
     pub constructor: BackendConstructor,
+    /// The name that says where an installed engine comes from, such as
+    /// "Eloquence (OpenEVV, direct)" ([`BackendRegistry::set_label`]).
+    pub label: Option<EngineLabel>,
+}
+
+/// Works out an installed engine's name with its source (the library
+/// found), or `None` to keep the registered name.
+pub type EngineLabel = Arc<dyn Fn() -> Option<String> + Send + Sync + 'static>;
+
+/// `s` as a `&'static str`, kept once per distinct text for the life of
+/// the process (engine names are few and fixed per machine).
+fn intern(s: String) -> &'static str {
+    static NAMES: OnceLock<Mutex<std::collections::HashSet<&'static str>>> = OnceLock::new();
+    let mut names = NAMES
+        .get_or_init(Mutex::default)
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    if let Some(&known) = names.get(s.as_str()) {
+        return known;
+    }
+    let leaked: &'static str = Box::leak(s.into_boxed_str());
+    names.insert(leaked);
+    leaked
 }
 
 impl std::fmt::Debug for RegisteredBackend {
@@ -306,19 +346,55 @@ impl BackendRegistry {
             info,
             probe,
             constructor,
+            label: None,
         });
     }
 
-    /// Every registered backend with availability checked now, highest
-    /// priority first.
+    /// Gives engine `id` a name that says where it comes from, worked out
+    /// (at most once) when the engine is found installed: "Eloquence
+    /// (OpenEVV, direct)" rather than "ETI-Eloquence". The id stays the
+    /// same; [`list`](Self::list) and [`get`](Self::get) report the name.
+    pub fn set_label(
+        &mut self,
+        id: &str,
+        label: impl Fn() -> Option<String> + Send + Sync + 'static,
+    ) {
+        let cached: Arc<OnceLock<Option<&'static str>>> = Arc::new(OnceLock::new());
+        let label = Arc::new(move || *cached.get_or_init(|| label().map(intern)));
+        if let Some(e) = self.entries.iter_mut().find(|e| e.info.id == id) {
+            e.label = Some(Arc::new(move || label().map(str::to_owned)));
+        }
+    }
+
+    /// An entry's description with availability checked now, named by its
+    /// label when it is available.
+    fn probed(e: &RegisteredBackend) -> BackendInfo {
+        let available = (e.probe)();
+        let name = if available {
+            e.label
+                .as_ref()
+                .and_then(|l| l())
+                .map_or(e.info.name, intern)
+        } else {
+            e.info.name
+        };
+        BackendInfo {
+            available,
+            name,
+            ..e.info.clone()
+        }
+    }
+
+    /// Every registered backend that can exist on this system
+    /// ([`exists_on_this_os`]), with availability checked now, highest
+    /// priority first. An installed engine is named with its source
+    /// ([`set_label`](Self::set_label)).
     pub fn list(&self) -> Vec<BackendInfo> {
         let mut out: Vec<BackendInfo> = self
             .entries
             .iter()
-            .map(|e| BackendInfo {
-                available: (e.probe)(),
-                ..e.info.clone()
-            })
+            .filter(|e| exists_on_this_os(e.info.id))
+            .map(Self::probed)
             .collect();
         out.sort_by(|a, b| b.priority.cmp(&a.priority).then(a.id.cmp(b.id)));
         out
@@ -339,10 +415,7 @@ impl BackendRegistry {
         self.entries
             .iter()
             .find(|e| e.info.id == id)
-            .map(|e| BackendInfo {
-                available: (e.probe)(),
-                ..e.info.clone()
-            })
+            .map(Self::probed)
     }
 
     /// A factory for backend `id`, if registered (`null` always is).
@@ -724,6 +797,54 @@ mod tests {
         forget_probes();
         build("config A").list();
         assert_eq!(calls.load(Ordering::SeqCst), 3);
+    }
+
+    #[test]
+    fn an_installed_engine_is_named_by_its_source_and_keeps_its_id() {
+        let mut r = BackendRegistry::test_doubles();
+        for (id, available) in [("eci", true), ("dectalk", false)] {
+            r.register(
+                BackendInfo {
+                    id,
+                    name: "Registered name",
+                    priority: 10,
+                    ..BackendInfo::default()
+                },
+                move || available,
+                || Ok(Box::new(NullBackend::default()) as Box<dyn SpeechBackend>),
+            );
+            r.set_label(id, || Some("Eloquence (OpenEVV, direct)".into()));
+        }
+        let eci = r.get("eci").unwrap();
+        assert_eq!((eci.id, eci.name), ("eci", "Eloquence (OpenEVV, direct)"));
+        // Not installed: no source to name.
+        assert_eq!(r.get("dectalk").unwrap().name, "Registered name");
+        assert_eq!(r.start_order(None)[0].name, "Eloquence (OpenEVV, direct)");
+    }
+
+    #[test]
+    fn engines_of_another_system_are_not_listed() {
+        let mut r = BackendRegistry::test_doubles();
+        for id in ["sapi", "avspeech", "nsspeech", "speechd", "eci", "dectalk"] {
+            r.register(
+                BackendInfo {
+                    id,
+                    name: id,
+                    priority: 10,
+                    ..BackendInfo::default()
+                },
+                || false,
+                || Ok(Box::new(NullBackend::default()) as Box<dyn SpeechBackend>),
+            );
+        }
+        let ids: Vec<&str> = r.list().iter().map(|b| b.id).collect();
+        assert!(ids.contains(&"eci") && ids.contains(&"dectalk"));
+        assert_eq!(ids.contains(&"sapi"), cfg!(windows));
+        assert_eq!(ids.contains(&"avspeech"), cfg!(target_os = "macos"));
+        assert_eq!(
+            ids.contains(&"speechd"),
+            cfg!(all(unix, not(target_os = "macos")))
+        );
     }
 
     #[test]
