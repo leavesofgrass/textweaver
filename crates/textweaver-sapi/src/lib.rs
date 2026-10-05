@@ -245,7 +245,7 @@ pub fn probe(config: &SapiConfig) -> bool {
 pub fn backend_description() -> BackendInfo {
     BackendInfo {
         id: BACKEND_ID,
-        name: "Windows SAPI5 voices",
+        name: "Windows SAPI 5 voices",
         priority: PRIORITY,
         opt_in: false,
         available: false,

@@ -131,7 +131,7 @@ impl App {
         let found: Vec<&str> = textweaver_engines::speech_registry_for(&self.settings)
             .list()
             .into_iter()
-            .filter(|b| b.available && b.id != "null")
+            .filter(|b| b.available && !b.opt_in && b.id != "null")
             .map(|b| b.name)
             .collect();
         facts.push(if found.is_empty() {

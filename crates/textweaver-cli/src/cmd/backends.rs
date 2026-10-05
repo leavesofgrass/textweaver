@@ -174,7 +174,7 @@ pub fn describe(b: &BackendInfo, auto: &str, selected: &str) -> String {
         if b.available {
             "Available"
         } else {
-            "Not available"
+            "Not installed"
         }
     );
     if b.priority != i32::MIN {
