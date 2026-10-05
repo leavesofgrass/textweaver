@@ -12,10 +12,21 @@
 //! bar is drawn by muda, but the drop-down menus are the system's, and
 //! they go dark only when the application asked for dark mode through
 //! uxtheme's unnamed exports (`SetPreferredAppMode`, ordinal 135, and
-//! `AllowDarkModeForWindow`, ordinal 133) and the menu themes were flushed
-//! (`FlushMenuThemes`, ordinal 136). Those are looked up by ordinal, only
-//! on builds that have them, and a missing one is skipped silently: the
-//! menus then stay light, which is readable, never broken.
+//! `AllowDarkModeForWindow`, ordinal 133), the process's cached color
+//! policy was refreshed (`RefreshImmersiveColorPolicyState`, ordinal 104),
+//! and the menu themes were flushed (`FlushMenuThemes`, ordinal 136).
+//! Those are looked up by ordinal, only on builds that have them, and a
+//! missing one is skipped silently: the menus then stay light, which is
+//! readable, never broken.
+//!
+//! The refresh is what alpha.9 lacked (the owner's report: a dark-themed
+//! File menu opened all white, each item showing only under the mouse).
+//! Without it the drop-down menu's theme was dark, so its text was white,
+//! while the process's cached color policy still held the system's own
+//! light setting, so the menu's background was painted white: white on
+//! white, readable only where the hover highlight was drawn. When dark
+//! drop-down menus cannot be had in full (no refresh export), they are
+//! kept light instead ([`Popups::LightFallback`], which the window logs).
 
 use masonry_winit::winit::window::Theme;
 use textweaver_theme::Rgb;
@@ -87,12 +98,38 @@ pub fn os_high_contrast() -> bool {
 #[cfg(windows)]
 pub use win::{flush_menus, prepare};
 
+/// How the drop-down menus are drawn after `prepare` (Windows).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Popups {
+    /// Dark, as the theme asked.
+    Dark,
+    /// Light, as the theme (or high contrast) asked.
+    Light,
+    /// Light although the theme is dark: this Windows lacks a call that
+    /// dark drop-down menus need, so they stay light and readable.
+    LightFallback,
+    /// Nothing could be asked of this Windows: the system's own menus.
+    Unchanged,
+}
+
+impl Popups {
+    /// Words for the log ("drop-down menus: dark").
+    pub fn name(self) -> &'static str {
+        match self {
+            Popups::Dark => "dark",
+            Popups::Light => "light",
+            Popups::LightFallback => "light, because dark drop-down menus are unavailable",
+            Popups::Unchanged => "the system's",
+        }
+    }
+}
+
 #[cfg(windows)]
 #[allow(unsafe_code)]
 mod win {
     use std::sync::OnceLock;
 
-    use super::Chrome;
+    use super::{Chrome, Popups};
 
     /// A DLL export, as `GetProcAddress` returns it (`FARPROC`).
     type Proc = unsafe extern "system" fn() -> isize;
@@ -118,6 +155,7 @@ mod win {
     type AllowDarkModeForApp = unsafe extern "system" fn(bool) -> bool;
     type AllowDarkModeForWindow = unsafe extern "system" fn(isize, bool) -> bool;
     type FlushMenuThemes = unsafe extern "system" fn();
+    type RefreshImmersiveColorPolicyState = unsafe extern "system" fn();
 
     /// The exports this build has.
     struct Exports {
@@ -125,6 +163,7 @@ mod win {
         app_mode: Option<Proc>,
         allow_window: Option<AllowDarkModeForWindow>,
         flush: Option<FlushMenuThemes>,
+        refresh: Option<RefreshImmersiveColorPolicyState>,
     }
 
     fn wide(s: &str) -> Vec<u16> {
@@ -200,6 +239,7 @@ mod win {
                     app_mode: None,
                     allow_window: None,
                     flush: None,
+                    refresh: None,
                 };
             }
             let uxtheme = system_dll("uxtheme.dll");
@@ -212,6 +252,9 @@ mod win {
                     .map(|f| unsafe { std::mem::transmute::<Proc, AllowDarkModeForWindow>(f) }),
                 flush: ordinal(uxtheme, 136)
                     .map(|f| unsafe { std::mem::transmute::<Proc, FlushMenuThemes>(f) }),
+                refresh: ordinal(uxtheme, 104).map(|f| unsafe {
+                    std::mem::transmute::<Proc, RefreshImmersiveColorPolicyState>(f)
+                }),
             }
         })
     }
@@ -219,20 +262,25 @@ mod win {
     /// Asks Windows to draw this application's menus and this window's
     /// frame in `chrome`'s mode: the app's preferred mode (forced dark or
     /// light, or the system's default in high contrast), and dark mode
-    /// allowed for the window or not. Call it before the menus are made
-    /// and whenever the theme changes, then [`flush_menus`]. Returns false
-    /// when this Windows has none of the calls (nothing was done).
-    pub fn prepare(hwnd: isize, chrome: Chrome) -> bool {
+    /// allowed for the window or not, with the process's cached color
+    /// policy refreshed in between so the drop-down menus' background and
+    /// text agree. Call it before the menus are made and whenever the
+    /// theme changes, then [`flush_menus`]. Says how the drop-down menus
+    /// will be drawn.
+    pub fn prepare(hwnd: isize, chrome: Chrome) -> Popups {
         let e = exports();
-        let dark = chrome.is_dark();
+        // Dark drop-down menus only with every call they need; otherwise
+        // the light ones, which never put a dark theme's white text on a
+        // light background.
+        let dark = chrome.is_dark() && e.app_mode.is_some() && e.refresh.is_some();
         let mut done = false;
         if let Some(f) = e.app_mode {
             if e.build >= FIRST_APP_MODE_BUILD {
                 // SAFETY: from 1903 on, ordinal 135 is SetPreferredAppMode.
                 let set = unsafe { std::mem::transmute::<Proc, SetPreferredAppMode>(f) };
                 let mode = match chrome {
-                    Chrome::Dark => APP_MODE_FORCE_DARK,
-                    Chrome::Light => APP_MODE_FORCE_LIGHT,
+                    Chrome::Dark if dark => APP_MODE_FORCE_DARK,
+                    Chrome::Dark | Chrome::Light => APP_MODE_FORCE_LIGHT,
                     Chrome::System => APP_MODE_DEFAULT,
                 };
                 // SAFETY: takes and returns a PreferredAppMode by value.
@@ -245,6 +293,11 @@ mod win {
             }
             done = true;
         }
+        if let Some(refresh) = e.refresh {
+            // SAFETY: takes nothing and returns nothing; it rereads the
+            // app's mode into the process's cached color policy.
+            unsafe { refresh() };
+        }
         if let Some(allow) = e.allow_window
             && hwnd != 0
         {
@@ -252,7 +305,12 @@ mod win {
             let _ = unsafe { allow(hwnd, dark) };
             done = true;
         }
-        done
+        match (done, dark, chrome) {
+            (false, _, _) => Popups::Unchanged,
+            (true, true, _) => Popups::Dark,
+            (true, false, Chrome::Dark) => Popups::LightFallback,
+            (true, false, _) => Popups::Light,
+        }
     }
 
     /// Makes the menus pick up the mode [`prepare`] set: the menu themes

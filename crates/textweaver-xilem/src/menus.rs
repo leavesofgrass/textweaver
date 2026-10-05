@@ -403,6 +403,11 @@ mod native {
             &[]
         }
 
+        /// No drop-down menus of the system's.
+        pub fn popups(&self) -> &'static str {
+            ""
+        }
+
         /// Nothing to read back.
         pub fn dump(&self) -> Vec<String> {
             Vec::new()
@@ -436,6 +441,9 @@ mod native {
         /// How the menus are drawn (dark, light, or the system's).
         #[cfg(windows)]
         chrome: Chrome,
+        /// How the drop-down menus are drawn, as `prepare` said.
+        #[cfg(windows)]
+        popups: crate::dark_mode::Popups,
         /// `gui.auto_hide_menu`: the bar is hidden until a key shows it.
         #[cfg(windows)]
         auto_hide: bool,
@@ -480,7 +488,7 @@ mod native {
                 }
                 // Dark mode is asked for before the menus exist, so the
                 // drop-down menus are made in it.
-                crate::dark_mode::prepare(hwnd, chrome);
+                let popups = crate::dark_mode::prepare(hwnd, chrome);
                 // SAFETY: `hwnd` is this process's live top-level window,
                 // and `menu` is kept in `Native` for as long as it is
                 // attached (muda's window subclass points at it).
@@ -492,6 +500,7 @@ mod native {
                     shown: tree,
                     hwnd,
                     chrome,
+                    popups,
                     auto_hide: false,
                     hidden: false,
                     revealed_at: None,
@@ -518,7 +527,7 @@ mod native {
                     return;
                 }
                 self.chrome = chrome;
-                crate::dark_mode::prepare(self.hwnd, chrome);
+                self.popups = crate::dark_mode::prepare(self.hwnd, chrome);
                 // SAFETY: as in `attach`; muda only sends the window a
                 // message of its own.
                 let _ = unsafe { self.menu.set_theme_for_hwnd(self.hwnd, menu_theme(chrome)) };
@@ -659,6 +668,19 @@ mod native {
         /// What the menus show now.
         pub fn shown(&self) -> &[TopMenu] {
             &self.shown
+        }
+
+        /// How the drop-down menus are drawn, for the log: "dark",
+        /// "light", or why they stay light.
+        pub fn popups(&self) -> &'static str {
+            #[cfg(windows)]
+            {
+                self.popups.name()
+            }
+            #[cfg(target_os = "macos")]
+            {
+                crate::dark_mode::Popups::Unchanged.name()
+            }
         }
 
         /// The menus as the system holds them, one line per item:

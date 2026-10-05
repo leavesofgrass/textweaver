@@ -1868,7 +1868,17 @@ impl Gui {
                 n.set_chrome(chrome);
             }
             if self.log {
-                crate::log::line(&format!("frame: {}", chrome.name()));
+                let popups = self.native.as_ref().map_or("", |n| n.popups());
+                crate::log::line(&format!(
+                    "frame: {}{}{}",
+                    chrome.name(),
+                    if popups.is_empty() {
+                        ""
+                    } else {
+                        ", drop-down menus: "
+                    },
+                    popups
+                ));
             }
         }
         let auto_hide = self.app.settings().gui.auto_hide_menu;
@@ -2129,10 +2139,11 @@ impl Gui {
             Ok(n) => {
                 if self.log {
                     crate::log::line(&format!(
-                        "menus: native, model {:.1} ms, attached in {:.1} ms, frame: {}{}",
+                        "menus: native, model {:.1} ms, attached in {:.1} ms, frame: {}, drop-down menus: {}{}",
                         modelled.as_secs_f64() * 1000.0,
                         (started.elapsed() - modelled).as_secs_f64() * 1000.0,
                         self.chrome.name(),
+                        n.popups(),
                         if auto_hide { ", hidden until Alt" } else { "" }
                     ));
                     // What the system holds, as a screen reader will read
