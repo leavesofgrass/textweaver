@@ -91,6 +91,8 @@ Or set it for good in `settings.toml`. Write `false` to turn them off, or a fold
 dictionaries = false
 ```
 
+With OpenEVV, textweaver loads the main and abbreviation dictionaries but leaves out the root dictionary: OpenEVV 0.3.0 takes about a minute to load it, and Eloquence would start silent. If an engine ever takes too long to start with the dictionaries, textweaver starts it again without them, so Eloquence still speaks.
+
 ## Checking that it works
 
 First, list the speech engines. `eci` should be listed as available:
