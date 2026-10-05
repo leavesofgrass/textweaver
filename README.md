@@ -19,7 +19,7 @@ You will download one file, unpack it, and run the program.
 5. Open that folder. Run `textweaver-gui.exe`.
 6. Windows may warn you the first time, because the program is not code-signed. Choose "More info". Then choose "Run anyway".
 
-The window opens. You are ready for the first steps below.
+textweaver opens. You are ready for the first steps below.
 
 ## Your first steps
 
@@ -63,11 +63,11 @@ On Linux:
 2. Make it runnable. In a terminal, type `chmod +x` and the file name. Press Enter.
 3. Run the file.
 
-The Mac and Linux windows have had basic testing with VoiceOver and Orca, and more testing with both is planned. Not every release is tested by a person yet. If something does not work, the terminal reader, below, is a good choice there.
+The Mac and Linux versions have had basic testing with VoiceOver and Orca, and more testing with both is planned. Not every release is tested by a person yet. If something does not work, the terminal reader, below, is a good choice there.
 
 ## The terminal reader
 
-The terminal reader runs in a text window. It has no mouse and no pictures. Many people who use a screen reader prefer it.
+The terminal reader runs in a terminal, a screen of text only. It has no mouse and no pictures. Many people who use a screen reader prefer it.
 
 1. On the releases page, download the file for your computer. Its name has no `-gui` in it. It ends in `windows-x86_64.zip`, `macos-universal.tar.gz`, or `linux-x86_64.AppImage`.
 2. Unpack it, and open a terminal in that folder.
@@ -83,7 +83,7 @@ textweaver speaks and shows its menus and messages in English, Spanish, German, 
 
 - [Quick start](docs/quickstart.md): your first 30 seconds, in full.
 - [Start here, for students](docs/start-students.md).
-- [The textweaver window](docs/gui.md).
+- [Using the textweaver app](docs/gui.md).
 - [Every key](docs/keyboard.md).
 - [Installing textweaver](docs/install.md): every package, and scripts that install for you.
 - [Privacy](docs/privacy.md) and the [accessibility statement](docs/accessibility.md).
