@@ -3609,10 +3609,15 @@ impl Gui {
             return;
         };
         let line = format!(
-            "graphics adapter: {}, {}, {}{}",
+            "graphics adapter: {}, {}, {}{}{}",
             a.name,
             a.backend,
             a.kind,
+            if a.alpha_mode.is_empty() {
+                String::new()
+            } else {
+                format!(", surface {}", a.alpha_mode)
+            },
             if a.driver.is_empty() {
                 String::new()
             } else {
