@@ -359,7 +359,7 @@ claxon = "0.4.3"
 # mp3lame-sys and linked statically (cc on Windows, autotools elsewhere).
 # symphonia (MPL-2.0) decodes exports back in tests only.
 mp3lame-encoder = "=0.2.5"
-symphonia = { version = "0.5", default-features = false, features = ["mp3"] }
+symphonia = { version = "0.6", default-features = false, features = ["mp3"] }
 # Wave 7, W7o (libopus approved by the owner, Wednesday, September 30,
 # 2026): Ogg Opus in process with libopus 1.6.1, the reference encoder,
 # built from the source bundled in opusic-sys with cmake and linked
