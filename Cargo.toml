@@ -336,7 +336,7 @@ rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] 
 # one menu model. Only on those two systems: default features off, so no
 # GTK and no libxdo (Linux shows the same model as an in-window list).
 # Apache-2.0 or MIT.
-muda = { version = "0.20.0", default-features = false }
+muda = { version = "0.21.0", default-features = false }
 
 # Wave 5, Agent W5c3: email (EML) and web archives (MHTML, RFC 2557) in the
 # formats crate (ADR-0035). mail-parser is safe Rust (`forbid(unsafe_code)`)
