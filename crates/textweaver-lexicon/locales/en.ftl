@@ -2752,6 +2752,10 @@ tui-setup-keymap-ignored = Keymap file ignored: { $error }
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
 tui-setup-welcome = Welcome to { -brand }. { $open } opens a document. { $play } starts and pauses reading, and { $stop } stops. { $palette } lists every command. { $help } opens the help.
+# The window's first-run welcome on Windows, where the menu bar is
+# hidden until Alt or $menu (F10) shows it: the keys of
+# tui-setup-welcome, and the menus.
+gui-setup-welcome-menus = Welcome to { -brand }. { $open } opens a document. { $play } plays and pauses, { $stop } stops. { $palette } lists every command, Alt or { $menu } the menus. { $help } opens the help.
 # Said at startup without a document. $open, $new, and $help name the
 # keys for Open, New Document, and Help.
 tui-setup-no-document = No document is open. Press { $open } to open one, { $new } for a new one, or { $help } for help.

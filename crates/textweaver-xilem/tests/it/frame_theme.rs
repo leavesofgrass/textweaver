@@ -58,7 +58,7 @@ fn high_contrast_always_wins() {
     assert_eq!(Chrome::System.window_theme(), None);
 }
 
-/// `gui.auto_hide_menu`: off by default, a toggle in the Window section
+/// `gui.auto_hide_menu`: on by default (alpha.9), a toggle in the Window section
 /// with its help in English, kept on this computer, and set like any
 /// other setting.
 #[test]
@@ -70,12 +70,12 @@ fn auto_hide_menu_is_a_machine_toggle() {
         ..Options::default()
     };
     let mut app = setup::build_app(&opts, Box::new(LogAnnouncer::default())).0;
-    assert!(!app.settings().gui.auto_hide_menu, "off by default");
+    assert!(app.settings().gui.auto_hide_menu, "on by default");
     let schema = app.settings_schema();
     let s = schema.get("gui.auto_hide_menu").expect("in the schema");
     assert_eq!(s.kind, SettingKind::Toggle);
     assert!(!s.internal, "on the settings screen");
-    assert_eq!(s.default, serde_json::json!(false));
+    assert_eq!(s.default, serde_json::json!(true));
     let c = app.catalog();
     assert_eq!(s.label_in(&c), "Hide the menu bar");
     assert!(s.help_in(&c).contains("Alt or F10"), "{}", s.help_in(&c));
@@ -84,7 +84,7 @@ fn auto_hide_menu_is_a_machine_toggle() {
         setting_scope("gui.auto_hide_menu"),
         Some(SettingScope::Machine)
     );
-    let said = app.set_setting("gui.auto_hide_menu", serde_json::json!(true));
+    let said = app.set_setting("gui.auto_hide_menu", serde_json::json!(false));
     assert!(said.is_ok(), "{said:?}");
-    assert!(app.settings().gui.auto_hide_menu);
+    assert!(!app.settings().gui.auto_hide_menu);
 }

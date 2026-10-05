@@ -3006,6 +3006,7 @@ tui-setup-keymap-ignored = جرى تجاهل ملف خريطة المفاتيح:
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
 tui-setup-welcome = مرحبًا بك في { -brand }. { $open } يفتح مستندًا. { $play } يبدأ القراءة ويوقفها مؤقتًا، و{ $stop } يوقفها. { $palette } يسرد كل الأوامر. { $help } يفتح المساعدة.
+gui-setup-welcome-menus = مرحبًا بك في { -brand }. { $open } يفتح مستندًا. { $play } يقرأ ويوقف مؤقتًا، و{ $stop } يوقف. { $palette } يسرد كل الأوامر، وAlt أو { $menu } القوائم. { $help } يفتح المساعدة.
 # Said at startup without a document. $open, $new, and $help name the
 # keys for Open, New Document, and Help.
 tui-setup-no-document = لا يوجد مستند مفتوح. اضغط { $open } لفتح واحد، { $new } لواحد جديد، أو { $help } للمساعدة.

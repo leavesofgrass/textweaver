@@ -1005,9 +1005,10 @@ pub fn settings_dialog(
     let sections = NewWidget::new(
         ChoiceList::new(
             c.tr("gui-settings-sections"),
-            form.section_items(&c),
+            form.section_titles(&c),
             p.clone(),
         )
+        .with_names(form.section_items(&c))
         .with_selected(section)
         .with_focus_actions(true),
     )
@@ -1868,7 +1869,17 @@ impl Gui {
                 n.set_chrome(chrome);
             }
             if self.log {
-                crate::log::line(&format!("frame: {}", chrome.name()));
+                let popups = self.native.as_ref().map_or("", |n| n.popups());
+                crate::log::line(&format!(
+                    "frame: {}{}{}",
+                    chrome.name(),
+                    if popups.is_empty() {
+                        ""
+                    } else {
+                        ", drop-down menus: "
+                    },
+                    popups
+                ));
             }
         }
         let auto_hide = self.app.settings().gui.auto_hide_menu;
@@ -2129,10 +2140,11 @@ impl Gui {
             Ok(n) => {
                 if self.log {
                     crate::log::line(&format!(
-                        "menus: native, model {:.1} ms, attached in {:.1} ms, frame: {}{}",
+                        "menus: native, model {:.1} ms, attached in {:.1} ms, frame: {}, drop-down menus: {}{}",
                         modelled.as_secs_f64() * 1000.0,
                         (started.elapsed() - modelled).as_secs_f64() * 1000.0,
                         self.chrome.name(),
+                        n.popups(),
                         if auto_hide { ", hidden until Alt" } else { "" }
                     ));
                     // What the system holds, as a screen reader will read
@@ -2801,7 +2813,8 @@ impl Gui {
         }
         open.form.set_filter(query, &c);
         open.section = 0;
-        let items = open.form.section_items(&c);
+        let items = open.form.section_titles(&c);
+        let names = open.form.section_items(&c);
         let title = open.form.form_label(0, &c);
         let rows = open.form.rows(0, &self.app);
         let total = open.form.settings_in(0).len();
@@ -2809,7 +2822,7 @@ impl Gui {
         let filtering = !query.is_empty();
         let root = ctx.render_root(self.window_id);
         root.edit_widget_with_tag(SECTIONS, |mut l| {
-            ChoiceList::set_items(&mut l, items);
+            ChoiceList::set_named_items(&mut l, items, names);
             ChoiceList::select(&mut l, 0);
         });
         root.edit_widget_with_tag(FORM, |mut g| {
@@ -3609,10 +3622,15 @@ impl Gui {
             return;
         };
         let line = format!(
-            "graphics adapter: {}, {}, {}{}",
+            "graphics adapter: {}, {}, {}{}{}",
             a.name,
             a.backend,
             a.kind,
+            if a.alpha_mode.is_empty() {
+                String::new()
+            } else {
+                format!(", surface {}", a.alpha_mode)
+            },
             if a.driver.is_empty() {
                 String::new()
             } else {

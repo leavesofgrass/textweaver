@@ -17,6 +17,12 @@ publish.workspace = true
 name = "textweaver-xilem"
 path = "src/main.rs"
 
+# Draws the loom logo into `assets/icons/` (the PNGs, the .ico files, and
+# textweaver.res): `cargo run -p textweaver-xilem --example icons`.
+[[example]]
+name = "icons"
+required-features = ["screenshot"]
+
 [features]
 default = ["screenshot", "renderer-vello", "publish", "lint", "grammar", "dictation", "audio-export", "opus"]
 # Dictation in edit mode (textweaver-app's `dictation`, ADR-0042).
@@ -74,6 +80,9 @@ clap.workspace = true
 rfd.workspace = true
 # textweaver.log in the state folder, as the terminal reader writes it.
 log.workspace = true
+# The window's icon from the committed loom PNG (Linux, and Windows
+# without the linked resource), and the icon files' generator.
+png.workspace = true
 
 # `--announce uia` (W4s): UI Automation Notification events raised directly.
 # The same `windows` crate and features AccessKit's Windows adapter already

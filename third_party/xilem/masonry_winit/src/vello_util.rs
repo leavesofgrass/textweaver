@@ -18,6 +18,10 @@ use crate::app_driver::WgpuLimits;
 /// The graphics adapter a window first drew with (textweaver).
 static FIRST_ADAPTER: std::sync::OnceLock<wgpu::AdapterInfo> = std::sync::OnceLock::new();
 
+/// How the first window's surface composites with what is behind it
+/// (textweaver).
+static FIRST_ALPHA_MODE: std::sync::OnceLock<CompositeAlphaMode> = std::sync::OnceLock::new();
+
 /// The graphics adapter the first window's device was created on, once
 /// one has been (textweaver): its name, driver, graphics API, and kind, so
 /// an app can log it and flag a software renderer.
@@ -34,6 +38,11 @@ pub struct GraphicsAdapter {
     /// True when the adapter draws on the CPU (a software renderer such
     /// as WARP or llvmpipe), which is much slower.
     pub software: bool,
+    /// How the first window's surface composites with what is behind it:
+    /// "opaque" for an ordinary window, or "premultiplied",
+    /// "postmultiplied", "inherit", or "auto"; empty before a surface
+    /// exists.
+    pub alpha_mode: String,
 }
 
 /// The adapter the first window draws with, or `None` before a window's
@@ -59,6 +68,19 @@ pub fn graphics_adapter() -> Option<GraphicsAdapter> {
         backend: format!("{:?}", info.backend),
         kind: kind.to_owned(),
         software: info.device_type == wgpu::DeviceType::Cpu,
+        alpha_mode: FIRST_ALPHA_MODE
+            .get()
+            .map(|m| {
+                match m {
+                    CompositeAlphaMode::Auto => "auto",
+                    CompositeAlphaMode::Opaque => "opaque",
+                    CompositeAlphaMode::PreMultiplied => "premultiplied",
+                    CompositeAlphaMode::PostMultiplied => "postmultiplied",
+                    CompositeAlphaMode::Inherit => "inherit",
+                }
+                .to_owned()
+            })
+            .unwrap_or_default(),
     })
 }
 
@@ -158,6 +180,7 @@ impl RenderContext {
         width: u32,
         height: u32,
         present_mode: PresentMode,
+        transparent: bool,
     ) -> Result<RenderSurface<'w>, RenderSurfaceError> {
         self.create_render_surface(
             self.instance
@@ -166,17 +189,22 @@ impl RenderContext {
             width,
             height,
             present_mode,
+            transparent,
         )
         .await
     }
 
     /// Creates a new render surface for the specified window and dimensions.
+    ///
+    /// `transparent` is whether the window was created transparent
+    /// (textweaver): only then is an alpha-compositing mode chosen.
     pub(crate) async fn create_render_surface<'w>(
         &mut self,
         surface: Surface<'w>,
         width: u32,
         height: u32,
         present_mode: PresentMode,
+        transparent: bool,
     ) -> Result<RenderSurface<'w>, RenderSurfaceError> {
         let dev_id = self
             .device(Some(&surface))
@@ -199,10 +227,32 @@ impl RenderContext {
                 operation: wgpu::BlendOperation::Add,
             },
         };
-        // TODO: check if the window is transparent then set alpha_mode accordingly
-        // also, Opaque mode may help in saving power.
-        // blocked on winit not exposing a way to check for transparency
-        let (alpha_mode, blitter) = if capabilities
+        // textweaver: an opaque window gets an opaque surface. Before, the
+        // first alpha mode the surface offered was taken whatever the
+        // window, and some drivers (Vulkan on NVIDIA under Windows) offer
+        // pre- or post-multiplied alpha for an ordinary window and then
+        // composite the whole window with per-pixel alpha. GDI draws the
+        // native menu bar with alpha 0, so the menu bar became see-through.
+        // Opaque is also what saves power.
+        let opaque = !transparent
+            && capabilities
+                .alpha_modes
+                .contains(&CompositeAlphaMode::Opaque);
+        let opaque_blitter = || {
+            if cfg!(windows) && device_handle.adapter.get_info().name.contains("AMD") {
+                tracing::info!(
+                    "on Windows with AMD GPUs use premultiplied blitting even on opaque surface"
+                );
+                TextureBlitterBuilder::new(&device_handle.device, format)
+                    .blend_state(PREMUL_BLEND_STATE)
+                    .build()
+            } else {
+                TextureBlitter::new(&device_handle.device, format)
+            }
+        };
+        let (alpha_mode, blitter) = if opaque {
+            (CompositeAlphaMode::Opaque, opaque_blitter())
+        } else if capabilities
             .alpha_modes
             .contains(&CompositeAlphaMode::PostMultiplied)
         {
@@ -223,19 +273,9 @@ impl RenderContext {
         } else {
             // TODO: check if the only available mode is Inherit then log info that postmultipled blit is being used
             // TODO: check if non-opaque base color is used on unsupported device then warn
-            let texture_blitter =
-                if cfg!(windows) && device_handle.adapter.get_info().name.contains("AMD") {
-                    tracing::info!(
-                        "on Windows with AMD GPUs use premultiplied blitting even on opaque surface"
-                    );
-                    TextureBlitterBuilder::new(&device_handle.device, format)
-                        .blend_state(PREMUL_BLEND_STATE)
-                        .build()
-                } else {
-                    TextureBlitter::new(&device_handle.device, format)
-                };
-            (CompositeAlphaMode::Auto, texture_blitter)
+            (CompositeAlphaMode::Auto, opaque_blitter())
         };
+        let _ = FIRST_ALPHA_MODE.set(alpha_mode);
 
         let config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,

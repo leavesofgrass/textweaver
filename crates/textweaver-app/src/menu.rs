@@ -98,7 +98,7 @@ pub enum MenuId {
     Format,
     /// Edit, Insert.
     Insert,
-    /// Edit, Proofing (and Tools).
+    /// Edit, Proofing.
     Proofing,
     /// Edit, Citations.
     Citations,
@@ -251,8 +251,6 @@ impl MenuId {
                 Sub(MenuId::Preview),
                 Sep,
                 Sub(MenuId::SettingsFiles),
-                Do(A::SettingsProfiles),
-                Do(A::ReadingStatistics),
                 Sep,
                 Do(A::Quit),
             ],
@@ -273,7 +271,6 @@ impl MenuId {
             ],
             MenuId::SettingsFiles => &[
                 Do(A::Settings),
-                Do(A::ColorSettings),
                 Do(A::SettingsProfiles),
                 Sep,
                 Do(A::ExportSettings),
@@ -298,8 +295,6 @@ impl MenuId {
                 Sub(MenuId::Citations),
                 Sep,
                 Do(A::Dictate),
-                Do(A::CycleTypingEcho),
-                Do(A::ListenRendered),
             ],
             MenuId::Find => &[
                 Do(A::Find),
@@ -328,9 +323,6 @@ impl MenuId {
                 Do(A::NextTableCell),
                 Do(A::PreviousTableCell),
                 Do(A::HorizontalRule),
-                Sep,
-                Do(A::InsertCitation),
-                Do(A::InsertBibliography),
             ],
             MenuId::Proofing => &[
                 Do(A::NextMisspelling),
@@ -352,10 +344,6 @@ impl MenuId {
                 Do(A::ImportReferences),
             ],
             MenuId::View => &[
-                Do(A::Outline),
-                Do(A::ListBookmarks),
-                Do(A::ListNotes),
-                Sep,
                 Do(A::ContentsPanel),
                 Do(A::NotesPanel),
                 Do(A::NextRegion),
@@ -372,7 +360,6 @@ impl MenuId {
                 Sub(MenuId::ReadingAids),
                 Sep,
                 Do(A::CycleAccessMode),
-                Do(A::CycleInterfaceAnnouncements),
                 Do(A::ToggleCharacterKeys),
             ],
             MenuId::TextSize => &[Do(A::TextLarger), Do(A::TextSmaller), Do(A::TextSizeReset)],
@@ -425,7 +412,6 @@ impl MenuId {
                 Do(A::SayStatus),
                 Do(A::RepeatMessage),
                 Do(A::WordCount),
-                Do(A::ReadingLevel),
                 Do(A::LinkAddress),
             ],
             MenuId::MoveBy => &[
@@ -435,8 +421,6 @@ impl MenuId {
                 Do(A::PreviousParagraph),
                 Do(A::NextChapter),
                 Do(A::PreviousChapter),
-                Do(A::NextTable),
-                Do(A::PreviousTable),
                 Do(A::NextList),
                 Do(A::PreviousList),
                 Do(A::NextListItem),
@@ -508,8 +492,6 @@ impl MenuId {
                 Do(A::PreviousNote),
                 Do(A::HighlightSelection),
                 Do(A::DeleteNote),
-                Sep,
-                Do(A::ExportStudySheet),
             ],
             MenuId::Tables => &[
                 Do(A::NextTable),
@@ -547,24 +529,17 @@ impl MenuId {
             ],
             MenuId::Tools => &[
                 Do(A::CommandPalette),
-                Do(A::Dictate),
-                Do(A::DownloadDictationModel),
                 Sep,
                 Do(A::DefineWord),
                 Do(A::Summarize),
                 Do(A::ReadingLevel),
                 Do(A::ReadingStatistics),
-                Sub(MenuId::Proofing),
                 Sep,
                 Sub(MenuId::Sync),
                 Sep,
-                Do(A::Settings),
-                Do(A::ColorSettings),
-                Do(A::ReadingForm),
-                Do(A::SettingsProfiles),
                 Do(A::ManageComponents),
+                Do(A::DownloadDictationModel),
                 Do(A::AskFirstRunAgain),
-                Do(A::RestartSpeech),
             ],
             MenuId::Sync => &[
                 Do(A::SyncSetup),
@@ -1567,6 +1542,52 @@ mod tests {
         );
         app.dispatch(Command::Action(A::ExportAudio));
         assert_eq!(app.status_text(), "Exporting.");
+    }
+
+    /// Commands deliberately in more than one menu, each with its reason.
+    /// Empty: every command has one place.
+    const IN_TWO_MENUS: &[ActionId] = &[];
+
+    /// Each command is in exactly one menu, and each submenu hangs from
+    /// exactly one menu: no redundant items (the owner, alpha.9). The
+    /// command palette lists every command once; the menus do too.
+    #[test]
+    fn every_command_and_submenu_has_one_place() {
+        let mut places: Vec<(ActionId, Vec<MenuId>)> = Vec::new();
+        let mut parents: Vec<(MenuId, Vec<MenuId>)> = Vec::new();
+        for m in MenuId::ALL {
+            for e in m.entries() {
+                match *e {
+                    Do(a) => match places.iter_mut().find(|(x, _)| *x == a) {
+                        Some((_, ms)) => ms.push(m),
+                        None => places.push((a, vec![m])),
+                    },
+                    Sub(sub) => match parents.iter_mut().find(|(x, _)| *x == sub) {
+                        Some((_, ms)) => ms.push(m),
+                        None => parents.push((sub, vec![m])),
+                    },
+                    _ => {}
+                }
+            }
+        }
+        let repeated: Vec<_> = places
+            .iter()
+            .filter(|(a, ms)| ms.len() > 1 && !IN_TWO_MENUS.contains(a))
+            .collect();
+        assert!(repeated.is_empty(), "in more than one menu: {repeated:?}");
+        let shared: Vec<_> = parents.iter().filter(|(_, ms)| ms.len() > 1).collect();
+        assert!(
+            shared.is_empty(),
+            "submenu in more than one menu: {shared:?}"
+        );
+        for m in MenuId::ALL {
+            if !m.is_top() {
+                assert!(
+                    parents.iter().any(|(x, _)| *x == m),
+                    "{m:?} hangs from no menu"
+                );
+            }
+        }
     }
 
     /// Each menu stays short enough to hear through (about 20 items).

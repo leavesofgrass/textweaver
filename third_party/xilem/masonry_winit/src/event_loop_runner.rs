@@ -220,6 +220,10 @@ pub struct MasonryState {
 
     surfaces: HashMap<HandleId, RenderSurface<'static>>,
     windows: HashMap<HandleId, Window>,
+    /// The windows created with `with_transparent(true)` (textweaver):
+    /// only these get a surface that composites with alpha; every other
+    /// window's surface is opaque. winit cannot be asked afterwards.
+    transparent_windows: HashSet<HandleId>,
     /// On Metal, we need to track the state of resize requests to avoid jitter.
     #[cfg(target_os = "macos")]
     resized_window: Option<HandleId>,
@@ -424,6 +428,7 @@ impl MasonryState {
             window_id_to_handle_id: HashMap::new(),
             windows: HashMap::new(),
             surfaces: HashMap::new(),
+            transparent_windows: HashSet::new(),
             #[cfg(target_os = "macos")]
             resized_window: None,
 
@@ -544,6 +549,7 @@ impl MasonryState {
         }
 
         let visible = new_window.attributes.visible;
+        let transparent = new_window.attributes.transparent;
         // We always create the window as invisible so that we can
         // render the first frame before showing it to avoid flashing.
         let handle = event_loop
@@ -561,6 +567,9 @@ impl MasonryState {
 
         let handle_id = handle.id();
         let scale_factor = handle.scale_factor();
+        if transparent {
+            self.transparent_windows.insert(handle_id);
+        }
 
         // https://github.com/rust-windowing/winit/issues/2308
         #[cfg(target_os = "ios")]
@@ -592,6 +601,7 @@ impl MasonryState {
             .remove(&window_id)
             .unwrap_or_else(|| panic!("could not find window for id {window_id:?}"));
         self.surfaces.remove(&window_id);
+        self.transparent_windows.remove(&window_id);
         let window = self.windows.remove(&window_id).unwrap();
 
         // HACK: When we exit, on some systems (known to happen with Wayland on KDE),
@@ -627,7 +637,13 @@ impl MasonryState {
             surface
         } else {
             let devices_before = self.render_cx.devices.len();
-            let surface = create_surface(&mut self.render_cx, window.handle.clone(), size);
+            let transparent = self.transparent_windows.contains(&handle_id);
+            let surface = create_surface(
+                &mut self.render_cx,
+                window.handle.clone(),
+                size,
+                transparent,
+            );
             let dev_id = surface.dev_id;
             self.surfaces.insert(handle_id, surface);
             let surface = self.surfaces.get_mut(&handle_id).unwrap();
@@ -1205,6 +1221,7 @@ fn create_surface(
     render_cx: &mut RenderContext,
     handle: Arc<WindowHandle>,
     size: PhysicalSize<u32>,
+    transparent: bool,
 ) -> RenderSurface<'static> {
     assert!(
         size.width != 0 && size.height != 0,
@@ -1215,6 +1232,7 @@ fn create_surface(
         size.width,
         size.height,
         wgpu::PresentMode::AutoVsync,
+        transparent,
     ))
     .unwrap_or_else(|e| panic!("{GRAPHICS_FAILURE}: {e}"))
 }

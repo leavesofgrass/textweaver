@@ -16,3 +16,5 @@ third_party/lexicon/*.twlex binary
 third_party/mathcat/** -text
 # BRF snapshots keep their CR LF line ends and form feeds.
 *.brf binary
+*.ico binary
+*.res binary

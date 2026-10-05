@@ -260,22 +260,53 @@ pub fn named_key(keymap: &Keymap, action: ActionId) -> String {
 /// comes from `keymap`; the palette's is a chord that works with
 /// single-key shortcuts on or off ("F2", not ":").
 pub fn welcome_text(c: &Catalog, keymap: &Keymap) -> String {
+    welcome(c, keymap, false)
+}
+
+/// [`welcome_text`] with the menus as well: "Alt or F10 the menus", for
+/// the window on Windows, whose menu bar is hidden until Alt or the menu
+/// key shows it (`gui.auto_hide_menu`). Without a menu key in `keymap`
+/// it is [`welcome_text`].
+pub fn welcome_text_with_menus(c: &Catalog, keymap: &Keymap) -> String {
+    welcome(c, keymap, true)
+}
+
+fn welcome(c: &Catalog, keymap: &Keymap, menus: bool) -> String {
     let k = |a| named_key_in(c, keymap, a);
     let palette = keymap
         .chords_for(ActionId::CommandPalette)
         .into_iter()
         .find(|ch| !ch.is_text_input())
         .map_or_else(|| k(ActionId::CommandPalette), |ch| mark_chord(c, &ch));
-    c.fmt(
-        "tui-setup-welcome",
-        &args![
-            "open" => k(ActionId::Open),
-            "play" => k(ActionId::PlayPause),
-            "stop" => k(ActionId::Stop),
-            "palette" => palette,
-            "help" => k(ActionId::Help)
-        ],
-    )
+    let (open, play, stop, help) = (
+        k(ActionId::Open),
+        k(ActionId::PlayPause),
+        k(ActionId::Stop),
+        k(ActionId::Help),
+    );
+    match main_chord(keymap, ActionId::Menu) {
+        Some(menu) if menus => c.fmt(
+            "gui-setup-welcome-menus",
+            &args![
+                "open" => open,
+                "play" => play,
+                "stop" => stop,
+                "palette" => palette,
+                "menu" => mark_chord(c, &menu),
+                "help" => help
+            ],
+        ),
+        _ => c.fmt(
+            "tui-setup-welcome",
+            &args![
+                "open" => open,
+                "play" => play,
+                "stop" => stop,
+                "palette" => palette,
+                "help" => help
+            ],
+        ),
+    }
 }
 
 /// [`named_key`] in the catalog's language ([`App::catalog`]).
@@ -882,6 +913,27 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The window's welcome on Windows names the menus ("Alt or F10"),
+    /// and stays about as long as the terminal reader's.
+    #[test]
+    fn the_windows_welcome_names_the_menus() {
+        use textweaver_keymap::{Frontend, Platform};
+        let map = Keymap::defaults(Platform::Windows, Frontend::Gui);
+        let c = Catalog::english();
+        let with = welcome_text_with_menus(&c, &map);
+        let plain = welcome_text(&c, &map);
+        assert_eq!(
+            written_text(&with),
+            "Welcome to textweaver. Ctrl+O opens a document. Space plays and pauses, Escape stops. F2 lists every command, Alt or F10 the menus. F1 opens the help."
+        );
+        assert!(spoken_text(&with).contains("Alt or F10 the menus"));
+        assert!(!plain.contains("menus"));
+        assert!(
+            written_text(&with).len() <= written_text(&plain).len() + 10,
+            "{with}"
+        );
+    }
 
     #[test]
     fn one_key_per_action_spoken_and_written() {

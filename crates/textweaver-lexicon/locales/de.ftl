@@ -2769,6 +2769,7 @@ tui-setup-keymap-ignored = Tastenzuordnungsdatei ignoriert: { $error }
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
 tui-setup-welcome = Willkommen bei { -brand }. { $open } öffnet ein Dokument. { $play } startet und pausiert das Vorlesen, und { $stop } stoppt. { $palette } listet jeden Befehl auf. { $help } öffnet die Hilfe.
+gui-setup-welcome-menus = Willkommen bei { -brand }. { $open } öffnet ein Dokument. { $play } liest vor und pausiert, { $stop } stoppt. { $palette } listet jeden Befehl, Alt oder { $menu } die Menüs. { $help } öffnet die Hilfe.
 # Said at startup without a document. $open, $new, and $help name the
 # keys for Open, New Document, and Help.
 tui-setup-no-document = Kein Dokument ist geöffnet. Drücken Sie { $open }, um eines zu öffnen, { $new } für ein neues, oder { $help } für Hilfe.

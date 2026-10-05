@@ -270,7 +270,8 @@ pub use goto::parse_go_to;
 pub use help::{
     action_help, category_title, chords_text, chords_text_in, help_entries, key_text, named_key,
     named_key_in, palette_matches, palette_matches_in, resolve_command, resolve_command_in,
-    short_chords_text, spoken_chord, spoken_key, spoken_text, welcome_text, written_text,
+    short_chords_text, spoken_chord, spoken_key, spoken_text, welcome_text,
+    welcome_text_with_menus, written_text,
 };
 pub use list_model::{ListKey, ListModel, PromptKey, PromptModel};
 pub use math_explore::MathMove;
