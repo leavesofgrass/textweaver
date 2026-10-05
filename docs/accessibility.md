@@ -15,8 +15,8 @@ textweaver is in alpha. This statement describes release 0.1.0-alpha.9.
 
 ## What has been tested
 
-- **Windows, by listening.** A person who is blind has used the window and the terminal reader with NVDA and JAWS, and with a 40-cell Braille display. The window had two such sessions. The terminal reader's newest Braille layout is waiting for the checklist in [the screen reader guide](screen-readers.md).
-- **By computer, on every release.** The window's accessibility tree is checked on Windows and Linux. On macOS a smoke run reads a document. These checks see what assistive technology is given, not what it says.
+- **Windows, by listening.** A person who is blind has used the textweaver app and the terminal reader with NVDA and JAWS, and with a 40-cell Braille display. The app had two such sessions. The terminal reader's newest Braille layout is waiting for the checklist in [the screen reader guide](screen-readers.md).
+- **By computer, on every release.** The app's accessibility tree is checked on Windows and Linux. On macOS a smoke run reads a document. These checks see what assistive technology is given, not what it says.
 - **Contrast.** Every built-in theme is checked for contrast, and the spoken-word highlight is checked against the page.
 - **Output files.** HTML, EPUB, Word, and PDF output are checked for structure and alternative text. See [Converting documents](converting.md).
 

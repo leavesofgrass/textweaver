@@ -55,7 +55,7 @@ On a Mac:
 
 1. Download the file ending in `macos-universal-gui.zip`. Double-click it to unpack it.
 2. Open the unpacked folder. Run `textweaver-gui`.
-3. Your Mac may block it the first time. [Installing textweaver](docs/install.md#the-gui) tells you how to allow it.
+3. Your Mac may block it the first time. [Installing textweaver](docs/install.md#the-app) tells you how to allow it.
 
 On Linux:
 

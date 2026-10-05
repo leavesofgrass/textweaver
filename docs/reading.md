@@ -2,7 +2,7 @@
 
 This guide covers the terminal reader, `textweaver`: opening a document, reading it aloud, and moving through it by sentence, paragraph, heading, and more. It is for anyone who reads with textweaver, with or without a screen reader.
 
-Keys are the terminal defaults. Where the window uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key in both frontends. Many keys are single keys, such as `h` for the next heading. Those are called browse keys. They work while you read, not while you edit or type in a prompt.
+Keys are the terminal defaults. Where the textweaver app uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key in both frontends. Many keys are single keys, such as `h` for the next heading. Those are called browse keys. They work while you read, not while you edit or type in a prompt.
 
 The browse keys follow the quick navigation keys of NVDA's and JAWS's browse mode: `h` for headings, `1` to `6` for heading levels, `l` for lists, `k` for links, and so on, with Shift for the previous one. They changed in 0.1.0-alpha.4. The [keyboard reference](keyboard.md#what-changed) lists every change, and `preset = "classic"` under `[keyboard]` brings back the earlier keys.
 
@@ -30,11 +30,11 @@ Rather not type it? Press **F4** in the prompt to choose the file in the [file b
 
 ### From the library: Alt+L
 
-Press **Alt+L** to list the documents in your library folders and the files you opened recently. Use **Up** and **Down** to move, and **Enter** to open one. The window uses **Ctrl+Shift+B**. The [library guide](library.md) explains library folders.
+Press **Alt+L** to list the documents in your library folders and the files you opened recently. Use **Up** and **Down** to move, and **Enter** to open one. The app uses **Ctrl+Shift+B**. The [library guide](library.md) explains library folders.
 
 ### From the file browser: File, Browse files
 
-The file browser walks through folders and archives as one list, and opens what you choose. Open it from the File menu (**F10**, then File, then Browse files) or from the command palette: type `browse` and press **Enter**. It has no key of its own; give `browse_files` one in `keymap.toml` if you use it often. In the window it opens in the window's list dialog, from the File menu or the command palette, and the Say Status key previews the focused row there too.
+The file browser walks through folders and archives as one list, and opens what you choose. Open it from the File menu (**F10**, then File, then Browse files) or from the command palette: type `browse` and press **Enter**. It has no key of its own; give `browse_files` one in `keymap.toml` if you use it often. In the app it opens in the app's list dialog, from the File menu or the command palette, and the Say Status key previews the focused row there too.
 
 It starts on **Places**: the open document's folder (focused), the folder you started textweaver in, your library folders, and your drives on Windows (the root folder on Linux and macOS). Each row says the name first, then what it is, so a Braille display shows the name in its first cells:
 
@@ -60,7 +60,7 @@ The keys:
 
 **The browser only opens and chooses files.** It never copies, moves, renames, or deletes anything; **Delete** and **F2** say so.
 
-**Choosing a folder.** Commands that need a folder, such as converting a folder of documents, open the same browser to choose it. They say what the folder is for when the browser opens. **Ctrl+Enter** chooses the focused folder, or the folder you are in. Some terminals cannot send Ctrl+Enter, so the first row of each folder, "Choose this folder", does the same with **Enter**. Folders inside archives cannot be chosen. In the window on a Mac the browser's keys use Cmd instead of Ctrl, and Cmd+Shift+Period shows every file, as in the Mac's own file dialogs.
+**Choosing a folder.** Commands that need a folder, such as converting a folder of documents, open the same browser to choose it. They say what the folder is for when the browser opens. **Ctrl+Enter** chooses the focused folder, or the folder you are in. Some terminals cannot send Ctrl+Enter, so the first row of each folder, "Choose this folder", does the same with **Enter**. Folders inside archives cannot be chosen. In the app on a Mac the browser's keys use Cmd instead of Ctrl, and Cmd+Shift+Period shows every file, as in the Mac's own file dialogs.
 
 ### What you hear when a document opens
 
@@ -120,7 +120,7 @@ The terminal window's own title becomes the document's name when you open one, s
 
 In hybrid and screen-reader modes, the screen is laid out for a Braille display, which shows one line of about 40 cells at a time. Each line starts with its meaning in the first cell:
 
-- **The title line** starts with the position: "Line 12 of 400, 3%, Ready", then the other parts, then the document's title, without "textweaver:". In edit mode it reads "Line 212 of 400, Edit, modified, Ready, 51%": the percentage moves to the end, so "modified" is inside the first 40 cells even at three-digit lines. The window's status bar shows the same parts, also starting with a capital.
+- **The title line** starts with the position: "Line 12 of 400, 3%, Ready", then the other parts, then the document's title, without "textweaver:". In edit mode it reads "Line 212 of 400, Edit, modified, Ready, 51%": the percentage moves to the end, so "modified" is inside the first 40 cells even at three-digit lines. The app's status bar shows the same parts, also starting with a capital.
 - **The status area** has a fixed height, big enough for the longest text textweaver puts there (600 characters), and at most half the screen. The document does not move up and down with each message, and a long line or paragraph is shown in full.
 - **Line numbers** start at the left edge ("12  Text"), and the reading ruler marks its line with underline and bold only, with no mark in a column of its own.
 - **The key hint line** is hidden, since F1, the keyboard shortcuts list (`?`), and the menus name the keys. `[display] hints = "on"` shows it again, starting at the edge. A prompt still uses that line.
@@ -136,7 +136,7 @@ Code blocks are drawn in the theme's code colors. When a block names its languag
 
 Press **Space** to start reading from the cursor. Press it again to pause. Press it once more to go on. Reading goes on from the last word you heard, so you may hear one word twice, but you never miss one. If you move the cursor while paused, reading goes on from the new place.
 
-**Alt+P** does the same, and still works when single-key shortcuts are off. The window uses **Ctrl+Shift+Space**.
+**Alt+P** does the same, and still works when single-key shortcuts are off. The app uses **Ctrl+Shift+Space**.
 
 When textweaver pauses, it says "Paused."
 
@@ -158,10 +158,10 @@ If nothing is being read and a search is active, Escape clears the search and sa
 
 These keys read a piece of text where the cursor is. They do not move the cursor.
 
-- **c**: say the character. Terminal chord **Alt+Shift+C**; window **Ctrl+Shift+C**.
-- **w**: say the word. Terminal chord **Alt+Shift+W**; window **Ctrl+Shift+W**.
-- **.** (period): say the sentence. Terminal chord **Alt+Shift+S**; window **Ctrl+Shift+E**.
-- **Alt+Shift+L**: say the line. Window **Ctrl+L**.
+- **c**: say the character. Terminal chord **Alt+Shift+C**; app **Ctrl+Shift+C**.
+- **w**: say the word. Terminal chord **Alt+Shift+W**; app **Ctrl+Shift+W**.
+- **.** (period): say the sentence. Terminal chord **Alt+Shift+S**; app **Ctrl+Shift+E**.
+- **Alt+Shift+L**: say the line. App **Ctrl+L**.
 - **,** (comma): say the paragraph.
 - **v**: read the selected text. With nothing selected, you hear "No selection."
 
@@ -207,19 +207,19 @@ Windows Terminal moves between panes with **Alt+Down** and **Alt+Up**; **Alt+.**
 ### Paragraphs
 
 - **p**, **]**, **Ctrl+Down**, or **Ctrl+P**: next paragraph.
-- **Shift+P**, **[**, or **Ctrl+Up**: previous paragraph. The window also has **Ctrl+Shift+P**.
+- **Shift+P**, **[**, or **Ctrl+Up**: previous paragraph. The app also has **Ctrl+Shift+P**.
 
 ### Headings
 
 There are two kinds of heading keys. One reads from the heading. The other only moves.
 
-- **>**: read from the next heading. The window also has **Ctrl+H**.
-- **<**: read from the previous heading. The window also has **Ctrl+Shift+H**.
+- **>**: read from the next heading. The app also has **Ctrl+H**.
+- **<**: read from the previous heading. The app also has **Ctrl+Shift+H**.
 - **h**, **}**, or **Alt+H**: move to the next heading without reading.
 - **Shift+H**, **{**, or **Alt+Shift+H**: move to the previous heading without reading.
 - **1** to **6**: the next heading at that level. **Shift** with the digit: the previous one. textweaver matches the digit key itself, so this works on any keyboard layout; see [the keyboard reference](keyboard.md#terminal-notes).
 
-You hear the heading level and text, for example "Heading level 2: Methods". **Alt+H** and **Alt+Shift+H** are chords, so they also work in edit mode and with single-key shortcuts turned off. They are terminal keys; the window has **Ctrl+H** and **Ctrl+Shift+H**.
+You hear the heading level and text, for example "Heading level 2: Methods". **Alt+H** and **Alt+Shift+H** are chords, so they also work in edit mode and with single-key shortcuts turned off. They are terminal keys; the app has **Ctrl+H** and **Ctrl+Shift+H**.
 
 ### The outline: Alt+O
 
@@ -233,7 +233,7 @@ The outline works while reading and while editing; in edit mode it lists the hea
 
 ### Tables, lists, links, and more
 
-- **t**: next table. **Shift+T**: previous table. The window also has **Ctrl+T** and **Ctrl+Shift+T**.
+- **t**: next table. **Shift+T**: previous table. The app also has **Ctrl+T** and **Ctrl+Shift+T**.
 - **l**: next list. **Shift+L**: previous list.
 - **i**: next list item. **Shift+I**: previous list item.
 - **k** or **u**: next link. **Shift+K** or **Shift+U**: previous link.
@@ -272,7 +272,7 @@ On a footnote reference, **Alt+Shift+F** goes to the note; on the note, it goes 
 - **d**, **F11**, or **Alt+PageDown**: next chapter.
 - **Shift+D** or **Alt+PageUp**: previous chapter. More than five words into a chapter, this goes back to its start instead.
 
-Chapters are the book's sections when the document has them (EPUB chapters, Word sections, PDF bookmarks). Otherwise they are the level-1 headings. A document with neither says "This document has no chapters." Some terminal programs keep F11 for themselves; the Alt chords always work. The window uses only the Alt chords.
+Chapters are the book's sections when the document has them (EPUB chapters, Word sections, PDF bookmarks). Otherwise they are the level-1 headings. A document with neither says "This document has no chapters." Some terminal programs keep F11 for themselves; the Alt chords always work. The app uses only the Alt chords.
 
 ### Start and end
 
@@ -341,9 +341,9 @@ You hear the match number, the count, and the line, for example "Match 2 of 5:" 
 ### Next and previous match
 
 - **F3** or **n**: next match.
-- **F4** or **Shift+N**: previous match (**Shift+F3** in the window).
+- **F4** or **Shift+N**: previous match (**Shift+F3** in the app).
 
-At the end, the search wraps and says "Wrapped to top." or "Wrapped to bottom." If you have not searched yet, these keys open the Find prompt. The window uses **F3** and **Shift+F3**, as other Windows programs do, besides **n** and **Shift+N**.
+At the end, the search wraps and says "Wrapped to top." or "Wrapped to bottom." If you have not searched yet, these keys open the Find prompt. The app uses **F3** and **Shift+F3**, as other Windows programs do, besides **n** and **Shift+N**.
 
 ### Clear the search
 
@@ -454,7 +454,7 @@ Choose **Document overview** in the Say menu (under Reading) or the command pale
 
 ## Where am I: Shift+W or Alt+Shift+Y
 
-Press **Shift+W**, or **Alt+Shift+Y** from any mode. You hear the line, the number of lines, and the percentage, for example "Line 12 of 300, 4 percent." In a PDF, or any other paged format, the page comes first: "Page 12 of 30. Line 400 of 2000, 20 percent." In a table you also hear where in it: "Table, row 2 of 5, column 3 of 4." At normal verbosity you also hear the word number and the heading above you: "Under heading Methods." It ends with the time left at your current rate: "About 3 minutes left." The window's status bar shows the same time left, and changes it once a minute. At high verbosity you also hear the document's title and the mode, when it is not plain reading. This works in edit mode too, on the headings as you have written them.
+Press **Shift+W**, or **Alt+Shift+Y** from any mode. You hear the line, the number of lines, and the percentage, for example "Line 12 of 300, 4 percent." In a PDF, or any other paged format, the page comes first: "Page 12 of 30. Line 400 of 2000, 20 percent." In a table you also hear where in it: "Table, row 2 of 5, column 3 of 4." At normal verbosity you also hear the word number and the heading above you: "Under heading Methods." It ends with the time left at your current rate: "About 3 minutes left." The app's status bar shows the same time left, and changes it once a minute. At high verbosity you also hear the document's title and the mode, when it is not plain reading. This works in edit mode too, on the headings as you have written them.
 
 ## Hear it again: ' and z
 
@@ -503,9 +503,9 @@ For more help reading, such as one word at a time (RSVP), bionic reading, and a 
 
 ## Faster, slower, and the voice
 
-- **+** or **=**: faster. **-**: slower. Each step is 20 words per minute. The window also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size.
+- **+** or **=**: faster. **-**: slower. Each step is 20 words per minute. The app also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size.
 - **F8**: cycle the speed presets: skim, normal, study, slow.
-- **Alt+V**: choose a voice. The window uses **Ctrl+Shift+V**.
+- **Alt+V**: choose a voice. The app uses **Ctrl+Shift+V**.
 
 The [speech guide](speech.md) covers rate, pitch, volume, and voices.
 
@@ -552,7 +552,7 @@ interface_announcements = "minimal"
 
 ## Define a word: Ctrl+Shift+D or Alt+E
 
-**Ctrl+Shift+D** in the window, or **Alt+E** in the terminal, defines the word at the cursor, or the words you selected (`ice cream`). textweaver looks in your own glossary first, then in Open English WordNet, and says how the word is pronounced, from the CMU Pronouncing Dictionary. Everything is on your computer: nothing goes to the internet.
+**Ctrl+Shift+D** in the app, or **Alt+E** in the terminal, defines the word at the cursor, or the words you selected (`ice cream`). textweaver looks in your own glossary first, then in Open English WordNet, and says how the word is pronounced, from the CMU Pronouncing Dictionary. Everything is on your computer: nothing goes to the internet.
 
 The senses come up in a list. The first item is the pronunciation, respelled with the stressed syllable in capitals ("Pronounced RUN-ing."). Each sense then says its headword, its part of speech, which sense it is, the definition, an example, synonyms, opposites, and what it is a kind of:
 
@@ -568,7 +568,7 @@ Up and Down move through the senses. Enter copies one to the clipboard, for a no
 
 ## Reading statistics: Ctrl+Shift+Y or Alt+Y
 
-textweaver counts the time it spends reading each document aloud, the furthest point you reached, and the sessions: each time you open a document and read it. **Ctrl+Shift+Y** in the window, or **Alt+Y** in the terminal, lists:
+textweaver counts the time it spends reading each document aloud, the furthest point you reached, and the sessions: each time you open a document and read it. **Ctrl+Shift+Y** in the app, or **Alt+Y** in the terminal, lists:
 
 - the total time read, over how many sessions and documents;
 - this document's time, furthest point, and sessions;
@@ -603,7 +603,7 @@ Press **Shift+F1**, then any key: you hear what the key does, its keys, and wher
 
 ## The command palette: F2
 
-Press **F2** to run any command by name. **Alt+X** and **:** open it too. The window uses **F2** and **:**. You hear "Command. Type part of a name; Tab completes, Up and Down list matches." (at low verbosity, just "Command"); the bottom line shows "Command".
+Press **F2** to run any command by name. **Alt+X** and **:** open it too. The app uses **F2** and **:**. You hear "Command. Type part of a name; Tab completes, Up and Down list matches." (at low verbosity, just "Command"); the bottom line shows "Command".
 
 1. Type part of a command's name, such as `next head`, or its first letters: `ep` finds Export PDF.
 2. Press **Tab** to complete it. You hear how many commands match and the first few names.
@@ -638,7 +638,7 @@ For a file textweaver writes (Save as, and the exports), F4 chooses the folder i
 
 ## Help: ? and F1
 
-- **?**: list every keyboard shortcut with its current keys, including your own changes. Up and Down move, **Enter** runs the command, **Escape** closes. In the window, the Help menu opens it too.
+- **?**: list every keyboard shortcut with its current keys, including your own changes. Up and Down move, **Enter** runs the command, **Escape** closes. In the app, the Help menu opens it too.
 - **F1**: open the help, a short list of the most useful keys.
 
 In any list: **Up** and **Down** move, **PageUp** and **PageDown** move ten items, **Home** and **End** go to the first and last, a letter jumps to the next item starting with it, **Enter** chooses, and **Escape** or **Backspace** closes. At the ends you hear "Top of list." or "End of list."; with `cursor = "status"` the status line keeps the item after it, such as "End of list. 12 of 12, Conclusion", so your Braille display still shows where you are. **F1** or **Alt+End** says the list's introduction again (its name, how many items it has, and the keys it takes), then the item you are on, such as "3 of 12". **Alt+'** says the last message again.

@@ -1,6 +1,6 @@
-# The window in pictures
+# The textweaver app in pictures
 
-These eight pictures show the textweaver window (`textweaver-gui`) to a new user. They are drawn without a window on screen, by Vello's CPU renderer, from the same widgets the window uses, with the sample document `fixtures/sample.md` and fresh settings. Unless a description says otherwise, the window is 1100 by 780 pixels at 100 percent scale.
+These eight pictures show the textweaver app (`textweaver-gui`) to a new user. They are drawn without a window on screen, by Vello's CPU renderer, from the same widgets the app uses, with the sample document `fixtures/sample.md` and fresh settings. Unless a description says otherwise, the app is 1100 by 780 pixels at 100 percent scale.
 
 The reading position is on the word "Jones" in the first paragraph: the spoken word has a solid band, and its sentence ("Dr. Jones arrived at 3:30 p.m.") a paler band and an underline, so the sentence never depends on its band color alone. For the pictures, `[highlight] granularity` is "both"; the default, "word", draws the word only.
 
@@ -36,9 +36,9 @@ Description: the reading view in Lamplight, the soft dark theme: dark brown pane
 
 ## A narrow window
 
-![The window at 780 by 540 pixels: one folded bar with two rows of buttons above the document](images/gui-narrow-780x540.png)
+![The app at 780 by 540 pixels: one folded bar with two rows of buttons above the document](images/gui-narrow-780x540.png)
 
-Description: the window at 780 by 540 pixels, just under the folding width. Below 800 pixels wide, the header and the toolbar fold into one bar above the document, and the buttons hide their keys. The bar holds two rows of buttons: Open, Font, Start editing, Settings and Commands, then Play, Stop, Previous sentence and Next sentence, with Slower and Faster at the right. The document shows the title, the first paragraph and the start of the list, and the status bar fits on one line.
+Description: the app at 780 by 540 pixels, just under the folding width. Below 800 pixels wide, the header and the toolbar fold into one bar above the document, and the buttons hide their keys. The bar holds two rows of buttons: Open, Font, Start editing, Settings and Commands, then Play, Stop, Previous sentence and Next sentence, with Slower and Faster at the right. The document shows the title, the first paragraph and the start of the list, and the status bar fits on one line.
 
 ## Settings, with a filter
 
@@ -60,6 +60,6 @@ Description: after Start editing, the document's frame turns dashed and an "Edit
 
 ## See also
 
-- [The textweaver window](gui.md)
+- [The textweaver app](gui.md)
 - [Reading aids](reading-aids.md)
 - [Themes](themes.md)

@@ -1,6 +1,6 @@
 # Using textweaver with a screen reader
 
-This guide is for people who use a screen reader, such as JAWS, NVDA, VoiceOver, or Orca, and want to use textweaver's terminal reader alongside it. It explains the three accessibility modes, how to stop hearing things twice, what your screen reader can read, the settings to try in NVDA and JAWS, which terminals to use, and which keys may clash. It also covers braille displays, with a checklist for a 40-cell display, and the window, and ends with a checklist for trying each mode.
+This guide is for people who use a screen reader, such as JAWS, NVDA, VoiceOver, or Orca, and want to use textweaver's terminal reader alongside it. It explains the three accessibility modes, how to stop hearing things twice, what your screen reader can read, the settings to try in NVDA and JAWS, which terminals to use, and which keys may clash. It also covers braille displays, with a checklist for a 40-cell display, and the textweaver app, and ends with a checklist for trying each mode.
 
 textweaver's keys are the same in every mode. See [Reading and moving around](reading.md) and the [keyboard reference](keyboard.md).
 
@@ -165,7 +165,7 @@ textweaver runs in any terminal that sends key presses in the usual way.
 
 ### Windows Terminal or the classic console
 
-textweaver runs in Windows Terminal and in the classic console (conhost, the window `cmd` opens by default).
+textweaver runs in Windows Terminal and in the classic console (conhost, the app `cmd` opens by default).
 
 - Windows Terminal exposes its text through UI Automation, which recent NVDA and JAWS versions use. The classic console is older and well known to screen readers. Try both; which works better with JAWS and NVDA for each mode has not been recorded yet. **Not yet verified.**
 - Paste with **Ctrl+V** in Windows Terminal, or with right-click in either.
@@ -179,10 +179,10 @@ Windows Terminal keeps some keys for itself, so textweaver never sees them. Thes
 - **Alt+Shift+Up** and **Alt+Shift+Down** resize panes. In textweaver they make RSVP faster and slower; **Alt+Shift+PageUp** and **Alt+Shift+PageDown** do the same and reach textweaver.
 - **F11** and **Alt+Enter** switch full screen. In textweaver **F11** is the next chapter. Use **Alt+PageDown** and **Alt+PageUp** for chapters.
 - **Ctrl+C** copies when text is selected in Windows Terminal; otherwise textweaver gets it and copies. **Ctrl+V** pastes, which textweaver takes as pasted text.
-- **Alt+Shift+D**, **Alt+Shift+minus**, and **Alt+Shift+plus** split the window into panes. So the terminal adds a reference by DOI or ISBN with **Alt+B** (the window keeps **Alt+Shift+D**), and "add reference" is in the command palette (**F2**). Pitch is **Alt+=** and **Alt+-**: pressing Shift by mistake splits the window.
+- **Alt+Shift+D**, **Alt+Shift+minus**, and **Alt+Shift+plus** split the app into panes. So the terminal adds a reference by DOI or ISBN with **Alt+B** (the app keeps **Alt+Shift+D**), and "add reference" is in the command palette (**F2**). Pitch is **Alt+=** and **Alt+-**: pressing Shift by mistake splits the app.
 - **Ctrl+Alt+Left** moves to the previous pane in Windows Terminal 1.24 (`Terminal.MoveFocusPrevious` in its defaults). In textweaver it is the previous cell in a table row; with one pane open Windows Terminal may pass it on, **not yet verified**, or run `table previous column` from the palette or give it another key in `keymap.toml`. The other **Ctrl+Alt** arrows are not bound by Windows Terminal, but some graphics drivers rotate the screen with them, and a screen reader may keep them for its own table commands.
 - textweaver's newer chords were checked against the same list and do not clash: **Alt+Shift+Q** (citations), **Alt+Shift+X** (explore math), **Alt+Shift+Z** (syllables), **Alt+Shift+J** (difficult words), **Alt+B** (add a reference), **F12** and **Shift+F12** (notes), **Ctrl+Down** and **Ctrl+Up** (paragraphs), and **Alt+Shift+PageUp** and **Alt+Shift+PageDown** (RSVP).
-- **Alt+Space** opens the window menu. textweaver does not use it.
+- **Alt+Space** opens the app menu. textweaver does not use it.
 - **Ctrl+Shift** chords (new tab, close pane, find, scroll) and **Ctrl+Alt** with digits (switch tabs) do not clash: terminals cannot send textweaver Ctrl+Shift chords, and textweaver's terminal keys use no Ctrl+Alt digits.
 
 To unbind a key in Windows Terminal, open its settings (**Ctrl+comma**), choose Actions, and remove the key from the action; or add this to the `actions` list in its `settings.json`, one line per key:
@@ -221,7 +221,7 @@ textweaver's own words (messages, lists, help, and settings) are in English, Spa
 
 ## Braille displays
 
-textweaver draws no braille of its own, in the terminal or in the window. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. This section is written for a 40-cell display, the HumanWare Mantis Q40, with NVDA or JAWS on Windows.
+textweaver draws no braille of its own, in the terminal or in the app. A braille display shows what your screen reader shows: the line at the terminal's cursor, and new text as it appears. This section is written for a 40-cell display, the HumanWare Mantis Q40, with NVDA or JAWS on Windows.
 
 ### Set up textweaver for the display
 
@@ -276,14 +276,14 @@ In Settings Center (**Insert+6**), Braille group. **Every item here is not yet v
 
 ### What has been tried
 
-- **Tried in testing:** a 40-cell Mantis Q40 through NVDA and JAWS on Windows, reading the status line, messages, and moving by unit in the terminal reader, before this layout; and, in the window, the document control, the settings dialog, and edit mode, across two sessions. The layout above waits for the checklist.
+- **Tried in testing:** a 40-cell Mantis Q40 through NVDA and JAWS on Windows, reading the status line, messages, and moving by unit in the terminal reader, before this layout; and, in the app, the document control, the settings dialog, and edit mode, across two sessions. The layout above waits for the checklist.
 - **Not tried:** other cell widths, other display models, Orca's braille on Linux, and VoiceOver's on macOS.
 - **The BRF writer** (`tw convert --to brf`, see [Converting documents](converting.md)) is a separate feature: a grade 1, or grade 2 with the `liblouis` feature, braille file you save and read on a notetaker or emboss, not the live display output above. A BRF from a document with math writes the math in Nemeth or UEB mathematics; see [Math in braille files](math.md#math-in-braille-files).
 - If your combination behaves differently from this, add it to the checklist below and let the project know what you found.
 
-## The GUI
+## The app
 
-textweaver also has a window, written entirely in Rust with AccessKit for screen readers. It shares documents, keys, settings, notes, and voices with the terminal reader, and it has been checked with NVDA, JAWS, and a braille display on Windows. [The window guide](gui.md) covers it in full: starting it, the file chooser, edit mode, how messages reach your screen reader (a live region, or UI Automation notifications), and the spoken word's highlight. [ADR-0027](adr/0027-xilem-gui.md), [ADR-0028](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033](adr/0033-gui-session-2-and-edit-mode.md) record what was checked.
+textweaver also has an app, written entirely in Rust with AccessKit for screen readers. It shares documents, keys, settings, notes, and voices with the terminal reader, and it has been checked with NVDA, JAWS, and a braille display on Windows. [The app guide](gui.md) covers it in full: starting it, the file chooser, edit mode, how messages reach your screen reader (a live region, or UI Automation notifications), and the spoken word's highlight. [ADR-0027](adr/0027-xilem-gui.md), [ADR-0028](adr/0028-xilem-gui-after-the-session.md), and [ADR-0033](adr/0033-gui-session-2-and-edit-mode.md) record what was checked.
 
 ## Checklist: try each mode with JAWS and NVDA
 
@@ -348,8 +348,8 @@ Please note which steps did not behave as expected, with the screen reader, its 
 - [Keyboard reference](keyboard.md): every key, what changed, the classic preset, and what terminals cannot send.
 - [Settings](settings.md): the `[accessibility]` settings and `[keyboard] preset`.
 - [Converting documents](converting.md): the `brf` braille output, and the other formats `tw convert` writes.
-- [The window guide](gui.md): the window in full, including edit mode and the file chooser.
+- [The app guide](gui.md): the app in full, including edit mode and the file chooser.
 - [Troubleshooting](troubleshooting.md): common problems and how to report a bug.
 - [ADR-0006: Keymap, actions, and announcements](adr/0006-keymap-and-actions.md): how announcements reach the status line.
-- [ADR-0014: GUI toolkit](adr/0014-gui-toolkit.md): the window preview and what was checked.
+- [ADR-0014: GUI toolkit](adr/0014-gui-toolkit.md): the app preview and what was checked.
 - [Documentation index](README.md)

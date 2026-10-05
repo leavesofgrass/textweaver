@@ -2,7 +2,7 @@
 
 textweaver has aids that make text easier to see and follow. They change how text looks, never what it says. Speech, search, bookmarks, and notes always use the real text.
 
-Every aid can be turned on and off, and textweaver says when it changes. The keys, in both the terminal and the window, are:
+Every aid can be turned on and off, and textweaver says when it changes. The keys, in both the terminal and the textweaver app, are:
 
 - **Alt+Shift+R**: show or hide RSVP, starting from the cursor.
 - **Alt+Shift+P**: start or pause RSVP.
@@ -14,7 +14,7 @@ Every aid can be turned on and off, and textweaver says when it changes. The key
 - **Alt+Shift+Z**: syllables shown or hidden.
 - **Alt+Shift+J**: difficult words marked or not.
 
-In the window (`textweaver-gui`), RSVP has its own strip under the document, so it never covers the text, and the words before and after sit to its left and right; see [The textweaver window](gui.md#reading-aids).
+In the app (`textweaver-gui`), RSVP has its own strip under the document, so it never covers the text, and the words before and after sit to its left and right; see [The textweaver app](gui.md#reading-aids).
 
 The [keyboard reference](keyboard.md) lists every key. Each aid's settings are in the `[reading_aids]` sections of `settings.toml`; [Settings](settings.md#reading_aids) lists them.
 
@@ -35,7 +35,7 @@ RSVP shows one word at a time in the same place on the screen. Your eyes stay st
 - A word too long for the box ends with `…`, so you know part of it is hidden.
 - The status line says where you are: for example, "Word 12 of 300, 3 percent. Sentence 2 of 20. 300 words per minute. Paused."
 
-A note on safety: fast RSVP changes the screen many times a second. textweaver changes only the word, never the whole box: the box never goes blank or moves between words. WCAG 2.3.1 allows at most three flashes a second over an area bigger than about a quarter of what the eye takes in at once. A test checks the fastest rate, 1,500 words a minute, against that limit: the terminal box (with a terminal font up to about 24 points) and the window's RSVP panel stay well under it, because only the letters change. A frontend that ever draws much larger words has a cap ready that slows those changes to three flashes a second ([ADR-0037](adr/0037-extractive-summaries.md)). If flicker bothers you, slow down or use a smaller word size.
+A note on safety: fast RSVP changes the screen many times a second. textweaver changes only the word, never the whole box: the box never goes blank or moves between words. WCAG 2.3.1 allows at most three flashes a second over an area bigger than about a quarter of what the eye takes in at once. A test checks the fastest rate, 1,500 words a minute, against that limit: the terminal box (with a terminal font up to about 24 points) and the app's RSVP panel stay well under it, because only the letters change. A frontend that ever draws much larger words has a cap ready that slows those changes to three flashes a second ([ADR-0037](adr/0037-extractive-summaries.md)). If flicker bothers you, slow down or use a smaller word size.
 
 ## Bionic reading
 
@@ -68,11 +68,11 @@ word_spacing = 0.16
 
 ## Fonts
 
-In the window you can choose the font and its size; how bold it is is set in `settings.toml`.
+In the app you can choose the font and its size; how bold it is is set in `settings.toml`.
 
 The terminal version always uses the terminal's own font. A terminal program cannot change the font, so to read in a different font there, change it in your terminal's settings. Everything else on this page works in the terminal.
 
-### The font list and text size in the window
+### The font list and text size in the app
 
 - **Ctrl+D**, or the Font button, opens the font list. The fonts that come with textweaver are first, marked "built in", then Lexend ("download, 206 KB" until it is downloaded), then the fonts installed on your computer. It is a list like textweaver's others: a letter moves to the next font starting with it, and Enter uses the font at once. You hear, for example, "Font: OpenDyslexic." Escape keeps the font you had.
 - **Ctrl+Plus** and **Ctrl+Minus** make the text larger and smaller, from 8 to 72 points, and **Ctrl+0** goes back to 14 points. You hear, for example, "Text size 18 points."
@@ -115,15 +115,15 @@ All three reading fonts are free, under the SIL Open Font License. OpenDyslexic 
 
 ### Lexend on first choice
 
-When you choose Lexend, in Settings or in the window's font list (Ctrl+D), and it is not installed, textweaver asks first:
+When you choose Lexend, in Settings or in the app's font list (Ctrl+D), and it is not installed, textweaver asks first:
 
 "Download the Lexend font, 206 KB, SIL Open Font License? y or n"
 
-- **y** downloads it. textweaver says "Downloading Lexend.", then "Lexend downloaded and ready." The window uses it at once.
+- **y** downloads it. textweaver says "Downloading Lexend.", then "Lexend downloaded and ready." The app uses it at once.
 - **n** says "Not downloaded. Another font is used." Lexend stays your choice, and textweaver uses another reading font, or a plain font, so you can keep reading. Choosing Lexend again asks again.
 - Any other key asks the question again.
 
-The window's font list says which it is: "Lexend (download, 206 KB)" before, "Lexend (downloaded)" after. If you have Lexend installed yourself, textweaver uses that and asks nothing.
+The app's font list says which it is: "Lexend (download, 206 KB)" before, "Lexend (downloaded)" after. If you have Lexend installed yourself, textweaver uses that and asks nothing.
 
 What textweaver downloads, and how it checks it:
 
@@ -131,7 +131,7 @@ What textweaver downloads, and how it checks it:
 - Each file is checked by its size and its SHA-256 fingerprint before it is kept. If one does not match, nothing is kept and textweaver says so: "Lexend not downloaded:" and the reason.
 - The files are kept in textweaver's data folder, in `fonts/lexend`, with the license, `OFL.txt`. Lexend's license also comes with textweaver, in `third_party/fonts/lexend/`.
 
-Once downloaded, Lexend works everywhere textweaver uses a font: the window, PDF files (`tw convert --font lexend`), and EPUB books, which carry the font and its license inside. Export to PDF or EPUB in the reader uses your reading font too, Lexend included; a font that is not on this computer leaves the export's usual font, and an installed font that textweaver does not bundle goes into PDF files only.
+Once downloaded, Lexend works everywhere textweaver uses a font: the app, PDF files (`tw convert --font lexend`), and EPUB books, which carry the font and its license inside. Export to PDF or EPUB in the reader uses your reading font too, Lexend included; a font that is not on this computer leaves the export's usual font, and an installed font that textweaver does not bundle goes into PDF files only.
 
 When there is no data folder (a session that keeps no files), textweaver says "No data folder to keep Lexend in." The lean reader, built without the `publish` feature, has no downloads and says "Font downloads are not in this version."; install Lexend yourself from its home page there, and textweaver finds it the next time it starts.
 
@@ -146,13 +146,13 @@ Font size is in points. The default is 14. `settings.toml` takes 6 to 144; the S
 - You can mark just the screen row, or the whole line when it wraps onto several rows.
 - **Mask** (off by default) dims everything outside the band. Dim text can be hard to see, so try it before you rely on it. In the terminal it looks the same in every terminal with full color or 256 colors; with 16 colors it uses the terminal's own dim, which some terminals draw weakly or not at all.
 
-In the terminal, the current line is underlined with a bar in the left margin. Lines in the band get a thinner bar. In the window, the current line has a band with a bar at its start, and lines in the band a paler band with a thinner bar. Nothing is shown by color alone.
+In the terminal, the current line is underlined with a bar in the left margin. Lines in the band get a thinner bar. In the app, the current line has a band with a bar at its start, and lines in the band a paler band with a thinner bar. Nothing is shown by color alone.
 
 ## Difficult words
 
 textweaver can mark rare words, so you can look them up before you read. A word is rare when it is uncommon in everyday English.
 
-Press **Alt+Shift+J** (or run `difficult words toggle` from the palette) to mark them. You hear "Difficult words underlined." In the terminal, each difficult word is underlined, never shown by color alone; the window underlines them with a thick line, the same rule. When verbosity is high (**Alt+Shift+V**), moving onto one with the Right or Left arrow adds "difficult word" after it: "mitochondria, difficult word". The choice is saved as `difficult_words = true` under `[reading_aids]`. See also [The textweaver window](gui.md#reading-aids).
+Press **Alt+Shift+J** (or run `difficult words toggle` from the palette) to mark them. You hear "Difficult words underlined." In the terminal, each difficult word is underlined, never shown by color alone; the app underlines them with a thick line, the same rule. When verbosity is high (**Alt+Shift+V**), moving onto one with the Right or Left arrow adds "difficult word" after it: "mitochondria, difficult word". The choice is saved as `difficult_words = true` under `[reading_aids]`. See also [The textweaver app](gui.md#reading-aids).
 
 To hear what a difficult word means as you move onto it, turn on `difficult_definitions` under `[reading_aids]` (off by default; it is also in the settings screen as "Difficult word definitions"). With difficult words marked and verbosity high, you then hear the first definition from the define-word dictionary, your glossary first: "mitochondria, difficult word: an organelle containing enzymes responsible for producing energy". Only the first part of the definition is said, at most about 100 characters. The dictionary opens quietly the first time; until it has, you hear "difficult word" alone. Without the dictionary file, nothing changes.
 
@@ -188,7 +188,7 @@ These are estimates. Other tools may give a slightly different grade.
 
 textweaver can show long words split into syllables, like `read·a·bil·i·ty`. Press **Alt+Shift+Z** (or run `syllables toggle` from the palette); you hear "Syllables shown." This helps you sound out a word. Only the screen changes. Speech, search, bookmarks, and positions use the word as it is.
 
-The separator is drawn between the letters, so the reading highlight still covers exactly the word being spoken, separators and all, and the cursor stays on the right letter. The choice is saved as `syllables = true` under `[reading_aids]`; `[reading_aids.syllable_options]` sets the separator (a middle dot by default) and which words are split. Both the terminal reader and the window draw the split; only the letters shown change, so your screen reader and Braille display still read the word whole. See also [The textweaver window](gui.md#reading-aids).
+The separator is drawn between the letters, so the reading highlight still covers exactly the word being spoken, separators and all, and the cursor stays on the right letter. The choice is saved as `syllables = true` under `[reading_aids]`; `[reading_aids.syllable_options]` sets the separator (a middle dot by default) and which words are split. Both the terminal reader and the app draw the split; only the letters shown change, so your screen reader and Braille display still read the word whole. See also [The textweaver app](gui.md#reading-aids).
 
 The split is worked out from English spelling rules, not a dictionary, so a few words split in odd places.
 

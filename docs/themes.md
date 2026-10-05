@@ -11,7 +11,7 @@ Galaxy is textweaver's default theme and the first in the list. It is star's def
 - Page `#1e1e1e`, text `#dadada`.
 - Headings in lavender, violet, periwinkle, and teal.
 - Links in purple (`#a882ff`), always underlined.
-- The word being spoken is dark text on a lavender band, in bold, inside an underlined sentence, in the terminal and in the window alike.
+- The word being spoken is dark text on a lavender band, in bold, inside an underlined sentence, in the terminal and in the app alike.
 
 One color changed from star: dim text (hints, line numbers, quotes) is `#858585` instead of `#7d7d7d`, because star's gray measured 4.0 to 1 against the page and the minimum is 4.5 to 1.
 
@@ -110,7 +110,7 @@ textweaver uses as many colors as your terminal offers:
 
 Inside tmux, and over SSH, a terminal usually gets 256 colors even when the terminal itself has full color. Set `TEXTWEAVER_COLOR=truecolor` if yours passes full color through.
 
-With full color or 256 colors, the title and status lines sit on the panel color, so the spoken word's band is the one strong color on the screen; with 16 colors or none they keep reverse video. The reading ruler's mask draws the text outside the band in a color most of the way toward the page, the same mask the window draws; with 16 colors or none it uses the terminal's dim attribute.
+With full color or 256 colors, the title and status lines sit on the panel color, so the spoken word's band is the one strong color on the screen; with 16 colors or none they keep reverse video. The reading ruler's mask draws the text outside the band in a color most of the way toward the page, the same mask the app draws; with 16 colors or none it uses the terminal's dim attribute.
 
 To turn color off, set the `NO_COLOR` environment variable to any value, such as `1`. To choose a level yourself, set `TEXTWEAVER_COLOR` to `truecolor`, `256`, `16`, or `none`. For example, in a Linux or macOS shell:
 
