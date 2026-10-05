@@ -127,7 +127,7 @@ CRATE_NO_ADR_NOTE = {
 LAYERS = [
     # (id, heading, one sentence, crates)
     ("tools", "Tools", "Maintenance tasks for developers; not part of the program.", ["xtask"]),
-    ("frontends", "Frontends", "What you run: the terminal reader, the command-line tool, and the textweaver app.",
+    ("frontends", "Frontends", "What you run: the terminal reader, the command-line tool, and the GUI.",
      ["tui", "cli", "gui", "xilem"]),
     ("application", "Application", "The application core that every frontend drives.", ["app"]),
     ("output", "Output and aids", "Writing other formats, and what changes how text looks.",
@@ -207,7 +207,7 @@ GUIDE_TITLES = {
     "install.md": "Installation guide",
     "screen-readers.md": "Screen reader guide",
     "roadmap.md": "Roadmap",
-    "gui.md": "The textweaver app",
+    "gui.md": "The textweaver window (GUI)",
     "adr/0014-gui-toolkit.md": "ADR-0014: GUI toolkit (wxDragon)",
 }
 
@@ -279,7 +279,7 @@ FEATURES = [
          "done", "Recovery is offered when you reopen the file.", "editing.md"),
         ("Citations in the editor",
          "Insert and format citations while writing.",
-         "done", "Alt+C picks a reference; Alt+B (app Alt+Shift+D) adds one by DOI or ISBN; Alt+Shift+Q says citations while reading.", "citations.md"),
+         "done", "Alt+C picks a reference; Alt+B (GUI Alt+Shift+D) adds one by DOI or ISBN; Alt+Shift+Q says citations while reading.", "citations.md"),
         ("Structure while writing and the outline",
          "Move by heading, list, link, and table in the text you are writing, and list the headings.",
          "done", "Alt+O lists the headings; type to filter them.", "editing.md"),
@@ -326,7 +326,7 @@ FEATURES = [
          "done", "Shift+F8 restarts speech at any time.", "troubleshooting.md"),
         ("Piper neural voices and a voice manager",
          "Download and use Piper voices, and manage every engine's voices in one list.",
-         "done", "Alt+V in the terminal, Ctrl+Shift+V in the app; Piper voices download on request, with model-accurate word timing.", "speech.md"),
+         "done", "Alt+V in the terminal, Ctrl+Shift+V in the GUI; Piper voices download on request, with model-accurate word timing.", "speech.md"),
     ]),
     ("Math and citations", [
         ("Math read aloud",
@@ -362,10 +362,10 @@ FEATURES = [
          "done", "Try them on the reading aids page.", "reading-aids.md"),
         ("Difficult words and syllables",
          "Mark difficult words and show words split into syllables.",
-         "done", "Alt+Shift+J and Alt+Shift+Z, in the terminal and the app.", "reading-aids.md"),
+         "done", "Alt+Shift+J and Alt+Shift+Z, in the terminal and the GUI.", "reading-aids.md"),
         ("Font choice",
          "Choose a reading font such as Atkinson Hyperlegible or OpenDyslexic.",
-         "done", "In the app and HTML views; a terminal always uses its own font.", "reading-aids.md"),
+         "done", "In the GUI and HTML views; a terminal always uses its own font.", "reading-aids.md"),
     ]),
     ("Library and tools", [
         ("Library",
@@ -385,10 +385,10 @@ FEATURES = [
          "done", "Through tw dictate.", "dictation.md"),
         ("Dictation from the microphone",
          "Speak and have your words typed.",
-         "done", "In edit mode with Ctrl+Shift+F9, in the reader and the app, and through tw dictate.", "dictation.md"),
+         "done", "In edit mode with Ctrl+Shift+F9, in the reader and the GUI, and through tw dictate.", "dictation.md"),
         ("Define a word",
          "Definitions, examples, synonyms, and pronunciation for the word at the cursor, from your glossary and Open English WordNet, offline.",
-         "done", "Ctrl+Shift+D in the app, Alt+E in the terminal; tw define on the command line.", "reading.md"),
+         "done", "Ctrl+Shift+D in the GUI, Alt+E in the terminal; tw define on the command line.", "reading.md"),
         ("Reading statistics",
          "Time read aloud, the furthest point, and sessions for each document, with a most-read list.",
          "done", "Ctrl+Shift+Y or Alt+Y; tw stats; off with [stats] enabled = false.", "reading.md"),
@@ -419,7 +419,7 @@ FEATURES = [
          "One file that runs on most Linux distributions from 2022 on, with a plain tarball as a fallback.",
          "done", "Built by the release workflow for x86_64 and aarch64.", "install.md"),
         ("Native GUI on Xilem",
-         "The textweaver app, for people who prefer a graphical program, in the all-Rust Xilem toolkit with AccessKit.",
+         "A native window for people who prefer a GUI, in the all-Rust Xilem toolkit with AccessKit.",
          "done", "Runs on Windows, macOS, and Linux, and ships with every release.", "gui.md"),
     ]),
 ]
