@@ -26,6 +26,15 @@
 //! (`TEXTWEAVER_PANDOC` names the program, `TEXTWEAVER_PANDOC_TIMEOUT` or
 //! [`ConvertOptions::pandoc_timeout`] the time limit).
 //!
+//! **carta** (feature `carta`). Org, reStructuredText, MediaWiki, DokuWiki,
+//! and Jira are read in process by carta's readers, which win over Pandoc
+//! where both could read a file; [`ConvertOptions::from`] names a format
+//! that has no extension of its own (`dokuwiki`, `jira`). AsciiDoc, Typst,
+//! LaTeX, MediaWiki, and Org output ([`OutputFormat::carta_writer`]) is
+//! written by carta's writers from the Markdown: the source itself, or the
+//! loaded document exported to Markdown. Without the feature those
+//! outputs are refused before a batch starts.
+//!
 //! **Citations.** Pandoc citations in Markdown sources (`[@doe2020]`) are
 //! formatted with `textweaver-cite` in a CSL style, and a References
 //! section is appended, for every output but Markdown (see [`citations`]
@@ -86,11 +95,23 @@ pub enum OutputFormat {
     Brf,
     /// Tagged PDF (`.pdf`).
     Pdf,
+    /// AsciiDoc (`.adoc`), written by carta (feature `carta`).
+    AsciiDoc,
+    /// Typst (`.typ`), written by carta (feature `carta`).
+    Typst,
+    /// LaTeX (`.tex`), a whole document with its preamble, written by
+    /// carta (feature `carta`).
+    Latex,
+    /// MediaWiki markup (`.wiki`), written by carta (feature `carta`).
+    MediaWiki,
+    /// Org mode (`.org`), written by carta (feature `carta`).
+    Org,
 }
 
 impl OutputFormat {
-    /// Every format, in display order.
-    pub const ALL: [OutputFormat; 7] = [
+    /// Every format, in display order, the ones carta writes last (see
+    /// [`available`](Self::available) for the ones this build writes).
+    pub const ALL: [OutputFormat; 12] = [
         OutputFormat::Markdown,
         OutputFormat::Html,
         OutputFormat::Text,
@@ -98,10 +119,17 @@ impl OutputFormat {
         OutputFormat::Docx,
         OutputFormat::Brf,
         OutputFormat::Pdf,
+        OutputFormat::AsciiDoc,
+        OutputFormat::Typst,
+        OutputFormat::Latex,
+        OutputFormat::MediaWiki,
+        OutputFormat::Org,
     ];
 
     /// Parses a name or extension (`md`, `markdown`, `html`, `htm`, `txt`,
-    /// `text`, `epub`, `docx`, `brf`, `braille`, `pdf`).
+    /// `text`, `epub`, `docx`, `brf`, `braille`, `pdf`, `adoc`,
+    /// `asciidoc`, `typ`, `typst`, `tex`, `latex`, `wiki`, `mediawiki`,
+    /// `org`).
     pub fn parse(s: &str) -> Option<Self> {
         match s
             .trim()
@@ -116,6 +144,11 @@ impl OutputFormat {
             "docx" | "word" => Some(OutputFormat::Docx),
             "brf" | "braille" => Some(OutputFormat::Brf),
             "pdf" => Some(OutputFormat::Pdf),
+            "adoc" | "asciidoc" => Some(OutputFormat::AsciiDoc),
+            "typ" | "typst" => Some(OutputFormat::Typst),
+            "tex" | "latex" => Some(OutputFormat::Latex),
+            "wiki" | "mediawiki" => Some(OutputFormat::MediaWiki),
+            "org" => Some(OutputFormat::Org),
             _ => None,
         }
     }
@@ -130,6 +163,11 @@ impl OutputFormat {
             OutputFormat::Docx => "docx",
             OutputFormat::Brf => "brf",
             OutputFormat::Pdf => "pdf",
+            OutputFormat::AsciiDoc => "adoc",
+            OutputFormat::Typst => "typ",
+            OutputFormat::Latex => "tex",
+            OutputFormat::MediaWiki => "wiki",
+            OutputFormat::Org => "org",
         }
     }
 
@@ -143,7 +181,31 @@ impl OutputFormat {
             OutputFormat::Docx => "Word",
             OutputFormat::Brf => "braille",
             OutputFormat::Pdf => "PDF",
+            OutputFormat::AsciiDoc => "AsciiDoc",
+            OutputFormat::Typst => "Typst",
+            OutputFormat::Latex => "LaTeX",
+            OutputFormat::MediaWiki => "MediaWiki",
+            OutputFormat::Org => "Org",
         }
+    }
+
+    /// carta's writer for this output (feature `carta`), for the formats
+    /// textweaver does not write itself.
+    pub fn carta_writer(self) -> Option<&'static str> {
+        match self {
+            OutputFormat::AsciiDoc => Some("asciidoc"),
+            OutputFormat::Typst => Some("typst"),
+            OutputFormat::Latex => Some("latex"),
+            OutputFormat::MediaWiki => Some("mediawiki"),
+            OutputFormat::Org => Some("org"),
+            _ => None,
+        }
+    }
+
+    /// True when this build writes the format: every format but carta's,
+    /// and carta's with the `carta` feature.
+    pub fn available(self) -> bool {
+        self.carta_writer().is_none() || cfg!(feature = "carta")
     }
 
     /// True for the formats written by the native writers.
@@ -179,6 +241,11 @@ pub struct ConvertOptions {
     pub force: bool,
     /// Loader options for non-Markdown sources.
     pub load: LoadOptions,
+    /// Read every source as this format, by name or extension (`dokuwiki`
+    /// and `jira`, which have no extension of their own, or any extension
+    /// a loader reads), instead of by each file's extension; `None` goes
+    /// by extension.
+    pub from: Option<String>,
     /// Use Pandoc for formats with no native loader, when installed.
     pub pandoc: bool,
     /// How long Pandoc may run on one file; `None` uses
@@ -207,6 +274,7 @@ impl Default for ConvertOptions {
             jobs: None,
             force: false,
             load: LoadOptions::default(),
+            from: None,
             pandoc: true,
             pandoc_timeout: None,
             write: WriteOptions::default(),
@@ -560,7 +628,9 @@ impl Converter {
 
     /// A converter with the given writers.
     pub fn with_writers(options: ConvertOptions, writers: Writers) -> Result<Self, ConvertError> {
-        if options.to.needs_writer() && writers.get(options.to).is_none() {
+        if !options.to.available()
+            || (options.to.needs_writer() && writers.get(options.to).is_none())
+        {
             return Err(ConvertError::Unavailable(options.to.label()));
         }
         if options.to == OutputFormat::Pdf {
@@ -582,6 +652,17 @@ impl Converter {
         } else {
             Registry::with_builtins()
         };
+        if let Some(from) = &options.from {
+            let named = Source::Bytes {
+                data: Vec::new(),
+                hint: from.clone(),
+            };
+            if registry.loader_for(&named).is_none() {
+                return Err(ConvertError::Output(format!(
+                    "No reader for the format {from} in this build. Name an extension a reader takes, such as org or rst, or dokuwiki or jira."
+                )));
+            }
+        }
         Ok(Converter {
             options,
             registry,
@@ -797,7 +878,8 @@ impl Converter {
     /// The converted bytes of a job's source, with the source size and the
     /// writer's warnings.
     fn convert_bytes(&self, job: &Job) -> Result<Output, String> {
-        let ext = extension(&job.source);
+        let from = self.options.from.as_deref();
+        let ext = from.map_or_else(|| extension(&job.source), str::to_ascii_lowercase);
         let is_markdown = MarkdownLoader.extensions().contains(&ext.as_str());
         let loader = self.registry.loader_for(&Source::Path(job.source.clone()));
         if is_markdown {
@@ -807,6 +889,29 @@ impl Converter {
                 .convert_markdown(job, &text)?
                 .read_from(bytes.len() as u64);
             out.sha256 = Some(report::sha256_hex(&bytes));
+            return Ok(out);
+        }
+        if let Some(from) = from {
+            // Named, not by extension: the bytes, with the format as hint.
+            let bytes = std::fs::read(&job.source).map_err(|e| format!("cannot read: {e}"))?;
+            let size = bytes.len() as u64;
+            let sha256 = report::sha256_hex(&bytes);
+            let source = Source::Bytes {
+                data: bytes,
+                hint: from.to_owned(),
+            };
+            let mut doc = self
+                .registry
+                .load(&source, &self.options.load)
+                .map_err(|e| e.to_string())?;
+            doc.meta.path = Some(job.source.clone());
+            if doc.meta.title.is_none() {
+                doc.meta.title = stem(&job.source);
+            }
+            let mut out = self.convert_document(job, &doc, None)?.read_from(size);
+            out.warnings
+                .splice(0..0, textweaver_formats::warnings(&doc.meta));
+            out.sha256 = Some(sha256);
             return Ok(out);
         }
         if loader.is_none() && textweaver_formats::pandoc::EXTENSIONS.contains(&ext.as_str()) {
@@ -868,6 +973,10 @@ impl Converter {
                     ..self.page(job, &rendered).map(Output::new)?
                 })
             }
+            to if to.carta_writer().is_some() => Ok(Output {
+                issues: self.markdown_issues(text),
+                ..write_carta(to, text)?
+            }),
             _ => {
                 let source = Source::Bytes {
                     data: text.as_bytes().to_vec(),
@@ -965,6 +1074,13 @@ impl Converter {
                 }
                 self.page(job, &rendered).map(Output::new)
             }
+            to if to.carta_writer().is_some() => {
+                let md = match markdown {
+                    Some(m) => m.to_owned(),
+                    None => textweaver_formats::to_markdown(doc),
+                };
+                write_carta(to, &md)
+            }
             format => {
                 let writer = self
                     .writers
@@ -1011,6 +1127,19 @@ impl Converter {
                 .clone(),
         )
     }
+}
+
+/// Markdown written by carta as `to`, one of the formats with an
+/// [`OutputFormat::carta_writer`].
+fn write_carta(to: OutputFormat, markdown: &str) -> Result<Output, String> {
+    #[cfg(feature = "carta")]
+    if let Some(name) = to.carta_writer() {
+        return textweaver_formats::carta::write_markdown(markdown, name)
+            .map(|text| Output::new(text.into_bytes()))
+            .map_err(|e| e.to_string());
+    }
+    let _ = markdown;
+    Err(format!("{} output is not available in this build", to.label()))
 }
 
 /// Lowercase extension of a path, or empty.

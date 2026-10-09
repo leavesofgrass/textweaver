@@ -220,6 +220,41 @@ fn missing_input_is_an_error() {
     assert!(err.to_string().contains("does not exist"));
 }
 
+#[cfg(feature = "carta")]
+#[test]
+fn a_named_format_reads_files_whatever_their_extension() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let src = write(
+        dir.path(),
+        "start.txt",
+        "====== Crows ======\nThey are //clever//.\n",
+    );
+    let out = dir.path().join("out");
+    let conv = |from: &str| {
+        Converter::new(ConvertOptions {
+            from: Some(from.to_owned()),
+            ..options(OutputFormat::Org, Some(&out))
+        })
+    };
+    let s = conv("dokuwiki")
+        .expect("converter")
+        .run(&[src])
+        .expect("run");
+    assert_eq!(s.converted, 1, "{:?}", statuses(&s));
+    let org = fs::read_to_string(out.join("start.org")).expect("read");
+    assert!(org.contains("* Crows"), "{org}");
+    assert!(org.contains("/clever/"), "{org}");
+    let err = conv("no-such-format").unwrap_err().to_string();
+    assert!(err.starts_with("No reader for the format no-such-format"), "{err}");
+}
+
+#[cfg(not(feature = "carta"))]
+#[test]
+fn carta_outputs_are_refused_without_the_feature() {
+    let err = Converter::new(options(OutputFormat::Typst, None)).unwrap_err();
+    assert!(err.to_string().starts_with("Typst output is not available"), "{err}");
+}
+
 #[test]
 fn pandoc_fallback_when_installed() {
     if !pandoc_available() {
