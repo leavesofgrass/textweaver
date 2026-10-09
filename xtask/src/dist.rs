@@ -5,8 +5,8 @@
 //! profile with fat LTO), each in a cargo run of its own so the reader
 //! gets only its own features, the engine hosts for the platform (Windows
 //! and Linux), and stages them with the pronunciation dictionaries, the
-//! licence, the third-party notices and licence files, and the user guides
-//! in `target/dist/textweaver-VERSION-PLATFORM/`, then archives the folder:
+//! licence, the copyright notice (`NOTICE`), the third-party notices and
+//! licence files, and the user guides in `target/dist/textweaver-VERSION-PLATFORM/`, then archives the folder:
 //! a `.zip` on Windows, a `.tar.gz` elsewhere. It fails if a notice is
 //! missing from the staged folder, or if the archive grew more than 10
 //! percent over the last release's without a note (`sizes.rs`).
@@ -397,8 +397,13 @@ pub(crate) const LINUX_DESKTOP_FILES: [(&str, &str); 2] = [
     ),
 ];
 
-/// Copies the third-party notices and the data licence files into `stage`.
+/// Copies textweaver's copyright notice, the third-party notices, and the
+/// data licence files into `stage`.
 pub(crate) fn stage_notices(root: &Path, stage: &Path) -> anyhow::Result<()> {
+    eci::copy(
+        &root.join(crate::notices::NOTICE),
+        &stage.join(crate::notices::NOTICE),
+    )?;
     eci::copy(
         &root.join(crate::notices::NOTICES),
         &stage.join(crate::notices::NOTICES),
@@ -409,10 +414,11 @@ pub(crate) fn stage_notices(root: &Path, stage: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Fails unless `stage` holds the licence, the notices, and every data
-/// licence file: a package must never ship without them.
+/// Fails unless `stage` holds the licence, the copyright notice, the
+/// notices, and every data licence file: a package must never ship without
+/// them.
 pub(crate) fn check_notices(stage: &Path) -> anyhow::Result<()> {
-    let required = ["LICENSE", crate::notices::NOTICES]
+    let required = ["LICENSE", crate::notices::NOTICE, crate::notices::NOTICES]
         .into_iter()
         .chain(LICENCE_FILES.iter().map(|(_, dest)| *dest));
     let missing: Vec<&str> = required.filter(|f| !stage.join(f).is_file()).collect();
@@ -719,6 +725,7 @@ mod tests {
         eci::copy(&root.join("LICENSE"), &stage.join("LICENSE")).unwrap();
         stage_notices(&root, &stage).unwrap();
         check_notices(&stage).unwrap();
+        assert!(stage.join("NOTICE").is_file());
         assert!(stage.join("licenses/scowl/Copyright").is_file());
         assert!(stage.join("licenses/lexicon/WORDNET-LICENSE").is_file());
         assert!(stage.join("licenses/fonts/opendyslexic/OFL.txt").is_file());

@@ -242,6 +242,20 @@ fn errors_are_one_line_with_exit_status_1() {
 }
 
 #[test]
+fn version_prints_the_version_then_the_copyright_line() {
+    let home = tempfile::tempdir().unwrap();
+    let out = tw_in(home.path(), &["--version"], "");
+    assert!(out.status.success(), "{out:?}");
+    let text = String::from_utf8(out.stdout).unwrap();
+    let mut lines = text.lines();
+    assert_eq!(
+        lines.next(),
+        Some(concat!("tw ", env!("CARGO_PKG_VERSION")))
+    );
+    assert_eq!(lines.next(), Some(textweaver_app::COPYRIGHT));
+}
+
+#[test]
 fn a_usage_error_exits_with_status_2() {
     let home = tempfile::tempdir().unwrap();
     let out = tw_in(home.path(), &["text", "--no-such-option"], "");
