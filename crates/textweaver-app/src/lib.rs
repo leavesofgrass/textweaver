@@ -155,8 +155,8 @@ mod audio_export;
 mod authoring;
 mod authoring_state;
 mod batch;
-pub mod braille_file;
-mod browse;
+mod braille_file;
+pub mod browse;
 mod overview;
 // In-reader export, preview, and citations: the full modules with the
 // `publish` feature, stand-ins that say "not in this build" without it.
