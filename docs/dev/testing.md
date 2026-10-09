@@ -42,7 +42,7 @@ The Python checks are written `python3` below. On Windows, run them with `py -3`
 
 - **links**: `python3 tools/check_links.py`. Every relative link and anchor in the Markdown docs and in `docs/site` must resolve.
 - **site-a11y**: `python3 tools/check_site_a11y.py`. Static accessibility checks of the `docs/site` pages: language, title, one level-1 heading and no skipped levels, the skip link, landmarks, a label for every control, text alternatives, and references that resolve.
-- **hosts32** (Windows only): the 32-bit engine hosts build.
+- **hosts32** (Windows only): the 32-bit engine hosts build (Eloquence, SAPI 5, DECtalk, and eSpeak NG).
 - **scripts**: shellcheck on the shell scripts, or PSScriptAnalyzer on the PowerShell scripts, when installed.
 
 Useful options: `--only fmt,clippy` runs some steps, `--fail-fast` stops at the first failure, and `--dry-run` prints the commands.

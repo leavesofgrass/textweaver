@@ -27,6 +27,7 @@ const SECTIONS: &[(&str, &str)] = &[
     ("SapiSettings", "sapi"),
     ("AppleSettings", "apple"),
     ("DectalkSettings", "dectalk"),
+    ("EspeakSettings", "espeak"),
     ("PiperSettings", "piper"),
     ("HighlightSettings", "highlight"),
     ("NormalizationSettings", "normalization"),

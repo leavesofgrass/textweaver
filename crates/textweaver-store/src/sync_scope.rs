@@ -90,6 +90,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("speech.sapi.onecore", Machine),
     ("speech.apple.backend", Machine),
     ("speech.dectalk.library", Machine),
+    ("speech.espeak.helper", Machine),
     ("speech.piper.voices", Machine),
     ("speech.piper.voice", Machine),
     ("speech.piper.phonemizer", Machine),

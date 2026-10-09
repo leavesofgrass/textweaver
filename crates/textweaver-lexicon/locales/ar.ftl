@@ -3377,6 +3377,11 @@ define-still-loading = ما زال القاموس قيد التحميل.
 # إعدادات.
 setting-speech-dectalk-library = مكتبة DECtalk
 setting-speech-dectalk-library-help = مكتبة DECtalk المراد تحميلها؛ عدم الضبط يبحث في الأماكن المعتادة.
+setting-speech-espeak-helper = البرنامج المساعد لـ eSpeak NG
+setting-speech-espeak-helper-help = تشغيل eSpeak NG في برنامجه المساعد الخاص، حتى لا يُغلق تعطّل المحرك textweaver. الوضع التلقائي يستخدم البرنامج المساعد على Windows عند تثبيته، ويشغّل eSpeak NG داخل textweaver في غيره.
+choice-speech-espeak-helper-auto = تلقائي
+choice-speech-espeak-helper-always = البرنامج المساعد دائمًا
+choice-speech-espeak-helper-never = داخل textweaver
 setting-speech-piper-voices = مجلد أصوات Piper
 setting-speech-piper-voices-help = مجلد أصوات Piper؛ عدم الضبط يستخدم مجلد piper في مجلد بيانات textweaver.
 setting-speech-piper-voice = صوت Piper

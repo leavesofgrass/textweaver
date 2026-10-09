@@ -3114,6 +3114,11 @@ define-still-loading = Dictionary still loading.
 # Settings: the DECtalk and Piper sections, the rate and pitch per voice, and the template author.
 setting-speech-dectalk-library = DECtalk library
 setting-speech-dectalk-library-help = The DECtalk library to load; not set searches the usual places.
+setting-speech-espeak-helper = eSpeak NG helper program
+setting-speech-espeak-helper-help = Run eSpeak NG in its own helper program, so an engine crash cannot close textweaver. Automatic uses the helper on Windows when it is installed, and runs eSpeak NG inside textweaver elsewhere.
+choice-speech-espeak-helper-auto = automatic
+choice-speech-espeak-helper-always = always the helper
+choice-speech-espeak-helper-never = inside textweaver
 setting-speech-piper-voices = Piper voices folder
 setting-speech-piper-voices-help = The folder of Piper voices; not set uses the piper folder in textweaver's data folder.
 setting-speech-piper-voice = Piper voice

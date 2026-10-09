@@ -3080,6 +3080,11 @@ define-still-loading = El diccionario aún se está cargando.
 # Ajustes.
 setting-speech-dectalk-library = Biblioteca de DECtalk
 setting-speech-dectalk-library-help = La biblioteca de DECtalk que se cargará; sin definir busca en los lugares habituales.
+setting-speech-espeak-helper = Programa auxiliar de eSpeak NG
+setting-speech-espeak-helper-help = Ejecutar eSpeak NG en su propio programa auxiliar, para que un fallo del motor no cierre textweaver. Automático usa el programa auxiliar en Windows cuando está instalado y, en los demás sistemas, ejecuta eSpeak NG dentro de textweaver.
+choice-speech-espeak-helper-auto = automático
+choice-speech-espeak-helper-always = siempre el programa auxiliar
+choice-speech-espeak-helper-never = dentro de textweaver
 setting-speech-piper-voices = Carpeta de voces de Piper
 setting-speech-piper-voices-help = La carpeta de voces de Piper; sin definir usa la carpeta piper de la carpeta de datos de textweaver.
 setting-speech-piper-voice = Voz de Piper

@@ -6,14 +6,14 @@ The [interactive architecture page](../site/architecture.html) shows the same cr
 
 ## The big picture
 
-textweaver is one Cargo workspace with 36 crates and a maintenance crate, `xtask`. Two programs come out of it:
+textweaver is one Cargo workspace with 37 crates and a maintenance crate, `xtask`. Two programs come out of it:
 
 - `textweaver`, the terminal reader, built from `crates/textweaver-tui`;
 - `tw`, the command-line tool, built from `crates/textweaver-cli`.
 
 A third program, `textweaver-xilem`, is the GUI, on Xilem, Linebender's all-Rust toolkit ([ADR-0027](../adr/0027-xilem-gui.md)). The first GUI, a feasibility spike on wxDragon ([ADR-0014](../adr/0014-gui-toolkit.md)), was removed once the Xilem GUI passed its second screen-reader test session.
 
-Three helper programs run speech engines in their own processes: `textweaver-eci-host` (Eloquence), `textweaver-sapi-host` (SAPI5 voices), and `textweaver-dectalk-host` (DECtalk), each in a 64-bit build and, on Windows, a 32-bit `-x86` build. `cargo xtask hosts` builds them.
+Four helper programs run speech engines in their own processes: `textweaver-eci-host` (Eloquence), `textweaver-sapi-host` (SAPI5 voices), `textweaver-dectalk-host` (DECtalk), and on Windows `textweaver-espeak-host` (eSpeak NG; Linux and macOS run eSpeak NG in process), each in a 64-bit build and, on Windows, a 32-bit `-x86` build. `cargo xtask hosts` builds them. The [eSpeak NG helper](espeak-helper.md) page explains how that host is built and why Windows prefers it.
 
 Everything a user does goes through one application core, `textweaver-app`. The terminal reader, the GUI, and the JSON-RPC server (`tw serve`) are thin frontends over it. They turn keys or messages into commands, and draw or send what the core returns. Lists and prompts are the core's too: a frontend sends list and prompt keys, and the core moves the focus, filters, completes, and says "item, 3 of 12", the same everywhere.
 
@@ -42,9 +42,10 @@ The crates are grouped here by the part of the system they serve. For each crate
 - **`textweaver-eci`**: ETI-Eloquence through its ECI library, in a host process, with the community dictionaries. ADRs: [0007](../adr/0007-eloquence-via-eci-host.md), [0012](../adr/0012-engine-host.md). Depends on core, speech, and enginehost.
 - **`textweaver-sapi`**: Windows SAPI5 and OneCore voices, in 64-bit and 32-bit host processes. ADRs: [0009](../adr/0009-sapi5-voices.md), [0012](../adr/0012-engine-host.md). Depends on core, speech, and enginehost.
 - **`textweaver-dectalk`**: a user-installed DECtalk, in a host process. ADRs: [0021](../adr/0021-dectalk.md), [0012](../adr/0012-engine-host.md). Depends on core, speech, and enginehost.
+- **`textweaver-espeak`**: an installed eSpeak NG in a helper program, `textweaver-espeak-host`, built for the library's architecture, and the backend that plays its audio. It drives libespeak-ng through the speech crate's loader in retrieval mode, so both ways of running eSpeak NG share one set of declarations. ADR: [0012](../adr/0012-engine-host.md); see [the eSpeak NG helper](espeak-helper.md). Depends on core, speech, and enginehost.
 - **`textweaver-apple`**: Apple's voices on macOS, as the `nsspeech` and `avspeech` backends. Empty on other systems. ADR: [0008](../adr/0008-apple-speech.md). Depends on core and speech.
 - **`textweaver-piper`**: Piper neural voices, run in process on RTen (a pure-Rust ONNX runtime), with word timing read from the model instead of estimated. Phonemes come from an installed `libespeak-ng` when present, else a built-in pure-Rust eSpeak NG port; voice downloads from Hugging Face are checked by hash and stay behind the `download` feature. ADR: [0023](../adr/0023-in-process-neural-speech.md). Depends on core, speech, and enginehost.
-- **`textweaver-engines`**: the one backend registry every frontend shares: the speech crate's built-ins plus Eloquence, SAPI5, Apple, DECtalk, and Piper, each configured from the settings, and the speech service configuration. It has the in-process engine features (`espeak`, `omnivox`, `speechd`, `mathcat`) and re-exports the engine crates. ADRs: [0001](../adr/0001-workspace-and-dependencies.md), [0012](../adr/0012-engine-host.md), [0023](../adr/0023-in-process-neural-speech.md). Depends on core, speech, store, eci, sapi, dectalk, apple, and piper.
+- **`textweaver-engines`**: the one backend registry every frontend shares: the speech crate's built-ins plus Eloquence, SAPI5, Apple, DECtalk, eSpeak NG's helper, and Piper, each configured from the settings, and the speech service configuration. It has the in-process engine features (`espeak`, `omnivox`, `speechd`, `mathcat`) and re-exports the engine crates. ADRs: [0001](../adr/0001-workspace-and-dependencies.md), [0012](../adr/0012-engine-host.md), [0023](../adr/0023-in-process-neural-speech.md). Depends on core, speech, store, eci, sapi, dectalk, espeak, apple, and piper.
 - **`textweaver-export`**: reads a document into WAV, MP3, or M4B with chapters, and writes SRT or WebVTT subtitles. ADR: [0011](../adr/0011-audio-export.md). Depends on core, speech, and text.
 
 ### State and input
@@ -88,7 +89,7 @@ Dependencies point down, from the frontends to the foundation, and never back up
 
 - `textweaver-core` depends on no other workspace crate. Everything else may depend on it.
 - `textweaver-speech` never sees a `Document`. It receives `Utterance`s: text plus an offset map. It depends only on core and math, so it can be tested with no document, no frontend, and no audio.
-- Engine crates (eci, sapi, dectalk, apple) depend on speech, not the other way round. `textweaver-engines` registers them with the speech registry; the app and the frontends use that crate, not each engine crate.
+- Engine crates (eci, sapi, dectalk, espeak, apple) depend on speech, not the other way round. `textweaver-engines` registers them with the speech registry; the app and the frontends use that crate, not each engine crate.
 - `textweaver-sync` depends only on core and store, and outside them only on serde, serde_json, sha2 (document identity), thiserror, and log: it reads and writes files in a folder, and never opens a network connection.
 - The editor works on a rope and core's `Edit`. The app applies the same edit to the `Document` with `Document::apply`, so markers, bookmarks, and notes move with it.
 - `textweaver-app` is the only crate that knows about everything. Frontends depend on the app, never on each other, except that the CLI runs the TUI in process for `tw open`.
@@ -106,7 +107,7 @@ The crates in levels, from the bottom up. Each crate depends only on crates in l
 2. text, math, cite, store, keymap, a11y, editor, and dictation;
 3. formats, aids, speech, render, writers, vault, and mathcat;
 4. enginehost, apple, export, and convert;
-5. eci, sapi, dectalk, and piper;
+5. eci, sapi, dectalk, espeak, and piper;
 6. engines;
 7. app;
 8. tui, xilem, and xtask;

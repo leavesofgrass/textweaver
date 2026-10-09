@@ -151,7 +151,7 @@ The [speech guide](speech.md) explains how each engine is highlighted.
 
 ### A voice or engine is missing
 
-Eloquence, SAPI voices, and DECtalk run in helper programs, called engine hosts. On Windows these are `textweaver-eci-host.exe`, `textweaver-sapi-host.exe`, `textweaver-dectalk-host.exe`, and their 32-bit versions ending in `-x86.exe`.
+Eloquence, SAPI voices, DECtalk, and on Windows eSpeak NG run in helper programs, called engine hosts. On Windows these are `textweaver-eci-host.exe`, `textweaver-sapi-host.exe`, `textweaver-dectalk-host.exe`, `textweaver-espeak-host.exe`, and their 32-bit versions ending in `-x86.exe`.
 
 1. Check that the host files are in the same folder as `textweaver.exe` and `tw.exe`. If you copied only the two programs somewhere else, copy the hosts and the `ibmtts-dictionaries` folder too. The doctor script checks this.
 2. A 32-bit SAPI voice (such as older VW or eSpeak SAPI voices) needs `textweaver-sapi-host-x86.exe`. Without it, 32-bit voices are not listed.
