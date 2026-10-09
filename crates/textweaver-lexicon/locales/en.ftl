@@ -515,8 +515,21 @@ help-the-command = the command { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Unknown command: { $text }.
-help-shortcuts-intro = Keyboard shortcuts, { $n } commands. Up and Down move, Enter runs, Escape closes.
+help-shortcuts-intro = Keyboard shortcuts, { $n } commands. Type to filter. Page Down moves to the next group, F1 explains a command, Enter runs it, Escape closes.
 help-shortcuts-title = Keyboard shortcuts
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = Keyboard shortcuts matching { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } of { $total } commands match.
+help-shortcuts-filter-none = No commands match { $query }. Backspace removes letters.
+help-shortcuts-filter-cleared = Filter cleared, { $n } commands.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }, { $n ->
+        [one] 1 command
+       *[other] { $n } commands
+    }. { $item }
 help-title = Help
 help-intro = Help. Up and Down move, Escape closes.
 
@@ -3157,7 +3170,7 @@ gui-prompt-path-hint = Type the path of a document, then press Enter. Tab comple
 gui-prompt-hint = Press Enter to accept, or Escape to cancel. Up and Down recall earlier answers.
 gui-palette-filter = Type to filter the commands
 gui-palette-list = Commands
-gui-palette-hint = Enter runs the first match; Tab moves to the list.
+gui-palette-hint = Enter runs the first match; Tab moves to the list; F1 explains a command.
 gui-open-failed = Could not open { $name }: { $error }
 gui-uia-unavailable = UI Automation notifications exist only on Windows; using the live region.
 gui-graphics-failed = The window could not start its graphics. The terminal reader, textweaver, needs none.
@@ -3511,17 +3524,17 @@ choice-accessibility-interface-announcements-off = off
 choice-accessibility-interface-announcements-minimal = minimal
 choice-accessibility-interface-announcements-normal = normal
 choice-accessibility-interface-announcements-full = full
-palette-item = { $name }, { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }, { $category }: { $help }.
-palette-item-recent = { $name }, recent, { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }, recent, { $category }: { $help }.
+palette-item = { $name }, { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }, { $keys }, recent
+palette-item-recent-no-keys = { $name }, recent
 palette-list-title = Commands matching { $query }
 palette-list-title-all = Commands
 palette-list-intro =
     { $title }, { $n ->
         [one] 1 command
        *[other] { $n } commands
-    }. Enter runs one.
+    }. Enter runs one, F1 explains it.
 action-browse-files = Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up
 action-batch-convert = Convert a folder of documents to another format, in the background
 action-export-audio = Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook

@@ -538,8 +538,21 @@ help-the-command = la commande { $name }
 # action-* help, and its category-* title.
 help-entry = { $name } : { $keys }. { $help }. { $category }
 help-unknown-command = Commande inconnue : { $text }.
-help-shortcuts-intro = Raccourcis clavier, { $n } commandes. Haut et Bas déplacent, Entrée exécute, Échap ferme.
+help-shortcuts-intro = Raccourcis clavier, { $n } commandes. Tapez pour filtrer. Page suivante passe au groupe suivant, F1 explique une commande, Entrée l'exécute, Échap ferme.
 help-shortcuts-title = Raccourcis clavier
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = Raccourcis clavier correspondant à { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } sur { $total } commandes correspondent.
+help-shortcuts-filter-none = Aucune commande ne correspond à { $query }. Retour arrière retire des lettres.
+help-shortcuts-filter-cleared = Filtre effacé, { $n } commandes.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }, { $n ->
+        [one] 1 commande
+       *[other] { $n } commandes
+    }. { $item }
 help-title = Aide
 help-intro = Aide. Haut et Bas déplacent, Échap ferme.
 
@@ -3149,7 +3162,7 @@ gui-prompt-path-hint = Tapez le chemin d'un document, puis appuyez sur Entrée. 
 gui-prompt-hint = Appuyez sur Entrée pour valider, ou sur Échap pour annuler. Haut et Bas rappellent les réponses précédentes.
 gui-palette-filter = Tapez pour filtrer les commandes
 gui-palette-list = Commandes
-gui-palette-hint = Entrée exécute la première correspondance ; Tab passe à la liste.
+gui-palette-hint = Entrée exécute la première correspondance ; Tab passe à la liste ; F1 explique une commande.
 gui-open-failed = Impossible d'ouvrir { $name } : { $error }
 gui-uia-unavailable = Les notifications UI Automation n'existent que sous Windows ; la région active est utilisée.
 gui-graphics-failed = La fenêtre n'a pas pu démarrer son affichage graphique. Le lecteur en terminal, textweaver, n'en a pas besoin.
@@ -3503,17 +3516,17 @@ choice-accessibility-interface-announcements-off = désactivées
 choice-accessibility-interface-announcements-minimal = minimales
 choice-accessibility-interface-announcements-normal = normales
 choice-accessibility-interface-announcements-full = complètes
-palette-item = { $name }, { $category } : { $help }. { $keys }
-palette-item-no-keys = { $name }, { $category } : { $help }.
-palette-item-recent = { $name }, récent, { $category } : { $help }. { $keys }
-palette-item-recent-no-keys = { $name }, récent, { $category } : { $help }.
+palette-item = { $name }, { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }, { $keys }, récent
+palette-item-recent-no-keys = { $name }, récent
 palette-list-title = Commandes correspondant à { $query }
 palette-list-title-all = Commandes
 palette-list-intro =
     { $title }, { $n ->
         [one] 1 commande
        *[other] { $n } commandes
-    }. Entrée en exécute une.
+    }. Entrée en exécute une, F1 l'explique.
 action-browse-files = Parcourir les fichiers et les archives : Entrée ouvre un dossier, une archive ou un document ; Retour arrière remonte
 action-batch-convert = Convertir un dossier de documents dans un autre format, en arrière-plan
 action-export-audio = Exporter le document en audio parlé : MP3, FLAC, Opus, WAV ou un livre audio M4B

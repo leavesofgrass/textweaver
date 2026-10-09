@@ -169,6 +169,7 @@ mod citations;
 mod citations;
 mod colors;
 mod command;
+mod command_list;
 pub mod components;
 mod details_form;
 mod dictation;
@@ -268,6 +269,7 @@ pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};
 pub use command::{
     CaretMove, Command, Confirm, DestructiveVerb, Effect, NoteCommand, PromptPurpose,
 };
+pub use command_list::CommandRow;
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_command, extra_lookup};
 pub use font_download::{InstalledCheck, fonts_folder, use_downloaded_fonts};

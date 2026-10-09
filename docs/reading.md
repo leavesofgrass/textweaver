@@ -145,7 +145,12 @@ In hybrid and screen-reader modes, the screen is laid out for a Braille display,
 - **The key hint line** is hidden, since F1, the keyboard shortcuts list (`?`), and the menus name the keys. `[display] hints = "on"` shows it again, starting at the edge. A prompt still uses that line.
 - **The empty screen**, with no document open, starts its lines at the edge.
 
-The keyboard shortcuts list leads every line with the command's name, then its keys: "Play or pause: Alt+P or Space. Play or pause reading from the current word. Reading". A first-letter jump in the list goes to a command, not a category, and the keys are inside the first 40 cells.
+The keyboard shortcuts list (`?`) leads every row with the command's short name, then its key: "Find next, F3". The name always fits a 40-cell line, and so does the whole row for all but a few keys with two modifiers. With the Braille-first layout the row reads just like that; otherwise the key is drawn at the right edge.
+
+- **Type to filter**, as in Settings. The list keeps the commands whose name, keys, group, or menu hold every word you typed, and says how many match: "12 of 226 commands match." Backspace takes letters off.
+- **F1** on a row says what the command does, with all its keys: "Find next: F3 or Ctrl+G. Find the next match. Search".
+- **Page Down** and **Page Up** move to the next and previous group (Reading, Navigation, Search, and so on). Entering a group says its name and how many commands it has first, then the row.
+- **Enter** runs the command, and **Escape** closes the list.
 
 Code blocks are drawn in the theme's code colors. When a block names its language (```` ```python ````), its keywords, strings, comments, numbers, and names get colors from the theme too, and the kinds differ by more than color: keywords are bold and comments italic. The text itself never changes. Moving the cursor onto the block's first line says its language, for example "code, Python".
 
@@ -694,9 +699,9 @@ Press **F2** to run any command by name. **Alt+X** and **:** open it too. The wi
 
 1. Type part of a command's name, such as `next head`, or its first letters: `ep` finds Export PDF.
 2. Press **Tab** to complete it. You hear how many commands match and the first few names.
-3. Or press **Down** and **Up** to go through the matching commands. Each is said name first, then its menu category, what it does, and its keys: "Export PDF, File: Export the document as a tagged PDF next to it."
+3. Or press **Down** and **Up** to go through the matching commands. Each is said as its short name, then its key: "Find next, F3".
 4. Press **Enter** to run it.
-5. Or press **Ctrl+L** to hear the matches as a list, and choose one with **Enter**.
+5. Or press **Ctrl+L** to hear the matches as a list, and choose one with **Enter**. In the list, **F1** says what the focused command does.
 
 With nothing typed, the commands you ran last from the palette or the menus come first, each said as "recent".
 

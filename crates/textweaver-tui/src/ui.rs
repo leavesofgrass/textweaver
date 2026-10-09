@@ -1753,6 +1753,22 @@ impl Tui {
             if i == list.selected {
                 first_row = rows.len();
             }
+            // A command row ("Find next, F3") draws its key at the right
+            // edge when the name and the key fit on one line; the line
+            // still starts with the name. With the Braille-first layout the
+            // row stays "Find next, F3", so the key is on the display
+            // without panning across the gap.
+            if let Some((name, key)) = list.columns.get(i).filter(|(_, k)| !k.is_empty())
+                && !rtl
+                && !braille
+            {
+                let used = name.chars().count() + key.chars().count();
+                if used + 2 <= width {
+                    let gap = width - used;
+                    rows.push((i, format!("{name}{:gap$}{key}", "")));
+                    continue;
+                }
+            }
             let chars: Vec<char> = item.chars().collect();
             for (a, b) in layout::wrap(&chars, width, 4) {
                 rows.push((i, chars[a..b].iter().collect()));
