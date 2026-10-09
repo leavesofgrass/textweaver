@@ -155,6 +155,7 @@ impl App {
     }
 
     /// The spoken answer, when recording ends: read back, never graded.
+    #[cfg(feature = "dictation")]
     pub(crate) fn reveal_heard(&mut self, words: &str) {
         if let Some(ListKind::Reveal(l)) = self.list.as_mut() {
             l.listening = None;
