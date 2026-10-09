@@ -63,7 +63,7 @@ It reads its own quick start out loud. Space starts and pauses; `?` lists every 
 
 ## Screen readers
 
-textweaver can speak by itself or hand speech to your screen reader. Alt+Shift+A chooses who speaks. On Windows it works with NVDA and JAWS. On macOS and Linux it has had basic testing with VoiceOver and Orca, and more is planned; if the GUI gives you trouble there, the terminal reader is a solid fallback. [Using textweaver with a screen reader](docs/screen-readers.md) explains the choices.
+textweaver can speak by itself or hand speech to your screen reader. Alt+Shift+A chooses who speaks. On Windows it works with NVDA and JAWS. On macOS the GUI works with VoiceOver; testing so far is basic and more is planned. On Linux the GUI has had basic testing with Orca, and if it gives you trouble, the terminal reader is a solid fallback. [Using textweaver with a screen reader](docs/screen-readers.md) explains the choices.
 
 ## Languages
 
