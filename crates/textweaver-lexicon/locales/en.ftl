@@ -415,6 +415,13 @@ playback-speech-died = Speech stopped working ({ $reason }). { $next }
 playback-done-reading = Done reading.
 playback-speech-restarted = Speech restarted: { $reason }. Reading on from the last word.
 playback-speech-error = Speech error: { $error } Try again, or use the Restart speech command.
+playback-end-of-section = End of section. { $key } to go on.
+playback-time-up =
+    { $minutes ->
+        [one] Time is up after 1 minute. { $key } to go on.
+       *[other] Time is up after { $minutes } minutes. { $key } to go on.
+    }
+playback-repeat-slower = Repeating slower, at { $rate } words per minute.
 
 ## The title line and Say Status.
 
@@ -638,6 +645,7 @@ action-word-count = Say how many words are in the document, or in the selection
 action-link-address = Say the address of the link at the cursor
 action-replay-sentence = Read again from the start of the current sentence
 action-replay-paragraph = Read again from the start of the current paragraph
+action-repeat-sentence-slower = Say the sentence at the cursor again more slowly, then go back to the usual rate
 action-rsvp-toggle = Show or hide RSVP: one word at a time, from the cursor
 action-rsvp-play-pause = Start or pause RSVP
 action-rsvp-faster = RSVP faster
@@ -1867,6 +1875,13 @@ setting-reading-revisions-help = How tracked changes in Word, OpenDocument, and 
 choice-reading-revisions-auto = automatic
 choice-reading-revisions-marked = always say them
 choice-reading-revisions-final = final text only
+setting-reading-stop-at = Stop at section end
+setting-reading-stop-at-help = Where continuous reading stops by itself and says End of section. Never, at the next heading of any level, or at the next chapter: a section break, else a level 1 heading. Reading goes on from the heading with the read key.
+choice-reading-stop-at-off = never
+choice-reading-stop-at-heading = next heading
+choice-reading-stop-at-chapter = next chapter
+setting-reading-stop-after-minutes = Reading timer
+setting-reading-stop-after-minutes-help = Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.
 setting-display-theme = Theme
 setting-display-theme-help = The color theme.
 setting-display-follow-os-theme = Follow the system theme
@@ -2192,6 +2207,11 @@ settings-unit-rows =
     { $n ->
         [one] row
        *[other] rows
+    }
+settings-unit-minutes =
+    { $n ->
+        [one] minute
+       *[other] minutes
     }
 
 ## Settings sections.
@@ -3189,6 +3209,7 @@ name-word-count = Word count
 name-link-address = Link address
 name-replay-sentence = Replay sentence
 name-replay-paragraph = Replay paragraph
+name-repeat-sentence-slower = Repeat slower
 name-rsvp-toggle = RSVP
 name-rsvp-play-pause = Start or pause RSVP
 name-rsvp-faster = RSVP faster

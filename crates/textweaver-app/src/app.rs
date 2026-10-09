@@ -366,6 +366,14 @@ pub struct App {
     pub(crate) continue_from: Option<CharPos>,
     /// Where the text handed to the speech service ends.
     pub(crate) planned_end: Option<CharPos>,
+    /// `[reading] stop_at`: where the current continuous reading stops
+    /// (the next heading or chapter), set as it starts.
+    pub(crate) section_end: Option<CharPos>,
+    /// Set while a sentence is repeated slower; the usual rate comes back
+    /// when that reading ends.
+    pub(crate) slow_repeat: bool,
+    /// `[reading] stop_after_minutes`: the reading timer.
+    pub(crate) reading_timer: crate::playback::ReadingTimer,
     /// The backend's capabilities as last reported.
     pub(crate) speech_caps: textweaver_speech::Caps,
     pub(crate) view: Viewport,
@@ -555,6 +563,9 @@ impl App {
             track: SpeechTrack::default(),
             continue_from: None,
             planned_end: None,
+            section_end: None,
+            slow_repeat: false,
+            reading_timer: crate::playback::ReadingTimer::default(),
             speech_caps,
             view: Viewport::default(),
             self_voicing: config.self_voicing,
@@ -1615,6 +1626,7 @@ impl App {
         effects.extend(self.sync_tick(now));
         effects.extend(self.font_download_tick());
         effects.extend(self.components_tick());
+        self.reading_timer_tick(now);
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));
         if rsvp_moved && effects.is_empty() {
@@ -1963,6 +1975,7 @@ impl App {
             A::LinkAddress => self.link_address(),
             A::ReplaySentence => self.replay_sentence(),
             A::ReplayParagraph => self.replay_paragraph(),
+            A::RepeatSentenceSlower => self.repeat_sentence_slower(),
             A::RsvpToggle => self.rsvp_toggle(Instant::now()),
             A::RsvpPlayPause => self.rsvp_play_pause(Instant::now()),
             A::RsvpFaster => self.rsvp_rate(true),

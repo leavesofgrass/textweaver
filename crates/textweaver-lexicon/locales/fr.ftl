@@ -438,6 +438,13 @@ playback-speech-died = La synthèse vocale s'est arrêtée ({ $reason }). { $nex
 playback-done-reading = Lecture terminée.
 playback-speech-restarted = Synthèse vocale redémarrée : { $reason }. Reprise de la lecture au dernier mot.
 playback-speech-error = Erreur de synthèse vocale : { $error } Réessayez, ou utilisez la commande Redémarrer la parole.
+playback-end-of-section = Fin de la section. { $key } pour continuer.
+playback-time-up =
+    { $minutes ->
+        [one] Temps écoulé après 1 minute. { $key } pour continuer.
+       *[other] Temps écoulé après { $minutes } minutes. { $key } pour continuer.
+    }
+playback-repeat-slower = Répétition plus lente, à { $rate } mots par minute.
 
 ## The title line and Say Status.
 
@@ -661,6 +668,7 @@ action-word-count = Dire le nombre de mots dans le document, ou dans la sélecti
 action-link-address = Dire l'adresse du lien au curseur
 action-replay-sentence = Relire depuis le début de la phrase actuelle
 action-replay-paragraph = Relire depuis le début du paragraphe actuel
+action-repeat-sentence-slower = Redire plus lentement la phrase au curseur, puis revenir au débit habituel
 action-rsvp-toggle = Afficher ou masquer le RSVP : un mot à la fois, à partir du curseur
 action-rsvp-play-pause = Démarrer ou mettre en pause le RSVP
 action-rsvp-faster = RSVP plus vite
@@ -1888,6 +1896,13 @@ setting-reading-revisions-help = Comment les modifications suivies des fichiers 
 choice-reading-revisions-auto = automatique
 choice-reading-revisions-marked = toujours les annoncer
 choice-reading-revisions-final = texte final seulement
+setting-reading-stop-at = Arrêt en fin de section
+setting-reading-stop-at-help = Où la lecture continue s’arrête d’elle-même en disant Fin de la section. Jamais, au prochain titre de tout niveau, ou au prochain chapitre : un saut de section, sinon un titre de niveau 1. La lecture reprend au titre avec la touche de lecture.
+choice-reading-stop-at-off = jamais
+choice-reading-stop-at-heading = prochain titre
+choice-reading-stop-at-chapter = prochain chapitre
+setting-reading-stop-after-minutes = Minuteur de lecture
+setting-reading-stop-after-minutes-help = La lecture continue s’arrête à la fin de la phrase après ce nombre de minutes de lecture, et le dit. La pause arrête l’horloge ; l’arrêt la remet à zéro. 0 désactive le minuteur.
 setting-display-theme = Thème
 setting-display-theme-help = Le thème de couleur.
 setting-display-follow-os-theme = Suivre le thème du système
@@ -2213,6 +2228,11 @@ settings-unit-rows =
     { $n ->
         [one] ligne
        *[other] lignes
+    }
+settings-unit-minutes =
+    { $n ->
+        [one] minute
+       *[other] minutes
     }
 
 ## Settings sections.
@@ -3190,6 +3210,7 @@ name-word-count = Nombre de mots
 name-link-address = Adresse du lien
 name-replay-sentence = Relire la phrase
 name-replay-paragraph = Relire le paragraphe
+name-repeat-sentence-slower = Répéter plus lentement
 name-rsvp-toggle = RSVP
 name-rsvp-play-pause = Démarrer ou suspendre RSVP
 name-rsvp-faster = RSVP plus rapide

@@ -527,11 +527,17 @@ impl App {
             .map(|t| t.range)
             .filter(|r| r.start > sa.sentence.start)
         });
+        // `[reading] stop_at` and the reading timer stop between sentences.
+        if let Some(at) = next.and_then(|r| self.screen_stop_before(r.start)) {
+            self.reading_stops_at(at);
+            return true;
+        }
         match next {
             Some(r) => self.show_screen_sentence(r, now),
             None => {
                 self.screen_say_all = None;
                 self.playback = Playback::Idle;
+                self.reading_timer = Default::default();
                 if let Some(s) = self.session.as_mut() {
                     s.spoken = None;
                     s.spoken_sentence = None;
@@ -548,6 +554,7 @@ impl App {
         let Some(sa) = self.screen_say_all.take() else {
             return false;
         };
+        self.reading_timer.bank(Instant::now());
         self.playback = Playback::Paused {
             resume_at: Some(sa.sentence.start),
         };

@@ -502,6 +502,15 @@ playback-speech-died = توقف الكلام عن العمل ({ $reason }). { $n
 playback-done-reading = انتهت القراءة.
 playback-speech-restarted = أُعيد تشغيل الكلام: { $reason }. متابعة القراءة من آخر كلمة.
 playback-speech-error = خطأ في الكلام: { $error } حاول مرة أخرى، أو استخدم أمر إعادة تشغيل النطق.
+playback-end-of-section = نهاية القسم. { $key } للمتابعة.
+playback-time-up =
+    { $minutes ->
+        [one] انتهى الوقت بعد دقيقة واحدة. { $key } للمتابعة.
+        [two] انتهى الوقت بعد دقيقتين. { $key } للمتابعة.
+        [few] انتهى الوقت بعد { $minutes } دقائق. { $key } للمتابعة.
+       *[other] انتهى الوقت بعد { $minutes } دقيقة. { $key } للمتابعة.
+    }
+playback-repeat-slower = إعادة أبطأ، بسرعة { $rate } كلمة في الدقيقة.
 
 ## سطر العنوان وقول الحالة.
 
@@ -727,6 +736,7 @@ action-word-count = نطق عدد كلمات المستند، أو التحدي�
 action-link-address = نطق عنوان الرابط عند المؤشر
 action-replay-sentence = إعادة القراءة من بداية الجملة الحالية
 action-replay-paragraph = إعادة القراءة من بداية الفقرة الحالية
+action-repeat-sentence-slower = نطق الجملة عند المؤشر مرة أخرى بسرعة أبطأ، ثم العودة إلى السرعة المعتادة
 action-rsvp-toggle = إظهار أو إخفاء العرض السريع للكلمات، كلمة كلمة من المؤشر
 action-rsvp-play-pause = بدء أو إيقاف مؤقت للعرض السريع للكلمات
 action-rsvp-faster = تسريع العرض السريع للكلمات
@@ -2042,6 +2052,13 @@ setting-reading-revisions-help = كيف تُقرأ التغييرات المتع
 choice-reading-revisions-auto = تلقائي
 choice-reading-revisions-marked = قلها دائمًا
 choice-reading-revisions-final = النص النهائي فقط
+setting-reading-stop-at = التوقف عند نهاية القسم
+setting-reading-stop-at-help = أين تتوقف القراءة المستمرة من تلقاء نفسها وتقول نهاية القسم. أبدًا، أو عند العنوان التالي من أي مستوى، أو عند الفصل التالي: فاصل قسم، وإلا عنوان من المستوى 1. تتابع القراءة من العنوان بمفتاح القراءة.
+choice-reading-stop-at-off = أبدًا
+choice-reading-stop-at-heading = العنوان التالي
+choice-reading-stop-at-chapter = الفصل التالي
+setting-reading-stop-after-minutes = مؤقت القراءة
+setting-reading-stop-after-minutes-help = تتوقف القراءة المستمرة عند نهاية الجملة بعد هذا العدد من دقائق القراءة، وتقول ذلك. الإيقاف المؤقت يوقف الساعة، والإيقاف يبدأها من جديد. 0 يطفئ المؤقت.
 setting-display-theme = السمة
 setting-display-theme-help = السمة اللونية.
 setting-display-follow-os-theme = اتباع سمة النظام
@@ -2391,6 +2408,14 @@ settings-unit-rows =
         [few] صفوف
         [zero] صفوف
        *[other] صف
+    }
+settings-unit-minutes =
+    { $n ->
+        [one] دقيقة
+        [two] دقيقتان
+        [few] دقائق
+        [zero] دقيقة
+       *[other] دقيقة
     }
 
 ## أقسام الإعدادات.
@@ -3469,6 +3494,7 @@ name-word-count = عدد الكلمات
 name-link-address = عنوان الرابط
 name-replay-sentence = إعادة قراءة الجملة
 name-replay-paragraph = إعادة قراءة الفقرة
+name-repeat-sentence-slower = إعادة أبطأ
 name-rsvp-toggle = RSVP
 name-rsvp-play-pause = بدء RSVP أو إيقافه مؤقتًا
 name-rsvp-faster = RSVP أسرع

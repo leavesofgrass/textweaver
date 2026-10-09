@@ -446,6 +446,13 @@ playback-speech-died = Die Sprachausgabe hat aufgehört zu arbeiten ({ $reason }
 playback-done-reading = Lesen beendet.
 playback-speech-restarted = Sprachausgabe neu gestartet: { $reason }. Weiter ab dem letzten Wort.
 playback-speech-error = Fehler der Sprachausgabe: { $error } Versuchen Sie es erneut, oder nutzen Sie den Befehl Sprache neu starten.
+playback-end-of-section = Ende des Abschnitts. { $key } liest weiter.
+playback-time-up =
+    { $minutes ->
+        [one] Zeit ist um nach 1 Minute. { $key } liest weiter.
+       *[other] Zeit ist um nach { $minutes } Minuten. { $key } liest weiter.
+    }
+playback-repeat-slower = Langsamer wiederholen, mit { $rate } Wörtern pro Minute.
 
 ## The title line and Say Status.
 
@@ -669,6 +676,7 @@ action-word-count = Sagen, wie viele Wörter im Dokument oder in der Auswahl ste
 action-link-address = Die Adresse des Links am Cursor sagen
 action-replay-sentence = Ab dem Anfang des aktuellen Satzes erneut lesen
 action-replay-paragraph = Ab dem Anfang des aktuellen Absatzes erneut lesen
+action-repeat-sentence-slower = Den Satz am Cursor langsamer wiederholen, dann zur gewohnten Geschwindigkeit zurückkehren
 action-rsvp-toggle = RSVP anzeigen oder ausblenden: ein Wort nach dem anderen, ab dem Cursor
 action-rsvp-play-pause = RSVP starten oder pausieren
 action-rsvp-faster = RSVP schneller
@@ -1896,6 +1904,13 @@ setting-reading-revisions-help = Wie nachverfolgte Änderungen in Word-, OpenDoc
 choice-reading-revisions-auto = automatisch
 choice-reading-revisions-marked = immer ansagen
 choice-reading-revisions-final = nur endgültiger Text
+setting-reading-stop-at = Am Abschnittsende anhalten
+setting-reading-stop-at-help = Wo fortlaufendes Lesen von selbst anhält und Ende des Abschnitts sagt. Nie, bei der nächsten Überschrift jeder Ebene oder beim nächsten Kapitel: einem Abschnittswechsel, sonst einer Überschrift der Ebene 1. Mit der Lesetaste geht es ab der Überschrift weiter.
+choice-reading-stop-at-off = nie
+choice-reading-stop-at-heading = nächste Überschrift
+choice-reading-stop-at-chapter = nächstes Kapitel
+setting-reading-stop-after-minutes = Lese-Timer
+setting-reading-stop-after-minutes-help = Fortlaufendes Lesen hält nach so vielen Minuten Lesen am Satzende an und sagt es. Pause hält die Uhr an; Stopp beginnt neu. 0 schaltet den Timer aus.
 setting-display-theme = Design
 setting-display-theme-help = Das Farbdesign.
 setting-display-follow-os-theme = Dem Systemdesign folgen
@@ -2209,6 +2224,11 @@ settings-unit-rows =
     { $n ->
         [one] Zeile
        *[other] Zeilen
+    }
+settings-unit-minutes =
+    { $n ->
+        [one] Minute
+       *[other] Minuten
     }
 
 ## Settings sections.
@@ -3186,6 +3206,7 @@ name-word-count = Wortzahl
 name-link-address = Linkadresse
 name-replay-sentence = Satz erneut lesen
 name-replay-paragraph = Absatz erneut lesen
+name-repeat-sentence-slower = Langsamer wiederholen
 name-rsvp-toggle = RSVP
 name-rsvp-play-pause = RSVP starten oder anhalten
 name-rsvp-faster = RSVP schneller

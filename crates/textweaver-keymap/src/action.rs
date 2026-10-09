@@ -201,6 +201,9 @@ actions! {
         gui ["g:Alt+;"], term ["g:Alt+;"], shared ["b:;"];
     ReplayParagraph = "replay_paragraph", Reading, "Read again from the start of the current paragraph",
         gui ["g:Ctrl+R"], term ["g:Ctrl+R"], shared ["b:r"];
+    RepeatSentenceSlower = "repeat_sentence_slower", Reading,
+        "Say the sentence at the cursor again more slowly, then go back to the usual rate",
+        gui [], term [], shared ["b:Shift+X"];
     RsvpToggle = "rsvp_toggle", Reading, "Show or hide RSVP: one word at a time, from the cursor",
         gui ["g:Alt+Shift+R"], term ["g:Alt+Shift+R"], shared [];
     RsvpPlayPause = "rsvp_play_pause", Reading, "Start or pause RSVP",
