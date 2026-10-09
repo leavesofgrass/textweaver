@@ -2210,6 +2210,7 @@ section-normalization = Lecture du texte
 section-reading = Lecture
 section-display = Affichage
 section-editing = Édition
+section-authoring = Rédaction
 section-library = Bibliothèque
 section-keyboard = Clavier
 section-accessibility = Accessibilité
@@ -2945,8 +2946,8 @@ choice-speech-piper-phonemizer-library = bibliothèque espeak-ng
 choice-speech-piper-phonemizer-rust = celui de textweaver
 setting-speech-voice-params = Débit et hauteur par voix
 setting-speech-voice-params-help = Le débit et la hauteur de la dernière utilisation de chaque voix. Choisir à nouveau une voix les rétablit.
-setting-editing-author = Auteur
-setting-editing-author-help = L'auteur écrit dans les nouveaux documents créés à partir d'un modèle ; vide le laisse en blanc.
+setting-authoring-author = Auteur
+setting-authoring-author-help = Le nom que { -brand } écrit sur les commentaires, les réponses et les documents créés depuis un modèle. Vide signifie { -brand } pour les commentaires et aucun auteur dans les modèles. Jamais tiré de l'ordinateur.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -4189,3 +4190,39 @@ changes-written-rejected =
        *[other] { $path } écrit avec { $n } modifications refusées.
     }
 ## End of B1-t1
+
+## B1-t2 : enregistrer la révision dans le fichier Word.
+name-save-changes-to-word = Enregistrer dans le fichier Word
+action-save-changes-to-word = Enregistrer les modifications acceptées et refusées et les commentaires dans le fichier Word, après avoir gardé une copie de l'original
+changes-accept-all-question =
+    { $n ->
+        [one] Accepter la modification ? y ou n
+       *[other] Accepter les { $n } modifications ? y ou n
+    }
+changes-reject-all-question =
+    { $n ->
+        [one] Refuser la modification ? y ou n
+       *[other] Refuser les { $n } modifications ? y ou n
+    }
+changes-save-not-word = Ce n'est pas un fichier Word. Les modifications ne sont réenregistrées que dans les fichiers .docx ; l'export écrit le texte décidé dans d'autres formats.
+changes-save-nothing = Rien à enregistrer : aucune modification acceptée ou refusée, et aucun commentaire changé.
+changes-saved-backup = Modifications enregistrées dans { $file }. L'original est gardé sous le nom { $backup }.
+changes-saved = Modifications enregistrées dans { $file }.
+changes-save-unplaced =
+    { $n ->
+        [one] 1 nouveau commentaire est au début : son texte est introuvable.
+       *[other] { $n } nouveaux commentaires sont au début : leur texte est introuvable.
+    }
+changes-save-failed = Impossible d'enregistrer les modifications dans { $file } : { $error }. Le fichier est inchangé ; fermez-le dans Word s'il est ouvert, puis réessayez.
+changes-save-not-in-build = L'enregistrement des modifications dans le fichier Word n'est pas inclus dans cette version de { -brand }. tw changes --in-place le fait toujours.
+changes-in-place-accepted =
+    { $n ->
+        [one] 1 modification acceptée dans { $path }. L'original est gardé sous le nom { $backup }.
+       *[other] { $n } modifications acceptées dans { $path }. L'original est gardé sous le nom { $backup }.
+    }
+changes-in-place-rejected =
+    { $n ->
+        [one] 1 modification refusée dans { $path }. L'original est gardé sous le nom { $backup }.
+       *[other] { $n } modifications refusées dans { $path }. L'original est gardé sous le nom { $backup }.
+    }
+## End of B1-t2

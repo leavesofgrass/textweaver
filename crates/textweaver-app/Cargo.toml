@@ -48,6 +48,7 @@ publish = [
     "dep:textweaver-cite",
     "dep:textweaver-convert",
     "dep:textweaver-render",
+    "dep:textweaver-writers",
     "textweaver-engines/piper-download",
     "textweaver-fonts/download",
     "textweaver-components/download",
@@ -92,6 +93,9 @@ textweaver-mathcat = { workspace = true, optional = true }
 textweaver-cite = { workspace = true, optional = true }
 textweaver-convert = { workspace = true, optional = true }
 textweaver-render = { workspace = true, optional = true }
+# Save changes to the Word file (B1-t2): the review written into the
+# original package in place; with `publish`, which already links it.
+textweaver-writers = { workspace = true, optional = true }
 # Agent W3e: define word and the message catalog.
 textweaver-lexicon.workspace = true
 # Agent W5s: summaries without a model (ADR-0037).

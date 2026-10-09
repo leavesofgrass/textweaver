@@ -825,10 +825,11 @@ pub const INFO: &[Info] = &[
         (1.0, 4096.0, 16.0),
         "megabytes",
     ),
+    // [authoring]
     text(
-        "editing.author",
+        "authoring.author",
         "Author",
-        "The author written into new documents made from a template; empty leaves it blank.",
+        "The name textweaver writes on comments, replies, and documents from a template. Empty means textweaver on comments and no author in templates. Never taken from the computer.",
     ),
     // [library]
     number(
@@ -1531,6 +1532,7 @@ fn section_title(key: &str) -> &'static str {
         "reading" => "Reading",
         "display" => "Display",
         "editing" => "Editing",
+        "authoring" => "Authoring",
         "library" => "Library",
         "keyboard" => "Keyboard",
         "accessibility" => "Accessibility",

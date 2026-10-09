@@ -497,6 +497,7 @@ impl MenuId {
                 Do(A::AcceptAllChanges),
                 Do(A::RejectAllChanges),
                 Do(A::AddComment),
+                Do(A::SaveChangesToWord),
             ],
             MenuId::Tables => &[
                 Do(A::NextTable),

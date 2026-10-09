@@ -9,6 +9,7 @@ use super::*;
 use crate::command::Command;
 use crate::list_model::ListKey;
 use crate::{App, AppConfig};
+use textweaver_formats::ChangeKind;
 
 fn fixture(revisions: RevisionMode) -> Document {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/t1/changes.docx");
@@ -171,9 +172,16 @@ fn keys_in_the_list_accept_reject_and_handle_comments() {
     let note = s.notes.iter().find(|n| n.id == "comment-0").unwrap();
     assert!(note.note.contains("Yes, March 4."), "{}", note.note);
     assert!(app.review().unwrap().comments_changed);
-    // Accept all: the rest.
+    // Accept all: the rest, after one question.
     app.dispatch(Command::Cancel);
     app.dispatch(Command::Action(ActionId::AcceptAllChanges));
+    assert!(
+        app.status_text()
+            .starts_with("Accept all 2 changes? y or n"),
+        "{}",
+        app.status_text()
+    );
+    app.dispatch(Command::Confirm(crate::command::Confirm::Yes));
     assert!(
         app.status_text().starts_with("Accepted 2 changes."),
         "{}",
@@ -209,4 +217,103 @@ fn a_comment_is_deleted_after_its_question_and_a_new_one_added() {
             .any(|c| c.text == "See the chart." && !c.date.is_empty())
     );
     assert!(s.notes.iter().any(|n| n.note.contains("See the chart.")));
+}
+
+#[test]
+fn the_two_halves_of_a_move_are_decided_together() {
+    let mut app = app_with(fixture(RevisionMode::Final));
+    app.dispatch(Command::Action(ActionId::ListChanges));
+    // Row 2 is the move away; r rejects it and its arriving half.
+    app.dispatch(Command::ListFocus(2));
+    app.dispatch(Command::ListKey(ListKey::Char('r')));
+    let review = app.review().unwrap();
+    let kinds: Vec<_> = review.decisions.iter().map(|d| d.change.kind).collect();
+    assert_eq!(kinds, vec![ChangeKind::MovedAway, ChangeKind::MovedHere]);
+    assert!(text(&app).contains("Check the labs first. Call the family."));
+    assert!(text(&app).contains("Then. Repeat"), "{}", text(&app));
+}
+
+#[test]
+fn reject_all_asks_once_and_no_keeps_every_change() {
+    let mut app = app_with(fixture(RevisionMode::Final));
+    app.dispatch(Command::Action(ActionId::RejectAllChanges));
+    assert!(
+        app.status_text()
+            .starts_with("Reject all 5 changes? y or n")
+    );
+    app.dispatch(Command::Confirm(crate::command::Confirm::No));
+    assert_eq!(
+        textweaver_formats::changes(&app.session.as_ref().unwrap().doc.meta).len(),
+        5
+    );
+}
+
+#[cfg(feature = "publish")]
+mod save {
+    use super::*;
+
+    /// A copy of the Word-made fixture in a folder of its own, opened.
+    fn opened() -> (tempfile::TempDir, PathBuf, App) {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("plan.docx");
+        let from =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/t1/word-review.docx");
+        std::fs::copy(from, &path).unwrap();
+        let mut app = App::new(AppConfig::for_tests());
+        app.open(&path).unwrap();
+        (dir, path, app)
+    }
+
+    #[test]
+    fn saving_writes_the_review_into_the_word_file_after_a_copy() {
+        let (dir, path, mut app) = opened();
+        let original = std::fs::read(&path).unwrap();
+        app.dispatch(Command::Action(ActionId::SaveChangesToWord));
+        assert!(app.status_text().starts_with("Nothing to save"));
+
+        app.dispatch(Command::Action(ActionId::AcceptAllChanges));
+        app.dispatch(Command::Confirm(crate::command::Confirm::Yes));
+        app.dispatch(Command::Action(ActionId::ListChanges));
+        // The first comment: a reply, then save.
+        app.dispatch(Command::ListFocus(0));
+        app.dispatch(Command::ListKey(ListKey::Rename));
+        app.dispatch(Command::Answer("Two.".into()));
+        app.dispatch(Command::Cancel);
+        app.dispatch(Command::Action(ActionId::SaveChangesToWord));
+        assert_eq!(
+            app.status_text(),
+            "Saved the changes in plan.docx. The original is kept as plan-original.docx."
+        );
+        let kept = dir.path().join("plan-original.docx");
+        assert_eq!(std::fs::read(&kept).unwrap(), original);
+
+        let saved = textweaver_formats::load_path(&path).unwrap();
+        assert!(textweaver_formats::changes(&saved.meta).is_empty());
+        let cs = textweaver_formats::comments(&saved.meta);
+        let reply = &cs[0].replies.last().unwrap();
+        assert_eq!(reply.text, "Two.");
+        assert_eq!(reply.author, "textweaver", "an empty author setting");
+
+        // A second save keeps the first copy and makes no other.
+        app.dispatch(Command::Action(ActionId::SaveChangesToWord));
+        assert!(app.status_text().starts_with("Nothing to save"));
+        app.dispatch(Command::Action(ActionId::ListChanges));
+        app.dispatch(Command::ListFocus(0));
+        app.dispatch(Command::ListKey(ListKey::Char(' ')));
+        app.dispatch(Command::Cancel);
+        app.dispatch(Command::Action(ActionId::SaveChangesToWord));
+        assert_eq!(app.status_text(), "Saved the changes in plan.docx.");
+        assert!(!dir.path().join("plan-original-2.docx").exists());
+        let saved = textweaver_formats::load_path(&path).unwrap();
+        assert!(textweaver_formats::comments(&saved.meta)[0].resolved);
+    }
+
+    #[test]
+    fn only_a_word_file_takes_changes_back() {
+        let mut doc = fixture(RevisionMode::Final);
+        doc.meta.path = Some(PathBuf::from("notes.odt"));
+        let mut app = app_with(doc);
+        app.dispatch(Command::Action(ActionId::SaveChangesToWord));
+        assert!(app.status_text().starts_with("Not a Word file."));
+    }
 }

@@ -937,7 +937,10 @@ impl Server {
         match self.app.pending_confirmation() {
             Some(a) => json!({
                 "action": a.id(),
-                "question": a.confirmation_prompt(),
+                "question": a
+                    .confirmation_prompt()
+                    .map(str::to_owned)
+                    .or_else(|| self.app.confirmation_question(a)),
             }),
             None => Value::Null,
         }

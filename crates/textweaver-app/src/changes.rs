@@ -24,7 +24,17 @@
 //! ([`resolve_change`]): reading, search, and the study tools see the
 //! result at once, and each decision is kept in the session's [`Review`],
 //! for writing back to the Word file. The comments' notes (crate::notes)
-//! follow every comment change.
+//! follow every comment change. The two halves of a move are decided
+//! together ([`resolve_with_pair`]), and Accept all and Reject all ask
+//! once first ("Accept all 12 changes? y or n"), as Replace all does.
+//!
+//! Save changes to the Word file (task B1-t2) writes the review into the
+//! original `.docx` in place (`textweaver_writers::docx_update`), after a
+//! copy of the original is kept beside it on the first save. Comments and
+//! replies textweaver adds carry `[authoring] author`, or "textweaver"
+//! when it is empty; the name is never taken from the computer.
+
+use std::path::PathBuf;
 
 use textweaver_core::{Bias, CharPos, CharRange, Edit, EditOutcome, MarkerKind};
 use textweaver_formats::{ChangeKind, CommentReply, DocumentChange, DocumentComment};
@@ -70,6 +80,16 @@ pub struct Review {
     /// A comment was replied to, resolved, reopened, or added; the
     /// document's comments hold the result.
     pub comments_changed: bool,
+    /// The copy of the original Word file kept before the first save of
+    /// the review, once made.
+    pub backup: Option<PathBuf>,
+}
+
+impl Review {
+    /// True when nothing was decided or changed since the last save.
+    pub fn is_empty(&self) -> bool {
+        self.decisions.is_empty() && self.deleted_comments.is_empty() && !self.comments_changed
+    }
 }
 
 /// Whitespace collapsed to single spaces, trimmed.
@@ -258,6 +278,34 @@ pub fn resolve_change(
     Some((change, outcome))
 }
 
+/// Accepts or rejects change `i` as [`resolve_change`] does and, for one
+/// half of a move, the other half with it: the two are decided together.
+/// Returns each change decided with its edit's outcome.
+pub fn resolve_with_pair(
+    doc: &mut Document,
+    i: usize,
+    accept: bool,
+) -> Vec<(DocumentChange, Option<EditOutcome>)> {
+    let Some(first) = resolve_change(doc, i, accept) else {
+        return Vec::new();
+    };
+    let pair = first.0.pair.clone();
+    let mut done = vec![first];
+    while !pair.is_empty() {
+        let Some(j) = textweaver_formats::changes(&doc.meta)
+            .iter()
+            .position(|c| c.pair == pair)
+        else {
+            break;
+        };
+        match resolve_change(doc, j, accept) {
+            Some(d) => done.push(d),
+            None => break,
+        }
+    }
+    done
+}
+
 /// Accepts or rejects every change recorded on `doc` (by `author` only,
 /// when given). Returns the changes decided, in document order.
 pub fn resolve_all(doc: &mut Document, accept: bool, author: Option<&str>) -> Vec<DocumentChange> {
@@ -272,16 +320,13 @@ fn resolve_all_with_outcomes(
 ) -> (Vec<DocumentChange>, Vec<EditOutcome>) {
     let mut done = Vec::new();
     let mut outcomes = Vec::new();
-    // From the end, so the earlier indices stay put.
-    let mut i = textweaver_formats::changes(&doc.meta).len();
-    while i > 0 {
-        i -= 1;
-        let take = author.is_none_or(|a| {
-            textweaver_formats::changes(&doc.meta)
-                .get(i)
-                .is_some_and(|c| c.author == a)
-        });
-        if take && let Some((c, o)) = resolve_change(doc, i, accept) {
+    // From the end, so the earlier positions stay put; a move's other
+    // half goes with it.
+    while let Some(i) = textweaver_formats::changes(&doc.meta)
+        .iter()
+        .rposition(|c| author.is_none_or(|a| c.author == a))
+    {
+        for (c, o) in resolve_with_pair(doc, i, accept) {
             done.push(c);
             outcomes.extend(o);
         }
@@ -459,9 +504,12 @@ impl App {
             return self.reshow_changes();
         }
         let decided = self.with_document_edit(accept, |doc| {
-            resolve_change(doc, i, accept)
-                .map(|(c, o)| (vec![c], o.into_iter().collect()))
-                .unwrap_or_default()
+            let (mut cs, mut os) = (Vec::new(), Vec::new());
+            for (c, o) in resolve_with_pair(doc, i, accept) {
+                cs.push(c);
+                os.extend(o);
+            }
+            (cs, os)
         });
         if let Some(c) = decided.first() {
             let msg = self.msg_args(
@@ -591,7 +639,8 @@ impl App {
     }
 
     /// The answer to the reply prompt: the reply is added to the comment,
-    /// with the author from `[editing] author` and the date from the clock.
+    /// with the author from `[authoring] author` and the date from the
+    /// clock.
     pub(crate) fn answer_comment_reply(&mut self, text: &str) -> Vec<Effect> {
         let text = text.trim().to_owned();
         let Some(i) = self.pending_item.take() else {
@@ -602,7 +651,7 @@ impl App {
             self.note(&msg);
             return self.reshow_changes();
         }
-        let author = self.settings.editing.author.trim().to_owned();
+        let author = self.comment_author();
         let date = textweaver_store::time::rfc3339(textweaver_store::now_ts());
         self.edit_comments(
             |comments, _| {
@@ -670,7 +719,7 @@ impl App {
             self.tell(&msg);
             return vec![Effect::Redraw];
         };
-        let author = self.settings.editing.author.trim().to_owned();
+        let author = self.comment_author();
         let date = textweaver_store::time::rfc3339(textweaver_store::now_ts());
         self.edit_comments(
             |comments, _| {
@@ -691,6 +740,36 @@ impl App {
             "changes-comment-added",
         );
         vec![Effect::Redraw]
+    }
+
+    /// The name on comments and replies textweaver adds: `[authoring]
+    /// author`, or "textweaver" when it is empty. Never the computer's or
+    /// the account's name.
+    fn comment_author(&self) -> String {
+        match self.settings.authoring.author.trim() {
+            "" => "textweaver".to_owned(),
+            a => a.to_owned(),
+        }
+    }
+
+    /// "Accept all 12 changes? y or n": the question Accept all and
+    /// Reject all ask first, or `None` when there is nothing to decide (or
+    /// edit mode stops it), so the command says why at once.
+    pub(crate) fn decide_all_question(&self, accept: bool) -> Option<String> {
+        if self.edit.is_some() {
+            return None;
+        }
+        let n = textweaver_formats::changes(&self.session.as_ref()?.doc.meta).len();
+        (n > 0).then(|| {
+            self.msg_args(
+                if accept {
+                    "changes-accept-all-question"
+                } else {
+                    "changes-reject-all-question"
+                },
+                &args!["n" => n],
+            )
+        })
     }
 
     /// What was decided while reviewing the open document's changes and
@@ -727,6 +806,22 @@ fn sync_comment_notes(
     }
     // New comments become notes as the loaded ones did.
     crate::notes::add_document_comments_from(notes, doc, after);
+}
+
+#[cfg(feature = "publish")]
+mod save;
+#[cfg(feature = "publish")]
+pub use save::docx_update;
+
+#[cfg(not(feature = "publish"))]
+impl App {
+    /// `save_changes_to_word` in a build without the `publish` feature,
+    /// which links no writers: says it is not in this build.
+    pub(crate) fn save_changes_to_word(&mut self) -> Vec<Effect> {
+        let msg = self.msg("changes-save-not-in-build");
+        self.tell(&msg);
+        vec![Effect::Redraw]
+    }
 }
 
 #[cfg(test)]

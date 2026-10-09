@@ -133,7 +133,7 @@ fn everything_changed() -> Settings {
     e.echo_lines_on_move = false;
     e.undo_steps = 200;
     e.undo_memory_mb = 10;
-    e.author = "Ada Example".into();
+    s.authoring.author = "Ada Example".into();
     s.library.recent_limit = 10;
     s.library.folders = vec!["C:/Books".into()];
     s.keyboard.character_keys = false;

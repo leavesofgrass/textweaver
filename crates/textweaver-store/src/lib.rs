@@ -71,8 +71,8 @@ pub use paths::{MEDICAL_OVERLAY_FILE, Paths};
 pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
-    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, BrailleSettings,
-    BrailleTableFormat, CitationReading, ColorSettings, CommunityLexiconSettings,
+    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, AuthoringSettings,
+    BrailleSettings, BrailleTableFormat, CitationReading, ColorSettings, CommunityLexiconSettings,
     ComponentsSettings, CursorPlacement, DectalkSettings, DictationSettings, DigitRow,
     DisplaySettings, EciDictionaries, EciSettings, EditingSettings, ExportSettings, FootnoteMode,
     GuiAnnounce, GuiSettings, GuiSidebar, GuiWindow, HighlightSettings, HintsLine,
