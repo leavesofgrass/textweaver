@@ -85,6 +85,7 @@ The reader opens these formats itself:
 - PDF: `.pdf`, with comments as notes, links you can follow, and filled-in form fields read label first; scanned PDFs through text recognition (below).
 - Pictures of text: `.png`, `.jpg`, `.jpeg`, through text recognition.
 - DAISY 3 books and DTBook: `.opf`, `.xml`, `.dtbook`, and a DAISY book in a zip.
+- DAISY 2.02 books: open the book's `ncc.html`, or the zip it came in. The text is read, not the recorded audio.
 - PowerPoint: `.pptx`, `.pptm`, `.ppsx`, `.potx`, with the speaker notes.
 - Spreadsheets, as tables: `.csv`, `.tsv`, `.tab`, `.ods`, `.xlsx`, `.xlsm`, `.xlsb`.
 - Archives: `.zip`, `.tar`, `.tgz`, `.gz`, `.7z`. Opening one lists the files inside that textweaver can read; `course.zip!week1/notes.md` opens one directly.

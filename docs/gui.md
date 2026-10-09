@@ -27,7 +27,7 @@ Useful options:
 - `--home FOLDER`: keep settings and reading positions in this folder, as `TEXTWEAVER_HOME` does.
 - `--list-menus`: show the menus as a list inside the window (F10), as on Linux, instead of the system's menu bar.
 - `--graphics API`: draw with one graphics API only: `vulkan`, `dx12` (Windows), `metal` (macOS), or `gl`; `auto`, the default, lets the graphics library use every one it finds. On the development machine `vulkan` used about 26 MB less memory, but this depends on your graphics driver. To keep a choice, put `graphics = "vulkan"` in the `[gui]` section of `settings.toml`.
-- `--log` or `--log-file PATH`: write what the window announces and does, for a bug report.
+- `--log` or `--log-file PATH`: write what the window announces and does, for a bug report. Every 200 frames it also writes a "frame times" line with the median, the 95th percentile, and the worst time to draw a frame, so a change to drawing can be measured in a real window.
 
 `textweaver-gui --help` lists every option.
 
@@ -146,6 +146,8 @@ The panel costs nothing while it is closed. While it is open, its rows are built
 Ctrl+E, or the Edit button, turns edit mode on, as in the terminal reader: you edit the document's source (a Markdown file's Markdown; for other formats, the Markdown made from them, which Save stores as a new `.md` file). Ctrl+E again finishes, asking to save if there are changes.
 
 In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus mode by themselves.
+
+List items keep their indent by depth while you edit, as in reading, and bulleted items keep their bullet shape (a disc, a ring, then a square), so the nesting shows. A numbered item shows the number you typed. These are drawn only: the screen reader reads the source text, with its own dashes and numbers.
 
 - **Typing** goes in at the cursor, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
 - **Your screen reader echoes** what you type, and reads the cursor and the selection as they move. With **Speak textweaver's messages** on, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the cursor moves to, and what a Shift key added to the selection or took from it.
@@ -272,7 +274,7 @@ In the terminal, the same command shows the settings screen with only these sett
 - **The icon is the loom,** textweaver's logo, in the title bar, the taskbar, and on the programs in Explorer and their shortcuts (`textweaver-gui.exe`, `textweaver.exe` and `tw.exe` carry it). In Windows High Contrast the window uses the one-color loom, white on black. The Linux menu entry uses the same drawing.
 - **The window asks for the integrated graphics adapter** when the computer has one, because it draws text as fast and saves the battery. To use the fast adapter instead, set the environment variable `WGPU_POWER_PREF` to `high`.
 - **A log file.** The window writes warnings and errors to `textweaver.log` in the state folder, as the terminal reader does. [Troubleshooting](troubleshooting.md#the-log-file) says where it is.
-- **After a failure,** the window saves your unsaved edits as a recovery copy, and saves your place and settings. At the next start it offers the work back (see [Recovering unsaved work](editing.md#recovering-unsaved-work)). Signing out, shutting down, or restarting does the same.
+- **After a failure,** the window saves your unsaved edits as a recovery copy, and saves your place and settings. At the next start it offers the work back (see [Recovering unsaved work](editing.md#recovering-unsaved-work)). Signing out, shutting down, or restarting does the same. On Linux and macOS, so does a termination signal: closing the terminal the window was started from, Ctrl+C in that terminal, or the system ending the program (SIGHUP, SIGINT, or SIGTERM). The window saves, then closes.
 - **If graphics cannot start,** the window says so in words. Started from a shortcut, it shows a message box. See [The window does not open, or it is blank](troubleshooting.md#the-window-does-not-open-or-it-is-blank).
 
 ## What only the terminal reader does
