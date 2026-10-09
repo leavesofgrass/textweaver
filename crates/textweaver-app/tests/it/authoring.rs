@@ -1100,6 +1100,138 @@ fn the_self_test_asks_then_reveals_the_passage() {
     assert_eq!(list.items[0], "What did you highlight in Essay?");
 }
 
+/// Study cards (B1-f1): a note and its heading become cards; the session
+/// asks, reveals, takes grades in words with 1 to 4, reverses a question
+/// card, and stores each grade; the Cards list goes to a card's source.
+#[test]
+fn cards_are_made_studied_and_graded() {
+    use textweaver_app::ListKey;
+    let mut r = Rig::new();
+    r.open("essay.md", ESSAY);
+    r.act(ActionId::StudyCards);
+    assert!(r.status().starts_with("No cards yet."), "{}", r.status());
+    r.go("We measured");
+    r.act(ActionId::AddNote);
+    r.send(Command::Answer("How was it measured?".into()));
+    r.act(ActionId::MakeCards);
+    assert_eq!(r.status(), "Cards made: 2 new, 2 in all.");
+    r.act(ActionId::MakeCards);
+    assert_eq!(r.status(), "No new cards. 2 cards in all.");
+    r.said.clear();
+    r.act(ActionId::StudyCards);
+    assert!(
+        r.said.any(
+            "Study cards, 2 cards. Enter shows each answer, 1 to 4 grade it. Space to answer aloud."
+        ),
+        "{:?}",
+        r.said.all()
+    );
+    let list = r.app.list_model().unwrap().clone();
+    assert_eq!(list.title, "Study cards: Essay");
+    assert_eq!(
+        list.items,
+        [
+            "What does \u{201c}Methods\u{201d} say?",
+            "How was it measured?"
+        ]
+    );
+    r.send(Command::ListKey(ListKey::Enter));
+    assert!(r.said.any("Answer: We measured things carefully."));
+    r.said.clear();
+    r.send(Command::ListKey(ListKey::Char('3')));
+    assert_eq!(
+        r.said.all(),
+        ["Good. Card 2 of 2. Question: How was it measured?"]
+    );
+    assert_eq!(r.app.list_model().unwrap().selected, 1);
+    r.send(Command::ListKey(ListKey::Char('r')));
+    assert!(
+        r.said
+            .any("Reversed. Question: We measured things carefully.")
+    );
+    r.send(Command::ListKey(ListKey::Char('1')));
+    assert!(r.said.any("Again. Done: all 2 cards graded."));
+    assert!(r.app.list_model().is_none());
+    // The grades are stored with their times, and the direction kept.
+    let dir = r.paths.cards_dir();
+    let files: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap()
+        .filter_map(Result::ok)
+        .collect();
+    assert_eq!(files.len(), 1);
+    let deck: textweaver_store::CardDeck =
+        serde_json::from_str(&std::fs::read_to_string(files[0].path()).unwrap()).unwrap();
+    let grades: Vec<Vec<&str>> = deck
+        .cards
+        .iter()
+        .map(|c| c.reviews.iter().map(|g| g.grade.as_str()).collect())
+        .collect();
+    assert_eq!(grades, [vec!["good"], vec!["again"]]);
+    assert!(deck.cards[1].reversed);
+    assert!(deck.cards[1].reviews[0].ts > 0);
+    // The Cards list, and Enter on a card's source.
+    r.act(ActionId::ListCards);
+    let items = r.app.list_model().unwrap().items.clone();
+    assert_eq!(
+        items[0],
+        "Recall: What does \u{201c}Methods\u{201d} say?, last graded Good"
+    );
+    r.act(ActionId::SkipNextHeading);
+    r.act(ActionId::ListCards);
+    r.send(Command::ListKey(ListKey::Down));
+    r.send(Command::ListKey(ListKey::Enter));
+    assert_eq!(r.at_cursor(11), "We measured");
+}
+
+/// A grade from the palette, with the session's list closed, grades the
+/// card the reader was on and opens the list again on the next one.
+#[test]
+fn a_grade_from_the_palette_reopens_the_session() {
+    use textweaver_app::ListKey;
+    let mut r = Rig::new();
+    r.open("essay.md", ESSAY);
+    r.go("We measured");
+    r.act(ActionId::AddNote);
+    r.send(Command::Answer("How was it measured?".into()));
+    r.act(ActionId::GradeGood);
+    assert!(
+        r.status().starts_with("No study session."),
+        "{}",
+        r.status()
+    );
+    r.act(ActionId::MakeCards);
+    r.act(ActionId::StudyCards);
+    r.send(Command::ListKey(ListKey::Escape));
+    assert!(r.app.list_model().is_none());
+    r.said.clear();
+    r.act(ActionId::GradeGood);
+    assert!(
+        r.said.any("Good. Study cards, card 2 of 2."),
+        "{:?}",
+        r.said.all()
+    );
+    assert_eq!(r.app.list_model().unwrap().selected, 1);
+}
+
+/// `c` in the highlights list makes a cloze card from the highlight.
+#[test]
+fn a_highlight_becomes_a_cloze_card_from_its_list() {
+    use textweaver_app::ListKey;
+    let mut r = Rig::new();
+    r.open("essay.md", ESSAY);
+    r.go("Intro paragraph");
+    r.send(Command::Select(CharRange::new(
+        r.cursor(),
+        r.cursor().saturating_add(5),
+    )));
+    r.act(ActionId::HighlightSelection);
+    r.send(Command::Notes(textweaver_app::NoteCommand::ListHighlights));
+    assert!(r.app.list_model().is_some());
+    r.send(Command::ListKey(ListKey::Char('c')));
+    assert_eq!(r.status(), "Card made: blank paragraph with bold words.");
+    assert!(r.app.list_model().is_some(), "the list stays");
+}
+
 #[test]
 fn the_self_test_says_when_there_is_nothing_to_test() {
     let mut r = Rig::new();

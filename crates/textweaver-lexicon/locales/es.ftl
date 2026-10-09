@@ -752,6 +752,13 @@ action-delete-note = Eliminar la nota o resaltado en el cursor
 action-highlight-selection = Resaltar la selección, o la oración en el cursor
 action-export-study-sheet = Exportar las notas y resaltados como una hoja de estudio en Markdown, agrupados por encabezado
 action-self-test = Ponerse a prueba con las notas y resaltados: Intro muestra cada respuesta
+action-make-cards = Crear tarjetas de estudio con las notas, los resaltados y sus encabezados
+action-study-cards = Estudiar las tarjetas: Intro muestra la respuesta, de 1 a 4 la califican
+action-list-cards = Mostrar las tarjetas de estudio: Intro va al origen de una tarjeta, Supr la quita
+action-grade-again = Calificar la tarjeta en estudio: Otra vez, no recordada
+action-grade-hard = Calificar la tarjeta en estudio: Difícil, recordada con esfuerzo
+action-grade-good = Calificar la tarjeta en estudio: Bien, recordada
+action-grade-easy = Calificar la tarjeta en estudio: Fácil, recordada al instante
 action-open = Abrir un documento
 action-open-path = Abrir un documento escribiendo su ruta
 action-open-library = Abrir la biblioteca: documentos de sus carpetas de biblioteca y archivos recientes
@@ -1154,8 +1161,8 @@ notes-none = Sin notas. Para agregar una: { $key }.
 notes-list-title = Notas
 notes-list-intro =
     { $n ->
-        [one] Notas, 1 elemento. Intro va a una nota, Suprimir la elimina, F2 la edita, Espacio abre sus enlaces.
-       *[other] Notas, { $n } elementos. Intro va a una nota, Suprimir la elimina, F2 la edita, Espacio abre sus enlaces.
+        [one] Notas, 1 elemento. Intro va a una nota, Suprimir la elimina, F2 la edita, Espacio abre sus enlaces. C crea una tarjeta.
+       *[other] Notas, { $n } elementos. Intro va a una nota, Suprimir la elimina, F2 la edita, Espacio abre sus enlaces. C crea una tarjeta.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. En: { $anchor }
@@ -1180,8 +1187,8 @@ notes-no-highlights = Sin resaltados. Para crear uno: { $key }.
 notes-highlights-title = Resaltados
 notes-highlights-intro =
     { $n ->
-        [one] Resaltados, 1 elemento. Intro va a uno, Suprimir lo quita.
-       *[other] Resaltados, { $n } elementos. Intro va a uno, Suprimir lo quita.
+        [one] Resaltados, 1 elemento. Intro va a uno, Suprimir lo quita. C crea una tarjeta.
+       *[other] Resaltados, { $n } elementos. Intro va a uno, Suprimir lo quita. C crea una tarjeta.
     }
 # The label said before a highlight's text on jumping to it.
 notes-highlight-label = Resaltado
@@ -1317,6 +1324,62 @@ reveal-listening = Responda en voz alta ahora. Espacio para terminar.
 reveal-you-said = Usted dijo: { $words }. Intro muestra la respuesta.
 reveal-heard-nothing = No se oyó ninguna respuesta. Espacio para intentarlo de nuevo.
 reveal-no-dictation = Responder en voz alta necesita el dictado, que no está en esta versión.
+
+## Tarjetas de estudio y la sesión de estudio (crate::cards).
+
+cards-blank = espacio
+cards-recall-question = ¿Qué dice «{ $heading }»?
+cards-no-document = Abra un documento para crear o estudiar tarjetas.
+cards-nothing-to-make = No hay notas ni resaltados para crear tarjetas. Añada primero una nota o un resaltado.
+cards-made =
+    { $added ->
+        [0] Ninguna tarjeta nueva. { $total } tarjetas en total.
+        [one] Tarjetas creadas: 1 nueva, { $total } en total.
+       *[other] Tarjetas creadas: { $added } nuevas, { $total } en total.
+    }
+cards-none-from-item = Ninguna tarjeta de este elemento: necesita texto sobre un pasaje.
+cards-made-one = Tarjeta creada: { $question }
+cards-updated-one = Tarjeta actualizada: { $question }
+cards-none = Aún no hay tarjetas. Para crearlas: { $key }.
+cards-study-title = Estudiar tarjetas: { $title }
+cards-study-intro =
+    { $n ->
+        [one] Estudiar tarjetas, 1 tarjeta. Intro muestra la respuesta, de 1 a 4 la califican. Espacio para responder en voz alta.
+       *[other] Estudiar tarjetas, { $n } tarjetas. Intro muestra cada respuesta, de 1 a 4 la califican. Espacio para responder en voz alta.
+    }
+cards-no-session = No hay sesión de estudio. Para empezar una: { $key }.
+cards-card-gone = Esa tarjeta se quitó.
+cards-grade-again = Otra vez
+cards-grade-hard = Difícil
+cards-grade-good = Bien
+cards-grade-easy = Fácil
+cards-graded = { $grade }. Tarjeta { $i } de { $n }. Pregunta: { $question }
+# Said when a grade from the palette opens the session again on the next card.
+cards-graded-reopen = { $grade }. Estudiar tarjetas, tarjeta { $i } de { $n }.
+cards-session-done =
+    { $n ->
+        [one] { $grade }. Terminado: la tarjeta está calificada.
+       *[other] { $grade }. Terminado: las { $n } tarjetas están calificadas.
+    }
+cards-reversed = Invertida. Pregunta: { $question }
+cards-unreversed = Como se creó. Pregunta: { $question }
+cards-not-reversible = Solo las tarjetas de pregunta se pueden invertir.
+cards-kind-cloze = Completar el espacio
+cards-kind-question = Pregunta
+cards-kind-recall = Recordar
+cards-not-graded = sin calificar aún
+cards-last-grade = última calificación: { $grade }
+cards-item = { $kind }: { $question }, { $grade }
+cards-list-title = Tarjetas
+cards-list-intro =
+    { $n ->
+        [one] Tarjetas, 1 elemento. Intro va a su origen, Supr la quita.
+       *[other] Tarjetas, { $n } elementos. Intro va al origen de una tarjeta, Supr la quita.
+    }
+cards-source-label = Origen de la tarjeta
+cards-remove-question = ¿Quitar esta tarjeta y sus calificaciones? y o n
+cards-removed = Tarjeta quitada.
+cards-save-failed = No se pudieron guardar las tarjetas: { $error } Compruebe que se puede escribir en la carpeta de datos.
 
 ## Find, bookmarks, and selection.
 
@@ -3382,6 +3445,13 @@ name-delete-note = Borrar nota o resaltado
 name-highlight-selection = Resaltar
 name-export-study-sheet = Exportar hoja de estudio
 name-self-test = Autoevaluación
+name-make-cards = Crear tarjetas
+name-study-cards = Estudiar tarjetas
+name-list-cards = Tarjetas
+name-grade-again = Calificar otra vez
+name-grade-hard = Calificar difícil
+name-grade-good = Calificar bien
+name-grade-easy = Calificar fácil
 name-open = Abrir
 name-open-path = Abrir por ruta
 name-open-library = Biblioteca
@@ -3972,6 +4042,7 @@ sync-already-off = La sincronización ya está desactivada aquí.
 sync-stopped = Sincronización desactivada aquí. La carpeta queda como está.
 prompt-sync-computer-name = Nombre de este equipo, Intro lo mantiene
 menu-sync = Sincronización
+menu-cards = Tarjetas de estudio
 name-sync-setup = Configurar la sincronización
 name-sync-status = Estado de la sincronización
 name-sync-now = Sincronizar ahora

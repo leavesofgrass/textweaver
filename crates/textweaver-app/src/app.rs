@@ -319,6 +319,8 @@ pub(crate) enum ListKind {
     /// A note's links, what links to it, or a step of adding one
     /// (crate::relations, B1-g1).
     Relations(crate::relations::RelationsList),
+    /// The study cards, by id (crate::cards).
+    Cards(Vec<String>),
 }
 
 /// The application: the only owner of mutable state.
@@ -503,6 +505,8 @@ pub struct App {
     /// just said (an answer revealed): its focused item is not said again
     /// and its introduction is kept (crate::reveal).
     pub(crate) list_reshow_quiet: bool,
+    /// Study cards and the study session (crate::cards).
+    pub(crate) cards: crate::cards::CardsState,
     /// Menu handlers, recent commands, and the menu list (crate::menu).
     pub(crate) menu: crate::menu::MenuState,
     /// Dictation in edit mode (crate::dictation).
@@ -644,6 +648,7 @@ impl App {
             pending_list_focus: None,
             announce_list_focus: true,
             list_reshow_quiet: false,
+            cards: crate::cards::CardsState::default(),
             menu: crate::menu::MenuState::default(),
             dictation: crate::dictation::DictationSlot::default(),
             browse: crate::browse::BrowseState::new(),
@@ -753,7 +758,7 @@ impl App {
         }
         if let Some((kind, _)) = &self.pending_list_delete {
             return Some(match kind {
-                ListKind::Highlights | ListKind::Relations(_) => V::Remove,
+                ListKind::Highlights | ListKind::Relations(_) | ListKind::Cards(_) => V::Remove,
                 _ => V::Delete,
             });
         }
@@ -823,6 +828,7 @@ impl App {
                         ListKind::Highlights => self.delete_highlight(n),
                         ListKind::Changes(rows) => self.delete_comment_row(&rows, n),
                         ListKind::Relations(l) => self.remove_relation(&l, n),
+                        ListKind::Cards(ids) => self.delete_card_row(&ids, n),
                         _ => self.delete_note(n),
                     }
                 }
@@ -834,6 +840,7 @@ impl App {
                         ListKind::Highlights => self.list_highlights(),
                         ListKind::Changes(_) => self.list_changes(),
                         ListKind::Relations(l) => self.reshow_relations(&l),
+                        ListKind::Cards(_) => self.list_cards(),
                         _ => self.notes_command(NoteCommand::List),
                     }
                 }
@@ -1852,7 +1859,11 @@ impl App {
                 }
             }
             Some(ListKind::Summary(ranges)) => self.choose_summary_sentence(&ranges, n),
-            Some(ListKind::Reveal(l)) => return self.choose_reveal(l, n),
+            Some(ListKind::Reveal(l)) => {
+                self.cards_row_chosen(&l, n);
+                return self.choose_reveal(l, n);
+            }
+            Some(ListKind::Cards(ids)) => self.choose_card_row(&ids, n),
             Some(ListKind::Changes(rows)) => self.choose_change_row(&rows, n),
             Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
             Some(ListKind::Info) | None => {}
@@ -1890,6 +1901,13 @@ impl App {
                 vec![Effect::Redraw]
             }
             Some(ListKind::Relations(l)) => self.delete_relation_item(l, n),
+            Some(kind @ ListKind::Cards(_)) => {
+                let question = self.msg(list_delete_question(&kind));
+                self.list = None;
+                self.pending_list_delete = Some((kind, n));
+                self.ask(&question);
+                vec![Effect::Redraw]
+            }
             _ => {
                 let msg = self.msg("study-nothing-to-delete");
                 self.tell(&msg);
@@ -2187,6 +2205,13 @@ impl App {
             A::AddNote => return self.notes_command(NoteCommand::Add),
             A::ListNotes => return self.notes_command(NoteCommand::List),
             A::ListChanges => return self.list_changes(),
+            A::MakeCards
+            | A::StudyCards
+            | A::ListCards
+            | A::GradeAgain
+            | A::GradeHard
+            | A::GradeGood
+            | A::GradeEasy => return self.cards_action(a),
             A::AcceptAllChanges => return self.decide_all(true, None),
             A::RejectAllChanges => return self.decide_all(false, None),
             A::AddComment => return self.prompt(PromptPurpose::CommentText),
@@ -2338,6 +2363,7 @@ fn list_delete_question(kind: &ListKind) -> &'static str {
     match kind {
         ListKind::Highlights => "notes-remove-highlight-question",
         ListKind::Changes(_) => "changes-delete-comment-question",
+        ListKind::Cards(_) => "cards-remove-question",
         ListKind::Relations(_) => "relations-remove-question",
         _ => "notes-delete-note-question",
     }
