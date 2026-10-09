@@ -1,6 +1,7 @@
 //! Subcommands. Each file is owned by one agent (the agent briefs).
 
 pub mod backends;
+pub mod changes;
 pub mod cite;
 pub mod components;
 pub mod convert;

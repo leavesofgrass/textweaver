@@ -122,6 +122,36 @@ impl Builder {
         }
     }
 
+    /// The canonical text so far.
+    pub(crate) fn as_str(&self) -> &str {
+        &self.text
+    }
+
+    /// The canonical text's length so far, in chars.
+    pub(crate) fn len_chars(&self) -> usize {
+        self.len
+    }
+
+    /// Where the next content will start, in chars: after a pending line
+    /// or paragraph break, before a pending space.
+    pub(crate) fn next_start(&self) -> usize {
+        let breaks = match self.pending {
+            Some(Break::Paragraph) if self.len > 0 => {
+                2 - usize::from(self.text.ends_with('\n'))
+                    - usize::from(self.text.ends_with("\n\n"))
+            }
+            Some(Break::Line) if self.len > 0 && !self.text.ends_with('\n') => 1,
+            _ => 0,
+        };
+        self.len + breaks
+    }
+
+    /// The next text joins the word before it: no separator is pending and
+    /// the line has text ("cat" then "s" in one word).
+    pub(crate) fn joined(&self) -> bool {
+        self.pending.is_none() && self.line_has_text
+    }
+
     /// Inline text: whitespace runs collapse to one space, dropped at line
     /// starts and ends.
     pub(crate) fn text(&mut self, s: &str) {

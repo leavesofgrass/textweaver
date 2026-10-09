@@ -4442,3 +4442,101 @@ gui-reading-generous = تباعد واسع
 gui-reading-generous-help = ضبط التباعدات الأربعة أوسع من WCAG.
 gui-reading-closed = أُغلقت إعدادات القراءة.
 ## End of W9b-x
+
+## B1-t1: التغييرات المتعقبة والتعليقات (قائمة التغييرات).
+name-list-changes = التغييرات والتعليقات
+action-list-changes = عرض التغييرات المتعقبة والتعليقات: Enter ينتقل إلى أحدها، A يقبل التغيير، R يرفضه
+name-accept-all-changes = قبول كل التغييرات
+action-accept-all-changes = قبول كل تغيير متعقب في المستند
+name-reject-all-changes = رفض كل التغييرات
+action-reject-all-changes = رفض كل تغيير متعقب في المستند
+name-add-comment = إضافة تعليق
+action-add-comment = إضافة تعليق على التحديد أو على الجملة عند المؤشر
+prompt-comment-reply = الرد
+prompt-comment-text = التعليق
+changes-title = التغييرات والتعليقات
+changes-intro =
+    { $n ->
+        [one] { $title }، عنصر واحد. Enter ينتقل إليه. A يقبل التغيير، R يرفضه، ومع Shift يشمل كل تغييرات المؤلف نفسه. على التعليق، F2 للرد، Space للحل، Delete للحذف. N يضيف تعليقا.
+       *[other] { $title }، { $n } عناصر. Enter ينتقل إلى أحدها. A يقبل التغيير، R يرفضه، ومع Shift يشمل كل تغييرات المؤلف نفسه. على التعليق، F2 للرد، Space للحل، Delete للحذف. N يضيف تعليقا.
+    }
+changes-none = لا توجد تغييرات متعقبة ولا تعليقات في هذا المستند.
+changes-row = { $kind }: «{ $text }»، { $who }، { $when }
+changes-kind-inserted = إدراج
+changes-kind-deleted = حذف
+changes-kind-moved-away = نقل من هنا
+changes-kind-moved-here = نقل إلى هنا
+changes-by = بواسطة { $author }
+changes-no-author = المؤلف غير مسجل
+changes-no-date = التاريخ غير مسجل
+changes-date = { $weekday }، { $day } { $month } { $year }
+changes-weekday-0 = الأحد
+changes-weekday-1 = الاثنين
+changes-weekday-2 = الثلاثاء
+changes-weekday-3 = الأربعاء
+changes-weekday-4 = الخميس
+changes-weekday-5 = الجمعة
+changes-weekday-6 = السبت
+changes-month-1 = يناير
+changes-month-2 = فبراير
+changes-month-3 = مارس
+changes-month-4 = أبريل
+changes-month-5 = مايو
+changes-month-6 = يونيو
+changes-month-7 = يوليو
+changes-month-8 = أغسطس
+changes-month-9 = سبتمبر
+changes-month-10 = أكتوبر
+changes-month-11 = نوفمبر
+changes-month-12 = ديسمبر
+changes-comment = تعليق: { $text }
+changes-comment-by = تعليق من { $author }: { $text }
+changes-replies =
+    { $n ->
+        [one] رد واحد
+       *[other] { $n } ردود
+    }
+changes-resolved = محلول
+changes-accepted = تم القبول. { $kind }: «{ $text }».
+changes-rejected = تم الرفض. { $kind }: «{ $text }».
+changes-accepted-all =
+    { $n ->
+        [one] تم قبول تغيير واحد.
+       *[other] تم قبول { $n } تغييرات.
+    }
+changes-rejected-all =
+    { $n ->
+        [one] تم رفض تغيير واحد.
+       *[other] تم رفض { $n } تغييرات.
+    }
+changes-accepted-author =
+    { $n ->
+        [one] تم قبول تغيير واحد من { $author }.
+       *[other] تم قبول { $n } تغييرات من { $author }.
+    }
+changes-rejected-author =
+    { $n ->
+        [one] تم رفض تغيير واحد من { $author }.
+       *[other] تم رفض { $n } تغييرات من { $author }.
+    }
+changes-none-left = لا توجد تغييرات متعقبة للقبول أو الرفض.
+changes-not-a-change = هذا الصف تعليق. F2 للرد، Space للحل، Delete للحذف.
+changes-not-a-comment = هذا الصف تغيير. A يقبله، R يرفضه.
+changes-edit-mode = تبقى التغييرات كما هي في وضع التحرير. اخرج من وضع التحرير لقبولها أو رفضها.
+changes-replied = تمت إضافة الرد.
+changes-resolved-done = تم حل التعليق.
+changes-reopened = أعيد فتح التعليق.
+changes-comment-deleted = تم حذف التعليق وردوده.
+changes-comment-added = تمت إضافة التعليق.
+changes-delete-comment-question = حذف هذا التعليق وردوده؟ y أو n
+changes-written-accepted =
+    { $n ->
+        [one] تمت كتابة { $path } مع قبول تغيير واحد.
+       *[other] تمت كتابة { $path } مع قبول { $n } تغييرات.
+    }
+changes-written-rejected =
+    { $n ->
+        [one] تمت كتابة { $path } مع رفض تغيير واحد.
+       *[other] تمت كتابة { $path } مع رفض { $n } تغييرات.
+    }
+## End of B1-t1

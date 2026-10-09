@@ -321,7 +321,7 @@ The notes commands return `status` and `effects` but no `pending`.
 
 #### Prompt purposes
 
-A prompt's `purpose` is one of these 26 purposes. The names are fixed: a new purpose may be added, but none is renamed or removed within protocol version 1. Treat a purpose you do not know like any other text question: show the `label` and send what the user types.
+A prompt's `purpose` is one of these 28 purposes. The names are fixed: a new purpose may be added, but none is renamed or removed within protocol version 1. Treat a purpose you do not know like any other text question: show the `label` and send what the user types.
 
 - `find`: the text to find.
 - `go_to`: a line, a percentage, `start`, or `end`.
@@ -349,6 +349,8 @@ A prompt's `purpose` is one of these 26 purposes. The names are fixed: a new pur
 - `setting_value`: a new value for the setting chosen in the settings list; empty keeps it.
 - `sync_computer_name`: this computer's name for sync; empty keeps the one suggested.
 - `document_details`: one field of the document details form (title, author, DOI, or ISBN). `prompt_key` with `tab` moves between the fields, and `answer` saves them all.
+- `comment_reply`: a reply to the comment chosen in the changes list.
+- `comment_text`: the text of a new comment on the selection or the sentence at the cursor.
 
 The reader writes files in the background (saves, bookmarks, notes, positions). The server waits for those writes before it answers, so when an `action` such as `save` or `add_bookmark` returns, the file is on disk.
 

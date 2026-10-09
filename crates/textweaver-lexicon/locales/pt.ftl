@@ -4154,3 +4154,101 @@ gui-reading-generous = Espaçamento amplo
 gui-reading-generous-help = Pôr os quatro espaçamentos maiores que a WCAG.
 gui-reading-closed = Configurações de leitura fechadas.
 ## End of W9b-x
+
+## B1-t1: alterações controladas e comentários (a lista de alterações).
+name-list-changes = Alterações e comentários
+action-list-changes = Listar as alterações controladas e os comentários: Enter vai até um, A aceita uma alteração, R a rejeita
+name-accept-all-changes = Aceitar todas as alterações
+action-accept-all-changes = Aceitar todas as alterações controladas do documento
+name-reject-all-changes = Rejeitar todas as alterações
+action-reject-all-changes = Rejeitar todas as alterações controladas do documento
+name-add-comment = Adicionar comentário
+action-add-comment = Adicionar um comentário à seleção ou à frase do cursor
+prompt-comment-reply = Resposta
+prompt-comment-text = Comentário
+changes-title = Alterações e comentários
+changes-intro =
+    { $n ->
+        [one] { $title }, { $n } item. Enter vai até ele. A aceita uma alteração, R a rejeita, e com Shift qualquer uma faz todas as alterações do mesmo autor. Num comentário, F2 responde, Espaço resolve, Delete apaga. N adiciona um comentário.
+       *[other] { $title }, { $n } itens. Enter vai até um. A aceita uma alteração, R a rejeita, e com Shift qualquer uma faz todas as alterações do mesmo autor. Num comentário, F2 responde, Espaço resolve, Delete apaga. N adiciona um comentário.
+    }
+changes-none = Não há alterações controladas nem comentários neste documento.
+changes-row = { $kind }: “{ $text }”, { $who }, { $when }
+changes-kind-inserted = Inserido
+changes-kind-deleted = Excluído
+changes-kind-moved-away = Movido daqui
+changes-kind-moved-here = Movido para cá
+changes-by = por { $author }
+changes-no-author = autor não registrado
+changes-no-date = data não registrada
+changes-date = { $weekday }, { $day } de { $month } de { $year }
+changes-weekday-0 = domingo
+changes-weekday-1 = segunda-feira
+changes-weekday-2 = terça-feira
+changes-weekday-3 = quarta-feira
+changes-weekday-4 = quinta-feira
+changes-weekday-5 = sexta-feira
+changes-weekday-6 = sábado
+changes-month-1 = janeiro
+changes-month-2 = fevereiro
+changes-month-3 = março
+changes-month-4 = abril
+changes-month-5 = maio
+changes-month-6 = junho
+changes-month-7 = julho
+changes-month-8 = agosto
+changes-month-9 = setembro
+changes-month-10 = outubro
+changes-month-11 = novembro
+changes-month-12 = dezembro
+changes-comment = Comentário: { $text }
+changes-comment-by = Comentário de { $author }: { $text }
+changes-replies =
+    { $n ->
+        [one] { $n } resposta
+       *[other] { $n } respostas
+    }
+changes-resolved = resolvido
+changes-accepted = Aceito. { $kind }: “{ $text }”.
+changes-rejected = Rejeitado. { $kind }: “{ $text }”.
+changes-accepted-all =
+    { $n ->
+        [one] { $n } alteração aceita.
+       *[other] { $n } alterações aceitas.
+    }
+changes-rejected-all =
+    { $n ->
+        [one] { $n } alteração rejeitada.
+       *[other] { $n } alterações rejeitadas.
+    }
+changes-accepted-author =
+    { $n ->
+        [one] { $n } alteração de { $author } aceita.
+       *[other] { $n } alterações de { $author } aceitas.
+    }
+changes-rejected-author =
+    { $n ->
+        [one] { $n } alteração de { $author } rejeitada.
+       *[other] { $n } alterações de { $author } rejeitadas.
+    }
+changes-none-left = Não há alterações controladas para aceitar ou rejeitar.
+changes-not-a-change = Esta linha é um comentário. F2 responde, Espaço resolve, Delete apaga.
+changes-not-a-comment = Esta linha é uma alteração. A a aceita, R a rejeita.
+changes-edit-mode = No modo de edição as alterações ficam como estão. Saia do modo de edição para aceitá-las ou rejeitá-las.
+changes-replied = Resposta adicionada.
+changes-resolved-done = Comentário resolvido.
+changes-reopened = Comentário aberto de novo.
+changes-comment-deleted = Comentário e respostas apagados.
+changes-comment-added = Comentário adicionado.
+changes-delete-comment-question = Apagar este comentário e as respostas? y ou n
+changes-written-accepted =
+    { $n ->
+        [one] { $path } gravado com { $n } alteração aceita.
+       *[other] { $path } gravado com { $n } alterações aceitas.
+    }
+changes-written-rejected =
+    { $n ->
+        [one] { $path } gravado com { $n } alteração rejeitada.
+       *[other] { $path } gravado com { $n } alterações rejeitadas.
+    }
+## End of B1-t1

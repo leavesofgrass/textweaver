@@ -113,14 +113,23 @@ fn comment_note_id(c: &textweaver_formats::DocumentComment) -> String {
 /// tagged `comment` (and `resolved` when it is), so reading passes it with
 /// the note signal. Returns how many were added.
 pub(crate) fn add_document_comments(notes: &mut Vec<Note>, doc: &Document) -> usize {
-    let comments = textweaver_formats::comments(&doc.meta);
+    add_document_comments_from(notes, doc, &textweaver_formats::comments(&doc.meta))
+}
+
+/// [`add_document_comments`] for `comments` (the changes list passes the
+/// document's comments after an edit).
+pub(crate) fn add_document_comments_from(
+    notes: &mut Vec<Note>,
+    doc: &Document,
+    comments: &[textweaver_formats::DocumentComment],
+) -> usize {
     if comments.is_empty() {
         return 0;
     }
     let len = doc.len_chars();
     let now = textweaver_store::now_ts();
     let mut added = 0;
-    for c in &comments {
+    for c in comments {
         let id = comment_note_id(c);
         if notes.iter().any(|n| n.id == id) {
             continue;
@@ -169,7 +178,7 @@ impl App {
     }
 
     /// The selection, else the sentence at the cursor, else the word.
-    fn note_target(&self) -> Option<CharRange> {
+    pub(crate) fn note_target(&self) -> Option<CharRange> {
         let s = self.session.as_ref()?;
         if let Some(sel) = s.selection.filter(|r| !r.is_empty()) {
             return Some(sel);

@@ -213,6 +213,8 @@ pub(crate) fn prompt_label(c: &Catalog, purpose: PromptPurpose) -> String {
         P::SettingValue => "prompt-setting-value",
         P::SyncComputerName => "prompt-sync-computer-name",
         P::DocumentDetails => "prompt-document-details",
+        P::CommentReply => "prompt-comment-reply",
+        P::CommentText => "prompt-comment-text",
     })
 }
 

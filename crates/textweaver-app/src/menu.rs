@@ -494,6 +494,11 @@ impl MenuId {
                 Do(A::PreviousNote),
                 Do(A::HighlightSelection),
                 Do(A::DeleteNote),
+                Sep,
+                Do(A::ListChanges),
+                Do(A::AcceptAllChanges),
+                Do(A::RejectAllChanges),
+                Do(A::AddComment),
             ],
             MenuId::Tables => &[
                 Do(A::NextTable),

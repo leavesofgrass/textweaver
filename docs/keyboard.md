@@ -262,6 +262,10 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `Delete` (browse) | `delete_note` |
 | Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `y` (browse) | `highlight_selection` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | palette | palette | palette | `export_study_sheet` |
+| List the tracked changes and comments: Enter goes to one, A accepts a change, R rejects it | `Alt+A` | `Ctrl+Shift+J` | `Cmd+Shift+J` | `list_changes` |
+| Accept every tracked change in the document | palette | palette | palette | `accept_all_changes` |
+| Reject every tracked change in the document | palette | palette | palette | `reject_all_changes` |
+| Add a comment to the selection or the sentence at the cursor | palette | palette | palette | `add_comment` |
 
 ## File
 
@@ -528,6 +532,9 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
 | Choose how Find and Replace match: case, whole words, regular expression, across lines | `search_options` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
+| Accept every tracked change in the document | `accept_all_changes` |
+| Reject every tracked change in the document | `reject_all_changes` |
+| Add a comment to the selection or the sentence at the cursor | `add_comment` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |
