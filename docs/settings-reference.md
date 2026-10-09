@@ -123,6 +123,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 ## Export: the `[export]` section
 
+- `export.audio_format`: default FLAC (`"flac"`). Audio export format. The format Export audio lists first. tw export-audio also uses it for a file name with no extension. Choices: `"flac"` (FLAC), `"mp3"` (MP3), `"opus"` (Opus), `"ogg"` (Ogg Vorbis), `"wav"` (WAV), `"m4b"` (M4B audiobook), `"mp4"` (MP4 video with captions). Syncs between computers.
 - `export.subtitle_format`: default SubRip (`"srt"`). Subtitle format. The format of subtitles written without a file name. Choices: `"srt"` (SubRip), `"vtt"` (WebVTT), `"ass"` (ASS karaoke). Syncs between computers.
 - `export.subtitle_karaoke`: default Off (`"off"`). Subtitle karaoke. How subtitle lines show the word being read. Off, underlined as it is spoken (WebVTT tags), or one cue per word in bold and underline. Choices: `"off"` (Off), `"tags"` (Underline as spoken), `"lines"` (One cue per word). Syncs between computers.
 - `export.subtitle_chapters`: default off (`false`). Chapters file. Also write a WebVTT chapters file beside the subtitles or the audio. On or off: `true` or `false`. Syncs between computers.

@@ -337,6 +337,7 @@ How textweaver shares the work with a screen reader. See [Using textweaver with 
 
 Audio export. See [Audio export](audio-export.md).
 
+- `audio_format`, default `"flac"`: the format Export audio lists first, and the one `tw export-audio` writes when the `--out` name has no extension. `"flac"`, `"mp3"`, `"opus"`, `"ogg"`, `"wav"`, `"m4b"` (an audiobook), or `"mp4"` (a video with captions). M4B and MP4 need ffmpeg; without it they are not listed, and the list keeps its usual order.
 - `subtitle_format`, default `"srt"`: `"srt"` or `"vtt"`, used when subtitles are written without a file name.
 - `subtitle_word_level`, default `false`: one subtitle cue per word instead of caption lines.
 - `subtitles_with_audio`, default `false`: always write subtitles beside the exported audio.
@@ -502,7 +503,7 @@ Every setting is either **portable**, which syncs, or **machine**, which never d
 
 ## Settings profiles
 
-A profile is a named set of the settings you change together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; and the access mode. Keep one for studying and one for skimming, or one for each person who shares the computer.
+A profile is a named set of the settings you change together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; the access mode; and the audio export format. Keep one for studying and one for skimming, or one for each person who shares the computer.
 
 - In the reader, **Ctrl+Shift+U** in the window or **Alt+U** in the terminal lists your profiles. Enter switches to one; its settings take effect at once and are saved. F2 renames a profile, and Delete deletes one after a yes or no. The last items save the current settings as a new profile, save them into the profile in use, and import and export profiles.
 - From the command line:
@@ -521,12 +522,13 @@ Profiles are kept in `profiles.toml`, beside `settings.toml`, so exporting your 
 
 ### Developer profile (example)
 
-An example profile, `docs/examples/developer-profile.toml`, comes with the source and the terminal package. It is never used unless you import it and switch to it. It sets:
+An example profile, `docs/examples/developer-profile.toml`, comes with the source and every package, beside the guides. It is never used unless you import it and switch to it. It sets:
 
 - the Eloquence engine (`speech.backend = "eci"`) with the Reed voice (`speech.voice = "Reed"`);
 - 400 words per minute (`speech.rate = 400`);
 - the Lexend font at 16 points (`reading_aids.font`, `family = "lexend"`, `size_pt = 16.0`); Lexend is downloaded the first time, after asking;
-- the Galaxy theme (`display.theme = "galaxy"`).
+- the Galaxy theme (`display.theme = "galaxy"`);
+- Opus for audio export (`export.audio_format = "opus"`).
 
 To try it:
 
@@ -537,8 +539,6 @@ tw settings profile switch "Developer"
 ```
 
 Saving your own settings as a profile first means `tw settings profile switch "My settings"` puts them back. Importing only adds the profile; nothing changes until you switch. In the reader, the profile list (Ctrl+Shift+U in the window, Alt+U in the terminal) imports and switches the same way.
-
-The example also uses Opus for audio export. A profile does not hold the audio format, so choose Opus in Export audio's format list, or give `tw export-audio` an output name ending in `.opus`. See [Audio export](audio-export.md).
 
 Eloquence must be installed for the Reed voice; see [the Eloquence guide](eloquence.md). Without it, textweaver says so and uses another engine.
 

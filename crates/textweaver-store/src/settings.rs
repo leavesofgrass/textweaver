@@ -589,6 +589,44 @@ impl Default for CommunityLexiconSettings {
     }
 }
 
+/// The audio format Export audio offers first, and the one `tw
+/// export-audio` writes when the output name has no extension (`[export]
+/// audio_format`). Each value is the format's file extension.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AudioExportFormat {
+    /// FLAC (`.flac`), lossless; first in the list, as before the setting.
+    #[default]
+    Flac,
+    /// MP3 (`.mp3`).
+    Mp3,
+    /// Ogg Opus (`.opus`), the smallest, made for speech.
+    Opus,
+    /// Ogg Vorbis (`.ogg`).
+    Ogg,
+    /// WAV (`.wav`).
+    Wav,
+    /// An M4B audiobook (`.m4b`); needs ffmpeg.
+    M4b,
+    /// An MP4 video with captions (`.mp4`); needs ffmpeg.
+    Mp4,
+}
+
+impl AudioExportFormat {
+    /// The file extension, without the dot.
+    pub fn extension(self) -> &'static str {
+        match self {
+            AudioExportFormat::Flac => "flac",
+            AudioExportFormat::Mp3 => "mp3",
+            AudioExportFormat::Opus => "opus",
+            AudioExportFormat::Ogg => "ogg",
+            AudioExportFormat::Wav => "wav",
+            AudioExportFormat::M4b => "m4b",
+            AudioExportFormat::Mp4 => "mp4",
+        }
+    }
+}
+
 /// Subtitle file format for audio export.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -632,6 +670,9 @@ pub enum SubtitleKaraoke {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ExportSettings {
+    /// The audio format offered first, and written when `tw export-audio`
+    /// is given a name without an extension.
+    pub audio_format: AudioExportFormat,
     /// Subtitle format when subtitles are written without a file name.
     pub subtitle_format: SubtitleFormat,
     /// One subtitle cue per word instead of caption lines.

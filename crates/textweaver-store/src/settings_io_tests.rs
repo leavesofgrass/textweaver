@@ -158,6 +158,7 @@ fn everything_changed() -> Settings {
     s.normalization.medical_lexicon.overlay = Some("C:/terms/medical.toml".into());
     s.normalization.math_verbosity = textweaver_core::Verbosity::High;
     s.normalization.asciimath_delimiter = Some('`');
+    s.export.audio_format = crate::AudioExportFormat::Opus;
     s.export.subtitle_format = crate::SubtitleFormat::Vtt;
     s.export.subtitle_word_level = true;
     s.export.subtitles_with_audio = true;

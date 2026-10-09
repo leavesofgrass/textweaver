@@ -7,9 +7,9 @@
 #   tw settings profile switch "Developer"
 #
 # Settings: the Eloquence engine (eci) with the Reed voice at 400 words
-# per minute, the Lexend font at 16 points, and the Galaxy theme. The
-# settings guide (docs/settings.md, "Developer profile (example)") says
-# how to choose Opus for audio export, which a profile does not hold.
+# per minute, the Lexend font at 16 points, the Galaxy theme, and Opus for
+# audio export. The settings guide (docs/settings.md, "Developer profile
+# (example)") says more.
 
 textweaver_profiles = 1
 
@@ -20,6 +20,9 @@ rate = 400
 
 [profiles.Developer.display]
 theme = "galaxy"
+
+[profiles.Developer.export]
+audio_format = "opus"
 
 [profiles.Developer.reading_aids.font]
 family = "lexend"
