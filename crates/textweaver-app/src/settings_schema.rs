@@ -2275,27 +2275,33 @@ impl App {
     /// choices.
     pub fn settings_schema(&self) -> SettingsSchema {
         let mut schema = base_schema().clone();
-        let themes: Vec<Choice> = self
+        let mut themes: Vec<(bool, Choice)> = self
             .themes
             .names()
             .into_iter()
             .map(|name| {
-                // Grouped in words (W9b-d): the themes that meet AA come
-                // first in the cycle and say so; the rest say "below AA".
+                // Grouped by AA, in words (W9b-d): the themes that meet AA
+                // say so, the rest say "below AA".
                 let theme = self.themes.resolve(name).0;
                 let shown = self.theme_name_in_words(name, &theme.meta.display_name);
-                let id = if textweaver_theme::check(theme).failures().count() == 0 {
+                let meets = textweaver_theme::check(theme).failures().count() == 0;
+                let id = if meets {
                     "themes-choice-aa"
                 } else {
                     "themes-choice-below-aa"
                 };
                 let label = self.msg_args(id, &args!["theme" => shown.as_str()]);
-                Choice {
+                let choice = Choice {
                     value: Value::String(name.to_owned()),
                     label,
-                }
+                };
+                (meets, choice)
             })
             .collect();
+        // Every theme that meets AA comes first, the reader's own themes
+        // too (they load after the built-ins), each group in cycle order.
+        themes.sort_by_key(|(meets, _)| !meets);
+        let themes: Vec<Choice> = themes.into_iter().map(|(_, c)| c).collect();
         let window = self.uses_window_modes();
         for s in &mut schema.settings {
             if window && s.path == "accessibility.mode" {
