@@ -731,6 +731,23 @@ pub const INFO: &[Info] = &[
             ("final", "final text only"),
         ],
     ),
+    choice(
+        "reading.stop_at",
+        "Stop at section end",
+        "Where continuous reading stops by itself and says End of section. Never, at the next heading of any level, or at the next chapter: a section break, else a level 1 heading. Reading goes on from the heading with the read key.",
+        &[
+            ("off", "never"),
+            ("heading", "next heading"),
+            ("chapter", "next chapter"),
+        ],
+    ),
+    number(
+        "reading.stop_after_minutes",
+        "Reading timer",
+        "Continuous reading stops at the end of the sentence after this many minutes of reading, and says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.",
+        (0.0, 240.0, 5.0),
+        "minutes",
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The color theme.", &[]),
     toggle(

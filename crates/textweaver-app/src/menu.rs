@@ -383,6 +383,7 @@ impl MenuId {
                 Do(A::ReadFromCursor),
                 Do(A::ReadDocument),
                 Do(A::ReplaySentence),
+                Do(A::RepeatSentenceSlower),
                 Do(A::ReplayParagraph),
                 Do(A::ReadingPass),
                 Sep,

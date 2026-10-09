@@ -171,6 +171,23 @@ An empty line is read as "blank". Pressing **Space** right after one of these ke
 
 - **;** or **Alt+;**: read again from the start of the current sentence.
 - **r** or **Ctrl+R**: read again from the start of the current paragraph.
+- **Shift+Y**: repeat slower. textweaver says the current sentence again, 60 words per minute slower than your rate, then goes back to your rate. While reading on, reading continues after the sentence at the usual speed; otherwise it stops after the sentence. It is also **Repeat slower** in the Reading menu and the command palette. Your rate setting does not change.
+
+### Stop at the end of a section
+
+To read one section at a time, set **Stop at section end** in Settings (`[reading] stop_at`):
+
+- **never** (the default): reading goes on to the end of the document.
+- **next heading**: reading stops just before the next heading of any level.
+- **next chapter**: reading stops just before the next chapter: a section break when the document has them, otherwise a level 1 heading.
+
+When reading stops, you hear "End of section." and the key that goes on, such as "End of section. Ctrl+Space to go on." The cursor is on the next heading, so **Enter** in the document, or the read key, reads the next section, which stops at its end in turn.
+
+### Reading timer
+
+To read for a set time, set **Reading timer** in Settings (`[reading] stop_after_minutes`) to a number of minutes; 0, the default, turns it off. When that much reading time has passed, reading finishes the sentence it is in and stops, and you hear "Time is up after 20 minutes." and the key that goes on. The cursor is on the next sentence.
+
+Only reading time counts: pausing stops the clock, and resuming starts it again. Stopping with **Escape**, reaching the end of the document, or the timer running out starts the clock over at the next reading.
 
 ### Skim: reading passes, Shift+F
 

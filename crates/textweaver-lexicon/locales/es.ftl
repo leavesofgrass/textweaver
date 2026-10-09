@@ -410,6 +410,13 @@ playback-speech-died = La voz dejó de funcionar ({ $reason }). { $next }
 playback-done-reading = Lectura terminada.
 playback-speech-restarted = Voz reiniciada: { $reason }. Continúa la lectura desde la última palabra.
 playback-speech-error = Error de voz: { $error }
+playback-end-of-section = Fin de la sección. { $key } para seguir.
+playback-time-up =
+    { $minutes ->
+        [one] Se acabó el tiempo tras 1 minuto. { $key } para seguir.
+       *[other] Se acabó el tiempo tras { $minutes } minutos. { $key } para seguir.
+    }
+playback-repeat-slower = Repitiendo más despacio, a { $rate } palabras por minuto.
 
 ## The title line and Say Status.
 
@@ -633,6 +640,7 @@ action-word-count = Decir cuántas palabras tiene el documento, o la selección
 action-link-address = Decir la dirección del enlace en el cursor
 action-replay-sentence = Volver a leer desde el principio de la oración actual
 action-replay-paragraph = Volver a leer desde el principio del párrafo actual
+action-repeat-sentence-slower = Decir de nuevo la oración en el cursor más despacio y volver a la velocidad habitual
 action-rsvp-toggle = Mostrar u ocultar RSVP: una palabra a la vez, desde el cursor
 action-rsvp-play-pause = Iniciar o pausar RSVP
 action-rsvp-faster = RSVP más rápido
@@ -1856,6 +1864,13 @@ setting-reading-revisions-help = Cómo se leen los cambios registrados en archiv
 choice-reading-revisions-auto = automático
 choice-reading-revisions-marked = decirlos siempre
 choice-reading-revisions-final = solo el texto final
+setting-reading-stop-at = Parar al final de la sección
+setting-reading-stop-at-help = Dónde se detiene sola la lectura continua y dice Fin de la sección. Nunca, en el siguiente encabezado de cualquier nivel o en el siguiente capítulo: un salto de sección, o si no un encabezado de nivel 1. La lectura sigue desde el encabezado con la tecla de leer.
+choice-reading-stop-at-off = nunca
+choice-reading-stop-at-heading = siguiente encabezado
+choice-reading-stop-at-chapter = siguiente capítulo
+setting-reading-stop-after-minutes = Temporizador de lectura
+setting-reading-stop-after-minutes-help = La lectura continua se detiene al final de la oración tras estos minutos de lectura, y lo dice. Pausar detiene el reloj; detener lo reinicia. 0 apaga el temporizador.
 setting-display-theme = Tema
 setting-display-theme-help = El tema de color.
 setting-display-follow-os-theme = Seguir el tema del sistema
@@ -2172,6 +2187,11 @@ settings-unit-rows =
     { $n ->
         [one] fila
        *[other] filas
+    }
+settings-unit-minutes =
+    { $n ->
+        [one] minuto
+       *[other] minutos
     }
 
 ## Settings sections.
@@ -3109,6 +3129,7 @@ name-word-count = Número de palabras
 name-link-address = Dirección del enlace
 name-replay-sentence = Repetir oración
 name-replay-paragraph = Repetir párrafo
+name-repeat-sentence-slower = Repetir más despacio
 name-rsvp-toggle = RSVP
 name-rsvp-play-pause = Iniciar o pausar RSVP
 name-rsvp-faster = RSVP más rápido

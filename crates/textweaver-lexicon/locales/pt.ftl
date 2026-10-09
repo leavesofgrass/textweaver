@@ -426,6 +426,13 @@ playback-speech-died = A fala parou de funcionar ({ $reason }). { $next }
 playback-done-reading = Leitura concluída.
 playback-speech-restarted = Fala reiniciada: { $reason }. Continuando a leitura a partir da última palavra.
 playback-speech-error = Erro de fala: { $error }
+playback-end-of-section = Fim da seção. { $key } para continuar.
+playback-time-up =
+    { $minutes ->
+        [one] O tempo acabou após 1 minuto. { $key } para continuar.
+       *[other] O tempo acabou após { $minutes } minutos. { $key } para continuar.
+    }
+playback-repeat-slower = Repetindo mais devagar, a { $rate } palavras por minuto.
 
 ## The title line and Say Status.
 
@@ -649,6 +656,7 @@ action-word-count = Dizer quantas palavras há no documento, ou na seleção
 action-link-address = Dizer o endereço do link no cursor
 action-replay-sentence = Ler novamente desde o início da frase atual
 action-replay-paragraph = Ler novamente desde o início do parágrafo atual
+action-repeat-sentence-slower = Dizer de novo a frase no cursor mais devagar e voltar à velocidade habitual
 action-rsvp-toggle = Mostrar ou ocultar o RSVP: uma palavra de cada vez, a partir do cursor
 action-rsvp-play-pause = Iniciar ou pausar o RSVP
 action-rsvp-faster = RSVP mais rápido
@@ -1872,6 +1880,13 @@ setting-reading-revisions-help = Como as alterações controladas em arquivos do
 choice-reading-revisions-auto = automático
 choice-reading-revisions-marked = sempre dizê-las
 choice-reading-revisions-final = só o texto final
+setting-reading-stop-at = Parar no fim da seção
+setting-reading-stop-at-help = Onde a leitura contínua para sozinha e diz Fim da seção. Nunca, no próximo título de qualquer nível, ou no próximo capítulo: uma quebra de seção, senão um título de nível 1. A leitura continua a partir do título com a tecla de ler.
+choice-reading-stop-at-off = nunca
+choice-reading-stop-at-heading = próximo título
+choice-reading-stop-at-chapter = próximo capítulo
+setting-reading-stop-after-minutes = Temporizador de leitura
+setting-reading-stop-after-minutes-help = A leitura contínua para no fim da frase após estes minutos de leitura, e avisa. Pausar para o relógio; parar recomeça a contagem. 0 desliga o temporizador.
 setting-display-theme = Tema
 setting-display-theme-help = O tema de cores.
 setting-display-follow-os-theme = Seguir o tema do sistema
@@ -2188,6 +2203,11 @@ settings-unit-rows =
     { $n ->
         [one] linha
        *[other] linhas
+    }
+settings-unit-minutes =
+    { $n ->
+        [one] minuto
+       *[other] minutos
     }
 
 ## Settings sections.
@@ -3125,6 +3145,7 @@ name-word-count = Contagem de palavras
 name-link-address = Endereço do link
 name-replay-sentence = Repetir frase
 name-replay-paragraph = Repetir parágrafo
+name-repeat-sentence-slower = Repetir mais devagar
 name-rsvp-toggle = RSVP
 name-rsvp-play-pause = Iniciar ou pausar RSVP
 name-rsvp-faster = RSVP mais rápido

@@ -1,6 +1,8 @@
 //! Reading aloud: starting, pausing, resuming, stopping, and following the
 //! speech service's status updates.
 
+use std::time::{Duration, Instant};
+
 use textweaver_a11y::{AccessMode, Channel, Priority, Verbosity};
 use textweaver_core::{CharPos, CharRange, MarkerKind, Unit};
 use textweaver_speech::{Caps, ReadingGeneration, SayMode, SpeechStatus};
@@ -109,6 +111,78 @@ pub(crate) fn window_end(doc: &textweaver_text::Document, start: CharPos) -> Cha
         }
     }
     end.clamp_to(len)
+}
+
+/// How much slower "repeat slower" says the sentence, in words per minute
+/// (three presses of Rate Down).
+pub(crate) const SLOWER_STEP_WPM: i32 = 60;
+
+/// The reading timer (`[reading] stop_after_minutes`): how long continuous
+/// reading has read. Pausing stops the clock; Stop, the end of the
+/// document, and the timer running out start it over.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) struct ReadingTimer {
+    /// When the clock last started, while reading.
+    since: Option<Instant>,
+    /// Time read before that.
+    banked: Duration,
+    /// Time is up: reading stops at the end of the sentence.
+    due: bool,
+    /// The end of the sentence being read when time ran out.
+    stop_end: Option<CharPos>,
+}
+
+impl ReadingTimer {
+    /// Starts the clock, unless it runs already.
+    fn run(&mut self, now: Instant) {
+        self.since.get_or_insert(now);
+    }
+
+    /// Stops the clock, keeping the time read.
+    pub(crate) fn bank(&mut self, now: Instant) {
+        if let Some(t) = self.since.take() {
+            self.banked += now.saturating_duration_since(t);
+        }
+        self.stop_end = None;
+    }
+
+    /// How long reading has read by `now`.
+    fn read_for(&self, now: Instant) -> Duration {
+        self.banked
+            + self
+                .since
+                .map_or(Duration::ZERO, |t| now.saturating_duration_since(t))
+    }
+}
+
+/// Where continuous reading from `start` stops for `[reading] stop_at`:
+/// the start of the next heading (any level) or chapter (a section break
+/// when the document has them, else a level 1 heading) with text before
+/// it, or `None` when it reads to the end.
+pub(crate) fn section_stop(
+    doc: &textweaver_text::Document,
+    start: CharPos,
+    stop_at: textweaver_store::StopAt,
+) -> Option<CharPos> {
+    use textweaver_store::StopAt;
+    let breaks = doc
+        .markers()
+        .iter()
+        .any(|m| m.kind == MarkerKind::SectionBreak);
+    let wanted = |m: &textweaver_text::Marker| match stop_at {
+        StopAt::Off => false,
+        StopAt::Heading => m.kind == MarkerKind::Heading,
+        StopAt::Chapter if breaks => m.kind == MarkerKind::SectionBreak,
+        StopAt::Chapter => m.kind == MarkerKind::Heading && m.level == 1,
+    };
+    doc.markers()
+        .iter()
+        .filter(|m| wanted(m) && m.range.start > start)
+        .map(|m| m.range.start)
+        // A heading right after the start (reading from a blank line
+        // above it) is not a section to stop at.
+        .filter(|&at| !text_util::is_blank(doc, CharRange::new(start, at)))
+        .min()
 }
 
 /// How documents are narrated with `settings`: code skipped or not, the
@@ -353,10 +427,124 @@ impl App {
         self.screen_say_all = None;
         self.continue_from = None;
         self.planned_end = None;
+        self.end_slow_repeat();
+        self.reading_timer.bank(Instant::now());
         if let Some(s) = self.session.as_mut() {
             s.spoken = None;
             s.spoken_sentence = None;
         }
+    }
+
+    /// Puts the usual rate back after a sentence repeated slower.
+    fn end_slow_repeat(&mut self) {
+        if std::mem::take(&mut self.slow_repeat) {
+            self.speech.set_rate(self.settings.speech.rate);
+        }
+    }
+
+    /// Repeats the sentence being read, or the one at the cursor, at the
+    /// rate minus [`SLOWER_STEP_WPM`], then goes back to the usual rate.
+    /// Continuous reading goes on after it at the usual rate; otherwise
+    /// reading stops after the sentence.
+    pub(crate) fn repeat_sentence_slower(&mut self) {
+        let Some(here) = self.reading_position() else {
+            return;
+        };
+        let Some(s) = self.session.as_ref() else {
+            return;
+        };
+        let doc_end = s.doc.end();
+        let Some(range) = unit_at(&s.doc, here, Unit::Sentence) else {
+            let unit = Unit::Sentence;
+            let what = crate::words::unit_name(self.cat(), unit);
+            let msg = self.msg_args(
+                "playback-no-unit-here",
+                &args!["what" => what, "unit" => crate::words::unit_key(unit)],
+            );
+            self.tell(&msg);
+            return;
+        };
+        let continuous = self.playback == Playback::Reading
+            && self.reading == ReadKind::Continuous
+            && self.screen_say_all.is_none();
+        self.stop_speech();
+        if !self.route(Channel::Reading).speak {
+            // No voice to slow down: the sentence goes to the status line.
+            self.show_read_text(range, false);
+            return;
+        }
+        let slower = self.settings.speech.rate.step(-SLOWER_STEP_WPM);
+        self.speech.set_rate(slower);
+        self.slow_repeat = true;
+        let kind = if continuous {
+            ReadKind::Continuous
+        } else {
+            ReadKind::InPlace
+        };
+        if !self.read_range(range, kind) {
+            self.end_slow_repeat();
+            let blank = self.msg("nav-blank");
+            self.speak_content(Channel::Caret, &blank);
+            return;
+        }
+        if continuous {
+            self.continue_from = (range.end < doc_end).then_some(range.end);
+        }
+        if self.access_mode == AccessMode::SelfVoicing && !self.quiet_screen() {
+            let msg = self.msg_args("playback-repeat-slower", &args!["rate" => slower.wpm()]);
+            self.show(&msg);
+        }
+    }
+
+    /// Continuous reading stops by itself at `at` (the next section, or
+    /// the sentence after the reading timer ran out): the cursor goes
+    /// there, so the read key goes on from it, and the reason is said.
+    pub(crate) fn reading_stops_at(&mut self, at: CharPos) {
+        let timer = self.reading_timer.due;
+        self.stop_speech();
+        if let Some(s) = self.session.as_mut() {
+            s.cursor = at.clamp_to(s.doc.len_chars());
+            s.goal_column = None;
+        }
+        self.scroll_to_cursor();
+        let key = self.key(textweaver_keymap::ActionId::ReadFromCursor);
+        let msg = if timer {
+            let minutes = self.settings.reading.stop_after_minutes;
+            self.reading_timer = ReadingTimer::default();
+            self.msg_args(
+                "playback-time-up",
+                &args!["minutes" => minutes, "key" => key],
+            )
+        } else {
+            self.msg_args("playback-end-of-section", &args!["key" => key])
+        };
+        self.tell(&msg);
+    }
+
+    /// Notes when the reading timer runs out; reading then stops at the
+    /// end of the sentence. Called from [`App::tick`].
+    pub(crate) fn reading_timer_tick(&mut self, now: Instant) {
+        let minutes = self.settings.reading.stop_after_minutes;
+        if minutes == 0
+            || self.reading_timer.due
+            || self.playback != Playback::Reading
+            || self.reading != ReadKind::Continuous
+        {
+            return;
+        }
+        let limit = Duration::from_secs(u64::from(minutes) * 60);
+        if self.reading_timer.read_for(now) >= limit {
+            self.reading_timer.due = true;
+        }
+    }
+
+    /// Where the screen say-all stops before showing the sentence at
+    /// `next`: the section end, or `next` itself when the timer ran out.
+    pub(crate) fn screen_stop_before(&self, next: CharPos) -> Option<CharPos> {
+        if self.reading_timer.due {
+            return Some(next);
+        }
+        self.section_end.filter(|&e| next >= e)
     }
 
     /// Where the text handed to the speech service for the current reading
@@ -474,14 +662,21 @@ impl App {
                 return false;
             };
             let doc_end = s.doc.end();
-            let end = window_end(&s.doc, from);
+            let section = self.section_end.filter(|&e| e > from);
+            let window = window_end(&s.doc, from);
+            let end = section.map_or(window, |e| window.min(e));
+            let at_section = section == Some(end);
             if self.read_range(CharRange::new(from, end), ReadKind::Continuous) {
-                self.continue_from = (end < doc_end).then_some(end);
+                self.continue_from = (end < doc_end && !at_section).then_some(end);
                 return true;
             }
-            // A window with nothing to say (blank, or skipped code only).
+            // A window with nothing to say (blank, or skipped code only);
+            // a section with nothing to say is read past.
             if end >= doc_end {
                 return false;
+            }
+            if at_section {
+                self.section_end = None;
             }
             from = end;
         }
@@ -494,6 +689,11 @@ impl App {
             return;
         };
         let start = text_util::word_start(&s.doc, pos);
+        self.section_end = section_stop(&s.doc, start, self.settings.reading.stop_at);
+        self.end_slow_repeat();
+        if self.settings.reading.stop_after_minutes > 0 {
+            self.reading_timer.run(Instant::now());
+        }
         // Reading was asked for, even in screen-reader mode or when the
         // rest is blank: the title line says "Stopped" from now on.
         self.has_read = true;
@@ -580,6 +780,7 @@ impl App {
                 let resume_at = self.reading_position();
                 self.speech.pause();
                 self.track.pause();
+                self.reading_timer.bank(Instant::now());
                 self.playback = Playback::Paused { resume_at };
                 self.pause_origin = resume_at;
                 let msg = self.msg("playback-paused");
@@ -628,6 +829,7 @@ impl App {
     pub(crate) fn stop_action(&mut self) {
         let was_active = self.playback != Playback::Idle;
         self.stop_speech();
+        self.reading_timer = ReadingTimer::default();
         if self.mode == Mode::SpeechCursor {
             self.leave_speech_cursor();
             let msg = self.msg("playback-stopped-speech-cursor-off");
@@ -942,6 +1144,17 @@ impl App {
                 // Listening to the rendered text: its positions are in the
                 // rendered document; the highlight follows in the source.
                 let r = self.map_listened(generation, r);
+                if self.reading_timer.due
+                    && self.reading == ReadKind::Continuous
+                    && let Some(at) = self.timer_stop(r)
+                {
+                    // shortcut: stops when the first word past the
+                    // sentence is reported, so its very start may sound;
+                    // a speech-service "stop after this utterance" would
+                    // make it exact.
+                    self.reading_stops_at(at);
+                    return true;
+                }
                 self.set_spoken(r);
                 self.note_signal(r);
                 true
@@ -964,14 +1177,28 @@ impl App {
             }
             SpeechStatus::Finished { generation } => {
                 if self.playback == Playback::Reading && self.track.is_current(generation) {
-                    // The window is done: continuous reading goes on with
-                    // the next one.
-                    if self.reading == ReadKind::Continuous
-                        && let Some(next) = self.continue_from.take()
-                        && self.read_window(next)
-                    {
-                        return false;
+                    self.end_slow_repeat();
+                    if self.reading == ReadKind::Continuous {
+                        // The section is done: stop there (`[reading]
+                        // stop_at`).
+                        if let Some(at) = self.section_end.filter(|&e| self.planned_end == Some(e))
+                        {
+                            self.reading_stops_at(at);
+                            return true;
+                        }
+                        // The window is done: continuous reading goes on
+                        // with the next one, unless the timer ran out.
+                        if let Some(next) = self.continue_from.take() {
+                            if self.reading_timer.due {
+                                self.reading_stops_at(next);
+                                return true;
+                            }
+                            if self.read_window(next) {
+                                return false;
+                            }
+                        }
                     }
+                    self.reading_timer = ReadingTimer::default();
                     self.track.clear();
                     self.planned_end = None;
                     self.playback = Playback::Idle;
@@ -1006,6 +1233,7 @@ impl App {
                 false
             }
             SpeechStatus::BackendError(e) => {
+                self.end_slow_repeat();
                 self.track.clear();
                 self.playback = Playback::Idle;
                 let msg = self.msg_args("playback-speech-error", &args!["error" => e.to_string()]);
@@ -1013,6 +1241,19 @@ impl App {
                 true
             }
         }
+    }
+
+    /// With the reading timer run out: where reading stops when the word
+    /// `r` is reported, or `None` while the sentence that was being read
+    /// goes on.
+    fn timer_stop(&mut self, r: CharRange) -> Option<CharPos> {
+        let s = self.session.as_ref()?;
+        let sentence = unit_at(&s.doc, r.start, Unit::Sentence);
+        let end = *self
+            .reading_timer
+            .stop_end
+            .get_or_insert_with(|| sentence.map_or(r.end, |x| x.end));
+        (r.start >= end).then(|| sentence.map_or(r.start, |x| x.start.max(end)))
     }
 
     fn set_spoken(&mut self, r: CharRange) {
