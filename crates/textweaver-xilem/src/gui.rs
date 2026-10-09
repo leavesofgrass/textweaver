@@ -3650,7 +3650,8 @@ impl Gui {
         }
     }
 
-    /// Watches for the session ending (Windows), so unsaved edits get a
+    /// Watches for the session ending (Windows) or a termination signal
+    /// (Linux and macOS), so unsaved edits get a
     /// recovery copy before the process is ended.
     fn watch_session_end(&mut self, ctx: &mut DriverCtx<'_>) {
         let hwnd = self.window_handle(ctx);
@@ -4287,6 +4288,9 @@ fn startup_phase(log: bool, phase: &str) {
 /// Runs the GUI until the window closes.
 pub fn run(opts: GuiOptions) -> Result<(), String> {
     let _ = RUN_STARTED.set(Instant::now());
+    if opts.log {
+        crate::log::frame_times();
+    }
     // The platform's interface text size, read beside the app's startup.
     let text_scale = std::thread::Builder::new()
         .name("text-scale".into())

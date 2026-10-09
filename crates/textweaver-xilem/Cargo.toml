@@ -103,6 +103,12 @@ windows = { workspace = true, features = [
 ] }
 windows-core.workspace = true
 
+# The session ending on Linux and macOS: SIGTERM, SIGHUP (the terminal
+# closed, or the session ended), and Ctrl+C in the terminal it was started
+# from, as the terminal reader catches them.
+[target.'cfg(unix)'.dependencies]
+ctrlc.workspace = true
+
 # W6a6: native menus from the app's menu model (ADR-0046), on Windows and
 # macOS only; Linux shows the menus as an in-window list.
 [target.'cfg(any(windows, target_os = "macos"))'.dependencies]
