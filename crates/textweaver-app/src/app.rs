@@ -1084,7 +1084,11 @@ impl App {
         // The recent list and the bookshelf, on the writer.
         let details = self.record_library_open_doc(path, &title, &doc);
         let rope = doc.text().clone();
+        let braille = crate::braille_file::untranslated_braille(&doc);
         let effects = self.open_document_stamped(doc, key, title, text);
+        if braille {
+            self.say_braille_untranslated();
+        }
         if let Some(s) = self.session.as_mut() {
             s.disk = stamp;
         }
@@ -1958,6 +1962,7 @@ impl App {
             A::ReadingPass => self.cycle_reading_pass(),
             A::DefineWord => return self.define_word(),
             A::Summarize => return self.summarize(),
+            A::ShowOriginalBraille => return self.show_original_braille(),
             A::ReadingStatistics => return self.reading_statistics(),
             A::SettingsProfiles => return self.settings_profiles(),
             A::ToggleCitations => self.toggle_citations(),

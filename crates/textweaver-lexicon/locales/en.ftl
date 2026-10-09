@@ -4108,3 +4108,22 @@ gui-reading-generous = Generous spacing
 gui-reading-generous-help = Set the four spacings wider than WCAG.
 gui-reading-closed = Reading settings closed.
 ## End of W9b-x
+
+## B1-r5: braille (BRF) files read as print. $page is a braille page
+## number ("3", "p1"); $n is a number of lines; $reason is an error.
+setting-braille-brf-code = Braille code of BRF files
+setting-braille-brf-code-help = The braille code BRF files are read in when you open one: UEB, for books made since 2016, or EBAE, English Braille American Edition, for older books. Reading a BRF file as print needs liblouis. Open the file again after a change.
+choice-braille-brf-code-ueb = UEB
+choice-braille-brf-code-ebae = EBAE
+name-show-original-braille = Show original Braille
+action-show-original-braille = Show the original braille of the page at the cursor, in a BRF file read as print
+brf-original-title = Original Braille, page { $page }
+brf-original-intro =
+    { $n ->
+        [one] Original Braille, page { $page }, { $n } line. Escape closes.
+       *[other] Original Braille, page { $page }, { $n } lines. Escape closes.
+    }
+brf-original-not-brf = Not a braille file. Show original Braille works on BRF files.
+brf-original-unreadable = Cannot read the braille file: { $reason }
+brf-no-liblouis = Braille shown as braille: liblouis is missing. To read it as print, install liblouis from liblouis.io or your system's packages, then open the file again.
+## End of B1-r5

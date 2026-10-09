@@ -85,6 +85,7 @@ The reader opens these formats itself:
 - PDF: `.pdf`, with comments as notes, links you can follow, and filled-in form fields read label first; scanned PDFs through text recognition (below).
 - Pictures of text: `.png`, `.jpg`, `.jpeg`, through text recognition.
 - DAISY 3 books and DTBook: `.opf`, `.xml`, `.dtbook`, and a DAISY book in a zip.
+- Braille files: `.brf`, `.brl`, read as print through liblouis (below), and each volume of a braille book in a zip.
 - PowerPoint: `.pptx`, `.pptm`, `.ppsx`, `.potx`, with the speaker notes.
 - Spreadsheets, as tables: `.csv`, `.tsv`, `.tab`, `.ods`, `.xlsx`, `.xlsm`, `.xlsb`.
 - Archives: `.zip`, `.tar`, `.tgz`, `.gz`, `.7z`. Opening one lists the files inside that textweaver can read; `course.zip!week1/notes.md` opens one directly.
@@ -100,6 +101,23 @@ tw convert essay.rst --to md
 The [converting guide](converting.md) explains `tw convert`.
 
 A scanned PDF is a picture of the pages. textweaver recognizes its text (OCR) and reads it like any other PDF, and says that it did, since recognized text can contain mistakes. English needs a one-time download, `tw ocr download`, which asks first; other languages need Tesseract. Until an engine can run, such a PDF reads as one sentence that begins "This PDF has no text layer" and says what is missing. See [Scanned pages](converting.md#scanned-pages-ocr).
+
+### Braille files (BRF)
+
+A BRF file (Braille Ready Format) is a braille book as plain text: each character stands for one braille cell, in the braille ASCII code that embossers and notetakers use, and the file is laid out in braille lines and pages, usually 40 cells by 25 lines. Libraries for blind and print-disabled readers distribute books this way; the braille downloads of the NLS BARD service, for instance, are BRF files in a zip, often one file per volume. Open the zip to see its volumes, and follow a link to open one, or open `book.zip!volume1.brf` directly.
+
+textweaver reads a BRF file as print, so speech, search, notes and export work as they do for any book. It does this in two steps.
+
+1. **It rebuilds the layout.** Braille transcribers follow conventions (BANA's *Braille Formats*, 2016), and textweaver reads them back: a centered line is a heading, a line beginning in cell 5 after a blank line is a subheading, a line indented two cells starts a paragraph, and a line at the margin continues the paragraph above, across a page if need be. The braille page number at the foot of each page is taken out of the text; each braille page becomes a page you can reach with "go to page" and that the title line names. A print page change (a line of dots 3-6 ending in a number) is read as "Print page 12", as a braille reader meets it. A running head repeated at the top of every page is read once.
+2. **It translates the braille back to print** with [liblouis](https://liblouis.io/), the translator most braille software uses, in contracted or uncontracted braille. The code is set by **Braille code of BRF files** in Settings (`[braille] brf_code`): UEB (Unified English Braille, the default) for books produced since 2016, or EBAE (English Braille American Edition) for older American books. If a book reads oddly, with stray letters where words should be, it is probably in the other code: change the setting and open the file again.
+
+The layout rules are heuristics, so poetry, tables and forms may come out with lines joined or split where the transcriber did not intend it. When a file has no layout textweaver can follow (for example, no indents and no blank lines at all), each braille line is read as its own paragraph instead. Mathematics in the Nemeth Code and computer braille are not translated reliably.
+
+**Show original Braille** (in the View menu and the command palette) lists the lines of the braille page the cursor is on, exactly as the file has them, in Unicode braille. A Braille display shows them as the original cells, which is useful for checking a transcription, a mathematical expression, or a layout the print reading lost. Escape returns to the book.
+
+**Without liblouis**, the file opens as braille: the same headings, paragraphs and pages, but each cell shown as a Unicode braille pattern, which a Braille display renders as dots. textweaver says so when the file opens, and how to fix it: install liblouis (from [liblouis.io](https://liblouis.io/) on Windows, or your distribution's `liblouis` package, which provides `lou_translate`, on Linux and macOS), then open the file again.
+
+Only braille files that are distributed in the clear are read. Protected talking books, such as the audio books of NLS BARD, are not opened: textweaver does not touch any library's protection or terms.
 
 ## What the screen shows
 

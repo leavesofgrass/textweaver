@@ -268,6 +268,7 @@ textweaver reads these formats itself:
 - Email (EML) and web pages saved from a browser as one file (MHTML and MHT). See [Email and web archives](#email-and-web-archives).
 - Scanned PDFs and pictures (PNG, JPEG), by recognizing their text. See [Scanned pages](#scanned-pages-ocr).
 - DAISY 3 books and DTBook files, including Bookshare zips.
+- Braille files (BRF and BRL), such as the braille books of the NLS BARD service, read back to print through liblouis. See [Braille files](reading.md#braille-files-brf).
 - PowerPoint (PPTX): slides in order, each with its speaker notes.
 - Spreadsheets: CSV, TSV, OpenDocument (ODS), and Excel (XLSX, XLSM, XLSB), as tables. Old binary Excel files (XLS) are not read.
 - Archives (ZIP, TAR, TAR.GZ, and 7Z): opening one lists the files inside that textweaver can read, each a link. To open a file inside an archive directly, write its name after a `!`, as in `tw text course.zip!week1/notes.md`.

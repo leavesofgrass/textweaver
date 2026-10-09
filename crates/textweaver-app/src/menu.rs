@@ -357,6 +357,7 @@ impl MenuId {
                 Sub(MenuId::TextSize),
                 Do(A::ChooseFont),
                 Do(A::ToggleLineNumbers),
+                Do(A::ShowOriginalBraille),
                 Sub(MenuId::ReadingAids),
                 Sep,
                 Do(A::CycleAccessMode),

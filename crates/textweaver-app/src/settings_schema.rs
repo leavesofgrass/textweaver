@@ -962,6 +962,12 @@ pub const INFO: &[Info] = &[
             ("stairstep", "stairstep"),
         ],
     ),
+    choice(
+        "braille.brf_code",
+        "Braille code of BRF files",
+        "The braille code BRF files are read in when you open one: UEB, for books made since 2016, or EBAE, English Braille American Edition, for older books. Reading a BRF file as print needs liblouis. Open the file again after a change.",
+        &[("ueb", "UEB"), ("ebae", "EBAE")],
+    ),
     // [reading_aids]
     number(
         "reading_aids.rsvp.wpm",

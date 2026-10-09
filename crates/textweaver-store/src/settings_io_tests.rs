@@ -165,6 +165,7 @@ fn everything_changed() -> Settings {
     s.export.subtitle_chapters = true;
     s.braille.math_code = crate::MathBrailleCode::Ueb;
     s.braille.table_format = crate::BrailleTableFormat::Listed;
+    s.braille.brf_code = crate::BrfCode::Ebae;
     let a = &mut s.reading_aids;
     a.rsvp = crate::reading_aids::RsvpSettings {
         wpm: 450,
