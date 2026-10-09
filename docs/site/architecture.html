@@ -875,7 +875,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "dependents": [
     "textweaver-aids",
     "textweaver-app",
+    "textweaver-eci",
     "textweaver-engines",
+    "textweaver-export",
+    "textweaver-speech",
     "textweaver-sync",
     "textweaver-vault"
    ],
@@ -1045,7 +1048,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "deps": [
     "textweaver-core",
     "textweaver-math",
-    "textweaver-mathcat"
+    "textweaver-mathcat",
+    "textweaver-store"
    ],
    "description": "textweaver speech: backend trait, speech service, pacing, queue, normalization, engines",
    "dev_deps": [],
@@ -1159,7 +1163,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "deps": [
     "textweaver-core",
     "textweaver-enginehost",
-    "textweaver-speech"
+    "textweaver-speech",
+    "textweaver-store"
    ],
    "description": "ETI-Eloquence for textweaver: ECI engine host process and speech backend",
    "dev_deps": [],
@@ -1333,6 +1338,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-fonts",
     "textweaver-render",
     "textweaver-speech",
+    "textweaver-store",
     "textweaver-text",
     "textweaver-theme",
     "textweaver-writers"
@@ -1423,7 +1429,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-ocr",
     "textweaver-text"
    ],
-   "description": "textweaver document loaders: loader trait, registry, text, Markdown with Obsidian notes, HTML, EPUB, DOCX, RTF, ODT, LaTeX, email, web archives, PDF with OCR, DAISY, PowerPoint, spreadsheets, archives, JSON and notebooks, SVG, MathML, web pages, and Pandoc for other formats",
+   "description": "textweaver document loaders: loader trait, registry, text, Markdown with Obsidian notes, HTML, EPUB, DOCX, RTF, ODT, LaTeX, email, web archives, PDF with OCR, DAISY, braille (BRF) files, PowerPoint, spreadsheets, archives, JSON and notebooks, SVG, MathML, web pages, and Pandoc for other formats",
    "dev_deps": [],
    "job": "Document loaders that turn text, Markdown, HTML, EPUB, DOCX, PDF (with OCR of scans), DAISY, PowerPoint, spreadsheets, archives, and web pages into a document.",
    "layer": "document",

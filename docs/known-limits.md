@@ -28,7 +28,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 ## Documents
 
 - **Translating a document** is not offered.
-- **RAR archives** do not open. ZIP, TAR, and 7z do.
+- **RAR archives** do not open. ZIP, TAR, and 7z do. Extract a RAR archive first; the message says so.
 - **Scanned pages** are read by OCR, and OCR makes mistakes. Check anything important against the original.
 
 ## Output
@@ -38,7 +38,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 ## Study tools
 
 - **Spaced-repetition review** (Anki-style) is out of scope, on purpose.
-- **Knowledge graphs** from notes are not drawn.
+- **Knowledge graphs** from notes are not drawn. Links between notes are lists instead: each note's links, "What links here", and `tw notes links` ([notes guide](notes.md#links-between-notes)).
 
 ## What this page does not promise
 

@@ -84,4 +84,6 @@ textweaver grew out of star and the owner's other work, and now has a life of it
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE).
+Copyright (C) 2026 Jon Pielaet
+
+Licensed under the GNU General Public License, version 3 or later (GPL-3.0-or-later). See [LICENSE](LICENSE) and [NOTICE](NOTICE). Work by others that textweaver includes is listed in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

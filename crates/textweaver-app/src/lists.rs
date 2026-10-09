@@ -30,15 +30,23 @@ pub(crate) fn matches(text: &str, query: &str) -> bool {
 }
 
 /// The item a letter chooses at once in `list`, if any: in the find and
-/// replace choices, `r` replaces, `s` skips, `a` replaces all, `c` and `w`
-/// switch match case and whole words.
+/// replace choices, `r` replaces, `s` skips, `a` replaces all; there and in
+/// the search options, `c`, `w`, `x` and `l` switch match case, whole
+/// words, regular expression and across lines.
 pub(crate) fn accelerator(list: &AuthoringList, c: char) -> Option<usize> {
+    let option = || {
+        crate::replace::SearchOption::from_key(c).and_then(|o| {
+            crate::replace::SearchOption::ALL
+                .iter()
+                .position(|a| *a == o)
+        })
+    };
     match (list, c.to_ascii_lowercase()) {
         (AuthoringList::Replace, 'r') => Some(0),
         (AuthoringList::Replace, 's') => Some(1),
         (AuthoringList::Replace, 'a') => Some(2),
-        (AuthoringList::Replace, 'c') => Some(3),
-        (AuthoringList::Replace, 'w') => Some(4),
+        (AuthoringList::Replace, _) => option().map(|i| i + 3),
+        (AuthoringList::SearchOptions, _) => option(),
         _ => None,
     }
 }
@@ -100,6 +108,7 @@ impl App {
             Some(ListKind::Settings) => self.settings_filter(),
             Some(ListKind::Library(_)) => self.library_filter(),
             Some(ListKind::Actions(_)) => self.keys_filter(),
+            Some(ListKind::Relations(l)) if l.filterable() => Some(&self.relations.filter),
             _ => None,
         }
     }
@@ -189,6 +198,9 @@ impl App {
                     .collect(),
             ),
             AuthoringList::Replace => (self.replace_title(), self.replace_items()),
+            AuthoringList::SearchOptions => {
+                (self.msg("search-options-title"), self.search_option_items())
+            }
             AuthoringList::Templates(t) => (
                 self.msg_args("lists-templates-title", &args!["n" => t.len()]),
                 t.iter().map(|t| t.label(self.cat())).collect(),
@@ -208,6 +220,9 @@ impl App {
         }
         if matches!(self.list, Some(ListKind::Actions(_))) {
             return self.filter_keys(query);
+        }
+        if matches!(self.list, Some(ListKind::Relations(_))) {
+            return self.filter_relations(query);
         }
         let Some(ListKind::Authoring(mut list)) = self.list.clone() else {
             let msg = self.msg("lists-no-filter");
@@ -303,6 +318,7 @@ impl App {
                 self.grammar_fix_action(range, &fixes, n)
             }
             AuthoringList::Replace => self.replace_choice(n),
+            AuthoringList::SearchOptions => self.search_option_chosen(n),
             AuthoringList::Templates(t) => match t.get(n) {
                 Some(t) => self.template_chosen(t.clone()),
                 None => vec![Effect::Redraw],

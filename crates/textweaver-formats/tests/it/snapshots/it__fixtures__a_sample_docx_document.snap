@@ -453,6 +453,7 @@ expression: view(&doc)
     "language": "en-USen-US",
     "path": null,
     "properties": {
+      "textweaver.changes": "[{\"id\":\"1\",\"kind\":\"deleted\",\"range\":{\"start\":250,\"end\":250},\"text\":\"removed\",\"author\":\"x\"},{\"id\":\"2\",\"kind\":\"inserted\",\"range\":{\"start\":251,\"end\":259},\"text\":\"inserted\",\"author\":\"x\"}]",
       "textweaver.revisions": "2"
     },
     "title": "Sample Word DocumentSample Word Document"

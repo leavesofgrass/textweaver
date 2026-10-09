@@ -6,9 +6,10 @@
 //! textweaver knows: the Whisper dictation models, the OCR model sets
 //! (`textweaver_ocr::models`), and Lexend (`textweaver_fonts::downloaded`),
 //! each with its title, size, license, credit, the features that need it,
-//! and its files pinned by size and SHA-256. A mirror's own list
-//! (`manifest/components.toml`, read only when a mirror is set) adds more
-//! components, never different pins for these. Piper voices are
+//! and its files pinned by size and SHA-256. The components source's list
+//! and a mirror's (`components.toml`, read only when one is set; see
+//! `textweaver_components::manifest`) add more components for this
+//! computer's platform, never different pins for these. Piper voices are
 //! components too, made from the catalogue as each is chosen
 //! (`textweaver_piper::download::component`).
 //!
@@ -42,9 +43,9 @@ use std::sync::mpsc::{Receiver, TryRecvError};
 
 use textweaver_a11y::{Importance, Priority, Verbosity};
 pub use textweaver_components::{
-    Check, Component, ComponentError, Fetched, Fetcher, FilePin, FileState, InstallReport,
-    MIRROR_ENV, Outcome, Progress, Sources, StandardFetcher, Status, Tenths, can_download, fake,
-    sha256_hex, size_text,
+    Action, Check, Component, ComponentError, Fetched, Fetcher, FilePin, FileState, InstallReport,
+    MIRROR_ENV, Outcome, Platform, Progress, Sources, StandardFetcher, Status, Tenths,
+    can_download, fake, sha256_hex, size_text,
 };
 use textweaver_keymap::ActionId;
 use textweaver_lexicon::args;
@@ -117,6 +118,7 @@ fn whisper(
             ),
         ]),
         notice: None,
+        listing: None,
     }
 }
 
@@ -253,11 +255,12 @@ pub fn status_line(c: &Catalog, (installed, known): (usize, usize)) -> String {
     )
 }
 
-/// Where components come from with these settings: the mirror
-/// (`TEXTWEAVER_COMPONENTS_MIRROR`, else `[components] mirror`), then the
-/// public addresses.
+/// Where components come from with these settings: the components
+/// source (`[components] source`, a repository or a folder), then the
+/// mirror (`TEXTWEAVER_COMPONENTS_MIRROR`, else `[components] mirror`),
+/// then the public addresses.
 pub fn sources(settings: &textweaver_store::Settings) -> Sources {
-    Sources::from_env_or(&settings.components.mirror)
+    Sources::from_env_or(&settings.components.mirror).with_source(&settings.components.source)
 }
 
 /// The OCR model sets, each a component in the registry.
@@ -486,43 +489,39 @@ impl App {
         if let Some(f) = &self.components.fetcher {
             return Some(Arc::clone(f));
         }
-        let local_mirror = sources(&self.settings)
-            .mirror
-            .is_some_and(|m| !m.to_ascii_lowercase().starts_with("http"));
-        (can_download() || local_mirror).then(|| Arc::new(StandardFetcher) as Arc<dyn Fetcher>)
+        let local = sources(&self.settings).has_local();
+        (can_download() || local).then(|| Arc::new(StandardFetcher) as Arc<dyn Fetcher>)
     }
 
-    /// Reads the mirror's manifest once per mirror, when one is set.
+    /// Reads the components lists (`components.toml`) of the source and
+    /// the mirror once per setting, when either is set: the source's
+    /// first, so its components win.
     fn load_mirror_manifest(&mut self) {
-        let sources = sources(&self.settings);
-        let Some(address) = sources.manifest_address() else {
-            return;
-        };
-        if self.components.manifest_for.as_deref() == Some(address.as_str()) {
+        let addresses = sources(&self.settings).manifest_addresses();
+        if addresses.is_empty() {
             return;
         }
-        self.components.manifest_for = Some(address.clone());
+        let key = addresses.join("\n");
+        if self.components.manifest_for.as_deref() == Some(key.as_str()) {
+            return;
+        }
+        self.components.manifest_for = Some(key);
         let Some(fetcher) = self.component_fetcher() else {
             return;
         };
-        let text = textweaver_components::fetch_bytes(
-            &*fetcher,
-            &address,
-            textweaver_components::manifest::MAX_BYTES,
-        )
-        .map_err(|e| e.to_string())
-        .and_then(|b| String::from_utf8(b).map_err(|e| e.to_string()));
         let mut registry = Registry::builtin();
-        match text.map(|t| registry.add_manifest(&t)) {
-            Ok(Ok(refused)) => {
-                for (id, why) in refused {
-                    log::warn!("mirror component {id} refused: {why}");
+        for address in addresses {
+            match fetch_text(&*fetcher, &address).map(|t| registry.add_manifest(&t)) {
+                Ok(Ok(refused)) => {
+                    for (id, why) in refused {
+                        log::warn!("component {id} in {address} refused: {why}");
+                    }
                 }
-                self.components.registry = Some(registry);
+                Ok(Err(e)) => log::warn!("components list {address}: {e}"),
+                Err(e) => log::info!("no components list at {address}: {e}"),
             }
-            Ok(Err(e)) => log::warn!("mirror manifest: {e}"),
-            Err(e) => log::info!("no mirror manifest at {address}: {e}"),
         }
+        self.components.registry = Some(registry);
     }
 
     // ----- The manager -------------------------------------------------

@@ -238,6 +238,15 @@ pub enum ListKey {
     ShowAll,
 }
 
+/// The history a prompt's answers join: the text to find is one history,
+/// whether typed for Find or for find and replace.
+fn history_key(purpose: PromptPurpose) -> PromptPurpose {
+    match purpose {
+        PromptPurpose::ReplaceFind => PromptPurpose::Find,
+        p => p,
+    }
+}
+
 /// A key pressed in a prompt ([`Command::PromptKey`]).
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PromptKey {
@@ -471,8 +480,11 @@ impl App {
 
     /// Earlier answers to prompts for `purpose`, oldest first (at most
     /// [`PROMPT_HISTORY`]).
+    /// Find and the replace prompt's "find what" share one history.
     pub fn prompt_history(&self, purpose: PromptPurpose) -> &[String] {
-        self.answers.get(&purpose).map_or(&[], Vec::as_slice)
+        self.answers
+            .get(&history_key(purpose))
+            .map_or(&[], Vec::as_slice)
     }
 
     /// Keeps the list and prompt models in step with effects returned to
@@ -579,6 +591,9 @@ impl App {
             return effects;
         }
         if let Some(effects) = self.command_list_key(key) {
+            return effects;
+        }
+        if let Some(effects) = self.changes_list_key(key) {
             return effects;
         }
         // The Say Status key previews the focused voice (crate::voice).
@@ -793,7 +808,7 @@ impl App {
         if answer.trim().is_empty() {
             return;
         }
-        let hist = self.answers.entry(purpose).or_default();
+        let hist = self.answers.entry(history_key(purpose)).or_default();
         hist.retain(|a| a != answer);
         hist.push(answer.to_owned());
         if hist.len() > PROMPT_HISTORY {
@@ -839,7 +854,11 @@ impl App {
             self.announce(&said, Priority::Assertive);
             return;
         }
-        let hist = self.answers.get(&purpose).cloned().unwrap_or_default();
+        let hist = self
+            .answers
+            .get(&history_key(purpose))
+            .cloned()
+            .unwrap_or_default();
         let Some(mb) = self.prompt_model.as_mut() else {
             return;
         };

@@ -6,8 +6,8 @@
 //! - **Documentation** and **Report a problem** show their web address and
 //!   ask before opening a browser ([`App::offer_open`]); nothing is sent.
 //! - **About** lists the facts a problem report needs, one per line, each
-//!   starting with what it is: version, build, license, components,
-//!   speech engines, and folders.
+//!   starting with what it is: version, build, license, copyright,
+//!   components, speech engines, and folders.
 //! - **Ask again about first-run choices** clears the markers of the
 //!   hybrid-mode question and the optional components list, so both are
 //!   offered at the next start.
@@ -19,6 +19,22 @@ use textweaver_lexicon::args;
 use crate::app::{App, ListKind};
 use crate::command::Effect;
 use textweaver_keymap::Frontend;
+
+/// The copyright line, as the `NOTICE` file at the repository root has it.
+/// A macro so [`COPYRIGHT`] and [`VERSION_TEXT`] share one literal.
+macro_rules! copyright {
+    () => {
+        "Copyright (C) 2026 Jon Pielaet"
+    };
+}
+
+/// textweaver's copyright line. It is a legal notice, so it is shown as is
+/// in every language: in About and after the version in `--version`.
+pub const COPYRIGHT: &str = copyright!();
+
+/// What `tw --version` and `textweaver --version` print after the program's
+/// name: the version, then the copyright line.
+pub const VERSION_TEXT: &str = concat!(env!("CARGO_PKG_VERSION"), "\n", copyright!());
 
 /// The documentation site.
 pub const DOCS_ADDRESS: &str = "https://leavesofgrass.github.io/textweaver/";
@@ -117,6 +133,7 @@ impl App {
                 "about-license",
                 &args!["license" => env!("CARGO_PKG_LICENSE")],
             ),
+            COPYRIGHT.to_owned(),
             c.fmt(
                 "about-engine-in-use",
                 &args!["engine" => self.backend_name.as_str()],
@@ -164,6 +181,14 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_copyright_line_matches_the_notice_file() {
+        let notice = include_str!("../../../NOTICE");
+        assert_eq!(notice.lines().next(), Some(COPYRIGHT));
+        assert!(VERSION_TEXT.ends_with(COPYRIGHT));
+        assert!(VERSION_TEXT.starts_with(env!("CARGO_PKG_VERSION")));
+    }
 
     #[test]
     fn the_packaged_quick_start_is_found_beside_the_program_or_one_up() {

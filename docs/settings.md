@@ -337,15 +337,17 @@ How textweaver shares the work with a screen reader. See [Using textweaver with 
 
 Audio export. See [Audio export](audio-export.md).
 
+- `audio_format`, default `"flac"`: the format Export audio lists first, and the one `tw export-audio` writes when the `--out` name has no extension. `"flac"`, `"mp3"`, `"opus"`, `"ogg"`, `"wav"`, `"m4b"` (an audiobook), or `"mp4"` (a video with captions). M4B and MP4 need ffmpeg; without it they are not listed, and the list keeps its usual order.
 - `subtitle_format`, default `"srt"`: `"srt"` or `"vtt"`, used when subtitles are written without a file name.
 - `subtitle_word_level`, default `false`: one subtitle cue per word instead of caption lines.
 - `subtitles_with_audio`, default `false`: always write subtitles beside the exported audio.
 
 ### [braille]
 
-Braille output: BRF files and math braille on the display. See [Math in braille files](math.md#math-in-braille-files) and [Converting documents](converting.md).
+Braille output and input: BRF files written and read, and math braille on the display. See [Math in braille files](math.md#math-in-braille-files) and [Converting documents](converting.md).
 
 - `math_code`, default `"nemeth"`: the braille code math is written in, in BRF files and while exploring a formula. `"nemeth"` is the Nemeth Code inside UEB text, with the Nemeth switch indicators; `"ueb"` is Unified English Braille's own mathematics. Needs a build with MathCAT; without it, math is written as its spoken words in uncontracted braille.
+- `brf_code`, default `"ueb"`: the braille code BRF files are read in when you open one and textweaver translates it back to print through liblouis. `"ueb"` is Unified English Braille, the code of books produced since 2016; `"ebae"` is English Braille American Edition, for older American books. Open the file again after a change. See [Braille files](reading.md#braille-files-brf).
 - `table_format`, default `"linear"`: how BRF files lay out tables (BANA's Braille Formats, 2016, section 11). `"linear"` is one row per line, entries separated by semicolons; `"listed"` gives each row a cell-5 heading, then each entry on its own line after its column heading; `"stairstep"` sets each row's entries two cells further right than the one before, for tables of up to four columns (a wider table is listed instead, with a warning). `tw convert --table-format` sets it for one conversion.
 
 ### [reading_aids]
@@ -502,7 +504,7 @@ Every setting is either **portable**, which syncs, or **machine**, which never d
 
 ## Settings profiles
 
-A profile is a named set of the settings you change together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; and the access mode. Keep one for studying and one for skimming, or one for each person who shares the computer.
+A profile is a named set of the settings you change together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; the access mode; and the audio export format. Keep one for studying and one for skimming, or one for each person who shares the computer.
 
 - In the reader, **Ctrl+Shift+U** in the window or **Alt+U** in the terminal lists your profiles. Enter switches to one; its settings take effect at once and are saved. F2 renames a profile, and Delete deletes one after a yes or no. The last items save the current settings as a new profile, save them into the profile in use, and import and export profiles.
 - From the command line:
@@ -518,6 +520,28 @@ A profile is a named set of the settings you change together: the speech engine,
   ```
 
 Profiles are kept in `profiles.toml`, beside `settings.toml`, so exporting your settings does not include them. A profile export works in any version of textweaver: settings a version does not know are left out, and it says which. With sync on, your profiles travel to your other computers (`[sync] profiles`); which one is in use stays on each.
+
+### Developer profile (example)
+
+An example profile, `docs/examples/developer-profile.toml`, comes with the source and every package, beside the guides. It is never used unless you import it and switch to it. It sets:
+
+- the Eloquence engine (`speech.backend = "eci"`) with the Reed voice (`speech.voice = "Reed"`);
+- 400 words per minute (`speech.rate = 400`);
+- the Lexend font at 16 points (`reading_aids.font`, `family = "lexend"`, `size_pt = 16.0`); Lexend is downloaded the first time, after asking;
+- the Galaxy theme (`display.theme = "galaxy"`);
+- Opus for audio export (`export.audio_format = "opus"`).
+
+To try it:
+
+```sh
+tw settings profile save "My settings"
+tw settings profile import docs/examples/developer-profile.toml
+tw settings profile switch "Developer"
+```
+
+Saving your own settings as a profile first means `tw settings profile switch "My settings"` puts them back. Importing only adds the profile; nothing changes until you switch. In the reader, the profile list (Ctrl+Shift+U in the window, Alt+U in the terminal) imports and switches the same way.
+
+Eloquence must be installed for the Reed voice; see [the Eloquence guide](eloquence.md). Without it, textweaver says so and uses another engine.
 
 ## See also
 

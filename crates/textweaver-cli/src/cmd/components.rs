@@ -104,20 +104,20 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     }
 }
 
-/// The registry, with the mirror's components when a mirror is set and
-/// its list can be read.
+/// The registry, with the components source's and the mirror's
+/// components when either is set and its list can be read.
 fn registry_with_mirror(settings: &textweaver_app::store::Settings) -> Registry {
     let mut registry = Registry::builtin();
-    if let Some(address) = sources(settings).manifest_address() {
+    for address in sources(settings).manifest_addresses() {
         let text = textweaver_app::components::fetch_text(&StandardFetcher, &address);
         match text.map(|t| registry.add_manifest(&t)) {
             Ok(Ok(refused)) => {
                 for (id, why) in refused {
-                    eprintln!("The mirror's component {id} was refused: {why}.");
+                    eprintln!("Component {id} was refused: {why}. It is in {address}.");
                 }
             }
-            Ok(Err(e)) => eprintln!("The mirror's list of components was not used: {e}."),
-            Err(e) => eprintln!("The mirror has no list of components ({e})."),
+            Ok(Err(e)) => eprintln!("A components list was not used: {e}. It is {address}."),
+            Err(e) => eprintln!("No components list at {address} ({e})."),
         }
     }
     registry
@@ -225,9 +225,10 @@ pub(crate) fn download(
         return Ok(());
     }
     let sources = sources(settings);
-    let from = match &sources.mirror {
-        Some(m) => format!("the mirror {m}, then its public source"),
-        None => c
+    let from = match (&sources.source, &sources.mirror) {
+        (Some(s), _) => format!("your components source {s}, then any other source"),
+        (None, Some(m)) => format!("the mirror {m}, then its public source"),
+        (None, None) => c
             .files
             .first()
             .and_then(|f| f.url.split('/').nth(2))
@@ -395,6 +396,7 @@ mod tests {
                 )),
             }]),
             notice: None,
+            listing: None,
         };
         let mirror = tmp.path().join("mirror");
         std::fs::create_dir_all(mirror.join("made-up")).unwrap();

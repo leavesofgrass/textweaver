@@ -17,7 +17,9 @@ pub enum Command {
     /// Text typed in edit mode (wave 2). Prompts send their whole answer
     /// with [`Command::Answer`] instead.
     Insert(String),
-    /// Run a search with this pattern (from the find prompt).
+    /// Run a search with this pattern (from the find prompt, or a find
+    /// panel's Find next after its text changed), with the search options
+    /// ([`App::search_options`](crate::App::search_options)).
     Find(String),
     /// Jump to a target (from the go-to prompt).
     GoTo(GoTo),
@@ -144,6 +146,25 @@ pub enum Command {
         /// Its new value (`null` resets it to the default).
         value: serde_json::Value,
     },
+    /// Set the search options of Find and Replace (a find panel's check
+    /// boxes). Nothing is said: the check box says its own state. A
+    /// replace loop in progress counts its matches again and asks about
+    /// the match at the caret.
+    SetSearchOptions(crate::SearchOptions),
+    /// Edit mode: start replacing `find` with `with`, one match at a time
+    /// from the caret, as Alt+F's two prompts do (a find panel's Replace).
+    /// An invalid pattern is said in words and nothing starts. Both texts
+    /// join the prompts' history.
+    StartReplace {
+        /// The text or regular expression to find.
+        find: String,
+        /// What each match becomes (`$1`, `${name}` and `$$` with a
+        /// regular expression).
+        with: String,
+    },
+    /// A step of the replace loop in progress (a find panel's Replace,
+    /// Skip and Replace all buttons); nothing without one.
+    ReplaceStep(crate::ReplaceStep),
 }
 
 /// How far a [`Command::MoveCaret`] moves.
@@ -189,11 +210,14 @@ pub enum NoteCommand {
     RenameBookmark,
     /// Delete the bookmark at the cursor, else one chosen from the list.
     DeleteBookmark,
+    /// List the links of the note at the cursor: its relations to other
+    /// notes and what links to it (crate::relations).
+    Links,
 }
 
 impl NoteCommand {
     /// Every command, in help order.
-    pub const ALL: [NoteCommand; 8] = [
+    pub const ALL: [NoteCommand; 9] = [
         NoteCommand::Add,
         NoteCommand::List,
         NoteCommand::Next,
@@ -202,6 +226,7 @@ impl NoteCommand {
         NoteCommand::ListHighlights,
         NoteCommand::RenameBookmark,
         NoteCommand::DeleteBookmark,
+        NoteCommand::Links,
     ];
 
     /// The command palette name (snake_case, like action ids).
@@ -215,6 +240,7 @@ impl NoteCommand {
             NoteCommand::ListHighlights => "list_highlights",
             NoteCommand::RenameBookmark => "rename_bookmark",
             NoteCommand::DeleteBookmark => "delete_bookmark",
+            NoteCommand::Links => "note_links",
         }
     }
 
@@ -231,6 +257,7 @@ impl NoteCommand {
             NoteCommand::ListHighlights => "List highlights",
             NoteCommand::RenameBookmark => "Rename a bookmark",
             NoteCommand::DeleteBookmark => "Delete a bookmark",
+            NoteCommand::Links => "List the links of the note at the cursor",
         }
     }
 
@@ -327,6 +354,11 @@ pub enum PromptPurpose {
     /// DOI, or ISBN. Tab and Shift+Tab move between the fields; Enter
     /// saves them all.
     DocumentDetails,
+    /// Answer is a reply to the comment chosen in the changes list.
+    CommentReply,
+    /// Answer is the text of a new comment on the selection or the
+    /// sentence at the cursor.
+    CommentText,
 }
 
 impl PromptPurpose {
@@ -365,6 +397,8 @@ impl PromptPurpose {
             PromptPurpose::SyncComputerName => "Name this computer, Enter keeps it",
             // The app labels each field from the message catalog.
             PromptPurpose::DocumentDetails => "Document details",
+            PromptPurpose::CommentReply => "Reply",
+            PromptPurpose::CommentText => "Comment",
         }
     }
 }

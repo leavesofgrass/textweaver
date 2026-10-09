@@ -140,19 +140,36 @@ Press **Alt+F** in edit mode. The window uses **Ctrl+Shift+F**.
 1. The prompt says "Replace, find what". Type the text to find and press **Enter**. You hear how many matches there are, then "Replace with?"
 2. Type the new text and press **Enter**.
 
-textweaver then goes through the matches one at a time, starting at the cursor. Each match is selected, and you hear where it is and its line, for example "Match 2 of 5, line 12: the cat sat on the mat." A short list asks what to do. Press a letter, or move with Up and Down and press Enter:
+In both prompts, **Up** and **Down** bring back what you typed before. The text to find shares its history with Find (**Ctrl+F**).
+
+textweaver then goes through the matches one at a time, starting at the cursor. Each match is selected, and you hear its number, its line, and what it becomes, then the text of its line, for example "Match 2 of 5, line 12: teh becomes the. The line: teh cat sat on the mat." When the new text is empty, you hear "teh is removed" instead. Long matches are shortened, so the start of the line ("Match 2 of 5, line 12") always fits a 40-cell Braille display. A short list asks what to do. Press a letter, or move with Up and Down and press Enter:
 
 - **r**, "Replace this one": replaces it and goes to the next match.
 - **s**, "Skip this one": leaves it and goes to the next match.
-- **a**, "Replace all the rest": replaces this match and every one after it.
-- **c**, "Match case": on or off. Off (the default), `cat` also finds `Cat`. You hear the new setting and how many matches there are now.
+- **a**, "Replace all the rest": says how many matches are left and asks once, for example "Replace all 4 remaining matches? y or n". **y** replaces them all; **n** goes back to the match.
+- **c**, "Match case": on or off. Off (the default), `cat` also finds `Cat`.
 - **w**, "Whole words only": on or off. On, `cat` does not find `catalog`.
+- **x**, "Regular expression": on or off. On, the text to find is a regular expression, and the new text can use what it captured (see below).
+- **l**, "Across lines": on or off. With a regular expression, `.` matches a line break too, so a match can run on from one line to the next.
+
+After switching an option you hear the new setting and how many matches there are now. These are the same search options that Find uses, and they stay as you left them until you quit. Search options, in the Edit menu under Find and in the command palette, changes them without replacing anything.
 
 After the last match, the search goes on from the top of the document and stops where it started. At the end you hear what was done, for example "Replaced 3, skipped 1." Press **Escape** to stop early: "Stopped. Replaced 1, skipped 0."
 
 Each replacement is one undo step, and "Replace all the rest" is one step for all of them, so **Ctrl+Z** takes back the last thing you chose.
 
 To find without replacing, use **Ctrl+F**, as when reading.
+
+### Regular expressions
+
+With **Regular expression** on, textweaver uses the Rust `regex` syntax:
+
+- `cats?` finds "cat" and "cats"; `\d+` finds a number; `\bcat\b` finds the word "cat".
+- `^` and `$` match at the start and end of a line. `\n` and `\s` can match a line break; with **Across lines** on, so can `.`.
+- In the new text, `$1` is what the first group in parentheses matched, `${name}` is a named group such as `(?<year>\d{4})`, and `$$` is a dollar sign. Write `${1}st` rather than `$1st` when a letter or digit follows the group. With the option off, a dollar sign in the new text is just a dollar sign.
+- For example, find `(\d{4})-(\d\d)-(\d\d)` and replace with `$3/$2/$1` to turn 2026-10-09 into 09/10/2026.
+- A pattern that is not valid is said in words, with the character where it goes wrong, for example "Invalid pattern at character 3: unclosed group." Nothing is replaced. Press **Alt+F** and **Up** to fix it.
+- A pattern that matches only a position, such as `^` alone, finds nothing: every match must hold at least one character.
 
 ## Save
 

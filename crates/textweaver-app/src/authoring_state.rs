@@ -111,6 +111,8 @@ pub(crate) enum AuthoringList {
     },
     /// What to do with the current match of find and replace.
     Replace,
+    /// The search options of Find and Replace, each switched by Enter.
+    SearchOptions,
     /// Templates for a new document.
     Templates(Vec<crate::templates::Template>),
 }
@@ -208,6 +210,9 @@ pub(crate) enum Question {
     /// and the whole question as asked, so a stray key asks it again with
     /// what "it" is ("Wrote essay.mp3 ... Open it? y or n").
     Open(String, String),
+    /// Replace all the rest of the matches? The whole question as asked,
+    /// with the count.
+    ReplaceAll(String),
 }
 
 /// The authoring state.

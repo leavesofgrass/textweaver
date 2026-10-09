@@ -8,7 +8,7 @@ This guide is written to be read with a screen reader. Each task section starts 
 
 In the reader, open the File menu (F10 in the terminal) and choose Export audio, or find "Export audio" in the command palette. A document must be open. Export audio is in the terminal reader, the window, and `tw` in every release; only a lean build of the reader, made with `--no-default-features`, leaves it out ([Building](dev/building.md)).
 
-1. **The format.** You hear, for example, "Export essay as audio: choose a format, 6 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then Ogg Vorbis: small and open, and most players open it. Then WAV. M4B and "Video with captions: MP4, needs ffmpeg" are listed only when ffmpeg is installed; when it is not, you hear "M4B, MP4 need ffmpeg, which was not found." (see [Make a video with captions](#make-a-video-with-captions)). Last comes "Read-along page: text and audio, one file", which writes `essay.html` (see [Make a read-along page](#make-a-read-along-page)). Press Enter on a format.
+1. **The format.** You hear, for example, "Export essay as audio: choose a format, 6 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then Ogg Vorbis: small and open, and most players open it. Then WAV. M4B and "Video with captions: MP4, needs ffmpeg" are listed only when ffmpeg is installed; when it is not, you hear "M4B, MP4 need ffmpeg, which was not found." (see [Make a video with captions](#make-a-video-with-captions)). Last comes "Read-along page: text and audio, one file", which writes `essay.html` (see [Make a read-along page](#make-a-read-along-page)). Press Enter on a format. The format in the `[export] audio_format` setting (Settings, Audio export format) is listed first; FLAC unless you change it.
 2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
 3. **The question.** "Export essay.flac with Microsoft David at 200 words per minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
 
@@ -50,12 +50,13 @@ WAV, FLAC, MP3, Opus, and Ogg Vorbis files are written by textweaver itself. You
 
 ### M4B needs ffmpeg
 
-To write `.m4b` or `.mp4`, textweaver first writes a WAV and then asks ffmpeg to convert it. textweaver never downloads or bundles ffmpeg, so you install it yourself once.
+To write `.m4b` or `.mp4`, textweaver first writes a WAV and then asks ffmpeg to convert it. textweaver never bundles ffmpeg, so you install it yourself once, or get it from your own components source (see [Optional components](components.md#your-own-components-source)).
 
-textweaver looks for ffmpeg in two places, in this order:
+textweaver looks for ffmpeg in three places, in this order:
 
-1. The `TEXTWEAVER_FFMPEG` environment variable, if it is set. It must be the full path to the ffmpeg program.
-2. Otherwise, a program named `ffmpeg` in one of the folders on your `PATH`, which is where installers put it.
+1. textweaver's components folder, `components` in the data folder, where a copy from a components source goes.
+2. The `TEXTWEAVER_FFMPEG` environment variable, if it is set. It must be the full path to the ffmpeg program.
+3. Otherwise, a program named `ffmpeg` in one of the folders on your `PATH`, which is where installers put it.
 
 ### Install ffmpeg on Windows
 
@@ -103,7 +104,7 @@ In a Linux or macOS shell:
 export TEXTWEAVER_FFMPEG="$HOME/tools/ffmpeg"
 ```
 
-When `TEXTWEAVER_FFMPEG` is set, textweaver uses only that path and does not search `PATH`. If the path is wrong, textweaver says ffmpeg was not found, even when ffmpeg is on your `PATH`.
+When `TEXTWEAVER_FFMPEG` is set (and there is no ffmpeg in the components folder), textweaver uses only that path and does not search `PATH`. If the path is wrong, textweaver says ffmpeg was not found, even when ffmpeg is on your `PATH`.
 
 ## Export a document to a WAV file
 
@@ -124,7 +125,7 @@ The output format comes from the file name you give with `--out`:
 - `.ogg`: an Ogg Vorbis file. Always works; textweaver encodes it itself with libvorbis, at quality 3, at the voice's own sample rate.
 - `.m4b`: an M4B audiobook (AAC audio at 64 kilobits per second). Needs ffmpeg.
 
-Capital letters in the extension are fine, so `.MP3` works too. Any other extension is refused before anything is read.
+Capital letters in the extension are fine, so `.MP3` works too. Any other extension is refused before anything is read. A name with no extension, such as `--out reading`, gets the format in `[export] audio_format`, FLAC unless you change it, so `reading.flac` is written.
 
 If the output file already exists, it is replaced without asking.
 
@@ -396,7 +397,8 @@ Without `--voice`, textweaver uses your `[speech] voice` setting, but only when 
 - `[normalization]`: numbers, abbreviations, your pronunciations, math, and the community lexicon, the same as when reading aloud. Engines that read numbers and abbreviations themselves, such as ETI-Eloquence, are left to do so.
 - `[normalization] table_mode`: tables read with row and column context (`structured`), as cell text only (`flat`), or left out (`skip`).
 - `[normalization] footnote_mode`: footnotes read where they are referenced (`inline`), at the end of the section (`deferred`), or left out (`skip`).
-- The three `[export]` settings, described next.
+- `[export] audio_format`: the format written when `--out` has no extension.
+- The three `[export]` subtitle settings, described next.
 
 See [the settings guide](settings.md) for how to look at, export, and import your settings.
 

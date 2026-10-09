@@ -1,7 +1,10 @@
 //! Find, bookmarks, and selection.
 //!
-//! Find is case-insensitive plain text (star's behavior); a pattern written
-//! as `/regex/` is a regular expression. Matches wrap at the document ends
+//! Find follows the search options ([`crate::SearchOptions`]): by default
+//! case-insensitive plain text (star's behavior). With the regular
+//! expression option off, a pattern written as `/regex/` is still a
+//! regular expression; an invalid one is said in words with where it
+//! fails. Matches wrap at the document ends
 //! (star wraps search in both UIs), and the wrap is announced. Bookmarks go
 //! to the first word at or after their position (star's GUI rule; the TUI's
 //! "closest word" quirk is not kept) and wrap the same way.
@@ -11,7 +14,7 @@ use textweaver_core::{CharPos, CharRange, Direction, Unit};
 use textweaver_lexicon::args;
 use textweaver_speech::Earcon;
 use textweaver_store::Bookmark;
-use textweaver_text::{NavOptions, SearchQuery, navigate};
+use textweaver_text::{NavOptions, navigate};
 
 use crate::app::{App, FindState, ListKind};
 use crate::command::{Effect, PromptPurpose};
@@ -27,18 +30,21 @@ impl App {
             self.note(&msg);
             return;
         }
-        let (text, regex) = match pattern.strip_prefix('/').and_then(|p| p.strip_suffix('/')) {
-            Some(re) if !re.is_empty() => (re.to_owned(), true),
-            _ => (pattern.to_owned(), false),
-        };
-        let query = SearchQuery {
-            pattern: text,
-            regex,
-            case_sensitive: false,
-            whole_word: false,
-            wrap: true,
-            direction: Direction::Forward,
-        };
+        let mut opts = self.search;
+        let mut text = pattern;
+        if !opts.regex
+            && let Some(re) = pattern.strip_prefix('/').and_then(|p| p.strip_suffix('/'))
+            && !re.is_empty()
+        {
+            opts.regex = true;
+            text = re;
+        }
+        if let Some(p) = crate::search_options::pattern_problem(text, opts) {
+            let msg = self.pattern_problem_message(&p);
+            self.error(&msg);
+            return;
+        }
+        let query = opts.query(text);
         let Some(s) = self.session.as_mut() else {
             return;
         };
@@ -108,10 +114,13 @@ impl App {
             return self.prompt(PromptPurpose::Find);
         };
         if f.total == 0 || f.hits.is_empty() {
-            let msg = self.msg_args(
-                "marks-no-matches",
-                &args!["pattern" => f.query.pattern.as_str()],
-            );
+            // Without the across-lines flag the options added.
+            let pattern = f
+                .query
+                .pattern
+                .strip_prefix("(?s)")
+                .unwrap_or(&f.query.pattern);
+            let msg = self.msg_args("marks-no-matches", &args!["pattern" => pattern]);
             self.tell(&msg);
             return vec![Effect::Redraw];
         }

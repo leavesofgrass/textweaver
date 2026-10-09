@@ -141,9 +141,11 @@ pub(super) fn initialize(mode: Mode) -> Result<u32, String> {
     if mode == Mode::Playback {
         keep_com_available();
     }
-    // SAFETY: a null path selects the installed data directory; options 0
-    // disables phoneme events. Callers serialize initialization.
-    let rate = unsafe { sys::espeak_Initialize(output, 0, std::ptr::null(), 0) };
+    // SAFETY: the path is null (the installed data directory) or a C
+    // string kept for the life of the process (the data beside a copy in
+    // the components folder); options 0 disables phoneme events. Callers
+    // serialize initialization.
+    let rate = unsafe { sys::espeak_Initialize(output, 0, sys::data_path(), 0) };
     let rate = u32::try_from(rate).map_err(|_| "espeak-ng failed to initialize".to_owned())?;
     // SAFETY: `synth_callback` has the signature libespeak-ng expects and
     // lives for the whole program.

@@ -100,7 +100,7 @@ define-nothing-here = لا توجد كلمة عند المؤشر.
 define-not-found = لم يُعثر على تعريف لـ{ $word }.
 define-no-dictionary = ملف القاموس غير مثبَّت، لذا بُحث في مسردك فقط. دليل القراءة يوضح كيفية تثبيته.
 define-dictionary-damaged = تعذّرت قراءة ملف القاموس: { $error } يُبحث في مسردك فقط.
-define-glossary-problem = تعذّرت قراءة مسردك: { $error }
+define-glossary-problem = تعذّرت قراءة مسردك: { $error } يُبحث في القاموس فقط.
 define-glossary-skipped =
     { $n ->
         [one] سطر واحد في مسردك بلا تعريف، فتم تخطّيه.
@@ -159,7 +159,7 @@ profile-needs-name = يحتاج ملف الإعدادات إلى اسم.
 profile-exists = يوجد بالفعل ملف إعدادات باسم { $name }.
 profiles-not-an-export = { $detail }
 profiles-no-persistence = لا تُحفظ ملفات الإعدادات في هذه الجلسة.
-profiles-read-failed = تعذّرت قراءة ملف ملفات الإعدادات، لذا يُعامل كأنه فارغ: { $error }
+profiles-read-failed = تعذّرت قراءة ملف ملفات الإعدادات، لذا يُعامل كأنه فارغ: { $error } حفظ ملف إعدادات يستبدل الملف.
 profiles-save-failed = تعذّر حفظ ملفات الإعدادات: { $error } تحقّق من إمكانية الكتابة في مجلد الإعدادات.
 profiles-none-to-export = لا توجد ملفات إعدادات لتصديرها بعد.
 profiles-exported =
@@ -170,7 +170,7 @@ profiles-exported =
         [many] صُدِّر { $n } ملف إعدادات إلى { $file }.
        *[other] صُدِّر { $n } ملف إعدادات إلى { $file }.
     }
-profiles-export-failed = تعذّر تصدير ملفات الإعدادات: { $error }
+profiles-export-failed = تعذّر تصدير ملفات الإعدادات: { $error } تحقّق من إمكانية الكتابة في المجلد.
 profiles-imported =
     { $n ->
         [0] لم تكن هناك ملفات إعدادات في { $file }.
@@ -501,7 +501,16 @@ playback-no-selection = لا تحديد.
 playback-speech-died = توقف الكلام عن العمل ({ $reason }). { $next }
 playback-done-reading = انتهت القراءة.
 playback-speech-restarted = أُعيد تشغيل الكلام: { $reason }. متابعة القراءة من آخر كلمة.
-playback-speech-error = خطأ في الكلام: { $error }
+playback-speech-error = خطأ في الكلام: { $error } حاول مرة أخرى، أو استخدم أمر إعادة تشغيل النطق.
+playback-end-of-section = نهاية القسم. { $key } للمتابعة.
+playback-time-up =
+    { $minutes ->
+        [one] انتهى الوقت بعد دقيقة واحدة. { $key } للمتابعة.
+        [two] انتهى الوقت بعد دقيقتين. { $key } للمتابعة.
+        [few] انتهى الوقت بعد { $minutes } دقائق. { $key } للمتابعة.
+       *[other] انتهى الوقت بعد { $minutes } دقيقة. { $key } للمتابعة.
+    }
+playback-repeat-slower = إعادة أبطأ، بسرعة { $rate } كلمة في الدقيقة.
 
 ## سطر العنوان وقول الحالة.
 
@@ -740,6 +749,7 @@ action-word-count = نطق عدد كلمات المستند، أو التحدي�
 action-link-address = نطق عنوان الرابط عند المؤشر
 action-replay-sentence = إعادة القراءة من بداية الجملة الحالية
 action-replay-paragraph = إعادة القراءة من بداية الفقرة الحالية
+action-repeat-sentence-slower = نطق الجملة عند المؤشر مرة أخرى بسرعة أبطأ، ثم العودة إلى السرعة المعتادة
 action-rsvp-toggle = إظهار أو إخفاء العرض السريع للكلمات، كلمة كلمة من المؤشر
 action-rsvp-play-pause = بدء أو إيقاف مؤقت للعرض السريع للكلمات
 action-rsvp-faster = تسريع العرض السريع للكلمات
@@ -830,6 +840,7 @@ action-cycle-punctuation = التنقل بين مقدار علامات التر�
 action-find = البحث عن نص في المستند
 action-find-next = البحث عن التطابق التالي
 action-find-previous = البحث عن التطابق السابق
+action-search-options = اختيار طريقة المطابقة في البحث والاستبدال: حالة الأحرف، الكلمات الكاملة، التعبير النمطي، عبر الأسطر
 action-next-misspelling = الانتقال إلى الكلمة الخطأ إملائيًا التالية، وتهجئتها
 action-previous-misspelling = الانتقال إلى الكلمة الخطأ إملائيًا السابقة، وتهجئتها
 action-spelling-suggestions = سرد اقتراحات الكلمة الخطأ إملائيًا عند المؤشر، أو إضافتها إلى قائمة كلماتك
@@ -947,7 +958,7 @@ restart-restarting = إعادة تشغيل الكلام.
 restart-not-here = لا يمكن إعادة تشغيل الكلام هنا.
 restart-already = الكلام تجري إعادة تشغيله بالفعل.
 # $error is the system's reason, in its own words.
-restart-failed = تعذّرت إعادة تشغيل الكلام: { $error }
+restart-failed = تعذّرت إعادة تشغيل الكلام: { $error } انتظر قليلًا، ثم حاول مرة أخرى.
 restart-start-failed = تعذّرت إعادة تشغيل الكلام: فشل بدء تشغيله.
 restart-no-engine = لا يتوفر محرك كلام؛ يبقى { -brand } صامتًا. راجع Troubleshooting، No speech at all، في الوثائق.
 restart-done-silent = أُعيد تشغيل الكلام، لكن لا يتوفر محرك كلام؛ يبقى { -brand } صامتًا.
@@ -987,12 +998,12 @@ settingsio-import-question =
 settingsio-no-persistence = لا تُحفظ الإعدادات في هذه الجلسة، لذا لا يمكن تصديرها أو استيرادها.
 # $path is the file written.
 settingsio-exported = صُدِّرت الإعدادات إلى { $path }.
-settingsio-export-failed = تعذّر تصدير الإعدادات: { $error }
+settingsio-export-failed = تعذّر تصدير الإعدادات: { $error } تحقّق من إمكانية الكتابة في المجلد.
 # $path is the file; $error the system's reason.
-settingsio-read-failed = تعذّرت قراءة { $path }: { $error }
+settingsio-read-failed = تعذّرت قراءة { $path }: { $error } تحقّق من الملف، ثم استورد مرة أخرى.
 settingsio-nothing-to-import = لا شيء لاستيراده: إعداداتك مطابقة لذلك الملف بالفعل.
 settingsio-cancelled-unchanged = أُلغي. لم يتغيّر شيء.
-settingsio-import-failed = تعذّر استيراد الإعدادات: { $error }
+settingsio-import-failed = تعذّر استيراد الإعدادات: { $error } تحقّق من إمكانية الكتابة في مجلد الإعدادات.
 # $summary lists what changed (from the settings store, in English).
 settingsio-imported = استُوردت الإعدادات. { $summary }
 settingsio-backend-next-start = يُستخدم محرك الكلام الجديد من بدء التشغيل التالي.
@@ -1011,6 +1022,9 @@ opening-damaged-odt = ليس ملف نص OpenDocument قابلًا للقراء�
 opening-damaged-latex = ليس ملف LaTeX قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
 opening-damaged-email = ليست رسالة بريد إلكتروني قابلة للقراءة؛ قد تكون تالفة أو كبيرة جدًا.
 opening-damaged-mhtml = ليس أرشيف ويب قابلًا للقراءة؛ قد يكون تالفًا أو كبيرًا جدًا.
+opening-pdf-password = إنه محمي بكلمة مرور. أزل كلمة المرور في برنامج PDF، ثم افتحه مرة أخرى.
+opening-old-office = إنه ملف Microsoft Office قديم. احفظه بتنسيق أحدث مثل docx، ثم افتح الملف الجديد.
+opening-rar = إنه أرشيف RAR لا يُفتح. استخرجه أولًا، أو استخدم ZIP أو 7z.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = تعذّر فتح { $name }: { $reason }
 opening-started = يجري فتح { $name }. Escape للإلغاء.
@@ -1100,7 +1114,7 @@ voices-language-zh = الصينية
 voice-sample = الثعلب البني السريع يقفز فوق الكلب الكسول.
 voice-list-title = اختيار صوت
 voice-still-loading = ما زالت الأصوات قيد التحميل. تُفتح القائمة عندما تكون جاهزة.
-voice-list-failed = تعذّر سرد الأصوات: { $error }
+voice-list-failed = تعذّر سرد الأصوات: { $error } اختر محركًا آخر من قائمة الكلام.
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
 voice-manager-intro = مدير الأصوات. { $shown } Enter لاستخدام صوت ونطق عينة منه، أو لتنزيله؛ { $preview } لمعاينة صوت؛ Space لوضع علامة مفضّل؛ Delete لإزالة صوت مُنزَّل؛ Escape للإغلاق.
@@ -1117,7 +1131,7 @@ voice-preview-starting = معاينة: { $voice }، جارٍ تشغيل { $engin
 voice-preview-not-installed = { $voice } لم يُنزَّل بعد. Enter ينزّله بعد سؤال.
 voice-preview-unavailable = لا يمكن تشغيل { $engine } هنا للمعاينة. Enter ينتقل إليه.
 voice-preview-engine-failed = تعذّر تشغيل { $engine } لمعاينة { $voice }.
-voice-preview-failed = تعذّرت معاينة { $voice }: { $error }
+voice-preview-failed = تعذّرت معاينة { $voice }: { $error } جرّب صوتًا آخر.
 # $keys names the Choose Voice key.
 voice-ready = الأصوات جاهزة. { $keys } لسردها.
 voice-fetch-catalog-question = تنزيل قائمة أصوات Piper، نحو 250 كيلوبايت، من Hugging Face؟ y أو n
@@ -1135,14 +1149,14 @@ voice-only-piper-removable = يمكن إزالة أصوات Piper المُنزَ
 voice-download-question = { $plan } y أو n
 voice-in-use = { $voice } هو الصوت قيد الاستخدام. اختر صوتًا آخر أولًا.
 voice-removed = أُزيل { $voice }.
-voice-remove-failed = تعذّرت إزالة { $voice }: { $error }
+voice-remove-failed = تعذّرت إزالة { $voice }: { $error } تحقّق من إمكانية الكتابة في مجلده.
 voice-downloading-catalog = تنزيل قائمة أصوات Piper.
 voice-downloading = تنزيل { $voice }.
 voice-downloading-percent = تنزيل { $voice }، { $pct } بالمئة.
-voice-details-failed = تعذّرت قراءة تفاصيل الصوت: { $error }
+voice-details-failed = تعذّرت قراءة تفاصيل الصوت: { $error } تحقّق من الاتصال، ثم حاول مرة أخرى.
 voice-download-stopped = توقّف التنزيل.
 voice-catalog-fetched = تحتوي قائمة أصوات Piper على { $voices } صوتًا في { $languages } لغة. يسردها أمر الأصوات.
-voice-catalog-failed = تعذّر تنزيل قائمة الأصوات: { $error }
+voice-catalog-failed = تعذّر تنزيل قائمة الأصوات: { $error } تحقّق من الاتصال، ثم حاول مرة أخرى.
 # $licence describes the voice's licence, in a sentence of its own.
 voice-installed = { $voice } مثبَّت. { $licence } يسرده أمر الأصوات.
 voice-download-failed = تعذّر تنزيل { $voice }: { $error } اختر الصوت مرة أخرى لإعادة المحاولة.
@@ -1175,16 +1189,16 @@ voice-line-numbers-off = أرقام الأسطر متوقفة.
 common-no-document = لا يوجد مستند مفتوح.
 # Said after "Could not export:", so it starts in lower case. $path is a
 # folder or a file; $error the system's reason.
-publish-cannot-write-to = تعذّرت الكتابة إلى { $path }: { $error }
-publish-cannot-write = تعذّرت كتابة { $path }: { $error }
-publish-start-failed = تعذّر بدء التصدير: { $error }
-publish-export-error = تعذّر التصدير: { $error }
+publish-cannot-write-to = تعذّرت الكتابة إلى { $path }: { $error } تحقّق من إمكانية الكتابة في المجلد.
+publish-cannot-write = تعذّرت كتابة { $path }: { $error } تحقّق من إمكانية الكتابة في مجلده.
+publish-start-failed = تعذّر بدء التصدير: { $error } انتظر قليلًا، ثم حاول مرة أخرى.
+publish-export-error = تعذّر التصدير: { $error } أصلح ذلك، ثم صدّر مرة أخرى.
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = التصدير إلى { $format }.
 publish-theme-title = سمة صفحة HTML
 publish-theme-intro = سمة صفحة HTML؟ { $first } أولًا، { $n } خيارات. Escape للإلغاء.
 publish-writing-preview = كتابة المعاينة.
-publish-preview-error = تعذّرت كتابة المعاينة: { $error }
+publish-preview-error = تعذّرت كتابة المعاينة: { $error } أصلح ذلك، ثم افتح المعاينة مرة أخرى.
 publish-still-exporting =
     { $secs ->
         [one] ما زال التصدير إلى { $format } جاريًا، ثانية واحدة.
@@ -1213,8 +1227,8 @@ publish-live-on = المعاينة الحية مفعّلة: تُعاد المع�
 publish-live-on-needs-reload = المعاينة الحية مفعّلة. تعمل مع إعادة التحميل التلقائي، وهي متوقفة؛ فعّلها بأمر إعادة تحميل المعاينة تلقائيًا.
 publish-live-off = المعاينة الحية متوقفة: تُعاد المعاينة بعد الحفظ فقط.
 # $error is the converter's reason.
-publish-export-failed = فشل التصدير إلى { $format }: { $error }
-publish-preview-failed = فشلت المعاينة: { $error }
+publish-export-failed = فشل التصدير إلى { $format }: { $error } جرّب تنسيقًا آخر.
+publish-preview-failed = فشلت المعاينة: { $error } احفظ للمحاولة مرة أخرى.
 # The converter's warnings: how many, and the first one.
 publish-warnings =
     { $n ->
@@ -1235,7 +1249,7 @@ publish-preview-written = كُتبت المعاينة. يجري فتحها في 
 publish-preview-updated = تحدّثت المعاينة.
 publish-preview-updated-press-f5 = تحدّثت المعاينة. اضغط F5 في المتصفح.
 publish-server-failed = تعذّر بدء خادم إعادة تحميل المعاينة ({ $error })؛ يجري فتح الملف بدلًا من ذلك.
-publish-render-failed = تعذّر عرض النص: { $error }
+publish-render-failed = تعذّر عرض النص: { $error } اخرج من وضع التحرير لقراءة النص.
 publish-nothing-after-caret = لا شيء لقراءته بعد المؤشر.
 publish-listening = الاستماع إلى النص المعروض.
 
@@ -1261,11 +1275,11 @@ notes-none = لا ملاحظات. لإضافة واحدة: { $key }.
 notes-list-title = الملاحظات
 notes-list-intro =
     { $n ->
-        [one] الملاحظات، عنصر واحد. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها.
-        [two] الملاحظات، عنصران. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها.
-        [few] الملاحظات، { $n } عناصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها.
-        [many] الملاحظات، { $n } عنصرًا. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها.
-       *[other] الملاحظات، { $n } عنصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها.
+        [one] الملاحظات، عنصر واحد. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
+        [two] الملاحظات، عنصران. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
+        [few] الملاحظات، { $n } عناصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
+        [many] الملاحظات، { $n } عنصرًا. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
+       *[other] الملاحظات، { $n } عنصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. عند: { $anchor }
@@ -1302,6 +1316,73 @@ notes-highlight-label = تمييز
 notes-signal = ملاحظة: { $text }
 # Said after moving onto a note's passage.
 notes-has-note = تحتوي على ملاحظة: { $text }
+
+## Relations between notes (the knowledge graph as lists).
+
+relations-type-conflicts-with = يتعارض مع
+relations-type-supports = يدعم
+relations-type-is-example-of = مثال على
+relations-type-cites = يستشهد بـ
+relations-type-contradicts = يناقض
+relations-type-defines = يعرّف
+relations-type-extends = يوسّع
+relations-type-see-also = انظر أيضًا
+relations-type-precedes = يسبق
+relations-type-follows = يلي
+relations-count = الروابط: { $out } صادرة، { $in } واردة.
+relations-note-title = روابط: { $note }
+relations-title-filtered = { $title }، التصفية: { $filter }
+relations-note-intro = روابط { $note }: { $out } صادرة، { $in } واردة. Enter لاتباع رابط، F2 لتغييره، Delete لإزالته. اكتب للتصفية حسب النوع.
+relations-out-item = { $type }: { $target }
+relations-target-in = { $note }، في { $doc }
+relations-target-missing = ملاحظة غير موجودة
+relations-empty-note = ملاحظة فارغة
+relations-incoming-row =
+    { $n ->
+        [0] ما يرتبط هنا: لا شيء بعد
+        [one] ما يرتبط هنا: ملاحظة واحدة
+        [two] ما يرتبط هنا: ملاحظتان
+       *[other] ما يرتبط هنا: { $n } ملاحظات
+    }
+relations-add-row = إضافة رابط
+relations-backlinks-title = ما يرتبط هنا: { $note }
+relations-backlinks-intro =
+    { $n ->
+        [one] ما يرتبط بـ { $note }: ملاحظة واحدة. Enter للانتقال إليها. اكتب للتصفية حسب النوع.
+       *[other] ما يرتبط بـ { $note }: { $n } ملاحظات. Enter للانتقال إلى إحداها. اكتب للتصفية حسب النوع.
+    }
+relations-backlink-item = { $type } هذه، من: { $note }
+relations-none-in = لا شيء يرتبط بهذه الملاحظة بعد.
+relations-types-title = نوع الرابط لـ: { $note }
+relations-types-intro = اختر نوع الرابط، 10 أنواع. اكتب للتصفية.
+relations-targets-title = { $type }: أي ملاحظة؟
+relations-targets-intro =
+    { $n ->
+        [0] لا توجد ملاحظة أخرى هنا. اختر ملاحظة في مستند آخر.
+        [one] اختر الملاحظة المراد الربط بها: ملاحظة واحدة. Enter للربط.
+       *[other] اختر الملاحظة المراد الربط بها: { $n } ملاحظات. Enter للربط.
+    }
+relations-other-document-row = ملاحظة في مستند آخر
+relations-documents-title = مستندات بها ملاحظات
+relations-documents-intro = مستندات بها ملاحظات: { $n }. Enter لعرض ملاحظات مستند.
+relations-document-item =
+    { $n ->
+        [one] { $title }، ملاحظة واحدة
+       *[other] { $title }، { $n } ملاحظات
+    }
+relations-no-other-documents = لا يوجد مستند آخر في المكتبة به ملاحظات.
+relations-linked = تم الربط: { $type } { $target }.
+relations-changed = تم تغيير الرابط: { $type } { $target }.
+relations-already = مرتبط من قبل: { $type } { $target }.
+relations-removed = تمت إزالة الرابط: { $type } { $target }.
+relations-remove-question = إزالة هذا الرابط؟ y أو n
+relations-nothing-to-remove = يمكن إزالة رابط فقط هنا.
+relations-note-gone = الملاحظة غير موجودة: حُذفت، أو اختفى مستندها.
+relations-document-missing = المستند غير موجود: { $file }.
+relations-no-note-here = لا توجد ملاحظة هنا. الروابط تخص الملاحظات؛ أضف واحدة: { $key }.
+relations-filter-cleared = تم مسح التصفية، { $n } معروضة.
+relations-filter-none = لا شيء يطابق { $filter }.
+relations-filter-matched = التصفية { $filter }: { $n } معروضة.
 
 ## الإشارات المرجعية: إعادة التسمية والحذف.
 
@@ -1349,7 +1430,7 @@ notes-study-sheet-saved-both =
         [many] { $h } تمييزًا
        *[other] { $h } تمييز
     } حُفظت باسم { $file }. فتحها؟ y أو n. في { $folder }.
-notes-study-sheet-failed = تعذّرت كتابة ورقة الدراسة: { $error }
+notes-study-sheet-failed = تعذّرت كتابة ورقة الدراسة: { $error } تحقّق من إمكانية الكتابة في المجلد.
 # The study sheet file's own text (Markdown; the # marks stay in the code).
 notes-sheet-title = ورقة دراسة: { $title }
 notes-sheet-exported = صُدِّرت من { -brand } في { $date }.
@@ -1361,7 +1442,7 @@ notes-sheet-highlighted = مُيِّز، { $color }.
 
 ## البحث، والإشارات المرجعية، والتحديد.
 
-marks-cannot-search = تعذّر البحث: { $error }
+marks-cannot-search = تعذّر البحث: { $error } تحقّق من النمط بين الشرطتين المائلتين.
 # $pattern is the text searched for.
 marks-no-matches = لا تطابقات لـ{ $pattern }.
 # The label of a match reached by Find, at high verbosity; $number is its place among $n matches.
@@ -1579,14 +1660,14 @@ citations-picker-intro =
     }
 # $text is what was typed at the locator prompt.
 citations-locator-unreadable = تعذّرت قراءة الموضع { $text }. اكتب رقم صفحة مثل 12، أو صفحات مثل 3-5، أو chapter 2؛ Enter وحدها لعدم تحديد شيء.
-citations-insert-failed = تعذّر إدراج الاستشهاد: { $error }
+citations-insert-failed = تعذّر إدراج الاستشهاد: { $error } لم يتغيّر النص.
 # $what is the identifier being looked up, as the citation library describes it.
 citations-looking-up = البحث عن { $what }.
-citations-lookup-not-started = تعذّر بدء البحث: { $error }
+citations-lookup-not-started = تعذّر بدء البحث: { $error } انتظر قليلًا، ثم حاول مرة أخرى.
 # $input is the DOI or ISBN as typed.
-citations-lookup-failed = تعذّر البحث عن { $input }: { $error }
+citations-lookup-failed = تعذّر البحث عن { $input }: { $error } تحقّق من رقم DOI أو ISBN ومن الاتصال.
 citations-no-library-to-add-to = لا توجد مكتبة لإضافة إليها: لا يحتفظ { -brand } بملفات في هذه الجلسة.
-citations-library-save-failed = تعذّر حفظ المكتبة: { $error }
+citations-library-save-failed = تعذّر حفظ المكتبة: { $error } تحقّق من إمكانية الكتابة في مجلده.
 # $n is how many citations the document has.
 citations-found-no-library =
     { $n ->
@@ -1596,13 +1677,13 @@ citations-found-no-library =
         [many] عُثر على { $n } استشهادًا. لا يحتفظ { -brand } بمكتبة في هذه الجلسة.
        *[other] عُثر على { $n } استشهاد. لا يحتفظ { -brand } بمكتبة في هذه الجلسة.
     }
-citations-check-failed = تعذّر فحص الاستشهادات: { $error }
+citations-check-failed = تعذّر فحص الاستشهادات: { $error } تحقّق من ملف مكتبة المراجع.
 citations-no-library-to-import-into = لا توجد مكتبة لاستيراد إليها: لا يحتفظ { -brand } بملفات في هذه الجلسة.
 # $file is the file's path.
-citations-import-failed = تعذّر استيراد { $file }: { $error }
+citations-import-failed = تعذّر استيراد { $file }: { $error } تحقّق من أنه ملف بامتداد bib أو ris أو json.
 # $style is the style's name from the front matter, such as apa.
-citations-style-unusable = لا يمكن استخدام نمط الاستشهاد { $style }: { $error }
-citations-format-failed = تعذّر تنسيق الاستشهادات: { $error }
+citations-style-unusable = لا يمكن استخدام نمط الاستشهاد { $style }: { $error } تحقّق من اسم النمط في أعلى المستند.
+citations-format-failed = تعذّر تنسيق الاستشهادات: { $error } تحقّق من مفاتيح الاستشهاد ومن المكتبة.
 # $key names the Insert Citation command's keys.
 citations-none-yet = لا استشهادات في المستند بعد. أدرج واحدًا بـ{ $key }.
 citations-nothing-to-list = لا يوجد أي عمل مستشهد به في مكتبتك، فلا شيء لسرده.
@@ -1617,7 +1698,7 @@ citations-bibliography-inserted =
     }
 # Follows citations-bibliography-inserted; $keys are citation keys joined with commas.
 citations-not-in-library = ليست في المكتبة: { $keys }.
-citations-bibliography-insert-failed = تعذّر إدراج قائمة المراجع: { $error }
+citations-bibliography-insert-failed = تعذّر إدراج قائمة المراجع: { $error } لم يتغيّر النص.
 
 ## وضع مؤشّر الكلام.
 
@@ -1830,7 +1911,7 @@ settings-choose-one-of = اختر واحدًا من: { $names }.
 settings-edit-table = حرّر { $label } في settings.toml؛ يحمل أسماء وقيمًا.
 # $path is a key such as speech.rate, not translated.
 settings-no-such-setting = لا يوجد إعداد { $path }.
-settings-cannot-be = لا يمكن أن يكون { $label } كذلك: { $error }
+settings-cannot-be = لا يمكن أن يكون { $label } كذلك: { $error } اختر قيمة أخرى.
 settings-changed = { $label }، { $value }.
 settings-clamped = خارج النطاق، فتُستخدم أقرب قيمة.
 settings-restart-speech = أعد تشغيل الكلام لاستخدامه.
@@ -2051,6 +2132,13 @@ setting-reading-revisions-help = كيف تُقرأ التغييرات المتع
 choice-reading-revisions-auto = تلقائي
 choice-reading-revisions-marked = قلها دائمًا
 choice-reading-revisions-final = النص النهائي فقط
+setting-reading-stop-at = التوقف عند نهاية القسم
+setting-reading-stop-at-help = أين تتوقف القراءة المستمرة من تلقاء نفسها وتقول نهاية القسم. أبدًا، أو عند العنوان التالي من أي مستوى، أو عند الفصل التالي: فاصل قسم، وإلا عنوان من المستوى 1. تتابع القراءة من العنوان بمفتاح القراءة.
+choice-reading-stop-at-off = أبدًا
+choice-reading-stop-at-heading = العنوان التالي
+choice-reading-stop-at-chapter = الفصل التالي
+setting-reading-stop-after-minutes = مؤقت القراءة
+setting-reading-stop-after-minutes-help = تتوقف القراءة المستمرة عند نهاية الجملة بعد هذا العدد من دقائق القراءة، وتقول ذلك. الإيقاف المؤقت يوقف الساعة، والإيقاف يبدأها من جديد. 0 يطفئ المؤقت.
 setting-display-theme = السمة
 setting-display-theme-help = السمة اللونية.
 setting-display-follow-os-theme = اتباع سمة النظام
@@ -2118,6 +2206,15 @@ setting-accessibility-cursor = المؤشر
 setting-accessibility-cursor-help = أين ينتظر مؤشر الطرفية. على ما تعمل عليه، أو على سطر الحالة.
 choice-accessibility-cursor-follow = يتبع التركيز
 choice-accessibility-cursor-status = على سطر الحالة
+setting-export-audio-format = صيغة تصدير الصوت
+setting-export-audio-format-help = الصيغة التي يعرضها تصدير الصوت أولًا. يستخدمها tw export-audio أيضًا لاسم ملف بلا امتداد.
+choice-export-audio-format-flac = FLAC
+choice-export-audio-format-mp3 = MP3
+choice-export-audio-format-opus = Opus
+choice-export-audio-format-ogg = Ogg Vorbis
+choice-export-audio-format-wav = WAV
+choice-export-audio-format-m4b = كتاب صوتي M4B
+choice-export-audio-format-mp4 = فيديو MP4 مع ترجمة نصية
 setting-export-subtitle-format = صيغة الترجمة النصية
 setting-export-subtitle-format-help = صيغة الترجمة النصية المكتوبة دون اسم ملف.
 choice-export-subtitle-format-srt = SubRip
@@ -2392,6 +2489,14 @@ settings-unit-rows =
         [zero] صفوف
        *[other] صف
     }
+settings-unit-minutes =
+    { $n ->
+        [one] دقيقة
+        [two] دقيقتان
+        [few] دقائق
+        [zero] دقيقة
+       *[other] دقيقة
+    }
 
 ## أقسام الإعدادات.
 
@@ -2476,11 +2581,11 @@ edit-pasted-start =
         [many] لُصق { $n } حرفًا: { $start }
        *[other] لُصق { $n } حرف: { $start }
     }
-edit-insert-failed = تعذّر الإدراج: { $error }
+edit-insert-failed = تعذّر الإدراج: { $error } لم يتغيّر النص.
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = لا يمكن تغيير الحروف من { $start } إلى { $end }: النص يحتوي { $len }.
-edit-change-failed = تعذّر تغيير النص: { $error }
-edit-delete-failed = تعذّر الحذف: { $error }
+edit-change-failed = تعذّر تغيير النص: { $error } لم يتغيّر النص.
+edit-delete-failed = تعذّر الحذف: { $error } لم يتغيّر النص.
 edit-list-ended = انتهت القائمة.
 # Said when Enter continues a bulleted list.
 edit-bullet = نقطة
@@ -2567,7 +2672,7 @@ edit-nothing-to-redo = لا شيء لإعادته.
 edit-not-a-table-size = ليس حجم جدول: { $text }. اكتب أعمدة وصفوفًا، مثل 3 by 2.
 # $name is the image's file name.
 edit-image-inserted = أُدرجت الصورة { $name }. وصفها محدَّد؛ اكتب لاستبداله.
-edit-image-failed = تعذّر إدراج الصورة: { $error }
+edit-image-failed = تعذّر إدراج الصورة: { $error } لم يتغيّر النص.
 # $query is the text to find.
 common-no-matches = لا تطابقات لـ{ $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -2597,19 +2702,22 @@ edit-recovery-postponed = أُجِّل الاسترداد. سيُعرض العم
 
 # $title is replace-match-title. Keep the letters r, s and a: they are the
 # keys that answer.
-replace-match-question = { $title }. اضغط r للاستبدال، s للتخطي، a لاستبدال الكل، Escape للإيقاف.
+replace-match-question = { $title }. السطر: { $context }. اضغط r للاستبدال، s للتخطي، a لاستبدال الكل، Escape للإيقاف.
 # The replace list's title when no match is being asked about.
 replace-title = استبدال
 # $n is this match's number, $total the number of matches, $line the line
-# number, and $context the text of that line.
-replace-match-title = التطابق { $n } من { $total }، السطر { $line }: { $context }
+# number, $found the matched text, and $result what it becomes (both
+# shortened); the -removed form is for an empty replacement. $context in
+# replace-match-question is the text of the match's line.
+replace-match-title = التطابق { $n } من { $total }، السطر { $line }: { $found } يصبح { $result }
+replace-match-title-removed = التطابق { $n } من { $total }، السطر { $line }: يُحذف { $found }
 replace-item-this = استبدال هذا
 replace-item-skip = تخطي هذا
 replace-item-rest = استبدال كل الباقي
 # $state is common-on or common-off.
 replace-item-match-case = مطابقة حالة الأحرف: { $state }
 replace-item-whole-words = الكلمات الكاملة فقط: { $state }
-replace-failed = تعذّر الاستبدال: { $error }
+replace-failed = تعذّر الاستبدال: { $error } لم يتغيّر النص.
 # Said after switching match case; $state is common-on or common-off, and
 # $n is the number of matches now.
 replace-match-case-now =
@@ -2639,6 +2747,52 @@ replace-replaced =
     }
 replace-replaced-skipped = استُبدل { $n }، تُخطي { $skipped }.
 replace-stopped = تم الإيقاف. استُبدل { $n }، تُخطي { $skipped }.
+# Find and replace with regular expressions (B1-fr). $state is common-on
+# or common-off; $n is the number of matches now.
+replace-item-regex = تعبير نمطي: { $state }
+replace-item-across-lines = عبر الأسطر: { $state }
+replace-regex-now =
+    { $n ->
+        [one] تعبير نمطي { $state }. تطابق واحد.
+        [two] تعبير نمطي { $state }. تطابقان.
+        [few] تعبير نمطي { $state }. { $n } تطابقات.
+        [many] تعبير نمطي { $state }. { $n } تطابقًا.
+       *[other] تعبير نمطي { $state }. { $n } تطابق.
+    }
+replace-across-lines-now =
+    { $n ->
+        [one] عبر الأسطر { $state }. تطابق واحد.
+        [two] عبر الأسطر { $state }. تطابقان.
+        [few] عبر الأسطر { $state }. { $n } تطابقات.
+        [many] عبر الأسطر { $state }. { $n } تطابقًا.
+       *[other] عبر الأسطر { $state }. { $n } تطابق.
+    }
+# $problem is search-invalid-pattern: switching the option would make the
+# pattern invalid.
+replace-option-refused = { $problem } لم يتغير الخيار.
+# Asked once before replacing all the rest; $n is how many. Keep y and n.
+replace-all-question =
+    { $n ->
+        [one] استبدال التطابق الأخير؟ y أو n
+        [two] استبدال التطابقين المتبقيين؟ y أو n
+        [few] استبدال { $n } تطابقات متبقية؟ y أو n
+        [many] استبدال { $n } تطابقًا متبقيًا؟ y أو n
+       *[other] استبدال { $n } تطابق متبقٍ؟ y أو n
+    }
+replace-all-declined = لم يُستبدل شيء.
+# The search options list, and the options as named in search-options-on.
+search-options-title = خيارات البحث
+search-option-match-case = مطابقة حالة الأحرف
+search-option-whole-words = الكلمات الكاملة
+search-option-regex = تعبير نمطي
+search-option-across-lines = عبر الأسطر
+# Said as Find or Replace opens when an option is on; $list joins the
+# options' names with commas.
+search-options-on = الخيارات المفعّلة: { $list }.
+# $at is the character where the pattern fails, counting from 1; $reason
+# is the regular expression engine's own explanation (in English).
+search-invalid-pattern = نمط غير صالح عند الحرف { $at }: { $reason }.
+search-invalid-pattern-anywhere = نمط غير صالح: { $reason }.
 
 ## الحفظ في الخلفية.
 
@@ -2647,7 +2801,7 @@ writes-not-written-in-time = تعذّرت كتابة بعض التغييرات �
 # $error is the system's reason.
 writes-save-failed = تعذّر الحفظ: { $error }. ما زلت في وضع التحرير.
 # $name is the bookmark's name, $pct where it is.
-writes-bookmark-not-saved = الإشارة المرجعية { $name } موضوعة الآن، لكن تعذّر حفظها: { $error }
+writes-bookmark-not-saved = الإشارة المرجعية { $name } موضوعة الآن، لكن تعذّر حفظها: { $error } تحقّق من إمكانية الكتابة في مجلد البيانات.
 # $name is the saved file's name.
 writes-saved = حُفظ { $name }. ما زلت في وضع التحرير.
 
@@ -2951,7 +3105,7 @@ common-left-as-is = تُركت كما هي.
 grammar-fix-not-editing = { $fix }. فعّل وضع التحرير بـ{ $key } لتغيير النص.
 grammar-removed = أُزيلت.
 grammar-changed = غُيِّرت إلى { $fix }.
-grammar-change-failed = تعذّر تغيير النص: { $error }
+grammar-change-failed = تعذّر تغيير النص: { $error } لم يتغيّر شيء.
 
 ## التدقيق الإملائي.
 
@@ -2994,7 +3148,7 @@ spell-suggestions-edit =
 # $word is the suggestion chosen; $key turns on edit mode.
 spell-replace-not-editing = { $word }. فعّل وضع التحرير بـ{ $key } لتغيير النص.
 spell-replaced = استُبدلت بـ{ $word }.
-spell-replace-failed = تعذّر الاستبدال: { $error }
+spell-replace-failed = تعذّر الاستبدال: { $error } لم تتغيّر الكلمة.
 spell-added-for-session = أُضيفت { $word } إلى قائمة كلماتك لهذه الجلسة.
 spell-added = أُضيفت { $word } إلى قائمة كلماتك.
 spell-save-failed = تعذّر حفظ قائمة كلماتك: { $error } تبقى الكلمة معروفة حتى تخرج.
@@ -3013,8 +3167,8 @@ tui-setup-backend-unavailable = محرك الكلام { $wanted } غير متو�
 tui-setup-speech-failed = تعذّر بدء الكلام ({ $error })؛ التشغيل بصمت.
 speech-engine-fallback = تعذّر بدء { $failed }؛ يتحدث { $engine } بدلًا منه.
 speech-engine-fallback-silent = تعذّر بدء { $failed } ولا يتوفر محرك كلام آخر؛ يبقى { -brand } صامتًا.
-tui-setup-cannot-save = تعذّر حفظ الإعدادات أو المواضع: { $error }
-tui-setup-keymap-ignored = جرى تجاهل ملف خريطة المفاتيح: { $error }
+tui-setup-cannot-save = تعذّر حفظ الإعدادات أو المواضع: { $error } القراءة تعمل. تضيع التغييرات عند الخروج.
+tui-setup-keymap-ignored = جرى تجاهل ملف خريطة المفاتيح: { $error } تُستخدم المفاتيح الافتراضية. أصلح الملف، ثم أعد التشغيل.
 # The first-run welcome. Each value names the key for an action: $play
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
@@ -3420,6 +3574,7 @@ name-word-count = عدد الكلمات
 name-link-address = عنوان الرابط
 name-replay-sentence = إعادة قراءة الجملة
 name-replay-paragraph = إعادة قراءة الفقرة
+name-repeat-sentence-slower = إعادة أبطأ
 name-rsvp-toggle = RSVP
 name-rsvp-play-pause = بدء RSVP أو إيقافه مؤقتًا
 name-rsvp-faster = RSVP أسرع
@@ -3511,6 +3666,7 @@ name-cycle-punctuation = علامات الترقيم
 name-find = بحث
 name-find-next = بحث عن التالي
 name-find-previous = بحث عن السابق
+name-search-options = خيارات البحث
 name-next-misspelling = الخطأ الإملائي التالي
 name-previous-misspelling = الخطأ الإملائي السابق
 name-spelling-suggestions = اقتراحات الإملاء
@@ -3737,7 +3893,7 @@ dictation-done = انتهى الإملاء.
 dictation-busy = الإملاء ينتهي. حاول مرة أخرى بعد لحظة.
 dictation-needs-edit = الإملاء يكتب في وضع التحرير. هل تشغّل وضع التحرير وتملي؟ y أو n
 dictation-no-model = يحتاج الإملاء إلى نموذج Whisper في { $dir }. راجع Dictation في الوثائق.
-dictation-failed = فشل الإملاء: { $error }
+dictation-failed = فشل الإملاء: { $error } راجع Dictation في الوثائق.
 dictation-no-words = لم تُعرف أي كلمات في تلك العبارة.
 dictation-lost = توقف الإملاء قبل كتابة كلماته الأخيرة.
 dictation-not-typed = كلمات مُملاة لم تُكتب، وضع التحرير متوقف: { $text }
@@ -3914,7 +4070,7 @@ batch-stopped =
        *[other] { $converted } ملفات
     }؛ { $left } لم تُحوَّل؛ { $failed } فشلت.
 batch-report = حُفظ التقرير في { $path }.
-batch-report-failed = تعذّر حفظ التقرير: { $error }
+batch-report-failed = تعذّر حفظ التقرير: { $error } يُحتفظ بالملفات المحوّلة.
 batch-inaccessible = ملفات فيها عناصر لم تُجعل متاحة: { $n }. انظر التقرير.
 batch-failures-title =
     { $n ->
@@ -3922,7 +4078,7 @@ batch-failures-title =
        *[other] { $n } ملفات فشلت
     }
 batch-failure-item = { $name }: { $reason }
-batch-start-failed = تعذّر بدء التحويل: { $error }
+batch-start-failed = تعذّر بدء التحويل: { $error } تحقّق من المجلد والتنسيق، ثم حاول مرة أخرى.
 batch-thread-stopped = توقف التحويل الجماعي على نحو غير متوقع.
 
 
@@ -3964,7 +4120,7 @@ audio-done =
        *[other] { $chapters } فصول
     }.
 audio-subtitles = الترجمة في { $name }.
-audio-failed = تعذر تصدير الصوت: { $error }
+audio-failed = تعذر تصدير الصوت: { $error } جرّب تنسيقًا أو صوتًا آخر.
 audio-thread-stopped = توقف تصدير الصوت على نحو غير متوقع.
 
 
@@ -4013,7 +4169,7 @@ sync-status-up-to-date = المزامنة: محدّثة
 sync-status-this-computer = هذا الحاسوب: { $name }.
 sync-status-no-others = لا حواسيب أخرى بعد.
 sync-status-others = الحواسيب الأخرى: { $names }.
-sync-status-error = مشكلة: { $error }
+sync-status-error = مشكلة: { $error } تحقّق من مجلد المزامنة.
 sync-another-computer = حاسوب آخر
 sync-untitled = مستند
 sync-damaged = المزامنة: تُخُطّي ملف تالف من { $device }.
@@ -4021,7 +4177,7 @@ sync-newer-file = المزامنة: تُخُطّي ملف أحدث من { $devic
 sync-read-only = المزامنة: تنسيق أحدث، قراءة فقط.
 sync-clock-ahead = المزامنة: ساعة { $device } متقدمة بمقدار { $hours } ساعة.
 sync-fresh-id = المزامنة: إعداد منسوخ؛ مُعرّف حاسوب جديد.
-sync-write-failed = المزامنة: تعذّرت الكتابة. { $error }
+sync-write-failed = المزامنة: تعذّرت الكتابة. { $error } يُحفظ على هذا الحاسوب مؤقتًا.
 sync-name-refused = الاسم غير مسموح. جرّب اسمًا مثل laptop.
 sync-note-replaced =
     { $n ->
@@ -4065,7 +4221,7 @@ sync-sidecar-differed =
         [one] المزامنة: اختلف موضع واحد في المكتبة.
        *[other] المزامنة: اختلفت مواضع في المكتبة: { $n }.
     }
-sync-sidecar-failed = المزامنة: تعذّرت كتابة موضع في المكتبة. { $error }
+sync-sidecar-failed = المزامنة: تعذّرت كتابة موضع في المكتبة. { $error } تحقّق من إمكانية الكتابة في مجلد المكتبة.
 sync-no-state = المزامنة متوقفة في هذا التشغيل: لا يُحفظ شيء.
 sync-choose-folder = اختر مجلد المزامنة
 sync-group-places = المواضع
@@ -4207,7 +4363,7 @@ setting-sync-favorite-voices-help = مشاركة الأصوات المفضلة. 
 font-download-question = تنزيل الخط { $font }، { $kb } كيلوبايت، { $licence }؟ y أو n
 font-downloading = تنزيل { $font }.
 font-downloaded = تم تنزيل { $font } وهو جاهز.
-font-download-failed = تعذّر تنزيل { $font }: { $error }
+font-download-failed = تعذّر تنزيل { $font }: { $error } يُستخدم خط آخر.
 font-download-declined = لم يُنزَّل. يُستخدم خط آخر.
 font-download-busy = ما زال { $font } قيد التنزيل.
 font-download-no-folder = لا يوجد مجلد بيانات لحفظ { $font }.
@@ -4285,13 +4441,13 @@ component-not-in-build = لا تنزيلات في هذا الإصدار.
 component-no-folder = لا مجلد بيانات لحفظه.
 component-error-fetch = لم يُنزَّل: فشل المصدر.
 component-error-size = لم يُثبَّت: حجم ملف خاطئ.
-component-error-hash = لم يُثبَّت: ملف غير مطابق.
+component-error-hash = لم يُثبَّت: ملف لم يتطابق. نزّله مرة أخرى أو تحقق من المصدر.
 component-error-missing = لم يُثبَّت: ملف مفقود.
 component-error-cancelled = توقف التنزيل؛ يُستأنف لاحقًا.
 component-error-busy = يجري تنزيل مكوّن بالفعل.
 component-error-no-source = لم يُنزَّل: لا عنوان له.
 component-error-name = مرفوض: اسم غير بسيط.
-component-error-manifest = قائمة المرآة غير مقروءة.
+component-error-manifest = قائمة مكونات غير مقروءة.
 component-error-io = لم يُثبَّت: تعذرت الكتابة.
 components-chooser-title = المكونات الاختيارية
 components-chooser-intro = إضافات اختيارية، لم يُختر شيء. المسافة تختار؛ تنزيل المختار يجلبها؛ Escape يتخطى.
@@ -4315,6 +4471,8 @@ setting-dictation-model = نموذج الإملاء
 setting-dictation-model-help = نموذج Whisper الذي يستخدمه الإملاء حين لا يُحدَّد مجلد. «تنزيل نموذج الإملاء» في قائمة الأدوات يجلبه.
 choice-dictation-model-whisper-base-en = base.en، الافتراضي
 choice-dictation-model-whisper-small-en = small.en، أكبر وأدق
+setting-components-source = مصدر المكونات
+setting-components-source-help = مكوناتك الخاصة، تُستخدم أولًا. مستودع GitHub بصيغة المالك/الاسم، أو مجلد على هذا الحاسوب. الفارغ لا يستخدم شيئًا. لا تضع كلمة مرور هنا أبدًا.
 setting-components-mirror = مرآة المكونات
 setting-components-mirror-help = من أين تأتي المكونات الاختيارية أولًا: عنوان https أو مجلد على هذا الحاسوب. الفارغ يستخدم مصادرها العامة. لا تضع كلمة مرور هنا أبدًا.
 
@@ -4366,3 +4524,122 @@ gui-reading-generous = تباعد واسع
 gui-reading-generous-help = ضبط التباعدات الأربعة أوسع من WCAG.
 gui-reading-closed = أُغلقت إعدادات القراءة.
 ## End of W9b-x
+
+## B1-t1: التغييرات المتعقبة والتعليقات (قائمة التغييرات).
+name-list-changes = التغييرات والتعليقات
+action-list-changes = عرض التغييرات المتعقبة والتعليقات: Enter ينتقل إلى أحدها، A يقبل التغيير، R يرفضه
+name-accept-all-changes = قبول كل التغييرات
+action-accept-all-changes = قبول كل تغيير متعقب في المستند
+name-reject-all-changes = رفض كل التغييرات
+action-reject-all-changes = رفض كل تغيير متعقب في المستند
+name-add-comment = إضافة تعليق
+action-add-comment = إضافة تعليق على التحديد أو على الجملة عند المؤشر
+prompt-comment-reply = الرد
+prompt-comment-text = التعليق
+changes-title = التغييرات والتعليقات
+changes-intro =
+    { $n ->
+        [one] { $title }، عنصر واحد. Enter ينتقل إليه. A يقبل التغيير، R يرفضه، ومع Shift يشمل كل تغييرات المؤلف نفسه. على التعليق، F2 للرد، Space للحل، Delete للحذف. N يضيف تعليقا.
+       *[other] { $title }، { $n } عناصر. Enter ينتقل إلى أحدها. A يقبل التغيير، R يرفضه، ومع Shift يشمل كل تغييرات المؤلف نفسه. على التعليق، F2 للرد، Space للحل، Delete للحذف. N يضيف تعليقا.
+    }
+changes-none = لا توجد تغييرات متعقبة ولا تعليقات في هذا المستند.
+changes-row = { $kind }: «{ $text }»، { $who }، { $when }
+changes-kind-inserted = إدراج
+changes-kind-deleted = حذف
+changes-kind-moved-away = نقل من هنا
+changes-kind-moved-here = نقل إلى هنا
+changes-by = بواسطة { $author }
+changes-no-author = المؤلف غير مسجل
+changes-no-date = التاريخ غير مسجل
+changes-date = { $weekday }، { $day } { $month } { $year }
+changes-weekday-0 = الأحد
+changes-weekday-1 = الاثنين
+changes-weekday-2 = الثلاثاء
+changes-weekday-3 = الأربعاء
+changes-weekday-4 = الخميس
+changes-weekday-5 = الجمعة
+changes-weekday-6 = السبت
+changes-month-1 = يناير
+changes-month-2 = فبراير
+changes-month-3 = مارس
+changes-month-4 = أبريل
+changes-month-5 = مايو
+changes-month-6 = يونيو
+changes-month-7 = يوليو
+changes-month-8 = أغسطس
+changes-month-9 = سبتمبر
+changes-month-10 = أكتوبر
+changes-month-11 = نوفمبر
+changes-month-12 = ديسمبر
+changes-comment = تعليق: { $text }
+changes-comment-by = تعليق من { $author }: { $text }
+changes-replies =
+    { $n ->
+        [one] رد واحد
+       *[other] { $n } ردود
+    }
+changes-resolved = محلول
+changes-accepted = تم القبول. { $kind }: «{ $text }».
+changes-rejected = تم الرفض. { $kind }: «{ $text }».
+changes-accepted-all =
+    { $n ->
+        [one] تم قبول تغيير واحد.
+       *[other] تم قبول { $n } تغييرات.
+    }
+changes-rejected-all =
+    { $n ->
+        [one] تم رفض تغيير واحد.
+       *[other] تم رفض { $n } تغييرات.
+    }
+changes-accepted-author =
+    { $n ->
+        [one] تم قبول تغيير واحد من { $author }.
+       *[other] تم قبول { $n } تغييرات من { $author }.
+    }
+changes-rejected-author =
+    { $n ->
+        [one] تم رفض تغيير واحد من { $author }.
+       *[other] تم رفض { $n } تغييرات من { $author }.
+    }
+changes-none-left = لا توجد تغييرات متعقبة للقبول أو الرفض.
+changes-not-a-change = هذا الصف تعليق. F2 للرد، Space للحل، Delete للحذف.
+changes-not-a-comment = هذا الصف تغيير. A يقبله، R يرفضه.
+changes-edit-mode = تبقى التغييرات كما هي في وضع التحرير. اخرج من وضع التحرير لقبولها أو رفضها.
+changes-replied = تمت إضافة الرد.
+changes-resolved-done = تم حل التعليق.
+changes-reopened = أعيد فتح التعليق.
+changes-comment-deleted = تم حذف التعليق وردوده.
+changes-comment-added = تمت إضافة التعليق.
+changes-delete-comment-question = حذف هذا التعليق وردوده؟ y أو n
+changes-written-accepted =
+    { $n ->
+        [one] تمت كتابة { $path } مع قبول تغيير واحد.
+       *[other] تمت كتابة { $path } مع قبول { $n } تغييرات.
+    }
+changes-written-rejected =
+    { $n ->
+        [one] تمت كتابة { $path } مع رفض تغيير واحد.
+       *[other] تمت كتابة { $path } مع رفض { $n } تغييرات.
+    }
+## End of B1-t1
+## B1-r5: braille (BRF) files read as print. $page is a braille page
+## number ("3", "p1"); $n is a number of lines; $reason is an error.
+setting-braille-brf-code = رمز برايل لملفات BRF
+setting-braille-brf-code-help = رمز برايل الذي تُقرأ به ملفات BRF. UEB للكتب المصنوعة منذ 2016، وEBAE، أي English Braille American Edition، للكتب الأقدم. قراءة ملف BRF كنص مطبوع تحتاج إلى liblouis. افتح الملف مرة أخرى بعد أي تغيير.
+choice-braille-brf-code-ueb = UEB
+choice-braille-brf-code-ebae = EBAE
+name-show-original-braille = عرض برايل الأصلي
+action-show-original-braille = عرض برايل الأصلي للصفحة عند المؤشر، في ملف BRF مقروء كنص مطبوع
+brf-original-title = برايل الأصلي، الصفحة { $page }
+brf-original-intro =
+    { $n ->
+        [one] برايل الأصلي، الصفحة { $page }، سطر واحد. Escape يغلق.
+        [two] برايل الأصلي، الصفحة { $page }، سطران. Escape يغلق.
+        [few] برايل الأصلي، الصفحة { $page }، { $n } أسطر. Escape يغلق.
+        [many] برايل الأصلي، الصفحة { $page }، { $n } سطرًا. Escape يغلق.
+       *[other] برايل الأصلي، الصفحة { $page }، { $n } سطر. Escape يغلق.
+    }
+brf-original-not-brf = ليس ملف برايل. عرض برايل الأصلي يعمل مع ملفات BRF.
+brf-original-unreadable = تعذرت قراءة ملف برايل: { $reason }
+brf-no-liblouis = برايل معروض كبرايل: liblouis غير موجود. لقراءته كنص مطبوع، ثبّت liblouis من liblouis.io أو من حزم نظامك، ثم افتح الملف مرة أخرى.
+## End of B1-r5

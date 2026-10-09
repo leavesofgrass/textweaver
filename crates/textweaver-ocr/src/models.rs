@@ -283,6 +283,7 @@ impl ModelSet {
                     .collect(),
             ),
             notice: None,
+            listing: None,
         }
     }
 

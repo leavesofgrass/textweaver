@@ -7,7 +7,7 @@
 //! RGBA at a low, constant frame rate. A frame is drawn only when the
 //! spoken word changes; between changes the same bytes are sent again, which
 //! the H.264 encoder stores in almost no space. ffmpeg is found exactly as
-//! for M4B ([`crate::ffmpeg::find`]) and is never downloaded or bundled.
+//! for M4B ([`crate::ffmpeg::find`], the components folder first) and is never bundled.
 
 use std::ffi::OsString;
 use std::path::Path;

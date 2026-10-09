@@ -1,5 +1,6 @@
 //! The session ending (signing out, shutting down, restarting) while the
-//! window is open (Wave 9, W9a-w).
+//! window is open (Wave 9, W9a-w), and on Linux and macOS a termination
+//! signal (beta 1).
 //!
 //! winit does not tell an app that the session is ending: Windows sends
 //! `WM_ENDSESSION` and may end the process as soon as the window procedure
@@ -11,8 +12,15 @@
 //! ([`crate::safety::save_after_trouble`]): the recovery copy, the place,
 //! and the settings.
 //!
-//! Elsewhere it does nothing yet: on Linux and macOS a session's end
-//! closes the window, which saves as Alt+F4 does.
+//! On Linux and macOS the end comes as a signal: SIGHUP when the terminal
+//! the window was started from closes or the session ends, SIGTERM at
+//! logout, shutdown, or from `kill`, and SIGINT for Ctrl+C in that
+//! terminal. Each one ended the process at once, losing unsaved edits.
+//! [`watch`] catches them (the `ctrlc` crate, as the terminal reader
+//! does); its handler thread posts [`SessionEnding`] in the same way,
+//! waits for [`saved`] for at most [`SAVE_WAIT`], and then ends the
+//! process. A session ended through the desktop's own logout, which closes
+//! the window, saves as Alt+F4 does.
 
 use std::time::Duration;
 
@@ -27,9 +35,10 @@ pub const SAVE_WAIT: Duration = Duration::from_secs(3);
 /// The function that asks the window to save (it posts [`SessionEnding`]).
 pub type Request = Box<dyn Fn() + Send + Sync>;
 
-/// Watches the window `hwnd` (a Win32 handle; 0 or another system does
-/// nothing) for the session ending, calling `request` when it does.
-/// Returns true when the watch was installed.
+/// Watches for the session ending, calling `request` when it does: the
+/// window `hwnd` on Windows (a Win32 handle; 0 does nothing), the
+/// termination signals on Linux and macOS (`hwnd` unused). Returns true
+/// when the watch was installed.
 pub fn watch(hwnd: isize, request: Request) -> bool {
     imp::watch(hwnd, request)
 }
@@ -131,7 +140,89 @@ mod imp {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(unix)]
+mod imp {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::time::{Duration, Instant};
+
+    use super::{Request, SAVE_WAIT};
+
+    static SAVED: AtomicBool = AtomicBool::new(false);
+
+    pub(super) fn watch(_hwnd: isize, request: Request) -> bool {
+        // The handler runs on ctrlc's own thread, never inside the signal.
+        let installed = ctrlc::set_handler(move || {
+            let saved = save_before_ending(&request, &SAVED, SAVE_WAIT);
+            std::process::exit(if saved { 0 } else { 1 });
+        });
+        if let Err(e) = &installed {
+            log::warn!("cannot save when the session ends: {e}");
+        }
+        installed.is_ok()
+    }
+
+    pub(super) fn saved() {
+        SAVED.store(true, Ordering::Release);
+    }
+
+    /// Asks the window to save, then waits until it has (`saved` is set)
+    /// or `wait` passes; true when it saved.
+    pub(super) fn save_before_ending(
+        request: &Request,
+        saved: &AtomicBool,
+        wait: Duration,
+    ) -> bool {
+        log::warn!("the session is ending; saving before it does");
+        request();
+        let until = Instant::now() + wait;
+        while !saved.load(Ordering::Acquire) && Instant::now() < until {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let done = saved.load(Ordering::Acquire);
+        if !done {
+            log::error!("the session ended before the window could save");
+        }
+        done
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::time::Duration;
+
+        use super::save_before_ending;
+
+        #[test]
+        fn the_wait_ends_when_the_window_has_saved() {
+            let saved = Arc::new(AtomicBool::new(false));
+            let flag = Arc::clone(&saved);
+            // The window saves on its own thread once asked.
+            let request: super::Request = Box::new(move || {
+                let flag = Arc::clone(&flag);
+                std::thread::spawn(move || flag.store(true, Ordering::Release));
+            });
+            assert!(save_before_ending(
+                &request,
+                &saved,
+                Duration::from_secs(10)
+            ));
+        }
+
+        #[test]
+        fn the_wait_gives_up_when_the_window_does_not_save() {
+            let saved = AtomicBool::new(false);
+            let request: super::Request = Box::new(|| {});
+            assert!(!save_before_ending(
+                &request,
+                &saved,
+                Duration::from_millis(30)
+            ));
+        }
+    }
+}
+
+#[cfg(not(any(windows, unix)))]
 mod imp {
     use super::Request;
 

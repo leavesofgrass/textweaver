@@ -14,15 +14,64 @@ use crate::error::ComponentError;
 use crate::fetch::Fetcher;
 use crate::pin::FilePin;
 
-/// Where files may come from, in order: a mirror (when set), then each
-/// file's public address.
+/// Where files may come from, in order: the components source (when
+/// set), a mirror (when set), then each file's public address.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Sources {
+    /// The components source's base address (`[components] source`,
+    /// resolved by [`source_base`]): a folder on this computer, or a
+    /// repository's release downloads. A component's files are under
+    /// `<source>/<release>/<file name>` ([`Component::release`]), and its
+    /// list at `<source>/components.toml` (a folder) or
+    /// `<source>/manifest/components.toml`.
+    pub source: Option<String>,
     /// The mirror's base address: an `https:` address or a folder on this
-    /// computer. A component's files are under `<mirror>/<id>/<file name>`
-    /// (on GitHub, a release tagged with the component's id), and the
-    /// mirror's own list of components at `<mirror>/manifest/components.toml`.
+    /// computer. A component's files are under `<mirror>/<release>/<file
+    /// name>` (on GitHub, a release tagged with the component's id), and
+    /// the mirror's own list of components at
+    /// `<mirror>/manifest/components.toml`.
     pub mirror: Option<String>,
+}
+
+/// The base address of a components source, from the `[components]
+/// source` setting: a folder on this computer as it is, or a GitHub
+/// repository written `owner/name`, whose release downloads are the base
+/// (`https://github.com/owner/name/releases/download`). Empty is none. A
+/// value that is neither an existing folder nor `owner/name` is taken as
+/// a folder, so a missing folder says it is missing when it is read.
+pub fn source_base(setting: &str) -> Option<String> {
+    let s = setting.trim();
+    if s.is_empty() {
+        return None;
+    }
+    if !std::path::Path::new(s).is_dir()
+        && let Some((owner, name)) = repository(s)
+    {
+        return Some(format!(
+            "https://github.com/{owner}/{name}/releases/download"
+        ));
+    }
+    Some(s.to_owned())
+}
+
+/// `owner/name` when `s` is a repository address: two plain names, not
+/// starting with a dot, joined by one slash.
+fn repository(s: &str) -> Option<(&str, &str)> {
+    let (owner, name) = s.split_once('/')?;
+    let ok = |p: &str| {
+        !p.is_empty()
+            && !p.starts_with('.')
+            && p.bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+    };
+    (ok(owner) && ok(name)).then_some((owner, name))
+}
+
+/// True for an address on this computer (a folder), not `http:` or
+/// `https:`.
+fn is_local(address: &str) -> bool {
+    let lower = address.to_ascii_lowercase();
+    !lower.starts_with("http://") && !lower.starts_with("https://")
 }
 
 impl Sources {
@@ -35,6 +84,7 @@ impl Sources {
     pub fn with_mirror(mirror: &str) -> Self {
         let m = mirror.trim();
         Sources {
+            source: None,
             mirror: (!m.is_empty()).then(|| m.to_owned()),
         }
     }
@@ -48,24 +98,53 @@ impl Sources {
         }
     }
 
+    /// These sources with the components source `setting` tried first
+    /// (the `[components] source` setting, through [`source_base`]).
+    pub fn with_source(mut self, setting: &str) -> Self {
+        self.source = source_base(setting);
+        self
+    }
+
+    /// True when the source or the mirror is a folder on this computer,
+    /// so a build without downloads can still fetch from it.
+    pub fn has_local(&self) -> bool {
+        self.source.iter().chain(&self.mirror).any(|b| is_local(b))
+    }
+
     /// The addresses to try for `file` of `component`, in order.
     pub fn addresses(&self, component: &Component, file: &FilePin) -> Vec<String> {
-        let mut out = Vec::new();
-        if let Some(m) = &self.mirror {
-            out.push(join(m, &[&component.id, &file.name]));
-        }
+        let release = component.release();
+        let mut out: Vec<String> = self
+            .source
+            .iter()
+            .chain(&self.mirror)
+            .map(|base| join(base, &[&release, &file.name]))
+            .collect();
         if !file.url.is_empty() {
             out.push(file.url.to_string());
         }
         out
     }
 
-    /// Where the mirror's list of extra components is, when a mirror is
-    /// set.
-    pub fn manifest_address(&self) -> Option<String> {
-        self.mirror
-            .as_deref()
-            .map(|m| join(m, &["manifest", "components.toml"]))
+    /// Where the lists of extra components are, in order: the source's,
+    /// then the mirror's. A source folder's list is its
+    /// `components.toml` when there is one, else
+    /// `manifest/components.toml`, as on GitHub (a release tagged
+    /// `manifest`).
+    pub fn manifest_addresses(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        if let Some(s) = &self.source {
+            let top = join(s, &[crate::manifest::FILE_NAME]);
+            if is_local(s) && std::path::Path::new(&top).is_file() {
+                out.push(top);
+            } else {
+                out.push(join(s, &["manifest", crate::manifest::FILE_NAME]));
+            }
+        }
+        if let Some(m) = &self.mirror {
+            out.push(join(m, &["manifest", crate::manifest::FILE_NAME]));
+        }
+        out
     }
 }
 
@@ -456,10 +535,55 @@ mod tests {
             vec!["D:/mirror/sample/a.bin".to_owned(), f.url.to_string()]
         );
         assert_eq!(
-            s.manifest_address().unwrap(),
-            "D:/mirror/manifest/components.toml"
+            s.manifest_addresses(),
+            ["D:/mirror/manifest/components.toml"]
         );
         assert_eq!(Sources::with_mirror("  "), Sources::public());
+    }
+
+    #[test]
+    fn the_source_comes_first_and_a_version_names_the_release() {
+        let mut c = crate::component::tests_support::sample();
+        c.listing = Some(crate::manifest::Listing {
+            version: "1.2".into(),
+            platform: crate::manifest::Platform::Any,
+            action: crate::manifest::Action::Place,
+        });
+        let f = c.files[0].clone();
+        let s = Sources::with_mirror("https://mirror.invalid/m").with_source("example-org/parts");
+        assert_eq!(
+            s.addresses(&c, &f),
+            vec![
+                "https://github.com/example-org/parts/releases/download/sample-1.2/a.bin"
+                    .to_owned(),
+                "https://mirror.invalid/m/sample-1.2/a.bin".to_owned(),
+                f.url.to_string(),
+            ]
+        );
+        assert_eq!(
+            s.manifest_addresses(),
+            [
+                "https://github.com/example-org/parts/releases/download/manifest/components.toml",
+                "https://mirror.invalid/m/manifest/components.toml",
+            ]
+        );
+        assert!(!s.has_local());
+    }
+
+    #[test]
+    fn a_source_folder_is_read_as_it_is() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().to_string_lossy().into_owned();
+        assert_eq!(source_base(&dir), Some(dir.clone()));
+        assert_eq!(source_base("  "), None);
+        assert_eq!(source_base("a/b/c"), Some("a/b/c".to_owned()));
+        assert_eq!(source_base("./x"), Some("./x".to_owned()));
+        let s = Sources::public().with_source(&dir);
+        assert!(s.has_local());
+        // No components.toml at the top: the manifest folder's.
+        assert!(s.manifest_addresses()[0].ends_with("manifest/components.toml"));
+        std::fs::write(tmp.path().join("components.toml"), "format = 1").unwrap();
+        assert_eq!(s.manifest_addresses(), [format!("{dir}/components.toml")]);
     }
 
     #[test]
