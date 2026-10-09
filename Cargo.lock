@@ -9643,12 +9643,14 @@ dependencies = [
  "pulldown-cmark",
  "serde",
  "serde_json",
+ "syntect",
  "tempfile",
  "textweaver-formats",
  "textweaver-math",
  "textweaver-text",
  "textweaver-theme",
  "thiserror 2.0.21",
+ "two-face",
 ]
 
 [[package]]
@@ -9766,13 +9768,12 @@ dependencies = [
  "ctrlc",
  "log",
  "ratatui",
- "syntect",
  "tempfile",
  "textweaver-aids",
  "textweaver-app",
  "textweaver-engines",
+ "textweaver-render",
  "textweaver-theme",
- "two-face",
  "unicode-bidi",
  "windows 0.62.2",
 ]

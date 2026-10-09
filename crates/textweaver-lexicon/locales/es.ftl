@@ -511,8 +511,21 @@ help-the-command = el comando { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Comando desconocido: { $text }.
-help-shortcuts-intro = Atajos de teclado, { $n } comandos. Arriba y Abajo se mueven, Intro ejecuta, Escape cierra.
+help-shortcuts-intro = Atajos de teclado, { $n } comandos. Escriba para filtrar. Avance de página pasa al grupo siguiente, F1 explica un comando, Intro lo ejecuta, Escape cierra.
 help-shortcuts-title = Atajos de teclado
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = Atajos de teclado que coinciden con { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } de { $total } comandos coinciden.
+help-shortcuts-filter-none = Ningún comando coincide con { $query }. Retroceso quita letras.
+help-shortcuts-filter-cleared = Filtro borrado, { $n } comandos.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }, { $n ->
+        [one] 1 comando
+       *[other] { $n } comandos
+    }. { $item }
 help-title = Ayuda
 help-intro = Ayuda. Arriba y Abajo se mueven, Escape cierra.
 
@@ -3206,7 +3219,7 @@ gui-prompt-path-hint = Escriba la ruta de un documento y pulse Intro. Tab la com
 gui-prompt-hint = Pulse Intro para aceptar, o Escape para cancelar. Arriba y Abajo recuperan respuestas anteriores.
 gui-palette-filter = Escriba para filtrar los comandos
 gui-palette-list = Comandos
-gui-palette-hint = Intro ejecuta la primera coincidencia; Tab pasa a la lista.
+gui-palette-hint = Intro ejecuta la primera coincidencia; Tab pasa a la lista; F1 explica un comando.
 gui-open-failed = No se pudo abrir { $name }: { $error }
 gui-uia-unavailable = Las notificaciones de UI Automation solo existen en Windows; se usa la región activa.
 gui-graphics-failed = La ventana no pudo iniciar sus gráficos. El lector de terminal, textweaver, no los necesita.
@@ -3568,17 +3581,17 @@ choice-accessibility-interface-announcements-off = desactivados
 choice-accessibility-interface-announcements-minimal = mínimos
 choice-accessibility-interface-announcements-normal = normales
 choice-accessibility-interface-announcements-full = completos
-palette-item = { $name }, { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }, { $category }: { $help }.
-palette-item-recent = { $name }, reciente, { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }, reciente, { $category }: { $help }.
+palette-item = { $name }, { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }, { $keys }, reciente
+palette-item-recent-no-keys = { $name }, reciente
 palette-list-title = Comandos que coinciden con { $query }
 palette-list-title-all = Comandos
 palette-list-intro =
     { $title }, { $n ->
         [one] 1 comando
        *[other] { $n } comandos
-    }. Intro ejecuta uno.
+    }. Intro ejecuta uno, F1 lo explica.
 action-browse-files = Explorar archivos y archivos comprimidos: Intro abre una carpeta, un archivo comprimido o un documento; Retroceso sube un nivel
 action-batch-convert = Convertir una carpeta de documentos a otro formato, en segundo plano
 action-export-audio = Exportar el documento como audio hablado: MP3, FLAC, Opus, WAV o un audiolibro M4B

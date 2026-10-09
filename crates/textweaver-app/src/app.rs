@@ -312,13 +312,13 @@ pub(crate) enum ListKind {
     /// the order shown (crate::publish).
     #[cfg_attr(not(feature = "publish"), allow(dead_code))]
     HtmlTheme(crate::authoring_state::ThemeFor, Vec<String>),
-    /// Prompts with hidden answers: the self-test (crate::reveal).
-    Reveal(crate::reveal::RevealList),
     /// The tracked changes and comments, by row (crate::changes).
     Changes(Vec<crate::changes::Row>),
     /// A note's links, what links to it, or a step of adding one
     /// (crate::relations, B1-g1).
     Relations(crate::relations::RelationsList),
+    /// Prompts with hidden answers: the self-test (crate::reveal).
+    Reveal(crate::reveal::RevealList),
     /// The study cards, by id (crate::cards).
     Cards(Vec<String>),
 }
@@ -367,6 +367,8 @@ pub struct App {
     /// The introduction of the list shown ("Notes, 12 notes. Enter goes
     /// to a note..."), repeated on request (crate::status).
     pub(crate) list_intro: Option<String>,
+    /// The keyboard shortcuts list's filter (crate::command_list).
+    pub(crate) keys_filter: String,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     /// Which sentences continuous reading says (crate::overview); for
@@ -578,6 +580,7 @@ impl App {
             last_message: None,
             messages_said: 0,
             list_intro: None,
+            keys_filter: String::new(),
             pause_origin: None,
             reading: ReadKind::Continuous,
             reading_pass: textweaver_text::ReadingPass::Full,

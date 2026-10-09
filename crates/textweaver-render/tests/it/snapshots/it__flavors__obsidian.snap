@@ -11,11 +11,11 @@ A reference to a block: <a class="wikilink" href="chapter-one.html#block-quote1"
 <p>Tagged <span class="tag">#reading</span> and <span class="tag">#study/biology</span>, but not issue#3 or #2026.
 Some <mark>highlighted text</mark> here.</p>
 <div class="callout callout-tip" role="note">
-<p class="callout-title"><strong>Remember</strong></p>
+<p class="callout-title"><strong>Tip: Remember</strong></p>
 <p>Callouts can hold <strong>Markdown</strong>.</p>
 </div>
 <details class="callout callout-faq">
-<summary class="callout-title">Can callouts fold?</summary>
+<summary class="callout-title">FAQ: Can callouts fold?</summary>
 <p>Yes, with a minus sign.</p>
 </details>
 <h2 id="summary">Summary</h2>

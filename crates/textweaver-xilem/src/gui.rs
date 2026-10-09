@@ -91,6 +91,9 @@ pub const MAIN: WidgetTag<Region> = WidgetTag::named("tw-main");
 pub const PROMPT_FIELD: WidgetTag<TextArea<true>> = WidgetTag::named("tw-prompt-field");
 /// The list of an open list dialog.
 pub const LIST: WidgetTag<ChoiceList> = WidgetTag::named("tw-list");
+/// The drawn title of a list dialog, which follows a list that filters as
+/// you type ("Keyboard shortcuts matching find").
+pub const LIST_TITLE: WidgetTag<Label> = WidgetTag::named("tw-list-title");
 /// The settings dialog's list of sections.
 pub const SECTIONS: WidgetTag<ChoiceList> = WidgetTag::named("tw-settings-sections");
 /// The settings dialog's form.
@@ -795,7 +798,7 @@ pub fn list_dialog(
     let list_id = list.id();
     let card = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .with_fixed(dialog_title(title))
+        .with_fixed(dialog_title(title).with_tag(LIST_TITLE))
         .with(list, 1.0)
         .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
         .with_fixed(dialog_footer(
@@ -883,8 +886,14 @@ pub fn palette_dialog(
             vec![close_button(c, None)],
         ));
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
-    let modal =
-        NewWidget::new(Modal::new(card, label_text, p.clone()).with_show_matches(true)).erased();
+    // Chords go to the driver too, so F1 says what the selected command
+    // does, with the focus in the field or in the list.
+    let modal = NewWidget::new(
+        Modal::new(card, label_text, p.clone())
+            .with_show_matches(true)
+            .with_app_chords(true),
+    )
+    .erased();
     (modal, field_id)
 }
 
@@ -2973,6 +2982,12 @@ impl Gui {
         let (modal, list_id) = list_dialog(&self.palette, &c, title, items, selected, true);
         self.show_dialog(ctx, modal, list_id);
         self.dialog = Some(OpenDialog::List(title.to_owned()));
+        // A list of commands: short names, keys at the right edge, and the
+        // long explanations as descriptions.
+        if let Some(rows) = self.app.list_model().and_then(dialog::Rows::from_model) {
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(LIST, |mut l| ChoiceList::sync_rows(&mut l, rows, selected));
+        }
         if self.log {
             crate::log::line(&format!("dialog: list {title:?} with {count} items"));
         }
@@ -3044,8 +3059,11 @@ impl Gui {
             window_palette(&self.app, "").into_iter().unzip();
         let count = items.len();
         let c = self.app.catalog();
+        let rows = dialog::Rows::commands(&self.app, &ids, items.clone());
         let (modal, field_id) = palette_dialog(&self.palette, &c, label_text, items);
         self.show_dialog(ctx, modal, field_id);
+        ctx.render_root(self.window_id)
+            .edit_widget_with_tag(LIST, |mut l| ChoiceList::set_rows(&mut l, rows));
         self.dialog = Some(OpenDialog::Palette(ids));
         if self.log {
             crate::log::line(&format!("dialog: command palette with {count} commands"));
@@ -3134,8 +3152,9 @@ impl Gui {
         let (ids, items): (Vec<ActionId>, Vec<String>) =
             window_palette(&self.app, query).into_iter().unzip();
         let n = items.len();
+        let rows = dialog::Rows::commands(&self.app, &ids, items);
         ctx.render_root(self.window_id)
-            .edit_widget_with_tag(LIST, |mut l| ChoiceList::set_items(&mut l, items));
+            .edit_widget_with_tag(LIST, |mut l| ChoiceList::set_rows(&mut l, rows));
         self.dialog = Some(OpenDialog::Palette(ids));
         let said = self
             .app
@@ -3166,7 +3185,25 @@ impl Gui {
                 return;
             }
         }
+        // Typing in a list that filters as you type (the keyboard
+        // shortcuts list, the outline) changes its title with the filter;
+        // the dialog stays open and its drawn title follows, so the
+        // screen reader is not moved back into a new dialog per letter.
+        let filtering = self.app.list_filter().is_some()
+            && matches!(
+                k,
+                textweaver_app::ListKey::Char(_) | textweaver_app::ListKey::Backspace
+            );
         let effects = self.app.dispatch(Command::ListKey(k));
+        if filtering
+            && self.app.list_filter().is_some()
+            && matches!(self.dialog, Some(OpenDialog::List(_)))
+            && let Some(title) = self.app.list_model().map(|m| m.title.clone())
+        {
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(LIST_TITLE, |mut l| Label::set_text(&mut l, title.clone()));
+            self.dialog = Some(OpenDialog::List(title));
+        }
         self.sync_list(ctx);
         self.run_effects(ctx, effects);
         self.refresh(ctx);
@@ -3193,6 +3230,23 @@ impl Gui {
             crate::log::line(&format!("list chord {chord} -> {action:?}"));
         }
         match action {
+            // In the command palette, the Help key says what the selected
+            // command does (its row has only the name and the key).
+            Some(ActionId::Help) if matches!(self.dialog, Some(OpenDialog::Palette(_))) => {
+                let Some(OpenDialog::Palette(ids)) = &self.dialog else {
+                    return;
+                };
+                let selected = ctx
+                    .render_root(self.window_id)
+                    .get_widget_with_tag(LIST)
+                    .map_or(0, |w| w.inner().selected());
+                if let Some(&a) = ids.get(selected) {
+                    let help = self.app.command_row(a).help;
+                    self.app
+                        .announce_as(&help, Priority::Assertive, Importance::Answer);
+                    self.refresh(ctx);
+                }
+            }
             // In the file browser, Say Status previews the focused row;
             // in the voice manager, the focused voice.
             Some(ActionId::SayStatus) if self.app.list_has_details() => {
@@ -3233,8 +3287,12 @@ impl Gui {
             }
             Some(m) => {
                 let (items, selected) = (m.items.clone(), m.selected);
+                let rows = dialog::Rows::from_model(m);
                 let root = ctx.render_root(self.window_id);
-                root.edit_widget_with_tag(LIST, |mut l| ChoiceList::sync(&mut l, &items, selected));
+                root.edit_widget_with_tag(LIST, |mut l| match rows {
+                    Some(rows) => ChoiceList::sync_rows(&mut l, rows, selected),
+                    None => ChoiceList::sync(&mut l, &items, selected),
+                });
                 // The filter buttons say what the list shows now.
                 if let Some(c) = self.app.voice_controls() {
                     root.edit_widget_with_tag(crate::voices::VOICE_LANGUAGE, |mut b| {

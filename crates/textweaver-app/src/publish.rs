@@ -147,6 +147,28 @@ fn folder_url(folder: &Path) -> String {
     }
 }
 
+/// The reader's typography for an HTML page, read from the settings at
+/// export time (the owner's choice: a page looks like the reader, and
+/// themes keep colors only): `[reading_aids.font]` family, size, and
+/// weight, `[reading_aids.spacing]`, and `[display] measure`, each
+/// clamped to its range. `tw convert`, export, the batch, and the browser
+/// preview all use it.
+pub fn page_typography(settings: &textweaver_store::Settings) -> textweaver_render::Typography {
+    let aids = &settings.reading_aids;
+    let font = textweaver_aids::fonts::from_store(&aids.font).clamped();
+    let spacing = textweaver_aids::TextSpacing::from(&aids.spacing).clamped();
+    textweaver_render::Typography {
+        font_family: font.css_font_family(),
+        size_pt: font.size_pt,
+        weight: font.weight,
+        line_height: spacing.line_height,
+        paragraph_spacing: spacing.paragraph_spacing,
+        letter_spacing: spacing.letter_spacing,
+        word_spacing: spacing.word_spacing,
+        measure: settings.display.measure,
+    }
+}
+
 /// `html` with `<base href="…">` after `<head>`, so relative images and
 /// links in a page written elsewhere resolve beside the document.
 pub(crate) fn with_base(html: &str, href: &str) -> String {
@@ -307,6 +329,7 @@ impl App {
         o.citations.bibliography = src.bibliography.clone();
         if to == OutputFormat::Html {
             o.theme_css = Some(self.html_theme_css());
+            o.typography = Some(page_typography(&self.settings));
         }
         o
     }
