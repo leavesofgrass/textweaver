@@ -1390,6 +1390,7 @@ dependencies = [
  "carta-core",
  "carta-readers",
  "carta-writers",
+ "serde_json",
  "stacker",
 ]
 
@@ -1421,8 +1422,11 @@ checksum = "800fe815cdbea7e198e5d9ecc31102e874d0fc683bf1a7308c916aa52d5be099"
 dependencies = [
  "carta-ast",
  "carta-core",
+ "caseless",
  "memchr",
  "serde_json",
+ "unicode-general-category",
+ "unicode-normalization",
 ]
 
 [[package]]

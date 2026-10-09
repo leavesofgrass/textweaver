@@ -43,9 +43,9 @@
 //!   file it is. See `web`.
 //!
 //! The carta loader (feature `carta`, off by default; `org`, `rst`,
-//! `rest`, `mediawiki`, `wiki`; priority 7) is a built-in when the feature
-//! is on: pure Rust, in process, below the native loaders and above Pandoc.
-//! See `carta`.
+//! `rest`, `mediawiki`, `wiki`, and by name `dokuwiki` and `jira`;
+//! priority 7) is a built-in when the feature is on: pure Rust, in
+//! process, below the native loaders and above Pandoc. See `carta`.
 //!
 //! Every other built-in loader is native Rust. The Pandoc loader (feature
 //! `pandoc`; `rst`, `org`, `tex`, `dbk`, `textile`,

@@ -1,7 +1,8 @@
-//! carta loader (feature `carta`): Org mode, reStructuredText, and
-//! MediaWiki read in process, in pure Rust, by
+//! carta loader (feature `carta`): Org mode, reStructuredText, MediaWiki,
+//! DokuWiki, and Jira read in process, in pure Rust, by
 //! [carta](https://github.com/mfkrause/carta), a young reimplementation of
-//! Pandoc (MIT or Apache-2.0).
+//! Pandoc (MIT or Apache-2.0); and Markdown written out as AsciiDoc, Typst,
+//! LaTeX, MediaWiki, or Org ([`write_markdown`]).
 //!
 //! carta converts the source to an HTML fragment, and the HTML loader's
 //! rules read it, exactly as the Pandoc loader does, so offsets, markers,
@@ -10,8 +11,13 @@
 //! textweaver reads itself, and where both are registered (as in
 //! `tw convert`) the in-process reader wins over the subprocess.
 //!
-//! A spike (B1-k1): the formats claimed are the ones the comparison with
-//! Pandoc found usable; see the spike report in the planning repository.
+//! The formats claimed are the ones the comparison with Pandoc found
+//! usable (B1-k1). DokuWiki pages and Jira markup have no extension of
+//! their own (a DokuWiki page is a `.txt` file), so they are read when
+//! named: `tw convert --from dokuwiki`, or a hint of `dokuwiki` or `jira`.
+//! Typst and LaTeX are not read here: carta's Typst reader reads any file
+//! a document names, with no way to turn that off, and textweaver's own
+//! LaTeX loader keeps tables and the title that carta's loses.
 //!
 //! carta's reStructuredText reader follows `.. include::` to any path on
 //! the disk, relative to the working folder, with no sandbox (Pandoc's
@@ -36,10 +42,45 @@ const FORMATS: &[(&str, &str)] = &[
     ("rest", "rst"),
     ("mediawiki", "mediawiki"),
     ("wiki", "mediawiki"),
+    ("dokuwiki", "dokuwiki"),
+    ("jira", "jira"),
 ];
 
-/// Extensions the carta loader claims.
-pub const EXTENSIONS: &[&str] = &["org", "rst", "rest", "mediawiki", "wiki"];
+/// Extensions (and format names) the carta loader claims.
+pub const EXTENSIONS: &[&str] = &["org", "rst", "rest", "mediawiki", "wiki", "dokuwiki", "jira"];
+
+/// The formats [`write_markdown`] writes: carta's writer names, for the
+/// formats textweaver does not write itself.
+pub const WRITERS: &[&str] = &["asciidoc", "typst", "latex", "mediawiki", "org"];
+
+/// Markdown (GitHub's flavor, with dollar math, footnotes, and YAML front
+/// matter) written as a whole document in `to`, one of [`WRITERS`]: an
+/// AsciiDoc or Org file with its title, a LaTeX file with its preamble, a
+/// Typst file with its page setup, or MediaWiki markup.
+///
+/// One direction only: Markdown in, the format out, through carta's
+/// document model and its built-in templates; no file is read.
+///
+/// shortcut: a document textweaver loaded from another format reaches carta
+/// as Markdown (`to_markdown`), so what Markdown cannot say (a table cell
+/// spanning columns, a page number) is lost on the way; upgrade to a
+/// direct mapping from the canonical document to carta's model when
+/// carta's API settles.
+pub fn write_markdown(markdown: &str, to: &str) -> Result<String, LoadError> {
+    if !WRITERS.contains(&to) {
+        return Err(LoadError::Unsupported(format!("carta writer for {to}")));
+    }
+    let failed = |e: carta::Error| LoadError::Parse(format!("carta could not write {to}: {e}"));
+    let (doc, media) =
+        carta::read_document("gfm", markdown.as_bytes(), &carta::ReaderOptions::default())
+            .map_err(failed)?;
+    let mut writer = carta::WriterOptions::default();
+    writer.standalone = true;
+    match carta::render_document(to, doc, media, &writer).map_err(failed)? {
+        carta::Output::Text(text) => Ok(text),
+        carta::Output::Bytes(_) => Err(LoadError::Parse(format!("carta wrote bytes, not {to}"))),
+    }
+}
 
 /// Loads documents through carta.
 #[derive(Clone, Copy, Debug, Default)]
@@ -66,7 +107,6 @@ fn without_includes(text: &str) -> Cow<'_, str> {
     let mut out = String::with_capacity(text.len());
     for line in text.split_inclusive('\n') {
         if is_include(line) {
-            log::warn!("carta: an include directive was skipped");
             let indent = &line[..line.len() - line.trim_start().len()];
             out.push_str(indent);
             out.push_str(".. textweaver skipped an include\n");
@@ -77,16 +117,22 @@ fn without_includes(text: &str) -> Cow<'_, str> {
     Cow::Owned(out)
 }
 
-/// Converts `text` from carta reader `from` to an HTML fragment. A title
-/// in the metadata (Org's `#+TITLE`, for one) opens the fragment as a
-/// level-1 heading, as Pandoc's standalone title block does.
-fn to_html(from: &str, text: &str) -> Result<String, LoadError> {
+/// The warning a document gets when an include was left out.
+pub const INCLUDE_WARNING: &str =
+    "An include directive was left out, so the file it names is not read.";
+
+/// Converts `text` from carta reader `from` to an HTML fragment, and
+/// whether an include was left out. A title in the metadata (Org's
+/// `#+TITLE`, for one) opens the fragment as a level-1 heading, as
+/// Pandoc's standalone title block does.
+fn to_html(from: &str, text: &str) -> Result<(String, bool), LoadError> {
     use carta::ast::MetaValue;
     let text = if from == "rst" {
         without_includes(text)
     } else {
         Cow::Borrowed(text)
     };
+    let skipped = matches!(text, Cow::Owned(_));
     let failed = |e: carta::Error| LoadError::Parse(format!("carta could not read it: {e}"));
     let (doc, media) =
         carta::read_document(from, text.as_bytes(), &carta::ReaderOptions::default())
@@ -106,14 +152,14 @@ fn to_html(from: &str, text: &str) -> Result<String, LoadError> {
         }
     };
     if title.trim().is_empty() {
-        return Ok(body);
+        return Ok((body, skipped));
     }
     let title = title
         .trim()
         .replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;");
-    Ok(format!("<h1 class=\"title\">{title}</h1>\n{body}"))
+    Ok((format!("<h1 class=\"title\">{title}</h1>\n{body}"), skipped))
 }
 
 impl Loader for CartaLoader {
@@ -139,9 +185,12 @@ impl Loader for CartaLoader {
         // Decoded as the native loaders decode (Windows-1252, UTF-16 with a
         // byte order mark), since carta reads UTF-8 only.
         let decoded = crate::decode_bytes(&source.read()?, None).text;
-        let html = to_html(from, &decoded)?;
+        let (html, skipped) = to_html(from, &decoded)?;
         let mut meta = meta_for(source, self.id());
         meta.properties.insert("carta.from".into(), from.to_owned());
+        if skipped {
+            crate::add_warning(&mut meta, INCLUDE_WARNING);
+        }
         let (text, markers) = crate::html::convert(&html, options, &mut meta);
         // The fragment has no title element: take the first level-1
         // heading (the metadata title when there is one), then the file
@@ -216,6 +265,37 @@ mod tests {
     }
 
     #[test]
+    fn reads_dokuwiki_and_jira_by_name() {
+        let doku = load("====== Crows ======\nThey are //clever//.\n", "dokuwiki");
+        assert!(doku.text().to_string().contains("They are clever."));
+        assert_eq!(doku.marker_index().count(MarkerKind::Heading, None), 1);
+        let jira = load("h1. Crows\nThey are _clever_.\n* one\n* two\n", "jira");
+        assert!(jira.text().to_string().contains("They are clever."));
+        assert_eq!(jira.marker_index().count(MarkerKind::ListItem, None), 2);
+    }
+
+    #[test]
+    fn writes_markdown_as_each_format() {
+        let md = "---\ntitle: Field Notes\n---\n\n# Crows\n\nThey are *clever* and caf\u{e9}.\n\n- one\n- two\n";
+        let expect = [
+            ("asciidoc", "= Field Notes"),
+            ("typst", "Crows"),
+            ("latex", r"\documentclass"),
+            ("mediawiki", "= Crows ="),
+            ("org", "#+title: Field Notes"),
+        ];
+        for (to, needle) in expect {
+            let out = write_markdown(md, to).unwrap();
+            assert!(out.contains(needle), "{to}: {out}");
+            assert!(out.contains("caf\u{e9}"), "{to}: {out}");
+        }
+        assert!(write_markdown(md, "typst-or-not").is_err());
+        // The Org output reads back through the loader with its heading.
+        let back = load(&write_markdown(md, "org").unwrap(), "org");
+        assert!(back.text().to_string().contains("They are clever"));
+    }
+
+    #[test]
     fn a_restructured_text_include_never_reads_another_file() {
         let dir = tempfile::tempdir().unwrap();
         let secret = dir.path().join("secret.rst");
@@ -225,7 +305,9 @@ mod tests {
             secret.display(),
             secret.display()
         );
-        let text = load(&src, "rst").text().to_string();
+        let doc = load(&src, "rst");
+        assert_eq!(crate::warnings(&doc.meta), [INCLUDE_WARNING]);
+        let text = doc.text().to_string();
         assert!(!text.contains("pelican"), "{text}");
         assert!(
             text.contains("Before.") && text.contains("After."),
