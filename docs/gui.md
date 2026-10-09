@@ -147,6 +147,8 @@ Ctrl+E, or the Edit button, turns edit mode on, as in the terminal reader: you e
 
 In edit mode the document is a multi-line edit, so NVDA and JAWS switch to focus mode by themselves.
 
+List items keep their indent by depth while you edit, as in reading, and bulleted items keep their bullet shape (a disc, a ring, then a square), so the nesting shows. A numbered item shows the number you typed. These are drawn only: the screen reader reads the source text, with its own dashes and numbers.
+
 - **Typing** goes in at the cursor, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
 - **Your screen reader echoes** what you type, and reads the cursor and the selection as they move. With **Speak textweaver's messages** on, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the cursor moves to, and what a Shift key added to the selection or took from it.
 - **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the cursor (on macOS, Command with each).
