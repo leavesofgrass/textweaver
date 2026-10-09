@@ -1,0 +1,13 @@
+[package]
+name = "k1-cmp"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+textweaver-formats = { path = "../../../crates/textweaver-formats", default-features = false, features = ["carta", "pandoc"] }
+textweaver-core = { path = "../../../crates/textweaver-core" }
+textweaver-text = { path = "../../../crates/textweaver-text" }
+carta = { version = "=0.0.11", default-features = false, features = ["read-org", "read-rst", "read-mediawiki", "read-latex", "read-dokuwiki", "read-jira", "read-typst", "write-html"] }

@@ -1,0 +1,25 @@
+h1. Field Notes on Crows
+
+h2. Introduction
+Crows are _clever_ birds with *strong* memories. Café owners in Portland know them well.
+
+h3. Behavior
+* They cache food.
+* They recognize faces.
+** Even after years.
+* They use tools.
+
+# Watch from a distance.
+# Write down the time.
+
+||Species||Length (cm)||
+|American crow|45|
+|Common raven|63|
+
+See [the crow page|https://example.org/crows] for more.
+
+{code:rust}
+fn main() { println!("caw"); }
+{code}
+
+bq. A murder of crows is a group, not a crime.
