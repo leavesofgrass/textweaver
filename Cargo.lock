@@ -9812,6 +9812,7 @@ version = "0.1.0-alpha.9"
 dependencies = [
  "accesskit_consumer",
  "clap",
+ "ctrlc",
  "log",
  "masonry",
  "masonry_testing",

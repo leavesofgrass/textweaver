@@ -3650,7 +3650,8 @@ impl Gui {
         }
     }
 
-    /// Watches for the session ending (Windows), so unsaved edits get a
+    /// Watches for the session ending (Windows) or a termination signal
+    /// (Linux and macOS), so unsaved edits get a
     /// recovery copy before the process is ended.
     fn watch_session_end(&mut self, ctx: &mut DriverCtx<'_>) {
         let hwnd = self.window_handle(ctx);
