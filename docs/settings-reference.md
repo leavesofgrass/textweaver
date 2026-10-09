@@ -133,6 +133,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 - `braille.math_code`: default Nemeth (`"nemeth"`). Math braille. The braille code for math in BRF files and while exploring a formula with MathCAT. Nemeth, or UEB mathematics. It needs a version that includes MathCAT; otherwise math is written as its spoken words. Choices: `"nemeth"` (Nemeth), `"ueb"` (UEB). Syncs between computers.
 - `braille.table_format`: default `"linear"`. Braille tables. How BRF files lay out tables. Linear, one row per line with semicolons between entries; listed, each row a heading with each entry on its own line after its column heading; or stairstep, each entry two cells right of the one before, for tables of up to four columns. Choices: `"linear"`, `"listed"`, `"stairstep"`. Syncs between computers.
+- `braille.brf_code`: default UEB (`"ueb"`). Braille code of BRF files. The braille code BRF files are read in when you open one: UEB, for books made since 2016, or EBAE, English Braille American Edition, for older books. Reading a BRF file as print needs liblouis. Open the file again after a change. Choices: `"ueb"` (UEB), `"ebae"` (EBAE). Syncs between computers.
 
 ## Reading aids: the `[reading_aids]` section
 

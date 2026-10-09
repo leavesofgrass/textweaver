@@ -343,6 +343,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 |---|---|---|---|---|
 | Switch to the next color theme | `F5` | `F5` | `F5` | `next_theme` |
 | Show or hide line numbers | `F6` | none | none | `toggle_line_numbers` |
+| Show the original braille of the page at the cursor, in a BRF file read as print | palette | palette | palette | `show_original_braille` |
 | Turn single-key shortcuts on or off, so dictation and typing never trigger commands | `F9` | `F9` | `F9` | `toggle_character_keys` |
 | Cycle the accessibility mode: self-voicing, hybrid, or screen reader | `Alt+Shift+A` | `Alt+Shift+A` | `Cmd+Option+Shift+A` | `cycle_access_mode` |
 | List settings profiles: switch to one, save the current settings as one, rename, delete, import, or export | `Alt+U` | `Ctrl+Shift+U` | `Cmd+Shift+U` | `settings_profiles` |
@@ -548,6 +549,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Check the citations: how many there are, and which keys are not in your library | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |
 | Download the dictation model chosen in the settings, after saying its size and license | `download_dictation_model` |
+| Show the original braille of the page at the cursor, in a BRF file read as print | `show_original_braille` |
 | Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | `toggle_header` |
 | Show or hide the toolbar, the bar of Play, Stop and the reading buttons | `toggle_toolbar` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | `color_settings` |
