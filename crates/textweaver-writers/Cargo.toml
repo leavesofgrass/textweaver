@@ -16,6 +16,8 @@ thiserror.workspace = true
 serde.workspace = true
 krilla.workspace = true
 zip.workspace = true
+# Reading a Word file's XML to write a review back in place (docx_update).
+roxmltree.workspace = true
 textweaver-fonts.workspace = true
 textweaver-math.workspace = true
 textweaver-mathcat = { workspace = true, optional = true }
@@ -34,7 +36,6 @@ mathcat = ["dep:textweaver-mathcat"]
 
 [dev-dependencies]
 ropey.workspace = true
-roxmltree.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 textweaver-formats.workspace = true
