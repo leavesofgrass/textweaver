@@ -787,7 +787,9 @@ action-cycle-typing-echo = Recorrer el eco de escritura: caracteres y palabras, 
 action-select-all = Seleccionar todo el texto
 action-delete-word-before = Eliminar la palabra anterior al cursor
 action-delete-word-after = Eliminar la palabra posterior al cursor
-action-paste = Pegar el texto copiado o cortado por última vez en textweaver; el pegado del terminal también funciona
+action-paste = Pegar el portapapeles; el texto con formato de un navegador o un procesador de textos se convierte en Markdown
+action-paste-plain-text = Pegar el portapapeles como texto sin formato, sin conservar nada de su formato
+action-context-menu = Abrir el menú contextual: cortar, copiar, pegar y los comandos para donde está el cursor
 action-insert-citation = Insertar una cita: elegir una referencia y luego indicar una página u otro localizador
 action-add-reference = Agregar una referencia a su biblioteca por DOI o ISBN
 action-insert-bibliography = Insertar la bibliografía de las obras citadas, en el cursor
@@ -2251,6 +2253,12 @@ edit-pasted-start =
         [one] Se pegó 1 carácter: { $start }
        *[other] Se pegaron { $n } caracteres: { $start }
     }
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] Se pegó 1 línea: { $start }
+       *[other] Se pegaron { $n } líneas: { $start }
+    }
 edit-insert-failed = No se pudo insertar: { $error }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = No se pueden cambiar los caracteres { $start } a { $end }: el texto tiene { $len }.
@@ -2584,6 +2592,46 @@ authoring-space-deleted = Espacio eliminado.
 authoring-deleted = { $text } eliminada.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = Todavía no se ha copiado nada en { -brand }. Use el pegado de su terminal, por ejemplo { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = Pegado como Markdown: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] 1 encabezado
+       *[other] { $n } encabezados
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] 1 párrafo
+       *[other] { $n } párrafos
+    }
+paste-part-list =
+    { $n ->
+        [one] 1 lista
+       *[other] { $n } listas
+    }
+paste-part-table =
+    { $n ->
+        [one] 1 tabla
+       *[other] { $n } tablas
+    }
+paste-part-code =
+    { $n ->
+        [one] 1 bloque de código
+       *[other] { $n } bloques de código
+    }
+paste-part-quote =
+    { $n ->
+        [one] 1 cita
+       *[other] { $n } citas
+    }
+paste-part-link =
+    { $n ->
+        [one] 1 enlace
+       *[other] { $n } enlaces
+    }
+paste-empty = Nada que pegar: el portapapeles está vacío.
+paste-converting = Convirtiendo el texto con formato para pegarlo.
+paste-failed = No se pudo pegar: { $error } Pruebe Pegar como texto sin formato.
 authoring-verbosity =
     { $level ->
         [low] Verbosidad: baja.
@@ -3268,6 +3316,8 @@ name-select-all = Seleccionar todo
 name-delete-word-before = Borrar palabra anterior
 name-delete-word-after = Borrar palabra siguiente
 name-paste = Pegar
+name-paste-plain-text = Pegar como texto sin formato
+name-context-menu = Menú contextual
 name-insert-citation = Insertar cita
 name-add-reference = Añadir referencia
 name-insert-bibliography = Insertar bibliografía
@@ -3317,6 +3367,8 @@ menu-recent-none = No hay documentos recientes
 menu-not-available = { $name } no está disponible en esta versión.
 menu-no-access-key = Ningún elemento con la tecla { $letter }.
 menu-closed = Menús cerrados.
+menu-context = Menú contextual
+menu-context-closed = Menú contextual cerrado.
 menu-press-a-key = Pulse una tecla para oír lo que hace.
 menu-key-described = { $name }: { $help }. Teclas: { $keys }. En los menús: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Teclas: { $keys }.

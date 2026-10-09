@@ -792,7 +792,9 @@ action-cycle-typing-echo = Cycle typing echo: characters and words, characters, 
 action-select-all = Select all the text
 action-delete-word-before = Delete the word before the cursor
 action-delete-word-after = Delete the word after the cursor
-action-paste = Paste the text last copied or cut in textweaver; the terminal paste works too
+action-paste = Paste the clipboard; formatted text from a browser or word processor becomes Markdown
+action-paste-plain-text = Paste the clipboard as plain text, keeping none of its formatting
+action-context-menu = Open the context menu: cut, copy, paste, and the commands for where the cursor is
 action-insert-citation = Insert a citation: pick a reference, then give a page or other locator
 action-add-reference = Add a reference to your library by DOI or ISBN
 action-insert-bibliography = Insert the bibliography of the works cited, at the cursor
@@ -2258,6 +2260,12 @@ edit-pasted-start =
         [one] Pasted 1 character: { $start }
        *[other] Pasted { $n } characters: { $start }
     }
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] Pasted 1 line: { $start }
+       *[other] Pasted { $n } lines: { $start }
+    }
 edit-insert-failed = Could not insert: { $error }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = Cannot change characters { $start } to { $end }: the text has { $len }.
@@ -2591,6 +2599,46 @@ authoring-space-deleted = Space deleted.
 authoring-deleted = { $text } deleted.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = Nothing copied in { -brand } yet. Use your terminal's paste, for example { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = Pasted as Markdown: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] 1 heading
+       *[other] { $n } headings
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] 1 paragraph
+       *[other] { $n } paragraphs
+    }
+paste-part-list =
+    { $n ->
+        [one] 1 list
+       *[other] { $n } lists
+    }
+paste-part-table =
+    { $n ->
+        [one] 1 table
+       *[other] { $n } tables
+    }
+paste-part-code =
+    { $n ->
+        [one] 1 code block
+       *[other] { $n } code blocks
+    }
+paste-part-quote =
+    { $n ->
+        [one] 1 quote
+       *[other] { $n } quotes
+    }
+paste-part-link =
+    { $n ->
+        [one] 1 link
+       *[other] { $n } links
+    }
+paste-empty = Nothing to paste: the clipboard is empty.
+paste-converting = Converting the formatted text to paste.
+paste-failed = Could not paste: { $error } Try Paste as plain text.
 authoring-verbosity =
     { $level ->
         [low] Verbosity: low.
@@ -3295,6 +3343,8 @@ name-select-all = Select all
 name-delete-word-before = Delete word before
 name-delete-word-after = Delete word after
 name-paste = Paste
+name-paste-plain-text = Paste as plain text
+name-context-menu = Context menu
 name-insert-citation = Insert citation
 name-add-reference = Add reference
 name-insert-bibliography = Insert bibliography
@@ -3344,6 +3394,8 @@ menu-recent-none = No recent documents
 menu-not-available = { $name } is not available in this version.
 menu-no-access-key = No item with the key { $letter }.
 menu-closed = Menus closed.
+menu-context = Context menu
+menu-context-closed = Context menu closed.
 menu-press-a-key = Press a key to hear what it does.
 menu-key-described = { $name }: { $help }. Keys: { $keys }. In the menus: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Keys: { $keys }.

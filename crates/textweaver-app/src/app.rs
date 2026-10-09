@@ -420,6 +420,10 @@ pub struct App {
     /// Text copied or cut, waiting for the frontend
     /// ([`App::take_clipboard`]).
     pub(crate) clipboard: Option<String>,
+    /// The system clipboard Paste reads ([`App::set_clipboard`]).
+    pub(crate) system_clipboard: Option<Box<dyn crate::clipboard::Clipboard>>,
+    /// A formatted paste being converted on a worker thread.
+    pub(crate) paste_job: Option<crate::clipboard::PasteJob>,
     /// The background writer: saves, snapshots, positions, and the disk
     /// check (crate::writer).
     pub(crate) writer: crate::writer::Writer,
@@ -584,6 +588,8 @@ impl App {
             drawn_colors: None,
             voices: crate::voice::VoicesState::default(),
             clipboard: None,
+            system_clipboard: None,
+            paste_job: None,
             writer: crate::writer::Writer::spawn(wake.clone()),
             pending_saves: Vec::new(),
             disk_check_pending: false,
@@ -1598,6 +1604,7 @@ impl App {
         effects.extend(self.restart_tick());
         effects.extend(self.library_tick());
         effects.extend(self.details_tick());
+        effects.extend(self.paste_tick());
         effects.extend(self.define_tick());
         effects.extend(self.voices_tick());
         effects.extend(self.dictation_tick());
@@ -2144,6 +2151,7 @@ impl App {
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),
             A::Menu => return self.open_menu(),
+            A::ContextMenu => return self.open_context_menu(),
             A::BrowseFiles
             | A::BatchConvert
             | A::ExportAudio
@@ -2231,6 +2239,7 @@ impl App {
             | A::DeleteWordBefore
             | A::DeleteWordAfter
             | A::Paste
+            | A::PastePlainText
             | A::InsertCitation
             | A::AddReference
             | A::InsertBibliography

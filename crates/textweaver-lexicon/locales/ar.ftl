@@ -881,7 +881,9 @@ action-cycle-typing-echo = التنقل بين ترديد الكتابة: الح
 action-select-all = تحديد كل النص
 action-delete-word-before = حذف الكلمة قبل المؤشر
 action-delete-word-after = حذف الكلمة بعد المؤشر
-action-paste = لصق آخر نص نُسخ أو قُصّ في textweaver؛ يعمل لصق الطرفية أيضًا
+action-paste = لصق الحافظة؛ يصبح النص المنسق من متصفح أو معالج نصوص بتنسيق Markdown
+action-paste-plain-text = لصق الحافظة نصًا عاديًا دون أي من تنسيقه
+action-context-menu = فتح قائمة السياق: القص والنسخ واللصق والأوامر المناسبة لموضع المؤشر
 action-insert-citation = إدراج استشهاد: اختيار مرجع، ثم إعطاء رقم صفحة أو موضع آخر
 action-add-reference = إضافة مرجع إلى مكتبتك بـDOI أو ISBN
 action-insert-bibliography = إدراج قائمة مراجع الأعمال المستشهد بها، عند المؤشر
@@ -2463,6 +2465,15 @@ edit-pasted-start =
         [many] لُصق { $n } حرفًا: { $start }
        *[other] لُصق { $n } حرف: { $start }
     }
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] لُصق سطر واحد: { $start }
+        [two] لُصق سطران: { $start }
+        [few] لُصقت { $n } أسطر: { $start }
+        [many] لُصق { $n } سطرًا: { $start }
+       *[other] لُصق { $n } سطر: { $start }
+    }
 edit-insert-failed = تعذّر الإدراج: { $error }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = لا يمكن تغيير الحروف من { $start } إلى { $end }: النص يحتوي { $len }.
@@ -2827,6 +2838,67 @@ authoring-space-deleted = حُذفت المسافة.
 authoring-deleted = حُذفت { $text }.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = لا شيء منسوخ في { -brand } بعد. استخدم لصق طرفيتك، مثل { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = لُصق بتنسيق Markdown: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] عنوان واحد
+        [two] عنوانان
+        [few] { $n } عناوين
+        [many] { $n } عنوانًا
+       *[other] { $n } عنوان
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] فقرة واحدة
+        [two] فقرتان
+        [few] { $n } فقرات
+        [many] { $n } فقرة
+       *[other] { $n } فقرة
+    }
+paste-part-list =
+    { $n ->
+        [one] قائمة واحدة
+        [two] قائمتان
+        [few] { $n } قوائم
+        [many] { $n } قائمة
+       *[other] { $n } قائمة
+    }
+paste-part-table =
+    { $n ->
+        [one] جدول واحد
+        [two] جدولان
+        [few] { $n } جداول
+        [many] { $n } جدولًا
+       *[other] { $n } جدول
+    }
+paste-part-code =
+    { $n ->
+        [one] كتلة برمجية واحدة
+        [two] كتلتان برمجيتان
+        [few] { $n } كتل برمجية
+        [many] { $n } كتلة برمجية
+       *[other] { $n } كتلة برمجية
+    }
+paste-part-quote =
+    { $n ->
+        [one] اقتباس واحد
+        [two] اقتباسان
+        [few] { $n } اقتباسات
+        [many] { $n } اقتباسًا
+       *[other] { $n } اقتباس
+    }
+paste-part-link =
+    { $n ->
+        [one] رابط واحد
+        [two] رابطان
+        [few] { $n } روابط
+        [many] { $n } رابطًا
+       *[other] { $n } رابط
+    }
+paste-empty = لا شيء للصق: الحافظة فارغة.
+paste-converting = جارٍ تحويل النص المنسق للصقه.
+paste-failed = تعذّر اللصق: { $error } جرّب اللصق كنص عادي.
 authoring-verbosity =
     { $level ->
         [low] مستوى التفصيل: منخفض.
@@ -3566,6 +3638,8 @@ name-select-all = تحديد الكل
 name-delete-word-before = حذف الكلمة السابقة
 name-delete-word-after = حذف الكلمة التالية
 name-paste = لصق
+name-paste-plain-text = لصق كنص عادي
+name-context-menu = قائمة السياق
 name-insert-citation = إدراج استشهاد
 name-add-reference = إضافة مرجع
 name-insert-bibliography = إدراج قائمة المراجع
@@ -3615,6 +3689,8 @@ menu-recent-none = لا توجد مستندات حديثة
 menu-not-available = { $name } غير متاح في هذا الإصدار.
 menu-no-access-key = لا يوجد عنصر بالمفتاح { $letter }.
 menu-closed = أُغلقت القوائم.
+menu-context = قائمة السياق
+menu-context-closed = أُغلقت قائمة السياق.
 menu-press-a-key = اضغط مفتاحًا لتسمع ما يفعله.
 menu-key-described = { $name }: { $help }. المفاتيح: { $keys }. في القوائم: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. المفاتيح: { $keys }.

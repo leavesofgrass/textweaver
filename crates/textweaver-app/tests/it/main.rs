@@ -18,6 +18,7 @@ mod batch;
 mod browse;
 #[cfg(feature = "publish")]
 mod citations_reading;
+mod clipboard;
 mod components_registry;
 mod details;
 mod edit;

@@ -803,7 +803,9 @@ action-cycle-typing-echo = Alternar o eco de digitação: caracteres e palavras,
 action-select-all = Selecionar todo o texto
 action-delete-word-before = Excluir a palavra antes do cursor
 action-delete-word-after = Excluir a palavra depois do cursor
-action-paste = Colar o último texto copiado ou recortado no textweaver; a colagem do terminal também funciona
+action-paste = Colar a área de transferência; o texto formatado de um navegador ou processador de texto vira Markdown
+action-paste-plain-text = Colar a área de transferência como texto simples, sem nada da formatação
+action-context-menu = Abrir o menu de contexto: recortar, copiar, colar e os comandos para onde o cursor está
 action-insert-citation = Inserir uma citação: escolha uma referência, depois informe uma página ou outro localizador
 action-add-reference = Adicionar uma referência à sua biblioteca por DOI ou ISBN
 action-insert-bibliography = Inserir a bibliografia das obras citadas, no cursor
@@ -2267,6 +2269,12 @@ edit-pasted-start =
         [one] Colou 1 caractere: { $start }
        *[other] Colou { $n } caracteres: { $start }
     }
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] 1 linha colada: { $start }
+       *[other] { $n } linhas coladas: { $start }
+    }
 edit-insert-failed = Não foi possível inserir: { $error }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = Não é possível alterar os caracteres { $start } a { $end }: o texto tem { $len }.
@@ -2600,6 +2608,46 @@ authoring-space-deleted = Espaço excluído.
 authoring-deleted = { $text } excluída.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = Nada copiado no { -brand } ainda. Use a colagem do seu terminal, por exemplo { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = Colado como Markdown: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] 1 título
+       *[other] { $n } títulos
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] 1 parágrafo
+       *[other] { $n } parágrafos
+    }
+paste-part-list =
+    { $n ->
+        [one] 1 lista
+       *[other] { $n } listas
+    }
+paste-part-table =
+    { $n ->
+        [one] 1 tabela
+       *[other] { $n } tabelas
+    }
+paste-part-code =
+    { $n ->
+        [one] 1 bloco de código
+       *[other] { $n } blocos de código
+    }
+paste-part-quote =
+    { $n ->
+        [one] 1 citação
+       *[other] { $n } citações
+    }
+paste-part-link =
+    { $n ->
+        [one] 1 link
+       *[other] { $n } links
+    }
+paste-empty = Nada para colar: a área de transferência está vazia.
+paste-converting = Convertendo o texto formatado para colar.
+paste-failed = Não foi possível colar: { $error } Tente Colar como texto simples.
 authoring-verbosity =
     { $level ->
         [low] Verbosidade: baixa.
@@ -3284,6 +3332,8 @@ name-select-all = Selecionar tudo
 name-delete-word-before = Excluir palavra anterior
 name-delete-word-after = Excluir próxima palavra
 name-paste = Colar
+name-paste-plain-text = Colar como texto simples
+name-context-menu = Menu de contexto
 name-insert-citation = Inserir citação
 name-add-reference = Adicionar referência
 name-insert-bibliography = Inserir bibliografia
@@ -3333,6 +3383,8 @@ menu-recent-none = Nenhum documento recente
 menu-not-available = { $name } não está disponível nesta versão.
 menu-no-access-key = Nenhum item com a tecla { $letter }.
 menu-closed = Menus fechados.
+menu-context = Menu de contexto
+menu-context-closed = Menu de contexto fechado.
 menu-press-a-key = Pressione uma tecla para ouvir o que ela faz.
 menu-key-described = { $name }: { $help }. Teclas: { $keys }. Nos menus: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Teclas: { $keys }.

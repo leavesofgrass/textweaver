@@ -815,7 +815,9 @@ action-cycle-typing-echo = Faire défiler l'écho de frappe : caractères et mot
 action-select-all = Sélectionner tout le texte
 action-delete-word-before = Supprimer le mot avant le curseur
 action-delete-word-after = Supprimer le mot après le curseur
-action-paste = Coller le texte le plus récemment copié ou coupé dans textweaver ; le collage du terminal fonctionne aussi
+action-paste = Coller le presse-papiers ; le texte mis en forme venant d’un navigateur ou d’un traitement de texte devient du Markdown
+action-paste-plain-text = Coller le presse-papiers en texte brut, sans rien garder de sa mise en forme
+action-context-menu = Ouvrir le menu contextuel : couper, copier, coller et les commandes adaptées à la position du curseur
 action-insert-citation = Insérer une citation : choisir une référence, puis donner une page ou un autre repère
 action-add-reference = Ajouter une référence à votre bibliothèque par DOI ou ISBN
 action-insert-bibliography = Insérer la bibliographie des ouvrages cités, au curseur
@@ -2279,6 +2281,12 @@ edit-pasted-start =
         [one] 1 caractère collé : { $start }
        *[other] { $n } caractères collés : { $start }
     }
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] 1 ligne collée : { $start }
+       *[other] { $n } lignes collées : { $start }
+    }
 edit-insert-failed = Impossible d'insérer : { $error }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = Impossible de modifier les caractères { $start } à { $end } : le texte en a { $len }.
@@ -2612,6 +2620,46 @@ authoring-space-deleted = Espace supprimée.
 authoring-deleted = { $text } supprimé.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = Rien de copié dans { -brand } pour l'instant. Utilisez le collage de votre terminal, par exemple { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = Collé en Markdown : { $parts }
+paste-part-heading =
+    { $n ->
+        [one] 1 titre
+       *[other] { $n } titres
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] 1 paragraphe
+       *[other] { $n } paragraphes
+    }
+paste-part-list =
+    { $n ->
+        [one] 1 liste
+       *[other] { $n } listes
+    }
+paste-part-table =
+    { $n ->
+        [one] 1 tableau
+       *[other] { $n } tableaux
+    }
+paste-part-code =
+    { $n ->
+        [one] 1 bloc de code
+       *[other] { $n } blocs de code
+    }
+paste-part-quote =
+    { $n ->
+        [one] 1 citation
+       *[other] { $n } citations
+    }
+paste-part-link =
+    { $n ->
+        [one] 1 lien
+       *[other] { $n } liens
+    }
+paste-empty = Rien à coller : le presse-papiers est vide.
+paste-converting = Conversion du texte mis en forme à coller.
+paste-failed = Impossible de coller : { $error } Essayez Coller en texte brut.
 authoring-verbosity =
     { $level ->
         [low] Verbosité : faible.
@@ -3296,6 +3344,8 @@ name-select-all = Tout sélectionner
 name-delete-word-before = Supprimer le mot avant
 name-delete-word-after = Supprimer le mot après
 name-paste = Coller
+name-paste-plain-text = Coller en texte brut
+name-context-menu = Menu contextuel
 name-insert-citation = Insérer une citation
 name-add-reference = Ajouter une référence
 name-insert-bibliography = Insérer la bibliographie
@@ -3345,6 +3395,8 @@ menu-recent-none = Aucun document récent
 menu-not-available = { $name } n'est pas disponible dans cette version.
 menu-no-access-key = Aucun élément avec la touche { $letter }.
 menu-closed = Menus fermés.
+menu-context = Menu contextuel
+menu-context-closed = Menu contextuel fermé.
 menu-press-a-key = Appuyez sur une touche pour entendre ce qu'elle fait.
 menu-key-described = { $name } : { $help }. Touches : { $keys }. Dans les menus : { $path }.
 menu-key-described-no-menu = { $name } : { $help }. Touches : { $keys }.

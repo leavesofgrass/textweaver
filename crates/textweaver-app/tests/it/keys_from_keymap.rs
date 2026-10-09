@@ -24,7 +24,7 @@ use textweaver_app::{App, AppConfig, Command, ListKey, PromptKey};
 /// Strings allowed to name a chord, with why: (file name, text).
 const ALLOWED: &[(&str, &str)] = &[
     // The terminal's own paste key, which textweaver does not bind.
-    ("authoring.rs", "Control Shift V"),
+    ("clipboard.rs", "Control Shift V"),
     // The definition of an extra binding, parsed into the keymap.
     ("extra.rs", "Shift+Y"),
     // `textweaver --help`, printed by clap before the keymap exists.
