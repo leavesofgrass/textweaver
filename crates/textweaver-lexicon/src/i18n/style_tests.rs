@@ -13,9 +13,14 @@ use super::ENGLISH;
 /// Every message in en.ftl as (id, value): continuation lines joined with
 /// a line break, terms and comments left out.
 fn messages() -> Vec<(String, String)> {
+    messages_in(ENGLISH)
+}
+
+/// Every message in one catalog's text, as [`messages`] reads en.ftl.
+fn messages_in(catalog: &str) -> Vec<(String, String)> {
     let mut out: Vec<(String, String)> = Vec::new();
     let mut open = false;
-    for line in ENGLISH.lines() {
+    for line in catalog.lines() {
         if let Some((id, value)) = line.split_once(" =")
             && !id.is_empty()
             && id
@@ -128,63 +133,10 @@ fn questions_end_with_y_or_n() {
 }
 
 /// Rule 2: an error ends with what to do next. The system's words
-/// (`{ $error }`) come before it, with no period after them; these messages
-/// still end with the error itself and may only become fewer.
+/// (`{ $error }`) come before it, with no period after them. Every error
+/// gives a next step in every language; one that ends with the error fails.
 #[test]
 fn errors_get_a_next_step() {
-    const NO_NEXT_STEP_YET: [&str; 51] = [
-        "audio-failed",
-        "batch-report-failed",
-        "batch-start-failed",
-        "citations-bibliography-insert-failed",
-        "citations-check-failed",
-        "citations-format-failed",
-        "citations-import-failed",
-        "citations-insert-failed",
-        "citations-library-save-failed",
-        "citations-lookup-failed",
-        "citations-lookup-not-started",
-        "citations-style-unusable",
-        "define-glossary-problem",
-        "dictation-failed",
-        "edit-change-failed",
-        "edit-delete-failed",
-        "edit-image-failed",
-        "edit-insert-failed",
-        "font-download-failed",
-        "grammar-change-failed",
-        "marks-cannot-search",
-        "notes-study-sheet-failed",
-        "playback-speech-error",
-        "profiles-export-failed",
-        "profiles-read-failed",
-        "publish-cannot-write",
-        "publish-cannot-write-to",
-        "publish-export-error",
-        "publish-export-failed",
-        "publish-preview-error",
-        "publish-preview-failed",
-        "publish-render-failed",
-        "publish-start-failed",
-        "replace-failed",
-        "restart-failed",
-        "settings-cannot-be",
-        "settingsio-export-failed",
-        "settingsio-import-failed",
-        "settingsio-read-failed",
-        "spell-replace-failed",
-        "sync-sidecar-failed",
-        "sync-status-error",
-        "sync-write-failed",
-        "tui-setup-cannot-save",
-        "tui-setup-keymap-ignored",
-        "voice-catalog-failed",
-        "voice-details-failed",
-        "voice-list-failed",
-        "voice-preview-failed",
-        "voice-remove-failed",
-        "writes-bookmark-not-saved",
-    ];
     // Messages whose error is a detail of something already said: the
     // file could not be opened, and the reason is the next step.
     const REASON_IS_THE_STEP: [&str; 3] = [
@@ -192,29 +144,18 @@ fn errors_get_a_next_step() {
         "tasks-could-not-open",
         "tui-could-not-open",
     ];
-    let known: BTreeSet<&str> = NO_NEXT_STEP_YET
-        .iter()
-        .chain(REASON_IS_THE_STEP.iter())
-        .copied()
-        .collect();
+    let known: BTreeSet<&str> = REASON_IS_THE_STEP.iter().copied().collect();
     let mut new = Vec::new();
-    let mut fixed = Vec::new();
     let mut period = Vec::new();
-    let all = messages();
-    for (id, v) in &all {
-        let v = v.trim_end();
-        if v.ends_with("{ $error }.") {
-            period.push(id.clone());
-        }
-        if !v.contains('\n') && v.ends_with("{ $error }") && !known.contains(id.as_str()) {
-            new.push(id.clone());
-        }
-    }
-    for id in NO_NEXT_STEP_YET {
-        if let Some((_, v)) = all.iter().find(|(i, _)| i == id)
-            && !v.trim_end().ends_with("{ $error }")
-        {
-            fixed.push(id);
+    for (tag, text) in std::iter::once(("en", ENGLISH)).chain(super::BUILTIN.iter().copied()) {
+        for (id, v) in messages_in(text) {
+            let v = v.trim_end();
+            if v.ends_with("{ $error }.") {
+                period.push(format!("{tag}: {id}"));
+            }
+            if !v.contains('\n') && v.ends_with("{ $error }") && !known.contains(id.as_str()) {
+                new.push(format!("{tag}: {id}"));
+            }
         }
     }
     assert!(
@@ -224,10 +165,6 @@ fn errors_get_a_next_step() {
     assert!(
         new.is_empty(),
         "an error with no next step (messages.md, rule 2): {new:?}"
-    );
-    assert!(
-        fixed.is_empty(),
-        "these now give a next step: take them off NO_NEXT_STEP_YET: {fixed:?}"
     );
 }
 

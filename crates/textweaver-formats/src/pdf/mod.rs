@@ -207,7 +207,7 @@ fn convert(
     if !found.links.is_empty() || !found.notes.is_empty() {
         let ix = locate::TextIndex::new(&text, &markers, &order);
         let comments = annots::apply(&found, &contents, &ix, &mut markers);
-        crate::annotations::record(meta, comments, 0);
+        crate::annotations::record(meta, comments, Vec::new());
     }
     if found.truncated {
         crate::add_warning(

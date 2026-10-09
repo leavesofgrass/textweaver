@@ -671,7 +671,11 @@ fn replace_all_heading_cycle_and_caret_echo() {
         "{effects:?}"
     );
     assert_eq!(r.app.list_accelerator('a'), Some(2));
+    assert_eq!(r.app.list_accelerator('x'), Some(5));
+    assert_eq!(r.app.list_accelerator('l'), Some(6));
     r.send(Command::Choose(2));
+    assert_eq!(r.said.last(), "Replace all 2 remaining matches? y or n");
+    r.send(Command::Confirm(Confirm::Yes));
     assert_eq!(r.text(), "bird bird dog\n");
     assert_eq!(r.said.last(), "Replaced 2 matches.");
     r.act(ActionId::Undo);
@@ -1133,4 +1137,135 @@ fn a_reload_is_not_offered_over_unsaved_changes_but_is_in_clean_edit_mode() {
     r.send(Command::Confirm(Confirm::Yes));
     assert!(r.app.is_editing());
     assert!(r.text().contains("Other words here."), "{}", r.text());
+}
+
+/// The items of the list a dispatch showed.
+fn shown(effects: &[Effect]) -> Vec<String> {
+    effects
+        .iter()
+        .find_map(|e| match e {
+            Effect::ShowList { items, .. } => Some(items.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("no list: {effects:?}"))
+}
+
+/// Relations between notes through the list keys every frontend sends
+/// (B1-g1): Space on a note opens its links; adding one by type (typed to
+/// filter) and target, in this document and in another library document;
+/// the counts in the notes list; "What links here"; removing after the
+/// question; every row's meaning in its first 40 characters.
+#[test]
+fn notes_link_to_notes_through_the_lists() {
+    use textweaver_app::list_model::ListKey;
+    let mut r = rig();
+    let text = "Alpha one here. Beta two here. Gamma three here.";
+    let a = r.file("a.txt", text);
+    r.app.open(&a).unwrap();
+    for (word, note) in [("Alpha", "Energy note"), ("Gamma", "Chapter note")] {
+        r.go(at(text, word));
+        r.send(Command::Notes(NoteCommand::Add));
+        r.send(Command::Answer(note.into()));
+    }
+    r.send(Command::Notes(NoteCommand::List));
+    let items = shown(&r.send(Command::ListKey(ListKey::Char(' '))));
+    assert_eq!(items, vec!["What links here: nothing yet", "Add a link"]);
+    assert!(
+        r.said.any("Links of Energy note: 0 out, 0 in."),
+        "{:?}",
+        r.said.all()
+    );
+    r.send(Command::ListKey(ListKey::End));
+    let types = shown(&r.send(Command::ListKey(ListKey::Enter)));
+    assert_eq!(types.len(), 10);
+    r.send(Command::ListKey(ListKey::Char('s')));
+    r.send(Command::ListKey(ListKey::Char('u')));
+    let filtered = shown(&r.send(Command::ListKey(ListKey::Char('p'))));
+    assert_eq!(filtered, vec!["supports"]);
+    let targets = shown(&r.send(Command::ListKey(ListKey::Enter)));
+    assert_eq!(targets, vec!["Chapter note", "A note in another document"]);
+    let links = shown(&r.send(Command::ListKey(ListKey::Enter)));
+    assert!(
+        r.said.any("Linked: supports Chapter note."),
+        "{:?}",
+        r.said.all()
+    );
+    assert_eq!(links[0], "supports: Chapter note");
+    // The notes list counts links both ways.
+    r.send(Command::ListKey(ListKey::Escape));
+    let notes = shown(&r.send(Command::Notes(NoteCommand::List)));
+    assert!(notes[0].ends_with("Links: 1 out, 0 in."), "{notes:?}");
+    assert!(notes[1].ends_with("Links: 0 out, 1 in."), "{notes:?}");
+    // What links to the second note.
+    r.send(Command::ListKey(ListKey::Down));
+    r.send(Command::ListKey(ListKey::Char(' ')));
+    let back = shown(&r.send(Command::ListKey(ListKey::Enter)));
+    assert_eq!(back, vec!["supports this, from: Energy note"]);
+    r.send(Command::ListKey(ListKey::Enter));
+    assert_eq!(r.app.session().unwrap().cursor, at(text, "Alpha"));
+
+    // From another document: the target is a library document's note.
+    let b = r.file("b.txt", "Week four starts here.");
+    r.app.open(&b).unwrap();
+    r.app.wait_for_writes();
+    r.send(Command::Notes(NoteCommand::Add));
+    r.send(Command::Answer("Week four note".into()));
+    r.go(CharPos(0));
+    r.send(Command::Notes(NoteCommand::Links));
+    r.send(Command::ListKey(ListKey::End));
+    r.send(Command::ListKey(ListKey::Enter));
+    for c in "cit".chars() {
+        r.send(Command::ListKey(ListKey::Char(c)));
+    }
+    let only_other = shown(&r.send(Command::ListKey(ListKey::Enter)));
+    assert_eq!(only_other, vec!["A note in another document"]);
+    let docs = shown(&r.send(Command::ListKey(ListKey::Enter)));
+    assert_eq!(docs.len(), 1, "{docs:?}");
+    assert!(docs[0].ends_with(", 2 notes"), "{docs:?}");
+    r.send(Command::ListKey(ListKey::Enter));
+    r.send(Command::ListKey(ListKey::Down));
+    let links = shown(&r.send(Command::ListKey(ListKey::Enter)));
+    assert!(
+        links[0].starts_with("cites: Chapter note, in "),
+        "{links:?}"
+    );
+    // Enter follows it into the other document, to the note.
+    r.send(Command::ListKey(ListKey::Home));
+    r.send(Command::ListKey(ListKey::Enter));
+    r.app.wait_for_writes();
+    let s = r.app.session().unwrap();
+    // Canonical paths: temp folders differ by short name (Windows) or /private (macOS).
+    let opened = s
+        .doc
+        .meta
+        .path
+        .as_deref()
+        .map(|p| std::fs::canonicalize(p).unwrap());
+    assert_eq!(opened, Some(std::fs::canonicalize(&a).unwrap()));
+    assert_eq!(s.cursor, at(text, "Gamma"));
+    let notes = shown(&r.send(Command::Notes(NoteCommand::List)));
+    assert!(notes[1].ends_with("Links: 0 out, 2 in."), "{notes:?}");
+
+    // Delete asks, then removes the link, and the file has it no more.
+    r.send(Command::ListKey(ListKey::Home));
+    r.send(Command::ListKey(ListKey::Char(' ')));
+    r.send(Command::ListKey(ListKey::Delete));
+    assert!(r.said.last().starts_with("Remove this link? y or n"));
+    let after = shown(&r.send(Command::Confirm(Confirm::Yes)));
+    assert!(
+        r.said.any("Link removed: supports Chapter note."),
+        "{:?}",
+        r.said.all()
+    );
+    assert_eq!(after, vec!["What links here: nothing yet", "Add a link"]);
+    let on_disk = StateStore::new(r.paths.state_dir())
+        .load(&DocKey::for_path(&a))
+        .unwrap();
+    assert!(on_disk.notes[0].relations.is_empty());
+    for line in r.said.all() {
+        if line.starts_with("supports") || line.starts_with("cites") || line.starts_with("Link") {
+            let head: String = line.chars().take(40).collect();
+            assert!(head.contains(':'), "meaning first: {line}");
+        }
+    }
 }

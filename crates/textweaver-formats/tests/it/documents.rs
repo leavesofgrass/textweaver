@@ -149,3 +149,104 @@ fn the_word_draft_carries_comments_and_changes() {
         "{said}"
     );
 }
+
+fn t1_fixture(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/t1")
+        .join(name)
+}
+
+#[test]
+fn every_tracked_change_is_recorded_with_its_author_and_date() {
+    use textweaver_formats::{ChangeKind, changes};
+    let registry = Registry::with_builtins();
+    let source = Source::Path(t1_fixture("changes.docx"));
+    let doc = registry.load(&source, &LoadOptions::default()).unwrap();
+    let text = doc.text().to_string();
+    assert_eq!(
+        text,
+        "Case Notes\n\nThe patient has acute renal failure.\n\nFluids were given every hour.\n\nCall the family.\n\nThen check the labs first. Repeat tomorrow."
+    );
+    let cs = changes(&doc.meta);
+    let kinds: Vec<ChangeKind> = cs.iter().map(|c| c.kind).collect();
+    assert_eq!(
+        kinds,
+        vec![
+            ChangeKind::Inserted,
+            ChangeKind::Deleted,
+            ChangeKind::MovedAway,
+            ChangeKind::MovedHere,
+            ChangeKind::Inserted,
+        ]
+    );
+    assert_eq!(revision_count(&doc.meta), 5);
+    let renal = &cs[0];
+    assert_eq!(doc.slice(renal.range).to_string(), "renal");
+    assert_eq!(renal.author, "Ada Example");
+    assert_eq!(renal.date, "2026-03-03T09:15:00Z");
+    assert_eq!(renal.id, "1");
+    assert_eq!(cs[1].text, "rarely");
+    assert!(cs[1].range.is_empty());
+    assert_eq!(cs[1].author, "Bo Example");
+    assert_eq!(cs[2].text, "Check the labs first.");
+    assert_eq!(
+        doc.slice(textweaver_core::CharRange::new(
+            cs[2].range.start.0,
+            cs[2].range.start.0 + 4
+        ))
+        .to_string(),
+        "Call",
+        "a deletion at a paragraph start sits after the break"
+    );
+    assert_eq!(doc.slice(cs[3].range).to_string(), "check the labs first");
+    assert_eq!(doc.slice(cs[4].range).to_string(), "Repeat tomorrow.");
+    assert!(cs[4].date.is_empty(), "no date is invented");
+    let threads = comments(&doc.meta);
+    assert_eq!(threads.len(), 2);
+    assert_eq!(doc.slice(threads[0].range).to_string(), "Call the family.");
+    assert_eq!(threads[0].replies.len(), 1);
+    assert!(threads[0].resolved);
+    assert!(threads[1].date.is_empty());
+
+    let said = registry.load(&source, &marked()).unwrap();
+    let said_text = said.text().to_string();
+    assert!(
+        said_text.contains("acute (inserted by Ada Example: renal) failure."),
+        "{said_text}"
+    );
+    let cs = changes(&said.meta);
+    assert_eq!(cs.len(), 5);
+    assert_eq!(
+        said.slice(cs[0].range).to_string(),
+        "(inserted by Ada Example: renal)"
+    );
+    assert_eq!(cs[0].text, "renal");
+    assert_eq!(
+        said.slice(cs[1].range).to_string(),
+        "(deleted by Bo Example: rarely)"
+    );
+}
+
+#[test]
+fn rtf_revision_times_are_read_as_dates() {
+    use textweaver_formats::changes;
+    // 2026-03-03 09:15, packed as Word's DTTM.
+    let packed = 15 | (9 << 6) | (3 << 11) | (3 << 16) | (126 << 20);
+    let rtf = format!(
+        "{{\\rtf1\\ansi{{\\*\\revtbl {{Unknown;}}{{Ada Example;}}}}\\pard The {{\\revised\\revauth1\\revdttm{packed} new }}plan.\\par}}"
+    );
+    let doc = Registry::with_builtins()
+        .load(
+            &Source::Bytes {
+                data: rtf.into_bytes(),
+                hint: "rtf".into(),
+            },
+            &LoadOptions::default(),
+        )
+        .unwrap();
+    let cs = changes(&doc.meta);
+    assert_eq!(cs.len(), 1);
+    assert_eq!(cs[0].author, "Ada Example");
+    assert_eq!(cs[0].date, "2026-03-03T09:15:00");
+    assert_eq!(doc.slice(cs[0].range).to_string(), "new");
+}

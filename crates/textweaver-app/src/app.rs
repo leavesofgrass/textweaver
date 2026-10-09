@@ -154,6 +154,9 @@ pub struct Session {
     /// The document text's stamp, saved with its positions so a change
     /// made outside textweaver is noticed on the next open.
     pub(crate) text_stamp: Option<textweaver_store::TextStamp>,
+    /// Changes accepted or rejected and comments changed while reviewing
+    /// (crate::changes), for writing back to the file.
+    pub(crate) review: crate::changes::Review,
     /// The text's revision: a number, unique in this process, that changes
     /// whenever [`doc`](Self::doc)'s text is replaced or edited (typing, a
     /// [`Command::ReplaceRange`], entering or leaving edit mode). Markers
@@ -193,6 +196,7 @@ impl Session {
             highlights: Vec::new(),
             disk: None,
             text_stamp: None,
+            review: crate::changes::Review::default(),
         }
     }
 
@@ -310,6 +314,11 @@ pub(crate) enum ListKind {
     HtmlTheme(crate::authoring_state::ThemeFor, Vec<String>),
     /// Prompts with hidden answers: the self-test (crate::reveal).
     Reveal(crate::reveal::RevealList),
+    /// The tracked changes and comments, by row (crate::changes).
+    Changes(Vec<crate::changes::Row>),
+    /// A note's links, what links to it, or a step of adding one
+    /// (crate::relations, B1-g1).
+    Relations(crate::relations::RelationsList),
 }
 
 /// The application: the only owner of mutable state.
@@ -392,6 +401,8 @@ pub struct App {
     /// asked before replacing a file, so the app does not ask again.
     pub(crate) save_as_replace_confirmed: bool,
     pub(crate) replace_query: Option<String>,
+    /// How Find and Replace match, for the session.
+    pub(crate) search: crate::SearchOptions,
     pub(crate) pending_item: Option<usize>,
     /// An action waiting for a yes or no ([`ActionId::needs_confirmation`]).
     pub(crate) pending_confirm: Option<ActionId>,
@@ -516,6 +527,9 @@ pub struct App {
     /// Optional components: the registry, questions, and downloads
     /// (crate::components).
     pub(crate) components: crate::components::ComponentsState,
+    /// Relations between notes: the filter and the library's notes
+    /// (crate::relations, B1-g1).
+    pub(crate) relations: crate::relations::RelationsState,
 }
 
 impl App {
@@ -581,6 +595,7 @@ impl App {
             suggested_path: None,
             save_as_replace_confirmed: false,
             replace_query: None,
+            search: crate::SearchOptions::default(),
             pending_item: None,
             pending_confirm: None,
             pending_import: None,
@@ -639,6 +654,7 @@ impl App {
             sync: crate::sync::SyncState::default(),
             fonts: crate::font_download::FontDownloads::default(),
             components: crate::components::ComponentsState::default(),
+            relations: crate::relations::RelationsState::default(),
         };
         if app.paths.is_some() {
             // The writers find a downloaded Lexend by name.
@@ -737,7 +753,7 @@ impl App {
         }
         if let Some((kind, _)) = &self.pending_list_delete {
             return Some(match kind {
-                ListKind::Highlights => V::Remove,
+                ListKind::Highlights | ListKind::Relations(_) => V::Remove,
                 _ => V::Delete,
             });
         }
@@ -805,6 +821,8 @@ impl App {
                     self.list = Some(kind.clone());
                     match kind {
                         ListKind::Highlights => self.delete_highlight(n),
+                        ListKind::Changes(rows) => self.delete_comment_row(&rows, n),
+                        ListKind::Relations(l) => self.remove_relation(&l, n),
                         _ => self.delete_note(n),
                     }
                 }
@@ -814,6 +832,8 @@ impl App {
                     self.tell(&msg);
                     match kind {
                         ListKind::Highlights => self.list_highlights(),
+                        ListKind::Changes(_) => self.list_changes(),
+                        ListKind::Relations(l) => self.reshow_relations(&l),
                         _ => self.notes_command(NoteCommand::List),
                     }
                 }
@@ -1102,7 +1122,11 @@ impl App {
         // The recent list and the bookshelf, on the writer.
         let details = self.record_library_open_doc(path, &title, &doc);
         let rope = doc.text().clone();
+        let braille = crate::braille_file::untranslated_braille(&doc);
         let effects = self.open_document_stamped(doc, key, title, text);
+        if braille {
+            self.say_braille_untranslated();
+        }
         if let Some(s) = self.session.as_mut() {
             s.disk = stamp;
         }
@@ -1500,6 +1524,12 @@ impl App {
                 self.run_find(&pattern);
                 vec![Effect::Redraw]
             }
+            Command::SetSearchOptions(opts) => self.set_search_options(opts),
+            Command::StartReplace { find, with } => {
+                self.leave_prompt();
+                self.start_replace_command(find, with)
+            }
+            Command::ReplaceStep(step) => self.replace_step(step),
             Command::GoTo(target) => {
                 self.leave_prompt();
                 self.go_to(target);
@@ -1675,7 +1705,13 @@ impl App {
         } else {
             crate::study::prompt_label(&self.study.catalog, purpose)
         };
-        let said = self.path_prompt_said(purpose, &label);
+        let mut said = self.path_prompt_said(purpose, &label);
+        if matches!(purpose, PromptPurpose::Find | PromptPurpose::ReplaceFind)
+            && let Some(options) = self.search_options_said()
+        {
+            // "Find. Options on: regular expression."
+            said = format!("{said}. {options}");
+        }
         if purpose == PromptPurpose::CommandPalette
             && self.settings.speech.verbosity >= Verbosity::Normal
         {
@@ -1760,6 +1796,8 @@ impl App {
             PromptPurpose::SettingValue => return self.answer_setting_value(text),
             PromptPurpose::SyncComputerName => return self.answer_sync_name(text),
             PromptPurpose::DocumentDetails => return self.answer_details(text),
+            PromptPurpose::CommentReply => return self.answer_comment_reply(text),
+            PromptPurpose::CommentText => return self.answer_new_comment(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {
@@ -1815,6 +1853,8 @@ impl App {
             }
             Some(ListKind::Summary(ranges)) => self.choose_summary_sentence(&ranges, n),
             Some(ListKind::Reveal(l)) => return self.choose_reveal(l, n),
+            Some(ListKind::Changes(rows)) => self.choose_change_row(&rows, n),
+            Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1836,6 +1876,20 @@ impl App {
             }
             Some(ListKind::Study(l)) => self.delete_study_item(l, n),
             Some(ListKind::Components(l)) => self.delete_component_row(l, n),
+            Some(ListKind::Changes(rows)) => {
+                if !matches!(rows.get(n), Some(crate::changes::Row::Comment(_))) {
+                    let msg = self.msg("changes-not-a-comment");
+                    self.tell(&msg);
+                    return self.list_changes();
+                }
+                let kind = ListKind::Changes(rows);
+                let question = self.msg(list_delete_question(&kind));
+                self.list = None;
+                self.pending_list_delete = Some((kind, n));
+                self.ask(&question);
+                vec![Effect::Redraw]
+            }
+            Some(ListKind::Relations(l)) => self.delete_relation_item(l, n),
             _ => {
                 let msg = self.msg("study-nothing-to-delete");
                 self.tell(&msg);
@@ -1863,6 +1917,9 @@ impl App {
     fn mark_item(&mut self, n: usize) -> Vec<Effect> {
         match self.list.clone() {
             Some(ListKind::Voices) => self.toggle_favourite_voice(n),
+            Some(ListKind::Changes(rows)) => self.toggle_comment_resolved(&rows, n),
+            // Space on a note opens its links (crate::relations).
+            Some(ListKind::Notes) => self.note_links(n),
             Some(ListKind::Components(l)) => {
                 self.list = None;
                 self.mark_component_row(l, n)
@@ -1908,6 +1965,8 @@ impl App {
                 e
             }
             Some(ListKind::Study(l)) => self.rename_study_item(l, n),
+            Some(ListKind::Changes(rows)) => self.reply_comment_prompt(&rows, n),
+            Some(ListKind::Relations(l)) => self.edit_relation_item(l, n),
             _ => {
                 let msg = self.msg("study-nothing-to-rename");
                 self.tell(&msg);
@@ -1983,6 +2042,7 @@ impl App {
             A::ReadingPass => self.cycle_reading_pass(),
             A::DefineWord => return self.define_word(),
             A::Summarize => return self.summarize(),
+            A::ShowOriginalBraille => return self.show_original_braille(),
             A::ReadingStatistics => return self.reading_statistics(),
             A::SettingsProfiles => return self.settings_profiles(),
             A::ToggleCitations => self.toggle_citations(),
@@ -2122,9 +2182,14 @@ impl App {
             A::Find => return self.prompt(PromptPurpose::Find),
             A::FindNext => return self.find_step(textweaver_core::Direction::Forward),
             A::FindPrevious => return self.find_step(textweaver_core::Direction::Backward),
+            A::SearchOptions => return self.search_options_list(),
             // Bookmarks
             A::AddNote => return self.notes_command(NoteCommand::Add),
             A::ListNotes => return self.notes_command(NoteCommand::List),
+            A::ListChanges => return self.list_changes(),
+            A::AcceptAllChanges => return self.decide_all(true, None),
+            A::RejectAllChanges => return self.decide_all(false, None),
+            A::AddComment => return self.prompt(PromptPurpose::CommentText),
             A::NextNote => return self.notes_command(NoteCommand::Next),
             A::PreviousNote => return self.notes_command(NoteCommand::Previous),
             A::HighlightSelection => return self.notes_command(NoteCommand::ToggleHighlight),
@@ -2272,6 +2337,8 @@ impl App {
 fn list_delete_question(kind: &ListKind) -> &'static str {
     match kind {
         ListKind::Highlights => "notes-remove-highlight-question",
+        ListKind::Changes(_) => "changes-delete-comment-question",
+        ListKind::Relations(_) => "relations-remove-question",
         _ => "notes-delete-note-question",
     }
 }

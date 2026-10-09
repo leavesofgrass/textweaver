@@ -937,6 +937,20 @@ pub const INFO: &[Info] = &[
     ),
     // [export]
     choice(
+        "export.audio_format",
+        "Audio export format",
+        "The format Export audio lists first. tw export-audio also uses it for a file name with no extension.",
+        &[
+            ("flac", "FLAC"),
+            ("mp3", "MP3"),
+            ("opus", "Opus"),
+            ("ogg", "Ogg Vorbis"),
+            ("wav", "WAV"),
+            ("m4b", "M4B audiobook"),
+            ("mp4", "MP4 video with captions"),
+        ],
+    ),
+    choice(
         "export.subtitle_format",
         "Subtitle format",
         "The format of subtitles written without a file name.",
@@ -983,6 +997,12 @@ pub const INFO: &[Info] = &[
             ("listed", "listed"),
             ("stairstep", "stairstep"),
         ],
+    ),
+    choice(
+        "braille.brf_code",
+        "Braille code of BRF files",
+        "The braille code BRF files are read in. UEB is for books made since 2016; EBAE, English Braille American Edition, is for older books. Reading a BRF file as print needs liblouis. Open the file again after a change.",
+        &[("ueb", "UEB"), ("ebae", "EBAE")],
     ),
     // [reading_aids]
     number(
@@ -1531,7 +1551,12 @@ pub const INFO: &[Info] = &[
             ("ask", "ask"),
         ],
     ),
-    // [components] (W8a-d)
+    // [components] (W8a-d; source, beta 1)
+    text(
+        "components.source",
+        "Components source",
+        "Your own components, used first. A GitHub repository as owner/name, or a folder on this computer. Empty uses none. Never put a password here.",
+    ),
     text(
         "components.mirror",
         "Components mirror",

@@ -82,7 +82,7 @@ define-nothing-here = No hay ninguna palabra en el cursor.
 define-not-found = No se encontró ninguna definición de { $word }.
 define-no-dictionary = El archivo del diccionario no está instalado, así que solo se buscó en su glosario. La guía de lectura explica cómo instalarlo.
 define-dictionary-damaged = No se pudo leer el archivo del diccionario: { $error } Solo se busca en su glosario.
-define-glossary-problem = No se pudo leer su glosario: { $error }
+define-glossary-problem = No se pudo leer su glosario: { $error } Solo se busca en el diccionario.
 define-glossary-skipped =
     { $n ->
         [one] 1 línea de su glosario no tiene definición y se omitió.
@@ -132,7 +132,7 @@ profile-needs-name = Un perfil necesita un nombre.
 profile-exists = Ya existe un perfil llamado { $name }.
 profiles-not-an-export = { $detail }
 profiles-no-persistence = Los perfiles no se guardan en esta sesión.
-profiles-read-failed = No se pudo leer el archivo de perfiles, así que se trata como vacío: { $error }
+profiles-read-failed = No se pudo leer el archivo de perfiles, así que se trata como vacío: { $error } Guardar un perfil reemplaza el archivo.
 profiles-save-failed = No se pudieron guardar los perfiles: { $error } Compruebe que se puede escribir en la carpeta de configuración.
 profiles-none-to-export = Todavía no hay perfiles para exportar.
 profiles-exported =
@@ -140,7 +140,7 @@ profiles-exported =
         [one] Se exportó 1 perfil a { $file }.
        *[other] Se exportaron { $n } perfiles a { $file }.
     }
-profiles-export-failed = No se pudieron exportar los perfiles: { $error }
+profiles-export-failed = No se pudieron exportar los perfiles: { $error } Compruebe que se puede escribir en la carpeta.
 profiles-imported =
     { $n ->
         [0] No había perfiles en { $file }.
@@ -409,7 +409,7 @@ playback-no-selection = No hay selección.
 playback-speech-died = La voz dejó de funcionar ({ $reason }). { $next }
 playback-done-reading = Lectura terminada.
 playback-speech-restarted = Voz reiniciada: { $reason }. Continúa la lectura desde la última palabra.
-playback-speech-error = Error de voz: { $error }
+playback-speech-error = Error de voz: { $error } Vuelva a intentarlo, o use la orden Reiniciar la voz.
 playback-end-of-section = Fin de la sección. { $key } para seguir.
 playback-time-up =
     { $minutes ->
@@ -732,6 +732,7 @@ action-cycle-punctuation = Recorrer cuánta puntuación se dice: ninguna, algo, 
 action-find = Buscar texto en el documento
 action-find-next = Buscar la coincidencia siguiente
 action-find-previous = Buscar la coincidencia anterior
+action-search-options = Elegir cómo buscan Buscar y Reemplazar: mayúsculas, palabras completas, expresión regular, a través de líneas
 action-next-misspelling = Ir a la palabra mal escrita siguiente, y deletrearla
 action-previous-misspelling = Ir a la palabra mal escrita anterior, y deletrearla
 action-spelling-suggestions = Listar sugerencias para la palabra mal escrita en el cursor, o agregarla a su lista de palabras
@@ -848,7 +849,7 @@ restart-restarting = Reiniciando la voz.
 restart-not-here = La voz no se puede reiniciar aquí.
 restart-already = La voz ya se está reiniciando.
 # $error is the system's reason, in its own words.
-restart-failed = No se pudo reiniciar la voz: { $error }
+restart-failed = No se pudo reiniciar la voz: { $error } Espere un momento y vuelva a intentarlo.
 restart-start-failed = No se pudo reiniciar la voz: no se pudo iniciar.
 restart-no-engine = No hay ningún motor de voz disponible; { -brand } permanece en silencio. Consulte Troubleshooting, No speech at all, en la documentación.
 restart-done-silent = Se reinició la voz, pero no hay ningún motor de voz disponible; { -brand } permanece en silencio.
@@ -885,12 +886,12 @@ settingsio-import-question =
 settingsio-no-persistence = La configuración no se guarda en esta sesión, así que no se puede exportar ni importar.
 # $path is the file written.
 settingsio-exported = Configuración exportada a { $path }.
-settingsio-export-failed = No se pudo exportar la configuración: { $error }
+settingsio-export-failed = No se pudo exportar la configuración: { $error } Compruebe que se puede escribir en la carpeta.
 # $path is the file; $error the system's reason.
-settingsio-read-failed = No se pudo leer { $path }: { $error }
+settingsio-read-failed = No se pudo leer { $path }: { $error } Compruebe el archivo y vuelva a importar.
 settingsio-nothing-to-import = Nada que importar: su configuración ya coincide con ese archivo.
 settingsio-cancelled-unchanged = Cancelado. No se cambió nada.
-settingsio-import-failed = No se pudo importar la configuración: { $error }
+settingsio-import-failed = No se pudo importar la configuración: { $error } Compruebe que se puede escribir en la carpeta de configuración.
 # $summary lists what changed (from the settings store, in English).
 settingsio-imported = Configuración importada. { $summary }
 settingsio-backend-next-start = El nuevo motor de voz se usará a partir del próximo inicio.
@@ -909,6 +910,9 @@ opening-damaged-odt = no es un archivo de texto OpenDocument legible; puede esta
 opening-damaged-latex = no es un archivo LaTeX legible; puede estar dañado o ser demasiado grande.
 opening-damaged-email = no es un mensaje de correo legible; puede estar dañado o ser demasiado grande.
 opening-damaged-mhtml = no es una página web archivada legible; puede estar dañada o ser demasiado grande.
+opening-pdf-password = está protegido con contraseña. Quite la contraseña en un programa de PDF y vuelva a abrirlo.
+opening-old-office = es un archivo antiguo de Microsoft Office. Guárdelo en un formato más nuevo, como .docx, y abra ese.
+opening-rar = es un archivo RAR, que no se abre. Extráigalo primero, o use ZIP o 7z.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = No se pudo abrir { $name }: { $reason }
 opening-started = Abriendo { $name }. Escape cancela.
@@ -996,7 +1000,7 @@ voices-language-zh = chino
 voice-sample = El veloz murciélago hindú comía feliz cardillo y kiwi.
 voice-list-title = Elegir una voz
 voice-still-loading = Las voces todavía se están cargando. La lista se abre cuando estén listas.
-voice-list-failed = No se pudieron listar las voces: { $error }
+voice-list-failed = No se pudieron listar las voces: { $error } Elija otro motor en el menú Voz.
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
 voice-manager-intro = Gestor de voces. { $shown } Intro usa una voz y dice una muestra, o la descarga; { $preview } prueba una voz; Espacio marca una favorita; Suprimir elimina una voz descargada; Escape cierra.
@@ -1011,7 +1015,7 @@ voice-preview-starting = Prueba: { $voice }, iniciando { $engine }.
 voice-preview-not-installed = { $voice } aún no está descargada. Intro la descarga, tras una pregunta.
 voice-preview-unavailable = { $engine } no puede iniciarse aquí para una prueba. Intro cambia a ese motor.
 voice-preview-engine-failed = No se pudo iniciar { $engine } para probar { $voice }.
-voice-preview-failed = No se pudo probar { $voice }: { $error }
+voice-preview-failed = No se pudo probar { $voice }: { $error } Pruebe otra voz.
 # $keys names the Choose Voice key.
 voice-ready = Las voces están listas. { $keys } las lista.
 voice-fetch-catalog-question = ¿Descargar la lista de voces de Piper, unos 250 kilobytes, desde Hugging Face? y o n
@@ -1029,14 +1033,14 @@ voice-only-piper-removable = Solo se pueden quitar las voces de Piper descargada
 voice-download-question = { $plan } y o n
 voice-in-use = { $voice } es la voz en uso. Elija otra voz primero.
 voice-removed = { $voice } quitada.
-voice-remove-failed = No se pudo quitar { $voice }: { $error }
+voice-remove-failed = No se pudo quitar { $voice }: { $error } Compruebe que se puede escribir en su carpeta.
 voice-downloading-catalog = Descargando la lista de voces de Piper.
 voice-downloading = Descargando { $voice }.
 voice-downloading-percent = Descargando { $voice }, { $pct } por ciento.
-voice-details-failed = No se pudieron leer los detalles de la voz: { $error }
+voice-details-failed = No se pudieron leer los detalles de la voz: { $error } Compruebe la conexión y vuelva a intentarlo.
 voice-download-stopped = La descarga se detuvo.
 voice-catalog-fetched = La lista de voces de Piper tiene { $voices } voces en { $languages } idiomas. El comando Voces las lista.
-voice-catalog-failed = No se pudo descargar la lista de voces: { $error }
+voice-catalog-failed = No se pudo descargar la lista de voces: { $error } Compruebe la conexión y vuelva a intentarlo.
 # $licence describes the voice's licence, in a sentence of its own.
 voice-installed = { $voice } está instalada. { $licence } El comando Voces la lista.
 voice-download-failed = No se pudo descargar { $voice }: { $error } Elija la voz de nuevo para reintentar.
@@ -1069,16 +1073,16 @@ voice-line-numbers-off = Números de línea desactivados.
 common-no-document = No hay ningún documento abierto.
 # Said after "Could not export:", so it starts in lower case. $path is a
 # folder or a file; $error the system's reason.
-publish-cannot-write-to = no se puede escribir en { $path }: { $error }
-publish-cannot-write = no se puede escribir { $path }: { $error }
-publish-start-failed = No se pudo iniciar la exportación: { $error }
-publish-export-error = No se pudo exportar: { $error }
+publish-cannot-write-to = no se puede escribir en { $path }: { $error } Compruebe que se puede escribir en la carpeta.
+publish-cannot-write = no se puede escribir { $path }: { $error } Compruebe que se puede escribir en su carpeta.
+publish-start-failed = No se pudo iniciar la exportación: { $error } Espere un momento y vuelva a intentarlo.
+publish-export-error = No se pudo exportar: { $error } Corríjalo y vuelva a exportar.
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = Exportando a { $format }.
 publish-theme-title = Tema para la página HTML
 publish-theme-intro = ¿Tema para la página HTML? { $first } primero, { $n } opciones. Escape cancela.
 publish-writing-preview = Escribiendo la vista previa.
-publish-preview-error = No se pudo escribir la vista previa: { $error }
+publish-preview-error = No se pudo escribir la vista previa: { $error } Corríjalo y vuelva a abrir la vista previa.
 publish-still-exporting =
     { $secs ->
         [one] Todavía exportando a { $format }, { $secs } segundo.
@@ -1101,8 +1105,8 @@ publish-live-on = Vista previa en vivo activada: la vista previa también se rec
 publish-live-on-needs-reload = Vista previa en vivo activada. Funciona con la recarga automática, que está desactivada; actívela con Recargar la vista previa sola.
 publish-live-off = Vista previa en vivo desactivada: la vista previa se recarga solo tras guardar.
 # $error is the converter's reason.
-publish-export-failed = Error al exportar a { $format }: { $error }
-publish-preview-failed = Error en la vista previa: { $error }
+publish-export-failed = Error al exportar a { $format }: { $error } Pruebe otro formato.
+publish-preview-failed = Error en la vista previa: { $error } Guarde para volver a intentarlo.
 # The converter's warnings: how many, and the first one.
 publish-warnings =
     { $n ->
@@ -1124,7 +1128,7 @@ publish-preview-written = Vista previa escrita. Abriéndola en el navegador. Gua
 publish-preview-updated = Vista previa actualizada.
 publish-preview-updated-press-f5 = Vista previa actualizada. Pulse F5 en el navegador.
 publish-server-failed = No se pudo iniciar el servidor de recarga de la vista previa ({ $error }); se abre el archivo en su lugar.
-publish-render-failed = No se pudo representar el texto: { $error }
+publish-render-failed = No se pudo representar el texto: { $error } Salga del modo de edición para leer el texto.
 publish-nothing-after-caret = Nada que leer después del cursor.
 publish-listening = Escuchando el texto representado.
 
@@ -1150,8 +1154,8 @@ notes-none = Sin notas. Para agregar una: { $key }.
 notes-list-title = Notas
 notes-list-intro =
     { $n ->
-        [one] Notas, 1 elemento. Intro va a una nota, Suprimir la elimina, F2 la edita.
-       *[other] Notas, { $n } elementos. Intro va a una nota, Suprimir la elimina, F2 la edita.
+        [one] Notas, 1 elemento. Intro va a una nota, Suprimir la elimina, F2 la edita, Espacio abre sus enlaces.
+       *[other] Notas, { $n } elementos. Intro va a una nota, Suprimir la elimina, F2 la edita, Espacio abre sus enlaces.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. En: { $anchor }
@@ -1185,6 +1189,72 @@ notes-highlight-label = Resaltado
 notes-signal = Nota: { $text }
 # Said after moving onto a note's passage.
 notes-has-note = Tiene una nota: { $text }
+
+## Relations between notes (the knowledge graph as lists).
+
+relations-type-conflicts-with = está en conflicto con
+relations-type-supports = respalda
+relations-type-is-example-of = es un ejemplo de
+relations-type-cites = cita
+relations-type-contradicts = contradice
+relations-type-defines = define
+relations-type-extends = amplía
+relations-type-see-also = véase también
+relations-type-precedes = precede a
+relations-type-follows = sigue a
+relations-count = Enlaces: { $out } salientes, { $in } entrantes.
+relations-note-title = Enlaces de: { $note }
+relations-title-filtered = { $title }, filtro: { $filter }
+relations-note-intro = Enlaces de { $note }: { $out } salientes, { $in } entrantes. Intro sigue un enlace, F2 lo cambia, Suprimir lo quita. Escriba para filtrar por tipo.
+relations-out-item = { $type }: { $target }
+relations-target-in = { $note }, en { $doc }
+relations-target-missing = una nota no encontrada
+relations-empty-note = Nota vacía
+relations-incoming-row =
+    { $n ->
+        [0] Qué enlaza aquí: nada aún
+        [one] Qué enlaza aquí: 1 nota
+       *[other] Qué enlaza aquí: { $n } notas
+    }
+relations-add-row = Añadir un enlace
+relations-backlinks-title = Qué enlaza aquí: { $note }
+relations-backlinks-intro =
+    { $n ->
+        [one] Qué enlaza a { $note }: 1 nota. Intro va a ella. Escriba para filtrar por tipo.
+       *[other] Qué enlaza a { $note }: { $n } notas. Intro va a una. Escriba para filtrar por tipo.
+    }
+relations-backlink-item = { $type } esta, desde: { $note }
+relations-none-in = Todavía nada enlaza a esta nota.
+relations-types-title = Tipo de enlace para: { $note }
+relations-types-intro = Elija el tipo de enlace, 10 tipos. Escriba para filtrar.
+relations-targets-title = { $type }: ¿qué nota?
+relations-targets-intro =
+    { $n ->
+        [0] No hay otra nota aquí. Elija una nota de otro documento.
+        [one] Elija la nota de destino: 1 nota. Intro la enlaza.
+       *[other] Elija la nota de destino: { $n } notas. Intro la enlaza.
+    }
+relations-other-document-row = Una nota de otro documento
+relations-documents-title = Documentos con notas
+relations-documents-intro = Documentos con notas: { $n }. Intro muestra las notas de un documento.
+relations-document-item =
+    { $n ->
+        [one] { $title }, 1 nota
+       *[other] { $title }, { $n } notas
+    }
+relations-no-other-documents = Ningún otro documento de la biblioteca tiene notas.
+relations-linked = Enlazado: { $type } { $target }.
+relations-changed = Enlace cambiado: { $type } { $target }.
+relations-already = Ya enlazado: { $type } { $target }.
+relations-removed = Enlace quitado: { $type } { $target }.
+relations-remove-question = ¿Quitar este enlace? y o n
+relations-nothing-to-remove = Aquí solo se puede quitar un enlace.
+relations-note-gone = Nota no encontrada: se eliminó o su documento ya no está.
+relations-document-missing = Documento no encontrado: { $file }.
+relations-no-note-here = No hay ninguna nota aquí. Los enlaces pertenecen a notas; añada una: { $key }.
+relations-filter-cleared = Filtro borrado, { $n } mostrados.
+relations-filter-none = Nada coincide con { $filter }.
+relations-filter-matched = Filtro { $filter }: { $n } mostrados.
 
 ## Bookmarks: rename and delete.
 
@@ -1220,7 +1290,7 @@ notes-study-sheet-saved-both =
         [one] 1 resaltado
        *[other] { $h } resaltados
     } guardada como { $file }. ¿Abrirla? y o n. En { $folder }.
-notes-study-sheet-failed = No se pudo escribir la hoja de estudio: { $error }
+notes-study-sheet-failed = No se pudo escribir la hoja de estudio: { $error } Compruebe que se puede escribir en la carpeta.
 # The study sheet file's own text (Markdown; the # marks stay in the code).
 notes-sheet-title = Hoja de estudio: { $title }
 notes-sheet-exported = Exportado desde { -brand } el { $date }.
@@ -1250,7 +1320,7 @@ reveal-no-dictation = Responder en voz alta necesita el dictado, que no está en
 
 ## Find, bookmarks, and selection.
 
-marks-cannot-search = No se puede buscar: { $error }
+marks-cannot-search = No se puede buscar: { $error } Compruebe el patrón entre las barras.
 # $pattern is the text searched for.
 marks-no-matches = Sin coincidencias para { $pattern }.
 # The label of a match reached by Find, at high verbosity; $number is its place among $n matches.
@@ -1432,27 +1502,27 @@ citations-picker-intro =
     }
 # $text is what was typed at the locator prompt.
 citations-locator-unreadable = No se pudo leer el localizador { $text }. Escriba una página como 12, páginas como 3-5, o capítulo 2; Intro sola para ninguno.
-citations-insert-failed = No se pudo insertar la cita: { $error }
+citations-insert-failed = No se pudo insertar la cita: { $error } El texto no ha cambiado.
 # $what is the identifier being looked up, as the citation library describes it.
 citations-looking-up = Buscando { $what }.
-citations-lookup-not-started = No se pudo iniciar la búsqueda: { $error }
+citations-lookup-not-started = No se pudo iniciar la búsqueda: { $error } Espere un momento y vuelva a intentarlo.
 # $input is the DOI or ISBN as typed.
-citations-lookup-failed = No se pudo buscar { $input }: { $error }
+citations-lookup-failed = No se pudo buscar { $input }: { $error } Compruebe el DOI o el ISBN y la conexión.
 citations-no-library-to-add-to = No hay ninguna biblioteca a la que agregar: { -brand } no guarda archivos en esta sesión.
-citations-library-save-failed = No se pudo guardar la biblioteca: { $error }
+citations-library-save-failed = No se pudo guardar la biblioteca: { $error } Compruebe que se puede escribir en su carpeta.
 # $n is how many citations the document has.
 citations-found-no-library =
     { $n ->
         [one] Se encontró { $n } cita. { -brand } no guarda biblioteca en esta sesión.
        *[other] Se encontraron { $n } citas. { -brand } no guarda biblioteca en esta sesión.
     }
-citations-check-failed = No se pudieron comprobar las citas: { $error }
+citations-check-failed = No se pudieron comprobar las citas: { $error } Compruebe el archivo de la biblioteca de referencias.
 citations-no-library-to-import-into = No hay ninguna biblioteca a la que importar: { -brand } no guarda archivos en esta sesión.
 # $file is the file's path.
-citations-import-failed = No se pudo importar { $file }: { $error }
+citations-import-failed = No se pudo importar { $file }: { $error } Compruebe que sea un archivo .bib, .ris o .json.
 # $style is the style's name from the front matter, such as apa.
-citations-style-unusable = No se puede usar el estilo de cita { $style }: { $error }
-citations-format-failed = No se pudieron formatear las citas: { $error }
+citations-style-unusable = No se puede usar el estilo de cita { $style }: { $error } Compruebe el nombre del estilo al principio del documento.
+citations-format-failed = No se pudieron formatear las citas: { $error } Compruebe las claves de cita y la biblioteca.
 # $key names the Insert Citation command's keys.
 citations-none-yet = El documento todavía no tiene citas. Inserte una con { $key }.
 citations-nothing-to-list = Ninguna de las obras citadas está en su biblioteca, así que no hay nada que listar.
@@ -1464,7 +1534,7 @@ citations-bibliography-inserted =
     }
 # Follows citations-bibliography-inserted; $keys are citation keys joined with commas.
 citations-not-in-library = No están en la biblioteca: { $keys }.
-citations-bibliography-insert-failed = No se pudo insertar la bibliografía: { $error }
+citations-bibliography-insert-failed = No se pudo insertar la bibliografía: { $error } El texto no ha cambiado.
 
 ## Speech Cursor mode.
 
@@ -1669,7 +1739,7 @@ settings-choose-one-of = Elija una de estas opciones: { $names }.
 settings-edit-table = Edite { $label } en settings.toml; contiene nombres y valores.
 # $path is a key such as speech.rate, not translated.
 settings-no-such-setting = No existe la opción { $path }.
-settings-cannot-be = { $label } no puede ser eso: { $error }
+settings-cannot-be = { $label } no puede ser eso: { $error } Elija otro valor.
 settings-changed = { $label }, { $value }.
 settings-clamped = Fuera de rango, así que se usa el valor más cercano.
 settings-restart-speech = Reinicie la voz para usarlo.
@@ -1960,6 +2030,15 @@ setting-accessibility-cursor = Cursor
 setting-accessibility-cursor-help = Dónde espera el cursor del terminal. En lo que está trabajando, o en la línea de estado.
 choice-accessibility-cursor-follow = sigue al foco
 choice-accessibility-cursor-status = en la línea de estado
+setting-export-audio-format = Formato de exportación de audio
+setting-export-audio-format-help = El formato que Exportar audio ofrece primero. tw export-audio también lo usa para nombres de archivo sin extensión.
+choice-export-audio-format-flac = FLAC
+choice-export-audio-format-mp3 = MP3
+choice-export-audio-format-opus = Opus
+choice-export-audio-format-ogg = Ogg Vorbis
+choice-export-audio-format-wav = WAV
+choice-export-audio-format-m4b = Audiolibro M4B
+choice-export-audio-format-mp4 = Vídeo MP4 con subtítulos
 setting-export-subtitle-format = Formato de subtítulos
 setting-export-subtitle-format-help = El formato de los subtítulos escritos sin nombre de archivo.
 choice-export-subtitle-format-srt = SubRip
@@ -2293,11 +2372,11 @@ edit-pasted-start =
         [one] Se pegó 1 carácter: { $start }
        *[other] Se pegaron { $n } caracteres: { $start }
     }
-edit-insert-failed = No se pudo insertar: { $error }
+edit-insert-failed = No se pudo insertar: { $error } El texto no ha cambiado.
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = No se pueden cambiar los caracteres { $start } a { $end }: el texto tiene { $len }.
-edit-change-failed = No se pudo cambiar el texto: { $error }
-edit-delete-failed = No se pudo eliminar: { $error }
+edit-change-failed = No se pudo cambiar el texto: { $error } El texto no ha cambiado.
+edit-delete-failed = No se pudo eliminar: { $error } El texto no ha cambiado.
 edit-list-ended = Lista terminada.
 # Said when Enter continues a bulleted list.
 edit-bullet = viñeta
@@ -2384,7 +2463,7 @@ edit-nothing-to-redo = Nada que rehacer.
 edit-not-a-table-size = No es un tamaño de tabla: { $text }. Escriba columnas y filas, por ejemplo 3 por 2.
 # $name is the image's file name.
 edit-image-inserted = Se insertó la imagen { $name }. Su descripción está seleccionada; escriba para reemplazarla.
-edit-image-failed = No se pudo insertar la imagen: { $error }
+edit-image-failed = No se pudo insertar la imagen: { $error } El texto no ha cambiado.
 # $query is the text to find.
 common-no-matches = Sin coincidencias para { $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -2411,19 +2490,22 @@ edit-recovery-postponed = Recuperación aplazada. El trabajo sin guardar se ofre
 
 # $title is replace-match-title. Keep the letters r, s and a: they are the
 # keys that answer.
-replace-match-question = { $title }. Pulse r para reemplazar, s para omitir, a para reemplazar todo, Escape para detener.
+replace-match-question = { $title }. La línea: { $context }. Pulse r para reemplazar, s para omitir, a para reemplazar todo, Escape para detener.
 # The replace list's title when no match is being asked about.
 replace-title = Reemplazar
 # $n is this match's number, $total the number of matches, $line the line
-# number, and $context the text of that line.
-replace-match-title = Coincidencia { $n } de { $total }, línea { $line }: { $context }
+# number, $found the matched text, and $result what it becomes (both
+# shortened); the -removed form is for an empty replacement. $context in
+# replace-match-question is the text of the match's line.
+replace-match-title = Coincidencia { $n } de { $total }, línea { $line }: { $found } pasa a { $result }
+replace-match-title-removed = Coincidencia { $n } de { $total }, línea { $line }: se elimina { $found }
 replace-item-this = Reemplazar esta
 replace-item-skip = Omitir esta
 replace-item-rest = Reemplazar todas las demás
 # $state is common-on or common-off.
 replace-item-match-case = Distinguir mayúsculas: { $state }
 replace-item-whole-words = Solo palabras completas: { $state }
-replace-failed = No se pudo reemplazar: { $error }
+replace-failed = No se pudo reemplazar: { $error } El texto no ha cambiado.
 # Said after switching match case; $state is common-on or common-off, and
 # $n is the number of matches now.
 replace-match-case-now =
@@ -2444,6 +2526,43 @@ replace-replaced =
     }
 replace-replaced-skipped = Se reemplazaron { $n }, se omitieron { $skipped }.
 replace-stopped = Detenido. Se reemplazaron { $n }, se omitieron { $skipped }.
+# Find and replace with regular expressions (B1-fr). $state is common-on
+# or common-off; $n is the number of matches now.
+replace-item-regex = Expresión regular: { $state }
+replace-item-across-lines = A través de líneas: { $state }
+replace-regex-now =
+    { $n ->
+        [one] Expresión regular { $state }. 1 coincidencia.
+       *[other] Expresión regular { $state }. { $n } coincidencias.
+    }
+replace-across-lines-now =
+    { $n ->
+        [one] A través de líneas { $state }. 1 coincidencia.
+       *[other] A través de líneas { $state }. { $n } coincidencias.
+    }
+# $problem is search-invalid-pattern: switching the option would make the
+# pattern invalid.
+replace-option-refused = { $problem } La opción no cambia.
+# Asked once before replacing all the rest; $n is how many. Keep y and n.
+replace-all-question =
+    { $n ->
+        [one] ¿Reemplazar la última coincidencia? y o n
+       *[other] ¿Reemplazar las { $n } coincidencias restantes? y o n
+    }
+replace-all-declined = No se reemplazó nada.
+# The search options list, and the options as named in search-options-on.
+search-options-title = Opciones de búsqueda
+search-option-match-case = coincidir mayúsculas
+search-option-whole-words = palabras completas
+search-option-regex = expresión regular
+search-option-across-lines = a través de líneas
+# Said as Find or Replace opens when an option is on; $list joins the
+# options' names with commas.
+search-options-on = Opciones activadas: { $list }.
+# $at is the character where the pattern fails, counting from 1; $reason
+# is the regular expression engine's own explanation (in English).
+search-invalid-pattern = Patrón no válido en el carácter { $at }: { $reason }.
+search-invalid-pattern-anywhere = Patrón no válido: { $reason }.
 
 ## Saving in the background.
 
@@ -2452,7 +2571,7 @@ writes-not-written-in-time = Algunos cambios no se pudieron escribir a tiempo: e
 # $error is the system's reason.
 writes-save-failed = No se pudo guardar: { $error }. Aún editando.
 # $name is the bookmark's name, $pct where it is.
-writes-bookmark-not-saved = El marcador { $name } está puesto por ahora, pero no se pudo guardar: { $error }
+writes-bookmark-not-saved = El marcador { $name } está puesto por ahora, pero no se pudo guardar: { $error } Compruebe que se puede escribir en la carpeta de datos.
 # $name is the saved file's name.
 writes-saved = Se guardó { $name }. Aún editando.
 
@@ -2725,7 +2844,7 @@ common-left-as-is = Se dejó tal cual.
 grammar-fix-not-editing = { $fix }. Active el modo de edición con { $key } para cambiar el texto.
 grammar-removed = Quitado.
 grammar-changed = Cambiado a { $fix }.
-grammar-change-failed = No se pudo cambiar el texto: { $error }
+grammar-change-failed = No se pudo cambiar el texto: { $error } No se cambió nada.
 
 ## Spell checking.
 
@@ -2762,7 +2881,7 @@ spell-suggestions-edit =
 # $word is the suggestion chosen; $key turns on edit mode.
 spell-replace-not-editing = { $word }. Active el modo de edición con { $key } para cambiar el texto.
 spell-replaced = Reemplazado con { $word }.
-spell-replace-failed = No se pudo reemplazar: { $error }
+spell-replace-failed = No se pudo reemplazar: { $error } La palabra no ha cambiado.
 spell-added-for-session = Se agregó { $word } a su lista de palabras para esta sesión.
 spell-added = Se agregó { $word } a su lista de palabras.
 spell-save-failed = No se pudo guardar su lista de palabras: { $error } La palabra se reconoce hasta que salga.
@@ -2781,8 +2900,8 @@ tui-setup-backend-unavailable = El motor de voz { $wanted } no está disponible;
 tui-setup-speech-failed = No se pudo iniciar la voz ({ $error }); ejecutando en silencio.
 speech-engine-fallback = { $failed } no pudo iniciarse; ahora habla { $engine }.
 speech-engine-fallback-silent = { $failed } no pudo iniciarse y no hay otro motor de voz disponible; { -brand } queda en silencio.
-tui-setup-cannot-save = No se puede guardar la configuración ni las posiciones: { $error }
-tui-setup-keymap-ignored = Se ignoró el archivo de teclas: { $error }
+tui-setup-cannot-save = No se puede guardar la configuración ni las posiciones: { $error } La lectura funciona. Los cambios se pierden al salir.
+tui-setup-keymap-ignored = Se ignoró el archivo de teclas: { $error } Se usan las teclas predeterminadas. Corrija el archivo y reinicie.
 # The first-run welcome. Each value names the key for an action: $play
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
@@ -3243,6 +3362,7 @@ name-cycle-punctuation = Puntuación
 name-find = Buscar
 name-find-next = Buscar siguiente
 name-find-previous = Buscar anterior
+name-search-options = Opciones de búsqueda
 name-next-misspelling = Error ortográfico siguiente
 name-previous-misspelling = Error ortográfico anterior
 name-spelling-suggestions = Sugerencias ortográficas
@@ -3470,7 +3590,7 @@ dictation-done = Dictado terminado.
 dictation-busy = El dictado está terminando. Inténtelo de nuevo en un momento.
 dictation-needs-edit = El dictado escribe en modo de edición. ¿Activar el modo de edición y dictar? y o n
 dictation-no-model = El dictado necesita el modelo Whisper en { $dir }. Consulte Dictation en la documentación.
-dictation-failed = El dictado falló: { $error }
+dictation-failed = El dictado falló: { $error } Consulte Dictation en la documentación.
 dictation-no-words = No se reconocieron palabras en esa frase.
 dictation-lost = El dictado se detuvo antes de escribir sus últimas palabras.
 dictation-not-typed = Palabras dictadas sin escribir, el modo de edición está desactivado: { $text }
@@ -3647,7 +3767,7 @@ batch-stopped =
        *[other] { $converted } archivos convertidos
     }; { $left } sin convertir; { $failed } con error.
 batch-report = Informe guardado en { $path }.
-batch-report-failed = No se pudo guardar el informe: { $error }
+batch-report-failed = No se pudo guardar el informe: { $error } Los archivos convertidos se conservan.
 batch-inaccessible =
     { $n ->
         [one] 1 archivo tiene
@@ -3659,7 +3779,7 @@ batch-failures-title =
        *[other] { $n } archivos con error
     }
 batch-failure-item = { $name }: { $reason }
-batch-start-failed = No se pudo empezar a convertir: { $error }
+batch-start-failed = No se pudo empezar a convertir: { $error } Compruebe la carpeta y el formato, y vuelva a intentarlo.
 batch-thread-stopped = La conversión por lotes se detuvo de forma inesperada.
 
 
@@ -3705,7 +3825,7 @@ audio-done =
        *[other] { $chapters } capítulos
     }.
 audio-subtitles = Subtítulos en { $name }.
-audio-failed = No se pudo exportar el audio: { $error }
+audio-failed = No se pudo exportar el audio: { $error } Pruebe otro formato u otra voz.
 audio-thread-stopped = La exportación de audio se detuvo de forma inesperada.
 
 
@@ -3754,7 +3874,7 @@ sync-status-up-to-date = Sincronización: al día
 sync-status-this-computer = Este equipo: { $name }.
 sync-status-no-others = Todavía no hay otros equipos.
 sync-status-others = Otros equipos: { $names }.
-sync-status-error = Problema: { $error }
+sync-status-error = Problema: { $error } Compruebe la carpeta de sincronización.
 sync-another-computer = otro equipo
 sync-untitled = un documento
 sync-damaged = Sincronización: archivo dañado de { $device } omitido.
@@ -3762,7 +3882,7 @@ sync-newer-file = Sincronización: archivo más nuevo de { $device } omitido.
 sync-read-only = Sincronización: formato más nuevo, solo lectura.
 sync-clock-ahead = Sincronización: el reloj de { $device } va { $hours } horas adelantado.
 sync-fresh-id = Sincronización: configuración copiada; nuevo identificador.
-sync-write-failed = Sincronización: no se puede escribir. { $error }
+sync-write-failed = Sincronización: no se puede escribir. { $error } Por ahora se guarda en este equipo.
 sync-name-refused = Nombre no permitido. Pruebe uno como portátil.
 sync-note-replaced =
     { $n ->
@@ -3806,7 +3926,7 @@ sync-sidecar-differed =
         [one] Sincronización: 1 lugar de la biblioteca difería.
        *[other] Sincronización: { $n } lugares de la biblioteca diferían.
     }
-sync-sidecar-failed = Sincronización: no se puede escribir un lugar de la biblioteca. { $error }
+sync-sidecar-failed = Sincronización: no se puede escribir un lugar de la biblioteca. { $error } Compruebe que se puede escribir en la carpeta de la biblioteca.
 sync-no-state = La sincronización está desactivada en esta sesión: no se guarda nada.
 sync-choose-folder = Elija la carpeta de sincronización
 sync-group-places = Lugares
@@ -3948,7 +4068,7 @@ setting-sync-favorite-voices-help = Compartir las voces favoritas. Una que este 
 font-download-question = ¿Descargar la fuente { $font }, { $kb } KB, { $licence }? y o n
 font-downloading = Descargando { $font }.
 font-downloaded = { $font } descargada y lista.
-font-download-failed = { $font } no se descargó: { $error }
+font-download-failed = { $font } no se descargó: { $error } Se usa otra fuente.
 font-download-declined = No se descargó. Se usa otra fuente.
 font-download-busy = { $font } aún se está descargando.
 font-download-no-folder = No hay carpeta de datos para { $font }.
@@ -4026,13 +4146,13 @@ component-not-in-build = Sin descargas en esta versión.
 component-no-folder = No hay carpeta de datos para él.
 component-error-fetch = No descargado: falló el origen.
 component-error-size = No instalado: tamaño incorrecto.
-component-error-hash = No instalado: un archivo no coincide.
+component-error-hash = No instalado: un archivo no coincidió. Descárguelo de nuevo o revise el origen.
 component-error-missing = No instalado: falta un archivo.
 component-error-cancelled = Descarga detenida; seguirá luego.
 component-error-busy = Ya se está descargando uno.
 component-error-no-source = No descargado: no tiene dirección.
 component-error-name = Rechazado: un nombre no es simple.
-component-error-manifest = La lista del espejo no se lee.
+component-error-manifest = Una lista de componentes no se puede leer.
 component-error-io = No instalado: no se pudo escribir.
 components-chooser-title = Componentes opcionales
 components-chooser-intro = Extras opcionales, ninguno elegido. Espacio elige uno; Descargar los elegidos los obtiene; Escape omite.
@@ -4056,6 +4176,8 @@ setting-dictation-model = Modelo de dictado
 setting-dictation-model-help = El modelo Whisper que usa el dictado cuando no hay carpeta. Descargar el modelo de dictado, en el menú Herramientas, lo obtiene.
 choice-dictation-model-whisper-base-en = base.en, el predeterminado
 choice-dictation-model-whisper-small-en = small.en, más grande y preciso
+setting-components-source = Origen de componentes
+setting-components-source-help = Sus propios componentes, usados primero. Un repositorio de GitHub como propietario/nombre, o una carpeta en este equipo. Vacío no usa ninguno. Nunca ponga aquí una contraseña.
 setting-components-mirror = Espejo de componentes
 setting-components-mirror-help = De dónde vienen primero los componentes opcionales: una dirección https o una carpeta en este equipo. Vacío usa sus orígenes públicos. Nunca ponga aquí una contraseña.
 
@@ -4107,3 +4229,119 @@ gui-reading-generous = Espaciado amplio
 gui-reading-generous-help = Poner los cuatro espaciados más amplios que WCAG.
 gui-reading-closed = Opciones de lectura cerradas.
 ## End of W9b-x
+
+## B1-t1: cambios con seguimiento y comentarios (la lista de cambios).
+name-list-changes = Cambios y comentarios
+action-list-changes = Mostrar los cambios con seguimiento y los comentarios: Intro va a uno, A acepta un cambio, R lo rechaza
+name-accept-all-changes = Aceptar todos los cambios
+action-accept-all-changes = Aceptar todos los cambios con seguimiento del documento
+name-reject-all-changes = Rechazar todos los cambios
+action-reject-all-changes = Rechazar todos los cambios con seguimiento del documento
+name-add-comment = Añadir comentario
+action-add-comment = Añadir un comentario a la selección o a la oración del cursor
+prompt-comment-reply = Respuesta
+prompt-comment-text = Comentario
+changes-title = Cambios y comentarios
+changes-intro =
+    { $n ->
+        [one] { $title }, { $n } elemento. Intro va a él. A acepta un cambio, R lo rechaza, y con Mayús cualquiera de las dos hace todos los cambios de su autor. En un comentario, F2 responde, Espacio lo resuelve, Suprimir lo borra. N añade un comentario.
+       *[other] { $title }, { $n } elementos. Intro va a uno. A acepta un cambio, R lo rechaza, y con Mayús cualquiera de las dos hace todos los cambios de su autor. En un comentario, F2 responde, Espacio lo resuelve, Suprimir lo borra. N añade un comentario.
+    }
+changes-none = No hay cambios con seguimiento ni comentarios en este documento.
+changes-row = { $kind }: «{ $text }», { $who }, { $when }
+changes-kind-inserted = Insertado
+changes-kind-deleted = Eliminado
+changes-kind-moved-away = Movido de aquí
+changes-kind-moved-here = Movido aquí
+changes-by = por { $author }
+changes-no-author = autor no registrado
+changes-no-date = fecha no registrada
+changes-date = { $weekday }, { $day } de { $month } de { $year }
+changes-weekday-0 = domingo
+changes-weekday-1 = lunes
+changes-weekday-2 = martes
+changes-weekday-3 = miércoles
+changes-weekday-4 = jueves
+changes-weekday-5 = viernes
+changes-weekday-6 = sábado
+changes-month-1 = enero
+changes-month-2 = febrero
+changes-month-3 = marzo
+changes-month-4 = abril
+changes-month-5 = mayo
+changes-month-6 = junio
+changes-month-7 = julio
+changes-month-8 = agosto
+changes-month-9 = septiembre
+changes-month-10 = octubre
+changes-month-11 = noviembre
+changes-month-12 = diciembre
+changes-comment = Comentario: { $text }
+changes-comment-by = Comentario de { $author }: { $text }
+changes-replies =
+    { $n ->
+        [one] { $n } respuesta
+       *[other] { $n } respuestas
+    }
+changes-resolved = resuelto
+changes-accepted = Aceptado. { $kind }: «{ $text }».
+changes-rejected = Rechazado. { $kind }: «{ $text }».
+changes-accepted-all =
+    { $n ->
+        [one] { $n } cambio aceptado.
+       *[other] { $n } cambios aceptados.
+    }
+changes-rejected-all =
+    { $n ->
+        [one] { $n } cambio rechazado.
+       *[other] { $n } cambios rechazados.
+    }
+changes-accepted-author =
+    { $n ->
+        [one] { $n } cambio de { $author } aceptado.
+       *[other] { $n } cambios de { $author } aceptados.
+    }
+changes-rejected-author =
+    { $n ->
+        [one] { $n } cambio de { $author } rechazado.
+       *[other] { $n } cambios de { $author } rechazados.
+    }
+changes-none-left = No hay cambios con seguimiento que aceptar o rechazar.
+changes-not-a-change = Esta fila es un comentario. F2 responde, Espacio lo resuelve, Suprimir lo borra.
+changes-not-a-comment = Esta fila es un cambio. A lo acepta, R lo rechaza.
+changes-edit-mode = En el modo de edición los cambios quedan como están. Salga del modo de edición para aceptarlos o rechazarlos.
+changes-replied = Respuesta añadida.
+changes-resolved-done = Comentario resuelto.
+changes-reopened = Comentario abierto de nuevo.
+changes-comment-deleted = Comentario y respuestas borrados.
+changes-comment-added = Comentario añadido.
+changes-delete-comment-question = ¿Borrar este comentario y sus respuestas? y o n
+changes-written-accepted =
+    { $n ->
+        [one] { $path } escrito con { $n } cambio aceptado.
+       *[other] { $path } escrito con { $n } cambios aceptados.
+    }
+changes-written-rejected =
+    { $n ->
+        [one] { $path } escrito con { $n } cambio rechazado.
+       *[other] { $path } escrito con { $n } cambios rechazados.
+    }
+## End of B1-t1
+## B1-r5: braille (BRF) files read as print. $page is a braille page
+## number ("3", "p1"); $n is a number of lines; $reason is an error.
+setting-braille-brf-code = Código braille de los archivos BRF
+setting-braille-brf-code-help = El código braille en que se leen los archivos BRF. UEB es para libros hechos desde 2016; EBAE, English Braille American Edition, para libros más antiguos. Leer un archivo BRF como texto impreso necesita liblouis. Vuelva a abrir el archivo después de un cambio.
+choice-braille-brf-code-ueb = UEB
+choice-braille-brf-code-ebae = EBAE
+name-show-original-braille = Mostrar el braille original
+action-show-original-braille = Mostrar el braille original de la página del cursor, en un archivo BRF leído como texto impreso
+brf-original-title = Braille original, página { $page }
+brf-original-intro =
+    { $n ->
+        [one] Braille original, página { $page }, { $n } línea. Escape cierra.
+       *[other] Braille original, página { $page }, { $n } líneas. Escape cierra.
+    }
+brf-original-not-brf = No es un archivo braille. Mostrar el braille original funciona con archivos BRF.
+brf-original-unreadable = No se puede leer el archivo braille: { $reason }
+brf-no-liblouis = Braille mostrado como braille: falta liblouis. Para leerlo como texto impreso, instale liblouis desde liblouis.io o los paquetes de su sistema y vuelva a abrir el archivo.
+## End of B1-r5

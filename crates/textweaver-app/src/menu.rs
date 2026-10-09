@@ -301,6 +301,7 @@ impl MenuId {
                 Do(A::FindNext),
                 Do(A::FindPrevious),
                 Do(A::Replace),
+                Do(A::SearchOptions),
             ],
             MenuId::Format => &[
                 Do(A::Bold),
@@ -357,6 +358,7 @@ impl MenuId {
                 Sub(MenuId::TextSize),
                 Do(A::ChooseFont),
                 Do(A::ToggleLineNumbers),
+                Do(A::ShowOriginalBraille),
                 Sub(MenuId::ReadingAids),
                 Sep,
                 Do(A::CycleAccessMode),
@@ -495,6 +497,10 @@ impl MenuId {
                 Do(A::DeleteNote),
                 Sep,
                 Do(A::SelfTest),
+                Do(A::ListChanges),
+                Do(A::AcceptAllChanges),
+                Do(A::RejectAllChanges),
+                Do(A::AddComment),
             ],
             MenuId::Tables => &[
                 Do(A::NextTable),

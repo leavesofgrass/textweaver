@@ -65,24 +65,27 @@ pub use doc_state::{
     StateStore, TextStamp, percent,
 };
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
-pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};
-pub use notes::{Annotation, Highlight, Note, NotesExport, Relation, RelationType};
-pub use paths::{MEDICAL_OVERLAY_FILE, Paths};
+pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, NotedDoc, ScannedDoc};
+pub use notes::{
+    Annotation, Backlink, Backlinks, Highlight, Note, NotesExport, Relation, RelationType,
+};
+pub use paths::{COMPONENTS_DIR, MEDICAL_OVERLAY_FILE, Paths, components_dir, find_in_components};
 pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
-    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, BrailleSettings,
-    BrailleTableFormat, CitationReading, ColorSettings, CommunityLexiconSettings,
-    ComponentsSettings, CursorPlacement, DectalkSettings, DictationSettings, DigitRow,
-    DisplaySettings, EciDictionaries, EciSettings, EditingSettings, ExportSettings, FootnoteMode,
-    GuiAnnounce, GuiSettings, GuiSidebar, GuiWindow, HighlightSettings, HintsLine,
-    InterfaceAnnouncements, InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset,
-    LexiconSettings, LibrarySettings, MathBrailleCode, MathDisplay, MathEngine,
-    MedicalLexiconSettings, NormalizationSettings, OcrEngine, PiperPhonemizer, PiperSettings,
-    PositionPolicy, PreviewSettings, QuietScreen, REMOVED_SETTINGS, RESERVED_SETTINGS,
-    ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings, SayAll, Settings,
-    SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, StopAt, SubtitleFormat,
-    SubtitleKaraoke, SummarySettings, SyncSettings, TableMode, drop_removed_settings,
+    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, AudioExportFormat,
+    BrailleSettings, BrailleTableFormat, BrfCode, CitationReading, ColorSettings,
+    CommunityLexiconSettings, ComponentsSettings, CursorPlacement, DectalkSettings,
+    DictationSettings, DigitRow, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,
+    ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings, GuiSidebar, GuiWindow,
+    HighlightSettings, HintsLine, InterfaceAnnouncements, InterfaceSettings, KeyboardSettings,
+    KeymapOverrides, KeymapPreset, LexiconSettings, LibrarySettings, MathBrailleCode, MathDisplay,
+    MathEngine, MedicalLexiconSettings, NormalizationSettings, OcrEngine, PiperPhonemizer,
+    PiperSettings, PositionPolicy, PreviewSettings, QuietScreen, REMOVED_SETTINGS,
+    RESERVED_SETTINGS, ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings,
+    SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, StopAt,
+    SubtitleFormat, SubtitleKaraoke, SummarySettings, SyncSettings, TableMode,
+    drop_removed_settings,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

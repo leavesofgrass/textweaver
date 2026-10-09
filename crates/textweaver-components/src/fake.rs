@@ -4,11 +4,13 @@
 
 use std::collections::HashMap;
 use std::io::Read;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::fetch::{Fetched, Fetcher};
+use crate::manifest::{Action, Platform};
 
 /// One request a [`FakeFetcher`] answered: the address and the offset.
 pub type Request = (String, u64);
@@ -132,5 +134,73 @@ impl Fetcher for FakeFetcher {
             }),
             start,
         })
+    }
+}
+
+/// A components source in a folder, for tests: a `components.toml` and
+/// each component's files under `<release>/` ([`Component::release`]),
+/// as a clone of a components repository has them. Nothing goes to the
+/// network.
+///
+/// [`Component::release`]: crate::Component::release
+#[derive(Debug)]
+pub struct FakeSource {
+    root: PathBuf,
+    list: String,
+}
+
+impl FakeSource {
+    /// An empty source in `root` (a temporary folder).
+    pub fn new(root: &Path) -> Self {
+        FakeSource {
+            root: root.to_owned(),
+            list: format!("format = {}\n", crate::manifest::FORMAT),
+        }
+    }
+
+    /// The source's folder: what `[components] source` is set to.
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// Adds a component with `files` (name and bytes), pinned by their
+    /// real size and SHA-256, and writes the list again.
+    pub fn add(
+        &mut self,
+        id: &str,
+        version: &str,
+        platform: Platform,
+        action: Action,
+        files: &[(&str, &[u8])],
+    ) -> std::io::Result<()> {
+        let release = if version.is_empty() {
+            id.to_owned()
+        } else {
+            format!("{id}-{version}")
+        };
+        let dir = self.root.join(&release);
+        std::fs::create_dir_all(&dir)?;
+        self.list.push_str(&format!(
+            "\n[[component]]\nid = \"{id}\"\ntitle = \"The {id} component\"\n\
+             license = \"CC0-1.0, made up for tests\"\nfeatures = [\"test\"]\n\
+             version = \"{version}\"\nplatform = \"{}\"\naction = \"{}\"\n",
+            platform.word(),
+            action.word()
+        ));
+        for (name, bytes) in files {
+            std::fs::write(dir.join(name), bytes)?;
+            self.list.push_str(&format!(
+                "[[component.file]]\nname = \"{name}\"\nsize = {}\nsha256 = \"{}\"\n",
+                bytes.len(),
+                crate::sha256_hex(bytes)
+            ));
+        }
+        std::fs::write(self.root.join(crate::manifest::FILE_NAME), &self.list)
+    }
+
+    /// Replaces a file's bytes after it was listed, so its checksum no
+    /// longer matches (a damaged or altered file).
+    pub fn tamper(&self, release: &str, name: &str, bytes: &[u8]) -> std::io::Result<()> {
+        std::fs::write(self.root.join(release).join(name), bytes)
     }
 }

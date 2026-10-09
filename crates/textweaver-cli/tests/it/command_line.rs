@@ -92,6 +92,7 @@ const PRINTS_FACTS: &[&str] = &[
     "vault",
     "dictate",
     "marks",
+    "notes",
     "lint",
     "migrate-star",
     "cite",
@@ -99,6 +100,7 @@ const PRINTS_FACTS: &[&str] = &[
     "define",
     "stats",
     "summarize",
+    "changes",
     "sync",
     "ocr",
     "components",
@@ -118,12 +120,14 @@ const TOUCHES_DATA: &[&str] = &[
     "vault",
     "dictate",
     "marks",
+    "notes",
     "migrate-star",
     "cite",
     "settings",
     "define",
     "stats",
     "summarize",
+    "changes",
     "sync",
     "serve",
     "components",
@@ -239,6 +243,20 @@ fn errors_are_one_line_with_exit_status_1() {
     assert!(!err.contains("Caused by"), "{err}");
     let first = last.trim_start_matches("Error: ").chars().next().unwrap();
     assert!(first.is_uppercase(), "{err}");
+}
+
+#[test]
+fn version_prints_the_version_then_the_copyright_line() {
+    let home = tempfile::tempdir().unwrap();
+    let out = tw_in(home.path(), &["--version"], "");
+    assert!(out.status.success(), "{out:?}");
+    let text = String::from_utf8(out.stdout).unwrap();
+    let mut lines = text.lines();
+    assert_eq!(
+        lines.next(),
+        Some(concat!("tw ", env!("CARGO_PKG_VERSION")))
+    );
+    assert_eq!(lines.next(), Some(textweaver_app::COPYRIGHT));
 }
 
 #[test]

@@ -259,6 +259,7 @@ impl DownloadableFont {
                     .collect(),
             ),
             notice: Some((Cow::Borrowed("OFL.txt"), Cow::Borrowed(self.license_text))),
+            listing: None,
         }
     }
 

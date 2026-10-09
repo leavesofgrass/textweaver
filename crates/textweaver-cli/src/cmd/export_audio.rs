@@ -33,6 +33,8 @@ pub struct Args {
     /// read-along page: the text with the MP3 inside, the spoken word
     /// marked as it plays; or .mp4 for a video with captions (needs
     /// ffmpeg): the text on screen, the spoken word bold and underlined.
+    /// With no extension, the format in `[export] audio_format` (FLAC
+    /// unless changed).
     #[arg(long = "out", short = 'o', alias = "output")]
     pub out: PathBuf,
     /// Also write subtitles (.srt, .vtt, or .ass karaoke).
@@ -183,6 +185,16 @@ pub fn spoken_duration(ms: u64) -> String {
     parts.join(", ")
 }
 
+/// `out`, or `out` with the extension of `[export] audio_format` when it
+/// has none (`--out reading` writes `reading.flac` by default).
+fn with_default_extension(out: &std::path::Path, settings: &Settings) -> PathBuf {
+    if out.extension().is_some() {
+        out.to_owned()
+    } else {
+        out.with_extension(settings.export.audio_format.extension())
+    }
+}
+
 /// Exports and returns what happened, with `settings`: the voice, rate,
 /// pitch, and volume of `[speech]` (the flags override them), the preferred
 /// backend, normalization and table narration, where footnotes go, and the
@@ -194,15 +206,16 @@ pub fn export_audio(
     ffmpeg_path: Option<PathBuf>,
     progress: &mut dyn FnMut(&str),
 ) -> anyhow::Result<Report> {
+    let out = with_default_extension(&args.out, settings);
     // An .html file is the read-along page, with the MP3 inside.
-    let page = readalong::is_page(&args.out);
+    let page = readalong::is_page(&out);
     let format = if page {
         AudioFormat::Mp3
     } else {
-        AudioFormat::from_path(&args.out).with_context(|| {
+        AudioFormat::from_path(&out).with_context(|| {
             format!(
                 "cannot write {}: use a .wav, .flac, .mp3, .opus, .ogg, or .m4b file name, .mp4 for a video with captions, or .html for a read-along page",
-                args.out.display()
+                out.display()
             )
         })?
     };
@@ -256,20 +269,17 @@ pub fn export_audio(
             selection.backend.name
         );
     }
-    let plan = textweaver_app::subtitle_plan(
-        settings,
-        &args.out,
-        args.subtitles.as_deref(),
-        args.word_level,
-    );
+    let plan =
+        textweaver_app::subtitle_plan(settings, &out, args.subtitles.as_deref(), args.word_level);
     let karaoke = args.karaoke.map_or_else(
         || karaoke_setting(settings.export.subtitle_karaoke),
         Karaoke::from,
     );
     let chapters_to = args.chapters.clone().or_else(|| {
-        settings.export.subtitle_chapters.then(|| {
-            textweaver_export::chapters::vtt_path(plan.path.as_deref().unwrap_or(&args.out))
-        })
+        settings
+            .export
+            .subtitle_chapters
+            .then(|| textweaver_export::chapters::vtt_path(plan.path.as_deref().unwrap_or(&out)))
     });
     let subtitles = plan.path.map(|path| SubtitleRequest {
         path,
@@ -330,7 +340,7 @@ pub fn export_audio(
         readalong::export_page(
             &doc,
             backend.as_mut(),
-            &args.out,
+            &out,
             subtitles.as_ref(),
             ffmpeg_path.as_deref(),
             &options,
@@ -341,7 +351,7 @@ pub fn export_audio(
         export(
             &doc,
             backend.as_mut(),
-            &args.out,
+            &out,
             subtitles.as_ref(),
             ffmpeg_path.as_deref(),
             &options,
@@ -413,7 +423,14 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         &args,
         &settings,
         &textweaver_engines::speech_registry_for(&settings),
-        ffmpeg::find(),
+        match args.home.as_deref() {
+            Some(h) => ffmpeg::find_in(
+                Some(&Paths::under(h).components_dir()),
+                std::env::var_os("TEXTWEAVER_FFMPEG"),
+                std::env::var_os("PATH"),
+            ),
+            None => ffmpeg::find(),
+        },
         &mut |msg| {
             if !quiet {
                 eprintln!("{msg}");
@@ -476,6 +493,25 @@ mod tests {
             quiet: true,
             home: None,
         }
+    }
+
+    #[test]
+    fn an_out_without_an_extension_takes_the_audio_format_setting() {
+        let mut settings = Settings::default();
+        let dir = std::path::Path::new("books");
+        assert_eq!(
+            with_default_extension(&dir.join("reading"), &settings),
+            dir.join("reading.flac")
+        );
+        settings.export.audio_format = textweaver_app::store::AudioExportFormat::Opus;
+        assert_eq!(
+            with_default_extension(&dir.join("reading"), &settings),
+            dir.join("reading.opus")
+        );
+        assert_eq!(
+            with_default_extension(&dir.join("reading.mp3"), &settings),
+            dir.join("reading.mp3")
+        );
     }
 
     #[test]

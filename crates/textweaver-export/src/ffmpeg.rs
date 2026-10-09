@@ -1,7 +1,9 @@
 //! Converting the exported WAV with ffmpeg, when it is installed.
 //!
-//! ffmpeg is found through `TEXTWEAVER_FFMPEG` (a path to the program) or on
-//! `PATH`. textweaver never downloads or bundles it. The commands follow
+//! ffmpeg is found in textweaver's components folder first (a copy placed
+//! or unpacked there from a components source), then through
+//! `TEXTWEAVER_FFMPEG` (a path to the program), then on `PATH`. textweaver
+//! never bundles it. The commands follow
 //! star's (`star/tts/audio.py`, `star/audiobook.py`): MP3 with LAME at VBR
 //! quality 2; M4B as AAC in an MP4 container at 64 kbit/s (spoken word needs
 //! little) with `+faststart`, the chapters and title mapped from an ffmpeg
@@ -91,14 +93,41 @@ impl AudioFormat {
 /// Default AAC bitrate for M4B (star's `DEFAULT_M4B_BITRATE`).
 pub const M4B_BITRATE: &str = "64k";
 
-/// The ffmpeg program: `TEXTWEAVER_FFMPEG` if set (and it exists), else
-/// `ffmpeg` on `PATH`.
+/// The ffmpeg program: the copy in textweaver's components folder
+/// first, then `TEXTWEAVER_FFMPEG` if set (and it exists), else `ffmpeg`
+/// on `PATH`.
 pub fn find() -> Option<PathBuf> {
-    if let Some(p) = std::env::var_os("TEXTWEAVER_FFMPEG") {
+    find_in(
+        textweaver_store::components_dir().as_deref(),
+        std::env::var_os("TEXTWEAVER_FFMPEG"),
+        std::env::var_os("PATH"),
+    )
+}
+
+/// [`find`] with its places given: the components folder, the
+/// `TEXTWEAVER_FFMPEG` value, and the `PATH` value.
+pub fn find_in(
+    components: Option<&Path>,
+    env: Option<OsString>,
+    path: Option<OsString>,
+) -> Option<PathBuf> {
+    if let Some(p) = components.and_then(|dir| {
+        textweaver_store::find_in_components(
+            dir,
+            &[if cfg!(windows) {
+                "ffmpeg.exe"
+            } else {
+                "ffmpeg"
+            }],
+        )
+    }) {
+        return Some(p);
+    }
+    if let Some(p) = env.filter(|v| !v.is_empty()) {
         let p = PathBuf::from(p);
         return p.is_file().then_some(p);
     }
-    find_on_path("ffmpeg", std::env::var_os("PATH"))
+    find_on_path("ffmpeg", path)
 }
 
 /// `name` in the directories of `path` (a `PATH`-style list), by the
@@ -329,5 +358,39 @@ mod tests {
         );
         assert_eq!(find_on_path("other", Some(path)), None);
         assert_eq!(find_on_path("tool", None), None);
+    }
+
+    #[test]
+    fn the_components_folder_comes_first() {
+        let tmp = tempfile::tempdir().unwrap();
+        let components = tmp.path().join("components");
+        let name = if cfg!(windows) {
+            "ffmpeg.exe"
+        } else {
+            "ffmpeg"
+        };
+        let on_path = tmp.path().join("bin");
+        std::fs::create_dir_all(&on_path).unwrap();
+        std::fs::write(on_path.join(name), b"").unwrap();
+        let path = Some(std::env::join_paths([&on_path]).unwrap());
+        // Nothing in the components folder: the PATH's.
+        assert_eq!(
+            find_in(Some(&components), None, path.clone()),
+            Some(on_path.join(name))
+        );
+        // A placed copy wins over the variable and the PATH.
+        let placed = components.join("ffmpeg").join("ffmpeg-9.0.2").join("bin");
+        std::fs::create_dir_all(&placed).unwrap();
+        std::fs::write(placed.join(name), b"").unwrap();
+        let env = Some(on_path.join(name).into_os_string());
+        assert_eq!(
+            find_in(Some(&components), env, path),
+            Some(placed.join(name))
+        );
+        // Found with no variable and nothing on the PATH.
+        assert_eq!(
+            find_in(Some(&components), None, None),
+            Some(placed.join(name))
+        );
     }
 }

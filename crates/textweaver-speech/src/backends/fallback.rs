@@ -188,16 +188,16 @@ mod tests {
     fn a_chain_of_failing_engines_ends_on_the_first_that_starts() {
         let r = fakes(&[
             ("eci", 1000, false),
-            ("sapi", 500, false),
+            ("piper", 500, false),
             ("dectalk", 300, true),
             ("espeak", 50, true),
         ]);
         let (out, tried) = run(&r, None);
         let started = out.expect("an engine starts");
         assert_eq!(started.backend.id, "dectalk");
-        assert_eq!(tried, ["eci", "sapi", "dectalk"]);
+        assert_eq!(tried, ["eci", "piper", "dectalk"]);
         let failed: Vec<&str> = started.failed.iter().map(|f| f.backend.id).collect();
-        assert_eq!(failed, ["eci", "sapi"]);
+        assert_eq!(failed, ["eci", "piper"]);
         assert!(started.failed[0].error.contains("did not start in time"));
         assert!(!started.silent());
     }
@@ -206,12 +206,12 @@ mod tests {
     fn a_preferred_engine_is_tried_first_then_the_rest_by_priority() {
         let r = fakes(&[
             ("eci", 1000, true),
-            ("sapi", 500, false),
+            ("piper", 500, false),
             ("espeak", 50, true),
         ]);
-        let (out, tried) = run(&r, Some("sapi"));
+        let (out, tried) = run(&r, Some("piper"));
         assert_eq!(out.expect("starts").backend.id, "eci");
-        assert_eq!(tried, ["sapi", "eci"]);
+        assert_eq!(tried, ["piper", "eci"]);
         // Automatic selection and the preferred engine starting at once.
         let (out, tried) = run(&r, Some("auto"));
         assert_eq!(out.expect("starts").backend.id, "eci");
@@ -222,12 +222,12 @@ mod tests {
     fn silence_only_after_every_engine_failed() {
         let r = fakes(&[
             ("eci", 1000, false),
-            ("sapi", 500, false),
+            ("piper", 500, false),
             ("espeak", 50, false),
         ]);
         let (out, tried) = run(&r, Some("eci"));
         let started = out.expect("silence always starts");
-        assert_eq!(tried, ["eci", "sapi", "espeak", "null"]);
+        assert_eq!(tried, ["eci", "piper", "espeak", "null"]);
         assert!(started.silent());
         assert_eq!(started.failed.len(), 3);
     }

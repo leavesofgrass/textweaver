@@ -113,11 +113,15 @@ Finally, speak a sentence with Reed:
 tw speak --voice Reed "Eloquence is working."
 ```
 
+## A 32-bit engine library
+
+64-bit textweaver runs a 32-bit `eci.dll` only through its 32-bit helper, `textweaver-eci-host-x86.exe`, on Windows. Without that helper, textweaver says "A 32-bit ECI library cannot run in this 64-bit textweaver" and names the file: install the 64-bit (x86_64) library instead. OpenEVV's 32-bit library is always refused, because it uses a different calling convention.
+
 ## Settings reference
 
 These environment variables change how textweaver finds and runs Eloquence:
 
-- `TEXTWEAVER_ECI_LIBRARY`: use this engine library instead of searching.
+- `TEXTWEAVER_ECI_LIBRARY`: use this engine library instead of searching. An engine library in textweaver's components folder (from your own components source) is still used first.
 - `TEXTWEAVER_ECI_CODE_FACTORY`: set to `1` after buying Code Factory's Eloquence for Windows, so textweaver uses it.
 - `TEXTWEAVER_ECI_DICTIONARIES`: `off`, or a folder of dictionaries to use instead of the included ones.
 - `TEXTWEAVER_ECI_HOST`: use this helper program instead of the one next to textweaver.

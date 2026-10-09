@@ -23,6 +23,8 @@ playback = ["textweaver-enginehost/playback"]
 [dependencies]
 textweaver-core.workspace = true
 textweaver-speech.workspace = true
+# The components folder, searched first for the ECI library.
+textweaver-store.workspace = true
 textweaver-enginehost.workspace = true
 thiserror.workspace = true
 log.workspace = true

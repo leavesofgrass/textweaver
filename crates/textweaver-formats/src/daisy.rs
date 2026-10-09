@@ -22,7 +22,7 @@
 //! aloud: each starts a `PageBreak` marker labeled with the printed number,
 //! whose range is that page's text.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::path::Path;
 
@@ -39,7 +39,7 @@ use crate::{LoadError, LoadOptions, Loader, Source, meta_for, title_from_path};
 const PAGE_ID: &str = "textweaver-pagenum-";
 
 /// Most files one book may read (SMIL and DTBook together).
-const MAX_FILES: usize = 20_000;
+pub(crate) const MAX_FILES: usize = 20_000;
 
 /// Loads DAISY 3 package files and DTBook XML.
 #[derive(Clone, Copy, Debug, Default)]
@@ -78,19 +78,7 @@ impl Loader for DaisyLoader {
                 Source::Path(p) => p.parent().map(Path::to_owned),
                 _ => None,
             };
-            let mut read = |rel: &str| -> Result<Option<Vec<u8>>, LoadError> {
-                let Some(folder) = &folder else {
-                    return Ok(None);
-                };
-                // `rel` was resolved against the package's folder, so `..`
-                // cannot leave it.
-                let path = folder.join(rel);
-                match crate::archive::read_path(&path) {
-                    Ok(b) => Ok(Some(b)),
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-                    Err(e) => Err(LoadError::Io(path, e)),
-                }
-            };
+            let mut read = |rel: &str| read_beside(folder.as_deref(), rel);
             let mut doc = load_package(&name, &bytes, &mut read, options)?;
             if let Source::Path(p) = source {
                 doc.meta.path = Some(p.clone());
@@ -142,7 +130,7 @@ fn is_dtbook(bytes: &[u8]) -> bool {
 }
 
 /// XML bytes as text, flattened past the nesting limit (with the warning).
-fn decode_xml(bytes: &[u8], meta: &mut DocumentMeta) -> String {
+pub(crate) fn decode_xml(bytes: &[u8], meta: &mut DocumentMeta) -> String {
     let declared = crate::encoding::sniff_html_charset(bytes);
     let text = crate::decode_bytes(bytes, declared.as_deref()).text;
     match crate::xmldepth::limit_depth(&text, crate::MAX_NESTING) {
@@ -191,6 +179,86 @@ fn text_of(node: roxmltree::Node<'_, '_>) -> String {
 /// Reads one of a book's files by path (relative to the book's root):
 /// `None` when it is missing.
 pub(crate) type ReadFile<'a> = dyn FnMut(&str) -> Result<Option<Vec<u8>>, LoadError> + 'a;
+
+/// Reads `rel`, a path among a book's files, from `folder`, the folder of
+/// the file that was opened (which may be an archive member): `None` when
+/// it is missing, or when there is no folder (the book came as bytes).
+pub(crate) fn read_beside(folder: Option<&Path>, rel: &str) -> Result<Option<Vec<u8>>, LoadError> {
+    let Some(folder) = folder else {
+        return Ok(None);
+    };
+    // `rel` was resolved against the book's root, so `..` cannot leave it.
+    let path = folder.join(rel);
+    match crate::archive::read_path(&path) {
+        Ok(b) => Ok(Some(b)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(LoadError::Io(path, e)),
+    }
+}
+
+/// Where one SMIL file's ids point: each id (a `par`, a `text`, or any
+/// element holding a `text`) maps to the content file and fragment that
+/// its first `text` element shows.
+#[derive(Debug, Default)]
+pub(crate) struct SmilTargets {
+    /// Targets by element id.
+    pub(crate) ids: HashMap<String, (String, Option<String>)>,
+    /// The first `text` target: where a link to the SMIL file itself lands.
+    pub(crate) first: Option<(String, Option<String>)>,
+}
+
+/// Reads one SMIL file (DAISY 3, or SMIL 1.0 in DAISY 2.02). The content
+/// files its `text` elements point into are added to `order`, once each
+/// (`seen` holds them) and at most [`MAX_FILES`]. Element names match in
+/// any case and namespace, and a `seq` inside a `par`, or any child the
+/// specification does not list, is read like any other element.
+pub(crate) fn read_smil(
+    xml: &roxmltree::Document<'_>,
+    dir: &str,
+    order: &mut Vec<String>,
+    seen: &mut HashSet<String>,
+) -> SmilTargets {
+    let is_text = |n: &roxmltree::Node<'_, '_>| n.tag_name().name().eq_ignore_ascii_case("text");
+    let mut out = SmilTargets::default();
+    for el in xml.descendants().filter(|n| n.is_element()) {
+        let first_text = std::iter::once(el)
+            .chain(el.descendants())
+            .find(is_text)
+            .and_then(|t| t.attribute("src"));
+        let Some(src) = first_text else { continue };
+        let target = resolve(dir, src);
+        if is_text(&el) {
+            if order.len() < MAX_FILES && seen.insert(target.0.clone()) {
+                order.push(target.0.clone());
+            }
+            if out.first.is_none() {
+                out.first = Some(target.clone());
+            }
+        }
+        if let Some(id) = el.attribute("id") {
+            out.ids.entry(id.to_owned()).or_insert(target);
+        }
+    }
+    out
+}
+
+/// Where a link to `file#frag` lands in a book's content: the content file
+/// itself when `is_content`, else through the SMIL file's ids (its first
+/// text when the fragment is missing or unknown).
+pub(crate) fn smil_target(
+    smil: &HashMap<String, SmilTargets>,
+    file: &str,
+    frag: Option<&str>,
+    is_content: bool,
+) -> Option<(String, Option<String>)> {
+    if is_content {
+        return Some((file.to_owned(), frag.map(str::to_owned)));
+    }
+    let targets = smil.get(file)?;
+    frag.and_then(|f| targets.ids.get(f))
+        .or(targets.first.as_ref())
+        .cloned()
+}
 
 /// Loads a DAISY 3 book from its package file. `opf_path` is the package's
 /// path among the book's files, and `read` reads another of them.
@@ -254,32 +322,17 @@ pub(crate) fn load_package(
     // Spine order: the DTBook files in the order the SMIL files point
     // into them; each SMIL's ids map to the DTBook element they show.
     let mut order: Vec<String> = Vec::new();
-    let mut smil_targets: HashMap<String, HashMap<String, (String, Option<String>)>> =
-        HashMap::new();
+    let mut seen = HashSet::new();
+    let mut smil_targets: HashMap<String, SmilTargets> = HashMap::new();
     for smil in &smils {
         let Some(bytes) = read(smil)? else { continue };
         let text = decode_xml(&bytes, &mut meta);
         let Ok(xml) = parse_xml(&text) else { continue };
-        let dir = dir_of(smil).to_owned();
-        let mut ids = HashMap::new();
-        for el in xml.descendants().filter(|n| n.is_element()) {
-            let first_text = std::iter::once(el)
-                .chain(el.descendants())
-                .find(|n| n.tag_name().name() == "text")
-                .and_then(|t| t.attribute("src"));
-            let Some(src) = first_text else { continue };
-            let target = resolve(&dir, src);
-            if el.tag_name().name() == "text" && !order.contains(&target.0) {
-                order.push(target.0.clone());
-            }
-            if let Some(id) = el.attribute("id") {
-                ids.entry(id.to_owned()).or_insert(target);
-            }
-        }
-        smil_targets.insert(smil.clone(), ids);
+        let targets = read_smil(&xml, dir_of(smil), &mut order, &mut seen);
+        smil_targets.insert(smil.clone(), targets);
     }
     for d in &dtbooks {
-        if !order.contains(d) {
+        if seen.insert(d.clone()) {
             order.push(d.clone());
         }
     }
@@ -336,7 +389,7 @@ fn ncx_entries(
     node: roxmltree::Node<'_, '_>,
     depth: usize,
     dir: &str,
-    smil: &HashMap<String, HashMap<String, (String, Option<String>)>>,
+    smil: &HashMap<String, SmilTargets>,
     out: &mut Vec<TocEntry>,
 ) {
     if depth > crate::MAX_NESTING {
@@ -357,20 +410,9 @@ fn ncx_entries(
             .and_then(|c| c.attribute("src"))
         {
             let (file, frag) = resolve(dir, src);
-            let target = frag
-                .as_ref()
-                .and_then(|f| smil.get(&file).and_then(|ids| ids.get(f)))
-                .cloned()
-                .or_else(|| {
-                    // A navPoint straight at the DTBook, or at a SMIL's start.
-                    if file.to_ascii_lowercase().ends_with(".xml") {
-                        Some((file.clone(), frag.clone()))
-                    } else {
-                        smil.get(&file)
-                            .and_then(|ids| ids.values().next())
-                            .map(|(f, _)| (f.clone(), None))
-                    }
-                });
+            // A navPoint straight at the DTBook, or through a SMIL file.
+            let is_dtbook = file.to_ascii_lowercase().ends_with(".xml");
+            let target = smil_target(smil, &file, frag.as_deref(), is_dtbook);
             if let Some((file, fragment)) = target {
                 out.push(TocEntry {
                     title,

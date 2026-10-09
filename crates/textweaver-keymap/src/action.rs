@@ -404,6 +404,9 @@ actions! {
         gui ["g:F3"], term ["g:F3"], shared ["b:n"];
     FindPrevious = "find_previous", Search, "Find the previous match",
         gui ["g:Shift+F3"], term ["g:F4"], shared ["b:Shift+N"];
+    SearchOptions = "search_options", Search,
+        "Choose how Find and Replace match: case, whole words, regular expression, across lines",
+        gui [], term [], shared [];
     NextMisspelling = "next_misspelling", Search, "Move to the next misspelled word, and spell it",
         gui ["g:Alt+M"], term ["g:Alt+M"], shared [];
     PreviousMisspelling = "previous_misspelling", Search, "Move to the previous misspelled word, and spell it",
@@ -450,6 +453,15 @@ actions! {
         gui [], term [], shared [];
     SelfTest = "self_test", Bookmarks,
         "Test yourself on the notes and highlights: Enter shows each answer",
+        gui [], term [], shared [];
+    ListChanges = "list_changes", Bookmarks,
+        "List the tracked changes and comments: Enter goes to one, A accepts a change, R rejects it",
+        gui ["g:Ctrl+Shift+J"], term ["g:Alt+A"], shared [];
+    AcceptAllChanges = "accept_all_changes", Bookmarks, "Accept every tracked change in the document",
+        gui [], term [], shared [];
+    RejectAllChanges = "reject_all_changes", Bookmarks, "Reject every tracked change in the document",
+        gui [], term [], shared [];
+    AddComment = "add_comment", Bookmarks, "Add a comment to the selection or the sentence at the cursor",
         gui [], term [], shared [];
 
     // File
@@ -624,6 +636,9 @@ actions! {
     // regions (Wave 8d), as Windows programs do.
     ToggleLineNumbers = "toggle_line_numbers", View, "Show or hide line numbers",
         gui [], term ["g:F6"], shared [];
+    ShowOriginalBraille = "show_original_braille", View,
+        "Show the original braille of the page at the cursor, in a BRF file read as print",
+        gui [], term [], shared [];
     ToggleCharacterKeys = "toggle_character_keys", View,
         "Turn single-key shortcuts on or off, so dictation and typing never trigger commands",
         gui ["g:F9"], term ["g:F9"], shared [];

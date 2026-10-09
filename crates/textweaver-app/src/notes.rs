@@ -113,14 +113,23 @@ fn comment_note_id(c: &textweaver_formats::DocumentComment) -> String {
 /// tagged `comment` (and `resolved` when it is), so reading passes it with
 /// the note signal. Returns how many were added.
 pub(crate) fn add_document_comments(notes: &mut Vec<Note>, doc: &Document) -> usize {
-    let comments = textweaver_formats::comments(&doc.meta);
+    add_document_comments_from(notes, doc, &textweaver_formats::comments(&doc.meta))
+}
+
+/// [`add_document_comments`] for `comments` (the changes list passes the
+/// document's comments after an edit).
+pub(crate) fn add_document_comments_from(
+    notes: &mut Vec<Note>,
+    doc: &Document,
+    comments: &[textweaver_formats::DocumentComment],
+) -> usize {
     if comments.is_empty() {
         return 0;
     }
     let len = doc.len_chars();
     let now = textweaver_store::now_ts();
     let mut added = 0;
-    for c in &comments {
+    for c in comments {
         let id = comment_note_id(c);
         if notes.iter().any(|n| n.id == id) {
             continue;
@@ -164,12 +173,13 @@ impl App {
             NoteCommand::ListHighlights => return self.list_highlights(),
             NoteCommand::RenameBookmark => return self.bookmark_manage(false),
             NoteCommand::DeleteBookmark => return self.bookmark_manage(true),
+            NoteCommand::Links => return self.note_links_here(),
         }
         vec![Effect::Redraw]
     }
 
     /// The selection, else the sentence at the cursor, else the word.
-    fn note_target(&self) -> Option<CharRange> {
+    pub(crate) fn note_target(&self) -> Option<CharRange> {
         let s = self.session.as_ref()?;
         if let Some(sel) = s.selection.filter(|r| !r.is_empty()) {
             return Some(sel);
@@ -244,6 +254,24 @@ impl App {
         ))
     }
 
+    /// The notes list's rows: each note, with "Links: 2 out, 1 in" after
+    /// a note that has links (crate::relations).
+    fn note_items(&mut self) -> Vec<String> {
+        let n = self.session.as_ref().map_or(0, |s| s.notes.len());
+        let counts = self.relations_counts();
+        (0..n)
+            .filter_map(|i| {
+                let item = self.note_item(i)?;
+                Some(match counts.get(i).cloned().flatten() {
+                    Some(links) => {
+                        format!("{}. {links}", item.trim_end().trim_end_matches('.'))
+                    }
+                    None => item,
+                })
+            })
+            .collect()
+    }
+
     pub(crate) fn list_notes(&mut self) -> Vec<Effect> {
         let n = self.session.as_ref().map_or(0, |s| s.notes.len());
         if n == 0 {
@@ -252,7 +280,7 @@ impl App {
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
-        let items: Vec<String> = (0..n).filter_map(|i| self.note_item(i)).collect();
+        let items = self.note_items();
         self.list = Some(ListKind::Notes);
         let msg = self.msg_args("notes-list-intro", &args!["n" => n]);
         self.tell(&msg);
@@ -364,8 +392,7 @@ impl App {
     }
 
     fn list_notes_quiet(&mut self) -> Vec<Effect> {
-        let n = self.session.as_ref().map_or(0, |s| s.notes.len());
-        let items: Vec<String> = (0..n).filter_map(|i| self.note_item(i)).collect();
+        let items = self.note_items();
         self.list = Some(ListKind::Notes);
         vec![Effect::ShowList {
             title: self.msg("notes-list-title"),

@@ -589,6 +589,44 @@ impl Default for CommunityLexiconSettings {
     }
 }
 
+/// The audio format Export audio offers first, and the one `tw
+/// export-audio` writes when the output name has no extension (`[export]
+/// audio_format`). Each value is the format's file extension.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AudioExportFormat {
+    /// FLAC (`.flac`), lossless; first in the list, as before the setting.
+    #[default]
+    Flac,
+    /// MP3 (`.mp3`).
+    Mp3,
+    /// Ogg Opus (`.opus`), the smallest, made for speech.
+    Opus,
+    /// Ogg Vorbis (`.ogg`).
+    Ogg,
+    /// WAV (`.wav`).
+    Wav,
+    /// An M4B audiobook (`.m4b`); needs ffmpeg.
+    M4b,
+    /// An MP4 video with captions (`.mp4`); needs ffmpeg.
+    Mp4,
+}
+
+impl AudioExportFormat {
+    /// The file extension, without the dot.
+    pub fn extension(self) -> &'static str {
+        match self {
+            AudioExportFormat::Flac => "flac",
+            AudioExportFormat::Mp3 => "mp3",
+            AudioExportFormat::Opus => "opus",
+            AudioExportFormat::Ogg => "ogg",
+            AudioExportFormat::Wav => "wav",
+            AudioExportFormat::M4b => "m4b",
+            AudioExportFormat::Mp4 => "mp4",
+        }
+    }
+}
+
 /// Subtitle file format for audio export.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -632,6 +670,9 @@ pub enum SubtitleKaraoke {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ExportSettings {
+    /// The audio format offered first, and written when `tw export-audio`
+    /// is given a name without an extension.
+    pub audio_format: AudioExportFormat,
     /// Subtitle format when subtitles are written without a file name.
     pub subtitle_format: SubtitleFormat,
     /// One subtitle cue per word instead of caption lines.
@@ -1314,6 +1355,12 @@ impl Default for DictationSettings {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ComponentsSettings {
+    /// Where your own components come from first: a GitHub repository
+    /// written `owner/name` (its releases hold the files, and a release
+    /// tagged `manifest` its `components.toml`), or a folder on this
+    /// computer (a clone, or a memory stick) read with no sign-in. Empty:
+    /// none. Never holds a password or token.
+    pub source: String,
     /// A mirror tried before the public sources: an `https:` address or a
     /// folder on this computer, holding each component's files under its
     /// id. Empty: public sources only. `TEXTWEAVER_COMPONENTS_MIRROR` wins
@@ -1722,6 +1769,18 @@ pub enum BrailleTableFormat {
     Stairstep,
 }
 
+/// `[braille] brf_code`: the braille code BRF files are read in, when one
+/// is opened and back-translated to print through liblouis.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BrfCode {
+    /// Unified English Braille: books made since 2016.
+    #[default]
+    Ueb,
+    /// English Braille American Edition: older American books.
+    Ebae,
+}
+
 /// `[braille]`: braille output: BRF files and math braille on the
 /// display.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -1733,6 +1792,8 @@ pub struct BrailleSettings {
     pub math_code: MathBrailleCode,
     /// How tables are laid out in BRF files.
     pub table_format: BrailleTableFormat,
+    /// The code BRF files are read in when opened.
+    pub brf_code: BrfCode,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -2702,6 +2763,27 @@ wrap_navigation = true
         let (s, err) = store.load();
         assert_eq!(s.braille.table_format, BrailleTableFormat::Linear);
         assert!(err.unwrap_or_default().contains("braille.table_format"));
+    }
+
+    /// The code BRF files are read in: UEB by default, stored only when
+    /// changed, and a bad value costs only itself.
+    #[test]
+    fn braille_brf_code_default_round_trip_and_bad_value() {
+        let s = Settings::default();
+        assert_eq!(s.braille.brf_code, BrfCode::Ueb);
+        assert!(!s.to_minimal_toml().unwrap().contains("[braille]"));
+        let (_d, store) = store();
+        write(&store, "[braille]\nbrf_code = \"ebae\"\n");
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        assert_eq!(s.braille.brf_code, BrfCode::Ebae);
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("brf_code = \"ebae\""), "{text}");
+        write(&store, "[braille]\nbrf_code = \"moon\"\n");
+        let (s, err) = store.load();
+        assert_eq!(s.braille.brf_code, BrfCode::Ueb);
+        assert!(err.unwrap_or_default().contains("braille.brf_code"));
     }
 
     #[test]

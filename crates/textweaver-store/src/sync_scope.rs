@@ -174,6 +174,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("accessibility.hybrid_offered", Machine),
     ("accessibility.interface_announcements", Portable),
     // [export]
+    ("export.audio_format", Portable),
     ("export.subtitle_format", Portable),
     ("export.subtitle_word_level", Portable),
     ("export.subtitles_with_audio", Portable),
@@ -182,6 +183,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // [braille]
     ("braille.math_code", Portable),
     ("braille.table_format", Portable),
+    ("braille.brf_code", Portable),
     // [reading_aids]
     ("reading_aids.rsvp.wpm", Portable),
     ("reading_aids.rsvp.pacing", Portable),
@@ -241,6 +243,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // What is downloaded on this computer.
     ("dictation.model", Machine),
     // [components] (W8a-d): this computer's mirror and first run.
+    ("components.source", Machine),
     ("components.mirror", Machine),
     ("components.chooser_shown", Machine),
     // [interface]

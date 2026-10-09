@@ -161,6 +161,7 @@ fn everything_changed() -> Settings {
     s.normalization.medical_lexicon.overlay = Some("C:/terms/medical.toml".into());
     s.normalization.math_verbosity = textweaver_core::Verbosity::High;
     s.normalization.asciimath_delimiter = Some('`');
+    s.export.audio_format = crate::AudioExportFormat::Opus;
     s.export.subtitle_format = crate::SubtitleFormat::Vtt;
     s.export.subtitle_word_level = true;
     s.export.subtitles_with_audio = true;
@@ -168,6 +169,7 @@ fn everything_changed() -> Settings {
     s.export.subtitle_chapters = true;
     s.braille.math_code = crate::MathBrailleCode::Ueb;
     s.braille.table_format = crate::BrailleTableFormat::Listed;
+    s.braille.brf_code = crate::BrfCode::Ebae;
     let a = &mut s.reading_aids;
     a.rsvp = crate::reading_aids::RsvpSettings {
         wpm: 450,
@@ -230,6 +232,7 @@ fn everything_changed() -> Settings {
     s.dictation.speak_while_recording = true;
     s.dictation.model_dir = Some("D:/models/whisper-base.en".into());
     s.dictation.model = "whisper-small.en".into();
+    s.components.source = "D:/my-components".into();
     s.components.mirror = "D:/mirror".into();
     s.components.chooser_shown = true;
     s.interface.language = "en-XA".into();

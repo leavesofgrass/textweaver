@@ -828,24 +828,52 @@ fn list_items_draw_their_bullets_numbers_and_nesting() {
 }
 
 #[test]
-fn edit_mode_draws_no_list_markers() {
-    use textweaver_xilem::document::PaintStep;
+fn edit_mode_keeps_the_list_indent_and_bullets() {
+    use textweaver_xilem::document::{DocMark, PaintStep};
     let doc = nested_list();
     let (mut h, _) = harness_with(&doc, CharPos::ZERO);
-    let has_markers = |h: &TestHarness<DocumentView>| {
-        h.root_widget()
-            .painted()
+    // A highlight on each item's first letter shows where its text starts.
+    let marks: Vec<_> = [6, 13, 24]
+        .iter()
+        .map(|&a| (CharRange::new(a, a + 1), DocMark::Highlight))
+        .collect();
+    h.edit_root_widget(|mut d| DocumentView::set_marks(&mut d, marks));
+    let drawn = |h: &mut TestHarness<DocumentView>| {
+        let _ = h.redraw();
+        let steps = h.root_widget().painted().to_vec();
+        let markers: Vec<u8> = steps
             .iter()
-            .any(|s| matches!(s, PaintStep::ListMarker(..) | PaintStep::Bullet(..)))
+            .filter_map(|s| match s {
+                PaintStep::ListMarker(level, _) => Some(*level),
+                _ => None,
+            })
+            .collect();
+        let bullets = steps
+            .iter()
+            .filter(|s| matches!(s, PaintStep::Bullet(..)))
+            .count();
+        let starts: Vec<f64> = steps
+            .iter()
+            .filter_map(|s| match s {
+                PaintStep::MarkBand(DocMark::Highlight, r) => Some(r.x0),
+                _ => None,
+            })
+            .collect();
+        (markers, bullets, starts)
     };
-    assert!(has_markers(&h));
-    // The source's own dashes and numbers show while editing.
+    let reading = drawn(&mut h);
+    assert_eq!(reading.0, [1, 2, 3]);
     h.edit_root_widget(|mut d| DocumentView::set_editing(&mut d, true));
-    let _ = h.redraw();
-    assert!(!has_markers(&h));
+    let editing = drawn(&mut h);
+    // The indent is the reading view's; the bullets are drawn, and the
+    // numbered item's number is left to the source's own.
+    assert_eq!(editing.2, reading.2, "the same indent by depth");
+    assert_eq!(editing.0, [1, 3]);
+    assert_eq!(editing.1, 2);
+    // Drawn only: the screen reader's text is the document's, unchanged.
+    assert_eq!(doc_text(&h), doc.text().to_string());
     h.edit_root_widget(|mut d| DocumentView::set_editing(&mut d, false));
-    let _ = h.redraw();
-    assert!(has_markers(&h));
+    assert_eq!(drawn(&mut h).0, [1, 2, 3]);
     assert_eq!(doc_text(&h), doc.text().to_string());
 }
 

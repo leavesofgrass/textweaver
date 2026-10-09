@@ -12,7 +12,10 @@ use textweaver_app::a11y::{Announcer, Priority};
 use textweaver_app::core::{CharPos, CharRange};
 use textweaver_app::keymap::ActionId;
 use textweaver_app::store::Paths;
-use textweaver_app::{App, AppConfig, Command, Confirm, Effect, Mode};
+use textweaver_app::{
+    App, AppConfig, Command, Confirm, Effect, Mode, PromptKey, PromptPurpose, ReplaceStep,
+    SearchOptions,
+};
 
 #[derive(Clone, Default)]
 struct Said(Arc<Mutex<Vec<String>>>);
@@ -1208,7 +1211,12 @@ fn replace_one_at_a_time_with_skip_case_and_all() {
     let effects = r.send(Command::Answer("bird".into()));
     assert_eq!(
         list_title(&effects),
-        "Match 1 of 4, line 1: cat Cat cat cat dog"
+        "Match 1 of 4, line 1: cat becomes bird"
+    );
+    assert!(
+        r.said.any("The line: cat Cat cat cat dog."),
+        "{:?}",
+        r.said.all()
     );
     assert_eq!(
         list_items(&effects),
@@ -1217,7 +1225,9 @@ fn replace_one_at_a_time_with_skip_case_and_all() {
             "Skip this one",
             "Replace all the rest",
             "Match case: off",
-            "Whole words only: off"
+            "Whole words only: off",
+            "Regular expression: off",
+            "Across lines: off"
         ]
     );
     // r: replace this one.
@@ -1234,9 +1244,12 @@ fn replace_one_at_a_time_with_skip_case_and_all() {
         list_title(&effects).starts_with("Match 1 of 2"),
         "{effects:?}"
     );
-    // s: skip, then a: all the rest.
+    // s: skip, then a: all the rest, after saying the count and asking.
     r.send(Command::Choose(1));
     r.send(Command::Choose(2));
+    assert_eq!(r.status(), "Replace the 1 remaining match? y or n");
+    assert!(r.app.confirmation_pending());
+    r.send(Command::Confirm(Confirm::Yes));
     assert_eq!(r.text(), "bird Cat cat bird dog\n");
     assert_eq!(r.status(), "Replaced 2, skipped 1.");
     // Undo takes back the last step only.
@@ -1248,6 +1261,223 @@ fn replace_one_at_a_time_with_skip_case_and_all() {
     r.send(Command::Answer("cow".into()));
     r.send(Command::Cancel);
     assert_eq!(r.status(), "Stopped. Replaced 0, skipped 0.");
+}
+/// Edit mode on `text`, with these search options.
+fn editing_with(text: &str, opts: SearchOptions) -> Rig {
+    let mut r = Rig::new();
+    r.open("find.md", text);
+    r.act(ActionId::ToggleEditMode);
+    r.send(Command::SetSearchOptions(opts));
+    r
+}
+
+fn regex() -> SearchOptions {
+    SearchOptions {
+        regex: true,
+        ..SearchOptions::default()
+    }
+}
+
+#[test]
+fn regex_replace_fills_in_captures_and_replace_all_is_one_undo_step() {
+    let mut r = Rig::new();
+    r.open("dates.md", "On 2026-10-09 and 2025-01-02, $5.\n");
+    r.act(ActionId::ToggleEditMode);
+    // The search options list: x switches regular expressions on.
+    let effects = r.act(ActionId::SearchOptions);
+    assert_eq!(list_title(&effects), "Search options");
+    assert_eq!(r.app.list_accelerator('x'), Some(2));
+    let effects = r.send(Command::Choose(2));
+    assert!(r.said.any("Regular expression: on"), "{:?}", r.said.all());
+    assert_eq!(list_items(&effects)[2], "Regular expression: on");
+    r.send(Command::Cancel);
+    assert!(r.app.search_options().regex);
+    // The prompt says the options that are on.
+    r.act(ActionId::Replace);
+    assert!(
+        r.said.any("Options on: regular expression."),
+        "{:?}",
+        r.said.all()
+    );
+    r.send(Command::Answer(r"(?<y>\d{4})-(\d\d)-(\d\d)".into()));
+    let effects = r.send(Command::Answer("$3/$2/${y}$$".into()));
+    assert_eq!(
+        list_title(&effects),
+        "Match 1 of 2, line 1: 2026-10-09 becomes 09/10/2026$"
+    );
+    assert_eq!(
+        r.app.replace_preview().as_deref(),
+        Some("Match 1 of 2, line 1: 2026-10-09 becomes 09/10/2026$")
+    );
+    r.send(Command::Choose(2));
+    assert_eq!(r.status(), "Replace all 2 remaining matches? y or n");
+    r.send(Command::Confirm(Confirm::Yes));
+    assert_eq!(r.text(), "On 09/10/2026$ and 02/01/2025$, $5.\n");
+    assert_eq!(r.status(), "Replaced 2 matches.");
+    // One undo step for all of them.
+    r.act(ActionId::Undo);
+    assert_eq!(r.text(), "On 2026-10-09 and 2025-01-02, $5.\n");
+}
+
+#[test]
+fn replace_all_declined_goes_back_to_the_match() {
+    let mut r = editing_with("a a a\n", SearchOptions::default());
+    r.act(ActionId::Replace);
+    r.send(Command::Answer("a".into()));
+    r.send(Command::Answer(String::new()));
+    assert!(
+        r.said.any("Match 1 of 3, line 1: a is removed"),
+        "{:?}",
+        r.said.all()
+    );
+    r.send(Command::Choose(2));
+    let effects = r.send(Command::Confirm(Confirm::No));
+    assert!(r.said.any("Nothing replaced."), "{:?}", r.said.all());
+    assert!(
+        list_title(&effects).starts_with("Match 1 of 3"),
+        "{effects:?}"
+    );
+    assert_eq!(r.text(), "a a a\n");
+}
+
+#[test]
+fn invalid_patterns_are_said_with_where_they_fail() {
+    let mut r = editing_with("ab(cd\n", regex());
+    r.act(ActionId::Replace);
+    let effects = r.send(Command::Answer("ab(cd".into()));
+    assert_eq!(
+        r.status(),
+        "Error: Invalid pattern at character 3: unclosed group."
+    );
+    assert!(list_items(&effects).is_empty(), "{effects:?}");
+    assert_eq!(
+        r.app.search_pattern_problem("x(").as_deref(),
+        Some("Invalid pattern at character 2: unclosed group.")
+    );
+    assert_eq!(r.app.search_pattern_problem("x(y)"), None);
+    // Find says the same, and so does a `/pattern/` with the option off.
+    r.send(Command::Find("ab(".into()));
+    assert_eq!(
+        r.status(),
+        "Error: Invalid pattern at character 3: unclosed group."
+    );
+    r.send(Command::SetSearchOptions(SearchOptions::default()));
+    r.send(Command::Find("/a[b/".into()));
+    assert!(
+        r.status()
+            .starts_with("Error: Invalid pattern at character 2:"),
+        "{}",
+        r.status()
+    );
+    // Plain text with the same characters finds it; switching x on in the
+    // loop is refused in words, and the option stays off.
+    r.act(ActionId::Replace);
+    r.send(Command::Answer("ab(".into()));
+    r.send(Command::Answer("X".into()));
+    let effects = r.send(Command::Choose(5));
+    assert!(
+        r.said.any("unclosed group. The option is unchanged."),
+        "{:?}",
+        r.said.all()
+    );
+    assert_eq!(list_items(&effects)[5], "Regular expression: off");
+    r.send(Command::Choose(0));
+    assert_eq!(r.text(), "Xcd\n");
+}
+
+#[test]
+fn match_case_and_whole_words_work_with_regex() {
+    let opts = SearchOptions {
+        match_case: true,
+        whole_words: true,
+        ..regex()
+    };
+    let mut r = editing_with("Cat cot catalog cut\n", opts);
+    r.send(Command::StartReplace {
+        find: "c.t".into(),
+        with: "dog".into(),
+    });
+    assert_eq!(
+        r.app.replace_preview().as_deref(),
+        Some("Match 1 of 2, line 1: cot becomes dog")
+    );
+    r.send(Command::ReplaceStep(ReplaceStep::Skip));
+    r.send(Command::ReplaceStep(ReplaceStep::Replace));
+    assert_eq!(r.text(), "Cat cot catalog dog\n");
+    assert_eq!(r.status(), "Replaced 1, skipped 1.");
+    assert_eq!(r.app.replace_preview(), None);
+    // Both texts joined the prompts' history.
+    assert_eq!(
+        r.app.prompt_history(PromptPurpose::ReplaceWith),
+        ["dog".to_owned()]
+    );
+}
+
+#[test]
+fn across_lines_lets_a_match_run_on() {
+    let opts = SearchOptions {
+        across_lines: true,
+        ..regex()
+    };
+    let mut r = editing_with("end of one\nstart of two\n", opts);
+    r.send(Command::StartReplace {
+        find: "one.start".into(),
+        with: "one, start".into(),
+    });
+    r.send(Command::ReplaceStep(ReplaceStep::Replace));
+    assert_eq!(r.text(), "end of one, start of two\n");
+    // In the loop, l switches it off and counts again.
+    r.act(ActionId::Replace);
+    r.send(Command::Answer("of.".into()));
+    r.send(Command::Answer("x".into()));
+    r.send(Command::Choose(6));
+    assert!(
+        r.said.any("Across lines off. 2 matches."),
+        "{:?}",
+        r.said.all()
+    );
+}
+
+#[test]
+fn match_lines_keep_their_meaning_in_forty_cells() {
+    let long = "a".repeat(60);
+    let mut r = editing_with(&format!("{long}\n"), SearchOptions::default());
+    r.act(ActionId::Replace);
+    r.send(Command::Answer(long.clone()));
+    let effects = r.send(Command::Answer("b".repeat(60)));
+    let title = list_title(&effects);
+    assert!(title.starts_with("Match 1 of 1, line 1: aaaa"), "{title}");
+    // The number and line come first, and the change is shortened so the
+    // whole line fits two lines of a 40-cell display.
+    assert!(title.find(':').unwrap() < 40, "{title}");
+    assert!(title.chars().count() <= 80, "{title}");
+    assert!(title.contains(" becomes bbbb"), "{title}");
+}
+
+#[test]
+fn find_and_replace_share_their_history_and_options() {
+    let mut r = Rig::new();
+    r.open("h.md", "Colour and colour\n");
+    r.send(Command::SetSearchOptions(SearchOptions {
+        match_case: true,
+        ..SearchOptions::default()
+    }));
+    r.act(ActionId::Find);
+    assert!(
+        r.said.any("Find. Options on: match case."),
+        "{:?}",
+        r.said.all()
+    );
+    for c in "colour".chars() {
+        r.send(Command::PromptKey(PromptKey::Char(c)));
+    }
+    r.send(Command::PromptKey(PromptKey::Enter));
+    // Match case on: only the second one.
+    assert!(r.said.any("1 of 1"), "{:?}", r.said.all());
+    r.act(ActionId::ToggleEditMode);
+    r.act(ActionId::Replace);
+    r.send(Command::PromptKey(PromptKey::Up));
+    assert_eq!(r.app.prompt_model().unwrap().text(), "colour");
 }
 
 // Templates.

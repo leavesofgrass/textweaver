@@ -46,6 +46,7 @@ use textweaver_app::keymap::ActionId;
 use textweaver_app::store::{Paths, SettingsStore};
 
 use crate::gui::{self, DOC, Refresher};
+pub use crate::log::quantile;
 use crate::setup::{self, Options};
 use crate::theme::{self, Palette};
 
@@ -161,15 +162,6 @@ impl FrameReport {
         }
         out
     }
-}
-
-/// The value at fraction `q` of sorted `v` (0 when empty).
-pub fn quantile(sorted: &[f64], q: f64) -> f64 {
-    if sorted.is_empty() {
-        return 0.0;
-    }
-    let i = ((sorted.len() - 1) as f64 * q.clamp(0.0, 1.0)).round() as usize;
-    sorted[i.min(sorted.len() - 1)]
 }
 
 fn sorted(mut v: Vec<f64>) -> Vec<f64> {
