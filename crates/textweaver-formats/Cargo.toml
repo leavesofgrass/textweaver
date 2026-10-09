@@ -36,6 +36,12 @@ url = ["dep:ureq"]
 paperback = []
 # Pandoc subprocess loader for the long tail (odt, rtf, rst, org, latex, ...).
 pandoc = []
+# carta (pure Rust, MIT or Apache-2.0): reads Org, reStructuredText, and
+# MediaWiki into HTML that the HTML loader takes from there. Off by
+# default, a spike (B1-k1): carta is young and its API unstable, so the
+# version is pinned exactly. Only the readers used and the HTML writer;
+# never carta's `embed-copyleft-grammars` (nor `highlight`, which it needs).
+carta = ["dep:carta"]
 # LaTeX's `\bibliography` and `\printbibliography` read through
 # textweaver-cite: the cited entries of the `.bib` files, formatted. Off by
 # default: the citation stack stays out of the lean reader (`cargo xtask
@@ -70,6 +76,14 @@ flate2 = { workspace = true, optional = true }
 calamine = { workspace = true, optional = true }
 ureq = { workspace = true, optional = true }
 textweaver-cite = { workspace = true, optional = true }
+# shortcut: pinned here, not in `[workspace.dependencies]`, while it is a
+# spike; move it there if the bridge (B1-k2) goes ahead.
+carta = { version = "=0.0.11", optional = true, default-features = false, features = [
+    "read-org",
+    "read-rst",
+    "read-mediawiki",
+    "write-html",
+] }
 
 [dev-dependencies]
 insta.workspace = true

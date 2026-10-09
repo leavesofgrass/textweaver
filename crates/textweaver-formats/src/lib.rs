@@ -41,7 +41,12 @@
 //!   fetches the page and reads it as HTML, or the PDF, EPUB, or other
 //!   file it is. See `web`.
 //!
-//! Every built-in loader is native Rust. The Pandoc loader (feature
+//! The carta loader (feature `carta`, off by default; `org`, `rst`,
+//! `rest`, `mediawiki`, `wiki`; priority 7) is a built-in when the feature
+//! is on: pure Rust, in process, below the native loaders and above Pandoc.
+//! See `carta`.
+//!
+//! Every other built-in loader is native Rust. The Pandoc loader (feature
 //! `pandoc`; `rst`, `org`, `tex`, `dbk`, `textile`,
 //! `mediawiki`, `fb2`, `opml`, `ipynb`, and more; priority 5) is not among
 //! the built-ins: a caller that wants Pandoc registers it
@@ -74,6 +79,8 @@ pub mod archive;
 mod builder;
 pub mod cache;
 pub mod callout;
+#[cfg(feature = "carta")]
+pub mod carta;
 mod counter;
 pub mod daisy;
 pub mod docx;
@@ -112,6 +119,8 @@ pub use annotations::{
 };
 pub use archive::ArchiveLoader;
 pub use cache::{CacheKey, DocumentCache};
+#[cfg(feature = "carta")]
+pub use carta::CartaLoader;
 pub use daisy::DaisyLoader;
 pub use docx::DocxLoader;
 pub use eml::{EmlLoader, MhtmlLoader};
@@ -470,6 +479,8 @@ impl Registry {
         r.register(Box::new(NotebookLoader));
         r.register(Box::new(SvgLoader));
         r.register(Box::new(MathMlLoader));
+        #[cfg(feature = "carta")]
+        r.register(Box::new(CartaLoader));
         r
     }
 
