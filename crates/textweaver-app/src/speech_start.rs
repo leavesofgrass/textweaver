@@ -142,20 +142,21 @@ mod tests {
     }
 
     #[test]
+    // Fakes use engines that exist on every OS; SAPI would be hidden off Windows.
     fn a_failed_engine_falls_back_and_says_so_in_one_sentence() {
         let r = fakes(&[
             ("eci", "Eloquence (OpenEVV, direct)", 1000, false),
-            ("sapi", "Windows SAPI 5 voices", 500, true),
+            ("dectalk", "DECtalk", 500, true),
             ("espeak", "eSpeak NG", 50, true),
         ]);
         let (service, id, messages) =
             start_speech_service(&r, None, &ServiceConfig::default(), &catalog());
-        assert_eq!(id, "sapi");
+        assert_eq!(id, "dectalk");
         assert_eq!(messages.len(), 1, "{messages:?}");
         let m = &messages[0];
         assert!(
             m.starts_with("Eloquence (OpenEVV, direct) could not start")
-                && m.contains("Windows SAPI 5 voices"),
+                && m.contains("DECtalk"),
             "{m}"
         );
         service.shutdown();
@@ -165,14 +166,14 @@ mod tests {
     fn silence_only_when_every_engine_failed() {
         let r = fakes(&[
             ("eci", "Eloquence", 1000, false),
-            ("sapi", "Windows SAPI 5 voices", 500, false),
+            ("dectalk", "DECtalk", 500, false),
         ]);
         let (service, id, messages) =
             start_speech_service(&r, Some("eci"), &ServiceConfig::default(), &catalog());
         assert_eq!(id, SILENT);
         assert_eq!(messages.len(), 1, "{messages:?}");
         assert!(
-            messages[0].starts_with("Eloquence, Windows SAPI 5 voices could not start"),
+            messages[0].starts_with("Eloquence, DECtalk could not start"),
             "{}",
             messages[0]
         );
