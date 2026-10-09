@@ -130,6 +130,10 @@ textweaver never changes your terminal's own colors or cursor.
 
 Documents converted to HTML use textweaver's themes as CSS properties named `--tw-` and the color's key (`--tw-background`, `--tw-dim-text`): Galaxy, or Galaxy Light when the reader's system asks for light, and High Contrast when it asks for more contrast. A browser with a Windows contrast theme on uses its own colors. Links are underlined, and keyboard focus always shows a ring with a thin inner line.
 
+A theme supplies colors only. The page's font, size, spacing, and line length come from your reading settings when you convert, so a theme written for an earlier version keeps working and a page looks like the reader whatever its colors; see [how the page is set](converting.md#how-the-page-is-set).
+
+Highlighted code borrows the theme's text roles: keywords take the heading 2 color and are bold, comments take the dim text color and are italic, strings take the quote color, numbers heading 4, function names heading 1, and type names heading 3. Code blocks sit on the page background, where the theme's contrast check holds every one of these roles to the text floor. textweaver's tests measure every color pair the page draws, in every built-in theme that meets WCAG AA, with the same checker described under [contrast checks](#contrast-checks).
+
 ## Writing your own theme
 
 A theme is a small text file in TOML format. Put it in a folder called `themes` inside the configuration folder above, with a name ending in `.toml`. textweaver loads every theme there when it starts; your themes come after the built-in ones when you press F5.

@@ -278,6 +278,7 @@ mod run {
             o.write.braille.table_format = crate::publish::braille_tables(&self.settings);
             if to == OutputFormat::Html {
                 o.theme_css = Some(self.html_theme_css());
+                o.typography = Some(crate::publish::page_typography(&self.settings));
             }
             o.citations.user_library = self
                 .paths

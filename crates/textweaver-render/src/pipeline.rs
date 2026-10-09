@@ -57,6 +57,7 @@ pub fn to_html(
         link_depth: 0,
         code_depth: 0,
         para_html: Vec::new(),
+        tables: 0,
     };
     // The endnotes heading's id; a heading with the same text gets a suffix.
     pass.slugger.reserve("footnote-label");
@@ -145,9 +146,12 @@ struct Pass<'o, 'a> {
     note_refs: HashMap<String, usize>,
     link_depth: usize,
     code_depth: usize,
-    /// For each open paragraph: true when its start was written as HTML
-    /// (it carries an id) and its end must be too.
-    para_html: Vec<bool>,
+    /// For each open paragraph: the HTML that closes it when its start
+    /// was written as HTML (it carries an id, or it is a figure); `None`
+    /// for an ordinary paragraph.
+    para_html: Vec<Option<String>>,
+    /// Tables written so far, to name each one's scrolling box.
+    tables: usize,
 }
 
 impl<'a> Pass<'_, 'a> {
@@ -204,20 +208,57 @@ impl<'a> Pass<'_, 'a> {
                                 "<p id=\"block-{}\">",
                                 escape_html(&id)
                             ))));
-                            self.para_html.push(true);
+                            self.para_html.push(Some("</p>\n".to_owned()));
                             i += 1;
                             continue;
                         }
                     }
-                    self.para_html.push(false);
+                    if self.polished()
+                        && let Some(k) = lone_image(&ev[i + 1..end])
+                    {
+                        // An image alone in its paragraph is a figure; its
+                        // title, if any, is the caption (and leaves the
+                        // image, so it is not read twice). The alt text
+                        // stays the image's description.
+                        let caption = match &mut ev[i + 1 + k] {
+                            Event::Start(Tag::Image { title, .. }) => {
+                                std::mem::replace(title, CowStr::Borrowed(""))
+                            }
+                            _ => CowStr::Borrowed(""),
+                        };
+                        let close = if caption.trim().is_empty() {
+                            "\n</figure>\n".to_owned()
+                        } else {
+                            format!(
+                                "\n<figcaption>{}</figcaption>\n</figure>\n",
+                                escape_html(caption.trim())
+                            )
+                        };
+                        self.emit(Event::Html(CowStr::Borrowed("<figure>\n")));
+                        self.para_html.push(Some(close));
+                        i += 1;
+                        continue;
+                    }
+                    self.para_html.push(None);
                     self.emit(Event::Start(Tag::Paragraph));
                 }
-                Event::End(TagEnd::Paragraph) => {
-                    if self.para_html.pop() == Some(true) {
-                        self.emit(Event::Html(CowStr::Borrowed("</p>\n")));
-                    } else {
-                        self.emit(Event::End(TagEnd::Paragraph));
-                    }
+                Event::End(TagEnd::Paragraph) => match self.para_html.pop().flatten() {
+                    Some(close) => self.emit(Event::Html(CowStr::from(close))),
+                    None => self.emit(Event::End(TagEnd::Paragraph)),
+                },
+                Event::Start(tag @ Tag::Table(_)) if self.polished() => {
+                    // Wide tables scroll sideways in their own box, which
+                    // takes focus so the keyboard can scroll it too.
+                    self.tables += 1;
+                    self.emit(Event::Html(CowStr::from(format!(
+                        "<div class=\"table-scroll\" role=\"group\" aria-label=\"Table {}\" tabindex=\"0\">\n",
+                        self.tables
+                    ))));
+                    self.emit(Event::Start(tag));
+                }
+                Event::End(TagEnd::Table) if self.polished() => {
+                    self.emit(Event::End(TagEnd::Table));
+                    self.emit(Event::Html(CowStr::Borrowed("</div>\n")));
                 }
                 Event::Start(tag @ (Tag::Link { .. } | Tag::Image { .. })) => {
                     self.link_depth += 1;
@@ -237,6 +278,20 @@ impl<'a> Pass<'_, 'a> {
                     self.emit(Event::Html(CowStr::from(format!("<p>{html}</p>\n"))));
                     i = end + 1;
                     continue;
+                }
+                Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(info))) if self.polished() => {
+                    let end = find_end(&ev, i, |t| matches!(t, TagEnd::CodeBlock));
+                    let lang = info.split_whitespace().next().unwrap_or("");
+                    if let Some(html) = highlighted(lang, &plain_text(&ev[i + 1..end])) {
+                        self.emit(Event::Html(CowStr::from(format!(
+                            "<pre><code class=\"language-{}\">{html}</code></pre>\n",
+                            escape_html(lang)
+                        ))));
+                        i = end + 1;
+                        continue;
+                    }
+                    self.code_depth += 1;
+                    self.emit(Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(info))));
                 }
                 Event::Start(tag @ Tag::CodeBlock(_)) => {
                     self.code_depth += 1;
@@ -294,6 +349,12 @@ impl<'a> Pass<'_, 'a> {
         if let Some(note) = self.note.take() {
             self.notes.push(note);
         }
+    }
+
+    /// The extras past the bare spec (highlighted code, figures, scrolling
+    /// tables): every flavor but CommonMark, which stays exactly the spec.
+    fn polished(&self) -> bool {
+        self.opts.flavor != Flavor::CommonMark
     }
 
     /// The heading's id: an explicit one (pulldown's `{#id}` or a trailing
@@ -456,6 +517,45 @@ fn find_end(ev: &[Event<'_>], start: usize, is_end: impl Fn(&TagEnd) -> bool) ->
         .iter()
         .position(|e| matches!(e, Event::End(t) if is_end(t)))
         .map_or(ev.len(), |p| start + 1 + p)
+}
+
+/// A code block's highlighted HTML, when this build highlights and knows
+/// the language.
+fn highlighted(lang: &str, code: &str) -> Option<String> {
+    #[cfg(feature = "highlight")]
+    {
+        crate::highlight::to_html(lang, code)
+    }
+    #[cfg(not(feature = "highlight"))]
+    {
+        let _ = (lang, code);
+        None
+    }
+}
+
+/// The index of the one image in a paragraph's events, when the image is
+/// all the paragraph holds (spaces and line breaks aside).
+fn lone_image(ev: &[Event<'_>]) -> Option<usize> {
+    let mut found = None;
+    let mut depth = 0usize;
+    for (k, e) in ev.iter().enumerate() {
+        match e {
+            Event::Start(Tag::Image { .. }) if depth == 0 => {
+                if found.is_some() {
+                    return None;
+                }
+                found = Some(k);
+                depth = 1;
+            }
+            Event::Start(Tag::Image { .. }) => depth += 1,
+            Event::End(TagEnd::Image) => depth = depth.checked_sub(1)?,
+            _ if depth > 0 => {}
+            Event::Text(t) if t.trim().is_empty() => {}
+            Event::SoftBreak | Event::HardBreak => {}
+            _ => return None,
+        }
+    }
+    found.filter(|_| depth == 0)
 }
 
 /// True for a fence info string naming ASCIIMath (`asciimath`, `am`).

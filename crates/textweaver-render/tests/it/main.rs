@@ -8,4 +8,5 @@
 mod commonmark;
 mod flavors;
 mod math;
+mod page;
 mod robustness;
