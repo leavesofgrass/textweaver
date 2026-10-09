@@ -308,6 +308,9 @@ pub(crate) enum ListKind {
     /// the order shown (crate::publish).
     #[cfg_attr(not(feature = "publish"), allow(dead_code))]
     HtmlTheme(crate::authoring_state::ThemeFor, Vec<String>),
+    /// A note's links, what links to it, or a step of adding one
+    /// (crate::relations, B1-g1).
+    Relations(crate::relations::RelationsList),
 }
 
 /// The application: the only owner of mutable state.
@@ -502,6 +505,9 @@ pub struct App {
     /// Optional components: the registry, questions, and downloads
     /// (crate::components).
     pub(crate) components: crate::components::ComponentsState,
+    /// Relations between notes: the filter and the library's notes
+    /// (crate::relations, B1-g1).
+    pub(crate) relations: crate::relations::RelationsState,
 }
 
 impl App {
@@ -621,6 +627,7 @@ impl App {
             sync: crate::sync::SyncState::default(),
             fonts: crate::font_download::FontDownloads::default(),
             components: crate::components::ComponentsState::default(),
+            relations: crate::relations::RelationsState::default(),
         };
         if app.paths.is_some() {
             // The writers find a downloaded Lexend by name.
@@ -719,7 +726,7 @@ impl App {
         }
         if let Some((kind, _)) = &self.pending_list_delete {
             return Some(match kind {
-                ListKind::Highlights => V::Remove,
+                ListKind::Highlights | ListKind::Relations(_) => V::Remove,
                 _ => V::Delete,
             });
         }
@@ -787,6 +794,7 @@ impl App {
                     self.list = Some(kind.clone());
                     match kind {
                         ListKind::Highlights => self.delete_highlight(n),
+                        ListKind::Relations(l) => self.remove_relation(&l, n),
                         _ => self.delete_note(n),
                     }
                 }
@@ -796,6 +804,7 @@ impl App {
                     self.tell(&msg);
                     match kind {
                         ListKind::Highlights => self.list_highlights(),
+                        ListKind::Relations(l) => self.reshow_relations(&l),
                         _ => self.notes_command(NoteCommand::List),
                     }
                 }
@@ -1795,6 +1804,7 @@ impl App {
                 }
             }
             Some(ListKind::Summary(ranges)) => self.choose_summary_sentence(&ranges, n),
+            Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1816,6 +1826,7 @@ impl App {
             }
             Some(ListKind::Study(l)) => self.delete_study_item(l, n),
             Some(ListKind::Components(l)) => self.delete_component_row(l, n),
+            Some(ListKind::Relations(l)) => self.delete_relation_item(l, n),
             _ => {
                 let msg = self.msg("study-nothing-to-delete");
                 self.tell(&msg);
@@ -1843,6 +1854,8 @@ impl App {
     fn mark_item(&mut self, n: usize) -> Vec<Effect> {
         match self.list.clone() {
             Some(ListKind::Voices) => self.toggle_favourite_voice(n),
+            // Space on a note opens its links (crate::relations).
+            Some(ListKind::Notes) => self.note_links(n),
             Some(ListKind::Components(l)) => {
                 self.list = None;
                 self.mark_component_row(l, n)
@@ -1884,6 +1897,7 @@ impl App {
                 e
             }
             Some(ListKind::Study(l)) => self.rename_study_item(l, n),
+            Some(ListKind::Relations(l)) => self.edit_relation_item(l, n),
             _ => {
                 let msg = self.msg("study-nothing-to-rename");
                 self.tell(&msg);
@@ -2246,6 +2260,7 @@ impl App {
 fn list_delete_question(kind: &ListKind) -> &'static str {
     match kind {
         ListKind::Highlights => "notes-remove-highlight-question",
+        ListKind::Relations(_) => "relations-remove-question",
         _ => "notes-delete-note-question",
     }
 }

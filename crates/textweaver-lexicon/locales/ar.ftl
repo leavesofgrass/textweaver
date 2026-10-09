@@ -1248,11 +1248,11 @@ notes-none = لا ملاحظات. لإضافة واحدة: { $key }.
 notes-list-title = الملاحظات
 notes-list-intro =
     { $n ->
-        [one] الملاحظات، عنصر واحد. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها.
-        [two] الملاحظات، عنصران. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها.
-        [few] الملاحظات، { $n } عناصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها.
-        [many] الملاحظات، { $n } عنصرًا. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها.
-       *[other] الملاحظات، { $n } عنصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها.
+        [one] الملاحظات، عنصر واحد. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
+        [two] الملاحظات، عنصران. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
+        [few] الملاحظات، { $n } عناصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
+        [many] الملاحظات، { $n } عنصرًا. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
+       *[other] الملاحظات، { $n } عنصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. عند: { $anchor }
@@ -1289,6 +1289,73 @@ notes-highlight-label = تمييز
 notes-signal = ملاحظة: { $text }
 # Said after moving onto a note's passage.
 notes-has-note = تحتوي على ملاحظة: { $text }
+
+## Relations between notes (the knowledge graph as lists).
+
+relations-type-conflicts-with = يتعارض مع
+relations-type-supports = يدعم
+relations-type-is-example-of = مثال على
+relations-type-cites = يستشهد بـ
+relations-type-contradicts = يناقض
+relations-type-defines = يعرّف
+relations-type-extends = يوسّع
+relations-type-see-also = انظر أيضًا
+relations-type-precedes = يسبق
+relations-type-follows = يلي
+relations-count = الروابط: { $out } صادرة، { $in } واردة.
+relations-note-title = روابط: { $note }
+relations-title-filtered = { $title }، التصفية: { $filter }
+relations-note-intro = روابط { $note }: { $out } صادرة، { $in } واردة. Enter لاتباع رابط، F2 لتغييره، Delete لإزالته. اكتب للتصفية حسب النوع.
+relations-out-item = { $type }: { $target }
+relations-target-in = { $note }، في { $doc }
+relations-target-missing = ملاحظة غير موجودة
+relations-empty-note = ملاحظة فارغة
+relations-incoming-row =
+    { $n ->
+        [0] ما يرتبط هنا: لا شيء بعد
+        [one] ما يرتبط هنا: ملاحظة واحدة
+        [two] ما يرتبط هنا: ملاحظتان
+       *[other] ما يرتبط هنا: { $n } ملاحظات
+    }
+relations-add-row = إضافة رابط
+relations-backlinks-title = ما يرتبط هنا: { $note }
+relations-backlinks-intro =
+    { $n ->
+        [one] ما يرتبط بـ { $note }: ملاحظة واحدة. Enter للانتقال إليها. اكتب للتصفية حسب النوع.
+       *[other] ما يرتبط بـ { $note }: { $n } ملاحظات. Enter للانتقال إلى إحداها. اكتب للتصفية حسب النوع.
+    }
+relations-backlink-item = { $type } هذه، من: { $note }
+relations-none-in = لا شيء يرتبط بهذه الملاحظة بعد.
+relations-types-title = نوع الرابط لـ: { $note }
+relations-types-intro = اختر نوع الرابط، 10 أنواع. اكتب للتصفية.
+relations-targets-title = { $type }: أي ملاحظة؟
+relations-targets-intro =
+    { $n ->
+        [0] لا توجد ملاحظة أخرى هنا. اختر ملاحظة في مستند آخر.
+        [one] اختر الملاحظة المراد الربط بها: ملاحظة واحدة. Enter للربط.
+       *[other] اختر الملاحظة المراد الربط بها: { $n } ملاحظات. Enter للربط.
+    }
+relations-other-document-row = ملاحظة في مستند آخر
+relations-documents-title = مستندات بها ملاحظات
+relations-documents-intro = مستندات بها ملاحظات: { $n }. Enter لعرض ملاحظات مستند.
+relations-document-item =
+    { $n ->
+        [one] { $title }، ملاحظة واحدة
+       *[other] { $title }، { $n } ملاحظات
+    }
+relations-no-other-documents = لا يوجد مستند آخر في المكتبة به ملاحظات.
+relations-linked = تم الربط: { $type } { $target }.
+relations-changed = تم تغيير الرابط: { $type } { $target }.
+relations-already = مرتبط من قبل: { $type } { $target }.
+relations-removed = تمت إزالة الرابط: { $type } { $target }.
+relations-remove-question = إزالة هذا الرابط؟ y أو n
+relations-nothing-to-remove = يمكن إزالة رابط فقط هنا.
+relations-note-gone = الملاحظة غير موجودة: حُذفت، أو اختفى مستندها.
+relations-document-missing = المستند غير موجود: { $file }.
+relations-no-note-here = لا توجد ملاحظة هنا. الروابط تخص الملاحظات؛ أضف واحدة: { $key }.
+relations-filter-cleared = تم مسح التصفية، { $n } معروضة.
+relations-filter-none = لا شيء يطابق { $filter }.
+relations-filter-matched = التصفية { $filter }: { $n } معروضة.
 
 ## الإشارات المرجعية: إعادة التسمية والحذف.
 
