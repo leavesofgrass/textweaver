@@ -308,6 +308,8 @@ pub(crate) enum ListKind {
     /// the order shown (crate::publish).
     #[cfg_attr(not(feature = "publish"), allow(dead_code))]
     HtmlTheme(crate::authoring_state::ThemeFor, Vec<String>),
+    /// Prompts with hidden answers: the self-test (crate::reveal).
+    Reveal(crate::reveal::RevealList),
 }
 
 /// The application: the only owner of mutable state.
@@ -486,6 +488,10 @@ pub struct App {
     pub(crate) pending_list_focus: Option<usize>,
     /// Say a list's focused item when the list is shown (crate::list_model).
     pub(crate) announce_list_focus: bool,
+    /// The next list shown is the same list again after a change that was
+    /// just said (an answer revealed): its focused item is not said again
+    /// and its introduction is kept (crate::reveal).
+    pub(crate) list_reshow_quiet: bool,
     /// Menu handlers, recent commands, and the menu list (crate::menu).
     pub(crate) menu: crate::menu::MenuState,
     /// Dictation in edit mode (crate::dictation).
@@ -622,6 +628,7 @@ impl App {
             pending_prompt_text: None,
             pending_list_focus: None,
             announce_list_focus: true,
+            list_reshow_quiet: false,
             menu: crate::menu::MenuState::default(),
             dictation: crate::dictation::DictationSlot::default(),
             browse: crate::browse::BrowseState::new(),
@@ -1807,6 +1814,7 @@ impl App {
                 }
             }
             Some(ListKind::Summary(ranges)) => self.choose_summary_sentence(&ranges, n),
+            Some(ListKind::Reveal(l)) => return self.choose_reveal(l, n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1858,6 +1866,10 @@ impl App {
             Some(ListKind::Components(l)) => {
                 self.list = None;
                 self.mark_component_row(l, n)
+            }
+            Some(ListKind::Reveal(l)) => {
+                self.list = None;
+                self.reveal_answer_aloud(l, n)
             }
             _ => {
                 let msg = self.msg("list-nothing-to-mark");
@@ -2231,6 +2243,7 @@ impl App {
             | A::NextLintProblem
             | A::PreviousLintProblem
             | A::ExportStudySheet
+            | A::SelfTest
             | A::NewFromTemplate
             | A::ExportHtml
             | A::ExportPdf

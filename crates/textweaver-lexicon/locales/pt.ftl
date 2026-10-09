@@ -433,6 +433,7 @@ playback-time-up =
        *[other] O tempo acabou após { $minutes } minutos. { $key } para continuar.
     }
 playback-repeat-slower = Repetindo mais devagar, a { $rate } palavras por minuto.
+playback-recall-prompt = Diga o que lembra de { $section }. { $key } para continuar.
 
 ## The title line and Say Status.
 
@@ -765,6 +766,7 @@ action-previous-note = Mover para a nota anterior
 action-delete-note = Excluir a nota ou o realce no cursor
 action-highlight-selection = Realçar a seleção, ou a frase no cursor
 action-export-study-sheet = Exportar as notas e realces como uma folha de estudo em Markdown, agrupada por cabeçalho
+action-self-test = Testar-se nas notas e realces: Enter mostra cada resposta
 action-open = Abrir um documento
 action-open-path = Abrir um documento digitando o caminho
 action-open-library = Abrir a biblioteca: documentos nas suas pastas de biblioteca e arquivos recentes
@@ -1243,6 +1245,24 @@ notes-sheet-before-first-heading = Antes do primeiro cabeçalho
 notes-sheet-tags = (tags: { $tags })
 # $color is the highlight's color name.
 notes-sheet-highlighted = Realçado, { $color }.
+
+## O autoteste: perguntas com respostas ocultas (crate::reveal).
+
+reveal-self-test-title = Autoteste: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] Autoteste, 1 pergunta. Enter mostra a resposta. Espaço para responder em voz alta.
+       *[other] Autoteste, { $n } perguntas. Enter mostra cada resposta. Espaço para responder em voz alta.
+    }
+reveal-nothing-to-test = Nenhuma nota ou realce para testar. Adicione antes uma nota ou um realce.
+reveal-prompt-note = { $note } (em { $section })
+reveal-prompt-highlight = O que você realçou em { $section }?
+reveal-row-shown = { $prompt } Resposta: { $answer }
+reveal-answer = Resposta: { $answer }
+reveal-listening = Responda em voz alta agora. Espaço para parar.
+reveal-you-said = Você disse: { $words }. Enter mostra a resposta.
+reveal-heard-nothing = Nenhuma resposta ouvida. Espaço para tentar de novo.
+reveal-no-dictation = Responder em voz alta precisa do ditado, que não está nesta versão.
 
 ## Find, bookmarks, and selection.
 
@@ -1887,6 +1907,8 @@ choice-reading-stop-at-heading = próximo título
 choice-reading-stop-at-chapter = próximo capítulo
 setting-reading-stop-after-minutes = Temporizador de leitura
 setting-reading-stop-after-minutes-help = A leitura contínua para no fim da frase após estes minutos de leitura, e avisa. Pausar para o relógio; parar recomeça a contagem. 0 desliga o temporizador.
+setting-reading-recall-prompts = Perguntas de recordação
+setting-reading-recall-prompts-help = No fim de uma seção, a leitura pede que você diga o que lembra. Se Parar no fim da seção for nunca, a leitura para no próximo cabeçalho para isso. A leitura continua com a tecla de ler.
 setting-display-theme = Tema
 setting-display-theme-help = O tema de cores.
 setting-display-follow-os-theme = Seguir o tema do sistema
@@ -3255,6 +3277,7 @@ name-previous-note = Nota anterior
 name-delete-note = Excluir nota ou destaque
 name-highlight-selection = Destacar
 name-export-study-sheet = Exportar folha de estudo
+name-self-test = Autoteste
 name-open = Abrir
 name-open-path = Abrir pelo caminho
 name-open-library = Biblioteca

@@ -220,6 +220,7 @@ mod reading_form;
 mod relocate;
 mod replace;
 mod restart;
+mod reveal;
 pub mod rpc;
 pub mod settings_io;
 pub mod settings_schema;

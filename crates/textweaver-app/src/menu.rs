@@ -493,6 +493,8 @@ impl MenuId {
                 Do(A::PreviousNote),
                 Do(A::HighlightSelection),
                 Do(A::DeleteNote),
+                Sep,
+                Do(A::SelfTest),
             ],
             MenuId::Tables => &[
                 Do(A::NextTable),

@@ -494,7 +494,12 @@ impl App {
                         .filter(|l| &l.title == title)
                         .map(|l| l.selected);
                     let same_list = self.list_model.as_ref().is_some_and(|l| &l.title == title);
-                    if fresh_message {
+                    // The same list again after a change just said: the
+                    // item and the introduction stay as they were.
+                    let quiet = std::mem::take(&mut self.list_reshow_quiet);
+                    if quiet {
+                        // Kept.
+                    } else if fresh_message {
                         self.list_intro = self.last_message.clone();
                     } else if !same_list {
                         self.list_intro = None;
@@ -508,8 +513,7 @@ impl App {
                     if let Some(i) = self.pending_list_focus.take().or(keep) {
                         view.selected = i.min(view.items.len().saturating_sub(1));
                     }
-                    let item = self
-                        .announce_list_focus
+                    let item = (self.announce_list_focus && !quiet)
                         .then(|| view.spoken_item_text(self.cat()))
                         .flatten();
                     // Shown first, so a message held for it belongs to it

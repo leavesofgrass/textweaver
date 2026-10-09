@@ -453,6 +453,7 @@ playback-time-up =
        *[other] Zeit ist um nach { $minutes } Minuten. { $key } liest weiter.
     }
 playback-repeat-slower = Langsamer wiederholen, mit { $rate } Wörtern pro Minute.
+playback-recall-prompt = Sagen Sie, was Sie von { $section } behalten haben. { $key } liest weiter.
 
 ## The title line and Say Status.
 
@@ -785,6 +786,7 @@ action-previous-note = Zur vorherigen Notiz bewegen
 action-delete-note = Die Notiz oder Hervorhebung am Cursor löschen
 action-highlight-selection = Die Auswahl oder den Satz am Cursor hervorheben
 action-export-study-sheet = Die Notizen und Hervorhebungen als Markdown-Lernblatt exportieren, gruppiert nach Überschrift
+action-self-test = Sich selbst zu den Notizen und Hervorhebungen abfragen: Eingabe zeigt jede Antwort
 action-open = Ein Dokument öffnen
 action-open-path = Ein Dokument öffnen, indem Sie seinen Pfad eingeben
 action-open-library = Die Bibliothek öffnen: Dokumente in Ihren Bibliotheksordnern und zuletzt verwendete Dateien
@@ -1263,6 +1265,24 @@ notes-sheet-before-first-heading = Vor der ersten Überschrift
 notes-sheet-tags = (Tags: { $tags })
 # $color is the highlight's color name.
 notes-sheet-highlighted = Hervorgehoben, { $color }.
+
+## Der Selbsttest: Fragen mit verdeckten Antworten (crate::reveal).
+
+reveal-self-test-title = Selbsttest: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] Selbsttest, 1 Frage. Eingabe zeigt die Antwort. Leertaste, um laut zu antworten.
+       *[other] Selbsttest, { $n } Fragen. Eingabe zeigt jede Antwort. Leertaste, um laut zu antworten.
+    }
+reveal-nothing-to-test = Keine Notizen oder Hervorhebungen zum Abfragen. Fügen Sie zuerst eine Notiz oder Hervorhebung hinzu.
+reveal-prompt-note = { $note } (in { $section })
+reveal-prompt-highlight = Was haben Sie in { $section } hervorgehoben?
+reveal-row-shown = { $prompt } Antwort: { $answer }
+reveal-answer = Antwort: { $answer }
+reveal-listening = Antworten Sie jetzt laut. Leertaste zum Beenden.
+reveal-you-said = Sie sagten: { $words }. Eingabe zeigt die Antwort.
+reveal-heard-nothing = Keine Antwort gehört. Leertaste, um es erneut zu versuchen.
+reveal-no-dictation = Laut antworten braucht das Diktat, das in diesem Build fehlt.
 
 ## Find, bookmarks, and selection.
 
@@ -1907,6 +1927,8 @@ choice-reading-stop-at-heading = nächste Überschrift
 choice-reading-stop-at-chapter = nächstes Kapitel
 setting-reading-stop-after-minutes = Lese-Timer
 setting-reading-stop-after-minutes-help = Fortlaufendes Lesen hält nach so vielen Minuten Lesen am Satzende an und sagt es. Pause hält die Uhr an; Stopp beginnt neu. 0 schaltet den Timer aus.
+setting-reading-recall-prompts = Erinnerungsfragen
+setting-reading-recall-prompts-help = Am Abschnittsende bittet das Lesen Sie, zu sagen, was Sie behalten haben. Ist Am Abschnittsende anhalten auf nie, hält das Lesen dafür bei der nächsten Überschrift. Mit der Lesetaste geht es weiter.
 setting-display-theme = Design
 setting-display-theme-help = Das Farbdesign.
 setting-display-follow-os-theme = Dem Systemdesign folgen
@@ -3263,6 +3285,7 @@ name-previous-note = Vorherige Notiz
 name-delete-note = Notiz oder Markierung löschen
 name-highlight-selection = Markieren
 name-export-study-sheet = Lernblatt exportieren
+name-self-test = Selbsttest
 name-open = Öffnen
 name-open-path = Über Pfad öffnen
 name-open-library = Bibliothek

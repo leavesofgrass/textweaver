@@ -31,6 +31,7 @@ impl App {
             A::NextLintProblem => self.lint_action(Direction::Forward),
             A::PreviousLintProblem => self.lint_action(Direction::Backward),
             A::ExportStudySheet => return self.export_study_sheet(),
+            A::SelfTest => return self.self_test(),
             A::NewFromTemplate => return self.new_from_template(),
             A::ExportHtml => return self.export_to(OutputFormat::Html),
             A::ExportPdf => return self.export_to(OutputFormat::Pdf),

@@ -511,6 +511,7 @@ playback-time-up =
        *[other] انتهى الوقت بعد { $minutes } دقيقة. { $key } للمتابعة.
     }
 playback-repeat-slower = إعادة أبطأ، بسرعة { $rate } كلمة في الدقيقة.
+playback-recall-prompt = قل ما تتذكره من { $section }. { $key } للمتابعة.
 
 ## سطر العنوان وقول الحالة.
 
@@ -845,6 +846,7 @@ action-previous-note = الانتقال إلى الملاحظة السابقة
 action-delete-note = حذف الملاحظة أو التمييز عند المؤشر
 action-highlight-selection = تمييز التحديد، أو الجملة عند المؤشر
 action-export-study-sheet = تصدير الملاحظات والتمييزات كورقة دراسة بصيغة ماركداون، مجمّعة حسب العنوان
+action-self-test = اختبر نفسك في الملاحظات والتمييزات: Enter يُظهر كل إجابة
 action-open = فتح مستند
 action-open-path = فتح مستند بكتابة مساره
 action-open-library = فتح المكتبة: مستندات مجلدات مكتبتك والملفات الأخيرة
@@ -1355,6 +1357,27 @@ notes-sheet-before-first-heading = قبل العنوان الأول
 notes-sheet-tags = (الوسوم: { $tags })
 # $color is the highlight's color name.
 notes-sheet-highlighted = مُيِّز، { $color }.
+
+## الاختبار الذاتي: أسئلة بإجابات مخفية (crate::reveal).
+
+reveal-self-test-title = اختبار ذاتي: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] اختبار ذاتي، سؤال واحد. Enter يُظهر الإجابة. مسافة للإجابة بصوت عالٍ.
+        [two] اختبار ذاتي، سؤالان. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+        [few] اختبار ذاتي، { $n } أسئلة. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+        [zero] اختبار ذاتي، { $n } سؤال. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+       *[other] اختبار ذاتي، { $n } سؤالًا. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+    }
+reveal-nothing-to-test = لا ملاحظات أو تمييزات للاختبار. أضف ملاحظة أو تمييزًا أولًا.
+reveal-prompt-note = { $note } (في { $section })
+reveal-prompt-highlight = ماذا ميّزت في { $section }؟
+reveal-row-shown = { $prompt } الإجابة: { $answer }
+reveal-answer = الإجابة: { $answer }
+reveal-listening = أجب بصوت عالٍ الآن. مسافة للإيقاف.
+reveal-you-said = قلت: { $words }. Enter يُظهر الإجابة.
+reveal-heard-nothing = لم تُسمع إجابة. مسافة للمحاولة مرة أخرى.
+reveal-no-dictation = الإجابة بصوت عالٍ تحتاج الإملاء، وهو غير موجود في هذا الإصدار.
 
 ## البحث، والإشارات المرجعية، والتحديد.
 
@@ -2055,6 +2078,8 @@ choice-reading-stop-at-heading = العنوان التالي
 choice-reading-stop-at-chapter = الفصل التالي
 setting-reading-stop-after-minutes = مؤقت القراءة
 setting-reading-stop-after-minutes-help = تتوقف القراءة المستمرة عند نهاية الجملة بعد هذا العدد من دقائق القراءة، وتقول ذلك. الإيقاف المؤقت يوقف الساعة، والإيقاف يبدأها من جديد. 0 يطفئ المؤقت.
+setting-reading-recall-prompts = أسئلة التذكر
+setting-reading-recall-prompts-help = عند نهاية القسم، تطلب منك القراءة أن تقول ما تتذكره. إذا كان التوقف عند نهاية القسم على أبدًا، تتوقف القراءة لذلك عند العنوان التالي. تتابع القراءة بمفتاح القراءة.
 setting-display-theme = السمة
 setting-display-theme-help = السمة اللونية.
 setting-display-follow-os-theme = اتباع سمة النظام
@@ -3542,6 +3567,7 @@ name-previous-note = الملاحظة السابقة
 name-delete-note = حذف الملاحظة أو التمييز
 name-highlight-selection = تمييز
 name-export-study-sheet = تصدير ورقة الدراسة
+name-self-test = اختبار ذاتي
 name-open = فتح
 name-open-path = فتح بالمسار
 name-open-library = المكتبة

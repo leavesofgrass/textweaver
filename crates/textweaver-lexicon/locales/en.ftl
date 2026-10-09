@@ -422,6 +422,7 @@ playback-time-up =
        *[other] Time is up after { $minutes } minutes. { $key } to go on.
     }
 playback-repeat-slower = Repeating slower, at { $rate } words per minute.
+playback-recall-prompt = Say what you remember from { $section }. { $key } to go on.
 
 ## The title line and Say Status.
 
@@ -754,6 +755,7 @@ action-previous-note = Move to the previous note
 action-delete-note = Delete the note or highlight at the cursor
 action-highlight-selection = Highlight the selection, or the sentence at the cursor
 action-export-study-sheet = Export the notes and highlights as a Markdown study sheet, grouped by heading
+action-self-test = Test yourself on the notes and highlights: Enter shows each answer
 action-open = Open a document
 action-open-path = Open a document by typing its path
 action-open-library = Open the library: documents in your library folders and recent files
@@ -1232,6 +1234,24 @@ notes-sheet-before-first-heading = Before the first heading
 notes-sheet-tags = (tags: { $tags })
 # $color is the highlight's color name.
 notes-sheet-highlighted = Highlighted, { $color }.
+
+## The self-test: prompts with hidden answers (crate::reveal).
+
+reveal-self-test-title = Self-test: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] Self-test, 1 prompt. Enter shows the answer. Space to answer aloud.
+       *[other] Self-test, { $n } prompts. Enter shows each answer. Space to answer aloud.
+    }
+reveal-nothing-to-test = No notes or highlights to test. Add a note or highlight first.
+reveal-prompt-note = { $note } (in { $section })
+reveal-prompt-highlight = What did you highlight in { $section }?
+reveal-row-shown = { $prompt } Answer: { $answer }
+reveal-answer = Answer: { $answer }
+reveal-listening = Answer aloud now. Space to stop.
+reveal-you-said = You said: { $words }. Enter shows the answer.
+reveal-heard-nothing = No answer heard. Space to try again.
+reveal-no-dictation = Answering aloud needs dictation, which is not in this version.
 
 ## Find, bookmarks, and selection.
 
@@ -1878,6 +1898,8 @@ choice-reading-stop-at-heading = next heading
 choice-reading-stop-at-chapter = next chapter
 setting-reading-stop-after-minutes = Reading timer
 setting-reading-stop-after-minutes-help = Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.
+setting-reading-recall-prompts = Recall prompts
+setting-reading-recall-prompts-help = At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key.
 setting-display-theme = Theme
 setting-display-theme-help = The color theme.
 setting-display-follow-os-theme = Follow the system theme
@@ -3266,6 +3288,7 @@ name-previous-note = Previous note
 name-delete-note = Delete note or highlight
 name-highlight-selection = Highlight
 name-export-study-sheet = Export study sheet
+name-self-test = Self-test
 name-open = Open
 name-open-path = Open by path
 name-open-library = Library

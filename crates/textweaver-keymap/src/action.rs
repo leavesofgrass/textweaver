@@ -448,6 +448,9 @@ actions! {
     ExportStudySheet = "export_study_sheet", Bookmarks,
         "Export the notes and highlights as a Markdown study sheet, grouped by heading",
         gui [], term [], shared [];
+    SelfTest = "self_test", Bookmarks,
+        "Test yourself on the notes and highlights: Enter shows each answer",
+        gui [], term [], shared [];
 
     // File
     Open = "open", File, "Open a document",
