@@ -82,7 +82,7 @@ define-nothing-here = Am Cursor steht kein Wort.
 define-not-found = Keine Definition gefunden für { $word }.
 define-no-dictionary = Die Wörterbuchdatei ist nicht installiert, daher wurde nur Ihr Glossar durchsucht. Die Lesehilfe beschreibt die Installation.
 define-dictionary-damaged = Die Wörterbuchdatei konnte nicht gelesen werden: { $error } Nur Ihr Glossar wird durchsucht.
-define-glossary-problem = Ihr Glossar konnte nicht gelesen werden: { $error }
+define-glossary-problem = Ihr Glossar konnte nicht gelesen werden: { $error } Nur das Wörterbuch wird durchsucht.
 define-glossary-skipped =
     { $n ->
         [one] 1 Zeile Ihres Glossars hat keine Definition und wurde übersprungen.
@@ -132,7 +132,7 @@ profile-needs-name = Ein Profil braucht einen Namen.
 profile-exists = Ein Profil namens { $name } existiert bereits.
 profiles-not-an-export = { $detail }
 profiles-no-persistence = Profile werden in dieser Sitzung nicht gespeichert.
-profiles-read-failed = Die Profildatei konnte nicht gelesen werden, daher wird sie als leer behandelt: { $error }
+profiles-read-failed = Die Profildatei konnte nicht gelesen werden, daher wird sie als leer behandelt: { $error } Beim Speichern eines Profils wird die Datei ersetzt.
 profiles-save-failed = Die Profile konnten nicht gespeichert werden: { $error } Prüfen Sie, ob in den Einstellungsordner geschrieben werden kann.
 profiles-none-to-export = Es gibt noch keine Profile zu exportieren.
 profiles-exported =
@@ -140,7 +140,7 @@ profiles-exported =
         [one] 1 Profil nach { $file } exportiert.
        *[other] { $n } Profile nach { $file } exportiert.
     }
-profiles-export-failed = Die Profile konnten nicht exportiert werden: { $error }
+profiles-export-failed = Die Profile konnten nicht exportiert werden: { $error } Prüfen Sie, ob in den Ordner geschrieben werden kann.
 profiles-imported =
     { $n ->
         [0] Es waren keine Profile in { $file }.
@@ -445,7 +445,7 @@ playback-no-selection = Keine Auswahl.
 playback-speech-died = Die Sprachausgabe hat aufgehört zu arbeiten ({ $reason }). { $next }
 playback-done-reading = Lesen beendet.
 playback-speech-restarted = Sprachausgabe neu gestartet: { $reason }. Weiter ab dem letzten Wort.
-playback-speech-error = Fehler der Sprachausgabe: { $error }
+playback-speech-error = Fehler der Sprachausgabe: { $error } Versuchen Sie es erneut, oder nutzen Sie den Befehl Sprache neu starten.
 
 ## The title line and Say Status.
 
@@ -874,7 +874,7 @@ restart-restarting = Sprachausgabe wird neu gestartet.
 restart-not-here = Die Sprachausgabe kann hier nicht neu gestartet werden.
 restart-already = Die Sprachausgabe wird bereits neu gestartet.
 # $error is the system's reason, in its own words.
-restart-failed = Die Sprachausgabe konnte nicht neu gestartet werden: { $error }
+restart-failed = Die Sprachausgabe konnte nicht neu gestartet werden: { $error } Warten Sie kurz und versuchen Sie es dann erneut.
 restart-start-failed = Die Sprachausgabe konnte nicht neu gestartet werden: der Start ist fehlgeschlagen.
 restart-no-engine = Keine Sprachausgabe ist verfügbar; { -brand } bleibt stumm. Siehe Troubleshooting, No speech at all, in der Dokumentation.
 restart-done-silent = Sprachausgabe neu gestartet, aber keine Sprachausgabe ist verfügbar; { -brand } bleibt stumm.
@@ -911,12 +911,12 @@ settingsio-import-question =
 settingsio-no-persistence = Einstellungen werden in dieser Sitzung nicht gespeichert, daher können sie nicht exportiert oder importiert werden.
 # $path is the file written.
 settingsio-exported = Einstellungen nach { $path } exportiert.
-settingsio-export-failed = Einstellungen konnten nicht exportiert werden: { $error }
+settingsio-export-failed = Einstellungen konnten nicht exportiert werden: { $error } Prüfen Sie, ob in den Ordner geschrieben werden kann.
 # $path is the file; $error the system's reason.
-settingsio-read-failed = { $path } konnte nicht gelesen werden: { $error }
+settingsio-read-failed = { $path } konnte nicht gelesen werden: { $error } Prüfen Sie die Datei und importieren Sie erneut.
 settingsio-nothing-to-import = Nichts zu importieren: Ihre Einstellungen stimmen bereits mit dieser Datei überein.
 settingsio-cancelled-unchanged = Abgebrochen. Nichts wurde geändert.
-settingsio-import-failed = Einstellungen konnten nicht importiert werden: { $error }
+settingsio-import-failed = Einstellungen konnten nicht importiert werden: { $error } Prüfen Sie, ob in den Einstellungsordner geschrieben werden kann.
 # $summary lists what changed (from the settings store, in English).
 settingsio-imported = Einstellungen importiert. { $summary }
 settingsio-backend-next-start = Die neue Sprachausgabe wird ab dem nächsten Start verwendet.
@@ -1022,7 +1022,7 @@ voices-language-zh = Chinesisch
 voice-sample = Franz jagt im komplett verwahrlosten Taxi quer durch Bayern.
 voice-list-title = Eine Stimme wählen
 voice-still-loading = Die Stimmen werden noch geladen. Die Liste öffnet sich, sobald sie bereit sind.
-voice-list-failed = Die Stimmen konnten nicht aufgelistet werden: { $error }
+voice-list-failed = Die Stimmen konnten nicht aufgelistet werden: { $error } Wählen Sie im Menü Sprache eine andere Sprachausgabe.
 # $shown is voices-shown ("12 voices: English, all engines."). Enter,
 # Space, Delete and Escape are the list's own keys.
 voice-manager-intro = Stimmenverwaltung. { $shown } Eingabetaste verwendet eine Stimme und spricht ein Beispiel, oder lädt eine herunter; { $preview } spielt eine Hörprobe; Leertaste markiert einen Favoriten; Entf entfernt eine heruntergeladene Stimme; Escape schließt.
@@ -1037,7 +1037,7 @@ voice-preview-starting = Hörprobe: { $voice }, { $engine } wird gestartet.
 voice-preview-not-installed = { $voice } ist noch nicht heruntergeladen. Die Eingabetaste lädt sie herunter, nach einer Frage.
 voice-preview-unavailable = { $engine } kann hier nicht für eine Hörprobe starten. Die Eingabetaste wechselt zu dieser Engine.
 voice-preview-engine-failed = { $engine } konnte für eine Hörprobe von { $voice } nicht gestartet werden.
-voice-preview-failed = Hörprobe von { $voice } nicht möglich: { $error }
+voice-preview-failed = Hörprobe von { $voice } nicht möglich: { $error } Versuchen Sie eine andere Stimme.
 # $keys names the Choose Voice key.
 voice-ready = Die Stimmen sind bereit. { $keys } listet sie auf.
 voice-fetch-catalog-question = Die Liste der Piper-Stimmen, etwa 250 Kilobyte, von Hugging Face herunterladen? y oder n
@@ -1055,14 +1055,14 @@ voice-only-piper-removable = Nur heruntergeladene Piper-Stimmen können entfernt
 voice-download-question = { $plan } y oder n
 voice-in-use = { $voice } ist die verwendete Stimme. Wählen Sie zuerst eine andere Stimme.
 voice-removed = { $voice } entfernt.
-voice-remove-failed = { $voice } konnte nicht entfernt werden: { $error }
+voice-remove-failed = { $voice } konnte nicht entfernt werden: { $error } Prüfen Sie, ob in seinen Ordner geschrieben werden kann.
 voice-downloading-catalog = Die Piper-Stimmenliste wird heruntergeladen.
 voice-downloading = { $voice } wird heruntergeladen.
 voice-downloading-percent = { $voice } wird heruntergeladen, { $pct } Prozent.
-voice-details-failed = Die Details der Stimme konnten nicht gelesen werden: { $error }
+voice-details-failed = Die Details der Stimme konnten nicht gelesen werden: { $error } Prüfen Sie die Verbindung und versuchen Sie es erneut.
 voice-download-stopped = Der Download wurde gestoppt.
 voice-catalog-fetched = Die Piper-Stimmenliste hat { $voices } Stimmen in { $languages } Sprachen. Der Befehl Stimmen listet sie auf.
-voice-catalog-failed = Die Stimmenliste konnte nicht heruntergeladen werden: { $error }
+voice-catalog-failed = Die Stimmenliste konnte nicht heruntergeladen werden: { $error } Prüfen Sie die Verbindung und versuchen Sie es erneut.
 # $licence describes the voice's licence, in a sentence of its own.
 voice-installed = { $voice } ist installiert. { $licence } Der Befehl Stimmen listet sie auf.
 voice-download-failed = { $voice } konnte nicht heruntergeladen werden: { $error } Wählen Sie die Stimme erneut, um es noch einmal zu versuchen.
@@ -1095,16 +1095,16 @@ voice-line-numbers-off = Zeilennummern aus.
 common-no-document = Kein Dokument ist geöffnet.
 # Said after "Could not export:", so it starts in lower case. $path is a
 # folder or a file; $error the system's reason.
-publish-cannot-write-to = kann nicht nach { $path } schreiben: { $error }
-publish-cannot-write = kann { $path } nicht schreiben: { $error }
-publish-start-failed = Der Export konnte nicht gestartet werden: { $error }
-publish-export-error = Export nicht möglich: { $error }
+publish-cannot-write-to = kann nicht nach { $path } schreiben: { $error } Prüfen Sie, ob in den Ordner geschrieben werden kann.
+publish-cannot-write = kann { $path } nicht schreiben: { $error } Prüfen Sie, ob in seinen Ordner geschrieben werden kann.
+publish-start-failed = Der Export konnte nicht gestartet werden: { $error } Warten Sie kurz und versuchen Sie es dann erneut.
+publish-export-error = Export nicht möglich: { $error } Beheben Sie das und exportieren Sie dann erneut.
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = Export nach { $format }.
 publish-theme-title = Design für die HTML-Seite
 publish-theme-intro = Design für die HTML-Seite? { $first } zuerst, { $n } zur Auswahl. Escape bricht ab.
 publish-writing-preview = Die Vorschau wird geschrieben.
-publish-preview-error = Die Vorschau konnte nicht geschrieben werden: { $error }
+publish-preview-error = Die Vorschau konnte nicht geschrieben werden: { $error } Beheben Sie das und öffnen Sie die Vorschau erneut.
 publish-still-exporting =
     { $secs ->
         [one] Export nach { $format } läuft noch, { $secs } Sekunde.
@@ -1127,8 +1127,8 @@ publish-live-on = Live-Vorschau an: die Vorschau lädt auch neu, wenn das Tippen
 publish-live-on-needs-reload = Live-Vorschau an. Sie funktioniert mit automatischem Neuladen, das aus ist; schalten Sie es ein mit Vorschau automatisch neu laden.
 publish-live-off = Live-Vorschau aus: die Vorschau lädt nur nach dem Speichern neu.
 # $error is the converter's reason.
-publish-export-failed = Export nach { $format } fehlgeschlagen: { $error }
-publish-preview-failed = Vorschau fehlgeschlagen: { $error }
+publish-export-failed = Export nach { $format } fehlgeschlagen: { $error } Versuchen Sie ein anderes Format.
+publish-preview-failed = Vorschau fehlgeschlagen: { $error } Speichern Sie, um es erneut zu versuchen.
 # The converter's warnings: how many, and the first one.
 publish-warnings =
     { $n ->
@@ -1150,7 +1150,7 @@ publish-preview-written = Vorschau geschrieben. Sie wird im Browser geöffnet. S
 publish-preview-updated = Vorschau aktualisiert.
 publish-preview-updated-press-f5 = Vorschau aktualisiert. Drücken Sie F5 im Browser.
 publish-server-failed = Der Neuladeserver der Vorschau konnte nicht gestartet werden ({ $error }); die Datei wird stattdessen geöffnet.
-publish-render-failed = Der Text konnte nicht dargestellt werden: { $error }
+publish-render-failed = Der Text konnte nicht dargestellt werden: { $error } Verlassen Sie den Bearbeitungsmodus, um den Text zu lesen.
 publish-nothing-after-caret = Nichts zu lesen nach dem Cursor.
 publish-listening = Der dargestellte Text wird angehört.
 
@@ -1246,7 +1246,7 @@ notes-study-sheet-saved-both =
         [one] 1 Hervorhebung
        *[other] { $h } Hervorhebungen
     } gespeichert als { $file }. Öffnen? y oder n. In { $folder }.
-notes-study-sheet-failed = Das Lernblatt konnte nicht geschrieben werden: { $error }
+notes-study-sheet-failed = Das Lernblatt konnte nicht geschrieben werden: { $error } Prüfen Sie, ob in den Ordner geschrieben werden kann.
 # The study sheet file's own text (Markdown; the # marks stay in the code).
 notes-sheet-title = Lernblatt: { $title }
 notes-sheet-exported = Exportiert aus { -brand } am { $date }.
@@ -1258,7 +1258,7 @@ notes-sheet-highlighted = Hervorgehoben, { $color }.
 
 ## Find, bookmarks, and selection.
 
-marks-cannot-search = Suche nicht möglich: { $error }
+marks-cannot-search = Suche nicht möglich: { $error } Prüfen Sie das Muster zwischen den Schrägstrichen.
 # $pattern is the text searched for.
 marks-no-matches = Keine Treffer für { $pattern }.
 # The label of a match reached by Find, at high verbosity; $number is its place among $n matches.
@@ -1440,27 +1440,27 @@ citations-picker-intro =
     }
 # $text is what was typed at the locator prompt.
 citations-locator-unreadable = Der Fundort { $text } konnte nicht gelesen werden. Geben Sie eine Seite wie 12 ein, Seiten wie 3-5, oder Kapitel 2; Eingabetaste allein für keinen.
-citations-insert-failed = Das Zitat konnte nicht eingefügt werden: { $error }
+citations-insert-failed = Das Zitat konnte nicht eingefügt werden: { $error } Der Text ist unverändert.
 # $what is the identifier being looked up, as the citation library describes it.
 citations-looking-up = { $what } wird nachgeschlagen.
-citations-lookup-not-started = Das Nachschlagen konnte nicht gestartet werden: { $error }
+citations-lookup-not-started = Das Nachschlagen konnte nicht gestartet werden: { $error } Warten Sie kurz und versuchen Sie es dann erneut.
 # $input is the DOI or ISBN as typed.
-citations-lookup-failed = { $input } konnte nicht nachgeschlagen werden: { $error }
+citations-lookup-failed = { $input } konnte nicht nachgeschlagen werden: { $error } Prüfen Sie die DOI oder ISBN und die Verbindung.
 citations-no-library-to-add-to = Es gibt keine Bibliothek zum Hinzufügen: { -brand } hält in dieser Sitzung keine Dateien.
-citations-library-save-failed = Die Bibliothek konnte nicht gespeichert werden: { $error }
+citations-library-save-failed = Die Bibliothek konnte nicht gespeichert werden: { $error } Prüfen Sie, ob in seinen Ordner geschrieben werden kann.
 # $n is how many citations the document has.
 citations-found-no-library =
     { $n ->
         [one] { $n } Zitat gefunden. { -brand } hält in dieser Sitzung keine Bibliothek.
        *[other] { $n } Zitate gefunden. { -brand } hält in dieser Sitzung keine Bibliothek.
     }
-citations-check-failed = Die Zitate konnten nicht geprüft werden: { $error }
+citations-check-failed = Die Zitate konnten nicht geprüft werden: { $error } Prüfen Sie die Datei der Literaturbibliothek.
 citations-no-library-to-import-into = Es gibt keine Bibliothek zum Importieren: { -brand } hält in dieser Sitzung keine Dateien.
 # $file is the file's path.
-citations-import-failed = { $file } konnte nicht importiert werden: { $error }
+citations-import-failed = { $file } konnte nicht importiert werden: { $error } Prüfen Sie, ob es eine .bib-, .ris- oder .json-Datei ist.
 # $style is the style's name from the front matter, such as apa.
-citations-style-unusable = Der Zitierstil { $style } kann nicht verwendet werden: { $error }
-citations-format-failed = Die Zitate konnten nicht formatiert werden: { $error }
+citations-style-unusable = Der Zitierstil { $style } kann nicht verwendet werden: { $error } Prüfen Sie den Stilnamen am Anfang des Dokuments.
+citations-format-failed = Die Zitate konnten nicht formatiert werden: { $error } Prüfen Sie die Zitierschlüssel und die Bibliothek.
 # $key names the Insert Citation command's keys.
 citations-none-yet = Das Dokument hat noch keine Zitate. Fügen Sie eines ein mit { $key }.
 citations-nothing-to-list = Keines der zitierten Werke ist in Ihrer Bibliothek, daher gibt es nichts aufzulisten.
@@ -1472,7 +1472,7 @@ citations-bibliography-inserted =
     }
 # Follows citations-bibliography-inserted; $keys are citation keys joined with commas.
 citations-not-in-library = Nicht in der Bibliothek: { $keys }.
-citations-bibliography-insert-failed = Das Literaturverzeichnis konnte nicht eingefügt werden: { $error }
+citations-bibliography-insert-failed = Das Literaturverzeichnis konnte nicht eingefügt werden: { $error } Der Text ist unverändert.
 
 ## Speech Cursor mode.
 
@@ -1677,7 +1677,7 @@ settings-choose-one-of = Wählen Sie eines von: { $names }.
 settings-edit-table = Bearbeiten Sie { $label } in settings.toml; sie enthält Namen und Werte.
 # $path is a key such as speech.rate, not translated.
 settings-no-such-setting = Es gibt keine Einstellung { $path }.
-settings-cannot-be = { $label } kann das nicht sein: { $error }
+settings-cannot-be = { $label } kann das nicht sein: { $error } Wählen Sie einen anderen Wert.
 settings-changed = { $label }, { $value }.
 settings-clamped = Außerhalb des Bereichs, daher wird der nächstliegende Wert verwendet.
 settings-restart-speech = Starten Sie die Sprachausgabe neu, um es zu verwenden.
@@ -2275,11 +2275,11 @@ edit-pasted-start =
         [one] 1 Zeichen eingefügt: { $start }
        *[other] { $n } Zeichen eingefügt: { $start }
     }
-edit-insert-failed = Konnte nicht einfügen: { $error }
+edit-insert-failed = Konnte nicht einfügen: { $error } Der Text ist unverändert.
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = Zeichen { $start } bis { $end } können nicht geändert werden: der Text hat { $len }.
-edit-change-failed = Der Text konnte nicht geändert werden: { $error }
-edit-delete-failed = Konnte nicht löschen: { $error }
+edit-change-failed = Der Text konnte nicht geändert werden: { $error } Der Text ist unverändert.
+edit-delete-failed = Konnte nicht löschen: { $error } Der Text ist unverändert.
 edit-list-ended = Liste beendet.
 # Said when Enter continues a bulleted list.
 edit-bullet = Aufzählungspunkt
@@ -2366,7 +2366,7 @@ edit-nothing-to-redo = Nichts zu wiederholen.
 edit-not-a-table-size = Keine Tabellengröße: { $text }. Geben Sie Spalten und Zeilen ein, zum Beispiel 3 mal 2.
 # $name is the image's file name.
 edit-image-inserted = Bild { $name } eingefügt. Seine Beschreibung ist ausgewählt; tippen Sie, um sie zu ersetzen.
-edit-image-failed = Das Bild konnte nicht eingefügt werden: { $error }
+edit-image-failed = Das Bild konnte nicht eingefügt werden: { $error } Der Text ist unverändert.
 # $query is the text to find.
 common-no-matches = Keine Treffer für { $query }.
 # $n matches of $query were found; the replacement is asked next.
@@ -2405,7 +2405,7 @@ replace-item-rest = Alle restlichen ersetzen
 # $state is common-on or common-off.
 replace-item-match-case = Groß-/Kleinschreibung beachten: { $state }
 replace-item-whole-words = Nur ganze Wörter: { $state }
-replace-failed = Konnte nicht ersetzen: { $error }
+replace-failed = Konnte nicht ersetzen: { $error } Der Text ist unverändert.
 # Said after switching match case; $state is common-on or common-off, and
 # $n is the number of matches now.
 replace-match-case-now =
@@ -2434,7 +2434,7 @@ writes-not-written-in-time = Einige Änderungen konnten nicht rechtzeitig geschr
 # $error is the system's reason.
 writes-save-failed = Konnte nicht speichern: { $error }. Noch in Bearbeitung.
 # $name is the bookmark's name, $pct where it is.
-writes-bookmark-not-saved = Lesezeichen { $name } ist vorerst gesetzt, konnte aber nicht gespeichert werden: { $error }
+writes-bookmark-not-saved = Lesezeichen { $name } ist vorerst gesetzt, konnte aber nicht gespeichert werden: { $error } Prüfen Sie, ob in den Datenordner geschrieben werden kann.
 # $name is the saved file's name.
 writes-saved = { $name } gespeichert. Noch in Bearbeitung.
 
@@ -2707,7 +2707,7 @@ common-left-as-is = So belassen, wie es ist.
 grammar-fix-not-editing = { $fix }. Schalten Sie den Bearbeitungsmodus mit { $key } ein, um den Text zu ändern.
 grammar-removed = Entfernt.
 grammar-changed = Geändert zu { $fix }.
-grammar-change-failed = Der Text konnte nicht geändert werden: { $error }
+grammar-change-failed = Der Text konnte nicht geändert werden: { $error } Nichts wurde geändert.
 
 ## Spell checking.
 
@@ -2744,7 +2744,7 @@ spell-suggestions-edit =
 # $word is the suggestion chosen; $key turns on edit mode.
 spell-replace-not-editing = { $word }. Schalten Sie den Bearbeitungsmodus mit { $key } ein, um den Text zu ändern.
 spell-replaced = Ersetzt durch { $word }.
-spell-replace-failed = Konnte nicht ersetzen: { $error }
+spell-replace-failed = Konnte nicht ersetzen: { $error } Das Wort ist unverändert.
 spell-added-for-session = { $word } für diese Sitzung zu Ihrer Wortliste hinzugefügt.
 spell-added = { $word } zu Ihrer Wortliste hinzugefügt.
 spell-save-failed = Ihre Wortliste konnte nicht gespeichert werden: { $error } Das Wort gilt bis zum Beenden als bekannt.
@@ -2763,8 +2763,8 @@ tui-setup-backend-unavailable = Sprachausgabe { $wanted } ist nicht verfügbar; 
 tui-setup-speech-failed = Die Sprachausgabe konnte nicht gestartet werden ({ $error }); läuft stumm weiter.
 speech-engine-fallback = { $failed } konnte nicht starten; stattdessen spricht { $engine }.
 speech-engine-fallback-silent = { $failed } konnte nicht starten, und keine andere Sprachausgabe ist verfügbar; { -brand } bleibt stumm.
-tui-setup-cannot-save = Einstellungen oder Positionen können nicht gespeichert werden: { $error }
-tui-setup-keymap-ignored = Tastenzuordnungsdatei ignoriert: { $error }
+tui-setup-cannot-save = Einstellungen oder Positionen können nicht gespeichert werden: { $error } Lesen funktioniert. Änderungen gehen beim Beenden verloren.
+tui-setup-keymap-ignored = Tastenzuordnungsdatei ignoriert: { $error } Die Standardtasten gelten. Korrigieren Sie die Datei und starten Sie neu.
 # The first-run welcome. Each value names the key for an action: $play
 # reads and pauses, $stop stops, $heading moves to the next heading,
 # $help opens the help, $quit quits.
@@ -3450,7 +3450,7 @@ dictation-done = Diktat fertig.
 dictation-busy = Das Diktat wird abgeschlossen. Versuchen Sie es gleich noch einmal.
 dictation-needs-edit = Das Diktat schreibt im Bearbeitungsmodus. Bearbeitungsmodus einschalten und diktieren? y oder n
 dictation-no-model = Das Diktat braucht das Whisper-Modell in { $dir }. Siehe Dictation in der Dokumentation.
-dictation-failed = Diktat fehlgeschlagen: { $error }
+dictation-failed = Diktat fehlgeschlagen: { $error } Siehe Dictation in der Dokumentation.
 dictation-no-words = In diesem Satz wurden keine Wörter erkannt.
 dictation-lost = Das Diktat wurde beendet, bevor seine letzten Wörter geschrieben waren.
 dictation-not-typed = Diktierte Wörter nicht geschrieben, der Bearbeitungsmodus ist aus: { $text }
@@ -3627,7 +3627,7 @@ batch-stopped =
        *[other] { $converted } Dateien
     } umgewandelt; { $left } nicht umgewandelt; { $failed } fehlgeschlagen.
 batch-report = Bericht gespeichert in { $path }.
-batch-report-failed = Der Bericht konnte nicht gespeichert werden: { $error }
+batch-report-failed = Der Bericht konnte nicht gespeichert werden: { $error } Die umgewandelten Dateien bleiben erhalten.
 batch-inaccessible =
     { $n ->
         [one] 1 Datei hat
@@ -3639,7 +3639,7 @@ batch-failures-title =
        *[other] { $n } fehlgeschlagene Dateien
     }
 batch-failure-item = { $name }: { $reason }
-batch-start-failed = Umwandlung konnte nicht beginnen: { $error }
+batch-start-failed = Umwandlung konnte nicht beginnen: { $error } Prüfen Sie Ordner und Format und versuchen Sie es erneut.
 batch-thread-stopped = Die Stapelumwandlung hat unerwartet angehalten.
 
 
@@ -3685,7 +3685,7 @@ audio-done =
        *[other] { $chapters } Kapitel
     }.
 audio-subtitles = Untertitel in { $name }.
-audio-failed = Audio konnte nicht exportiert werden: { $error }
+audio-failed = Audio konnte nicht exportiert werden: { $error } Versuchen Sie ein anderes Format oder eine andere Stimme.
 audio-thread-stopped = Der Audioexport hat unerwartet angehalten.
 
 
@@ -3734,7 +3734,7 @@ sync-status-up-to-date = Sync: aktuell
 sync-status-this-computer = Dieser Computer: { $name }.
 sync-status-no-others = Noch keine anderen Computer.
 sync-status-others = Andere Computer: { $names }.
-sync-status-error = Problem: { $error }
+sync-status-error = Problem: { $error } Prüfen Sie den Sync-Ordner.
 sync-another-computer = ein anderer Computer
 sync-untitled = ein Dokument
 sync-damaged = Sync: beschädigte Datei von { $device } übersprungen.
@@ -3742,7 +3742,7 @@ sync-newer-file = Sync: neuere Datei von { $device } übersprungen.
 sync-read-only = Sync: neueres Format, nur lesen.
 sync-clock-ahead = Sync: Uhr von { $device } geht { $hours } Stunden vor.
 sync-fresh-id = Sync: kopierte Einrichtung; neue Computer-ID.
-sync-write-failed = Sync: Schreiben fehlgeschlagen. { $error }
+sync-write-failed = Sync: Schreiben fehlgeschlagen. { $error } Vorerst wird auf diesem Computer gespeichert.
 sync-name-refused = Name nicht erlaubt. Zum Beispiel: Laptop.
 sync-note-replaced =
     { $n ->
@@ -3786,7 +3786,7 @@ sync-sidecar-differed =
         [one] Sync: 1 Bibliotheksstelle wich ab.
        *[other] Sync: { $n } Bibliotheksstellen wichen ab.
     }
-sync-sidecar-failed = Sync: Bibliotheksstelle nicht schreibbar. { $error }
+sync-sidecar-failed = Sync: Bibliotheksstelle nicht schreibbar. { $error } Prüfen Sie, ob in den Bibliotheksordner geschrieben werden kann.
 sync-no-state = Sync ist in diesem Lauf aus: nichts wird gespeichert.
 sync-choose-folder = Sync-Ordner wählen
 sync-group-places = Stellen
@@ -3928,7 +3928,7 @@ setting-sync-favorite-voices-help = Die Lieblingsstimmen teilen. Eine, die diese
 font-download-question = Schrift { $font } herunterladen, { $kb } KB, { $licence }? y oder n
 font-downloading = { $font } wird heruntergeladen.
 font-downloaded = { $font } heruntergeladen und bereit.
-font-download-failed = { $font } nicht heruntergeladen: { $error }
+font-download-failed = { $font } nicht heruntergeladen: { $error } Andere Schrift aktiv.
 font-download-declined = Nicht geladen. Andere Schrift aktiv.
 font-download-busy = { $font } wird noch heruntergeladen.
 font-download-no-folder = Kein Datenordner für { $font }.
