@@ -256,6 +256,13 @@ impl Tui {
         log::info!("{}", info.log_line());
         let mut tui = Self::with_color_support(app, info.color);
         tui.clipboard_route = info.clipboard;
+        // Paste reads the system clipboard where it is the listener's
+        // (not over SSH or in tmux), so formatted text becomes Markdown.
+        #[cfg(feature = "clipboard")]
+        if info.clipboard != crate::clipboard::Route::Osc52 {
+            tui.app
+                .set_clipboard(Box::new(crate::clipboard::SystemReader));
+        }
         tui.terminal = info;
         tui
     }
@@ -565,6 +572,14 @@ impl Tui {
                 _ => Confirm::Repeat,
             };
             self.dispatch(Command::Confirm(answer));
+            return;
+        }
+        // The Applications key, where the terminal reports it (with the
+        // kitty keyboard protocol): the context menu, as in the window.
+        if k.code == KeyCode::Menu && self.app.prompt_model().is_none() {
+            if self.app.list_model().is_none() {
+                self.dispatch(Command::Action(ActionId::ContextMenu));
+            }
             return;
         }
         if self.app.list_model().is_some() {
