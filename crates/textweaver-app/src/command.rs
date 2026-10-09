@@ -17,7 +17,9 @@ pub enum Command {
     /// Text typed in edit mode (wave 2). Prompts send their whole answer
     /// with [`Command::Answer`] instead.
     Insert(String),
-    /// Run a search with this pattern (from the find prompt).
+    /// Run a search with this pattern (from the find prompt, or a find
+    /// panel's Find next after its text changed), with the search options
+    /// ([`App::search_options`](crate::App::search_options)).
     Find(String),
     /// Jump to a target (from the go-to prompt).
     GoTo(GoTo),
@@ -144,6 +146,25 @@ pub enum Command {
         /// Its new value (`null` resets it to the default).
         value: serde_json::Value,
     },
+    /// Set the search options of Find and Replace (a find panel's check
+    /// boxes). Nothing is said: the check box says its own state. A
+    /// replace loop in progress counts its matches again and asks about
+    /// the match at the caret.
+    SetSearchOptions(crate::SearchOptions),
+    /// Edit mode: start replacing `find` with `with`, one match at a time
+    /// from the caret, as Alt+F's two prompts do (a find panel's Replace).
+    /// An invalid pattern is said in words and nothing starts. Both texts
+    /// join the prompts' history.
+    StartReplace {
+        /// The text or regular expression to find.
+        find: String,
+        /// What each match becomes (`$1`, `${name}` and `$$` with a
+        /// regular expression).
+        with: String,
+    },
+    /// A step of the replace loop in progress (a find panel's Replace,
+    /// Skip and Replace all buttons); nothing without one.
+    ReplaceStep(crate::ReplaceStep),
 }
 
 /// How far a [`Command::MoveCaret`] moves.

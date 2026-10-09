@@ -221,6 +221,7 @@ mod relocate;
 mod replace;
 mod restart;
 pub mod rpc;
+mod search_options;
 pub mod settings_io;
 pub mod settings_schema;
 mod speech_cursor;
@@ -288,7 +289,9 @@ pub use playback::{
     Playback, load_options, narration_policy, plan_with_written_pauses, structural_pauses,
 };
 pub use reading_form::{READING_SETTINGS, SpacingPreset, is_reading_setting};
+pub use replace::ReplaceStep;
 pub use restart::SpeechStarter;
+pub use search_options::SearchOptions;
 pub use settings_schema::{
     Frontend, Setting, SettingKind, SettingsSchema, TERMINAL_ONLY, WINDOW_ONLY,
 };

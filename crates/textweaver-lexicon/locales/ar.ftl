@@ -817,6 +817,7 @@ action-cycle-punctuation = التنقل بين مقدار علامات التر�
 action-find = البحث عن نص في المستند
 action-find-next = البحث عن التطابق التالي
 action-find-previous = البحث عن التطابق السابق
+action-search-options = اختيار طريقة المطابقة في البحث والاستبدال: حالة الأحرف، الكلمات الكاملة، التعبير النمطي، عبر الأسطر
 action-next-misspelling = الانتقال إلى الكلمة الخطأ إملائيًا التالية، وتهجئتها
 action-previous-misspelling = الانتقال إلى الكلمة الخطأ إملائيًا السابقة، وتهجئتها
 action-spelling-suggestions = سرد اقتراحات الكلمة الخطأ إملائيًا عند المؤشر، أو إضافتها إلى قائمة كلماتك
@@ -2596,12 +2597,15 @@ edit-recovery-postponed = أُجِّل الاسترداد. سيُعرض العم
 
 # $title is replace-match-title. Keep the letters r, s and a: they are the
 # keys that answer.
-replace-match-question = { $title }. اضغط r للاستبدال، s للتخطي، a لاستبدال الكل، Escape للإيقاف.
+replace-match-question = { $title }. السطر: { $context }. اضغط r للاستبدال، s للتخطي، a لاستبدال الكل، Escape للإيقاف.
 # The replace list's title when no match is being asked about.
 replace-title = استبدال
 # $n is this match's number, $total the number of matches, $line the line
-# number, and $context the text of that line.
-replace-match-title = التطابق { $n } من { $total }، السطر { $line }: { $context }
+# number, $found the matched text, and $result what it becomes (both
+# shortened); the -removed form is for an empty replacement. $context in
+# replace-match-question is the text of the match's line.
+replace-match-title = التطابق { $n } من { $total }، السطر { $line }: { $found } يصبح { $result }
+replace-match-title-removed = التطابق { $n } من { $total }، السطر { $line }: يُحذف { $found }
 replace-item-this = استبدال هذا
 replace-item-skip = تخطي هذا
 replace-item-rest = استبدال كل الباقي
@@ -2638,6 +2642,52 @@ replace-replaced =
     }
 replace-replaced-skipped = استُبدل { $n }، تُخطي { $skipped }.
 replace-stopped = تم الإيقاف. استُبدل { $n }، تُخطي { $skipped }.
+# Find and replace with regular expressions (B1-fr). $state is common-on
+# or common-off; $n is the number of matches now.
+replace-item-regex = تعبير نمطي: { $state }
+replace-item-across-lines = عبر الأسطر: { $state }
+replace-regex-now =
+    { $n ->
+        [one] تعبير نمطي { $state }. تطابق واحد.
+        [two] تعبير نمطي { $state }. تطابقان.
+        [few] تعبير نمطي { $state }. { $n } تطابقات.
+        [many] تعبير نمطي { $state }. { $n } تطابقًا.
+       *[other] تعبير نمطي { $state }. { $n } تطابق.
+    }
+replace-across-lines-now =
+    { $n ->
+        [one] عبر الأسطر { $state }. تطابق واحد.
+        [two] عبر الأسطر { $state }. تطابقان.
+        [few] عبر الأسطر { $state }. { $n } تطابقات.
+        [many] عبر الأسطر { $state }. { $n } تطابقًا.
+       *[other] عبر الأسطر { $state }. { $n } تطابق.
+    }
+# $problem is search-invalid-pattern: switching the option would make the
+# pattern invalid.
+replace-option-refused = { $problem } لم يتغير الخيار.
+# Asked once before replacing all the rest; $n is how many. Keep y and n.
+replace-all-question =
+    { $n ->
+        [one] استبدال التطابق الأخير؟ y أو n
+        [two] استبدال التطابقين المتبقيين؟ y أو n
+        [few] استبدال { $n } تطابقات متبقية؟ y أو n
+        [many] استبدال { $n } تطابقًا متبقيًا؟ y أو n
+       *[other] استبدال { $n } تطابق متبقٍ؟ y أو n
+    }
+replace-all-declined = لم يُستبدل شيء.
+# The search options list, and the options as named in search-options-on.
+search-options-title = خيارات البحث
+search-option-match-case = مطابقة حالة الأحرف
+search-option-whole-words = الكلمات الكاملة
+search-option-regex = تعبير نمطي
+search-option-across-lines = عبر الأسطر
+# Said as Find or Replace opens when an option is on; $list joins the
+# options' names with commas.
+search-options-on = الخيارات المفعّلة: { $list }.
+# $at is the character where the pattern fails, counting from 1; $reason
+# is the regular expression engine's own explanation (in English).
+search-invalid-pattern = نمط غير صالح عند الحرف { $at }: { $reason }.
+search-invalid-pattern-anywhere = نمط غير صالح: { $reason }.
 
 ## الحفظ في الخلفية.
 
@@ -3510,6 +3560,7 @@ name-cycle-punctuation = علامات الترقيم
 name-find = بحث
 name-find-next = بحث عن التالي
 name-find-previous = بحث عن السابق
+name-search-options = خيارات البحث
 name-next-misspelling = الخطأ الإملائي التالي
 name-previous-misspelling = الخطأ الإملائي السابق
 name-spelling-suggestions = اقتراحات الإملاء
