@@ -4287,6 +4287,9 @@ fn startup_phase(log: bool, phase: &str) {
 /// Runs the GUI until the window closes.
 pub fn run(opts: GuiOptions) -> Result<(), String> {
     let _ = RUN_STARTED.set(Instant::now());
+    if opts.log {
+        crate::log::frame_times();
+    }
     // The platform's interface text size, read beside the app's startup.
     let text_scale = std::thread::Builder::new()
         .name("text-scale".into())
