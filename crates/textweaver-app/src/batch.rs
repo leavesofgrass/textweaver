@@ -110,16 +110,25 @@ mod run {
     pub(crate) const PROGRESS_EVERY: Duration = Duration::from_secs(10);
 
     /// The formats offered, in order: Markdown first (the owner's most
-    /// used), then PDF, then the rest.
-    pub(crate) const FORMATS: [OutputFormat; 7] = [
-        OutputFormat::Markdown,
-        OutputFormat::Pdf,
-        OutputFormat::Html,
-        OutputFormat::Text,
-        OutputFormat::Epub,
-        OutputFormat::Docx,
-        OutputFormat::Brf,
-    ];
+    /// used), then PDF, then the rest, and last the ones carta writes
+    /// (AsciiDoc, Typst, LaTeX, MediaWiki, Org) when this build has it.
+    pub(crate) fn formats() -> Vec<OutputFormat> {
+        let mut formats = vec![
+            OutputFormat::Markdown,
+            OutputFormat::Pdf,
+            OutputFormat::Html,
+            OutputFormat::Text,
+            OutputFormat::Epub,
+            OutputFormat::Docx,
+            OutputFormat::Brf,
+        ];
+        formats.extend(
+            OutputFormat::ALL
+                .into_iter()
+                .filter(|f| f.carta_writer().is_some() && f.available()),
+        );
+        formats
+    }
 
     /// The batch being set up, the question open, and the run.
     #[derive(Default)]
@@ -179,7 +188,7 @@ mod run {
             self.batch.source = Some(folder);
             self.batch.format = None;
             self.batch.out = None;
-            let items: Vec<String> = FORMATS.iter().map(|f| f.label().to_owned()).collect();
+            let items: Vec<String> = formats().iter().map(|f| f.label().to_owned()).collect();
             let msg = self.msg_args(
                 "batch-format-intro",
                 &args!["name" => name, "n" => items.len()],
@@ -200,7 +209,7 @@ mod run {
         /// Enter in a batch list.
         pub(crate) fn choose_batch(&mut self, list: BatchList, n: usize) -> Vec<Effect> {
             match list {
-                BatchList::Format => match FORMATS.get(n) {
+                BatchList::Format => match formats().get(n) {
                     Some(&f) => {
                         self.batch.format = Some(f);
                         if f == OutputFormat::Html {

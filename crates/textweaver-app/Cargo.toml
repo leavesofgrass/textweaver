@@ -10,7 +10,7 @@ authors.workspace = true
 publish.workspace = true
 
 [features]
-default = ["publish", "lint", "grammar", "dictation", "audio-export", "opus"]
+default = ["publish", "lint", "grammar", "dictation", "audio-export", "opus", "carta"]
 # Export audio from the reader (Agent W6v, ADR-0011): FLAC, MP3, Ogg Vorbis
 # (W9x-o) and WAV in process, M4B through ffmpeg when it is found. Off, the Export audio
 # command stays hidden.
@@ -52,6 +52,11 @@ publish = [
     "textweaver-fonts/download",
     "textweaver-components/download",
 ]
+# carta (B1-k2): Org, reStructuredText, MediaWiki, DokuWiki, and Jira
+# opened in the reader in process, and AsciiDoc, Typst, LaTeX, MediaWiki,
+# and Org offered in Batch convert (with `publish`). On by default in the
+# terminal reader, `tw`, and the GUI; the lean reader leaves it out.
+carta = ["textweaver-formats/carta", "textweaver-convert?/carta"]
 # Speech engines, passed through to textweaver-engines.
 espeak = ["textweaver-engines/espeak"]
 omnivox = ["textweaver-engines/omnivox"]

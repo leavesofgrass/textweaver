@@ -37,9 +37,16 @@ pub struct Args {
     /// mirrored under --out.
     #[arg(required = true)]
     pub inputs: Vec<PathBuf>,
-    /// Output format: md, html, txt, epub, docx, brf, or pdf.
+    /// Output format: md, html, txt, epub, docx, brf, or pdf; and, written
+    /// by carta, adoc (AsciiDoc), typ (Typst), tex (LaTeX), wiki
+    /// (MediaWiki), or org.
     #[arg(long, default_value = "md", value_parser = parse_format)]
     pub to: OutputFormat,
+    /// Read every file as this format instead of by its extension: dokuwiki
+    /// or jira (which have no extension of their own), or an extension
+    /// such as org or rst.
+    #[arg(long, value_name = "FORMAT")]
+    pub from: Option<String>,
     /// Output folder (default: beside each source; for --watch, a
     /// "converted" folder inside the watched folder).
     #[arg(long = "out", short = 'o', alias = "output")]
@@ -158,8 +165,9 @@ pub struct Args {
 }
 
 fn parse_format(s: &str) -> Result<OutputFormat, String> {
-    OutputFormat::parse(s)
-        .ok_or_else(|| format!("unknown format {s:?}; use md, html, txt, epub, docx, brf, or pdf"))
+    OutputFormat::parse(s).ok_or_else(|| {
+        format!("unknown format {s:?}; use md, html, txt, epub, docx, brf, pdf, adoc, typ, tex, wiki, or org")
+    })
 }
 
 fn parse_report_format(s: &str) -> Result<ReportFormat, String> {
@@ -263,6 +271,7 @@ fn command_options(args: &Args) -> ConvertOptions {
         toc: !args.no_toc,
         jobs: args.jobs,
         force: args.force,
+        from: args.from.clone(),
         pandoc: !args.no_pandoc,
         pandoc_timeout: args
             .pandoc_timeout

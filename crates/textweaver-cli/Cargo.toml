@@ -14,7 +14,12 @@ name = "tw"
 path = "src/main.rs"
 
 [features]
-default = ["opus"]
+default = ["opus", "carta"]
+# carta (B1-k2): `tw convert`, `tw text`, and the reader read Org,
+# reStructuredText, MediaWiki, DokuWiki (`--from dokuwiki`), and Jira
+# (`--from jira`) in process, ahead of Pandoc, and `tw convert --to` writes
+# AsciiDoc, Typst, LaTeX, MediaWiki, and Org. On by default.
+carta = ["textweaver-app/carta", "textweaver-convert/carta", "textweaver-tui/carta"]
 # `tw export-audio --out x.opus` in process with libopus (W7o; building it
 # needs cmake). Off, Opus goes through ffmpeg.
 opus = ["textweaver-export/opus"]
