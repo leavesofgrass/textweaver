@@ -9,7 +9,10 @@
 //! in `target/dist/textweaver-VERSION-PLATFORM/`, then archives the folder:
 //! a `.zip` on Windows, a `.tar.gz` elsewhere. It fails if a notice is
 //! missing from the staged folder, or if the archive grew more than 10
-//! percent over the last release's without a note (`sizes.rs`).
+//! percent over the last release's without a note (`sizes.rs`). A user
+//! guide missing from the package only warns (`stage_user_docs`): the
+//! build prints one warning line per missing file, adds it to the GitHub
+//! job summary, and goes on.
 //!
 //! - Windows builds link the C runtime statically (`+crt-static`), so the
 //!   package runs without the Visual C++ redistributable. The static build
@@ -105,11 +108,8 @@ const DOCS: [(&str, &str); 6] = [
     ("docs/install.md", "INSTALL.md"),
     ("docs/eloquence.md", "docs/eloquence.md"),
 ];
-/// More guides copied when present, besides the user guides listed in the
-/// documentation index (see [`user_guides`]).
-const OPTIONAL_DOCS: [&str; 3] = ["docs/README.md", "docs/quickstart.md", "scripts/README.md"];
-/// The documentation index; the guides linked under its [`USER_SECTION`]
-/// are packaged.
+/// The documentation index; it and the guides linked under its
+/// [`USER_SECTION`] are packaged (see [`stage_user_docs`]).
 const DOCS_INDEX: &str = "docs/README.md";
 /// The heading of the user section in [`DOCS_INDEX`].
 const USER_SECTION: &str = "## For users";
@@ -162,6 +162,74 @@ fn normalize(path: &str) -> String {
         }
     }
     parts.join("/")
+}
+
+/// The warning for a guide the package lacks.
+fn missing_guide(path: &str) -> String {
+    format!("Warning: the package lacks the guide {path}.")
+}
+
+/// Stages the complete user documentation into `stage`, in the same layout
+/// for every package (`cargo xtask dist`, `appimage`, and `gui-dist`): the
+/// documentation index, every guide linked under its [`USER_SECTION`], and
+/// the offline pages in [`SITE_DIR`], each at its path from the root.
+///
+/// A missing file never stops the build: it is left out and named in the
+/// returned warnings, one per file, for [`report_doc_warnings`].
+pub(crate) fn stage_user_docs(root: &Path, stage: &Path) -> anyhow::Result<Vec<String>> {
+    let mut warnings = Vec::new();
+    let guides = fs::read_to_string(root.join(DOCS_INDEX))
+        .map(|index| user_guides(&index))
+        .unwrap_or_default();
+    for src in std::iter::once(DOCS_INDEX.to_owned()).chain(guides) {
+        let path = root.join(&src);
+        if path.is_file() {
+            eci::copy(&path, &stage.join(&src))?;
+        } else {
+            warnings.push(missing_guide(&src));
+        }
+    }
+    let site = root.join(SITE_DIR);
+    if site.is_dir() {
+        copy_tree(&site, &stage.join(SITE_DIR))?;
+    } else {
+        warnings.push(format!(
+            "Warning: the package lacks the offline pages {SITE_DIR}."
+        ));
+    }
+    Ok(warnings)
+}
+
+/// Prints each documentation warning on a line of its own, and adds them
+/// to the job summary when `GITHUB_STEP_SUMMARY` names one, so the release
+/// workflow shows them. Never fails: a summary that cannot be written is
+/// noted and the build goes on.
+pub(crate) fn report_doc_warnings(warnings: &[String]) {
+    for w in warnings {
+        println!("{w}");
+    }
+    if let Some(summary) = std::env::var_os("GITHUB_STEP_SUMMARY")
+        && let Err(e) = append_summary(Path::new(&summary), warnings)
+    {
+        println!("Warning: the job summary could not be written: {e}.");
+    }
+}
+
+/// Appends `warnings` to a Markdown job summary, one list item each.
+fn append_summary(path: &Path, warnings: &[String]) -> std::io::Result<()> {
+    use std::io::Write as _;
+    if warnings.is_empty() {
+        return Ok(());
+    }
+    let mut f = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
+    writeln!(f)?;
+    for w in warnings {
+        writeln!(f, "- {w}")?;
+    }
+    Ok(())
 }
 
 /// Copies every file under `src` into `dest`, keeping the layout.
@@ -309,18 +377,7 @@ pub(crate) fn stage(out: Option<PathBuf>, universal: bool) -> anyhow::Result<Sta
         }
     }
     // The user guides from the documentation index, and the offline pages.
-    let index = fs::read_to_string(root.join(DOCS_INDEX)).unwrap_or_default();
-    let guides = user_guides(&index);
-    for src in OPTIONAL_DOCS.iter().map(|s| (*s).to_owned()).chain(guides) {
-        let path = root.join(&src);
-        if path.is_file() {
-            eci::copy(&path, &stage.join(&src))?;
-        }
-    }
-    let site = root.join(SITE_DIR);
-    if site.is_dir() {
-        copy_tree(&site, &stage.join(SITE_DIR))?;
-    }
+    report_doc_warnings(&stage_user_docs(&root, &stage)?);
 
     // Linux: the menu entry and the icon, for the tarball's users and the
     // AppImage (scripts/linux/).
@@ -672,6 +729,58 @@ mod tests {
             ["docs/reading.md", "docs/keyboard.md", "scripts/README.md"]
         );
         assert_eq!(normalize("docs/./a/../b.md"), "docs/b.md");
+    }
+
+    /// A guide missing from the index's list warns, in words naming the
+    /// file, and the package still builds with everything else.
+    #[test]
+    fn a_missing_guide_warns_and_the_build_goes_on() {
+        let tmp = std::env::temp_dir().join(format!("tw-dist-docs-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&tmp);
+        let (root, stage) = (tmp.join("root"), tmp.join("stage"));
+        fs::create_dir_all(root.join("docs/site")).unwrap();
+        fs::write(
+            root.join(DOCS_INDEX),
+            "# Docs
+
+## For users
+
+- [Reading](reading.md)
+- [Notes](notes.md)
+
+## For contributors
+
+- [Dev](dev/x.md)
+",
+        )
+        .unwrap();
+        fs::write(root.join("docs/notes.md"), "notes").unwrap();
+        fs::write(root.join("docs/site/index.html"), "<p>site</p>").unwrap();
+
+        let warnings = stage_user_docs(&root, &stage).unwrap();
+        assert_eq!(
+            warnings,
+            ["Warning: the package lacks the guide docs/reading.md."]
+        );
+        for f in ["docs/README.md", "docs/notes.md", "docs/site/index.html"] {
+            assert!(stage.join(f).is_file(), "{f} is not staged");
+        }
+        assert!(!stage.join("docs/dev/x.md").exists());
+
+        let summary = tmp.join("summary.md");
+        append_summary(&summary, &warnings).unwrap();
+        append_summary(&summary, &[]).unwrap();
+        assert_eq!(
+            fs::read_to_string(&summary).unwrap(),
+            "
+- Warning: the package lacks the guide docs/reading.md.
+"
+        );
+
+        // With nothing missing, no warning.
+        fs::write(root.join("docs/reading.md"), "reading").unwrap();
+        assert!(stage_user_docs(&root, &stage).unwrap().is_empty());
+        let _ = fs::remove_dir_all(&tmp);
     }
 
     #[test]
