@@ -100,7 +100,10 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `editing.echo_lines_on_move`: default on (`true`). Echo lines. Say the line when the cursor moves to another line. On or off: `true` or `false`. Syncs between computers.
 - `editing.undo_steps`: default 1000 steps. Undo steps. Most undo steps kept while editing. From 1 to 100000 steps, in steps of 100. Stays on this computer.
 - `editing.undo_memory_mb`: default 50 megabytes. Undo memory. Most memory the undo history may use. From 1 to 4096 megabytes, in steps of 16. Stays on this computer.
-- `editing.author`: default empty (`""`). Author. The author written into new documents made from a template; empty leaves it blank. Text. Stays on this computer.
+
+## Authoring: the `[authoring]` section
+
+- `authoring.author`: default empty (`""`). Author. The name textweaver writes on comments, replies, and documents from a template. Empty means textweaver on comments and no author in templates. Never taken from the computer. Text. Stays on this computer.
 
 ## Library: the `[library]` section
 
