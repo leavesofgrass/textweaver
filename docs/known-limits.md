@@ -28,7 +28,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 ## Documents
 
 - **Translating a document** is not offered.
-- **RAR archives** do not open. ZIP, TAR, and 7z do.
+- **RAR archives** do not open. ZIP, TAR, and 7z do. Extract a RAR archive first; the message says so.
 - **Scanned pages** are read by OCR, and OCR makes mistakes. Check anything important against the original.
 
 ## Output

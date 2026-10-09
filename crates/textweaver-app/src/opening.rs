@@ -91,6 +91,22 @@ pub fn open_failure_reason_in(c: &Catalog, path: &Path, err: &LoadError) -> Stri
     if path.is_dir() {
         return c.fmt("opening-is-folder", &args!["name" => name]);
     }
+    // The known limits that have a next step (docs/known-limits.md,
+    // docs/troubleshooting.md). shortcut: matched on the loaders' own
+    // words, since LoadError has no variant for them; a variant per limit
+    // is the upgrade if a third loader message is matched here.
+    match err {
+        LoadError::Unsupported(detail) if detail.contains("protected by a password") => {
+            return c.tr("opening-pdf-password");
+        }
+        LoadError::Binary(_, "an old Microsoft Office document") => {
+            return c.tr("opening-old-office");
+        }
+        LoadError::Binary(..) | LoadError::NoLoader(_) if extension(path) == "rar" => {
+            return c.tr("opening-rar");
+        }
+        _ => {}
+    }
     match err {
         LoadError::Io(_, io) => match io.kind() {
             std::io::ErrorKind::NotFound => {
@@ -458,6 +474,44 @@ mod tests {
              {open_ms:.1} ms; the queued saves after the stall: {rest_ms:.1} ms",
             text.len() / 1_000_000
         );
+    }
+
+    /// A password PDF, an old Office file, and a RAR archive say what to
+    /// do instead, in the catalog's words.
+    #[test]
+    fn known_limits_name_a_next_step() {
+        let c = Catalog::english();
+        let pdf = LoadError::Unsupported(
+            "this PDF is protected by a password, so its text cannot be read".into(),
+        );
+        let doc = LoadError::Binary("essay.doc".into(), "an old Microsoft Office document");
+        let rar = LoadError::Binary("notes.rar".into(), "a binary file");
+        for (path, err, id) in [
+            ("locked.pdf", &pdf, "opening-pdf-password"),
+            ("essay.doc", &doc, "opening-old-office"),
+            ("notes.rar", &rar, "opening-rar"),
+        ] {
+            let reason = open_failure_reason_in(&c, Path::new(path), err);
+            assert_eq!(reason, c.tr(id), "{path}");
+        }
+        // The real loaders say the words matched above.
+        let tmp = tempfile::tempdir().unwrap();
+        let old = tmp.path().join("essay.doc");
+        let mut bytes = vec![0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
+        bytes.extend([0u8; 64]);
+        std::fs::write(&old, &bytes).unwrap();
+        let rar = tmp.path().join("notes.rar");
+        let mut bytes = b"Rar!".to_vec();
+        bytes.extend([0x1a, 0x07, 0x01, 0x00]);
+        bytes.extend([0u8; 64]);
+        std::fs::write(&rar, &bytes).unwrap();
+        let registry = Registry::with_builtins();
+        for (path, id) in [(&old, "opening-old-office"), (&rar, "opening-rar")] {
+            let err = registry
+                .load(&Source::Path(path.clone()), &Default::default())
+                .unwrap_err();
+            assert_eq!(open_failure_reason_in(&c, path, &err), c.tr(id), "{err}");
+        }
     }
 
     #[test]

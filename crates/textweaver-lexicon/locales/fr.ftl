@@ -927,6 +927,9 @@ opening-damaged-odt = ce n'est pas un fichier texte OpenDocument lisible, il est
 opening-damaged-latex = ce n'est pas un fichier LaTeX lisible, il est peut-être endommagé ou trop volumineux.
 opening-damaged-email = ce n'est pas un message électronique lisible, il est peut-être endommagé ou trop volumineux.
 opening-damaged-mhtml = ce n'est pas une archive web lisible, elle est peut-être endommagée ou trop volumineuse.
+opening-pdf-password = il est protégé par un mot de passe. Retirez le mot de passe dans un logiciel PDF, puis ouvrez-le de nouveau.
+opening-old-office = c'est un ancien fichier Microsoft Office. Enregistrez-le dans un format plus récent, comme .docx, puis ouvrez celui-ci.
+opening-rar = c'est une archive RAR, qui ne s'ouvre pas. Extrayez-la d'abord, ou utilisez ZIP ou 7z.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = Impossible d'ouvrir { $name } : { $reason }
 opening-started = Ouverture de { $name }. Échap annule.

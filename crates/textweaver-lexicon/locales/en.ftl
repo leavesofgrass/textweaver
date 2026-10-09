@@ -904,6 +904,9 @@ opening-damaged-odt = it is not a readable OpenDocument text file; it may be dam
 opening-damaged-latex = it is not a readable LaTeX file; it may be damaged or too large.
 opening-damaged-email = it is not a readable email message; it may be damaged or too large.
 opening-damaged-mhtml = it is not a readable web archive; it may be damaged or too large.
+opening-pdf-password = it is protected by a password. Remove the password in a PDF program, then open it again.
+opening-old-office = it is an old Microsoft Office file. Save it in a newer format, such as .docx, then open that.
+opening-rar = it is a RAR archive, which does not open. Extract it first, or use ZIP or 7z.
 # $reason is one of the opening-no-* messages, or the loader's own words.
 opening-failed = Could not open { $name }: { $reason }
 opening-started = Opening { $name }. Escape cancels.

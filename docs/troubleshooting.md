@@ -216,7 +216,9 @@ The [themes guide](themes.md) explains themes and how to make your own.
 textweaver refuses a file that is not text, such as a program, an audio file, or an old Word `.doc`. The message says what the file looks like. RTF, OpenDocument text, LaTeX, email, and saved web pages open directly, and PNG and JPEG pictures are read by recognizing their text.
 
 1. Check that you opened the file you meant.
-2. For a LaTeX, reStructuredText, or similar file, convert it to Markdown, then open the Markdown. This needs Pandoc:
+2. For an old Word `.doc`, Excel `.xls`, or PowerPoint `.ppt` file, you hear "it is an old Microsoft Office file". Open it in Word or LibreOffice, save it in a newer format such as `.docx`, then open that.
+3. For a RAR archive, you hear "it is a RAR archive, which does not open". Extract it first, or pack it as ZIP or 7z, which open directly.
+4. For a LaTeX, reStructuredText, or similar file, convert it to Markdown, then open the Markdown. This needs Pandoc:
 
    ```bash
    tw convert report.rst --to md
