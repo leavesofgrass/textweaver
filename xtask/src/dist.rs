@@ -100,19 +100,17 @@ pub(crate) const DATA_FILES: [(&str, &str); 1] = [(
 /// The two macOS targets joined by `--universal`.
 pub(crate) const MAC_TARGETS: [&str; 2] = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
 /// Documents copied into the package: (source, name in the package).
-const DOCS: [(&str, &str); 7] = [
+const DOCS: [(&str, &str); 6] = [
     ("docs/quickstart.md", "QUICKSTART.md"),
     ("README.md", "README.md"),
     ("LICENSE", "LICENSE"),
     ("CHANGELOG.md", "CHANGELOG.md"),
     ("docs/install.md", "INSTALL.md"),
     ("docs/eloquence.md", "docs/eloquence.md"),
-    // The example profile the settings guide describes.
-    (
-        "docs/examples/developer-profile.toml",
-        "docs/examples/developer-profile.toml",
-    ),
 ];
+/// Example files the user guides describe, packaged with them at their
+/// paths from the root.
+const DOC_EXAMPLES: [&str; 1] = ["docs/examples/developer-profile.toml"];
 /// The documentation index; it and the guides linked under its
 /// [`USER_SECTION`] are packaged (see [`stage_user_docs`]).
 const DOCS_INDEX: &str = "docs/README.md";
@@ -176,8 +174,9 @@ fn missing_guide(path: &str) -> String {
 
 /// Stages the complete user documentation into `stage`, in the same layout
 /// for every package (`cargo xtask dist`, `appimage`, and `gui-dist`): the
-/// documentation index, every guide linked under its [`USER_SECTION`], and
-/// the offline pages in [`SITE_DIR`], each at its path from the root.
+/// documentation index, every guide linked under its [`USER_SECTION`], the
+/// examples the guides describe ([`DOC_EXAMPLES`]), and the offline pages
+/// in [`SITE_DIR`], each at its path from the root.
 ///
 /// A missing file never stops the build: it is left out and named in the
 /// returned warnings, one per file, for [`report_doc_warnings`].
@@ -186,7 +185,11 @@ pub(crate) fn stage_user_docs(root: &Path, stage: &Path) -> anyhow::Result<Vec<S
     let guides = fs::read_to_string(root.join(DOCS_INDEX))
         .map(|index| user_guides(&index))
         .unwrap_or_default();
-    for src in std::iter::once(DOCS_INDEX.to_owned()).chain(guides) {
+    let examples = DOC_EXAMPLES.iter().map(|s| (*s).to_owned());
+    for src in std::iter::once(DOCS_INDEX.to_owned())
+        .chain(guides)
+        .chain(examples)
+    {
         let path = root.join(&src);
         if path.is_file() {
             eci::copy(&path, &stage.join(&src))?;
@@ -767,13 +770,20 @@ mod tests {
         .unwrap();
         fs::write(root.join("docs/notes.md"), "notes").unwrap();
         fs::write(root.join("docs/site/index.html"), "<p>site</p>").unwrap();
+        fs::create_dir_all(root.join("docs/examples")).unwrap();
+        fs::write(root.join(DOC_EXAMPLES[0]), "textweaver_profiles = 1\n").unwrap();
 
         let warnings = stage_user_docs(&root, &stage).unwrap();
         assert_eq!(
             warnings,
             ["Warning: the package lacks the guide docs/reading.md."]
         );
-        for f in ["docs/README.md", "docs/notes.md", "docs/site/index.html"] {
+        for f in [
+            "docs/README.md",
+            "docs/notes.md",
+            "docs/site/index.html",
+            DOC_EXAMPLES[0],
+        ] {
             assert!(stage.join(f).is_file(), "{f} is not staged");
         }
         assert!(!stage.join("docs/dev/x.md").exists());
