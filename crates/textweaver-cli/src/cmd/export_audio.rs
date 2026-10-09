@@ -413,7 +413,14 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         &args,
         &settings,
         &textweaver_engines::speech_registry_for(&settings),
-        ffmpeg::find(),
+        match args.home.as_deref() {
+            Some(h) => ffmpeg::find_in(
+                Some(&Paths::under(h).components_dir()),
+                std::env::var_os("TEXTWEAVER_FFMPEG"),
+                std::env::var_os("PATH"),
+            ),
+            None => ffmpeg::find(),
+        },
         &mut |msg| {
             if !quiet {
                 eprintln!("{msg}");

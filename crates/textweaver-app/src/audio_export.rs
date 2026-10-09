@@ -324,9 +324,15 @@ mod run {
                 self.tell(&msg);
                 return vec![Effect::Redraw];
             };
-            let ffmpeg = match &self.audio.ffmpeg_override {
-                Some(f) => f.clone(),
-                None => ffmpeg::find(),
+            let ffmpeg = match (&self.audio.ffmpeg_override, &self.paths) {
+                (Some(f), _) => f.clone(),
+                // This session's own components folder first.
+                (None, Some(p)) => ffmpeg::find_in(
+                    Some(&p.components_dir()),
+                    std::env::var_os("TEXTWEAVER_FFMPEG"),
+                    std::env::var_os("PATH"),
+                ),
+                (None, None) => ffmpeg::find(),
             };
             self.audio.formats = formats(ffmpeg.is_some());
             self.audio.ffmpeg = ffmpeg;

@@ -5,6 +5,7 @@
 //!
 //! | Where | Product |
 //! |---|---|
+//! | textweaver's components folder (`eci.dll`, `libibmeci.so`) | detected from the path |
 //! | `TEXTWEAVER_ECI_LIBRARY` | detected from the path |
 //! | [`EciConfig::library`](crate::EciConfig::library) (the backend option) | detected from the path |
 //! | Windows: `%ProgramFiles%\OpenEVV\lib\x86_64\eci.dll` | OpenEVV (SAPI5 install) |
@@ -18,7 +19,9 @@
 //! ([`library_arch`]: PE `Machine` on Windows, ELF class on Linux): a
 //! 32-bit x86 DLL runs in `textweaver-eci-host-x86.exe` (built for
 //! `i686-pc-windows-msvc`), a 64-bit one in the native
-//! `textweaver-eci-host[.exe]`.
+//! `textweaver-eci-host[.exe]`. A 64-bit textweaver runs a 32-bit
+//! library only through that 32-bit host, on Windows; without one, the
+//! library is refused in words ([`check_arch`]).
 //!
 //! **OpenEVV** (a reimplementation of IBM's ECI API) is recognised by its
 //! install path (an `openevv` path component), or by an `eciVersion`
@@ -87,6 +90,9 @@ impl Product {
 /// Why a candidate is on the list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Source {
+    /// textweaver's components folder (a copy placed there from a
+    /// components source).
+    Components,
     /// `TEXTWEAVER_ECI_LIBRARY`.
     Environment,
     /// The backend option.
@@ -124,6 +130,8 @@ pub enum Arch {
 /// Where the standard install locations live (injectable for tests).
 #[derive(Clone, Debug, Default)]
 pub struct Places {
+    /// textweaver's components folder, searched first.
+    pub components: Option<PathBuf>,
     /// `TEXTWEAVER_ECI_LIBRARY`.
     pub env_library: Option<PathBuf>,
     /// `%ProgramFiles%`.
@@ -148,6 +156,7 @@ impl Places {
                 .map(PathBuf::from)
         };
         Places {
+            components: textweaver_store::components_dir(),
             env_library: var(crate::LIBRARY_ENV),
             program_files: var("ProgramW6432").or_else(|| var("ProgramFiles")),
             appdata: var("APPDATA"),
@@ -174,6 +183,18 @@ pub fn library_candidates(option: Option<&Path>, places: &Places) -> Vec<Library
             exists,
         });
     };
+    let name = if places.windows {
+        "eci.dll"
+    } else {
+        "libibmeci.so"
+    };
+    if let Some(p) = places
+        .components
+        .as_deref()
+        .and_then(|d| textweaver_store::find_in_components(d, &[name]))
+    {
+        push(p, Source::Components, None);
+    }
     if let Some(p) = &places.env_library {
         push(p.clone(), Source::Environment, None);
     }
@@ -315,6 +336,7 @@ pub fn choose_library(candidates: &[LibraryCandidate]) -> Result<LibraryChoice, 
         ));
     }
     let why = match c.source {
+        Source::Components => "found in textweaver's components folder".to_string(),
         Source::Environment => format!("named by {}", crate::LIBRARY_ENV),
         Source::Option => "named in the backend settings".to_string(),
         Source::Default => "found at its standard install location".to_string(),
@@ -335,6 +357,38 @@ pub fn choose_library(candidates: &[LibraryCandidate]) -> Result<LibraryChoice, 
         candidate: c.clone(),
         arch,
     })
+}
+
+/// Checks that `choice` can run here. A 32-bit library in a 64-bit
+/// textweaver (`program_64`) runs only in the 32-bit host, which exists
+/// only on Windows: when one was found (`x86_host`) the choice says it
+/// will use it; otherwise the library is refused in words, with what to
+/// get instead.
+pub fn check_arch(
+    mut choice: LibraryChoice,
+    program_64: bool,
+    windows: bool,
+    x86_host: bool,
+) -> Result<LibraryChoice, String> {
+    if choice.arch != Some(Arch::X86) || !program_64 {
+        return Ok(choice);
+    }
+    if windows && x86_host {
+        choice
+            .reason
+            .push_str("; it is 32-bit, so the 32-bit host runs it");
+        return Ok(choice);
+    }
+    let host = if windows {
+        format!(", and no 32-bit host ({HOST_NAME_X86}) was found")
+    } else {
+        String::new()
+    };
+    Err(format!(
+        "A 32-bit ECI library cannot run in this 64-bit textweaver{host}: {}. \
+         Install the 64-bit (x86_64) library instead",
+        choice.candidate.path.display()
+    ))
 }
 
 /// The native host's file name.
@@ -435,8 +489,17 @@ pub fn diagnose(config: &EciConfig) -> Diagnosis {
     let candidates = library_candidates(config.library.as_deref(), &Places::current());
     let library = choose_library(&candidates);
     let arch = library.as_ref().ok().and_then(|c| c.arch);
+    let hosts = host_candidates(config, arch);
+    let library = library.and_then(|c| {
+        check_arch(
+            c,
+            cfg!(target_pointer_width = "64"),
+            cfg!(windows),
+            !hosts.is_empty(),
+        )
+    });
     Diagnosis {
-        hosts: host_candidates(config, arch),
+        hosts,
         candidates,
         library,
     }
@@ -520,6 +583,7 @@ mod tests {
     fn windows_order_is_env_option_openevv_then_code_factory() {
         let dir = tempfile::tempdir().unwrap();
         let places = Places {
+            components: None,
             env_library: Some(dir.path().join("env.dll")),
             program_files: Some(dir.path().join("pf")),
             appdata: Some(dir.path().join("ad")),
@@ -559,6 +623,7 @@ mod tests {
     fn code_factory_is_searched_only_when_enabled() {
         let dir = tempfile::tempdir().unwrap();
         let places = Places {
+            components: None,
             env_library: None,
             program_files: Some(dir.path().join("pf")),
             appdata: Some(dir.path().join("ad")),
@@ -606,6 +671,7 @@ mod tests {
         std::fs::create_dir_all(&evv).unwrap();
         std::fs::write(evv.join("eci.dll"), pe(0x8664)).unwrap();
         let places = Places {
+            components: None,
             env_library: Some(dir.path().join("missing.dll")),
             program_files: Some(pf),
             appdata: None,
@@ -631,6 +697,7 @@ mod tests {
         std::fs::create_dir_all(lib.parent().unwrap()).unwrap();
         std::fs::write(&lib, pe(0x014C)).unwrap();
         let places = Places {
+            components: None,
             env_library: Some(lib),
             windows: true,
             code_factory: true,
@@ -650,6 +717,79 @@ mod tests {
         };
         let ok = choose_library(&library_candidates(None, &places)).unwrap();
         assert_eq!(ok.arch, Some(Arch::X86));
+    }
+
+    #[test]
+    fn the_components_folder_is_searched_first() {
+        let dir = tempfile::tempdir().unwrap();
+        let comp = dir.path().join("components");
+        let lib = join(&comp, &["openevv", "lib", "x86_64", "eci.dll"]);
+        std::fs::create_dir_all(lib.parent().unwrap()).unwrap();
+        std::fs::write(&lib, pe(0x8664)).unwrap();
+        let env = dir.path().join("env.dll");
+        std::fs::write(&env, pe(0x8664)).unwrap();
+        let places = Places {
+            components: Some(comp),
+            env_library: Some(env),
+            windows: true,
+            ..Places::default()
+        };
+        let c = library_candidates(None, &places);
+        assert_eq!(c[0].source, Source::Components);
+        assert_eq!(c[0].path, lib);
+        assert_eq!(c[0].product, Product::OpenEvv);
+        let choice = choose_library(&c).unwrap();
+        assert_eq!(choice.candidate.source, Source::Components);
+        assert!(
+            choice.reason.contains("components folder"),
+            "{}",
+            choice.reason
+        );
+        // An empty components folder adds nothing.
+        let empty = Places {
+            components: Some(dir.path().join("none")),
+            windows: true,
+            ..Places::default()
+        };
+        assert!(
+            library_candidates(None, &empty)
+                .iter()
+                .all(|c| c.source != Source::Components)
+        );
+    }
+
+    #[test]
+    fn a_32_bit_library_needs_the_32_bit_host() {
+        let choice = |arch| LibraryChoice {
+            candidate: LibraryCandidate {
+                path: "D:/c/eci.dll".into(),
+                product: Product::Unknown,
+                source: Source::Components,
+                exists: true,
+            },
+            arch: Some(arch),
+            reason: "found".into(),
+        };
+        // 64-bit libraries, and any library in a 32-bit program, pass.
+        assert!(check_arch(choice(Arch::X64), true, true, false).is_ok());
+        assert!(check_arch(choice(Arch::X86), false, true, false).is_ok());
+        // With the 32-bit host on Windows, it says it uses it.
+        let ok = check_arch(choice(Arch::X86), true, true, true).unwrap();
+        assert!(
+            ok.reason.ends_with("so the 32-bit host runs it"),
+            "{}",
+            ok.reason
+        );
+        // Without one, refused in words, the meaning first.
+        let err = check_arch(choice(Arch::X86), true, true, false).unwrap_err();
+        assert!(err.starts_with("A 32-bit ECI library cannot run"), "{err}");
+        assert!(
+            err.contains(HOST_NAME_X86) && err.contains("64-bit (x86_64)"),
+            "{err}"
+        );
+        // Linux has no 32-bit host at all.
+        let err = check_arch(choice(Arch::X86), true, false, true).unwrap_err();
+        assert!(!err.contains(HOST_NAME_X86), "{err}");
     }
 
     #[test]
