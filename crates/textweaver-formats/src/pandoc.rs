@@ -490,7 +490,9 @@ mod tests {
             return;
         }
         let src = "=====\nTitle\n=====\n\nSome *emphasis* and caf\u{e9}.\n\n- one\n- two\n\n=====  =====\nA      B\n=====  =====\n1      2\n=====  =====\n";
-        let doc = Registry::with_pandoc(None)
+        // The loader itself: with the `carta` feature, carta outranks Pandoc
+        // for `.rst` in the registry.
+        let doc = PandocLoader::default()
             .load(
                 &Source::Bytes {
                     data: src.as_bytes().to_vec(),

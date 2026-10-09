@@ -755,6 +755,9 @@ mod tests {
         ids.extend([
             "daisy", "pptx", "sheet", "archive", "json", "notebook", "svg", "mathml",
         ]);
+        if cfg!(feature = "carta") {
+            ids.push("carta");
+        }
         // Pandoc is never a built-in (see `Registry::with_pandoc`).
         ids.extend(["low", "high"]);
         assert_eq!(r.ids(), ids);
