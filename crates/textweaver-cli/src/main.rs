@@ -3,7 +3,7 @@
 //! One module per subcommand under `cmd/`: `open`, `text`, `info`,
 //! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
 //! `convert_layout` for the PDF and EPUB layout flags), `export-audio`,
-//! `library`, `vault`, `dictate`, `marks`, `lint`, `migrate-star`, `cite`,
+//! `library`, `vault`, `dictate`, `marks`, `notes`, `lint`, `migrate-star`, `cite`,
 //! `settings` (with `profile`), `define`, `stats`, `summarize`, `serve`, `ocr`, and `components`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
@@ -61,6 +61,8 @@ enum Cmd {
     Dictate(cmd::dictate::Args),
     /// List a document's saved position and bookmarks, or export its notes as references.
     Marks(cmd::marks::Args),
+    /// Links between notes: a document's links out and what links to its notes.
+    Notes(cmd::notes::Args),
     /// Check Markdown files for problems a listener would miss: heading levels, list markers, trailing spaces, link references, bare web addresses.
     Lint(cmd::lint::Args),
     /// Import settings and reading positions from star.
@@ -121,6 +123,7 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Vault(a) => cmd::vault::run(a),
         Cmd::Dictate(a) => cmd::dictate::run(a),
         Cmd::Marks(a) => cmd::marks::run(a),
+        Cmd::Notes(a) => cmd::notes::run(a),
         Cmd::Lint(a) => cmd::lint::run(a),
         Cmd::MigrateStar(a) => cmd::migrate::run(a),
         Cmd::Cite(a) => cmd::cite::run(a),
