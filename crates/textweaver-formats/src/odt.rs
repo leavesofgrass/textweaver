@@ -133,15 +133,20 @@ impl Loader for OdtLoader {
             depth: 0,
             flattened: false,
             comments: Vec::new(),
-            revisions: 0,
+            recorded: Vec::new(),
         };
         c.blocks(body);
+        let mut left: Vec<_> = c.open_changes.drain().collect();
+        left.sort_by(|a, b| a.0.cmp(&b.0));
+        for (_, open) in left {
+            revision::close(&mut c.b, open, &mut c.recorded);
+        }
         c.close_code();
         c.close_lists();
         let deferred = std::mem::take(&mut c.deferred);
         c.b.footnotes_section(&deferred);
         flattened |= c.flattened;
-        let revisions = c.revisions;
+        let recorded = std::mem::take(&mut c.recorded);
         let mut comments = std::mem::take(&mut c.comments);
         let (text, markers, anchors) = c.b.finish_with_anchors();
         let ranges: HashMap<String, CharRange> = anchors.into_iter().collect();
@@ -154,7 +159,7 @@ impl Loader for OdtLoader {
         if flattened {
             crate::add_warning(&mut meta, crate::NESTING_WARNING);
         }
-        crate::annotations::record(&mut meta, comments, revisions);
+        crate::annotations::record(&mut meta, comments, recorded);
         if meta.title.is_none() {
             meta.title = markers
                 .iter()
@@ -479,7 +484,8 @@ struct Conv<'a> {
     depth: usize,
     flattened: bool,
     comments: Vec<Comment>,
-    revisions: usize,
+    /// Tracked changes seen, as recorded.
+    recorded: Vec<crate::DocumentChange>,
 }
 
 const FMT_KINDS: [MarkerKind; 4] = [
@@ -848,8 +854,10 @@ impl Conv<'_> {
                 if let Some(id) = attr(c, "change-id")
                     && let Some(open) = self.open_changes.remove(id)
                 {
-                    self.set_fmt([false; 4]);
-                    revision::close(&mut self.b, open);
+                    if self.options.revisions == RevisionMode::Marked {
+                        self.set_fmt([false; 4]);
+                    }
+                    revision::close(&mut self.b, open, &mut self.recorded);
                 }
             }
             "change" => self.change_point(c),
@@ -881,36 +889,52 @@ impl Conv<'_> {
         let Some(ch) = self.changes.get(id) else {
             return;
         };
-        if ch.kind != ChangeKind::Inserted {
+        if ch.kind != ChangeKind::Inserted || self.open_changes.contains_key(id) {
             return;
         }
-        self.revisions += 1;
-        if self.options.revisions == RevisionMode::Marked && !self.open_changes.contains_key(id) {
+        let say = self.options.revisions == RevisionMode::Marked;
+        if say {
             self.set_fmt([false; 4]);
-            let author = Some(ch.author.as_str()).filter(|a| !a.is_empty());
-            let date = Some(ch.date.as_str()).filter(|d| !d.is_empty());
-            let open = revision::open(&mut self.b, ch.kind, author, date);
-            self.open_changes.insert(id.to_owned(), open);
         }
+        let open = revision::open(
+            &mut self.b,
+            ch.kind,
+            Some(ch.author.as_str()),
+            Some(ch.date.as_str()),
+            Some(id),
+            say,
+        );
+        self.open_changes.insert(id.to_owned(), open);
     }
 
     fn change_point(&mut self, c: Node<'_, '_>) {
-        let Some(ch) = attr(c, "change-id").and_then(|id| self.changes.get(id)) else {
+        let Some(id) = attr(c, "change-id") else {
             return;
         };
-        if ch.kind != ChangeKind::Deleted {
+        let Some(ch) = self.changes.get(id) else {
+            return;
+        };
+        if ch.kind != ChangeKind::Deleted || ch.text.is_empty() {
             return;
         }
-        self.revisions += 1;
-        if self.options.revisions != RevisionMode::Marked || ch.text.is_empty() {
-            return;
+        let say = self.options.revisions == RevisionMode::Marked;
+        if say {
+            self.set_fmt([false; 4]);
         }
-        self.set_fmt([false; 4]);
-        let author = Some(ch.author.as_str()).filter(|a| !a.is_empty());
-        let date = Some(ch.date.as_str()).filter(|d| !d.is_empty());
-        let open = revision::open(&mut self.b, ch.kind, author, date);
-        self.b.text(&ch.text);
-        revision::close(&mut self.b, open);
+        let mut open = revision::open(
+            &mut self.b,
+            ch.kind,
+            Some(ch.author.as_str()),
+            Some(ch.date.as_str()),
+            Some(id),
+            say,
+        );
+        if say {
+            self.b.text(&ch.text);
+        } else {
+            open.push_deleted(&ch.text);
+        }
+        revision::close(&mut self.b, open, &mut self.recorded);
     }
 
     fn annotation(&mut self, a: Node<'_, '_>) {

@@ -1,82 +1,163 @@
-//! Saying tracked changes in place ([`RevisionMode::Marked`]), shared by
-//! the DOCX, ODT, and RTF loaders.
+//! Tracked changes, shared by the DOCX, ODT, and RTF loaders: said in
+//! place ([`RevisionMode::Marked`]) or read as the final text, and either
+//! way recorded as a [`DocumentChange`] with the range of canonical text
+//! that accepting or rejecting it replaces.
 //!
 //! [`RevisionMode::Marked`]: crate::RevisionMode::Marked
 
 use textweaver_core::{CharRange, MarkerKind};
 use textweaver_text::Marker;
 
+pub(crate) use crate::annotations::ChangeKind;
+use crate::annotations::DocumentChange;
 use crate::builder::{Builder, OpenId};
 
-/// What a tracked change did.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum ChangeKind {
-    /// Text added.
-    Inserted,
-    /// Text removed.
-    Deleted,
-    /// Text moved away from here (Word `w:moveFrom`).
-    MovedAway,
-    /// Text moved here (Word `w:moveTo`).
-    MovedHere,
+fn verb(kind: ChangeKind) -> &'static str {
+    match kind {
+        ChangeKind::Inserted => "inserted",
+        ChangeKind::Deleted => "deleted",
+        ChangeKind::MovedAway => "moved away",
+        ChangeKind::MovedHere => "moved here",
+    }
 }
 
-impl ChangeKind {
-    fn verb(self) -> &'static str {
-        match self {
-            ChangeKind::Inserted => "inserted",
-            ChangeKind::Deleted => "deleted",
-            ChangeKind::MovedAway => "moved away",
-            ChangeKind::MovedHere => "moved here",
-        }
-    }
-
-    /// Insertions are underlined and deletions struck through, as word
-    /// processors show them.
-    fn marker(self) -> MarkerKind {
-        match self {
-            ChangeKind::Inserted | ChangeKind::MovedHere => MarkerKind::Underline,
-            ChangeKind::Deleted | ChangeKind::MovedAway => MarkerKind::Strikethrough,
-        }
+/// Insertions are underlined and deletions struck through, as word
+/// processors show them.
+fn marker(kind: ChangeKind) -> MarkerKind {
+    if kind.adds_text() {
+        MarkerKind::Underline
+    } else {
+        MarkerKind::Strikethrough
     }
 }
 
 /// "inserted by Ada Example", or "deleted" when no author is given.
 pub(crate) fn phrase(kind: ChangeKind, author: Option<&str>) -> String {
     match author.map(str::trim).filter(|a| !a.is_empty()) {
-        Some(a) => format!("{} by {a}", kind.verb()),
-        None => kind.verb().to_owned(),
+        Some(a) => format!("{} by {a}", verb(kind)),
+        None => verb(kind).to_owned(),
     }
 }
 
-/// An open change: its marker and whether any text came.
-pub(crate) struct Open {
-    id: OpenId,
+/// Whitespace collapsed to single spaces, trimmed.
+fn collapse(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Starts saying a change: "(inserted by Ada Example:", then the changed
-/// text goes under the change's marker until [`close`].
+/// An open change: what it is, where it started, and its marker when it is
+/// said in place.
+pub(crate) struct Open {
+    said: Option<OpenId>,
+    change: DocumentChange,
+    /// Char where the recorded range starts.
+    start: usize,
+    /// Byte where the changed text starts in the builder's text.
+    text_byte: usize,
+    /// No space came between the text before and this change.
+    glued: bool,
+    /// Deleted text not written to the canonical text (final reading).
+    deleted: String,
+}
+
+impl Open {
+    /// Deleted text read as the final text: kept for the record (rejecting
+    /// the change puts it back), not written.
+    pub(crate) fn push_deleted(&mut self, text: &str) {
+        self.deleted.push_str(text);
+    }
+}
+
+/// Starts a change. Said in place (`say`), it opens with "(inserted by Ada
+/// Example:", and the changed text goes under the change's marker until
+/// [`close`]; otherwise nothing is written, and the caller writes the text
+/// of an insertion and passes the text of a deletion to
+/// [`Open::push_deleted`].
 pub(crate) fn open(
     b: &mut Builder,
     kind: ChangeKind,
     author: Option<&str>,
     date: Option<&str>,
+    id: Option<&str>,
+    say: bool,
 ) -> Open {
+    let author = author.map(str::trim).filter(|a| !a.is_empty());
+    let date = date.map(str::trim).filter(|d| !d.is_empty());
+    let change = DocumentChange {
+        id: id.map(str::trim).unwrap_or_default().to_owned(),
+        kind,
+        author: author.unwrap_or_default().to_owned(),
+        date: date.unwrap_or_default().to_owned(),
+        ..DocumentChange::default()
+    };
+    let glued = b.joined();
+    let len0 = b.len_chars();
+    let byte0 = b.as_str().len();
+    if !say {
+        return Open {
+            said: None,
+            change,
+            start: len0,
+            text_byte: byte0,
+            glued,
+            deleted: String::new(),
+        };
+    }
     let words = phrase(kind, author);
     b.space();
     b.text(&format!("({words}:"));
+    let written = &b.as_str()[byte0..];
+    let lead = written.find('(').unwrap_or(0);
+    let start = len0 + written[..lead].chars().count();
     b.space();
-    let mut m = Marker::new(kind.marker(), CharRange::empty(0)).with_label(words);
-    if let Some(d) = date.map(str::trim).filter(|d| !d.is_empty()) {
+    let mut m = Marker::new(marker(kind), CharRange::empty(0)).with_label(words);
+    if let Some(d) = date {
         m = m.with_reference(d);
     }
-    Open { id: b.open(m) }
+    let said = Some(b.open(m));
+    Open {
+        said,
+        change,
+        start,
+        text_byte: b.as_str().len(),
+        glued,
+        deleted: String::new(),
+    }
 }
 
-/// Ends a change opened with [`open`]: ")".
-pub(crate) fn close(b: &mut Builder, open: Open) {
-    b.close(open.id);
-    b.close_punct(")");
+/// Ends a change opened with [`open`] (writing ")" when it is said) and
+/// records it in `out` when it changed any text.
+pub(crate) fn close(b: &mut Builder, open: Open, out: &mut Vec<DocumentChange>) {
+    let Open {
+        said,
+        mut change,
+        start,
+        text_byte,
+        glued,
+        deleted,
+    } = open;
+    let written = b.as_str().get(text_byte..).unwrap_or_default();
+    if let Some(id) = said {
+        change.text = collapse(written);
+        b.close(id);
+        b.close_punct(")");
+        change.range = CharRange::new(start, b.len_chars());
+        change.glued = glued;
+    } else if change.kind.adds_text() {
+        let lead = written.len() - written.trim_start().len();
+        change.text = collapse(written);
+        let from = start + written[..lead].chars().count();
+        change.range = CharRange::new(from, b.len_chars().max(from));
+        change.glued = glued && lead == 0;
+    } else {
+        change.text = collapse(&deleted);
+        // At the next paragraph or line when one is pending, so the text
+        // put back on rejecting goes there.
+        change.range = CharRange::empty(b.next_start());
+        change.glued = glued && !deleted.starts_with(char::is_whitespace);
+    }
+    if !change.text.is_empty() {
+        out.push(change);
+    }
 }
 
 #[cfg(test)]
@@ -85,6 +166,7 @@ mod tests {
 
     #[test]
     fn changes_read_in_place_with_their_markers() {
+        let mut out = Vec::new();
         let mut b = Builder::new();
         b.text("The cat");
         let o = open(
@@ -92,13 +174,15 @@ mod tests {
             ChangeKind::Inserted,
             Some("Ada Example"),
             Some("2026-09-01"),
+            Some("7"),
+            true,
         );
         b.text("s ");
-        close(&mut b, o);
+        close(&mut b, o, &mut out);
         b.text(". Then ");
-        let o = open(&mut b, ChangeKind::Deleted, None, None);
+        let o = open(&mut b, ChangeKind::Deleted, None, None, None, true);
         b.text("old ");
-        close(&mut b, o);
+        close(&mut b, o, &mut out);
         b.text("new.");
         let (text, markers) = b.finish();
         assert_eq!(
@@ -118,5 +202,47 @@ mod tests {
             .expect("a deletion marker");
         assert_eq!(&text[struck.range.to_range()], "old");
         assert_eq!(phrase(ChangeKind::MovedHere, Some(" ")), "moved here");
+
+        assert_eq!(out.len(), 2);
+        assert_eq!(
+            &text[out[0].range.to_range()],
+            "(inserted by Ada Example: s)"
+        );
+        assert_eq!(out[0].text, "s");
+        assert_eq!(out[0].id, "7");
+        assert_eq!(out[0].author, "Ada Example");
+        assert_eq!(out[0].date, "2026-09-01");
+        assert!(out[0].glued);
+        assert_eq!(&text[out[1].range.to_range()], "(deleted: old)");
+        assert!(!out[1].glued);
+    }
+
+    #[test]
+    fn changes_read_as_the_final_text_are_recorded_too() {
+        let mut out = Vec::new();
+        let mut b = Builder::new();
+        b.text("The cat");
+        let o = open(&mut b, ChangeKind::Inserted, None, None, None, false);
+        b.text("s");
+        close(&mut b, o, &mut out);
+        b.text(" sat ");
+        let mut o = open(
+            &mut b,
+            ChangeKind::Deleted,
+            Some("Bo Example"),
+            None,
+            None,
+            false,
+        );
+        o.push_deleted("down ");
+        close(&mut b, o, &mut out);
+        b.text("there.");
+        let (text, _) = b.finish();
+        assert_eq!(text, "The cats sat there.");
+        assert_eq!(&text[out[0].range.to_range()], "s");
+        assert!(out[0].glued);
+        assert_eq!(out[1].range, CharRange::empty(12));
+        assert_eq!(out[1].text, "down");
+        assert!(!out[1].glued);
     }
 }

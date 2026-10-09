@@ -108,7 +108,8 @@ pub mod web;
 mod xmldepth;
 
 pub use annotations::{
-    COMMENTS_PROPERTY, CommentReply, DocumentComment, REVISIONS_PROPERTY, comments, revision_count,
+    CHANGES_PROPERTY, COMMENTS_PROPERTY, ChangeKind, CommentReply, DocumentChange, DocumentComment,
+    REVISIONS_PROPERTY, changes, comments, revision_count, set_changes, set_comments,
 };
 pub use archive::ArchiveLoader;
 pub use cache::{CacheKey, DocumentCache};

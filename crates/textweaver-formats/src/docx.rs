@@ -153,7 +153,7 @@ impl Loader for DocxLoader {
             depth: 0,
             flattened: false,
             in_del: 0,
-            revisions: 0,
+            changes: Vec::new(),
             comment_starts: HashSet::new(),
         };
         c.blocks(body);
@@ -162,7 +162,7 @@ impl Loader for DocxLoader {
         let deferred = std::mem::take(&mut c.deferred);
         c.b.footnotes_section(&deferred);
         let flattened = c.flattened || pkg.flattened();
-        let revisions = c.revisions;
+        let changes = std::mem::take(&mut c.changes);
         let (text, markers, anchors) = c.b.finish_with_anchors();
         let comments = match comments_xml {
             Some(xml) => read_comments(&xml, extended_xml.as_deref(), &anchors)?,
@@ -171,7 +171,7 @@ impl Loader for DocxLoader {
         if flattened {
             crate::add_warning(&mut meta, crate::NESTING_WARNING);
         }
-        crate::annotations::record(&mut meta, comments, revisions);
+        crate::annotations::record(&mut meta, comments, changes);
         if meta.title.is_none() {
             meta.title = markers
                 .iter()
@@ -620,8 +620,8 @@ struct Conv<'a> {
     /// Inside a deletion being said ([`RevisionMode::Marked`]): its
     /// `w:delText` is read.
     in_del: usize,
-    /// Tracked changes seen.
-    revisions: usize,
+    /// Tracked changes seen, in reading order.
+    changes: Vec<crate::DocumentChange>,
     /// Comments whose range has started (their `w:commentReference` then
     /// adds nothing).
     comment_starts: HashSet<String>,
@@ -744,27 +744,43 @@ impl Conv<'_> {
             matches!(n.tag_name().name(), "t" | "delText")
                 && n.text().is_some_and(|t| !t.trim().is_empty())
         });
-        if has_text {
-            self.revisions += 1;
-        }
-        let deleted = matches!(kind, ChangeKind::Deleted | ChangeKind::MovedAway);
-        if self.options.revisions != RevisionMode::Marked || !has_text {
+        let deleted = !kind.adds_text();
+        if !has_text {
             if !deleted {
                 self.inline(c);
             }
             return;
         }
-        self.set_fmt([false; 4]);
-        let open = revision::open(&mut self.b, kind, attr(c, "author"), attr(c, "date"));
-        if deleted {
+        let say = self.options.revisions == RevisionMode::Marked;
+        if say {
+            self.set_fmt([false; 4]);
+        }
+        let mut open = revision::open(
+            &mut self.b,
+            kind,
+            attr(c, "author"),
+            attr(c, "date"),
+            attr(c, "id"),
+            say,
+        );
+        if deleted && say {
             self.in_del += 1;
-        }
-        self.inline(c);
-        if deleted {
+            self.inline(c);
             self.in_del -= 1;
+        } else if deleted {
+            let text: String = c
+                .descendants()
+                .filter(|n| matches!(n.tag_name().name(), "t" | "delText"))
+                .filter_map(|n| n.text())
+                .collect();
+            open.push_deleted(&text);
+        } else {
+            self.inline(c);
         }
-        self.set_fmt([false; 4]);
-        revision::close(&mut self.b, open);
+        if say {
+            self.set_fmt([false; 4]);
+        }
+        revision::close(&mut self.b, open, &mut self.changes);
     }
 
     fn close_lists(&mut self) {

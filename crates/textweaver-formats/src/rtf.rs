@@ -86,11 +86,11 @@ impl Loader for RtfLoader {
         let mut meta = meta_for(source, self.id());
         meta.title = parsed.title.clone().filter(|t| !t.is_empty());
         meta.author = parsed.author.clone().filter(|a| !a.is_empty());
-        let (text, markers, revisions) = render(&parsed, options);
+        let (text, markers, changes) = render(&parsed, options);
         if parsed.flattened {
             crate::add_warning(&mut meta, crate::NESTING_WARNING);
         }
-        crate::annotations::record(&mut meta, Vec::new(), revisions);
+        crate::annotations::record(&mut meta, Vec::new(), changes);
         if meta.title.is_none() {
             meta.title = markers
                 .iter()
@@ -142,7 +142,32 @@ struct Fmt {
     ins_author: i32,
     /// `\revauthdel`.
     del_author: i32,
+    /// `\revdttm`: when the insertion was made, packed as Word's DTTM.
+    ins_date: i32,
+    /// `\revdttmdel`.
+    del_date: i32,
 }
+
+/// An RTF revision time (`\revdttm`, Word's packed DTTM: minutes, hours,
+/// day, month, and years since 1900 in bit fields) as an ISO 8601 date and
+/// time, or `None` for zero or a value that is not a date.
+fn dttm(v: i32) -> Option<String> {
+    let v = v as u32;
+    let min = v & 0x3f;
+    let hour = (v >> 6) & 0x1f;
+    let day = (v >> 11) & 0x1f;
+    let month = (v >> 16) & 0xf;
+    let year = 1900 + ((v >> 20) & 0x1ff);
+    if v == 0 || !(1..=12).contains(&month) || !(1..=31).contains(&day) || hour > 23 || min > 59 {
+        return None;
+    }
+    Some(format!(
+        "{year:04}-{month:02}-{day:02}T{hour:02}:{min:02}:00"
+    ))
+}
+
+/// A change in an RTF run: its kind, author index, and packed time.
+type ChangeKey = (ChangeKind, i32, i32);
 
 #[derive(Clone, Debug)]
 struct Group {
@@ -792,6 +817,8 @@ impl Parser<'_> {
             "deleted" => self.group_mut().fmt.deleted = on,
             "revauth" => self.group_mut().fmt.ins_author = param.unwrap_or(0),
             "revauthdel" => self.group_mut().fmt.del_author = param.unwrap_or(0),
+            "revdttm" => self.group_mut().fmt.ins_date = param.unwrap_or(0),
+            "revdttmdel" => self.group_mut().fmt.del_date = param.unwrap_or(0),
             "pard" => {
                 let g = self.group_mut();
                 g.style = 0;
@@ -1025,7 +1052,10 @@ fn codepage(cp: i32) -> &'static Encoding {
 
 /// Builds the canonical text; returns it, its markers, and the number of
 /// tracked changes.
-fn render(parsed: &Parsed, options: &LoadOptions) -> (String, Vec<Marker>, usize) {
+fn render(
+    parsed: &Parsed,
+    options: &LoadOptions,
+) -> (String, Vec<Marker>, Vec<crate::DocumentChange>) {
     let mut r = Render {
         b: Builder::new(),
         parsed,
@@ -1038,7 +1068,7 @@ fn render(parsed: &Parsed, options: &LoadOptions) -> (String, Vec<Marker>, usize
         in_cell: false,
         deferred: Vec::new(),
         note_count: 0,
-        revisions: 0,
+        recorded: Vec::new(),
     };
     for block in &parsed.blocks {
         match block {
@@ -1053,9 +1083,10 @@ fn render(parsed: &Parsed, options: &LoadOptions) -> (String, Vec<Marker>, usize
     r.close_lists();
     let deferred = std::mem::take(&mut r.deferred);
     r.b.footnotes_section(&deferred);
-    let revisions = r.revisions;
+    r.set_change(None);
+    let recorded = std::mem::take(&mut r.recorded);
     let (text, markers) = r.b.finish();
-    (text, markers, revisions)
+    (text, markers, recorded)
 }
 
 const FMT_KINDS: [MarkerKind; 3] = [MarkerKind::Bold, MarkerKind::Italic, MarkerKind::Underline];
@@ -1066,14 +1097,15 @@ struct Render<'a> {
     options: &'a LoadOptions,
     fmt: [Option<OpenId>; 3],
     link: Option<(usize, OpenId)>,
-    /// The change being said, with its kind and author.
-    change: Option<(ChangeKind, i32, revision::Open)>,
+    /// The change being read, with its kind, author, and time.
+    change: Option<(ChangeKey, revision::Open)>,
     lists: Vec<OpenId>,
     table: Option<OpenId>,
     in_cell: bool,
     deferred: Vec<(String, String)>,
     note_count: usize,
-    revisions: usize,
+    /// Tracked changes seen, as recorded.
+    recorded: Vec<crate::DocumentChange>,
 }
 
 impl Render<'_> {
@@ -1139,49 +1171,57 @@ impl Render<'_> {
             .filter(|a| !a.is_empty() && !a.eq_ignore_ascii_case("unknown"))
     }
 
-    /// Opens or closes the change being said; counts changes.
-    fn set_change(&mut self, want: Option<(ChangeKind, i32)>) {
-        if self.change.as_ref().map(|(k, a, _)| (*k, *a)) == want {
+    /// Opens or closes the change being read (said in place when reading
+    /// marked), recording each one.
+    fn set_change(&mut self, want: Option<ChangeKey>) {
+        if self.change.as_ref().map(|(k, _)| *k) == want {
             return;
         }
-        if let Some((_, _, open)) = self.change.take() {
-            self.set_fmt([false; 3]);
-            self.set_link(None);
-            revision::close(&mut self.b, open);
+        let marked = self.options.revisions == RevisionMode::Marked;
+        if let Some((_, open)) = self.change.take() {
+            if marked {
+                self.set_fmt([false; 3]);
+                self.set_link(None);
+            }
+            revision::close(&mut self.b, open, &mut self.recorded);
         }
-        if let Some((kind, author)) = want {
-            self.set_fmt([false; 3]);
-            self.set_link(None);
+        if let Some((kind, author, packed)) = want {
+            if marked {
+                self.set_fmt([false; 3]);
+                self.set_link(None);
+            }
             let name = self.author(author).map(str::to_owned);
-            let open = revision::open(&mut self.b, kind, name.as_deref(), None);
-            self.change = Some((kind, author, open));
+            let date = dttm(packed);
+            let open = revision::open(
+                &mut self.b,
+                kind,
+                name.as_deref(),
+                date.as_deref(),
+                None,
+                marked,
+            );
+            self.change = Some(((kind, author, packed), open));
         }
     }
 
     fn runs(&mut self, runs: &[Run]) {
         let marked = self.options.revisions == RevisionMode::Marked;
-        let mut prev: Option<(ChangeKind, i32)> = None;
         for run in runs {
             match run {
                 Run::Text { text, fmt, link } => {
                     let change = if fmt.deleted {
-                        Some((ChangeKind::Deleted, fmt.del_author))
+                        Some((ChangeKind::Deleted, fmt.del_author, fmt.del_date))
                     } else if fmt.inserted {
-                        Some((ChangeKind::Inserted, fmt.ins_author))
+                        Some((ChangeKind::Inserted, fmt.ins_author, fmt.ins_date))
                     } else {
                         None
                     };
-                    if change.is_some() && change != prev && !text.trim().is_empty() {
-                        self.revisions += 1;
-                    }
-                    if !text.trim().is_empty() {
-                        prev = change;
-                    }
+                    self.set_change(change);
                     if fmt.deleted && !marked {
+                        if let Some((_, open)) = self.change.as_mut() {
+                            open.push_deleted(text);
+                        }
                         continue;
-                    }
-                    if marked {
-                        self.set_change(change);
                     }
                     self.set_link(*link);
                     self.set_fmt([fmt.bold, fmt.italic, fmt.underline]);
