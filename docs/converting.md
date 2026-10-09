@@ -161,6 +161,28 @@ The page's colors come from a [theme](themes.md). Use `--theme NAME` to choose o
 
 You can write your own templates. They are HTML files with MiniJinja placeholders such as `{{ title }}` and `{{ content }}`. Put them in a folder and pass `--templates FOLDER --template NAME`, where the name is the file name without its extension, or give a file directly with `--template my-page.html`. Your template can start with `{% extends "default" %}` to reuse the built-in page. The placeholders are listed in the rustdoc of `textweaver_render::template`.
 
+### How the page is set
+
+The page takes its typography from your reading settings at the moment you convert, so that a document read in the browser looks like the same document read in textweaver. The font, its size and weight come from `[reading_aids.font]`; line height, paragraph spacing, and letter and word spacing come from `[reading_aids.spacing]`; and the length of a line comes from `[display] measure`, the number of characters a line may hold (0 lets the text fill the window). Change any of these in Settings and the next page you convert follows. The size is written relative to the browser's own default size, so the reader's browser zoom and minimum font size still apply. Themes carry colors only, which is why an older theme file keeps working unchanged. A user template that prints `{{ stylesheet }}` gets the same settings.
+
+The rest of the page follows a few rules, each chosen so that nothing depends on color alone:
+
+- **Headings** use one scale, each level 1.2 times the size of the level below it, with the space around a heading measured in the heading's own size. Levels 5 and 6 share the body size; level 6 is set in italics.
+- **Code blocks** that name their language (a fence that opens with three backticks and `rust`, for example) are highlighted with the same syntax definitions and token kinds the terminal reader uses. Each kind takes a color from the theme's text roles, and the two that matter most also change their type: keywords are bold and comments are italic, so a black-and-white printout or a contrast theme keeps them apart. Strings keep their quotation marks and numbers their digits. A block in an unknown language, or without one, stays plain. Code blocks sit on the page's own background inside a border, because several token colors fall short of the 4.5 to 1 contrast floor on the darker code background.
+- **Tables** set their header row in bold above a double rule, and every cell has a border, so rows are told apart by their borders; the tint on every other row is an extra. A table wider than the window scrolls sideways inside its own box, which takes keyboard focus and is named "Table 1", "Table 2", and so on, so it can be scrolled from the keyboard.
+- **Images** that stand alone in a paragraph become figures. The image's title, written after its address as in `![A crow on a fence](crow.png "A crow keeps watch")`, becomes the caption under it, and the alternative text stays the description that a screen reader reads. The title is not repeated on the image, so the caption is read once.
+- **Footnotes** are gathered at the end under the heading "Footnotes", and each one ends with a link back to the place it was cited, named "Back to reference 1" and so on.
+- **Callouts** begin with their type word, so a reader hears what kind of note it is before its title: `> [!tip] Remember` becomes "Tip: Remember". A title that already begins with the word, such as "Tip of the day", is kept as written.
+- **Math** is written as MathML, with the formula's source as its text alternative (what a screen reader falls back to) and as an annotation that can be copied. A formula that cannot be read is shown as its source, marked as an error in bold.
+
+The CommonMark flavor is the exception: it renders exactly what the specification describes, with plain code blocks, images inside paragraphs, and tables without the scrolling box.
+
+**Printing.** The `print` template, and the default page when printed from a browser, print black on white with no tinted backgrounds, at your reading font size in points. The address of each web link is printed after it, headings are kept with the text that follows them, and code blocks, quotations, callouts, figures, and table rows are not split across pages. A table's header row repeats at the top of each printed page.
+
+**Contrast themes and motion.** Under a Windows contrast theme (the browser's forced colors), the system's colors take over, and every border and focus outline stays drawn, so code blocks, callouts, and tables keep their edges and code keeps its bold and italics. Nothing on the page animates; the one movement, smooth scrolling to a heading, is turned off when your system asks for reduced motion.
+
+The same templates serve `tw convert`, Export from inside the reader, the batch conversion, and the browser preview. textweaver's own tests convert a sample page and check it with `tools/check_site_a11y.py --page`, which looks for the language, the title, one first-level heading, no skipped heading levels, the skip link, the main landmark, labels, image descriptions, table headers, and anything loaded from another host.
+
 ## Publishing templates
 
 ```bash
