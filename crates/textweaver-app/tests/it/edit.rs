@@ -1234,7 +1234,14 @@ fn notes_link_to_notes_through_the_lists() {
     r.send(Command::ListKey(ListKey::Enter));
     r.app.wait_for_writes();
     let s = r.app.session().unwrap();
-    assert_eq!(s.doc.meta.path.as_deref(), Some(a.as_path()));
+    // Canonical paths: temp folders differ by short name (Windows) or /private (macOS).
+    let opened = s
+        .doc
+        .meta
+        .path
+        .as_deref()
+        .map(|p| std::fs::canonicalize(p).unwrap());
+    assert_eq!(opened, Some(std::fs::canonicalize(&a).unwrap()));
     assert_eq!(s.cursor, at(text, "Gamma"));
     let notes = shown(&r.send(Command::Notes(NoteCommand::List)));
     assert!(notes[1].ends_with("Links: 0 out, 2 in."), "{notes:?}");

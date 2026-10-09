@@ -46,6 +46,7 @@ const FIXTURES: &[(&str, &str, usize)] = &[
     ("pdf", "fixtures/a/notes.pdf", 0),
     ("image", "fixtures/w3d/scan-small.png", 0),
     ("daisy", "fixtures/k/book.dtbook", 1),
+    ("brf", "fixtures/r5/river-ueb.brf", 0),
     ("pptx", "fixtures/k/lesson.pptx", 1),
     ("sheet", "fixtures/k/grades.csv", 0),
     ("archive", "fixtures/w3d/course.7z", 0),
