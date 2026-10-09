@@ -80,6 +80,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading.revisions`: default automatic (`"auto"`). Tracked changes. How tracked changes in Word, OpenDocument, and RTF files are read. Said in place at high verbosity (automatic), always said, or never said, reading the final text. Applies when a document is opened. Choices: `"auto"` (automatic), `"marked"` (always say them), `"final"` (final text only). Syncs between computers.
 - `reading.stop_at`: default never (`"off"`). Stop at section end. Where continuous reading stops by itself and says End of section. Never, at the next heading of any level, or at the next chapter: a section break, else a level 1 heading. Reading goes on from the heading with the read key. Choices: `"off"` (never), `"heading"` (next heading), `"chapter"` (next chapter). Syncs between computers.
 - `reading.stop_after_minutes`: default 0 minutes. Reading timer. Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off. From 0 to 240 minutes, in steps of 5. Syncs between computers.
+- `reading.recall_prompts`: default off (`false`). Recall prompts. At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key. On or off: `true` or `false`. Syncs between computers.
 
 ## Display: the `[display]` section
 

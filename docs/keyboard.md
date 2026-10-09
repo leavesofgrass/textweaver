@@ -261,6 +261,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `Delete` (browse) | `delete_note` |
 | Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `y` (browse) | `highlight_selection` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | palette | palette | palette | `export_study_sheet` |
+| Test yourself on the notes and highlights: Enter shows each answer | palette | palette | palette | `self_test` |
 
 ## File
 
@@ -526,6 +527,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
+| Test yourself on the notes and highlights: Enter shows each answer | `self_test` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |

@@ -183,6 +183,8 @@ To read one section at a time, set **Stop at section end** in Settings (`[readin
 
 When reading stops, you hear "End of section." and the key that goes on, such as "End of section. Ctrl+Space to go on." The cursor is on the next heading, so **Enter** in the document, or the read key, reads the next section, which stops at its end in turn.
 
+With **Recall prompts** on in Settings (`[reading] recall_prompts`, off by default), the stop asks you to recall the section instead: "Say what you remember from Methods. Ctrl+Space to go on." With **Stop at section end** set to never, recall prompts stop at the next heading. [Study with textweaver](notes.md#study-with-textweaver) explains them and the self-test.
+
 ### Reading timer
 
 To read for a set time, set **Reading timer** in Settings (`[reading] stop_after_minutes`) to a number of minutes; 0, the default, turns it off. When that much reading time has passed, reading finishes the sentence it is in and stops, and you hear "Time is up after 20 minutes." and the key that goes on. The cursor is on the next sentence.
