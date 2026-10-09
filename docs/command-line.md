@@ -48,7 +48,7 @@ Every command that prints facts takes `--json`, either on the command or on the 
 
 ## The data folder
 
-textweaver keeps your settings, places, notes and libraries in its data folders. `tw settings path` names them all, with the log file. `--home DIR` puts all of them under `DIR` for one run; the `TEXTWEAVER_HOME` environment variable does the same for every run. `--home` works on `tw open`, `speak`, `voices`, `backends`, `convert`, `export-audio`, `library`, `vault`, `dictate`, `marks`, `migrate-star`, `cite`, `settings`, `define`, `stats`, `summarize`, `sync`, `serve` and `components`, and on `tw ocr status` and `tw ocr download`, where the OCR models are kept.
+textweaver keeps your settings, places, notes and libraries in its data folders. `tw settings path` names them all, with the log file. `--home DIR` puts all of them under `DIR` for one run; the `TEXTWEAVER_HOME` environment variable does the same for every run. `--home` works on `tw open`, `speak`, `voices`, `backends`, `convert`, `export-audio`, `library`, `vault`, `dictate`, `marks`, `migrate-star`, `cite`, `settings`, `define`, `stats`, `summarize`, `changes`, `sync`, `serve` and `components`, and on `tw ocr status` and `tw ocr download`, where the OCR models are kept.
 
 ## Questions
 

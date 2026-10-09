@@ -435,6 +435,45 @@ sentences = 7
 
 The stop words the method leaves out ("the", "and", "of") are English. Documents in other languages still get a summary, a little less sharp.
 
+## Tracked changes and comments: Ctrl+Shift+J or Alt+A
+
+A Word document (and an OpenDocument or RTF file) can carry tracked changes, the edits a reviewer made with Track Changes on, and comments. textweaver reads the final text by default; `[reading] revisions` in the settings chooses whether the changes are also said in place ("(inserted by Ada Example: renal)").
+
+**The changes list.** Press **Ctrl+Shift+J** in the window or **Alt+A** in the terminal reader, or choose **Changes and comments** from the Bookmarks menu or the command palette. Every change and every comment thread is one row, in document order, with what it is first:
+
+- "Inserted: 'renal', by Ada Example, Tuesday, March 3, 2026"
+- "Deleted: 'rarely', by Bo Example, date not recorded"
+- "Moved here: 'check the labs first', by Ada Example, Thursday, March 5, 2026"
+- "Comment by Bo Example: check this date, 1 reply, resolved"
+
+The date is the one the document gives, said in full. When the document gives none, the row says "date not recorded"; textweaver never guesses one. A move is two rows, "Moved away" where the text was and "Moved here" where it went.
+
+**Keys in the list:**
+
+- **Enter** goes to the change or comment and says its line.
+- **A** accepts the change, **R** rejects it.
+- **Shift+A** and **Shift+R** accept or reject every change by the same author.
+- On a comment: **F2** replies, **Space** resolves it or opens it again, **Delete** deletes it and its replies (after a y or n question).
+- **N** adds a comment to the selection, or to the sentence at the cursor.
+
+To accept or reject every change at once, use **Accept all changes** or **Reject all changes** from the Bookmarks menu or the palette. **Add comment** adds a comment without opening the list.
+
+Accepting an insertion keeps its text; rejecting it removes the text. Accepting a deletion removes the text; rejecting it puts the text back. The document you are reading changes at once, so reading, search, and the study tools see the result. Comments are notes too: a reply, a resolve, or a delete shows in the notes list as well. Replies and new comments carry the name in `[editing] author` (empty unless you fill it; textweaver never takes it from your computer) and the date from the clock.
+
+Accepting and rejecting do not change the file yet. Reopen the file and its changes are there again. Writing your decisions back into the Word file comes with a later beta 1 task; until then, `tw changes` writes a copy.
+
+Changes stay as they are in edit mode: leave edit mode to accept or reject them.
+
+**From the command line**, `tw changes` prints the same rows, one per line:
+
+```sh
+tw changes draft.docx
+tw changes draft.docx --json
+tw changes draft.docx --accept-all --out final.md
+tw changes draft.docx --reject-all --out original.docx
+```
+
+`--json` prints each change (its kind, text, author, date, and position) and each comment thread as the document records them. `--accept-all` or `--reject-all` with `--out FILE` writes the document with every change decided, in the format the file name's extension names: Markdown (`.md`), plain text (`.txt`), HTML, or `.docx`, `.epub`, `.pdf`, and `.brf`. The original file is never changed.
 ## Go back and forward
 
 textweaver keeps a history of your jumps, like the Back button of a web browser.
