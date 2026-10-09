@@ -261,22 +261,27 @@ fn the_command_palette_says_how_to_use_it() {
     assert!(!bottom.contains("Tab completes"), "{bottom}");
 }
 
-/// Deliverable 8: in an open list, F1 or the Say Status key repeats the
-/// list's introduction (title, count, keys), then the focused item; the
-/// Repeat Message key says the last message.
+/// Deliverable 8: in an open list, the Say Status key repeats the list's
+/// introduction (title, count, keys), then the focused item; the Repeat
+/// Message key says the last message. In the keyboard shortcuts list, F1
+/// says what the focused command does (beta 1).
 #[test]
 fn a_key_in_a_list_repeats_its_introduction() {
     let (mut tui, log) = voiced("Text.\n");
     tui.handle_key(key(KeyCode::Char('?')));
     let intro = heard(&log, "Keyboard shortcuts,").expect("the list's introduction");
-    assert!(
-        intro.contains("Up and Down move, Enter runs, Escape closes."),
-        "{intro}"
-    );
+    assert!(intro.contains("Type to filter."), "{intro}");
     tui.handle_key(key(KeyCode::Down));
     tui.handle_key(key(KeyCode::Down));
     let n = tui.app().list_model().unwrap().items.len();
-    for k in [key(KeyCode::F(1)), tui.key_for(ActionId::SayStatus)] {
+    let name = tui.app().list_model().unwrap().columns[2].0.clone();
+    log.clear();
+    tui.handle_key(key(KeyCode::F(1)));
+    let help = heard(&log, &format!("{name}: ")).unwrap_or_else(|| panic!("{:?}", log.texts()));
+    assert!(help.starts_with(&format!("{name}: ")), "{help}");
+    assert_eq!(tui.app().list_model().unwrap().selected, 2);
+    {
+        let k = tui.key_for(ActionId::SayStatus);
         log.clear();
         tui.handle_key(k);
         let again = heard(&log, "Keyboard shortcuts,")
@@ -286,10 +291,11 @@ fn a_key_in_a_list_repeats_its_introduction() {
         // The list is still open, on the same item.
         assert_eq!(tui.app().list_model().unwrap().selected, 2);
     }
+    // The last message was F1's explanation, which is said again.
     log.clear();
     tui.handle_key(tui.key_for(ActionId::RepeatMessage));
     assert!(
-        heard(&log, &format!("3 of {n}")).is_some(),
+        heard(&log, &format!("{name}: ")).is_some(),
         "{:?}",
         log.texts()
     );

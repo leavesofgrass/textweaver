@@ -422,6 +422,7 @@ playback-time-up =
        *[other] Time is up after { $minutes } minutes. { $key } to go on.
     }
 playback-repeat-slower = Repeating slower, at { $rate } words per minute.
+playback-recall-prompt = Say what you remember from { $section }. { $key } to go on.
 
 ## The title line and Say Status.
 
@@ -515,8 +516,21 @@ help-the-command = the command { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Unknown command: { $text }.
-help-shortcuts-intro = Keyboard shortcuts, { $n } commands. Up and Down move, Enter runs, Escape closes.
+help-shortcuts-intro = Keyboard shortcuts, { $n } commands. Type to filter. Page Down moves to the next group, F1 explains a command, Enter runs it, Escape closes.
 help-shortcuts-title = Keyboard shortcuts
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = Keyboard shortcuts matching { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } of { $total } commands match.
+help-shortcuts-filter-none = No commands match { $query }. Backspace removes letters.
+help-shortcuts-filter-cleared = Filter cleared, { $n } commands.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }, { $n ->
+        [one] 1 command
+       *[other] { $n } commands
+    }. { $item }
 help-title = Help
 help-intro = Help. Up and Down move, Escape closes.
 
@@ -755,6 +769,7 @@ action-previous-note = Move to the previous note
 action-delete-note = Delete the note or highlight at the cursor
 action-highlight-selection = Highlight the selection, or the sentence at the cursor
 action-export-study-sheet = Export the notes and highlights as a Markdown study sheet, grouped by heading
+action-self-test = Test yourself on the notes and highlights: Enter shows each answer
 action-open = Open a document
 action-open-path = Open a document by typing its path
 action-open-library = Open the library: documents in your library folders and recent files
@@ -1311,6 +1326,24 @@ notes-sheet-before-first-heading = Before the first heading
 notes-sheet-tags = (tags: { $tags })
 # $color is the highlight's color name.
 notes-sheet-highlighted = Highlighted, { $color }.
+
+## The self-test: prompts with hidden answers (crate::reveal).
+
+reveal-self-test-title = Self-test: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] Self-test, 1 prompt. Enter shows the answer. Space to answer aloud.
+       *[other] Self-test, { $n } prompts. Enter shows each answer. Space to answer aloud.
+    }
+reveal-nothing-to-test = No notes or highlights to test. Add a note or highlight first.
+reveal-prompt-note = { $note } (in { $section })
+reveal-prompt-highlight = What did you highlight in { $section }?
+reveal-row-shown = { $prompt } Answer: { $answer }
+reveal-answer = Answer: { $answer }
+reveal-listening = Answer aloud now. Space to stop.
+reveal-you-said = You said: { $words }. Enter shows the answer.
+reveal-heard-nothing = No answer heard. Space to try again.
+reveal-no-dictation = Answering aloud needs dictation, which is not in this version.
 
 ## Find, bookmarks, and selection.
 
@@ -1957,6 +1990,8 @@ choice-reading-stop-at-heading = next heading
 choice-reading-stop-at-chapter = next chapter
 setting-reading-stop-after-minutes = Reading timer
 setting-reading-stop-after-minutes-help = Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.
+setting-reading-recall-prompts = Recall prompts
+setting-reading-recall-prompts-help = At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key.
 setting-display-theme = Theme
 setting-display-theme-help = The color theme.
 setting-display-follow-os-theme = Follow the system theme
@@ -3157,7 +3192,7 @@ gui-prompt-path-hint = Type the path of a document, then press Enter. Tab comple
 gui-prompt-hint = Press Enter to accept, or Escape to cancel. Up and Down recall earlier answers.
 gui-palette-filter = Type to filter the commands
 gui-palette-list = Commands
-gui-palette-hint = Enter runs the first match; Tab moves to the list.
+gui-palette-hint = Enter runs the first match; Tab moves to the list; F1 explains a command.
 gui-open-failed = Could not open { $name }: { $error }
 gui-uia-unavailable = UI Automation notifications exist only on Windows; using the live region.
 gui-graphics-failed = The window could not start its graphics. The terminal reader, textweaver, needs none.
@@ -3395,6 +3430,7 @@ name-previous-note = Previous note
 name-delete-note = Delete note or highlight
 name-highlight-selection = Highlight
 name-export-study-sheet = Export study sheet
+name-self-test = Self-test
 name-open = Open
 name-open-path = Open by path
 name-open-library = Library
@@ -3511,17 +3547,17 @@ choice-accessibility-interface-announcements-off = off
 choice-accessibility-interface-announcements-minimal = minimal
 choice-accessibility-interface-announcements-normal = normal
 choice-accessibility-interface-announcements-full = full
-palette-item = { $name }, { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }, { $category }: { $help }.
-palette-item-recent = { $name }, recent, { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }, recent, { $category }: { $help }.
+palette-item = { $name }, { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }, { $keys }, recent
+palette-item-recent-no-keys = { $name }, recent
 palette-list-title = Commands matching { $query }
 palette-list-title-all = Commands
 palette-list-intro =
     { $title }, { $n ->
         [one] 1 command
        *[other] { $n } commands
-    }. Enter runs one.
+    }. Enter runs one, F1 explains it.
 action-browse-files = Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up
 action-batch-convert = Convert a folder of documents to another format, in the background
 action-export-audio = Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook

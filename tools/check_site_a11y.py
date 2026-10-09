@@ -42,10 +42,26 @@ checked for:
 The interactive pages in the built site/ folder also get the full docs/site/
 checks above.
 
+With `--page FILE` (repeatable) it checks pages that textweaver exports from
+Markdown (`tw convert --to html`, the reader's export and preview), which are
+documents rather than site pages: no header, footer, or live region is
+expected, and a table needs header cells but not a caption, since Markdown
+has no syntax for one. Every exported page is checked for:
+
+- a lang on <html>, a title, exactly one <h1> and it first, and no skipped
+  heading level;
+- a skip link as the first thing Tab reaches, pointing at
+  <main id="main" tabindex="-1">;
+- a label on every nav, control, and button, alt on every image, and no
+  duplicate or dangling id references;
+- tables with header cells;
+- no "outline: none", and nothing loaded from another host.
+
 Usage:
 
     python tools/check_site_a11y.py
     python tools/check_site_a11y.py --built target/docs-site
+    python tools/check_site_a11y.py --page target/exported.html
 
 Exit status 0 when every page passes, 1 when a problem was found.
 Links to files that do not exist are problems too; `--allow-missing FILE`
@@ -471,13 +487,93 @@ def check_built_site(root: Path) -> int:
     return 1 if failed else 0
 
 
+def check_exported_page(path: Path) -> list[str]:
+    html = path.read_text(encoding="utf-8")
+    p = BuiltPage()
+    p.feed(html)
+    problems: list[str] = []
+
+    if not p.html_lang:
+        problems.append("<html> has no lang attribute.")
+    if not p.title.strip():
+        problems.append("The page has no <title>, or it is empty.")
+    if p.headings.count(1) != 1:
+        problems.append(f"The page has {p.headings.count(1)} h1 headings; it needs exactly one.")
+    if p.headings and p.headings[0] != 1:
+        problems.append(f"The first heading is h{p.headings[0]}, not h1.")
+    prev = 0
+    for level in p.headings:
+        if prev and level > prev + 1:
+            problems.append(f"A heading skips from h{prev} to h{level}.")
+        prev = level
+
+    ff = p.first_focusable
+    if ff is None or ff[0] != "a" or ff[1].get("href") != "#main":
+        problems.append("The first focusable element is not a skip link to #main.")
+    mains = p.landmarks["main"]
+    if len(mains) != 1 or mains[0].get("id") != "main" or mains[0].get("tabindex") != "-1":
+        problems.append('The page needs exactly one <main id="main" tabindex="-1">.')
+    for nav in p.landmarks["nav"]:
+        if not (nav.get("aria-label") or nav.get("aria-labelledby")):
+            problems.append("A <nav> has no aria-label.")
+    for c in p.controls:
+        a = c["attrs"]
+        if not (c["wrapped"] or a.get("id") in p.label_for or a.get("aria-label")
+                or a.get("aria-labelledby") or a.get("title")):
+            problems.append(f"A <{c['tag']}> (id {a.get('id', 'none')}) has no label.")
+    for b in p.buttons:
+        a = b["attrs"]
+        if not (b["text"].strip() or a.get("aria-label") or a.get("aria-labelledby")):
+            problems.append("A button has no text or label.")
+    for img in p.imgs:
+        if "alt" not in img:
+            problems.append(f"An <img> ({img.get('src', '?')}) has no alt.")
+    for ident, n in p.ids.items():
+        if n > 1:
+            problems.append(f"The id {ident!r} is used {n} times.")
+    for attr, ref, tag in p.refs:
+        if ref not in p.ids:
+            problems.append(f"{attr}={ref!r} on <{tag}> points at no element.")
+    for t in p.tables:
+        if not t["th"]:
+            problems.append("A <table> has no header cells.")
+    for href in p.links:
+        if href.startswith("#") and len(href) > 1 and href[1:] not in p.ids:
+            problems.append(f"The link {href} points at no id on the page.")
+    if re.search(r"outline\s*:\s*(none|0)\b", html):
+        problems.append('The page uses "outline: none".')
+    for tag, url in p.resources:
+        if _is_external(url):
+            problems.append(f"A <{tag}> loads {url} from another host.")
+    return problems
+
+
+def check_exported_pages(pages: list[str]) -> int:
+    failed = 0
+    for name in pages:
+        page = Path(name)
+        problems = check_exported_page(page)
+        if problems:
+            failed += 1
+            print(f"{page.name}: {len(problems)} problems.")
+            for msg in problems:
+                print(f"  - {msg}")
+        else:
+            print(f"{page.name} passes.")
+    return 1 if failed else 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Check the docs/site/ pages for accessibility basics.")
     parser.add_argument("--allow-missing", action="append", default=[], metavar="FILE",
                         help="a file under docs/ that may be missing for now (repeatable)")
     parser.add_argument("--built", metavar="DIR",
                         help="check the built documentation site in DIR instead")
+    parser.add_argument("--page", action="append", default=[], metavar="FILE",
+                        help="check a page textweaver exported from Markdown instead (repeatable)")
     args = parser.parse_args(argv)
+    if args.page:
+        return check_exported_pages(args.page)
     if args.built:
         return check_built_site(Path(args.built))
     allow = set(args.allow_missing)

@@ -1053,6 +1053,65 @@ fn notes_export_as_a_study_sheet_grouped_by_heading() {
     assert_eq!(r.opened(), [out.display().to_string()]);
 }
 
+/// The self-test (B1-s1): the study sheet's note and highlight as prompts;
+/// Enter reveals and says the answer, and the list stays on the prompt.
+#[test]
+fn the_self_test_asks_then_reveals_the_passage() {
+    use textweaver_app::ListKey;
+    let mut r = Rig::new();
+    r.open("essay.md", ESSAY);
+    r.go("We measured");
+    r.act(ActionId::AddNote);
+    r.send(Command::Answer("How was it measured?".into()));
+    r.go("Intro");
+    r.act(ActionId::HighlightSelection);
+    r.said.clear();
+    r.act(ActionId::SelfTest);
+    assert!(
+        r.said.any("Self-test, 2 prompts. Enter shows each answer."),
+        "{:?}",
+        r.said.all()
+    );
+    let list = r.app.list_model().unwrap().clone();
+    assert_eq!(list.title, "Self-test: Essay");
+    assert_eq!(
+        list.items,
+        [
+            "What did you highlight in Essay?",
+            "How was it measured? (in Methods)"
+        ]
+    );
+    r.send(Command::ListKey(ListKey::Down));
+    r.said.clear();
+    r.send(Command::ListKey(ListKey::Enter));
+    assert!(
+        r.said.any("Answer: We measured things carefully."),
+        "{:?}",
+        r.said.all()
+    );
+    // Said once: the row is not read again after the answer.
+    assert_eq!(r.said.all().len(), 1, "{:?}", r.said.all());
+    let list = r.app.list_model().unwrap();
+    assert_eq!(list.selected, 1);
+    assert_eq!(
+        list.items[1],
+        "How was it measured? (in Methods) Answer: We measured things carefully."
+    );
+    assert_eq!(list.items[0], "What did you highlight in Essay?");
+}
+
+#[test]
+fn the_self_test_says_when_there_is_nothing_to_test() {
+    let mut r = Rig::new();
+    r.open("essay.md", ESSAY);
+    r.act(ActionId::SelfTest);
+    assert!(r.app.list_model().is_none());
+    assert_eq!(
+        r.status(),
+        "No notes or highlights to test. Add a note or highlight first."
+    );
+}
+
 #[test]
 fn a_note_is_signalled_while_reading_and_on_word_moves() {
     let tmp = tempfile::tempdir().unwrap();

@@ -1695,3 +1695,50 @@ fn a_described_window_command_is_described_not_run() {
     assert!(said.starts_with("Font: "), "{said}");
     assert!(said.contains("Keys: "), "{said}");
 }
+
+/// The command palette and the keyboard shortcuts list (beta 1): each
+/// option is named "Find next, F3" (the short name, then the key), has
+/// the long explanation as its description, and the list keeps the key
+/// for drawing at the right edge.
+#[test]
+fn command_rows_are_named_name_then_key_with_the_help_as_description() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::dialog::{ChoiceList, Rows};
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let p = Palette::galaxy();
+    let ids = [ActionId::FindNext, ActionId::PlayPause, ActionId::ExportPdf];
+    let names: Vec<String> = ids
+        .iter()
+        .map(|&a| app.command_row(a).text(&Catalog::english()))
+        .collect();
+    let rows = Rows::commands(&app, &ids, names.clone());
+    let (modal, list_id) =
+        gui::palette_dialog(&p, &Catalog::english(), "Commands", rows.items.clone());
+    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+    h.edit_widget(LIST, |mut l| ChoiceList::set_rows(&mut l, rows.clone()));
+    h.focus_on(Some(list_id));
+    let _ = h.redraw();
+    let list = h.access_node(h.get_widget(LIST).id()).unwrap();
+    let options: Vec<_> = list.children().collect();
+    assert_eq!(options.len(), 3);
+    for (i, o) in options.iter().enumerate() {
+        let row = app.command_row(ids[i]);
+        assert_eq!(o.label().unwrap_or_default(), names[i]);
+        assert!(o.label().unwrap_or_default().starts_with(&row.name));
+        assert_eq!(o.description().unwrap_or_default(), row.help);
+    }
+    let w = h.get_widget(LIST);
+    let list = w.inner();
+    assert_eq!(
+        list.key(0),
+        app.command_row(ActionId::FindNext).key.as_deref()
+    );
+    // A command without a key draws none.
+    assert_eq!(list.key(2), None);
+    assert_eq!(
+        names[0],
+        format!("{}, {}", list.items()[0], list.key(0).unwrap())
+    );
+}

@@ -106,6 +106,30 @@ fn chapter_stops_only_at_a_level_one_heading() {
 }
 
 #[test]
+fn a_recall_prompt_names_the_section_and_stops_at_the_next_heading() {
+    let mut settings = Settings::default();
+    settings.reading.recall_prompts = true;
+    let (mut app, log) = app_with(SECTIONS, settings);
+    act(&mut app, ActionId::ReadFromCursor);
+    wait_idle(&mut app);
+    assert!(said(&log, "Two fish."), "{:?}", log.texts());
+    assert!(!said(&log, "Red fish."), "{:?}", log.texts());
+    let msg = app.status_text().to_owned();
+    assert!(
+        msg.starts_with("Say what you remember from Alpha. "),
+        "{msg}"
+    );
+    assert!(msg.ends_with(" to go on."), "{msg}");
+    assert_eq!(cursor(&app), at(&app, "Beta"));
+    act(&mut app, ActionId::ReadFromCursor);
+    wait_idle(&mut app);
+    assert!(
+        app.status_text()
+            .starts_with("Say what you remember from Beta. ")
+    );
+}
+
+#[test]
 fn off_reads_to_the_end() {
     let (mut app, log) = app_with(SECTIONS, Settings::default());
     act(&mut app, ActionId::ReadFromCursor);

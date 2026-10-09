@@ -317,6 +317,8 @@ pub(crate) enum ListKind {
     /// A note's links, what links to it, or a step of adding one
     /// (crate::relations, B1-g1).
     Relations(crate::relations::RelationsList),
+    /// Prompts with hidden answers: the self-test (crate::reveal).
+    Reveal(crate::reveal::RevealList),
 }
 
 /// The application: the only owner of mutable state.
@@ -363,6 +365,8 @@ pub struct App {
     /// The introduction of the list shown ("Notes, 12 notes. Enter goes
     /// to a note..."), repeated on request (crate::status).
     pub(crate) list_intro: Option<String>,
+    /// The keyboard shortcuts list's filter (crate::command_list).
+    pub(crate) keys_filter: String,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     /// Which sentences continuous reading says (crate::overview); for
@@ -497,6 +501,10 @@ pub struct App {
     pub(crate) pending_list_focus: Option<usize>,
     /// Say a list's focused item when the list is shown (crate::list_model).
     pub(crate) announce_list_focus: bool,
+    /// The next list shown is the same list again after a change that was
+    /// just said (an answer revealed): its focused item is not said again
+    /// and its introduction is kept (crate::reveal).
+    pub(crate) list_reshow_quiet: bool,
     /// Menu handlers, recent commands, and the menu list (crate::menu).
     pub(crate) menu: crate::menu::MenuState,
     /// Dictation in edit mode (crate::dictation).
@@ -568,6 +576,7 @@ impl App {
             last_message: None,
             messages_said: 0,
             list_intro: None,
+            keys_filter: String::new(),
             pause_origin: None,
             reading: ReadKind::Continuous,
             reading_pass: textweaver_text::ReadingPass::Full,
@@ -637,6 +646,7 @@ impl App {
             pending_prompt_text: None,
             pending_list_focus: None,
             announce_list_focus: true,
+            list_reshow_quiet: false,
             menu: crate::menu::MenuState::default(),
             dictation: crate::dictation::DictationSlot::default(),
             browse: crate::browse::BrowseState::new(),
@@ -1847,6 +1857,7 @@ impl App {
             Some(ListKind::Summary(ranges)) => self.choose_summary_sentence(&ranges, n),
             Some(ListKind::Changes(rows)) => self.choose_change_row(&rows, n),
             Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
+            Some(ListKind::Reveal(l)) => return self.choose_reveal(l, n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1915,6 +1926,10 @@ impl App {
             Some(ListKind::Components(l)) => {
                 self.list = None;
                 self.mark_component_row(l, n)
+            }
+            Some(ListKind::Reveal(l)) => {
+                self.list = None;
+                self.reveal_answer_aloud(l, n)
             }
             _ => {
                 let msg = self.msg("list-nothing-to-mark");
@@ -2296,6 +2311,7 @@ impl App {
             | A::NextLintProblem
             | A::PreviousLintProblem
             | A::ExportStudySheet
+            | A::SelfTest
             | A::NewFromTemplate
             | A::ExportHtml
             | A::ExportPdf

@@ -168,6 +168,65 @@ When reading, move to a note or a highlight and press **Delete**. textweaver ask
 
 Delete in the notes and highlights lists asks the same way. Only the bookmarks list deletes at once, without asking.
 
+## Study with textweaver
+
+textweaver has two tools for studying what you read: a self-test made from your notes and highlights, and recall prompts that stop reading at the end of each section. Both are optional, and neither changes your document.
+
+### What the research says, and what it does not
+
+A review of ten common study techniques rated practice testing (retrieving material from memory) and spacing study over time as high in utility, and rereading, highlighting, and summarizing as low (Dunlosky and colleagues, 2013). Highlighting on its own is therefore a weak way to study; the self-test turns your highlights into questions instead. In two experiments with prose passages, students who were tested on a passage remembered more of it two days and one week later than students who reread it, although rereading did better after five minutes and left students more confident (Roediger and Karpicke, 2006).
+
+In a study of adaptive retrieval practice with 118 participants, the slower answers of participants with dyslexia came from typing them, not from memory, and answering aloud removed the gap (Wilschut, Sense, and van Rijn, 2024). This is why the self-test lets you answer aloud through dictation.
+
+In an experiment with a 21-minute video lecture in four parts, undergraduates who answered short tests between the parts reported mind wandering on 19 percent of probes, against 39 percent for those who restudied the material between parts (Szpunar, Khan, and Schacter, 2013). Recall prompts bring a similar pause for recall to reading aloud.
+
+These studies were done mostly with readers without disabilities, and with tests that experimenters wrote. textweaver's self-test and recall prompts have not themselves been studied. Treat them as ways to practice recalling, not as a promised gain.
+
+### Test yourself from the study sheet
+
+Press **F2** for the command palette and type `self test`, or choose **Self-test** in the **Bookmarks and notes** menu. textweaver makes a list of prompts from the same notes and highlights as the [study sheet](#export-a-study-sheet), in document order, and says, for example, "Self-test, 12 prompts. Enter shows each answer. Space to answer aloud."
+
+- A note becomes a prompt in your own words, with the section it is in: "Check the method (in Methods)". Its answer is the passage the note is on.
+- A highlight becomes "What did you highlight in Methods?" Its answer is the highlighted passage.
+- Before the first heading, the section is the document's title.
+
+Each prompt is said and its answer is hidden. In the list:
+
+- **Up** and **Down** move between prompts, which are said with their position, such as "2 of 12".
+- Answer silently or aloud, then press **Enter**. You hear "Answer:" and the passage. The prompt now shows its answer, and the list stays on it. **Enter** again says the answer again.
+- **Space** answers aloud (see below).
+- **Escape** closes the list. Opening the self-test again starts with every answer hidden.
+
+textweaver never scores your answer. You compare it with the passage yourself. A note or highlight on an empty passage is left out, and with no notes or highlights you hear "No notes or highlights to test."
+
+### Answer aloud
+
+On a prompt, press **Space** and say your answer. You hear "Answer aloud now. Space to stop." Press **Space** again when you are done. When the last words are transcribed, you hear "You said:" and your words, then "Enter shows the answer." Press **Enter** to hear the answer and compare. Pressing **Enter** while still recording first finishes the recording and reads it back.
+
+Answering aloud uses the same Whisper model as [dictation](dictation.md), in any mode, and types nothing into the document. The first time, textweaver offers to download the model if it is missing; open the self-test again once it is in place. If no words are heard, you hear "No answer heard. Space to try again." In a version without dictation, you hear that answering aloud needs it.
+
+### Recall prompts at section ends
+
+Turn on **Recall prompts** in Settings (`[reading] recall_prompts`, off by default). When continuous reading stops at the end of a section, it asks you to recall it, naming the section it just read: "Say what you remember from Renal clearance. Ctrl+Space to go on." The key you hear is your read key. Say or think what you remember, then press the key, and reading goes on with the next section.
+
+Where reading stops is set by **Stop at section end** ([Reading and moving around](reading.md#stop-at-the-end-of-a-section)). If that is **never**, recall prompts stop at the next heading of any level; set it to **next chapter** for longer sections. Recall prompts do not record what you say.
+
+### A study routine
+
+One way to combine these:
+
+1. Read a section aloud with recall prompts on. At each prompt, say what you remember before going on.
+2. While reading, add a note (**a**) where a passage answers a question you expect, written as that question, and highlight (**y**) what you want to recall.
+3. Later, open the self-test. Answer each prompt before you reveal it, aloud or silently, and add a note where you missed something.
+4. Repeat the self-test on another day rather than rereading the chapter.
+
+### Sources
+
+- Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., and Willingham, D. T. (2013). *Psychological Science in the Public Interest*, 14(1). [doi:10.1177/1529100612453266](https://doi.org/10.1177/1529100612453266)
+- Roediger, H. L., and Karpicke, J. D. (2006). *Psychological Science*, 17(3). [doi:10.1111/j.1467-9280.2006.01693.x](https://doi.org/10.1111/j.1467-9280.2006.01693.x)
+- Szpunar, K. K., Khan, N. Y., and Schacter, D. L. (2013). *Proceedings of the National Academy of Sciences*, 110(16). [doi:10.1073/pnas.1221764110](https://doi.org/10.1073/pnas.1221764110)
+- Wilschut, T., Sense, F., and van Rijn, H. (2024). *Topics in Cognitive Science*, 17(1). [doi:10.1111/tops.12769](https://doi.org/10.1111/tops.12769)
+
 ## How marks move when you edit
 
 Bookmarks, notes, and highlights are tied to the text, not to a line number. When you edit the document (see [Writing and editing](editing.md)), they move with the text around them:
@@ -255,7 +314,7 @@ Without sync, a document in a library folder still carries its reading place to 
 - **"Nothing here to attach a note to."** The cursor is on an empty line. Move to text, or select some.
 - **A mark is missing after reopening.** The document may have moved or been renamed; marks follow the full path. Check with `tw marks` on the old path.
 - **A note is in the wrong place after an edit outside textweaver.** textweaver looks for the note's passage again when the file changed (see [When the file changes in another program](#when-the-file-changes-in-another-program)). If the passage was rewritten or deleted, the note could not be found: it is marked, and put at the same share of the way through the document. The note's anchor still shows the passage it was made on.
-- **The keys do nothing.** Single-key shortcuts may be off. Press **F9**, or use the command palette names: `add_bookmark`, `list_bookmarks`, `next_bookmark`, `previous_bookmark`, `add_note`, `list_notes`, `next_note`, `previous_note`, `highlight_selection`, `list_highlights`, `note_links`, and `delete_note`.
+- **The keys do nothing.** Single-key shortcuts may be off. Press **F9**, or use the command palette names: `add_bookmark`, `list_bookmarks`, `next_bookmark`, `previous_bookmark`, `add_note`, `list_notes`, `next_note`, `previous_note`, `highlight_selection`, `list_highlights`, `note_links`, `delete_note`, and `self_test`.
 
 ## See also
 

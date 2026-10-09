@@ -671,9 +671,10 @@ fn keyboard_help_and_palette_come_from_the_keymap() {
     };
     assert_eq!(title, "Keyboard shortcuts");
     assert_eq!(items.len(), ActionId::ALL.len());
+    // Each row is the short name, then the key (the help is on F1).
     let i = items
         .iter()
-        .position(|s| s.contains(ActionId::NextSentence.help()))
+        .position(|s| s.starts_with("Next sentence, "))
         .unwrap();
     let sentence = r
         .app

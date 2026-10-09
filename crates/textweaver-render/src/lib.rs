@@ -43,6 +43,8 @@ use serde_json::{Map, Value};
 
 mod engine;
 pub mod frontmatter;
+#[cfg(feature = "highlight")]
+pub mod highlight;
 pub mod inline;
 pub mod math;
 mod pipeline;
@@ -52,7 +54,7 @@ pub mod slug;
 pub mod template;
 
 pub use pipeline::extract_section;
-pub use template::{PageOptions, TemplateChoice, Templates};
+pub use template::{PageOptions, TemplateChoice, Templates, Typography};
 
 /// The Markdown parser.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]

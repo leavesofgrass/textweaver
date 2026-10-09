@@ -500,6 +500,7 @@ impl MenuId {
                 Do(A::AcceptAllChanges),
                 Do(A::RejectAllChanges),
                 Do(A::AddComment),
+                Do(A::SelfTest),
             ],
             MenuId::Tables => &[
                 Do(A::NextTable),

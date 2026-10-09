@@ -779,6 +779,27 @@ impl App {
         }
         vec![Effect::Redraw]
     }
+
+    /// The palette's `self_test`: the study sheet's notes and highlights
+    /// as prompts with hidden answers (crate::reveal).
+    pub(crate) fn self_test(&mut self) -> Vec<Effect> {
+        let Some(s) = self.session.as_ref() else {
+            return vec![Effect::Redraw];
+        };
+        let items = self_test_items(self.cat(), &s.doc, &s.title, &s.notes, &s.highlights);
+        if items.is_empty() {
+            let msg = self.msg("reveal-nothing-to-test");
+            self.tell(&msg);
+            return vec![Effect::Redraw];
+        }
+        let title = self.msg_args(
+            "reveal-self-test-title",
+            &args!["title" => s.title.as_str()],
+        );
+        let list = crate::reveal::RevealList::new(title, items);
+        let intro = self.msg_args("reveal-self-test-intro", &args!["n" => list.len()]);
+        self.show_reveal_list(&intro, list)
+    }
 }
 
 fn s_count(s: &Option<crate::app::Session>, notes: bool) -> usize {
@@ -789,6 +810,106 @@ fn s_count(s: &Option<crate::app::Session>, notes: bool) -> usize {
             s.highlights.len()
         }
     })
+}
+
+/// The study sheet's contents: the headings (start, level, text), and the
+/// notes and highlights in document order, each with its quoted passage
+/// and the heading it falls under. The study sheet and the self-test are
+/// made from it.
+struct SheetItems<'a> {
+    headings: Vec<(CharPos, u8, String)>,
+    items: Vec<SheetItem<'a>>,
+}
+
+/// A note or highlight on the study sheet.
+struct SheetItem<'a> {
+    at: CharPos,
+    /// The heading it falls under (None before the first).
+    under: Option<usize>,
+    /// The quoted passage.
+    passage: String,
+    /// The note, or None for a highlight.
+    note: Option<&'a Note>,
+    /// The highlight's color, for a highlight.
+    color: Option<&'a str>,
+}
+
+fn sheet_items<'a>(
+    doc: &Document,
+    notes: &'a [Note],
+    highlights: &'a [Highlight],
+) -> SheetItems<'a> {
+    use textweaver_core::MarkerKind;
+    let headings: Vec<(CharPos, u8, String)> = doc
+        .marker_index()
+        .iter(MarkerKind::Heading, None)
+        .map(|m| (m.range.start, m.level, collapse(&doc.slice(m.range), 120)))
+        .collect();
+    let under = |p: CharPos| headings.iter().rposition(|h| h.0 <= p);
+    let mut items = Vec::new();
+    for n in notes {
+        let passage = collapse(&doc.slice(n.range), 400);
+        let passage = if passage.is_empty() {
+            collapse(&n.anchor, 400)
+        } else {
+            passage
+        };
+        items.push(SheetItem {
+            at: n.range.start,
+            under: under(n.range.start),
+            passage,
+            note: Some(n),
+            color: None,
+        });
+    }
+    for h in highlights {
+        items.push(SheetItem {
+            at: h.range.start,
+            under: under(h.range.start),
+            passage: collapse(&doc.slice(h.range), 400),
+            note: None,
+            color: Some(&h.color),
+        });
+    }
+    items.sort_by_key(|i| i.at);
+    SheetItems { headings, items }
+}
+
+/// The self-test's prompts from the study sheet: a note asks with its own
+/// words and the passage it quotes is the answer; a highlight asks what
+/// was highlighted under its heading. The section is the heading, or the
+/// document's title before the first heading. Items with no passage are
+/// left out (nothing to reveal).
+pub(crate) fn self_test_items(
+    c: &Catalog,
+    doc: &Document,
+    title: &str,
+    notes: &[Note],
+    highlights: &[Highlight],
+) -> Vec<crate::reveal::RevealItem> {
+    let sheet = sheet_items(doc, notes, highlights);
+    sheet
+        .items
+        .into_iter()
+        .filter(|i| !i.passage.is_empty())
+        .map(|i| {
+            let section = i
+                .under
+                .map_or(title, |h| sheet.headings[h].2.as_str())
+                .to_owned();
+            let prompt = match i.note.map(|n| n.note.trim()).filter(|t| !t.is_empty()) {
+                Some(note) => c.fmt(
+                    "reveal-prompt-note",
+                    &args!["note" => note, "section" => section],
+                ),
+                None => c.fmt("reveal-prompt-highlight", &args!["section" => section]),
+            };
+            crate::reveal::RevealItem {
+                prompt,
+                answer: i.passage,
+            }
+        })
+        .collect()
 }
 
 /// The study sheet: a title, then one section per heading that has notes
@@ -803,44 +924,30 @@ pub(crate) fn study_sheet(
     highlights: &[Highlight],
     date: &str,
 ) -> String {
-    use textweaver_core::MarkerKind;
-    let headings: Vec<(CharPos, u8, String)> = doc
-        .marker_index()
-        .iter(MarkerKind::Heading, None)
-        .map(|m| (m.range.start, m.level, collapse(&doc.slice(m.range), 120)))
-        .collect();
-    // Every item with the heading it falls under (None before the first).
-    let mut items: Vec<(CharPos, Option<usize>, String)> = Vec::new();
-    let under = |p: CharPos| headings.iter().rposition(|h| h.0 <= p);
-    for n in notes {
-        let passage = collapse(&doc.slice(n.range), 400);
-        let passage = if passage.is_empty() {
-            collapse(&n.anchor, 400)
-        } else {
-            passage
-        };
-        let mut entry = format!("- > {passage}\n\n  {}", n.note.trim());
-        if !n.tags.is_empty() {
-            entry.push_str(&format!(
-                " {}",
-                c.fmt("notes-sheet-tags", &args!["tags" => n.tags.join(", ")])
-            ));
-        }
-        items.push((n.range.start, under(n.range.start), entry));
-    }
-    for h in highlights {
-        let passage = collapse(&doc.slice(h.range), 400);
-        let color = color_name(&h.color);
-        items.push((
-            h.range.start,
-            under(h.range.start),
-            format!(
-                "- > {passage}\n\n  {}",
-                c.fmt("notes-sheet-highlighted", &args!["color" => color])
+    let SheetItems { headings, items } = sheet_items(doc, notes, highlights);
+    let items = items.into_iter().map(|i| {
+        let entry = match i.note {
+            Some(n) => {
+                let mut entry = format!("- > {}\n\n  {}", i.passage, n.note.trim());
+                if !n.tags.is_empty() {
+                    entry.push_str(&format!(
+                        " {}",
+                        c.fmt("notes-sheet-tags", &args!["tags" => n.tags.join(", ")])
+                    ));
+                }
+                entry
+            }
+            None => format!(
+                "- > {}\n\n  {}",
+                i.passage,
+                c.fmt(
+                    "notes-sheet-highlighted",
+                    &args!["color" => color_name(i.color.unwrap_or_default())]
+                )
             ),
-        ));
-    }
-    items.sort_by_key(|i| i.0);
+        };
+        (i.at, i.under, entry)
+    });
     let mut out = format!(
         "# {}\n\n{}\n",
         c.fmt("notes-sheet-title", &args!["title" => title]),

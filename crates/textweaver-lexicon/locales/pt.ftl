@@ -433,6 +433,7 @@ playback-time-up =
        *[other] O tempo acabou após { $minutes } minutos. { $key } para continuar.
     }
 playback-repeat-slower = Repetindo mais devagar, a { $rate } palavras por minuto.
+playback-recall-prompt = Diga o que lembra de { $section }. { $key } para continuar.
 
 ## The title line and Say Status.
 
@@ -526,8 +527,21 @@ help-the-command = o comando { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Comando desconhecido: { $text }.
-help-shortcuts-intro = Atalhos de teclado, { $n } comandos. Seta para cima e para baixo move, Enter executa, Escape fecha.
+help-shortcuts-intro = Atalhos de teclado, { $n } comandos. Digite para filtrar. Page Down vai para o próximo grupo, F1 explica um comando, Enter o executa, Escape fecha.
 help-shortcuts-title = Atalhos de teclado
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = Atalhos de teclado que correspondem a { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } de { $total } comandos correspondem.
+help-shortcuts-filter-none = Nenhum comando corresponde a { $query }. Backspace remove letras.
+help-shortcuts-filter-cleared = Filtro limpo, { $n } comandos.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }, { $n ->
+        [one] 1 comando
+       *[other] { $n } comandos
+    }. { $item }
 help-title = Ajuda
 help-intro = Ajuda. Seta para cima e para baixo move, Escape fecha.
 
@@ -766,6 +780,7 @@ action-previous-note = Mover para a nota anterior
 action-delete-note = Excluir a nota ou o realce no cursor
 action-highlight-selection = Realçar a seleção, ou a frase no cursor
 action-export-study-sheet = Exportar as notas e realces como uma folha de estudo em Markdown, agrupada por cabeçalho
+action-self-test = Testar-se nas notas e realces: Enter mostra cada resposta
 action-open = Abrir um documento
 action-open-path = Abrir um documento digitando o caminho
 action-open-library = Abrir a biblioteca: documentos nas suas pastas de biblioteca e arquivos recentes
@@ -1313,6 +1328,24 @@ notes-sheet-before-first-heading = Antes do primeiro cabeçalho
 notes-sheet-tags = (tags: { $tags })
 # $color is the highlight's color name.
 notes-sheet-highlighted = Realçado, { $color }.
+
+## O autoteste: perguntas com respostas ocultas (crate::reveal).
+
+reveal-self-test-title = Autoteste: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] Autoteste, 1 pergunta. Enter mostra a resposta. Espaço para responder em voz alta.
+       *[other] Autoteste, { $n } perguntas. Enter mostra cada resposta. Espaço para responder em voz alta.
+    }
+reveal-nothing-to-test = Nenhuma nota ou realce para testar. Adicione antes uma nota ou um realce.
+reveal-prompt-note = { $note } (em { $section })
+reveal-prompt-highlight = O que você realçou em { $section }?
+reveal-row-shown = { $prompt } Resposta: { $answer }
+reveal-answer = Resposta: { $answer }
+reveal-listening = Responda em voz alta agora. Espaço para parar.
+reveal-you-said = Você disse: { $words }. Enter mostra a resposta.
+reveal-heard-nothing = Nenhuma resposta ouvida. Espaço para tentar de novo.
+reveal-no-dictation = Responder em voz alta precisa do ditado, que não está nesta versão.
 
 ## Find, bookmarks, and selection.
 
@@ -1957,6 +1990,8 @@ choice-reading-stop-at-heading = próximo título
 choice-reading-stop-at-chapter = próximo capítulo
 setting-reading-stop-after-minutes = Temporizador de leitura
 setting-reading-stop-after-minutes-help = A leitura contínua para no fim da frase após estes minutos de leitura, e avisa. Pausar para o relógio; parar recomeça a contagem. 0 desliga o temporizador.
+setting-reading-recall-prompts = Perguntas de recordação
+setting-reading-recall-prompts-help = No fim de uma seção, a leitura pede que você diga o que lembra. Se Parar no fim da seção for nunca, a leitura para no próximo cabeçalho para isso. A leitura continua com a tecla de ler.
 setting-display-theme = Tema
 setting-display-theme-help = O tema de cores.
 setting-display-follow-os-theme = Seguir o tema do sistema
@@ -3137,7 +3172,7 @@ gui-prompt-path-hint = Digite o caminho de um documento e pressione Enter. Tab o
 gui-prompt-hint = Pressione Enter para aceitar, ou Escape para cancelar. Seta para cima e para baixo recuperam respostas anteriores.
 gui-palette-filter = Digite para filtrar os comandos
 gui-palette-list = Comandos
-gui-palette-hint = Enter executa a primeira correspondência; Tab vai para a lista.
+gui-palette-hint = Enter executa a primeira correspondência; Tab vai para a lista; F1 explica um comando.
 gui-open-failed = Não foi possível abrir { $name }: { $error }
 gui-uia-unavailable = As notificações do UI Automation só existem no Windows; usando a região dinâmica.
 gui-graphics-failed = A janela não conseguiu iniciar os gráficos. O leitor de terminal, textweaver, não precisa deles.
@@ -3375,6 +3410,7 @@ name-previous-note = Nota anterior
 name-delete-note = Excluir nota ou destaque
 name-highlight-selection = Destacar
 name-export-study-sheet = Exportar folha de estudo
+name-self-test = Autoteste
 name-open = Abrir
 name-open-path = Abrir pelo caminho
 name-open-library = Biblioteca
@@ -3491,17 +3527,17 @@ choice-accessibility-interface-announcements-off = desativados
 choice-accessibility-interface-announcements-minimal = mínimos
 choice-accessibility-interface-announcements-normal = normais
 choice-accessibility-interface-announcements-full = completos
-palette-item = { $name }, { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }, { $category }: { $help }.
-palette-item-recent = { $name }, recente, { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }, recente, { $category }: { $help }.
+palette-item = { $name }, { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }, { $keys }, recente
+palette-item-recent-no-keys = { $name }, recente
 palette-list-title = Comandos que correspondem a { $query }
 palette-list-title-all = Comandos
 palette-list-intro =
     { $title }, { $n ->
         [one] 1 comando
        *[other] { $n } comandos
-    }. Enter executa um.
+    }. Enter executa um, F1 o explica.
 action-browse-files = Navegar por arquivos e pacotes: Enter abre uma pasta, um pacote ou um documento; Backspace sobe um nível
 action-batch-convert = Converter uma pasta de documentos para outro formato, em segundo plano
 action-export-audio = Exportar o documento como áudio falado: MP3, FLAC, Opus, WAV ou um audiolivro M4B

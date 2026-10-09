@@ -77,7 +77,7 @@ fn join_or(c: &Catalog, items: Vec<String>) -> String {
 /// The one key that best stands for `action`: its single key (a browse
 /// key such as `h`) while single-key shortcuts are on, else its first
 /// chord, which still works with them off; `None` without keys.
-fn main_chord(keymap: &Keymap, action: ActionId) -> Option<textweaver_keymap::KeyChord> {
+pub(crate) fn main_chord(keymap: &Keymap, action: ActionId) -> Option<textweaver_keymap::KeyChord> {
     let chords = keymap.chords_for(action);
     let single = chords.iter().find(|c| c.is_text_input());
     let chord = chords.iter().find(|c| !c.is_text_input());
@@ -436,19 +436,37 @@ fn entries_with(
             ],
         )
     };
+    help_order().into_iter().map(|a| (a, entry(a))).collect()
+}
+
+/// Every action in help order: by category, in the order `Category`
+/// declares, then any category added later.
+pub(crate) fn help_order() -> Vec<ActionId> {
     let mut out = Vec::new();
     for cat in CATEGORIES {
-        for &a in ActionId::ALL.iter().filter(|a| a.category() == cat) {
-            out.push((a, entry(a)));
-        }
+        out.extend(ActionId::ALL.iter().filter(|a| a.category() == cat));
     }
     // Categories added later still appear.
-    for &a in ActionId::ALL {
-        if !CATEGORIES.contains(&a.category()) {
-            out.push((a, entry(a)));
-        }
-    }
+    out.extend(
+        ActionId::ALL
+            .iter()
+            .filter(|a| !CATEGORIES.contains(&a.category())),
+    );
     out
+}
+
+/// One action's help entry with every key marked (the voice says
+/// "Control O"): "Find next: F3 or Ctrl+G. Find the next match. Search".
+pub(crate) fn marked_entry(c: &Catalog, keymap: &Keymap, a: ActionId) -> String {
+    c.fmt(
+        "help-entry",
+        &args![
+            "name" => crate::menu::action_name(c, a),
+            "category" => category_title(c, a.category()),
+            "help" => action_help(c, a),
+            "keys" => named_keys(c, keymap, a)
+        ],
+    )
 }
 
 fn normalize(s: &str) -> String {
@@ -559,14 +577,13 @@ fn in_order(text: &str, letters: &str) -> bool {
     letters.chars().all(|l| chars.any(|t| t == l))
 }
 
-/// One palette line, name first: "Export PDF, File: Export the document
-/// as a tagged PDF next to it. Ctrl+E" (`keys` when it has any); `recent`
-/// adds "recent" after the name.
-fn palette_line(c: &Catalog, a: ActionId, keys: Option<String>, recent: bool) -> String {
-    let name = crate::menu::action_name(c, a);
-    let category = category_title(c, a.category());
-    let help = action_help(c, a);
-    let id = match (recent, keys.is_some()) {
+/// One row of the command palette and the keyboard shortcuts list (beta
+/// 1): the short name, then the key, "Find next, F3" (the name alone
+/// without a key); `recent` adds "recent" after the key. The long
+/// explanation is never in the row: F1 on the row says it
+/// (crate::command_list).
+pub(crate) fn palette_line(c: &Catalog, a: ActionId, key: Option<String>, recent: bool) -> String {
+    let id = match (recent, key.is_some()) {
         (false, true) => "palette-item",
         (false, false) => "palette-item-no-keys",
         (true, true) => "palette-item-recent",
@@ -575,10 +592,8 @@ fn palette_line(c: &Catalog, a: ActionId, keys: Option<String>, recent: bool) ->
     c.fmt(
         id,
         &args![
-            "name" => name,
-            "category" => category,
-            "help" => help,
-            "keys" => keys.unwrap_or_default()
+            "name" => crate::menu::action_name(c, a),
+            "keys" => key.unwrap_or_default()
         ],
     )
 }
@@ -616,27 +631,25 @@ impl App {
         named_keys(self.cat(), &self.keymap, action)
     }
 
-    /// What is said for a command palette candidate, with its keys marked
+    /// What is said for a command palette candidate, its key marked
     /// ([`App::palette_candidates`] gives the written form, to show):
-    /// "Export PDF, File: Export the document as a tagged PDF next to it."
-    /// `recent` marks a recent command in words.
+    /// "Find next, F3". `recent` marks a recent command in words.
     pub(crate) fn palette_said(&self, a: ActionId, recent: bool) -> String {
-        let keys = self.keymap.chords_for(a);
-        let keys = (!keys.is_empty()).then(|| self.keys(a));
-        palette_line(self.cat(), a, keys, recent)
+        let key = main_chord(&self.keymap, a).map(|ch| mark_chord(self.cat(), &ch));
+        palette_line(self.cat(), a, key, recent)
     }
 
     /// Candidates for the command palette, best first ([`palette_matches`]),
-    /// each with its line, name first: "Export PDF, File: Export the
-    /// document as a tagged PDF next to it." With nothing typed, the
-    /// recent commands come first, each marked "recent". Commands whose
-    /// module is not in this version are left out ([`App::is_available`]).
+    /// each with its row: the short name, then the key, "Find next, F3"
+    /// ([`App::command_row`] has the long explanation). With nothing
+    /// typed, the recent commands come first, each marked "recent".
+    /// Commands whose module is not in this version are left out
+    /// ([`App::is_available`]).
     pub fn palette_candidates(&self, query: &str) -> Vec<(ActionId, String)> {
         let c = self.cat();
         let line = |a: ActionId, recent: bool| {
-            let chords = self.keymap.chords_for(a);
-            let keys = (!chords.is_empty()).then(|| chords_text_in(c, &self.keymap, a));
-            (a, palette_line(c, a, keys, recent))
+            let key = main_chord(&self.keymap, a).map(|ch| ch.to_string());
+            (a, palette_line(c, a, key, recent))
         };
         let recent: Vec<ActionId> = if query.trim().is_empty() {
             self.recent_commands()
@@ -694,19 +707,6 @@ impl App {
                 vec![Effect::Redraw]
             }
         }
-    }
-
-    pub(crate) fn keyboard_help(&mut self) -> Vec<Effect> {
-        let entries = entries_with(self.cat(), &self.keymap, named_keys);
-        let (actions, items): (Vec<ActionId>, Vec<String>) = entries.into_iter().unzip();
-        let n = items.len();
-        self.list = Some(ListKind::Actions(actions));
-        let msg = self.msg_args("help-shortcuts-intro", &args!["n" => n]);
-        self.tell(&msg);
-        vec![Effect::ShowList {
-            title: self.msg("help-shortcuts-title"),
-            items,
-        }]
     }
 
     pub(crate) fn help(&mut self) -> Vec<Effect> {
