@@ -162,7 +162,15 @@ impl Loader for DocxLoader {
         let deferred = std::mem::take(&mut c.deferred);
         c.b.footnotes_section(&deferred);
         let flattened = c.flattened || pkg.flattened();
-        let changes = std::mem::take(&mut c.changes);
+        let mut changes = std::mem::take(&mut c.changes);
+        let moves = move_keys(body);
+        for ch in &mut changes {
+            if matches!(ch.kind, ChangeKind::MovedAway | ChangeKind::MovedHere)
+                && let Some(key) = moves.get(&ch.id)
+            {
+                ch.pair = key.clone();
+            }
+        }
         let (text, markers, anchors) = c.b.finish_with_anchors();
         let comments = match comments_xml {
             Some(xml) => read_comments(&xml, extended_xml.as_deref(), &anchors)?,
@@ -586,6 +594,43 @@ fn read_comments(
         .flatten()
         .filter(|c| ranges.contains_key(comment_key(&c.id).as_str()))
         .collect())
+}
+
+/// The move each `w:moveFrom` and `w:moveTo` belongs to, by its id: the
+/// name of the move range around it, or `#n` for the n-th half of its kind
+/// outside any range, in reading order. textweaver-writers' `docx_update`
+/// pairs the halves by the same rule when it writes a decision back.
+fn move_keys(body: Node<'_, '_>) -> HashMap<String, String> {
+    let mut halves = HashMap::new();
+    let mut active: [Vec<(String, String)>; 2] = [Vec::new(), Vec::new()];
+    let mut unnamed = [0usize; 2];
+    for n in body.descendants().filter(|n| n.is_element()) {
+        let name = n.tag_name().name();
+        let id = attr(n, "id").unwrap_or_default().to_owned();
+        let side = usize::from(name.starts_with("moveTo"));
+        let in_properties = n
+            .parent_element()
+            .is_some_and(|p| p.tag_name().name().ends_with("Pr"));
+        match name {
+            "moveFromRangeStart" | "moveToRangeStart" => {
+                let key = attr(n, "name").unwrap_or(&id).to_owned();
+                active[side].push((id, key));
+            }
+            "moveFromRangeEnd" | "moveToRangeEnd" => active[side].retain(|(r, _)| *r != id),
+            "moveFrom" | "moveTo" if !in_properties => {
+                let key = match active[side].last() {
+                    Some((_, k)) => k.clone(),
+                    None => {
+                        unnamed[side] += 1;
+                        format!("#{}", unnamed[side])
+                    }
+                };
+                halves.insert(id, key);
+            }
+            _ => {}
+        }
+    }
+    halves
 }
 
 fn in_deletion(n: Node<'_, '_>) -> bool {

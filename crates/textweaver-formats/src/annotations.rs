@@ -133,6 +133,11 @@ pub struct DocumentChange {
     /// and an inserted "s"), so none is put between them.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub glued: bool,
+    /// For one half of a move, the move it belongs to (the name of Word's
+    /// move range, or `#n` for the n-th move without one): the halves with
+    /// the same `pair` are accepted or rejected together. Empty otherwise.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub pair: String,
 }
 
 impl DocumentComment {
