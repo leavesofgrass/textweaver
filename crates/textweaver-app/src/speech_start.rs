@@ -155,8 +155,7 @@ mod tests {
         assert_eq!(messages.len(), 1, "{messages:?}");
         let m = &messages[0];
         assert!(
-            m.starts_with("Eloquence (OpenEVV, direct) could not start")
-                && m.contains("DECtalk"),
+            m.starts_with("Eloquence (OpenEVV, direct) could not start") && m.contains("DECtalk"),
             "{m}"
         );
         service.shutdown();

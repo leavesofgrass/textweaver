@@ -1509,7 +1509,12 @@ pub const INFO: &[Info] = &[
             ("ask", "ask"),
         ],
     ),
-    // [components] (W8a-d)
+    // [components] (W8a-d; source, beta 1)
+    text(
+        "components.source",
+        "Components source",
+        "Your own components, used first. A GitHub repository as owner/name, or a folder on this computer. Empty uses none. Never put a password here.",
+    ),
     text(
         "components.mirror",
         "Components mirror",
