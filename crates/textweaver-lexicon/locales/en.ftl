@@ -1157,8 +1157,8 @@ notes-none = No notes. To add one: { $key }.
 notes-list-title = Notes
 notes-list-intro =
     { $n ->
-        [one] Notes, 1 item. Enter goes to a note, Delete deletes it, F2 edits it.
-       *[other] Notes, { $n } items. Enter goes to a note, Delete deletes it, F2 edits it.
+        [one] Notes, 1 item. Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links.
+       *[other] Notes, { $n } items. Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. On: { $anchor }
@@ -1192,6 +1192,81 @@ notes-highlight-label = Highlight
 notes-signal = Note: { $text }
 # Said after moving onto a note's passage.
 notes-has-note = Has a note: { $text }
+
+## Relations between notes (the knowledge graph as lists).
+
+# The ten relation types, as they read aloud. Lower case: they start list
+# rows such as "supports: Chapter 3 note".
+relations-type-conflicts-with = conflicts with
+relations-type-supports = supports
+relations-type-is-example-of = is an example of
+relations-type-cites = cites
+relations-type-contradicts = contradicts
+relations-type-defines = defines
+relations-type-extends = extends
+relations-type-see-also = see also
+relations-type-precedes = precedes
+relations-type-follows = follows
+# After a note in the notes list: how many links it has to other notes,
+# and how many notes link to it.
+relations-count = Links: { $out } out, { $in } in.
+relations-note-title = Links of: { $note }
+# $title is a list title, $filter the type filter typed.
+relations-title-filtered = { $title }, filter: { $filter }
+relations-note-intro = Links of { $note }: { $out } out, { $in } in. Enter follows a link, F2 changes it, Delete removes it. Type to filter by type.
+# A link of the note: its type, then the note it goes to.
+relations-out-item = { $type }: { $target }
+# A note in another document. $doc is that document's title.
+relations-target-in = { $note }, in { $doc }
+relations-target-missing = a note not found
+relations-empty-note = Empty note
+relations-incoming-row =
+    { $n ->
+        [0] What links here: nothing yet
+        [one] What links here: 1 note
+       *[other] What links here: { $n } notes
+    }
+relations-add-row = Add a link
+relations-backlinks-title = What links here: { $note }
+relations-backlinks-intro =
+    { $n ->
+        [one] What links to { $note }: 1 note. Enter goes to it. Type to filter by type.
+       *[other] What links to { $note }: { $n } notes. Enter goes to one. Type to filter by type.
+    }
+# A note linking here: the link's type, then that note.
+relations-backlink-item = { $type } this, from: { $note }
+relations-none-in = Nothing links to this note yet.
+relations-types-title = Link type for: { $note }
+relations-types-intro = Choose the type of link, 10 types. Type to filter.
+# $type is the link type chosen.
+relations-targets-title = { $type }: which note?
+relations-targets-intro =
+    { $n ->
+        [0] No other note here. Choose a note in another document.
+        [one] Choose the note to link to: 1 note. Enter links it.
+       *[other] Choose the note to link to: { $n } notes. Enter links it.
+    }
+relations-other-document-row = A note in another document
+relations-documents-title = Documents with notes
+relations-documents-intro = Documents with notes: { $n }. Enter lists a document's notes.
+relations-document-item =
+    { $n ->
+        [one] { $title }, 1 note
+       *[other] { $title }, { $n } notes
+    }
+relations-no-other-documents = No other document in the library has notes.
+relations-linked = Linked: { $type } { $target }.
+relations-changed = Link changed: { $type } { $target }.
+relations-already = Already linked: { $type } { $target }.
+relations-removed = Link removed: { $type } { $target }.
+relations-remove-question = Remove this link? y or n
+relations-nothing-to-remove = Only a link can be removed here.
+relations-note-gone = Note not found: it was deleted, or its document is gone.
+relations-document-missing = Document not found: { $file }.
+relations-no-note-here = No note here. Links belong to notes; add one: { $key }.
+relations-filter-cleared = Filter cleared, { $n } shown.
+relations-filter-none = Nothing matches { $filter }.
+relations-filter-matched = Filter { $filter }: { $n } shown.
 
 ## Bookmarks: rename and delete.
 

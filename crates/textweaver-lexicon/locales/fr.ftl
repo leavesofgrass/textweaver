@@ -1180,8 +1180,8 @@ notes-none = Aucune note. Pour en ajouter une : { $key }.
 notes-list-title = Notes
 notes-list-intro =
     { $n ->
-        [one] Notes, 1 élément. Entrée va à une note, Suppr la supprime, F2 la modifie.
-       *[other] Notes, { $n } éléments. Entrée va à une note, Suppr la supprime, F2 la modifie.
+        [one] Notes, 1 élément. Entrée va à une note, Suppr la supprime, F2 la modifie, Espace ouvre ses liens.
+       *[other] Notes, { $n } éléments. Entrée va à une note, Suppr la supprime, F2 la modifie, Espace ouvre ses liens.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. Sur : { $anchor }
@@ -1215,6 +1215,72 @@ notes-highlight-label = Surligner
 notes-signal = Note : { $text }
 # Said after moving onto a note's passage.
 notes-has-note = A une note : { $text }
+
+## Relations between notes (the knowledge graph as lists).
+
+relations-type-conflicts-with = est en conflit avec
+relations-type-supports = appuie
+relations-type-is-example-of = est un exemple de
+relations-type-cites = cite
+relations-type-contradicts = contredit
+relations-type-defines = définit
+relations-type-extends = prolonge
+relations-type-see-also = voir aussi
+relations-type-precedes = précède
+relations-type-follows = suit
+relations-count = Liens : { $out } sortants, { $in } entrants.
+relations-note-title = Liens de : { $note }
+relations-title-filtered = { $title }, filtre : { $filter }
+relations-note-intro = Liens de { $note } : { $out } sortants, { $in } entrants. Entrée suit un lien, F2 le modifie, Suppr le supprime. Tapez pour filtrer par type.
+relations-out-item = { $type } : { $target }
+relations-target-in = { $note }, dans { $doc }
+relations-target-missing = une note introuvable
+relations-empty-note = Note vide
+relations-incoming-row =
+    { $n ->
+        [0] Ce qui pointe ici : rien pour l'instant
+        [one] Ce qui pointe ici : 1 note
+       *[other] Ce qui pointe ici : { $n } notes
+    }
+relations-add-row = Ajouter un lien
+relations-backlinks-title = Ce qui pointe ici : { $note }
+relations-backlinks-intro =
+    { $n ->
+        [one] Ce qui pointe vers { $note } : 1 note. Entrée y va. Tapez pour filtrer par type.
+       *[other] Ce qui pointe vers { $note } : { $n } notes. Entrée va à l'une d'elles. Tapez pour filtrer par type.
+    }
+relations-backlink-item = { $type } celle-ci, depuis : { $note }
+relations-none-in = Rien ne pointe encore vers cette note.
+relations-types-title = Type de lien pour : { $note }
+relations-types-intro = Choisissez le type de lien, 10 types. Tapez pour filtrer.
+relations-targets-title = { $type } : quelle note ?
+relations-targets-intro =
+    { $n ->
+        [0] Aucune autre note ici. Choisissez une note d'un autre document.
+        [one] Choisissez la note cible : 1 note. Entrée crée le lien.
+       *[other] Choisissez la note cible : { $n } notes. Entrée crée le lien.
+    }
+relations-other-document-row = Une note d'un autre document
+relations-documents-title = Documents avec des notes
+relations-documents-intro = Documents avec des notes : { $n }. Entrée liste les notes d'un document.
+relations-document-item =
+    { $n ->
+        [one] { $title }, 1 note
+       *[other] { $title }, { $n } notes
+    }
+relations-no-other-documents = Aucun autre document de la bibliothèque n'a de notes.
+relations-linked = Lien créé : { $type } { $target }.
+relations-changed = Lien modifié : { $type } { $target }.
+relations-already = Déjà lié : { $type } { $target }.
+relations-removed = Lien supprimé : { $type } { $target }.
+relations-remove-question = Supprimer ce lien ? y ou n
+relations-nothing-to-remove = Seul un lien peut être supprimé ici.
+relations-note-gone = Note introuvable : elle a été supprimée, ou son document a disparu.
+relations-document-missing = Document introuvable : { $file }.
+relations-no-note-here = Pas de note ici. Les liens appartiennent aux notes ; en ajouter une : { $key }.
+relations-filter-cleared = Filtre effacé, { $n } affichés.
+relations-filter-none = Rien ne correspond à { $filter }.
+relations-filter-matched = Filtre { $filter } : { $n } affichés.
 
 ## Bookmarks: rename and delete.
 

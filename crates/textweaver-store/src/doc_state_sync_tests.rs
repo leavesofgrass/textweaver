@@ -537,3 +537,23 @@ fn versions_compare_by_clock_stamp_when_they_carry_one() {
     assert_eq!(xy.note(&n.id).unwrap().note, "newer by the clock");
     assert_eq!(yx.note(&n.id).unwrap().note, "newer by the clock");
 }
+
+/// A relation added on one computer reaches the other through the merge
+/// sync uses: the note's newer version carries it (B1-g1).
+#[test]
+fn a_relation_added_elsewhere_arrives_with_the_note() {
+    let mut here = DocState::default();
+    let n = here.add_note(CharRange::new(0, 4), "Cell", "energy", "");
+    let mut there = here.clone();
+    let note = there.notes.iter_mut().find(|x| x.id == n.id).unwrap();
+    note.relations.push(crate::Relation {
+        rel_type: "SUPPORTS".into(),
+        target_doc: String::new(),
+        target_id: "other".into(),
+        note: String::new(),
+    });
+    note.ts += 10;
+    here.merge_marks(&there, "laptop");
+    assert_eq!(here.note(&n.id).unwrap().relations.len(), 1);
+    assert_eq!(here.note(&n.id).unwrap().relations[0].target_id, "other");
+}

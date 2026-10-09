@@ -1188,8 +1188,8 @@ notes-none = Keine Notizen. Eine hinzufügen: { $key }.
 notes-list-title = Notizen
 notes-list-intro =
     { $n ->
-        [one] Notizen, 1 Eintrag. Eingabetaste springt zu einer Notiz, Entf löscht sie, F2 bearbeitet sie.
-       *[other] Notizen, { $n } Einträge. Eingabetaste springt zu einer Notiz, Entf löscht sie, F2 bearbeitet sie.
+        [one] Notizen, 1 Eintrag. Eingabetaste springt zu einer Notiz, Entf löscht sie, F2 bearbeitet sie, Leertaste öffnet ihre Verknüpfungen.
+       *[other] Notizen, { $n } Einträge. Eingabetaste springt zu einer Notiz, Entf löscht sie, F2 bearbeitet sie, Leertaste öffnet ihre Verknüpfungen.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. Zu: { $anchor }
@@ -1223,6 +1223,72 @@ notes-highlight-label = Hervorhebung
 notes-signal = Notiz: { $text }
 # Said after moving onto a note's passage.
 notes-has-note = Hat eine Notiz: { $text }
+
+## Relations between notes (the knowledge graph as lists).
+
+relations-type-conflicts-with = steht im Konflikt mit
+relations-type-supports = stützt
+relations-type-is-example-of = ist ein Beispiel für
+relations-type-cites = zitiert
+relations-type-contradicts = widerspricht
+relations-type-defines = definiert
+relations-type-extends = erweitert
+relations-type-see-also = siehe auch
+relations-type-precedes = geht voraus
+relations-type-follows = folgt auf
+relations-count = Verknüpfungen: { $out } ausgehend, { $in } eingehend.
+relations-note-title = Verknüpfungen von: { $note }
+relations-title-filtered = { $title }, Filter: { $filter }
+relations-note-intro = Verknüpfungen von { $note }: { $out } ausgehend, { $in } eingehend. Eingabetaste folgt einer Verknüpfung, F2 ändert sie, Entf entfernt sie. Tippen filtert nach Art.
+relations-out-item = { $type }: { $target }
+relations-target-in = { $note }, in { $doc }
+relations-target-missing = eine nicht gefundene Notiz
+relations-empty-note = Leere Notiz
+relations-incoming-row =
+    { $n ->
+        [0] Was hierher verweist: noch nichts
+        [one] Was hierher verweist: 1 Notiz
+       *[other] Was hierher verweist: { $n } Notizen
+    }
+relations-add-row = Verknüpfung hinzufügen
+relations-backlinks-title = Was hierher verweist: { $note }
+relations-backlinks-intro =
+    { $n ->
+        [one] Was auf { $note } verweist: 1 Notiz. Eingabetaste springt dorthin. Tippen filtert nach Art.
+       *[other] Was auf { $note } verweist: { $n } Notizen. Eingabetaste springt zu einer. Tippen filtert nach Art.
+    }
+relations-backlink-item = { $type } diese, von: { $note }
+relations-none-in = Noch verweist nichts auf diese Notiz.
+relations-types-title = Art der Verknüpfung für: { $note }
+relations-types-intro = Wählen Sie die Art der Verknüpfung, 10 Arten. Tippen filtert.
+relations-targets-title = { $type }: welche Notiz?
+relations-targets-intro =
+    { $n ->
+        [0] Keine andere Notiz hier. Wählen Sie eine Notiz in einem anderen Dokument.
+        [one] Wählen Sie die Zielnotiz: 1 Notiz. Eingabetaste verknüpft sie.
+       *[other] Wählen Sie die Zielnotiz: { $n } Notizen. Eingabetaste verknüpft sie.
+    }
+relations-other-document-row = Eine Notiz in einem anderen Dokument
+relations-documents-title = Dokumente mit Notizen
+relations-documents-intro = Dokumente mit Notizen: { $n }. Eingabetaste listet die Notizen eines Dokuments.
+relations-document-item =
+    { $n ->
+        [one] { $title }, 1 Notiz
+       *[other] { $title }, { $n } Notizen
+    }
+relations-no-other-documents = Kein anderes Dokument der Bibliothek hat Notizen.
+relations-linked = Verknüpft: { $type } { $target }.
+relations-changed = Verknüpfung geändert: { $type } { $target }.
+relations-already = Schon verknüpft: { $type } { $target }.
+relations-removed = Verknüpfung entfernt: { $type } { $target }.
+relations-remove-question = Diese Verknüpfung entfernen? y oder n
+relations-nothing-to-remove = Hier lässt sich nur eine Verknüpfung entfernen.
+relations-note-gone = Notiz nicht gefunden: Sie wurde gelöscht, oder ihr Dokument fehlt.
+relations-document-missing = Dokument nicht gefunden: { $file }.
+relations-no-note-here = Hier ist keine Notiz. Verknüpfungen gehören zu Notizen; eine hinzufügen: { $key }.
+relations-filter-cleared = Filter gelöscht, { $n } angezeigt.
+relations-filter-none = Nichts passt zu { $filter }.
+relations-filter-matched = Filter { $filter }: { $n } angezeigt.
 
 ## Bookmarks: rename and delete.
 

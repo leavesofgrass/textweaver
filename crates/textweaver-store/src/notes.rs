@@ -319,6 +319,114 @@ impl Relation {
     pub fn relation_type(&self) -> Option<RelationType> {
         RelationType::parse(&self.rel_type)
     }
+
+    /// The type as it reads aloud: the spoken name of a known type
+    /// ("see also"), else the stored name in lower case with spaces
+    /// ("likes" for `LIKES`), so a type from a newer version still reads.
+    pub fn spoken_type(&self) -> String {
+        match self.relation_type() {
+            Some(t) => t.spoken().to_owned(),
+            None => self.rel_type.trim().replace('_', " ").to_lowercase(),
+        }
+    }
+
+    /// True when the relation points to note `id` of the document `doc`
+    /// (a path as [`Relation::target_doc`] holds it, or empty), seen from a
+    /// note of the document `from` (empty `target_doc` means `from`).
+    pub fn points_to(&self, from: &str, doc: &str, id: &str) -> bool {
+        let target = if self.target_doc.is_empty() {
+            from
+        } else {
+            &self.target_doc
+        };
+        self.target_id == id && doc_key(target) == doc_key(doc)
+    }
+}
+
+/// The key two document paths are compared by: the store's
+/// [`DocKey`](crate::DocKey) for a path, or empty for a document with no
+/// file (an unsaved one).
+pub fn doc_key(path: &str) -> String {
+    if path.is_empty() {
+        String::new()
+    } else {
+        crate::DocKey::for_path(std::path::Path::new(path)).0
+    }
+}
+
+/// A relation seen from its target: note `from_id` of the document
+/// `from_doc` links here with type `rel_type`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Backlink {
+    /// The linking note's document, a path (empty for an unsaved one).
+    pub from_doc: String,
+    /// The linking note's id.
+    pub from_id: String,
+    /// The relation's type, as stored ([`Relation::rel_type`]).
+    pub rel_type: String,
+    /// Why the link exists ([`Relation::note`]).
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub note: String,
+}
+
+impl Backlink {
+    /// The type as it reads aloud ([`Relation::spoken_type`]).
+    pub fn spoken_type(&self) -> String {
+        Relation {
+            rel_type: self.rel_type.clone(),
+            ..Relation::default()
+        }
+        .spoken_type()
+    }
+}
+
+/// The reverse index of relations ("what links here"), built once from
+/// the notes of the documents loaded ([`Backlinks::build`]) and asked with
+/// [`Backlinks::backlinks`].
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Backlinks {
+    /// `(document key, note id)` to the relations pointing there.
+    index: std::collections::HashMap<(String, String), Vec<Backlink>>,
+}
+
+impl Backlinks {
+    /// The index of every relation of `docs`: each a document's path (as
+    /// relations name it; empty for an unsaved document) and its notes. A
+    /// relation with an empty `target_doc` points into its own document.
+    pub fn build<'a>(docs: impl IntoIterator<Item = (&'a str, &'a [Note])>) -> Self {
+        let mut index: std::collections::HashMap<(String, String), Vec<Backlink>> =
+            std::collections::HashMap::new();
+        for (doc, notes) in docs {
+            for n in notes {
+                for r in &n.relations {
+                    let target = if r.target_doc.is_empty() {
+                        doc
+                    } else {
+                        &r.target_doc
+                    };
+                    index
+                        .entry((doc_key(target), r.target_id.clone()))
+                        .or_default()
+                        .push(Backlink {
+                            from_doc: doc.to_owned(),
+                            from_id: n.id.clone(),
+                            rel_type: r.rel_type.clone(),
+                            note: r.note.clone(),
+                        });
+                }
+            }
+        }
+        Backlinks { index }
+    }
+
+    /// The relations pointing to note `id` of the document `doc` (a path,
+    /// or empty for an unsaved document), in the order the documents and
+    /// notes were given.
+    pub fn backlinks(&self, doc: &str, id: &str) -> &[Backlink] {
+        self.index
+            .get(&(doc_key(doc), id.to_owned()))
+            .map_or(&[], Vec::as_slice)
+    }
 }
 
 /// A note attached to a range of the text.
@@ -767,6 +875,52 @@ mod tests {
             }
             proptest::prop_assert_eq!(format!("{:016x}", id_from_seed(a, start)).len(), 16);
         }
+    }
+
+    #[test]
+    fn backlinks_index_every_document() {
+        let rel = |t: RelationType, doc: &str, id: &str| Relation {
+            rel_type: t.as_str().into(),
+            target_doc: doc.into(),
+            target_id: id.into(),
+            note: String::new(),
+        };
+        let a = vec![
+            Note {
+                id: "a1".into(),
+                relations: vec![rel(RelationType::Supports, "", "a2")],
+                ..Note::default()
+            },
+            Note {
+                id: "a2".into(),
+                ..Note::default()
+            },
+        ];
+        let b = vec![Note {
+            id: "b1".into(),
+            relations: vec![
+                rel(RelationType::Cites, "/books/a.md", "a2"),
+                Relation {
+                    rel_type: "LIKES".into(),
+                    ..rel(RelationType::SeeAlso, "/books/a.md", "a1")
+                },
+            ],
+            ..Note::default()
+        }];
+        let index =
+            Backlinks::build([("/books/a.md", a.as_slice()), ("/books/b.md", b.as_slice())]);
+        let to_a2 = index.backlinks("/books/a.md", "a2");
+        assert_eq!(to_a2.len(), 2);
+        assert_eq!(to_a2[0].from_id, "a1");
+        assert_eq!(to_a2[0].spoken_type(), "supports");
+        assert_eq!(to_a2[1].from_doc, "/books/b.md");
+        assert_eq!(to_a2[1].spoken_type(), "cites");
+        let to_a1 = index.backlinks("/books/a.md", "a1");
+        assert_eq!(to_a1[0].spoken_type(), "likes", "unknown types still read");
+        assert!(index.backlinks("/books/b.md", "a2").is_empty());
+        assert!(b[0].relations[0].points_to("/books/b.md", "/books/a.md", "a2"));
+        assert!(a[0].relations[0].points_to("/books/a.md", "/books/a.md", "a2"));
+        assert!(!a[0].relations[0].points_to("/books/a.md", "/books/b.md", "a2"));
     }
 
     #[test]

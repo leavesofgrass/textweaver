@@ -1152,8 +1152,8 @@ notes-none = Sin notas. Para agregar una: { $key }.
 notes-list-title = Notas
 notes-list-intro =
     { $n ->
-        [one] Notas, 1 elemento. Intro va a una nota, Suprimir la elimina, F2 la edita.
-       *[other] Notas, { $n } elementos. Intro va a una nota, Suprimir la elimina, F2 la edita.
+        [one] Notas, 1 elemento. Intro va a una nota, Suprimir la elimina, F2 la edita, Espacio abre sus enlaces.
+       *[other] Notas, { $n } elementos. Intro va a una nota, Suprimir la elimina, F2 la edita, Espacio abre sus enlaces.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. En: { $anchor }
@@ -1187,6 +1187,72 @@ notes-highlight-label = Resaltado
 notes-signal = Nota: { $text }
 # Said after moving onto a note's passage.
 notes-has-note = Tiene una nota: { $text }
+
+## Relations between notes (the knowledge graph as lists).
+
+relations-type-conflicts-with = está en conflicto con
+relations-type-supports = respalda
+relations-type-is-example-of = es un ejemplo de
+relations-type-cites = cita
+relations-type-contradicts = contradice
+relations-type-defines = define
+relations-type-extends = amplía
+relations-type-see-also = véase también
+relations-type-precedes = precede a
+relations-type-follows = sigue a
+relations-count = Enlaces: { $out } salientes, { $in } entrantes.
+relations-note-title = Enlaces de: { $note }
+relations-title-filtered = { $title }, filtro: { $filter }
+relations-note-intro = Enlaces de { $note }: { $out } salientes, { $in } entrantes. Intro sigue un enlace, F2 lo cambia, Suprimir lo quita. Escriba para filtrar por tipo.
+relations-out-item = { $type }: { $target }
+relations-target-in = { $note }, en { $doc }
+relations-target-missing = una nota no encontrada
+relations-empty-note = Nota vacía
+relations-incoming-row =
+    { $n ->
+        [0] Qué enlaza aquí: nada aún
+        [one] Qué enlaza aquí: 1 nota
+       *[other] Qué enlaza aquí: { $n } notas
+    }
+relations-add-row = Añadir un enlace
+relations-backlinks-title = Qué enlaza aquí: { $note }
+relations-backlinks-intro =
+    { $n ->
+        [one] Qué enlaza a { $note }: 1 nota. Intro va a ella. Escriba para filtrar por tipo.
+       *[other] Qué enlaza a { $note }: { $n } notas. Intro va a una. Escriba para filtrar por tipo.
+    }
+relations-backlink-item = { $type } esta, desde: { $note }
+relations-none-in = Todavía nada enlaza a esta nota.
+relations-types-title = Tipo de enlace para: { $note }
+relations-types-intro = Elija el tipo de enlace, 10 tipos. Escriba para filtrar.
+relations-targets-title = { $type }: ¿qué nota?
+relations-targets-intro =
+    { $n ->
+        [0] No hay otra nota aquí. Elija una nota de otro documento.
+        [one] Elija la nota de destino: 1 nota. Intro la enlaza.
+       *[other] Elija la nota de destino: { $n } notas. Intro la enlaza.
+    }
+relations-other-document-row = Una nota de otro documento
+relations-documents-title = Documentos con notas
+relations-documents-intro = Documentos con notas: { $n }. Intro muestra las notas de un documento.
+relations-document-item =
+    { $n ->
+        [one] { $title }, 1 nota
+       *[other] { $title }, { $n } notas
+    }
+relations-no-other-documents = Ningún otro documento de la biblioteca tiene notas.
+relations-linked = Enlazado: { $type } { $target }.
+relations-changed = Enlace cambiado: { $type } { $target }.
+relations-already = Ya enlazado: { $type } { $target }.
+relations-removed = Enlace quitado: { $type } { $target }.
+relations-remove-question = ¿Quitar este enlace? y o n
+relations-nothing-to-remove = Aquí solo se puede quitar un enlace.
+relations-note-gone = Nota no encontrada: se eliminó o su documento ya no está.
+relations-document-missing = Documento no encontrado: { $file }.
+relations-no-note-here = No hay ninguna nota aquí. Los enlaces pertenecen a notas; añada una: { $key }.
+relations-filter-cleared = Filtro borrado, { $n } mostrados.
+relations-filter-none = Nada coincide con { $filter }.
+relations-filter-matched = Filtro { $filter }: { $n } mostrados.
 
 ## Bookmarks: rename and delete.
 

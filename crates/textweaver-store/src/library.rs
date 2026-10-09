@@ -665,6 +665,17 @@ impl LibraryEntry {
     }
 }
 
+/// A bookshelf document with its notes ([`Library::noted_documents`]).
+#[derive(Clone, Debug, PartialEq)]
+pub struct NotedDoc {
+    /// The document (absolute).
+    pub path: PathBuf,
+    /// Its title as the library shows it.
+    pub title: String,
+    /// Its notes, in document order.
+    pub notes: Vec<crate::Note>,
+}
+
 /// The bookshelf, `library.json`: every document opened, newest first.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Library {
@@ -696,6 +707,28 @@ impl Library {
             message: e.to_string(),
         })?;
         atomic_write(file, text.as_bytes())
+    }
+
+    /// The bookshelf's documents that have notes, with their notes, read
+    /// from `states` (most recently opened first). The knowledge graph's
+    /// documents: [`Backlinks::build`](crate::Backlinks::build) indexes
+    /// them, and a relation can point to any of their notes.
+    ///
+    /// shortcut: reads every bookshelf document's state file (at most
+    /// [`LIBRARY_CAP`]); callers keep the result while a document is open.
+    /// Upgrade to an index file if large libraries make it slow.
+    pub fn noted_documents(&self, states: &crate::StateStore) -> Vec<NotedDoc> {
+        self.entries
+            .iter()
+            .filter_map(|e| {
+                let state = states.load(&crate::DocKey::for_path(&e.path))?;
+                (!state.notes.is_empty()).then(|| NotedDoc {
+                    path: e.path.clone(),
+                    title: e.shown_title().to_owned(),
+                    notes: state.notes,
+                })
+            })
+            .collect()
     }
 
     /// The entry for `path`.
@@ -1190,6 +1223,27 @@ mod tests {
     use std::time::Duration;
 
     use super::*;
+
+    #[test]
+    fn noted_documents_are_the_shelf_documents_with_notes() {
+        let dir = tempfile::tempdir().unwrap();
+        let states = crate::StateStore::new(dir.path().join("state"));
+        let mut lib = Library::default();
+        let a = dir.path().join("a.md");
+        let b = dir.path().join("b.md");
+        lib.record_open_at(&a, "Alpha", "markdown", 1);
+        lib.record_open_at(&b, "Beta", "markdown", 2);
+        let mut st = DocState::default();
+        st.add_note(textweaver_core::CharRange::new(0, 1), "A", "first", "");
+        states.save(&crate::DocKey::for_path(&a), &st).unwrap();
+        states
+            .save(&crate::DocKey::for_path(&b), &DocState::default())
+            .unwrap();
+        let docs = lib.noted_documents(&states);
+        assert_eq!(docs.len(), 1);
+        assert_eq!(docs[0].title, "Alpha");
+        assert_eq!(docs[0].notes[0].note, "first");
+    }
 
     fn supported(ext: &str) -> bool {
         matches!(ext, "md" | "txt" | "html")

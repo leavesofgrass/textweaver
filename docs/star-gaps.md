@@ -63,7 +63,7 @@ star's reading aids are described in its "Accessibility and WCAG reading aids" n
 
 ## Peripheral
 
-- **Knowledge graph and concept extraction.** Typed links between notes; exports to SVG, DOT, PlantUML, and JSON. Status: partly. Vault import and export keep typed links between notes; the graph exports and concept extraction are dropped.
+- **Knowledge graph and concept extraction.** Typed links between notes; exports to SVG, DOT, PlantUML, and JSON. Status: partly. Typed links between notes are added, changed, removed, filtered by type, and followed from the notes list, with "What links here" across the library and `tw notes links` ([notes guide](notes.md#links-between-notes)); vault import and export keep them. The graph exports and concept extraction are dropped.
 - **Karaoke video export.** Status: dropped.
 - **Feeds, Wikipedia, and PubMed** quick open. Status: dropped.
 - **More engines:** Coqui, Festival, Qt speech, and cloud voices. Status: dropped. speech-dispatcher, which can drive Festival, and DECtalk were added instead.

@@ -305,7 +305,7 @@ Errors: `-32602` when `text` is missing, and `-32004` "insert needs edit mode; r
 
 This is how a client does anything a key can do. Parameters:
 
-- `id` (string, required): any action id from the [keyboard reference](keyboard.md), such as `add_bookmark`, `go_to`, `toggle_edit_mode`, `save`, or `quit`. It can also be one of the notes commands: `add_note`, `list_notes`, `next_note`, `previous_note`, `toggle_highlight`, `list_highlights`, `rename_bookmark`, or `delete_bookmark`.
+- `id` (string, required): any action id from the [keyboard reference](keyboard.md), such as `add_bookmark`, `go_to`, `toggle_edit_mode`, `save`, or `quit`. It can also be one of the notes commands: `add_note`, `list_notes`, `next_note`, `previous_note`, `toggle_highlight`, `list_highlights`, `rename_bookmark`, `delete_bookmark`, or `note_links`.
 - `confirm` (true or false, optional): the answer to give if the action asks a yes-or-no question first, as `quit` and `delete_note` do. `true` answers yes and `false` answers no.
 
 The result is an object with:

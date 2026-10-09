@@ -173,6 +173,7 @@ impl App {
             NoteCommand::ListHighlights => return self.list_highlights(),
             NoteCommand::RenameBookmark => return self.bookmark_manage(false),
             NoteCommand::DeleteBookmark => return self.bookmark_manage(true),
+            NoteCommand::Links => return self.note_links_here(),
         }
         vec![Effect::Redraw]
     }
@@ -253,6 +254,24 @@ impl App {
         ))
     }
 
+    /// The notes list's rows: each note, with "Links: 2 out, 1 in" after
+    /// a note that has links (crate::relations).
+    fn note_items(&mut self) -> Vec<String> {
+        let n = self.session.as_ref().map_or(0, |s| s.notes.len());
+        let counts = self.relations_counts();
+        (0..n)
+            .filter_map(|i| {
+                let item = self.note_item(i)?;
+                Some(match counts.get(i).cloned().flatten() {
+                    Some(links) => {
+                        format!("{}. {links}", item.trim_end().trim_end_matches('.'))
+                    }
+                    None => item,
+                })
+            })
+            .collect()
+    }
+
     pub(crate) fn list_notes(&mut self) -> Vec<Effect> {
         let n = self.session.as_ref().map_or(0, |s| s.notes.len());
         if n == 0 {
@@ -261,7 +280,7 @@ impl App {
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
-        let items: Vec<String> = (0..n).filter_map(|i| self.note_item(i)).collect();
+        let items = self.note_items();
         self.list = Some(ListKind::Notes);
         let msg = self.msg_args("notes-list-intro", &args!["n" => n]);
         self.tell(&msg);
@@ -373,8 +392,7 @@ impl App {
     }
 
     fn list_notes_quiet(&mut self) -> Vec<Effect> {
-        let n = self.session.as_ref().map_or(0, |s| s.notes.len());
-        let items: Vec<String> = (0..n).filter_map(|i| self.note_item(i)).collect();
+        let items = self.note_items();
         self.list = Some(ListKind::Notes);
         vec![Effect::ShowList {
             title: self.msg("notes-list-title"),

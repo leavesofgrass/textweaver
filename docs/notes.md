@@ -87,16 +87,55 @@ Highlights are listed the same way, with their color. A new document that was ne
 
 ### List notes: Shift+A
 
-Press **Shift+A**. The window also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it." Each item says the note, the line, and the passage.
+Press **Shift+A**. The window also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links." Each item says the note, the line, and the passage, then its links when it has some.
 
 In the list:
 
 - **Enter** goes to the note.
 - **F2** edits the note. You hear "Editing note:" and its text. The prompt says "Edit note, Enter keeps it". Type the new text and press **Enter**; tags are read again from the new text. You hear "Note updated." Enter on an empty prompt leaves the note as it was.
 - **Delete** asks "Delete this note? y or n". Press **y** to delete it; you hear "Note deleted:" and the start of the note. Press **n**, **a**, or **Escape** to keep it; you hear "Kept." and the list comes back.
+- **Space** opens the note's links (see [Links between notes](#links-between-notes)).
 - **Escape** closes the list.
 
 This list shows notes only. Highlights have their own list.
+
+### Links between notes
+
+A note can link to other notes, in this document or in another document in your library, as star's knowledge graph did. Each link has one of ten types: conflicts with, supports, is an example of, cites, contradicts, defines, extends, see also, precedes, and follows. textweaver shows links as lists, never as a picture, so every link reads well aloud and on a Braille display.
+
+In the notes list, a note that has links ends with how many, for example "Links: 2 out, 1 in." "Out" counts the links this note makes; "in" counts the notes that link to it.
+
+Press **Space** on a note in the notes list to open its links. From the document, the command palette's `note_links` opens the links of the note at the cursor. You hear "Links of", the note, the counts, and the keys. The list has:
+
+- one row per link, the type first: "supports: Chapter 3 note". A note in another document adds its title: "cites: Renal clearance, in Pharmacology 2";
+- "What links here", with how many notes link to this one;
+- "Add a link".
+
+In the links list:
+
+- **Enter** on a link goes to the note it points to. A note in another document opens that document and goes to the note.
+- **F2** on a link changes it: choose the type again, then the note.
+- **Delete** on a link asks "Remove this link? y or n". Press **y** to remove it.
+- **Typing** filters the links by type: type "sup" to keep the "supports" links. **Backspace** removes a letter, and **Escape** closes the list.
+
+**Enter** on "What links here" lists the notes that link to this one, the type first: "supports this, from: Week 4 note". Enter goes to that note. Typing filters by type here too.
+
+To add a link, press **Enter** on "Add a link":
+
+1. Choose the type from the ten. Typing filters the list.
+2. Choose the note to link to. The list has this document's other notes, then "A note in another document", which lists the library's documents that have notes, and then that document's notes.
+
+You hear "Linked:" with the type and the note, and the links list comes back. Adding the same link twice says "Already linked".
+
+Links are saved with the note, so they sync to your other computers with it, and `tw vault export` writes them as Dataview fields. "What links here" looks at this document and every library document that has notes; textweaver reads those when you first open a links list after opening a document.
+
+### List links from the command line: tw notes links
+
+```bash
+tw notes links essay.md
+```
+
+`tw notes links` prints each note of the document that has links, then one line per link: its links out ("supports: Chapter 3 note"), then what links to it ("cites this, from: Week 4 note, in Pharmacology 2"). Add `--type supports` to list one type, and `--json` for a program or a script. It only reads; it never changes anything.
 
 ## Highlights
 
@@ -216,7 +255,7 @@ Without sync, a document in a library folder still carries its reading place to 
 - **"Nothing here to attach a note to."** The cursor is on an empty line. Move to text, or select some.
 - **A mark is missing after reopening.** The document may have moved or been renamed; marks follow the full path. Check with `tw marks` on the old path.
 - **A note is in the wrong place after an edit outside textweaver.** textweaver looks for the note's passage again when the file changed (see [When the file changes in another program](#when-the-file-changes-in-another-program)). If the passage was rewritten or deleted, the note could not be found: it is marked, and put at the same share of the way through the document. The note's anchor still shows the passage it was made on.
-- **The keys do nothing.** Single-key shortcuts may be off. Press **F9**, or use the command palette names: `add_bookmark`, `list_bookmarks`, `next_bookmark`, `previous_bookmark`, `add_note`, `list_notes`, `next_note`, `previous_note`, `highlight_selection`, `list_highlights`, and `delete_note`.
+- **The keys do nothing.** Single-key shortcuts may be off. Press **F9**, or use the command palette names: `add_bookmark`, `list_bookmarks`, `next_bookmark`, `previous_bookmark`, `add_note`, `list_notes`, `next_note`, `previous_note`, `highlight_selection`, `list_highlights`, `note_links`, and `delete_note`.
 
 ## See also
 

@@ -210,11 +210,14 @@ pub enum NoteCommand {
     RenameBookmark,
     /// Delete the bookmark at the cursor, else one chosen from the list.
     DeleteBookmark,
+    /// List the links of the note at the cursor: its relations to other
+    /// notes and what links to it (crate::relations).
+    Links,
 }
 
 impl NoteCommand {
     /// Every command, in help order.
-    pub const ALL: [NoteCommand; 8] = [
+    pub const ALL: [NoteCommand; 9] = [
         NoteCommand::Add,
         NoteCommand::List,
         NoteCommand::Next,
@@ -223,6 +226,7 @@ impl NoteCommand {
         NoteCommand::ListHighlights,
         NoteCommand::RenameBookmark,
         NoteCommand::DeleteBookmark,
+        NoteCommand::Links,
     ];
 
     /// The command palette name (snake_case, like action ids).
@@ -236,6 +240,7 @@ impl NoteCommand {
             NoteCommand::ListHighlights => "list_highlights",
             NoteCommand::RenameBookmark => "rename_bookmark",
             NoteCommand::DeleteBookmark => "delete_bookmark",
+            NoteCommand::Links => "note_links",
         }
     }
 
@@ -252,6 +257,7 @@ impl NoteCommand {
             NoteCommand::ListHighlights => "List highlights",
             NoteCommand::RenameBookmark => "Rename a bookmark",
             NoteCommand::DeleteBookmark => "Delete a bookmark",
+            NoteCommand::Links => "List the links of the note at the cursor",
         }
     }
 
