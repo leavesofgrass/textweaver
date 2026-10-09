@@ -763,6 +763,14 @@ impl Conv<'_> {
             attr(c, "id"),
             say,
         );
+        if let Some(first) = c
+            .descendants()
+            .filter(|n| matches!(n.tag_name().name(), "t" | "delText"))
+            .filter_map(|n| n.text())
+            .find(|t| !t.is_empty())
+        {
+            open.saw_text(first);
+        }
         if deleted && say {
             self.in_del += 1;
             self.inline(c);

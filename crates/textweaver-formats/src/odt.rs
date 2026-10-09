@@ -929,6 +929,7 @@ impl Conv<'_> {
             Some(id),
             say,
         );
+        open.saw_text(&ch.text);
         if say {
             self.b.text(&ch.text);
         } else {

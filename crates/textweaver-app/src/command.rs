@@ -327,6 +327,11 @@ pub enum PromptPurpose {
     /// DOI, or ISBN. Tab and Shift+Tab move between the fields; Enter
     /// saves them all.
     DocumentDetails,
+    /// Answer is a reply to the comment chosen in the changes list.
+    CommentReply,
+    /// Answer is the text of a new comment on the selection or the
+    /// sentence at the cursor.
+    CommentText,
 }
 
 impl PromptPurpose {
@@ -365,6 +370,8 @@ impl PromptPurpose {
             PromptPurpose::SyncComputerName => "Name this computer, Enter keeps it",
             // The app labels each field from the message catalog.
             PromptPurpose::DocumentDetails => "Document details",
+            PromptPurpose::CommentReply => "Reply",
+            PromptPurpose::CommentText => "Comment",
         }
     }
 }

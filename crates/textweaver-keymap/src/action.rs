@@ -445,6 +445,15 @@ actions! {
     ExportStudySheet = "export_study_sheet", Bookmarks,
         "Export the notes and highlights as a Markdown study sheet, grouped by heading",
         gui [], term [], shared [];
+    ListChanges = "list_changes", Bookmarks,
+        "List the tracked changes and comments: Enter goes to one, A accepts a change, R rejects it",
+        gui ["g:Ctrl+Shift+J"], term ["g:Alt+A"], shared [];
+    AcceptAllChanges = "accept_all_changes", Bookmarks, "Accept every tracked change in the document",
+        gui [], term [], shared [];
+    RejectAllChanges = "reject_all_changes", Bookmarks, "Reject every tracked change in the document",
+        gui [], term [], shared [];
+    AddComment = "add_comment", Bookmarks, "Add a comment to the selection or the sentence at the cursor",
+        gui [], term [], shared [];
 
     // File
     Open = "open", File, "Open a document",

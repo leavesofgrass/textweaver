@@ -57,9 +57,23 @@ pub(crate) struct Open {
     glued: bool,
     /// Deleted text not written to the canonical text (final reading).
     deleted: String,
+    /// No text of the change has been seen yet ([`Open::saw_text`]).
+    first: bool,
 }
 
 impl Open {
+    /// The change's text as the source has it, before the builder
+    /// collapses its spaces: a change starting with a space is not glued to
+    /// the word before it. Only the first non-empty text counts.
+    pub(crate) fn saw_text(&mut self, text: &str) {
+        if self.first && !text.is_empty() {
+            self.first = false;
+            if text.starts_with(char::is_whitespace) {
+                self.glued = false;
+            }
+        }
+    }
+
     /// Deleted text read as the final text: kept for the record (rejecting
     /// the change puts it back), not written.
     pub(crate) fn push_deleted(&mut self, text: &str) {
@@ -100,6 +114,7 @@ pub(crate) fn open(
             text_byte: byte0,
             glued,
             deleted: String::new(),
+            first: true,
         };
     }
     let words = phrase(kind, author);
@@ -121,6 +136,7 @@ pub(crate) fn open(
         text_byte: b.as_str().len(),
         glued,
         deleted: String::new(),
+        first: true,
     }
 }
 
@@ -134,6 +150,7 @@ pub(crate) fn close(b: &mut Builder, open: Open, out: &mut Vec<DocumentChange>) 
         text_byte,
         glued,
         deleted,
+        first: _,
     } = open;
     let written = b.as_str().get(text_byte..).unwrap_or_default();
     if let Some(id) = said {
@@ -180,7 +197,8 @@ mod tests {
         b.text("s ");
         close(&mut b, o, &mut out);
         b.text(". Then ");
-        let o = open(&mut b, ChangeKind::Deleted, None, None, None, true);
+        let mut o = open(&mut b, ChangeKind::Deleted, None, None, None, true);
+        o.saw_text(" old ");
         b.text("old ");
         close(&mut b, o, &mut out);
         b.text("new.");

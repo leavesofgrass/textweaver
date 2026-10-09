@@ -563,6 +563,9 @@ impl App {
         {
             return effects;
         }
+        if let Some(effects) = self.changes_list_key(key) {
+            return effects;
+        }
         // The Say Status key previews the focused voice (crate::voice).
         if key == ListKey::Details && self.list == Some(crate::app::ListKind::Voices) {
             let n = self.list_model.as_ref().map_or(0, |l| l.selected);

@@ -1217,6 +1217,9 @@ impl Render<'_> {
                         None
                     };
                     self.set_change(change);
+                    if let Some((_, open)) = self.change.as_mut() {
+                        open.saw_text(text);
+                    }
                     if fmt.deleted && !marked {
                         if let Some((_, open)) = self.change.as_mut() {
                             open.push_deleted(text);
