@@ -460,6 +460,9 @@ actions! {
         gui [], term [], shared [];
     AddComment = "add_comment", Bookmarks, "Add a comment to the selection or the sentence at the cursor",
         gui [], term [], shared [];
+    SelfTest = "self_test", Bookmarks,
+        "Test yourself on the notes and highlights: Enter shows each answer",
+        gui [], term [], shared [];
 
     // File
     Open = "open", File, "Open a document",

@@ -161,6 +161,21 @@ mod off {
         pub(crate) fn dictate_after_download(&mut self) -> Vec<Effect> {
             Vec::new()
         }
+
+        /// A spoken answer (crate::reveal) needs dictation: said so.
+        pub(crate) fn answer_aloud_start(&mut self) -> Vec<Effect> {
+            let msg = self.msg("reveal-no-dictation");
+            self.tell(&msg);
+            vec![Effect::Redraw]
+        }
+
+        pub(crate) fn answer_aloud_stop(&mut self) -> Vec<Effect> {
+            vec![Effect::Redraw]
+        }
+
+        pub(crate) fn answer_aloud_active(&self) -> bool {
+            false
+        }
     }
 }
 
@@ -207,6 +222,9 @@ mod on {
         utterance: Option<usize>,
         /// Words not yet said (held while recording).
         held: String,
+        /// A spoken answer for a prompt list (crate::reveal) is being
+        /// recorded: its words so far. Nothing is typed.
+        answer: Option<String>,
     }
 
     impl std::fmt::Debug for DictationSlot {
@@ -429,6 +447,57 @@ mod on {
             vec![Effect::Redraw]
         }
 
+        /// Starts recording a spoken answer for a prompt list
+        /// (crate::reveal), in any mode: the words are read back when it
+        /// ends, never typed.
+        pub(crate) fn answer_aloud_start(&mut self) -> Vec<Effect> {
+            if self.dictation.active() {
+                let msg = self.msg("dictation-busy");
+                self.tell(&msg);
+                return vec![Effect::Redraw];
+            }
+            self.dictation.answer = Some(String::new());
+            let effects = self.start_dictation();
+            if !self.dictation.active() {
+                self.dictation.answer = None;
+            }
+            effects
+        }
+
+        /// Stops recording a spoken answer; the words are read back when
+        /// the last phrase is transcribed.
+        pub(crate) fn answer_aloud_stop(&mut self) -> Vec<Effect> {
+            if self.dictation.state() != DictationState::Recording {
+                let msg = self.msg("dictation-busy");
+                self.tell(&msg);
+                return vec![Effect::Redraw];
+            }
+            if let Some(b) = self.dictation.backend.as_mut()
+                && let Err(e) = b.stop()
+            {
+                let msg = self.msg_args("dictation-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
+            self.take_dictation_events();
+            vec![Effect::Redraw]
+        }
+
+        /// True while a spoken answer is recorded or transcribed.
+        pub(crate) fn answer_aloud_active(&self) -> bool {
+            self.dictation.answer.is_some()
+        }
+
+        /// A spoken answer ended without words reaching the reader (the
+        /// recognizer failed or was cancelled): the prompt list stops
+        /// waiting for it.
+        fn answer_aloud_dropped(&mut self) {
+            if self.dictation.answer.take().is_some()
+                && let Some(crate::app::ListKind::Reveal(l)) = self.list.as_mut()
+            {
+                l.listening = None;
+            }
+        }
+
         /// Applies what the dictation backend reported since the last
         /// tick. Called from [`App::tick`].
         pub(crate) fn dictation_tick(&mut self) -> Vec<Effect> {
@@ -455,6 +524,10 @@ mod on {
 
         fn on_dictation_event(&mut self, event: DictationEvent) {
             match event {
+                DictationEvent::Recording if self.dictation.answer.is_some() => {
+                    let msg = self.msg("reveal-listening");
+                    self.announce_as(&msg, Priority::Polite, Importance::Result);
+                }
                 DictationEvent::Recording => {
                     let key = self.key(ActionId::Dictate);
                     let msg = self.msg_args("dictation-listening", &args!["key" => key]);
@@ -475,12 +548,26 @@ mod on {
                         self.dictation.words.clear();
                     }
                     push_words(&mut self.dictation.words, &text);
-                    if self.settings.dictation.speak_while_recording {
+                    // A spoken answer is read back whole at the end.
+                    let answering = self.dictation.answer.is_some();
+                    if self.settings.dictation.speak_while_recording && !answering {
                         self.announce_as(&text, Priority::Polite, Importance::Result);
-                    } else {
+                    } else if !answering {
                         push_words(&mut self.dictation.held, &text);
                     }
                     self.show_dictation_line();
+                }
+                DictationEvent::Partial(segment) if self.dictation.answer.is_some() => {
+                    if let Some(answer) = self.dictation.answer.as_mut() {
+                        push_words(answer, &segment.text);
+                    }
+                    self.show_dictation_line();
+                }
+                DictationEvent::Final(_) if self.dictation.answer.is_some() => {
+                    let words = self.dictation.answer.take().unwrap_or_default();
+                    self.dictation.words.clear();
+                    self.dictation.utterance = None;
+                    self.reveal_heard(&words);
                 }
                 DictationEvent::Partial(segment) => {
                     // The phrase is finished at its pause: typed, and said
@@ -504,11 +591,12 @@ mod on {
                     self.announce_as(&msg, Priority::Polite, Importance::Result);
                 }
                 DictationEvent::Failed { message } => {
+                    self.answer_aloud_dropped();
                     self.dictation.words.clear();
                     let msg = self.msg_args("dictation-failed", &args!["error" => message]);
                     self.error(&msg);
                 }
-                DictationEvent::Cancelled => {}
+                DictationEvent::Cancelled => self.answer_aloud_dropped(),
             }
         }
 
@@ -778,6 +866,45 @@ mod on {
 
         fn tick(app: &mut App) {
             app.tick(Instant::now());
+        }
+
+        /// The self-test (crate::reveal): Space records a spoken answer in
+        /// any mode, it is read back and never typed, and Enter then
+        /// reveals the passage.
+        #[test]
+        fn a_spoken_answer_is_read_back_before_the_reveal() {
+            use crate::list_model::ListKey;
+            let (mut app, fake, said) = reading("Kidneys filter the blood.\n");
+            app.add_note("What filters the blood?");
+            app.dispatch(Command::Action(ActionId::SelfTest));
+            assert!(app.list_model().is_some());
+            app.dispatch(Command::ListKey(ListKey::Char(' ')));
+            assert_eq!(fake.0.lock().unwrap().starts, 1);
+            assert!(!app.is_editing());
+            assert!(
+                said.all()
+                    .iter()
+                    .any(|t| t.starts_with("Answer aloud now."))
+            );
+            assert!(app.list_model().is_some(), "the list stays");
+            fake.push(committed("the kidneys", 0));
+            fake.push(phrase("The kidneys."));
+            tick(&mut app);
+            fake.at_stop(vec![final_event()]);
+            app.dispatch(Command::ListKey(ListKey::Char(' ')));
+            assert!(
+                said.all()
+                    .iter()
+                    .any(|t| t == "You said: The kidneys. Enter shows the answer."),
+                "{:?}",
+                said.all()
+            );
+            assert_eq!(text_now(&app), "Kidneys filter the blood.\n");
+            app.dispatch(Command::ListKey(ListKey::Enter));
+            assert_eq!(
+                said.all().last().map(String::as_str),
+                Some("Answer: Kidneys filter the blood.")
+            );
         }
 
         #[test]

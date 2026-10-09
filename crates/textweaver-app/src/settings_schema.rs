@@ -748,6 +748,11 @@ pub const INFO: &[Info] = &[
         (0.0, 240.0, 5.0),
         "minutes",
     ),
+    toggle(
+        "reading.recall_prompts",
+        "Recall prompts",
+        "At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key.",
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The color theme.", &[]),
     toggle(

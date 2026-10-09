@@ -224,6 +224,7 @@ mod relations;
 mod relocate;
 mod replace;
 mod restart;
+mod reveal;
 pub mod rpc;
 mod search_options;
 pub mod settings_io;

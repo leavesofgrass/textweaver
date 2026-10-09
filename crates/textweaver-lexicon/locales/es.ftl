@@ -417,6 +417,7 @@ playback-time-up =
        *[other] Se acabó el tiempo tras { $minutes } minutos. { $key } para seguir.
     }
 playback-repeat-slower = Repitiendo más despacio, a { $rate } palabras por minuto.
+playback-recall-prompt = Diga lo que recuerda de { $section }. { $key } para seguir.
 
 ## The title line and Say Status.
 
@@ -763,6 +764,7 @@ action-previous-note = Ir a la nota anterior
 action-delete-note = Eliminar la nota o resaltado en el cursor
 action-highlight-selection = Resaltar la selección, o la oración en el cursor
 action-export-study-sheet = Exportar las notas y resaltados como una hoja de estudio en Markdown, agrupados por encabezado
+action-self-test = Ponerse a prueba con las notas y resaltados: Intro muestra cada respuesta
 action-open = Abrir un documento
 action-open-path = Abrir un documento escribiendo su ruta
 action-open-library = Abrir la biblioteca: documentos de sus carpetas de biblioteca y archivos recientes
@@ -1310,6 +1312,24 @@ notes-sheet-before-first-heading = Antes del primer encabezado
 notes-sheet-tags = (etiquetas: { $tags })
 # $color is the highlight's color name.
 notes-sheet-highlighted = Resaltado, { $color }.
+
+## La autoevaluación: preguntas con respuestas ocultas (crate::reveal).
+
+reveal-self-test-title = Autoevaluación: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] Autoevaluación, 1 pregunta. Intro muestra la respuesta. Espacio para responder en voz alta.
+       *[other] Autoevaluación, { $n } preguntas. Intro muestra cada respuesta. Espacio para responder en voz alta.
+    }
+reveal-nothing-to-test = No hay notas ni resaltados para evaluar. Añada antes una nota o un resaltado.
+reveal-prompt-note = { $note } (en { $section })
+reveal-prompt-highlight = ¿Qué resaltó en { $section }?
+reveal-row-shown = { $prompt } Respuesta: { $answer }
+reveal-answer = Respuesta: { $answer }
+reveal-listening = Responda en voz alta ahora. Espacio para terminar.
+reveal-you-said = Usted dijo: { $words }. Intro muestra la respuesta.
+reveal-heard-nothing = No se oyó ninguna respuesta. Espacio para intentarlo de nuevo.
+reveal-no-dictation = Responder en voz alta necesita el dictado, que no está en esta versión.
 
 ## Find, bookmarks, and selection.
 
@@ -1954,6 +1974,8 @@ choice-reading-stop-at-heading = siguiente encabezado
 choice-reading-stop-at-chapter = siguiente capítulo
 setting-reading-stop-after-minutes = Temporizador de lectura
 setting-reading-stop-after-minutes-help = La lectura continua se detiene al final de la oración tras estos minutos de lectura, y lo dice. Pausar detiene el reloj; detener lo reinicia. 0 apaga el temporizador.
+setting-reading-recall-prompts = Preguntas de recuerdo
+setting-reading-recall-prompts-help = Al final de una sección, la lectura le pide que diga lo que recuerda. Si Detenerse al final de la sección es nunca, la lectura se detiene para ello en el siguiente encabezado. La lectura sigue con la tecla de leer.
 setting-display-theme = Tema
 setting-display-theme-help = El tema de color.
 setting-display-follow-os-theme = Seguir el tema del sistema
@@ -3372,6 +3394,7 @@ name-previous-note = Nota anterior
 name-delete-note = Borrar nota o resaltado
 name-highlight-selection = Resaltar
 name-export-study-sheet = Exportar hoja de estudio
+name-self-test = Autoevaluación
 name-open = Abrir
 name-open-path = Abrir por ruta
 name-open-library = Biblioteca

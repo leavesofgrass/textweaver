@@ -266,6 +266,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Accept every tracked change in the document | palette | palette | palette | `accept_all_changes` |
 | Reject every tracked change in the document | palette | palette | palette | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | palette | palette | palette | `add_comment` |
+| Test yourself on the notes and highlights: Enter shows each answer | palette | palette | palette | `self_test` |
 
 ## File
 
@@ -536,6 +537,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Accept every tracked change in the document | `accept_all_changes` |
 | Reject every tracked change in the document | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | `add_comment` |
+| Test yourself on the notes and highlights: Enter shows each answer | `self_test` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |
