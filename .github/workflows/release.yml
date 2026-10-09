@@ -293,7 +293,10 @@ jobs:
           docker build -t textweaver-appimage docker/appimage
           docker run --rm -v "$PWD:/work" -w /work --user "$(id -u):$(id -g)" \
             -e HOME=/tmp -e CARGO_TARGET_DIR=/work/target/linux \
+            -e GITHUB_STEP_SUMMARY=/work/target/docs-summary.md \
             textweaver-appimage cargo xtask appimage --out /work/target/dist
+          # Missing-guide warnings written inside the container reach the job summary.
+          cat target/docs-summary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
       # tw --version, tw backends (espeak unavailable without libespeak-ng,
       # available with it), tw text, --install and --uninstall, the
       # tarball, and install-linux.sh --release with each package.
@@ -312,7 +315,10 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/work" -w /work --user "$(id -u):$(id -g)" \
             -e HOME=/tmp -e CARGO_TARGET_DIR=/work/target/linux \
+            -e GITHUB_STEP_SUMMARY=/work/target/docs-summary-gui.md \
             textweaver-appimage cargo xtask gui-dist --out /work/target/dist
+          # Missing-guide warnings written inside the container reach the job summary.
+          cat target/docs-summary-gui.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
       # In the build image (it has the ALSA library the GUI links): the
       # files are there, --version, a screenshot drawn on the CPU (no
       # display is needed), and the AppImage's --version. Not yet run on
