@@ -159,7 +159,7 @@ mod run {
     };
     use textweaver_lexicon::args;
     use textweaver_speech::{BackendFactory, BackendInfo, BackendRegistry, Caps, VoiceParams};
-    use textweaver_store::SubtitleKaraoke;
+    use textweaver_store::{AudioExportFormat, SubtitleKaraoke};
     use textweaver_text::Document;
 
     use super::AudioList;
@@ -273,6 +273,32 @@ mod run {
             .collect()
     }
 
+    /// The format `[export] audio_format` names.
+    pub(crate) fn from_setting(f: AudioExportFormat) -> AudioFormat {
+        match f {
+            AudioExportFormat::Flac => AudioFormat::Flac,
+            AudioExportFormat::Mp3 => AudioFormat::Mp3,
+            AudioExportFormat::Opus => AudioFormat::Opus,
+            AudioExportFormat::Ogg => AudioFormat::Ogg,
+            AudioExportFormat::Wav => AudioFormat::Wav,
+            AudioExportFormat::M4b => AudioFormat::M4b,
+            AudioExportFormat::Mp4 => AudioFormat::Mp4,
+        }
+    }
+
+    /// `offered` with `preferred` moved to the front, when it is offered;
+    /// the others keep their order.
+    pub(crate) fn preferred_first(
+        mut offered: Vec<AudioFormat>,
+        preferred: AudioFormat,
+    ) -> Vec<AudioFormat> {
+        if let Some(i) = offered.iter().position(|f| *f == preferred) {
+            let f = offered.remove(i);
+            offered.insert(0, f);
+        }
+        offered
+    }
+
     /// The formats left out for want of ffmpeg.
     pub(crate) fn needing_ffmpeg() -> Vec<AudioFormat> {
         ALL.into_iter().filter(|f| f.needs_ffmpeg()).collect()
@@ -324,11 +350,21 @@ mod run {
                 self.tell(&msg);
                 return vec![Effect::Redraw];
             };
-            let ffmpeg = match &self.audio.ffmpeg_override {
-                Some(f) => f.clone(),
-                None => ffmpeg::find(),
+            let ffmpeg = match (&self.audio.ffmpeg_override, &self.paths) {
+                (Some(f), _) => f.clone(),
+                // This session's own components folder first.
+                (None, Some(p)) => ffmpeg::find_in(
+                    Some(&p.components_dir()),
+                    std::env::var_os("TEXTWEAVER_FFMPEG"),
+                    std::env::var_os("PATH"),
+                ),
+                (None, None) => ffmpeg::find(),
             };
-            self.audio.formats = formats(ffmpeg.is_some());
+            // The format in `[export] audio_format` comes first.
+            self.audio.formats = preferred_first(
+                formats(ffmpeg.is_some()),
+                from_setting(self.settings.export.audio_format),
+            );
             self.audio.ffmpeg = ffmpeg;
             self.audio.format = None;
             self.audio.page = false;
@@ -895,6 +931,37 @@ mod run {
                 Some("recording")
             );
             assert_eq!(id(choose_backend(&list[..1], "omnivox", "")), None);
+        }
+
+        #[test]
+        fn the_audio_format_setting_comes_first() {
+            let offered = preferred_first(ALL.to_vec(), from_setting(AudioExportFormat::Opus));
+            assert_eq!(offered[0], AudioFormat::Opus);
+            assert_eq!(&offered[1..3], [AudioFormat::Flac, AudioFormat::Mp3]);
+            assert_eq!(offered.len(), ALL.len());
+            // The default keeps today's order.
+            assert_eq!(
+                preferred_first(ALL.to_vec(), from_setting(AudioExportFormat::default())),
+                ALL
+            );
+            // A format not offered (no ffmpeg) leaves the list alone.
+            let here = formats(false);
+            assert_eq!(
+                preferred_first(here.clone(), from_setting(AudioExportFormat::M4b)),
+                here
+            );
+            // Each setting value names the format with its extension.
+            for f in [
+                AudioExportFormat::Flac,
+                AudioExportFormat::Mp3,
+                AudioExportFormat::Opus,
+                AudioExportFormat::Ogg,
+                AudioExportFormat::Wav,
+                AudioExportFormat::M4b,
+                AudioExportFormat::Mp4,
+            ] {
+                assert_eq!(extension(from_setting(f)), f.extension());
+            }
         }
 
         #[test]

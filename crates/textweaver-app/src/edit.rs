@@ -39,9 +39,7 @@ use textweaver_a11y::{Priority, Verbosity};
 use textweaver_core::{CharPos, CharRange, Direction, Edit, EditOutcome, Unit};
 use textweaver_editor::autosave::{self, AutosavePolicy, RecoverySnapshot};
 use textweaver_editor::echo::{self, EchoEvent, EchoPolicy};
-use textweaver_editor::{
-    Choice, DocInfo, EditSession, FindOptions, LeaveOutcome, MarkdownOp, Selection,
-};
+use textweaver_editor::{Choice, DocInfo, EditSession, LeaveOutcome, MarkdownOp, Selection};
 use textweaver_formats::Source;
 use textweaver_keymap::ActionId;
 use textweaver_lexicon::args;
@@ -1788,13 +1786,15 @@ impl App {
                 self.note(&msg);
                 return vec![Effect::Redraw];
             }
+            if self.refuse_bad_pattern(text) {
+                return vec![Effect::Redraw];
+            }
+            let opts = self.search;
             let n = self
                 .edit
                 .as_ref()
                 .and_then(|e| e.session.editor())
-                .map_or(0, |ed| {
-                    textweaver_editor::find::count_matches(ed.text(), text, FindOptions::default())
-                });
+                .map_or(0, |ed| crate::search_options::count(ed.text(), text, opts));
             if n == 0 {
                 self.speech.earcon(Earcon::Error);
                 let msg = self.msg_args("common-no-matches", &args!["query" => text]);

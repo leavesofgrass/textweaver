@@ -56,6 +56,7 @@ fn dense_log_dir_from(value: Option<std::ffi::OsString>) -> Option<std::path::Pa
 /// Returns the subscriber, and the error in case of a (recoverable) error.
 fn default_tracing_subscriber_native(
     default_level: LevelFilter,
+    span_times: Option<SpanTimes>,
 ) -> (impl Subscriber, Option<Box<dyn Error>>) {
     // Use EnvFilter to allow the user to override the log level without recompiling.
     let env_filter_builder = EnvFilter::builder()
@@ -141,9 +142,19 @@ fn default_tracing_subscriber_native(
     #[cfg(target_os = "android")]
     let android_trace_layer = tracing_android_trace::AndroidTraceLayer::new();
 
+    // textweaver patch: the span timer, filtered to its one span name, so
+    // it turns on no other span or event.
+    let span_times_layer = span_times.map(|t| {
+        let name = t.name;
+        t.with_filter(tracing_subscriber::filter::filter_fn(move |m| {
+            m.is_span() && m.name() == name
+        }))
+    });
+
     let registry = tracing_subscriber::registry()
         .with(console_layer)
-        .with(log_file_layer);
+        .with(log_file_layer)
+        .with(span_times_layer);
 
     #[cfg(target_os = "android")]
     let registry = registry.with(android_trace_layer);
@@ -186,7 +197,7 @@ pub fn default_tracing_subscriber(
 ) -> (impl Subscriber, Option<Box<dyn Error>>) {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        default_tracing_subscriber_native(max_level)
+        default_tracing_subscriber_native(max_level, None)
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -239,6 +250,24 @@ pub fn try_init_test_tracing() -> Result<(), TracingSubscriberHasBeenSetError> {
 
 /// Initialise tracing with a default subscriber for an end-user application.
 pub fn try_init_tracing() -> Result<(), TracingSubscriberHasBeenSetError> {
+    init_app_tracing(None)
+}
+
+/// Called with how long a span lasted, from its creation to its close.
+pub type SpanTimeReport = Box<dyn Fn(std::time::Duration) + Send + Sync>;
+
+/// Like [`try_init_tracing`], and `report` is also called with the length
+/// of every span named `name` when it closes (a textweaver patch: the
+/// frame times its `--log` reports, from `masonry_winit`'s `redraw` span).
+/// On the web, `report` is never called.
+pub fn try_init_tracing_with_span_times(
+    name: &'static str,
+    report: SpanTimeReport,
+) -> Result<(), TracingSubscriberHasBeenSetError> {
+    init_app_tracing(Some(SpanTimes { name, report }))
+}
+
+fn init_app_tracing(span_times: Option<SpanTimes>) -> Result<(), TracingSubscriberHasBeenSetError> {
     // Default level is DEBUG in --dev, INFO in --release, unless a level is passed.
     // DEBUG should print a few logs per low-density event.
     // INFO should only print logs for noteworthy things.
@@ -250,7 +279,13 @@ pub fn try_init_tracing() -> Result<(), TracingSubscriberHasBeenSetError> {
 
     verify_subscriber_has_not_been_set()?;
 
-    let (subscriber, err) = default_tracing_subscriber(default_level);
+    #[cfg(not(target_arch = "wasm32"))]
+    let (subscriber, err) = default_tracing_subscriber_native(default_level, span_times);
+    #[cfg(target_arch = "wasm32")]
+    let (subscriber, err) = {
+        drop(span_times);
+        default_tracing_subscriber(default_level)
+    };
 
     // We may ignore potential errors here because we already checked that no subscriber has been set.
     let _ = tracing::subscriber::set_global_default(subscriber);
@@ -259,6 +294,42 @@ pub fn try_init_tracing() -> Result<(), TracingSubscriberHasBeenSetError> {
     }
 
     Ok(())
+}
+
+/// The layer that times the spans with one name (a textweaver patch).
+struct SpanTimes {
+    name: &'static str,
+    report: SpanTimeReport,
+}
+
+/// When a timed span was created, kept in its extensions.
+struct SpanStarted(std::time::Instant);
+
+impl<S> tracing_subscriber::Layer<S> for SpanTimes
+where
+    S: Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
+{
+    fn on_new_span(
+        &self,
+        attrs: &tracing::span::Attributes<'_>,
+        id: &tracing::span::Id,
+        ctx: tracing_subscriber::layer::Context<'_, S>,
+    ) {
+        if attrs.metadata().name() == self.name
+            && let Some(span) = ctx.span(id)
+        {
+            span.extensions_mut()
+                .insert(SpanStarted(std::time::Instant::now()));
+        }
+    }
+
+    fn on_close(&self, id: tracing::span::Id, ctx: tracing_subscriber::layer::Context<'_, S>) {
+        if let Some(span) = ctx.span(&id)
+            && let Some(started) = span.extensions().get::<SpanStarted>()
+        {
+            (self.report)(started.0.elapsed());
+        }
+    }
 }
 
 #[cfg(test)]
@@ -270,6 +341,29 @@ mod tests {
         let _first_result = try_init_test_tracing();
         let second_result = try_init_test_tracing();
         assert!(second_result.is_err());
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn span_times_report_only_their_span() {
+        // textweaver patch: the frame times under `--log`.
+        use std::sync::{Arc, Mutex};
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let into = Arc::clone(&seen);
+        let layer = SpanTimes {
+            name: "timed",
+            report: Box::new(move |d| into.lock().unwrap().push(d)),
+        };
+        let subscriber = tracing_subscriber::registry().with(layer);
+        tracing::subscriber::with_default(subscriber, || {
+            let a = tracing::info_span!("timed");
+            std::thread::sleep(std::time::Duration::from_millis(2));
+            drop(a);
+            drop(tracing::info_span!("other"));
+        });
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 1);
+        assert!(seen[0] >= std::time::Duration::from_millis(2));
     }
 
     #[cfg(not(target_arch = "wasm32"))]

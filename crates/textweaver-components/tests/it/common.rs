@@ -34,6 +34,7 @@ pub fn component(id: &str) -> Component {
             pin("tokenizer.json", &second_bytes()),
         ]),
         notice: Some((Cow::Borrowed("LICENSE.txt"), Cow::Borrowed("CC0"))),
+        listing: None,
     }
 }
 

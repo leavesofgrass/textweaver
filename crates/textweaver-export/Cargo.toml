@@ -45,6 +45,8 @@ video = ["dep:hayro", "dep:textweaver-fonts"]
 textweaver-core.workspace = true
 textweaver-text.workspace = true
 textweaver-speech.workspace = true
+# The components folder, searched first for ffmpeg.
+textweaver-store.workspace = true
 thiserror.workspace = true
 log.workspace = true
 serde.workspace = true

@@ -234,6 +234,8 @@ fn purpose_name(p: PromptPurpose) -> &'static str {
         PromptPurpose::SettingValue => "setting_value",
         PromptPurpose::SyncComputerName => "sync_computer_name",
         PromptPurpose::DocumentDetails => "document_details",
+        PromptPurpose::CommentReply => "comment_reply",
+        PromptPurpose::CommentText => "comment_text",
     }
 }
 
@@ -1174,7 +1176,7 @@ mod tests {
 
     /// Every prompt purpose and its protocol name: a change here is a
     /// protocol change, so clients are told (see the protocol version rule).
-    const PURPOSES: [(PromptPurpose, &str); 26] = [
+    const PURPOSES: [(PromptPurpose, &str); 28] = [
         (PromptPurpose::Find, "find"),
         (PromptPurpose::GoTo, "go_to"),
         (PromptPurpose::Open, "open"),
@@ -1201,10 +1203,12 @@ mod tests {
         (PromptPurpose::SettingValue, "setting_value"),
         (PromptPurpose::SyncComputerName, "sync_computer_name"),
         (PromptPurpose::DocumentDetails, "document_details"),
+        (PromptPurpose::CommentReply, "comment_reply"),
+        (PromptPurpose::CommentText, "comment_text"),
     ];
 
     #[test]
-    fn the_26_purpose_names_are_pinned() {
+    fn the_28_purpose_names_are_pinned() {
         let mut seen = std::collections::HashSet::new();
         for (p, name) in PURPOSES {
             assert_eq!(purpose_name(p), name, "{p:?}");
@@ -1236,7 +1240,9 @@ mod tests {
                 | PromptPurpose::ExportProfiles
                 | PromptPurpose::SettingValue
                 | PromptPurpose::SyncComputerName
-                | PromptPurpose::DocumentDetails => name,
+                | PromptPurpose::DocumentDetails
+                | PromptPurpose::CommentReply
+                | PromptPurpose::CommentText => name,
             };
             assert!(!variant.is_empty());
         }
@@ -1251,7 +1257,7 @@ mod tests {
         for (_, name) in PURPOSES {
             assert!(guide.contains(&format!("`{name}`")), "{name} missing");
         }
-        assert!(guide.contains("26 purposes"));
+        assert!(guide.contains("28 purposes"));
     }
 
     /// The messages `read_messages` passes on for `input`, with their

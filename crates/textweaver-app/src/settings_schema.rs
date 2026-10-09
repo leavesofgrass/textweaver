@@ -731,6 +731,23 @@ pub const INFO: &[Info] = &[
             ("final", "final text only"),
         ],
     ),
+    choice(
+        "reading.stop_at",
+        "Stop at section end",
+        "Where continuous reading stops by itself and says End of section. Never, at the next heading of any level, or at the next chapter: a section break, else a level 1 heading. Reading goes on from the heading with the read key.",
+        &[
+            ("off", "never"),
+            ("heading", "next heading"),
+            ("chapter", "next chapter"),
+        ],
+    ),
+    number(
+        "reading.stop_after_minutes",
+        "Reading timer",
+        "Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.",
+        (0.0, 240.0, 5.0),
+        "minutes",
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The color theme.", &[]),
     toggle(
@@ -915,6 +932,20 @@ pub const INFO: &[Info] = &[
     ),
     // [export]
     choice(
+        "export.audio_format",
+        "Audio export format",
+        "The format Export audio lists first. tw export-audio also uses it for a file name with no extension.",
+        &[
+            ("flac", "FLAC"),
+            ("mp3", "MP3"),
+            ("opus", "Opus"),
+            ("ogg", "Ogg Vorbis"),
+            ("wav", "WAV"),
+            ("m4b", "M4B audiobook"),
+            ("mp4", "MP4 video with captions"),
+        ],
+    ),
+    choice(
         "export.subtitle_format",
         "Subtitle format",
         "The format of subtitles written without a file name.",
@@ -961,6 +992,12 @@ pub const INFO: &[Info] = &[
             ("listed", "listed"),
             ("stairstep", "stairstep"),
         ],
+    ),
+    choice(
+        "braille.brf_code",
+        "Braille code of BRF files",
+        "The braille code BRF files are read in. UEB is for books made since 2016; EBAE, English Braille American Edition, is for older books. Reading a BRF file as print needs liblouis. Open the file again after a change.",
+        &[("ueb", "UEB"), ("ebae", "EBAE")],
     ),
     // [reading_aids]
     number(
@@ -1509,7 +1546,12 @@ pub const INFO: &[Info] = &[
             ("ask", "ask"),
         ],
     ),
-    // [components] (W8a-d)
+    // [components] (W8a-d; source, beta 1)
+    text(
+        "components.source",
+        "Components source",
+        "Your own components, used first. A GitHub repository as owner/name, or a folder on this computer. Empty uses none. Never put a password here.",
+    ),
     text(
         "components.mirror",
         "Components mirror",

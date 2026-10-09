@@ -270,6 +270,7 @@ pub fn component(plan: &DownloadPlan) -> Component {
                 .collect(),
         ),
         notice: None,
+        listing: None,
     }
 }
 

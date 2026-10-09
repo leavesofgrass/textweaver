@@ -126,6 +126,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Say the address of the link at the cursor | `Alt+Shift+K` | `Alt+Shift+K` | `Cmd+Option+Shift+K` | `link_address` |
 | Read again from the start of the current sentence | `Alt+;`, `;` (browse) | `Alt+;`, `;` (browse) | `Cmd+Option+;`, `;` (browse) | `replay_sentence` |
 | Read again from the start of the current paragraph | `Ctrl+R`, `r` (browse) | `Ctrl+R`, `r` (browse) | `Cmd+R`, `r` (browse) | `replay_paragraph` |
+| Say the sentence at the cursor again more slowly, then go back to the usual rate | `Shift+X` (browse) | `Shift+X` (browse) | `Shift+X` (browse) | `repeat_sentence_slower` |
 | Show or hide RSVP: one word at a time, from the cursor | `Alt+Shift+R` | `Alt+Shift+R` | `Cmd+Option+Shift+R` | `rsvp_toggle` |
 | Start or pause RSVP | `Alt+Shift+P` | `Alt+Shift+P` | `Cmd+Option+Shift+P` | `rsvp_play_pause` |
 | RSVP faster | `Alt+Shift+Up`, `Alt+Shift+PageUp` | `Alt+Shift+Up`, `Alt+Shift+PageUp` | `Option+Shift+Up`, `Option+Shift+PageUp` | `rsvp_faster` |
@@ -237,6 +238,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Find text in the document | `Ctrl+F`, `/` (browse) | `Ctrl+F`, `/` (browse) | `Cmd+F`, `/` (browse) | `find` |
 | Find the next match | `F3`, `n` (browse) | `F3`, `n` (browse) | `F3`, `n` (browse) | `find_next` |
 | Find the previous match | `F4`, `Shift+N` (browse) | `Shift+F3`, `Shift+N` (browse) | `Shift+F3`, `Shift+N` (browse) | `find_previous` |
+| Choose how Find and Replace match: case, whole words, regular expression, across lines | palette | palette | palette | `search_options` |
 | Move to the next misspelled word, and spell it | `Alt+M` | `Alt+M` | `Cmd+;` | `next_misspelling` |
 | Move to the previous misspelled word, and spell it | `Alt+Shift+M` | `Alt+Shift+M` | `Cmd+Option+Shift+M` | `previous_misspelling` |
 | List suggestions for the misspelled word at the cursor, or add it to your word list | `Alt+J` | `Alt+J` | `Cmd+Option+J` | `spelling_suggestions` |
@@ -260,6 +262,10 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `Delete` (browse) | `delete_note` |
 | Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `y` (browse) | `highlight_selection` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | palette | palette | palette | `export_study_sheet` |
+| List the tracked changes and comments: Enter goes to one, A accepts a change, R rejects it | `Alt+A` | `Ctrl+Shift+J` | `Cmd+Shift+J` | `list_changes` |
+| Accept every tracked change in the document | palette | palette | palette | `accept_all_changes` |
+| Reject every tracked change in the document | palette | palette | palette | `reject_all_changes` |
+| Add a comment to the selection or the sentence at the cursor | palette | palette | palette | `add_comment` |
 
 ## File
 
@@ -343,6 +349,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 |---|---|---|---|---|
 | Switch to the next color theme | `F5` | `F5` | `F5` | `next_theme` |
 | Show or hide line numbers | `F6` | none | none | `toggle_line_numbers` |
+| Show the original braille of the page at the cursor, in a BRF file read as print | palette | palette | palette | `show_original_braille` |
 | Turn single-key shortcuts on or off, so dictation and typing never trigger commands | `F9` | `F9` | `F9` | `toggle_character_keys` |
 | Cycle the accessibility mode: self-voicing, hybrid, or screen reader | `Alt+Shift+A` | `Alt+Shift+A` | `Cmd+Option+Shift+A` | `cycle_access_mode` |
 | List settings profiles: switch to one, save the current settings as one, rename, delete, import, or export | `Alt+U` | `Ctrl+Shift+U` | `Cmd+Shift+U` | `settings_profiles` |
@@ -460,6 +467,7 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Read the whole document from the start | palette | palette | `read_document` |
 | Say the paragraph at the cursor without moving | palette | palette | `read_paragraph` |
 | Read the selected text | palette | palette | `read_selection` |
+| Say the sentence at the cursor again more slowly, then go back to the usual rate | palette | palette | `repeat_sentence_slower` |
 | Change what reading says: the full text, the first sentence of each paragraph with the headings, or the headings only | palette | palette | `reading_pass` |
 | Read from the next heading | palette | has a chord | `next_heading` |
 | Read from the previous heading | palette | has a chord | `previous_heading` |
@@ -523,7 +531,11 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Say the document's title, how many headings, tables, pictures, and footnotes it has, and about how many minutes are left | `document_overview` |
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
+| Choose how Find and Replace match: case, whole words, regular expression, across lines | `search_options` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
+| Accept every tracked change in the document | `accept_all_changes` |
+| Reject every tracked change in the document | `reject_all_changes` |
+| Add a comment to the selection or the sentence at the cursor | `add_comment` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |
@@ -548,6 +560,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Check the citations: how many there are, and which keys are not in your library | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |
 | Download the dictation model chosen in the settings, after saying its size and license | `download_dictation_model` |
+| Show the original braille of the page at the cursor, in a BRF file read as print | `show_original_braille` |
 | Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | `toggle_header` |
 | Show or hide the toolbar, the bar of Play, Stop and the reading buttons | `toggle_toolbar` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | `color_settings` |

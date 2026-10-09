@@ -19,10 +19,12 @@
 //! - [`install_from()`] does the same from a downloaded zip or a folder
 //!   (managed laptops, accommodation offices): only pinned files that
 //!   match are used, and anything else is refused with the reason.
-//! - [`Sources`] lists where a file may come from: a mirror first, when
-//!   one is set (`[components] mirror` or `TEXTWEAVER_COMPONENTS_MIRROR`),
-//!   then the public address. A mirror may carry a [`manifest`] of extra
-//!   components in the same format.
+//! - [`Sources`] lists where a file may come from: the components source
+//!   first, when one is set (`[components] source`: a folder, or a
+//!   repository written `owner/name`), then a mirror (`[components]
+//!   mirror` or `TEXTWEAVER_COMPONENTS_MIRROR`), then the public address.
+//!   A source or a mirror may carry a [`manifest`], `components.toml`, of
+//!   extra components, each with its version, platform, and action.
 //! - Every request carries the neutral [`USER_AGENT`], never anything
 //!   about the person or the computer (the owner's rule).
 //!
@@ -41,12 +43,13 @@ pub mod manifest;
 mod pin;
 
 pub use component::{Component, FileState, Status};
-pub use download::{Outcome, Progress, Sources, Tenths, download};
+pub use download::{Outcome, Progress, Sources, Tenths, download, source_base};
 pub use error::ComponentError;
 #[cfg(feature = "download")]
 pub use fetch::HttpFetcher;
 pub use fetch::{Fetched, Fetcher, StandardFetcher, can_download, fetch_bytes};
 pub use install::{InstallReport, install_from};
+pub use manifest::{Action, Listing, Platform};
 pub use pin::{Check, FilePin, git_blob_sha1, hash_file, is_plain_name, sha256_hex};
 
 /// The User-Agent sent with every request: the project, nothing personal

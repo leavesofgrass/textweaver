@@ -12,10 +12,14 @@
 //!   Windows; Eloquence for Voxin and DECtalk on Linux) and the IBMTTS
 //!   community dictionaries, beside the program, where the engines look;
 //! - the define-word dictionary (`lexicon/`);
-//! - the licence, the third-party notices, and every data licence file the
-//!   terminal package carries (the check fails if one is missing), and the
-//!   vendored Xilem's licence;
-//! - the quick start and the window's guide (`GUI.md`).
+//! - the licence, the copyright notice (`NOTICE`), the third-party notices,
+//!   and every data licence file the terminal package carries (the check
+//!   fails if one is missing), and the vendored Xilem's licence;
+//! - the quick start and the window's guide (`GUI.md`) at the top;
+//! - the complete user documentation in `docs/`, in the same layout as the
+//!   terminal package (`dist::stage_user_docs`): the index, every guide it
+//!   lists for users, and the offline pages. A missing guide is named in a
+//!   warning and the package still builds.
 //!
 //! The GUI is built with the speech engines `cargo xtask dist` builds into
 //! the terminal programs for the platform (espeak-ng, speech-dispatcher,
@@ -354,6 +358,7 @@ pub fn run() -> anyhow::Result<()> {
     for (src, dest) in FILES.iter().chain(dist::DATA_FILES.iter()) {
         eci::copy(&root.join(src), &stage.join(dest))?;
     }
+    dist::report_doc_warnings(&dist::stage_user_docs(&root, &stage)?);
     dist::stage_notices(&root, &stage)?;
     dist::check_notices(&stage)?;
 

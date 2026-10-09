@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE smil PUBLIC "-//W3C//DTD SMIL 1.0//EN" "http://www.w3.org/TR/REC-smil/SMIL10.dtd">
+<smil>
+<head><meta name="dc:format" content="Daisy 2.02" /><layout><region id="txtView" /></layout></head>
+<body>
+<seq dur="0.0s">
+<par endsync="last" id="par1"><text src="content1.html#c_title" id="t1" /></par>
+<par endsync="last" id="pf1par"><text src="content1.html#c_pf1" id="pf1" /></par>
+<par endsync="last" id="par2"><text src="content1.html#c_h2" id="t2" /></par>
+<par endsync="last" id="pn1par"><text src="content1.html#c_pn1" id="pn1" /></par>
+<par endsync="last" id="par3"><text src="content1.html#c_p1" id="t2b" /></par>
+</seq>
+</body>
+</smil>

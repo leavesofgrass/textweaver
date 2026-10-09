@@ -172,6 +172,9 @@ impl App {
                 self.authoring.question = Some(Question::Open(target, question.clone()));
                 self.ask(&question);
             }
+            (Question::ReplaceAll(question), answer) => {
+                return self.confirm_replace_all(question, answer);
+            }
         }
         vec![Effect::Redraw]
     }

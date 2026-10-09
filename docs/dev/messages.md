@@ -23,7 +23,7 @@ The shape is "Could not VERB OBJECT: CAUSE NEXT STEP." The cause is often the sy
 - Good: "Could not save: { $error } Still editing. Try Save as."
 - Good: "Could not scan the library: { $error } Check the library folders in Settings."
 - Not: "Could not save the profiles: { $error }" (nothing to do next).
-- Tested: `errors_get_a_next_step`. Its list `NO_NEXT_STEP_YET` names the errors still waiting for a next step.
+- Tested: `errors_get_a_next_step`, in all six languages. Every error gives a next step; only the three "Could not open" messages, whose reason is the step, are exempt.
 
 ### 3. Questions: the question first, naming what yes does, then "y or n"
 

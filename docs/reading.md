@@ -85,6 +85,8 @@ The reader opens these formats itself:
 - PDF: `.pdf`, with comments as notes, links you can follow, and filled-in form fields read label first; scanned PDFs through text recognition (below).
 - Pictures of text: `.png`, `.jpg`, `.jpeg`, through text recognition.
 - DAISY 3 books and DTBook: `.opf`, `.xml`, `.dtbook`, and a DAISY book in a zip.
+- DAISY 2.02 books: open the book's `ncc.html`, or the zip it came in. The text is read, not the recorded audio.
+- Braille files: `.brf`, `.brl`, read as print through liblouis (below), and each volume of a braille book in a zip.
 - PowerPoint: `.pptx`, `.pptm`, `.ppsx`, `.potx`, with the speaker notes.
 - Spreadsheets, as tables: `.csv`, `.tsv`, `.tab`, `.ods`, `.xlsx`, `.xlsm`, `.xlsb`.
 - Archives: `.zip`, `.tar`, `.tgz`, `.gz`, `.7z`. Opening one lists the files inside that textweaver can read; `course.zip!week1/notes.md` opens one directly.
@@ -100,6 +102,23 @@ tw convert essay.rst --to md
 The [converting guide](converting.md) explains `tw convert`.
 
 A scanned PDF is a picture of the pages. textweaver recognizes its text (OCR) and reads it like any other PDF, and says that it did, since recognized text can contain mistakes. English needs a one-time download, `tw ocr download`, which asks first; other languages need Tesseract. Until an engine can run, such a PDF reads as one sentence that begins "This PDF has no text layer" and says what is missing. See [Scanned pages](converting.md#scanned-pages-ocr).
+
+### Braille files (BRF)
+
+A BRF file (Braille Ready Format) is a braille book as plain text: each character stands for one braille cell, in the braille ASCII code that embossers and notetakers use, and the file is laid out in braille lines and pages, usually 40 cells by 25 lines. Libraries for blind and print-disabled readers distribute books this way; the braille downloads of the NLS BARD service, for instance, are BRF files in a zip, often one file per volume. Open the zip to see its volumes, and follow a link to open one, or open `book.zip!volume1.brf` directly.
+
+textweaver reads a BRF file as print, so speech, search, notes and export work as they do for any book. It does this in two steps.
+
+1. **It rebuilds the layout.** Braille transcribers follow conventions (BANA's *Braille Formats*, 2016), and textweaver reads them back: a centered line is a heading, a line beginning in cell 5 after a blank line is a subheading, a line indented two cells starts a paragraph, and a line at the margin continues the paragraph above, across a page if need be. The braille page number at the foot of each page is taken out of the text; each braille page becomes a page you can reach with "go to page" and that the title line names. A print page change (a line of dots 3-6 ending in a number) is read as "Print page 12", as a braille reader meets it. A running head repeated at the top of every page is read once.
+2. **It translates the braille back to print** with [liblouis](https://liblouis.io/), the translator most braille software uses, in contracted or uncontracted braille. The code is set by **Braille code of BRF files** in Settings (`[braille] brf_code`): UEB (Unified English Braille, the default) for books produced since 2016, or EBAE (English Braille American Edition) for older American books. If a book reads oddly, with stray letters where words should be, it is probably in the other code: change the setting and open the file again.
+
+The layout rules are heuristics, so poetry, tables and forms may come out with lines joined or split where the transcriber did not intend it. When a file has no layout textweaver can follow (for example, no indents and no blank lines at all), each braille line is read as its own paragraph instead. Mathematics in the Nemeth Code and computer braille are not translated reliably.
+
+**Show original Braille** (in the View menu and the command palette) lists the lines of the braille page the cursor is on, exactly as the file has them, in Unicode braille. A Braille display shows them as the original cells, which is useful for checking a transcription, a mathematical expression, or a layout the print reading lost. Escape returns to the book.
+
+**Without liblouis**, the file opens as braille: the same headings, paragraphs and pages, but each cell shown as a Unicode braille pattern, which a Braille display renders as dots. textweaver says so when the file opens, and how to fix it: install liblouis (from [liblouis.io](https://liblouis.io/) on Windows, or your distribution's `liblouis` package, which provides `lou_translate`, on Linux and macOS), then open the file again.
+
+Only braille files that are distributed in the clear are read. Protected talking books, such as the audio books of NLS BARD, are not opened: textweaver does not touch any library's protection or terms.
 
 ## What the screen shows
 
@@ -171,6 +190,23 @@ An empty line is read as "blank". Pressing **Space** right after one of these ke
 
 - **;** or **Alt+;**: read again from the start of the current sentence.
 - **r** or **Ctrl+R**: read again from the start of the current paragraph.
+- **Shift+X**: repeat slower. textweaver says the current sentence again, 60 words per minute slower than your rate, then goes back to your rate. While reading on, reading continues after the sentence at the usual speed; otherwise it stops after the sentence. It is also **Repeat slower** in the Reading menu and the command palette. Your rate setting does not change.
+
+### Stop at the end of a section
+
+To read one section at a time, set **Stop at section end** in Settings (`[reading] stop_at`):
+
+- **never** (the default): reading goes on to the end of the document.
+- **next heading**: reading stops just before the next heading of any level.
+- **next chapter**: reading stops just before the next chapter: a section break when the document has them, otherwise a level 1 heading.
+
+When reading stops, you hear "End of section." and the key that goes on, such as "End of section. Ctrl+Space to go on." The cursor is on the next heading, so **Enter** in the document, or the read key, reads the next section, which stops at its end in turn.
+
+### Reading timer
+
+To read for a set time, set **Reading timer** in Settings (`[reading] stop_after_minutes`) to a number of minutes; 0, the default, turns it off. When that much reading time has passed, reading finishes the sentence it is in and stops, and you hear "Time is up after 20 minutes." and the key that goes on. The cursor is on the next sentence.
+
+Only reading time counts: pausing stops the clock, and resuming starts it again. Stopping with **Escape**, reaching the end of the document, or the timer running out starts the clock over at the next reading.
 
 ### Skim: reading passes, Shift+F
 
@@ -332,9 +368,10 @@ Other moves still work. A heading, find, or bookmark jump moves the Speech Curso
 
 Press **Ctrl+F** or **/**. Type what to find and press **Enter**.
 
-- Search ignores case.
-- To search with a regular expression, write it between slashes, for example `/colou?r/`.
+- Search ignores case, unless you turn on **Match case** in the search options (below).
+- To search with a regular expression, write it between slashes, for example `/colou?r/`, or turn on **Regular expression** in the search options.
 - The search starts at the cursor. When there is no match after it, it wraps to the top.
+- A regular expression that is not valid is said in words, with the character where it goes wrong, for example "Invalid pattern at character 3: unclosed group." Nothing is searched.
 
 You hear the match number, the count, and the line, for example "Match 2 of 5:" followed by the text of that line. With no match, you hear "No matches for", then your text.
 
@@ -344,6 +381,17 @@ You hear the match number, the count, and the line, for example "Match 2 of 5:" 
 - **F4** or **Shift+N**: previous match (**Shift+F3** in the window).
 
 At the end, the search wraps and says "Wrapped to top." or "Wrapped to bottom." If you have not searched yet, these keys open the Find prompt. The window uses **F3** and **Shift+F3**, as other Windows programs do, besides **n** and **Shift+N**.
+
+### Search options
+
+**Search options**, in the Edit menu under Find and in the command palette, is a short list of four switches that Find and Find and replace share. Press **Enter** on one, or its letter, to turn it on or off; you hear its new state, and the list stays open until **Escape**.
+
+- **Match case** (**c**): off by default, so `cat` also finds `Cat`.
+- **Whole words only** (**w**): on, `cat` does not find `catalog`.
+- **Regular expression** (**x**): the text to find is a regular expression, such as `colou?r` or `\d+`. `^` and `$` match at the start and end of a line, and `\n` or `\s` can match a line break.
+- **Across lines** (**l**): with a regular expression, `.` matches a line break too, so a match can run on from one line to the next.
+
+The options last until you quit, and all start off. When one is on, the Find prompt says so as it opens, for example "Find. Options on: regular expression."
 
 ### Clear the search
 
@@ -435,6 +483,45 @@ sentences = 7
 
 The stop words the method leaves out ("the", "and", "of") are English. Documents in other languages still get a summary, a little less sharp.
 
+## Tracked changes and comments: Ctrl+Shift+J or Alt+A
+
+A Word document (and an OpenDocument or RTF file) can carry tracked changes, the edits a reviewer made with Track Changes on, and comments. textweaver reads the final text by default; `[reading] revisions` in the settings chooses whether the changes are also said in place ("(inserted by Ada Example: renal)").
+
+**The changes list.** Press **Ctrl+Shift+J** in the window or **Alt+A** in the terminal reader, or choose **Changes and comments** from the Bookmarks menu or the command palette. Every change and every comment thread is one row, in document order, with what it is first:
+
+- "Inserted: 'renal', by Ada Example, Tuesday, March 3, 2026"
+- "Deleted: 'rarely', by Bo Example, date not recorded"
+- "Moved here: 'check the labs first', by Ada Example, Thursday, March 5, 2026"
+- "Comment by Bo Example: check this date, 1 reply, resolved"
+
+The date is the one the document gives, said in full. When the document gives none, the row says "date not recorded"; textweaver never guesses one. A move is two rows, "Moved away" where the text was and "Moved here" where it went.
+
+**Keys in the list:**
+
+- **Enter** goes to the change or comment and says its line.
+- **A** accepts the change, **R** rejects it.
+- **Shift+A** and **Shift+R** accept or reject every change by the same author.
+- On a comment: **F2** replies, **Space** resolves it or opens it again, **Delete** deletes it and its replies (after a y or n question).
+- **N** adds a comment to the selection, or to the sentence at the cursor.
+
+To accept or reject every change at once, use **Accept all changes** or **Reject all changes** from the Bookmarks menu or the palette. **Add comment** adds a comment without opening the list.
+
+Accepting an insertion keeps its text; rejecting it removes the text. Accepting a deletion removes the text; rejecting it puts the text back. The document you are reading changes at once, so reading, search, and the study tools see the result. Comments are notes too: a reply, a resolve, or a delete shows in the notes list as well. Replies and new comments carry the name in `[editing] author` (empty unless you fill it; textweaver never takes it from your computer) and the date from the clock.
+
+Accepting and rejecting do not change the file yet. Reopen the file and its changes are there again. Writing your decisions back into the Word file comes with a later beta 1 task; until then, `tw changes` writes a copy.
+
+Changes stay as they are in edit mode: leave edit mode to accept or reject them.
+
+**From the command line**, `tw changes` prints the same rows, one per line:
+
+```sh
+tw changes draft.docx
+tw changes draft.docx --json
+tw changes draft.docx --accept-all --out final.md
+tw changes draft.docx --reject-all --out original.docx
+```
+
+`--json` prints each change (its kind, text, author, date, and position) and each comment thread as the document records them. `--accept-all` or `--reject-all` with `--out FILE` writes the document with every change decided, in the format the file name's extension names: Markdown (`.md`), plain text (`.txt`), HTML, or `.docx`, `.epub`, `.pdf`, and `.brf`. The original file is never changed.
 ## Go back and forward
 
 textweaver keeps a history of your jumps, like the Back button of a web browser.
@@ -619,7 +706,7 @@ An unknown name gives "Unknown command:" and your text.
 
 These keys work in every prompt, including Find, Go to, and Open file:
 
-- **Up** and **Down**: earlier answers to the same prompt (except in the palette, where they go through the commands). The last 50 are kept until you quit.
+- **Up** and **Down**: earlier answers to the same prompt (except in the palette, where they go through the commands). The last 50 are kept until you quit. Find and the "find what" of Find and replace share their history.
 - **Ctrl+A** and **Home**: to the start. **Ctrl+E** and **End**: to the end.
 - **Ctrl+U**: delete to the start. **Ctrl+K**: delete to the end. **Ctrl+W**: delete the word before the cursor.
 - **Escape** or **Ctrl+G**: cancel.

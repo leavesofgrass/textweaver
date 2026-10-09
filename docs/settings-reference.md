@@ -78,6 +78,8 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading.math_engine`: default textweaver (`"builtin"`). Math speech. Which engine reads math aloud. textweaver's own, or MathCAT in ClearSpeak or SimpleSpeak, in the document's language. MathCAT needs a version that includes it; otherwise textweaver's own is used. Choices: `"builtin"` (textweaver), `"mathcat"` (MathCAT ClearSpeak), `"mathcat_simplespeak"` (MathCAT SimpleSpeak). Syncs between computers.
 - `reading.math_display`: default `"source"`. Math on screen. How math looks in the reading view. As its source, such as x^2, or as Unicode, such as x with a superscript 2. Speech and edit mode always use the source. Choices: `"source"`, `"unicode"` (Unicode). Syncs between computers.
 - `reading.revisions`: default automatic (`"auto"`). Tracked changes. How tracked changes in Word, OpenDocument, and RTF files are read. Said in place at high verbosity (automatic), always said, or never said, reading the final text. Applies when a document is opened. Choices: `"auto"` (automatic), `"marked"` (always say them), `"final"` (final text only). Syncs between computers.
+- `reading.stop_at`: default never (`"off"`). Stop at section end. Where continuous reading stops by itself and says End of section. Never, at the next heading of any level, or at the next chapter: a section break, else a level 1 heading. Reading goes on from the heading with the read key. Choices: `"off"` (never), `"heading"` (next heading), `"chapter"` (next chapter). Syncs between computers.
+- `reading.stop_after_minutes`: default 0 minutes. Reading timer. Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off. From 0 to 240 minutes, in steps of 5. Syncs between computers.
 
 ## Display: the `[display]` section
 
@@ -123,6 +125,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 ## Export: the `[export]` section
 
+- `export.audio_format`: default FLAC (`"flac"`). Audio export format. The format Export audio lists first. tw export-audio also uses it for a file name with no extension. Choices: `"flac"` (FLAC), `"mp3"` (MP3), `"opus"` (Opus), `"ogg"` (Ogg Vorbis), `"wav"` (WAV), `"m4b"` (M4B audiobook), `"mp4"` (MP4 video with captions). Syncs between computers.
 - `export.subtitle_format`: default SubRip (`"srt"`). Subtitle format. The format of subtitles written without a file name. Choices: `"srt"` (SubRip), `"vtt"` (WebVTT), `"ass"` (ASS karaoke). Syncs between computers.
 - `export.subtitle_karaoke`: default Off (`"off"`). Subtitle karaoke. How subtitle lines show the word being read. Off, underlined as it is spoken (WebVTT tags), or one cue per word in bold and underline. Choices: `"off"` (Off), `"tags"` (Underline as spoken), `"lines"` (One cue per word). Syncs between computers.
 - `export.subtitle_chapters`: default off (`false`). Chapters file. Also write a WebVTT chapters file beside the subtitles or the audio. On or off: `true` or `false`. Syncs between computers.
@@ -133,6 +136,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 - `braille.math_code`: default Nemeth (`"nemeth"`). Math braille. The braille code for math in BRF files and while exploring a formula with MathCAT. Nemeth, or UEB mathematics. It needs a version that includes MathCAT; otherwise math is written as its spoken words. Choices: `"nemeth"` (Nemeth), `"ueb"` (UEB). Syncs between computers.
 - `braille.table_format`: default `"linear"`. Braille tables. How BRF files lay out tables. Linear, one row per line with semicolons between entries; listed, each row a heading with each entry on its own line after its column heading; or stairstep, each entry two cells right of the one before, for tables of up to four columns. Choices: `"linear"`, `"listed"`, `"stairstep"`. Syncs between computers.
+- `braille.brf_code`: default UEB (`"ueb"`). Braille code of BRF files. The braille code BRF files are read in. UEB is for books made since 2016; EBAE, English Braille American Edition, is for older books. Reading a BRF file as print needs liblouis. Open the file again after a change. Choices: `"ueb"` (UEB), `"ebae"` (EBAE). Syncs between computers.
 
 ## Reading aids: the `[reading_aids]` section
 
@@ -251,6 +255,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 ## Optional components: the `[components]` section
 
+- `components.source`: default empty (`""`). Components source. Your own components, used first. A GitHub repository as owner/name, or a folder on this computer. Empty uses none. Never put a password here. Text. Stays on this computer.
 - `components.mirror`: default empty (`""`). Components mirror. Where optional components come from first: an https address or a folder on this computer. Empty uses their public sources. Never put a password here. Text. Stays on this computer.
 
 ## Kept by textweaver

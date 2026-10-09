@@ -650,8 +650,9 @@ fn group_digits(n: usize) -> String {
     out
 }
 
-/// A DAISY book (its package file names a DTBook) or an EPUB (its
-/// `mimetype` says so) inside the archive, loaded; `None` otherwise.
+/// A DAISY 3 book (its package file names a DTBook), a DAISY 2.02 book
+/// (its `ncc.html`), or an EPUB (its `mimetype` says so) inside the
+/// archive, loaded; `None` otherwise.
 fn open_book(
     input: &Input,
     entries: &[Entry],
@@ -696,6 +697,24 @@ fn open_book(
             }
         };
         let mut doc = crate::daisy::load_package(&opf.name, &text, &mut read, options)?;
+        restore_identity(&mut doc, source);
+        return Ok(Some(doc));
+    }
+    // A DAISY 2.02 book: the shallowest `ncc.html`.
+    if let Some(ncc) = entries
+        .iter()
+        .filter(|e| crate::daisy2::is_ncc_name(&e.name))
+        .min_by_key(|e| e.name.matches('/').count())
+    {
+        let text = input.read(&ncc.name).map_err(bad)?;
+        let mut read = |name: &str| -> Result<Option<Vec<u8>>, LoadError> {
+            match input.read(name) {
+                Ok(b) => Ok(Some(b)),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
+                Err(e) => Err(LoadError::Parse(e.to_string())),
+            }
+        };
+        let mut doc = crate::daisy2::load_ncc(&ncc.name, &text, &mut read, options)?;
         restore_identity(&mut doc, source);
         return Ok(Some(doc));
     }

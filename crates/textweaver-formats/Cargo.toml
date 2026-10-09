@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-formats"
-description = "textweaver document loaders: loader trait, registry, text, Markdown with Obsidian notes, HTML, EPUB, DOCX, RTF, ODT, LaTeX, email, web archives, PDF with OCR, DAISY, PowerPoint, spreadsheets, archives, JSON and notebooks, SVG, MathML, web pages, and Pandoc for other formats"
+description = "textweaver document loaders: loader trait, registry, text, Markdown with Obsidian notes, HTML, EPUB, DOCX, RTF, ODT, LaTeX, email, web archives, PDF with OCR, DAISY, braille (BRF) files, PowerPoint, spreadsheets, archives, JSON and notebooks, SVG, MathML, web pages, and Pandoc for other formats"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -59,6 +59,15 @@ impl Paths {
         self.config_dir.join("keymap.toml")
     }
 
+    /// The components folder, `components/` in the data folder: where
+    /// optional components from a source or a mirror are installed, each
+    /// in its own folder. Helper programs and libraries found here
+    /// (ffmpeg, libespeak-ng, an ECI library) are used before the
+    /// system's ([`find_in_components`]).
+    pub fn components_dir(&self) -> PathBuf {
+        self.data_dir.join(COMPONENTS_DIR)
+    }
+
     /// Per-document state directory.
     pub fn state_dir(&self) -> PathBuf {
         self.data_dir.join("state")
@@ -138,9 +147,101 @@ fn home_override(value: Option<std::ffi::OsString>) -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
+/// The components folder's name in the data folder.
+pub const COMPONENTS_DIR: &str = "components";
+
+/// The deepest [`find_in_components`] looks: an unpacked archive keeps
+/// its program a few folders down (`ffmpeg/<build>/bin/ffmpeg.exe`).
+const FIND_DEPTH: usize = 5;
+
+/// The most entries [`find_in_components`] looks at.
+const FIND_ENTRIES: usize = 20_000;
+
+/// The components folder of this computer's textweaver
+/// ([`Paths::platform`], so `TEXTWEAVER_HOME` moves it too).
+///
+/// shortcut: a frontend started with other paths (tests, `--home`) still
+/// searches the platform folder; pass the folder to the lookups' `_in`
+/// forms when that matters.
+pub fn components_dir() -> Option<PathBuf> {
+    Paths::platform().ok().map(|p| p.components_dir())
+}
+
+/// The first file under `dir` named one of `names` (compared without
+/// regard to case on Windows and macOS), searched breadth first in name
+/// order, at most a few folders deep: a helper program or library a
+/// component placed or unpacked there. `None` when `dir` is missing.
+pub fn find_in_components(dir: &Path, names: &[&str]) -> Option<PathBuf> {
+    let fold = cfg!(any(windows, target_os = "macos"));
+    let wanted = |n: &str| {
+        names.iter().any(|w| {
+            if fold {
+                w.eq_ignore_ascii_case(n)
+            } else {
+                *w == n
+            }
+        })
+    };
+    let mut level = vec![dir.to_owned()];
+    let mut seen = 0usize;
+    for _ in 0..=FIND_DEPTH {
+        let mut next = Vec::new();
+        for d in level {
+            let Ok(read) = std::fs::read_dir(&d) else {
+                continue;
+            };
+            let mut entries: Vec<_> = read.filter_map(Result::ok).collect();
+            entries.sort_by_key(|e| e.file_name());
+            for e in entries {
+                seen += 1;
+                if seen > FIND_ENTRIES {
+                    return None;
+                }
+                let Ok(kind) = e.file_type() else { continue };
+                if kind.is_dir() {
+                    next.push(e.path());
+                } else if kind.is_file() && wanted(&e.file_name().to_string_lossy()) {
+                    return Some(e.path());
+                }
+            }
+        }
+        if next.is_empty() {
+            break;
+        }
+        level = next;
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_helper_is_found_in_the_components_folder() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = Paths::under(tmp.path()).components_dir();
+        assert_eq!(find_in_components(&root, &["ffmpeg"]), None);
+        let bin = root.join("ffmpeg").join("ffmpeg-9.0.2-win64").join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        std::fs::write(bin.join("ffprobe"), b"x").unwrap();
+        std::fs::write(bin.join("ffmpeg"), b"x").unwrap();
+        assert_eq!(
+            find_in_components(&root, &["ffmpeg.exe", "ffmpeg"]),
+            Some(bin.join("ffmpeg"))
+        );
+        // A shallower copy wins.
+        std::fs::write(root.join("ffmpeg").join("ffmpeg"), b"x").unwrap();
+        assert_eq!(
+            find_in_components(&root, &["ffmpeg"]),
+            Some(root.join("ffmpeg").join("ffmpeg"))
+        );
+        // Too deep is not looked at.
+        let deep = (0..=FIND_DEPTH + 1).fold(root.join("deep"), |p, i| p.join(i.to_string()));
+        std::fs::create_dir_all(&deep).unwrap();
+        std::fs::write(deep.join("libtts.so"), b"x").unwrap();
+        assert_eq!(find_in_components(&root, &["libtts.so"]), None);
+    }
 
     #[test]
     fn an_empty_home_override_is_ignored() {

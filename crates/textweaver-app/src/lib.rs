@@ -155,7 +155,9 @@ mod audio_export;
 mod authoring;
 mod authoring_state;
 mod batch;
+mod braille_file;
 pub mod browse;
+pub mod changes;
 mod overview;
 // In-reader export, preview, and citations: the full modules with the
 // `publish` feature, stand-ins that say "not in this build" without it.
@@ -217,10 +219,12 @@ mod publish;
 mod publish;
 mod reading_aids;
 mod reading_form;
+mod relations;
 mod relocate;
 mod replace;
 mod restart;
 pub mod rpc;
+mod search_options;
 pub mod settings_io;
 pub mod settings_schema;
 mod speech_cursor;
@@ -250,6 +254,7 @@ mod words;
 mod writer;
 mod writes;
 
+pub use about::{COPYRIGHT, VERSION_TEXT};
 pub use access::{
     SENTENCE_GAP, STATUS_TEXT_LIMIT, access_mode_from_setting, access_mode_setting, digit_row,
     keymap_preset, sentence_duration, startup_keymap,
@@ -287,7 +292,9 @@ pub use playback::{
     Playback, load_options, narration_policy, plan_with_written_pauses, structural_pauses,
 };
 pub use reading_form::{READING_SETTINGS, SpacingPreset, is_reading_setting};
+pub use replace::ReplaceStep;
 pub use restart::SpeechStarter;
+pub use search_options::SearchOptions;
 pub use settings_schema::{
     Frontend, Setting, SettingKind, SettingsSchema, TERMINAL_ONLY, WINDOW_ONLY,
 };

@@ -870,6 +870,34 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
+   "action": "Say the sentence at the cursor again more slowly, then go back to the usual rate",
+   "category": "Reading",
+   "gui": [
+    {
+     "key": "Shift+X",
+     "layer": "browse"
+    }
+   ],
+   "id": "repeat_sentence_slower",
+   "mac": [
+    {
+     "key": "Shift+X",
+     "layer": "browse"
+    }
+   ],
+   "palette_when_off": {
+    "gui": true,
+    "terminal": true
+   },
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Shift+X",
+     "layer": "browse"
+    }
+   ]
+  },
+  {
    "action": "Show or hide RSVP: one word at a time, from the cursor",
    "category": "Reading",
    "gui": [
@@ -3664,6 +3692,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
+   "action": "Choose how Find and Replace match: case, whole words, regular expression, across lines",
+   "category": "Search",
+   "gui": [],
+   "id": "search_options",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
    "action": "Move to the next misspelled word, and spell it",
    "category": "Search",
    "gui": [
@@ -4163,6 +4201,61 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Bookmarks and notes",
    "gui": [],
    "id": "export_study_sheet",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "List the tracked changes and comments: Enter goes to one, A accepts a change, R rejects it",
+   "category": "Bookmarks and notes",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+J",
+     "layer": "global"
+    }
+   ],
+   "id": "list_changes",
+   "mac": [
+    {
+     "key": "Cmd+Shift+J",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+A",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Accept every tracked change in the document",
+   "category": "Bookmarks and notes",
+   "gui": [],
+   "id": "accept_all_changes",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Reject every tracked change in the document",
+   "category": "Bookmarks and notes",
+   "gui": [],
+   "id": "reject_all_changes",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Add a comment to the selection or the sentence at the cursor",
+   "category": "Bookmarks and notes",
+   "gui": [],
+   "id": "add_comment",
    "mac": [],
    "palette_when_off": null,
    "source": "keymap",
@@ -5506,6 +5599,16 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "layer": "global"
     }
    ]
+  },
+  {
+   "action": "Show the original braille of the page at the cursor, in a BRF file read as print",
+   "category": "View and help",
+   "gui": [],
+   "id": "show_original_braille",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
   },
   {
    "action": "Turn single-key shortcuts on or off, so dictation and typing never trigger commands",

@@ -13,7 +13,7 @@ use textweaver_tui::{Options, launch};
 #[derive(Parser, Debug)]
 #[command(
     name = "textweaver",
-    version,
+    version = textweaver_app::VERSION_TEXT,
     about = "Read documents aloud in the terminal: text, Markdown, HTML, EPUB, Word, and PDF. Inside, Space reads and pauses, Escape stops, h moves by heading, F1 opens the help, ? lists every key, and Ctrl+Q quits."
 )]
 struct Args {

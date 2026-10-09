@@ -765,7 +765,10 @@ impl DocumentView {
         let delta = model.doc_len as isize - old.doc_len as isize;
         let shift = |p: CharPos| CharPos((p.0 as isize + delta).max(0) as usize);
         let same_text = |a: &Paragraph, b: &Paragraph| {
-            a.text == b.text && a.heading == b.heading && a.has_break == b.has_break
+            a.text == b.text
+                && a.heading == b.heading
+                && a.has_break == b.has_break
+                && a.list == b.list
         };
         if model.separator != old.separator {
             return Err(Box::new(model));
@@ -935,7 +938,7 @@ impl DocumentView {
                     continue;
                 };
                 let q = &old.paragraphs[i];
-                if q.text != p.text || q.heading != p.heading {
+                if q.text != p.text || q.heading != p.heading || q.list != p.list {
                     continue;
                 }
                 if !same_sep || old_styles[i] != new_styles[j] {
@@ -989,8 +992,8 @@ impl DocumentView {
         if this.widget.editing != on {
             this.widget.editing = on;
             this.widget.state.anchor = None;
-            // List markers and their indent are drawn in reading mode
-            // only: lay the text out again (the nodes keep their ids).
+            // A numbered item's number is drawn in reading mode only:
+            // lay the text out again (the nodes keep their ids).
             let w = &mut *this.widget;
             w.layouts.clear();
             w.line_starts.iter_mut().for_each(|l| *l = None);
@@ -1228,33 +1231,37 @@ impl DocumentView {
         // A list item: its hanging indent by depth, and its bullet or
         // number in the body font, laid out once (drawn only).
         let em = f64::from(size);
-        // In edit mode the source's own dash or number shows, so the list
-        // is not drawn: no hanging indent and no marker.
-        let list = p.list.as_ref().filter(|_| !self.editing);
+        // In edit mode too, so the nesting shows while writing; the
+        // source's own text is unchanged. A numbered item's number is in
+        // the source, so edit mode draws only its indent; a bullet's shape
+        // shows the depth, which the source's dash does not.
+        let list = p.list.as_ref();
         let indent = list.map_or(0.0, |l| {
             (f64::from(l.level.max(1)) * em * LIST_INDENT_EM).min(self.column / 2.0)
         });
-        let marker = list.map(|l| {
-            // A bullet is drawn as a shape, in the box of the disc glyph
-            // (which every bundled font has), so it sits where text would.
-            let glyph = if l.bullet().is_some() {
-                "\u{2022}"
-            } else {
-                l.glyph()
-            };
-            let mut mb = lcx.ranged_builder(fcx, glyph, 1.0, true);
-            mb.push_default(StyleProperty::FontFamily(FontFamily::Source(
-                self.font.family.clone().into(),
-            )));
-            mb.push_default(StyleProperty::FontSize(size));
-            mb.push_default(StyleProperty::Brush(BrushIndex(B_TEXT)));
-            if self.font.bold {
-                mb.push_default(StyleProperty::FontWeight(FontWeight::BOLD));
-            }
-            let mut layout = mb.build(glyph);
-            layout.break_all_lines(None);
-            layout
-        });
+        let marker = list
+            .filter(|l| !self.editing || l.bullet().is_some())
+            .map(|l| {
+                // A bullet is drawn as a shape, in the box of the disc glyph
+                // (which every bundled font has), so it sits where text would.
+                let glyph = if l.bullet().is_some() {
+                    "\u{2022}"
+                } else {
+                    l.glyph()
+                };
+                let mut mb = lcx.ranged_builder(fcx, glyph, 1.0, true);
+                mb.push_default(StyleProperty::FontFamily(FontFamily::Source(
+                    self.font.family.clone().into(),
+                )));
+                mb.push_default(StyleProperty::FontSize(size));
+                mb.push_default(StyleProperty::Brush(BrushIndex(B_TEXT)));
+                if self.font.bold {
+                    mb.push_default(StyleProperty::FontWeight(FontWeight::BOLD));
+                }
+                let mut layout = mb.build(glyph);
+                layout.break_all_lines(None);
+                layout
+            });
         let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
         b.push_default(StyleProperty::FontFamily(FontFamily::Source(
             self.font.family.clone().into(),
