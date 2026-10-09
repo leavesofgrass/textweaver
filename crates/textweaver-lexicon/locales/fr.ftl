@@ -4095,7 +4095,7 @@ gui-reading-closed = Paramètres de lecture fermés.
 ## B1-r5: braille (BRF) files read as print. $page is a braille page
 ## number ("3", "p1"); $n is a number of lines; $reason is an error.
 setting-braille-brf-code = Code braille des fichiers BRF
-setting-braille-brf-code-help = Le code braille dans lequel les fichiers BRF sont lus à l'ouverture : UEB, pour les livres faits depuis 2016, ou EBAE, English Braille American Edition, pour les livres plus anciens. Lire un fichier BRF en noir demande liblouis. Rouvrez le fichier après un changement.
+setting-braille-brf-code-help = Le code braille dans lequel les fichiers BRF sont lus. UEB sert aux livres faits depuis 2016 ; EBAE, English Braille American Edition, aux livres plus anciens. Lire un fichier BRF en noir demande liblouis. Rouvrez le fichier après un changement.
 choice-braille-brf-code-ueb = UEB
 choice-braille-brf-code-ebae = EBAE
 name-show-original-braille = Afficher le braille d'origine

@@ -4357,7 +4357,7 @@ gui-reading-closed = أُغلقت إعدادات القراءة.
 ## B1-r5: braille (BRF) files read as print. $page is a braille page
 ## number ("3", "p1"); $n is a number of lines; $reason is an error.
 setting-braille-brf-code = رمز برايل لملفات BRF
-setting-braille-brf-code-help = رمز برايل الذي تُقرأ به ملفات BRF عند فتحها: UEB للكتب المصنوعة منذ 2016، أو EBAE، أي English Braille American Edition، للكتب الأقدم. قراءة ملف BRF كنص مطبوع تحتاج إلى liblouis. افتح الملف مرة أخرى بعد أي تغيير.
+setting-braille-brf-code-help = رمز برايل الذي تُقرأ به ملفات BRF. UEB للكتب المصنوعة منذ 2016، وEBAE، أي English Braille American Edition، للكتب الأقدم. قراءة ملف BRF كنص مطبوع تحتاج إلى liblouis. افتح الملف مرة أخرى بعد أي تغيير.
 choice-braille-brf-code-ueb = UEB
 choice-braille-brf-code-ebae = EBAE
 name-show-original-braille = عرض برايل الأصلي

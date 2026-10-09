@@ -748,7 +748,7 @@ mod tests {
             ids.push("image");
         }
         ids.extend([
-            "daisy", "pptx", "sheet", "archive", "json", "notebook", "svg", "mathml",
+            "daisy", "brf", "pptx", "sheet", "archive", "json", "notebook", "svg", "mathml",
         ]);
         // Pandoc is never a built-in (see `Registry::with_pandoc`).
         ids.extend(["low", "high"]);
