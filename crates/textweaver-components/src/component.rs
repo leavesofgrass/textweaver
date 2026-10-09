@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
 use crate::error::ComponentError;
+use crate::manifest::Listing;
 use crate::pin::{FilePin, hash_file, is_plain_name};
 
 /// An optional component: a model, font, or voice textweaver can use but
@@ -30,6 +31,9 @@ pub struct Component {
     /// A license file written beside the files when it is installed: its
     /// name and text (Lexend's `OFL.txt`).
     pub notice: Option<(Cow<'static, str>, Cow<'static, str>)>,
+    /// What a source's `components.toml` said beyond the pins (version,
+    /// platform, action); `None` for a built-in component.
+    pub listing: Option<Listing>,
 }
 
 /// Whether a component is installed, from the files' sizes (quick; the
@@ -68,6 +72,16 @@ impl Component {
     /// The size for a person: "79.3 MB".
     pub fn size_text(&self) -> String {
         crate::size_text(self.size())
+    }
+
+    /// The folder holding its files in a source or a mirror: on GitHub, the
+    /// release's tag. `<id>-<version>` when its list gives a version
+    /// (`ffmpeg-9.0.2`), else the id (`whisper-base.en`).
+    pub fn release(&self) -> String {
+        match &self.listing {
+            Some(l) if !l.version.is_empty() => format!("{}-{}", self.id, l.version),
+            _ => self.id.to_string(),
+        }
     }
 
     /// The folder it is installed in under `data_dir`.
@@ -211,6 +225,7 @@ pub(crate) mod tests_support {
             }]
             .into(),
             notice: None,
+            listing: None,
         }
     }
 }

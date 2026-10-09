@@ -13,8 +13,9 @@
 //! libespeak-ng is loaded at run time with `libloading`, not linked, so one
 //! binary (the Linux AppImage, for instance) works with or without
 //! libespeak-ng installed: without it the backend reports itself
-//! unavailable and another engine speaks. [`LIBRARY_ENV`] names a file to
-//! try first, then the usual names for the platform
+//! unavailable and another engine speaks. A copy in textweaver's
+//! components folder is tried first ([`component_library`]), then the file
+//! [`LIBRARY_ENV`] names, then the usual names for the platform
 //! ([`library_candidates`]). The library stays loaded for the life of the
 //! process. Building needs no espeak-ng headers or library.
 //!
@@ -173,6 +174,31 @@ pub fn library_candidates() -> &'static [&'static str] {
     }
 }
 
+/// libespeak-ng in textweaver's components folder, placed or unpacked
+/// there from a components source: tried before everything else.
+pub fn component_library() -> Option<std::path::PathBuf> {
+    let names: &[&str] = if cfg!(windows) {
+        &["libespeak-ng.dll"]
+    } else if cfg!(target_os = "macos") {
+        &["libespeak-ng.1.dylib", "libespeak-ng.dylib"]
+    } else {
+        &["libespeak-ng.so.1", "libespeak-ng.so"]
+    };
+    let dir = textweaver_store::components_dir()?;
+    textweaver_store::find_in_components(&dir, names)
+}
+
+/// The folder to hand `espeak_Initialize` for a library at `lib`: its own
+/// folder when `espeak-ng-data` is beside it (a copy from the components
+/// folder carries its data), else `None` (the installed data).
+fn data_dir_beside(lib: &std::path::Path) -> Option<std::ffi::CString> {
+    let dir = lib.parent()?;
+    if !dir.join("espeak-ng-data").is_dir() {
+        return None;
+    }
+    std::ffi::CString::new(dir.to_str()?).ok()
+}
+
 type InitializeFn = unsafe extern "C" fn(espeak_AUDIO_OUTPUT, c_int, *const c_char, c_int) -> c_int;
 type SetSynthCallbackFn = unsafe extern "C" fn(t_espeak_callback);
 type SynthFn = unsafe extern "C" fn(
@@ -211,6 +237,9 @@ struct Api {
     /// `espeak_TextToPhonemes` (since eSpeak NG 1.49), for Piper's
     /// phonemizer; `None` in a library too old to have it.
     text_to_phonemes: Option<TextToPhonemesFn>,
+    /// The data folder for `espeak_Initialize` when the library came with
+    /// its own ([`data_dir_beside`]); `None` uses the installed data.
+    data_dir: Option<std::ffi::CString>,
     /// Keeps the library mapped: the function pointers above point into
     /// it. The `Api` lives in a static, so it is never unloaded.
     _library: Library,
@@ -231,18 +260,28 @@ unsafe fn symbol<T: Copy>(lib: &Library, name: &str) -> Result<T, String> {
 
 impl Api {
     fn open() -> Result<Self, String> {
+        let from_components = component_library();
+        let data_dir = from_components.as_deref().and_then(data_dir_beside);
         let from_env = std::env::var_os(LIBRARY_ENV).filter(|v| !v.is_empty());
         let mut tried = Vec::new();
         let mut library = None;
-        for name in from_env
+        let mut data = None;
+        for (i, name) in from_components
+            .map(OsString::from)
             .into_iter()
+            .chain(from_env)
             .chain(library_candidates().iter().map(OsString::from))
+            .enumerate()
         {
             // SAFETY: loading libespeak-ng runs its initializers, which set
             // up only its own globals (it is a plain C library).
             match unsafe { Library::new(&name) } {
                 Ok(lib) => {
                     library = Some(lib);
+                    // Only the components folder's copy brings its data.
+                    if i == 0 {
+                        data = data_dir.clone();
+                    }
                     break;
                 }
                 Err(e) => tried.push(format!("{}: {e}", name.to_string_lossy())),
@@ -270,6 +309,7 @@ impl Api {
                 synchronize: symbol(&lib, "espeak_Synchronize")?,
                 terminate: symbol(&lib, "espeak_Terminate")?,
                 text_to_phonemes: symbol(&lib, "espeak_TextToPhonemes").ok(),
+                data_dir: data,
                 _library: lib,
             })
         }
@@ -280,6 +320,17 @@ static API: OnceLock<Result<Api, String>> = OnceLock::new();
 
 fn api() -> Result<&'static Api, &'static str> {
     API.get_or_init(Api::open).as_ref().map_err(String::as_str)
+}
+
+/// The data folder to hand `espeak_Initialize`: the components folder's
+/// copy's own, or null for the installed data.
+pub fn data_path() -> *const c_char {
+    match api() {
+        Ok(Api {
+            data_dir: Some(d), ..
+        }) => d.as_ptr(),
+        _ => std::ptr::null(),
+    }
 }
 
 /// Loads libespeak-ng (once). The error says which files were tried.
@@ -504,6 +555,16 @@ mod tests {
         assert_eq!(offset_of!(espeak_VOICE, spare), 3 * ptr + 8);
         assert_eq!(size_of::<espeak_VOICE>(), if ptr == 8 { 40 } else { 24 });
         assert_eq!(align_of::<espeak_VOICE>(), ptr);
+    }
+
+    #[test]
+    fn a_copy_with_its_data_brings_its_folder() {
+        let tmp = tempfile::tempdir().unwrap();
+        let lib = tmp.path().join("libespeak-ng.dll");
+        assert_eq!(data_dir_beside(&lib), None);
+        std::fs::create_dir_all(tmp.path().join("espeak-ng-data")).unwrap();
+        let got = data_dir_beside(&lib).unwrap();
+        assert_eq!(got.to_str().unwrap(), tmp.path().to_str().unwrap());
     }
 
     /// Whatever this machine has installed, loading either works or says

@@ -90,6 +90,19 @@ The files are found by name anywhere in the zip or folder (for the Whisper model
 
 A folder that already holds the right files is adopted as it is: Download and Install check the files that are there and fetch only what is missing.
 
+## Your own components source
+
+If you keep components of your own (licensed engines, helper programs, offline copies of the models), point textweaver at them: Settings, Optional components, Components source (`[components] source`). It takes either of these:
+
+- **A folder on this computer**, such as a clone of your repository or a memory stick. No sign-in is needed.
+- **A GitHub repository**, written `owner/name`. Its releases hold the files, one release per component, and a release tagged `manifest` holds the list. A public repository works today; signing in to a private one comes in a later version.
+
+The source is tried first, before a mirror and before each file's public address. Its list, `components.toml`, says for each component its name, version, platform (`windows`, `linux`, `macos` or `any`), files with size and SHA-256, license note, and what installing it does (`place`, `unpack` or `installer`). In a folder the list is `components.toml` at the top, or `manifest/components.toml`; each component's files are in a folder named after it, `<id>-<version>` when it has a version (`ffmpeg-9.0.2`), else `<id>`.
+
+Only the components for your computer's platform are listed. Every file is checked against its SHA-256: a file that does not match is refused, "Not installed: a file did not match. Get it again, or check the source.", and nothing is installed. Fields textweaver does not know yet are ignored, so a list written for a later version still loads.
+
+Components from a source go into the components folder, `components` in the data folder. textweaver looks there first for ffmpeg, the eSpeak NG library and the Eloquence engine library, before the environment variables and the usual install places.
+
 ## A mirror
 
 A mirror is a place tried before the public sources: a web address, or a folder on this computer. Set it in the settings (Optional components, Components mirror, `[components] mirror`) or with the `TEXTWEAVER_COMPONENTS_MIRROR` environment variable, which wins over the setting.

@@ -1349,6 +1349,12 @@ impl Default for DictationSettings {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ComponentsSettings {
+    /// Where your own components come from first: a GitHub repository
+    /// written `owner/name` (its releases hold the files, and a release
+    /// tagged `manifest` its `components.toml`), or a folder on this
+    /// computer (a clone, or a memory stick) read with no sign-in. Empty:
+    /// none. Never holds a password or token.
+    pub source: String,
     /// A mirror tried before the public sources: an `https:` address or a
     /// folder on this computer, holding each component's files under its
     /// id. Empty: public sources only. `TEXTWEAVER_COMPONENTS_MIRROR` wins

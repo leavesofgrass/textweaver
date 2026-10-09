@@ -9421,6 +9421,7 @@ dependencies = [
  "textweaver-core",
  "textweaver-enginehost",
  "textweaver-speech",
+ "textweaver-store",
  "thiserror 2.0.21",
 ]
 
@@ -9488,6 +9489,7 @@ dependencies = [
  "textweaver-fonts",
  "textweaver-render",
  "textweaver-speech",
+ "textweaver-store",
  "textweaver-text",
  "textweaver-theme",
  "textweaver-writers",
@@ -9679,6 +9681,7 @@ dependencies = [
  "textweaver-core",
  "textweaver-math",
  "textweaver-mathcat",
+ "textweaver-store",
  "thiserror 2.0.21",
  "toml 1.1.6+spec-1.1.0",
  "windows 0.62.2",

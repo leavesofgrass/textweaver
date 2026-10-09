@@ -508,3 +508,97 @@ fn remove_asks_and_takes_only_the_components_files() {
     assert!(dir.join("mine.txt").is_file());
     assert!(app.component_changes() > before);
 }
+
+/// A components source that is a folder (no sign-in, no network): its
+/// `components.toml` adds the components for this platform, a file comes
+/// from `<release>/`, and a file whose checksum does not match is refused
+/// with the reason and a next step, leaving nothing installed.
+#[test]
+fn a_source_folder_lists_installs_and_refuses_a_bad_checksum() {
+    use textweaver_components::fake::FakeSource;
+    let tmp = tempfile::tempdir().unwrap();
+    let mut source = FakeSource::new(&tmp.path().join("my-components"));
+    source
+        .add(
+            "made-up-font",
+            "2.1",
+            Platform::Any,
+            Action::Place,
+            &[("font.ttf", b"a made-up font")],
+        )
+        .unwrap();
+    source
+        .add(
+            "made-up-tool",
+            "",
+            Platform::current(),
+            Action::Place,
+            &[("tool.bin", b"a made-up tool")],
+        )
+        .unwrap();
+    let elsewhere = if Platform::current() == Platform::Linux {
+        Platform::Windows
+    } else {
+        Platform::Linux
+    };
+    source
+        .add(
+            "other-platform",
+            "",
+            elsewhere,
+            Action::Unpack,
+            &[("x.zip", b"x")],
+        )
+        .unwrap();
+    // Built only from its folder: the standard fetcher reads it.
+    let (mut app, said) = app_in(tmp.path(), Arc::new(StandardFetcher));
+    let root = source.root().to_string_lossy().into_owned();
+    let _ = app.update_settings(|s| s.components.source = root.clone());
+    app.dispatch(Command::Action(ActionId::ManageComponents));
+    let model = app.list_model().unwrap().clone();
+    let row = |title: &str| {
+        model
+            .items
+            .iter()
+            .position(|i| i.starts_with(title))
+            .unwrap_or_else(|| panic!("{title} in {:?}", model.items))
+    };
+    let font = row("The made-up-font component: not installed");
+    let _ = row("The made-up-tool component: not installed");
+    assert!(
+        !model.items.iter().any(|i| i.contains("other-platform")),
+        "{:?}",
+        model.items
+    );
+    let (c, _) = app.component_and_dir("made-up-font").unwrap();
+    assert_eq!(c.listing.as_ref().unwrap().version, "2.1");
+    assert_eq!(c.release(), "made-up-font-2.1");
+
+    // A wrong checksum: refused, nothing installed.
+    source
+        .tamper("made-up-font-2.1", "font.ttf", b"a made-up fonT")
+        .unwrap();
+    app.dispatch(Command::Choose(font));
+    app.dispatch(Command::Choose(0));
+    app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(app.wait_for_components(WAIT));
+    assert!(
+        said.any("Not installed: a file did not match. Get it again, or check the source."),
+        "{:?}",
+        said.all()
+    );
+    let (c, dir) = app.component_and_dir("made-up-font").unwrap();
+    assert_eq!(c.status_in(&dir), Status::NotInstalled);
+
+    // The right file: installed from the source folder.
+    source
+        .tamper("made-up-font-2.1", "font.ttf", b"a made-up font")
+        .unwrap();
+    app.dispatch(Command::Action(ActionId::ManageComponents));
+    app.dispatch(Command::Choose(font));
+    app.dispatch(Command::Choose(0));
+    app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(app.wait_for_components(WAIT));
+    assert_eq!(c.status_in(&dir), Status::Installed);
+    assert!(dir.starts_with(tmp.path().join("data").join("components")));
+}

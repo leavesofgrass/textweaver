@@ -241,6 +241,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // What is downloaded on this computer.
     ("dictation.model", Machine),
     // [components] (W8a-d): this computer's mirror and first run.
+    ("components.source", Machine),
     ("components.mirror", Machine),
     ("components.chooser_shown", Machine),
     // [interface]
