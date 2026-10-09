@@ -304,6 +304,8 @@ pub use wake::{Waker, channel_waker};
 pub use window::{DocWindow, Units, WINDOW_UNITS, WindowChange};
 pub use words::system_language;
 
+#[cfg(feature = "publish")]
+pub use publish::page_typography;
 pub use reading_aids::{RSVP_STEP, RSVP_WINDOW};
 pub use textweaver_a11y as a11y;
 pub use textweaver_aids as aids;
