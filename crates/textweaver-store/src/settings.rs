@@ -717,6 +717,11 @@ pub struct ReadingSettings {
     /// sentence once it has read this many minutes, and says so. 0, the
     /// default, is off.
     pub stop_after_minutes: u16,
+    /// Recall prompts: where continuous reading stops at a section end,
+    /// it asks the reader to say what they remember from the section
+    /// before going on. With `stop_at` off, reading stops at the next
+    /// heading for them. Off by default.
+    pub recall_prompts: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -767,6 +772,7 @@ impl Default for ReadingSettings {
             revisions: RevisionReading::Auto,
             stop_at: StopAt::Off,
             stop_after_minutes: 0,
+            recall_prompts: false,
             extra: toml::Table::new(),
         }
     }
