@@ -1530,6 +1530,7 @@ impl App {
             Command::MathStep(mv) => self.math_step(mv),
             Command::Find(pattern) => {
                 self.leave_prompt();
+                self.remember_answer(PromptPurpose::Find, &pattern);
                 self.run_find(&pattern);
                 vec![Effect::Redraw]
             }

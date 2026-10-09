@@ -22,6 +22,9 @@ fn every_window_announcement_has_a_level() {
         // Caret and selection echo in the self-voicing mode: reading the
         // text the user moved over, not an interface message.
         ("gui.rs", "fn echo_caret", ".echo("),
+        // An earlier answer brought back into a find and replace field
+        // with Up or Down: the field's text, as the caret echo reads it.
+        ("gui.rs", "fn find_recall", ".echo("),
         // The window taking the focus, said only when
         // `interface_allows(Importance::Dialog)`.
         ("gui.rs", "fn window_focused", ".echo("),
