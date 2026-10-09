@@ -31,6 +31,9 @@ textweaver-eci.workspace = true
 textweaver-enginehost.workspace = true
 textweaver-sapi.workspace = true
 textweaver-dectalk.workspace = true
+# eSpeak NG in its helper program; the `espeak` feature adds the
+# in-process backend beside it.
+textweaver-espeak.workspace = true
 textweaver-apple.workspace = true
 # Piper neural voices in-process on RTen (ADR-0023): phonemes from an
 # installed libespeak-ng, else the built-in pure-Rust port. Downloads

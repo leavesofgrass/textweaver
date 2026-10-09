@@ -493,6 +493,16 @@ pub const INFO: &[Info] = &[
         "DECtalk library",
         "The DECtalk library to load; not set searches the usual places.",
     ),
+    choice(
+        "speech.espeak.helper",
+        "eSpeak NG helper program",
+        "Run eSpeak NG in its own helper program, so an engine crash cannot close textweaver. Automatic uses the helper on Windows when it is installed, and runs eSpeak NG inside textweaver elsewhere.",
+        &[
+            ("auto", "automatic"),
+            ("always", "always the helper"),
+            ("never", "inside textweaver"),
+        ],
+    ),
     optional(
         "speech.piper.voices",
         "Piper voices folder",
@@ -2850,6 +2860,7 @@ fn restart_note(path: &str) -> Option<&'static str> {
         | "speech.sapi.onecore"
         | "speech.apple.backend"
         | "speech.dectalk.library"
+        | "speech.espeak.helper"
         | "speech.piper.voices"
         | "speech.piper.voice"
         | "speech.piper.phonemizer" => Some("settings-restart-speech"),
