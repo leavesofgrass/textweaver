@@ -446,7 +446,7 @@ A Word document (and an OpenDocument or RTF file) can carry tracked changes, the
 - "Moved here: 'check the labs first', by Ada Example, Thursday, March 5, 2026"
 - "Comment by Bo Example: check this date, 1 reply, resolved"
 
-The date is the one the document gives, said in full. When the document gives none, the row says "date not recorded"; textweaver never guesses one. A move is two rows, "Moved away" where the text was and "Moved here" where it went.
+The date is the one the document gives, said in full. When the document gives none, the row says "date not recorded"; textweaver never guesses one. A move is two rows, "Moved away" where the text was and "Moved here" where it went. The two halves are decided together, as Word decides them: accepting either one keeps the text in its new place, and rejecting either one returns it to where it was.
 
 **Keys in the list:**
 
@@ -456,11 +456,13 @@ The date is the one the document gives, said in full. When the document gives no
 - On a comment: **F2** replies, **Space** resolves it or opens it again, **Delete** deletes it and its replies (after a y or n question).
 - **N** adds a comment to the selection, or to the sentence at the cursor.
 
-To accept or reject every change at once, use **Accept all changes** or **Reject all changes** from the Bookmarks menu or the palette. **Add comment** adds a comment without opening the list.
+To accept or reject every change at once, use **Accept all changes** or **Reject all changes** from the Bookmarks menu or the palette. Each asks once before it acts ("Accept all 12 changes? y or n"), as Replace all does, because a whole review is a large thing to undo; press **n** and nothing changes. **Add comment** adds a comment without opening the list.
 
-Accepting an insertion keeps its text; rejecting it removes the text. Accepting a deletion removes the text; rejecting it puts the text back. The document you are reading changes at once, so reading, search, and the study tools see the result. Comments are notes too: a reply, a resolve, or a delete shows in the notes list as well. Replies and new comments carry the name in `[editing] author` (empty unless you fill it; textweaver never takes it from your computer) and the date from the clock.
+Accepting an insertion keeps its text; rejecting it removes the text. Accepting a deletion removes the text; rejecting it puts the text back. The document you are reading changes at once, so reading, search, and the study tools see the result. Comments are notes too: a reply, a resolve, or a delete shows in the notes list as well. Replies and new comments carry the name in `[authoring] author` and the date from the clock. The setting is empty until you fill it, and textweaver never takes a name from your computer or your account; while it is empty, what you add is signed "textweaver". (Settings files that still have the older `[editing] author` keep their name: it is read as `[authoring] author`.)
 
-Accepting and rejecting do not change the file yet. Reopen the file and its changes are there again. Writing your decisions back into the Word file comes with a later beta 1 task; until then, `tw changes` writes a copy.
+**Saving to the Word file.** Accepting and rejecting change the document you are reading, not the file. To write your decisions into the Word file itself, choose **Save changes to the Word file** from the Bookmarks menu or the command palette. textweaver then edits the original `.docx` in place rather than writing a new one, so its styles, numbering, headers, and everything else textweaver does not read stay exactly as Word left them. Accepted insertions and rejected deletions become ordinary text; accepted deletions and rejected insertions disappear; and formatting changes and deleted paragraph breaks, which the list does not show, follow your decisions once every change has been decided the same way. Replies, resolved marks, deleted threads, and new comments go into the file's comments, where Word shows them as a thread.
+
+Before the first save, textweaver keeps a copy of the original beside it, named so that it says what it is: `report.docx` is copied to `report-original.docx` (or `report-original-2.docx`, if that name is taken). You hear "Saved the changes in report.docx. The original is kept as report-original.docx." Later saves in the same session write only the file. Saving works for `.docx` files; an OpenDocument or RTF file's changes appear in the list and can be decided, and export writes the result in another format. Open the saved file in Word to confirm the result: the Review tab should show no tracked changes once every change has been decided.
 
 Changes stay as they are in edit mode: leave edit mode to accept or reject them.
 
@@ -471,9 +473,11 @@ tw changes draft.docx
 tw changes draft.docx --json
 tw changes draft.docx --accept-all --out final.md
 tw changes draft.docx --reject-all --out original.docx
+tw changes draft.docx --accept-all --in-place
 ```
 
-`--json` prints each change (its kind, text, author, date, and position) and each comment thread as the document records them. `--accept-all` or `--reject-all` with `--out FILE` writes the document with every change decided, in the format the file name's extension names: Markdown (`.md`), plain text (`.txt`), HTML, or `.docx`, `.epub`, `.pdf`, and `.brf`. The original file is never changed.
+`--json` prints each change (its kind, text, author, date, and position) and each comment thread as the document records them. `--accept-all` or `--reject-all` with `--out FILE` writes the document with every change decided, in the format the file name's extension names: Markdown (`.md`), plain text (`.txt`), HTML, or `.docx`, `.epub`, `.pdf`, and `.brf`; the original file is left alone. With `--in-place` instead, the Word file itself is changed, exactly as Save changes to the Word file does it, after the original is copied to `draft-original.docx`.
+
 ## Go back and forward
 
 textweaver keeps a history of your jumps, like the Back button of a web browser.

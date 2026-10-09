@@ -324,6 +324,14 @@ Then run `preview in browser` again. The page now comes from a small web server 
 - The server stops when you open another document or quit textweaver. Turning automatic reloading off stops it at once; the browser then shows the last page it had.
 - Images and other files beside your document are served too, but nothing outside the document's folder.
 
+## Review a Word document's tracked changes
+
+Reviewing a colleague's tracked changes is reading work more than writing work, so it lives in the reader: open the Word document, press **Ctrl+Shift+J** (or **Alt+A** in the terminal reader), and accept, reject, reply, and resolve from the changes list. [Tracked changes and comments](reading.md#tracked-changes-and-comments-ctrlshiftj-or-alta) in the reading guide describes the list and its keys.
+
+When you are done, **Save changes to the Word file** writes your decisions into the original `.docx` in place, keeping a copy of the original beside it the first time (`report-original.docx`). textweaver changes only the marks your decisions touch, so the document's styles, numbering, headers, and anything else Word stored come back unaltered when your colleague opens it. Comments and replies you add are signed with `[authoring] author`, or "textweaver" while that setting is empty; textweaver never takes a name from your computer.
+
+Edit mode does not record tracked changes of its own, and the changes list does not accept or reject while edit mode is on. Leave edit mode to review.
+
 ## Start from a template
 
 Type `new from template` in the command palette. The list has three templates, Essay, Report, and Notes, and your own after them. Choose one, then type the title. textweaver starts a new document in edit mode with front matter, headings, and a References heading, for example:
@@ -343,9 +351,11 @@ date: 2026-09-26
 The date is today's date on your computer, in your time zone. The author comes from this setting, when you set it:
 
 ```toml
-[editing]
+[authoring]
 author = "Jo Writer"
 ```
+
+The same name signs the comments and replies you add to a Word document's review (see below). Older settings files that put it under `[editing]` still work: the name is read as `[authoring] author`.
 
 The cursor starts under the first section heading, and the document is new and unsaved: save it with **Ctrl+S**.
 
