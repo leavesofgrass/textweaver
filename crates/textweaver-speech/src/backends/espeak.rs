@@ -200,6 +200,98 @@ fn byte_range(offsets: &[u32], position: i32, length: i32) -> std::ops::Range<u3
     offsets[start]..offsets[end]
 }
 
+/// A voice as textweaver lists it.
+fn voice(v: ffi::VoiceInfo) -> Voice {
+    Voice {
+        id: if v.identifier.is_empty() {
+            v.name.clone()
+        } else {
+            v.identifier
+        },
+        name: v.name,
+        languages: v.languages,
+        gender: match v.gender {
+            1 => Some("male".into()),
+            2 => Some("female".into()),
+            _ => None,
+        },
+        tags: Vec::new(),
+    }
+}
+
+/// Receives retrieval-mode synthesis as it is made: each block of samples
+/// with the words whose audio starts in it (byte ranges of the text,
+/// `audio_ms` from the start of the utterance's audio). Returns true to
+/// stop synthesis.
+pub type RetrievalSink = Box<dyn FnMut(&[i16], &[WordTiming]) -> bool + Send>;
+
+/// Initializes libespeak-ng in retrieval mode (synthesis comes back
+/// through a [`RetrievalSink`]; nothing is played) and returns its sample
+/// rate. For the eSpeak NG helper program (`textweaver-espeak-host`),
+/// which streams the audio to textweaver instead of playing it.
+pub fn retrieval_start() -> Result<u32, String> {
+    ensure(ffi::Mode::Retrieval)
+}
+
+/// The installed voices (after [`retrieval_start`]).
+pub fn retrieval_voices() -> Vec<Voice> {
+    ffi::list_voices().into_iter().map(voice).collect()
+}
+
+/// Applies voice, rate, pitch, and volume for the next
+/// [`retrieval_synthesize`] (as the backend maps them, ADR-0004). An
+/// unknown voice is an error only when one was named.
+pub fn retrieval_params(params: &VoiceParams) -> Result<(), String> {
+    apply_params(params)
+}
+
+/// Synthesizes `text` (or the one `character`, spoken by name) in
+/// retrieval mode on the calling thread, handing every block to `sink` as
+/// it is made. Returns `Ok(true)` when synthesis completed and `Ok(false)`
+/// when `sink` stopped it.
+pub fn retrieval_synthesize(
+    text: &str,
+    character: Option<char>,
+    sink: RetrievalSink,
+) -> Result<bool, String> {
+    ensure(ffi::Mode::Retrieval)?;
+    stream(text, character, sink)
+}
+
+/// Runs one synthesis through `sink` in the current mode: sets the
+/// callback's receiver, synthesizes, waits, and clears it.
+fn stream(text: &str, character: Option<char>, mut sink: RetrievalSink) -> Result<bool, String> {
+    let offsets = char_offsets(text);
+    let stopped = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    {
+        let stopped = Arc::clone(&stopped);
+        ffi::set_sink(Some(Box::new(move |wav: &[i16], evs: &[ffi::Event]| {
+            let words: Vec<WordTiming> = evs
+                .iter()
+                .filter(|e| e.kind == ffi::EventKind::Word)
+                .map(|e| WordTiming {
+                    byte_range: byte_range(&offsets, e.text_position, e.length),
+                    audio_ms: u32::try_from(e.audio_ms).unwrap_or(0),
+                })
+                .collect();
+            let stop = (!wav.is_empty() || !words.is_empty()) && sink(wav, &words);
+            if stop {
+                stopped.store(true, Ordering::SeqCst);
+            }
+            stop
+        })));
+    }
+    let r = match character {
+        Some(c) => ffi::synth_char(c),
+        None => ffi::synth(text),
+    };
+    if r.is_ok() {
+        ffi::synchronize();
+    }
+    ffi::set_sink(None);
+    r.map(|()| !stopped.load(Ordering::SeqCst))
+}
+
 enum Job {
     Speak {
         id: UtteranceId,
@@ -263,24 +355,7 @@ impl EspeakBackend {
             .recv()
             .map_err(|_| SpeechError::Unavailable("espeak", "worker died".into()))?
             .map_err(|e| SpeechError::Unavailable("espeak", e))?;
-        let voices = voices
-            .into_iter()
-            .map(|v| Voice {
-                id: if v.identifier.is_empty() {
-                    v.name.clone()
-                } else {
-                    v.identifier
-                },
-                name: v.name,
-                languages: v.languages,
-                gender: match v.gender {
-                    1 => Some("male".into()),
-                    2 => Some("female".into()),
-                    _ => None,
-                },
-                tags: Vec::new(),
-            })
-            .collect();
+        let voices = voices.into_iter().map(voice).collect();
         Ok(EspeakBackend {
             output,
             jobs: Some(job_tx),
@@ -444,27 +519,22 @@ fn to_file(text: &str, path: &Path, params: &VoiceParams) -> Result<FileSynthesi
     {
         let pcm = Arc::clone(&pcm);
         let words = Arc::clone(&words);
-        let offsets = char_offsets(text);
-        ffi::set_sink(Some(Box::new(move |wav: &[i16], evs: &[ffi::Event]| {
-            pcm.lock()
-                .unwrap_or_else(|p| p.into_inner())
-                .extend_from_slice(wav);
-            let mut w = words.lock().unwrap_or_else(|p| p.into_inner());
-            for e in evs.iter().filter(|e| e.kind == ffi::EventKind::Word) {
-                w.push(WordTiming {
-                    byte_range: byte_range(&offsets, e.text_position, e.length),
-                    audio_ms: u32::try_from(e.audio_ms).unwrap_or(0),
-                });
-            }
-            false
-        })));
+        stream(
+            text,
+            None,
+            Box::new(move |wav: &[i16], w: &[WordTiming]| {
+                pcm.lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .extend_from_slice(wav);
+                words
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .extend_from_slice(w);
+                false
+            }),
+        )
+        .map_err(engine)?;
     }
-    let r = ffi::synth(text);
-    if r.is_ok() {
-        ffi::synchronize();
-    }
-    ffi::set_sink(None);
-    r.map_err(engine)?;
     let pcm = std::mem::take(&mut *pcm.lock().unwrap_or_else(|p| p.into_inner()));
     std::fs::write(path, wav_bytes(&pcm, rate)).map_err(|e| SpeechError::Io(e.to_string()))?;
     let words = std::mem::take(&mut *words.lock().unwrap_or_else(|p| p.into_inner()));
@@ -472,6 +542,7 @@ fn to_file(text: &str, path: &Path, params: &VoiceParams) -> Result<FileSynthesi
 }
 
 pub use crate::wav::wav_bytes;
+pub use sys::{LIBRARY_ENV, choose_library, component_library, library_candidates};
 
 impl SpeechBackend for EspeakBackend {
     fn id(&self) -> BackendId {
