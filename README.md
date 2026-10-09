@@ -2,93 +2,81 @@
 
 <img src="docs/assets/textweaver-logo.svg" alt="textweaver logo: the letters t and w woven on a loom" width="128" height="128">
 
-textweaver reads documents out loud. As it reads, it highlights each word as it is spoken. You can also use it to write, and it speaks the letters and words you type.
+textweaver reads documents out loud and highlights each word as it is spoken. It also lets you write, speaking the letters and words you type.
 
-It is made first for people who use a screen reader, and for students who find print hard to read. It runs on Windows, Mac, and Linux.
+It is made first for people who use a screen reader, and for students who find print hard to read. It runs on Linux, macOS, and Windows, as a window (the GUI) or in a terminal.
 
 Status: alpha. It is ready for testing, but not yet for every day. See [known limits](docs/known-limits.md).
 
-## Get textweaver on Windows
+## Get textweaver
 
-You will download one file, unpack it, and run the program.
+Every release on the [releases page](https://github.com/leavesofgrass/textweaver/releases) ships the same programs for each platform. Pick the file for your computer. Names ending in `-gui` are the window; the others are the terminal reader.
 
-1. Go to the [releases page](https://github.com/leavesofgrass/textweaver/releases). Choose the latest release.
-2. Find the file whose name ends in `windows-x86_64-gui.zip`. Download it.
-3. Open your Downloads folder. Right-click the file.
-4. Choose "Extract All". Then choose a folder of your own, and finish.
-5. Open that folder. Run `textweaver-gui.exe`.
-6. Windows may warn you the first time, because the program is not code-signed. Choose "More info". Then choose "Run anyway".
+| Platform | GUI | Terminal reader |
+| --- | --- | --- |
+| Linux, x86_64 | `linux-x86_64-gui.AppImage` | `linux-x86_64.AppImage` |
+| Linux, 64-bit ARM | `linux-aarch64-gui.AppImage` | `linux-aarch64.AppImage` |
+| macOS, Apple silicon and Intel | `macos-universal-gui.zip` | `macos-universal.tar.gz` |
+| Windows, x86_64 | `windows-x86_64-gui.zip` | `windows-x86_64.zip` |
 
-textweaver opens. You are ready for the first steps below.
+Linux also has `.tar.gz` packages for systems where AppImages cannot run.
 
-## Your first steps
+Each package is self-contained: unpack it, keep its files together, and run the program. Each platform has one first-run step, because the builds are not code-signed:
 
-1. Press Ctrl+O. A box opens to choose a file.
-2. Choose a document, such as a Word file, a PDF, or a text file. Press Enter. textweaver says "Opened" and the title.
-3. Press Space. textweaver starts reading out loud. The highlight follows each word.
-4. Press Space again to pause. Press Space once more to go on.
-5. Press Escape to stop.
-6. Press F1 for help.
-7. Press F2 to see the list of every command. Type a few letters of a command's name. Press Enter to run it.
-8. Press Ctrl+Q to quit. textweaver asks "Quit textweaver? y or n". Press y.
+- **Linux:** make the AppImage executable with `chmod +x`, then run it. Add `--install` to link it into `~/.local/bin` and add a menu entry.
+- **macOS:** the GUI zip holds `textweaver.app`. Clear the quarantine flag once with `xattr -dr com.apple.quarantine` on the unpacked folder, or use "Open Anyway" under Privacy & Security. The same applies to the terminal package.
+- **Windows:** run `textweaver-gui.exe` or `textweaver.exe`. SmartScreen warns the first time: choose "More info", then "Run anyway".
 
-textweaver remembers your place. Open the same file later, and it picks up where you left off.
+Or let a script do it. Clone the repository and run the one for your platform; each says what it will do, asks before changing your PATH, and takes `--gui` to install the window too:
 
-## More keys to try
+```bash
+bash scripts/install-linux.sh --release latest --gui
+bash scripts/install-macos.sh --gui
+powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1 -Gui
+```
 
-- Alt+Down: next sentence.
-- Alt+Up: previous sentence.
-- h: next heading.
-- Plus: faster voice. Minus: slower voice.
-- Ctrl+E: switch between reading and writing.
-- Ctrl+S: save what you wrote.
+[Installing textweaver](docs/install.md) covers every package, checking downloads, updates, and building from source.
 
-## If you use a screen reader
+## First steps
 
-textweaver can speak by itself, or work with NVDA or JAWS. Press Alt+Shift+A to choose who speaks. [Using textweaver with a screen reader](docs/screen-readers.md) explains the choices.
+These keys are the same in the GUI on every platform.
 
-## Mac and Linux
+1. Ctrl+O opens a file: a Word document, a PDF, EPUB, Markdown, or plain text. textweaver says "Opened" and the title.
+2. Space starts reading; the highlight follows each word. Space again pauses. Escape stops.
+3. Alt+Down and Alt+Up move by sentence. H jumps to the next heading.
+4. Plus and Minus change the voice speed.
+5. Ctrl+E switches between reading and writing. Ctrl+S saves.
+6. F1 opens help. F2 lists every command: type part of its name and press Enter.
+7. Ctrl+Q quits.
 
-For both, go to the [releases page](https://github.com/leavesofgrass/textweaver/releases) and choose the latest release.
-
-On a Mac:
-
-1. Download the file ending in `macos-universal-gui.zip`. Double-click it to unpack it.
-2. Open the unpacked folder. Run `textweaver-gui`.
-3. Your Mac may block it the first time. [Installing textweaver](docs/install.md#the-gui) tells you how to allow it.
-
-On Linux:
-
-1. Download the file ending in `linux-x86_64-gui.AppImage`. For an ARM computer, choose the one with `aarch64` instead.
-2. Make it runnable. In a terminal, type `chmod +x` and the file name. Press Enter.
-3. Run the file.
-
-The Mac and Linux versions have had basic testing with VoiceOver and Orca, and more testing with both is planned. Not every release is tested by a person yet. If something does not work, the terminal reader, below, is a good choice there.
+textweaver remembers your place in each file and picks up where you left off.
 
 ## The terminal reader
 
-The terminal reader runs in a terminal, a screen of text only. It has no mouse and no pictures. Many people who use a screen reader prefer it.
+The terminal reader is text only, with no mouse and no pictures. Many screen reader users prefer it. Unpack the terminal package, open a terminal in that folder, and run:
 
-1. On the releases page, download the file for your computer. Its name has no `-gui` in it. It ends in `windows-x86_64.zip`, `macos-universal.tar.gz`, or `linux-x86_64.AppImage`.
-2. Unpack it, and open a terminal in that folder.
-3. Type `textweaver QUICKSTART.md` and press Enter.
+```bash
+textweaver QUICKSTART.md
+```
 
-textweaver reads its own quick start out loud. Press Space to start and pause. Press ? to list every key.
+It reads its own quick start out loud. Space starts and pauses; `?` lists every key. The reader and the GUI share settings, reading positions, and notes.
+
+## Screen readers
+
+textweaver can speak by itself or hand speech to your screen reader. Alt+Shift+A chooses who speaks. On Windows it works with NVDA and JAWS. On macOS and Linux it has had basic testing with VoiceOver and Orca, and more is planned; if the GUI gives you trouble there, the terminal reader is a solid fallback. [Using textweaver with a screen reader](docs/screen-readers.md) explains the choices.
 
 ## Languages
 
-textweaver speaks and shows its menus and messages in English, Spanish, German, French, Portuguese, and Arabic. Native speakers have checked the English and the Spanish. The German, French, Portuguese, and Arabic have not been checked yet, so if a word sounds wrong, please tell us. Use Help, then Report a problem.
+Menus, messages, and speech come in English, Spanish, German, French, Portuguese, and Arabic. English and Spanish have been checked by native speakers; the others have not, so if a word sounds wrong, use Help, then Report a problem.
 
 ## Learn more
 
 - [Quick start](docs/quickstart.md): your first 30 seconds, in full.
-- [Start here, for students](docs/start-students.md).
-- [Using the textweaver app](docs/gui.md).
-- [Every key](docs/keyboard.md).
-- [Installing textweaver](docs/install.md): every package, and scripts that install for you.
+- [Start here, for students](docs/start-students.md) and [for staff](docs/start-staff.md).
+- [Using the textweaver app](docs/gui.md) and [every key](docs/keyboard.md).
 - [Privacy](docs/privacy.md) and the [accessibility statement](docs/accessibility.md).
 - [What is new](docs/whats-new.md) and the [changelog](CHANGELOG.md).
-- Building from source, and everything for developers: [Building](docs/dev/building.md), [Contributing](CONTRIBUTING.md), and the [documentation index](docs/README.md).
+- For developers: [Building](docs/dev/building.md), [Contributing](CONTRIBUTING.md), and the [documentation index](docs/README.md).
 
 ## Where it came from
 
