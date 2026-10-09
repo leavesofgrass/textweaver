@@ -285,7 +285,7 @@ fn the_messages_are_in_six_languages_and_short() {
                 "family" => "Lexend",
                 "kb" => 206u64,
                 "licence" => "SIL Open Font License",
-                "error" => "x"
+                "error" => "ERROR"
             ];
             let text = c.fmt(id, &a);
             assert_ne!(text, id, "{tag} lacks {id}");
@@ -293,7 +293,9 @@ fn the_messages_are_in_six_languages_and_short() {
                 assert_ne!(text, english.fmt(id, &a), "{tag} {id} is English");
             }
             // The question names the size and license, so it is longer
-            // than a line of 40 cells; its meaning comes first.
+            // than a line of 40 cells; its meaning comes first. A failure
+            // fits up to the system's words; its next step follows them.
+            let text = text.split("ERROR").next().unwrap_or_default();
             if id != "font-download-question" {
                 assert!(
                     text.chars().count() <= 40,
