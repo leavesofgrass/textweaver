@@ -51,8 +51,28 @@ fn window(app: &App, size: (u32, u32), scale: f64) -> TestHarness<Root> {
 }
 
 /// Every kind of dialog, by name, with the widget that takes the focus.
-const KINDS: [&str; 8] = [
-    "list", "prompt", "palette", "question", "settings", "colors", "reading", "voices",
+/// "links" and "changes" are app lists (B1-g1, B1-t1) with their real row
+/// shapes: a note's links, and the changes and comments, whose rows run
+/// past the dialog's width.
+const KINDS: [&str; 10] = [
+    "list", "prompt", "palette", "question", "settings", "colors", "reading", "voices", "links",
+    "changes",
+];
+
+/// A note's links as the app lists them: type first, then the two rows.
+const LINK_ROWS: [&str; 4] = [
+    "supports: Chapter note",
+    "cites: Week four note, in Pharmacology 2",
+    "What links here: 1 note",
+    "Add a link",
+];
+
+/// The changes and comments as the app lists them, meaning first.
+const CHANGE_ROWS: [&str; 4] = [
+    "Inserted: 'renal', by Ada Example, Tuesday, March 3, 2026",
+    "Moved away: 'Check the labs first.', by Ada Example, Thursday, March 5, 2026",
+    "Comment by Bo Example: check this date, 1 reply, resolved",
+    "Inserted: 'Repeat tomorrow.', by Bo Example, date not recorded",
 ];
 
 fn build(kind: &str, app: &App) -> (NewWidget<dyn Widget>, WidgetId) {
@@ -96,6 +116,14 @@ fn build_for(kind: &str, app: &App, height: u32) -> (NewWidget<dyn Widget>, Widg
             let short = f64::from(height) < voices::SHORT_HEIGHT;
             let d = voices::voice_dialog_fit(&p, app, "Voices", items, 0, short);
             (d.modal, d.list)
+        }
+        "links" => {
+            let rows = LINK_ROWS.iter().map(|r| (*r).to_owned()).collect();
+            gui::list_dialog(&p, &c, "Links of: Energy note", rows, 0, true)
+        }
+        "changes" => {
+            let rows = CHANGE_ROWS.iter().map(|r| (*r).to_owned()).collect();
+            gui::list_dialog(&p, &c, "Changes and comments", rows, 0, true)
         }
         _ => unreachable!("{kind}"),
     }
@@ -268,6 +296,8 @@ fn title_of(kind: &str, app: &App) -> String {
         "prompt" => "Go to line".into(),
         "palette" => "Commands".into(),
         "question" => "Remove the voice?".into(),
+        "links" => "Links of: Energy note".into(),
+        "changes" => "Changes and comments".into(),
         "settings" => app.catalog().tr("settings-title"),
         "colors" | "voices" | "reading" => String::new(),
         _ => unreachable!("{kind}"),
@@ -429,4 +459,44 @@ fn the_voice_manager_fits_the_smallest_window() {
         }
     }
     assert!(outside.is_empty(), "outside the window: {outside:#?}");
+}
+
+/// The links and the changes lists (B1-g1, B1-t1): a screen reader reads
+/// each option as the app's row, whole, so its meaning comes first ("supports",
+/// "Inserted", "Comment by"), within the 40 cells of a Braille line, even
+/// where the drawn row is cut short with an ellipsis.
+#[test]
+fn links_and_changes_rows_are_read_as_the_apps_rows() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    for (kind, rows, meaning) in [
+        (
+            "links",
+            &LINK_ROWS,
+            ["supports", "cites", "What links here", "Add a link"],
+        ),
+        (
+            "changes",
+            &CHANGE_ROWS,
+            ["Inserted", "Moved away", "Comment by", "Inserted"],
+        ),
+    ] {
+        let mut h = window(&app, (1100, 780), 1.0);
+        let (modal, focus) = build(kind, &app);
+        let mut back = None;
+        gui::open_dialog_in(&mut h, modal, focus, &mut back);
+        let _ = h.redraw();
+        let list = h.access_node(focus).expect("the list is in the tree");
+        assert_eq!(list.role(), Role::ListBox, "{kind}");
+        let names: Vec<String> = list
+            .children()
+            .filter(|n| n.role() == Role::ListBoxOption)
+            .map(|n| n.label().unwrap_or_default())
+            .collect();
+        assert_eq!(names, rows.to_vec(), "{kind}: read as the app's rows");
+        for (name, m) in names.iter().zip(meaning) {
+            let head: String = name.chars().take(40).collect();
+            assert!(head.starts_with(m), "{kind}: meaning first: {name:?}");
+        }
+    }
 }

@@ -776,7 +776,7 @@ impl Widget for ChoiceList {
                 Key::Named(NamedKey::Delete) => L::Delete,
                 Key::Named(NamedKey::F2) => L::Rename,
                 Key::Character(s) => match s.chars().next() {
-                    Some(c) if !c.is_control() => L::Char(c),
+                    Some(c) if !c.is_control() => L::Char(list_letter(c, k.modifiers.shift())),
                     _ => return,
                 },
                 _ => return,
@@ -1144,9 +1144,32 @@ pub fn card_props(p: &Palette) -> impl Into<masonry::core::PropertySet> {
     )
 }
 
+/// A letter typed in an app list, with its case from Shift alone: some
+/// lists give a capital its own meaning (in the changes list, Shift+A
+/// accepts every change by the author, where `a` accepts one), so Caps
+/// Lock must never turn `a` into `A`. Other characters are kept as typed.
+pub fn list_letter(c: char, shift: bool) -> char {
+    match (c.is_ascii_alphabetic(), shift) {
+        (true, true) => c.to_ascii_uppercase(),
+        (true, false) => c.to_ascii_lowercase(),
+        (false, _) => c,
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::ellipsize;
+    use super::{ellipsize, list_letter};
+
+    /// Caps Lock never makes `a` accept every change by the author: a
+    /// letter's case comes from Shift; other characters are kept.
+    #[test]
+    fn a_list_letter_is_capital_only_with_shift() {
+        assert_eq!(list_letter('A', false), 'a');
+        assert_eq!(list_letter('a', true), 'A');
+        assert_eq!(list_letter('r', false), 'r');
+        assert_eq!(list_letter(' ', true), ' ');
+        assert_eq!(list_letter('é', false), 'é');
+    }
 
     #[test]
     fn a_long_row_ends_with_an_ellipsis_at_a_word() {
