@@ -1041,6 +1041,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-eci",
     "textweaver-enginehost",
     "textweaver-engines",
+    "textweaver-espeak",
     "textweaver-export",
     "textweaver-piper",
     "textweaver-sapi"
@@ -1089,6 +1090,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-dectalk",
     "textweaver-eci",
     "textweaver-enginehost",
+    "textweaver-espeak",
     "textweaver-piper",
     "textweaver-sapi",
     "textweaver-speech",
@@ -1120,6 +1122,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-dectalk",
     "textweaver-eci",
     "textweaver-engines",
+    "textweaver-espeak",
     "textweaver-piper",
     "textweaver-sapi",
     "xtask"
@@ -1277,6 +1280,38 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "name": "textweaver-dectalk",
    "path": "crates/textweaver-dectalk",
    "short": "dectalk",
+   "tool": false,
+   "version": "0.1.0-alpha.9"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0012-engine-host.md",
+     "number": "0012",
+     "title": "ADR-0012: One engine-host protocol and playback client"
+    }
+   ],
+   "bins": [
+    "textweaver-espeak-host"
+   ],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-engines"
+   ],
+   "deps": [
+    "textweaver-core",
+    "textweaver-enginehost",
+    "textweaver-speech"
+   ],
+   "description": "eSpeak NG in a helper program for textweaver: the engine host and the speech backend that drives it",
+   "dev_deps": [],
+   "job": "Runs an installed eSpeak NG in a helper program built for its architecture, so an engine crash cannot close the reader.",
+   "layer": "speech",
+   "name": "textweaver-espeak",
+   "path": "crates/textweaver-espeak",
+   "short": "espeak",
    "tool": false,
    "version": "0.1.0-alpha.9"
   },
@@ -1600,6 +1635,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-editor",
     "textweaver-enginehost",
     "textweaver-engines",
+    "textweaver-espeak",
     "textweaver-export",
     "textweaver-fonts",
     "textweaver-formats",
@@ -1723,6 +1759,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-sapi",
     "textweaver-apple",
     "textweaver-dectalk",
+    "textweaver-espeak",
     "textweaver-piper",
     "textweaver-export"
    ],
