@@ -10,7 +10,7 @@ Status: alpha. It is ready for testing, but not yet for every day. See [known li
 
 ## Get textweaver
 
-Every release on the [releases page](https://github.com/leavesofgrass/textweaver/releases) ships the same programs for each platform. Pick the file for your computer. Names ending in `-gui` are the window; the others are the terminal reader.
+Every release on the [releases page](https://github.com/leavesofgrass/textweaver/releases) ships the same programs for each platform. Pick the file for your computer. Names ending in `-gui` are the graphical version; the others are the terminal reader.
 
 | Platform | GUI | Terminal reader |
 | --- | --- | --- |
