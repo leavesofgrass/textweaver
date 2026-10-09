@@ -135,7 +135,7 @@ textweaver keeps the last 1,000 steps, or 50 MB of them, whichever comes first; 
 
 ## Find and replace: Alt+F
 
-Press **Alt+F** in edit mode. The window uses **Ctrl+Shift+F**.
+Press **Alt+F** in edit mode. In the window, **Ctrl+Shift+F** opens a panel with the same choices as fields, check boxes, and buttons; see [In the window: the find and replace panel](#in-the-window-the-find-and-replace-panel).
 
 1. The prompt says "Replace, find what". Type the text to find and press **Enter**. You hear how many matches there are, then "Replace with?"
 2. Type the new text and press **Enter**.
@@ -170,6 +170,23 @@ With **Regular expression** on, textweaver uses the Rust `regex` syntax:
 - For example, find `(\d{4})-(\d\d)-(\d\d)` and replace with `$3/$2/$1` to turn 2026-10-09 into 09/10/2026.
 - A pattern that is not valid is said in words, with the character where it goes wrong, for example "Invalid pattern at character 3: unclosed group." Nothing is replaced. Press **Alt+F** and **Up** to fix it.
 - A pattern that matches only a position, such as `^` alone, finds nothing: every match must hold at least one character.
+
+### In the window: the find and replace panel
+
+In the window, **Ctrl+Shift+F** in edit mode opens the Find and replace panel, a dialog that gathers the whole search in one place. It drives the same search as the terminal's prompts, with the same options, history, spoken previews, and undo steps, so a replacement behaves identically in both programs. The controls, in Tab order, are these:
+
+- **Find what**: the text to find or, with Regular expression on, the pattern. **Enter** in this field finds the next match.
+- A status line beneath it. While the pattern cannot be searched, it explains why, for example "Invalid pattern at character 3: unclosed group.", and textweaver says so once each time the reason changes. While a replacement is under way, it shows the match in question, for example "Match 2 of 5, line 12: teh becomes the."
+- **Replace with**: the new text, which may refer to what a regular expression captured. **Enter** in this field replaces the match.
+- Four check boxes: **Match case**, **Whole words**, **Regular expression**, and **Across lines**. **Space** switches the focused one. These are the search options described above, shared with Find and with the terminal's loop; when one changes during a replacement, the matches are counted again.
+- **Find next** (F3): selects the next match. During a replacement it skips the match in question instead.
+- **Replace**: the first press finds the first match after the cursor and says it; each further press replaces that match, as one undo step, and moves on to the next.
+- **Replace all**: says how many matches would change and asks once. **Y** replaces them all as a single undo step; **N** returns to the panel.
+- **Close** (Escape): closes the panel and returns the focus to the document. A replacement under way stops, and textweaver reports what was done, for example "Stopped. Replaced 2, skipped 1."
+
+In either field, **Up** and **Down** bring back earlier entries; Find what shares its history with Find (**Ctrl+F**). **F3** and **Shift+F3** find the next and the previous match from any control in the panel, and the Help key (**F1**) reads a short summary of these keys. Counts and previews are announced politely, so they wait until your screen reader has finished speaking.
+
+In a short window, less than 480 pixels high, the panel is compact: the drawn title and hint are omitted and the buttons hide their keys on screen, while the controls, their names, and their order remain the same.
 
 ## Save
 
