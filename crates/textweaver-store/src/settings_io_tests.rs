@@ -100,6 +100,8 @@ fn everything_changed() -> Settings {
     r.math_engine = crate::MathEngine::MathCatSimpleSpeak;
     r.math_display = crate::MathDisplay::Unicode;
     r.revisions = crate::RevisionReading::Marked;
+    r.stop_at = crate::StopAt::Chapter;
+    r.stop_after_minutes = 25;
     let y = &mut s.sync;
     y.enabled = true;
     y.folder = Some(PathBuf::from("/media/stick/Sync"));

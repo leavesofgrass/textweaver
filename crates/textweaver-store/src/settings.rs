@@ -708,9 +708,32 @@ pub struct ReadingSettings {
     /// (W4c2): `auto` says them in place at high verbosity and reads the
     /// final text otherwise; `marked` always says them; `final` never.
     pub revisions: RevisionReading,
+    /// Where continuous reading stops by itself: never (`off`, the
+    /// default), at the next heading of any level (`heading`), or at the
+    /// next chapter (`chapter`: a section break, else a level 1 heading).
+    /// It says "End of section." and reading goes on from the heading.
+    pub stop_at: StopAt,
+    /// The reading timer: continuous reading stops at the end of the
+    /// sentence once it has read this many minutes, and says so. 0, the
+    /// default, is off.
+    pub stop_after_minutes: u16,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
+}
+
+/// `[reading] stop_at`: where continuous reading stops by itself.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum StopAt {
+    /// Reading goes on to the end of the document.
+    #[default]
+    Off,
+    /// Reading stops at the next heading of any level.
+    Heading,
+    /// Reading stops at the next chapter: a section break when the
+    /// document has them, else a level 1 heading.
+    Chapter,
 }
 
 /// `[reading] ocr_engine`: which engine recognizes scanned pages.
@@ -742,6 +765,8 @@ impl Default for ReadingSettings {
             math_engine: MathEngine::Builtin,
             math_display: MathDisplay::Source,
             revisions: RevisionReading::Auto,
+            stop_at: StopAt::Off,
+            stop_after_minutes: 0,
             extra: toml::Table::new(),
         }
     }
