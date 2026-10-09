@@ -33,9 +33,10 @@ lint = ["textweaver-app/lint"]
 # The system clipboard (arboard) where the terminal cannot take OSC 52:
 # the old Windows console, macOS Terminal, VTE terminals (ADR-0032).
 clipboard = ["dep:arboard"]
-# Code blocks highlighted with syntect and bat's syntaxes (two-face);
+# Code blocks highlighted with syntect and bat's syntaxes (two-face),
+# through textweaver-render's tokenizer, which the HTML pages share;
 # colors from the theme's roles, never color alone (ADR-0032).
-highlight = ["dep:syntect", "dep:two-face"]
+highlight = ["dep:textweaver-render"]
 # Grammar checking with harper-core (textweaver-app's `grammar`). On by
 # default and in releases since Wave 7 (the owner's decision); it adds
 # about 11 MB and the burn framework. `--no-default-features` leaves it
@@ -61,8 +62,7 @@ log.workspace = true
 unicode-bidi.workspace = true
 
 arboard = { workspace = true, optional = true }
-syntect = { workspace = true, optional = true }
-two-face = { workspace = true, optional = true }
+textweaver-render = { workspace = true, optional = true }
 
 # Wayland as well as X11 for the system clipboard.
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
