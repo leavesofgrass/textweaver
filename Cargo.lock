@@ -9463,10 +9463,22 @@ dependencies = [
  "textweaver-dectalk",
  "textweaver-eci",
  "textweaver-enginehost",
+ "textweaver-espeak",
  "textweaver-piper",
  "textweaver-sapi",
  "textweaver-speech",
  "textweaver-store",
+]
+
+[[package]]
+name = "textweaver-espeak"
+version = "0.1.0-alpha.9"
+dependencies = [
+ "log",
+ "tempfile",
+ "textweaver-core",
+ "textweaver-enginehost",
+ "textweaver-speech",
 ]
 
 [[package]]
