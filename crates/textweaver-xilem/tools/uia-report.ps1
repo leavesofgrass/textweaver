@@ -696,6 +696,9 @@ New-Item -ItemType Directory -Force $scratch | Out-Null
 $env:TMP = $scratch
 $env:TEMP = $scratch
 $logFile = Join-Path $scratch 'gui.log'
+# The menu bar is hidden by default on Windows; show it so the menus can be read.
+New-Item -ItemType Directory -Force (Join-Path $scratch 'config') | Out-Null
+[IO.File]::WriteAllText((Join-Path $scratch 'config\settings.toml'), "[gui]`nauto_hide_menu = false`n")
 if ($WindowEdge) {
     # Three GUI windows (120,000 units each) of plain paragraphs, about 240
     # characters each, and the fastest rate, so the paced reading reaches
@@ -711,7 +714,7 @@ if ($WindowEdge) {
     [IO.File]::WriteAllText($edgeDoc, $sb.ToString())
     $Document = $edgeDoc
     New-Item -ItemType Directory -Force (Join-Path $scratch 'config') | Out-Null
-    [IO.File]::WriteAllText((Join-Path $scratch 'config\settings.toml'), "[speech]`nrate = 900`n")
+    [IO.File]::WriteAllText((Join-Path $scratch 'config\settings.toml'), "[speech]`nrate = 900`n`n[gui]`nauto_hide_menu = false`n")
     Say "- Window edge probe: $Document ($($sb.Length) characters, $n paragraphs), read at 900 words per minute"
     Say ""
 }
