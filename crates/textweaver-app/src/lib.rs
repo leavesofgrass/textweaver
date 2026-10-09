@@ -264,7 +264,7 @@ pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use audio_export::{read_along_labels, video_options, video_options_for};
 pub use authoring::osc52;
 pub use authoring_state::{ClientFactory, Launcher};
-pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};
+pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, is_color_setting};
 pub use command::{
     CaretMove, Command, Confirm, DestructiveVerb, Effect, NoteCommand, PromptPurpose,
 };

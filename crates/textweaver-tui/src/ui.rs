@@ -288,7 +288,7 @@ impl Tui {
     pub fn with_color_support(mut app: App, support: ColorSupport) -> Self {
         // F4 in a prompt for a path browses for it, and the prompt says so.
         app.set_prompt_browse_key(Some(textweaver_app::path_prompt::browse_key()));
-        let theme = Theme::from_theme(&app.reading_theme(), support).with_marks(&app.mark_colors());
+        let theme = Theme::from_theme(&app.reading_theme(), support);
         let theme_key = app.reading_theme_key();
         Tui {
             app,
@@ -396,8 +396,7 @@ impl Tui {
     fn refresh_theme(&mut self) {
         let key = self.app.reading_theme_key();
         if key != self.theme_key {
-            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support)
-                .with_marks(&self.app.mark_colors());
+            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support);
             self.theme_key = key;
         }
     }

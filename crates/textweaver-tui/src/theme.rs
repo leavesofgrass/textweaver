@@ -58,8 +58,7 @@ pub struct Theme {
     pub list_selected: Style,
     /// Code blocks and their tokens.
     pub code: CodeStyles,
-    /// The reader's colors for marks no theme role holds (`[colors]`):
-    /// set with [`with_marks`](Self::with_marks).
+    /// The colors of the reading aids' marks, from the theme's roles.
     pub marks: MarkStyles,
     /// The foreground of rows the reading ruler masks: the text color
     /// blended [`MASK_TOWARD_PAGE`] of the way toward the page, as the
@@ -72,9 +71,10 @@ pub struct Theme {
 /// window's overlay strength, so both frontends mask alike.
 pub const MASK_TOWARD_PAGE: f64 = 0.72;
 
-/// The reader's own colors for the reading aids' marks (`[colors]`), at
-/// the terminal's color level. With 16 colors or none they are unset, and
-/// the marks keep their attributes alone (an underline, the gutter mark).
+/// The colors of the reading aids' marks, at the terminal's color level:
+/// set only where the theme file or the reader's `[colors]` gives the
+/// role, so a role worked out at load leaves the mark to its attributes
+/// alone (an underline, the gutter mark), as with no color.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct MarkStyles {
     /// The band of the reading ruler and the current line.
@@ -191,7 +191,7 @@ impl Theme {
             list: panel,
             list_selected: style(t.style(StyleRole::Focus)),
             code: CodeStyles::from_terminal(&t),
-            marks: MarkStyles::default(),
+            marks: MarkStyles::from_theme(theme, support),
             masked,
         }
     }
@@ -206,21 +206,6 @@ impl Theme {
             Some(_) => s,
             None => s.add_modifier(Modifier::DIM),
         }
-    }
-
-    /// These styles with the reader's mark colors (`[colors]`), at this
-    /// theme's color level.
-    pub fn with_marks(mut self, marks: &textweaver_app::MarkColors) -> Self {
-        let to = |c: Option<textweaver_theme::Rgb>| {
-            c.and_then(|rgb| textweaver_theme::term_color(rgb, self.support))
-                .map(color)
-        };
-        self.marks = MarkStyles {
-            ruler: to(marks.ruler),
-            difficult: to(marks.difficult_words),
-            syllables: to(marks.syllables),
-        };
-        self
     }
 
     /// The built-in theme with this name (star's old names accepted), or
@@ -246,6 +231,24 @@ impl Theme {
             HighlightKind::SpokenSentence => self.spoken_sentence,
             HighlightKind::CurrentFindHit => self.current_hit,
             HighlightKind::SpokenWord => self.spoken_word,
+        }
+    }
+}
+
+impl MarkStyles {
+    /// The mark colors `theme` gives (its file or the reader's
+    /// `[colors]`), at color level `support`.
+    fn from_theme(theme: &textweaver_theme::Theme, support: ColorSupport) -> Self {
+        let given = |role: ColorRole| {
+            (!theme.is_derived(role))
+                .then(|| textweaver_theme::term_color(theme.color(role), support))
+                .flatten()
+                .map(color)
+        };
+        MarkStyles {
+            ruler: given(ColorRole::Ruler),
+            difficult: given(ColorRole::DifficultWord),
+            syllables: given(ColorRole::SyllableMark),
         }
     }
 }
@@ -388,6 +391,22 @@ mod tests {
             let bar = style(TerminalTheme::new(galaxy, support).style(StyleRole::StatusBar));
             assert_eq!(t.status, bar, "{support:?}");
         }
+    }
+
+    /// The marks take their colors from the theme's roles: a reader's
+    /// `[colors]` value shows; a role worked out at load leaves the mark
+    /// to its attributes.
+    #[test]
+    fn marks_come_from_the_theme_roles() {
+        let mut config = textweaver_app::AppConfig::for_tests();
+        config.settings.colors.ruler = "#336699".into();
+        let app = textweaver_app::App::new(config);
+        let t = Theme::from_theme(&app.reading_theme(), ColorSupport::TrueColor);
+        assert_eq!(t.marks.ruler, Some(Color::Rgb(0x33, 0x66, 0x99)));
+        assert_eq!(t.marks.difficult, None);
+        assert_eq!(t.marks.syllables, None);
+        let none = Theme::from_theme(&app.reading_theme(), ColorSupport::NoColor);
+        assert_eq!(none.marks, MarkStyles::default());
     }
 
     #[test]
