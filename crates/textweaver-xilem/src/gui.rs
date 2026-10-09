@@ -2090,6 +2090,23 @@ impl Gui {
         self.refresh(ctx);
     }
 
+    /// Space in the Notes panel: the selected note's links open as the
+    /// app's list ([`sidebar::links`]); the list dialog gives the focus
+    /// back to the panel when it closes.
+    fn panel_links(&mut self, ctx: &mut DriverCtx<'_>) {
+        let root = ctx.render_root(self.window_id);
+        let row = root
+            .get_widget_with_tag(SIDEBAR_LIST)
+            .map_or(0, |l| l.inner().selected());
+        let effects = sidebar::links(&mut self.app, &self.sidebar, row);
+        if self.log {
+            crate::log::line(&format!("panel row {row}: links"));
+        }
+        self.menu_dirty = true;
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
+    }
+
     /// Runs `a` if the window runs it itself ([`Self::is_window_command`]);
     /// returns false for the app's commands.
     fn window_command(&mut self, ctx: &mut DriverCtx<'_>, a: ActionId) -> bool {
@@ -3967,6 +3984,9 @@ impl AppDriver for Gui {
                 None
             };
             self.panel_go(ctx, row, true);
+        } else if let Some(SidebarAction::Links) = action.downcast_ref::<SidebarAction>() {
+            // Space in the Notes panel: the note's links, as a list dialog.
+            self.panel_links(ctx);
         } else if let Some(d) = action.downcast_ref::<DialogAction>()
             && ctx
                 .render_root(self.window_id)
