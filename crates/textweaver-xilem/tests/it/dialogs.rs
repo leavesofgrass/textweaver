@@ -12,6 +12,7 @@ use masonry_testing::{TestHarness, TestHarnessParams};
 use textweaver_app::App;
 use textweaver_app::a11y::LogAnnouncer;
 use textweaver_xilem::dialog::DialogAction;
+use textweaver_xilem::find_panel::{self, FindTexts};
 use textweaver_xilem::gui;
 use textweaver_xilem::settings_dialog::SettingsForm;
 use textweaver_xilem::setup::{self, Options};
@@ -51,8 +52,8 @@ fn window(app: &App, size: (u32, u32), scale: f64) -> TestHarness<Root> {
 }
 
 /// Every kind of dialog, by name, with the widget that takes the focus.
-const KINDS: [&str; 8] = [
-    "list", "prompt", "palette", "question", "settings", "colors", "reading", "voices",
+const KINDS: [&str; 9] = [
+    "list", "prompt", "palette", "question", "settings", "colors", "reading", "voices", "find",
 ];
 
 fn build(kind: &str, app: &App) -> (NewWidget<dyn Widget>, WidgetId) {
@@ -96,6 +97,11 @@ fn build_for(kind: &str, app: &App, height: u32) -> (NewWidget<dyn Widget>, Widg
             let short = f64::from(height) < voices::SHORT_HEIGHT;
             let d = voices::voice_dialog_fit(&p, app, "Voices", items, 0, short);
             (d.modal, d.list)
+        }
+        "find" => {
+            let short = f64::from(height) < find_panel::SHORT_HEIGHT;
+            let d = find_panel::find_dialog(&p, app, &FindTexts::default(), short);
+            (d.modal, d.find)
         }
         _ => unreachable!("{kind}"),
     }
@@ -231,7 +237,7 @@ fn no_dialog_control_leaves_a_small_window() {
                 }
                 if !matches!(
                     n.role(),
-                    Role::Button | Role::ListBox | Role::TextInput | Role::Group
+                    Role::Button | Role::ListBox | Role::TextInput | Role::Group | Role::CheckBox
                 ) {
                     continue;
                 }
@@ -268,6 +274,7 @@ fn title_of(kind: &str, app: &App) -> String {
         "prompt" => "Go to line".into(),
         "palette" => "Commands".into(),
         "question" => "Remove the voice?".into(),
+        "find" => "Find and replace".into(),
         "settings" => app.catalog().tr("settings-title"),
         "colors" | "voices" | "reading" => String::new(),
         _ => unreachable!("{kind}"),
@@ -429,4 +436,112 @@ fn the_voice_manager_fits_the_smallest_window() {
         }
     }
     assert!(outside.is_empty(), "outside the window: {outside:#?}");
+}
+
+/// The controls inside the open dialog, in tree (and Tab) order, with
+/// their roles and names.
+fn dialog_controls(h: &TestHarness<Root>) -> Vec<(Role, String)> {
+    let mut stack = vec![h.access_tree().state().root()];
+    let mut dialog = None;
+    while let Some(n) = stack.pop() {
+        if n.role() == Role::Dialog {
+            dialog = Some(n);
+            break;
+        }
+        stack.extend(n.children());
+    }
+    let mut out = Vec::new();
+    let mut stack = vec![dialog.expect("a dialog is open")];
+    while let Some(n) = stack.pop() {
+        if matches!(n.role(), Role::TextInput | Role::CheckBox | Role::Button) {
+            out.push((n.role(), n.label().unwrap_or_default()));
+        }
+        let mut children: Vec<_> = n.children().collect();
+        children.reverse();
+        stack.extend(children);
+    }
+    out
+}
+
+/// The find and replace panel (G1-b): every control has its role and
+/// name, in the order Tab reaches them; the check boxes show the app's
+/// search options; and an invalid pattern is explained under Find what.
+#[test]
+fn the_find_panel_names_its_controls_and_shows_a_bad_pattern() {
+    use textweaver_app::{Command, SearchOptions};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app(dir.path());
+    let _ = app.dispatch(Command::SetSearchOptions(SearchOptions {
+        regex: true,
+        ..SearchOptions::default()
+    }));
+    let mut h = window(&app, (1100, 780), 1.0);
+    let texts = FindTexts {
+        find: "(teh".into(),
+        with: "the".into(),
+    };
+    let d = find_panel::find_dialog(&Palette::galaxy(), &app, &texts, false);
+    let (find, checks) = (d.find, d.options.len());
+    let mut back = None;
+    gui::open_dialog_in(&mut h, d.modal, find, &mut back);
+    let _ = h.redraw();
+    assert_eq!(
+        h.focused_widget_id(),
+        Some(find),
+        "the focus starts in Find what"
+    );
+    assert_eq!(checks, 4);
+    let controls = dialog_controls(&h);
+    let expected = [
+        (Role::TextInput, "Find what"),
+        (Role::TextInput, "Replace with"),
+        (Role::CheckBox, "Match case"),
+        (Role::CheckBox, "Whole words"),
+        (Role::CheckBox, "Regular expression"),
+        (Role::CheckBox, "Across lines"),
+        (Role::Button, "Find next"),
+        (Role::Button, "Replace"),
+        (Role::Button, "Replace all"),
+        (Role::Button, "Close"),
+    ];
+    let got: Vec<(Role, &str)> = controls.iter().map(|(r, n)| (*r, n.as_str())).collect();
+    assert_eq!(got, expected);
+    // Regular expression is on, as the app's options say; the rest off.
+    let mut on = Vec::new();
+    let mut stack = vec![h.access_tree().state().root()];
+    while let Some(n) = stack.pop() {
+        stack.extend(n.children());
+        if n.role() == Role::CheckBox {
+            on.push((
+                n.label().unwrap_or_default(),
+                n.toggled() == Some(masonry::accesskit::Toggled::True),
+            ));
+        }
+    }
+    on.sort();
+    assert!(on.contains(&("Regular expression".into(), true)), "{on:?}");
+    assert!(on.contains(&("Match case".into(), false)), "{on:?}");
+    // The unclosed group is explained in words, meaning first.
+    let status = h
+        .get_widget(find_panel::FIND_STATUS)
+        .inner()
+        .text()
+        .to_string();
+    assert!(status.starts_with("Invalid pattern"), "{status:?}");
+    // Escape closes it, and the focus goes back.
+    h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::Escape)));
+    gui::close_dialog_in(&mut h, &mut back);
+    let _ = h.redraw();
+    assert!(dialog_controls_closed(&h));
+}
+
+fn dialog_controls_closed(h: &TestHarness<Root>) -> bool {
+    let mut stack = vec![h.access_tree().state().root()];
+    while let Some(n) = stack.pop() {
+        if n.role() == Role::Dialog {
+            return false;
+        }
+        stack.extend(n.children());
+    }
+    true
 }

@@ -47,6 +47,7 @@ pub mod dark_mode;
 pub mod dialog;
 pub mod document;
 pub mod file_chooser;
+pub mod find_panel;
 pub mod font_chooser;
 pub mod fonts;
 #[cfg(feature = "screenshot")]
