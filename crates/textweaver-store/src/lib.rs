@@ -65,8 +65,10 @@ pub use doc_state::{
     StateStore, TextStamp, percent,
 };
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
-pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, ScannedDoc};
-pub use notes::{Annotation, Highlight, Note, NotesExport, Relation, RelationType};
+pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, NotedDoc, ScannedDoc};
+pub use notes::{
+    Annotation, Backlink, Backlinks, Highlight, Note, NotesExport, Relation, RelationType,
+};
 pub use paths::{MEDICAL_OVERLAY_FILE, Paths};
 pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
