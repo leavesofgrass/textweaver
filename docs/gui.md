@@ -110,7 +110,8 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **F11** and **Shift+F11**: faster and slower (or **+** and **-** in browse). In the window, Ctrl+= and Ctrl+- size the text instead of the rate.
 - **Ctrl+Shift+V**: the voice manager (see [Voices](#voices)).
 - **Ctrl+,**: settings.
-- **F2**: the command palette, every command by name, each with its category and key ("Export PDF, File: ..."). Type to filter; Up and Down say each match; Tab or Ctrl+L moves to the list of matches, where your screen reader reads each with its place; Enter runs one. With nothing typed, the commands you ran last from the palette or the menus come first, marked "recent".
+- **F2**: the command palette, every command by its short name, with its key at the right edge ("Find next, F3"). Type to filter; Up and Down say each match; Tab or Ctrl+L moves to the list of matches, where your screen reader reads each with its place; F1 says what the selected command does, which is also each row's description; Enter runs one. With nothing typed, the commands you ran last from the palette or the menus come first, marked "recent".
+- **The keyboard shortcuts list** (? in browse, or the Help menu) has the same rows. Type to filter it by name, key, or menu ("12 of 226 commands match."); Page Down and Page Up move by group; F1 on a row says what it does.
 - **F1**: help. In a list, F1 repeats the list's introduction.
 - **F3** and **Shift+F3**: the next and previous match of the last search (Ctrl+F), as in other Windows programs. The list of every key is on **?** (browse) and in the Help menu.
 - **Alt+Shift+S**: Speech Cursor mode on or off. Tab moves the focus, as in any window.
