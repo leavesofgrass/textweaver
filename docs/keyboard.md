@@ -237,6 +237,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Find text in the document | `Ctrl+F`, `/` (browse) | `Ctrl+F`, `/` (browse) | `Cmd+F`, `/` (browse) | `find` |
 | Find the next match | `F3`, `n` (browse) | `F3`, `n` (browse) | `F3`, `n` (browse) | `find_next` |
 | Find the previous match | `F4`, `Shift+N` (browse) | `Shift+F3`, `Shift+N` (browse) | `Shift+F3`, `Shift+N` (browse) | `find_previous` |
+| Choose how Find and Replace match: case, whole words, regular expression, across lines | palette | palette | palette | `search_options` |
 | Move to the next misspelled word, and spell it | `Alt+M` | `Alt+M` | `Cmd+;` | `next_misspelling` |
 | Move to the previous misspelled word, and spell it | `Alt+Shift+M` | `Alt+Shift+M` | `Cmd+Option+Shift+M` | `previous_misspelling` |
 | List suggestions for the misspelled word at the cursor, or add it to your word list | `Alt+J` | `Alt+J` | `Cmd+Option+J` | `spelling_suggestions` |
@@ -523,6 +524,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Say the document's title, how many headings, tables, pictures, and footnotes it has, and about how many minutes are left | `document_overview` |
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
+| Choose how Find and Replace match: case, whole words, regular expression, across lines | `search_options` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |

@@ -332,9 +332,10 @@ Other moves still work. A heading, find, or bookmark jump moves the Speech Curso
 
 Press **Ctrl+F** or **/**. Type what to find and press **Enter**.
 
-- Search ignores case.
-- To search with a regular expression, write it between slashes, for example `/colou?r/`.
+- Search ignores case, unless you turn on **Match case** in the search options (below).
+- To search with a regular expression, write it between slashes, for example `/colou?r/`, or turn on **Regular expression** in the search options.
 - The search starts at the cursor. When there is no match after it, it wraps to the top.
+- A regular expression that is not valid is said in words, with the character where it goes wrong, for example "Invalid pattern at character 3: unclosed group." Nothing is searched.
 
 You hear the match number, the count, and the line, for example "Match 2 of 5:" followed by the text of that line. With no match, you hear "No matches for", then your text.
 
@@ -344,6 +345,17 @@ You hear the match number, the count, and the line, for example "Match 2 of 5:" 
 - **F4** or **Shift+N**: previous match (**Shift+F3** in the window).
 
 At the end, the search wraps and says "Wrapped to top." or "Wrapped to bottom." If you have not searched yet, these keys open the Find prompt. The window uses **F3** and **Shift+F3**, as other Windows programs do, besides **n** and **Shift+N**.
+
+### Search options
+
+**Search options**, in the Edit menu under Find and in the command palette, is a short list of four switches that Find and Find and replace share. Press **Enter** on one, or its letter, to turn it on or off; you hear its new state, and the list stays open until **Escape**.
+
+- **Match case** (**c**): off by default, so `cat` also finds `Cat`.
+- **Whole words only** (**w**): on, `cat` does not find `catalog`.
+- **Regular expression** (**x**): the text to find is a regular expression, such as `colou?r` or `\d+`. `^` and `$` match at the start and end of a line, and `\n` or `\s` can match a line break.
+- **Across lines** (**l**): with a regular expression, `.` matches a line break too, so a match can run on from one line to the next.
+
+The options last until you quit, and all start off. When one is on, the Find prompt says so as it opens, for example "Find. Options on: regular expression."
 
 ### Clear the search
 
@@ -619,7 +631,7 @@ An unknown name gives "Unknown command:" and your text.
 
 These keys work in every prompt, including Find, Go to, and Open file:
 
-- **Up** and **Down**: earlier answers to the same prompt (except in the palette, where they go through the commands). The last 50 are kept until you quit.
+- **Up** and **Down**: earlier answers to the same prompt (except in the palette, where they go through the commands). The last 50 are kept until you quit. Find and the "find what" of Find and replace share their history.
 - **Ctrl+A** and **Home**: to the start. **Ctrl+E** and **End**: to the end.
 - **Ctrl+U**: delete to the start. **Ctrl+K**: delete to the end. **Ctrl+W**: delete the word before the cursor.
 - **Escape** or **Ctrl+G**: cancel.
