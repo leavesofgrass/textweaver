@@ -99,6 +99,7 @@ impl App {
             Some(ListKind::Authoring(l)) if l.filterable() => Some(&self.authoring.filter),
             Some(ListKind::Settings) => self.settings_filter(),
             Some(ListKind::Library(_)) => self.library_filter(),
+            Some(ListKind::Actions(_)) => self.keys_filter(),
             _ => None,
         }
     }
@@ -204,6 +205,9 @@ impl App {
         }
         if matches!(self.list, Some(ListKind::Library(_))) {
             return self.filter_library(query);
+        }
+        if matches!(self.list, Some(ListKind::Actions(_))) {
+            return self.filter_keys(query);
         }
         let Some(ListKind::Authoring(mut list)) = self.list.clone() else {
             let msg = self.msg("lists-no-filter");

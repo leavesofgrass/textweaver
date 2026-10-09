@@ -354,6 +354,8 @@ pub struct App {
     /// The introduction of the list shown ("Notes, 12 notes. Enter goes
     /// to a note..."), repeated on request (crate::status).
     pub(crate) list_intro: Option<String>,
+    /// The keyboard shortcuts list's filter (crate::command_list).
+    pub(crate) keys_filter: String,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     /// Which sentences continuous reading says (crate::overview); for
@@ -546,6 +548,7 @@ impl App {
             last_message: None,
             messages_said: 0,
             list_intro: None,
+            keys_filter: String::new(),
             pause_origin: None,
             reading: ReadKind::Continuous,
             reading_pass: textweaver_text::ReadingPass::Full,

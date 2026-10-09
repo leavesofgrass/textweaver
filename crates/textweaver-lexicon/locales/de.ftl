@@ -539,8 +539,21 @@ help-the-command = der Befehl { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Unbekannter Befehl: { $text }.
-help-shortcuts-intro = Tastenkombinationen, { $n } Befehle. Auf und Ab bewegen, Eingabetaste führt aus, Escape schließt.
+help-shortcuts-intro = Tastenkombinationen, { $n } Befehle. Tippen filtert. Bild ab springt zur nächsten Gruppe, F1 erklärt einen Befehl, Eingabetaste führt ihn aus, Escape schließt.
 help-shortcuts-title = Tastenkombinationen
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = Tastenkombinationen zu { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } von { $total } Befehlen stimmen überein.
+help-shortcuts-filter-none = Kein Befehl stimmt mit { $query } überein. Rücktaste entfernt Buchstaben.
+help-shortcuts-filter-cleared = Filter gelöscht, { $n } Befehle.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }, { $n ->
+        [one] 1 Befehl
+       *[other] { $n } Befehle
+    }. { $item }
 help-title = Hilfe
 help-intro = Hilfe. Auf und Ab bewegen, Escape schließt.
 
@@ -3006,7 +3019,7 @@ gui-prompt-path-hint = Geben Sie den Pfad eines Dokuments ein und drücken Sie d
 gui-prompt-hint = Eingabetaste übernimmt, Escape bricht ab. Pfeil nach oben und unten holen frühere Antworten zurück.
 gui-palette-filter = Tippen, um die Befehle zu filtern
 gui-palette-list = Befehle
-gui-palette-hint = Eingabetaste führt den ersten Treffer aus; Tab wechselt zur Liste.
+gui-palette-hint = Eingabetaste führt den ersten Treffer aus; Tab wechselt zur Liste; F1 erklärt einen Befehl.
 gui-open-failed = { $name } konnte nicht geöffnet werden: { $error }
 gui-uia-unavailable = UI-Automation-Benachrichtigungen gibt es nur unter Windows; die Live-Region wird verwendet.
 gui-graphics-failed = Das Fenster konnte seine Grafik nicht starten. Der Terminal-Leser textweaver braucht keine.
@@ -3358,17 +3371,17 @@ choice-accessibility-interface-announcements-off = aus
 choice-accessibility-interface-announcements-minimal = minimal
 choice-accessibility-interface-announcements-normal = normal
 choice-accessibility-interface-announcements-full = vollständig
-palette-item = { $name }, { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }, { $category }: { $help }.
-palette-item-recent = { $name }, zuletzt, { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }, zuletzt, { $category }: { $help }.
+palette-item = { $name }, { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }, { $keys }, zuletzt
+palette-item-recent-no-keys = { $name }, zuletzt
 palette-list-title = Befehle zu { $query }
 palette-list-title-all = Befehle
 palette-list-intro =
     { $title }, { $n ->
         [one] 1 Befehl
        *[other] { $n } Befehle
-    }. Eingabe führt einen aus.
+    }. Eingabe führt einen aus, F1 erklärt ihn.
 action-browse-files = Dateien und Archive durchsuchen: Eingabe öffnet einen Ordner, ein Archiv oder ein Dokument; Rücktaste geht eine Ebene nach oben
 action-batch-convert = Einen Ordner mit Dokumenten im Hintergrund in ein anderes Format umwandeln
 action-export-audio = Das Dokument als gesprochenes Audio exportieren: MP3, FLAC, Opus, WAV oder ein M4B-Hörbuch

@@ -58,6 +58,15 @@ pub struct ListModel {
     pub items: Vec<String>,
     /// The focused item (0 in an empty list).
     pub selected: usize,
+    /// In a list of commands (the keyboard shortcuts list, the command
+    /// palette's list), each row's short name and key, for a frontend
+    /// that draws the key at the right edge ("Find next" and "F3"; the key
+    /// is empty for a command without one). Empty for other lists.
+    pub columns: Vec<(String, String)>,
+    /// In a list of commands, each row's long explanation, which F1 says
+    /// and a frontend gives the row as its description. Empty for other
+    /// lists.
+    pub descriptions: Vec<String>,
     /// Items as textweaver's voice says them: keys named in an item
     /// ("Open a document: Ctrl+O") keep both forms (crate::help), so the
     /// voice says "Control O". Empty when no item names a key.
@@ -86,6 +95,8 @@ impl ListModel {
             title: title.into(),
             items,
             selected: 0,
+            columns: Vec::new(),
+            descriptions: Vec::new(),
             said,
             position_last: false,
         }
@@ -503,6 +514,10 @@ impl App {
                     if self.list == Some(crate::app::ListKind::Browse) {
                         view = view.with_position_last();
                     }
+                    if let Some((columns, descriptions)) = self.command_columns() {
+                        view.columns = columns;
+                        view.descriptions = descriptions;
+                    }
                     // A focus the app asked for wins over the one kept
                     // (the file browser keeps its row when sorted).
                     if let Some(i) = self.pending_list_focus.take().or(keep) {
@@ -561,6 +576,9 @@ impl App {
         if self.settings_screen.is_some()
             && let Some(effects) = self.settings_list_key(key)
         {
+            return effects;
+        }
+        if let Some(effects) = self.command_list_key(key) {
             return effects;
         }
         // The Say Status key previews the focused voice (crate::voice).

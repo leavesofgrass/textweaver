@@ -597,8 +597,21 @@ help-the-command = الأمر { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = أمر غير معروف: { $text }.
-help-shortcuts-intro = اختصارات لوحة المفاتيح، { $n } أمرًا. السهمان لأعلى ولأسفل للتنقل، Enter للتشغيل، Escape للإغلاق.
+help-shortcuts-intro = اختصارات لوحة المفاتيح، { $n } أمرًا. اكتب للتصفية. ينتقل Page Down إلى المجموعة التالية، ويشرح F1 الأمر، ويشغّله Enter، ويغلق Escape.
 help-shortcuts-title = اختصارات لوحة المفاتيح
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = اختصارات لوحة المفاتيح المطابقة لـ { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } من { $total } أمرًا مطابقة.
+help-shortcuts-filter-none = لا يطابق أي أمر { $query }. يزيل Backspace الأحرف.
+help-shortcuts-filter-cleared = مُسح عامل التصفية، { $n } أمرًا.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }، { $n ->
+        [one] أمر واحد
+       *[other] { $n } أوامر
+    }. { $item }
 help-title = مساعدة
 help-intro = مساعدة. السهمان لأعلى ولأسفل للتنقل، Escape للإغلاق.
 
@@ -3261,7 +3274,7 @@ gui-prompt-path-hint = اكتب مسار مستند، ثم اضغط Enter. يك�
 gui-prompt-hint = اضغط Enter للقبول، أو Escape للإلغاء. يستعيد السهمان لأعلى ولأسفل الإجابات السابقة.
 gui-palette-filter = اكتب لتصفية الأوامر
 gui-palette-list = الأوامر
-gui-palette-hint = يشغّل Enter أول نتيجة مطابقة، وينتقل Tab إلى القائمة.
+gui-palette-hint = يشغّل Enter أول نتيجة مطابقة، وينتقل Tab إلى القائمة، ويشرح F1 الأمر.
 gui-open-failed = تعذّر فتح { $name }: { $error }
 gui-uia-unavailable = إشعارات UI Automation متاحة في Windows فقط؛ ستُستخدم المنطقة الحية.
 gui-graphics-failed = تعذّر على النافذة تشغيل الرسوميات. قارئ الطرفية textweaver لا يحتاج إليها.
@@ -3632,17 +3645,17 @@ choice-accessibility-interface-announcements-off = متوقفة
 choice-accessibility-interface-announcements-minimal = في حدها الأدنى
 choice-accessibility-interface-announcements-normal = عادية
 choice-accessibility-interface-announcements-full = كاملة
-palette-item = { $name }، { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }، { $category }: { $help }.
-palette-item-recent = { $name }، حديث، { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }، حديث، { $category }: { $help }.
+palette-item = { $name }، { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }، { $keys }، حديث
+palette-item-recent-no-keys = { $name }، حديث
 palette-list-title = الأوامر المطابقة لـ { $query }
 palette-list-title-all = الأوامر
 palette-list-intro =
     { $title }، { $n ->
         [one] أمر واحد
        *[other] { $n } أوامر
-    }. يشغّل Enter أحدها.
+    }. يشغّل Enter أحدها، ويشرحه F1.
 action-browse-files = تصفح الملفات والأرشيفات: يفتح Enter مجلدًا أو أرشيفًا أو مستندًا، ويصعد Backspace مستوى
 action-batch-convert = تحويل مجلد من المستندات إلى صيغة أخرى في الخلفية
 action-export-audio = تصدير المستند صوتًا منطوقًا: MP3 أو FLAC أو Opus أو WAV أو كتاب صوتي M4B
