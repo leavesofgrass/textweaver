@@ -9235,6 +9235,7 @@ dependencies = [
  "harper-core",
  "log",
  "pulldown-cmark",
+ "regex",
  "ropey",
  "serde",
  "serde_json",

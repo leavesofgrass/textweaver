@@ -301,6 +301,7 @@ impl MenuId {
                 Do(A::FindNext),
                 Do(A::FindPrevious),
                 Do(A::Replace),
+                Do(A::SearchOptions),
             ],
             MenuId::Format => &[
                 Do(A::Bold),

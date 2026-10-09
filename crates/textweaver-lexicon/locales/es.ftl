@@ -723,6 +723,7 @@ action-cycle-punctuation = Recorrer cuánta puntuación se dice: ninguna, algo, 
 action-find = Buscar texto en el documento
 action-find-next = Buscar la coincidencia siguiente
 action-find-previous = Buscar la coincidencia anterior
+action-search-options = Elegir cómo buscan Buscar y Reemplazar: mayúsculas, palabras completas, expresión regular, a través de líneas
 action-next-misspelling = Ir a la palabra mal escrita siguiente, y deletrearla
 action-previous-misspelling = Ir a la palabra mal escrita anterior, y deletrearla
 action-spelling-suggestions = Listar sugerencias para la palabra mal escrita en el cursor, o agregarla a su lista de palabras
@@ -2369,12 +2370,15 @@ edit-recovery-postponed = Recuperación aplazada. El trabajo sin guardar se ofre
 
 # $title is replace-match-title. Keep the letters r, s and a: they are the
 # keys that answer.
-replace-match-question = { $title }. Pulse r para reemplazar, s para omitir, a para reemplazar todo, Escape para detener.
+replace-match-question = { $title }. La línea: { $context }. Pulse r para reemplazar, s para omitir, a para reemplazar todo, Escape para detener.
 # The replace list's title when no match is being asked about.
 replace-title = Reemplazar
 # $n is this match's number, $total the number of matches, $line the line
-# number, and $context the text of that line.
-replace-match-title = Coincidencia { $n } de { $total }, línea { $line }: { $context }
+# number, $found the matched text, and $result what it becomes (both
+# shortened); the -removed form is for an empty replacement. $context in
+# replace-match-question is the text of the match's line.
+replace-match-title = Coincidencia { $n } de { $total }, línea { $line }: { $found } pasa a { $result }
+replace-match-title-removed = Coincidencia { $n } de { $total }, línea { $line }: se elimina { $found }
 replace-item-this = Reemplazar esta
 replace-item-skip = Omitir esta
 replace-item-rest = Reemplazar todas las demás
@@ -2402,6 +2406,43 @@ replace-replaced =
     }
 replace-replaced-skipped = Se reemplazaron { $n }, se omitieron { $skipped }.
 replace-stopped = Detenido. Se reemplazaron { $n }, se omitieron { $skipped }.
+# Find and replace with regular expressions (B1-fr). $state is common-on
+# or common-off; $n is the number of matches now.
+replace-item-regex = Expresión regular: { $state }
+replace-item-across-lines = A través de líneas: { $state }
+replace-regex-now =
+    { $n ->
+        [one] Expresión regular { $state }. 1 coincidencia.
+       *[other] Expresión regular { $state }. { $n } coincidencias.
+    }
+replace-across-lines-now =
+    { $n ->
+        [one] A través de líneas { $state }. 1 coincidencia.
+       *[other] A través de líneas { $state }. { $n } coincidencias.
+    }
+# $problem is search-invalid-pattern: switching the option would make the
+# pattern invalid.
+replace-option-refused = { $problem } La opción no cambia.
+# Asked once before replacing all the rest; $n is how many. Keep y and n.
+replace-all-question =
+    { $n ->
+        [one] ¿Reemplazar la última coincidencia? y o n
+       *[other] ¿Reemplazar las { $n } coincidencias restantes? y o n
+    }
+replace-all-declined = No se reemplazó nada.
+# The search options list, and the options as named in search-options-on.
+search-options-title = Opciones de búsqueda
+search-option-match-case = coincidir mayúsculas
+search-option-whole-words = palabras completas
+search-option-regex = expresión regular
+search-option-across-lines = a través de líneas
+# Said as Find or Replace opens when an option is on; $list joins the
+# options' names with commas.
+search-options-on = Opciones activadas: { $list }.
+# $at is the character where the pattern fails, counting from 1; $reason
+# is the regular expression engine's own explanation (in English).
+search-invalid-pattern = Patrón no válido en el carácter { $at }: { $reason }.
+search-invalid-pattern-anywhere = Patrón no válido: { $reason }.
 
 ## Saving in the background.
 
@@ -3200,6 +3241,7 @@ name-cycle-punctuation = Puntuación
 name-find = Buscar
 name-find-next = Buscar siguiente
 name-find-previous = Buscar anterior
+name-search-options = Opciones de búsqueda
 name-next-misspelling = Error ortográfico siguiente
 name-previous-misspelling = Error ortográfico anterior
 name-spelling-suggestions = Sugerencias ortográficas

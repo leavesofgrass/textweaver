@@ -382,6 +382,8 @@ pub struct App {
     /// asked before replacing a file, so the app does not ask again.
     pub(crate) save_as_replace_confirmed: bool,
     pub(crate) replace_query: Option<String>,
+    /// How Find and Replace match, for the session.
+    pub(crate) search: crate::SearchOptions,
     pub(crate) pending_item: Option<usize>,
     /// An action waiting for a yes or no ([`ActionId::needs_confirmation`]).
     pub(crate) pending_confirm: Option<ActionId>,
@@ -564,6 +566,7 @@ impl App {
             suggested_path: None,
             save_as_replace_confirmed: false,
             replace_query: None,
+            search: crate::SearchOptions::default(),
             pending_item: None,
             pending_confirm: None,
             pending_import: None,
@@ -1482,6 +1485,12 @@ impl App {
                 self.run_find(&pattern);
                 vec![Effect::Redraw]
             }
+            Command::SetSearchOptions(opts) => self.set_search_options(opts),
+            Command::StartReplace { find, with } => {
+                self.leave_prompt();
+                self.start_replace_command(find, with)
+            }
+            Command::ReplaceStep(step) => self.replace_step(step),
             Command::GoTo(target) => {
                 self.leave_prompt();
                 self.go_to(target);
@@ -1656,7 +1665,13 @@ impl App {
         } else {
             crate::study::prompt_label(&self.study.catalog, purpose)
         };
-        let said = self.path_prompt_said(purpose, &label);
+        let mut said = self.path_prompt_said(purpose, &label);
+        if matches!(purpose, PromptPurpose::Find | PromptPurpose::ReplaceFind)
+            && let Some(options) = self.search_options_said()
+        {
+            // "Find. Options on: regular expression."
+            said = format!("{said}. {options}");
+        }
         if purpose == PromptPurpose::CommandPalette
             && self.settings.speech.verbosity >= Verbosity::Normal
         {
@@ -2097,6 +2112,7 @@ impl App {
             A::Find => return self.prompt(PromptPurpose::Find),
             A::FindNext => return self.find_step(textweaver_core::Direction::Forward),
             A::FindPrevious => return self.find_step(textweaver_core::Direction::Backward),
+            A::SearchOptions => return self.search_options_list(),
             // Bookmarks
             A::AddNote => return self.notes_command(NoteCommand::Add),
             A::ListNotes => return self.notes_command(NoteCommand::List),

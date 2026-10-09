@@ -728,6 +728,7 @@ action-cycle-punctuation = Cycle how much punctuation is spoken: none, some, all
 action-find = Find text in the document
 action-find-next = Find the next match
 action-find-previous = Find the previous match
+action-search-options = Choose how Find and Replace match: case, whole words, regular expression, across lines
 action-next-misspelling = Move to the next misspelled word, and spell it
 action-previous-misspelling = Move to the previous misspelled word, and spell it
 action-spelling-suggestions = List suggestions for the misspelled word at the cursor, or add it to your word list
@@ -2376,12 +2377,15 @@ edit-recovery-postponed = Recovery postponed. The unsaved work will be offered a
 
 # $title is replace-match-title. Keep the letters r, s and a: they are the
 # keys that answer.
-replace-match-question = { $title }. Press r to replace, s to skip, a to replace all, Escape to stop.
+replace-match-question = { $title }. The line: { $context }. Press r to replace, s to skip, a to replace all, Escape to stop.
 # The replace list's title when no match is being asked about.
 replace-title = Replace
 # $n is this match's number, $total the number of matches, $line the line
-# number, and $context the text of that line.
-replace-match-title = Match { $n } of { $total }, line { $line }: { $context }
+# number, $found the matched text, and $result what it becomes (both
+# shortened); the -removed form is for an empty replacement. $context in
+# replace-match-question is the text of the match's line.
+replace-match-title = Match { $n } of { $total }, line { $line }: { $found } becomes { $result }
+replace-match-title-removed = Match { $n } of { $total }, line { $line }: { $found } is removed
 replace-item-this = Replace this one
 replace-item-skip = Skip this one
 replace-item-rest = Replace all the rest
@@ -2409,6 +2413,43 @@ replace-replaced =
     }
 replace-replaced-skipped = Replaced { $n }, skipped { $skipped }.
 replace-stopped = Stopped. Replaced { $n }, skipped { $skipped }.
+# Find and replace with regular expressions (B1-fr). $state is common-on
+# or common-off; $n is the number of matches now.
+replace-item-regex = Regular expression: { $state }
+replace-item-across-lines = Across lines: { $state }
+replace-regex-now =
+    { $n ->
+        [one] Regular expression { $state }. 1 match.
+       *[other] Regular expression { $state }. { $n } matches.
+    }
+replace-across-lines-now =
+    { $n ->
+        [one] Across lines { $state }. 1 match.
+       *[other] Across lines { $state }. { $n } matches.
+    }
+# $problem is search-invalid-pattern: switching the option would make the
+# pattern invalid.
+replace-option-refused = { $problem } The option is unchanged.
+# Asked once before replacing all the rest; $n is how many. Keep y and n.
+replace-all-question =
+    { $n ->
+        [one] Replace the 1 remaining match? y or n
+       *[other] Replace all { $n } remaining matches? y or n
+    }
+replace-all-declined = Nothing replaced.
+# The search options list, and the options as named in search-options-on.
+search-options-title = Search options
+search-option-match-case = match case
+search-option-whole-words = whole words
+search-option-regex = regular expression
+search-option-across-lines = across lines
+# Said as Find or Replace opens when an option is on; $list joins the
+# options' names with commas.
+search-options-on = Options on: { $list }.
+# $at is the character where the pattern fails, counting from 1; $reason
+# is the regular expression engine's own explanation (in English).
+search-invalid-pattern = Invalid pattern at character { $at }: { $reason }.
+search-invalid-pattern-anywhere = Invalid pattern: { $reason }.
 
 ## Saving in the background.
 
@@ -3227,6 +3268,7 @@ name-cycle-punctuation = Punctuation
 name-find = Find
 name-find-next = Find next
 name-find-previous = Find previous
+name-search-options = Search options
 name-next-misspelling = Next misspelling
 name-previous-misspelling = Previous misspelling
 name-spelling-suggestions = Spelling suggestions

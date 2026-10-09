@@ -671,7 +671,11 @@ fn replace_all_heading_cycle_and_caret_echo() {
         "{effects:?}"
     );
     assert_eq!(r.app.list_accelerator('a'), Some(2));
+    assert_eq!(r.app.list_accelerator('x'), Some(5));
+    assert_eq!(r.app.list_accelerator('l'), Some(6));
     r.send(Command::Choose(2));
+    assert_eq!(r.said.last(), "Replace all 2 remaining matches? y or n");
+    r.send(Command::Confirm(Confirm::Yes));
     assert_eq!(r.text(), "bird bird dog\n");
     assert_eq!(r.said.last(), "Replaced 2 matches.");
     r.act(ActionId::Undo);

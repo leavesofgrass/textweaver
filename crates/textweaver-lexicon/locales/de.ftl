@@ -759,6 +759,7 @@ action-cycle-punctuation = Durch die Interpunktionsstufe wechseln: keine, etwas,
 action-find = Text im Dokument suchen
 action-find-next = Den nächsten Treffer suchen
 action-find-previous = Den vorherigen Treffer suchen
+action-search-options = Festlegen, wie Suchen und Ersetzen vergleichen: Groß- und Kleinschreibung, ganze Wörter, regulärer Ausdruck, über Zeilen hinweg
 action-next-misspelling = Zum nächsten falsch geschriebenen Wort bewegen und es buchstabieren
 action-previous-misspelling = Zum vorherigen falsch geschriebenen Wort bewegen und es buchstabieren
 action-spelling-suggestions = Vorschläge für das falsch geschriebene Wort am Cursor auflisten, oder es zu Ihrer Wortliste hinzufügen
@@ -2393,12 +2394,15 @@ edit-recovery-postponed = Wiederherstellung verschoben. Die ungespeicherte Arbei
 
 # $title is replace-match-title. Keep the letters r, s and a: they are the
 # keys that answer.
-replace-match-question = { $title }. Drücken Sie r zum Ersetzen, s zum Überspringen, a für Alle ersetzen, Escape zum Stoppen.
+replace-match-question = { $title }. Die Zeile: { $context }. Drücken Sie r zum Ersetzen, s zum Überspringen, a für Alle ersetzen, Escape zum Stoppen.
 # The replace list's title when no match is being asked about.
 replace-title = Ersetzen
 # $n is this match's number, $total the number of matches, $line the line
-# number, and $context the text of that line.
-replace-match-title = Treffer { $n } von { $total }, Zeile { $line }: { $context }
+# number, $found the matched text, and $result what it becomes (both
+# shortened); the -removed form is for an empty replacement. $context in
+# replace-match-question is the text of the match's line.
+replace-match-title = Treffer { $n } von { $total }, Zeile { $line }: { $found } wird { $result }
+replace-match-title-removed = Treffer { $n } von { $total }, Zeile { $line }: { $found } wird entfernt
 replace-item-this = Diesen ersetzen
 replace-item-skip = Diesen überspringen
 replace-item-rest = Alle restlichen ersetzen
@@ -2426,6 +2430,43 @@ replace-replaced =
     }
 replace-replaced-skipped = { $n } ersetzt, { $skipped } übersprungen.
 replace-stopped = Gestoppt. { $n } ersetzt, { $skipped } übersprungen.
+# Find and replace with regular expressions (B1-fr). $state is common-on
+# or common-off; $n is the number of matches now.
+replace-item-regex = Regulärer Ausdruck: { $state }
+replace-item-across-lines = Über Zeilen hinweg: { $state }
+replace-regex-now =
+    { $n ->
+        [one] Regulärer Ausdruck { $state }. 1 Treffer.
+       *[other] Regulärer Ausdruck { $state }. { $n } Treffer.
+    }
+replace-across-lines-now =
+    { $n ->
+        [one] Über Zeilen hinweg { $state }. 1 Treffer.
+       *[other] Über Zeilen hinweg { $state }. { $n } Treffer.
+    }
+# $problem is search-invalid-pattern: switching the option would make the
+# pattern invalid.
+replace-option-refused = { $problem } Die Option bleibt unverändert.
+# Asked once before replacing all the rest; $n is how many. Keep y and n.
+replace-all-question =
+    { $n ->
+        [one] Den letzten verbleibenden Treffer ersetzen? y oder n
+       *[other] Alle { $n } verbleibenden Treffer ersetzen? y oder n
+    }
+replace-all-declined = Nichts ersetzt.
+# The search options list, and the options as named in search-options-on.
+search-options-title = Suchoptionen
+search-option-match-case = Groß- und Kleinschreibung
+search-option-whole-words = ganze Wörter
+search-option-regex = regulärer Ausdruck
+search-option-across-lines = über Zeilen hinweg
+# Said as Find or Replace opens when an option is on; $list joins the
+# options' names with commas.
+search-options-on = Optionen an: { $list }.
+# $at is the character where the pattern fails, counting from 1; $reason
+# is the regular expression engine's own explanation (in English).
+search-invalid-pattern = Ungültiges Muster bei Zeichen { $at }: { $reason }.
+search-invalid-pattern-anywhere = Ungültiges Muster: { $reason }.
 
 ## Saving in the background.
 
@@ -3224,6 +3265,7 @@ name-cycle-punctuation = Satzzeichen
 name-find = Suchen
 name-find-next = Weitersuchen
 name-find-previous = Rückwärts suchen
+name-search-options = Suchoptionen
 name-next-misspelling = Nächster Rechtschreibfehler
 name-previous-misspelling = Vorheriger Rechtschreibfehler
 name-spelling-suggestions = Rechtschreibvorschläge

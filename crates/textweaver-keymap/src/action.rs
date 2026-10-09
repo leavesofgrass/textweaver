@@ -401,6 +401,9 @@ actions! {
         gui ["g:F3"], term ["g:F3"], shared ["b:n"];
     FindPrevious = "find_previous", Search, "Find the previous match",
         gui ["g:Shift+F3"], term ["g:F4"], shared ["b:Shift+N"];
+    SearchOptions = "search_options", Search,
+        "Choose how Find and Replace match: case, whole words, regular expression, across lines",
+        gui [], term [], shared [];
     NextMisspelling = "next_misspelling", Search, "Move to the next misspelled word, and spell it",
         gui ["g:Alt+M"], term ["g:Alt+M"], shared [];
     PreviousMisspelling = "previous_misspelling", Search, "Move to the previous misspelled word, and spell it",
