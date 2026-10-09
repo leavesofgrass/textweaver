@@ -344,9 +344,10 @@ Audio export. See [Audio export](audio-export.md).
 
 ### [braille]
 
-Braille output: BRF files and math braille on the display. See [Math in braille files](math.md#math-in-braille-files) and [Converting documents](converting.md).
+Braille output and input: BRF files written and read, and math braille on the display. See [Math in braille files](math.md#math-in-braille-files) and [Converting documents](converting.md).
 
 - `math_code`, default `"nemeth"`: the braille code math is written in, in BRF files and while exploring a formula. `"nemeth"` is the Nemeth Code inside UEB text, with the Nemeth switch indicators; `"ueb"` is Unified English Braille's own mathematics. Needs a build with MathCAT; without it, math is written as its spoken words in uncontracted braille.
+- `brf_code`, default `"ueb"`: the braille code BRF files are read in when you open one and textweaver translates it back to print through liblouis. `"ueb"` is Unified English Braille, the code of books produced since 2016; `"ebae"` is English Braille American Edition, for older American books. Open the file again after a change. See [Braille files](reading.md#braille-files-brf).
 - `table_format`, default `"linear"`: how BRF files lay out tables (BANA's Braille Formats, 2016, section 11). `"linear"` is one row per line, entries separated by semicolons; `"listed"` gives each row a cell-5 heading, then each entry on its own line after its column heading; `"stairstep"` sets each row's entries two cells further right than the one before, for tables of up to four columns (a wider table is listed instead, with a warning). `tw convert --table-format` sets it for one conversion.
 
 ### [reading_aids]

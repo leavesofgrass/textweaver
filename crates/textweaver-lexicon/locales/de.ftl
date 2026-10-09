@@ -4328,3 +4328,21 @@ changes-written-rejected =
        *[other] { $path } geschrieben, { $n } Änderungen abgelehnt.
     }
 ## End of B1-t1
+## B1-r5: braille (BRF) files read as print. $page is a braille page
+## number ("3", "p1"); $n is a number of lines; $reason is an error.
+setting-braille-brf-code = Braille-Code von BRF-Dateien
+setting-braille-brf-code-help = Der Braille-Code, in dem BRF-Dateien gelesen werden. UEB gilt für Bücher ab 2016; EBAE, English Braille American Edition, für ältere Bücher. Eine BRF-Datei als Schwarzschrift zu lesen braucht liblouis. Öffnen Sie die Datei nach einer Änderung erneut.
+choice-braille-brf-code-ueb = UEB
+choice-braille-brf-code-ebae = EBAE
+name-show-original-braille = Original-Braille anzeigen
+action-show-original-braille = Das Original-Braille der Seite am Cursor anzeigen, in einer als Schwarzschrift gelesenen BRF-Datei
+brf-original-title = Original-Braille, Seite { $page }
+brf-original-intro =
+    { $n ->
+        [one] Original-Braille, Seite { $page }, { $n } Zeile. Escape schließt.
+       *[other] Original-Braille, Seite { $page }, { $n } Zeilen. Escape schließt.
+    }
+brf-original-not-brf = Keine Braille-Datei. Original-Braille anzeigen funktioniert mit BRF-Dateien.
+brf-original-unreadable = Die Braille-Datei kann nicht gelesen werden: { $reason }
+brf-no-liblouis = Braille als Braille angezeigt: liblouis fehlt. Um sie als Schwarzschrift zu lesen, installieren Sie liblouis von liblouis.io oder aus den Paketen Ihres Systems und öffnen Sie die Datei erneut.
+## End of B1-r5

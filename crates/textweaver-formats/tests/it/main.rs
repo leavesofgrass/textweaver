@@ -6,6 +6,7 @@
 //! never as a new file directly in `tests/`.
 
 mod archives;
+mod brf;
 mod c3;
 mod c5;
 mod documents;

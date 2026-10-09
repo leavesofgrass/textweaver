@@ -182,6 +182,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // [braille]
     ("braille.math_code", Portable),
     ("braille.table_format", Portable),
+    ("braille.brf_code", Portable),
     // [reading_aids]
     ("reading_aids.rsvp.wpm", Portable),
     ("reading_aids.rsvp.pacing", Portable),

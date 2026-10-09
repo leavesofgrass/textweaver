@@ -4609,3 +4609,24 @@ changes-written-rejected =
        *[other] تمت كتابة { $path } مع رفض { $n } تغييرات.
     }
 ## End of B1-t1
+## B1-r5: braille (BRF) files read as print. $page is a braille page
+## number ("3", "p1"); $n is a number of lines; $reason is an error.
+setting-braille-brf-code = رمز برايل لملفات BRF
+setting-braille-brf-code-help = رمز برايل الذي تُقرأ به ملفات BRF. UEB للكتب المصنوعة منذ 2016، وEBAE، أي English Braille American Edition، للكتب الأقدم. قراءة ملف BRF كنص مطبوع تحتاج إلى liblouis. افتح الملف مرة أخرى بعد أي تغيير.
+choice-braille-brf-code-ueb = UEB
+choice-braille-brf-code-ebae = EBAE
+name-show-original-braille = عرض برايل الأصلي
+action-show-original-braille = عرض برايل الأصلي للصفحة عند المؤشر، في ملف BRF مقروء كنص مطبوع
+brf-original-title = برايل الأصلي، الصفحة { $page }
+brf-original-intro =
+    { $n ->
+        [one] برايل الأصلي، الصفحة { $page }، سطر واحد. Escape يغلق.
+        [two] برايل الأصلي، الصفحة { $page }، سطران. Escape يغلق.
+        [few] برايل الأصلي، الصفحة { $page }، { $n } أسطر. Escape يغلق.
+        [many] برايل الأصلي، الصفحة { $page }، { $n } سطرًا. Escape يغلق.
+       *[other] برايل الأصلي، الصفحة { $page }، { $n } سطر. Escape يغلق.
+    }
+brf-original-not-brf = ليس ملف برايل. عرض برايل الأصلي يعمل مع ملفات BRF.
+brf-original-unreadable = تعذرت قراءة ملف برايل: { $reason }
+brf-no-liblouis = برايل معروض كبرايل: liblouis غير موجود. لقراءته كنص مطبوع، ثبّت liblouis من liblouis.io أو من حزم نظامك، ثم افتح الملف مرة أخرى.
+## End of B1-r5

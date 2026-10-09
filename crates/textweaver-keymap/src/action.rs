@@ -633,6 +633,9 @@ actions! {
     // regions (Wave 8d), as Windows programs do.
     ToggleLineNumbers = "toggle_line_numbers", View, "Show or hide line numbers",
         gui [], term ["g:F6"], shared [];
+    ShowOriginalBraille = "show_original_braille", View,
+        "Show the original braille of the page at the cursor, in a BRF file read as print",
+        gui [], term [], shared [];
     ToggleCharacterKeys = "toggle_character_keys", View,
         "Turn single-key shortcuts on or off, so dictation and typing never trigger commands",
         gui ["g:F9"], term ["g:F9"], shared [];

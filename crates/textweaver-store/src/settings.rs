@@ -1763,6 +1763,18 @@ pub enum BrailleTableFormat {
     Stairstep,
 }
 
+/// `[braille] brf_code`: the braille code BRF files are read in, when one
+/// is opened and back-translated to print through liblouis.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BrfCode {
+    /// Unified English Braille: books made since 2016.
+    #[default]
+    Ueb,
+    /// English Braille American Edition: older American books.
+    Ebae,
+}
+
 /// `[braille]`: braille output: BRF files and math braille on the
 /// display.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -1774,6 +1786,8 @@ pub struct BrailleSettings {
     pub math_code: MathBrailleCode,
     /// How tables are laid out in BRF files.
     pub table_format: BrailleTableFormat,
+    /// The code BRF files are read in when opened.
+    pub brf_code: BrfCode,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -2743,6 +2757,27 @@ wrap_navigation = true
         let (s, err) = store.load();
         assert_eq!(s.braille.table_format, BrailleTableFormat::Linear);
         assert!(err.unwrap_or_default().contains("braille.table_format"));
+    }
+
+    /// The code BRF files are read in: UEB by default, stored only when
+    /// changed, and a bad value costs only itself.
+    #[test]
+    fn braille_brf_code_default_round_trip_and_bad_value() {
+        let s = Settings::default();
+        assert_eq!(s.braille.brf_code, BrfCode::Ueb);
+        assert!(!s.to_minimal_toml().unwrap().contains("[braille]"));
+        let (_d, store) = store();
+        write(&store, "[braille]\nbrf_code = \"ebae\"\n");
+        let (s, err) = store.load();
+        assert!(err.is_none(), "{err:?}");
+        assert_eq!(s.braille.brf_code, BrfCode::Ebae);
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
+        assert!(text.contains("brf_code = \"ebae\""), "{text}");
+        write(&store, "[braille]\nbrf_code = \"moon\"\n");
+        let (s, err) = store.load();
+        assert_eq!(s.braille.brf_code, BrfCode::Ueb);
+        assert!(err.unwrap_or_default().contains("braille.brf_code"));
     }
 
     #[test]
