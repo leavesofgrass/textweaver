@@ -74,6 +74,9 @@ impl Loader for HtmlLoader {
 
     fn load(&self, source: &Source, options: &LoadOptions) -> Result<Document, LoadError> {
         let bytes = source.read()?;
+        if crate::daisy2::is_ncc(source, &bytes) {
+            return crate::daisy2::load_source(source, &bytes, options);
+        }
         let declared = encoding::sniff_html_charset(&bytes);
         let decoded = decode_bytes(&bytes, declared.as_deref());
         let mut meta = meta_for(source, self.id());
@@ -193,6 +196,9 @@ pub(crate) struct Pages {
     open: Option<OpenId>,
     /// Page labels by element id, for the chapter being read.
     pub(crate) by_id: std::collections::HashMap<String, String>,
+    /// DAISY 2.02 content: an element whose class is `page-front`,
+    /// `page-normal` or `page-special` is a print page number.
+    pub(crate) by_class: bool,
 }
 
 impl Pages {
@@ -235,7 +241,17 @@ fn is_page_break(el: &ElementRef<'_>) -> bool {
     has("epub:type", "pagebreak") || has("role", "doc-pagebreak")
 }
 
-/// [`walk_into`] for an EPUB 3 chapter: an `epub:switch` reads its MathML
+/// True for a DAISY 2.02 page number: its class is `page-front`,
+/// `page-normal` or `page-special`.
+pub(crate) fn is_daisy_page(el: &ElementRef<'_>) -> bool {
+    el.value().classes().any(|c| {
+        ["page-front", "page-normal", "page-special"]
+            .iter()
+            .any(|p| c.eq_ignore_ascii_case(p))
+    })
+}
+
+/// [`walk_into`] for an EPUB 3 chapter (or a DAISY 2.02 content file): an `epub:switch` reads its MathML
 /// case, or else its default. (MathML is read as math in every page.)
 /// Print pages carry on from chapter to chapter: `pages` comes back with
 /// the last page still open, for the next chapter; the caller closes it.
@@ -545,7 +561,7 @@ impl Walker<'_> {
         }
         // A print page break starts a page and is not read; a page list
         // entry starts one at the element it names, which is read.
-        if is_page_break(&el) {
+        if is_page_break(&el) || (self.pages.by_class && is_daisy_page(&el)) {
             let label = el
                 .attr("id")
                 .and_then(|id| self.pages.by_id.get(id).cloned())

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE smil PUBLIC "-//W3C//DTD SMIL 1.0//EN" "http://www.w3.org/TR/REC-smil/SMIL10.dtd">
+<smil>
+<body>
+<seq dur="0.0s">
+<par endsync="last" id="par4"><seq><Text src="content2.html#c_h3" id="t3" /></seq></par>
+<par endsync="last" id="pn2par"><text src="content2.html#c_p2" id="pn2" /></par>
+<par endsync="last" id="par5"><text src="content2.html#c_h4" id="t4" /></par>
+</seq>
+</body>
+</smil>
