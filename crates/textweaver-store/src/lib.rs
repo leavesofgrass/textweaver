@@ -43,6 +43,7 @@
 mod atomic;
 mod doc_state;
 pub mod fulltext;
+pub mod graph;
 pub mod library;
 pub mod migrate;
 pub mod notes;
@@ -65,6 +66,7 @@ pub use doc_state::{
     StateStore, TextStamp, percent,
 };
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
+pub use graph::{Graph, GraphEdge, GraphFormat, GraphNode};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, NotedDoc, ScannedDoc};
 pub use notes::{
     Annotation, Backlink, Backlinks, Highlight, Note, NotesExport, Relation, RelationType,

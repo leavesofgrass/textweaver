@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns">
+  <key id="label" for="node" attr.name="label" attr.type="string"/>
+  <key id="doc" for="node" attr.name="doc" attr.type="string"/>
+  <key id="title" for="node" attr.name="title" attr.type="string"/>
+  <key id="type" for="edge" attr.name="type" attr.type="string"/>
+  <key id="spoken" for="edge" attr.name="spoken" attr.type="string"/>
+  <key id="note" for="edge" attr.name="note" attr.type="string"/>
+  <graph id="knowledge_graph" edgedefault="directed">
+    <node id="a1">
+      <data key="label">Mitochondria &quot;make&quot; energy</data>
+      <data key="doc">/library/biology.md</data>
+      <data key="title">Biology</data>
+    </node>
+    <node id="a2">
+      <data key="label">Cells &amp; &lt;tissues&gt;, #3 \ more</data>
+      <data key="doc">/library/biology.md</data>
+      <data key="title">Biology</data>
+    </node>
+    <node id="a1-2">
+      <data key="label">=SUM(proteins)</data>
+      <data key="doc">/library/chem.md</data>
+      <data key="title">Chemistry, 2nd ed.</data>
+    </node>
+    <node id="zz">
+      <data key="label">Note not found</data>
+      <data key="doc">/library/gone.md</data>
+      <data key="title">gone.md</data>
+    </node>
+    <edge source="a1" target="a2">
+      <data key="type">SUPPORTS</data>
+      <data key="spoken">supports</data>
+      <data key="note">same chapter</data>
+    </edge>
+    <edge source="a1" target="a1-2">
+      <data key="type">CITES</data>
+      <data key="spoken">cites</data>
+    </edge>
+    <edge source="a1-2" target="a2">
+      <data key="type">LIKES</data>
+      <data key="spoken">likes</data>
+    </edge>
+    <edge source="a1-2" target="zz">
+      <data key="type">SEE_ALSO</data>
+      <data key="spoken">see also</data>
+    </edge>
+  </graph>
+</graphml>
