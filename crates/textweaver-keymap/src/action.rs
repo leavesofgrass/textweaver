@@ -203,7 +203,7 @@ actions! {
         gui ["g:Ctrl+R"], term ["g:Ctrl+R"], shared ["b:r"];
     RepeatSentenceSlower = "repeat_sentence_slower", Reading,
         "Say the sentence at the cursor again more slowly, then go back to the usual rate",
-        gui [], term [], shared ["b:Shift+Y"];
+        gui [], term [], shared ["b:Shift+X"];
     RsvpToggle = "rsvp_toggle", Reading, "Show or hide RSVP: one word at a time, from the cursor",
         gui ["g:Alt+Shift+R"], term ["g:Alt+Shift+R"], shared [];
     RsvpPlayPause = "rsvp_play_pause", Reading, "Start or pause RSVP",

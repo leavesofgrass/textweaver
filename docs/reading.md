@@ -171,7 +171,7 @@ An empty line is read as "blank". Pressing **Space** right after one of these ke
 
 - **;** or **Alt+;**: read again from the start of the current sentence.
 - **r** or **Ctrl+R**: read again from the start of the current paragraph.
-- **Shift+Y**: repeat slower. textweaver says the current sentence again, 60 words per minute slower than your rate, then goes back to your rate. While reading on, reading continues after the sentence at the usual speed; otherwise it stops after the sentence. It is also **Repeat slower** in the Reading menu and the command palette. Your rate setting does not change.
+- **Shift+X**: repeat slower. textweaver says the current sentence again, 60 words per minute slower than your rate, then goes back to your rate. While reading on, reading continues after the sentence at the usual speed; otherwise it stops after the sentence. It is also **Repeat slower** in the Reading menu and the command palette. Your rate setting does not change.
 
 ### Stop at the end of a section
 

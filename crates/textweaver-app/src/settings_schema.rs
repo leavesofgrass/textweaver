@@ -744,7 +744,7 @@ pub const INFO: &[Info] = &[
     number(
         "reading.stop_after_minutes",
         "Reading timer",
-        "Continuous reading stops at the end of the sentence after this many minutes of reading, and says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.",
+        "Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.",
         (0.0, 240.0, 5.0),
         "minutes",
     ),

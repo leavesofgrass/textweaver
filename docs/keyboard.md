@@ -126,7 +126,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Say the address of the link at the cursor | `Alt+Shift+K` | `Alt+Shift+K` | `Cmd+Option+Shift+K` | `link_address` |
 | Read again from the start of the current sentence | `Alt+;`, `;` (browse) | `Alt+;`, `;` (browse) | `Cmd+Option+;`, `;` (browse) | `replay_sentence` |
 | Read again from the start of the current paragraph | `Ctrl+R`, `r` (browse) | `Ctrl+R`, `r` (browse) | `Cmd+R`, `r` (browse) | `replay_paragraph` |
-| Say the sentence at the cursor again more slowly, then go back to the usual rate | `Shift+Y` (browse) | `Shift+Y` (browse) | `Shift+Y` (browse) | `repeat_sentence_slower` |
+| Say the sentence at the cursor again more slowly, then go back to the usual rate | `Shift+X` (browse) | `Shift+X` (browse) | `Shift+X` (browse) | `repeat_sentence_slower` |
 | Show or hide RSVP: one word at a time, from the cursor | `Alt+Shift+R` | `Alt+Shift+R` | `Cmd+Option+Shift+R` | `rsvp_toggle` |
 | Start or pause RSVP | `Alt+Shift+P` | `Alt+Shift+P` | `Cmd+Option+Shift+P` | `rsvp_play_pause` |
 | RSVP faster | `Alt+Shift+Up`, `Alt+Shift+PageUp` | `Alt+Shift+Up`, `Alt+Shift+PageUp` | `Option+Shift+Up`, `Option+Shift+PageUp` | `rsvp_faster` |
