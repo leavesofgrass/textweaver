@@ -5428,7 +5428,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ]
   },
   {
-   "action": "Paste the text last copied or cut in textweaver; the terminal paste works too",
+   "action": "Paste the clipboard; formatted text from a browser or word processor becomes Markdown",
    "category": "Editing",
    "gui": [
     {
@@ -5448,6 +5448,31 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": [
     {
      "key": "Ctrl+V",
+     "layer": "edit"
+    }
+   ]
+  },
+  {
+   "action": "Paste the clipboard as plain text, keeping none of its formatting",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Ctrl+Shift+M",
+     "layer": "edit"
+    }
+   ],
+   "id": "paste_plain_text",
+   "mac": [
+    {
+     "key": "Cmd+Shift+M",
+     "layer": "edit"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+A",
      "layer": "edit"
     }
    ]
@@ -6065,6 +6090,31 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": [
     {
      "key": "F10",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Open the context menu: cut, copy, paste, and the commands for where the cursor is",
+   "category": "View and help",
+   "gui": [
+    {
+     "key": "Shift+F10",
+     "layer": "global"
+    }
+   ],
+   "id": "context_menu",
+   "mac": [
+    {
+     "key": "Shift+F10",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Ctrl+F10",
      "layer": "global"
     }
    ]

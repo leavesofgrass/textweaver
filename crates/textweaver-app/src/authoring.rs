@@ -1,8 +1,9 @@
 //! Authoring and reading quick wins (roadmap Phase 1, Agent P1b): word
 //! count, the link address at the cursor, table cells in edit mode, the
 //! typing echo switch, and copying to the clipboard; and from Phase 2
-//! (Agent P2b) select all, deleting a word, paste, and cycling verbosity
-//! and punctuation while running.
+//! (Agent P2b) select all, deleting a word, and cycling verbosity and
+//! punctuation while running. Paste reads the system clipboard
+//! ([`crate::clipboard`]).
 //!
 //! # Clipboard
 //!
@@ -634,28 +635,6 @@ impl App {
             self.speech.say(said, textweaver_speech::SayMode::Interrupt);
         }
         vec![Effect::Redraw]
-    }
-
-    /// Paste (Ctrl+V in edit mode): the text last copied or cut in
-    /// textweaver. Most terminals paste the system clipboard themselves
-    /// when Ctrl+V or Ctrl+Shift+V is pressed; this is for the times they
-    /// pass the key on instead.
-    pub(crate) fn paste(&mut self) -> Vec<Effect> {
-        if self.edit.is_none() {
-            return self.not_editing("paste");
-        }
-        match self.authoring.copied.clone() {
-            Some(text) if !text.is_empty() => self.insert(&text),
-            _ => {
-                // The terminal's own paste key, not one of textweaver's.
-                let msg = self.msg_args(
-                    "authoring-nothing-copied",
-                    &args!["key" => "Control Shift V"],
-                );
-                self.tell(&msg);
-                vec![Effect::Redraw]
-            }
-        }
     }
 
     /// Cycles how much is announced (low, normal, high) and saves it.

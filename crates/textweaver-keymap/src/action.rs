@@ -606,8 +606,11 @@ actions! {
     DeleteWordAfter = "delete_word_after", Editing, "Delete the word after the cursor",
         gui ["e:Ctrl+Delete"], term ["e:Ctrl+Delete"], shared [];
     Paste = "paste", Editing,
-        "Paste the text last copied or cut in textweaver; the terminal paste works too",
+        "Paste the clipboard; formatted text from a browser or word processor becomes Markdown",
         gui ["e:Ctrl+V"], term ["e:Ctrl+V"], shared [];
+    PastePlainText = "paste_plain_text", Editing,
+        "Paste the clipboard as plain text, keeping none of its formatting",
+        gui ["e:Ctrl+Shift+M"], term ["e:Alt+A"], shared [];
     InsertCitation = "insert_citation", Editing,
         "Insert a citation: pick a reference, then give a page or other locator",
         gui ["e:Alt+C"], term ["e:Alt+C"], shared [];
@@ -696,6 +699,9 @@ actions! {
         gui ["g:Ctrl+F9"], term ["g:Ctrl+F9"], shared [];
     Menu = "menu", View, "Open the menus: File, Edit, View, Reading, Speech, Tools, and Help",
         gui ["g:F10"], term ["g:F10"], shared [];
+    ContextMenu = "context_menu", View,
+        "Open the context menu: cut, copy, paste, and the commands for where the cursor is",
+        gui ["g:Shift+F10"], term ["g:Ctrl+F10"], shared [];
     CommandPalette = "command_palette", View, "Run any command by name",
         gui ["g:F2"], term ["g:F2", "g:Alt+X"], shared ["b::"];
     Settings = "settings", View,

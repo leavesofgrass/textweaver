@@ -167,6 +167,7 @@ mod citations;
 #[cfg(not(feature = "publish"))]
 #[path = "lean/citations.rs"]
 mod citations;
+pub mod clipboard;
 mod colors;
 mod command;
 mod command_list;
@@ -266,6 +267,7 @@ pub use app::{App, AppConfig, AppError, FindState, Mode, Session};
 pub use audio_export::{read_along_labels, video_options, video_options_for};
 pub use authoring::osc52;
 pub use authoring_state::{ClientFactory, Launcher};
+pub use clipboard::{Clipboard, ClipboardContents, FakeClipboard};
 pub use colors::{COLOR_CHOICES, COLOR_SETTINGS, MarkColors, is_color_setting};
 pub use command::{
     CaretMove, Command, Confirm, DestructiveVerb, Effect, NoteCommand, PromptPurpose,

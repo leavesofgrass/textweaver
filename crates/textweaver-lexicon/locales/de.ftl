@@ -847,7 +847,9 @@ action-cycle-typing-echo = Durch das Tipp-Echo wechseln: Zeichen und Wörter, Ze
 action-select-all = Den ganzen Text auswählen
 action-delete-word-before = Das Wort vor dem Cursor löschen
 action-delete-word-after = Das Wort nach dem Cursor löschen
-action-paste = Den zuletzt in textweaver kopierten oder ausgeschnittenen Text einfügen; das Einfügen des Terminals funktioniert auch
+action-paste = Die Zwischenablage einfügen; formatierter Text aus einem Browser oder einer Textverarbeitung wird zu Markdown
+action-paste-plain-text = Die Zwischenablage als reinen Text einfügen, ohne ihre Formatierung
+action-context-menu = Das Kontextmenü öffnen: Ausschneiden, Kopieren, Einfügen und die Befehle für die Stelle am Cursor
 action-insert-citation = Ein Zitat einfügen: eine Literaturangabe wählen, dann eine Seite oder einen anderen Fundort angeben
 action-add-reference = Eine Literaturangabe per DOI oder ISBN zu Ihrer Bibliothek hinzufügen
 action-insert-bibliography = Das Literaturverzeichnis der zitierten Werke am Cursor einfügen
@@ -2410,6 +2412,12 @@ edit-pasted-start =
        *[other] { $n } Zeichen eingefügt: { $start }
     }
 edit-insert-failed = Konnte nicht einfügen: { $error } Der Text ist unverändert.
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] 1 Zeile eingefügt: { $start }
+       *[other] { $n } Zeilen eingefügt: { $start }
+    }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = Zeichen { $start } bis { $end } können nicht geändert werden: der Text hat { $len }.
 edit-change-failed = Der Text konnte nicht geändert werden: { $error } Der Text ist unverändert.
@@ -2782,6 +2790,46 @@ authoring-space-deleted = Leerzeichen gelöscht.
 authoring-deleted = { $text } gelöscht.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = In { -brand } noch nichts kopiert. Verwenden Sie das Einfügen Ihres Terminals, zum Beispiel { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = Als Markdown eingefügt: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] 1 Überschrift
+       *[other] { $n } Überschriften
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] 1 Absatz
+       *[other] { $n } Absätze
+    }
+paste-part-list =
+    { $n ->
+        [one] 1 Liste
+       *[other] { $n } Listen
+    }
+paste-part-table =
+    { $n ->
+        [one] 1 Tabelle
+       *[other] { $n } Tabellen
+    }
+paste-part-code =
+    { $n ->
+        [one] 1 Codeblock
+       *[other] { $n } Codeblöcke
+    }
+paste-part-quote =
+    { $n ->
+        [one] 1 Zitat
+       *[other] { $n } Zitate
+    }
+paste-part-link =
+    { $n ->
+        [one] 1 Link
+       *[other] { $n } Links
+    }
+paste-empty = Nichts einzufügen: die Zwischenablage ist leer.
+paste-converting = Der formatierte Text wird zum Einfügen umgewandelt.
+paste-failed = Einfügen nicht möglich: { $error } Versuchen Sie: Als reinen Text einfügen.
 authoring-verbosity =
     { $level ->
         [low] Ausführlichkeit: niedrig.
@@ -3474,6 +3522,8 @@ name-select-all = Alles auswählen
 name-delete-word-before = Wort davor löschen
 name-delete-word-after = Wort danach löschen
 name-paste = Einfügen
+name-paste-plain-text = Als reinen Text einfügen
+name-context-menu = Kontextmenü
 name-insert-citation = Zitat einfügen
 name-add-reference = Quelle hinzufügen
 name-insert-bibliography = Literaturverzeichnis einfügen
@@ -3523,6 +3573,8 @@ menu-recent-none = Keine zuletzt geöffneten Dokumente
 menu-not-available = { $name } gibt es in dieser Version nicht.
 menu-no-access-key = Kein Eintrag mit der Taste { $letter }.
 menu-closed = Menüs geschlossen.
+menu-context = Kontextmenü
+menu-context-closed = Kontextmenü geschlossen.
 menu-press-a-key = Drücken Sie eine Taste, um zu hören, was sie tut.
 menu-key-described = { $name }: { $help }. Tasten: { $keys }. In den Menüs: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Tasten: { $keys }.

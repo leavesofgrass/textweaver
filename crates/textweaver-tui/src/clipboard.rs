@@ -141,6 +141,28 @@ impl SystemClipboard {
     }
 }
 
+/// Reads the system clipboard for Paste (the `clipboard` feature): its
+/// plain text and its HTML, which browsers and word processors put beside
+/// the text. `arboard` cannot read RTF; the app converts the HTML to
+/// Markdown.
+#[cfg(feature = "clipboard")]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SystemReader;
+
+#[cfg(feature = "clipboard")]
+impl textweaver_app::Clipboard for SystemReader {
+    fn read(&mut self) -> textweaver_app::ClipboardContents {
+        let Ok(mut c) = arboard::Clipboard::new() else {
+            return textweaver_app::ClipboardContents::default();
+        };
+        textweaver_app::ClipboardContents {
+            text: c.get_text().ok(),
+            html: c.get().html().ok(),
+            rtf: None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
