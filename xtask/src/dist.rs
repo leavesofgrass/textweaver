@@ -5,8 +5,8 @@
 //! profile with fat LTO), each in a cargo run of its own so the reader
 //! gets only its own features, the engine hosts for the platform (Windows
 //! and Linux), and stages them with the pronunciation dictionaries, the
-//! licence, the third-party notices and licence files, and the user guides
-//! in `target/dist/textweaver-VERSION-PLATFORM/`, then archives the folder:
+//! licence, the copyright notice (`NOTICE`), the third-party notices and
+//! licence files, and the user guides in `target/dist/textweaver-VERSION-PLATFORM/`, then archives the folder:
 //! a `.zip` on Windows, a `.tar.gz` elsewhere. It fails if a notice is
 //! missing from the staged folder, or if the archive grew more than 10
 //! percent over the last release's without a note (`sizes.rs`). A user
@@ -108,6 +108,9 @@ const DOCS: [(&str, &str); 6] = [
     ("docs/install.md", "INSTALL.md"),
     ("docs/eloquence.md", "docs/eloquence.md"),
 ];
+/// Example files the user guides describe, packaged with them at their
+/// paths from the root.
+const DOC_EXAMPLES: [&str; 1] = ["docs/examples/developer-profile.toml"];
 /// The documentation index; it and the guides linked under its
 /// [`USER_SECTION`] are packaged (see [`stage_user_docs`]).
 const DOCS_INDEX: &str = "docs/README.md";
@@ -171,8 +174,9 @@ fn missing_guide(path: &str) -> String {
 
 /// Stages the complete user documentation into `stage`, in the same layout
 /// for every package (`cargo xtask dist`, `appimage`, and `gui-dist`): the
-/// documentation index, every guide linked under its [`USER_SECTION`], and
-/// the offline pages in [`SITE_DIR`], each at its path from the root.
+/// documentation index, every guide linked under its [`USER_SECTION`], the
+/// examples the guides describe ([`DOC_EXAMPLES`]), and the offline pages
+/// in [`SITE_DIR`], each at its path from the root.
 ///
 /// A missing file never stops the build: it is left out and named in the
 /// returned warnings, one per file, for [`report_doc_warnings`].
@@ -181,7 +185,11 @@ pub(crate) fn stage_user_docs(root: &Path, stage: &Path) -> anyhow::Result<Vec<S
     let guides = fs::read_to_string(root.join(DOCS_INDEX))
         .map(|index| user_guides(&index))
         .unwrap_or_default();
-    for src in std::iter::once(DOCS_INDEX.to_owned()).chain(guides) {
+    let examples = DOC_EXAMPLES.iter().map(|s| (*s).to_owned());
+    for src in std::iter::once(DOCS_INDEX.to_owned())
+        .chain(guides)
+        .chain(examples)
+    {
         let path = root.join(&src);
         if path.is_file() {
             eci::copy(&path, &stage.join(&src))?;
@@ -454,8 +462,13 @@ pub(crate) const LINUX_DESKTOP_FILES: [(&str, &str); 2] = [
     ),
 ];
 
-/// Copies the third-party notices and the data licence files into `stage`.
+/// Copies textweaver's copyright notice, the third-party notices, and the
+/// data licence files into `stage`.
 pub(crate) fn stage_notices(root: &Path, stage: &Path) -> anyhow::Result<()> {
+    eci::copy(
+        &root.join(crate::notices::NOTICE),
+        &stage.join(crate::notices::NOTICE),
+    )?;
     eci::copy(
         &root.join(crate::notices::NOTICES),
         &stage.join(crate::notices::NOTICES),
@@ -466,10 +479,11 @@ pub(crate) fn stage_notices(root: &Path, stage: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Fails unless `stage` holds the licence, the notices, and every data
-/// licence file: a package must never ship without them.
+/// Fails unless `stage` holds the licence, the copyright notice, the
+/// notices, and every data licence file: a package must never ship without
+/// them.
 pub(crate) fn check_notices(stage: &Path) -> anyhow::Result<()> {
-    let required = ["LICENSE", crate::notices::NOTICES]
+    let required = ["LICENSE", crate::notices::NOTICE, crate::notices::NOTICES]
         .into_iter()
         .chain(LICENCE_FILES.iter().map(|(_, dest)| *dest));
     let missing: Vec<&str> = required.filter(|f| !stage.join(f).is_file()).collect();
@@ -756,13 +770,20 @@ mod tests {
         .unwrap();
         fs::write(root.join("docs/notes.md"), "notes").unwrap();
         fs::write(root.join("docs/site/index.html"), "<p>site</p>").unwrap();
+        fs::create_dir_all(root.join("docs/examples")).unwrap();
+        fs::write(root.join(DOC_EXAMPLES[0]), "textweaver_profiles = 1\n").unwrap();
 
         let warnings = stage_user_docs(&root, &stage).unwrap();
         assert_eq!(
             warnings,
             ["Warning: the package lacks the guide docs/reading.md."]
         );
-        for f in ["docs/README.md", "docs/notes.md", "docs/site/index.html"] {
+        for f in [
+            "docs/README.md",
+            "docs/notes.md",
+            "docs/site/index.html",
+            DOC_EXAMPLES[0],
+        ] {
             assert!(stage.join(f).is_file(), "{f} is not staged");
         }
         assert!(!stage.join("docs/dev/x.md").exists());
@@ -828,6 +849,7 @@ mod tests {
         eci::copy(&root.join("LICENSE"), &stage.join("LICENSE")).unwrap();
         stage_notices(&root, &stage).unwrap();
         check_notices(&stage).unwrap();
+        assert!(stage.join("NOTICE").is_file());
         assert!(stage.join("licenses/scowl/Copyright").is_file());
         assert!(stage.join("licenses/lexicon/WORDNET-LICENSE").is_file());
         assert!(stage.join("licenses/fonts/opendyslexic/OFL.txt").is_file());

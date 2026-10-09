@@ -12,9 +12,9 @@
 //!   Windows; Eloquence for Voxin and DECtalk on Linux) and the IBMTTS
 //!   community dictionaries, beside the program, where the engines look;
 //! - the define-word dictionary (`lexicon/`);
-//! - the licence, the third-party notices, and every data licence file the
-//!   terminal package carries (the check fails if one is missing), and the
-//!   vendored Xilem's licence;
+//! - the licence, the copyright notice (`NOTICE`), the third-party notices,
+//!   and every data licence file the terminal package carries (the check
+//!   fails if one is missing), and the vendored Xilem's licence;
 //! - the quick start and the window's guide (`GUI.md`) at the top;
 //! - the complete user documentation in `docs/`, in the same layout as the
 //!   terminal package (`dist::stage_user_docs`): the index, every guide it

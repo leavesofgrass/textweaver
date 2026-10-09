@@ -1,6 +1,6 @@
 //! Settings profiles: named sets of the settings people switch together
-//! (voice, rate, theme, font, spacing, highlight, and access mode), kept in
-//! `profiles.toml` beside `settings.toml`.
+//! (voice, rate, theme, font, spacing, highlight, access mode, and audio
+//! export format), kept in `profiles.toml` beside `settings.toml`.
 //!
 //! A profile stores the values of [`PROFILE_KEYS`] as they were when it was
 //! saved, in the same shape as `settings.toml`:
@@ -35,7 +35,7 @@ use crate::{Paths, StoreError, atomic_write};
 
 /// The settings a profile holds, as dotted paths into `settings.toml`. A
 /// path to a table (`highlight`) takes the whole table.
-pub const PROFILE_KEYS: [&str; 16] = [
+pub const PROFILE_KEYS: [&str; 17] = [
     "speech.backend",
     "speech.voice",
     "speech.prefer_voice",
@@ -52,6 +52,7 @@ pub const PROFILE_KEYS: [&str; 16] = [
     "accessibility.say_all",
     "accessibility.quiet_screen",
     "accessibility.interface_announcements",
+    "export.audio_format",
 ];
 
 /// The format marker of an export, `"textweaver_profiles": 1`.
@@ -528,5 +529,27 @@ mod tests {
             q.import(r#"{"textweaver_profiles": 1}"#),
             Err(ProfileError::NotAnExport(_))
         ));
+    }
+
+    /// The developer profile example in the docs imports whole, adds only
+    /// that profile, and gives the settings it names when switched to.
+    #[test]
+    fn the_developer_profile_example_imports_and_applies() {
+        let text = include_str!("../../../docs/examples/developer-profile.toml");
+        let mut p = Profiles::default();
+        let report = p.import(text).unwrap();
+        assert_eq!(report.imported, ["Developer"]);
+        assert!(report.dropped.is_empty(), "{:?}", report.dropped);
+        // Importing never switches: nothing is applied by default.
+        assert_eq!(p.active, None);
+        let (s, dropped) = apply(&p.profiles["Developer"], &Settings::default());
+        assert!(dropped.is_empty(), "{dropped:?}");
+        assert_eq!(s.speech.backend, "eci");
+        assert_eq!(s.speech.voice.as_deref(), Some("Reed"));
+        assert_eq!(s.speech.rate.wpm(), 400);
+        assert_eq!(s.display.theme, "galaxy");
+        assert_eq!(s.reading_aids.font.family, "lexend");
+        assert!((s.reading_aids.font.size_pt - 16.0).abs() < f32::EPSILON);
+        assert_eq!(s.export.audio_format, crate::AudioExportFormat::Opus);
     }
 }

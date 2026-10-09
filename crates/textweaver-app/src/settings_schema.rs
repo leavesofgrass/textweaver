@@ -915,6 +915,20 @@ pub const INFO: &[Info] = &[
     ),
     // [export]
     choice(
+        "export.audio_format",
+        "Audio export format",
+        "The format Export audio lists first. tw export-audio also uses it for a file name with no extension.",
+        &[
+            ("flac", "FLAC"),
+            ("mp3", "MP3"),
+            ("opus", "Opus"),
+            ("ogg", "Ogg Vorbis"),
+            ("wav", "WAV"),
+            ("m4b", "M4B audiobook"),
+            ("mp4", "MP4 video with captions"),
+        ],
+    ),
+    choice(
         "export.subtitle_format",
         "Subtitle format",
         "The format of subtitles written without a file name.",

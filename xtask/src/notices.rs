@@ -1,6 +1,7 @@
 //! `cargo xtask notices [--check]`: writes `THIRD-PARTY-NOTICES.md`.
 //!
-//! The file has three parts:
+//! The file has three parts, under its title and the copyright line from
+//! `NOTICE`:
 //!
 //! 1. The data files textweaver bundles (fonts, word lists, dictionaries,
 //!    citation styles, font metrics): `about/data-files.md`, written by
@@ -60,6 +61,8 @@ pub const DATA_LICENCES: [(&str, &str); 8] = [
 
 /// The hand-written part.
 const DATA_FILES: &str = "about/data-files.md";
+/// textweaver's own copyright notice; its first line heads the notices.
+pub const NOTICE: &str = "NOTICE";
 /// The `cargo about` configuration and template.
 const ABOUT_CONFIG: &str = "about.toml";
 const ABOUT_TEMPLATE: &str = "about/crates.hbs";
@@ -158,12 +161,22 @@ fn cargo_about(root: &Path) -> anyhow::Result<String> {
     Ok(normalized(&text))
 }
 
-/// The whole notices file.
-fn compose(root: &Path, crates: &str) -> anyhow::Result<String> {
+/// The hand-written part, with the copyright line (the first line of
+/// [`NOTICE`]) under its title.
+fn header(root: &Path) -> anyhow::Result<String> {
     let data = fs::read_to_string(root.join(DATA_FILES))
         .with_context(|| format!("reading {DATA_FILES}"))?;
-    let mut out = String::new();
-    out.push_str(normalized(&data).trim_end());
+    let notice =
+        fs::read_to_string(root.join(NOTICE)).with_context(|| format!("reading {NOTICE}"))?;
+    let copyright = notice.lines().next().unwrap_or_default().trim();
+    let data = normalized(&data);
+    let (title, rest) = data.split_once('\n').unwrap_or((data.as_str(), ""));
+    Ok(format!("{title}\n\n{copyright}\n{}", rest.trim_end()))
+}
+
+/// The whole notices file.
+fn compose(root: &Path, crates: &str) -> anyhow::Result<String> {
+    let mut out = header(root)?;
     out.push_str("\n\n## Data file licences\n\nThese are copied unchanged from `third_party/`.\n");
     for (src, heading) in DATA_LICENCES {
         let text = fs::read_to_string(root.join(src)).with_context(|| format!("reading {src}"))?;
@@ -185,7 +198,7 @@ mod tests {
     #[test]
     fn inputs_exist() {
         let root = crate::eci::root();
-        for f in [DATA_FILES, ABOUT_CONFIG, ABOUT_TEMPLATE, NOTICES] {
+        for f in [DATA_FILES, ABOUT_CONFIG, ABOUT_TEMPLATE, NOTICES, NOTICE] {
             assert!(root.join(f).is_file(), "{f} is missing");
         }
         for (src, _) in DATA_LICENCES {
@@ -197,10 +210,10 @@ mod tests {
     fn the_notices_carry_every_data_licence() {
         let root = crate::eci::root();
         let notices = normalized(&fs::read_to_string(root.join(NOTICES)).unwrap());
-        // The hand-written part is current.
-        let data = normalized(&fs::read_to_string(root.join(DATA_FILES)).unwrap());
+        // The hand-written part and the copyright line are current.
+        let header = header(&root).unwrap();
         assert!(
-            notices.starts_with(data.trim_end()),
+            notices.starts_with(&header),
             "{NOTICES} does not start with {DATA_FILES}; run `cargo xtask notices`"
         );
         for (src, _) in DATA_LICENCES {
@@ -229,5 +242,10 @@ mod tests {
         assert!(data < crates);
         assert!(!text.contains('\r'));
         assert!(text.ends_with("none\n"));
+        // The copyright line sits right under the title.
+        let notice = fs::read_to_string(root.join(NOTICE)).unwrap();
+        let second = text.lines().nth(2).unwrap();
+        assert_eq!(Some(second), notice.lines().next());
+        assert!(second.starts_with("Copyright (C) "));
     }
 }

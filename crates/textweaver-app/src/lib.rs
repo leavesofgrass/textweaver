@@ -250,6 +250,7 @@ mod words;
 mod writer;
 mod writes;
 
+pub use about::{COPYRIGHT, VERSION_TEXT};
 pub use access::{
     SENTENCE_GAP, STATUS_TEXT_LIMIT, access_mode_from_setting, access_mode_setting, digit_row,
     keymap_preset, sentence_duration, startup_keymap,

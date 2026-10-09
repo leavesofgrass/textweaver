@@ -136,7 +136,7 @@ Write down what you heard in the release notes' testing section, including anyth
 - `textweaver` and `tw`;
 - on Windows, the engine hosts for Eloquence, SAPI5, and DECtalk, each for x64 and x86, and the IBMTTS community dictionaries;
 - on Linux, the engine hosts for Eloquence (Voxin) and DECtalk, the IBMTTS community dictionaries, and the menu entry and icon under `share/`. `textweaver` and `tw` are built with Omnivox, speech-dispatcher, and espeak-ng; espeak-ng is loaded when the program starts, if it is installed, so the same binaries work without it;
-- `QUICKSTART.md`, `README.md`, `LICENSE`, `CHANGELOG.md`, and `INSTALL.md` at the top;
+- `QUICKSTART.md`, `README.md`, `LICENSE`, `NOTICE` (the copyright notice), `CHANGELOG.md`, and `INSTALL.md` at the top;
 - in `docs/`, the [documentation index](../README.md), every user guide it lists under "For users", and the offline interactive pages in `docs/site/`, each at its path in the repository;
 - the platform's helper scripts (doctor, speech check, update) and their README;
 - `THIRD-PARTY-NOTICES.md`, and under `licenses/`: each bundled font's `OFL.txt`, SCOWL's `Copyright`, and the IBMTTS dictionaries' license. `cargo xtask dist` fails if any of these is missing.
@@ -145,7 +145,7 @@ Write down what you heard in the release notes' testing section, including anyth
 
 ## The GUI packages
 
-`cargo xtask gui-dist` builds the GUI (`textweaver-xilem`, installed as `textweaver-gui`) with the `dist` profile, in the same build folder as `cargo xtask dist`, with the static C runtime on Windows, and with the speech engines `cargo xtask dist` builds into the terminal programs for the platform (espeak-ng, speech-dispatcher and Omnivox on Linux; Omnivox elsewhere) for each one the GUI crate declares as a feature. It names any engine it leaves out because the crate has no such feature. It stages the program with the same engine hosts, IBMTTS dictionaries, define-word dictionary, notices, and license files as the terminal package (the same check fails if one is missing), plus Xilem's license, the quick start and `GUI.md` at the top, and the same complete `docs/` folder as the terminal package (a missing guide warns, as there), in `target/dist/textweaver-VERSION-PLATFORM-gui/`, and then:
+`cargo xtask gui-dist` builds the GUI (`textweaver-xilem`, installed as `textweaver-gui`) with the `dist` profile, in the same build folder as `cargo xtask dist`, with the static C runtime on Windows, and with the speech engines `cargo xtask dist` builds into the terminal programs for the platform (espeak-ng, speech-dispatcher and Omnivox on Linux; Omnivox elsewhere) for each one the GUI crate declares as a feature. It names any engine it leaves out because the crate has no such feature. It stages the program with the same engine hosts, IBMTTS dictionaries, define-word dictionary, `NOTICE`, notices, and license files as the terminal package (the same check fails if one is missing), plus Xilem's license, the quick start and `GUI.md` at the top, and the same complete `docs/` folder as the terminal package (a missing guide warns, as there), in `target/dist/textweaver-VERSION-PLATFORM-gui/`, and then:
 
 - on Windows, zips it;
 - on macOS, puts the program in `textweaver.app` (signed ad hoc) and zips the folder with `ditto`. It is built for the Mac's own architecture, or with `--universal` for Apple silicon and Intel joined with `lipo`, as the release does;

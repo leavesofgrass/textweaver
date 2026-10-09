@@ -16,7 +16,12 @@ mod cmd;
 
 /// Read, extract, and speak documents from the command line.
 #[derive(Parser, Debug)]
-#[command(name = "tw", version, about, propagate_version = true)]
+#[command(
+    name = "tw",
+    version = textweaver_app::VERSION_TEXT,
+    about,
+    propagate_version = true
+)]
 struct Cli {
     /// The command; with none, `tw` prints [`NO_COMMAND_HINT`].
     #[command(subcommand)]

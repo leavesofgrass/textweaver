@@ -171,6 +171,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("accessibility.hybrid_offered", Machine),
     ("accessibility.interface_announcements", Portable),
     // [export]
+    ("export.audio_format", Portable),
     ("export.subtitle_format", Portable),
     ("export.subtitle_word_level", Portable),
     ("export.subtitles_with_audio", Portable),
