@@ -529,4 +529,25 @@ mod tests {
             Err(ProfileError::NotAnExport(_))
         ));
     }
+
+    /// The developer profile example in the docs imports whole, adds only
+    /// that profile, and gives the settings it names when switched to.
+    #[test]
+    fn the_developer_profile_example_imports_and_applies() {
+        let text = include_str!("../../../docs/examples/developer-profile.toml");
+        let mut p = Profiles::default();
+        let report = p.import(text).unwrap();
+        assert_eq!(report.imported, ["Developer"]);
+        assert!(report.dropped.is_empty(), "{:?}", report.dropped);
+        // Importing never switches: nothing is applied by default.
+        assert_eq!(p.active, None);
+        let (s, dropped) = apply(&p.profiles["Developer"], &Settings::default());
+        assert!(dropped.is_empty(), "{dropped:?}");
+        assert_eq!(s.speech.backend, "eci");
+        assert_eq!(s.speech.voice.as_deref(), Some("Reed"));
+        assert_eq!(s.speech.rate.wpm(), 400);
+        assert_eq!(s.display.theme, "galaxy");
+        assert_eq!(s.reading_aids.font.family, "lexend");
+        assert!((s.reading_aids.font.size_pt - 16.0).abs() < f32::EPSILON);
+    }
 }

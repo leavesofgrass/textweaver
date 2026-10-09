@@ -97,13 +97,18 @@ pub(crate) const DATA_FILES: [(&str, &str); 1] = [(
 /// The two macOS targets joined by `--universal`.
 pub(crate) const MAC_TARGETS: [&str; 2] = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
 /// Documents copied into the package: (source, name in the package).
-const DOCS: [(&str, &str); 6] = [
+const DOCS: [(&str, &str); 7] = [
     ("docs/quickstart.md", "QUICKSTART.md"),
     ("README.md", "README.md"),
     ("LICENSE", "LICENSE"),
     ("CHANGELOG.md", "CHANGELOG.md"),
     ("docs/install.md", "INSTALL.md"),
     ("docs/eloquence.md", "docs/eloquence.md"),
+    // The example profile the settings guide describes.
+    (
+        "docs/examples/developer-profile.toml",
+        "docs/examples/developer-profile.toml",
+    ),
 ];
 /// More guides copied when present, besides the user guides listed in the
 /// documentation index (see [`user_guides`]).

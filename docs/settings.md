@@ -519,6 +519,29 @@ A profile is a named set of the settings you change together: the speech engine,
 
 Profiles are kept in `profiles.toml`, beside `settings.toml`, so exporting your settings does not include them. A profile export works in any version of textweaver: settings a version does not know are left out, and it says which. With sync on, your profiles travel to your other computers (`[sync] profiles`); which one is in use stays on each.
 
+### Developer profile (example)
+
+An example profile, `docs/examples/developer-profile.toml`, comes with the source and the terminal package. It is never used unless you import it and switch to it. It sets:
+
+- the Eloquence engine (`speech.backend = "eci"`) with the Reed voice (`speech.voice = "Reed"`);
+- 400 words per minute (`speech.rate = 400`);
+- the Lexend font at 16 points (`reading_aids.font`, `family = "lexend"`, `size_pt = 16.0`); Lexend is downloaded the first time, after asking;
+- the Galaxy theme (`display.theme = "galaxy"`).
+
+To try it:
+
+```sh
+tw settings profile save "My settings"
+tw settings profile import docs/examples/developer-profile.toml
+tw settings profile switch "Developer"
+```
+
+Saving your own settings as a profile first means `tw settings profile switch "My settings"` puts them back. Importing only adds the profile; nothing changes until you switch. In the reader, the profile list (Ctrl+Shift+U in the window, Alt+U in the terminal) imports and switches the same way.
+
+The example also uses Opus for audio export. A profile does not hold the audio format, so choose Opus in Export audio's format list, or give `tw export-audio` an output name ending in `.opus`. See [Audio export](audio-export.md).
+
+Eloquence must be installed for the Reed voice; see [the Eloquence guide](eloquence.md). Without it, textweaver says so and uses another engine.
+
 ## See also
 
 - [Speech engines and voices](speech.md): the speech settings in use.
