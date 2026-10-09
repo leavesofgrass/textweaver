@@ -22,6 +22,7 @@
 //! | `PdfLoader` (feature `pdf`, on by default; ADR-0010), with OCR of scanned pages (feature `images`, and `ocr` for the in-process engine; ADR-0026) | `pdf` | [`NATIVE_PRIORITY`] (10) |
 //! | `ImageLoader` (feature `images`; `ocr` adds the in-process engine): OCR of an image file | `png`, `jpg`, `jpeg` | [`NATIVE_PRIORITY`] (10) |
 //! | [`DaisyLoader`]: DAISY 3 books and DTBook files | `opf`, `xml`, `dtbook` | [`NATIVE_PRIORITY`] (10) |
+//! | [`BrfLoader`]: braille files (BRF), back-translated to print through liblouis | `brf`, `brl` | [`NATIVE_PRIORITY`] (10) |
 //! | [`PptxLoader`]: PowerPoint slides and speaker notes | `pptx`, `pptm`, `ppsx` | [`NATIVE_PRIORITY`] (10) |
 //! | [`SheetLoader`]: spreadsheets as tables | `csv`, `tsv`, `tab`, `ods`, and (feature `spreadsheets`) `xlsx`, `xlsm`, `xlsb` | [`NATIVE_PRIORITY`] (10) |
 //! | [`ArchiveLoader`]: a list of the files inside, or the DAISY book or EPUB it holds | `zip`, and (feature `archives`) `tar`, `tgz`, `gz`, `7z` | [`NATIVE_PRIORITY`] (10) |
@@ -71,6 +72,7 @@ use textweaver_text::{Document, DocumentMeta};
 
 pub mod annotations;
 pub mod archive;
+pub mod brf;
 mod builder;
 pub mod cache;
 pub mod callout;
@@ -111,6 +113,7 @@ pub use annotations::{
     COMMENTS_PROPERTY, CommentReply, DocumentComment, REVISIONS_PROPERTY, comments, revision_count,
 };
 pub use archive::ArchiveLoader;
+pub use brf::{BrfCode, BrfLoader};
 pub use cache::{CacheKey, DocumentCache};
 pub use daisy::DaisyLoader;
 pub use docx::DocxLoader;
@@ -328,6 +331,8 @@ pub struct LoadOptions {
     /// instead of reading it as a pause (`[speech] markup_pauses = false`,
     /// for documents that quote SSML). See [`pause_markup`].
     pub keep_pause_markup: bool,
+    /// The braille code BRF files are read in (`[braille] brf_code`).
+    pub brf_code: BrfCode,
     /// Progress reports and cancelling (not part of the cache key).
     #[serde(skip)]
     pub progress: Progress,
@@ -463,6 +468,7 @@ impl Registry {
         #[cfg(feature = "images")]
         r.register(Box::new(ImageLoader));
         r.register(Box::new(DaisyLoader));
+        r.register(Box::new(BrfLoader));
         r.register(Box::new(PptxLoader));
         r.register(Box::new(SheetLoader));
         r.register(Box::new(ArchiveLoader));
