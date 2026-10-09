@@ -321,3 +321,95 @@ fn mathml_long_token_in_deep_rows_loads_in_linear_time() {
     assert!(!plan.is_empty());
     assert!(took.as_secs() < 5, "took {took:?}");
 }
+
+/// DAISY 2.02 books that misbehave (B1-r2): links that climb out of the
+/// book's folder, a SMIL file pointing back at the NCC or at itself,
+/// missing files, SMIL nested far too deep, and 100,000 `par` elements.
+#[test]
+fn hostile_daisy202_books_load() {
+    let root = tempfile::tempdir().unwrap();
+    let outside = "Outside the book.";
+    std::fs::write(root.path().join("secret.html"), format!("<p>{outside}</p>")).unwrap();
+    std::fs::write(
+        root.path().join("x.smil"),
+        r#"<smil><body><par id="p"><text src="secret.html"/></par></body></smil>"#,
+    )
+    .unwrap();
+    let book = root.path().join("book");
+    std::fs::create_dir(&book).unwrap();
+    let write = |name: &str, body: &str| std::fs::write(book.join(name), body).unwrap();
+    let ncc = |body: &str| {
+        format!(
+            r#"<html><head><meta name="ncc:multimediaType" content="textNcc"/></head><body>{body}</body></html>"#
+        )
+    };
+    let open = || {
+        Registry::with_builtins()
+            .load(
+                &Source::Path(book.join("ncc.html")),
+                &LoadOptions::default(),
+            )
+            .unwrap()
+    };
+
+    // Out of the folder, a cycle, and missing files: only the NCC is read.
+    write(
+        "ncc.html",
+        &ncc(concat!(
+            r#"<h1 id="a"><a href="../x.smil#p">Out</a></h1>"#,
+            r#"<h1 id="b"><a href="a.smil#p">Cycle</a></h1>"#,
+            r#"<h1 id="c"><a href="gone.smil#p">Gone</a></h1>"#,
+        )),
+    );
+    write(
+        "a.smil",
+        concat!(
+            r#"<smil><body><seq><par id="p"><text src="ncc.html#a"/></par>"#,
+            r#"<par><text src="a.smil#p"/></par><par><text src="../secret.html"/></par>"#,
+            r#"<par><text src="missing.html"/></par></seq></body></smil>"#,
+        ),
+    );
+    let doc = open();
+    let text = doc.text().to_string();
+    assert!(!text.contains(outside), "{text}");
+    assert!(text.contains("Cycle") && text.contains("Gone"), "{text}");
+    assert_eq!(
+        warnings(&doc.meta),
+        vec![textweaver_formats::daisy2::NO_TEXT_WARNING.to_owned()]
+    );
+    assert_eq!(doc.marker_index().count(MarkerKind::SectionBreak, None), 3);
+
+    // SMIL nested far too deep: flattened, and its text is still found.
+    write("content.html", r#"<p id="x">Book text.</p>"#);
+    write(
+        "a.smil",
+        &format!(
+            r#"<smil><body>{}<par id="p"><text src="content.html#x"/></par>{}</body></smil>"#,
+            "<seq>".repeat(DEEP),
+            "</seq>".repeat(DEEP)
+        ),
+    );
+    let doc = open();
+    assert_eq!(doc.text().to_string(), "Book text.");
+    assert_eq!(warnings(&doc.meta), vec![NESTING_WARNING.to_owned()]);
+
+    // 100,000 `par` elements in one SMIL file load quickly.
+    let pars: String = (0..100_000)
+        .map(|i| format!(r#"<par id="p{i}"><text src="content.html#x"/></par>"#))
+        .collect();
+    write(
+        "a.smil",
+        &format!("<smil><body><seq>{pars}</seq></body></smil>"),
+    );
+    write(
+        "ncc.html",
+        &ncc(r#"<h1 id="a"><a href="a.smil#p99999">Last</a></h1>"#),
+    );
+    let started = std::time::Instant::now();
+    let doc = open();
+    assert!(started.elapsed() < std::time::Duration::from_secs(30));
+    assert_eq!(doc.text().to_string(), "Book text.");
+    assert!(warnings(&doc.meta).is_empty());
+    let sections = doc.marker_index().count(MarkerKind::SectionBreak, None);
+    assert_eq!(sections, 1);
+}
