@@ -204,3 +204,138 @@ impl FakeSource {
         std::fs::write(self.root.join(release).join(name), bytes)
     }
 }
+
+/// Switches this process to a memory credential store and never runs
+/// `gh`, so a test signs in, stores, and forgets a made-up token without
+/// touching the system credential store or a real sign-in. It lasts for
+/// the rest of the test program.
+pub fn memory_credentials() {
+    crate::credentials::use_memory();
+}
+
+/// One request a [`FakeGitHub`] answered: its path and query, and its
+/// headers with names in lower case.
+pub type Seen = (String, Vec<(String, String)>);
+
+/// A fake GitHub on this computer (`127.0.0.1`), for the signed-in
+/// fetcher: the API of one private repository, `example-org/parts` (a
+/// release by tag, and each asset, which redirects to a signed download),
+/// and the signed downloads. The API answers only with the expected
+/// token, as a private repository does; a signed download refuses any
+/// `Authorization` header. It records every request. Nothing goes to the
+/// network.
+#[derive(Debug)]
+pub struct FakeGitHub {
+    base: String,
+    seen: Arc<Mutex<Vec<Seen>>>,
+}
+
+impl FakeGitHub {
+    /// Starts the server, expecting `token`, with `files` as release
+    /// assets: `(tag, file name, bytes)`. Each release also lists
+    /// `elsewhere.bin` at an address outside the API.
+    pub fn start(token: &str, files: &[(&str, &str, &[u8])]) -> std::io::Result<FakeGitHub> {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let base = format!("http://{}", listener.local_addr()?);
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let files: Vec<(String, String, Vec<u8>)> = files
+            .iter()
+            .map(|(t, n, b)| ((*t).to_owned(), (*n).to_owned(), b.to_vec()))
+            .collect();
+        let auth = format!("Bearer {token}");
+        let (b, s) = (base.clone(), Arc::clone(&seen));
+        std::thread::spawn(move || {
+            for stream in listener.incoming().flatten() {
+                let _ = serve_one(stream, &b, &auth, &files, &s);
+            }
+        });
+        Ok(FakeGitHub { base, seen })
+    }
+
+    /// The API address to give [`SignedInFetcher::with_api`](crate::SignedInFetcher::with_api).
+    pub fn api(&self) -> &str {
+        &self.base
+    }
+
+    /// Every request so far, in order.
+    pub fn requests(&self) -> Vec<Seen> {
+        self.seen.lock().map(|s| s.clone()).unwrap_or_default()
+    }
+}
+
+/// Answers one connection of a [`FakeGitHub`].
+fn serve_one(
+    stream: std::net::TcpStream,
+    base: &str,
+    auth: &str,
+    files: &[(String, String, Vec<u8>)],
+    seen: &Mutex<Vec<Seen>>,
+) -> std::io::Result<()> {
+    use std::io::{BufRead, BufReader, Write};
+    let mut reader = BufReader::new(stream.try_clone()?);
+    let mut line = String::new();
+    reader.read_line(&mut line)?;
+    let path = line.split(' ').nth(1).unwrap_or("").to_owned();
+    let mut headers = Vec::new();
+    loop {
+        let mut h = String::new();
+        if reader.read_line(&mut h)? == 0 {
+            break;
+        }
+        let h = h.trim_end();
+        if h.is_empty() {
+            break;
+        }
+        if let Some((k, v)) = h.split_once(':') {
+            headers.push((k.trim().to_ascii_lowercase(), v.trim().to_owned()));
+        }
+    }
+    let signed_in = headers
+        .iter()
+        .any(|(k, v)| k == "authorization" && v == auth);
+    let has_auth = headers.iter().any(|(k, _)| k == "authorization");
+    if let Ok(mut s) = seen.lock() {
+        s.push((path.clone(), headers));
+    }
+    let repo = "/repos/example-org/parts/releases/";
+    let (status, extra, body): (&str, String, Vec<u8>) = if let Some(tag) =
+        path.strip_prefix(&format!("{repo}tags/"))
+        && signed_in
+    {
+        let mut assets: Vec<String> = files
+            .iter()
+            .enumerate()
+            .filter(|(_, (t, _, _))| t == tag)
+            .map(|(i, (_, n, _))| format!(r#"{{"name":"{n}","url":"{base}{repo}assets/{i}"}}"#))
+            .collect();
+        assets.push(r#"{"name":"elsewhere.bin","url":"https://example.invalid/x"}"#.to_owned());
+        let json = format!(r#"{{"tag_name":"{tag}","assets":[{}]}}"#, assets.join(","));
+        ("200 OK", String::new(), json.into_bytes())
+    } else if let Some(id) = path.strip_prefix(&format!("{repo}assets/"))
+        && signed_in
+    {
+        let location = format!("Location: {base}/signed/{id}?signature=1\r\n");
+        ("302 Found", location, Vec::new())
+    } else if let Some(id) = path
+        .strip_prefix("/signed/")
+        .and_then(|r| r.strip_suffix("?signature=1"))
+        .and_then(|i| i.parse::<usize>().ok())
+        .filter(|i| *i < files.len())
+    {
+        if has_auth {
+            ("400 Bad Request", String::new(), Vec::new())
+        } else {
+            ("200 OK", String::new(), files[id].2.clone())
+        }
+    } else {
+        ("404 Not Found", String::new(), Vec::new())
+    };
+    let mut stream = stream;
+    let head = format!(
+        "HTTP/1.1 {status}\r\n{extra}Content-Length: {}\r\nConnection: close\r\n\r\n",
+        body.len()
+    );
+    stream.write_all(head.as_bytes())?;
+    stream.write_all(&body)?;
+    stream.flush()
+}
