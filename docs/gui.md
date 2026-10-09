@@ -118,7 +118,8 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Alt+End**: say the last message and the status. In a list, it repeats the list's introduction too.
 - **Alt+'**: say the last message again.
 - **Alt+O**: the outline. Type to filter the headings, Enter jumps to one.
-- **Ctrl+Shift+N**: the notes list.
+- **Ctrl+Shift+N**: the notes list. Space on a note opens its links (see [Links between notes and tracked changes](#links-between-notes-and-tracked-changes)).
+- **Ctrl+Shift+J**: the list of tracked changes and comments in a Word, OpenDocument, or RTF document.
 - **Ctrl+1** and **Ctrl+2**: the Contents and Notes panels beside the document (see [The Contents and Notes panels](#the-contents-and-notes-panels)).
 - **F6** and **Shift+F6**: the next and previous region: the header, the panel, the document, and the toolbar.
 - **Ctrl+T** and **Ctrl+Shift+T**: next and previous table. **Ctrl+Alt+arrows** move by cell in a table.
@@ -134,6 +135,7 @@ A panel beside the document keeps the document's headings, or its notes, in view
 - **Ctrl+1** shows the Contents panel, and **Ctrl+2** the Notes panel, and moves the focus to it. Your screen reader says the list and the row with its place, for example "Contents, Methods, level 2, 3 of 12", and textweaver says "Contents open, 12 items." Pressed while you are in the panel, the same key closes it and puts you back in the document ("Contents closed."). Pressed in the document while the panel is shown, it moves the focus to the panel.
 - **Up, Down, Home, End, Page Up, Page Down,** and a letter move in the list, as in any list.
 - **Enter** moves the document to that heading or note, says where it is as the outline does, and keeps you in the panel, so you can try the next one. **Shift+Enter** moves the document there and puts you back in the document. **Escape** puts you back in the document without moving it.
+- **Space,** in the Notes panel, opens the selected note's links as a list, exactly as Space does in the notes list. Closing that list returns you to the panel. When the Notes panel opens with notes in it, textweaver mentions this key once, after the count; the Contents panel has no such key.
 - **F6** and **Shift+F6** move between the header, the panel, the document, and the toolbar.
 - The row where the cursor is has a bar beside it, and your screen reader hears ", current" after its name. While you are in the document, the panel's selected row follows the cursor, so going to the panel starts where you are.
 - The panel is a navigation landmark named "Contents" or "Notes".
@@ -141,6 +143,16 @@ A panel beside the document keeps the document's headings, or its notes, in view
 The panel never takes the focus on its own: when the window opens with a panel, or you choose one in the settings, the focus stays where it was. The window remembers the panel you showed last (Settings, Window, "Panel beside the document"; `sidebar` in `[gui]`, one of `off`, `contents`, or `notes`). A document without headings shows "No headings." in the Contents panel; a PDF without headings lists its pages, as the outline does. In edit mode, the Contents follow the headings you type once they are parsed again, as the outline does.
 
 The panel costs nothing while it is closed. While it is open, its rows are built again only when the document, its headings, or its notes change, not as the reading highlight moves.
+
+## Links between notes and tracked changes
+
+Two lists bring the structure around a document's text into the window: the links between your notes, which together form a small knowledge graph, and the tracked changes and comments that other authors left in a document. Neither is drawn as a picture. Each is an ordinary list dialog, the same list the terminal reader shows, and each row begins with what it means, so the first forty cells of a Braille line, or the first words your screen reader speaks, carry the substance of the row. Where a row is longer than the dialog is wide, the drawn row ends with an ellipsis, but your screen reader still reads the whole row. The terminal reader's guides describe both lists fully: [Links between notes](notes.md#links-between-notes) and [Tracked changes and comments](reading.md#tracked-changes-and-comments-ctrlshiftj-or-alta).
+
+**A note's links.** Press Space on a note, in the notes list (Ctrl+Shift+N) or in the Notes panel (Ctrl+2), to open its links. Each link is a row that names its type before its target, for example "supports: Chapter 3 note". Two rows follow the links: "What links here", which lists the notes that link to this one, from this document and from every library document with notes, and "Add a link". In this list, Enter follows a link, opening the other document if the target lives there; F2 changes a link's type or target; and Delete removes a link after asking "Remove this link?". Adding a link asks first for one of the ten types, then for the target note. Typing in these lists filters them by type, and the dialog's title shows the filter so far; Backspace takes back one letter.
+
+**Tracked changes and comments.** Ctrl+Shift+J (Command+Shift+J on macOS) lists every insertion, deletion, and move, and every comment thread, in document order, for example "Inserted: 'renal', by Ada Example, Tuesday, March 3, 2026". A date is said in full when the document records one, and "date not recorded" otherwise. Enter goes to the place in the text. On a change, A accepts it and R rejects it; Shift+A and Shift+R accept or reject every change by the same author. On a comment, F2 asks for a reply, Space marks the thread resolved (or open again), and Delete deletes the thread and its replies after a question. N adds a comment where a note would attach: to the selection, or to the text at the cursor. These letters act only with the case you type: a capital comes from Shift alone, so Caps Lock never turns a single acceptance into an acceptance of everything by one author.
+
+Both questions, removing a link and deleting a comment, appear as the window's usual question dialog (see [Questions](#questions)): the focus starts on **No**, the first button says **Remove** or **Delete**, and Y and N answer as in the terminal. Answering no keeps the link or the comment and shows the list again.
 
 ## Editing
 
@@ -171,7 +183,7 @@ The document window: a very long document is shown a few hundred pages at a time
 
 When textweaver asks a yes-or-no question (a voice to download, after its size and license; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, without the "y or n" the buttons already show, so your screen reader says it, and the focus is on **Yes**; a question that deletes, removes or replaces something names its verb on the button ("Delete") and starts on **No**, so Enter is the safe answer. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other letter asks the question again.
 
-A question that deletes, removes, or replaces something (a note, a highlight, a profile, a voice, a downloaded component, a file that already exists) starts on **No** instead, so pressing Enter keeps things as they are. Its first button says what it does, **Delete**, **Remove**, or **Replace**, rather than "Yes". The keys are the same: **Y** goes ahead, **N** and Escape keep things.
+A question that deletes, removes, or replaces something (a note, a highlight, a link between notes, a comment, a profile, a voice, a downloaded component, a file that already exists) starts on **No** instead, so pressing Enter keeps things as they are. Its first button says what it does, **Delete**, **Remove**, or **Replace**, rather than "Yes". The keys are the same: **Y** goes ahead, **N** and Escape keep things.
 
 ## Closing the window
 
