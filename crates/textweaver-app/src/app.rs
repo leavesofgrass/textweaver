@@ -2367,6 +2367,8 @@ impl App {
             | A::NotesPanel
             | A::ToggleHeader
             | A::ToggleToolbar
+            | A::ToggleFocusMode
+            | A::FullScreen
             | A::ShowPreview
             | A::NextRegion
             | A::PreviousRegion => {

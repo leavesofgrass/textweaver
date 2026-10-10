@@ -879,6 +879,8 @@ action-contents-panel = Mostrar o painel Sumário ao lado do documento e ir até
 action-notes-panel = Mostrar o painel Notas ao lado do documento e ir até ele, ou fechá-lo de dentro dele: Enter vai a uma nota
 action-toggle-header = Mostrar ou ocultar o cabeçalho, a barra de comandos acima do documento
 action-toggle-toolbar = Mostrar ou ocultar a barra de ferramentas, a barra dos botões de leitura
+action-toggle-focus-mode = Ativar ou desativar o modo foco: as barras e o painel se ocultam enquanto o mouse está parado
+action-full-screen = Ativar ou desativar a tela cheia: as barras e o painel se ocultam enquanto o mouse está parado
 action-customize-buttons = Escolher os botões do cabeçalho e da barra de ferramentas, e a ordem deles
 action-show-preview = Mostrar ou ocultar a pré-visualização ao lado do editor no modo de edição: o documento como é lido, atualizado quando a digitação pausa
 action-next-region = Ir para a próxima parte da janela: o cabeçalho, o painel, o documento ou a barra de ferramentas
@@ -2429,6 +2431,8 @@ setting-gui-toolbar-buttons = Botões da barra de ferramentas
 setting-gui-toolbar-buttons-help = Os botões da barra de ferramentas, em ordem, como identificadores de comandos separados por vírgulas. As dicas de teclas do leitor de terminal seguem esses botões. Personalizar botões, no menu Exibir, muda um de cada vez.
 setting-gui-auto-hide-menu = Ocultar a barra de menus
 setting-gui-auto-hide-menu-help = Windows: oculta a barra de menus da janela até que Alt ou F10 a mostre. Ela se oculta de novo quando o menu fecha. Sem efeito no Linux, cujos menus são a lista do F10, nem no macOS.
+setting-gui-focus-mode = Modo foco
+setting-gui-focus-mode-help = Oculta as barras e o painel quando o mouse fica parado alguns segundos. O texto ocupa então a janela inteira. Mover o mouse os mostra; as teclas não. Os leitores de tela continuam encontrando cada controle.
 setting-gui-speak-messages = Falar as mensagens do textweaver
 setting-gui-speak-messages-help = Quando o textweaver lê em voz alta, falar também as mensagens, a digitação e os movimentos do cursor com a voz dele, para ler de ouvido sem leitor de tela.
 setting-gui-sidebar = Painel ao lado do documento
@@ -3420,6 +3424,10 @@ gui-header-shown = Cabeçalho mostrado.
 gui-header-hidden = Cabeçalho oculto. Seus comandos mantêm suas teclas.
 gui-toolbar-shown = Barra de ferramentas mostrada.
 gui-toolbar-hidden = Barra de ferramentas oculta. Seus comandos mantêm suas teclas.
+gui-focus-mode-on = Modo foco ativado. Mover o mouse mostra as barras.
+gui-focus-mode-off = Modo foco desativado.
+gui-full-screen-on = Tela cheia ativada.
+gui-full-screen-off = Tela cheia desativada.
 
 ## Personalizar botões (crate::buttons).
 
@@ -3826,6 +3834,8 @@ name-contents-panel = Painel Sumário
 name-notes-panel = Painel Notas
 name-toggle-header = Cabeçalho
 name-toggle-toolbar = Barra de ferramentas
+name-toggle-focus-mode = Modo foco
+name-full-screen = Tela cheia
 name-customize-buttons = Personalizar botões
 name-show-preview = Mostrar pré-visualização
 name-next-region = Próxima região

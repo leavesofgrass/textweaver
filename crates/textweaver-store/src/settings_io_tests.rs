@@ -252,6 +252,7 @@ fn everything_changed() -> Settings {
         .insert("es".into(), "espeak:es".into());
     s.gui.announce = crate::GuiAnnounce::Uia;
     s.gui.auto_hide_menu = false;
+    s.gui.focus_mode = true;
     s.gui.speak_messages = true;
     s.gui.header = false;
     s.gui.toolbar = false;

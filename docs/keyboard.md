@@ -386,6 +386,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note | none | `Ctrl+2` | `Cmd+2` | `notes_panel` |
 | Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | palette | palette | palette | `toggle_header` |
 | Show or hide the toolbar, the bar of Play, Stop and the reading buttons | palette | palette | palette | `toggle_toolbar` |
+| Turn focus mode on or off: the bars and the panel hide while the mouse rests | palette | palette | palette | `toggle_focus_mode` |
+| Full screen on or off: the bars and the panel hide while the mouse rests | none | `Alt+Enter` | `Option+Enter` | `full_screen` |
 | Choose the buttons on the header and the toolbar, and their order | palette | palette | palette | `customize_buttons` |
 | Show or hide the preview beside the editor in edit mode: the document as it reads, updated when typing pauses | none | `Alt+F5` | `Option+F5` | `show_preview` |
 | Move to the next part of the window: the header, the panel, the document, or the toolbar | none | `F6` | `F6` | `next_region` |
@@ -547,6 +549,7 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Choose the font of the document text | palette | has a chord | `choose_font` |
 | Show the Contents panel beside the document and go to it, or close it from inside it: Enter goes to a heading | palette | has a chord | `contents_panel` |
 | Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note | palette | has a chord | `notes_panel` |
+| Full screen on or off: the bars and the panel hide while the mouse rests | palette | has a chord | `full_screen` |
 | Show or hide the preview beside the editor in edit mode: the document as it reads, updated when typing pauses | palette | has a chord | `show_preview` |
 | Move to the next part of the window: the header, the panel, the document, or the toolbar | palette | has a chord | `next_region` |
 | Move to the previous part of the window | palette | has a chord | `previous_region` |
@@ -607,6 +610,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Show the original braille of the page at the cursor, in a BRF file read as print | `show_original_braille` |
 | Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | `toggle_header` |
 | Show or hide the toolbar, the bar of Play, Stop and the reading buttons | `toggle_toolbar` |
+| Turn focus mode on or off: the bars and the panel hide while the mouse rests | `toggle_focus_mode` |
 | Choose the buttons on the header and the toolbar, and their order | `customize_buttons` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | `color_settings` |
 | Open the reading settings: rate, font, spacing, line length, theme, highlight, ruler, bionic reading, and syllables | `reading_form` |

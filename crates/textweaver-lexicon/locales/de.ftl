@@ -899,6 +899,8 @@ action-contents-panel = Den Bereich Inhalt neben dem Dokument zeigen und dorthin
 action-notes-panel = Den Bereich Notizen neben dem Dokument zeigen und dorthin wechseln, oder ihn von innen schließen: Eingabetaste springt zu einer Notiz
 action-toggle-header = Kopfzeile ein- oder ausblenden, die Leiste der Befehle über dem Dokument
 action-toggle-toolbar = Symbolleiste ein- oder ausblenden, die Leiste der Lese-Schaltflächen
+action-toggle-focus-mode = Fokusmodus ein- oder ausschalten: Leisten und Seitenbereich verschwinden, solange die Maus ruht
+action-full-screen = Vollbild ein- oder ausschalten: Leisten und Seitenbereich verschwinden, solange die Maus ruht
 action-customize-buttons = Die Schaltflächen der Kopfzeile und der Symbolleiste und ihre Reihenfolge wählen
 action-show-preview = Die Vorschau neben dem Editor im Bearbeitungsmodus ein- oder ausblenden: das Dokument, wie es gelesen wird, aktualisiert, wenn das Tippen pausiert
 action-next-region = Zum nächsten Teil des Fensters: Kopfzeile, Bereich, Dokument oder Symbolleiste
@@ -2449,6 +2451,8 @@ setting-gui-toolbar-buttons = Schaltflächen der Symbolleiste
 setting-gui-toolbar-buttons-help = Die Schaltflächen der Symbolleiste, der Reihe nach, als Befehls-IDs mit Kommas getrennt. Die Tastenhinweise des Terminal-Lesers folgen ihnen. Schaltflächen anpassen im Menü Ansicht ändert sie einzeln.
 setting-gui-auto-hide-menu = Menüleiste ausblenden
 setting-gui-auto-hide-menu-help = Windows: blendet die Menüleiste des Fensters aus, bis Alt oder F10 sie zeigt. Sie verschwindet wieder, wenn das Menü schließt. Keine Wirkung unter Linux, dessen Menüs die F10-Liste sind, oder unter macOS.
+setting-gui-focus-mode = Fokusmodus
+setting-gui-focus-mode-help = Blendet die Leisten und den Seitenbereich aus, wenn die Maus einige Sekunden ruht. Der Text hat dann das ganze Fenster. Eine Mausbewegung zeigt sie wieder, Tasten nicht. Screenreader finden weiterhin jedes Steuerelement.
 setting-gui-speak-messages = Meldungen von textweaver sprechen
 setting-gui-speak-messages-help = Wenn textweaver vorliest, auch seine Meldungen, Eingaben und Cursorbewegungen mit seiner Stimme sprechen, zum Hören ohne Screenreader.
 setting-gui-sidebar = Bereich neben dem Dokument
@@ -3428,6 +3432,10 @@ gui-header-shown = Kopfzeile angezeigt.
 gui-header-hidden = Kopfzeile ausgeblendet. Ihre Befehle behalten ihre Tasten.
 gui-toolbar-shown = Symbolleiste angezeigt.
 gui-toolbar-hidden = Symbolleiste ausgeblendet. Ihre Befehle behalten ihre Tasten.
+gui-focus-mode-on = Fokusmodus an. Eine Mausbewegung zeigt die Leisten.
+gui-focus-mode-off = Fokusmodus aus.
+gui-full-screen-on = Vollbild an.
+gui-full-screen-off = Vollbild aus.
 
 ## Schaltflächen anpassen (crate::buttons).
 
@@ -3834,6 +3842,8 @@ name-contents-panel = Bereich Inhalt
 name-notes-panel = Bereich Notizen
 name-toggle-header = Kopfzeile
 name-toggle-toolbar = Symbolleiste
+name-toggle-focus-mode = Fokusmodus
+name-full-screen = Vollbild
 name-customize-buttons = Schaltflächen anpassen
 name-show-preview = Vorschau zeigen
 name-next-region = Nächster Teil

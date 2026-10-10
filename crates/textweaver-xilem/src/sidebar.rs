@@ -139,9 +139,21 @@ pub struct Sidebar {
     /// The preview was shown to take the focus in a short window: it stays
     /// until the focus has been there (then the focus keeps it).
     preview_revealed: bool,
+    /// Focus mode's veil ([`crate::bars::Frame::set_veiled`]): the document
+    /// is laid over the whole row, and the panel keeps its place under it,
+    /// in the tree and the focus order.
+    veiled: bool,
 }
 
 impl Sidebar {
+    /// Lays the document over the panel (focus mode's veil) or beside it.
+    pub fn set_veiled(this: &mut WidgetMut<'_, Self>, veiled: bool) {
+        if this.widget.veiled != veiled {
+            this.widget.veiled = veiled;
+            this.ctx.request_layout();
+        }
+    }
+
     /// The row around `doc`, with no panel.
     pub fn new(doc: NewWidget<DocumentView>) -> Self {
         Sidebar {
@@ -154,6 +166,7 @@ impl Sidebar {
             preview_hidden: false,
             preview_beside: false,
             preview_revealed: false,
+            veiled: false,
         }
     }
 
@@ -366,6 +379,10 @@ impl Widget for Sidebar {
             ctx.run_layout(panel, Size::new(size.width, height));
             ctx.place_child(panel, Point::ORIGIN);
             let y = height + GAP;
+            if self.veiled {
+                docs.place(ctx, Point::ORIGIN, size);
+                return;
+            }
             docs.place(
                 ctx,
                 Point::new(0.0, y),
@@ -376,6 +393,13 @@ impl Widget for Sidebar {
         let width = PANEL_WIDTH.min(size.width * 0.4).max(0.0);
         ctx.run_layout(panel, Size::new(width, size.height));
         ctx.place_child(panel, Point::ORIGIN);
+        // Veiled, the document is drawn over the panel, which comes first
+        // in the children (drawing) order. shortcut: the panel is covered,
+        // not clipped; clip it as the bars are if a theme lets it show.
+        if self.veiled {
+            docs.place(ctx, Point::ORIGIN, size);
+            return;
+        }
         let x = width + GAP;
         docs.place(
             ctx,

@@ -14,11 +14,21 @@
 //! - Either bar can be hidden from the View menu (`[gui] header`,
 //!   `[gui] toolbar`); a hidden bar leaves the Tab order and the
 //!   accessibility tree, and its commands stay on their keys and menus.
+//! - Focus mode (`[gui] focus_mode`, and full screen): after
+//!   [`VEIL_AFTER`] without a mouse move, [`Frame::set_veiled`] lays the
+//!   document over the whole window and draws nothing of the header, the
+//!   toolbar, the status bar or the panel. Visual only: they keep their
+//!   bounds, their nodes and the Tab order, and nothing is announced.
+//!   Only moving the mouse lifts the veil; keys never do, so reading keys
+//!   keep the text alone on screen.
 
 use masonry::accesskit::{Node, Role};
+use std::time::{Duration, Instant};
+
 use masonry::core::{
-    AccessCtx, ChildrenIds, LayoutCtx, MeasureCtx, NewWidget, NoAction, PaintCtx, PropertiesRef,
-    RegisterCtx, Widget, WidgetMut, WidgetPod, WidgetTag,
+    AccessCtx, ChildrenIds, EventCtx, LayoutCtx, MeasureCtx, NewWidget, NoAction, PaintCtx,
+    PointerEvent, PointerUpdate, PropertiesMut, PropertiesRef, RegisterCtx, Widget, WidgetMut,
+    WidgetPod, WidgetTag,
 };
 use masonry::imaging::Painter;
 use masonry::kurbo::{Axis, Point, Size};
@@ -403,6 +413,10 @@ impl Widget for Flow {
 
 // --- Frame.
 
+/// How long the mouse rests before focus mode hides the bars and the
+/// panel. Fixed, as the owner's plan asks (no option).
+pub const VEIL_AFTER: Duration = Duration::from_secs(3);
+
 /// The window's column: the header, the document's row, the RSVP strip,
 /// the toolbar, the status bar, and the live region. See the module
 /// documentation.
@@ -421,6 +435,13 @@ pub struct Frame {
     show_toolbar: bool,
     /// The colors the bars' cards are drawn in.
     palette: Palette,
+    /// Focus mode's veil is down: only the document (and RSVP) is drawn.
+    veiled: bool,
+    /// When the mouse last moved, or focus mode last woke.
+    still_since: Instant,
+    /// Where the mouse was last seen, so a move that goes nowhere (one a
+    /// relayout may send) never counts as the reader's.
+    last_pos: Option<(f64, f64)>,
 }
 
 impl Frame {
@@ -447,7 +468,55 @@ impl Frame {
             show_header: true,
             show_toolbar: true,
             palette: palette.clone(),
+            veiled: false,
+            still_since: Instant::now(),
+            last_pos: None,
         }
+    }
+
+    /// True while focus mode's veil is down.
+    pub fn is_veiled(&self) -> bool {
+        self.veiled
+    }
+
+    /// Lowers focus mode's veil or lifts it: the header, the toolbar, the
+    /// status bar and the panel are drawn as nothing, and the document
+    /// takes the whole window. Visual only: every control keeps its
+    /// bounds, its node and its place in the Tab order, and the focus
+    /// stays where it is. Nothing is announced.
+    pub fn set_veiled(this: &mut WidgetMut<'_, Self>, veiled: bool) {
+        if this.widget.veiled == veiled {
+            return;
+        }
+        this.widget.veiled = veiled;
+        for bar in [&mut this.widget.header, &mut this.widget.toolbar] {
+            Region::set_veiled(&mut this.ctx.get_mut(bar), veiled);
+        }
+        let mut status = this.ctx.get_mut(&mut this.widget.status);
+        if let Some(mut r) = status.try_downcast::<Region>() {
+            Region::set_veiled(&mut r, veiled);
+        }
+        drop(status);
+        let mut body = this.ctx.get_mut(&mut this.widget.body);
+        if let Some(mut s) = body.try_downcast::<crate::sidebar::Sidebar>() {
+            crate::sidebar::Sidebar::set_veiled(&mut s, veiled);
+        }
+        drop(body);
+        this.ctx.request_layout();
+    }
+
+    /// Lifts the veil and starts the rest over (focus mode or full screen
+    /// was just turned on or off).
+    pub fn wake(this: &mut WidgetMut<'_, Self>) {
+        this.widget.still_since = Instant::now();
+        Self::set_veiled(this, false);
+    }
+
+    /// The window's tick: with focus mode `active`, lowers the veil once
+    /// the mouse has rested [`VEIL_AFTER`]; inactive, lifts it.
+    pub fn rest(this: &mut WidgetMut<'_, Self>, active: bool, now: Instant) {
+        let rested = now.saturating_duration_since(this.widget.still_since) >= VEIL_AFTER;
+        Self::set_veiled(this, active && (this.widget.veiled || rested));
     }
 
     /// True while the header and the toolbar are folded into one bar.
@@ -605,6 +674,31 @@ impl Frame {
 impl Widget for Frame {
     type Action = NoAction;
 
+    fn on_pointer_event(
+        &mut self,
+        ctx: &mut EventCtx<'_>,
+        _props: &mut PropertiesMut<'_>,
+        event: &PointerEvent,
+    ) {
+        // Every move anywhere in the frame bubbles up to here: it starts
+        // the rest over and lifts the veil. Keys never do.
+        if let PointerEvent::Move(PointerUpdate { current, .. }) = event {
+            let at = (current.position.x, current.position.y);
+            if self.last_pos == Some(at) {
+                return;
+            }
+            self.last_pos = Some(at);
+            self.still_since = Instant::now();
+            if self.veiled {
+                ctx.mutate_self_later(|mut this| {
+                    if let Some(mut frame) = this.try_downcast::<Frame>() {
+                        Frame::set_veiled(&mut frame, false);
+                    }
+                });
+            }
+        }
+    }
+
     fn register_children(&mut self, ctx: &mut RegisterCtx<'_>) {
         ctx.register_child(&mut self.header);
         ctx.register_child(&mut self.body);
@@ -713,11 +807,25 @@ impl Widget for Frame {
             + gap_after(announcer_h)
             + announcer_h;
         let body_h = (size.height - y - bottom - GAP).max(0.0);
-        ctx.run_layout(&mut self.body, Size::new(w, body_h));
-        ctx.place_child(&mut self.body, Point::new(0.0, y));
+        if self.veiled {
+            // Focus mode: the document from the top to the RSVP strip (or
+            // the foot), drawn over the veiled header; the bars keep the
+            // places worked out here, unseen.
+            let room = rsvp_h + gap_after(rsvp_h);
+            ctx.run_layout(&mut self.body, Size::new(w, (size.height - room).max(0.0)));
+            ctx.place_child(&mut self.body, Point::ORIGIN);
+        } else {
+            ctx.run_layout(&mut self.body, Size::new(w, body_h));
+            ctx.place_child(&mut self.body, Point::new(0.0, y));
+        }
         y += body_h + GAP;
         ctx.run_layout(&mut self.rsvp, Size::new(w, rsvp_h));
-        ctx.place_child(&mut self.rsvp, Point::new(0.0, y));
+        let rsvp_y = if self.veiled {
+            (size.height - rsvp_h).max(0.0)
+        } else {
+            y
+        };
+        ctx.place_child(&mut self.rsvp, Point::new(0.0, rsvp_y));
         y += rsvp_h + gap_after(rsvp_h);
         if !self.folded && self.show_toolbar {
             ctx.run_layout(&mut self.toolbar, Size::new(w, toolbar_h));

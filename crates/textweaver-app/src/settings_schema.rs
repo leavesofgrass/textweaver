@@ -169,6 +169,7 @@ pub const WINDOW_ONLY: &[&str] = &[
     "gui.header_buttons",
     "gui.toolbar",
     "gui.auto_hide_menu",
+    "gui.focus_mode",
     "gui.speak_messages",
 ];
 
@@ -1449,6 +1450,11 @@ pub const INFO: &[Info] = &[
         "gui.auto_hide_menu",
         "Hide the menu bar",
         "Windows: hide the window's menu bar until Alt or F10 shows it. It hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.",
+    ),
+    toggle(
+        "gui.focus_mode",
+        "Focus mode",
+        "Hide the bars and the panel when the mouse rests a few seconds. The text then has the whole window. Moving the mouse shows them; keys do not. Screen readers still find every control.",
     ),
     toggle(
         "gui.speak_messages",

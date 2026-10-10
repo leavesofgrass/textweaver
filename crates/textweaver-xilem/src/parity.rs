@@ -40,6 +40,8 @@ pub fn support(action: ActionId) -> Support {
         | A::NotesPanel
         | A::ToggleHeader
         | A::ToggleToolbar
+        | A::ToggleFocusMode
+        | A::FullScreen
         | A::ShowPreview
         | A::NextRegion
         | A::PreviousRegion
@@ -107,6 +109,7 @@ mod tests {
                                 // with no keys (so not window-only).
                                 | ActionId::ToggleHeader
                                 | ActionId::ToggleToolbar
+                                | ActionId::ToggleFocusMode
                         ),
                     "{a:?}"
                 );
