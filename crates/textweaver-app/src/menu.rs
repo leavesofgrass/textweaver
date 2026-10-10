@@ -626,6 +626,7 @@ impl MenuId {
                 Do(A::OnlineDocumentation),
                 Do(A::ReportProblem),
                 Sep,
+                Do(A::CheckForUpdates),
                 Do(A::About),
             ],
         }

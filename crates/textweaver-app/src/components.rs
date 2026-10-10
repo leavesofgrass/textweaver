@@ -421,8 +421,8 @@ pub(crate) enum ComponentsList {
     Manager(Vec<String>),
     /// What to do with one component.
     Actions(String),
-    /// The first-run list: one row per component, then Download the
-    /// chosen ones and Skip for now.
+    /// The first-run list: one row per component, the updates question,
+    /// then Download the chosen ones and Skip for now.
     Chooser(Vec<String>),
 }
 
@@ -1416,14 +1416,18 @@ impl App {
             .map(|c| c.id.to_string())
             .collect();
         self.components.chosen = vec![false; ids.len()];
-        let _ = self.update_settings(|s| s.components.chooser_shown = true);
+        let _ = self.update_settings(|s| {
+            s.components.chooser_shown = true;
+            // Its updates row is the first-run question about updates.
+            s.updates.asked = true;
+        });
         let msg = self.msg("components-chooser-intro");
         self.say_result(&msg);
         self.chooser_list(ids, None)
     }
 
     fn chooser_list(&mut self, ids: Vec<String>, focus: Option<usize>) -> Vec<Effect> {
-        let mut items = Vec::with_capacity(ids.len() + 2);
+        let mut items = Vec::with_capacity(ids.len() + 3);
         for (i, id) in ids.iter().enumerate() {
             let Some(c) = self.component_registry().get(id).cloned() else {
                 continue;
@@ -1445,6 +1449,13 @@ impl App {
                 ],
             ));
         }
+        // The one question about updates (B1-u1), answered with Space.
+        let mark = self.msg(if self.settings.updates.check {
+            "components-chosen"
+        } else {
+            "components-not-chosen"
+        });
+        items.push(self.msg_args("components-chooser-updates", &args!["mark" => mark]));
         items.push(self.msg("components-chooser-download"));
         items.push(self.msg("components-chooser-skip"));
         self.list = Some(ListKind::Components(ComponentsList::Chooser(ids)));
@@ -1465,7 +1476,13 @@ impl App {
             self.list = Some(ListKind::Components(list));
             return vec![Effect::Redraw];
         };
-        if n >= ids.len() {
+        if n == ids.len() {
+            // The updates row: on or off at once, said in words.
+            let on = !self.settings.updates.check;
+            self.set_update_check(on);
+            return self.chooser_list(ids, Some(n));
+        }
+        if n > ids.len() {
             self.list = Some(ListKind::Components(ComponentsList::Chooser(ids)));
             return vec![Effect::Redraw];
         }
@@ -1483,10 +1500,10 @@ impl App {
     }
 
     fn choose_in_chooser(&mut self, ids: Vec<String>, n: usize) -> Vec<Effect> {
-        if n < ids.len() {
+        if n <= ids.len() {
             return self.mark_component_row(ComponentsList::Chooser(ids), n);
         }
-        if n > ids.len() {
+        if n > ids.len() + 1 {
             let msg = self.msg("components-chooser-skipped");
             self.tell(&msg);
             return vec![Effect::Redraw];

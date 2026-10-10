@@ -252,6 +252,11 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("components.source", Machine),
     ("components.mirror", Machine),
     ("components.chooser_shown", Machine),
+    // [updates] (B1-u1): each computer checks and installs its own.
+    ("updates.check", Machine),
+    ("updates.asked", Machine),
+    ("updates.last_check", Machine),
+    ("updates.declined", Machine),
     // [interface]
     ("interface.language", Portable),
     // Depends on the terminal.

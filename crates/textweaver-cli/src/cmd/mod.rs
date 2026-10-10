@@ -28,6 +28,7 @@ pub mod study;
 pub mod summarize;
 pub mod sync;
 pub mod text;
+pub mod update;
 pub mod vault;
 pub mod voices;
 

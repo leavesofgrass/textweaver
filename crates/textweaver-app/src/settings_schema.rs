@@ -1629,6 +1629,27 @@ pub const INFO: &[Info] = &[
         "Components list shown",
         "The first-run list of optional components was shown.",
     ),
+    // [updates] (B1-u1)
+    toggle(
+        "updates.check",
+        "Check for updates",
+        "Look for a newer textweaver once a day at start. It reads the public list of releases on GitHub and asks before downloading. Nothing about you is sent. Help, Check for updates checks any time.",
+    ),
+    internal(
+        "updates.asked",
+        "Updates question asked",
+        "The first-run question about updates was asked.",
+    ),
+    internal(
+        "updates.last_check",
+        "Last update check",
+        "When the last automatic check for updates ran, in seconds since 1970.",
+    ),
+    internal(
+        "updates.declined",
+        "Declined update",
+        "The release you said no to; only a newer one is offered.",
+    ),
 ];
 
 /// The section title for a top-level key.
@@ -1657,6 +1678,7 @@ fn section_title(key: &str) -> &'static str {
         "colors" => "Colors",
         "sync" => "Sync",
         "components" => "Optional components",
+        "updates" => "Updates",
         _ => "Other",
     }
 }

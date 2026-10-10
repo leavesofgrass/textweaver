@@ -446,11 +446,19 @@ fn the_first_run_list_chooses_nothing_and_shows_once() {
         "{:?}",
         model.items
     );
-    assert_eq!(model.items[n], "Download the chosen ones");
-    assert_eq!(model.items[n + 1], "Skip for now");
+    // The one question about updates (B1-u1), not chosen either.
+    assert!(
+        model.items[n].starts_with("Not chosen: Check for updates automatically"),
+        "{:?}",
+        model.items
+    );
+    assert_eq!(model.items[n + 1], "Download the chosen ones");
+    assert_eq!(model.items[n + 2], "Skip for now");
     assert!(app.settings().components.chooser_shown);
+    assert!(app.settings().updates.asked);
+    assert!(!app.settings().updates.check);
     // Nothing chosen: Download downloads nothing.
-    app.dispatch(Command::Choose(n));
+    app.dispatch(Command::Choose(n + 1));
     assert!(said.any("Nothing chosen, nothing downloaded."));
     assert_eq!(fake.request_count(), 0);
     // Shown once.
@@ -477,6 +485,24 @@ fn space_marks_rows_in_the_first_run_list_in_words() {
     app.dispatch(Command::ListKey(ListKey::Char(' ')));
     let model = app.list_model().unwrap().clone();
     assert!(model.items[0].starts_with("Not chosen: "));
+}
+
+#[test]
+fn the_updates_row_turns_the_check_on_and_off_at_once() {
+    let tmp = tempfile::tempdir().unwrap();
+    let fake = Arc::new(FakeFetcher::new());
+    let (mut app, said) = app_in(tmp.path(), fake.clone());
+    app.offer_components_on_first_run();
+    app.tick(std::time::Instant::now());
+    app.dispatch(Command::Choose(5));
+    assert!(app.settings().updates.check);
+    assert!(said.any("Updates: checked once a day."), "{:?}", said.all());
+    let model = app.list_model().unwrap().clone();
+    assert!(model.items[5].starts_with("Chosen: Check for updates"));
+    // Escape keeps the answer; nothing was read from the network.
+    app.dispatch(Command::Cancel);
+    assert!(app.settings().updates.check);
+    assert_eq!(fake.request_count(), 0);
 }
 
 #[test]

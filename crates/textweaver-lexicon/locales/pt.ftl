@@ -4595,6 +4595,36 @@ setting-components-source-help = Seus próprios componentes, usados primeiro. Um
 setting-components-mirror = Espelho de componentes
 setting-components-mirror-help = De onde vêm primeiro os componentes opcionais: um endereço https ou uma pasta neste computador. Vazio usa as origens públicas. Nunca coloque uma senha aqui.
 
+## Atualizações (B1-u1).
+name-check-for-updates = Procurar atualizações
+action-check-for-updates = Procurar atualizações: ver se há um textweaver mais novo no GitHub e perguntar antes de baixá-lo
+components-chooser-updates = { $mark }: Procurar atualizações automaticamente, uma vez por dia, no GitHub
+update-checking = Procurando atualizações.
+update-none = Sem atualização: { $version } é a mais nova.
+update-found = Atualização disponível: textweaver { $version }, { $size }. Baixar? y ou n
+update-available-elsewhere = Atualização disponível: textweaver { $version }. Atualize esta cópia do jeito que foi instalada.
+update-declined = Não baixada. Uma versão mais nova será oferecida.
+update-downloading = Baixando a atualização, { $size }.
+update-progress = Atualização: { $percent } por cento baixado.
+update-installed = Atualização verificada e instalada. Reinicie o textweaver para usá-la.
+update-on-close = Atualização verificada. Ela é instalada ao fechar o textweaver.
+update-busy = Já procurando atualizações.
+update-not-in-build = Sem atualizações nesta versão.
+update-automatic-question = Procurar atualizações automaticamente, uma vez por dia? y ou n
+update-automatic-on = Atualizações: procuradas uma vez por dia.
+update-automatic-off = Atualizações: não procuradas. Ajuda, Procurar atualizações procura a qualquer hora.
+update-error-check = Falha ao procurar atualizações: { $reason }
+update-error-no-package = Sem pacote de atualização para este computador em { $version }.
+update-error-no-checksum = Atualização recusada: sem soma de verificação. Nada mudou.
+update-error-mismatch = Atualização recusada: a soma não confere. Nada mudou.
+update-error-cancelled = Download parado; continua da próxima vez.
+update-error-download = Atualização não baixada: { $reason }
+update-error-install = Atualização não instalada: { $reason }. Nada mudou.
+update-error-not-package = Não atualizado: esta cópia não vem de um pacote publicado.
+section-updates = Atualizações
+setting-updates-check = Procurar atualizações
+setting-updates-check-help = Procurar um textweaver mais novo uma vez por dia ao iniciar. Ele lê a lista pública de versões no GitHub e pergunta antes de baixar. Nada sobre você é enviado. Ajuda, Procurar atualizações procura a qualquer hora.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.

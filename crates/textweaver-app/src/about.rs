@@ -92,6 +92,7 @@ impl App {
         let _ = self.update_settings(|s| {
             s.accessibility.hybrid_offered = false;
             s.components.chooser_shown = false;
+            s.updates.asked = false;
         });
         let msg = self.msg("about-first-run-again");
         self.tell(&msg);

@@ -4,7 +4,7 @@
 //! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
 //! `convert_layout` for the PDF and EPUB layout flags), `export-audio`,
 //! `library`, `vault`, `dictate`, `marks`, `notes`, `lint`, `migrate-star`, `cite`,
-//! `settings` (with `profile`), `define`, `stats`, `study`, `summarize`, `changes`, `serve`, `ocr`, and `components`. Each module's docs name the ADR and crate it
+//! `settings` (with `profile`), `define`, `stats`, `study`, `summarize`, `changes`, `serve`, `ocr`, `components`, and `update`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
 use std::process::ExitCode;
@@ -95,6 +95,8 @@ enum Cmd {
     Ocr(cmd::ocr::Args),
     /// Optional components (models, fonts, voices): list, download, verify, remove, or install from a file.
     Components(cmd::components::Args),
+    /// Check for a newer textweaver on GitHub, or download, check, and install it.
+    Update(cmd::update::Args),
 }
 
 /// Runs `tw` and turns the result into its exit status: 0 done, 1 failed
@@ -146,6 +148,7 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Serve(a) => cmd::serve::run(a),
         Cmd::Ocr(a) => cmd::ocr::run(a),
         Cmd::Components(a) => cmd::components::run(a),
+        Cmd::Update(a) => cmd::update::run(a),
     }
 }
 

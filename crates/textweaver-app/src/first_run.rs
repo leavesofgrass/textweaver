@@ -11,12 +11,16 @@
 //!    ([`App::infer_hybrid`]).
 //! 3. **The optional components**, a list with nothing chosen, shown once
 //!    nothing else is open (`[components] chooser_shown`). Nothing is
-//!    fetched unless something is chosen and Download is pressed.
+//!    fetched unless something is chosen and Download is pressed. The
+//!    same list holds the one question about updates, "Check for updates
+//!    automatically" (`[updates] check`, crate::updates), so updates add
+//!    no step of their own.
 //!
 //! One dialog at a time: the components list waits for the language list
 //! to close ([`App::tick`]). "Ask again about first-run choices" (Tools)
-//! clears `hybrid_offered` and `chooser_shown`, so the screen reader step
-//! and the components list come again at the next start.
+//! clears `hybrid_offered`, `chooser_shown` and `[updates] asked`, so the
+//! screen reader step, the components list, and the updates question come
+//! again at the next start.
 
 use textweaver_a11y::detect::Detected;
 use textweaver_lexicon::i18n;
@@ -72,13 +76,17 @@ impl App {
             Vec::new()
         };
         self.offer_components_on_first_run();
+        self.updates_started(true);
         effects
     }
 
     /// A later start: when "Ask again about first-run choices" cleared the
     /// marker and a screen reader runs, hybrid mode is inferred and said,
     /// as on the first run. True when it chose.
+    /// Updates may be checked from now on, and a copy never asked about
+    /// them asks once (B1-u1).
     pub fn startup_screen_reader_step(&mut self, screen_reader: Option<&Detected>) -> bool {
+        self.updates_started(false);
         screen_reader.is_some_and(|found| self.infer_hybrid(found))
     }
 }
@@ -165,6 +173,26 @@ mod tests {
         assert!(app.settings().components.chooser_shown);
         // Escape kept the language.
         assert_eq!(app.settings().interface.language, "en");
+    }
+
+    #[test]
+    fn the_updates_question_is_in_the_components_step() {
+        let tmp = tempfile::tempdir().unwrap();
+        let (mut app, said) = first_app(tmp.path());
+        assert!(app.first_run_language(Some("ja-JP")));
+        let effects = app.first_run_steps(true, None);
+        // The language list and the components list, whose row asks about
+        // updates: still within the three steps, and no question after.
+        let steps = escape_each(&mut app, effects);
+        assert_eq!(steps, 2);
+        assert!(steps <= FIRST_RUN_MAX_STEPS);
+        for _ in 0..3 {
+            app.tick(std::time::Instant::now());
+        }
+        assert!(!app.confirmation_pending(), "{:?}", said.all());
+        let u = &app.settings().updates;
+        assert!(u.asked, "asked by the components step");
+        assert!(!u.check, "Escape leaves it off");
     }
 
     #[test]

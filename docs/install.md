@@ -75,6 +75,8 @@ scripts/update.sh
 powershell -ExecutionPolicy Bypass -File scripts\update.ps1
 ```
 
+textweaver can also update itself from a release package. On its first run it asks once whether to check for updates automatically, and Help, Check for updates looks at any time; either way it asks before downloading. `tw update` does the whole update from the command line. Every update is checked against the release's checksums and leaves your settings and notes alone. [Updates](updates.md) explains each step.
+
 If something does not work, the doctor script prints a report to paste into a bug report:
 
 ```bash
@@ -237,7 +239,13 @@ On Linux:
 sha256sum textweaver-*-linux-x86_64.AppImage
 ```
 
-Compare the result with the line for that file in `SHA256SUMS.txt`.
+Compare the result with the line for that file in `SHA256SUMS.txt`. textweaver's own updates make this comparison for you (see [Updates](updates.md)).
+
+Every package also carries a build attestation, a signed record of the GitHub workflow that built it. With the GitHub CLI installed, this checks one:
+
+```bash
+gh attestation verify textweaver-0.1.0-alpha.9-windows-x86_64.zip --repo leavesofgrass/textweaver
+```
 
 ## Building from source
 
@@ -246,6 +254,7 @@ Compare the result with the line for that file in `SHA256SUMS.txt`.
 ## See also
 
 - [Quick start](quickstart.md): what to do first.
+- [Updates](updates.md): keeping textweaver current.
 - [Speech engines and voices](speech.md): choosing an engine and a voice.
 - [Troubleshooting](troubleshooting.md): when something does not work.
 - [scripts/README.md](../scripts/README.md): every install and helper script.

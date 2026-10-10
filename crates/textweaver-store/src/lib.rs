@@ -98,7 +98,7 @@ pub use settings::{
     REMOVED_SETTINGS, RESERVED_SETTINGS, ReadingSettings, RememberedVoice, RevisionReading,
     RtlDisplay, SapiSettings, SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings,
     StatsSettings, StopAt, SubtitleFormat, SubtitleKaraoke, SummarySettings, SyncSettings,
-    TableMode, default_palette, drop_removed_settings, migrate_preview_follow,
+    TableMode, UpdatesSettings, default_palette, drop_removed_settings, migrate_preview_follow,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

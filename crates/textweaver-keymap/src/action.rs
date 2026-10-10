@@ -799,6 +799,9 @@ actions! {
     ManageComponents = "manage_components", View,
         "Manage optional components: the models, fonts, and voices textweaver can download, with their size and license",
         gui [], term [], shared [];
+    CheckForUpdates = "check_for_updates", View,
+        "Check for updates: look for a newer textweaver on GitHub, and ask before downloading it",
+        gui [], term [], shared [];
     ForgetGitHubToken = "forget_github_token", View,
         "Forget the GitHub token kept for your components source; it is asked for again when needed",
         gui [], term [], shared [];

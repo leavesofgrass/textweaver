@@ -38,6 +38,10 @@
 //!   keeps the checked installer, which the app launches only after the
 //!   reader hears its name, version, and license note and says yes.
 //!
+//! - [`update`] checks textweaver's public releases on GitHub for a newer
+//!   version and downloads its package through the same downloader,
+//!   checked against the release's `SHA256SUMS.txt`; [`swap`] installs it.
+//!
 //! Nothing here asks the reader: the app names the size and license and
 //! waits for a yes. Tests use [`fake::FakeFetcher`]; only the `download`
 //! feature's HTTP fetcher goes to the network, so the lean reader links no
@@ -53,7 +57,9 @@ mod github;
 mod install;
 pub mod manifest;
 mod pin;
+pub mod swap;
 pub mod unpack;
+pub mod update;
 
 pub use component::{Component, FileState, Status};
 pub use download::{Outcome, Progress, Sources, Tenths, download, source_base};

@@ -1604,6 +1604,29 @@ pub struct ComponentsSettings {
     pub extra: toml::Table,
 }
 
+/// `[updates]`: whether textweaver checks GitHub for a newer release
+/// (B1-u1). Asked once on the first run; nothing is checked until the
+/// answer is yes.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct UpdatesSettings {
+    /// Check for a newer release at most once a day, at start, and ask
+    /// before downloading it. Off until the first-run question is
+    /// answered yes.
+    pub check: bool,
+    /// The first-run question about updates was asked.
+    pub asked: bool,
+    /// When the last automatic check ran, in seconds since 1970 (0:
+    /// never).
+    pub last_check: u64,
+    /// The release the reader said no to; it is not offered again, only a
+    /// newer one is.
+    pub declined: String,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
 /// `[summary]`: extractive summaries, `tw summarize` and the Summarize
 /// command (ADR-0037).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -2124,6 +2147,8 @@ pub struct Settings {
     pub sync: SyncSettings,
     /// `[components]`
     pub components: ComponentsSettings,
+    /// `[updates]`
+    pub updates: UpdatesSettings,
     /// Unknown top-level keys and tables, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -2299,6 +2324,7 @@ impl Settings {
             colors: lenient_section("colors", table.remove("colors"), &mut w),
             sync: lenient_section("sync", table.remove("sync"), &mut w),
             components: lenient_section("components", table.remove("components"), &mut w),
+            updates: lenient_section("updates", table.remove("updates"), &mut w),
             extra: table,
         };
         (s, w)
@@ -2576,11 +2602,12 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 37] = [
+pub(crate) const STRUCT_TABLES: [&str; 38] = [
     "keyboard",
     "colors",
     "sync",
     "components",
+    "updates",
     "preview",
     "lexicon",
     "stats",

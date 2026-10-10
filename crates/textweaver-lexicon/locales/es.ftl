@@ -4579,6 +4579,36 @@ setting-components-source-help = Sus propios componentes, usados primero. Un rep
 setting-components-mirror = Espejo de componentes
 setting-components-mirror-help = De dónde vienen primero los componentes opcionales: una dirección https o una carpeta en este equipo. Vacío usa sus orígenes públicos. Nunca ponga aquí una contraseña.
 
+## Actualizaciones (B1-u1).
+name-check-for-updates = Buscar actualizaciones
+action-check-for-updates = Buscar actualizaciones: ver si hay un textweaver más nuevo en GitHub y preguntar antes de descargarlo
+components-chooser-updates = { $mark }: Buscar actualizaciones automáticamente, una vez al día, en GitHub
+update-checking = Buscando actualizaciones.
+update-none = Sin actualización: { $version } es la más nueva.
+update-found = Actualización disponible: textweaver { $version }, { $size }. ¿Descargarla? y o n
+update-available-elsewhere = Actualización disponible: textweaver { $version }. Actualice esta copia como se instaló.
+update-declined = No descargada. Se ofrecerá una versión más nueva.
+update-downloading = Descargando la actualización, { $size }.
+update-progress = Actualización: { $percent } por ciento descargado.
+update-installed = Actualización verificada e instalada. Reinicie textweaver para usarla.
+update-on-close = Actualización verificada. Se instala al cerrar textweaver.
+update-busy = Ya se buscan actualizaciones.
+update-not-in-build = Sin actualizaciones en esta versión.
+update-automatic-question = ¿Buscar actualizaciones automáticamente, una vez al día? y o n
+update-automatic-on = Actualizaciones: se buscan una vez al día.
+update-automatic-off = Actualizaciones: no se buscan. Ayuda, Buscar actualizaciones busca en cualquier momento.
+update-error-check = Falló la búsqueda de actualizaciones: { $reason }
+update-error-no-package = Sin paquete de actualización para este equipo en { $version }.
+update-error-no-checksum = Actualización rechazada: no tiene suma de comprobación. Nada cambió.
+update-error-mismatch = Actualización rechazada: la suma no coincide. Nada cambió.
+update-error-cancelled = Descarga detenida; sigue la próxima vez.
+update-error-download = Actualización no descargada: { $reason }
+update-error-install = Actualización no instalada: { $reason }. Nada cambió.
+update-error-not-package = No actualizado: esta copia no viene de un paquete publicado.
+section-updates = Actualizaciones
+setting-updates-check = Buscar actualizaciones
+setting-updates-check-help = Buscar un textweaver más nuevo una vez al día al iniciar. Lee la lista pública de versiones en GitHub y pregunta antes de descargar. No se envía nada sobre usted. Ayuda, Buscar actualizaciones busca en cualquier momento.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.
