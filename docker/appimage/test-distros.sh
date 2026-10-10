@@ -133,11 +133,11 @@ run_round() {
   espeak_line="$(printf '%s\n' "$backends" | grep -i espeak | head -n 1)"
   echo "  tw backends (through the tw link): ${espeak_line:-no espeak line}"
   case "$want_espeak:$espeak_line" in
-    yes:*"Not available"* | yes:)
+    yes:*"Not available"* | yes:*"Not installed"* | yes:)
       echo "  FAILED: espeak-ng is installed but not available"
       fail=1
       ;;
-    no:*"Not available"*) echo "  ok: espeak unavailable without libespeak-ng" ;;
+    no:*"Not available"* | no:*"Not installed"*) echo "  ok: espeak unavailable without libespeak-ng" ;;
     yes:*) echo "  ok: espeak available with libespeak-ng" ;;
     no:*)
       echo "  FAILED: espeak reported available without libespeak-ng"
