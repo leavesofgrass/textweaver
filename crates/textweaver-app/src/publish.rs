@@ -317,6 +317,31 @@ impl App {
             textweaver_store::MathBrailleCode::Ueb => textweaver_convert::MathCode::Ueb,
         };
         o.write.braille.table_format = braille_tables(&self.settings);
+        // The reader's highlights go into BRF with their palette entries'
+        // typeforms, when the file exported is the one they were made on
+        // (an edited copy's text has moved; the writer checks each one's
+        // text too).
+        if to == OutputFormat::Brf
+            && src.temp.is_none()
+            && let Some(s) = self.session.as_ref()
+        {
+            o.write.braille.highlights = s
+                .highlights
+                .iter()
+                .filter_map(|h| {
+                    Some(textweaver_convert::BrailleHighlight {
+                        range: h.range,
+                        entry: self.highlight_mark(h).look.entry?,
+                        text: h.text.clone(),
+                    })
+                })
+                .collect();
+            o.write.braille.highlight_names = self
+                .highlight_palette()
+                .iter()
+                .map(|e| e.name.trim().to_owned())
+                .collect();
+        }
         // The reading font, a downloaded Lexend too, as `tw convert
         // --font` gives it (W8a); a font missing here keeps the defaults.
         let fonts = self.export_fonts();

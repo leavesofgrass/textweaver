@@ -83,7 +83,9 @@ Exported from textweaver on 2026-09-26.
   Check the method (tags: exam)
 ```
 
-Highlights are listed the same way, with their color. A new document that was never saved has no folder yet; its study sheet goes to the folder textweaver was started in.
+Highlights are listed the same way, with their name. A new document that was never saved has no folder yet; its study sheet goes to the folder textweaver was started in.
+
+To group the highlights by name instead, type `export study sheet by name` (or choose **Export study sheet by name** in **File**, **Export as**). That sheet has a section for each name in your palette, with its highlights in document order and the heading each falls under, then a section of your notes. It is saved as `essay-study-sheet-by-name.md`.
 
 ### List notes: Shift+A
 
@@ -178,22 +180,69 @@ A highlight marks a passage, as a highlighter pen does on paper.
 1. Select the text with **Shift** and the arrow keys, or leave nothing selected to highlight the sentence at the cursor.
 2. Press **y**.
 
-You hear "Highlighted:" and the start of the passage. At high verbosity you also hear the percentage.
+You hear "Highlighted," the name, and the start of the passage: "Highlighted, important: The cell membrane". At high verbosity you also hear the percentage. **y** highlights with the first name in your palette.
 
 Press **y** again on a highlighted passage, with nothing selected, to remove the highlight. You hear "Highlight removed:" and the passage.
 
+### Highlight with a name: Alt+1 to Alt+5
+
+Each highlight has a name from your highlight palette, such as "important" or "ask the professor". The name is what you hear, and what you sort and collect by later.
+
+- **Alt+1** to **Alt+5** highlight with the first five names, in reading mode, in the terminal reader and in the window. On a passage that already has that name, the same key removes the highlight; on a passage with another name, it changes the name, and you hear "Highlight changed to define:" and the passage.
+- **Highlight with a name** lists every name in the palette, up to eight, with how many highlights have it, its shape, and its color: "important, 3 highlights, underline, yellow". Enter highlights with the name you choose. It is in the **Bookmarks and notes** menu, under **Highlights**, and in the command palette as `highlight_as`.
+
+The keys are in the keymap as `highlight_name_1` to `highlight_name_5`, so you can change them (see [Keyboard](keyboard.md)). star used Ctrl+Shift+1 to 5 for its colors. textweaver cannot use those: Shift with a digit types a different symbol on each keyboard layout, and terminals do not send Ctrl with a digit.
+
 ### Highlight colors
 
-Highlights made in textweaver are yellow. There is no key to choose another color yet.
+The highlight palette is `[[highlight.palette]]` in `settings.toml`. It starts with star's five colors, each with a study name and a shape of its own:
 
-Highlights imported from star, or from a synced folder, can have other colors. textweaver knows five by name: yellow, green, cyan, pink, and orange. Other colors are kept and shown by their code. On screen a highlight is marked by the theme's highlight style, which never relies on color alone.
+| Name | Color | Shape |
+|---|---|---|
+| important | yellow | underline |
+| define | green | double underline |
+| question | cyan | brackets |
+| example | pink | dotted underline |
+| review | orange | bold |
+
+Each entry has a `name` (any words you like), a `color` (a color name such as `skyblue` or `orange`, or `#rrggbb`), and a `shape`: `underline`, `double_underline`, `bold`, `dotted`, `brackets`, or `symbol`. You can have up to eight entries; textweaver keeps the first eight and tells you if there are more. To change a name, a color, or a shape, edit the file; Settings lists the palette as **Highlight names**. For example:
+
+```toml
+[[highlight.palette]]
+name = "ask the professor"
+color = "skyblue"
+shape = "symbol"
+```
+
+Color never tells the names apart on its own. Every highlight is said by its name, and each name has its own shape:
+
+- In the terminal reader, the highlight's color is the band behind the text, with black or white text, whichever reads better on it, and the shape is a set of text attributes of its own: underline; underline and bold; bold; underline and italic; italic; italic and bold. With colors off, the attributes still tell the names apart.
+- In a BRF file, each of the first five names has its own transcriber-defined typeform, and a transcriber's note at the start says which typeform is which name. This happens when you export the document you highlighted (**File**, **Export as**, **BRF**). UEB has five transcriber-defined typeforms, so highlights with the sixth to eighth names are not marked in braille, and the export report says so.
+- In the window, highlights keep the window's highlight mark for now; drawing each name's own shape there is still to come.
+
+Highlights made before the palette, in textweaver or in star, have only a color. Each takes the name of the first palette entry with its color, so star's yellow highlights are "important". If you rename an entry, its highlights follow the same rule: they take the name of the entry with their color. A highlight whose color is in no entry is said by its color and drawn with a shape no entry uses, when one is free.
 
 ### List highlights: Shift+Y
 
-Press **Shift+Y**. You hear "Highlights", the count, then "Enter goes to one, Delete removes it." Each item says the passage, the line, and the color name.
+Press **Shift+Y**. You hear "Highlights", the count, then "Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name." Each item says the name, the passage, and the line: "important: The cell membrane, line 12".
 
-In the list, **Enter** goes to the highlight, **Delete** asks "Remove this highlight? y or n" and removes it on **y**, and **Escape** closes the list. In the command palette this command is `list_highlights`.
+In the list:
 
+- **Enter** goes to the highlight. You hear "Highlight, important" and the passage.
+- **F2** lists the palette's names; choose one with **Enter** to give the highlight that name.
+- **Space** shows only the highlights with that item's name: "Highlights named important, 3 items. Space shows every highlight." **Space** again shows them all.
+- **Delete** asks "Remove this highlight? y or n" and removes it on **y**.
+- **Escape** closes the list.
+
+In the command palette this command is `list_highlights`.
+
+### Collect the highlights of one name
+
+**Collect highlights** lists the palette's names. Choose one and press **Enter**: textweaver writes that name's highlights as a Markdown list next to the document, in document order, each with its line. `essay.md` and the name "ask the professor" give `essay-highlights-ask-the-professor.md`. You hear how many highlights went in, the file's name, "Open it? y or n.", and the folder. It is in the **Highlights** menu and in the command palette as `collect_highlights`.
+
+### Highlighting is not studying
+
+Highlighting on its own is a weak way to study. A review of ten common study techniques rated it low in utility (Dunlosky and colleagues, 2013; see [What the research says](#what-the-research-says-and-what-it-does-not)). Use your names to sort what you mark, then turn the marks into questions: the [self-test](#test-yourself-from-the-study-sheet) asks you about each highlight and shows the passage only when you ask.
 ## Delete a note or highlight at the cursor: Delete
 
 When reading, move to a note or a highlight and press **Delete**. textweaver asks "Delete this note or highlight? y or n". Press **y** to delete it, or **n**, **a**, or **Escape** to keep it. A note under the cursor is deleted before a highlight. With nothing there you hear "No note or highlight here."
@@ -306,6 +355,14 @@ tw marks essay.md --json
 ```
 
 The JSON also has the document's state key and its history of jumps.
+
+To list only the highlights with one name, as Space does in the highlights list:
+
+```bash
+tw marks essay.md --name important
+```
+
+Each highlight says its name, and the JSON gives its `name` and `shape` beside its `color`.
 
 ## Export notes as references: tw marks --to
 

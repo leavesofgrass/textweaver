@@ -80,6 +80,7 @@ fn everything_changed() -> Settings {
     h.speed = 0.7;
     h.color = "#ff8800".into();
     h.sentence_color = Some("yellow".into());
+    h.palette[0].name = "ask the professor".into();
     let n = &mut s.normalization;
     n.math = false;
     n.abbreviations = false;

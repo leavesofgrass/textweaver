@@ -136,37 +136,7 @@ fn ratio_text(c: &Catalog, ratio: f64) -> String {
     crate::words::decimal(c, n)
 }
 
-/// The reading aids' colors that no theme role holds, for the frontends
-/// to draw: `None` keeps the frontend's own (attributes only in the
-/// terminal).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct MarkColors {
-    /// The reading ruler and the current-line band.
-    pub ruler: Option<Rgb>,
-    /// The underline of difficult words.
-    pub difficult_words: Option<Rgb>,
-    /// The marks between syllables.
-    pub syllables: Option<Rgb>,
-    /// The underline of misspellings.
-    pub misspellings: Option<Rgb>,
-    /// The underline of lint and grammar problems.
-    pub lint: Option<Rgb>,
-}
-
 impl App {
-    /// `[colors]` values for the marks no theme role holds.
-    pub fn mark_colors(&self) -> MarkColors {
-        let c = &self.settings.colors;
-        let get = |v: &str| parse_setting(v).ok().flatten();
-        MarkColors {
-            ruler: get(&c.ruler),
-            difficult_words: get(&c.difficult_words),
-            syllables: get(&c.syllables),
-            misspellings: get(&c.misspellings),
-            lint: get(&c.lint),
-        }
-    }
-
     /// Lays `[colors]` over `theme`'s roles: bands behind find matches,
     /// the selection, focus, the status bar, notes, and bookmarks; the
     /// text color of links and headings; and the reading aids' marks (the
@@ -454,18 +424,6 @@ mod tests {
             "{}",
             app.status_text()
         );
-    }
-
-    #[test]
-    fn marks_come_from_the_settings() {
-        let mut config = AppConfig::for_tests();
-        config.settings.colors.ruler = "#336699".into();
-        config.settings.colors.lint = "bad color".into();
-        let app = App::new(config);
-        let m = app.mark_colors();
-        assert_eq!(m.ruler, Some(Rgb::from_u32(0x336699)));
-        assert_eq!(m.lint, None);
-        assert_eq!(m.difficult_words, None);
     }
 
     /// Reset all colors asks first; no keeps every color, a stray key asks

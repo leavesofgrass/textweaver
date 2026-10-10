@@ -6,6 +6,8 @@
 
 use ratatui::style::{Color, Modifier, Style};
 use textweaver_app::HighlightKind;
+use textweaver_app::palette::PaletteLook;
+use textweaver_app::store::HighlightShape;
 use textweaver_theme::{
     Attrs, ColorRole, ColorSupport, Registry, StyleRole, TermColor, TermStyle, TerminalTheme,
 };
@@ -58,8 +60,7 @@ pub struct Theme {
     pub list_selected: Style,
     /// Code blocks and their tokens.
     pub code: CodeStyles,
-    /// The reader's colors for marks no theme role holds (`[colors]`):
-    /// set with [`with_marks`](Self::with_marks).
+    /// The colors of the reading aids' marks, from the theme's roles.
     pub marks: MarkStyles,
     /// The foreground of rows the reading ruler masks: the text color
     /// blended [`MASK_TOWARD_PAGE`] of the way toward the page, as the
@@ -72,9 +73,10 @@ pub struct Theme {
 /// window's overlay strength, so both frontends mask alike.
 pub const MASK_TOWARD_PAGE: f64 = 0.72;
 
-/// The reader's own colors for the reading aids' marks (`[colors]`), at
-/// the terminal's color level. With 16 colors or none they are unset, and
-/// the marks keep their attributes alone (an underline, the gutter mark).
+/// The colors of the reading aids' marks, at the terminal's color level:
+/// set only where the theme file or the reader's `[colors]` gives the
+/// role, so a role worked out at load leaves the mark to its attributes
+/// alone (an underline, the gutter mark), as with no color.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct MarkStyles {
     /// The band of the reading ruler and the current line.
@@ -110,6 +112,18 @@ fn color(c: TermColor) -> Color {
     match c {
         TermColor::Rgb(rgb) => Color::Rgb(rgb.r, rgb.g, rgb.b),
         TermColor::Indexed(i) => Color::Indexed(i),
+    }
+}
+
+/// A highlight shape as terminal attributes: a different set for each.
+fn shape_modifiers(shape: HighlightShape) -> Modifier {
+    match shape {
+        HighlightShape::Underline => Modifier::UNDERLINED,
+        HighlightShape::DoubleUnderline => Modifier::UNDERLINED | Modifier::BOLD,
+        HighlightShape::Bold => Modifier::BOLD,
+        HighlightShape::Dotted => Modifier::UNDERLINED | Modifier::ITALIC,
+        HighlightShape::Brackets => Modifier::ITALIC,
+        HighlightShape::Symbol => Modifier::ITALIC | Modifier::BOLD,
     }
 }
 
@@ -191,7 +205,7 @@ impl Theme {
             list: panel,
             list_selected: style(t.style(StyleRole::Focus)),
             code: CodeStyles::from_terminal(&t),
-            marks: MarkStyles::default(),
+            marks: MarkStyles::from_theme(theme, support),
             masked,
         }
     }
@@ -208,21 +222,6 @@ impl Theme {
         }
     }
 
-    /// These styles with the reader's mark colors (`[colors]`), at this
-    /// theme's color level.
-    pub fn with_marks(mut self, marks: &textweaver_app::MarkColors) -> Self {
-        let to = |c: Option<textweaver_theme::Rgb>| {
-            c.and_then(|rgb| textweaver_theme::term_color(rgb, self.support))
-                .map(color)
-        };
-        self.marks = MarkStyles {
-            ruler: to(marks.ruler),
-            difficult: to(marks.difficult_words),
-            syllables: to(marks.syllables),
-        };
-        self
-    }
-
     /// The built-in theme with this name (star's old names accepted), or
     /// Galaxy, at the detected color level.
     pub fn named(name: &str) -> Self {
@@ -233,6 +232,46 @@ impl Theme {
     /// Galaxy, the default theme.
     pub fn galaxy() -> Self {
         Theme::named(textweaver_theme::DEFAULT_THEME)
+    }
+
+    /// The style patched onto text for highlight `h`: a user highlight's
+    /// palette color and shape ([`textweaver_app::palette::resolve`]), the
+    /// theme's style for the rest.
+    pub fn mark(&self, h: &textweaver_app::Highlight) -> Style {
+        match (h.kind, h.look) {
+            (HighlightKind::UserHighlight, Some(look)) => self.palette_mark(look),
+            _ => self.highlight(h.kind),
+        }
+    }
+
+    /// A palette entry's style: its color as the band, with black or
+    /// white text, whichever reads better on it, where the terminal shows
+    /// colors (the theme's highlight band where it does not), and its
+    /// shape's own attributes, so no two entries differ by color alone.
+    ///
+    /// shortcut: a terminal has no double or dotted underline and no room
+    /// for brackets or a symbol without moving the text, so each shape is
+    /// a distinct set of attributes here; the window draws the shapes
+    /// themselves.
+    pub fn palette_mark(&self, look: PaletteLook) -> Style {
+        let band = look.color.and_then(|rgb| {
+            let bg = textweaver_theme::term_color(rgb, self.support)?;
+            let on_black = textweaver_theme::contrast_ratio(textweaver_theme::Rgb::BLACK, rgb);
+            let on_white = textweaver_theme::contrast_ratio(textweaver_theme::Rgb::WHITE, rgb);
+            let ink = if on_black >= on_white {
+                textweaver_theme::Rgb::BLACK
+            } else {
+                textweaver_theme::Rgb::WHITE
+            };
+            let fg = textweaver_theme::term_color(ink, self.support)?;
+            Some(Style::new().bg(color(bg)).fg(color(fg)))
+        });
+        let base = band.unwrap_or(self.user_highlight);
+        Style {
+            add_modifier: (base.add_modifier & Modifier::REVERSED) | shape_modifiers(look.shape),
+            sub_modifier: Modifier::empty(),
+            ..base
+        }
     }
 
     /// The style patched onto text for a highlight.
@@ -246,6 +285,24 @@ impl Theme {
             HighlightKind::SpokenSentence => self.spoken_sentence,
             HighlightKind::CurrentFindHit => self.current_hit,
             HighlightKind::SpokenWord => self.spoken_word,
+        }
+    }
+}
+
+impl MarkStyles {
+    /// The mark colors `theme` gives (its file or the reader's
+    /// `[colors]`), at color level `support`.
+    fn from_theme(theme: &textweaver_theme::Theme, support: ColorSupport) -> Self {
+        let given = |role: ColorRole| {
+            (!theme.is_derived(role))
+                .then(|| textweaver_theme::term_color(theme.color(role), support))
+                .flatten()
+                .map(color)
+        };
+        MarkStyles {
+            ruler: given(ColorRole::Ruler),
+            difficult: given(ColorRole::DifficultWord),
+            syllables: given(ColorRole::SyllableMark),
         }
     }
 }
@@ -292,6 +349,38 @@ mod tests {
         assert_eq!(Theme::named("High_Contrast").name, "high-contrast");
         assert_eq!(Theme::named("nonsense").name, "galaxy");
         assert_eq!(Theme::galaxy().display_name, "Galaxy");
+    }
+
+    /// Every palette shape is its own set of attributes, at every color
+    /// level, so two entries of one color, or any entries with no color,
+    /// still read apart; with colors, the band is the entry's color.
+    #[test]
+    fn palette_entries_differ_by_attributes_not_color_alone() {
+        let registry = Registry::builtin();
+        let theme = registry.resolve("galaxy").0;
+        for support in [ColorSupport::TrueColor, ColorSupport::NoColor] {
+            let t = Theme::from_theme(theme, support);
+            let mut seen = Vec::new();
+            for shape in HighlightShape::ALL {
+                let look = PaletteLook {
+                    entry: Some(0),
+                    color: Some(textweaver_theme::Rgb::from_u32(0xffff00)),
+                    shape,
+                };
+                let m = t.palette_mark(look).add_modifier;
+                assert!(!m.is_empty(), "{shape:?}");
+                assert!(!seen.contains(&m), "{shape:?} {support:?}");
+                seen.push(m);
+            }
+        }
+        let t = Theme::from_theme(theme, ColorSupport::TrueColor);
+        let look = PaletteLook {
+            entry: Some(0),
+            color: Some(textweaver_theme::Rgb::from_u32(0xffff00)),
+            shape: HighlightShape::Underline,
+        };
+        assert_eq!(t.palette_mark(look).bg, Some(Color::Rgb(0xff, 0xff, 0)));
+        assert_eq!(t.palette_mark(look).fg, Some(Color::Rgb(0, 0, 0)));
     }
 
     #[test]
@@ -388,6 +477,22 @@ mod tests {
             let bar = style(TerminalTheme::new(galaxy, support).style(StyleRole::StatusBar));
             assert_eq!(t.status, bar, "{support:?}");
         }
+    }
+
+    /// The marks take their colors from the theme's roles: a reader's
+    /// `[colors]` value shows; a role worked out at load leaves the mark
+    /// to its attributes.
+    #[test]
+    fn marks_come_from_the_theme_roles() {
+        let mut config = textweaver_app::AppConfig::for_tests();
+        config.settings.colors.ruler = "#336699".into();
+        let app = textweaver_app::App::new(config);
+        let t = Theme::from_theme(&app.reading_theme(), ColorSupport::TrueColor);
+        assert_eq!(t.marks.ruler, Some(Color::Rgb(0x33, 0x66, 0x99)));
+        assert_eq!(t.marks.difficult, None);
+        assert_eq!(t.marks.syllables, None);
+        let none = Theme::from_theme(&app.reading_theme(), ColorSupport::NoColor);
+        assert_eq!(none.marks, MarkStyles::default());
     }
 
     #[test]

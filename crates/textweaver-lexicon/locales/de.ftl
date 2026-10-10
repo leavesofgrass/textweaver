@@ -585,7 +585,7 @@ help-rate = Schneller und langsamer: { $faster } und { $slower }.
 help-where = Wo bin ich: { $key }.
 help-repeat = Die letzte Meldung noch einmal hören: { $repeat }. Die letzte Meldung und der Status: Modus, Geschwindigkeit, Engine und Position: { $status }.
 help-notes = Notizen: hinzufügen { $add }, auflisten { $list }, nächste und vorherige { $next } und { $previous }, die am Cursor löschen { $delete }. In der Liste löscht Entf, F2 bearbeitet.
-help-highlights = Die Auswahl oder den Satz hervorheben, oder eine Hervorhebung entfernen: { $highlight }. Hervorhebungen auflisten: { $list }.
+help-highlights = Die Auswahl oder den Satz hervorheben, oder eine Hervorhebung entfernen: { $highlight }. Mit einem Namen: { $first } bis { $fifth }, oder die Liste: { $named }. Hervorhebungen auflisten: { $list }.
 help-bookmarks-list = Lesezeichenliste: Entf löscht ein Lesezeichen, F2 benennt es um.
 help-edit = Das Dokument bearbeiten: { $edit }. Speichern: { $save }. Speichern unter: { $saveas }. Neues Dokument: { $new }.
 help-editing = Beim Bearbeiten: rückgängig { $undo }, wiederholen { $redo }, fett { $bold }. Jeder Formatierungsbefehl steht in den Tastenkombinationen.
@@ -799,7 +799,15 @@ action-next-note = Zur nächsten Notiz bewegen
 action-previous-note = Zur vorherigen Notiz bewegen
 action-delete-note = Die Notiz oder Hervorhebung am Cursor löschen
 action-highlight-selection = Die Auswahl oder den Satz am Cursor hervorheben
+action-highlight-as = Die Auswahl oder den Satz mit einem Namen aus der Hervorhebungspalette hervorheben
+action-highlight-name-1 = Mit dem ersten Namen der Palette hervorheben, oder diese Hervorhebung entfernen
+action-highlight-name-2 = Mit dem zweiten Namen der Palette hervorheben, oder diese Hervorhebung entfernen
+action-highlight-name-3 = Mit dem dritten Namen der Palette hervorheben, oder diese Hervorhebung entfernen
+action-highlight-name-4 = Mit dem vierten Namen der Palette hervorheben, oder diese Hervorhebung entfernen
+action-highlight-name-5 = Mit dem fünften Namen der Palette hervorheben, oder diese Hervorhebung entfernen
+action-collect-highlights = Die Hervorhebungen eines Namens als Markdown-Liste schreiben
 action-export-study-sheet = Die Notizen und Hervorhebungen als Markdown-Lernblatt exportieren, gruppiert nach Überschrift
+action-export-study-sheet-by-name = Das Lernblatt mit den Hervorhebungen nach Namen gruppiert exportieren
 action-self-test = Sich selbst zu den Notizen und Hervorhebungen abfragen: Eingabe zeigt jede Antwort
 action-open = Ein Dokument öffnen
 action-open-path = Ein Dokument öffnen, indem Sie seinen Pfad eingeben
@@ -1219,24 +1227,59 @@ notes-unchanged = Notiz unverändert.
 notes-updated = Notiz aktualisiert.
 notes-nothing-to-highlight = Hier gibt es nichts hervorzuheben.
 notes-highlight-removed = Hervorhebung entfernt: { $text }
-notes-highlighted-at = Hervorgehoben bei { $pct } Prozent: { $text }
-notes-highlighted = Hervorgehoben: { $text }
-# An item in the highlights list. $color is the highlight's color name;
+notes-highlighted-at = Hervorgehoben, { $name }, bei { $pct } Prozent: { $text }
+notes-highlighted = Hervorgehoben, { $name }: { $text }
+# An item in the highlights list. $name is the highlight's palette name;
 # $lost is yes when the text was not found after the file changed.
 notes-highlight-item =
     { $lost ->
-        [yes] { $text }, Zeile { $line }, { $color }, nach der Dateiänderung nicht gefunden
-       *[no] { $text }, Zeile { $line }, { $color }
+        [yes] { $name }: { $text }, Zeile { $line }, nach der Dateiänderung nicht gefunden
+       *[no] { $name }: { $text }, Zeile { $line }
     }
 notes-no-highlights = Keine Hervorhebungen. Eine erstellen: { $key }.
 notes-highlights-title = Hervorhebungen
 notes-highlights-intro =
     { $n ->
-        [one] Hervorhebungen, 1 Eintrag. Eingabetaste springt zu einer, Entf entfernt sie.
-       *[other] Hervorhebungen, { $n } Einträge. Eingabetaste springt zu einer, Entf entfernt sie.
+        [one] Hervorhebungen, 1 Eintrag. Eingabetaste springt zu einer, Entf entfernt sie, F2 ändert ihren Namen, Leertaste zeigt nur diesen Namen.
+       *[other] Hervorhebungen, { $n } Einträge. Eingabetaste springt zu einer, Entf entfernt sie, F2 ändert ihren Namen, Leertaste zeigt nur diesen Namen.
     }
 # The label said before a highlight's text on jumping to it.
-notes-highlight-label = Hervorhebung
+notes-highlight-label = Hervorhebung, { $name }
+notes-highlight-changed = Hervorhebung geändert zu { $name }: { $text }
+# $n is the palette entry's number, $key the keys of Highlight with a name.
+notes-palette-no-entry = Kein Hervorhebungsname { $n } in der Palette. Einen Namen wählen: { $key }.
+notes-highlights-named-title = Hervorhebungen: { $name }
+notes-highlights-named-intro =
+    { $n ->
+        [one] Hervorhebungen namens { $name }, 1 Eintrag. Leertaste zeigt alle Hervorhebungen.
+       *[other] Hervorhebungen namens { $name }, { $n } Einträge. Leertaste zeigt alle Hervorhebungen.
+    }
+notes-palette-title = Hervorhebungsnamen
+# A palette name: the name, how many highlights have it, its shape and its color.
+notes-palette-row =
+    { $count ->
+        [one] { $name }, 1 Hervorhebung, { $shape }, { $color }
+       *[other] { $name }, { $count } Hervorhebungen, { $shape }, { $color }
+    }
+notes-palette-intro-highlight = Mit welchem Namen hervorheben? { $n } Namen. Eingabetaste wählt einen.
+notes-palette-intro-change = Die Hervorhebung zu welchem Namen ändern? { $n } Namen. Eingabetaste wählt einen.
+notes-palette-intro-collect = Die Hervorhebungen welches Namens sammeln? { $n } Namen. Eingabetaste schreibt sie als Liste.
+notes-collect-none = Keine Hervorhebungen namens { $name }.
+# The collected list's own title (Markdown).
+notes-collect-title = Hervorhebungen namens { $name }: { $title }
+notes-collect-line = (Zeile { $line })
+# Keep the letters y and n: they are the keys that answer.
+notes-collect-saved =
+    { $n ->
+        [one] 1 Hervorhebung namens { $name } gespeichert als { $file }. Öffnen? y oder n. In { $folder }.
+       *[other] { $n } Hervorhebungen namens { $name } gespeichert als { $file }. Öffnen? y oder n. In { $folder }.
+    }
+palette-shape-underline = Unterstreichung
+palette-shape-double-underline = doppelte Unterstreichung
+palette-shape-bold = fett
+palette-shape-dotted = gepunktete Unterstreichung
+palette-shape-brackets = Klammern
+palette-shape-symbol = Symbol
 # Shown while reading reaches a note's passage.
 notes-signal = Notiz: { $text }
 # Said after moving onto a note's passage.
@@ -1364,8 +1407,12 @@ notes-sheet-exported = Exportiert aus { -brand } am { $date }.
 notes-sheet-before-first-heading = Vor der ersten Überschrift
 # After a note's text: its tags, joined with commas.
 notes-sheet-tags = (Tags: { $tags })
-# $color is the highlight's color name.
-notes-sheet-highlighted = Hervorgehoben, { $color }.
+# $name is the highlight's palette name.
+notes-sheet-highlighted = Hervorgehoben, { $name }.
+# On the study sheet grouped by name: the heading a highlight falls under.
+notes-sheet-under = Unter: { $heading }
+# The study sheet's section of notes, after the names.
+notes-sheet-notes = Notizen
 
 ## Der Selbsttest: Fragen mit verdeckten Antworten (crate::reveal).
 
@@ -1930,6 +1977,8 @@ setting-highlight-color = Wort-Hervorhebungsfarbe
 setting-highlight-color-help = Die Farbe hinter dem gelesenen Wort. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
 setting-highlight-sentence-color = Satz-Hervorhebungsfarbe
 setting-highlight-sentence-color-help = Die Farbe hinter dem gelesenen Satz. Wählen Sie einen Namen oder geben Sie einen Hex-Code ein. Standard: die Farbe des Designs.
+setting-highlight-palette = Hervorhebungsnamen
+setting-highlight-palette-help = Bis zu acht Namen für Ihre Hervorhebungen, jeder mit einer Farbe und einer Form. Die ersten fünf haben eigene Tasten.
 setting-normalization-math = Mathematik sprechen
 setting-normalization-math-help = Mathematische Notation in Worten sprechen.
 setting-normalization-math-verbosity = Mathematik-Ausführlichkeit
@@ -3372,6 +3421,7 @@ menu-headings = Überschriften
 menu-go-to = Gehe zu
 menu-cursor = Cursor und Auswahl
 menu-bookmarks = Lesezeichen und Notizen
+menu-highlights = Hervorhebungen
 menu-tables = Tabellen
 menu-speech-cursor = Sprachcursor
 
@@ -3505,6 +3555,14 @@ name-previous-note = Vorherige Notiz
 name-delete-note = Notiz oder Markierung löschen
 name-highlight-selection = Markieren
 name-export-study-sheet = Lernblatt exportieren
+name-highlight-as = Mit Namen hervorheben
+name-highlight-name-1 = Mit Name 1 hervorheben
+name-highlight-name-2 = Mit Name 2 hervorheben
+name-highlight-name-3 = Mit Name 3 hervorheben
+name-highlight-name-4 = Mit Name 4 hervorheben
+name-highlight-name-5 = Mit Name 5 hervorheben
+name-collect-highlights = Hervorhebungen sammeln
+name-export-study-sheet-by-name = Lernblatt nach Namen exportieren
 name-self-test = Selbsttest
 name-open = Öffnen
 name-open-path = Über Pfad öffnen
@@ -3681,6 +3739,8 @@ color-name-skyblue = Himmelblau
 color-name-teal = Petrol
 color-name-gold = Gold
 color-name-yellow = Gelb
+color-name-green = Grün
+color-name-cyan = Cyan
 color-name-purple = Lila
 color-name-pink = Rosa
 color-name-brown = Braun

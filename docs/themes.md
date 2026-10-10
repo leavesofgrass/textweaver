@@ -212,6 +212,9 @@ attributes = ["bold"]
 
 Keys textweaver does not know are kept, so a theme written for a newer version still loads.
 
+The highlights you make take their colors from your highlight palette, `[[highlight.palette]]` in your settings, not from the theme: each name has its own color and shape, so two names never differ by color alone (see [Highlight colors](notes.md#highlight-colors)). In the terminal reader the palette color is the band, with black or white text, whichever reads better on it. A theme's first `[[user_highlights]]` entry is the band only where the terminal shows 16 colors or none; each name's shape still tells them apart there.
+
+
 ### Contrast checks
 
 When textweaver loads your theme, it measures every color against what it sits on. Text needs 4.5 to 1 (7 to 1 in a high-contrast theme); the focus band needs 3 to 1 against the page. The spoken word's band needs 3 to 1 against the page and against the sentence's band, so the word stands out within its sentence. The sentence's band has no minimum: it is a soft tint, and the underline is what marks the sentence. Every highlight needs at least one attribute, and the spoken word must differ from its sentence, and the current find match from the others, by attribute and not only by color.

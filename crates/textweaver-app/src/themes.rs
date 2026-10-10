@@ -379,5 +379,15 @@ mod tests {
             "{}",
             app.status_text()
         );
+        // The reader's own theme meets AA, so Settings lists it with the
+        // AA themes, before every theme below AA.
+        let schema = app.settings_schema();
+        let crate::SettingKind::Choice { choices, .. } = &schema.get("display.theme").unwrap().kind
+        else {
+            panic!("the theme is a choice");
+        };
+        let at = |v: &str| choices.iter().position(|c| c.value == v).unwrap();
+        assert_eq!(choices[at("ocean")].label, "Ocean, meets AA");
+        assert!(at("ocean") < at("one-dark"), "{choices:?}");
     }
 }

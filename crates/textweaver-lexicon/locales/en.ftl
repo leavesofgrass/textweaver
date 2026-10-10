@@ -554,7 +554,7 @@ help-rate = Faster and slower: { $faster } and { $slower }.
 help-where = Where am I: { $key }.
 help-repeat = Hear the last message again: { $repeat }. The last message and the status: mode, rate, engine, and position: { $status }.
 help-notes = Notes: add { $add }, list { $list }, next and previous { $next } and { $previous }, delete the one at the cursor { $delete }. In the list, Delete deletes and F2 edits.
-help-highlights = Highlight the selection or sentence, or remove a highlight: { $highlight }. List highlights: { $list }.
+help-highlights = Highlight the selection or sentence, or remove a highlight: { $highlight }. With a name: { $first } to { $fifth }, or the list: { $named }. List highlights: { $list }.
 help-bookmarks-list = Bookmarks list: Delete deletes a bookmark, F2 renames it.
 help-edit = Edit the document: { $edit }. Save: { $save }. Save as: { $saveas }. New document: { $new }.
 help-editing = While editing: undo { $undo }, redo { $redo }, bold { $bold }. Every formatting command is in the keyboard shortcuts.
@@ -768,7 +768,15 @@ action-next-note = Move to the next note
 action-previous-note = Move to the previous note
 action-delete-note = Delete the note or highlight at the cursor
 action-highlight-selection = Highlight the selection, or the sentence at the cursor
+action-highlight-as = Highlight the selection or the sentence with a name chosen from the highlight palette
+action-highlight-name-1 = Highlight with the palette's first name, or remove that highlight
+action-highlight-name-2 = Highlight with the palette's second name, or remove that highlight
+action-highlight-name-3 = Highlight with the palette's third name, or remove that highlight
+action-highlight-name-4 = Highlight with the palette's fourth name, or remove that highlight
+action-highlight-name-5 = Highlight with the palette's fifth name, or remove that highlight
+action-collect-highlights = Write the highlights of one name as a Markdown list
 action-export-study-sheet = Export the notes and highlights as a Markdown study sheet, grouped by heading
+action-export-study-sheet-by-name = Export the study sheet with the highlights grouped by name
 action-self-test = Test yourself on the notes and highlights: Enter shows each answer
 action-open = Open a document
 action-open-path = Open a document by typing its path
@@ -1188,24 +1196,59 @@ notes-unchanged = Note unchanged.
 notes-updated = Note updated.
 notes-nothing-to-highlight = Nothing here to highlight.
 notes-highlight-removed = Highlight removed: { $text }
-notes-highlighted-at = Highlighted at { $pct } percent: { $text }
-notes-highlighted = Highlighted: { $text }
-# An item in the highlights list. $color is the highlight's color name;
+notes-highlighted-at = Highlighted, { $name }, at { $pct } percent: { $text }
+notes-highlighted = Highlighted, { $name }: { $text }
+# An item in the highlights list. $name is the highlight's palette name;
 # $lost is yes when the text was not found after the file changed.
 notes-highlight-item =
     { $lost ->
-        [yes] { $text }, line { $line }, { $color }, not found after the file changed
-       *[no] { $text }, line { $line }, { $color }
+        [yes] { $name }: { $text }, line { $line }, not found after the file changed
+       *[no] { $name }: { $text }, line { $line }
     }
 notes-no-highlights = No highlights. To make one: { $key }.
 notes-highlights-title = Highlights
 notes-highlights-intro =
     { $n ->
-        [one] Highlights, 1 item. Enter goes to one, Delete removes it.
-       *[other] Highlights, { $n } items. Enter goes to one, Delete removes it.
+        [one] Highlights, 1 item. Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name.
+       *[other] Highlights, { $n } items. Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name.
     }
 # The label said before a highlight's text on jumping to it.
-notes-highlight-label = Highlight
+notes-highlight-label = Highlight, { $name }
+notes-highlight-changed = Highlight changed to { $name }: { $text }
+# $n is the palette entry's number, $key the keys of Highlight with a name.
+notes-palette-no-entry = No highlight name { $n } in the palette. To choose a name: { $key }.
+notes-highlights-named-title = Highlights: { $name }
+notes-highlights-named-intro =
+    { $n ->
+        [one] Highlights named { $name }, 1 item. Space shows every highlight.
+       *[other] Highlights named { $name }, { $n } items. Space shows every highlight.
+    }
+notes-palette-title = Highlight names
+# A palette name: the name, how many highlights have it, its shape and its color.
+notes-palette-row =
+    { $count ->
+        [one] { $name }, 1 highlight, { $shape }, { $color }
+       *[other] { $name }, { $count } highlights, { $shape }, { $color }
+    }
+notes-palette-intro-highlight = Highlight with which name? { $n } names. Enter chooses one.
+notes-palette-intro-change = Change the highlight to which name? { $n } names. Enter chooses one.
+notes-palette-intro-collect = Collect the highlights of which name? { $n } names. Enter writes them as a list.
+notes-collect-none = No highlights named { $name }.
+# The collected list's own title (Markdown).
+notes-collect-title = Highlights named { $name }: { $title }
+notes-collect-line = (line { $line })
+# Keep the letters y and n: they are the keys that answer.
+notes-collect-saved =
+    { $n ->
+        [one] 1 highlight named { $name } saved as { $file }. Open it? y or n. In { $folder }.
+       *[other] { $n } highlights named { $name } saved as { $file }. Open it? y or n. In { $folder }.
+    }
+palette-shape-underline = underline
+palette-shape-double-underline = double underline
+palette-shape-bold = bold
+palette-shape-dotted = dotted underline
+palette-shape-brackets = brackets
+palette-shape-symbol = symbol
 # Shown while reading reaches a note's passage.
 notes-signal = Note: { $text }
 # Said after moving onto a note's passage.
@@ -1345,8 +1388,12 @@ notes-sheet-exported = Exported from { -brand } on { $date }.
 notes-sheet-before-first-heading = Before the first heading
 # After a note's text: its tags, joined with commas.
 notes-sheet-tags = (tags: { $tags })
-# $color is the highlight's color name.
-notes-sheet-highlighted = Highlighted, { $color }.
+# $name is the highlight's palette name.
+notes-sheet-highlighted = Highlighted, { $name }.
+# On the study sheet grouped by name: the heading a highlight falls under.
+notes-sheet-under = Under: { $heading }
+# The study sheet's section of notes, after the names.
+notes-sheet-notes = Notes
 
 ## The self-test: prompts with hidden answers (crate::reveal).
 
@@ -1913,6 +1960,8 @@ setting-highlight-color = Word highlight color
 setting-highlight-color-help = The color behind the word being read. Choose a name, or type a hex code. Default: the theme's color.
 setting-highlight-sentence-color = Sentence highlight color
 setting-highlight-sentence-color-help = The color behind the sentence being read. Choose a name, or type a hex code. Default: the theme's color.
+setting-highlight-palette = Highlight names
+setting-highlight-palette-help = Up to eight names for your highlights, each with a color and a shape. The first five have keys of their own.
 setting-normalization-math = Speak math
 setting-normalization-math-help = Speak math notation in words.
 setting-normalization-math-verbosity = Math verbosity
@@ -3387,6 +3436,7 @@ menu-headings = Headings
 menu-go-to = Go to
 menu-cursor = Cursor and selection
 menu-bookmarks = Bookmarks and notes
+menu-highlights = Highlights
 menu-tables = Tables
 menu-speech-cursor = Speech Cursor
 
@@ -3520,6 +3570,14 @@ name-previous-note = Previous note
 name-delete-note = Delete note or highlight
 name-highlight-selection = Highlight
 name-export-study-sheet = Export study sheet
+name-highlight-as = Highlight with a name
+name-highlight-name-1 = Highlight with name 1
+name-highlight-name-2 = Highlight with name 2
+name-highlight-name-3 = Highlight with name 3
+name-highlight-name-4 = Highlight with name 4
+name-highlight-name-5 = Highlight with name 5
+name-collect-highlights = Collect highlights
+name-export-study-sheet-by-name = Export study sheet by name
 name-self-test = Self-test
 name-open = Open
 name-open-path = Open by path
@@ -3696,6 +3754,8 @@ color-name-skyblue = sky blue
 color-name-teal = teal
 color-name-gold = gold
 color-name-yellow = yellow
+color-name-green = green
+color-name-cyan = cyan
 color-name-purple = purple
 color-name-pink = pink
 color-name-brown = brown

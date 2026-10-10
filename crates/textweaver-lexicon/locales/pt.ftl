@@ -565,7 +565,7 @@ help-rate = Mais rápido e mais devagar: { $faster } e { $slower }.
 help-where = Onde estou: { $key }.
 help-repeat = Ouvir a última mensagem novamente: { $repeat }. A última mensagem e o status: modo, velocidade, motor e posição: { $status }.
 help-notes = Notas: adicionar { $add }, listar { $list }, próxima e anterior { $next } e { $previous }, excluir a do cursor { $delete }. Na lista, Delete exclui e F2 edita.
-help-highlights = Realçar a seleção ou a frase, ou remover um realce: { $highlight }. Listar realces: { $list }.
+help-highlights = Realçar a seleção ou a frase, ou remover um realce: { $highlight }. Com um nome: { $first } a { $fifth }, ou a lista: { $named }. Listar realces: { $list }.
 help-bookmarks-list = Lista de marcadores: Delete exclui um marcador, F2 o renomeia.
 help-edit = Editar o documento: { $edit }. Salvar: { $save }. Salvar como: { $saveas }. Novo documento: { $new }.
 help-editing = Durante a edição: desfazer { $undo }, refazer { $redo }, negrito { $bold }. Todo comando de formatação está nos atalhos de teclado.
@@ -779,7 +779,15 @@ action-next-note = Mover para a próxima nota
 action-previous-note = Mover para a nota anterior
 action-delete-note = Excluir a nota ou o realce no cursor
 action-highlight-selection = Realçar a seleção, ou a frase no cursor
+action-highlight-as = Realçar a seleção ou a frase com um nome escolhido da paleta de realce
+action-highlight-name-1 = Realçar com o primeiro nome da paleta, ou remover esse realce
+action-highlight-name-2 = Realçar com o segundo nome da paleta, ou remover esse realce
+action-highlight-name-3 = Realçar com o terceiro nome da paleta, ou remover esse realce
+action-highlight-name-4 = Realçar com o quarto nome da paleta, ou remover esse realce
+action-highlight-name-5 = Realçar com o quinto nome da paleta, ou remover esse realce
+action-collect-highlights = Escrever os realces de um nome como uma lista em Markdown
 action-export-study-sheet = Exportar as notas e realces como uma folha de estudo em Markdown, agrupada por cabeçalho
+action-export-study-sheet-by-name = Exportar a folha de estudo com os realces agrupados por nome
 action-self-test = Testar-se nas notas e realces: Enter mostra cada resposta
 action-open = Abrir um documento
 action-open-path = Abrir um documento digitando o caminho
@@ -1199,24 +1207,59 @@ notes-unchanged = Nota inalterada.
 notes-updated = Nota atualizada.
 notes-nothing-to-highlight = Nada aqui para realçar.
 notes-highlight-removed = Realce removido: { $text }
-notes-highlighted-at = Realçado em { $pct } por cento: { $text }
-notes-highlighted = Realçado: { $text }
-# An item in the highlights list. $color is the highlight's color name;
+notes-highlighted-at = Realçado, { $name }, em { $pct } por cento: { $text }
+notes-highlighted = Realçado, { $name }: { $text }
+# An item in the highlights list. $name is the highlight's palette name;
 # $lost is yes when the text was not found after the file changed.
 notes-highlight-item =
     { $lost ->
-        [yes] { $text }, linha { $line }, { $color }, não encontrado depois que o arquivo mudou
-       *[no] { $text }, linha { $line }, { $color }
+        [yes] { $name }: { $text }, linha { $line }, não encontrado depois que o arquivo mudou
+       *[no] { $name }: { $text }, linha { $line }
     }
 notes-no-highlights = Nenhum realce. Para criar um: { $key }.
 notes-highlights-title = Realces
 notes-highlights-intro =
     { $n ->
-        [one] Realces, 1 item. Enter vai até um, Delete o remove.
-       *[other] Realces, { $n } itens. Enter vai até um, Delete o remove.
+        [one] Realces, 1 item. Enter vai até um, Delete o remove, F2 muda seu nome, Espaço mostra só seu nome.
+       *[other] Realces, { $n } itens. Enter vai até um, Delete o remove, F2 muda seu nome, Espaço mostra só seu nome.
     }
 # The label said before a highlight's text on jumping to it.
-notes-highlight-label = Realçar
+notes-highlight-label = Realce, { $name }
+notes-highlight-changed = Realce mudado para { $name }: { $text }
+# $n is the palette entry's number, $key the keys of Highlight with a name.
+notes-palette-no-entry = Não há nome de realce { $n } na paleta. Para escolher um nome: { $key }.
+notes-highlights-named-title = Realces: { $name }
+notes-highlights-named-intro =
+    { $n ->
+        [one] Realces chamados { $name }, 1 item. Espaço mostra todos os realces.
+       *[other] Realces chamados { $name }, { $n } itens. Espaço mostra todos os realces.
+    }
+notes-palette-title = Nomes de realce
+# A palette name: the name, how many highlights have it, its shape and its color.
+notes-palette-row =
+    { $count ->
+        [one] { $name }, 1 realce, { $shape }, { $color }
+       *[other] { $name }, { $count } realces, { $shape }, { $color }
+    }
+notes-palette-intro-highlight = Realçar com qual nome? { $n } nomes. Enter escolhe um.
+notes-palette-intro-change = Mudar o realce para qual nome? { $n } nomes. Enter escolhe um.
+notes-palette-intro-collect = Reunir os realces de qual nome? { $n } nomes. Enter os escreve como lista.
+notes-collect-none = Nenhum realce chamado { $name }.
+# The collected list's own title (Markdown).
+notes-collect-title = Realces chamados { $name }: { $title }
+notes-collect-line = (linha { $line })
+# Keep the letters y and n: they are the keys that answer.
+notes-collect-saved =
+    { $n ->
+        [one] 1 realce chamado { $name } salvo como { $file }. Abrir? y ou n. Em { $folder }.
+       *[other] { $n } realces chamados { $name } salvos como { $file }. Abrir? y ou n. Em { $folder }.
+    }
+palette-shape-underline = sublinhado
+palette-shape-double-underline = sublinhado duplo
+palette-shape-bold = negrito
+palette-shape-dotted = sublinhado pontilhado
+palette-shape-brackets = colchetes
+palette-shape-symbol = símbolo
 # Shown while reading reaches a note's passage.
 notes-signal = Nota: { $text }
 # Said after moving onto a note's passage.
@@ -1344,8 +1387,12 @@ notes-sheet-exported = Exportado do { -brand } em { $date }.
 notes-sheet-before-first-heading = Antes do primeiro cabeçalho
 # After a note's text: its tags, joined with commas.
 notes-sheet-tags = (tags: { $tags })
-# $color is the highlight's color name.
-notes-sheet-highlighted = Realçado, { $color }.
+# $name is the highlight's palette name.
+notes-sheet-highlighted = Realçado, { $name }.
+# On the study sheet grouped by name: the heading a highlight falls under.
+notes-sheet-under = Sob: { $heading }
+# The study sheet's section of notes, after the names.
+notes-sheet-notes = Notas
 
 ## O autoteste: perguntas com respostas ocultas (crate::reveal).
 
@@ -1910,6 +1957,8 @@ setting-highlight-color = Cor do realce de palavra
 setting-highlight-color-help = A cor atrás da palavra sendo lida. Escolha um nome ou digite um código hexadecimal. Padrão: a cor do tema.
 setting-highlight-sentence-color = Cor do realce de frase
 setting-highlight-sentence-color-help = A cor atrás da frase sendo lida. Escolha um nome ou digite um código hexadecimal. Padrão: a cor do tema.
+setting-highlight-palette = Nomes de realce
+setting-highlight-palette-help = Até oito nomes para seus realces, cada um com uma cor e uma forma. Os cinco primeiros têm teclas próprias.
 setting-normalization-math = Falar matemática
 setting-normalization-math-help = Falar notação matemática em palavras.
 setting-normalization-math-verbosity = Verbosidade da matemática
@@ -3364,6 +3413,7 @@ menu-headings = Títulos
 menu-go-to = Ir para
 menu-cursor = Cursor e seleção
 menu-bookmarks = Marcadores e notas
+menu-highlights = Realces
 menu-tables = Tabelas
 menu-speech-cursor = Cursor de fala
 
@@ -3497,6 +3547,14 @@ name-previous-note = Nota anterior
 name-delete-note = Excluir nota ou destaque
 name-highlight-selection = Destacar
 name-export-study-sheet = Exportar folha de estudo
+name-highlight-as = Realçar com um nome
+name-highlight-name-1 = Realçar com o nome 1
+name-highlight-name-2 = Realçar com o nome 2
+name-highlight-name-3 = Realçar com o nome 3
+name-highlight-name-4 = Realçar com o nome 4
+name-highlight-name-5 = Realçar com o nome 5
+name-collect-highlights = Reunir realces
+name-export-study-sheet-by-name = Exportar folha de estudo por nome
 name-self-test = Autoteste
 name-open = Abrir
 name-open-path = Abrir pelo caminho
@@ -3673,6 +3731,8 @@ color-name-skyblue = azul-celeste
 color-name-teal = azul-petróleo
 color-name-gold = dourado
 color-name-yellow = amarelo
+color-name-green = verde
+color-name-cyan = ciano
 color-name-purple = roxo
 color-name-pink = rosa
 color-name-brown = marrom

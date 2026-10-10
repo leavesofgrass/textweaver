@@ -20,7 +20,7 @@ use textweaver_core::{CharPos, CharRange, Direction, EditOutcome, Unit};
 use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
 use textweaver_speech::Earcon;
-use textweaver_store::notes::{self as store_notes, color_name, highlight_color};
+use textweaver_store::notes::{self as store_notes, highlight_color};
 use textweaver_store::{DocState, Highlight, MarkKind, Note};
 use textweaver_text::Document;
 use textweaver_text::units::unit_at;
@@ -28,7 +28,20 @@ use textweaver_text::units::unit_at;
 use crate::app::{App, ListKind};
 use crate::command::{Effect, NoteCommand, PromptPurpose};
 use crate::nav::ReadAfter;
+use crate::palette;
 use crate::text_util::{self, preview};
+
+/// What a choice from the list of the palette's names does.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum NamePick {
+    /// Highlights the selection or the sentence with the name.
+    Highlight,
+    /// Gives the session's highlight at this place the name (F2 in the
+    /// highlights list).
+    Change(usize),
+    /// Writes the name's highlights as a Markdown list.
+    Collect,
+}
 
 /// A highlighted range: the store's [`Highlight`] (named for the app so it
 /// does not clash with [`crate::Highlight`], a range drawn on screen).
@@ -169,7 +182,7 @@ impl App {
             NoteCommand::List => return self.list_notes(),
             NoteCommand::Next => self.note_step(Direction::Forward),
             NoteCommand::Previous => self.note_step(Direction::Backward),
-            NoteCommand::ToggleHighlight => self.toggle_highlight(),
+            NoteCommand::ToggleHighlight => self.highlight_with(None),
             NoteCommand::ListHighlights => return self.list_highlights(),
             NoteCommand::RenameBookmark => return self.bookmark_manage(false),
             NoteCommand::DeleteBookmark => return self.bookmark_manage(true),
@@ -381,7 +394,7 @@ impl App {
             return effects;
         }
         if let Some(i) = s.highlights.iter().position(|h| at(h.range)) {
-            let mut effects = self.delete_highlight(i);
+            let mut effects = self.delete_highlight(i, None);
             self.list = None;
             effects.retain(|e| !matches!(e, Effect::ShowList { .. }));
             return effects;
@@ -419,7 +432,22 @@ impl App {
         self.tell(&msg);
     }
 
-    fn toggle_highlight(&mut self) {
+    /// Highlights the selection, else the sentence at the cursor, with
+    /// palette entry `entry` (`None` is Highlight, `y`: the first entry).
+    /// On a highlight already there: plain Highlight, or the same entry,
+    /// removes it; another entry gives it that entry's name.
+    pub(crate) fn highlight_with(&mut self, entry: Option<usize>) {
+        let wanted = entry.unwrap_or(0);
+        let Some(mark) = palette::entry_mark(self.highlight_palette(), wanted) else {
+            let key = self.key(textweaver_keymap::ActionId::HighlightAs);
+            let msg = self.msg_args(
+                "notes-palette-no-entry",
+                &args!["n" => wanted + 1, "key" => key],
+            );
+            self.tell(&msg);
+            return;
+        };
+        let color = self.highlight_palette()[wanted].color.clone();
         let Some(range) = self.note_target() else {
             let msg = self.msg("notes-nothing-to-highlight");
             self.tell(&msg);
@@ -430,7 +458,7 @@ impl App {
         };
         let pos = range.start;
         // On an existing highlight (the same range, or one containing the
-        // cursor when nothing is selected): remove it.
+        // cursor when nothing is selected).
         let existing = s
             .highlights
             .iter()
@@ -442,45 +470,82 @@ impl App {
                     .flatten()
             });
         if let Some(i) = existing {
-            let h = s.highlights.remove(i);
-            s.saved.record_deletion(MarkKind::Highlight, &h.id);
+            let now = palette::resolve(&self.settings.highlight.palette, &s.highlights[i]);
+            if entry.is_none() || now.look.entry == Some(wanted) {
+                let h = s.highlights.remove(i);
+                s.saved.record_deletion(MarkKind::Highlight, &h.id);
+                let text = preview(&s.doc, h.range, 8);
+                self.persist_marks();
+                let msg = self.msg_args("notes-highlight-removed", &args!["text" => text]);
+                self.tell(&msg);
+                return;
+            }
+            let h = &mut s.highlights[i];
+            h.set_palette_entry(&mark.name, &color);
+            h.ts = textweaver_store::now_ts();
             let text = preview(&s.doc, h.range, 8);
             self.persist_marks();
-            let msg = self.msg_args("notes-highlight-removed", &args!["text" => text]);
+            let msg = self.msg_args(
+                "notes-highlight-changed",
+                &args!["name" => mark.name, "text" => text],
+            );
             self.tell(&msg);
             return;
         }
         let text = preview(&s.doc, range, 8);
         let id = fresh_id(&s.notes, &s.highlights);
-        s.highlights.push(Highlight {
+        let mut h = Highlight {
             id,
             range,
-            color: highlight_color("yellow"),
+            color: highlight_color(&color),
             text: store_notes::collapse(&s.doc.slice(range), store_notes::HIGHLIGHT_TEXT_MAX_CHARS),
             ts: textweaver_store::now_ts(),
             extra: serde_json::Map::new(),
-        });
+        };
+        h.set_palette_entry(&mark.name, &color);
+        s.highlights.push(h);
         s.highlights.sort_by_key(|h| (h.range.start, h.range.end));
         s.selection = None;
         s.selection_anchor = None;
         let pct = text_util::percent(&s.doc, pos);
         self.persist_marks();
         let msg = match self.settings.speech.verbosity {
-            Verbosity::High => {
-                self.msg_args("notes-highlighted-at", &args!["pct" => pct, "text" => text])
-            }
-            _ => self.msg_args("notes-highlighted", &args!["text" => text]),
+            Verbosity::High => self.msg_args(
+                "notes-highlighted-at",
+                &args!["name" => mark.name, "pct" => pct, "text" => text],
+            ),
+            _ => self.msg_args(
+                "notes-highlighted",
+                &args!["name" => mark.name, "text" => text],
+            ),
         };
         self.tell(&msg);
     }
 
-    fn highlight_items(&self) -> Vec<String> {
+    /// The highlights a list shows, as places in the session's
+    /// highlights: every one, or those whose name is `filter`.
+    pub(crate) fn highlight_rows(&self, filter: Option<&str>) -> Vec<usize> {
         let Some(s) = self.session.as_ref() else {
             return Vec::new();
         };
         s.highlights
             .iter()
-            .map(|h| {
+            .enumerate()
+            .filter(|(_, h)| {
+                filter.is_none_or(|f| self.highlight_mark(h).name.eq_ignore_ascii_case(f))
+            })
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    fn highlight_items(&self, filter: Option<&str>) -> Vec<String> {
+        let Some(s) = self.session.as_ref() else {
+            return Vec::new();
+        };
+        self.highlight_rows(filter)
+            .into_iter()
+            .map(|i| {
+                let h = &s.highlights[i];
                 let line = text_util::line_of(&s.doc, h.range.start) + 1;
                 let lost = if crate::relocate::is_marked(&h.extra) {
                     "yes"
@@ -492,7 +557,7 @@ impl App {
                     &args![
                         "text" => preview(&s.doc, h.range, 10),
                         "line" => line,
-                        "color" => color_name(&h.color),
+                        "name" => self.highlight_mark(h).name,
                         "lost" => lost
                     ],
                 )
@@ -501,21 +566,62 @@ impl App {
     }
 
     pub(crate) fn list_highlights(&mut self) -> Vec<Effect> {
-        let items = self.highlight_items();
+        self.list_highlights_named(None)
+    }
+
+    /// The highlights list: every highlight, or those named `filter`
+    /// (Space on a row shows only its name, and Space again all).
+    pub(crate) fn list_highlights_named(&mut self, filter: Option<String>) -> Vec<Effect> {
+        let items = self.highlight_items(filter.as_deref());
         let n = items.len();
         if n == 0 {
+            if filter.is_some() {
+                return self.list_highlights_named(None);
+            }
             let key = self.key(textweaver_keymap::ActionId::HighlightSelection);
             let msg = self.msg_args("notes-no-highlights", &args!["key" => key]);
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
-        self.list = Some(ListKind::Highlights);
-        let msg = self.msg_args("notes-highlights-intro", &args!["n" => n]);
-        self.tell(&msg);
-        vec![Effect::ShowList {
-            title: self.msg("notes-highlights-title"),
-            items,
-        }]
+        let (intro, title) = match &filter {
+            Some(name) => (
+                self.msg_args(
+                    "notes-highlights-named-intro",
+                    &args!["name" => name.as_str(), "n" => n],
+                ),
+                self.msg_args(
+                    "notes-highlights-named-title",
+                    &args!["name" => name.as_str()],
+                ),
+            ),
+            None => (
+                self.msg_args("notes-highlights-intro", &args!["n" => n]),
+                self.msg("notes-highlights-title"),
+            ),
+        };
+        self.list = Some(ListKind::Highlights(filter));
+        self.tell(&intro);
+        vec![Effect::ShowList { title, items }]
+    }
+
+    /// Space on row `row` of the highlights list: shows only the
+    /// highlights of its name, or, in a list already showing one name,
+    /// every highlight.
+    pub(crate) fn filter_highlights(&mut self, filter: Option<String>, row: usize) -> Vec<Effect> {
+        if filter.is_some() {
+            return self.list_highlights_named(None);
+        }
+        let name = self
+            .highlight_rows(None)
+            .get(row)
+            .and_then(|&i| self.session.as_ref()?.highlights.get(i))
+            .map(|h| self.highlight_mark(h).name);
+        self.list_highlights_named(name)
+    }
+
+    /// The session's highlight shown at `row` of a highlights list.
+    pub(crate) fn highlight_at_row(&self, filter: Option<&str>, row: usize) -> Option<usize> {
+        self.highlight_rows(filter).get(row).copied()
     }
 
     pub(crate) fn go_to_highlight(&mut self, i: usize) {
@@ -527,12 +633,13 @@ impl App {
         };
         let target = h.range.start;
         let content = preview(&s.doc, h.range, 10);
-        let label = self.msg("notes-highlight-label");
+        let name = self.highlight_mark(h).name;
+        let label = self.msg_args("notes-highlight-label", &args!["name" => name]);
         let msg = self.nav_message(Some(&label), target, &content);
         self.jump(target, true, ReadAfter::Follow, &msg);
     }
 
-    pub(crate) fn delete_highlight(&mut self, i: usize) -> Vec<Effect> {
+    pub(crate) fn delete_highlight(&mut self, i: usize, filter: Option<String>) -> Vec<Effect> {
         let Some(s) = self.session.as_mut() else {
             return vec![Effect::Redraw];
         };
@@ -545,23 +652,158 @@ impl App {
         self.persist_marks();
         let msg = self.msg_args("notes-highlight-removed", &args!["text" => text]);
         self.tell(&msg);
-        let items = self.highlight_items();
+        let filter = filter.filter(|f| !self.highlight_rows(Some(f)).is_empty());
+        let items = self.highlight_items(filter.as_deref());
         if items.is_empty() {
             self.list = None;
             return vec![Effect::Redraw];
         }
-        self.list = Some(ListKind::Highlights);
-        vec![
-            Effect::ShowList {
-                title: self.msg("notes-highlights-title"),
-                items,
-            },
-            Effect::Redraw,
-        ]
+        let title = match &filter {
+            Some(name) => self.msg_args(
+                "notes-highlights-named-title",
+                &args!["name" => name.as_str()],
+            ),
+            None => self.msg("notes-highlights-title"),
+        };
+        self.list = Some(ListKind::Highlights(filter));
+        vec![Effect::ShowList { title, items }, Effect::Redraw]
     }
 
-    /// Rename or delete: the bookmark at the cursor directly, else the list
-    /// (Delete and F2 act on its items).
+    /// The palette's names as a list to choose from, for `pick`: each
+    /// name with how many highlights have it, its shape and its color.
+    pub(crate) fn show_highlight_names(&mut self, pick: NamePick) -> Vec<Effect> {
+        if self.session.is_none() {
+            let open = self.key(textweaver_keymap::ActionId::Open);
+            let msg = self.msg_args("app-no-document-open", &args!["key" => open]);
+            self.tell(&msg);
+            return vec![Effect::Redraw];
+        }
+        let c = self.cat();
+        let items: Vec<String> = self
+            .highlight_palette()
+            .iter()
+            .map(|e| {
+                let count = self.highlight_rows(Some(e.name.trim())).len();
+                c.fmt(
+                    "notes-palette-row",
+                    &args![
+                        "name" => e.name.trim(),
+                        "count" => count,
+                        "shape" => c.tr(palette::shape_message(e.shape)),
+                        "color" => palette::color_words(c, &e.color)
+                    ],
+                )
+            })
+            .collect();
+        let n = items.len();
+        let intro = match pick {
+            NamePick::Highlight => "notes-palette-intro-highlight",
+            NamePick::Change(_) => "notes-palette-intro-change",
+            NamePick::Collect => "notes-palette-intro-collect",
+        };
+        let intro = self.msg_args(intro, &args!["n" => n]);
+        self.list = Some(ListKind::HighlightNames(pick));
+        self.tell(&intro);
+        vec![Effect::ShowList {
+            title: self.msg("notes-palette-title"),
+            items,
+        }]
+    }
+
+    /// Enter on name `n` of the names list.
+    pub(crate) fn choose_highlight_name(&mut self, pick: NamePick, n: usize) -> Vec<Effect> {
+        match pick {
+            NamePick::Highlight => {
+                self.highlight_with(Some(n));
+                vec![Effect::Redraw]
+            }
+            NamePick::Change(i) => {
+                let Some(mark) = palette::entry_mark(self.highlight_palette(), n) else {
+                    return vec![Effect::Redraw];
+                };
+                let color = self.highlight_palette()[n].color.clone();
+                let Some(s) = self.session.as_mut() else {
+                    return vec![Effect::Redraw];
+                };
+                let Some(h) = s.highlights.get_mut(i) else {
+                    return vec![Effect::Redraw];
+                };
+                h.set_palette_entry(&mark.name, &color);
+                h.ts = textweaver_store::now_ts();
+                let text = preview(&s.doc, h.range, 8);
+                self.persist_marks();
+                let msg = self.msg_args(
+                    "notes-highlight-changed",
+                    &args!["name" => mark.name, "text" => text],
+                );
+                self.tell(&msg);
+                let mut e = self.list_highlights();
+                e.push(Effect::Redraw);
+                e
+            }
+            NamePick::Collect => self.collect_highlights(n),
+        }
+    }
+
+    /// Writes the highlights of palette entry `n` as a Markdown list next
+    /// to the document, as `NAME-highlights-ENTRY.md`, and offers to open
+    /// it.
+    fn collect_highlights(&mut self, n: usize) -> Vec<Effect> {
+        let Some(mark) = palette::entry_mark(self.highlight_palette(), n) else {
+            return vec![Effect::Redraw];
+        };
+        let rows = self.highlight_rows(Some(&mark.name));
+        if rows.is_empty() {
+            let msg = self.msg_args("notes-collect-none", &args!["name" => mark.name]);
+            self.tell(&msg);
+            return vec![Effect::Redraw];
+        }
+        let Some(s) = self.session.as_ref() else {
+            return vec![Effect::Redraw];
+        };
+        let date = crate::templates::local_date();
+        let mut text = format!(
+            "# {}\n\n{}\n\n",
+            self.msg_args(
+                "notes-collect-title",
+                &args!["name" => mark.name.as_str(), "title" => s.title.as_str()]
+            ),
+            self.msg_args("notes-sheet-exported", &args!["date" => date])
+        );
+        for &i in &rows {
+            let h = &s.highlights[i];
+            let line = text_util::line_of(&s.doc, h.range.start) + 1;
+            let passage = collapse(&s.doc.slice(h.range), 400);
+            let at = self.msg_args("notes-collect-line", &args!["line" => line]);
+            text.push_str(&format!("- {passage} {at}\n"));
+        }
+        let (folder, stem) = self.sheet_place();
+        let out = folder.join(format!(
+            "{stem}-highlights-{}.md",
+            palette::file_part(&mark.name)
+        ));
+        match textweaver_store::atomic_write(&out, text.as_bytes()) {
+            Ok(()) => {
+                let question = self.msg_args(
+                    "notes-collect-saved",
+                    &args![
+                        "n" => rows.len(),
+                        "name" => mark.name,
+                        "file" => crate::authoring_state::file_name(&out),
+                        "folder" => folder.display().to_string()
+                    ],
+                );
+                self.offer_open(out.display().to_string(), &question);
+            }
+            Err(e) => {
+                let msg =
+                    self.msg_args("notes-study-sheet-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
+        }
+        vec![Effect::Redraw]
+    }
+
     fn bookmark_manage(&mut self, delete: bool) -> Vec<Effect> {
         let at = self.session.as_ref().and_then(|s| {
             let pos = text_util::word_start(&s.doc, s.cursor);
@@ -727,21 +969,11 @@ impl App {
         }
     }
 
-    /// The palette's `export_study_sheet`: the notes and highlights as
-    /// Markdown, grouped under the headings they fall under, written next
-    /// to the document as `NAME-study-sheet.md`.
-    pub(crate) fn export_study_sheet(&mut self) -> Vec<Effect> {
-        let Some(s) = self.session.as_ref() else {
-            return vec![Effect::Redraw];
-        };
-        if s.notes.is_empty() && s.highlights.is_empty() {
-            let msg = self.msg("notes-nothing-to-export");
-            self.tell(&msg);
-            return vec![Effect::Redraw];
-        }
-        let date = crate::templates::local_date();
-        let sheet = study_sheet(self.cat(), &s.doc, &s.title, &s.notes, &s.highlights, &date);
-        let path = s.doc.meta.path.clone();
+    /// The folder and file stem of files written beside the document (the
+    /// study sheet, collected highlights): the document's own, else the
+    /// loose folder and `notes`.
+    pub(crate) fn sheet_place(&self) -> (std::path::PathBuf, String) {
+        let path = self.session.as_ref().and_then(|s| s.doc.meta.path.clone());
         let folder = path
             .as_ref()
             .and_then(|p| p.parent().map(std::path::Path::to_owned))
@@ -751,7 +983,53 @@ impl App {
             .as_ref()
             .and_then(|p| p.file_stem().map(|x| x.to_string_lossy().into_owned()))
             .unwrap_or_else(|| "notes".to_owned());
-        let out = folder.join(format!("{stem}-study-sheet.md"));
+        (folder, stem)
+    }
+
+    /// The palette's `export_study_sheet`: the notes and highlights as
+    /// Markdown, grouped under the headings they fall under, written next
+    /// to the document as `NAME-study-sheet.md`. With `by_name`
+    /// (`export_study_sheet_by_name`), the highlights are grouped under
+    /// their palette names instead, then the notes under their headings,
+    /// as `NAME-study-sheet-by-name.md`.
+    pub(crate) fn export_study_sheet(&mut self, by_name: bool) -> Vec<Effect> {
+        let Some(s) = self.session.as_ref() else {
+            return vec![Effect::Redraw];
+        };
+        if s.notes.is_empty() && s.highlights.is_empty() {
+            let msg = self.msg("notes-nothing-to-export");
+            self.tell(&msg);
+            return vec![Effect::Redraw];
+        }
+        let date = crate::templates::local_date();
+        let names: Vec<String> = s
+            .highlights
+            .iter()
+            .map(|h| self.highlight_mark(h).name)
+            .collect();
+        let input = SheetInput {
+            doc: &s.doc,
+            title: &s.title,
+            notes: &s.notes,
+            highlights: &s.highlights,
+            names: &names,
+        };
+        let sheet = if by_name {
+            let order: Vec<String> = self
+                .highlight_palette()
+                .iter()
+                .map(|e| e.name.trim().to_owned())
+                .collect();
+            study_sheet_by_name(self.cat(), &input, &order, &date)
+        } else {
+            study_sheet(self.cat(), &input, &date)
+        };
+        let (folder, stem) = self.sheet_place();
+        let out = if by_name {
+            folder.join(format!("{stem}-study-sheet-by-name.md"))
+        } else {
+            folder.join(format!("{stem}-study-sheet.md"))
+        };
         match textweaver_store::atomic_write(&out, sheet.as_bytes()) {
             Ok(()) => {
                 let (n, h) = (s_count(&self.session, true), s_count(&self.session, false));
@@ -812,6 +1090,17 @@ fn s_count(s: &Option<crate::app::Session>, notes: bool) -> usize {
     })
 }
 
+/// What the study sheet and the self-test are made from.
+pub(crate) struct SheetInput<'a> {
+    pub(crate) doc: &'a Document,
+    pub(crate) title: &'a str,
+    pub(crate) notes: &'a [Note],
+    pub(crate) highlights: &'a [Highlight],
+    /// Each highlight's palette name, in the order of `highlights` (may
+    /// be empty where no name is needed).
+    pub(crate) names: &'a [String],
+}
+
 /// The study sheet's contents: the headings (start, level, text), and the
 /// notes and highlights in document order, each with its quoted passage
 /// and the heading it falls under. The study sheet and the self-test are
@@ -830,16 +1119,13 @@ struct SheetItem<'a> {
     passage: String,
     /// The note, or None for a highlight.
     note: Option<&'a Note>,
-    /// The highlight's color, for a highlight.
-    color: Option<&'a str>,
+    /// The highlight's palette name, for a highlight.
+    name: Option<&'a str>,
 }
 
-fn sheet_items<'a>(
-    doc: &Document,
-    notes: &'a [Note],
-    highlights: &'a [Highlight],
-) -> SheetItems<'a> {
+fn sheet_items<'a>(input: &SheetInput<'a>) -> SheetItems<'a> {
     use textweaver_core::MarkerKind;
+    let doc = input.doc;
     let headings: Vec<(CharPos, u8, String)> = doc
         .marker_index()
         .iter(MarkerKind::Heading, None)
@@ -847,7 +1133,7 @@ fn sheet_items<'a>(
         .collect();
     let under = |p: CharPos| headings.iter().rposition(|h| h.0 <= p);
     let mut items = Vec::new();
-    for n in notes {
+    for n in input.notes {
         let passage = collapse(&doc.slice(n.range), 400);
         let passage = if passage.is_empty() {
             collapse(&n.anchor, 400)
@@ -859,16 +1145,16 @@ fn sheet_items<'a>(
             under: under(n.range.start),
             passage,
             note: Some(n),
-            color: None,
+            name: None,
         });
     }
-    for h in highlights {
+    for (i, h) in input.highlights.iter().enumerate() {
         items.push(SheetItem {
             at: h.range.start,
             under: under(h.range.start),
             passage: collapse(&doc.slice(h.range), 400),
             note: None,
-            color: Some(&h.color),
+            name: Some(input.names.get(i).map_or("", String::as_str)),
         });
     }
     items.sort_by_key(|i| i.at);
@@ -887,7 +1173,13 @@ pub(crate) fn self_test_items(
     notes: &[Note],
     highlights: &[Highlight],
 ) -> Vec<crate::reveal::RevealItem> {
-    let sheet = sheet_items(doc, notes, highlights);
+    let sheet = sheet_items(&SheetInput {
+        doc,
+        title,
+        notes,
+        highlights,
+        names: &[],
+    });
     sheet
         .items
         .into_iter()
@@ -912,54 +1204,55 @@ pub(crate) fn self_test_items(
         .collect()
 }
 
-/// The study sheet: a title, then one section per heading that has notes
-/// or highlights under it (in document order, at the heading's level less
-/// one, so the sheet's own title stays level 1), each passage quoted with
-/// its note after it.
-pub(crate) fn study_sheet(
-    c: &Catalog,
-    doc: &Document,
-    title: &str,
-    notes: &[Note],
-    highlights: &[Highlight],
-    date: &str,
-) -> String {
-    let SheetItems { headings, items } = sheet_items(doc, notes, highlights);
-    let items = items.into_iter().map(|i| {
-        let entry = match i.note {
-            Some(n) => {
-                let mut entry = format!("- > {}\n\n  {}", i.passage, n.note.trim());
-                if !n.tags.is_empty() {
-                    entry.push_str(&format!(
-                        " {}",
-                        c.fmt("notes-sheet-tags", &args!["tags" => n.tags.join(", ")])
-                    ));
-                }
-                entry
+/// One study sheet entry: the quoted passage, then the note (with its
+/// tags) or the highlight's name.
+fn sheet_entry(c: &Catalog, i: &SheetItem<'_>) -> String {
+    match i.note {
+        Some(n) => {
+            let mut entry = format!("- > {}\n\n  {}", i.passage, n.note.trim());
+            if !n.tags.is_empty() {
+                entry.push_str(&format!(
+                    " {}",
+                    c.fmt("notes-sheet-tags", &args!["tags" => n.tags.join(", ")])
+                ));
             }
-            None => format!(
-                "- > {}\n\n  {}",
-                i.passage,
-                c.fmt(
-                    "notes-sheet-highlighted",
-                    &args!["color" => color_name(i.color.unwrap_or_default())]
-                )
-            ),
-        };
-        (i.at, i.under, entry)
-    });
-    let mut out = format!(
+            entry
+        }
+        None => format!(
+            "- > {}\n\n  {}",
+            i.passage,
+            c.fmt(
+                "notes-sheet-highlighted",
+                &args!["name" => i.name.unwrap_or_default()]
+            )
+        ),
+    }
+}
+
+/// The study sheet's title and date lines.
+fn sheet_head(c: &Catalog, title: &str, date: &str) -> String {
+    format!(
         "# {}\n\n{}\n",
         c.fmt("notes-sheet-title", &args!["title" => title]),
         c.fmt("notes-sheet-exported", &args!["date" => date])
-    );
+    )
+}
+
+/// The study sheet: a title, then one section per heading that has notes
+/// or highlights under it (in document order, at the heading's level less
+/// one, so the sheet's own title stays level 1), each passage quoted with
+/// its note or its highlight's name after it.
+pub(crate) fn study_sheet(c: &Catalog, input: &SheetInput<'_>, date: &str) -> String {
+    let SheetItems { headings, items } = sheet_items(input);
+    let mut out = sheet_head(c, input.title, date);
     let mut current: Option<Option<usize>> = None;
-    for (_, h, entry) in items {
+    for i in &items {
+        let h = i.under;
         if current != Some(h) {
             current = Some(h);
             match h {
-                Some(i) => {
-                    let (_, level, text) = &headings[i];
+                Some(k) => {
+                    let (_, level, text) = &headings[k];
                     let hashes = "#".repeat(usize::from((*level).clamp(1, 5)) + 1);
                     out.push_str(&format!("\n{hashes} {text}\n"));
                 }
@@ -970,12 +1263,65 @@ pub(crate) fn study_sheet(
             }
         }
         out.push('\n');
-        out.push_str(&entry);
+        out.push_str(&sheet_entry(c, i));
         out.push('\n');
     }
     out
 }
 
+/// The study sheet grouped by name: a section per palette name (in the
+/// palette's order, then any other name) with its highlights in document
+/// order, each with the heading it falls under; then the notes.
+pub(crate) fn study_sheet_by_name(
+    c: &Catalog,
+    input: &SheetInput<'_>,
+    order: &[String],
+    date: &str,
+) -> String {
+    let SheetItems { headings, items } = sheet_items(input);
+    let mut names: Vec<&str> = order.iter().map(String::as_str).collect();
+    for i in &items {
+        if let Some(n) = i.name
+            && !names.iter().any(|x| x.eq_ignore_ascii_case(n))
+        {
+            names.push(n);
+        }
+    }
+    let section = |i: &SheetItem<'_>| {
+        i.under.map_or_else(
+            || c.tr("notes-sheet-before-first-heading"),
+            |k| headings[k].2.clone(),
+        )
+    };
+    let mut out = sheet_head(c, input.title, date);
+    for name in names {
+        let mine: Vec<&SheetItem<'_>> = items
+            .iter()
+            .filter(|i| i.note.is_none() && i.name.is_some_and(|n| n.eq_ignore_ascii_case(name)))
+            .collect();
+        if mine.is_empty() {
+            continue;
+        }
+        out.push_str(&format!("\n## {name}\n"));
+        for i in mine {
+            out.push_str(&format!(
+                "\n- > {}\n\n  {}\n",
+                i.passage,
+                c.fmt("notes-sheet-under", &args!["heading" => section(i)])
+            ));
+        }
+    }
+    let notes: Vec<&SheetItem<'_>> = items.iter().filter(|i| i.note.is_some()).collect();
+    if !notes.is_empty() {
+        out.push_str(&format!("\n## {}\n", c.tr("notes-sheet-notes")));
+        for i in notes {
+            out.push('\n');
+            out.push_str(&sheet_entry(c, i));
+            out.push('\n');
+        }
+    }
+    out
+}
 /// What [`notes_references`] needs to know about the document.
 #[cfg(feature = "publish")]
 #[derive(Clone, Debug, Default)]
@@ -1075,7 +1421,10 @@ pub fn notes_references(
         let mut r = base(format!("{prefix}-highlight-{}", i + 1), h.ts, h.range.start);
         let passage = collapse(&h.text, 2000);
         r.abstract_text = (!passage.is_empty()).then_some(passage);
-        r.note = Some(format!("Highlighted, {}.", color_name(&h.color)));
+        let name = h
+            .palette_name()
+            .map_or_else(|| store_notes::color_name(&h.color), str::to_owned);
+        r.note = Some(format!("Highlighted, {name}."));
         out.push(r);
     }
     out

@@ -55,6 +55,9 @@ pub struct Highlight {
     pub range: CharRange,
     /// Why.
     pub kind: HighlightKind,
+    /// For a [`HighlightKind::UserHighlight`], its palette entry, color
+    /// and shape ([`crate::palette::resolve`]); `None` for the rest.
+    pub look: Option<crate::palette::PaletteLook>,
 }
 
 impl App {
@@ -186,14 +189,20 @@ impl App {
             return Vec::new();
         };
         let mut out = Vec::new();
-        let mut push = |r: CharRange, kind| {
+        let mut push_look = |r: CharRange, kind, look| {
             if r.intersects(range) || (r.is_empty() && range.contains(r.start)) {
-                out.push(Highlight { range: r, kind });
+                out.push(Highlight {
+                    range: r,
+                    kind,
+                    look,
+                });
             }
         };
         for h in &s.highlights {
-            push(h.range, HighlightKind::UserHighlight);
+            let look = Some(self.highlight_mark(h).look);
+            push_look(h.range, HighlightKind::UserHighlight, look);
         }
+        let mut push = |r: CharRange, kind| push_look(r, kind, None);
         for n in &s.notes {
             // A note collapsed by an edit still marks its place.
             let r = if n.range.is_empty() {

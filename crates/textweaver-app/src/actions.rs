@@ -30,7 +30,7 @@ impl App {
             A::PreviousGrammarProblem => self.grammar_action(Direction::Backward),
             A::NextLintProblem => self.lint_action(Direction::Forward),
             A::PreviousLintProblem => self.lint_action(Direction::Backward),
-            A::ExportStudySheet => return self.export_study_sheet(),
+            A::ExportStudySheet => return self.export_study_sheet(false),
             A::SelfTest => return self.self_test(),
             A::ExportKnowledgeGraph => return self.export_knowledge_graph(),
             A::NewFromTemplate => return self.new_from_template(),

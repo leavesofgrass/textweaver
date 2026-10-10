@@ -65,8 +65,8 @@ pub use plan::{Job, Plan};
 pub use report::{Issue, IssueKind, Location, ReportFormat, file_report_path, find_issues};
 pub use watch::{WatchEvent, WatchOptions, watch};
 pub use writer::{
-    BrailleGrade, BrailleOptions, BrailleTableFormat, EpubOptions, MathCode, PageSize, PdfOptions,
-    WriteError, WriteOptions, WriteReport, Writer, Writers,
+    BrailleGrade, BrailleHighlight, BrailleOptions, BrailleTableFormat, EpubOptions, MathCode,
+    PageSize, PdfOptions, WriteError, WriteOptions, WriteReport, Writer, Writers,
 };
 
 /// An output format.
