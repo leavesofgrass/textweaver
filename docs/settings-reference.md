@@ -269,6 +269,7 @@ textweaver writes these itself, such as a question already asked. They are in th
 - `accessibility.hybrid_offered`: default off (`false`). Hybrid mode offered. Set once textweaver has asked whether to use hybrid mode. On or off: `true` or `false`. Stays on this computer.
 - `interface.recent_settings`: default an empty list. Recently changed settings. The settings changed last on the settings screen, listed at its top. Text; empty means not set. Stays on this computer.
 - `gui.window`: default not set. Window place and size. Where the window was and how large, kept on this computer and never synced. Text; empty means not set. Stays on this computer.
+- `gui.last_version`: default not set. Version last run. The version the window last ran on this computer, so it says Updated to once after an update. Never synced. Text; empty means not set. Stays on this computer.
 - `components.chooser_shown`: default off (`false`). Components list shown. The first-run list of optional components was shown. On or off: `true` or `false`. Stays on this computer.
 
 ## See also

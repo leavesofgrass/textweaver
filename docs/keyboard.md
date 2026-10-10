@@ -555,6 +555,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Highlight the selection or the sentence with a name chosen from the highlight palette | `highlight_as` |
 | Write the highlights of one name as a Markdown list | `collect_highlights` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
+| Export the study sheet with the highlights grouped by name | `export_study_sheet_by_name` |
 | Test yourself on the notes and highlights: Enter shows each answer | `self_test` |
 | Make study cards from the notes, the highlights, and their headings | `make_cards` |
 | Study the cards: Enter shows the answer, 1 to 4 grade it | `study_cards` |
