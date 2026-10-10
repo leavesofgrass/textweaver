@@ -1139,7 +1139,10 @@ fn write_carta(to: OutputFormat, markdown: &str) -> Result<Output, String> {
             .map_err(|e| e.to_string());
     }
     let _ = markdown;
-    Err(format!("{} output is not available in this build", to.label()))
+    Err(format!(
+        "{} output is not available in this build",
+        to.label()
+    ))
 }
 
 /// Lowercase extension of a path, or empty.

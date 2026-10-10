@@ -333,8 +333,12 @@ fn markdown_and_org_convert_to_every_carta_format_with_their_headings() {
     let dir = tempfile::tempdir().expect("tempdir");
     let registry = Registry::with_builtins();
     let mut problems = Vec::new();
-    for to in OutputFormat::ALL.into_iter().filter(|f| f.carta_writer().is_some()) {
-        let conv = Converter::new(options(to, &dir.path().join(to.extension()))).expect("converter");
+    for to in OutputFormat::ALL
+        .into_iter()
+        .filter(|f| f.carta_writer().is_some())
+    {
+        let conv =
+            Converter::new(options(to, &dir.path().join(to.extension()))).expect("converter");
         for rel in ["fixtures/k1/sample.md", "fixtures/k1/sample.org"] {
             let source = root().join(rel);
             let job = Job {

@@ -245,14 +245,20 @@ fn a_named_format_reads_files_whatever_their_extension() {
     assert!(org.contains("* Crows"), "{org}");
     assert!(org.contains("/clever/"), "{org}");
     let err = conv("no-such-format").unwrap_err().to_string();
-    assert!(err.starts_with("No reader for the format no-such-format"), "{err}");
+    assert!(
+        err.starts_with("No reader for the format no-such-format"),
+        "{err}"
+    );
 }
 
 #[cfg(not(feature = "carta"))]
 #[test]
 fn carta_outputs_are_refused_without_the_feature() {
     let err = Converter::new(options(OutputFormat::Typst, None)).unwrap_err();
-    assert!(err.to_string().starts_with("Typst output is not available"), "{err}");
+    assert!(
+        err.to_string().starts_with("Typst output is not available"),
+        "{err}"
+    );
 }
 
 #[test]

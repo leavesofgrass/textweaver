@@ -47,7 +47,15 @@ const FORMATS: &[(&str, &str)] = &[
 ];
 
 /// Extensions (and format names) the carta loader claims.
-pub const EXTENSIONS: &[&str] = &["org", "rst", "rest", "mediawiki", "wiki", "dokuwiki", "jira"];
+pub const EXTENSIONS: &[&str] = &[
+    "org",
+    "rst",
+    "rest",
+    "mediawiki",
+    "wiki",
+    "dokuwiki",
+    "jira",
+];
 
 /// The formats [`write_markdown`] writes: carta's writer names, for the
 /// formats textweaver does not write itself.
