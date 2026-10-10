@@ -15,7 +15,7 @@ default = []
 # reader links no HTTP client: without it only a mirror that is a folder
 # on this computer, and Install from a file, work.
 # It also brings the credential store for a private components source.
-download = ["dep:ureq", "dep:serde_json", "dep:keyring"]
+download = ["dep:ureq", "dep:keyring"]
 
 [dependencies]
 thiserror.workspace = true
@@ -29,8 +29,12 @@ sha1.workspace = true
 # Install from a downloaded zip (already in the tree through the formats).
 zip.workspace = true
 ureq = { workspace = true, optional = true }
-# A private repository's release list (GitHub's API answers in JSON).
-serde_json = { workspace = true, optional = true }
+# Release lists (GitHub's API answers in JSON): a private repository's,
+# and textweaver's own for updates.
+serde_json.workspace = true
+# Unpacking an update: the Linux tarball (the zip uses `zip` above).
+flate2.workspace = true
+tar.workspace = true
 # The GitHub token asked for once, kept only in the system credential store.
 keyring = { workspace = true, optional = true }
 # Finding and running `gh auth token` with no console window.
