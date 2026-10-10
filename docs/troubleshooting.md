@@ -218,10 +218,10 @@ textweaver refuses a file that is not text, such as a program, an audio file, or
 1. Check that you opened the file you meant.
 2. For an old Word `.doc`, Excel `.xls`, or PowerPoint `.ppt` file, you hear "it is an old Microsoft Office file". Open it in Word or LibreOffice, save it in a newer format such as `.docx`, then open that.
 3. For a RAR archive, you hear "it is a RAR archive, which does not open". Extract it first, or pack it as ZIP or 7z, which open directly.
-4. For a LaTeX, reStructuredText, or similar file, convert it to Markdown, then open the Markdown. This needs Pandoc:
+4. For a Textile, DocBook, or similar file, convert it to Markdown, then open the Markdown. This needs Pandoc. LaTeX, Org, and reStructuredText open directly.
 
    ```bash
-   tw convert report.rst --to md
+   tw convert report.textile --to md
    ```
 
 The [converting guide](converting.md) explains `tw convert`.

@@ -257,7 +257,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
 <script type="application/json" id="site-data">
 {
  "counts": {
-  "done": 59,
+  "done": 60,
   "not yet": 0,
   "partial": 3
  },
@@ -401,7 +401,17 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
      "status": "done"
     },
     {
-     "description": "reStructuredText, Org, and other formats convert through Pandoc in tw convert when Pandoc is installed.",
+     "description": "Read in process by carta, a pure-Rust converter, in the reader and in tw convert, with no Pandoc needed.",
+     "guide": {
+      "href": "../converting.md",
+      "title": "Converting documents guide"
+     },
+     "name": "Org, reStructuredText, MediaWiki, DokuWiki, and Jira",
+     "note": "DokuWiki and Jira are named with tw convert --from; the lean reader leaves carta out.",
+     "status": "done"
+    },
+    {
+     "description": "Textile, DocBook, FB2, OPML, and other formats convert through Pandoc in tw convert when Pandoc is installed.",
      "guide": {
       "href": "../converting.md",
       "title": "Converting documents guide"
@@ -671,7 +681,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
   {
    "features": [
     {
-     "description": "tw convert writes Markdown, HTML, text, EPUB 3, DOCX, grade 1 braille (BRF), and tagged PDF.",
+     "description": "tw convert writes Markdown, HTML, text, EPUB 3, DOCX, grade 1 braille (BRF), and tagged PDF; and, through carta, AsciiDoc, Typst, LaTeX, MediaWiki, and Org.",
      "guide": {
       "href": "../converting.md",
       "title": "Converting documents guide"
@@ -955,7 +965,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "title": "Reading aids"
   }
  ],
- "total": 62
+ "total": 63
 }
 </script>
 <!-- END generated: site-data -->

@@ -93,10 +93,12 @@ The reader opens these formats itself:
 
 The [converting guide](converting.md#formats-textweaver-reads) says what is read from each format. A file with any other extension is read as plain text. A file that is not text at all is refused: a program, an audio file, or an old Word `.doc`. The message says what the file looks like, for example: "report.bin is not a text file; it looks like a program. textweaver cannot read it as text."
 
-The reader does not use Pandoc. To read a reStructuredText, Org, or other such file, convert it to Markdown first, then open the Markdown. `tw convert` uses Pandoc for these formats, so Pandoc must be installed:
+Org mode (`.org`), reStructuredText (`.rst`, `.rest`), and MediaWiki (`.wiki`, `.mediawiki`) files open directly, read by carta, a converter built into textweaver; see [Org, reStructuredText, and wiki markup](converting.md#org-restructuredtext-and-wiki-markup). The lean reader, built without its default features, reads them as plain text.
+
+The reader does not use Pandoc. To read a Textile, DocBook, or other such file, convert it to Markdown first, then open the Markdown. `tw convert` uses Pandoc for these formats, so Pandoc must be installed:
 
 ```bash
-tw convert essay.rst --to md
+tw convert essay.textile --to md
 ```
 
 The [converting guide](converting.md) explains `tw convert`.
