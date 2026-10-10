@@ -165,7 +165,8 @@ pub fn run(terminal: &mut DefaultTerminal, tui: &mut Tui) -> anyhow::Result<()> 
 
 /// The whole terminal reader: builds the app from `opts`, opens `file`,
 /// offers unsaved work from a previous run, runs until the user quits, and
-/// saves on the way out. Used by the `textweaver` binary and `tw open`.
+/// saves on the way out. Used by `tw` with no command (and `textweaver`,
+/// its second name), and by `tw open`.
 pub fn launch(opts: &Options, file: Option<&Path>) -> anyhow::Result<()> {
     let log_message = setup::start_log(opts);
     let (app, mut messages) = build_app(opts);

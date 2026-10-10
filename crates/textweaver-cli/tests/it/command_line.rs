@@ -1,5 +1,7 @@
 //! The command-line rules (the "Command line" guide, `docs/command-line.md`),
-//! checked over `tw --help` and a few runs: one test per rule.
+//! checked over `tw --help` and a few runs: one test per rule. The option
+//! rules are checked under both names, `tw` and `textweaver`, its second
+//! name (the launcher binary here; a link in the Linux and macOS packages).
 //!
 //! - Output is `--out`, with `-o` and `--output` hidden aliases; no option
 //!   list shows `--output`, `--format`, `--export` or `--language`.
@@ -14,10 +16,18 @@
 use std::io::Write as _;
 use std::process::{Command, Output, Stdio};
 
+/// The program under its two names.
+const NAMES: [&str; 2] = [env!("CARGO_BIN_EXE_tw"), env!("CARGO_BIN_EXE_textweaver")];
+
 /// Runs `tw` with `args`, standard input empty and not a terminal, the
 /// data folder in `home`, and speech never played.
 fn tw_in(home: &std::path::Path, args: &[&str], input: &str) -> Output {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_tw"))
+    run_in(NAMES[0], home, args, input)
+}
+
+/// Runs the program `exe` (one of [`NAMES`]) as [`tw_in`] does.
+fn run_in(exe: &str, home: &std::path::Path, args: &[&str], input: &str) -> Output {
+    let mut child = Command::new(exe)
         .args(args)
         .env("TEXTWEAVER_HOME", home)
         .env("TEXTWEAVER_ESPEAK_OUTPUT", "virtual")
@@ -32,10 +42,10 @@ fn tw_in(home: &std::path::Path, args: &[&str], input: &str) -> Output {
     child.wait_with_output().unwrap()
 }
 
-fn help(home: &std::path::Path, args: &[&str]) -> String {
+fn help(exe: &str, home: &std::path::Path, args: &[&str]) -> String {
     let mut argv: Vec<&str> = args.to_vec();
     argv.push("--help");
-    let out = tw_in(home, &argv, "");
+    let out = run_in(exe, home, &argv, "");
     assert!(out.status.success(), "{argv:?}: {out:?}");
     String::from_utf8(out.stdout).unwrap()
 }
@@ -53,15 +63,15 @@ fn commands(help: &str) -> Vec<String> {
 }
 
 /// Every command's help, with its subcommands' (two levels) appended.
-fn all_help(home: &std::path::Path) -> Vec<(String, String)> {
-    let top = help(home, &[]);
+fn all_help(exe: &str, home: &std::path::Path) -> Vec<(String, String)> {
+    let top = help(exe, home, &[]);
     let mut all = Vec::new();
     for name in commands(&top) {
-        let mut text = help(home, &[&name]);
+        let mut text = help(exe, home, &[&name]);
         for sub in commands(&text.clone()) {
-            let sub_help = help(home, &[&name, &sub]);
+            let sub_help = help(exe, home, &[&name, &sub]);
             for subsub in commands(&sub_help) {
-                text.push_str(&help(home, &[&name, &sub, &subsub]));
+                text.push_str(&help(exe, home, &[&name, &sub, &subsub]));
             }
             text.push_str(&sub_help);
         }
@@ -138,7 +148,43 @@ const TOUCHES_DATA: &[&str] = &[
 #[test]
 fn the_option_rules_hold_for_every_command() {
     let home = tempfile::tempdir().unwrap();
-    let all = all_help(home.path());
+    for exe in NAMES {
+        option_rules(exe, home.path());
+    }
+}
+
+/// `tw --help` and `textweaver --help` print the same text, every
+/// command's help included.
+#[test]
+fn both_names_print_the_same_help() {
+    let home = tempfile::tempdir().unwrap();
+    assert_eq!(
+        all_help(NAMES[0], home.path()),
+        all_help(NAMES[1], home.path())
+    );
+}
+
+/// The second name passes on the exit status and the one-line error.
+#[test]
+fn the_second_name_keeps_exit_codes_and_error_lines() {
+    let home = tempfile::tempdir().unwrap();
+    let missing = home.path().join("missing.md");
+    let missing = missing.to_str().unwrap();
+    for args in [
+        vec!["text", "--no-such-option"],
+        vec!["speak", "--file", missing],
+        vec!["--version"],
+    ] {
+        let a = run_in(NAMES[0], home.path(), &args, "");
+        let b = run_in(NAMES[1], home.path(), &args, "");
+        assert_eq!(a.status.code(), b.status.code(), "{args:?}");
+        assert_eq!(a.stdout, b.stdout, "{args:?}");
+        assert_eq!(a.stderr, b.stderr, "{args:?}");
+    }
+}
+
+fn option_rules(exe: &str, home: &std::path::Path) {
+    let all = all_help(exe, home);
     assert!(all.len() >= 25, "only {} commands", all.len());
     let mut problems = Vec::new();
     for (name, text) in &all {
@@ -177,7 +223,7 @@ fn the_option_rules_hold_for_every_command() {
             problems.push(format!("{name}: no --home"));
         }
     }
-    assert!(problems.is_empty(), "{}", problems.join("\n"));
+    assert!(problems.is_empty(), "{exe}: {}", problems.join("\n"));
 }
 
 #[test]

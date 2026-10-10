@@ -1,6 +1,21 @@
 # The command line
 
-`tw` is textweaver's command line: one program with a command for each job, such as `tw text`, `tw speak`, `tw convert` and `tw cite`. This page is for anyone who uses `tw` in a terminal or a script. It gives the rules every command follows, so that what you learn in one command works in the next. Each command's own options are in its guide and in `tw COMMAND --help`.
+`tw` is textweaver's terminal program. On its own it opens the terminal reader; with a command it does one job without the reader, such as `tw text`, `tw speak`, `tw convert` and `tw cite`. This page is for anyone who uses `tw` in a terminal or a script. It gives the rules every command follows, so that what you learn in one command works in the next. Each command's own options are in its guide and in `tw COMMAND --help`.
+
+## One program, two names
+
+| You type | What happens |
+|---|---|
+| `tw` | The terminal reader opens with no document. |
+| `tw essay.md` | The terminal reader opens `essay.md`. `tw open essay.md`, the older spelling, does the same. |
+| `tw convert essay.md --to html` | The command runs without the reader and ends. So do the other commands. |
+| `tw --help` | Every command, and the reader's options. |
+
+`textweaver` is a second name for `tw`, kept so that older shortcuts and scripts still work: `textweaver essay.md` and `tw essay.md` are the same, and `textweaver --help` prints the same help as `tw --help`. On Linux and macOS `textweaver` is a link to `tw`; on Windows it is a small launcher, `textweaver.exe`, that starts `tw.exe` beside it. The app itself is `textweaver-gui`, a separate program in the same download.
+
+The reader's options go before the file: `tw --no-speech essay.md`, `tw --mode hybrid`, `tw --theme light essay.md`, `tw --backend espeak`, `tw --home DIR` and `tw --log`. They do not go with a command. A document whose name is also a command's name, such as a file called `convert`, opens with `tw open convert` or `tw ./convert`.
+
+The reader needs a terminal. Started with standard output going to a file or a pipe, `tw` says so in one error line and ends with exit status 1, instead of drawing the reader into the file.
 
 ## The rules in one table
 
@@ -27,9 +42,10 @@ tw library add Readings
 tw library search mitochondria
 tw stats clear
 tw dictate list --json
+tw changes accept draft.docx --out final.md
 ```
 
-`tw library` alone still lists the library, and `tw stats` alone still prints the statistics. The older option spellings still work for now, and will be removed after beta 1: `tw library --add`, `--remove`, `--search` and `--continue`, `tw stats --clear`, and `tw dictate --list`.
+`tw library` alone still lists the library, `tw stats` alone still prints the statistics, and `tw changes FILE` alone still lists the changes. The older option spellings still work for now, and will be removed after beta 1: `tw library --add`, `--remove`, `--search` and `--continue`, `tw stats --clear`, `tw dictate --list`, and `tw changes --accept-all` and `--reject-all`.
 
 ## Output and format
 
@@ -48,7 +64,7 @@ Every command that prints facts takes `--json`, either on the command or on the 
 
 ## The data folder
 
-textweaver keeps your settings, places, notes and libraries in its data folders. `tw settings path` names them all, with the log file. `--home DIR` puts all of them under `DIR` for one run; the `TEXTWEAVER_HOME` environment variable does the same for every run. `--home` works on `tw open`, `speak`, `voices`, `backends`, `convert`, `export-audio`, `library`, `vault`, `dictate`, `marks`, `notes`, `migrate-star`, `cite`, `settings`, `define`, `stats`, `summarize`, `changes`, `sync`, `serve` and `components`, and on `tw ocr status` and `tw ocr download`, where the OCR models are kept.
+textweaver keeps your settings, places, notes and libraries in its data folders. `tw settings path` names them all, with the log file. `--home DIR` puts all of them under `DIR` for one run; the `TEXTWEAVER_HOME` environment variable does the same for every run. `--home` works on `tw` and `tw open` (the reader), `speak`, `voices`, `backends`, `convert`, `export-audio`, `library`, `vault`, `dictate`, `marks`, `notes`, `migrate-star`, `cite`, `settings`, `define`, `stats`, `summarize`, `changes`, `sync`, `serve` and `components`, and on `tw ocr status` and `tw ocr download`, where the OCR models are kept.
 
 ## Questions
 
@@ -61,7 +77,7 @@ A question needs a terminal. When standard input is a pipe or a file, as in a sc
 | Status | Meaning |
 |---|---|
 | 0 | Done. |
-| 1 | Something failed, or nothing was found: `tw search` with no match, `tw define` with no definition, `tw lint` with problems, `tw cite check` with keys missing from the library, `tw convert` with a file that failed, and a question with no terminal. |
+| 1 | Something failed, or nothing was found: `tw search` with no match, `tw define` with no definition, `tw lint` with problems, `tw cite check` with keys missing from the library, `tw convert` with a file that failed, a question with no terminal, and the reader with no terminal. |
 | 2 | The command was typed wrong: an unknown option, or a value that is missing or not allowed. The message names it. |
 
 A script can test the status: `tw cite check essay.md || echo "Some keys are missing."`.

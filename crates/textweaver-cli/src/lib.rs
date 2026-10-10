@@ -1,4 +1,14 @@
-//! `tw`: the textweaver command line.
+//! `tw`: textweaver's terminal program, as a library (B1-o1).
+//!
+//! `tw` alone, or `tw FILE`, opens the terminal reader; `tw COMMAND` runs
+//! a command headless, with no terminal interface. `textweaver` is a
+//! second name for the same program: a link on Linux and macOS, and on
+//! Windows a small launcher (`src/bin/textweaver.rs`) that runs `tw.exe`
+//! beside it with the same arguments. Both binaries are thin; `tw` calls
+//! [`main`].
+//!
+//! A new subcommand goes here: a module in `cmd/`, a variant in `Cmd`
+//! below, and its arm in `run`.
 //!
 //! One module per subcommand under `cmd/`: `open`, `text`, `info`,
 //! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
@@ -7,6 +17,7 @@
 //! `settings` (with `profile`), `define`, `stats`, `study`, `summarize`, `changes`, `serve`, `ocr`, and `components`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use anyhow::Result;
@@ -14,26 +25,37 @@ use clap::{Parser, Subcommand};
 
 mod cmd;
 
-/// Read, extract, and speak documents from the command line.
+/// The program's description at the top of `tw --help`.
+const ABOUT: &str = "Read documents aloud in the terminal reader, or run a command without it. tw FILE opens a document in the reader; tw COMMAND runs a command, such as tw convert. textweaver is a second name for tw.";
+
+/// The reader's main keys, at the end of `tw --help`.
+const READER_KEYS: &str = "In the reader, Space reads and pauses, Escape stops, h moves by heading, F1 opens the help, ? lists every key, and Ctrl+Q quits.";
+
+/// Read, extract, and speak documents, in the terminal reader or from the
+/// command line. The name is fixed, so `tw --help` and `textweaver
+/// --help` print the same text.
 #[derive(Parser, Debug)]
 #[command(
     name = "tw",
+    bin_name = "tw",
     version = textweaver_app::VERSION_TEXT,
-    about,
-    propagate_version = true
+    about = ABOUT,
+    after_help = READER_KEYS,
+    propagate_version = true,
+    args_conflicts_with_subcommands = true
 )]
 struct Cli {
-    /// The command; with none, `tw` prints [`NO_COMMAND_HINT`].
+    /// Document to open in the terminal reader: a file, a file inside an
+    /// archive (`book.zip!chapter.pdf`), or a web address. With none, the
+    /// reader opens empty.
+    file: Option<PathBuf>,
+    /// The reader's options.
+    #[command(flatten)]
+    reader: cmd::open::Reader,
+    /// The command; with none, `tw` opens the terminal reader.
     #[command(subcommand)]
     command: Option<Cmd>,
 }
-
-/// What `tw` with no arguments prints, on standard output, before exiting
-/// with status 0: two lines instead of the whole command list as an error
-/// (usability pass, item 6). `tw --help` still lists every command.
-const NO_COMMAND_HINT: &str = "tw open FILE reads a document aloud in the terminal reader.
-tw --help lists every command.
-";
 
 #[derive(Subcommand, Debug)]
 enum Cmd {
@@ -102,7 +124,7 @@ enum Cmd {
 /// `main` runs a command). An error is printed as one line on standard
 /// error, "Error: what failed: why. What to do." (the "Command line"
 /// page).
-fn main() -> ExitCode {
+pub fn main() -> ExitCode {
     match run(Cli::parse()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) if e.downcast_ref::<cmd::NothingFound>().is_some() => ExitCode::FAILURE,
@@ -115,7 +137,7 @@ fn main() -> ExitCode {
 
 fn run(cli: Cli) -> Result<()> {
     let Some(command) = cli.command else {
-        return cmd::print_all(NO_COMMAND_HINT);
+        return cmd::open::read(cli.file, &cli.reader);
     };
     match command {
         Cmd::Open(a) => cmd::open::run(a),
@@ -153,10 +175,45 @@ fn run(cli: Cli) -> Result<()> {
 mod tests {
     use clap::Parser as _;
 
+    use super::{Cli, Cmd};
+
     #[test]
-    fn no_arguments_is_not_an_error() {
-        let cli = super::Cli::try_parse_from(["tw"]).unwrap();
+    fn no_arguments_opens_the_reader_empty() {
+        let cli = Cli::try_parse_from(["tw"]).unwrap();
         assert!(cli.command.is_none());
-        assert_eq!(super::NO_COMMAND_HINT.lines().count(), 2);
+        assert!(cli.file.is_none());
+    }
+
+    /// A file opens the reader; a command name runs the command; the
+    /// reader's options go with a file, never with a command.
+    #[test]
+    fn a_file_opens_the_reader_and_a_command_runs_headless() {
+        let cli = Cli::try_parse_from(["tw", "book.md", "--no-speech"]).unwrap();
+        assert!(cli.command.is_none());
+        assert_eq!(cli.file.as_deref(), Some(std::path::Path::new("book.md")));
+        assert!(cli.reader.no_speech);
+        let cli = Cli::try_parse_from(["tw", "convert", "a.md", "--to", "html"]).unwrap();
+        assert!(matches!(cli.command, Some(Cmd::Convert(_))));
+        assert!(cli.file.is_none());
+        let cli = Cli::try_parse_from(["tw", "open", "book.md"]).unwrap();
+        assert!(matches!(cli.command, Some(Cmd::Open(_))));
+        assert!(Cli::try_parse_from(["tw", "--no-speech", "convert", "a.md"]).is_err());
+    }
+
+    /// `textweaver` is the same program: started under either name, the
+    /// help names `tw`, so the two agree.
+    #[test]
+    fn the_help_is_the_same_under_either_name() {
+        use clap::CommandFactory as _;
+        let help = |argv0: &str| {
+            let err = Cli::command()
+                .try_get_matches_from([argv0, "--help"])
+                .unwrap_err();
+            err.render().to_string()
+        };
+        let tw = help("tw");
+        assert_eq!(tw, help("textweaver"));
+        assert_eq!(tw, help("/usr/local/bin/textweaver"));
+        assert!(tw.contains("Usage: tw [OPTIONS] [FILE]"), "{tw}");
     }
 }

@@ -1,4 +1,4 @@
-//! `tw` with no arguments, and `tw search --json` and `tw info --json` on
+//! `tw` with no arguments and no terminal, and `tw search --json` and `tw info --json` on
 //! a closed pipe (usability pass, items 6 and 10). `tw search x --json |
 //! head` panicked with "failed printing to stdout" once `head` closed the
 //! pipe; output goes through `print_all` now, which ends quietly.
@@ -64,21 +64,23 @@ fn info_ends_quietly_on_a_closed_pipe() {
     }
 }
 
-/// `tw` with no arguments prints a two-line hint and succeeds (usability
-/// pass, item 6); `tw --help` keeps the full list.
+/// `tw` with no arguments opens the terminal reader (B1-o1). With standard
+/// output not a terminal, as here, it refuses in one error line with exit
+/// status 1 instead of drawing into the pipe, under either name; `tw
+/// --help` keeps the full list.
 #[test]
-fn no_arguments_prints_a_short_hint() {
-    let out = Command::new(env!("CARGO_BIN_EXE_tw")).output().unwrap();
-    assert!(out.status.success(), "{:?}", out.status);
-    let text = String::from_utf8(out.stdout).unwrap();
-    assert_eq!(
-        text.lines().collect::<Vec<_>>(),
-        [
-            "tw open FILE reads a document aloud in the terminal reader.",
-            "tw --help lists every command."
-        ]
-    );
-    assert!(out.stderr.is_empty());
+fn no_arguments_without_a_terminal_is_one_error_line() {
+    for exe in [env!("CARGO_BIN_EXE_tw"), env!("CARGO_BIN_EXE_textweaver")] {
+        let out = Command::new(exe).stdin(Stdio::null()).output().unwrap();
+        assert_eq!(out.status.code(), Some(1), "{exe}: {out:?}");
+        assert!(out.stdout.is_empty(), "{exe}: {out:?}");
+        let err = String::from_utf8(out.stderr).unwrap();
+        assert_eq!(err.lines().count(), 1, "{err}");
+        assert!(
+            err.starts_with("Error: The terminal reader needs a terminal"),
+            "{err}"
+        );
+    }
     let help = Command::new(env!("CARGO_BIN_EXE_tw"))
         .arg("--help")
         .output()
