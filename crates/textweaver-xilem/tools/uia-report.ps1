@@ -698,7 +698,7 @@ $env:TEMP = $scratch
 $logFile = Join-Path $scratch 'gui.log'
 # The menu bar is hidden by default on Windows; show it so the menus can be read.
 New-Item -ItemType Directory -Force (Join-Path $scratch 'config') | Out-Null
-[IO.File]::WriteAllText((Join-Path $scratch 'config\settings.toml'), "[gui]`nauto_hide_menu = false`n")
+[IO.File]::WriteAllText((Join-Path $scratch 'config\settings.toml'), "[gui]`nauto_hide_menu = false`n`n[updates]`nasked = true`n")
 if ($WindowEdge) {
     # Three GUI windows (120,000 units each) of plain paragraphs, about 240
     # characters each, and the fastest rate, so the paced reading reaches
@@ -714,7 +714,7 @@ if ($WindowEdge) {
     [IO.File]::WriteAllText($edgeDoc, $sb.ToString())
     $Document = $edgeDoc
     New-Item -ItemType Directory -Force (Join-Path $scratch 'config') | Out-Null
-    [IO.File]::WriteAllText((Join-Path $scratch 'config\settings.toml'), "[speech]`nrate = 900`n`n[gui]`nauto_hide_menu = false`n")
+    [IO.File]::WriteAllText((Join-Path $scratch 'config\settings.toml'), "[speech]`nrate = 900`n`n[gui]`nauto_hide_menu = false`n`n[updates]`nasked = true`n")
     Say "- Window edge probe: $Document ($($sb.Length) characters, $n paragraphs), read at 900 words per minute"
     Say ""
 }
@@ -1076,6 +1076,9 @@ if (-not $WindowEdge) {
     Say "### The command palette (a second run, silent; Commands button pressed; its list read with UI Automation)"
     Say ""
     $palHome = Join-Path $scratch 'palette'
+    # The one-time update question would cover the palette; it is answered.
+    New-Item -ItemType Directory -Force (Join-Path $palHome 'config') | Out-Null
+    [IO.File]::WriteAllText((Join-Path $palHome 'config\settings.toml'), "[updates]`nasked = true`n")
     $palLog = Join-Path $scratch 'palette.log'
     $palArgs = "`"$Document`" --backend null --home `"$palHome`" --background --log-file `"$palLog`" --exit-after 60"
     $palPid = [TwXUia]::LaunchInactive($Exe, $palArgs, $repo)

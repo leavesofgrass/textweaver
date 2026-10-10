@@ -100,7 +100,11 @@ fn the_swap_replaces_only_the_package_files() {
     std::fs::write(new.join("textweaver-gui.exe"), b"new gui").unwrap();
     std::fs::write(new.join("docs").join("new.md"), b"new doc").unwrap();
 
-    assert_eq!(install_dir(&install.join("tw.exe")).unwrap(), install);
+    // Canonical: macOS temp folders sit behind /private.
+    assert_eq!(
+        std::fs::canonicalize(install_dir(&install.join("tw.exe")).unwrap()).unwrap(),
+        std::fs::canonicalize(&install).unwrap()
+    );
     assert!(wait_until_closed(
         &install.join("tw.exe"),
         Duration::from_secs(5)

@@ -331,13 +331,9 @@ pub fn espeak_path(
                 in_process().then_some(InProcess)
             }
         }
-        EspeakHelper::Auto => {
-            if in_process() {
-                Some(InProcess)
-            } else {
-                helper().then_some(Helper)
-            }
-        }
+        // Off Windows the library is the system's own, so the in-process
+        // backend alone decides; the helper's probe finds only its program.
+        EspeakHelper::Auto => in_process().then_some(InProcess),
     }
 }
 
@@ -550,11 +546,12 @@ mod tests {
         let path = |choice, windows, local: bool, helper: bool| {
             espeak_path(choice, windows, || local, || helper)
         };
-        // Automatic: the helper first on Windows, in process first elsewhere.
+        // Automatic: the helper first on Windows; elsewhere the in-process
+        // backend alone (the helper there would find only its program).
         assert_eq!(path(Auto, true, true, true), Some(Helper));
         assert_eq!(path(Auto, true, true, false), Some(InProcess));
         assert_eq!(path(Auto, false, true, true), Some(InProcess));
-        assert_eq!(path(Auto, false, false, true), Some(Helper));
+        assert_eq!(path(Auto, false, false, true), None);
         assert_eq!(path(Auto, false, false, false), None);
         // Always and never hold to their path, available or not.
         assert_eq!(path(Always, false, true, true), Some(Helper));
