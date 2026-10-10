@@ -345,7 +345,7 @@ mod tests {
     }
 
     #[test]
-    fn the_components_folder_comes_first() {
+    fn the_variable_then_the_components_folder_come_first() {
         let tmp = tempfile::tempdir().unwrap();
         let components = tmp.path().join("components");
         let name = if cfg!(windows) {
@@ -362,13 +362,17 @@ mod tests {
             find_in(Some(&components), None, path.clone()),
             Some(on_path.join(name))
         );
-        // A placed copy wins over the variable and the PATH.
+        // A placed copy wins over the PATH; the variable, when set, wins.
         let placed = components.join("ffmpeg").join("ffmpeg-9.0.2").join("bin");
         std::fs::create_dir_all(&placed).unwrap();
         std::fs::write(placed.join(name), b"").unwrap();
         let env = Some(on_path.join(name).into_os_string());
         assert_eq!(
-            find_in(Some(&components), env, path),
+            find_in(Some(&components), env, path.clone()),
+            Some(on_path.join(name))
+        );
+        assert_eq!(
+            find_in(Some(&components), None, path),
             Some(placed.join(name))
         );
         // Found with no variable and nothing on the PATH.

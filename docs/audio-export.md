@@ -54,8 +54,8 @@ To write `.m4b` or `.mp4`, textweaver first writes a WAV and then asks ffmpeg to
 
 textweaver looks for ffmpeg in three places, in this order:
 
-1. textweaver's components folder, `components` in the data folder, where a copy that textweaver fetched, or one from a components source, goes.
-2. The `TEXTWEAVER_FFMPEG` environment variable, if it is set. It must be the full path to the ffmpeg program.
+1. The `TEXTWEAVER_FFMPEG` environment variable, if it is set. It must be the full path to the ffmpeg program.
+2. textweaver's components folder, `components` in the data folder, where a copy that textweaver fetched, or one from a components source, goes.
 3. Otherwise, a program named `ffmpeg` in one of the folders on your `PATH`, which is where installers put it.
 
 ### Install ffmpeg on Windows
@@ -104,7 +104,7 @@ In a Linux or macOS shell:
 export TEXTWEAVER_FFMPEG="$HOME/tools/ffmpeg"
 ```
 
-When `TEXTWEAVER_FFMPEG` is set (and there is no ffmpeg in the components folder), textweaver uses only that path and does not search `PATH`. If the path is wrong, textweaver says ffmpeg was not found, even when ffmpeg is on your `PATH`.
+When `TEXTWEAVER_FFMPEG` is set, textweaver uses only that path and does not search `PATH`. If the path is wrong, textweaver says ffmpeg was not found, even when ffmpeg is on your `PATH`.
 
 ## Export a document to a WAV file
 

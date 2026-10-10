@@ -1267,7 +1267,7 @@ mod tests {
         for (_, name) in PURPOSES {
             assert!(guide.contains(&format!("`{name}`")), "{name} missing");
         }
-        assert!(guide.contains("29 purposes"));
+        assert!(guide.contains(&format!("{} purposes", PURPOSES.len())));
     }
 
     /// The messages `read_messages` passes on for `input`, with their

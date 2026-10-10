@@ -40,12 +40,13 @@ pub fn find_helper_in(
     } else {
         program.to_owned()
     };
-    if let Some(p) = components.and_then(|d| find_in_components(d, &[&exe])) {
-        return Some(p);
-    }
+    // An explicit environment variable wins over the components folder.
     if let Some(p) = env_value.filter(|v| !v.is_empty()).map(PathBuf::from)
         && p.is_file()
     {
+        return Some(p);
+    }
+    if let Some(p) = components.and_then(|d| find_in_components(d, &[&exe])) {
         return Some(p);
     }
     textweaver_core::process::find_program_in(program, &path?)
@@ -82,7 +83,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_components_folder_comes_first_then_the_variable_then_the_path() {
+    fn the_variable_comes_first_then_the_components_folder_then_the_path() {
         let tmp = tempfile::tempdir().unwrap();
         let exe = if cfg!(windows) {
             "pandoc.exe"
@@ -111,12 +112,22 @@ mod tests {
             ),
             Some(named.clone())
         );
-        // In the components folder, a few folders down: it wins.
+        // In the components folder, a few folders down: the variable still
+        // wins, and without it the components folder wins over the PATH.
         let unpacked = comp.join("pandoc").join("pandoc-3.12.1");
         std::fs::create_dir_all(&unpacked).unwrap();
         std::fs::write(unpacked.join(exe), b"x").unwrap();
         assert_eq!(
-            find_helper_in(Some(&comp), "pandoc", Some(named.into()), path),
+            find_helper_in(
+                Some(&comp),
+                "pandoc",
+                Some(named.clone().into()),
+                path.clone()
+            ),
+            Some(named)
+        );
+        assert_eq!(
+            find_helper_in(Some(&comp), "pandoc", None, path),
             Some(unpacked.join(exe))
         );
         assert_eq!(find_helper_in(None, "pandoc", None, None), None);
