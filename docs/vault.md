@@ -7,7 +7,7 @@ This guide is written to be read with a screen reader. Each section starts with 
 ## Before you start
 
 - A vault is simply a folder of Markdown files. Obsidian keeps its own settings in a folder called `.obsidian` inside it. `tw vault` works on the folder; Obsidian does not need to be open or even installed.
-- The vault commands are part of `tw`, the command-line tool. The reader windows have no vault menu yet.
+- The vault commands are part of `tw`, the command-line tool. Neither the terminal reader nor the app has a vault menu yet.
 - Notes and highlights are made while you read. See [the notes guide](notes.md) for how to add them. To check what a document has, run `tw marks` with the document's file name. It lists the document's notes and highlights.
 - textweaver keeps each document's notes and highlights in its own data folder, never inside the document. On Windows that is `%APPDATA%\leavesofgrass\textweaver\data\state`. On macOS it is `~/Library/Application Support/org.leavesofgrass.textweaver/state`, and on Linux `~/.local/share/textweaver/state`. If the `TEXTWEAVER_HOME` environment variable is set, it is `data\state` inside that folder.
 - Import only reads the vault. It never changes, moves, or deletes a file in it.
