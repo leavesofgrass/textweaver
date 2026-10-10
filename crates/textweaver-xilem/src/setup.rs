@@ -142,6 +142,18 @@ pub fn is_first_run(opts: &Options) -> bool {
     !paths.settings_file().exists() && !paths.keymap_file().exists() && state_empty
 }
 
+/// The version to name in the "Updated to" notice (B1-g2c): `current`,
+/// when the window last ran another version on this computer (`last`), or
+/// ran before the version was kept (`None` on a run that is not the
+/// first). Nothing on the first run, which has its welcome, or when the
+/// version is the same.
+pub fn updated_to(last: Option<&str>, current: &str, first_run: bool) -> Option<String> {
+    if first_run || last == Some(current) {
+        return None;
+    }
+    Some(current.to_owned())
+}
+
 /// The welcome said once, on the first run: the five keys that get a new
 /// user reading (open, play and pause, stop, the command palette, help),
 /// the same words as the terminal reader's. On Windows, whose menu bar is
@@ -286,6 +298,27 @@ pub fn build_app_following(
 mod tests {
     use super::*;
     use textweaver_app::a11y::LogAnnouncer;
+
+    /// "Updated to" is said once: after another version, or a version
+    /// from before it was kept; never on the first run or the same one.
+    #[test]
+    fn updated_to_is_said_once_after_an_update() {
+        let now = "0.1.0-beta.1";
+        assert_eq!(
+            updated_to(Some("0.1.0-alpha.9"), now, false).as_deref(),
+            Some(now)
+        );
+        assert_eq!(updated_to(None, now, false).as_deref(), Some(now));
+        assert_eq!(updated_to(Some(now), now, false), None);
+        assert_eq!(updated_to(None, now, true), None);
+        let c = textweaver_app::lexicon::i18n::Catalog::english();
+        let said = c.fmt(
+            "gui-updated-to",
+            &textweaver_app::lexicon::args!["version" => now],
+        );
+        assert!(said.starts_with("Updated to"), "{said}");
+        assert!(said.contains(now), "{said}");
+    }
 
     #[test]
     fn paced_rate_is_one_word_per_beat() {

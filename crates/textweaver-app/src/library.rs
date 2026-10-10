@@ -164,6 +164,11 @@ impl App {
         let Some(paths) = &self.paths else {
             return;
         };
+        // A guide packaged with textweaver is help, not a document of the
+        // reader's: it stays out of the recent list and the library.
+        if self.is_bundled_guide(path) {
+            return;
+        }
         let job = crate::writer::Job::Opened {
             library_file: paths.library_file(),
             recent_file: paths.recent_file(),

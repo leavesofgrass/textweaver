@@ -256,6 +256,21 @@ fn documentation_warns_of_a_missing_guide_and_follows_links_and_back() {
     assert_eq!(app.session.as_ref().unwrap().cursor, link);
 }
 
+/// A guide packaged with textweaver opens read only: the edit key says so
+/// and leaves the guide as it is. A document elsewhere is not a guide.
+#[test]
+fn a_packaged_guide_is_read_only() {
+    let tmp = tempfile::tempdir().unwrap();
+    let docs = fake_docs(tmp.path());
+    let (mut app, said) = app_on(&docs, &tmp.path().join("home"));
+    app.dispatch(Command::Action(ActionId::Documentation));
+    assert!(app.is_bundled_guide(&docs.join("README.md")));
+    assert!(!app.is_bundled_guide(&tmp.path().join("notes.md")));
+    app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    assert!(!app.is_editing(), "a guide is not edited");
+    assert!(said.any("This guide comes with textweaver and is read only."));
+}
+
 #[test]
 fn without_docs_documentation_offers_the_online_version() {
     let tmp = tempfile::tempdir().unwrap();

@@ -3559,6 +3559,7 @@ settings-unit-sentences =
 # The GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }, { -brand }.
+gui-updated-to = Mis à jour vers { $version }. Aide, Documentation décrit les nouveautés.
 
 ## Opening the new formats. Said after "Could not open NAME:", so
 ## each starts in lower case.
@@ -3940,6 +3941,10 @@ colors-contrast-low = faible
 colors-item = { $label } : { $value }, contraste { $ratio } pour 1, { $verdict }
 colors-contrast = Contraste { $ratio } pour 1, { $verdict }.
 colors-contrast-warning = Sous 3 pour 1, c'est difficile à voir ; choisissez une couleur plus claire ou plus foncée.
+colors-palette-label = Nom de surlignage { $name }
+colors-palette-value = { $color }, { $shape }, contraste { $text } pour 1 avec le texte et { $page } pour 1 avec la page, { $verdict }
+colors-palette-system = { $color }, { $shape } ; les couleurs de contraste élevé du système sont dessinées, et la forme le marque toujours
+colors-palette-unknown = { $color }, { $shape } ; une couleur que textweaver ne peut pas mesurer
 colors-intro = Couleurs, { $n } paramètres. Gauche et Droite choisissent une couleur nommée, Entrée saisit un nom ou une valeur #rrggbb, Suppr remet celle du thème, F1 dit l'aide.
 settings-item-recent = { $item }, modifié récemment
 settings-reset = { $label } revient à sa valeur par défaut, { $value }.
@@ -4219,6 +4224,8 @@ gui-settings-import-title = Importer les paramètres
 gui-chooser-no-dialog = Le sélecteur de fichiers du système ne s'est pas ouvert. Tapez plutôt le chemin du fichier.
 gui-colors-value = { $value }, contraste { $ratio } pour 1, { $verdict }
 gui-colors-help = Gauche et Droite choisissent une couleur nommée, le bleu et l'orange d'abord. Entrée saisit un nom ou une valeur #rrggbb. Suppr remet la couleur du thème. Chaque marque garde son soulignement, sa graisse ou son symbole, quelle que soit sa couleur.
+gui-colors-value-system = { $value } ; non dessinée tant que les couleurs de contraste élevé du système sont actives
+gui-colors-help-system = Les couleurs de contraste élevé du système sont actives et sont dessinées à la place de celles-ci, qui s'appliquent de nouveau quand elles sont désactivées. Chaque nom de surlignage garde sa propre forme.
 gui-colors-reset-all = Rétablir toutes les couleurs
 gui-colors-reset-all-help = Remettre la couleur du thème pour chaque partie.
 gui-colors-reset-done = Toutes les couleurs sont de nouveau celles du thème.
@@ -4625,6 +4632,7 @@ name-search-help = Chercher dans l'aide
 action-online-documentation = Afficher l'adresse web de la documentation en ligne, et demander avant de l'ouvrir dans un navigateur
 action-search-help = Chercher dans toute l'aide : noms des commandes, touches, réglages, et titres et texte des guides
 docs-not-found = Documentation introuvable à côté de textweaver. Ouvrir { $address } dans le navigateur ? y ou n
+docs-read-only = Ce guide est fourni avec textweaver et est en lecture seule. Pour le modifier, copiez le fichier ailleurs et ouvrez la copie.
 docs-guide-missing =
     { $n ->
         [one] Guide manquant : { $guides }. Les autres guides s'ouvrent.

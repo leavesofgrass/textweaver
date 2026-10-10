@@ -3547,6 +3547,7 @@ settings-unit-sentences =
 # The GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }, { -brand }.
+gui-updated-to = Atualizado para { $version }. Ajuda, Documentação descreve as novidades.
 
 ## Opening the new formats. Said after "Could not open NAME:", so
 ## each starts in lower case.
@@ -3928,6 +3929,10 @@ colors-contrast-low = baixo
 colors-item = { $label }: { $value }, contraste { $ratio } para 1, { $verdict }
 colors-contrast = Contraste { $ratio } para 1, { $verdict }.
 colors-contrast-warning = Abaixo de 3 para 1 fica difícil de ver; escolha uma cor mais clara ou mais escura.
+colors-palette-label = Nome de realce { $name }
+colors-palette-value = { $color }, { $shape }, contraste { $text } para 1 com o texto e { $page } para 1 com a página, { $verdict }
+colors-palette-system = { $color }, { $shape }; as cores de alto contraste do sistema são desenhadas, e a forma ainda o marca
+colors-palette-unknown = { $color }, { $shape }; uma cor que o textweaver não consegue medir
 colors-intro = Cores, { $n } configurações. Esquerda e Direita escolhem uma cor com nome, Enter digita um nome ou um valor #rrggbb, Delete volta à cor do tema, F1 diz a ajuda.
 settings-item-recent = { $item }, alterado recentemente
 settings-reset = { $label } voltou ao padrão, { $value }.
@@ -4207,6 +4212,8 @@ gui-settings-import-title = Importar configurações
 gui-chooser-no-dialog = O seletor de arquivos do sistema não abriu. Digite o caminho do arquivo.
 gui-colors-value = { $value }, contraste { $ratio } para 1, { $verdict }
 gui-colors-help = Esquerda e Direita escolhem uma cor com nome, azul e laranja primeiro. Enter digita um nome ou um valor #rrggbb. Delete volta à cor do tema. Cada marca mantém seu sublinhado, seu peso ou seu símbolo, qualquer que seja a cor.
+gui-colors-value-system = { $value }; não desenhada enquanto as cores de alto contraste do sistema estão ativas
+gui-colors-help-system = As cores de alto contraste do sistema estão ativas e são desenhadas no lugar destas, que voltam a valer quando forem desativadas. Cada nome de realce mantém sua própria forma.
 gui-colors-reset-all = Redefinir todas as cores
 gui-colors-reset-all-help = Voltar à cor do próprio tema em cada parte.
 gui-colors-reset-done = Todas as cores voltaram a ser as do tema.
@@ -4613,6 +4620,7 @@ name-search-help = Pesquisar na ajuda
 action-online-documentation = Mostrar o endereço web da documentação online e perguntar antes de abri-lo em um navegador
 action-search-help = Pesquisar em toda a ajuda: nomes de comandos, teclas, configurações, e os títulos e o texto dos guias
 docs-not-found = Documentação não encontrada junto ao textweaver. Abrir { $address } no navegador? y ou n
+docs-read-only = Este guia vem com o textweaver e é somente leitura. Para alterá-lo, copie o arquivo para outro lugar e abra a cópia.
 docs-guide-missing =
     { $n ->
         [one] Guia ausente: { $guides }. Os outros guias abrem.

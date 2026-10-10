@@ -3893,6 +3893,7 @@ settings-unit-sentences =
 # The GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }، { -brand }.
+gui-updated-to = تم التحديث إلى { $version }. مساعدة، التوثيق يصف الجديد.
 
 ## Opening the new formats. Said after "Could not open NAME:", so
 ## each starts in lower case.
@@ -4274,6 +4275,10 @@ colors-contrast-low = منخفض
 colors-item = { $label }: { $value }، التباين { $ratio } إلى 1، { $verdict }
 colors-contrast = التباين { $ratio } إلى 1، { $verdict }.
 colors-contrast-warning = أقل من 3 إلى 1 يصعب رؤيته؛ اختر لونًا أفتح أو أغمق.
+colors-palette-label = اسم التمييز { $name }
+colors-palette-value = { $color }، { $shape }، التباين { $text } إلى 1 مع النص و{ $page } إلى 1 مع الصفحة، { $verdict }
+colors-palette-system = { $color }، { $shape }؛ تُرسم ألوان التباين العالي للنظام، ويظل الشكل يميّزه
+colors-palette-unknown = { $color }، { $shape }؛ لون لا يستطيع textweaver قياسه
 colors-intro = الألوان، { $n } إعدادات. يختار اليسار واليمين لونًا مسمى، ويكتب Enter اسمًا أو قيمة ‎#rrggbb، ويعيد Delete لون السمة، ويقول F1 المساعدة.
 settings-item-recent = { $item }، غُيّر مؤخرًا
 settings-reset = عاد { $label } إلى قيمته الافتراضية، { $value }.
@@ -4545,6 +4550,8 @@ gui-settings-import-title = استيراد الإعدادات
 gui-chooser-no-dialog = لم يُفتح منتقي الملفات في النظام. اكتب مسار الملف بدلًا من ذلك.
 gui-colors-value = { $value }، التباين { $ratio } إلى 1، { $verdict }
 gui-colors-help = يختار اليسار واليمين لونًا مسمى، الأزرق والبرتقالي أولًا. ويكتب Enter اسمًا أو قيمة ‎#rrggbb. ويعيد Delete لون السمة. تحتفظ كل علامة بتسطيرها أو سماكتها أو رمزها، أيًّا كان لونها.
+gui-colors-value-system = { $value }؛ لا يُرسم ما دامت ألوان التباين العالي للنظام مفعّلة
+gui-colors-help-system = ألوان التباين العالي للنظام مفعّلة، فتُرسم بدلًا من هذه الألوان التي تعود عند إيقافها. يحتفظ كل اسم تمييز بشكله الخاص.
 gui-colors-reset-all = إعادة كل الألوان
 gui-colors-reset-all-help = إعادة لون السمة نفسه لكل جزء.
 gui-colors-reset-done = عادت كل الألوان إلى ألوان السمة.
@@ -4951,6 +4958,7 @@ name-search-help = البحث في المساعدة
 action-online-documentation = عرض عنوان التوثيق على الإنترنت، والسؤال قبل فتحه في المتصفح
 action-search-help = البحث في المساعدة كلها: أسماء الأوامر والمفاتيح والإعدادات، وعناوين الأدلة ونصها
 docs-not-found = لم يُعثر على التوثيق بجانب textweaver. هل تفتح { $address } في المتصفح؟ y أو n
+docs-read-only = هذا الدليل مرفق مع textweaver وهو للقراءة فقط. لتغييره، انسخ الملف إلى مكان آخر وافتح النسخة.
 docs-guide-missing =
     { $n ->
         [one] دليل مفقود: { $guides }. تُفتح الأدلة الأخرى.

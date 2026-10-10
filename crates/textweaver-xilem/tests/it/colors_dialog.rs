@@ -148,6 +148,108 @@ fn the_dialog_has_the_form_and_its_buttons() {
     );
 }
 
+/// Every row is measured, the theme's own color too, and the highlight
+/// palette's entries end the form (B1-g2c): each says its name first,
+/// then its color, shape and contrast with the text and the page in
+/// words, with a sample; a low one has the contrast warning as its
+/// description; and each belongs to the palette's table, read only.
+#[test]
+fn every_row_is_measured_and_the_palette_ends_the_form() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path());
+    let c = app.catalog();
+    let form = SettingsForm::colors(app.settings_schema());
+    let rows = form.rows(0, &app);
+    let n = textweaver_app::COLOR_SETTINGS.len();
+    assert_eq!(rows.len(), n + app.highlight_palette().len());
+    for r in &rows[..n] {
+        assert!(
+            r.value_text.contains("contrast"),
+            "{}: {}",
+            r.label,
+            r.value_text
+        );
+    }
+    let first = &rows[n];
+    assert_eq!(first.label, "Highlight name important");
+    assert!(
+        first.value_text.starts_with("yellow, underline, contrast"),
+        "{}",
+        first.value_text
+    );
+    assert!(
+        first.value_text.contains("with the page"),
+        "{}",
+        first.value_text
+    );
+    assert!(first.swatch.is_some(), "a sample beside the words");
+    assert_eq!(first.kind, settings_dialog::RowKind::Table);
+    assert_eq!(first.help, c.tr("colors-contrast-warning"), "low on Galaxy");
+    assert_eq!(
+        form.setting(0, n).map(|s| s.path.as_str()),
+        Some("highlight.palette")
+    );
+    assert_eq!(
+        form.setting(0, rows.len() + 3).map(|s| s.path.as_str()),
+        Some("highlight.palette")
+    );
+    // A screen reader finds the entry by its name, and its words.
+    let (h, _) = harness(&app);
+    let mut found = None;
+    let mut stack = vec![h.access_tree().state().root()];
+    while let Some(node) = stack.pop() {
+        if node.label().as_deref() == Some("Highlight name important") {
+            found = Some((node.value(), node.description()));
+        }
+        stack.extend(node.children());
+    }
+    let (value, description) = found.expect("the entry is in the tree");
+    assert!(value.unwrap_or_default().contains("with the text"));
+    assert_eq!(description, Some(c.tr("colors-contrast-warning")));
+}
+
+/// While the system's high contrast colors are drawn, they win: the help
+/// says so, no row shows a sample or a contrast of a color not on the
+/// screen, and the highlight names still differ by shape.
+#[test]
+fn the_system_high_contrast_colors_win() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app(dir.path());
+    app.set_setting("colors.links", serde_json::Value::String("navy".into()))
+        .unwrap();
+    app.set_system_colors_win(true);
+    let c = app.catalog();
+    let form = SettingsForm::colors(app.settings_schema());
+    let rows = form.rows(0, &app);
+    let n = textweaver_app::COLOR_SETTINGS.len();
+    assert!(rows.iter().all(|r| r.swatch.is_none()));
+    for r in &rows[..n] {
+        assert!(
+            r.value_text.contains("not drawn"),
+            "{}: {}",
+            r.label,
+            r.value_text
+        );
+        assert!(!r.value_text.contains(" to 1"), "{}", r.value_text);
+    }
+    let mut shapes = Vec::new();
+    for (r, e) in rows[n..].iter().zip(app.highlight_palette()) {
+        assert!(
+            r.value_text.contains("high contrast colors are drawn"),
+            "{}",
+            r.value_text
+        );
+        shapes.push(e.shape);
+    }
+    let count = shapes.len();
+    shapes.sort_by_key(|s| format!("{s:?}"));
+    shapes.dedup();
+    assert_eq!(shapes.len(), count, "the shapes still differ");
+    let (h, _) = harness(&app);
+    let grid = h.access_node(h.get_widget(FORM).id()).expect("the form");
+    assert_eq!(grid.description(), Some(c.tr("gui-colors-help-system")));
+}
+
 /// The Colors dialog measures each color against the page the window
 /// draws (a theme from the command line, or the system's contrast
 /// colors), not the saved theme: navy links are low on Galaxy's dark page

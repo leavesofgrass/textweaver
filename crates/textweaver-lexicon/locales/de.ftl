@@ -3555,6 +3555,7 @@ settings-unit-sentences =
 # The GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }, { -brand }.
+gui-updated-to = Aktualisiert auf { $version }. Hilfe, Dokumentation beschreibt die Neuerungen.
 
 ## Opening the new formats. Said after "Could not open NAME:", so
 ## each starts in lower case.
@@ -3936,6 +3937,10 @@ colors-contrast-low = gering
 colors-item = { $label }: { $value }, Kontrast { $ratio } zu 1, { $verdict }
 colors-contrast = Kontrast { $ratio } zu 1, { $verdict }.
 colors-contrast-warning = Unter 3 zu 1 ist das schwer zu sehen; wählen Sie eine hellere oder dunklere Farbe.
+colors-palette-label = Hervorhebungsname { $name }
+colors-palette-value = { $color }, { $shape }, Kontrast { $text } zu 1 zum Text und { $page } zu 1 zur Seite, { $verdict }
+colors-palette-system = { $color }, { $shape }; die Kontrastfarben des Systems werden gezeichnet, die Form kennzeichnet sie weiterhin
+colors-palette-unknown = { $color }, { $shape }; eine Farbe, die textweaver nicht messen kann
 colors-intro = Farben, { $n } Einstellungen. Links und Rechts wählen eine benannte Farbe, Eingabe tippt einen Namen oder einen #rrggbb-Wert, Entf stellt die Farbe des Designs wieder her, F1 sagt die Hilfe.
 settings-item-recent = { $item }, kürzlich geändert
 settings-reset = { $label } wieder auf dem Standard, { $value }.
@@ -4215,6 +4220,8 @@ gui-settings-import-title = Einstellungen importieren
 gui-chooser-no-dialog = Die Dateiauswahl des Systems hat sich nicht geöffnet. Geben Sie stattdessen den Pfad der Datei ein.
 gui-colors-value = { $value }, Kontrast { $ratio } zu 1, { $verdict }
 gui-colors-help = Links und Rechts wählen eine benannte Farbe, Blau und Orange zuerst. Eingabe tippt einen Namen oder einen #rrggbb-Wert. Entf stellt die Farbe des Designs wieder her. Jede Markierung behält ihre Unterstreichung, Stärke oder ihr Symbol, welche Farbe sie auch hat.
+gui-colors-value-system = { $value }; nicht gezeichnet, solange die Kontrastfarben des Systems an sind
+gui-colors-help-system = Die Kontrastfarben des Systems sind an und werden statt dieser Farben gezeichnet; diese gelten wieder, wenn sie aus sind. Jeder Hervorhebungsname behält seine eigene Form.
 gui-colors-reset-all = Alle Farben zurücksetzen
 gui-colors-reset-all-help = Für jeden Teil die Farbe des Designs wiederherstellen.
 gui-colors-reset-done = Alle Farben sind wieder die des Designs.
@@ -4621,6 +4628,7 @@ name-search-help = Hilfe durchsuchen
 action-online-documentation = Die Webadresse der Online-Dokumentation zeigen und vor dem Öffnen im Browser fragen
 action-search-help = Die ganze Hilfe durchsuchen: Befehlsnamen, Tasten, Einstellungen sowie Überschriften und Text der Anleitungen
 docs-not-found = Dokumentation nicht neben textweaver gefunden. { $address } im Browser öffnen? y oder n
+docs-read-only = Diese Anleitung gehört zu textweaver und ist schreibgeschützt. Um sie zu ändern, kopieren Sie die Datei an einen anderen Ort und öffnen die Kopie.
 docs-guide-missing =
     { $n ->
         [one] Anleitung fehlt: { $guides }. Die anderen Anleitungen öffnen sich.

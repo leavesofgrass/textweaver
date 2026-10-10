@@ -471,6 +471,9 @@ pub struct App {
     /// The page and text colors a frontend draws with when they are not
     /// the theme's ([`App::set_drawn_colors`]).
     pub(crate) drawn_colors: Option<(textweaver_theme::Rgb, textweaver_theme::Rgb)>,
+    /// True while the system's high contrast colors are drawn instead of
+    /// the color settings ([`App::set_system_colors_win`]).
+    pub(crate) system_colors_win: bool,
     /// The voice manager: its list, question, and download (crate::voice).
     pub(crate) voices: crate::voice::VoicesState,
     /// Text copied or cut, waiting for the frontend
@@ -664,6 +667,7 @@ impl App {
             pending_list_delete: None,
             pending_colors_reset: false,
             drawn_colors: None,
+            system_colors_win: false,
             voices: crate::voice::VoicesState::default(),
             clipboard: None,
             system_clipboard: None,

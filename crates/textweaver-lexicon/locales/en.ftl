@@ -3578,6 +3578,8 @@ settings-unit-sentences =
 # The GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }, { -brand }.
+# Said once after an update. $version is the new version, such as 0.1.0-beta.1.
+gui-updated-to = Updated to { $version }. Help, Documentation describes what is new.
 
 ## Opening the new formats. Said after "Could not open NAME:", so
 ## each starts in lower case.
@@ -3959,6 +3961,12 @@ colors-contrast-low = low
 colors-item = { $label }: { $value }, contrast { $ratio } to 1, { $verdict }
 colors-contrast = Contrast { $ratio } to 1, { $verdict }.
 colors-contrast-warning = Under 3 to 1 it is hard to see; choose a lighter or darker color.
+# A highlight palette entry in the Colors view. $name is the entry's name.
+colors-palette-label = Highlight name { $name }
+# $color and $shape in words; $text and $page are ratios; $verdict good, fair or low.
+colors-palette-value = { $color }, { $shape }, contrast { $text } to 1 with the text and { $page } to 1 with the page, { $verdict }
+colors-palette-system = { $color }, { $shape }; the system's high contrast colors are drawn, and the shape still marks it
+colors-palette-unknown = { $color }, { $shape }; a color textweaver cannot measure
 colors-intro = Colors, { $n } settings. Left and Right choose a named color, Enter types a name or a #rrggbb value, Delete puts the theme's back, F1 says the help.
 settings-item-recent = { $item }, recently changed
 settings-reset = { $label } back to its default, { $value }.
@@ -4244,6 +4252,8 @@ gui-settings-import-title = Import settings
 gui-chooser-no-dialog = The system's file chooser did not open. Type the path of the file instead.
 gui-colors-value = { $value }, contrast { $ratio } to 1, { $verdict }
 gui-colors-help = Left and Right choose a named color, blue and orange first. Enter types a name or a #rrggbb value. Delete puts the theme's color back. Every mark keeps its underline, weight, or symbol, whatever its color.
+gui-colors-value-system = { $value }; not drawn while the system's high contrast colors are on
+gui-colors-help-system = The system's high contrast colors are on, so they are drawn instead of these colors, which apply again when it is off. Each highlight name keeps its own shape.
 gui-colors-reset-all = Reset all colors
 gui-colors-reset-all-help = Put the theme's own color back for every part.
 gui-colors-reset-done = Every color is the theme's again.
@@ -4664,6 +4674,7 @@ name-search-help = Search help
 action-online-documentation = Show the online documentation's web address, and ask before opening it in a browser
 action-search-help = Search all of help: command names, keys, settings, and the guides' headings and text
 docs-not-found = Documentation not found beside textweaver. Open { $address } in your browser? y or n
+docs-read-only = This guide comes with textweaver and is read only. To change it, copy the file elsewhere and open the copy.
 docs-guide-missing =
     { $n ->
         [one] Guide missing: { $guides }. The other guides open.

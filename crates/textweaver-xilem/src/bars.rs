@@ -61,8 +61,9 @@ pub struct Flow {
     /// At most this many rows ([`set_max_rows`](Self::set_max_rows)); the
     /// buttons that do not fit are hidden.
     max_rows: Option<usize>,
-    /// The last button stays shown when rows are limited.
-    keep_last: bool,
+    /// The button that stays shown when rows are limited
+    /// ([`with_keep`](Self::with_keep)).
+    keep: Option<usize>,
 }
 
 impl Flow {
@@ -73,7 +74,7 @@ impl Flow {
             push_right: None,
             compact: false,
             max_rows: None,
-            keep_last: false,
+            keep: None,
         }
     }
 
@@ -84,12 +85,46 @@ impl Flow {
         self
     }
 
-    /// Keeps the last button shown when [`set_max_rows`](Self::set_max_rows)
+    /// Replaces the buttons, with those from `push_right` on at the right
+    /// end (the user changed the bar's buttons, B1-cb).
+    pub fn set_buttons(
+        this: &mut WidgetMut<'_, Self>,
+        buttons: Vec<NewWidget<ActionButton>>,
+        push_right: Option<usize>,
+    ) {
+        for old in std::mem::take(&mut this.widget.children) {
+            this.ctx.remove_child(old);
+        }
+        this.widget.children = buttons.into_iter().map(NewWidget::to_pod).collect();
+        this.widget.push_right = push_right;
+        this.ctx.children_changed();
+        this.ctx.request_layout();
+    }
+
+    /// The number of buttons, hidden ones included.
+    pub fn len(&self) -> usize {
+        self.children.len()
+    }
+
+    /// True with no buttons.
+    pub fn is_empty(&self) -> bool {
+        self.children.is_empty()
+    }
+
+    /// Keeps button `index` shown when [`set_max_rows`](Self::set_max_rows)
     /// hides some (the header's Commands, which opens every command,
-    /// those hidden too).
-    pub fn with_keep_last(mut self) -> Self {
-        self.keep_last = true;
+    /// those hidden too, wherever the user put it). `None` keeps none.
+    pub fn with_keep(mut self, index: Option<usize>) -> Self {
+        self.keep = index;
         self
+    }
+
+    /// Sets the button kept shown ([`with_keep`](Self::with_keep)).
+    pub fn set_keep(this: &mut WidgetMut<'_, Self>, index: Option<usize>) {
+        if this.widget.keep != index {
+            this.widget.keep = index;
+            this.ctx.request_layout();
+        }
     }
 
     /// Limits the flow to `rows` rows (`None`: no limit). The buttons that
@@ -117,16 +152,17 @@ impl Flow {
             return all;
         }
         let n = widths.len();
+        let keep = self.keep.filter(|&i| i < n);
         for k in (1..n).rev() {
             let mut set: Vec<usize> = (0..k).collect();
-            if self.keep_last && k < n {
-                set.push(n - 1);
+            if let Some(i) = keep.filter(|&i| i >= k) {
+                set.push(i);
             }
             if fits(&set) {
                 return set;
             }
         }
-        vec![0]
+        vec![keep.unwrap_or(0)]
     }
 
     /// Where the buttons from [`with_push_right`](Self::with_push_right) on

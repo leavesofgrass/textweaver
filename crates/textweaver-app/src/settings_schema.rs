@@ -1399,6 +1399,11 @@ pub const INFO: &[Info] = &[
         "Window place and size",
         "Where the window was and how large, kept on this computer and never synced.",
     ),
+    internal(
+        "gui.last_version",
+        "Version last run",
+        "The version the window last ran on this computer, so it says Updated to once after an update. Never synced.",
+    ),
     choice(
         "gui.announce",
         "Announcements",

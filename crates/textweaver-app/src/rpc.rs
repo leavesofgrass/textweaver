@@ -1182,7 +1182,7 @@ mod tests {
 
     /// Every prompt purpose and its protocol name: a change here is a
     /// protocol change, so clients are told (see the protocol version rule).
-    const PURPOSES: [(PromptPurpose, &str); 29] = [
+    const PURPOSES: [(PromptPurpose, &str); 30] = [
         (PromptPurpose::Find, "find"),
         (PromptPurpose::GoTo, "go_to"),
         (PromptPurpose::Open, "open"),
