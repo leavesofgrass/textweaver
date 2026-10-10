@@ -226,6 +226,8 @@ fn everything_changed() -> Settings {
     };
     s.preview.auto_reload = true;
     s.preview.live = true;
+    s.preview.pane = true;
+    s.preview.pane_delay_ms = 500;
     s.lexicon.glossary = Some("glossary.txt".into());
     s.lexicon.data_file = Some("lexicon-en.twlex".into());
     s.stats.enabled = false;

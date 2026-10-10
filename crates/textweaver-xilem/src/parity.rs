@@ -40,6 +40,7 @@ pub fn support(action: ActionId) -> Support {
         | A::NotesPanel
         | A::ToggleHeader
         | A::ToggleToolbar
+        | A::ShowPreview
         | A::NextRegion
         | A::PreviousRegion
         | A::Open

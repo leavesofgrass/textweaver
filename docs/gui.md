@@ -49,7 +49,7 @@ Every button has a key, shown on screen with its name, for example "Open… (Ctr
 
 In a narrow window the buttons wrap onto more rows rather than leave the window. Below 800 pixels wide (at 100 percent; a 1366 by 768 laptop at 200 percent is 683 wide), the header and the toolbar fold into one flat bar above the document, the buttons hide their keys on screen (your screen reader still says them), and the panel goes above the document below 600 pixels. Header and Toolbar in the View menu hide either bar; their commands keep their keys and menu items, and the settings `gui.header` and `gui.toolbar` remember the choice on this computer.
 
-Tab and Shift+Tab move between the document and the buttons, in the order they are on screen. F6 and Shift+F6 move between the window's regions, as in other Windows programs: the header, the panel (when shown), the document, and the toolbar, landing on the first control of each. Dialogs (settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
+Tab and Shift+Tab move between the document and the buttons, in the order they are on screen. F6 and Shift+F6 move between the window's regions, as in other Windows programs: the header, the panel (when shown), the document, the preview (when shown, in edit mode), and the toolbar, landing on the first control of each. Dialogs (settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
 
 ## Menus
 
@@ -120,7 +120,8 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Alt+O**: the outline. Type to filter the headings, Enter jumps to one.
 - **Ctrl+Shift+N**: the notes list.
 - **Ctrl+1** and **Ctrl+2**: the Contents and Notes panels beside the document (see [The Contents and Notes panels](#the-contents-and-notes-panels)).
-- **F6** and **Shift+F6**: the next and previous region: the header, the panel, the document, and the toolbar.
+- **F6** and **Shift+F6**: the next and previous region: the header, the panel, the document, the preview, and the toolbar.
+- **Alt+F5**: the preview pane beside the editor, on or off (see [The preview pane](#the-preview-pane)).
 - **Ctrl+T** and **Ctrl+Shift+T**: next and previous table. **Ctrl+Alt+arrows** move by cell in a table.
 - **k** and **Shift+K** (browse): next and previous link. **Alt+Shift+F** follows a link.
 - **Alt+Shift+A**: the window's mode, one of two: "textweaver reads aloud" (documents in textweaver's voice, its messages for your screen reader) or "my screen reader reads" (textweaver is silent, and your screen reader reads the text). The **Speak textweaver's messages** setting (Settings, Window), off by default, has textweaver say its messages, typing and cursor moves too, for reading by ear without a screen reader; `--self-voicing` turns it on for one run. The View menu and the Accessibility mode setting show the same two names. In `settings.toml` the mode keeps the terminal reader's three values: "textweaver reads aloud" is saved as `"hybrid"`, and "my screen reader reads" as `"screen-reader"`.
@@ -134,7 +135,7 @@ A panel beside the document keeps the document's headings, or its notes, in view
 - **Ctrl+1** shows the Contents panel, and **Ctrl+2** the Notes panel, and moves the focus to it. Your screen reader says the list and the row with its place, for example "Contents, Methods, level 2, 3 of 12", and textweaver says "Contents open, 12 items." Pressed while you are in the panel, the same key closes it and puts you back in the document ("Contents closed."). Pressed in the document while the panel is shown, it moves the focus to the panel.
 - **Up, Down, Home, End, Page Up, Page Down,** and a letter move in the list, as in any list.
 - **Enter** moves the document to that heading or note, says where it is as the outline does, and keeps you in the panel, so you can try the next one. **Shift+Enter** moves the document there and puts you back in the document. **Escape** puts you back in the document without moving it.
-- **F6** and **Shift+F6** move between the header, the panel, the document, and the toolbar.
+- **F6** and **Shift+F6** move between the header, the panel, the document, the preview pane when it is shown, and the toolbar.
 - The row where the cursor is has a bar beside it, and your screen reader hears ", current" after its name. While you are in the document, the panel's selected row follows the cursor, so going to the panel starts where you are.
 - The panel is a navigation landmark named "Contents" or "Notes".
 
@@ -159,8 +160,18 @@ List items keep their indent by depth while you edit, as in reading, and bullete
 - **Find and replace:** Ctrl+Shift+F opens the Find and replace panel: Find what, Replace with, check boxes for Match case, Whole words, Regular expression, and Across lines, and the Find next, Replace, Replace all, and Close buttons. Enter in Find what finds the next match and Enter in Replace with replaces it; Up and Down recall earlier entries; F3 and Shift+F3 work throughout; Escape returns to the document. An invalid pattern is explained beside Find what, and each match is previewed there before it changes. The panel uses the same search, options, and undo steps as the terminal's replace loop ([Editing](editing.md#in-the-window-the-find-and-replace-panel)).
 - **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back. Misspelled words are also marked on screen with a dotted underline, shortly after you stop typing (in documents up to a million characters).
 - **Citations while writing:** Alt+C opens the citation picker. Type part of an author or title to filter, Enter inserts it, and textweaver asks for a page or other locator. Alt+Shift+D adds a reference by DOI or ISBN.
-- **Export and preview:** the command palette (F2) has Export as a web page, PDF, Word, EPUB, and braille (BRF), each written next to the document, and Preview in the browser, which reloads when you save.
+- **Export and preview:** the command palette (F2) has Export as a web page, PDF, Word, EPUB, and braille (BRF), each written next to the document, and Preview in the browser, which reloads when you save. The window can also show the preview beside the editor; see [The preview pane](#the-preview-pane).
 - Ctrl+Tab and Ctrl+Shift+Tab move between the document and the buttons, so you are never trapped in the edit; Ctrl+E is always the way out of edit mode.
+
+### The preview pane
+
+While you edit, the window can show the document beside the editor as it will read: the headings at their sizes, lists with their bullets and numbers, tables, code, callouts, math, and images by their captions, drawn by the same view that shows a document you are reading. It is off by default, because it takes half of the window and most writers want the room. Turn it on with **Alt+F5**, with Show preview in the View menu, or by typing `show preview` in the command palette; textweaver says "Preview shown beside the editor. F6 moves to it." and remembers the choice (Settings, Preview, "Preview pane"; `pane` in `[preview]`). The same key turns it off. Turned on outside edit mode, it waits, and appears the next time you edit.
+
+The preview follows your writing without getting in its way. It is rebuilt only after you pause typing, 300 milliseconds by default ("Preview pause", `pane_delay_ms`, from 100 to 3000), and the work is done away from the keyboard, so typing is never slowed. It follows the cursor: the block you are writing in scrolls into view and is marked as the spoken sentence is marked while reading, with a band and a line under it, so the mark never depends on color alone. Nothing is said when the preview changes, and the focus and the cursor stay in the editor.
+
+To read the preview, press **F6** from the editor; Shift+F6, or F6 again past the toolbar, returns. The preview is a region named "Preview" holding a read-only document, so your screen reader reads it as it reads any document, with the usual reading keys, while the editor keeps its cursor where you left it. The word "Preview" is drawn in its corner, as "Editing" is in the editor's.
+
+In a wide window the preview stands to the right of the editor. In a narrower one (below 800 pixels beside the panel) it goes under the editor instead, and in a window too short for both, it is hidden so the editor keeps its lines; Alt+F5 then shows it and moves you into it, and it hides again when you go back to the editor.
 
 ## The spoken word
 

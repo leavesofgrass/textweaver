@@ -682,6 +682,14 @@ actions! {
     ToggleToolbar = "toggle_toolbar", View,
         "Show or hide the toolbar, the bar of Play, Stop and the reading buttons",
         gui [], term [], shared [];
+    // The preview pane (B1-p1). Ctrl+Shift+P, the plan's first choice, is
+    // Previous Paragraph (star's key), and every Ctrl+Shift letter is
+    // taken in one layer or another; Ctrl+F5 and Ctrl+Shift+F5 become
+    // Command+F5 on macOS, VoiceOver's own key. Alt+F5 is free in both
+    // keymaps and on every platform.
+    ShowPreview = "show_preview", View,
+        "Show or hide the preview beside the editor in edit mode: the document as it reads, updated when typing pauses",
+        gui ["g:Alt+F5"], term [], shared [];
     NextRegion = "next_region", View,
         "Move to the next part of the window: the header, the panel, the document, or the toolbar",
         gui ["g:F6"], term [], shared [];
@@ -819,6 +827,7 @@ impl ActionId {
                 | ActionId::ChooseFont
                 | ActionId::ContentsPanel
                 | ActionId::NotesPanel
+                | ActionId::ShowPreview
                 | ActionId::NextRegion
                 | ActionId::PreviousRegion
         )

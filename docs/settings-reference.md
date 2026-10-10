@@ -187,6 +187,8 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 - `preview.auto_reload`: default off (`false`). Reload the preview. Reload the browser preview after each save, through a small server on this computer only. On or off: `true` or `false`. Syncs between computers.
 - `preview.live`: default off (`false`). Live preview. With reloading on, also reload when typing pauses. On or off: `true` or `false`. Syncs between computers.
+- `preview.pane`: default off (`false`). Preview pane. In edit mode, show the document as it reads beside the editor. F6 moves to it; the cursor stays in the editor. On or off: `true` or `false`. Syncs between computers.
+- `preview.pane_delay_ms`: default 300 milliseconds. Preview pause. How long typing must pause before a preview that follows your typing is rewritten. From 100 to 3000 milliseconds, in steps of 50. Syncs between computers.
 
 ## Define word: the `[lexicon]` section
 

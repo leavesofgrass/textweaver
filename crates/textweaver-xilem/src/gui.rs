@@ -356,6 +356,8 @@ pub struct Gui {
     shown: Shown,
     /// The Contents or Notes panel as last shown ([`crate::sidebar`]).
     sidebar: SidebarShown,
+    /// The preview pane as last shown ([`crate::preview`]).
+    preview: crate::preview::PreviewShown,
     buttons: Buttons,
     dialog: Option<OpenDialog>,
     log: bool,
@@ -1880,6 +1882,10 @@ impl Gui {
         {
             crate::log::line(&format!("panel: {change:?}"));
         }
+        // The preview pane follows `[preview] pane`, edit mode, and the
+        // editor; off, this reads one setting.
+        let root = ctx.render_root(self.window_id);
+        crate::preview::sync(&self.app, &self.palette, &mut self.preview, root);
         self.sync_question(ctx);
         self.sync_find(ctx);
         self.sync_misspellings(ctx);
@@ -2012,6 +2018,7 @@ impl Gui {
             | ActionId::NotesPanel
             | ActionId::ToggleHeader
             | ActionId::ToggleToolbar
+            | ActionId::ShowPreview
             | ActionId::NextRegion
             | ActionId::PreviousRegion => true,
             ActionId::Menu => self.native.is_some() && cfg!(windows),
@@ -2037,6 +2044,22 @@ impl Gui {
                 Importance::Result
             };
             self.app.announce_as(&said, Priority::Polite, importance);
+        }
+        self.refresh(ctx);
+    }
+
+    /// The preview key ([`crate::preview::toggle`]): shows or hides the
+    /// preview pane, or goes to it where a short window hid it; says which.
+    /// The focus stays in the editor.
+    fn preview_key(&mut self, ctx: &mut DriverCtx<'_>) {
+        let root = ctx.render_root(self.window_id);
+        let t = crate::preview::toggle(&mut self.app, &self.palette, &mut self.preview, root);
+        if self.log {
+            crate::log::line(&format!("preview key: {t:?}"));
+        }
+        if let Some(said) = crate::preview::toggled_message(&self.app, t) {
+            self.app
+                .announce_as(&said, Priority::Polite, Importance::Result);
         }
         self.refresh(ctx);
     }
@@ -2082,9 +2105,12 @@ impl Gui {
     /// (header, panel, document, toolbar), as in Windows programs.
     fn region_key(&mut self, ctx: &mut DriverCtx<'_>, forward: bool) {
         let root = ctx.render_root(self.window_id);
-        let (list, doc) = root.get_widget_with_tag(SIDEBAR).map_or((None, None), |s| {
-            (s.inner().shown_list_id(), Some(s.inner().doc_id()))
-        });
+        let (list, doc, preview) =
+            root.get_widget_with_tag(SIDEBAR)
+                .map_or((None, None, None), |s| {
+                    let s = s.inner();
+                    (s.shown_list_id(), Some(s.doc_id()), s.shown_preview_id())
+                });
         let (folded, header, toolbar) =
             root.get_widget_with_tag(FRAME)
                 .map_or((false, true, true), |f| {
@@ -2097,6 +2123,7 @@ impl Gui {
             header: shown(header, &self.buttons.header),
             sidebar: list,
             document: doc,
+            preview,
             toolbar: shown(toolbar, &self.buttons.toolbar),
             folded,
         };
@@ -2149,6 +2176,7 @@ impl Gui {
             ActionId::NotesPanel => self.panel_key(ctx, textweaver_app::Panel::Notes),
             ActionId::ToggleHeader => self.bar_key(ctx, true),
             ActionId::ToggleToolbar => self.bar_key(ctx, false),
+            ActionId::ShowPreview => self.preview_key(ctx),
             ActionId::NextRegion => self.region_key(ctx, true),
             ActionId::PreviousRegion => self.region_key(ctx, false),
             ActionId::Replace => self.open_find(ctx, FindState::default()),
@@ -4248,6 +4276,16 @@ impl AppDriver for Gui {
                 self.reveal_menu_bar();
             }
             self.on_key(ctx, &k);
+        } else if action
+            .downcast_ref::<DocAction>()
+            .is_some_and(|a| *a != DocAction::WindowFocused)
+            && ctx
+                .render_root(self.window_id)
+                .get_widget_with_tag(SIDEBAR)
+                .is_some_and(|s| s.inner().preview_doc_id() == Some(widget_id))
+        {
+            // The preview is read-only, and its caret is its own: a reader
+            // moving in it never moves the editor's caret.
         } else if let Some(DocAction::CaretMoved {
             caret,
             selection,
@@ -4873,6 +4911,14 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         exit_watchdog(after);
     }
 
+    // The preview pane's parser rings the window when a parse is ready; an
+    // idle thread waiting on its channel until the pane is used.
+    let preview = {
+        let proxy = proxy.clone();
+        crate::preview::PreviewShown::with_worker(move || {
+            let _ = proxy.send_event(MasonryUserEvent::AsyncAction(window_id, Box::new(Tick)));
+        })
+    };
     let gui = Gui {
         app,
         queue,
@@ -4881,6 +4927,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         palette,
         shown: Shown::default(),
         sidebar: SidebarShown::default(),
+        preview,
         buttons: tree.buttons,
         dialog: None,
         log: opts.log,
@@ -5034,6 +5081,7 @@ pub fn refresh_for_tests(app: &App, host: &mut impl Host) {
 #[derive(Default)]
 pub struct Refresher {
     shown: Shown,
+    preview: crate::preview::PreviewShown,
 }
 
 impl Refresher {
@@ -5051,9 +5099,31 @@ impl Refresher {
 
     /// Brings `host` up to date with `app`. Returns the document window's
     /// range when the view's text was replaced or slid.
-    pub fn refresh(&mut self, app: &App, host: &mut impl Host) -> Option<CharRange> {
-        refresh_host(app, &mut self.shown, host, false)?;
+    pub fn refresh(&mut self, app: &App, host: &mut impl sidebar::FocusHost) -> Option<CharRange> {
+        let loaded = refresh_host(app, &mut self.shown, host, false);
+        // The preview pane, parsed at once here (no worker, no pause); in
+        // the app's theme. Off, nothing is done.
+        if app.settings().preview.pane || self.preview.is_open() {
+            let palette = Palette::from_theme(&app.reading_theme());
+            crate::preview::sync(app, &palette, &mut self.preview, host);
+        }
+        loaded?;
         self.shown.window.map(|w| w.range())
+    }
+
+    /// The preview pane as last shown.
+    pub fn preview(&self) -> &crate::preview::PreviewShown {
+        &self.preview
+    }
+
+    /// The preview key, as the window runs it ([`crate::preview::toggle`]).
+    pub fn preview_key(
+        &mut self,
+        app: &mut App,
+        host: &mut impl sidebar::FocusHost,
+    ) -> crate::preview::Toggled {
+        let palette = Palette::from_theme(&app.reading_theme());
+        crate::preview::toggle(app, &palette, &mut self.preview, host)
     }
 }
 

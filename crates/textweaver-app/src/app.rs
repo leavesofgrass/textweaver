@@ -2235,6 +2235,7 @@ impl App {
             | A::NotesPanel
             | A::ToggleHeader
             | A::ToggleToolbar
+            | A::ShowPreview
             | A::NextRegion
             | A::PreviousRegion => {
                 let msg = self.msg("app-window-only");
