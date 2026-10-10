@@ -42,8 +42,8 @@
 
 mod atomic;
 mod doc_state;
-pub mod helpers;
 pub mod fulltext;
+pub mod helpers;
 pub mod library;
 pub mod migrate;
 pub mod notes;
@@ -66,11 +66,11 @@ pub use doc_state::{
     StateStore, TextStamp, percent,
 };
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
+pub use helpers::{find_helper, find_helper_in, lou_translate};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, NotedDoc, ScannedDoc};
 pub use notes::{
     Annotation, Backlink, Backlinks, Highlight, Note, NotesExport, Relation, RelationType,
 };
-pub use helpers::{find_helper, find_helper_in, lou_translate};
 pub use paths::{COMPONENTS_DIR, MEDICAL_OVERLAY_FILE, Paths, components_dir, find_in_components};
 pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};

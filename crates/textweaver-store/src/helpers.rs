@@ -84,7 +84,11 @@ mod tests {
     #[test]
     fn the_components_folder_comes_first_then_the_variable_then_the_path() {
         let tmp = tempfile::tempdir().unwrap();
-        let exe = if cfg!(windows) { "pandoc.exe" } else { "pandoc" };
+        let exe = if cfg!(windows) {
+            "pandoc.exe"
+        } else {
+            "pandoc"
+        };
         let comp = tmp.path().join("components");
         let on_path = tmp.path().join("bin");
         std::fs::create_dir_all(&on_path).unwrap();
@@ -99,7 +103,12 @@ mod tests {
         let named = tmp.path().join("named-pandoc");
         std::fs::write(&named, b"x").unwrap();
         assert_eq!(
-            find_helper_in(Some(&comp), "pandoc", Some(named.clone().into()), path.clone()),
+            find_helper_in(
+                Some(&comp),
+                "pandoc",
+                Some(named.clone().into()),
+                path.clone()
+            ),
             Some(named.clone())
         );
         // In the components folder, a few folders down: it wins.

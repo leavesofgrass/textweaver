@@ -400,7 +400,10 @@ fn launch(c: &Component, dir: &Path, yes: bool) -> anyhow::Result<()> {
         return Ok(());
     }
     if !file.matches_file(&path) {
-        bail!("{} does not match its pin; download it again", path.display());
+        bail!(
+            "{} does not match its pin; download it again",
+            path.display()
+        );
     }
     textweaver_app::opener::open_with_system(&path.display().to_string())
         .with_context(|| format!("the installer {} did not start", path.display()))?;

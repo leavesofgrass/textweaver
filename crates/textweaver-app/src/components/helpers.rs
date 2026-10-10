@@ -186,7 +186,11 @@ impl Helper {
             (Helper::Ffmpeg, Platform::Linux) if arm || arch == "x86_64" => (
                 FFMPEG_RELEASE,
                 FFMPEG_VERSION,
-                if arm { FFMPEG_LINUXARM64 } else { FFMPEG_LINUX64 },
+                if arm {
+                    FFMPEG_LINUXARM64
+                } else {
+                    FFMPEG_LINUX64
+                },
                 Action::Unpack,
             ),
             (Helper::Liblouis, Platform::Windows) => (
@@ -195,47 +199,52 @@ impl Helper {
                 LIBLOUIS_WIN64,
                 Action::Unpack,
             ),
-            (Helper::Pandoc, Platform::Windows) => (
-                PANDOC_RELEASE,
-                PANDOC_VERSION,
-                PANDOC_WIN64,
-                Action::Unpack,
-            ),
+            (Helper::Pandoc, Platform::Windows) => {
+                (PANDOC_RELEASE, PANDOC_VERSION, PANDOC_WIN64, Action::Unpack)
+            }
             (Helper::Pandoc, Platform::Linux) if arm || arch == "x86_64" => (
                 PANDOC_RELEASE,
                 PANDOC_VERSION,
-                if arm { PANDOC_LINUXARM64 } else { PANDOC_LINUX64 },
+                if arm {
+                    PANDOC_LINUXARM64
+                } else {
+                    PANDOC_LINUX64
+                },
                 Action::Unpack,
             ),
             (Helper::Pandoc, Platform::Macos) => (
                 PANDOC_RELEASE,
                 PANDOC_VERSION,
-                if arm { PANDOC_MAC_ARM64 } else { PANDOC_MAC_X64 },
+                if arm {
+                    PANDOC_MAC_ARM64
+                } else {
+                    PANDOC_MAC_X64
+                },
                 Action::Installer,
             ),
             _ => return None,
         };
-        let (title, license, credit, features): (_, _, _, &'static [Cow<'static, str>]) =
-            match self {
-                Helper::Ffmpeg => (
-                    "FFmpeg 9.0.2, for M4B and MP4 export",
-                    "LGPL-2.1-or-later",
-                    "FFmpeg (LGPL-2.1-or-later), the LGPL build by BtbN, https://github.com/BtbN/FFmpeg-Builds",
-                    &[Cow::Borrowed("audio-export")],
-                ),
-                Helper::Liblouis => (
-                    "liblouis 3.39.0, for braille translation",
-                    "LGPL-2.1-or-later; its tools GPL-3.0-or-later",
-                    "liblouis (LGPL-2.1-or-later, tools GPL-3.0-or-later), https://liblouis.io",
-                    &[Cow::Borrowed("braille")],
-                ),
-                Helper::Pandoc => (
-                    "Pandoc 3.12.1, for more document formats",
-                    "GPL-2.0-or-later",
-                    "Pandoc by John MacFarlane (GPL-2.0-or-later), https://pandoc.org",
-                    &[Cow::Borrowed("pandoc")],
-                ),
-            };
+        let (title, license, credit, features): (_, _, _, &'static [Cow<'static, str>]) = match self
+        {
+            Helper::Ffmpeg => (
+                "FFmpeg 9.0.2, for M4B and MP4 export",
+                "LGPL-2.1-or-later",
+                "FFmpeg (LGPL-2.1-or-later), the LGPL build by BtbN, https://github.com/BtbN/FFmpeg-Builds",
+                &[Cow::Borrowed("audio-export")],
+            ),
+            Helper::Liblouis => (
+                "liblouis 3.39.0, for braille translation",
+                "LGPL-2.1-or-later; its tools GPL-3.0-or-later",
+                "liblouis (LGPL-2.1-or-later, tools GPL-3.0-or-later), https://liblouis.io",
+                &[Cow::Borrowed("braille")],
+            ),
+            Helper::Pandoc => (
+                "Pandoc 3.12.1, for more document formats",
+                "GPL-2.0-or-later",
+                "Pandoc by John MacFarlane (GPL-2.0-or-later), https://pandoc.org",
+                &[Cow::Borrowed("pandoc")],
+            ),
+        };
         Some(Component {
             id: Cow::Borrowed(self.id()),
             title: Cow::Borrowed(title),
@@ -356,7 +365,11 @@ mod tests {
             .component_for(Platform::Windows, "x86_64")
             .unwrap();
         assert_eq!(louis.release(), "liblouis-3.39.0");
-        assert!(louis.files[0].url.starts_with("https://github.com/liblouis/"));
+        assert!(
+            louis.files[0]
+                .url
+                .starts_with("https://github.com/liblouis/")
+        );
         let pkg = Helper::Pandoc
             .component_for(Platform::Macos, "aarch64")
             .unwrap();
@@ -390,9 +403,18 @@ mod tests {
         let manjaro = concat!("ID=manjaro\nID_LIKE=", '"', "arch", '"', "\n");
         let l = Helper::Liblouis;
         let cmd = |os: &str| package_command_for(l, Platform::Linux, Some(os));
-        assert_eq!(cmd(debian).as_deref(), Some("sudo apt install liblouis-bin"));
-        assert_eq!(cmd(ubuntu).as_deref(), Some("sudo apt install liblouis-bin"));
-        assert_eq!(cmd(fedora).as_deref(), Some("sudo dnf install liblouis-utils"));
+        assert_eq!(
+            cmd(debian).as_deref(),
+            Some("sudo apt install liblouis-bin")
+        );
+        assert_eq!(
+            cmd(ubuntu).as_deref(),
+            Some("sudo apt install liblouis-bin")
+        );
+        assert_eq!(
+            cmd(fedora).as_deref(),
+            Some("sudo dnf install liblouis-utils")
+        );
         assert_eq!(cmd(manjaro).as_deref(), Some("sudo pacman -S liblouis"));
         assert_eq!(cmd("ID=gentoo"), None);
         assert_eq!(

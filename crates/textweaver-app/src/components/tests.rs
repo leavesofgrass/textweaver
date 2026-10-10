@@ -817,14 +817,32 @@ fn place_unpack_and_installer_from_a_source_folder() {
     let here = Platform::current();
     let mut source = FakeSource::new(&tmp.path().join("my-components"));
     source
-        .add("made-up-voice", "1.0", Platform::Any, Action::Place, &[("voice.onnx", b"a voice")])
+        .add(
+            "made-up-voice",
+            "1.0",
+            Platform::Any,
+            Action::Place,
+            &[("voice.onnx", b"a voice")],
+        )
         .unwrap();
     let archive = zip_bytes(&[("made-up-tool-2.0/bin/tool.exe", b"a made-up program")]);
     source
-        .add("made-up-tool", "2.0", here, Action::Unpack, &[("made-up-tool-2.0.zip", &archive)])
+        .add(
+            "made-up-tool",
+            "2.0",
+            here,
+            Action::Unpack,
+            &[("made-up-tool-2.0.zip", &archive)],
+        )
         .unwrap();
     source
-        .add("made-up-setup", "0.3.0", here, Action::Installer, &[("setup.exe", b"a made-up installer")])
+        .add(
+            "made-up-setup",
+            "0.3.0",
+            here,
+            Action::Installer,
+            &[("setup.exe", b"a made-up installer")],
+        )
         .unwrap();
     let (mut app, said) = app_in(tmp.path(), Arc::new(StandardFetcher));
     let (launcher, ran) = recording_launcher();
@@ -850,7 +868,12 @@ fn place_unpack_and_installer_from_a_source_folder() {
     assert!(app.wait_for_components(WAIT));
     let (c, dir) = app.component_and_dir("made-up-tool").unwrap();
     assert_eq!(c.status_in(&dir), Status::Installed);
-    assert!(dir.join("made-up-tool-2.0").join("bin").join("tool.exe").is_file());
+    assert!(
+        dir.join("made-up-tool-2.0")
+            .join("bin")
+            .join("tool.exe")
+            .is_file()
+    );
     assert!(!dir.join("made-up-tool-2.0.zip").exists());
     // The engine discovery's search finds what was unpacked.
     let comp = Paths::under(tmp.path()).components_dir();
@@ -874,10 +897,17 @@ fn place_unpack_and_installer_from_a_source_folder() {
         said.all()
     );
     app.dispatch(Command::Confirm(Confirm::No));
-    assert!(said.any("Not launched; the installer is kept."), "{:?}", said.all());
+    assert!(
+        said.any("Not launched; the installer is kept."),
+        "{:?}",
+        said.all()
+    );
     assert!(ran.lock().unwrap().is_empty(), "no launches nothing");
     assert!(app.component_declined("made-up-setup"));
-    let _ = manager_row(&mut app, "The made-up-setup component: installer downloaded");
+    let _ = manager_row(
+        &mut app,
+        "The made-up-setup component: installer downloaded",
+    );
 
     // Download again on a downloaded installer: the launch is offered.
     let row = manager_row(&mut app, "The made-up-setup component");
@@ -887,7 +917,11 @@ fn place_unpack_and_installer_from_a_source_folder() {
     let ran = ran.lock().unwrap().clone();
     assert_eq!(ran.len(), 1, "{ran:?}");
     assert!(ran[0].ends_with("setup.exe"), "{ran:?}");
-    assert!(said.any("Installer started: The made-up-setup component."), "{:?}", said.all());
+    assert!(
+        said.any("Installer started: The made-up-setup component."),
+        "{:?}",
+        said.all()
+    );
 }
 
 /// A braille file opened without liblouis: one question instead of "not
@@ -900,7 +934,13 @@ fn liblouis_is_offered_once_when_a_braille_file_needs_it() {
     let mut source = FakeSource::new(&tmp.path().join("my-components"));
     let archive = zip_bytes(&[("liblouis/bin/lou_translate.exe", b"a made-up program")]);
     source
-        .add("liblouis", "3.39.0", Platform::current(), Action::Unpack, &[("liblouis-made-up.zip", &archive)])
+        .add(
+            "liblouis",
+            "3.39.0",
+            Platform::current(),
+            Action::Unpack,
+            &[("liblouis-made-up.zip", &archive)],
+        )
         .unwrap();
     let (mut app, said) = app_in(tmp.path(), Arc::new(StandardFetcher));
     let root = source.root().to_string_lossy().into_owned();
@@ -916,7 +956,11 @@ fn liblouis_is_offered_once_when_a_braille_file_needs_it() {
     assert!(said.any("Not downloaded."), "{:?}", said.all());
     said.clear();
     app.say_braille_untranslated(&brf);
-    assert!(said.any("Braille shown as braille: liblouis is missing."), "{:?}", said.all());
+    assert!(
+        said.any("Braille shown as braille: liblouis is missing."),
+        "{:?}",
+        said.all()
+    );
     assert!(!said.any("Download it now?"), "{:?}", said.all());
     // The source's liblouis took the built-in one's place.
     let (c, _) = app.component_and_dir("liblouis").unwrap();
@@ -932,7 +976,13 @@ fn after_a_yes_liblouis_is_unpacked_and_the_file_opens_again() {
     let mut source = FakeSource::new(&tmp.path().join("my-components"));
     let archive = zip_bytes(&[("liblouis/bin/lou_translate.exe", b"a made-up program")]);
     source
-        .add("liblouis", "3.39.0", Platform::current(), Action::Unpack, &[("liblouis-made-up.zip", &archive)])
+        .add(
+            "liblouis",
+            "3.39.0",
+            Platform::current(),
+            Action::Unpack,
+            &[("liblouis-made-up.zip", &archive)],
+        )
         .unwrap();
     let (mut app, said) = app_in(tmp.path(), Arc::new(StandardFetcher));
     let root = source.root().to_string_lossy().into_owned();
@@ -944,8 +994,21 @@ fn after_a_yes_liblouis_is_unpacked_and_the_file_opens_again() {
     assert!(app.wait_for_components(WAIT));
     let (c, dir) = app.component_and_dir("liblouis").unwrap();
     assert_eq!(c.status_in(&dir), Status::Installed);
-    assert!(dir.join("liblouis").join("bin").join("lou_translate.exe").is_file());
-    assert!(said.any("Ready: The liblouis component."), "{:?}", said.all());
+    assert!(
+        dir.join("liblouis")
+            .join("bin")
+            .join("lou_translate.exe")
+            .is_file()
+    );
+    assert!(
+        said.any("Ready: The liblouis component."),
+        "{:?}",
+        said.all()
+    );
     let open = app.session.as_ref().and_then(|s| s.doc.meta.path.clone());
-    assert_eq!(open.as_deref(), Some(brf.as_path()), "the file opened again");
+    assert_eq!(
+        open.as_deref(),
+        Some(brf.as_path()),
+        "the file opened again"
+    );
 }

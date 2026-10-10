@@ -164,8 +164,8 @@ mod run {
 
     use super::AudioList;
     use crate::app::{App, ListKind};
-    use crate::components::After;
     use crate::command::{Confirm, Effect};
+    use crate::components::After;
 
     /// How often progress may be said, at most.
     pub(crate) const PROGRESS_EVERY: Duration = Duration::from_secs(10);
@@ -397,9 +397,7 @@ mod run {
                     "audio-no-ffmpeg",
                     &args!["formats" => names.join(", "), "n" => missing.len()],
                 ));
-                if let Some(command) =
-                    self.helper_command_text(crate::components::Helper::Ffmpeg)
-                {
+                if let Some(command) = self.helper_command_text(crate::components::Helper::Ffmpeg) {
                     msg.push(' ');
                     msg.push_str(&command);
                 }
