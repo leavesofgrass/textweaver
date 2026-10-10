@@ -104,6 +104,11 @@ pub const DIALOG_CLOSE: WidgetTag<ActionButton> = WidgetTag::named("tw-dialog-cl
 /// The RSVP panel, under the document.
 pub const RSVP: WidgetTag<RsvpView> = WidgetTag::named("tw-rsvp");
 
+/// The longest an idle tick goes without refreshing the window, though
+/// its [`tick_signature`] is unchanged: a safety net for anything shown
+/// that the signature leaves out.
+const REFRESH_AT_LEAST: Duration = Duration::from_secs(1);
+
 /// The first wait between ticks, before the app says (`App::tick_interval`).
 const FIRST_TICK: Duration = Duration::from_millis(250);
 /// Highlight moves slower than this are logged.
@@ -410,6 +415,12 @@ pub struct Gui {
     /// typing).
     spell_marked: Option<(DocKey, u64)>,
     spell_seen: Option<((DocKey, u64), Instant)>,
+    /// The last tick's [`tick_signature`] and when the window was last
+    /// refreshed for it: a tick that changes nothing skips the refresh.
+    last_tick: Option<(u64, Instant)>,
+    /// The preview pane's worker has a parse ready, so the next tick
+    /// refreshes.
+    preview_ready: Arc<AtomicBool>,
     /// The interface language the drawn labels were last written in
     /// (`[interface] language` changes them live, as in the terminal).
     lang: String,
@@ -1386,6 +1397,48 @@ pub fn model_for(app: &App, w: CharRange) -> Option<DocModel> {
         breaks: app.syllable_breaks(w),
         separator: app.syllable_separator().to_owned(),
     })
+}
+
+/// A number that changes whenever what the window shows could have changed
+/// between ticks (performance report G8, as the terminal's
+/// `view_signature`): the status message and line, the mode, reading and
+/// edit mode, the text and its revision, the caret, the selection, the
+/// spoken word and sentence, the marks' counts, the list or prompt, RSVP,
+/// the time left, and fonts downloaded. Cheap: nothing is copied. A tick
+/// whose signature has not changed skips the refresh; commands and keys
+/// always refresh.
+pub fn tick_signature(app: &App) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    app.status().seq.hash(&mut h);
+    app.status_text().hash(&mut h);
+    (app.mode() as u8).hash(&mut h);
+    app.playback().hash(&mut h);
+    app.is_editing().hash(&mut h);
+    app.opening().hash(&mut h);
+    app.minutes_left().hash(&mut h);
+    app.font_downloads().hash(&mut h);
+    if let Some(s) = app.session() {
+        s.revision.hash(&mut h);
+        s.cursor.0.hash(&mut h);
+        s.selection.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+        s.spoken.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+        s.spoken_sentence.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+        s.speech_cursor_line.hash(&mut h);
+        s.notes.len().hash(&mut h);
+        s.bookmarks.len().hash(&mut h);
+        s.highlights.len().hash(&mut h);
+    }
+    if let Some(l) = app.list_model() {
+        (l.title.len(), l.items.len(), l.selected).hash(&mut h);
+    }
+    if let Some(p) = app.prompt_model() {
+        (p.label.len(), p.caret(), p.text().len()).hash(&mut h);
+    }
+    if let Some(r) = app.rsvp() {
+        (r.index(), r.is_playing()).hash(&mut h);
+    }
+    h.finish()
 }
 
 /// The notes, bookmarks, the reader's highlights, and the search matches in
@@ -3645,7 +3698,10 @@ impl Gui {
     /// ("Text size 18 points."). The next refresh lays the text out again.
     fn text_size(&mut self, ctx: &mut DriverCtx<'_>, step: Step) {
         let now = self.app.settings().reading_aids.font.clone();
-        let (size, limit) = crate::font_chooser::stepped(now.size_pt, step);
+        // From the size shown, which follows the text scale until the
+        // reader sets one, so the first step never jumps back.
+        let shown = crate::fonts::shown_size_pt(&now);
+        let (size, limit) = crate::font_chooser::stepped(shown, step);
         self.save_font(crate::font_chooser::with_size(&now, size));
         if self.log {
             crate::log::line(&format!("text size {step:?}: {size} points"));
@@ -4825,8 +4881,26 @@ impl AppDriver for Gui {
         let now = Instant::now();
         let mut effects = self.app.poll_speech();
         effects.extend(self.app.tick(now));
+        // A tick that changed nothing the window shows skips the refresh
+        // (performance report G8), with one at least every second.
+        let quiet = effects.is_empty()
+            && self.queue.borrow().is_empty()
+            && self.spell_seen.is_none()
+            && !self.preview_ready.swap(false, Ordering::AcqRel)
+            && !ctx
+                .render_root(self.window_id)
+                .get_widget_with_tag(ANNOUNCER)
+                .is_some_and(|a| a.inner().holding());
         self.run_effects(ctx, effects);
-        self.refresh(ctx);
+        let signature = tick_signature(&self.app);
+        let now = Instant::now();
+        let unchanged = self.last_tick.is_some_and(|(s, at)| {
+            s == signature && now.saturating_duration_since(at) < REFRESH_AT_LEAST
+        });
+        if !(quiet && unchanged) {
+            self.refresh(ctx);
+            self.last_tick = Some((signature, now));
+        }
         let mut wait = self.app.tick_interval(Instant::now());
         if self.spell_seen.is_some() {
             // Come back when the pause is over, to mark the misspellings.
@@ -5060,9 +5134,12 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
 
     // The preview pane's parser rings the window when a parse is ready; an
     // idle thread waiting on its channel until the pane is used.
+    let preview_ready = Arc::new(AtomicBool::new(false));
     let preview = {
         let proxy = proxy.clone();
+        let ready = Arc::clone(&preview_ready);
         crate::preview::PreviewShown::with_worker(move || {
+            ready.store(true, Ordering::Release);
             let _ = proxy.send_event(MasonryUserEvent::AsyncAction(window_id, Box::new(Tick)));
         })
     };
@@ -5095,6 +5172,8 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         lang: String::new(),
         spell_marked: None,
         spell_seen: None,
+        last_tick: None,
+        preview_ready,
         fixed_theme: opts.theme.is_some(),
         theme_key,
         system,
@@ -5307,6 +5386,31 @@ mod tests {
             Some((ActionId::ChooseFont, true))
         );
         assert_eq!(window_command_of(&Command::Cancel, false), None);
+    }
+
+    /// The tick signature stays while nothing changes and moves when the
+    /// caret, the text, or the mode does.
+    #[test]
+    fn the_tick_signature_follows_what_the_window_shows() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("notes.md");
+        std::fs::write(
+            &file,
+            "# Notes
+
+Ada Example's notes.
+",
+        )
+        .unwrap();
+        let mut app = App::new(textweaver_app::AppConfig::for_tests());
+        app.open(&file).unwrap();
+        let first = tick_signature(&app);
+        assert_eq!(tick_signature(&app), first, "nothing changed");
+        let _ = sync_caret(&mut app, textweaver_app::core::CharPos(9), None);
+        let moved = tick_signature(&app);
+        assert_ne!(moved, first, "the caret moved");
+        let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+        assert_ne!(tick_signature(&app), moved, "edit mode");
     }
 
     /// A secret prompt's field shows stars, and the secret follows each

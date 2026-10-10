@@ -85,8 +85,10 @@ pub fn channel_waker() -> (Waker, Receiver<()>) {
 pub const IDLE_TICK: Duration = Duration::from_millis(250);
 
 /// The tick interval while something times itself in small steps: Markdown
-/// structure parsed when typing pauses, continuous reading on the status
-/// line.
+/// structure parsed when typing pauses (and the live browser preview
+/// written then), continuous reading on the status line. Only while that
+/// work is pending: edit mode at rest ticks at [`IDLE_TICK`] (performance
+/// report W2; beta 1, G1-e).
 pub const BUSY_TICK: Duration = Duration::from_millis(50);
 
 impl App {
@@ -101,11 +103,12 @@ impl App {
     }
 
     /// How long the frontend may wait before its next [`App::tick`] when
-    /// nothing wakes it: the next RSVP word, [`BUSY_TICK`] while editing
-    /// or reading on the status line, else [`IDLE_TICK`]. Speech statuses
-    /// and finished background work ring the waker instead.
+    /// nothing wakes it: the next RSVP word, [`BUSY_TICK`] while an edit
+    /// waits for its pause to be parsed or reading goes on on the status
+    /// line, else [`IDLE_TICK`]. Speech statuses and finished background
+    /// work ring the waker instead.
     pub fn tick_interval(&self, now: Instant) -> Duration {
-        let base = if self.edit.is_some() || self.screen_say_all.is_some() || self.opening() {
+        let base = if self.edit_work_pending() || self.screen_say_all.is_some() || self.opening() {
             BUSY_TICK
         } else {
             IDLE_TICK
@@ -113,9 +116,57 @@ impl App {
         self.rsvp_wait(now).map_or(base, |w| w.min(base))
     }
 
+    /// True while edit mode has work timed by the pause in typing: the
+    /// Markdown structure not yet parsed since the last edit, or the live
+    /// browser preview not yet written for it.
+    fn edit_work_pending(&self) -> bool {
+        if self.edit.is_none() {
+            return false;
+        }
+        let st = &self.authoring.structure;
+        let unparsed = st.markdown && (!st.fresh() || st.pending.is_some());
+        let p = &self.settings.preview;
+        let live = p.live && p.auto_reload && st.version != self.authoring.preview_version;
+        unparsed || live
+    }
+
     /// A clone of the wake slot, for a background job to ring when it
     /// finishes.
     pub(crate) fn waker_slot(&self) -> WakeSlot {
         self.wake.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::keymap::ActionId;
+    use crate::{AppConfig, Command};
+
+    /// Edit mode ticks fast only while an edit waits to be parsed; at rest
+    /// it ticks as slowly as reading does.
+    #[test]
+    fn edit_mode_ticks_fast_only_while_an_edit_waits() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("notes.md");
+        std::fs::write(
+            &file,
+            "# Notes
+
+Ada Example's notes.
+",
+        )
+        .unwrap();
+        let mut app = App::new(AppConfig::for_tests());
+        app.open(&file).unwrap();
+        let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+        assert!(app.is_editing());
+        let now = Instant::now();
+        app.authoring.structure.parsed = app.authoring.structure.version;
+        assert_eq!(app.tick_interval(now), IDLE_TICK);
+        let _ = app.dispatch(Command::Insert("x".into()));
+        assert_eq!(app.tick_interval(now), BUSY_TICK);
+        app.authoring.structure.parsed = app.authoring.structure.version;
+        assert_eq!(app.tick_interval(now), IDLE_TICK);
     }
 }
