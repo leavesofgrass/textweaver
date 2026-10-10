@@ -81,6 +81,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading.stop_at`: default never (`"off"`). Stop at section end. Where continuous reading stops by itself and says End of section. Never, at the next heading of any level, or at the next chapter: a section break, else a level 1 heading. Reading goes on from the heading with the read key. Choices: `"off"` (never), `"heading"` (next heading), `"chapter"` (next chapter). Syncs between computers.
 - `reading.stop_after_minutes`: default 0 minutes. Reading timer. Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off. From 0 to 240 minutes, in steps of 5. Syncs between computers.
 - `reading.recall_prompts`: default off (`false`). Recall prompts. At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key. On or off: `true` or `false`. Syncs between computers.
+- `reading.book_audio`: default recorded narration (`"auto"`). Book audio. What reads a DAISY talking book that has a recording. Its recorded narration, with the highlight following it and speech reading any text without audio, or speech only. Rate changes do not apply to the recording. Choices: `"auto"` (recorded narration), `"speech"` (speech only). Syncs between computers.
 
 ## Display: the `[display]` section
 

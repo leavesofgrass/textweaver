@@ -138,6 +138,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation | `Alt+E` | `Ctrl+Shift+D` | `Cmd+Shift+D` | `define_word` |
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | palette | palette | palette | `summarize` |
 | Turn citations on or off in continuous reading: off skips them, on says them in words | `Alt+Shift+Q` | `Alt+Shift+Q` | `Cmd+Option+Shift+C` | `toggle_citations` |
+| Switch a talking book between its recorded narration and speech | palette | palette | palette | `toggle_book_audio` |
 | Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves | `Alt+Shift+X` | `Alt+Shift+X` | `Cmd+Option+Shift+X` | `explore_math` |
 | Listen to the document as it will render, without leaving edit mode | palette | palette | palette | `listen_rendered` |
 
@@ -531,6 +532,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 |---|---|
 | Say the document's title, how many headings, tables, pictures, and footnotes it has, and about how many minutes are left | `document_overview` |
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
+| Switch a talking book between its recorded narration and speech | `toggle_book_audio` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
 | Choose how Find and Replace match: case, whole words, regular expression, across lines | `search_options` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
