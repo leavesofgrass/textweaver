@@ -86,7 +86,7 @@ The reader opens these formats itself:
 - Pictures of text: `.png`, `.jpg`, `.jpeg`, through text recognition.
 - DAISY 3 books and DTBook: `.opf`, `.xml`, `.dtbook`, and a DAISY book in a zip.
 - DAISY 2.02 books: open the book's folder, its `ncc.html`, or the zip it came in. The text is read, not the recorded audio. A book with no text reads its headings, and textweaver says so when it opens.
-- Braille files: `.brf`, `.brl`, read as print through liblouis (below), and each volume of a braille book in a zip.
+- Braille files: `.brf`, `.brl`, read as print through liblouis (below), and each volume of a braille book in a zip. A zip that holds only one braille file opens straight into it.
 - PowerPoint: `.pptx`, `.pptm`, `.ppsx`, `.potx`, with the speaker notes.
 - Spreadsheets, as tables: `.csv`, `.tsv`, `.tab`, `.ods`, `.xlsx`, `.xlsm`, `.xlsb`.
 - Archives: `.zip`, `.tar`, `.tgz`, `.gz`, `.7z`. Opening one lists the files inside that textweaver can read; `course.zip!week1/notes.md` opens one directly.
@@ -105,7 +105,7 @@ A scanned PDF is a picture of the pages. textweaver recognizes its text (OCR) an
 
 ### Braille files (BRF)
 
-A BRF file (Braille Ready Format) is a braille book as plain text: each character stands for one braille cell, in the braille ASCII code that embossers and notetakers use, and the file is laid out in braille lines and pages, usually 40 cells by 25 lines. Libraries for blind and print-disabled readers distribute books this way; the braille downloads of the NLS BARD service, for instance, are BRF files in a zip, often one file per volume. Open the zip to see its volumes, and follow a link to open one, or open `book.zip!volume1.brf` directly.
+A BRF file (Braille Ready Format) is a braille book as plain text: each character stands for one braille cell, in the braille ASCII code that embossers and notetakers use, and the file is laid out in braille lines and pages, usually 40 cells by 25 lines. Libraries for blind and print-disabled readers distribute books this way; the braille downloads of the NLS BARD service, for instance, are BRF files in a zip, often one file per volume. Open the zip to see its volumes, and follow a link to open one, or open `book.zip!volume1.brf` directly. A zip with a single braille file in it opens that file at once, with no list in between.
 
 textweaver reads a BRF file as print, so speech, search, notes and export work as they do for any book. It does this in two steps.
 

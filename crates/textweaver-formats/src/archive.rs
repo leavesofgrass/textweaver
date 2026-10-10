@@ -651,8 +651,8 @@ fn group_digits(n: usize) -> String {
 }
 
 /// A DAISY 3 book (its package file names a DTBook), a DAISY 2.02 book
-/// (its `ncc.html`), or an EPUB (its `mimetype` says so) inside the
-/// archive, loaded; `None` otherwise.
+/// (its `ncc.html`), an EPUB (its `mimetype` says so), or the archive's
+/// only braille file inside the archive, loaded; `None` otherwise.
 fn open_book(
     input: &Input,
     entries: &[Entry],
@@ -718,6 +718,40 @@ fn open_book(
         restore_identity(&mut doc, source);
         return Ok(Some(doc));
     }
+    // Exactly one braille file (as a BARD braille download): the book. A
+    // zip from a path opens it as a member (`book.zip!book.brf`), so Show
+    // original Braille can read the page again.
+    let brfs: Vec<&Entry> = entries
+        .iter()
+        .filter(|e| !is_junk(&e.name))
+        .filter(|e| {
+            Path::new(&e.name).extension().is_some_and(|x| {
+                crate::BrfLoader
+                    .extensions()
+                    .contains(&x.to_string_lossy().to_ascii_lowercase().as_str())
+            })
+        })
+        .collect();
+    if let [brf] = brfs.as_slice() {
+        let doc = match source {
+            Source::Path(p) => {
+                crate::BrfLoader.load(&Source::Path(member_path(p, &brf.name)), options)?
+            }
+            _ => {
+                let data = input.read(&brf.name).map_err(bad)?;
+                let mut doc = crate::BrfLoader.load(
+                    &Source::Bytes {
+                        data,
+                        hint: "brf".into(),
+                    },
+                    options,
+                )?;
+                restore_identity(&mut doc, source);
+                doc
+            }
+        };
+        return Ok(Some(doc));
+    }
     Ok(None)
 }
 
@@ -747,6 +781,30 @@ mod tests {
             z.write_all(body).unwrap();
         }
         z.finish().unwrap().into_inner()
+    }
+
+    #[test]
+    fn a_zip_with_one_braille_file_opens_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let brf = b"  ,! ,BOOK\x0c\n";
+        let one = dir.path().join("one.zip");
+        std::fs::write(
+            &one,
+            zip_of(&[("book.brf", brf), ("readme.txt", b"About this book.")]),
+        )
+        .unwrap();
+        let d = ArchiveLoader
+            .load(&Source::Path(one.clone()), &LoadOptions::default())
+            .unwrap();
+        assert_eq!(d.meta.format, "brf");
+        assert_eq!(d.meta.path, Some(member_path(&one, "book.brf")));
+        // Two braille files: the list, to choose one.
+        let two = dir.path().join("two.zip");
+        std::fs::write(&two, zip_of(&[("a.brf", brf), ("b.brf", brf)])).unwrap();
+        let d = ArchiveLoader
+            .load(&Source::Path(two), &LoadOptions::default())
+            .unwrap();
+        assert_eq!(d.meta.format, "archive");
     }
 
     #[test]
