@@ -3435,6 +3435,7 @@ settings-unit-sentences =
 # The GUI. Said in textweaver's own voice when the window takes the
 # focus; $title is the document's title.
 gui-window-focused = { $title }, { -brand }.
+gui-updated-to = Mis à jour vers { $version }. Aide, Documentation décrit les nouveautés.
 
 ## Opening the new formats. Said after "Could not open NAME:", so
 ## each starts in lower case.

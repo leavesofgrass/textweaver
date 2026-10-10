@@ -243,6 +243,10 @@ The window draws the same [reading aids](reading-aids.md) as the terminal, with 
 
 All of these change only how text looks. Your screen reader reads the same text either way. The RSVP word is hidden from screen readers, so it is never spoken by itself. Beside it is a quiet status ("RSVP paused, word 120 of 900") that you can find with your screen reader's review or object navigation.
 
+## After an update
+
+The first time the app starts after textweaver has been updated, it says "Updated to" and the new version number, for example "Updated to 0.1.0-beta.1", followed by where to read about the changes. The notice is said once, after the opening message, and only by a version newer or older than the one that last ran on this computer; the version is then remembered as a machine setting (`[gui] last_version`) that never syncs, so another computer gives its own notice. A first run has its welcome instead, and runs in the background say nothing.
+
 ## Colors and high contrast
 
 The window starts in the theme your settings choose, and follows your system's light or dark setting as the terminal reader does (`display.follow_os_theme`, on unless you picked a theme). The system's setting is read while the rest of the window starts, and not at all with `--theme` or a theme you picked. F5 moves to the next theme.

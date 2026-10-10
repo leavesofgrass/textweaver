@@ -4240,6 +4240,25 @@ impl Gui {
             // hybrid mode, said in one sentence, never a question.
             self.app.startup_screen_reader_step(screen_reader.as_ref());
         }
+        // After an update, "Updated to 0.1.0-beta.1", once: the version is
+        // then written (`[gui] last_version`, a machine setting). Not in
+        // background runs, which leave it for the next real start.
+        if self.startup_offers {
+            let current = env!("CARGO_PKG_VERSION");
+            let last = self.app.settings().gui.last_version.clone();
+            if let Some(version) = setup::updated_to(last.as_deref(), current, self.first_run) {
+                let said = self
+                    .app
+                    .catalog()
+                    .fmt("gui-updated-to", &args!["version" => version.as_str()]);
+                self.app.announce_queued(&said, Priority::Polite);
+            }
+            if last.as_deref() != Some(current) {
+                let _ = self
+                    .app
+                    .update_settings(|s| s.gui.last_version = Some(current.to_owned()));
+            }
+        }
         // Unsaved work from an earlier run, one snapshot at a time.
         effects.extend(self.app.offer_recovery());
         self.run_effects(ctx, effects);

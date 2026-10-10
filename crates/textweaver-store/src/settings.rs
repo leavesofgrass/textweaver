@@ -1644,6 +1644,10 @@ pub struct GuiSettings {
     /// written when the window closes, used when it opens. A machine
     /// setting: it never syncs, because screens differ.
     pub window: Option<GuiWindow>,
+    /// The version of textweaver the window last ran on this computer
+    /// (B1-g2c): when it starts as a newer one, it says "Updated to" once
+    /// and writes the new version here. A machine setting.
+    pub last_version: Option<String>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1659,6 +1663,7 @@ impl Default for GuiSettings {
             speak_messages: false,
             sidebar: GuiSidebar::default(),
             window: None,
+            last_version: None,
             extra: toml::Table::new(),
         }
     }

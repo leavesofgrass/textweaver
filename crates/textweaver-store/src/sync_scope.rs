@@ -269,6 +269,9 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("gui.sidebar", Machine),
     // Where this computer's window was and how big: screens differ.
     ("gui.window", Machine),
+    // The version this computer's window last ran, for its "Updated to"
+    // notice.
+    ("gui.last_version", Machine),
     // [colors]
     ("colors.ruler", Portable),
     ("colors.difficult_words", Portable),
