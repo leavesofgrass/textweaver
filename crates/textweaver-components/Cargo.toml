@@ -28,6 +28,9 @@ sha2.workspace = true
 sha1.workspace = true
 # Install from a downloaded zip (already in the tree through the formats).
 zip.workspace = true
+# The `unpack` action: gzip tarballs (pandoc for Linux).
+tar.workspace = true
+flate2.workspace = true
 ureq = { workspace = true, optional = true }
 # A private repository's release list (GitHub's API answers in JSON).
 serde_json = { workspace = true, optional = true }

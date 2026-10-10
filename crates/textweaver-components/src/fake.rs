@@ -205,6 +205,50 @@ impl FakeSource {
     }
 }
 
+/// A zip holding `members` (path and bytes), stored, for tests of the
+/// `unpack` action: a made-up program in a made-up archive.
+pub fn zip_bytes(members: &[(&str, &[u8])]) -> Vec<u8> {
+    use std::io::Write;
+    let mut out = std::io::Cursor::new(Vec::new());
+    let mut w = zip::ZipWriter::new(&mut out);
+    let opts = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .unix_permissions(0o755);
+    for (name, bytes) in members {
+        // A test's own archive: writing to memory does not fail.
+        let _ = w.start_file(*name, opts);
+        let _ = w.write_all(bytes);
+    }
+    let _ = w.finish();
+    out.into_inner()
+}
+
+/// A gzip tarball holding `files` (path and bytes, each executable) and
+/// `links` (path and target), for tests of the `unpack` action.
+pub fn tar_gz_bytes(files: &[(&str, &[u8])], links: &[(&str, &str)]) -> Vec<u8> {
+    let mut out = Vec::new();
+    let gz = flate2::write::GzEncoder::new(&mut out, flate2::Compression::fast());
+    let mut b = tar::Builder::new(gz);
+    for (name, bytes) in files {
+        let mut h = tar::Header::new_gnu();
+        h.set_size(bytes.len() as u64);
+        h.set_mode(0o755);
+        h.set_cksum();
+        let _ = b.append_data(&mut h, name, *bytes);
+    }
+    for (name, target) in links {
+        let mut h = tar::Header::new_gnu();
+        h.set_entry_type(tar::EntryType::Symlink);
+        h.set_size(0);
+        h.set_cksum();
+        let _ = b.append_link(&mut h, name, target);
+    }
+    if let Ok(gz) = b.into_inner() {
+        let _ = gz.finish();
+    }
+    out
+}
+
 /// Switches this process to a memory credential store and never runs
 /// `gh`, so a test signs in, stores, and forgets a made-up token without
 /// touching the system credential store or a real sign-in. It lasts for

@@ -65,7 +65,9 @@ pub fn install_from(
     };
     let mut claim = Claim::take(&component.id, dest)?;
     for pin in component.files.iter() {
-        if pin.matches_file(&dest.join(pin.name.as_ref())) {
+        if pin.matches_file(&dest.join(pin.name.as_ref()))
+            || crate::unpack::receipt_matches(dest, pin)
+        {
             report.outcome.kept.push(pin.name.to_string());
             if let Some(c) = candidates.iter_mut().find(|c| c.name == pin.name) {
                 c.used = true;
@@ -92,7 +94,7 @@ pub fn install_from(
             "not one of this component's files".to_owned(),
         ));
     }
-    finish(component, dest, &claim.staging, &report.outcome.fetched)?;
+    report.outcome.left_out = finish(component, dest, &claim.staging, &report.outcome.fetched)?;
     Ok(report)
 }
 

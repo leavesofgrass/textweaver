@@ -32,6 +32,11 @@
 //!   system credential store. [`SignedInFetcher`] sends it to GitHub's API
 //!   and nowhere else, and it never reaches settings, the log, or a
 //!   message.
+//! - What installing does depends on the component's [`Action`]: `place`
+//!   leaves the checked files in its folder; `unpack` unpacks each archive
+//!   there ([`unpack`]) and keeps a receipt in its place; `installer`
+//!   keeps the checked installer, which the app launches only after the
+//!   reader hears its name, version, and license note and says yes.
 //!
 //! Nothing here asks the reader: the app names the size and license and
 //! waits for a yes. Tests use [`fake::FakeFetcher`]; only the `download`
@@ -48,6 +53,7 @@ mod github;
 mod install;
 pub mod manifest;
 mod pin;
+pub mod unpack;
 
 pub use component::{Component, FileState, Status};
 pub use download::{Outcome, Progress, Sources, Tenths, download, source_base};
@@ -59,6 +65,7 @@ pub use github::{GITHUB_API, SignedInFetcher};
 pub use install::{InstallReport, install_from};
 pub use manifest::{Action, Listing, Platform};
 pub use pin::{Check, FilePin, git_blob_sha1, hash_file, is_plain_name, sha256_hex};
+pub use unpack::{ArchiveKind, unpack_in};
 
 /// The User-Agent sent with every request: the project, nothing personal
 /// (the owner's rule).
