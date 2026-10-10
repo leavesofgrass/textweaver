@@ -44,6 +44,10 @@ pub struct Args {
         requires = "export"
     )]
     pub output: Option<PathBuf>,
+    /// List only the highlights with this palette name ("important"),
+    /// as the highlights list does after Space on one of them.
+    #[arg(long, value_name = "NAME", conflicts_with = "export")]
+    pub name: Option<String>,
 }
 
 /// One position with where it falls in the document.
@@ -97,6 +101,10 @@ struct NoteMark {
 #[derive(Debug, Serialize, PartialEq, Eq)]
 struct HighlightMark {
     id: String,
+    /// Its palette name, said with it.
+    name: String,
+    /// Its palette shape (`underline`, `brackets`).
+    shape: &'static str,
     color: String,
     text: String,
     end: usize,
@@ -149,7 +157,7 @@ fn saved_text(ts: i64) -> Option<String> {
     (ts > 0).then(|| time::rfc3339(ts))
 }
 
-fn build(file: &Path, paths: &Paths) -> Report {
+fn build(file: &Path, paths: &Paths, name: Option<&str>) -> Report {
     let settings = SettingsStore::new(paths.clone()).load().0;
     let key = DocKey::for_path(file);
     let store = StateStore::new(paths.state_dir());
@@ -189,15 +197,24 @@ fn build(file: &Path, paths: &Paths) -> Report {
             mark: mark(None, n.range.start.0, pct_of(n.range.start.0), n.ts),
         })
         .collect();
+    let palette = &settings.highlight.palette;
     let highlights = state
         .highlights
         .iter()
-        .map(|h| HighlightMark {
+        .map(|h| (h, textweaver_app::palette::resolve(palette, h)))
+        .filter(|(_, p)| name.is_none_or(|n| p.name.eq_ignore_ascii_case(n.trim())))
+        .map(|(h, p)| HighlightMark {
             id: h.id.clone(),
+            spoken: if h.text.is_empty() {
+                format!("Highlight, {}", p.name)
+            } else {
+                format!("Highlight, {}: {}", p.name, h.text)
+            },
+            name: p.name,
+            shape: p.look.shape.as_str(),
             color: color_name(&h.color),
             text: h.text.clone(),
             end: h.range.end.0,
-            spoken: Annotation::Highlight(h).spoken(),
             mark: mark(None, h.range.start.0, pct_of(h.range.start.0), h.ts),
         })
         .collect();
@@ -358,7 +375,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         }
         return Ok(());
     }
-    let report = build(&args.file, &paths);
+    let report = build(&args.file, &paths, args.name.as_deref());
     if args.json {
         crate::cmd::outln!("{}", serde_json::to_string_pretty(&report)?);
     } else {
@@ -410,7 +427,7 @@ mod tests {
             .save(&DocKey::for_path(&doc), &st)
             .unwrap();
 
-        let r = build(&doc, &paths);
+        let r = build(&doc, &paths, None);
         let p = r.position.as_ref().unwrap();
         assert_eq!((p.offset, p.pct), (11, 32));
         assert!(p.saved.is_some());
@@ -440,7 +457,7 @@ mod tests {
             "{text}"
         );
         assert!(
-            text.contains("  1 highlight:\n    Yellow highlight: third; "),
+            text.contains("  1 highlight:\n    Highlight, important: third; "),
             "{text}"
         );
         let json: serde_json::Value = serde_json::to_value(&r).unwrap();
@@ -449,7 +466,31 @@ mod tests {
         assert_eq!(json["notes"][0]["offset"], 11);
         assert_eq!(json["notes"][0]["end"], 17);
         assert_eq!(json["highlights"][0]["color"], "yellow");
+        assert_eq!(json["highlights"][0]["name"], "important");
+        assert_eq!(json["highlights"][0]["shape"], "underline");
         assert!(json["sidecar"].is_null());
+    }
+
+    /// `--name` lists the highlights of one palette name, as the
+    /// highlights list does after Space on one of them.
+    #[test]
+    fn lists_the_highlights_of_one_name() {
+        let dir = TempDir::new("name");
+        let paths = Paths::under(&dir.0);
+        let doc = dir.0.join("book.txt");
+        std::fs::write(&doc, "first line\nsecond line here\nthird\n").unwrap();
+        let mut st = DocState::default();
+        st.add_highlight(CharRange::new(0, 5), "yellow", "first");
+        st.add_highlight(CharRange::new(11, 17), "cyan", "second");
+        StateStore::new(paths.state_dir())
+            .save(&DocKey::for_path(&doc), &st)
+            .unwrap();
+        let r = build(&doc, &paths, Some("Question"));
+        assert_eq!(r.highlights.len(), 1);
+        assert_eq!(r.highlights[0].name, "question");
+        assert_eq!(r.highlights[0].text, "second");
+        assert_eq!(build(&doc, &paths, None).highlights.len(), 2);
+        assert!(build(&doc, &paths, Some("nothing")).highlights.is_empty());
     }
 
     #[test]
@@ -485,7 +526,7 @@ mod tests {
         let dir = TempDir::new("empty");
         let paths = Paths::under(&dir.0);
         let doc = dir.0.join("missing.md");
-        let r = build(&doc, &paths);
+        let r = build(&doc, &paths, None);
         assert!(r.position.is_none() && r.bookmarks.is_empty());
         let text = render(&r);
         assert!(text.contains("No saved reading position."));
@@ -516,7 +557,7 @@ mod tests {
                 None,
             )
             .unwrap();
-        let r = build(&doc, &paths);
+        let r = build(&doc, &paths, None);
         let s = r.sidecar.unwrap();
         assert_eq!(s.rel, "sub/b.md");
         assert_eq!((s.mark.offset, s.mark.pct), (2, 50));
