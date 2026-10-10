@@ -4,11 +4,73 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
-### One program, one download (B1-o1 and B1-o2)
+In short: beta 1 adds study tools (study cards with SM-2 scheduling and sync, a self-test, recall prompts), links between notes with seven export formats, tracked changes and comments written back to Word files, a named highlight palette, regular-expression find and replace, Markdown paste, a preview pane, polished HTML, DAISY 2.02 books and recorded DAISY narration, braille (BRF) files such as NLS BARD downloads, five more formats through carta, offline searchable help, optional components fetched for you (including from your own repository), update checks, and one download per system holding both programs.
 
-- **`tw` is the terminal program.** `tw` alone, or `tw FILE`, opens the terminal reader; `tw COMMAND` runs a command without it, as before. `textweaver` is a second name for the same program, so `textweaver FILE` still opens the reader: a link on Linux and macOS, and a small launcher, `textweaver.exe`, on Windows. `tw --help` and `textweaver --help` print the same help. `tw` with no arguments used to print a two-line hint; it now opens the reader, and refuses in one error line when standard output is not a terminal.
-- **One download per system and processor**, holding the app, `tw`, the speech engine helpers (the eSpeak NG helpers on Windows included), and the complete documentation: `windows-x86_64.zip`, `macos-universal.zip` (`textweaver.app` beside `tw`; it was a tarball), and for Linux on x86_64 and aarch64 an AppImage and a tarball. The separate `-gui` packages are gone. The Linux AppImage starts the app by default, `tw` with `--tw` or through a link named `tw` or `textweaver`; the terminal and app AppImages of 0.1.0-alpha.9 and earlier are offered it as their update.
-- **`tw changes accept FILE` and `tw changes reject FILE`** replace `--accept-all` and `--reject-all`, which still work, hidden, through beta 1.
+### Reading and speech
+
+- **Stop at the end of a section or after a set time,** and **repeat the current sentence slower** (Shift+X).
+- **Recorded narration in DAISY 3 and 2.02 books** plays as you read, the highlight following each phrase; speech reads any text without audio (`[reading] book_audio`).
+- **An eSpeak NG helper program** runs eSpeak NG out of process on Windows, so any installed eSpeak NG works with any build and a crash cannot take the reader down.
+- **Speech never stays silent while an engine works:** engines fall back in order, each source is named ("Eloquence (OpenEVV, direct)"), and engines that cannot exist on the system are hidden. OpenEVV's root dictionary now loads in the background after speech starts.
+
+### Study and notes
+
+- **Study cards** from highlights, notes and headings; a study session graded Again, Hard, Good or Easy; **SM-2 scheduling** ("Due today: 7 cards"); cards and grades **sync** between computers. `tw study due`.
+- **Self-test** from the study sheet, and optional **recall prompts** at section ends.
+- **Links between notes** with the ten star relation types, "What links here", and `tw notes links`; **knowledge-graph export** as JSON, DOT, Markdown, GraphML, Mermaid, PlantUML and a CSV edge list.
+- **A named highlight palette** (important, define, question, example, review): Alt+1 to Alt+5, a distinct shape and braille typeform for each name, filtering and collecting by name.
+
+### Documents and conversion
+
+- **Tracked changes and comments:** a list with author and date in words; accept or reject one, by author, or all; reply, resolve and add comments; **write the decisions back into the Word file** in place, with a backup; optional **tracked edits** from edit mode under `[authoring] author`.
+- **DAISY 2.02 books** open from `ncc.html`, their folder, or a zip.
+- **Braille files (BRF and BRL),** such as NLS BARD's braille downloads, are read as print through liblouis, with "Show original Braille".
+- **carta** reads Org, reStructuredText, MediaWiki, DokuWiki and Jira, and writes AsciiDoc, Typst, LaTeX, MediaWiki and Org, in pure Rust.
+- **Polished HTML pages:** typography from your reading settings, highlighted code that never relies on color alone, figures, print and forced-colors styles.
+
+### Writing and editing
+
+- **Find and replace with regular expressions,** captures, spoken previews ("Match 2 of 5, line 12: teh becomes the"), and a panel in the app.
+- **Formatted text pastes as Markdown** (in the terminal reader, and in the app on Windows); paste as plain text with Ctrl+Shift+M in the app and Alt+Q in the terminal reader.
+- **A context menu** (Applications key, Shift+F10, right-click), native on Windows.
+- **A preview pane** beside the editor (Alt+F5), and one setting for the browser preview, "Browser preview follows".
+
+### The app
+
+- The keyboard list and the command palette filter as you type, with short names and the key on each row; F1 explains the row.
+- **Customizable buttons**; the toolbar's navigation pair is now previous and next paragraph.
+- The Colors dialog measures every row and each highlight name, and respects Windows high contrast.
+- The menu bar is hidden by default on Windows (Alt or F10 shows it), menus have no duplicate commands, the window is opaque on every graphics card, and the loom logo is the icon.
+- "Updated to" is said once after an update.
+
+### The terminal reader and the command line
+
+- **`tw` is the one terminal program:** `tw` or `tw FILE` opens the reader, `tw COMMAND` runs headless, and `textweaver` is a second name for it.
+- `tw changes accept|reject FILE` replace `--accept-all` and `--reject-all`, which still work through beta 1.
+
+### Settings and data
+
+- **A developer profile example** (`docs/examples/developer-profile.toml`), and `[export] audio_format` for the format offered first.
+- Code blocks are read by default (`[speech] skip_code` is off).
+- Export asks where to save and under what name.
+
+### Help and documentation
+
+- **Help, Documentation opens the bundled guides in textweaver;** **Search help** finds commands, keys, settings and guide sections.
+- The guides were revised for university-level readers; the GUI is "the textweaver app", not "the window".
+- Every error message gives a next step.
+
+### Components and updates
+
+- **Optional components from your own repository or folder** (`components.toml`), with a GitHub token kept only in the system credential store.
+- **ffmpeg, liblouis and Pandoc fetched for you** when a feature needs them, from their official releases.
+- **Update checks:** asked on first run, at most once a day, never downloading without asking; packages verified against the release checksums. `tw update`.
+
+### Packages and the build
+
+- **One download per system and processor,** holding the app, `tw`, every engine helper and the complete documentation; the separate `-gui` packages are gone. The Linux AppImage starts the app by default.
+- Every package carries the complete user documentation, and a missing guide is a warning, never a failure.
+- Copyright (C) 2026 Jon Pielaet, in `NOTICE`, the README, `--version` and About.
 
 ## [0.1.0-alpha.9] - 2026-10-04
 
