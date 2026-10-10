@@ -101,7 +101,7 @@ Return settings to their defaults:
 tw settings reset
 ```
 
-It says how many settings will change and asks you to type `y` first. `--yes` skips the question. To reset only one section, add `--section` and the section name. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `speech.dectalk`, `speech.piper`, `highlight`, `normalization`, `normalization.community_lexicon`, `normalization.medical_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `braille`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, `preview`, `lexicon`, `stats`, `summary`, `dictation`, `interface`, `gui`, `colors`, and `keymap` (your key overrides). Sections not in this list, added by a newer textweaver or a build with extra features, can be reset by name too. A reset is backed up like an import.
+It says how many settings will change and asks you to type `y` first. `--yes` skips the question. To reset only one section, add `--section` and the section name. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `speech.dectalk`, `speech.espeak`, `speech.piper`, `highlight`, `normalization`, `normalization.community_lexicon`, `normalization.medical_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `braille`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, `preview`, `lexicon`, `stats`, `summary`, `dictation`, `interface`, `gui`, `colors`, and `keymap` (your key overrides). Sections not in this list, added by a newer textweaver or a build with extra features, can be reset by name too. A reset is backed up like an import.
 
 ## Example file
 
@@ -209,6 +209,12 @@ DECtalk. See [the DECtalk guide](dectalk.md).
 
 - `library`, not set by default: the DECtalk library to load. `TEXTWEAVER_DECTALK_LIBRARY` wins over it.
 
+### [speech.espeak]
+
+eSpeak NG. See [the speech guide](speech.md#speechespeak-espeak-ng).
+
+- `helper`, default `"auto"`: where eSpeak NG runs. `"auto"` uses its helper program on Windows when the helper and an installed eSpeak NG are found, and runs it inside textweaver elsewhere; `"always"` uses only the helper program, and `"never"` only runs it inside textweaver.
+
 ### [speech.piper]
 
 Piper neural voices.
@@ -217,7 +223,7 @@ Piper neural voices.
 - `voice`, not set by default: the Piper voice to start with, by id, such as `"en_US-amy-medium"`. Unset, the first installed voice.
 - `phonemizer`, default `"auto"`: how Piper turns text into sounds. `"library"` uses the espeak-ng library, `"rust"` textweaver's own, and `"auto"` the library when it is installed.
 
-A change to `[speech.dectalk]` or `[speech.piper]` takes effect when speech restarts.
+A change to `[speech.dectalk]`, `[speech.espeak]`, or `[speech.piper]` takes effect when speech restarts.
 
 ### [speech.voice_params]
 

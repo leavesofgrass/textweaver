@@ -24,7 +24,7 @@ use textweaver_app::{App, AppConfig, Command, ListKey, PromptKey};
 /// Strings allowed to name a chord, with why: (file name, text).
 const ALLOWED: &[(&str, &str)] = &[
     // The terminal's own paste key, which textweaver does not bind.
-    ("authoring.rs", "Control Shift V"),
+    ("clipboard.rs", "Control Shift V"),
     // The definition of an extra binding, parsed into the keymap.
     ("extra.rs", "Shift+Y"),
     // `textweaver --help`, printed by clap before the keymap exists.
@@ -372,17 +372,17 @@ fn keys_are_spoken_by_name_and_written_on_the_status_line() {
         "{said:?}"
     );
     app.dispatch(Command::ListKey(ListKey::Escape));
-    // The command palette: Tab completes and says the keys by name.
+    // The command palette: Tab completes and says the command's short
+    // name and its key by name.
     log.clear();
     app.dispatch(Command::Action(ActionId::CommandPalette));
     for c in "next_sent".chars() {
         app.dispatch(Command::PromptKey(PromptKey::Char(c)));
     }
     app.dispatch(Command::PromptKey(PromptKey::Tab));
-    let said = heard(&log, "next_sentence:");
+    let said = heard(&log, "Next sentence, ");
     assert!(
-        said.iter()
-            .any(|t| t.contains("Alt period or Alt Down Arrow")),
+        said.iter().any(|t| t == "Next sentence, Alt period"),
         "{said:?}"
     );
     app.dispatch(Command::PromptKey(PromptKey::Escape));

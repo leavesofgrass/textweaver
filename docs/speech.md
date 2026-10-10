@@ -12,7 +12,7 @@ Each speech engine has a short id, used by `--backend` and by the `backend` sett
 - `piper`: Piper neural voices, run inside textweaver on RTen, a speech model runtime written in Rust. Every platform. It is available once you download a voice in the voice manager (Alt+V). Words are highlighted from the voice's own timing. See [Piper voices](#piper-voices) below.
 - `nsspeech`: Apple's system voices through the classic engine. macOS only. It answers fastest.
 - `avspeech`: Apple's system voices through AVSpeechSynthesizer. macOS only. It highlights words most exactly. On macOS 13 and later the system voices include Eloquence (Reed, Shelley, and others).
-- `espeak`: eSpeak NG, inside textweaver itself. In builds made with it: the Linux AppImage and tarball, and the Linux install script. textweaver loads libespeak-ng when it starts, so install the `espeak-ng` package to use it; without it, the backend is simply not available. `TEXTWEAVER_ESPEAK_LIBRARY` names the library file to load instead. A copy in textweaver's components folder, from your own components source, is loaded first (see [Optional components](components.md#your-own-components-source)).
+- `espeak`: eSpeak NG, from a copy you installed. It runs in one of two ways. On Linux and macOS it runs inside textweaver itself, in builds made with it (the Linux AppImage and tarball, and the Linux install script): install the `espeak-ng` package to use it. On Windows it runs in a small helper program, `textweaver-espeak-host`, which the package includes: install eSpeak NG with its Windows installer, 64-bit or 32-bit, and textweaver starts the helper built for that copy. Either way, without eSpeak NG the backend is simply not available. `TEXTWEAVER_ESPEAK_LIBRARY` names the library file to load instead, and a copy in textweaver's components folder, from your own components source, is loaded first (see [Optional components](components.md#your-own-components-source)). The setting `[speech.espeak] helper` chooses between the two ways; see [below](#speechespeak-espeak-ng).
 - `speechd`: Speech Dispatcher, the speech service Orca uses on Linux. In builds made with it; the Linux install script includes it.
 - `omnivox`: an Omnivox speech server, a separate program found on your `PATH`. It supports rate and tones, but not pitch, volume, or voices.
 - `null`: silent. Used when nothing else works, and by `--no-speech`.
@@ -304,7 +304,18 @@ phonemizer = "auto"
 - `voice`: the voice Piper starts with when `[speech] voice` does not name one of its voices. Default: the first English voice.
 - `phonemizer`: `auto` (the installed eSpeak NG, else the built-in one), `library`, or `rust`.
 
-`[speech.voice_params]` keeps each voice's own rate and pitch, written back whenever you change voices; you do not need to edit it by hand. All three sections, `[speech.dectalk]`, `[speech.piper]`, and `[speech.voice_params]`, are typed settings, so `tw settings export` lists them and `tw settings import` checks their values like any other setting.
+### [speech.espeak]: eSpeak NG
+
+```toml
+[speech.espeak]
+helper = "auto"
+```
+
+- `helper`: where eSpeak NG runs. `"auto"`, the default, runs it in its helper program on Windows when the helper and an installed eSpeak NG are both found, and inside textweaver otherwise; on Linux and macOS it runs inside textweaver, and turns to the helper only if the library cannot be loaded there. `"always"` uses the helper program and nothing else; `"never"` runs eSpeak NG inside textweaver and nothing else. In Settings this is "eSpeak NG helper program". A change takes effect when speech restarts.
+
+The two ways differ in what happens around the engine, not in what you hear. In the helper, a crash in eSpeak NG ends only the helper: the sentence reports an error, and the next one starts a fresh helper while the reader carries on. textweaver also plays the helper's audio itself, so eSpeak NG then uses the sound device you chose, pauses at once, and is highlighted word by word as each word is heard (see [How exactly words are highlighted](#how-exactly-words-are-highlighted)). And the helper is built for the library rather than for textweaver, so a 32-bit eSpeak NG works with 64-bit textweaver, and the 64-bit one with textweaver for ARM. Inside textweaver, eSpeak NG plays its own sound on the system's default device, and starts about a fifth of a second sooner when speech first starts. Both ways read the same words at the same moments: they drive the same library with the same settings.
+
+`[speech.voice_params]` keeps each voice's own rate and pitch, written back whenever you change voices; you do not need to edit it by hand. All four sections, `[speech.dectalk]`, `[speech.espeak]`, `[speech.piper]`, and `[speech.voice_params]`, are typed settings, so `tw settings export` lists them and `tw settings import` checks their values like any other setting.
 
 ## How text is prepared for speech
 
@@ -407,8 +418,8 @@ The pauses are 400 milliseconds after a heading, 300 after a paragraph and 150 a
 
 How the pause is made depends on who plays the sound:
 
-- **Eloquence, Windows voices (SAPI), DECtalk and Piper.** textweaver plays these engines' audio itself, and plays the pause as silence between two sentences. The next sentence is prepared while the first is spoken, as always, so the pause adds nothing to the wait.
-- **Apple voices, Speech Dispatcher and eSpeak NG.** These engines play their own sound. textweaver waits for the sentence to end, waits out the pause, then hands the engine the next sentence.
+- **Eloquence, Windows voices (SAPI), DECtalk, Piper, and eSpeak NG in its helper program.** textweaver plays these engines' audio itself, and plays the pause as silence between two sentences. The next sentence is prepared while the first is spoken, as always, so the pause adds nothing to the wait.
+- **Apple voices, Speech Dispatcher, and eSpeak NG inside textweaver.** These engines play their own sound. textweaver waits for the sentence to end, waits out the pause, then hands the engine the next sentence.
 
 Either way:
 
@@ -436,8 +447,8 @@ For a document that quotes SSML as an example, turn this off: `markup_pauses = f
 
 How closely the highlight follows the voice depends on what the engine tells textweaver.
 
-- **Eloquence and DECtalk.** textweaver plays their audio itself and learns the moment each word is heard. The highlight is exact.
-- **SAPI, eSpeak NG, and avspeech.** Each word comes with its time in the audio. textweaver shows it at that time plus `[speech] latency_offset_ms`, 120 ms by default, to allow for the sound card's delay. If the highlight runs ahead of what you hear, raise the offset; if it lags, lower it.
+- **Eloquence, DECtalk, and eSpeak NG in its helper program.** textweaver plays their audio itself and learns the moment each word is heard. The highlight is exact.
+- **SAPI, eSpeak NG inside textweaver, and avspeech.** Each word comes with its time in the audio. textweaver shows it at that time plus `[speech] latency_offset_ms`, 120 ms by default, to allow for the sound card's delay. If the highlight runs ahead of what you hear, raise the offset; if it lags, lower it.
 - **nsspeech and Speech Dispatcher.** The engine reports each word as it speaks it, and textweaver shows it at once.
 - **Omnivox, and any voice that reports no words.** textweaver estimates: it moves the highlight one word at a time at the speaking rate. `[highlight] speed` (0.5 to 1.5) speeds the estimate up or slows it down. Word-level highlighting with Omnivox is not promised.
 
@@ -445,11 +456,12 @@ Some SAPI voices, such as Code Factory's, report no word times. textweaver tells
 
 ## Keep the helper programs next to textweaver
 
-Eloquence, SAPI voices, and DECtalk run in small helper programs, called engine hosts. They must stay in the same folder as `textweaver` and `tw`, with the dictionaries folder `ibmtts-dictionaries`:
+Eloquence, SAPI voices, DECtalk, and on Windows eSpeak NG run in small helper programs, called engine hosts. They must stay in the same folder as `textweaver` and `tw`, with the dictionaries folder `ibmtts-dictionaries`:
 
 - `textweaver-eci-host`, and on Windows `textweaver-eci-host-x86.exe`;
 - on Windows, `textweaver-sapi-host.exe` and `textweaver-sapi-host-x86.exe`;
-- `textweaver-dectalk-host`, and on Windows `textweaver-dectalk-host-x86.exe`.
+- `textweaver-dectalk-host`, and on Windows `textweaver-dectalk-host-x86.exe`;
+- on Windows, `textweaver-espeak-host.exe` and `textweaver-espeak-host-x86.exe`.
 
 If you copy only `textweaver` and `tw` somewhere else, those engines show as not available. The SAPI engine is available only when its 64-bit host is found. Environment variables can point to hosts elsewhere; see below.
 
@@ -469,7 +481,7 @@ The id stays the same when you restart or plug the device in again. A change in 
 
 When the chosen device is not connected, speech plays on the default, and `tw backends --devices` ends with a line that says so. When the device in use goes away, such as a headset unplugged or switched off, textweaver opens the sound output again at once, on the chosen device if it is back, else on the current default, and the reading goes on from where it was.
 
-The setting applies to the engines whose audio textweaver plays itself: Eloquence, the Windows SAPI and OneCore voices, DECtalk, and Piper. eSpeak NG, Speech Dispatcher, and the Apple voices play on the system's default device. The setting belongs to this computer and never syncs.
+The setting applies to the engines whose audio textweaver plays itself: Eloquence, the Windows SAPI and OneCore voices, DECtalk, Piper, and eSpeak NG in its helper program. eSpeak NG inside textweaver, Speech Dispatcher, and the Apple voices play on the system's default device. The setting belongs to this computer and never syncs.
 
 ## When the engine stops or goes silent
 
@@ -493,7 +505,9 @@ These variables change how the engines are found for one run. They win over the 
 - `TEXTWEAVER_SAPI_HOST_X86`: the 32-bit SAPI host program.
 - `TEXTWEAVER_DECTALK_LIBRARY`: the DECtalk library to load.
 - `TEXTWEAVER_DECTALK_HOST`: the DECtalk host program.
-- `TEXTWEAVER_ESPEAK_OUTPUT`: set to `virtual` to have eSpeak NG make the audio and throw it away, keeping real timing. For machines with no sound device.
+- `TEXTWEAVER_ESPEAK_LIBRARY`: the eSpeak NG library to load, after the components folder's copy.
+- `TEXTWEAVER_ESPEAK_HOST`: the eSpeak NG helper program, instead of the one next to textweaver.
+- `TEXTWEAVER_ESPEAK_OUTPUT`: set to `virtual` to have eSpeak NG make the audio and throw it away, keeping real timing, in either way of running it. For machines with no sound device.
 - `TEXTWEAVER_OMNIVOX`: the Omnivox server program, instead of `omnivox` on your `PATH`.
 - `TEXTWEAVER_OMNIVOX_ARGS`: extra arguments for the Omnivox server, separated by spaces.
 

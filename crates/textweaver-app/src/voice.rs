@@ -818,10 +818,11 @@ impl App {
 
     /// Whether the Say Status key acts on the focused row of the list
     /// shown ([`crate::ListKey::Details`]): a preview of the file in the
-    /// file browser, a sample of the voice in the voice list. In other
-    /// lists it repeats the list's introduction.
+    /// file browser, a sample of the voice in the voice list; in a list
+    /// of commands, whose F1 explains the focused row, the list's
+    /// introduction. In other lists it repeats the list's introduction.
     pub fn list_has_details(&self) -> bool {
-        self.browse_location().is_some() || self.voice_list_open()
+        self.browse_location().is_some() || self.voice_list_open() || self.command_list_shown()
     }
 
     /// Shows the voice manager's filters and its fetch row as controls of

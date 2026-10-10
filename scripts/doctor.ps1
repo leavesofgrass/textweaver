@@ -235,7 +235,7 @@ if ($Tw) {
 
     Add-Line
     Add-Line "Engine hosts beside tw.exe, in ${dir}:"
-    foreach ($h in 'textweaver-eci-host.exe', 'textweaver-eci-host-x86.exe', 'textweaver-sapi-host.exe', 'textweaver-sapi-host-x86.exe', 'textweaver-dectalk-host.exe', 'textweaver-dectalk-host-x86.exe') {
+    foreach ($h in 'textweaver-eci-host.exe', 'textweaver-eci-host-x86.exe', 'textweaver-sapi-host.exe', 'textweaver-sapi-host-x86.exe', 'textweaver-dectalk-host.exe', 'textweaver-dectalk-host-x86.exe', 'textweaver-espeak-host.exe', 'textweaver-espeak-host-x86.exe') {
         if (Test-Path -LiteralPath (Join-Path $dir $h)) { Add-Line "  ${h}: present" } else { Add-Line "  ${h}: missing" }
     }
     $dict = Join-Path $dir 'ibmtts-dictionaries'

@@ -1070,8 +1070,8 @@ try {
 # W6a6: the command palette, in a second, silent run (a dialog closes only
 # with Escape, and the report types no keys, so the first run's font list
 # would stand in front of it). The Commands button opens it; its list is
-# the app's candidates, each read name first with its category ("Open,
-# File: Open a document. Ctrl+O."), and one row is the selected option.
+# the app's candidates, each read as its short name then its key ("Find next,
+# F3"; the explanation is the row's description), and one row is the selected option.
 if (-not $WindowEdge) {
     Say "### The command palette (a second run, silent; Commands button pressed; its list read with UI Automation)"
     Say ""
@@ -1114,8 +1114,8 @@ if (-not $WindowEdge) {
                     if ($popts.Count -lt 100) { $failures.Add("the palette lists only $($popts.Count) commands") }
                     $selected = @($popts | Where-Object { [TwXUia]::OptionLine($_) -match ', selected' })
                     if ($selected.Count -ne 1) { $failures.Add("the palette has $($selected.Count) selected rows, not 1") }
-                    $unnamed = @($popts | Select-Object -First 20 | Where-Object { $_.Current.Name -notmatch '^[^,]+, [^:]+: ' })
-                    if ($unnamed.Count -gt 0) { $failures.Add("a palette row is not name first with its category: $([TwXUia]::Q($unnamed[0].Current.Name))") }
+                    $unnamed = @($popts | Select-Object -First 20 | Where-Object { $_.Current.Name -notmatch '^[^,:]+(, [^:]+)?$' })
+                    if ($unnamed.Count -gt 0) { $failures.Add("a palette row is not its short name, then its key (no explanation): $([TwXUia]::Q($unnamed[0].Current.Name))") }
                 }
             }
             $palFgEnd = [TwXUia]::IsForeground($palPid)

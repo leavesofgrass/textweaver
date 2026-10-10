@@ -114,18 +114,7 @@ pub struct LibraryCandidate {
     pub exists: bool,
 }
 
-/// A library's machine architecture.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Arch {
-    /// 32-bit x86.
-    X86,
-    /// x86-64.
-    X64,
-    /// 64-bit ARM.
-    Arm64,
-    /// Something else.
-    Other,
-}
+pub use textweaver_enginehost::arch::{Arch, arch_from_header, library_arch};
 
 /// Where the standard install locations live (injectable for tests).
 #[derive(Clone, Debug, Default)]
@@ -245,61 +234,6 @@ pub fn library_candidates(option: Option<&Path>, places: &Places) -> Vec<Library
         }
     }
     out
-}
-
-/// The architecture in a PE (Windows) or ELF (Linux) header, from the
-/// file's first bytes.
-pub fn arch_from_header(bytes: &[u8]) -> Option<Arch> {
-    if bytes.starts_with(b"MZ") {
-        let at = u32::from_le_bytes(bytes.get(0x3C..0x40)?.try_into().ok()?) as usize;
-        if bytes.get(at..at + 4)? != b"PE\0\0" {
-            return None;
-        }
-        let machine = u16::from_le_bytes(bytes.get(at + 4..at + 6)?.try_into().ok()?);
-        return Some(match machine {
-            0x014C => Arch::X86,
-            0x8664 => Arch::X64,
-            0xAA64 => Arch::Arm64,
-            _ => Arch::Other,
-        });
-    }
-    if bytes.starts_with(b"\x7fELF") {
-        let little = *bytes.get(5)? == 1;
-        let raw = bytes.get(18..20)?;
-        let machine = if little {
-            u16::from_le_bytes([raw[0], raw[1]])
-        } else {
-            u16::from_be_bytes([raw[0], raw[1]])
-        };
-        return Some(match (bytes.get(4)?, machine) {
-            (1, 3) => Arch::X86,
-            (2, 62) => Arch::X64,
-            (2, 183) => Arch::Arm64,
-            _ => Arch::Other,
-        });
-    }
-    None
-}
-
-/// The architecture of the library at `path` (reads its header).
-pub fn library_arch(path: &Path) -> Option<Arch> {
-    use std::io::Read;
-    let mut f = std::fs::File::open(path).ok()?;
-    let mut head = vec![0u8; 4096];
-    let n = f.read(&mut head).ok()?;
-    head.truncate(n);
-    if let Some(a) = arch_from_header(&head) {
-        return Some(a);
-    }
-    // A PE header beyond the first 4 KiB: read up to it.
-    if head.starts_with(b"MZ") && head.len() >= 0x40 {
-        let at = u32::from_le_bytes(head[0x3C..0x40].try_into().ok()?) as usize;
-        if at < 16 * 1024 * 1024 {
-            let bytes = std::fs::read(path).ok()?;
-            return arch_from_header(bytes.get(..at + 6)?);
-        }
-    }
-    None
 }
 
 /// The library textweaver will use, and why.

@@ -511,6 +511,7 @@ playback-time-up =
        *[other] انتهى الوقت بعد { $minutes } دقيقة. { $key } للمتابعة.
     }
 playback-repeat-slower = إعادة أبطأ، بسرعة { $rate } كلمة في الدقيقة.
+playback-recall-prompt = قل ما تتذكره من { $section }. { $key } للمتابعة.
 
 ## سطر العنوان وقول الحالة.
 
@@ -606,8 +607,21 @@ help-the-command = الأمر { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = أمر غير معروف: { $text }.
-help-shortcuts-intro = اختصارات لوحة المفاتيح، { $n } أمرًا. السهمان لأعلى ولأسفل للتنقل، Enter للتشغيل، Escape للإغلاق.
+help-shortcuts-intro = اختصارات لوحة المفاتيح، { $n } أمرًا. اكتب للتصفية. ينتقل Page Down إلى المجموعة التالية، ويشرح F1 الأمر، ويشغّله Enter، ويغلق Escape.
 help-shortcuts-title = اختصارات لوحة المفاتيح
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = اختصارات لوحة المفاتيح المطابقة لـ { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } من { $total } أمرًا مطابقة.
+help-shortcuts-filter-none = لا يطابق أي أمر { $query }. يزيل Backspace الأحرف.
+help-shortcuts-filter-cleared = مُسح عامل التصفية، { $n } أمرًا.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }، { $n ->
+        [one] أمر واحد
+       *[other] { $n } أوامر
+    }. { $item }
 help-title = مساعدة
 help-intro = مساعدة. السهمان لأعلى ولأسفل للتنقل، Escape للإغلاق.
 
@@ -846,6 +860,7 @@ action-previous-note = الانتقال إلى الملاحظة السابقة
 action-delete-note = حذف الملاحظة أو التمييز عند المؤشر
 action-highlight-selection = تمييز التحديد، أو الجملة عند المؤشر
 action-export-study-sheet = تصدير الملاحظات والتمييزات كورقة دراسة بصيغة ماركداون، مجمّعة حسب العنوان
+action-self-test = اختبر نفسك في الملاحظات والتمييزات: Enter يُظهر كل إجابة
 action-open = فتح مستند
 action-open-path = فتح مستند بكتابة مساره
 action-open-library = فتح المكتبة: مستندات مجلدات مكتبتك والملفات الأخيرة
@@ -892,7 +907,9 @@ action-cycle-typing-echo = التنقل بين ترديد الكتابة: الح
 action-select-all = تحديد كل النص
 action-delete-word-before = حذف الكلمة قبل المؤشر
 action-delete-word-after = حذف الكلمة بعد المؤشر
-action-paste = لصق آخر نص نُسخ أو قُصّ في textweaver؛ يعمل لصق الطرفية أيضًا
+action-paste = لصق الحافظة؛ يصبح النص المنسق من متصفح أو معالج نصوص بتنسيق Markdown
+action-paste-plain-text = لصق الحافظة نصًا عاديًا دون أي من تنسيقه
+action-context-menu = فتح قائمة السياق: القص والنسخ واللصق والأوامر المناسبة لموضع المؤشر
 action-insert-citation = إدراج استشهاد: اختيار مرجع، ثم إعطاء رقم صفحة أو موضع آخر
 action-add-reference = إضافة مرجع إلى مكتبتك بـDOI أو ISBN
 action-insert-bibliography = إدراج قائمة مراجع الأعمال المستشهد بها، عند المؤشر
@@ -1426,6 +1443,27 @@ notes-sheet-before-first-heading = قبل العنوان الأول
 notes-sheet-tags = (الوسوم: { $tags })
 # $color is the highlight's color name.
 notes-sheet-highlighted = مُيِّز، { $color }.
+
+## الاختبار الذاتي: أسئلة بإجابات مخفية (crate::reveal).
+
+reveal-self-test-title = اختبار ذاتي: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] اختبار ذاتي، سؤال واحد. Enter يُظهر الإجابة. مسافة للإجابة بصوت عالٍ.
+        [two] اختبار ذاتي، سؤالان. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+        [few] اختبار ذاتي، { $n } أسئلة. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+        [zero] اختبار ذاتي، { $n } سؤال. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+       *[other] اختبار ذاتي، { $n } سؤالًا. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+    }
+reveal-nothing-to-test = لا ملاحظات أو تمييزات للاختبار. أضف ملاحظة أو تمييزًا أولًا.
+reveal-prompt-note = { $note } (في { $section })
+reveal-prompt-highlight = ماذا ميّزت في { $section }؟
+reveal-row-shown = { $prompt } الإجابة: { $answer }
+reveal-answer = الإجابة: { $answer }
+reveal-listening = أجب بصوت عالٍ الآن. مسافة للإيقاف.
+reveal-you-said = قلت: { $words }. Enter يُظهر الإجابة.
+reveal-heard-nothing = لم تُسمع إجابة. مسافة للمحاولة مرة أخرى.
+reveal-no-dictation = الإجابة بصوت عالٍ تحتاج الإملاء، وهو غير موجود في هذا الإصدار.
 
 ## البحث، والإشارات المرجعية، والتحديد.
 
@@ -2126,6 +2164,8 @@ choice-reading-stop-at-heading = العنوان التالي
 choice-reading-stop-at-chapter = الفصل التالي
 setting-reading-stop-after-minutes = مؤقت القراءة
 setting-reading-stop-after-minutes-help = تتوقف القراءة المستمرة عند نهاية الجملة بعد هذا العدد من دقائق القراءة، وتقول ذلك. الإيقاف المؤقت يوقف الساعة، والإيقاف يبدأها من جديد. 0 يطفئ المؤقت.
+setting-reading-recall-prompts = أسئلة التذكر
+setting-reading-recall-prompts-help = عند نهاية القسم، تطلب منك القراءة أن تقول ما تتذكره. إذا كان التوقف عند نهاية القسم على أبدًا، تتوقف القراءة لذلك عند العنوان التالي. تتابع القراءة بمفتاح القراءة.
 setting-display-theme = السمة
 setting-display-theme-help = السمة اللونية.
 setting-display-follow-os-theme = اتباع سمة النظام
@@ -2569,6 +2609,15 @@ edit-pasted-start =
        *[other] لُصق { $n } حرف: { $start }
     }
 edit-insert-failed = تعذّر الإدراج: { $error } لم يتغيّر النص.
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] لُصق سطر واحد: { $start }
+        [two] لُصق سطران: { $start }
+        [few] لُصقت { $n } أسطر: { $start }
+        [many] لُصق { $n } سطرًا: { $start }
+       *[other] لُصق { $n } سطر: { $start }
+    }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = لا يمكن تغيير الحروف من { $start } إلى { $end }: النص يحتوي { $len }.
 edit-change-failed = تعذّر تغيير النص: { $error } لم يتغيّر النص.
@@ -2981,6 +3030,67 @@ authoring-space-deleted = حُذفت المسافة.
 authoring-deleted = حُذفت { $text }.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = لا شيء منسوخ في { -brand } بعد. استخدم لصق طرفيتك، مثل { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = لُصق بتنسيق Markdown: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] عنوان واحد
+        [two] عنوانان
+        [few] { $n } عناوين
+        [many] { $n } عنوانًا
+       *[other] { $n } عنوان
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] فقرة واحدة
+        [two] فقرتان
+        [few] { $n } فقرات
+        [many] { $n } فقرة
+       *[other] { $n } فقرة
+    }
+paste-part-list =
+    { $n ->
+        [one] قائمة واحدة
+        [two] قائمتان
+        [few] { $n } قوائم
+        [many] { $n } قائمة
+       *[other] { $n } قائمة
+    }
+paste-part-table =
+    { $n ->
+        [one] جدول واحد
+        [two] جدولان
+        [few] { $n } جداول
+        [many] { $n } جدولًا
+       *[other] { $n } جدول
+    }
+paste-part-code =
+    { $n ->
+        [one] كتلة برمجية واحدة
+        [two] كتلتان برمجيتان
+        [few] { $n } كتل برمجية
+        [many] { $n } كتلة برمجية
+       *[other] { $n } كتلة برمجية
+    }
+paste-part-quote =
+    { $n ->
+        [one] اقتباس واحد
+        [two] اقتباسان
+        [few] { $n } اقتباسات
+        [many] { $n } اقتباسًا
+       *[other] { $n } اقتباس
+    }
+paste-part-link =
+    { $n ->
+        [one] رابط واحد
+        [two] رابطان
+        [few] { $n } روابط
+        [many] { $n } رابطًا
+       *[other] { $n } رابط
+    }
+paste-empty = لا شيء للصق: الحافظة فارغة.
+paste-converting = جارٍ تحويل النص المنسق للصقه.
+paste-failed = تعذّر اللصق: { $error } جرّب اللصق كنص عادي.
 authoring-verbosity =
     { $level ->
         [low] مستوى التفصيل: منخفض.
@@ -3339,6 +3449,11 @@ define-still-loading = ما زال القاموس قيد التحميل.
 # إعدادات.
 setting-speech-dectalk-library = مكتبة DECtalk
 setting-speech-dectalk-library-help = مكتبة DECtalk المراد تحميلها؛ عدم الضبط يبحث في الأماكن المعتادة.
+setting-speech-espeak-helper = البرنامج المساعد لـ eSpeak NG
+setting-speech-espeak-helper-help = تشغيل eSpeak NG في برنامجه المساعد الخاص، حتى لا يُغلق تعطّل المحرك textweaver. الوضع التلقائي يستخدم البرنامج المساعد على Windows عند تثبيته، ويشغّل eSpeak NG داخل textweaver في غيره.
+choice-speech-espeak-helper-auto = تلقائي
+choice-speech-espeak-helper-always = البرنامج المساعد دائمًا
+choice-speech-espeak-helper-never = داخل textweaver
 setting-speech-piper-voices = مجلد أصوات Piper
 setting-speech-piper-voices-help = مجلد أصوات Piper؛ عدم الضبط يستخدم مجلد piper في مجلد بيانات textweaver.
 setting-speech-piper-voice = صوت Piper
@@ -3362,6 +3477,21 @@ gui-answer-delete = حذف
 gui-answer-remove = إزالة
 gui-answer-replace = استبدال
 gui-question-hint = Y للإجابة بنعم، وN للإجابة بلا، وEscape للإجابة بلا.
+gui-find-title = بحث واستبدال
+gui-find-what = البحث عن
+gui-find-with = الاستبدال بـ
+gui-find-match-case = مطابقة حالة الأحرف
+gui-find-whole-words = كلمات كاملة
+gui-find-regex = تعبير نمطي
+gui-find-across-lines = عبر الأسطر
+gui-find-next = البحث عن التالي
+gui-find-next-help = يحدد التطابق التالي.
+gui-find-replace = استبدال
+gui-find-replace-help = يستبدل التطابق المعروض وينتقل إلى التالي. الضغطة الأولى تبحث عن تطابق.
+gui-find-replace-all = استبدال الكل
+gui-find-replace-all-help = يذكر عدد التطابقات ويسأل مرة واحدة. تراجع واحد يعيدها كلها.
+gui-find-hint = Enter في حقل البحث يجد التطابق التالي، وEnter في حقل الاستبدال يستبدله. السهم لأعلى يستعيد النصوص السابقة. Escape يغلق.
+gui-find-empty = لا شيء للبحث عنه: اكتب النص في حقل البحث عن.
 gui-button-open = فتح…
 gui-button-font = الخط…
 gui-button-edit = بدء التحرير
@@ -3415,7 +3545,7 @@ gui-prompt-path-hint = اكتب مسار مستند، ثم اضغط Enter. يك�
 gui-prompt-hint = اضغط Enter للقبول، أو Escape للإلغاء. يستعيد السهمان لأعلى ولأسفل الإجابات السابقة.
 gui-palette-filter = اكتب لتصفية الأوامر
 gui-palette-list = الأوامر
-gui-palette-hint = يشغّل Enter أول نتيجة مطابقة، وينتقل Tab إلى القائمة.
+gui-palette-hint = يشغّل Enter أول نتيجة مطابقة، وينتقل Tab إلى القائمة، ويشرح F1 الأمر.
 gui-open-failed = تعذّر فتح { $name }: { $error }
 gui-uia-unavailable = إشعارات UI Automation متاحة في Windows فقط؛ ستُستخدم المنطقة الحية.
 gui-graphics-failed = تعذّر على النافذة تشغيل الرسوميات. قارئ الطرفية textweaver لا يحتاج إليها.
@@ -3672,6 +3802,7 @@ name-previous-note = الملاحظة السابقة
 name-delete-note = حذف الملاحظة أو التمييز
 name-highlight-selection = تمييز
 name-export-study-sheet = تصدير ورقة الدراسة
+name-self-test = اختبار ذاتي
 name-open = فتح
 name-open-path = فتح بالمسار
 name-open-library = المكتبة
@@ -3722,6 +3853,8 @@ name-select-all = تحديد الكل
 name-delete-word-before = حذف الكلمة السابقة
 name-delete-word-after = حذف الكلمة التالية
 name-paste = لصق
+name-paste-plain-text = لصق كنص عادي
+name-context-menu = قائمة السياق
 name-insert-citation = إدراج استشهاد
 name-add-reference = إضافة مرجع
 name-insert-bibliography = إدراج قائمة المراجع
@@ -3771,6 +3904,8 @@ menu-recent-none = لا توجد مستندات حديثة
 menu-not-available = { $name } غير متاح في هذا الإصدار.
 menu-no-access-key = لا يوجد عنصر بالمفتاح { $letter }.
 menu-closed = أُغلقت القوائم.
+menu-context = قائمة السياق
+menu-context-closed = أُغلقت قائمة السياق.
 menu-press-a-key = اضغط مفتاحًا لتسمع ما يفعله.
 menu-key-described = { $name }: { $help }. المفاتيح: { $keys }. في القوائم: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. المفاتيح: { $keys }.
@@ -3788,17 +3923,17 @@ choice-accessibility-interface-announcements-off = متوقفة
 choice-accessibility-interface-announcements-minimal = في حدها الأدنى
 choice-accessibility-interface-announcements-normal = عادية
 choice-accessibility-interface-announcements-full = كاملة
-palette-item = { $name }، { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }، { $category }: { $help }.
-palette-item-recent = { $name }، حديث، { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }، حديث، { $category }: { $help }.
+palette-item = { $name }، { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }، { $keys }، حديث
+palette-item-recent-no-keys = { $name }، حديث
 palette-list-title = الأوامر المطابقة لـ { $query }
 palette-list-title-all = الأوامر
 palette-list-intro =
     { $title }، { $n ->
         [one] أمر واحد
        *[other] { $n } أوامر
-    }. يشغّل Enter أحدها.
+    }. يشغّل Enter أحدها، ويشرحه F1.
 action-browse-files = تصفح الملفات والأرشيفات: يفتح Enter مجلدًا أو أرشيفًا أو مستندًا، ويصعد Backspace مستوى
 action-batch-convert = تحويل مجلد من المستندات إلى صيغة أخرى في الخلفية
 action-export-audio = تصدير المستند صوتًا منطوقًا: MP3 أو FLAC أو Opus أو WAV أو كتاب صوتي M4B

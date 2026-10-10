@@ -1736,4 +1736,42 @@ mod tests {
             vec![k("Tab")]
         );
     }
+
+    /// The clash check behind the paste and context menu keys (B1-cm):
+    /// Ctrl+Shift+V is Choose a voice in the window, terminals cannot tell
+    /// Ctrl+Shift+V from Ctrl+V, and Shift+F10 is the terminal's Settings,
+    /// so paste as plain text and the context menu take the nearest free
+    /// keys there.
+    #[test]
+    fn paste_plain_text_and_context_menu_keys() {
+        for platform in [Platform::Windows, Platform::Linux] {
+            let gui = Keymap::defaults(platform, Frontend::Gui);
+            assert_eq!(
+                gui.lookup(&k("Ctrl+Shift+V"), Layer::Edit),
+                Some(ActionId::ChooseVoice)
+            );
+            assert_eq!(
+                gui.lookup(&k("Ctrl+Shift+M"), Layer::Edit),
+                Some(ActionId::PastePlainText)
+            );
+            assert_eq!(
+                gui.lookup(&k("Shift+F10"), Layer::Browse),
+                Some(ActionId::ContextMenu)
+            );
+            let term = Keymap::defaults(platform, Frontend::Terminal);
+            assert_eq!(
+                term.lookup(&k("Alt+A"), Layer::Edit),
+                Some(ActionId::PastePlainText)
+            );
+            assert_eq!(term.lookup(&k("Alt+A"), Layer::Browse), None);
+            assert_eq!(
+                term.lookup(&k("Shift+F10"), Layer::Browse),
+                Some(ActionId::Settings)
+            );
+            assert_eq!(
+                term.lookup(&k("Ctrl+F10"), Layer::Edit),
+                Some(ActionId::ContextMenu)
+            );
+        }
+    }
 }

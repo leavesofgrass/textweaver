@@ -372,6 +372,59 @@ pub fn ellipsize(text: &str, mut fits: impl FnMut(&str) -> bool) -> String {
     }
 }
 
+/// The rows of a list of commands for a [`ChoiceList`]: the text drawn
+/// (each command's short name), the names for screen readers ("Find next,
+/// F3"), the keys drawn at the right edge, and the descriptions (each
+/// command's long explanation).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Rows {
+    /// The text drawn on each row.
+    pub items: Vec<String>,
+    /// Each row's name for screen readers.
+    pub names: Vec<String>,
+    /// Each row's key, drawn at the right edge.
+    pub keys: Vec<String>,
+    /// Each row's description for screen readers.
+    pub descriptions: Vec<String>,
+}
+
+impl Rows {
+    /// The rows of the app's list model when it is a list of commands
+    /// (`ListModel::columns`); `None` for other lists.
+    pub fn from_model(m: &textweaver_app::ListModel) -> Option<Rows> {
+        if m.columns.len() != m.items.len() || m.items.is_empty() {
+            return None;
+        }
+        Some(Rows {
+            items: m.columns.iter().map(|(n, _)| n.clone()).collect(),
+            names: m.items.clone(),
+            keys: m.columns.iter().map(|(_, k)| k.clone()).collect(),
+            descriptions: m.descriptions.clone(),
+        })
+    }
+
+    /// The rows of the command palette for `actions`, from the app's
+    /// command rows ([`App::command_row`](textweaver_app::App::command_row)):
+    /// `names` are the palette's own lines ("Find next, F3, recent").
+    pub fn commands(
+        app: &textweaver_app::App,
+        actions: &[textweaver_app::keymap::ActionId],
+        names: Vec<String>,
+    ) -> Rows {
+        let rows: Vec<textweaver_app::CommandRow> =
+            actions.iter().map(|&a| app.command_row(a)).collect();
+        Rows {
+            items: rows.iter().map(|r| r.name.clone()).collect(),
+            names,
+            keys: rows
+                .iter()
+                .map(|r| r.key.clone().unwrap_or_default())
+                .collect(),
+            descriptions: rows.into_iter().map(|r| r.help).collect(),
+        }
+    }
+}
+
 /// A list of choices: one focusable `ListBox` whose options are AccessKit
 /// nodes (not widgets), with the selected one reported as selected and
 /// the list's active descendant.
@@ -381,6 +434,14 @@ pub struct ChoiceList {
     /// (the settings' sections: "Speech, 31 settings" for the screen
     /// reader, "Speech" on screen). Empty: the text is the name.
     names: Vec<String>,
+    /// Each row's key, drawn at the right edge (the command palette and
+    /// the keyboard shortcuts list: "F3" beside "Find next"). The row's
+    /// name says it too ("Find next, F3"). Empty: no key column.
+    keys: Vec<String>,
+    key_layouts: Vec<Option<Layout<BrushIndex>>>,
+    /// Each row's description for screen readers (a command's long
+    /// explanation). Empty: none.
+    descriptions: Vec<String>,
     selected: usize,
     label: String,
     palette: Palette,
@@ -413,6 +474,9 @@ impl ChoiceList {
         ChoiceList {
             items,
             names: Vec::new(),
+            keys: Vec::new(),
+            key_layouts: Vec::new(),
+            descriptions: Vec::new(),
             selected: 0,
             label: label.into(),
             palette,
@@ -497,6 +561,9 @@ impl ChoiceList {
             w.layouts = (0..items.len()).map(|_| None).collect();
             w.items = items.to_vec();
             w.names.clear();
+            w.keys.clear();
+            w.key_layouts.clear();
+            w.descriptions.clear();
             w.top = 0;
             this.ctx.request_layout();
         }
@@ -509,6 +576,61 @@ impl ChoiceList {
     pub fn with_names(mut self, names: Vec<String>) -> Self {
         self.names = names;
         self
+    }
+
+    /// Draws each row's key at the right edge (`keys`, same order as the
+    /// items; an empty key draws none) and gives each row a description
+    /// for screen readers (`descriptions`; may be empty).
+    pub fn with_keys(mut self, keys: Vec<String>, descriptions: Vec<String>) -> Self {
+        self.key_layouts = (0..keys.len()).map(|_| None).collect();
+        self.keys = keys;
+        self.descriptions = descriptions;
+        self
+    }
+
+    /// Row `i`'s key, drawn at the right edge, if any.
+    pub fn key(&self, i: usize) -> Option<&str> {
+        self.keys
+            .get(i)
+            .map(String::as_str)
+            .filter(|k| !k.is_empty())
+    }
+
+    /// Row `i`'s description for screen readers, if any.
+    pub fn description(&self, i: usize) -> Option<&str> {
+        self.descriptions
+            .get(i)
+            .map(String::as_str)
+            .filter(|d| !d.is_empty())
+    }
+
+    /// Shows the rows of a list of commands from the app's list model:
+    /// `items` drawn, `names` for screen readers, `keys` at the right
+    /// edge, and `descriptions`, with `selected` focused.
+    pub fn sync_rows(this: &mut WidgetMut<'_, Self>, rows: Rows, selected: usize) {
+        let w = &mut *this.widget;
+        if w.items != rows.items || w.keys != rows.keys || w.names != rows.names {
+            w.layouts = (0..rows.items.len()).map(|_| None).collect();
+            w.key_layouts = (0..rows.keys.len()).map(|_| None).collect();
+            w.items = rows.items;
+            w.names = rows.names;
+            w.keys = rows.keys;
+            w.top = 0;
+            this.ctx.request_layout();
+        }
+        w.descriptions = rows.descriptions;
+        w.set_selected(selected);
+        this.ctx.request_render();
+    }
+
+    /// Replaces the rows (a filtered list of commands), selecting the
+    /// first.
+    pub fn set_rows(this: &mut WidgetMut<'_, Self>, rows: Rows) {
+        Self::set_named_items(this, rows.items, rows.names);
+        let w = &mut *this.widget;
+        w.key_layouts = (0..rows.keys.len()).map(|_| None).collect();
+        w.keys = rows.keys;
+        w.descriptions = rows.descriptions;
     }
 
     /// Row `i`'s accessible name: its own name, or its text.
@@ -542,6 +664,9 @@ impl ChoiceList {
         w.layouts = (0..items.len()).map(|_| None).collect();
         w.items = items;
         w.names = names;
+        w.keys.clear();
+        w.key_layouts.clear();
+        w.descriptions.clear();
         w.selected = 0;
         w.top = 0;
         this.ctx.request_layout();
@@ -806,6 +931,7 @@ impl Widget for ChoiceList {
         if (size.width - self.width).abs() > 0.5 {
             self.width = size.width;
             self.layouts.iter_mut().for_each(|l| *l = None);
+            self.key_layouts.iter_mut().for_each(|l| *l = None);
         }
         let last = (self.top + self.visible_rows + 1).min(self.items.len());
         let (fcx, lcx) = ctx.text_contexts();
@@ -825,10 +951,18 @@ impl Widget for ChoiceList {
                     l.break_all_lines(None);
                     l
                 };
+                // The key, at the right edge, takes its width (and a gap)
+                // from the row's text.
+                let mut key_w = 0.0;
+                if let Some(key) = self.keys.get(i).filter(|k| !k.is_empty()) {
+                    let l = build(key);
+                    key_w = l.width() + 24.0;
+                    self.key_layouts[i] = Some(l);
+                }
                 // A row too long for the list ends with an ellipsis at a
                 // word, never a hard cut; its option keeps the whole text
                 // as its name (W9b-n).
-                let room = (size.width - 2.0 * ROW_PAD - 8.0).max(0.0) as f32;
+                let room = ((size.width - 2.0 * ROW_PAD - 8.0) as f32 - key_w).max(0.0);
                 let text = self.items[i].as_str();
                 let mut l = build(text);
                 if l.width() > room {
@@ -901,6 +1035,17 @@ impl Widget for ChoiceList {
                     true,
                 );
             }
+            if let Some(Some(k)) = self.key_layouts.get(i) {
+                let ty = y + (self.row_h - f64::from(k.height())) / 2.0;
+                let x = size.width - ROW_PAD - 4.0 - f64::from(k.width());
+                render_text(
+                    painter,
+                    Affine::translate(Vec2::new(x, ty)),
+                    k,
+                    &[theme::color(text_fg).into()],
+                    true,
+                );
+            }
         }
         // A scroll hint when there are more items than rows.
         let n = self.items.len();
@@ -947,6 +1092,9 @@ impl Widget for ChoiceList {
             match &self.current {
                 Some((c, label)) if *c == i => o.set_label(label.as_str()),
                 _ => o.set_label(self.names.get(i).unwrap_or(item).as_str()),
+            }
+            if let Some(d) = self.descriptions.get(i).filter(|d| !d.is_empty()) {
+                o.set_description(d.as_str());
             }
             o.set_selected(i == self.selected);
             o.add_action(Action::Focus);

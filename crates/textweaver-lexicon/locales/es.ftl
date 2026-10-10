@@ -417,6 +417,7 @@ playback-time-up =
        *[other] Se acabó el tiempo tras { $minutes } minutos. { $key } para seguir.
     }
 playback-repeat-slower = Repitiendo más despacio, a { $rate } palabras por minuto.
+playback-recall-prompt = Diga lo que recuerda de { $section }. { $key } para seguir.
 
 ## The title line and Say Status.
 
@@ -510,8 +511,21 @@ help-the-command = el comando { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Comando desconocido: { $text }.
-help-shortcuts-intro = Atajos de teclado, { $n } comandos. Arriba y Abajo se mueven, Intro ejecuta, Escape cierra.
+help-shortcuts-intro = Atajos de teclado, { $n } comandos. Escriba para filtrar. Avance de página pasa al grupo siguiente, F1 explica un comando, Intro lo ejecuta, Escape cierra.
 help-shortcuts-title = Atajos de teclado
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = Atajos de teclado que coinciden con { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } de { $total } comandos coinciden.
+help-shortcuts-filter-none = Ningún comando coincide con { $query }. Retroceso quita letras.
+help-shortcuts-filter-cleared = Filtro borrado, { $n } comandos.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }, { $n ->
+        [one] 1 comando
+       *[other] { $n } comandos
+    }. { $item }
 help-title = Ayuda
 help-intro = Ayuda. Arriba y Abajo se mueven, Escape cierra.
 
@@ -750,6 +764,7 @@ action-previous-note = Ir a la nota anterior
 action-delete-note = Eliminar la nota o resaltado en el cursor
 action-highlight-selection = Resaltar la selección, o la oración en el cursor
 action-export-study-sheet = Exportar las notas y resaltados como una hoja de estudio en Markdown, agrupados por encabezado
+action-self-test = Ponerse a prueba con las notas y resaltados: Intro muestra cada respuesta
 action-open = Abrir un documento
 action-open-path = Abrir un documento escribiendo su ruta
 action-open-library = Abrir la biblioteca: documentos de sus carpetas de biblioteca y archivos recientes
@@ -796,7 +811,9 @@ action-cycle-typing-echo = Recorrer el eco de escritura: caracteres y palabras, 
 action-select-all = Seleccionar todo el texto
 action-delete-word-before = Eliminar la palabra anterior al cursor
 action-delete-word-after = Eliminar la palabra posterior al cursor
-action-paste = Pegar el texto copiado o cortado por última vez en textweaver; el pegado del terminal también funciona
+action-paste = Pegar el portapapeles; el texto con formato de un navegador o un procesador de textos se convierte en Markdown
+action-paste-plain-text = Pegar el portapapeles como texto sin formato, sin conservar nada de su formato
+action-context-menu = Abrir el menú contextual: cortar, copiar, pegar y los comandos para donde está el cursor
 action-insert-citation = Insertar una cita: elegir una referencia y luego indicar una página u otro localizador
 action-add-reference = Agregar una referencia a su biblioteca por DOI o ISBN
 action-insert-bibliography = Insertar la bibliografía de las obras citadas, en el cursor
@@ -1297,6 +1314,24 @@ notes-sheet-before-first-heading = Antes del primer encabezado
 notes-sheet-tags = (etiquetas: { $tags })
 # $color is the highlight's color name.
 notes-sheet-highlighted = Resaltado, { $color }.
+
+## La autoevaluación: preguntas con respuestas ocultas (crate::reveal).
+
+reveal-self-test-title = Autoevaluación: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] Autoevaluación, 1 pregunta. Intro muestra la respuesta. Espacio para responder en voz alta.
+       *[other] Autoevaluación, { $n } preguntas. Intro muestra cada respuesta. Espacio para responder en voz alta.
+    }
+reveal-nothing-to-test = No hay notas ni resaltados para evaluar. Añada antes una nota o un resaltado.
+reveal-prompt-note = { $note } (en { $section })
+reveal-prompt-highlight = ¿Qué resaltó en { $section }?
+reveal-row-shown = { $prompt } Respuesta: { $answer }
+reveal-answer = Respuesta: { $answer }
+reveal-listening = Responda en voz alta ahora. Espacio para terminar.
+reveal-you-said = Usted dijo: { $words }. Intro muestra la respuesta.
+reveal-heard-nothing = No se oyó ninguna respuesta. Espacio para intentarlo de nuevo.
+reveal-no-dictation = Responder en voz alta necesita el dictado, que no está en esta versión.
 
 ## Find, bookmarks, and selection.
 
@@ -1941,6 +1976,8 @@ choice-reading-stop-at-heading = siguiente encabezado
 choice-reading-stop-at-chapter = siguiente capítulo
 setting-reading-stop-after-minutes = Temporizador de lectura
 setting-reading-stop-after-minutes-help = La lectura continua se detiene al final de la oración tras estos minutos de lectura, y lo dice. Pausar detiene el reloj; detener lo reinicia. 0 apaga el temporizador.
+setting-reading-recall-prompts = Preguntas de recuerdo
+setting-reading-recall-prompts-help = Al final de una sección, la lectura le pide que diga lo que recuerda. Si Detenerse al final de la sección es nunca, la lectura se detiene para ello en el siguiente encabezado. La lectura sigue con la tecla de leer.
 setting-display-theme = Tema
 setting-display-theme-help = El tema de color.
 setting-display-follow-os-theme = Seguir el tema del sistema
@@ -2351,6 +2388,12 @@ edit-pasted-start =
        *[other] Se pegaron { $n } caracteres: { $start }
     }
 edit-insert-failed = No se pudo insertar: { $error } El texto no ha cambiado.
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] Se pegó 1 línea: { $start }
+       *[other] Se pegaron { $n } líneas: { $start }
+    }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = No se pueden cambiar los caracteres { $start } a { $end }: el texto tiene { $len }.
 edit-change-failed = No se pudo cambiar el texto: { $error } El texto no ha cambiado.
@@ -2723,6 +2766,46 @@ authoring-space-deleted = Espacio eliminado.
 authoring-deleted = { $text } eliminada.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = Todavía no se ha copiado nada en { -brand }. Use el pegado de su terminal, por ejemplo { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = Pegado como Markdown: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] 1 encabezado
+       *[other] { $n } encabezados
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] 1 párrafo
+       *[other] { $n } párrafos
+    }
+paste-part-list =
+    { $n ->
+        [one] 1 lista
+       *[other] { $n } listas
+    }
+paste-part-table =
+    { $n ->
+        [one] 1 tabla
+       *[other] { $n } tablas
+    }
+paste-part-code =
+    { $n ->
+        [one] 1 bloque de código
+       *[other] { $n } bloques de código
+    }
+paste-part-quote =
+    { $n ->
+        [one] 1 cita
+       *[other] { $n } citas
+    }
+paste-part-link =
+    { $n ->
+        [one] 1 enlace
+       *[other] { $n } enlaces
+    }
+paste-empty = Nada que pegar: el portapapeles está vacío.
+paste-converting = Convirtiendo el texto con formato para pegarlo.
+paste-failed = No se pudo pegar: { $error } Pruebe Pegar como texto sin formato.
 authoring-verbosity =
     { $level ->
         [low] Verbosidad: baja.
@@ -3045,6 +3128,11 @@ define-still-loading = El diccionario aún se está cargando.
 # Ajustes.
 setting-speech-dectalk-library = Biblioteca de DECtalk
 setting-speech-dectalk-library-help = La biblioteca de DECtalk que se cargará; sin definir busca en los lugares habituales.
+setting-speech-espeak-helper = Programa auxiliar de eSpeak NG
+setting-speech-espeak-helper-help = Ejecutar eSpeak NG en su propio programa auxiliar, para que un fallo del motor no cierre textweaver. Automático usa el programa auxiliar en Windows cuando está instalado y, en los demás sistemas, ejecuta eSpeak NG dentro de textweaver.
+choice-speech-espeak-helper-auto = automático
+choice-speech-espeak-helper-always = siempre el programa auxiliar
+choice-speech-espeak-helper-never = dentro de textweaver
 setting-speech-piper-voices = Carpeta de voces de Piper
 setting-speech-piper-voices-help = La carpeta de voces de Piper; sin definir usa la carpeta piper de la carpeta de datos de textweaver.
 setting-speech-piper-voice = Voz de Piper
@@ -3068,6 +3156,21 @@ gui-answer-delete = Eliminar
 gui-answer-remove = Quitar
 gui-answer-replace = Reemplazar
 gui-question-hint = Y responde sí, N responde no, Escape responde no.
+gui-find-title = Buscar y reemplazar
+gui-find-what = Buscar
+gui-find-with = Reemplazar con
+gui-find-match-case = Coincidir mayúsculas
+gui-find-whole-words = Palabras completas
+gui-find-regex = Expresión regular
+gui-find-across-lines = Entre líneas
+gui-find-next = Buscar siguiente
+gui-find-next-help = Selecciona la siguiente coincidencia.
+gui-find-replace = Reemplazar
+gui-find-replace-help = Reemplaza la coincidencia mostrada y pasa a la siguiente. La primera pulsación busca una coincidencia.
+gui-find-replace-all = Reemplazar todo
+gui-find-replace-all-help = Dice cuántas coincidencias hay y pregunta una vez. Un solo deshacer las revierte todas.
+gui-find-hint = Intro en Buscar busca la siguiente coincidencia; Intro en Reemplazar con la reemplaza. Flecha arriba recupera textos anteriores. Escape cierra.
+gui-find-empty = Nada que buscar: escriba el texto en Buscar.
 gui-button-open = Abrir…
 gui-button-font = Fuente…
 gui-button-edit = Empezar a editar
@@ -3121,7 +3224,7 @@ gui-prompt-path-hint = Escriba la ruta de un documento y pulse Intro. Tab la com
 gui-prompt-hint = Pulse Intro para aceptar, o Escape para cancelar. Arriba y Abajo recuperan respuestas anteriores.
 gui-palette-filter = Escriba para filtrar los comandos
 gui-palette-list = Comandos
-gui-palette-hint = Intro ejecuta la primera coincidencia; Tab pasa a la lista.
+gui-palette-hint = Intro ejecuta la primera coincidencia; Tab pasa a la lista; F1 explica un comando.
 gui-open-failed = No se pudo abrir { $name }: { $error }
 gui-uia-unavailable = Las notificaciones de UI Automation solo existen en Windows; se usa la región activa.
 gui-graphics-failed = La ventana no pudo iniciar sus gráficos. El lector de terminal, textweaver, no los necesita.
@@ -3359,6 +3462,7 @@ name-previous-note = Nota anterior
 name-delete-note = Borrar nota o resaltado
 name-highlight-selection = Resaltar
 name-export-study-sheet = Exportar hoja de estudio
+name-self-test = Autoevaluación
 name-open = Abrir
 name-open-path = Abrir por ruta
 name-open-library = Biblioteca
@@ -3409,6 +3513,8 @@ name-select-all = Seleccionar todo
 name-delete-word-before = Borrar palabra anterior
 name-delete-word-after = Borrar palabra siguiente
 name-paste = Pegar
+name-paste-plain-text = Pegar como texto sin formato
+name-context-menu = Menú contextual
 name-insert-citation = Insertar cita
 name-add-reference = Añadir referencia
 name-insert-bibliography = Insertar bibliografía
@@ -3458,6 +3564,8 @@ menu-recent-none = No hay documentos recientes
 menu-not-available = { $name } no está disponible en esta versión.
 menu-no-access-key = Ningún elemento con la tecla { $letter }.
 menu-closed = Menús cerrados.
+menu-context = Menú contextual
+menu-context-closed = Menú contextual cerrado.
 menu-press-a-key = Pulse una tecla para oír lo que hace.
 menu-key-described = { $name }: { $help }. Teclas: { $keys }. En los menús: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Teclas: { $keys }.
@@ -3475,17 +3583,17 @@ choice-accessibility-interface-announcements-off = desactivados
 choice-accessibility-interface-announcements-minimal = mínimos
 choice-accessibility-interface-announcements-normal = normales
 choice-accessibility-interface-announcements-full = completos
-palette-item = { $name }, { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }, { $category }: { $help }.
-palette-item-recent = { $name }, reciente, { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }, reciente, { $category }: { $help }.
+palette-item = { $name }, { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }, { $keys }, reciente
+palette-item-recent-no-keys = { $name }, reciente
 palette-list-title = Comandos que coinciden con { $query }
 palette-list-title-all = Comandos
 palette-list-intro =
     { $title }, { $n ->
         [one] 1 comando
        *[other] { $n } comandos
-    }. Intro ejecuta uno.
+    }. Intro ejecuta uno, F1 lo explica.
 action-browse-files = Explorar archivos y archivos comprimidos: Intro abre una carpeta, un archivo comprimido o un documento; Retroceso sube un nivel
 action-batch-convert = Convertir una carpeta de documentos a otro formato, en segundo plano
 action-export-audio = Exportar el documento como audio hablado: MP3, FLAC, Opus, WAV o un audiolibro M4B

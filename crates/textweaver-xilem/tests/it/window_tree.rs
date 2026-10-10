@@ -1695,3 +1695,130 @@ fn a_described_window_command_is_described_not_run() {
     assert!(said.starts_with("Font: "), "{said}");
     assert!(said.contains("Keys: "), "{said}");
 }
+
+/// The command palette and the keyboard shortcuts list (beta 1): each
+/// option is named "Find next, F3" (the short name, then the key), has
+/// the long explanation as its description, and the list keeps the key
+/// for drawing at the right edge.
+#[test]
+fn command_rows_are_named_name_then_key_with_the_help_as_description() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::dialog::{ChoiceList, Rows};
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let p = Palette::galaxy();
+    let ids = [ActionId::FindNext, ActionId::PlayPause, ActionId::ExportPdf];
+    let names: Vec<String> = ids
+        .iter()
+        .map(|&a| app.command_row(a).text(&Catalog::english()))
+        .collect();
+    let rows = Rows::commands(&app, &ids, names.clone());
+    let (modal, list_id) =
+        gui::palette_dialog(&p, &Catalog::english(), "Commands", rows.items.clone());
+    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+    h.edit_widget(LIST, |mut l| ChoiceList::set_rows(&mut l, rows.clone()));
+    h.focus_on(Some(list_id));
+    let _ = h.redraw();
+    let list = h.access_node(h.get_widget(LIST).id()).unwrap();
+    let options: Vec<_> = list.children().collect();
+    assert_eq!(options.len(), 3);
+    for (i, o) in options.iter().enumerate() {
+        let row = app.command_row(ids[i]);
+        assert_eq!(o.label().unwrap_or_default(), names[i]);
+        assert!(o.label().unwrap_or_default().starts_with(&row.name));
+        assert_eq!(o.description().unwrap_or_default(), row.help);
+    }
+    let w = h.get_widget(LIST);
+    let list = w.inner();
+    assert_eq!(
+        list.key(0),
+        app.command_row(ActionId::FindNext).key.as_deref()
+    );
+    // A command without a key draws none.
+    assert_eq!(list.key(2), None);
+    assert_eq!(
+        names[0],
+        format!("{}, {}", list.items()[0], list.key(0).unwrap())
+    );
+}
+
+/// The find and replace panel in the bounds test's review sizes, from the
+/// largest window to a 1366 by 768 laptop at 200 percent and the smallest
+/// window (compact below 480 px high): every field, check box and button
+/// is inside the window, and every button at least 24 by 24.
+#[test]
+fn the_find_panel_fits_every_review_size() {
+    use textweaver_xilem::find_panel::{self, FindTexts};
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    for (size, scale) in [
+        ((1100, 780), 1.0),
+        ((960, 540), 1.0),
+        ((683, 384), 2.0),
+        ((420, 320), 1.0),
+    ] {
+        let mut h = harness_at(&app, size, scale);
+        let short = f64::from(size.1) < find_panel::SHORT_HEIGHT;
+        let d = find_panel::find_dialog(&Palette::galaxy(), &app, &FindTexts::default(), short);
+        let mut back = None;
+        gui::open_dialog_in(&mut h, d.modal, d.find, &mut back);
+        let _ = h.redraw();
+        let _ = h.redraw();
+        let at = format!("{}x{} at {}%", size.0, size.1, scale * 100.0);
+        let window = masonry::kurbo::Rect::new(
+            0.0,
+            0.0,
+            f64::from(size.0) * scale,
+            f64::from(size.1) * scale,
+        );
+        // The panel's controls (the window's own bars are behind it).
+        let mut stack = vec![h.access_tree().state().root()];
+        let mut dialog = None;
+        while let Some(n) = stack.pop() {
+            if n.role() == Role::Dialog {
+                dialog = Some(n);
+                break;
+            }
+            stack.extend(n.children());
+        }
+        let mut seen = Vec::new();
+        let mut stack = vec![dialog.expect("the panel is open")];
+        while let Some(n) = stack.pop() {
+            stack.extend(n.children());
+            if !matches!(n.role(), Role::Button | Role::CheckBox | Role::TextInput) {
+                continue;
+            }
+            let name = n.label().unwrap_or_default();
+            let Some(b) = n.bounding_box() else {
+                continue;
+            };
+            seen.push(name.clone());
+            assert!(
+                b.x0 >= window.x0 - 0.5
+                    && b.y0 >= window.y0 - 0.5
+                    && b.x1 <= window.x1 + 0.5
+                    && b.y1 <= window.y1 + 0.5,
+                "{at}: {name:?} at {b:?} leaves the window {window:?}"
+            );
+            if n.role() == Role::Button {
+                assert!(
+                    b.width() >= 24.0 * scale - 0.5 && b.height() >= 24.0 * scale - 0.5,
+                    "{at}: {name:?} is smaller than 24 by 24: {b:?}"
+                );
+            }
+        }
+        for name in [
+            "Find what",
+            "Replace with",
+            "Across lines",
+            "Replace all",
+            "Close",
+        ] {
+            assert!(
+                seen.iter().any(|s| s == name),
+                "{at}: no {name:?} in {seen:?}"
+            );
+        }
+    }
+}

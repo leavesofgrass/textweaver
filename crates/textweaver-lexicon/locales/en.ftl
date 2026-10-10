@@ -422,6 +422,7 @@ playback-time-up =
        *[other] Time is up after { $minutes } minutes. { $key } to go on.
     }
 playback-repeat-slower = Repeating slower, at { $rate } words per minute.
+playback-recall-prompt = Say what you remember from { $section }. { $key } to go on.
 
 ## The title line and Say Status.
 
@@ -515,8 +516,21 @@ help-the-command = the command { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Unknown command: { $text }.
-help-shortcuts-intro = Keyboard shortcuts, { $n } commands. Up and Down move, Enter runs, Escape closes.
+help-shortcuts-intro = Keyboard shortcuts, { $n } commands. Type to filter. Page Down moves to the next group, F1 explains a command, Enter runs it, Escape closes.
 help-shortcuts-title = Keyboard shortcuts
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = Keyboard shortcuts matching { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } of { $total } commands match.
+help-shortcuts-filter-none = No commands match { $query }. Backspace removes letters.
+help-shortcuts-filter-cleared = Filter cleared, { $n } commands.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }, { $n ->
+        [one] 1 command
+       *[other] { $n } commands
+    }. { $item }
 help-title = Help
 help-intro = Help. Up and Down move, Escape closes.
 
@@ -755,6 +769,7 @@ action-previous-note = Move to the previous note
 action-delete-note = Delete the note or highlight at the cursor
 action-highlight-selection = Highlight the selection, or the sentence at the cursor
 action-export-study-sheet = Export the notes and highlights as a Markdown study sheet, grouped by heading
+action-self-test = Test yourself on the notes and highlights: Enter shows each answer
 action-open = Open a document
 action-open-path = Open a document by typing its path
 action-open-library = Open the library: documents in your library folders and recent files
@@ -801,7 +816,9 @@ action-cycle-typing-echo = Cycle typing echo: characters and words, characters, 
 action-select-all = Select all the text
 action-delete-word-before = Delete the word before the cursor
 action-delete-word-after = Delete the word after the cursor
-action-paste = Paste the text last copied or cut in textweaver; the terminal paste works too
+action-paste = Paste the clipboard; formatted text from a browser or word processor becomes Markdown
+action-paste-plain-text = Paste the clipboard as plain text, keeping none of its formatting
+action-context-menu = Open the context menu: cut, copy, paste, and the commands for where the cursor is
 action-insert-citation = Insert a citation: pick a reference, then give a page or other locator
 action-add-reference = Add a reference to your library by DOI or ISBN
 action-insert-bibliography = Insert the bibliography of the works cited, at the cursor
@@ -1311,6 +1328,24 @@ notes-sheet-before-first-heading = Before the first heading
 notes-sheet-tags = (tags: { $tags })
 # $color is the highlight's color name.
 notes-sheet-highlighted = Highlighted, { $color }.
+
+## The self-test: prompts with hidden answers (crate::reveal).
+
+reveal-self-test-title = Self-test: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] Self-test, 1 prompt. Enter shows the answer. Space to answer aloud.
+       *[other] Self-test, { $n } prompts. Enter shows each answer. Space to answer aloud.
+    }
+reveal-nothing-to-test = No notes or highlights to test. Add a note or highlight first.
+reveal-prompt-note = { $note } (in { $section })
+reveal-prompt-highlight = What did you highlight in { $section }?
+reveal-row-shown = { $prompt } Answer: { $answer }
+reveal-answer = Answer: { $answer }
+reveal-listening = Answer aloud now. Space to stop.
+reveal-you-said = You said: { $words }. Enter shows the answer.
+reveal-heard-nothing = No answer heard. Space to try again.
+reveal-no-dictation = Answering aloud needs dictation, which is not in this version.
 
 ## Find, bookmarks, and selection.
 
@@ -1957,6 +1992,8 @@ choice-reading-stop-at-heading = next heading
 choice-reading-stop-at-chapter = next chapter
 setting-reading-stop-after-minutes = Reading timer
 setting-reading-stop-after-minutes-help = Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.
+setting-reading-recall-prompts = Recall prompts
+setting-reading-recall-prompts-help = At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key.
 setting-display-theme = Theme
 setting-display-theme-help = The color theme.
 setting-display-follow-os-theme = Follow the system theme
@@ -2367,6 +2404,12 @@ edit-pasted-start =
        *[other] Pasted { $n } characters: { $start }
     }
 edit-insert-failed = Could not insert: { $error } The text is unchanged.
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] Pasted 1 line: { $start }
+       *[other] Pasted { $n } lines: { $start }
+    }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = Cannot change characters { $start } to { $end }: the text has { $len }.
 edit-change-failed = Could not change the text: { $error } The text is unchanged.
@@ -2739,6 +2782,46 @@ authoring-space-deleted = Space deleted.
 authoring-deleted = { $text } deleted.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = Nothing copied in { -brand } yet. Use your terminal's paste, for example { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = Pasted as Markdown: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] 1 heading
+       *[other] { $n } headings
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] 1 paragraph
+       *[other] { $n } paragraphs
+    }
+paste-part-list =
+    { $n ->
+        [one] 1 list
+       *[other] { $n } lists
+    }
+paste-part-table =
+    { $n ->
+        [one] 1 table
+       *[other] { $n } tables
+    }
+paste-part-code =
+    { $n ->
+        [one] 1 code block
+       *[other] { $n } code blocks
+    }
+paste-part-quote =
+    { $n ->
+        [one] 1 quote
+       *[other] { $n } quotes
+    }
+paste-part-link =
+    { $n ->
+        [one] 1 link
+       *[other] { $n } links
+    }
+paste-empty = Nothing to paste: the clipboard is empty.
+paste-converting = Converting the formatted text to paste.
+paste-failed = Could not paste: { $error } Try Paste as plain text.
 authoring-verbosity =
     { $level ->
         [low] Verbosity: low.
@@ -3079,6 +3162,11 @@ define-still-loading = Dictionary still loading.
 # Settings: the DECtalk and Piper sections, the rate and pitch per voice, and the template author.
 setting-speech-dectalk-library = DECtalk library
 setting-speech-dectalk-library-help = The DECtalk library to load; not set searches the usual places.
+setting-speech-espeak-helper = eSpeak NG helper program
+setting-speech-espeak-helper-help = Run eSpeak NG in its own helper program, so an engine crash cannot close textweaver. Automatic uses the helper on Windows when it is installed, and runs eSpeak NG inside textweaver elsewhere.
+choice-speech-espeak-helper-auto = automatic
+choice-speech-espeak-helper-always = always the helper
+choice-speech-espeak-helper-never = inside textweaver
 setting-speech-piper-voices = Piper voices folder
 setting-speech-piper-voices-help = The folder of Piper voices; not set uses the piper folder in textweaver's data folder.
 setting-speech-piper-voice = Piper voice
@@ -3102,6 +3190,21 @@ gui-answer-delete = Delete
 gui-answer-remove = Remove
 gui-answer-replace = Replace
 gui-question-hint = Y answers yes, N answers no, Escape answers no.
+gui-find-title = Find and replace
+gui-find-what = Find what
+gui-find-with = Replace with
+gui-find-match-case = Match case
+gui-find-whole-words = Whole words
+gui-find-regex = Regular expression
+gui-find-across-lines = Across lines
+gui-find-next = Find next
+gui-find-next-help = Selects the next match.
+gui-find-replace = Replace
+gui-find-replace-help = Replaces the match shown and goes to the next. The first press finds a match.
+gui-find-replace-all = Replace all
+gui-find-replace-all-help = Says how many matches there are and asks once. One undo takes them all back.
+gui-find-hint = Enter in Find what finds the next match; Enter in Replace with replaces it. Up brings back earlier text. Escape closes.
+gui-find-empty = Nothing to find: type the text in Find what.
 gui-button-open = Open…
 gui-button-font = Font…
 gui-button-edit = Start editing
@@ -3157,7 +3260,7 @@ gui-prompt-path-hint = Type the path of a document, then press Enter. Tab comple
 gui-prompt-hint = Press Enter to accept, or Escape to cancel. Up and Down recall earlier answers.
 gui-palette-filter = Type to filter the commands
 gui-palette-list = Commands
-gui-palette-hint = Enter runs the first match; Tab moves to the list.
+gui-palette-hint = Enter runs the first match; Tab moves to the list; F1 explains a command.
 gui-open-failed = Could not open { $name }: { $error }
 gui-uia-unavailable = UI Automation notifications exist only on Windows; using the live region.
 gui-graphics-failed = The window could not start its graphics. The terminal reader, textweaver, needs none.
@@ -3395,6 +3498,7 @@ name-previous-note = Previous note
 name-delete-note = Delete note or highlight
 name-highlight-selection = Highlight
 name-export-study-sheet = Export study sheet
+name-self-test = Self-test
 name-open = Open
 name-open-path = Open by path
 name-open-library = Library
@@ -3445,6 +3549,8 @@ name-select-all = Select all
 name-delete-word-before = Delete word before
 name-delete-word-after = Delete word after
 name-paste = Paste
+name-paste-plain-text = Paste as plain text
+name-context-menu = Context menu
 name-insert-citation = Insert citation
 name-add-reference = Add reference
 name-insert-bibliography = Insert bibliography
@@ -3494,6 +3600,8 @@ menu-recent-none = No recent documents
 menu-not-available = { $name } is not available in this version.
 menu-no-access-key = No item with the key { $letter }.
 menu-closed = Menus closed.
+menu-context = Context menu
+menu-context-closed = Context menu closed.
 menu-press-a-key = Press a key to hear what it does.
 menu-key-described = { $name }: { $help }. Keys: { $keys }. In the menus: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Keys: { $keys }.
@@ -3511,17 +3619,17 @@ choice-accessibility-interface-announcements-off = off
 choice-accessibility-interface-announcements-minimal = minimal
 choice-accessibility-interface-announcements-normal = normal
 choice-accessibility-interface-announcements-full = full
-palette-item = { $name }, { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }, { $category }: { $help }.
-palette-item-recent = { $name }, recent, { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }, recent, { $category }: { $help }.
+palette-item = { $name }, { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }, { $keys }, recent
+palette-item-recent-no-keys = { $name }, recent
 palette-list-title = Commands matching { $query }
 palette-list-title-all = Commands
 palette-list-intro =
     { $title }, { $n ->
         [one] 1 command
        *[other] { $n } commands
-    }. Enter runs one.
+    }. Enter runs one, F1 explains it.
 action-browse-files = Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up
 action-batch-convert = Convert a folder of documents to another format, in the background
 action-export-audio = Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook

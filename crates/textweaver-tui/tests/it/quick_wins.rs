@@ -80,18 +80,21 @@ fn tab_completes_paths_in_file_prompts() {
 fn lists_jump_by_first_letter_and_the_save_list_takes_s_d_c() {
     let mut tui = tui_with("Words.\n");
     tui.dispatch(Command::Action(ActionId::KeyboardHelp));
-    let first = tui.list().unwrap().selected;
-    tui.handle_key(ch('v'));
+    let all = tui.list().unwrap().items.len();
+    // The keyboard list filters as you type, as Settings does (beta 1).
+    for c in "voice".chars() {
+        tui.handle_key(ch(c));
+    }
     let list = tui.list().unwrap();
-    assert_ne!(list.selected, first);
+    assert!(list.items.len() < all, "{}", list.items.len());
     assert!(
-        list.items[list.selected].starts_with("Voice"),
-        "{}",
-        list.items[list.selected]
+        list.items.iter().any(|i| i.starts_with("Voice")),
+        "{:?}",
+        list.items
     );
-    // "12 of 90, Voice ...": the place first (Wave 5, the Braille pass).
+    // "1 of 12, ...": the place first (Wave 5, the Braille pass).
     assert!(
-        tui.app().status_text().contains(" of ") && tui.app().status_text().contains(", Voice"),
+        tui.app().status_text().contains(" of "),
         "{}",
         tui.app().status_text()
     );

@@ -60,6 +60,7 @@ fn everything_changed() -> Settings {
     sp.sapi.onecore = false;
     sp.apple.backend = AppleBackend::AvSpeech;
     sp.dectalk.library = Some("C:/dectalk/DECtalk.dll".into());
+    sp.espeak.helper = crate::EspeakHelper::Always;
     sp.piper.voices = Some("D:/voices".into());
     sp.piper.voice = Some("en_US-amy-medium".into());
     sp.piper.phonemizer = crate::PiperPhonemizer::Rust;
@@ -102,6 +103,7 @@ fn everything_changed() -> Settings {
     r.revisions = crate::RevisionReading::Marked;
     r.stop_at = crate::StopAt::Chapter;
     r.stop_after_minutes = 25;
+    r.recall_prompts = true;
     let y = &mut s.sync;
     y.enabled = true;
     y.folder = Some(PathBuf::from("/media/stick/Sync"));

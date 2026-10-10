@@ -185,6 +185,19 @@ pub(crate) fn section_stop(
         .min()
 }
 
+/// The name of the section that ends at `at`, for a recall prompt: the
+/// last heading before it, or the document's title before the first
+/// heading.
+pub(crate) fn section_name(doc: &textweaver_text::Document, title: &str, at: CharPos) -> String {
+    doc.markers()
+        .iter()
+        .filter(|m| m.kind == MarkerKind::Heading && m.range.start < at)
+        .max_by_key(|m| m.range.start)
+        .map(|m| crate::notes::collapse(&doc.slice(m.range), 80))
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| title.to_owned())
+}
+
 /// How documents are narrated with `settings`: code skipped or not, the
 /// verbosity, and `[normalization] table_mode` (which was stored but never
 /// used). Reading aloud and audio export use the same policy.
@@ -519,6 +532,16 @@ impl App {
                 "playback-time-up",
                 &args!["minutes" => minutes, "key" => key],
             )
+        } else if self.settings.reading.recall_prompts {
+            let section = self
+                .session
+                .as_ref()
+                .map(|s| section_name(&s.doc, &s.title, at))
+                .unwrap_or_default();
+            self.msg_args(
+                "playback-recall-prompt",
+                &args!["section" => section, "key" => key],
+            )
         } else {
             self.msg_args("playback-end-of-section", &args!["key" => key])
         };
@@ -693,7 +716,15 @@ impl App {
             return;
         };
         let start = text_util::word_start(&s.doc, pos);
-        self.section_end = section_stop(&s.doc, start, self.settings.reading.stop_at);
+        // Recall prompts need a section end: with `stop_at` off they
+        // stop at the next heading.
+        let stop_at = match self.settings.reading.stop_at {
+            textweaver_store::StopAt::Off if self.settings.reading.recall_prompts => {
+                textweaver_store::StopAt::Heading
+            }
+            other => other,
+        };
+        self.section_end = section_stop(&s.doc, start, stop_at);
         self.end_slow_repeat();
         if self.settings.reading.stop_after_minutes > 0 {
             self.reading_timer.run(Instant::now());

@@ -493,6 +493,16 @@ pub const INFO: &[Info] = &[
         "DECtalk library",
         "The DECtalk library to load; not set searches the usual places.",
     ),
+    choice(
+        "speech.espeak.helper",
+        "eSpeak NG helper program",
+        "Run eSpeak NG in its own helper program, so an engine crash cannot close textweaver. Automatic uses the helper on Windows when it is installed, and runs eSpeak NG inside textweaver elsewhere.",
+        &[
+            ("auto", "automatic"),
+            ("always", "always the helper"),
+            ("never", "inside textweaver"),
+        ],
+    ),
     optional(
         "speech.piper.voices",
         "Piper voices folder",
@@ -747,6 +757,11 @@ pub const INFO: &[Info] = &[
         "Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.",
         (0.0, 240.0, 5.0),
         "minutes",
+    ),
+    toggle(
+        "reading.recall_prompts",
+        "Recall prompts",
+        "At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key.",
     ),
     // [display]
     open_choice("display.theme", "Theme", "The color theme.", &[]),
@@ -2850,6 +2865,7 @@ fn restart_note(path: &str) -> Option<&'static str> {
         | "speech.sapi.onecore"
         | "speech.apple.backend"
         | "speech.dectalk.library"
+        | "speech.espeak.helper"
         | "speech.piper.voices"
         | "speech.piper.voice"
         | "speech.piper.phonemizer" => Some("settings-restart-speech"),

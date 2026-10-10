@@ -94,6 +94,8 @@ pub struct SpeechSettings {
     pub apple: AppleSettings,
     /// `[speech.dectalk]`: the DECtalk engine (ADR-0021).
     pub dectalk: DectalkSettings,
+    /// `[speech.espeak]`: eSpeak NG, in process or in its helper program.
+    pub espeak: EspeakSettings,
     /// `[speech.piper]`: Piper neural voices (ADR-0023).
     pub piper: PiperSettings,
     /// `[speech.voice_params]`: the rate and pitch each voice was last used
@@ -242,6 +244,32 @@ pub struct DectalkSettings {
     pub extra: toml::Table,
 }
 
+/// Where eSpeak NG runs.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EspeakHelper {
+    /// The helper program on Windows when it and the library are found,
+    /// else in process; in process elsewhere, else the helper.
+    #[default]
+    Auto,
+    /// Always the helper program.
+    Always,
+    /// Never: always in process.
+    Never,
+}
+
+/// `[speech.espeak]`: eSpeak NG.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EspeakSettings {
+    /// Whether eSpeak NG runs in its helper program
+    /// (`textweaver-espeak-host`) or inside textweaver.
+    pub helper: EspeakHelper,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
 /// How Piper turns text into phonemes.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -317,6 +345,7 @@ impl Default for SpeechSettings {
             sapi: SapiSettings::default(),
             apple: AppleSettings::default(),
             dectalk: DectalkSettings::default(),
+            espeak: EspeakSettings::default(),
             piper: PiperSettings::default(),
             voice_params: BTreeMap::new(),
             extra: toml::Table::new(),
@@ -758,6 +787,11 @@ pub struct ReadingSettings {
     /// sentence once it has read this many minutes, and says so. 0, the
     /// default, is off.
     pub stop_after_minutes: u16,
+    /// Recall prompts: where continuous reading stops at a section end,
+    /// it asks the reader to say what they remember from the section
+    /// before going on. With `stop_at` off, reading stops at the next
+    /// heading for them. Off by default.
+    pub recall_prompts: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -808,6 +842,7 @@ impl Default for ReadingSettings {
             revisions: RevisionReading::Auto,
             stop_at: StopAt::Off,
             stop_after_minutes: 0,
+            recall_prompts: false,
             extra: toml::Table::new(),
         }
     }
@@ -1967,11 +2002,13 @@ impl Settings {
         };
         let (eci, sapi, apple) = (sub("eci"), sub("sapi"), sub("apple"));
         let (dectalk, piper, voice_params) = (sub("dectalk"), sub("piper"), sub("voice_params"));
+        let espeak = sub("espeak");
         let mut speech: SpeechSettings = lenient_section("speech", speech_table, &mut w);
         speech.eci = lenient_section("speech.eci", eci, &mut w);
         speech.sapi = lenient_section("speech.sapi", sapi, &mut w);
         speech.apple = lenient_section("speech.apple", apple, &mut w);
         speech.dectalk = lenient_section("speech.dectalk", dectalk, &mut w);
+        speech.espeak = lenient_section("speech.espeak", espeak, &mut w);
         speech.piper = lenient_section("speech.piper", piper, &mut w);
         speech.voice_params = voice_params_leniently(voice_params, &mut w);
         let mut normalization_table = table.remove("normalization");
@@ -2246,7 +2283,7 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 35] = [
+pub(crate) const STRUCT_TABLES: [&str; 36] = [
     "keyboard",
     "colors",
     "sync",
@@ -2275,6 +2312,7 @@ pub(crate) const STRUCT_TABLES: [&str; 35] = [
     "speech.sapi",
     "speech.apple",
     "speech.dectalk",
+    "speech.espeak",
     "speech.piper",
     "highlight",
     "normalization",
@@ -3271,6 +3309,7 @@ wrap_navigation = true
             &store,
             "[speech]\nrate = 300\n\
              [speech.dectalk]\nlibrary = \"C:/dectalk/DECtalk.dll\"\n\
+             [speech.espeak]\nhelper = \"never\"\n\
              [speech.piper]\nvoice = \"en_US-amy-medium\"\nphonemizer = \"rust\"\n\
              [speech.voice_params]\n\"sapi:David\" = { rate = 310, pitch = -1 }\n\"piper:x\" = { rate = 250 }\nbad = { rate = \"fast\" }\n\
              [reading_aids.font]\nsize_pt = 16\nfetch_missing = false\n\
@@ -3283,6 +3322,7 @@ wrap_navigation = true
             s.speech.dectalk.library.as_deref(),
             Some(std::path::Path::new("C:/dectalk/DECtalk.dll"))
         );
+        assert_eq!(s.speech.espeak.helper, EspeakHelper::Never);
         assert_eq!(s.speech.piper.voice.as_deref(), Some("en_US-amy-medium"));
         assert_eq!(s.speech.piper.phonemizer, PiperPhonemizer::Rust);
         assert_eq!(s.speech.piper.voices, None);

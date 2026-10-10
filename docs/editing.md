@@ -46,7 +46,8 @@ More editing keys:
 - **Alt+Backspace**: delete the word before the cursor. The window uses **Ctrl+Backspace**.
 - **Ctrl+Delete**: delete the word after the cursor.
 - **Ctrl+C**: copy the selection. **Ctrl+X**: cut it. Both go to your computer's clipboard through the terminal; see [Copy, cut, and paste](#copy-cut-and-paste).
-- **Ctrl+V**: paste. See [Copy, cut, and paste](#copy-cut-and-paste).
+- **Ctrl+V**: paste. Formatted text becomes Markdown. See [Copy, cut, and paste](#copy-cut-and-paste).
+- **Alt+A**: paste as plain text. The window uses **Ctrl+Shift+M**.
 
 You hear what the word keys deleted, for example "three deleted."
 
@@ -135,7 +136,7 @@ textweaver keeps the last 1,000 steps, or 50 MB of them, whichever comes first; 
 
 ## Find and replace: Alt+F
 
-Press **Alt+F** in edit mode. The window uses **Ctrl+Shift+F**.
+Press **Alt+F** in edit mode. In the window, **Ctrl+Shift+F** opens a panel with the same choices as fields, check boxes, and buttons; see [In the window: the find and replace panel](#in-the-window-the-find-and-replace-panel).
 
 1. The prompt says "Replace, find what". Type the text to find and press **Enter**. You hear how many matches there are, then "Replace with?"
 2. Type the new text and press **Enter**.
@@ -170,6 +171,23 @@ With **Regular expression** on, textweaver uses the Rust `regex` syntax:
 - For example, find `(\d{4})-(\d\d)-(\d\d)` and replace with `$3/$2/$1` to turn 2026-10-09 into 09/10/2026.
 - A pattern that is not valid is said in words, with the character where it goes wrong, for example "Invalid pattern at character 3: unclosed group." Nothing is replaced. Press **Alt+F** and **Up** to fix it.
 - A pattern that matches only a position, such as `^` alone, finds nothing: every match must hold at least one character.
+
+### In the window: the find and replace panel
+
+In the window, **Ctrl+Shift+F** in edit mode opens the Find and replace panel, a dialog that gathers the whole search in one place. It drives the same search as the terminal's prompts, with the same options, history, spoken previews, and undo steps, so a replacement behaves identically in both programs. The controls, in Tab order, are these:
+
+- **Find what**: the text to find or, with Regular expression on, the pattern. **Enter** in this field finds the next match.
+- A status line beneath it. While the pattern cannot be searched, it explains why, for example "Invalid pattern at character 3: unclosed group.", and textweaver says so once each time the reason changes. While a replacement is under way, it shows the match in question, for example "Match 2 of 5, line 12: teh becomes the."
+- **Replace with**: the new text, which may refer to what a regular expression captured. **Enter** in this field replaces the match.
+- Four check boxes: **Match case**, **Whole words**, **Regular expression**, and **Across lines**. **Space** switches the focused one. These are the search options described above, shared with Find and with the terminal's loop; when one changes during a replacement, the matches are counted again.
+- **Find next** (F3): selects the next match. During a replacement it skips the match in question instead.
+- **Replace**: the first press finds the first match after the cursor and says it; each further press replaces that match, as one undo step, and moves on to the next.
+- **Replace all**: says how many matches would change and asks once. **Y** replaces them all as a single undo step; **N** returns to the panel.
+- **Close** (Escape): closes the panel and returns the focus to the document. A replacement under way stops, and textweaver reports what was done, for example "Stopped. Replaced 2, skipped 1."
+
+In either field, **Up** and **Down** bring back earlier entries; Find what shares its history with Find (**Ctrl+F**). **F3** and **Shift+F3** find the next and the previous match from any control in the panel, and the Help key (**F1**) reads a short summary of these keys. Counts and previews are announced politely, so they wait until your screen reader has finished speaking.
+
+In a short window, less than 480 pixels high, the panel is compact: the drawn title and hint are omitted and the buttons hide their keys on screen, while the controls, their names, and their order remain the same.
 
 ## Save
 
@@ -242,16 +260,35 @@ The copies are in the `recovery` folder of the data folder. The [library guide](
 
 ## Copy, cut, and paste
 
-- **Ctrl+C** copies the selection. **Ctrl+X** cuts it; the cut is one undo step. textweaver sends the text to the terminal, which puts it on your computer's clipboard (the OSC 52 sequence; it works over SSH too). Windows Terminal, iTerm2, kitty, WezTerm, foot, Alacritty, and xterm pass it on.
-- The old Windows console window, macOS Terminal, and terminals built on VTE (GNOME Terminal, Tilix) do not take text that way, so there textweaver puts it on the system clipboard itself. The first time, it says "Copied with the system clipboard, because this terminal cannot take copied text." In Konsole it does both. Over SSH and in tmux it always uses the terminal, because the system clipboard there belongs to the other computer.
-- To paste from your computer's clipboard, use your terminal's paste command, such as **Ctrl+V** or **Ctrl+Shift+V** in Windows Terminal, or right-click.
-- When the terminal passes **Ctrl+V** to textweaver instead of pasting, textweaver pastes the text you last copied or cut in textweaver. When there is none, it says "Nothing copied in textweaver yet. Use your terminal's paste, for example Control Shift V."
+### Copy and cut
 
-textweaver turns on bracketed paste, so the terminal sends pasted text as one piece, not as separate key presses. That means:
+**Ctrl+C** copies the selection. When nothing is selected in reading mode, it copies the sentence at the cursor, and you hear "Copied the sentence:" followed by its first words; with a selection you hear "Copied:" and the first words instead. **Ctrl+X** cuts the selection in edit mode, and the cut is a single undo step. A long selection is summarized rather than read in full: you hear how many characters were copied, with the first and last few words.
 
-- the paste is one undo step;
-- keys in the pasted text never run commands;
-- you hear "Pasted", the number of characters, and the first words.
+In the terminal reader, textweaver sends copied text to the terminal, which places it on your computer's clipboard (the OSC 52 sequence, which also works over SSH). Windows Terminal, iTerm2, kitty, WezTerm, foot, Alacritty, and xterm accept it. The old Windows console window, macOS Terminal, and terminals built on VTE (GNOME Terminal, Tilix) do not, so there textweaver writes to the system clipboard itself; the first time, it says "Copied with the system clipboard, because this terminal cannot take copied text." Konsole receives both. Over SSH and inside tmux, textweaver always uses the terminal, because the system clipboard on that side belongs to the other computer.
+
+### Paste: formatted text becomes Markdown
+
+**Ctrl+V** pastes at the cursor in edit mode. When the clipboard holds formatted text, such as a passage copied from a web browser or a word processor, textweaver converts it to Markdown with its own HTML and RTF readers and its own Markdown writer, the same ones it uses to open and export documents. Headings, bulleted and numbered lists, bold and italic text, links, tables, and code survive the conversion, so the pasted passage keeps its structure in your document. You then hear what arrived, for example "Pasted as Markdown: 1 heading, 3 paragraphs, 1 list." When the clipboard holds only plain text, you hear how many lines or characters were pasted and how the text begins, for example "Pasted 3 lines: The results suggest that…"
+
+A very long formatted passage is converted in the background, so the keyboard keeps responding; you hear "Converting the formatted text to paste." and the text appears when the conversion is done. Whatever its size, every paste is one undo step: **Ctrl+Z** removes the whole paste at once, and **Ctrl+Y** puts it back.
+
+### Paste as plain text: Alt+A, or Ctrl+Shift+M in the window
+
+When you want the words without their formatting, use **Paste as plain text**. It inserts only the clipboard's plain text, with no Markdown added. It is in the Edit menu, in the context menu, and in the command palette as "paste plain text". Many programs use **Ctrl+Shift+V** for this, but in textweaver's window that key already chooses a voice, and a terminal cannot tell **Ctrl+Shift+V** from **Ctrl+V**, so textweaver uses the nearest free keys instead. You can move the command to any key you prefer in `keymap.toml`; the [keyboard guide](keyboard.md) explains how.
+
+### Where the clipboard comes from in the terminal
+
+Most terminals keep **Ctrl+V** or **Ctrl+Shift+V** (or a right-click) as their own paste command. That paste reaches textweaver as plain text, because a terminal passes on only the characters it was given; it is therefore always a plain-text paste. textweaver turns on bracketed paste, so the terminal sends the pasted text as one piece rather than as separate key presses. As a result, the paste is one undo step, keys inside the pasted text never run commands, and you hear how much was pasted and how it begins.
+
+When the terminal passes **Ctrl+V** through to textweaver instead of pasting, textweaver reads the system clipboard itself, and formatted text from a browser or word processor becomes Markdown as described above. Over SSH and in tmux, where the system clipboard belongs to the other computer, textweaver pastes the text you last copied or cut in textweaver; when there is none, it says "Nothing copied in textweaver yet. Use your terminal's paste, for example Control Shift V."
+
+In the window, **Ctrl+V** currently pastes the clipboard's plain text; Markdown conversion of formatted text in the window arrives with the window's context menu.
+
+### The context menu: Ctrl+F10 in the terminal
+
+The context menu gathers the commands that fit where the cursor is: Cut, Copy, Paste, Paste as plain text, and Select all, then Add a note, Highlight, Define the word, Read from here, and, on a link, Open link. Cut and the two paste commands appear only in edit mode. Each item is read with its key, for example "Copy, Ctrl+C", so the menu also teaches the shortcuts. The items are the same commands as in the menu bar, not copies of them, so a key you change in `keymap.toml` changes in both places.
+
+In the terminal reader, **Ctrl+F10** opens the context menu as a list ("Context menu"), because **Shift+F10** opens Settings there. A terminal that reports the Applications key opens it with that key too. Move with the arrow keys or press an item's letter, press **Enter** to run the item, and press **Escape** to close the menu; you hear "Context menu closed." and the cursor is where it was. In the window, **Shift+F10** is the context menu key.
 
 Pasting into a prompt, such as Find, puts the text in the prompt.
 

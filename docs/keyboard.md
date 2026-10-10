@@ -266,6 +266,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Accept every tracked change in the document | palette | palette | palette | `accept_all_changes` |
 | Reject every tracked change in the document | palette | palette | palette | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | palette | palette | palette | `add_comment` |
+| Test yourself on the notes and highlights: Enter shows each answer | palette | palette | palette | `self_test` |
 
 ## File
 
@@ -334,7 +335,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Select all the text | `Ctrl+A` (edit) | `Ctrl+A` (edit) | `Cmd+A` (edit) | `select_all` |
 | Delete the word before the cursor | `Alt+Backspace` (edit) | `Ctrl+Backspace` (edit) | `Option+Backspace` (edit) | `delete_word_before` |
 | Delete the word after the cursor | `Ctrl+Delete` (edit) | `Ctrl+Delete` (edit) | `Option+Delete` (edit) | `delete_word_after` |
-| Paste the text last copied or cut in textweaver; the terminal paste works too | `Ctrl+V` (edit) | `Ctrl+V` (edit) | `Cmd+V` (edit) | `paste` |
+| Paste the clipboard; formatted text from a browser or word processor becomes Markdown | `Ctrl+V` (edit) | `Ctrl+V` (edit) | `Cmd+V` (edit) | `paste` |
+| Paste the clipboard as plain text, keeping none of its formatting | `Alt+A` (edit) | `Ctrl+Shift+M` (edit) | `Cmd+Shift+M` (edit) | `paste_plain_text` |
 | Insert a citation: pick a reference, then give a page or other locator | `Alt+C` (edit) | `Alt+C` (edit) | `Cmd+Option+C` (edit) | `insert_citation` |
 | Add a reference to your library by DOI or ISBN | `Alt+B` | `Alt+Shift+D` | `Cmd+Option+Shift+D` | `add_reference` |
 | Insert the bibliography of the works cited, at the cursor | palette | palette | palette | `insert_bibliography` |
@@ -371,6 +373,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Open the reading settings: rate, font, spacing, line length, theme, highlight, ruler, bionic reading, and syllables | palette | palette | palette | `reading_form` |
 | Cycle how much textweaver announces about itself: off, minimal, normal, or full; errors and answers are always said | `Ctrl+F9` | `Ctrl+F9` | `Cmd+F9` | `cycle_interface_announcements` |
 | Open the menus: File, Edit, View, Reading, Speech, Tools, and Help | `F10` | `F10` | `F10` | `menu` |
+| Open the context menu: cut, copy, paste, and the commands for where the cursor is | `Ctrl+F10` | `Shift+F10` | `Shift+F10` | `context_menu` |
 | Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
 | Open the settings: every option with its help; Left and Right change a value | `Shift+F10` | `Ctrl+,` | `Cmd+,` | `settings` |
 | List keyboard shortcuts | `?` (browse) | `?` (browse) | `?` (browse) | `keyboard_help` |
@@ -537,6 +540,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Accept every tracked change in the document | `accept_all_changes` |
 | Reject every tracked change in the document | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | `add_comment` |
+| Test yourself on the notes and highlights: Enter shows each answer | `self_test` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |

@@ -81,7 +81,8 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [Testing](dev/testing.md): the checks every change must pass, the tests, and the [benchmarks](dev/testing.md#benchmarks).
 - [The polish checklist and its tests](dev/checklist-tests.md): each row of the consistency, accessibility, visual, and documentation checklist, with the test that holds it or the owner's session that covers it.
 - [Architecture](dev/architecture.md): the crates, the dependency rules, the threads, and the path from a file to a highlighted word.
-- [The crates](dev/architecture.md#the-crates): what each of the 36 crates does, with its ADRs.
+- [The eSpeak NG helper](dev/espeak-helper.md): how eSpeak NG runs in its own helper program, how textweaver chooses between it and the in-process backend, and the measurement behind the choice.
+- [The crates](dev/architecture.md#the-crates): what each of the 37 crates does, with its ADRs.
 - [CI](../CONTRIBUTING.md#ci): the workflows and what they check.
 - [Docker development container](dev/docker.md): building and testing Linux features on any machine, and Voxin.
 - [Fuzzing](../fuzz/README.md): the 35 cargo-fuzz targets, run every night: the document loaders (RTF, ODT, Word revisions, LaTeX, Obsidian, JSON, SVG, and email among them), PDF annotations, the math and citation parsers, themes, the lexicon, vault import, JSON-RPC, the settings and state files, the sync folder's records and group files, and the engine-host protocol.

@@ -23,6 +23,7 @@
 pub use textweaver_apple as apple;
 pub use textweaver_dectalk as dectalk;
 pub use textweaver_eci as eci;
+pub use textweaver_espeak as espeak;
 pub use textweaver_piper as piper;
 pub use textweaver_sapi as sapi;
 
@@ -35,7 +36,7 @@ use textweaver_speech::pacing::PacingConfig;
 use textweaver_speech::{
     BackendRegistry, NormalizeConfig, ServiceConfig, SpeechBackend, TableMode, VoiceParams,
 };
-use textweaver_store::{EciDictionaries, Settings, TableMode as StoreTableMode};
+use textweaver_store::{EciDictionaries, EspeakHelper, Settings, TableMode as StoreTableMode};
 
 /// The language part of a tag, lowercase: `es` for `es-MX` or `es_ES`.
 fn language_of(tag: &str) -> String {
@@ -251,6 +252,7 @@ fn register_engines(registry: &mut BackendRegistry, settings: &Settings) {
             .ok()?;
         Some(format!("DECtalk ({})", choice.candidate.path.display()))
     });
+    register_espeak(registry, settings);
     // Piper neural voices (ADR-0023), in-process on RTen: available once a
     // voice is installed, below DECtalk and above the built-in engines.
     let piper = piper_config(settings);
@@ -261,6 +263,109 @@ fn register_engines(registry: &mut BackendRegistry, settings: &Settings) {
         move || textweaver_piper::probe(&probe),
         textweaver_piper::factory(piper),
     );
+}
+
+/// Where eSpeak NG runs: inside textweaver, or in its helper program.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EspeakPath {
+    /// The in-process backend (the `espeak` feature).
+    InProcess,
+    /// The helper program, `textweaver-espeak-host`.
+    Helper,
+}
+
+/// True when the in-process eSpeak NG backend is built in and its library
+/// loads in this process.
+pub fn espeak_in_process_available() -> bool {
+    #[cfg(feature = "espeak")]
+    {
+        textweaver_speech::backends::espeak::available()
+    }
+    #[cfg(not(feature = "espeak"))]
+    {
+        false
+    }
+}
+
+/// Where eSpeak NG runs for `[speech.espeak] helper`, given whether the
+/// in-process backend can run (`in_process`) and the helper can
+/// (`helper`); `None` when neither the choice allows can. Automatic
+/// prefers the helper on Windows (`windows`), where it measured as good as
+/// the in-process path (`docs/dev/espeak-helper.md`) and keeps an engine
+/// crash out of the reader, and the in-process backend elsewhere. Each
+/// probe runs only when it is needed.
+pub fn espeak_path(
+    choice: EspeakHelper,
+    windows: bool,
+    in_process: impl FnOnce() -> bool,
+    helper: impl FnOnce() -> bool,
+) -> Option<EspeakPath> {
+    use EspeakPath::{Helper, InProcess};
+    match choice {
+        EspeakHelper::Never => in_process().then_some(InProcess),
+        EspeakHelper::Always => helper().then_some(Helper),
+        EspeakHelper::Auto if windows => {
+            if helper() {
+                Some(Helper)
+            } else {
+                in_process().then_some(InProcess)
+            }
+        }
+        EspeakHelper::Auto => {
+            if in_process() {
+                Some(InProcess)
+            } else {
+                helper().then_some(Helper)
+            }
+        }
+    }
+}
+
+/// The in-process eSpeak NG backend, when this build has it.
+fn in_process_espeak() -> Result<Box<dyn SpeechBackend>, textweaver_speech::SpeechError> {
+    #[cfg(feature = "espeak")]
+    {
+        use textweaver_speech::backends::espeak::{EspeakBackend, EspeakOutput};
+        EspeakBackend::new(EspeakOutput::from_env()).map(|b| Box::new(b) as Box<dyn SpeechBackend>)
+    }
+    #[cfg(not(feature = "espeak"))]
+    {
+        Err(textweaver_speech::SpeechError::Unavailable(
+            "espeak",
+            "this build runs eSpeak NG only in its helper program".into(),
+        ))
+    }
+}
+
+/// Registers eSpeak NG, in process or in its helper program as
+/// `[speech.espeak] helper` and [`espeak_path`] decide. It replaces the
+/// speech crate's built-in entry of the same id.
+fn register_espeak(registry: &mut BackendRegistry, settings: &Settings) {
+    let choice = settings.speech.espeak.helper;
+    let helper = textweaver_espeak::EspeakHostConfig::from_env();
+    let path = move |helper: &textweaver_espeak::EspeakHostConfig| {
+        espeak_path(choice, cfg!(windows), espeak_in_process_available, || {
+            textweaver_espeak::probe(helper)
+        })
+    };
+    let probe = helper.clone();
+    let label = helper.clone();
+    registry.register_cached(
+        textweaver_espeak::backend_description(),
+        format!("{choice:?} {helper:?}"),
+        move || path(&probe).is_some(),
+        move || match path(&helper) {
+            Some(EspeakPath::Helper) => (textweaver_espeak::factory(helper.clone()))(),
+            Some(EspeakPath::InProcess) => in_process_espeak(),
+            None => Err(textweaver_speech::SpeechError::Unavailable(
+                "espeak",
+                "eSpeak NG is not installed, or its helper program is missing".into(),
+            )),
+        },
+    );
+    registry.set_label("espeak", move || {
+        (path(&label) == Some(EspeakPath::Helper)).then(|| "eSpeak NG (helper program)".to_owned())
+    });
 }
 
 /// Eloquence's name with its source: the product ("Eloquence (OpenEVV,
@@ -416,6 +521,29 @@ mod tests {
                 .filter(|b| b.id != "eci")
                 .all(|b| b.priority < eci.priority)
         );
+    }
+
+    #[test]
+    fn espeak_runs_where_the_setting_and_the_platform_say() {
+        use EspeakHelper::{Always, Auto, Never};
+        use EspeakPath::{Helper, InProcess};
+        let path = |choice, windows, local: bool, helper: bool| {
+            espeak_path(choice, windows, || local, || helper)
+        };
+        // Automatic: the helper first on Windows, in process first elsewhere.
+        assert_eq!(path(Auto, true, true, true), Some(Helper));
+        assert_eq!(path(Auto, true, true, false), Some(InProcess));
+        assert_eq!(path(Auto, false, true, true), Some(InProcess));
+        assert_eq!(path(Auto, false, false, true), Some(Helper));
+        assert_eq!(path(Auto, false, false, false), None);
+        // Always and never hold to their path, available or not.
+        assert_eq!(path(Always, false, true, true), Some(Helper));
+        assert_eq!(path(Always, true, true, false), None);
+        assert_eq!(path(Never, true, true, true), Some(InProcess));
+        assert_eq!(path(Never, true, false, true), None);
+        // The registry lists eSpeak NG under its one id either way.
+        let list = engines_described(&Settings::default());
+        assert_eq!(list.iter().filter(|b| b.id == "espeak").count(), 1);
     }
 
     #[test]

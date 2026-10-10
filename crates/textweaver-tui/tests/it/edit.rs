@@ -307,7 +307,7 @@ fn bracketed_paste_inserts_as_one_step() {
     // The caret was on "Notes" (after "# "); CRLF became one line break.
     assert_eq!(h.text(), "# Pasted\nlines Notes\n\nPlain words here.\n");
     assert!(
-        h.status().contains("Pasted 13 characters: Pasted lines"),
+        h.status().contains("Pasted 2 lines: Pasted lines"),
         "{}",
         h.status()
     );

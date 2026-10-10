@@ -21,6 +21,7 @@
 //! - [`audio`]: the sample feed and the outputs (the audio device through
 //!   rodio with the `playback` feature, or a silent timed output);
 //! - [`wav`]: WAV writing;
+//! - [`arch`]: a library's machine architecture, for choosing its host;
 //! - [`serve`]: the host side's request reader with its stop epoch, and a
 //!   shared frame writer;
 //! - [`Clock`] ([`clock`]): the clock the start deadline, the stall
@@ -31,6 +32,7 @@
 //! top of [`serve`], and their backends on top of [`process`] and
 //! [`Playback`].
 
+pub mod arch;
 pub mod audio;
 pub mod clock;
 mod orphan;

@@ -317,6 +317,8 @@ pub(crate) enum ListKind {
     /// A note's links, what links to it, or a step of adding one
     /// (crate::relations, B1-g1).
     Relations(crate::relations::RelationsList),
+    /// Prompts with hidden answers: the self-test (crate::reveal).
+    Reveal(crate::reveal::RevealList),
 }
 
 /// The application: the only owner of mutable state.
@@ -363,6 +365,8 @@ pub struct App {
     /// The introduction of the list shown ("Notes, 12 notes. Enter goes
     /// to a note..."), repeated on request (crate::status).
     pub(crate) list_intro: Option<String>,
+    /// The keyboard shortcuts list's filter (crate::command_list).
+    pub(crate) keys_filter: String,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     /// Which sentences continuous reading says (crate::overview); for
@@ -439,6 +443,10 @@ pub struct App {
     /// Text copied or cut, waiting for the frontend
     /// ([`App::take_clipboard`]).
     pub(crate) clipboard: Option<String>,
+    /// The system clipboard Paste reads ([`App::set_clipboard`]).
+    pub(crate) system_clipboard: Option<Box<dyn crate::clipboard::Clipboard>>,
+    /// A formatted paste being converted on a worker thread.
+    pub(crate) paste_job: Option<crate::clipboard::PasteJob>,
     /// The background writer: saves, snapshots, positions, and the disk
     /// check (crate::writer).
     pub(crate) writer: crate::writer::Writer,
@@ -497,6 +505,10 @@ pub struct App {
     pub(crate) pending_list_focus: Option<usize>,
     /// Say a list's focused item when the list is shown (crate::list_model).
     pub(crate) announce_list_focus: bool,
+    /// The next list shown is the same list again after a change that was
+    /// just said (an answer revealed): its focused item is not said again
+    /// and its introduction is kept (crate::reveal).
+    pub(crate) list_reshow_quiet: bool,
     /// Menu handlers, recent commands, and the menu list (crate::menu).
     pub(crate) menu: crate::menu::MenuState,
     /// Dictation in edit mode (crate::dictation).
@@ -568,6 +580,7 @@ impl App {
             last_message: None,
             messages_said: 0,
             list_intro: None,
+            keys_filter: String::new(),
             pause_origin: None,
             reading: ReadKind::Continuous,
             reading_pass: textweaver_text::ReadingPass::Full,
@@ -610,6 +623,8 @@ impl App {
             drawn_colors: None,
             voices: crate::voice::VoicesState::default(),
             clipboard: None,
+            system_clipboard: None,
+            paste_job: None,
             writer: crate::writer::Writer::spawn(wake.clone()),
             pending_saves: Vec::new(),
             disk_check_pending: false,
@@ -637,6 +652,7 @@ impl App {
             pending_prompt_text: None,
             pending_list_focus: None,
             announce_list_focus: true,
+            list_reshow_quiet: false,
             menu: crate::menu::MenuState::default(),
             dictation: crate::dictation::DictationSlot::default(),
             browse: crate::browse::BrowseState::new(),
@@ -1514,6 +1530,7 @@ impl App {
             Command::MathStep(mv) => self.math_step(mv),
             Command::Find(pattern) => {
                 self.leave_prompt();
+                self.remember_answer(PromptPurpose::Find, &pattern);
                 self.run_find(&pattern);
                 vec![Effect::Redraw]
             }
@@ -1639,6 +1656,7 @@ impl App {
         effects.extend(self.restart_tick());
         effects.extend(self.library_tick());
         effects.extend(self.details_tick());
+        effects.extend(self.paste_tick());
         effects.extend(self.define_tick());
         effects.extend(self.voices_tick());
         effects.extend(self.dictation_tick());
@@ -1848,6 +1866,7 @@ impl App {
             Some(ListKind::Summary(ranges)) => self.choose_summary_sentence(&ranges, n),
             Some(ListKind::Changes(rows)) => self.choose_change_row(&rows, n),
             Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
+            Some(ListKind::Reveal(l)) => return self.choose_reveal(l, n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1916,6 +1935,10 @@ impl App {
             Some(ListKind::Components(l)) => {
                 self.list = None;
                 self.mark_component_row(l, n)
+            }
+            Some(ListKind::Reveal(l)) => {
+                self.list = None;
+                self.reveal_answer_aloud(l, n)
             }
             _ => {
                 let msg = self.msg("list-nothing-to-mark");
@@ -2223,6 +2246,7 @@ impl App {
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),
             A::Menu => return self.open_menu(),
+            A::ContextMenu => return self.open_context_menu(),
             A::BrowseFiles
             | A::BatchConvert
             | A::ExportAudio
@@ -2298,6 +2322,7 @@ impl App {
             | A::NextLintProblem
             | A::PreviousLintProblem
             | A::ExportStudySheet
+            | A::SelfTest
             | A::NewFromTemplate
             | A::ExportHtml
             | A::ExportPdf
@@ -2311,6 +2336,7 @@ impl App {
             | A::DeleteWordBefore
             | A::DeleteWordAfter
             | A::Paste
+            | A::PastePlainText
             | A::InsertCitation
             | A::AddReference
             | A::InsertBibliography
