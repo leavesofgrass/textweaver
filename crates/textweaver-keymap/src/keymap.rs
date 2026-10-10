@@ -1405,6 +1405,7 @@ mod tests {
                 ActionId::CheckCitations,
                 ActionId::ImportReferences,
                 ActionId::ExportStudySheet,
+                ActionId::ExportKnowledgeGraph,
                 ActionId::NewFromTemplate,
                 ActionId::TogglePreviewAutoReload,
                 ActionId::TogglePreviewLive,

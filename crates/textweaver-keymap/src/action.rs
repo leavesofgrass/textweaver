@@ -505,6 +505,9 @@ actions! {
         gui [], term [], shared [];
     ExportBrf = "export_brf", File, "Export the document as braille (BRF) next to it",
         gui [], term [], shared [];
+    ExportKnowledgeGraph = "export_knowledge_graph", File,
+        "Export the knowledge graph: every link between notes, as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or CSV",
+        gui [], term [], shared [];
     PreviewInBrowser = "preview_in_browser", File,
         "Preview the document in the web browser, with math; each save rewrites the preview",
         gui [], term [], shared [];

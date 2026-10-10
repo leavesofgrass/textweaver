@@ -263,6 +263,7 @@ impl MenuId {
                 Do(A::ExportBrf),
                 Sep,
                 Do(A::ExportStudySheet),
+                Do(A::ExportKnowledgeGraph),
             ],
             MenuId::Preview => &[
                 Do(A::PreviewInBrowser),

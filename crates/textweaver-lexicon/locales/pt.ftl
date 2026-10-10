@@ -781,6 +781,7 @@ action-export-pdf = Exportar o documento como um PDF com marcação (tagged) ao 
 action-export-docx = Exportar o documento como um arquivo do Word (DOCX) ao lado dele
 action-export-epub = Exportar o documento como um livro EPUB ao lado dele
 action-export-brf = Exportar o documento como braille (BRF) ao lado dele
+action-export-knowledge-graph = Exportar o grafo de conhecimento: cada ligação entre notas, como lista Markdown, JSON, DOT, GraphML, Mermaid, PlantUML ou CSV
 action-preview-in-browser = Pré-visualizar o documento no navegador web, com matemática; cada salvamento reescreve a pré-visualização
 action-toggle-preview-auto-reload = Ligar ou desligar a recarga automática da pré-visualização no navegador
 action-toggle-preview-live = Ligar ou desligar a pré-visualização ao vivo: com a recarga automática, a pré-visualização também recarrega quando a digitação pausa
@@ -1269,6 +1270,21 @@ relations-no-note-here = Nenhuma nota aqui. Ligações pertencem a notas; adicio
 relations-filter-cleared = Filtro limpo, { $n } mostrados.
 relations-filter-none = Nada corresponde a { $filter }.
 relations-filter-matched = Filtro { $filter }: { $n } mostrados.
+
+## Exportar o grafo de conhecimento (B1-g2).
+
+graph-export-title = Exportar o grafo de conhecimento como
+graph-export-intro = Grafo de conhecimento, ligações: { $links }. Escolha um formato; a lista Markdown é o texto para ler.
+graph-export-empty = Não há ligações entre notas para exportar. Adicione uma na lista de ligações de uma nota.
+graph-format-md = Lista Markdown, o texto para ler
+graph-format-json = JSON, para Gephi e Cytoscape
+graph-format-dot = DOT, para Graphviz
+graph-format-graphml = GraphML, para Gephi, Cytoscape e yEd
+graph-format-mermaid = Diagrama Mermaid
+graph-format-plantuml = Diagrama PlantUML
+graph-format-csv = Lista de arestas CSV, para planilhas
+graph-export-saved = Grafo de conhecimento salvo como { $file }. Abrir? y ou n. Em { $folder }.
+graph-export-failed = Não foi possível escrever o grafo de conhecimento: { $error } Verifique se a pasta pode ser gravada.
 
 ## Bookmarks: rename and delete.
 
@@ -3390,6 +3406,7 @@ name-export-pdf = Exportar PDF
 name-export-docx = Exportar Word
 name-export-epub = Exportar EPUB
 name-export-brf = Exportar braille
+name-export-knowledge-graph = Exportar grafo de conhecimento
 name-preview-in-browser = Visualizar no navegador
 name-toggle-preview-auto-reload = Recarregar a prévia sozinha
 name-toggle-preview-live = Prévia ao vivo

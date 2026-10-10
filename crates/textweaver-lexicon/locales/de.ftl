@@ -801,6 +801,7 @@ action-export-pdf = Das Dokument als getaggtes PDF daneben exportieren
 action-export-docx = Das Dokument als Word-Datei (DOCX) daneben exportieren
 action-export-epub = Das Dokument als EPUB-Buch daneben exportieren
 action-export-brf = Das Dokument als Braille (BRF) daneben exportieren
+action-export-knowledge-graph = Den Wissensgraphen exportieren: jede Verknüpfung zwischen Notizen, als Markdown-Liste, JSON, DOT, GraphML, Mermaid, PlantUML oder CSV
 action-preview-in-browser = Das Dokument im Webbrowser als Vorschau anzeigen, mit Mathematik; jedes Speichern schreibt die Vorschau neu
 action-toggle-preview-auto-reload = Das automatische Neuladen der Browser-Vorschau ein- oder ausschalten
 action-toggle-preview-live = Die Live-Vorschau ein- oder ausschalten: bei automatischem Neuladen lädt die Vorschau auch neu, wenn das Tippen pausiert
@@ -1289,6 +1290,21 @@ relations-no-note-here = Hier ist keine Notiz. Verknüpfungen gehören zu Notize
 relations-filter-cleared = Filter gelöscht, { $n } angezeigt.
 relations-filter-none = Nichts passt zu { $filter }.
 relations-filter-matched = Filter { $filter }: { $n } angezeigt.
+
+## Den Wissensgraphen exportieren (B1-g2).
+
+graph-export-title = Wissensgraph exportieren als
+graph-export-intro = Wissensgraph, Verknüpfungen: { $links }. Wählen Sie ein Format; die Markdown-Liste ist der Text zum Lesen.
+graph-export-empty = Keine Verknüpfungen zwischen Notizen zum Exportieren. Fügen Sie eine in der Verknüpfungsliste einer Notiz hinzu.
+graph-format-md = Markdown-Liste, der Text zum Lesen
+graph-format-json = JSON, für Gephi und Cytoscape
+graph-format-dot = DOT, für Graphviz
+graph-format-graphml = GraphML, für Gephi, Cytoscape und yEd
+graph-format-mermaid = Mermaid-Diagramm
+graph-format-plantuml = PlantUML-Diagramm
+graph-format-csv = CSV-Kantenliste, für Tabellenkalkulationen
+graph-export-saved = Wissensgraph gespeichert als { $file }. Öffnen? y oder n. In { $folder }.
+graph-export-failed = Der Wissensgraph konnte nicht geschrieben werden: { $error } Prüfen Sie, ob in den Ordner geschrieben werden kann.
 
 ## Bookmarks: rename and delete.
 
@@ -3398,6 +3414,7 @@ name-export-pdf = PDF exportieren
 name-export-docx = Word exportieren
 name-export-epub = EPUB exportieren
 name-export-brf = Braille exportieren
+name-export-knowledge-graph = Wissensgraph exportieren
 name-preview-in-browser = Vorschau im Browser
 name-toggle-preview-auto-reload = Vorschau automatisch neu laden
 name-toggle-preview-live = Live-Vorschau

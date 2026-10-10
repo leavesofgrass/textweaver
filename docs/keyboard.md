@@ -289,6 +289,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Export the document as a Word file (DOCX) next to it | palette | palette | palette | `export_docx` |
 | Export the document as an EPUB book next to it | palette | palette | palette | `export_epub` |
 | Export the document as braille (BRF) next to it | palette | palette | palette | `export_brf` |
+| Export the knowledge graph: every link between notes, as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or CSV | palette | palette | palette | `export_knowledge_graph` |
 | Preview the document in the web browser, with math; each save rewrites the preview | palette | palette | palette | `preview_in_browser` |
 | Turn automatic reloading of the browser preview on or off | palette | palette | palette | `toggle_preview_auto_reload` |
 | Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | palette | palette | palette | `toggle_preview_live` |
@@ -545,6 +546,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Export the document as a Word file (DOCX) next to it | `export_docx` |
 | Export the document as an EPUB book next to it | `export_epub` |
 | Export the document as braille (BRF) next to it | `export_brf` |
+| Export the knowledge graph: every link between notes, as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or CSV | `export_knowledge_graph` |
 | Preview the document in the web browser, with math; each save rewrites the preview | `preview_in_browser` |
 | Turn automatic reloading of the browser preview on or off | `toggle_preview_auto_reload` |
 | Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | `toggle_preview_live` |
