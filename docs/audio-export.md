@@ -8,7 +8,7 @@ This guide is written to be read with a screen reader. Each task section starts 
 
 In the reader, open the File menu (F10 in the terminal) and choose Export audio, or find "Export audio" in the command palette. A document must be open. Export audio is in the terminal reader, the app, and `tw` in every release; only a lean build of the reader, made with `--no-default-features`, leaves it out ([Building](dev/building.md)).
 
-1. **The format.** You hear, for example, "Export essay as audio: choose a format, 6 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then Ogg Vorbis: small and open, and most players open it. Then WAV. M4B and "Video with captions: MP4, needs ffmpeg" are listed only when ffmpeg is installed; when it is not, you hear "M4B, MP4 need ffmpeg, which was not found." (see [Make a video with captions](#make-a-video-with-captions)). Last comes "Read-along page: text and audio, one file", which writes `essay.html` (see [Make a read-along page](#make-a-read-along-page)). Press Enter on a format. The format in the `[export] audio_format` setting (Settings, Audio export format) is listed first; FLAC unless you change it.
+1. **The format.** You hear, for example, "Export essay as audio: choose a format, 6 choices." FLAC comes first: lossless and about half the size of WAV. MP3 follows: small, and every player opens it. Then Opus: the smallest, made for speech. Then Ogg Vorbis: small and open, and most players open it. Then WAV. M4B and "Video with captions: MP4, needs ffmpeg" are listed only when ffmpeg is installed; when it is not, textweaver first offers to fetch it (a no, or a system with no build to fetch, goes on), and then you hear "M4B, MP4 need ffmpeg, which was not found." (see [Make a video with captions](#make-a-video-with-captions)). Last comes "Read-along page: text and audio, one file", which writes `essay.html` (see [Make a read-along page](#make-a-read-along-page)). Press Enter on a format. The format in the `[export] audio_format` setting (Settings, Audio export format) is listed first; FLAC unless you change it.
 2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
 3. **The question.** "Export essay.flac with Microsoft David at 200 words per minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
 
@@ -50,17 +50,17 @@ WAV, FLAC, MP3, Opus, and Ogg Vorbis files are written by textweaver itself. You
 
 ### M4B needs ffmpeg
 
-To write `.m4b` or `.mp4`, textweaver first writes a WAV and then asks ffmpeg to convert it. textweaver never bundles ffmpeg, so you install it yourself once, or get it from your own components source (see [Optional components](components.md#your-own-components-source)).
+To write `.m4b` or `.mp4`, textweaver first writes a WAV and then asks ffmpeg to convert it. textweaver does not bundle ffmpeg. Where its publisher makes a build for your computer (Windows and Linux), textweaver offers to fetch it for you when you start Export audio without it, names the size and license, and asks first ([Optional components](components.md#helper-programs)). On macOS, or if you prefer, install it yourself once, or get it from your own components source (see [Optional components](components.md#your-own-components-source)).
 
 textweaver looks for ffmpeg in three places, in this order:
 
-1. textweaver's components folder, `components` in the data folder, where a copy from a components source goes.
+1. textweaver's components folder, `components` in the data folder, where a copy that textweaver fetched, or one from a components source, goes.
 2. The `TEXTWEAVER_FFMPEG` environment variable, if it is set. It must be the full path to the ffmpeg program.
 3. Otherwise, a program named `ffmpeg` in one of the folders on your `PATH`, which is where installers put it.
 
 ### Install ffmpeg on Windows
 
-You can use the Windows package manager, winget. For example:
+If you said yes when textweaver offered to fetch ffmpeg, there is nothing to install. To install it yourself, you can use the Windows package manager, winget. For example:
 
 ```powershell
 winget install Gyan.FFmpeg
