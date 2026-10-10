@@ -32,7 +32,7 @@ fn parse_announce(s: &str) -> Result<AnnounceMode, String> {
 
 /// Read documents aloud in a window.
 #[derive(Parser, Debug)]
-#[command(name = "textweaver-gui", version, about)]
+#[command(name = "textweaver-gui", version = textweaver_app::VERSION_TEXT, about)]
 struct Args {
     /// Document to open.
     file: Option<PathBuf>,
@@ -363,6 +363,16 @@ mod tests {
             harness_flag(&parse(&["--measure-frames", "20", "--home", "h"])),
             Some("--measure-frames")
         );
+    }
+
+    /// `--version` prints the version, then the copyright line from the
+    /// shared constant, as `tw` and the terminal reader do.
+    #[test]
+    fn version_prints_the_copyright_line() {
+        use clap::CommandFactory;
+        let version = Args::command().render_version();
+        assert!(version.contains(env!("CARGO_PKG_VERSION")), "{version}");
+        assert!(version.contains(textweaver_app::COPYRIGHT), "{version}");
     }
 
     /// The window's command line is textweaver-gui's, and the flags for
