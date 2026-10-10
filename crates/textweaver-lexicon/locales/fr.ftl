@@ -4506,7 +4506,7 @@ update-error-install = Mise à jour non installée : { $reason }. Rien n'a chang
 update-error-not-package = Non mis à jour : cette copie ne vient pas d'un paquet publié.
 section-updates = Mises à jour
 setting-updates-check = Rechercher les mises à jour
-setting-updates-check-help = Une fois par jour au démarrage, lire la liste publique des versions de textweaver sur GitHub et proposer une version plus récente, en demandant avant de la télécharger. Rien sur vous n'est envoyé. Aide, Rechercher les mises à jour le fait à tout moment.
+setting-updates-check-help = Chercher un textweaver plus récent une fois par jour au démarrage. Il lit la liste publique des versions sur GitHub et demande avant de télécharger. Rien sur vous n'est envoyé. Aide, Rechercher les mises à jour le fait à tout moment.
 
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with

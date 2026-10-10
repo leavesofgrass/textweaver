@@ -4494,7 +4494,7 @@ update-error-install = Atualização não instalada: { $reason }. Nada mudou.
 update-error-not-package = Não atualizado: esta cópia não vem de um pacote publicado.
 section-updates = Atualizações
 setting-updates-check = Procurar atualizações
-setting-updates-check-help = Uma vez por dia ao iniciar, ler a lista pública de versões do textweaver no GitHub e oferecer uma mais nova, perguntando antes de baixá-la. Nada sobre você é enviado. Ajuda, Procurar atualizações procura a qualquer hora.
+setting-updates-check-help = Procurar um textweaver mais novo uma vez por dia ao iniciar. Ele lê a lista pública de versões no GitHub e pergunta antes de baixar. Nada sobre você é enviado. Ajuda, Procurar atualizações procura a qualquer hora.
 
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with

@@ -267,7 +267,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 ## Updates: the `[updates]` section
 
-- `updates.check`: default off (`false`). Check for updates. Once a day at start, read the public list of textweaver releases on GitHub and offer a newer one, asking before downloading it. Nothing about you is sent. Help, Check for updates checks any time. On or off: `true` or `false`. Stays on this computer.
+- `updates.check`: default off (`false`). Check for updates. Look for a newer textweaver once a day at start. It reads the public list of releases on GitHub and asks before downloading. Nothing about you is sent. Help, Check for updates checks any time. On or off: `true` or `false`. Stays on this computer.
 
 ## Kept by textweaver
 

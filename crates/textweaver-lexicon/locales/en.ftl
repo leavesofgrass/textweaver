@@ -4541,7 +4541,7 @@ update-error-install = Update not installed: { $reason }. Nothing changed.
 update-error-not-package = Not updated: this copy is not from a release package.
 section-updates = Updates
 setting-updates-check = Check for updates
-setting-updates-check-help = Once a day at start, read the public list of textweaver releases on GitHub and offer a newer one, asking before downloading it. Nothing about you is sent. Help, Check for updates checks any time.
+setting-updates-check-help = Look for a newer textweaver once a day at start. It reads the public list of releases on GitHub and asks before downloading. Nothing about you is sent. Help, Check for updates checks any time.
 
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with

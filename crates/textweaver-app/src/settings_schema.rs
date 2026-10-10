@@ -1592,7 +1592,7 @@ pub const INFO: &[Info] = &[
     toggle(
         "updates.check",
         "Check for updates",
-        "Once a day at start, read the public list of textweaver releases on GitHub and offer a newer one, asking before downloading it. Nothing about you is sent. Help, Check for updates checks any time.",
+        "Look for a newer textweaver once a day at start. It reads the public list of releases on GitHub and asks before downloading. Nothing about you is sent. Help, Check for updates checks any time.",
     ),
     internal(
         "updates.asked",

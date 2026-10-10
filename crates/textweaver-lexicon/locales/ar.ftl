@@ -4826,7 +4826,7 @@ update-error-install = لم يُثبَّت التحديث: { $reason }. لم ي�
 update-error-not-package = لم يُحدَّث: هذه النسخة ليست من حزمة إصدار.
 section-updates = التحديثات
 setting-updates-check = البحث عن تحديثات
-setting-updates-check-help = مرة يوميًا عند البدء، قراءة القائمة العامة لإصدارات textweaver على GitHub وعرض إصدار أحدث، مع السؤال قبل تنزيله. لا يُرسل شيء عنك. المساعدة، البحث عن تحديثات يبحث في أي وقت.
+setting-updates-check-help = البحث عن إصدار أحدث من textweaver مرة يوميًا عند البدء. يقرأ القائمة العامة للإصدارات على GitHub ويسأل قبل التنزيل. لا يُرسل شيء عنك. المساعدة، البحث عن تحديثات يبحث في أي وقت.
 
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
