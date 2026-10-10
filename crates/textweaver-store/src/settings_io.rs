@@ -881,10 +881,13 @@ pub fn plan_import(
     let prefix = incoming.prefix;
     let mut warnings = incoming.warnings;
     // Renamed keys move to their new names first, so their values are
-    // imported, not warned about (crate::settings::RENAMED_SETTINGS).
+    // imported, not warned about (crate::settings::RENAMED_SETTINGS), and
+    // the old `[preview] auto_reload` and `live` become `follow`.
     if let Some(map) = incoming.settings.take() {
         let renamed = json_object_to_toml(&map, "").ok().and_then(|mut t| {
-            (!crate::settings::rename_legacy_settings(&mut t).is_empty()).then_some(t)
+            let renamed = !crate::settings::rename_legacy_settings(&mut t).is_empty();
+            let migrated = crate::settings::migrate_preview_follow(&mut t);
+            (renamed || migrated).then_some(t)
         });
         incoming.settings = Some(match renamed {
             Some(t) => match toml_to_json(&toml::Value::Table(t)) {

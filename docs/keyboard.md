@@ -291,8 +291,6 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Export the document as an EPUB book next to it | palette | palette | palette | `export_epub` |
 | Export the document as braille (BRF) next to it | palette | palette | palette | `export_brf` |
 | Preview the document in the web browser, with math; each save rewrites the preview | palette | palette | palette | `preview_in_browser` |
-| Turn automatic reloading of the browser preview on or off | palette | palette | palette | `toggle_preview_auto_reload` |
-| Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | palette | palette | palette | `toggle_preview_live` |
 | Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up | palette | palette | palette | `browse_files` |
 | Convert a folder of documents to another format, in the background | palette | palette | palette | `batch_convert` |
 | Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook | palette | palette | palette | `export_audio` |
@@ -348,6 +346,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 
 | Action | Terminal | GUI | GUI on macOS | Id |
 |---|---|---|---|---|
+| Choose what the browser preview follows: nothing, each save, or your typing | palette | palette | palette | `cycle_preview_follow` |
 | Switch to the next color theme | `F5` | `F5` | `F5` | `next_theme` |
 | Show or hide line numbers | `F6` | none | none | `toggle_line_numbers` |
 | Show the original braille of the page at the cursor, in a BRF file read as print | palette | palette | palette | `show_original_braille` |
@@ -548,8 +547,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Export the document as an EPUB book next to it | `export_epub` |
 | Export the document as braille (BRF) next to it | `export_brf` |
 | Preview the document in the web browser, with math; each save rewrites the preview | `preview_in_browser` |
-| Turn automatic reloading of the browser preview on or off | `toggle_preview_auto_reload` |
-| Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | `toggle_preview_live` |
+| Choose what the browser preview follows: nothing, each save, or your typing | `cycle_preview_follow` |
 | Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up | `browse_files` |
 | Convert a folder of documents to another format, in the background | `batch_convert` |
 | Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook | `export_audio` |

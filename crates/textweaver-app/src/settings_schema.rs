@@ -1277,15 +1277,22 @@ pub const INFO: &[Info] = &[
         "With difficult words marked, at high verbosity also say a difficult word's first definition from the dictionary.",
     ),
     // [preview]
-    toggle(
-        "preview.auto_reload",
-        "Reload the preview",
-        "Reload the browser preview after each save, through a small server on this computer only.",
+    choice(
+        "preview.follow",
+        "Browser preview follows",
+        "When the browser preview reloads by itself: never (press F5 in the browser after a save), after each save, or also when typing pauses. It reloads through a small server on this computer only.",
+        &[
+            ("off", "nothing"),
+            ("save", "each save"),
+            ("typing", "your typing"),
+        ],
     ),
-    toggle(
-        "preview.live",
-        "Live preview",
-        "With reloading on, also reload when typing pauses.",
+    number(
+        "preview.pane_delay_ms",
+        "Preview pause",
+        "How long typing must pause before a preview that follows your typing is rewritten.",
+        (100.0, 3000.0, 50.0),
+        "milliseconds",
     ),
     // [lexicon] (Agent W3e)
     optional(

@@ -1406,8 +1406,7 @@ mod tests {
                 ActionId::ImportReferences,
                 ActionId::ExportStudySheet,
                 ActionId::NewFromTemplate,
-                ActionId::TogglePreviewAutoReload,
-                ActionId::TogglePreviewLive,
+                ActionId::CyclePreviewFollow,
             ] {
                 assert!(a.is_palette_command(), "{a:?}");
                 assert!(map.chords_for(a).is_empty(), "{a:?}");

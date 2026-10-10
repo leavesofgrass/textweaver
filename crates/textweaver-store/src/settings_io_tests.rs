@@ -223,8 +223,8 @@ fn everything_changed() -> Settings {
         skip_urls: false,
         skip_code: false,
     };
-    s.preview.auto_reload = true;
-    s.preview.live = true;
+    s.preview.follow = crate::PreviewFollow::Typing;
+    s.preview.pane_delay_ms = 500;
     s.lexicon.glossary = Some("glossary.txt".into());
     s.lexicon.data_file = Some("lexicon-en.twlex".into());
     s.stats.enabled = false;
@@ -473,6 +473,23 @@ fn toml_export_reads_back() {
     .unwrap();
     assert_eq!(plan.settings, s);
     assert_eq!(plan.keymap, some_keys());
+}
+
+/// An import with the old `[preview] auto_reload` and `live` sets
+/// `follow`, without a warning about unknown keys (B1-p4).
+#[test]
+fn old_preview_keys_import_as_follow() {
+    let text = "[preview]\nauto_reload = true\nlive = true\n";
+    let plan = plan_import(
+        &Settings::default(),
+        &KeymapOverrides::default(),
+        text,
+        ImportMode::Merge,
+    )
+    .unwrap();
+    assert_eq!(plan.settings.preview.follow, crate::PreviewFollow::Typing);
+    assert!(plan.settings.preview.extra.is_empty());
+    assert!(plan.warnings.is_empty(), "{:?}", plan.warnings);
 }
 
 #[test]

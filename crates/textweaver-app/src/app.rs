@@ -2319,8 +2319,7 @@ impl App {
             | A::ExportEpub
             | A::ExportBrf
             | A::PreviewInBrowser
-            | A::TogglePreviewAutoReload
-            | A::TogglePreviewLive
+            | A::CyclePreviewFollow
             | A::SelectAll
             | A::DeleteWordBefore
             | A::DeleteWordAfter

@@ -648,6 +648,14 @@ fn preview_opens_the_browser_and_saving_rewrites_it() {
     );
     r.act(ActionId::PreviewInBrowser);
     r.send(Command::Choose(0));
+    // The session's first preview says what will happen, from "Browser
+    // preview follows" (off by default).
+    assert!(
+        r.said
+            .any("Preview opens in your browser. Press F5 there after each save."),
+        "{:?}",
+        r.said.all()
+    );
     r.wait();
     let opened = r.opened();
     assert_eq!(opened.len(), 1, "{opened:?}");
@@ -670,28 +678,43 @@ fn preview_opens_the_browser_and_saving_rewrites_it() {
         "{:?}",
         r.said.all()
     );
+    // Later previews in the session do not explain again.
+    r.said.clear();
+    r.act(ActionId::PreviewInBrowser);
+    r.send(Command::Choose(0));
+    assert!(r.said.any("Writing the preview."), "{:?}", r.said.all());
+    assert!(!r.said.any("Preview opens"), "{:?}", r.said.all());
+    r.wait();
 }
 
-/// `[preview] auto_reload`: the page comes from a server on 127.0.0.1 with
-/// a secret path, and a save sends a reload naming the heading nearest the
-/// caret; turning it off stops the server.
+/// `[preview] follow` ("Browser preview follows"): on save, the page comes
+/// from a server on 127.0.0.1 with a secret path, and a save sends a
+/// reload naming the heading nearest the caret; on typing, a pause in
+/// typing does too; off stops the server.
 #[test]
-fn preview_auto_reload_serves_the_page_and_reloads_after_saves() {
+fn preview_follow_serves_the_page_and_reloads_after_saves_and_typing() {
     use std::io::{BufRead, BufReader, Read, Write};
+    use textweaver_app::store::PreviewFollow;
     let mut r = Rig::new();
     r.open(
         "live.md",
         "# Intro\n\nFirst part.\n\n## Methods\n\nWe measured.\n\n## Results\n\nIt worked.\n",
     );
-    r.act(ActionId::TogglePreviewAutoReload);
-    assert!(r.app.settings().preview.auto_reload);
+    r.act(ActionId::CyclePreviewFollow);
+    assert_eq!(r.app.settings().preview.follow, PreviewFollow::Save);
     assert!(
-        r.status().starts_with("Automatic preview reloading on"),
+        r.status().starts_with("Browser preview follows each save"),
         "{}",
         r.status()
     );
     r.act(ActionId::PreviewInBrowser);
     r.send(Command::Choose(0));
+    assert!(
+        r.said
+            .any("Preview opens in your browser and reloads after each save."),
+        "{:?}",
+        r.said.all()
+    );
     r.wait();
     let opened = r.opened();
     assert_eq!(opened.len(), 1, "{opened:?}");
@@ -729,31 +752,54 @@ fn preview_auto_reload_serves_the_page_and_reloads_after_saves() {
     r.type_text("Then ");
     r.act(ActionId::Save);
     r.wait();
-    let mut event = String::new();
-    loop {
-        line.clear();
-        if reader.read_line(&mut line).unwrap() == 0 {
-            break;
-        }
-        if line.trim().is_empty() {
-            if event.is_empty() {
-                continue;
+    let mut next_event = || {
+        let mut event = String::new();
+        loop {
+            line.clear();
+            if reader.read_line(&mut line).unwrap() == 0 {
+                break;
             }
-            break;
+            if line.trim().is_empty() {
+                if event.is_empty() {
+                    continue;
+                }
+                break;
+            }
+            event.push_str(&line);
         }
-        event.push_str(&line);
-    }
+        event
+    };
     assert_eq!(
-        event,
+        next_event(),
         "event: reload\ndata: methods\n",
         "{:?}",
         r.said.all()
     );
     assert!(r.said.any("Preview updated."));
     assert!(!r.said.any("Press F5"), "{:?}", r.said.all());
+    // Typing: a pause in typing reloads it too, without a save.
+    r.act(ActionId::CyclePreviewFollow);
+    assert_eq!(r.app.settings().preview.follow, PreviewFollow::Typing);
+    assert!(
+        r.status()
+            .starts_with("Browser preview follows your typing"),
+        "{}",
+        r.status()
+    );
+    r.type_text("again ");
+    r.pause();
+    r.wait();
+    r.pause();
+    assert_eq!(next_event(), "event: reload\ndata: methods\n");
+    assert!(r.app.is_dirty());
     // Off: the server stops.
-    r.act(ActionId::TogglePreviewAutoReload);
-    assert!(!r.app.settings().preview.auto_reload);
+    r.act(ActionId::CyclePreviewFollow);
+    assert_eq!(r.app.settings().preview.follow, PreviewFollow::Off);
+    assert!(
+        r.status().starts_with("Browser preview follows nothing"),
+        "{}",
+        r.status()
+    );
     let refused = std::net::TcpStream::connect_timeout(&addr, Duration::from_millis(300))
         .and_then(|mut c| {
             write!(c, "GET /{path} HTTP/1.1\r\n\r\n")?;

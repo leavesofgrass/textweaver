@@ -797,8 +797,7 @@ action-export-docx = Exportar o documento como um arquivo do Word (DOCX) ao lado
 action-export-epub = Exportar o documento como um livro EPUB ao lado dele
 action-export-brf = Exportar o documento como braille (BRF) ao lado dele
 action-preview-in-browser = Pré-visualizar o documento no navegador web, com matemática; cada salvamento reescreve a pré-visualização
-action-toggle-preview-auto-reload = Ligar ou desligar a recarga automática da pré-visualização no navegador
-action-toggle-preview-live = Ligar ou desligar a pré-visualização ao vivo: com a recarga automática, a pré-visualização também recarrega quando a digitação pausa
+action-cycle-preview-follow = Escolher o que a prévia no navegador acompanha: nada, cada salvamento ou sua digitação
 action-quit = Sair, salvando a posição de leitura
 action-toggle-edit-mode = Alternar entre leitura e edição
 action-undo = Desfazer
@@ -1122,17 +1121,27 @@ publish-still-previewing =
         [one] Ainda escrevendo a pré-visualização, { $secs } segundo.
        *[other] Ainda escrevendo a pré-visualização, { $secs } segundos.
     }
-# $again is yes when a preview is open already.
-publish-auto-reload-on =
+# "Browser preview follows" was chosen. $again is yes when a preview
+# is open that reloads by itself only once it is opened again.
+publish-follow-off = A prévia no navegador não acompanha nada: pressione F5 no navegador depois de salvar.
+publish-follow-save =
     { $again ->
-        [yes] Recarga automática da pré-visualização ligada: depois de cada salvamento o navegador recarrega a página por conta própria. Execute pré-visualizar no navegador de novo para usá-la.
-       *[no] Recarga automática da pré-visualização ligada: depois de cada salvamento o navegador recarrega a página por conta própria.
+        [yes] A prévia no navegador acompanha cada salvamento: a página recarrega sozinha. Abra a pré-visualização no navegador de novo para começar.
+       *[no] A prévia no navegador acompanha cada salvamento: a página recarrega sozinha.
     }
-publish-auto-reload-off = Recarga automática da pré-visualização desligada: pressione F5 no navegador depois de salvar.
-publish-live-on = Pré-visualização ao vivo ligada: a pré-visualização também recarrega quando a digitação pausa.
-# "toggle preview auto reload" is the command's name in the command palette.
-publish-live-on-needs-reload = Pré-visualização ao vivo ligada. Ela funciona com a recarga automática, que está desligada; ligue-a com Recarregar a prévia sozinha.
-publish-live-off = Pré-visualização ao vivo desligada: a pré-visualização recarrega só depois de salvar.
+publish-follow-typing =
+    { $again ->
+        [yes] A prévia no navegador acompanha sua digitação: a página recarrega depois de cada salvamento e quando a digitação pausa. Abra a pré-visualização no navegador de novo para começar.
+       *[no] A prévia no navegador acompanha sua digitação: a página recarrega depois de cada salvamento e quando a digitação pausa.
+    }
+# The first preview of a session: what the browser will do. $follow is
+# the "Browser preview follows" setting: off, save, or typing.
+publish-preview-first =
+    { $follow ->
+        [save] A pré-visualização abre no seu navegador e recarrega depois de cada salvamento.
+        [typing] A pré-visualização abre no seu navegador e acompanha sua digitação.
+       *[off] A pré-visualização abre no seu navegador. Pressione F5 lá depois de cada salvamento.
+    }
 # $error is the converter's reason.
 publish-export-failed = A exportação para { $format } falhou: { $error } Tente outro formato.
 publish-preview-failed = A pré-visualização falhou: { $error } Salve para tentar de novo.
@@ -2199,10 +2208,13 @@ setting-reading-aids-syllable-options-skip-urls = Sílabas ignoram endereços
 setting-reading-aids-syllable-options-skip-urls-help = Deixar de lado endereços da web e de e-mail.
 setting-reading-aids-syllable-options-skip-code = Sílabas ignoram código
 setting-reading-aids-syllable-options-skip-code-help = Deixar o código de lado.
-setting-preview-auto-reload = Recarregar a pré-visualização
-setting-preview-auto-reload-help = Recarregar a pré-visualização do navegador depois de cada salvamento, através de um pequeno servidor apenas neste computador.
-setting-preview-live = Pré-visualização ao vivo
-setting-preview-live-help = Com a recarga ligada, recarregar também quando a digitação pausa.
+setting-preview-follow = Prévia no navegador acompanha
+setting-preview-follow-help = Quando a pré-visualização no navegador recarrega sozinha: nunca (pressione F5 no navegador depois de salvar), depois de cada salvamento, ou também quando a digitação pausa. Ela recarrega por um pequeno servidor só neste computador.
+choice-preview-follow-off = nada
+choice-preview-follow-save = cada salvamento
+choice-preview-follow-typing = sua digitação
+setting-preview-pane-delay-ms = Pausa da pré-visualização
+setting-preview-pane-delay-ms-help = Quanto tempo a digitação precisa pausar antes de reescrever uma pré-visualização que acompanha sua digitação.
 setting-lexicon-glossary = Glossário
 setting-lexicon-glossary-help = Seu próprio glossário, consultado antes do dicionário: linhas termo: definição, ou o JSON do star. Não definido usa glossary.txt na pasta de configurações.
 setting-lexicon-data-file = Arquivo de dicionário
@@ -3427,8 +3439,7 @@ name-export-docx = Exportar Word
 name-export-epub = Exportar EPUB
 name-export-brf = Exportar braille
 name-preview-in-browser = Visualizar no navegador
-name-toggle-preview-auto-reload = Recarregar a prévia sozinha
-name-toggle-preview-live = Prévia ao vivo
+name-cycle-preview-follow = Prévia no navegador acompanha
 name-browse-files = Navegar pelos arquivos
 name-batch-convert = Converter em lote
 name-export-audio = Exportar áudio

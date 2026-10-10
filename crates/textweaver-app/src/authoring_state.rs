@@ -136,7 +136,8 @@ pub(crate) enum ExportKind {
     PreviewOpen,
     /// The preview rewritten after a save.
     PreviewRefresh,
-    /// The preview rewritten after typing paused (`[preview] live`).
+    /// The preview rewritten after typing paused (`[preview] follow`
+    /// set to typing).
     PreviewLive,
 }
 
@@ -252,7 +253,10 @@ pub(crate) struct Authoring {
     pub(crate) note_signalled: Option<String>,
     /// Libraries loaded for reading citations aloud.
     pub(crate) cite_cache: Option<crate::citations::CachedLibraries>,
-    /// The edit version the preview last showed (`[preview] live`).
+    /// Whether this session's first preview has said what the browser
+    /// will do ("Preview opens in your browser. ...").
+    pub(crate) preview_explained: bool,
+    /// The edit version the preview last showed (`[preview] follow`).
     pub(crate) preview_version: u64,
     /// The document folder of the preview, for its images.
     pub(crate) preview_folder: Option<PathBuf>,

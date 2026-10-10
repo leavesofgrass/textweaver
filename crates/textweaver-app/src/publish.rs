@@ -15,13 +15,16 @@
 //!   theme's colors alone, not Galaxy's light and dark pair.
 //! - **Preview in browser** writes the page, with math as MathML, to the
 //!   `preview` folder of the cache folder and opens the default browser,
-//!   after the same theme question; rewrites keep the answer.
+//!   after the same theme question; rewrites keep the answer. The first
+//!   preview of a session says in one sentence what will happen ("Preview
+//!   opens in your browser. Press F5 there after each save.").
 //!   Each save while editing writes it again, and textweaver says "Preview
-//!   updated. Press F5 in the browser." With `[preview] auto_reload`
-//!   (palette: `toggle preview auto reload`), the page is served by a small
-//!   server on this computer only ([`crate::preview_server`]) and reloads
-//!   itself after each save, landing on the heading nearest the caret; with
-//!   `[preview] live` too, also when typing pauses for a second.
+//!   updated. Press F5 in the browser." With `[preview] follow` ("Browser
+//!   preview follows", View menu and palette) set to save, the
+//!   page is served by a small server on this computer only
+//!   ([`crate::preview_server`]) and reloads itself after each save,
+//!   landing on the heading nearest the caret; set to typing, also when
+//!   typing pauses for `[preview] pane_delay_ms` (the preview pane's pause).
 //! - **Progress.** An export says it started; one that takes more than two
 //!   seconds says "Still exporting to PDF, 2 seconds." and then every ten
 //!   seconds, never more often.
@@ -40,6 +43,7 @@ use textweaver_core::{CharRange, Utterance};
 use textweaver_formats::{Loader, MarkdownLoader, Source};
 use textweaver_lexicon::args;
 use textweaver_speech::ReadingGeneration;
+use textweaver_store::PreviewFollow;
 
 use crate::app::App;
 use crate::authoring_state::{
@@ -50,8 +54,15 @@ use crate::command::Effect;
 /// How much text "listen to the rendered text" plans at once, in chars.
 const LISTEN_LIMIT: usize = 400_000;
 
-/// How long typing must pause before a live preview reloads.
-const LIVE_PAUSE: std::time::Duration = std::time::Duration::from_secs(1);
+/// `[preview] follow`'s value as the catalogs' selector: off, save, or
+/// typing.
+fn follow_name(follow: PreviewFollow) -> &'static str {
+    match follow {
+        PreviewFollow::Off => "off",
+        PreviewFollow::Save => "save",
+        PreviewFollow::Typing => "typing",
+    }
+}
 
 /// The headings of an HTML page: each one's id and its text without tags.
 fn page_headings(html: &str) -> Vec<(String, String)> {
@@ -552,7 +563,7 @@ impl App {
     }
 
     /// Writes the HTML preview and opens it in the browser (through the
-    /// reload server with `[preview] auto_reload`).
+    /// reload server when `[preview] follow` is not off).
     pub(crate) fn preview_in_browser(&mut self) -> Vec<Effect> {
         if self.session.is_none() {
             let open = self.key(textweaver_keymap::ActionId::Open);
@@ -563,9 +574,15 @@ impl App {
         self.ask_html_theme(ThemeFor::Preview)
     }
 
-    /// Writes the preview and opens it, the theme chosen.
+    /// Writes the preview and opens it, the theme chosen. The first time in
+    /// a session it says what the browser will do, from `[preview] follow`.
     fn preview_now(&mut self) -> Vec<Effect> {
-        let msg = self.msg("publish-writing-preview");
+        let msg = if std::mem::replace(&mut self.authoring.preview_explained, true) {
+            self.msg("publish-writing-preview")
+        } else {
+            let follow = follow_name(self.settings.preview.follow);
+            self.msg_args("publish-preview-first", &args!["follow" => follow])
+        };
         self.tell(&msg);
         self.write_preview(ExportKind::PreviewOpen);
         vec![Effect::Redraw]
@@ -646,52 +663,53 @@ impl App {
             .filter(|id| !id.is_empty())
     }
 
-    /// `toggle_preview_auto_reload`: saved.
-    pub(crate) fn toggle_preview_auto_reload(&mut self) {
-        let on = !self.settings.preview.auto_reload;
-        self.settings.preview.auto_reload = on;
+    /// `cycle_preview_follow`, "Browser preview follows": off, each save,
+    /// your typing, then off again. Saved.
+    pub(crate) fn cycle_preview_follow(&mut self) {
+        let follow = match self.settings.preview.follow {
+            PreviewFollow::Off => PreviewFollow::Save,
+            PreviewFollow::Save => PreviewFollow::Typing,
+            PreviewFollow::Typing => PreviewFollow::Off,
+        };
+        self.settings.preview.follow = follow;
         self.settings_dirty = true;
-        if on {
-            let again = if self.authoring.preview.is_some() {
-                "yes"
-            } else {
-                "no"
-            };
-            let msg = self.msg_args("publish-auto-reload-on", &args!["again" => again]);
-            self.tell(&msg);
-        } else {
+        if follow == PreviewFollow::Off {
             if let Some(mut server) = self.preview_server.take() {
                 server.stop();
             }
-            let msg = self.msg("publish-auto-reload-off");
+            let msg = self.msg("publish-follow-off");
             self.tell(&msg);
+            return;
         }
-    }
-
-    /// `toggle_preview_live`: saved.
-    pub(crate) fn toggle_preview_live(&mut self) {
-        let on = !self.settings.preview.live;
-        self.settings.preview.live = on;
-        self.settings_dirty = true;
-        let msg = self.msg(match (on, self.settings.preview.auto_reload) {
-            (true, true) => "publish-live-on",
-            (true, false) => "publish-live-on-needs-reload",
-            (false, _) => "publish-live-off",
-        });
+        // A preview opened as a plain file reloads by itself only once it
+        // is opened again, through the server.
+        let again = if self.authoring.preview.is_some() && self.preview_server.is_none() {
+            "yes"
+        } else {
+            "no"
+        };
+        let key = match follow {
+            PreviewFollow::Typing => "publish-follow-typing",
+            _ => "publish-follow-save",
+        };
+        let msg = self.msg_args(key, &args!["again" => again]);
         self.tell(&msg);
     }
 
-    /// `[preview] live`: rewrites the preview a second after typing stops.
+    /// `[preview] follow` set to typing: rewrites the preview once typing
+    /// has paused for `[preview] pane_delay_ms`.
     pub(crate) fn live_preview_tick(&mut self, now: std::time::Instant) {
         let p = &self.settings.preview;
-        if !(p.live && p.auto_reload) || self.preview_server.is_none() || self.edit.is_none() {
+        if p.follow != PreviewFollow::Typing || self.preview_server.is_none() || self.edit.is_none()
+        {
             return;
         }
+        let pause = std::time::Duration::from_millis(u64::from(p.pane_delay_ms));
         let st = &self.authoring.structure;
         let changed = st.version != self.authoring.preview_version;
         let paused = st
             .last_edit
-            .is_some_and(|t| now.saturating_duration_since(t) >= LIVE_PAUSE);
+            .is_some_and(|t| now.saturating_duration_since(t) >= pause);
         let busy = self.authoring.jobs.iter().any(|j| {
             matches!(
                 j,
@@ -788,7 +806,7 @@ impl App {
                 self.offer_open(target, &question);
             }
             ExportKind::PreviewOpen => {
-                let served = if self.settings.preview.auto_reload {
+                let served = if self.settings.preview.follow != PreviewFollow::Off {
                     self.serve_preview(&path)
                 } else {
                     None

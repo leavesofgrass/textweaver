@@ -817,8 +817,7 @@ action-export-docx = Das Dokument als Word-Datei (DOCX) daneben exportieren
 action-export-epub = Das Dokument als EPUB-Buch daneben exportieren
 action-export-brf = Das Dokument als Braille (BRF) daneben exportieren
 action-preview-in-browser = Das Dokument im Webbrowser als Vorschau anzeigen, mit Mathematik; jedes Speichern schreibt die Vorschau neu
-action-toggle-preview-auto-reload = Das automatische Neuladen der Browser-Vorschau ein- oder ausschalten
-action-toggle-preview-live = Die Live-Vorschau ein- oder ausschalten: bei automatischem Neuladen lädt die Vorschau auch neu, wenn das Tippen pausiert
+action-cycle-preview-follow = Wählen, was die Browser-Vorschau verfolgt: nichts, jedes Speichern oder Ihr Tippen
 action-quit = Beenden, mit Speichern der Leseposition
 action-toggle-edit-mode = Zwischen Lesen und Bearbeiten wechseln
 action-undo = Rückgängig
@@ -1142,17 +1141,27 @@ publish-still-previewing =
         [one] Die Vorschau wird noch geschrieben, { $secs } Sekunde.
        *[other] Die Vorschau wird noch geschrieben, { $secs } Sekunden.
     }
-# $again is yes when a preview is open already.
-publish-auto-reload-on =
+# "Browser preview follows" was chosen. $again is yes when a preview
+# is open that reloads by itself only once it is opened again.
+publish-follow-off = Browser-Vorschau folgt nichts: drücken Sie nach dem Speichern F5 im Browser.
+publish-follow-save =
     { $again ->
-        [yes] Automatisches Neuladen der Vorschau an: nach jedem Speichern lädt der Browser die Seite von selbst neu. Führen Sie Vorschau im Browser erneut aus, um sie zu nutzen.
-       *[no] Automatisches Neuladen der Vorschau an: nach jedem Speichern lädt der Browser die Seite von selbst neu.
+        [yes] Browser-Vorschau folgt jedem Speichern: die Seite lädt von selbst neu. Öffnen Sie die Vorschau im Browser erneut, um es zu starten.
+       *[no] Browser-Vorschau folgt jedem Speichern: die Seite lädt von selbst neu.
     }
-publish-auto-reload-off = Automatisches Neuladen der Vorschau aus: drücken Sie F5 im Browser nach einem Speichern.
-publish-live-on = Live-Vorschau an: die Vorschau lädt auch neu, wenn das Tippen pausiert.
-# "toggle preview auto reload" is the command's name in the command palette.
-publish-live-on-needs-reload = Live-Vorschau an. Sie funktioniert mit automatischem Neuladen, das aus ist; schalten Sie es ein mit Vorschau automatisch neu laden.
-publish-live-off = Live-Vorschau aus: die Vorschau lädt nur nach dem Speichern neu.
+publish-follow-typing =
+    { $again ->
+        [yes] Browser-Vorschau folgt Ihrem Tippen: die Seite lädt nach jedem Speichern und bei Tipppausen neu. Öffnen Sie die Vorschau im Browser erneut, um es zu starten.
+       *[no] Browser-Vorschau folgt Ihrem Tippen: die Seite lädt nach jedem Speichern und bei Tipppausen neu.
+    }
+# The first preview of a session: what the browser will do. $follow is
+# the "Browser preview follows" setting: off, save, or typing.
+publish-preview-first =
+    { $follow ->
+        [save] Die Vorschau öffnet sich in Ihrem Browser und lädt nach jedem Speichern neu.
+        [typing] Die Vorschau öffnet sich in Ihrem Browser und folgt Ihrem Tippen.
+       *[off] Die Vorschau öffnet sich in Ihrem Browser. Drücken Sie dort nach jedem Speichern F5.
+    }
 # $error is the converter's reason.
 publish-export-failed = Export nach { $format } fehlgeschlagen: { $error } Versuchen Sie ein anderes Format.
 publish-preview-failed = Vorschau fehlgeschlagen: { $error } Speichern Sie, um es erneut zu versuchen.
@@ -2219,10 +2228,13 @@ setting-reading-aids-syllable-options-skip-urls = Silben überspringen Adressen
 setting-reading-aids-syllable-options-skip-urls-help = Web- und E-Mail-Adressen in Ruhe lassen.
 setting-reading-aids-syllable-options-skip-code = Silben überspringen Code
 setting-reading-aids-syllable-options-skip-code-help = Code in Ruhe lassen.
-setting-preview-auto-reload = Die Vorschau neu laden
-setting-preview-auto-reload-help = Die Browser-Vorschau nach jedem Speichern neu laden, über einen kleinen Server nur auf diesem Computer.
-setting-preview-live = Live-Vorschau
-setting-preview-live-help = Bei aktivem Neuladen auch neu laden, wenn das Tippen pausiert.
+setting-preview-follow = Browser-Vorschau folgt
+setting-preview-follow-help = Wann die Browser-Vorschau von selbst neu lädt: nie (nach dem Speichern F5 im Browser drücken), nach jedem Speichern oder auch bei Tipppausen. Sie lädt über einen kleinen Server nur auf diesem Computer neu.
+choice-preview-follow-off = nichts
+choice-preview-follow-save = jedem Speichern
+choice-preview-follow-typing = Ihrem Tippen
+setting-preview-pane-delay-ms = Vorschaupause
+setting-preview-pane-delay-ms-help = Wie lange das Tippen pausieren muss, bevor eine Vorschau, die Ihrem Tippen folgt, neu geschrieben wird.
 setting-lexicon-glossary = Glossar
 setting-lexicon-glossary-help = Ihr eigenes Glossar, vor dem Wörterbuch nachgeschlagen: Begriff: Definition-Zeilen, oder das JSON von star. Nicht gesetzt verwendet glossary.txt im Einstellungsordner.
 setting-lexicon-data-file = Wörterbuchdatei
@@ -3435,8 +3447,7 @@ name-export-docx = Word exportieren
 name-export-epub = EPUB exportieren
 name-export-brf = Braille exportieren
 name-preview-in-browser = Vorschau im Browser
-name-toggle-preview-auto-reload = Vorschau automatisch neu laden
-name-toggle-preview-live = Live-Vorschau
+name-cycle-preview-follow = Browser-Vorschau folgt
 name-browse-files = Dateien durchsuchen
 name-batch-convert = Stapelkonvertierung
 name-export-audio = Audio exportieren

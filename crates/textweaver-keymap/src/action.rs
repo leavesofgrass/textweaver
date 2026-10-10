@@ -511,11 +511,8 @@ actions! {
     PreviewInBrowser = "preview_in_browser", File,
         "Preview the document in the web browser, with math; each save rewrites the preview",
         gui [], term [], shared [];
-    TogglePreviewAutoReload = "toggle_preview_auto_reload", File,
-        "Turn automatic reloading of the browser preview on or off",
-        gui [], term [], shared [];
-    TogglePreviewLive = "toggle_preview_live", File,
-        "Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses",
+    CyclePreviewFollow = "cycle_preview_follow", View,
+        "Choose what the browser preview follows: nothing, each save, or your typing",
         gui [], term [], shared [];
     BrowseFiles = "browse_files", File,
         "Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up",

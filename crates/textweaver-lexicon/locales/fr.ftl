@@ -809,8 +809,7 @@ action-export-docx = Exporter le document en fichier Word (DOCX) à côté de lu
 action-export-epub = Exporter le document en livre EPUB à côté de lui
 action-export-brf = Exporter le document en braille (BRF) à côté de lui
 action-preview-in-browser = Aperçu du document dans le navigateur, avec les mathématiques ; chaque enregistrement réécrit l'aperçu
-action-toggle-preview-auto-reload = Activer ou désactiver le rechargement automatique de l'aperçu dans le navigateur
-action-toggle-preview-live = Activer ou désactiver l'aperçu en direct : avec le rechargement automatique, l'aperçu se recharge aussi quand la frappe fait une pause
+action-cycle-preview-follow = Choisir ce que suit l'aperçu du navigateur : rien, chaque enregistrement ou votre frappe
 action-quit = Quitter, en enregistrant la position de lecture
 action-toggle-edit-mode = Basculer entre lecture et édition
 action-undo = Annuler
@@ -1134,17 +1133,27 @@ publish-still-previewing =
         [one] Écriture de l'aperçu toujours en cours, { $secs } seconde.
        *[other] Écriture de l'aperçu toujours en cours, { $secs } secondes.
     }
-# $again is yes when a preview is open already.
-publish-auto-reload-on =
+# "Browser preview follows" was chosen. $again is yes when a preview
+# is open that reloads by itself only once it is opened again.
+publish-follow-off = L'aperçu du navigateur ne suit rien : appuyez sur F5 dans le navigateur après un enregistrement.
+publish-follow-save =
     { $again ->
-        [yes] Rechargement automatique de l'aperçu activé : après chaque enregistrement, le navigateur recharge la page tout seul. Relancez l'aperçu dans le navigateur pour l'utiliser.
-       *[no] Rechargement automatique de l'aperçu activé : après chaque enregistrement, le navigateur recharge la page tout seul.
+        [yes] L'aperçu du navigateur suit chaque enregistrement : la page se recharge seule. Ouvrez de nouveau l'aperçu dans le navigateur pour commencer.
+       *[no] L'aperçu du navigateur suit chaque enregistrement : la page se recharge seule.
     }
-publish-auto-reload-off = Rechargement automatique de l'aperçu désactivé : appuyez sur F5 dans le navigateur après un enregistrement.
-publish-live-on = Aperçu en direct activé : l'aperçu se recharge aussi quand la frappe fait une pause.
-# "toggle preview auto reload" is the command's name in the command palette.
-publish-live-on-needs-reload = Aperçu en direct activé. Il fonctionne avec le rechargement automatique, qui est désactivé ; activez-le avec Recharger l'aperçu automatiquement.
-publish-live-off = Aperçu en direct désactivé : l'aperçu ne recharge qu'après un enregistrement.
+publish-follow-typing =
+    { $again ->
+        [yes] L'aperçu du navigateur suit votre frappe : la page se recharge après chaque enregistrement et quand la frappe fait une pause. Ouvrez de nouveau l'aperçu dans le navigateur pour commencer.
+       *[no] L'aperçu du navigateur suit votre frappe : la page se recharge après chaque enregistrement et quand la frappe fait une pause.
+    }
+# The first preview of a session: what the browser will do. $follow is
+# the "Browser preview follows" setting: off, save, or typing.
+publish-preview-first =
+    { $follow ->
+        [save] L'aperçu s'ouvre dans votre navigateur et se recharge après chaque enregistrement.
+        [typing] L'aperçu s'ouvre dans votre navigateur et suit votre frappe.
+       *[off] L'aperçu s'ouvre dans votre navigateur. Appuyez sur F5 dans celui-ci après chaque enregistrement.
+    }
 # $error is the converter's reason.
 publish-export-failed = Échec de l'export vers { $format } : { $error } Essayez un autre format.
 publish-preview-failed = Échec de l'aperçu : { $error } Enregistrez pour réessayer.
@@ -2211,10 +2220,13 @@ setting-reading-aids-syllable-options-skip-urls = Les syllabes ignorent les adre
 setting-reading-aids-syllable-options-skip-urls-help = Laisser les adresses web et de messagerie telles quelles.
 setting-reading-aids-syllable-options-skip-code = Les syllabes ignorent le code
 setting-reading-aids-syllable-options-skip-code-help = Laisser le code tel quel.
-setting-preview-auto-reload = Recharger l'aperçu
-setting-preview-auto-reload-help = Recharger l'aperçu du navigateur après chaque enregistrement, via un petit serveur sur cet ordinateur seulement.
-setting-preview-live = Aperçu en direct
-setting-preview-live-help = Avec le rechargement activé, recharger aussi quand la frappe fait une pause.
+setting-preview-follow = L'aperçu du navigateur suit
+setting-preview-follow-help = Quand l'aperçu du navigateur se recharge seul : jamais (appuyez sur F5 dans le navigateur après un enregistrement), après chaque enregistrement, ou aussi quand la frappe fait une pause. Il se recharge par un petit serveur sur cet ordinateur seulement.
+choice-preview-follow-off = rien
+choice-preview-follow-save = chaque enregistrement
+choice-preview-follow-typing = votre frappe
+setting-preview-pane-delay-ms = Pause de l'aperçu
+setting-preview-pane-delay-ms-help = Durée de la pause de frappe avant la réécriture d'un aperçu qui suit votre frappe.
 setting-lexicon-glossary = Glossaire
 setting-lexicon-glossary-help = Votre propre glossaire, consulté avant le dictionnaire : lignes terme : définition, ou le JSON de star. Non défini utilise glossary.txt dans le dossier des paramètres.
 setting-lexicon-data-file = Fichier de dictionnaire
@@ -3439,8 +3451,7 @@ name-export-docx = Exporter en Word
 name-export-epub = Exporter en EPUB
 name-export-brf = Exporter en braille
 name-preview-in-browser = Aperçu dans le navigateur
-name-toggle-preview-auto-reload = Recharger l'aperçu automatiquement
-name-toggle-preview-live = Aperçu en direct
+name-cycle-preview-follow = L'aperçu du navigateur suit
 name-browse-files = Parcourir les fichiers
 name-batch-convert = Convertir par lots
 name-export-audio = Exporter l'audio

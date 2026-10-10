@@ -324,22 +324,29 @@ Type `export pdf`, `export docx`, `export html`, `export epub`, or `export brf` 
 
 ### Preview in the browser
 
-`preview in browser` opens the document as a web page, with math as MathML, in your default browser. Each save (**Ctrl+S**) writes the preview again, and you hear "Preview updated. Press F5 in the browser." By default the page does not reload by itself: a reload puts your screen reader back at the top of the page, so you choose when it happens.
+`preview in browser` (File menu, Preview) opens the document as a web page, with math as MathML, in your default browser. The first preview of a session tells you, in one sentence, what the browser will do from then on; with the default setting you hear "Preview opens in your browser. Press F5 there after each save." Each save (**Ctrl+S**) writes the preview again, and you hear "Preview updated. Press F5 in the browser." By default the page does not reload by itself, because a reload returns your screen reader to the top of the page, and you should decide when that happens.
 
-**Automatic reloading.** Run `toggle preview auto reload` from the palette, or set it in `settings.toml`:
+**Browser preview follows.** One setting decides whether, and when, the page reloads by itself. It has three values:
+
+- **Nothing** (the default): the page changes only when you press F5 in the browser.
+- **Each save**: the page reloads after every save.
+- **Your typing**: the page reloads after every save, and also whenever you pause in your typing, without saving.
+
+Choose it from the View menu (Browser preview follows), from the palette (`browser preview follows`, which moves to the next value and says it), or in Settings under Preview, where F1 explains it. Each choice is saved, and choosing again returns it to nothing. In `settings.toml` it reads:
 
 ```toml
 [preview]
-auto_reload = true
-live = false
+follow = "save"        # "off", "save", or "typing"
+pane_delay_ms = 300    # the pause before following your typing
 ```
 
-Then run `preview in browser` again. The page now comes from a small web server that textweaver runs on your own computer only (the address starts `http://127.0.0.1:`, with a random secret in it, so no other computer or program can read your document). After each save the page reloads by itself, then scrolls to the heading nearest your cursor and puts the focus there, so your screen reader lands near the place you edited. You hear "Preview updated."
+When the setting is not "nothing", run `preview in browser` again. The page now comes from a small web server that textweaver runs on your own computer only: the address starts `http://127.0.0.1:` and carries a random secret, so no other computer or program can read your document. After a reload the page scrolls to the heading nearest your cursor and puts the focus there, so your screen reader lands near the place you edited, and you hear "Preview updated."
 
-- A reload still resets your screen reader's place in the page to that heading, which is why automatic reloading is off by default.
-- `toggle preview live` (or `live = true`) also reloads the page when you pause typing for a second, without saving. It needs automatic reloading on. Live reloads are shown on the status line and not spoken.
-- The server stops when you open another document or quit textweaver. Turning automatic reloading off stops it at once; the browser then shows the last page it had.
+- A reload still moves your screen reader's place to that heading, which is why the page follows nothing by default.
+- The pause before following your typing is `pane_delay_ms`, 300 milliseconds unless you change it (100 to 3000). The side-by-side preview pane uses the same pause, so the two keep step. Reloads while you type are shown on the status line and not spoken.
+- The server stops when you open another document or quit textweaver. Choosing nothing stops it at once; the browser then keeps the last page it had.
 - Images and other files beside your document are served too, but nothing outside the document's folder.
+- Older settings files keep working. `auto_reload = true` is read as following each save, and `auto_reload = true` with `live = true` as following your typing. The next save of your settings writes only `follow`.
 
 ## Start from a template
 

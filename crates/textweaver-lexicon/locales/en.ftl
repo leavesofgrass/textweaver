@@ -786,8 +786,7 @@ action-export-docx = Export the document as a Word file (DOCX) next to it
 action-export-epub = Export the document as an EPUB book next to it
 action-export-brf = Export the document as braille (BRF) next to it
 action-preview-in-browser = Preview the document in the web browser, with math; each save rewrites the preview
-action-toggle-preview-auto-reload = Turn automatic reloading of the browser preview on or off
-action-toggle-preview-live = Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses
+action-cycle-preview-follow = Choose what the browser preview follows: nothing, each save, or your typing
 action-quit = Quit, saving the reading position
 action-toggle-edit-mode = Switch between reading and editing
 action-undo = Undo
@@ -1111,17 +1110,27 @@ publish-still-previewing =
         [one] Still writing the preview, { $secs } second.
        *[other] Still writing the preview, { $secs } seconds.
     }
-# $again is yes when a preview is open already.
-publish-auto-reload-on =
+# "Browser preview follows" was chosen. $again is yes when a preview
+# is open that reloads by itself only once it is opened again.
+publish-follow-off = Browser preview follows nothing: press F5 in the browser after a save.
+publish-follow-save =
     { $again ->
-        [yes] Automatic preview reloading on: after each save the browser reloads the page by itself. Run preview in browser again to use it.
-       *[no] Automatic preview reloading on: after each save the browser reloads the page by itself.
+        [yes] Browser preview follows each save: the page reloads by itself. Preview in browser again to start it.
+       *[no] Browser preview follows each save: the page reloads by itself.
     }
-publish-auto-reload-off = Automatic preview reloading off: press F5 in the browser after a save.
-publish-live-on = Live preview on: the preview also reloads when typing pauses.
-# "toggle preview auto reload" is the command's name in the command palette.
-publish-live-on-needs-reload = Live preview on. It needs automatic reloading, which is off. Turn it on with Reload preview automatically.
-publish-live-off = Live preview off: the preview reloads after saves only.
+publish-follow-typing =
+    { $again ->
+        [yes] Browser preview follows your typing: the page reloads after each save and when typing pauses. Preview in browser again to start it.
+       *[no] Browser preview follows your typing: the page reloads after each save and when typing pauses.
+    }
+# The first preview of a session: what the browser will do. $follow is
+# the "Browser preview follows" setting: off, save, or typing.
+publish-preview-first =
+    { $follow ->
+        [save] Preview opens in your browser and reloads after each save.
+        [typing] Preview opens in your browser and follows your typing.
+       *[off] Preview opens in your browser. Press F5 there after each save.
+    }
 # $error is the converter's reason.
 publish-export-failed = Could not export to { $format }: { $error } Try another format.
 publish-preview-failed = Preview failed: { $error } Save to try again.
@@ -2199,10 +2208,13 @@ setting-reading-aids-syllable-options-skip-urls = Syllables skip addresses
 setting-reading-aids-syllable-options-skip-urls-help = Leave web and email addresses alone.
 setting-reading-aids-syllable-options-skip-code = Syllables skip code
 setting-reading-aids-syllable-options-skip-code-help = Leave code alone.
-setting-preview-auto-reload = Reload the preview
-setting-preview-auto-reload-help = Reload the browser preview after each save, through a small server on this computer only.
-setting-preview-live = Live preview
-setting-preview-live-help = With reloading on, also reload when typing pauses.
+setting-preview-follow = Browser preview follows
+setting-preview-follow-help = When the browser preview reloads by itself: never (press F5 in the browser after a save), after each save, or also when typing pauses. It reloads through a small server on this computer only.
+choice-preview-follow-off = nothing
+choice-preview-follow-save = each save
+choice-preview-follow-typing = your typing
+setting-preview-pane-delay-ms = Preview pause
+setting-preview-pane-delay-ms-help = How long typing must pause before a preview that follows your typing is rewritten.
 setting-lexicon-glossary = Glossary
 setting-lexicon-glossary-help = Your own glossary, looked up before the dictionary: term: definition lines, or star's JSON. Not set uses glossary.txt in the settings folder.
 setting-lexicon-data-file = Dictionary file
@@ -3447,8 +3459,7 @@ name-export-docx = Export Word
 name-export-epub = Export EPUB
 name-export-brf = Export braille
 name-preview-in-browser = Preview in browser
-name-toggle-preview-auto-reload = Reload preview automatically
-name-toggle-preview-live = Live preview
+name-cycle-preview-follow = Browser preview follows
 name-browse-files = Browse files
 name-batch-convert = Batch convert
 name-export-audio = Export audio
