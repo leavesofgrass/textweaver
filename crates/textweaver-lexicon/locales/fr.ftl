@@ -4333,6 +4333,7 @@ action-reading-form = Ouvrir les paramètres de lecture : débit, police, espace
 reading-form-intro = Paramètres de lecture, { $n } paramètres. Gauche et Droite changent une valeur, Entrée en saisit une, Suppr remet la valeur par défaut, F1 dit l'aide.
 reading-form-spacing-wcag-done = Espacements réglés sur les valeurs WCAG.
 reading-form-spacing-generous-done = Espacements réglés sur Large, plus que WCAG.
+spacing-letter-without-word = Augmentez l'espace des mots avec celui des lettres.
 gui-reading-form-help = Haut et Bas déplacent, Gauche et Droite changent une valeur, Entrée en saisit une, F1 dit l'aide.
 gui-reading-voices = Voix
 gui-reading-voices-help = Ouvrir le gestionnaire de voix.

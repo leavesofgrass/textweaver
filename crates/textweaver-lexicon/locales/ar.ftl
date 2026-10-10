@@ -4637,6 +4637,7 @@ action-reading-form = فتح إعدادات القراءة: السرعة وال�
 reading-form-intro = إعدادات القراءة، { $n } إعدادات. يغيّر اليسار واليمين قيمة، ويكتب Enter قيمة، ويعيد Delete القيمة الافتراضية، ويقول F1 المساعدة.
 reading-form-spacing-wcag-done = ضُبط التباعد على قيم WCAG.
 reading-form-spacing-generous-done = ضُبط التباعد على الواسع، أوسع من WCAG.
+spacing-letter-without-word = زِد تباعد الكلمات مع تباعد الحروف.
 gui-reading-form-help = يتنقل الأعلى والأسفل، ويغيّر اليسار واليمين قيمة، ويكتب Enter قيمة، ويقول F1 المساعدة.
 gui-reading-voices = الأصوات
 gui-reading-voices-help = فتح مدير الأصوات.

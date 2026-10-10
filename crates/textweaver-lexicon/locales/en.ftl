@@ -4359,6 +4359,8 @@ action-reading-form = Open the reading settings: rate, font, spacing, line lengt
 reading-form-intro = Reading settings, { $n } settings. Left and Right change a value, Enter types one, Delete puts the default back, F1 says the help.
 reading-form-spacing-wcag-done = Spacing set to the WCAG values.
 reading-form-spacing-generous-done = Spacing set to Generous, wider than WCAG.
+# Said after a spacing change leaves letters spaced wider than words.
+spacing-letter-without-word = Raise word spacing with letter spacing.
 gui-reading-form-help = Up and Down move, Left and Right change a value, Enter types one, F1 says the help.
 gui-reading-voices = Voices
 gui-reading-voices-help = Open the voice manager.

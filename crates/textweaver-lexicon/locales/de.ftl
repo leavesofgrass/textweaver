@@ -4329,6 +4329,7 @@ action-reading-form = Die Leseeinstellungen öffnen: Geschwindigkeit, Schrift, A
 reading-form-intro = Leseeinstellungen, { $n } Einstellungen. Links und Rechts ändern einen Wert, Eingabe tippt einen, Entf stellt den Standard wieder her, F1 sagt die Hilfe.
 reading-form-spacing-wcag-done = Abstände auf die WCAG-Werte gesetzt.
 reading-form-spacing-generous-done = Abstände auf Großzügig gesetzt, weiter als WCAG.
+spacing-letter-without-word = Wortabstand mit dem Zeichenabstand erhöhen.
 gui-reading-form-help = Auf und Ab bewegen, Links und Rechts ändern einen Wert, Eingabe tippt einen, F1 sagt die Hilfe.
 gui-reading-voices = Stimmen
 gui-reading-voices-help = Die Stimmenverwaltung öffnen.

@@ -4305,6 +4305,7 @@ action-reading-form = Abrir las opciones de lectura: velocidad, fuente, espaciad
 reading-form-intro = Opciones de lectura, { $n } opciones. Izquierda y Derecha cambian un valor, Intro escribe uno, Suprimir recupera el predeterminado, F1 dice la ayuda.
 reading-form-spacing-wcag-done = Espaciado con los valores de WCAG.
 reading-form-spacing-generous-done = Espaciado amplio, más que WCAG.
+spacing-letter-without-word = Suba el espacio entre palabras con el de letras.
 gui-reading-form-help = Arriba y Abajo mueven, Izquierda y Derecha cambian un valor, Intro escribe uno, F1 dice la ayuda.
 gui-reading-voices = Voces
 gui-reading-voices-help = Abrir el gestor de voces.

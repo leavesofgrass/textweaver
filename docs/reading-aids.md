@@ -52,7 +52,7 @@ You can set four kinds of space. Each is a multiple of the font size.
 - **Letter spacing**: extra space between letters.
 - **Word spacing**: extra space between words.
 
-The WCAG text spacing guideline's values are line height 1.5, paragraph spacing 2, letter spacing 0.12, and word spacing 0.16; the example below sets them. textweaver does not warn about values below them: use what reads best for you.
+The WCAG text spacing guideline's values are line height 1.5, paragraph spacing 2, letter spacing 0.12, and word spacing 0.16; the example below sets them. textweaver does not warn about values below them: use what reads best for you. It says one thing when a change leaves letters spaced wider than words, "Raise word spacing with letter spacing.", because words then run into one another; WCAG's own values keep word spacing above letter spacing.
 
 In the terminal, textweaver cannot change letter spacing or line height exactly. It uses blank lines and extra spaces instead.
 
