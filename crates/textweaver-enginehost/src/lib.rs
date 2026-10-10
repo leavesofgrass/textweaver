@@ -21,6 +21,8 @@
 //! - [`audio`]: the sample feed and the outputs (the audio device through
 //!   rodio with the `playback` feature, or a silent timed output);
 //! - [`wav`]: WAV writing;
+//! - [`recorded`]: the clip player for recorded audio (a DAISY book's
+//!   narration), MP3 and WAV decoded and played through [`Playback`];
 //! - [`serve`]: the host side's request reader with its stop epoch, and a
 //!   shared frame writer;
 //! - [`Clock`] ([`clock`]): the clock the start deadline, the stall
@@ -37,6 +39,7 @@ mod orphan;
 pub mod playback;
 pub mod process;
 pub mod protocol;
+pub mod recorded;
 pub mod serve;
 pub mod start;
 pub mod wav;

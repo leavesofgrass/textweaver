@@ -357,9 +357,13 @@ claxon = "0.4.3"
 # Wave 6, W6v (the owner approved LGPL for MP3 on Tuesday, September 29,
 # 2026): MP3 in process with LAME 3.100, compiled from the source bundled in
 # mp3lame-sys and linked statically (cc on Windows, autotools elsewhere).
-# symphonia (MPL-2.0) decodes exports back in tests only.
 mp3lame-encoder = "=0.2.5"
-symphonia = { version = "0.5", default-features = false, features = ["mp3"] }
+# symphonia (MPL-2.0) decodes the recorded audio of DAISY books (MP3 and
+# WAV, the formats DAISY 2.02 and 3 books use) in textweaver-enginehost,
+# and decodes exports back in tests. A normal dependency since the owner's
+# approval on Friday, October 9, 2026 (B1-r3); AAC and MP4 audio are left
+# out (the r1 research found them in few books).
+symphonia = { version = "=0.5.5", default-features = false, features = ["mp3", "wav", "pcm"] }
 # Wave 7, W7o (libopus approved by the owner, Wednesday, September 30,
 # 2026): Ogg Opus in process with libopus 1.6.1, the reference encoder,
 # built from the source bundled in opusic-sys with cmake and linked

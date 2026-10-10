@@ -150,6 +150,26 @@ pub fn speech_registry() -> BackendRegistry {
 /// The output devices connected now, the default first, for
 /// `[speech] output_device` (empty in a build without audio output).
 pub use textweaver_enginehost::audio::{OutputDevice, output_devices};
+pub use textweaver_enginehost::recorded::ReadFile;
+
+/// The player for a DAISY book's recorded audio
+/// (`textweaver_speech::recorded`), on the output device speech uses,
+/// reading the book's files with `read`.
+pub fn recorded_player(read: ReadFile) -> textweaver_speech::PlayerFactory {
+    textweaver_enginehost::recorded::player_factory(
+        textweaver_enginehost::AudioOutput::default(),
+        read,
+    )
+}
+
+/// [`recorded_player`] that plays nothing, quickly (tests never play
+/// audio).
+pub fn silent_recorded_player(read: ReadFile) -> textweaver_speech::PlayerFactory {
+    textweaver_enginehost::recorded::player_factory(
+        textweaver_enginehost::AudioOutput::Null { speed: 50.0 },
+        read,
+    )
+}
 
 /// Plays speech on `[speech] output_device` from now on (or the
 /// system's default when it is not set or not connected), for the
