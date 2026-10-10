@@ -483,11 +483,18 @@ impl SpeechBackend for DectalkBackend {
     }
 
     fn set_params(&mut self, params: &VoiceParams) -> Result<(), SpeechError> {
-        let speaker = match &params.voice {
-            None => Speaker::Paul,
-            Some(id) => Speaker::parse(id).ok_or_else(|| SpeechError::UnknownVoice(id.clone()))?,
-        };
-        self.speaker = speaker;
+        // Another engine's voice (a SAPI voice saved during a fallback)
+        // keeps the current speaker without an error; rate, pitch and
+        // volume always apply.
+        match &params.voice {
+            None => self.speaker = Speaker::Paul,
+            Some(id) => match Speaker::parse(id) {
+                Some(speaker) => self.speaker = speaker,
+                None => log::debug!(
+                    "dectalk: voice {id} is another engine's; keeping the current speaker"
+                ),
+            },
+        }
         self.params = params.clone();
         self.playback.set_gain(params.volume.fraction());
         self.apply_voice()

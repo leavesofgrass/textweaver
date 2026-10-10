@@ -389,13 +389,14 @@ fn nine_speakers_are_listed_and_unknown_voices_refused() {
         ..VoiceParams::default()
     })
     .unwrap();
-    assert!(matches!(
+    // Another engine's voice is no error: the speaker stays, the rest applies.
+    assert!(
         b.set_params(&VoiceParams {
             voice: Some("eci:enu:reed".into()),
             ..VoiceParams::default()
-        }),
-        Err(SpeechError::UnknownVoice(_))
-    ));
+        })
+        .is_ok()
+    );
     assert_eq!(
         b.speaker(),
         Speaker::Paul,
