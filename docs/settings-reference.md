@@ -104,6 +104,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 ## Authoring: the `[authoring]` section
 
 - `authoring.author`: default empty (`""`). Author. The name textweaver writes on comments, replies, and documents from a template. Empty means textweaver on comments and no author in templates. Never taken from the computer. Text. Stays on this computer.
+- `authoring.track_changes`: default off (`false`). Track changes in Word files. Save edits to a Word file as tracked changes a reviewer can accept. Off saves them as Markdown under a new name. On or off: `true` or `false`. Syncs between computers.
 
 ## Library: the `[library]` section
 
