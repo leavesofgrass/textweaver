@@ -85,12 +85,15 @@ pub struct MarkStyles {
     pub syllables: Option<Color>,
 }
 
-/// Styles for code blocks (Agent W4g): the theme's code colors, and for
-/// each token kind a color from another role plus, for most, an attribute,
-/// so no kind is told apart by color alone.
+/// Styles for code blocks (Agent W4g): text on the page's own background,
+/// and for each token kind a color from another role plus, for most, an
+/// attribute, so no kind is told apart by color alone. The page
+/// background, not the code background, as the HTML pages have it
+/// (B1-p3): the theme check holds the text roles to the text floor on the
+/// page, and some fell short on the code background.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CodeStyles {
-    /// Code on the code background (`code`, `code_background`).
+    /// Code: body text on the page.
     pub plain: Style,
     /// Comments: dim text, italic.
     pub comment: Style,
@@ -253,8 +256,8 @@ impl Theme {
 impl CodeStyles {
     /// The code styles of a resolved theme.
     fn from_terminal(t: &TerminalTheme) -> Self {
-        let plain = style(t.color(ColorRole::CodeBackground));
-        // A role's foreground over the code background, with an attribute.
+        let plain = style(t.page());
+        // A role's foreground over the page, with an attribute.
         let fg = |role: ColorRole, m: Modifier| {
             let mut s = plain.add_modifier(m);
             if let Some(c) = t.color(role).fg {
@@ -325,6 +328,26 @@ mod tests {
                     "{}",
                     t.name
                 );
+            }
+        }
+    }
+
+    /// Code tokens sit on the page, as in the HTML pages, and keywords and
+    /// comments carry an attribute, never color alone.
+    #[test]
+    fn code_is_on_the_page_with_attributes() {
+        let registry = Registry::builtin();
+        for support in [ColorSupport::TrueColor, ColorSupport::Ansi16] {
+            for theme in registry.themes() {
+                let t = Theme::from_theme(theme, support);
+                let c = &t.code;
+                for s in [
+                    c.plain, c.comment, c.keyword, c.string, c.number, c.function,
+                ] {
+                    assert_eq!(s.bg, t.text.bg, "{} {support:?}", t.name);
+                }
+                assert!(c.keyword.add_modifier.contains(Modifier::BOLD));
+                assert!(c.comment.add_modifier.contains(Modifier::ITALIC));
             }
         }
     }

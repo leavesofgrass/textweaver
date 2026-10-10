@@ -75,7 +75,7 @@ impl PromptPurpose {
             P::ImagePath => PathKind::Read(IMAGE_EXTENSIONS),
             P::ImportReferences => PathKind::Read(REFERENCE_EXTENSIONS),
             P::ImportSettings | P::ImportProfiles => PathKind::Read(SETTINGS_EXTENSIONS),
-            P::SaveAs => PathKind::Write(&[]),
+            P::SaveAs | P::ExportAs => PathKind::Write(&[]),
             P::ExportSettings | P::ExportProfiles => PathKind::Write(SETTINGS_EXTENSIONS),
             _ => return None,
         })
@@ -163,8 +163,8 @@ impl App {
     }
 
     /// The system chooser for the prompt `purpose`, or `None` when it does
-    /// not ask for a path. Save As offers the suggested name in the
-    /// suggested folder (the document's own); Insert Image and Import
+    /// not ask for a path. Save As and Export As offer the suggested name in
+    /// the suggested folder (the document's own); Insert Image and Import
     /// References start in the document's folder.
     pub fn path_prompt_spec(&self, purpose: PromptPurpose) -> Option<PathPromptSpec> {
         let kind = purpose.path_kind()?;
@@ -174,7 +174,7 @@ impl App {
             PathKind::Read(e) | PathKind::Write(e) => e.iter().map(|&e| e.to_owned()).collect(),
         };
         let (title, filter, file_name, folder) = match purpose {
-            PromptPurpose::SaveAs => {
+            PromptPurpose::SaveAs | PromptPurpose::ExportAs => {
                 let suggested = self.suggested_path.as_deref();
                 let ext = suggested
                     .and_then(Path::extension)
@@ -192,7 +192,12 @@ impl App {
                     .filter(|p| p.is_dir())
                     .map(Path::to_path_buf)
                     .or(doc_folder);
-                (c.tr("prompt-save-as"), filter, name, folder)
+                let title = if purpose == PromptPurpose::ExportAs {
+                    c.tr("prompt-export-as")
+                } else {
+                    c.tr("prompt-save-as")
+                };
+                (title, filter, name, folder)
             }
             PromptPurpose::Open => (c.tr("gui-open-title"), String::new(), None, doc_folder),
             PromptPurpose::ImagePath => (

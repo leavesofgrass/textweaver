@@ -139,6 +139,10 @@ pub(crate) fn register(app: &mut crate::app::App) {
     app.register_handler(textweaver_keymap::ActionId::ExportAudio, |app| {
         app.export_audio()
     });
+    #[cfg(feature = "audio-export")]
+    app.register_handler(textweaver_keymap::ActionId::ExportReadAlong, |app| {
+        app.export_read_along()
+    });
     #[cfg(not(feature = "audio-export"))]
     let _ = app;
 }
@@ -148,7 +152,7 @@ mod run {
     use std::ops::ControlFlow;
     use std::path::{Path, PathBuf};
     use std::sync::Arc;
-    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
     use std::sync::mpsc::{Receiver, TryRecvError};
     use std::time::{Duration, Instant};
 
@@ -236,6 +240,12 @@ mod run {
         /// When progress was last said, and the tens of percent it said.
         said_at: Instant,
         said_tens: usize,
+        /// A video's frames fed to ffmpeg, and its frames in all (zero
+        /// until synthesis is done).
+        frames: Arc<[AtomicU64; 2]>,
+        /// When the frames were first seen, and how many were fed then:
+        /// the start of the time-left estimate.
+        encode_began: Option<(Instant, u64)>,
     }
 
     /// The engine an export uses: the reader's own when it can write audio
@@ -350,16 +360,7 @@ mod run {
                 self.tell(&msg);
                 return vec![Effect::Redraw];
             };
-            let ffmpeg = match (&self.audio.ffmpeg_override, &self.paths) {
-                (Some(f), _) => f.clone(),
-                // This session's own components folder first.
-                (None, Some(p)) => ffmpeg::find_in(
-                    Some(&p.components_dir()),
-                    std::env::var_os("TEXTWEAVER_FFMPEG"),
-                    std::env::var_os("PATH"),
-                ),
-                (None, None) => ffmpeg::find(),
-            };
+            let ffmpeg = self.find_ffmpeg();
             // The format in `[export] audio_format` comes first.
             self.audio.formats = preferred_first(
                 formats(ffmpeg.is_some()),
@@ -396,6 +397,41 @@ mod run {
                 title: self.msg("audio-format-title"),
                 items,
             }]
+        }
+
+        /// File, Export as, Read-along page: the read-along page chosen
+        /// at once, so the next question is where it goes.
+        pub(crate) fn export_read_along(&mut self) -> Vec<Effect> {
+            if let Some(run) = &self.audio.run {
+                let msg = self.msg_args("audio-busy", &args!["name" => display_name(&run.out)]);
+                self.tell(&msg);
+                return vec![Effect::Redraw];
+            }
+            if self.audio_source().is_none() {
+                let open = self.key(textweaver_keymap::ActionId::Open);
+                let msg = self.msg_args("app-no-document-open", &args!["key" => open]);
+                self.tell(&msg);
+                return vec![Effect::Redraw];
+            }
+            self.audio.question = None;
+            self.audio.ffmpeg = self.find_ffmpeg();
+            self.audio.format = Some(AudioFormat::Mp3);
+            self.audio.page = true;
+            self.audio_where()
+        }
+
+        /// The ffmpeg to use: the tests' choice, else this session's own
+        /// components folder, `TEXTWEAVER_FFMPEG`, then `PATH`.
+        fn find_ffmpeg(&self) -> Option<PathBuf> {
+            match (&self.audio.ffmpeg_override, &self.paths) {
+                (Some(f), _) => f.clone(),
+                (None, Some(p)) => ffmpeg::find_in(
+                    Some(&p.components_dir()),
+                    std::env::var_os("TEXTWEAVER_FFMPEG"),
+                    std::env::var_os("PATH"),
+                ),
+                (None, None) => ffmpeg::find(),
+            }
         }
 
         fn format_item(&self, f: AudioFormat) -> String {
@@ -665,13 +701,15 @@ mod run {
             let done = Arc::new(AtomicUsize::new(0));
             let total = Arc::new(AtomicUsize::new(0));
             let cancel = Arc::new(AtomicBool::new(false));
+            let frames = Arc::new([AtomicU64::new(0), AtomicU64::new(0)]);
             let (tx, rx) = std::sync::mpsc::channel();
             let wake = self.waker_slot();
             let (d, t, c) = (Arc::clone(&done), Arc::clone(&total), Arc::clone(&cancel));
+            let f = Arc::clone(&frames);
             let spawned = std::thread::Builder::new()
                 .name("tw-audio-export".into())
                 .spawn(move || {
-                    let result = run_export(plan, &d, &t, &c);
+                    let result = run_export(plan, &d, &t, &c, &f);
                     let _ = tx.send(result);
                     wake.wake();
                 });
@@ -688,6 +726,8 @@ mod run {
                 rx,
                 said_at: Instant::now(),
                 said_tens: 0,
+                frames,
+                encode_began: None,
             });
             let msg = self.msg_args(
                 "audio-started",
@@ -708,6 +748,20 @@ mod run {
                     self.audio_finished(&out, result)
                 }
                 Err(TryRecvError::Empty) => {
+                    let all = run.frames[1].load(Ordering::Relaxed);
+                    if all > 0 {
+                        let fed = run.frames[0].load(Ordering::Relaxed);
+                        let msg = video_progress(run, now, fed, all).map(|(id, minutes)| {
+                            self.msg_args(
+                                id,
+                                &args!["fed" => fed, "all" => all, "minutes" => minutes],
+                            )
+                        });
+                        if let Some(msg) = msg {
+                            self.announce_as(&msg, Priority::Polite, Importance::Progress);
+                        }
+                        return Vec::new();
+                    }
                     let done = run.done.load(Ordering::Relaxed);
                     let total = run.total.load(Ordering::Relaxed);
                     let tens = (done * 10).checked_div(total).unwrap_or(0).min(9);
@@ -774,11 +828,36 @@ mod run {
     }
 
     /// The export itself, on its own thread.
+    /// While a video encodes: the message to say now, if any, with the
+    /// minutes left, at most every [`PROGRESS_EVERY`]. The time left comes
+    /// from the frames fed since they were first seen.
+    fn video_progress(
+        run: &mut Run,
+        now: Instant,
+        fed: u64,
+        all: u64,
+    ) -> Option<(&'static str, u64)> {
+        let (t0, f0) = *run.encode_began.get_or_insert((now, fed));
+        let secs = now.duration_since(t0).as_secs_f64();
+        if now.duration_since(run.said_at) < PROGRESS_EVERY || fed <= f0 || secs <= 0.0 {
+            return None;
+        }
+        run.said_at = now;
+        let per_sec = (fed - f0) as f64 / secs;
+        let left = all.saturating_sub(fed) as f64 / per_sec;
+        if left < 60.0 {
+            Some(("audio-video-progress-soon", 0))
+        } else {
+            Some(("audio-video-progress", (left / 60.0).ceil() as u64))
+        }
+    }
+
     fn run_export(
         plan: Plan,
         done: &AtomicUsize,
         total: &AtomicUsize,
         cancel: &AtomicBool,
+        frames: &[AtomicU64; 2],
     ) -> Finished {
         let fail = |e: String| Ended::Failed(e);
         let mut backend = (plan.factory)().map_err(|e| fail(e.to_string()))?;
@@ -794,6 +873,10 @@ mod run {
         let mut progress = |p: textweaver_export::Progress| {
             total.store(p.total, Ordering::Relaxed);
             done.store(p.done, Ordering::Relaxed);
+            if let Some((fed, all)) = p.frames {
+                frames[0].store(fed, Ordering::Relaxed);
+                frames[1].store(all, Ordering::Relaxed);
+            }
             if cancel.load(Ordering::SeqCst) {
                 ControlFlow::Break(())
             } else {
@@ -1100,6 +1183,26 @@ mod run {
             assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2);
         }
 
+        /// File, Export as, Read-along page skips the format list.
+        #[test]
+        fn the_read_along_command_asks_only_where() {
+            let dir = tempfile::tempdir().unwrap();
+            let (mut app, _) = app_with_doc(dir.path());
+            app.dispatch(Command::Action(ActionId::ExportReadAlong));
+            assert!(
+                app.status_text().starts_with("Where should the audio go?"),
+                "{}",
+                app.status_text()
+            );
+            app.dispatch(Command::Choose(0));
+            assert!(
+                app.status_text().starts_with("Export essay.html with "),
+                "{}",
+                app.status_text()
+            );
+            app.dispatch(Command::Confirm(Confirm::No));
+        }
+
         #[test]
         fn escape_asks_then_stops_without_a_file() {
             let dir = tempfile::tempdir().unwrap();
@@ -1114,6 +1217,8 @@ mod run {
                 rx,
                 said_at: Instant::now(),
                 said_tens: 0,
+                frames: Arc::new([AtomicU64::new(0), AtomicU64::new(0)]),
+                encode_began: None,
             });
             app.dispatch(Command::Cancel);
             assert_eq!(
@@ -1161,6 +1266,8 @@ mod run {
                 rx,
                 said_at: t0,
                 said_tens: 0,
+                frames: Arc::new([AtomicU64::new(0), AtomicU64::new(0)]),
+                encode_began: None,
             });
             app.tell("Started.");
             done.store(13, Ordering::Relaxed);
@@ -1172,6 +1279,44 @@ mod run {
             app.tell("Quiet.");
             app.audio_tick(t0 + Duration::from_secs(30));
             assert_eq!(app.status_text(), "Quiet.");
+        }
+
+        #[test]
+        fn the_video_encode_says_frames_and_time_left() {
+            let dir = tempfile::tempdir().unwrap();
+            let (mut app, _) = app_with_doc(dir.path());
+            let (_tx, rx) = std::sync::mpsc::channel();
+            let t0 = Instant::now();
+            let frames = Arc::new([AtomicU64::new(0), AtomicU64::new(9000)]);
+            app.audio.run = Some(Run {
+                out: dir.path().join("essay.mp4"),
+                done: Arc::new(AtomicUsize::new(1)),
+                total: Arc::new(AtomicUsize::new(1)),
+                cancel: Arc::new(AtomicBool::new(false)),
+                rx,
+                said_at: t0,
+                said_tens: 9,
+                frames: Arc::clone(&frames),
+                encode_began: None,
+            });
+            app.tell("Started.");
+            // The estimate starts when the frames are first seen.
+            app.audio_tick(t0);
+            frames[0].store(1000, Ordering::Relaxed);
+            app.audio_tick(t0 + Duration::from_secs(5));
+            assert_eq!(app.status_text(), "Started.");
+            // 1000 frames in 10 seconds: 8000 left is 80 seconds.
+            app.audio_tick(t0 + Duration::from_secs(10));
+            assert_eq!(
+                app.status_text(),
+                "Encoding video: 1000 of 9000 frames, about 2 minutes left."
+            );
+            frames[0].store(8500, Ordering::Relaxed);
+            app.audio_tick(t0 + Duration::from_secs(20));
+            assert_eq!(
+                app.status_text(),
+                "Encoding video: 8500 of 9000 frames, under a minute left."
+            );
         }
 
         #[test]

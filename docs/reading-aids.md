@@ -1,6 +1,6 @@
 # Reading aids
 
-textweaver has aids that make text easier to see and follow. They change how text looks, never what it says. Speech, search, bookmarks, and notes always use the real text.
+textweaver has aids that change how text looks, never what it says; try each one and keep the ones that help you. Speech, search, bookmarks, and notes always use the real text.
 
 Every aid can be turned on and off, and textweaver says when it changes. The keys, in both the terminal and the window, are:
 
@@ -22,7 +22,7 @@ To try RSVP, bionic reading, and the ruler in a web browser first, open the [rea
 
 ## RSVP: one word at a time
 
-RSVP shows one word at a time in the same place on the screen. Your eyes stay still, so you do not have to track a line of text.
+RSVP shows one word at a time in the same place on the screen, so your eyes do not have to track a line of text. Studies of RSVP find that it raises reading speed while lowering understanding of what is implied rather than stated, more so as the rate climbs, and that it helps readers with low vision only when their central vision is intact. Use it for skimming or for short passages, and slow it down when you need to follow an argument.
 
 - One letter of each word is marked, a little left of center. Look at that letter. It is where the eye reads a word fastest, and it stays in the same column from word to word.
 - The word before and the word after are shown above and below, in normal type. You can hide either one.
@@ -39,7 +39,7 @@ A note on safety: fast RSVP changes the screen many times a second. textweaver c
 
 ## Bionic reading
 
-Bionic reading makes the first part of each word bold, so the eye has a place to land. By default, the first 40 percent of each word is bold. You can choose from 10 to 90 percent.
+Bionic reading makes the first part of each word bold. Four independent studies found no gain in reading speed or understanding from it, though some readers like how it looks; try it and see. By default, the first 40 percent of each word is bold. You can choose from 10 to 90 percent.
 
 Numbers, web addresses, email addresses, and code are left alone.
 
@@ -52,7 +52,7 @@ You can set four kinds of space. Each is a multiple of the font size.
 - **Letter spacing**: extra space between letters.
 - **Word spacing**: extra space between words.
 
-The WCAG text spacing guideline's values are line height 1.5, paragraph spacing 2, letter spacing 0.12, and word spacing 0.16; the example below sets them. textweaver does not warn about values below them: use what reads best for you.
+The WCAG text spacing guideline's values are line height 1.5, paragraph spacing 2, letter spacing 0.12, and word spacing 0.16; the example below sets them. textweaver does not warn about values below them: use what reads best for you. It says one thing when a change leaves letters spaced wider than words, "Raise word spacing with letter spacing.", because words then run into one another; WCAG's own values keep word spacing above letter spacing.
 
 In the terminal, textweaver cannot change letter spacing or line height exactly. It uses blank lines and extra spaces instead.
 
@@ -93,7 +93,7 @@ Three fonts are built in. They work with no download and nothing installed on yo
 
 - **Atkinson Hyperlegible Next**: from the Braille Institute, for readers with low vision. Letters that look alike are made different. It is also the font of PDF files textweaver makes.
 - **Atkinson Hyperlegible Mono**: the same design with every letter the same width, for code.
-- **OpenDyslexic**: for readers with dyslexia. The letters are heavier at the bottom and hard to mix up.
+- **OpenDyslexic**: a font some readers prefer, with letters heavier at the bottom. Studies found no gain in reading speed or accuracy from it.
 
 All three are free, under the SIL Open Font License. Their licenses are in `third_party/fonts/`.
 
@@ -106,9 +106,9 @@ The choices in settings (and in HTML views) are:
 - **Serif**: a font with small strokes on the letters.
 - **Monospace**: every letter the same width.
 - **Reading fonts**, made to be easy to read:
-  - **OpenDyslexic**: for readers with dyslexia. The letters are heavier at the bottom and hard to mix up. Home page: https://opendyslexic.org/
+  - **OpenDyslexic**: a font some readers prefer, with letters heavier at the bottom. Studies found no gain in reading speed or accuracy from it. Home page: https://opendyslexic.org/
   - **Atkinson Hyperlegible**: from the Braille Institute, for readers with low vision. Letters that look alike are made different. Home page: https://www.brailleinstitute.org/freefont/
-  - **Lexend**: wide letter spacing, made to reduce visual stress. Home page: https://www.lexend.com/
+  - **Lexend**: a font with wide letter spacing. The study behind it is small and has not been repeated. Home page: https://www.lexend.com/
 - **Any other font** installed on your computer.
 
 All three reading fonts are free, under the SIL Open Font License. OpenDyslexic comes with textweaver. For Atkinson Hyperlegible, textweaver uses the newer Atkinson Hyperlegible Next that comes with it, unless you have the original installed. Lexend does not come with textweaver: textweaver downloads it the first time you choose it, after asking.
@@ -186,7 +186,7 @@ These are estimates. Other tools may give a slightly different grade.
 
 ## Syllables
 
-textweaver can show long words split into syllables, like `read·a·bil·i·ty`. Press **Alt+Shift+Z** (or run `syllables toggle` from the palette); you hear "Syllables shown." This helps you sound out a word. Only the screen changes. Speech, search, bookmarks, and positions use the word as it is.
+textweaver can show long words split into syllables, like `read·a·bil·i·ty`. Press **Alt+Shift+Z** (or run `syllables toggle` from the palette); you hear "Syllables shown." It shows where a long word breaks into syllables; no study of adult readers has tested it. Only the screen changes. Speech, search, bookmarks, and positions use the word as it is.
 
 The separator is drawn between the letters, so the reading highlight still covers exactly the word being spoken, separators and all, and the cursor stays on the right letter. The choice is saved as `syllables = true` under `[reading_aids]`; `[reading_aids.syllable_options]` sets the separator (a middle dot by default) and which words are split. Both the terminal reader and the window draw the split; only the letters shown change, so your screen reader and Braille display still read the word whole. See also [The textweaver window](gui.md#reading-aids).
 

@@ -527,6 +527,62 @@ A profile is a named set of the settings you change together: the speech engine,
 
 Profiles are kept in `profiles.toml`, beside `settings.toml`, so exporting your settings does not include them. A profile export works in any version of textweaver: settings a version does not know are left out, and it says which. With sync on, your profiles travel to your other computers (`[sync] profiles`); which one is in use stays on each.
 
+### Starter recipes
+
+Four starting points, each with exact values. None is a treatment for any condition, and no one setting suits every reader: try a recipe, then change what does not help. To use one, save your current settings as a profile first (`tw settings profile save "My settings"`), put the recipe in a file such as `larger-print.toml`, check it with `tw settings import larger-print.toml --dry-run`, which lists each change and refuses a value out of range, then import it without `--dry-run` and save the result as a profile of its own.
+
+**Larger print.** Bigger letters and more room between lines and words:
+
+```toml
+[reading_aids.font]
+size_pt = 20
+
+[reading_aids.spacing]
+line_height = 2.0
+word_spacing = 0.3
+```
+
+**Slow and clear.** A slower voice, the whole sentence highlighted, and the Generous spacing values, with the ruler on the current line:
+
+```toml
+[speech]
+rate = 150
+
+[highlight]
+granularity = "sentence"
+
+[reading_aids.font]
+size_pt = 18
+
+[reading_aids.spacing]
+line_height = 2.0
+paragraph_spacing = 2.5
+letter_spacing = 0.15
+word_spacing = 0.3
+
+[reading_aids.ruler]
+mode = "ruler"
+```
+
+**Focus.** The ruler with everything outside its band dimmed, at a moderate rate:
+
+```toml
+[speech]
+rate = 200
+
+[reading_aids.ruler]
+mode = "ruler"
+mask_outside = true
+```
+
+**Short lines.** Fewer words to a line: about 45 characters in the window, and 60 columns in the terminal reader. Some readers read better at three or four words a line and some do not, so try a few lengths between 25 and 66.
+
+```toml
+[display]
+measure = 45
+wrap_width = 60
+```
+
 ### Developer profile (example)
 
 An example profile, `docs/examples/developer-profile.toml`, comes with the source and every package, beside the guides. It is never used unless you import it and switch to it. It sets:

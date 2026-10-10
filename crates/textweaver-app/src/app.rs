@@ -736,6 +736,12 @@ impl App {
                 DiskQuestion::Reload { .. } => None,
             };
         }
+        if matches!(
+            self.authoring.question,
+            Some(crate::authoring_state::Question::ReplaceExport(..))
+        ) {
+            return Some(V::Replace);
+        }
         if self.pending_import.is_some() || self.authoring.question.is_some() {
             return None;
         }
@@ -1132,9 +1138,18 @@ impl App {
         let details = self.record_library_open_doc(path, &title, &doc);
         let rope = doc.text().clone();
         let braille = crate::braille_file::untranslated_braille(&doc);
+        let headings_only = textweaver_formats::warnings(&doc.meta)
+            .iter()
+            .any(|w| w == textweaver_formats::daisy2::NO_TEXT_WARNING);
         let effects = self.open_document_stamped(doc, key, title, text);
         if braille {
             self.say_braille_untranslated();
+        }
+        if headings_only {
+            // A DAISY book with only headings and audio: said in the
+            // interface's language, not the loader's English.
+            let msg = self.msg("daisy-headings-only");
+            self.tell(&msg);
         }
         if let Some(s) = self.session.as_mut() {
             s.disk = stamp;
@@ -1789,6 +1804,7 @@ impl App {
     fn answer_prompt(&mut self, purpose: PromptPurpose, text: &str) -> Vec<Effect> {
         match purpose {
             PromptPurpose::SaveAs => return self.answer_save_as(text),
+            PromptPurpose::ExportAs => return self.answer_export_as(text),
             PromptPurpose::TableSize => return self.answer_table(text),
             PromptPurpose::ImagePath => return self.answer_image(text),
             PromptPurpose::ExportSettings => return self.answer_export_settings(text),
@@ -2251,6 +2267,7 @@ impl App {
             A::BrowseFiles
             | A::BatchConvert
             | A::ExportAudio
+            | A::ExportReadAlong
             | A::Dictate
             | A::DownloadDictationModel
             | A::ManageComponents

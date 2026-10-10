@@ -357,7 +357,7 @@ In edit mode, type `listen rendered` in the command palette. textweaver reads fr
 
 ## Export and preview
 
-Type `export pdf`, `export docx`, `export html`, `export epub`, or `export brf` in the command palette to write the document you are editing, saved or not, next to it in that format. You hear "Exporting to PDF.", then, for a long export, "Still exporting to PDF, 2 seconds." and every ten seconds after. The [converting guide](converting.md#export-from-inside-the-reader) explains exports.
+Type `export pdf`, `export docx`, `export html`, `export epub`, or `export brf` in the command palette to write the document you are editing, saved or not, in that format. textweaver first asks where, offering the document's name and folder with the format's extension; Enter accepts it. You hear "Exporting to PDF.", then, for a long export, "Still exporting to PDF, 2 seconds." and every ten seconds after. The [converting guide](converting.md#export-from-inside-the-reader) explains exports.
 
 ### The preview pane in the window
 

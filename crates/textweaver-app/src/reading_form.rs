@@ -136,4 +136,25 @@ mod tests {
         assert!((s.line_height - 1.5).abs() < 1e-3);
         assert!((s.word_spacing - 0.16).abs() < 1e-3);
     }
+
+    #[test]
+    fn letters_wider_than_words_get_one_hint() {
+        let mut app = App::new(AppConfig::for_tests());
+        let hint = "Raise word spacing with letter spacing.";
+        let said = app
+            .set_setting("reading_aids.spacing.word_spacing", serde_json::json!(0.0))
+            .unwrap();
+        assert!(!said.contains(hint), "{said}");
+        let said = app
+            .set_setting(
+                "reading_aids.spacing.letter_spacing",
+                serde_json::json!(0.2),
+            )
+            .unwrap();
+        assert!(said.ends_with(hint), "{said}");
+        let said = app
+            .set_setting("reading_aids.spacing.word_spacing", serde_json::json!(0.3))
+            .unwrap();
+        assert!(!said.contains(hint), "{said}");
+    }
 }

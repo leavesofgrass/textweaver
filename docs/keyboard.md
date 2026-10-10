@@ -285,17 +285,18 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Import settings from a JSON or TOML file, after a yes or no | `Alt+Shift+I` | `Alt+Shift+I` | `Cmd+Option+Shift+I` | `import_settings` |
 | List reading statistics: time read, the furthest point, sessions, and the most read documents | `Alt+Y` | `Ctrl+Shift+Y` | `Cmd+Option+Y` | `reading_statistics` |
 | Start a new document from a template, with a title, author, date, and References heading | palette | palette | palette | `new_from_template` |
-| Export the document as a web page (HTML) next to it | palette | palette | palette | `export_html` |
-| Export the document as a tagged PDF next to it | palette | palette | palette | `export_pdf` |
-| Export the document as a Word file (DOCX) next to it | palette | palette | palette | `export_docx` |
-| Export the document as an EPUB book next to it | palette | palette | palette | `export_epub` |
-| Export the document as braille (BRF) next to it | palette | palette | palette | `export_brf` |
+| Export the document as a web page (HTML), choosing where to save it | palette | palette | palette | `export_html` |
+| Export the document as a tagged PDF, choosing where to save it | palette | palette | palette | `export_pdf` |
+| Export the document as a Word file (DOCX), choosing where to save it | palette | palette | palette | `export_docx` |
+| Export the document as an EPUB book, choosing where to save it | palette | palette | palette | `export_epub` |
+| Export the document as braille (BRF), choosing where to save it | palette | palette | palette | `export_brf` |
 | Preview the document in the web browser, with math; each save rewrites the preview | palette | palette | palette | `preview_in_browser` |
 | Turn automatic reloading of the browser preview on or off | palette | palette | palette | `toggle_preview_auto_reload` |
 | Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | palette | palette | palette | `toggle_preview_live` |
 | Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up | palette | palette | palette | `browse_files` |
 | Convert a folder of documents to another format, in the background | palette | palette | palette | `batch_convert` |
 | Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook | palette | palette | palette | `export_audio` |
+| Export a read-along page: one HTML file with the text and its audio, the spoken word marked as it plays | palette | palette | palette | `export_read_along` |
 | Set up sync: choose the sync folder, name this computer, and choose what syncs | palette | palette | palette | `sync_setup` |
 | Say how sync stands (up to date, the folder missing, or a problem) and name the other computers | `Shift+F5` | `Shift+F5` | `Shift+F5` | `sync_status` |
 | Sync now: send this computer's changes and take the other computers' for every document | palette | palette | palette | `sync_now` |
@@ -547,17 +548,18 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |
 | Start a new document from a template, with a title, author, date, and References heading | `new_from_template` |
-| Export the document as a web page (HTML) next to it | `export_html` |
-| Export the document as a tagged PDF next to it | `export_pdf` |
-| Export the document as a Word file (DOCX) next to it | `export_docx` |
-| Export the document as an EPUB book next to it | `export_epub` |
-| Export the document as braille (BRF) next to it | `export_brf` |
+| Export the document as a web page (HTML), choosing where to save it | `export_html` |
+| Export the document as a tagged PDF, choosing where to save it | `export_pdf` |
+| Export the document as a Word file (DOCX), choosing where to save it | `export_docx` |
+| Export the document as an EPUB book, choosing where to save it | `export_epub` |
+| Export the document as braille (BRF), choosing where to save it | `export_brf` |
 | Preview the document in the web browser, with math; each save rewrites the preview | `preview_in_browser` |
 | Turn automatic reloading of the browser preview on or off | `toggle_preview_auto_reload` |
 | Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | `toggle_preview_live` |
 | Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up | `browse_files` |
 | Convert a folder of documents to another format, in the background | `batch_convert` |
 | Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook | `export_audio` |
+| Export a read-along page: one HTML file with the text and its audio, the spoken word marked as it plays | `export_read_along` |
 | Set up sync: choose the sync folder, name this computer, and choose what syncs | `sync_setup` |
 | Sync now: send this computer's changes and take the other computers' for every document | `sync_now` |
 | List the other computers' places in this document; Enter goes to one | `sync_go_to_place` |

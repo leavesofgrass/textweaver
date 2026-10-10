@@ -2411,6 +2411,14 @@ impl App {
                 said.push_str(&note);
             }
         }
+        // Letters spaced wider than words run the words together (QW4).
+        if path.starts_with("reading_aids.spacing.")
+            && textweaver_aids::TextSpacing::from(&self.settings.reading_aids.spacing)
+                .letter_exceeds_word()
+        {
+            said.push(' ');
+            said.push_str(&c.tr("spacing-letter-without-word"));
+        }
         if !setting.internal {
             self.remember_setting(path);
         }

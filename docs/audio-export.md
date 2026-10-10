@@ -151,6 +151,16 @@ Progress messages go to the error output and the result sentence to the standard
 
 To stop an export, press Control C. A partly written file may be left behind. Delete it and start again.
 
+## Make a pocket review
+
+Your notes and highlights can go with you as audio. Export a study sheet first (press **F2** and type `export study sheet`; see [notes](notes.md#export-a-study-sheet)), which writes `essay-study-sheet.md` beside `essay.md`. Then read the sheet into a file:
+
+```bash
+tw export-audio essay-study-sheet.md --out essay-review.mp3
+```
+
+MP3, FLAC, Opus, and Ogg Vorbis need nothing else. With ffmpeg installed, `--out essay-review.m4b` makes an audiobook with a chapter for each heading of the essay, so a book player can jump between sections. `tw convert essay-study-sheet.md --to brf` makes a braille copy of the same sheet. Thirty highlights come to about 3,000 words, or about 15 minutes of audio at 200 words a minute.
+
 ## Make an audiobook with chapters
 
 ```bash
@@ -200,7 +210,7 @@ Players that read these chapters show them. Many simple players ignore them and 
 tw export-audio essay.md --out essay.html
 ```
 
-An `.html` file name writes a read-along page instead of an audio file: one web page that holds the document as real text, its audio inside as MP3, and a mark on the sentence and the word being read as it plays. Open it in any web browser; it needs no internet connection and no other file, so you can send it, post it to a course site, or open it on a phone. In the reader, choose "Read-along page: text and audio, one file", the last format in Export audio.
+An `.html` file name writes a read-along page instead of an audio file: one web page that holds the document as real text, its audio inside as MP3, and a mark on the sentence and the word being read as it plays. Open it in any web browser; it needs no internet connection and no other file, so you can send it, post it to a course site, or open it on a phone. In the reader, choose **File, Export as, Read-along page: text and audio**, or type `read-along` in the command palette; you are asked only where it goes. It is also "Read-along page: text and audio, one file", the last format in Export audio.
 
 The text stays text, so a screen reader, a Braille display, zoom, reflow, and your own fonts all work on it. The page uses your reading theme (`[display] theme`); with the default theme it follows the system's light or dark setting.
 
@@ -229,7 +239,7 @@ An `.mp4` file name writes a karaoke video: the document read aloud, with the se
 - **The chapters.** One chapter for each heading, as in an M4B, so players with a chapter list can jump.
 - **The sound.** AAC at 96 kilobits per second.
 - **The picture.** H.264, with ffmpeg's libx264 encoder when it has one, otherwise the system's own H.264 encoder that ffmpeg offers (Media Foundation on Windows, VideoToolbox on macOS), otherwise OpenH264, and as a last resort MPEG-4. The picture changes only when the spoken word changes, ten times a second at most, so the file stays small: a little more than the M4B would be.
-- **How long it takes.** textweaver reads the whole document first, as for any audio file, then draws the frames and has ffmpeg encode them. The encode takes a few minutes for an hour of speech, with no progress messages of its own. A stop during the encode is honored: ffmpeg is stopped and no file is left behind.
+- **How long it takes.** textweaver reads the whole document first, as for any audio file, then draws the frames and has ffmpeg encode them. The encode takes a few minutes for an hour of speech. While it runs, a progress message comes at most every ten seconds, with the frames sent to ffmpeg and an estimate of the time left, worked out from how fast the frames have gone so far: for example, "Encoding video: 1000 of 9000 frames, about 2 minutes left." The reader and `tw export-audio` both give it, and `--quiet` leaves it out. A stop during the encode is honored: ffmpeg is stopped and no file is left behind.
 
 `--subtitles` and `--chapters` still write their own files beside the video.
 

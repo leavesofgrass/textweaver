@@ -498,15 +498,15 @@ actions! {
     NewFromTemplate = "new_from_template", File,
         "Start a new document from a template, with a title, author, date, and References heading",
         gui [], term [], shared [];
-    ExportHtml = "export_html", File, "Export the document as a web page (HTML) next to it",
+    ExportHtml = "export_html", File, "Export the document as a web page (HTML), choosing where to save it",
         gui [], term [], shared [];
-    ExportPdf = "export_pdf", File, "Export the document as a tagged PDF next to it",
+    ExportPdf = "export_pdf", File, "Export the document as a tagged PDF, choosing where to save it",
         gui [], term [], shared [];
-    ExportDocx = "export_docx", File, "Export the document as a Word file (DOCX) next to it",
+    ExportDocx = "export_docx", File, "Export the document as a Word file (DOCX), choosing where to save it",
         gui [], term [], shared [];
-    ExportEpub = "export_epub", File, "Export the document as an EPUB book next to it",
+    ExportEpub = "export_epub", File, "Export the document as an EPUB book, choosing where to save it",
         gui [], term [], shared [];
-    ExportBrf = "export_brf", File, "Export the document as braille (BRF) next to it",
+    ExportBrf = "export_brf", File, "Export the document as braille (BRF), choosing where to save it",
         gui [], term [], shared [];
     PreviewInBrowser = "preview_in_browser", File,
         "Preview the document in the web browser, with math; each save rewrites the preview",
@@ -525,6 +525,9 @@ actions! {
         gui [], term [], shared [];
     ExportAudio = "export_audio", File,
         "Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook",
+        gui [], term [], shared [];
+    ExportReadAlong = "export_read_along", File,
+        "Export a read-along page: one HTML file with the text and its audio, the spoken word marked as it plays",
         gui [], term [], shared [];
     SyncSetup = "sync_setup", File,
         "Set up sync: choose the sync folder, name this computer, and choose what syncs",

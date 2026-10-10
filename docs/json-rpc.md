@@ -328,6 +328,7 @@ A prompt's `purpose` is one of these 29 purposes. The names are fixed: a new pur
 - `open`: the document to open.
 - `command_palette`: the name of a command to run.
 - `save_as`: the file to save to; empty accepts the name in the label.
+- `export_as`: the file to export the document to; empty accepts the name in the label, the document's own name and folder with the format's extension.
 - `table_size`: a table size such as `3 by 2` (columns by rows).
 - `image_path`: the path of an image to insert.
 - `replace_find`: the text to replace (the replacement is asked next).

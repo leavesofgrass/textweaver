@@ -511,6 +511,7 @@ prompt-command = Commande
 # $label is prompt-command.
 prompt-command-palette-intro = { $label }. Tapez une partie d'un nom ; Tab complète, Haut et Bas parcourent les correspondances.
 prompt-save-as = Enregistrer sous
+prompt-export-as = Exporter sous
 prompt-table-size = Taille du tableau, colonnes par lignes, par exemple 3 by 2
 prompt-image-path = Fichier image
 prompt-replace-find = Remplacer, rechercher quoi
@@ -803,11 +804,11 @@ action-export-settings = Exporter les paramètres et les touches personnalisées
 action-import-settings = Importer les paramètres depuis un fichier JSON ou TOML, après une confirmation
 action-reading-statistics = Lister les statistiques de lecture : temps lu, point le plus avancé, sessions, et les documents les plus lus
 action-new-from-template = Commencer un nouveau document à partir d'un modèle, avec un titre, un auteur, une date, et une rubrique Références
-action-export-html = Exporter le document en page web (HTML) à côté de lui
-action-export-pdf = Exporter le document en PDF balisé à côté de lui
-action-export-docx = Exporter le document en fichier Word (DOCX) à côté de lui
-action-export-epub = Exporter le document en livre EPUB à côté de lui
-action-export-brf = Exporter le document en braille (BRF) à côté de lui
+action-export-html = Exporter le document en page web (HTML), en choisissant où l'enregistrer
+action-export-pdf = Exporter le document en PDF balisé, en choisissant où l'enregistrer
+action-export-docx = Exporter le document en fichier Word (DOCX), en choisissant où l'enregistrer
+action-export-epub = Exporter le document en livre EPUB, en choisissant où l'enregistrer
+action-export-brf = Exporter le document en braille (BRF), en choisissant où l'enregistrer
 action-preview-in-browser = Aperçu du document dans le navigateur, avec les mathématiques ; chaque enregistrement réécrit l'aperçu
 action-toggle-preview-auto-reload = Activer ou désactiver le rechargement automatique de l'aperçu dans le navigateur
 action-toggle-preview-live = Activer ou désactiver l'aperçu en direct : avec le rechargement automatique, l'aperçu se recharge aussi quand la frappe fait une pause
@@ -1121,6 +1122,8 @@ publish-cannot-write-to = impossible d'écrire dans { $path } : { $error } Véri
 publish-cannot-write = impossible d'écrire { $path } : { $error } Vérifiez que son dossier est accessible en écriture.
 publish-start-failed = Impossible de démarrer l'export : { $error } Patientez un instant, puis réessayez.
 publish-export-error = Impossible d'exporter : { $error } Corrigez cela, puis exportez de nouveau.
+publish-export-as-label = Exporter sous, Entrée pour { $path }
+publish-export-over-source = Non exporté : c'est le document lui-même. Choisissez un autre nom.
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = Export vers { $format }.
 publish-theme-title = Thème de la page HTML
@@ -3523,6 +3526,7 @@ name-toggle-preview-live = Aperçu en direct
 name-browse-files = Parcourir les fichiers
 name-batch-convert = Convertir par lots
 name-export-audio = Exporter l'audio
+name-export-read-along = Page de lecture : texte et audio
 name-quit = Quitter
 name-toggle-edit-mode = Mode édition
 name-undo = Annuler
@@ -3637,6 +3641,7 @@ palette-list-intro =
 action-browse-files = Parcourir les fichiers et les archives : Entrée ouvre un dossier, une archive ou un document ; Retour arrière remonte
 action-batch-convert = Convertir un dossier de documents dans un autre format, en arrière-plan
 action-export-audio = Exporter le document en audio parlé : MP3, FLAC, Opus, WAV ou un livre audio M4B
+action-export-read-along = Exporter une page de lecture : un fichier HTML avec le texte et son audio, le mot prononcé marqué pendant la lecture
 action-dictate = Démarrer ou arrêter la dictée : les mots prononcés s'écrivent au curseur en mode édition
 action-color-settings = Ouvrir les paramètres des couleurs : le surlignage de lecture, la règle, les marques et chaque partie de l'écran, avec leur contraste
 action-cycle-interface-announcements = Changer ce que textweaver annonce de lui-même : désactivées, minimales, normales ou complètes ; les erreurs et les réponses sont toujours dites
@@ -3939,6 +3944,12 @@ audio-no-engine = Aucun moteur vocal ici ne sait écrire de fichier audio. Insta
 audio-confirm = Exporter { $name } avec { $voice } à { $wpm } mots par minute, dans { $path } ? y ou n
 audio-started = Export de { $name } en { $format }. Échap arrête.
 audio-progress = Export audio, { $percent } pour cent.
+audio-video-progress =
+    { $minutes ->
+        [one] Encodage vidéo : { $fed } images sur { $all }, environ 1 minute restante.
+       *[other] Encodage vidéo : { $fed } images sur { $all }, environ { $minutes } minutes restantes.
+    }
+audio-video-progress-soon = Encodage vidéo : { $fed } images sur { $all }, moins d'une minute restante.
 audio-busy = { $name } est déjà en cours d'export. Échap arrête.
 audio-stop-question = Arrêter l'export ? Aucun fichier n'est gardé. y ou n
 audio-stopping = Arrêt de l'export.
@@ -4354,6 +4365,7 @@ action-reading-form = Ouvrir les paramètres de lecture : débit, police, espace
 reading-form-intro = Paramètres de lecture, { $n } paramètres. Gauche et Droite changent une valeur, Entrée en saisit une, Suppr remet la valeur par défaut, F1 dit l'aide.
 reading-form-spacing-wcag-done = Espacements réglés sur les valeurs WCAG.
 reading-form-spacing-generous-done = Espacements réglés sur Large, plus que WCAG.
+spacing-letter-without-word = Augmentez l'espace des mots avec celui des lettres.
 gui-reading-form-help = Haut et Bas déplacent, Gauche et Droite changent une valeur, Entrée en saisit une, F1 dit l'aide.
 gui-reading-voices = Voix
 gui-reading-voices-help = Ouvrir le gestionnaire de voix.
@@ -4479,4 +4491,5 @@ brf-original-intro =
 brf-original-not-brf = Pas un fichier braille. Afficher le braille d'origine fonctionne avec les fichiers BRF.
 brf-original-unreadable = Impossible de lire le fichier braille : { $reason }
 brf-no-liblouis = Braille affiché en braille : liblouis manque. Pour le lire en noir, installez liblouis depuis liblouis.io ou les paquets de votre système, puis rouvrez le fichier.
+daisy-headings-only = Titres seulement : ce livre DAISY n'a pas de texte, seulement des titres et de l'audio, donc ses titres sont lus.
 ## End of B1-r5

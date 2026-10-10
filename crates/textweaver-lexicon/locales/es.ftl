@@ -483,6 +483,7 @@ prompt-command = Comando
 # $label is prompt-command.
 prompt-command-palette-intro = { $label }. Escriba parte de un nombre; Tab completa, Arriba y Abajo recorren las coincidencias.
 prompt-save-as = Guardar como
+prompt-export-as = Exportar como
 prompt-table-size = Tamaño de la tabla, columnas por filas, por ejemplo 3 por 2
 prompt-image-path = Archivo de imagen
 prompt-replace-find = Reemplazar, buscar qué
@@ -775,11 +776,11 @@ action-export-settings = Exportar la configuración y las teclas personalizadas 
 action-import-settings = Importar la configuración desde un archivo JSON o TOML, tras un sí o no
 action-reading-statistics = Listar las estadísticas de lectura: tiempo leído, punto más lejano, sesiones y los documentos más leídos
 action-new-from-template = Empezar un documento nuevo a partir de una plantilla, con título, autor, fecha y un encabezado de Referencias
-action-export-html = Exportar el documento como página web (HTML) junto a él
-action-export-pdf = Exportar el documento como PDF etiquetado junto a él
-action-export-docx = Exportar el documento como archivo de Word (DOCX) junto a él
-action-export-epub = Exportar el documento como libro EPUB junto a él
-action-export-brf = Exportar el documento como braille (BRF) junto a él
+action-export-html = Exportar el documento como página web (HTML), eligiendo dónde guardarlo
+action-export-pdf = Exportar el documento como PDF etiquetado, eligiendo dónde guardarlo
+action-export-docx = Exportar el documento como archivo de Word (DOCX), eligiendo dónde guardarlo
+action-export-epub = Exportar el documento como libro EPUB, eligiendo dónde guardarlo
+action-export-brf = Exportar el documento como braille (BRF), eligiendo dónde guardarlo
 action-preview-in-browser = Ver la vista previa del documento en el navegador web, con matemáticas; cada guardado la reescribe
 action-toggle-preview-auto-reload = Activar o desactivar la recarga automática de la vista previa en el navegador
 action-toggle-preview-live = Activar o desactivar la vista previa en vivo: con la recarga automática, la vista previa también se recarga al hacer una pausa al escribir
@@ -1093,6 +1094,8 @@ publish-cannot-write-to = no se puede escribir en { $path }: { $error } Comprueb
 publish-cannot-write = no se puede escribir { $path }: { $error } Compruebe que se puede escribir en su carpeta.
 publish-start-failed = No se pudo iniciar la exportación: { $error } Espere un momento y vuelva a intentarlo.
 publish-export-error = No se pudo exportar: { $error } Corríjalo y vuelva a exportar.
+publish-export-as-label = Exportar como, Intro para { $path }
+publish-export-over-source = No exportado: es el propio documento. Elija otro nombre.
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = Exportando a { $format }.
 publish-theme-title = Tema para la página HTML
@@ -3495,6 +3498,7 @@ name-toggle-preview-live = Vista previa en vivo
 name-browse-files = Explorar archivos
 name-batch-convert = Convertir por lotes
 name-export-audio = Exportar audio
+name-export-read-along = Página de lectura: texto y audio
 name-quit = Salir
 name-toggle-edit-mode = Modo de edición
 name-undo = Deshacer
@@ -3609,6 +3613,7 @@ palette-list-intro =
 action-browse-files = Explorar archivos y archivos comprimidos: Intro abre una carpeta, un archivo comprimido o un documento; Retroceso sube un nivel
 action-batch-convert = Convertir una carpeta de documentos a otro formato, en segundo plano
 action-export-audio = Exportar el documento como audio hablado: MP3, FLAC, Opus, WAV o un audiolibro M4B
+action-export-read-along = Exportar una página de lectura: un archivo HTML con el texto y su audio, con la palabra hablada marcada al reproducirse
 action-dictate = Iniciar o detener el dictado: las palabras habladas se escriben en el cursor en modo de edición
 action-color-settings = Abrir las opciones de color: el resaltado de lectura, la regla, las marcas y cada parte de la pantalla, con su contraste
 action-cycle-interface-announcements = Cambiar cuánto anuncia textweaver de sí mismo: desactivados, mínimos, normales o completos; los errores y las respuestas se dicen siempre
@@ -3911,6 +3916,12 @@ audio-no-engine = Ningún motor de voz de aquí puede escribir archivos de audio
 audio-confirm = ¿Exportar { $name } con { $voice } a { $wpm } palabras por minuto, en { $path }? y o n
 audio-started = Exportando { $name } como { $format }. Escape detiene.
 audio-progress = Exportando audio, { $percent } por ciento.
+audio-video-progress =
+    { $minutes ->
+        [one] Codificando video: { $fed } de { $all } fotogramas, falta 1 minuto.
+       *[other] Codificando video: { $fed } de { $all } fotogramas, faltan unos { $minutes } minutos.
+    }
+audio-video-progress-soon = Codificando video: { $fed } de { $all } fotogramas, falta menos de un minuto.
 audio-busy = Ya se está exportando { $name }. Escape detiene.
 audio-stop-question = ¿Detener la exportación? No se guarda ningún archivo. y o n
 audio-stopping = Deteniendo la exportación.
@@ -4326,6 +4337,7 @@ action-reading-form = Abrir las opciones de lectura: velocidad, fuente, espaciad
 reading-form-intro = Opciones de lectura, { $n } opciones. Izquierda y Derecha cambian un valor, Intro escribe uno, Suprimir recupera el predeterminado, F1 dice la ayuda.
 reading-form-spacing-wcag-done = Espaciado con los valores de WCAG.
 reading-form-spacing-generous-done = Espaciado amplio, más que WCAG.
+spacing-letter-without-word = Suba el espacio entre palabras con el de letras.
 gui-reading-form-help = Arriba y Abajo mueven, Izquierda y Derecha cambian un valor, Intro escribe uno, F1 dice la ayuda.
 gui-reading-voices = Voces
 gui-reading-voices-help = Abrir el gestor de voces.
@@ -4451,4 +4463,5 @@ brf-original-intro =
 brf-original-not-brf = No es un archivo braille. Mostrar el braille original funciona con archivos BRF.
 brf-original-unreadable = No se puede leer el archivo braille: { $reason }
 brf-no-liblouis = Braille mostrado como braille: falta liblouis. Para leerlo como texto impreso, instale liblouis desde liblouis.io o los paquetes de su sistema y vuelva a abrir el archivo.
+daisy-headings-only = Solo encabezados: este libro DAISY no tiene texto, solo encabezados y audio, así que se leen sus encabezados.
 ## End of B1-r5

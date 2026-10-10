@@ -213,6 +213,7 @@ fn purpose_name(p: PromptPurpose) -> &'static str {
         PromptPurpose::Open => "open",
         PromptPurpose::CommandPalette => "command_palette",
         PromptPurpose::SaveAs => "save_as",
+        PromptPurpose::ExportAs => "export_as",
         PromptPurpose::TableSize => "table_size",
         PromptPurpose::ImagePath => "image_path",
         PromptPurpose::ReplaceFind => "replace_find",
@@ -1184,6 +1185,7 @@ mod tests {
         (PromptPurpose::Open, "open"),
         (PromptPurpose::CommandPalette, "command_palette"),
         (PromptPurpose::SaveAs, "save_as"),
+        (PromptPurpose::ExportAs, "export_as"),
         (PromptPurpose::TableSize, "table_size"),
         (PromptPurpose::ImagePath, "image_path"),
         (PromptPurpose::ReplaceFind, "replace_find"),
@@ -1223,6 +1225,7 @@ mod tests {
                 | PromptPurpose::Open
                 | PromptPurpose::CommandPalette
                 | PromptPurpose::SaveAs
+                | PromptPurpose::ExportAs
                 | PromptPurpose::TableSize
                 | PromptPurpose::ImagePath
                 | PromptPurpose::ReplaceFind

@@ -91,7 +91,7 @@ Or set it for good in `settings.toml`. Write `false` to turn them off, or a fold
 dictionaries = false
 ```
 
-With OpenEVV, textweaver loads the main and abbreviation dictionaries but leaves out the root dictionary: OpenEVV 0.3.0 takes about a minute to load it, and Eloquence would start silent. If an engine ever takes too long to start with the dictionaries, textweaver starts it again without them, so Eloquence still speaks.
+With OpenEVV, the root dictionary waits until speech has started: OpenEVV 0.3.0 takes about a minute to load it, and Eloquence would otherwise start silent. textweaver starts speaking with the main and abbreviation dictionaries, loads all three in a second copy of the engine in the background, and moves to that copy between sentences once it is ready. The log records how long the root dictionary took; if it fails to load, the log says why and speech goes on without it. If an engine ever takes too long to start with the dictionaries, textweaver starts it again without them, so Eloquence still speaks.
 
 ## Checking that it works
 

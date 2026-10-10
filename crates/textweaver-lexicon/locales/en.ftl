@@ -488,6 +488,7 @@ prompt-command = Command
 # $label is prompt-command.
 prompt-command-palette-intro = { $label }. Type part of a name; Tab completes, Up and Down list matches.
 prompt-save-as = Save as
+prompt-export-as = Export as
 prompt-table-size = Table size, columns by rows, for example 3 by 2
 prompt-image-path = Image file
 prompt-replace-find = Replace, find what
@@ -780,11 +781,11 @@ action-export-settings = Export settings and key overrides to a JSON or TOML fil
 action-import-settings = Import settings from a JSON or TOML file, after a yes or no
 action-reading-statistics = List reading statistics: time read, the furthest point, sessions, and the most read documents
 action-new-from-template = Start a new document from a template, with a title, author, date, and References heading
-action-export-html = Export the document as a web page (HTML) next to it
-action-export-pdf = Export the document as a tagged PDF next to it
-action-export-docx = Export the document as a Word file (DOCX) next to it
-action-export-epub = Export the document as an EPUB book next to it
-action-export-brf = Export the document as braille (BRF) next to it
+action-export-html = Export the document as a web page (HTML), choosing where to save it
+action-export-pdf = Export the document as a tagged PDF, choosing where to save it
+action-export-docx = Export the document as a Word file (DOCX), choosing where to save it
+action-export-epub = Export the document as an EPUB book, choosing where to save it
+action-export-brf = Export the document as braille (BRF), choosing where to save it
 action-preview-in-browser = Preview the document in the web browser, with math; each save rewrites the preview
 action-toggle-preview-auto-reload = Turn automatic reloading of the browser preview on or off
 action-toggle-preview-live = Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses
@@ -1098,6 +1099,10 @@ publish-cannot-write-to = cannot write to { $path }: { $error } Check that the f
 publish-cannot-write = cannot write { $path }: { $error } Check that its folder can be written to.
 publish-start-failed = Could not start the export: { $error } Wait a moment, then try again.
 publish-export-error = Could not export: { $error } Fix that, then export again.
+# The Export as prompt; $path is the file offered (the document's name
+# with the format's extension, in its folder).
+publish-export-as-label = Export as, Enter for { $path }
+publish-export-over-source = Not exported: that is the document itself. Choose another name.
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = Exporting to { $format }.
 publish-theme-title = Theme for the HTML page
@@ -3531,6 +3536,7 @@ name-toggle-preview-live = Live preview
 name-browse-files = Browse files
 name-batch-convert = Batch convert
 name-export-audio = Export audio
+name-export-read-along = Read-along page: text and audio
 name-quit = Quit
 name-toggle-edit-mode = Edit mode
 name-undo = Undo
@@ -3645,6 +3651,7 @@ palette-list-intro =
 action-browse-files = Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up
 action-batch-convert = Convert a folder of documents to another format, in the background
 action-export-audio = Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook
+action-export-read-along = Export a read-along page: one HTML file with the text and its audio, the spoken word marked as it plays
 action-dictate = Start or stop dictation: spoken words are typed at the cursor in edit mode
 action-color-settings = Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast
 action-cycle-interface-announcements = Cycle how much textweaver announces about itself: off, minimal, normal, or full; errors and answers are always said
@@ -3951,6 +3958,14 @@ audio-no-engine = No speech engine here can write audio files. Install eSpeak NG
 audio-confirm = Export { $name } with { $voice } at { $wpm } words per minute, into { $path }? y or n
 audio-started = Exporting { $name } as { $format }. Escape stops.
 audio-progress = Exporting audio, { $percent } percent.
+# While the karaoke video encodes, at most every ten seconds: the frames
+# fed to ffmpeg ($fed), the frames in all ($all), and the minutes left.
+audio-video-progress =
+    { $minutes ->
+        [one] Encoding video: { $fed } of { $all } frames, about 1 minute left.
+       *[other] Encoding video: { $fed } of { $all } frames, about { $minutes } minutes left.
+    }
+audio-video-progress-soon = Encoding video: { $fed } of { $all } frames, under a minute left.
 audio-busy = Already exporting { $name }. Escape stops.
 audio-stop-question = Stop the export? No file is kept. y or n
 audio-stopping = Stopping the export.
@@ -4380,6 +4395,8 @@ action-reading-form = Open the reading settings: rate, font, spacing, line lengt
 reading-form-intro = Reading settings, { $n } settings. Left and Right change a value, Enter types one, Delete puts the default back, F1 says the help.
 reading-form-spacing-wcag-done = Spacing set to the WCAG values.
 reading-form-spacing-generous-done = Spacing set to Generous, wider than WCAG.
+# Said after a spacing change leaves letters spaced wider than words.
+spacing-letter-without-word = Raise word spacing with letter spacing.
 gui-reading-form-help = Up and Down move, Left and Right change a value, Enter types one, F1 says the help.
 gui-reading-voices = Voices
 gui-reading-voices-help = Open the voice manager.
@@ -4511,4 +4528,6 @@ brf-original-intro =
 brf-original-not-brf = Not a braille file. Show original Braille works on BRF files.
 brf-original-unreadable = Cannot read the braille file: { $reason }
 brf-no-liblouis = Braille shown as braille: liblouis is missing. To read it as print, install liblouis from liblouis.io or your system's packages, then open the file again.
+# Said on opening a DAISY 2.02 book with no text files.
+daisy-headings-only = Headings only: this DAISY book has no text, just headings and audio, so its headings are read.
 ## End of B1-r5
