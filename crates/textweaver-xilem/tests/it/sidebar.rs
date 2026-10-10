@@ -299,3 +299,50 @@ fn the_notes_panel_lists_the_notes() {
     let s = app.session().unwrap();
     assert_eq!(s.cursor, s.notes[0].range.start);
 }
+
+/// Space in the Notes panel (B1-g1): the panel asks for the selected
+/// note's links, which open as the app's list, as Space does in the notes
+/// list. Opening the panel says the key once; the Contents panel has no
+/// links, and Space there shows nothing.
+#[test]
+fn space_in_the_notes_panel_shows_the_notes_links() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let p = Palette::galaxy();
+    let mut shown = SidebarShown::default();
+    app.dispatch(Command::SetCursor(char_at(&app, "A Table")));
+    app.dispatch(Command::Notes(NoteCommand::Add));
+    app.dispatch(Command::Answer("Check the totals".into()));
+    let t = sidebar::toggle(&mut app, Panel::Notes, &p, &mut shown, &mut h);
+    assert_eq!(t, Toggled::Opened(Panel::Notes, 1));
+    let said = sidebar::toggled_message(&app, t).unwrap();
+    assert_eq!(said, "Notes open, 1 item. Space shows a note's links.");
+    let _ = h.redraw();
+    let list = list_id(&h).unwrap();
+    assert_eq!(h.focused_widget_id(), Some(list));
+
+    let platform = textweaver_app::keymap::Platform::current();
+    h.process_text_event(TextEvent::Keyboard(keys::press(
+        &"Space".parse().unwrap(),
+        platform,
+    )));
+    let (action, _) = h.pop_action::<SidebarAction>().expect("Space");
+    assert_eq!(action, SidebarAction::Links);
+    let row = h.get_widget(SIDEBAR_LIST).inner().selected();
+    let effects = sidebar::links(&mut app, &shown, row);
+    let items = effects
+        .iter()
+        .find_map(|e| match e {
+            textweaver_app::Effect::ShowList { items, .. } => Some(items.clone()),
+            _ => None,
+        })
+        .expect("the note's links");
+    assert_eq!(items, ["What links here: nothing yet", "Add a link"]);
+    assert!(app.status_text().starts_with("Links of Check the totals"));
+
+    // The Contents panel: Space shows nothing.
+    let _ = app.dispatch(Command::ListKey(textweaver_app::ListKey::Escape));
+    let _ = sidebar::toggle(&mut app, Panel::Contents, &p, &mut shown, &mut h);
+    assert!(sidebar::links(&mut app, &shown, 0).is_empty());
+}

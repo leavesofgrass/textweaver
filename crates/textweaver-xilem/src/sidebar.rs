@@ -18,7 +18,9 @@
 //!   it; pressed in the panel, it closes it and goes back to the document.
 //!   F6 and Shift+F6 move between the window's regions ([`next_region`]).
 //!   In the list, Enter goes to the row and stays; Shift+Enter goes and
-//!   returns to the document; Escape returns without moving.
+//!   returns to the document; Escape returns without moving. In the Notes
+//!   panel, Space shows the note's links ([`links`]), as Space does in the
+//!   notes list.
 //! - **No cost when closed.** [`sync`] reads one setting and returns; open,
 //!   the rows are built again only when [`App::panel_key`] changes (the
 //!   document, its revision, its headings, the notes), never on a caret or
@@ -102,6 +104,9 @@ pub enum SidebarAction {
         /// Go to the selected row first.
         go: bool,
     },
+    /// Space: the selected note's links ([`links`]); nothing in the
+    /// Contents panel.
+    Links,
 }
 
 /// The document's row: the panel beside the document when one is shown,
@@ -353,12 +358,16 @@ impl Widget for PanelView {
         }
         let m = k.modifiers;
         let plain = !m.ctrl() && !m.alt() && !m.meta();
-        let go = match &k.key {
-            Key::Named(NamedKey::Escape) if plain && !m.shift() => false,
-            Key::Named(NamedKey::Enter) if plain && m.shift() => true,
+        let action = match &k.key {
+            Key::Named(NamedKey::Escape) if plain && !m.shift() => {
+                SidebarAction::Leave { go: false }
+            }
+            Key::Named(NamedKey::Enter) if plain && m.shift() => SidebarAction::Leave { go: true },
+            // The list leaves Space alone (it is no letter to jump by).
+            Key::Character(c) if plain && !m.shift() && c == " " => SidebarAction::Links,
             _ => return,
         };
-        ctx.submit_action::<SidebarAction>(SidebarAction::Leave { go });
+        ctx.submit_action::<SidebarAction>(action);
         ctx.set_handled();
     }
 
@@ -588,7 +597,10 @@ pub fn sync(
                 textweaver_app::keymap::Modifiers::SHIFT,
             );
             let hint = app.catalog().fmt(
-                "gui-sidebar-hint",
+                match panel {
+                    Panel::Contents => "gui-sidebar-hint",
+                    Panel::Notes => "gui-sidebar-hint-notes",
+                },
                 &args!["leave" => crate::keys::shortcut_text(&leave)],
             );
             host.edit(SIDEBAR, |mut s| {
@@ -702,10 +714,18 @@ pub fn toggle(
 pub fn toggled_message(app: &App, t: Toggled) -> Option<String> {
     let c = app.catalog();
     match t {
-        Toggled::Opened(p, n) => Some(c.fmt(
-            "gui-sidebar-open",
-            &args!["panel" => panel_name(app, p), "n" => n],
-        )),
+        Toggled::Opened(p, n) => {
+            let open = c.fmt(
+                "gui-sidebar-open",
+                &args!["panel" => panel_name(app, p), "n" => n],
+            );
+            // The drawn hint is hidden from screen readers: the Notes
+            // panel's own key is said once, after the count.
+            Some(match p {
+                Panel::Notes if n > 0 => format!("{open} {}", c.tr("gui-sidebar-notes-keys")),
+                _ => open,
+            })
+        }
         Toggled::Closed(p) => {
             Some(c.fmt("gui-sidebar-closed", &args!["panel" => panel_name(app, p)]))
         }
@@ -736,6 +756,17 @@ pub fn go(
         host.focus(Some(doc));
     }
     effects
+}
+
+/// Space on row `index` of the Notes panel: the note's links, as the
+/// app's list (the window shows it as a list dialog, and the focus comes
+/// back to the panel when it closes). Nothing for the Contents panel or a
+/// row that is not a note (the "No notes" row).
+pub fn links(app: &mut App, shown: &SidebarShown, index: usize) -> Vec<Effect> {
+    match shown.panel {
+        Some(panel) if index < shown.positions.len() => app.panel_entry_links(panel, index),
+        _ => Vec::new(),
+    }
 }
 
 /// The window's regions in F6 order: the header, the panel (when shown),
