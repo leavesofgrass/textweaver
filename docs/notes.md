@@ -137,6 +137,38 @@ tw notes links essay.md
 
 `tw notes links` prints each note of the document that has links, then one line per link: its links out ("supports: Chapter 3 note"), then what links to it ("cites this, from: Week 4 note, in Pharmacology 2"). Add `--type supports` to list one type, and `--json` for a program or a script. It only reads; it never changes anything.
 
+### Export the knowledge graph
+
+The links of a single note answer a local question: what this idea supports, and what cites it. A literature review or an exam plan raises a global one, about the shape of everything you have connected across the semester. Exporting the knowledge graph writes every link in your library to one file, so that you can read the whole structure as a list or hand it to a tool that analyzes or draws networks.
+
+In the reader, press **F2** for the command palette and type `export knowledge graph`, or choose **File**, **Export As**, **Export knowledge graph**. You hear how many links there are, then a list of formats. Press **Enter** on one, and textweaver writes `knowledge-graph` with that format's extension next to the open document (or, with no document open, in the folder textweaver was started in). You hear the file's name, "Open it? y or n.", and the folder. Press **y** to open it with the program your computer uses for that kind of file. If no note has a link yet, you hear "No links between notes to export." and nothing is written.
+
+From the command line:
+
+```bash
+tw notes graph
+tw notes graph --to json --out graph.json
+tw notes graph --out graph.graphml
+```
+
+`tw notes graph` prints the Markdown list. `--to` chooses the format, `--json` is short for `--to json`, and `--out FILE` (or `-o FILE`) writes a file instead of printing; without `--to`, the extension of the file chooses the format, so `graph.graphml` is written as GraphML. `--home DIR` reads the notes kept under another data folder. The command only reads your notes; it never changes them.
+
+The graph holds every note that links to another note or is linked from one, across the open document and every library document that has notes. A note with no links in either direction is left out, because it has no place in a network. A link whose target note no longer exists, because the note was deleted or its document left the library, is kept and points to a node labeled "Note not found", so an export never hides a broken link. A link type textweaver does not know, written by a newer version, is exported under its stored name.
+
+The formats, in the order the list offers them:
+
+- **Markdown list** (`md`). A heading for each note, with its document's title, followed by one line per link, the type first: "supports: Chapter 3 note, in Biology". The links the note makes come first, then the links made to it: "cites this, from: Week 4 note, in Pharmacology 2". This is the text equivalent of every other format, and the one to read with a screen reader or a Braille display; each line carries its meaning in the first words.
+- **JSON** (`json`). An object with `nodes` and `edges`, the shape star used. Each node has an `id` (the note's own id), `doc` (the document's path), `title` and `label` (the note's text, shortened), and `missing: true` when the note was not found. Each edge has `src` and `dst` (node ids), `rel_type` as stored (`SUPPORTS`), `spoken` as it reads aloud (`supports`), and the link's comment as `note` when it has one. Gephi and Cytoscape import this shape with their JSON importers, and it suits scripts.
+- **DOT** (`dot`), the language of Graphviz. Each note is a box labeled with its text; each link is an arrow labeled with its type.
+- **GraphML** (`graphml`), the XML graph format that Gephi, Cytoscape and yEd open directly. Nodes carry the label, document path and title; edges carry the stored type, the spoken type and the comment.
+- **Mermaid** (`mermaid`, written as `.mmd`), a flowchart that Markdown editors and code hosts that support Mermaid draw from text. It carries an accessible title and a description that names the Markdown list as its text equivalent.
+- **PlantUML** (`plantuml`, written as `.puml`), a diagram for PlantUML and the editors that render it.
+- **CSV edge list** (`csv`). A header row, `source,type,target`, then one row per link: the linking note, the type as it reads aloud, and the linked note, each note with its document's title. Spreadsheets open it, and Gephi can import it as an edge table.
+
+Each format escapes note text by its own rules, so a quotation mark, an ampersand or a bracket in a note never breaks the file: quotes are escaped in DOT, characters are written as XML entities in GraphML, Mermaid uses its entity codes and generated node names, and the CSV file quotes fields as the CSV standard asks. A CSV field that a spreadsheet would run as a formula, such as a note beginning with an equals sign, starts with an apostrophe instead, so opening an export never runs anything. The words of the Markdown list are in English, as `tw notes links` prints them.
+
+The drawn formats are for tools that lay out a network as a picture. textweaver itself never draws the graph; the lists in the reader and the Markdown list are how it presents links, and they hold the same information as any picture made from the other files. Concept extraction, which star used to suggest links from the words of a document, is not part of textweaver.
+
 ## Highlights
 
 A highlight marks a passage, as a highlighter pen does on paper.

@@ -38,7 +38,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 ## Study tools
 
 - **Spaced-repetition review** (Anki-style) is out of scope, on purpose.
-- **Knowledge graphs** from notes are not drawn. Links between notes are lists instead: each note's links, "What links here", and `tw notes links` ([notes guide](notes.md#links-between-notes)).
+- **Knowledge graphs** from notes are not drawn. Links between notes are lists instead: each note's links, "What links here", and `tw notes links` ([notes guide](notes.md#links-between-notes)). The graph exports to files that other tools draw, with a Markdown list as their text equivalent ([Export the knowledge graph](notes.md#export-the-knowledge-graph)).
 
 ## What this page does not promise
 
