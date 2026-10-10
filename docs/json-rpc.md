@@ -128,7 +128,7 @@ Parameters: none.
 The result is an object with:
 
 - `server`: always `"textweaver"`.
-- `version`: the textweaver version, such as `"0.1.0-alpha.9"`.
+- `version`: the textweaver version, such as `"0.1.0-beta.1"`.
 - `protocol`: the protocol version, a number. It is `1`.
 - `methods`: the names of every method.
 - `notifications`: the names of every notification.
@@ -321,7 +321,7 @@ The notes commands return `status` and `effects` but no `pending`.
 
 #### Prompt purposes
 
-A prompt's `purpose` is one of these 29 purposes. The names are fixed: a new purpose may be added, but none is renamed or removed within protocol version 1. Treat a purpose you do not know like any other text question: show the `label` and send what the user types.
+A prompt's `purpose` is one of these 30 purposes. The names are fixed: a new purpose may be added, but none is renamed or removed within protocol version 1. Treat a purpose you do not know like any other text question: show the `label` and send what the user types.
 
 - `find`: the text to find.
 - `go_to`: a line, a percentage, `start`, or `end`.
@@ -482,7 +482,7 @@ The server answers with its name, version, protocol, and the lists of methods an
     "notifications": ["position", "playback", "announcement", "prompt", "list", "quit"],
     "protocol": 1,
     "server": "textweaver",
-    "version": "0.1.0-alpha.9"
+    "version": "0.1.0-beta.1"
   }
 }
 ```
@@ -767,7 +767,7 @@ python client.py notes.md
 With the example document, opened for the first time, it prints:
 
 ```text
-Connected to textweaver 0.1.0-alpha.9 protocol 1
+Connected to textweaver 0.1.0-beta.1 protocol 1
 Announcement: Opened Cell biology.
 Opened Cell biology with 7 lines
 Announcement: Cells are the smallest units of life.
