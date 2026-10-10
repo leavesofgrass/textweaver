@@ -559,14 +559,14 @@ mod tests {
     #[test]
     fn only_a_file_pandoc_alone_reads_needs_it() {
         let tmp = tempfile::tempdir().unwrap();
-        let org = tmp.path().join("notes.org");
+        let org = tmp.path().join("notes.textile");
         let md = tmp.path().join("notes.md");
-        std::fs::write(&org, "* A heading").unwrap();
+        std::fs::write(&org, "h1. A heading").unwrap();
         std::fs::write(&md, "# A heading").unwrap();
         assert_eq!(needs_pandoc(std::slice::from_ref(&md)), None);
         assert_eq!(needs_pandoc(&[md.clone(), org.clone()]), Some(&org));
         // A folder, or a file that is not there, is not asked about.
-        assert_eq!(needs_pandoc(&[tmp.path().join("gone.org")]), None);
+        assert_eq!(needs_pandoc(&[tmp.path().join("gone.textile")]), None);
     }
 
     #[derive(Parser)]

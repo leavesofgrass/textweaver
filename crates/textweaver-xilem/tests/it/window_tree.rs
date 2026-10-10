@@ -2140,7 +2140,7 @@ fn the_study_list_takes_its_keys_in_the_window() {
     // The window hands 3 to the app: Good, and the next card.
     let _ = app.dispatch(Command::ListKey(ListKey::Char('3')));
     assert!(
-        app.status_text().starts_with("Good. Card 2 of"),
+        app.status_text().starts_with("Good, next") && app.status_text().contains("Card 2 of"),
         "{}",
         app.status_text()
     );
