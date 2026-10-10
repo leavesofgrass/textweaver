@@ -138,7 +138,8 @@ fn lists_jump_by_first_letter_and_the_save_list_takes_s_d_c() {
 fn key_hints_show_only_keys_that_work() {
     let mut tui = tui_with("Words here.\n");
     let on = tui.hints(200);
-    assert!(on.contains("Space play"), "{on}");
+    // The toolbar's buttons come first, by their short names (B1-cb).
+    assert!(on.contains("Space Play or pause"), "{on}");
     assert!(on.contains("h heading"), "{on}");
     // F9: single keys off; the hints switch to chords, and actions with
     // only single keys drop out.
@@ -155,11 +156,14 @@ fn key_hints_show_only_keys_that_work() {
             .unwrap_or_else(|| panic!("{a:?} has a chord"))
     };
     assert!(
-        off.contains(&format!("{} play", chord(ActionId::PlayPause))),
+        off.contains(&format!("{} Play or pause", chord(ActionId::PlayPause))),
         "{off}"
     );
     assert!(
-        off.contains(&format!("{} sentence", chord(ActionId::NextSentence))),
+        off.contains(&format!(
+            "{} Next paragraph",
+            chord(ActionId::NextParagraph)
+        )),
         "{off}"
     );
     // Headings have a chord in the terminal since Phase 2.
@@ -176,6 +180,29 @@ fn key_hints_show_only_keys_that_work() {
     assert!(edit.contains(&format!("{save} save")), "{edit}");
     assert!(edit.contains("F2 commands"), "{edit}");
     assert!(!edit.contains("?"), "{edit}");
+}
+
+/// The browse hints follow `[gui] toolbar_buttons` (B1-cb): a toolbar of
+/// sentence steps shows them, and the terminal's own keys follow.
+#[test]
+fn key_hints_follow_the_toolbar_buttons() {
+    let mut config = AppConfig::for_tests();
+    config.settings.gui.toolbar_buttons = vec!["next_sentence".into(), "from_the_future".into()];
+    let mut app = App::new(config);
+    app.open_document(
+        Document::from_plain_text(
+            "Words here.
+",
+        ),
+        DocKey::untitled(1),
+        "Doc".into(),
+    );
+    let tui = Tui::with_color_support(app, ColorSupport::NoColor);
+    let hints = tui.hints(200);
+    assert!(hints.contains("Next sentence"), "{hints}");
+    assert!(!hints.contains("Next paragraph"), "{hints}");
+    assert!(!hints.contains("Play or pause"), "{hints}");
+    assert!(hints.contains("find"), "{hints}");
 }
 
 /// A long heading, a wide table, and a long code line drawn at 20, 40, 60,

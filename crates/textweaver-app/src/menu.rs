@@ -377,6 +377,7 @@ impl MenuId {
                 Do(A::ToggleHeader),
                 Do(A::ToggleToolbar),
                 Do(A::CyclePreviewFollow),
+                Do(A::CustomizeButtons),
                 Sep,
                 Do(A::NextTheme),
                 Do(A::ColorSettings),

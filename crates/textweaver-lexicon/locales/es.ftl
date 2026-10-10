@@ -862,6 +862,7 @@ action-contents-panel = Mostrar el panel Contenido junto al documento e ir a él
 action-notes-panel = Mostrar el panel Notas junto al documento e ir a él, o cerrarlo desde dentro: Intro va a una nota
 action-toggle-header = Mostrar u ocultar la cabecera, la barra de comandos sobre el documento
 action-toggle-toolbar = Mostrar u ocultar la barra de herramientas, la barra de los botones de lectura
+action-customize-buttons = Elegir los botones de la cabecera y de la barra de herramientas, y su orden
 action-next-region = Ir a la siguiente parte de la ventana: la cabecera, el panel, el documento o la barra de herramientas
 action-previous-region = Ir a la parte anterior de la ventana
 action-command-palette = Ejecutar cualquier comando por su nombre
@@ -2396,6 +2397,10 @@ setting-gui-header = Mostrar la cabecera
 setting-gui-header-help = Muestra la barra de comandos sobre el documento. Desactivada, los comandos conservan sus teclas y sus elementos de menú.
 setting-gui-toolbar = Mostrar la barra de herramientas
 setting-gui-toolbar-help = Muestra la barra de los botones de lectura. Desactivada, los comandos conservan sus teclas y sus elementos de menú.
+setting-gui-header-buttons = Botones de la cabecera
+setting-gui-header-buttons-help = Los botones de la cabecera, en orden, como identificadores de comandos separados por comas. Personalizar botones, en el menú Ver, los cambia uno a uno. Los identificadores que esta versión no conoce se conservan, pero no se muestran.
+setting-gui-toolbar-buttons = Botones de la barra de herramientas
+setting-gui-toolbar-buttons-help = Los botones de la barra de herramientas, en orden, como identificadores de comandos separados por comas. Las pistas de teclas del lector de terminal los siguen. Personalizar botones, en el menú Ver, los cambia uno a uno.
 setting-gui-auto-hide-menu = Ocultar la barra de menús
 setting-gui-auto-hide-menu-help = Windows: oculta la barra de menús de la ventana hasta que Alt o F10 la muestra. Se oculta de nuevo al cerrar el menú. Sin efecto en Linux, cuyos menús son la lista de F10, ni en macOS.
 setting-gui-speak-messages = Decir los mensajes de textweaver
@@ -3198,7 +3203,6 @@ tui-hint-previous-line = línea anterior
 tui-hint-again = otra vez
 tui-hint-read-on = seguir leyendo
 tui-hint-leave = salir
-tui-hint-paragraph = párrafo
 tui-hint-find = buscar
 tui-hint-mark = marcar
 tui-hint-lines = líneas
@@ -3390,6 +3394,53 @@ gui-header-shown = Cabecera mostrada.
 gui-header-hidden = Cabecera oculta. Sus comandos conservan sus teclas.
 gui-toolbar-shown = Barra de herramientas mostrada.
 gui-toolbar-hidden = Barra de herramientas oculta. Sus comandos conservan sus teclas.
+
+## Personalizar botones (crate::buttons).
+
+buttons-title = Personalizar botones
+buttons-intro =
+    { $n ->
+        [one] Personalizar botones, 1 botón. Enter en un botón para moverlo o quitarlo.
+       *[other] Personalizar botones, { $n } botones. Enter en un botón para moverlo o quitarlo.
+    }
+buttons-row =
+    { $bar ->
+        [header] { $name }, cabecera { $pos } de { $count }
+       *[toolbar] { $name }, barra de herramientas { $pos } de { $count }
+    }
+buttons-add-header = Añadir un botón a la cabecera
+buttons-add-toolbar = Añadir un botón a la barra de herramientas
+buttons-reset = Restablecer las dos barras
+buttons-move-up = Subir
+buttons-move-down = Bajar
+buttons-remove = Quitar
+buttons-add-intro =
+    { $n ->
+        [one] 1 comando para añadir. Enter lo añade al final.
+       *[other] { $n } comandos para añadir. Enter añade uno al final.
+    }
+buttons-added =
+    { $bar ->
+        [header] { $name } añadido, cabecera { $pos } de { $count }.
+       *[toolbar] { $name } añadido, barra de herramientas { $pos } de { $count }.
+    }
+buttons-removed =
+    { $bar ->
+        [header] { $name } quitado de la cabecera.
+       *[toolbar] { $name } quitado de la barra de herramientas.
+    }
+buttons-moved = { $name } movido, { $pos } de { $count }.
+buttons-first = { $name } ya es el primero.
+buttons-last = { $name } ya es el último.
+buttons-already =
+    { $bar ->
+        [header] { $name } ya está en la cabecera.
+       *[toolbar] { $name } ya está en la barra de herramientas.
+    }
+buttons-no-name = Ese comando no tiene nombre corto, así que no puede ser un botón.
+buttons-no-button = No hay ningún botón ahí.
+buttons-reset-done = Botones restablecidos a los valores predeterminados.
+buttons-none-to-add = No quedan comandos para añadir.
 gui-sidebar-no-headings = No hay encabezados.
 gui-sidebar-no-notes = No hay notas.
 gui-sidebar-current = { $item }, actual
@@ -3741,6 +3792,7 @@ name-contents-panel = Panel Contenido
 name-notes-panel = Panel Notas
 name-toggle-header = Cabecera
 name-toggle-toolbar = Barra de herramientas
+name-customize-buttons = Personalizar botones
 name-next-region = Siguiente región
 name-previous-region = Región anterior
 name-color-settings = Colores

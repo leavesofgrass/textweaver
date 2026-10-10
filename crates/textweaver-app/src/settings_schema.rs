@@ -166,6 +166,7 @@ pub const WINDOW_ONLY: &[&str] = &[
     "display.measure",
     "gui.announce",
     "gui.header",
+    "gui.header_buttons",
     "gui.toolbar",
     "gui.auto_hide_menu",
     "gui.speak_messages",
@@ -1416,6 +1417,16 @@ pub const INFO: &[Info] = &[
         "gui.toolbar",
         "Show the toolbar",
         "Show the bar of Play, Stop and the reading buttons. Off, the commands keep their keys and menu items.",
+    ),
+    list(
+        "gui.header_buttons",
+        "Header buttons",
+        "The header's buttons, in order, as command ids separated by commas. Customize buttons in the View menu changes them one at a time. Ids this version does not know are kept but not shown.",
+    ),
+    list(
+        "gui.toolbar_buttons",
+        "Toolbar buttons",
+        "The toolbar's buttons, in order, as command ids separated by commas. The terminal reader's key hints follow them. Customize buttons in the View menu changes them one at a time.",
     ),
     toggle(
         "gui.auto_hide_menu",

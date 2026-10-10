@@ -878,6 +878,7 @@ action-contents-panel = Mostrar o painel Sumário ao lado do documento e ir até
 action-notes-panel = Mostrar o painel Notas ao lado do documento e ir até ele, ou fechá-lo de dentro dele: Enter vai a uma nota
 action-toggle-header = Mostrar ou ocultar o cabeçalho, a barra de comandos acima do documento
 action-toggle-toolbar = Mostrar ou ocultar a barra de ferramentas, a barra dos botões de leitura
+action-customize-buttons = Escolher os botões do cabeçalho e da barra de ferramentas, e a ordem deles
 action-next-region = Ir para a próxima parte da janela: o cabeçalho, o painel, o documento ou a barra de ferramentas
 action-previous-region = Ir para a parte anterior da janela
 action-command-palette = Executar qualquer comando pelo nome
@@ -2412,6 +2413,10 @@ setting-gui-header = Mostrar o cabeçalho
 setting-gui-header-help = Mostra a barra de comandos acima do documento. Desativado, os comandos mantêm suas teclas e itens de menu.
 setting-gui-toolbar = Mostrar a barra de ferramentas
 setting-gui-toolbar-help = Mostra a barra dos botões de leitura. Desativada, os comandos mantêm suas teclas e itens de menu.
+setting-gui-header-buttons = Botões do cabeçalho
+setting-gui-header-buttons-help = Os botões do cabeçalho, em ordem, como identificadores de comandos separados por vírgulas. Personalizar botões, no menu Exibir, muda um de cada vez. Identificadores que esta versão não conhece são mantidos, mas não mostrados.
+setting-gui-toolbar-buttons = Botões da barra de ferramentas
+setting-gui-toolbar-buttons-help = Os botões da barra de ferramentas, em ordem, como identificadores de comandos separados por vírgulas. As dicas de teclas do leitor de terminal seguem esses botões. Personalizar botões, no menu Exibir, muda um de cada vez.
 setting-gui-auto-hide-menu = Ocultar a barra de menus
 setting-gui-auto-hide-menu-help = Windows: oculta a barra de menus da janela até que Alt ou F10 a mostre. Ela se oculta de novo quando o menu fecha. Sem efeito no Linux, cujos menus são a lista do F10, nem no macOS.
 setting-gui-speak-messages = Falar as mensagens do textweaver
@@ -3214,7 +3219,6 @@ tui-hint-previous-line = linha anterior
 tui-hint-again = de novo
 tui-hint-read-on = continuar lendo
 tui-hint-leave = sair
-tui-hint-paragraph = parágrafo
 tui-hint-find = localizar
 tui-hint-mark = marcar
 tui-hint-lines = linhas
@@ -3406,6 +3410,53 @@ gui-header-shown = Cabeçalho mostrado.
 gui-header-hidden = Cabeçalho oculto. Seus comandos mantêm suas teclas.
 gui-toolbar-shown = Barra de ferramentas mostrada.
 gui-toolbar-hidden = Barra de ferramentas oculta. Seus comandos mantêm suas teclas.
+
+## Personalizar botões (crate::buttons).
+
+buttons-title = Personalizar botões
+buttons-intro =
+    { $n ->
+        [one] Personalizar botões, 1 botão. Enter num botão para movê-lo ou removê-lo.
+       *[other] Personalizar botões, { $n } botões. Enter num botão para movê-lo ou removê-lo.
+    }
+buttons-row =
+    { $bar ->
+        [header] { $name }, cabeçalho { $pos } de { $count }
+       *[toolbar] { $name }, barra de ferramentas { $pos } de { $count }
+    }
+buttons-add-header = Adicionar um botão ao cabeçalho
+buttons-add-toolbar = Adicionar um botão à barra de ferramentas
+buttons-reset = Restaurar o padrão das duas barras
+buttons-move-up = Mover para cima
+buttons-move-down = Mover para baixo
+buttons-remove = Remover
+buttons-add-intro =
+    { $n ->
+        [one] 1 comando para adicionar. Enter o adiciona no fim.
+       *[other] { $n } comandos para adicionar. Enter adiciona um no fim.
+    }
+buttons-added =
+    { $bar ->
+        [header] { $name } adicionado, cabeçalho { $pos } de { $count }.
+       *[toolbar] { $name } adicionado, barra de ferramentas { $pos } de { $count }.
+    }
+buttons-removed =
+    { $bar ->
+        [header] { $name } removido do cabeçalho.
+       *[toolbar] { $name } removido da barra de ferramentas.
+    }
+buttons-moved = { $name } movido, { $pos } de { $count }.
+buttons-first = { $name } já é o primeiro.
+buttons-last = { $name } já é o último.
+buttons-already =
+    { $bar ->
+        [header] { $name } já está no cabeçalho.
+       *[toolbar] { $name } já está na barra de ferramentas.
+    }
+buttons-no-name = Esse comando não tem nome curto, então não pode ser um botão.
+buttons-no-button = Não há botão aí.
+buttons-reset-done = Botões restaurados para o padrão.
+buttons-none-to-add = Não há mais comandos para adicionar.
 gui-sidebar-no-headings = Nenhum título.
 gui-sidebar-no-notes = Nenhuma nota.
 gui-sidebar-current = { $item }, atual
@@ -3757,6 +3808,7 @@ name-contents-panel = Painel Sumário
 name-notes-panel = Painel Notas
 name-toggle-header = Cabeçalho
 name-toggle-toolbar = Barra de ferramentas
+name-customize-buttons = Personalizar botões
 name-next-region = Próxima região
 name-previous-region = Região anterior
 name-color-settings = Cores

@@ -158,6 +158,7 @@ mod batch;
 mod book_audio;
 mod braille_file;
 pub mod browse;
+pub mod buttons;
 mod cards;
 pub mod changes;
 mod overview;

@@ -890,6 +890,7 @@ action-contents-panel = Afficher le panneau Sommaire à côté du document et y 
 action-notes-panel = Afficher le panneau Notes à côté du document et y aller, ou le fermer depuis l'intérieur : Entrée va à une note
 action-toggle-header = Afficher ou masquer l'en-tête, la barre de commandes au-dessus du document
 action-toggle-toolbar = Afficher ou masquer la barre d'outils, la barre des boutons de lecture
+action-customize-buttons = Choisir les boutons de l'en-tête et de la barre d'outils, et leur ordre
 action-next-region = Aller à la partie suivante de la fenêtre : l'en-tête, le panneau, le document ou la barre d'outils
 action-previous-region = Aller à la partie précédente de la fenêtre
 action-command-palette = Exécuter une commande par son nom
@@ -2424,6 +2425,10 @@ setting-gui-header = Afficher l'en-tête
 setting-gui-header-help = Affiche la barre de commandes au-dessus du document. Désactivé, les commandes gardent leurs touches et leurs éléments de menu.
 setting-gui-toolbar = Afficher la barre d'outils
 setting-gui-toolbar-help = Affiche la barre des boutons de lecture. Désactivée, les commandes gardent leurs touches et leurs éléments de menu.
+setting-gui-header-buttons = Boutons de l'en-tête
+setting-gui-header-buttons-help = Les boutons de l'en-tête, dans l'ordre, sous forme d'identifiants de commandes séparés par des virgules. Personnaliser les boutons, dans le menu Affichage, les change un par un. Les identifiants que cette version ne connaît pas sont gardés, mais pas affichés.
+setting-gui-toolbar-buttons = Boutons de la barre d'outils
+setting-gui-toolbar-buttons-help = Les boutons de la barre d'outils, dans l'ordre, sous forme d'identifiants de commandes séparés par des virgules. Les indications de touches du lecteur en terminal les suivent. Personnaliser les boutons, dans le menu Affichage, les change un par un.
 setting-gui-auto-hide-menu = Masquer la barre de menus
 setting-gui-auto-hide-menu-help = Windows : masque la barre de menus de la fenêtre jusqu'à ce qu'Alt ou F10 l'affiche. Elle se masque de nouveau quand le menu se ferme. Sans effet sous Linux, dont les menus sont la liste F10, ni sous macOS.
 setting-gui-speak-messages = Dire les messages de textweaver
@@ -3226,7 +3231,6 @@ tui-hint-previous-line = ligne précédente
 tui-hint-again = encore
 tui-hint-read-on = continuer
 tui-hint-leave = quitter
-tui-hint-paragraph = paragraphe
 tui-hint-find = rechercher
 tui-hint-mark = marquer
 tui-hint-lines = lignes
@@ -3418,6 +3422,53 @@ gui-header-shown = En-tête affiché.
 gui-header-hidden = En-tête masqué. Ses commandes gardent leurs touches.
 gui-toolbar-shown = Barre d'outils affichée.
 gui-toolbar-hidden = Barre d'outils masquée. Ses commandes gardent leurs touches.
+
+## Personnaliser les boutons (crate::buttons).
+
+buttons-title = Personnaliser les boutons
+buttons-intro =
+    { $n ->
+        [one] Personnaliser les boutons, 1 bouton. Entrée sur un bouton pour le déplacer ou le retirer.
+       *[other] Personnaliser les boutons, { $n } boutons. Entrée sur un bouton pour le déplacer ou le retirer.
+    }
+buttons-row =
+    { $bar ->
+        [header] { $name }, en-tête { $pos } sur { $count }
+       *[toolbar] { $name }, barre d'outils { $pos } sur { $count }
+    }
+buttons-add-header = Ajouter un bouton à l'en-tête
+buttons-add-toolbar = Ajouter un bouton à la barre d'outils
+buttons-reset = Rétablir les deux barres par défaut
+buttons-move-up = Monter
+buttons-move-down = Descendre
+buttons-remove = Retirer
+buttons-add-intro =
+    { $n ->
+        [one] 1 commande à ajouter. Entrée l'ajoute à la fin.
+       *[other] { $n } commandes à ajouter. Entrée en ajoute une à la fin.
+    }
+buttons-added =
+    { $bar ->
+        [header] { $name } ajouté, en-tête { $pos } sur { $count }.
+       *[toolbar] { $name } ajouté, barre d'outils { $pos } sur { $count }.
+    }
+buttons-removed =
+    { $bar ->
+        [header] { $name } retiré de l'en-tête.
+       *[toolbar] { $name } retiré de la barre d'outils.
+    }
+buttons-moved = { $name } déplacé, { $pos } sur { $count }.
+buttons-first = { $name } est déjà le premier.
+buttons-last = { $name } est déjà le dernier.
+buttons-already =
+    { $bar ->
+        [header] { $name } est déjà dans l'en-tête.
+       *[toolbar] { $name } est déjà dans la barre d'outils.
+    }
+buttons-no-name = Cette commande n'a pas de nom court, elle ne peut donc pas être un bouton.
+buttons-no-button = Aucun bouton à cet endroit.
+buttons-reset-done = Boutons rétablis par défaut.
+buttons-none-to-add = Plus aucune commande à ajouter.
 gui-sidebar-no-headings = Aucun titre.
 gui-sidebar-no-notes = Aucune note.
 gui-sidebar-current = { $item }, actuel
@@ -3769,6 +3820,7 @@ name-contents-panel = Panneau Sommaire
 name-notes-panel = Panneau Notes
 name-toggle-header = En-tête
 name-toggle-toolbar = Barre d'outils
+name-customize-buttons = Personnaliser les boutons
 name-next-region = Région suivante
 name-previous-region = Région précédente
 name-color-settings = Couleurs

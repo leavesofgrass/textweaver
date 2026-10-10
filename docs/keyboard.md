@@ -385,6 +385,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note | none | `Ctrl+2` | `Cmd+2` | `notes_panel` |
 | Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | palette | palette | palette | `toggle_header` |
 | Show or hide the toolbar, the bar of Play, Stop and the reading buttons | palette | palette | palette | `toggle_toolbar` |
+| Choose the buttons on the header and the toolbar, and their order | palette | palette | palette | `customize_buttons` |
 | Move to the next part of the window: the header, the panel, the document, or the toolbar | none | `F6` | `F6` | `next_region` |
 | Move to the previous part of the window | none | `Shift+F6` | `Shift+F6` | `previous_region` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | palette | palette | palette | `color_settings` |
@@ -600,6 +601,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Show the original braille of the page at the cursor, in a BRF file read as print | `show_original_braille` |
 | Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | `toggle_header` |
 | Show or hide the toolbar, the bar of Play, Stop and the reading buttons | `toggle_toolbar` |
+| Choose the buttons on the header and the toolbar, and their order | `customize_buttons` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | `color_settings` |
 | Open the reading settings: rate, font, spacing, line length, theme, highlight, ruler, bionic reading, and syllables | `reading_form` |
 | List the facts a problem report needs: version, build, components, speech engines, and folders | `about` |

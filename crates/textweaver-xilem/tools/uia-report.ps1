@@ -871,9 +871,9 @@ try {
         Say ""
         $steps = @(
             @{ button = 'Pause'; wait = 700 },
-            @{ button = 'Next sentence'; wait = 700 },
-            @{ button = 'Next sentence'; wait = 700 },
-            @{ button = 'Previous sentence'; wait = 700 },
+            @{ button = 'Next paragraph'; wait = 700 },
+            @{ button = 'Next paragraph'; wait = 700 },
+            @{ button = 'Previous paragraph'; wait = 700 },
             @{ button = 'Stop'; wait = 700 },
             @{ paragraph = 8; wait = 400 },
             @{ button = 'Play'; wait = 1500 },

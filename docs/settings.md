@@ -297,7 +297,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `tab_width`, default `4`: columns per tab.
 - `show_line_numbers`, default `false`: show line numbers. F6 turns them on and off.
 - `scroll_margin`, default `3`: lines kept visible above and below the cursor.
-- `hints`, default `"auto"`: the terminal reader's key hint line at the bottom of the screen. `"auto"` shows it when textweaver speaks for itself and hides it in hybrid and screen-reader modes, where the Braille display reads the screen; `"on"` always shows it; `"off"` never does. A prompt still uses that line. Stays on this computer. See [Braille-first layout](reading.md#braille-first-layout).
+- `hints`, default `"auto"`: the terminal reader's key hint line at the bottom of the screen. While reading, it begins with the toolbar's buttons from `gui.toolbar_buttons`, each by its short name, then the terminal's own keys. `"auto"` shows it when textweaver speaks for itself and hides it in hybrid and screen-reader modes, where the Braille display reads the screen; `"on"` always shows it; `"off"` never does. A prompt still uses that line. Stays on this computer. See [Braille-first layout](reading.md#braille-first-layout).
 
 ### [editing]
 
@@ -469,6 +469,8 @@ Dictating text, in edit mode, in the terminal reader and the window. See [Dictat
 Settings only the window (`textweaver-gui`) reads. In the settings dialog they are under "Window".
 
 - `announce`, default `"live"`: how the window's messages reach the screen reader, from the next start. `"live"` uses a live region, which NVDA and JAWS both speak. `"uia"` raises UI Automation notifications instead (Windows only; elsewhere the live region is used). `--announce live` or `--announce uia` on the command line wins over the setting for one run.
+- `header_buttons`, default `["open", "choose_font", "toggle_edit_mode", "settings", "command_palette"]`: the header's buttons, in order, as command ids. Any command with a short name can be a button; an id this version does not recognize is kept but not shown, and a command already on a bar is not shown a second time. View, Customize buttons changes the list one button at a time and says each change. It stays on this computer. See [Customizing the buttons](gui.md#customizing-the-buttons).
+- `toolbar_buttons`, default `["play_pause", "stop", "previous_paragraph", "next_paragraph", "rate_down", "rate_up"]`: the toolbar's buttons, in order, under the same rules. The defaults step by paragraph rather than by sentence. The terminal reader's key hint line follows this list too, so both programs offer the same commands. It stays on this computer.
 - `auto_hide_menu`, default `true`: on Windows, hide the menu bar until Alt, F10, or Alt with a menu's letter shows it; it hides again when the menu closes, and nothing is announced then. It applies at once and stays on this computer. It has no effect on Linux (the menus are the F10 list) or macOS. See [Menus](gui.md#menus).
 
 ### [colors]

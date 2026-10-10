@@ -732,6 +732,9 @@ actions! {
     ToggleToolbar = "toggle_toolbar", View,
         "Show or hide the toolbar, the bar of Play, Stop and the reading buttons",
         gui [], term [], shared [];
+    CustomizeButtons = "customize_buttons", View,
+        "Choose the buttons on the header and the toolbar, and their order",
+        gui [], term [], shared [];
     NextRegion = "next_region", View,
         "Move to the next part of the window: the header, the panel, the document, or the toolbar",
         gui ["g:F6"], term [], shared [];
