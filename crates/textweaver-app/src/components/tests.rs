@@ -765,6 +765,8 @@ fn a_private_source_signs_in_once_and_the_token_is_never_written() {
     app.dispatch(Command::Action(ActionId::ManageComponents));
     assert!(app.prompt_model().is_none());
     app.save_settings().unwrap();
+    // The writer thread saves; wait so the file is there to read.
+    let _ = app.wait_for_writes();
 
     // The token went to the API, and nowhere else.
     let signed = gh
