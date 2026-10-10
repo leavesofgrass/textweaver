@@ -36,11 +36,12 @@ use masonry_winit::app::{
 use masonry_winit::winit::dpi::{LogicalSize, PhysicalPosition};
 use masonry_winit::winit::window::Window as WinitWindow;
 use textweaver_app::a11y::{Announcer as AppAnnouncer, Importance, Priority};
+use textweaver_app::buttons::{Bar, bar_actions};
 use textweaver_app::core::CharRange;
 use textweaver_app::keymap::{ActionId, Platform};
 use textweaver_app::lexicon::args;
 use textweaver_app::lexicon::i18n::Catalog;
-use textweaver_app::store::DocKey;
+use textweaver_app::store::{DocKey, GuiSettings};
 use textweaver_app::{
     App, AppError, Command, DocWindow, Effect, Playback, PromptKey, PromptPurpose, WindowChange,
     extra_command,
@@ -478,6 +479,23 @@ fn button(
     styled_button(text, action, app, ids, false)
 }
 
+/// A bar's button for `action` (B1-cb): Play is the primary action, and
+/// Play and Edit keep their tags so their labels follow the state.
+fn bar_button(
+    text: &str,
+    action: ActionId,
+    app: Option<&App>,
+    ids: &mut HashMap<WidgetId, ActionId>,
+) -> NewWidget<ActionButton> {
+    match action {
+        ActionId::PlayPause => styled_button(text, action, app, ids, true)
+            .with_tag(PLAY)
+            .with_class("primary"),
+        ActionId::ToggleEditMode => button(text, action, app, ids).with_tag(EDIT),
+        _ => button(text, action, app, ids),
+    }
+}
+
 fn styled_button(
     text: &str,
     action: ActionId,
@@ -517,7 +535,8 @@ pub fn button_label(c: &Catalog, action: ActionId, reading: bool, editing: bool)
         ActionId::NextSentence => "gui-button-next-sentence",
         ActionId::RateDown => "gui-button-slower",
         ActionId::RateUp => "gui-button-faster",
-        _ => return action.id().to_owned(),
+        // Any other command a user puts on a bar: its short name.
+        _ => return textweaver_app::menu::action_name(c, action),
     };
     c.tr(id)
 }
@@ -646,31 +665,18 @@ pub fn build_tree(
     let c = catalog_of(app);
     let l = |a| button_label(&c, a, false, false);
 
+    // The bars' buttons are the user's choice, `[gui] header_buttons` and
+    // `[gui] toolbar_buttons`, read through the app (B1-cb); the defaults
+    // before an app exists.
+    let gui = app.map_or_else(GuiSettings::default, |a| a.settings().gui.clone());
     // Header: the commands. The document's title is the window's title,
     // so the header no longer says it a second time (W9b-n).
-    let header = Flow::new(vec![
-        button(&l(ActionId::Open), ActionId::Open, app, &mut ids),
-        button(
-            &l(ActionId::ChooseFont),
-            ActionId::ChooseFont,
-            app,
-            &mut ids,
-        ),
-        button(
-            &l(ActionId::ToggleEditMode),
-            ActionId::ToggleEditMode,
-            app,
-            &mut ids,
-        )
-        .with_tag(EDIT),
-        button(&l(ActionId::Settings), ActionId::Settings, app, &mut ids),
-        button(
-            &l(ActionId::CommandPalette),
-            ActionId::CommandPalette,
-            app,
-            &mut ids,
-        ),
-    ])
+    let header = Flow::new(
+        bar_actions(&gui, Bar::Header)
+            .into_iter()
+            .map(|a| bar_button(&l(a), a, app, &mut ids))
+            .collect(),
+    )
     // In a short, narrow window the buttons that do not fit are hidden;
     // Commands stays, and lists every command, those hidden too.
     .with_keep_last();
@@ -705,35 +711,21 @@ pub fn build_tree(
     // so the word never covers the text or the caret.
     let rsvp = NewWidget::new(RsvpView::new(p.clone())).with_tag(RSVP);
 
-    // Toolbar: Play/Pause is the primary action.
-    let play = styled_button(
-        &l(ActionId::PlayPause),
-        ActionId::PlayPause,
-        app,
-        &mut ids,
-        true,
-    )
-    .with_tag(PLAY)
-    .with_class("primary");
-    let toolbar = Flow::new(vec![
-        play,
-        button(&l(ActionId::Stop), ActionId::Stop, app, &mut ids),
-        button(
-            &l(ActionId::PreviousSentence),
-            ActionId::PreviousSentence,
-            app,
-            &mut ids,
-        ),
-        button(
-            &l(ActionId::NextSentence),
-            ActionId::NextSentence,
-            app,
-            &mut ids,
-        ),
-        button(&l(ActionId::RateDown), ActionId::RateDown, app, &mut ids),
-        button(&l(ActionId::RateUp), ActionId::RateUp, app, &mut ids),
-    ])
-    .with_push_right(4);
+    // Toolbar: Play/Pause is the primary action; Slower and Faster sit at
+    // the right end.
+    let toolbar_actions = bar_actions(&gui, Bar::Toolbar);
+    let rate = toolbar_actions
+        .iter()
+        .position(|a| matches!(a, ActionId::RateDown | ActionId::RateUp));
+    let mut toolbar = Flow::new(
+        toolbar_actions
+            .iter()
+            .map(|&a| bar_button(&l(a), a, app, &mut ids))
+            .collect(),
+    );
+    if let Some(i) = rate.filter(|&i| i > 0) {
+        toolbar = toolbar.with_push_right(i);
+    }
     let toolbar = NewWidget::new(Region::new(
         NewWidget::new(toolbar),
         Role::Toolbar,
@@ -1589,12 +1581,17 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     let reading = app.playback() == Playback::Reading;
     if reading != shown.reading {
         let text = button_label(&app.catalog(), ActionId::PlayPause, reading, false);
-        host.edit(PLAY, |mut b| ActionButton::set_label(&mut b, text));
+        // Play may not be on a bar (B1-cb).
+        if host.id_of(PLAY).is_some() {
+            host.edit(PLAY, |mut b| ActionButton::set_label(&mut b, text));
+        }
         shown.reading = reading;
     }
     if editing != shown.edit_button {
         let text = button_label(&app.catalog(), ActionId::ToggleEditMode, false, editing);
-        host.edit(EDIT, |mut b| ActionButton::set_label(&mut b, text));
+        if host.id_of(EDIT).is_some() {
+            host.edit(EDIT, |mut b| ActionButton::set_label(&mut b, text));
+        }
         shown.edit_button = editing;
     }
     let status = app.status_text().to_owned();
