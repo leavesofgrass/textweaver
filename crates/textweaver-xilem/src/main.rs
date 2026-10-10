@@ -126,6 +126,9 @@ struct Args {
     /// For --measure-frames: every reading aid on first.
     #[arg(long, hide = true)]
     frames_aids: bool,
+    /// For --measure-frames: read in edit mode with the preview pane open.
+    #[arg(long, hide = true)]
+    frames_preview: bool,
     /// For --measure-frames: also write the report as JSON to this file.
     #[arg(long, value_name = "PATH", hide = true)]
     frames_json: Option<PathBuf>,
@@ -225,6 +228,7 @@ fn main() {
             o.moves = moves.clamp(1, 100_000);
             o.scale = args.scale;
             o.aids = args.frames_aids;
+            o.preview = args.frames_preview;
             o.theme = args.theme.clone();
             if let Err(e) = textweaver_xilem::frames::run(&o, args.frames_json.as_deref()) {
                 console::report_error(&e, true);

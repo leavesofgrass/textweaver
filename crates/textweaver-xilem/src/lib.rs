@@ -11,6 +11,7 @@
 //! - [`rsvp`]: the RSVP panel, one word at a time under the document.
 //! - [`sidebar`]: the Contents and Notes panels beside the document, and
 //!   F6 between the window's regions.
+//! - [`preview`]: the preview pane beside the editor in edit mode.
 //! - [`widgets`]: the root, panels, buttons, and the live-region announcer.
 //! - [`dialog`]: in-window dialogs: prompts and lists.
 //! - [`menus`]: the menus, native on Windows and macOS, from the app's model.
@@ -59,6 +60,7 @@ pub mod log;
 pub mod menus;
 pub mod parity;
 pub mod placement;
+pub mod preview;
 pub mod rsvp;
 pub mod runs;
 pub mod safety;

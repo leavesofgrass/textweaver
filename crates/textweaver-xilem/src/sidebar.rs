@@ -31,7 +31,7 @@ use masonry::core::{
     PropertiesRef, RegisterCtx, TextEvent, Widget, WidgetId, WidgetMut, WidgetPod, WidgetTag,
 };
 use masonry::imaging::Painter;
-use masonry::kurbo::{Axis, Point, Size};
+use masonry::kurbo::{Axis, Point, Size, Vec2};
 use masonry::layout::{LayoutSize, LenReq, Length};
 use masonry::properties::{LineBreaking, Padding};
 use masonry::widgets::Label;
@@ -44,6 +44,7 @@ use crate::dialog::ChoiceList;
 use crate::document::DocumentView;
 use crate::gui::Host;
 use crate::theme::{self, Palette};
+use crate::widgets::Region;
 
 /// The document's row: the panel (when shown) and the document.
 pub const SIDEBAR: WidgetTag<Sidebar> = WidgetTag::named("tw-sidebar");
@@ -64,6 +65,13 @@ pub const STACK_WIDTH: f64 = 600.0;
 pub const SHORT_DOC: f64 = 150.0;
 /// The least room the panel's list keeps before its hint gives way.
 const MIN_LIST: f64 = 64.0;
+/// Below this width, in logical pixels, of the room beside the panel, the
+/// preview pane ([`crate::preview`]) goes under the editor instead of
+/// beside it: each half would hold under about 35 characters of the
+/// reading text at its default size, under twice a comfortable measure.
+/// shortcut: a fixed width rather than the measure in the reader's font;
+/// upgrade if large text makes side-by-side panes too narrow to read.
+pub const PREVIEW_SIDE_WIDTH: f64 = 800.0;
 
 /// The panel `setting` names, if any.
 pub fn panel_of(setting: GuiSidebar) -> Option<Panel> {
@@ -114,6 +122,18 @@ pub struct Sidebar {
     /// The panel is open but hidden: the window is too short for it and
     /// the document ([`SHORT_DOC`]).
     hidden: bool,
+    /// The preview pane, a `Region` named "Preview", while shown.
+    preview: Option<WidgetPod<Region>>,
+    /// The preview's document view.
+    preview_doc: Option<WidgetId>,
+    /// The preview is open but hidden: a narrow window too short for it
+    /// under the document.
+    preview_hidden: bool,
+    /// The preview was last laid out beside the document, not under it.
+    preview_beside: bool,
+    /// The preview was shown to take the focus in a short window: it stays
+    /// until the focus has been there (then the focus keeps it).
+    preview_revealed: bool,
 }
 
 impl Sidebar {
@@ -124,6 +144,11 @@ impl Sidebar {
             doc: doc.to_pod(),
             list: None,
             hidden: false,
+            preview: None,
+            preview_doc: None,
+            preview_hidden: false,
+            preview_beside: false,
+            preview_revealed: false,
         }
     }
 
@@ -212,6 +237,62 @@ impl Sidebar {
     pub fn doc_id(&self) -> WidgetId {
         self.doc.id()
     }
+
+    /// Shows the preview pane: `region` around the preview's document view
+    /// `doc`, beside the document.
+    pub fn open_preview(this: &mut WidgetMut<'_, Self>, region: NewWidget<Region>, doc: WidgetId) {
+        if let Some(old) = this.widget.preview.take() {
+            this.ctx.remove_child(old);
+        }
+        this.widget.preview = Some(region.to_pod());
+        this.widget.preview_doc = Some(doc);
+        this.widget.preview_hidden = false;
+        this.widget.preview_revealed = false;
+        this.ctx.children_changed();
+        this.ctx.request_layout();
+    }
+
+    /// Closes the preview pane; the document takes its room again.
+    pub fn close_preview(this: &mut WidgetMut<'_, Self>) {
+        if let Some(old) = this.widget.preview.take() {
+            this.ctx.remove_child(old);
+            this.widget.preview_doc = None;
+            this.widget.preview_hidden = false;
+            this.widget.preview_revealed = false;
+            this.ctx.children_changed();
+            this.ctx.request_layout();
+        }
+    }
+
+    /// The preview's document view, while the pane is shown.
+    pub fn preview_doc_id(&self) -> Option<WidgetId> {
+        self.preview_doc
+    }
+
+    /// The preview's document view while it is on screen: not while a
+    /// narrow, short window hides it, when it is no region to go to.
+    pub fn shown_preview_id(&self) -> Option<WidgetId> {
+        self.preview_doc.filter(|_| !self.preview_hidden)
+    }
+
+    /// True when the preview was last laid out beside the document, false
+    /// under it (or not shown).
+    pub fn preview_beside(&self) -> bool {
+        self.preview.is_some() && self.preview_beside
+    }
+
+    /// Shows a preview a short window hid, before the focus goes to it; it
+    /// stays while it has the focus.
+    pub fn reveal_preview(this: &mut WidgetMut<'_, Self>) {
+        if this.widget.preview_hidden {
+            this.widget.preview_hidden = false;
+            this.widget.preview_revealed = true;
+            if let Some(p) = this.widget.preview.as_mut() {
+                this.ctx.set_stashed(p, false);
+            }
+            this.ctx.request_layout();
+        }
+    }
 }
 
 impl Widget for Sidebar {
@@ -222,6 +303,9 @@ impl Widget for Sidebar {
             ctx.register_child(p);
         }
         ctx.register_child(&mut self.doc);
+        if let Some(p) = &mut self.preview {
+            ctx.register_child(p);
+        }
     }
 
     fn measure(
@@ -241,21 +325,32 @@ impl Widget for Sidebar {
     }
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
+        let preview_focused = ctx.has_focus_target()
+            && self.preview_doc.is_some()
+            && ctx.focus_target_id() == self.preview_doc;
+        let mut docs = Docs {
+            doc: &mut self.doc,
+            preview: self.preview.as_mut(),
+            hidden: &mut self.preview_hidden,
+            beside: &mut self.preview_beside,
+            revealed: &mut self.preview_revealed,
+            focused: preview_focused,
+        };
         let Some(panel) = &mut self.panel else {
-            ctx.run_layout(&mut self.doc, size);
-            ctx.place_child(&mut self.doc, Point::ORIGIN);
+            docs.place(ctx, Point::ORIGIN, size);
             return;
         };
         let stacked = size.width < STACK_WIDTH;
         let doc_h = size.height - (size.height * 0.5).max(0.0) - GAP;
-        let panel_focused = ctx.has_focus_target() && ctx.focus_target_id() != Some(self.doc.id());
+        let panel_focused = ctx.has_focus_target()
+            && ctx.focus_target_id() != Some(docs.doc.id())
+            && !preview_focused;
         self.hidden = stacked && doc_h < SHORT_DOC && !panel_focused;
         ctx.set_stashed(panel, self.hidden);
         if self.hidden {
             // Too short for both: the document alone, the panel still
             // open (its key goes to it, and shows it).
-            ctx.run_layout(&mut self.doc, size);
-            ctx.place_child(&mut self.doc, Point::ORIGIN);
+            docs.place(ctx, Point::ORIGIN, size);
             return;
         }
         if stacked {
@@ -266,22 +361,22 @@ impl Widget for Sidebar {
             ctx.run_layout(panel, Size::new(size.width, height));
             ctx.place_child(panel, Point::ORIGIN);
             let y = height + GAP;
-            ctx.run_layout(
-                &mut self.doc,
+            docs.place(
+                ctx,
+                Point::new(0.0, y),
                 Size::new(size.width, (size.height - y).max(0.0)),
             );
-            ctx.place_child(&mut self.doc, Point::new(0.0, y));
             return;
         }
         let width = PANEL_WIDTH.min(size.width * 0.4).max(0.0);
         ctx.run_layout(panel, Size::new(width, size.height));
         ctx.place_child(panel, Point::ORIGIN);
         let x = width + GAP;
-        ctx.run_layout(
-            &mut self.doc,
+        docs.place(
+            ctx,
+            Point::new(x, 0.0),
             Size::new((size.width - x).max(0.0), size.height),
         );
-        ctx.place_child(&mut self.doc, Point::new(x, 0.0));
     }
 
     fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _p: &mut Painter<'_>) {
@@ -305,7 +400,64 @@ impl Widget for Sidebar {
             ids.push(p.id());
         }
         ids.push(self.doc.id());
+        if let Some(p) = &self.preview {
+            ids.push(p.id());
+        }
         ids
+    }
+}
+
+/// The document and the preview pane, placed in the room the panel leaves.
+struct Docs<'a> {
+    doc: &'a mut WidgetPod<DocumentView>,
+    preview: Option<&'a mut WidgetPod<Region>>,
+    hidden: &'a mut bool,
+    beside: &'a mut bool,
+    /// Shown for the focus to go to ([`Sidebar::reveal_preview`]).
+    revealed: &'a mut bool,
+    /// The preview has the focus.
+    focused: bool,
+}
+
+impl Docs<'_> {
+    /// Lays the document (and the preview) out in `size` at `origin`: the
+    /// preview beside the document in a wide room ([`PREVIEW_SIDE_WIDTH`]),
+    /// under it in a narrow one, and hidden in a narrow room too short for
+    /// both ([`SHORT_DOC`]) unless it has the focus.
+    fn place(&mut self, ctx: &mut LayoutCtx<'_>, origin: Point, size: Size) {
+        let Some(preview) = self.preview.as_deref_mut() else {
+            ctx.run_layout(self.doc, size);
+            ctx.place_child(self.doc, origin);
+            return;
+        };
+        *self.beside = size.width >= PREVIEW_SIDE_WIDTH;
+        let half_h = ((size.height - GAP) * 0.5).max(0.0);
+        if self.focused {
+            // The focus arrived: it keeps the preview shown from now on.
+            *self.revealed = false;
+        }
+        let kept = self.focused || *self.revealed;
+        *self.hidden = !*self.beside && half_h < SHORT_DOC && !kept;
+        ctx.set_stashed(preview, *self.hidden);
+        if *self.hidden {
+            ctx.run_layout(self.doc, size);
+            ctx.place_child(self.doc, origin);
+            return;
+        }
+        if *self.beside {
+            let w = ((size.width - GAP) * 0.5).max(0.0);
+            ctx.run_layout(self.doc, Size::new(w, size.height));
+            ctx.place_child(self.doc, origin);
+            ctx.run_layout(preview, Size::new(w, size.height));
+            ctx.place_child(preview, origin + Vec2::new(w + GAP, 0.0));
+        } else {
+            // The editor above, the preview under it; the order on screen
+            // is the order of the children.
+            ctx.run_layout(self.doc, Size::new(size.width, half_h));
+            ctx.place_child(self.doc, origin);
+            ctx.run_layout(preview, Size::new(size.width, half_h));
+            ctx.place_child(preview, origin + Vec2::new(0.0, half_h + GAP));
+        }
     }
 }
 
@@ -739,8 +891,8 @@ pub fn go(
 }
 
 /// The window's regions in F6 order: the header, the panel (when shown),
-/// the document, and the toolbar. Each holds the controls the focus may
-/// land on, the first being where it lands.
+/// the document, the preview (when shown), and the toolbar. Each holds the
+/// controls the focus may land on, the first being where it lands.
 #[derive(Clone, Debug, Default)]
 pub struct Regions {
     /// The header's buttons.
@@ -749,6 +901,8 @@ pub struct Regions {
     pub sidebar: Option<WidgetId>,
     /// The document.
     pub document: Option<WidgetId>,
+    /// The preview pane's document view, when shown.
+    pub preview: Option<WidgetId>,
     /// The toolbar's buttons.
     pub toolbar: Vec<WidgetId>,
     /// The header and the toolbar are folded into one bar above the
@@ -759,15 +913,16 @@ pub struct Regions {
 
 impl Regions {
     /// The regions in order on screen, and where the document is.
-    fn ordered(&self) -> ([Vec<WidgetId>; 4], usize) {
+    fn ordered(&self) -> ([Vec<WidgetId>; 5], usize) {
         let header = self.header.clone();
         let sidebar = self.sidebar.into_iter().collect();
         let document = self.document.into_iter().collect();
+        let preview = self.preview.into_iter().collect();
         let toolbar = self.toolbar.clone();
         if self.folded {
-            ([header, toolbar, sidebar, document], 3)
+            ([header, toolbar, sidebar, document, preview], 3)
         } else {
-            ([header, sidebar, document, toolbar], 2)
+            ([header, sidebar, document, preview, toolbar], 2)
         }
     }
 }
@@ -816,6 +971,7 @@ mod tests {
             header: header.clone(),
             sidebar: None,
             document: Some(doc),
+            preview: None,
             toolbar: toolbar.clone(),
             folded: false,
         };
@@ -841,6 +997,35 @@ mod tests {
         assert_eq!(next_region(&r, None, true), Some(header[0]));
         r.header.clear();
         assert_eq!(next_region(&r, Some(doc), true), Some(toolbar[0]));
+    }
+
+    /// The preview pane is a region after the document: editor, preview,
+    /// panel by F6 (wrapping through the toolbar and header when shown).
+    #[test]
+    fn f6_reaches_the_preview_after_the_document() {
+        let doc = ids(1)[0];
+        let preview = ids(1)[0];
+        let list = ids(1)[0];
+        let toolbar = ids(2);
+        let mut r = Regions {
+            header: Vec::new(),
+            sidebar: Some(list),
+            document: Some(doc),
+            preview: Some(preview),
+            toolbar: Vec::new(),
+            folded: false,
+        };
+        // Editor, preview, panel, as the brief says with the bars hidden.
+        assert_eq!(next_region(&r, Some(doc), true), Some(preview));
+        assert_eq!(next_region(&r, Some(preview), true), Some(list));
+        assert_eq!(next_region(&r, Some(list), true), Some(doc));
+        assert_eq!(next_region(&r, Some(preview), false), Some(doc));
+        // With the toolbar: the preview comes before it.
+        r.toolbar = toolbar.clone();
+        assert_eq!(next_region(&r, Some(preview), true), Some(toolbar[0]));
+        // Folded: after the document, as on screen.
+        r.folded = true;
+        assert_eq!(next_region(&r, Some(doc), true), Some(preview));
     }
 
     #[test]

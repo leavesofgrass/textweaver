@@ -536,6 +536,14 @@ pub struct DocumentView {
     editing_word: String,
     /// The word laid out, in edit mode.
     badge_layout: Option<Layout<BrushIndex>>,
+    /// The preview pane's view ([`crate::preview`]): read-only, it draws
+    /// its word ("Preview") in the corner as edit mode draws "Editing",
+    /// and no "reading from here" mark.
+    preview: bool,
+    /// The preview's block being edited, drawn as the spoken sentence is:
+    /// the sentence band and the line under it (a shape and the theme's
+    /// role, never color alone). Paint only.
+    block: Option<CharRange>,
 }
 
 impl std::fmt::Debug for DocumentView {
@@ -605,7 +613,47 @@ impl DocumentView {
             hint_layout: None,
             editing_word: String::new(),
             badge_layout: None,
+            preview: false,
+            block: None,
         }
+    }
+
+    /// The preview pane's view: read-only, with `word` ("Preview") drawn
+    /// in its corner as edit mode draws "Editing".
+    pub fn with_preview(mut self, word: impl Into<String>) -> Self {
+        self.preview = true;
+        self.editing_word = word.into();
+        self
+    }
+
+    /// The preview's block being edited, drawn as the spoken sentence is
+    /// (its band and the line under it); `None` draws none.
+    pub fn set_block(this: &mut WidgetMut<'_, Self>, block: Option<CharRange>) {
+        if this.widget.block != block {
+            this.widget.block = block;
+            this.ctx.request_render();
+        }
+    }
+
+    /// The preview's block drawn, if any.
+    pub fn block(&self) -> Option<CharRange> {
+        self.block
+    }
+
+    /// True for the preview pane's view.
+    pub fn is_preview(&self) -> bool {
+        self.preview
+    }
+
+    /// The count of full accessibility passes the view watches, for a
+    /// second view in the same window (the preview pane).
+    pub fn full_passes(&self) -> Rc<Cell<u64>> {
+        Rc::clone(&self.full_passes)
+    }
+
+    /// The badge is drawn: edit mode's "Editing", or the preview's word.
+    fn badged(&self) -> bool {
+        self.editing || self.preview
     }
 
     /// What the view draws, and its node describes, when no document is
@@ -651,7 +699,7 @@ impl DocumentView {
 
     /// The edit-mode badge's word, when the view draws it (edit mode).
     pub fn badge_shown(&self) -> Option<&str> {
-        (self.editing && self.badge_layout.is_some()).then_some(self.editing_word.as_str())
+        (self.badged() && self.badge_layout.is_some()).then_some(self.editing_word.as_str())
     }
 
     /// Selects the spoken word while reading, instead of placing a caret on
@@ -2465,7 +2513,7 @@ impl Widget for DocumentView {
                 )
             });
         // Edit mode: the word in the corner, at the interface's size.
-        self.badge_layout = (self.editing && !self.editing_word.is_empty()).then(|| {
+        self.badge_layout = (self.badged() && !self.editing_word.is_empty()).then(|| {
             plain_layout(
                 fcx,
                 lcx,
@@ -2535,7 +2583,8 @@ impl Widget for DocumentView {
             None => (self.state.spoken, self.state.sentence),
         };
         let spoken = word.filter(|_| reading);
-        let sentence = sentence.filter(|_| reading);
+        // The preview's block being edited is drawn as the sentence is.
+        let sentence = sentence.filter(|_| reading).or(self.block);
         let selection = self
             .state
             .anchor
@@ -2905,7 +2954,7 @@ impl Widget for DocumentView {
                 // margin on the caret's line, where Play starts, shown with
                 // or without the focus (reading mode only; the caret is the
                 // node's selection, so a screen reader has it already).
-                if !self.editing {
+                if !self.editing && !self.preview {
                     let x1 = self.column_x - 14.0;
                     let s = (h * 0.5).clamp(6.0, 12.0);
                     let cy = r.y0 + h / 2.0;
@@ -2981,7 +3030,7 @@ impl Widget for DocumentView {
         painter.pop_clip();
         // Outside the text's clip, which starts lower once scrolled.
         // Edit mode: the word in a box in the top right corner.
-        if let Some(b) = self.badge_layout.as_ref().filter(|_| self.editing) {
+        if let Some(b) = self.badge_layout.as_ref().filter(|_| self.badged()) {
             let (w, h) = (f64::from(b.width()), f64::from(b.height()));
             let x1 = size.width - clip - 4.0;
             let r = Rect::new(x1 - w - 12.0, clip + 2.0, x1, clip + 2.0 + h + 4.0);

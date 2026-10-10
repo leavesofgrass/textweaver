@@ -9825,6 +9825,7 @@ dependencies = [
  "muda",
  "png",
  "rfd",
+ "ropey",
  "serde_json",
  "tempfile",
  "textweaver-app",
