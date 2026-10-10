@@ -24,7 +24,7 @@ name = "icons"
 required-features = ["screenshot"]
 
 [features]
-default = ["screenshot", "renderer-vello", "publish", "lint", "grammar", "dictation", "audio-export", "opus"]
+default = ["screenshot", "renderer-vello", "publish", "lint", "grammar", "dictation", "audio-export", "opus", "carta"]
 # Dictation in edit mode (textweaver-app's `dictation`, ADR-0042).
 dictation = ["textweaver-app/dictation"]
 # File, Export audio (textweaver-app's `audio-export`, W6v): without it the
@@ -33,6 +33,9 @@ audio-export = ["textweaver-app/audio-export"]
 # Opus in process in Export audio (textweaver-app's `opus`, W7o; building
 # it needs cmake).
 opus = ["textweaver-app/opus"]
+# More formats to open (textweaver-app's `carta`, B1-k2): Org, reStructuredText,
+# MediaWiki, DokuWiki and Jira, read through the pure-Rust carta.
+carta = ["textweaver-app/carta"]
 # The renderer: Vello's GPU compute renderer (the default), or Vello's
 # hybrid renderer (CPU strips, simple GPU shaders), which suits software
 # GPUs such as Mesa's llvmpipe under Xvfb in CI. With both, Vello wins.
