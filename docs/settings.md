@@ -240,6 +240,8 @@ The highlight that follows the reading.
 - `color`, default `"theme"`: the color of the band behind the word being read, laid over the theme's own. A name (`cyan`, `yellow`, `green`, `pink`, `orange`, `light blue`, and the common web color names) or `#rrggbb`. `"theme"` keeps the theme's color. The text in the band is the theme's text or page color, whichever reads better, and the highlight keeps its bold or underline, so it never depends on color alone. When the band leaves the text below 4.5 to 1 contrast (7 to 1 in high-contrast themes), textweaver says so at startup and when you change theme.
 - `sentence_color`, not set by default: the same for the band behind the sentence being read.
 
+- `palette`, default five names (important, define, question, example, review): your highlight names, up to eight, each with a color and a shape (`name`, `color`, `shape`). The first five have the keys Alt+1 to Alt+5. It is a table you edit in the file. See [Highlights](notes.md#highlights).
+
 ### [normalization]
 
 How text is turned into words before it is spoken. Engines that do this themselves, such as Eloquence, skip the parts they already do.
@@ -286,6 +288,11 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `math_engine`, default `"builtin"`: which engine reads math aloud. `"builtin"` is textweaver's own; `"mathcat"` is MathCAT in ClearSpeak and `"mathcat_simplespeak"` MathCAT in SimpleSpeak, in the document's language. MathCAT needs a build with the `mathcat` feature; without it, textweaver's own is used. See [Hear math with MathCAT](math.md#hear-math-with-mathcat).
 - `math_display`, default `"source"`: how math looks in the reading view. `"source"` shows it as written (`$x^2$`); `"unicode"` draws each formula as one line of Unicode (`x²`, `√2`, `1⁄2`), as star did. Speech, edit mode, and exploring a formula always use the source. See [See math as Unicode](math.md#see-math-as-unicode).
 - `revisions`, default `"auto"`: how tracked changes in Word, OpenDocument, and RTF files are read. `"auto"` says each change in place ("deleted by Ada Example: three") at high verbosity and reads the final text otherwise; `"marked"` always says them; `"final"` never does. It applies when a document is opened. See [Converting documents](converting.md).
+
+- `stop_at`, default `"off"`: where continuous reading stops by itself and says "End of section." `"off"` never stops, `"heading"` stops at the next heading of any level, and `"chapter"` at the next chapter (a section break, else a level 1 heading). The read key goes on from there.
+- `stop_after_minutes`, default `0`: stop at the end of a sentence after this many minutes of reading, from 0 to 240 in steps of 5. Pausing stops the clock. 0 turns the timer off.
+- `recall_prompts`, default `false`: at a section end, ask you to say what you remember before going on. It stops at the next heading for this when `stop_at` is `"off"`. See [Study with textweaver](notes.md#study-with-textweaver).
+- `book_audio`, default `"auto"`: what reads a DAISY talking book that has a recording. `"auto"` plays its recorded narration and uses speech for text without audio; `"speech"` reads everything with speech. Rate changes do not apply to a recording ([Talking books](reading.md#talking-books-the-recorded-narration)).
 
 ### [display]
 
@@ -354,6 +361,9 @@ Audio export. See [Audio export](audio-export.md).
 - `subtitle_word_level`, default `false`: one subtitle cue per word instead of caption lines.
 - `subtitles_with_audio`, default `false`: always write subtitles beside the exported audio.
 
+- `subtitle_karaoke`, default `"off"`: how subtitle lines show the word being read. `"off"`, `"tags"` (underlined as it is spoken, in WebVTT) or `"lines"` (one cue per word, in bold and underline).
+- `subtitle_chapters`, default `false`: also write a WebVTT chapters file beside the subtitles or the audio.
+
 ### [braille]
 
 Braille output and input: BRF files written and read, and math braille on the display. See [Math in braille files](math.md#math-in-braille-files) and [Converting documents](converting.md).
@@ -369,6 +379,8 @@ See [Reading aids](reading-aids.md).
 - `bionic`, default `false`: bionic reading, the start of each word in bold. Alt+Shift+B turns it on and off.
 - `syllables`, default `false`: show long words split into syllables, `read·a·bil·i·ty`. Alt+Shift+Z turns it on and off. Both the terminal reader and the graphical version draw it.
 - `difficult_words`, default `false`: underline rare words (SCOWL sizes above 50), and name them on word moves at high verbosity. Alt+Shift+J turns it on and off. Both the terminal reader and the graphical version draw it.
+
+- `difficult_definitions`, default `false`: with difficult words marked, at high verbosity also say a difficult word's first definition from the dictionary.
 
 ### [reading_aids.bionic_options]
 
@@ -427,10 +439,11 @@ For the syllable display (`syllables` above).
 
 ### [preview]
 
-The browser preview of the document you are editing (`preview in browser` in the palette). See [the editing guide](editing.md#preview-in-the-browser).
+The preview of the document you are editing: in the browser (`preview in browser` in the palette) and in the pane beside the editor in the app. See [the editing guide](editing.md#export-and-preview).
 
-- `auto_reload`, default `false`: reload the page by itself after each save, through a small server on this computer only (127.0.0.1, with a secret in the address), landing on the heading nearest the cursor. Off, textweaver says "Preview updated. Press F5 in the browser." A reload moves your screen reader's place in the page, which is why it is off. The palette's `toggle preview auto reload` switches it.
-- `live`, default `false`: with `auto_reload`, also reload when typing pauses for a second. The palette's `toggle preview live` switches it.
+- `follow`, default `"off"`: when the browser preview reloads itself, through a small server on this computer only (127.0.0.1, with a secret in the address), landing on the heading nearest the cursor. `"off"` never: textweaver says "Preview updated. Press F5 in the browser." `"save"` reloads after each save, and `"typing"` also when typing pauses. A reload moves your screen reader's place in the page, which is why it is off. In the app and the palette it is called "Browser preview follows" (`browser preview follows` moves to the next value). The older `auto_reload` and `live` are still read as `"save"` and `"typing"`.
+- `pane`, default `false`: in the app, show the document as it reads beside the editor. Alt+F5 turns it on and off; F6 moves to it.
+- `pane_delay_ms`, default `300`: how long typing must pause before a preview that follows your typing is rewritten, from 100 to 3000 in steps of 50.
 
 ### [lexicon]
 
@@ -464,6 +477,8 @@ Dictating text, in edit mode, in the terminal reader and the graphical version. 
 - `language`, default `"en"`: the language of textweaver's own words: messages, lists, help, and the settings screen, not your documents. Built in: `"en"` English, `"es"` Spanish, `"fr"` French, `"de"` German, `"pt"` Portuguese (Brazilian), and `"ar"` Arabic. A tag with a region, such as `"es-MX"` or `"pt-BR"`, uses its language. A change on the settings screen takes effect at once: the change is said in the new language, then the title line. The voice follows the language when the speech engine has a voice for it; when it has none, the current voice keeps speaking and textweaver says so. `en-XA` shows every message accented and in `⟦ ⟧` brackets, and `ar-XB` shows them right to left: both are for testing. A `<language>.ftl` file in the `locales` folder of the settings folder adds a language, or goes over a built-in one message by message; messages it lacks come from the built-in translation, then English. `tw settings language` lists the languages, and `tw settings language es` sets one. The first run starts with the list of languages, your system's language first. Native speakers have checked English and Spanish; German, French, Portuguese, and Arabic have not been checked yet, and feedback on any translation is welcome (see [Known limits](known-limits.md)).
 - `rtl`, default `"auto"`: whether the terminal reader reorders right-to-left text (Arabic, Hebrew) for display. `"auto"` reorders only where it helps: not in terminals that do it themselves (GNOME Terminal and other VTE terminals, Konsole, mlterm, macOS Terminal), not on Windows (Windows Terminal and the console do not support right-to-left text), and not in hybrid or screen reader mode, since a screen reader reads the terminal's cells and would get reordered text backwards. `"on"` always reorders, `"off"` never. The document, speech, and your screen reader always get the text in reading order.
 
+- `recent_settings`, default an empty list: the settings changed last on the settings screen, listed at its top. It stays on this computer.
+
 ### [gui]
 
 Settings only the textweaver app (`textweaver-gui`) reads. In the settings dialog they are under "Window".
@@ -472,6 +487,11 @@ Settings only the textweaver app (`textweaver-gui`) reads. In the settings dialo
 - `header_buttons`, default `["open", "choose_font", "toggle_edit_mode", "settings", "command_palette"]`: the header's buttons, in order, as command ids. Any command with a short name can be a button; an id this version does not recognize is kept but not shown, and a command already on a bar is not shown a second time. View, Customize buttons changes the list one button at a time and says each change. It stays on this computer. See [Customizing the buttons](gui.md#customizing-the-buttons).
 - `toolbar_buttons`, default `["play_pause", "stop", "previous_paragraph", "next_paragraph", "rate_down", "rate_up"]`: the toolbar's buttons, in order, under the same rules. The defaults step by paragraph rather than by sentence. The terminal reader's key hint line follows this list too, so both programs offer the same commands. It stays on this computer.
 - `auto_hide_menu`, default `true`: on Windows, hide the menu bar until Alt, F10, or Alt with a menu's letter shows it; it hides again when the menu closes, and nothing is announced then. It applies at once and stays on this computer. It has no effect on Linux (the menus are the F10 list) or macOS. See [Menus](gui.md#menus).
+
+- `header` and `toolbar`, default `true`: show the header bar (Open, Font, Edit, Settings, Commands) and the reading toolbar. Off, their commands keep their keys and menu items. View, Header and Toolbar switch them.
+- `speak_messages`, default `false`: when textweaver reads aloud, also say its messages, typing, and cursor moves in its own voice, for reading by ear without a screen reader (Settings, "Speak textweaver's messages").
+- `sidebar`, default `"off"`: the panel beside the document: `"off"`, `"contents"` (the headings), or `"notes"`. Ctrl+1 and Ctrl+2 change it, and the app remembers the last one.
+- `window` and `last_version`: where the window was and how large, and the version that last ran here, so "Updated to" is said once after an update. textweaver keeps both itself; they never sync.
 
 ### [colors]
 
@@ -507,11 +527,19 @@ Syncing with your other computers through a folder you choose. Tools, Sync, Set 
 - `favorite_voices`: your favorite voices. One that is not installed on this computer is kept, and Choose voice lists it as "not on this computer".
 - `position_policy`, default `"newest"`: which place a document opens at when another computer has one too: `"newest"`, `"furthest"`, or `"ask"`. It replaces `[reading] sync_conflict_policy` (`"highest_progress"` reads as `"furthest"`, `"manual"` as `"ask"`), and also decides between places in a library folder's old progress file.
 
+### [updates]
+
+Update checks. See [Updates](updates.md). All of these stay on this computer.
+
+- `check`, default `false`: look for a newer textweaver once a day at start. It reads the public list of releases on GitHub and asks before downloading. Nothing about you is sent. Help, Check for updates checks at any time.
+- `asked`, `last_check`, and `declined`: markers textweaver keeps itself. `asked` is set once the first-run question has been asked, `last_check` is when the daily check last ran (seconds since 1970), and `declined` is the release you said no to; only a newer one is offered.
+
 ### [components]
 
 Optional components: the models, fonts, and voices textweaver can download. See [Optional components](components.md).
 
 - `mirror`, default `""`: where components come from first, before their public sources: an `https` address or a folder on this computer, holding each component's files under its id. Empty uses the public sources. The `TEXTWEAVER_COMPONENTS_MIRROR` environment variable wins over it. Never put a password or token here.
+- `source`, default `""`: your own components, used first. A GitHub repository written `owner/name`, or a folder on this computer. Never put a password here: a private repository signs in with the GitHub CLI, or asks once for a token kept in the system credential store. See [Your own components source](components.md#your-own-components-source).
 - `chooser_shown`, default `false`: set once the first-run list of optional components has been shown, so it is shown once.
 
 Every setting is either **portable**, which syncs, or **machine**, which never does. Portable settings are about you as a reader: the rate, punctuation, verbosity, capitals, the reading aids, the highlight, the theme and colors, the Braille and math codes, the interface language, speed presets, and the announcement level. Machine settings belong to one computer: the speech engine and voice, the volume, the sound device, the access mode and what goes with your screen reader, the NVDA or JAWS key preset, the keyboard layout, the wrap width, undo memory, every path (library folders, the glossary file, engine libraries, the sync folder), the author name written on comments and new documents, and the sync settings themselves. The [settings reference](settings-reference.md) says for each setting whether it syncs.
