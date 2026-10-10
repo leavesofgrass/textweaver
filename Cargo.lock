@@ -10037,7 +10037,6 @@ version = "0.1.0-alpha.9"
 dependencies = [
  "anyhow",
  "arboard",
- "clap",
  "ctrlc",
  "log",
  "ratatui",

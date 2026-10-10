@@ -4,6 +4,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### One program, one download (B1-o1 and B1-o2)
+
+- **`tw` is the terminal program.** `tw` alone, or `tw FILE`, opens the terminal reader; `tw COMMAND` runs a command without it, as before. `textweaver` is a second name for the same program, so `textweaver FILE` still opens the reader: a link on Linux and macOS, and a small launcher, `textweaver.exe`, on Windows. `tw --help` and `textweaver --help` print the same help. `tw` with no arguments used to print a two-line hint; it now opens the reader, and refuses in one error line when standard output is not a terminal.
+- **One download per system and processor**, holding the app, `tw`, the speech engine helpers (the eSpeak NG helpers on Windows included), and the complete documentation: `windows-x86_64.zip`, `macos-universal.zip` (`textweaver.app` beside `tw`; it was a tarball), and for Linux on x86_64 and aarch64 an AppImage and a tarball. The separate `-gui` packages are gone. The Linux AppImage starts the app by default, `tw` with `--tw` or through a link named `tw` or `textweaver`; the terminal and app AppImages of 0.1.0-alpha.9 and earlier are offered it as their update.
+- **`tw changes accept FILE` and `tw changes reject FILE`** replace `--accept-all` and `--reject-all`, which still work, hidden, through beta 1.
+
 ## [0.1.0-alpha.9] - 2026-10-04
 
 In short: this is the last alpha before beta 1, so it finishes and tidies what is there. The window gains a reading settings dialog, a narrow layout, drawn list markers, and a first run of at most three skippable steps. Documents can be exported as a read-along web page, as Ogg Vorbis audio, and as an MP4 video with the spoken word marked. Captions gain karaoke tags and chapters. The command line follows one set of rules. Themes are checked for contrast, and the result is said in words. Written pauses are honored in every speech engine. The documentation has start pages for students and staff, a known-limits page, and an accessibility statement.
@@ -594,7 +600,7 @@ The fifth alpha. Braille comes first: every status line, list, and prompt puts t
 - **Yes-or-no questions** are a dialog with Yes and No, answered with Y, N, or Escape for no.
 - **Every drawn label comes from the catalog,** in all six interface languages, and changes live with the interface language. The settings dialog starts on a plain setting.
 - **Edit mode:** caret and selection moves are spoken in self-voicing mode, Tab types a tab (Ctrl+Tab leaves the document), and misspellings are marked on screen.
-- **The GUI ships in the release:** `textweaver-VERSION-windows-x86_64-gui.zip`, `textweaver-VERSION-macos-aarch64-gui.zip` (`textweaver.app`, Apple silicon), and for Linux x86_64 and aarch64 an AppImage and a tarball whose names end in `-gui`. Supported on Windows; on macOS and Linux built and checked automatically, not yet heard with a screen reader. Each is attested and in `SHA256SUMS.txt`. See [docs/install.md](docs/install.md#the-gui).
+- **The GUI ships in the release:** `textweaver-VERSION-windows-x86_64-gui.zip`, `textweaver-VERSION-macos-aarch64-gui.zip` (`textweaver.app`, Apple silicon), and for Linux x86_64 and aarch64 an AppImage and a tarball whose names end in `-gui`. Supported on Windows; on macOS and Linux built and checked automatically, not yet heard with a screen reader. Each is attested and in `SHA256SUMS.txt`. See [docs/install.md](docs/install.md#the-app).
 - The GUI package now speaks with every engine the terminal package does: it carries the Eloquence, SAPI 5, and DECtalk engine hosts and the pronunciation dictionaries (Windows and Linux), the define-word dictionary, and every licence file, and on Windows it needs no Visual C++ runtime.
 
 ### Speech and dictation

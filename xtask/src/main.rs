@@ -1,7 +1,7 @@
 //! `cargo xtask <task>`: maintenance tasks.
 //!
-//! - `appimage [--docker]`: the Linux AppImage and tarball (see
-//!   `appimage.rs`).
+//! - `appimage [--docker]`: the Linux AppImage and tarball, each holding
+//!   the app and `tw` (see `appimage.rs`).
 //! - `bench`: time the reading and authoring hot paths on generated Markdown
 //!   corpora, the fixtures, and pathological inputs (release build; see
 //!   `bench.rs`), and compare them with the committed baseline
@@ -12,15 +12,15 @@
 //!   (see `deps.rs`).
 //! - `hosts`: build every speech-engine host for this platform and install
 //!   them with the dictionaries (`--dest DIR` for a package directory).
-//! - `dist`: build a release package for this platform (`--universal` on
-//!   macOS); see `docs/dev/releasing.md`. It fails when the package grew
+//! - `dist`: build the release package for this platform, one holding the
+//!   app and `tw` (`--universal` on macOS); see `docs/dev/releasing.md`. It fails when the package grew
 //!   more than 10 percent over the last release's without a note.
 //! - `eci-host`, `sapi-host`: build one engine's hosts.
 //! - `frames [--seconds N] [--json PATH]`: the GUI frame-time probe, the
 //!   median and worst frame while the spoken word moves, with no window on
 //!   screen (see `frames.rs`).
-//! - `gui-dist`: the Xilem GUI's own package: a zip on Windows, a `.app`
-//!   on macOS, a tarball and an AppImage on Linux (see `gui_dist.rs`).
+//! - `gui-dist`: another name for `dist`, kept for older notes; the app's
+//!   part of the package is built in `gui_dist.rs`.
 //! - `listen [--engine ID] [--text FILE] [--out DIR]`: write sample WAV
 //!   files (and word-level subtitles) from every real speech engine here,
 //!   for the listening checklist in `docs/releasing.md`; plays nothing

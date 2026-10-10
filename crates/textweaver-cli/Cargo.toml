@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-cli"
-description = "tw: the textweaver command line (extract, search, speak, convert, export audio, cite, library, vault, dictate, settings, JSON-RPC)"
+description = "tw: textweaver's terminal program, the terminal reader and the command line (extract, search, speak, convert, export audio, cite, library, vault, dictate, settings, JSON-RPC), as a library with thin binaries"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,9 +9,18 @@ repository.workspace = true
 authors.workspace = true
 publish.workspace = true
 
+# The program: `tw` alone or `tw FILE` opens the terminal reader, and
+# `tw COMMAND` runs a command headless (B1-o1).
 [[bin]]
 name = "tw"
-path = "src/main.rs"
+path = "src/bin/tw.rs"
+
+# `textweaver`, a second name for `tw`: a small launcher that runs `tw`
+# beside it. The packages use it on Windows; on Linux and macOS they make
+# `textweaver` a link to `tw` instead.
+[[bin]]
+name = "textweaver"
+path = "src/bin/textweaver.rs"
 
 [features]
 default = ["opus", "carta"]

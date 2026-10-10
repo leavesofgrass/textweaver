@@ -544,12 +544,12 @@ Changes stay as they are in edit mode: leave edit mode to accept or reject them.
 ```sh
 tw changes draft.docx
 tw changes draft.docx --json
-tw changes draft.docx --accept-all --out final.md
-tw changes draft.docx --reject-all --out original.docx
-tw changes draft.docx --accept-all --in-place
+tw changes accept draft.docx --out final.md
+tw changes reject draft.docx --out original.docx
+tw changes accept draft.docx --in-place
 ```
 
-`--json` prints each change (its kind, text, author, date, and position) and each comment thread as the document records them. `--accept-all` or `--reject-all` with `--out FILE` writes the document with every change decided, in the format the file name's extension names: Markdown (`.md`), plain text (`.txt`), HTML, or `.docx`, `.epub`, `.pdf`, and `.brf`; the original file is left alone. With `--in-place` instead, the Word file itself is changed, exactly as Save changes to the Word file does it, after the original is copied to `draft-original.docx`.
+`--json` prints each change (its kind, text, author, date, and position) and each comment thread as the document records them. `tw changes accept` or `tw changes reject` with `--out FILE` writes the document with every change decided, in the format the file name's extension names: Markdown (`.md`), plain text (`.txt`), HTML, or `.docx`, `.epub`, `.pdf`, and `.brf`; the original file is left alone. The older spellings, `--accept-all` and `--reject-all`, still work through beta 1. With `--in-place` instead, the Word file itself is changed, exactly as Save changes to the Word file does it, after the original is copied to `draft-original.docx`.
 
 ## Go back and forward
 

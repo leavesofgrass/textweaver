@@ -28,7 +28,7 @@ With `--release TAG` (a tag such as `v0.1.0-alpha.4`, or `latest` for the newest
 
 - It downloads the AppImage and `SHA256SUMS.txt` from the release with curl (or wget), and checks the AppImage against its line there. A mismatch stops the install.
 - It installs the AppImage as `~/.local/bin/textweaver.AppImage` (or under `--prefix DIR`), links `textweaver` and `tw` to it, and adds a menu entry, an icon, and the quick start.
-- Where FUSE is missing, so AppImages cannot run, it installs the plain tarball instead, checked the same way, into `lib/textweaver/` with `textweaver` and `tw` linked from `bin/`. `--tarball` asks for the tarball anyway; `--appimage` asks for the AppImage anyway. `--gui` also installs the GUI, `textweaver-gui`, from the release's GUI package of the same kind, with a menu entry named "textweaver window"; later runs keep it, and `--no-gui` removes it.
+- Where FUSE is missing, so AppImages cannot run, it installs the plain tarball instead, checked the same way, into `lib/textweaver/` with `textweaver` and `tw` linked from `bin/`. `--tarball` asks for the tarball anyway; `--appimage` asks for the AppImage anyway. `--gui` also links the app, `textweaver-gui`, from `bin/` (since beta 1 it is in the same AppImage or tarball as `tw`; older releases had a GUI package of the same kind), with a menu entry named "textweaver window"; later runs keep it, and `--no-gui` removes it.
 - It is for x86_64 and aarch64 (arm64) computers. Elsewhere, build from source.
 - It needs a release with Linux packages: 0.1.0-alpha.4 is the first, with the AppImage and tarball for both x86_64 and aarch64. Earlier releases (0.1.0-alpha.3 and before) shipped Windows and macOS packages only; build from source for those.
 - `--uninstall` removes either kind of install; `scripts/update.sh` installs the newest release of the same kind.
@@ -75,7 +75,7 @@ Installs textweaver on a Mac.
 - `--release TAG` installs a given release.
 - `--from-source` checks for the Xcode command line tools, installs rustup if needed (it asks first), and builds with `cargo xtask dist`.
 - It offers ffmpeg and pandoc from Homebrew when Homebrew is installed. It never installs Homebrew itself.
-- `--gui` also installs the GUI, `textweaver.app`, into `~/Applications` from the release's GUI package, with the quarantine flag removed. Later runs keep it; `--no-gui` removes it.
+- `--gui` also installs the app, `textweaver.app`, into `~/Applications`, with the quarantine flag removed. Since beta 1 it comes from the same zip as `tw`; for older releases, from the release's GUI package. Later runs keep it; `--no-gui` removes it.
 - `--uninstall` removes it, and `textweaver.app` if the script installed it.
 
 ### install-windows.ps1
@@ -85,7 +85,7 @@ Installs textweaver on Windows.
 - By default it downloads the newest release zip, checks its SHA-256 against `SHA256SUMS.txt`, and extracts it to `%LOCALAPPDATA%\Programs\textweaver`.
 - It offers to add that folder to your user PATH, and to create a Start menu shortcut that opens textweaver in Windows Terminal, or in a command prompt.
 - `-FromSource` checks for the MSVC build tools, rustup, and the `i686-pc-windows-msvc` target, then runs `cargo xtask dist` and installs the result.
-- `-Gui` also installs the GUI, `textweaver-gui.exe`, in a `gui` folder inside the install (from the release's GUI zip, or with `cargo xtask gui-dist` when building from source), and offers a Start menu shortcut named "textweaver window". Later runs keep it; `-NoGui` removes it.
+- `-Gui` offers a Start menu shortcut named "textweaver window" for the app, `textweaver-gui.exe`. Since beta 1 the app is in the same package as `tw` and is installed beside it; for older releases, `-Gui` installs it in a `gui` folder inside the install, from the release's GUI zip. Later runs keep the shortcut; `-NoGui` removes it.
 - `-Uninstall` removes the folder, the PATH entry, and the shortcuts. Settings are kept.
 
 ### update.sh and update.ps1

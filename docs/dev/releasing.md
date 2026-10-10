@@ -1,13 +1,14 @@
 # Releasing textweaver
 
-A release is a git tag `vX.Y.Z[-pre]` and a GitHub release with these files:
+A release is a git tag `vX.Y.Z[-pre]` and a GitHub release with these files. Since beta 1 there is one package per OS and CPU architecture, and each holds both programs, the app (`textweaver-gui`) and the terminal program (`tw`, with `textweaver` as a second name), with the complete documentation:
 
 - the Windows package, `textweaver-VERSION-windows-x86_64.zip`;
-- the macOS package, `textweaver-VERSION-macos-universal.tar.gz`;
-- the Linux AppImages, `textweaver-VERSION-linux-x86_64.AppImage` and `textweaver-VERSION-linux-aarch64.AppImage`, each with its `.zsync` file for delta updates;
+- the macOS package, `textweaver-VERSION-macos-universal.zip` (`textweaver.app` beside `tw`, Apple silicon and Intel);
+- the Linux AppImages, `textweaver-VERSION-linux-x86_64.AppImage` and `textweaver-VERSION-linux-aarch64.AppImage`, each with its `.zsync` file for delta updates, and a copy of that file named `textweaver-VERSION-linux-ARCH-gui.AppImage.zsync`, so the separate app AppImages of 0.1.0-alpha.9 and earlier are offered the single image;
 - the Linux tarballs, `textweaver-VERSION-linux-x86_64.tar.gz` and `textweaver-VERSION-linux-aarch64.tar.gz`, for systems without FUSE;
-- the GUI's packages, named like the terminal's with `-gui` at the end: `textweaver-VERSION-windows-x86_64-gui.zip`, `textweaver-VERSION-macos-universal-gui.zip` (`textweaver.app`, Apple silicon and Intel), and for x86_64 and aarch64 `textweaver-VERSION-linux-ARCH-gui.AppImage` (with its `.zsync` file) and `textweaver-VERSION-linux-ARCH-gui.tar.gz`;
 - `SHA256SUMS.txt`, covering every package.
+
+`cargo xtask release-assets` holds this list, and the release workflow checks each build folder and the finished release against it.
 
 The `Release` workflow (`.github/workflows/release.yml`) builds the packages, attests their build provenance, and writes the checksums. Releases before 1.0 are marked as pre-releases.
 
@@ -52,7 +53,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    gh workflow run release.yml --ref BRANCH
    ```
 
-   Download the artifacts from the run's page (or `gh run download RUN_ID`), and start each package once: the GUI with a screen reader on Windows, and the terminal reader on each system you use. This is optional and never holds a release; it is most useful when the packages change.
+   Download the artifacts from the run's page (or `gh run download RUN_ID`), and start each package once: the app with a screen reader on Windows, and the terminal reader on each system you use. This is optional and never holds a release; it is most useful when the packages change.
 
 4. **Push.** Push the commit, then the tag:
 
@@ -67,9 +68,8 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    Pushing the tag starts the `Release` workflow:
 
    - **Create the release.** Checks that the version in `Cargo.toml` matches the tag, then creates the GitHub release as a pre-release, with notes taken from the matching `CHANGELOG.md` section.
-   - **Windows package** (on `windows-latest`) and **macOS package** (on `macos-14`), in parallel. Each runs `cargo xtask dist`, checks the package (the binaries run, and the notices and license files are inside), attests its build provenance, and uploads it to the release.
-   - **Linux AppImage and tarball, x86_64 and aarch64** (on `ubuntu-latest` and `ubuntu-22.04-arm`, in parallel with the others). Each runs `cargo xtask appimage` in the `docker/appimage` image (Ubuntu 22.04), then `docker/appimage/test-distros.sh`, which runs both packages on Debian stable and Fedora, and on Arch for x86_64 (Arch has no official arm64 image): `tw --version`, `tw backends` without and with espeak-ng, `tw text`, `--install` and `--uninstall`, and `install-linux.sh --release` with each package. Then it attests and uploads the AppImage, its `.zsync` file, and the tarball.
-   - **The GUI**, in the same three jobs, after the terminal package: `cargo xtask gui-dist` (`--universal` on macOS; in the `docker/appimage` image on Linux), then a check of the files in the package, `textweaver-gui --version`, and `--screenshot`, which draws the window on the CPU with no display. On macOS it also reads a document silently with the paced backend in a background window, then closes. On Windows the checks start the program with `Start-Process -Wait`, since it is a GUI-subsystem program. The GUI's packages are attested and uploaded with the terminal's. The GUI is not yet run on other Linux distributions.
+   - **Windows package** (on `windows-latest`) and **macOS package** (on `macos-14`), in parallel. Each runs `cargo xtask dist` once, which builds both programs, then checks the package: the files inside (`tw`, `textweaver`, the app, every engine host including the eSpeak NG hosts on Windows, the notices and license files), `tw` with `tools/package-smoke.sh`, and the app with `textweaver-gui --version` and `--screenshot`, which draws the app's interface on the CPU with no display. On macOS it also reads a document silently with the paced backend in a background window, then closes. On Windows the checks start the app with `Start-Process -Wait`, since it is a GUI-subsystem program. Then it attests the package's build provenance and uploads it to the release.
+   - **Linux AppImage and tarball, x86_64 and aarch64** (on `ubuntu-latest` and `ubuntu-22.04-arm`, in parallel with the others). Each runs `cargo xtask appimage` in the `docker/appimage` image (Ubuntu 22.04), then `docker/appimage/test-distros.sh`, which runs both packages on Debian stable and Fedora, and on Arch for x86_64 (Arch has no official arm64 image): `tw --version`, `tw backends` without and with espeak-ng, `tw text`, `--install` and `--uninstall`, and `install-linux.sh --release` with each package. It checks the app in the same packages (`textweaver-gui --version` and `--screenshot`). Then it attests and uploads the AppImage, its two `.zsync` files, and the tarball. The app is not yet run on other Linux distributions.
    - **SHA256SUMS.txt.** Once all the packages are uploaded, one job writes the checksums of every package on the release and attests the checksum file. The package jobs never write checksums, so they cannot race.
 
 5. **Check.** Read the release page. It should have every package and `SHA256SUMS.txt`, with the pre-release flag set. Anyone can check where a package was built:
@@ -131,33 +131,33 @@ Write down what you heard in the release notes' testing section, including anyth
 
 ## What the packages hold
 
-`cargo xtask dist` builds with the `dist` profile (the release profile with fat LTO, and symbols stripped) and writes the package to `target/dist/`. It builds `textweaver` and `tw` in two cargo runs, one each: built together, cargo would unify their features and give the reader `tw`'s, such as `textweaver-formats`' `url` (opening a web address) and `textweaver-ocr`'s `download`, which the reader is meant to leave out. The reader still links an HTTP client of its own, for citation lookups (`textweaver-cite`). The C runtime is linked statically on Windows, so the package does not need the Visual C++ redistributable. Each package holds:
+`cargo xtask dist` builds with the `dist` profile (the release profile with fat LTO, and symbols stripped) and writes the package to `target/dist/`. It builds the terminal program in one cargo run (`textweaver-cli`: `tw`, and on Windows the `textweaver` launcher) and the app in another (`textweaver-xilem`, installed as `textweaver-gui`), in the same build folder, so the two share their compiled dependencies and cargo never unifies their features. `cargo xtask gui-dist` is another name for the same task. The C runtime is linked statically on Windows, so the package does not need the Visual C++ redistributable. Each package holds:
 
-- `textweaver` and `tw`;
-- on Windows, the engine hosts for Eloquence, SAPI5, and DECtalk, each for x64 and x86, and the IBMTTS community dictionaries;
-- on Linux, the engine hosts for Eloquence (Voxin) and DECtalk, the IBMTTS community dictionaries, and the menu entry and icon under `share/`. `textweaver` and `tw` are built with Omnivox, speech-dispatcher, and espeak-ng; espeak-ng is loaded when the program starts, if it is installed, so the same binaries work without it;
+- `tw`, the terminal program: the terminal reader with no command, and every command headless;
+- `textweaver`, its second name: a link to `tw` on Linux and macOS, and on Windows `textweaver.exe`, a launcher of a few hundred kilobytes that runs `tw.exe` beside it with the same arguments (a copy would undo the size the single program saves);
+- the app, `textweaver-gui` (on macOS inside `textweaver.app`, beside `tw`), with its guide `GUI.md` at the top and Xilem's license;
+- on Windows, the engine hosts for Eloquence, SAPI5, DECtalk, and eSpeak NG, each for x64 and x86, and the IBMTTS community dictionaries;
+- on Linux, the engine hosts for Eloquence (Voxin) and DECtalk, the IBMTTS community dictionaries, and the menu entries for the terminal reader and the app and the icon under `share/`. `tw` and the app are built with Omnivox, speech-dispatcher, and espeak-ng; espeak-ng is loaded when the program starts, if it is installed, so the same binaries work without it;
 - `QUICKSTART.md`, `README.md`, `LICENSE`, `NOTICE` (the copyright notice), `CHANGELOG.md`, and `INSTALL.md` at the top;
 - in `docs/`, the [documentation index](../README.md), every user guide it lists under "For users", and the offline interactive pages in `docs/site/`, each at its path in the repository;
 - the platform's helper scripts (doctor, speech check, update) and their README;
-- `THIRD-PARTY-NOTICES.md`, and under `licenses/`: each bundled font's `OFL.txt`, SCOWL's `Copyright`, and the IBMTTS dictionaries' license. `cargo xtask dist` fails if any of these is missing.
+- `THIRD-PARTY-NOTICES.md`, and under `licenses/`: each bundled font's `OFL.txt`, SCOWL's `Copyright`, and the IBMTTS dictionaries' license.
 
-**A missing guide warns, and the package still builds.** The documentation is staged by one helper, `stage_user_docs` in `xtask/src/dist.rs`, which `cargo xtask dist`, `appimage`, and `gui-dist` all call, so the packages carry the same `docs/` folder. When a guide the index lists, the index itself, or `docs/site/` is missing, the build leaves it out, prints one line per missing file, such as "Warning: the package lacks the guide docs/reading.md.", and goes on. When `GITHUB_STEP_SUMMARY` is set, as in every GitHub Actions step, the same lines are added to the job summary, so the release run shows them. Read the summary before you publish: a warning there means a package went out without a guide. With nothing missing, nothing is printed.
+`cargo xtask dist` fails if a program, an engine host, or one of the notices and licenses is missing from the staged folder.
 
-## The GUI packages
+**A missing guide warns, and the package still builds.** The documentation is staged by one helper, `stage_user_docs` in `xtask/src/dist.rs`, which `cargo xtask dist` and `appimage` call. When a guide the index lists, the index itself, or `docs/site/` is missing, the build leaves it out, prints one line per missing file, such as "Warning: the package lacks the guide docs/reading.md.", and goes on. When `GITHUB_STEP_SUMMARY` is set, as in every GitHub Actions step, the same lines are added to the job summary, so the release run shows them. Read the summary before you publish: a warning there means a package went out without a guide. With nothing missing, nothing is printed.
 
-`cargo xtask gui-dist` builds the GUI (`textweaver-xilem`, installed as `textweaver-gui`) with the `dist` profile, in the same build folder as `cargo xtask dist`, with the static C runtime on Windows, and with the speech engines `cargo xtask dist` builds into the terminal programs for the platform (espeak-ng, speech-dispatcher and Omnivox on Linux; Omnivox elsewhere) for each one the GUI crate declares as a feature. It names any engine it leaves out because the crate has no such feature. It stages the program with the same engine hosts, IBMTTS dictionaries, define-word dictionary, `NOTICE`, notices, and license files as the terminal package (the same check fails if one is missing), plus Xilem's license, the quick start and `GUI.md` at the top, and the same complete `docs/` folder as the terminal package (a missing guide warns, as there), in `target/dist/textweaver-VERSION-PLATFORM-gui/`, and then:
+## The app in the package
 
-- on Windows, zips it;
-- on macOS, puts the program in `textweaver.app` (signed ad hoc) and zips the folder with `ditto`. It is built for the Mac's own architecture, or with `--universal` for Apple silicon and Intel joined with `lipo`, as the release does;
-- on Linux, writes a tarball and, when `appimagetool` and the pinned runtime are found (as for `cargo xtask appimage`), an AppImage with the folder under `usr/lib/textweaver-gui/`, its own update information, and a `.zsync` file.
+The app's part of the build is in `xtask/src/gui_dist.rs`. It builds `textweaver-xilem` with the speech engines `cargo xtask dist` builds into `tw` for the platform (espeak-ng, speech-dispatcher and Omnivox on Linux; Omnivox elsewhere), for each one the GUI crate declares as a feature, and names any engine it leaves out because the crate has no such feature. On macOS it puts the app in `textweaver.app` (signed ad hoc), built for the Mac's own architecture, or with `--universal` for Apple silicon and Intel joined with `lipo`, as the release does, and the package folder is zipped with `ditto`, which keeps the `textweaver` link.
 
-**The screenshot harness stays in the GUI package for now.** The GUI's default `screenshot` feature (`--screenshot` and `--review-screenshots`, drawn with Vello's CPU renderer, `image`, and `oxipng`) is the only way the release workflow can check that the packaged program draws a window: its runners have no GPU Vello can use, and the Linux check runs with no display. So the GUI checks on all three systems run `textweaver-gui --screenshot`. `cargo xtask gui-dist --no-screenshot` builds the package without it, with every other default feature; it can become the default once the release checks no longer need the harness. Review screenshots come from a developer build either way.
+**The screenshot harness stays in the package for now.** The app's default `screenshot` feature (`--screenshot` and `--review-screenshots`, drawn with Vello's CPU renderer, `image`, and `oxipng`) is the only way the release workflow can check that the packaged app draws its interface: its runners have no GPU Vello can use, and the Linux check runs with no display. So the checks on all three systems run `textweaver-gui --screenshot`. `cargo xtask dist --no-screenshot` builds the package without it, with every other default feature; it can become the default once the release checks no longer need the harness. Review screenshots come from a developer build either way.
 
-The names end in `-gui` so that no pattern for the terminal packages matches them. That matters most for the update information inside the terminal AppImages already released (`textweaver-*-linux-ARCH.AppImage.zsync`): a GUI name matching it would be offered as an update to the terminal reader. A test in `xtask/src/gui_dist.rs` checks every such pattern against every GUI name.
+Releases up to 0.1.0-alpha.9 had the app in packages of its own, named like the terminal packages with `-gui` at the end. Those are not made any more. The one name kept is the `-gui` copy of each Linux `.zsync` file, for the app AppImages already installed.
 
 ## The Linux packages
 
-`cargo xtask appimage` stages the Linux package as `cargo xtask dist` does, writes the tarball, and then wraps the same folder in an AppImage with `appimagetool`. The folder sits whole under `usr/lib/textweaver/` inside the AppImage, so the programs find the hosts and dictionaries beside them, as in the tarball. `scripts/linux/AppRun` is the entry point: it starts `textweaver`, or `tw` when started through a link named `tw` or with `--tw` first, and it offers `--install` and `--uninstall`. The AppImage carries `gh-releases-zsync` update information pointing at the newest release or pre-release.
+`cargo xtask appimage` stages the Linux package as `cargo xtask dist` does, writes the tarball, and then wraps the same folder in an AppImage with `appimagetool`. The folder sits whole under `usr/lib/textweaver/` inside the AppImage, so the programs find the hosts and dictionaries beside them, as in the tarball. `scripts/linux/AppRun` is the entry point: it starts the app by default (or with `--gui` first), `tw` when started through a link named `tw` or `textweaver` or with `--tw` or `--textweaver` first, and it offers `--install` and `--uninstall`, which link all three names and add menu entries for the app and the terminal reader. The AppImage carries `gh-releases-zsync` update information pointing at the newest release or pre-release, under the same name the terminal AppImages always had, so they update to the single image. The app AppImages of 0.1.0-alpha.9 and earlier look for `textweaver-*-linux-ARCH-gui.AppImage.zsync`; `cargo xtask appimage` writes a copy of the `.zsync` file under that name. Its `URL` line names the single image, which is beside it in the release, so they update to it too.
 
 Build on an old glibc, so the packages run on older distributions. The `docker/appimage` image is Ubuntu 22.04 (glibc 2.35), with Rust from rustup, the AppImage tools, and, for the GUI build, `libfontconfig1-dev` (`yeslogic-fontconfig-sys` needs its headers). `docker/appimage/fetch-tools.sh` downloads appimagetool 1.9.1 and the type 2 runtime 20251108, for x86_64 or aarch64, from their GitHub releases, and checks each against the SHA-256 digest GitHub publishes for it; a changed file stops the build. The image builds for the machine it runs on, so the aarch64 packages are built on an arm64 machine: the release workflow uses GitHub's `ubuntu-22.04-arm` runner. To build locally on any system with Docker:
 
@@ -175,7 +175,7 @@ The AppImage is not signed; its checksum is in `SHA256SUMS.txt`, and its build p
 
 ## Package sizes
 
-Every package has a size budget. `xtask/package-sizes.toml` records each package's size in bytes at the last release, named without the version (`windows-x86_64.zip`, `linux-x86_64-gui.AppImage`). After writing a package, `cargo xtask dist`, `gui-dist`, and `appimage` print one line for it, meaning first:
+Every package has a size budget. `xtask/package-sizes.toml` records each package's size in bytes at the last release, named without the version (`windows-x86_64.zip`, `linux-x86_64.AppImage`). After writing a package, `cargo xtask dist` (or `gui-dist`) and `appimage` print one line for it, meaning first:
 
 - `Size within budget:` with its size and the change in percent from the last release;
 - `Size over budget, with a note:` and the note;
@@ -187,10 +187,10 @@ When a package is meant to grow, say why under `[notes]` in the file, in the sam
 
 ```toml
 [notes]
-"windows-x86_64-gui.zip" = "Opus encoding in process for Export audio"
+"windows-x86_64.zip" = "Opus encoding in process for Export audio"
 ```
 
-A note named `"all"` covers every package. The release step (`cargo xtask release VERSION --sizes`, step 6 above) writes the new sizes and clears the notes, so each note covers one release. The sizes also go into the release notes, as a "Package sizes" list in the version's section of `CHANGELOG.md`. MB there, as in the release workflow's summaries, is 1,048,576 bytes.
+A note named `"all"` covers every package. Until the first release with the single package records its sizes, each line holds the alpha.9 terminal and app packages added together, the two downloads it replaces. The release step (`cargo xtask release VERSION --sizes`, step 6 above) writes the new sizes and clears the notes, so each note covers one release. The sizes also go into the release notes, as a "Package sizes" list in the version's section of `CHANGELOG.md`. MB there, as in the release workflow's summaries, is 1,048,576 bytes.
 
 ## Building a package by hand (fallback)
 

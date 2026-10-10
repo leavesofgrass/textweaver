@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-tui"
-description = "textweaver terminal UI: self-voicing ratatui frontend"
+description = "textweaver terminal UI: self-voicing ratatui frontend (a library; the program is `tw`, in textweaver-cli)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,10 +8,6 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 publish.workspace = true
-
-[[bin]]
-name = "textweaver"
-path = "src/main.rs"
 
 [features]
 default = ["publish", "lint", "grammar", "clipboard", "highlight", "dictation", "audio-export", "opus", "carta"]
@@ -61,7 +57,6 @@ textweaver-theme.workspace = true
 textweaver-aids.workspace = true
 ratatui.workspace = true
 anyhow.workspace = true
-clap.workspace = true
 ctrlc.workspace = true
 log.workspace = true
 unicode-bidi.workspace = true

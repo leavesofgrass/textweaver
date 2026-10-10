@@ -1,14 +1,14 @@
 //! The package size budget (docs/dev/releasing.md, "Package sizes").
 //!
 //! [`FILE`] records the size of each package at the last release.
-//! `cargo xtask dist`, `gui-dist`, and `appimage` call [`check`] on the
+//! `cargo xtask dist` (or `gui-dist`, its other name) and `appimage` call [`check`] on the
 //! packages they write: a package more than [`MAX_GROWTH_PERCENT`] percent
 //! over its recorded size fails the build, unless the file's `[notes]`
 //! table says why. `cargo xtask release VERSION --sizes` rewrites the file
 //! from the published release (see `release.rs`) and clears the notes.
 //!
 //! A package is named by its file name without `textweaver-VERSION-`
-//! (`windows-x86_64.zip`, `linux-x86_64-gui.AppImage`), so the names stay
+//! (`windows-x86_64.zip`, `linux-x86_64.AppImage`), so the names stay
 //! the same from one release to the next.
 
 use std::collections::BTreeMap;
@@ -358,7 +358,7 @@ mod tests {
         let r = parse(&text).unwrap();
         assert!(!r.version.is_empty());
         assert!(r.sizes.contains_key("windows-x86_64.zip"), "{r:?}");
-        assert!(r.sizes.contains_key("windows-x86_64-gui.zip"), "{r:?}");
+        assert!(r.sizes.contains_key("macos-universal.zip"), "{r:?}");
         assert_eq!(render(&r).replace("\r\n", "\n"), text.replace("\r\n", "\n"));
     }
 

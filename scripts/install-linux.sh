@@ -1059,7 +1059,7 @@ remove_gui() {
   local f="$BINDIR/textweaver-gui"
   if [ -L "$f" ]; then
     case "$(readlink "$f")" in
-      *lib/textweaver-gui/* | textweaver-gui.AppImage) ir rm -f "$f" ;;
+      *lib/textweaver-gui/* | textweaver-gui.AppImage | *lib/textweaver/textweaver-gui | textweaver.AppImage) ir rm -f "$f" ;;
       *) say "Leaving $f: it does not point into this install." ;;
     esac
   elif [ -e "$f" ]; then
@@ -1070,9 +1070,55 @@ remove_gui() {
   if [ -e "$APPDIR/textweaver-gui.desktop" ]; then ir rm -f "$APPDIR/textweaver-gui.desktop"; fi
 }
 
-# Downloads, checks, and installs the GUI package: $1 the base URL, $2 the
-# package name without -gui, $3 appimage or tarball. SHA256SUMS.txt is
-# already in $WORK.
+# Since beta 1, one package holds the app and tw: links textweaver-gui to
+# what install_release installed ($1 appimage or tarball) and adds the
+# app's menu entry.
+install_gui_from_package() {
+  local kind="$1" f="$BINDIR/textweaver-gui" target
+  if [ -e "$f" ] && [ ! -L "$f" ]; then
+    die "$f is a file, not a link this script made. Move it away, then run this script again."
+  fi
+  if [ "$kind" = appimage ]; then
+    target=textweaver.AppImage
+    say "The app is in the AppImage; linking $f to it."
+  else
+    target="../lib/textweaver/textweaver-gui"
+    if [ "$DRY_RUN" = 0 ] && [ ! -x "$LIBDIR/textweaver-gui" ]; then
+      warn "This release has no app, textweaver-gui, so it is not installed. Releases from 0.1.0-alpha.5 on have it."
+      return 0
+    fi
+    say "The app is in the package; linking $f to it."
+  fi
+  if [ -e "$BINDIR/textweaver-gui.AppImage" ] || [ "$DRY_RUN" = 1 ]; then ir rm -f "$BINDIR/textweaver-gui.AppImage"; fi
+  if [ -e "$GUILIBDIR" ] || [ "$DRY_RUN" = 1 ]; then ir rm -rf "$GUILIBDIR"; fi
+  ir ln -sfn "$target" "$f"
+  write_gui_desktop "$f"
+  GUI_INSTALLED="$kind"
+}
+
+# Writes the app's menu entry for the program $1.
+write_gui_desktop() {
+  local exe="$1"
+  {
+    say "[Desktop Entry]"
+    say "Type=Application"
+    say "Name=textweaver window"
+    say "GenericName=Talking document reader"
+    say "Comment=Read documents aloud in a window, with a highlight that follows the spoken word"
+    say "Exec=\"$exe\" %f"
+    say "TryExec=$exe"
+    say "Terminal=false"
+    say "Icon=textweaver"
+    say "Categories=Utility;Accessibility;TextTools;"
+  } | iw "$APPDIR/textweaver-gui.desktop"
+  if have update-desktop-database && [ -z "$INSTALL_SUDO" ]; then
+    run update-desktop-database "$APPDIR" || true
+  fi
+}
+
+# Downloads, checks, and installs the GUI package of a release up to
+# 0.1.0-alpha.9: $1 the base URL, $2 the package name without -gui, $3
+# appimage or tarball. SHA256SUMS.txt is already in $WORK.
 install_gui() {
   local base="$1" name="$2" kind="$3" file
   case $kind in
@@ -1080,12 +1126,13 @@ install_gui() {
     *) file="$name-gui.tar.gz" ;;
   esac
   section "GUI"
-  say "Downloading $file, the GUI, from $base."
-  if [ "$DRY_RUN" = 0 ] \
-    && ! awk -v f="$file" '$2 == f || $2 == "*" f { found = 1 } END { exit !found }' "$WORK/SHA256SUMS.txt"; then
-    warn "This release has no $file, so the GUI is not installed. Releases from 0.1.0-alpha.5 on have it."
+  if [ "$DRY_RUN" = 1 ] \
+    || ! awk -v f="$file" '$2 == f || $2 == "*" f { found = 1 } END { exit !found }' "$WORK/SHA256SUMS.txt"; then
+    # Since beta 1 the app is in the reader's own package (no -gui file).
+    install_gui_from_package "$kind"
     return 0
   fi
+  say "Downloading $file, the GUI, from $base."
   fetch "$base/$file" "$WORK/$file"
   if [ "$DRY_RUN" = 1 ]; then
     say "Would compare the SHA-256 of $file with its line in SHA256SUMS.txt"
@@ -1117,21 +1164,7 @@ install_gui() {
     ir ln -sfn "../lib/textweaver-gui/textweaver-gui" "$f"
   fi
   exe="$f"
-  {
-    say "[Desktop Entry]"
-    say "Type=Application"
-    say "Name=textweaver window"
-    say "GenericName=Talking document reader"
-    say "Comment=Read documents aloud in a window, with a highlight that follows the spoken word"
-    say "Exec=\"$exe\" %f"
-    say "TryExec=$exe"
-    say "Terminal=false"
-    say "Icon=textweaver"
-    say "Categories=Utility;Accessibility;TextTools;"
-  } | iw "$APPDIR/textweaver-gui.desktop"
-  if have update-desktop-database && [ -z "$INSTALL_SUDO" ]; then
-    run update-desktop-database "$APPDIR" || true
-  fi
+  write_gui_desktop "$exe"
   GUI_INSTALLED="$kind"
 }
 
@@ -1225,13 +1258,15 @@ install_release() {
     done
     # The menu entry and icon come from inside the AppImage; extracting
     # them needs no FUSE.
-    desktop="$WORK/squashfs-root/textweaver.desktop"
+    # The terminal reader's entry is in usr/share/applications in every
+    # AppImage; since beta 1 the entry at the top is the app's.
+    desktop="$WORK/squashfs-root/usr/share/applications/textweaver.desktop"
     icon="$WORK/squashfs-root/textweaver.svg"
     if [ "$DRY_RUN" = 1 ]; then
       say "Would extract textweaver.desktop, textweaver.svg, and QUICKSTART.md from the AppImage"
     else
       chmod +x "$WORK/$file"
-      (cd "$WORK" && "./$file" --appimage-extract textweaver.desktop > /dev/null 2>&1 \
+      (cd "$WORK" && "./$file" --appimage-extract usr/share/applications/textweaver.desktop > /dev/null 2>&1 \
         && "./$file" --appimage-extract textweaver.svg > /dev/null 2>&1) \
         || warn "Could not read the menu entry from the AppImage, so none is installed."
       if (cd "$WORK" && "./$file" --appimage-extract usr/lib/textweaver/QUICKSTART.md > /dev/null 2>&1); then

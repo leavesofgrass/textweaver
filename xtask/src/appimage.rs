@@ -2,19 +2,26 @@
 //! packages (docs/dev/releasing.md).
 //!
 //! Stages the Linux package exactly as `cargo xtask dist` does (the `dist`
-//! profile; `textweaver` and `tw` with Omnivox, speech-dispatcher, and
-//! espeak-ng loaded at run time; the ECI and DECtalk hosts; the
-//! dictionaries, notices, licences, and guides; the menu entry and icon),
-//! writes the plain tarball, then wraps the same folder in an AppImage:
+//! profile; the app, `textweaver-gui`, and `tw`, with `textweaver` a link
+//! to it, with Omnivox, speech-dispatcher, and espeak-ng loaded at run
+//! time; the ECI and DECtalk hosts; the dictionaries, notices, licences,
+//! and guides; the menu entries and icon), writes the plain tarball, then
+//! wraps the same folder in one AppImage holding both programs (B1-o2):
 //!
 //! - `textweaver-VERSION-linux-ARCH.tar.gz`: the fallback for systems
 //!   without FUSE;
 //! - `textweaver-VERSION-linux-ARCH.AppImage`: one file that runs on most
-//!   distributions. Its `AppRun` (`scripts/linux/AppRun`) starts
-//!   `textweaver`, or `tw` when started through a link named `tw` or with
-//!   `--tw`, and offers `--install` and `--uninstall`;
+//!   distributions. Its `AppRun` (`scripts/linux/AppRun`) starts the app
+//!   by default; `tw` when started through a link named `tw` or with
+//!   `--tw`; the terminal reader (`tw` with no command) through a link
+//!   named `textweaver` or with `--textweaver`. It offers `--install` and
+//!   `--uninstall`;
 //! - `textweaver-VERSION-linux-ARCH.AppImage.zsync`: for delta updates
-//!   (the AppImage carries `gh-releases-zsync` update information).
+//!   (the AppImage carries `gh-releases-zsync` update information);
+//! - `textweaver-VERSION-linux-ARCH-gui.AppImage.zsync`: the same file
+//!   under the name the app's own AppImages (alpha.9 and earlier) look
+//!   for, so they are offered the single image too. Its `URL` line names
+//!   the single image, which sits beside it in the release.
 //!
 //! The AppDir keeps the package folder whole under `usr/lib/textweaver/`,
 //! so the programs find the engine hosts and dictionaries beside them as
@@ -86,6 +93,14 @@ fn update_information(arch: &str) -> String {
     )
 }
 
+/// The name, for the package `name`, of the copy of the `.zsync` file
+/// that the app's own AppImages from alpha.9 and earlier look for
+/// (`textweaver-*-linux-ARCH-gui.AppImage.zsync`), so they update to the
+/// single image.
+fn old_gui_zsync(name: &str) -> String {
+    format!("{name}-gui.AppImage.zsync")
+}
+
 /// The desktop entry inside the AppImage: the template without `TryExec`
 /// (the program is inside the image, not on `PATH`).
 fn appimage_desktop(template: &str) -> String {
@@ -147,7 +162,7 @@ pub fn run() -> anyhow::Result<()> {
     let runtime = find_runtime(&tool)?;
 
     let root = eci::root();
-    let staged = dist::stage(args.out.clone(), false)?;
+    let staged = dist::stage(args.out.clone(), false, false)?;
     let tarball = dist::archive(&staged)?;
     println!("package {}", tarball.display());
 
@@ -183,6 +198,9 @@ pub fn run() -> anyhow::Result<()> {
     println!("package {}", file.display());
     if zsync.is_file() {
         println!("package {}", zsync.display());
+        let old_gui = staged.out.join(old_gui_zsync(&staged.name));
+        fs::copy(&zsync, &old_gui).with_context(|| format!("writing {}", old_gui.display()))?;
+        println!("package {}", old_gui.display());
     } else {
         println!(
             "note: no {} (appimagetool writes it when zsyncmake is installed)",
@@ -193,7 +211,9 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 /// Lays out the AppDir: the package under `usr/lib/textweaver`, `AppRun`,
-/// the desktop entry, and the icon.
+/// the menu entries, and the icon. The app's entry is the one at the top,
+/// the image's own, since the image starts the app by default; both
+/// entries are in `usr/share/applications`, for `AppRun --install`.
 fn build_appdir(root: &Path, package: &Path, appdir: &Path) -> anyhow::Result<()> {
     if appdir.exists() {
         fs::remove_dir_all(appdir).with_context(|| format!("clearing {}", appdir.display()))?;
@@ -206,15 +226,23 @@ fn build_appdir(root: &Path, package: &Path, appdir: &Path) -> anyhow::Result<()
 
     let template = fs::read_to_string(root.join("scripts/linux/textweaver.desktop"))
         .context("reading scripts/linux/textweaver.desktop")?;
-    let desktop = appimage_desktop(&template);
-    for dest in [
-        appdir.join("textweaver.desktop"),
-        appdir.join("usr/share/applications/textweaver.desktop"),
+    let reader = appimage_desktop(&template);
+    let app = crate::gui_dist::desktop_entry();
+    for (dest, entry) in [
+        (appdir.join("textweaver-gui.desktop"), app),
+        (
+            appdir.join("usr/share/applications/textweaver-gui.desktop"),
+            app,
+        ),
+        (
+            appdir.join("usr/share/applications/textweaver.desktop"),
+            reader.as_str(),
+        ),
     ] {
         if let Some(parent) = dest.parent() {
             fs::create_dir_all(parent)?;
         }
-        fs::write(&dest, &desktop).with_context(|| format!("writing {}", dest.display()))?;
+        fs::write(&dest, entry).with_context(|| format!("writing {}", dest.display()))?;
     }
 
     let icon = root.join("scripts/linux/textweaver.svg");
@@ -316,6 +344,22 @@ mod tests {
         assert!(parse(&["--bogus".into()]).is_err());
     }
 
+    /// The app's AppImages from alpha.9 and earlier look for
+    /// `textweaver-*-linux-ARCH-gui.AppImage.zsync`; the copy carries that
+    /// name, and the single image's own pattern never matches it.
+    #[test]
+    fn the_old_app_images_are_offered_the_single_image() {
+        let copy = old_gui_zsync("textweaver-0.1.0-beta.1-linux-x86_64");
+        assert_eq!(
+            copy,
+            "textweaver-0.1.0-beta.1-linux-x86_64-gui.AppImage.zsync"
+        );
+        assert!(
+            copy.starts_with("textweaver-") && copy.ends_with("-linux-x86_64-gui.AppImage.zsync")
+        );
+        assert!(!copy.ends_with("-linux-x86_64.AppImage.zsync"));
+    }
+
     #[test]
     fn update_information_points_at_the_releases() {
         assert_eq!(
@@ -348,16 +392,25 @@ mod tests {
         build_appdir(&root, &package, &appdir).unwrap();
         for f in [
             "AppRun",
-            "textweaver.desktop",
+            "textweaver-gui.desktop",
             "textweaver.svg",
             ".DirIcon",
             "usr/lib/textweaver/tw",
             "usr/lib/textweaver/docs/reading.md",
             "usr/share/applications/textweaver.desktop",
+            "usr/share/applications/textweaver-gui.desktop",
             "usr/share/icons/hicolor/scalable/apps/textweaver.svg",
         ] {
             assert!(appdir.join(f).is_file(), "{f} is missing");
         }
+        // One entry at the top, the app's: appimagetool takes exactly one.
+        let top: Vec<String> = fs::read_dir(&appdir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|n| n.ends_with(".desktop"))
+            .collect();
+        assert_eq!(top, ["textweaver-gui.desktop"]);
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -376,8 +429,11 @@ mod tests {
         assert!(apprun.starts_with("#!/bin/sh\n"));
         for needle in [
             "ARGV0",
+            "program=textweaver-gui",
             "tw | tw.*) program=tw",
-            "--tw)",
+            "textweaver) program=tw",
+            "--tw | --textweaver)",
+            "--gui)",
             "--install | --uninstall)",
             "usr/lib/textweaver",
         ] {

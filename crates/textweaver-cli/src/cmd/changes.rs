@@ -2,8 +2,9 @@
 //! line, meaning first ("Inserted: 'renal', by Ada Example, Tuesday, March
 //! 3, 2026"), from the same list the reader shows (`textweaver_app::changes`).
 //! `--json` prints the changes and comments as the loaders recorded them.
-//! `--accept-all` or `--reject-all` with `--out FILE` writes the document
-//! with every change decided: Markdown (`.md`), plain text (`.txt`), HTML,
+//! `tw changes accept FILE` or `tw changes reject FILE` with `--out FILE`
+//! writes the document with every change decided (the older spellings,
+//! `--accept-all` and `--reject-all`, still work, hidden, through beta 1): Markdown (`.md`), plain text (`.txt`), HTML,
 //! or a writer's format (`.docx`, `.epub`, `.pdf`, `.brf`), leaving the
 //! original alone. With `--in-place` instead, a Word file is changed
 //! itself (`textweaver_writers::docx_update`): a copy of the original is
@@ -22,21 +23,71 @@ use textweaver_app::store::{Paths, SettingsStore};
 use textweaver_app::text::Document;
 
 /// Arguments for `tw changes`.
-#[derive(clap::Args, Debug)]
+#[derive(clap::Args, Debug, Default)]
+#[command(args_conflicts_with_subcommands = true, subcommand_negates_reqs = true)]
 pub struct Args {
     /// The document whose changes and comments to list.
-    pub file: PathBuf,
+    #[arg(required = true)]
+    pub file: Option<PathBuf>,
     /// Print JSON instead of one row per line.
     #[arg(long)]
     pub json: bool,
-    /// Accept every tracked change; give -o FILE or --in-place.
-    #[arg(long, conflicts_with_all = ["reject_all", "json"])]
+    /// The old spelling of `tw changes accept FILE`, kept hidden through
+    /// beta 1.
+    #[arg(long, hide = true, conflicts_with_all = ["reject_all", "json"])]
     pub accept_all: bool,
-    /// Reject every tracked change; give -o FILE or --in-place.
-    #[arg(long, conflicts_with = "json")]
+    /// The old spelling of `tw changes reject FILE`, kept hidden through
+    /// beta 1.
+    #[arg(long, hide = true, conflicts_with = "json")]
     pub reject_all: bool,
-    /// With --accept-all or --reject-all: the file to write; its extension
-    /// names the format (md, txt, html, docx, epub, pdf, brf).
+    /// With the old --accept-all or --reject-all, kept hidden through
+    /// beta 1: the file to write.
+    #[arg(
+        long = "out",
+        short = 'o',
+        value_name = "FILE",
+        conflicts_with = "in_place",
+        hide = true
+    )]
+    pub output: Option<PathBuf>,
+    /// With the old --accept-all or --reject-all, kept hidden through
+    /// beta 1: change the Word file itself.
+    #[arg(long, hide = true)]
+    pub in_place: bool,
+    /// Use the settings under this folder instead of the usual place.
+    #[arg(long, global = true, value_name = "DIR")]
+    pub home: Option<PathBuf>,
+    /// What to do instead of listing.
+    #[command(subcommand)]
+    pub command: Option<ChangesCommand>,
+}
+
+/// `tw changes` commands.
+#[derive(clap::Subcommand, Debug)]
+pub enum ChangesCommand {
+    /// List the changes and comments (what `tw changes FILE` prints).
+    List {
+        /// The document whose changes and comments to list.
+        file: PathBuf,
+        /// Print JSON instead of one row per line.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Write the document with every tracked change accepted; give -o FILE
+    /// or --in-place.
+    Accept(Decide),
+    /// Write the document with every tracked change rejected; give -o FILE
+    /// or --in-place.
+    Reject(Decide),
+}
+
+/// Arguments for `tw changes accept` and `tw changes reject`.
+#[derive(clap::Args, Debug)]
+pub struct Decide {
+    /// The document whose changes to decide.
+    pub file: PathBuf,
+    /// The file to write; its extension names the format (md, txt, html,
+    /// docx, epub, pdf, brf).
     #[arg(
         long = "out",
         short = 'o',
@@ -44,17 +95,43 @@ pub struct Args {
         conflicts_with = "in_place"
     )]
     pub output: Option<PathBuf>,
-    /// With --accept-all or --reject-all: change the Word file (.docx)
-    /// itself, after keeping a copy of the original beside it.
+    /// Change the Word file (.docx) itself, after keeping a copy of the
+    /// original beside it.
     #[arg(long)]
     pub in_place: bool,
-    /// Use the settings under this folder instead of the usual place.
-    #[arg(long, value_name = "DIR")]
-    pub home: Option<PathBuf>,
+}
+
+impl Args {
+    /// The subcommand folded into the flags it stands for, so one path
+    /// runs both spellings.
+    fn folded(mut self) -> Self {
+        match self.command.take() {
+            Some(ChangesCommand::List { file, json }) => {
+                self.file = Some(file);
+                self.json |= json;
+            }
+            Some(ChangesCommand::Accept(d)) => self.decide(d, true),
+            Some(ChangesCommand::Reject(d)) => self.decide(d, false),
+            None => {}
+        }
+        self
+    }
+
+    fn decide(&mut self, d: Decide, accept: bool) {
+        self.file = Some(d.file);
+        self.output = d.output;
+        self.in_place = d.in_place;
+        self.accept_all = accept;
+        self.reject_all = !accept;
+    }
 }
 
 /// Runs `tw changes`.
 pub fn run(args: Args) -> anyhow::Result<()> {
+    let args = args.folded();
+    let Some(file) = args.file.clone() else {
+        anyhow::bail!("give the document: tw changes FILE");
+    };
     let paths = match &args.home {
         Some(h) => Some(Paths::under(h)),
         None => Paths::platform().ok(),
@@ -67,16 +144,18 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         &settings.interface.language,
         paths.as_ref().map(Paths::locales_dir).as_deref(),
     );
-    let mut doc = super::text::load_document(&args.file)?;
+    let mut doc = super::text::load_document(&file)?;
     if args.in_place && !(args.accept_all || args.reject_all) {
-        anyhow::bail!("--in-place needs --accept-all or --reject-all");
+        anyhow::bail!("--in-place goes with tw changes accept or tw changes reject");
     }
     if args.in_place {
-        return in_place(&catalog, &args.file, &doc, args.accept_all);
+        return in_place(&catalog, &file, &doc, args.accept_all);
     }
     if args.accept_all || args.reject_all {
         let Some(out) = args.output.as_deref() else {
-            anyhow::bail!("--out or --in-place is needed with --accept-all or --reject-all");
+            anyhow::bail!(
+                "nothing to write to: give -o FILE, or --in-place to change the Word file itself"
+            );
         };
         let n = resolve_all(&mut doc, args.accept_all, None).len();
         write(&doc, out)?;
@@ -249,13 +328,13 @@ mod tests {
         let out = dir.path().join("final.md");
         let before = std::fs::read(fixture()).unwrap();
         run(Args {
-            file: fixture(),
-            json: false,
-            accept_all: true,
-            reject_all: false,
-            output: Some(out.clone()),
-            in_place: false,
             home: Some(dir.path().to_owned()),
+            command: Some(ChangesCommand::Accept(Decide {
+                file: fixture(),
+                output: Some(out.clone()),
+                in_place: false,
+            })),
+            ..Args::default()
         })
         .unwrap();
         let md = std::fs::read_to_string(&out).unwrap();
@@ -273,13 +352,13 @@ mod tests {
         std::fs::copy(fixture(), &file).unwrap();
         let before = std::fs::read(&file).unwrap();
         run(Args {
-            file: file.clone(),
-            json: false,
-            accept_all: false,
-            reject_all: true,
-            output: None,
-            in_place: true,
             home: Some(dir.path().to_owned()),
+            command: Some(ChangesCommand::Reject(Decide {
+                file: file.clone(),
+                output: None,
+                in_place: true,
+            })),
+            ..Args::default()
         })
         .unwrap();
         assert_eq!(
@@ -297,16 +376,40 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("notes.md");
         std::fs::write(&file, "Plain notes.").unwrap();
+        // The old spelling, --accept-all --in-place, takes the same path.
         let err = run(Args {
-            file,
-            json: false,
+            file: Some(file),
             accept_all: true,
-            reject_all: false,
-            output: None,
             in_place: true,
             home: Some(dir.path().to_owned()),
+            ..Args::default()
         })
         .unwrap_err();
         assert!(err.to_string().contains("only Word files"), "{err}");
+    }
+
+    /// `tw changes FILE`, `tw changes list FILE`, and the subcommands
+    /// parse; the old flags still do, hidden.
+    #[test]
+    fn verbs_are_subcommands_and_the_old_flags_still_parse() {
+        use clap::Parser as _;
+        #[derive(clap::Parser)]
+        struct Tw {
+            #[command(flatten)]
+            args: Args,
+        }
+        let parse = |argv: &[&str]| Tw::try_parse_from(argv).map(|t| t.args.folded());
+        let a = parse(&["tw", "a.docx", "--json"]).unwrap();
+        assert!(a.json && a.file.is_some() && !a.accept_all);
+        let a = parse(&["tw", "list", "a.docx", "--json"]).unwrap();
+        assert!(a.json && a.file.is_some());
+        let a = parse(&["tw", "accept", "a.docx", "-o", "b.md"]).unwrap();
+        assert!(a.accept_all && !a.reject_all);
+        assert_eq!(a.output.as_deref(), Some(Path::new("b.md")));
+        let a = parse(&["tw", "reject", "a.docx", "--in-place", "--home", "h"]).unwrap();
+        assert!(a.reject_all && a.in_place && a.home.is_some());
+        let a = parse(&["tw", "a.docx", "--accept-all", "-o", "b.md"]).unwrap();
+        assert!(a.accept_all && a.output.is_some());
+        assert!(parse(&["tw"]).is_err(), "the document is required");
     }
 }
