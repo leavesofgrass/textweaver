@@ -11,6 +11,10 @@ In short: beta 2 fixes the speech rate, and brings every document up to date.
 - **The speech rate changes again with Eloquence and DECtalk.** A voice saved while another engine spoke (a Windows SAPI 5 voice during a fallback) made both engines refuse every change of voice, rate, pitch, and volume, so the rate stayed fixed while the number on screen moved, and DECtalk could fail to start. Another engine's voice is now set aside quietly, and rate, pitch, and volume always apply; the "unknown voice" error no longer appears. Both engines now speed up past 430 words per minute.
 - **Choosing a speech engine in Settings switches to it at once,** instead of waiting for Restart speech.
 
+### The app
+
+- **New: focus mode and full screen.** With View, Focus mode on (`[gui] focus_mode`, off by default), the header, the toolbar, the status bar and the panel fade once the mouse rests for three seconds, and the text takes the window; moving the mouse brings them back, and keys never do. Full screen (Alt+Enter, or View, Full screen) does the same. The hiding is visual only: screen readers, the Tab order and the focus are unchanged, and nothing is announced.
+
 ### Settings and data
 
 - Settings shows the highlight palette as a count of entries, not raw data running over the Highlight section, and a SAPI voice by its name rather than its registry path.

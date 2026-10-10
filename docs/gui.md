@@ -62,6 +62,14 @@ The rules that keep the bars usable hold for any choice. Each button keeps its r
 
 The choice is kept in the settings `gui.header_buttons` and `gui.toolbar_buttons`, as lists of command ids, and like the other window layout settings it stays on this computer rather than syncing. A command id that this version does not recognize, perhaps one written by a newer version, is kept in the setting but not shown, so moving between versions loses nothing.
 
+### Focus mode and full screen
+
+Focus mode lets the text have the window to itself. With it on, the header, the toolbar, the status bar and the Contents or Notes panel fade from view once the mouse has rested for three seconds, and the document widens and lengthens to fill the space they leave. Moving the mouse brings them back at once, and they fade again after the next rest. Turn it on or off with View, Focus mode, with "Focus mode" in the command palette (F2), or in Settings under Window (`focus_mode = true` in `[gui]`). It is off by default, stays on this computer, and the delay is fixed rather than a further option.
+
+The keyboard never brings the interface back. Reading keys such as Space, the arrows, the sentence and paragraph keys and the rate keys leave the text alone on screen, so a reader who works from the keyboard is not interrupted. The hiding is visual only: every control stays in the accessibility tree with its name, its role and its place, the Tab order and F6's regions are unchanged, and the focus stays where it was. A hidden button still takes the focus and still works; it is simply not drawn until the mouse moves. Nothing is announced when the interface fades or returns, so NVDA, JAWS and a Braille display read the window exactly as they do without focus mode. Turning focus mode on or off is announced, as the result of a command.
+
+Full screen does the same while it lasts, whether focus mode is on or not. Alt+Enter, or View, Full screen, makes the window fill the screen and lets the interface melt away when the mouse rests; the same key returns the window to its size. F11, the usual full-screen key on Windows and Linux, already belongs to Faster, so full screen uses Alt+Enter, the key many players and terminals use for it. On macOS the key is Option+Enter.
+
 ## Menus
 
 The app has the same menus as the terminal reader, built from the same list of commands, so both always offer the same things under the same names: File, Edit, View, Reading, Speech, Tools, and Help. Every command is in a menu, with its key beside it. The keys come from the keymap, so a key you change in `keymap.toml` shows in the menus too.
