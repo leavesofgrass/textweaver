@@ -74,6 +74,15 @@ In short: beta 1 adds study tools (study cards with SM-2 scheduling and sync, a 
 - Every package carries the complete user documentation, and a missing guide is a warning, never a failure.
 - Copyright (C) 2026 Jon Pielaet, in `NOTICE`, the README, `--version` and About.
 
+### Package sizes
+
+- `textweaver-0.1.0-beta.1-linux-aarch64.AppImage`: 66.4 MB (69,634,568 bytes)
+- `textweaver-0.1.0-beta.1-linux-aarch64.tar.gz`: 70.7 MB (74,170,533 bytes)
+- `textweaver-0.1.0-beta.1-linux-x86_64.AppImage`: 71.7 MB (75,135,480 bytes)
+- `textweaver-0.1.0-beta.1-linux-x86_64.tar.gz`: 76.3 MB (79,988,217 bytes)
+- `textweaver-0.1.0-beta.1-macos-universal.zip`: 126.0 MB (132,158,701 bytes)
+- `textweaver-0.1.0-beta.1-windows-x86_64.zip`: 78.3 MB (82,108,049 bytes)
+
 ## [0.1.0-alpha.9] - 2026-10-04
 
 In short: this is the last alpha before beta 1, so it finishes and tidies what is there. The window gains a reading settings dialog, a narrow layout, drawn list markers, and a first run of at most three skippable steps. Documents can be exported as a read-along web page, as Ogg Vorbis audio, and as an MP4 video with the spoken word marked. Captions gain karaoke tags and chapters. The command line follows one set of rules. Themes are checked for contrast, and the result is said in words. Written pauses are honored in every speech engine. The documentation has start pages for students and staff, a known-limits page, and an accessibility statement.

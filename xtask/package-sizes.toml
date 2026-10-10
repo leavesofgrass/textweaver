@@ -7,15 +7,15 @@
 # (docs/dev/releasing.md, "Package sizes"). Written by that step; edit only
 # the notes by hand.
 
-version = "0.1.0-alpha.9"
+version = "0.1.0-beta.1"
 
 [sizes]
-"linux-aarch64.AppImage" = 97870864
-"linux-aarch64.tar.gz" = 103157715
-"linux-x86_64.AppImage" = 105120752
-"linux-x86_64.tar.gz" = 110860788
-"macos-universal.zip" = 182088035
-"windows-x86_64.zip" = 115458246
+"linux-aarch64.AppImage" = 69634568
+"linux-aarch64.tar.gz" = 74170533
+"linux-x86_64.AppImage" = 75135480
+"linux-x86_64.tar.gz" = 79988217
+"macos-universal.zip" = 132158701
+"windows-x86_64.zip" = 82108049
 
 # Why a package may grow more than 10 percent before the next release, one
 # line per package: "windows-x86_64.zip" = "why". "all" covers every
