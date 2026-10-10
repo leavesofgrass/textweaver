@@ -264,7 +264,11 @@ pub(crate) enum ListKind {
     Actions(Vec<ActionId>),
     Info,
     Notes,
-    Highlights,
+    /// The highlights, all of them or those of one palette name.
+    Highlights(Option<String>),
+    /// The palette's names, to highlight with, change a highlight to, or
+    /// collect (crate::notes::NamePick).
+    HighlightNames(crate::notes::NamePick),
     SaveChoice(AfterLeave),
     Recovery,
     /// The library: the documents, the filter, and those shown
@@ -762,7 +766,7 @@ impl App {
         }
         if let Some((kind, _)) = &self.pending_list_delete {
             return Some(match kind {
-                ListKind::Highlights | ListKind::Relations(_) => V::Remove,
+                ListKind::Highlights(_) | ListKind::Relations(_) => V::Remove,
                 _ => V::Delete,
             });
         }
@@ -829,7 +833,10 @@ impl App {
                     self.pending_list_delete = None;
                     self.list = Some(kind.clone());
                     match kind {
-                        ListKind::Highlights => self.delete_highlight(n),
+                        ListKind::Highlights(f) => match self.highlight_at_row(f.as_deref(), n) {
+                            Some(i) => self.delete_highlight(i, f),
+                            None => vec![Effect::Redraw],
+                        },
                         ListKind::Changes(rows) => self.delete_comment_row(&rows, n),
                         ListKind::Relations(l) => self.remove_relation(&l, n),
                         _ => self.delete_note(n),
@@ -840,7 +847,7 @@ impl App {
                     let msg = self.msg("common-kept");
                     self.tell(&msg);
                     match kind {
-                        ListKind::Highlights => self.list_highlights(),
+                        ListKind::Highlights(f) => self.list_highlights_named(f),
                         ListKind::Changes(_) => self.list_changes(),
                         ListKind::Relations(l) => self.reshow_relations(&l),
                         _ => self.notes_command(NoteCommand::List),
@@ -1837,7 +1844,12 @@ impl App {
                 }
             }
             Some(ListKind::Notes) => self.go_to_note(n, false),
-            Some(ListKind::Highlights) => self.go_to_highlight(n),
+            Some(ListKind::Highlights(f)) => {
+                if let Some(i) = self.highlight_at_row(f.as_deref(), n) {
+                    self.go_to_highlight(i);
+                }
+            }
+            Some(ListKind::HighlightNames(pick)) => return self.choose_highlight_name(pick, n),
             Some(ListKind::SaveChoice(after)) => return self.answer_save_choice(n, after),
             Some(ListKind::Recovery) => return self.answer_recovery(n),
             Some(ListKind::Library(l)) => return self.choose_library(&l, n),
@@ -1878,7 +1890,7 @@ impl App {
             Some(ListKind::Voices) => self.remove_voice_row(n),
             // Deleting a note or highlight asks first, as the delete_note
             // action does: a stray Delete in the list cannot lose one.
-            Some(kind @ (ListKind::Notes | ListKind::Highlights)) => {
+            Some(kind @ (ListKind::Notes | ListKind::Highlights(_))) => {
                 let question = self.msg(list_delete_question(&kind));
                 self.list = None;
                 self.pending_list_delete = Some((kind, n));
@@ -1931,6 +1943,8 @@ impl App {
             Some(ListKind::Changes(rows)) => self.toggle_comment_resolved(&rows, n),
             // Space on a note opens its links (crate::relations).
             Some(ListKind::Notes) => self.note_links(n),
+            // Space on a highlight shows only its name's, and again all.
+            Some(ListKind::Highlights(f)) => self.filter_highlights(f, n),
             Some(ListKind::Components(l)) => {
                 self.list = None;
                 self.mark_component_row(l, n)
@@ -1976,6 +1990,11 @@ impl App {
                 e
             }
             Some(ListKind::Study(l)) => self.rename_study_item(l, n),
+            // F2 on a highlight gives it another palette name.
+            Some(ListKind::Highlights(f)) => match self.highlight_at_row(f.as_deref(), n) {
+                Some(i) => self.show_highlight_names(crate::notes::NamePick::Change(i)),
+                None => vec![Effect::Redraw],
+            },
             Some(ListKind::Changes(rows)) => self.reply_comment_prompt(&rows, n),
             Some(ListKind::Relations(l)) => self.edit_relation_item(l, n),
             _ => {
@@ -2204,6 +2223,16 @@ impl App {
             A::NextNote => return self.notes_command(NoteCommand::Next),
             A::PreviousNote => return self.notes_command(NoteCommand::Previous),
             A::HighlightSelection => return self.notes_command(NoteCommand::ToggleHighlight),
+            A::HighlightAs => return self.show_highlight_names(crate::notes::NamePick::Highlight),
+            A::HighlightName1 => self.highlight_with(Some(0)),
+            A::HighlightName2 => self.highlight_with(Some(1)),
+            A::HighlightName3 => self.highlight_with(Some(2)),
+            A::HighlightName4 => self.highlight_with(Some(3)),
+            A::HighlightName5 => self.highlight_with(Some(4)),
+            A::CollectHighlights => {
+                return self.show_highlight_names(crate::notes::NamePick::Collect);
+            }
+            A::ExportStudySheetByName => return self.export_study_sheet(true),
             A::DeleteNote => return self.delete_note_here(),
             A::AddBookmark => self.add_bookmark(),
             A::ListBookmarks => return self.list_bookmarks(),
@@ -2349,7 +2378,7 @@ impl App {
 /// its message id.
 fn list_delete_question(kind: &ListKind) -> &'static str {
     match kind {
-        ListKind::Highlights => "notes-remove-highlight-question",
+        ListKind::Highlights(_) => "notes-remove-highlight-question",
         ListKind::Changes(_) => "changes-delete-comment-question",
         ListKind::Relations(_) => "relations-remove-question",
         _ => "notes-delete-note-question",

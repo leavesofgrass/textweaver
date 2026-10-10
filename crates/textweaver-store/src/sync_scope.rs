@@ -102,6 +102,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("highlight.speed", Portable),
     ("highlight.color", Portable),
     ("highlight.sentence_color", Portable),
+    ("highlight.palette", Portable),
     // [normalization]
     ("normalization.math", Portable),
     ("normalization.math_verbosity", Portable),

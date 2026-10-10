@@ -826,6 +826,9 @@ impl App {
                 "help-highlights",
                 &[
                     ("highlight", k(A::HighlightSelection)),
+                    ("first", k(A::HighlightName1)),
+                    ("fifth", k(A::HighlightName5)),
+                    ("named", k(A::HighlightAs)),
                     ("list", x(NoteCommand::ListHighlights)),
                 ],
             ),

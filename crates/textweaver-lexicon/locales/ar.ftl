@@ -645,7 +645,7 @@ help-rate = أسرع وأبطأ: { $faster } و{ $slower }.
 help-where = أين أنا: { $key }.
 help-repeat = سماع الرسالة الأخيرة مجددًا: { $repeat }. الرسالة الأخيرة والحالة: الوضع والسرعة والمحرك والموضع: { $status }.
 help-notes = الملاحظات: إضافة { $add }، سرد { $list }، التالية والسابقة { $next } و{ $previous }، حذف التي عند المؤشر { $delete }. في القائمة، Delete للحذف وF2 للتحرير.
-help-highlights = تمييز التحديد أو الجملة، أو إزالة تمييز: { $highlight }. سرد أشرطة التمييز: { $list }.
+help-highlights = تمييز التحديد أو الجملة، أو إزالة تمييز: { $highlight }. باسم: من { $first } إلى { $fifth }، أو القائمة: { $named }. سرد أشرطة التمييز: { $list }.
 help-bookmarks-list = قائمة الإشارات المرجعية: Delete لحذف إشارة، F2 لإعادة تسميتها.
 help-edit = تحرير المستند: { $edit }. حفظ: { $save }. حفظ باسم: { $saveas }. مستند جديد: { $new }.
 help-editing = أثناء التحرير: تراجع { $undo }، إعادة { $redo }، عريض { $bold }. كل أمر تنسيق موجود في اختصارات لوحة المفاتيح.
@@ -859,7 +859,15 @@ action-next-note = الانتقال إلى الملاحظة التالية
 action-previous-note = الانتقال إلى الملاحظة السابقة
 action-delete-note = حذف الملاحظة أو التمييز عند المؤشر
 action-highlight-selection = تمييز التحديد، أو الجملة عند المؤشر
+action-highlight-as = تمييز التحديد أو الجملة باسم يُختار من لوحة التمييز
+action-highlight-name-1 = التمييز بالاسم الأول في اللوحة، أو إزالة ذلك التمييز
+action-highlight-name-2 = التمييز بالاسم الثاني في اللوحة، أو إزالة ذلك التمييز
+action-highlight-name-3 = التمييز بالاسم الثالث في اللوحة، أو إزالة ذلك التمييز
+action-highlight-name-4 = التمييز بالاسم الرابع في اللوحة، أو إزالة ذلك التمييز
+action-highlight-name-5 = التمييز بالاسم الخامس في اللوحة، أو إزالة ذلك التمييز
+action-collect-highlights = كتابة تمييزات اسم واحد كقائمة ماركداون
 action-export-study-sheet = تصدير الملاحظات والتمييزات كورقة دراسة بصيغة ماركداون، مجمّعة حسب العنوان
+action-export-study-sheet-by-name = تصدير ورقة الدراسة مع تجميع التمييزات حسب الاسم
 action-self-test = اختبر نفسك في الملاحظات والتمييزات: Enter يُظهر كل إجابة
 action-open = فتح مستند
 action-open-path = فتح مستند بكتابة مساره
@@ -1295,27 +1303,71 @@ notes-unchanged = لم تتغيّر الملاحظة.
 notes-updated = تحدّثت الملاحظة.
 notes-nothing-to-highlight = لا شيء هنا لتمييزه.
 notes-highlight-removed = أُزيل التمييز: { $text }
-notes-highlighted-at = مُيِّز عند { $pct } بالمئة: { $text }
-notes-highlighted = مُيِّز: { $text }
-# An item in the highlights list. $color is the highlight's color name;
+notes-highlighted-at = مُيِّز، { $name }، عند { $pct } بالمئة: { $text }
+notes-highlighted = مُيِّز، { $name }: { $text }
+# An item in the highlights list. $name is the highlight's palette name;
 # $lost is yes when the text was not found after the file changed.
 notes-highlight-item =
     { $lost ->
-        [yes] { $text }، السطر { $line }، { $color }، لم يُعثر عليه بعد تغيّر الملف
-       *[no] { $text }، السطر { $line }، { $color }
+        [yes] { $name }: { $text }، السطر { $line }، لم يُعثر عليه بعد تغيّر الملف
+       *[no] { $name }: { $text }، السطر { $line }
     }
 notes-no-highlights = لا تمييزات. لإنشاء تمييز: { $key }.
 notes-highlights-title = التمييزات
 notes-highlights-intro =
     { $n ->
-        [one] التمييزات، عنصر واحد. Enter للانتقال إلى أحدها، Delete لإزالته.
-        [two] التمييزات، عنصران. Enter للانتقال إلى أحدها، Delete لإزالته.
-        [few] التمييزات، { $n } عناصر. Enter للانتقال إلى أحدها، Delete لإزالته.
-        [many] التمييزات، { $n } عنصرًا. Enter للانتقال إلى أحدها، Delete لإزالته.
-       *[other] التمييزات، { $n } عنصر. Enter للانتقال إلى أحدها، Delete لإزالته.
+        [one] التمييزات، عنصر واحد. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط.
+        [two] التمييزات، عنصران. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط.
+        [few] التمييزات، { $n } عناصر. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط.
+        [many] التمييزات، { $n } عنصرًا. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط.
+       *[other] التمييزات، { $n } عنصر. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط.
     }
 # The label said before a highlight's text on jumping to it.
-notes-highlight-label = تمييز
+notes-highlight-label = تمييز، { $name }
+notes-highlight-changed = تغيّر التمييز إلى { $name }: { $text }
+# $n is the palette entry's number, $key the keys of Highlight with a name.
+notes-palette-no-entry = لا يوجد اسم تمييز رقم { $n } في اللوحة. لاختيار اسم: { $key }.
+notes-highlights-named-title = التمييزات: { $name }
+notes-highlights-named-intro =
+    { $n ->
+        [one] التمييزات باسم { $name }، عنصر واحد. Space لعرض كل التمييزات.
+        [two] التمييزات باسم { $name }، عنصران. Space لعرض كل التمييزات.
+        [few] التمييزات باسم { $name }، { $n } عناصر. Space لعرض كل التمييزات.
+        [many] التمييزات باسم { $name }، { $n } عنصرًا. Space لعرض كل التمييزات.
+       *[other] التمييزات باسم { $name }، { $n } عنصر. Space لعرض كل التمييزات.
+    }
+notes-palette-title = أسماء التمييز
+# A palette name: the name, how many highlights have it, its shape and its color.
+notes-palette-row =
+    { $count ->
+        [one] { $name }، تمييز واحد، { $shape }، { $color }
+        [two] { $name }، تمييزان، { $shape }، { $color }
+        [few] { $name }، { $count } تمييزات، { $shape }، { $color }
+        [many] { $name }، { $count } تمييزًا، { $shape }، { $color }
+       *[other] { $name }، { $count } تمييز، { $shape }، { $color }
+    }
+notes-palette-intro-highlight = التمييز بأي اسم؟ عدد الأسماء { $n }. Enter لاختيار اسم.
+notes-palette-intro-change = تغيير التمييز إلى أي اسم؟ عدد الأسماء { $n }. Enter لاختيار اسم.
+notes-palette-intro-collect = جمع تمييزات أي اسم؟ عدد الأسماء { $n }. Enter لكتابتها كقائمة.
+notes-collect-none = لا توجد تمييزات باسم { $name }.
+# The collected list's own title (Markdown).
+notes-collect-title = التمييزات باسم { $name }: { $title }
+notes-collect-line = (السطر { $line })
+# Keep the letters y and n: they are the keys that answer.
+notes-collect-saved =
+    { $n ->
+        [one] تمييز واحد باسم { $name } حُفظ بعنوان { $file }. فتحه؟ y أو n. في { $folder }.
+        [two] تمييزان باسم { $name } حُفظا بعنوان { $file }. فتحه؟ y أو n. في { $folder }.
+        [few] { $n } تمييزات باسم { $name } حُفظت بعنوان { $file }. فتحه؟ y أو n. في { $folder }.
+        [many] { $n } تمييزًا باسم { $name } حُفظت بعنوان { $file }. فتحه؟ y أو n. في { $folder }.
+       *[other] { $n } تمييز باسم { $name } حُفظت بعنوان { $file }. فتحه؟ y أو n. في { $folder }.
+    }
+palette-shape-underline = تسطير
+palette-shape-double-underline = تسطير مزدوج
+palette-shape-bold = غامق
+palette-shape-dotted = تسطير منقط
+palette-shape-brackets = أقواس
+palette-shape-symbol = رمز
 # Shown while reading reaches a note's passage.
 notes-signal = ملاحظة: { $text }
 # Said after moving onto a note's passage.
@@ -1441,8 +1493,12 @@ notes-sheet-exported = صُدِّرت من { -brand } في { $date }.
 notes-sheet-before-first-heading = قبل العنوان الأول
 # After a note's text: its tags, joined with commas.
 notes-sheet-tags = (الوسوم: { $tags })
-# $color is the highlight's color name.
-notes-sheet-highlighted = مُيِّز، { $color }.
+# $name is the highlight's palette name.
+notes-sheet-highlighted = مُيِّز، { $name }.
+# On the study sheet grouped by name: the heading a highlight falls under.
+notes-sheet-under = تحت: { $heading }
+# The study sheet's section of notes, after the names.
+notes-sheet-notes = ملاحظات
 
 ## الاختبار الذاتي: أسئلة بإجابات مخفية (crate::reveal).
 
@@ -2066,6 +2122,8 @@ setting-highlight-color = لون تمييز الكلمة
 setting-highlight-color-help = اللون خلف الكلمة المقروءة. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-highlight-sentence-color = لون تمييز الجملة
 setting-highlight-sentence-color-help = اللون خلف الجملة المقروءة. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
+setting-highlight-palette = أسماء التمييز
+setting-highlight-palette-help = حتى ثمانية أسماء لتمييزاتك، لكل منها لون وشكل. للأسماء الخمسة الأولى مفاتيح خاصة بها.
 setting-normalization-math = نطق الرياضيات
 setting-normalization-math-help = نطق رموز الرياضيات بالكلمات.
 setting-normalization-math-verbosity = تفصيل الرياضيات
@@ -3671,6 +3729,7 @@ menu-headings = العناوين
 menu-go-to = انتقال
 menu-cursor = المؤشر والتحديد
 menu-bookmarks = العلامات والملاحظات
+menu-highlights = التمييزات
 menu-tables = الجداول
 menu-speech-cursor = مؤشر النطق
 
@@ -3804,6 +3863,14 @@ name-previous-note = الملاحظة السابقة
 name-delete-note = حذف الملاحظة أو التمييز
 name-highlight-selection = تمييز
 name-export-study-sheet = تصدير ورقة الدراسة
+name-highlight-as = تمييز باسم
+name-highlight-name-1 = تمييز بالاسم 1
+name-highlight-name-2 = تمييز بالاسم 2
+name-highlight-name-3 = تمييز بالاسم 3
+name-highlight-name-4 = تمييز بالاسم 4
+name-highlight-name-5 = تمييز بالاسم 5
+name-collect-highlights = جمع التمييزات
+name-export-study-sheet-by-name = تصدير ورقة الدراسة حسب الاسم
 name-self-test = اختبار ذاتي
 name-open = فتح
 name-open-path = فتح بالمسار
@@ -3979,6 +4046,8 @@ color-name-skyblue = أزرق سماوي
 color-name-teal = أزرق مخضر
 color-name-gold = ذهبي
 color-name-yellow = أصفر
+color-name-green = أخضر
+color-name-cyan = سماوي
 color-name-purple = بنفسجي
 color-name-pink = وردي
 color-name-brown = بني

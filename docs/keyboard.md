@@ -261,7 +261,15 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Move to the previous note | `Shift+F12`, `Shift+E` (browse) | `Shift+F12`, `Shift+E` (browse) | `Shift+F12`, `Shift+E` (browse) | `previous_note` |
 | Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `Delete` (browse) | `delete_note` |
 | Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `y` (browse) | `highlight_selection` |
+| Highlight the selection or the sentence with a name chosen from the highlight palette | palette | palette | palette | `highlight_as` |
+| Highlight with the palette's first name, or remove that highlight | `Alt+1` (browse) | `Alt+1` (browse) | `Cmd+Option+1` (browse) | `highlight_name_1` |
+| Highlight with the palette's second name, or remove that highlight | `Alt+2` (browse) | `Alt+2` (browse) | `Cmd+Option+2` (browse) | `highlight_name_2` |
+| Highlight with the palette's third name, or remove that highlight | `Alt+3` (browse) | `Alt+3` (browse) | `Cmd+Option+3` (browse) | `highlight_name_3` |
+| Highlight with the palette's fourth name, or remove that highlight | `Alt+4` (browse) | `Alt+4` (browse) | `Cmd+Option+4` (browse) | `highlight_name_4` |
+| Highlight with the palette's fifth name, or remove that highlight | `Alt+5` (browse) | `Alt+5` (browse) | `Cmd+Option+5` (browse) | `highlight_name_5` |
+| Write the highlights of one name as a Markdown list | palette | palette | palette | `collect_highlights` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | palette | palette | palette | `export_study_sheet` |
+| Export the study sheet with the highlights grouped by name | palette | palette | palette | `export_study_sheet_by_name` |
 | List the tracked changes and comments: Enter goes to one, A accepts a change, R rejects it | `Alt+A` | `Ctrl+Shift+J` | `Cmd+Shift+J` | `list_changes` |
 | Accept every tracked change in the document | palette | palette | palette | `accept_all_changes` |
 | Reject every tracked change in the document | palette | palette | palette | `reject_all_changes` |
@@ -535,7 +543,10 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
 | Choose how Find and Replace match: case, whole words, regular expression, across lines | `search_options` |
+| Highlight the selection or the sentence with a name chosen from the highlight palette | `highlight_as` |
+| Write the highlights of one name as a Markdown list | `collect_highlights` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
+| Export the study sheet with the highlights grouped by name | `export_study_sheet_by_name` |
 | Accept every tracked change in the document | `accept_all_changes` |
 | Reject every tracked change in the document | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | `add_comment` |

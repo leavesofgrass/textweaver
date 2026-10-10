@@ -295,7 +295,7 @@ impl Tui {
     pub fn with_color_support(mut app: App, support: ColorSupport) -> Self {
         // F4 in a prompt for a path browses for it, and the prompt says so.
         app.set_prompt_browse_key(Some(textweaver_app::path_prompt::browse_key()));
-        let theme = Theme::from_theme(&app.reading_theme(), support).with_marks(&app.mark_colors());
+        let theme = Theme::from_theme(&app.reading_theme(), support);
         let theme_key = app.reading_theme_key();
         Tui {
             app,
@@ -403,8 +403,7 @@ impl Tui {
     fn refresh_theme(&mut self) {
         let key = self.app.reading_theme_key();
         if key != self.theme_key {
-            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support)
-                .with_marks(&self.app.mark_colors());
+            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support);
             self.theme_key = key;
         }
     }
@@ -927,6 +926,8 @@ impl Tui {
             s.notes.len().hash(&mut h);
             s.bookmarks.len().hash(&mut h);
             s.highlights.len().hash(&mut h);
+            // A highlight given another name is stamped anew.
+            s.highlights.iter().map(|x| x.ts).max().hash(&mut h);
         }
         if let Some(l) = app.list_model() {
             (l.title.len(), l.items.len(), l.selected).hash(&mut h);
@@ -1519,7 +1520,7 @@ impl Tui {
             let mut style = highlights
                 .iter()
                 .filter(|h| h.range.contains(pos))
-                .fold(base, |st, h| st.patch(theme.highlight(h.kind)));
+                .fold(base, |st, h| st.patch(theme.mark(h)));
             while b < bold.len() && bold[b].end <= pos {
                 b += 1;
             }

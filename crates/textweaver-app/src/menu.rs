@@ -137,6 +137,8 @@ pub enum MenuId {
     Cursor,
     /// Reading, Bookmarks and notes.
     Bookmarks,
+    /// Reading, Bookmarks and notes, Highlights.
+    Highlights,
     /// Reading, Tables.
     Tables,
     /// Reading, Speech Cursor.
@@ -170,7 +172,7 @@ impl MenuId {
     ];
 
     /// Every menu and submenu.
-    pub const ALL: [MenuId; 28] = [
+    pub const ALL: [MenuId; 29] = [
         MenuId::File,
         MenuId::Edit,
         MenuId::View,
@@ -196,6 +198,7 @@ impl MenuId {
         MenuId::GoTo,
         MenuId::Cursor,
         MenuId::Bookmarks,
+        MenuId::Highlights,
         MenuId::Tables,
         MenuId::SpeechCursor,
         MenuId::Sync,
@@ -229,6 +232,7 @@ impl MenuId {
             MenuId::GoTo => "go-to",
             MenuId::Cursor => "cursor",
             MenuId::Bookmarks => "bookmarks",
+            MenuId::Highlights => "highlights",
             MenuId::Tables => "tables",
             MenuId::SpeechCursor => "speech-cursor",
             MenuId::Sync => "sync",
@@ -280,6 +284,7 @@ impl MenuId {
                 Do(A::ExportBrf),
                 Sep,
                 Do(A::ExportStudySheet),
+                Do(A::ExportStudySheetByName),
             ],
             MenuId::Preview => &[
                 Do(A::PreviewInBrowser),
@@ -511,7 +516,7 @@ impl MenuId {
                 Do(A::ListNotes),
                 Do(A::NextNote),
                 Do(A::PreviousNote),
-                Do(A::HighlightSelection),
+                Sub(MenuId::Highlights),
                 Do(A::DeleteNote),
                 Sep,
                 Do(A::ListChanges),
@@ -519,6 +524,16 @@ impl MenuId {
                 Do(A::RejectAllChanges),
                 Do(A::AddComment),
                 Do(A::SelfTest),
+            ],
+            MenuId::Highlights => &[
+                Do(A::HighlightSelection),
+                Do(A::HighlightAs),
+                Do(A::HighlightName1),
+                Do(A::HighlightName2),
+                Do(A::HighlightName3),
+                Do(A::HighlightName4),
+                Do(A::HighlightName5),
+                Do(A::CollectHighlights),
             ],
             MenuId::Tables => &[
                 Do(A::NextTable),
