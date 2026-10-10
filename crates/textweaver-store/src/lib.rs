@@ -29,6 +29,7 @@
 //!
 //! - [`cards`]: study cards made from notes, highlights, and headings,
 //!   with the grades given them, in `cards/<doc-key>.json` (B1-f1).
+//! - [`schedule`]: when each card is due, by SM-2 from its grades (B1-f2).
 //!
 //! - [`reading_aids`]: the saved form of the `[reading_aids]` settings,
 //!   which `textweaver-aids` converts into its working types.
@@ -54,6 +55,7 @@ mod paths;
 pub mod profiles;
 pub mod reading_aids;
 mod recent;
+pub mod schedule;
 mod settings;
 pub mod settings_io;
 pub mod stats;

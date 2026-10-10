@@ -10,8 +10,14 @@
 //!
 //! Each card keeps where it came from ([`Card::source`],
 //! [`Card::source_id`], [`Card::range`]) so a list can go to the place, and
-//! every grade the reader gave it with the time ([`Card::reviews`]), for a
-//! scheduler to use. Nothing here schedules.
+//! every grade the reader gave it with the time ([`Card::reviews`]), from
+//! which [`crate::schedule`] works out when it is due (B1-f2).
+//!
+//! A deck remembers the ids of cards removed on this computer
+//! ([`CardDeck::removed`]), so sync can tell a card removed here from one
+//! that arrived from another computer and is not written here yet. Grades
+//! from two computers are merged as a union ([`Card::merge_reviews`]), so
+//! both survive.
 //!
 //! A card's id is derived from its source, so making cards again from the
 //! same notes and highlights updates the same cards (their grades kept)
@@ -168,7 +174,25 @@ impl Card {
 
     /// The last grade given, if any.
     pub fn last_grade(&self) -> Option<Grade> {
-        self.reviews.last().map(|r| r.grade)
+        self.reviews.iter().max_by_key(|r| r.ts).map(|r| r.grade)
+    }
+
+    /// Adds the grades in `other` this card lacks: the union of both, in
+    /// time order, so grades given on two computers both survive. Returns
+    /// whether any was added.
+    pub fn merge_reviews(&mut self, other: &[Review]) -> bool {
+        let before = self.reviews.len();
+        for r in other {
+            if !self.reviews.contains(r) {
+                self.reviews.push(r.clone());
+            }
+        }
+        if self.reviews.len() == before {
+            return false;
+        }
+        self.reviews
+            .sort_by(|a, b| a.ts.cmp(&b.ts).then(a.grade.as_str().cmp(b.grade.as_str())));
+        true
     }
 }
 
@@ -186,6 +210,10 @@ pub struct CardDeck {
     /// The cards, in document order.
     #[serde(default)]
     pub cards: Vec<Card>,
+    /// The ids of cards removed on this computer, so sync publishes the
+    /// removal (B1-f2). Added without raising [`CARDS_FORMAT`].
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub removed: Vec<String>,
     /// Unknown fields, preserved.
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
@@ -196,6 +224,7 @@ impl Default for CardDeck {
         CardDeck {
             format: CARDS_FORMAT,
             cards: Vec::new(),
+            removed: Vec::new(),
             extra: serde_json::Map::new(),
         }
     }
@@ -235,6 +264,7 @@ impl CardDeck {
                 }
                 None => {
                     out.added += 1;
+                    self.removed.retain(|id| *id != card.id);
                     self.cards.push(card);
                 }
             }
@@ -261,9 +291,13 @@ impl CardDeck {
         Some(card.reversed)
     }
 
-    /// Removes card `id`: the card, if there was one.
+    /// Removes card `id`, and remembers it was removed here: the card, if
+    /// there was one.
     pub fn remove(&mut self, id: &str) -> Option<Card> {
         let i = self.cards.iter().position(|c| c.id == id)?;
+        if !self.removed.iter().any(|r| r == id) {
+            self.removed.push(id.to_owned());
+        }
         Some(self.cards.remove(i))
     }
 }
@@ -372,7 +406,41 @@ mod tests {
         assert_eq!(a.reveal(), "First, changed?");
         assert_eq!(deck.cards.len(), 3);
         assert!(deck.remove(&id).is_some());
+        assert_eq!(deck.removed, vec![id.clone()]);
         assert!(!deck.grade(&id, Grade::Again, 1));
+        // Made again: no longer removed.
+        deck.add_made(vec![card("a", 6, "First?")]);
+        assert!(deck.removed.is_empty());
+    }
+
+    #[test]
+    fn grades_merge_as_a_union_in_time_order() {
+        let mut a = card("a", 1, "Q?");
+        a.reviews = vec![
+            Review {
+                grade: Grade::Good,
+                ts: 10,
+            },
+            Review {
+                grade: Grade::Hard,
+                ts: 30,
+            },
+        ];
+        let theirs = vec![
+            Review {
+                grade: Grade::Again,
+                ts: 20,
+            },
+            Review {
+                grade: Grade::Good,
+                ts: 10,
+            },
+        ];
+        assert!(a.merge_reviews(&theirs));
+        let ts: Vec<i64> = a.reviews.iter().map(|r| r.ts).collect();
+        assert_eq!(ts, vec![10, 20, 30]);
+        assert_eq!(a.last_grade(), Some(Grade::Hard));
+        assert!(!a.merge_reviews(&theirs));
     }
 
     #[test]
