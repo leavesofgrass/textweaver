@@ -43,7 +43,6 @@ use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
 
 use crate::app::{App, Mode};
-use crate::playback::Playback;
 use crate::text_util;
 
 /// Chars of the document an RSVP word track covers at a time.
@@ -246,7 +245,8 @@ impl App {
             A::PreviousParagraph => st.rsvp.previous_paragraph(t),
             A::CaretNextWord => st.rsvp.next_word(t),
             A::CaretPreviousWord => st.rsvp.previous_word(t),
-            A::PlayPause if self.playback == Playback::Idle => st.rsvp.toggle(t),
+            // Play/Pause always reads aloud; RSVP follows the speech, and its
+            // own key (Alt+Shift+P) starts it silently.
             A::Stop => {
                 self.rsvp = None;
                 self.stop_speech();

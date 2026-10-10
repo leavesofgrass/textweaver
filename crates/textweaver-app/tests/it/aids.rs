@@ -125,10 +125,9 @@ fn navigation_moves_the_rsvp_word_and_stop_closes_it() {
     assert_eq!(word(&app), "Alpha");
     act(&mut app, ActionId::CaretPreviousWord);
     assert_eq!(said.last(), "Start of text.");
-    // Space starts it when nothing is read aloud.
+    // Space reads aloud with RSVP shown; RSVP follows the speech.
     act(&mut app, ActionId::PlayPause);
-    assert_eq!(said.last(), "RSVP playing.");
-    assert_eq!(app.playback(), Playback::Idle, "no speech");
+    assert_ne!(app.playback(), Playback::Idle, "speech reads");
     act(&mut app, ActionId::Stop);
     assert_eq!(said.last(), "RSVP off.");
     assert!(app.rsvp().is_none());
