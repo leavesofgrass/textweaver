@@ -2,9 +2,23 @@
 
 This page tells students and readers, in plain words, what each release brought. The [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) has every detail, and it is the record to trust if the two differ.
 
+## 0.1.0-beta.1 (in preparation)
+
+In short: study tools, richer marks and review, more formats, and a graphical version that catches up to the terminal reader.
+
+- Study cards made from notes, highlights, and headings, graded in words and brought back when due, with a self-test you can answer aloud and recall prompts at the end of a section. See [Study with textweaver](notes.md#study-with-textweaver).
+- Highlights can carry names, such as "important", each with its own color and shape in the terminal reader. Notes can link to each other, and the links export as a knowledge graph.
+- Tracked changes and comments from a Word file can be listed, accepted, or rejected, and your own edits can be saved back to the Word file as tracked changes.
+- Find and replace accepts regular expressions. Formatted text pasted into the terminal reader becomes Markdown, and there is a context menu.
+- Org, reStructuredText, MediaWiki, DokuWiki, and Jira markup open and convert. Braille files open as books, and DAISY books play their recorded narration.
+- HTML pages take their typography from your reading settings.
+- The graphical version has buttons you can customize, the guides stored inside it, and one search over commands, keys, settings, and guides.
+- Helper programs and components can come from your own source, including a private GitHub repository.
+- Known limits: the graphical version draws every highlight name the same way, and Windows on ARM64, Anki import and export, and the reading queue come in beta 2. See [Known limits](known-limits.md).
+
 ## 0.1.0-alpha.9
 
-In short: the window is easier to start and to read, and a document can become a read-along page, a video, or Vorbis audio.
+In short: the app is easier to start and to read, and a document can become a read-along page, a video, or Vorbis audio.
 
 - A short first run, at most three steps, each one skippable. If a screen reader is running, textweaver reads less on its own.
 - A Reading settings dialog gathers the reading choices in one place.
