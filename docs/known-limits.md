@@ -14,7 +14,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 ## The program
 
 - **Not code-signed.** Windows warns the first time you start it. On a Mac you remove the quarantine flag once. See [Installing textweaver](install.md).
-- **Windows on ARM64 has no package yet.** It comes in beta 2. Until then, no package is built for those computers.
+- **No native Windows ARM64 package is planned.** On a Windows computer with an ARM processor, use the x86-64 package: Windows runs it under emulation.
 - **No update check inside the program.** Update with the scripts, or download the new release. It does tell you, once, when it has been updated.
 - **No guided first-run tour.** The [quick start](quickstart.md) is a document you open and read.
 - **Some translations are not reviewed.** The interface has six languages. Native speakers have checked English and Spanish. German, French, Portuguese, and Arabic have not been checked yet. Feedback on any translation is welcome: use Help, Report a problem, or the [issue tracker](https://github.com/leavesofgrass/textweaver/issues).

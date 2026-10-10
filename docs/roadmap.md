@@ -35,7 +35,6 @@ Beta 1 follows the last alpha with the features below. Each is described in its 
 
 These were planned for beta 1 and are now in beta 2:
 
-- Windows on ARM64 packages.
 - Anki import and export.
 - The reading queue.
 - The full rewrite of the guides. Beta 1 corrects wording and fills gaps; beta 2 rewrites the guides for a university-level reader throughout.
