@@ -275,6 +275,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Reject every tracked change in the document | palette | palette | palette | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | palette | palette | palette | `add_comment` |
 | Test yourself on the notes and highlights: Enter shows each answer | palette | palette | palette | `self_test` |
+| Save the accepted and rejected changes and the comments into the Word file, keeping a copy of the original first | palette | palette | palette | `save_changes_to_word` |
 | Make study cards from the notes, the highlights, and their headings | palette | palette | palette | `make_cards` |
 | Study the cards: Enter shows the answer, 1 to 4 grade it | palette | palette | palette | `study_cards` |
 | List the study cards: Enter goes to a card's source, Delete removes it | palette | palette | palette | `list_cards` |
@@ -559,6 +560,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Reject every tracked change in the document | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | `add_comment` |
 | Test yourself on the notes and highlights: Enter shows each answer | `self_test` |
+| Save the accepted and rejected changes and the comments into the Word file, keeping a copy of the original first | `save_changes_to_word` |
 | Make study cards from the notes, the highlights, and their headings | `make_cards` |
 | Study the cards: Enter shows the answer, 1 to 4 grade it | `study_cards` |
 | List the study cards: Enter goes to a card's source, Delete removes it | `list_cards` |
