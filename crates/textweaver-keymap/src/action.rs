@@ -475,6 +475,26 @@ actions! {
     ExportStudySheetByName = "export_study_sheet_by_name", Bookmarks,
         "Export the study sheet with the highlights grouped by name",
         gui [], term [], shared [];
+    SelfTest = "self_test", Bookmarks,
+        "Test yourself on the notes and highlights: Enter shows each answer",
+        gui [], term [], shared [];
+    MakeCards = "make_cards", Bookmarks,
+        "Make study cards from the notes, the highlights, and their headings",
+        gui [], term [], shared [];
+    StudyCards = "study_cards", Bookmarks,
+        "Study the cards: Enter shows the answer, 1 to 4 grade it",
+        gui [], term [], shared [];
+    ListCards = "list_cards", Bookmarks,
+        "List the study cards: Enter goes to a card's source, Delete removes it",
+        gui [], term [], shared [];
+    GradeAgain = "grade_again", Bookmarks, "Grade the card being studied: Again, not recalled",
+        gui [], term [], shared [];
+    GradeHard = "grade_hard", Bookmarks, "Grade the card being studied: Hard, recalled with effort",
+        gui [], term [], shared [];
+    GradeGood = "grade_good", Bookmarks, "Grade the card being studied: Good, recalled",
+        gui [], term [], shared [];
+    GradeEasy = "grade_easy", Bookmarks, "Grade the card being studied: Easy, recalled at once",
+        gui [], term [], shared [];
     ListChanges = "list_changes", Bookmarks,
         "List the tracked changes and comments: Enter goes to one, A accepts a change, R rejects it",
         gui ["g:Ctrl+Shift+J"], term ["g:Alt+A"], shared [];
@@ -483,9 +503,6 @@ actions! {
     RejectAllChanges = "reject_all_changes", Bookmarks, "Reject every tracked change in the document",
         gui [], term [], shared [];
     AddComment = "add_comment", Bookmarks, "Add a comment to the selection or the sentence at the cursor",
-        gui [], term [], shared [];
-    SelfTest = "self_test", Bookmarks,
-        "Test yourself on the notes and highlights: Enter shows each answer",
         gui [], term [], shared [];
 
     // File

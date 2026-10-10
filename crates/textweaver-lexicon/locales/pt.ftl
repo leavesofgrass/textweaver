@@ -789,6 +789,13 @@ action-collect-highlights = Escrever os realces de um nome como uma lista em Mar
 action-export-study-sheet = Exportar as notas e realces como uma folha de estudo em Markdown, agrupada por cabeçalho
 action-export-study-sheet-by-name = Exportar a folha de estudo com os realces agrupados por nome
 action-self-test = Testar-se nas notas e realces: Enter mostra cada resposta
+action-make-cards = Criar cartões de estudo a partir das notas, dos realces e de seus títulos
+action-study-cards = Estudar os cartões: Enter mostra a resposta, 1 a 4 a avaliam
+action-list-cards = Listar os cartões de estudo: Enter vai até a origem de um cartão, Delete o remove
+action-grade-again = Avaliar o cartão em estudo: De novo, não lembrado
+action-grade-hard = Avaliar o cartão em estudo: Difícil, lembrado com esforço
+action-grade-good = Avaliar o cartão em estudo: Bom, lembrado
+action-grade-easy = Avaliar o cartão em estudo: Fácil, lembrado na hora
 action-open = Abrir um documento
 action-open-path = Abrir um documento digitando o caminho
 action-open-library = Abrir a biblioteca: documentos nas suas pastas de biblioteca e arquivos recentes
@@ -1193,8 +1200,8 @@ notes-none = Nenhuma nota. Para adicionar uma: { $key }.
 notes-list-title = Notas
 notes-list-intro =
     { $n ->
-        [one] Notas, 1 item. Enter vai até uma nota, Delete a exclui, F2 a edita, Espaço abre suas ligações.
-       *[other] Notas, { $n } itens. Enter vai até uma nota, Delete a exclui, F2 a edita, Espaço abre suas ligações.
+        [one] Notas, 1 item. Enter vai até uma nota, Delete a exclui, F2 a edita, Espaço abre suas ligações. C cria um cartão.
+       *[other] Notas, { $n } itens. Enter vai até uma nota, Delete a exclui, F2 a edita, Espaço abre suas ligações. C cria um cartão.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. Em: { $anchor }
@@ -1219,8 +1226,8 @@ notes-no-highlights = Nenhum realce. Para criar um: { $key }.
 notes-highlights-title = Realces
 notes-highlights-intro =
     { $n ->
-        [one] Realces, 1 item. Enter vai até um, Delete o remove, F2 muda seu nome, Espaço mostra só seu nome.
-       *[other] Realces, { $n } itens. Enter vai até um, Delete o remove, F2 muda seu nome, Espaço mostra só seu nome.
+        [one] Realces, 1 item. Enter vai até um, Delete o remove, F2 muda seu nome, Espaço mostra só seu nome. C cria um cartão.
+       *[other] Realces, { $n } itens. Enter vai até um, Delete o remove, F2 muda seu nome, Espaço mostra só seu nome. C cria um cartão.
     }
 # The label said before a highlight's text on jumping to it.
 notes-highlight-label = Realce, { $name }
@@ -1395,6 +1402,62 @@ reveal-listening = Responda em voz alta agora. Espaço para parar.
 reveal-you-said = Você disse: { $words }. Enter mostra a resposta.
 reveal-heard-nothing = Nenhuma resposta ouvida. Espaço para tentar de novo.
 reveal-no-dictation = Responder em voz alta precisa do ditado, que não está nesta versão.
+
+## Cartões de estudo e a sessão de estudo (crate::cards).
+
+cards-blank = lacuna
+cards-recall-question = O que diz “{ $heading }”?
+cards-no-document = Abra um documento para criar ou estudar cartões.
+cards-nothing-to-make = Nenhuma nota ou realce para criar cartões. Adicione primeiro uma nota ou um realce.
+cards-made =
+    { $added ->
+        [0] Nenhum cartão novo. { $total } cartões ao todo.
+        [one] Cartões criados: 1 novo, { $total } ao todo.
+       *[other] Cartões criados: { $added } novos, { $total } ao todo.
+    }
+cards-none-from-item = Nenhum cartão deste item: ele precisa de texto sobre um trecho.
+cards-made-one = Cartão criado: { $question }
+cards-updated-one = Cartão atualizado: { $question }
+cards-none = Ainda não há cartões. Para criá-los: { $key }.
+cards-study-title = Estudar cartões: { $title }
+cards-study-intro =
+    { $n ->
+        [one] Estudar cartões, 1 cartão. Enter mostra a resposta, 1 a 4 a avaliam. Espaço para responder em voz alta.
+       *[other] Estudar cartões, { $n } cartões. Enter mostra cada resposta, 1 a 4 a avaliam. Espaço para responder em voz alta.
+    }
+cards-no-session = Nenhuma sessão de estudo. Para começar uma: { $key }.
+cards-card-gone = Esse cartão foi removido.
+cards-grade-again = De novo
+cards-grade-hard = Difícil
+cards-grade-good = Bom
+cards-grade-easy = Fácil
+cards-graded = { $grade }. Cartão { $i } de { $n }. Pergunta: { $question }
+# Said when a grade from the palette opens the session again on the next card.
+cards-graded-reopen = { $grade }. Estudar cartões, cartão { $i } de { $n }.
+cards-session-done =
+    { $n ->
+        [one] { $grade }. Pronto: o cartão foi avaliado.
+       *[other] { $grade }. Pronto: os { $n } cartões foram avaliados.
+    }
+cards-reversed = Invertido. Pergunta: { $question }
+cards-unreversed = Como criado. Pergunta: { $question }
+cards-not-reversible = Só cartões de pergunta podem ser invertidos.
+cards-kind-cloze = Preencher a lacuna
+cards-kind-question = Pergunta
+cards-kind-recall = Lembrar
+cards-not-graded = ainda não avaliado
+cards-last-grade = última avaliação: { $grade }
+cards-item = { $kind }: { $question }, { $grade }
+cards-list-title = Cartões
+cards-list-intro =
+    { $n ->
+        [one] Cartões, 1 item. Enter vai até a origem, Delete o remove.
+       *[other] Cartões, { $n } itens. Enter vai até a origem de um cartão, Delete o remove.
+    }
+cards-source-label = Origem do cartão
+cards-remove-question = Remover este cartão e suas avaliações? y ou n
+cards-removed = Cartão removido.
+cards-save-failed = Não foi possível salvar os cartões: { $error } Verifique se a pasta de dados pode ser gravada.
 
 ## Find, bookmarks, and selection.
 
@@ -3539,6 +3602,13 @@ name-highlight-name-5 = Realçar com o nome 5
 name-collect-highlights = Reunir realces
 name-export-study-sheet-by-name = Exportar folha de estudo por nome
 name-self-test = Autoteste
+name-make-cards = Criar cartões
+name-study-cards = Estudar cartões
+name-list-cards = Cartões
+name-grade-again = Avaliar de novo
+name-grade-hard = Avaliar difícil
+name-grade-good = Avaliar bom
+name-grade-easy = Avaliar fácil
 name-open = Abrir
 name-open-path = Abrir pelo caminho
 name-open-library = Biblioteca
@@ -4135,6 +4205,7 @@ sync-already-off = A sincronização já está desligada aqui.
 sync-stopped = Sincronização desligada aqui. A pasta fica como está.
 prompt-sync-computer-name = Nome deste computador, Enter o mantém
 menu-sync = Sincronização
+menu-cards = Cartões de estudo
 name-sync-setup = Configurar a sincronização
 name-sync-status = Estado da sincronização
 name-sync-now = Sincronizar agora

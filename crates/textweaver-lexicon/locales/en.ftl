@@ -778,6 +778,13 @@ action-collect-highlights = Write the highlights of one name as a Markdown list
 action-export-study-sheet = Export the notes and highlights as a Markdown study sheet, grouped by heading
 action-export-study-sheet-by-name = Export the study sheet with the highlights grouped by name
 action-self-test = Test yourself on the notes and highlights: Enter shows each answer
+action-make-cards = Make study cards from the notes, the highlights, and their headings
+action-study-cards = Study the cards: Enter shows the answer, 1 to 4 grade it
+action-list-cards = List the study cards: Enter goes to a card's source, Delete removes it
+action-grade-again = Grade the card being studied: Again, not recalled
+action-grade-hard = Grade the card being studied: Hard, recalled with effort
+action-grade-good = Grade the card being studied: Good, recalled
+action-grade-easy = Grade the card being studied: Easy, recalled at once
 action-open = Open a document
 action-open-path = Open a document by typing its path
 action-open-library = Open the library: documents in your library folders and recent files
@@ -1182,8 +1189,8 @@ notes-none = No notes. To add one: { $key }.
 notes-list-title = Notes
 notes-list-intro =
     { $n ->
-        [one] Notes, 1 item. Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links.
-       *[other] Notes, { $n } items. Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links.
+        [one] Notes, 1 item. Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links. C makes a card.
+       *[other] Notes, { $n } items. Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links. C makes a card.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. On: { $anchor }
@@ -1208,8 +1215,8 @@ notes-no-highlights = No highlights. To make one: { $key }.
 notes-highlights-title = Highlights
 notes-highlights-intro =
     { $n ->
-        [one] Highlights, 1 item. Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name.
-       *[other] Highlights, { $n } items. Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name.
+        [one] Highlights, 1 item. Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name. C makes a card.
+       *[other] Highlights, { $n } items. Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name. C makes a card.
     }
 # The label said before a highlight's text on jumping to it.
 notes-highlight-label = Highlight, { $name }
@@ -1393,6 +1400,67 @@ reveal-listening = Answer aloud now. Space to stop.
 reveal-you-said = You said: { $words }. Enter shows the answer.
 reveal-heard-nothing = No answer heard. Space to try again.
 reveal-no-dictation = Answering aloud needs dictation, which is not in this version.
+
+## Study cards and the study session (crate::cards).
+
+# The word said in place of the blanked words of a cloze card.
+cards-blank = blank
+# A recall card's question. $heading is the heading's text.
+cards-recall-question = What does “{ $heading }” say?
+cards-no-document = Open a document to make or study cards.
+cards-nothing-to-make = No notes or highlights to make cards from. Add a note or highlight first.
+# $added is how many cards are new, $total how many the document has.
+cards-made =
+    { $added ->
+        [0] No new cards. { $total } cards in all.
+        [one] Cards made: 1 new, { $total } in all.
+       *[other] Cards made: { $added } new, { $total } in all.
+    }
+cards-none-from-item = No card from this item: it needs text on a passage.
+cards-made-one = Card made: { $question }
+cards-updated-one = Card updated: { $question }
+cards-none = No cards yet. To make them: { $key }.
+cards-study-title = Study cards: { $title }
+cards-study-intro =
+    { $n ->
+        [one] Study cards, 1 card. Enter shows the answer, 1 to 4 grade it. Space to answer aloud.
+       *[other] Study cards, { $n } cards. Enter shows each answer, 1 to 4 grade it. Space to answer aloud.
+    }
+cards-no-session = No study session. To start one: { $key }.
+cards-card-gone = That card was removed.
+cards-grade-again = Again
+cards-grade-hard = Hard
+cards-grade-good = Good
+cards-grade-easy = Easy
+# Said after grading: the grade, then the next card.
+cards-graded = { $grade }. Card { $i } of { $n }. Question: { $question }
+# Said when a grade from the palette opens the session again on the next card.
+cards-graded-reopen = { $grade }. Study cards, card { $i } of { $n }.
+cards-session-done =
+    { $n ->
+        [one] { $grade }. Done: the card is graded.
+       *[other] { $grade }. Done: all { $n } cards graded.
+    }
+cards-reversed = Reversed. Question: { $question }
+cards-unreversed = As made. Question: { $question }
+cards-not-reversible = Only question cards can be reversed.
+cards-kind-cloze = Fill in the blank
+cards-kind-question = Question
+cards-kind-recall = Recall
+cards-not-graded = not graded yet
+cards-last-grade = last graded { $grade }
+# An item in the Cards list.
+cards-item = { $kind }: { $question }, { $grade }
+cards-list-title = Cards
+cards-list-intro =
+    { $n ->
+        [one] Cards, 1 item. Enter goes to its source, Delete removes it.
+       *[other] Cards, { $n } items. Enter goes to a card's source, Delete removes it.
+    }
+cards-source-label = Card source
+cards-remove-question = Remove this card and its grades? y or n
+cards-removed = Card removed.
+cards-save-failed = Could not save the cards: { $error } Check that the data folder can be written to.
 
 ## Find, bookmarks, and selection.
 
@@ -3559,6 +3627,13 @@ name-highlight-name-5 = Highlight with name 5
 name-collect-highlights = Collect highlights
 name-export-study-sheet-by-name = Export study sheet by name
 name-self-test = Self-test
+name-make-cards = Make cards
+name-study-cards = Study cards
+name-list-cards = Cards
+name-grade-again = Grade again
+name-grade-hard = Grade hard
+name-grade-good = Grade good
+name-grade-easy = Grade easy
 name-open = Open
 name-open-path = Open by path
 name-open-library = Library
@@ -4163,6 +4238,7 @@ sync-already-off = Sync is already off here.
 sync-stopped = Sync off here. The folder is left as it is.
 prompt-sync-computer-name = Name this computer, Enter keeps it
 menu-sync = Sync
+menu-cards = Study cards
 name-sync-setup = Set up sync
 name-sync-status = Sync status
 name-sync-now = Sync now

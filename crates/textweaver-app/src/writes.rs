@@ -242,6 +242,14 @@ impl App {
                 self.disk_check_pending = false;
                 self.disk_checked(path, stamp)
             }
+            Report::CardsFailed(e) => {
+                let m = self.msg_args(
+                    "cards-save-failed",
+                    &textweaver_lexicon::args!["error" => e],
+                );
+                self.error(&m);
+                Vec::new()
+            }
             Report::ProfilesFailed(e) => {
                 let m = self.msg_args(
                     "profiles-save-failed",

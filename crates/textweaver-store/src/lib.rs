@@ -27,6 +27,9 @@
 //!   (it never does), and the portable values taken out of and put into
 //!   settings.
 //!
+//! - [`cards`]: study cards made from notes, highlights, and headings,
+//!   with the grades given them, in `cards/<doc-key>.json` (B1-f1).
+//!
 //! - [`reading_aids`]: the saved form of the `[reading_aids]` settings,
 //!   which `textweaver-aids` converts into its working types.
 //!
@@ -41,6 +44,7 @@
 //! Owner: Agent C.
 
 mod atomic;
+pub mod cards;
 mod doc_state;
 pub mod fulltext;
 pub mod library;
@@ -59,6 +63,7 @@ pub mod sync_scope;
 pub mod time;
 
 pub use atomic::atomic_write;
+pub use cards::{Card, CardDeck, CardKind, CardSource, CardStore, Grade, Review};
 pub use doc_state::{
     Anchor, Bookmark, ClockStamp, DEFAULT_DEBOUNCE, Deletion, Deletions, DocKey, DocState,
     LEGACY_STATE_FORMAT, MarkKind, MergeReport, NOTE_BACKUPS_MAX, NoteBackup, STATE_FORMAT,

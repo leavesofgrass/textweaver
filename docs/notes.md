@@ -89,7 +89,7 @@ To group the highlights by name instead, type `export study sheet by name` (or c
 
 ### List notes: Shift+A
 
-Press **Shift+A**. The window also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links." Each item says the note, the line, and the passage, then its links when it has some.
+Press **Shift+A**. The window also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links. C makes a card." Each item says the note, the line, and the passage, then its links when it has some.
 
 In the list:
 
@@ -97,6 +97,7 @@ In the list:
 - **F2** edits the note. You hear "Editing note:" and its text. The prompt says "Edit note, Enter keeps it". Type the new text and press **Enter**; tags are read again from the new text. You hear "Note updated." Enter on an empty prompt leaves the note as it was.
 - **Delete** asks "Delete this note? y or n". Press **y** to delete it; you hear "Note deleted:" and the start of the note. Press **n**, **a**, or **Escape** to keep it; you hear "Kept." and the list comes back.
 - **Space** opens the note's links (see [Links between notes](#links-between-notes)).
+- **C** makes a study card from the note (see [Study with cards](#study-with-cards)). Because **C** makes a card, it does not jump to a note starting with C.
 - **Escape** closes the list.
 
 This list shows notes only. Highlights have their own list.
@@ -192,7 +193,7 @@ Highlights made before the palette, in textweaver or in star, have only a color.
 
 ### List highlights: Shift+Y
 
-Press **Shift+Y**. You hear "Highlights", the count, then "Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name." Each item says the name, the passage, and the line: "important: The cell membrane, line 12".
+Press **Shift+Y**. You hear "Highlights", the count, then "Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name. C makes a card." **C** makes a study card from the highlight ([Study with cards](#study-with-cards)). Each item says the name, the passage, and the line: "important: The cell membrane, line 12".
 
 In the list:
 
@@ -219,7 +220,7 @@ Delete in the notes and highlights lists asks the same way. Only the bookmarks l
 
 ## Study with textweaver
 
-textweaver has two tools for studying what you read: a self-test made from your notes and highlights, and recall prompts that stop reading at the end of each section. Both are optional, and neither changes your document.
+textweaver has three tools for studying what you read: a self-test made from your notes and highlights, study cards made from the same marks and kept with your grades, and recall prompts that stop reading at the end of each section. All are optional, and none changes your document.
 
 ### What the research says, and what it does not
 
@@ -254,6 +255,47 @@ On a prompt, press **Space** and say your answer. You hear "Answer aloud now. Sp
 
 Answering aloud uses the same Whisper model as [dictation](dictation.md), in any mode, and types nothing into the document. The first time, textweaver offers to download the model if it is missing; open the self-test again once it is in place. If no words are heard, you hear "No answer heard. Space to try again." In a version without dictation, you hear that answering aloud needs it.
 
+### Study with cards
+
+Study cards turn the passages you marked into questions you answer from memory, and keep a record of how each answer went. The self-test asks every note and highlight afresh each time; cards are kept, so you can come back to them, reverse them, remove the ones you no longer need, and see the last grade you gave each one.
+
+#### Make cards
+
+Press **F2** for the command palette and type `make cards`, or choose **Make cards** in **Study cards**, a submenu of the **Bookmarks and notes** menu. textweaver makes cards from every note and highlight in the document, and says, for example, "Cards made: 5 new, 12 in all."
+
+- **A highlight** becomes a fill-in-the-blank card. The question is the sentence the highlight is in, with the highlighted words replaced by the word "blank", which is how it is read aloud and shown: "The kidneys blank the blood." The answer is the highlighted words. A highlight that covers its whole sentence leaves nothing to fill in, so it asks "What did you highlight in Renal clearance?" instead.
+- **A note on a passage** becomes a question card. The note is the question and the passage is the answer, so a note written as a question ("What does the loop of Henle do?") makes the best card. A note with no text, or one on an empty passage, makes no card.
+- **A heading** becomes a recall card when a note or highlight is in its section: "What does “Renal clearance” say?" The answer is the section's first sentence.
+
+To make a card from one note or highlight, open the notes list (**Shift+A**; the window also has **Ctrl+Shift+N**) or the highlights list (**Shift+Y**), move to it, and press **C**. You hear "Card made:" and its question.
+
+Making cards again is safe. A card is tied to the note, highlight, or heading it came from, so making cards again after you edit a note updates that card's question and answer and keeps its grades; it never makes a second copy. A card stays when you delete its note or highlight; remove it from the Cards list (below) if you no longer want it.
+
+#### Study the cards
+
+Type `study cards` in the palette, or choose **Study cards** in the same submenu. You hear "Study cards, 12 cards. Enter shows each answer, 1 to 4 grade it. Space to answer aloud." and then the first question. In the list:
+
+- Answer silently or aloud, then press **Enter** to hear "Answer:" and the answer.
+- Grade how well you recalled it, in your own judgment, with a number key or by name in the palette:
+  - **1**, Again (`grade_again`): you did not recall it.
+  - **2**, Hard (`grade_hard`): you recalled it with effort.
+  - **3**, Good (`grade_good`): you recalled it.
+  - **4**, Easy (`grade_easy`): you recalled it at once.
+- After a grade you hear the grade and the next card: "Good. Card 4 of 12. Question: ...". After the last card you hear "Done: all 12 cards graded." and the list closes.
+- **Space** answers aloud, as in the self-test ([Answer aloud](#answer-aloud)): your words are read back before you reveal the answer, and textweaver never judges them. The grade is always yours.
+- **R** reverses a question card: the passage is asked and the note becomes the answer. Press **R** again to put it back. The card stays reversed the next time you study it. Fill-in-the-blank and recall cards cannot be reversed.
+- **Up** and **Down** move between cards without grading; **Escape** closes the list. The session waits: a grade from the palette or the submenu grades the card you were on and opens the list again on the next card ("Good. Study cards, card 4 of 12."), and **Study cards** starts again from the first card.
+
+Each grade is stored with the time you gave it. This version does not yet use the grades to decide when a card should come back; every session asks every card, in document order.
+
+#### The Cards list
+
+Type `list cards` in the palette, or choose **Cards** in the same submenu, to hear every card with its kind, its question, and its last grade: "Fill in the blank: The kidneys blank the blood., last graded Good". **Enter** goes to the card's source in the document, where its note or highlight is now. **Delete** asks "Remove this card and its grades?" and removes it on **y**.
+
+#### Where cards are kept
+
+Cards are kept on this computer beside your notes, one file per document (`cards/` in textweaver's data folder), and written in the background. They do not sync between computers yet. Because a card is tied to its source, making cards on another computer from the same synced notes gives the same cards, without their grades.
+
 ### Recall prompts at section ends
 
 Turn on **Recall prompts** in Settings (`[reading] recall_prompts`, off by default). When continuous reading stops at the end of a section, it asks you to recall it, naming the section it just read: "Say what you remember from Renal clearance. Ctrl+Space to go on." The key you hear is your read key. Say or think what you remember, then press the key, and reading goes on with the next section.
@@ -266,8 +308,8 @@ One way to combine these:
 
 1. Read a section aloud with recall prompts on. At each prompt, say what you remember before going on.
 2. While reading, add a note (**a**) where a passage answers a question you expect, written as that question, and highlight (**y**) what you want to recall.
-3. Later, open the self-test. Answer each prompt before you reveal it, aloud or silently, and add a note where you missed something.
-4. Repeat the self-test on another day rather than rereading the chapter.
+3. Later, open the self-test, or make cards and study them. Answer each question before you reveal it, aloud or silently, and add a note where you missed something.
+4. Study the cards again on another day rather than rereading the chapter.
 
 ### Sources
 

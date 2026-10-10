@@ -37,7 +37,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 ## Study tools
 
-- **Spaced-repetition review** (Anki-style) is out of scope, on purpose.
+- **Spaced-repetition scheduling** is not in yet. Study cards are made from notes, highlights, and headings, studied, and graded in words ([Study with cards](notes.md#study-with-cards)), and each grade is kept with its time, but nothing yet says which cards are due. Anki export and import are not in, and AnkiConnect sync is dropped on purpose.
 - **Knowledge graphs** from notes are not drawn. Links between notes are lists instead: each note's links, "What links here", and `tw notes links` ([notes guide](notes.md#links-between-notes)).
 
 ## What this page does not promise

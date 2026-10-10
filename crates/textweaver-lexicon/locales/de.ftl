@@ -809,6 +809,13 @@ action-collect-highlights = Die Hervorhebungen eines Namens als Markdown-Liste s
 action-export-study-sheet = Die Notizen und Hervorhebungen als Markdown-Lernblatt exportieren, gruppiert nach Überschrift
 action-export-study-sheet-by-name = Das Lernblatt mit den Hervorhebungen nach Namen gruppiert exportieren
 action-self-test = Sich selbst zu den Notizen und Hervorhebungen abfragen: Eingabe zeigt jede Antwort
+action-make-cards = Lernkarten aus den Notizen, den Hervorhebungen und ihren Überschriften erstellen
+action-study-cards = Die Karten lernen: Eingabe zeigt die Antwort, 1 bis 4 bewerten sie
+action-list-cards = Die Lernkarten auflisten: Eingabe springt zur Quelle einer Karte, Entf entfernt sie
+action-grade-again = Die gelernte Karte bewerten: Nochmal, nicht erinnert
+action-grade-hard = Die gelernte Karte bewerten: Schwer, mit Mühe erinnert
+action-grade-good = Die gelernte Karte bewerten: Gut, erinnert
+action-grade-easy = Die gelernte Karte bewerten: Leicht, sofort erinnert
 action-open = Ein Dokument öffnen
 action-open-path = Ein Dokument öffnen, indem Sie seinen Pfad eingeben
 action-open-library = Die Bibliothek öffnen: Dokumente in Ihren Bibliotheksordnern und zuletzt verwendete Dateien
@@ -1213,8 +1220,8 @@ notes-none = Keine Notizen. Eine hinzufügen: { $key }.
 notes-list-title = Notizen
 notes-list-intro =
     { $n ->
-        [one] Notizen, 1 Eintrag. Eingabetaste springt zu einer Notiz, Entf löscht sie, F2 bearbeitet sie, Leertaste öffnet ihre Verknüpfungen.
-       *[other] Notizen, { $n } Einträge. Eingabetaste springt zu einer Notiz, Entf löscht sie, F2 bearbeitet sie, Leertaste öffnet ihre Verknüpfungen.
+        [one] Notizen, 1 Eintrag. Eingabetaste springt zu einer Notiz, Entf löscht sie, F2 bearbeitet sie, Leertaste öffnet ihre Verknüpfungen. C erstellt eine Karte.
+       *[other] Notizen, { $n } Einträge. Eingabetaste springt zu einer Notiz, Entf löscht sie, F2 bearbeitet sie, Leertaste öffnet ihre Verknüpfungen. C erstellt eine Karte.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. Zu: { $anchor }
@@ -1239,8 +1246,8 @@ notes-no-highlights = Keine Hervorhebungen. Eine erstellen: { $key }.
 notes-highlights-title = Hervorhebungen
 notes-highlights-intro =
     { $n ->
-        [one] Hervorhebungen, 1 Eintrag. Eingabetaste springt zu einer, Entf entfernt sie, F2 ändert ihren Namen, Leertaste zeigt nur diesen Namen.
-       *[other] Hervorhebungen, { $n } Einträge. Eingabetaste springt zu einer, Entf entfernt sie, F2 ändert ihren Namen, Leertaste zeigt nur diesen Namen.
+        [one] Hervorhebungen, 1 Eintrag. Eingabetaste springt zu einer, Entf entfernt sie, F2 ändert ihren Namen, Leertaste zeigt nur diesen Namen. C erstellt eine Karte.
+       *[other] Hervorhebungen, { $n } Einträge. Eingabetaste springt zu einer, Entf entfernt sie, F2 ändert ihren Namen, Leertaste zeigt nur diesen Namen. C erstellt eine Karte.
     }
 # The label said before a highlight's text on jumping to it.
 notes-highlight-label = Hervorhebung, { $name }
@@ -1415,6 +1422,62 @@ reveal-listening = Antworten Sie jetzt laut. Leertaste zum Beenden.
 reveal-you-said = Sie sagten: { $words }. Eingabe zeigt die Antwort.
 reveal-heard-nothing = Keine Antwort gehört. Leertaste, um es erneut zu versuchen.
 reveal-no-dictation = Laut antworten braucht das Diktat, das in diesem Build fehlt.
+
+## Lernkarten und die Lernsitzung (crate::cards).
+
+cards-blank = Lücke
+cards-recall-question = Was steht unter „{ $heading }“?
+cards-no-document = Öffnen Sie ein Dokument, um Karten zu erstellen oder zu lernen.
+cards-nothing-to-make = Keine Notizen oder Hervorhebungen für Karten. Fügen Sie zuerst eine Notiz oder Hervorhebung hinzu.
+cards-made =
+    { $added ->
+        [0] Keine neuen Karten. { $total } Karten insgesamt.
+        [one] Karten erstellt: 1 neu, { $total } insgesamt.
+       *[other] Karten erstellt: { $added } neu, { $total } insgesamt.
+    }
+cards-none-from-item = Keine Karte aus diesem Eintrag: Er braucht Text zu einer Passage.
+cards-made-one = Karte erstellt: { $question }
+cards-updated-one = Karte aktualisiert: { $question }
+cards-none = Noch keine Karten. Zum Erstellen: { $key }.
+cards-study-title = Karten lernen: { $title }
+cards-study-intro =
+    { $n ->
+        [one] Karten lernen, 1 Karte. Eingabe zeigt die Antwort, 1 bis 4 bewerten sie. Leertaste, um laut zu antworten.
+       *[other] Karten lernen, { $n } Karten. Eingabe zeigt jede Antwort, 1 bis 4 bewerten sie. Leertaste, um laut zu antworten.
+    }
+cards-no-session = Keine Lernsitzung. Zum Starten: { $key }.
+cards-card-gone = Diese Karte wurde entfernt.
+cards-grade-again = Nochmal
+cards-grade-hard = Schwer
+cards-grade-good = Gut
+cards-grade-easy = Leicht
+cards-graded = { $grade }. Karte { $i } von { $n }. Frage: { $question }
+# Said when a grade from the palette opens the session again on the next card.
+cards-graded-reopen = { $grade }. Karten lernen, Karte { $i } von { $n }.
+cards-session-done =
+    { $n ->
+        [one] { $grade }. Fertig: Die Karte ist bewertet.
+       *[other] { $grade }. Fertig: Alle { $n } Karten bewertet.
+    }
+cards-reversed = Umgekehrt. Frage: { $question }
+cards-unreversed = Wie erstellt. Frage: { $question }
+cards-not-reversible = Nur Fragekarten lassen sich umkehren.
+cards-kind-cloze = Lückentext
+cards-kind-question = Frage
+cards-kind-recall = Erinnern
+cards-not-graded = noch nicht bewertet
+cards-last-grade = zuletzt bewertet: { $grade }
+cards-item = { $kind }: { $question }, { $grade }
+cards-list-title = Karten
+cards-list-intro =
+    { $n ->
+        [one] Karten, 1 Eintrag. Eingabe springt zur Quelle, Entf entfernt sie.
+       *[other] Karten, { $n } Einträge. Eingabe springt zur Quelle einer Karte, Entf entfernt sie.
+    }
+cards-source-label = Quelle der Karte
+cards-remove-question = Diese Karte und ihre Bewertungen entfernen? y oder n
+cards-removed = Karte entfernt.
+cards-save-failed = Die Karten konnten nicht gespeichert werden: { $error } Prüfen Sie, ob in den Datenordner geschrieben werden kann.
 
 ## Find, bookmarks, and selection.
 
@@ -3547,6 +3610,13 @@ name-highlight-name-5 = Mit Name 5 hervorheben
 name-collect-highlights = Hervorhebungen sammeln
 name-export-study-sheet-by-name = Lernblatt nach Namen exportieren
 name-self-test = Selbsttest
+name-make-cards = Karten erstellen
+name-study-cards = Karten lernen
+name-list-cards = Karten
+name-grade-again = Bewerten: Nochmal
+name-grade-hard = Bewerten: Schwer
+name-grade-good = Bewerten: Gut
+name-grade-easy = Bewerten: Leicht
 name-open = Öffnen
 name-open-path = Über Pfad öffnen
 name-open-library = Bibliothek
@@ -4143,6 +4213,7 @@ sync-already-off = Sync ist hier schon aus.
 sync-stopped = Sync hier aus. Der Ordner bleibt, wie er ist.
 prompt-sync-computer-name = Name dieses Computers, Enter behält ihn
 menu-sync = Sync
+menu-cards = Lernkarten
 name-sync-setup = Sync einrichten
 name-sync-status = Sync-Status
 name-sync-now = Jetzt synchronisieren

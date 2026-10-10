@@ -145,6 +145,8 @@ pub enum MenuId {
     SpeechCursor,
     /// Tools, Sync.
     Sync,
+    /// Reading, Bookmarks and notes, Study cards.
+    Cards,
 }
 
 /// One entry of a menu's definition.
@@ -202,6 +204,7 @@ impl MenuId {
         MenuId::Tables,
         MenuId::SpeechCursor,
         MenuId::Sync,
+        MenuId::Cards,
     ];
 
     /// The stable id, used in catalog ids (`menu-export-as`) and JSON-RPC.
@@ -236,6 +239,7 @@ impl MenuId {
             MenuId::Tables => "tables",
             MenuId::SpeechCursor => "speech-cursor",
             MenuId::Sync => "sync",
+            MenuId::Cards => "cards",
         }
     }
 
@@ -519,11 +523,13 @@ impl MenuId {
                 Sub(MenuId::Highlights),
                 Do(A::DeleteNote),
                 Sep,
+                Do(A::SelfTest),
+                Sub(MenuId::Cards),
+                Sep,
                 Do(A::ListChanges),
                 Do(A::AcceptAllChanges),
                 Do(A::RejectAllChanges),
                 Do(A::AddComment),
-                Do(A::SelfTest),
             ],
             MenuId::Highlights => &[
                 Do(A::HighlightSelection),
@@ -582,6 +588,16 @@ impl MenuId {
                 Do(A::ManageComponents),
                 Do(A::DownloadDictationModel),
                 Do(A::AskFirstRunAgain),
+            ],
+            MenuId::Cards => &[
+                Do(A::MakeCards),
+                Do(A::StudyCards),
+                Do(A::ListCards),
+                Sep,
+                Do(A::GradeAgain),
+                Do(A::GradeHard),
+                Do(A::GradeGood),
+                Do(A::GradeEasy),
             ],
             MenuId::Sync => &[
                 Do(A::SyncSetup),
