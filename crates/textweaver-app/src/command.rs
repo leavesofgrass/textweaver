@@ -359,6 +359,9 @@ pub enum PromptPurpose {
     /// Answer is the text of a new comment on the selection or the
     /// sentence at the cursor.
     CommentText,
+    /// Answer is a GitHub token for a private components source; empty
+    /// skips. It is secret ([`PromptPurpose::is_secret`]).
+    GitHubToken,
 }
 
 impl PromptPurpose {
@@ -399,7 +402,16 @@ impl PromptPurpose {
             PromptPurpose::DocumentDetails => "Document details",
             PromptPurpose::CommentReply => "Reply",
             PromptPurpose::CommentText => "Comment",
+            PromptPurpose::GitHubToken => "GitHub token for your components source, Enter skips",
         }
+    }
+
+    /// True for a prompt whose answer is secret (a token): a frontend
+    /// shows [`PromptModel::shown_text`](crate::PromptModel::shown_text),
+    /// one star per character, and never logs the keys or the answer; the
+    /// app echoes nothing typed and keeps no history of it.
+    pub fn is_secret(self) -> bool {
+        self == PromptPurpose::GitHubToken
     }
 }
 

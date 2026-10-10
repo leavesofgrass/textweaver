@@ -1559,7 +1559,8 @@ impl Tui {
             // the prompt opens; the line drawn here keeps it short so what
             // is typed starts within 40 cells.
             let label = format!("{}: ", prompt_line_label(&mb.label));
-            let text = mb.text();
+            // A secret prompt (a token) is drawn as stars.
+            let text = mb.shown_text();
             let before: String = text.chars().take(mb.caret()).collect();
             let col = Span::raw(&label).width() + Span::raw(&before).width();
             f.render_widget(

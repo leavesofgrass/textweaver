@@ -546,6 +546,7 @@ impl MenuId {
                 Sub(MenuId::Sync),
                 Sep,
                 Do(A::ManageComponents),
+                Do(A::ForgetGitHubToken),
                 Do(A::DownloadDictationModel),
                 Do(A::AskFirstRunAgain),
             ],

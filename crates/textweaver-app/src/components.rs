@@ -42,17 +42,18 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, TryRecvError};
 
 use textweaver_a11y::{Importance, Priority, Verbosity};
+use textweaver_components::credentials::Token;
 pub use textweaver_components::{
     Action, Check, Component, ComponentError, Fetched, Fetcher, FilePin, FileState, InstallReport,
-    MIRROR_ENV, Outcome, Platform, Progress, Sources, StandardFetcher, Status, Tenths,
-    can_download, fake, sha256_hex, size_text,
+    MIRROR_ENV, Outcome, Platform, Progress, SignedInFetcher, Sources, StandardFetcher, Status,
+    Tenths, can_download, credentials, fake, sha256_hex, size_text,
 };
 use textweaver_keymap::ActionId;
 use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
 
 use crate::app::{App, ListKind};
-use crate::command::{Confirm, Effect};
+use crate::command::{Confirm, Effect, PromptPurpose};
 
 /// The default dictation model's id.
 pub const WHISPER_BASE_EN: &str = "whisper-base.en";
@@ -414,6 +415,14 @@ pub(crate) struct ComponentsState {
     first_run: bool,
     /// Moves on when a component was installed, removed, or verified.
     generation: u64,
+    /// The token for a private components source, once looked up this
+    /// session (`Some(None)`: there is none). Never printed.
+    token: Option<Option<Token>>,
+    /// The token was asked for this session (asked once).
+    token_asked: bool,
+    /// Tests: the fake GitHub API the signed-in fetcher goes to.
+    #[cfg(test)]
+    github_api: Option<String>,
 }
 
 impl std::fmt::Debug for ComponentsState {
@@ -431,6 +440,9 @@ impl std::fmt::Debug for ComponentsState {
 /// Gives the commands their handlers.
 pub(crate) fn register(app: &mut App) {
     app.register_handler(ActionId::ManageComponents, |app| app.manage_components());
+    app.register_handler(ActionId::ForgetGitHubToken, |app| {
+        app.forget_components_token()
+    });
 }
 
 impl App {
@@ -483,14 +495,104 @@ impl App {
     }
 
     /// The fetcher to use, when downloads can happen in this build: a
-    /// test's, else the standard one with the `publish` feature or a
-    /// mirror that is a folder on this computer.
-    fn component_fetcher(&self) -> Option<Arc<dyn Fetcher>> {
+    /// test's; else, for a components source on GitHub with a token, the
+    /// signed-in one; else the standard one with the `publish` feature or
+    /// a mirror that is a folder on this computer.
+    fn component_fetcher(&mut self) -> Option<Arc<dyn Fetcher>> {
         if let Some(f) = &self.components.fetcher {
             return Some(Arc::clone(f));
         }
-        let local = sources(&self.settings).has_local();
+        let sources = sources(&self.settings);
+        if can_download()
+            && sources.source_is_github()
+            && let Some(token) = self.components_token()
+        {
+            let f = SignedInFetcher::new(token);
+            #[cfg(test)]
+            let f = match &self.components.github_api {
+                Some(api) => f.with_api(api),
+                None => f,
+            };
+            return Some(Arc::new(f));
+        }
+        let local = sources.has_local();
         (can_download() || local).then(|| Arc::new(StandardFetcher) as Arc<dyn Fetcher>)
+    }
+
+    // ----- Signing in to a private source (B1-c2) ----------------------
+
+    /// The token for a private components source: the GitHub CLI's when
+    /// it is signed in, else the one in the system credential store.
+    /// Looked up once a session.
+    fn components_token(&mut self) -> Option<Token> {
+        if self.components.token.is_none() {
+            self.components.token = Some(credentials::find_token().map(|(t, _)| t));
+        }
+        self.components.token.clone().flatten()
+    }
+
+    /// True when Manage optional components asks for a token first: the
+    /// source is a GitHub repository, this build downloads, no token is
+    /// known, and it was not asked this session.
+    fn wants_components_token(&mut self) -> bool {
+        can_download()
+            && !self.components.token_asked
+            && sources(&self.settings).source_is_github()
+            && self.components_token().is_none()
+    }
+
+    /// The answer to the token prompt: a token is kept in the system
+    /// credential store (and used this session even when the store
+    /// refuses it); empty skips (a public repository needs none). Then the
+    /// manager opens. Nothing said here holds the token.
+    pub(crate) fn answer_github_token(&mut self, text: &str) -> Vec<Effect> {
+        if !text.trim().is_empty() {
+            let Some(token) = Token::new(text) else {
+                let msg = self.msg("components-token-invalid");
+                self.error(&msg);
+                return self.prompt(PromptPurpose::GitHubToken);
+            };
+            match credentials::store_token(&token) {
+                Ok(()) => {
+                    let msg = self.msg("components-token-kept");
+                    self.note(&msg);
+                }
+                Err(reason) => {
+                    let msg =
+                        self.msg_args("components-token-not-kept", &args!["reason" => reason]);
+                    self.error(&msg);
+                }
+            }
+            self.components.token = Some(Some(token));
+            // Read the source's list again, signed in.
+            self.components.manifest_for = None;
+        }
+        self.manage_components()
+    }
+
+    /// Forget the GitHub token: removes it from the system credential
+    /// store, and asks again the next time Manage optional components
+    /// needs one. The GitHub CLI's own sign-in is kept, and said.
+    pub(crate) fn forget_components_token(&mut self) -> Vec<Effect> {
+        let key = match credentials::forget_token() {
+            Ok(true) => "components-token-forgotten",
+            Ok(false) => "components-token-none",
+            Err(reason) => {
+                let msg =
+                    self.msg_args("components-token-not-forgotten", &args!["reason" => reason]);
+                self.error(&msg);
+                return vec![Effect::Redraw];
+            }
+        };
+        self.components.token = None;
+        self.components.token_asked = false;
+        self.components.manifest_for = None;
+        let mut msg = self.msg(key);
+        if credentials::gh_token().is_some() {
+            msg = format!("{msg} {}", self.msg("components-token-gh-still"));
+        }
+        self.note(&msg);
+        vec![Effect::Redraw]
     }
 
     /// Reads the components lists (`components.toml`) of the source and
@@ -533,6 +635,11 @@ impl App {
             let msg = self.msg("component-no-folder");
             self.tell(&msg);
             return vec![Effect::Redraw];
+        }
+        if self.wants_components_token() {
+            // Asked once a session; Enter skips.
+            self.components.token_asked = true;
+            return self.prompt(PromptPurpose::GitHubToken);
         }
         self.load_mirror_manifest();
         self.show_component_manager(None)

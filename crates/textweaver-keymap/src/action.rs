@@ -720,6 +720,9 @@ actions! {
     ManageComponents = "manage_components", View,
         "Manage optional components: the models, fonts, and voices textweaver can download, with their size and license",
         gui [], term [], shared [];
+    ForgetGitHubToken = "forget_github_token", View,
+        "Forget the GitHub token kept for your components source; it is asked for again when needed",
+        gui [], term [], shared [];
     Help = "help", View, "Open the help",
         gui ["g:F1"], term ["g:F1"], shared [];
 }

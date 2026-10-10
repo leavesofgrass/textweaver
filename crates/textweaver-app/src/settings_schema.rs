@@ -1550,7 +1550,7 @@ pub const INFO: &[Info] = &[
     text(
         "components.source",
         "Components source",
-        "Your own components, used first. A GitHub repository as owner/name, or a folder on this computer. Empty uses none. Never put a password here.",
+        "Your own components, used first. A GitHub repository as owner/name, or a folder on this computer. Empty uses none. Never put a password here. A private repository signs in with the GitHub CLI, or asks once for a token kept in the system credential store.",
     ),
     text(
         "components.mirror",

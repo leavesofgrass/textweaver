@@ -236,6 +236,7 @@ fn purpose_name(p: PromptPurpose) -> &'static str {
         PromptPurpose::DocumentDetails => "document_details",
         PromptPurpose::CommentReply => "comment_reply",
         PromptPurpose::CommentText => "comment_text",
+        PromptPurpose::GitHubToken => "github_token",
     }
 }
 
@@ -910,7 +911,8 @@ impl Server {
             Some(p) => json!({
                 "label": p.label,
                 "purpose": purpose_name(p.purpose),
-                "text": p.text(),
+                // A secret prompt (a token) shows one star per character.
+                "text": p.shown_text(),
                 "caret": p.caret(),
             }),
             None => Value::Null,
@@ -1176,7 +1178,7 @@ mod tests {
 
     /// Every prompt purpose and its protocol name: a change here is a
     /// protocol change, so clients are told (see the protocol version rule).
-    const PURPOSES: [(PromptPurpose, &str); 28] = [
+    const PURPOSES: [(PromptPurpose, &str); 29] = [
         (PromptPurpose::Find, "find"),
         (PromptPurpose::GoTo, "go_to"),
         (PromptPurpose::Open, "open"),
@@ -1205,10 +1207,11 @@ mod tests {
         (PromptPurpose::DocumentDetails, "document_details"),
         (PromptPurpose::CommentReply, "comment_reply"),
         (PromptPurpose::CommentText, "comment_text"),
+        (PromptPurpose::GitHubToken, "github_token"),
     ];
 
     #[test]
-    fn the_28_purpose_names_are_pinned() {
+    fn the_29_purpose_names_are_pinned() {
         let mut seen = std::collections::HashSet::new();
         for (p, name) in PURPOSES {
             assert_eq!(purpose_name(p), name, "{p:?}");
@@ -1242,7 +1245,8 @@ mod tests {
                 | PromptPurpose::SyncComputerName
                 | PromptPurpose::DocumentDetails
                 | PromptPurpose::CommentReply
-                | PromptPurpose::CommentText => name,
+                | PromptPurpose::CommentText
+                | PromptPurpose::GitHubToken => name,
             };
             assert!(!variant.is_empty());
         }
@@ -1257,7 +1261,7 @@ mod tests {
         for (_, name) in PURPOSES {
             assert!(guide.contains(&format!("`{name}`")), "{name} missing");
         }
-        assert!(guide.contains("28 purposes"));
+        assert!(guide.contains("29 purposes"));
     }
 
     /// The messages `read_messages` passes on for `input`, with their
