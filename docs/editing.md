@@ -282,7 +282,7 @@ Most terminals keep **Ctrl+V** or **Ctrl+Shift+V** (or a right-click) as their o
 
 When the terminal passes **Ctrl+V** through to textweaver instead of pasting, textweaver reads the system clipboard itself, and formatted text from a browser or word processor becomes Markdown as described above. Over SSH and in tmux, where the system clipboard belongs to the other computer, textweaver pastes the text you last copied or cut in textweaver; when there is none, it says "Nothing copied in textweaver yet. Use your terminal's paste, for example Control Shift V."
 
-In the graphical version, **Ctrl+V** pastes only the clipboard's plain text for now. Converting formatted text to Markdown is done in the terminal reader; see [Known limits](known-limits.md#the-graphical-version).
+In the app on Windows, **Ctrl+V** converts formatted text to Markdown as the terminal reader does. In the app on macOS and Linux, **Ctrl+V** pastes only the clipboard's plain text for now, and the conversion is planned for beta 2; paste in the terminal reader until then. See [Known limits](known-limits.md#the-graphical-version).
 
 ### The context menu: Ctrl+F10 in the terminal
 
