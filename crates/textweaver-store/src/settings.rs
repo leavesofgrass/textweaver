@@ -2438,7 +2438,7 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 36] = [
+pub(crate) const STRUCT_TABLES: [&str; 37] = [
     "keyboard",
     "colors",
     "sync",

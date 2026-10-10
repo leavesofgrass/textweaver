@@ -1892,7 +1892,6 @@ impl App {
             Some(ListKind::Cards(ids)) => self.choose_card_row(&ids, n),
             Some(ListKind::Changes(rows)) => self.choose_change_row(&rows, n),
             Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
-            Some(ListKind::Reveal(l)) => return self.choose_reveal(l, n),
             Some(ListKind::GraphFormats) => return self.choose_graph_format(n),
             Some(ListKind::Info) | None => {}
         }

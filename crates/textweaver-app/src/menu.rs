@@ -174,7 +174,7 @@ impl MenuId {
     ];
 
     /// Every menu and submenu.
-    pub const ALL: [MenuId; 29] = [
+    pub const ALL: [MenuId; 30] = [
         MenuId::File,
         MenuId::Edit,
         MenuId::View,
