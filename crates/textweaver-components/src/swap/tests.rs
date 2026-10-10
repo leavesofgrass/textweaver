@@ -203,3 +203,42 @@ fn the_finisher_is_told_where_and_what() {
     assert!(can_write(tmp.path()));
     assert!(start_finisher(tmp.path(), tmp.path(), tmp.path(), None).is_err());
 }
+
+#[test]
+fn windows_waits_for_the_close_and_linux_installs_now() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("textweaver");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("NOTICE"), b"old").unwrap();
+    std::fs::write(dir.join("tw"), b"old tw").unwrap();
+    let place = Place::Folder(dir.clone());
+
+    let zip = tmp.path().join("p.zip");
+    std::fs::write(&zip, zip_of(&[("p/tw", b"new tw"), ("p/NOTICE", b"new")])).unwrap();
+    let windows = Target {
+        os: "windows",
+        arch: "x86_64",
+        kind: PackageKind::WindowsZip,
+    };
+    let work = tmp.path().join("work");
+    let got = install(&zip, &windows, &place, &work).unwrap();
+    assert_eq!(
+        got,
+        Installed::OnClose {
+            new_root: work.join("new"),
+            install: dir.clone()
+        }
+    );
+    // Nothing replaced yet: that happens after textweaver closes.
+    assert_eq!(std::fs::read(dir.join("tw")).unwrap(), b"old tw");
+
+    let linux = Target {
+        os: "linux",
+        arch: "x86_64",
+        kind: PackageKind::Tarball,
+    };
+    // The same unpacked files, put in place at once.
+    let got = install(&zip, &linux, &place, &work).unwrap();
+    assert_eq!(got, Installed::Done);
+    assert_eq!(std::fs::read(dir.join("tw")).unwrap(), b"new tw");
+}

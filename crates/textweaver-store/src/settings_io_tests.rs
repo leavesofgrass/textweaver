@@ -238,6 +238,10 @@ fn everything_changed() -> Settings {
     s.components.source = "D:/my-components".into();
     s.components.mirror = "D:/mirror".into();
     s.components.chooser_shown = true;
+    s.updates.check = true;
+    s.updates.asked = true;
+    s.updates.last_check = 1_791_000_000;
+    s.updates.declined = "0.2.0".into();
     s.interface.language = "en-XA".into();
     s.interface.rtl = crate::RtlDisplay::Off;
     s.interface.recent_settings = vec!["speech.rate".into()];

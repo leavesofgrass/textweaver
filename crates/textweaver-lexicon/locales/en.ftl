@@ -4510,6 +4510,39 @@ setting-components-source-help = Your own components, used first. A GitHub repos
 setting-components-mirror = Components mirror
 setting-components-mirror-help = Where optional components come from first: an https address or a folder on this computer. Empty uses their public sources. Never put a password here.
 
+## Updates (B1-u1): the check, the question before downloading, and each
+## step said in words. Status messages fit 40 Braille cells, meaning first.
+## $version is a release ("0.2.0-beta.1"), $size a size ("92.1 MB"),
+## $percent a whole number, $reason why something failed.
+name-check-for-updates = Check for updates
+action-check-for-updates = Check for updates: look for a newer textweaver on GitHub, and ask before downloading it
+components-chooser-updates = { $mark }: Check for updates automatically, once a day, from GitHub
+update-checking = Checking for updates.
+update-none = No update: { $version } is the newest.
+update-found = Update available: textweaver { $version }, { $size }. Download it? y or n
+update-available-elsewhere = Update available: textweaver { $version }. Update this copy the way it was installed.
+update-declined = Not downloaded. A newer release will be offered.
+update-downloading = Downloading the update, { $size }.
+update-progress = Update { $percent } percent downloaded.
+update-installed = Update verified and installed. Restart textweaver to use it.
+update-on-close = Update verified. It installs when textweaver closes.
+update-busy = Already checking for updates.
+update-not-in-build = Updates are not in this version.
+update-automatic-question = Check for updates automatically, once a day? y or n
+update-automatic-on = Updates: checked once a day.
+update-automatic-off = Updates: not checked. Help, Check for updates checks any time.
+update-error-check = Update check failed: { $reason }
+update-error-no-package = No update package for this computer in { $version }.
+update-error-no-checksum = Update refused: no checksum for it. Nothing changed.
+update-error-mismatch = Update refused: checksum does not match. Nothing changed.
+update-error-cancelled = Update download stopped; it resumes next time.
+update-error-download = Update not downloaded: { $reason }
+update-error-install = Update not installed: { $reason }. Nothing changed.
+update-error-not-package = Not updated: this copy is not from a release package.
+section-updates = Updates
+setting-updates-check = Check for updates
+setting-updates-check-help = Once a day at start, read the public list of textweaver releases on GitHub and offer a newer one, asking before downloading it. Nothing about you is sent. Help, Check for updates checks any time.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.

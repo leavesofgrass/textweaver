@@ -544,6 +544,9 @@ pub struct App {
     /// Optional components: the registry, questions, and downloads
     /// (crate::components).
     pub(crate) components: crate::components::ComponentsState,
+    /// Updates: the check, the question, and the download
+    /// (crate::updates, B1-u1).
+    pub(crate) updates: crate::updates::UpdatesState,
     /// Relations between notes: the filter and the library's notes
     /// (crate::relations, B1-g1).
     pub(crate) relations: crate::relations::RelationsState,
@@ -675,6 +678,7 @@ impl App {
             sync: crate::sync::SyncState::default(),
             fonts: crate::font_download::FontDownloads::default(),
             components: crate::components::ComponentsState::default(),
+            updates: crate::updates::UpdatesState::default(),
             relations: crate::relations::RelationsState::default(),
         };
         if app.paths.is_some() {
@@ -688,6 +692,7 @@ impl App {
         crate::batch::register(&mut app);
         crate::audio_export::register(&mut app);
         crate::components::register(&mut app);
+        crate::updates::register(&mut app);
         app
     }
 
@@ -728,6 +733,7 @@ impl App {
             || self.sync.question.is_some()
             || self.fonts.question.is_some()
             || self.components.question.is_some()
+            || self.updates.question.is_some()
     }
 
     /// What a yes to the open question destroys, if anything: the window
@@ -766,6 +772,7 @@ impl App {
             || self.audio_question()
             || self.sync.question.is_some()
             || self.fonts.question.is_some()
+            || self.updates.question.is_some()
         {
             return None;
         }
@@ -831,6 +838,9 @@ impl App {
         }
         if self.components.question.is_some() {
             return self.confirm_component(answer);
+        }
+        if self.updates.question.is_some() {
+            return self.confirm_update(answer);
         }
         if self.pending_colors_reset {
             return self.confirm_colors_reset(answer);
@@ -1444,6 +1454,7 @@ impl App {
         self.stop_speech();
         self.close_preview();
         self.finish_writes();
+        self.finish_update_on_close();
     }
 
     /// Handles one command. Settings changed by it are saved (on the writer
@@ -1682,6 +1693,7 @@ impl App {
         effects.extend(self.sync_tick(now));
         effects.extend(self.font_download_tick());
         effects.extend(self.components_tick());
+        effects.extend(self.updates_tick());
         self.reading_timer_tick(now);
         let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
         effects.extend(self.authoring_tick(now));
@@ -2312,6 +2324,7 @@ impl App {
             | A::Dictate
             | A::DownloadDictationModel
             | A::ManageComponents
+            | A::CheckForUpdates
             | A::ForgetGitHubToken => {
                 return self.run_registered(a);
             }

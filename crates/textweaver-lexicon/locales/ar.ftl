@@ -4798,6 +4798,36 @@ setting-components-source-help = مكوناتك الخاصة، تُستخدم أ
 setting-components-mirror = مرآة المكونات
 setting-components-mirror-help = من أين تأتي المكونات الاختيارية أولًا: عنوان https أو مجلد على هذا الحاسوب. الفارغ يستخدم مصادرها العامة. لا تضع كلمة مرور هنا أبدًا.
 
+## التحديثات (B1-u1).
+name-check-for-updates = البحث عن تحديثات
+action-check-for-updates = البحث عن تحديثات: البحث في GitHub عن إصدار أحدث من textweaver، والسؤال قبل تنزيله
+components-chooser-updates = { $mark }: البحث عن تحديثات تلقائيًا، مرة يوميًا، من GitHub
+update-checking = جارٍ البحث عن تحديثات.
+update-none = لا تحديث: { $version } هو الأحدث.
+update-found = تحديث متاح: textweaver { $version }، { $size }. تنزيله؟ y أو n
+update-available-elsewhere = تحديث متاح: textweaver { $version }. حدّث هذه النسخة بالطريقة التي ثُبّتت بها.
+update-declined = لم يُنزَّل. سيُعرض إصدار أحدث.
+update-downloading = جارٍ تنزيل التحديث، { $size }.
+update-progress = التحديث: تم تنزيل { $percent } بالمئة.
+update-installed = تم التحقق من التحديث وتثبيته. أعد تشغيل textweaver لاستخدامه.
+update-on-close = تم التحقق من التحديث. يُثبَّت عند إغلاق textweaver.
+update-busy = البحث عن تحديثات جارٍ بالفعل.
+update-not-in-build = لا تحديثات في هذا الإصدار.
+update-automatic-question = البحث عن تحديثات تلقائيًا، مرة يوميًا؟ y أو n
+update-automatic-on = التحديثات: يُبحث عنها مرة يوميًا.
+update-automatic-off = التحديثات: لا يُبحث عنها. المساعدة، البحث عن تحديثات يبحث في أي وقت.
+update-error-check = فشل البحث عن تحديثات: { $reason }
+update-error-no-package = لا حزمة تحديث لهذا الحاسوب في { $version }.
+update-error-no-checksum = رُفض التحديث: لا مجموع تحقق له. لم يتغير شيء.
+update-error-mismatch = رُفض التحديث: مجموع التحقق لا يطابق. لم يتغير شيء.
+update-error-cancelled = توقف تنزيل التحديث؛ يُستأنف في المرة القادمة.
+update-error-download = لم يُنزَّل التحديث: { $reason }
+update-error-install = لم يُثبَّت التحديث: { $reason }. لم يتغير شيء.
+update-error-not-package = لم يُحدَّث: هذه النسخة ليست من حزمة إصدار.
+section-updates = التحديثات
+setting-updates-check = البحث عن تحديثات
+setting-updates-check-help = مرة يوميًا عند البدء، قراءة القائمة العامة لإصدارات textweaver على GitHub وعرض إصدار أحدث، مع السؤال قبل تنزيله. لا يُرسل شيء عنك. المساعدة، البحث عن تحديثات يبحث في أي وقت.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.

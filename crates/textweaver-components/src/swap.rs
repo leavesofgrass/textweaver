@@ -23,7 +23,7 @@ use std::path::{Component as PathPart, Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::pin::is_plain_name;
-use crate::update::UpdateError;
+use crate::update::{PackageKind, Target, UpdateError};
 
 /// The suffix of a new entry copied beside the old one.
 const NEW: &str = "update-new";
@@ -300,6 +300,77 @@ pub fn replace_file(new: &Path, file: &Path) -> Result<(), UpdateError> {
         let _ = std::fs::remove_file(&tmp);
         UpdateError::install(file, e)
     })
+}
+
+/// Where an update goes on this computer.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Place {
+    /// A package's folder ([`install_dir`]).
+    Folder(PathBuf),
+    /// One AppImage file, replaced whole.
+    Image(PathBuf),
+}
+
+impl Place {
+    /// Where the running textweaver came from: the AppImage file the
+    /// runtime names in `APPIMAGE`, or the package folder of this program.
+    /// A build from source or a system package is refused, so nothing is
+    /// downloaded that cannot be installed.
+    pub fn find(target: &Target) -> Result<Place, UpdateError> {
+        if target.kind == PackageKind::AppImage {
+            let image = std::env::var_os("APPIMAGE").map(PathBuf::from);
+            return match image {
+                Some(p) if p.is_file() => Ok(Place::Image(p)),
+                other => Err(UpdateError::NotPackage(other.unwrap_or_default())),
+            };
+        }
+        let exe = std::env::current_exe().map_err(|e| UpdateError::install(Path::new("."), e))?;
+        install_dir(&exe).map(Place::Folder)
+    }
+}
+
+/// What installing did.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Installed {
+    /// The new files are in place; the next start uses them.
+    Done,
+    /// Windows: unpacked into `new_root`, to be swapped into `install` by
+    /// [`start_finisher`] once textweaver closes.
+    OnClose {
+        /// The unpacked package.
+        new_root: PathBuf,
+        /// The install folder.
+        install: PathBuf,
+    },
+}
+
+/// Installs the checked `package` at `place`, unpacking into `work` (a
+/// folder of its own, cleared first). Linux and macOS replace the files
+/// now (a running program there keeps its old copy until it closes);
+/// Windows unpacks and waits for textweaver to close ([`Installed::OnClose`]).
+pub fn install(
+    package: &Path,
+    target: &Target,
+    place: &Place,
+    work: &Path,
+) -> Result<Installed, UpdateError> {
+    let dir = match place {
+        Place::Image(file) => return replace_file(package, file).map(|()| Installed::Done),
+        Place::Folder(dir) => dir,
+    };
+    let new_root = work.join("new");
+    remove_any(&new_root).map_err(|e| UpdateError::install(&new_root, e))?;
+    unpack(package, &new_root)?;
+    match target.kind {
+        PackageKind::WindowsZip => Ok(Installed::OnClose {
+            new_root,
+            install: dir.clone(),
+        }),
+        kind => {
+            swap_in(&new_root, dir, kind == PackageKind::MacZip)?;
+            Ok(Installed::Done)
+        }
+    }
 }
 
 /// Waits until the program at `exe` has closed, at most `limit`: on

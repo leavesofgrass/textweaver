@@ -94,7 +94,7 @@ pub use settings::{
     PositionPolicy, PreviewSettings, QuietScreen, REMOVED_SETTINGS, RESERVED_SETTINGS,
     ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings, SayAll, Settings,
     SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, StopAt, SubtitleFormat,
-    SubtitleKaraoke, SummarySettings, SyncSettings, TableMode, default_palette,
+    SubtitleKaraoke, SummarySettings, SyncSettings, TableMode, UpdatesSettings, default_palette,
     drop_removed_settings,
 };
 pub use settings_io::{

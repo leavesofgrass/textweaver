@@ -4474,6 +4474,36 @@ setting-components-source-help = Eigene Komponenten, zuerst genutzt. Ein GitHub-
 setting-components-mirror = Spiegel für Komponenten
 setting-components-mirror-help = Woher optionale Komponenten zuerst kommen: eine https-Adresse oder ein Ordner auf diesem Computer. Leer nutzt die öffentlichen Quellen. Nie ein Passwort eintragen.
 
+## Updates (B1-u1).
+name-check-for-updates = Nach Updates suchen
+action-check-for-updates = Nach Updates suchen: auf GitHub nach einer neueren textweaver-Version sehen und vor dem Herunterladen fragen
+components-chooser-updates = { $mark }: Automatisch nach Updates suchen, einmal täglich, auf GitHub
+update-checking = Suche nach Updates.
+update-none = Kein Update: { $version } ist die neueste.
+update-found = Update verfügbar: textweaver { $version }, { $size }. Herunterladen? y oder n
+update-available-elsewhere = Update verfügbar: textweaver { $version }. Diese Kopie so aktualisieren, wie sie installiert wurde.
+update-declined = Nicht geladen. Eine neuere Version wird angeboten.
+update-downloading = Update wird geladen, { $size }.
+update-progress = Update zu { $percent } Prozent geladen.
+update-installed = Update geprüft und installiert. textweaver neu starten, um es zu nutzen.
+update-on-close = Update geprüft. Es wird beim Schließen von textweaver installiert.
+update-busy = Suche nach Updates läuft schon.
+update-not-in-build = Updates fehlen in diesem Build.
+update-automatic-question = Automatisch nach Updates suchen, einmal täglich? y oder n
+update-automatic-on = Updates: einmal täglich gesucht.
+update-automatic-off = Updates: nicht gesucht. Hilfe, Nach Updates suchen sucht jederzeit.
+update-error-check = Update-Suche fehlgeschlagen: { $reason }
+update-error-no-package = Kein Updatepaket für diesen Computer in { $version }.
+update-error-no-checksum = Update abgelehnt: keine Prüfsumme dafür. Nichts geändert.
+update-error-mismatch = Update abgelehnt: Prüfsumme passt nicht. Nichts geändert.
+update-error-cancelled = Update-Download gestoppt; er geht beim nächsten Mal weiter.
+update-error-download = Update nicht geladen: { $reason }
+update-error-install = Update nicht installiert: { $reason }. Nichts geändert.
+update-error-not-package = Nicht aktualisiert: diese Kopie stammt nicht aus einem Release-Paket.
+section-updates = Updates
+setting-updates-check = Nach Updates suchen
+setting-updates-check-help = Einmal täglich beim Start die öffentliche Liste der textweaver-Versionen auf GitHub lesen und eine neuere anbieten, mit einer Frage vor dem Herunterladen. Nichts über Sie wird gesendet. Hilfe, Nach Updates suchen sucht jederzeit.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.

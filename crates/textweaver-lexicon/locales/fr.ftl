@@ -4478,6 +4478,36 @@ setting-components-source-help = Vos propres composants, utilisés en premier. U
 setting-components-mirror = Miroir des composants
 setting-components-mirror-help = D'où viennent d'abord les composants facultatifs : une adresse https ou un dossier sur cet ordinateur. Vide utilise leurs sources publiques. N'y mettez jamais de mot de passe.
 
+## Mises à jour (B1-u1).
+name-check-for-updates = Rechercher les mises à jour
+action-check-for-updates = Rechercher les mises à jour : voir sur GitHub s'il existe un textweaver plus récent, et demander avant de le télécharger
+components-chooser-updates = { $mark } : Rechercher les mises à jour automatiquement, une fois par jour, sur GitHub
+update-checking = Recherche des mises à jour.
+update-none = Pas de mise à jour : { $version } est la plus récente.
+update-found = Mise à jour disponible : textweaver { $version }, { $size }. La télécharger ? y ou n
+update-available-elsewhere = Mise à jour disponible : textweaver { $version }. Mettez cette copie à jour comme elle a été installée.
+update-declined = Non téléchargée. Une version plus récente sera proposée.
+update-downloading = Téléchargement de la mise à jour, { $size }.
+update-progress = Mise à jour : { $percent } pour cent téléchargés.
+update-installed = Mise à jour vérifiée et installée. Redémarrez textweaver pour l'utiliser.
+update-on-close = Mise à jour vérifiée. Elle s'installe à la fermeture de textweaver.
+update-busy = Recherche des mises à jour déjà en cours.
+update-not-in-build = Pas de mise à jour dans cette version.
+update-automatic-question = Rechercher les mises à jour automatiquement, une fois par jour ? y ou n
+update-automatic-on = Mises à jour : recherchées une fois par jour.
+update-automatic-off = Mises à jour : non recherchées. Aide, Rechercher les mises à jour le fait à tout moment.
+update-error-check = Recherche de mise à jour échouée : { $reason }
+update-error-no-package = Pas de paquet de mise à jour pour cet ordinateur dans { $version }.
+update-error-no-checksum = Mise à jour refusée : aucune somme de contrôle. Rien n'a changé.
+update-error-mismatch = Mise à jour refusée : somme de contrôle différente. Rien n'a changé.
+update-error-cancelled = Téléchargement arrêté ; il reprendra la prochaine fois.
+update-error-download = Mise à jour non téléchargée : { $reason }
+update-error-install = Mise à jour non installée : { $reason }. Rien n'a changé.
+update-error-not-package = Non mis à jour : cette copie ne vient pas d'un paquet publié.
+section-updates = Mises à jour
+setting-updates-check = Rechercher les mises à jour
+setting-updates-check-help = Une fois par jour au démarrage, lire la liste publique des versions de textweaver sur GitHub et proposer une version plus récente, en demandant avant de la télécharger. Rien sur vous n'est envoyé. Aide, Rechercher les mises à jour le fait à tout moment.
+
 ## Help's ways to the docs, About's facts, and first-run choices asked
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.
