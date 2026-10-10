@@ -91,7 +91,7 @@ Every guide was read again for beta 1, one by one, against the code and the chan
 - The context menu, the preview pane, Browser preview follows: gui.md, editing.md, settings.md. Pass, after fix.
 - Customizable buttons, offline help, Search help, the menu bar hidden by default on Windows: gui.md, reading.md. Pass.
 - The developer profile and `[export] audio_format`, code blocks read by default, Export asks where to save: settings.md, speech.md, audio-export.md. Pass, after fix.
-- Version wording (beta), the app named "the app", Windows ARM64 not planned, Anki and the reading queue in beta 2: every guide, known-limits.md, roadmap.md, whats-new.md. Pass, after fix.
+- Version wording (beta), the app named "the app", Windows ARM64 not planned, Anki and the reading queue in beta 3: every guide, known-limits.md, roadmap.md, whats-new.md. Pass, after fix.
 
 ## Still open
 

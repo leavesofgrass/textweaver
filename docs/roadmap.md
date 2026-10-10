@@ -32,12 +32,14 @@ Beta 1 follows the last alpha with the features below. Each is described in its 
 - **Updates and packages.** One download per system holding the app and `tw`; an update check that asks first, `tw update`, and Help, Check for updates ([Updates](updates.md), [Installing textweaver](install.md)).
 - **Components.** ffmpeg, liblouis, and Pandoc fetched for you; a components folder searched first for helper programs, your own components source (including a private GitHub repository), and an unpack action for archives ([Optional components](components.md)).
 
-## Moved to beta 2
+## Moved to beta 3
 
-These were planned for beta 1 and are now in beta 2:
+These were planned for earlier betas and are now in beta 3:
 
 - Anki import and export.
 - The reading queue.
+- The app's shortcut name.
+- The full rewrite of the guides. Beta 1 and beta 2 correct wording and keep every guide current; beta 3 rewrites them for a university-level reader throughout.
 
 ## Being built next
 

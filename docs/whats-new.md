@@ -20,7 +20,7 @@ In short: one download per system, study tools, richer marks and review, more fo
 - eSpeak NG runs in its own helper program on Windows. Speech never stays silent while any engine can work.
 - The app has buttons you can customize, the guides stored inside it, and one search over commands, keys, settings, and guides. Its menu bar is hidden by default on Windows (Alt or F10 shows it). Export asks where to save.
 - Code blocks are read by default, and there is a developer profile example.
-- Known limits: the app draws every highlight name the same way, and on macOS and Linux it pastes plain text. Anki import and export and the reading queue come in beta 2. A native Windows ARM64 package is not planned. See [Known limits](known-limits.md).
+- Known limits: the app draws every highlight name the same way, and on macOS and Linux it pastes plain text. Anki import and export and the reading queue come in beta 3. A native Windows ARM64 package is not planned. See [Known limits](known-limits.md).
 
 ## 0.1.0-alpha.9
 
