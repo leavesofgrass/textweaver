@@ -1,6 +1,6 @@
 # Reading and moving around
 
-This guide covers the terminal reader, `textweaver`: opening a document, reading it aloud, and moving through it by sentence, paragraph, heading, and more. It is for anyone who reads with textweaver, with or without a screen reader.
+This guide covers the terminal reader, started with `tw` (or its second name, `textweaver`): opening a document, reading it aloud, and moving through it by sentence, paragraph, heading, and more. It is for anyone who reads with textweaver, with or without a screen reader.
 
 Keys are the terminal defaults. Where the graphical version uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key in both frontends. Many keys are single keys, such as `h` for the next heading. Those are called browse keys. They work while you read, not while you edit or type in a prompt.
 
@@ -11,7 +11,7 @@ The browse keys follow the quick navigation keys of NVDA's and JAWS's browse mod
 ### From the command line
 
 ```bash
-textweaver essay.md
+tw essay.md
 ```
 
 `tw open` does the same thing, with the same options:
@@ -20,7 +20,7 @@ textweaver essay.md
 tw open essay.md
 ```
 
-`tw open` refuses a file that does not exist ("no such file"). Plain `textweaver` with no file starts with no document open. It says: "No document is open. Press Ctrl+O to open one, Ctrl+N for a new one, or F1 for help." Keys named in messages are written this way on the status line; textweaver's own voice says them by name, such as "Control O" and "Alt period", so they are heard whatever the punctuation level.
+`tw open` refuses a file that does not exist ("no such file"). Plain `tw` with no file starts with no document open. It says: "No document is open. Press Ctrl+O to open one, Ctrl+N for a new one, or F1 for help." Keys named in messages are written this way on the status line; textweaver's own voice says them by name, such as "Control O" and "Alt period", so they are heard whatever the punctuation level.
 
 ### From inside the reader: Ctrl+O
 
@@ -95,7 +95,7 @@ The [converting guide](converting.md#formats-textweaver-reads) says what is read
 
 Org mode (`.org`), reStructuredText (`.rst`, `.rest`), and MediaWiki (`.wiki`, `.mediawiki`) files open directly, read by carta, a converter built into textweaver; see [Org, reStructuredText, and wiki markup](converting.md#org-restructuredtext-and-wiki-markup). The lean reader, built without its default features, reads them as plain text.
 
-The reader does not use Pandoc. To read a Textile, DocBook, or other such file, convert it to Markdown first, then open the Markdown. `tw convert` uses Pandoc for these formats, so Pandoc must be installed:
+The reader does not use Pandoc. To read a Textile, DocBook, or other such file, convert it to Markdown first, then open the Markdown. `tw convert` uses Pandoc for these formats, so Pandoc must be installed; textweaver offers to fetch it for you, and asks first ([Optional components](components.md)):
 
 ```bash
 tw convert essay.textile --to md
@@ -118,7 +118,7 @@ The layout rules are heuristics, so poetry, tables and forms may come out with l
 
 **Show original Braille** (in the View menu and the command palette) lists the lines of the braille page the cursor is on, exactly as the file has them, in Unicode braille. A Braille display shows them as the original cells, which is useful for checking a transcription, a mathematical expression, or a layout the print reading lost. Escape returns to the book.
 
-**Without liblouis**, the file opens as braille: the same headings, paragraphs and pages, but each cell shown as a Unicode braille pattern, which a Braille display renders as dots. textweaver says so when the file opens, and how to fix it: install liblouis (from [liblouis.io](https://liblouis.io/) on Windows, or your distribution's `liblouis` package, which provides `lou_translate`, on Linux and macOS), then open the file again.
+**Without liblouis**, the file opens as braille: the same headings, paragraphs and pages, but each cell shown as a Unicode braille pattern, which a Braille display renders as dots. textweaver says so when the file opens, and how to fix it. On Windows it offers to fetch liblouis for you (it asks first; see [Optional components](components.md)). On Linux and macOS, install your distribution's `liblouis` package, which provides `lou_translate`. Then open the file again.
 
 Only braille files that are distributed in the clear are read. Protected talking books, such as the audio books of NLS BARD, are not opened: textweaver does not touch any library's protection or terms.
 
@@ -795,13 +795,13 @@ Press **Ctrl+Q**. textweaver asks "Quit textweaver? y or n". (In the classic pre
 
 If you are editing and have unsaved changes, textweaver asks whether to save them first. See [Writing and editing](editing.md).
 
-## The textweaver command line
+## The reader's command line
 
 ```bash
-textweaver --help
+tw --help
 ```
 
-`textweaver` takes one optional argument, the document to open, and these options. `tw open` takes the same options, but needs the document.
+`tw` takes one optional argument, the document to open, and these options. (`textweaver` is a second name for `tw`.) `tw open` takes the same options, but needs the document. With a command word instead of a document, `tw` runs that command without the reader; see [The command line](command-line.md).
 
 - `--no-speech`: do not speak at all, in screen-reader mode. There is no self-voicing and no reading aloud. Use it when your screen reader should do all the talking; it reads the status line and follows the cursor. See [Using textweaver with a screen reader](screen-readers.md).
 - `--mode MODE`: the accessibility mode for this run, not saved: `self-voicing`, `hybrid` (textweaver reads documents aloud and your screen reader speaks messages and typing), or `screen-reader` (textweaver is silent). **Alt+Shift+A** changes the mode and saves it. See [Using textweaver with a screen reader](screen-readers.md#three-modes).
