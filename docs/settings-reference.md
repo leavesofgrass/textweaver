@@ -265,6 +265,10 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `components.source`: default empty (`""`). Components source. Your own components, used first. A GitHub repository as owner/name, or a folder on this computer. Empty uses none. Never put a password here. A private repository signs in with the GitHub CLI, or asks once for a token kept in the system credential store. Text. Stays on this computer.
 - `components.mirror`: default empty (`""`). Components mirror. Where optional components come from first: an https address or a folder on this computer. Empty uses their public sources. Never put a password here. Text. Stays on this computer.
 
+## Updates: the `[updates]` section
+
+- `updates.check`: default off (`false`). Check for updates. Once a day at start, read the public list of textweaver releases on GitHub and offer a newer one, asking before downloading it. Nothing about you is sent. Help, Check for updates checks any time. On or off: `true` or `false`. Stays on this computer.
+
 ## Kept by textweaver
 
 textweaver writes these itself, such as a question already asked. They are in the file, but not on the settings screen.
@@ -274,6 +278,9 @@ textweaver writes these itself, such as a question already asked. They are in th
 - `interface.recent_settings`: default an empty list. Recently changed settings. The settings changed last on the settings screen, listed at its top. Text; empty means not set. Stays on this computer.
 - `gui.window`: default not set. Window place and size. Where the window was and how large, kept on this computer and never synced. Text; empty means not set. Stays on this computer.
 - `components.chooser_shown`: default off (`false`). Components list shown. The first-run list of optional components was shown. On or off: `true` or `false`. Stays on this computer.
+- `updates.asked`: default off (`false`). Updates question asked. The first-run question about updates was asked. On or off: `true` or `false`. Stays on this computer.
+- `updates.last_check`: default 0. Last update check. When the last automatic check for updates ran, in seconds since 1970. Text; empty means not set. Stays on this computer.
+- `updates.declined`: default empty (`""`). Declined update. The release you said no to; only a newer one is offered. Text; empty means not set. Stays on this computer.
 
 ## See also
 

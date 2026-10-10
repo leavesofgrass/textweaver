@@ -71,6 +71,7 @@ nav = [
       { "Converting documents" = "converting.md" },
       { "The library" = "library.md" },
       { "Optional components" = "components.md" },
+      { "Updates" = "updates.md" },
       { "Syncing between computers" = "sync.md" },
       { "The Obsidian vault" = "vault.md" },
       { "Settings" = "settings.md" },

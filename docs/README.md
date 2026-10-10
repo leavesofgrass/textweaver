@@ -61,6 +61,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more; exporting and previewing from inside the reader.
 - [The library](library.md): library folders, recent files, sync between computers, and importing from star.
 - [Optional components](components.md): the models, fonts, and voices textweaver downloads only when you agree; Manage optional components, the first-run list, `tw components`, installing from a file, and a mirror.
+- [Updates](updates.md): the daily check and Help, Check for updates; the question before downloading; how a download is checked and installed; and `tw update`.
 - [Syncing between computers](sync.md): notes, highlights, bookmarks, places, statistics, and settings through a folder you choose; what never syncs, setting it up, what you hear, and privacy.
 - [The Obsidian vault](vault.md): exporting notes and highlights to a vault, and importing them back.
 - [Settings](settings.md): where settings live, every setting, and export, import, and reset.
