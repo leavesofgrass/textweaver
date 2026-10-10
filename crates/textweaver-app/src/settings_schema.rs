@@ -2127,7 +2127,16 @@ impl Setting {
             (SettingKind::Table, Value::Object(m)) => {
                 c.fmt("settings-entries", &args!["n" => m.len()])
             }
+            // An array of tables (the highlight palette) is counted too,
+            // never shown as raw data.
+            (SettingKind::Table, Value::Array(items)) => {
+                c.fmt("settings-entries", &args!["n" => items.len()])
+            }
             (_, Value::String(s)) if s.is_empty() => c.tr("settings-empty"),
+            // A SAPI voice id is a registry path: show only its name.
+            (_, Value::String(s)) if self.path == "speech.voice" && s.contains('\\') => {
+                s.rsplit('\\').next().unwrap_or(s).to_owned()
+            }
             (_, v) => plain(v),
         }
     }
@@ -3231,5 +3240,18 @@ mod tests {
         let de = Catalog::builtin("de").unwrap();
         assert_eq!(lead.describe_in(&de, &serde_json::json!(1)), "1 Wort");
         assert_eq!(lead.describe_in(&de, &serde_json::json!(2)), "2 Wörter");
+        // The palette is counted, never shown as raw data; a SAPI voice
+        // shows its name, not its registry path.
+        let palette = schema.get("highlight.palette").unwrap();
+        assert_eq!(
+            palette.describe(&serde_json::json!([{"name": "important"}, {"name": "define"}])),
+            "2 entries"
+        );
+        let voice = schema.get("speech.voice").unwrap();
+        let sapi = r"x64:HKEY_LOCAL_MACHINE\SOFTWARE\Tokens\OpenEVV-AdultMale1";
+        assert_eq!(
+            voice.describe(&serde_json::json!(sapi)),
+            "OpenEVV-AdultMale1"
+        );
     }
 }
