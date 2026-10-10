@@ -107,7 +107,8 @@ pub fn from_unicode(s: &str) -> String {
 }
 
 /// A print typeform braille shows with its own indicators (UEB Rules,
-/// section 9).
+/// section 9): the three of print, and the five transcriber-defined
+/// typeforms (9.2.1), which BRF gives the reader's highlight palette.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Typeform {
     /// Italic: indicators with the prefix dots 4-6 (`.`).
@@ -116,10 +117,39 @@ pub enum Typeform {
     Bold,
     /// Underline: indicators with the prefix dots 4-5-6 (`_`).
     Underline,
+    /// The first transcriber-defined typeform: prefix dots 4, 3-4-5-6
+    /// (`` `# ``).
+    Transcriber1,
+    /// The second: prefix dots 4-5, 3-4-5-6 (`^#`).
+    Transcriber2,
+    /// The third: prefix dots 4-5-6, 3-4-5-6 (`_#`).
+    Transcriber3,
+    /// The fourth: prefix dots 5, 3-4-5-6 (`"#`).
+    Transcriber4,
+    /// The fifth: prefix dots 4-6, 3-4-5-6 (`.#`).
+    Transcriber5,
 }
 
 impl Typeform {
-    const ALL: [Typeform; 3] = [Typeform::Italic, Typeform::Bold, Typeform::Underline];
+    const ALL: [Typeform; 8] = [
+        Typeform::Italic,
+        Typeform::Bold,
+        Typeform::Underline,
+        Typeform::Transcriber1,
+        Typeform::Transcriber2,
+        Typeform::Transcriber3,
+        Typeform::Transcriber4,
+        Typeform::Transcriber5,
+    ];
+
+    /// The transcriber-defined typeforms, first to fifth.
+    pub const TRANSCRIBER: [Typeform; 5] = [
+        Typeform::Transcriber1,
+        Typeform::Transcriber2,
+        Typeform::Transcriber3,
+        Typeform::Transcriber4,
+        Typeform::Transcriber5,
+    ];
 
     /// The mark that opens this typeform in text given to [`translate`]
     /// (a private-use character).
@@ -128,6 +158,11 @@ impl Typeform {
             Typeform::Italic => '\u{E020}',
             Typeform::Bold => '\u{E022}',
             Typeform::Underline => '\u{E024}',
+            Typeform::Transcriber1 => '\u{E026}',
+            Typeform::Transcriber2 => '\u{E028}',
+            Typeform::Transcriber3 => '\u{E02A}',
+            Typeform::Transcriber4 => '\u{E02C}',
+            Typeform::Transcriber5 => '\u{E02E}',
         }
     }
 
@@ -137,6 +172,11 @@ impl Typeform {
             Typeform::Italic => '\u{E021}',
             Typeform::Bold => '\u{E023}',
             Typeform::Underline => '\u{E025}',
+            Typeform::Transcriber1 => '\u{E027}',
+            Typeform::Transcriber2 => '\u{E029}',
+            Typeform::Transcriber3 => '\u{E02B}',
+            Typeform::Transcriber4 => '\u{E02D}',
+            Typeform::Transcriber5 => '\u{E02F}',
         }
     }
 
@@ -158,15 +198,25 @@ impl Typeform {
             Typeform::Italic => 0,
             Typeform::Bold => 1,
             Typeform::Underline => 2,
+            Typeform::Transcriber1 => 3,
+            Typeform::Transcriber2 => 4,
+            Typeform::Transcriber3 => 5,
+            Typeform::Transcriber4 => 6,
+            Typeform::Transcriber5 => 7,
         }
     }
 
-    /// The indicator's first cell (Rule 9.2 to 9.4).
-    fn prefix(self) -> char {
+    /// The indicator's cells before its last one (Rule 9.2 to 9.4).
+    fn prefix(self) -> &'static str {
         match self {
-            Typeform::Italic => '.',
-            Typeform::Bold => '^',
-            Typeform::Underline => '_',
+            Typeform::Italic => ".",
+            Typeform::Bold => "^",
+            Typeform::Underline => "_",
+            Typeform::Transcriber1 => "`#",
+            Typeform::Transcriber2 => "^#",
+            Typeform::Transcriber3 => "_#",
+            Typeform::Transcriber4 => "\"#",
+            Typeform::Transcriber5 => ".#",
         }
     }
 }
@@ -362,7 +412,7 @@ impl Marked {
     fn parse(texts: &[(&str, Join)], group: &[usize]) -> Marked {
         let mut chars: Vec<char> = Vec::new();
         let mut runs: Vec<Run> = Vec::new();
-        let mut open: [Option<(usize, usize)>; 3] = [None; 3];
+        let mut open: [Option<(usize, usize)>; 8] = [None; 8];
         for (k, &index) in group.iter().enumerate() {
             let (text, join) = texts[index];
             if k > 0 {
@@ -453,7 +503,7 @@ struct Plan {
 }
 
 /// The nesting rank of capitals: inside every typeform (Rule 8.6.2).
-const CAPS_RANK: u8 = 3;
+const CAPS_RANK: u8 = 8;
 
 /// A symbols-sequence: a stretch of print between spaces (char indices).
 #[derive(Clone, Copy, Debug)]
