@@ -366,6 +366,19 @@ pub enum DocAction {
         /// Their replacement.
         text: String,
     },
+    /// The context menu: a right-click (`at` the pointer) moved the caret
+    /// there unless it was on the selection. The driver shows the menu
+    /// from the app's model (`App::context_menu`); `at` is in the
+    /// window's logical pixels, rounded.
+    ContextMenu {
+        /// Where the pointer was.
+        at: (i32, i32),
+    },
+    /// The platform's paste key (Ctrl+V, Cmd+V), with the clipboard's
+    /// plain text as the window read it. The driver runs the app's Paste,
+    /// which reads the clipboard's HTML and RTF too and pastes formatted
+    /// text as Markdown (B1-cm).
+    Paste(String),
 }
 
 /// What a caret key moved onto, for textweaver's own voice in the
@@ -506,6 +519,9 @@ pub struct DocumentView {
     visible: Vec<(usize, f64)>,
     follow: bool,
     goal_x: Option<f32>,
+    /// The caret's foot as last painted, in the window's logical pixels:
+    /// where a context menu opened from the keyboard appears.
+    caret_at: Option<Point>,
 
     // Accessibility.
     /// Each paragraph's runs, by visual line, built when first asked for.
@@ -536,6 +552,14 @@ pub struct DocumentView {
     editing_word: String,
     /// The word laid out, in edit mode.
     badge_layout: Option<Layout<BrushIndex>>,
+    /// The preview pane's view ([`crate::preview`]): read-only, it draws
+    /// its word ("Preview") in the corner as edit mode draws "Editing",
+    /// and no "reading from here" mark.
+    preview: bool,
+    /// The preview's block being edited, drawn as the spoken sentence is:
+    /// the sentence band and the line under it (a shape and the theme's
+    /// role, never color alone). Paint only.
+    block: Option<CharRange>,
 }
 
 impl std::fmt::Debug for DocumentView {
@@ -591,6 +615,7 @@ impl DocumentView {
             visible: Vec::new(),
             follow: true,
             goal_x: None,
+            caret_at: None,
             para_runs: Vec::new(),
             para_ids: Vec::new(),
             dirty_paras: Vec::new(),
@@ -605,7 +630,54 @@ impl DocumentView {
             hint_layout: None,
             editing_word: String::new(),
             badge_layout: None,
+            preview: false,
+            block: None,
         }
+    }
+
+    /// The caret's foot as last painted, in the window's logical pixels,
+    /// or `None` before the caret was drawn: where a context menu opened
+    /// from the keyboard appears, as in any Windows program.
+    pub fn caret_point(&self) -> Option<Point> {
+        self.caret_at
+    }
+
+    /// The preview pane's view: read-only, with `word` ("Preview") drawn
+    /// in its corner as edit mode draws "Editing".
+    pub fn with_preview(mut self, word: impl Into<String>) -> Self {
+        self.preview = true;
+        self.editing_word = word.into();
+        self
+    }
+
+    /// The preview's block being edited, drawn as the spoken sentence is
+    /// (its band and the line under it); `None` draws none.
+    pub fn set_block(this: &mut WidgetMut<'_, Self>, block: Option<CharRange>) {
+        if this.widget.block != block {
+            this.widget.block = block;
+            this.ctx.request_render();
+        }
+    }
+
+    /// The preview's block drawn, if any.
+    pub fn block(&self) -> Option<CharRange> {
+        self.block
+    }
+
+    /// True for the preview pane's view.
+    pub fn is_preview(&self) -> bool {
+        self.preview
+    }
+
+    /// The count of full accessibility passes the view watches, for a
+    /// second view in the same window (the preview pane).
+    pub fn full_passes(&self) -> Rc<Cell<u64>> {
+        Rc::clone(&self.full_passes)
+    }
+
+    /// The badge is drawn: edit mode's "Editing", or the preview's word.
+    fn badged(&self) -> bool {
+        self.editing || self.preview
     }
 
     /// What the view draws, and its node describes, when no document is
@@ -651,7 +723,7 @@ impl DocumentView {
 
     /// The edit-mode badge's word, when the view draws it (edit mode).
     pub fn badge_shown(&self) -> Option<&str> {
-        (self.editing && self.badge_layout.is_some()).then_some(self.editing_word.as_str())
+        (self.badged() && self.badge_layout.is_some()).then_some(self.editing_word.as_str())
     }
 
     /// Selects the spoken word while reading, instead of placing a caret on
@@ -2293,6 +2365,27 @@ impl Widget for DocumentView {
         event: &PointerEvent,
     ) {
         match event {
+            PointerEvent::Down(PointerButtonEvent { state, button, .. })
+                if *button == Some(masonry::core::PointerButton::Secondary) =>
+            {
+                // A right-click: the caret goes where it was, unless that
+                // is on the selection, which the menu then acts on.
+                ctx.request_focus();
+                let local = ctx.local_position(state.position);
+                if let Some(pos) = self.hit(ctx, local)
+                    && !self
+                        .selection()
+                        .is_some_and(|r| r.start.0 <= pos.0 && pos.0 <= r.end.0)
+                {
+                    self.move_caret(ctx, pos, false);
+                }
+                if !self.preview {
+                    let p = ctx.to_window(local);
+                    let at = (p.x.round() as i32, p.y.round() as i32);
+                    ctx.submit_action::<DocAction>(DocAction::ContextMenu { at });
+                }
+                ctx.set_handled();
+            }
             PointerEvent::Down(PointerButtonEvent { state, .. }) => {
                 ctx.request_focus();
                 let local = ctx.local_position(state.position);
@@ -2326,13 +2419,21 @@ impl Widget for DocumentView {
         event: &TextEvent,
     ) {
         if self.editing
-            && let TextEvent::Ime(masonry::core::Ime::Commit(text))
-            | TextEvent::ClipboardPaste(text) = event
+            && let TextEvent::Ime(masonry::core::Ime::Commit(text)) = event
         {
-            // An input method's text, or the system clipboard's (the
-            // window reads it for the platform's paste key).
+            // An input method's text.
             let text = text.clone();
             self.type_text(ctx, &text);
+            ctx.set_handled();
+            return;
+        }
+        if let TextEvent::ClipboardPaste(text) = event
+            && !self.preview
+        {
+            // The platform's paste key (the window reads the clipboard's
+            // text for it): the app's Paste, which pastes formatted text
+            // as Markdown, or says that pasting needs edit mode.
+            ctx.submit_action::<DocAction>(DocAction::Paste(text.clone()));
             ctx.set_handled();
             return;
         }
@@ -2465,7 +2566,7 @@ impl Widget for DocumentView {
                 )
             });
         // Edit mode: the word in the corner, at the interface's size.
-        self.badge_layout = (self.editing && !self.editing_word.is_empty()).then(|| {
+        self.badge_layout = (self.badged() && !self.editing_word.is_empty()).then(|| {
             plain_layout(
                 fcx,
                 lcx,
@@ -2535,7 +2636,8 @@ impl Widget for DocumentView {
             None => (self.state.spoken, self.state.sentence),
         };
         let spoken = word.filter(|_| reading);
-        let sentence = sentence.filter(|_| reading);
+        // The preview's block being edited is drawn as the sentence is.
+        let sentence = sentence.filter(|_| reading).or(self.block);
         let selection = self
             .state
             .anchor
@@ -2898,6 +3000,7 @@ impl Widget for DocumentView {
                     bb.y1 - bb.y0
                 };
                 let r = Rect::new(bb.x0, bb.y0, bb.x0 + 2.0, bb.y0 + h) + origin;
+                self.caret_at = Some(ctx.to_window(Point::new(r.x0, r.y1)));
                 if self.focused {
                     painter.fill(r, theme::color(p.caret)).draw();
                 }
@@ -2905,7 +3008,7 @@ impl Widget for DocumentView {
                 // margin on the caret's line, where Play starts, shown with
                 // or without the focus (reading mode only; the caret is the
                 // node's selection, so a screen reader has it already).
-                if !self.editing {
+                if !self.editing && !self.preview {
                     let x1 = self.column_x - 14.0;
                     let s = (h * 0.5).clamp(6.0, 12.0);
                     let cy = r.y0 + h / 2.0;
@@ -2981,7 +3084,7 @@ impl Widget for DocumentView {
         painter.pop_clip();
         // Outside the text's clip, which starts lower once scrolled.
         // Edit mode: the word in a box in the top right corner.
-        if let Some(b) = self.badge_layout.as_ref().filter(|_| self.editing) {
+        if let Some(b) = self.badge_layout.as_ref().filter(|_| self.badged()) {
             let (w, h) = (f64::from(b.width()), f64::from(b.height()));
             let x1 = size.width - clip - 4.0;
             let r = Rect::new(x1 - w - 12.0, clip + 2.0, x1, clip + 2.0 + h + 4.0);

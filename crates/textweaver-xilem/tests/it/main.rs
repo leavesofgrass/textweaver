@@ -12,6 +12,7 @@ mod document_view;
 mod edit_mode;
 mod frame_theme;
 mod highlight_paint;
+mod preview;
 mod settings_dialog;
 mod sidebar;
 mod voice_manager;

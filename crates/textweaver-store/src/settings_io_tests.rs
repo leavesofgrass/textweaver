@@ -228,6 +228,7 @@ fn everything_changed() -> Settings {
         skip_code: false,
     };
     s.preview.follow = crate::PreviewFollow::Typing;
+    s.preview.pane = true;
     s.preview.pane_delay_ms = 500;
     s.lexicon.glossary = Some("glossary.txt".into());
     s.lexicon.data_file = Some("lexicon-en.twlex".into());

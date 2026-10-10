@@ -24,7 +24,8 @@
 //!
 //! Options: `--frames-aids` turns every reading aid on first (bionic
 //! reading, difficult words, syllables, the ruler with its band, text
-//! spacing, and RSVP); `--scale` sets the scale (1 is 100 percent).
+//! spacing, and RSVP); `--frames-preview` reads in edit mode with the
+//! preview pane open; `--scale` sets the scale (1 is 100 percent).
 //!
 //! Not included: rasterizing on the GPU, which depends on the graphics
 //! card, the UI thread's wait for it, and the platform's accessibility
@@ -72,6 +73,8 @@ pub struct FrameOptions {
     pub scale: f64,
     /// Every reading aid on.
     pub aids: bool,
+    /// Read in edit mode with the preview pane open (B1-p1).
+    pub preview: bool,
     /// Theme name (the saved theme otherwise).
     pub theme: Option<String>,
 }
@@ -88,6 +91,7 @@ impl FrameOptions {
             size: (1100, 780),
             scale: 1.0,
             aids: false,
+            preview: false,
             theme: None,
         }
     }
@@ -195,6 +199,11 @@ pub fn measure(opts: &FrameOptions) -> Result<FrameReport, String> {
     let (mut app, _) = setup::build_app(&app_opts, Box::new(LogAnnouncer::default()));
     app.open(&opts.file)
         .map_err(|e| format!("cannot open {}: {e}", opts.file.display()))?;
+    if opts.preview {
+        app.update_settings(|s| s.preview.pane = true)
+            .map_err(|e| format!("cannot turn the preview on: {e}"))?;
+        let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    }
     if opts.aids {
         crate::screenshot::turn_on_aids(&mut app)?;
     }

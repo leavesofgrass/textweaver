@@ -234,6 +234,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("reading_aids.difficult_definitions", Portable),
     // [preview]
     ("preview.follow", Portable),
+    ("preview.pane", Portable),
     ("preview.pane_delay_ms", Portable),
     // [lexicon]: paths. The glossary's entries sync in the glossary group.
     ("lexicon.glossary", Machine),

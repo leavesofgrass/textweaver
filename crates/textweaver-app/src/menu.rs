@@ -380,6 +380,7 @@ impl MenuId {
                 Do(A::ToggleToolbar),
                 Do(A::CyclePreviewFollow),
                 Do(A::CustomizeButtons),
+                Do(A::ShowPreview),
                 Sep,
                 Do(A::NextTheme),
                 Do(A::ColorSettings),
@@ -650,6 +651,7 @@ pub fn bound_setting(a: ActionId) -> Option<&'static str> {
         A::CyclePreviewFollow => "preview.follow",
         A::ToggleHeader => "gui.header",
         A::ToggleToolbar => "gui.toolbar",
+        A::ShowPreview => "preview.pane",
         _ => return None,
     })
 }

@@ -27,7 +27,8 @@ Useful options:
 - `--home FOLDER`: keep settings and reading positions in this folder, as `TEXTWEAVER_HOME` does.
 - `--list-menus`: show the menus as a list inside the window (F10), as on Linux, instead of the system's menu bar.
 - `--graphics API`: draw with one graphics API only: `vulkan`, `dx12` (Windows), `metal` (macOS), or `gl`; `auto`, the default, lets the graphics library use every one it finds. On the development machine `vulkan` used about 26 MB less memory, but this depends on your graphics driver. To keep a choice, put `graphics = "vulkan"` in the `[gui]` section of `settings.toml`.
-- `--log` or `--log-file PATH`: write what the window announces and does, for a bug report. Every 200 frames it also writes a "frame times" line with the median, the 95th percentile, and the worst time to draw a frame, so a change to drawing can be measured in a real window.
+- `--log` or `--log-file PATH`: write what the window announces and does, for a bug report. Every 200 frames it also writes a "frame times" line with the median, the 95th percentile, and the worst time to draw a frame, so a change to drawing can be measured in a real window. While a prompt for a secret is open (the GitHub token for a private components source), the log is paused: it says "log paused: a secret prompt is open", then writes nothing until the prompt closes, so no key you type, no command it makes, and not the answer itself can reach the file.
+- `--version`: the version, then textweaver's copyright line.
 
 `textweaver-gui --help` lists every option.
 
@@ -49,7 +50,7 @@ Every button has a key, shown on screen with its name, for example "Open… (Ctr
 
 In a narrow window the buttons wrap onto more rows rather than leave the window. Below 800 pixels wide (at 100 percent; a 1366 by 768 laptop at 200 percent is 683 wide), the header and the toolbar fold into one flat bar above the document, the buttons hide their keys on screen (your screen reader still says them), and the panel goes above the document below 600 pixels. Header and Toolbar in the View menu hide either bar; their commands keep their keys and menu items, and the settings `gui.header` and `gui.toolbar` remember the choice on this computer.
 
-Tab and Shift+Tab move between the document and the buttons, in the order they are on screen. F6 and Shift+F6 move between the window's regions, as in other Windows programs: the header, the panel (when shown), the document, and the toolbar, landing on the first control of each. Dialogs (settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
+Tab and Shift+Tab move between the document and the buttons, in the order they are on screen. F6 and Shift+F6 move between the window's regions, as in other Windows programs: the header, the panel (when shown), the document, the preview (when shown, in edit mode), and the toolbar, landing on the first control of each. Dialogs (settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
 
 ### Customizing the buttons
 
@@ -70,6 +71,12 @@ The window has the same menus as the terminal reader, built from the same list o
 - **Linux:** F10 shows the menus as a list inside the window, as the terminal does: "Menus, 1 of 7, File". Enter or Right opens a menu, a letter moves to the item with that letter, Enter runs a command, Left or Backspace goes back up, and Escape closes.
 
 **Hiding the menu bar (Windows).** The menu bar is hidden by default and takes no room until you want it; the first-run welcome says so ("Alt or F10 the menus"). To keep it shown, turn off "Hide the menu bar" in Settings, under Window (`auto_hide_menu = false` in `[gui]`); a value you saved earlier is kept. Alt, F10, or Alt with a menu's letter shows it and enters it as before, so NVDA and JAWS still say "menu bar" or the menu's name; it hides again, silently, when the menu closes. Every Alt key the keymap uses still works. The bar also appears for a moment when you press Alt for one of those keys. While a dialog is open, close it before using the menus. This setting has no effect on Linux, where the menus are already the F10 list and take no room, or on macOS, whose menu bar is at the top of the screen.
+
+### The context menu
+
+The Applications key (beside the right Ctrl key), Shift+F10, or a right-click opens the context menu in the document, while reading and while editing. It offers the commands that fit where the cursor is: Cut, Copy, Paste, Paste as plain text, Select all, Add note, Highlight, Define word, Read from here, and, on a link, Open link. Cut and the two pastes appear only in edit mode. Each item shows its key, so the menu also teaches the shortcut. The items, their names, and their keys come from the same list as the menu bar, so the two never disagree.
+
+On Windows the context menu is a standard one, which NVDA and JAWS announce as a menu; each item is read with its key, and its underlined letter chooses it. Opened from the keyboard it appears at the cursor; opened by a right-click it appears at the pointer, and the cursor moves there unless you clicked on the selection, which the menu then acts on. Escape closes it and leaves the focus where it was. On macOS and Linux the same items appear as a list in the window's list dialog, as the terminal reader shows them.
 
 Choosing a command in a menu runs it as its key would, and it joins the recent commands the command palette lists first (F2 with nothing typed). A few commands that only mean something in a terminal are left out of the window's menus (see [What only the terminal reader does](#what-only-the-terminal-reader-does)). File, Browse files opens textweaver's file browser in the window's list dialog (see [Reading](reading.md#from-the-file-browser-file-browse-files)); its keys work there as in the terminal, and the Say Status key previews the focused row. Batch conversion, audio export, and dictation are in the menus in the default build.
 
@@ -98,6 +105,8 @@ When a chooser closes, the focus returns to the document, or to the next step of
 - **Ctrl+D**, or the Font button: the font list. The fonts that come with textweaver are first, marked "built in": Atkinson Hyperlegible Next, Atkinson Hyperlegible Mono, and OpenDyslexic. Then your installed fonts. It is a list like textweaver's others: a letter moves to the next font starting with it, F1 says the list's name and size again, and Enter uses the font at once.
 
 Each change is said, for example "Text size 18 points." or "Font: OpenDyslexic.", and saved in `[reading_aids.font]` (see [Settings](settings.md)). The size steps one point at a time around the usual sizes and more quickly above 16 points, from 8 up to 72 points. The Settings dialog changes the same settings, under "Reading aids".
+
+Until you choose a size, the document's text follows your system's text size, as the rest of the window does: with Windows' "Text size" at 150 percent, the standard 14 points is drawn as 21. Ctrl+Plus and Ctrl+Minus step from the size you see, and the size you reach is kept as your own. Ctrl+0 returns to the standard size, which follows the system again.
 
 ## Cursor keys
 
@@ -131,7 +140,8 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **Ctrl+Shift+N**: the notes list. Space on a note opens its links (see [Links between notes and tracked changes](#links-between-notes-and-tracked-changes)).
 - **Ctrl+Shift+J**: the list of tracked changes and comments in a Word, OpenDocument, or RTF document.
 - **Ctrl+1** and **Ctrl+2**: the Contents and Notes panels beside the document (see [The Contents and Notes panels](#the-contents-and-notes-panels)).
-- **F6** and **Shift+F6**: the next and previous region: the header, the panel, the document, and the toolbar.
+- **F6** and **Shift+F6**: the next and previous region: the header, the panel, the document, the preview, and the toolbar.
+- **Alt+F5**: the preview pane beside the editor, on or off (see [The preview pane](#the-preview-pane)).
 - **Ctrl+T** and **Ctrl+Shift+T**: next and previous table. **Ctrl+Alt+arrows** move by cell in a table.
 - **k** and **Shift+K** (browse): next and previous link. **Alt+Shift+F** follows a link.
 - **Alt+Shift+A**: the window's mode, one of two: "textweaver reads aloud" (documents in textweaver's voice, its messages for your screen reader) or "my screen reader reads" (textweaver is silent, and your screen reader reads the text). The **Speak textweaver's messages** setting (Settings, Window), off by default, has textweaver say its messages, typing and cursor moves too, for reading by ear without a screen reader; `--self-voicing` turns it on for one run. The View menu and the Accessibility mode setting show the same two names. In `settings.toml` the mode keeps the terminal reader's three values: "textweaver reads aloud" is saved as `"hybrid"`, and "my screen reader reads" as `"screen-reader"`.
@@ -146,7 +156,7 @@ A panel beside the document keeps the document's headings, or its notes, in view
 - **Up, Down, Home, End, Page Up, Page Down,** and a letter move in the list, as in any list.
 - **Enter** moves the document to that heading or note, says where it is as the outline does, and keeps you in the panel, so you can try the next one. **Shift+Enter** moves the document there and puts you back in the document. **Escape** puts you back in the document without moving it.
 - **Space,** in the Notes panel, opens the selected note's links as a list, exactly as Space does in the notes list. Closing that list returns you to the panel. When the Notes panel opens with notes in it, textweaver mentions this key once, after the count; the Contents panel has no such key.
-- **F6** and **Shift+F6** move between the header, the panel, the document, and the toolbar.
+- **F6** and **Shift+F6** move between the header, the panel, the document, the preview pane when it is shown, and the toolbar.
 - The row where the cursor is has a bar beside it, and your screen reader hears ", current" after its name. While you are in the document, the panel's selected row follows the cursor, so going to the panel starts where you are.
 - The panel is a navigation landmark named "Contents" or "Notes".
 
@@ -174,15 +184,25 @@ List items keep their indent by depth while you edit, as in reading, and bullete
 
 - **Typing** goes in at the cursor, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
 - **Your screen reader echoes** what you type, and reads the cursor and the selection as they move. With **Speak textweaver's messages** on, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the cursor moves to, and what a Shift key added to the selection or took from it.
-- **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the cursor (on macOS, Command with each).
+- **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the cursor (on macOS, Command with each). On Windows, formatted text copied from a web browser, a word processor, or another editor is pasted as Markdown, keeping its headings, lists, emphasis, links, tables, and code, and textweaver says what came in, for example "Pasted as Markdown: 1 heading, 3 paragraphs, 1 list". **Paste as plain text** (Ctrl+Shift+M, or in the context menu) inserts only the clipboard's text. Either paste is one undo step. On macOS and Linux the window can read only the clipboard's plain text, so Ctrl+V pastes that.
 - **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
 - **Tab** types a tab, or in a table moves to the next cell (Shift+Tab to the previous one), as in the terminal. **Ctrl+Tab** moves the focus out of the document, to the buttons.
 - **Markdown lint:** Ctrl+F8 moves to the next lint problem (a skipped heading level, a mixed list marker, a bare web address) and says it; Ctrl+Shift+F8 goes back. Ctrl+F7 moves to the next grammar problem and Ctrl+Shift+F7 to the previous one, as in the terminal ([Editing](editing.md#grammar)).
 - **Find and replace:** Ctrl+Shift+F opens the Find and replace panel: Find what, Replace with, check boxes for Match case, Whole words, Regular expression, and Across lines, and the Find next, Replace, Replace all, and Close buttons. Enter in Find what finds the next match and Enter in Replace with replaces it; Up and Down recall earlier entries; F3 and Shift+F3 work throughout; Escape returns to the document. An invalid pattern is explained beside Find what, and each match is previewed there before it changes. The panel uses the same search, options, and undo steps as the terminal's replace loop ([Editing](editing.md#in-the-window-the-find-and-replace-panel)).
 - **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back. Misspelled words are also marked on screen with a dotted underline, shortly after you stop typing (in documents up to a million characters).
 - **Citations while writing:** Alt+C opens the citation picker. Type part of an author or title to filter, Enter inserts it, and textweaver asks for a page or other locator. Alt+Shift+D adds a reference by DOI or ISBN.
-- **Export and preview:** the command palette (F2) has Export as a web page, PDF, Word, EPUB, and braille (BRF), each written next to the document, and Preview in the browser, which reloads when you save.
+- **Export and preview:** the command palette (F2) has Export as a web page, PDF, Word, EPUB, and braille (BRF), each written next to the document (File, Export as lists the same, and, in a build with audio export, a read-along page: one HTML file with the text and its audio, the spoken word marked as it plays), and Preview in the browser, which reloads when you save. The window can also show the preview beside the editor; see [The preview pane](#the-preview-pane).
 - Ctrl+Tab and Ctrl+Shift+Tab move between the document and the buttons, so you are never trapped in the edit; Ctrl+E is always the way out of edit mode.
+
+### The preview pane
+
+While you edit, the window can show the document beside the editor as it will read: the headings at their sizes, lists with their bullets and numbers, tables, code, callouts, math, and images by their captions, drawn by the same view that shows a document you are reading. It is off by default, because it takes half of the window and most writers want the room. Turn it on with **Alt+F5**, with Show preview in the View menu, or by typing `show preview` in the command palette; textweaver says "Preview shown beside the editor. F6 moves to it." and remembers the choice (Settings, Preview, "Preview pane"; `pane` in `[preview]`). The same key turns it off. Turned on outside edit mode, it waits, and appears the next time you edit.
+
+The preview follows your writing without getting in its way. It is rebuilt only after you pause typing, 300 milliseconds by default ("Preview pause", `pane_delay_ms`, from 100 to 3000), and the work is done away from the keyboard, so typing is never slowed. It follows the cursor: the block you are writing in scrolls into view and is marked as the spoken sentence is marked while reading, with a band and a line under it, so the mark never depends on color alone. Nothing is said when the preview changes, and the focus and the cursor stay in the editor.
+
+To read the preview, press **F6** from the editor; Shift+F6, or F6 again past the toolbar, returns. The preview is a region named "Preview" holding a read-only document, so your screen reader reads it as it reads any document, with the usual reading keys, while the editor keeps its cursor where you left it. The word "Preview" is drawn in its corner, as "Editing" is in the editor's.
+
+In a wide window the preview stands to the right of the editor. In a narrower one (below 800 pixels beside the panel) it goes under the editor instead, and in a window too short for both, it is hidden so the editor keeps its lines; Alt+F5 then shows it and moves you into it, and it hides again when you go back to the editor.
 
 ## The spoken word
 
@@ -300,7 +320,8 @@ In the terminal, the same command shows the settings screen with only these sett
 ## Size, place, and when something goes wrong
 
 - **The window remembers its size and place** on this computer. It opens where it closed, and whether it was maximized. A place on a screen that is no longer connected is not used, so the window never opens where you cannot see it. This is kept for each computer and is not synced.
-- **Text follows the system's text size.** Interface text grows with the Windows "Text size" setting or the GNOME text scaling factor.
+- **Text follows the system's text size.** Interface text grows with the Windows "Text size" setting or the GNOME text scaling factor, and so does the document's text until you choose a size for it (see [Text size and font](#text-size-and-font)).
+- **The window rests when nothing changes.** It checks for work four times a second while you read or pause, and twenty times a second only while an edit waits to be parsed or the status line is reading; a check that finds nothing new does not redraw.
 - **The caret blinks as the system's does,** or not at all when the system says so.
 - **The window draws opaque on every graphics API.** It asks for an opaque drawing surface, never one that blends with what is behind the window. Up to alpha.9, with `auto` on Windows (which picks Vulkan on an NVIDIA card) the menu bar was see-through, because the driver offered a blended surface and the window took it; `--graphics dx12` hid the problem, since Direct3D 12 offers only opaque surfaces for a window. `--log` names the surface on the "graphics adapter" line ("surface opaque").
 - **The icon is the loom,** textweaver's logo, in the title bar, the taskbar, and on the programs in Explorer and their shortcuts (`textweaver-gui.exe`, `textweaver.exe` and `tw.exe` carry it). In Windows High Contrast the window uses the one-color loom, white on black. The Linux menu entry uses the same drawing.

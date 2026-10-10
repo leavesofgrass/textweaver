@@ -1051,6 +1051,10 @@ pub struct PreviewSettings {
     /// Replaces `auto_reload` and `live`, which still load (see
     /// [`migrate_preview_follow`]).
     pub follow: PreviewFollow,
+    /// The window's preview pane: in edit mode, the document as the
+    /// reading view draws it, beside the editor. Off by default: it costs
+    /// screen space, and a reader who wants it turns it on once.
+    pub pane: bool,
     /// How long typing must pause before a preview that follows typing is
     /// rewritten, in milliseconds (100 to 3000; 300 by default). The
     /// preview pane uses the same pause.
@@ -1064,6 +1068,7 @@ impl Default for PreviewSettings {
     fn default() -> Self {
         Self {
             follow: PreviewFollow::Off,
+            pane: false,
             pane_delay_ms: PREVIEW_DELAY_MS,
             extra: toml::Table::new(),
         }

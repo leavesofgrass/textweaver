@@ -359,6 +359,10 @@ In edit mode, type `listen rendered` in the command palette. textweaver reads fr
 
 Type `export pdf`, `export docx`, `export html`, `export epub`, or `export brf` in the command palette to write the document you are editing, saved or not, in that format. textweaver first asks where, offering the document's name and folder with the format's extension; Enter accepts it. You hear "Exporting to PDF.", then, for a long export, "Still exporting to PDF, 2 seconds." and every ten seconds after. The [converting guide](converting.md#export-from-inside-the-reader) explains exports.
 
+### The preview pane in the window
+
+In the window, the preview can stand beside the editor instead of in a browser: **Alt+F5**, Show preview in the View menu, or `show preview` in the palette turns it on or off, and the choice is kept (`pane` in `[preview]`, off by default). It shows the document as the reading view draws it, parsed by textweaver's own Markdown reader rather than a web engine, and it is redrawn once you pause typing for 300 milliseconds (`pane_delay_ms`, 100 to 3000). The block you are editing is scrolled into view and marked with a band and an underline; the focus stays in the editor and nothing is announced, so the preview never interrupts your screen reader. F6 moves into it to read, and back. The [window guide](gui.md#the-preview-pane) describes narrow windows and the keys in full.
+
 ### Preview in the browser
 
 `preview in browser` (File menu, Preview) opens the document as a web page, with math as MathML, in your default browser. The first preview of a session tells you, in one sentence, what the browser will do from then on; with the default setting you hear "Preview opens in your browser. Press F5 there after each save." Each save (**Ctrl+S**) writes the preview again, and you hear "Preview updated. Press F5 in the browser." By default the page does not reload by itself, because a reload returns your screen reader to the top of the page, and you should decide when that happens.

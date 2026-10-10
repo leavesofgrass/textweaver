@@ -109,6 +109,11 @@ pub const DIALOG_CLOSE: WidgetTag<ActionButton> = WidgetTag::named("tw-dialog-cl
 /// The RSVP panel, under the document.
 pub const RSVP: WidgetTag<RsvpView> = WidgetTag::named("tw-rsvp");
 
+/// The longest an idle tick goes without refreshing the window, though
+/// its [`tick_signature`] is unchanged: a safety net for anything shown
+/// that the signature leaves out.
+const REFRESH_AT_LEAST: Duration = Duration::from_secs(1);
+
 /// The first wait between ticks, before the app says (`App::tick_interval`).
 const FIRST_TICK: Duration = Duration::from_millis(250);
 /// Highlight moves slower than this are logged.
@@ -429,6 +434,8 @@ pub struct Gui {
     shown: Shown,
     /// The Contents or Notes panel as last shown ([`crate::sidebar`]).
     sidebar: SidebarShown,
+    /// The preview pane as last shown ([`crate::preview`]).
+    preview: crate::preview::PreviewShown,
     buttons: Buttons,
     dialog: Option<OpenDialog>,
     log: bool,
@@ -481,6 +488,12 @@ pub struct Gui {
     /// typing).
     spell_marked: Option<(DocKey, u64)>,
     spell_seen: Option<((DocKey, u64), Instant)>,
+    /// The last tick's [`tick_signature`] and when the window was last
+    /// refreshed for it: a tick that changes nothing skips the refresh.
+    last_tick: Option<(u64, Instant)>,
+    /// The preview pane's worker has a parse ready, so the next tick
+    /// refreshes.
+    preview_ready: Arc<AtomicBool>,
     /// The interface language the drawn labels were last written in
     /// (`[interface] language` changes them live, as in the terminal).
     lang: String,
@@ -953,6 +966,32 @@ pub fn prompt_dialog(
     )
     .erased();
     (modal, field_id)
+}
+
+/// The secret after an edit in a secret prompt's field, which shows one
+/// star per character (`PromptModel::shown_text`, B1-c2): `real` is the
+/// secret before the edit, `field` the field's text after it. Stars kept
+/// at the start and the end stand for the secret's characters there;
+/// what lies between was typed or pasted. Returns the new secret and the
+/// caret after the edit, in characters.
+///
+/// shortcut: a star typed into the secret reads as a kept character, and
+/// deleting inside a run of stars removes from the run's end; GitHub
+/// tokens hold only letters, digits and `_`, so both are moot until a
+/// secret that may hold a star needs a masked field of its own.
+pub fn secret_edit(real: &str, field: &str) -> (String, usize) {
+    let real: Vec<char> = real.chars().collect();
+    let field: Vec<char> = field.chars().collect();
+    let stars = |it: &mut dyn Iterator<Item = &char>| it.take_while(|c| **c == '*').count();
+    let head = stars(&mut field.iter()).min(real.len());
+    let tail = stars(&mut field[head..].iter().rev()).min(real.len() - head);
+    let typed = &field[head..field.len() - tail];
+    let secret: String = real[..head]
+        .iter()
+        .chain(typed)
+        .chain(&real[real.len() - tail..])
+        .collect();
+    (secret, head + typed.len())
 }
 
 /// The command palette as a dialog: a filter field over the list of
@@ -1432,6 +1471,48 @@ pub fn model_for(app: &App, w: CharRange) -> Option<DocModel> {
     })
 }
 
+/// A number that changes whenever what the window shows could have changed
+/// between ticks (performance report G8, as the terminal's
+/// `view_signature`): the status message and line, the mode, reading and
+/// edit mode, the text and its revision, the caret, the selection, the
+/// spoken word and sentence, the marks' counts, the list or prompt, RSVP,
+/// the time left, and fonts downloaded. Cheap: nothing is copied. A tick
+/// whose signature has not changed skips the refresh; commands and keys
+/// always refresh.
+pub fn tick_signature(app: &App) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    app.status().seq.hash(&mut h);
+    app.status_text().hash(&mut h);
+    (app.mode() as u8).hash(&mut h);
+    app.playback().hash(&mut h);
+    app.is_editing().hash(&mut h);
+    app.opening().hash(&mut h);
+    app.minutes_left().hash(&mut h);
+    app.font_downloads().hash(&mut h);
+    if let Some(s) = app.session() {
+        s.revision.hash(&mut h);
+        s.cursor.0.hash(&mut h);
+        s.selection.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+        s.spoken.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+        s.spoken_sentence.map(|r| (r.start.0, r.end.0)).hash(&mut h);
+        s.speech_cursor_line.hash(&mut h);
+        s.notes.len().hash(&mut h);
+        s.bookmarks.len().hash(&mut h);
+        s.highlights.len().hash(&mut h);
+    }
+    if let Some(l) = app.list_model() {
+        (l.title.len(), l.items.len(), l.selected).hash(&mut h);
+    }
+    if let Some(p) = app.prompt_model() {
+        (p.label.len(), p.caret(), p.text().len()).hash(&mut h);
+    }
+    if let Some(r) = app.rsvp() {
+        (r.index(), r.is_playing()).hash(&mut h);
+    }
+    h.finish()
+}
+
 /// The notes, bookmarks, the reader's highlights, and the search matches in
 /// `window`, as the document view draws them (the selection and the spoken
 /// word and sentence are its own).
@@ -1810,6 +1891,12 @@ impl Gui {
     }
 
     fn refresh(&mut self, ctx: &mut DriverCtx<'_>) {
+        // The log stays paused while a secret prompt is open (B1-c2).
+        let secret = self
+            .app
+            .prompt_model()
+            .is_some_and(|p| p.purpose.is_secret());
+        crate::log::set_paused(secret, self.log);
         if self.app.font_downloads() != self.font_downloads {
             // A font finished downloading (Lexend): register it, and lay the
             // text out again so a family list naming it now finds it.
@@ -1967,6 +2054,10 @@ impl Gui {
         {
             crate::log::line(&format!("panel: {change:?}"));
         }
+        // The preview pane follows `[preview] pane`, edit mode, and the
+        // editor; off, this reads one setting.
+        let root = ctx.render_root(self.window_id);
+        crate::preview::sync(&self.app, &self.palette, &mut self.preview, root);
         self.sync_question(ctx);
         self.sync_find(ctx);
         self.sync_misspellings(ctx);
@@ -2099,9 +2190,13 @@ impl Gui {
             | ActionId::NotesPanel
             | ActionId::ToggleHeader
             | ActionId::ToggleToolbar
+            | ActionId::ShowPreview
             | ActionId::NextRegion
             | ActionId::PreviousRegion => true,
             ActionId::Menu => self.native.is_some() && cfg!(windows),
+            // The native context menu where the menus are native
+            // (Windows); elsewhere the app's list of the same items.
+            ActionId::ContextMenu => self.native.is_some() && cfg!(windows),
             // Find and replace is the window's panel in edit mode; while
             // reading, the app says it needs edit mode.
             ActionId::Replace => self.app.is_editing(),
@@ -2124,6 +2219,22 @@ impl Gui {
                 Importance::Result
             };
             self.app.announce_as(&said, Priority::Polite, importance);
+        }
+        self.refresh(ctx);
+    }
+
+    /// The preview key ([`crate::preview::toggle`]): shows or hides the
+    /// preview pane, or goes to it where a short window hid it; says which.
+    /// The focus stays in the editor.
+    fn preview_key(&mut self, ctx: &mut DriverCtx<'_>) {
+        let root = ctx.render_root(self.window_id);
+        let t = crate::preview::toggle(&mut self.app, &self.palette, &mut self.preview, root);
+        if self.log {
+            crate::log::line(&format!("preview key: {t:?}"));
+        }
+        if let Some(said) = crate::preview::toggled_message(&self.app, t) {
+            self.app
+                .announce_as(&said, Priority::Polite, Importance::Result);
         }
         self.refresh(ctx);
     }
@@ -2169,9 +2280,12 @@ impl Gui {
     /// (header, panel, document, toolbar), as in Windows programs.
     fn region_key(&mut self, ctx: &mut DriverCtx<'_>, forward: bool) {
         let root = ctx.render_root(self.window_id);
-        let (list, doc) = root.get_widget_with_tag(SIDEBAR).map_or((None, None), |s| {
-            (s.inner().shown_list_id(), Some(s.inner().doc_id()))
-        });
+        let (list, doc, preview) =
+            root.get_widget_with_tag(SIDEBAR)
+                .map_or((None, None, None), |s| {
+                    let s = s.inner();
+                    (s.shown_list_id(), Some(s.doc_id()), s.shown_preview_id())
+                });
         let (folded, header, toolbar) =
             root.get_widget_with_tag(FRAME)
                 .map_or((false, true, true), |f| {
@@ -2184,6 +2298,7 @@ impl Gui {
             header: shown(header, &self.buttons.header),
             sidebar: list,
             document: doc,
+            preview,
             toolbar: shown(toolbar, &self.buttons.toolbar),
             folded,
         };
@@ -2253,9 +2368,15 @@ impl Gui {
             ActionId::NotesPanel => self.panel_key(ctx, textweaver_app::Panel::Notes),
             ActionId::ToggleHeader => self.bar_key(ctx, true),
             ActionId::ToggleToolbar => self.bar_key(ctx, false),
+            ActionId::ShowPreview => self.preview_key(ctx),
             ActionId::NextRegion => self.region_key(ctx, true),
             ActionId::PreviousRegion => self.region_key(ctx, false),
             ActionId::Replace => self.open_find(ctx, FindState::default()),
+            ActionId::ContextMenu => {
+                if !self.show_context_menu(ctx, None) {
+                    return false;
+                }
+            }
             ActionId::Menu => {
                 // The native menu bar, entered as F10 enters it.
                 self.reveal_menu_bar();
@@ -2267,6 +2388,52 @@ impl Gui {
             _ => return false,
         }
         true
+    }
+
+    /// The native context menu (Windows), from the app's model for where
+    /// the cursor is: at `at` (a right-click, the window's logical
+    /// pixels), else at the caret, as the Applications key and Shift+F10
+    /// open it. A chosen item runs as a menu pick ([`Self::menu_picked`]);
+    /// Escape leaves the focus where it was. False when no native menu
+    /// could be shown, so the app's list stands in.
+    fn show_context_menu(&mut self, ctx: &mut DriverCtx<'_>, at: Option<(i32, i32)>) -> bool {
+        let entries = crate::menus::context_entries(&self.app);
+        let at = at.map(|(x, y)| (f64::from(x), f64::from(y))).or_else(|| {
+            ctx.render_root(self.window_id)
+                .get_widget_with_tag(DOC)
+                .and_then(|d| d.inner().caret_point())
+                .map(|p| (p.x, p.y))
+        });
+        let window = ctx.window(self.window_id).handle();
+        let shown = crate::menus::show_context(window, &entries, at);
+        if self.log {
+            match &shown {
+                Ok(()) => crate::log::line(&format!("context menu: {} items", entries.len())),
+                Err(e) => crate::log::line(&format!("context menu: not native ({e})")),
+            }
+        }
+        shown.is_ok()
+    }
+
+    /// The platform's paste key (Ctrl+V), with the clipboard's text as
+    /// Masonry's window read it: the app's Paste, which on Windows reads
+    /// the clipboard's HTML and RTF itself (`crate::clipboard`) and pastes
+    /// formatted text as Markdown, as one undo step. Elsewhere the text
+    /// handed over is pasted (plain text is all that clipboard reads).
+    fn paste_key(&mut self, ctx: &mut DriverCtx<'_>, text: String) {
+        if cfg!(windows) || !self.app.is_editing() {
+            // Out of edit mode, the app says pasting needs it.
+            self.dispatch(ctx, Command::Action(ActionId::Paste));
+            return;
+        }
+        if self.log {
+            crate::log::line(&format!("paste: {} chars", text.chars().count()));
+        }
+        let effects = self
+            .app
+            .paste_contents(textweaver_app::ClipboardContents::text(text), false);
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
     }
 
     /// The window's Win32 handle (0 elsewhere).
@@ -2523,10 +2690,11 @@ impl Gui {
         } else {
             c.tr("gui-prompt-hint")
         };
+        // A secret prompt (a token) shows one star per character.
         let initial = self
             .app
             .prompt_model()
-            .map(textweaver_app::PromptModel::text)
+            .map(textweaver_app::PromptModel::shown_text)
             .unwrap_or_default();
         // The edit details form (W7m): Tab and Shift+Tab move between its
         // fields, each the app's prompt.
@@ -2536,6 +2704,8 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("dialog: prompt {label_text:?}"));
         }
+        // Nothing typed in a secret prompt reaches the log (B1-c2).
+        crate::log::set_paused(purpose.is_secret(), self.log);
     }
 
     /// The system's file chooser, on its own thread and modal to the
@@ -2735,6 +2905,35 @@ impl Gui {
         self.show_dialog(ctx, modal, field_id);
     }
 
+    /// The prompt's field changed: the app's prompt model follows it. In
+    /// a secret prompt the field shows stars, so the secret is worked out
+    /// from the edit ([`secret_edit`]) and the field drawn again as stars.
+    fn prompt_changed(&mut self, ctx: &mut DriverCtx<'_>, field: String) {
+        let Some(model) = self.app.prompt_model().filter(|p| p.purpose.is_secret()) else {
+            let _ = self
+                .app
+                .dispatch(Command::PromptKey(PromptKey::SetText(field)));
+            return;
+        };
+        let (secret, caret) = secret_edit(&model.text(), &field);
+        let _ = self
+            .app
+            .dispatch(Command::PromptKey(PromptKey::SetText(secret)));
+        let shown = self
+            .app
+            .prompt_model()
+            .map(textweaver_app::PromptModel::shown_text)
+            .unwrap_or_default();
+        if shown != field {
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(PROMPT_FIELD, |mut f| {
+                    TextArea::reset_text(&mut f, &shown);
+                    // A star is one byte, so the caret's byte is its char.
+                    TextArea::select_byte_range(&mut f, caret, caret);
+                });
+        }
+    }
+
     /// A key for the app's prompt: the app changes its text (history,
     /// completion), and the field shows it.
     fn prompt_key(&mut self, ctx: &mut DriverCtx<'_>, key: PromptKey) {
@@ -2745,7 +2944,7 @@ impl Gui {
         if let Some(text) = self
             .app
             .prompt_model()
-            .map(textweaver_app::PromptModel::text)
+            .map(textweaver_app::PromptModel::shown_text)
         {
             ctx.render_root(self.window_id)
                 .edit_widget_with_tag(PROMPT_FIELD, |mut f| TextArea::reset_text(&mut f, &text));
@@ -3603,7 +3802,10 @@ impl Gui {
     /// ("Text size 18 points."). The next refresh lays the text out again.
     fn text_size(&mut self, ctx: &mut DriverCtx<'_>, step: Step) {
         let now = self.app.settings().reading_aids.font.clone();
-        let (size, limit) = crate::font_chooser::stepped(now.size_pt, step);
+        // From the size shown, which follows the text scale until the
+        // reader sets one, so the first step never jumps back.
+        let shown = crate::fonts::shown_size_pt(&now);
+        let (size, limit) = crate::font_chooser::stepped(shown, step);
         self.save_font(crate::font_chooser::with_size(&now, size));
         if self.log {
             crate::log::line(&format!("text size {step:?}: {size} points"));
@@ -4038,7 +4240,14 @@ impl Gui {
             self.dispatch(ctx, cmd);
             return;
         }
+        let secret = self
+            .app
+            .prompt_model()
+            .is_some_and(|p| p.purpose.is_secret());
         let key = match text {
+            // A secret prompt's field holds stars; the model already has
+            // the secret (`prompt_changed`).
+            Some(_) if secret => PromptKey::Enter,
             Some(t) => {
                 let _ = self.app.dispatch(Command::PromptKey(PromptKey::SetText(t)));
                 PromptKey::Enter
@@ -4054,6 +4263,11 @@ impl Gui {
     }
 
     fn on_key(&mut self, ctx: &mut DriverCtx<'_>, k: &masonry::core::keyboard::KeyboardEvent) {
+        if keys::is_context_menu_key(k) {
+            // The Applications key: the context menu, as Shift+F10.
+            self.dispatch(ctx, Command::Action(ActionId::ContextMenu));
+            return;
+        }
         let Some(chord) = keys::chord(k, Platform::current()) else {
             return;
         };
@@ -4371,6 +4585,16 @@ impl AppDriver for Gui {
                 self.reveal_menu_bar();
             }
             self.on_key(ctx, &k);
+        } else if action
+            .downcast_ref::<DocAction>()
+            .is_some_and(|a| *a != DocAction::WindowFocused)
+            && ctx
+                .render_root(self.window_id)
+                .get_widget_with_tag(SIDEBAR)
+                .is_some_and(|s| s.inner().preview_doc_id() == Some(widget_id))
+        {
+            // The preview is read-only, and its caret is its own: a reader
+            // moving in it never moves the editor's caret.
         } else if let Some(DocAction::CaretMoved {
             caret,
             selection,
@@ -4397,6 +4621,17 @@ impl AppDriver for Gui {
             }
         } else if let Some(DocAction::WindowFocused) = action.downcast_ref::<DocAction>() {
             self.window_focused();
+        } else if let Some(DocAction::ContextMenu { at }) = action.downcast_ref::<DocAction>() {
+            // A right-click: the native menu at the pointer, or the app's
+            // list where there is none.
+            let at = *at;
+            if !(self.is_window_command(ActionId::ContextMenu)
+                && self.show_context_menu(ctx, Some(at)))
+            {
+                self.dispatch(ctx, Command::Action(ActionId::ContextMenu));
+            }
+        } else if let Some(DocAction::Paste(text)) = action.downcast_ref::<DocAction>() {
+            self.paste_key(ctx, text.clone());
         } else if let Some(DocAction::TableCell { forward }) = action.downcast_ref::<DocAction>() {
             let a = if *forward {
                 ActionId::NextTableCell
@@ -4414,7 +4649,9 @@ impl AppDriver for Gui {
                 DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
                 DocAction::CaretMoved { .. }
                 | DocAction::TableCell { .. }
-                | DocAction::WindowFocused => return,
+                | DocAction::WindowFocused
+                | DocAction::ContextMenu { .. }
+                | DocAction::Paste(_) => return,
             };
             if self.log {
                 crate::log::line(&format!("edit: {cmd:?}"));
@@ -4684,7 +4921,7 @@ impl AppDriver for Gui {
                     // The app's prompt model follows the field (no echo:
                     // the field says what was typed).
                     let q = q.clone();
-                    let _ = self.app.dispatch(Command::PromptKey(PromptKey::SetText(q)));
+                    self.prompt_changed(ctx, q);
                 }
                 (TextAction::Entered(text), _) => {
                     // In the palette, Enter runs the match Up and Down
@@ -4770,8 +5007,26 @@ impl AppDriver for Gui {
         let now = Instant::now();
         let mut effects = self.app.poll_speech();
         effects.extend(self.app.tick(now));
+        // A tick that changed nothing the window shows skips the refresh
+        // (performance report G8), with one at least every second.
+        let quiet = effects.is_empty()
+            && self.queue.borrow().is_empty()
+            && self.spell_seen.is_none()
+            && !self.preview_ready.swap(false, Ordering::AcqRel)
+            && !ctx
+                .render_root(self.window_id)
+                .get_widget_with_tag(ANNOUNCER)
+                .is_some_and(|a| a.inner().holding());
         self.run_effects(ctx, effects);
-        self.refresh(ctx);
+        let signature = tick_signature(&self.app);
+        let now = Instant::now();
+        let unchanged = self.last_tick.is_some_and(|(s, at)| {
+            s == signature && now.saturating_duration_since(at) < REFRESH_AT_LEAST
+        });
+        if !(quiet && unchanged) {
+            self.refresh(ctx);
+            self.last_tick = Some((signature, now));
+        }
         let mut wait = self.app.tick_interval(Instant::now());
         if self.spell_seen.is_some() {
             // Come back when the pause is over, to mark the misspellings.
@@ -4919,6 +5174,10 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         }
     }
     app.set_announce_list_focus(opts.experiments.app_list_announcements);
+    // Paste reads the system clipboard's HTML and RTF (Windows), so
+    // formatted text pastes as Markdown.
+    #[cfg(windows)]
+    app.set_clipboard(Box::new(crate::clipboard::System));
     let mut experiments = opts.experiments;
     let wanted = experiments
         .announce
@@ -4999,6 +5258,17 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         exit_watchdog(after);
     }
 
+    // The preview pane's parser rings the window when a parse is ready; an
+    // idle thread waiting on its channel until the pane is used.
+    let preview_ready = Arc::new(AtomicBool::new(false));
+    let preview = {
+        let proxy = proxy.clone();
+        let ready = Arc::clone(&preview_ready);
+        crate::preview::PreviewShown::with_worker(move || {
+            ready.store(true, Ordering::Release);
+            let _ = proxy.send_event(MasonryUserEvent::AsyncAction(window_id, Box::new(Tick)));
+        })
+    };
     let gui = Gui {
         app,
         queue,
@@ -5007,6 +5277,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         palette,
         shown: Shown::default(),
         sidebar: SidebarShown::default(),
+        preview,
         buttons: tree.buttons,
         dialog: None,
         log: opts.log,
@@ -5027,6 +5298,8 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         lang: String::new(),
         spell_marked: None,
         spell_seen: None,
+        last_tick: None,
+        preview_ready,
         fixed_theme: opts.theme.is_some(),
         theme_key,
         system,
@@ -5160,6 +5433,7 @@ pub fn refresh_for_tests(app: &App, host: &mut impl Host) {
 #[derive(Default)]
 pub struct Refresher {
     shown: Shown,
+    preview: crate::preview::PreviewShown,
 }
 
 impl Refresher {
@@ -5177,9 +5451,31 @@ impl Refresher {
 
     /// Brings `host` up to date with `app`. Returns the document window's
     /// range when the view's text was replaced or slid.
-    pub fn refresh(&mut self, app: &App, host: &mut impl Host) -> Option<CharRange> {
-        refresh_host(app, &mut self.shown, host, false)?;
+    pub fn refresh(&mut self, app: &App, host: &mut impl sidebar::FocusHost) -> Option<CharRange> {
+        let loaded = refresh_host(app, &mut self.shown, host, false);
+        // The preview pane, parsed at once here (no worker, no pause); in
+        // the app's theme. Off, nothing is done.
+        if app.settings().preview.pane || self.preview.is_open() {
+            let palette = Palette::from_theme(&app.reading_theme());
+            crate::preview::sync(app, &palette, &mut self.preview, host);
+        }
+        loaded?;
         self.shown.window.map(|w| w.range())
+    }
+
+    /// The preview pane as last shown.
+    pub fn preview(&self) -> &crate::preview::PreviewShown {
+        &self.preview
+    }
+
+    /// The preview key, as the window runs it ([`crate::preview::toggle`]).
+    pub fn preview_key(
+        &mut self,
+        app: &mut App,
+        host: &mut impl sidebar::FocusHost,
+    ) -> crate::preview::Toggled {
+        let palette = Palette::from_theme(&app.reading_theme());
+        crate::preview::toggle(app, &palette, &mut self.preview, host)
     }
 }
 
@@ -5216,5 +5512,83 @@ mod tests {
             Some((ActionId::ChooseFont, true))
         );
         assert_eq!(window_command_of(&Command::Cancel, false), None);
+    }
+
+    /// The tick signature stays while nothing changes and moves when the
+    /// caret, the text, or the mode does.
+    #[test]
+    fn the_tick_signature_follows_what_the_window_shows() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("notes.md");
+        std::fs::write(
+            &file,
+            "# Notes
+
+Ada Example's notes.
+",
+        )
+        .unwrap();
+        let mut app = App::new(textweaver_app::AppConfig::for_tests());
+        app.open(&file).unwrap();
+        let first = tick_signature(&app);
+        assert_eq!(tick_signature(&app), first, "nothing changed");
+        let _ = sync_caret(&mut app, textweaver_app::core::CharPos(9), None);
+        let moved = tick_signature(&app);
+        assert_ne!(moved, first, "the caret moved");
+        let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+        assert_ne!(tick_signature(&app), moved, "edit mode");
+    }
+
+    /// A secret prompt's field shows stars, and the secret follows each
+    /// edit: typing at the end, a paste, Backspace, and typing between.
+    #[test]
+    fn the_secret_field_follows_its_edits() {
+        assert_eq!(secret_edit("", "Q"), ("Q".to_owned(), 1));
+        assert_eq!(secret_edit("QZ", "**X"), ("QZX".to_owned(), 3));
+        assert_eq!(secret_edit("QZ", "**pasted"), ("QZpasted".to_owned(), 8));
+        assert_eq!(secret_edit("QZX", "**"), ("QZ".to_owned(), 2));
+        assert_eq!(secret_edit("QZX", "*a**"), ("QaZX".to_owned(), 2));
+        assert_eq!(secret_edit("QZX", "***"), ("QZX".to_owned(), 3));
+        assert_eq!(secret_edit("QZX", ""), (String::new(), 0));
+    }
+
+    /// With the log on, typing a token into the secret prompt writes no
+    /// character of it: the window's lines for each key, the command each
+    /// edit makes, and the answer all fall in the paused log (B1-c2).
+    #[test]
+    fn a_secret_prompt_keeps_typed_characters_out_of_the_log() {
+        const TOKEN: &str = "QZX9_7VWK";
+        let model = textweaver_app::PromptModel::new("token", PromptPurpose::GitHubToken);
+        assert!(model.purpose.is_secret());
+        let _ = crate::log::capture();
+        crate::log::line("before");
+        crate::log::set_paused(true, true);
+        let (mut secret, mut field) = (String::new(), String::new());
+        for c in TOKEN.chars() {
+            field.push(c);
+            crate::log::line(&format!("key {c} -> None"));
+            (secret, _) = secret_edit(&secret, &field);
+            let cmd = Command::PromptKey(PromptKey::SetText(secret.clone()));
+            crate::log::line(&format!("command {cmd:?}"));
+            field = "*".repeat(secret.chars().count());
+        }
+        assert_eq!(secret, TOKEN);
+        crate::log::line(&format!("command {:?}", Command::Answer(secret.clone())));
+        crate::log::set_paused(false, true);
+        crate::log::line("after");
+        let lines = crate::log::capture();
+        assert_eq!(
+            lines,
+            [
+                "before",
+                "log paused: a secret prompt is open",
+                "log resumed",
+                "after"
+            ]
+        );
+        let all = lines.concat();
+        for c in TOKEN.chars() {
+            assert!(!all.contains(c), "{c:?} reached the log: {all}");
+        }
     }
 }

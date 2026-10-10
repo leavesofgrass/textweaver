@@ -58,7 +58,30 @@ fn quoted(name: &str) -> String {
 /// the bundled Atkinson Hyperlegible Next), its size in points as
 /// logical pixels, and bold from a weight of 600 or more.
 pub fn doc_font(saved: &SavedFont) -> DocFont {
-    font_for(&from_store(saved))
+    let mut font = font_for(&from_store(saved));
+    font.size *= shown_size_pt(saved) / saved.size_pt.max(f32::MIN_POSITIVE);
+    font
+}
+
+/// The reading size shown, in points: the reader's own size, or, while
+/// the size is the default (the reader has not set one), the default
+/// times the platform's text scale (Windows' Make text bigger, GNOME's
+/// text scale), as the interface text follows it.
+///
+/// shortcut: a size set back to exactly the default follows the scale
+/// again; telling the two apart needs the store to remember that the
+/// reader set a size.
+pub fn shown_size_pt(saved: &SavedFont) -> f32 {
+    size_at_scale(saved, crate::theme::text_scale())
+}
+
+/// [`shown_size_pt`] at the text scale `scale`.
+fn size_at_scale(saved: &SavedFont, scale: f32) -> f32 {
+    if (saved.size_pt - SavedFont::default().size_pt).abs() < 0.01 {
+        saved.size_pt * scale
+    } else {
+        saved.size_pt
+    }
 }
 
 /// [`doc_font`] for settings already parsed.
@@ -83,6 +106,21 @@ pub fn font_for(settings: &FontSettings) -> DocFont {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The default reading size follows the text scale; a size the reader
+    /// set does not.
+    #[test]
+    fn the_default_size_follows_the_text_scale() {
+        let default = SavedFont::default();
+        let set = SavedFont {
+            size_pt: 18.0,
+            ..SavedFont::default()
+        };
+        let base = default.size_pt;
+        assert!((size_at_scale(&default, 1.5) - base * 1.5).abs() < 0.01);
+        assert!((size_at_scale(&default, 1.0) - base).abs() < 0.01);
+        assert!((size_at_scale(&set, 1.5) - 18.0).abs() < 0.01);
+    }
     use textweaver_app::aids::fonts::FontFamily;
 
     #[test]

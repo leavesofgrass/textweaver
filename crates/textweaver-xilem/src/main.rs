@@ -32,7 +32,7 @@ fn parse_announce(s: &str) -> Result<AnnounceMode, String> {
 
 /// Read documents aloud in a window.
 #[derive(Parser, Debug)]
-#[command(name = "textweaver-gui", version, about)]
+#[command(name = "textweaver-gui", version = textweaver_app::VERSION_TEXT, about)]
 struct Args {
     /// Document to open.
     file: Option<PathBuf>,
@@ -126,6 +126,9 @@ struct Args {
     /// For --measure-frames: every reading aid on first.
     #[arg(long, hide = true)]
     frames_aids: bool,
+    /// For --measure-frames: read in edit mode with the preview pane open.
+    #[arg(long, hide = true)]
+    frames_preview: bool,
     /// For --measure-frames: also write the report as JSON to this file.
     #[arg(long, value_name = "PATH", hide = true)]
     frames_json: Option<PathBuf>,
@@ -225,6 +228,7 @@ fn main() {
             o.moves = moves.clamp(1, 100_000);
             o.scale = args.scale;
             o.aids = args.frames_aids;
+            o.preview = args.frames_preview;
             o.theme = args.theme.clone();
             if let Err(e) = textweaver_xilem::frames::run(&o, args.frames_json.as_deref()) {
                 console::report_error(&e, true);
@@ -359,6 +363,16 @@ mod tests {
             harness_flag(&parse(&["--measure-frames", "20", "--home", "h"])),
             Some("--measure-frames")
         );
+    }
+
+    /// `--version` prints the version, then the copyright line from the
+    /// shared constant, as `tw` and the terminal reader do.
+    #[test]
+    fn version_prints_the_copyright_line() {
+        use clap::CommandFactory;
+        let version = Args::command().render_version();
+        assert!(version.contains(env!("CARGO_PKG_VERSION")), "{version}");
+        assert!(version.contains(textweaver_app::COPYRIGHT), "{version}");
     }
 
     /// The window's command line is textweaver-gui's, and the flags for

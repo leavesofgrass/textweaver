@@ -414,6 +414,12 @@ fn help_and_say_status_keys_in_a_list_reach_the_keymap() {
     h.process_text_event(TextEvent::key_down(Key::Named(NamedKey::F2)));
     let (a, _) = h.pop_action::<DialogAction>().expect("F2");
     assert_eq!(a, DialogAction::Key(textweaver_app::ListKey::Rename));
+    // Space goes to the app as the list's key, which marks the row
+    // (Command::MarkItem: a favourite voice, a note's links, a spoken
+    // answer in the self-test).
+    h.process_text_event(TextEvent::key_down(Key::Character(" ".into())));
+    let (a, _) = h.pop_action::<DialogAction>().expect("Space");
+    assert_eq!(a, DialogAction::Key(textweaver_app::ListKey::Char(' ')));
 }
 
 /// What a screen reader would learn from one node.

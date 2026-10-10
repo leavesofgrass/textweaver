@@ -92,7 +92,12 @@ fn apply(app: &mut App, action: DocAction) {
         }
         DocAction::TableCell { forward: true } => Command::Action(ActionId::NextTableCell),
         DocAction::TableCell { forward: false } => Command::Action(ActionId::PreviousTableCell),
-        DocAction::WindowFocused => return,
+        DocAction::Paste(text) => {
+            let contents = textweaver_app::ClipboardContents::text(text);
+            let _ = app.paste_contents(contents, false);
+            return;
+        }
+        DocAction::WindowFocused | DocAction::ContextMenu { .. } => return,
     };
     let _ = app.dispatch(cmd);
 }
@@ -458,11 +463,48 @@ fn copy_cut_and_paste_work_on_the_selection_on_screen() {
     let _ = app.dispatch(Command::Action(ActionId::Cut));
     assert!(app.take_clipboard().is_some());
     assert!(!text_of(&app).contains("First"), "{:?}", text_of(&app));
-    // The platform's paste key: the window hands the view the clipboard.
+    // The platform's paste key: the window hands the view the clipboard,
+    // and the view hands it to the app's Paste (formatted text as
+    // Markdown, one undo step).
     let _ = r.refresh(&app, &mut h);
     h.process_text_event(TextEvent::ClipboardPaste("Second ".into()));
     let (action, _) = h.pop_action::<DocAction>().expect("pasted");
-    assert_eq!(action, DocAction::Typed("Second ".into()));
+    assert_eq!(action, DocAction::Paste("Second ".into()));
+    apply(&mut app, action);
+    assert!(text_of(&app).contains("Second "), "{:?}", text_of(&app));
+}
+
+/// A right-click on the document asks for the context menu where the
+/// pointer is, and leaves a selection it lands on alone, so the menu's
+/// Cut and Copy act on it.
+#[test]
+fn a_right_click_asks_for_the_context_menu() {
+    use masonry::core::PointerButton;
+    let dir = tempfile::tempdir().unwrap();
+    let (mut app, mut h, mut r, doc) = setup(dir.path());
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let _ = r.refresh(&app, &mut h);
+    let _ = h.redraw();
+    while h.pop_action_erased().is_some() {}
+    h.mouse_click_on(doc, Some(PointerButton::Secondary));
+    let mut asked = None;
+    while let Some((a, _)) = h.pop_action::<DocAction>() {
+        if let DocAction::ContextMenu { at } = a {
+            asked = Some(at);
+        }
+    }
+    let (x, y) = asked.expect("a right-click asks for the context menu");
+    let center = {
+        let w = h.get_widget_with_id(doc);
+        w.ctx().window_transform() * w.ctx().border_box().center()
+    };
+    assert!((f64::from(x) - center.x).abs() <= 2.0, "{x} vs {center:?}");
+    assert!((f64::from(y) - center.y).abs() <= 2.0, "{y} vs {center:?}");
+    // A left click asks for nothing of the kind.
+    h.mouse_click_on(doc, Some(PointerButton::Primary));
+    while let Some((a, _)) = h.pop_action::<DocAction>() {
+        assert!(!matches!(a, DocAction::ContextMenu { .. }), "{a:?}");
+    }
 }
 
 /// A key in edit mode costs one paragraph: the runs of the paragraphs

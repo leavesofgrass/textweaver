@@ -76,6 +76,8 @@ masonry.workspace = true
 masonry_winit.workspace = true
 masonry_testing = { workspace = true, optional = true }
 unicode-segmentation.workspace = true
+# The preview pane's worker holds the editor's text as its rope (B1-p1).
+ropey.workspace = true
 serde_json.workspace = true
 # The `[gui]` table's `graphics` key, read before the window starts.
 toml.workspace = true

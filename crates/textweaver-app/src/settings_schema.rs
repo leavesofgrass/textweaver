@@ -1322,6 +1322,18 @@ pub const INFO: &[Info] = &[
         (100.0, 3000.0, 50.0),
         "milliseconds",
     ),
+    toggle(
+        "preview.pane",
+        "Preview pane",
+        "In edit mode, show the document as it reads beside the editor. F6 moves to it; the cursor stays in the editor.",
+    ),
+    number(
+        "preview.pane_delay_ms",
+        "Preview pause",
+        "How long typing must pause before a preview that follows your typing is rewritten.",
+        (100.0, 3000.0, 50.0),
+        "milliseconds",
+    ),
     // [lexicon] (Agent W3e)
     optional(
         "lexicon.glossary",
