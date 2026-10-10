@@ -25,7 +25,9 @@ star's reading aids are described in its "Accessibility and WCAG reading aids" n
 
 ## Formats and documents
 
-- **DAISY 3 / DTBook** (the Bookshare format), including DAISY zips. Status: done, in spine order with NCX navigation.
+- **DAISY 3 / DTBook** (the Bookshare format), including DAISY zips, and DAISY 2.02 books. Status: done, in spine order with NCX navigation. A book's recorded narration plays as you read ([Talking books](reading.md#talking-books-the-recorded-narration)).
+- **Braille files (BRF, BRL),** such as NLS BARD's braille downloads. Status: done, read as print through liblouis ([Braille files](reading.md#braille-files-brf)).
+- **Org, reStructuredText, MediaWiki, DokuWiki, and Jira markup.** Status: done, read and written natively by carta ([Converting documents](converting.md)).
 - **OCR** of images and scanned PDF pages. Status: done: a pure-Rust engine runs in process by default (models are downloaded once with `tw ocr download`, checked by SHA-256), with a Tesseract subprocess as a fallback for other languages ([ADR-0026](adr/0026-ocr-and-student-formats.md)). Scans made sideways or upside down are turned upright before they are read, and scanned tables whose rows and columns line up are read as tables ([ADR-0048](adr/0048-pdf-annotations-links-and-forms.md)).
 - **Better PDF reading order:** removing running headers, footers, and page numbers, and marking captions. Status: done. Captions are marked by pattern ("Figure 3.", "Table 2:"), in English, Spanish, French, German, Portuguese, and Arabic ([ADR-0010](adr/0010-pdf-loader.md), [ADR-0048](adr/0048-pdf-annotations-links-and-forms.md)).
 - **Archives:** ZIP and TAR, with 7z. Opening one lists its readable files, and `book.zip!inner.pdf` opens a file inside. Status: done. RAR is not planned.
@@ -56,7 +58,7 @@ star's reading aids are described in its "Accessibility and WCAG reading aids" n
 - **Dependency report** (`--deps`) and a crash log. Status: done. `scripts/doctor.sh` and `scripts\doctor.ps1` print a system report, and textweaver writes a rotating log file ([troubleshooting.md](troubleshooting.md)).
 - **Document metadata:** edit it per document, and search the library by it. Status: done. The library list's filter and `tw library search` match title, path, author, DOI, ISBN, and text, from the document's own metadata, its text, and `tw cite`'s record ([library.md](library.md#search-by-author-doi-and-isbn)). Edit details (the File menu, or F2 in the library list) and `tw library edit` set a document's title, author, DOI, and ISBN by hand, and what you type wins over the document's own ([library.md](library.md#edit-a-documents-details)).
 - **Notes export** as BibTeX, RIS, JSON, or plain text. Status: done. `tw marks FILE --to FORMAT` writes BibTeX, BibLaTeX, RIS, or CSL-JSON records for Zotero or Pandoc. Notes and highlights also export to an Obsidian vault as Markdown ([vault.md](vault.md)), and as a Markdown study sheet grouped by the document's headings ([notes.md](notes.md#export-a-study-sheet)). Plain-text export is not a separate format; CSL-JSON or the study sheet cover that need.
-- **Study tools:** cards from highlights, a spaced-repetition scheduler (FSRS) and review screen, AnkiConnect sync, and `.apkg` export. Status: partly. Cards are made from highlights (cloze), notes (question and answer), and headings (recall), and studied in a session that reveals each answer and takes a grade in words; an SM-2 scheduler brings each card back when due, and `tw study due` counts the cards due ([Study with cards](notes.md#study-with-cards)). `.apkg` export and import are not in yet; FSRS and AnkiConnect sync are dropped.
+- **Study tools:** cards from highlights, a spaced-repetition scheduler (FSRS) and review screen, AnkiConnect sync, and `.apkg` export. Status: partly. Cards are made from highlights (cloze), notes (question and answer), and headings (recall), and studied in a session that reveals each answer and takes a grade in words; an SM-2 scheduler brings each card back when due, and `tw study due` counts the cards due ([Study with cards](notes.md#study-with-cards)). Anki `.apkg` export and import come in beta 2; FSRS and AnkiConnect sync are dropped. There is also a self-test and optional recall prompts at section ends.
 
 ## Peripheral
 
@@ -65,10 +67,10 @@ star's reading aids are described in its "Accessibility and WCAG reading aids" n
 - **Feeds, Wikipedia, and PubMed** quick open. Status: dropped.
 - **More engines:** Coqui, Festival, Qt speech, and cloud voices. Status: dropped. speech-dispatcher, which can drive Festival, and DECtalk were added instead.
 - **SSML pauses.** Status: partly. Reading leaves a short silence after each heading, paragraph, and list item, which you can set ([Pauses at headings, paragraphs and list items](speech.md#pauses-at-headings-paragraphs-and-list-items)); pauses written as markup in the text itself are dropped.
-- **Audio export to OGG and AAC,** and an M4B cover image. Status: partly. M4B audiobooks are AAC, and Ogg Opus files are written in process ([audio-export.md](audio-export.md)); Ogg Vorbis and the cover image are dropped.
+- **Audio export to OGG and AAC,** and an M4B cover image. Status: partly. M4B audiobooks are AAC, and Ogg Opus and Ogg Vorbis files are written ([audio-export.md](audio-export.md)); a separate AAC file and the cover image are dropped.
 - **Infrastructure:**
   - plugins. Status: dropped.
-  - an update checker. Status: partly. `scripts/update.sh` and `scripts\update.ps1` update an installed textweaver; a check inside the program is dropped.
+  - an update checker. Status: done. Help, Check for updates and `tw update` check and install, asking first, and the update scripts still work ([Updates](updates.md)).
   - a guided tour and a welcome page. Status: partly. The [quick start](quickstart.md) opens as a document, from Help, Quick start; a tour is dropped.
   - a key-code inspector. Status: partly. Help, "What does this key do?" (Shift+F1) names a command key and its menu place without running it; raw key codes are not shown.
   - line numbers and syntax highlighting in the terminal. Status: done. Line numbers (F6), and code blocks highlighted with syntect and bat's syntaxes, in colors from the theme and never color alone.
