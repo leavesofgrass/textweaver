@@ -9,7 +9,10 @@
 //!   entries become `SectionBreak` markers (label = the entry's title,
 //!   level = its depth), so "next chapter" follows the book's own table of
 //!   contents. Title, author, and language come from the package's Dublin
-//!   Core metadata.
+//!   Core metadata. A book with no DTBook (audio only) reads its NCX
+//!   headings, each a section, with the warning
+//!   [`NO_TEXT_WARNING`](crate::daisy2::NO_TEXT_WARNING); its recording
+//!   is found by [`crate::book_audio()`].
 //! - **A DTBook file** (`.xml` whose root is `dtbook`) is read on its own;
 //!   its `level1`–`level6` elements become the sections. Other `.xml` files
 //!   read as plain text.
@@ -79,7 +82,7 @@ impl Loader for DaisyLoader {
                 _ => None,
             };
             let mut read = |rel: &str| read_beside(folder.as_deref(), rel);
-            let mut doc = load_package(&name, &bytes, &mut read, options)?;
+            let mut doc = load_package(&name, &bytes, &mut read, options, None)?;
             if let Source::Path(p) = source {
                 doc.meta.path = Some(p.clone());
             }
@@ -102,6 +105,7 @@ impl Loader for DaisyLoader {
                 true,
                 options,
                 &mut meta,
+                None,
             )?;
             fill_meta(&mut meta, &book);
             if meta.title.is_none() {
@@ -120,7 +124,11 @@ impl Loader for DaisyLoader {
 pub fn is_daisy_package(bytes: &[u8]) -> bool {
     let head = &bytes[..bytes.len().min(256 * 1024)];
     let s = String::from_utf8_lossy(head);
-    s.contains("<package") && s.contains("application/x-dtbook+xml")
+    // An audio-only book has no DTBook: its NCX and its SMIL files (whose
+    // media type EPUB never uses; EPUB 3 writes `application/smil+xml`).
+    let audio_only = s.contains("application/x-dtbncx+xml")
+        && (s.contains("\"application/smil\"") || s.contains("'application/smil'"));
+    s.contains("<package") && (s.contains("application/x-dtbook+xml") || audio_only)
 }
 
 /// True for DTBook XML (its root element is `dtbook`).
@@ -262,11 +270,14 @@ pub(crate) fn smil_target(
 
 /// Loads a DAISY 3 book from its package file. `opf_path` is the package's
 /// path among the book's files, and `read` reads another of them.
+/// `collect`, when given, gathers what the book's audio needs
+/// ([`crate::book_audio()`]).
 pub(crate) fn load_package(
     opf_path: &str,
     opf_bytes: &[u8],
     read: &mut ReadFile<'_>,
     options: &LoadOptions,
+    mut collect: Option<&mut Collect>,
 ) -> Result<Document, LoadError> {
     let mut meta = DocumentMeta {
         format: "daisy".into(),
@@ -330,6 +341,9 @@ pub(crate) fn load_package(
         let Ok(xml) = parse_xml(&text) else { continue };
         let targets = read_smil(&xml, dir_of(smil), &mut order, &mut seen);
         smil_targets.insert(smil.clone(), targets);
+        if let Some(c) = collect.as_deref_mut() {
+            c.smils.push((smil.clone(), text.clone()));
+        }
     }
     for d in &dtbooks {
         if seen.insert(d.clone()) {
@@ -340,6 +354,8 @@ pub(crate) fn load_package(
 
     // The NCX's entries, pointed through the SMIL files at DTBook ids.
     let mut toc: Vec<TocEntry> = Vec::new();
+    // Every entry with its own link too, for a book with no text.
+    let mut points: Vec<(String, u8, String)> = Vec::new();
     if let Some(ncx) = &ncx
         && let Some(bytes) = read(ncx)?
     {
@@ -348,6 +364,7 @@ pub(crate) fn load_package(
             let dir = dir_of(ncx).to_owned();
             if let Some(map) = xml.descendants().find(|n| n.tag_name().name() == "navMap") {
                 ncx_entries(map, 1, &dir, &smil_targets, &mut toc);
+                ncx_points(map, 1, &mut points);
             }
         }
     }
@@ -369,6 +386,7 @@ pub(crate) fn load_package(
             toc.is_empty(),
             options,
             &mut meta,
+            collect.as_deref_mut(),
         )?;
         if first {
             // Package metadata wins; the DTBook's head fills gaps.
@@ -377,10 +395,119 @@ pub(crate) fn load_package(
             first = false;
         }
     }
+    if first && !points.is_empty() {
+        // No text, only audio: the NCX headings are the text, and the
+        // audio is reached through them.
+        crate::add_warning(&mut meta, crate::daisy2::NO_TEXT_WARNING);
+        let ncx = ncx.unwrap_or_default();
+        nav_headings(
+            &mut b,
+            &mut sections,
+            &ncx,
+            &points,
+            options,
+            &mut meta,
+            collect,
+        );
+    }
     fill_meta(&mut meta, &book);
     let (text, mut markers) = b.finish();
     label_sections_by_heading(&text, &mut markers);
     Ok(Document::new(meta, Rope::from_str(&text), markers))
+}
+
+/// Every NCX `navPoint` under `node`, in order: its label, its depth, and
+/// its `content` link as written.
+fn ncx_points(node: roxmltree::Node<'_, '_>, depth: usize, out: &mut Vec<(String, u8, String)>) {
+    if depth > crate::MAX_NESTING {
+        return;
+    }
+    for point in node
+        .children()
+        .filter(|n| n.tag_name().name() == "navPoint")
+    {
+        let title = point
+            .children()
+            .find(|n| n.tag_name().name() == "navLabel")
+            .map(text_of)
+            .unwrap_or_default();
+        if let Some(src) = point
+            .children()
+            .find(|n| n.tag_name().name() == "content")
+            .and_then(|c| c.attribute("src"))
+        {
+            out.push((
+                title,
+                u8::try_from(depth).unwrap_or(u8::MAX),
+                src.to_owned(),
+            ));
+        }
+        ncx_points(point, depth + 1, out);
+    }
+}
+
+/// A book with no text: its NCX headings, each a section, are the text.
+/// `collect` learns where each heading starts and the SMIL position it
+/// links to.
+fn nav_headings(
+    b: &mut Builder,
+    sections: &mut Sections,
+    ncx: &str,
+    points: &[(String, u8, String)],
+    options: &LoadOptions,
+    meta: &mut DocumentMeta,
+    mut collect: Option<&mut Collect>,
+) {
+    let mut html = String::from("<html><body>");
+    let mut toc = Vec::new();
+    for (i, (title, depth, _)) in points.iter().enumerate() {
+        let level = (*depth).clamp(1, 6);
+        let id = format!("textweaver-nav-{i}");
+        let _ = write!(html, "<h{level} id=\"{id}\">");
+        escape(title, &mut html);
+        let _ = write!(html, "</h{level}>");
+        if let Some(c) = collect.as_deref_mut() {
+            c.nav.push((
+                (ncx.to_owned(), id.clone()),
+                resolve(dir_of(ncx), &points[i].2),
+            ));
+        }
+        toc.push(TocEntry {
+            title: title.clone(),
+            file: ncx.to_owned(),
+            fragment: Some(id),
+            depth: *depth,
+        });
+    }
+    html.push_str("</body></html>");
+    let entries: Vec<&TocEntry> = toc.iter().collect();
+    crate::daisy2::read_chapter(b, sections, &html, ncx, &entries, options, meta, collect);
+}
+
+/// What a second walk of a DAISY book gathers for its audio
+/// ([`crate::book_audio()`]).
+#[derive(Debug, Default)]
+pub(crate) struct Collect {
+    /// Where each element with an id starts in the text, by content file
+    /// and id.
+    pub(crate) positions: HashMap<(String, String), usize>,
+    /// The SMIL files in reading order, with their text.
+    pub(crate) smils: Vec<(String, String)>,
+    /// For a book with no text: each heading (by file and id) and the
+    /// SMIL file and fragment it links to.
+    pub(crate) nav: Vec<(IdKey, (String, Option<String>))>,
+}
+
+/// An element of a book's file: the file and the element's id.
+pub(crate) type IdKey = (String, String);
+
+impl Collect {
+    /// Notes that id `id` of `file` starts at char `at`, unless known.
+    pub(crate) fn note(&mut self, file: &str, id: &str, at: usize) {
+        self.positions
+            .entry((file.to_owned(), id.to_owned()))
+            .or_insert(at);
+    }
 }
 
 /// Table-of-contents entries from an NCX `navMap`, each pointed at the
@@ -440,6 +567,7 @@ fn read_dtbook(
     own_levels: bool,
     options: &LoadOptions,
     meta: &mut DocumentMeta,
+    mut collect: Option<&mut Collect>,
 ) -> Result<BookMeta, LoadError> {
     let xml = parse_xml(text)?;
     let mut book = BookMeta::default();
@@ -510,6 +638,9 @@ fn read_dtbook(
     let mut scratch = DocumentMeta::default();
     {
         let mut hook = |id: &str, b: &mut Builder| {
+            if let Some(c) = collect.as_deref_mut() {
+                c.note(file, id, b.next_start());
+            }
             if let Some(n) = id
                 .strip_prefix(PAGE_ID)
                 .and_then(|n| n.parse::<usize>().ok())
@@ -850,6 +981,7 @@ mod tests {
             opf.as_bytes(),
             &mut read,
             &LoadOptions::default(),
+            None,
         )
         .unwrap();
         assert_eq!(d.text().to_string(), "From A.\n\nBefore.\n\nFrom B.");
