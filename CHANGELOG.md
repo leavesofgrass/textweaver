@@ -27,6 +27,15 @@ In short: beta 2 fixes the speech rate, and brings every document up to date.
 
 - Every guide, the README, and the developer documentation were checked against beta 1 and brought up to date: one download per system, `tw` as the one terminal program, the beta stage, privacy (updates, fetched helpers, the credential store), and the settings that were missing from the settings guide.
 
+### Package sizes
+
+- `textweaver-0.1.0-beta.2-linux-aarch64.AppImage`: 66.4 MB (69,638,664 bytes)
+- `textweaver-0.1.0-beta.2-linux-aarch64.tar.gz`: 70.7 MB (74,160,981 bytes)
+- `textweaver-0.1.0-beta.2-linux-x86_64.AppImage`: 71.7 MB (75,176,440 bytes)
+- `textweaver-0.1.0-beta.2-linux-x86_64.tar.gz`: 76.3 MB (80,014,927 bytes)
+- `textweaver-0.1.0-beta.2-macos-universal.zip`: 126.1 MB (132,202,558 bytes)
+- `textweaver-0.1.0-beta.2-windows-x86_64.zip`: 78.3 MB (82,128,223 bytes)
+
 ## [0.1.0-beta.1] - 2026-10-10
 
 In short: beta 1 adds study tools (study cards with SM-2 scheduling and sync, a self-test, recall prompts), links between notes with seven export formats, tracked changes and comments written back to Word files, a named highlight palette, regular-expression find and replace, Markdown paste, a preview pane, polished HTML, DAISY 2.02 books and recorded DAISY narration, braille (BRF) files such as NLS BARD downloads, five more formats through carta, offline searchable help, optional components fetched for you (including from your own repository), update checks, and one download per system holding both programs.
