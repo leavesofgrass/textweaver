@@ -24,10 +24,18 @@ pub(crate) fn untranslated_braille(doc: &Document) -> bool {
 }
 
 impl App {
-    /// After opening a BRF file without liblouis: what happened and how to
-    /// read it as print, once.
-    pub(crate) fn say_braille_untranslated(&mut self) {
-        let msg = self.msg("brf-no-liblouis");
+    /// After opening a BRF file without liblouis: one question to fetch
+    /// liblouis, after which the file opens again as print, when this
+    /// computer can have it; else what happened and how to read it as
+    /// print (with the package command to copy, when it is known), once.
+    pub(crate) fn say_braille_untranslated(&mut self, path: &std::path::Path) {
+        if self.offer_liblouis_for(path.to_owned()) {
+            return;
+        }
+        let msg = match self.helper_command_text(crate::components::Helper::Liblouis) {
+            Some(command) => format!("{} {command}", self.msg("brf-no-liblouis-short")),
+            None => self.msg("brf-no-liblouis"),
+        };
         self.tell(&msg);
     }
 

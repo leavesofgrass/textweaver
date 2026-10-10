@@ -178,7 +178,8 @@ impl Default for Registry {
 
 impl Registry {
     /// The built-in components: the Whisper models, the OCR model sets,
-    /// and the downloadable reading fonts.
+    /// the downloadable reading fonts, and the public helper programs
+    /// that have a build for this computer ([`Helper`]).
     pub fn builtin() -> Self {
         let mut list = vec![whisper_base_en(), whisper_small_en()];
         list.extend(textweaver_ocr::models::ALL.iter().map(|s| s.component()));
@@ -187,6 +188,7 @@ impl Registry {
                 .iter()
                 .map(|f| f.component()),
         );
+        list.extend(Helper::ALL.iter().filter_map(|h| h.component()));
         let builtin = list.len();
         Registry { list, builtin }
     }
@@ -198,6 +200,36 @@ impl Registry {
         let parsed =
             textweaver_components::manifest::parse(text, &|id| known.iter().any(|k| k == id))?;
         self.list.extend(parsed.components);
+        Ok(parsed.refused)
+    }
+
+    /// Adds the components of the components source's own list (its
+    /// text), like [`Registry::add_manifest`], except that the source may
+    /// supply a public helper (ffmpeg, liblouis, pandoc) in place of the
+    /// built-in one: the reader's own source comes first. Every other
+    /// built-in id is still refused.
+    pub fn add_source_manifest(
+        &mut self,
+        text: &str,
+    ) -> Result<Vec<(String, String)>, ComponentError> {
+        let known: Vec<String> = self
+            .list
+            .iter()
+            .map(|c| c.id.to_string())
+            .filter(|id| Helper::from_id(id).is_none())
+            .collect();
+        let parsed =
+            textweaver_components::manifest::parse(text, &|id| known.iter().any(|k| k == id))?;
+        for c in parsed.components {
+            if let Some(i) = self.list.iter().position(|b| b.id == c.id) {
+                log::info!("the components source supplies {}", c.id);
+                self.list.remove(i);
+                if i < self.builtin {
+                    self.builtin -= 1;
+                }
+            }
+            self.list.push(c);
+        }
         Ok(parsed.refused)
     }
 
@@ -321,6 +353,7 @@ pub fn error_text(c: &Catalog, e: &ComponentError) -> String {
         ComponentError::BadName(_) => "component-error-name",
         ComponentError::Manifest(_) => "component-error-manifest",
         ComponentError::Io { .. } => "component-error-io",
+        ComponentError::Unpack(_) => "component-error-unpack",
     })
 }
 
@@ -331,6 +364,12 @@ pub(crate) enum After {
     Nothing,
     /// Start dictating (the dictation question's yes).
     Dictate,
+    /// Export audio again, now with ffmpeg (the export's offer).
+    #[cfg_attr(not(feature = "audio-export"), allow(dead_code))]
+    ExportAudio,
+    /// Open the braille file again, now with liblouis (its path is kept
+    /// in the components state).
+    Reopen,
 }
 
 /// A yes-or-no question about a component.
@@ -340,7 +379,13 @@ pub(crate) enum Question {
     Download(String, After),
     /// Remove this component's files.
     Remove(String),
+    /// Launch this component's installer (its name, version, and license
+    /// note said first).
+    Launch(String),
 }
+
+/// Launches an installer (tests record it instead).
+pub(crate) type Launcher = Arc<dyn Fn(&Path) -> std::io::Result<()> + Send + Sync>;
 
 /// What a helper thread does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -352,7 +397,7 @@ enum JobKind {
 
 /// What a helper thread finished with.
 enum JobDone {
-    Fetched,
+    Fetched(Outcome),
     Installed(InstallReport),
     Verified(Vec<(String, FileState)>),
 }
@@ -423,6 +468,10 @@ pub(crate) struct ComponentsState {
     /// Tests: the fake GitHub API the signed-in fetcher goes to.
     #[cfg(test)]
     github_api: Option<String>,
+    /// Set by tests: records an installer's launch instead of running it.
+    launcher: Option<Launcher>,
+    /// The braille file to open again once liblouis is installed.
+    reopen: Option<PathBuf>,
 }
 
 impl std::fmt::Debug for ComponentsState {
@@ -453,6 +502,15 @@ impl App {
     /// goes to the network).
     pub fn set_component_fetcher(&mut self, fetcher: Arc<dyn Fetcher>) {
         self.components.fetcher = Some(fetcher);
+    }
+
+    /// Launches installers through `launcher` from now on, instead of the
+    /// system's opener (tests record the launch; nothing runs).
+    pub fn set_installer_launcher(
+        &mut self,
+        launcher: Arc<dyn Fn(&Path) -> std::io::Result<()> + Send + Sync>,
+    ) {
+        self.components.launcher = Some(launcher);
     }
 
     /// Moves on each time a component was installed, removed, or
@@ -612,8 +670,17 @@ impl App {
             return;
         };
         let mut registry = Registry::builtin();
-        for address in addresses {
-            match fetch_text(&*fetcher, &address).map(|t| registry.add_manifest(&t)) {
+        // The source's list comes first, and may supply the helpers.
+        let from_source = sources(&self.settings).source.is_some();
+        for (i, address) in addresses.into_iter().enumerate() {
+            let add = |r: &mut Registry, t: &str| {
+                if i == 0 && from_source {
+                    r.add_source_manifest(t)
+                } else {
+                    r.add_manifest(t)
+                }
+            };
+            match fetch_text(&*fetcher, &address).map(|t| add(&mut registry, &t)) {
                 Ok(Ok(refused)) => {
                     for (id, why) in refused {
                         log::warn!("component {id} in {address} refused: {why}");
@@ -654,6 +721,9 @@ impl App {
             "component-state-downloading"
         } else {
             match c.status_in(&component_dir(c, &data)) {
+                Status::Installed if c.action() == Action::Installer => {
+                    "component-state-installer-ready"
+                }
                 Status::Installed => "component-state-installed",
                 Status::NotInstalled => "component-state-not-installed",
                 Status::Partial(_) => "component-state-partial",
@@ -773,6 +843,11 @@ impl App {
             return vec![Effect::Redraw];
         }
         if then == After::Nothing && c.status_in(&dir) == Status::Installed {
+            if c.action() == Action::Installer {
+                // Downloaded and checked: what is left is the launch.
+                self.ask_component_launch(&c);
+                return vec![Effect::Redraw];
+            }
             let msg = self.msg_args("component-already", &args!["title" => c.title.as_ref()]);
             self.tell(&msg);
             return vec![Effect::Redraw];
@@ -796,15 +871,129 @@ impl App {
         let key = match then {
             After::Dictate => "dictation-model-question",
             After::Nothing => "component-question",
+            After::ExportAudio | After::Reopen => "helper-question",
+        };
+        let need = match then {
+            After::ExportAudio => self.msg("helper-need-audio"),
+            After::Reopen => self.msg("helper-need-brf"),
+            After::Nothing | After::Dictate => String::new(),
         };
         self.msg_args(
             key,
             &args![
+                "need" => need,
                 "title" => c.title.as_ref(),
                 "size" => c.size_text(),
                 "license" => c.license.as_ref()
             ],
         )
+    }
+
+    /// The installer question: its name, version, and license note, then
+    /// whether to launch it. The system's own prompt follows a yes.
+    fn launch_question(&self, c: &Component) -> String {
+        let version = match c.version() {
+            "" => self.msg("component-version-unknown"),
+            v => v.to_owned(),
+        };
+        self.msg_args(
+            "component-launch-question",
+            &args![
+                "title" => c.title.as_ref(),
+                "version" => version,
+                "license" => c.license.as_ref()
+            ],
+        )
+    }
+
+    fn ask_component_launch(&mut self, c: &Component) {
+        let q = self.launch_question(c);
+        self.components.question = Some(Question::Launch(c.id.to_string()));
+        self.ask(&q);
+    }
+
+    /// Launches `id`'s checked installer: through the system's opener (on
+    /// Windows the shell, so its own permission prompt follows), or a
+    /// test's launcher. Said either way.
+    fn launch_component(&mut self, id: &str) {
+        let Some((c, dir)) = self.component_and_dir(id) else {
+            return;
+        };
+        let Some(file) = c.files.first() else {
+            return;
+        };
+        let path = dir.join(file.name.as_ref());
+        if !file.matches_file(&path) {
+            let msg = self.msg("component-error-hash");
+            self.error(&msg);
+            return;
+        }
+        let launched = match &self.components.launcher {
+            Some(l) => l(&path),
+            None => crate::opener::open_with_system(&path.display().to_string()),
+        };
+        match launched {
+            Ok(()) => {
+                log::info!("launched the installer {}", path.display());
+                let msg = self.msg_args("component-launched", &args!["title" => c.title.as_ref()]);
+                self.tell(&msg);
+            }
+            Err(e) => {
+                log::warn!("launching {}: {e}", path.display());
+                let msg =
+                    self.msg_args("component-launch-failed", &args!["reason" => e.to_string()]);
+                self.error(&msg);
+            }
+        }
+    }
+
+    // ----- Helpers at the moment of need -------------------------------
+
+    /// Offers `helper` when a feature needs it and it is missing: one
+    /// question (its name, size, and license) when it can be fetched here
+    /// and the reader has not said no this session; the download then
+    /// carries on with `then`. True when the question was asked.
+    pub(crate) fn offer_helper(&mut self, helper: Helper, then: After) -> bool {
+        let id = helper.id();
+        if self.components.declined.contains(id)
+            || self.components.job.is_some()
+            || self.confirmation_pending()
+        {
+            return false;
+        }
+        // The components source may supply the helper (read once).
+        self.load_mirror_manifest();
+        let Some((c, dir)) = self.component_and_dir(id) else {
+            return false;
+        };
+        if c.status_in(&dir) == Status::Installed || self.component_fetcher().is_none() {
+            return false;
+        }
+        let question = self.component_question(&c, then);
+        self.components.question = Some(Question::Download(id.to_owned(), then));
+        self.ask(&question);
+        true
+    }
+
+    /// The sentence that names the package command for `helper`, on a
+    /// computer with no component for it ("To get liblouis, run: sudo apt
+    /// install liblouis-bin"), when the command is known.
+    pub(crate) fn helper_command_text(&self, helper: Helper) -> Option<String> {
+        let command = helper.package_command()?;
+        Some(self.msg_args(
+            "helper-run-command",
+            &args!["title" => helper.name(), "command" => command],
+        ))
+    }
+
+    /// Asks to fetch liblouis for the braille file at `path`, which opened
+    /// as braille; once installed, the file opens again. True when asked.
+    pub(crate) fn offer_liblouis_for(&mut self, path: PathBuf) -> bool {
+        if self.offer_helper(Helper::Liblouis, After::Reopen) {
+            self.components.reopen = Some(path);
+            return true;
+        }
+        false
     }
 
     fn ask_component_remove(&mut self, id: &str) -> Vec<Effect> {
@@ -847,6 +1036,10 @@ impl App {
                             )
                         })
                     }
+                    Question::Launch(id) => {
+                        let c = self.component_registry().get(id).cloned();
+                        c.map(|c| self.launch_question(&c))
+                    }
                 };
                 self.components.question = Some(q);
                 if let Some(t) = text {
@@ -857,10 +1050,24 @@ impl App {
                 self.components.declined.insert(id);
                 let key = match then {
                     After::Dictate => "dictation-model-declined",
-                    After::Nothing => "component-declined",
+                    After::Nothing | After::ExportAudio | After::Reopen => "component-declined",
                 };
                 let msg = self.msg(key);
                 self.tell(&msg);
+                self.components.reopen = None;
+                // The export goes on without ffmpeg's formats.
+                if then == After::ExportAudio {
+                    return self.export_audio_after_offer();
+                }
+            }
+            (Confirm::No, Question::Launch(id)) => {
+                self.components.declined.insert(id);
+                let msg = self.msg("component-launch-declined");
+                self.tell(&msg);
+            }
+            (Confirm::Yes, Question::Launch(id)) => {
+                self.components.declined.remove(&id);
+                self.launch_component(&id);
             }
             (Confirm::No, Question::Remove(_)) => {
                 let msg = self.msg("common-kept");
@@ -921,7 +1128,7 @@ impl App {
                         },
                         &cancel2,
                     )
-                    .map(|_| JobDone::Fetched),
+                    .map(JobDone::Fetched),
                     JobKind::Install => match from {
                         Some(path) => textweaver_components::install_from(&c2, &path, &dir2)
                             .map(JobDone::Installed),
@@ -1103,21 +1310,14 @@ impl App {
             .get(&job.id)
             .map_or_else(|| job.id.clone(), |c| c.title.to_string());
         match result {
-            Ok(JobDone::Fetched) => self.component_ready(job, &title),
+            Ok(JobDone::Fetched(outcome)) => {
+                self.say_left_out(&outcome.left_out);
+                self.component_ready(job, &title)
+            }
             Ok(JobDone::Installed(report)) => {
+                self.say_left_out(&report.outcome.left_out);
                 let effects = self.component_ready(job, &title);
-                if !report.refused.is_empty() {
-                    let names: Vec<String> = report
-                        .refused
-                        .iter()
-                        .map(|(n, why)| format!("{n}, {why}"))
-                        .collect();
-                    let msg = self.msg_args(
-                        "component-refused",
-                        &args!["n" => names.len(), "files" => names.join("; ")],
-                    );
-                    self.tell(&msg);
-                }
+                self.say_left_out(&report.refused);
                 effects
             }
             Ok(JobDone::Verified(states)) => {
@@ -1159,16 +1359,53 @@ impl App {
         }
     }
 
+    /// Says the files a zip, a folder, or an archive held that were left
+    /// out, with the reason, when there are any.
+    fn say_left_out(&mut self, left_out: &[(String, String)]) {
+        if left_out.is_empty() {
+            return;
+        }
+        let names: Vec<String> = left_out
+            .iter()
+            .map(|(n, why)| format!("{n}, {why}"))
+            .collect();
+        let msg = self.msg_args(
+            "component-refused",
+            &args!["n" => names.len(), "files" => names.join("; ")],
+        );
+        self.tell(&msg);
+    }
+
     /// A download or install finished: every feature sees it, the reader
-    /// hears it, and dictation starts when that was the reason.
+    /// hears it, and the feature that asked for it carries on: dictation
+    /// starts, the export asks again with every format, or the braille
+    /// file opens again. An installer is offered for launch instead.
     fn component_ready(&mut self, job: &Job, title: &str) -> Vec<Effect> {
         self.component_changed(&job.id);
+        let installer = self
+            .component_registry()
+            .get(&job.id)
+            .filter(|c| c.action() == Action::Installer)
+            .cloned();
+        if let Some(c) = installer {
+            self.ask_component_launch(&c);
+            return Vec::new();
+        }
         let msg = self.msg_args("component-ready", &args!["title" => title]);
         self.tell(&msg);
-        if job.then == After::Dictate {
-            return self.dictate_after_download();
+        match job.then {
+            After::Dictate => self.dictate_after_download(),
+            After::ExportAudio => self.export_audio_after_offer(),
+            After::Reopen => match self.components.reopen.take() {
+                Some(path) => self.open(&path).unwrap_or_else(|e| {
+                    let msg = e.to_string();
+                    self.error(&msg);
+                    vec![Effect::Redraw]
+                }),
+                None => Vec::new(),
+            },
+            After::Nothing => Vec::new(),
         }
-        Vec::new()
     }
 
     // ----- The first-run list ------------------------------------------
@@ -1281,6 +1518,19 @@ impl App {
         vec![Effect::Redraw]
     }
 
+    /// Export audio once more after the ffmpeg offer was answered (a no
+    /// goes on without its formats; a yes, once installed, with them).
+    fn export_audio_after_offer(&mut self) -> Vec<Effect> {
+        #[cfg(feature = "audio-export")]
+        {
+            self.export_audio()
+        }
+        #[cfg(not(feature = "audio-export"))]
+        {
+            Vec::new()
+        }
+    }
+
     /// Waits up to `limit` for component work to finish (tests).
     pub fn wait_for_components(&mut self, limit: std::time::Duration) -> bool {
         let start = std::time::Instant::now();
@@ -1294,6 +1544,9 @@ impl App {
         true
     }
 }
+
+mod helpers;
+pub use helpers::{Helper, package_command_for};
 
 #[cfg(test)]
 mod tests;

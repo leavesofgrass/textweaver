@@ -135,16 +135,24 @@ fn made_up_mirror() -> (FakeFetcher, &'static str, Vec<(String, Vec<u8>)>) {
 fn the_registry_holds_the_owners_pins() {
     let r = Registry::builtin();
     let ids: Vec<&str> = r.components().iter().map(|c| c.id.as_ref()).collect();
-    assert_eq!(
-        ids,
-        [
-            "whisper-base.en",
-            "whisper-small.en",
-            "ocr-ocrs",
-            "ocr-paddle-latin",
-            "lexend"
-        ]
-    );
+    // The helper programs with a build for this computer come last.
+    let helpers: Vec<&str> = Helper::ALL
+        .iter()
+        .filter(|h| h.component().is_some())
+        .map(|h| h.id())
+        .collect();
+    let mut expected = vec![
+        "whisper-base.en",
+        "whisper-small.en",
+        "ocr-ocrs",
+        "ocr-paddle-latin",
+        "lexend",
+    ];
+    expected.extend(&helpers);
+    assert_eq!(ids, expected);
+    if cfg!(windows) {
+        assert_eq!(helpers, ["ffmpeg", "liblouis", "pandoc"]);
+    }
     for c in r.components() {
         c.check_names().unwrap();
     }
@@ -171,7 +179,7 @@ fn the_registry_holds_the_owners_pins() {
     );
     // With nothing installed, nothing is said to be.
     let tmp = tempfile::tempdir().unwrap();
-    assert_eq!(r.installed_count(tmp.path()), (0, 5));
+    assert_eq!(r.installed_count(tmp.path()), (0, 5 + helpers.len()));
 }
 
 #[test]
@@ -204,7 +212,12 @@ fn nothing_is_fetched_before_a_yes() {
     let fake = Arc::new(FakeFetcher::new());
     let (mut app, said) = app_in(tmp.path(), fake.clone());
     app.dispatch(Command::Action(ActionId::ManageComponents));
-    assert!(said.any("5 optional components."), "{:?}", said.all());
+    let n = Registry::builtin().components().len();
+    assert!(
+        said.any(&format!("{n} optional components.")),
+        "{:?}",
+        said.all()
+    );
     let model = app.list_model().unwrap().clone();
     assert!(
         model.items[0].starts_with("Whisper base.en, English dictation: not installed, 79.3 MB"),
@@ -420,8 +433,10 @@ fn the_first_run_list_chooses_nothing_and_shows_once() {
     app.tick(std::time::Instant::now());
     let model = app.list_model().unwrap().clone();
     assert_eq!(model.title, "Optional components");
+    // The built-in components, the helper programs with a build here last.
+    let n = Registry::builtin().components().len();
     assert!(
-        model.items[..5]
+        model.items[..n]
             .iter()
             .all(|i| i.starts_with("Not chosen: "))
     );
@@ -431,11 +446,11 @@ fn the_first_run_list_chooses_nothing_and_shows_once() {
         "{:?}",
         model.items
     );
-    assert_eq!(model.items[5], "Download the chosen ones");
-    assert_eq!(model.items[6], "Skip for now");
+    assert_eq!(model.items[n], "Download the chosen ones");
+    assert_eq!(model.items[n + 1], "Skip for now");
     assert!(app.settings().components.chooser_shown);
     // Nothing chosen: Download downloads nothing.
-    app.dispatch(Command::Choose(5));
+    app.dispatch(Command::Choose(n));
     assert!(said.any("Nothing chosen, nothing downloaded."));
     assert_eq!(fake.request_count(), 0);
     // Shown once.
@@ -766,4 +781,171 @@ fn a_private_source_signs_in_once_and_the_token_is_never_written() {
     app.dispatch(Command::Action(ActionId::ManageComponents));
     let purpose = app.prompt_model().map(|p| p.purpose);
     assert_eq!(purpose, Some(PromptPurpose::GitHubToken));
+}
+
+/// A launcher that records each installer it is asked to start and runs
+/// nothing: the fake installer.
+fn recording_launcher() -> (Launcher, Arc<Mutex<Vec<PathBuf>>>) {
+    let ran = Arc::new(Mutex::new(Vec::new()));
+    let r = Arc::clone(&ran);
+    let launcher: Launcher = Arc::new(move |p: &Path| {
+        r.lock().unwrap().push(p.to_owned());
+        Ok(())
+    });
+    (launcher, ran)
+}
+
+/// The rows of the manager, and the row whose text starts with `title`.
+fn manager_row(app: &mut App, title: &str) -> usize {
+    app.dispatch(Command::Action(ActionId::ManageComponents));
+    let model = app.list_model().unwrap().clone();
+    model
+        .items
+        .iter()
+        .position(|i| i.starts_with(title))
+        .unwrap_or_else(|| panic!("{title} in {:?}", model.items))
+}
+
+/// A source with one component of each action: textweaver lists all
+/// three, installs the first two (the archive unpacked), and for the
+/// installer says its name, version, and license note and stops at the
+/// question. No launches nothing and is remembered; yes launches it once.
+#[test]
+fn place_unpack_and_installer_from_a_source_folder() {
+    use textweaver_components::fake::{FakeSource, zip_bytes};
+    let tmp = tempfile::tempdir().unwrap();
+    let here = Platform::current();
+    let mut source = FakeSource::new(&tmp.path().join("my-components"));
+    source
+        .add("made-up-voice", "1.0", Platform::Any, Action::Place, &[("voice.onnx", b"a voice")])
+        .unwrap();
+    let archive = zip_bytes(&[("made-up-tool-2.0/bin/tool.exe", b"a made-up program")]);
+    source
+        .add("made-up-tool", "2.0", here, Action::Unpack, &[("made-up-tool-2.0.zip", &archive)])
+        .unwrap();
+    source
+        .add("made-up-setup", "0.3.0", here, Action::Installer, &[("setup.exe", b"a made-up installer")])
+        .unwrap();
+    let (mut app, said) = app_in(tmp.path(), Arc::new(StandardFetcher));
+    let (launcher, ran) = recording_launcher();
+    app.set_installer_launcher(launcher);
+    let root = source.root().to_string_lossy().into_owned();
+    let _ = app.update_settings(|s| s.components.source = root.clone());
+
+    // Place.
+    let row = manager_row(&mut app, "The made-up-voice component: not installed");
+    app.dispatch(Command::Choose(row));
+    app.dispatch(Command::Choose(0));
+    app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(app.wait_for_components(WAIT));
+    let (c, dir) = app.component_and_dir("made-up-voice").unwrap();
+    assert_eq!(c.status_in(&dir), Status::Installed);
+    assert!(dir.join("voice.onnx").is_file());
+
+    // Unpack: the program is in the folder, the archive is not.
+    let row = manager_row(&mut app, "The made-up-tool component: not installed");
+    app.dispatch(Command::Choose(row));
+    app.dispatch(Command::Choose(0));
+    app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(app.wait_for_components(WAIT));
+    let (c, dir) = app.component_and_dir("made-up-tool").unwrap();
+    assert_eq!(c.status_in(&dir), Status::Installed);
+    assert!(dir.join("made-up-tool-2.0").join("bin").join("tool.exe").is_file());
+    assert!(!dir.join("made-up-tool-2.0.zip").exists());
+    // The engine discovery's search finds what was unpacked.
+    let comp = Paths::under(tmp.path()).components_dir();
+    assert_eq!(
+        textweaver_store::find_in_components(&comp, &["tool.exe"]),
+        Some(dir.join("made-up-tool-2.0").join("bin").join("tool.exe"))
+    );
+
+    // Installer: downloaded and checked, then the question, said first.
+    said.clear();
+    let row = manager_row(&mut app, "The made-up-setup component: not installed");
+    app.dispatch(Command::Choose(row));
+    app.dispatch(Command::Choose(0));
+    app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(app.wait_for_components(WAIT));
+    assert!(
+        said.any(
+            "Launch installer: The made-up-setup component, version 0.3.0, license CC0-1.0, made up for tests? The system asks next. y or n"
+        ),
+        "{:?}",
+        said.all()
+    );
+    app.dispatch(Command::Confirm(Confirm::No));
+    assert!(said.any("Not launched; the installer is kept."), "{:?}", said.all());
+    assert!(ran.lock().unwrap().is_empty(), "no launches nothing");
+    assert!(app.component_declined("made-up-setup"));
+    let _ = manager_row(&mut app, "The made-up-setup component: installer downloaded");
+
+    // Download again on a downloaded installer: the launch is offered.
+    let row = manager_row(&mut app, "The made-up-setup component");
+    app.dispatch(Command::Choose(row));
+    app.dispatch(Command::Choose(0));
+    app.dispatch(Command::Confirm(Confirm::Yes));
+    let ran = ran.lock().unwrap().clone();
+    assert_eq!(ran.len(), 1, "{ran:?}");
+    assert!(ran[0].ends_with("setup.exe"), "{ran:?}");
+    assert!(said.any("Installer started: The made-up-setup component."), "{:?}", said.all());
+}
+
+/// A braille file opened without liblouis: one question instead of "not
+/// found", with the source supplying liblouis; a no is remembered for the
+/// session, and the file is not asked about again.
+#[test]
+fn liblouis_is_offered_once_when_a_braille_file_needs_it() {
+    use textweaver_components::fake::{FakeSource, zip_bytes};
+    let tmp = tempfile::tempdir().unwrap();
+    let mut source = FakeSource::new(&tmp.path().join("my-components"));
+    let archive = zip_bytes(&[("liblouis/bin/lou_translate.exe", b"a made-up program")]);
+    source
+        .add("liblouis", "3.39.0", Platform::current(), Action::Unpack, &[("liblouis-made-up.zip", &archive)])
+        .unwrap();
+    let (mut app, said) = app_in(tmp.path(), Arc::new(StandardFetcher));
+    let root = source.root().to_string_lossy().into_owned();
+    let _ = app.update_settings(|s| s.components.source = root.clone());
+    let brf = tmp.path().join("book.brf");
+    app.say_braille_untranslated(&brf);
+    assert!(
+        said.any("Reading braille as print needs The liblouis component, "),
+        "{:?}",
+        said.all()
+    );
+    app.dispatch(Command::Confirm(Confirm::No));
+    assert!(said.any("Not downloaded."), "{:?}", said.all());
+    said.clear();
+    app.say_braille_untranslated(&brf);
+    assert!(said.any("Braille shown as braille: liblouis is missing."), "{:?}", said.all());
+    assert!(!said.any("Download it now?"), "{:?}", said.all());
+    // The source's liblouis took the built-in one's place.
+    let (c, _) = app.component_and_dir("liblouis").unwrap();
+    assert_eq!(c.title, "The liblouis component");
+}
+
+/// Yes: the source's liblouis is fetched and unpacked, and the braille
+/// file is opened again.
+#[test]
+fn after_a_yes_liblouis_is_unpacked_and_the_file_opens_again() {
+    use textweaver_components::fake::{FakeSource, zip_bytes};
+    let tmp = tempfile::tempdir().unwrap();
+    let mut source = FakeSource::new(&tmp.path().join("my-components"));
+    let archive = zip_bytes(&[("liblouis/bin/lou_translate.exe", b"a made-up program")]);
+    source
+        .add("liblouis", "3.39.0", Platform::current(), Action::Unpack, &[("liblouis-made-up.zip", &archive)])
+        .unwrap();
+    let (mut app, said) = app_in(tmp.path(), Arc::new(StandardFetcher));
+    let root = source.root().to_string_lossy().into_owned();
+    let _ = app.update_settings(|s| s.components.source = root.clone());
+    let brf = tmp.path().join("book.brf");
+    std::fs::write(&brf, "  ,HELLO\r\n").unwrap();
+    app.say_braille_untranslated(&brf);
+    app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(app.wait_for_components(WAIT));
+    let (c, dir) = app.component_and_dir("liblouis").unwrap();
+    assert_eq!(c.status_in(&dir), Status::Installed);
+    assert!(dir.join("liblouis").join("bin").join("lou_translate.exe").is_file());
+    assert!(said.any("Ready: The liblouis component."), "{:?}", said.all());
+    let open = app.session.as_ref().and_then(|s| s.doc.meta.path.clone());
+    assert_eq!(open.as_deref(), Some(brf.as_path()), "the file opened again");
 }

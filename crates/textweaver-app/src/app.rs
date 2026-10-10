@@ -1134,7 +1134,7 @@ impl App {
         let braille = crate::braille_file::untranslated_braille(&doc);
         let effects = self.open_document_stamped(doc, key, title, text);
         if braille {
-            self.say_braille_untranslated();
+            self.say_braille_untranslated(path);
         }
         if let Some(s) = self.session.as_mut() {
             s.disk = stamp;

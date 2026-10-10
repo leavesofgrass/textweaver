@@ -164,6 +164,7 @@ mod run {
 
     use super::AudioList;
     use crate::app::{App, ListKind};
+    use crate::components::After;
     use crate::command::{Confirm, Effect};
 
     /// How often progress may be said, at most.
@@ -383,12 +384,25 @@ mod run {
             );
             let missing = needing_ffmpeg();
             if self.audio.ffmpeg.is_none() && !missing.is_empty() {
+                // One question instead of "not found": fetch ffmpeg, then
+                // ask for the format again with M4B and MP4 in the list.
+                if self.audio.ffmpeg_override.is_none()
+                    && self.offer_helper(crate::components::Helper::Ffmpeg, After::ExportAudio)
+                {
+                    return vec![Effect::Redraw];
+                }
                 let names: Vec<&str> = missing.iter().map(|f| f.name()).collect();
                 msg.push(' ');
                 msg.push_str(&self.msg_args(
                     "audio-no-ffmpeg",
                     &args!["formats" => names.join(", "), "n" => missing.len()],
                 ));
+                if let Some(command) =
+                    self.helper_command_text(crate::components::Helper::Ffmpeg)
+                {
+                    msg.push(' ');
+                    msg.push_str(&command);
+                }
             }
             self.list = Some(ListKind::Audio(AudioList::Format));
             self.tell(&msg);
