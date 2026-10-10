@@ -27,7 +27,8 @@ Useful options:
 - `--home FOLDER`: keep settings and reading positions in this folder, as `TEXTWEAVER_HOME` does.
 - `--list-menus`: show the menus as a list inside the window (F10), as on Linux, instead of the system's menu bar.
 - `--graphics API`: draw with one graphics API only: `vulkan`, `dx12` (Windows), `metal` (macOS), or `gl`; `auto`, the default, lets the graphics library use every one it finds. On the development machine `vulkan` used about 26 MB less memory, but this depends on your graphics driver. To keep a choice, put `graphics = "vulkan"` in the `[gui]` section of `settings.toml`.
-- `--log` or `--log-file PATH`: write what the window announces and does, for a bug report. Every 200 frames it also writes a "frame times" line with the median, the 95th percentile, and the worst time to draw a frame, so a change to drawing can be measured in a real window.
+- `--log` or `--log-file PATH`: write what the window announces and does, for a bug report. Every 200 frames it also writes a "frame times" line with the median, the 95th percentile, and the worst time to draw a frame, so a change to drawing can be measured in a real window. While a prompt for a secret is open (the GitHub token for a private components source), the log is paused: it says "log paused: a secret prompt is open", then writes nothing until the prompt closes, so no key you type, no command it makes, and not the answer itself can reach the file.
+- `--version`: the version, then textweaver's copyright line.
 
 `textweaver-gui --help` lists every option.
 
@@ -61,6 +62,12 @@ The window has the same menus as the terminal reader, built from the same list o
 
 **Hiding the menu bar (Windows).** The menu bar is hidden by default and takes no room until you want it; the first-run welcome says so ("Alt or F10 the menus"). To keep it shown, turn off "Hide the menu bar" in Settings, under Window (`auto_hide_menu = false` in `[gui]`); a value you saved earlier is kept. Alt, F10, or Alt with a menu's letter shows it and enters it as before, so NVDA and JAWS still say "menu bar" or the menu's name; it hides again, silently, when the menu closes. Every Alt key the keymap uses still works. The bar also appears for a moment when you press Alt for one of those keys. While a dialog is open, close it before using the menus. This setting has no effect on Linux, where the menus are already the F10 list and take no room, or on macOS, whose menu bar is at the top of the screen.
 
+### The context menu
+
+The Applications key (beside the right Ctrl key), Shift+F10, or a right-click opens the context menu in the document, while reading and while editing. It offers the commands that fit where the cursor is: Cut, Copy, Paste, Paste as plain text, Select all, Add note, Highlight, Define word, Read from here, and, on a link, Open link. Cut and the two pastes appear only in edit mode. Each item shows its key, so the menu also teaches the shortcut. The items, their names, and their keys come from the same list as the menu bar, so the two never disagree.
+
+On Windows the context menu is a standard one, which NVDA and JAWS announce as a menu; each item is read with its key, and its underlined letter chooses it. Opened from the keyboard it appears at the cursor; opened by a right-click it appears at the pointer, and the cursor moves there unless you clicked on the selection, which the menu then acts on. Escape closes it and leaves the focus where it was. On macOS and Linux the same items appear as a list in the window's list dialog, as the terminal reader shows them.
+
 Choosing a command in a menu runs it as its key would, and it joins the recent commands the command palette lists first (F2 with nothing typed). A few commands that only mean something in a terminal are left out of the window's menus (see [What only the terminal reader does](#what-only-the-terminal-reader-does)). File, Browse files opens textweaver's file browser in the window's list dialog (see [Reading](reading.md#from-the-file-browser-file-browse-files)); its keys work there as in the terminal, and the Say Status key previews the focused row. Batch conversion, audio export, and dictation are in the menus in the default build.
 
 ## Opening a document
@@ -88,6 +95,8 @@ When a chooser closes, the focus returns to the document, or to the next step of
 - **Ctrl+D**, or the Font button: the font list. The fonts that come with textweaver are first, marked "built in": Atkinson Hyperlegible Next, Atkinson Hyperlegible Mono, and OpenDyslexic. Then your installed fonts. It is a list like textweaver's others: a letter moves to the next font starting with it, F1 says the list's name and size again, and Enter uses the font at once.
 
 Each change is said, for example "Text size 18 points." or "Font: OpenDyslexic.", and saved in `[reading_aids.font]` (see [Settings](settings.md)). The size steps one point at a time around the usual sizes and more quickly above 16 points, from 8 up to 72 points. The Settings dialog changes the same settings, under "Reading aids".
+
+Until you choose a size, the document's text follows your system's text size, as the rest of the window does: with Windows' "Text size" at 150 percent, the standard 14 points is drawn as 21. Ctrl+Plus and Ctrl+Minus step from the size you see, and the size you reach is kept as your own. Ctrl+0 returns to the standard size, which follows the system again.
 
 ## Cursor keys
 
@@ -153,7 +162,7 @@ List items keep their indent by depth while you edit, as in reading, and bullete
 
 - **Typing** goes in at the cursor, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
 - **Your screen reader echoes** what you type, and reads the cursor and the selection as they move. With **Speak textweaver's messages** on, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the cursor moves to, and what a Shift key added to the selection or took from it.
-- **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the cursor (on macOS, Command with each).
+- **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the cursor (on macOS, Command with each). On Windows, formatted text copied from a web browser, a word processor, or another editor is pasted as Markdown, keeping its headings, lists, emphasis, links, tables, and code, and textweaver says what came in, for example "Pasted as Markdown: 1 heading, 3 paragraphs, 1 list". **Paste as plain text** (Ctrl+Shift+M, or in the context menu) inserts only the clipboard's text. Either paste is one undo step. On macOS and Linux the window can read only the clipboard's plain text, so Ctrl+V pastes that.
 - **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
 - **Tab** types a tab, or in a table moves to the next cell (Shift+Tab to the previous one), as in the terminal. **Ctrl+Tab** moves the focus out of the document, to the buttons.
 - **Markdown lint:** Ctrl+F8 moves to the next lint problem (a skipped heading level, a mixed list marker, a bare web address) and says it; Ctrl+Shift+F8 goes back. Ctrl+F7 moves to the next grammar problem and Ctrl+Shift+F7 to the previous one, as in the terminal ([Editing](editing.md#grammar)).
@@ -281,7 +290,8 @@ In the terminal, the same command shows the settings screen with only these sett
 ## Size, place, and when something goes wrong
 
 - **The window remembers its size and place** on this computer. It opens where it closed, and whether it was maximized. A place on a screen that is no longer connected is not used, so the window never opens where you cannot see it. This is kept for each computer and is not synced.
-- **Text follows the system's text size.** Interface text grows with the Windows "Text size" setting or the GNOME text scaling factor.
+- **Text follows the system's text size.** Interface text grows with the Windows "Text size" setting or the GNOME text scaling factor, and so does the document's text until you choose a size for it (see [Text size and font](#text-size-and-font)).
+- **The window rests when nothing changes.** It checks for work four times a second while you read or pause, and twenty times a second only while an edit waits to be parsed or the status line is reading; a check that finds nothing new does not redraw.
 - **The caret blinks as the system's does,** or not at all when the system says so.
 - **The window draws opaque on every graphics API.** It asks for an opaque drawing surface, never one that blends with what is behind the window. Up to alpha.9, with `auto` on Windows (which picks Vulkan on an NVIDIA card) the menu bar was see-through, because the driver offered a blended surface and the window took it; `--graphics dx12` hid the problem, since Direct3D 12 offers only opaque surfaces for a window. `--log` names the surface on the "graphics adapter" line ("surface opaque").
 - **The icon is the loom,** textweaver's logo, in the title bar, the taskbar, and on the programs in Explorer and their shortcuts (`textweaver-gui.exe`, `textweaver.exe` and `tw.exe` carry it). In Windows High Contrast the window uses the one-color loom, white on black. The Linux menu entry uses the same drawing.
