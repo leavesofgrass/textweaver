@@ -152,7 +152,7 @@ The keyboard shortcuts list (`?`) leads every row with the command's short name,
 - **Page Down** and **Page Up** move to the next and previous group (Reading, Navigation, Search, and so on). Entering a group says its name and how many commands it has first, then the row.
 - **Enter** runs the command, and **Escape** closes the list.
 
-Code blocks are drawn in the theme's code colors. When a block names its language (```` ```python ````), its keywords, strings, comments, numbers, and names get colors from the theme too, and the kinds differ by more than color: keywords are bold and comments italic. The text itself never changes. Moving the cursor onto the block's first line says its language, for example "code, Python".
+Code blocks are drawn on the page's own background, in the text color, as in the HTML pages, so every token color keeps its contrast. When a block names its language (```` ```python ````), its keywords, strings, comments, numbers, and names get colors from the theme too, and the kinds differ by more than color: keywords are bold and comments italic. The text itself never changes. Moving the cursor onto the block's first line says its language, for example "code, Python".
 
 ## Read aloud
 
