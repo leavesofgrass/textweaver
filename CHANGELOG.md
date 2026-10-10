@@ -4,6 +4,21 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+In short: beta 2 fixes the speech rate, and brings every document up to date.
+
+### Reading and speech
+
+- **The speech rate changes again with Eloquence and DECtalk.** A voice saved while another engine spoke (a Windows SAPI 5 voice during a fallback) made both engines refuse every change of voice, rate, pitch, and volume, so the rate stayed fixed while the number on screen moved, and DECtalk could fail to start. Another engine's voice is now set aside quietly, and rate, pitch, and volume always apply; the "unknown voice" error no longer appears. Both engines now speed up past 430 words per minute.
+- **Choosing a speech engine in Settings switches to it at once,** instead of waiting for Restart speech.
+
+### Settings and data
+
+- Settings shows the highlight palette as a count of entries, not raw data running over the Highlight section, and a SAPI voice by its name rather than its registry path.
+
+### Help and documentation
+
+- Every guide, the README, and the developer documentation were checked against beta 1 and brought up to date: one download per system, `tw` as the one terminal program, the beta stage, privacy (updates, fetched helpers, the credential store), and the settings that were missing from the settings guide.
+
 ## [0.1.0-beta.1] - 2026-10-10
 
 In short: beta 1 adds study tools (study cards with SM-2 scheduling and sync, a self-test, recall prompts), links between notes with seven export formats, tracked changes and comments written back to Word files, a named highlight palette, regular-expression find and replace, Markdown paste, a preview pane, polished HTML, DAISY 2.02 books and recorded DAISY narration, braille (BRF) files such as NLS BARD downloads, five more formats through carta, offline searchable help, optional components fetched for you (including from your own repository), update checks, and one download per system holding both programs.

@@ -39,6 +39,8 @@ So an installed, licensed Eloquence is always the first choice. On macOS, `[spee
 
 When you name an engine, with `--backend` or in the settings, textweaver uses it if it is available. If it is not, textweaver does not fall silent: it makes the automatic choice instead and tells you. The reader says "Speech engine", the id, "is not available; using", and the engine it chose. If the chosen engine then fails to start, the reader says "Speech could not start", the reason, then "running silently."
 
+A voice saved for one engine is never an error with another. When speech falls back to Windows SAPI 5 and later returns to Eloquence or DECtalk, the saved SAPI voice is set aside quietly: the engine keeps its own voice, and your rate, pitch, and volume still apply. Choose a voice for the engine in the voice manager to keep it.
+
 `--no-speech` always means silent.
 
 ### Who speaks: the accessibility mode
