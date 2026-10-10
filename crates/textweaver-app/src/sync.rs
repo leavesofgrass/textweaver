@@ -628,6 +628,11 @@ impl App {
 
     fn sync_cycle_done(&mut self, o: CycleOutcome) -> Vec<Effect> {
         self.sync.status = o.status.clone();
+        if o.cards_changed
+            && let Some(key) = &o.key
+        {
+            self.cards_changed_on_disk(key);
+        }
         self.sync_notices(o.notices.clone());
         let current = self
             .sync
