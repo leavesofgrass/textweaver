@@ -511,9 +511,6 @@ actions! {
     PreviewInBrowser = "preview_in_browser", File,
         "Preview the document in the web browser, with math; each save rewrites the preview",
         gui [], term [], shared [];
-    CyclePreviewFollow = "cycle_preview_follow", View,
-        "Choose what the browser preview follows: nothing, each save, or your typing",
-        gui [], term [], shared [];
     BrowseFiles = "browse_files", File,
         "Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up",
         gui [], term [], shared [];
@@ -547,6 +544,9 @@ actions! {
     // Editing
     ToggleEditMode = "toggle_edit_mode", Editing, "Switch between reading and editing",
         gui ["g:Ctrl+E"], term ["g:Ctrl+E"], shared [];
+    TogglePreview = "toggle_preview", Editing,
+        "In edit mode, switch between the Markdown source and the reading view of the same document, at the same place",
+        gui [], term ["g:Shift+F4"], shared [];
     Undo = "undo", Editing, "Undo",
         gui ["e:Ctrl+Z"], term ["e:Ctrl+Z"], shared [];
     Redo = "redo", Editing, "Redo",
@@ -627,6 +627,9 @@ actions! {
         gui [], term [], shared [];
 
     // View and help
+    CyclePreviewFollow = "cycle_preview_follow", View,
+        "Choose what the browser preview follows: nothing, each save, or your typing",
+        gui [], term [], shared [];
     NextTheme = "next_theme", View, "Switch to the next color theme",
         gui ["g:F5"], term ["g:F5"], shared [];
     // The terminal's gutter: the window has none, and gives F6 to its
@@ -816,11 +819,12 @@ impl ActionId {
     }
 
     /// True for commands only the terminal reader has keys for: line
-    /// numbers, which are the terminal's gutter. They have terminal keys
-    /// and no window keys, so F6 is the window's, for its regions; the
-    /// window's palette leaves them out.
+    /// numbers, which are the terminal's gutter, and the preview inside
+    /// edit mode, which the window shows as a pane beside the editor
+    /// instead. They have terminal keys and no window keys, so F6 is the
+    /// window's, for its regions; the window's palette leaves them out.
     pub fn is_terminal_only(self) -> bool {
-        matches!(self, ActionId::ToggleLineNumbers)
+        matches!(self, ActionId::ToggleLineNumbers | ActionId::TogglePreview)
     }
 
     /// The command palette name: the id with spaces, e.g. `next sentence`.

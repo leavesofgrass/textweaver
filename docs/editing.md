@@ -348,6 +348,16 @@ When the setting is not "nothing", run `preview in browser` again. The page now 
 - Images and other files beside your document are served too, but nothing outside the document's folder.
 - Older settings files keep working. `auto_reload = true` is read as following each save, and `auto_reload = true` with `live = true` as following your typing. The next save of your settings writes only `follow`.
 
+### Preview in the terminal reader
+
+In edit mode, **Shift+F4** (the palette's `Preview`, or Edit menu, Preview) replaces the Markdown source on screen with the reading view of the same document: headings, lists, and emphasis as the reader shows them, without the marks. You stay in edit mode, and you hear "Preview, read-only: the reading view at the same place." **Shift+F4** again returns to the source.
+
+- **The place is kept.** The caret moves to the same character in the reading view. If it was inside markup, such as between the asterisks of `**bold**` or in a link's address, it lands on the nearest text, because that markup is not shown. Returning without moving puts the caret exactly where it was; returning after moving puts it on the same text in the source.
+- **The preview is read-only.** Reading and navigation keys work as they do when reading. Typing says "Preview is read-only." Editing, file, and bookmark commands, such as Save, return to the source first and then run.
+- **The view is current.** Until you edit, the preview is the document as it was opened; after an edit, the text you are editing is read again by the same Markdown reader.
+- **No split view.** The terminal shows the source or the preview, never both side by side. A split would halve what each line of the screen, and so each line of a Braille display, can show, for no gain over switching.
+- Plain-text files look the same in both views, so there the command says there is nothing to preview.
+
 ## Start from a template
 
 Type `new from template` in the command palette. The list has three templates, Essay, Report, and Notes, and your own after them. Choose one, then type the title. textweaver starts a new document in edit mode with front matter, headings, and a References heading, for example:

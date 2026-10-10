@@ -1152,6 +1152,8 @@ mod tests {
                 if matches!(
                     a,
                     ActionId::ToggleEditMode
+                        // The preview leaves the Edit layer while shown.
+                        | ActionId::TogglePreview
                         | ActionId::Copy
                         | ActionId::CycleTypingEcho
                         | ActionId::AddReference

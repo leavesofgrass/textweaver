@@ -471,6 +471,14 @@ app-terminal-only = This command works in the terminal reader.
 settings-save-failed = Could not save settings: { $error } Your changes stay in use until you quit.
 settings-outside-kept = Settings changed outside textweaver were kept.
 edit-still-editing = Still editing.
+# The reading view inside edit mode (toggle_preview). $key is its key;
+# $line the line the caret is back on.
+edit-preview-on = Preview, read-only: the reading view at the same place. { $key } goes back to editing.
+edit-preview-off = Back to editing. { $line }
+edit-preview-read-only = Preview is read-only. { $key } goes back to editing.
+edit-preview-not-editing = Preview works in edit mode. { $key } starts editing.
+edit-preview-plain = Plain text has no formatting to preview; it reads the same.
+edit-preview-failed = Could not show the preview: { $error } Check the Markdown, then try again.
 goto-not-a-target = Not a go-to target: { $text }. Type a line number, a percentage such as 50%, start, or end.
 
 ## Opening a document.
@@ -789,6 +797,7 @@ action-preview-in-browser = Preview the document in the web browser, with math; 
 action-cycle-preview-follow = Choose what the browser preview follows: nothing, each save, or your typing
 action-quit = Quit, saving the reading position
 action-toggle-edit-mode = Switch between reading and editing
+action-toggle-preview = In edit mode, switch between the Markdown source and the reading view of the same document, at the same place
 action-undo = Undo
 action-redo = Redo
 action-bold = Make the selection bold
@@ -2209,7 +2218,7 @@ setting-reading-aids-syllable-options-skip-urls-help = Leave web and email addre
 setting-reading-aids-syllable-options-skip-code = Syllables skip code
 setting-reading-aids-syllable-options-skip-code-help = Leave code alone.
 setting-preview-follow = Browser preview follows
-setting-preview-follow-help = When the browser preview reloads by itself: never (press F5 in the browser after a save), after each save, or also when typing pauses. It reloads through a small server on this computer only.
+setting-preview-follow-help = When the browser preview reloads itself: never, after each save, or also when typing pauses. With never, press F5 in the browser after a save. It reloads through a small server on this computer only.
 choice-preview-follow-off = nothing
 choice-preview-follow-save = each save
 choice-preview-follow-typing = your typing
@@ -3465,6 +3474,7 @@ name-batch-convert = Batch convert
 name-export-audio = Export audio
 name-quit = Quit
 name-toggle-edit-mode = Edit mode
+name-toggle-preview = Preview
 name-undo = Undo
 name-redo = Redo
 name-bold = Bold

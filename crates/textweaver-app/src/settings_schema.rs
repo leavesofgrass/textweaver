@@ -1280,7 +1280,7 @@ pub const INFO: &[Info] = &[
     choice(
         "preview.follow",
         "Browser preview follows",
-        "When the browser preview reloads by itself: never (press F5 in the browser after a save), after each save, or also when typing pauses. It reloads through a small server on this computer only.",
+        "When the browser preview reloads itself: never, after each save, or also when typing pauses. With never, press F5 in the browser after a save. It reloads through a small server on this computer only.",
         &[
             ("off", "nothing"),
             ("save", "each save"),

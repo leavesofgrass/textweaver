@@ -811,6 +811,72 @@ fn preview_follow_serves_the_page_and_reloads_after_saves_and_typing() {
     assert!(refused, "the server still answers");
 }
 
+/// The text from the caret, a few characters of it.
+fn at_caret(r: &Rig, n: usize) -> String {
+    let s = r.app.session().unwrap();
+    let t = s.doc.text().to_string();
+    t.chars().skip(s.cursor.0).take(n).collect()
+}
+
+/// `toggle_preview` (B1-p2): in edit mode the source is replaced by the
+/// reading view at the same place, read-only, and back; coming back
+/// without moving restores the caret exactly; editing commands go back
+/// to the source first.
+#[test]
+fn preview_in_edit_mode_shows_the_reading_view_at_the_same_place() {
+    let mut r = Rig::new();
+    r.open(
+        "view.md",
+        "# Title\n\nSome **bold** words here.\n\n- one item\n- two items\n",
+    );
+    r.act(ActionId::TogglePreview);
+    assert!(
+        r.said.any("Preview works in edit mode."),
+        "{:?}",
+        r.said.all()
+    );
+    r.act(ActionId::ToggleEditMode);
+    r.go("words here");
+    let source_caret = r.app.session().unwrap().cursor;
+    r.act(ActionId::TogglePreview);
+    assert_eq!(r.app.mode(), Mode::Browse);
+    assert!(r.app.is_editing(), "still in edit mode");
+    assert!(!r.text().contains("**"), "{}", r.text());
+    assert_eq!(at_caret(&r, 10), "words here");
+    assert!(r.said.any("Preview, read-only"), "{:?}", r.said.all());
+    // Read-only: typing says so and changes nothing.
+    r.send(Command::Insert("x".into()));
+    assert!(r.said.any("Preview is read-only."), "{:?}", r.said.all());
+    assert!(!r.app.is_dirty());
+    // Back without moving: exactly where the caret was.
+    r.act(ActionId::TogglePreview);
+    assert_eq!(r.app.mode(), Mode::Edit);
+    assert!(r.text().contains("**bold**"));
+    assert_eq!(r.app.session().unwrap().cursor, source_caret);
+    // Inside markup: shown on the nearest text, and back exactly.
+    r.go("*bold");
+    let inside = r.app.session().unwrap().cursor;
+    r.act(ActionId::TogglePreview);
+    assert_eq!(at_caret(&r, 4), "bold");
+    r.act(ActionId::TogglePreview);
+    assert_eq!(r.app.session().unwrap().cursor, inside);
+    // Moved in the preview: back at the same text in the source.
+    r.go("one item");
+    r.act(ActionId::TogglePreview);
+    r.go("two items");
+    r.act(ActionId::TogglePreview);
+    assert_eq!(at_caret(&r, 9), "two items");
+    // An edit shows in the preview; Save goes back to the source first.
+    r.type_text("new ");
+    r.act(ActionId::TogglePreview);
+    assert!(r.text().contains("new "), "{}", r.text());
+    r.act(ActionId::Save);
+    r.wait();
+    assert_eq!(r.app.mode(), Mode::Edit);
+    assert!(r.text().contains("- "), "{}", r.text());
+    assert!(!r.app.is_dirty());
+}
+
 // Spelling.
 
 #[test]

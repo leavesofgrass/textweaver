@@ -466,6 +466,14 @@ app-terminal-only = Esta orden funciona en el lector del terminal.
 settings-save-failed = No se pudo guardar la configuración: { $error } Sus cambios siguen en uso hasta que salga.
 settings-outside-kept = Se conservó la configuración cambiada fuera de textweaver.
 edit-still-editing = Aún editando.
+# The reading view inside edit mode (toggle_preview). $key is its key;
+# $line the line the caret is back on.
+edit-preview-on = Vista previa, solo lectura: la vista de lectura en el mismo lugar. { $key } vuelve a la edición.
+edit-preview-off = De vuelta a la edición. { $line }
+edit-preview-read-only = La vista previa es de solo lectura. { $key } vuelve a la edición.
+edit-preview-not-editing = La vista previa funciona en modo de edición. { $key } empieza a editar.
+edit-preview-plain = El texto plano no tiene formato que previsualizar; se lee igual.
+edit-preview-failed = No se pudo mostrar la vista previa: { $error } Revise el Markdown e inténtelo de nuevo.
 goto-not-a-target = No es un destino válido: { $text }. Escriba un número de línea, un porcentaje como 50%, inicio o fin.
 
 ## Opening a document.
@@ -784,6 +792,7 @@ action-preview-in-browser = Ver la vista previa del documento en el navegador we
 action-cycle-preview-follow = Elegir qué sigue la vista previa del navegador: nada, cada guardado o lo que escribe
 action-quit = Salir, guardando la posición de lectura
 action-toggle-edit-mode = Cambiar entre lectura y edición
+action-toggle-preview = En modo de edición, cambiar entre el código Markdown y la vista de lectura del mismo documento, en el mismo lugar
 action-undo = Deshacer
 action-redo = Rehacer
 action-bold = Poner en negrita la selección
@@ -2193,7 +2202,7 @@ setting-reading-aids-syllable-options-skip-urls-help = Dejar tal cual las direcc
 setting-reading-aids-syllable-options-skip-code = Sílabas omiten código
 setting-reading-aids-syllable-options-skip-code-help = Dejar tal cual el código.
 setting-preview-follow = La vista previa del navegador sigue
-setting-preview-follow-help = Cuándo se recarga sola la vista previa del navegador: nunca (pulse F5 en el navegador tras guardar), tras cada guardado, o también al hacer una pausa al escribir. Se recarga mediante un pequeño servidor solo en este equipo.
+setting-preview-follow-help = Cuándo se recarga sola la vista previa del navegador: nunca, tras cada guardado, o también al hacer una pausa al escribir. Con nunca, pulse F5 en el navegador tras guardar. Se recarga mediante un pequeño servidor solo en este equipo.
 choice-preview-follow-off = nada
 choice-preview-follow-save = cada guardado
 choice-preview-follow-typing = lo que escribe
@@ -3429,6 +3438,7 @@ name-batch-convert = Convertir por lotes
 name-export-audio = Exportar audio
 name-quit = Salir
 name-toggle-edit-mode = Modo de edición
+name-toggle-preview = Vista previa
 name-undo = Deshacer
 name-redo = Rehacer
 name-bold = Negrita

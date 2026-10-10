@@ -502,6 +502,14 @@ app-terminal-only = Dieser Befehl funktioniert im Terminal-Reader.
 settings-save-failed = Einstellungen konnten nicht gespeichert werden: { $error } Ihre Änderungen gelten, bis Sie beenden.
 settings-outside-kept = Außerhalb von textweaver geänderte Einstellungen wurden beibehalten.
 edit-still-editing = Noch in Bearbeitung.
+# The reading view inside edit mode (toggle_preview). $key is its key;
+# $line the line the caret is back on.
+edit-preview-on = Vorschau, schreibgeschützt: die Leseansicht an derselben Stelle. { $key } kehrt zum Bearbeiten zurück.
+edit-preview-off = Zurück beim Bearbeiten. { $line }
+edit-preview-read-only = Die Vorschau ist schreibgeschützt. { $key } kehrt zum Bearbeiten zurück.
+edit-preview-not-editing = Die Vorschau gibt es im Bearbeitungsmodus. { $key } startet das Bearbeiten.
+edit-preview-plain = Reiner Text hat keine Formatierung für eine Vorschau; er liest sich gleich.
+edit-preview-failed = Die Vorschau konnte nicht angezeigt werden: { $error } Prüfen Sie das Markdown und versuchen Sie es erneut.
 goto-not-a-target = Kein Sprungziel: { $text }. Geben Sie eine Zeilennummer ein, einen Prozentwert wie 50%, start oder end.
 
 ## Opening a document.
@@ -820,6 +828,7 @@ action-preview-in-browser = Das Dokument im Webbrowser als Vorschau anzeigen, mi
 action-cycle-preview-follow = Wählen, was die Browser-Vorschau verfolgt: nichts, jedes Speichern oder Ihr Tippen
 action-quit = Beenden, mit Speichern der Leseposition
 action-toggle-edit-mode = Zwischen Lesen und Bearbeiten wechseln
+action-toggle-preview = Im Bearbeitungsmodus zwischen dem Markdown-Quelltext und der Leseansicht desselben Dokuments an derselben Stelle wechseln
 action-undo = Rückgängig
 action-redo = Wiederholen
 action-bold = Die Auswahl fett machen
@@ -2229,7 +2238,7 @@ setting-reading-aids-syllable-options-skip-urls-help = Web- und E-Mail-Adressen 
 setting-reading-aids-syllable-options-skip-code = Silben überspringen Code
 setting-reading-aids-syllable-options-skip-code-help = Code in Ruhe lassen.
 setting-preview-follow = Browser-Vorschau folgt
-setting-preview-follow-help = Wann die Browser-Vorschau von selbst neu lädt: nie (nach dem Speichern F5 im Browser drücken), nach jedem Speichern oder auch bei Tipppausen. Sie lädt über einen kleinen Server nur auf diesem Computer neu.
+setting-preview-follow-help = Wann die Browser-Vorschau von selbst neu lädt: nie, nach jedem Speichern oder auch bei Tipppausen. Bei nie drücken Sie nach dem Speichern F5 im Browser. Sie lädt über einen kleinen Server nur auf diesem Computer neu.
 choice-preview-follow-off = nichts
 choice-preview-follow-save = jedem Speichern
 choice-preview-follow-typing = Ihrem Tippen
@@ -3453,6 +3462,7 @@ name-batch-convert = Stapelkonvertierung
 name-export-audio = Audio exportieren
 name-quit = Beenden
 name-toggle-edit-mode = Bearbeitungsmodus
+name-toggle-preview = Vorschau
 name-undo = Rückgängig
 name-redo = Wiederholen
 name-bold = Fett

@@ -482,6 +482,14 @@ app-terminal-only = Este comando funciona no leitor de terminal.
 settings-save-failed = Não foi possível salvar as configurações: { $error } Suas alterações continuam em uso até você sair.
 settings-outside-kept = As configurações alteradas fora do textweaver foram mantidas.
 edit-still-editing = Ainda editando.
+# The reading view inside edit mode (toggle_preview). $key is its key;
+# $line the line the caret is back on.
+edit-preview-on = Pré-visualização, somente leitura: a visualização de leitura no mesmo lugar. { $key } volta à edição.
+edit-preview-off = De volta à edição. { $line }
+edit-preview-read-only = A pré-visualização é somente leitura. { $key } volta à edição.
+edit-preview-not-editing = A pré-visualização funciona no modo de edição. { $key } começa a editar.
+edit-preview-plain = Texto simples não tem formatação para pré-visualizar; ele é lido igual.
+edit-preview-failed = Não foi possível mostrar a pré-visualização: { $error } Verifique o Markdown e tente de novo.
 goto-not-a-target = Não é um destino válido: { $text }. Digite um número de linha, uma porcentagem como 50%, início ou fim.
 
 ## Opening a document.
@@ -800,6 +808,7 @@ action-preview-in-browser = Pré-visualizar o documento no navegador web, com ma
 action-cycle-preview-follow = Escolher o que a prévia no navegador acompanha: nada, cada salvamento ou sua digitação
 action-quit = Sair, salvando a posição de leitura
 action-toggle-edit-mode = Alternar entre leitura e edição
+action-toggle-preview = No modo de edição, alternar entre o código Markdown e a visualização de leitura do mesmo documento, no mesmo lugar
 action-undo = Desfazer
 action-redo = Refazer
 action-bold = Deixar a seleção em negrito
@@ -2209,7 +2218,7 @@ setting-reading-aids-syllable-options-skip-urls-help = Deixar de lado endereços
 setting-reading-aids-syllable-options-skip-code = Sílabas ignoram código
 setting-reading-aids-syllable-options-skip-code-help = Deixar o código de lado.
 setting-preview-follow = Prévia no navegador acompanha
-setting-preview-follow-help = Quando a pré-visualização no navegador recarrega sozinha: nunca (pressione F5 no navegador depois de salvar), depois de cada salvamento, ou também quando a digitação pausa. Ela recarrega por um pequeno servidor só neste computador.
+setting-preview-follow-help = Quando a pré-visualização no navegador recarrega sozinha: nunca, depois de cada salvamento, ou também quando a digitação pausa. Com nunca, pressione F5 no navegador depois de salvar. Ela recarrega por um pequeno servidor só neste computador.
 choice-preview-follow-off = nada
 choice-preview-follow-save = cada salvamento
 choice-preview-follow-typing = sua digitação
@@ -3445,6 +3454,7 @@ name-batch-convert = Converter em lote
 name-export-audio = Exportar áudio
 name-quit = Sair
 name-toggle-edit-mode = Modo de edição
+name-toggle-preview = Pré-visualização
 name-undo = Desfazer
 name-redo = Refazer
 name-bold = Negrito

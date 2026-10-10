@@ -274,6 +274,7 @@ impl MenuId {
             ],
             MenuId::Edit => &[
                 Do(A::ToggleEditMode),
+                Do(A::TogglePreview),
                 Do(A::Undo),
                 Do(A::Redo),
                 Sep,
@@ -1041,6 +1042,7 @@ impl App {
     fn item_state(&self, a: ActionId) -> (Option<bool>, Option<String>) {
         match a {
             A::ToggleEditMode => return (Some(self.edit.is_some()), None),
+            A::TogglePreview => return (Some(self.previewing()), None),
             A::RsvpToggle => return (Some(self.rsvp.is_some()), None),
             A::SpeechCursorToggle => return (Some(self.mode == Mode::SpeechCursor), None),
             A::NextTheme => {

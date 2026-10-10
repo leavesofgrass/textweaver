@@ -494,6 +494,14 @@ app-terminal-only = Cette commande fonctionne dans le lecteur en mode terminal.
 settings-save-failed = Impossible d'enregistrer les paramètres : { $error } Vos changements restent actifs jusqu'à la fermeture.
 settings-outside-kept = Les paramètres modifiés en dehors de textweaver ont été conservés.
 edit-still-editing = Toujours en cours d'édition.
+# The reading view inside edit mode (toggle_preview). $key is its key;
+# $line the line the caret is back on.
+edit-preview-on = Aperçu, en lecture seule : la vue de lecture au même endroit. { $key } revient à l'édition.
+edit-preview-off = Retour à l'édition. { $line }
+edit-preview-read-only = L'aperçu est en lecture seule. { $key } revient à l'édition.
+edit-preview-not-editing = L'aperçu fonctionne en mode édition. { $key } commence l'édition.
+edit-preview-plain = Le texte brut n'a pas de mise en forme à prévisualiser ; il se lit de la même façon.
+edit-preview-failed = Impossible d'afficher l'aperçu : { $error } Vérifiez le Markdown, puis réessayez.
 goto-not-a-target = Ce n'est pas une cible valide : { $text }. Tapez un numéro de ligne, un pourcentage tel que 50%, start, ou end.
 
 ## Opening a document.
@@ -812,6 +820,7 @@ action-preview-in-browser = Aperçu du document dans le navigateur, avec les mat
 action-cycle-preview-follow = Choisir ce que suit l'aperçu du navigateur : rien, chaque enregistrement ou votre frappe
 action-quit = Quitter, en enregistrant la position de lecture
 action-toggle-edit-mode = Basculer entre lecture et édition
+action-toggle-preview = En mode édition, basculer entre la source Markdown et la vue de lecture du même document, au même endroit
 action-undo = Annuler
 action-redo = Rétablir
 action-bold = Mettre la sélection en gras
@@ -2221,7 +2230,7 @@ setting-reading-aids-syllable-options-skip-urls-help = Laisser les adresses web 
 setting-reading-aids-syllable-options-skip-code = Les syllabes ignorent le code
 setting-reading-aids-syllable-options-skip-code-help = Laisser le code tel quel.
 setting-preview-follow = L'aperçu du navigateur suit
-setting-preview-follow-help = Quand l'aperçu du navigateur se recharge seul : jamais (appuyez sur F5 dans le navigateur après un enregistrement), après chaque enregistrement, ou aussi quand la frappe fait une pause. Il se recharge par un petit serveur sur cet ordinateur seulement.
+setting-preview-follow-help = Quand l'aperçu du navigateur se recharge seul : jamais, après chaque enregistrement, ou aussi quand la frappe fait une pause. Avec jamais, appuyez sur F5 dans le navigateur après un enregistrement. Il se recharge par un petit serveur sur cet ordinateur seulement.
 choice-preview-follow-off = rien
 choice-preview-follow-save = chaque enregistrement
 choice-preview-follow-typing = votre frappe
@@ -3457,6 +3466,7 @@ name-batch-convert = Convertir par lots
 name-export-audio = Exporter l'audio
 name-quit = Quitter
 name-toggle-edit-mode = Mode édition
+name-toggle-preview = Aperçu
 name-undo = Annuler
 name-redo = Rétablir
 name-bold = Gras

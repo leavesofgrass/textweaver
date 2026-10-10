@@ -562,6 +562,14 @@ app-terminal-only = يعمل هذا الأمر في قارئ الطرفية.
 settings-save-failed = تعذّر حفظ الإعدادات: { $error } تبقى تغييراتك سارية حتى تخرج.
 settings-outside-kept = تم الاحتفاظ بالإعدادات التي تغيّرت خارج textweaver.
 edit-still-editing = ما زلت في وضع التحرير.
+# The reading view inside edit mode (toggle_preview). $key is its key;
+# $line the line the caret is back on.
+edit-preview-on = المعاينة، للقراءة فقط: عرض القراءة في المكان نفسه. { $key } يعود إلى التحرير.
+edit-preview-off = عودة إلى التحرير. { $line }
+edit-preview-read-only = المعاينة للقراءة فقط. { $key } يعود إلى التحرير.
+edit-preview-not-editing = تعمل المعاينة في وضع التحرير. { $key } يبدأ التحرير.
+edit-preview-plain = النص العادي بلا تنسيق لمعاينته؛ يُقرأ كما هو.
+edit-preview-failed = تعذر عرض المعاينة: { $error } تحقق من Markdown ثم حاول مرة أخرى.
 goto-not-a-target = ليس هدف انتقال: { $text }. اكتب رقم سطر، أو نسبة مئوية مثل 50%، أو start، أو end.
 
 ## فتح مستند.
@@ -880,6 +888,7 @@ action-preview-in-browser = معاينة المستند في متصفح الوي
 action-cycle-preview-follow = اختيار ما تتبعه معاينة المتصفح: لا شيء، أو كل حفظ، أو كتابتك
 action-quit = الإنهاء، مع حفظ موضع القراءة
 action-toggle-edit-mode = التبديل بين القراءة والتحرير
+action-toggle-preview = في وضع التحرير، التبديل بين مصدر Markdown وعرض القراءة للمستند نفسه، في المكان نفسه
 action-undo = تراجع
 action-redo = إعادة
 action-bold = جعل التحديد عريضًا
@@ -2381,7 +2390,7 @@ setting-reading-aids-syllable-options-skip-urls-help = تُترك عناوين �
 setting-reading-aids-syllable-options-skip-code = المقاطع تتخطى الشيفرة
 setting-reading-aids-syllable-options-skip-code-help = تُترك الشيفرة وحدها.
 setting-preview-follow = معاينة المتصفح تتبع
-setting-preview-follow-help = متى تُعاد معاينة المتصفح تلقائيًا: أبدًا (اضغط F5 في المتصفح بعد الحفظ)، أو بعد كل حفظ، أو أيضًا عند توقف الكتابة. تُعاد عبر خادم صغير على هذا الحاسوب فقط.
+setting-preview-follow-help = متى تُعاد معاينة المتصفح تلقائيًا: أبدًا، أو بعد كل حفظ، أو أيضًا عند توقف الكتابة. مع أبدًا، اضغط F5 في المتصفح بعد الحفظ. تُعاد عبر خادم صغير على هذا الحاسوب فقط.
 choice-preview-follow-off = لا شيء
 choice-preview-follow-save = كل حفظ
 choice-preview-follow-typing = كتابتك
@@ -3745,6 +3754,7 @@ name-batch-convert = تحويل دفعة
 name-export-audio = تصدير الصوت
 name-quit = خروج
 name-toggle-edit-mode = وضع التحرير
+name-toggle-preview = المعاينة
 name-undo = تراجع
 name-redo = إعادة
 name-bold = غامق
