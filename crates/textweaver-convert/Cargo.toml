@@ -12,6 +12,10 @@ publish.workspace = true
 [features]
 # Math in BRF output as Nemeth or UEB braille through MathCAT (ADR-0036).
 mathcat = ["textweaver-writers/mathcat"]
+# carta (B1-k2): Org, reStructuredText, MediaWiki, DokuWiki, and Jira read
+# in process, and AsciiDoc, Typst, LaTeX, MediaWiki, and Org written. Off
+# here; `tw`, the terminal reader, and the app turn it on.
+carta = ["textweaver-formats/carta"]
 
 [dependencies]
 textweaver-core.workspace = true

@@ -23,6 +23,12 @@ version = "0.1.0-alpha.9"
 "windows-x86_64-gui.zip" = 44471409
 "windows-x86_64.zip" = 70986837
 
+# Growth noted, under the budget so no note is needed (B1-k2, carta on by
+# default in tw and the terminal reader): about 3.9 MiB in tw.exe, 5.1
+# percent (the readers 1.80 MiB, measured in B1-k1; the writers, DokuWiki,
+# Jira, and Markdown input 2.14 MiB more, measured on carta alone). The
+# GUI and the lean reader are unchanged until the GUI turns carta on.
+
 # Why a package may grow more than 10 percent before the next release, one
 # line per package: "windows-x86_64.zip" = "why". "all" covers every
 # package.

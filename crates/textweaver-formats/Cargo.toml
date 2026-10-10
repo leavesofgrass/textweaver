@@ -36,6 +36,15 @@ url = ["dep:ureq"]
 paperback = []
 # Pandoc subprocess loader for the long tail (odt, rtf, rst, org, latex, ...).
 pandoc = []
+# carta (pure Rust, MIT or Apache-2.0): reads Org, reStructuredText,
+# MediaWiki, DokuWiki, and Jira into HTML that the HTML loader takes from
+# there, and writes Markdown out as AsciiDoc, Typst, LaTeX, MediaWiki, or
+# Org (`carta::write_markdown`). Off here; `tw`, the terminal reader, and
+# the app turn it on. Only the readers and writers used; never carta's
+# `embed-copyleft-grammars` (nor `highlight`, which it needs). Not Typst or
+# LaTeX input: carta's Typst reader reads any file a document names, and
+# textweaver's own LaTeX loader does better.
+carta = ["dep:carta"]
 # LaTeX's `\bibliography` and `\printbibliography` read through
 # textweaver-cite: the cited entries of the `.bib` files, formatted. Off by
 # default: the citation stack stays out of the lean reader (`cargo xtask
@@ -70,6 +79,23 @@ flate2 = { workspace = true, optional = true }
 calamine = { workspace = true, optional = true }
 ureq = { workspace = true, optional = true }
 textweaver-cite = { workspace = true, optional = true }
+# `standalone` gives the writers their document templates (a LaTeX
+# preamble, a Typst page setup), built in; no template is read from disk.
+carta = { workspace = true, optional = true, features = [
+    "read-org",
+    "read-rst",
+    "read-mediawiki",
+    "read-dokuwiki",
+    "read-jira",
+    "read-commonmark",
+    "write-html",
+    "write-asciidoc",
+    "write-typst",
+    "write-latex",
+    "write-mediawiki",
+    "write-org",
+    "standalone",
+] }
 
 [dev-dependencies]
 insta.workspace = true

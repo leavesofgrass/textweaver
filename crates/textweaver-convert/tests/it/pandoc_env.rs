@@ -102,7 +102,8 @@ fn child() {
     let hang = std::env::var_os("FAKE_PANDOC_HANG").is_some();
     let src = dir.join("in");
     fs::create_dir_all(&src).expect("mkdir");
-    fs::write(src.join("doc.rst"), "Title\n=====\n").expect("write");
+    // Textile, which only Pandoc reads (carta, when built in, takes `.rst`).
+    fs::write(src.join("doc.textile"), "h1. Title\n").expect("write");
     let out = dir.join("out");
     let conv = Converter::new(ConvertOptions {
         to: OutputFormat::Markdown,
@@ -112,7 +113,7 @@ fn child() {
         ..ConvertOptions::default()
     })
     .expect("converter");
-    assert!(conv.source_extensions().contains(&"rst"));
+    assert!(conv.source_extensions().contains(&"textile"));
     let started = Instant::now();
     let s = conv.run(std::slice::from_ref(&src)).expect("run");
     if !hang {

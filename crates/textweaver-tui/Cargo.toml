@@ -14,7 +14,12 @@ name = "textweaver"
 path = "src/main.rs"
 
 [features]
-default = ["publish", "lint", "grammar", "clipboard", "highlight", "dictation", "audio-export", "opus"]
+default = ["publish", "lint", "grammar", "clipboard", "highlight", "dictation", "audio-export", "opus", "carta"]
+# Org, reStructuredText, MediaWiki, DokuWiki, and Jira read in process by
+# carta, and its writers in Batch convert (textweaver-app's `carta`, B1-k2).
+# On by default (the owner's decision); `--no-default-features` leaves it
+# out, with the rest of the defaults.
+carta = ["textweaver-app/carta"]
 # Dictation in edit mode (textweaver-app's `dictation`, ADR-0042).
 dictation = ["textweaver-app/dictation"]
 # File, Export audio (textweaver-app's `audio-export`, W6v), as in the GUI

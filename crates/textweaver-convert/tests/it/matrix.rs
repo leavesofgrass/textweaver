@@ -12,6 +12,11 @@
 //! One large generated document (about 1 MB of Markdown, dense with inline
 //! styles) is converted to EPUB and PDF under a hang check, so a path that
 //! grows with the square of the document cannot come back unnoticed.
+//!
+//! With the `carta` feature, the carta loader has its fixture too, and a
+//! Markdown source and an Org source are each written in every format
+//! carta writes (AsciiDoc, Typst, LaTeX, MediaWiki, Org), keeping every
+//! heading.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -49,6 +54,8 @@ const FIXTURES: &[(&str, &str, usize)] = &[
     ("notebook", "fixtures/o/growth.ipynb", 1),
     ("mathml", "fixtures/o/growth.mml", 0),
     ("svg", "fixtures/o/chart.svg", 0),
+    #[cfg(feature = "carta")]
+    ("carta", "fixtures/k1/sample.org", 1),
 ];
 
 fn root() -> PathBuf {
@@ -315,6 +322,54 @@ fn every_fixture_converts_to_pdf_with_its_headings() {
                 "{id} ({rel}): {tags} heading tags for {} headings",
                 expected.len()
             ));
+        }
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
+#[cfg(feature = "carta")]
+#[test]
+fn markdown_and_org_convert_to_every_carta_format_with_their_headings() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let registry = Registry::with_builtins();
+    let mut problems = Vec::new();
+    for to in OutputFormat::ALL
+        .into_iter()
+        .filter(|f| f.carta_writer().is_some())
+    {
+        let conv =
+            Converter::new(options(to, &dir.path().join(to.extension()))).expect("converter");
+        for rel in ["fixtures/k1/sample.md", "fixtures/k1/sample.org"] {
+            let source = root().join(rel);
+            let job = Job {
+                output: dir
+                    .path()
+                    .join(to.extension())
+                    .join(rel.replace(['/', '.'], "-"))
+                    .with_extension(to.extension()),
+                root: source.parent().expect("a folder").to_owned(),
+                source: source.clone(),
+            };
+            let f = conv.convert_job(&job);
+            if let Status::Failed(reason) = &f.status {
+                problems.push(format!("{rel} to {}: failed: {reason}", to.label()));
+                continue;
+            }
+            let written = norm(&std::fs::read_to_string(&f.output).unwrap_or_default());
+            // The headings the loaders add (a "Footnotes" heading over the
+            // notes) are not in the source; the writers keep the notes as
+            // notes.
+            let text = norm(&std::fs::read_to_string(&source).unwrap_or_default());
+            let mut expected = headings(&registry, &source);
+            expected.retain(|h| text.contains(h.as_str()));
+            for h in expected {
+                if !written.contains(h.as_str()) {
+                    problems.push(format!("{rel} to {}: heading {h:?} is missing", to.label()));
+                }
+            }
+            if !written.contains("americancrow") {
+                problems.push(format!("{rel} to {}: the table is missing", to.label()));
+            }
         }
     }
     assert!(problems.is_empty(), "{}", problems.join("\n"));

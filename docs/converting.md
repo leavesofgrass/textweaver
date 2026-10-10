@@ -25,6 +25,7 @@ The formats you can ask for with `--to`:
 
   Bold, italic, and underlined text carry the UEB typeform indicators: a word indicator before one or two emphasized words, and a passage indicator and terminator around three or more. Three or more words in capitals get the capitals passage indicator once, instead of a word indicator before each. A passage that goes on over several paragraphs or list items is opened again at the start of each and ended once, after the last; each heading stands alone. Contracted (grade 2) braille carries the same typeform indicators, placed around liblouis's contractions; its capitals are liblouis's own, one paragraph at a time.
 - `pdf`: a tagged PDF that screen readers can move through by heading, list, and table.
+- `adoc`, `typ`, `tex`, `wiki`, and `org`: AsciiDoc, Typst, LaTeX, MediaWiki, and Org mode, written by carta. See [AsciiDoc, Typst, LaTeX, MediaWiki, and Org](#asciidoc-typst-latex-mediawiki-and-org).
 
 Some outputs come with warnings, for example "The image cat.png was not found, so its description was written instead." Each warning is read out with its file name, and the summary says how many files had warnings.
 
@@ -265,12 +266,28 @@ Struck-through text, such as `~~old plan~~` in Markdown, is drawn with a line th
 
 For EPUB, `--font` and `--code-font` put one of textweaver's own fonts into the book, with its license, and make it the book's font. Reading apps may still let you choose another. Fonts installed on your computer cannot be put into a book, because their licenses may not allow it.
 
+## AsciiDoc, Typst, LaTeX, MediaWiki, and Org
+
+```bash
+tw convert thesis.md --to tex
+tw convert "Lab notes" --to org --out "Lab notes in Org"
+```
+
+textweaver does not write these five formats itself; carta, the converter built into textweaver, writes them. The output is a whole document: a LaTeX file with its preamble, ready for `pdflatex` or `lualatex`; a Typst file with its page setup, ready for `typst compile`; and AsciiDoc and Org files that begin with the title. MediaWiki markup has no document header, so it is the page's text alone. The extensions are `.adoc`, `.typ`, `.tex`, `.wiki`, and `.org`, and `--to` also takes the full names `asciidoc`, `typst`, `latex`, and `mediawiki`. Batch convert in the reader offers the same five formats after the others.
+
+carta writes from Markdown. A Markdown file goes to carta as it is, so its front matter title, footnotes, math, tables, and code blocks become the target format's own. Any other document is first turned into Markdown, the same Markdown `--to md` writes, and that Markdown goes to carta. Whatever Markdown cannot express is lost on the way: the footnotes of an Org file, for example, arrive as a numbered list under a "Footnotes" heading rather than as notes, and its title is the first heading rather than the document's title. To keep the most, convert to Markdown first, check it, and convert the Markdown.
+
+The publishing templates, `--template`, and the PDF and EPUB layout options do not apply to these formats; each uses its usual layout. Citations in Markdown are formatted, as for every output but Markdown.
+
+On the sample documents, carta's output, read back by Pandoc, gave the same text as Pandoc's own writers for LaTeX, MediaWiki, and Org. For AsciiDoc and Typst, carta kept a footnote, a link's text, and a formula that Pandoc's own round trip lost. In MediaWiki, quotation marks inside a code block are written as `&quot;`, which MediaWiki shows as quotation marks.
+
 ## Other options
 
 - `--engine comrak` uses the comrak Markdown parser instead of the default, pulldown-cmark. comrak implements every detail of GitHub's specification; pulldown-cmark is faster. Both give the same page structure.
 - `--jobs 4` limits the work to four processor cores. By default every core is used.
 - `--sanitize` removes scripts and other unsafe HTML, for Markdown you did not write yourself.
 - `--smart` turns straight quotes into curly quotes and double hyphens into dashes.
+- `--from dokuwiki` reads every file in the batch as DokuWiki, whatever its extension; `--from jira` reads Jira markup the same way. Any extension a reader takes also works, such as `--from org` for Org files saved as `.txt`. See [Org, reStructuredText, and wiki markup](#org-restructuredtext-and-wiki-markup).
 - `--no-pandoc` never runs Pandoc (see below).
 - `--pandoc-timeout 300` gives Pandoc up to 300 seconds for each file instead of 120 (see below).
 - `--pdf-font FILE` chooses a font file for the text of PDF output. `--font` does the same by name.
@@ -300,8 +317,9 @@ textweaver reads these formats itself:
 - JSON and JSON Lines, as headings and lists you can move through by key, and Jupyter notebooks (IPYNB), cell by cell. See [JSON and notebooks](#json-and-notebooks).
 - SVG drawings, by their title, description, labeled parts, and text. See [Drawings and formulas](#drawings-and-formulas).
 - MathML formulas (MML), presentation or content MathML, as one formula.
+- Org mode (ORG), reStructuredText (RST and REST), MediaWiki (WIKI and MEDIAWIKI), DokuWiki, and Jira markup, read by carta, a converter written in Rust that runs inside textweaver. See [Org, reStructuredText, and wiki markup](#org-restructuredtext-and-wiki-markup).
 
-For other formats, such as reStructuredText and Org, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself, and RTF, OpenDocument text, LaTeX, and notebooks no longer need it. `--no-pandoc` turns it off. Text sent to Pandoc in an older encoding, such as a Windows-1252 file, is converted to UTF-8 first, because Pandoc reads only UTF-8.
+For other formats, such as Textile, DocBook, and FictionBook, `tw convert` asks Pandoc when Pandoc is installed. Pandoc is never used for a format textweaver reads itself, and RTF, OpenDocument text, LaTeX, notebooks, Org, and reStructuredText no longer need it. `--no-pandoc` turns it off. Text sent to Pandoc in an older encoding, such as a Windows-1252 file, is converted to UTF-8 first, because Pandoc reads only UTF-8.
 
 JSON files and SVG drawings open when you name them, but a folder of them is not treated as a folder of documents: the library, `tw convert` on a folder, and a watched folder leave them out, as they leave out pictures and archives.
 
@@ -329,6 +347,25 @@ textweaver reads LaTeX itself, the way course notes and papers use it, without P
 What textweaver does not know is never lost: a command it does not know is left out and its text is read. The document's warnings list those commands, for example "Some LaTeX commands are not supported, so only their text is read: \hl." The preamble, layout commands such as spacing and page breaks, and drawings made with TikZ are left out.
 
 A file over 16 megabytes is refused. A document that includes more than 8 levels of files, or is so long or so tangled that it passes textweaver's limits, is read up to that point, and the warning says the rest was left out.
+
+### Org, reStructuredText, and wiki markup
+
+```bash
+tw text notes.org
+tw convert "Course wiki" --from dokuwiki --to md --out "Course notes"
+```
+
+Org mode files, reStructuredText, and MediaWiki pages open in the reader and convert with `tw convert` like any other document, with nothing else installed. They are read by carta, a young converter written in Rust and modeled on Pandoc, which runs inside textweaver. carta turns the file into a web page in memory, and textweaver's own HTML reader takes it from there, so headings, lists, tables, links, and footnotes behave exactly as they do in a web page, and a heading move, a search, or a braille line works the same way. An Org file's `#+TITLE` becomes the document's title and its first heading. Math is read as math. On the sample documents, carta and Pandoc gave the same text and the same structure, and carta took a few milliseconds where Pandoc took about a third of a second.
+
+DokuWiki pages and Jira markup have no file extension of their own; a DokuWiki page is saved as a `.txt` file. Name the format with `--from`, as in the example above, and every file given to that command is read as DokuWiki. Name a folder that holds only pages in that format, because `--from` applies to every file in the batch. A file whose name ends in `.dokuwiki` or `.jira` is recognized without `--from`.
+
+When Pandoc is installed as well, carta reads these formats and Pandoc is not asked. Typst and LaTeX are not read through carta: carta's Typst reader would follow a document's instructions to read other files anywhere on the computer, with no way to turn that off, and textweaver's own LaTeX reader keeps tables and the title that carta loses.
+
+In reStructuredText, the `.. include::` directive is never followed, because carta would read the named file from anywhere on the computer. Each include is left out, and the document's warnings say "An include directive was left out, so the file it names is not read." An include written inside a code example is left out too.
+
+A few details are known to differ from Pandoc. In Org, a heading's `:ID:` property does not become a link target. In reStructuredText, the `contents` directive writes no table of contents. In MediaWiki, a displayed formula is read as an inline one. In DokuWiki, a footnote ends at the first `))`.
+
+The lean reader, built without its default features, leaves carta out; there these files are read as plain text.
 
 ### Obsidian notes
 
@@ -399,10 +436,10 @@ Pandoc runs in its sandbox, so a document cannot make it read other files on you
 
 A damaged or deliberately odd file cannot stop a batch either. Content nested thousands of levels deep, in a web page, EPUB, Word, OpenDocument, or RTF document, is read as plain text below 256 levels, with the warning "Some content was nested too deeply to keep its structure, so it is read as plain text." List and page numbers that claim impossible values are capped. A file that is really a picture, a program, or another binary file is refused after its first 8 kilobytes, however large it is. Word, OpenDocument, EPUB, and PowerPoint files are zip packages; one with more than 50,000 files inside, with files that overlap, or with a file that claims to unpack to more than 1,000 times its size is refused, and no package is unpacked past 1 gigabyte.
 
-The reader, `textweaver`, does not use Pandoc. It opens RTF and OpenDocument text itself. For a format only Pandoc reads, such as reStructuredText, convert it to Markdown first, then open the Markdown:
+The reader, `textweaver`, does not use Pandoc. It opens RTF, OpenDocument text, Org, and reStructuredText itself. For a format only Pandoc reads, such as Textile, convert it to Markdown first, then open the Markdown:
 
 ```bash
-tw convert essay.rst --to md
+tw convert essay.textile --to md
 ```
 
 ```bash
@@ -461,7 +498,7 @@ While you edit, each save (**Ctrl+S**) writes the preview again and you hear "Pr
 
 ## When something fails
 
-A file that cannot be converted never stops the others. After the summary, each failure is read out with its reason, for example "Failed: old.rst: no native reader for .rst files, and Pandoc is not installed". When any file fails, `tw convert` ends with exit status 1, so scripts can tell.
+A file that cannot be converted never stops the others. After the summary, each failure is read out with its reason, for example "Failed: old.textile: no native reader for .textile files, and Pandoc is not installed". When any file fails, `tw convert` ends with exit status 1, so scripts can tell.
 
 Failures are also listed in the [conversion report](#the-conversion-report), each with the file's name first, for example "report.docx: parse error: not a valid DOCX (zip) file".
 

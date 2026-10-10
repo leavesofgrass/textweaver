@@ -203,6 +203,12 @@ comrak = { version = "0.55", default-features = false }
 minijinja = "2.24"
 rayon = "1.12"
 walkdir = "2.5"
+# carta (B1-k1, B1-k2): Org, reStructuredText, MediaWiki, DokuWiki, and Jira
+# read, and AsciiDoc, Typst, LaTeX, MediaWiki, and Org written, in pure
+# Rust. Young, with an unstable API, so pinned exactly; no default features
+# (its command line, its HTTP fetch, and every format it offers), so each
+# crate names only the readers and writers it uses.
+carta = { version = "=0.0.11", default-features = false }
 # Held on 4.1 (security fixes still land there): 4.1.4 uses html5ever 0.39,
 # the version scraper 0.27 uses, so one HTML parser is linked instead of
 # two. Move to 4.2 together with a scraper release on html5ever 0.40.

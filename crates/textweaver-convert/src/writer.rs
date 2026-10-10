@@ -25,7 +25,14 @@ impl OutputFormat {
             OutputFormat::Docx => Some(Format::Docx),
             OutputFormat::Brf => Some(Format::Brf),
             OutputFormat::Pdf => Some(Format::Pdf),
-            OutputFormat::Markdown | OutputFormat::Html | OutputFormat::Text => None,
+            OutputFormat::Markdown
+            | OutputFormat::Html
+            | OutputFormat::Text
+            | OutputFormat::AsciiDoc
+            | OutputFormat::Typst
+            | OutputFormat::Latex
+            | OutputFormat::MediaWiki
+            | OutputFormat::Org => None,
         }
     }
 }
