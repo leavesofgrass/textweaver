@@ -385,7 +385,7 @@ pub(crate) enum Question {
 }
 
 /// Launches an installer (tests record it instead).
-pub(crate) type Launcher = Arc<dyn Fn(&Path) -> std::io::Result<()> + Send + Sync>;
+pub type Launcher = Arc<dyn Fn(&Path) -> std::io::Result<()> + Send + Sync>;
 
 /// What a helper thread does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -506,10 +506,7 @@ impl App {
 
     /// Launches installers through `launcher` from now on, instead of the
     /// system's opener (tests record the launch; nothing runs).
-    pub fn set_installer_launcher(
-        &mut self,
-        launcher: Arc<dyn Fn(&Path) -> std::io::Result<()> + Send + Sync>,
-    ) {
+    pub fn set_installer_launcher(&mut self, launcher: Launcher) {
         self.components.launcher = Some(launcher);
     }
 
