@@ -85,6 +85,26 @@ Exported from textweaver on 2026-09-26.
 
 Highlights are listed the same way, with their color. A new document that was never saved has no folder yet; its study sheet goes to the folder textweaver was started in.
 
+### Make a pocket review
+
+A pocket review is your own marks as something to carry: the study sheet read aloud into an audio file for a walk or a bus ride, and a braille copy for a notetaker. It takes two commands after the study sheet:
+
+1. Export the study sheet, as above. For `essay.md` this writes `essay-study-sheet.md`.
+2. Read it into audio from a terminal:
+
+   ```bash
+   tw export-audio essay-study-sheet.md --out essay-review.mp3
+   ```
+
+   MP3, FLAC, Opus, and Ogg Vorbis need no other program; `essay-review.m4b`, an audiobook with a chapter for each heading of the essay, needs ffmpeg. In the reader, open the study sheet and use Export audio instead. See [audio export](audio-export.md#make-a-pocket-review).
+3. For a braille copy, convert it:
+
+   ```bash
+   tw convert essay-study-sheet.md --to brf
+   ```
+
+The review holds only what you marked, in the order of the document, under its headings. It is a way to reach your marks without the whole text; hearing them again is still rereading, so test yourself as well (see [Study with textweaver](#study-with-textweaver)).
+
 ### List notes: Shift+A
 
 Press **Shift+A**. The window also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links." Each item says the note, the line, and the passage, then its links when it has some.

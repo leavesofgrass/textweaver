@@ -151,6 +151,16 @@ Progress messages go to the error output and the result sentence to the standard
 
 To stop an export, press Control C. A partly written file may be left behind. Delete it and start again.
 
+## Make a pocket review
+
+Your notes and highlights can go with you as audio. Export a study sheet first (press **F2** and type `export study sheet`; see [notes](notes.md#export-a-study-sheet)), which writes `essay-study-sheet.md` beside `essay.md`. Then read the sheet into a file:
+
+```bash
+tw export-audio essay-study-sheet.md --out essay-review.mp3
+```
+
+MP3, FLAC, Opus, and Ogg Vorbis need nothing else. With ffmpeg installed, `--out essay-review.m4b` makes an audiobook with a chapter for each heading of the essay, so a book player can jump between sections. `tw convert essay-study-sheet.md --to brf` makes a braille copy of the same sheet. Thirty highlights come to about 3,000 words, or about 15 minutes of audio at 200 words a minute.
+
 ## Make an audiobook with chapters
 
 ```bash
