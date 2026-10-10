@@ -2478,7 +2478,13 @@ impl App {
             said.push(' ');
             said.push_str(&c.tr("settings-clamped"));
         }
-        if let Some(extra) = restart_note(path) {
+        // A new engine takes over at once, through Restart speech, rather
+        // than after a restart the reader might not know to do.
+        let engine_changed =
+            path == "speech.backend" && old.speech.backend != self.settings.speech.backend;
+        if engine_changed {
+            let _ = self.restart_speech_command();
+        } else if let Some(extra) = restart_note(path) {
             said.push(' ');
             said.push_str(&c.tr(extra));
         }
