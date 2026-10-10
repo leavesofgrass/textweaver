@@ -319,6 +319,9 @@ pub(crate) enum ListKind {
     Relations(crate::relations::RelationsList),
     /// Prompts with hidden answers: the self-test (crate::reveal).
     Reveal(crate::reveal::RevealList),
+    /// Customize buttons: the bars' buttons, one button's moves, or the
+    /// commands to add (crate::buttons, B1-cb).
+    Buttons(crate::buttons::ButtonsList),
 }
 
 /// The application: the only owner of mutable state.
@@ -1858,6 +1861,7 @@ impl App {
             Some(ListKind::Changes(rows)) => self.choose_change_row(&rows, n),
             Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
             Some(ListKind::Reveal(l)) => return self.choose_reveal(l, n),
+            Some(ListKind::Buttons(l)) => return self.choose_buttons(l, n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1893,6 +1897,7 @@ impl App {
                 vec![Effect::Redraw]
             }
             Some(ListKind::Relations(l)) => self.delete_relation_item(l, n),
+            Some(ListKind::Buttons(l)) => self.delete_buttons_item(l, n),
             _ => {
                 let msg = self.msg("study-nothing-to-delete");
                 self.tell(&msg);
@@ -2246,6 +2251,7 @@ impl App {
                 return self.run_registered(a);
             }
             A::ColorSettings => return self.open_color_settings(),
+            A::CustomizeButtons => return self.customize_buttons(),
             A::ReadingForm => return self.open_reading_form(),
             A::SyncSetup
             | A::SyncStatus

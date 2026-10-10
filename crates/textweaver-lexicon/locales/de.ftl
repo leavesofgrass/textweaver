@@ -870,6 +870,7 @@ action-contents-panel = Den Bereich Inhalt neben dem Dokument zeigen und dorthin
 action-notes-panel = Den Bereich Notizen neben dem Dokument zeigen und dorthin wechseln, oder ihn von innen schließen: Eingabetaste springt zu einer Notiz
 action-toggle-header = Kopfzeile ein- oder ausblenden, die Leiste der Befehle über dem Dokument
 action-toggle-toolbar = Symbolleiste ein- oder ausblenden, die Leiste der Lese-Schaltflächen
+action-customize-buttons = Die Schaltflächen der Kopfzeile und der Symbolleiste und ihre Reihenfolge wählen
 action-next-region = Zum nächsten Teil des Fensters: Kopfzeile, Bereich, Dokument oder Symbolleiste
 action-previous-region = Zum vorherigen Teil des Fensters
 action-command-palette = Jeden Befehl über seinen Namen ausführen
@@ -2250,6 +2251,10 @@ setting-gui-header = Kopfzeile anzeigen
 setting-gui-header-help = Zeigt die Leiste der Befehle über dem Dokument. Aus, behalten die Befehle ihre Tasten und Menüeinträge.
 setting-gui-toolbar = Symbolleiste anzeigen
 setting-gui-toolbar-help = Zeigt die Leiste der Lese-Schaltflächen. Aus, behalten die Befehle ihre Tasten und Menüeinträge.
+setting-gui-header-buttons = Schaltflächen der Kopfzeile
+setting-gui-header-buttons-help = Die Schaltflächen der Kopfzeile, der Reihe nach, als Befehls-IDs mit Kommas getrennt. Schaltflächen anpassen im Menü Ansicht ändert sie einzeln. IDs, die diese Version nicht kennt, bleiben erhalten, werden aber nicht gezeigt.
+setting-gui-toolbar-buttons = Schaltflächen der Symbolleiste
+setting-gui-toolbar-buttons-help = Die Schaltflächen der Symbolleiste, der Reihe nach, als Befehls-IDs mit Kommas getrennt. Die Tastenhinweise des Terminal-Lesers folgen ihnen. Schaltflächen anpassen im Menü Ansicht ändert sie einzeln.
 setting-gui-auto-hide-menu = Menüleiste ausblenden
 setting-gui-auto-hide-menu-help = Windows: blendet die Menüleiste des Fensters aus, bis Alt oder F10 sie zeigt. Sie verschwindet wieder, wenn das Menü schließt. Keine Wirkung unter Linux, dessen Menüs die F10-Liste sind, oder unter macOS.
 setting-gui-speak-messages = Meldungen von textweaver sprechen
@@ -2993,7 +2998,6 @@ tui-hint-previous-line = vorherige Zeile
 tui-hint-again = nochmal
 tui-hint-read-on = weiterlesen
 tui-hint-leave = verlassen
-tui-hint-paragraph = Absatz
 tui-hint-find = suchen
 tui-hint-mark = markieren
 tui-hint-lines = Zeilen
@@ -3163,6 +3167,53 @@ gui-header-shown = Kopfzeile angezeigt.
 gui-header-hidden = Kopfzeile ausgeblendet. Ihre Befehle behalten ihre Tasten.
 gui-toolbar-shown = Symbolleiste angezeigt.
 gui-toolbar-hidden = Symbolleiste ausgeblendet. Ihre Befehle behalten ihre Tasten.
+
+## Schaltflächen anpassen (crate::buttons).
+
+buttons-title = Schaltflächen anpassen
+buttons-intro =
+    { $n ->
+        [one] Schaltflächen anpassen, 1 Schaltfläche. Enter auf einer Schaltfläche, um sie zu verschieben oder zu entfernen.
+       *[other] Schaltflächen anpassen, { $n } Schaltflächen. Enter auf einer Schaltfläche, um sie zu verschieben oder zu entfernen.
+    }
+buttons-row =
+    { $bar ->
+        [header] { $name }, Kopfzeile { $pos } von { $count }
+       *[toolbar] { $name }, Symbolleiste { $pos } von { $count }
+    }
+buttons-add-header = Schaltfläche zur Kopfzeile hinzufügen
+buttons-add-toolbar = Schaltfläche zur Symbolleiste hinzufügen
+buttons-reset = Beide Leisten auf die Standardwerte zurücksetzen
+buttons-move-up = Nach oben
+buttons-move-down = Nach unten
+buttons-remove = Entfernen
+buttons-add-intro =
+    { $n ->
+        [one] 1 Befehl zum Hinzufügen. Enter fügt ihn am Ende hinzu.
+       *[other] { $n } Befehle zum Hinzufügen. Enter fügt einen am Ende hinzu.
+    }
+buttons-added =
+    { $bar ->
+        [header] { $name } hinzugefügt, Kopfzeile { $pos } von { $count }.
+       *[toolbar] { $name } hinzugefügt, Symbolleiste { $pos } von { $count }.
+    }
+buttons-removed =
+    { $bar ->
+        [header] { $name } aus der Kopfzeile entfernt.
+       *[toolbar] { $name } aus der Symbolleiste entfernt.
+    }
+buttons-moved = { $name } verschoben, { $pos } von { $count }.
+buttons-first = { $name } ist schon die erste.
+buttons-last = { $name } ist schon die letzte.
+buttons-already =
+    { $bar ->
+        [header] { $name } ist schon in der Kopfzeile.
+       *[toolbar] { $name } ist schon in der Symbolleiste.
+    }
+buttons-no-name = Dieser Befehl hat keinen Kurznamen und kann keine Schaltfläche sein.
+buttons-no-button = Dort ist keine Schaltfläche.
+buttons-reset-done = Schaltflächen auf die Standardwerte zurückgesetzt.
+buttons-none-to-add = Keine weiteren Befehle zum Hinzufügen.
 gui-sidebar-no-headings = Keine Überschriften.
 gui-sidebar-no-notes = Keine Notizen.
 gui-sidebar-current = { $item }, aktuell
@@ -3492,6 +3543,7 @@ name-contents-panel = Bereich Inhalt
 name-notes-panel = Bereich Notizen
 name-toggle-header = Kopfzeile
 name-toggle-toolbar = Symbolleiste
+name-customize-buttons = Schaltflächen anpassen
 name-next-region = Nächster Teil
 name-previous-region = Vorheriger Teil
 name-color-settings = Farben

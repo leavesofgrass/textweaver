@@ -351,6 +351,7 @@ impl MenuId {
                 Do(A::PreviousRegion),
                 Do(A::ToggleHeader),
                 Do(A::ToggleToolbar),
+                Do(A::CustomizeButtons),
                 Sep,
                 Do(A::NextTheme),
                 Do(A::ColorSettings),

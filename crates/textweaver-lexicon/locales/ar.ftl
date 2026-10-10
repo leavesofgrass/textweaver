@@ -930,6 +930,7 @@ action-contents-panel = إظهار لوحة المحتويات بجانب الم
 action-notes-panel = إظهار لوحة الملاحظات بجانب المستند والانتقال إليها، أو إغلاقها من داخلها: Enter ينتقل إلى ملاحظة
 action-toggle-header = إظهار الترويسة أو إخفاؤها، شريط الأوامر فوق المستند
 action-toggle-toolbar = إظهار شريط الأدوات أو إخفاؤه، شريط أزرار القراءة
+action-customize-buttons = اختيار أزرار الترويسة وشريط الأدوات وترتيبها
 action-next-region = الانتقال إلى الجزء التالي من النافذة: الترويسة، أو اللوحة، أو المستند، أو شريط الأدوات
 action-previous-region = الانتقال إلى الجزء السابق من النافذة
 action-command-palette = تشغيل أي أمر بالاسم
@@ -2402,6 +2403,10 @@ setting-gui-header = إظهار الترويسة
 setting-gui-header-help = يُظهر شريط الأوامر فوق المستند. عند إيقافه تحتفظ الأوامر بمفاتيحها وعناصر قوائمها.
 setting-gui-toolbar = إظهار شريط الأدوات
 setting-gui-toolbar-help = يُظهر شريط أزرار القراءة. عند إيقافه تحتفظ الأوامر بمفاتيحها وعناصر قوائمها.
+setting-gui-header-buttons = أزرار الترويسة
+setting-gui-header-buttons-help = أزرار الترويسة بالترتيب، معرّفات أوامر تفصل بينها فواصل. يغيّرها أمر تخصيص الأزرار في قائمة عرض زرًا زرًا. تُحفظ المعرّفات التي لا يعرفها هذا الإصدار لكنها لا تظهر.
+setting-gui-toolbar-buttons = أزرار شريط الأدوات
+setting-gui-toolbar-buttons-help = أزرار شريط الأدوات بالترتيب، معرّفات أوامر تفصل بينها فواصل. تتبعها تلميحات المفاتيح في قارئ الطرفية. يغيّرها أمر تخصيص الأزرار في قائمة عرض زرًا زرًا.
 setting-gui-auto-hide-menu = إخفاء شريط القوائم
 setting-gui-auto-hide-menu-help = Windows: يخفي شريط قوائم النافذة حتى يُظهره Alt أو F10، ويختفي مرة أخرى عند إغلاق القائمة. لا أثر له على Linux، حيث القوائم هي قائمة F10، ولا على macOS.
 setting-gui-speak-messages = نطق رسائل textweaver
@@ -3248,7 +3253,6 @@ tui-hint-previous-line = السطر السابق
 tui-hint-again = مجددًا
 tui-hint-read-on = متابعة القراءة
 tui-hint-leave = مغادرة
-tui-hint-paragraph = فقرة
 tui-hint-find = بحث
 tui-hint-mark = وضع علامة
 tui-hint-lines = أسطر
@@ -3436,6 +3440,59 @@ gui-header-shown = الترويسة ظاهرة.
 gui-header-hidden = الترويسة مخفية. تحتفظ أوامرها بمفاتيحها.
 gui-toolbar-shown = شريط الأدوات ظاهر.
 gui-toolbar-hidden = شريط الأدوات مخفي. تحتفظ أوامره بمفاتيحها.
+
+## تخصيص الأزرار (crate::buttons).
+
+buttons-title = تخصيص الأزرار
+buttons-intro =
+    { $n ->
+        [one] تخصيص الأزرار، زر واحد. Enter على زر لنقله أو إزالته.
+        [two] تخصيص الأزرار، زران. Enter على زر لنقله أو إزالته.
+        [few] تخصيص الأزرار، { $n } أزرار. Enter على زر لنقله أو إزالته.
+        [zero] تخصيص الأزرار، { $n } زر. Enter على زر لنقله أو إزالته.
+       *[other] تخصيص الأزرار، { $n } زرًا. Enter على زر لنقله أو إزالته.
+    }
+buttons-row =
+    { $bar ->
+        [header] { $name }، الترويسة { $pos } من { $count }
+       *[toolbar] { $name }، شريط الأدوات { $pos } من { $count }
+    }
+buttons-add-header = إضافة زر إلى الترويسة
+buttons-add-toolbar = إضافة زر إلى شريط الأدوات
+buttons-reset = إعادة الشريطين إلى الافتراضي
+buttons-move-up = نقل إلى أعلى
+buttons-move-down = نقل إلى أسفل
+buttons-remove = إزالة
+buttons-add-intro =
+    { $n ->
+        [one] أمر واحد للإضافة. Enter يضيفه في النهاية.
+        [two] أمران للإضافة. Enter يضيف أحدهما في النهاية.
+        [few] { $n } أوامر للإضافة. Enter يضيف واحدًا في النهاية.
+        [zero] { $n } أمر للإضافة. Enter يضيف واحدًا في النهاية.
+       *[other] { $n } أمرًا للإضافة. Enter يضيف واحدًا في النهاية.
+    }
+buttons-added =
+    { $bar ->
+        [header] أُضيف { $name }، الترويسة { $pos } من { $count }.
+       *[toolbar] أُضيف { $name }، شريط الأدوات { $pos } من { $count }.
+    }
+buttons-removed =
+    { $bar ->
+        [header] أُزيل { $name } من الترويسة.
+       *[toolbar] أُزيل { $name } من شريط الأدوات.
+    }
+buttons-moved = نُقل { $name }، { $pos } من { $count }.
+buttons-first = { $name } هو الأول أصلًا.
+buttons-last = { $name } هو الأخير أصلًا.
+buttons-already =
+    { $bar ->
+        [header] { $name } موجود في الترويسة أصلًا.
+       *[toolbar] { $name } موجود في شريط الأدوات أصلًا.
+    }
+buttons-no-name = ليس لهذا الأمر اسم قصير، فلا يمكن أن يكون زرًا.
+buttons-no-button = لا زر هناك.
+buttons-reset-done = أُعيدت الأزرار إلى الافتراضي.
+buttons-none-to-add = لا أوامر أخرى للإضافة.
 gui-sidebar-no-headings = لا توجد عناوين.
 gui-sidebar-no-notes = لا توجد ملاحظات.
 gui-sidebar-current = { $item }، الحالي
@@ -3784,6 +3841,7 @@ name-contents-panel = لوحة المحتويات
 name-notes-panel = لوحة الملاحظات
 name-toggle-header = الترويسة
 name-toggle-toolbar = شريط الأدوات
+name-customize-buttons = تخصيص الأزرار
 name-next-region = المنطقة التالية
 name-previous-region = المنطقة السابقة
 name-color-settings = الألوان

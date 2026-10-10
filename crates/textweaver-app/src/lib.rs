@@ -157,6 +157,7 @@ mod authoring_state;
 mod batch;
 mod braille_file;
 pub mod browse;
+pub mod buttons;
 pub mod changes;
 mod overview;
 // In-reader export, preview, and citations: the full modules with the
