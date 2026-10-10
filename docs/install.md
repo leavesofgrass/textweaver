@@ -215,6 +215,10 @@ The app is in every package, beside `tw`, with the same engine hosts and diction
 - **macOS.** Extract the zip and remove the quarantine flag once, as in [macOS](#macos). Then open `textweaver.app`.
 - **Linux.** Run the AppImage on its own, or extract the tarball and run `textweaver-gui` from its folder. The app needs a desktop session (Wayland or X11) and, like the terminal reader, the ALSA library.
 
+## Optional components
+
+A package does not hold every tool textweaver can use. ffmpeg (audio export), liblouis (braille) and Pandoc are fetched for you, from their official releases, the first time a feature needs one, and only after asking. Components can also come from your own repository or folder. [Optional components](components.md) explains what is fetched, where it is kept, and how to remove it.
+
 ## Checking a download
 
 Each release has a `SHA256SUMS.txt` file. To check a download on Windows:
@@ -251,6 +255,7 @@ gh attestation verify textweaver-0.1.0-beta.1-windows-x86_64.zip --repo leavesof
 
 - [Quick start](quickstart.md): what to do first.
 - [Updates](updates.md): keeping textweaver current.
+- [Optional components](components.md): the tools textweaver fetches for you.
 - [Speech engines and voices](speech.md): choosing an engine and a voice.
 - [Troubleshooting](troubleshooting.md): when something does not work.
 - [scripts/README.md](../scripts/README.md): every install and helper script.

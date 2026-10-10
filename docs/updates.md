@@ -35,7 +35,7 @@ When a newer release exists, textweaver asks, for example:
 
 The question never interrupts reading. If textweaver is reading aloud, the question waits until reading stops or pauses, and until no dialog or other question is open.
 
-Every newer release is offered, pre-release or stable, because textweaver is still moving through its alpha and beta releases.
+Every newer release is offered, pre-release or stable, because textweaver is in beta and each beta release is a pre-release.
 
 - **y** downloads it. textweaver says "Downloading the update", with its size, and then how far it has got, at most every ten seconds.
 - **n** or Escape keeps what you have. textweaver remembers that you declined this release and does not offer it again; the next newer release is offered as usual. Help, Check for updates still offers it if you change your mind.
@@ -51,7 +51,7 @@ GitHub also attaches a build attestation to every package, a signed record of th
 
 textweaver updates the same package you installed, and only that package. It finds the folder the running program came from and confirms that it is a release package, by the `NOTICE` file every package carries (on macOS, by the `textweaver.app` bundle). A copy built from source, or installed by a system package manager, is not touched; textweaver says "Not updated: this copy is not from a release package." and you update it the way you installed it.
 
-- **Windows.** A running program cannot replace its own files, so textweaver unpacks the new package and says "Update verified. It installs when textweaver closes." When you close textweaver, a small step in the new package waits for it to close, puts the new files in place, and starts the window again. If textweaver is installed under Program Files, Windows asks once for administrator permission.
+- **Windows.** A running program cannot replace its own files, so textweaver unpacks the new package and says "Update verified. It installs when textweaver closes." When you close textweaver, a small step in the new package waits for it to close, puts the new files in place, and starts the app again. If textweaver is installed under Program Files, Windows asks once for administrator permission.
 - **Linux.** A tarball install is replaced in place, and an AppImage is replaced by the new image as one file. textweaver says "Update verified and installed. Restart textweaver to use it." The copy already running keeps working until you close it.
 - **macOS.** The `textweaver.app` bundle and `tw` are replaced together, wherever they sit side by side, and textweaver asks you to restart.
 

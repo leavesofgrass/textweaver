@@ -8,16 +8,16 @@ Each problem below is a heading that says what you notice. Under it are the step
 
 ### The log file
 
-The terminal reader and the window write warnings and errors to a log file, `textweaver.log`, in the state folder. The state folder is `state` inside the data folder; the [library guide](library.md) says where that is on each system. With `TEXTWEAVER_HOME` or `--home`, it is `data\state` under that folder.
+The terminal reader and the app write warnings and errors to a log file, `textweaver.log`, in the state folder. The state folder is `state` inside the data folder; the [library guide](library.md) says where that is on each system. With `TEXTWEAVER_HOME` or `--home`, it is `data\state` under that folder.
 
-The log is written by `textweaver`, `tw open`, and `tw serve`. Other `tw` commands print their errors in the terminal instead.
+The log is written by the reader (`tw` or `tw FILE`), `tw open`, and `tw serve`. Other `tw` commands print their errors in the terminal instead.
 
 The log is small. When it reaches 1 MB it is renamed `textweaver.log.1`, and a new one starts. Three older logs are kept: `textweaver.log.1` is the newest of them, and `textweaver.log.3` the oldest.
 
 To log more, start the reader with `--log` and a level:
 
 ```bash
-textweaver --log debug essay.md
+tw --log debug essay.md
 ```
 
 The levels, from least to most: `off`, `error`, `warn` (the default), `info`, `debug`, and `trace`. `--log` alone means `debug`. `--log off` writes no log.
@@ -58,7 +58,7 @@ These three commands read your `settings.toml`, as the reader does, so they use 
 
 The `scripts` folder has two checking scripts. The [scripts guide](../scripts/README.md) describes every option.
 
-The doctor writes one plain-text report to paste into a bug report: your system, your terminal, the screen reader if one is running, where textweaver and the window are installed, `tw backends`, the optional components with one line such as "Components: 3 of 12 installed", text recognition, whether the engine hosts sit beside the programs, and the optional tools. It reads no file contents and shows only the names of `TEXTWEAVER_` variables that are set. On Windows:
+The doctor writes one plain-text report to paste into a bug report: your system, your terminal, the screen reader if one is running, where textweaver and the app are installed, `tw backends`, the optional components with one line such as "Components: 3 of 12 installed", text recognition, whether the engine hosts sit beside the programs, and the optional tools. It reads no file contents and shows only the names of `TEXTWEAVER_` variables that are set. On Windows:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\doctor.ps1 -Out doctor.txt
@@ -93,21 +93,21 @@ scripts/speech-check.sh
 5. Run `tw speak "Hello"`. If that speaks but the reader does not, check `[speech] backend` in `settings.toml`, or start with `--backend` and an engine id.
 6. Start with `--log debug`, try again, and read `textweaver.log`.
 
-### The window does not open, or it is blank
+### The app does not open, or it is blank
 
 1. Start it from a terminal, so any error shows there, and write a log: `textweaver-gui --log-file gui.log`. Started from a shortcut or File Explorer, a startup error is shown in a message box instead.
 2. Try another graphics interface for one run: `textweaver-gui --graphics vulkan`. The others are `dx12` (Windows), `metal` (macOS), and `gl`. To keep the one that works, put `graphics = "vulkan"` under `[gui]` in `settings.toml`.
 3. Attach `gui.log` to a bug report; see [Report a bug](#report-a-bug).
 
-### Your screen reader does not read the window's messages
+### Your screen reader does not read the app's messages
 
-1. Open Settings (Ctrl+,), choose the section Window, and change Announcements. The choices are a live region (the default) and UI Automation notifications (Windows only). The change applies from the next start. To try the other one for a single run, start with `--announce uia` or `--announce live`.
+1. Open Settings (Ctrl+,), choose the section Window (it holds the app's settings), and change Announcements. The choices are a live region (the default) and UI Automation notifications (Windows only). The change applies from the next start. To try the other one for a single run, start with `--announce uia` or `--announce live`.
 2. Check the accessibility mode: **Alt+Shift+A** changes it. In screen reader mode textweaver itself is silent, and your screen reader reads its messages.
 3. NVDA says a button's key only when its setting for reporting object shortcut keys is on (Object Presentation).
 
 ### The file chooser does not open
 
-On Linux the window's Open dialog needs the XDG desktop portal. When it cannot open, textweaver says so and shows a one-line prompt for the path instead. **Ctrl+Shift+G** opens the same prompt at any time, and Tab completes the path.
+On Linux the app's Open dialog needs the XDG desktop portal. When it cannot open, textweaver says so and shows a one-line prompt for the path instead. **Ctrl+Shift+G** opens the same prompt at any time, and Tab completes the path.
 
 ### textweaver and your screen reader talk at once
 
@@ -121,7 +121,7 @@ On its first run with a screen reader, textweaver offers hybrid mode once. [Usin
 
 ### The wrong voice speaks
 
-1. Press **Alt+V** in the terminal reader, or **Ctrl+Shift+V** in the window, and choose the voice. The one in use says "current". The choice is saved.
+1. Press **Alt+V** in the terminal reader, or **Ctrl+Shift+V** in the app (where the key may paste instead; use Speech, Choose a voice, or the command palette; see [Known limits](known-limits.md#the-graphical-version)), and choose the voice. The one in use says "current". The choice is saved.
 2. Check `[speech] voice` in `settings.toml`. A voice name that matches nothing leaves the engine's default voice in use.
 3. With no voice chosen, `[speech] prefer_voice` (default `"eloquence"`) picks one whose name contains it. Set it to part of the name you want, or to `""`.
 4. Check the engine. Your voice may belong to another engine: `tw voices --backend sapi`, for example. Set `[speech] backend` to that engine.
@@ -147,7 +147,7 @@ The [speech guide](speech.md) explains how each engine is highlighted.
 2. textweaver does not include Eloquence. The [Eloquence guide](eloquence.md) explains how to get a licensed copy for Windows, macOS, and Linux.
 3. With Code Factory's Eloquence for Windows, textweaver uses it only after you say you own it: set `TEXTWEAVER_ECI_CODE_FACTORY` to 1, or `[speech.eci] code_factory = true`.
 4. If your Eloquence is somewhere unusual, name its library with `TEXTWEAVER_ECI_LIBRARY`, or `[speech.eci] library`.
-5. Eloquence runs in a helper program, `textweaver-eci-host`. It must be in the same folder as `textweaver` and `tw`.
+5. Eloquence runs in a helper program, `textweaver-eci-host`. It must be in the same folder as `tw` and the app.
 
 ### A voice or engine is missing
 
@@ -193,7 +193,7 @@ This comes from the code; it has not been tested on a real Mac yet.
 ### The colors are hard to read
 
 1. Press **F5** to try the next color theme. The title line and status line change at once.
-2. Pick a theme for one run with `--theme`, for example `--theme high-contrast`. `textweaver --help` lists the themes.
+2. Pick a theme for one run with `--theme`, for example `--theme high-contrast`. `tw --help` lists the themes.
 3. Turn color off: set the `NO_COLOR` environment variable to `1`. textweaver still marks the highlight, the selection, and the cursor with bold, underline, or reverse video, never with color alone.
 4. If colors look wrong, your terminal may report the wrong color support. Set `TEXTWEAVER_COLOR` to `truecolor`, `256`, `16`, or `none`. It wins over `NO_COLOR`.
 
@@ -299,6 +299,22 @@ A single damaged file is different: the status says "Sync: 1 damaged file skippe
 
 The [settings guide](settings.md) explains import and export.
 
+### An update does not install
+
+1. "Update refused: checksum does not match. Nothing changed." means the download was damaged or changed on the way. Nothing was installed. Check for updates again to download it afresh.
+2. "Not updated: this copy is not from a release package." means this copy was built from source or installed by a system package manager. Update it the way you installed it.
+3. On Windows an update installs when textweaver closes. If nothing seems to happen, close every textweaver window and wait a moment. `tw update` and the app both leave your settings and notes alone.
+4. If textweaver cannot reach GitHub, the daily check says nothing and tries again the next day. Help, Check for updates says why. Run `tw update --check` in a terminal to see the same answer in words.
+
+[Updates](updates.md) explains each step.
+
+### A component will not download
+
+1. Run `tw components list` to see what is installed and what each component is for.
+2. A download that stops goes on from where it stopped the next time. "Not installed: a file did not match" means the file was damaged or is not the pinned one; get it again, or check your own components source.
+3. Behind a firewall, or offline, install the component from a zip file or a folder instead (`tw components install ID PATH`), or set a mirror. [Optional components](components.md) has the steps.
+4. Where a helper program has no build for your computer (liblouis on Linux and macOS, ffmpeg on macOS), the message names the command that installs it from your system's packages.
+
 ### Speech Dispatcher does not work in a container or over SSH
 
 The `speechd` engine talks to the Speech Dispatcher server through a socket.
@@ -328,14 +344,14 @@ If you hear "Speech stopped working", textweaver restarts speech once by itself.
 A good report lets someone else see the same problem. Include:
 
 1. What you did, what you expected, and what happened instead. Quote what textweaver said, from the status line.
-2. textweaver's version. In the window or the terminal reader, choose About from the command palette (in the window, also from the Help menu): it says the version. From a command line:
+2. textweaver's version. In the app or the terminal reader, choose About from the command palette (in the app, also from the Help menu): it says the version. From a command line:
 
    ```bash
    tw --version
    ```
 
 3. The doctor report: run the doctor script with `--out doctor.txt` (or `-Out doctor.txt` in PowerShell), as shown above, and attach the file.
-4. The log: start the reader with `--log debug`, make the problem happen, quit, and attach `textweaver.log` from the state folder (`tw settings path` names it). For the window, start it with `--log-file gui.log` and attach that file.
+4. The log: start the reader with `--log debug`, make the problem happen, quit, and attach `textweaver.log` from the state folder (`tw settings path` names it). For the app, start it with `--log-file gui.log` and attach that file.
 5. If a document causes it, and you may share it, attach the document or a small part of it that shows the problem.
 
 Report bugs at the project's issue tracker: [github.com/leavesofgrass/textweaver/issues](https://github.com/leavesofgrass/textweaver/issues).
@@ -345,6 +361,7 @@ Report bugs at the project's issue tracker: [github.com/leavesofgrass/textweaver
 - [Using textweaver with a screen reader](screen-readers.md): keys, double speech, and terminals.
 - [Speech engines and voices](speech.md): engines, voices, and every speech setting.
 - [Installing textweaver](install.md): packages, SmartScreen, and Gatekeeper.
+- [Updates](updates.md) and [Optional components](components.md): when an update or a download fails.
 - [Keyboard reference](keyboard.md): every key, and the terminal notes.
 - [Scripts](../scripts/README.md): the doctor, the speech check, and the install scripts.
 - [Documentation index](README.md)

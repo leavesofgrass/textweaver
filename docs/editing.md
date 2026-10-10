@@ -282,7 +282,7 @@ Most terminals keep **Ctrl+V** or **Ctrl+Shift+V** (or a right-click) as their o
 
 When the terminal passes **Ctrl+V** through to textweaver instead of pasting, textweaver reads the system clipboard itself, and formatted text from a browser or word processor becomes Markdown as described above. Over SSH and in tmux, where the system clipboard belongs to the other computer, textweaver pastes the text you last copied or cut in textweaver; when there is none, it says "Nothing copied in textweaver yet. Use your terminal's paste, for example Control Shift V."
 
-In the graphical version, **Ctrl+V** pastes only the clipboard's plain text for now. Converting formatted text to Markdown is done in the terminal reader; see [Known limits](known-limits.md#the-graphical-version).
+In the app on Windows, **Ctrl+V** converts formatted text to Markdown as the terminal reader does. In the app on macOS and Linux, **Ctrl+V** pastes only the clipboard's plain text for now, and the conversion is planned for beta 2; paste in the terminal reader until then. See [Known limits](known-limits.md#the-graphical-version).
 
 ### The context menu: Ctrl+F10 in the terminal
 
@@ -359,9 +359,9 @@ In edit mode, type `listen rendered` in the command palette. textweaver reads fr
 
 Type `export pdf`, `export docx`, `export html`, `export epub`, or `export brf` in the command palette to write the document you are editing, saved or not, in that format. textweaver first asks where, offering the document's name and folder with the format's extension; Enter accepts it. You hear "Exporting to PDF.", then, for a long export, "Still exporting to PDF, 2 seconds." and every ten seconds after. The [converting guide](converting.md#export-from-inside-the-reader) explains exports.
 
-### The preview pane in the window
+### The preview pane in the app
 
-In the window, the preview can stand beside the editor instead of in a browser: **Alt+F5**, Show preview in the View menu, or `show preview` in the palette turns it on or off, and the choice is kept (`pane` in `[preview]`, off by default). It shows the document as the reading view draws it, parsed by textweaver's own Markdown reader rather than a web engine, and it is redrawn once you pause typing for 300 milliseconds (`pane_delay_ms`, 100 to 3000). The block you are editing is scrolled into view and marked with a band and an underline; the focus stays in the editor and nothing is announced, so the preview never interrupts your screen reader. F6 moves into it to read, and back. The [window guide](gui.md#the-preview-pane) describes narrow windows and the keys in full.
+In the app, the preview can stand beside the editor instead of in a browser: **Alt+F5**, Show preview in the View menu, or `show preview` in the palette turns it on or off, and the choice is kept (`pane` in `[preview]`, off by default). It shows the document as the reading view draws it, parsed by textweaver's own Markdown reader rather than a web engine, and it is redrawn once you pause typing for 300 milliseconds (`pane_delay_ms`, 100 to 3000). The block you are editing is scrolled into view and marked with a band and an underline; the focus stays in the editor and nothing is announced, so the preview never interrupts your screen reader. F6 moves into it to read, and back. The [window guide](gui.md#the-preview-pane) describes narrow windows and the keys in full.
 
 ### Preview in the browser
 

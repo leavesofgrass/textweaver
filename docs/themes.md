@@ -11,7 +11,7 @@ Galaxy is textweaver's default theme and the first in the list. It is star's def
 - Page `#1e1e1e`, text `#dadada`.
 - Headings in lavender, violet, periwinkle, and teal.
 - Links in purple (`#a882ff`), always underlined.
-- The word being spoken is dark text on a lavender band, in bold, inside an underlined sentence, in the terminal and in the window alike.
+- The word being spoken is dark text on a lavender band, in bold, inside an underlined sentence, in the terminal and in the app alike.
 
 One color changed from star: dim text (hints, line numbers, quotes) is `#858585` instead of `#7d7d7d`, because star's gray measured 4.0 to 1 against the page and the minimum is 4.5 to 1.
 

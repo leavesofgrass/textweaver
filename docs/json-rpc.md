@@ -128,7 +128,7 @@ Parameters: none.
 The result is an object with:
 
 - `server`: always `"textweaver"`.
-- `version`: the textweaver version, such as `"0.1.0-alpha.9"`.
+- `version`: the textweaver version, such as `"0.1.0-beta.1"`.
 - `protocol`: the protocol version, a number. It is `1`.
 - `methods`: the names of every method.
 - `notifications`: the names of every notification.
@@ -321,7 +321,7 @@ The notes commands return `status` and `effects` but no `pending`.
 
 #### Prompt purposes
 
-A prompt's `purpose` is one of these 29 purposes. The names are fixed: a new purpose may be added, but none is renamed or removed within protocol version 1. Treat a purpose you do not know like any other text question: show the `label` and send what the user types.
+A prompt's `purpose` is one of these 30 purposes. The names are fixed: a new purpose may be added, but none is renamed or removed within protocol version 1. Treat a purpose you do not know like any other text question: show the `label` and send what the user types.
 
 - `find`: the text to find.
 - `go_to`: a line, a percentage, `start`, or `end`.
@@ -368,7 +368,7 @@ Each returns `{status, effects}`, the same as `action` without `pending`.
 
 ### list_state and list_key: move through a list as the reader does
 
-The list shown and its focused item are kept by textweaver itself, the same for the terminal reader, the window, and a client. These methods let a client move through a list with the reader's own keys and hear the same "item, 2 of 5" announcements.
+The list shown and its focused item are kept by textweaver itself, the same for the terminal reader, the app, and a client. These methods let a client move through a list with the reader's own keys and hear the same "item, 2 of 5" announcements.
 
 - `list_state` takes no parameters. It returns the list shown as `{title, items, selected, filter}`, or null when no list is shown. `selected` counts from 0; `filter` is the text typed so far in a list that filters as you type (the outline, the citation picker, the settings), else null.
 - `list_key` takes `key` (string, required): `up`, `down`, `page_up`, `page_down`, `home`, `end`, `left`, `right`, `enter`, `escape`, `backspace`, `delete`, `rename`, `introduce` (the list's introduction again), `details` (the Say Status key: in the file browser, a preview of the focused row), the file browser's `choose_here`, `sort`, and `show_all`, or one character. A character filters a list that filters, chooses by a list's own letter (`s`, `d`, `c` in Save, Discard, Cancel), or moves to the next item starting with it; a space marks an item (a favorite voice). `left` and `right` change a value in the settings list. It returns `{status, effects, list}`, where `list` is the list after the key, as `list_state` gives it.
@@ -482,7 +482,7 @@ The server answers with its name, version, protocol, and the lists of methods an
     "notifications": ["position", "playback", "announcement", "prompt", "list", "quit"],
     "protocol": 1,
     "server": "textweaver",
-    "version": "0.1.0-alpha.9"
+    "version": "0.1.0-beta.1"
   }
 }
 ```
@@ -767,7 +767,7 @@ python client.py notes.md
 With the example document, opened for the first time, it prints:
 
 ```text
-Connected to textweaver 0.1.0-alpha.9 protocol 1
+Connected to textweaver 0.1.0-beta.1 protocol 1
 Announcement: Opened Cell biology.
 Opened Cell biology with 7 lines
 Announcement: Cells are the smallest units of life.
@@ -793,7 +793,7 @@ This client only reads while it waits for an answer. A real client, such as an e
 ## See also
 
 - [ADR-0015: JSON-RPC server](adr/0015-json-rpc.md): the design decision behind `tw serve`.
-- [Architecture](dev/architecture.md): how the server shares the app core with the terminal reader and the window.
+- [Architecture](dev/architecture.md): how the server shares the app core with the terminal reader and the app.
 - [Keyboard reference](keyboard.md): every action id you can pass to `action` and `navigate`.
 - [Using textweaver with a screen reader](screen-readers.md): `--no-speech` and working with JAWS, NVDA, VoiceOver, and Orca.
 - [Troubleshooting](troubleshooting.md): the log file and common problems.

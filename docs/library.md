@@ -4,7 +4,7 @@ This guide covers textweaver's library: the folders of documents you read from, 
 
 ## Open the library in the reader: Alt+L
 
-Press **Alt+L** in the terminal reader. The window uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Type to filter, Enter opens one, F2 edits details."
+Press **Alt+L** in the terminal reader. The app uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Type to filter, Enter opens one, F2 edits details."
 
 The folders are read in the background, so a large library (up to 20,000 files) never holds up the keyboard. While it is read you may hear "Scanning the library.", and the status line counts the documents found every second; the list opens when the scan is done. Pressing **Alt+L** again meanwhile says how many have been found so far.
 
@@ -59,7 +59,7 @@ A DOI or an ISBN can be typed any way it is usually written: `10.1000/xyz`, `doi
 
 **Clearing a field** removes your edit, so the document's own value shows again, at once in the library list. A field you never edited cannot hide the document's own value.
 
-In the window the form is a dialog with one field at a time, labeled the same way; Tab and Shift+Tab move between the fields, Enter saves, and Escape cancels.
+In the app the form is a dialog with one field at a time, labeled the same way; Tab and Shift+Tab move between the fields, Enter saves, and Escape cancels.
 
 ### From the command line: tw library edit
 
@@ -81,7 +81,7 @@ A library folder is an ordinary folder of documents. textweaver lists every docu
 
 ### Add a folder
 
-In the reader, in the window or the terminal, choose **Add a folder to the library** in the File menu, or type its name in the command palette. The file browser opens on your places; go to the folder and choose it with **Ctrl+Enter**, or the "Choose this folder" row. You hear, for example, "Added Readings to the library. Open the library to see its documents." Choosing a folder already there says it is "already in the library".
+In the reader, in the app or the terminal, choose **Add a folder to the library** in the File menu, or type its name in the command palette. The file browser opens on your places; go to the folder and choose it with **Ctrl+Enter**, or the "Choose this folder" row. You hear, for example, "Added Readings to the library. Open the library to see its documents." Choosing a folder already there says it is "already in the library".
 
 On the command line:
 

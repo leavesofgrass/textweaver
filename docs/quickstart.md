@@ -10,7 +10,7 @@ textweaver comes in two forms that share the same documents, keys, settings, not
 2. Windows, the app: unzip `textweaver-VERSION-windows-x86_64.zip`, and run `textweaver-gui.exe`. Windows warns once, because the program is not code-signed: choose "More info", then "Run anyway".
 3. Mac and Linux, the app: unpack the package and open `textweaver.app` on a Mac, or run the AppImage on Linux. See [Installing textweaver](install.md#the-app).
 4. The terminal reader is in the same package: open a terminal in its folder, and type `tw QUICKSTART.md` (`textweaver QUICKSTART.md` works too).
-5. The first time, the app asks up to three questions: the interface language, who speaks (if a screen reader is running), and which optional components to download. You can skip each one. The terminal reader asks the same.
+5. The first time, the app asks up to four questions: the interface language, who speaks (if a screen reader is running), which optional components to download, and whether textweaver may check for updates once a day. You can skip each one, and nothing is downloaded without asking. The terminal reader asks the same.
 
 ## Hear a document
 
@@ -44,6 +44,7 @@ If you use a screen reader, decide whether textweaver or the screen reader reads
 - In the package, the guides are in the `docs` folder.
 - [Start here, for students](start-students.md)
 - [Reading and moving around](reading.md)
+- [What is new in this release](whats-new.md)
 - [Every key](keyboard.md)
 - [Troubleshooting](troubleshooting.md)
 - [Documentation index](README.md)

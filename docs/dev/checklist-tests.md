@@ -24,7 +24,7 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 - Test: `crates/textweaver-xilem/tests/it/dialogs.rs`, `every_dialog_has_a_close_escape_closes_and_focus_returns` (focus in, a Close or No, Escape, focus back) and `every_dialog_is_modal_named_and_hides_the_window_behind` (one modal dialog, named by its title, the window behind disabled and hidden from readers, back after closing). Both run over the seven kinds: list, prompt, palette, question, settings, colors, voices.
 - Test: "Canceled." on Escape in an app list, `crates/textweaver-app/tests/it/list_contract.rs`.
 - Report: the UI Automation report, `crates/textweaver-xilem/tools/uia-report.ps1`.
-- Manual, session S3: the settings, colors and voice dialogs say they closed (the window's driver says it, which the headless tests do not run).
+- Manual, session S3: the settings, colors and voice dialogs say they closed (the app's driver says it, which the headless tests do not run).
 
 **C2. Every list says its title and introduction first, each item "n of m" first, with letter jump, F1 and the Say Status key, Home, End, Enter and Escape.**
 
@@ -35,7 +35,7 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 
 **C3. Every message has a level, a catalog entry in six languages, keys from the keymap, and its key fact first.**
 
-- Test: `crates/textweaver-xilem/tests/it/announcements.rs` (every window message has a level); `crates/textweaver-app/tests/it/pseudo_locale.rs` and `crates/textweaver-app/tests/it/keys_from_keymap.rs`; the catalog style tests named in [Writing messages](messages.md).
+- Test: `crates/textweaver-xilem/tests/it/announcements.rs` (every app message has a level); `crates/textweaver-app/tests/it/pseudo_locale.rs` and `crates/textweaver-app/tests/it/keys_from_keymap.rs`; the catalog style tests named in [Writing messages](messages.md).
 - Test: the key fact first, `crates/textweaver-tui/tests/it/braille_first.rs`.
 
 **C4. Every label has one case style, an ellipsis only before a chooser, the name equal to the label without the key, and the label in the name.**
@@ -48,7 +48,7 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 
 - Test: `cargo xtask keyboard --check`, `crates/textweaver-app/tests/it/keys_from_keymap.rs`, `crates/textweaver-app/tests/it/tests_ask_the_keymap.rs`.
 
-**C6. Every setting has a row, help, default, sync flag and an effect; the window and the terminal agree.**
+**C6. Every setting has a row, help, default, sync flag and an effect; the app and the terminal reader agree.**
 
 - Test: `cargo xtask settings-doc --check`, `crates/textweaver-app/tests/it/settings_reference.rs`, `crates/textweaver-xilem/tests/it/settings_dialog.rs`.
 
@@ -58,12 +58,12 @@ The sessions are short scripted passes the owner runs with a screen reader and t
 - Report: the UI Automation report.
 - Manual, session S9.
 
-**C8. Wording: US English; an error says its cause and next step; no terminal-only claim in window text.**
+**C8. Wording: US English; an error says its cause and next step; no terminal-only claim in the app's text.**
 
 - Test: the catalog style tests ([Writing messages](messages.md)); `button_descriptions_are_short_and_about_the_window` in `window_tree.rs`.
 - Manual: the owner's read.
 
-**C9. The terminal and the window offer the same commands.**
+**C9. The terminal reader and the app offer the same commands.**
 
 - Test: `crates/textweaver-xilem/src/parity.rs`.
 

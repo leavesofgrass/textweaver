@@ -6,7 +6,7 @@ textweaver reads documents out loud and highlights each word as it is spoken. It
 
 It is made first for people who use a screen reader, and for students who find print hard to read. It runs on Linux, macOS, and Windows, as an app with a graphical interface or in a terminal.
 
-Status: alpha. It is ready for testing, but not yet for every day. See [known limits](docs/known-limits.md).
+Status: beta. The current release is 0.1.0-beta.1. It is ready for wider testing, and some parts are still changing. See [known limits](docs/known-limits.md).
 
 ## Get textweaver
 
@@ -39,7 +39,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1 -Gui
 
 ## First steps
 
-These keys are the same in the GUI on every platform.
+These keys are the same in the app on every platform.
 
 1. Ctrl+O opens a file: a Word document, a PDF, EPUB, Markdown, or plain text. textweaver says "Opened" and the title.
 2. Space starts reading; the highlight follows each word. Space again pauses. Escape stops.
@@ -59,11 +59,11 @@ The terminal reader is text only, with no mouse and no pictures. Many screen rea
 tw QUICKSTART.md
 ```
 
-It reads its own quick start out loud. Space starts and pauses; `?` lists every key. `textweaver QUICKSTART.md` does the same, as it did before beta 1. With a command instead of a file, `tw` works without the reader, for scripts: `tw convert`, `tw speak`, and the rest are in [the command line guide](docs/command-line.md). The reader and the app share settings, reading positions, and notes.
+It reads its own quick start out loud. Space starts and pauses; `?` lists every key. Plain `tw` opens the reader with no file, and `textweaver QUICKSTART.md` does the same as `tw QUICKSTART.md`. With a command instead of a file, `tw` works without the reader, for scripts: `tw convert`, `tw speak`, and the rest are in [the command line guide](docs/command-line.md). The reader and the app share settings, reading positions, and notes.
 
 ## Screen readers
 
-textweaver can speak by itself or hand speech to your screen reader. Alt+Shift+A chooses who speaks. On Windows it works with NVDA and JAWS. On macOS the GUI works with VoiceOver; testing so far is basic and more is planned. On Linux the GUI has had basic testing with Orca, and if it gives you trouble, the terminal reader is a solid fallback. [Using textweaver with a screen reader](docs/screen-readers.md) explains the choices.
+textweaver can speak by itself or hand speech to your screen reader. Alt+Shift+A chooses who speaks. On Windows it works with NVDA and JAWS. On macOS the app works with VoiceOver; testing so far is basic and more is planned. On Linux the app has had basic testing with Orca, and if it gives you trouble, the terminal reader is a solid fallback. [Using textweaver with a screen reader](docs/screen-readers.md) explains the choices.
 
 ## Languages
 
@@ -76,6 +76,7 @@ Menus, messages, and speech come in English, Spanish, German, French, Portuguese
 - [Using the textweaver app](docs/gui.md) and [every key](docs/keyboard.md).
 - [Privacy](docs/privacy.md) and the [accessibility statement](docs/accessibility.md).
 - [What is new](docs/whats-new.md) and the [changelog](CHANGELOG.md).
+- [Updates](docs/updates.md), [optional components](docs/components.md), and [the roadmap](docs/roadmap.md).
 - For developers: [Building](docs/dev/building.md), [Contributing](CONTRIBUTING.md), and the [documentation index](docs/README.md).
 
 ## Where it came from

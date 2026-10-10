@@ -15,7 +15,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 - **Not code-signed.** Windows warns the first time you start it. On a Mac you remove the quarantine flag once. See [Installing textweaver](install.md).
 - **No native Windows ARM64 package is planned.** On a Windows computer with an ARM processor, use the x86-64 package: Windows runs it under emulation.
-- **No update check inside the program.** Update with the scripts, or download the new release. It does tell you, once, when it has been updated.
+- **Updates are your choice.** textweaver checks for a new release only if you say yes, at most once a day, and never downloads without asking. You can also update with `tw update`, the scripts, or a new download ([Updates](updates.md)). Packages are not code-signed or notarized, so each is checked against the release checksums instead.
 - **No guided first-run tour.** The [quick start](quickstart.md) is a document you open and read.
 - **Some translations are not reviewed.** The interface has six languages. Native speakers have checked English and Spanish. German, French, Portuguese, and Arabic have not been checked yet. Feedback on any translation is welcome: use Help, Report a problem, or the [issue tracker](https://github.com/leavesofgrass/textweaver/issues).
 - **Settings, keys, and file formats may still change** between releases. Read the [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) before you update.
@@ -51,13 +51,13 @@ These limits apply to the textweaver app (`textweaver-gui`). The terminal reader
 ## Study tools
 
 - **Study cards are scheduled with SM-2 only.** Cards are made from notes, highlights, and headings, studied, graded in words, and brought back when due ([Study with cards](notes.md#study-with-cards)). A card counts as due by the clock, from half a day before its interval ends, not by the calendar day in your time zone. FSRS scheduling is dropped on purpose.
-- **Anki import and export come in beta 2.** Until then, cards stay in textweaver and sync between your computers with your notes. AnkiConnect sync is dropped on purpose.
-- **The reading queue comes in beta 2.** There is no list of documents to read next that carries from one session to the next. Next step: the library's recent files (Alt+L) and bookmarks.
+- **Anki import and export come in beta 3.** Until then, cards stay in textweaver and sync between your computers with your notes. AnkiConnect sync is dropped on purpose.
+- **The reading queue comes in beta 3.** There is no list of documents to read next that carries from one session to the next. Next step: the library's recent files (Alt+L) and bookmarks.
 - **Knowledge graphs from notes are not drawn.** Links between notes are lists instead: each note's links, "What links here", and `tw notes links` ([notes guide](notes.md#links-between-notes)). The graph exports to files that other tools draw, with a Markdown list as their text equivalent ([Export the knowledge graph](notes.md#export-the-knowledge-graph)).
 
 ## Documentation
 
-- **The guides are being rewritten for beta 2.** Beta 1 corrects wording and fills gaps, but a full rewrite of the guides comes in beta 2. If a guide contradicts what the program does, the program is right; please report the page.
+- **If a guide contradicts what the program does, the program is right.** Please report the page, with Help, Report a problem.
 
 ## What this page does not promise
 

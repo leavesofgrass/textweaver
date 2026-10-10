@@ -2,19 +2,25 @@
 
 This page tells students and readers, in plain words, what each release brought. The [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) has every detail, and it is the record to trust if the two differ.
 
-## 0.1.0-beta.1 (in preparation)
+## 0.1.0-beta.1
 
-In short: study tools, richer marks and review, more formats, and a graphical version that catches up to the terminal reader.
+Released on Saturday, October 10, 2026. textweaver is now in beta.
 
+In short: one download per system, study tools, richer marks and review, more formats, update checks, and a graphical version that catches up to the terminal reader.
+
+- **One download per system.** Each package holds the app, the terminal program `tw` (with `textweaver` as a second name), the speech engine helpers, and the guides. The separate downloads whose names ended in `-gui` ended with 0.1.0-alpha.9. Plain `tw` or `tw FILE` opens the terminal reader. See [Installing textweaver](install.md).
+- **Updates.** textweaver asks once whether it may check for updates, checks at most once a day, and never downloads without asking. Help, Check for updates and `tw update` do it on demand. See [Updates](updates.md).
+- **Components.** ffmpeg, liblouis, and Pandoc are fetched for you, from their official releases, when a feature needs them. Components can also come from your own repository or folder. See [Optional components](components.md).
 - Study cards made from notes, highlights, and headings, graded in words and brought back when due, with a self-test you can answer aloud and recall prompts at the end of a section. See [Study with textweaver](notes.md#study-with-textweaver).
-- Highlights can carry names, such as "important", each with its own color and shape in the terminal reader. Notes can link to each other, and the links export as a knowledge graph.
+- A highlight palette: names such as "important" on Alt+1 to Alt+5, each with its own color and shape in the terminal reader. Notes can link to each other, and the links export as a knowledge graph in seven formats.
 - Tracked changes and comments from a Word file can be listed, accepted, or rejected, and your own edits can be saved back to the Word file as tracked changes.
-- Find and replace accepts regular expressions. Formatted text pasted into the terminal reader becomes Markdown, and there is a context menu.
-- Org, reStructuredText, MediaWiki, DokuWiki, and Jira markup open and convert. Braille files open as books, and DAISY books play their recorded narration.
+- Find and replace accepts regular expressions, with a panel in the app. Formatted text pasted into the terminal reader, and into the app on Windows, becomes Markdown. There is a context menu, and a preview pane beside the editor (Alt+F5).
+- Org, reStructuredText, MediaWiki, DokuWiki, and Jira markup open and convert. Braille (BRF) files open as books, and DAISY 2.02 and 3 books play their recorded narration.
 - HTML pages take their typography from your reading settings.
-- The graphical version has buttons you can customize, the guides stored inside it, and one search over commands, keys, settings, and guides.
-- Helper programs and components can come from your own source, including a private GitHub repository.
-- Known limits: the graphical version draws every highlight name the same way, and Windows on ARM64, Anki import and export, and the reading queue come in beta 2. See [Known limits](known-limits.md).
+- eSpeak NG runs in its own helper program on Windows. Speech never stays silent while any engine can work.
+- The app has buttons you can customize, the guides stored inside it, and one search over commands, keys, settings, and guides. Its menu bar is hidden by default on Windows (Alt or F10 shows it). Export asks where to save.
+- Code blocks are read by default, and there is a developer profile example.
+- Known limits: the app draws every highlight name the same way, and on macOS and Linux it pastes plain text. Anki import and export and the reading queue come in beta 3. A native Windows ARM64 package is not planned. See [Known limits](known-limits.md).
 
 ## 0.1.0-alpha.9
 
@@ -75,7 +81,7 @@ In short: menus and a file browser, and more kinds of documents.
 
 ## Earlier releases
 
-Releases before alpha.6 built the reader, the window, speech engines, OCR, and the writers. Read the [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) for them.
+Releases before alpha.6 built the reader, the app, speech engines, OCR, and the writers. Read the [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) for them.
 
 ## See also
 

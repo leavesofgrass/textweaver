@@ -8,7 +8,7 @@ textweaver is an accessible document reader and writer for students with print d
 
 Accessibility is the product, not a feature. A change that works with a mouse and a screen, but not with a screen reader, a Braille display, or the keyboard alone, is not finished.
 
-textweaver is a Rust reimplementation of [star](https://github.com/leavesofgrass/star), an earlier reader written in Python. It is in alpha: it works, and it is changing quickly.
+textweaver is a Rust reimplementation of [star](https://github.com/leavesofgrass/star), an earlier reader written in Python. It is in beta: it works, and it is still changing.
 
 ## Ways to help
 
@@ -48,13 +48,13 @@ Everyone who takes part is asked to follow the [code of conduct](CODE_OF_CONDUCT
    cargo test --workspace
    ```
 
-5. Try the terminal reader and the window on a document. Space starts and pauses reading, and `?` lists every key:
+5. Try the terminal reader and the app on a document. Space starts and pauses reading, and `?` lists every key:
 
    ```bash
    cargo run -p textweaver-cli --bin tw -- fixtures/sample.md
    ```
 
-   and the window:
+   and the app:
 
    ```bash
    cargo run -p textweaver-xilem -- fixtures/sample.md
@@ -185,10 +185,11 @@ The workflows in `.github/workflows/`:
 - `scripts.yml`: lints and dry runs of the scripts in `scripts/`.
 - `apple.yml`: extra macOS voice measurements.
 - `bench.yml`: the benchmark gate on pull requests and main (see [benchmarks](docs/dev/testing.md#benchmarks)).
+- `engines.yml`: real speech engines (espeak-ng, SAPI 5, OneCore, AVSpeech) exporting a fixture to a WAV file, checked by a script; nothing is played.
 - `second-tool.yml`: checks the writers' EPUB and PDF output with epubcheck and veraPDF.
 - `pages.yml`: builds the documentation site with Zensical and deploys it to GitHub Pages (see [Documentation site](docs/dev/building.md#documentation-site)).
 - `nightly.yml`: every night, the fuzz targets for 10 minutes each (`fuzz/README.md`), Miri on core, text, and the engine-host protocol, AddressSanitizer on the FFI crates, the tests in release mode, an MSRV check, the Docker image and its tests, and the soak test; on Mondays, `cargo hack --each-feature` on the speech, formats, and writers crates. Nightly Rust is used only for fuzzing, Miri, and the sanitizer.
-- `release.yml`: the release job, started by pushing a tag. It builds the Windows, macOS, and Linux packages (the AppImage in `docker/appimage`), the terminal reader's and the GUI's.
+- `release.yml`: the release job, started by pushing a tag. It builds one package for each system and processor, each holding the app and `tw`: the Windows zip, the macOS zip, and the Linux AppImage and tarball (the AppImage in `docker/appimage`).
 
 ## License
 

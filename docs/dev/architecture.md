@@ -8,10 +8,10 @@ The [interactive architecture page](../site/architecture.html) shows the same cr
 
 textweaver is one Cargo workspace with 37 crates and a maintenance crate, `xtask`. Two programs come out of it:
 
-- `textweaver`, the terminal reader, built from `crates/textweaver-tui`;
-- `tw`, the command-line tool, built from `crates/textweaver-cli`.
+- `tw`, the terminal program, built from `crates/textweaver-cli`: on its own or with a file it runs the terminal reader (the library in `crates/textweaver-tui`), and with a command it runs headless. `textweaver` is a small second binary from the same crate that does the same as `tw`;
+- `textweaver-gui`, the app, built from `crates/textweaver-xilem` as `textweaver-xilem` and renamed in a release package.
 
-A third program, `textweaver-xilem`, is the GUI, on Xilem, Linebender's all-Rust toolkit ([ADR-0027](../adr/0027-xilem-gui.md)). The first GUI, a feasibility spike on wxDragon ([ADR-0014](../adr/0014-gui-toolkit.md)), was removed once the Xilem GUI passed its second screen-reader test session.
+The app, `textweaver-xilem`, is the GUI, on Xilem, Linebender's all-Rust toolkit ([ADR-0027](../adr/0027-xilem-gui.md)). The first GUI, a feasibility spike on wxDragon ([ADR-0014](../adr/0014-gui-toolkit.md)), was removed once the Xilem GUI passed its second screen-reader test session.
 
 Four helper programs run speech engines in their own processes: `textweaver-eci-host` (Eloquence), `textweaver-sapi-host` (SAPI5 voices), `textweaver-dectalk-host` (DECtalk), and on Windows `textweaver-espeak-host` (eSpeak NG; Linux and macOS run eSpeak NG in process), each in a 64-bit build and, on Windows, a 32-bit `-x86` build. `cargo xtask hosts` builds them. The [eSpeak NG helper](espeak-helper.md) page explains how that host is built and why Windows prefers it.
 
@@ -64,7 +64,7 @@ The crates are grouped here by the part of the system they serve. For each crate
 
 - **`textweaver-tui`**: the terminal reader, on ratatui and crossterm, as a library; `tw` (`textweaver-cli`) runs it. ADRs: [0006](../adr/0006-keymap-and-actions.md), [0020](../adr/0020-themes.md), [0022](../adr/0022-reading-aids.md). Depends on app, engines, theme, and aids. Its default features (`publish`, `grammar`, `audio-export`, `opus`, and others) turn on the app's; `cargo build -p textweaver-tui --no-default-features` builds a lean reader without export, preview, citations, grammar checking, and Export audio.
 - **`textweaver-cli`**: the `tw` program, as a library with thin binaries: `tw` alone or `tw FILE` runs the terminal reader, and each subcommand runs headless; the `textweaver` binary is a small launcher for the second name. One module per subcommand. `tw`, `tw open`, and `tw serve` run the terminal reader and the JSON-RPC server in process. ADRs: [0015](../adr/0015-json-rpc.md), [0016](../adr/0016-rendering-and-conversion.md), [0011](../adr/0011-audio-export.md). Depends on app (with `publish`), engines, tui, convert, render, writers, export, cite, vault, and dictation.
-- **`textweaver-xilem`**: the all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit, with its own `DocumentView`; builds `textweaver-xilem`, to become `textweaver-gui`. Masonry is vendored under `third_party/xilem`, patched to AccessKit 0.25. ADR: [0027](../adr/0027-xilem-gui.md). Depends on app, theme, and fonts. Not a default member of the workspace.
+- **`textweaver-xilem`**: the all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit, with its own `DocumentView`; builds `textweaver-xilem`, which a release package names `textweaver-gui`. Masonry is vendored under `third_party/xilem`, patched to AccessKit 0.25. ADR: [0027](../adr/0027-xilem-gui.md). Depends on app, theme, and fonts. Not a default member of the workspace.
 
 ### Output and study tools
 

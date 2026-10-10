@@ -4,7 +4,7 @@ A release is a git tag `vX.Y.Z[-pre]` and a GitHub release with these files. Sin
 
 - the Windows package, `textweaver-VERSION-windows-x86_64.zip`;
 - the macOS package, `textweaver-VERSION-macos-universal.zip` (`textweaver.app` beside `tw`, Apple silicon and Intel);
-- the Linux AppImages, `textweaver-VERSION-linux-x86_64.AppImage` and `textweaver-VERSION-linux-aarch64.AppImage`, each with its `.zsync` file for delta updates, and a copy of that file named `textweaver-VERSION-linux-ARCH-gui.AppImage.zsync`, so the separate app AppImages of 0.1.0-beta.1 and earlier are offered the single image;
+- the Linux AppImages, `textweaver-VERSION-linux-x86_64.AppImage` and `textweaver-VERSION-linux-aarch64.AppImage`, each with its `.zsync` file for delta updates, and a copy of that file named `textweaver-VERSION-linux-ARCH-gui.AppImage.zsync`, so the separate app AppImages of 0.1.0-alpha.9 and earlier are offered the single image;
 - the Linux tarballs, `textweaver-VERSION-linux-x86_64.tar.gz` and `textweaver-VERSION-linux-aarch64.tar.gz`, for systems without FUSE;
 - `SHA256SUMS.txt`, covering every package.
 
@@ -153,7 +153,7 @@ The app's part of the build is in `xtask/src/gui_dist.rs`. It builds `textweaver
 
 **The screenshot harness stays in the package for now.** The app's default `screenshot` feature (`--screenshot` and `--review-screenshots`, drawn with Vello's CPU renderer, `image`, and `oxipng`) is the only way the release workflow can check that the packaged app draws its interface: its runners have no GPU Vello can use, and the Linux check runs with no display. So the checks on all three systems run `textweaver-gui --screenshot`. `cargo xtask dist --no-screenshot` builds the package without it, with every other default feature; it can become the default once the release checks no longer need the harness. Review screenshots come from a developer build either way.
 
-Releases up to 0.1.0-beta.1 had the app in packages of its own, named like the terminal packages with `-gui` at the end. Those are not made any more. The one name kept is the `-gui` copy of each Linux `.zsync` file, for the app AppImages already installed.
+Releases up to 0.1.0-alpha.9 had the app in packages of its own, named like the terminal packages with `-gui` at the end. Those are not made any more. The one name kept is the `-gui` copy of each Linux `.zsync` file, for the app AppImages already installed.
 
 ## The Linux packages
 
@@ -190,7 +190,7 @@ When a package is meant to grow, say why under `[notes]` in the file, in the sam
 "windows-x86_64.zip" = "Opus encoding in process for Export audio"
 ```
 
-A note named `"all"` covers every package. Until the first release with the single package records its sizes, each line holds the alpha.9 terminal and app packages added together, the two downloads it replaces. The release step (`cargo xtask release VERSION --sizes`, step 6 above) writes the new sizes and clears the notes, so each note covers one release. The sizes also go into the release notes, as a "Package sizes" list in the version's section of `CHANGELOG.md`. MB there, as in the release workflow's summaries, is 1,048,576 bytes.
+A note named `"all"` covers every package. The sizes recorded for 0.1.0-beta.1 are the first for the single packages; they replace the alpha.9 terminal and app packages, which were two downloads. The release step (`cargo xtask release VERSION --sizes`, step 6 above) writes the new sizes and clears the notes, so each note covers one release. The sizes also go into the release notes, as a "Package sizes" list in the version's section of `CHANGELOG.md`. MB there, as in the release workflow's summaries, is 1,048,576 bytes.
 
 ## Building a package by hand (fallback)
 
