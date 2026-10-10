@@ -10,6 +10,7 @@ use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Clear, Paragraph};
 use textweaver_app::a11y::{CursorPlacement, Priority};
+use textweaver_app::buttons::Bar;
 use textweaver_app::core::{CharPos, CharRange, Direction, Unit};
 use textweaver_app::keymap::{ActionId, Key, KeyChord, Layer, Modifiers};
 use textweaver_app::lexicon::args;
@@ -1623,6 +1624,29 @@ impl Tui {
             (ActionId::RsvpToggle, "tui-hint-close-rsvp"),
             (ActionId::Quit, "tui-hint-quit"),
         ];
+        // Browse mode: the toolbar's buttons first, by their short names
+        // (`[gui] toolbar_buttons`, B1-cb), then the terminal's own keys.
+        let browse: Vec<(ActionId, String)> = {
+            let mut v: Vec<(ActionId, String)> = self
+                .app
+                .bar_buttons(Bar::Toolbar)
+                .into_iter()
+                .map(|a| (a, textweaver_app::menu::action_name(&c, a)))
+                .collect();
+            for (a, label) in [
+                (ActionId::SkipNextHeading, "tui-hint-heading"),
+                (ActionId::Find, "tui-hint-find"),
+                (ActionId::AddBookmark, "tui-hint-mark"),
+                (ActionId::SpeechCursorToggle, "tui-hint-lines"),
+                (ActionId::KeyboardHelp, "tui-hint-keys"),
+                (ActionId::Quit, "tui-hint-quit"),
+            ] {
+                if !v.iter().any(|(x, _)| *x == a) {
+                    v.push((a, c.tr(label)));
+                }
+            }
+            v
+        };
         let hints: &[(ActionId, &str)] = match self.app.mode() {
             _ if self.app.rsvp().is_some() => rsvp_hints,
             Mode::Edit => &[
@@ -1641,17 +1665,12 @@ impl Tui {
                 (ActionId::SpeechCursorExitAndRead, "tui-hint-read-on"),
                 (ActionId::SpeechCursorToggle, "tui-hint-leave"),
             ],
-            _ => &[
-                (ActionId::PlayPause, "tui-hint-play"),
-                (ActionId::NextSentence, "tui-hint-sentence"),
-                (ActionId::NextParagraph, "tui-hint-paragraph"),
-                (ActionId::SkipNextHeading, "tui-hint-heading"),
-                (ActionId::Find, "tui-hint-find"),
-                (ActionId::AddBookmark, "tui-hint-mark"),
-                (ActionId::SpeechCursorToggle, "tui-hint-lines"),
-                (ActionId::KeyboardHelp, "tui-hint-keys"),
-                (ActionId::Quit, "tui-hint-quit"),
-            ],
+            _ => &[],
+        };
+        let hints: Vec<(ActionId, String)> = if hints.is_empty() {
+            browse
+        } else {
+            hints.iter().map(|&(a, id)| (a, c.tr(id))).collect()
         };
         let keymap = self.app.keymap();
         // Only keys that work here: in this mode's layers, and with
@@ -1683,7 +1702,7 @@ impl Tui {
         } else {
             hints
                 .iter()
-                .filter_map(|(a, label)| Some(format!("{} {}", best(*a)?, c.tr(label))))
+                .filter_map(|(a, label)| Some(format!("{} {label}", best(*a)?)))
                 .collect()
         };
         // Keep what fits, always ending with the last two (help and quit
