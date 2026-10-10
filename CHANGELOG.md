@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-beta.2] - 2026-10-10
+
 In short: beta 2 fixes the speech rate, and brings every document up to date.
 
 ### Reading and speech
@@ -999,6 +1001,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-beta.2]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.1
 [0.1.0-alpha.9]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.9
 [0.1.0-alpha.8]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.8

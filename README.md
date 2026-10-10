@@ -6,7 +6,7 @@ textweaver reads documents out loud and highlights each word as it is spoken. It
 
 It is made first for people who use a screen reader, and for students who find print hard to read. It runs on Linux, macOS, and Windows, as an app with a graphical interface or in a terminal.
 
-Status: beta. The current release is 0.1.0-beta.1. It is ready for wider testing, and some parts are still changing. See [known limits](docs/known-limits.md).
+Status: beta. The current release is 0.1.0-beta.2. It is ready for wider testing, and some parts are still changing. See [known limits](docs/known-limits.md).
 
 ## Get textweaver
 
