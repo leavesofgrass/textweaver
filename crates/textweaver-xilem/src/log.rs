@@ -41,7 +41,7 @@ pub fn line(text: &str) {
 }
 
 /// Pauses the log while a secret prompt (a token, B1-c2) is open, and
-/// resumes it once the prompt is gone. While paused, [`line`] writes
+/// resumes it once the prompt is gone. While paused, [`line()`] writes
 /// nothing, so the keys typed, the commands they make, and the answer
 /// never reach the log, whichever part of the window logs them. With
 /// `note`, one line says the log paused and one that it resumed, neither
