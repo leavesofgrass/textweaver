@@ -256,6 +256,7 @@ fn everything_changed() -> Settings {
         height: 640,
         maximized: true,
     });
+    s.gui.last_version = Some("0.1.0-alpha.9".into());
     let c = &mut s.colors;
     c.ruler = "orange".into();
     c.difficult_words = "blue".into();
