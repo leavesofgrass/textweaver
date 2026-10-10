@@ -782,41 +782,56 @@ impl SpeechBackend for EciBackend {
     }
 
     fn set_params(&mut self, params: &VoiceParams) -> Result<(), SpeechError> {
+        // Rate, pitch and volume always apply. A voice from another engine
+        // (a SAPI voice saved during a fallback) keeps the current voice
+        // without an error; an Eloquence voice that is not installed is
+        // reported after the rest is applied.
         let sel = match &params.voice {
-            None => voices::VoiceSel {
+            None => Some(voices::VoiceSel {
                 dialect: None,
                 preset: Some(1),
-            },
+            }),
             Some(id) => {
-                voices::parse_voice_id(id).ok_or_else(|| SpeechError::UnknownVoice(id.clone()))?
+                let sel = voices::parse_voice_id(id);
+                if sel.is_none() {
+                    log::debug!("eci: voice {id} is another engine's; keeping the current voice");
+                }
+                sel
             }
         };
-        if let Some(code) = sel.dialect {
-            let d = language::dialect_by_code(code)
-                .filter(|d| d.supported)
-                .ok_or_else(|| {
-                    SpeechError::UnknownVoice(params.voice.clone().unwrap_or_default())
-                })?;
-            if self.ready.is_some() && !self.installed.contains(&d.code) {
-                return Err(SpeechError::UnknownVoice(format!(
-                    "{} ({} is not installed)",
-                    params.voice.clone().unwrap_or_default(),
-                    d.name
-                )));
+        let mut problem = None;
+        if let Some(sel) = sel {
+            if let Some(code) = sel.dialect {
+                match language::dialect_by_code(code).filter(|d| d.supported) {
+                    None => {
+                        problem = Some(SpeechError::UnknownVoice(
+                            params.voice.clone().unwrap_or_default(),
+                        ));
+                    }
+                    Some(d) if self.ready.is_some() && !self.installed.contains(&d.code) => {
+                        problem = Some(SpeechError::UnknownVoice(format!(
+                            "{} ({} is not installed)",
+                            params.voice.clone().unwrap_or_default(),
+                            d.name
+                        )));
+                    }
+                    Some(_) => self.dialect = Some(code),
+                }
+            } else if params.voice.is_none() {
+                self.dialect = None;
             }
-            self.dialect = Some(code);
-        } else if params.voice.is_none() {
-            self.dialect = None;
-        }
-        if let Some(p) = sel.preset {
-            self.preset = p;
+            if problem.is_none()
+                && let Some(p) = sel.preset
+            {
+                self.preset = p;
+            }
         }
         self.params = params.clone();
         self.playback.set_gain(params.volume.fraction());
         if self.host.is_some() {
             self.apply_voice()?;
         }
-        Ok(())
+        problem.map_or(Ok(()), Err)
     }
 
     fn effective_wpm(&self) -> u16 {

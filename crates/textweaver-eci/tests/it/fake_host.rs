@@ -405,11 +405,15 @@ fn voices_list_languages_and_presets_and_reject_unknown_ids() {
         b.set_params(&p),
         Err(SpeechError::UnknownVoice(_))
     ));
-    p.voice = Some("en-US:9".into());
-    assert!(matches!(
-        b.set_params(&p),
-        Err(SpeechError::UnknownVoice(_))
-    ));
+    // Another engine's voice (a SAPI voice saved during a fallback) is no
+    // error, and the rate still applies.
+    p.voice = Some(
+        r"x64:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\OpenEVV-AdultMale1".into(),
+    );
+    let before = b.effective_wpm();
+    p.rate = Rate::Wpm(400);
+    assert!(b.set_params(&p).is_ok());
+    assert!(b.effective_wpm() > before, "the new rate applies");
 }
 
 #[test]
