@@ -1,6 +1,6 @@
 # Documentation coverage
 
-This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
+This page lists each feature, the user guide that covers it, and whether the guide passes. It was written in a documentation sweep on Sunday, October 4, 2026, and extended on Saturday, October 10, 2026, from the changelog, the keymap, the settings reference, `tw --help`, and the window's dialogs. "Pass" means the guide explains the feature and matches the code. "Pass, after fix" means the sweep added or corrected the text. "Fix" means a gap is still open.
 
 The generated pages (`keyboard.md` and `settings-reference.md`) list every key and setting, so this page tracks the guides that explain them.
 
@@ -50,7 +50,7 @@ The generated pages (`keyboard.md` and `settings-reference.md`) list every key a
 - Optional components: components.md. Pass.
 - Importing from star: library.md. Pass.
 
-## The window
+## The app
 
 - Layout, narrow layout, Header and Toolbar: gui.md. Pass.
 - Reading settings dialog: gui.md. Pass.
@@ -63,7 +63,7 @@ The generated pages (`keyboard.md` and `settings-reference.md`) list every key a
 ## The command line
 
 - Rules for every command: command-line.md. Pass.
-- Each `tw` command (open, text, info, search, speak, voices, backends, eloquence, convert, export-audio, library, vault, dictate, marks, lint, migrate-star, cite, settings, define, stats, summarize, sync, serve, ocr, components): the guide named for it, and command-line.md. Pass.
+- Each `tw` command (open, text, info, search, speak, voices, backends, eloquence, convert, export-audio, library, vault, dictate, marks, lint, migrate-star, cite, settings, define, stats, summarize, sync, serve, ocr, components, changes, notes links, study, update): the guide named for it, and command-line.md. Pass.
 - JSON-RPC, including `open`, `outline`, `notes`, `highlights`, and `info`: json-rpc.md. Pass.
 
 ## Framing
@@ -72,6 +72,26 @@ The generated pages (`keyboard.md` and `settings-reference.md`) list every key a
 - star-gaps.md opening: no longer calls textweaver a port. Pass, after fix.
 - docs/site/index.html and docs/site/README.md: Pass, after fix. The start page named two programs and now names three.
 - Other guides mention star only for importing and for the history of a feature. Pass.
+
+## Beta 1, audited on Saturday, October 10, 2026
+
+Every guide was read again for beta 1, one by one, against the code and the changelog. The features new since alpha.9:
+
+- One download per system, `tw` as the one terminal program, `textweaver` as its second name: install.md, command-line.md, reading.md, quickstart.md. Pass, after fix.
+- Update checks, Help, Check for updates, `tw update`: updates.md, install.md, privacy.md, troubleshooting.md. Pass, after fix.
+- Components fetched for you (ffmpeg, liblouis, Pandoc), components from your own source, the token in the credential store: components.md, audio-export.md, reading.md, privacy.md. Pass, after fix.
+- The eSpeak NG helper on Windows, speech that never stays silent: speech.md, dev/espeak-helper.md. Pass.
+- Carta formats, DAISY 2.02 and recorded narration, braille (BRF) reading, polished HTML: converting.md, reading.md. Pass.
+- Tracked changes and write-back, `tw changes`: reading.md, editing.md. Pass.
+- Study cards with SM-2, the self-test, recall prompts, `tw study due`: notes.md, reading.md, settings.md. Pass, after fix.
+- Links between notes, graph exports, `tw notes links`: notes.md, gui.md. Pass.
+- The highlight palette, Alt+1 to Alt+5: notes.md, settings.md, gui.md. Pass, after fix.
+- Regular-expression find and replace and its panel: editing.md, gui.md. Pass.
+- Markdown paste (Windows app, terminal reader) and the plain-text limit on macOS and Linux: editing.md, known-limits.md. Pass, after fix.
+- The context menu, the preview pane, Browser preview follows: gui.md, editing.md, settings.md. Pass, after fix.
+- Customizable buttons, offline help, Search help, the menu bar hidden by default on Windows: gui.md, reading.md. Pass.
+- The developer profile and `[export] audio_format`, code blocks read by default, Export asks where to save: settings.md, speech.md, audio-export.md. Pass, after fix.
+- Version wording (beta), the app named "the app", Windows ARM64 not planned, Anki and the reading queue in beta 2: every guide, known-limits.md, roadmap.md, whats-new.md. Pass, after fix.
 
 ## Still open
 
