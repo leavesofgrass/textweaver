@@ -105,6 +105,15 @@ impl Sources {
         self
     }
 
+    /// True when the components source is a GitHub repository (written
+    /// `owner/name`), whose files may need a sign-in when it is private
+    /// ([`SignedInFetcher`](crate::SignedInFetcher)).
+    pub fn source_is_github(&self) -> bool {
+        self.source
+            .as_deref()
+            .is_some_and(|s| s.starts_with("https://github.com/"))
+    }
+
     /// True when the source or the mirror is a folder on this computer,
     /// so a build without downloads can still fetch from it.
     pub fn has_local(&self) -> bool {

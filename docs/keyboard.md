@@ -385,6 +385,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Show where to report a problem, and ask before opening it in a browser; nothing is sent | palette | palette | palette | `report_problem` |
 | Ask again about first-run choices: hybrid mode with a screen reader, and the optional components | palette | palette | palette | `ask_first_run_again` |
 | Manage optional components: the models, fonts, and voices textweaver can download, with their size and license | palette | palette | palette | `manage_components` |
+| Forget the GitHub token kept for your components source; it is asked for again when needed | palette | palette | palette | `forget_github_token` |
 | Open the help | `F1` | `F1` | `F1` | `help` |
 
 ## The terminal on macOS
@@ -577,3 +578,4 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Show where to report a problem, and ask before opening it in a browser; nothing is sent | `report_problem` |
 | Ask again about first-run choices: hybrid mode with a screen reader, and the optional components | `ask_first_run_again` |
 | Manage optional components: the models, fonts, and voices textweaver can download, with their size and license | `manage_components` |
+| Forget the GitHub token kept for your components source; it is asked for again when needed | `forget_github_token` |

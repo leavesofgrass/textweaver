@@ -1809,6 +1809,7 @@ impl App {
             PromptPurpose::DocumentDetails => return self.answer_details(text),
             PromptPurpose::CommentReply => return self.answer_comment_reply(text),
             PromptPurpose::CommentText => return self.answer_new_comment(text),
+            PromptPurpose::GitHubToken => return self.answer_github_token(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
                 if let Some(i) = self.pending_item.take() {
@@ -2252,7 +2253,8 @@ impl App {
             | A::ExportAudio
             | A::Dictate
             | A::DownloadDictationModel
-            | A::ManageComponents => {
+            | A::ManageComponents
+            | A::ForgetGitHubToken => {
                 return self.run_registered(a);
             }
             A::ColorSettings => return self.open_color_settings(),

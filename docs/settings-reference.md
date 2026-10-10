@@ -259,7 +259,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 
 ## Optional components: the `[components]` section
 
-- `components.source`: default empty (`""`). Components source. Your own components, used first. A GitHub repository as owner/name, or a folder on this computer. Empty uses none. Never put a password here. Text. Stays on this computer.
+- `components.source`: default empty (`""`). Components source. Your own components, used first. A GitHub repository as owner/name, or a folder on this computer. Empty uses none. Never put a password here. A private repository signs in with the GitHub CLI, or asks once for a token kept in the system credential store. Text. Stays on this computer.
 - `components.mirror`: default empty (`""`). Components mirror. Where optional components come from first: an https address or a folder on this computer. Empty uses their public sources. Never put a password here. Text. Stays on this computer.
 
 ## Kept by textweaver

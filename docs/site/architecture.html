@@ -1630,6 +1630,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-app",
     "textweaver-apple",
     "textweaver-cite",
+    "textweaver-components",
     "textweaver-convert",
     "textweaver-dectalk",
     "textweaver-dictation",
@@ -1682,7 +1683,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-ocr",
     "textweaver-piper"
    ],
-   "deps": [],
+   "deps": [
+    "textweaver-core"
+   ],
    "description": "textweaver's optional components: files pinned by size and SHA-256, one downloader (a .part file, the hash, then a rename), install from a zip or a folder, and a mirror's manifest",
    "dev_deps": [],
    "job": "Optional components: the models, fonts, and voices textweaver can use but does not ship, and the one way they are fetched, checked, and installed (Wave 8, W8a-d).",

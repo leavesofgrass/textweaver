@@ -212,6 +212,11 @@ krilla = "0.8"
 hayagriva = "0.10"
 biblatex = "0.12"
 ureq = { version = "3.4", default-features = false, features = ["rustls"] }
+# B1-c2 (Friday, October 9, 2026): the system credential store for the
+# components source's GitHub token (Windows Credential Manager, macOS
+# Keychain, Linux Secret Service through zbus, so no C library). Pinned to
+# 4.2; MIT OR Apache-2.0. Only with textweaver-components' `download`.
+keyring = { version = "~4.2.0", default-features = false, features = ["v1"] }
 # Live-region announcements for the platform accessibility APIs.
 live-region = "0.3"
 # The Xilem GUI (Wave 3, textweaver-xilem only; ADR-0027). Masonry is

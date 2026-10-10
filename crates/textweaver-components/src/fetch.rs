@@ -123,31 +123,48 @@ pub struct HttpFetcher;
 #[cfg(feature = "download")]
 impl Fetcher for HttpFetcher {
     fn open(&self, address: &str, from: u64) -> Result<Fetched, String> {
-        use std::time::Duration;
-        let agent: ureq::Agent = ureq::Agent::config_builder()
-            .timeout_connect(Some(Duration::from_secs(30)))
-            .timeout_recv_body(Some(Duration::from_secs(120)))
-            // Neutral on purpose: no user, machine, or account names ever
-            // go out with a request (the owner's rule).
-            .user_agent(crate::USER_AGENT)
-            .build()
-            .into();
-        let mut req = agent.get(address);
-        if from > 0 {
-            req = req.header("Range", format!("bytes={from}-"));
-        }
-        let resp = req.call().map_err(|e| e.to_string())?;
-        let start = if from > 0 && resp.status().as_u16() == 206 {
-            from
-        } else {
-            0
-        };
-        let reader = resp.into_body().into_reader();
-        Ok(Fetched {
-            reader: Box::new(reader),
-            start,
-        })
+        http_get(address, from, &[])
     }
+}
+
+/// A GET of `address` from byte `from`, with `headers` added (the signed-in
+/// fetcher's `Authorization`). A redirect is followed without the
+/// `Authorization` header, so a token never reaches the place a redirect
+/// points to.
+#[cfg(feature = "download")]
+pub(crate) fn http_get(
+    address: &str,
+    from: u64,
+    headers: &[(&str, String)],
+) -> Result<Fetched, String> {
+    use std::time::Duration;
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_connect(Some(Duration::from_secs(30)))
+        .timeout_recv_body(Some(Duration::from_secs(120)))
+        // Neutral on purpose: no user, machine, or account names ever
+        // go out with a request (the owner's rule).
+        .user_agent(crate::USER_AGENT)
+        .redirect_auth_headers(ureq::config::RedirectAuthHeaders::Never)
+        .build()
+        .into();
+    let mut req = agent.get(address);
+    for (name, value) in headers {
+        req = req.header(*name, value.as_str());
+    }
+    if from > 0 {
+        req = req.header("Range", format!("bytes={from}-"));
+    }
+    let resp = req.call().map_err(|e| e.to_string())?;
+    let start = if from > 0 && resp.status().as_u16() == 206 {
+        from
+    } else {
+        0
+    };
+    let reader = resp.into_body().into_reader();
+    Ok(Fetched {
+        reader: Box::new(reader),
+        start,
+    })
 }
 
 #[cfg(test)]

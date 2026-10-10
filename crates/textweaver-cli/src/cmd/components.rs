@@ -15,16 +15,22 @@
 //!   folder, checked against the same pins; anything else is refused with
 //!   the reason.
 //!
+//! - `tw components sign-in` keeps a GitHub token for a private components
+//!   source in the system credential store, read from standard input
+//!   (piped, never typed where it shows); `tw components forget-token`
+//!   removes it. A signed-in GitHub CLI (`gh auth login`) needs neither.
+//!
 //! `tw` never shows the first-run list; that is the GUI's and the terminal
 //! reader's.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use anyhow::{Context, bail};
 use textweaver_app::components::{
-    Component, FileState, Progress, Registry, StandardFetcher, Status, Tenths, component_dir,
-    features_text, sources,
+    Component, Fetcher, FileState, Progress, Registry, SignedInFetcher, StandardFetcher, Status,
+    Tenths, component_dir, credentials, features_text, sources,
 };
 use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::store::SettingsStore;
@@ -75,10 +81,19 @@ enum Sub {
         /// The zip file or folder.
         path: PathBuf,
     },
+    /// Keep a GitHub token for a private components source in the system credential store, read from standard input (pipe it in; a signed-in GitHub CLI needs none).
+    SignIn,
+    /// Forget the GitHub token kept in the system credential store.
+    ForgetToken,
 }
 
 /// Runs `tw components`.
 pub fn run(args: Args) -> anyhow::Result<()> {
+    match args.command {
+        Sub::SignIn => return sign_in(&mut std::io::stdin().lock(), super::stdin_is_terminal()),
+        Sub::ForgetToken => return forget_token(),
+        _ => {}
+    }
     let paths = super::paths(args.home.as_deref())?;
     let settings = SettingsStore::new(paths.clone()).load().0;
     let registry = registry_with_mirror(&settings);
@@ -101,15 +116,70 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             let c = named(&registry, &id)?;
             install(c, &component_dir(c, &data), &path)
         }
+        Sub::SignIn | Sub::ForgetToken => Ok(()),
     }
+}
+
+/// The fetcher for these settings: signed in when the components source
+/// is a GitHub repository and a token is found (the GitHub CLI's, else
+/// the one kept in the credential store), else the standard one.
+fn fetcher(settings: &textweaver_app::store::Settings) -> Arc<dyn Fetcher> {
+    if sources(settings).source_is_github()
+        && let Some((token, _)) = credentials::find_token()
+    {
+        return Arc::new(SignedInFetcher::new(token));
+    }
+    Arc::new(StandardFetcher)
+}
+
+/// `tw components sign-in`: one line from standard input, kept in the
+/// system credential store. A terminal is refused, because what is typed
+/// there shows on the screen and is read aloud; the token is piped in
+/// instead. Nothing printed holds the token.
+fn sign_in(input: &mut dyn std::io::BufRead, terminal: bool) -> anyhow::Result<()> {
+    if terminal {
+        bail!(
+            "Pipe the token in, so it never shows: on Windows, copy it, then Get-Clipboard | tw components sign-in. Or sign in to the GitHub CLI with gh auth login, which needs no token here."
+        );
+    }
+    let mut line = String::new();
+    input.read_line(&mut line)?;
+    let Some(token) = credentials::Token::new(&line) else {
+        bail!("That is not a GitHub token. Nothing was kept.");
+    };
+    credentials::store_token(&token)
+        .map_err(|reason| anyhow::anyhow!("The token was not kept: {reason}."))?;
+    crate::cmd::outln!("The token is kept in the system credential store.");
+    Ok(())
+}
+
+/// `tw components forget-token`.
+fn forget_token() -> anyhow::Result<()> {
+    let had = credentials::forget_token()
+        .map_err(|reason| anyhow::anyhow!("The token was not forgotten: {reason}."))?;
+    if had {
+        crate::cmd::outln!("The token is forgotten.");
+    } else {
+        crate::cmd::outln!("No token was kept.");
+    }
+    if credentials::gh_token().is_some() {
+        crate::cmd::outln!("The GitHub CLI sign-in is still used; gh auth logout ends it.");
+    }
+    Ok(())
 }
 
 /// The registry, with the components source's and the mirror's
 /// components when either is set and its list can be read.
 fn registry_with_mirror(settings: &textweaver_app::store::Settings) -> Registry {
     let mut registry = Registry::builtin();
-    for address in sources(settings).manifest_addresses() {
-        let text = textweaver_app::components::fetch_text(&StandardFetcher, &address);
+    let addresses = sources(settings).manifest_addresses();
+    let fetcher = if addresses.is_empty() {
+        Arc::new(StandardFetcher)
+    } else {
+        fetcher(settings)
+    };
+    for address in addresses {
+        let text = textweaver_app::components::fetch_text(&*fetcher, &address);
         match text.map(|t| registry.add_manifest(&t)) {
             Ok(Ok(refused)) => {
                 for (id, why) in refused {
@@ -252,7 +322,7 @@ pub(crate) fn download(
         c,
         dir,
         &sources,
-        &StandardFetcher,
+        &*fetcher(settings),
         &mut |p: Progress| {
             if let Some(percent) = tenths.step(p) {
                 eprintln!("{percent} percent");
@@ -435,5 +505,25 @@ mod tests {
     fn an_unknown_id_names_the_known_ones() {
         let e = named(&Registry::builtin(), "gpt").unwrap_err().to_string();
         assert!(e.contains("whisper-base.en"), "{e}");
+    }
+
+    #[test]
+    fn sign_in_reads_a_piped_token_and_never_a_terminal() {
+        // A memory store, never the system one, and never gh.
+        textweaver_app::components::fake::memory_credentials();
+        let token = "ghp_EXAMPLEonlyNotARealToken6666";
+        let e = sign_in(&mut format!("{token}\n").as_bytes(), true)
+            .unwrap_err()
+            .to_string();
+        assert!(e.starts_with("Pipe the token in"), "{e}");
+        let e = sign_in(&mut "y\n".as_bytes(), false)
+            .unwrap_err()
+            .to_string();
+        assert!(!e.contains("EXAMPLEonly"), "{e}");
+        sign_in(&mut format!("{token}\r\n").as_bytes(), false).unwrap();
+        let kept = credentials::stored_token().unwrap();
+        assert_eq!(kept, credentials::Token::new(token).unwrap());
+        forget_token().unwrap();
+        assert_eq!(credentials::stored_token(), None);
     }
 }

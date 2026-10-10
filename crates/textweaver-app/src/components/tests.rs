@@ -602,3 +602,168 @@ fn a_source_folder_lists_installs_and_refuses_a_bad_checksum() {
     assert_eq!(c.status_in(&dir), Status::Installed);
     assert!(dir.starts_with(tmp.path().join("data").join("components")));
 }
+
+/// The log of this test program, written at trace level by the app's own
+/// file logger (so its filter applies), beside the test program in the
+/// target folder. Installed once.
+#[cfg(feature = "publish")]
+fn log_at_trace() -> PathBuf {
+    static LOG: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    LOG.get_or_init(|| {
+        let exe = std::env::current_exe().unwrap();
+        let path = exe
+            .parent()
+            .unwrap()
+            .join("token-privacy")
+            .join("textweaver.log");
+        let _ = std::fs::write(&path, "");
+        let logger = crate::logfile::FileLogger::new(
+            path.clone(),
+            log::LevelFilter::Trace,
+            512 * 1024 * 1024,
+        );
+        let logger: &'static crate::logfile::FileLogger = Box::leak(Box::new(logger));
+        log::set_logger(logger).expect("no other logger in this test program");
+        log::set_max_level(log::LevelFilter::Trace);
+        path
+    })
+    .clone()
+}
+
+/// Every 10-character piece of `token` that is found in `text`.
+#[cfg(feature = "publish")]
+fn pieces_in(token: &str, text: &str) -> Vec<String> {
+    (0..=token.len() - 10)
+        .map(|i| &token[i..i + 10])
+        .filter(|p| text.contains(p))
+        .map(str::to_owned)
+        .collect()
+}
+
+/// A private components source on a fake GitHub (no network, no real
+/// token, a memory credential store): Manage optional components asks
+/// once for a token, masked and never echoed, keeps it, lists the
+/// source's component, and downloads it signed in. Then the token is in
+/// none of settings.toml, the log (at trace level), anything said, or any
+/// file the test made.
+#[cfg(feature = "publish")]
+#[test]
+fn a_private_source_signs_in_once_and_the_token_is_never_written() {
+    use crate::list_model::PromptKey;
+    use textweaver_components::fake::{FakeGitHub, FakeSource};
+    const TOKEN: &str = "ghp_EXAMPLEonlyNotARealToken7777";
+    fake::memory_credentials();
+    let log = log_at_trace();
+    let tmp = tempfile::tempdir().unwrap();
+
+    // The private repository: its list in the release `manifest`, its
+    // file in the release `private-sample-1.0`.
+    let mut source = FakeSource::new(&tmp.path().join("made"));
+    source
+        .add(
+            "private-sample",
+            "1.0",
+            Platform::Any,
+            Action::Place,
+            &[("p.bin", b"a private file")],
+        )
+        .unwrap();
+    let list = std::fs::read(source.root().join("components.toml")).unwrap();
+    let gh = FakeGitHub::start(
+        TOKEN,
+        &[
+            ("manifest", "components.toml", list.as_slice()),
+            ("private-sample-1.0", "p.bin", &b"a private file"[..]),
+        ],
+    )
+    .unwrap();
+
+    let said = Said::default();
+    let mut app = App::new(AppConfig {
+        announcer: Box::new(said.clone()),
+        paths: Some(Paths::under(tmp.path())),
+        ..AppConfig::for_tests()
+    });
+    app.components.github_api = Some(gh.api().to_owned());
+    let _ = app.update_settings(|s| s.components.source = "example-org/parts".to_owned());
+
+    // Asked once, masked, nothing echoed, no history.
+    app.dispatch(Command::Action(ActionId::ManageComponents));
+    let purpose = app.prompt_model().map(|p| p.purpose);
+    assert_eq!(purpose, Some(PromptPurpose::GitHubToken));
+    said.clear();
+    for c in TOKEN.chars() {
+        app.dispatch(Command::PromptKey(PromptKey::Char(c)));
+    }
+    assert_eq!(
+        app.prompt_model().unwrap().shown_text(),
+        "*".repeat(TOKEN.len())
+    );
+    assert!(said.all().is_empty(), "{:?}", said.all());
+    app.dispatch(Command::PromptKey(PromptKey::Enter));
+    assert!(app.prompt_history(PromptPurpose::GitHubToken).is_empty());
+    assert!(said.any("Token kept in the system credential store."));
+
+    // The source's list was read signed in, and its file downloads.
+    let model = app.list_model().unwrap().clone();
+    let row = model
+        .items
+        .iter()
+        .position(|i| i.starts_with("The private-sample component: not installed"))
+        .unwrap_or_else(|| panic!("{:?}", model.items));
+    app.dispatch(Command::Choose(row));
+    app.dispatch(Command::Choose(0));
+    app.dispatch(Command::Confirm(Confirm::Yes));
+    assert!(app.wait_for_components(WAIT));
+    let (c, dir) = app.component_and_dir("private-sample").unwrap();
+    assert_eq!(c.status_in(&dir), Status::Installed, "{:?}", said.all());
+
+    // Not asked again this session.
+    app.dispatch(Command::Action(ActionId::ManageComponents));
+    assert!(app.prompt_model().is_none());
+    app.save_settings().unwrap();
+
+    // The token went to the API, and nowhere else.
+    let signed = gh
+        .requests()
+        .iter()
+        .filter(|(_, h)| h.iter().any(|(k, _)| k == "authorization"))
+        .count();
+    assert!(signed >= 3, "{:?}", gh.requests());
+
+    // Nowhere written: the log, what was said, and every file made.
+    log::info!("token privacy test: fetched");
+    log::logger().flush();
+    let logged = std::fs::read_to_string(&log).unwrap();
+    assert!(logged.contains("token privacy test: fetched"));
+    assert_eq!(pieces_in(TOKEN, &logged), Vec::<String>::new(), "the log");
+    let spoken = said.all().join("\n");
+    assert_eq!(pieces_in(TOKEN, &spoken), Vec::<String>::new(), "messages");
+    let settings = std::fs::read_to_string(Paths::under(tmp.path()).settings_file()).unwrap();
+    assert!(settings.contains("example-org/parts"));
+    let mut files = vec![tmp.path().to_owned()];
+    let mut checked = 0;
+    while let Some(p) = files.pop() {
+        if p.is_dir() {
+            files.extend(std::fs::read_dir(&p).unwrap().map(|e| e.unwrap().path()));
+        } else {
+            let text = String::from_utf8_lossy(&std::fs::read(&p).unwrap()).into_owned();
+            assert_eq!(
+                pieces_in(TOKEN, &text),
+                Vec::<String>::new(),
+                "{}",
+                p.display()
+            );
+            checked += 1;
+        }
+    }
+    assert!(checked >= 3, "settings, the list, and the file");
+
+    // Forget the token: said in words, and asked again next time.
+    app.dispatch(Command::Action(ActionId::ForgetGitHubToken));
+    assert!(said.any("Token forgotten."));
+    assert_eq!(credentials::stored_token(), None);
+    app.dispatch(Command::Action(ActionId::ManageComponents));
+    let purpose = app.prompt_model().map(|p| p.purpose);
+    assert_eq!(purpose, Some(PromptPurpose::GitHubToken));
+}
