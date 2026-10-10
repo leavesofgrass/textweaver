@@ -34,7 +34,7 @@ To build without cmake, turn off the `opus` feature. Opus export then goes throu
 cargo build -p textweaver-cli --no-default-features
 ```
 
-For the terminal reader and the GUI, list their other default features: `cargo build -p textweaver-tui --no-default-features --features publish,lint,grammar,clipboard,highlight,dictation,audio-export` and `cargo build -p textweaver-xilem --no-default-features --features screenshot,renderer-vello,publish,lint,grammar,dictation,audio-export`. A build of the whole workspace, such as `cargo build --workspace`, always includes Opus, because `tw` turns it on.
+For the app, list its other default features: `cargo build -p textweaver-xilem --no-default-features --features screenshot,renderer-vello,publish,lint,grammar,dictation,audio-export`. A build of the whole workspace, such as `cargo build --workspace`, always includes Opus, because `tw` turns it on.
 
 ## Your first contribution
 
@@ -42,7 +42,7 @@ For the terminal reader and the GUI, list their other default features: `cargo b
 2. **Run it:**
 
    ```bash
-   cargo run -p textweaver-tui --bin textweaver -- fixtures/t/reading.md
+   cargo run -p textweaver-cli --bin tw -- fixtures/t/reading.md
    ```
 
    Or use the command-line tool, `tw`, to speak a file to a WAV without opening the reader:
@@ -115,7 +115,7 @@ target/release/textweaver-xilem path/to/document.md
 
 The program is `textweaver-xilem` (`textweaver-xilem.exe` on Windows) under `target/release/`; a release package renames the same program to `textweaver-gui`.
 
-A lean reader, without in-reader export, preview, and citations (the `publish` feature, on by default), grammar checking, and Export audio, builds with:
+Since beta 1 the terminal reader is part of `tw` (`textweaver-cli`), which always has export, preview, citations, grammar checking, and Export audio; there is no separate lean reader program. The reader's library still builds lean, and CI builds it that way so code behind those features stays sound:
 
 ```bash
 cargo build -p textweaver-tui --no-default-features

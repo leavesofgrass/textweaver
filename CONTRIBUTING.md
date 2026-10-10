@@ -51,7 +51,7 @@ Everyone who takes part is asked to follow the [code of conduct](CODE_OF_CONDUCT
 5. Try the terminal reader and the window on a document. Space starts and pauses reading, and `?` lists every key:
 
    ```bash
-   cargo run -p textweaver-tui -- fixtures/sample.md
+   cargo run -p textweaver-cli --bin tw -- fixtures/sample.md
    ```
 
    and the window:

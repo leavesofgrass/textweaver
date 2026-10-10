@@ -321,13 +321,13 @@ In edit mode on a Markdown file, textweaver checks the Markdown you write and le
 
 ### Building without grammar
 
-Grammar checking makes each program about 11 MB larger and a clean build about 7 minutes longer, because Harper brings its dictionary, its rules, and a part-of-speech tagger. To build without it, turn off the default features and name the ones you want, for example:
+Grammar checking makes each program about 11 MB larger and a clean build about 7 minutes longer, because Harper brings its dictionary, its rules, and a part-of-speech tagger. Since beta 1, `tw` (and the terminal reader in it) always has it. The app can be built without it: turn off the default features and name the ones you want, for example:
 
 ```bash
-cargo build --release -p textweaver-tui --no-default-features --features publish,lint,clipboard,highlight,dictation,audio-export,opus
+cargo build --release -p textweaver-xilem --no-default-features --features screenshot,renderer-vello,publish,lint,dictation,audio-export,opus,carta
 ```
 
-`--no-default-features` alone builds the lean reader, which also leaves out export, preview, citations, and Export audio ([Building](dev/building.md)).
+See [Building](dev/building.md).
 
 ## Markdown lint
 

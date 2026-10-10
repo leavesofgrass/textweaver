@@ -196,7 +196,7 @@ To compare the two engines, open `fixtures/c1/quadratic.md` and read it with eac
 ### Build it
 
 ```powershell
-cargo build --release -p textweaver-tui --features mathcat
+cargo build --release -p textweaver-cli --bin tw --features mathcat
 ```
 
 This builds the reader with MathCAT. MathCAT's rules are built into the program, so nothing is downloaded when it runs. Without the feature, `math_engine = "mathcat"` changes nothing and math is read by textweaver's own speech.
