@@ -2,7 +2,7 @@
 
 textweaver is built first for people who use a screen reader or a Braille display, and for students with print disabilities. This page says what has been tested, how, and what has not.
 
-textweaver is in beta. This statement describes release 0.1.0-beta.1.
+textweaver is in beta. This statement describes release 0.1.0-beta.2.
 
 ## What textweaver aims for
 
