@@ -313,6 +313,7 @@ Your spelling word list is not a setting: it is `words.txt` in the data folder, 
 The name textweaver writes on what it adds to a document.
 
 - `author`, default `""`: the name on comments, replies, and changes saved to a Word file (see [Tracked changes and comments](reading.md#tracked-changes-and-comments-ctrlshiftj-or-alta)), and the author of a new document from a template (`author = "Jo Writer"`; see [Start from a template](editing.md#start-from-a-template)). Empty signs comments "textweaver" and leaves a template's author blank. textweaver never takes a name from your computer or your account, and the name never syncs. A settings file with the older `[editing] author` keeps its value: it is read as `[authoring] author`.
+- `track_changes`, default `false`: save edit mode's changes to a Word file (`.docx`) into the file itself as tracked changes, signed with `author` and the time, for a reviewer to accept or reject in Word. Off, a Word file's edits are saved as Markdown under a new name. See [Your own edits as tracked changes](editing.md#your-own-edits-as-tracked-changes).
 
 ### [library]
 

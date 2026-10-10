@@ -831,6 +831,11 @@ pub const INFO: &[Info] = &[
         "Author",
         "The name textweaver writes on comments, replies, and documents from a template. Empty means textweaver on comments and no author in templates. Never taken from the computer.",
     ),
+    toggle(
+        "authoring.track_changes",
+        "Track changes in Word files",
+        "Save edits to a Word file as tracked changes a reviewer can accept. Off saves them as Markdown under a new name.",
+    ),
     // [library]
     number(
         "library.recent_limit",

@@ -134,6 +134,7 @@ fn everything_changed() -> Settings {
     e.undo_steps = 200;
     e.undo_memory_mb = 10;
     s.authoring.author = "Ada Example".into();
+    s.authoring.track_changes = true;
     s.library.recent_limit = 10;
     s.library.folders = vec!["C:/Books".into()];
     s.keyboard.character_keys = false;

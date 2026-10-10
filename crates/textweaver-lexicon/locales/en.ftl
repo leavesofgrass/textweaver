@@ -2945,6 +2945,8 @@ setting-speech-voice-params = Rate and pitch per voice
 setting-speech-voice-params-help = The rate and pitch each voice was last used at. Choosing a voice again brings them back.
 setting-authoring-author = Author
 setting-authoring-author-help = The name { -brand } writes on comments, replies, and documents from a template. Empty means { -brand } on comments and no author in templates. Never taken from the computer.
+setting-authoring-track-changes = Track changes in Word files
+setting-authoring-track-changes-help = Save edits to a Word file as tracked changes a reviewer can accept. Off saves them as Markdown under a new name.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -4251,5 +4253,17 @@ changes-in-place-rejected =
     { $n ->
         [one] Rejected 1 change in { $path }. The original is kept as { $backup }.
        *[other] Rejected { $n } changes in { $path }. The original is kept as { $backup }.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] Saved 1 tracked change in { $file }.
+       *[other] Saved { $n } tracked changes in { $file }.
+    }
+changes-original-kept = The original is kept as { $backup }.
+changes-tracked-refused =
+    { $n ->
+        [one] Not saved: 1 change in { $file } crosses a paragraph or sits in a link or field, so it cannot be tracked. Save As keeps your edits as Markdown.
+       *[other] Not saved: { $n } changes in { $file } cross a paragraph or sit in a link or field, so they cannot be tracked. Save As keeps your edits as Markdown.
     }
 ## End of B1-t2

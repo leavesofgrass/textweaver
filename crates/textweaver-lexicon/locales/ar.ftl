@@ -3199,6 +3199,8 @@ setting-speech-voice-params = السرعة وطبقة الصوت لكل صوت
 setting-speech-voice-params-help = السرعة وطبقة الصوت اللتان استُخدم بهما كل صوت آخر مرة. اختيار الصوت مجددًا يعيدهما.
 setting-authoring-author = المؤلف
 setting-authoring-author-help = الاسم الذي يكتبه { -brand } على التعليقات والردود والمستندات المنشأة من قالب. الفارغ يعني { -brand } في التعليقات وعدم وجود مؤلف في القوالب. لا يؤخذ أبدًا من الحاسوب.
+setting-authoring-track-changes = تتبع التغييرات في ملفات Word
+setting-authoring-track-changes-help = حفظ التعديلات على ملف Word كتغييرات متتبعة يستطيع المراجع قبولها. عند الإيقاف تُحفظ بصيغة Markdown باسم جديد.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -4486,5 +4488,17 @@ changes-in-place-rejected =
     { $n ->
         [one] رُفض تغيير واحد في { $path }. الأصل محفوظ باسم { $backup }.
        *[other] رُفضت { $n } تغييرات في { $path }. الأصل محفوظ باسم { $backup }.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] حُفظ تغيير متتبع واحد في { $file }.
+       *[other] حُفظت { $n } تغييرات متتبعة في { $file }.
+    }
+changes-original-kept = الأصل محفوظ باسم { $backup }.
+changes-tracked-refused =
+    { $n ->
+        [one] لم يُحفظ: تغيير واحد في { $file } يعبر فقرة أو يقع في رابط أو حقل، فلا يمكن تتبعه. الحفظ باسم يحتفظ بتعديلاتك بصيغة Markdown.
+       *[other] لم يُحفظ: { $n } تغييرات في { $file } تعبر فقرة أو تقع في رابط أو حقل، فلا يمكن تتبعها. الحفظ باسم يحتفظ بتعديلاتك بصيغة Markdown.
     }
 ## End of B1-t2

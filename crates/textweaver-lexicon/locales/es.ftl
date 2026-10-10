@@ -2920,6 +2920,8 @@ setting-speech-voice-params = Velocidad y tono por voz
 setting-speech-voice-params-help = La velocidad y el tono con que se usó cada voz por última vez. Al elegir de nuevo una voz, vuelven.
 setting-authoring-author = Autor
 setting-authoring-author-help = El nombre que { -brand } escribe en comentarios, respuestas y documentos hechos con una plantilla. Vacío significa { -brand } en los comentarios y ningún autor en las plantillas. Nunca se toma del equipo.
+setting-authoring-track-changes = Control de cambios en archivos Word
+setting-authoring-track-changes-help = Guardar las ediciones de un archivo de Word como cambios controlados que un revisor puede aceptar. Desactivado las guarda como Markdown con otro nombre.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -4196,5 +4198,17 @@ changes-in-place-rejected =
     { $n ->
         [one] 1 cambio rechazado en { $path }. El original se conserva como { $backup }.
        *[other] { $n } cambios rechazados en { $path }. El original se conserva como { $backup }.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] 1 cambio controlado guardado en { $file }.
+       *[other] { $n } cambios controlados guardados en { $file }.
+    }
+changes-original-kept = El original se conserva como { $backup }.
+changes-tracked-refused =
+    { $n ->
+        [one] No se guardó: 1 cambio en { $file } cruza un párrafo o está en un enlace o campo, y no se puede controlar. Guardar como conserva sus ediciones en Markdown.
+       *[other] No se guardó: { $n } cambios en { $file } cruzan un párrafo o están en un enlace o campo, y no se pueden controlar. Guardar como conserva sus ediciones en Markdown.
     }
 ## End of B1-t2

@@ -152,8 +152,10 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // How much memory the computer has.
     ("editing.undo_steps", Machine),
     ("editing.undo_memory_mb", Machine),
-    // [authoring]: a person's name, never written to the sync folder.
+    // [authoring]: the name is a person's, never written to the sync
+    // folder; tracking changes is a preference that travels.
     ("authoring.author", Machine),
+    ("authoring.track_changes", Portable),
     // [library]
     ("library.recent_limit", Portable),
     ("library.folders", Machine),

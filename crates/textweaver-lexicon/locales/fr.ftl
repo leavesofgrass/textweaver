@@ -2948,6 +2948,8 @@ setting-speech-voice-params = Débit et hauteur par voix
 setting-speech-voice-params-help = Le débit et la hauteur de la dernière utilisation de chaque voix. Choisir à nouveau une voix les rétablit.
 setting-authoring-author = Auteur
 setting-authoring-author-help = Le nom que { -brand } écrit sur les commentaires, les réponses et les documents créés depuis un modèle. Vide signifie { -brand } pour les commentaires et aucun auteur dans les modèles. Jamais tiré de l'ordinateur.
+setting-authoring-track-changes = Suivi des modifications dans Word
+setting-authoring-track-changes-help = Enregistrer les modifications d'un fichier Word comme des modifications suivies qu'un relecteur peut accepter. Désactivé, elles sont enregistrées en Markdown sous un autre nom.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -4224,5 +4226,17 @@ changes-in-place-rejected =
     { $n ->
         [one] 1 modification refusée dans { $path }. L'original est gardé sous le nom { $backup }.
        *[other] { $n } modifications refusées dans { $path }. L'original est gardé sous le nom { $backup }.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] 1 modification suivie enregistrée dans { $file }.
+       *[other] { $n } modifications suivies enregistrées dans { $file }.
+    }
+changes-original-kept = L'original est gardé sous le nom { $backup }.
+changes-tracked-refused =
+    { $n ->
+        [one] Non enregistré : 1 modification dans { $file } traverse un paragraphe ou se trouve dans un lien ou un champ, et ne peut pas être suivie. Enregistrer sous garde vos modifications en Markdown.
+       *[other] Non enregistré : { $n } modifications dans { $file } traversent un paragraphe ou se trouvent dans un lien ou un champ, et ne peuvent pas être suivies. Enregistrer sous garde vos modifications en Markdown.
     }
 ## End of B1-t2

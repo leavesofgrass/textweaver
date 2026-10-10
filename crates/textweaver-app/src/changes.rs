@@ -811,10 +811,18 @@ fn sync_comment_notes(
 #[cfg(feature = "publish")]
 mod save;
 #[cfg(feature = "publish")]
+mod tracked;
+#[cfg(feature = "publish")]
 pub use save::docx_update;
 
 #[cfg(not(feature = "publish"))]
 impl App {
+    /// Tracked edits need the writers: a Word file's edits are saved as
+    /// Markdown under a new name, as with tracking off.
+    pub(crate) fn save_tracked(&mut self, _then: crate::edit::SaveThen) -> Option<Vec<Effect>> {
+        None
+    }
+
     /// `save_changes_to_word` in a build without the `publish` feature,
     /// which links no writers: says it is not in this build.
     pub(crate) fn save_changes_to_word(&mut self) -> Vec<Effect> {

@@ -923,6 +923,11 @@ pub struct AuthoringSettings {
     /// it blank). Never taken from the computer or the account. Was
     /// `[editing] author`, which still loads.
     pub author: String,
+    /// Edits saved from edit mode into a Word file are written as tracked
+    /// changes (`w:ins`, `w:del`) with [`author`](Self::author) and the
+    /// time, for a reviewer in Word (task B1-t3). Off: a Word file's edits
+    /// are saved as Markdown under a new name, as before.
+    pub track_changes: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,

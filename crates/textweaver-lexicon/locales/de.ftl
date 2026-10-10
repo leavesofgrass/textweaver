@@ -2944,6 +2944,8 @@ setting-speech-voice-params = Tempo und Tonhöhe je Stimme
 setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zuletzt genutzt wurde. Wird die Stimme wieder gewählt, kehren sie zurück.
 setting-authoring-author = Autor
 setting-authoring-author-help = Der Name, den { -brand } auf Kommentare, Antworten und Dokumente aus einer Vorlage schreibt. Leer bedeutet { -brand } bei Kommentaren und keinen Autor in Vorlagen. Nie vom Computer übernommen.
+setting-authoring-track-changes = Änderungen in Word-Dateien nachverfolgen
+setting-authoring-track-changes-help = Bearbeitungen in einer Word-Datei als nachverfolgte Änderungen speichern, die ein Prüfer annehmen kann. Aus speichert sie als Markdown unter neuem Namen.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -4220,5 +4222,17 @@ changes-in-place-rejected =
     { $n ->
         [one] 1 Änderung in { $path } abgelehnt. Das Original bleibt als { $backup } erhalten.
        *[other] { $n } Änderungen in { $path } abgelehnt. Das Original bleibt als { $backup } erhalten.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] 1 nachverfolgte Änderung in { $file } gespeichert.
+       *[other] { $n } nachverfolgte Änderungen in { $file } gespeichert.
+    }
+changes-original-kept = Das Original bleibt als { $backup } erhalten.
+changes-tracked-refused =
+    { $n ->
+        [one] Nicht gespeichert: 1 Änderung in { $file } überschreitet einen Absatz oder liegt in einem Link oder Feld und kann nicht nachverfolgt werden. Speichern unter behält Ihre Bearbeitungen als Markdown.
+       *[other] Nicht gespeichert: { $n } Änderungen in { $file } überschreiten einen Absatz oder liegen in einem Link oder Feld und können nicht nachverfolgt werden. Speichern unter behält Ihre Bearbeitungen als Markdown.
     }
 ## End of B1-t2

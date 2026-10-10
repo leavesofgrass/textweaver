@@ -308,6 +308,67 @@ mod save {
         assert!(textweaver_formats::comments(&saved.meta)[0].resolved);
     }
 
+    /// Replaces the first `old` in the text being edited with `new`.
+    fn replace(app: &mut App, old: &str, new: &str) {
+        let text = app.session.as_ref().unwrap().doc.text().to_string();
+        let at = text.find(old).unwrap_or_else(|| panic!("{old} in {text}"));
+        let start = text[..at].chars().count();
+        let range = CharRange::new(start, start + old.chars().count());
+        app.dispatch(Command::ReplaceRange {
+            range,
+            text: new.into(),
+        });
+    }
+
+    #[test]
+    fn edits_are_saved_into_the_word_file_as_tracked_changes() {
+        let (dir, path, mut app) = opened();
+        app.set_setting("authoring.track_changes", serde_json::json!(true))
+            .unwrap();
+        app.set_setting("authoring.author", serde_json::json!("Ada Example"))
+            .unwrap();
+        app.dispatch(Command::Action(ActionId::ToggleEditMode));
+        replace(&mut app, "Give fluids.", "Give water.");
+        replace(&mut app, "patient may go", "patient go");
+        app.dispatch(Command::Action(ActionId::Save));
+        assert_eq!(
+            app.status_text(),
+            "Saved 2 tracked changes in plan.docx. The original is kept as plan-original.docx."
+        );
+        assert!(dir.path().join("plan-original.docx").exists());
+        let saved = textweaver_formats::load_path(&path).unwrap();
+        let ours: Vec<(ChangeKind, String)> = textweaver_formats::changes(&saved.meta)
+            .into_iter()
+            .filter(|c| c.author == "Ada Example" && c.date.starts_with("20"))
+            .filter(|c| ["may", "fluids.", "water."].contains(&c.text.as_str()))
+            .map(|c| (c.kind, c.text))
+            .collect();
+        assert_eq!(
+            ours,
+            vec![
+                (ChangeKind::Deleted, "may".to_owned()),
+                (ChangeKind::Deleted, "fluids.".to_owned()),
+                (ChangeKind::Inserted, "water.".to_owned()),
+            ]
+        );
+        let text = saved.text().to_string();
+        assert!(text.contains("The patient go home"), "{text}");
+        assert!(text.contains("Give water."), "{text}");
+    }
+
+    #[test]
+    fn with_tracking_off_a_word_file_is_saved_as_markdown() {
+        let (_dir, _path, mut app) = opened();
+        app.dispatch(Command::Action(ActionId::ToggleEditMode));
+        replace(&mut app, "Give fluids.", "Give water.");
+        app.dispatch(Command::Action(ActionId::Save));
+        assert!(
+            !app.status_text().starts_with("Saved"),
+            "{}",
+            app.status_text()
+        );
+    }
+
     #[test]
     fn only_a_word_file_takes_changes_back() {
         let mut doc = fixture(RevisionMode::Final);
