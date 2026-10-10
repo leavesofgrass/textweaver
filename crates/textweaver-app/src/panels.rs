@@ -126,6 +126,16 @@ impl App {
             vec![Effect::Redraw]
         })
     }
+
+    /// Space on row `index` of the Notes panel: that note's links, as
+    /// Space on it in the notes list shows them (`crate::relations`). The
+    /// Contents panel has no links: nothing happens there.
+    pub fn panel_entry_links(&mut self, panel: Panel, index: usize) -> Vec<Effect> {
+        match panel {
+            Panel::Notes => self.entry(|app| app.note_links(index)),
+            Panel::Contents => Vec::new(),
+        }
+    }
 }
 
 #[cfg(test)]
