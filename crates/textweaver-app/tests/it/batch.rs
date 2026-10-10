@@ -71,7 +71,13 @@ fn a_folder_converts_to_markdown_and_the_failures_are_listed() {
     let formats = items(&app);
     assert_eq!(formats[0], "Markdown");
     assert_eq!(formats[1], "PDF");
-    assert_eq!(formats.len(), 7);
+    // Seven native formats, then carta's five (AsciiDoc to Org).
+    let carta = if cfg!(feature = "carta") { 5 } else { 0 };
+    assert_eq!(formats.len(), 7 + carta);
+    if carta > 0 {
+        assert_eq!(formats[7], "AsciiDoc");
+        assert_eq!(formats[11], "Org");
+    }
     app.dispatch(Command::Choose(0));
 
     // Where: the converted folder first.
