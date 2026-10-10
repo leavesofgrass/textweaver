@@ -118,6 +118,34 @@ fn contrast_with(page: Rgb, text: Rgb, path: &str, color: Rgb) -> f64 {
     }
 }
 
+/// The theme's own color where `path` paints it on `theme`: a band as it
+/// appears (reverse video applied; the page for a band drawn only by its
+/// attributes, as the window draws it), a text role's color, or a mark's
+/// role.
+fn theme_color(theme: &Theme, path: &str) -> Option<Rgb> {
+    match paint(path) {
+        Paint::Band(role) => Some(theme.resolve_style(role).background),
+        Paint::Text(roles) => roles.first().map(|&r| theme.color(r)),
+        Paint::Mark(role) => Some(theme.color(role)),
+    }
+}
+
+/// A highlight palette entry's row in the Colors view: its name, then its
+/// color, shape and contrast in words ([`App::palette_color_rows`]).
+#[derive(Clone, Debug, PartialEq)]
+pub struct PaletteColorRow {
+    /// "Highlight name important".
+    pub label: String,
+    /// "yellow, underline, contrast 1.2 to 1 with the text and 14 to 1
+    /// with the page, low".
+    pub value: String,
+    /// The entry's color, for a sample beside the words; `None` for a
+    /// color textweaver does not know, or while the system's colors win.
+    pub color: Option<Rgb>,
+    /// True under 3 to 1 against the text or the page (warned about).
+    pub low: bool,
+}
+
 /// The contrast in words: at least 4.5 to 1 is good, at least 3 to 1 is
 /// fair, and less is low (and warned about).
 pub fn contrast_word(c: &Catalog, ratio: f64) -> String {
@@ -219,17 +247,108 @@ impl App {
     /// The contrast of the color setting at `path`, on the current theme:
     /// the ratio, and "good", "fair", or "low"; `None` for the theme's own
     /// color or a value that is not a color.
+    ///
+    /// The theme's own color is measured too (B1-g2c), so every row of
+    /// the Colors view says its contrast. While the system's high
+    /// contrast colors are drawn instead, nothing is measured.
     pub fn color_contrast(&self, path: &str) -> Option<(f64, String)> {
+        if self.system_colors_win {
+            return None;
+        }
         let value = self.setting_value(path)?;
-        let text = value.as_str()?;
-        let rgb = parse_setting(text).ok()??;
-        let theme = self.current_theme();
+        let own = match value.as_str() {
+            Some(text) => parse_setting(text).ok()?,
+            None if value.is_null() => None,
+            None => return None,
+        };
+        let theme = self.reading_theme();
+        let rgb = match own {
+            Some(rgb) => rgb,
+            // shortcut: the theme's own color is the saved theme's, so
+            // while the window draws another theme (--theme) its rows say
+            // no contrast; upgrade when the frontends pass their whole
+            // palette, not only the page and text.
+            None if self.drawn_colors.is_none() => theme_color(&theme, path)?,
+            None => return None,
+        };
         let (page, text) = self.drawn_colors.unwrap_or((
             theme.color(ColorRole::Background),
             theme.color(ColorRole::Text),
         ));
         let ratio = contrast_with(page, text, path, rgb);
         Some((ratio, contrast_word(self.cat(), ratio)))
+    }
+
+    /// True while the system's high contrast colors are drawn instead of
+    /// the color settings ([`App::set_system_colors_win`]).
+    pub fn system_colors_win(&self) -> bool {
+        self.system_colors_win
+    }
+
+    /// Tells the app that the frontend draws the system's high contrast
+    /// colors instead of the color settings (the window, while Windows
+    /// high contrast is on). The Colors view then measures nothing and
+    /// says the system's colors are drawn; the highlight names still
+    /// differ by shape.
+    pub fn set_system_colors_win(&mut self, on: bool) {
+        self.system_colors_win = on;
+    }
+
+    /// Each highlight palette entry as the Colors view shows it: its name,
+    /// color and shape in words, and its contrast as a band behind the
+    /// text, against the text and against the page, with the lower ratio's
+    /// word ("low" under 3 to 1). While the system's colors win, the row
+    /// says so instead, and the shape still tells the names apart.
+    pub fn palette_color_rows(&self) -> Vec<PaletteColorRow> {
+        let c = self.cat();
+        let theme = self.reading_theme();
+        let (page, text) = self.drawn_colors.unwrap_or((
+            theme.color(ColorRole::Background),
+            theme.color(ColorRole::Text),
+        ));
+        self.highlight_palette()
+            .iter()
+            .map(|e| {
+                let name = e.name.trim();
+                let color = crate::palette::color_words(c, &e.color);
+                let shape = c.tr(crate::palette::shape_message(e.shape));
+                let label = c.fmt("colors-palette-label", &args!["name" => name]);
+                let rgb = parse_setting(&e.color).ok().flatten();
+                let measured = rgb.filter(|_| !self.system_colors_win);
+                let Some(rgb) = measured else {
+                    let id = if self.system_colors_win {
+                        "colors-palette-system"
+                    } else {
+                        "colors-palette-unknown"
+                    };
+                    return PaletteColorRow {
+                        label,
+                        value: c.fmt(id, &args!["color" => color, "shape" => shape]),
+                        color: None,
+                        low: false,
+                    };
+                };
+                let on_text = contrast_ratio(text, rgb);
+                let on_page = contrast_ratio(page, rgb);
+                let low = on_text.min(on_page);
+                let value = c.fmt(
+                    "colors-palette-value",
+                    &args![
+                        "color" => color,
+                        "shape" => shape,
+                        "text" => ratio_text(c, on_text),
+                        "page" => ratio_text(c, on_page),
+                        "verdict" => contrast_word(c, low)
+                    ],
+                );
+                PaletteColorRow {
+                    label,
+                    value,
+                    color: Some(rgb),
+                    low: low < 3.0,
+                }
+            })
+            .collect()
     }
 
     /// The page and text colors a frontend draws with when they are not
@@ -404,8 +523,47 @@ mod tests {
         let (ratio, word) = app.color_contrast("colors.links").unwrap();
         assert!(ratio < 3.0);
         assert_eq!(word, "low");
-        // The theme's own color has no contrast to report.
-        assert_eq!(app.color_contrast("colors.ruler"), None);
+        // The theme's own color is measured too, on the theme.
+        assert_eq!(app.settings().colors.ruler, "theme");
+        let (ruler, _) = app.color_contrast("colors.ruler").expect("measured");
+        assert!(ruler > 1.0);
+        // While the system's high contrast colors win, nothing is.
+        app.set_system_colors_win(true);
+        assert_eq!(app.color_contrast("colors.links"), None);
+    }
+
+    /// Every palette entry says its color, shape and contrast against the
+    /// text and the page, meaning first; a low one is flagged; while the
+    /// system's colors win, each says so and keeps its shape.
+    #[test]
+    fn palette_entries_say_their_contrast() {
+        let mut app = App::new(AppConfig::for_tests());
+        let rows = app.palette_color_rows();
+        assert_eq!(rows.len(), app.highlight_palette().len());
+        let first = &rows[0];
+        assert_eq!(first.label, "Highlight name important");
+        assert!(
+            first.value.starts_with("yellow, underline, contrast"),
+            "{}",
+            first.value
+        );
+        assert!(first.value.contains("with the text"), "{}", first.value);
+        assert!(first.value.contains("with the page"), "{}", first.value);
+        assert!(first.color.is_some());
+        // Galaxy's light text on a yellow band is hard to read.
+        assert!(first.low, "{}", first.value);
+        assert!(first.value.ends_with("low"), "{}", first.value);
+        app.set_system_colors_win(true);
+        let hc = app.palette_color_rows();
+        assert!(
+            hc[0].value.starts_with("yellow, underline;"),
+            "{}",
+            hc[0].value
+        );
+        assert!(hc.iter().all(|r| r.color.is_none() && !r.low));
+        let shapes: std::collections::HashSet<_> =
+            app.highlight_palette().iter().map(|e| e.shape).collect();
+        assert_eq!(shapes.len(), app.highlight_palette().len(), "shapes differ");
     }
 
     #[test]

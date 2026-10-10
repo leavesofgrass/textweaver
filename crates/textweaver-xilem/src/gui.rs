@@ -1113,7 +1113,9 @@ pub fn settings_dialog(
 
 /// View, Colors (W6a6): every color setting in one form, the reading
 /// aids' highlights first, each with a sample and its contrast said in
-/// words; a Reset all colors button puts the theme's back; Close (Escape)
+/// words, then the highlight palette's entries (B1-g2c); while the
+/// system's high contrast colors are drawn, the help and each row say so
+/// instead of a contrast; a Reset all colors button puts the theme's back; Close (Escape)
 /// closes. The form's help names the keys and that color never carries
 /// meaning alone.
 fn colors_dialog(p: &Palette, form: &SettingsForm, app: &App, row: usize) -> SettingsDialog {
@@ -1121,7 +1123,11 @@ fn colors_dialog(p: &Palette, form: &SettingsForm, app: &App, row: usize) -> Set
     let title = form.section_title(0, &c);
     let grid = NewWidget::new(
         SettingsGrid::new(title.clone(), form.rows(0, app), p.clone())
-            .with_help_text(c.tr("gui-colors-help"))
+            .with_help_text(c.tr(if app.system_colors_win() {
+                "gui-colors-help-system"
+            } else {
+                "gui-colors-help"
+            }))
             .with_selected(row),
     )
     .with_tag(FORM);
@@ -1871,6 +1877,7 @@ impl Gui {
         let drawn = (self.fixed_theme || self.system.is_some())
             .then_some((self.palette.background, self.palette.text));
         self.app.set_drawn_colors(drawn);
+        self.app.set_system_colors_win(self.system.is_some());
         // The Contents or Notes panel follows `[gui] sidebar` and the
         // document; closed, this reads one setting.
         let root = ctx.render_root(self.window_id);

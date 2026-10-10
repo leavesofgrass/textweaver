@@ -107,7 +107,15 @@ impl FormRow {
                 .ok()
                 .flatten()
         });
-        if let Some((ratio, verdict)) = app.color_contrast(&setting.path) {
+        if app.system_colors_win() {
+            // The system's high contrast colors are drawn instead: no
+            // sample of a color that is not on the screen.
+            row.swatch = None;
+            row.value_text = c.fmt(
+                "gui-colors-value-system",
+                &args!["value" => row.value_text.as_str()],
+            );
+        } else if let Some((ratio, verdict)) = app.color_contrast(&setting.path) {
             row.value_text = c.fmt(
                 "gui-colors-value",
                 &args![
@@ -118,6 +126,34 @@ impl FormRow {
             );
         }
         row
+    }
+
+    /// A highlight palette entry's row in the Colors dialog: the entry's
+    /// name, then its color, shape and contrast in words, and a sample of
+    /// its color. It is read only, like the other tables (the palette is
+    /// edited in `settings.toml`); under 3 to 1 its help is the contrast
+    /// warning, so the description says it too.
+    pub fn for_palette(
+        palette: &Setting,
+        entry: textweaver_app::PaletteColorRow,
+        c: &Catalog,
+    ) -> Self {
+        let warning = c.tr("colors-contrast-warning");
+        let (help, full_help) = if entry.low {
+            (warning.clone(), format!("{warning} {}", palette.help_in(c)))
+        } else {
+            (palette.short_help_in(c), palette.help_in(c))
+        };
+        FormRow {
+            path: palette.path.clone(),
+            label: entry.label,
+            help,
+            full_help,
+            kind: RowKind::Table,
+            value_text: entry.value,
+            swatch: entry.color,
+            typed_choice: false,
+        }
     }
 
     /// The row for `setting` with its current `value`, in the catalog's
@@ -184,6 +220,9 @@ const RECENT: &str = "\u{1}recent";
 
 /// The first section while a filter is typed: every setting it matches.
 const MATCHING: &str = "\u{1}matching";
+
+/// The highlight palette's table, whose entries end the Colors dialog.
+const PALETTE: &str = "highlight.palette";
 
 /// Which form a [`SettingsForm`] is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -365,15 +404,30 @@ impl SettingsForm {
         }
     }
 
-    /// The setting shown at `row` of section `section`.
+    /// The setting shown at `row` of section `section`. In the Colors
+    /// dialog the rows after the color settings are the highlight
+    /// palette's entries, which belong to `highlight.palette`.
     pub fn setting(&self, section: usize, row: usize) -> Option<&Setting> {
-        self.settings_in(section).get(row).copied()
+        let settings = self.settings_in(section);
+        match settings.get(row) {
+            Some(s) => Some(*s),
+            None if self.is_colors() => self.palette_setting(),
+            None => None,
+        }
     }
 
-    /// The rows of section `i`, with `app`'s current values.
+    /// The highlight palette's table setting, when the window shows it.
+    fn palette_setting(&self) -> Option<&Setting> {
+        self.by_paths(&[PALETTE]).first().copied()
+    }
+
+    /// The rows of section `i`, with `app`'s current values. The Colors
+    /// dialog ends with one row per highlight palette entry, each saying
+    /// its color, shape and contrast in words (B1-g2c).
     pub fn rows(&self, i: usize, app: &App) -> Vec<FormRow> {
         let c = app.catalog();
-        self.settings_in(i)
+        let mut rows: Vec<FormRow> = self
+            .settings_in(i)
             .into_iter()
             .map(|s| {
                 let value = app.setting_value(&s.path).unwrap_or(Value::Null);
@@ -383,7 +437,17 @@ impl SettingsForm {
                     FormRow::new(s, &value, &c)
                 }
             })
-            .collect()
+            .collect();
+        if self.is_colors()
+            && let Some(palette) = self.palette_setting()
+        {
+            rows.extend(
+                app.palette_color_rows()
+                    .into_iter()
+                    .map(|e| FormRow::for_palette(palette, e, &c)),
+            );
+        }
+        rows
     }
 
     /// Section `i`'s title in the catalog's language ("Speech").
