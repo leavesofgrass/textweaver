@@ -609,8 +609,8 @@ fn read(ascii: &str, translate: impl FnOnce(&[String]) -> Result<Vec<String>, St
 
 /// Back-translates each braille ASCII text (one per line) through
 /// liblouis's `lou_translate`, with the display table the BRF writer uses.
-// shortcut: liblouis is found on the PATH; when optional components can
-// install it (beta 1 task c5), look in the components folder first too.
+/// It is looked for in the components folder first, then on the PATH
+/// (`textweaver_store::lou_translate`).
 fn liblouis(texts: &[String], code: BrfCode) -> Result<Vec<String>, String> {
     use std::io::Write;
     use std::process::Stdio;
@@ -619,7 +619,7 @@ fn liblouis(texts: &[String], code: BrfCode) -> Result<Vec<String>, String> {
         return Ok(Vec::new());
     }
     let tables = format!("en-us-brf.dis,{}", code.table());
-    let mut child = textweaver_core::process::command("lou_translate")
+    let mut child = textweaver_store::lou_translate()
         .args(["--backward", &tables])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

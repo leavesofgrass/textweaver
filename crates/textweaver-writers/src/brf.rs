@@ -1047,7 +1047,7 @@ mod louis {
         use std::process::Stdio;
 
         let tables = format!("en-us-brf.dis,{table}");
-        let mut child = textweaver_core::process::command("lou_translate")
+        let mut child = textweaver_store::lou_translate()
             .args(["--forward", &tables])
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -1091,7 +1091,7 @@ mod louis {
     /// True when `lou_translate` runs.
     #[cfg(all(test, feature = "liblouis"))]
     pub(super) fn available() -> bool {
-        textweaver_core::process::command("lou_translate")
+        textweaver_store::lou_translate()
             .arg("--version")
             .output()
             .is_ok_and(|o| o.status.success())

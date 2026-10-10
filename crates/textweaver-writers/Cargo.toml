@@ -19,12 +19,13 @@ zip.workspace = true
 textweaver-fonts.workspace = true
 textweaver-math.workspace = true
 textweaver-mathcat = { workspace = true, optional = true }
+textweaver-store = { workspace = true, optional = true }
 
 [features]
 default = ["bundled-fonts"]
 # Contracted (grade 2) braille through liblouis's `lou_translate`, when it
-# is installed.
-liblouis = []
+# is installed (found in the components folder first, then the PATH).
+liblouis = ["dep:textweaver-store"]
 # Bundled fonts (Atkinson Hyperlegible Next and Mono, OpenDyslexic): PDF
 # output needs no installed font, and EPUB can embed them.
 bundled-fonts = ["textweaver-fonts/bundled-fonts"]

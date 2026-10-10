@@ -19,7 +19,7 @@ use std::ffi::{OsStr, OsString};
 use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use ropey::Rope;
@@ -126,10 +126,13 @@ fn timeout_from_env() -> Duration {
         .map_or(DEFAULT_TIMEOUT, Duration::from_secs)
 }
 
-/// The program to run (`TEXTWEAVER_PANDOC`, else `pandoc` on `PATH`).
+/// The program to run: the copy in textweaver's components folder, then
+/// `TEXTWEAVER_PANDOC`, then `pandoc` on `PATH`
+/// (`textweaver_store::find_helper`).
 pub fn program() -> OsString {
-    std::env::var_os("TEXTWEAVER_PANDOC")
-        .filter(|p| !p.is_empty())
+    textweaver_store::find_helper("pandoc", Some("TEXTWEAVER_PANDOC"))
+        .map(OsString::from)
+        .or_else(|| std::env::var_os("TEXTWEAVER_PANDOC").filter(|p| !p.is_empty()))
         .unwrap_or_else(|| "pandoc".into())
 }
 
@@ -145,18 +148,23 @@ fn command(program: &OsStr) -> Command {
     c
 }
 
-/// True when Pandoc runs (checked once per process).
+/// True when Pandoc runs. A yes is remembered for the process; a no is
+/// checked again next time, so Pandoc installed meanwhile (textweaver can
+/// fetch it) is found without a restart.
 pub fn pandoc_available() -> bool {
-    static AVAILABLE: OnceLock<bool> = OnceLock::new();
-    *AVAILABLE.get_or_init(|| {
-        command(&program())
-            .arg("--version")
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .is_ok_and(|s| s.success())
-    })
+    static AVAILABLE: AtomicBool = AtomicBool::new(false);
+    if AVAILABLE.load(Ordering::Relaxed) {
+        return true;
+    }
+    let runs = command(&program())
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success());
+    AVAILABLE.store(runs, Ordering::Relaxed);
+    runs
 }
 
 /// What a finished run produced.

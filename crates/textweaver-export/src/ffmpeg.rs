@@ -111,23 +111,7 @@ pub fn find_in(
     env: Option<OsString>,
     path: Option<OsString>,
 ) -> Option<PathBuf> {
-    if let Some(p) = components.and_then(|dir| {
-        textweaver_store::find_in_components(
-            dir,
-            &[if cfg!(windows) {
-                "ffmpeg.exe"
-            } else {
-                "ffmpeg"
-            }],
-        )
-    }) {
-        return Some(p);
-    }
-    if let Some(p) = env.filter(|v| !v.is_empty()) {
-        let p = PathBuf::from(p);
-        return p.is_file().then_some(p);
-    }
-    find_on_path("ffmpeg", path)
+    textweaver_store::find_helper_in(components, "ffmpeg", env, path)
 }
 
 /// `name` in the directories of `path` (a `PATH`-style list), by the

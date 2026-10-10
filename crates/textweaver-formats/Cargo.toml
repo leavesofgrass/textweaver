@@ -46,6 +46,9 @@ bibliography = ["dep:textweaver-cite"]
 [dependencies]
 textweaver-core.workspace = true
 textweaver-text.workspace = true
+# Helper programs (pandoc, liblouis) are looked for in the components
+# folder first (`textweaver_store::find_helper`).
+textweaver-store.workspace = true
 thiserror.workspace = true
 log.workspace = true
 serde.workspace = true
