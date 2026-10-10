@@ -544,6 +544,35 @@ pub struct Highlight {
     pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
+/// The key of a highlight's palette entry name in [`Highlight::extra`].
+const PALETTE_NAME_KEY: &str = "name";
+
+impl Highlight {
+    /// The name of the palette entry it was made with ("important"), or
+    /// `None` for a highlight made before the palette, which takes the
+    /// entry of its color.
+    ///
+    /// shortcut: kept in `extra` as `"name"`, so the record's fields, its
+    /// sync and every place that builds one stay as they are; make it a
+    /// field when the record next changes shape.
+    pub fn palette_name(&self) -> Option<&str> {
+        self.extra
+            .get(PALETTE_NAME_KEY)
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|n| !n.is_empty())
+    }
+
+    /// Records the palette entry's name and color on the highlight.
+    pub fn set_palette_entry(&mut self, name: &str, color: &str) {
+        self.extra.insert(
+            PALETTE_NAME_KEY.to_owned(),
+            serde_json::Value::String(name.trim().to_owned()),
+        );
+        self.color = highlight_color(color);
+    }
+}
+
 impl Default for Highlight {
     fn default() -> Self {
         Highlight {
@@ -583,11 +612,20 @@ impl Annotation<'_> {
         }
     }
 
-    /// What to say when the cursor reaches it: "Note: ..." or "Yellow
-    /// highlight: ...".
+    /// What to say when the cursor reaches it: "Note: ...", "Highlight,
+    /// important: ..." (a palette entry's name), or "Yellow highlight:
+    /// ..." (a highlight made before the palette).
     pub fn spoken(&self) -> String {
         match self {
             Annotation::Note(n) => format!("Note: {}", n.summary()),
+            Annotation::Highlight(h) if h.palette_name().is_some() => {
+                let name = h.palette_name().unwrap_or_default();
+                if h.text.is_empty() {
+                    format!("Highlight, {name}")
+                } else {
+                    format!("Highlight, {name}: {}", collapse(&h.text, 200))
+                }
+            }
             Annotation::Highlight(h) => {
                 let mut name = color_name(&h.color);
                 if let Some(first) = name.get(..1) {
@@ -934,6 +972,17 @@ mod tests {
             Annotation::Highlight(&h).spoken(),
             "Yellow highlight: key idea"
         );
+        let mut named = h.clone();
+        named.set_palette_entry(" ask the professor ", "skyblue");
+        assert_eq!(named.palette_name(), Some("ask the professor"));
+        assert_eq!(
+            Annotation::Highlight(&named).spoken(),
+            "Highlight, ask the professor: key idea"
+        );
+        // The name travels in the record and comes back.
+        let json = serde_json::to_string(&named).unwrap();
+        let back: Highlight = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.palette_name(), Some("ask the professor"));
         let n = Note {
             note: "check this".into(),
             anchor: "claim".into(),

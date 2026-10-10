@@ -457,6 +457,11 @@ pub struct HighlightSettings {
     /// Sentence highlight color laid over the theme's spoken-sentence
     /// style; `None` (or `"theme"`) keeps the theme's own.
     pub sentence_color: Option<String>,
+    /// The named highlight palette (`[[highlight.palette]]`): up to
+    /// [`PALETTE_MAX`] entries, each a name the reader writes, a color and
+    /// a shape. The first five have keys of their own (Alt+1 to Alt+5
+    /// by default).
+    pub palette: Vec<PaletteEntry>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -471,9 +476,104 @@ impl Default for HighlightSettings {
             speed: 1.0,
             color: "theme".into(),
             sentence_color: None,
+            palette: default_palette(),
             extra: toml::Table::new(),
         }
     }
+}
+
+/// The most entries the highlight palette keeps.
+pub const PALETTE_MAX: usize = 8;
+
+/// How a palette entry's highlights are drawn besides their color, so no
+/// two entries differ by color alone: the terminal gives each shape its
+/// own text attributes, the window its own mark, and BRF each entry its
+/// own typeform.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HighlightShape {
+    /// A single underline.
+    #[default]
+    Underline,
+    /// A double underline.
+    DoubleUnderline,
+    /// Bold text.
+    Bold,
+    /// A dotted underline.
+    Dotted,
+    /// A bracket at each end.
+    Brackets,
+    /// A symbol before the highlighted text.
+    Symbol,
+}
+
+impl HighlightShape {
+    /// Every shape, in the order the palette's defaults use them.
+    pub const ALL: [HighlightShape; 6] = [
+        HighlightShape::Underline,
+        HighlightShape::DoubleUnderline,
+        HighlightShape::Brackets,
+        HighlightShape::Dotted,
+        HighlightShape::Bold,
+        HighlightShape::Symbol,
+    ];
+
+    /// The stored name: `double_underline`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            HighlightShape::Underline => "underline",
+            HighlightShape::DoubleUnderline => "double_underline",
+            HighlightShape::Bold => "bold",
+            HighlightShape::Dotted => "dotted",
+            HighlightShape::Brackets => "brackets",
+            HighlightShape::Symbol => "symbol",
+        }
+    }
+}
+
+/// One entry of the highlight palette.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PaletteEntry {
+    /// The name the reader gave it ("important", "ask the professor"),
+    /// said with each of its highlights.
+    pub name: String,
+    /// A color name (`yellow`, `skyblue`) or `#rrggbb`.
+    pub color: String,
+    /// How it is drawn besides its color.
+    pub shape: HighlightShape,
+}
+
+impl Default for PaletteEntry {
+    fn default() -> Self {
+        PaletteEntry {
+            name: String::new(),
+            color: "yellow".into(),
+            shape: HighlightShape::Underline,
+        }
+    }
+}
+
+/// The starting palette: star's five highlight colors (yellow, green,
+/// cyan, pink, orange, in its Ctrl+Shift+1 to 5 order), each with a study
+/// name and a shape of its own. A highlight made before the palette (its
+/// color only) takes the entry of its color.
+pub fn default_palette() -> Vec<PaletteEntry> {
+    [
+        ("important", "yellow"),
+        ("define", "green"),
+        ("question", "cyan"),
+        ("example", "pink"),
+        ("review", "orange"),
+    ]
+    .into_iter()
+    .zip(HighlightShape::ALL)
+    .map(|((name, color), shape)| PaletteEntry {
+        name: name.into(),
+        color: color.into(),
+        shape,
+    })
+    .collect()
 }
 
 /// How tables are read aloud.
@@ -2133,6 +2233,36 @@ impl Settings {
             );
             self.highlight.speed = fixed;
         }
+        if self.highlight.palette.len() > PALETTE_MAX {
+            fix(
+                "highlight.palette".into(),
+                format!(
+                    "has {} entries, more than {PALETTE_MAX}",
+                    self.highlight.palette.len()
+                ),
+                format!("the first {PALETTE_MAX}"),
+            );
+            self.highlight.palette.truncate(PALETTE_MAX);
+        }
+        if self.highlight.palette.is_empty() {
+            fix(
+                "highlight.palette".into(),
+                "is empty".into(),
+                "the starting palette".into(),
+            );
+            self.highlight.palette = default_palette();
+        }
+        for (i, e) in self.highlight.palette.iter_mut().enumerate() {
+            if e.name.trim().is_empty() {
+                let name = e.color.trim().to_owned();
+                fix(
+                    format!("highlight.palette entry {}", i + 1),
+                    "has no name".into(),
+                    format!("\"{name}\""),
+                );
+                e.name = name;
+            }
+        }
         let mut at_least = |value: &mut usize, min: usize, name: &str| {
             if *value < min {
                 fix(
@@ -3061,6 +3191,74 @@ wrap_navigation = true
         assert!((s.highlight.speed - 1.5).abs() < f32::EPSILON);
         assert_eq!(s.highlight.lead_words, -5);
         assert_eq!(loaded.warnings.len(), 4, "{:?}", loaded.warnings);
+    }
+
+    /// The highlight palette: an older file without one gets the starting
+    /// palette (star's five colors, five different shapes); a written one
+    /// loads, keeps its order, and round-trips; more than eight entries
+    /// keep the first eight, and a nameless entry takes its color's name.
+    #[test]
+    fn highlight_palette_loads_and_is_kept_in_bounds() {
+        let (_d, store) = store();
+        write(
+            &store,
+            "[highlight]
+color = \"yellow\"
+",
+        );
+        let s = store.load_detailed().settings;
+        assert_eq!(s.highlight.palette, default_palette());
+        let shapes: std::collections::HashSet<_> =
+            s.highlight.palette.iter().map(|e| e.shape).collect();
+        assert_eq!(shapes.len(), 5, "no two starting entries share a shape");
+        let colors: Vec<&str> = s
+            .highlight
+            .palette
+            .iter()
+            .map(|e| e.color.as_str())
+            .collect();
+        assert_eq!(colors, ["yellow", "green", "cyan", "pink", "orange"]);
+
+        let mut file = String::from(
+            "[highlight]
+",
+        );
+        for i in 0..10 {
+            file.push_str(&format!(
+                "[[highlight.palette]]
+name = \"n{i}\"
+color = \"#00008{i}\"
+shape = \"dotted\"
+"
+            ));
+        }
+        file.push_str(
+            "[[highlight.palette]]
+color = \"blue\"
+",
+        );
+        write(&store, &file);
+        let loaded = store.load_detailed();
+        let p = &loaded.settings.highlight.palette;
+        assert_eq!(p.len(), PALETTE_MAX);
+        assert_eq!(p[0].name, "n0");
+        assert_eq!(p[0].shape, HighlightShape::Dotted);
+        assert_eq!(loaded.warnings.len(), 1, "{:?}", loaded.warnings);
+
+        write(
+            &store,
+            "[[highlight.palette]]
+color = \"blue\"
+shape = \"brackets\"
+",
+        );
+        let loaded = store.load_detailed();
+        assert_eq!(loaded.settings.highlight.palette[0].name, "blue");
+        store.save(&loaded.settings).unwrap();
+        assert_eq!(
+            store.load_detailed().settings.highlight.palette,
+            loaded.settings.highlight.palette
+        );
     }
 
     /// `Volume` deserializes as a bare number, so 150 got through before.
