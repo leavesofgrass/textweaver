@@ -5,10 +5,21 @@
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 static FILE: OnceLock<Mutex<File>> = OnceLock::new();
+
+/// The log is paused while a secret prompt is open ([`set_paused`]).
+static PAUSED: AtomicBool = AtomicBool::new(false);
+
+#[cfg(test)]
+thread_local! {
+    /// A test's copy of the lines written on its thread ([`capture`]).
+    static CAPTURED: std::cell::RefCell<Option<Vec<String>>> =
+        const { std::cell::RefCell::new(None) };
+}
 
 /// Sends log lines to `path` instead of standard error.
 pub fn to_file(path: &Path) -> std::io::Result<()> {
@@ -22,8 +33,46 @@ pub fn to_file_active() -> bool {
     FILE.get().is_some()
 }
 
-/// Writes one line.
+/// Writes one line, unless the log is paused ([`set_paused`]).
 pub fn line(text: &str) {
+    if !PAUSED.load(Ordering::SeqCst) {
+        write(text);
+    }
+}
+
+/// Pauses the log while a secret prompt (a token, B1-c2) is open, and
+/// resumes it once the prompt is gone. While paused, [`line`] writes
+/// nothing, so the keys typed, the commands they make, and the answer
+/// never reach the log, whichever part of the window logs them. With
+/// `note`, one line says the log paused and one that it resumed, neither
+/// holding anything typed.
+pub fn set_paused(on: bool, note: bool) {
+    if PAUSED.load(Ordering::SeqCst) == on {
+        return;
+    }
+    if on && note {
+        write("log paused: a secret prompt is open");
+    }
+    PAUSED.store(on, Ordering::SeqCst);
+    if !on && note {
+        write("log resumed");
+    }
+}
+
+/// Starts keeping a copy of every line written on this thread, and
+/// returns the lines kept since the last call (tests only).
+#[cfg(test)]
+pub fn capture() -> Vec<String> {
+    CAPTURED.with(|c| c.borrow_mut().replace(Vec::new()).unwrap_or_default())
+}
+
+fn write(text: &str) {
+    #[cfg(test)]
+    CAPTURED.with(|c| {
+        if let Some(lines) = c.borrow_mut().as_mut() {
+            lines.push(text.to_owned());
+        }
+    });
     match FILE.get() {
         Some(file) => {
             if let Ok(mut f) = file.lock() {

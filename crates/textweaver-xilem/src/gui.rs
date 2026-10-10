@@ -891,6 +891,32 @@ pub fn prompt_dialog(
     (modal, field_id)
 }
 
+/// The secret after an edit in a secret prompt's field, which shows one
+/// star per character (`PromptModel::shown_text`, B1-c2): `real` is the
+/// secret before the edit, `field` the field's text after it. Stars kept
+/// at the start and the end stand for the secret's characters there;
+/// what lies between was typed or pasted. Returns the new secret and the
+/// caret after the edit, in characters.
+///
+/// shortcut: a star typed into the secret reads as a kept character, and
+/// deleting inside a run of stars removes from the run's end; GitHub
+/// tokens hold only letters, digits and `_`, so both are moot until a
+/// secret that may hold a star needs a masked field of its own.
+pub fn secret_edit(real: &str, field: &str) -> (String, usize) {
+    let real: Vec<char> = real.chars().collect();
+    let field: Vec<char> = field.chars().collect();
+    let stars = |it: &mut dyn Iterator<Item = &char>| it.take_while(|c| **c == '*').count();
+    let head = stars(&mut field.iter()).min(real.len());
+    let tail = stars(&mut field[head..].iter().rev()).min(real.len() - head);
+    let typed = &field[head..field.len() - tail];
+    let secret: String = real[..head]
+        .iter()
+        .chain(typed)
+        .chain(&real[real.len() - tail..])
+        .collect();
+    (secret, head + typed.len())
+}
+
 /// The command palette as a dialog: a filter field over the list of
 /// `items`, and a footer with its hint and Close. Returns the dialog and
 /// the field's id (to focus it).
@@ -1735,6 +1761,12 @@ impl Gui {
     }
 
     fn refresh(&mut self, ctx: &mut DriverCtx<'_>) {
+        // The log stays paused while a secret prompt is open (B1-c2).
+        let secret = self
+            .app
+            .prompt_model()
+            .is_some_and(|p| p.purpose.is_secret());
+        crate::log::set_paused(secret, self.log);
         if self.app.font_downloads() != self.font_downloads {
             // A font finished downloading (Lexend): register it, and lay the
             // text out again so a family list naming it now finds it.
@@ -2447,10 +2479,11 @@ impl Gui {
         } else {
             c.tr("gui-prompt-hint")
         };
+        // A secret prompt (a token) shows one star per character.
         let initial = self
             .app
             .prompt_model()
-            .map(textweaver_app::PromptModel::text)
+            .map(textweaver_app::PromptModel::shown_text)
             .unwrap_or_default();
         // The edit details form (W7m): Tab and Shift+Tab move between its
         // fields, each the app's prompt.
@@ -2460,6 +2493,8 @@ impl Gui {
         if self.log {
             crate::log::line(&format!("dialog: prompt {label_text:?}"));
         }
+        // Nothing typed in a secret prompt reaches the log (B1-c2).
+        crate::log::set_paused(purpose.is_secret(), self.log);
     }
 
     /// The system's file chooser, on its own thread and modal to the
@@ -2659,6 +2694,35 @@ impl Gui {
         self.show_dialog(ctx, modal, field_id);
     }
 
+    /// The prompt's field changed: the app's prompt model follows it. In
+    /// a secret prompt the field shows stars, so the secret is worked out
+    /// from the edit ([`secret_edit`]) and the field drawn again as stars.
+    fn prompt_changed(&mut self, ctx: &mut DriverCtx<'_>, field: String) {
+        let Some(model) = self.app.prompt_model().filter(|p| p.purpose.is_secret()) else {
+            let _ = self
+                .app
+                .dispatch(Command::PromptKey(PromptKey::SetText(field)));
+            return;
+        };
+        let (secret, caret) = secret_edit(&model.text(), &field);
+        let _ = self
+            .app
+            .dispatch(Command::PromptKey(PromptKey::SetText(secret)));
+        let shown = self
+            .app
+            .prompt_model()
+            .map(textweaver_app::PromptModel::shown_text)
+            .unwrap_or_default();
+        if shown != field {
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(PROMPT_FIELD, |mut f| {
+                    TextArea::reset_text(&mut f, &shown);
+                    // A star is one byte, so the caret's byte is its char.
+                    TextArea::select_byte_range(&mut f, caret, caret);
+                });
+        }
+    }
+
     /// A key for the app's prompt: the app changes its text (history,
     /// completion), and the field shows it.
     fn prompt_key(&mut self, ctx: &mut DriverCtx<'_>, key: PromptKey) {
@@ -2669,7 +2733,7 @@ impl Gui {
         if let Some(text) = self
             .app
             .prompt_model()
-            .map(textweaver_app::PromptModel::text)
+            .map(textweaver_app::PromptModel::shown_text)
         {
             ctx.render_root(self.window_id)
                 .edit_widget_with_tag(PROMPT_FIELD, |mut f| TextArea::reset_text(&mut f, &text));
@@ -3962,7 +4026,14 @@ impl Gui {
             self.dispatch(ctx, cmd);
             return;
         }
+        let secret = self
+            .app
+            .prompt_model()
+            .is_some_and(|p| p.purpose.is_secret());
         let key = match text {
+            // A secret prompt's field holds stars; the model already has
+            // the secret (`prompt_changed`).
+            Some(_) if secret => PromptKey::Enter,
             Some(t) => {
                 let _ = self.app.dispatch(Command::PromptKey(PromptKey::SetText(t)));
                 PromptKey::Enter
@@ -4596,7 +4667,7 @@ impl AppDriver for Gui {
                     // The app's prompt model follows the field (no echo:
                     // the field says what was typed).
                     let q = q.clone();
-                    let _ = self.app.dispatch(Command::PromptKey(PromptKey::SetText(q)));
+                    self.prompt_changed(ctx, q);
                 }
                 (TextAction::Entered(text), _) => {
                     // In the palette, Enter runs the match Up and Down
@@ -5160,5 +5231,58 @@ mod tests {
             Some((ActionId::ChooseFont, true))
         );
         assert_eq!(window_command_of(&Command::Cancel, false), None);
+    }
+
+    /// A secret prompt's field shows stars, and the secret follows each
+    /// edit: typing at the end, a paste, Backspace, and typing between.
+    #[test]
+    fn the_secret_field_follows_its_edits() {
+        assert_eq!(secret_edit("", "Q"), ("Q".to_owned(), 1));
+        assert_eq!(secret_edit("QZ", "**X"), ("QZX".to_owned(), 3));
+        assert_eq!(secret_edit("QZ", "**pasted"), ("QZpasted".to_owned(), 8));
+        assert_eq!(secret_edit("QZX", "**"), ("QZ".to_owned(), 2));
+        assert_eq!(secret_edit("QZX", "*a**"), ("QaZX".to_owned(), 2));
+        assert_eq!(secret_edit("QZX", "***"), ("QZX".to_owned(), 3));
+        assert_eq!(secret_edit("QZX", ""), (String::new(), 0));
+    }
+
+    /// With the log on, typing a token into the secret prompt writes no
+    /// character of it: the window's lines for each key, the command each
+    /// edit makes, and the answer all fall in the paused log (B1-c2).
+    #[test]
+    fn a_secret_prompt_keeps_typed_characters_out_of_the_log() {
+        const TOKEN: &str = "QZX9_7VWK";
+        let model = textweaver_app::PromptModel::new("token", PromptPurpose::GitHubToken);
+        assert!(model.purpose.is_secret());
+        let _ = crate::log::capture();
+        crate::log::line("before");
+        crate::log::set_paused(true, true);
+        let (mut secret, mut field) = (String::new(), String::new());
+        for c in TOKEN.chars() {
+            field.push(c);
+            crate::log::line(&format!("key {c} -> None"));
+            (secret, _) = secret_edit(&secret, &field);
+            let cmd = Command::PromptKey(PromptKey::SetText(secret.clone()));
+            crate::log::line(&format!("command {cmd:?}"));
+            field = "*".repeat(secret.chars().count());
+        }
+        assert_eq!(secret, TOKEN);
+        crate::log::line(&format!("command {:?}", Command::Answer(secret.clone())));
+        crate::log::set_paused(false, true);
+        crate::log::line("after");
+        let lines = crate::log::capture();
+        assert_eq!(
+            lines,
+            [
+                "before",
+                "log paused: a secret prompt is open",
+                "log resumed",
+                "after"
+            ]
+        );
+        let all = lines.concat();
+        for c in TOKEN.chars() {
+            assert!(!all.contains(c), "{c:?} reached the log: {all}");
+        }
     }
 }
