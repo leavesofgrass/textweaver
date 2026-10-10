@@ -20,7 +20,7 @@
 #   once. The app is checked (--version, a screenshot drawn on the CPU,
 #   and on macOS a silent reading) before upload. The Linux jobs also
 #   upload a copy of each .zsync file under the -gui name, so the app
-#   AppImages of 0.1.0-beta.1 and earlier update to the single image.
+#   AppImages of 0.1.0-alpha.9 and earlier update to the single image.
 #
 # The terminal packages are smoke-tested beyond --version before upload
 # (tools/package-smoke.sh: open a fixture, tw info, tw components list,

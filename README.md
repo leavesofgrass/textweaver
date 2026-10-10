@@ -19,7 +19,7 @@ Every release on the [releases page](https://github.com/leavesofgrass/textweaver
 | macOS, Apple silicon and Intel | `macos-universal.zip` |
 | Windows, x86_64 | `windows-x86_64.zip` |
 
-Linux also has `.tar.gz` packages for systems where AppImages cannot run. Releases up to 0.1.0-beta.1 had the app in separate downloads whose names end in `-gui`.
+Linux also has `.tar.gz` packages for systems where AppImages cannot run. Releases up to 0.1.0-alpha.9 had the app in separate downloads whose names end in `-gui`.
 
 Each package is self-contained: unpack it, keep its files together, and run the program. Each platform has one first-run step, because the builds are not code-signed:
 
