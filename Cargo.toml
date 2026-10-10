@@ -282,7 +282,7 @@ ruzstd = "0.9"
 rten = { version = "0.26", default-features = false, features = ["onnx_format", "contrib", "random"] }
 rten-tensor = "0.26"
 rten-generate = { version = "0.26", features = ["text-decoder"] }
-rten-text = "0.26"
+rten-text = "0.27"
 # Whisper's spectrogram (the FFT crate rten itself uses).
 rustfft = "6.4"
 # Pure-Rust eSpeak NG (GPL-3.0-or-later, as textweaver): Piper's phonemizer
