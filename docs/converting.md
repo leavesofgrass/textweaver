@@ -443,7 +443,7 @@ tw convert essay.textile --to md
 ```
 
 ```bash
-textweaver essay.md
+tw essay.md
 ```
 
 ### PDF files

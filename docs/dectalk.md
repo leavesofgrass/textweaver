@@ -62,7 +62,7 @@ tw speak --backend dectalk "Hello from DECtalk."
 To read a document with DECtalk:
 
 ```bash
-textweaver --backend dectalk book.md
+tw --backend dectalk book.md
 ```
 
 To make DECtalk your engine for good, set it in `settings.toml`:

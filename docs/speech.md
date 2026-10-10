@@ -220,7 +220,7 @@ punctuation = "some"
 split_caps = false
 caps = "pitch"
 auto_play = false
-skip_code = true
+skip_code = false
 latency_offset_ms = 120
 pause_heading_ms = 400
 pause_paragraph_ms = 300
@@ -240,7 +240,7 @@ verbosity = "normal"
 - `split_caps`: speak the parts of words written in mixed capitals separately: "camelCase" as "camel Case", "XMLHttpRequest" as "XML Http Request".
 - `caps`: how a capital letter is marked when a single character is spoken: `"pitch"`, `"tone"`, `"say_cap"`, or `"none"`. See [Writing and editing](editing.md).
 - `auto_play`: start reading as soon as a document opens.
-- `skip_code`: do not read code blocks aloud.
+- `skip_code`: do not read code blocks aloud. Off by default: code blocks are read.
 - `speed_presets`: the presets for **F8**, as above.
 - `latency_offset_ms`: how many milliseconds to delay the highlight behind an engine's reported word time. See [How exactly words are highlighted](#how-exactly-words-are-highlighted).
 - `pause_heading_ms`, `pause_paragraph_ms`, `pause_list_item_ms`: how long speech pauses after a heading, a paragraph and a list item, in milliseconds, from 0 to 3000. 0 turns that pause off. See [Pauses at headings, paragraphs and list items](#pauses-at-headings-paragraphs-and-list-items).

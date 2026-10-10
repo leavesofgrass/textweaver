@@ -402,7 +402,7 @@ Without `--voice`, textweaver uses your `[speech] voice` setting, but only when 
 - `[speech] rate` and `[speech] pitch`. The `--rate` and `--pitch` options override them for this export.
 - `[speech] volume`. There is no option for it; change the setting.
 - `[speech] punctuation` and `[speech] split_caps`: how much punctuation is spoken, and whether capitals inside words are spoken separately.
-- `[speech] skip_code`: whether code blocks are left out.
+- `[speech] skip_code`: whether code blocks are left out (off by default, so code is read).
 - `[speech] verbosity`: how much structure is announced. At `low`, headings are not announced as "heading level 1".
 - `[normalization]`: numbers, abbreviations, your pronunciations, math, and the community lexicon, the same as when reading aloud. Engines that read numbers and abbreviations themselves, such as ETI-Eloquence, are left to do so.
 - `[normalization] table_mode`: tables read with row and column context (`structured`), as cell text only (`flat`), or left out (`skip`).
