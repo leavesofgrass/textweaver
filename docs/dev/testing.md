@@ -429,7 +429,7 @@ The Windows packages, built with `cargo xtask dist` and `cargo xtask gui-dist` (
 | `textweaver-gui.exe`, `--no-screenshot` | 81,058,816 | 80,076,800 | 982,016 smaller |
 
 - **The reader built on its own** saves 43 KB, not the 1 to 3 MB the estimate gave: the reader already links an HTTP client (ureq with rustls) for citation lookups through `textweaver-cite`, so building it apart from `tw` only drops `tw`'s own features (`textweaver-formats`' `url`, `textweaver-ocr`'s `download`). `cargo tree -p textweaver-tui -i ureq -e features` shows the path.
-- **The screenshot harness** is about 1 MB of the GUI program and 0.4 MB of its zip. The package keeps it while the release workflow's GUI checks draw a `--screenshot` with it ([releasing](releasing.md#the-gui-packages)).
+- **The screenshot harness** is about 1 MB of the GUI program and 0.4 MB of its zip. The package keeps it while the release workflow's GUI checks draw a `--screenshot` with it ([releasing](releasing.md#the-app-in-the-package)).
 - Against alpha.7's published packages (the size budget's file, `xtask/package-sizes.toml`), the terminal zip is 0.9 percent larger and the GUI zip 0.7 percent larger, well within the 10 percent budget.
 
 ## Braille, real engines, and timing
