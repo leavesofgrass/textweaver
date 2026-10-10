@@ -245,18 +245,24 @@ download_release() {
   else
     WORK="$(mktemp -d -t textweaver-install)"
   fi
-  say "Downloading $name.tar.gz and SHA256SUMS.txt from release $TAG."
-  run curl -fsSL -o "$WORK/$name.tar.gz" "$base/$name.tar.gz"
   run curl -fsSL -o "$WORK/SHA256SUMS.txt" "$base/SHA256SUMS.txt"
+  # Since beta 1 the package is a zip holding textweaver.app beside tw;
+  # releases up to 0.1.0-alpha.9 had a tarball.
+  local file="$name.zip"
+  if [ "$DRY_RUN" = 0 ] && ! awk -v f="$file" '$2 == f || $2 == "*" f { found = 1 } END { exit !found }' "$WORK/SHA256SUMS.txt"; then
+    file="$name.tar.gz"
+  fi
+  say "Downloading $file from release $TAG."
+  run curl -fsSL -o "$WORK/$file" "$base/$file"
 
   say "Checking the download against SHA256SUMS.txt."
   if [ "$DRY_RUN" = 1 ]; then
-    say "Would run: shasum -a 256 $WORK/$name.tar.gz, and compare it with the line for $name.tar.gz in SHA256SUMS.txt"
+    say "Would run: shasum -a 256 $WORK/$file, and compare it with the line for $file in SHA256SUMS.txt"
   else
     local want got
-    want="$(awk -v f="$name.tar.gz" '$2 == f || $2 == "*" f { print $1 }' "$WORK/SHA256SUMS.txt" | head -n 1)"
-    [ -n "$want" ] || die "SHA256SUMS.txt has no line for $name.tar.gz, so the download cannot be checked. Nothing was installed."
-    got="$(shasum -a 256 "$WORK/$name.tar.gz" | awk '{ print $1 }')"
+    want="$(awk -v f="$file" '$2 == f || $2 == "*" f { print $1 }' "$WORK/SHA256SUMS.txt" | head -n 1)"
+    [ -n "$want" ] || die "SHA256SUMS.txt has no line for $file, so the download cannot be checked. Nothing was installed."
+    got="$(shasum -a 256 "$WORK/$file" | awk '{ print $1 }')"
     if [ "$want" != "$got" ]; then
       die "The checksum does not match (expected $want, got $got). The download may be damaged. Nothing was installed."
     fi
@@ -264,7 +270,10 @@ download_release() {
   fi
 
   say "Extracting the package."
-  run tar -xzf "$WORK/$name.tar.gz" -C "$WORK"
+  case $file in
+    *.zip) run ditto -x -k "$WORK/$file" "$WORK" ;;
+    *) run tar -xzf "$WORK/$file" -C "$WORK" ;;
+  esac
   STAGE="$WORK/$name"
   say "Removing the quarantine flag, so Gatekeeper lets the programs run. The package is signed ad hoc, not notarized."
   if [ "$DRY_RUN" = 1 ]; then
@@ -311,23 +320,35 @@ GUI_INSTALLED=""
 # had an Apple silicon one only.
 install_gui() {
   section "GUI"
+  local app="$APPSDIR/textweaver.app"
+  # Since beta 1 the app is in the package itself, beside tw.
+  if [ "$DRY_RUN" = 1 ] || [ -d "$STAGE/textweaver.app" ]; then
+    if [ -e "$app" ] && ! is_our_app "$app" && [ "$DRY_RUN" = 0 ]; then
+      die "$app exists and is not the textweaver GUI. Move it away, then run this script again."
+    fi
+    say "Installing textweaver.app, from the package, into $APPSDIR."
+    run mkdir -p "$APPSDIR"
+    if [ -e "$app" ] || [ "$DRY_RUN" = 1 ]; then
+      run rm -rf "$app"
+    fi
+    run ditto "$STAGE/textweaver.app" "$app"
+    GUI_INSTALLED="app"
+    return 0
+  fi
+  # Releases up to 0.1.0-alpha.9 had the app in a package of its own.
   local base="https://github.com/$REPO/releases/download/$TAG"
   local name="" candidate
   local arch
   arch="$(uname -m)"
-  if [ "$DRY_RUN" = 1 ]; then
-    name="textweaver-$VERSION-macos-universal-gui"
-  else
-    for candidate in universal aarch64; do
-      if [ "$candidate" = aarch64 ] && [ "$arch" != arm64 ]; then
-        continue
-      fi
-      if awk -v f="textweaver-$VERSION-macos-$candidate-gui.zip" '$2 == f || $2 == "*" f { found = 1 } END { exit !found }' "$WORK/SHA256SUMS.txt"; then
-        name="textweaver-$VERSION-macos-$candidate-gui"
-        break
-      fi
-    done
-  fi
+  for candidate in universal aarch64; do
+    if [ "$candidate" = aarch64 ] && [ "$arch" != arm64 ]; then
+      continue
+    fi
+    if awk -v f="textweaver-$VERSION-macos-$candidate-gui.zip" '$2 == f || $2 == "*" f { found = 1 } END { exit !found }' "$WORK/SHA256SUMS.txt"; then
+      name="textweaver-$VERSION-macos-$candidate-gui"
+      break
+    fi
+  done
   if [ -z "$name" ]; then
     warn "Release $TAG has no GUI package for this Mac ($arch), so the GUI is not installed."
     return 0
@@ -485,10 +506,15 @@ install_stage() {
     [ -x "$STAGE/tw" ] || die "$STAGE/tw is missing, so there is nothing to install."
   fi
   run mkdir -p "$BINDIR" "$DOCDIR" "$DATADIR/scripts"
+  run install -m 0755 "$STAGE/tw" "$BINDIR/tw"
+  # Since beta 1 textweaver is a link to tw, made again here so it is not
+  # a second copy; older packages had a program of its own.
+  if [ -L "$STAGE/textweaver" ]; then
+    run ln -sfn tw "$BINDIR/textweaver"
+  else
+    run install -m 0755 "$STAGE/textweaver" "$BINDIR/textweaver"
+  fi
   local f
-  for f in textweaver tw; do
-    run install -m 0755 "$STAGE/$f" "$BINDIR/$f"
-  done
   for f in QUICKSTART.md README.md LICENSE CHANGELOG.md INSTALL.md; do
     if [ "$DRY_RUN" = 1 ] || [ -f "$STAGE/$f" ]; then
       run install -m 0644 "$STAGE/$f" "$DOCDIR/$f"

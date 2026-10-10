@@ -17,8 +17,10 @@
   it again updates the install. It works in Windows PowerShell 5.1 and in
   PowerShell 7.
 
-  With -Gui it also installs the GUI, textweaver-gui, from the release's GUI
-  package (or builds it with cargo xtask gui-dist), in a gui folder inside
+  Since beta 1 the app, textweaver-gui, is in the same package as tw and is
+  always installed beside it; -Gui adds its Start menu shortcut. For older
+  releases, -Gui installs the app from the release's GUI package (or builds
+  it with cargo xtask gui-dist), in a gui folder inside
   the install, and offers a second Start menu shortcut for it.
 
   GNU-style options work too: --help, --dry-run, --yes, --from-source,
@@ -643,10 +645,23 @@ try {
     $withGui = Get-GuiChoice
     Install-Stage $package
     if ($withGui) {
-        if ($FromSource) { $guiStage = Build-GuiFromSource $package } else { $guiStage = Get-ReleaseGuiPackage $package }
-        if ($guiStage) {
-            Install-Gui $guiStage
+        if ($DryRun -or (Test-Path -LiteralPath (Join-Path $package.Stage 'textweaver-gui.exe'))) {
+            # Since beta 1 the app is in the package itself, so Install-Stage
+            # has put it beside tw.exe; only the shortcut and the manifest
+            # line remain.
+            $script:GuiDir = $InstallDir
+            Write-Line "The app, textweaver-gui.exe, is installed in $InstallDir with tw."
+            Invoke-Step "add gui=package to $Manifest" {
+                Add-Content -LiteralPath $Manifest -Value 'gui=package' -Encoding ascii
+            }
             $guiInstalled = $true
+        } else {
+            # Releases up to 0.1.0-alpha.9 had the app in a package of its own.
+            if ($FromSource) { $guiStage = Build-GuiFromSource $package } else { $guiStage = Get-ReleaseGuiPackage $package }
+            if ($guiStage) {
+                Install-Gui $guiStage
+                $guiInstalled = $true
+            }
         }
     }
     Add-ToUserPath
