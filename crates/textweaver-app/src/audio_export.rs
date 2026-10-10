@@ -139,6 +139,10 @@ pub(crate) fn register(app: &mut crate::app::App) {
     app.register_handler(textweaver_keymap::ActionId::ExportAudio, |app| {
         app.export_audio()
     });
+    #[cfg(feature = "audio-export")]
+    app.register_handler(textweaver_keymap::ActionId::ExportReadAlong, |app| {
+        app.export_read_along()
+    });
     #[cfg(not(feature = "audio-export"))]
     let _ = app;
 }
@@ -356,16 +360,7 @@ mod run {
                 self.tell(&msg);
                 return vec![Effect::Redraw];
             };
-            let ffmpeg = match (&self.audio.ffmpeg_override, &self.paths) {
-                (Some(f), _) => f.clone(),
-                // This session's own components folder first.
-                (None, Some(p)) => ffmpeg::find_in(
-                    Some(&p.components_dir()),
-                    std::env::var_os("TEXTWEAVER_FFMPEG"),
-                    std::env::var_os("PATH"),
-                ),
-                (None, None) => ffmpeg::find(),
-            };
+            let ffmpeg = self.find_ffmpeg();
             // The format in `[export] audio_format` comes first.
             self.audio.formats = preferred_first(
                 formats(ffmpeg.is_some()),
@@ -402,6 +397,41 @@ mod run {
                 title: self.msg("audio-format-title"),
                 items,
             }]
+        }
+
+        /// File, Export as, Read-along page: the read-along page chosen
+        /// at once, so the next question is where it goes.
+        pub(crate) fn export_read_along(&mut self) -> Vec<Effect> {
+            if let Some(run) = &self.audio.run {
+                let msg = self.msg_args("audio-busy", &args!["name" => display_name(&run.out)]);
+                self.tell(&msg);
+                return vec![Effect::Redraw];
+            }
+            if self.audio_source().is_none() {
+                let open = self.key(textweaver_keymap::ActionId::Open);
+                let msg = self.msg_args("app-no-document-open", &args!["key" => open]);
+                self.tell(&msg);
+                return vec![Effect::Redraw];
+            }
+            self.audio.question = None;
+            self.audio.ffmpeg = self.find_ffmpeg();
+            self.audio.format = Some(AudioFormat::Mp3);
+            self.audio.page = true;
+            self.audio_where()
+        }
+
+        /// The ffmpeg to use: the tests' choice, else this session's own
+        /// components folder, `TEXTWEAVER_FFMPEG`, then `PATH`.
+        fn find_ffmpeg(&self) -> Option<PathBuf> {
+            match (&self.audio.ffmpeg_override, &self.paths) {
+                (Some(f), _) => f.clone(),
+                (None, Some(p)) => ffmpeg::find_in(
+                    Some(&p.components_dir()),
+                    std::env::var_os("TEXTWEAVER_FFMPEG"),
+                    std::env::var_os("PATH"),
+                ),
+                (None, None) => ffmpeg::find(),
+            }
         }
 
         fn format_item(&self, f: AudioFormat) -> String {
@@ -1151,6 +1181,26 @@ mod run {
             assert!(html.contains(".tw-spoken-word"));
             // Only the document and the page: the MP3 went inside.
             assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2);
+        }
+
+        /// File, Export as, Read-along page skips the format list.
+        #[test]
+        fn the_read_along_command_asks_only_where() {
+            let dir = tempfile::tempdir().unwrap();
+            let (mut app, _) = app_with_doc(dir.path());
+            app.dispatch(Command::Action(ActionId::ExportReadAlong));
+            assert!(
+                app.status_text().starts_with("Where should the audio go?"),
+                "{}",
+                app.status_text()
+            );
+            app.dispatch(Command::Choose(0));
+            assert!(
+                app.status_text().starts_with("Export essay.html with "),
+                "{}",
+                app.status_text()
+            );
+            app.dispatch(Command::Confirm(Confirm::No));
         }
 
         #[test]

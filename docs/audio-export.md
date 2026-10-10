@@ -210,7 +210,7 @@ Players that read these chapters show them. Many simple players ignore them and 
 tw export-audio essay.md --out essay.html
 ```
 
-An `.html` file name writes a read-along page instead of an audio file: one web page that holds the document as real text, its audio inside as MP3, and a mark on the sentence and the word being read as it plays. Open it in any web browser; it needs no internet connection and no other file, so you can send it, post it to a course site, or open it on a phone. In the reader, choose "Read-along page: text and audio, one file", the last format in Export audio.
+An `.html` file name writes a read-along page instead of an audio file: one web page that holds the document as real text, its audio inside as MP3, and a mark on the sentence and the word being read as it plays. Open it in any web browser; it needs no internet connection and no other file, so you can send it, post it to a course site, or open it on a phone. In the reader, choose **File, Export as, Read-along page: text and audio**, or type `read-along` in the command palette; you are asked only where it goes. It is also "Read-along page: text and audio, one file", the last format in Export audio.
 
 The text stays text, so a screen reader, a Braille display, zoom, reflow, and your own fonts all work on it. The page uses your reading theme (`[display] theme`); with the default theme it follows the system's light or dark setting.
 

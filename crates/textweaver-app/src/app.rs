@@ -2265,6 +2265,7 @@ impl App {
             A::BrowseFiles
             | A::BatchConvert
             | A::ExportAudio
+            | A::ExportReadAlong
             | A::Dictate
             | A::DownloadDictationModel
             | A::ManageComponents => {

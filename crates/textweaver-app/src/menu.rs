@@ -53,6 +53,7 @@ pub const PENDING: &[ActionId] = &[
     ActionId::BrowseFiles,
     ActionId::BatchConvert,
     ActionId::ExportAudio,
+    ActionId::ExportReadAlong,
     ActionId::Dictate,
     ActionId::DownloadDictationModel,
 ];
@@ -278,6 +279,7 @@ impl MenuId {
                 Do(A::ExportDocx),
                 Do(A::ExportEpub),
                 Do(A::ExportBrf),
+                Do(A::ExportReadAlong),
                 Sep,
                 Do(A::ExportStudySheet),
             ],

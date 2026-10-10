@@ -526,6 +526,9 @@ actions! {
     ExportAudio = "export_audio", File,
         "Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook",
         gui [], term [], shared [];
+    ExportReadAlong = "export_read_along", File,
+        "Export a read-along page: one HTML file with the text and its audio, the spoken word marked as it plays",
+        gui [], term [], shared [];
     SyncSetup = "sync_setup", File,
         "Set up sync: choose the sync folder, name this computer, and choose what syncs",
         gui [], term [], shared [];
