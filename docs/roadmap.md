@@ -38,7 +38,7 @@ The 0.1 series ends with a feature-complete final alpha. None of these is in it,
 - A plugin system.
 - An in-app update checker, and a guided first-run tour. The update scripts update an installed textweaver, and Help, Quick start opens the quick start.
 - Source code read as a structured document, rather than plain text.
-- Knowledge-graph export and concept extraction from notes.
+- Concept extraction from notes. The knowledge graph itself exports already ([Export the knowledge graph](notes.md#export-the-knowledge-graph)).
 
 Dropped on purpose: spaced-repetition study tools (Anki-style review, FSRS scheduling, AnkiConnect sync) and cloud speech engines. [star features not yet planned](star-gaps.md) marks each dropped item.
 

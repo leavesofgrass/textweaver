@@ -780,6 +780,7 @@ action-export-pdf = Exportar el documento como PDF etiquetado junto a él
 action-export-docx = Exportar el documento como archivo de Word (DOCX) junto a él
 action-export-epub = Exportar el documento como libro EPUB junto a él
 action-export-brf = Exportar el documento como braille (BRF) junto a él
+action-export-knowledge-graph = Exportar el grafo de conocimiento: cada enlace entre notas, como lista Markdown, JSON, DOT, GraphML, Mermaid, PlantUML o CSV
 action-preview-in-browser = Ver la vista previa del documento en el navegador web, con matemáticas; cada guardado la reescribe
 action-toggle-preview-auto-reload = Activar o desactivar la recarga automática de la vista previa en el navegador
 action-toggle-preview-live = Activar o desactivar la vista previa en vivo: con la recarga automática, la vista previa también se recarga al hacer una pausa al escribir
@@ -1270,6 +1271,21 @@ relations-no-note-here = No hay ninguna nota aquí. Los enlaces pertenecen a not
 relations-filter-cleared = Filtro borrado, { $n } mostrados.
 relations-filter-none = Nada coincide con { $filter }.
 relations-filter-matched = Filtro { $filter }: { $n } mostrados.
+
+## Exportar el grafo de conocimiento (B1-g2).
+
+graph-export-title = Exportar el grafo de conocimiento como
+graph-export-intro = Grafo de conocimiento, enlaces: { $links }. Elija un formato; la lista Markdown es el texto para leer.
+graph-export-empty = No hay enlaces entre notas para exportar. Añada uno desde la lista de enlaces de una nota.
+graph-format-md = Lista Markdown, el texto para leer
+graph-format-json = JSON, para Gephi y Cytoscape
+graph-format-dot = DOT, para Graphviz
+graph-format-graphml = GraphML, para Gephi, Cytoscape y yEd
+graph-format-mermaid = Diagrama Mermaid
+graph-format-plantuml = Diagrama PlantUML
+graph-format-csv = Lista de aristas CSV, para hojas de cálculo
+graph-export-saved = Grafo de conocimiento guardado como { $file }. ¿Abrirlo? y o n. En { $folder }.
+graph-export-failed = No se pudo escribir el grafo de conocimiento: { $error } Compruebe que se puede escribir en la carpeta.
 
 ## Bookmarks: rename and delete.
 
@@ -3481,6 +3497,7 @@ name-export-pdf = Exportar PDF
 name-export-docx = Exportar Word
 name-export-epub = Exportar EPUB
 name-export-brf = Exportar braille
+name-export-knowledge-graph = Exportar grafo de conocimiento
 name-preview-in-browser = Vista previa en el navegador
 name-toggle-preview-auto-reload = Recargar la vista previa sola
 name-toggle-preview-live = Vista previa en vivo

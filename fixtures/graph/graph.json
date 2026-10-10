@@ -1,0 +1,56 @@
+{
+  "nodes": [
+    {
+      "id": "a1",
+      "doc": "/library/biology.md",
+      "title": "Biology",
+      "label": "Mitochondria \"make\" energy"
+    },
+    {
+      "id": "a2",
+      "doc": "/library/biology.md",
+      "title": "Biology",
+      "label": "Cells & <tissues>, #3 \\ more"
+    },
+    {
+      "id": "a1-2",
+      "doc": "/library/chem.md",
+      "title": "Chemistry, 2nd ed.",
+      "label": "=SUM(proteins)"
+    },
+    {
+      "id": "zz",
+      "doc": "/library/gone.md",
+      "title": "gone.md",
+      "label": "Note not found",
+      "missing": true
+    }
+  ],
+  "edges": [
+    {
+      "src": "a1",
+      "dst": "a2",
+      "rel_type": "SUPPORTS",
+      "spoken": "supports",
+      "note": "same chapter"
+    },
+    {
+      "src": "a1",
+      "dst": "a1-2",
+      "rel_type": "CITES",
+      "spoken": "cites"
+    },
+    {
+      "src": "a1-2",
+      "dst": "a2",
+      "rel_type": "LIKES",
+      "spoken": "likes"
+    },
+    {
+      "src": "a1-2",
+      "dst": "zz",
+      "rel_type": "SEE_ALSO",
+      "spoken": "see also"
+    }
+  ]
+}

@@ -338,7 +338,7 @@ fn resolve(read: &mut VaultRead, default_rel: RelationType) {
         if matches!(note.kind, NoteKind::Document { .. }) {
             continue;
         }
-        let mut seen: HashSet<(RelationType, String)> = HashSet::new();
+        let mut seen: HashSet<(String, String)> = HashSet::new();
         let mut out = Vec::new();
         for link in &note.links {
             let target = index
@@ -348,12 +348,15 @@ fn resolve(read: &mut VaultRead, default_rel: RelationType) {
                 unresolved += 1;
                 continue;
             };
-            let rel_type = link.rel_type.unwrap_or(default_rel);
-            if !seen.insert((rel_type, id.clone())) {
+            let rel_type = link
+                .rel_type
+                .clone()
+                .unwrap_or_else(|| default_rel.as_str().to_owned());
+            if !seen.insert((rel_type.clone(), id.clone())) {
                 continue;
             }
             out.push(Relation {
-                rel_type: rel_type.as_str().to_owned(),
+                rel_type,
                 target_doc: doc.to_string_lossy().into_owned(),
                 target_id: id.clone(),
                 note: link.note.clone(),

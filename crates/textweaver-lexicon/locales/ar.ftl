@@ -876,6 +876,7 @@ action-export-pdf = تصدير المستند كملف PDF موسوم بجانب
 action-export-docx = تصدير المستند كملف Word ‏(DOCX) بجانبه
 action-export-epub = تصدير المستند ككتاب EPUB بجانبه
 action-export-brf = تصدير المستند كبرايل (BRF) بجانبه
+action-export-knowledge-graph = تصدير مخطط المعرفة: كل رابط بين الملاحظات، كقائمة ماركداون أو JSON أو DOT أو GraphML أو Mermaid أو PlantUML أو CSV
 action-preview-in-browser = معاينة المستند في متصفح الويب، مع الرياضيات؛ كل حفظ يعيد كتابة المعاينة
 action-toggle-preview-auto-reload = تشغيل أو إيقاف إعادة التحميل التلقائي لمعاينة المتصفح
 action-toggle-preview-live = تشغيل أو إيقاف المعاينة الحية: مع إعادة التحميل التلقائي، تُعاد المعاينة أيضًا عند توقف الكتابة
@@ -1387,6 +1388,21 @@ relations-no-note-here = لا توجد ملاحظة هنا. الروابط تخ�
 relations-filter-cleared = تم مسح التصفية، { $n } معروضة.
 relations-filter-none = لا شيء يطابق { $filter }.
 relations-filter-matched = التصفية { $filter }: { $n } معروضة.
+
+## تصدير مخطط المعرفة (B1-g2).
+
+graph-export-title = تصدير مخطط المعرفة بصيغة
+graph-export-intro = مخطط المعرفة، الروابط: { $links }. اختر صيغة؛ قائمة ماركداون هي النص المخصّص للقراءة.
+graph-export-empty = لا روابط بين الملاحظات للتصدير. أضف رابطًا من قائمة روابط إحدى الملاحظات.
+graph-format-md = قائمة ماركداون، النص المخصّص للقراءة
+graph-format-json = JSON، لبرنامجي Gephi وCytoscape
+graph-format-dot = DOT، لبرنامج Graphviz
+graph-format-graphml = GraphML، لبرامج Gephi وCytoscape وyEd
+graph-format-mermaid = مخطط Mermaid
+graph-format-plantuml = مخطط PlantUML
+graph-format-csv = قائمة حواف CSV، لجداول البيانات
+graph-export-saved = حُفظ مخطط المعرفة باسم { $file }. فتحه؟ y أو n. في { $folder }.
+graph-export-failed = تعذّرت كتابة مخطط المعرفة: { $error } تحقّق من إمكانية الكتابة في المجلد.
 
 ## الإشارات المرجعية: إعادة التسمية والحذف.
 
@@ -3821,6 +3837,7 @@ name-export-pdf = تصدير PDF
 name-export-docx = تصدير Word
 name-export-epub = تصدير EPUB
 name-export-brf = تصدير برايل
+name-export-knowledge-graph = تصدير مخطط المعرفة
 name-preview-in-browser = معاينة في المتصفح
 name-toggle-preview-auto-reload = إعادة تحميل المعاينة تلقائيًا
 name-toggle-preview-live = معاينة مباشرة

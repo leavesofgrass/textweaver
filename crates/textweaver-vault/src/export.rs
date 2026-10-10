@@ -28,7 +28,7 @@ use textweaver_store::{atomic_write, percent, time};
 
 use crate::frontmatter::{self, FmValue, FrontMatter};
 use crate::links::first_line;
-use crate::model::{DocAnnotations, Highlight, Note, color_name, derive_id};
+use crate::model::{DocAnnotations, Highlight, Note, RelationType, color_name, derive_id};
 use crate::names::{NameAllocator, sanitize};
 use crate::walk::{note_files, stem};
 use crate::{DOCUMENT_TAG, NODE_TAG, VaultError};
@@ -305,6 +305,26 @@ fn link_name(id: &str, plan: &Plan, existing: &Existing) -> Option<String> {
         .or_else(|| existing.notes.get(id).map(|p| stem(p)))
 }
 
+/// A relation type as a Dataview field name: a known type's stored name
+/// (`SUPPORTS`), else the type in the stored form (`likes` as `LIKES`), so
+/// the import keeps a type it does not know.
+fn stored_type(rel_type: &str) -> String {
+    match RelationType::parse(rel_type) {
+        Some(t) => t.as_str().to_owned(),
+        None => rel_type
+            .trim()
+            .chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() {
+                    c.to_ascii_uppercase()
+                } else {
+                    '_'
+                }
+            })
+            .collect(),
+    }
+}
+
 /// A note's file. Returns the text and the number of relations left out.
 fn render_note(
     doc: &ExportDocument<'_>,
@@ -354,7 +374,7 @@ fn render_note(
     for rel in &note.relations {
         match link_name(&rel.target_id, plan, existing) {
             Some(name) => {
-                let mut line = format!("- {}:: [[{name}]]", rel.rel_type);
+                let mut line = format!("- {}:: [[{name}]]", stored_type(&rel.rel_type));
                 let comment = rel.note.split_whitespace().collect::<Vec<_>>().join(" ");
                 if !comment.is_empty() {
                     line.push_str(" - ");

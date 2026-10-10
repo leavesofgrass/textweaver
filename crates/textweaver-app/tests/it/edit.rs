@@ -1269,3 +1269,61 @@ fn notes_link_to_notes_through_the_lists() {
         }
     }
 }
+
+/// Export the knowledge graph (B1-g2): nothing to export says so; with a
+/// link, the formats list starts with the Markdown list, and Enter writes
+/// the file beside the document and offers to open it.
+#[test]
+fn the_knowledge_graph_exports_in_a_format_chosen_from_a_list() {
+    use textweaver_app::list_model::ListKey;
+    let mut r = rig();
+    let text = "Alpha one here. Gamma three here.";
+    let a = r.file("a.txt", text);
+    r.app.open(&a).unwrap();
+    r.send(Command::Action(ActionId::ExportKnowledgeGraph));
+    assert!(
+        r.said.any("No links between notes to export."),
+        "{:?}",
+        r.said.all()
+    );
+    for (word, note) in [("Alpha", "Energy note"), ("Gamma", "Chapter note")] {
+        r.go(at(text, word));
+        r.send(Command::Notes(NoteCommand::Add));
+        r.send(Command::Answer(note.into()));
+    }
+    r.go(at(text, "Alpha"));
+    r.send(Command::Notes(NoteCommand::Links));
+    r.send(Command::ListKey(ListKey::End));
+    r.send(Command::ListKey(ListKey::Enter));
+    for c in "sup".chars() {
+        r.send(Command::ListKey(ListKey::Char(c)));
+    }
+    r.send(Command::ListKey(ListKey::Enter));
+    r.send(Command::ListKey(ListKey::Enter));
+    r.send(Command::ListKey(ListKey::Escape));
+    let formats = shown(&r.send(Command::Action(ActionId::ExportKnowledgeGraph)));
+    assert_eq!(formats.len(), 7, "{formats:?}");
+    assert_eq!(formats[0], "Markdown list, the text to read");
+    assert!(
+        r.said.any(
+            "Knowledge graph, links: 1. Choose a format; the Markdown list is the text to read."
+        ),
+        "{:?}",
+        r.said.all()
+    );
+    r.send(Command::Choose(0));
+    let out = a.with_file_name("knowledge-graph.md");
+    let written = std::fs::read_to_string(&out).unwrap();
+    assert!(written.starts_with("# Knowledge graph\n"), "{written}");
+    assert!(
+        written.contains("\n- supports: Chapter note, in "),
+        "{written}"
+    );
+    assert!(
+        r.said
+            .last()
+            .starts_with("Knowledge graph saved as knowledge-graph.md."),
+        "{}",
+        r.said.last()
+    );
+}

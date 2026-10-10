@@ -1,0 +1,11 @@
+digraph knowledge_graph {
+  node [shape=box];
+  n1 [label="Mitochondria \"make\" energy", document="Biology"];
+  n2 [label="Cells & <tissues>, #3 \\ more", document="Biology"];
+  n3 [label="=SUM(proteins)", document="Chemistry, 2nd ed."];
+  n4 [label="Note not found", document="gone.md"];
+  n1 -> n2 [label="supports"];
+  n1 -> n3 [label="cites"];
+  n3 -> n2 [label="likes"];
+  n3 -> n4 [label="see also"];
+}

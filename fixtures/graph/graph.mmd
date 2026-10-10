@@ -1,0 +1,11 @@
+flowchart LR
+  accTitle: Knowledge graph
+  accDescr: 3 notes, 4 links. The Markdown list export is its text equivalent.
+  n1["Mitochondria #quot;make#quot; energy"]
+  n2["Cells #amp; #lt;tissues#gt;, #35;3 \ more"]
+  n3["=SUM(proteins)"]
+  n4["Note not found"]
+  n1 -->|"supports"| n2
+  n1 -->|"cites"| n3
+  n3 -->|"likes"| n2
+  n3 -->|"see also"| n4

@@ -785,6 +785,7 @@ action-export-pdf = Export the document as a tagged PDF next to it
 action-export-docx = Export the document as a Word file (DOCX) next to it
 action-export-epub = Export the document as an EPUB book next to it
 action-export-brf = Export the document as braille (BRF) next to it
+action-export-knowledge-graph = Export the knowledge graph: every link between notes, as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or CSV
 action-preview-in-browser = Preview the document in the web browser, with math; each save rewrites the preview
 action-toggle-preview-auto-reload = Turn automatic reloading of the browser preview on or off
 action-toggle-preview-live = Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses
@@ -1284,6 +1285,24 @@ relations-no-note-here = No note here. Links belong to notes; add one: { $key }.
 relations-filter-cleared = Filter cleared, { $n } shown.
 relations-filter-none = Nothing matches { $filter }.
 relations-filter-matched = Filter { $filter }: { $n } shown.
+
+## Export the knowledge graph (B1-g2).
+
+graph-export-title = Export the knowledge graph as
+# $links is the number of links between notes in the library.
+graph-export-intro = Knowledge graph, links: { $links }. Choose a format; the Markdown list is the text to read.
+graph-export-empty = No links between notes to export. Add one from a note's links list.
+graph-format-md = Markdown list, the text to read
+graph-format-json = JSON, for Gephi and Cytoscape
+graph-format-dot = DOT, for Graphviz
+graph-format-graphml = GraphML, for Gephi, Cytoscape and yEd
+graph-format-mermaid = Mermaid diagram
+graph-format-plantuml = PlantUML diagram
+graph-format-csv = CSV edge list, for spreadsheets
+# Keep the letters y and n: they are the keys that answer. $file is the
+# file name, $folder the folder it was saved in.
+graph-export-saved = Knowledge graph saved as { $file }. Open it? y or n. In { $folder }.
+graph-export-failed = Could not write the knowledge graph: { $error } Check that the folder can be written to.
 
 ## Bookmarks: rename and delete.
 
@@ -3517,6 +3536,7 @@ name-export-pdf = Export PDF
 name-export-docx = Export Word
 name-export-epub = Export EPUB
 name-export-brf = Export braille
+name-export-knowledge-graph = Export knowledge graph
 name-preview-in-browser = Preview in browser
 name-toggle-preview-auto-reload = Reload preview automatically
 name-toggle-preview-live = Live preview

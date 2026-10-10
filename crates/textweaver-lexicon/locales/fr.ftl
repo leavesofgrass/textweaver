@@ -808,6 +808,7 @@ action-export-pdf = Exporter le document en PDF balisé à côté de lui
 action-export-docx = Exporter le document en fichier Word (DOCX) à côté de lui
 action-export-epub = Exporter le document en livre EPUB à côté de lui
 action-export-brf = Exporter le document en braille (BRF) à côté de lui
+action-export-knowledge-graph = Exporter le graphe de connaissances : chaque lien entre notes, en liste Markdown, JSON, DOT, GraphML, Mermaid, PlantUML ou CSV
 action-preview-in-browser = Aperçu du document dans le navigateur, avec les mathématiques ; chaque enregistrement réécrit l'aperçu
 action-toggle-preview-auto-reload = Activer ou désactiver le rechargement automatique de l'aperçu dans le navigateur
 action-toggle-preview-live = Activer ou désactiver l'aperçu en direct : avec le rechargement automatique, l'aperçu se recharge aussi quand la frappe fait une pause
@@ -1298,6 +1299,21 @@ relations-no-note-here = Pas de note ici. Les liens appartiennent aux notes ; en
 relations-filter-cleared = Filtre effacé, { $n } affichés.
 relations-filter-none = Rien ne correspond à { $filter }.
 relations-filter-matched = Filtre { $filter } : { $n } affichés.
+
+## Exporter le graphe de connaissances (B1-g2).
+
+graph-export-title = Exporter le graphe de connaissances en
+graph-export-intro = Graphe de connaissances, liens : { $links }. Choisissez un format ; la liste Markdown est le texte à lire.
+graph-export-empty = Aucun lien entre notes à exporter. Ajoutez-en un depuis la liste des liens d'une note.
+graph-format-md = Liste Markdown, le texte à lire
+graph-format-json = JSON, pour Gephi et Cytoscape
+graph-format-dot = DOT, pour Graphviz
+graph-format-graphml = GraphML, pour Gephi, Cytoscape et yEd
+graph-format-mermaid = Diagramme Mermaid
+graph-format-plantuml = Diagramme PlantUML
+graph-format-csv = Liste d'arêtes CSV, pour les tableurs
+graph-export-saved = Graphe de connaissances enregistré sous { $file }. L'ouvrir ? y ou n. Dans { $folder }.
+graph-export-failed = Impossible d'écrire le graphe de connaissances : { $error } Vérifiez que le dossier est accessible en écriture.
 
 ## Bookmarks: rename and delete.
 
@@ -3509,6 +3525,7 @@ name-export-pdf = Exporter en PDF
 name-export-docx = Exporter en Word
 name-export-epub = Exporter en EPUB
 name-export-brf = Exporter en braille
+name-export-knowledge-graph = Exporter le graphe de connaissances
 name-preview-in-browser = Aperçu dans le navigateur
 name-toggle-preview-auto-reload = Recharger l'aperçu automatiquement
 name-toggle-preview-live = Aperçu en direct

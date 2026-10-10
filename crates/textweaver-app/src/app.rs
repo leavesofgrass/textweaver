@@ -319,6 +319,9 @@ pub(crate) enum ListKind {
     Relations(crate::relations::RelationsList),
     /// Prompts with hidden answers: the self-test (crate::reveal).
     Reveal(crate::reveal::RevealList),
+    /// The formats the knowledge graph can be exported in, in the order of
+    /// `GraphFormat::ALL` (crate::relations, B1-g2).
+    GraphFormats,
 }
 
 /// The application: the only owner of mutable state.
@@ -1866,6 +1869,7 @@ impl App {
             Some(ListKind::Changes(rows)) => self.choose_change_row(&rows, n),
             Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
             Some(ListKind::Reveal(l)) => return self.choose_reveal(l, n),
+            Some(ListKind::GraphFormats) => return self.choose_graph_format(n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -2322,6 +2326,7 @@ impl App {
             | A::PreviousLintProblem
             | A::ExportStudySheet
             | A::SelfTest
+            | A::ExportKnowledgeGraph
             | A::NewFromTemplate
             | A::ExportHtml
             | A::ExportPdf
