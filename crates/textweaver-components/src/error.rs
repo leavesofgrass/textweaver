@@ -57,6 +57,9 @@ pub enum ComponentError {
     /// zip), refused before anything is written.
     #[error("{0} is not a plain name")]
     BadName(String),
+    /// An archive could not be unpacked (the `unpack` action).
+    #[error("unpacking {0}")]
+    Unpack(String),
     /// A mirror's manifest could not be read.
     #[error("the mirror's list of components: {0}")]
     Manifest(String),

@@ -12,7 +12,9 @@ use std::time::{Duration, Instant, SystemTime};
 use crate::component::Component;
 use crate::error::ComponentError;
 use crate::fetch::Fetcher;
+use crate::manifest::Action;
 use crate::pin::FilePin;
+use crate::unpack::receipt_matches;
 
 /// Where files may come from, in order: the components source (when
 /// set), a mirror (when set), then each file's public address.
@@ -103,6 +105,15 @@ impl Sources {
     pub fn with_source(mut self, setting: &str) -> Self {
         self.source = source_base(setting);
         self
+    }
+
+    /// True when the components source is a GitHub repository (written
+    /// `owner/name`), whose files may need a sign-in when it is private
+    /// ([`SignedInFetcher`](crate::SignedInFetcher)).
+    pub fn source_is_github(&self) -> bool {
+        self.source
+            .as_deref()
+            .is_some_and(|s| s.starts_with("https://github.com/"))
     }
 
     /// True when the source or the mirror is a folder on this computer,
@@ -202,6 +213,9 @@ pub struct Outcome {
     /// Files already in place that checked out, kept as they were (a
     /// folder placed by hand is adopted, not downloaded again).
     pub kept: Vec<String>,
+    /// Members of an archive that were not unpacked (the `unpack`
+    /// action), each with the reason in words.
+    pub left_out: Vec<(String, String)>,
 }
 
 /// Components being downloaded or installed in this program, by folder.
@@ -333,7 +347,7 @@ pub fn download(
     let mut outcome = Outcome::default();
     let mut done = 0u64;
     for f in component.files.iter() {
-        if f.matches_file(&dest.join(f.name.as_ref())) {
+        if f.matches_file(&dest.join(f.name.as_ref())) || receipt_matches(dest, f) {
             done += f.size;
             outcome.kept.push(f.name.to_string());
             progress(Progress { done, total });
@@ -407,7 +421,7 @@ pub fn download(
         outcome.fetched.push(f.name.to_string());
         progress(Progress { done, total });
     }
-    finish(component, dest, &claim.staging, &outcome.fetched)?;
+    outcome.left_out = finish(component, dest, &claim.staging, &outcome.fetched)?;
     Ok(outcome)
 }
 
@@ -498,13 +512,15 @@ fn fetch_one(
 }
 
 /// Moves the checked files `names` from `staging` into `dest`, writes the
-/// component's notice, and leaves `dest` complete.
+/// component's notice, unpacks its archives when its action is
+/// [`Action::Unpack`], and leaves `dest` complete. Returns the archive
+/// members left out, with the reason.
 pub(crate) fn finish(
     component: &Component,
     dest: &Path,
     staging: &Path,
     names: &[String],
-) -> Result<(), ComponentError> {
+) -> Result<Vec<(String, String)>, ComponentError> {
     std::fs::create_dir_all(dest).map_err(|e| ComponentError::io(dest, e))?;
     for name in names {
         let to = dest.join(name);
@@ -517,7 +533,10 @@ pub(crate) fn finish(
             std::fs::write(&path, text.as_bytes()).map_err(|e| ComponentError::io(&path, e))?;
         }
     }
-    Ok(())
+    if component.action() == Action::Unpack {
+        return crate::unpack::unpack_in(component, dest);
+    }
+    Ok(Vec::new())
 }
 
 #[cfg(test)]

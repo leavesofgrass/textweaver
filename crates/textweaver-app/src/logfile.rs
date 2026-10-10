@@ -159,9 +159,17 @@ pub fn utc_timestamp(secs: u64) -> String {
     )
 }
 
+/// True when a record may be written. The HTTP library's own debug and
+/// trace records are left out: they dump each request byte by byte, and a
+/// request to a private components source carries a token in its
+/// `Authorization` header, which must never reach the log (B1-c2).
+pub fn keeps(metadata: &Metadata<'_>) -> bool {
+    !(metadata.target().starts_with("ureq") && metadata.level() > log::Level::Info)
+}
+
 impl Log for FileLogger {
     fn enabled(&self, metadata: &Metadata<'_>) -> bool {
-        metadata.level() <= self.level
+        metadata.level() <= self.level && keeps(metadata)
     }
 
     fn log(&self, record: &Record<'_>) {
@@ -237,6 +245,37 @@ mod tests {
         assert!(text.contains("WARN  test: cannot save position: disk full"));
         assert!(!text.contains("not written"));
         assert_eq!(text.lines().count(), 1);
+    }
+
+    #[test]
+    fn the_http_library_never_logs_its_requests() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("textweaver.log");
+        let logger = FileLogger::new(path.clone(), LevelFilter::Trace, MAX_BYTES);
+        for (target, level, msg) in [
+            (
+                "ureq_proto::util",
+                log::Level::Trace,
+                "6175 7468 authorization",
+            ),
+            ("ureq", log::Level::Debug, "GET request"),
+            ("ureq", log::Level::Warn, "a ureq warning"),
+            ("textweaver", log::Level::Trace, "our own trace"),
+        ] {
+            logger.log(
+                &Record::builder()
+                    .level(level)
+                    .target(target)
+                    .args(format_args!("{msg}"))
+                    .build(),
+            );
+        }
+        logger.flush();
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(!text.contains("authorization"), "{text}");
+        assert!(!text.contains("GET request"), "{text}");
+        assert!(text.contains("a ureq warning"), "{text}");
+        assert!(text.contains("our own trace"), "{text}");
     }
 
     #[test]

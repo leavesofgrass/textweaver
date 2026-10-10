@@ -334,6 +334,9 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         // the reader (themes carry colors only).
         options.typography = Some(textweaver_app::page_typography(&settings));
     }
+    if !args.no_pandoc && !args.watch {
+        offer_pandoc(&args)?;
+    }
     let converter = Converter::new(options)?;
     if let Some(note) = template_note(&args) {
         eprintln!("{note}");
@@ -388,6 +391,64 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         bail!("{} of {} files failed", summary.failed, summary.total());
     }
     Ok(())
+}
+
+/// The first file named on the command line that only Pandoc reads (its
+/// extension, `org`, `rst`, and the rest, has no native reader).
+fn needs_pandoc(inputs: &[PathBuf]) -> Option<&PathBuf> {
+    let builtins = textweaver_formats::Registry::with_builtins();
+    inputs.iter().find(|p| {
+        let ext = p
+            .extension()
+            .map(|e| e.to_string_lossy().to_ascii_lowercase())
+            .unwrap_or_default();
+        p.is_file()
+            && textweaver_formats::pandoc::EXTENSIONS.contains(&ext.as_str())
+            && builtins
+                .loader_for(&textweaver_formats::Source::Path((*p).clone()))
+                .is_none()
+    })
+}
+
+/// Pandoc at the moment of need: a named file only Pandoc reads, with
+/// Pandoc missing, gets one question instead of a failure. Where its
+/// publisher has a build for this computer, the size and license are said
+/// and, on a yes (asked only on a terminal), it is fetched into the
+/// components folder and the conversion carries on with it. Elsewhere the
+/// package command to copy is said.
+fn offer_pandoc(args: &Args) -> anyhow::Result<()> {
+    use textweaver_app::components::{Helper, component_dir};
+    let Some(file) = needs_pandoc(&args.inputs) else {
+        return Ok(());
+    };
+    if textweaver_formats::pandoc::pandoc_available() {
+        return Ok(());
+    }
+    let ext = file
+        .extension()
+        .map(|e| e.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let Some(c) = Helper::Pandoc.component() else {
+        let how = Helper::Pandoc
+            .package_command()
+            .map(|cmd| format!(" To get it, run: {cmd}"))
+            .unwrap_or_default();
+        eprintln!("Reading .{ext} files needs Pandoc, which was not found.{how}");
+        return Ok(());
+    };
+    if !super::stdin_is_terminal() {
+        eprintln!(
+            "Reading .{ext} files needs Pandoc, which was not found. tw components download pandoc gets it."
+        );
+        return Ok(());
+    }
+    eprintln!("Reading .{ext} files needs Pandoc, which was not found.");
+    let paths = super::paths(args.home.as_deref())?;
+    let settings = textweaver_app::store::SettingsStore::new(paths.clone())
+        .load()
+        .0;
+    let dir = component_dir(&c, &paths.data_dir);
+    super::components::download(&c, &dir, &settings, false)
 }
 
 /// Saves the conversion report and says where it is, in one sentence: in
@@ -493,6 +554,20 @@ mod tests {
     use clap::Parser;
 
     use super::*;
+
+    /// Only a file no native reader takes asks for Pandoc.
+    #[test]
+    fn only_a_file_pandoc_alone_reads_needs_it() {
+        let tmp = tempfile::tempdir().unwrap();
+        let org = tmp.path().join("notes.org");
+        let md = tmp.path().join("notes.md");
+        std::fs::write(&org, "* A heading").unwrap();
+        std::fs::write(&md, "# A heading").unwrap();
+        assert_eq!(needs_pandoc(std::slice::from_ref(&md)), None);
+        assert_eq!(needs_pandoc(&[md.clone(), org.clone()]), Some(&org));
+        // A folder, or a file that is not there, is not asked about.
+        assert_eq!(needs_pandoc(&[tmp.path().join("gone.org")]), None);
+    }
 
     #[derive(Parser)]
     struct Cli {

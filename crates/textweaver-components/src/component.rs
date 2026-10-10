@@ -4,8 +4,9 @@ use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
 use crate::error::ComponentError;
-use crate::manifest::Listing;
+use crate::manifest::{Action, Listing};
 use crate::pin::{FilePin, hash_file, is_plain_name};
+use crate::unpack::{receipt_matches, remove_unpacked};
 
 /// An optional component: a model, font, or voice textweaver can use but
 /// does not ship.
@@ -134,10 +135,26 @@ impl Component {
         Ok(())
     }
 
-    /// Whether it is installed in `dir`, from the files' sizes.
+    /// What installing it does: its list's action, else
+    /// [`Action::Place`] (every built-in component).
+    pub fn action(&self) -> Action {
+        self.listing.as_ref().map_or(Action::Place, |l| l.action)
+    }
+
+    /// Its version, as its list says it; empty when not given.
+    pub fn version(&self) -> &str {
+        self.listing.as_ref().map_or("", |l| l.version.as_str())
+    }
+
+    /// Whether it is installed in `dir`, from the files' sizes. An
+    /// archive that was unpacked counts by its receipt
+    /// ([`crate::unpack`]).
     pub fn status_in(&self, dir: &Path) -> Status {
         let mut missing = Vec::new();
         for f in self.files.iter() {
+            if receipt_matches(dir, f) {
+                continue;
+            }
             match std::fs::metadata(dir.join(f.name.as_ref())) {
                 Ok(m) if m.is_file() && m.len() == f.size => {}
                 Ok(_) => return Status::Damaged(f.name.to_string()),
@@ -153,13 +170,18 @@ impl Component {
         }
     }
 
-    /// Checks each file in `dir` by size and hash.
+    /// Checks each file in `dir` by size and hash. An unpacked archive
+    /// checks out when its receipt holds its pinned hash.
+    // shortcut: the files an archive unpacked are not hashed again (the
+    // archive was checked before unpacking); hash them if the receipt
+    // grows a hash per file.
     pub fn verify_in(&self, dir: &Path) -> Vec<(String, FileState)> {
         self.files
             .iter()
             .map(|f| {
                 let path = dir.join(f.name.as_ref());
                 let state = match std::fs::metadata(&path) {
+                    _ if receipt_matches(dir, f) => FileState::Good,
                     Err(_) => FileState::Missing,
                     Ok(m) if !m.is_file() => FileState::Missing,
                     Ok(m) if m.len() != f.size => FileState::WrongSize(m.len()),
@@ -174,20 +196,22 @@ impl Component {
     }
 
     /// Removes the component's own files from `dir` (its pinned files,
-    /// their `.part` files, and its notice), then `dir` itself when that
-    /// leaves it empty. Nothing else is touched: a file the component does
-    /// not name stays, and so does the folder holding it. Returns how many
-    /// files were removed.
+    /// their `.part` files, its notice, and what an archive of it
+    /// unpacked, by its receipt), then `dir` itself when that leaves it
+    /// empty. Nothing else is touched: a file the component does not name
+    /// stays, and so does the folder holding it. Returns how many files
+    /// were removed.
     pub fn remove_in(&self, dir: &Path) -> Result<usize, ComponentError> {
         let mut names: Vec<String> = Vec::new();
+        let mut removed = 0;
         for f in self.files.iter() {
+            removed += remove_unpacked(dir, f)?;
             names.push(f.name.to_string());
             names.push(format!("{}.part", f.name));
         }
         if let Some((n, _)) = &self.notice {
             names.push(n.to_string());
         }
-        let mut removed = 0;
         for name in names {
             let path = dir.join(&name);
             if path.is_file() {

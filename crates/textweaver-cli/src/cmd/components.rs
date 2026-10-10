@@ -15,16 +15,29 @@
 //!   folder, checked against the same pins; anything else is refused with
 //!   the reason.
 //!
+//! - What installing does follows the component's action: `place` keeps
+//!   the checked files; `unpack` unpacks its archive into the component's
+//!   folder; `installer` says the installer's name, version, and license
+//!   note and asks before launching it (`--yes` answers), and the system's
+//!   own prompt follows. `tw components list --json` gives each one's
+//!   `action`, `version`, and `platform`.
+//!
+//! - `tw components sign-in` keeps a GitHub token for a private components
+//!   source in the system credential store, read from standard input
+//!   (piped, never typed where it shows); `tw components forget-token`
+//!   removes it. A signed-in GitHub CLI (`gh auth login`) needs neither.
+//!
 //! `tw` never shows the first-run list; that is the GUI's and the terminal
 //! reader's.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use anyhow::{Context, bail};
 use textweaver_app::components::{
-    Component, FileState, Progress, Registry, StandardFetcher, Status, Tenths, component_dir,
-    features_text, sources,
+    Action, Component, Fetcher, FileState, Progress, Registry, SignedInFetcher, StandardFetcher,
+    Status, Tenths, component_dir, credentials, features_text, sources,
 };
 use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::store::SettingsStore;
@@ -75,10 +88,19 @@ enum Sub {
         /// The zip file or folder.
         path: PathBuf,
     },
+    /// Keep a GitHub token for a private components source in the system credential store, read from standard input (pipe it in; a signed-in GitHub CLI needs none).
+    SignIn,
+    /// Forget the GitHub token kept in the system credential store.
+    ForgetToken,
 }
 
 /// Runs `tw components`.
 pub fn run(args: Args) -> anyhow::Result<()> {
+    match args.command {
+        Sub::SignIn => return sign_in(&mut std::io::stdin().lock(), super::stdin_is_terminal()),
+        Sub::ForgetToken => return forget_token(),
+        _ => {}
+    }
     let paths = super::paths(args.home.as_deref())?;
     let settings = SettingsStore::new(paths.clone()).load().0;
     let registry = registry_with_mirror(&settings);
@@ -101,16 +123,80 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             let c = named(&registry, &id)?;
             install(c, &component_dir(c, &data), &path)
         }
+        Sub::SignIn | Sub::ForgetToken => Ok(()),
     }
+}
+
+/// The fetcher for these settings: signed in when the components source
+/// is a GitHub repository and a token is found (the GitHub CLI's, else
+/// the one kept in the credential store), else the standard one.
+fn fetcher(settings: &textweaver_app::store::Settings) -> Arc<dyn Fetcher> {
+    if sources(settings).source_is_github()
+        && let Some((token, _)) = credentials::find_token()
+    {
+        return Arc::new(SignedInFetcher::new(token));
+    }
+    Arc::new(StandardFetcher)
+}
+
+/// `tw components sign-in`: one line from standard input, kept in the
+/// system credential store. A terminal is refused, because what is typed
+/// there shows on the screen and is read aloud; the token is piped in
+/// instead. Nothing printed holds the token.
+fn sign_in(input: &mut dyn std::io::BufRead, terminal: bool) -> anyhow::Result<()> {
+    if terminal {
+        bail!(
+            "Pipe the token in, so it never shows: on Windows, copy it, then Get-Clipboard | tw components sign-in. Or sign in to the GitHub CLI with gh auth login, which needs no token here."
+        );
+    }
+    let mut line = String::new();
+    input.read_line(&mut line)?;
+    let Some(token) = credentials::Token::new(&line) else {
+        bail!("That is not a GitHub token. Nothing was kept.");
+    };
+    credentials::store_token(&token)
+        .map_err(|reason| anyhow::anyhow!("The token was not kept: {reason}."))?;
+    crate::cmd::outln!("The token is kept in the system credential store.");
+    Ok(())
+}
+
+/// `tw components forget-token`.
+fn forget_token() -> anyhow::Result<()> {
+    let had = credentials::forget_token()
+        .map_err(|reason| anyhow::anyhow!("The token was not forgotten: {reason}."))?;
+    if had {
+        crate::cmd::outln!("The token is forgotten.");
+    } else {
+        crate::cmd::outln!("No token was kept.");
+    }
+    if credentials::gh_token().is_some() {
+        crate::cmd::outln!("The GitHub CLI sign-in is still used; gh auth logout ends it.");
+    }
+    Ok(())
 }
 
 /// The registry, with the components source's and the mirror's
 /// components when either is set and its list can be read.
 fn registry_with_mirror(settings: &textweaver_app::store::Settings) -> Registry {
     let mut registry = Registry::builtin();
-    for address in sources(settings).manifest_addresses() {
-        let text = textweaver_app::components::fetch_text(&StandardFetcher, &address);
-        match text.map(|t| registry.add_manifest(&t)) {
+    let addresses = sources(settings).manifest_addresses();
+    let fetcher = if addresses.is_empty() {
+        Arc::new(StandardFetcher)
+    } else {
+        fetcher(settings)
+    };
+    // The source's list comes first, and may supply the public helpers.
+    let from_source = sources(settings).source.is_some();
+    for (i, address) in addresses.into_iter().enumerate() {
+        let text = textweaver_app::components::fetch_text(&*fetcher, &address);
+        let added = text.map(|t| {
+            if i == 0 && from_source {
+                registry.add_source_manifest(&t)
+            } else {
+                registry.add_manifest(&t)
+            }
+        });
+        match added {
             Ok(Ok(refused)) => {
                 for (id, why) in refused {
                     eprintln!("Component {id} was refused: {why}. It is in {address}.");
@@ -139,6 +225,7 @@ fn named<'a>(registry: &'a Registry, id: &str) -> anyhow::Result<&'a Component> 
 
 fn state(c: &Component, dir: &Path) -> String {
     match c.status_in(dir) {
+        Status::Installed if c.action() == Action::Installer => "installer downloaded".to_owned(),
         Status::Installed => "installed".to_owned(),
         Status::NotInstalled => "not installed".to_owned(),
         Status::Partial(missing) => format!("partly installed, missing {}", missing.join(", ")),
@@ -180,6 +267,9 @@ fn list_json(registry: &Registry, data: &Path) -> serde_json::Value {
         .map(|c| {
             let dir = component_dir(c, data);
             let (status, missing) = match c.status_in(&dir) {
+                Status::Installed if c.action() == Action::Installer => {
+                    ("installer-downloaded", Vec::new())
+                }
                 Status::Installed => ("installed", Vec::new()),
                 Status::NotInstalled => ("not-installed", Vec::new()),
                 Status::Partial(m) => ("partial", m),
@@ -194,6 +284,9 @@ fn list_json(registry: &Registry, data: &Path) -> serde_json::Value {
                 "license": c.license,
                 "features": c.features,
                 "folder": dir,
+                "version": c.version(),
+                "action": c.action().word(),
+                "platform": c.listing.as_ref().map_or("any", |l| l.platform.word()),
             })
         })
         .collect();
@@ -221,6 +314,9 @@ pub(crate) fn download(
     yes: bool,
 ) -> anyhow::Result<()> {
     if c.status_in(dir) == Status::Installed {
+        if c.action() == Action::Installer {
+            return launch(c, dir, yes);
+        }
         crate::cmd::outln!("{} is already installed in {}.", c.title, dir.display());
         return Ok(());
     }
@@ -252,7 +348,7 @@ pub(crate) fn download(
         c,
         dir,
         &sources,
-        &StandardFetcher,
+        &*fetcher(settings),
         &mut |p: Progress| {
             if let Some(percent) = tenths.step(p) {
                 eprintln!("{percent} percent");
@@ -260,12 +356,58 @@ pub(crate) fn download(
         },
         &cancel,
     )
-    .with_context(|| format!("{} was not downloaded", c.title))?;
+    .with_context(|| format!("{} was not downloaded", c.title))
+    .map(|o| say_left_out(&o.left_out))?;
     crate::cmd::outln!(
         "{} is downloaded and checked, in {}.",
         c.title,
         dir.display()
     );
+    if c.action() == Action::Installer {
+        return launch(c, dir, yes);
+    }
+    Ok(())
+}
+
+/// Archive members that were not unpacked, or files of a zip or folder
+/// that were not used, each with the reason, on standard error.
+fn say_left_out(left_out: &[(String, String)]) {
+    for (name, why) in left_out {
+        eprintln!("Left out {name}: {why}.");
+    }
+}
+
+/// Launches `c`'s checked installer after saying its name, version, and
+/// license note and asking (or `yes`). The system's own prompt follows.
+/// "No" launches nothing.
+fn launch(c: &Component, dir: &Path, yes: bool) -> anyhow::Result<()> {
+    let Some(file) = c.files.first() else {
+        return Ok(());
+    };
+    let path = dir.join(file.name.as_ref());
+    let version = match c.version() {
+        "" => "not given",
+        v => v,
+    };
+    eprintln!(
+        "Installer: {}, version {version}, license {}. It is {}. The system asks next.",
+        c.title,
+        c.license,
+        path.display()
+    );
+    if !yes && !ask("Launch the installer?")? {
+        eprintln!("Nothing was launched. The installer is kept.");
+        return Ok(());
+    }
+    if !file.matches_file(&path) {
+        bail!(
+            "{} does not match its pin; download it again",
+            path.display()
+        );
+    }
+    textweaver_app::opener::open_with_system(&path.display().to_string())
+        .with_context(|| format!("the installer {} did not start", path.display()))?;
+    crate::cmd::outln!("The installer started: {}.", c.title);
     Ok(())
 }
 
@@ -342,9 +484,8 @@ fn remove(c: &Component, dir: &Path, yes: bool) -> anyhow::Result<()> {
 fn install(c: &Component, dir: &Path, from: &Path) -> anyhow::Result<()> {
     let report = textweaver_app::components::install_component(c, from, dir)
         .with_context(|| format!("{} was not installed", c.title))?;
-    for (name, why) in &report.refused {
-        eprintln!("Left out {name}: {why}.");
-    }
+    say_left_out(&report.refused);
+    say_left_out(&report.outcome.left_out);
     crate::cmd::outln!(
         "{} is installed and checked, in {}: {} files copied, {} already there.",
         c.title,
@@ -352,6 +493,9 @@ fn install(c: &Component, dir: &Path, from: &Path) -> anyhow::Result<()> {
         report.outcome.fetched.len(),
         report.outcome.kept.len()
     );
+    if c.action() == Action::Installer {
+        return launch(c, dir, false);
+    }
     Ok(())
 }
 
@@ -432,8 +576,44 @@ mod tests {
     }
 
     #[test]
+    fn the_json_list_gives_each_ones_action_version_and_platform() {
+        let tmp = tempfile::tempdir().unwrap();
+        let v = list_json(&Registry::builtin(), tmp.path());
+        let items = v["components"].as_array().unwrap();
+        let lexend = items.iter().find(|i| i["id"] == "lexend").unwrap();
+        assert_eq!(lexend["action"], "place");
+        assert_eq!(lexend["version"], "");
+        assert_eq!(lexend["platform"], "any");
+        assert_eq!(lexend["status"], "not-installed");
+        if let Some(ff) = items.iter().find(|i| i["id"] == "ffmpeg") {
+            assert_eq!(ff["action"], "unpack");
+            assert_eq!(ff["version"], "9.0.2");
+        }
+    }
+
+    #[test]
     fn an_unknown_id_names_the_known_ones() {
         let e = named(&Registry::builtin(), "gpt").unwrap_err().to_string();
         assert!(e.contains("whisper-base.en"), "{e}");
+    }
+
+    #[test]
+    fn sign_in_reads_a_piped_token_and_never_a_terminal() {
+        // A memory store, never the system one, and never gh.
+        textweaver_app::components::fake::memory_credentials();
+        let token = "ghp_EXAMPLEonlyNotARealToken6666";
+        let e = sign_in(&mut format!("{token}\n").as_bytes(), true)
+            .unwrap_err()
+            .to_string();
+        assert!(e.starts_with("Pipe the token in"), "{e}");
+        let e = sign_in(&mut "y\n".as_bytes(), false)
+            .unwrap_err()
+            .to_string();
+        assert!(!e.contains("EXAMPLEonly"), "{e}");
+        sign_in(&mut format!("{token}\r\n").as_bytes(), false).unwrap();
+        let kept = credentials::stored_token().unwrap();
+        assert_eq!(kept, credentials::Token::new(token).unwrap());
+        forget_token().unwrap();
+        assert_eq!(credentials::stored_token(), None);
     }
 }

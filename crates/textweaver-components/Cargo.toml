@@ -14,7 +14,8 @@ default = []
 # Downloads over HTTPS (ureq with rustls). Off by default, so the lean
 # reader links no HTTP client: without it only a mirror that is a folder
 # on this computer, and Install from a file, work.
-download = ["dep:ureq"]
+# It also brings the credential store for a private components source.
+download = ["dep:ureq", "dep:serde_json", "dep:keyring"]
 
 [dependencies]
 thiserror.workspace = true
@@ -27,7 +28,16 @@ sha2.workspace = true
 sha1.workspace = true
 # Install from a downloaded zip (already in the tree through the formats).
 zip.workspace = true
+# The `unpack` action: gzip tarballs (pandoc for Linux).
+tar.workspace = true
+flate2.workspace = true
 ureq = { workspace = true, optional = true }
+# A private repository's release list (GitHub's API answers in JSON).
+serde_json = { workspace = true, optional = true }
+# The GitHub token asked for once, kept only in the system credential store.
+keyring = { workspace = true, optional = true }
+# Finding and running `gh auth token` with no console window.
+textweaver-core.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

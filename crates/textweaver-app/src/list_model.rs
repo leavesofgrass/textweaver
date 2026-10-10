@@ -352,6 +352,17 @@ impl PromptModel {
         self.text.iter().collect()
     }
 
+    /// The text to draw: the text typed, or one star per character in a
+    /// secret prompt ([`PromptPurpose::is_secret`]), so a token is never
+    /// on the screen or the Braille display.
+    pub fn shown_text(&self) -> String {
+        if self.purpose.is_secret() {
+            "*".repeat(self.text.len())
+        } else {
+            self.text()
+        }
+    }
+
     /// The caret, in chars from the start of the text.
     pub fn caret(&self) -> usize {
         self.caret
@@ -732,11 +743,14 @@ impl App {
             return vec![Effect::Redraw];
         };
         let mut echo: Option<String> = None;
+        let secret = mb.purpose.is_secret();
         match key {
             PromptKey::Enter => {
                 let answer = mb.text();
                 let purpose = mb.purpose;
-                self.remember_answer(purpose, &answer);
+                if !secret {
+                    self.remember_answer(purpose, &answer);
+                }
                 self.prompt_model = None;
                 return self.dispatch_inner(Command::Answer(answer));
             }
@@ -797,6 +811,7 @@ impl App {
                 }
                 return vec![Effect::Redraw];
             }
+            PromptKey::Up | PromptKey::Down if secret => return vec![Effect::Redraw],
             PromptKey::Up => {
                 self.recall(-1);
                 return vec![Effect::Redraw];
@@ -805,6 +820,10 @@ impl App {
                 self.recall(1);
                 return vec![Effect::Redraw];
             }
+        }
+        if secret {
+            // Nothing typed into a secret prompt is said.
+            echo = None;
         }
         if let Some(e) = echo.filter(|e| !e.is_empty()) {
             self.echo(&e);
