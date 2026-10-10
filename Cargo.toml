@@ -83,7 +83,7 @@ default-members = [
 ]
 
 [workspace.package]
-version = "0.1.0-alpha.9"
+version = "0.1.0-beta.1"
 edition = "2024"
 # 1.95: harper-core 2.11.0 (grammar, on by default since Wave 7) declares no
 # rust-version but does not build with 1.94, which cannot infer the type of

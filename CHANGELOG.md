@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-beta.1] - 2026-10-10
+
 In short: beta 1 adds study tools (study cards with SM-2 scheduling and sync, a self-test, recall prompts), links between notes with seven export formats, tracked changes and comments written back to Word files, a named highlight palette, regular-expression find and replace, Markdown paste, a preview pane, polished HTML, DAISY 2.02 books and recorded DAISY narration, braille (BRF) files such as NLS BARD downloads, five more formats through carta, offline searchable help, optional components fetched for you (including from your own repository), update checks, and one download per system holding both programs.
 
 ### Reading and speech
@@ -967,6 +969,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-beta.1]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.1
 [0.1.0-alpha.9]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.9
 [0.1.0-alpha.8]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.8
 [0.1.0-alpha.7]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.7

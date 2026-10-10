@@ -2,7 +2,7 @@
 
 In a hurry? The [quick start](quickstart.md) is the short version. On Windows, the quickest way in is to download `textweaver-VERSION-windows-x86_64.zip`, extract it, and run `textweaver-gui.exe`, the app (see [The app](#the-app)).
 
-textweaver is in alpha. The newest release is 0.1.0-alpha.9. From beta 1 on, a release on GitHub has one package for each system and processor, and each package holds everything:
+textweaver is in alpha. The newest release is 0.1.0-beta.1. From beta 1 on, a release on GitHub has one package for each system and processor, and each package holds everything:
 
 - `textweaver-VERSION-windows-x86_64.zip`, for Windows on x86-64 computers (it also runs on Windows on ARM, under emulation)
 - `textweaver-VERSION-macos-universal.zip`, for Apple silicon and Intel Macs
@@ -16,7 +16,7 @@ Every package contains both programs and the complete documentation:
 - `tw`, the terminal program. `tw FILE` opens the terminal reader, and `tw COMMAND` runs a command without it, such as `tw convert` (see [The command line](command-line.md)).
 - `textweaver`, a second name for `tw`, so that older shortcuts keep working: `textweaver FILE` opens the terminal reader as it always has. On Linux and macOS it is a link to `tw`; on Windows it is a small launcher that starts `tw.exe`.
 
-Releases up to 0.1.0-alpha.9 had the app in packages of their own, whose names ended in `-gui`. Those packages are not made any more.
+Releases up to 0.1.0-beta.1 had the app in packages of their own, whose names ended in `-gui`. Those packages are not made any more.
 
 Download from the [releases page](https://github.com/leavesofgrass/textweaver/releases).
 
@@ -54,7 +54,7 @@ The scripts are in a copy of the repository. To get one:
 git clone https://github.com/leavesofgrass/textweaver
 ```
 
-To set up the app as well, add `--gui` (`-Gui` also works on Windows). Since beta 1 the app is in the same package as `tw`, so nothing more is downloaded: the script adds a shortcut or menu entry named "textweaver window", and on macOS copies `textweaver.app` into `~/Applications` and on Linux links `textweaver-gui` into `~/.local/bin`. On Windows the app is installed beside `tw.exe` either way. For releases up to 0.1.0-alpha.9, `--gui` downloads their separate app package instead. Running the script again, or the update script, keeps the app set up; `--no-gui` removes the shortcut, menu entry, link, or copy. On Linux `--gui` goes with `--release`.
+To set up the app as well, add `--gui` (`-Gui` also works on Windows). Since beta 1 the app is in the same package as `tw`, so nothing more is downloaded: the script adds a shortcut or menu entry named "textweaver window", and on macOS copies `textweaver.app` into `~/Applications` and on Linux links `textweaver-gui` into `~/.local/bin`. On Windows the app is installed beside `tw.exe` either way. For releases up to 0.1.0-beta.1, `--gui` downloads their separate app package instead. Running the script again, or the update script, keeps the app set up; `--no-gui` removes the shortcut, menu entry, link, or copy. On Linux `--gui` goes with `--release`.
 
 ```bash
 bash scripts/install-linux.sh --release latest --gui
@@ -136,7 +136,7 @@ The macOS build is not notarized by Apple yet, because notarization needs a paid
 2. Remove the quarantine flag that the browser added. Replace the folder name with the one you extracted:
 
    ```bash
-   xattr -dr com.apple.quarantine textweaver-0.1.0-alpha.9-macos-universal
+   xattr -dr com.apple.quarantine textweaver-0.1.0-beta.1-macos-universal
    ```
 
    If you skip this, macOS says the program "cannot be opened because Apple cannot check it for malicious software". In that case open System Settings, go to Privacy & Security, and choose "Open Anyway" next to the message about `textweaver.app` or `tw`. Then run the program again.
@@ -201,7 +201,7 @@ To install it by hand:
 
 Run `tw backends` to see which engines textweaver found.
 
-**Updates.** The AppImage carries update information, so AppImageUpdate and similar tools can update it, downloading only what changed. The separate terminal and app AppImages of 0.1.0-alpha.9 and earlier are offered the single AppImage as their update. After that update, the file starts the app when run on its own; links named `tw` and `textweaver` keep running `tw`. `scripts/update.sh` updates an install made by the script.
+**Updates.** The AppImage carries update information, so AppImageUpdate and similar tools can update it, downloading only what changed. The separate terminal and app AppImages of 0.1.0-beta.1 and earlier are offered the single AppImage as their update. After that update, the file starts the app when run on its own; links named `tw` and `textweaver` keep running `tw`. `scripts/update.sh` updates an install made by the script.
 
 To build from source instead, run the install script without `--release`; it works on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine, and on other architectures. The Docker image in `docker/` has everything a build needs, including espeak-ng; see [docs/dev/docker.md](dev/docker.md).
 
@@ -220,13 +220,13 @@ The app is in every package, beside `tw`, with the same engine hosts and diction
 Each release has a `SHA256SUMS.txt` file. To check a download on Windows:
 
 ```powershell
-certutil -hashfile textweaver-0.1.0-alpha.9-windows-x86_64.zip SHA256
+certutil -hashfile textweaver-0.1.0-beta.1-windows-x86_64.zip SHA256
 ```
 
 On macOS:
 
 ```bash
-shasum -a 256 textweaver-0.1.0-alpha.9-macos-universal.zip
+shasum -a 256 textweaver-0.1.0-beta.1-macos-universal.zip
 ```
 
 On Linux:
@@ -240,7 +240,7 @@ Compare the result with the line for that file in `SHA256SUMS.txt`. textweaver's
 Every package also carries a build attestation, a signed record of the GitHub workflow that built it. With the GitHub CLI installed, this checks one:
 
 ```bash
-gh attestation verify textweaver-0.1.0-alpha.9-windows-x86_64.zip --repo leavesofgrass/textweaver
+gh attestation verify textweaver-0.1.0-beta.1-windows-x86_64.zip --repo leavesofgrass/textweaver
 ```
 
 ## Building from source

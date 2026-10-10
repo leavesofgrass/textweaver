@@ -4,7 +4,7 @@ A release is a git tag `vX.Y.Z[-pre]` and a GitHub release with these files. Sin
 
 - the Windows package, `textweaver-VERSION-windows-x86_64.zip`;
 - the macOS package, `textweaver-VERSION-macos-universal.zip` (`textweaver.app` beside `tw`, Apple silicon and Intel);
-- the Linux AppImages, `textweaver-VERSION-linux-x86_64.AppImage` and `textweaver-VERSION-linux-aarch64.AppImage`, each with its `.zsync` file for delta updates, and a copy of that file named `textweaver-VERSION-linux-ARCH-gui.AppImage.zsync`, so the separate app AppImages of 0.1.0-alpha.9 and earlier are offered the single image;
+- the Linux AppImages, `textweaver-VERSION-linux-x86_64.AppImage` and `textweaver-VERSION-linux-aarch64.AppImage`, each with its `.zsync` file for delta updates, and a copy of that file named `textweaver-VERSION-linux-ARCH-gui.AppImage.zsync`, so the separate app AppImages of 0.1.0-beta.1 and earlier are offered the single image;
 - the Linux tarballs, `textweaver-VERSION-linux-x86_64.tar.gz` and `textweaver-VERSION-linux-aarch64.tar.gz`, for systems without FUSE;
 - `SHA256SUMS.txt`, covering every package.
 
@@ -17,7 +17,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 1. **Listen, if you want to (optional).** A release does not wait for a listening check (the owner's decision, Wednesday, September 30, 2026). Tests that fake the engine cannot hear a silent one, so a listen on real hardware is still worth doing when speech has changed a lot. When you do one, go through [the listening checklist](#listening-checklist) below and record it:
 
    ```bash
-   cargo xtask release 0.1.0-alpha.9 --listened
+   cargo xtask release 0.1.0-beta.1 --listened
    ```
 
    This writes today's date and the version on the "Last listening check" line of this guide, and changes nothing else. The release prints a note when that line is old or for another version, and goes on.
@@ -25,23 +25,23 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 2. **Prepare.** Before you start, run the checks CI runs, locally: `scripts/dev-check.sh` on Linux or macOS (`--docker` for the full Linux set), or `scripts\dev-check.ps1` on Windows. They include the link check and the site data check. Then, on `main`, with a clean tree and CI green, try the release without changing anything:
 
    ```bash
-   cargo xtask release 0.1.0-alpha.9 --dry-run
+   cargo xtask release 0.1.0-beta.1 --dry-run
    ```
 
    It prints the date it will use, the files it will change, and the checks it will run. Right after a release, `[Unreleased]` in `CHANGELOG.md` is empty; a dry run lists that as a problem, the same way it lists the other things a real release would stop for, instead of stopping itself. Then run it for real:
 
    ```bash
-   cargo xtask release 0.1.0-alpha.9
+   cargo xtask release 0.1.0-beta.1
    ```
 
    This:
 
    - stops unless the tree is clean and on `main` and the changelog is grouped by area (below), and notes an old or missing listening check without stopping;
    - sets `version` in `[workspace.package]` in the root `Cargo.toml` and runs `cargo update -w`;
-   - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-alpha.9] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
+   - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-beta.1] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
    - updates the version examples in this guide, `docs/install.md`, the README, the crate map (`docs/site/architecture.html`), and the workflows, and lists every other line that still names the old version, so a file that should follow the release is seen in the dry run (lines that record history stay as they are);
    - runs the checks CI runs: fmt, clippy, the tests, `cargo xtask keyboard --check`, and `cargo xtask deps --check` (`--no-checks` skips them, for a rerun after a failure you have fixed);
-   - commits "Release 0.1.0-alpha.9" and makes the annotated tag `v0.1.0-alpha.9`. It pushes nothing.
+   - commits "Release 0.1.0-beta.1" and makes the annotated tag `v0.1.0-beta.1`. It pushes nothing.
 
    Before a release, also run `cargo xtask notices` (it needs `cargo install --locked cargo-about`) and commit `THIRD-PARTY-NOTICES.md` if it changed. CI fails when it is out of date.
 
@@ -62,7 +62,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    ```
 
    ```bash
-   git push origin v0.1.0-alpha.9
+   git push origin v0.1.0-beta.1
    ```
 
    Pushing the tag starts the `Release` workflow:
@@ -75,22 +75,22 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
 5. **Check.** Read the release page. It should have every package and `SHA256SUMS.txt`, with the pre-release flag set. Anyone can check where a package was built:
 
    ```bash
-   gh attestation verify textweaver-0.1.0-alpha.9-windows-x86_64.zip --repo leavesofgrass/textweaver
+   gh attestation verify textweaver-0.1.0-beta.1-windows-x86_64.zip --repo leavesofgrass/textweaver
    ```
 
 6. **Record the package sizes.** Once every package is on the release:
 
    ```bash
-   cargo xtask release 0.1.0-alpha.9 --sizes
+   cargo xtask release 0.1.0-beta.1 --sizes
    ```
 
-   It reads each package's size from the release (`gh release view`, read only), rewrites `xtask/package-sizes.toml` with them and clears its notes, adds a "Package sizes" list to the version's section of `CHANGELOG.md`, and writes that section to `target/release-notes-0.1.0-alpha.9.md`. Commit the two files. To show the sizes on the release page too, run the `gh release edit` command it prints. `--sizes-from DIR` reads the package files in a folder instead, such as a dry run's downloaded artifacts. See [Package sizes](#package-sizes).
+   It reads each package's size from the release (`gh release view`, read only), rewrites `xtask/package-sizes.toml` with them and clears its notes, adds a "Package sizes" list to the version's section of `CHANGELOG.md`, and writes that section to `target/release-notes-0.1.0-beta.1.md`. Commit the two files. To show the sizes on the release page too, run the `gh release edit` command it prints. `--sizes-from DIR` reads the package files in a folder instead, such as a dry run's downloaded artifacts. See [Package sizes](#package-sizes).
 
 ## Listening checklist
 
 Optional. When you want to listen, do this on the machine you use every day, with Eloquence, SAPI 5, and Piper (and DECtalk if it is installed). Then record it with `cargo xtask release VERSION --listened`, which rewrites this line from the machine's clock:
 
-**Last listening check:** 2026-09-29 (Tuesday, September 29, 2026), for 0.1.0-alpha.9.
+**Last listening check:** 2026-09-29 (Tuesday, September 29, 2026), for 0.1.0-beta.1.
 
 1. **Write the samples.**
 
@@ -153,11 +153,11 @@ The app's part of the build is in `xtask/src/gui_dist.rs`. It builds `textweaver
 
 **The screenshot harness stays in the package for now.** The app's default `screenshot` feature (`--screenshot` and `--review-screenshots`, drawn with Vello's CPU renderer, `image`, and `oxipng`) is the only way the release workflow can check that the packaged app draws its interface: its runners have no GPU Vello can use, and the Linux check runs with no display. So the checks on all three systems run `textweaver-gui --screenshot`. `cargo xtask dist --no-screenshot` builds the package without it, with every other default feature; it can become the default once the release checks no longer need the harness. Review screenshots come from a developer build either way.
 
-Releases up to 0.1.0-alpha.9 had the app in packages of its own, named like the terminal packages with `-gui` at the end. Those are not made any more. The one name kept is the `-gui` copy of each Linux `.zsync` file, for the app AppImages already installed.
+Releases up to 0.1.0-beta.1 had the app in packages of its own, named like the terminal packages with `-gui` at the end. Those are not made any more. The one name kept is the `-gui` copy of each Linux `.zsync` file, for the app AppImages already installed.
 
 ## The Linux packages
 
-`cargo xtask appimage` stages the Linux package as `cargo xtask dist` does, writes the tarball, and then wraps the same folder in an AppImage with `appimagetool`. The folder sits whole under `usr/lib/textweaver/` inside the AppImage, so the programs find the hosts and dictionaries beside them, as in the tarball. `scripts/linux/AppRun` is the entry point: it starts the app by default (or with `--gui` first), `tw` when started through a link named `tw` or `textweaver` or with `--tw` or `--textweaver` first, and it offers `--install` and `--uninstall`, which link all three names and add menu entries for the app and the terminal reader. The AppImage carries `gh-releases-zsync` update information pointing at the newest release or pre-release, under the same name the terminal AppImages always had, so they update to the single image. The app AppImages of 0.1.0-alpha.9 and earlier look for `textweaver-*-linux-ARCH-gui.AppImage.zsync`; `cargo xtask appimage` writes a copy of the `.zsync` file under that name. Its `URL` line names the single image, which is beside it in the release, so they update to it too.
+`cargo xtask appimage` stages the Linux package as `cargo xtask dist` does, writes the tarball, and then wraps the same folder in an AppImage with `appimagetool`. The folder sits whole under `usr/lib/textweaver/` inside the AppImage, so the programs find the hosts and dictionaries beside them, as in the tarball. `scripts/linux/AppRun` is the entry point: it starts the app by default (or with `--gui` first), `tw` when started through a link named `tw` or `textweaver` or with `--tw` or `--textweaver` first, and it offers `--install` and `--uninstall`, which link all three names and add menu entries for the app and the terminal reader. The AppImage carries `gh-releases-zsync` update information pointing at the newest release or pre-release, under the same name the terminal AppImages always had, so they update to the single image. The app AppImages of 0.1.0-beta.1 and earlier look for `textweaver-*-linux-ARCH-gui.AppImage.zsync`; `cargo xtask appimage` writes a copy of the `.zsync` file under that name. Its `URL` line names the single image, which is beside it in the release, so they update to it too.
 
 Build on an old glibc, so the packages run on older distributions. The `docker/appimage` image is Ubuntu 22.04 (glibc 2.35), with Rust from rustup, the AppImage tools, and, for the GUI build, `libfontconfig1-dev` (`yeslogic-fontconfig-sys` needs its headers). `docker/appimage/fetch-tools.sh` downloads appimagetool 1.9.1 and the type 2 runtime 20251108, for x86_64 or aarch64, from their GitHub releases, and checks each against the SHA-256 digest GitHub publishes for it; a changed file stops the build. The image builds for the machine it runs on, so the aarch64 packages are built on an arm64 machine: the release workflow uses GitHub's `ubuntu-22.04-arm` runner. To build locally on any system with Docker:
 
@@ -209,7 +209,7 @@ cargo xtask dist --universal
 Then upload it and refresh the checksums. `tools/release-upload.sh` does both (it needs `gh`, logged in):
 
 ```bash
-tools/release-upload.sh v0.1.0-alpha.9 target/dist/textweaver-0.1.0-alpha.9-windows-x86_64.zip
+tools/release-upload.sh v0.1.0-beta.1 target/dist/textweaver-0.1.0-beta.1-windows-x86_64.zip
 ```
 
 If the release does not exist yet, the script creates it. A package uploaded this way has no provenance attestation.
