@@ -563,11 +563,12 @@ help-shortcuts-group-item =
        *[other] { $n } Befehle
     }. { $item }
 help-title = Hilfe
-help-intro = Hilfe. Auf und Ab bewegen, Escape schließt.
+help-intro = Hilfe. Tippen durchsucht die ganze Hilfe; Auf und Ab bewegen, Escape schließt.
 
 ## The help list. Each value is a key or keys from the keymap.
 
 help-about = textweaver liest Dokumente vor. Die Tasten unten sind die aktuellen Belegungen.
+help-search = Die ganze Hilfe durchsuchen, indem Sie hier tippen: Befehle, Tasten, Einstellungen und die Anleitungen.
 help-open = Ein Dokument öffnen: { $open }. Bibliothek und zuletzt verwendete Dateien: { $library }.
 help-play = Abspielen oder pausieren: { $key }.
 help-read-from-cursor = Ab dem Cursor lesen: { $key }.
@@ -4222,11 +4223,11 @@ setting-components-mirror-help = Woher optionale Komponenten zuerst kommen: eine
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.
 name-quick-start = Schnellstart
-name-documentation = Dokumentation…
+name-documentation = Dokumentation
 name-report-problem = Problem melden…
 name-ask-first-run-again = Fragen zum ersten Start erneut stellen
 action-quick-start = Die Schnellstartanleitung in textweaver öffnen
-action-documentation = Die Webadresse der Dokumentation zeigen und vor dem Öffnen im Browser fragen
+action-documentation = Die mit textweaver gelieferten Anleitungen als Dokumente öffnen; ein Link zu einer anderen Anleitung öffnet sie an Ort und Stelle, und Verlauf zurück kehrt zurück
 action-report-problem = Zeigen, wo man ein Problem meldet, und vor dem Öffnen im Browser fragen; nichts wird gesendet
 action-ask-first-run-again = Fragen zum ersten Start erneut stellen: Hybridmodus mit Bildschirmleser und die optionalen Komponenten
 about-title = Über textweaver
@@ -4250,6 +4251,37 @@ about-quick-start-online = Schnellstart nicht neben textweaver gefunden. { $addr
 about-docs-question = Dokumentation: { $address }. Im Browser öffnen? y oder n
 about-report-question = Problem melden: { $address }. Nichts wird gesendet. Im Browser öffnen? y oder n
 about-first-run-again = Fragen zum ersten Start zurückgesetzt; beim nächsten Start.
+
+## B1-hp: die gelieferten Anleitungen und Hilfe durchsuchen.
+name-online-documentation = Online-Dokumentation…
+name-search-help = Hilfe durchsuchen
+action-online-documentation = Die Webadresse der Online-Dokumentation zeigen und vor dem Öffnen im Browser fragen
+action-search-help = Die ganze Hilfe durchsuchen: Befehlsnamen, Tasten, Einstellungen sowie Überschriften und Text der Anleitungen
+docs-not-found = Dokumentation nicht neben textweaver gefunden. { $address } im Browser öffnen? y oder n
+docs-guide-missing =
+    { $n ->
+        [one] Anleitung fehlt: { $guides }. Die anderen Anleitungen öffnen sich.
+       *[other] { $n } Anleitungen fehlen: { $guides }. Die anderen Anleitungen öffnen sich.
+    }
+helpsearch-title = Hilfe durchsuchen
+helpsearch-title-matching = Hilfe zu { $filter }
+helpsearch-intro = Hilfe durchsuchen, { $n } Themen. Tippen durchsucht Befehle, Tasten, Einstellungen und die Anleitungen; Enter öffnet ein Thema, F1 erklärt es.
+helpsearch-match =
+    { $n ->
+        [one] 1 Treffer.
+       *[other] { $n } Treffer.
+    }
+helpsearch-none = Keine Hilfe zu { $query }. Die Rücktaste entfernt Buchstaben.
+helpsearch-cleared =
+    { $n ->
+        [one] Filter gelöscht, 1 Thema.
+       *[other] Filter gelöscht, { $n } Themen.
+    }
+helpsearch-command = { $row }, Befehl
+helpsearch-setting = { $label }, Einstellung in { $section }
+helpsearch-guide = { $heading }, in { $guide }
+helpsearch-at-heading = Bei { $heading }.
+## End of B1-hp
 
 ## W9b-x: die Leseeinstellungen (Ansicht, Leseeinstellungen).
 name-reading-form = Leseeinstellungen

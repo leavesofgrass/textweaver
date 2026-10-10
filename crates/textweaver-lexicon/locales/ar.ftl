@@ -623,11 +623,12 @@ help-shortcuts-group-item =
        *[other] { $n } أوامر
     }. { $item }
 help-title = مساعدة
-help-intro = مساعدة. السهمان لأعلى ولأسفل للتنقل، Escape للإغلاق.
+help-intro = مساعدة. اكتب للبحث في المساعدة كلها؛ السهمان لأعلى ولأسفل للتنقل، Escape للإغلاق.
 
 ## قائمة المساعدة. كل قيمة هي مفتاح أو مفاتيح من خريطة المفاتيح.
 
 help-about = يقرأ textweaver المستندات بصوت عالٍ. المفاتيح أدناه هي الارتباطات الحالية.
+help-search = ابحث في المساعدة كلها بالكتابة هنا: الأوامر والمفاتيح والإعدادات والأدلة.
 help-open = فتح مستند: { $open }. المكتبة والملفات الأخيرة: { $library }.
 help-play = تشغيل أو إيقاف مؤقت: { $key }.
 help-read-from-cursor = القراءة من المؤشر: { $key }.
@@ -4506,11 +4507,11 @@ setting-components-mirror-help = من أين تأتي المكونات الاخ�
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.
 name-quick-start = البدء السريع
-name-documentation = التوثيق…
+name-documentation = التوثيق
 name-report-problem = الإبلاغ عن مشكلة…
 name-ask-first-run-again = السؤال مجددا عن خيارات التشغيل الأول
 action-quick-start = فتح دليل البدء السريع في textweaver
-action-documentation = عرض عنوان التوثيق على الويب، والسؤال قبل فتحه في المتصفح
+action-documentation = فتح الأدلة المرفقة مع textweaver كمستندات؛ رابط إلى دليل آخر يفتحه في مكانه، والرجوع في السجل يعيدك
 action-report-problem = عرض مكان الإبلاغ عن مشكلة، والسؤال قبل فتحه في المتصفح؛ لا يُرسل شيء
 action-ask-first-run-again = السؤال مجددا عن خيارات التشغيل الأول: الوضع المختلط مع قارئ الشاشة، والمكونات الاختيارية
 about-title = حول textweaver
@@ -4534,6 +4535,43 @@ about-quick-start-online = لم يوجد البدء السريع بجانب text
 about-docs-question = التوثيق: { $address }. فتحه في المتصفح؟ y أو n
 about-report-question = الإبلاغ عن مشكلة: { $address }. لا يُرسل شيء. فتحه في المتصفح؟ y أو n
 about-first-run-again = أُعيد ضبط خيارات التشغيل الأول؛ تُسأل عند التشغيل التالي.
+
+## B1-hp: الأدلة المرفقة والبحث في المساعدة.
+name-online-documentation = التوثيق على الإنترنت…
+name-search-help = البحث في المساعدة
+action-online-documentation = عرض عنوان التوثيق على الإنترنت، والسؤال قبل فتحه في المتصفح
+action-search-help = البحث في المساعدة كلها: أسماء الأوامر والمفاتيح والإعدادات، وعناوين الأدلة ونصها
+docs-not-found = لم يُعثر على التوثيق بجانب textweaver. هل تفتح { $address } في المتصفح؟ y أو n
+docs-guide-missing =
+    { $n ->
+        [one] دليل مفقود: { $guides }. تُفتح الأدلة الأخرى.
+       *[other] أدلة مفقودة ({ $n }): { $guides }. تُفتح الأدلة الأخرى.
+    }
+helpsearch-title = البحث في المساعدة
+helpsearch-title-matching = مساعدة عن { $filter }
+helpsearch-intro = البحث في المساعدة، { $n } موضوعًا. اكتب للبحث في الأوامر والمفاتيح والإعدادات والأدلة؛ Enter يفتح موضوعًا، وF1 يشرحه.
+helpsearch-match =
+    { $n ->
+        [one] نتيجة واحدة.
+        [two] نتيجتان.
+        [few] { $n } نتائج.
+        [many] { $n } نتيجة.
+       *[other] { $n } نتيجة.
+    }
+helpsearch-none = لا مساعدة عن { $query }. Backspace يحذف الحروف.
+helpsearch-cleared =
+    { $n ->
+        [one] مُسح عامل التصفية، موضوع واحد.
+        [two] مُسح عامل التصفية، موضوعان.
+        [few] مُسح عامل التصفية، { $n } مواضيع.
+        [many] مُسح عامل التصفية، { $n } موضوعًا.
+       *[other] مُسح عامل التصفية، { $n } موضوع.
+    }
+helpsearch-command = { $row }، أمر
+helpsearch-setting = { $label }، إعداد في { $section }
+helpsearch-guide = { $heading }، في { $guide }
+helpsearch-at-heading = عند { $heading }.
+## End of B1-hp
 
 ## W9b-x: إعدادات القراءة (عرض، إعدادات القراءة).
 name-reading-form = إعدادات القراءة

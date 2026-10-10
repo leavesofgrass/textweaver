@@ -712,7 +712,13 @@ actions! {
     QuickStart = "quick_start", View, "Open the quick start guide in textweaver",
         gui [], term [], shared [];
     Documentation = "documentation", View,
-        "Show the documentation's web address, and ask before opening it in a browser",
+        "Open the guides that come with textweaver as documents; a link to another guide opens it in place, and History back returns",
+        gui [], term [], shared [];
+    OnlineDocumentation = "online_documentation", View,
+        "Show the online documentation's web address, and ask before opening it in a browser",
+        gui [], term [], shared [];
+    SearchHelp = "search_help", View,
+        "Search all of help: command names, keys, settings, and the guides' headings and text",
         gui [], term [], shared [];
     ReportProblem = "report_problem", View,
         "Show where to report a problem, and ask before opening it in a browser; nothing is sent",

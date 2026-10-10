@@ -900,11 +900,12 @@ impl App {
                     ("settings", k(A::Settings)),
                 ],
             ),
+            c.tr("help-search"),
             line("help-quit", &[("key", k(A::Quit))]),
         ];
         let intro = c.tr("help-intro");
         let title = c.tr("help-title");
-        self.list = Some(ListKind::Info);
+        self.list = Some(ListKind::Help);
         self.tell(&intro);
         vec![Effect::ShowList { title, items }]
     }

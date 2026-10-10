@@ -186,6 +186,7 @@ mod goto;
 #[cfg(feature = "grammar")]
 mod grammar;
 mod help;
+mod help_docs;
 mod language;
 mod library;
 mod links;
