@@ -52,7 +52,7 @@ Sync is set up, checked, and driven from **Tools, Sync** in the menus (F10 in th
 - **Replaced notes**: lists the notes in this document that another computer's newer edit replaced, and the ones another computer deleted; Enter puts one back.
 - **Stop syncing on this computer**: turns sync off here. The sync folder is left as it is, and the other computers go on.
 
-Sync status is the one sync command with a default key, Shift+F5, in both the terminal and the window, on every system. The others have no keys; you can give them keys in `keymap.toml` (see [the keyboard reference](keyboard.md)).
+Sync status is the one sync command with a default key, Shift+F5, in both the terminal reader and the app, on every system. The others have no keys; you can give them keys in `keymap.toml` (see [the keyboard reference](keyboard.md)).
 
 ### Naming each computer
 

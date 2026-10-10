@@ -368,7 +368,7 @@ Each returns `{status, effects}`, the same as `action` without `pending`.
 
 ### list_state and list_key: move through a list as the reader does
 
-The list shown and its focused item are kept by textweaver itself, the same for the terminal reader, the window, and a client. These methods let a client move through a list with the reader's own keys and hear the same "item, 2 of 5" announcements.
+The list shown and its focused item are kept by textweaver itself, the same for the terminal reader, the app, and a client. These methods let a client move through a list with the reader's own keys and hear the same "item, 2 of 5" announcements.
 
 - `list_state` takes no parameters. It returns the list shown as `{title, items, selected, filter}`, or null when no list is shown. `selected` counts from 0; `filter` is the text typed so far in a list that filters as you type (the outline, the citation picker, the settings), else null.
 - `list_key` takes `key` (string, required): `up`, `down`, `page_up`, `page_down`, `home`, `end`, `left`, `right`, `enter`, `escape`, `backspace`, `delete`, `rename`, `introduce` (the list's introduction again), `details` (the Say Status key: in the file browser, a preview of the focused row), the file browser's `choose_here`, `sort`, and `show_all`, or one character. A character filters a list that filters, chooses by a list's own letter (`s`, `d`, `c` in Save, Discard, Cancel), or moves to the next item starting with it; a space marks an item (a favorite voice). `left` and `right` change a value in the settings list. It returns `{status, effects, list}`, where `list` is the list after the key, as `list_state` gives it.
@@ -793,7 +793,7 @@ This client only reads while it waits for an answer. A real client, such as an e
 ## See also
 
 - [ADR-0015: JSON-RPC server](adr/0015-json-rpc.md): the design decision behind `tw serve`.
-- [Architecture](dev/architecture.md): how the server shares the app core with the terminal reader and the window.
+- [Architecture](dev/architecture.md): how the server shares the app core with the terminal reader and the app.
 - [Keyboard reference](keyboard.md): every action id you can pass to `action` and `navigate`.
 - [Using textweaver with a screen reader](screen-readers.md): `--no-speech` and working with JAWS, NVDA, VoiceOver, and Orca.
 - [Troubleshooting](troubleshooting.md): the log file and common problems.

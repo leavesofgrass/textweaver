@@ -48,13 +48,13 @@ Everyone who takes part is asked to follow the [code of conduct](CODE_OF_CONDUCT
    cargo test --workspace
    ```
 
-5. Try the terminal reader and the window on a document. Space starts and pauses reading, and `?` lists every key:
+5. Try the terminal reader and the app on a document. Space starts and pauses reading, and `?` lists every key:
 
    ```bash
    cargo run -p textweaver-cli --bin tw -- fixtures/sample.md
    ```
 
-   and the window:
+   and the app:
 
    ```bash
    cargo run -p textweaver-xilem -- fixtures/sample.md
