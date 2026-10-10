@@ -1,25 +1,22 @@
 # Installing textweaver
 
-In a hurry? The [quick start](quickstart.md) is the short version. On Windows, the quickest way in is the window package: download `textweaver-VERSION-windows-x86_64-gui.zip`, extract it, and run `textweaver-gui.exe` (see [The GUI](#the-gui)).
+In a hurry? The [quick start](quickstart.md) is the short version. On Windows, the quickest way in is to download `textweaver-VERSION-windows-x86_64.zip`, extract it, and run `textweaver-gui.exe`, the app (see [The app](#the-app)).
 
-textweaver is in alpha. The newest release is 0.1.0-alpha.9. A release on GitHub has these packages:
+textweaver is in alpha. The newest release is 0.1.0-alpha.9. From beta 1 on, a release on GitHub has one package for each system and processor, and each package holds everything:
 
-- `textweaver-VERSION-windows-x86_64.zip`
-- `textweaver-VERSION-macos-universal.tar.gz`, for Apple silicon and Intel Macs
+- `textweaver-VERSION-windows-x86_64.zip`, for Windows on x86-64 computers (it also runs on Windows on ARM, under emulation)
+- `textweaver-VERSION-macos-universal.zip`, for Apple silicon and Intel Macs
 - `textweaver-VERSION-linux-x86_64.AppImage`, one file that runs on most Linux distributions
 - `textweaver-VERSION-linux-x86_64.tar.gz`, the same programs as a plain folder, for Linux systems where AppImages cannot run
 - `textweaver-VERSION-linux-aarch64.AppImage` and `textweaver-VERSION-linux-aarch64.tar.gz`, the same for 64-bit ARM (arm64) computers
 
-Every package contains two programs:
+Every package contains both programs and the complete documentation:
 
-- `textweaver`, the terminal reader. Run `textweaver FILE`.
-- `tw`, the command-line tool. Run `tw --help`.
+- `textweaver-gui`, the app, for reading and writing with a mouse as well as the keyboard. On macOS it is `textweaver.app`.
+- `tw`, the terminal program. `tw FILE` opens the terminal reader, and `tw COMMAND` runs a command without it, such as `tw convert` (see [The command line](command-line.md)).
+- `textweaver`, a second name for `tw`, so that older shortcuts keep working: `textweaver FILE` opens the terminal reader as it always has. On Linux and macOS it is a link to `tw`; on Windows it is a small launcher that starts `tw.exe`.
 
-Releases after the fourth alpha also have the GUI, `textweaver-gui`, in packages of its own whose names end in `-gui` (see [The GUI](#the-gui)):
-
-- `textweaver-VERSION-windows-x86_64-gui.zip`
-- `textweaver-VERSION-macos-universal-gui.zip`, for Apple silicon and Intel Macs (the fifth alpha had `textweaver-VERSION-macos-aarch64-gui.zip`, for Apple silicon only)
-- `textweaver-VERSION-linux-x86_64-gui.AppImage` and `textweaver-VERSION-linux-x86_64-gui.tar.gz`, and the same for `aarch64`
+Releases up to 0.1.0-alpha.9 had the app in packages of their own, whose names ended in `-gui`. Those packages are not made any more.
 
 Download from the [releases page](https://github.com/leavesofgrass/textweaver/releases).
 
@@ -57,7 +54,7 @@ The scripts are in a copy of the repository. To get one:
 git clone https://github.com/leavesofgrass/textweaver
 ```
 
-To install the GUI as well, add `--gui` (`-Gui` also works on Windows). It installs the release's GUI package beside the reader and adds a shortcut or menu entry named "textweaver window": on Windows in a `gui` folder inside the install, on macOS as `textweaver.app` in `~/Applications`, and on Linux as `textweaver-gui` in `~/.local/bin` (the same kind of package as the reader, AppImage or tarball). Running the script again, or the update script, keeps the GUI installed; `--no-gui` removes it. On Linux and macOS the GUI comes from release packages only, so `--gui` goes with `--release` on Linux; on Windows it can also be built with `-FromSource`.
+To set up the app as well, add `--gui` (`-Gui` also works on Windows). Since beta 1 the app is in the same package as `tw`, so nothing more is downloaded: the script adds a shortcut or menu entry named "textweaver window", and on macOS copies `textweaver.app` into `~/Applications` and on Linux links `textweaver-gui` into `~/.local/bin`. On Windows the app is installed beside `tw.exe` either way. For releases up to 0.1.0-alpha.9, `--gui` downloads their separate app package instead. Running the script again, or the update script, keeps the app set up; `--no-gui` removes the shortcut, menu entry, link, or copy. On Linux `--gui` goes with `--release`.
 
 ```bash
 bash scripts/install-linux.sh --release latest --gui
@@ -105,7 +102,9 @@ powershell -ExecutionPolicy Bypass -File scripts\speech-check.ps1
    tw backends
    ```
 
-Keep the files in the folder together. The engine hosts must stay next to `textweaver.exe` and `tw.exe`:
+To start the app, run `textweaver-gui.exe`; to open the terminal reader, run `tw` (or `textweaver`) in a terminal.
+
+Keep the files in the folder together. The engine hosts must stay next to `textweaver-gui.exe`, `tw.exe` and `textweaver.exe`:
 
 - `textweaver-eci-host.exe` and `textweaver-eci-host-x86.exe`, for Eloquence;
 - `textweaver-sapi-host.exe` and `textweaver-sapi-host-x86.exe`, for SAPI5 voices;
@@ -124,11 +123,13 @@ The programs are not code-signed. Windows SmartScreen may warn the first time yo
 
 The macOS build is not notarized by Apple yet, because notarization needs a paid developer account. The binaries are signed ad hoc, so they run on Apple silicon. Gatekeeper still blocks the first run of a download that is not notarized, so do this once.
 
-1. Download the `.tar.gz`. Extract it in Finder, or in Terminal:
+1. Download the `.zip`. Extract it in Finder, or in Terminal:
 
    ```bash
-   tar -xzf textweaver-*-macos-universal.tar.gz
+   ditto -x -k textweaver-*-macos-universal.zip .
    ```
+
+   The folder holds `textweaver.app`, the app, and `tw` and `textweaver`, the terminal program and its second name.
 
 2. Remove the quarantine flag that the browser added. Replace the folder name with the one you extracted:
 
@@ -136,9 +137,9 @@ The macOS build is not notarized by Apple yet, because notarization needs a paid
    xattr -dr com.apple.quarantine textweaver-0.1.0-alpha.9-macos-universal
    ```
 
-   If you skip this, macOS says the program "cannot be opened because Apple cannot check it for malicious software". In that case open System Settings, go to Privacy & Security, and choose "Open Anyway" next to the message about `tw` or `textweaver`. Then run the program again.
+   If you skip this, macOS says the program "cannot be opened because Apple cannot check it for malicious software". In that case open System Settings, go to Privacy & Security, and choose "Open Anyway" next to the message about `textweaver.app` or `tw`. Then run the program again.
 
-3. Optionally, copy `textweaver` and `tw` to a folder on your `PATH`, such as `/usr/local/bin`.
+3. Open `textweaver.app` to start the app; you may move it to your Applications folder. For the terminal program, optionally link `tw` into a folder on your `PATH`, such as `/usr/local/bin`, and `textweaver` too if you want the second name.
 
 textweaver speaks with Apple's voices, including the Eloquence voices built into macOS. Reed is the default when it is installed. To list the voices:
 
@@ -148,7 +149,7 @@ tw voices
 
 ## Linux
 
-The Linux package is an AppImage: one file that holds `textweaver`, `tw`, the engine hosts for Eloquence (Voxin) and DECtalk, the pronunciation dictionaries, the guides, and the licenses. It is built on Ubuntu 22.04, so it runs on distributions from 2022 on, including Debian 12 and 13, Ubuntu 22.04 and later, Fedora, Arch, and openSUSE. There is one for x86_64 computers and one for 64-bit ARM (aarch64) computers; the install script picks the one for your computer. In the steps below, write `aarch64` where they say `x86_64` if `uname -m` says `aarch64`.
+The Linux package is an AppImage: one file that holds the app (`textweaver-gui`), `tw` and its second name `textweaver`, the engine hosts for Eloquence (Voxin) and DECtalk, the pronunciation dictionaries, the guides, and the licenses. It is built on Ubuntu 22.04, so it runs on distributions from 2022 on, including Debian 12 and 13, Ubuntu 22.04 and later, Fedora, Arch, and openSUSE. There is one for x86_64 computers and one for 64-bit ARM (aarch64) computers; the install script picks the one for your computer. In the steps below, write `aarch64` where they say `x86_64` if `uname -m` says `aarch64`.
 
 The easiest way is the install script, which checks the download for you (see [Install with a script](#install-with-a-script)):
 
@@ -165,27 +166,28 @@ To install it by hand:
    chmod +x textweaver-*-linux-x86_64.AppImage
    ```
 
-3. Run it. On its own it starts `textweaver`, the reader:
+3. Run it. On its own it starts the app:
 
    ```bash
    ./textweaver-*-linux-x86_64.AppImage FILE
    ```
 
-   With `--tw` first it runs `tw` instead:
+   With `--tw` first it runs `tw` instead: the terminal reader with a file or nothing, or a command:
 
    ```bash
+   ./textweaver-*-linux-x86_64.AppImage --tw FILE
    ./textweaver-*-linux-x86_64.AppImage --tw backends
    ```
 
-4. To run `textweaver` and `tw` from any folder, let the AppImage link itself into `~/.local/bin` and add a menu entry and an icon. It says what it will do and asks first:
+4. To run `textweaver-gui`, `tw` and `textweaver` from any folder, let the AppImage link itself into `~/.local/bin` and add menu entries for the app and the terminal reader, and an icon. It says what it will do and asks first:
 
    ```bash
    ./textweaver-*-linux-x86_64.AppImage --install
    ```
 
-   A link named `tw` runs `tw`; a link named `textweaver` runs the reader. The links point at the AppImage where it is, so move it before you run `--install`. `--uninstall` removes the links, the menu entry, and the icon.
+   A link named `textweaver-gui` starts the app; a link named `tw` runs `tw`; a link named `textweaver` runs `tw` too, so `textweaver FILE` opens the terminal reader. The links point at the AppImage where it is, so move it before you run `--install`. `--uninstall` removes the links, the menu entries, and the icon.
 
-**Without FUSE.** An AppImage mounts itself with FUSE, which most desktops have. Where it is missing (some containers and minimal systems), the AppImage says so. Then either set `APPIMAGE_EXTRACT_AND_RUN=1`, which makes it unpack itself to a temporary folder each time it runs, or use the tarball: extract it anywhere and run `textweaver` and `tw` from the folder. The install script picks the tarball by itself when FUSE is missing (`--tarball` asks for it).
+**Without FUSE.** An AppImage mounts itself with FUSE, which most desktops have. Where it is missing (some containers and minimal systems), the AppImage says so. Then either set `APPIMAGE_EXTRACT_AND_RUN=1`, which makes it unpack itself to a temporary folder each time it runs, or use the tarball: extract it anywhere and run `textweaver-gui` or `tw` from the folder. The install script picks the tarball by itself when FUSE is missing (`--tarball` asks for it).
 
 **Sound.** textweaver needs the ALSA library, `libasound.so.2`, which every Linux desktop has. On a minimal system, install `alsa-lib` (Fedora, Arch, openSUSE) or `libasound2` (Debian, Ubuntu).
 
@@ -197,25 +199,19 @@ To install it by hand:
 
 Run `tw backends` to see which engines textweaver found.
 
-**Updates.** The AppImage carries update information, so AppImageUpdate and similar tools can update it, downloading only what changed. `scripts/update.sh` updates an install made by the script.
+**Updates.** The AppImage carries update information, so AppImageUpdate and similar tools can update it, downloading only what changed. The separate terminal and app AppImages of 0.1.0-alpha.9 and earlier are offered the single AppImage as their update. After that update, the file starts the app when run on its own; links named `tw` and `textweaver` keep running `tw`. `scripts/update.sh` updates an install made by the script.
 
 To build from source instead, run the install script without `--release`; it works on Debian, Ubuntu, Fedora, Arch, openSUSE, and Alpine, and on other architectures. The Docker image in `docker/` has everything a build needs, including espeak-ng; see [docs/dev/docker.md](dev/docker.md).
 
-## The GUI
+## The app
 
-The GUI is a window for reading and writing, for people who prefer one to a terminal. Its guide is [docs/gui.md](gui.md), also in the package as `GUI.md`. It is supported on Windows. The macOS and Linux packages are built and checked automatically on every release, but no one has listened to them with a screen reader yet.
+The app, `textweaver-gui`, is for reading and writing with a mouse as well as the keyboard, for people who prefer it to a terminal. Its guide is [docs/gui.md](gui.md), also in the package as `GUI.md`. It is supported on Windows. The macOS and Linux builds are built and checked automatically on every release, but no one has listened to them with a screen reader yet.
 
-Each GUI package holds `textweaver-gui`, and on Windows and Linux the same engine hosts and dictionaries as the terminal package, next to the program. Keep the folder's files together, as for the terminal package. It shares its settings, reading positions, and notes with `textweaver`. The install scripts install it with `--gui` (see [Install with a script](#install-with-a-script)), or extract the package by hand as below.
+The app is in every package, beside `tw`, with the same engine hosts and dictionaries. Keep the folder's files together. The app and the terminal reader share their settings, reading positions, and notes.
 
-- **Windows.** Extract `textweaver-VERSION-windows-x86_64-gui.zip` to a folder of your own, and run `textweaver-gui.exe`. The program is not code-signed, so Windows SmartScreen warns the first time you start it from File Explorer: choose "More info", then "Run anyway".
-- **macOS.** Extract the zip. It holds `textweaver.app`, signed ad hoc and not notarized, so remove the quarantine flag once, with the folder name you extracted:
-
-  ```bash
-  xattr -dr com.apple.quarantine textweaver-VERSION-macos-universal-gui
-  ```
-
-  Then open `textweaver.app`. If you skip this step, use "Open Anyway" in System Settings, under Privacy & Security, as for the terminal package.
-- **Linux.** Make the AppImage executable and run it, or extract the tarball and run `textweaver-gui` from its folder. It needs a desktop session (Wayland or X11) and, like the reader, the ALSA library. The GUI's AppImage updates only to newer GUI AppImages.
+- **Windows.** Extract `textweaver-VERSION-windows-x86_64.zip` to a folder of your own, and run `textweaver-gui.exe`. The program is not code-signed, so Windows SmartScreen warns the first time you start it from File Explorer: choose "More info", then "Run anyway".
+- **macOS.** Extract the zip and remove the quarantine flag once, as in [macOS](#macos). Then open `textweaver.app`.
+- **Linux.** Run the AppImage on its own, or extract the tarball and run `textweaver-gui` from its folder. The app needs a desktop session (Wayland or X11) and, like the terminal reader, the ALSA library.
 
 ## Checking a download
 
@@ -228,7 +224,7 @@ certutil -hashfile textweaver-0.1.0-alpha.9-windows-x86_64.zip SHA256
 On macOS:
 
 ```bash
-shasum -a 256 textweaver-0.1.0-alpha.9-macos-universal.tar.gz
+shasum -a 256 textweaver-0.1.0-alpha.9-macos-universal.zip
 ```
 
 On Linux:

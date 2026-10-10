@@ -4,7 +4,7 @@ textweaver has two readers: the terminal reader, `textweaver`, and a window. The
 
 The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It reads and it edits; see [Editing](#editing).
 
-In a release package the program is `textweaver-gui`; see [the window package](install.md#the-gui). If you build the window yourself, `cargo build` makes `textweaver-xilem` instead; use that name where this guide says `textweaver-gui`.
+In a release package the program is `textweaver-gui`, beside `tw` in the same package; see [the app](install.md#the-app). If you build the window yourself, `cargo build` makes `textweaver-xilem` instead; use that name where this guide says `textweaver-gui`.
 
 ## Starting it
 

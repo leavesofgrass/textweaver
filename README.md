@@ -4,30 +4,30 @@
 
 textweaver reads documents out loud and highlights each word as it is spoken. It also lets you write, speaking the letters and words you type.
 
-It is made first for people who use a screen reader, and for students who find print hard to read. It runs on Linux, macOS, and Windows, as a window (the GUI) or in a terminal.
+It is made first for people who use a screen reader, and for students who find print hard to read. It runs on Linux, macOS, and Windows, as an app with a graphical interface or in a terminal.
 
 Status: alpha. It is ready for testing, but not yet for every day. See [known limits](docs/known-limits.md).
 
 ## Get textweaver
 
-Every release on the [releases page](https://github.com/leavesofgrass/textweaver/releases) ships the same programs for each platform. Pick the file for your computer. Names ending in `-gui` are the graphical version; the others are the terminal reader.
+Every release on the [releases page](https://github.com/leavesofgrass/textweaver/releases) has one download for each platform, and each download holds everything: the app (`textweaver-gui`), the terminal program (`tw`, with `textweaver` as a second name), the speech engine helpers, and the complete documentation. Pick the file for your computer.
 
-| Platform | GUI | Terminal reader |
-| --- | --- | --- |
-| Linux, x86_64 | `linux-x86_64-gui.AppImage` | `linux-x86_64.AppImage` |
-| Linux, 64-bit ARM | `linux-aarch64-gui.AppImage` | `linux-aarch64.AppImage` |
-| macOS, Apple silicon and Intel | `macos-universal-gui.zip` | `macos-universal.tar.gz` |
-| Windows, x86_64 | `windows-x86_64-gui.zip` | `windows-x86_64.zip` |
+| Platform | Download |
+| --- | --- |
+| Linux, x86_64 | `linux-x86_64.AppImage` |
+| Linux, 64-bit ARM | `linux-aarch64.AppImage` |
+| macOS, Apple silicon and Intel | `macos-universal.zip` |
+| Windows, x86_64 | `windows-x86_64.zip` |
 
-Linux also has `.tar.gz` packages for systems where AppImages cannot run.
+Linux also has `.tar.gz` packages for systems where AppImages cannot run. Releases up to 0.1.0-alpha.9 had the app in separate downloads whose names end in `-gui`.
 
 Each package is self-contained: unpack it, keep its files together, and run the program. Each platform has one first-run step, because the builds are not code-signed:
 
-- **Linux:** make the AppImage executable with `chmod +x`, then run it. Add `--install` to link it into `~/.local/bin` and add a menu entry.
-- **macOS:** the GUI zip holds `textweaver.app`. Clear the quarantine flag once with `xattr -dr com.apple.quarantine` on the unpacked folder, or use "Open Anyway" under Privacy & Security. The same applies to the terminal package.
-- **Windows:** run `textweaver-gui.exe` or `textweaver.exe`. SmartScreen warns the first time: choose "More info", then "Run anyway".
+- **Linux:** make the AppImage executable with `chmod +x`, then run it; on its own it starts the app, and with `--tw` it runs `tw`. Add `--install` to link `textweaver-gui`, `tw`, and `textweaver` into `~/.local/bin` and add menu entries.
+- **macOS:** the zip holds `textweaver.app` beside `tw`. Clear the quarantine flag once with `xattr -dr com.apple.quarantine` on the unpacked folder, or use "Open Anyway" under Privacy & Security.
+- **Windows:** run `textweaver-gui.exe` for the app, or `tw.exe` in a terminal. SmartScreen warns the first time: choose "More info", then "Run anyway".
 
-Or let a script do it. Clone the repository and run the one for your platform; each says what it will do, asks before changing your PATH, and takes `--gui` to install the window too:
+Or let a script do it. Clone the repository and run the one for your platform; each says what it will do, asks before changing your PATH, and takes `--gui` to install the app too:
 
 ```bash
 bash scripts/install-linux.sh --release latest --gui
@@ -53,13 +53,13 @@ textweaver remembers your place in each file and picks up where you left off.
 
 ## The terminal reader
 
-The terminal reader is text only, with no mouse and no pictures. Many screen reader users prefer it. Unpack the terminal package, open a terminal in that folder, and run:
+The terminal reader is text only, with no mouse and no pictures. Many screen reader users prefer it. It is part of `tw`, in the same package as the app. Open a terminal in the unpacked folder and run:
 
 ```bash
-textweaver QUICKSTART.md
+tw QUICKSTART.md
 ```
 
-It reads its own quick start out loud. Space starts and pauses; `?` lists every key. The reader and the GUI share settings, reading positions, and notes.
+It reads its own quick start out loud. Space starts and pauses; `?` lists every key. `textweaver QUICKSTART.md` does the same, as it did before beta 1. With a command instead of a file, `tw` works without the reader, for scripts: `tw convert`, `tw speak`, and the rest are in [the command line guide](docs/command-line.md). The reader and the app share settings, reading positions, and notes.
 
 ## Screen readers
 

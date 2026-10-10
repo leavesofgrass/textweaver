@@ -5,10 +5,10 @@ textweaver reads documents aloud and highlights each word. This page is the firs
 ## Start textweaver
 
 1. Download the package for your system from the [releases page](https://github.com/leavesofgrass/textweaver/releases). [Installing textweaver](install.md) has every package.
-2. Windows, the window: unzip `textweaver-VERSION-windows-x86_64-gui.zip`, and run `textweaver-gui.exe`. Windows warns once, because the program is not code-signed: choose "More info", then "Run anyway".
-3. Mac and Linux, the window: unpack the `-gui` package and run `textweaver-gui`. See [Installing textweaver](install.md#the-gui).
-4. The terminal reader: unpack the package without `-gui`, open a terminal in its folder, and type `textweaver QUICKSTART.md`.
-5. The first time, the window asks up to three questions. Each can be skipped.
+2. Windows, the app: unzip `textweaver-VERSION-windows-x86_64.zip`, and run `textweaver-gui.exe`. Windows warns once, because the program is not code-signed: choose "More info", then "Run anyway".
+3. Mac and Linux, the app: unpack the package and open `textweaver.app` on a Mac, or run the AppImage on Linux. See [Installing textweaver](install.md#the-app).
+4. The terminal reader is in the same package: open a terminal in its folder, and type `tw QUICKSTART.md` (`textweaver QUICKSTART.md` works too).
+5. The first time, the app asks up to three questions. Each can be skipped.
 
 ## Hear a document
 
