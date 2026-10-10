@@ -1138,9 +1138,18 @@ impl App {
         let details = self.record_library_open_doc(path, &title, &doc);
         let rope = doc.text().clone();
         let braille = crate::braille_file::untranslated_braille(&doc);
+        let headings_only = textweaver_formats::warnings(&doc.meta)
+            .iter()
+            .any(|w| w == textweaver_formats::daisy2::NO_TEXT_WARNING);
         let effects = self.open_document_stamped(doc, key, title, text);
         if braille {
             self.say_braille_untranslated();
+        }
+        if headings_only {
+            // A DAISY book with only headings and audio: said in the
+            // interface's language, not the loader's English.
+            let msg = self.msg("daisy-headings-only");
+            self.tell(&msg);
         }
         if let Some(s) = self.session.as_mut() {
             s.disk = stamp;

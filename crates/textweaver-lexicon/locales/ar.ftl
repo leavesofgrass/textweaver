@@ -4768,4 +4768,5 @@ brf-original-intro =
 brf-original-not-brf = ليس ملف برايل. عرض برايل الأصلي يعمل مع ملفات BRF.
 brf-original-unreadable = تعذرت قراءة ملف برايل: { $reason }
 brf-no-liblouis = برايل معروض كبرايل: liblouis غير موجود. لقراءته كنص مطبوع، ثبّت liblouis من liblouis.io أو من حزم نظامك، ثم افتح الملف مرة أخرى.
+daisy-headings-only = العناوين فقط: لا يحتوي كتاب DAISY هذا على نص، بل على عناوين وصوت فقط، لذا تُقرأ عناوينه.
 ## End of B1-r5

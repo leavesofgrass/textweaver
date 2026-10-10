@@ -4449,4 +4449,5 @@ brf-original-intro =
 brf-original-not-brf = Não é um arquivo braille. Mostrar o braille original funciona com arquivos BRF.
 brf-original-unreadable = Não é possível ler o arquivo braille: { $reason }
 brf-no-liblouis = Braille mostrado como braille: falta o liblouis. Para ler como texto impresso, instale o liblouis de liblouis.io ou dos pacotes do seu sistema e abra o arquivo de novo.
+daisy-headings-only = Só títulos: este livro DAISY não tem texto, apenas títulos e áudio, então seus títulos são lidos.
 ## End of B1-r5
