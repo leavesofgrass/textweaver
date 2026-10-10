@@ -329,6 +329,9 @@ pub(crate) enum ListKind {
     Help,
     /// Search help's topics, by row (crate::help_docs).
     HelpSearch(Vec<crate::help_docs::HelpTopic>),
+    /// Customize buttons: the bars' buttons, one button's moves, or the
+    /// commands to add (crate::buttons, B1-cb).
+    Buttons(crate::buttons::ButtonsList),
 }
 
 /// The application: the only owner of mutable state.
@@ -1908,6 +1911,7 @@ impl App {
             Some(ListKind::Changes(rows)) => self.choose_change_row(&rows, n),
             Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
             Some(ListKind::HelpSearch(topics)) => return self.choose_help_topic(&topics, n),
+            Some(ListKind::Buttons(l)) => return self.choose_buttons(l, n),
             Some(ListKind::Info) | Some(ListKind::Help) | None => {}
         }
         vec![Effect::Redraw]
@@ -1950,6 +1954,7 @@ impl App {
                 self.ask(&question);
                 vec![Effect::Redraw]
             }
+            Some(ListKind::Buttons(l)) => self.delete_buttons_item(l, n),
             _ => {
                 let msg = self.msg("study-nothing-to-delete");
                 self.tell(&msg);
@@ -2328,6 +2333,7 @@ impl App {
                 return self.run_registered(a);
             }
             A::ColorSettings => return self.open_color_settings(),
+            A::CustomizeButtons => return self.customize_buttons(),
             A::ReadingForm => return self.open_reading_form(),
             A::SyncSetup
             | A::SyncStatus

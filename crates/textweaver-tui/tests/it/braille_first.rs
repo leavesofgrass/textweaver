@@ -388,13 +388,17 @@ fn the_say_all_sentence_stays_first_on_the_status_line() {
 #[test]
 fn hints_under_an_open_list_match_its_keys() {
     let mut h = launch(Settings::default(), 100, 24, Some("# One\n\nText.\n"));
-    assert!(h.tui.hints(100).contains("play"), "{}", h.tui.hints(100));
+    assert!(
+        h.tui.hints(100).contains("Play or pause"),
+        "{}",
+        h.tui.hints(100)
+    );
     h.act(ActionId::KeyboardHelp);
     assert!(h.tui.list().is_some());
     let hints = h.tui.hints(100);
     assert!(hints.contains("Enter choose"), "{hints}");
     assert!(hints.contains("close"), "{hints}");
-    assert!(!hints.contains("play"), "{hints}");
+    assert!(!hints.contains("Play or pause"), "{hints}");
     h.act(ActionId::Menu);
     let hints = h.tui.hints(100);
     assert!(hints.contains("back"), "{hints}");

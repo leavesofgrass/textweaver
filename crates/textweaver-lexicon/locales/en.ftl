@@ -857,6 +857,7 @@ action-contents-panel = Show the Contents panel beside the document and go to it
 action-notes-panel = Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note
 action-toggle-header = Show or hide the header, the bar of Open, Font, Edit, Settings and Commands
 action-toggle-toolbar = Show or hide the toolbar, the bar of Play, Stop and the reading buttons
+action-customize-buttons = Choose the buttons on the header and the toolbar, and their order
 action-next-region = Move to the next part of the window: the header, the panel, the document, or the toolbar
 action-previous-region = Move to the previous part of the window
 action-command-palette = Run any command by name
@@ -2350,6 +2351,10 @@ setting-gui-header = Show the header
 setting-gui-header-help = Show the bar of Open, Font, Edit, Settings and Commands above the document. Off, the commands keep their keys and menu items.
 setting-gui-toolbar = Show the toolbar
 setting-gui-toolbar-help = Show the bar of Play, Stop and the reading buttons. Off, the commands keep their keys and menu items.
+setting-gui-header-buttons = Header buttons
+setting-gui-header-buttons-help = The header's buttons, in order, as command ids separated by commas. Customize buttons in the View menu changes them one at a time. Ids this version does not know are kept but not shown.
+setting-gui-toolbar-buttons = Toolbar buttons
+setting-gui-toolbar-buttons-help = The toolbar's buttons, in order, as command ids separated by commas. The terminal reader's key hints follow them. Customize buttons in the View menu changes them one at a time.
 setting-gui-auto-hide-menu = Hide the menu bar
 setting-gui-auto-hide-menu-help = Windows: hide the window's menu bar until Alt or F10 shows it. It hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.
 setting-gui-speak-messages = Speak textweaver's messages
@@ -3154,7 +3159,6 @@ tui-hint-previous-line = previous line
 tui-hint-again = again
 tui-hint-read-on = read on
 tui-hint-leave = leave
-tui-hint-paragraph = paragraph
 tui-hint-find = find
 tui-hint-mark = mark
 tui-hint-lines = lines
@@ -3361,6 +3365,54 @@ gui-header-shown = Header shown.
 gui-header-hidden = Header hidden. Its commands keep their keys.
 gui-toolbar-shown = Toolbar shown.
 gui-toolbar-hidden = Toolbar hidden. Its commands keep their keys.
+
+## Customize buttons: the header's and the toolbar's buttons (crate::buttons).
+
+buttons-title = Customize buttons
+buttons-intro =
+    { $n ->
+        [one] Customize buttons, 1 button. Enter on a button to move or remove it.
+       *[other] Customize buttons, { $n } buttons. Enter on a button to move or remove it.
+    }
+# A row: the button's name, its bar, and its place there.
+buttons-row =
+    { $bar ->
+        [header] { $name }, header { $pos } of { $count }
+       *[toolbar] { $name }, toolbar { $pos } of { $count }
+    }
+buttons-add-header = Add a button to the header
+buttons-add-toolbar = Add a button to the toolbar
+buttons-reset = Reset both bars to their defaults
+buttons-move-up = Move up
+buttons-move-down = Move down
+buttons-remove = Remove
+buttons-add-intro =
+    { $n ->
+        [one] 1 command to add. Enter adds it at the end.
+       *[other] { $n } commands to add. Enter adds one at the end.
+    }
+buttons-added =
+    { $bar ->
+        [header] { $name } added, header { $pos } of { $count }.
+       *[toolbar] { $name } added, toolbar { $pos } of { $count }.
+    }
+buttons-removed =
+    { $bar ->
+        [header] { $name } removed from the header.
+       *[toolbar] { $name } removed from the toolbar.
+    }
+buttons-moved = { $name } moved, { $pos } of { $count }.
+buttons-first = { $name } is already first.
+buttons-last = { $name } is already last.
+buttons-already =
+    { $bar ->
+        [header] { $name } is already on the header.
+       *[toolbar] { $name } is already on the toolbar.
+    }
+buttons-no-name = That command has no short name, so it cannot be a button.
+buttons-no-button = No button there.
+buttons-reset-done = Buttons reset to their defaults.
+buttons-none-to-add = No more commands to add.
 gui-sidebar-no-headings = No headings.
 gui-sidebar-no-notes = No notes.
 gui-sidebar-current = { $item }, current
@@ -3712,6 +3764,7 @@ name-contents-panel = Contents panel
 name-notes-panel = Notes panel
 name-toggle-header = Header
 name-toggle-toolbar = Toolbar
+name-customize-buttons = Customize buttons
 name-next-region = Next region
 name-previous-region = Previous region
 name-color-settings = Colors

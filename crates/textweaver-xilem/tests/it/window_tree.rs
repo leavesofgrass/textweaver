@@ -77,8 +77,8 @@ fn every_control_has_a_role_and_a_name() {
     for b in [
         "Play",
         "Stop",
-        "Next sentence",
-        "Previous sentence",
+        "Next paragraph",
+        "Previous paragraph",
         "Open",
         "Font",
         "Start editing",
@@ -171,8 +171,8 @@ fn every_button_has_its_key_from_the_keymap() {
         ("Commands", ActionId::CommandPalette),
         ("Play", ActionId::PlayPause),
         ("Stop", ActionId::Stop),
-        ("Previous sentence", ActionId::PreviousSentence),
-        ("Next sentence", ActionId::NextSentence),
+        ("Previous paragraph", ActionId::PreviousParagraph),
+        ("Next paragraph", ActionId::NextParagraph),
         ("Slower", ActionId::RateDown),
         ("Faster", ActionId::RateUp),
     ] {
@@ -227,8 +227,8 @@ fn every_button_shows_its_name_then_its_key() {
         ActionId::CommandPalette,
         ActionId::PlayPause,
         ActionId::Stop,
-        ActionId::PreviousSentence,
-        ActionId::NextSentence,
+        ActionId::PreviousParagraph,
+        ActionId::NextParagraph,
         ActionId::RateDown,
         ActionId::RateUp,
     ] {

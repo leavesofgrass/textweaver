@@ -158,6 +158,7 @@ mod batch;
 mod braille_file;
 pub mod browse;
 mod cards;
+pub mod buttons;
 pub mod changes;
 mod overview;
 // In-reader export, preview, and citations: the full modules with the

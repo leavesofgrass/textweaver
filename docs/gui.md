@@ -38,11 +38,11 @@ On Windows the window opens with no console window beside it. Started from a ter
 From top to bottom:
 
 1. **The menu bar** (Windows and macOS): File, Edit, View, Reading, Speech, Tools, and Help; see [Menus](#menus).
-2. **The header,** a banner with five buttons: Open, Font, Edit (or Finish editing), Settings, and Commands. The document's title is the window's title.
+2. **The header,** a banner with five buttons by default: Open, Font, Edit (or Finish editing), Settings, and Commands. The document's title is the window's title.
 3. **The Contents or Notes panel,** only when you show one (Ctrl+1 or Ctrl+2), to the left of the document; see [The Contents and Notes panels](#the-contents-and-notes-panels).
 4. **The document,** one control your screen reader reads as a document (on macOS, a read-only text area, which VoiceOver reads with its text commands). The cursor keys are your system's own (see [Cursor keys](#cursor-keys)), with Shift to select. Ctrl+C (Command+C on macOS) copies the selection, and says what it copied. Every other key goes to textweaver's keymap, so the browse keys of NVDA and JAWS work here too: `h` for the next heading, `t` for the next table, `k` for the next link, and so on.
 5. **The RSVP strip,** only while RSVP is on (Alt+Shift+R). It shows one word at a time under the document, so it never covers the text or the cursor.
-6. **The toolbar,** named "Reading": Play or Pause, Stop, Previous sentence, Next sentence, Slower, and Faster.
+6. **The toolbar,** named "Reading": by default Play or Pause, Stop, Previous paragraph, Next paragraph, Slower, and Faster. Both bars can hold other commands; see [Customizing the buttons](#customizing-the-buttons).
 7. **The status bar:** the last message, then what the terminal's title line shows: the reading state, "line 3 of 40, 7%", the accessibility mode, the rate, and the speech engine.
 
 Every button has a key, shown on screen with its name, for example "Open… (Ctrl+O)". Your screen reader reads it as the button's shortcut key: NVDA and JAWS say it after the name when their setting for reporting shortcut keys is on (in NVDA, Object Presentation, "Report object shortcut keys"). The name itself is only the label, "Open", so it stays short. The key comes from the keymap, so a key you change in `keymap.toml` shows here too, and F1 and the command palette list every key. While single-key shortcuts are on, a button shows its single key ("Play (Space)"); press F9 to turn them off, and the buttons show their chords instead ("Play (Ctrl+Shift+Space)").
@@ -50,6 +50,16 @@ Every button has a key, shown on screen with its name, for example "Open… (Ctr
 In a narrow window the buttons wrap onto more rows rather than leave the window. Below 800 pixels wide (at 100 percent; a 1366 by 768 laptop at 200 percent is 683 wide), the header and the toolbar fold into one flat bar above the document, the buttons hide their keys on screen (your screen reader still says them), and the panel goes above the document below 600 pixels. Header and Toolbar in the View menu hide either bar; their commands keep their keys and menu items, and the settings `gui.header` and `gui.toolbar` remember the choice on this computer.
 
 Tab and Shift+Tab move between the document and the buttons, in the order they are on screen. F6 and Shift+F6 move between the window's regions, as in other Windows programs: the header, the panel (when shown), the document, and the toolbar, landing on the first control of each. Dialogs (settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
+
+### Customizing the buttons
+
+The buttons on both bars are a choice rather than a fixed set. Any command that has a short name, which is to say any command the command palette and the menus list by name, can be placed on the header or the toolbar, in whatever order suits the way you read. The toolbar's defaults reflect how most readers move through a text: Play and Stop, then steps by paragraph rather than by sentence, then Slower and Faster. A reader who prefers sentence steps, heading steps, or Find on the toolbar can have them.
+
+View, Customize buttons (also in the command palette as "Customize buttons") opens a list of every button, the header's first, each named with its bar and its place there, as in "Stop, toolbar 2 of 6". Enter on a button offers Move up, Move down, and Remove; Delete removes the focused button at once. The last three rows add a button to the header, add one to the toolbar, or reset both bars to their defaults. Adding opens a list of the commands that are on neither bar, in alphabetical order, so a first letter jumps through it. Every change is said in words as it happens ("Find added, toolbar 7 of 7"), saved at once, and the list returns to the button that changed. The terminal reader offers the same list, and its key hints follow the toolbar's choice.
+
+The rules that keep the bars usable hold for any choice. Each button keeps its real name and its key in its accessible name, the keys are hidden on screen in a narrow window as before, and buttons that do not fit fold into Commands. A command never appears on both bars, nor twice on one. The window builds its bars as it opens, so a change made in the list shows on the bars the next time the window opens.
+
+The choice is kept in the settings `gui.header_buttons` and `gui.toolbar_buttons`, as lists of command ids, and like the other window layout settings it stays on this computer rather than syncing. A command id that this version does not recognize, perhaps one written by a newer version, is kept in the setting but not shown, so moving between versions loses nothing.
 
 ## Menus
 
