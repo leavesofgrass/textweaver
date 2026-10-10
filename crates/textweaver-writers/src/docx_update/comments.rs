@@ -129,7 +129,7 @@ fn read_comments(src: &str, root: Node<'_, '_>) -> Vec<FileComment> {
     root.children()
         .filter(|c| is_w_named(*c, "comment"))
         .filter_map(|c| {
-            let last = c.descendants().filter(|p| is_w_named(*p, "p")).last();
+            let last = c.descendants().rfind(|p| is_w_named(*p, "p"));
             Some(FileComment {
                 id: attr(c, "id")?.to_owned(),
                 range: c.range(),
@@ -455,8 +455,8 @@ pub(super) fn write(
         .enumerate()
         .filter_map(|(i, c)| Some((c.para.clone()?, i)))
         .collect();
-    for i in 0..file.len() {
-        let parent = file[i]
+    for (i, c) in file.iter_mut().enumerate() {
+        c.parent = c
             .para
             .as_ref()
             .and_then(|p| ext.get(p))
@@ -464,7 +464,6 @@ pub(super) fn write(
             .and_then(|p| by_para.get(p))
             .copied()
             .filter(|&j| j != i);
-        file[i].parent = parent;
     }
     let root_of = |mut i: usize| {
         for _ in 0..16 {

@@ -314,3 +314,78 @@ fn comments_are_added_to_a_package_without_comment_parts() {
     assert!(cs[0].resolved);
     assert_eq!(cs[0].text, "First.");
 }
+
+#[test]
+fn edits_are_written_as_tracked_changes_with_author_and_date() {
+    let body = format!(
+        "<w:p>{}{}</w:p><w:p>{}</w:p>",
+        r("The cat sat "),
+        r("on the mat."),
+        r("Then it slept.")
+    );
+    let pkg = package(&body, &[]);
+    let edits = [
+        TrackedEdit {
+            before: "The".into(),
+            inserted: "black".into(),
+            after: "cat sat".into(),
+            ..TrackedEdit::default()
+        },
+        TrackedEdit {
+            before: "on the".into(),
+            deleted: "mat.".into(),
+            inserted: "rug.".into(),
+            ..TrackedEdit::default()
+        },
+        TrackedEdit {
+            before: "Then it".into(),
+            deleted: "slept.".into(),
+            ..TrackedEdit::default()
+        },
+        TrackedEdit {
+            before: "nowhere".into(),
+            inserted: "lost".into(),
+            ..TrackedEdit::default()
+        },
+    ];
+    let (out, report) = track_edits(&pkg, &edits, "Ada Example", "2026-10-09T10:00:00Z").unwrap();
+    assert_eq!(
+        report,
+        TrackReport {
+            written: 3,
+            unplaced: 1
+        }
+    );
+    let doc = load(&out);
+    let changes = textweaver_formats::changes(&doc.meta);
+    let seen: Vec<(String, String)> = changes
+        .iter()
+        .map(|c| (format!("{:?}", c.kind), c.text.clone()))
+        .collect();
+    let want: Vec<(String, String)> = [
+        ("Inserted", "black"),
+        ("Deleted", "mat."),
+        ("Inserted", "rug."),
+        ("Deleted", "slept."),
+    ]
+    .iter()
+    .map(|(k, t)| ((*k).to_owned(), (*t).to_owned()))
+    .collect();
+    assert_eq!(seen, want);
+    assert!(changes.iter().all(|c| c.author == "Ada Example"));
+    assert!(changes.iter().all(|c| c.date == "2026-10-09T10:00:00Z"));
+    assert_eq!(
+        doc.text().to_string(),
+        "The black cat sat on the rug.\n\nThen it"
+    );
+    // Accepting them all gives the edited text.
+    let update = DocxUpdate {
+        rest: Some(true),
+        ..DocxUpdate::default()
+    };
+    let accepted = update_docx(&out, &update).unwrap().0;
+    assert_eq!(
+        text(&part(&accepted, DOCUMENT).unwrap()),
+        "The black cat sat on the rug. | Then it"
+    );
+}

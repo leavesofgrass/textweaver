@@ -32,6 +32,10 @@
 //! `w15:done`, and deleting removes a thread with its replies and its marks
 //! in the document. The parts and their relationships are created when the
 //! package has none.
+//!
+//! [`track_edits`] goes the other way (task B1-t3): edits made in
+//! textweaver are written as tracked changes, `w:ins` and `w:del` with the
+//! author and the time, for a reviewer in Word.
 
 use std::collections::HashMap;
 use std::io::{Cursor, Read};
@@ -755,6 +759,9 @@ impl Reviser<'_, '_> {
 }
 
 mod comments;
+mod track;
+
+pub use track::{TrackReport, TrackedEdit, track_edits};
 
 #[cfg(test)]
 mod tests;
