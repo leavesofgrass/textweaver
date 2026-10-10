@@ -73,7 +73,7 @@ pub use paths::{COMPONENTS_DIR, MEDICAL_OVERLAY_FILE, Paths, components_dir, fin
 pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
-    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, AudioExportFormat,
+    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, AudioExportFormat, BookAudio,
     BrailleSettings, BrailleTableFormat, BrfCode, CitationReading, ColorSettings,
     CommunityLexiconSettings, ComponentsSettings, CursorPlacement, DectalkSettings,
     DictationSettings, DigitRow, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,

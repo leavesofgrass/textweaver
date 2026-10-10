@@ -133,6 +133,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("reading.stop_at", Portable),
     ("reading.stop_after_minutes", Portable),
     ("reading.recall_prompts", Portable),
+    ("reading.book_audio", Portable),
     // [display]
     ("display.theme", Portable),
     ("display.follow_os_theme", Portable),

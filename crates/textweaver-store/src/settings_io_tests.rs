@@ -103,6 +103,7 @@ fn everything_changed() -> Settings {
     r.stop_at = crate::StopAt::Chapter;
     r.stop_after_minutes = 25;
     r.recall_prompts = true;
+    r.book_audio = crate::BookAudio::Speech;
     let y = &mut s.sync;
     y.enabled = true;
     y.folder = Some(PathBuf::from("/media/stick/Sync"));
