@@ -4234,6 +4234,12 @@ audio-no-engine = لا يوجد هنا محرك كلام يكتب ملفات ص�
 audio-confirm = تصدير { $name } بصوت { $voice } بسرعة { $wpm } كلمة في الدقيقة، في { $path }؟ y أو n
 audio-started = جارٍ تصدير { $name } بصيغة { $format }. Escape يوقف.
 audio-progress = جارٍ تصدير الصوت، { $percent } بالمئة.
+audio-video-progress =
+    { $minutes ->
+        [one] جارٍ ترميز الفيديو: { $fed } من { $all } إطار، بقيت دقيقة تقريبًا.
+       *[other] جارٍ ترميز الفيديو: { $fed } من { $all } إطار، بقي نحو { $minutes } دقائق.
+    }
+audio-video-progress-soon = جارٍ ترميز الفيديو: { $fed } من { $all } إطار، بقي أقل من دقيقة.
 audio-busy = جارٍ تصدير { $name } بالفعل. Escape يوقف.
 audio-stop-question = إيقاف التصدير؟ لن يُحفظ أي ملف. y أو n
 audio-stopping = جارٍ إيقاف التصدير.

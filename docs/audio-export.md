@@ -239,7 +239,7 @@ An `.mp4` file name writes a karaoke video: the document read aloud, with the se
 - **The chapters.** One chapter for each heading, as in an M4B, so players with a chapter list can jump.
 - **The sound.** AAC at 96 kilobits per second.
 - **The picture.** H.264, with ffmpeg's libx264 encoder when it has one, otherwise the system's own H.264 encoder that ffmpeg offers (Media Foundation on Windows, VideoToolbox on macOS), otherwise OpenH264, and as a last resort MPEG-4. The picture changes only when the spoken word changes, ten times a second at most, so the file stays small: a little more than the M4B would be.
-- **How long it takes.** textweaver reads the whole document first, as for any audio file, then draws the frames and has ffmpeg encode them. The encode takes a few minutes for an hour of speech, with no progress messages of its own. A stop during the encode is honored: ffmpeg is stopped and no file is left behind.
+- **How long it takes.** textweaver reads the whole document first, as for any audio file, then draws the frames and has ffmpeg encode them. The encode takes a few minutes for an hour of speech. While it runs, a progress message comes at most every ten seconds, with the frames sent to ffmpeg and an estimate of the time left, worked out from how fast the frames have gone so far: for example, "Encoding video: 1000 of 9000 frames, about 2 minutes left." The reader and `tw export-audio` both give it, and `--quiet` leaves it out. A stop during the encode is honored: ffmpeg is stopped and no file is left behind.
 
 `--subtitles` and `--chapters` still write their own files beside the video.
 

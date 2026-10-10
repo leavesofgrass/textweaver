@@ -3918,6 +3918,12 @@ audio-no-engine = Nenhum motor de voz aqui grava arquivos de áudio. Instale o e
 audio-confirm = Exportar { $name } com { $voice } a { $wpm } palavras por minuto, em { $path }? y ou n
 audio-started = Exportando { $name } como { $format }. Escape para.
 audio-progress = Exportando áudio, { $percent } por cento.
+audio-video-progress =
+    { $minutes ->
+        [one] Codificando vídeo: { $fed } de { $all } quadros, falta cerca de 1 minuto.
+       *[other] Codificando vídeo: { $fed } de { $all } quadros, faltam cerca de { $minutes } minutos.
+    }
+audio-video-progress-soon = Codificando vídeo: { $fed } de { $all } quadros, falta menos de um minuto.
 audio-busy = Já exportando { $name }. Escape para.
 audio-stop-question = Parar a exportação? Nenhum arquivo é mantido. y ou n
 audio-stopping = Parando a exportação.

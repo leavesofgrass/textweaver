@@ -3930,6 +3930,12 @@ audio-no-engine = Aucun moteur vocal ici ne sait écrire de fichier audio. Insta
 audio-confirm = Exporter { $name } avec { $voice } à { $wpm } mots par minute, dans { $path } ? y ou n
 audio-started = Export de { $name } en { $format }. Échap arrête.
 audio-progress = Export audio, { $percent } pour cent.
+audio-video-progress =
+    { $minutes ->
+        [one] Encodage vidéo : { $fed } images sur { $all }, environ 1 minute restante.
+       *[other] Encodage vidéo : { $fed } images sur { $all }, environ { $minutes } minutes restantes.
+    }
+audio-video-progress-soon = Encodage vidéo : { $fed } images sur { $all }, moins d'une minute restante.
 audio-busy = { $name } est déjà en cours d'export. Échap arrête.
 audio-stop-question = Arrêter l'export ? Aucun fichier n'est gardé. y ou n
 audio-stopping = Arrêt de l'export.

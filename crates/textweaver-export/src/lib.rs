@@ -211,13 +211,17 @@ pub struct ExportOptions {
 }
 
 /// Progress through an export, reported before each sentence and once at
-/// the end (`done == total`).
+/// the end (`done == total`); then, for an `.mp4` video, as each frame is
+/// fed to ffmpeg (`frames`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct Progress {
     /// Sentences done.
     pub done: usize,
     /// Sentences in all.
     pub total: usize,
+    /// While a video encodes: the frames fed to ffmpeg, and the frames in
+    /// all. `None` while speech is synthesized.
+    pub frames: Option<(u64, u64)>,
 }
 
 impl Progress {
@@ -274,7 +278,13 @@ fn synthesize_inner(
     let total = planned.len();
     let mut sentences: Vec<TimedSentence> = Vec::with_capacity(total);
     for (i, u) in planned.into_iter().enumerate() {
-        if progress(Progress { done: i, total }).is_break() {
+        if progress(Progress {
+            done: i,
+            total,
+            frames: None,
+        })
+        .is_break()
+        {
             return Err(ExportError::Cancelled);
         }
         let u = pipeline.apply(u);
@@ -310,7 +320,13 @@ fn synthesize_inner(
     writer.finish()?;
     // A stop asked for during the last sentence is a stop: the file is
     // removed by `synthesize_wav`, never reported as written.
-    if progress(Progress { done: total, total }).is_break() {
+    if progress(Progress {
+        done: total,
+        total,
+        frames: None,
+    })
+    .is_break()
+    {
         return Err(ExportError::Cancelled);
     }
     let chapters = chapters::place_named(
@@ -393,7 +409,11 @@ pub fn export(
     }
     // The progress callback also answers "stop?" after synthesis, asked
     // again with the last count it was given.
-    let last = Cell::new(Progress { done: 0, total: 0 });
+    let last = Cell::new(Progress {
+        done: 0,
+        total: 0,
+        frames: None,
+    });
     let progress = RefCell::new(progress);
     let mut tracked = |p: Progress| {
         last.set(p);
@@ -489,6 +509,15 @@ fn export_inner(
                 Some(&captions),
             );
             std::fs::write(&vtt_path, vtt).map_err(|e| ExportError::io(&vtt_path, e))?;
+            // Synthesis is done: from here on, frames. A stop is still
+            // asked through `stop`.
+            let mut fed = |n: u64, all: u64| {
+                let _ = progress(Progress {
+                    done: 1,
+                    total: 1,
+                    frames: Some((n, all)),
+                });
+            };
             let stats = video::encode_with_stop(
                 ff,
                 &timeline,
@@ -498,6 +527,7 @@ fn export_inner(
                 out,
                 &opts.video,
                 stop,
+                &mut fed,
             )?;
             return Ok((timeline, Some(ff.to_owned()), Some(stats)));
         }

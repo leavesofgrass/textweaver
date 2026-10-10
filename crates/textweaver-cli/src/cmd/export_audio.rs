@@ -7,7 +7,8 @@
 //! highest-priority available backend that can write files is used, so an
 //! engine that can only play (Omnivox, speech-dispatcher) is passed over.
 //! Progress goes to stderr in whole tens of percent, one short sentence
-//! each, so a screen reader is not flooded.
+//! each, so a screen reader is not flooded; while a video encodes, the
+//! frames fed and the time left, at most every ten seconds.
 
 use std::ops::ControlFlow;
 use std::path::PathBuf;
@@ -315,7 +316,28 @@ pub fn export_audio(
         ..ExportOptions::default()
     };
     let mut last_tenth = 0;
+    // The video's frames: when they were first seen, and when last said.
+    let mut encode: Option<(std::time::Instant, u64)> = None;
+    let mut said = std::time::Instant::now();
     let mut on_progress = |p: textweaver_export::Progress| {
+        if let Some((fed, all)) = p.frames {
+            let now = std::time::Instant::now();
+            let (t0, f0) = *encode.get_or_insert((now, fed));
+            let secs = now.duration_since(t0).as_secs_f64();
+            if now.duration_since(said).as_secs() >= 10 && fed > f0 && secs > 0.0 {
+                said = now;
+                let left = all.saturating_sub(fed) as f64 * secs / (fed - f0) as f64;
+                let when = match (left / 60.0).ceil() as u64 {
+                    _ if left < 60.0 => "under a minute left".to_owned(),
+                    1 => "about 1 minute left".to_owned(),
+                    m => format!("about {m} minutes left"),
+                };
+                progress(&format!(
+                    "Encoding video: {fed} of {all} frames, {when}."
+                ));
+            }
+            return ControlFlow::Continue(());
+        }
         let tenth = p.percent() / 10;
         if p.total > 0 && tenth > last_tenth && p.done < p.total {
             last_tenth = tenth;

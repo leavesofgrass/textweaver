@@ -3926,6 +3926,12 @@ audio-no-engine = Keine Sprachausgabe hier kann Audiodateien schreiben. Installi
 audio-confirm = { $name } mit { $voice } bei { $wpm } Wörtern pro Minute in { $path } exportieren? y oder n
 audio-started = { $name } wird als { $format } exportiert. Escape hält an.
 audio-progress = Audio wird exportiert, { $percent } Prozent.
+audio-video-progress =
+    { $minutes ->
+        [one] Video wird kodiert: { $fed } von { $all } Bildern, noch etwa 1 Minute.
+       *[other] Video wird kodiert: { $fed } von { $all } Bildern, noch etwa { $minutes } Minuten.
+    }
+audio-video-progress-soon = Video wird kodiert: { $fed } von { $all } Bildern, noch unter einer Minute.
 audio-busy = { $name } wird bereits exportiert. Escape hält an.
 audio-stop-question = Export anhalten? Keine Datei bleibt. y oder n
 audio-stopping = Der Export wird angehalten.

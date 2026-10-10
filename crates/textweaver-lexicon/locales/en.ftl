@@ -3944,6 +3944,14 @@ audio-no-engine = No speech engine here can write audio files. Install eSpeak NG
 audio-confirm = Export { $name } with { $voice } at { $wpm } words per minute, into { $path }? y or n
 audio-started = Exporting { $name } as { $format }. Escape stops.
 audio-progress = Exporting audio, { $percent } percent.
+# While the karaoke video encodes, at most every ten seconds: the frames
+# fed to ffmpeg ($fed), the frames in all ($all), and the minutes left.
+audio-video-progress =
+    { $minutes ->
+        [one] Encoding video: { $fed } of { $all } frames, about 1 minute left.
+       *[other] Encoding video: { $fed } of { $all } frames, about { $minutes } minutes left.
+    }
+audio-video-progress-soon = Encoding video: { $fed } of { $all } frames, under a minute left.
 audio-busy = Already exporting { $name }. Escape stops.
 audio-stop-question = Stop the export? No file is kept. y or n
 audio-stopping = Stopping the export.
