@@ -15,6 +15,13 @@
 //!   folder, checked against the same pins; anything else is refused with
 //!   the reason.
 //!
+//! - What installing does follows the component's action: `place` keeps
+//!   the checked files; `unpack` unpacks its archive into the component's
+//!   folder; `installer` says the installer's name, version, and license
+//!   note and asks before launching it (`--yes` answers), and the system's
+//!   own prompt follows. `tw components list --json` gives each one's
+//!   `action`, `version`, and `platform`.
+//!
 //! - `tw components sign-in` keeps a GitHub token for a private components
 //!   source in the system credential store, read from standard input
 //!   (piped, never typed where it shows); `tw components forget-token`
@@ -29,8 +36,8 @@ use std::sync::atomic::AtomicBool;
 
 use anyhow::{Context, bail};
 use textweaver_app::components::{
-    Component, Fetcher, FileState, Progress, Registry, SignedInFetcher, StandardFetcher, Status,
-    Tenths, component_dir, credentials, features_text, sources,
+    Action, Component, Fetcher, FileState, Progress, Registry, SignedInFetcher, StandardFetcher,
+    Status, Tenths, component_dir, credentials, features_text, sources,
 };
 use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::store::SettingsStore;
@@ -178,9 +185,18 @@ fn registry_with_mirror(settings: &textweaver_app::store::Settings) -> Registry 
     } else {
         fetcher(settings)
     };
-    for address in addresses {
+    // The source's list comes first, and may supply the public helpers.
+    let from_source = sources(settings).source.is_some();
+    for (i, address) in addresses.into_iter().enumerate() {
         let text = textweaver_app::components::fetch_text(&*fetcher, &address);
-        match text.map(|t| registry.add_manifest(&t)) {
+        let added = text.map(|t| {
+            if i == 0 && from_source {
+                registry.add_source_manifest(&t)
+            } else {
+                registry.add_manifest(&t)
+            }
+        });
+        match added {
             Ok(Ok(refused)) => {
                 for (id, why) in refused {
                     eprintln!("Component {id} was refused: {why}. It is in {address}.");
@@ -209,6 +225,7 @@ fn named<'a>(registry: &'a Registry, id: &str) -> anyhow::Result<&'a Component> 
 
 fn state(c: &Component, dir: &Path) -> String {
     match c.status_in(dir) {
+        Status::Installed if c.action() == Action::Installer => "installer downloaded".to_owned(),
         Status::Installed => "installed".to_owned(),
         Status::NotInstalled => "not installed".to_owned(),
         Status::Partial(missing) => format!("partly installed, missing {}", missing.join(", ")),
@@ -250,6 +267,9 @@ fn list_json(registry: &Registry, data: &Path) -> serde_json::Value {
         .map(|c| {
             let dir = component_dir(c, data);
             let (status, missing) = match c.status_in(&dir) {
+                Status::Installed if c.action() == Action::Installer => {
+                    ("installer-downloaded", Vec::new())
+                }
                 Status::Installed => ("installed", Vec::new()),
                 Status::NotInstalled => ("not-installed", Vec::new()),
                 Status::Partial(m) => ("partial", m),
@@ -264,6 +284,9 @@ fn list_json(registry: &Registry, data: &Path) -> serde_json::Value {
                 "license": c.license,
                 "features": c.features,
                 "folder": dir,
+                "version": c.version(),
+                "action": c.action().word(),
+                "platform": c.listing.as_ref().map_or("any", |l| l.platform.word()),
             })
         })
         .collect();
@@ -291,6 +314,9 @@ pub(crate) fn download(
     yes: bool,
 ) -> anyhow::Result<()> {
     if c.status_in(dir) == Status::Installed {
+        if c.action() == Action::Installer {
+            return launch(c, dir, yes);
+        }
         crate::cmd::outln!("{} is already installed in {}.", c.title, dir.display());
         return Ok(());
     }
@@ -330,12 +356,55 @@ pub(crate) fn download(
         },
         &cancel,
     )
-    .with_context(|| format!("{} was not downloaded", c.title))?;
+    .with_context(|| format!("{} was not downloaded", c.title))
+    .map(|o| say_left_out(&o.left_out))?;
     crate::cmd::outln!(
         "{} is downloaded and checked, in {}.",
         c.title,
         dir.display()
     );
+    if c.action() == Action::Installer {
+        return launch(c, dir, yes);
+    }
+    Ok(())
+}
+
+/// Archive members that were not unpacked, or files of a zip or folder
+/// that were not used, each with the reason, on standard error.
+fn say_left_out(left_out: &[(String, String)]) {
+    for (name, why) in left_out {
+        eprintln!("Left out {name}: {why}.");
+    }
+}
+
+/// Launches `c`'s checked installer after saying its name, version, and
+/// license note and asking (or `yes`). The system's own prompt follows.
+/// "No" launches nothing.
+fn launch(c: &Component, dir: &Path, yes: bool) -> anyhow::Result<()> {
+    let Some(file) = c.files.first() else {
+        return Ok(());
+    };
+    let path = dir.join(file.name.as_ref());
+    let version = match c.version() {
+        "" => "not given",
+        v => v,
+    };
+    eprintln!(
+        "Installer: {}, version {version}, license {}. It is {}. The system asks next.",
+        c.title,
+        c.license,
+        path.display()
+    );
+    if !yes && !ask("Launch the installer?")? {
+        eprintln!("Nothing was launched. The installer is kept.");
+        return Ok(());
+    }
+    if !file.matches_file(&path) {
+        bail!("{} does not match its pin; download it again", path.display());
+    }
+    textweaver_app::opener::open_with_system(&path.display().to_string())
+        .with_context(|| format!("the installer {} did not start", path.display()))?;
+    crate::cmd::outln!("The installer started: {}.", c.title);
     Ok(())
 }
 
@@ -412,9 +481,8 @@ fn remove(c: &Component, dir: &Path, yes: bool) -> anyhow::Result<()> {
 fn install(c: &Component, dir: &Path, from: &Path) -> anyhow::Result<()> {
     let report = textweaver_app::components::install_component(c, from, dir)
         .with_context(|| format!("{} was not installed", c.title))?;
-    for (name, why) in &report.refused {
-        eprintln!("Left out {name}: {why}.");
-    }
+    say_left_out(&report.refused);
+    say_left_out(&report.outcome.left_out);
     crate::cmd::outln!(
         "{} is installed and checked, in {}: {} files copied, {} already there.",
         c.title,
@@ -422,6 +490,9 @@ fn install(c: &Component, dir: &Path, from: &Path) -> anyhow::Result<()> {
         report.outcome.fetched.len(),
         report.outcome.kept.len()
     );
+    if c.action() == Action::Installer {
+        return launch(c, dir, false);
+    }
     Ok(())
 }
 
@@ -499,6 +570,22 @@ mod tests {
         ));
         let t = T::try_parse_from(["t", "--file", "a.wav"]).unwrap();
         assert!(t.args.action.is_none());
+    }
+
+    #[test]
+    fn the_json_list_gives_each_ones_action_version_and_platform() {
+        let tmp = tempfile::tempdir().unwrap();
+        let v = list_json(&Registry::builtin(), tmp.path());
+        let items = v["components"].as_array().unwrap();
+        let lexend = items.iter().find(|i| i["id"] == "lexend").unwrap();
+        assert_eq!(lexend["action"], "place");
+        assert_eq!(lexend["version"], "");
+        assert_eq!(lexend["platform"], "any");
+        assert_eq!(lexend["status"], "not-installed");
+        if let Some(ff) = items.iter().find(|i| i["id"] == "ffmpeg") {
+            assert_eq!(ff["action"], "unpack");
+            assert_eq!(ff["version"], "9.0.2");
+        }
     }
 
     #[test]
