@@ -230,6 +230,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // [preview]
     ("preview.auto_reload", Portable),
     ("preview.live", Portable),
+    ("preview.pane", Portable),
+    ("preview.pane_delay_ms", Portable),
     // [lexicon]: paths. The glossary's entries sync in the glossary group.
     ("lexicon.glossary", Machine),
     ("lexicon.data_file", Machine),

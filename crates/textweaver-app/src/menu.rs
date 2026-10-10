@@ -351,6 +351,7 @@ impl MenuId {
                 Do(A::PreviousRegion),
                 Do(A::ToggleHeader),
                 Do(A::ToggleToolbar),
+                Do(A::ShowPreview),
                 Sep,
                 Do(A::NextTheme),
                 Do(A::ColorSettings),
@@ -594,6 +595,7 @@ pub fn bound_setting(a: ActionId) -> Option<&'static str> {
         A::TogglePreviewLive => "preview.live",
         A::ToggleHeader => "gui.header",
         A::ToggleToolbar => "gui.toolbar",
+        A::ShowPreview => "preview.pane",
         _ => return None,
     })
 }

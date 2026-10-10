@@ -870,9 +870,14 @@ pub enum CitationReading {
     Words,
 }
 
+/// The default pause before the preview follows typing, in milliseconds.
+pub const PREVIEW_DELAY_MS: u32 = 300;
+/// The shortest and longest pause before the preview follows typing.
+pub const PREVIEW_DELAY_RANGE_MS: (u32, u32) = (100, 3000);
+
 /// `[preview]`: the browser preview of the document (the palette's
-/// `preview in browser`).
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+/// `preview in browser`), and the preview pane beside the editor.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PreviewSettings {
     /// Reload the page in the browser after each save, through a small
@@ -883,9 +888,29 @@ pub struct PreviewSettings {
     pub auto_reload: bool,
     /// With `auto_reload`, also reload when typing pauses for a second.
     pub live: bool,
+    /// The window's preview pane: in edit mode, the document as the
+    /// reading view draws it, beside the editor. Off by default: it costs
+    /// screen space, and a reader who wants it turns it on once.
+    pub pane: bool,
+    /// How long typing must pause before a preview that follows typing is
+    /// rewritten, in milliseconds (100 to 3000; 300 by default). The
+    /// preview pane uses the same pause.
+    pub pane_delay_ms: u32,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
+}
+
+impl Default for PreviewSettings {
+    fn default() -> Self {
+        Self {
+            auto_reload: false,
+            live: false,
+            pane: false,
+            pane_delay_ms: PREVIEW_DELAY_MS,
+            extra: toml::Table::new(),
+        }
+    }
 }
 
 /// Display settings.
@@ -2094,6 +2119,17 @@ impl Settings {
                 );
                 *ms = MAX_PAUSE_MS;
             }
+        }
+        let (lo, hi) = PREVIEW_DELAY_RANGE_MS;
+        let delay = self.preview.pane_delay_ms;
+        if !(lo..=hi).contains(&delay) {
+            let c = delay.clamp(lo, hi);
+            fix(
+                "preview.pane_delay_ms".into(),
+                format!("{delay} is outside {lo} to {hi} milliseconds"),
+                c.to_string(),
+            );
+            self.preview.pane_delay_ms = c;
         }
         for (name, wpm) in &mut self.speech.speed_presets {
             let c = (*wpm).clamp(Rate::MIN_WPM, Rate::MAX_WPM);
@@ -3505,6 +3541,8 @@ wrap_navigation = true
         let d = Settings::default();
         assert_eq!(d.reading.citations, CitationReading::Off);
         assert!(!d.preview.auto_reload && !d.preview.live);
+        assert!(!d.preview.pane);
+        assert_eq!(d.preview.pane_delay_ms, PREVIEW_DELAY_MS);
         assert!(!d.reading_aids.difficult_words);
         let r: ReadingSettings = toml::from_str("citations = \"words\"").unwrap();
         assert_eq!(r.citations, CitationReading::Words);
@@ -3515,6 +3553,15 @@ wrap_navigation = true
         );
         assert!(w.is_empty(), "{w:?}");
         assert!(s.preview.auto_reload && s.preview.live);
+        // The pane's pause is kept within its range.
+        let (s, w) = Settings::from_table(
+            "[preview]\npane = true\npane_delay_ms = 5\n"
+                .parse()
+                .unwrap(),
+        );
+        assert!(s.preview.pane);
+        assert_eq!(s.preview.pane_delay_ms, PREVIEW_DELAY_RANGE_MS.0);
+        assert_eq!(w.len(), 1, "{w:?}");
     }
 
     #[test]
