@@ -106,5 +106,6 @@ Results are written so that `tw search essay.md word | head` ends quietly once `
 
 - [Quick start](quickstart.md)
 - [Settings](settings.md), for `tw settings path` and `--home`
+- [Updates](updates.md), for `tw update`; [Notes](notes.md), for `tw notes links` and `tw study due`; [Optional components](components.md), for `tw components`
 - [Converting documents](converting.md), [Citations](citations.md) and [Dictation](dictation.md), for those commands' own options
 - [Troubleshooting](troubleshooting.md)

@@ -24,7 +24,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
 
 Installs textweaver on any Linux distribution: a published release, or a build from source.
 
-With `--release TAG` (a tag such as `v0.1.0-alpha.4`, or `latest` for the newest release or pre-release), nothing is built:
+With `--release TAG` (a tag such as `v0.1.0-beta.1`, or `latest` for the newest release or pre-release), nothing is built:
 
 - It downloads the AppImage and `SHA256SUMS.txt` from the release with curl (or wget), and checks the AppImage against its line there. A mismatch stops the install.
 - It installs the AppImage as `~/.local/bin/textweaver.AppImage` (or under `--prefix DIR`), links `textweaver` and `tw` to it, and adds a menu entry, an icon, and the quick start.
@@ -126,7 +126,7 @@ One plain-text report to paste into a bug report. It covers:
 - the terminal, `TERM`, and `COLORTERM`;
 - the locale, and the screen reader if one is running;
 - the Rust toolchain;
-- where textweaver is installed, the window's version when it is installed, and `tw settings path`;
+- where textweaver is installed, the app's version when it is installed, and `tw settings path`;
 - `tw backends`, `tw components list` (ending with "Components: 3 of 12 installed"), and `tw ocr status`;
 - whether the engine hosts and dictionaries sit beside the programs;
 - the optional tools.
@@ -178,7 +178,7 @@ Formats are html (the default), epub, pdf, docx, brf (braille), txt, and md. Any
 
 ### linux/textweaver.desktop
 
-The menu entry that `install-linux.sh` installs. It opens textweaver in a terminal (`Terminal=true`) for text, Markdown, HTML, EPUB, DOCX, and PDF files.
+The menu entry that `install-linux.sh` installs. It opens the terminal reader, `tw`, in a terminal (`Terminal=true`) for text, Markdown, HTML, EPUB, DOCX, and PDF files. The app's own menu entry is written by the script too (see `--gui` above).
 
 ## See also
 
