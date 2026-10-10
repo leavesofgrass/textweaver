@@ -37,7 +37,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 ## Study tools
 
-- **Spaced-repetition review** (Anki-style) is out of scope, on purpose.
+- **Study cards are scheduled with SM-2 only.** Cards are made from notes, highlights, and headings, studied, graded in words, and brought back when due ([Study with cards](notes.md#study-with-cards)). A card counts as due by the clock, from half a day before its interval ends, not by the calendar day in your time zone. FSRS scheduling is not in; Anki export and import are not in yet, and AnkiConnect sync is dropped on purpose.
 - **Knowledge graphs** from notes are not drawn. Links between notes are lists instead: each note's links, "What links here", and `tw notes links` ([notes guide](notes.md#links-between-notes)). The graph exports to files that other tools draw, with a Markdown list as their text equivalent ([Export the knowledge graph](notes.md#export-the-knowledge-graph)).
 
 ## What this page does not promise

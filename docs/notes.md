@@ -89,7 +89,7 @@ To group the highlights by name instead, type `export study sheet by name` (or c
 
 ### List notes: Shift+A
 
-Press **Shift+A**. The window also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links." Each item says the note, the line, and the passage, then its links when it has some.
+Press **Shift+A**. The window also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links. C makes a card." Each item says the note, the line, and the passage, then its links when it has some.
 
 In the list:
 
@@ -97,6 +97,7 @@ In the list:
 - **F2** edits the note. You hear "Editing note:" and its text. The prompt says "Edit note, Enter keeps it". Type the new text and press **Enter**; tags are read again from the new text. You hear "Note updated." Enter on an empty prompt leaves the note as it was.
 - **Delete** asks "Delete this note? y or n". Press **y** to delete it; you hear "Note deleted:" and the start of the note. Press **n**, **a**, or **Escape** to keep it; you hear "Kept." and the list comes back.
 - **Space** opens the note's links (see [Links between notes](#links-between-notes)).
+- **C** makes a study card from the note (see [Study with cards](#study-with-cards)). Because **C** makes a card, it does not jump to a note starting with C.
 - **Escape** closes the list.
 
 This list shows notes only. Highlights have their own list.
@@ -224,7 +225,7 @@ Highlights made before the palette, in textweaver or in star, have only a color.
 
 ### List highlights: Shift+Y
 
-Press **Shift+Y**. You hear "Highlights", the count, then "Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name." Each item says the name, the passage, and the line: "important: The cell membrane, line 12".
+Press **Shift+Y**. You hear "Highlights", the count, then "Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name. C makes a card." **C** makes a study card from the highlight ([Study with cards](#study-with-cards)). Each item says the name, the passage, and the line: "important: The cell membrane, line 12".
 
 In the list:
 
@@ -251,17 +252,19 @@ Delete in the notes and highlights lists asks the same way. Only the bookmarks l
 
 ## Study with textweaver
 
-textweaver has two tools for studying what you read: a self-test made from your notes and highlights, and recall prompts that stop reading at the end of each section. Both are optional, and neither changes your document.
+textweaver has three tools for studying what you read: a self-test made from your notes and highlights, study cards made from the same marks, kept with your grades and brought back at growing intervals, and recall prompts that stop reading at the end of each section. All are optional, and none changes your document.
 
 ### What the research says, and what it does not
 
 A review of ten common study techniques rated practice testing (retrieving material from memory) and spacing study over time as high in utility, and rereading, highlighting, and summarizing as low (Dunlosky and colleagues, 2013). Highlighting on its own is therefore a weak way to study; the self-test turns your highlights into questions instead. In two experiments with prose passages, students who were tested on a passage remembered more of it two days and one week later than students who reread it, although rereading did better after five minutes and left students more confident (Roediger and Karpicke, 2006).
 
+A quantitative synthesis of 839 assessments in 317 experiments on verbal recall found that spacing study sessions apart improves retention over studying in one session, and that the gap that works best grows with how long the material must be kept: a longer wait before the test calls for a longer gap between sessions (Cepeda and colleagues, 2006). This is the reason study cards come back after one day, then six, then at intervals that grow with each successful recall.
+
 In a study of adaptive retrieval practice with 118 participants, the slower answers of participants with dyslexia came from typing them, not from memory, and answering aloud removed the gap (Wilschut, Sense, and van Rijn, 2024). This is why the self-test lets you answer aloud through dictation.
 
 In an experiment with a 21-minute video lecture in four parts, undergraduates who answered short tests between the parts reported mind wandering on 19 percent of probes, against 39 percent for those who restudied the material between parts (Szpunar, Khan, and Schacter, 2013). Recall prompts bring a similar pause for recall to reading aloud.
 
-These studies were done mostly with readers without disabilities, and with tests that experimenters wrote. textweaver's self-test and recall prompts have not themselves been studied. Treat them as ways to practice recalling, not as a promised gain.
+These studies were done mostly with readers without disabilities, and with tests that experimenters wrote. textweaver's self-test, cards, schedule, and recall prompts have not themselves been studied. Treat them as ways to practice recalling, not as a promised gain.
 
 ### Test yourself from the study sheet
 
@@ -286,6 +289,59 @@ On a prompt, press **Space** and say your answer. You hear "Answer aloud now. Sp
 
 Answering aloud uses the same Whisper model as [dictation](dictation.md), in any mode, and types nothing into the document. The first time, textweaver offers to download the model if it is missing; open the self-test again once it is in place. If no words are heard, you hear "No answer heard. Space to try again." In a version without dictation, you hear that answering aloud needs it.
 
+### Study with cards
+
+Study cards turn the passages you marked into questions you answer from memory, and keep a record of how each answer went. The self-test asks every note and highlight afresh each time; cards are kept, and each one comes back when it is due, after an interval that lengthens as you keep recalling it. You can also reverse cards, remove the ones you no longer need, and see the last grade you gave each one.
+
+#### Make cards
+
+Press **F2** for the command palette and type `make cards`, or choose **Make cards** in **Study cards**, a submenu of the **Bookmarks and notes** menu. textweaver makes cards from every note and highlight in the document, and says, for example, "Cards made: 5 new, 12 in all."
+
+- **A highlight** becomes a fill-in-the-blank card. The question is the sentence the highlight is in, with the highlighted words replaced by the word "blank", which is how it is read aloud and shown: "The kidneys blank the blood." The answer is the highlighted words. A highlight that covers its whole sentence leaves nothing to fill in, so it asks "What did you highlight in Renal clearance?" instead.
+- **A note on a passage** becomes a question card. The note is the question and the passage is the answer, so a note written as a question ("What does the loop of Henle do?") makes the best card. A note with no text, or one on an empty passage, makes no card.
+- **A heading** becomes a recall card when a note or highlight is in its section: "What does “Renal clearance” say?" The answer is the section's first sentence.
+
+To make a card from one note or highlight, open the notes list (**Shift+A**; the window also has **Ctrl+Shift+N**) or the highlights list (**Shift+Y**), move to it, and press **C**. You hear "Card made:" and its question.
+
+Making cards again is safe. A card is tied to the note, highlight, or heading it came from, so making cards again after you edit a note updates that card's question and answer and keeps its grades; it never makes a second copy. A card stays when you delete its note or highlight; remove it from the Cards list (below) if you no longer want it.
+
+#### Study the cards
+
+Type `study cards` in the palette, or choose **Study cards** in the same submenu. You first hear how many cards are due, then how the session works: "Due today: 7 cards, 5 new. Study cards, 12 cards. Enter shows each answer, 1 to 4 grade it. Space to answer aloud." and then the first question. The session asks the cards that are due first, those longest overdue at the head of the list, and then the new cards that have never been graded, in document order. Cards that are not due yet are left out. When nothing is due and every card has been graded, you hear when the next one falls due, "Nothing due today; the next card is due in 3 days. Studying every card ahead.", and the session asks every card. In the list:
+
+- Answer silently or aloud, then press **Enter** to hear "Answer:" and the answer.
+- Grade how well you recalled it, in your own judgment, with a number key or by name in the palette:
+  - **1**, Again (`grade_again`): you did not recall it.
+  - **2**, Hard (`grade_hard`): you recalled it with effort.
+  - **3**, Good (`grade_good`): you recalled it.
+  - **4**, Easy (`grade_easy`): you recalled it at once.
+- After a grade you hear the grade, when the card will come back, and the next card: "Good, next in 6 days. Card 4 of 12. Question: ...". After the last card you hear, for example, "Again, next tomorrow. Done: all 12 cards graded." and the list closes.
+- **Space** answers aloud, as in the self-test ([Answer aloud](#answer-aloud)): your words are read back before you reveal the answer, and textweaver never judges them. The grade is always yours.
+- **R** reverses a question card: the passage is asked and the note becomes the answer. Press **R** again to put it back. The card stays reversed the next time you study it. Fill-in-the-blank and recall cards cannot be reversed.
+- **Up** and **Down** move between cards without grading; **Escape** closes the list. The session waits: a grade from the palette or the submenu grades the card you were on and opens the list again on the next card ("Good, next in 6 days. Study cards, card 4 of 12."), and **Study cards** starts a new session with the cards due then.
+
+#### When cards come back
+
+Each grade is stored with the time you gave it, and textweaver works out from the grades alone when a card is next due. It uses SM-2, the scheduling method that SuperMemo published in 1990 and on which most flashcard programs have built since:
+
+- A card you recall (Hard, Good, or Easy) comes back after one day the first time, after six days the second time, and after that at the last interval multiplied by the card's ease. The ease starts at 2.5, so a card you keep grading Good comes back after 1, 6, 15, and 38 days.
+- **Easy** raises the card's ease by 0.1, so its intervals grow faster; **Hard** lowers it by 0.14, so they grow more slowly; **Good** leaves it unchanged. The ease never falls below 1.3.
+- **Again** starts the card over: it comes back the next day, and then after one and six days again, as if new. Its ease is unchanged.
+
+A card counts as due from half a day before its interval ends, so a card graded one evening is due the next morning. textweaver never shows a score: you hear counts ("Due today: 7 cards, 5 new.") and when a card comes back ("next in 3 days"), never a percentage or a mark. Because the schedule is computed from the grades rather than stored, a card graded on two computers is scheduled the same way on both once their grades have synced.
+
+#### The Cards list
+
+Type `list cards` in the palette, or choose **Cards** in the same submenu, to hear first how many cards are due and how many are new, then every card with its kind, its question, its last grade, and when it is next due: "Fill in the blank: The kidneys blank the blood., last graded Good, next in 6 days". A card that is due says "due today", and one never graded says "not graded yet". **Enter** goes to the card's source in the document, where its note or highlight is now. **Delete** asks "Remove this card and its grades?" and removes it on **y**.
+
+#### Where cards are kept
+
+Cards are kept on this computer beside your notes, one file per document (`cards/` in textweaver's data folder), and written in the background. With [sync](sync.md) set up, cards travel with your notes: a card made or graded on one computer arrives on your others, and a card taken out on one is taken out on the others. Every grade survives: when you grade the same card on two computers while they are apart, both grades are kept, in the order you gave them, and the schedule is worked out from all of them. A card's question, answer, and direction follow the newest edit, as a note does. Cards sync when the **Notes** group is on; turning that group off stops cards too.
+
+#### Count due cards from the command line: tw study due
+
+`tw study due` counts the cards due today in every document in your library that has cards, the total first: "Due today: 7 cards, 5 new, in 2 documents." followed by one line per document, such as "Due today: 3 cards, 1 new. Pharmacology". A document with nothing due says when its next card falls due: "Nothing due today, next in 3 days. Anatomy". Give a file to count only its cards: `tw study due chapter4.md`. `--json` prints the same counts as JSON for a script, and `--home DIR` reads the cards under another data folder. The command only reads; it never changes a card.
+
 ### Recall prompts at section ends
 
 Turn on **Recall prompts** in Settings (`[reading] recall_prompts`, off by default). When continuous reading stops at the end of a section, it asks you to recall it, naming the section it just read: "Say what you remember from Renal clearance. Ctrl+Space to go on." The key you hear is your read key. Say or think what you remember, then press the key, and reading goes on with the next section.
@@ -298,11 +354,12 @@ One way to combine these:
 
 1. Read a section aloud with recall prompts on. At each prompt, say what you remember before going on.
 2. While reading, add a note (**a**) where a passage answers a question you expect, written as that question, and highlight (**y**) what you want to recall.
-3. Later, open the self-test. Answer each prompt before you reveal it, aloud or silently, and add a note where you missed something.
-4. Repeat the self-test on another day rather than rereading the chapter.
+3. Later, open the self-test, or make cards and study them. Answer each question before you reveal it, aloud or silently, and add a note where you missed something.
+4. Study the due cards each day rather than rereading the chapter. `tw study due` tells you, without opening a document, how many are waiting.
 
 ### Sources
 
+- Cepeda, N. J., Pashler, H., Vul, E., Wixted, J. T., and Rohrer, D. (2006). *Psychological Bulletin*, 132(3). [doi:10.1037/0033-2909.132.3.354](https://doi.org/10.1037/0033-2909.132.3.354)
 - Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., and Willingham, D. T. (2013). *Psychological Science in the Public Interest*, 14(1). [doi:10.1177/1529100612453266](https://doi.org/10.1177/1529100612453266)
 - Roediger, H. L., and Karpicke, J. D. (2006). *Psychological Science*, 17(3). [doi:10.1111/j.1467-9280.2006.01693.x](https://doi.org/10.1111/j.1467-9280.2006.01693.x)
 - Szpunar, K. K., Khan, N. Y., and Schacter, D. L. (2013). *Proceedings of the National Academy of Sciences*, 110(16). [doi:10.1073/pnas.1221764110](https://doi.org/10.1073/pnas.1221764110)
@@ -394,7 +451,7 @@ tw vault export C:\Users\me\Vault --document essay.md
 
 ## Sync between computers
 
-With sync set up (Tools, Sync, Set up sync), your bookmarks, notes, highlights, and reading places travel to your other computers through a folder you choose, such as one kept in step by Syncthing or a USB stick. A document is recognized by its contents, so it syncs wherever it is on each computer. [Syncing between computers](sync.md) explains it, including what you hear when the same note was edited on two computers: the newest edit wins, and the older text is kept in this computer's backup of replaced notes.
+With sync set up (Tools, Sync, Set up sync), your bookmarks, notes, highlights, study cards with their grades, and reading places travel to your other computers through a folder you choose, such as one kept in step by Syncthing or a USB stick. A document is recognized by its contents, so it syncs wherever it is on each computer. [Syncing between computers](sync.md) explains it, including what you hear when the same note was edited on two computers: the newest edit wins, and the older text is kept in this computer's backup of replaced notes.
 
 Without sync, a document in a library folder still carries its reading place to other computers through a small file in that folder, `.textweaver/progress.json`, as older versions did; the notes, highlights, and bookmarks stay on the computer where you made them. With sync on, that file is only read. [The library guide](library.md#the-older-place-sync-through-a-library-folder) explains it.
 

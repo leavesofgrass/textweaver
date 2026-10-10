@@ -801,6 +801,13 @@ action-collect-highlights = Écrire les surlignages d'un nom en liste Markdown
 action-export-study-sheet = Exporter les notes et surlignages en fiche d'étude Markdown, groupés par titre
 action-export-study-sheet-by-name = Exporter la fiche d'étude avec les surlignages groupés par nom
 action-self-test = Vous tester sur les notes et surlignages : Entrée montre chaque réponse
+action-make-cards = Créer des cartes d’étude à partir des notes, des surlignages et de leurs titres
+action-study-cards = Étudier les cartes : Entrée montre la réponse, 1 à 4 la notent
+action-list-cards = Lister les cartes d’étude : Entrée va à la source d’une carte, Suppr la supprime
+action-grade-again = Noter la carte étudiée : À revoir, pas retenue
+action-grade-hard = Noter la carte étudiée : Difficile, retrouvée avec effort
+action-grade-good = Noter la carte étudiée : Bien, retrouvée
+action-grade-easy = Noter la carte étudiée : Facile, retrouvée aussitôt
 action-open = Ouvrir un document
 action-open-path = Ouvrir un document en tapant son chemin
 action-open-library = Ouvrir la bibliothèque : documents dans vos dossiers de bibliothèque et fichiers récents
@@ -1206,8 +1213,8 @@ notes-none = Aucune note. Pour en ajouter une : { $key }.
 notes-list-title = Notes
 notes-list-intro =
     { $n ->
-        [one] Notes, 1 élément. Entrée va à une note, Suppr la supprime, F2 la modifie, Espace ouvre ses liens.
-       *[other] Notes, { $n } éléments. Entrée va à une note, Suppr la supprime, F2 la modifie, Espace ouvre ses liens.
+        [one] Notes, 1 élément. Entrée va à une note, Suppr la supprime, F2 la modifie, Espace ouvre ses liens. C crée une carte.
+       *[other] Notes, { $n } éléments. Entrée va à une note, Suppr la supprime, F2 la modifie, Espace ouvre ses liens. C crée une carte.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. Sur : { $anchor }
@@ -1232,8 +1239,8 @@ notes-no-highlights = Aucun surlignage. Pour en faire un : { $key }.
 notes-highlights-title = Surlignages
 notes-highlights-intro =
     { $n ->
-        [one] Surlignages, 1 élément. Entrée va à l'un d'eux, Suppr le supprime, F2 change son nom, Espace n'affiche que son nom.
-       *[other] Surlignages, { $n } éléments. Entrée va à l'un d'eux, Suppr le supprime, F2 change son nom, Espace n'affiche que son nom.
+        [one] Surlignages, 1 élément. Entrée va à l'un d'eux, Suppr le supprime, F2 change son nom, Espace n'affiche que son nom. C crée une carte.
+       *[other] Surlignages, { $n } éléments. Entrée va à l'un d'eux, Suppr le supprime, F2 change son nom, Espace n'affiche que son nom. C crée une carte.
     }
 # The label said before a highlight's text on jumping to it.
 notes-highlight-label = Surlignage, { $name }
@@ -1423,6 +1430,84 @@ reveal-listening = Répondez à voix haute maintenant. Espace pour arrêter.
 reveal-you-said = Vous avez dit : { $words }. Entrée montre la réponse.
 reveal-heard-nothing = Aucune réponse entendue. Espace pour réessayer.
 reveal-no-dictation = Répondre à voix haute demande la dictée, absente de cette version.
+
+## Cartes d’étude et la séance d’étude (crate::cards).
+
+cards-blank = blanc
+cards-recall-question = Que dit « { $heading } » ?
+cards-no-document = Ouvrez un document pour créer ou étudier des cartes.
+cards-nothing-to-make = Aucune note ni aucun surlignage pour créer des cartes. Ajoutez d’abord une note ou un surlignage.
+cards-made =
+    { $added ->
+        [0] Aucune nouvelle carte. { $total } cartes en tout.
+        [one] Cartes créées : 1 nouvelle, { $total } en tout.
+       *[other] Cartes créées : { $added } nouvelles, { $total } en tout.
+    }
+cards-none-from-item = Aucune carte pour cet élément : il lui faut un texte sur un passage.
+cards-made-one = Carte créée : { $question }
+cards-updated-one = Carte mise à jour : { $question }
+cards-none = Pas encore de cartes. Pour en créer : { $key }.
+cards-study-title = Étudier les cartes : { $title }
+cards-study-intro =
+    { $n ->
+        [one] Étudier les cartes, 1 carte. Entrée montre la réponse, 1 à 4 la notent. Espace pour répondre à voix haute.
+       *[other] Étudier les cartes, { $n } cartes. Entrée montre chaque réponse, 1 à 4 la notent. Espace pour répondre à voix haute.
+    }
+cards-no-session = Aucune séance d’étude. Pour en commencer une : { $key }.
+cards-card-gone = Cette carte a été supprimée.
+cards-grade-again = À revoir
+cards-grade-hard = Difficile
+cards-grade-good = Bien
+cards-grade-easy = Facile
+cards-graded = { $grade }. Carte { $i } sur { $n }. Question : { $question }
+# Said when a grade from the palette opens the session again on the next card.
+cards-graded-reopen = { $grade }. Étudier les cartes, carte { $i } sur { $n }.
+cards-session-done =
+    { $n ->
+        [one] { $grade }. Terminé : la carte est notée.
+       *[other] { $grade }. Terminé : les { $n } cartes sont notées.
+    }
+cards-reversed = Inversée. Question : { $question }
+cards-unreversed = Comme créée. Question : { $question }
+cards-not-reversible = Seules les cartes question peuvent être inversées.
+cards-kind-cloze = Texte à trou
+cards-kind-question = Question
+cards-kind-recall = Rappel
+cards-not-graded = pas encore notée
+cards-last-grade = dernière note : { $grade }
+cards-item = { $kind } : { $question }, { $grade }
+cards-list-title = Cartes
+cards-list-intro =
+    { $n ->
+        [one] Cartes, 1 élément. Entrée va à sa source, Suppr la supprime.
+       *[other] Cartes, { $n } éléments. Entrée va à la source d’une carte, Suppr la supprime.
+    }
+cards-source-label = Source de la carte
+cards-remove-question = Supprimer cette carte et ses notes ? y ou n
+cards-removed = Carte supprimée.
+cards-save-failed = Impossible d’enregistrer les cartes : { $error } Vérifiez que le dossier des données est accessible en écriture.
+# Said first in the study session and the Cards list (B1-f2). $due is how
+# many graded cards are due, $new how many were never graded.
+cards-due-summary =
+    { $due ->
+        [one] À revoir aujourd’hui : 1 carte, { $new } nouvelles.
+       *[other] À revoir aujourd’hui : { $due } cartes, { $new } nouvelles.
+    }
+# When a card is next due, after a grade. $days is whole days, at least 1.
+cards-next-in =
+    { $days ->
+        [one] à revoir demain
+       *[other] à revoir dans { $days } jours
+    }
+cards-due-now = à revoir aujourd’hui
+# A grade or last grade, then when the card is next due: "Good, next in 3 days".
+cards-grade-next = { $grade }, { $next }
+# Study cards when no card is due and none is new: every card is asked.
+cards-nothing-due =
+    { $days ->
+        [one] Rien à revoir aujourd’hui ; la prochaine carte est pour demain. Toutes les cartes sont étudiées en avance.
+       *[other] Rien à revoir aujourd’hui ; la prochaine carte est dans { $days } jours. Toutes les cartes sont étudiées en avance.
+    }
 
 ## Find, bookmarks, and selection.
 
@@ -3570,6 +3655,13 @@ name-highlight-name-5 = Surligner avec le nom 5
 name-collect-highlights = Rassembler les surlignages
 name-export-study-sheet-by-name = Exporter la fiche d'étude par nom
 name-self-test = Autotest
+name-make-cards = Créer des cartes
+name-study-cards = Étudier les cartes
+name-list-cards = Cartes
+name-grade-again = Noter à revoir
+name-grade-hard = Noter difficile
+name-grade-good = Noter bien
+name-grade-easy = Noter facile
 name-open = Ouvrir
 name-open-path = Ouvrir par chemin
 name-open-library = Bibliothèque
@@ -4167,6 +4259,7 @@ sync-already-off = La synchro est déjà désactivée ici.
 sync-stopped = Synchro désactivée ici. Le dossier reste tel quel.
 prompt-sync-computer-name = Nom de cet ordinateur, Entrée le garde
 menu-sync = Synchro
+menu-cards = Cartes d’étude
 name-sync-setup = Configurer la synchro
 name-sync-status = État de la synchro
 name-sync-now = Synchroniser maintenant

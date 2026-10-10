@@ -56,10 +56,7 @@ star's reading aids are described in its "Accessibility and WCAG reading aids" n
 - **Dependency report** (`--deps`) and a crash log. Status: done. `scripts/doctor.sh` and `scripts\doctor.ps1` print a system report, and textweaver writes a rotating log file ([troubleshooting.md](troubleshooting.md)).
 - **Document metadata:** edit it per document, and search the library by it. Status: done. The library list's filter and `tw library search` match title, path, author, DOI, ISBN, and text, from the document's own metadata, its text, and `tw cite`'s record ([library.md](library.md#search-by-author-doi-and-isbn)). Edit details (the File menu, or F2 in the library list) and `tw library edit` set a document's title, author, DOI, and ISBN by hand, and what you type wins over the document's own ([library.md](library.md#edit-a-documents-details)).
 - **Notes export** as BibTeX, RIS, JSON, or plain text. Status: done. `tw marks FILE --to FORMAT` writes BibTeX, BibLaTeX, RIS, or CSL-JSON records for Zotero or Pandoc. Notes and highlights also export to an Obsidian vault as Markdown ([vault.md](vault.md)), and as a Markdown study sheet grouped by the document's headings ([notes.md](notes.md#export-a-study-sheet)). Plain-text export is not a separate format; CSL-JSON or the study sheet cover that need.
-- **Study tools,** out of scope on purpose:
-  - the spaced-repetition scheduler (FSRS) and review screen;
-  - AnkiConnect sync and `.apkg` export.
-  - Status: dropped.
+- **Study tools:** cards from highlights, a spaced-repetition scheduler (FSRS) and review screen, AnkiConnect sync, and `.apkg` export. Status: partly. Cards are made from highlights (cloze), notes (question and answer), and headings (recall), and studied in a session that reveals each answer and takes a grade in words; an SM-2 scheduler brings each card back when due, and `tw study due` counts the cards due ([Study with cards](notes.md#study-with-cards)). `.apkg` export and import are not in yet; FSRS and AnkiConnect sync are dropped.
 
 ## Peripheral
 

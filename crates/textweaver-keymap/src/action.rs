@@ -490,6 +490,23 @@ actions! {
     SaveChangesToWord = "save_changes_to_word", Bookmarks,
         "Save the accepted and rejected changes and the comments into the Word file, keeping a copy of the original first",
         gui [], term [], shared [];
+    MakeCards = "make_cards", Bookmarks,
+        "Make study cards from the notes, the highlights, and their headings",
+        gui [], term [], shared [];
+    StudyCards = "study_cards", Bookmarks,
+        "Study the cards: Enter shows the answer, 1 to 4 grade it",
+        gui [], term [], shared [];
+    ListCards = "list_cards", Bookmarks,
+        "List the study cards: Enter goes to a card's source, Delete removes it",
+        gui [], term [], shared [];
+    GradeAgain = "grade_again", Bookmarks, "Grade the card being studied: Again, not recalled",
+        gui [], term [], shared [];
+    GradeHard = "grade_hard", Bookmarks, "Grade the card being studied: Hard, recalled with effort",
+        gui [], term [], shared [];
+    GradeGood = "grade_good", Bookmarks, "Grade the card being studied: Good, recalled",
+        gui [], term [], shared [];
+    GradeEasy = "grade_easy", Bookmarks, "Grade the card being studied: Easy, recalled at once",
+        gui [], term [], shared [];
 
     // File
     Open = "open", File, "Open a document",

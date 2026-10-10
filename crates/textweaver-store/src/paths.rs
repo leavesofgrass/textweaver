@@ -73,6 +73,11 @@ impl Paths {
         self.data_dir.join("state")
     }
 
+    /// Study cards, one file per document (`cards/<doc-key>.json`).
+    pub fn cards_dir(&self) -> PathBuf {
+        self.data_dir.join(crate::cards::CARDS_DIR)
+    }
+
     /// Autosave recovery snapshots.
     pub fn recovery_dir(&self) -> PathBuf {
         self.data_dir.join("recovery")

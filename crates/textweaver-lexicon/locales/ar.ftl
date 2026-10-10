@@ -869,6 +869,13 @@ action-collect-highlights = كتابة تمييزات اسم واحد كقائم
 action-export-study-sheet = تصدير الملاحظات والتمييزات كورقة دراسة بصيغة ماركداون، مجمّعة حسب العنوان
 action-export-study-sheet-by-name = تصدير ورقة الدراسة مع تجميع التمييزات حسب الاسم
 action-self-test = اختبر نفسك في الملاحظات والتمييزات: Enter يُظهر كل إجابة
+action-make-cards = إنشاء بطاقات دراسة من الملاحظات والتمييزات وعناوينها
+action-study-cards = دراسة البطاقات: Enter يُظهر الإجابة، ومن 1 إلى 4 لتقييمها
+action-list-cards = عرض بطاقات الدراسة: Enter للانتقال إلى مصدر بطاقة، Delete لإزالتها
+action-grade-again = تقييم البطاقة قيد الدراسة: مرة أخرى، لم تُستذكر
+action-grade-hard = تقييم البطاقة قيد الدراسة: صعبة، استُذكرت بجهد
+action-grade-good = تقييم البطاقة قيد الدراسة: جيدة، استُذكرت
+action-grade-easy = تقييم البطاقة قيد الدراسة: سهلة، استُذكرت فورًا
 action-open = فتح مستند
 action-open-path = فتح مستند بكتابة مساره
 action-open-library = فتح المكتبة: مستندات مجلدات مكتبتك والملفات الأخيرة
@@ -1288,11 +1295,11 @@ notes-none = لا ملاحظات. لإضافة واحدة: { $key }.
 notes-list-title = الملاحظات
 notes-list-intro =
     { $n ->
-        [one] الملاحظات، عنصر واحد. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
-        [two] الملاحظات، عنصران. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
-        [few] الملاحظات، { $n } عناصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
-        [many] الملاحظات، { $n } عنصرًا. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
-       *[other] الملاحظات، { $n } عنصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
+        [one] الملاحظات، عنصر واحد. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها. C لإنشاء بطاقة.
+        [two] الملاحظات، عنصران. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها. C لإنشاء بطاقة.
+        [few] الملاحظات، { $n } عناصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها. C لإنشاء بطاقة.
+        [many] الملاحظات، { $n } عنصرًا. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها. C لإنشاء بطاقة.
+       *[other] الملاحظات، { $n } عنصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها. C لإنشاء بطاقة.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. عند: { $anchor }
@@ -1317,11 +1324,11 @@ notes-no-highlights = لا تمييزات. لإنشاء تمييز: { $key }.
 notes-highlights-title = التمييزات
 notes-highlights-intro =
     { $n ->
-        [one] التمييزات، عنصر واحد. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط.
-        [two] التمييزات، عنصران. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط.
-        [few] التمييزات، { $n } عناصر. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط.
-        [many] التمييزات، { $n } عنصرًا. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط.
-       *[other] التمييزات، { $n } عنصر. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط.
+        [one] التمييزات، عنصر واحد. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط. C لإنشاء بطاقة.
+        [two] التمييزات، عنصران. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط. C لإنشاء بطاقة.
+        [few] التمييزات، { $n } عناصر. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط. C لإنشاء بطاقة.
+        [many] التمييزات، { $n } عنصرًا. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط. C لإنشاء بطاقة.
+       *[other] التمييزات، { $n } عنصر. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط. C لإنشاء بطاقة.
     }
 # The label said before a highlight's text on jumping to it.
 notes-highlight-label = تمييز، { $name }
@@ -1536,6 +1543,91 @@ reveal-listening = أجب بصوت عالٍ الآن. مسافة للإيقاف.
 reveal-you-said = قلت: { $words }. Enter يُظهر الإجابة.
 reveal-heard-nothing = لم تُسمع إجابة. مسافة للمحاولة مرة أخرى.
 reveal-no-dictation = الإجابة بصوت عالٍ تحتاج الإملاء، وهو غير موجود في هذا الإصدار.
+
+## بطاقات الدراسة وجلسة الدراسة (crate::cards).
+
+cards-blank = فراغ
+cards-recall-question = ماذا يقول «{ $heading }»؟
+cards-no-document = افتح مستندًا لإنشاء البطاقات أو دراستها.
+cards-nothing-to-make = لا ملاحظات أو تمييزات لإنشاء البطاقات. أضف ملاحظة أو تمييزًا أولًا.
+cards-made =
+    { $added ->
+        [0] لا بطاقات جديدة. { $total } بطاقة في المجموع.
+        [one] أُنشئت البطاقات: واحدة جديدة، { $total } في المجموع.
+        [two] أُنشئت البطاقات: اثنتان جديدتان، { $total } في المجموع.
+       *[other] أُنشئت البطاقات: { $added } جديدة، { $total } في المجموع.
+    }
+cards-none-from-item = لا بطاقة من هذا العنصر: يحتاج إلى نص على مقطع.
+cards-made-one = أُنشئت بطاقة: { $question }
+cards-updated-one = حُدّثت بطاقة: { $question }
+cards-none = لا بطاقات بعد. لإنشائها: { $key }.
+cards-study-title = دراسة البطاقات: { $title }
+cards-study-intro =
+    { $n ->
+        [one] دراسة البطاقات، بطاقة واحدة. Enter يُظهر الإجابة، ومن 1 إلى 4 لتقييمها. مسافة للإجابة بصوت عالٍ.
+        [two] دراسة البطاقات، بطاقتان. Enter يُظهر كل إجابة، ومن 1 إلى 4 لتقييمها. مسافة للإجابة بصوت عالٍ.
+        [few] دراسة البطاقات، { $n } بطاقات. Enter يُظهر كل إجابة، ومن 1 إلى 4 لتقييمها. مسافة للإجابة بصوت عالٍ.
+        [many] دراسة البطاقات، { $n } بطاقة. Enter يُظهر كل إجابة، ومن 1 إلى 4 لتقييمها. مسافة للإجابة بصوت عالٍ.
+       *[other] دراسة البطاقات، { $n } بطاقة. Enter يُظهر كل إجابة، ومن 1 إلى 4 لتقييمها. مسافة للإجابة بصوت عالٍ.
+    }
+cards-no-session = لا جلسة دراسة. لبدء واحدة: { $key }.
+cards-card-gone = أُزيلت تلك البطاقة.
+cards-grade-again = مرة أخرى
+cards-grade-hard = صعبة
+cards-grade-good = جيدة
+cards-grade-easy = سهلة
+cards-graded = { $grade }. البطاقة { $i } من { $n }. السؤال: { $question }
+# Said when a grade from the palette opens the session again on the next card.
+cards-graded-reopen = { $grade }. دراسة البطاقات، البطاقة { $i } من { $n }.
+cards-session-done =
+    { $n ->
+        [one] { $grade }. انتهى: قُيّمت البطاقة.
+       *[other] { $grade }. انتهى: قُيّمت كل البطاقات، وعددها { $n }.
+    }
+cards-reversed = معكوسة. السؤال: { $question }
+cards-unreversed = كما أُنشئت. السؤال: { $question }
+cards-not-reversible = بطاقات الأسئلة وحدها يمكن عكسها.
+cards-kind-cloze = املأ الفراغ
+cards-kind-question = سؤال
+cards-kind-recall = استذكار
+cards-not-graded = لم تُقيَّم بعد
+cards-last-grade = آخر تقييم: { $grade }
+cards-item = { $kind }: { $question }، { $grade }
+cards-list-title = البطاقات
+cards-list-intro =
+    { $n ->
+        [one] البطاقات، عنصر واحد. Enter للانتقال إلى مصدرها، Delete لإزالتها.
+        [two] البطاقات، عنصران. Enter للانتقال إلى مصدر بطاقة، Delete لإزالتها.
+        [few] البطاقات، { $n } عناصر. Enter للانتقال إلى مصدر بطاقة، Delete لإزالتها.
+        [many] البطاقات، { $n } عنصرًا. Enter للانتقال إلى مصدر بطاقة، Delete لإزالتها.
+       *[other] البطاقات، { $n } عنصر. Enter للانتقال إلى مصدر بطاقة، Delete لإزالتها.
+    }
+cards-source-label = مصدر البطاقة
+cards-remove-question = إزالة هذه البطاقة وتقييماتها؟ y أو n
+cards-removed = أُزيلت البطاقة.
+cards-save-failed = تعذّر حفظ البطاقات: { $error } تحقّق من إمكانية الكتابة في مجلد البيانات.
+# Said first in the study session and the Cards list (B1-f2). $due is how
+# many graded cards are due, $new how many were never graded.
+cards-due-summary =
+    { $due ->
+        [one] المستحق اليوم: بطاقة واحدة، { $new } جديدة.
+       *[other] المستحق اليوم: { $due } بطاقة، { $new } جديدة.
+    }
+# When a card is next due, after a grade. $days is whole days, at least 1.
+cards-next-in =
+    { $days ->
+        [one] التالية غدًا
+       *[other] التالية بعد { $days } يوم
+    }
+cards-due-now = مستحقة اليوم
+# A grade or last grade, then when the card is next due: "Good, next in 3 days".
+cards-grade-next = { $grade }، { $next }
+# Study cards when no card is due and none is new: every card is asked.
+cards-nothing-due =
+    { $days ->
+        [one] لا شيء مستحق اليوم؛ البطاقة التالية مستحقة غدًا. ستُدرس كل البطاقات مسبقًا.
+       *[other] لا شيء مستحق اليوم؛ البطاقة التالية مستحقة بعد { $days } يوم. ستُدرس كل البطاقات مسبقًا.
+    }
 
 ## البحث، والإشارات المرجعية، والتحديد.
 
@@ -3891,6 +3983,13 @@ name-highlight-name-5 = تمييز بالاسم 5
 name-collect-highlights = جمع التمييزات
 name-export-study-sheet-by-name = تصدير ورقة الدراسة حسب الاسم
 name-self-test = اختبار ذاتي
+name-make-cards = إنشاء البطاقات
+name-study-cards = دراسة البطاقات
+name-list-cards = البطاقات
+name-grade-again = تقييم: مرة أخرى
+name-grade-hard = تقييم: صعبة
+name-grade-good = تقييم: جيدة
+name-grade-easy = تقييم: سهلة
 name-open = فتح
 name-open-path = فتح بالمسار
 name-open-library = المكتبة
@@ -4480,6 +4579,7 @@ sync-already-off = المزامنة متوقفة هنا بالفعل.
 sync-stopped = أُوقفت المزامنة هنا. يبقى المجلد كما هو.
 prompt-sync-computer-name = اسم هذا الحاسوب، Enter يبقيه
 menu-sync = المزامنة
+menu-cards = بطاقات الدراسة
 name-sync-setup = إعداد المزامنة
 name-sync-status = حالة المزامنة
 name-sync-now = المزامنة الآن

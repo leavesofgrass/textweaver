@@ -1,5 +1,6 @@
 //! One record per document: each computer's place, the bookmarks, notes,
-//! and highlights by id, and the reading statistics, as merge types. A
+//! highlights, and study cards by id, and the reading statistics, as merge
+//! types. A
 //! computer writes its full merged view of a document as one record, so
 //! merging a record twice, or records in any order, changes nothing.
 //!
@@ -9,7 +10,7 @@
 
 use serde::{Deserialize, Serialize};
 use textweaver_core::CharPos;
-use textweaver_store::{Anchor, Bookmark, Highlight, Note};
+use textweaver_store::{Anchor, Bookmark, Card, Highlight, Note};
 
 use crate::merge::{ChangeKind, Counter, Earliest, MapChange, Maximum, RegisterMap};
 use crate::{DeviceId, Stamp, SyncError, SyncId};
@@ -100,6 +101,16 @@ pub struct DocRecord {
     /// records disagree. Added without raising [`FORMAT`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub folded_into: Option<SyncId>,
+    /// Study cards by id (B1-f2). A card's fields go by the newest edit,
+    /// like a note's; its grades merge as a union, so grades given on two
+    /// computers both survive. Added without raising [`FORMAT`]: an older
+    /// reader ignores it, and a record with no cards writes none.
+    #[serde(default, skip_serializing_if = "register_map_empty")]
+    pub cards: RegisterMap<Card>,
+}
+
+fn register_map_empty<T>(m: &RegisterMap<T>) -> bool {
+    m.0.is_empty()
 }
 
 /// How many hashes of each kind a record keeps: the newest, and the ones
@@ -243,16 +254,12 @@ pub struct DocIdentity {
     /// Title, DOI, ISBN, author, and format ([`detail`]), newest wins per
     /// detail. A DOI or an ISBN is only ever a suggestion, never a match on
     /// its own.
-    #[serde(skip_serializing_if = "details_empty")]
+    #[serde(skip_serializing_if = "register_map_empty")]
     pub details: RegisterMap<String>,
     /// When the document was first added to a library on any computer
     /// (milliseconds since 1970, UTC): the earliest wins (S6).
     #[serde(skip_serializing_if = "Earliest::is_none")]
     pub added: Earliest,
-}
-
-fn details_empty(d: &RegisterMap<String>) -> bool {
-    d.0.is_empty()
 }
 
 impl DocIdentity {
@@ -333,6 +340,8 @@ pub enum ItemKind {
     Note,
     /// A highlight.
     Highlight,
+    /// A study card.
+    Card,
 }
 
 /// What an item held before a merge replaced or removed it.
@@ -347,6 +356,8 @@ pub enum Previous {
     Note(Box<Note>),
     /// A highlight.
     Highlight(Highlight),
+    /// A study card.
+    Card(Box<Card>),
 }
 
 /// One change a merge made, for the app to announce.
@@ -367,8 +378,8 @@ pub struct Change {
 /// What merging another computer's record changed here.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MergeReport {
-    /// The changes, places first, then bookmarks, notes, and highlights,
-    /// each in id order.
+    /// The changes, places first, then bookmarks, notes, highlights, and
+    /// cards, each in id order.
     pub changes: Vec<Change>,
 }
 
@@ -421,6 +432,38 @@ fn changes<T>(
     })
 }
 
+/// Merges `theirs` into `mine`: newest edit wins per card, as for notes,
+/// and a card live on both sides keeps the union of both sides' grades.
+// shortcut: a card removed and then made again on another computer keeps
+// only the grades given since, or every grade, depending on merge order;
+// the records agree at the next merge, as the union only grows. Keep the
+// grades in the deletion record if that ever matters.
+fn merge_cards(
+    mine: &mut RegisterMap<Card>,
+    theirs: &RegisterMap<Card>,
+) -> Vec<crate::merge::MapChange<Card>> {
+    // Their cards with our grades added, so a card that differs only in
+    // grades is not reported as replaced; ours take theirs below.
+    let mut theirs = theirs.clone();
+    let mut grades = Vec::new();
+    for (id, reg) in &mut theirs.0 {
+        if let (Some(t), Some(m)) = (reg.value.as_mut(), mine.get(id)) {
+            t.merge_reviews(&m.reviews);
+            let mut all = m.clone();
+            if all.merge_reviews(&t.reviews) {
+                grades.push((id.clone(), all.reviews));
+            }
+        }
+    }
+    let changes = mine.merge(&theirs);
+    for (id, reviews) in grades {
+        if let Some(card) = mine.0.get_mut(&id).and_then(|r| r.value.as_mut()) {
+            card.reviews = reviews;
+        }
+    }
+    changes
+}
+
 impl DocRecord {
     /// An empty record for `sync_id`.
     pub fn new(sync_id: SyncId) -> Self {
@@ -434,6 +477,7 @@ impl DocRecord {
             stats: DocStatsRecord::default(),
             identity: DocIdentity::default(),
             folded_into: None,
+            cards: RegisterMap::new(),
         }
     }
 
@@ -477,7 +521,18 @@ impl DocRecord {
             .chain(self.bookmarks.stamps())
             .chain(self.notes.stamps())
             .chain(self.highlights.stamps())
+            .chain(self.cards.stamps())
             .chain(self.identity.stamps())
+    }
+
+    /// Sets card `id` at `stamp`, keeping every grade the record already
+    /// holds for it (grades are never lost to a newer edit).
+    pub fn set_card(&mut self, id: impl Into<String>, stamp: Stamp, mut card: Card) {
+        let id = id.into();
+        if let Some(held) = self.cards.get(&id) {
+            card.merge_reviews(&held.reviews);
+        }
+        self.cards.set(id, stamp, card);
     }
 
     /// Merges another computer's record for the same document in, and
@@ -507,6 +562,11 @@ impl DocRecord {
             self.highlights.merge(&other.highlights),
             Previous::Highlight,
         ));
+        report.changes.extend(changes(
+            ItemKind::Card,
+            merge_cards(&mut self.cards, &other.cards),
+            |c| Previous::Card(Box::new(c)),
+        ));
         self.stats.merge(&other.stats);
         self.identity.merge(&other.identity);
         if let Some(t) = other.folded_into {
@@ -527,7 +587,8 @@ impl DocRecord {
             .0
             .keys()
             .chain(self.notes.0.keys())
-            .chain(self.highlights.0.keys());
+            .chain(self.highlights.0.keys())
+            .chain(self.cards.0.keys());
         for id in ids {
             if id.is_empty() || id.chars().count() > MAX_ITEM_ID_CHARS {
                 return Err(SyncError::Damaged("an item id is empty or too long".into()));
@@ -679,6 +740,77 @@ mod tests {
         // Only hex digests are read as hashes; a path never is.
         let bad = format!(
             "{{\"format\":1,\"sync_id\":\"{DOC}\",\"identity\":{{\"content\":{{\"C:/Users/x.md\":{{\"wall_ms\":1,\"device\":\"{A}\"}}}}}}}}"
+        );
+        assert!(DocRecord::from_bytes(bad.as_bytes()).is_err());
+    }
+
+    fn card(id: &str, grades: &[(textweaver_store::Grade, i64)]) -> Card {
+        Card {
+            id: id.to_owned(),
+            kind: textweaver_store::CardKind::Question,
+            source: textweaver_store::CardSource::Note,
+            source_id: "n1".to_owned(),
+            range: textweaver_core::CharRange::new(CharPos(0), CharPos(5)),
+            question: "What divides?".to_owned(),
+            answer: "Cells".to_owned(),
+            reversed: false,
+            created: 1,
+            reviews: grades
+                .iter()
+                .map(|(grade, ts)| textweaver_store::Review {
+                    grade: *grade,
+                    ts: *ts,
+                })
+                .collect(),
+            extra: serde_json::Map::new(),
+        }
+    }
+
+    #[test]
+    fn grades_from_two_computers_both_survive() {
+        use textweaver_store::Grade;
+        let mut here = DocRecord::new(DOC);
+        here.set_card("c1", Stamp::new(10, A), card("c1", &[(Grade::Good, 100)]));
+        let mut there = DocRecord::new(DOC);
+        let mut theirs = card("c1", &[(Grade::Again, 200)]);
+        theirs.reversed = true;
+        there.set_card("c1", Stamp::new(20, B), theirs);
+
+        let mut a = here.clone();
+        let report = a.merge(&there).unwrap();
+        assert_eq!(report.count(ItemKind::Card, ChangeKind::Replaced), 1);
+        let mut b = there.clone();
+        b.merge(&here).unwrap();
+        // The same either way: the newer edit's fields, both grades.
+        assert_eq!(a, b);
+        let c = a.cards.get("c1").unwrap();
+        assert!(c.reversed);
+        let ts: Vec<i64> = c.reviews.iter().map(|r| r.ts).collect();
+        assert_eq!(ts, vec![100, 200]);
+        // Merging again changes nothing.
+        let before = a.clone();
+        assert!(a.merge(&there).unwrap().is_empty());
+        assert_eq!(a, before);
+        // A newer edit here keeps the grades the record holds.
+        a.set_card("c1", Stamp::new(30, A), card("c1", &[]));
+        assert_eq!(a.cards.get("c1").unwrap().reviews.len(), 2);
+        assert!(a.stamps().any(|s| s.time == 30));
+        let bytes = a.to_bytes().unwrap();
+        assert_eq!(DocRecord::from_bytes(&bytes).unwrap(), a);
+    }
+
+    #[test]
+    fn a_record_without_cards_reads_and_writes_as_before() {
+        // A record from before cards: no "cards" key, read unchanged.
+        let old = format!("{{\"format\":1,\"sync_id\":\"{DOC}\"}}");
+        let r = DocRecord::from_bytes(old.as_bytes()).unwrap();
+        assert!(r.cards.0.is_empty());
+        let plain = String::from_utf8(r.to_bytes().unwrap()).unwrap();
+        assert!(!plain.contains("cards"), "{plain}");
+        assert!(plain.contains("\"format\":1"));
+        // An empty card id is damage.
+        let bad = format!(
+            "{{\"format\":1,\"sync_id\":\"{DOC}\",\"cards\":{{\"\":{{\"stamp\":{{\"wall_ms\":1,\"device\":\"{A}\"}}}}}}}}"
         );
         assert!(DocRecord::from_bytes(bad.as_bytes()).is_err());
     }

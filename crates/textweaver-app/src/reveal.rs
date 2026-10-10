@@ -1,6 +1,6 @@
 //! Prompts with hidden answers, on the shared list model (B1-s1): the
-//! self-test from the study sheet uses it, and the cards session (B1-f1)
-//! is meant to reuse it.
+//! self-test from the study sheet and the cards session (B1-f1,
+//! crate::cards) use it.
 //!
 //! The API, for a new kind of prompt list:
 //!
@@ -81,6 +81,14 @@ impl RevealList {
             .collect()
     }
 
+    /// Replaces row `n`'s prompt and answer, keeping whether it is shown
+    /// (a card asked the other way round).
+    pub(crate) fn set_item(&mut self, n: usize, item: RevealItem) {
+        if let Some(i) = self.items.get_mut(n) {
+            *i = item;
+        }
+    }
+
     /// Reveals row `n`'s answer and returns it.
     pub(crate) fn reveal(&mut self, n: usize) -> Option<&str> {
         let shown = self.shown.get_mut(n)?;
@@ -98,7 +106,7 @@ impl App {
 
     /// Shows `list` again, focused on row `n`, without saying the row
     /// again (what changed was just said).
-    fn reshow_reveal_list(&mut self, list: RevealList, n: usize) -> Vec<Effect> {
+    pub(crate) fn reshow_reveal_list(&mut self, list: RevealList, n: usize) -> Vec<Effect> {
         let title = list.title.clone();
         let items = list.rows(self.cat());
         self.pending_list_focus = Some(n);

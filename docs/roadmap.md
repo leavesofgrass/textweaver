@@ -40,7 +40,7 @@ The 0.1 series ends with a feature-complete final alpha. None of these is in it,
 - Source code read as a structured document, rather than plain text.
 - Concept extraction from notes. The knowledge graph itself exports already ([Export the knowledge graph](notes.md#export-the-knowledge-graph)).
 
-Dropped on purpose: spaced-repetition study tools (Anki-style review, FSRS scheduling, AnkiConnect sync) and cloud speech engines. [star features not yet planned](star-gaps.md) marks each dropped item.
+Dropped on purpose: AnkiConnect sync, FSRS scheduling, and cloud speech engines. Study cards made from notes, highlights, and headings are in, scheduled with SM-2 and synced with your notes ([Study with cards](notes.md#study-with-cards)); Anki export and import are not in yet. [star features not yet planned](star-gaps.md) marks each dropped item.
 
 ## See also
 

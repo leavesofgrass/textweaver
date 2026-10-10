@@ -597,6 +597,9 @@ impl App {
         if let Some(effects) = self.changes_list_key(key) {
             return effects;
         }
+        if let Some(effects) = self.cards_list_key(key) {
+            return effects;
+        }
         if let Some(effects) = self.command_list_key(key) {
             return effects;
         }

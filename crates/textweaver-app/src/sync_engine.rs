@@ -35,6 +35,13 @@
 //! folded and the merge goes on under the smaller id: this computer's
 //! notes, highlights, bookmarks, and place are published there.
 //!
+//! Study cards (B1-f2) sync with the notes group, straight from and into
+//! the card file (`cards/<doc-key>.json`), which the background writer
+//! also saves, so the two never run at once: a card made or changed here,
+//! or removed here (the deck's `removed` list), is published; what the
+//! merged view holds is written back. Grades merge as a union, so a grade
+//! given on each computer survives on both.
+//!
 //! A document the app does not have open is merged the same way by
 //! [`SyncEngine::sync_all`] (Sync now, `tw sync now`), straight into its
 //! state file.
@@ -46,8 +53,8 @@ use serde::Serialize;
 use serde_json::Value;
 use textweaver_store::sync_ids::SyncIds;
 use textweaver_store::{
-    Bookmark, DocKey, DocState, Highlight, MarkKind, Note, Paths, ReadingStats, StateStore,
-    SyncSettings,
+    Bookmark, Card, CardDeck, CardStore, DocKey, DocState, Highlight, MarkKind, Note, Paths,
+    ReadingStats, StateStore, SyncSettings,
 };
 use textweaver_sync::folder::{DEVICE_FILE, DEVICES_DIR, DOCS_DIR, SYNC_DIR};
 use textweaver_sync::merge::{ChangeKind, RegisterMap};
@@ -443,6 +450,9 @@ pub struct CycleOutcome {
     pub status: EngineStatus,
     /// Set when the request opened the document.
     pub opened: Option<OpenInfo>,
+    /// The document's study cards changed on disk (B1-f2): the app reads
+    /// them again.
+    pub cards_changed: bool,
 }
 
 /// What Sync now did for the documents not open.
@@ -1224,13 +1234,32 @@ impl SyncEngine {
         let others = self.others_signature(sync_id);
         let me = self.folder.as_ref()?.device();
         let place_now = groups.places.then(|| place_of(&snapshot.state));
+        // Cards travel with the notes group.
+        let card_store = self
+            .config
+            .as_ref()
+            .filter(|_| groups.notes)
+            .map(|c| CardStore::new(c.paths.cards_dir()));
+        let deck = card_store.as_ref().map(|s| s.load(&snapshot.key));
         let slot = self.slot(sync_id)?;
         let edits = local_edits(&snapshot.state, &slot.mine, groups, me, &slot.pending);
+        let card_edits = deck
+            .as_ref()
+            .map_or_else(Vec::new, |d| card_edits(d, &slot.mine));
+        let cards_behind = deck
+            .as_ref()
+            .is_some_and(|d| cards_from_record(&mut d.clone(), &slot.mine));
         let place_changed = snapshot.publish_place
             && place_now
                 .as_ref()
                 .is_some_and(|p| slot.mine.place_of(me).is_none_or(|q| q.pos != p.pos));
-        if !force && edits.is_empty() && !place_changed && others == slot.others {
+        if !force
+            && edits.is_empty()
+            && card_edits.is_empty()
+            && !cards_behind
+            && !place_changed
+            && others == slot.others
+        {
             return None;
         }
 
@@ -1269,6 +1298,22 @@ impl SyncEngine {
                     MarkKind::Highlight => slot.mine.highlights.delete(e.id, stamp),
                 },
             }
+        }
+        for (id, card) in card_edits {
+            let stamp = clock.tick();
+            match card {
+                Some(c) => slot.mine.set_card(id, stamp, c),
+                None => slot.mine.cards.delete(id, stamp),
+            }
+        }
+        let mut cards_changed = false;
+        if let (Some(store), Some(mut deck)) = (card_store, deck)
+            && cards_from_record(&mut deck, &slot.mine)
+        {
+            if let Err(e) = store.save(&snapshot.key, &deck) {
+                log::warn!("sync: cannot save the merged cards ({e})");
+            }
+            cards_changed = true;
         }
         if place_changed && let Some(p) = place_now {
             slot.mine.set_place(clock.tick(), p);
@@ -1324,6 +1369,7 @@ impl SyncEngine {
         o.places = places;
         o.my_place = my_place;
         o.places_changed = places_changed;
+        o.cards_changed = cards_changed;
         o.notices = notices;
         Some(o)
     }
@@ -1608,6 +1654,75 @@ fn backup_state_once(paths: &Paths) {
 }
 
 /// This computer's place, from its state.
+/// The cards made, changed, or removed here since the merged view: each
+/// card's new version (with every grade the view holds), or `None` for a
+/// card removed here. A card the view holds and the deck lacks, and that
+/// was not removed here, arrived and is not written yet: not an edit. A
+/// card the view deleted is an edit only when it was made after the
+/// deletion; an older copy is a stale one, and goes.
+fn card_edits(deck: &CardDeck, base: &DocRecord) -> Vec<(String, Option<Card>)> {
+    let mut out = Vec::new();
+    for c in &deck.cards {
+        match base.cards.register(&c.id) {
+            None => out.push((c.id.clone(), Some(c.clone()))),
+            Some(r) => match &r.value {
+                Some(held) => {
+                    let mut now = c.clone();
+                    now.merge_reviews(&held.reviews);
+                    if now != *held {
+                        out.push((c.id.clone(), Some(now)));
+                    }
+                }
+                None if secs_to_ms(c.created) > r.stamp.time => {
+                    out.push((c.id.clone(), Some(c.clone())));
+                }
+                None => {}
+            },
+        }
+    }
+    for id in &deck.removed {
+        if deck.card(id).is_none() && base.cards.get(id).is_some() {
+            out.push((id.clone(), None));
+        }
+    }
+    out
+}
+
+/// Brings `deck` up to the merged view: every live card with its fields
+/// and the union of grades, cards deleted elsewhere removed. A card removed
+/// here that another computer edited later comes back. Returns whether the
+/// deck changed.
+fn cards_from_record(deck: &mut CardDeck, mine: &DocRecord) -> bool {
+    let mut changed = false;
+    for (id, reg) in &mine.cards.0 {
+        let at = deck.cards.iter().position(|c| c.id == *id);
+        match (&reg.value, at) {
+            (Some(card), Some(i)) => {
+                let mut now = card.clone();
+                now.merge_reviews(&deck.cards[i].reviews);
+                if deck.cards[i] != now {
+                    deck.cards[i] = now;
+                    changed = true;
+                }
+            }
+            (Some(card), None) => {
+                deck.removed.retain(|r| r != id);
+                deck.cards.push(card.clone());
+                changed = true;
+            }
+            (None, Some(i)) => {
+                deck.cards.remove(i);
+                changed = true;
+            }
+            (None, None) => {}
+        }
+    }
+    if changed {
+        deck.cards.sort_by_key(|c| (c.range.start, c.range.end));
+    }
+    changed
+}
+
 fn place_of(state: &DocState) -> Place {
     Place {
         pos: state.position,
@@ -1629,7 +1744,7 @@ fn item_to_mark(kind: ItemKind) -> Option<MarkKind> {
         ItemKind::Bookmark => Some(MarkKind::Bookmark),
         ItemKind::Note => Some(MarkKind::Note),
         ItemKind::Highlight => Some(MarkKind::Highlight),
-        ItemKind::Place => None,
+        ItemKind::Place | ItemKind::Card => None,
     }
 }
 
