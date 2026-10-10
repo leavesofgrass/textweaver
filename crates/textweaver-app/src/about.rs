@@ -3,8 +3,10 @@
 //!
 //! - **Quick start** opens the `QUICKSTART.md` packaged beside the program
 //!   as a document; when there is none, it offers the online page.
-//! - **Documentation** and **Report a problem** show their web address and
-//!   ask before opening a browser ([`App::offer_open`]); nothing is sent.
+//! - **Documentation** opens the packaged guides in textweaver
+//!   ([`crate::help_docs`]); **Online documentation** and **Report a
+//!   problem** show their web address and ask before opening a browser
+//!   ([`App::offer_open`]); nothing is sent.
 //! - **About** lists the facts a problem report needs, one per line, each
 //!   starting with what it is: version, build, license, copyright,
 //!   components, speech engines, and folders.
@@ -74,14 +76,6 @@ impl App {
                 vec![Effect::Redraw]
             }
         }
-    }
-
-    /// Help, Documentation: the address, and a question before a browser
-    /// opens.
-    pub(crate) fn documentation(&mut self) -> Vec<Effect> {
-        let q = self.msg_args("about-docs-question", &args!["address" => DOCS_ADDRESS]);
-        self.offer_open(DOCS_ADDRESS.to_owned(), &q);
-        vec![Effect::Redraw]
     }
 
     /// Help, Report a problem: the address, and a question before a
