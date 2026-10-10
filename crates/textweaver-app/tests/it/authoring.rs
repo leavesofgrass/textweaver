@@ -650,7 +650,11 @@ fn exports_ask_where_offering_the_documents_folder() {
     // Never over the document itself.
     r.act(ActionId::ExportDocx);
     r.send(Command::Answer("essay.md".into()));
-    assert!(r.status().contains("Not exported: that is"), "{}", r.status());
+    assert!(
+        r.status().contains("Not exported: that is"),
+        "{}",
+        r.status()
+    );
     // Yes replaces it, and yes again opens it with the default program.
     r.act(ActionId::ExportHtml);
     r.send(Command::Choose(0));

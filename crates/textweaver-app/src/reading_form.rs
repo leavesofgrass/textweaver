@@ -146,7 +146,10 @@ mod tests {
             .unwrap();
         assert!(!said.contains(hint), "{said}");
         let said = app
-            .set_setting("reading_aids.spacing.letter_spacing", serde_json::json!(0.2))
+            .set_setting(
+                "reading_aids.spacing.letter_spacing",
+                serde_json::json!(0.2),
+            )
             .unwrap();
         assert!(said.ends_with(hint), "{said}");
         let said = app

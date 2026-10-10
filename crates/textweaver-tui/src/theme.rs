@@ -341,7 +341,9 @@ mod tests {
             for theme in registry.themes() {
                 let t = Theme::from_theme(theme, support);
                 let c = &t.code;
-                for s in [c.plain, c.comment, c.keyword, c.string, c.number, c.function] {
+                for s in [
+                    c.plain, c.comment, c.keyword, c.string, c.number, c.function,
+                ] {
                     assert_eq!(s.bg, t.text.bg, "{} {support:?}", t.name);
                 }
                 assert!(c.keyword.add_modifier.contains(Modifier::BOLD));

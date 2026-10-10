@@ -332,9 +332,7 @@ pub fn export_audio(
                     1 => "about 1 minute left".to_owned(),
                     m => format!("about {m} minutes left"),
                 };
-                progress(&format!(
-                    "Encoding video: {fed} of {all} frames, {when}."
-                ));
+                progress(&format!("Encoding video: {fed} of {all} frames, {when}."));
             }
             return ControlFlow::Continue(());
         }
