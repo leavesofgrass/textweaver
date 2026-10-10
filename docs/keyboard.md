@@ -378,7 +378,9 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Press a key to hear what it does and where it is in the menus, without running it | `Shift+F1` | `Shift+F1` | `Shift+F1` | `what_does_this_key_do` |
 | List the facts a problem report needs: version, build, components, speech engines, and folders | palette | palette | palette | `about` |
 | Open the quick start guide in textweaver | palette | palette | palette | `quick_start` |
-| Show the documentation's web address, and ask before opening it in a browser | palette | palette | palette | `documentation` |
+| Open the guides that come with textweaver as documents; a link to another guide opens it in place, and History back returns | palette | palette | palette | `documentation` |
+| Show the online documentation's web address, and ask before opening it in a browser | palette | palette | palette | `online_documentation` |
+| Search all of help: command names, keys, settings, and the guides' headings and text | palette | palette | palette | `search_help` |
 | Show where to report a problem, and ask before opening it in a browser; nothing is sent | palette | palette | palette | `report_problem` |
 | Ask again about first-run choices: hybrid mode with a screen reader, and the optional components | palette | palette | palette | `ask_first_run_again` |
 | Manage optional components: the models, fonts, and voices textweaver can download, with their size and license | palette | palette | palette | `manage_components` |
@@ -569,7 +571,9 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Open the reading settings: rate, font, spacing, line length, theme, highlight, ruler, bionic reading, and syllables | `reading_form` |
 | List the facts a problem report needs: version, build, components, speech engines, and folders | `about` |
 | Open the quick start guide in textweaver | `quick_start` |
-| Show the documentation's web address, and ask before opening it in a browser | `documentation` |
+| Open the guides that come with textweaver as documents; a link to another guide opens it in place, and History back returns | `documentation` |
+| Show the online documentation's web address, and ask before opening it in a browser | `online_documentation` |
+| Search all of help: command names, keys, settings, and the guides' headings and text | `search_help` |
 | Show where to report a problem, and ask before opening it in a browser; nothing is sent | `report_problem` |
 | Ask again about first-run choices: hybrid mode with a screen reader, and the optional components | `ask_first_run_again` |
 | Manage optional components: the models, fonts, and voices textweaver can download, with their size and license | `manage_components` |
