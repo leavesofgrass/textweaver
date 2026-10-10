@@ -494,11 +494,13 @@ fn the_updates_row_turns_the_check_on_and_off_at_once() {
     let (mut app, said) = app_in(tmp.path(), fake.clone());
     app.offer_components_on_first_run();
     app.tick(std::time::Instant::now());
-    app.dispatch(Command::Choose(5));
+    // The updates row follows the built-in components.
+    let n = Registry::builtin().components().len();
+    app.dispatch(Command::Choose(n));
     assert!(app.settings().updates.check);
     assert!(said.any("Updates: checked once a day."), "{:?}", said.all());
     let model = app.list_model().unwrap().clone();
-    assert!(model.items[5].starts_with("Chosen: Check for updates"));
+    assert!(model.items[n].starts_with("Chosen: Check for updates"));
     // Escape keeps the answer; nothing was read from the network.
     app.dispatch(Command::Cancel);
     assert!(app.settings().updates.check);
