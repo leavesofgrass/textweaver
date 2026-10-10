@@ -1760,10 +1760,10 @@ mod tests {
             );
             let term = Keymap::defaults(platform, Frontend::Terminal);
             assert_eq!(
-                term.lookup(&k("Alt+A"), Layer::Edit),
+                term.lookup(&k("Alt+Q"), Layer::Edit),
                 Some(ActionId::PastePlainText)
             );
-            assert_eq!(term.lookup(&k("Alt+A"), Layer::Browse), None);
+            assert_eq!(term.lookup(&k("Alt+Q"), Layer::Browse), None);
             assert_eq!(
                 term.lookup(&k("Shift+F10"), Layer::Browse),
                 Some(ActionId::Settings)

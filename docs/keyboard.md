@@ -336,7 +336,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Delete the word before the cursor | `Alt+Backspace` (edit) | `Ctrl+Backspace` (edit) | `Option+Backspace` (edit) | `delete_word_before` |
 | Delete the word after the cursor | `Ctrl+Delete` (edit) | `Ctrl+Delete` (edit) | `Option+Delete` (edit) | `delete_word_after` |
 | Paste the clipboard; formatted text from a browser or word processor becomes Markdown | `Ctrl+V` (edit) | `Ctrl+V` (edit) | `Cmd+V` (edit) | `paste` |
-| Paste the clipboard as plain text, keeping none of its formatting | `Alt+A` (edit) | `Ctrl+Shift+M` (edit) | `Cmd+Shift+M` (edit) | `paste_plain_text` |
+| Paste the clipboard as plain text, keeping none of its formatting | `Alt+Q` (edit) | `Ctrl+Shift+M` (edit) | `Cmd+Shift+M` (edit) | `paste_plain_text` |
 | Insert a citation: pick a reference, then give a page or other locator | `Alt+C` (edit) | `Alt+C` (edit) | `Cmd+Option+C` (edit) | `insert_citation` |
 | Add a reference to your library by DOI or ISBN | `Alt+B` | `Alt+Shift+D` | `Cmd+Option+Shift+D` | `add_reference` |
 | Insert the bibliography of the works cited, at the cursor | palette | palette | palette | `insert_bibliography` |

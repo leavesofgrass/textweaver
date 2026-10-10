@@ -610,7 +610,7 @@ actions! {
         gui ["e:Ctrl+V"], term ["e:Ctrl+V"], shared [];
     PastePlainText = "paste_plain_text", Editing,
         "Paste the clipboard as plain text, keeping none of its formatting",
-        gui ["e:Ctrl+Shift+M"], term ["e:Alt+A"], shared [];
+        gui ["e:Ctrl+Shift+M"], term ["e:Alt+Q"], shared [];
     InsertCitation = "insert_citation", Editing,
         "Insert a citation: pick a reference, then give a page or other locator",
         gui ["e:Alt+C"], term ["e:Alt+C"], shared [];

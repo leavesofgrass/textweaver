@@ -47,7 +47,7 @@ More editing keys:
 - **Ctrl+Delete**: delete the word after the cursor.
 - **Ctrl+C**: copy the selection. **Ctrl+X**: cut it. Both go to your computer's clipboard through the terminal; see [Copy, cut, and paste](#copy-cut-and-paste).
 - **Ctrl+V**: paste. Formatted text becomes Markdown. See [Copy, cut, and paste](#copy-cut-and-paste).
-- **Alt+A**: paste as plain text. The window uses **Ctrl+Shift+M**.
+- **Alt+Q**: paste as plain text. The window uses **Ctrl+Shift+M**.
 
 You hear what the word keys deleted, for example "three deleted."
 
@@ -272,7 +272,7 @@ In the terminal reader, textweaver sends copied text to the terminal, which plac
 
 A very long formatted passage is converted in the background, so the keyboard keeps responding; you hear "Converting the formatted text to paste." and the text appears when the conversion is done. Whatever its size, every paste is one undo step: **Ctrl+Z** removes the whole paste at once, and **Ctrl+Y** puts it back.
 
-### Paste as plain text: Alt+A, or Ctrl+Shift+M in the window
+### Paste as plain text: Alt+Q, or Ctrl+Shift+M in the window
 
 When you want the words without their formatting, use **Paste as plain text**. It inserts only the clipboard's plain text, with no Markdown added. It is in the Edit menu, in the context menu, and in the command palette as "paste plain text". Many programs use **Ctrl+Shift+V** for this, but in textweaver's window that key already chooses a voice, and a terminal cannot tell **Ctrl+Shift+V** from **Ctrl+V**, so textweaver uses the nearest free keys instead. You can move the command to any key you prefer in `keymap.toml`; the [keyboard guide](keyboard.md) explains how.
 
