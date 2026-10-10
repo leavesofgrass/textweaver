@@ -560,6 +560,11 @@ pub const INFO: &[Info] = &[
         "The color behind the sentence being read. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
+    table(
+        "highlight.palette",
+        "Highlight names",
+        "Up to eight names for your highlights, each with a color and a shape. The first five have keys of their own.",
+    ),
     // [normalization]
     toggle(
         "normalization.math",

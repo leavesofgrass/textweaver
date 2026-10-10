@@ -549,7 +549,7 @@ help-rate = Más rápido y más lento: { $faster } y { $slower }.
 help-where = Dónde estoy: { $key }.
 help-repeat = Repetir el último mensaje: { $repeat }. El último mensaje y el estado: modo, velocidad, motor y posición: { $status }.
 help-notes = Notas: agregar { $add }, listar { $list }, siguiente y anterior { $next } y { $previous }, eliminar la del cursor { $delete }. En la lista, Suprimir elimina y F2 edita.
-help-highlights = Resaltar la selección o la oración, o quitar un resaltado: { $highlight }. Listar resaltados: { $list }.
+help-highlights = Resaltar la selección o la oración, o quitar un resaltado: { $highlight }. Con un nombre: { $first } a { $fifth }, o la lista: { $named }. Listar resaltados: { $list }.
 help-bookmarks-list = Lista de marcadores: Suprimir elimina un marcador, F2 lo renombra.
 help-edit = Editar el documento: { $edit }. Guardar: { $save }. Guardar como: { $saveas }. Documento nuevo: { $new }.
 help-editing = Mientras edita: deshacer { $undo }, rehacer { $redo }, negrita { $bold }. Todos los comandos de formato están en los atajos de teclado.
@@ -763,7 +763,15 @@ action-next-note = Ir a la nota siguiente
 action-previous-note = Ir a la nota anterior
 action-delete-note = Eliminar la nota o resaltado en el cursor
 action-highlight-selection = Resaltar la selección, o la oración en el cursor
+action-highlight-as = Resaltar la selección o la oración con un nombre elegido de la paleta de resaltado
+action-highlight-name-1 = Resaltar con el primer nombre de la paleta, o quitar ese resaltado
+action-highlight-name-2 = Resaltar con el segundo nombre de la paleta, o quitar ese resaltado
+action-highlight-name-3 = Resaltar con el tercer nombre de la paleta, o quitar ese resaltado
+action-highlight-name-4 = Resaltar con el cuarto nombre de la paleta, o quitar ese resaltado
+action-highlight-name-5 = Resaltar con el quinto nombre de la paleta, o quitar ese resaltado
+action-collect-highlights = Escribir los resaltados de un nombre como una lista en Markdown
 action-export-study-sheet = Exportar las notas y resaltados como una hoja de estudio en Markdown, agrupados por encabezado
+action-export-study-sheet-by-name = Exportar la hoja de estudio con los resaltados agrupados por nombre
 action-self-test = Ponerse a prueba con las notas y resaltados: Intro muestra cada respuesta
 action-open = Abrir un documento
 action-open-path = Abrir un documento escribiendo su ruta
@@ -1180,24 +1188,59 @@ notes-unchanged = Nota sin cambios.
 notes-updated = Nota actualizada.
 notes-nothing-to-highlight = No hay nada aquí para resaltar.
 notes-highlight-removed = Resaltado quitado: { $text }
-notes-highlighted-at = Resaltado en el { $pct } por ciento: { $text }
-notes-highlighted = Resaltado: { $text }
-# An item in the highlights list. $color is the highlight's color name;
+notes-highlighted-at = Resaltado, { $name }, en el { $pct } por ciento: { $text }
+notes-highlighted = Resaltado, { $name }: { $text }
+# An item in the highlights list. $name is the highlight's palette name;
 # $lost is yes when the text was not found after the file changed.
 notes-highlight-item =
     { $lost ->
-        [yes] { $text }, línea { $line }, { $color }, no encontrado después de que el archivo cambiara
-       *[no] { $text }, línea { $line }, { $color }
+        [yes] { $name }: { $text }, línea { $line }, no encontrado después de que el archivo cambiara
+       *[no] { $name }: { $text }, línea { $line }
     }
 notes-no-highlights = Sin resaltados. Para crear uno: { $key }.
 notes-highlights-title = Resaltados
 notes-highlights-intro =
     { $n ->
-        [one] Resaltados, 1 elemento. Intro va a uno, Suprimir lo quita.
-       *[other] Resaltados, { $n } elementos. Intro va a uno, Suprimir lo quita.
+        [one] Resaltados, 1 elemento. Intro va a uno, Suprimir lo quita, F2 cambia su nombre, Espacio muestra solo su nombre.
+       *[other] Resaltados, { $n } elementos. Intro va a uno, Suprimir lo quita, F2 cambia su nombre, Espacio muestra solo su nombre.
     }
 # The label said before a highlight's text on jumping to it.
-notes-highlight-label = Resaltado
+notes-highlight-label = Resaltado, { $name }
+notes-highlight-changed = Resaltado cambiado a { $name }: { $text }
+# $n is the palette entry's number, $key the keys of Highlight with a name.
+notes-palette-no-entry = No hay nombre de resaltado { $n } en la paleta. Para elegir un nombre: { $key }.
+notes-highlights-named-title = Resaltados: { $name }
+notes-highlights-named-intro =
+    { $n ->
+        [one] Resaltados llamados { $name }, 1 elemento. Espacio muestra todos los resaltados.
+       *[other] Resaltados llamados { $name }, { $n } elementos. Espacio muestra todos los resaltados.
+    }
+notes-palette-title = Nombres de resaltado
+# A palette name: the name, how many highlights have it, its shape and its color.
+notes-palette-row =
+    { $count ->
+        [one] { $name }, 1 resaltado, { $shape }, { $color }
+       *[other] { $name }, { $count } resaltados, { $shape }, { $color }
+    }
+notes-palette-intro-highlight = ¿Resaltar con qué nombre? { $n } nombres. Intro elige uno.
+notes-palette-intro-change = ¿Cambiar el resaltado a qué nombre? { $n } nombres. Intro elige uno.
+notes-palette-intro-collect = ¿Reunir los resaltados de qué nombre? { $n } nombres. Intro los escribe como lista.
+notes-collect-none = No hay resaltados llamados { $name }.
+# The collected list's own title (Markdown).
+notes-collect-title = Resaltados llamados { $name }: { $title }
+notes-collect-line = (línea { $line })
+# Keep the letters y and n: they are the keys that answer.
+notes-collect-saved =
+    { $n ->
+        [one] 1 resaltado llamado { $name } guardado como { $file }. ¿Abrirlo? y o n. En { $folder }.
+       *[other] { $n } resaltados llamados { $name } guardados como { $file }. ¿Abrirlo? y o n. En { $folder }.
+    }
+palette-shape-underline = subrayado
+palette-shape-double-underline = subrayado doble
+palette-shape-bold = negrita
+palette-shape-dotted = subrayado punteado
+palette-shape-brackets = corchetes
+palette-shape-symbol = símbolo
 # Shown while reading reaches a note's passage.
 notes-signal = Nota: { $text }
 # Said after moving onto a note's passage.
@@ -1310,8 +1353,12 @@ notes-sheet-exported = Exportado desde { -brand } el { $date }.
 notes-sheet-before-first-heading = Antes del primer encabezado
 # After a note's text: its tags, joined with commas.
 notes-sheet-tags = (etiquetas: { $tags })
-# $color is the highlight's color name.
-notes-sheet-highlighted = Resaltado, { $color }.
+# $name is the highlight's palette name.
+notes-sheet-highlighted = Resaltado, { $name }.
+# On the study sheet grouped by name: the heading a highlight falls under.
+notes-sheet-under = Bajo: { $heading }
+# The study sheet's section of notes, after the names.
+notes-sheet-notes = Notas
 
 ## La autoevaluación: preguntas con respuestas ocultas (crate::reveal).
 
@@ -1876,6 +1923,8 @@ setting-highlight-color = Color del resaltado de palabra
 setting-highlight-color-help = El color detrás de la palabra que se lee. Elija un nombre o escriba un código hexadecimal. Predeterminado: el color del tema.
 setting-highlight-sentence-color = Color del resaltado de oración
 setting-highlight-sentence-color-help = El color detrás de la oración que se lee. Elija un nombre o escriba un código hexadecimal. Predeterminado: el color del tema.
+setting-highlight-palette = Nombres de resaltado
+setting-highlight-palette-help = Hasta ocho nombres para sus resaltados, cada uno con un color y una forma. Los cinco primeros tienen teclas propias.
 setting-normalization-math = Hablar matemáticas
 setting-normalization-math-help = Decir la notación matemática con palabras.
 setting-normalization-math-verbosity = Verbosidad de las matemáticas
@@ -3261,6 +3310,7 @@ menu-headings = Títulos
 menu-go-to = Ir a
 menu-cursor = Cursor y selección
 menu-bookmarks = Marcadores y notas
+menu-highlights = Resaltados
 menu-tables = Tablas
 menu-speech-cursor = Cursor de voz
 
@@ -3394,6 +3444,14 @@ name-previous-note = Nota anterior
 name-delete-note = Borrar nota o resaltado
 name-highlight-selection = Resaltar
 name-export-study-sheet = Exportar hoja de estudio
+name-highlight-as = Resaltar con un nombre
+name-highlight-name-1 = Resaltar con el nombre 1
+name-highlight-name-2 = Resaltar con el nombre 2
+name-highlight-name-3 = Resaltar con el nombre 3
+name-highlight-name-4 = Resaltar con el nombre 4
+name-highlight-name-5 = Resaltar con el nombre 5
+name-collect-highlights = Reunir resaltados
+name-export-study-sheet-by-name = Exportar hoja de estudio por nombre
 name-self-test = Autoevaluación
 name-open = Abrir
 name-open-path = Abrir por ruta
@@ -3565,6 +3623,8 @@ color-name-skyblue = azul cielo
 color-name-teal = verde azulado
 color-name-gold = dorado
 color-name-yellow = amarillo
+color-name-green = verde
+color-name-cyan = cian
 color-name-purple = morado
 color-name-pink = rosa
 color-name-brown = marrón

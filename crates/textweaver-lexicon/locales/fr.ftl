@@ -577,7 +577,7 @@ help-rate = Plus vite et plus lentement : { $faster } et { $slower }.
 help-where = Où suis-je : { $key }.
 help-repeat = Répéter le dernier message : { $repeat }. Le dernier message et le statut : mode, débit, moteur vocal, et position : { $status }.
 help-notes = Notes : ajouter { $add }, lister { $list }, suivante et précédente { $next } et { $previous }, supprimer celle au curseur { $delete }. Dans la liste, Suppr supprime et F2 modifie.
-help-highlights = Surligner la sélection ou la phrase, ou supprimer un surlignage : { $highlight }. Lister les surlignages : { $list }.
+help-highlights = Surligner la sélection ou la phrase, ou supprimer un surlignage : { $highlight }. Avec un nom : { $first } à { $fifth }, ou la liste : { $named }. Lister les surlignages : { $list }.
 help-bookmarks-list = Liste des signets : Suppr supprime un signet, F2 le renomme.
 help-edit = Modifier le document : { $edit }. Enregistrer : { $save }. Enregistrer sous : { $saveas }. Nouveau document : { $new }.
 help-editing = Pendant l'édition : annuler { $undo }, rétablir { $redo }, gras { $bold }. Toutes les commandes de mise en forme sont dans les raccourcis clavier.
@@ -791,7 +791,15 @@ action-next-note = Passer à la note suivante
 action-previous-note = Passer à la note précédente
 action-delete-note = Supprimer la note ou le surlignage au curseur
 action-highlight-selection = Surligner la sélection, ou la phrase au curseur
+action-highlight-as = Surligner la sélection ou la phrase avec un nom choisi dans la palette de surlignage
+action-highlight-name-1 = Surligner avec le premier nom de la palette, ou supprimer ce surlignage
+action-highlight-name-2 = Surligner avec le deuxième nom de la palette, ou supprimer ce surlignage
+action-highlight-name-3 = Surligner avec le troisième nom de la palette, ou supprimer ce surlignage
+action-highlight-name-4 = Surligner avec le quatrième nom de la palette, ou supprimer ce surlignage
+action-highlight-name-5 = Surligner avec le cinquième nom de la palette, ou supprimer ce surlignage
+action-collect-highlights = Écrire les surlignages d'un nom en liste Markdown
 action-export-study-sheet = Exporter les notes et surlignages en fiche d'étude Markdown, groupés par titre
+action-export-study-sheet-by-name = Exporter la fiche d'étude avec les surlignages groupés par nom
 action-self-test = Vous tester sur les notes et surlignages : Entrée montre chaque réponse
 action-open = Ouvrir un document
 action-open-path = Ouvrir un document en tapant son chemin
@@ -1208,24 +1216,59 @@ notes-unchanged = Note inchangée.
 notes-updated = Note mise à jour.
 notes-nothing-to-highlight = Rien ici à surligner.
 notes-highlight-removed = Surlignage supprimé : { $text }
-notes-highlighted-at = Surligné à { $pct } pour cent : { $text }
-notes-highlighted = Surligné : { $text }
-# An item in the highlights list. $color is the highlight's color name;
+notes-highlighted-at = Surligné, { $name }, à { $pct } pour cent : { $text }
+notes-highlighted = Surligné, { $name } : { $text }
+# An item in the highlights list. $name is the highlight's palette name;
 # $lost is yes when the text was not found after the file changed.
 notes-highlight-item =
     { $lost ->
-        [yes] { $text }, ligne { $line }, { $color }, introuvable après la modification du fichier
-       *[no] { $text }, ligne { $line }, { $color }
+        [yes] { $name } : { $text }, ligne { $line }, introuvable après la modification du fichier
+       *[no] { $name } : { $text }, ligne { $line }
     }
 notes-no-highlights = Aucun surlignage. Pour en faire un : { $key }.
 notes-highlights-title = Surlignages
 notes-highlights-intro =
     { $n ->
-        [one] Surlignages, 1 élément. Entrée va à l'un d'eux, Suppr le supprime.
-       *[other] Surlignages, { $n } éléments. Entrée va à l'un d'eux, Suppr le supprime.
+        [one] Surlignages, 1 élément. Entrée va à l'un d'eux, Suppr le supprime, F2 change son nom, Espace n'affiche que son nom.
+       *[other] Surlignages, { $n } éléments. Entrée va à l'un d'eux, Suppr le supprime, F2 change son nom, Espace n'affiche que son nom.
     }
 # The label said before a highlight's text on jumping to it.
-notes-highlight-label = Surligner
+notes-highlight-label = Surlignage, { $name }
+notes-highlight-changed = Surlignage changé en { $name } : { $text }
+# $n is the palette entry's number, $key the keys of Highlight with a name.
+notes-palette-no-entry = Pas de nom de surlignage { $n } dans la palette. Pour choisir un nom : { $key }.
+notes-highlights-named-title = Surlignages : { $name }
+notes-highlights-named-intro =
+    { $n ->
+        [one] Surlignages nommés { $name }, 1 élément. Espace affiche tous les surlignages.
+       *[other] Surlignages nommés { $name }, { $n } éléments. Espace affiche tous les surlignages.
+    }
+notes-palette-title = Noms de surlignage
+# A palette name: the name, how many highlights have it, its shape and its color.
+notes-palette-row =
+    { $count ->
+        [one] { $name }, 1 surlignage, { $shape }, { $color }
+       *[other] { $name }, { $count } surlignages, { $shape }, { $color }
+    }
+notes-palette-intro-highlight = Surligner avec quel nom ? { $n } noms. Entrée en choisit un.
+notes-palette-intro-change = Changer le surlignage en quel nom ? { $n } noms. Entrée en choisit un.
+notes-palette-intro-collect = Rassembler les surlignages de quel nom ? { $n } noms. Entrée les écrit en liste.
+notes-collect-none = Aucun surlignage nommé { $name }.
+# The collected list's own title (Markdown).
+notes-collect-title = Surlignages nommés { $name } : { $title }
+notes-collect-line = (ligne { $line })
+# Keep the letters y and n: they are the keys that answer.
+notes-collect-saved =
+    { $n ->
+        [one] 1 surlignage nommé { $name } enregistré sous { $file }. L'ouvrir ? y ou n. Dans { $folder }.
+       *[other] { $n } surlignages nommés { $name } enregistrés sous { $file }. L'ouvrir ? y ou n. Dans { $folder }.
+    }
+palette-shape-underline = soulignement
+palette-shape-double-underline = double soulignement
+palette-shape-bold = gras
+palette-shape-dotted = soulignement pointillé
+palette-shape-brackets = crochets
+palette-shape-symbol = symbole
 # Shown while reading reaches a note's passage.
 notes-signal = Note : { $text }
 # Said after moving onto a note's passage.
@@ -1338,8 +1381,12 @@ notes-sheet-exported = Exporté depuis { -brand } le { $date }.
 notes-sheet-before-first-heading = Avant le premier titre
 # After a note's text: its tags, joined with commas.
 notes-sheet-tags = (étiquettes : { $tags })
-# $color is the highlight's color name.
-notes-sheet-highlighted = Surligné, { $color }.
+# $name is the highlight's palette name.
+notes-sheet-highlighted = Surligné, { $name }.
+# On the study sheet grouped by name: the heading a highlight falls under.
+notes-sheet-under = Sous : { $heading }
+# The study sheet's section of notes, after the names.
+notes-sheet-notes = Notes
 
 ## L’autotest : questions aux réponses cachées (crate::reveal).
 
@@ -1904,6 +1951,8 @@ setting-highlight-color = Couleur du surlignage de mot
 setting-highlight-color-help = La couleur derrière le mot lu. Choisissez un nom ou tapez un code hexadécimal. Par défaut : la couleur du thème.
 setting-highlight-sentence-color = Couleur du surlignage de phrase
 setting-highlight-sentence-color-help = La couleur derrière la phrase lue. Choisissez un nom ou tapez un code hexadécimal. Par défaut : la couleur du thème.
+setting-highlight-palette = Noms de surlignage
+setting-highlight-palette-help = Jusqu'à huit noms pour vos surlignages, chacun avec une couleur et une forme. Les cinq premiers ont leurs propres touches.
 setting-normalization-math = Dire les mathématiques
 setting-normalization-math-help = Dire la notation mathématique en mots.
 setting-normalization-math-verbosity = Verbosité des mathématiques
@@ -3289,6 +3338,7 @@ menu-headings = Titres
 menu-go-to = Aller à
 menu-cursor = Curseur et sélection
 menu-bookmarks = Signets et notes
+menu-highlights = Surlignages
 menu-tables = Tableaux
 menu-speech-cursor = Curseur vocal
 
@@ -3422,6 +3472,14 @@ name-previous-note = Note précédente
 name-delete-note = Supprimer la note ou le surlignage
 name-highlight-selection = Surligner
 name-export-study-sheet = Exporter la fiche d'étude
+name-highlight-as = Surligner avec un nom
+name-highlight-name-1 = Surligner avec le nom 1
+name-highlight-name-2 = Surligner avec le nom 2
+name-highlight-name-3 = Surligner avec le nom 3
+name-highlight-name-4 = Surligner avec le nom 4
+name-highlight-name-5 = Surligner avec le nom 5
+name-collect-highlights = Rassembler les surlignages
+name-export-study-sheet-by-name = Exporter la fiche d'étude par nom
 name-self-test = Autotest
 name-open = Ouvrir
 name-open-path = Ouvrir par chemin
@@ -3593,6 +3651,8 @@ color-name-skyblue = bleu ciel
 color-name-teal = bleu canard
 color-name-gold = doré
 color-name-yellow = jaune
+color-name-green = vert
+color-name-cyan = cyan
 color-name-purple = violet
 color-name-pink = rose
 color-name-brown = marron

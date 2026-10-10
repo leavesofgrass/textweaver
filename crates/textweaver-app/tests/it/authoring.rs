@@ -1053,6 +1053,125 @@ fn notes_export_as_a_study_sheet_grouped_by_heading() {
     assert_eq!(r.opened(), [out.display().to_string()]);
 }
 
+/// The highlight palette (B1-h1): a key per name, and each highlight said
+/// by its name; the list leads with names, Space shows one name's, F2
+/// gives another name; Collect writes one name's highlights; the study
+/// sheet groups by name; the names are saved with the highlights.
+#[test]
+fn highlights_take_palette_names_and_are_filtered_and_collected() {
+    use textweaver_app::{ListKey, NoteCommand};
+    let mut r = Rig::new();
+    let path = r.open("essay.md", ESSAY);
+    r.go("Intro");
+    r.act(ActionId::HighlightName2);
+    assert!(
+        r.said.any("Highlighted, define: Intro"),
+        "{:?}",
+        r.said.all()
+    );
+    r.go("We measured");
+    r.act(ActionId::HighlightName1);
+    r.go("first item");
+    r.act(ActionId::HighlightName2);
+    // A name the palette does not have.
+    let mut four = serde_json::to_value(&r.app.settings().highlight.palette).unwrap();
+    four.as_array_mut().unwrap().truncate(4);
+    r.app.set_setting("highlight.palette", four).unwrap();
+    r.act(ActionId::HighlightName5);
+    assert!(
+        r.status()
+            .starts_with("No highlight name 5 in the palette."),
+        "{}",
+        r.status()
+    );
+
+    r.send(Command::Notes(NoteCommand::ListHighlights));
+    let list = r.app.list_model().unwrap().clone();
+    assert_eq!(list.items.len(), 3, "{:?}", list.items);
+    assert!(
+        list.items[0].starts_with("define: Intro"),
+        "{:?}",
+        list.items
+    );
+    assert!(
+        list.items[1].starts_with("important: We measured"),
+        "{:?}",
+        list.items
+    );
+    r.send(Command::ListKey(ListKey::Char(' ')));
+    let list = r.app.list_model().unwrap().clone();
+    assert_eq!(list.title, "Highlights: define");
+    assert_eq!(list.items.len(), 2, "{:?}", list.items);
+
+    // F2 on the second gives it the third name.
+    r.send(Command::ListKey(ListKey::Down));
+    r.send(Command::ListKey(ListKey::Rename));
+    let names = r.app.list_model().unwrap().clone();
+    assert_eq!(names.title, "Highlight names");
+    assert_eq!(names.items[0], "important, 1 highlight, underline, yellow");
+    assert_eq!(
+        names.items[1],
+        "define, 2 highlights, double underline, green"
+    );
+    assert_eq!(names.items[2], "question, 0 highlights, brackets, cyan");
+    r.send(Command::ListKey(ListKey::Down));
+    r.send(Command::ListKey(ListKey::Down));
+    r.said.clear();
+    r.send(Command::ListKey(ListKey::Enter));
+    assert!(
+        r.said.any("Highlight changed to question: first item"),
+        "{:?}",
+        r.said.all()
+    );
+    r.send(Command::ListKey(ListKey::Escape));
+
+    // Collect the one highlight still named define.
+    r.act(ActionId::CollectHighlights);
+    r.send(Command::ListKey(ListKey::Down));
+    r.send(Command::ListKey(ListKey::Enter));
+    let out = path.with_file_name("essay-highlights-define.md");
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        text.starts_with("# Highlights named define: Essay\n"),
+        "{text}"
+    );
+    assert!(
+        text.contains("\n- Intro paragraph with bold words. (line "),
+        "{text}"
+    );
+    assert!(!text.contains("first item"), "{text}");
+    assert!(
+        r.status()
+            .starts_with("1 highlight named define saved as essay-highlights-define.md."),
+        "{}",
+        r.status()
+    );
+    r.send(Command::Confirm(Confirm::No));
+
+    // The study sheet grouped by name, in the palette's order.
+    r.act(ActionId::ExportStudySheetByName);
+    let sheet =
+        std::fs::read_to_string(path.with_file_name("essay-study-sheet-by-name.md")).unwrap();
+    let important = sheet.find("\n## important\n").unwrap();
+    let define = sheet.find("\n## define\n").unwrap();
+    let question = sheet.find("\n## question\n").unwrap();
+    assert!(important < define && define < question, "{sheet}");
+    assert!(
+        sheet.contains("- > We measured things carefully.\n\n  Under: Methods"),
+        "{sheet}"
+    );
+    r.send(Command::Confirm(Confirm::No));
+
+    // The names are saved with the highlights.
+    let s = r.app.session().unwrap();
+    let names: Vec<_> = s
+        .highlights
+        .iter()
+        .map(|h| h.palette_name().unwrap_or_default().to_owned())
+        .collect();
+    assert_eq!(names, ["define", "important", "question"]);
+}
+
 /// The self-test (B1-s1): the study sheet's note and highlight as prompts;
 /// Enter reveals and says the answer, and the list stays on the prompt.
 #[test]

@@ -204,6 +204,7 @@ mod notes;
 pub mod opener;
 pub mod opening;
 mod pages;
+pub mod palette;
 pub mod panels;
 pub mod path_complete;
 pub mod path_prompt;

@@ -448,8 +448,32 @@ actions! {
         gui [], term [], shared ["b:Delete"];
     HighlightSelection = "highlight_selection", Bookmarks, "Highlight the selection, or the sentence at the cursor",
         gui [], term [], shared ["b:y"];
+    HighlightAs = "highlight_as", Bookmarks,
+        "Highlight the selection or the sentence with a name chosen from the highlight palette",
+        gui [], term [], shared [];
+    HighlightName1 = "highlight_name_1", Bookmarks,
+        "Highlight with the palette's first name, or remove that highlight",
+        gui [], term [], shared ["b:Alt+1"];
+    HighlightName2 = "highlight_name_2", Bookmarks,
+        "Highlight with the palette's second name, or remove that highlight",
+        gui [], term [], shared ["b:Alt+2"];
+    HighlightName3 = "highlight_name_3", Bookmarks,
+        "Highlight with the palette's third name, or remove that highlight",
+        gui [], term [], shared ["b:Alt+3"];
+    HighlightName4 = "highlight_name_4", Bookmarks,
+        "Highlight with the palette's fourth name, or remove that highlight",
+        gui [], term [], shared ["b:Alt+4"];
+    HighlightName5 = "highlight_name_5", Bookmarks,
+        "Highlight with the palette's fifth name, or remove that highlight",
+        gui [], term [], shared ["b:Alt+5"];
+    CollectHighlights = "collect_highlights", Bookmarks,
+        "Write the highlights of one name as a Markdown list",
+        gui [], term [], shared [];
     ExportStudySheet = "export_study_sheet", Bookmarks,
         "Export the notes and highlights as a Markdown study sheet, grouped by heading",
+        gui [], term [], shared [];
+    ExportStudySheetByName = "export_study_sheet_by_name", Bookmarks,
+        "Export the study sheet with the highlights grouped by name",
         gui [], term [], shared [];
     ListChanges = "list_changes", Bookmarks,
         "List the tracked changes and comments: Enter goes to one, A accepts a change, R rejects it",
