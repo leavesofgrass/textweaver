@@ -38,14 +38,14 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [Keyboard reference](keyboard.md): every key in the terminal and the GUI, generated from the keymap.
 - [The textweaver app (graphical version)](gui.md): starting it, what is on screen, the menus, buttons and panels, its keys, announcements, and the reading aids it draws.
 - [The app in pictures](window-in-pictures.md): eight pictures of the graphical version, each with a text description of what it shows.
-- [Bookmarks, notes, and highlights](notes.md): marking your place and your thoughts.
+- [Bookmarks, notes, and highlights](notes.md): marking your place and your thoughts; the named highlight palette; links between notes and graph exports; and study cards, the self-test, and recall prompts.
 - [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, and reading level.
 - [Themes](themes.md): the 24 built-in color themes, following your system, and writing your own.
 - [Math](math.md): hearing math read aloud, and writing it in Markdown.
 
 ### Writing
 
-- [Writing and editing](editing.md): edit mode, typing echo, Markdown commands, undo, saving, the outline, spell check, clipboard, templates, and find and replace.
+- [Writing and editing](editing.md): edit mode, typing echo, Markdown commands, undo, saving, the outline, spell check, clipboard and Markdown paste, templates, find and replace with regular expressions, the preview pane, and tracked changes in Word files.
 - [Citations](citations.md): inserting citations while writing, `tw cite`, the reference library, DOI and ISBN lookup, and citation styles.
 - [Dictation](dictation.md): `tw dictate`, turning speech in an audio file into text.
 
@@ -58,7 +58,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 ### Files, the library, and settings
 
-- [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more; exporting and previewing from inside the reader.
+- [Converting documents](converting.md): `tw convert` to HTML, EPUB, Word, braille, PDF, and more, including DAISY and BRF reading and the formats carta handles; exporting and previewing from inside the reader.
 - [The library](library.md): library folders, recent files, sync between computers, and importing from star.
 - [Optional components](components.md): the models, fonts, and voices textweaver downloads only when you agree; Manage optional components, the first-run list, `tw components`, installing from a file, and a mirror.
 - [Updates](updates.md): the daily check and Help, Check for updates; the question before downloading; how a download is checked and installed; and `tw update`.
@@ -91,7 +91,7 @@ The developer documents are in [dev/](dev/), and the decision records in [adr/](
 - [Third-party data](dev/third-party-data.md): the bundled pronunciation dictionaries, fonts, and word lists, and their licenses.
 - [JSON-RPC](json-rpc.md): driving textweaver from an editor or another program with `tw serve --stdio`.
 - [Roadmap](roadmap.md): what works today, what is being built next, and what is planned.
-- [Research for the next waves](dev/research/README.md): the research reports and the wave plan for alpha.8, alpha.9, and later: performance, speech engines, use cases, design, and law and standards.
+- [Research for the next waves](dev/research/README.md): the research reports and the wave plans for alpha.8 through beta 1 and later: performance, speech engines, use cases, design, and law and standards.
 - [star features not yet planned](star-gaps.md): star features with their status in textweaver.
 - [Documentation coverage](dev/docs-coverage.md): each feature, the guide that covers it, and whether the guide passes.
 - [CHANGELOG.md](../CHANGELOG.md): what changed in each release.
