@@ -25,7 +25,7 @@
 //! audio is found by [`crate::book_audio()`].
 
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use ropey::Rope;
 use scraper::{ElementRef, Html};
@@ -50,6 +50,24 @@ const PAGE_CLASSES: [&str; 3] = ["page-front", "page-normal", "page-special"];
 pub fn is_ncc_name(name: &str) -> bool {
     let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
     base.eq_ignore_ascii_case("ncc.html") || base.eq_ignore_ascii_case("ncc.htm")
+}
+
+/// The DAISY 2.02 navigation file directly inside the folder `dir`, if it
+/// holds one, so opening a book's folder opens the book.
+pub fn ncc_in(dir: &Path) -> Option<PathBuf> {
+    let mut found: Vec<PathBuf> = std::fs::read_dir(dir)
+        .ok()?
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_ok_and(|t| t.is_file()))
+        .map(|e| e.path())
+        .filter(|p| {
+            p.file_name()
+                .is_some_and(|n| is_ncc_name(&n.to_string_lossy()))
+        })
+        .collect();
+    // `ncc.html` before `ncc.htm`, whatever order the folder lists them.
+    found.sort();
+    found.pop()
 }
 
 /// True when `bytes`, opened from `source`, are a DAISY 2.02 NCC: by its
@@ -517,6 +535,19 @@ mod tests {
             .unwrap();
         check_book(&d);
         assert_eq!(d.meta.path, Some(fixture("ncc.html")));
+    }
+
+    #[test]
+    fn the_books_folder_opens_its_ncc() {
+        let folder = fixture("ncc.html").parent().unwrap().to_path_buf();
+        let d = Registry::with_builtins()
+            .load(&Source::Path(folder), &LoadOptions::default())
+            .unwrap();
+        check_book(&d);
+        assert_eq!(d.meta.path, Some(fixture("ncc.html")));
+        // A folder without one is still not a document.
+        let empty = tempfile::tempdir().unwrap();
+        assert!(ncc_in(empty.path()).is_none());
     }
 
     #[test]

@@ -192,6 +192,7 @@ pub(crate) fn prompt_label(c: &Catalog, purpose: PromptPurpose) -> String {
         P::Open => "prompt-open",
         P::CommandPalette => "prompt-command",
         P::SaveAs => "prompt-save-as",
+        P::ExportAs => "prompt-export-as",
         P::TableSize => "prompt-table-size",
         P::ImagePath => "prompt-image-path",
         P::ReplaceFind => "prompt-replace-find",

@@ -507,6 +507,7 @@ prompt-command = Comando
 # $label is prompt-command.
 prompt-command-palette-intro = { $label }. Digite parte de um nome; Tab completa, Seta para cima e para baixo listam correspondências.
 prompt-save-as = Salvar como
+prompt-export-as = Exportar como
 prompt-table-size = Tamanho da tabela, colunas por linhas, por exemplo 3 por 2
 prompt-image-path = Arquivo de imagem
 prompt-replace-find = Substituir, localizar o quê
@@ -1135,6 +1136,8 @@ publish-cannot-write-to = não é possível escrever em { $path }: { $error } Ve
 publish-cannot-write = não é possível escrever { $path }: { $error } Verifique se a pasta dele pode ser gravada.
 publish-start-failed = Não foi possível iniciar a exportação: { $error } Aguarde um momento e tente de novo.
 publish-export-error = Não foi possível exportar: { $error } Corrija isso e exporte de novo.
+publish-export-as-label = Exportar como, Enter para { $path }
+publish-export-over-source = Não exportado: é o próprio documento. Escolha outro nome.
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = Exportando para { $format }.
 publish-theme-title = Tema para a página HTML
@@ -3753,6 +3756,7 @@ name-cycle-preview-follow = Prévia no navegador acompanha
 name-browse-files = Navegar pelos arquivos
 name-batch-convert = Converter em lote
 name-export-audio = Exportar áudio
+name-export-read-along = Página de leitura: texto e áudio
 name-quit = Sair
 name-toggle-edit-mode = Modo de edição
 name-toggle-preview = Pré-visualização
@@ -3868,6 +3872,7 @@ palette-list-intro =
 action-browse-files = Navegar por arquivos e pacotes: Enter abre uma pasta, um pacote ou um documento; Backspace sobe um nível
 action-batch-convert = Converter uma pasta de documentos para outro formato, em segundo plano
 action-export-audio = Exportar o documento como áudio falado: MP3, FLAC, Opus, WAV ou um audiolivro M4B
+action-export-read-along = Exportar uma página de leitura: um arquivo HTML com o texto e seu áudio, a palavra falada marcada ao tocar
 action-dictate = Iniciar ou parar o ditado: as palavras faladas são digitadas no cursor no modo de edição
 action-color-settings = Abrir as configurações de cor: o destaque de leitura, a régua, as marcas e cada parte da tela, com o contraste
 action-cycle-interface-announcements = Alternar quanto o textweaver anuncia sobre si mesmo: desativados, mínimos, normais ou completos; erros e respostas são sempre ditos
@@ -4172,6 +4177,12 @@ audio-no-engine = Nenhum motor de voz aqui grava arquivos de áudio. Instale o e
 audio-confirm = Exportar { $name } com { $voice } a { $wpm } palavras por minuto, em { $path }? y ou n
 audio-started = Exportando { $name } como { $format }. Escape para.
 audio-progress = Exportando áudio, { $percent } por cento.
+audio-video-progress =
+    { $minutes ->
+        [one] Codificando vídeo: { $fed } de { $all } quadros, falta cerca de 1 minuto.
+       *[other] Codificando vídeo: { $fed } de { $all } quadros, faltam cerca de { $minutes } minutos.
+    }
+audio-video-progress-soon = Codificando vídeo: { $fed } de { $all } quadros, falta menos de um minuto.
 audio-busy = Já exportando { $name }. Escape para.
 audio-stop-question = Parar a exportação? Nenhum arquivo é mantido. y ou n
 audio-stopping = Parando a exportação.
@@ -4633,6 +4644,7 @@ action-reading-form = Abrir as configurações de leitura: velocidade, fonte, es
 reading-form-intro = Configurações de leitura, { $n } configurações. Esquerda e Direita mudam um valor, Enter digita um, Delete volta ao padrão, F1 diz a ajuda.
 reading-form-spacing-wcag-done = Espaçamento nos valores da WCAG.
 reading-form-spacing-generous-done = Espaçamento amplo, maior que a WCAG.
+spacing-letter-without-word = Aumente o espaço entre palavras com o das letras.
 gui-reading-form-help = Cima e Baixo movem, Esquerda e Direita mudam um valor, Enter digita um, F1 diz a ajuda.
 gui-reading-voices = Vozes
 gui-reading-voices-help = Abrir o gerenciador de vozes.
@@ -4759,6 +4771,7 @@ brf-original-not-brf = Não é um arquivo braille. Mostrar o braille original fu
 brf-original-unreadable = Não é possível ler o arquivo braille: { $reason }
 brf-no-liblouis = Braille mostrado como braille: falta o liblouis. Para ler como texto impresso, instale o liblouis de liblouis.io ou dos pacotes do seu sistema e abra o arquivo de novo.
 brf-no-liblouis-short = Braille mostrado como braille: falta o liblouis. Abra o arquivo de novo quando estiver instalado.
+daisy-headings-only = Só títulos: este livro DAISY não tem texto, apenas títulos e áudio, então seus títulos são lidos.
 ## End of B1-r5
 
 ## B1-t2: guardar a revisão no arquivo do Word.

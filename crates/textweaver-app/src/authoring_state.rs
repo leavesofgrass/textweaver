@@ -214,6 +214,9 @@ pub(crate) enum Question {
     /// Replace all the rest of the matches? The whole question as asked,
     /// with the count.
     ReplaceAll(String),
+    /// Export over this file, which already exists? The whole question as
+    /// asked ("essay.pdf already exists. Replace it? y or n").
+    ReplaceExport(PathBuf, String),
 }
 
 /// The authoring state.
@@ -263,6 +266,8 @@ pub(crate) struct Authoring {
     /// The theme chosen for HTML pages this session: offered first the
     /// next time, and used when the preview is rewritten.
     pub(crate) html_theme: Option<String>,
+    /// The format of the export waiting for the Export as answer.
+    pub(crate) export_as: Option<crate::publish::OutputFormat>,
 }
 
 /// Listening to the rendered text while editing.

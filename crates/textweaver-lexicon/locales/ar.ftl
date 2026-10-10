@@ -587,6 +587,7 @@ prompt-command = أمر
 # $label is prompt-command.
 prompt-command-palette-intro = { $label }. اكتب جزءًا من اسم؛ Tab لإكماله، والسهمان لأعلى ولأسفل لسرد التطابقات.
 prompt-save-as = حفظ باسم
+prompt-export-as = تصدير باسم
 prompt-table-size = حجم الجدول، أعمدة × صفوف، مثل 3 × 2
 prompt-image-path = ملف صورة
 prompt-replace-find = استبدال، ابحث عن
@@ -1224,6 +1225,8 @@ publish-cannot-write-to = تعذّرت الكتابة إلى { $path }: { $error
 publish-cannot-write = تعذّرت كتابة { $path }: { $error } تحقّق من إمكانية الكتابة في مجلده.
 publish-start-failed = تعذّر بدء التصدير: { $error } انتظر قليلًا، ثم حاول مرة أخرى.
 publish-export-error = تعذّر التصدير: { $error } أصلح ذلك، ثم صدّر مرة أخرى.
+publish-export-as-label = تصدير باسم، Enter لـ{ $path }
+publish-export-over-source = لم يُصدَّر: هذا هو المستند نفسه. اختر اسمًا آخر.
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = التصدير إلى { $format }.
 publish-theme-title = سمة صفحة HTML
@@ -4099,6 +4102,7 @@ name-cycle-preview-follow = معاينة المتصفح تتبع
 name-browse-files = تصفح الملفات
 name-batch-convert = تحويل دفعة
 name-export-audio = تصدير الصوت
+name-export-read-along = صفحة القراءة: النص والصوت
 name-quit = خروج
 name-toggle-edit-mode = وضع التحرير
 name-toggle-preview = المعاينة
@@ -4214,6 +4218,7 @@ palette-list-intro =
 action-browse-files = تصفح الملفات والأرشيفات: يفتح Enter مجلدًا أو أرشيفًا أو مستندًا، ويصعد Backspace مستوى
 action-batch-convert = تحويل مجلد من المستندات إلى صيغة أخرى في الخلفية
 action-export-audio = تصدير المستند صوتًا منطوقًا: MP3 أو FLAC أو Opus أو WAV أو كتاب صوتي M4B
+action-export-read-along = تصدير صفحة قراءة: ملف HTML واحد فيه النص وصوته، مع تمييز الكلمة المنطوقة أثناء التشغيل
 action-dictate = بدء الإملاء أو إيقافه: تُكتب الكلمات المنطوقة عند المؤشر في وضع التحرير
 action-color-settings = فتح إعدادات الألوان: تمييز القراءة والمسطرة والعلامات وكل جزء من الشاشة، مع تباينها
 action-cycle-interface-announcements = التبديل بين مقادير ما يعلنه textweaver عن نفسه: متوقفة أو في حدها الأدنى أو عادية أو كاملة؛ تُقال الأخطاء والإجابات دائمًا
@@ -4510,6 +4515,12 @@ audio-no-engine = لا يوجد هنا محرك كلام يكتب ملفات ص�
 audio-confirm = تصدير { $name } بصوت { $voice } بسرعة { $wpm } كلمة في الدقيقة، في { $path }؟ y أو n
 audio-started = جارٍ تصدير { $name } بصيغة { $format }. Escape يوقف.
 audio-progress = جارٍ تصدير الصوت، { $percent } بالمئة.
+audio-video-progress =
+    { $minutes ->
+        [one] جارٍ ترميز الفيديو: { $fed } من { $all } إطار، بقيت دقيقة تقريبًا.
+       *[other] جارٍ ترميز الفيديو: { $fed } من { $all } إطار، بقي نحو { $minutes } دقائق.
+    }
+audio-video-progress-soon = جارٍ ترميز الفيديو: { $fed } من { $all } إطار، بقي أقل من دقيقة.
 audio-busy = جارٍ تصدير { $name } بالفعل. Escape يوقف.
 audio-stop-question = إيقاف التصدير؟ لن يُحفظ أي ملف. y أو n
 audio-stopping = جارٍ إيقاف التصدير.
@@ -4977,6 +4988,7 @@ action-reading-form = فتح إعدادات القراءة: السرعة وال�
 reading-form-intro = إعدادات القراءة، { $n } إعدادات. يغيّر اليسار واليمين قيمة، ويكتب Enter قيمة، ويعيد Delete القيمة الافتراضية، ويقول F1 المساعدة.
 reading-form-spacing-wcag-done = ضُبط التباعد على قيم WCAG.
 reading-form-spacing-generous-done = ضُبط التباعد على الواسع، أوسع من WCAG.
+spacing-letter-without-word = زِد تباعد الكلمات مع تباعد الحروف.
 gui-reading-form-help = يتنقل الأعلى والأسفل، ويغيّر اليسار واليمين قيمة، ويكتب Enter قيمة، ويقول F1 المساعدة.
 gui-reading-voices = الأصوات
 gui-reading-voices-help = فتح مدير الأصوات.
@@ -5106,6 +5118,7 @@ brf-original-not-brf = ليس ملف برايل. عرض برايل الأصلي 
 brf-original-unreadable = تعذرت قراءة ملف برايل: { $reason }
 brf-no-liblouis = برايل معروض كبرايل: liblouis غير موجود. لقراءته كنص مطبوع، ثبّت liblouis من liblouis.io أو من حزم نظامك، ثم افتح الملف مرة أخرى.
 brf-no-liblouis-short = يُعرض برايل كبرايل: liblouis غير موجود. افتح الملف مرة أخرى بعد تثبيته.
+daisy-headings-only = العناوين فقط: لا يحتوي كتاب DAISY هذا على نص، بل على عناوين وصوت فقط، لذا تُقرأ عناوينه.
 ## End of B1-r5
 
 ## B1-t2: حفظ المراجعة في ملف Word.

@@ -84,8 +84,22 @@ fn wav_and_cues_from_the_recording_backend() {
     let audio = WavData::read(&out).unwrap();
     assert_eq!(audio.format.sample_rate, 16_000);
     assert_eq!(audio.frames(), 64_000);
-    assert_eq!(seen.first(), Some(&Progress { done: 0, total: 5 }));
-    assert_eq!(seen.last(), Some(&Progress { done: 5, total: 5 }));
+    assert_eq!(
+        seen.first(),
+        Some(&Progress {
+            done: 0,
+            total: 5,
+            frames: None
+        })
+    );
+    assert_eq!(
+        seen.last(),
+        Some(&Progress {
+            done: 5,
+            total: 5,
+            frames: None
+        })
+    );
 
     let chapters: Vec<(&str, u64, u64)> = timeline
         .chapters

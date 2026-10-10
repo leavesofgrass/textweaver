@@ -85,8 +85,8 @@ The reader opens these formats itself:
 - PDF: `.pdf`, with comments as notes, links you can follow, and filled-in form fields read label first; scanned PDFs through text recognition (below).
 - Pictures of text: `.png`, `.jpg`, `.jpeg`, through text recognition.
 - DAISY 3 books and DTBook: `.opf`, `.xml`, `.dtbook`, and a DAISY book in a zip.
-- DAISY 2.02 books: open the book's `ncc.html`, or the zip it came in. A book with a recorded narration plays it as you read; see [Talking books](#talking-books-the-recorded-narration).
-- Braille files: `.brf`, `.brl`, read as print through liblouis (below), and each volume of a braille book in a zip.
+- DAISY 2.02 books: open the book's folder, its `ncc.html`, or the zip it came in. A book with a recorded narration plays it as you read; see [Talking books](#talking-books-the-recorded-narration). A book with no text reads its headings, and textweaver says so when it opens.
+- Braille files: `.brf`, `.brl`, read as print through liblouis (below), and each volume of a braille book in a zip. A zip that holds only one braille file opens straight into it.
 - PowerPoint: `.pptx`, `.pptm`, `.ppsx`, `.potx`, with the speaker notes.
 - Spreadsheets, as tables: `.csv`, `.tsv`, `.tab`, `.ods`, `.xlsx`, `.xlsm`, `.xlsb`.
 - Archives: `.zip`, `.tar`, `.tgz`, `.gz`, `.7z`. Opening one lists the files inside that textweaver can read; `course.zip!week1/notes.md` opens one directly.
@@ -107,7 +107,7 @@ A scanned PDF is a picture of the pages. textweaver recognizes its text (OCR) an
 
 ### Braille files (BRF)
 
-A BRF file (Braille Ready Format) is a braille book as plain text: each character stands for one braille cell, in the braille ASCII code that embossers and notetakers use, and the file is laid out in braille lines and pages, usually 40 cells by 25 lines. Libraries for blind and print-disabled readers distribute books this way; the braille downloads of the NLS BARD service, for instance, are BRF files in a zip, often one file per volume. Open the zip to see its volumes, and follow a link to open one, or open `book.zip!volume1.brf` directly.
+A BRF file (Braille Ready Format) is a braille book as plain text: each character stands for one braille cell, in the braille ASCII code that embossers and notetakers use, and the file is laid out in braille lines and pages, usually 40 cells by 25 lines. Libraries for blind and print-disabled readers distribute books this way; the braille downloads of the NLS BARD service, for instance, are BRF files in a zip, often one file per volume. Open the zip to see its volumes, and follow a link to open one, or open `book.zip!volume1.brf` directly. A zip with a single braille file in it opens that file at once, with no list in between.
 
 textweaver reads a BRF file as print, so speech, search, notes and export work as they do for any book. It does this in two steps.
 
@@ -154,7 +154,7 @@ The keyboard shortcuts list (`?`) leads every row with the command's short name,
 - **Page Down** and **Page Up** move to the next and previous group (Reading, Navigation, Search, and so on). Entering a group says its name and how many commands it has first, then the row.
 - **Enter** runs the command, and **Escape** closes the list.
 
-Code blocks are drawn in the theme's code colors. When a block names its language (```` ```python ````), its keywords, strings, comments, numbers, and names get colors from the theme too, and the kinds differ by more than color: keywords are bold and comments italic. The text itself never changes. Moving the cursor onto the block's first line says its language, for example "code, Python".
+Code blocks are drawn on the page's own background, in the text color, as in the HTML pages, so every token color keeps its contrast. When a block names its language (```` ```python ````), its keywords, strings, comments, numbers, and names get colors from the theme too, and the kinds differ by more than color: keywords are bold and comments italic. The text itself never changes. Moving the cursor onto the block's first line says its language, for example "code, Python".
 
 ## Read aloud
 
@@ -479,7 +479,7 @@ Each step says the part and its role, such as "numerator, a plus b", and highlig
 
 ## Summaries
 
-A summary is a short list of the sentences that best stand for a text: the ones that share the most words with the rest of it. textweaver picks them itself, on your computer, with no model and no download (the method is LexRank; see [ADR-0037](adr/0037-extractive-summaries.md)). The sentences are the document's own, word for word, in the order they appear.
+A summary is a short list of the sentences that best stand for a text: the ones that share the most words with the rest of it. textweaver picks them itself, on your computer, with no model and no download (the method is LexRank; see [ADR-0037](adr/0037-extractive-summaries.md)). The sentences are the document's own, word for word, in the order they appear. A summary is for previewing a text before you read it and for finding your way back to a passage; no study shows that reading summaries in place of the text helps you learn it.
 
 **In the reader**, open the command palette and choose **Summarize** (it has no key of its own; you can give it one in the key settings). What it summarizes:
 
@@ -709,7 +709,7 @@ File, Recent documents lists the last documents you opened, with your place in e
 
 ## What does this key do: Shift+F1
 
-Press **Shift+F1**, then any key: you hear what the key does, its keys, and where the command is in the menus ("Export PDF: Export the document as a tagged PDF next to it. Keys: the command palette. In the menus: File, Export as, Export PDF."). The key is not run.
+Press **Shift+F1**, then any key: you hear what the key does, its keys, and where the command is in the menus ("Export PDF: Export the document as a tagged PDF, choosing where to save it. Keys: the command palette. In the menus: File, Export as, Export PDF."). The key is not run.
 
 ## The Help menu
 

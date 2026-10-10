@@ -3,8 +3,12 @@
 //!
 //! - **Export** (palette commands `export_html`, `export_pdf`,
 //!   `export_docx`, `export_epub`, `export_brf`): the document goes through
-//!   `textweaver-convert`, as `tw convert` would convert it, into a file of
-//!   the same name next to it (`essay.md` gives `essay.pdf`). In edit mode
+//!   `textweaver-convert`, as `tw convert` would convert it, into the file
+//!   the Export as prompt names, as Save as asks: it offers the same name
+//!   in the document's folder (`essay.md` gives `essay.pdf`), and the
+//!   window answers it with the system's Save dialog. A file already there
+//!   is replaced only after "Replace it? y or n", and the document itself
+//!   never is. In edit mode
 //!   the live text is exported, saved or not. Citations are formatted and a
 //!   References section added, from the bibliography the front matter
 //!   names, the folder's `references.json`, and your library. The work runs
@@ -45,11 +49,11 @@ use textweaver_lexicon::args;
 use textweaver_speech::ReadingGeneration;
 use textweaver_store::PreviewFollow;
 
-use crate::app::App;
+use crate::app::{App, Mode};
 use crate::authoring_state::{
-    ExportDone, ExportKind, Job, Listening, Progress, ThemeFor, file_name,
+    ExportDone, ExportKind, Job, Listening, Progress, Question, ThemeFor, file_name,
 };
-use crate::command::Effect;
+use crate::command::{Effect, PromptPurpose};
 
 /// How much text "listen to the rendered text" plans at once, in chars.
 const LISTEN_LIMIT: usize = 400_000;
@@ -541,8 +545,8 @@ impl App {
         }
     }
 
-    /// Exports the document to `to`, next to it; HTML asks for the theme
-    /// first.
+    /// Exports the document to `to`, asking where first; HTML asks for the
+    /// theme before that.
     pub(crate) fn export_to(&mut self, to: OutputFormat) -> Vec<Effect> {
         if self.session.is_none() {
             let open = self.key(textweaver_keymap::ActionId::Open);
@@ -556,8 +560,98 @@ impl App {
         self.export_now(to)
     }
 
-    /// Exports the document to `to`, next to it, without asking.
+    /// Asks where to export to `to`: the Export as prompt, offering the
+    /// document's name with the format's extension in its folder (with
+    /// "-export" added when that is the document itself).
     fn export_now(&mut self, to: OutputFormat) -> Vec<Effect> {
+        let (path, folder, stem) = self.doc_place();
+        let mut suggested = folder.join(format!("{stem}.{}", to.extension()));
+        if path.as_deref() == Some(suggested.as_path()) {
+            suggested = folder.join(format!("{stem}-export.{}", to.extension()));
+        }
+        self.authoring.export_as = Some(to);
+        let label = self.msg_args(
+            "publish-export-as-label",
+            &args!["path" => suggested.display().to_string()],
+        );
+        self.ask_export_path(suggested, label)
+    }
+
+    /// Opens the Export as prompt with `label`, offering `suggested`.
+    fn ask_export_path(&mut self, suggested: PathBuf, label: String) -> Vec<Effect> {
+        self.suggested_path = Some(suggested);
+        if !self.mode.is_prompt() {
+            self.return_mode = self.mode;
+        }
+        self.mode = Mode::Prompt;
+        self.prompt_purpose = PromptPurpose::ExportAs;
+        let said = self.path_prompt_said(PromptPurpose::ExportAs, &label);
+        self.tell(&said);
+        vec![Effect::Prompt {
+            label,
+            purpose: PromptPurpose::ExportAs,
+        }]
+    }
+
+    /// The answer to the Export as prompt: empty takes the name offered; a
+    /// name alone goes in the offered folder, and gets the format's
+    /// extension when it has none. A file already there is asked about
+    /// first, unless the system's Save dialog already asked.
+    pub(crate) fn answer_export_as(&mut self, text: &str) -> Vec<Effect> {
+        let suggested = self.suggested_path.take();
+        let confirmed = std::mem::take(&mut self.save_as_replace_confirmed);
+        let (Some(to), Some(suggested)) = (self.authoring.export_as, suggested) else {
+            return vec![Effect::Redraw];
+        };
+        let typed = text.trim().trim_matches('"');
+        let mut out = if typed.is_empty() {
+            suggested
+        } else {
+            let p = PathBuf::from(typed);
+            match suggested.parent() {
+                Some(dir) if p.is_relative() => dir.join(p),
+                _ => p,
+            }
+        };
+        if out.extension().is_none() {
+            out.set_extension(to.extension());
+        }
+        // Never over the document being exported (its file, even while
+        // editing, when the live text is what is exported).
+        let (doc, _, _) = self.doc_place();
+        if doc.is_some_and(|d| crate::edit::same_path(&out, &d)) {
+            self.authoring.export_as = None;
+            let msg = self.msg("publish-export-over-source");
+            self.error(&msg);
+            return vec![Effect::Redraw];
+        }
+        if !confirmed && out.exists() {
+            let question =
+                self.msg_args("disk-replace-question", &args!["name" => file_name(&out)]);
+            self.authoring.question = Some(Question::ReplaceExport(out, question.clone()));
+            self.ask(&question);
+            return vec![Effect::Redraw];
+        }
+        self.export_to_path(out)
+    }
+
+    /// Yes to "Replace it?": the export goes ahead.
+    pub(crate) fn export_replace_confirmed(&mut self, out: PathBuf) -> Vec<Effect> {
+        self.export_to_path(out)
+    }
+
+    /// No to "Replace it?": the prompt again, for another name in the
+    /// same folder.
+    pub(crate) fn export_not_replaced(&mut self, out: PathBuf) -> Vec<Effect> {
+        let label = self.msg("disk-not-replaced");
+        self.ask_export_path(out, label)
+    }
+
+    /// Exports the document to `output` in the format waiting.
+    fn export_to_path(&mut self, output: PathBuf) -> Vec<Effect> {
+        let Some(to) = self.authoring.export_as.take() else {
+            return vec![Effect::Redraw];
+        };
         let src = match self.export_source() {
             Ok(s) => s,
             Err(e) => {
@@ -566,12 +660,6 @@ impl App {
                 return vec![Effect::Redraw];
             }
         };
-        let mut output = src.folder.join(format!("{}.{}", src.stem, to.extension()));
-        if output == src.file {
-            output = src
-                .folder
-                .join(format!("{}-export.{}", src.stem, to.extension()));
-        }
         let options = self.convert_options(to, &src);
         let label = to.label();
         let msg = self.msg_args("publish-exporting", &args!["format" => label]);
@@ -1164,6 +1252,13 @@ mod tests {
         let (_, items) = ask(&mut app);
         let n = items.iter().position(|i| i == "Sepia").unwrap();
         app.dispatch(Command::Choose(n));
+        // Export as: Enter takes the name offered, beside the document.
+        assert!(
+            app.status_text().starts_with("Export as, Enter for "),
+            "{}",
+            app.status_text()
+        );
+        app.dispatch(Command::Answer(String::new()));
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
         while !app.authoring.jobs.is_empty() && std::time::Instant::now() < deadline {
             let _ = app.tick(std::time::Instant::now());

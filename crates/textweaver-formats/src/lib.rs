@@ -572,9 +572,16 @@ impl Registry {
 
     /// Loads `source` with the best loader, falling back to plain text for
     /// unknown extensions. A web address is fetched first (feature `url`).
+    /// A folder holding a DAISY 2.02 book's `ncc.html` opens that book.
     pub fn load(&self, source: &Source, options: &LoadOptions) -> Result<Document, LoadError> {
         if let Some(url) = source.url() {
             return self.load_url(&url, source, options);
+        }
+        if let Source::Path(dir) = source
+            && dir.is_dir()
+            && let Some(ncc) = daisy2::ncc_in(dir)
+        {
+            return self.load(&Source::Path(ncc), options);
         }
         self.resolve(source).load(source, options)
     }

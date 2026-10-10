@@ -153,8 +153,10 @@ impl TextSpacing {
         }
     }
 
-    /// More room than WCAG's values, often preferred by readers with
-    /// dyslexia or low vision.
+    /// More room than WCAG's values. Wider line and word spacing helped
+    /// readers with macular disease in one study, and wider letter spacing
+    /// helped some children with dyslexia; neither is a promise for any
+    /// one reader.
     pub fn generous() -> Self {
         TextSpacing {
             line_height: 2.0,
@@ -248,6 +250,14 @@ impl TextSpacing {
         self.below_wcag().is_empty()
     }
 
+    /// True when letters are spaced wider than words (letter spacing above
+    /// zero and above word spacing): words then run together, so word
+    /// spacing should rise with letter spacing. WCAG 1.4.12 names word
+    /// spacing above letter spacing (0.16 and 0.12).
+    pub fn letter_exceeds_word(&self) -> bool {
+        self.letter_spacing > 1e-4 && self.letter_spacing > self.word_spacing + 1e-4
+    }
+
     /// CSS declarations for `selector` (for example `body` or `.reader`),
     /// with paragraph spacing on `p`, list items, and blockquotes inside
     /// it. Values are clamped into range first.
@@ -337,6 +347,19 @@ mod tests {
             issues[0].message(),
             "Paragraph spacing is 1 times the font size; WCAG text spacing uses 2."
         );
+    }
+
+    #[test]
+    fn letters_wider_than_words_are_flagged() {
+        assert!(!TextSpacing::default().letter_exceeds_word());
+        assert!(!TextSpacing::wcag().letter_exceeds_word());
+        assert!(!TextSpacing::generous().letter_exceeds_word());
+        let wide = TextSpacing {
+            letter_spacing: 0.2,
+            word_spacing: 0.0,
+            ..TextSpacing::default()
+        };
+        assert!(wide.letter_exceeds_word());
     }
 
     #[test]

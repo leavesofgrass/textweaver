@@ -194,7 +194,8 @@ mod encode {
     /// the audio in `wav`, the captions in `vtt` and the chapters in
     /// `metadata` into `out`. `stop` is asked before every frame and while
     /// ffmpeg finishes; a stop kills ffmpeg, removes `out`, and ends in
-    /// [`ExportError::Cancelled`]. Any failure removes `out`.
+    /// [`ExportError::Cancelled`]. Any failure removes `out`. `fed` hears
+    /// the frames fed so far and the frames in all, after each frame.
     #[allow(clippy::too_many_arguments)]
     pub fn encode_with_stop(
         ffmpeg: &Path,
@@ -205,8 +206,9 @@ mod encode {
         out: &Path,
         opts: &VideoOptions,
         stop: &dyn Fn() -> bool,
+        fed: &mut dyn FnMut(u64, u64),
     ) -> Result<VideoStats, ExportError> {
-        let result = encode(ffmpeg, timeline, wav, vtt, metadata, out, opts, stop);
+        let result = encode(ffmpeg, timeline, wav, vtt, metadata, out, opts, stop, fed);
         if result.is_err() {
             let _ = std::fs::remove_file(out);
         }
@@ -223,6 +225,7 @@ mod encode {
         out: &Path,
         opts: &VideoOptions,
         stop: &dyn Fn() -> bool,
+        fed: &mut dyn FnMut(u64, u64),
     ) -> Result<VideoStats, ExportError> {
         let mut renderer = FrameRenderer::new(opts).map_err(|e| ExportError::Video(e.0.clone()))?;
         let encoder = pick_encoder(&encoders(ffmpeg));
@@ -240,7 +243,9 @@ mod encode {
             ..VideoStats::default()
         };
         let mut broken = false;
-        'frames: for (state, count) in schedule(timeline, FPS) {
+        let runs = schedule(timeline, FPS);
+        let all: u64 = runs.iter().map(|(_, n)| n).sum();
+        'frames: for (state, count) in runs {
             if stop() {
                 return Err(crate::ffmpeg::kill(child, reader));
             }
@@ -264,6 +269,7 @@ mod encode {
                     break 'frames;
                 }
                 stats.frames += 1;
+                fed(stats.frames, all);
             }
         }
         drop(stdin);

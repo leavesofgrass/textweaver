@@ -585,3 +585,20 @@ fn copy_and_cut_fill_the_clipboard() {
     assert_eq!(app.status_text(), "Nothing selected to cut.");
     assert_eq!(textweaver_app::osc52("Second"), "\u{1b}]52;c;U2Vjb25k\u{7}");
 }
+
+/// A DAISY 2.02 book with no text, opened by its folder, says in the
+/// interface's words that only its headings are read (B1-q1).
+#[test]
+fn a_daisy_folder_without_text_says_headings_only() {
+    let dir = tempfile::tempdir().unwrap();
+    let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../fixtures/r2/daisy202/ncc.html");
+    std::fs::copy(fixture, dir.path().join("ncc.html")).unwrap();
+    let mut app = App::new(AppConfig::for_tests());
+    app.open(dir.path()).unwrap();
+    assert!(
+        app.status_text().contains("Headings only: this DAISY book"),
+        "{}",
+        app.status_text()
+    );
+}
