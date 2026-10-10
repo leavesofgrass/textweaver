@@ -1962,6 +1962,102 @@ fn the_changes_list_takes_its_keys_in_the_window() {
     );
 }
 
+/// Study cards in the window (B1-f1, B1-g2c): in the study session's list
+/// the digits 1 to 4, R and C reach the app as plain list key presses
+/// (Caps Lock alone never makes a capital); 3 grades the card Good and
+/// the list moves to the next card, said with its place. The Study cards
+/// submenu is in the window's menus, from the shared menu model, with
+/// every cards command; the self-test still shows as a list.
+#[test]
+fn the_study_list_takes_its_keys_in_the_window() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_app::{Command, ListKey, NoteCommand};
+    use textweaver_xilem::menus::{self, Entry};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let text = app.session().unwrap().doc.text().to_string();
+    let at = |needle: &str| {
+        let byte = text.find(needle).unwrap();
+        textweaver_app::core::CharPos(text[..byte].chars().count())
+    };
+    for (word, note) in [("Lists", "Energy note"), ("A Table", "Chapter note")] {
+        let _ = app.dispatch(Command::SetCursor(at(word)));
+        let _ = app.dispatch(Command::Notes(NoteCommand::Add));
+        let _ = app.dispatch(Command::Answer(note.into()));
+    }
+    let _ = app.dispatch(Command::Action(ActionId::MakeCards));
+    let (title, cards) =
+        shown_list(&app.dispatch(Command::Action(ActionId::StudyCards))).expect("the session");
+    assert!(title.starts_with("Study cards"), "{title}");
+    assert!(cards.len() >= 2, "{cards:?}");
+    let mut h = harness(&app);
+    show_app_list(&mut h, &app, &title, cards.clone());
+    for (event, want) in [
+        (typed("1"), ListKey::Char('1')),
+        (typed("2"), ListKey::Char('2')),
+        (typed("3"), ListKey::Char('3')),
+        (typed("4"), ListKey::Char('4')),
+        (typed("r"), ListKey::Char('r')),
+        (typed("R"), ListKey::Char('r')),
+        (typed("c"), ListKey::Char('c')),
+        (chord_event("Shift+R"), ListKey::Char('R')),
+    ] {
+        assert_eq!(list_dialog_key(&mut h, event), Some(want));
+    }
+    // The window hands 3 to the app: Good, and the next card.
+    let _ = app.dispatch(Command::ListKey(ListKey::Char('3')));
+    assert!(
+        app.status_text().starts_with("Good. Card 2 of"),
+        "{}",
+        app.status_text()
+    );
+    assert_eq!(app.list_model().map(|m| m.selected), Some(1));
+    // R on the next card is the session's, not a first-letter jump.
+    let _ = app.dispatch(Command::ListKey(ListKey::Char('r')));
+    assert!(
+        !app.status_text().starts_with("No study session"),
+        "{}",
+        app.status_text()
+    );
+
+    // The Study cards submenu, in the window's menus.
+    fn find<'a>(entries: &'a [Entry], name: &str) -> Option<&'a [Entry]> {
+        entries.iter().find_map(|e| match e {
+            Entry::Submenu { label, entries } if label.replace('&', "") == name => {
+                Some(entries.as_slice())
+            }
+            Entry::Submenu { entries, .. } => find(entries, name),
+            _ => None,
+        })
+    }
+    let tree = menus::tree(&app);
+    let study = tree
+        .iter()
+        .find_map(|m| find(&m.entries, "Study cards"))
+        .expect("a Study cards submenu");
+    let mut wanted = vec![
+        ActionId::MakeCards,
+        ActionId::StudyCards,
+        ActionId::ListCards,
+    ];
+    wanted.extend([
+        ActionId::GradeAgain,
+        ActionId::GradeHard,
+        ActionId::GradeGood,
+    ]);
+    wanted.push(ActionId::GradeEasy);
+    let top = [menus::TopMenu {
+        id: tree[0].id,
+        title: String::new(),
+        entries: study.to_vec(),
+    }];
+    let offered = menus::commands(&top);
+    for a in wanted {
+        assert!(offered.contains(&a), "{a:?} in {offered:?}");
+    }
+    assert!(menus::commands(&tree).contains(&ActionId::SelfTest));
+}
+
 /// A note's links in the window (B1-g1): Space on a note in the notes
 /// list reaches the app as the list's Space and opens its links; letters
 /// typed in the types list filter it; F2 and Delete on a link are the
