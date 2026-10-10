@@ -25,10 +25,17 @@
 //! for [`STALL_TIMEOUT`] while it owes audio), the utterances it had not
 //! finished end with `Error` then `Finished`, and the next `speak` starts a
 //! new host.
+//!
+//! OpenEVV's root dictionary takes about a minute to load, so its host
+//! starts without it and speech starts at once. On the first `speak` a
+//! second host starts in the background with every dictionary; once it is
+//! ready and the first host owes no audio, it takes over (the voice is sent
+//! again) and the time it took is logged. A second host that fails is
+//! logged and dropped; speech goes on without the root dictionary.
 
 use std::ops::Range;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use textweaver_core::Utterance;
 use textweaver_enginehost::protocol::check_version;
@@ -48,6 +55,9 @@ use crate::{BACKEND_ID, EciConfig, words};
 
 /// How long to wait for a new host to report `Ready`.
 const READY_TIMEOUT: Duration = Duration::from_secs(10);
+/// How long the background host that loads every dictionary may take: the
+/// root dictionary took about a minute on OpenEVV 0.3.0.
+const FULL_DICTIONARY_TIMEOUT: Duration = Duration::from_secs(300);
 /// How long the host may stay silent while it owes audio before the
 /// backend treats the engine as hung, kills it, and fails the utterance
 /// (Eloquence is known to hang on some inputs).
@@ -67,8 +77,14 @@ struct ReadyInfo {
     presets: Vec<PresetInfo>,
 }
 
-/// The host's arguments for `config` and the chosen library.
-fn host_args(config: &EciConfig, library: Option<&Path>, path: &Path) -> Vec<std::ffi::OsString> {
+/// The host's arguments for `config` and the chosen library; `every_volume`
+/// loads OpenEVV's root dictionary too (the background host).
+fn host_args(
+    config: &EciConfig,
+    library: Option<&Path>,
+    path: &Path,
+    every_volume: bool,
+) -> Vec<std::ffi::OsString> {
     let mut args: Vec<std::ffi::OsString> = Vec::new();
     if config.fake_engine {
         args.extend(["--engine".into(), "fake".into()]);
@@ -80,7 +96,9 @@ fn host_args(config: &EciConfig, library: Option<&Path>, path: &Path) -> Vec<std
     }
     if let Some(dir) = crate::dictionaries::find_dir(&config.dictionaries, Some(path)) {
         args.extend(["--dictionaries".into(), dir.into()]);
-        if library.is_some_and(|l| discovery::Product::from_path(l) == discovery::Product::OpenEvv)
+        if !every_volume
+            && library
+                .is_some_and(|l| discovery::Product::from_path(l) == discovery::Product::OpenEvv)
         {
             // OpenEVV 0.3.0 takes about a minute to load the English root
             // dictionary (68,000 entries; measured October 5, 2026), far
@@ -161,6 +179,12 @@ pub struct EciBackend {
     starting: Option<(HostStart<Reply>, Option<LibraryChoice>)>,
     /// Speak requests for the host being started, in order.
     pending: Vec<Request>,
+    /// The background host loading every dictionary, and when it began.
+    full: Option<(HostStart<Reply>, Instant)>,
+    /// That host, ready, waiting for the running one to owe no audio.
+    full_ready: Option<(Started<Reply>, Instant)>,
+    /// The background host was started (once per backend).
+    full_tried: bool,
 }
 
 impl std::fmt::Debug for EciBackend {
@@ -216,6 +240,9 @@ impl EciBackend {
             installed: Vec::new(),
             starting: None,
             pending: Vec::new(),
+            full: None,
+            full_ready: None,
+            full_tried: false,
         };
         // The first start waits for the engine, so a broken installation
         // is reported here (and automatic selection can choose another).
@@ -302,11 +329,88 @@ impl EciBackend {
             candidates,
             self.config.ready_timeout.unwrap_or(READY_TIMEOUT),
             Box::new(move |path: &Path| {
-                HostProcess::spawn(path, host_args(&config, lib_path.as_deref(), path), "eci")
+                HostProcess::spawn(
+                    path,
+                    host_args(&config, lib_path.as_deref(), path, false),
+                    "eci",
+                )
             }),
         );
         self.starting = Some((start, library));
         Ok(())
+    }
+
+    /// Starts the background host with every dictionary, once, when the
+    /// running host left one out (OpenEVV's root dictionary).
+    fn begin_full_dictionaries(&mut self) {
+        if self.full_tried || self.starting.is_some() {
+            return;
+        }
+        let (Some(lib), Some(host)) = (
+            self.library.as_ref().map(|c| c.candidate.path.clone()),
+            self.host_path().map(Path::to_path_buf),
+        ) else {
+            return;
+        };
+        let skip = std::ffi::OsString::from("--skip-dictionary-volume");
+        if !host_args(&self.config, Some(&lib), &host, false).contains(&skip) {
+            return;
+        }
+        self.full_tried = true;
+        log::info!("eci: loading every dictionary in the background");
+        let config = self.config.clone();
+        let start = HostStart::begin(
+            vec![host],
+            FULL_DICTIONARY_TIMEOUT,
+            Box::new(move |path: &Path| {
+                HostProcess::spawn(path, host_args(&config, Some(&lib), path, true), "eci")
+            }),
+        );
+        self.full = Some((start, Instant::now()));
+    }
+
+    /// Moves the background host on: when it is ready and the running host
+    /// owes no audio, it takes over. A failure is logged, never fatal.
+    fn poll_full_dictionaries(&mut self) {
+        if let Some((start, began)) = self.full.as_mut() {
+            match start.poll(classify) {
+                Start::Pending => {}
+                Start::Ready(started) => {
+                    let began = *began;
+                    self.full = None;
+                    self.full_ready = Some((started, began));
+                }
+                Start::Failed(why) => {
+                    self.full = None;
+                    log::warn!(
+                        "eci: every dictionary did not load in the background ({why}); speech goes on without the root dictionary"
+                    );
+                }
+            }
+        }
+        if self.host.is_none()
+            || self.starting.is_some()
+            || !self.pending.is_empty()
+            || self.playback.owes(HOST)
+        {
+            return;
+        }
+        let Some((started, began)) = self.full_ready.take() else {
+            return;
+        };
+        if let Some(mut old) = self.host.take() {
+            old.shutdown();
+        }
+        // The new host reports every dictionary again.
+        self.dictionary_loads.clear();
+        let library = self.library.clone();
+        match self.finish_start(started, library) {
+            Ok(()) => log::info!(
+                "eci: every dictionary in use, {:.1} s after speech started",
+                began.elapsed().as_secs_f32()
+            ),
+            Err(e) => log::warn!("eci: the host with every dictionary did not take over: {e}"),
+        }
     }
 
     /// Moves a start on: reads what the host sent (waiting for the outcome
@@ -755,6 +859,8 @@ impl SpeechBackend for EciBackend {
             HOST,
             ws.into_iter().map(|w| w.highlight).collect(),
         );
+        // Speech has started: now the slow dictionary may load.
+        self.begin_full_dictionaries();
         Ok(())
     }
 
@@ -764,6 +870,7 @@ impl SpeechBackend for EciBackend {
         }
         self.drain_host();
         self.playback.emit(sink);
+        self.poll_full_dictionaries();
     }
 
     fn silence_after(&mut self, id: textweaver_speech::core::UtteranceId, ms: u32) {
@@ -791,6 +898,12 @@ impl SpeechBackend for EciBackend {
         self.playback.close();
         if let Some((mut s, _)) = self.starting.take() {
             s.cancel();
+        }
+        if let Some((mut s, _)) = self.full.take() {
+            s.cancel();
+        }
+        if let Some((mut s, _)) = self.full_ready.take() {
+            s.process.kill();
         }
         if let Some(mut h) = self.host.take() {
             h.kill();
@@ -839,6 +952,12 @@ impl Drop for EciBackend {
     fn drop(&mut self) {
         // Stop audio before the host goes away.
         self.playback.close();
+        if let Some((mut s, _)) = self.full.take() {
+            s.cancel();
+        }
+        if let Some((mut s, _)) = self.full_ready.take() {
+            s.process.kill();
+        }
         if let Some(mut h) = self.host.take() {
             h.shutdown();
         }
@@ -860,13 +979,15 @@ mod tests {
             ..EciConfig::default()
         };
         let host = Path::new("textweaver-eci-host");
-        let skip = |lib: &str| {
-            host_args(&config, Some(Path::new(lib)), host)
+        let skip = |lib: &str, every: bool| {
+            host_args(&config, Some(Path::new(lib)), host, every)
                 .iter()
                 .any(|a| a == "--skip-dictionary-volume")
         };
-        assert!(skip(r"C:\Program Files\OpenEVV\lib\x86_64\eci.dll"));
-        assert!(!skip("/usr/lib/libvoxin.so.1"));
+        assert!(skip(r"C:\Program Files\OpenEVV\lib\x86_64\eci.dll", false));
+        assert!(!skip("/usr/lib/libvoxin.so.1", false));
+        // The background host loads the root dictionary too.
+        assert!(!skip(r"C:\Program Files\OpenEVV\lib\x86_64\eci.dll", true));
         let off = EciConfig {
             dictionaries: Dictionaries::Off,
             ..EciConfig::default()
@@ -875,7 +996,8 @@ mod tests {
             !host_args(
                 &off,
                 Some(Path::new(r"C:\Program Files\OpenEVV\eci.dll")),
-                host
+                host,
+                false
             )
             .iter()
             .any(|a| a == "--skip-dictionary-volume")
@@ -926,6 +1048,9 @@ mod tests {
             installed: Vec::new(),
             starting: None,
             pending: Vec::new(),
+            full: None,
+            full_ready: None,
+            full_tried: false,
         };
         b.find_installed_dialects();
         b
