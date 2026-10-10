@@ -2,7 +2,7 @@
 
 This guide covers the three ways to mark what you read: bookmarks (named places), notes (your own text attached to a passage), and highlights (passages marked in color). It is for students and anyone who studies with textweaver. It also covers where they are kept, how to list them from the command line, and how to take them to Obsidian.
 
-Keys are the terminal defaults. Most are single browse keys, which work while reading. Where the window uses a different key, this guide says so. With single-key shortcuts turned off (**F9**), run these commands from the command palette (**F2**) by the names given here.
+Keys are the terminal defaults. Most are single browse keys, which work while reading. Where the graphical version uses a different key, this guide says so. With single-key shortcuts turned off (**F9**), run these commands from the command palette (**F2**) by the names given here.
 
 ## Bookmarks
 
@@ -10,7 +10,7 @@ A bookmark is a named place in a document.
 
 ### Add a bookmark: m
 
-Press **m**. The bookmark goes on the word being read, or on the word at the cursor. It is named `mark1`, `mark2`, and so on, using the first free name. You hear "Bookmark mark1 set at 42 percent." If a bookmark is already on that word, you hear "Bookmark", its name, "is already here." The window also has **Ctrl+M**.
+Press **m**. The bookmark goes on the word being read, or on the word at the cursor. It is named `mark1`, `mark2`, and so on, using the first free name. You hear "Bookmark mark1 set at 42 percent." If a bookmark is already on that word, you hear "Bookmark", its name, "is already here." The graphical version also has **Ctrl+M**.
 
 ### Move between bookmarks: b and Shift+B
 
@@ -109,7 +109,7 @@ The review holds only what you marked, in the order of the document, under its h
 
 ### List notes: Shift+A
 
-Press **Shift+A**. The window also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links. C makes a card." Each item says the note, the line, and the passage, then its links when it has some.
+Press **Shift+A**. The graphical version also has **Ctrl+Shift+N**. You hear "Notes", the count, then "Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links. C makes a card." Each item says the note, the line, and the passage, then its links when it has some.
 
 In the list:
 
@@ -209,7 +209,7 @@ Press **y** again on a highlighted passage, with nothing selected, to remove the
 
 Each highlight has a name from your highlight palette, such as "important" or "ask the professor". The name is what you hear, and what you sort and collect by later.
 
-- **Alt+1** to **Alt+5** highlight with the first five names, in reading mode, in the terminal reader and in the window. On a passage that already has that name, the same key removes the highlight; on a passage with another name, it changes the name, and you hear "Highlight changed to define:" and the passage.
+- **Alt+1** to **Alt+5** highlight with the first five names, in reading mode, in the terminal reader and in the graphical version. On a passage that already has that name, the same key removes the highlight; on a passage with another name, it changes the name, and you hear "Highlight changed to define:" and the passage.
 - **Highlight with a name** lists every name in the palette, up to eight, with how many highlights have it, its shape, and its color: "important, 3 highlights, underline, yellow". Enter highlights with the name you choose. It is in the **Bookmarks and notes** menu, under **Highlights**, and in the command palette as `highlight_as`.
 
 The keys are in the keymap as `highlight_name_1` to `highlight_name_5`, so you can change them (see [Keyboard](keyboard.md)). star used Ctrl+Shift+1 to 5 for its colors. textweaver cannot use those: Shift with a digit types a different symbol on each keyboard layout, and terminals do not send Ctrl with a digit.
@@ -239,7 +239,7 @@ Color never tells the names apart on its own. Every highlight is said by its nam
 
 - In the terminal reader, the highlight's color is the band behind the text, with black or white text, whichever reads better on it, and the shape is a set of text attributes of its own: underline; underline and bold; bold; underline and italic; italic; italic and bold. With colors off, the attributes still tell the names apart.
 - In a BRF file, each of the first five names has its own transcriber-defined typeform, and a transcriber's note at the start says which typeform is which name. This happens when you export the document you highlighted (**File**, **Export as**, **BRF**). UEB has five transcriber-defined typeforms, so highlights with the sixth to eighth names are not marked in braille, and the export report says so.
-- In the window, highlights keep the window's highlight mark for now; drawing each name's own shape there is still to come.
+- The graphical version draws every highlight with the same mark, whatever its name. The name is kept and is said by the highlights list; the shapes appear in the terminal reader. See [Known limits](known-limits.md#the-graphical-version).
 
 Highlights made before the palette, in textweaver or in star, have only a color. Each takes the name of the first palette entry with its color, so star's yellow highlights are "important". If you rename an entry, its highlights follow the same rule: they take the name of the entry with their color. A highlight whose color is in no entry is said by its color and drawn with a shape no entry uses, when one is free.
 
@@ -321,7 +321,7 @@ Press **F2** for the command palette and type `make cards`, or choose **Make car
 - **A note on a passage** becomes a question card. The note is the question and the passage is the answer, so a note written as a question ("What does the loop of Henle do?") makes the best card. A note with no text, or one on an empty passage, makes no card.
 - **A heading** becomes a recall card when a note or highlight is in its section: "What does “Renal clearance” say?" The answer is the section's first sentence.
 
-To make a card from one note or highlight, open the notes list (**Shift+A**; the window also has **Ctrl+Shift+N**) or the highlights list (**Shift+Y**), move to it, and press **C**. You hear "Card made:" and its question.
+To make a card from one note or highlight, open the notes list (**Shift+A**; the graphical version also has **Ctrl+Shift+N**) or the highlights list (**Shift+Y**), move to it, and press **C**. You hear "Card made:" and its question.
 
 Making cards again is safe. A card is tied to the note, highlight, or heading it came from, so making cards again after you edit a note updates that card's question and answer and keeps its grades; it never makes a second copy. A card stays when you delete its note or highlight; remove it from the Cards list (below) if you no longer want it.
 

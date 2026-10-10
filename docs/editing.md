@@ -2,7 +2,7 @@
 
 This guide covers edit mode in the terminal reader: typing with spoken feedback, Markdown formatting commands, undo, find and replace, saving, and getting back unsaved work after a crash. It is for anyone who writes or corrects documents in textweaver.
 
-Keys are the terminal defaults. Where the window uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key.
+Keys are the terminal defaults. Where the graphical version uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key.
 
 ## Start and finish editing: Ctrl+E
 
@@ -43,11 +43,11 @@ At the edges you hear "Start of line.", "End of line.", "Top of document.", or "
 More editing keys:
 
 - **Ctrl+A**: select all the text. You hear "Selected all" and the number of words.
-- **Alt+Backspace**: delete the word before the cursor. The window uses **Ctrl+Backspace**.
+- **Alt+Backspace**: delete the word before the cursor. The graphical version uses **Ctrl+Backspace**.
 - **Ctrl+Delete**: delete the word after the cursor.
 - **Ctrl+C**: copy the selection. **Ctrl+X**: cut it. Both go to your computer's clipboard through the terminal; see [Copy, cut, and paste](#copy-cut-and-paste).
 - **Ctrl+V**: paste. Formatted text becomes Markdown. See [Copy, cut, and paste](#copy-cut-and-paste).
-- **Alt+Q**: paste as plain text. The window uses **Ctrl+Shift+M**.
+- **Alt+Q**: paste as plain text. The graphical version uses **Ctrl+Shift+M**.
 
 You hear what the word keys deleted, for example "three deleted."
 
@@ -106,20 +106,20 @@ caps = "say_cap"
 Each command changes the selection, or the line the cursor is on. Each one is announced: for example "Bold." when it adds the marks, or "Bold removed." when the text was already bold. The commands toggle, so pressing a key twice undoes it. With nothing selected, bold, italic, and the other wrapping commands insert placeholder text and select it, so you can type over it.
 
 - Bold: **Ctrl+B**. Writes `**text**`.
-- Italic: **Alt+I**. The window uses **Ctrl+I**. Writes `*text*`.
+- Italic: **Alt+I**. The graphical version uses **Ctrl+I**. Writes `*text*`.
 - Underline: **Ctrl+U**. Writes `<u>text</u>`, because Markdown has no underline.
-- Strikethrough: **Alt+D**. The window uses **Ctrl+Shift+X**. Writes `~~text~~`.
-- Inline code: `` Alt+` ``, that is Alt with the backtick key. The window uses `` Ctrl+` ``. Writes the text between backticks.
-- Code block: **Alt+K**. The window uses **Ctrl+Shift+K**. Fences the selected lines.
+- Strikethrough: **Alt+D**. The graphical version uses **Ctrl+Shift+X**. Writes `~~text~~`.
+- Inline code: `` Alt+` ``, that is Alt with the backtick key. The graphical version uses `` Ctrl+` ``. Writes the text between backticks.
+- Code block: **Alt+K**. The graphical version uses **Ctrl+Shift+K**. Fences the selected lines.
 - Link: **Ctrl+K**. Writes `[text](https://)`. With nothing selected, `text` is selected so you can type the link text. With a selection, the address is selected so you can type it.
-- Heading: **Alt+1**. The window uses **Ctrl+Alt+1**. Each press raises the level of the current line by one: level 1, then 2, up to 6. Pressing it on a level-6 heading removes the heading. You hear "Heading level 2." and so on.
-- Bulleted list: **Alt+8**. The window uses **Ctrl+Shift+L**. Puts `- ` before each selected line.
-- Numbered list: **Alt+7**. The window uses **Ctrl+Shift+O**. Numbers each selected line. Bulleted and numbered lists turn into each other.
-- Block quote: **Alt+9**. The window uses **Ctrl+Shift+Q**. Puts `> ` before each selected line.
-- Horizontal rule: **Alt+R**. The window uses **Ctrl+Shift+R**. Inserts `---` on its own line.
-- Insert a table: **Alt+T**. The window uses **Ctrl+Shift+A**. textweaver asks "Table size, columns by rows, for example 3 by 2". Type the columns, then the rows, as `3 by 2`, `3x2`, or `3 2`. Enter alone makes 2 by 2. Up to 20 columns and 100 rows. The first header cell is selected afterwards.
-- Add a table row: **Alt+W**. The window uses **Ctrl+Shift+Enter**. Adds an empty row to the table at the cursor; the cursor goes to its first cell.
-- Insert an image: **Alt+G**. The window uses **Ctrl+Shift+I**. textweaver asks for the image file. It writes `![name](path)` and selects the description, so you can type a better one.
+- Heading: **Alt+1**. The graphical version uses **Ctrl+Alt+1**. Each press raises the level of the current line by one: level 1, then 2, up to 6. Pressing it on a level-6 heading removes the heading. You hear "Heading level 2." and so on.
+- Bulleted list: **Alt+8**. The graphical version uses **Ctrl+Shift+L**. Puts `- ` before each selected line.
+- Numbered list: **Alt+7**. The graphical version uses **Ctrl+Shift+O**. Numbers each selected line. Bulleted and numbered lists turn into each other.
+- Block quote: **Alt+9**. The graphical version uses **Ctrl+Shift+Q**. Puts `> ` before each selected line.
+- Horizontal rule: **Alt+R**. The graphical version uses **Ctrl+Shift+R**. Inserts `---` on its own line.
+- Insert a table: **Alt+T**. The graphical version uses **Ctrl+Shift+A**. textweaver asks "Table size, columns by rows, for example 3 by 2". Type the columns, then the rows, as `3 by 2`, `3x2`, or `3 2`. Enter alone makes 2 by 2. Up to 20 columns and 100 rows. The first header cell is selected afterwards.
+- Add a table row: **Alt+W**. The graphical version uses **Ctrl+Shift+Enter**. Adds an empty row to the table at the cursor; the cursor goes to its first cell.
+- Insert an image: **Alt+G**. The graphical version uses **Ctrl+Shift+I**. textweaver asks for the image file. It writes `![name](path)` and selects the description, so you can type a better one.
 
 The Alt chords in the terminal replace window chords that terminals cannot send, such as **Ctrl+I**, which arrives as Tab.
 
@@ -128,7 +128,7 @@ Writing citations and math has its own guides: [citations](citations.md) and [ma
 ## Undo and redo
 
 - **Ctrl+Z**: undo.
-- **Ctrl+Y**: redo. The window also has **Ctrl+Shift+Z**.
+- **Ctrl+Y**: redo. The graphical version also has **Ctrl+Shift+Z**.
 
 Typing and deleting are grouped into word-sized steps, so one undo removes about one word. Every formatting command, a paste, and a Replace All are each one step. You hear "Undo." or "Redo." and the current line. With nothing left, you hear "Nothing to undo." or "Nothing to redo."
 
@@ -136,7 +136,7 @@ textweaver keeps the last 1,000 steps, or 50 MB of them, whichever comes first; 
 
 ## Find and replace: Alt+F
 
-Press **Alt+F** in edit mode. In the window, **Ctrl+Shift+F** opens a panel with the same choices as fields, check boxes, and buttons; see [In the window: the find and replace panel](#in-the-window-the-find-and-replace-panel).
+Press **Alt+F** in edit mode. In the graphical version, **Ctrl+Shift+F** opens a panel with the same choices as fields, check boxes, and buttons; see [In the graphical version: the find and replace panel](#in-the-graphical-version-the-find-and-replace-panel).
 
 1. The prompt says "Replace, find what". Type the text to find and press **Enter**. You hear how many matches there are, then "Replace with?"
 2. Type the new text and press **Enter**.
@@ -172,9 +172,9 @@ With **Regular expression** on, textweaver uses the Rust `regex` syntax:
 - A pattern that is not valid is said in words, with the character where it goes wrong, for example "Invalid pattern at character 3: unclosed group." Nothing is replaced. Press **Alt+F** and **Up** to fix it.
 - A pattern that matches only a position, such as `^` alone, finds nothing: every match must hold at least one character.
 
-### In the window: the find and replace panel
+### In the graphical version: the find and replace panel
 
-In the window, **Ctrl+Shift+F** in edit mode opens the Find and replace panel, a dialog that gathers the whole search in one place. It drives the same search as the terminal's prompts, with the same options, history, spoken previews, and undo steps, so a replacement behaves identically in both programs. The controls, in Tab order, are these:
+In the graphical version, **Ctrl+Shift+F** in edit mode opens the Find and replace panel, a dialog that gathers the whole search in one place. It drives the same search as the terminal's prompts, with the same options, history, spoken previews, and undo steps, so a replacement behaves identically in both programs. The controls, in Tab order, are these:
 
 - **Find what**: the text to find or, with Regular expression on, the pattern. **Enter** in this field finds the next match.
 - A status line beneath it. While the pattern cannot be searched, it explains why, for example "Invalid pattern at character 3: unclosed group.", and textweaver says so once each time the reason changes. While a replacement is under way, it shows the match in question, for example "Match 2 of 5, line 12: teh becomes the."
@@ -204,9 +204,9 @@ The file is written in the background, so a large file never holds up the keyboa
 
 ### Save As: Alt+S
 
-Press **Alt+S** to save under a new name. The window uses **Ctrl+Shift+S**. The prompt suggests the current name. A name ending in `.md`, `.markdown`, `.txt`, or another plain-text or Markdown extension is kept. Any other ending becomes `.md`, so Markdown never lands in an `.html` or `.docx` file. A name without a folder goes in the same folder as the suggestion.
+Press **Alt+S** to save under a new name. The graphical version uses **Ctrl+Shift+S**. The prompt suggests the current name. A name ending in `.md`, `.markdown`, `.txt`, or another plain-text or Markdown extension is kept. Any other ending becomes `.md`, so Markdown never lands in an `.html` or `.docx` file. A name without a folder goes in the same folder as the suggestion.
 
-Save As asks before it writes over a file of the same name: "notes.md already exists. Replace it? y or n". In the window, the system's Save dialog asks instead.
+Save As asks before it writes over a file of the same name: "notes.md already exists. Replace it? y or n". In the graphical version, the system's Save dialog asks instead.
 
 ### New document: Ctrl+N
 
@@ -272,9 +272,9 @@ In the terminal reader, textweaver sends copied text to the terminal, which plac
 
 A very long formatted passage is converted in the background, so the keyboard keeps responding; you hear "Converting the formatted text to paste." and the text appears when the conversion is done. Whatever its size, every paste is one undo step: **Ctrl+Z** removes the whole paste at once, and **Ctrl+Y** puts it back.
 
-### Paste as plain text: Alt+Q, or Ctrl+Shift+M in the window
+### Paste as plain text: Alt+Q, or Ctrl+Shift+M in the graphical version
 
-When you want the words without their formatting, use **Paste as plain text**. It inserts only the clipboard's plain text, with no Markdown added. It is in the Edit menu, in the context menu, and in the command palette as "paste plain text". Many programs use **Ctrl+Shift+V** for this, but in textweaver's window that key already chooses a voice, and a terminal cannot tell **Ctrl+Shift+V** from **Ctrl+V**, so textweaver uses the nearest free keys instead. You can move the command to any key you prefer in `keymap.toml`; the [keyboard guide](keyboard.md) explains how.
+When you want the words without their formatting, use **Paste as plain text**. It inserts only the clipboard's plain text, with no Markdown added. It is in the Edit menu, in the context menu, and in the command palette as "paste plain text". Many programs use **Ctrl+Shift+V** for this, but the keymap lists that key for choosing a voice in the graphical version, and a terminal cannot tell **Ctrl+Shift+V** from **Ctrl+V**, so textweaver uses the nearest free keys instead. You can move the command to any key you prefer in `keymap.toml`; the [keyboard guide](keyboard.md) explains how.
 
 ### Where the clipboard comes from in the terminal
 
@@ -282,19 +282,19 @@ Most terminals keep **Ctrl+V** or **Ctrl+Shift+V** (or a right-click) as their o
 
 When the terminal passes **Ctrl+V** through to textweaver instead of pasting, textweaver reads the system clipboard itself, and formatted text from a browser or word processor becomes Markdown as described above. Over SSH and in tmux, where the system clipboard belongs to the other computer, textweaver pastes the text you last copied or cut in textweaver; when there is none, it says "Nothing copied in textweaver yet. Use your terminal's paste, for example Control Shift V."
 
-In the window, **Ctrl+V** currently pastes the clipboard's plain text; Markdown conversion of formatted text in the window arrives with the window's context menu.
+In the graphical version, **Ctrl+V** pastes only the clipboard's plain text for now. Converting formatted text to Markdown is done in the terminal reader; see [Known limits](known-limits.md#the-graphical-version).
 
 ### The context menu: Ctrl+F10 in the terminal
 
 The context menu gathers the commands that fit where the cursor is: Cut, Copy, Paste, Paste as plain text, and Select all, then Add a note, Highlight, Define the word, Read from here, and, on a link, Open link. Cut and the two paste commands appear only in edit mode. Each item is read with its key, for example "Copy, Ctrl+C", so the menu also teaches the shortcuts. The items are the same commands as in the menu bar, not copies of them, so a key you change in `keymap.toml` changes in both places.
 
-In the terminal reader, **Ctrl+F10** opens the context menu as a list ("Context menu"), because **Shift+F10** opens Settings there. A terminal that reports the Applications key opens it with that key too. Move with the arrow keys or press an item's letter, press **Enter** to run the item, and press **Escape** to close the menu; you hear "Context menu closed." and the cursor is where it was. In the window, **Shift+F10** is the context menu key.
+In the terminal reader, **Ctrl+F10** opens the context menu as a list ("Context menu"), because **Shift+F10** opens Settings there. A terminal that reports the Applications key opens it with that key too. Move with the arrow keys or press an item's letter, press **Enter** to run the item, and press **Escape** to close the menu; you hear "Context menu closed." and the cursor is where it was. In the graphical version, **Shift+F10** is the context menu key.
 
 Pasting into a prompt, such as Find, puts the text in the prompt.
 
 ## Citations
 
-In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+B** (window **Alt+Shift+D**) adds a reference by DOI or ISBN. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
+In edit mode, **Alt+C** inserts a citation: pick a reference from a list you can filter by typing, then give a page or other locator. **Alt+B** (**Alt+Shift+D** in the graphical version) adds a reference by DOI or ISBN. The command palette has `insert bibliography`, `check citations`, and `import references`. The [citations guide](citations.md#citations-while-reading-and-writing-in-textweaver) explains them.
 
 ## Spelling
 
@@ -310,7 +310,7 @@ Your word list is `words.txt` in the data folder, one word per line; you can edi
 
 ## Grammar
 
-Grammar checking is built in: it is in the terminal reader, the window app, `tw`, and the release packages. A build made without it (see [Building without grammar](#building-without-grammar)) says "Grammar checking is not in this version." when you press the keys below.
+Grammar checking is built in: it is in the terminal reader, the textweaver app, `tw`, and the release packages. A build made without it (see [Building without grammar](#building-without-grammar)) says "Grammar checking is not in this version." when you press the keys below.
 
 textweaver checks grammar offline with Harper, which knows American English. It looks for things such as "a apple", "the results was", a word typed twice, and a missing capital letter. Spelling is left to the spelling keys above, so a misspelled word is not reported twice.
 

@@ -108,7 +108,7 @@ To write a whole document to an audio file with subtitles, use `tw export-audio`
 
 ## Choose a voice in the reader: Alt+V
 
-Press **Alt+V**. The window uses **Ctrl+Shift+V**, and shows the filters and the actions as buttons beside the list (see [the window guide](gui.md#voices)). This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Alt+End previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes." Alt+End is the Say Status key; if you changed it in `keymap.toml`, the voice manager names your key.
+Press **Alt+V**. The graphical version lists **Ctrl+Shift+V** (which pastes in edit mode in this release; choose the command from the Speech menu or the palette instead, see [Known limits](known-limits.md#the-graphical-version)), and shows the filters and the actions as buttons beside the list (see [the app guide](gui.md#voices)). This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Alt+End previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes." Alt+End is the Say Status key; if you changed it in `keymap.toml`, the voice manager names your key.
 
 This is the voice for reading documents. textweaver's own words (messages, lists, help, and settings) have a separate choice, the interface language, in six languages: English, Spanish, French, German, Brazilian Portuguese, and Arabic. `[speech.voices_by_language]` picks which voice speaks each interface language, so switching the interface to Spanish can switch to a Spanish voice automatically. See [`[interface] language`](settings.md#interface) in the settings guide for how to choose it and how textweaver falls back when no voice exists for it.
 
@@ -161,7 +161,7 @@ The rate is in words per minute, from 50 to 900. The default is 265.
 - **+** or **=**: faster by 20.
 - **-**: slower by 20.
 
-The window also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size. You hear the new rate, for example "285 words per minute." At the limits you hear "Fastest rate." or "Slowest rate." Each engine turns words per minute into its own scale, so the same rate sounds about the same on every engine.
+The graphical version also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size. You hear the new rate, for example "285 words per minute." At the limits you hear "Fastest rate." or "Slowest rate." Each engine turns words per minute into its own scale, so the same rate sounds about the same on every engine.
 
 ### Speed presets: F8
 
