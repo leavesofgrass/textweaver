@@ -55,6 +55,9 @@ use crate::notes::{UserHighlight, shift_marks};
 use crate::text_util;
 use textweaver_store::Note;
 
+mod preview;
+pub(crate) use preview::leaves_preview;
+
 /// Positions that move with the text.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Marks {
@@ -158,6 +161,8 @@ pub(crate) struct EditState {
     saved: Option<Marks>,
     /// An edit was applied since entering.
     changed: bool,
+    /// The reading view shown in place of the source (`toggle_preview`).
+    preview: Option<preview::Preview>,
 }
 
 /// The first edit that turns `before` into `after`, given the outcomes of
@@ -422,6 +427,7 @@ impl App {
             entry,
             saved: None,
             changed: false,
+            preview: None,
         });
         self.mode = Mode::Edit;
         self.return_mode = Mode::Edit;
@@ -476,6 +482,7 @@ impl App {
         save_as: Option<PathBuf>,
         after: AfterLeave,
     ) -> Vec<Effect> {
+        self.end_preview(false);
         if self.is_dirty() && choice == Some(Choice::Save) {
             // Written on the writer; edit mode is left when it reports
             // (crate::writes), or the question about a file changed on
@@ -644,6 +651,7 @@ impl App {
     /// document from the saved file when a save happened, else restores it,
     /// and maps every position back.
     pub(crate) fn finish_leave(&mut self, rebuild: bool, discarded: bool) {
+        self.end_preview(false);
         // The structure must match the text before positions are carried
         // from it; discarding goes back to positions that need none.
         if !discarded {
@@ -994,6 +1002,9 @@ impl App {
         if self.edit.is_none() {
             return self.not_editing("type");
         }
+        if self.previewing() {
+            return self.preview_read_only();
+        }
         if text.is_empty() {
             return vec![Effect::Redraw];
         }
@@ -1080,6 +1091,9 @@ impl App {
     /// echo it. One character typed at the caret joins the typing undo
     /// step; anything else is one step.
     pub(crate) fn replace_range(&mut self, range: CharRange, text: &str) -> Vec<Effect> {
+        if self.previewing() {
+            return self.preview_read_only();
+        }
         let Some(len) = self
             .edit
             .as_ref()
@@ -1334,6 +1348,9 @@ impl App {
         if self.edit.is_none() {
             return self.not_editing("delete-text");
         }
+        if self.previewing() {
+            return self.preview_read_only();
+        }
         self.stop_speech();
         let policy = self.echo_policy();
         let Some(ed) = self.edit.as_mut().and_then(|e| e.session.editor_mut()) else {
@@ -1390,8 +1407,9 @@ impl App {
         dir: Direction,
         extend: bool,
     ) -> Vec<Effect> {
-        if self.edit.is_none() {
-            // Outside edit mode the caret moves are the browse actions.
+        if self.edit.is_none() || self.previewing() {
+            // Outside edit mode, and in its preview, the caret moves are
+            // the browse actions.
             let a = match (by, dir) {
                 (CaretMove::Char | CaretMove::Word, Direction::Forward) => ActionId::CaretNextWord,
                 (CaretMove::Char | CaretMove::Word, Direction::Backward) => {

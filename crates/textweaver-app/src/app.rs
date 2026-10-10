@@ -2087,6 +2087,10 @@ impl App {
             // Any other command leaves math exploration.
             self.math_explore = None;
         }
+        if crate::edit::leaves_preview(a) {
+            // Editing, files, and bookmarks work on the source.
+            self.end_preview(false);
+        }
         use ActionId as A;
         match a {
             A::Quit => return self.dictation_finish_then(Self::quit),
@@ -2370,6 +2374,7 @@ impl App {
             A::Save => return self.save(None),
             A::SaveAs => return self.save_as(),
             A::ToggleEditMode => return self.dictation_finish_then(Self::toggle_edit),
+            A::TogglePreview => return self.toggle_preview(),
             A::Undo
             | A::Redo
             | A::Bold
@@ -2421,8 +2426,7 @@ impl App {
             | A::ExportEpub
             | A::ExportBrf
             | A::PreviewInBrowser
-            | A::TogglePreviewAutoReload
-            | A::TogglePreviewLive
+            | A::CyclePreviewFollow
             | A::SelectAll
             | A::DeleteWordBefore
             | A::DeleteWordAfter

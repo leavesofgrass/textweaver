@@ -1152,6 +1152,8 @@ mod tests {
                 if matches!(
                     a,
                     ActionId::ToggleEditMode
+                        // The preview leaves the Edit layer while shown.
+                        | ActionId::TogglePreview
                         | ActionId::Copy
                         | ActionId::CycleTypingEcho
                         | ActionId::AddReference
@@ -1407,8 +1409,7 @@ mod tests {
                 ActionId::ExportStudySheet,
                 ActionId::ExportKnowledgeGraph,
                 ActionId::NewFromTemplate,
-                ActionId::TogglePreviewAutoReload,
-                ActionId::TogglePreviewLive,
+                ActionId::CyclePreviewFollow,
             ] {
                 assert!(a.is_palette_command(), "{a:?}");
                 assert!(map.chords_for(a).is_empty(), "{a:?}");

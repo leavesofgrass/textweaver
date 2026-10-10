@@ -309,8 +309,6 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Export the document as braille (BRF) next to it | palette | palette | palette | `export_brf` |
 | Export the knowledge graph: every link between notes, as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or CSV | palette | palette | palette | `export_knowledge_graph` |
 | Preview the document in the web browser, with math; each save rewrites the preview | palette | palette | palette | `preview_in_browser` |
-| Turn automatic reloading of the browser preview on or off | palette | palette | palette | `toggle_preview_auto_reload` |
-| Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | palette | palette | palette | `toggle_preview_live` |
 | Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up | palette | palette | palette | `browse_files` |
 | Convert a folder of documents to another format, in the background | palette | palette | palette | `batch_convert` |
 | Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook | palette | palette | palette | `export_audio` |
@@ -327,6 +325,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Action | Terminal | GUI | GUI on macOS | Id |
 |---|---|---|---|---|
 | Switch between reading and editing | `Ctrl+E` | `Ctrl+E` | `Cmd+E` | `toggle_edit_mode` |
+| In edit mode, switch between the Markdown source and the reading view of the same document, at the same place | `Shift+F4` | none | none | `toggle_preview` |
 | Undo | `Ctrl+Z` (edit) | `Ctrl+Z` (edit) | `Cmd+Z` (edit) | `undo` |
 | Redo | `Ctrl+Y` (edit) | `Ctrl+Y` (edit), `Ctrl+Shift+Z` (edit) | `Cmd+Y` (edit), `Cmd+Shift+Z` (edit) | `redo` |
 | Make the selection bold | `Ctrl+B` (edit) | `Ctrl+B` (edit) | `Cmd+B` (edit) | `bold` |
@@ -367,6 +366,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 
 | Action | Terminal | GUI | GUI on macOS | Id |
 |---|---|---|---|---|
+| Choose what the browser preview follows: nothing, each save, or your typing | palette | palette | palette | `cycle_preview_follow` |
 | Switch to the next color theme | `F5` | `F5` | `F5` | `next_theme` |
 | Show or hide line numbers | `F6` | none | none | `toggle_line_numbers` |
 | Show the original braille of the page at the cursor, in a BRF file read as print | palette | palette | palette | `show_original_braille` |
@@ -534,6 +534,7 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | List notes | palette | has a chord | `list_notes` |
 | Highlight the selection, or the sentence at the cursor | palette | palette | `highlight_selection` |
 | Open a document by typing its path | palette | has a chord | `open_path` |
+| In edit mode, switch between the Markdown source and the reading view of the same document, at the same place | has a chord | palette | `toggle_preview` |
 | Show or hide line numbers | has a chord | palette | `toggle_line_numbers` |
 | Make the document text larger | palette | has a chord | `text_larger` |
 | Make the document text smaller | palette | has a chord | `text_smaller` |
@@ -583,8 +584,6 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Export the document as braille (BRF) next to it | `export_brf` |
 | Export the knowledge graph: every link between notes, as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or CSV | `export_knowledge_graph` |
 | Preview the document in the web browser, with math; each save rewrites the preview | `preview_in_browser` |
-| Turn automatic reloading of the browser preview on or off | `toggle_preview_auto_reload` |
-| Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | `toggle_preview_live` |
 | Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up | `browse_files` |
 | Convert a folder of documents to another format, in the background | `batch_convert` |
 | Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook | `export_audio` |
@@ -597,6 +596,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Check the citations: how many there are, and which keys are not in your library | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | `import_references` |
 | Download the dictation model chosen in the settings, after saying its size and license | `download_dictation_model` |
+| Choose what the browser preview follows: nothing, each save, or your typing | `cycle_preview_follow` |
 | Show the original braille of the page at the cursor, in a BRF file read as print | `show_original_braille` |
 | Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | `toggle_header` |
 | Show or hide the toolbar, the bar of Play, Stop and the reading buttons | `toggle_toolbar` |

@@ -494,7 +494,7 @@ A new document that was never saved has no folder yet; its export goes to the fo
 
 Type `preview in browser` in the palette. textweaver writes the document as a web page, with math as MathML so screen readers can read it, and opens it in your default web browser. It asks for the theme first, as an HTML export does. The page is kept in the `preview` folder of textweaver's cache folder, and images and links in it still point beside your document.
 
-While you edit, each save (**Ctrl+S**) writes the preview again and you hear "Preview updated. Press F5 in the browser." The browser does not reload by itself, so it never moves your screen reader's place. To have it reload by itself, turn on automatic reloading; see [the editing guide](editing.md#preview-in-the-browser).
+The first preview of a session says in one sentence what will happen next, such as "Preview opens in your browser. Press F5 there after each save." While you edit, each save (**Ctrl+S**) writes the preview again and you hear "Preview updated. Press F5 in the browser." By default the browser does not reload by itself, so it never moves your screen reader's place without your asking. The setting Browser preview follows (View menu, the palette, or `[preview] follow` in Settings) lets the page reload by itself after each save, or also when you pause in your typing; it is served for this only from your own computer. [The editing guide](editing.md#preview-in-the-browser) explains the choices.
 
 ## When something fails
 

@@ -62,14 +62,8 @@ impl App {
         self.authoring.preview = None;
     }
 
-    /// `toggle_preview_auto_reload`.
-    pub(crate) fn toggle_preview_auto_reload(&mut self) {
-        let msg = self.msg("lean-publish-not-in-build");
-        self.tell(&msg);
-    }
-
-    /// `toggle_preview_live`.
-    pub(crate) fn toggle_preview_live(&mut self) {
+    /// `cycle_preview_follow`.
+    pub(crate) fn cycle_preview_follow(&mut self) {
         let msg = self.msg("lean-publish-not-in-build");
         self.tell(&msg);
     }

@@ -233,8 +233,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("reading_aids.syllable_options.skip_code", Portable),
     ("reading_aids.difficult_definitions", Portable),
     // [preview]
-    ("preview.auto_reload", Portable),
-    ("preview.live", Portable),
+    ("preview.follow", Portable),
+    ("preview.pane_delay_ms", Portable),
     // [lexicon]: paths. The glossary's entries sync in the glossary group.
     ("lexicon.glossary", Machine),
     ("lexicon.data_file", Machine),

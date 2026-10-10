@@ -562,6 +562,14 @@ app-terminal-only = يعمل هذا الأمر في قارئ الطرفية.
 settings-save-failed = تعذّر حفظ الإعدادات: { $error } تبقى تغييراتك سارية حتى تخرج.
 settings-outside-kept = تم الاحتفاظ بالإعدادات التي تغيّرت خارج textweaver.
 edit-still-editing = ما زلت في وضع التحرير.
+# The reading view inside edit mode (toggle_preview). $key is its key;
+# $line the line the caret is back on.
+edit-preview-on = المعاينة، للقراءة فقط: عرض القراءة في المكان نفسه. { $key } يعود إلى التحرير.
+edit-preview-off = عودة إلى التحرير. { $line }
+edit-preview-read-only = المعاينة للقراءة فقط. { $key } يعود إلى التحرير.
+edit-preview-not-editing = تعمل المعاينة في وضع التحرير. { $key } يبدأ التحرير.
+edit-preview-plain = النص العادي بلا تنسيق لمعاينته؛ يُقرأ كما هو.
+edit-preview-failed = تعذر عرض المعاينة: { $error } تحقق من Markdown ثم حاول مرة أخرى.
 goto-not-a-target = ليس هدف انتقال: { $text }. اكتب رقم سطر، أو نسبة مئوية مثل 50%، أو start، أو end.
 
 ## فتح مستند.
@@ -895,10 +903,10 @@ action-export-epub = تصدير المستند ككتاب EPUB بجانبه
 action-export-brf = تصدير المستند كبرايل (BRF) بجانبه
 action-export-knowledge-graph = تصدير مخطط المعرفة: كل رابط بين الملاحظات، كقائمة ماركداون أو JSON أو DOT أو GraphML أو Mermaid أو PlantUML أو CSV
 action-preview-in-browser = معاينة المستند في متصفح الويب، مع الرياضيات؛ كل حفظ يعيد كتابة المعاينة
-action-toggle-preview-auto-reload = تشغيل أو إيقاف إعادة التحميل التلقائي لمعاينة المتصفح
-action-toggle-preview-live = تشغيل أو إيقاف المعاينة الحية: مع إعادة التحميل التلقائي، تُعاد المعاينة أيضًا عند توقف الكتابة
+action-cycle-preview-follow = اختيار ما تتبعه معاينة المتصفح: لا شيء، أو كل حفظ، أو كتابتك
 action-quit = الإنهاء، مع حفظ موضع القراءة
 action-toggle-edit-mode = التبديل بين القراءة والتحرير
+action-toggle-preview = في وضع التحرير، التبديل بين مصدر Markdown وعرض القراءة للمستند نفسه، في المكان نفسه
 action-undo = تراجع
 action-redo = إعادة
 action-bold = جعل التحديد عريضًا
@@ -1237,17 +1245,27 @@ publish-still-previewing =
         [many] ما زالت كتابة المعاينة جارية، { $secs } ثانية.
        *[other] ما زالت كتابة المعاينة جارية، { $secs } ثانية.
     }
-# $again is yes when a preview is open already.
-publish-auto-reload-on =
+# "Browser preview follows" was chosen. $again is yes when a preview
+# is open that reloads by itself only once it is opened again.
+publish-follow-off = معاينة المتصفح لا تتبع شيئًا: اضغط F5 في المتصفح بعد الحفظ.
+publish-follow-save =
     { $again ->
-        [yes] إعادة التحميل التلقائي للمعاينة مفعّلة: بعد كل حفظ يعيد المتصفح تحميل الصفحة بنفسه. شغّل معاينة في المتصفح مجددًا لاستخدامها.
-       *[no] إعادة التحميل التلقائي للمعاينة مفعّلة: بعد كل حفظ يعيد المتصفح تحميل الصفحة بنفسه.
+        [yes] معاينة المتصفح تتبع كل حفظ: تُعاد الصفحة تلقائيًا. افتح المعاينة في المتصفح مرة أخرى لبدء ذلك.
+       *[no] معاينة المتصفح تتبع كل حفظ: تُعاد الصفحة تلقائيًا.
     }
-publish-auto-reload-off = إعادة التحميل التلقائي للمعاينة متوقفة: اضغط F5 في المتصفح بعد الحفظ.
-publish-live-on = المعاينة الحية مفعّلة: تُعاد المعاينة أيضًا عند توقف الكتابة.
-# "toggle preview auto reload" is the command's name in the command palette.
-publish-live-on-needs-reload = المعاينة الحية مفعّلة. تعمل مع إعادة التحميل التلقائي، وهي متوقفة؛ فعّلها بأمر إعادة تحميل المعاينة تلقائيًا.
-publish-live-off = المعاينة الحية متوقفة: تُعاد المعاينة بعد الحفظ فقط.
+publish-follow-typing =
+    { $again ->
+        [yes] معاينة المتصفح تتبع كتابتك: تُعاد الصفحة بعد كل حفظ وعند توقف الكتابة. افتح المعاينة في المتصفح مرة أخرى لبدء ذلك.
+       *[no] معاينة المتصفح تتبع كتابتك: تُعاد الصفحة بعد كل حفظ وعند توقف الكتابة.
+    }
+# The first preview of a session: what the browser will do. $follow is
+# the "Browser preview follows" setting: off, save, or typing.
+publish-preview-first =
+    { $follow ->
+        [save] تُفتح المعاينة في متصفحك وتُعاد بعد كل حفظ.
+        [typing] تُفتح المعاينة في متصفحك وتتبع كتابتك.
+       *[off] تُفتح المعاينة في متصفحك. اضغط F5 هناك بعد كل حفظ.
+    }
 # $error is the converter's reason.
 publish-export-failed = فشل التصدير إلى { $format }: { $error } جرّب تنسيقًا آخر.
 publish-preview-failed = فشلت المعاينة: { $error } احفظ للمحاولة مرة أخرى.
@@ -2548,10 +2566,13 @@ setting-reading-aids-syllable-options-skip-urls = المقاطع تتخطى ال
 setting-reading-aids-syllable-options-skip-urls-help = تُترك عناوين الويب والبريد الإلكتروني وحدها.
 setting-reading-aids-syllable-options-skip-code = المقاطع تتخطى الشيفرة
 setting-reading-aids-syllable-options-skip-code-help = تُترك الشيفرة وحدها.
-setting-preview-auto-reload = إعادة تحميل المعاينة
-setting-preview-auto-reload-help = إعادة تحميل معاينة المتصفح بعد كل حفظ، عبر خادم صغير على هذا الحاسوب فقط.
-setting-preview-live = المعاينة الحية
-setting-preview-live-help = مع تفعيل إعادة التحميل، إعادة التحميل أيضًا عند توقف الكتابة.
+setting-preview-follow = معاينة المتصفح تتبع
+setting-preview-follow-help = متى تُعاد معاينة المتصفح تلقائيًا: أبدًا، أو بعد كل حفظ، أو أيضًا عند توقف الكتابة. مع أبدًا، اضغط F5 في المتصفح بعد الحفظ. تُعاد عبر خادم صغير على هذا الحاسوب فقط.
+choice-preview-follow-off = لا شيء
+choice-preview-follow-save = كل حفظ
+choice-preview-follow-typing = كتابتك
+setting-preview-pane-delay-ms = مهلة المعاينة
+setting-preview-pane-delay-ms-help = المدة التي يجب أن تتوقف فيها الكتابة قبل إعادة كتابة معاينة تتبع كتابتك.
 setting-lexicon-glossary = المسرد
 setting-lexicon-glossary-help = مسردك الخاص، يُبحث فيه قبل القاموس: أسطر term: definition، أو JSON من star. عدم الضبط يستخدم glossary.txt في مجلد الإعدادات.
 setting-lexicon-data-file = ملف القاموس
@@ -4017,13 +4038,13 @@ name-export-epub = تصدير EPUB
 name-export-brf = تصدير برايل
 name-export-knowledge-graph = تصدير مخطط المعرفة
 name-preview-in-browser = معاينة في المتصفح
-name-toggle-preview-auto-reload = إعادة تحميل المعاينة تلقائيًا
-name-toggle-preview-live = معاينة مباشرة
+name-cycle-preview-follow = معاينة المتصفح تتبع
 name-browse-files = تصفح الملفات
 name-batch-convert = تحويل دفعة
 name-export-audio = تصدير الصوت
 name-quit = خروج
 name-toggle-edit-mode = وضع التحرير
+name-toggle-preview = المعاينة
 name-undo = تراجع
 name-redo = إعادة
 name-bold = غامق

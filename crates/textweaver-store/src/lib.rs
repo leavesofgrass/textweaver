@@ -90,12 +90,12 @@ pub use settings::{
     GuiSidebar, GuiWindow, HighlightSettings, HighlightShape, HintsLine, InterfaceAnnouncements,
     InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset, LexiconSettings,
     LibrarySettings, MathBrailleCode, MathDisplay, MathEngine, MedicalLexiconSettings,
-    NormalizationSettings, OcrEngine, PALETTE_MAX, PaletteEntry, PiperPhonemizer, PiperSettings,
-    PositionPolicy, PreviewSettings, QuietScreen, REMOVED_SETTINGS, RESERVED_SETTINGS,
-    ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings, SayAll, Settings,
-    SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, StopAt, SubtitleFormat,
-    SubtitleKaraoke, SummarySettings, SyncSettings, TableMode, default_palette,
-    drop_removed_settings,
+    NormalizationSettings, OcrEngine, PALETTE_MAX, PREVIEW_DELAY_MS, PREVIEW_DELAY_RANGE_MS,
+    PaletteEntry, PiperPhonemizer, PiperSettings, PositionPolicy, PreviewFollow, PreviewSettings,
+    QuietScreen, REMOVED_SETTINGS, RESERVED_SETTINGS, ReadingSettings, RememberedVoice,
+    RevisionReading, RtlDisplay, SapiSettings, SayAll, Settings, SettingsLoad, SettingsStore,
+    SpeechSettings, StatsSettings, StopAt, SubtitleFormat, SubtitleKaraoke, SummarySettings,
+    SyncSettings, TableMode, default_palette, drop_removed_settings, migrate_preview_follow,
 };
 pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,

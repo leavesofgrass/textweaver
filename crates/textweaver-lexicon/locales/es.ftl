@@ -466,6 +466,14 @@ app-terminal-only = Esta orden funciona en el lector del terminal.
 settings-save-failed = No se pudo guardar la configuración: { $error } Sus cambios siguen en uso hasta que salga.
 settings-outside-kept = Se conservó la configuración cambiada fuera de textweaver.
 edit-still-editing = Aún editando.
+# The reading view inside edit mode (toggle_preview). $key is its key;
+# $line the line the caret is back on.
+edit-preview-on = Vista previa, solo lectura: la vista de lectura en el mismo lugar. { $key } vuelve a la edición.
+edit-preview-off = De vuelta a la edición. { $line }
+edit-preview-read-only = La vista previa es de solo lectura. { $key } vuelve a la edición.
+edit-preview-not-editing = La vista previa funciona en modo de edición. { $key } empieza a editar.
+edit-preview-plain = El texto plano no tiene formato que previsualizar; se lee igual.
+edit-preview-failed = No se pudo mostrar la vista previa: { $error } Revise el Markdown e inténtelo de nuevo.
 goto-not-a-target = No es un destino válido: { $text }. Escriba un número de línea, un porcentaje como 50%, inicio o fin.
 
 ## Opening a document.
@@ -799,10 +807,10 @@ action-export-epub = Exportar el documento como libro EPUB junto a él
 action-export-brf = Exportar el documento como braille (BRF) junto a él
 action-export-knowledge-graph = Exportar el grafo de conocimiento: cada enlace entre notas, como lista Markdown, JSON, DOT, GraphML, Mermaid, PlantUML o CSV
 action-preview-in-browser = Ver la vista previa del documento en el navegador web, con matemáticas; cada guardado la reescribe
-action-toggle-preview-auto-reload = Activar o desactivar la recarga automática de la vista previa en el navegador
-action-toggle-preview-live = Activar o desactivar la vista previa en vivo: con la recarga automática, la vista previa también se recarga al hacer una pausa al escribir
+action-cycle-preview-follow = Elegir qué sigue la vista previa del navegador: nada, cada guardado o lo que escribe
 action-quit = Salir, guardando la posición de lectura
 action-toggle-edit-mode = Cambiar entre lectura y edición
+action-toggle-preview = En modo de edición, cambiar entre el código Markdown y la vista de lectura del mismo documento, en el mismo lugar
 action-undo = Deshacer
 action-redo = Rehacer
 action-bold = Poner en negrita la selección
@@ -1126,17 +1134,27 @@ publish-still-previewing =
         [one] Todavía escribiendo la vista previa, { $secs } segundo.
        *[other] Todavía escribiendo la vista previa, { $secs } segundos.
     }
-# $again is yes when a preview is open already.
-publish-auto-reload-on =
+# "Browser preview follows" was chosen. $again is yes when a preview
+# is open that reloads by itself only once it is opened again.
+publish-follow-off = La vista previa del navegador no sigue nada: pulse F5 en el navegador tras guardar.
+publish-follow-save =
     { $again ->
-        [yes] Recarga automática de la vista previa activada: después de cada guardado, el navegador recarga la página por sí solo. Ejecute ver vista previa en el navegador de nuevo para usarla.
-       *[no] Recarga automática de la vista previa activada: después de cada guardado, el navegador recarga la página por sí solo.
+        [yes] La vista previa del navegador sigue cada guardado: la página se recarga sola. Vuelva a abrir la vista previa en el navegador para empezar.
+       *[no] La vista previa del navegador sigue cada guardado: la página se recarga sola.
     }
-publish-auto-reload-off = Recarga automática de la vista previa desactivada: pulse F5 en el navegador después de guardar.
-publish-live-on = Vista previa en vivo activada: la vista previa también se recarga al hacer una pausa al escribir.
-# "toggle preview auto reload" is the command's name in the command palette.
-publish-live-on-needs-reload = Vista previa en vivo activada. Funciona con la recarga automática, que está desactivada; actívela con Recargar la vista previa sola.
-publish-live-off = Vista previa en vivo desactivada: la vista previa se recarga solo tras guardar.
+publish-follow-typing =
+    { $again ->
+        [yes] La vista previa del navegador sigue lo que escribe: la página se recarga tras cada guardado y al hacer una pausa al escribir. Vuelva a abrir la vista previa en el navegador para empezar.
+       *[no] La vista previa del navegador sigue lo que escribe: la página se recarga tras cada guardado y al hacer una pausa al escribir.
+    }
+# The first preview of a session: what the browser will do. $follow is
+# the "Browser preview follows" setting: off, save, or typing.
+publish-preview-first =
+    { $follow ->
+        [save] La vista previa se abre en su navegador y se recarga tras cada guardado.
+        [typing] La vista previa se abre en su navegador y sigue lo que escribe.
+       *[off] La vista previa se abre en su navegador. Pulse F5 allí tras cada guardado.
+    }
 # $error is the converter's reason.
 publish-export-failed = Error al exportar a { $format }: { $error } Pruebe otro formato.
 publish-preview-failed = Error en la vista previa: { $error } Guarde para volver a intentarlo.
@@ -2344,10 +2362,13 @@ setting-reading-aids-syllable-options-skip-urls = Sílabas omiten direcciones
 setting-reading-aids-syllable-options-skip-urls-help = Dejar tal cual las direcciones web y de correo.
 setting-reading-aids-syllable-options-skip-code = Sílabas omiten código
 setting-reading-aids-syllable-options-skip-code-help = Dejar tal cual el código.
-setting-preview-auto-reload = Recargar la vista previa
-setting-preview-auto-reload-help = Recargar la vista previa del navegador después de cada guardado, mediante un pequeño servidor en esta computadora únicamente.
-setting-preview-live = Vista previa en vivo
-setting-preview-live-help = Con la recarga activada, recargar también al hacer una pausa al escribir.
+setting-preview-follow = La vista previa del navegador sigue
+setting-preview-follow-help = Cuándo se recarga sola la vista previa del navegador: nunca, tras cada guardado, o también al hacer una pausa al escribir. Con nunca, pulse F5 en el navegador tras guardar. Se recarga mediante un pequeño servidor solo en este equipo.
+choice-preview-follow-off = nada
+choice-preview-follow-save = cada guardado
+choice-preview-follow-typing = lo que escribe
+setting-preview-pane-delay-ms = Pausa de la vista previa
+setting-preview-pane-delay-ms-help = Cuánto debe durar una pausa al escribir antes de reescribir una vista previa que sigue lo que escribe.
 setting-lexicon-glossary = Glosario
 setting-lexicon-glossary-help = Su propio glosario, consultado antes que el diccionario: líneas término: definición, o el JSON de star. Sin definir usa glossary.txt en la carpeta de configuración.
 setting-lexicon-data-file = Archivo del diccionario
@@ -3661,13 +3682,13 @@ name-export-epub = Exportar EPUB
 name-export-brf = Exportar braille
 name-export-knowledge-graph = Exportar grafo de conocimiento
 name-preview-in-browser = Vista previa en el navegador
-name-toggle-preview-auto-reload = Recargar la vista previa sola
-name-toggle-preview-live = Vista previa en vivo
+name-cycle-preview-follow = La vista previa del navegador sigue
 name-browse-files = Explorar archivos
 name-batch-convert = Convertir por lotes
 name-export-audio = Exportar audio
 name-quit = Salir
 name-toggle-edit-mode = Modo de edición
+name-toggle-preview = Vista previa
 name-undo = Deshacer
 name-redo = Rehacer
 name-bold = Negrita

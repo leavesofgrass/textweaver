@@ -291,11 +291,7 @@ impl MenuId {
                 Do(A::ExportKnowledgeGraph),
                 Do(A::ExportStudySheetByName),
             ],
-            MenuId::Preview => &[
-                Do(A::PreviewInBrowser),
-                Do(A::TogglePreviewAutoReload),
-                Do(A::TogglePreviewLive),
-            ],
+            MenuId::Preview => &[Do(A::PreviewInBrowser)],
             MenuId::SettingsFiles => &[
                 Do(A::Settings),
                 Do(A::SettingsProfiles),
@@ -305,6 +301,7 @@ impl MenuId {
             ],
             MenuId::Edit => &[
                 Do(A::ToggleEditMode),
+                Do(A::TogglePreview),
                 Do(A::Undo),
                 Do(A::Redo),
                 Sep,
@@ -379,6 +376,7 @@ impl MenuId {
                 Do(A::PreviousRegion),
                 Do(A::ToggleHeader),
                 Do(A::ToggleToolbar),
+                Do(A::CyclePreviewFollow),
                 Sep,
                 Do(A::NextTheme),
                 Do(A::ColorSettings),
@@ -645,8 +643,7 @@ pub fn bound_setting(a: ActionId) -> Option<&'static str> {
         A::CyclePunctuation => "speech.punctuation",
         A::ToggleCitations => "reading.citations",
         A::ToggleBookAudio => "reading.book_audio",
-        A::TogglePreviewAutoReload => "preview.auto_reload",
-        A::TogglePreviewLive => "preview.live",
+        A::CyclePreviewFollow => "preview.follow",
         A::ToggleHeader => "gui.header",
         A::ToggleToolbar => "gui.toolbar",
         _ => return None,
@@ -1102,6 +1099,7 @@ impl App {
     fn item_state(&self, a: ActionId) -> (Option<bool>, Option<String>) {
         match a {
             A::ToggleEditMode => return (Some(self.edit.is_some()), None),
+            A::TogglePreview => return (Some(self.previewing()), None),
             A::RsvpToggle => return (Some(self.rsvp.is_some()), None),
             A::SpeechCursorToggle => return (Some(self.mode == Mode::SpeechCursor), None),
             A::NextTheme => {

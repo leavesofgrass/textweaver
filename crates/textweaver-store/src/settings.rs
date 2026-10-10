@@ -1021,22 +1021,79 @@ pub enum CitationReading {
     Words,
 }
 
+/// `[preview] follow`: when the browser preview reloads by itself.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PreviewFollow {
+    /// Never: textweaver says "Preview updated. Press F5 in the browser."
+    /// after a save, because a reload moves the screen reader's place.
+    #[default]
+    Off,
+    /// After each save.
+    Save,
+    /// After each save, and when typing pauses for `pane_delay_ms`.
+    Typing,
+}
+
+/// The default pause before the preview follows typing, in milliseconds.
+pub const PREVIEW_DELAY_MS: u32 = 300;
+/// The shortest and longest pause before the preview follows typing.
+pub const PREVIEW_DELAY_RANGE_MS: (u32, u32) = (100, 3000);
+
 /// `[preview]`: the browser preview of the document (the palette's
-/// `preview in browser`).
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+/// `preview in browser`), and the pause the preview pane shares with it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PreviewSettings {
-    /// Reload the page in the browser after each save, through a small
+    /// When the page in the browser reloads by itself, through a small
     /// server on this computer only (127.0.0.1, with a secret in the
-    /// address). Off by default: textweaver says "Preview updated. Press F5
-    /// in the browser." instead, because a reload moves the screen reader's
-    /// place.
-    pub auto_reload: bool,
-    /// With `auto_reload`, also reload when typing pauses for a second.
-    pub live: bool,
+    /// address): off (the default), after each save, or as you type.
+    /// Replaces `auto_reload` and `live`, which still load (see
+    /// [`migrate_preview_follow`]).
+    pub follow: PreviewFollow,
+    /// How long typing must pause before a preview that follows typing is
+    /// rewritten, in milliseconds (100 to 3000; 300 by default). The
+    /// preview pane uses the same pause.
+    pub pane_delay_ms: u32,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
+}
+
+impl Default for PreviewSettings {
+    fn default() -> Self {
+        Self {
+            follow: PreviewFollow::Off,
+            pane_delay_ms: PREVIEW_DELAY_MS,
+            extra: toml::Table::new(),
+        }
+    }
+}
+
+/// Turns the old `[preview] auto_reload` and `live` into `follow`, in a
+/// parsed `settings.toml` or an import: `auto_reload = true` is `"save"`,
+/// and with `live = true` too, `"typing"`. The old keys are removed, so
+/// the next save writes only `follow`; a `follow` already set wins.
+/// Returns whether an old key was found.
+pub fn migrate_preview_follow(table: &mut toml::Table) -> bool {
+    let Some(preview) = table.get_mut("preview").and_then(toml::Value::as_table_mut) else {
+        return false;
+    };
+    let auto_reload = preview.remove("auto_reload");
+    let live = preview.remove("live");
+    if auto_reload.is_none() && live.is_none() {
+        return false;
+    }
+    let on = |v: &Option<toml::Value>| v.as_ref().and_then(toml::Value::as_bool) == Some(true);
+    let follow = match (on(&auto_reload), on(&live)) {
+        (false, _) => "off",
+        (true, false) => "save",
+        (true, true) => "typing",
+    };
+    preview
+        .entry("follow")
+        .or_insert_with(|| toml::Value::String(follow.into()));
+    true
 }
 
 /// Display settings.
@@ -2134,6 +2191,9 @@ impl Settings {
         for key in drop_removed_settings(&mut table) {
             log::info!("settings: {key} was removed and is dropped");
         }
+        if migrate_preview_follow(&mut table) {
+            log::info!("settings: preview.auto_reload and preview.live are now preview.follow");
+        }
         // Engine sub-tables are read on their own, so one bad value in
         // `[speech.eci]` does not throw away the rest of `[speech]`.
         let mut speech_table = table.remove("speech");
@@ -2267,6 +2327,17 @@ impl Settings {
                 );
                 *ms = MAX_PAUSE_MS;
             }
+        }
+        let (lo, hi) = PREVIEW_DELAY_RANGE_MS;
+        let delay = self.preview.pane_delay_ms;
+        if !(lo..=hi).contains(&delay) {
+            let c = delay.clamp(lo, hi);
+            fix(
+                "preview.pane_delay_ms".into(),
+                format!("{delay} is outside {lo} to {hi} milliseconds"),
+                c.to_string(),
+            );
+            self.preview.pane_delay_ms = c;
         }
         for (name, wpm) in &mut self.speech.speed_presets {
             let c = (*wpm).clamp(Rate::MIN_WPM, Rate::MAX_WPM);
@@ -3784,17 +3855,58 @@ shape = \"brackets\"
         assert_eq!(k.digit_row, DigitRow::Azerty);
         let d = Settings::default();
         assert_eq!(d.reading.citations, CitationReading::Off);
-        assert!(!d.preview.auto_reload && !d.preview.live);
+        assert_eq!(d.preview.follow, PreviewFollow::Off);
+        assert_eq!(d.preview.pane_delay_ms, 300);
         assert!(!d.reading_aids.difficult_words);
         let r: ReadingSettings = toml::from_str("citations = \"words\"").unwrap();
         assert_eq!(r.citations, CitationReading::Words);
         let (s, w) = Settings::from_table_unclamped(
-            "[preview]\nauto_reload = true\nlive = true\n"
+            "[preview]\nfollow = \"typing\"\npane_delay_ms = 500\n"
                 .parse()
                 .unwrap(),
         );
         assert!(w.is_empty(), "{w:?}");
-        assert!(s.preview.auto_reload && s.preview.live);
+        assert_eq!(s.preview.follow, PreviewFollow::Typing);
+        assert_eq!(s.preview.pane_delay_ms, 500);
+    }
+
+    /// The old `[preview] auto_reload` and `live` load as `follow`, and
+    /// the next save writes only `follow`; a pause out of range is
+    /// clamped (B1-p4).
+    #[test]
+    fn old_preview_keys_load_as_follow() {
+        for (old, follow) in [
+            ("auto_reload = false\nlive = true\n", PreviewFollow::Off),
+            ("live = false\n", PreviewFollow::Off),
+            ("auto_reload = true\n", PreviewFollow::Save),
+            ("auto_reload = true\nlive = false\n", PreviewFollow::Save),
+            ("auto_reload = true\nlive = true\n", PreviewFollow::Typing),
+            ("auto_reload = true\nfollow = \"off\"\n", PreviewFollow::Off),
+        ] {
+            let (s, w) = Settings::from_table(format!("[preview]\n{old}").parse().unwrap());
+            assert!(w.is_empty(), "{w:?}");
+            assert_eq!(s.preview.follow, follow, "{old}");
+            assert!(s.preview.extra.is_empty(), "{old}: {:?}", s.preview.extra);
+        }
+        let (_d, store) = store();
+        let file = store.paths().settings_file();
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(&file, "[preview]\nauto_reload = true\nlive = true\n").unwrap();
+        let (s, _) = store.load();
+        assert_eq!(s.preview.follow, PreviewFollow::Typing);
+        store.save(&s).unwrap();
+        let text = std::fs::read_to_string(&file).unwrap();
+        assert!(text.contains("follow = \"typing\""), "{text}");
+        assert!(
+            !text.contains("auto_reload") && !text.contains("live"),
+            "{text}"
+        );
+        let (s, w) = Settings::from_table("[preview]\npane_delay_ms = 20\n".parse().unwrap());
+        assert_eq!(s.preview.pane_delay_ms, 100);
+        assert_eq!(
+            w,
+            vec!["preview.pane_delay_ms 20 is outside 100 to 3000 milliseconds; using 100"]
+        );
     }
 
     #[test]

@@ -362,6 +362,8 @@ impl App {
             // Edit mode ended another way while the file was written.
             return Vec::new();
         }
+        // The save's positions are the source's.
+        self.end_preview(false);
         match result {
             Ok((text, stamp)) => {
                 let Some(edit) = self.edit.as_mut() else {

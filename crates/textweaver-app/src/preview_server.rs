@@ -1,9 +1,11 @@
-//! The preview's reload server (`[preview] auto_reload`).
+//! The preview's reload server (`[preview] follow`, "Browser preview
+//! follows").
 //!
 //! By default the browser preview is a file, and after each save
 //! textweaver says "Preview updated. Press F5 in the browser." With
-//! `auto_reload` on, the preview is served by this small server instead,
-//! and the page reloads itself after each save:
+//! `follow` set to save or typing, the preview is served by this small
+//! server instead, and the page reloads itself after each save (and, with
+//! typing, after a pause in typing):
 //!
 //! - It listens on 127.0.0.1 only, on a port the system picks, and answers
 //!   only paths that start with a random secret (`/<token>/`), so other
