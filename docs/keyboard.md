@@ -267,6 +267,13 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Reject every tracked change in the document | palette | palette | palette | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | palette | palette | palette | `add_comment` |
 | Test yourself on the notes and highlights: Enter shows each answer | palette | palette | palette | `self_test` |
+| Make study cards from the notes, the highlights, and their headings | palette | palette | palette | `make_cards` |
+| Study the cards: Enter shows the answer, 1 to 4 grade it | palette | palette | palette | `study_cards` |
+| List the study cards: Enter goes to a card's source, Delete removes it | palette | palette | palette | `list_cards` |
+| Grade the card being studied: Again, not recalled | palette | palette | palette | `grade_again` |
+| Grade the card being studied: Hard, recalled with effort | palette | palette | palette | `grade_hard` |
+| Grade the card being studied: Good, recalled | palette | palette | palette | `grade_good` |
+| Grade the card being studied: Easy, recalled at once | palette | palette | palette | `grade_easy` |
 
 ## File
 
@@ -538,6 +545,13 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Reject every tracked change in the document | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | `add_comment` |
 | Test yourself on the notes and highlights: Enter shows each answer | `self_test` |
+| Make study cards from the notes, the highlights, and their headings | `make_cards` |
+| Study the cards: Enter shows the answer, 1 to 4 grade it | `study_cards` |
+| List the study cards: Enter goes to a card's source, Delete removes it | `list_cards` |
+| Grade the card being studied: Again, not recalled | `grade_again` |
+| Grade the card being studied: Hard, recalled with effort | `grade_hard` |
+| Grade the card being studied: Good, recalled | `grade_good` |
+| Grade the card being studied: Easy, recalled at once | `grade_easy` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |

@@ -1,6 +1,6 @@
 # Syncing between computers
 
-This guide covers syncing your notes, highlights, bookmarks, reading places, reading statistics, settings, profiles, key overrides, word list, glossary, pronunciations, and favorite voices between computers, through a folder you choose. There is no account, no server, and no network code inside textweaver: textweaver only reads and writes files in the folder, and something else, such as Syncthing or a USB stick you carry, moves them between computers.
+This guide covers syncing your notes, highlights, study cards, bookmarks, reading places, reading statistics, settings, profiles, key overrides, word list, glossary, pronunciations, and favorite voices between computers, through a folder you choose. There is no account, no server, and no network code inside textweaver: textweaver only reads and writes files in the folder, and something else, such as Syncthing or a USB stick you carry, moves them between computers.
 
 Documents sync wherever they are on disk, not only inside a library folder: textweaver recognizes the same document on each computer by its contents, even under a different name or path.
 
@@ -9,7 +9,7 @@ Documents sync wherever they are on disk, not only inside a library folder: text
 Each group has its own switch, so you can turn one off without turning off the rest. Turning a group off stops that group only: this computer neither sends nor takes its items.
 
 - **Places**: where you are in each document, one place per computer.
-- **Notes.**
+- **Notes**, and with them your [study cards](notes.md#study-with-cards) and every grade you gave them.
 - **Highlights.**
 - **Bookmarks.**
 - **Statistics**: each computer's reading time and sessions for each document; the totals are their sum, in the statistics list and `tw stats` (below).
@@ -92,6 +92,12 @@ Your place never moves on its own after that. A place that arrives while you rea
 When the same note was edited on two computers while they were apart, the newest edit wins, and you are told which note it replaced: "Cells: a note was replaced by laptop's newer edit." There is no letter-by-letter merge of the two texts, and no list of conflicts to go through by ear.
 
 The text that lost is not discarded: it goes into this computer's backup of replaced notes, which keeps the last 20 per document. Tools, Sync, Replaced notes lists them ("First words, replaced by laptop"), and Enter puts one back as a new edit, which then wins on the other computers too. The text it replaces is kept in turn, so putting one back can be undone the same way.
+
+### Study cards and their grades
+
+Study cards travel with the Notes group. A card's question, answer, and direction follow the newest edit, as a note does, but its grades are never replaced: when the same card was graded on two computers while they were apart, the next sync keeps every grade from both, in the order they were given, and each computer works out the same schedule from them. Nothing is spoken when cards arrive; the next study session and the Cards list simply include them. Taking a card out of the Cards list takes it out on the other computers too; making cards again from the same notes afterwards brings it back, without the old grades.
+
+The cards were added to the sync record without changing its format, so a sync folder written by an earlier version is read as before, and an earlier version reading a folder written by this one ignores the cards.
 
 ### Deleted notes, and edits that bring them back
 
