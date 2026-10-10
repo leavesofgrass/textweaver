@@ -325,6 +325,21 @@ impl App {
         self.docs_override.clone().or_else(find_docs)
     }
 
+    /// True for a guide packaged with textweaver (under the docs folder
+    /// beside the program): it opens read only and stays out of the recent
+    /// list and the library. The repository's docs folder in a development
+    /// build is not packaged, so it can still be edited.
+    pub(crate) fn is_bundled_guide(&self, path: &Path) -> bool {
+        self.docs_override
+            .clone()
+            .or_else(|| {
+                std::env::current_exe()
+                    .ok()
+                    .and_then(|exe| packaged_docs(&exe))
+            })
+            .is_some_and(|docs| path.starts_with(docs))
+    }
+
     /// The guide index, built on first use.
     fn help_index(&mut self) -> &HelpIndex {
         if self.help_index.is_none() {

@@ -4469,6 +4469,7 @@ name-search-help = Hilfe durchsuchen
 action-online-documentation = Die Webadresse der Online-Dokumentation zeigen und vor dem Öffnen im Browser fragen
 action-search-help = Die ganze Hilfe durchsuchen: Befehlsnamen, Tasten, Einstellungen sowie Überschriften und Text der Anleitungen
 docs-not-found = Dokumentation nicht neben textweaver gefunden. { $address } im Browser öffnen? y oder n
+docs-read-only = Diese Anleitung gehört zu textweaver und ist schreibgeschützt. Um sie zu ändern, kopieren Sie die Datei an einen anderen Ort und öffnen die Kopie.
 docs-guide-missing =
     { $n ->
         [one] Anleitung fehlt: { $guides }. Die anderen Anleitungen öffnen sich.

@@ -2058,6 +2058,49 @@ fn the_study_list_takes_its_keys_in_the_window() {
     assert!(menus::commands(&tree).contains(&ActionId::SelfTest));
 }
 
+/// F1's help in the window (B1-hp, B1-g2c): it is an app list that
+/// filters as you type, so a letter typed in it reaches the app as a list
+/// key and turns it into Search help, whose title the window shows in
+/// place (the dialog stays open). F1 on a search row comes from the
+/// dialog as a chord the keymap names Help, which the window sends to the
+/// app as the list's Introduce key: the row's help is said.
+#[test]
+fn typing_in_f1_help_searches_and_f1_says_a_rows_help() {
+    use textweaver_app::keymap::{ActionId, Layer};
+    use textweaver_app::{Command, ListKey};
+    use textweaver_xilem::dialog::DialogAction;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let (title, items) =
+        shown_list(&app.dispatch(Command::Action(ActionId::Help))).expect("F1's help");
+    assert_eq!(app.list_filter(), Some(""), "it filters as you type");
+    let mut h = harness(&app);
+    show_app_list(&mut h, &app, &title, items);
+    let r = list_dialog_key(&mut h, typed("r")).expect("a typed letter");
+    assert_eq!(r, ListKey::Char('r'));
+    let _ = app.dispatch(Command::ListKey(r));
+    assert_eq!(app.list_filter(), Some("r"));
+    let search = app
+        .list_model()
+        .map(|m| m.title.clone())
+        .unwrap_or_default();
+    assert_ne!(search, title, "the title follows the search");
+    assert!(app.list_model().is_some_and(|m| !m.items.is_empty()));
+    // F1 on a row: a chord, which the window maps to Introduce.
+    h.process_text_event(TextEvent::Keyboard(chord_event("F1")));
+    let chord = match h.pop_action::<DialogAction>() {
+        Some((DialogAction::Chord(c), _)) => c,
+        other => panic!("F1 is a chord: {other:?}"),
+    };
+    assert_eq!(
+        app.keymap().lookup(&chord, Layer::Global),
+        Some(ActionId::Help)
+    );
+    let before = app.status_text().to_owned();
+    let _ = app.dispatch(Command::ListKey(ListKey::Introduce));
+    assert_ne!(app.status_text(), before, "the row's help is said");
+}
+
 /// A note's links in the window (B1-g1): Space on a note in the notes
 /// list reaches the app as the list's Space and opens its links; letters
 /// typed in the types list filter it; F2 and Delete on a link are the

@@ -4461,6 +4461,7 @@ name-search-help = Pesquisar na ajuda
 action-online-documentation = Mostrar o endereço web da documentação online e perguntar antes de abri-lo em um navegador
 action-search-help = Pesquisar em toda a ajuda: nomes de comandos, teclas, configurações, e os títulos e o texto dos guias
 docs-not-found = Documentação não encontrada junto ao textweaver. Abrir { $address } no navegador? y ou n
+docs-read-only = Este guia vem com o textweaver e é somente leitura. Para alterá-lo, copie o arquivo para outro lugar e abra a cópia.
 docs-guide-missing =
     { $n ->
         [one] Guia ausente: { $guides }. Os outros guias abrem.

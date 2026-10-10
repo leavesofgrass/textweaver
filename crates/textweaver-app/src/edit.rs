@@ -457,9 +457,18 @@ impl App {
         if self.edit.is_some() {
             return self.leave_edit(None, None, AfterLeave::Finish);
         }
+        let guide = self
+            .session
+            .as_ref()
+            .and_then(|s| s.doc.meta.path.as_deref())
+            .is_some_and(|p| self.is_bundled_guide(p));
         if self.session.is_none() {
             let new = self.key(ActionId::NewDocument);
             let msg = self.msg_args("edit-no-document", &args!["key" => new]);
+            self.tell(&msg);
+        } else if guide {
+            // The guides packaged with textweaver are read only.
+            let msg = self.msg("docs-read-only");
             self.tell(&msg);
         } else {
             self.enter_edit(None);
