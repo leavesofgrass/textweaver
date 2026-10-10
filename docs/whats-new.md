@@ -8,6 +8,8 @@ Released on Saturday, October 10, 2026.
 
 - **The speech rate works again with Eloquence and DECtalk.** In beta 1, a Windows SAPI 5 voice saved during a fallback kept both engines from changing speed: the rate number moved, but the voice did not, and an "unknown voice" error appeared. Now the rate, pitch, and volume always apply, both engines go faster than 430 words per minute, and that error is gone.
 - **Choosing a speech engine in Settings switches to it right away.**
+- **Speech keeps reading with RSVP on:** Play/Pause always reads aloud, and the RSVP word follows along.
+- **Focus mode and full screen in the app:** the buttons and bars fade when the mouse is still, so the text has the window. Keyboard reading keeps them hidden; moving the mouse brings them back. Full screen is Alt+Enter.
 - **Settings is easier to read:** the highlight palette shows how many names it has, and a SAPI voice shows its name.
 - **Every guide is up to date** with beta 1.
 

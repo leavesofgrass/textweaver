@@ -10,6 +10,8 @@ In short: beta 2 fixes the speech rate, and brings every document up to date.
 
 - **The speech rate changes again with Eloquence and DECtalk.** A voice saved while another engine spoke (a Windows SAPI 5 voice during a fallback) made both engines refuse every change of voice, rate, pitch, and volume, so the rate stayed fixed while the number on screen moved, and DECtalk could fail to start. Another engine's voice is now set aside quietly, and rate, pitch, and volume always apply; the "unknown voice" error no longer appears. Both engines now speed up past 430 words per minute.
 - **Choosing a speech engine in Settings switches to it at once,** instead of waiting for Restart speech.
+- **Speech no longer goes silent with RSVP.** With RSVP shown, Play/Pause started RSVP's silent word display instead of speech, so turning RSVP on while paused and then resuming gave silence. Play/Pause now always reads aloud, and RSVP follows the speech; Alt+Shift+P still starts RSVP on its own.
+- An environment variable that names a helper program (`TEXTWEAVER_FFMPEG`, `TEXTWEAVER_PANDOC`) now wins over a copy in the components folder.
 
 ### The app
 
