@@ -24,6 +24,7 @@ pub mod serve;
 pub mod settings;
 pub mod speak;
 pub mod stats;
+pub mod study;
 pub mod summarize;
 pub mod sync;
 pub mod text;

@@ -13,11 +13,17 @@
 //!   (crate::reveal): each card's question is said, Enter reveals and says
 //!   the answer, and the reader grades it in words with 1 to 4 or the
 //!   palette's Grade again, hard, good, and easy. Each grade is stored with
-//!   the time, for a scheduler; nothing is scheduled here. Space answers
-//!   aloud through dictation, read back and never graded by the machine.
-//!   `r` asks a question card the other way round.
-//! - **Cards** (`list_cards`) lists them; Enter goes to a card's source,
-//!   Delete removes a card after asking.
+//!   the time, and SM-2 works out from the grades when the card is next due
+//!   ([`textweaver_store::schedule`], B1-f2): the session starts with how
+//!   many are due ("Due today: 7 cards, 2 new."), asks the due cards first,
+//!   then the new ones, and after each grade says when the card comes back
+//!   ("Good, next in 3 days."). No score is ever shown as a grade. With
+//!   nothing due or new, every card is asked ahead. Space answers aloud
+//!   through dictation, read back and never graded by the machine. `r` asks
+//!   a question card the other way round.
+//! - **Cards** (`list_cards`) lists them with their last grade and when
+//!   each is due; Enter goes to a card's source, Delete removes a card
+//!   after asking.
 
 use textweaver_core::{CharPos, CharRange, MarkerKind, Unit};
 use textweaver_keymap::ActionId;
@@ -25,6 +31,7 @@ use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
 use textweaver_store::cards::{Card, CardDeck, CardKind, CardSource, CardStore, Grade, card_id};
 use textweaver_store::notes::{collapse, stable_id64};
+use textweaver_store::schedule::{DueCounts, due_counts, study_order};
 use textweaver_store::{DocKey, Highlight, Note};
 use textweaver_text::Document;
 use textweaver_text::units::unit_at;
@@ -256,6 +263,23 @@ fn grade_msg(grade: Grade) -> &'static str {
     }
 }
 
+/// When `card` is next due, in words: "due today" or "next in 3 days";
+/// `None` for a card never graded.
+fn next_due(c: &Catalog, card: &Card, now: i64) -> Option<String> {
+    match card.schedule().days_until(now)? {
+        0 => Some(c.fmt("cards-due-now", &[])),
+        days => Some(c.fmt("cards-next-in", &args!["days" => days])),
+    }
+}
+
+/// "Due today: 7 cards, 2 new."
+fn due_summary(c: &Catalog, counts: DueCounts) -> String {
+    c.fmt(
+        "cards-due-summary",
+        &args!["due" => counts.due, "new" => counts.new],
+    )
+}
+
 fn reveal_item(card: &Card) -> RevealItem {
     RevealItem {
         prompt: card.prompt().to_owned(),
@@ -305,6 +329,17 @@ impl App {
             .deck
             .get_or_insert_with(|| (key.clone(), CardDeck::default()))
             .1
+    }
+
+    /// Sync wrote document `key`'s cards (B1-f2): they are read again on
+    /// next use.
+    // shortcut: a grade given in the moment between sync writing the file
+    // and this is saved over sync's write; the next merge brings the
+    // arrivals back, as grades merge as a union.
+    pub(crate) fn cards_changed_on_disk(&mut self, key: &DocKey) {
+        if self.cards.deck.as_ref().is_some_and(|(k, _)| k == key) {
+            self.cards.deck = None;
+        }
     }
 
     /// Queues the deck in hand for writing.
@@ -419,15 +454,29 @@ impl App {
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
-        let items = deck.cards.iter().map(reveal_item).collect();
+        let now = textweaver_store::now_ts();
+        let counts = due_counts(&deck.cards, now);
+        let mut order = study_order(&deck.cards, now);
+        let ahead = order.is_empty();
+        if ahead {
+            order = (0..deck.cards.len()).collect();
+        }
+        let items = order.iter().map(|&i| reveal_item(&deck.cards[i])).collect();
         let list = RevealList::new(
             self.msg_args("cards-study-title", &args!["title" => title]),
             items,
         );
-        let intro = self.msg_args("cards-study-intro", &args!["n" => list.len()]);
+        let how = self.msg_args("cards-study-intro", &args!["n" => list.len()]);
+        let intro = if ahead {
+            let days = counts.next_in_days.unwrap_or(1);
+            let first = self.msg_args("cards-nothing-due", &args!["days" => days]);
+            format!("{first} {how}")
+        } else {
+            format!("{} {how}", due_summary(self.cat(), counts))
+        };
         self.cards.session = Some(StudySession {
             key,
-            ids: deck.cards.iter().map(|c| c.id.clone()).collect(),
+            ids: order.iter().map(|&i| deck.cards[i].id.clone()).collect(),
             list: list.clone(),
             at: 0,
         });
@@ -506,7 +555,17 @@ impl App {
         }
         self.save_deck();
         session.list.reveal(n);
-        let name = self.msg(grade_msg(grade));
+        let now = textweaver_store::now_ts();
+        let grade_name = self.msg(grade_msg(grade));
+        let card = self.deck(&key).card(&id).cloned();
+        let next = card.and_then(|c| next_due(self.cat(), &c, now));
+        let name = match next {
+            Some(next) => self.msg_args(
+                "cards-grade-next",
+                &args!["grade" => grade_name, "next" => next],
+            ),
+            None => grade_name,
+        };
         let total = session.ids.len();
         if n + 1 >= total {
             let msg = self.msg_args("cards-session-done", &args!["grade" => name, "n" => total]);
@@ -601,6 +660,7 @@ impl App {
             return vec![Effect::Redraw];
         }
         let c = self.cat();
+        let now = textweaver_store::now_ts();
         let items: Vec<String> = deck
             .cards
             .iter()
@@ -615,7 +675,16 @@ impl App {
                 );
                 let grade = card.last_grade().map_or_else(
                     || c.fmt("cards-not-graded", &[]),
-                    |g| c.fmt("cards-last-grade", &args!["grade" => c.fmt(grade_msg(g), &[])]),
+                    |g| {
+                        let last =
+                            c.fmt("cards-last-grade", &args!["grade" => c.fmt(grade_msg(g), &[])]);
+                        match next_due(c, card, now) {
+                            Some(next) => {
+                                c.fmt("cards-grade-next", &args!["grade" => last, "next" => next])
+                            }
+                            None => last,
+                        }
+                    },
                 );
                 c.fmt(
                     "cards-item",
@@ -623,8 +692,9 @@ impl App {
                 )
             })
             .collect();
-        let msg = self.msg_args("cards-list-intro", &args!["n" => items.len()]);
-        self.tell(&msg);
+        let summary = due_summary(c, due_counts(&deck.cards, now));
+        let how = self.msg_args("cards-list-intro", &args!["n" => items.len()]);
+        self.tell(&format!("{summary} {how}"));
         self.list = Some(ListKind::Cards(
             deck.cards.iter().map(|c| c.id.clone()).collect(),
         ));

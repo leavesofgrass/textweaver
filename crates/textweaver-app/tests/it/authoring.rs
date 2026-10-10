@@ -1121,7 +1121,7 @@ fn cards_are_made_studied_and_graded() {
     r.act(ActionId::StudyCards);
     assert!(
         r.said.any(
-            "Study cards, 2 cards. Enter shows each answer, 1 to 4 grade it. Space to answer aloud."
+            "Due today: 0 cards, 2 new. Study cards, 2 cards. Enter shows each answer, 1 to 4 grade it. Space to answer aloud."
         ),
         "{:?}",
         r.said.all()
@@ -1141,7 +1141,7 @@ fn cards_are_made_studied_and_graded() {
     r.send(Command::ListKey(ListKey::Char('3')));
     assert_eq!(
         r.said.all(),
-        ["Good. Card 2 of 2. Question: How was it measured?"]
+        ["Good, next tomorrow. Card 2 of 2. Question: How was it measured?"]
     );
     assert_eq!(r.app.list_model().unwrap().selected, 1);
     r.send(Command::ListKey(ListKey::Char('r')));
@@ -1150,8 +1150,20 @@ fn cards_are_made_studied_and_graded() {
             .any("Reversed. Question: We measured things carefully.")
     );
     r.send(Command::ListKey(ListKey::Char('1')));
-    assert!(r.said.any("Again. Done: all 2 cards graded."));
+    assert!(
+        r.said
+            .any("Again, next tomorrow. Done: all 2 cards graded.")
+    );
     assert!(r.app.list_model().is_none());
+    // Nothing is due until tomorrow: every card is asked ahead.
+    r.said.clear();
+    r.act(ActionId::StudyCards);
+    assert!(
+        r.said.any("Nothing due today; the next card is due tomorrow. Studying every card ahead. Study cards, 2 cards."),
+        "{:?}",
+        r.said.all()
+    );
+    r.send(Command::ListKey(ListKey::Escape));
     // The grades are stored with their times, and the direction kept.
     let dir = r.paths.cards_dir();
     let files: Vec<_> = std::fs::read_dir(&dir)
@@ -1174,7 +1186,7 @@ fn cards_are_made_studied_and_graded() {
     let items = r.app.list_model().unwrap().items.clone();
     assert_eq!(
         items[0],
-        "Recall: What does \u{201c}Methods\u{201d} say?, last graded Good"
+        "Recall: What does \u{201c}Methods\u{201d} say?, last graded Good, next tomorrow"
     );
     r.act(ActionId::SkipNextHeading);
     r.act(ActionId::ListCards);
@@ -1206,7 +1218,7 @@ fn a_grade_from_the_palette_reopens_the_session() {
     r.said.clear();
     r.act(ActionId::GradeGood);
     assert!(
-        r.said.any("Good. Study cards, card 2 of 2."),
+        r.said.any("Good, next tomorrow. Study cards, card 2 of 2."),
         "{:?}",
         r.said.all()
     );

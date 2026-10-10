@@ -1393,6 +1393,28 @@ cards-source-label = Origen de la tarjeta
 cards-remove-question = ¿Quitar esta tarjeta y sus calificaciones? y o n
 cards-removed = Tarjeta quitada.
 cards-save-failed = No se pudieron guardar las tarjetas: { $error } Compruebe que se puede escribir en la carpeta de datos.
+# Said first in the study session and the Cards list (B1-f2). $due is how
+# many graded cards are due, $new how many were never graded.
+cards-due-summary =
+    { $due ->
+        [one] Para hoy: 1 tarjeta, { $new } nuevas.
+       *[other] Para hoy: { $due } tarjetas, { $new } nuevas.
+    }
+# When a card is next due, after a grade. $days is whole days, at least 1.
+cards-next-in =
+    { $days ->
+        [one] de nuevo mañana
+       *[other] de nuevo en { $days } días
+    }
+cards-due-now = para hoy
+# A grade or last grade, then when the card is next due: "Good, next in 3 days".
+cards-grade-next = { $grade }, { $next }
+# Study cards when no card is due and none is new: every card is asked.
+cards-nothing-due =
+    { $days ->
+        [one] Nada para hoy; la próxima tarjeta toca mañana. Se estudian todas por adelantado.
+       *[other] Nada para hoy; la próxima tarjeta toca en { $days } días. Se estudian todas por adelantado.
+    }
 
 ## Find, bookmarks, and selection.
 

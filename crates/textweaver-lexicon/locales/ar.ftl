@@ -1532,6 +1532,28 @@ cards-source-label = مصدر البطاقة
 cards-remove-question = إزالة هذه البطاقة وتقييماتها؟ y أو n
 cards-removed = أُزيلت البطاقة.
 cards-save-failed = تعذّر حفظ البطاقات: { $error } تحقّق من إمكانية الكتابة في مجلد البيانات.
+# Said first in the study session and the Cards list (B1-f2). $due is how
+# many graded cards are due, $new how many were never graded.
+cards-due-summary =
+    { $due ->
+        [one] المستحق اليوم: بطاقة واحدة، { $new } جديدة.
+       *[other] المستحق اليوم: { $due } بطاقة، { $new } جديدة.
+    }
+# When a card is next due, after a grade. $days is whole days, at least 1.
+cards-next-in =
+    { $days ->
+        [one] التالية غدًا
+       *[other] التالية بعد { $days } يوم
+    }
+cards-due-now = مستحقة اليوم
+# A grade or last grade, then when the card is next due: "Good, next in 3 days".
+cards-grade-next = { $grade }، { $next }
+# Study cards when no card is due and none is new: every card is asked.
+cards-nothing-due =
+    { $days ->
+        [one] لا شيء مستحق اليوم؛ البطاقة التالية مستحقة غدًا. ستُدرس كل البطاقات مسبقًا.
+       *[other] لا شيء مستحق اليوم؛ البطاقة التالية مستحقة بعد { $days } يوم. ستُدرس كل البطاقات مسبقًا.
+    }
 
 ## البحث، والإشارات المرجعية، والتحديد.
 

@@ -1421,6 +1421,28 @@ cards-source-label = Source de la carte
 cards-remove-question = Supprimer cette carte et ses notes ? y ou n
 cards-removed = Carte supprimée.
 cards-save-failed = Impossible d’enregistrer les cartes : { $error } Vérifiez que le dossier des données est accessible en écriture.
+# Said first in the study session and the Cards list (B1-f2). $due is how
+# many graded cards are due, $new how many were never graded.
+cards-due-summary =
+    { $due ->
+        [one] À revoir aujourd’hui : 1 carte, { $new } nouvelles.
+       *[other] À revoir aujourd’hui : { $due } cartes, { $new } nouvelles.
+    }
+# When a card is next due, after a grade. $days is whole days, at least 1.
+cards-next-in =
+    { $days ->
+        [one] à revoir demain
+       *[other] à revoir dans { $days } jours
+    }
+cards-due-now = à revoir aujourd’hui
+# A grade or last grade, then when the card is next due: "Good, next in 3 days".
+cards-grade-next = { $grade }, { $next }
+# Study cards when no card is due and none is new: every card is asked.
+cards-nothing-due =
+    { $days ->
+        [one] Rien à revoir aujourd’hui ; la prochaine carte est pour demain. Toutes les cartes sont étudiées en avance.
+       *[other] Rien à revoir aujourd’hui ; la prochaine carte est dans { $days } jours. Toutes les cartes sont étudiées en avance.
+    }
 
 ## Find, bookmarks, and selection.
 

@@ -1412,6 +1412,28 @@ cards-source-label = Card source
 cards-remove-question = Remove this card and its grades? y or n
 cards-removed = Card removed.
 cards-save-failed = Could not save the cards: { $error } Check that the data folder can be written to.
+# Said first in the study session and the Cards list (B1-f2). $due is how
+# many graded cards are due, $new how many were never graded.
+cards-due-summary =
+    { $due ->
+        [one] Due today: 1 card, { $new } new.
+       *[other] Due today: { $due } cards, { $new } new.
+    }
+# When a card is next due, after a grade. $days is whole days, at least 1.
+cards-next-in =
+    { $days ->
+        [one] next tomorrow
+       *[other] next in { $days } days
+    }
+cards-due-now = due today
+# A grade or last grade, then when the card is next due: "Good, next in 3 days".
+cards-grade-next = { $grade }, { $next }
+# Study cards when no card is due and none is new: every card is asked.
+cards-nothing-due =
+    { $days ->
+        [one] Nothing due today; the next card is due tomorrow. Studying every card ahead.
+       *[other] Nothing due today; the next card is due in { $days } days. Studying every card ahead.
+    }
 
 ## Find, bookmarks, and selection.
 
