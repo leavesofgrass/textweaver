@@ -173,6 +173,13 @@ fn function_key(n: u8) -> Option<NamedKey> {
     KEYS.get(usize::from(n).checked_sub(1)?).cloned()
 }
 
+/// True for the Applications key (the context menu key, beside the right
+/// Ctrl), which the keymap has no chord for: the window opens the context
+/// menu with it, as Shift+F10 does.
+pub fn is_context_menu_key(event: &KeyboardEvent) -> bool {
+    event.key == Key::Named(NamedKey::ContextMenu)
+}
+
 /// The chord for `event`, or `None` for a lone modifier or an unknown key.
 pub fn chord(event: &KeyboardEvent, platform: Platform) -> Option<KeyChord> {
     let m = event.modifiers;

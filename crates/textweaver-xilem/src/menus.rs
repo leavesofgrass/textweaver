@@ -199,6 +199,15 @@ fn entries(app: &App, items: &[MenuItem], depth: usize) -> Vec<Entry> {
     tidy
 }
 
+/// The context menu's entries for where the cursor is (the Applications
+/// key, Shift+F10, a right-click), from the app's shared model
+/// (`App::context_menu`, B1-cm): the menu bar's own commands, labels,
+/// access keys, and keys, so nothing is defined twice. Open link is there
+/// only on a link; Cut and the pastes only in edit mode.
+pub fn context_entries(app: &App) -> Vec<Entry> {
+    entries(app, &app.context_menu(), 0)
+}
+
 /// True when the window runs `a` (every command but the few only the
 /// terminal has, [`crate::parity`]).
 pub fn in_window(a: ActionId) -> bool {
@@ -293,7 +302,7 @@ pub struct MenuPicked(pub String);
 /// elsewhere the menu key opens the list menu.
 pub const NATIVE: bool = cfg!(any(windows, target_os = "macos"));
 
-pub use native::{Native, listen};
+pub use native::{Native, listen, show_context};
 
 /// The letters that open the top menus (their access keys), lowercase.
 pub fn access_letters(tree: &[TopMenu]) -> Vec<char> {
@@ -360,6 +369,15 @@ mod native {
 
     /// Nothing to listen to.
     pub fn listen(_proxy: EventLoopProxy, _window_id: WindowId) {}
+
+    /// No native context menu here: the app's list stands in.
+    pub fn show_context(
+        _window: &WinitWindow,
+        _entries: &[super::Entry],
+        _at: Option<(f64, f64)>,
+    ) -> Result<(), String> {
+        Err("no native context menu on this system".into())
+    }
 
     impl Native {
         /// Always fails: this system shows the list menu.
@@ -466,6 +484,40 @@ mod native {
                 let _ = p.send_event(MasonryUserEvent::AsyncAction(window_id, Box::new(picked)));
             }
         }));
+    }
+
+    /// Shows `entries` as the window's native context menu at `at` (the
+    /// window's logical pixels), and returns once it has closed; a chosen
+    /// item comes back as [`MenuPicked`], as the menu bar's do. Escape
+    /// closes it, and the focus is where it was. Windows only (a Win32
+    /// popup menu, which screen readers announce as a menu, with each
+    /// item's key as its `AcceleratorKey`); macOS uses the app's list.
+    #[allow(unsafe_code)]
+    pub fn show_context(
+        window: &WinitWindow,
+        entries: &[Entry],
+        at: Option<(f64, f64)>,
+    ) -> Result<(), String> {
+        #[cfg(windows)]
+        {
+            use muda::ContextMenu;
+            let hwnd = crate::gui::hwnd_of(window);
+            if hwnd == 0 {
+                return Err("the window has no handle".into());
+            }
+            let menu = Submenu::new("", true);
+            fill(&menu, entries)?;
+            let at = at.map(|(x, y)| muda::dpi::Position::Logical((x, y).into()));
+            // SAFETY: `hwnd` is this process's live top-level window, and
+            // `menu` lives until the call returns, after the menu closed.
+            let _ = unsafe { menu.show_context_menu_for_hwnd(hwnd, at) };
+            Ok(())
+        }
+        #[cfg(target_os = "macos")]
+        {
+            let _ = (window, entries, at);
+            Err("the context menu is the app's list on macOS".into())
+        }
     }
 
     impl Native {
@@ -1061,6 +1113,83 @@ mod tests {
                     .any(|l| keymap.lookup(chord, *l) == Some(*a));
                 assert!(bound, "{chord} does not run {a:?}");
             }
+        }
+    }
+
+    /// The context menu (B1-cm, G1-c): the shared model's items, each a
+    /// command the window runs, with an access key and the key the keymap
+    /// binds to it; Cut and the pastes only in edit mode, Open link only
+    /// on a link; and the context menu key itself is never an item.
+    #[test]
+    fn the_context_menu_comes_from_the_shared_model() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = app();
+        let file = dir.path().join("notes.md");
+        std::fs::write(
+            &file,
+            "Ada Example's [notes](https://example.org) here.
+",
+        )
+        .unwrap();
+        app.open(&file).unwrap();
+        let picks = |app: &App| -> Vec<ActionId> {
+            context_entries(app)
+                .iter()
+                .filter_map(|e| match e {
+                    Entry::Item {
+                        pick: Pick::Command(a),
+                        ..
+                    } => Some(*a),
+                    _ => None,
+                })
+                .collect()
+        };
+        let reading = picks(&app);
+        assert!(reading.contains(&ActionId::Copy), "{reading:?}");
+        assert!(reading.contains(&ActionId::SelectAll), "{reading:?}");
+        for a in [ActionId::Cut, ActionId::Paste, ActionId::PastePlainText] {
+            assert!(!reading.contains(&a), "{a:?} while reading");
+        }
+        assert!(!reading.contains(&ActionId::FollowLink), "not on a link");
+        assert!(!reading.contains(&ActionId::ContextMenu));
+        // The same items as the model, in its order, labels and keys.
+        let model = app.context_menu();
+        let entries = context_entries(&app);
+        assert_eq!(entries.len(), model.len());
+        let keymap = app.keymap();
+        for (e, m) in entries.iter().zip(&model) {
+            let Entry::Item {
+                pick: Pick::Command(a),
+                label,
+                keys,
+                chord,
+                ..
+            } = e
+            else {
+                panic!("{e:?} is not a command");
+            };
+            assert!(in_window(*a), "{a:?} is the terminal's");
+            assert_eq!(*label, m.marked_label());
+            assert!(label.contains('&'), "{label} has an access key");
+            assert_eq!(*keys, m.keys);
+            let chord = chord.unwrap_or_else(|| panic!("{a:?} shows no key"));
+            assert_eq!(keys.as_deref(), Some(chord.to_string().as_str()));
+            let bound = Layer::ALL
+                .iter()
+                .any(|l| keymap.lookup(&chord, *l) == Some(*a));
+            assert!(bound, "{chord} does not run {a:?}");
+            // Windows shows the key after a tab, as the menu bar does.
+            assert!(e.windows_text().ends_with(&format!("	{chord}")));
+        }
+        // On the link ("notes"), Open link joins them.
+        let on_link = textweaver_app::core::CharPos(15);
+        let _ = crate::gui::sync_caret(&mut app, on_link, None);
+        assert!(picks(&app).contains(&ActionId::FollowLink));
+        // Edit mode adds Cut and the pastes.
+        let _ = app.dispatch(textweaver_app::Command::Action(ActionId::ToggleEditMode));
+        let editing = picks(&app);
+        for a in [ActionId::Cut, ActionId::Paste, ActionId::PastePlainText] {
+            assert!(editing.contains(&a), "{a:?} in edit mode: {editing:?}");
         }
     }
 

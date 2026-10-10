@@ -14,7 +14,10 @@
 //! - [`preview`]: the preview pane beside the editor in edit mode.
 //! - [`widgets`]: the root, panels, buttons, and the live-region announcer.
 //! - [`dialog`]: in-window dialogs: prompts and lists.
-//! - [`menus`]: the menus, native on Windows and macOS, from the app's model.
+//! - [`menus`]: the menus, native on Windows and macOS, from the app's model,
+//!   and the context menu.
+//! - [`clipboard`]: the system clipboard Paste reads (HTML and RTF on
+//!   Windows), so formatted text pastes as Markdown.
 //! - [`file_chooser`]: Open with the system's own file chooser.
 //! - [`settings_dialog`]: the settings dialog, built from the app's schema.
 //! - [`voices`]: the voice manager, every engine's voices.
@@ -43,6 +46,7 @@ pub mod background;
 pub mod bars;
 pub mod blink;
 pub mod caret;
+pub mod clipboard;
 pub mod console;
 pub mod dark_mode;
 pub mod dialog;

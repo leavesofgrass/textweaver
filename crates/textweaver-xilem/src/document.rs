@@ -366,6 +366,19 @@ pub enum DocAction {
         /// Their replacement.
         text: String,
     },
+    /// The context menu: a right-click (`at` the pointer) moved the caret
+    /// there unless it was on the selection. The driver shows the menu
+    /// from the app's model (`App::context_menu`); `at` is in the
+    /// window's logical pixels, rounded.
+    ContextMenu {
+        /// Where the pointer was.
+        at: (i32, i32),
+    },
+    /// The platform's paste key (Ctrl+V, Cmd+V), with the clipboard's
+    /// plain text as the window read it. The driver runs the app's Paste,
+    /// which reads the clipboard's HTML and RTF too and pastes formatted
+    /// text as Markdown (B1-cm).
+    Paste(String),
 }
 
 /// What a caret key moved onto, for textweaver's own voice in the
@@ -506,6 +519,9 @@ pub struct DocumentView {
     visible: Vec<(usize, f64)>,
     follow: bool,
     goal_x: Option<f32>,
+    /// The caret's foot as last painted, in the window's logical pixels:
+    /// where a context menu opened from the keyboard appears.
+    caret_at: Option<Point>,
 
     // Accessibility.
     /// Each paragraph's runs, by visual line, built when first asked for.
@@ -599,6 +615,7 @@ impl DocumentView {
             visible: Vec::new(),
             follow: true,
             goal_x: None,
+            caret_at: None,
             para_runs: Vec::new(),
             para_ids: Vec::new(),
             dirty_paras: Vec::new(),
@@ -616,6 +633,13 @@ impl DocumentView {
             preview: false,
             block: None,
         }
+    }
+
+    /// The caret's foot as last painted, in the window's logical pixels,
+    /// or `None` before the caret was drawn: where a context menu opened
+    /// from the keyboard appears, as in any Windows program.
+    pub fn caret_point(&self) -> Option<Point> {
+        self.caret_at
     }
 
     /// The preview pane's view: read-only, with `word` ("Preview") drawn
@@ -2341,6 +2365,27 @@ impl Widget for DocumentView {
         event: &PointerEvent,
     ) {
         match event {
+            PointerEvent::Down(PointerButtonEvent { state, button, .. })
+                if *button == Some(masonry::core::PointerButton::Secondary) =>
+            {
+                // A right-click: the caret goes where it was, unless that
+                // is on the selection, which the menu then acts on.
+                ctx.request_focus();
+                let local = ctx.local_position(state.position);
+                if let Some(pos) = self.hit(ctx, local)
+                    && !self
+                        .selection()
+                        .is_some_and(|r| r.start.0 <= pos.0 && pos.0 <= r.end.0)
+                {
+                    self.move_caret(ctx, pos, false);
+                }
+                if !self.preview {
+                    let p = ctx.to_window(local);
+                    let at = (p.x.round() as i32, p.y.round() as i32);
+                    ctx.submit_action::<DocAction>(DocAction::ContextMenu { at });
+                }
+                ctx.set_handled();
+            }
             PointerEvent::Down(PointerButtonEvent { state, .. }) => {
                 ctx.request_focus();
                 let local = ctx.local_position(state.position);
@@ -2374,13 +2419,21 @@ impl Widget for DocumentView {
         event: &TextEvent,
     ) {
         if self.editing
-            && let TextEvent::Ime(masonry::core::Ime::Commit(text))
-            | TextEvent::ClipboardPaste(text) = event
+            && let TextEvent::Ime(masonry::core::Ime::Commit(text)) = event
         {
-            // An input method's text, or the system clipboard's (the
-            // window reads it for the platform's paste key).
+            // An input method's text.
             let text = text.clone();
             self.type_text(ctx, &text);
+            ctx.set_handled();
+            return;
+        }
+        if let TextEvent::ClipboardPaste(text) = event
+            && !self.preview
+        {
+            // The platform's paste key (the window reads the clipboard's
+            // text for it): the app's Paste, which pastes formatted text
+            // as Markdown, or says that pasting needs edit mode.
+            ctx.submit_action::<DocAction>(DocAction::Paste(text.clone()));
             ctx.set_handled();
             return;
         }
@@ -2947,6 +3000,7 @@ impl Widget for DocumentView {
                     bb.y1 - bb.y0
                 };
                 let r = Rect::new(bb.x0, bb.y0, bb.x0 + 2.0, bb.y0 + h) + origin;
+                self.caret_at = Some(ctx.to_window(Point::new(r.x0, r.y1)));
                 if self.focused {
                     painter.fill(r, theme::color(p.caret)).draw();
                 }

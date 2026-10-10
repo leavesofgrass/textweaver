@@ -2054,6 +2054,9 @@ impl Gui {
             | ActionId::NextRegion
             | ActionId::PreviousRegion => true,
             ActionId::Menu => self.native.is_some() && cfg!(windows),
+            // The native context menu where the menus are native
+            // (Windows); elsewhere the app's list of the same items.
+            ActionId::ContextMenu => self.native.is_some() && cfg!(windows),
             // Find and replace is the window's panel in edit mode; while
             // reading, the app says it needs edit mode.
             ActionId::Replace => self.app.is_editing(),
@@ -2212,6 +2215,11 @@ impl Gui {
             ActionId::NextRegion => self.region_key(ctx, true),
             ActionId::PreviousRegion => self.region_key(ctx, false),
             ActionId::Replace => self.open_find(ctx, FindState::default()),
+            ActionId::ContextMenu => {
+                if !self.show_context_menu(ctx, None) {
+                    return false;
+                }
+            }
             ActionId::Menu => {
                 // The native menu bar, entered as F10 enters it.
                 self.reveal_menu_bar();
@@ -2223,6 +2231,52 @@ impl Gui {
             _ => return false,
         }
         true
+    }
+
+    /// The native context menu (Windows), from the app's model for where
+    /// the cursor is: at `at` (a right-click, the window's logical
+    /// pixels), else at the caret, as the Applications key and Shift+F10
+    /// open it. A chosen item runs as a menu pick ([`Self::menu_picked`]);
+    /// Escape leaves the focus where it was. False when no native menu
+    /// could be shown, so the app's list stands in.
+    fn show_context_menu(&mut self, ctx: &mut DriverCtx<'_>, at: Option<(i32, i32)>) -> bool {
+        let entries = crate::menus::context_entries(&self.app);
+        let at = at.map(|(x, y)| (f64::from(x), f64::from(y))).or_else(|| {
+            ctx.render_root(self.window_id)
+                .get_widget_with_tag(DOC)
+                .and_then(|d| d.inner().caret_point())
+                .map(|p| (p.x, p.y))
+        });
+        let window = ctx.window(self.window_id).handle();
+        let shown = crate::menus::show_context(window, &entries, at);
+        if self.log {
+            match &shown {
+                Ok(()) => crate::log::line(&format!("context menu: {} items", entries.len())),
+                Err(e) => crate::log::line(&format!("context menu: not native ({e})")),
+            }
+        }
+        shown.is_ok()
+    }
+
+    /// The platform's paste key (Ctrl+V), with the clipboard's text as
+    /// Masonry's window read it: the app's Paste, which on Windows reads
+    /// the clipboard's HTML and RTF itself (`crate::clipboard`) and pastes
+    /// formatted text as Markdown, as one undo step. Elsewhere the text
+    /// handed over is pasted (plain text is all that clipboard reads).
+    fn paste_key(&mut self, ctx: &mut DriverCtx<'_>, text: String) {
+        if cfg!(windows) || !self.app.is_editing() {
+            // Out of edit mode, the app says pasting needs it.
+            self.dispatch(ctx, Command::Action(ActionId::Paste));
+            return;
+        }
+        if self.log {
+            crate::log::line(&format!("paste: {} chars", text.chars().count()));
+        }
+        let effects = self
+            .app
+            .paste_contents(textweaver_app::ClipboardContents::text(text), false);
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
     }
 
     /// The window's Win32 handle (0 elsewhere).
@@ -4049,6 +4103,11 @@ impl Gui {
     }
 
     fn on_key(&mut self, ctx: &mut DriverCtx<'_>, k: &masonry::core::keyboard::KeyboardEvent) {
+        if keys::is_context_menu_key(k) {
+            // The Applications key: the context menu, as Shift+F10.
+            self.dispatch(ctx, Command::Action(ActionId::ContextMenu));
+            return;
+        }
         let Some(chord) = keys::chord(k, Platform::current()) else {
             return;
         };
@@ -4383,6 +4442,17 @@ impl AppDriver for Gui {
             }
         } else if let Some(DocAction::WindowFocused) = action.downcast_ref::<DocAction>() {
             self.window_focused();
+        } else if let Some(DocAction::ContextMenu { at }) = action.downcast_ref::<DocAction>() {
+            // A right-click: the native menu at the pointer, or the app's
+            // list where there is none.
+            let at = *at;
+            if !(self.is_window_command(ActionId::ContextMenu)
+                && self.show_context_menu(ctx, Some(at)))
+            {
+                self.dispatch(ctx, Command::Action(ActionId::ContextMenu));
+            }
+        } else if let Some(DocAction::Paste(text)) = action.downcast_ref::<DocAction>() {
+            self.paste_key(ctx, text.clone());
         } else if let Some(DocAction::TableCell { forward }) = action.downcast_ref::<DocAction>() {
             let a = if *forward {
                 ActionId::NextTableCell
@@ -4400,7 +4470,9 @@ impl AppDriver for Gui {
                 DocAction::Replace { range, text } => Command::ReplaceRange { range, text },
                 DocAction::CaretMoved { .. }
                 | DocAction::TableCell { .. }
-                | DocAction::WindowFocused => return,
+                | DocAction::WindowFocused
+                | DocAction::ContextMenu { .. }
+                | DocAction::Paste(_) => return,
             };
             if self.log {
                 crate::log::line(&format!("edit: {cmd:?}"));
@@ -4902,6 +4974,10 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         }
     }
     app.set_announce_list_focus(opts.experiments.app_list_announcements);
+    // Paste reads the system clipboard's HTML and RTF (Windows), so
+    // formatted text pastes as Markdown.
+    #[cfg(windows)]
+    app.set_clipboard(Box::new(crate::clipboard::System));
     let mut experiments = opts.experiments;
     let wanted = experiments
         .announce
