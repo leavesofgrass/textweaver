@@ -31,7 +31,7 @@ The shape is "Could not VERB OBJECT: CAUSE NEXT STEP." The cause is often the sy
 - Lower case "y or n", never "Y or N". No period after it, unless more text follows ("Exported essay.html. Open it? y or n. Format HTML, in Documents.").
 - Name the object: "Use the notes from Ada's laptop? y or n", not "Use them?". When a stray key asks again, ask the whole question again.
 - A question that changes or removes something asks before it acts (Reset all colors asks first).
-- In the window, the dialog's name is the question without "y or n", because its Yes and No buttons show the keys. The status line and the terminal keep "y or n".
+- In the app, the dialog's name is the question without "y or n", because its Yes and No buttons show the keys. The status line and the terminal keep "y or n".
 - Tested: `questions_end_with_y_or_n`.
 
 ### 4. Casing
@@ -54,7 +54,7 @@ Digits for numbers. Text that is spoken spells its units: "3 percent", "265 word
 - **document**: what you read. **file**: what is on disk.
 - **cursor**, never "caret", in messages and in the guides. "Caret" stays only as the name of the ^ character.
 - **speech engine**, never "backend". **voice**: one named voice.
-- **window**, never "GUI". **terminal reader**: the other program.
+- **the app** or **the graphical version**, never "GUI" and never "the window" for the program; "window" only for an actual window, such as one that opens. **terminal reader**: the other program. **Windows** only for the operating system.
 - **version**, never "build" ("Citations are not in this version of textweaver.").
 - **theme**: the whole look. **colors**: single parts.
 - **note**, **highlight**, **bookmark**: three things.
@@ -79,8 +79,8 @@ Use real plural selects ("1 note", "2 notes"), never "(s)". Zero says "No notes.
 
 The key fact is in cells 1 to 40. A prompt label plus eight typed letters fits. A menu name fits. A question comes before what it is about. A status-like result fits whole, or its first 40 cells already carry the outcome. Count Braille cells, not characters: capitals and digits take extra cells in uncontracted braille, and `textweaver_tui::ui::braille_cells` counts them.
 
-- The window's button descriptions (`gui-hint-*`) fit 40 cells and say what the name does not; Stop, Slower, Faster, and the sentence buttons have none, since their names say it. The full help stays in F1, Shift+F1, and the palette. Tested: `button_hints_are_short_in_every_language`, and in cells by `window_button_hints_fit_a_braille_line` in the terminal's tests.
-- A setting's help starts with one sentence of at most fifteen words. The window shows that sentence under the form and gives it as the row's description; F1 says the whole help, and the settings reference prints it. Tested: `setting_helps_start_with_a_short_sentence`, whose list `LONG_FIRST_SENTENCE` may only shrink.
+- The app's button descriptions (`gui-hint-*`) fit 40 cells and say what the name does not; Stop, Slower, Faster, and the sentence buttons have none, since their names say it. The full help stays in F1, Shift+F1, and the palette. Tested: `button_hints_are_short_in_every_language`, and in cells by `window_button_hints_fit_a_braille_line` in the terminal's tests.
+- A setting's help starts with one sentence of at most fifteen words. The app shows that sentence under the form and gives it as the row's description; F1 says the whole help, and the settings reference prints it. Tested: `setting_helps_start_with_a_short_sentence`, whose list `LONG_FIRST_SENTENCE` may only shrink.
 - A button's accessible name is its label without the key in parentheses; the key is its keyboard shortcut. A lone punctuation key is never shown as the key: Commands shows "(F2)", not "(:)".
 
 ### 12. What the tests check, and what they do not
@@ -91,7 +91,7 @@ Checked:
 - The pseudo-locale run fails on any English left outside the catalog (`crates/textweaver-app/tests/it/pseudo_locale.rs`).
 - Settings labels and helps equal `INFO`; command helps equal the keymap's.
 - The style rules above, on the English catalog (`style_tests.rs`).
-- 40 cells: about thirty terminal lines, every prompt and menu name in six languages, some sync and font messages, and the window's button descriptions.
+- 40 cells: about thirty terminal lines, every prompt and menu name in six languages, some sync and font messages, and the app's button descriptions.
 
 Not checked yet, so a reviewer reads for them: meaning first, casing, and units in spoken text.
 
