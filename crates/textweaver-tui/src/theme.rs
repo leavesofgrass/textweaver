@@ -6,6 +6,8 @@
 
 use ratatui::style::{Color, Modifier, Style};
 use textweaver_app::HighlightKind;
+use textweaver_app::palette::PaletteLook;
+use textweaver_app::store::HighlightShape;
 use textweaver_theme::{
     Attrs, ColorRole, ColorSupport, Registry, StyleRole, TermColor, TermStyle, TerminalTheme,
 };
@@ -110,6 +112,18 @@ fn color(c: TermColor) -> Color {
     match c {
         TermColor::Rgb(rgb) => Color::Rgb(rgb.r, rgb.g, rgb.b),
         TermColor::Indexed(i) => Color::Indexed(i),
+    }
+}
+
+/// A highlight shape as terminal attributes: a different set for each.
+fn shape_modifiers(shape: HighlightShape) -> Modifier {
+    match shape {
+        HighlightShape::Underline => Modifier::UNDERLINED,
+        HighlightShape::DoubleUnderline => Modifier::UNDERLINED | Modifier::BOLD,
+        HighlightShape::Bold => Modifier::BOLD,
+        HighlightShape::Dotted => Modifier::UNDERLINED | Modifier::ITALIC,
+        HighlightShape::Brackets => Modifier::ITALIC,
+        HighlightShape::Symbol => Modifier::ITALIC | Modifier::BOLD,
     }
 }
 
@@ -220,6 +234,46 @@ impl Theme {
         Theme::named(textweaver_theme::DEFAULT_THEME)
     }
 
+    /// The style patched onto text for highlight `h`: a user highlight's
+    /// palette color and shape ([`textweaver_app::palette::resolve`]), the
+    /// theme's style for the rest.
+    pub fn mark(&self, h: &textweaver_app::Highlight) -> Style {
+        match (h.kind, h.look) {
+            (HighlightKind::UserHighlight, Some(look)) => self.palette_mark(look),
+            _ => self.highlight(h.kind),
+        }
+    }
+
+    /// A palette entry's style: its color as the band, with black or
+    /// white text, whichever reads better on it, where the terminal shows
+    /// colors (the theme's highlight band where it does not), and its
+    /// shape's own attributes, so no two entries differ by color alone.
+    ///
+    /// shortcut: a terminal has no double or dotted underline and no room
+    /// for brackets or a symbol without moving the text, so each shape is
+    /// a distinct set of attributes here; the window draws the shapes
+    /// themselves.
+    pub fn palette_mark(&self, look: PaletteLook) -> Style {
+        let band = look.color.and_then(|rgb| {
+            let bg = textweaver_theme::term_color(rgb, self.support)?;
+            let on_black = textweaver_theme::contrast_ratio(textweaver_theme::Rgb::BLACK, rgb);
+            let on_white = textweaver_theme::contrast_ratio(textweaver_theme::Rgb::WHITE, rgb);
+            let ink = if on_black >= on_white {
+                textweaver_theme::Rgb::BLACK
+            } else {
+                textweaver_theme::Rgb::WHITE
+            };
+            let fg = textweaver_theme::term_color(ink, self.support)?;
+            Some(Style::new().bg(color(bg)).fg(color(fg)))
+        });
+        let base = band.unwrap_or(self.user_highlight);
+        Style {
+            add_modifier: (base.add_modifier & Modifier::REVERSED) | shape_modifiers(look.shape),
+            sub_modifier: Modifier::empty(),
+            ..base
+        }
+    }
+
     /// The style patched onto text for a highlight.
     pub fn highlight(&self, kind: HighlightKind) -> Style {
         match kind {
@@ -295,6 +349,38 @@ mod tests {
         assert_eq!(Theme::named("High_Contrast").name, "high-contrast");
         assert_eq!(Theme::named("nonsense").name, "galaxy");
         assert_eq!(Theme::galaxy().display_name, "Galaxy");
+    }
+
+    /// Every palette shape is its own set of attributes, at every color
+    /// level, so two entries of one color, or any entries with no color,
+    /// still read apart; with colors, the band is the entry's color.
+    #[test]
+    fn palette_entries_differ_by_attributes_not_color_alone() {
+        let registry = Registry::builtin();
+        let theme = registry.resolve("galaxy").0;
+        for support in [ColorSupport::TrueColor, ColorSupport::NoColor] {
+            let t = Theme::from_theme(theme, support);
+            let mut seen = Vec::new();
+            for shape in HighlightShape::ALL {
+                let look = PaletteLook {
+                    entry: Some(0),
+                    color: Some(textweaver_theme::Rgb::from_u32(0xffff00)),
+                    shape,
+                };
+                let m = t.palette_mark(look).add_modifier;
+                assert!(!m.is_empty(), "{shape:?}");
+                assert!(!seen.contains(&m), "{shape:?} {support:?}");
+                seen.push(m);
+            }
+        }
+        let t = Theme::from_theme(theme, ColorSupport::TrueColor);
+        let look = PaletteLook {
+            entry: Some(0),
+            color: Some(textweaver_theme::Rgb::from_u32(0xffff00)),
+            shape: HighlightShape::Underline,
+        };
+        assert_eq!(t.palette_mark(look).bg, Some(Color::Rgb(0xff, 0xff, 0)));
+        assert_eq!(t.palette_mark(look).fg, Some(Color::Rgb(0, 0, 0)));
     }
 
     #[test]

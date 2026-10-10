@@ -911,6 +911,8 @@ impl Tui {
             s.notes.len().hash(&mut h);
             s.bookmarks.len().hash(&mut h);
             s.highlights.len().hash(&mut h);
+            // A highlight given another name is stamped anew.
+            s.highlights.iter().map(|x| x.ts).max().hash(&mut h);
         }
         if let Some(l) = app.list_model() {
             (l.title.len(), l.items.len(), l.selected).hash(&mut h);
@@ -1503,7 +1505,7 @@ impl Tui {
             let mut style = highlights
                 .iter()
                 .filter(|h| h.range.contains(pos))
-                .fold(base, |st, h| st.patch(theme.highlight(h.kind)));
+                .fold(base, |st, h| st.patch(theme.mark(h)));
             while b < bold.len() && bold[b].end <= pos {
                 b += 1;
             }
