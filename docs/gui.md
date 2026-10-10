@@ -1,10 +1,10 @@
-# The textweaver window
+# The textweaver app
 
-textweaver has two readers: the terminal reader, `textweaver`, and a window. They share everything that matters: the documents, the keys, the settings, the notes, and the voices. This page covers what is different about the window.
+textweaver comes in two forms: the terminal reader, `textweaver`, and the textweaver app, the graphical version, `textweaver-gui`. They share the documents, the keys, the settings, the notes, and the voices. This page covers what is specific to the app: its screen, menus, dialogs, panels, and announcements. Where this guide says "the window", it means the app's own window; "the graphical version" and "the app" mean the program.
 
-The window is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It reads and it edits; see [Editing](#editing).
+The app is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It reads and it edits; see [Editing](#editing).
 
-In a release package the program is `textweaver-gui`; see [the window package](install.md#the-gui). If you build the window yourself, `cargo build` makes `textweaver-xilem` instead; use that name where this guide says `textweaver-gui`.
+In a release package the program is `textweaver-gui`; see [the app package](install.md#the-gui). If you build the app yourself, `cargo build` makes `textweaver-xilem` instead; use that name where this guide says `textweaver-gui`.
 
 ## Starting it
 
@@ -14,7 +14,7 @@ textweaver-gui path/to/document.md
 
 With no document, it opens empty and says which key opens one (Ctrl+O), at every announcement level but off.
 
-The first time textweaver runs (no settings yet), the window says a short welcome with the five keys that get you reading (open, play and pause, stop, the command palette, and help), and on Windows the keys that show the hidden menu bar (Alt or F10), before the hint that no document is open. Then come at most three steps, one at a time, each skipped with Escape: the language list, only when the system's language is not one of the six textweaver speaks (when it is, textweaver uses it without asking); if a screen reader is running, textweaver reads documents aloud and leaves its messages to the screen reader, and says so in one sentence with the key that changes it (it never asks); and the optional components, with nothing chosen and nothing downloaded unless you choose. The terminal reader does the same. Ask again about first-run choices (Tools) brings the last two back at the next start. If an earlier run left unsaved work, it offers it back. The speech engine starts in the background, so the window is ready at once; Restart Speech (Shift+F8) starts it again, and it restarts by itself once if it stops.
+The first time textweaver runs (no settings yet), the app says a short welcome with the five keys that get you reading (open, play and pause, stop, the command palette, and help), and on Windows the keys that show the hidden menu bar (Alt or F10), before the hint that no document is open. Then come at most three steps, one at a time, each skipped with Escape: the language list, only when the system's language is not one of the six textweaver speaks (when it is, textweaver uses it without asking); if a screen reader is running, textweaver reads documents aloud and leaves its messages to the screen reader, and says so in one sentence with the key that changes it (it never asks); and the optional components, with nothing chosen and nothing downloaded unless you choose. The terminal reader does the same. Ask again about first-run choices (Tools) brings the last two back at the next start. If an earlier run left unsaved work, it offers it back. The speech engine starts in the background, so the app is ready at once; Restart Speech (Shift+F8) starts it again, and it restarts by itself once if it stops.
 
 Useful options:
 
@@ -25,15 +25,15 @@ Useful options:
 - `--announce live` or `--announce uia`: how messages reach your screen reader, for this run (see [Announcements](#announcements)).
 - `--select-spoken`: while reading, select the spoken word instead of only moving the cursor to it (see [The spoken word](#the-spoken-word)).
 - `--home FOLDER`: keep settings and reading positions in this folder, as `TEXTWEAVER_HOME` does.
-- `--list-menus`: show the menus as a list inside the window (F10), as on Linux, instead of the system's menu bar.
+- `--list-menus`: show the menus as a list inside the app (F10), as on Linux, instead of the system's menu bar.
 - `--graphics API`: draw with one graphics API only: `vulkan`, `dx12` (Windows), `metal` (macOS), or `gl`; `auto`, the default, lets the graphics library use every one it finds. On the development machine `vulkan` used about 26 MB less memory, but this depends on your graphics driver. To keep a choice, put `graphics = "vulkan"` in the `[gui]` section of `settings.toml`.
-- `--log` or `--log-file PATH`: write what the window announces and does, for a bug report. Every 200 frames it also writes a "frame times" line with the median, the 95th percentile, and the worst time to draw a frame, so a change to drawing can be measured in a real window.
+- `--log` or `--log-file PATH`: write what the app announces and does, for a bug report. Every 200 frames it also writes a "frame times" line with the median, the 95th percentile, and the worst time to draw a frame, so a change to drawing can be measured in a real window.
 
 `textweaver-gui --help` lists every option.
 
-On Windows the window opens with no console window beside it. Started from a terminal, `--help`, `--version`, and errors still appear in that terminal. PowerShell does not wait for a windowed program, so its output may come after the next prompt; `textweaver-gui --help | Out-Host` waits for it. Started from a shortcut or File Explorer, a startup error is shown in a message box, and `--log-file PATH` keeps it in a file too.
+On Windows the app opens its window with no console window beside it. Started from a terminal, `--help`, `--version`, and errors still appear in that terminal. PowerShell does not wait for a windowed program, so its output may come after the next prompt; `textweaver-gui --help | Out-Host` waits for it. Started from a shortcut or File Explorer, a startup error is shown in a message box, and `--log-file PATH` keeps it in a file too.
 
-## What is in the window
+## What is in the app
 
 From top to bottom:
 
@@ -49,7 +49,7 @@ Every button has a key, shown on screen with its name, for example "Open… (Ctr
 
 In a narrow window the buttons wrap onto more rows rather than leave the window. Below 800 pixels wide (at 100 percent; a 1366 by 768 laptop at 200 percent is 683 wide), the header and the toolbar fold into one flat bar above the document, the buttons hide their keys on screen (your screen reader still says them), and the panel goes above the document below 600 pixels. Header and Toolbar in the View menu hide either bar; their commands keep their keys and menu items, and the settings `gui.header` and `gui.toolbar` remember the choice on this computer.
 
-Tab and Shift+Tab move between the document and the buttons, in the order they are on screen. F6 and Shift+F6 move between the window's regions, as in other Windows programs: the header, the panel (when shown), the document, and the toolbar, landing on the first control of each. Dialogs (settings, lists, the command palette) open inside the window and take the focus; Escape closes them and puts you back in the document.
+Tab and Shift+Tab move between the document and the buttons, in the order they are on screen. F6 and Shift+F6 move between the app's regions, as in other Windows programs: the header, the panel (when shown), the document, and the toolbar, landing on the first control of each. Dialogs (settings, lists, the command palette) open inside the app and take the focus; Escape closes them and puts you back in the document.
 
 ### Customizing the buttons
 
@@ -57,21 +57,21 @@ The buttons on both bars are a choice rather than a fixed set. Any command that 
 
 View, Customize buttons (also in the command palette as "Customize buttons") opens a list of every button, the header's first, each named with its bar and its place there, as in "Stop, toolbar 2 of 6". Enter on a button offers Move up, Move down, and Remove; Delete removes the focused button at once. The last three rows add a button to the header, add one to the toolbar, or reset both bars to their defaults. Adding opens a list of the commands that are on neither bar, in alphabetical order, so a first letter jumps through it. Every change is said in words as it happens ("Find added, toolbar 7 of 7"), saved at once, and the list returns to the button that changed. The bars themselves change at the same moment, without restarting the app, and the Tab order through each bar always follows the order in which its buttons are drawn: left to right, then row by row when a bar wraps. In a small window, where a bar shows only the buttons that fit, Commands stays visible wherever you placed it, because it lists every command, including those whose buttons are hidden. The terminal reader offers the same list, and its key hints follow the toolbar's choice.
 
-The rules that keep the bars usable hold for any choice. Each button keeps its real name and its key in its accessible name, the keys are hidden on screen in a narrow window as before, and buttons that do not fit fold into Commands. A command never appears on both bars, nor twice on one. The window builds its bars as it opens, so a change made in the list shows on the bars the next time the window opens.
+The rules that keep the bars usable hold for any choice. Each button keeps its real name and its key in its accessible name, the keys are hidden on screen in a narrow window as before, and buttons that do not fit fold into Commands. A command never appears on both bars, nor twice on one. The app builds its bars as it opens, so a change made in the list shows on the bars the next time the app opens.
 
 The choice is kept in the settings `gui.header_buttons` and `gui.toolbar_buttons`, as lists of command ids, and like the other window layout settings it stays on this computer rather than syncing. A command id that this version does not recognize, perhaps one written by a newer version, is kept in the setting but not shown, so moving between versions loses nothing.
 
 ## Menus
 
-The window has the same menus as the terminal reader, built from the same list of commands, so both always offer the same things under the same names: File, Edit, View, Reading, Speech, Tools, and Help. Every command is in a menu, with its key beside it. The keys come from the keymap, so a key you change in `keymap.toml` shows in the menus too.
+The app has the same menus as the terminal reader, built from the same list of commands, so both always offer the same things under the same names: File, Edit, View, Reading, Speech, Tools, and Help. Every command is in a menu, with its key beside it. The keys come from the keymap, so a key you change in `keymap.toml` shows in the menus too.
 
 - **Windows:** a standard menu bar, which NVDA and JAWS read as any program's. Alt, or F10, enters it; Alt with a menu's underlined letter opens that menu (Alt+F for File); Alt+Space still opens the window's system menu. In a menu, each item is read with its key, for example "Open, Ctrl+O", and a setting you can turn on or off is read as checked or not checked. Escape leaves the menus and puts you back where you were.
 - **macOS:** the menu bar at the top of the screen, with each command's key as its keyboard shortcut. VoiceOver reaches it with Control+Option+M.
-- **Linux:** F10 shows the menus as a list inside the window, as the terminal does: "Menus, 1 of 7, File". Enter or Right opens a menu, a letter moves to the item with that letter, Enter runs a command, Left or Backspace goes back up, and Escape closes.
+- **Linux:** F10 shows the menus as a list inside the app, as the terminal does: "Menus, 1 of 7, File". Enter or Right opens a menu, a letter moves to the item with that letter, Enter runs a command, Left or Backspace goes back up, and Escape closes.
 
 **Hiding the menu bar (Windows).** The menu bar is hidden by default and takes no room until you want it; the first-run welcome says so ("Alt or F10 the menus"). To keep it shown, turn off "Hide the menu bar" in Settings, under Window (`auto_hide_menu = false` in `[gui]`); a value you saved earlier is kept. Alt, F10, or Alt with a menu's letter shows it and enters it as before, so NVDA and JAWS still say "menu bar" or the menu's name; it hides again, silently, when the menu closes. Every Alt key the keymap uses still works. The bar also appears for a moment when you press Alt for one of those keys. While a dialog is open, close it before using the menus. This setting has no effect on Linux, where the menus are already the F10 list and take no room, or on macOS, whose menu bar is at the top of the screen.
 
-Choosing a command in a menu runs it as its key would, and it joins the recent commands the command palette lists first (F2 with nothing typed). A few commands that only mean something in a terminal are left out of the window's menus (see [What only the terminal reader does](#what-only-the-terminal-reader-does)). File, Browse files opens textweaver's file browser in the window's list dialog (see [Reading](reading.md#from-the-file-browser-file-browse-files)); its keys work there as in the terminal, and the Say Status key previews the focused row. Batch conversion, audio export, and dictation are in the menus in the default build.
+Choosing a command in a menu runs it as its key would, and it joins the recent commands the command palette lists first (F2 with nothing typed). A few commands that only mean something in a terminal are left out of the app's menus (see [What only the terminal reader does](#what-only-the-terminal-reader-does)). File, Browse files opens textweaver's file browser in the app's list dialog (see [Reading](reading.md#from-the-file-browser-file-browse-files)); its keys work there as in the terminal, and the Say Status key previews the focused row. Batch conversion, audio export, and dictation are in the menus in the default build.
 
 ## Opening a document
 
@@ -110,19 +110,19 @@ In browse mode, Home and End go to the ends of the line, as in any document wind
 
 ## Keys
 
-The window uses the same keymap as the terminal reader, with a few chords the terminal cannot send. The [keyboard reference](keyboard.md) lists every key, with a column for the window. The ones you will use most:
+The app uses the same keymap as the terminal reader, with a few chords the terminal cannot send. The [keyboard reference](keyboard.md) lists every key, with a column for the app. The ones you will use most:
 
 - **Space** (browse) or **Ctrl+Shift+Space**: play or pause.
 - **Escape**: stop.
 - **Alt+Down** and **Alt+Up**: next and previous sentence.
 - **Ctrl+O**: open a document with the system's file chooser. **Ctrl+Shift+G**: type its path instead.
 - **Ctrl+Plus**, **Ctrl+Minus**, **Ctrl+0**: text size. **Ctrl+D**: the font list.
-- **F11** and **Shift+F11**: faster and slower (or **+** and **-** in browse). In the window, Ctrl+= and Ctrl+- size the text instead of the rate.
+- **F11** and **Shift+F11**: faster and slower (or **+** and **-** in browse). In the app, Ctrl+= and Ctrl+- size the text instead of the rate.
 - **Ctrl+Shift+V**: the voice manager (see [Voices](#voices)).
 - **Ctrl+,**: settings.
 - **F2**: the command palette, every command by its short name, with its key at the right edge ("Find next, F3"). Type to filter; Up and Down say each match; Tab or Ctrl+L moves to the list of matches, where your screen reader reads each with its place; F1 says what the selected command does, which is also each row's description; Enter runs one. With nothing typed, the commands you ran last from the palette or the menus come first, marked "recent".
 - **The keyboard shortcuts list** (? in browse, or the Help menu) has the same rows. Type to filter it by name, key, or menu ("12 of 226 commands match."); Page Down and Page Up move by group; F1 on a row says what it does.
-- **F1**: help. In a list, F1 repeats the list's introduction. Typing in the help starts Search help, which searches the commands, keys, settings and the bundled guides at once and says how many topics match; in its results, F1 says the selected topic's help without leaving the list, and Enter opens the topic. The Help menu has it too. Help, Documentation opens the bundled guides as documents in the window, following links between guides in place, with **Backspace** or **Alt+Left** to go back. The guides that come with an installed textweaver are read only, so the edit key says so instead of entering edit mode, and they stay out of the recent documents and the library, which remain a record of your own reading; Help, Online documentation asks before a browser opens. The [reading guide](reading.md#search-help) describes both.
+- **F1**: help. In a list, F1 repeats the list's introduction. Typing in the help starts Search help, which searches the commands, keys, settings and the bundled guides at once and says how many topics match; in its results, F1 says the selected topic's help without leaving the list, and Enter opens the topic. The Help menu has it too. Help, Documentation opens the bundled guides as documents in the app, following links between guides in place, with **Backspace** or **Alt+Left** to go back. The guides that come with an installed textweaver are read only, so the edit key says so instead of entering edit mode, and they stay out of the recent documents and the library, which remain a record of your own reading; Help, Online documentation asks before a browser opens. The [reading guide](reading.md#search-help) describes both.
 - **F3** and **Shift+F3**: the next and previous match of the last search (Ctrl+F), as in other Windows programs. The list of every key is on **?** (browse) and in the Help menu.
 - **Alt+Shift+S**: Speech Cursor mode on or off. Tab moves the focus, as in any window.
 - **Alt+End**: say the last message and the status. In a list, it repeats the list's introduction too.
@@ -134,7 +134,7 @@ The window uses the same keymap as the terminal reader, with a few chords the te
 - **F6** and **Shift+F6**: the next and previous region: the header, the panel, the document, and the toolbar.
 - **Ctrl+T** and **Ctrl+Shift+T**: next and previous table. **Ctrl+Alt+arrows** move by cell in a table.
 - **k** and **Shift+K** (browse): next and previous link. **Alt+Shift+F** follows a link.
-- **Alt+Shift+A**: the window's mode, one of two: "textweaver reads aloud" (documents in textweaver's voice, its messages for your screen reader) or "my screen reader reads" (textweaver is silent, and your screen reader reads the text). The **Speak textweaver's messages** setting (Settings, Window), off by default, has textweaver say its messages, typing and cursor moves too, for reading by ear without a screen reader; `--self-voicing` turns it on for one run. The View menu and the Accessibility mode setting show the same two names. In `settings.toml` the mode keeps the terminal reader's three values: "textweaver reads aloud" is saved as `"hybrid"`, and "my screen reader reads" as `"screen-reader"`.
+- **Alt+Shift+A**: the app's mode, one of two: "textweaver reads aloud" (documents in textweaver's voice, its messages for your screen reader) or "my screen reader reads" (textweaver is silent, and your screen reader reads the text). The **Speak textweaver's messages** setting (Settings, Window), off by default, has textweaver say its messages, typing and cursor moves too, for reading by ear without a screen reader; `--self-voicing` turns it on for one run. The View menu and the Accessibility mode setting show the same two names. In `settings.toml` the mode keeps the terminal reader's three values: "textweaver reads aloud" is saved as `"hybrid"`, and "my screen reader reads" as `"screen-reader"`.
 - **F5**: the next color theme.
 - **F9**: single-key shortcuts off or on.
 
@@ -150,19 +150,19 @@ A panel beside the document keeps the document's headings, or its notes, in view
 - The row where the cursor is has a bar beside it, and your screen reader hears ", current" after its name. While you are in the document, the panel's selected row follows the cursor, so going to the panel starts where you are.
 - The panel is a navigation landmark named "Contents" or "Notes".
 
-The panel never takes the focus on its own: when the window opens with a panel, or you choose one in the settings, the focus stays where it was. The window remembers the panel you showed last (Settings, Window, "Panel beside the document"; `sidebar` in `[gui]`, one of `off`, `contents`, or `notes`). A document without headings shows "No headings." in the Contents panel; a PDF without headings lists its pages, as the outline does. In edit mode, the Contents follow the headings you type once they are parsed again, as the outline does.
+The panel never takes the focus on its own: when the app opens with a panel, or you choose one in the settings, the focus stays where it was. The app remembers the panel you showed last (Settings, Window, "Panel beside the document"; `sidebar` in `[gui]`, one of `off`, `contents`, or `notes`). A document without headings shows "No headings." in the Contents panel; a PDF without headings lists its pages, as the outline does. In edit mode, the Contents follow the headings you type once they are parsed again, as the outline does.
 
 The panel costs nothing while it is closed. While it is open, its rows are built again only when the document, its headings, or its notes change, not as the reading highlight moves.
 
 ## Links between notes and tracked changes
 
-Two lists bring the structure around a document's text into the window: the links between your notes, which together form a small knowledge graph, and the tracked changes and comments that other authors left in a document. Neither is drawn as a picture. Each is an ordinary list dialog, the same list the terminal reader shows, and each row begins with what it means, so the first forty cells of a Braille line, or the first words your screen reader speaks, carry the substance of the row. Where a row is longer than the dialog is wide, the drawn row ends with an ellipsis, but your screen reader still reads the whole row. The terminal reader's guides describe both lists fully: [Links between notes](notes.md#links-between-notes) and [Tracked changes and comments](reading.md#tracked-changes-and-comments-ctrlshiftj-or-alta).
+Two lists bring the structure around a document's text into the app: the links between your notes, which together form a small knowledge graph, and the tracked changes and comments that other authors left in a document. Neither is drawn as a picture. Each is an ordinary list dialog, the same list the terminal reader shows, and each row begins with what it means, so the first forty cells of a Braille line, or the first words your screen reader speaks, carry the substance of the row. Where a row is longer than the dialog is wide, the drawn row ends with an ellipsis, but your screen reader still reads the whole row. The terminal reader's guides describe both lists fully: [Links between notes](notes.md#links-between-notes) and [Tracked changes and comments](reading.md#tracked-changes-and-comments-ctrlshiftj-or-alta).
 
 **A note's links.** Press Space on a note, in the notes list (Ctrl+Shift+N) or in the Notes panel (Ctrl+2), to open its links. Each link is a row that names its type before its target, for example "supports: Chapter 3 note". Two rows follow the links: "What links here", which lists the notes that link to this one, from this document and from every library document with notes, and "Add a link". In this list, Enter follows a link, opening the other document if the target lives there; F2 changes a link's type or target; and Delete removes a link after asking "Remove this link?". Adding a link asks first for one of the ten types, then for the target note. Typing in these lists filters them by type, and the dialog's title shows the filter so far; Backspace takes back one letter.
 
 **Tracked changes and comments.** Ctrl+Shift+J (Command+Shift+J on macOS) lists every insertion, deletion, and move, and every comment thread, in document order, for example "Inserted: 'renal', by Ada Example, Tuesday, March 3, 2026". A date is said in full when the document records one, and "date not recorded" otherwise. Enter goes to the place in the text. On a change, A accepts it and R rejects it; Shift+A and Shift+R accept or reject every change by the same author. On a comment, F2 asks for a reply, Space marks the thread resolved (or open again), and Delete deletes the thread and its replies after a question. N adds a comment where a note would attach: to the selection, or to the text at the cursor. These letters act only with the case you type: a capital comes from Shift alone, so Caps Lock never turns a single acceptance into an acceptance of everything by one author.
 
-Both questions, removing a link and deleting a comment, appear as the window's usual question dialog (see [Questions](#questions)): the focus starts on **No**, the first button says **Remove** or **Delete**, and Y and N answer as in the terminal. Answering no keeps the link or the comment and shows the list again.
+Both questions, removing a link and deleting a comment, appear as the app's usual question dialog (see [Questions](#questions)): the focus starts on **No**, the first button says **Remove** or **Delete**, and Y and N answer as in the terminal. Answering no keeps the link or the comment and shows the list again.
 
 ## Editing
 
@@ -174,25 +174,25 @@ List items keep their indent by depth while you edit, as in reading, and bullete
 
 - **Typing** goes in at the cursor, and over the selection if there is one. Enter starts a new line (and continues a list). Backspace and Delete delete. Input methods and dictation work too.
 - **Your screen reader echoes** what you type, and reads the cursor and the selection as they move. With **Speak textweaver's messages** on, textweaver says them itself, as the terminal does: typing as the typing echo setting says (Shift+F9 cycles it), the character, word, or line the cursor moves to, and what a Shift key added to the selection or took from it.
-- **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes what is on your system's clipboard at the cursor (on macOS, Command with each).
+- **Copy, cut, and paste:** Ctrl+C copies the selection and Ctrl+X cuts it, each saying what it took; Ctrl+V pastes the plain text on your system's clipboard at the cursor (on macOS, Command with each). Formatted text from a browser or word processor is not yet converted to Markdown here, as it is in the terminal reader; see [Known limits](known-limits.md#the-graphical-version). Paste as plain text is Ctrl+Shift+M.
 - **Undo** is Ctrl+Z, **redo** Ctrl+Y or Ctrl+Shift+Z, and each says what it undid. The editing keys are the terminal's: Ctrl+B bold, Ctrl+I italic, Ctrl+K a link, Ctrl+Alt+1 a heading, and the rest in the [keyboard reference](keyboard.md). Ctrl+S saves.
 - **Tab** types a tab, or in a table moves to the next cell (Shift+Tab to the previous one), as in the terminal. **Ctrl+Tab** moves the focus out of the document, to the buttons.
 - **Markdown lint:** Ctrl+F8 moves to the next lint problem (a skipped heading level, a mixed list marker, a bare web address) and says it; Ctrl+Shift+F8 goes back. Ctrl+F7 moves to the next grammar problem and Ctrl+Shift+F7 to the previous one, as in the terminal ([Editing](editing.md#grammar)).
-- **Find and replace:** Ctrl+Shift+F opens the Find and replace panel: Find what, Replace with, check boxes for Match case, Whole words, Regular expression, and Across lines, and the Find next, Replace, Replace all, and Close buttons. Enter in Find what finds the next match and Enter in Replace with replaces it; Up and Down recall earlier entries; F3 and Shift+F3 work throughout; Escape returns to the document. An invalid pattern is explained beside Find what, and each match is previewed there before it changes. The panel uses the same search, options, and undo steps as the terminal's replace loop ([Editing](editing.md#in-the-window-the-find-and-replace-panel)).
+- **Find and replace:** Ctrl+Shift+F opens the Find and replace panel: Find what, Replace with, check boxes for Match case, Whole words, Regular expression, and Across lines, and the Find next, Replace, Replace all, and Close buttons. Enter in Find what finds the next match and Enter in Replace with replaces it; Up and Down recall earlier entries; F3 and Shift+F3 work throughout; Escape returns to the document. An invalid pattern is explained beside Find what, and each match is previewed there before it changes. The panel uses the same search, options, and undo steps as the terminal's replace loop ([Editing](editing.md#in-the-graphical-version-the-find-and-replace-panel)).
 - **Spell check:** Alt+M moves to the next misspelled word and selects it, so your screen reader says it and textweaver spells it. Type to replace it, or press Alt+J for suggestions. Alt+Shift+M goes back. Misspelled words are also marked on screen with a dotted underline, shortly after you stop typing (in documents up to a million characters).
 - **Citations while writing:** Alt+C opens the citation picker. Type part of an author or title to filter, Enter inserts it, and textweaver asks for a page or other locator. Alt+Shift+D adds a reference by DOI or ISBN.
-- **Export and preview:** the command palette (F2) has Export as a web page, PDF, Word, EPUB, and braille (BRF), each written next to the document, and Preview in the browser, which reloads when you save.
+- **Export and preview:** the command palette (F2) and File, Export as, offer a web page, PDF, Word, EPUB, braille (BRF), and the other formats of [Converting documents](converting.md). Export asks where to save and under what name, as Save as does. Preview in the browser reloads itself according to the setting "Browser preview follows": never, after each save, or also when typing pauses.
 - Ctrl+Tab and Ctrl+Shift+Tab move between the document and the buttons, so you are never trapped in the edit; Ctrl+E is always the way out of edit mode.
 
 ## The spoken word
 
 While textweaver reads, the spoken word has its own background color, and the cursor sits at its start, so your screen reader and Braille display follow the reading. This is the default, chosen after the first screen reader session. `--select-spoken` selects the word instead, for anyone who prefers it.
 
-The document window: a very long document is shown a few hundred pages at a time, around where you are. When reading reaches the edge, the window moves on by itself. The text that stays keeps its place, so your screen reader does not lose it.
+The document window: a very long document is shown a few hundred pages at a time, around where you are. When reading reaches the edge, the app moves on by itself. The text that stays keeps its place, so your screen reader does not lose it.
 
 ## Questions
 
-When textweaver asks a yes-or-no question (a voice to download, after its size and license; a voice to remove; a file changed on disk), the window shows it as a small dialog: the question is the dialog's name, without the "y or n" the buttons already show, so your screen reader says it, and the focus is on **Yes**; a question that deletes, removes or replaces something names its verb on the button ("Delete") and starts on **No**, so Enter is the safe answer. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other letter asks the question again.
+When textweaver asks a yes-or-no question (a voice to download, after its size and license; a voice to remove; a file changed on disk), the app shows it as a small dialog: the question is the dialog's name, without the "y or n" the buttons already show, so your screen reader says it, and the focus is on **Yes**; a question that deletes, removes or replaces something names its verb on the button ("Delete") and starts on **No**, so Enter is the safe answer. Press **Y** or **N**, as in the terminal, or Tab to **No** and press Enter. Escape answers no. Any other letter asks the question again.
 
 A question that deletes, removes, or replaces something (a note, a highlight, a link between notes, a comment, a profile, a voice, a downloaded component, a file that already exists) starts on **No** instead, so pressing Enter keeps things as they are. Its first button says what it does, **Delete**, **Remove**, or **Replace**, rather than "Yes". The keys are the same: **Y** goes ahead, **N** and Escape keep things.
 
@@ -202,7 +202,7 @@ Closing the window with its close button or Alt+F4 quits as Quit (Ctrl+Q) does, 
 
 ## Voices
 
-**Ctrl+Shift+V** opens the voice manager, a dialog named "Choose a voice" with every voice of every engine on this computer: Eloquence, SAPI 5 (with the OneCore voices), DECtalk, eSpeak NG, Piper, and Apple's voices on macOS. The voices are the terminal's, with the same names, filters, and favorites. The focus starts in the list, named "Voices", on the voice in use.
+**Ctrl+Shift+V** is listed as the key for the voice manager, but in this release it pastes in edit mode and may not open the dialog ([Known limits](known-limits.md#the-graphical-version)); choose Speech, then Choose a voice, from the menus, or use the command palette (F2). The voice manager is a dialog named "Choose a voice" with every voice of every engine on this computer: Eloquence, SAPI 5 (with the OneCore voices), DECtalk, eSpeak NG, Piper, and Apple's voices on macOS. The voices are the terminal's, with the same names, filters, and favorites. The focus starts in the list, named "Voices", on the voice in use.
 
 From top to bottom, Tab moves through:
 
@@ -219,7 +219,7 @@ Every button has its key as its shortcut and a short description, which NVDA and
 
 ## Language
 
-The window's own labels (the buttons, the settings dialog, the hints) follow the interface language, `[interface] language` in `settings.toml`, as textweaver's messages do. Change it in Settings, under "Interface", and the window relabels itself at once.
+The app's own labels (the buttons, the settings dialog, the hints) follow the interface language, `[interface] language` in `settings.toml`, as textweaver's messages do. Change it in Settings, under "Interface", and the app relabels itself at once.
 
 ## Announcements
 
@@ -230,17 +230,17 @@ textweaver's messages ("Paused.", "Reading at 300 words per minute.") reach your
 
 The setting is `announce` in the `[gui]` section of `settings.toml`; see [Settings](settings.md#gui).
 
-Messages said while the window starts ("Opened", the title, "Reading at") wait until your screen reader has asked for the window's contents, then are said once. Before, they could be lost when the window was quicker than the screen reader.
+Messages said while the app starts ("Opened", the title, "Reading at") wait until your screen reader has asked for the window's contents, then are said once. Before, they could be lost when the app was quicker than the screen reader.
 
 When the window takes the focus (Alt+Tab, a click), your screen reader says the window's title, which is the document's title and "textweaver", then the document. With **Speak textweaver's messages** on, textweaver says the document's title and its name in its own voice.
 
-How much textweaver says about its own interface is yours to choose: `[accessibility] interface_announcements`, or Ctrl+F9 to step through off, minimal, normal, and full. The window's messages follow it as the terminal's do. Errors and the answers to what you asked (a count, the font you chose) are always said; a dialog closing, the hint that no document is open, and the first run's welcome are said from normal up. In the screen reader and hybrid modes it starts at minimal, since your screen reader already says what opens and closes.
+How much textweaver says about its own interface is yours to choose: `[accessibility] interface_announcements`, or Ctrl+F9 to step through off, minimal, normal, and full. The app's messages follow it as the terminal's do. Errors and the answers to what you asked (a count, the font you chose) are always said; a dialog closing, the hint that no document is open, and the first run's welcome are said from normal up. In the screen reader and hybrid modes it starts at minimal, since your screen reader already says what opens and closes.
 
 ## Reading aids
 
-The window draws the same [reading aids](reading-aids.md) as the terminal, with the same keys:
+The app draws the same [reading aids](reading-aids.md) as the terminal, with the same keys:
 
-- **Text spacing:** line height, paragraph spacing, and letter and word spacing, in `[reading_aids.spacing]`. The window uses the exact values; the terminal rounds them to whole rows and spaces.
+- **Text spacing:** line height, paragraph spacing, and letter and word spacing, in `[reading_aids.spacing]`. The app uses the exact values; the terminal rounds them to whole rows and spaces.
 - **The reading ruler** (Alt+Shift+U): off, the current line, or the ruler. The reading line gets a band with a bar at its start, the lines around it a paler band, and with `mask_outside` the rest is dimmed. It follows the cursor, and the spoken word while reading.
 - **Bionic reading** (Alt+Shift+B): the start of each word in bold.
 - **Difficult words** (Alt+Shift+J): underlined with a thick line, never marked by color alone.
@@ -259,11 +259,11 @@ The first time the app starts after textweaver has been updated, it says "Update
 
 ## Colors and high contrast
 
-The window starts in the theme your settings choose, and follows your system's light or dark setting as the terminal reader does (`display.follow_os_theme`, on unless you picked a theme). The system's setting is read while the rest of the window starts, and not at all with `--theme` or a theme you picked. F5 moves to the next theme.
+The app starts in the theme your settings choose, and follows your system's light or dark setting as the terminal reader does (`display.follow_os_theme`, on unless you picked a theme). The system's setting is read while the rest of the app starts, and not at all with `--theme` or a theme you picked. F5 moves to the next theme.
 
-With Windows High Contrast on (Contrast themes in Windows 11), the window draws with your contrast theme's own colors: its page and text, its highlight for the spoken word, the selection, and the focus ring, and its link color. Turning it on or off applies at once. Marks that have a tint of their own in textweaver's themes (the reading ruler's band, notes, bookmarks, search matches) keep their shapes instead: the ruler's bar, the lines and boxes. The spoken sentence has no band then; its underline, in your contrast theme's text color, marks it. The focus ring stays visible: when the highlight color is too close to the page, the ring is drawn in the text color. `--theme`, or `follow_os_theme = false` in `[display]`, keeps textweaver's own colors.
+With Windows High Contrast on (Contrast themes in Windows 11), the app draws with your contrast theme's own colors: its page and text, its highlight for the spoken word, the selection, and the focus ring, and its link color. Turning it on or off applies at once. Marks that have a tint of their own in textweaver's themes (the reading ruler's band, notes, bookmarks, search matches) keep their shapes instead: the ruler's bar, the lines and boxes. The spoken sentence has no band then; its underline, in your contrast theme's text color, marks it. The focus ring stays visible: when the highlight color is too close to the page, the ring is drawn in the text color. `--theme`, or `follow_os_theme = false` in `[display]`, keeps textweaver's own colors.
 
-On macOS and Linux, the system's increased-contrast setting chooses textweaver's high-contrast theme when the window starts.
+On macOS and Linux, the system's increased-contrast setting chooses textweaver's high-contrast theme when the app starts.
 
 The title bar and the menus follow the theme too: a dark theme such as Galaxy gets a dark title bar, and on Windows a dark menu bar and dark drop-down menus, whatever Windows' own light or dark setting; a light theme gets light ones. The theme's page color decides. Changing the theme (F5, or Settings) changes them at once. With Windows High Contrast on, Windows draws them in your contrast theme's colors instead. Dark menus need Windows 10 version 1809 or later; on older versions they stay light.
 
@@ -279,7 +279,7 @@ Each row says its color and how well it stands out where it is drawn, as a ratio
 
 After the colors come your highlight names, one row each, in palette order: "Highlight name important: yellow, underline, contrast 1.2 to 1 with the text and 14 to 1 with the page, low". A highlight is a band behind text, so both ratios matter, and the word that ends the row describes the lower of the two. When either is under 3 to 1, the row's description, which a screen reader reads after its value, is the same warning a low color gets. These rows are read only, because the palette is a table in `settings.toml` (`[[highlight.palette]]`); Enter on one says so. [Notes and highlights](notes.md) explains the palette and its shapes.
 
-With Windows High Contrast on, the system's colors win. The window draws your contrast theme's colors instead of these settings, so the dialog stops measuring them: its help says that the system's colors are on, each color row says it is not drawn while they are, and no sample is shown. Your choices are kept and apply again when High Contrast is turned off. Each highlight name still says its color and shape, and the shapes still differ from one name to the next, so the names remain distinct without any color at all.
+With Windows High Contrast on, the system's colors win. The app draws your contrast theme's colors instead of these settings, so the dialog stops measuring them: its help says that the system's colors are on, each color row says it is not drawn while they are, and no sample is shown. Your choices are kept and apply again when High Contrast is turned off. Each highlight name still says its color and shape, and the shapes still differ from one name to the next, so the names remain distinct without any color at all.
 
 ## Settings
 
@@ -293,7 +293,7 @@ View, then Reading settings (or Tools, Reading settings) opens the settings you 
 - **WCAG spacing** sets the four spacings to the values WCAG names (line height 1.5, paragraph spacing 2, letter spacing 0.12, word spacing 0.16), and **Generous spacing** to wider ones (2, 2.5, 0.15, 0.3). It says which, once, and the rows show the new values.
 - **Close** (Escape) closes it.
 
-In the terminal, the same command shows the settings screen with only these settings, as View, Colors does for the colors. The line length is the window's own, so the terminal lists the other sixteen.
+In the terminal, the same command shows the settings screen with only these settings, as View, Colors does for the colors. The line length is the app's own, so the terminal lists the other sixteen.
 
 **Export settings** and **Import settings** are under File, then Settings (Alt+Shift+E and Alt+Shift+I). Export opens your system's Save dialog, offering `textweaver-settings.toml`; a name ending in `.json` writes JSON instead. It writes every setting and your key changes. Import opens the system's Open dialog for a TOML or JSON file, checks it, and then asks before changing anything, naming the first changes: "Import 12 changed settings from home.toml: Rate, Theme, Link color, and 9 more? y or n". Yes applies them at once and says what changed; no leaves everything as it was. If the system's file chooser cannot open, a prompt asks for the file's path instead.
 
@@ -302,30 +302,40 @@ In the terminal, the same command shows the settings screen with only these sett
 - **The window remembers its size and place** on this computer. It opens where it closed, and whether it was maximized. A place on a screen that is no longer connected is not used, so the window never opens where you cannot see it. This is kept for each computer and is not synced.
 - **Text follows the system's text size.** Interface text grows with the Windows "Text size" setting or the GNOME text scaling factor.
 - **The caret blinks as the system's does,** or not at all when the system says so.
-- **The window draws opaque on every graphics API.** It asks for an opaque drawing surface, never one that blends with what is behind the window. Up to alpha.9, with `auto` on Windows (which picks Vulkan on an NVIDIA card) the menu bar was see-through, because the driver offered a blended surface and the window took it; `--graphics dx12` hid the problem, since Direct3D 12 offers only opaque surfaces for a window. `--log` names the surface on the "graphics adapter" line ("surface opaque").
-- **The icon is the loom,** textweaver's logo, in the title bar, the taskbar, and on the programs in Explorer and their shortcuts (`textweaver-gui.exe`, `textweaver.exe` and `tw.exe` carry it). In Windows High Contrast the window uses the one-color loom, white on black. The Linux menu entry uses the same drawing.
-- **The window asks for the integrated graphics adapter** when the computer has one, because it draws text as fast and saves the battery. To use the fast adapter instead, set the environment variable `WGPU_POWER_PREF` to `high`.
-- **A log file.** The window writes warnings and errors to `textweaver.log` in the state folder, as the terminal reader does. [Troubleshooting](troubleshooting.md#the-log-file) says where it is.
-- **After a failure,** the window saves your unsaved edits as a recovery copy, and saves your place and settings. At the next start it offers the work back (see [Recovering unsaved work](editing.md#recovering-unsaved-work)). Signing out, shutting down, or restarting does the same. On Linux and macOS, so does a termination signal: closing the terminal the window was started from, Ctrl+C in that terminal, or the system ending the program (SIGHUP, SIGINT, or SIGTERM). The window saves, then closes.
-- **If graphics cannot start,** the window says so in words. Started from a shortcut, it shows a message box. See [The window does not open, or it is blank](troubleshooting.md#the-window-does-not-open-or-it-is-blank).
+- **The app draws opaque on every graphics API.** It asks for an opaque drawing surface, never one that blends with what is behind the window. Up to alpha.9, with `auto` on Windows (which picks Vulkan on an NVIDIA card) the menu bar was see-through, because the driver offered a blended surface and the app took it; `--graphics dx12` hid the problem, since Direct3D 12 offers only opaque surfaces for a window. `--log` names the surface on the "graphics adapter" line ("surface opaque").
+- **The icon is the loom,** textweaver's logo, in the title bar, the taskbar, and on the programs in Explorer and their shortcuts (`textweaver-gui.exe`, `textweaver.exe` and `tw.exe` carry it). In Windows High Contrast the app uses the one-color loom, white on black. The Linux menu entry uses the same drawing.
+- **The app asks for the integrated graphics adapter** when the computer has one, because it draws text as fast and saves the battery. To use the fast adapter instead, set the environment variable `WGPU_POWER_PREF` to `high`.
+- **A log file.** The app writes warnings and errors to `textweaver.log` in the state folder, as the terminal reader does. [Troubleshooting](troubleshooting.md#the-log-file) says where it is.
+- **After a failure,** the app saves your unsaved edits as a recovery copy, and saves your place and settings. At the next start it offers the work back (see [Recovering unsaved work](editing.md#recovering-unsaved-work)). Signing out, shutting down, or restarting does the same. On Linux and macOS, so does a termination signal: closing the terminal the app was started from, Ctrl+C in that terminal, or the system ending the program (SIGHUP, SIGINT, or SIGTERM). The app saves, then closes.
+- **If graphics cannot start,** the app says so in words. Started from a shortcut, it shows a message box. See [The app does not open, or it is blank](troubleshooting.md#the-window-does-not-open-or-it-is-blank).
+
+## Study, marks, and files in the app
+
+The study and marking commands are the same in the app as in the terminal reader, with the same lists and messages. Their guides give the keys for the app where they differ.
+
+- **Highlight names.** Alt+1 to Alt+5 highlight with the first five names in your palette, and the highlights list (Shift+Y) says each highlight's name. The app draws every highlight with the same mark, whatever its name; the terminal reader draws each name in its own color and shape ([Known limits](known-limits.md#the-graphical-version)). The Colors dialog lists each name with its measured contrast ([The Colors dialog](#the-colors-dialog)).
+- **Study cards and the self-test.** The Bookmarks and notes menu has a Study cards submenu, and the notes list (Ctrl+Shift+N) and highlights list make a card with C. Cards, grades, and due dates are described in [Study with cards](notes.md#study-with-cards). After you press Enter in the self-test, a screen reader may announce the revealed answer twice.
+- **Links between notes** and **tracked changes and comments** are lists; see [Links between notes and tracked changes](#links-between-notes-and-tracked-changes). Accepting or rejecting a change, and saving your own edits to a Word file as tracked changes, work as described in [Reading](reading.md#tracked-changes-and-comments-ctrlshiftj-or-alta) and [Editing](editing.md#review-a-word-documents-tracked-changes).
+- **Files.** Browse files in the File menu walks folders and archives as one list ([Reading](reading.md#from-the-file-browser-file-browse-files)). The formats added in beta 1 (Org, reStructuredText, MediaWiki, DokuWiki, and Jira markup; braille files; DAISY books with their recorded narration) open in the app as in the terminal reader.
+- **Help.** Help, then Documentation, opens the full guides inside the app, and Search help searches commands, keys, settings, and the guides together ([Reading](reading.md#help--and-f1)).
 
 ## What only the terminal reader does
 
-Every command works in the window as in the terminal reader, from the same keys, the menus, and the command palette (F2), with the same lists, questions, and messages. A few commands only mean something in a terminal, and the window's menus and command palette leave them out. If a key for one is pressed in the window (`j` or Shift+J, say), the window says "This command works in the terminal reader." and does nothing else:
+Every command works in the app as in the terminal reader, from the same keys, the menus, and the command palette (F2), with the same lists, questions, and messages. A few commands only mean something in a terminal, and the app's menus and command palette leave them out. If a key for one is pressed in the app (`j` or Shift+J, say), the app says "This command works in the terminal reader." and does nothing else:
 
-- `scroll_down` and `scroll_up`: the terminal scrolls its screen by lines. The window scrolls with the mouse wheel and keeps the cursor in view.
-- `toggle_line_numbers`: line numbers are the terminal's margin, on F6 there. In the window, the status bar says the line, and Say Position (Shift+W) says it too; F6 moves between the window's regions instead.
+- `scroll_down` and `scroll_up`: the terminal scrolls its screen by lines. The app scrolls with the mouse wheel and keeps the cursor in view.
+- `toggle_line_numbers`: line numbers are the terminal's margin, on F6 there. In the app, the status bar says the line, and Say Position (Shift+W) says it too; F6 moves between the app's regions instead.
 
 The command-line tools (`tw vault`, `tw convert`, `tw library`, and the rest) are the same for both readers.
 
 ## For testers
 
-- `--background` starts the window without taking the focus, off screen, with no taskbar button, for automated checks. On Windows the window is marked as one that accessibility tools must not activate (`WS_EX_NOACTIVATE`). UI Automation still activates it on the first control pressed through it; the window then hands the foreground straight back to the window that had it, and `--log` says so. Expect a moment's flicker of focus, not a lost one.
+- `--background` starts the app without taking the focus, off screen, with no taskbar button, for automated checks. On Windows the app is marked as one that accessibility tools must not activate (`WS_EX_NOACTIVATE`). UI Automation still activates it on the first control pressed through it; the app then hands the foreground straight back to the app that had it, and `--log` says so. Expect a moment's flicker of focus, not a lost one.
 - A debug build writes Masonry's full trace log only when `MASONRY_DENSE_LOG_DIR` names a folder for it (for example `target\masonry-logs`); otherwise it writes none. It never goes to the system's temporary folder.
 - `--backend paced` reads silently, timing words like a real engine.
-- `crates/textweaver-xilem/tools/uia-report.ps1` reports what UI Automation sees (Windows), including the menu bar's seven menus and access keys and every menu item's text and key as the window's menu holds them; `-WindowEdge` reads past the document window's edge; `-Menus` also opens the first menu to read its items through UI Automation (opening a menu may bring the window to the front, so use it on a test machine). `tools/atspi-check.sh` does the same with AT-SPI on Linux.
-- `--log` lists the menu items the window built, one per line, with each key after a tab.
-- `--review-screenshots FOLDER` draws the review screenshots without a window: four themes at 100% and 200%, the dialogs, the reading aids, the reading ruler on its own, edit mode, the window with no document, the Contents and Notes panels, and the window at 960 by 540, 683 by 384 at 200%, and 420 by 320. Give it a folder outside `docs/`, such as `target/review-screenshots`; the full set is for review and is not kept in the repository. A curated set of eight, each picture with a description, is in [the window in pictures](window-in-pictures.md). It, `--screenshot`, and `--measure-frames` need the `screenshot` feature (in the default build); a build without it ends with an error that names the option, and no window opens.
+- `crates/textweaver-xilem/tools/uia-report.ps1` reports what UI Automation sees (Windows), including the menu bar's seven menus and access keys and every menu item's text and key as the app's menu holds them; `-WindowEdge` reads past the document window's edge; `-Menus` also opens the first menu to read its items through UI Automation (opening a menu may bring the app to the front, so use it on a test machine). `tools/atspi-check.sh` does the same with AT-SPI on Linux.
+- `--log` lists the menu items the app built, one per line, with each key after a tab.
+- `--review-screenshots FOLDER` draws the review screenshots without a window: four themes at 100% and 200%, the dialogs, the reading aids, the reading ruler on its own, edit mode, the app with no document, the Contents and Notes panels, and the app at 960 by 540, 683 by 384 at 200%, and 420 by 320. Give it a folder outside `docs/`, such as `target/review-screenshots`; the full set is for review and is not kept in the repository. A curated set of eight, each picture with a description, is in [the app in pictures](window-in-pictures.md). It, `--screenshot`, and `--measure-frames` need the `screenshot` feature (in the default build); a build without it ends with an error that names the option, and no window opens.
 - `--log` also says how the title bar and menus are drawn: "frame: dark", "frame: light", or "frame: system" (high contrast), and how the drop-down menus are drawn ("drop-down menus: dark", "light", or "light, because dark drop-down menus are unavailable" on a Windows that lacks a call dark menus need), at startup on the "menus: native" line and again on each change; and "menu bar shown" and "menu bar hidden" while `auto_hide_menu` is on.
 
 ### Checking the title bar and menus by hand
@@ -354,5 +364,5 @@ Please note which steps did not behave as expected, with the screen reader and i
 - [Keyboard reference](keyboard.md)
 - [Reading aids](reading-aids.md)
 - [Using textweaver with a screen reader](screen-readers.md)
-- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md), [ADR-0028: the Xilem GUI after the first listening session](adr/0028-xilem-gui-after-the-session.md), [ADR-0033: the window after further accessibility testing, and edit mode](adr/0033-gui-session-2-and-edit-mode.md), and [ADR-0046: native menus in the window](adr/0046-native-menus-in-the-gui.md)
+- [ADR-0027: Xilem GUI](adr/0027-xilem-gui.md), [ADR-0028: the Xilem GUI after the first listening session](adr/0028-xilem-gui-after-the-session.md), [ADR-0033: the app after further accessibility testing, and edit mode](adr/0033-gui-session-2-and-edit-mode.md), and [ADR-0046: native menus in the app](adr/0046-native-menus-in-the-gui.md)
 - [ADR-0043: menus and the palette from one model](adr/0043-menus-and-the-palette-from-one-model.md)

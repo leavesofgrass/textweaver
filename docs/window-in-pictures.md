@@ -1,6 +1,6 @@
-# The window in pictures
+# The textweaver app in pictures
 
-These eight pictures show the textweaver window (`textweaver-gui`) to a new user. They are drawn without a window on screen, by Vello's CPU renderer, from the same widgets the window uses, with the sample document `fixtures/sample.md` and fresh settings. Unless a description says otherwise, the window is 1100 by 780 pixels at 100 percent scale.
+These eight pictures show the textweaver app (`textweaver-gui`) as a new user first sees it. They are drawn without a window on screen, by Vello's CPU renderer, from the same widgets the app uses, with the sample document `fixtures/sample.md` and fresh settings. Unless a description says otherwise, the window is 1100 by 780 pixels at 100 percent scale.
 
 The reading position is on the word "Jones" in the first paragraph: the spoken word has a solid band, and its sentence ("Dr. Jones arrived at 3:30 p.m.") a paler band and an underline, so the sentence never depends on its band color alone. For the pictures, `[highlight] granularity` is "both"; the default, "word", draws the word only.
 
