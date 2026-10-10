@@ -121,7 +121,10 @@ run_round() {
   ln -s textweaver.AppImage "$work/tw"
   cd "$work"
   check "AppImage --tw --version" ./textweaver.AppImage --appimage-extract-and-run --tw --version
-  check "textweaver --version" ./textweaver.AppImage --appimage-extract-and-run --version
+  # On its own the AppImage starts the app (B1-o2), which needs a desktop
+  # session's libraries a bare container lacks; --textweaver runs tw, the
+  # terminal reader's program.
+  check "AppImage --textweaver --version" ./textweaver.AppImage --appimage-extract-and-run --textweaver --version
   backends="$(APPIMAGE_EXTRACT_AND_RUN=1 ./tw backends 2>&1)" || {
     echo "  FAILED: tw backends"
     printf '%s\n' "$backends" | sed 's/^/      /'
@@ -151,7 +154,8 @@ run_round() {
   fi
   home="$(mktemp -d)"
   check "--install --yes" env HOME="$home" APPIMAGE_EXTRACT_AND_RUN=1 ./textweaver.AppImage --install --yes
-  for f in .local/bin/textweaver .local/bin/tw .local/share/applications/textweaver.desktop \
+  for f in .local/bin/textweaver .local/bin/tw .local/bin/textweaver-gui \
+    .local/share/applications/textweaver.desktop .local/share/applications/textweaver-gui.desktop \
     .local/share/icons/hicolor/scalable/apps/textweaver.svg; do
     [ -e "$home/$f" ] || [ -L "$home/$f" ] || {
       echo "  FAILED: --install did not make ~/$f"

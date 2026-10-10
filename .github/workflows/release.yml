@@ -12,16 +12,15 @@
 #   tarball for systems without FUSE, for x86_64 and for aarch64 (on the
 #   ubuntu-22.04-arm runner), built on Ubuntu 22.04's glibc and checked on
 #   Debian and Fedora (and Arch on x86_64) before upload.
-# - The GUI (textweaver-gui, ADR-0027), from `cargo xtask gui-dist` in each
-#   package job: a Windows zip, a macOS .app zip (universal: Apple silicon
-#   and Intel), and a Linux AppImage and tarball for x86_64 and aarch64.
-#   Each holds the same engine hosts and dictionaries as the terminal
-#   package, is built with the same speech engines where the GUI crate
-#   has them (espeak-ng and speech-dispatcher on Linux), and is checked
-#   (--version, a screenshot drawn on the CPU, and on macOS a silent
-#   reading) before upload. Their names end in -gui, so no pattern for the
-#   terminal packages matches them, including the update information of
-#   AppImages already released.
+# - One package per OS and CPU architecture (B1-o2) holds both programs:
+#   the app (textweaver-gui, ADR-0027; textweaver.app on macOS) and tw
+#   (with textweaver as a second name: a link on Linux and macOS, a small
+#   launcher on Windows), with the engine hosts, dictionaries, and the
+#   complete docs. `cargo xtask dist` (and `appimage` on Linux) builds it
+#   once. The app is checked (--version, a screenshot drawn on the CPU,
+#   and on macOS a silent reading) before upload. The Linux jobs also
+#   upload a copy of each .zsync file under the -gui name, so the app
+#   AppImages of 0.1.0-alpha.9 and earlier update to the single image.
 #
 # The terminal packages are smoke-tested beyond --version before upload
 # (tools/package-smoke.sh: open a fixture, tw info, tw components list,
@@ -90,7 +89,7 @@ jobs:
     name: Windows package
     needs: release
     runs-on: windows-latest
-    # The terminal package, then the GUI's (Vello and wgpu, fat LTO).
+    # tw, then the app (Vello and wgpu, fat LTO), in one package.
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
@@ -107,7 +106,7 @@ jobs:
           if (-not $zip) { throw 'no package' }
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $names = [IO.Compression.ZipFile]::OpenRead($zip.FullName).Entries.FullName
-          foreach ($want in 'tw.exe', 'textweaver.exe', 'THIRD-PARTY-NOTICES.md', 'licenses/scowl/Copyright', 'licenses/fonts/opendyslexic/OFL.txt') {
+          foreach ($want in 'tw.exe', 'textweaver.exe', 'textweaver-gui.exe', 'textweaver-eci-host.exe', 'textweaver-eci-host-x86.exe', 'textweaver-sapi-host.exe', 'textweaver-sapi-host-x86.exe', 'textweaver-dectalk-host.exe', 'textweaver-dectalk-host-x86.exe', 'textweaver-espeak-host.exe', 'textweaver-espeak-host-x86.exe', 'GUI.md', 'lexicon/lexicon-en.twlex', 'THIRD-PARTY-NOTICES.md', 'licenses/scowl/Copyright', 'licenses/fonts/opendyslexic/OFL.txt', 'licenses/xilem/LICENSE') {
             if (-not ($names | Where-Object { $_ -like "*/$want" })) { throw "the package lacks $want" }
           }
           "Windows package: $($zip.Name), $([math]::Round($zip.Length / 1MB, 1)) MB" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
@@ -120,32 +119,23 @@ jobs:
             [ -d "$dir" ] && break
           done
           bash tools/package-smoke.sh "$dir/tw.exe" fixtures/sample.md | tee -a "$GITHUB_STEP_SUMMARY"
-      # The GUI's zip, built in the same folder as the terminal package, so
-      # the shared dependencies compile once.
-      - name: Build the GUI package
-        run: cargo xtask gui-dist
+          # The second name, through the launcher: the same help as tw.
+          diff <("$dir/tw.exe" --help) <("$dir/textweaver.exe" --help)
+          "$dir/textweaver.exe" --version
       # textweaver-gui is a GUI-subsystem program: Start-Process waits for
       # it and reads its exit code. No window opens: --version exits, and
       # --screenshot draws on the CPU (the runner's WARP device crashes on
       # Vello's GPU shaders; see gui-xilem.yml).
-      - name: Check the GUI package
+      - name: Check the app in the package
         shell: pwsh
         run: |
-          $zip = Get-ChildItem target/dist/textweaver-*-windows-x86_64-gui.zip | Select-Object -First 1
-          if (-not $zip) { throw 'no GUI package' }
-          Add-Type -AssemblyName System.IO.Compression.FileSystem
-          $names = [IO.Compression.ZipFile]::OpenRead($zip.FullName).Entries.FullName
-          foreach ($want in 'textweaver-gui.exe', 'textweaver-eci-host.exe', 'textweaver-sapi-host.exe', 'textweaver-dectalk-host-x86.exe', 'GUI.md', 'lexicon/lexicon-en.twlex', 'THIRD-PARTY-NOTICES.md', 'licenses/scowl/Copyright', 'licenses/xilem/LICENSE') {
-            if (-not ($names | Where-Object { $_ -like "*/$want" })) { throw "the GUI package lacks $want" }
-          }
-          $dir = Get-ChildItem -Directory target/dist/textweaver-*-windows-x86_64-gui | Select-Object -First 1
+          $dir = Get-ChildItem -Directory target/dist/textweaver-*-windows-x86_64 | Select-Object -First 1
           $gui = Join-Path $dir.FullName 'textweaver-gui.exe'
           $p = Start-Process -FilePath $gui -ArgumentList '--version' -Wait -PassThru -NoNewWindow
           if ($p.ExitCode -ne 0) { throw "textweaver-gui --version failed ($($p.ExitCode))" }
           $png = Join-Path $env:RUNNER_TEMP 'gui-check.png'
           $p = Start-Process -FilePath $gui -ArgumentList '--screenshot', $png, 'fixtures/sample.md' -Wait -PassThru -NoNewWindow
           if ($p.ExitCode -ne 0 -or -not (Test-Path $png)) { throw "textweaver-gui --screenshot failed ($($p.ExitCode))" }
-          "GUI package: $($zip.Name), $([math]::Round($zip.Length / 1MB, 1)) MB" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
       # Exactly the files this job uploads: none missing, no stray one.
       - name: The package files are exactly the expected ones
         run: cargo xtask release-assets --dir target/dist --platform windows
@@ -154,14 +144,12 @@ jobs:
         with:
           subject-path: |
             target/dist/textweaver-*-windows-x86_64.zip
-            target/dist/textweaver-*-windows-x86_64-gui.zip
       - name: Upload to the release
         if: env.DRY_RUN != 'true'
         shell: bash
         run: |
           tools/release-upload.sh --no-sums "$TAG" \
-            target/dist/textweaver-*-windows-x86_64.zip \
-            target/dist/textweaver-*-windows-x86_64-gui.zip
+            target/dist/textweaver-*-windows-x86_64.zip
       - name: Keep the packages (dry run)
         if: env.DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
@@ -169,7 +157,6 @@ jobs:
           name: dry-run-windows
           path: |
             target/dist/textweaver-*-windows-x86_64.zip
-            target/dist/textweaver-*-windows-x86_64-gui.zip
 
   macos:
     name: macOS package
@@ -187,35 +174,27 @@ jobs:
       - name: Check the package
         run: |
           dir=$(ls -d target/dist/textweaver-*-macos-universal)
-          lipo -info "$dir/tw" "$dir/textweaver"
-          codesign --verify --verbose "$dir/tw" "$dir/textweaver"
+          lipo -info "$dir/tw"
+          codesign --verify --verbose "$dir/tw"
+          # textweaver is a link to tw, kept as a link in the zip.
+          test "$(readlink "$dir/textweaver")" = tw || { echo "Fail: textweaver is not a link to tw"; exit 1; }
           # More than --version: open a fixture, tw info, tw components
           # list, and convert one file, on an empty TEXTWEAVER_HOME.
           set -o pipefail
           bash tools/package-smoke.sh "$dir/tw" fixtures/sample.md | tee -a "$GITHUB_STEP_SUMMARY"
-          listing=$(tar -tzf target/dist/textweaver-*-macos-universal.tar.gz)
-          for want in THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/fonts/opendyslexic/OFL.txt; do
-            grep -q "/$want\$" <<< "$listing" || { echo "the package lacks $want"; exit 1; }
+          diff <("$dir/tw" --help) <("$dir/textweaver" --help)
+          zip=$(ls target/dist/textweaver-*-macos-universal.zip)
+          listing=$(unzip -Z1 "$zip")
+          for want in tw textweaver textweaver.app/Contents/MacOS/textweaver-gui textweaver.app/Contents/Info.plist GUI.md lexicon/lexicon-en.twlex THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/fonts/opendyslexic/OFL.txt licenses/xilem/LICENSE; do
+            grep -q "/$want\$" <<< "$listing" || { echo "Fail: the package lacks $want"; exit 1; }
           done
-      # The GUI's textweaver.app in a zip, universal (Apple silicon and
-      # Intel, joined with lipo), in the same build folder as the terminal
-      # package.
-      - name: Build the GUI package
-        run: cargo xtask gui-dist --universal
-      # --version, a screenshot drawn on the CPU, and a silent reading with
-      # the paced backend in a window kept in the background (as
-      # gui-xilem.yml's smoke run does), then the window closes itself.
-      - name: Check the GUI package
+          echo "macOS package: $(basename "$zip"), $(du -m "$zip" | cut -f1) MB" | tee -a "$GITHUB_STEP_SUMMARY"
+      # The app: --version, a screenshot drawn on the CPU, and a silent
+      # reading with the paced backend in a window kept in the background
+      # (as gui-xilem.yml's smoke run does), then the app closes itself.
+      - name: Check the app in the package
         run: |
-          for zip in target/dist/textweaver-*-macos-universal-gui.zip; do
-            test -f "$zip" || { echo "Fail: no GUI package"; exit 1; }
-            listing=$(unzip -Z1 "$zip")
-            for want in textweaver.app/Contents/MacOS/textweaver-gui textweaver.app/Contents/Info.plist GUI.md lexicon/lexicon-en.twlex THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/xilem/LICENSE; do
-              grep -q "/$want\$" <<< "$listing" || { echo "Fail: the GUI package lacks $want"; exit 1; }
-            done
-            echo "GUI package: $(basename "$zip"), $(du -m "$zip" | cut -f1) MB" | tee -a "$GITHUB_STEP_SUMMARY"
-          done
-          for app in target/dist/textweaver-*-macos-universal-gui/textweaver.app; do
+          for app in target/dist/textweaver-*-macos-universal/textweaver.app; do
             codesign --verify --deep --verbose "$app"
             gui="$app/Contents/MacOS/textweaver-gui"
             lipo -info "$gui"
@@ -241,22 +220,19 @@ jobs:
         if: env.DRY_RUN != 'true'
         with:
           subject-path: |
-            target/dist/textweaver-*-macos-universal.tar.gz
-            target/dist/textweaver-*-macos-universal-gui.zip
+            target/dist/textweaver-*-macos-universal.zip
       - name: Upload to the release
         if: env.DRY_RUN != 'true'
         run: |
           tools/release-upload.sh --no-sums "$TAG" \
-            target/dist/textweaver-*-macos-universal.tar.gz \
-            target/dist/textweaver-*-macos-universal-gui.zip
+            target/dist/textweaver-*-macos-universal.zip
       - name: Keep the packages (dry run)
         if: env.DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: dry-run-macos
           path: |
-            target/dist/textweaver-*-macos-universal.tar.gz
-            target/dist/textweaver-*-macos-universal-gui.zip
+            target/dist/textweaver-*-macos-universal.zip
 
   linux:
     name: Linux AppImage and tarball, ${{ matrix.arch }}
@@ -308,42 +284,38 @@ jobs:
           # One image per word.
           # shellcheck disable=SC2086
           bash docker/appimage/test-distros.sh target/dist $DISTROS
-      # The GUI's tarball and AppImage, in the same image and build folder
-      # as the terminal packages (the AppImage tools and the pinned runtime
-      # are in the image).
-      - name: Build the GUI's AppImage and tarball
-        run: |
-          docker run --rm -v "$PWD:/work" -w /work --user "$(id -u):$(id -g)" \
-            -e HOME=/tmp -e CARGO_TARGET_DIR=/work/target/linux \
-            -e GITHUB_STEP_SUMMARY=/work/target/docs-summary-gui.md \
-            textweaver-appimage cargo xtask gui-dist --out /work/target/dist
-          # Missing-guide warnings written inside the container reach the job summary.
-          cat target/docs-summary-gui.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
-      # In the build image (it has the ALSA library the GUI links): the
-      # files are there, --version, a screenshot drawn on the CPU (no
-      # display is needed), and the AppImage's --version. Not yet run on
-      # other distributions.
-      - name: Check the GUI packages
+      # In the build image (it has the libraries the app links): the app
+      # in the package runs --version and draws a screenshot on the CPU
+      # (no display is needed), and the AppImage starts it by default.
+      # textweaver is a link to tw in the tarball. Not yet run on other
+      # distributions.
+      - name: Check the app in the packages
         env:
           ARCH: ${{ matrix.arch }}
         run: |
           docker run --rm -v "$PWD:/work" -w /work --user "$(id -u):$(id -g)" \
             -e HOME=/tmp -e ARCH -e APPIMAGE_EXTRACT_AND_RUN=1 \
             textweaver-appimage bash -euc '
-              for dir in target/dist/textweaver-*-linux-"$ARCH"-gui; do
-                test -d "$dir" || { echo "Fail: no GUI package for $ARCH"; exit 1; }
-                for want in textweaver-gui textweaver-eci-host textweaver-dectalk-host GUI.md lexicon/lexicon-en.twlex THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/xilem/LICENSE; do
-                  test -e "$dir/$want" || { echo "Fail: the GUI package lacks $want"; exit 1; }
+              for dir in target/dist/textweaver-*-linux-"$ARCH"; do
+                test -d "$dir" || { echo "Fail: no package folder for $ARCH"; exit 1; }
+                for want in tw textweaver textweaver-gui textweaver-eci-host textweaver-dectalk-host GUI.md lexicon/lexicon-en.twlex share/applications/textweaver.desktop share/applications/textweaver-gui.desktop THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/xilem/LICENSE; do
+                  test -e "$dir/$want" || { echo "Fail: the package lacks $want"; exit 1; }
                 done
+                test "$(readlink "$dir/textweaver")" = tw || { echo "Fail: textweaver is not a link to tw"; exit 1; }
                 "$dir/textweaver-gui" --version
                 "$dir/textweaver-gui" --screenshot /tmp/gui-check.png fixtures/sample.md
                 test -s /tmp/gui-check.png
               done
-              for tarball in target/dist/textweaver-*-linux-"$ARCH"-gui.tar.gz; do
-                tar -tzf "$tarball" | grep -q "/textweaver-gui$" || { echo "Fail: the GUI tarball lacks textweaver-gui"; exit 1; }
+              for tarball in target/dist/textweaver-*-linux-"$ARCH".tar.gz; do
+                tar -tzvf "$tarball" | grep -q "/textweaver -> tw$" || { echo "Fail: the tarball lacks the textweaver link"; exit 1; }
+                tar -tzf "$tarball" | grep -q "/textweaver-gui$" || { echo "Fail: the tarball lacks textweaver-gui"; exit 1; }
               done
-              for image in target/dist/textweaver-*-linux-"$ARCH"-gui.AppImage; do
+              for image in target/dist/textweaver-*-linux-"$ARCH".AppImage; do
                 "$image" --version
+                "$image" --gui --version
+              done
+              for zsync in target/dist/textweaver-*-linux-"$ARCH".AppImage.zsync; do
+                cmp "$zsync" "${zsync%.AppImage.zsync}-gui.AppImage.zsync"
               done
             '
       # The terminal tarball unpacked in a clean Debian container started
@@ -359,7 +331,7 @@ jobs:
         run: bash tools/clean-install-smoke.sh target/dist debian:stable-slim | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Package summary
         run: |
-          for f in target/dist/textweaver-*-linux-${{ matrix.arch }}.* target/dist/textweaver-*-linux-${{ matrix.arch }}-gui.*; do
+          for f in target/dist/textweaver-*-linux-${{ matrix.arch }}.*; do
             echo "Linux package: $(basename "$f"), $(du -m "$f" | cut -f1) MB" | tee -a "$GITHUB_STEP_SUMMARY"
           done
       # Exactly the files this job uploads: none missing, no stray one.
@@ -372,18 +344,14 @@ jobs:
           subject-path: |
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage
             target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
-            target/dist/textweaver-*-linux-${{ matrix.arch }}-gui.AppImage
-            target/dist/textweaver-*-linux-${{ matrix.arch }}-gui.tar.gz
       - name: Upload to the release
         if: env.DRY_RUN != 'true'
         run: |
           tools/release-upload.sh --no-sums "$TAG" \
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage \
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage.zsync \
-            target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz \
-            target/dist/textweaver-*-linux-${{ matrix.arch }}-gui.AppImage \
             target/dist/textweaver-*-linux-${{ matrix.arch }}-gui.AppImage.zsync \
-            target/dist/textweaver-*-linux-${{ matrix.arch }}-gui.tar.gz
+            target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
       - name: Keep the packages (dry run)
         if: env.DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
@@ -392,8 +360,6 @@ jobs:
           path: |
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage
             target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
-            target/dist/textweaver-*-linux-${{ matrix.arch }}-gui.AppImage
-            target/dist/textweaver-*-linux-${{ matrix.arch }}-gui.tar.gz
 
   checksums:
     name: SHA256SUMS.txt

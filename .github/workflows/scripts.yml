@@ -94,7 +94,9 @@ jobs:
           $out = & powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1 --dry-run --yes --release v0.1.0-alpha.9 --gui
           if ($LASTEXITCODE -ne 0) { throw 'install-windows.ps1 --gui failed' }
           $out
-          foreach ($want in 'windows-x86_64-gui.zip', 'textweaver window.lnk') {
+          # Since beta 1 the app is in the package (B1-o2): -Gui adds the
+          # manifest line and the shortcut, and downloads nothing more.
+          foreach ($want in 'gui=package', 'textweaver window.lnk') {
             if (-not ($out | Select-String -SimpleMatch $want)) { throw "install-windows.ps1 --gui did not mention $want" }
           }
       - name: Dry runs in PowerShell 7
@@ -143,12 +145,13 @@ jobs:
           grep -F 'SHA256SUMS.txt' release.txt
           bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.9 --appimage | grep -F 'linux-x86_64.AppImage'
           bash scripts/install-linux.sh --dry-run --yes --release latest | grep -F 'api.github.com'
-          # --gui: the GUI package of the same kind, its link, and its menu
-          # entry; and never from source.
+          # --gui: since beta 1 the app is in the same package (B1-o2), so
+          # its link points into it, with its menu entry; and never from
+          # source.
           bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.9 --tarball --gui | tee gui.txt
-          grep -F 'textweaver-0.1.0-alpha.9-linux-x86_64-gui.tar.gz' gui.txt
+          grep -F 'ln -sfn ../lib/textweaver/textweaver-gui' gui.txt
           grep -F 'textweaver-gui.desktop' gui.txt
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.9 --appimage --gui | grep -F 'linux-x86_64-gui.AppImage'
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-alpha.9 --appimage --gui | grep -E 'ln -sfn textweaver.AppImage .*/textweaver-gui$'
           if bash scripts/install-linux.sh --dry-run --yes --gui > /dev/null 2>&1; then echo 'Fail: --gui without --release should stop'; exit 1; fi
           bash scripts/install-linux.sh --dry-run --yes --uninstall | grep -F 'textweaver-gui'
           bash scripts/doctor.sh --dry-run
@@ -166,7 +169,9 @@ jobs:
           /bin/bash --version | head -n 1
           /bin/bash scripts/install-macos.sh --dry-run --yes
           /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-alpha.9
-          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-alpha.9 --gui | grep -F 'macos-universal-gui.zip'
+          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-alpha.9 --gui | tee gui.txt
+          grep -F 'macos-universal.zip' gui.txt
+          grep -F 'textweaver.app, from the package' gui.txt
           /bin/bash scripts/install-macos.sh --dry-run --yes --from-source
           /bin/bash scripts/install-macos.sh --dry-run --yes --uninstall
           /bin/bash scripts/doctor.sh
