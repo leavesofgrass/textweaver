@@ -213,8 +213,7 @@ impl Graph {
         for ((d, path), key) in docs.iter().zip(&paths).zip(&keys) {
             for n in &d.notes {
                 let k = (key.clone(), n.id.clone());
-                if b.index.contains_key(&k) || (n.relations.is_empty() && !targeted.contains(&k))
-                {
+                if b.index.contains_key(&k) || (n.relations.is_empty() && !targeted.contains(&k)) {
                     continue;
                 }
                 let node = GraphNode {
@@ -701,7 +700,12 @@ mod tests {
                 continue;
             }
             let want = std::fs::read_to_string(&path).unwrap();
-            assert_eq!(text, want, "{} differs from its golden file", path.display());
+            assert_eq!(
+                text,
+                want,
+                "{} differs from its golden file",
+                path.display()
+            );
         }
     }
 }
