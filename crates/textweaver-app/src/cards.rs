@@ -699,8 +699,11 @@ impl App {
             Some(ListKind::Notes) if c.eq_ignore_ascii_case(&'c') => {
                 Some(self.card_from_list_item(true, n))
             }
-            Some(ListKind::Highlights) if c.eq_ignore_ascii_case(&'c') => {
-                Some(self.card_from_list_item(false, n))
+            Some(ListKind::Highlights(f)) if c.eq_ignore_ascii_case(&'c') => {
+                // The row is one of the shown (perhaps filtered) highlights.
+                let f = f.clone();
+                let i = self.highlight_at_row(f.as_deref(), n)?;
+                Some(self.card_from_list_item(false, i))
             }
             Some(ListKind::Reveal(l)) if self.is_session_list(l) => {
                 if let Some(grade) = Grade::from_key(c) {
