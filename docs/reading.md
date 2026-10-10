@@ -461,7 +461,7 @@ Each step says the part and its role, such as "numerator, a plus b", and highlig
 
 ## Summaries
 
-A summary is a short list of the sentences that best stand for a text: the ones that share the most words with the rest of it. textweaver picks them itself, on your computer, with no model and no download (the method is LexRank; see [ADR-0037](adr/0037-extractive-summaries.md)). The sentences are the document's own, word for word, in the order they appear.
+A summary is a short list of the sentences that best stand for a text: the ones that share the most words with the rest of it. textweaver picks them itself, on your computer, with no model and no download (the method is LexRank; see [ADR-0037](adr/0037-extractive-summaries.md)). The sentences are the document's own, word for word, in the order they appear. A summary is for previewing a text before you read it and for finding your way back to a passage; no study shows that reading summaries in place of the text helps you learn it.
 
 **In the reader**, open the command palette and choose **Summarize** (it has no key of its own; you can give it one in the key settings). What it summarizes:
 

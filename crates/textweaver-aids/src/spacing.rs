@@ -153,8 +153,10 @@ impl TextSpacing {
         }
     }
 
-    /// More room than WCAG's values, often preferred by readers with
-    /// dyslexia or low vision.
+    /// More room than WCAG's values. Wider line and word spacing helped
+    /// readers with macular disease in one study, and wider letter spacing
+    /// helped some children with dyslexia; neither is a promise for any
+    /// one reader.
     pub fn generous() -> Self {
         TextSpacing {
             line_height: 2.0,

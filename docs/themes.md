@@ -67,7 +67,7 @@ Dark themes:
 9. Tokyo Night.
 10. Catppuccin Mocha: soft pastels.
 11. Monokai.
-12. Amber: amber on near black, with little blue light.
+12. Amber: amber text on near black.
 13. Everforest Dark: soft greens.
 14. Rose Pine: muted rose and pine.
 15. Kanagawa.
@@ -79,7 +79,7 @@ Light themes:
 2. One Light.
 3. Light: star's original light theme.
 4. Solarized Light.
-5. Sepia: warm paper tones for long reading.
+5. Sepia: dark brown text on warm, paper-colored tones.
 6. Gruvbox Light.
 
 High-contrast themes, where every text color reaches 7 to 1 or more:
