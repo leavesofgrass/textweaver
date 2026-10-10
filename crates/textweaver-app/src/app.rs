@@ -387,6 +387,16 @@ pub struct App {
     pub(crate) slow_repeat: bool,
     /// `[reading] stop_after_minutes`: the reading timer.
     pub(crate) reading_timer: crate::playback::ReadingTimer,
+    /// The open DAISY book's recording, once looked for (crate::book_audio).
+    pub(crate) book_audio: Option<crate::book_audio::Found>,
+    /// The speech service holds phrases that play a recording.
+    pub(crate) recorded_set: bool,
+    /// The current reading plays a book's recording.
+    pub(crate) recorded_reading: bool,
+    /// "Rate changes do not apply to recorded audio" was said.
+    pub(crate) book_rate_said: bool,
+    /// Plays books' recordings; the output device unless set.
+    pub(crate) clip_player: Option<textweaver_speech::PlayerFactory>,
     /// The backend's capabilities as last reported.
     pub(crate) speech_caps: textweaver_speech::Caps,
     pub(crate) view: Viewport,
@@ -587,6 +597,11 @@ impl App {
             section_end: None,
             slow_repeat: false,
             reading_timer: crate::playback::ReadingTimer::default(),
+            book_audio: None,
+            recorded_set: false,
+            recorded_reading: false,
+            book_rate_said: false,
+            clip_player: None,
             speech_caps,
             view: Viewport::default(),
             self_voicing: config.self_voicing,
@@ -2049,6 +2064,7 @@ impl App {
             A::ReadingStatistics => return self.reading_statistics(),
             A::SettingsProfiles => return self.settings_profiles(),
             A::ToggleCitations => self.toggle_citations(),
+            A::ToggleBookAudio => self.toggle_book_audio(),
             A::ExploreMath => self.explore_math(),
             // Navigation
             A::NextSentence => self.next_sentence(),

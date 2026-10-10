@@ -155,6 +155,7 @@ mod audio_export;
 mod authoring;
 mod authoring_state;
 mod batch;
+mod book_audio;
 mod braille_file;
 pub mod browse;
 pub mod changes;

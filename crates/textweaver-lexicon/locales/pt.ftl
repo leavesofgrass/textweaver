@@ -681,6 +681,7 @@ action-document-overview = Dizer o título do documento, quantos títulos, tabel
 action-reading-pass = Mudar o que a leitura diz: o texto inteiro, a primeira frase de cada parágrafo com os títulos, ou só os títulos
 action-define-word = Definir a palavra no cursor, ou as palavras selecionadas: sentidos, exemplos, sinônimos e pronúncia
 action-toggle-citations = Ligar ou desligar as citações na leitura contínua: desligado as ignora, ligado as diz por extenso
+action-toggle-book-audio = Alternar um livro falado entre a narração gravada e a voz
 action-explore-math = Explorar a matemática no cursor, termo por termo: as setas movem, para baixo entra em uma parte, para cima sai, Escape sai
 action-listen-rendered = Ouvir o documento como ele será renderizado, sem sair do modo de edição
 action-next-sentence = Mover para a próxima frase
@@ -1521,6 +1522,9 @@ links-footnote-no-note = A nota de rodapé { $label } não tem nota.
 
 citations-on = Citações ligadas.
 citations-off = Citações desligadas.
+book-audio-on = Áudio do livro ligado. A gravação toca onde o livro tem uma.
+book-audio-off = Áudio do livro desligado. A voz lê o livro.
+book-audio-rate = As mudanças de velocidade não se aplicam ao áudio gravado.
 # $key names the Add Reference command's keys.
 citations-library-empty = Sua biblioteca de referências está vazia. Adicione uma referência por DOI ou ISBN com { $key }, ou execute importar referências na paleta de comandos.
 # $n is how many references the picker lists.
@@ -1992,6 +1996,10 @@ setting-reading-stop-after-minutes = Temporizador de leitura
 setting-reading-stop-after-minutes-help = A leitura contínua para no fim da frase após estes minutos de leitura, e avisa. Pausar para o relógio; parar recomeça a contagem. 0 desliga o temporizador.
 setting-reading-recall-prompts = Perguntas de recordação
 setting-reading-recall-prompts-help = No fim de uma seção, a leitura pede que você diga o que lembra. Se Parar no fim da seção for nunca, a leitura para no próximo cabeçalho para isso. A leitura continua com a tecla de ler.
+setting-reading-book-audio = Áudio do livro
+setting-reading-book-audio-help = O que lê um livro falado DAISY que tem gravação. A narração gravada, com o destaque acompanhando e a voz lendo o texto sem áudio, ou só a voz. As mudanças de velocidade não se aplicam à gravação.
+choice-reading-book-audio-auto = narração gravada
+choice-reading-book-audio-speech = só voz
 setting-display-theme = Tema
 setting-display-theme-help = O tema de cores.
 setting-display-follow-os-theme = Seguir o tema do sistema
@@ -3311,6 +3319,7 @@ name-reading-pass = Passagem de leitura
 name-define-word = Definir palavra
 name-summarize = Resumir
 name-toggle-citations = Ler citações
+name-toggle-book-audio = Áudio do livro
 name-explore-math = Explorar matemática
 name-listen-rendered = Ouvir como renderizado
 name-next-sentence = Próxima frase

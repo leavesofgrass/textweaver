@@ -701,6 +701,7 @@ action-document-overview = Den Titel des Dokuments sagen, wie viele Überschrift
 action-reading-pass = Ändern, was das Lesen sagt: den ganzen Text, den ersten Satz jedes Absatzes mit den Überschriften oder nur die Überschriften
 action-define-word = Das Wort am Cursor oder die ausgewählten Wörter definieren: Bedeutungen, Beispiele, Synonyme und Aussprache
 action-toggle-citations = Zitate beim fortlaufenden Lesen ein- oder ausschalten: aus überspringt sie, an sagt sie in Worten
+action-toggle-book-audio = Bei einem Hörbuch zwischen seiner Aufnahme und der Sprachausgabe wechseln
 action-explore-math = Die Mathematik am Cursor Term für Term erkunden: Pfeile bewegen, Ab geht in einen Teil hinein, Auf kommt heraus, Escape verlässt
 action-listen-rendered = Dem Dokument zuhören, wie es dargestellt wird, ohne den Bearbeitungsmodus zu verlassen
 action-next-sentence = Zum nächsten Satz bewegen
@@ -1541,6 +1542,9 @@ links-footnote-no-note = Fußnote { $label } hat keine Notiz.
 
 citations-on = Zitate an.
 citations-off = Zitate aus.
+book-audio-on = Hörbuchaufnahme an. Die Aufnahme spielt, wo das Buch eine hat.
+book-audio-off = Hörbuchaufnahme aus. Die Sprachausgabe liest das Buch.
+book-audio-rate = Das Tempo gilt nicht für aufgenommenes Audio.
 # $key names the Add Reference command's keys.
 citations-library-empty = Ihre Literaturbibliothek ist leer. Fügen Sie eine Literaturangabe per DOI oder ISBN hinzu mit { $key }, oder führen Sie Literaturangaben importieren aus der Befehlspalette aus.
 # $n is how many references the picker lists.
@@ -2012,6 +2016,10 @@ setting-reading-stop-after-minutes = Lese-Timer
 setting-reading-stop-after-minutes-help = Fortlaufendes Lesen hält nach so vielen Minuten Lesen am Satzende an und sagt es. Pause hält die Uhr an; Stopp beginnt neu. 0 schaltet den Timer aus.
 setting-reading-recall-prompts = Erinnerungsfragen
 setting-reading-recall-prompts-help = Am Abschnittsende bittet das Lesen Sie, zu sagen, was Sie behalten haben. Ist Am Abschnittsende anhalten auf nie, hält das Lesen dafür bei der nächsten Überschrift. Mit der Lesetaste geht es weiter.
+setting-reading-book-audio = Hörbuchaufnahme
+setting-reading-book-audio-help = Was ein DAISY-Hörbuch mit Aufnahme liest. Seine aufgenommene Sprecherstimme, mit der Hervorhebung dazu und der Sprachausgabe für Text ohne Audio, oder nur die Sprachausgabe. Das Tempo gilt nicht für die Aufnahme.
+choice-reading-book-audio-auto = Aufnahme
+choice-reading-book-audio-speech = nur Sprachausgabe
 setting-display-theme = Design
 setting-display-theme-help = Das Farbdesign.
 setting-display-follow-os-theme = Dem Systemdesign folgen
@@ -3319,6 +3327,7 @@ name-reading-pass = Lesedurchgang
 name-define-word = Wort erklären
 name-summarize = Zusammenfassen
 name-toggle-citations = Zitate lesen
+name-toggle-book-audio = Hörbuchaufnahme
 name-explore-math = Mathematik erkunden
 name-listen-rendered = Wie dargestellt anhören
 name-next-sentence = Nächster Satz

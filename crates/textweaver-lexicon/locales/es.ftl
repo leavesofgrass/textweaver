@@ -665,6 +665,7 @@ action-document-overview = Decir el título del documento, cuántos encabezados,
 action-reading-pass = Cambiar lo que dice la lectura: el texto completo, la primera oración de cada párrafo con los encabezados, o solo los encabezados
 action-define-word = Definir la palabra en el cursor, o las palabras seleccionadas: acepciones, ejemplos, sinónimos y pronunciación
 action-toggle-citations = Activar o desactivar las citas en la lectura continua: desactivado las omite, activado las dice en palabras
+action-toggle-book-audio = Cambiar un libro hablado entre su narración grabada y la voz
 action-explore-math = Explorar las matemáticas en el cursor, término por término: las flechas mueven, Abajo entra en una parte, Arriba sale, Escape termina
 action-listen-rendered = Escuchar el documento tal como se representará, sin salir del modo de edición
 action-next-sentence = Ir a la oración siguiente
@@ -1505,6 +1506,9 @@ links-footnote-no-note = La nota al pie { $label } no tiene nota.
 
 citations-on = Citas activadas.
 citations-off = Citas desactivadas.
+book-audio-on = Audio del libro activado. La grabación suena donde el libro la tiene.
+book-audio-off = Audio del libro desactivado. La voz lee el libro.
+book-audio-rate = Los cambios de velocidad no se aplican al audio grabado.
 # $key names the Add Reference command's keys.
 citations-library-empty = Su biblioteca de referencias está vacía. Agregue una referencia por DOI o ISBN con { $key }, o ejecute importar referencias desde la paleta de comandos.
 # $n is how many references the picker lists.
@@ -1976,6 +1980,10 @@ setting-reading-stop-after-minutes = Temporizador de lectura
 setting-reading-stop-after-minutes-help = La lectura continua se detiene al final de la oración tras estos minutos de lectura, y lo dice. Pausar detiene el reloj; detener lo reinicia. 0 apaga el temporizador.
 setting-reading-recall-prompts = Preguntas de recuerdo
 setting-reading-recall-prompts-help = Al final de una sección, la lectura le pide que diga lo que recuerda. Si Detenerse al final de la sección es nunca, la lectura se detiene para ello en el siguiente encabezado. La lectura sigue con la tecla de leer.
+setting-reading-book-audio = Audio del libro
+setting-reading-book-audio-help = Qué lee un libro hablado DAISY que tiene grabación. Su narración grabada, con el resaltado siguiéndola y la voz leyendo el texto sin audio, o solo la voz. Los cambios de velocidad no se aplican a la grabación.
+choice-reading-book-audio-auto = narración grabada
+choice-reading-book-audio-speech = solo voz
 setting-display-theme = Tema
 setting-display-theme-help = El tema de color.
 setting-display-follow-os-theme = Seguir el tema del sistema
@@ -3295,6 +3303,7 @@ name-reading-pass = Pasada de lectura
 name-define-word = Definir palabra
 name-summarize = Resumir
 name-toggle-citations = Leer citas
+name-toggle-book-audio = Audio del libro
 name-explore-math = Explorar matemáticas
 name-listen-rendered = Escuchar como se verá
 name-next-sentence = Oración siguiente
