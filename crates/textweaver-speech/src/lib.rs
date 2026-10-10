@@ -15,6 +15,8 @@
 //!   gap that stands in for a structural pause.
 //! - [`pauses`]: pauses at the ends of headings, paragraphs and list items,
 //!   as silence or a timed gap.
+//! - [`recorded`]: recorded audio (a DAISY book's narration) played in
+//!   place of speech for the phrases that have it.
 //! - [`backends`]: `null`, `recording` (a test double, always compiled),
 //!   `espeak` (feature `espeak`), `omnivox` (feature `omnivox`),
 //!   `speechd` (feature `speechd`: speech-dispatcher with an index mark
@@ -32,6 +34,7 @@ pub mod normalize;
 pub mod pacing;
 pub mod pauses;
 pub mod queue;
+pub mod recorded;
 pub mod service;
 pub mod voices;
 pub mod wav;
@@ -47,6 +50,7 @@ pub use backends::{
 pub use normalize::{NormalizeConfig, Pipeline, TableMode};
 pub use pacing::{Clock, FakeClock, PacingConfig, SystemClock};
 pub use pauses::{PauseAt, PauseConfig, PauseKind, PausePlan};
+pub use recorded::{ClipPlayer, PlayerFactory, RecordedClip, RecordedPar, RecordedPlan};
 pub use service::{
     Earcon, FirstAudio, FirstAudioStamp, ReadingGeneration, SayMode, ServiceConfig, ServiceCore,
     SpeechService, SpeechStatus, Waker,

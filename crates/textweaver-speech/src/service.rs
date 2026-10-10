@@ -74,6 +74,7 @@ use crate::pacing::{
 };
 use crate::pauses::{PauseAt, PauseConfig, PausePlan};
 use crate::queue::{DEFAULT_LOOKAHEAD, Generation, ReadingQueue};
+use crate::recorded::{Mixed, RecordedPlan};
 use crate::voices::{VoiceCache, VoiceList};
 
 /// How `say` interacts with speech in progress.
@@ -440,6 +441,7 @@ enum Command {
     SetNormalization(Box<NormalizeConfig>),
     SetPacing(PacingConfig),
     SetPauses(PauseConfig),
+    SetRecorded(Option<Arc<RecordedPlan>>),
     SpeakChar(char, Option<CharPos>),
     Preview(String, String),
     Tone(f32, u32),
@@ -746,6 +748,13 @@ impl SpeechService {
     pub fn set_pauses(&self, pauses: PauseConfig) {
         self.post(Command::SetPauses(pauses));
     }
+    /// Sets the phrases of the next reading that play recorded audio
+    /// instead of speech (a DAISY book's narration), or `None` for speech
+    /// only. Send it before [`read`](Self::read): the reading that follows
+    /// uses it. See [`crate::recorded`].
+    pub fn set_recorded(&self, plan: Option<Arc<RecordedPlan>>) {
+        self.post(Command::SetRecorded(plan));
+    }
     /// Speaks one character (scaled rate, caps indication), optionally
     /// mapped to a document position.
     pub fn speak_char(&self, c: char, at: Option<CharPos>) {
@@ -1023,7 +1032,8 @@ enum PauseState {
 /// backend, run timers), then [`take_statuses`](Self::take_statuses).
 /// [`next_wakeup`](Self::next_wakeup) says when to step again.
 pub struct ServiceCore {
-    backend: Box<dyn SpeechBackend>,
+    /// The engine, inside the layer that plays recorded audio.
+    backend: Mixed,
     caps: Caps,
     clock: PlaybackClock,
     config: ServiceConfig,
@@ -1121,7 +1131,7 @@ impl ServiceCore {
             caps.contains(Caps::NATIVE_NORMALIZATION),
         );
         let mut core = ServiceCore {
-            backend,
+            backend: Mixed::new(backend),
             caps,
             clock: PlaybackClock::new(clock),
             params: config.params.clone(),
@@ -1308,6 +1318,7 @@ impl ServiceCore {
             Command::SetNormalization(c) => self.set_normalization(*c),
             Command::SetPacing(p) => self.set_pacing(p),
             Command::SetPauses(p) => self.set_pauses(p),
+            Command::SetRecorded(plan) => self.set_recorded(plan),
             Command::SpeakChar(c, at) => self.speak_char(c, at),
             Command::Preview(voice, text) => self.preview(&voice, &text),
             Command::Tone(hz, ms) => self.tone(hz, ms),
@@ -1766,6 +1777,13 @@ impl ServiceCore {
     /// on use them.
     pub fn set_pauses(&mut self, pauses: PauseConfig) {
         self.config.pauses = pauses;
+    }
+
+    /// Sets the phrases that play recorded audio (see
+    /// [`SpeechService::set_recorded`]).
+    pub fn set_recorded(&mut self, plan: Option<Arc<RecordedPlan>>) {
+        self.backend.set_recorded(plan);
+        self.refresh_caps();
     }
 
     // ---- the engine loop --------------------------------------------------
