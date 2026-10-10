@@ -255,7 +255,7 @@ ctrlc = { version = "3.4", features = ["termination"] }
 # and rten-tensor are declared with W3f's entries below), with PDF pages
 # rendered by hayro. Models download at run time, after the user confirms,
 # and are checked by SHA-256.
-rten-imageproc = "0.26.0"
+rten-imageproc = "0.27.0"
 ocrs = { version = "0.13.1", default-features = false, features = ["onnx"] }
 # Embedded fonts and CMaps are off: OCR renders pages that have no text.
 hayro = { version = "0.7.1", default-features = false }
