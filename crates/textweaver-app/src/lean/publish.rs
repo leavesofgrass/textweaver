@@ -36,6 +36,21 @@ impl App {
         vec![Effect::Redraw]
     }
 
+    /// The Export as prompt is never opened in this build.
+    pub(crate) fn answer_export_as(&mut self, _text: &str) -> Vec<Effect> {
+        vec![Effect::Redraw]
+    }
+
+    /// The replace question is never asked in this build.
+    pub(crate) fn export_replace_confirmed(&mut self, _out: std::path::PathBuf) -> Vec<Effect> {
+        vec![Effect::Redraw]
+    }
+
+    /// The replace question is never asked in this build.
+    pub(crate) fn export_not_replaced(&mut self, _out: std::path::PathBuf) -> Vec<Effect> {
+        vec![Effect::Redraw]
+    }
+
     /// The theme question is never asked in this build.
     pub(crate) fn choose_html_theme(
         &mut self,

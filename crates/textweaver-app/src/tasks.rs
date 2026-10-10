@@ -175,6 +175,17 @@ impl App {
             (Question::ReplaceAll(question), answer) => {
                 return self.confirm_replace_all(question, answer);
             }
+            (Question::ReplaceExport(path, _), Confirm::Yes) => {
+                self.authoring.question = None;
+                return self.export_replace_confirmed(path);
+            }
+            (Question::ReplaceExport(path, _), Confirm::No) => {
+                self.authoring.question = None;
+                return self.export_not_replaced(path);
+            }
+            (Question::ReplaceExport(_, question), Confirm::Repeat) => {
+                self.ask(&question);
+            }
         }
         vec![Effect::Redraw]
     }

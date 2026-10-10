@@ -736,6 +736,12 @@ impl App {
                 DiskQuestion::Reload { .. } => None,
             };
         }
+        if matches!(
+            self.authoring.question,
+            Some(crate::authoring_state::Question::ReplaceExport(..))
+        ) {
+            return Some(V::Replace);
+        }
         if self.pending_import.is_some() || self.authoring.question.is_some() {
             return None;
         }
@@ -1789,6 +1795,7 @@ impl App {
     fn answer_prompt(&mut self, purpose: PromptPurpose, text: &str) -> Vec<Effect> {
         match purpose {
             PromptPurpose::SaveAs => return self.answer_save_as(text),
+            PromptPurpose::ExportAs => return self.answer_export_as(text),
             PromptPurpose::TableSize => return self.answer_table(text),
             PromptPurpose::ImagePath => return self.answer_image(text),
             PromptPurpose::ExportSettings => return self.answer_export_settings(text),

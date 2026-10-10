@@ -213,6 +213,7 @@ fn purpose_name(p: PromptPurpose) -> &'static str {
         PromptPurpose::Open => "open",
         PromptPurpose::CommandPalette => "command_palette",
         PromptPurpose::SaveAs => "save_as",
+        PromptPurpose::ExportAs => "export_as",
         PromptPurpose::TableSize => "table_size",
         PromptPurpose::ImagePath => "image_path",
         PromptPurpose::ReplaceFind => "replace_find",
@@ -1176,12 +1177,13 @@ mod tests {
 
     /// Every prompt purpose and its protocol name: a change here is a
     /// protocol change, so clients are told (see the protocol version rule).
-    const PURPOSES: [(PromptPurpose, &str); 28] = [
+    const PURPOSES: [(PromptPurpose, &str); 29] = [
         (PromptPurpose::Find, "find"),
         (PromptPurpose::GoTo, "go_to"),
         (PromptPurpose::Open, "open"),
         (PromptPurpose::CommandPalette, "command_palette"),
         (PromptPurpose::SaveAs, "save_as"),
+        (PromptPurpose::ExportAs, "export_as"),
         (PromptPurpose::TableSize, "table_size"),
         (PromptPurpose::ImagePath, "image_path"),
         (PromptPurpose::ReplaceFind, "replace_find"),
@@ -1208,7 +1210,7 @@ mod tests {
     ];
 
     #[test]
-    fn the_28_purpose_names_are_pinned() {
+    fn the_29_purpose_names_are_pinned() {
         let mut seen = std::collections::HashSet::new();
         for (p, name) in PURPOSES {
             assert_eq!(purpose_name(p), name, "{p:?}");
@@ -1220,6 +1222,7 @@ mod tests {
                 | PromptPurpose::Open
                 | PromptPurpose::CommandPalette
                 | PromptPurpose::SaveAs
+                | PromptPurpose::ExportAs
                 | PromptPurpose::TableSize
                 | PromptPurpose::ImagePath
                 | PromptPurpose::ReplaceFind
@@ -1257,7 +1260,7 @@ mod tests {
         for (_, name) in PURPOSES {
             assert!(guide.contains(&format!("`{name}`")), "{name} missing");
         }
-        assert!(guide.contains("28 purposes"));
+        assert!(guide.contains("29 purposes"));
     }
 
     /// The messages `read_messages` passes on for `input`, with their

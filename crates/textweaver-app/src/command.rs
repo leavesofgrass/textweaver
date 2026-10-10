@@ -306,6 +306,9 @@ pub enum PromptPurpose {
     /// Answer is the file to save to; empty accepts the suggestion in the
     /// label.
     SaveAs,
+    /// Answer is the file to export the document to; empty accepts the
+    /// suggestion in the label (the document's name, in its folder).
+    ExportAs,
     /// Answer is a table size such as `3 by 2` (columns by rows); empty is
     /// 2 by 2.
     TableSize,
@@ -370,6 +373,7 @@ impl PromptPurpose {
             PromptPurpose::Open => "Open file",
             PromptPurpose::CommandPalette => "Command",
             PromptPurpose::SaveAs => "Save as",
+            PromptPurpose::ExportAs => "Export as",
             PromptPurpose::TableSize => "Table size, columns by rows, for example 3 by 2",
             PromptPurpose::ImagePath => "Image file",
             PromptPurpose::ReplaceFind => "Replace, find what",

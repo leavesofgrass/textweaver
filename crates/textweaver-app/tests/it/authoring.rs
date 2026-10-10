@@ -543,6 +543,7 @@ fn y_and_n_answer_open_it_while_a_list_is_shown() {
     let path = r.open("essay.md", ESSAY);
     r.act(ActionId::ExportHtml);
     r.send(Command::Choose(0));
+    r.send(Command::Answer(String::new()));
     r.wait();
     assert!(r.app.confirmation_pending());
     r.act(ActionId::Outline);
@@ -555,6 +556,9 @@ fn y_and_n_answer_open_it_while_a_list_is_shown() {
 
     r.act(ActionId::ExportHtml);
     r.send(Command::Choose(0));
+    r.send(Command::Answer(String::new()));
+    // The first export is there: replaced after a yes.
+    r.send(Command::Confirm(Confirm::Yes));
     r.wait();
     r.act(ActionId::Outline);
     // Another letter moves in the list; the question still waits.
@@ -569,8 +573,10 @@ fn y_and_n_answer_open_it_while_a_list_is_shown() {
     assert!(r.app.list_model().is_some(), "the list stays open");
 }
 
+/// Export asks where, as Save as does (B1-q1): Enter takes the document's
+/// name with the format's extension in its folder, and offers to open it.
 #[test]
-fn exports_go_next_to_the_document_and_offer_to_open() {
+fn exports_ask_where_offering_the_documents_folder() {
     let mut r = Rig::new();
     let path = r.open("essay.md", ESSAY);
     for (action, ext) in [
@@ -584,6 +590,14 @@ fn exports_go_next_to_the_document_and_offer_to_open() {
             // The theme question: the reading theme, first.
             r.send(Command::Choose(0));
         }
+        let offered = path.with_extension(ext).display().to_string();
+        assert!(
+            r.status()
+                .starts_with(&format!("Export as, Enter for {offered}")),
+            "{}",
+            r.status()
+        );
+        r.send(Command::Answer(String::new()));
         r.wait();
         let out = path.with_extension(ext);
         assert!(out.is_file(), "{}", out.display());
@@ -617,9 +631,31 @@ fn exports_go_next_to_the_document_and_offer_to_open() {
         assert!(r.app.confirmation_pending());
         r.send(Command::Confirm(Confirm::No));
     }
-    // Yes opens it with the default program.
+    // The file is there now: replace it? No asks for another name, and a
+    // name alone goes in the same folder with the format's extension.
     r.act(ActionId::ExportHtml);
     r.send(Command::Choose(0));
+    r.send(Command::Answer(String::new()));
+    assert!(
+        r.status()
+            .starts_with("essay.html already exists. Replace it? y or n"),
+        "{}",
+        r.status()
+    );
+    r.send(Command::Confirm(Confirm::No));
+    r.send(Command::Answer("handout".into()));
+    r.wait();
+    assert!(path.with_file_name("handout.html").is_file());
+    r.send(Command::Confirm(Confirm::No));
+    // Never over the document itself.
+    r.act(ActionId::ExportDocx);
+    r.send(Command::Answer("essay.md".into()));
+    assert!(r.status().contains("Not exported: that is"), "{}", r.status());
+    // Yes replaces it, and yes again opens it with the default program.
+    r.act(ActionId::ExportHtml);
+    r.send(Command::Choose(0));
+    r.send(Command::Answer(String::new()));
+    r.send(Command::Confirm(Confirm::Yes));
     r.wait();
     r.send(Command::Confirm(Confirm::Yes));
     assert_eq!(
@@ -632,6 +668,8 @@ fn exports_go_next_to_the_document_and_offer_to_open() {
     r.type_text("Unsaved words. ");
     r.act(ActionId::ExportHtml);
     r.send(Command::Choose(0));
+    r.send(Command::Answer(String::new()));
+    r.send(Command::Confirm(Confirm::Yes));
     r.wait();
     r.send(Command::Confirm(Confirm::No));
     let html = std::fs::read_to_string(path.with_extension("html")).unwrap();

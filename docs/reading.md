@@ -687,7 +687,7 @@ File, Recent documents lists the last documents you opened, with your place in e
 
 ## What does this key do: Shift+F1
 
-Press **Shift+F1**, then any key: you hear what the key does, its keys, and where the command is in the menus ("Export PDF: Export the document as a tagged PDF next to it. Keys: the command palette. In the menus: File, Export as, Export PDF."). The key is not run.
+Press **Shift+F1**, then any key: you hear what the key does, its keys, and where the command is in the menus ("Export PDF: Export the document as a tagged PDF, choosing where to save it. Keys: the command palette. In the menus: File, Export as, Export PDF."). The key is not run.
 
 ## The Help menu
 

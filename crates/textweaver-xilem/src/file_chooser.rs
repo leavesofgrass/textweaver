@@ -252,6 +252,7 @@ mod tests {
         for p in [
             P::Open,
             P::SaveAs,
+            P::ExportAs,
             P::ImagePath,
             P::ImportReferences,
             P::ImportSettings,

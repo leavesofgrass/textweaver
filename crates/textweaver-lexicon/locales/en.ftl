@@ -488,6 +488,7 @@ prompt-command = Command
 # $label is prompt-command.
 prompt-command-palette-intro = { $label }. Type part of a name; Tab completes, Up and Down list matches.
 prompt-save-as = Save as
+prompt-export-as = Export as
 prompt-table-size = Table size, columns by rows, for example 3 by 2
 prompt-image-path = Image file
 prompt-replace-find = Replace, find what
@@ -780,11 +781,11 @@ action-export-settings = Export settings and key overrides to a JSON or TOML fil
 action-import-settings = Import settings from a JSON or TOML file, after a yes or no
 action-reading-statistics = List reading statistics: time read, the furthest point, sessions, and the most read documents
 action-new-from-template = Start a new document from a template, with a title, author, date, and References heading
-action-export-html = Export the document as a web page (HTML) next to it
-action-export-pdf = Export the document as a tagged PDF next to it
-action-export-docx = Export the document as a Word file (DOCX) next to it
-action-export-epub = Export the document as an EPUB book next to it
-action-export-brf = Export the document as braille (BRF) next to it
+action-export-html = Export the document as a web page (HTML), choosing where to save it
+action-export-pdf = Export the document as a tagged PDF, choosing where to save it
+action-export-docx = Export the document as a Word file (DOCX), choosing where to save it
+action-export-epub = Export the document as an EPUB book, choosing where to save it
+action-export-brf = Export the document as braille (BRF), choosing where to save it
 action-preview-in-browser = Preview the document in the web browser, with math; each save rewrites the preview
 action-toggle-preview-auto-reload = Turn automatic reloading of the browser preview on or off
 action-toggle-preview-live = Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses
@@ -1097,6 +1098,10 @@ publish-cannot-write-to = cannot write to { $path }: { $error } Check that the f
 publish-cannot-write = cannot write { $path }: { $error } Check that its folder can be written to.
 publish-start-failed = Could not start the export: { $error } Wait a moment, then try again.
 publish-export-error = Could not export: { $error } Fix that, then export again.
+# The Export as prompt; $path is the file offered (the document's name
+# with the format's extension, in its folder).
+publish-export-as-label = Export as, Enter for { $path }
+publish-export-over-source = Not exported: that is the document itself. Choose another name.
 # $format is the format's name, such as PDF, HTML, or Word.
 publish-exporting = Exporting to { $format }.
 publish-theme-title = Theme for the HTML page

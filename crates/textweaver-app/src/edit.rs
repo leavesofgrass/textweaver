@@ -230,7 +230,7 @@ fn capitalize_first(s: &str) -> String {
 
 /// True when `a` and `b` name the same file (compared resolved when both
 /// exist, else as written).
-fn same_path(a: &Path, b: &Path) -> bool {
+pub(crate) fn same_path(a: &Path, b: &Path) -> bool {
     match (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
         (Ok(x), Ok(y)) => x == y,
         _ => a == b,

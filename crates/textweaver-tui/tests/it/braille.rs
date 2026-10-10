@@ -278,6 +278,11 @@ fn an_export_asks_before_naming_the_folder() {
     h.act(ActionId::ExportHtml);
     // "Theme for the HTML page?": Enter keeps the reading theme.
     h.press(key(KeyCode::Enter));
+    // "Export as, Enter for ...essay.html": the name is offered first.
+    h.draw();
+    let b = h.bottom_row();
+    h.forty("export as prompt", &b, "Export as, Enter for ");
+    h.press(key(KeyCode::Enter));
     assert!(
         h.tui
             .app_mut()

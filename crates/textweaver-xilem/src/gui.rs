@@ -2517,7 +2517,7 @@ impl Gui {
                     .app
                     .dispatch(Command::PromptKey(PromptKey::SetText(text)));
                 // The system save dialog already asked before replacing.
-                if purpose == PromptPurpose::SaveAs {
+                if matches!(purpose, PromptPurpose::SaveAs | PromptPurpose::ExportAs) {
                     self.app.save_as_confirmed_by_system();
                 }
                 PromptKey::Enter
