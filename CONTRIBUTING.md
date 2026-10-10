@@ -8,7 +8,7 @@ textweaver is an accessible document reader and writer for students with print d
 
 Accessibility is the product, not a feature. A change that works with a mouse and a screen, but not with a screen reader, a Braille display, or the keyboard alone, is not finished.
 
-textweaver is a Rust reimplementation of [star](https://github.com/leavesofgrass/star), an earlier reader written in Python. It is in alpha: it works, and it is changing quickly.
+textweaver is a Rust reimplementation of [star](https://github.com/leavesofgrass/star), an earlier reader written in Python. It is in beta: it works, and it is still changing.
 
 ## Ways to help
 

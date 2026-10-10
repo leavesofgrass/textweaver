@@ -12,13 +12,13 @@ This page is for people who prepare documents and computers for students: conver
 
 ## Prepare a computer
 
-- Windows: use the window package. Extract it to a folder the student can open, and run `textweaver-gui.exe`. It is not code-signed, so Windows warns once. A managed laptop may need your IT office to allow it. See [Installing textweaver](install.md).
+- Windows: use the Windows package, `textweaver-VERSION-windows-x86_64.zip`. It holds the app and the terminal program `tw`. Extract it to a folder the student can open, and run `textweaver-gui.exe`. It is not code-signed, so Windows warns once. A managed laptop may need your IT office to allow it. See [Installing textweaver](install.md).
 - The zip route only extracts files. textweaver keeps its settings and notes in your user folders, and it does not change system settings.
 - Settings can be exported and imported. See [Settings](settings.md).
 
 ## A computer without internet
 
-Some features need downloaded files: the dictation model, the OCR models, and the Lexend font. textweaver never downloads them on its own. For a computer that cannot reach the internet, download them once and install them from a zip file or a folder, or point textweaver at a mirror you keep. See [Optional components](components.md).
+Some features need downloaded files: the dictation model, the OCR models, the Lexend font, and the helper programs ffmpeg, liblouis, and Pandoc. textweaver never downloads them on its own, and it checks for updates only if the student says yes. For a computer that cannot reach the internet, download them once and install them from a zip file or a folder, or point textweaver at a mirror you keep. See [Optional components](components.md).
 
 ## Privacy
 
@@ -26,7 +26,7 @@ textweaver sends nothing unless a person asks. See [Privacy](privacy.md) for the
 
 ## Accessibility and testing
 
-What has and has not been tested is in the [accessibility statement](accessibility.md) and [Known limits](known-limits.md). textweaver is alpha software. Try it with a student before you rely on it.
+What has and has not been tested is in the [accessibility statement](accessibility.md) and [Known limits](known-limits.md). textweaver is in beta. Try it with a student before you rely on it.
 
 ## Help a student get going
 

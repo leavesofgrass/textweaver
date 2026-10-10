@@ -14,7 +14,8 @@ textweaver sends nothing over the network unless you ask it to. It has no accoun
 
 Only when you ask. Each item below happens after an action of yours.
 
-- **Optional downloads.** The dictation model, the OCR models, the Lexend font, and Piper voices are not in the packages. textweaver asks first, names the size and the license, and downloads only when you say yes. Saying no is always fine. See [Optional components](components.md).
+- **Optional downloads.** The dictation model, the OCR models, the Lexend font, Piper voices, and the helper programs ffmpeg, liblouis, and Pandoc are not in the packages. textweaver asks first, names the size and the license, and downloads only when you say yes. Saying no is always fine. See [Optional components](components.md).
+- **Update checks.** Only if you say yes to the one question about them, textweaver reads the list of releases from GitHub once a day, and Help, Check for updates and `tw update` do it when you ask. A newer release is downloaded only after another yes (`tw update` is itself the yes), and it is checked against the release's checksums. See [Updates](updates.md).
 - **Adding a reference by DOI or ISBN.** The DOI is sent to doi.org, or the ISBN to Open Library. Nothing else is sent. See [Citations](citations.md#what-is-sent-over-the-network).
 - **Opening a web page** by its address, with `tw open` or `tw text`. textweaver fetches the page you named.
 - **Opening a link** in a document. textweaver asks first, and then your browser opens it.
@@ -33,9 +34,9 @@ If you set a components mirror, textweaver reads that mirror's list of component
 ## What textweaver does not do
 
 - It does not collect telemetry.
-- It does not store a password or token.
+- It does not store a password. The one token it can keep, a GitHub token for a components source of your own, goes only into your system's credential store, and only if you type it in.
 - It does not send your documents anywhere.
-- It does not install anything outside its own data folder, or run a downloaded program.
+- It does not install anything outside its own data folder and its own program folder. An update replaces only the textweaver package you installed, and a downloaded installer starts only after you say yes.
 
 ## Reporting a problem
 

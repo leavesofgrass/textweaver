@@ -22,7 +22,7 @@ You will get an answer within a week. textweaver is maintained by one person, so
 
 ## Supported versions
 
-textweaver is in alpha. Only the newest release, and `main`, get security fixes.
+textweaver is in beta. Only the newest release, and `main`, get security fixes.
 
 ## In scope
 
