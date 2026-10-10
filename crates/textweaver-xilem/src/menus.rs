@@ -1193,6 +1193,48 @@ mod tests {
         }
     }
 
+    /// File, Export as offers the read-along page (B1-q1) in a build
+    /// with audio export, from the shared model, with nothing of the
+    /// window's own.
+    #[cfg(feature = "audio-export")]
+    #[test]
+    fn export_as_offers_the_read_along_page() {
+        let app = app();
+        let file = tree(&app)
+            .into_iter()
+            .find(|m| m.id == MenuId::File)
+            .expect("the File menu");
+        let export = items(&file.entries)
+            .into_iter()
+            .find_map(|e| match e {
+                Entry::Submenu { entries, .. }
+                    if entries.iter().any(|e| {
+                        matches!(
+                            e,
+                            Entry::Item {
+                                pick: Pick::Command(ActionId::ExportPdf),
+                                ..
+                            }
+                        )
+                    }) =>
+                {
+                    Some(entries.clone())
+                }
+                _ => None,
+            })
+            .expect("the Export as submenu");
+        assert!(
+            export.iter().any(|e| matches!(
+                e,
+                Entry::Item {
+                    pick: Pick::Command(ActionId::ExportReadAlong),
+                    ..
+                }
+            )),
+            "{export:?}"
+        );
+    }
+
     #[test]
     fn windows_text_puts_the_key_after_a_tab() {
         let app = app();
