@@ -15,7 +15,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 - **Not code-signed.** Windows warns the first time you start it. On a Mac you remove the quarantine flag once. See [Installing textweaver](install.md).
 - **No native Windows ARM64 package is planned.** On a Windows computer with an ARM processor, use the x86-64 package: Windows runs it under emulation.
-- **No update check inside the program.** Update with the scripts, or download the new release. It does tell you, once, when it has been updated.
+- **Updates are your choice.** textweaver checks for a new release only if you say yes, at most once a day, and never downloads without asking. You can also update with `tw update`, the scripts, or a new download ([Updates](updates.md)). Packages are not code-signed or notarized, so each is checked against the release checksums instead.
 - **No guided first-run tour.** The [quick start](quickstart.md) is a document you open and read.
 - **Some translations are not reviewed.** The interface has six languages. Native speakers have checked English and Spanish. German, French, Portuguese, and Arabic have not been checked yet. Feedback on any translation is welcome: use Help, Report a problem, or the [issue tracker](https://github.com/leavesofgrass/textweaver/issues).
 - **Settings, keys, and file formats may still change** between releases. Read the [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) before you update.
@@ -57,7 +57,7 @@ These limits apply to the textweaver app (`textweaver-gui`). The terminal reader
 
 ## Documentation
 
-- **The guides are being rewritten for beta 2.** Beta 1 corrects wording and fills gaps, but a full rewrite of the guides comes in beta 2. If a guide contradicts what the program does, the program is right; please report the page.
+- **If a guide contradicts what the program does, the program is right.** Please report the page, with Help, Report a problem.
 
 ## What this page does not promise
 

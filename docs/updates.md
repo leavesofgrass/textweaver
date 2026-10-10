@@ -35,7 +35,7 @@ When a newer release exists, textweaver asks, for example:
 
 The question never interrupts reading. If textweaver is reading aloud, the question waits until reading stops or pauses, and until no dialog or other question is open.
 
-Every newer release is offered, pre-release or stable, because textweaver is still moving through its alpha and beta releases.
+Every newer release is offered, pre-release or stable, because textweaver is in beta and each beta release is a pre-release.
 
 - **y** downloads it. textweaver says "Downloading the update", with its size, and then how far it has got, at most every ten seconds.
 - **n** or Escape keeps what you have. textweaver remembers that you declined this release and does not offer it again; the next newer release is offered as usual. Help, Check for updates still offers it if you change your mind.
