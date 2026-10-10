@@ -90,6 +90,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("speech.sapi.onecore", Machine),
     ("speech.apple.backend", Machine),
     ("speech.dectalk.library", Machine),
+    ("speech.espeak.helper", Machine),
     ("speech.piper.voices", Machine),
     ("speech.piper.voice", Machine),
     ("speech.piper.phonemizer", Machine),
@@ -101,6 +102,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("highlight.speed", Portable),
     ("highlight.color", Portable),
     ("highlight.sentence_color", Portable),
+    ("highlight.palette", Portable),
     // [normalization]
     ("normalization.math", Portable),
     ("normalization.math_verbosity", Portable),
@@ -132,6 +134,7 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("reading.revisions", Portable),
     ("reading.stop_at", Portable),
     ("reading.stop_after_minutes", Portable),
+    ("reading.recall_prompts", Portable),
     // [display]
     ("display.theme", Portable),
     ("display.follow_os_theme", Portable),
@@ -154,8 +157,10 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // How much memory the computer has.
     ("editing.undo_steps", Machine),
     ("editing.undo_memory_mb", Machine),
-    // A person's name: never written to the sync folder.
-    ("editing.author", Machine),
+    // [authoring]: the name is a person's, never written to the sync
+    // folder; tracking changes is a preference that travels.
+    ("authoring.author", Machine),
+    ("authoring.track_changes", Portable),
     // [library]
     ("library.recent_limit", Portable),
     ("library.folders", Machine),
@@ -585,7 +590,7 @@ mod tests {
             "sync.folder",
             "sync.device_name",
             "display.wrap_width",
-            "editing.author",
+            "authoring.author",
         ] {
             assert_eq!(setting_scope(p), Some(Machine), "{p}");
             assert_eq!(sync_group_of(p), None, "{p}");

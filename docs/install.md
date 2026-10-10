@@ -109,7 +109,8 @@ Keep the files in the folder together. The engine hosts must stay next to `textw
 
 - `textweaver-eci-host.exe` and `textweaver-eci-host-x86.exe`, for Eloquence;
 - `textweaver-sapi-host.exe` and `textweaver-sapi-host-x86.exe`, for SAPI5 voices;
-- `textweaver-dectalk-host.exe` and `textweaver-dectalk-host-x86.exe`, for DECtalk.
+- `textweaver-dectalk-host.exe` and `textweaver-dectalk-host-x86.exe`, for DECtalk;
+- `textweaver-espeak-host.exe` and `textweaver-espeak-host-x86.exe`, for eSpeak NG (install eSpeak NG itself with its Windows installer).
 
 The `ibmtts-dictionaries` folder must stay there too. The hosts run speech engines in their own processes, so a crash in an engine never takes the reader down. They also let 32-bit voices work with 64-bit textweaver.
 

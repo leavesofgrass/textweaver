@@ -92,9 +92,18 @@ fn skipped(a: ActionId) -> bool {
     // The two cycling keys open no list, but change the announcement
     // level every later list would be checked at: at `minimal` (a screen
     // reader) a list closing is not said, by design.
+    // A grade opens the study session again on the card after the one
+    // graded, which in the sweep's two-card deck is the last: End there
+    // says "End of list." by design (crate::cards, tested in authoring).
     matches!(
         a,
-        ActionId::Quit | ActionId::CycleAccessMode | ActionId::CycleInterfaceAnnouncements
+        ActionId::Quit
+            | ActionId::CycleAccessMode
+            | ActionId::CycleInterfaceAnnouncements
+            | ActionId::GradeAgain
+            | ActionId::GradeHard
+            | ActionId::GradeGood
+            | ActionId::GradeEasy
     )
 }
 

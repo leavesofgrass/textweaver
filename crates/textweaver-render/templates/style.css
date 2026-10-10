@@ -1,6 +1,12 @@
-/* The page rules. The --tw-* properties come first, from the theme
+/* The page rules. The --tw-* colors come first, from the theme
    (textweaver_theme::css): Galaxy, Galaxy Light, High Contrast, and
-   system colors under forced colors. */
+   system colors under forced colors. The --tw-type-* properties come
+   next, from the reader's own settings (font, size, spacing, line
+   length); each has a fallback here, so a page without them still reads
+   well. Themes carry colors only. */
+
+/* Motion: nothing on the page animates. Smooth scrolling to an anchor is
+   the only movement, and it is off when the system asks for less. */
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
 }
@@ -11,49 +17,142 @@
     scroll-behavior: auto !important;
   }
 }
-html { font-size: 112.5%; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* Text: the reader's font, size, weight, spacing, and measure. */
+html { font-size: var(--tw-type-size, 112.5%); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   background: var(--tw-background);
   color: var(--tw-text);
-  font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.6;
-  letter-spacing: 0.01em;
-  word-spacing: 0.05em;
-  max-width: 70ch;
+  font-family: var(--tw-type-family, "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+  font-weight: var(--tw-type-weight, 400);
+  line-height: var(--tw-type-line-height, 1.6);
+  letter-spacing: var(--tw-type-letter-spacing, 0.01em);
+  word-spacing: var(--tw-type-word-spacing, 0.05em);
+  max-width: var(--tw-type-measure, 70ch);
   margin: 0 auto;
   padding: 1.5rem 1rem 4rem;
+  overflow-wrap: break-word;
 }
-h1, h2, h3, h4, h5, h6 { line-height: 1.25; margin: 2rem 0 0.75rem; }
-p, ul, ol, dl, blockquote, table, pre, figure, details { margin: 0 0 1rem; }
+p, ul, ol, dl, blockquote, pre, figure, details, .table-scroll { margin: 0 0 var(--tw-type-paragraph-spacing, 1rem); }
+
+/* Headings: one scale (a ratio of 1.2 per level), and spacing in each
+   heading's own em, so space grows with size. Levels 5 and 6 share the
+   body size and differ by style, never by color alone. */
+h1, h2, h3, h4, h5, h6 { line-height: 1.25; margin: 1.5em 0 0.5em; font-weight: bold; }
+h1 { font-size: 2.074em; margin-top: 0.5em; }
+h2 { font-size: 1.728em; }
+h3 { font-size: 1.44em; }
+h4 { font-size: 1.2em; }
+h5 { font-size: 1em; }
+h6 { font-size: 1em; font-style: italic; }
+
+/* Links are always underlined; focus is a ring, never color alone. */
 a { color: var(--tw-link); text-decoration-thickness: 0.08em; text-underline-offset: 0.15em; }
 :focus-visible { outline: 2px solid var(--tw-focus-bg); outline-offset: 1px; box-shadow: 0 0 0 1px var(--tw-focus-inner); }
 .skip-link { position: absolute; left: -10000px; top: auto; }
-.skip-link:focus { position: static; display: inline-block; padding: 0.5rem 1rem; background: var(--tw-code-background); }
-main:focus { outline: none; }
+.skip-link:focus { position: static; display: inline-block; padding: 0.5rem 1rem; background: var(--tw-code-background); color: var(--tw-text); border: 2px solid var(--tw-control-border); }
+
+/* Images in figures, with the caption under the image. */
 img { max-width: 100%; height: auto; }
-code, pre, kbd { font-family: ui-monospace, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace; font-size: 0.95em; }
-pre { background: var(--tw-code-background); padding: 0.75rem 1rem; overflow-x: auto; border: 1px solid var(--tw-control-border); border-radius: 4px; }
+figure { margin-left: 0; margin-right: 0; }
+figure img { display: block; }
+figcaption { margin-top: 0.5rem; font-style: italic; color: var(--tw-dim-text); }
+
+/* Code: a bordered box on the page's own background that scrolls
+   sideways. Tokens take the theme's text roles, which the theme's check
+   holds to the text floor on the page background (on the code background
+   some fall short), and the ones that matter an attribute too, so a
+   black-and-white print or a contrast theme keeps them apart: comments
+   italic, keywords bold. Strings keep their quote marks and numbers their
+   digits. */
+code, pre, kbd { font-family: ui-monospace, "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace; font-size: 0.95em; letter-spacing: 0; word-spacing: 0; }
+pre { background: var(--tw-background); padding: 0.75rem 1rem; overflow-x: auto; border: 1px solid var(--tw-control-border); border-radius: 4px; line-height: 1.45; }
+pre code { font-size: 1em; }
 :not(pre) > code { background: var(--tw-code-background); padding: 0.1em 0.3em; border-radius: 3px; }
+.tok-comment { color: var(--tw-dim-text); font-style: italic; }
+.tok-keyword { color: var(--tw-heading2); font-weight: bold; }
+.tok-string { color: var(--tw-quote); }
+.tok-number { color: var(--tw-heading4); }
+.tok-function { color: var(--tw-heading1); }
+.tok-type { color: var(--tw-heading3); }
+
 blockquote { border-left: 4px solid var(--tw-control-border); margin-left: 0; padding-left: 1rem; color: var(--tw-dim-text); }
-table { border-collapse: collapse; display: block; overflow-x: auto; }
-th, td { border: 1px solid var(--tw-control-border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
-th { background: var(--tw-code-background); }
-mark { background: var(--tw-highlight-yellow-bg); color: var(--tw-highlight-yellow-fg); }
+mark {
+  background: var(--tw-highlight-yellow-bg);
+  color: var(--tw-highlight-yellow-fg);
+  font-weight: var(--tw-highlight-yellow-weight);
+  text-decoration: var(--tw-highlight-yellow-decoration);
+  font-style: var(--tw-highlight-yellow-style);
+}
 hr { border: 0; border-top: 1px solid var(--tw-control-border); margin: 2rem 0; }
 dt { font-weight: bold; }
 dd { margin: 0 0 0.5rem 1.5rem; }
+
+/* Tables: a header row set off by weight and a double rule; every cell
+   bordered, so rows are told apart by their borders and the alternate
+   row tint is an extra. Wide tables scroll inside their own box. */
+.table-scroll { overflow-x: auto; max-width: 100%; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid var(--tw-control-border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+th { font-weight: bold; background: var(--tw-code-background); }
+thead th { border-bottom: 3px double var(--tw-control-border); }
+tbody tr:nth-child(even) { background: var(--tw-surface); }
+/* On the tint, links take the text color (the theme checks text on the
+   panel color, not links); they stay underlined. */
+tbody tr:nth-child(even) a { color: var(--tw-text); }
+
+/* Math: MathML, with the source as alttext (what a screen reader falls
+   back to) and as an annotation that can be copied. */
 math[display="block"] { margin: 1rem 0; overflow-x: auto; }
-.toc { background: var(--tw-code-background); border: 1px solid var(--tw-control-border); border-radius: 4px; padding: 0.5rem 1rem; margin-bottom: 2rem; }
+.math-error { color: var(--tw-error); font-weight: bold; }
+
+.toc { border: 1px solid var(--tw-control-border); border-radius: 4px; padding: 0.5rem 1rem; margin-bottom: 2rem; }
 .toc-title { font-weight: bold; margin: 0.25rem 0 0.5rem; }
 .toc ol { margin: 0; padding-left: 1.25rem; }
-.callout { border: 1px solid var(--tw-control-border); border-left-width: 6px; border-radius: 4px; padding: 0.5rem 1rem; margin: 0 0 1rem; background: var(--tw-code-background); }
+
+/* Callouts: the type word starts the title ("Tip: Remember"); the colored
+   edge is an extra. Boxes sit on the page background, so links and
+   headings inside them keep the contrast the theme checks. */
+.callout { border: 1px solid var(--tw-control-border); border-left-width: 6px; border-radius: 4px; padding: 0.5rem 1rem; margin: 0 0 1rem; }
 .callout-title { font-weight: bold; margin: 0.25rem 0 0.5rem; }
 details.callout > summary { cursor: pointer; }
 .callout-warning, .callout-caution, .callout-danger, .callout-error { border-left-color: var(--tw-error); }
 .callout-tip, .callout-success, .callout-check { border-left-color: var(--tw-accent); }
 .callout-important, .callout-note, .callout-info { border-left-color: var(--tw-link); }
 .tag { font-size: 0.9em; background: var(--tw-code-background); border: 1px solid var(--tw-control-border); border-radius: 1em; padding: 0 0.5em; }
+
+/* Footnotes: an endnotes section; each note links back to its reference. */
 .footnotes { font-size: 0.95em; border-top: 1px solid var(--tw-control-border); margin-top: 3rem; }
-.footnotes h2 { font-size: 1.1rem; }
-.math-error { color: var(--tw-error); }
+.footnotes h2 { font-size: 1.2em; }
 input[type="checkbox"] { width: 1.1em; height: 1.1em; vertical-align: middle; }
+
+/* Forced colors (Windows contrast themes): the system's colors win. The
+   theme's properties already map to system colors there; these rules keep
+   every border and outline drawn, so boxes, rules, and focus stay
+   visible when backgrounds go, and code tokens keep bold and italic. */
+@media (forced-colors: active) {
+  pre, .callout, .toc, .tag, th, td, blockquote, hr { border-color: CanvasText; }
+  .callout { border-style: solid; }
+  thead th { border-bottom: 3px double CanvasText; }
+  :focus-visible { outline: 2px solid Highlight; box-shadow: none; }
+  .skip-link:focus { border-color: CanvasText; }
+  mark { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .math-error { text-decoration: underline; }
+}
+
+/* Printing the screen page: black on white, no tinted backgrounds, link
+   targets after links, and no page break inside a block or after a
+   heading. The print template (print.css) does the same. */
+@media print {
+  *, *::before, *::after { background: transparent !important; color: #000 !important; box-shadow: none !important; }
+  html { font-size: var(--tw-type-print-size, 12pt); }
+  body { max-width: none; padding: 0; }
+  .skip-link, .toc { display: none; }
+  a[href^="http"]::after, a[href^="mailto:"]::after { content: " (" attr(href) ")"; font-size: 0.85em; word-break: break-all; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; page-break-after: avoid; }
+  p, li, dd { orphans: 3; widows: 3; }
+  pre, blockquote, figure, tr, .callout, math[display="block"] { break-inside: avoid; page-break-inside: avoid; }
+  pre, .table-scroll { overflow: visible; white-space: pre-wrap; }
+  thead { display: table-header-group; }
+  th, td, pre, .callout { border-color: #000; }
+}

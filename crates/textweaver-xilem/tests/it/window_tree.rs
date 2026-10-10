@@ -1695,3 +1695,331 @@ fn a_described_window_command_is_described_not_run() {
     assert!(said.starts_with("Font: "), "{said}");
     assert!(said.contains("Keys: "), "{said}");
 }
+
+/// The command palette and the keyboard shortcuts list (beta 1): each
+/// option is named "Find next, F3" (the short name, then the key), has
+/// the long explanation as its description, and the list keeps the key
+/// for drawing at the right edge.
+#[test]
+fn command_rows_are_named_name_then_key_with_the_help_as_description() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::dialog::{ChoiceList, Rows};
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let p = Palette::galaxy();
+    let ids = [ActionId::FindNext, ActionId::PlayPause, ActionId::ExportPdf];
+    let names: Vec<String> = ids
+        .iter()
+        .map(|&a| app.command_row(a).text(&Catalog::english()))
+        .collect();
+    let rows = Rows::commands(&app, &ids, names.clone());
+    let (modal, list_id) =
+        gui::palette_dialog(&p, &Catalog::english(), "Commands", rows.items.clone());
+    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+    h.edit_widget(LIST, |mut l| ChoiceList::set_rows(&mut l, rows.clone()));
+    h.focus_on(Some(list_id));
+    let _ = h.redraw();
+    let list = h.access_node(h.get_widget(LIST).id()).unwrap();
+    let options: Vec<_> = list.children().collect();
+    assert_eq!(options.len(), 3);
+    for (i, o) in options.iter().enumerate() {
+        let row = app.command_row(ids[i]);
+        assert_eq!(o.label().unwrap_or_default(), names[i]);
+        assert!(o.label().unwrap_or_default().starts_with(&row.name));
+        assert_eq!(o.description().unwrap_or_default(), row.help);
+    }
+    let w = h.get_widget(LIST);
+    let list = w.inner();
+    assert_eq!(
+        list.key(0),
+        app.command_row(ActionId::FindNext).key.as_deref()
+    );
+    // A command without a key draws none.
+    assert_eq!(list.key(2), None);
+    assert_eq!(
+        names[0],
+        format!("{}, {}", list.items()[0], list.key(0).unwrap())
+    );
+}
+
+/// The find and replace panel in the bounds test's review sizes, from the
+/// largest window to a 1366 by 768 laptop at 200 percent and the smallest
+/// window (compact below 480 px high): every field, check box and button
+/// is inside the window, and every button at least 24 by 24.
+#[test]
+fn the_find_panel_fits_every_review_size() {
+    use textweaver_xilem::find_panel::{self, FindTexts};
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_with_sample(dir.path());
+    for (size, scale) in [
+        ((1100, 780), 1.0),
+        ((960, 540), 1.0),
+        ((683, 384), 2.0),
+        ((420, 320), 1.0),
+    ] {
+        let mut h = harness_at(&app, size, scale);
+        let short = f64::from(size.1) < find_panel::SHORT_HEIGHT;
+        let d = find_panel::find_dialog(&Palette::galaxy(), &app, &FindTexts::default(), short);
+        let mut back = None;
+        gui::open_dialog_in(&mut h, d.modal, d.find, &mut back);
+        let _ = h.redraw();
+        let _ = h.redraw();
+        let at = format!("{}x{} at {}%", size.0, size.1, scale * 100.0);
+        let window = masonry::kurbo::Rect::new(
+            0.0,
+            0.0,
+            f64::from(size.0) * scale,
+            f64::from(size.1) * scale,
+        );
+        // The panel's controls (the window's own bars are behind it).
+        let mut stack = vec![h.access_tree().state().root()];
+        let mut dialog = None;
+        while let Some(n) = stack.pop() {
+            if n.role() == Role::Dialog {
+                dialog = Some(n);
+                break;
+            }
+            stack.extend(n.children());
+        }
+        let mut seen = Vec::new();
+        let mut stack = vec![dialog.expect("the panel is open")];
+        while let Some(n) = stack.pop() {
+            stack.extend(n.children());
+            if !matches!(n.role(), Role::Button | Role::CheckBox | Role::TextInput) {
+                continue;
+            }
+            let name = n.label().unwrap_or_default();
+            let Some(b) = n.bounding_box() else {
+                continue;
+            };
+            seen.push(name.clone());
+            assert!(
+                b.x0 >= window.x0 - 0.5
+                    && b.y0 >= window.y0 - 0.5
+                    && b.x1 <= window.x1 + 0.5
+                    && b.y1 <= window.y1 + 0.5,
+                "{at}: {name:?} at {b:?} leaves the window {window:?}"
+            );
+            if n.role() == Role::Button {
+                assert!(
+                    b.width() >= 24.0 * scale - 0.5 && b.height() >= 24.0 * scale - 0.5,
+                    "{at}: {name:?} is smaller than 24 by 24: {b:?}"
+                );
+            }
+        }
+        for name in [
+            "Find what",
+            "Replace with",
+            "Across lines",
+            "Replace all",
+            "Close",
+        ] {
+            assert!(
+                seen.iter().any(|s| s == name),
+                "{at}: no {name:?} in {seen:?}"
+            );
+        }
+    }
+}
+
+/// The key typed in the open list dialog, as the dialog hands it on.
+fn list_dialog_key(
+    h: &mut TestHarness<Root>,
+    event: masonry::core::keyboard::KeyboardEvent,
+) -> Option<textweaver_app::ListKey> {
+    use textweaver_xilem::dialog::DialogAction;
+    h.process_text_event(TextEvent::Keyboard(event));
+    match h.pop_action::<DialogAction>() {
+        Some((DialogAction::Key(k), _)) => Some(k),
+        _ => None,
+    }
+}
+
+/// `chord` ("Shift+A", "F2") as the platform sends it.
+fn chord_event(chord: &str) -> masonry::core::keyboard::KeyboardEvent {
+    let platform = textweaver_app::keymap::Platform::current();
+    textweaver_xilem::keys::press(&chord.parse().unwrap(), platform)
+}
+
+/// A character typed with no modifier (with Caps Lock, a capital).
+fn typed(c: &str) -> masonry::core::keyboard::KeyboardEvent {
+    masonry::core::keyboard::KeyboardEvent {
+        key: Key::Character(c.into()),
+        ..Default::default()
+    }
+}
+
+/// The list the app showed: its title and rows.
+fn shown_list(effects: &[textweaver_app::Effect]) -> Option<(String, Vec<String>)> {
+    effects.iter().find_map(|e| match e {
+        textweaver_app::Effect::ShowList { title, items } => Some((title.clone(), items.clone())),
+        _ => None,
+    })
+}
+
+/// Shows `items` as the window shows an app list, with the focus on it.
+fn show_app_list(
+    h: &mut TestHarness<Root>,
+    app: &textweaver_app::App,
+    title: &str,
+    items: Vec<String>,
+) {
+    let (modal, list) = gui::list_dialog(&Palette::galaxy(), &app.catalog(), title, items, 0, true);
+    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(modal)));
+    h.focus_on(Some(list));
+    let _ = h.redraw();
+}
+
+/// Shows the app's open question as the window does, and returns the
+/// dialog's name; asserts it starts on No with `verb` on its button.
+fn show_question(h: &mut TestHarness<Root>, app: &textweaver_app::App, verb: &str) -> String {
+    let q = gui::question_dialog(
+        &Palette::galaxy(),
+        &app.catalog(),
+        app.status_text(),
+        app.destructive_question(),
+    );
+    assert_eq!(q.focus, q.no, "Enter keeps things");
+    h.edit_widget(ROOT, |mut r| Root::set_dialog(&mut r, Some(q.modal)));
+    let _ = h.redraw();
+    assert!(names_of(h, Role::Button).contains(&verb.to_owned()));
+    names_of(h, Role::Dialog).join("|")
+}
+
+/// The changes and comments list in the window (B1-t1): Ctrl+Shift+J
+/// (Cmd+Shift+J on macOS) reaches it from the document; in its dialog, a
+/// and r, Shift+A and Shift+R as capitals, and n go to the app as typed
+/// letters (Caps Lock alone never makes a capital), and F2, Space and
+/// Delete as the list's keys; Delete on a comment asks through the usual
+/// question, which starts on No with its verb.
+#[test]
+fn the_changes_list_takes_its_keys_in_the_window() {
+    use textweaver_app::keymap::ActionId;
+    use textweaver_app::{Command, Confirm, DestructiveVerb, ListKey};
+    let dir = tempfile::tempdir().unwrap();
+    let opts = Options {
+        no_speech: true,
+        home: Some(dir.path().to_path_buf()),
+        ..Options::default()
+    };
+    let (mut app, _) = setup::build_app(&opts, Box::new(LogAnnouncer::default()));
+    let docx =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/t1/changes.docx");
+    app.open(&docx).expect("the tracked changes fixture opens");
+    let mut h = harness(&app);
+    let doc = h.get_widget(DOC).id();
+    h.focus_on(Some(doc));
+    assert_eq!(
+        press(&mut h, &app, ActionId::ListChanges, true),
+        Some(ActionId::ListChanges)
+    );
+    let (title, items) =
+        shown_list(&app.dispatch(Command::Action(ActionId::ListChanges))).expect("the list");
+    assert_eq!(title, "Changes and comments");
+    assert!(items[0].starts_with("Inserted: "), "{items:?}");
+
+    show_app_list(&mut h, &app, &title, items.clone());
+    for (event, want) in [
+        (typed("a"), ListKey::Char('a')),
+        (typed("r"), ListKey::Char('r')),
+        (typed("n"), ListKey::Char('n')),
+        (chord_event("Shift+A"), ListKey::Char('A')),
+        (chord_event("Shift+R"), ListKey::Char('R')),
+        (typed("A"), ListKey::Char('a')),
+        (chord_event("F2"), ListKey::Rename),
+        (chord_event("Space"), ListKey::Char(' ')),
+        (chord_event("Delete"), ListKey::Delete),
+    ] {
+        assert_eq!(list_dialog_key(&mut h, event), Some(want));
+    }
+
+    // Delete on a comment: the question, as a dialog starting on No.
+    let comment = items
+        .iter()
+        .position(|i| i.starts_with("Comment by"))
+        .expect("a comment row");
+    let _ = app.dispatch(Command::ListFocus(comment));
+    let _ = app.dispatch(Command::ListKey(ListKey::Delete));
+    assert!(app.confirmation_pending());
+    assert_eq!(app.destructive_question(), Some(DestructiveVerb::Delete));
+    assert_eq!(
+        show_question(&mut h, &app, "Delete"),
+        "Delete this comment and its replies?"
+    );
+    let (_, kept) = shown_list(&app.dispatch(Command::Confirm(Confirm::No))).expect("shown again");
+    assert_eq!(kept, items, "No keeps the comment");
+
+    // a on the first change accepts it: the list is shown without it.
+    let _ = app.dispatch(Command::ListFocus(0));
+    let (_, after) =
+        shown_list(&app.dispatch(Command::ListKey(ListKey::Char('a')))).expect("shown again");
+    assert_eq!(after.len(), items.len() - 1, "{after:?}");
+    assert!(
+        app.status_text().starts_with("Accepted. "),
+        "{}",
+        app.status_text()
+    );
+}
+
+/// A note's links in the window (B1-g1): Space on a note in the notes
+/// list reaches the app as the list's Space and opens its links; letters
+/// typed in the types list filter it; F2 and Delete on a link are the
+/// list's keys, and Delete asks through the usual question, which starts
+/// on No and says Remove.
+#[test]
+fn a_notes_links_take_their_keys_in_the_window() {
+    use textweaver_app::{Command, Confirm, DestructiveVerb, ListKey, NoteCommand};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let text = app.session().unwrap().doc.text().to_string();
+    let at = |needle: &str| {
+        let byte = text.find(needle).unwrap();
+        textweaver_app::core::CharPos(text[..byte].chars().count())
+    };
+    for (word, note) in [("Lists", "Energy note"), ("A Table", "Chapter note")] {
+        let _ = app.dispatch(Command::SetCursor(at(word)));
+        let _ = app.dispatch(Command::Notes(NoteCommand::Add));
+        let _ = app.dispatch(Command::Answer(note.into()));
+    }
+    let mut h = harness(&app);
+    let (title, notes) =
+        shown_list(&app.dispatch(Command::Notes(NoteCommand::List))).expect("the notes");
+    show_app_list(&mut h, &app, &title, notes);
+    let space = list_dialog_key(&mut h, chord_event("Space")).expect("Space is the list's");
+    assert_eq!(space, ListKey::Char(' '));
+    let (_, links) = shown_list(&app.dispatch(Command::ListKey(space))).expect("the links");
+    assert_eq!(links, ["What links here: nothing yet", "Add a link"]);
+
+    // Add a link: the types, filtered by typing, then the target.
+    let _ = app.dispatch(Command::ListKey(ListKey::End));
+    let (types_title, types) =
+        shown_list(&app.dispatch(Command::ListKey(ListKey::Enter))).expect("the types");
+    assert_eq!(types.len(), 10);
+    show_app_list(&mut h, &app, &types_title, types);
+    for c in ["s", "u", "p"] {
+        let k = list_dialog_key(&mut h, typed(c)).expect("a letter is the list's");
+        let _ = app.dispatch(Command::ListKey(k));
+    }
+    assert_eq!(app.list_filter(), Some("sup"));
+    let (_, targets) =
+        shown_list(&app.dispatch(Command::ListKey(ListKey::Enter))).expect("the targets");
+    assert_eq!(targets[0], "Chapter note");
+    let (links_title, links) =
+        shown_list(&app.dispatch(Command::ListKey(ListKey::Enter))).expect("the links");
+    assert_eq!(links[0], "supports: Chapter note");
+
+    // In the links dialog, F2 and Delete are the list's keys.
+    show_app_list(&mut h, &app, &links_title, links);
+    assert_eq!(
+        list_dialog_key(&mut h, chord_event("F2")),
+        Some(ListKey::Rename)
+    );
+    let delete = list_dialog_key(&mut h, chord_event("Delete")).expect("Delete is the list's");
+    let _ = app.dispatch(Command::ListKey(delete));
+    assert!(app.confirmation_pending());
+    assert_eq!(app.destructive_question(), Some(DestructiveVerb::Remove));
+    assert_eq!(show_question(&mut h, &app, "Remove"), "Remove this link?");
+    let (_, after) = shown_list(&app.dispatch(Command::Confirm(Confirm::Yes))).expect("shown");
+    assert_eq!(after, ["What links here: nothing yet", "Add a link"]);
+}

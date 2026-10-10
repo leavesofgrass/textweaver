@@ -17,6 +17,11 @@
 //!   ([`Backlinks`], read once per open document);
 //! - adding a link: the type (the ten spoken names, type to filter), then
 //!   the target, a note of the open document or of a library document.
+//!
+//! "Export the knowledge graph" (B1-g2) writes every link of the library
+//! to a file, in a format chosen from a list: the Markdown list (the text
+//! to read), JSON, DOT, GraphML, Mermaid, PlantUML or a CSV edge list
+//! ([`Graph`]).
 
 use std::path::PathBuf;
 
@@ -24,7 +29,8 @@ use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
 use textweaver_store::notes::doc_key;
 use textweaver_store::{
-    Backlink, Backlinks, DocKey, Library, Note, NotedDoc, Relation, RelationType,
+    Backlink, Backlinks, DocKey, Graph, GraphFormat, Library, Note, NotedDoc, Relation,
+    RelationType,
 };
 
 use crate::app::{App, ListKind};
@@ -839,5 +845,106 @@ impl App {
         };
         self.tell(&msg);
         effects
+    }
+}
+
+/// The catalog id of a knowledge graph format in the export list.
+fn graph_format_id(f: GraphFormat) -> &'static str {
+    match f {
+        GraphFormat::Markdown => "graph-format-md",
+        GraphFormat::Json => "graph-format-json",
+        GraphFormat::Dot => "graph-format-dot",
+        GraphFormat::GraphMl => "graph-format-graphml",
+        GraphFormat::Mermaid => "graph-format-mermaid",
+        GraphFormat::PlantUml => "graph-format-plantuml",
+        GraphFormat::Csv => "graph-format-csv",
+    }
+}
+
+/// Export the knowledge graph (B1-g2): the whole library as a file.
+impl App {
+    /// The documents with notes for the knowledge graph: the open
+    /// document with its notes as they are now, then every other library
+    /// document with its saved notes, read afresh.
+    fn graph_documents(&self) -> Vec<NotedDoc> {
+        let mut docs = Vec::new();
+        if let Some(s) = self.session.as_ref()
+            && let Some(path) = s.doc.meta.path.clone()
+            && !s.notes.is_empty()
+        {
+            docs.push(NotedDoc {
+                path,
+                title: s.title.clone(),
+                notes: s.notes.clone(),
+            });
+        }
+        let here = doc_key(&self.relations_here());
+        if let (Some(paths), Some(states)) = (&self.paths, self.state_store()) {
+            let lib = Library::load(&paths.library_file())
+                .unwrap_or_default()
+                .noted_documents(&states);
+            docs.extend(
+                lib.into_iter()
+                    .filter(|d| here.is_empty() || doc_key(&d.path.to_string_lossy()) != here),
+            );
+        }
+        docs
+    }
+
+    /// The palette command `export_knowledge_graph`: says how many links
+    /// there are and lists the formats, the Markdown list first.
+    pub(crate) fn export_knowledge_graph(&mut self) -> Vec<Effect> {
+        let graph = Graph::build(&self.graph_documents());
+        if graph.edges.is_empty() {
+            let msg = self.msg("graph-export-empty");
+            self.tell(&msg);
+            return vec![Effect::Redraw];
+        }
+        let items = GraphFormat::ALL
+            .iter()
+            .map(|&f| self.msg(graph_format_id(f)))
+            .collect();
+        self.list = Some(ListKind::GraphFormats);
+        let msg = self.msg_args("graph-export-intro", &args!["links" => graph.edges.len()]);
+        self.tell(&msg);
+        vec![Effect::ShowList {
+            title: self.msg("graph-export-title"),
+            items,
+        }]
+    }
+
+    /// Enter in the format list: writes `knowledge-graph.EXT` beside the
+    /// open document (or in the folder files without a document go to),
+    /// then offers to open it.
+    pub(crate) fn choose_graph_format(&mut self, n: usize) -> Vec<Effect> {
+        let Some(&format) = GraphFormat::ALL.get(n) else {
+            return vec![Effect::Redraw];
+        };
+        let text = Graph::build(&self.graph_documents()).render(format);
+        let folder = self
+            .session
+            .as_ref()
+            .and_then(|s| s.doc.meta.path.as_ref())
+            .and_then(|p| p.parent().map(std::path::Path::to_owned))
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or_else(|| self.loose_folder());
+        let out = folder.join(format!("knowledge-graph.{}", format.extension()));
+        match textweaver_store::atomic_write(&out, text.as_bytes()) {
+            Ok(()) => {
+                let question = self.msg_args(
+                    "graph-export-saved",
+                    &args![
+                        "file" => crate::authoring_state::file_name(&out),
+                        "folder" => folder.display().to_string()
+                    ],
+                );
+                self.offer_open(out.display().to_string(), &question);
+            }
+            Err(e) => {
+                let msg = self.msg_args("graph-export-failed", &args!["error" => e.to_string()]);
+                self.error(&msg);
+            }
+        }
+        vec![Effect::Redraw]
     }
 }

@@ -77,6 +77,16 @@ impl Writer for BrfWriter {
         out: &mut dyn Write,
     ) -> Result<WriteReport, WriteError> {
         let mut report = WriteReport::default();
+        let marked;
+        let mut forms = Vec::new();
+        let doc = if options.braille.highlights.is_empty() {
+            doc
+        } else {
+            let (d, used) = with_highlights(doc, &options.braille.highlights, &mut report);
+            marked = d;
+            forms = used;
+            &marked
+        };
         let mut blocks = model::blocks(doc);
         // Math is written in the math code (Nemeth or UEB) through MathCAT,
         // or as it is read aloud ("x squared"), which braille spells out
@@ -94,6 +104,12 @@ impl Writer for BrfWriter {
             out: &mut items,
             report: &mut report,
         };
+        if !forms.is_empty() {
+            let note = highlights_note(&forms, &options.braille.highlight_names);
+            for item in note_items(vec![(note, 6, 4)]) {
+                flat.push(item);
+            }
+        }
         flat.blocks(&blocks, 0);
         let texts: Vec<(&str, Join)> = items.iter().filter_map(Item::text).collect();
         let translated = translate_with_math(&texts, &math, &options.braille, &mut report)?;
@@ -216,6 +232,109 @@ fn text_item(text: String, first: usize, runover: usize) -> Item {
         after: "",
         join: Join::Fresh,
     }
+}
+
+/// `doc` with the typeform marks of each highlight in its text, the
+/// markers moved to match, and the palette entries marked, in order. A
+/// mark at a block's edge stays inside the block it belongs to: an
+/// opening mark goes inside a range starting where it stands, a closing
+/// one inside a range ending there.
+fn with_highlights(
+    doc: &Document,
+    highlights: &[crate::BrailleHighlight],
+    report: &mut WriteReport,
+) -> (Document, Vec<usize>) {
+    use textweaver_core::{CharPos, CharRange, MarkerKind};
+    let len = doc.len_chars();
+    let in_math = |p: CharPos| {
+        doc.markers()
+            .iter()
+            .any(|m| m.kind == MarkerKind::Math && m.range.start < p && p < m.range.end)
+    };
+    // (position, closes, mark)
+    let mut marks: Vec<(usize, bool, char)> = Vec::new();
+    let mut used: Vec<usize> = Vec::new();
+    let (mut beyond, mut moved) = (0, 0);
+    for h in highlights {
+        let r = h.range.clamp_to(len);
+        if r.is_empty() || in_math(r.start) || in_math(r.end) {
+            continue;
+        }
+        // shortcut: UEB defines five transcriber-defined typeforms, so
+        // entries six to eight go unmarked; a transcriber's symbol per
+        // entry could carry them if readers ask.
+        let Some(&form) = Typeform::TRANSCRIBER.get(h.entry) else {
+            beyond += 1;
+            continue;
+        };
+        let now: String = doc
+            .slice(r)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+        if !now.starts_with(h.text.trim()) {
+            moved += 1;
+            continue;
+        }
+        marks.push((r.start.0, false, form.open()));
+        marks.push((r.end.0, true, form.close()));
+        if !used.contains(&h.entry) {
+            used.push(h.entry);
+        }
+    }
+    if beyond > 0 {
+        report.warn(format!(
+            "{beyond} highlights of palette entries after the fifth are not marked: braille has five transcriber-defined typeforms."
+        ));
+    }
+    if moved > 0 {
+        report.warn(format!(
+            "{moved} highlights are not marked: their text is no longer where it was."
+        ));
+    }
+    // Closing marks before opening ones at the same place.
+    marks.sort_by_key(|&(at, closes, _)| (at, !closes));
+    let mut text = doc.text().clone();
+    for (k, &(at, _, c)) in marks.iter().enumerate() {
+        text.insert_char(at + k, c);
+    }
+    let moved_to = |p: CharPos| {
+        CharPos(p.0 + marks.partition_point(|&(at, closes, _)| at < p.0 || (at == p.0 && closes)))
+    };
+    let markers = doc
+        .markers()
+        .iter()
+        .map(|m| {
+            let mut m = m.clone();
+            m.range = CharRange::new(moved_to(m.range.start), moved_to(m.range.end));
+            m
+        })
+        .collect();
+    used.sort_unstable();
+    (Document::new(doc.meta.clone(), text, markers), used)
+}
+
+/// The transcriber's note before a document with highlights: which
+/// typeform stands for which palette name (UEB Rules 9.2.1 asks that
+/// transcriber-defined typeforms be explained).
+fn highlights_note(entries: &[usize], names: &[String]) -> String {
+    const ORDINALS: [&str; 5] = ["first", "second", "third", "fourth", "fifth"];
+    let parts: Vec<String> = entries
+        .iter()
+        .filter_map(|&e| {
+            let name = names.get(e).map_or("", |n| n.trim());
+            let ordinal = ORDINALS.get(e)?;
+            Some(if name.is_empty() {
+                format!(
+                    "the {ordinal} transcriber-defined typeform, highlight {}",
+                    e + 1
+                )
+            } else {
+                format!("the {ordinal} transcriber-defined typeform, {name}")
+            })
+        })
+        .collect();
+    format!("Highlights are shown with {}.", parts.join("; "))
 }
 
 /// The transcriber's note indicators (UEB Rules 3.27).
@@ -1110,6 +1229,69 @@ mod tests {
         let mut out = Vec::new();
         let report = BrfWriter.write(doc, options, &mut out).unwrap();
         (String::from_utf8(out).unwrap(), report)
+    }
+
+    /// Each palette entry's highlights take their own transcriber-defined
+    /// typeform, after a transcriber's note naming them; a highlight at a
+    /// paragraph's start stays in that paragraph; one whose text moved is
+    /// left out and reported.
+    #[test]
+    fn highlights_take_a_typeform_per_palette_entry() {
+        let text = "Read this. Then that.\nNext one.\n";
+        let para = |a: usize, b: usize| Marker {
+            kind: MarkerKind::Paragraph,
+            range: CharRange::new(a, b),
+            level: 0,
+            label: None,
+            reference: None,
+        };
+        let doc = Document::new(
+            DocumentMeta::default(),
+            Rope::from_str(text),
+            vec![para(0, 21), para(22, 31)],
+        );
+        let hl = |a: usize, b: usize, entry: usize, text: &str| crate::BrailleHighlight {
+            range: CharRange::new(a, b),
+            entry,
+            text: text.into(),
+        };
+        let options = WriteOptions {
+            braille: BrailleOptions {
+                page_numbers: false,
+                highlights: vec![
+                    hl(5, 9, 0, "this"),
+                    hl(16, 20, 1, "that"),
+                    hl(22, 26, 1, "Next"),
+                    hl(27, 30, 2, "two"),
+                ],
+                highlight_names: vec!["important".into(), "define".into(), "question".into()],
+                ..BrailleOptions::default()
+            },
+            ..WriteOptions::default()
+        };
+        let (out, report) = brf(&doc, &options);
+        assert!(out.starts_with("      @.<"), "{out}");
+        assert!(out.contains("`#1"), "first typeform: {out}");
+        assert_eq!(
+            out.matches("^#1").count(),
+            2,
+            "second typeform twice: {out}"
+        );
+        assert!(
+            !out.contains("_#"),
+            "the moved highlight is left out: {out}"
+        );
+        assert!(!out.contains('\u{E026}'), "no mark reaches the file");
+        assert_eq!(report.warnings.len(), 1, "{:?}", report.warnings);
+        let mut plain = options.clone();
+        plain.braille.highlights.clear();
+        let (without, _) = brf(&doc, &plain);
+        assert!(!without.contains("@.<"), "{without}");
+        assert_eq!(
+            highlights_note(&[0, 1], &options.braille.highlight_names),
+            "Highlights are shown with the first transcriber-defined typeform, important; \
+             the second transcriber-defined typeform, define."
+        );
     }
 
     /// Math markers: a bound space never ends a line, division points take

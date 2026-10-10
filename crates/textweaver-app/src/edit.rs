@@ -985,6 +985,12 @@ impl App {
     /// Typed text: one character is a keystroke (coalesced for undo and
     /// echoed); more is a paste (one undo step, announced).
     pub(crate) fn insert(&mut self, text: &str) -> Vec<Effect> {
+        self.insert_said(text, None)
+    }
+
+    /// [`insert`](Self::insert), saying `said` for a paste instead of how
+    /// much was pasted and how it starts.
+    pub(crate) fn insert_said(&mut self, text: &str, said: Option<String>) -> Vec<Effect> {
         if self.edit.is_none() {
             return self.not_editing("type");
         }
@@ -1032,19 +1038,7 @@ impl App {
                         }
                     }
                     None => {
-                        // A paste: how much, and how it starts.
-                        let n = text.chars().count();
-                        let words: Vec<&str> = text.split_whitespace().take(6).collect();
-                        let more = text.split_whitespace().nth(6).is_some();
-                        let start = format!("{}{}", words.join(" "), if more { "…" } else { "" });
-                        let msg = if start.is_empty() {
-                            self.msg_args("edit-pasted", &args!["n" => n])
-                        } else {
-                            self.msg_args(
-                                "edit-pasted-start",
-                                &args!["n" => n, "start" => start.as_str()],
-                            )
-                        };
+                        let msg = said.unwrap_or_else(|| self.pasted_message(text));
                         self.show(&msg);
                         self.speak_edit_feedback(&msg);
                     }
@@ -1056,6 +1050,29 @@ impl App {
             }
         }
         vec![Effect::Redraw]
+    }
+
+    /// What a paste says: how much (lines when there are several, else
+    /// characters) and how it starts.
+    fn pasted_message(&self, text: &str) -> String {
+        let n = text.chars().count();
+        let lines = text.trim_end_matches('\n').lines().count();
+        let words: Vec<&str> = text.split_whitespace().take(6).collect();
+        let more = text.split_whitespace().nth(6).is_some();
+        let start = format!("{}{}", words.join(" "), if more { "…" } else { "" });
+        if start.is_empty() {
+            self.msg_args("edit-pasted", &args!["n" => n])
+        } else if lines > 1 {
+            self.msg_args(
+                "edit-pasted-lines",
+                &args!["n" => lines, "start" => start.as_str()],
+            )
+        } else {
+            self.msg_args(
+                "edit-pasted-start",
+                &args!["n" => n, "start" => start.as_str()],
+            )
+        }
     }
 
     /// [`Command::ReplaceRange`](crate::Command::ReplaceRange): an edit a

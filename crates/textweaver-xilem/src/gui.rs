@@ -52,6 +52,7 @@ use crate::document::{
     CaretEcho, DocAction, DocAids, DocFont, DocModel, DocState, DocumentView, HighlightShown,
 };
 use crate::file_chooser::{self, FileChosen};
+use crate::find_panel::{FindButton, FindOption, FindTexts};
 use crate::font_chooser::Step;
 use crate::keys;
 use crate::rsvp::{RsvpShown, RsvpView};
@@ -91,6 +92,9 @@ pub const MAIN: WidgetTag<Region> = WidgetTag::named("tw-main");
 pub const PROMPT_FIELD: WidgetTag<TextArea<true>> = WidgetTag::named("tw-prompt-field");
 /// The list of an open list dialog.
 pub const LIST: WidgetTag<ChoiceList> = WidgetTag::named("tw-list");
+/// The drawn title of a list dialog, which follows a list that filters as
+/// you type ("Keyboard shortcuts matching find").
+pub const LIST_TITLE: WidgetTag<Label> = WidgetTag::named("tw-list-title");
 /// The settings dialog's list of sections.
 pub const SECTIONS: WidgetTag<ChoiceList> = WidgetTag::named("tw-settings-sections");
 /// The settings dialog's form.
@@ -298,6 +302,39 @@ enum OpenDialog {
         /// The No button.
         no: WidgetId,
     },
+    /// The find and replace panel ([`crate::find_panel`]).
+    Find(FindOpen),
+}
+
+/// The find and replace panel while it is open: its controls, and what
+/// it keeps while a question takes its place.
+struct FindOpen {
+    find: WidgetId,
+    with: WidgetId,
+    options: Vec<(WidgetId, FindOption)>,
+    buttons: Vec<(WidgetId, FindButton)>,
+    state: FindState,
+}
+
+/// What the find and replace panel holds between its controls and the
+/// app's model.
+#[derive(Clone, Debug, Default)]
+struct FindState {
+    texts: FindTexts,
+    /// The texts the app's replace loop was started with: Replace steps
+    /// it while they are unchanged, and starts it again after a change.
+    started: Option<FindTexts>,
+    /// The text Find last searched for, with the options then: Find next
+    /// moves to the app's next match while it is unchanged.
+    found: Option<String>,
+    /// Up and Down in each field (Find what, Replace with): the place in
+    /// its history (`None`, the typed text) and the typed text.
+    recall: [Option<usize>; 2],
+    typed: [String; 2],
+    /// The pattern problem last said, so it is said once.
+    problem: Option<String>,
+    /// The status line as drawn.
+    status: String,
 }
 
 /// The widget tree's toolbar buttons and what they do.
@@ -405,6 +442,9 @@ pub struct Gui {
     /// Reset all colors was asked from the Colors dialog on this section:
     /// the dialog opens again there once the question is answered.
     colors_after_question: Option<usize>,
+    /// The find and replace panel, while Replace all's question takes its
+    /// place: it opens again once the question is answered.
+    find_after_question: Option<FindState>,
     /// Load and highlight timings, for `--log` and the measurements.
     pub timings: Timings,
 }
@@ -587,7 +627,7 @@ fn panel(p: &Palette, pad_v: f64, pad_h: f64) -> PropertySet {
 
 /// A dialog's title as drawn: 20 px, bold, hidden from screen readers,
 /// since the dialog's name says it.
-fn dialog_title(text: &str) -> NewWidget<Label> {
+pub(crate) fn dialog_title(text: &str) -> NewWidget<Label> {
     NewWidget::new(label(text, dialog::TITLE_SIZE, true).accessibility_hidden(true))
 }
 
@@ -795,7 +835,7 @@ pub fn list_dialog(
     let list_id = list.id();
     let card = Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Stretch)
-        .with_fixed(dialog_title(title))
+        .with_fixed(dialog_title(title).with_tag(LIST_TITLE))
         .with(list, 1.0)
         .with_fixed_spacer(Length::px(dialog::FOOTER_GAP))
         .with_fixed(dialog_footer(
@@ -883,8 +923,14 @@ pub fn palette_dialog(
             vec![close_button(c, None)],
         ));
     let card = NewWidget::new(card).with_props(dialog::card_props(p));
-    let modal =
-        NewWidget::new(Modal::new(card, label_text, p.clone()).with_show_matches(true)).erased();
+    // Chords go to the driver too, so F1 says what the selected command
+    // does, with the focus in the field or in the list.
+    let modal = NewWidget::new(
+        Modal::new(card, label_text, p.clone())
+            .with_show_matches(true)
+            .with_app_chords(true),
+    )
+    .erased();
     (modal, field_id)
 }
 
@@ -1835,6 +1881,7 @@ impl Gui {
             crate::log::line(&format!("panel: {change:?}"));
         }
         self.sync_question(ctx);
+        self.sync_find(ctx);
         self.sync_misspellings(ctx);
         // The font list (the app's list, the window's families): a family
         // chosen applies; a list closed without one leaves the font alone.
@@ -1968,6 +2015,9 @@ impl Gui {
             | ActionId::NextRegion
             | ActionId::PreviousRegion => true,
             ActionId::Menu => self.native.is_some() && cfg!(windows),
+            // Find and replace is the window's panel in edit mode; while
+            // reading, the app says it needs edit mode.
+            ActionId::Replace => self.app.is_editing(),
             _ => false,
         }
     }
@@ -2081,6 +2131,23 @@ impl Gui {
         self.refresh(ctx);
     }
 
+    /// Space in the Notes panel: the selected note's links open as the
+    /// app's list ([`sidebar::links`]); the list dialog gives the focus
+    /// back to the panel when it closes.
+    fn panel_links(&mut self, ctx: &mut DriverCtx<'_>) {
+        let root = ctx.render_root(self.window_id);
+        let row = root
+            .get_widget_with_tag(SIDEBAR_LIST)
+            .map_or(0, |l| l.inner().selected());
+        let effects = sidebar::links(&mut self.app, &self.sidebar, row);
+        if self.log {
+            crate::log::line(&format!("panel row {row}: links"));
+        }
+        self.menu_dirty = true;
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
+    }
+
     /// Runs `a` if the window runs it itself ([`Self::is_window_command`]);
     /// returns false for the app's commands.
     fn window_command(&mut self, ctx: &mut DriverCtx<'_>, a: ActionId) -> bool {
@@ -2101,6 +2168,7 @@ impl Gui {
             ActionId::ToggleToolbar => self.bar_key(ctx, false),
             ActionId::NextRegion => self.region_key(ctx, true),
             ActionId::PreviousRegion => self.region_key(ctx, false),
+            ActionId::Replace => self.open_find(ctx, FindState::default()),
             ActionId::Menu => {
                 // The native menu bar, entered as F10 enters it.
                 self.reveal_menu_bar();
@@ -2284,6 +2352,7 @@ impl Gui {
                 self.settings_dialog_action(ctx, &DialogAction::Cancel);
             }
             Some(OpenDialog::Prompt) => self.prompt_answer(ctx, None),
+            Some(OpenDialog::Find(_)) => self.close_find(ctx),
             Some(OpenDialog::List(_) | OpenDialog::Palette(_) | OpenDialog::Voices { .. }) => {
                 self.answer(ctx, Command::Cancel);
             }
@@ -2327,6 +2396,11 @@ impl Gui {
                 }
                 Effect::ShowList { .. }
                     if matches!(self.dialog, Some(OpenDialog::FolderChooser)) => {}
+                // The replace loop's list of choices: the find and replace
+                // panel's buttons stand in for it.
+                Effect::ShowList { .. }
+                    if matches!(self.dialog, Some(OpenDialog::Find(_)))
+                        || self.find_after_question.is_some() => {}
                 // The open list changed (filtered, a setting changed): show
                 // it in place, keeping focus in the dialog.
                 Effect::ShowList { .. }
@@ -2591,6 +2665,327 @@ impl Gui {
         }
         self.run_effects(ctx, effects);
         self.refresh(ctx);
+    }
+
+    /// Find and replace (Ctrl+Shift+F in edit mode): the panel, its
+    /// fields holding `state`'s texts (empty the first time; Up brings
+    /// back earlier ones), compact in a short window.
+    fn open_find(&mut self, ctx: &mut DriverCtx<'_>, mut state: FindState) {
+        let short = {
+            let window = ctx.window(self.window_id).handle();
+            f64::from(window.inner_size().height) / window.scale_factor()
+                < crate::find_panel::SHORT_HEIGHT
+        };
+        let d = crate::find_panel::find_dialog(&self.palette, &self.app, &state.texts, short);
+        state.status = crate::find_panel::status_text(&self.app, &state.texts.find);
+        self.show_dialog(ctx, d.modal, d.find);
+        self.dialog = Some(OpenDialog::Find(FindOpen {
+            find: d.find,
+            with: d.with,
+            options: d.options,
+            buttons: d.buttons,
+            state,
+        }));
+        if self.log {
+            crate::log::line("dialog: find and replace");
+        }
+    }
+
+    /// Escape or Close in the panel: a replace loop in progress stops and
+    /// says what it did, and the focus goes back where it was (the
+    /// document).
+    fn close_find(&mut self, ctx: &mut DriverCtx<'_>) {
+        if !matches!(self.dialog, Some(OpenDialog::Find(_))) {
+            return;
+        }
+        self.close_dialog(ctx);
+        if self.app.replace_preview().is_some() {
+            self.dispatch(ctx, Command::Cancel);
+        } else {
+            self.refresh(ctx);
+        }
+    }
+
+    /// Runs a command of the panel's on the app: the replace loop's own
+    /// list stays hidden (its arm in `run_effects`), and the match it asks
+    /// about is said as the preview alone, or not at all when `keep` is
+    /// false ([`crate::find_panel::panel_messages`]).
+    fn panel_dispatch(&mut self, ctx: &mut DriverCtx<'_>, cmd: Command, keep: bool) {
+        if self.log {
+            crate::log::line(&format!("find panel: {cmd:?}"));
+        }
+        self.menu_dirty = true;
+        let effects = self.app.dispatch(cmd);
+        if let Some(preview) = self.app.replace_preview() {
+            crate::find_panel::panel_messages(&mut self.queue.borrow_mut(), &preview, keep);
+        }
+        // The pattern's problem under the options now (a check box).
+        self.say_find_problem();
+        self.run_effects(ctx, effects);
+        self.refresh(ctx);
+    }
+
+    /// Says why the text to find cannot be searched, once each time the
+    /// reason changes; the status line shows it too.
+    fn say_find_problem(&mut self) {
+        let Some(OpenDialog::Find(f)) = &mut self.dialog else {
+            return;
+        };
+        let problem = self.app.search_pattern_problem(&f.state.texts.find);
+        if problem == f.state.problem {
+            return;
+        }
+        f.state.problem.clone_from(&problem);
+        if let Some(p) = problem {
+            self.app
+                .announce_as(&p, Priority::Polite, Importance::Error);
+        }
+    }
+
+    /// Find next or Replace with nothing to find: said, and the focus
+    /// goes to Find what.
+    fn find_empty(&mut self, ctx: &mut DriverCtx<'_>) {
+        let Some(OpenDialog::Find(f)) = &self.dialog else {
+            return;
+        };
+        let field = f.find;
+        ctx.render_root(self.window_id).focus_on(Some(field));
+        let said = self.app.catalog().tr("gui-find-empty");
+        self.app
+            .announce_as(&said, Priority::Polite, Importance::Error);
+        self.refresh(ctx);
+    }
+
+    /// Find next (`forward`; Enter in Find what, F3) or previous
+    /// (Shift+F3): skips the match the replace loop asks about while its
+    /// texts are unchanged; otherwise the app's next match, or a new find
+    /// when the text or the options changed.
+    fn find_next(&mut self, ctx: &mut DriverCtx<'_>, forward: bool) {
+        let running = self.app.replace_preview().is_some();
+        let Some(OpenDialog::Find(f)) = &mut self.dialog else {
+            return;
+        };
+        let texts = f.state.texts.clone();
+        if texts.find.is_empty() {
+            self.find_empty(ctx);
+            return;
+        }
+        let cmd = if forward && running && f.state.started.as_ref() == Some(&texts) {
+            Command::ReplaceStep(textweaver_app::ReplaceStep::Skip)
+        } else if f.state.found.as_deref() == Some(texts.find.as_str()) {
+            Command::Action(if forward {
+                ActionId::FindNext
+            } else {
+                ActionId::FindPrevious
+            })
+        } else {
+            f.state.found = Some(texts.find.clone());
+            Command::Find(texts.find)
+        };
+        self.panel_dispatch(ctx, cmd, true);
+    }
+
+    /// A button of the panel. Replace and Replace all start the app's
+    /// replace loop at the cursor when it is not running with these
+    /// texts: Replace then shows the first match, which the next press
+    /// replaces; Replace all goes on to say the count and ask once.
+    fn find_button(&mut self, ctx: &mut DriverCtx<'_>, b: FindButton) {
+        if b == FindButton::Next {
+            self.find_next(ctx, true);
+            return;
+        }
+        let running = self.app.replace_preview().is_some();
+        let Some(OpenDialog::Find(f)) = &mut self.dialog else {
+            return;
+        };
+        let texts = f.state.texts.clone();
+        if texts.find.is_empty() {
+            self.find_empty(ctx);
+            return;
+        }
+        if !(running && f.state.started.as_ref() == Some(&texts)) {
+            f.state.started = Some(texts.clone());
+            let start = Command::StartReplace {
+                find: texts.find,
+                with: texts.with,
+            };
+            let replace = b == FindButton::Replace;
+            self.panel_dispatch(ctx, start, replace);
+            if replace || self.app.replace_preview().is_none() {
+                return;
+            }
+        }
+        let step = match b {
+            FindButton::ReplaceAll => textweaver_app::ReplaceStep::ReplaceAll,
+            _ => textweaver_app::ReplaceStep::Replace,
+        };
+        self.panel_dispatch(ctx, Command::ReplaceStep(step), true);
+    }
+
+    /// A check box of the panel: the app's search option. The screen
+    /// reader says the box; the window says it as a routine confirmation,
+    /// which the minimal level used with a screen reader leaves out. A
+    /// replace loop in progress counts again.
+    fn find_option(&mut self, ctx: &mut DriverCtx<'_>, id: WidgetId, on: bool) {
+        let Some(OpenDialog::Find(f)) = &mut self.dialog else {
+            return;
+        };
+        let Some(o) = f.options.iter().find(|(i, _)| *i == id).map(|(_, o)| *o) else {
+            return;
+        };
+        f.state.found = None;
+        let opts = o.set(self.app.search_options(), on);
+        ctx.render_root(self.window_id).edit_widget(id, |mut w| {
+            let mut b = w.downcast::<masonry::widgets::Checkbox>();
+            masonry::widgets::Checkbox::set_checked(&mut b, on);
+        });
+        let c = self.app.catalog();
+        let key = match o {
+            FindOption::MatchCase => "replace-item-match-case",
+            FindOption::WholeWords => "replace-item-whole-words",
+            FindOption::Regex => "replace-item-regex",
+            FindOption::AcrossLines => "replace-item-across-lines",
+        };
+        let state = c.tr(if on { "common-on" } else { "common-off" });
+        let said = c.fmt(key, &args!["state" => state]);
+        self.app
+            .announce_as(&said, Priority::Polite, Importance::Routine);
+        self.panel_dispatch(ctx, Command::SetSearchOptions(opts), true);
+    }
+
+    /// Typing in a field of the panel: the text it holds, and under Find
+    /// what, why it cannot be searched, if it cannot.
+    fn find_text_changed(&mut self, ctx: &mut DriverCtx<'_>, id: WidgetId, text: String) {
+        let Some(OpenDialog::Find(f)) = &mut self.dialog else {
+            return;
+        };
+        let i = if id == f.find {
+            0
+        } else if id == f.with {
+            1
+        } else {
+            return;
+        };
+        f.state.recall[i] = None;
+        f.state.typed[i].clone_from(&text);
+        if i == 0 {
+            f.state.texts.find = text;
+            self.say_find_problem();
+        } else {
+            f.state.texts.with = text;
+        }
+        self.refresh(ctx);
+    }
+
+    /// Enter in a field: Find next in Find what, Replace in Replace with.
+    fn find_entered(&mut self, ctx: &mut DriverCtx<'_>, id: WidgetId) {
+        let Some(OpenDialog::Find(f)) = &self.dialog else {
+            return;
+        };
+        if id == f.with {
+            self.find_button(ctx, FindButton::Replace);
+        } else {
+            self.find_next(ctx, true);
+        }
+    }
+
+    /// A key the panel's controls left: Escape closes; Up and Down bring
+    /// back earlier answers in the focused field; F3 and Shift+F3 find
+    /// again; the Help key says how the panel works; Repeat Message says
+    /// the last message.
+    fn find_dialog_action(&mut self, ctx: &mut DriverCtx<'_>, d: DialogAction) {
+        match d {
+            DialogAction::Cancel => self.close_find(ctx),
+            DialogAction::Recall(up) => self.find_recall(ctx, up),
+            DialogAction::Chord(chord) => {
+                let layer = self.app.mode().layer();
+                let keymap = self.app.keymap();
+                let action = keymap
+                    .lookup(&chord, layer)
+                    .or_else(|| keymap.lookup(&chord, textweaver_app::keymap::Layer::Global));
+                if self.log {
+                    crate::log::line(&format!("find panel chord {chord} -> {action:?}"));
+                }
+                match action {
+                    Some(ActionId::FindNext) => self.find_next(ctx, true),
+                    Some(ActionId::FindPrevious) => self.find_next(ctx, false),
+                    Some(ActionId::Help) => {
+                        let said = self.app.catalog().tr("gui-find-hint");
+                        self.app
+                            .announce_as(&said, Priority::Polite, Importance::Answer);
+                        self.refresh(ctx);
+                    }
+                    Some(ActionId::RepeatMessage) => {
+                        self.dispatch(ctx, Command::Action(ActionId::RepeatMessage));
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Up (`up`) or Down in Find what or Replace with: the field's earlier
+    /// answers (`App::prompt_history`; Find what shares Find's), and past
+    /// the newest, the text that was typed.
+    fn find_recall(&mut self, ctx: &mut DriverCtx<'_>, up: bool) {
+        let focus = ctx.render_root(self.window_id).focused_widget();
+        let Some(OpenDialog::Find(f)) = &mut self.dialog else {
+            return;
+        };
+        let (i, purpose, tag) = if focus == Some(f.find) {
+            (0, PromptPurpose::Find, crate::find_panel::FIND_WHAT)
+        } else if focus == Some(f.with) {
+            (1, PromptPurpose::ReplaceWith, crate::find_panel::FIND_WITH)
+        } else {
+            return;
+        };
+        let history = self.app.prompt_history(purpose);
+        let Some(at) = crate::find_panel::recall(history, f.state.recall[i], up) else {
+            return;
+        };
+        let text = at
+            .and_then(|n| history.get(n).cloned())
+            .unwrap_or_else(|| f.state.typed[i].clone());
+        f.state.recall[i] = at;
+        if i == 0 {
+            f.state.texts.find.clone_from(&text);
+        } else {
+            f.state.texts.with.clone_from(&text);
+        }
+        ctx.render_root(self.window_id)
+            .edit_widget_with_tag(tag, |mut w| TextArea::reset_text(&mut w, &text));
+        // A screen reader reads the field's new text; textweaver's own
+        // voice says it when it speaks its messages.
+        let said = if text.is_empty() {
+            self.app.catalog().tr("nav-blank")
+        } else {
+            text
+        };
+        self.app.echo(&said);
+        if i == 0 {
+            self.say_find_problem();
+        }
+        self.refresh(ctx);
+    }
+
+    /// The panel's status line follows the app: an invalid pattern, or
+    /// the match the replace loop asks about.
+    fn sync_find(&mut self, ctx: &mut DriverCtx<'_>) {
+        let Some(OpenDialog::Find(f)) = &mut self.dialog else {
+            return;
+        };
+        let status = crate::find_panel::status_text(&self.app, &f.state.texts.find);
+        if status == f.state.status {
+            return;
+        }
+        f.state.status.clone_from(&status);
+        ctx.render_root(self.window_id).edit_widget_with_tag(
+            crate::find_panel::FIND_STATUS,
+            |mut l| {
+                Label::set_text(&mut l, status);
+            },
+        );
     }
 
     /// The Settings command: the settings dialog, from the app's schema.
@@ -2973,6 +3368,12 @@ impl Gui {
         let (modal, list_id) = list_dialog(&self.palette, &c, title, items, selected, true);
         self.show_dialog(ctx, modal, list_id);
         self.dialog = Some(OpenDialog::List(title.to_owned()));
+        // A list of commands: short names, keys at the right edge, and the
+        // long explanations as descriptions.
+        if let Some(rows) = self.app.list_model().and_then(dialog::Rows::from_model) {
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(LIST, |mut l| ChoiceList::sync_rows(&mut l, rows, selected));
+        }
         if self.log {
             crate::log::line(&format!("dialog: list {title:?} with {count} items"));
         }
@@ -3044,8 +3445,11 @@ impl Gui {
             window_palette(&self.app, "").into_iter().unzip();
         let count = items.len();
         let c = self.app.catalog();
+        let rows = dialog::Rows::commands(&self.app, &ids, items.clone());
         let (modal, field_id) = palette_dialog(&self.palette, &c, label_text, items);
         self.show_dialog(ctx, modal, field_id);
+        ctx.render_root(self.window_id)
+            .edit_widget_with_tag(LIST, |mut l| ChoiceList::set_rows(&mut l, rows));
         self.dialog = Some(OpenDialog::Palette(ids));
         if self.log {
             crate::log::line(&format!("dialog: command palette with {count} commands"));
@@ -3134,8 +3538,9 @@ impl Gui {
         let (ids, items): (Vec<ActionId>, Vec<String>) =
             window_palette(&self.app, query).into_iter().unzip();
         let n = items.len();
+        let rows = dialog::Rows::commands(&self.app, &ids, items);
         ctx.render_root(self.window_id)
-            .edit_widget_with_tag(LIST, |mut l| ChoiceList::set_items(&mut l, items));
+            .edit_widget_with_tag(LIST, |mut l| ChoiceList::set_rows(&mut l, rows));
         self.dialog = Some(OpenDialog::Palette(ids));
         let said = self
             .app
@@ -3166,7 +3571,25 @@ impl Gui {
                 return;
             }
         }
+        // Typing in a list that filters as you type (the keyboard
+        // shortcuts list, the outline) changes its title with the filter;
+        // the dialog stays open and its drawn title follows, so the
+        // screen reader is not moved back into a new dialog per letter.
+        let filtering = self.app.list_filter().is_some()
+            && matches!(
+                k,
+                textweaver_app::ListKey::Char(_) | textweaver_app::ListKey::Backspace
+            );
         let effects = self.app.dispatch(Command::ListKey(k));
+        if filtering
+            && self.app.list_filter().is_some()
+            && matches!(self.dialog, Some(OpenDialog::List(_)))
+            && let Some(title) = self.app.list_model().map(|m| m.title.clone())
+        {
+            ctx.render_root(self.window_id)
+                .edit_widget_with_tag(LIST_TITLE, |mut l| Label::set_text(&mut l, title.clone()));
+            self.dialog = Some(OpenDialog::List(title));
+        }
         self.sync_list(ctx);
         self.run_effects(ctx, effects);
         self.refresh(ctx);
@@ -3193,6 +3616,23 @@ impl Gui {
             crate::log::line(&format!("list chord {chord} -> {action:?}"));
         }
         match action {
+            // In the command palette, the Help key says what the selected
+            // command does (its row has only the name and the key).
+            Some(ActionId::Help) if matches!(self.dialog, Some(OpenDialog::Palette(_))) => {
+                let Some(OpenDialog::Palette(ids)) = &self.dialog else {
+                    return;
+                };
+                let selected = ctx
+                    .render_root(self.window_id)
+                    .get_widget_with_tag(LIST)
+                    .map_or(0, |w| w.inner().selected());
+                if let Some(&a) = ids.get(selected) {
+                    let help = self.app.command_row(a).help;
+                    self.app
+                        .announce_as(&help, Priority::Assertive, Importance::Answer);
+                    self.refresh(ctx);
+                }
+            }
             // In the file browser, Say Status previews the focused row;
             // in the voice manager, the focused voice.
             Some(ActionId::SayStatus) if self.app.list_has_details() => {
@@ -3233,8 +3673,12 @@ impl Gui {
             }
             Some(m) => {
                 let (items, selected) = (m.items.clone(), m.selected);
+                let rows = dialog::Rows::from_model(m);
                 let root = ctx.render_root(self.window_id);
-                root.edit_widget_with_tag(LIST, |mut l| ChoiceList::sync(&mut l, &items, selected));
+                root.edit_widget_with_tag(LIST, |mut l| match rows {
+                    Some(rows) => ChoiceList::sync_rows(&mut l, rows, selected),
+                    None => ChoiceList::sync(&mut l, &items, selected),
+                });
                 // The filter buttons say what the list shows now.
                 if let Some(c) = self.app.voice_controls() {
                     root.edit_widget_with_tag(crate::voices::VOICE_LANGUAGE, |mut b| {
@@ -3381,6 +3825,13 @@ impl Gui {
         let pending = self.app.confirmation_pending();
         let showing = matches!(self.dialog, Some(OpenDialog::Question { .. }));
         if pending && !showing {
+            // Replace all's question takes the panel's place; the panel
+            // comes back once it is answered.
+            if matches!(self.dialog, Some(OpenDialog::Find(_)))
+                && let Some(OpenDialog::Find(f)) = self.dialog.take()
+            {
+                self.find_after_question = Some(f.state);
+            }
             let question = self.app.status_text().to_owned();
             let verb = self.app.destructive_question();
             let q = question_dialog(&self.palette, &self.app.catalog(), &question, verb);
@@ -3407,6 +3858,17 @@ impl Gui {
         }
         if self.log {
             crate::log::line(&format!("answer {answer:?}"));
+        }
+        if self.find_after_question.is_some() {
+            // Replace all's question: No asks about the match again, in
+            // the panel's words.
+            self.panel_dispatch(ctx, Command::Confirm(answer), true);
+            if !self.app.confirmation_pending()
+                && let Some(state) = self.find_after_question.take()
+            {
+                self.open_find(ctx, state);
+            }
+            return;
         }
         self.dispatch(ctx, Command::Confirm(answer));
         if !self.app.confirmation_pending()
@@ -3893,9 +4355,22 @@ impl AppDriver for Gui {
                 && let Some(b) = crate::voices::button_for(buttons, widget_id)
             {
                 self.voice_button(ctx, b);
+            } else if let Some(OpenDialog::Find(f)) = &self.dialog
+                && let Some(b) = f
+                    .buttons
+                    .iter()
+                    .find(|(id, _)| *id == widget_id)
+                    .map(|(_, b)| *b)
+            {
+                self.find_button(ctx, b);
             } else if let Some(a) = self.buttons.by_id.get(&widget_id).copied() {
                 self.dispatch(ctx, Command::Action(a));
             }
+        } else if let Some(masonry::widgets::CheckboxToggled(on)) =
+            action.downcast_ref::<masonry::widgets::CheckboxToggled>()
+        {
+            let on = *on;
+            self.find_option(ctx, widget_id, on);
         } else if let Some(a) = action.downcast_ref::<FormAction>() {
             let a = a.clone();
             self.settings_form_action(ctx, a);
@@ -3909,6 +4384,9 @@ impl AppDriver for Gui {
                 None
             };
             self.panel_go(ctx, row, true);
+        } else if let Some(SidebarAction::Links) = action.downcast_ref::<SidebarAction>() {
+            // Space in the Notes panel: the note's links, as a list dialog.
+            self.panel_links(ctx);
         } else if let Some(d) = action.downcast_ref::<DialogAction>()
             && ctx
                 .render_root(self.window_id)
@@ -3930,6 +4408,11 @@ impl AppDriver for Gui {
                     }
                     _ => {}
                 }
+                return;
+            }
+            if matches!(self.dialog, Some(OpenDialog::Find(_))) {
+                let d = d.clone();
+                self.find_dialog_action(ctx, d);
                 return;
             }
             if self.settings_dialog_action(ctx, d) {
@@ -4067,6 +4550,17 @@ impl AppDriver for Gui {
             self.answer(ctx, cmd);
         } else if let Some(t) = action.downcast_ref::<masonry::widgets::TextAction>() {
             use masonry::widgets::TextAction;
+            if matches!(self.dialog, Some(OpenDialog::Find(_))) {
+                match t {
+                    TextAction::Changed(text) => {
+                        let text = text.clone();
+                        self.find_text_changed(ctx, widget_id, text);
+                    }
+                    TextAction::Entered(_) => self.find_entered(ctx, widget_id),
+                    TextAction::Cancelled => self.close_find(ctx),
+                }
+                return;
+            }
             match (t, &self.dialog) {
                 (TextAction::Entered(text), Some(OpenDialog::SettingEdit(..))) => {
                     let text = text.clone();
@@ -4443,6 +4937,7 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         font_choices: None,
         font_downloads: 0,
         colors_after_question: None,
+        find_after_question: None,
         installed: crate::font_chooser::Installed::scan_in_background(),
         window_title: String::new(),
         closed: false,

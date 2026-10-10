@@ -321,6 +321,9 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             .ok()
             .map(|p| p.themes_dir());
         options.theme_css = page_theme(&args, &settings.display.theme, themes.as_deref())?;
+        // The reader's font, spacing, and line length: a page looks like
+        // the reader (themes carry colors only).
+        options.typography = Some(textweaver_app::page_typography(&settings));
     }
     let converter = Converter::new(options)?;
     if let Some(note) = template_note(&args) {
@@ -622,5 +625,25 @@ mod tests {
         let page = std::fs::read_to_string(dir.path().join("notes.html")).unwrap();
         assert!(page.contains("/* textweaver theme: Sepia */"));
         assert!(!page.contains("textweaver themes: Galaxy Light"));
+    }
+
+    /// A converted page takes its font and line length from the reading
+    /// settings, as `run` passes them.
+    #[test]
+    fn the_reading_settings_set_the_page_type() {
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("notes.md");
+        std::fs::write(&src, "# Notes\n\nText.\n").unwrap();
+        let args = parse(&["notes.md", "--to", "html"]);
+        let mut settings = textweaver_app::store::Settings::default();
+        settings.display.measure = 50;
+        settings.reading_aids.font.size_pt = 18.0;
+        let mut o = options(&args);
+        o.typography = Some(textweaver_app::page_typography(&settings));
+        o.audit = false;
+        Converter::new(o).unwrap().run(&[src]).unwrap();
+        let page = std::fs::read_to_string(dir.path().join("notes.html")).unwrap();
+        assert!(page.contains("--tw-type-measure: 50ch;"), "{page}");
+        assert!(page.contains("--tw-type-size: 150%;"), "{page}");
     }
 }

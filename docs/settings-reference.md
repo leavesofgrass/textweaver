@@ -33,6 +33,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `speech.sapi.onecore`: default on (`true`). OneCore voices. Also list the Windows OneCore voices through SAPI 5. On or off: `true` or `false`. Stays on this computer.
 - `speech.apple.backend`: default automatic (`"auto"`). Apple speech engine. Which of Apple's speech engines to use on macOS. Choices: `"auto"` (automatic), `"nsspeech"` (NSSpeechSynthesizer), `"avspeech"` (AVSpeechSynthesizer). Stays on this computer.
 - `speech.dectalk.library`: default not set. DECtalk library. The DECtalk library to load; not set searches the usual places. Text; empty means not set. Stays on this computer.
+- `speech.espeak.helper`: default automatic (`"auto"`). eSpeak NG helper program. Run eSpeak NG in its own helper program, so an engine crash cannot close textweaver. Automatic uses the helper on Windows when it is installed, and runs eSpeak NG inside textweaver elsewhere. Choices: `"auto"` (automatic), `"always"` (always the helper), `"never"` (inside textweaver). Stays on this computer.
 - `speech.piper.voices`: default not set. Piper voices folder. The folder of Piper voices; not set uses the piper folder in textweaver's data folder. Text; empty means not set. Stays on this computer.
 - `speech.piper.voice`: default not set. Piper voice. The Piper voice to start with, by id; not set takes the first installed. Text; empty means not set. Stays on this computer.
 - `speech.piper.phonemizer`: default automatic (`"auto"`). Piper phonemizer. How Piper turns text into sounds. The espeak-ng library when installed, that library, or textweaver's own. Choices: `"auto"` (automatic), `"library"` (espeak-ng library), `"rust"` (textweaver's own). Stays on this computer.
@@ -46,6 +47,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `highlight.speed`: default 1. Highlight speed. Speed of the timed highlight for engines that report no words, as a multiple. 1 is normal speed. From 0.5 to 1.5, in steps of 0.1. Syncs between computers.
 - `highlight.color`: default the theme's color (`"theme"`). Word highlight color. The color behind the word being read. Choose a name, or type a hex code. Default: the theme's color. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too. Syncs between computers.
 - `highlight.sentence_color`: default not set. Sentence highlight color. The color behind the sentence being read. Choose a name, or type a hex code. Default: the theme's color. Choices: `"theme"` (the theme's color), `"blue"`, `"orange"`, `"navy"` (dark blue), `"skyblue"` (sky blue), `"teal"`, `"gold"`, `"yellow"`, `"purple"`, `"pink"`, `"brown"`, `"gray"`, `"black"`, `"white"`. Other values may be written too. Syncs between computers.
+- `highlight.palette`: default [{"color":"yellow","name":"important","shape":"underline"},{"color":"green","name":"define","shape":"double_underline"},{"color":"cyan","name":"question","shape":"brackets"},{"color":"pink","name":"example","shape":"dotted"},{"color":"orange","name":"review","shape":"bold"}] (`[a table of 3 entries, a table of 3 entries, a table of 3 entries, a table of 3 entries, a table of 3 entries]`). Highlight names. Up to eight names for your highlights, each with a color and a shape. The first five have keys of their own. A table of names and values, edited in the file. Syncs between computers.
 
 ## Speaking text: the `[normalization]` section
 
@@ -80,6 +82,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `reading.revisions`: default automatic (`"auto"`). Tracked changes. How tracked changes in Word, OpenDocument, and RTF files are read. Said in place at high verbosity (automatic), always said, or never said, reading the final text. Applies when a document is opened. Choices: `"auto"` (automatic), `"marked"` (always say them), `"final"` (final text only). Syncs between computers.
 - `reading.stop_at`: default never (`"off"`). Stop at section end. Where continuous reading stops by itself and says End of section. Never, at the next heading of any level, or at the next chapter: a section break, else a level 1 heading. Reading goes on from the heading with the read key. Choices: `"off"` (never), `"heading"` (next heading), `"chapter"` (next chapter). Syncs between computers.
 - `reading.stop_after_minutes`: default 0 minutes. Reading timer. Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off. From 0 to 240 minutes, in steps of 5. Syncs between computers.
+- `reading.recall_prompts`: default off (`false`). Recall prompts. At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key. On or off: `true` or `false`. Syncs between computers.
 
 ## Display: the `[display]` section
 
@@ -102,7 +105,11 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `editing.echo_lines_on_move`: default on (`true`). Echo lines. Say the line when the cursor moves to another line. On or off: `true` or `false`. Syncs between computers.
 - `editing.undo_steps`: default 1000 steps. Undo steps. Most undo steps kept while editing. From 1 to 100000 steps, in steps of 100. Stays on this computer.
 - `editing.undo_memory_mb`: default 50 megabytes. Undo memory. Most memory the undo history may use. From 1 to 4096 megabytes, in steps of 16. Stays on this computer.
-- `editing.author`: default empty (`""`). Author. The author written into new documents made from a template; empty leaves it blank. Text. Stays on this computer.
+
+## Authoring: the `[authoring]` section
+
+- `authoring.author`: default empty (`""`). Author. The name textweaver writes on comments, replies, and documents from a template. Empty means textweaver on comments and no author in templates. Never taken from the computer. Text. Stays on this computer.
+- `authoring.track_changes`: default off (`false`). Track changes in Word files. Save edits to a Word file as tracked changes a reviewer can accept. Off saves them as Markdown under a new name. On or off: `true` or `false`. Syncs between computers.
 
 ## Library: the `[library]` section
 

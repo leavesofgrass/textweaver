@@ -97,7 +97,7 @@ Values that could confuse Obsidian, such as a title containing a colon, are put 
 
 After the front matter comes the note's own text. Then, if the note links to other notes, a `## Links` section lists them. Each line is a Dataview inline field: a dash, the kind of link in capitals, two colons, and a link to the other note. A comment on the link, if there is one, follows after " - ". Obsidian's graph shows these links as lines between the notes, and the Dataview plugin can query them.
 
-The kinds of link are `CONFLICTS_WITH`, `SUPPORTS`, `IS_EXAMPLE_OF`, `CITES`, `CONTRADICTS`, `DEFINES`, `EXTENDS`, `SEE_ALSO`, `PRECEDES`, and `FOLLOWS`.
+The kinds of link are `CONFLICTS_WITH`, `SUPPORTS`, `IS_EXAMPLE_OF`, `CITES`, `CONTRADICTS`, `DEFINES`, `EXTENDS`, `SEE_ALSO`, `PRECEDES`, and `FOLLOWS`. A kind textweaver does not know, written by a newer version, is exported in the same capitals and comes back unchanged on import. Any other field name the import does not know, such as `related::`, makes a plain link, as star did.
 
 ### What the document note holds
 

@@ -54,7 +54,7 @@ struct Computer {
     clock: Instant,
 }
 
-/// A name that must never reach the sync folder (`editing.author`, a
+/// A name that must never reach the sync folder (`authoring.author`, a
 /// machine setting).
 const AUTHOR: &str = "Ada Example";
 
@@ -220,7 +220,7 @@ fn two_computers_converge_on_portable_settings_and_keep_their_machine_settings()
     let folder = tempfile::tempdir().unwrap();
     let mut laptop = computer(folder.path(), "laptop", |s| {
         s.display.wrap_width = 80;
-        s.editing.author = AUTHOR.into();
+        s.authoring.author = AUTHOR.into();
         s.library.folders = vec![PathBuf::from("D:/Books")];
     });
     let mut lab = computer(folder.path(), "lab", |s| {
@@ -241,7 +241,7 @@ fn two_computers_converge_on_portable_settings_and_keep_their_machine_settings()
     // Machine settings stay each computer's own.
     assert_eq!(s.display.wrap_width, 100);
     assert_eq!(laptop.app.settings().display.wrap_width, 80);
-    assert!(s.editing.author.is_empty());
+    assert!(s.authoring.author.is_empty());
     assert!(s.library.folders.is_empty());
     // One short summary, meaning first.
     assert!(

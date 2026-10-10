@@ -200,7 +200,7 @@ impl App {
             "" => self.msg("templates-untitled"),
             t => t.to_owned(),
         };
-        let author = self.settings.editing.author.trim().to_owned();
+        let author = self.settings.authoring.author.trim().to_owned();
         let date = local_date();
         let body = t.fill(&title, &author, &date);
         self.untitled += 1;

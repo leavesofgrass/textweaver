@@ -50,6 +50,7 @@ use serde::Serialize;
 use textweaver_formats::{LoadOptions, Loader, MarkdownLoader, Registry, Source};
 use textweaver_render::{
     EmbedMode, FsResolver, PageOptions, RenderOptions, Resolver, TemplateChoice, Templates,
+    Typography,
 };
 use textweaver_text::Document;
 
@@ -64,8 +65,8 @@ pub use plan::{Job, Plan};
 pub use report::{Issue, IssueKind, Location, ReportFormat, file_report_path, find_issues};
 pub use watch::{WatchEvent, WatchOptions, watch};
 pub use writer::{
-    BrailleGrade, BrailleOptions, BrailleTableFormat, EpubOptions, MathCode, PageSize, PdfOptions,
-    WriteError, WriteOptions, WriteReport, Writer, Writers,
+    BrailleGrade, BrailleHighlight, BrailleOptions, BrailleTableFormat, EpubOptions, MathCode,
+    PageSize, PdfOptions, WriteError, WriteOptions, WriteReport, Writer, Writers,
 };
 
 /// An output format.
@@ -173,6 +174,9 @@ pub struct ConvertOptions {
     /// The theme's CSS properties for HTML pages (see
     /// [`PageOptions::theme_css`]); `None` uses Galaxy.
     pub theme_css: Option<String>,
+    /// The reader's font, spacing, and line length for HTML pages (see
+    /// [`PageOptions::typography`]); `None` keeps the templates' own.
+    pub typography: Option<Typography>,
     /// Worker threads; `None` uses every core.
     pub jobs: Option<usize>,
     /// Convert even when the output is newer than the source.
@@ -204,6 +208,7 @@ impl Default for ConvertOptions {
             template_dir: None,
             toc: true,
             theme_css: None,
+            typography: None,
             jobs: None,
             force: false,
             load: LoadOptions::default(),
@@ -991,6 +996,7 @@ impl Converter {
             fallback_title: stem(&job.source),
             toc: self.options.toc,
             theme_css: self.options.theme_css.clone(),
+            typography: self.options.typography.clone(),
             ..PageOptions::default()
         };
         self.templates

@@ -31,6 +31,7 @@ use textweaver_text::Document;
 
 pub mod brf;
 pub mod docx;
+pub mod docx_update;
 pub mod epub;
 mod math;
 pub mod model;
@@ -314,6 +315,29 @@ pub struct BrailleOptions {
     pub math_code: MathCode,
     /// How tables are laid out (default linear).
     pub table_format: BrailleTableFormat,
+    /// The reader's highlights, each written with the transcriber-defined
+    /// typeform of its palette entry (UEB Rules 9.2.1), after a
+    /// transcriber's note that names them. Empty (the default) writes none.
+    #[serde(skip)]
+    pub highlights: Vec<BrailleHighlight>,
+    /// The palette's names, first entry first, for that transcriber's note.
+    #[serde(skip)]
+    pub highlight_names: Vec<String>,
+}
+
+/// A highlight to carry into BRF.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BrailleHighlight {
+    /// The highlighted chars of the document written.
+    pub range: textweaver_core::CharRange,
+    /// Its palette entry, from 0. The first five have the five
+    /// transcriber-defined typeforms; later entries are left unmarked and
+    /// the report says so.
+    pub entry: usize,
+    /// The highlighted text when it was made, whitespace collapsed (a
+    /// start of it is enough). A highlight whose text the document no
+    /// longer has there is left out; empty skips the check.
+    pub text: String,
 }
 
 impl Default for BrailleOptions {
@@ -326,6 +350,8 @@ impl Default for BrailleOptions {
             table: "en-ueb-g2.ctb".to_owned(),
             math_code: MathCode::Nemeth,
             table_format: BrailleTableFormat::Linear,
+            highlights: Vec::new(),
+            highlight_names: Vec::new(),
         }
     }
 }

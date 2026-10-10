@@ -264,7 +264,11 @@ pub(crate) enum ListKind {
     Actions(Vec<ActionId>),
     Info,
     Notes,
-    Highlights,
+    /// The highlights, all of them or those of one palette name.
+    Highlights(Option<String>),
+    /// The palette's names, to highlight with, change a highlight to, or
+    /// collect (crate::notes::NamePick).
+    HighlightNames(crate::notes::NamePick),
     SaveChoice(AfterLeave),
     Recovery,
     /// The library: the documents, the filter, and those shown
@@ -317,6 +321,13 @@ pub(crate) enum ListKind {
     /// A note's links, what links to it, or a step of adding one
     /// (crate::relations, B1-g1).
     Relations(crate::relations::RelationsList),
+    /// Prompts with hidden answers: the self-test (crate::reveal).
+    Reveal(crate::reveal::RevealList),
+    /// The formats the knowledge graph can be exported in, in the order of
+    /// `GraphFormat::ALL` (crate::relations, B1-g2).
+    GraphFormats,
+    /// The study cards, by id (crate::cards).
+    Cards(Vec<String>),
 }
 
 /// The application: the only owner of mutable state.
@@ -363,6 +374,8 @@ pub struct App {
     /// The introduction of the list shown ("Notes, 12 notes. Enter goes
     /// to a note..."), repeated on request (crate::status).
     pub(crate) list_intro: Option<String>,
+    /// The keyboard shortcuts list's filter (crate::command_list).
+    pub(crate) keys_filter: String,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     /// Which sentences continuous reading says (crate::overview); for
@@ -439,6 +452,10 @@ pub struct App {
     /// Text copied or cut, waiting for the frontend
     /// ([`App::take_clipboard`]).
     pub(crate) clipboard: Option<String>,
+    /// The system clipboard Paste reads ([`App::set_clipboard`]).
+    pub(crate) system_clipboard: Option<Box<dyn crate::clipboard::Clipboard>>,
+    /// A formatted paste being converted on a worker thread.
+    pub(crate) paste_job: Option<crate::clipboard::PasteJob>,
     /// The background writer: saves, snapshots, positions, and the disk
     /// check (crate::writer).
     pub(crate) writer: crate::writer::Writer,
@@ -497,6 +514,12 @@ pub struct App {
     pub(crate) pending_list_focus: Option<usize>,
     /// Say a list's focused item when the list is shown (crate::list_model).
     pub(crate) announce_list_focus: bool,
+    /// The next list shown is the same list again after a change that was
+    /// just said (an answer revealed): its focused item is not said again
+    /// and its introduction is kept (crate::reveal).
+    pub(crate) list_reshow_quiet: bool,
+    /// Study cards and the study session (crate::cards).
+    pub(crate) cards: crate::cards::CardsState,
     /// Menu handlers, recent commands, and the menu list (crate::menu).
     pub(crate) menu: crate::menu::MenuState,
     /// Dictation in edit mode (crate::dictation).
@@ -568,6 +591,7 @@ impl App {
             last_message: None,
             messages_said: 0,
             list_intro: None,
+            keys_filter: String::new(),
             pause_origin: None,
             reading: ReadKind::Continuous,
             reading_pass: textweaver_text::ReadingPass::Full,
@@ -610,6 +634,8 @@ impl App {
             drawn_colors: None,
             voices: crate::voice::VoicesState::default(),
             clipboard: None,
+            system_clipboard: None,
+            paste_job: None,
             writer: crate::writer::Writer::spawn(wake.clone()),
             pending_saves: Vec::new(),
             disk_check_pending: false,
@@ -637,6 +663,8 @@ impl App {
             pending_prompt_text: None,
             pending_list_focus: None,
             announce_list_focus: true,
+            list_reshow_quiet: false,
+            cards: crate::cards::CardsState::default(),
             menu: crate::menu::MenuState::default(),
             dictation: crate::dictation::DictationSlot::default(),
             browse: crate::browse::BrowseState::new(),
@@ -746,7 +774,7 @@ impl App {
         }
         if let Some((kind, _)) = &self.pending_list_delete {
             return Some(match kind {
-                ListKind::Highlights | ListKind::Relations(_) => V::Remove,
+                ListKind::Highlights(_) | ListKind::Relations(_) | ListKind::Cards(_) => V::Remove,
                 _ => V::Delete,
             });
         }
@@ -813,9 +841,13 @@ impl App {
                     self.pending_list_delete = None;
                     self.list = Some(kind.clone());
                     match kind {
-                        ListKind::Highlights => self.delete_highlight(n),
+                        ListKind::Highlights(f) => match self.highlight_at_row(f.as_deref(), n) {
+                            Some(i) => self.delete_highlight(i, f),
+                            None => vec![Effect::Redraw],
+                        },
                         ListKind::Changes(rows) => self.delete_comment_row(&rows, n),
                         ListKind::Relations(l) => self.remove_relation(&l, n),
+                        ListKind::Cards(ids) => self.delete_card_row(&ids, n),
                         _ => self.delete_note(n),
                     }
                 }
@@ -824,9 +856,10 @@ impl App {
                     let msg = self.msg("common-kept");
                     self.tell(&msg);
                     match kind {
-                        ListKind::Highlights => self.list_highlights(),
+                        ListKind::Highlights(f) => self.list_highlights_named(f),
                         ListKind::Changes(_) => self.list_changes(),
                         ListKind::Relations(l) => self.reshow_relations(&l),
+                        ListKind::Cards(_) => self.list_cards(),
                         _ => self.notes_command(NoteCommand::List),
                     }
                 }
@@ -1514,6 +1547,7 @@ impl App {
             Command::MathStep(mv) => self.math_step(mv),
             Command::Find(pattern) => {
                 self.leave_prompt();
+                self.remember_answer(PromptPurpose::Find, &pattern);
                 self.run_find(&pattern);
                 vec![Effect::Redraw]
             }
@@ -1639,6 +1673,7 @@ impl App {
         effects.extend(self.restart_tick());
         effects.extend(self.library_tick());
         effects.extend(self.details_tick());
+        effects.extend(self.paste_tick());
         effects.extend(self.define_tick());
         effects.extend(self.voices_tick());
         effects.extend(self.dictation_tick());
@@ -1820,7 +1855,12 @@ impl App {
                 }
             }
             Some(ListKind::Notes) => self.go_to_note(n, false),
-            Some(ListKind::Highlights) => self.go_to_highlight(n),
+            Some(ListKind::Highlights(f)) => {
+                if let Some(i) = self.highlight_at_row(f.as_deref(), n) {
+                    self.go_to_highlight(i);
+                }
+            }
+            Some(ListKind::HighlightNames(pick)) => return self.choose_highlight_name(pick, n),
             Some(ListKind::SaveChoice(after)) => return self.answer_save_choice(n, after),
             Some(ListKind::Recovery) => return self.answer_recovery(n),
             Some(ListKind::Library(l)) => return self.choose_library(&l, n),
@@ -1846,8 +1886,14 @@ impl App {
                 }
             }
             Some(ListKind::Summary(ranges)) => self.choose_summary_sentence(&ranges, n),
+            Some(ListKind::Reveal(l)) => {
+                self.cards_row_chosen(&l, n);
+                return self.choose_reveal(l, n);
+            }
+            Some(ListKind::Cards(ids)) => self.choose_card_row(&ids, n),
             Some(ListKind::Changes(rows)) => self.choose_change_row(&rows, n),
             Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
+            Some(ListKind::GraphFormats) => return self.choose_graph_format(n),
             Some(ListKind::Info) | None => {}
         }
         vec![Effect::Redraw]
@@ -1860,7 +1906,7 @@ impl App {
             Some(ListKind::Voices) => self.remove_voice_row(n),
             // Deleting a note or highlight asks first, as the delete_note
             // action does: a stray Delete in the list cannot lose one.
-            Some(kind @ (ListKind::Notes | ListKind::Highlights)) => {
+            Some(kind @ (ListKind::Notes | ListKind::Highlights(_))) => {
                 let question = self.msg(list_delete_question(&kind));
                 self.list = None;
                 self.pending_list_delete = Some((kind, n));
@@ -1883,6 +1929,13 @@ impl App {
                 vec![Effect::Redraw]
             }
             Some(ListKind::Relations(l)) => self.delete_relation_item(l, n),
+            Some(kind @ ListKind::Cards(_)) => {
+                let question = self.msg(list_delete_question(&kind));
+                self.list = None;
+                self.pending_list_delete = Some((kind, n));
+                self.ask(&question);
+                vec![Effect::Redraw]
+            }
             _ => {
                 let msg = self.msg("study-nothing-to-delete");
                 self.tell(&msg);
@@ -1913,9 +1966,15 @@ impl App {
             Some(ListKind::Changes(rows)) => self.toggle_comment_resolved(&rows, n),
             // Space on a note opens its links (crate::relations).
             Some(ListKind::Notes) => self.note_links(n),
+            // Space on a highlight shows only its name's, and again all.
+            Some(ListKind::Highlights(f)) => self.filter_highlights(f, n),
             Some(ListKind::Components(l)) => {
                 self.list = None;
                 self.mark_component_row(l, n)
+            }
+            Some(ListKind::Reveal(l)) => {
+                self.list = None;
+                self.reveal_answer_aloud(l, n)
             }
             _ => {
                 let msg = self.msg("list-nothing-to-mark");
@@ -1954,6 +2013,11 @@ impl App {
                 e
             }
             Some(ListKind::Study(l)) => self.rename_study_item(l, n),
+            // F2 on a highlight gives it another palette name.
+            Some(ListKind::Highlights(f)) => match self.highlight_at_row(f.as_deref(), n) {
+                Some(i) => self.show_highlight_names(crate::notes::NamePick::Change(i)),
+                None => vec![Effect::Redraw],
+            },
             Some(ListKind::Changes(rows)) => self.reply_comment_prompt(&rows, n),
             Some(ListKind::Relations(l)) => self.edit_relation_item(l, n),
             _ => {
@@ -2176,12 +2240,30 @@ impl App {
             A::AddNote => return self.notes_command(NoteCommand::Add),
             A::ListNotes => return self.notes_command(NoteCommand::List),
             A::ListChanges => return self.list_changes(),
+            A::MakeCards
+            | A::StudyCards
+            | A::ListCards
+            | A::GradeAgain
+            | A::GradeHard
+            | A::GradeGood
+            | A::GradeEasy => return self.cards_action(a),
             A::AcceptAllChanges => return self.decide_all(true, None),
             A::RejectAllChanges => return self.decide_all(false, None),
             A::AddComment => return self.prompt(PromptPurpose::CommentText),
+            A::SaveChangesToWord => return self.save_changes_to_word(),
             A::NextNote => return self.notes_command(NoteCommand::Next),
             A::PreviousNote => return self.notes_command(NoteCommand::Previous),
             A::HighlightSelection => return self.notes_command(NoteCommand::ToggleHighlight),
+            A::HighlightAs => return self.show_highlight_names(crate::notes::NamePick::Highlight),
+            A::HighlightName1 => self.highlight_with(Some(0)),
+            A::HighlightName2 => self.highlight_with(Some(1)),
+            A::HighlightName3 => self.highlight_with(Some(2)),
+            A::HighlightName4 => self.highlight_with(Some(3)),
+            A::HighlightName5 => self.highlight_with(Some(4)),
+            A::CollectHighlights => {
+                return self.show_highlight_names(crate::notes::NamePick::Collect);
+            }
+            A::ExportStudySheetByName => return self.export_study_sheet(true),
             A::DeleteNote => return self.delete_note_here(),
             A::AddBookmark => self.add_bookmark(),
             A::ListBookmarks => return self.list_bookmarks(),
@@ -2223,6 +2305,7 @@ impl App {
             A::KeyboardHelp => return self.keyboard_help(),
             A::Help => return self.help(),
             A::Menu => return self.open_menu(),
+            A::ContextMenu => return self.open_context_menu(),
             A::BrowseFiles
             | A::BatchConvert
             | A::ExportAudio
@@ -2298,6 +2381,8 @@ impl App {
             | A::NextLintProblem
             | A::PreviousLintProblem
             | A::ExportStudySheet
+            | A::SelfTest
+            | A::ExportKnowledgeGraph
             | A::NewFromTemplate
             | A::ExportHtml
             | A::ExportPdf
@@ -2311,6 +2396,7 @@ impl App {
             | A::DeleteWordBefore
             | A::DeleteWordAfter
             | A::Paste
+            | A::PastePlainText
             | A::InsertCitation
             | A::AddReference
             | A::InsertBibliography
@@ -2325,8 +2411,9 @@ impl App {
 /// its message id.
 fn list_delete_question(kind: &ListKind) -> &'static str {
     match kind {
-        ListKind::Highlights => "notes-remove-highlight-question",
+        ListKind::Highlights(_) => "notes-remove-highlight-question",
         ListKind::Changes(_) => "changes-delete-comment-question",
+        ListKind::Cards(_) => "cards-remove-question",
         ListKind::Relations(_) => "relations-remove-question",
         _ => "notes-delete-note-question",
     }

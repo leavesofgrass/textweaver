@@ -145,7 +145,12 @@ In hybrid and screen-reader modes, the screen is laid out for a Braille display,
 - **The key hint line** is hidden, since F1, the keyboard shortcuts list (`?`), and the menus name the keys. `[display] hints = "on"` shows it again, starting at the edge. A prompt still uses that line.
 - **The empty screen**, with no document open, starts its lines at the edge.
 
-The keyboard shortcuts list leads every line with the command's name, then its keys: "Play or pause: Alt+P or Space. Play or pause reading from the current word. Reading". A first-letter jump in the list goes to a command, not a category, and the keys are inside the first 40 cells.
+The keyboard shortcuts list (`?`) leads every row with the command's short name, then its key: "Find next, F3". The name always fits a 40-cell line, and so does the whole row for all but a few keys with two modifiers. With the Braille-first layout the row reads just like that; otherwise the key is drawn at the right edge.
+
+- **Type to filter**, as in Settings. The list keeps the commands whose name, keys, group, or menu hold every word you typed, and says how many match: "12 of 226 commands match." Backspace takes letters off.
+- **F1** on a row says what the command does, with all its keys: "Find next: F3 or Ctrl+G. Find the next match. Search".
+- **Page Down** and **Page Up** move to the next and previous group (Reading, Navigation, Search, and so on). Entering a group says its name and how many commands it has first, then the row.
+- **Enter** runs the command, and **Escape** closes the list.
 
 Code blocks are drawn in the theme's code colors. When a block names its language (```` ```python ````), its keywords, strings, comments, numbers, and names get colors from the theme too, and the kinds differ by more than color: keywords are bold and comments italic. The text itself never changes. Moving the cursor onto the block's first line says its language, for example "code, Python".
 
@@ -201,6 +206,8 @@ To read one section at a time, set **Stop at section end** in Settings (`[readin
 - **next chapter**: reading stops just before the next chapter: a section break when the document has them, otherwise a level 1 heading.
 
 When reading stops, you hear "End of section." and the key that goes on, such as "End of section. Ctrl+Space to go on." The cursor is on the next heading, so **Enter** in the document, or the read key, reads the next section, which stops at its end in turn.
+
+With **Recall prompts** on in Settings (`[reading] recall_prompts`, off by default), the stop asks you to recall the section instead: "Say what you remember from Methods. Ctrl+Space to go on." With **Stop at section end** set to never, recall prompts stop at the next heading. [Study with textweaver](notes.md#study-with-textweaver) explains them and the self-test.
 
 ### Reading timer
 
@@ -494,7 +501,7 @@ A Word document (and an OpenDocument or RTF file) can carry tracked changes, the
 - "Moved here: 'check the labs first', by Ada Example, Thursday, March 5, 2026"
 - "Comment by Bo Example: check this date, 1 reply, resolved"
 
-The date is the one the document gives, said in full. When the document gives none, the row says "date not recorded"; textweaver never guesses one. A move is two rows, "Moved away" where the text was and "Moved here" where it went.
+The date is the one the document gives, said in full. When the document gives none, the row says "date not recorded"; textweaver never guesses one. A move is two rows, "Moved away" where the text was and "Moved here" where it went. The two halves are decided together, as Word decides them: accepting either one keeps the text in its new place, and rejecting either one returns it to where it was.
 
 **Keys in the list:**
 
@@ -504,11 +511,13 @@ The date is the one the document gives, said in full. When the document gives no
 - On a comment: **F2** replies, **Space** resolves it or opens it again, **Delete** deletes it and its replies (after a y or n question).
 - **N** adds a comment to the selection, or to the sentence at the cursor.
 
-To accept or reject every change at once, use **Accept all changes** or **Reject all changes** from the Bookmarks menu or the palette. **Add comment** adds a comment without opening the list.
+To accept or reject every change at once, use **Accept all changes** or **Reject all changes** from the Bookmarks menu or the palette. Each asks once before it acts ("Accept all 12 changes? y or n"), as Replace all does, because a whole review is a large thing to undo; press **n** and nothing changes. **Add comment** adds a comment without opening the list.
 
-Accepting an insertion keeps its text; rejecting it removes the text. Accepting a deletion removes the text; rejecting it puts the text back. The document you are reading changes at once, so reading, search, and the study tools see the result. Comments are notes too: a reply, a resolve, or a delete shows in the notes list as well. Replies and new comments carry the name in `[editing] author` (empty unless you fill it; textweaver never takes it from your computer) and the date from the clock.
+Accepting an insertion keeps its text; rejecting it removes the text. Accepting a deletion removes the text; rejecting it puts the text back. The document you are reading changes at once, so reading, search, and the study tools see the result. Comments are notes too: a reply, a resolve, or a delete shows in the notes list as well. Replies and new comments carry the name in `[authoring] author` and the date from the clock. The setting is empty until you fill it, and textweaver never takes a name from your computer or your account; while it is empty, what you add is signed "textweaver". (Settings files that still have the older `[editing] author` keep their name: it is read as `[authoring] author`.)
 
-Accepting and rejecting do not change the file yet. Reopen the file and its changes are there again. Writing your decisions back into the Word file comes with a later beta 1 task; until then, `tw changes` writes a copy.
+**Saving to the Word file.** Accepting and rejecting change the document you are reading, not the file. To write your decisions into the Word file itself, choose **Save changes to the Word file** from the Bookmarks menu or the command palette. textweaver then edits the original `.docx` in place rather than writing a new one, so its styles, numbering, headers, and everything else textweaver does not read stay exactly as Word left them. Accepted insertions and rejected deletions become ordinary text; accepted deletions and rejected insertions disappear; and formatting changes and deleted paragraph breaks, which the list does not show, follow your decisions once every change has been decided the same way. Replies, resolved marks, deleted threads, and new comments go into the file's comments, where Word shows them as a thread.
+
+Before the first save, textweaver keeps a copy of the original beside it, named so that it says what it is: `report.docx` is copied to `report-original.docx` (or `report-original-2.docx`, if that name is taken). You hear "Saved the changes in report.docx. The original is kept as report-original.docx." Later saves in the same session write only the file. Saving works for `.docx` files; an OpenDocument or RTF file's changes appear in the list and can be decided, and export writes the result in another format. Open the saved file in Word to confirm the result: the Review tab should show no tracked changes once every change has been decided.
 
 Changes stay as they are in edit mode: leave edit mode to accept or reject them.
 
@@ -519,9 +528,11 @@ tw changes draft.docx
 tw changes draft.docx --json
 tw changes draft.docx --accept-all --out final.md
 tw changes draft.docx --reject-all --out original.docx
+tw changes draft.docx --accept-all --in-place
 ```
 
-`--json` prints each change (its kind, text, author, date, and position) and each comment thread as the document records them. `--accept-all` or `--reject-all` with `--out FILE` writes the document with every change decided, in the format the file name's extension names: Markdown (`.md`), plain text (`.txt`), HTML, or `.docx`, `.epub`, `.pdf`, and `.brf`. The original file is never changed.
+`--json` prints each change (its kind, text, author, date, and position) and each comment thread as the document records them. `--accept-all` or `--reject-all` with `--out FILE` writes the document with every change decided, in the format the file name's extension names: Markdown (`.md`), plain text (`.txt`), HTML, or `.docx`, `.epub`, `.pdf`, and `.brf`; the original file is left alone. With `--in-place` instead, the Word file itself is changed, exactly as Save changes to the Word file does it, after the original is copied to `draft-original.docx`.
+
 ## Go back and forward
 
 textweaver keeps a history of your jumps, like the Back button of a web browser.
@@ -694,9 +705,9 @@ Press **F2** to run any command by name. **Alt+X** and **:** open it too. The wi
 
 1. Type part of a command's name, such as `next head`, or its first letters: `ep` finds Export PDF.
 2. Press **Tab** to complete it. You hear how many commands match and the first few names.
-3. Or press **Down** and **Up** to go through the matching commands. Each is said name first, then its menu category, what it does, and its keys: "Export PDF, File: Export the document as a tagged PDF next to it."
+3. Or press **Down** and **Up** to go through the matching commands. Each is said as its short name, then its key: "Find next, F3".
 4. Press **Enter** to run it.
-5. Or press **Ctrl+L** to hear the matches as a list, and choose one with **Enter**.
+5. Or press **Ctrl+L** to hear the matches as a list, and choose one with **Enter**. In the list, **F1** says what the focused command does.
 
 With nothing typed, the commands you ran last from the palette or the menus come first, each said as "recent".
 

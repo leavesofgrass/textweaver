@@ -261,11 +261,28 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Move to the previous note | `Shift+F12`, `Shift+E` (browse) | `Shift+F12`, `Shift+E` (browse) | `Shift+F12`, `Shift+E` (browse) | `previous_note` |
 | Delete the note or highlight at the cursor | `Delete` (browse) | `Delete` (browse) | `Delete` (browse) | `delete_note` |
 | Highlight the selection, or the sentence at the cursor | `y` (browse) | `y` (browse) | `y` (browse) | `highlight_selection` |
+| Highlight the selection or the sentence with a name chosen from the highlight palette | palette | palette | palette | `highlight_as` |
+| Highlight with the palette's first name, or remove that highlight | `Alt+1` (browse) | `Alt+1` (browse) | `Cmd+Option+1` (browse) | `highlight_name_1` |
+| Highlight with the palette's second name, or remove that highlight | `Alt+2` (browse) | `Alt+2` (browse) | `Cmd+Option+2` (browse) | `highlight_name_2` |
+| Highlight with the palette's third name, or remove that highlight | `Alt+3` (browse) | `Alt+3` (browse) | `Cmd+Option+3` (browse) | `highlight_name_3` |
+| Highlight with the palette's fourth name, or remove that highlight | `Alt+4` (browse) | `Alt+4` (browse) | `Cmd+Option+4` (browse) | `highlight_name_4` |
+| Highlight with the palette's fifth name, or remove that highlight | `Alt+5` (browse) | `Alt+5` (browse) | `Cmd+Option+5` (browse) | `highlight_name_5` |
+| Write the highlights of one name as a Markdown list | palette | palette | palette | `collect_highlights` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | palette | palette | palette | `export_study_sheet` |
+| Export the study sheet with the highlights grouped by name | palette | palette | palette | `export_study_sheet_by_name` |
 | List the tracked changes and comments: Enter goes to one, A accepts a change, R rejects it | `Alt+A` | `Ctrl+Shift+J` | `Cmd+Shift+J` | `list_changes` |
 | Accept every tracked change in the document | palette | palette | palette | `accept_all_changes` |
 | Reject every tracked change in the document | palette | palette | palette | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | palette | palette | palette | `add_comment` |
+| Test yourself on the notes and highlights: Enter shows each answer | palette | palette | palette | `self_test` |
+| Save the accepted and rejected changes and the comments into the Word file, keeping a copy of the original first | palette | palette | palette | `save_changes_to_word` |
+| Make study cards from the notes, the highlights, and their headings | palette | palette | palette | `make_cards` |
+| Study the cards: Enter shows the answer, 1 to 4 grade it | palette | palette | palette | `study_cards` |
+| List the study cards: Enter goes to a card's source, Delete removes it | palette | palette | palette | `list_cards` |
+| Grade the card being studied: Again, not recalled | palette | palette | palette | `grade_again` |
+| Grade the card being studied: Hard, recalled with effort | palette | palette | palette | `grade_hard` |
+| Grade the card being studied: Good, recalled | palette | palette | palette | `grade_good` |
+| Grade the card being studied: Easy, recalled at once | palette | palette | palette | `grade_easy` |
 
 ## File
 
@@ -289,6 +306,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Export the document as a Word file (DOCX) next to it | palette | palette | palette | `export_docx` |
 | Export the document as an EPUB book next to it | palette | palette | palette | `export_epub` |
 | Export the document as braille (BRF) next to it | palette | palette | palette | `export_brf` |
+| Export the knowledge graph: every link between notes, as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or CSV | palette | palette | palette | `export_knowledge_graph` |
 | Preview the document in the web browser, with math; each save rewrites the preview | palette | palette | palette | `preview_in_browser` |
 | Turn automatic reloading of the browser preview on or off | palette | palette | palette | `toggle_preview_auto_reload` |
 | Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | palette | palette | palette | `toggle_preview_live` |
@@ -334,7 +352,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Select all the text | `Ctrl+A` (edit) | `Ctrl+A` (edit) | `Cmd+A` (edit) | `select_all` |
 | Delete the word before the cursor | `Alt+Backspace` (edit) | `Ctrl+Backspace` (edit) | `Option+Backspace` (edit) | `delete_word_before` |
 | Delete the word after the cursor | `Ctrl+Delete` (edit) | `Ctrl+Delete` (edit) | `Option+Delete` (edit) | `delete_word_after` |
-| Paste the text last copied or cut in textweaver; the terminal paste works too | `Ctrl+V` (edit) | `Ctrl+V` (edit) | `Cmd+V` (edit) | `paste` |
+| Paste the clipboard; formatted text from a browser or word processor becomes Markdown | `Ctrl+V` (edit) | `Ctrl+V` (edit) | `Cmd+V` (edit) | `paste` |
+| Paste the clipboard as plain text, keeping none of its formatting | `Alt+Q` (edit) | `Ctrl+Shift+M` (edit) | `Cmd+Shift+M` (edit) | `paste_plain_text` |
 | Insert a citation: pick a reference, then give a page or other locator | `Alt+C` (edit) | `Alt+C` (edit) | `Cmd+Option+C` (edit) | `insert_citation` |
 | Add a reference to your library by DOI or ISBN | `Alt+B` | `Alt+Shift+D` | `Cmd+Option+Shift+D` | `add_reference` |
 | Insert the bibliography of the works cited, at the cursor | palette | palette | palette | `insert_bibliography` |
@@ -371,6 +390,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Open the reading settings: rate, font, spacing, line length, theme, highlight, ruler, bionic reading, and syllables | palette | palette | palette | `reading_form` |
 | Cycle how much textweaver announces about itself: off, minimal, normal, or full; errors and answers are always said | `Ctrl+F9` | `Ctrl+F9` | `Cmd+F9` | `cycle_interface_announcements` |
 | Open the menus: File, Edit, View, Reading, Speech, Tools, and Help | `F10` | `F10` | `F10` | `menu` |
+| Open the context menu: cut, copy, paste, and the commands for where the cursor is | `Ctrl+F10` | `Shift+F10` | `Shift+F10` | `context_menu` |
 | Run any command by name | `F2`, `Alt+X`, `:` (browse) | `F2`, `:` (browse) | `F2`, `:` (browse) | `command_palette` |
 | Open the settings: every option with its help; Left and Right change a value | `Shift+F10` | `Ctrl+,` | `Cmd+,` | `settings` |
 | List keyboard shortcuts | `?` (browse) | `?` (browse) | `?` (browse) | `keyboard_help` |
@@ -533,10 +553,22 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Summarize the selection, the chapter, or the document: its most central sentences in a list; Enter goes to one | `summarize` |
 | Listen to the document as it will render, without leaving edit mode | `listen_rendered` |
 | Choose how Find and Replace match: case, whole words, regular expression, across lines | `search_options` |
+| Highlight the selection or the sentence with a name chosen from the highlight palette | `highlight_as` |
+| Write the highlights of one name as a Markdown list | `collect_highlights` |
 | Export the notes and highlights as a Markdown study sheet, grouped by heading | `export_study_sheet` |
+| Export the study sheet with the highlights grouped by name | `export_study_sheet_by_name` |
 | Accept every tracked change in the document | `accept_all_changes` |
 | Reject every tracked change in the document | `reject_all_changes` |
 | Add a comment to the selection or the sentence at the cursor | `add_comment` |
+| Test yourself on the notes and highlights: Enter shows each answer | `self_test` |
+| Save the accepted and rejected changes and the comments into the Word file, keeping a copy of the original first | `save_changes_to_word` |
+| Make study cards from the notes, the highlights, and their headings | `make_cards` |
+| Study the cards: Enter shows the answer, 1 to 4 grade it | `study_cards` |
+| List the study cards: Enter goes to a card's source, Delete removes it | `list_cards` |
+| Grade the card being studied: Again, not recalled | `grade_again` |
+| Grade the card being studied: Hard, recalled with effort | `grade_hard` |
+| Grade the card being studied: Good, recalled | `grade_good` |
+| Grade the card being studied: Easy, recalled at once | `grade_easy` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |
@@ -546,6 +578,7 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Export the document as a Word file (DOCX) next to it | `export_docx` |
 | Export the document as an EPUB book next to it | `export_epub` |
 | Export the document as braille (BRF) next to it | `export_brf` |
+| Export the knowledge graph: every link between notes, as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or CSV | `export_knowledge_graph` |
 | Preview the document in the web browser, with math; each save rewrites the preview | `preview_in_browser` |
 | Turn automatic reloading of the browser preview on or off | `toggle_preview_auto_reload` |
 | Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses | `toggle_preview_live` |

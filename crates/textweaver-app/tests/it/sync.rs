@@ -244,6 +244,74 @@ fn a_note_made_on_one_computer_appears_on_the_other() {
     );
 }
 
+/// The study cards in `path`'s card file on computer `c`: each card's
+/// grades, by name.
+fn card_grades(c: &Computer, path: &Path) -> Vec<Vec<String>> {
+    let paths = Paths::under(c.home.path());
+    textweaver_app::store::CardStore::new(paths.cards_dir())
+        .load(&textweaver_app::store::DocKey::for_path(path))
+        .cards
+        .iter()
+        .map(|card| {
+            card.reviews
+                .iter()
+                .map(|r| r.grade.as_str().to_owned())
+                .collect()
+        })
+        .collect()
+}
+
+/// Cards sync with the notes (B1-f2): a card made and graded on one
+/// computer arrives on the other with its grade, and a grade given on
+/// each computer survives on both.
+#[test]
+fn a_card_and_its_grades_arrive_on_the_other_computer() {
+    let folder = tempfile::tempdir().unwrap();
+    let (da, pa) = copy_of(TEXT, "biology.txt");
+    let (db, pb) = copy_of(TEXT, "Biology notes.txt");
+    let mut laptop = computer(folder.path(), "laptop", |_| {});
+    let mut lab = computer(folder.path(), "lab", |_| {});
+
+    laptop.open(&pa);
+    laptop.add_note("What keeps the count?");
+    laptop.act(ActionId::MakeCards);
+    laptop.act(ActionId::StudyCards);
+    laptop.act(ActionId::GradeGood);
+    laptop.app.wait_for_writes();
+    assert_eq!(card_grades(&laptop, &pa), vec![vec!["good".to_owned()]]);
+    laptop.settle();
+
+    lab.open(&pb);
+    lab.settle();
+    assert_eq!(card_grades(&lab, &pb), vec![vec!["good".to_owned()]]);
+
+    // A grade on each computer: both keep both.
+    lab.act(ActionId::StudyCards);
+    lab.act(ActionId::GradeAgain);
+    lab.app.wait_for_writes();
+    laptop.act(ActionId::StudyCards);
+    laptop.act(ActionId::GradeEasy);
+    laptop.app.wait_for_writes();
+    for _ in 0..2 {
+        lab.settle();
+        laptop.settle();
+    }
+    let mut want = card_grades(&laptop, &pa);
+    want[0].sort();
+    assert_eq!(want, vec![vec!["again", "easy", "good"]]);
+    let mut there = card_grades(&lab, &pb);
+    there[0].sort();
+    assert_eq!(there, want);
+
+    laptop.quit();
+    lab.quit();
+    privacy_scan(
+        folder.path(),
+        &[laptop.home.path(), lab.home.path()],
+        &[&pa, &pb, da.path(), db.path()],
+    );
+}
+
 #[test]
 fn the_newer_edit_of_a_note_wins_and_is_said() {
     let folder = tempfile::tempdir().unwrap();

@@ -433,6 +433,7 @@ playback-time-up =
        *[other] O tempo acabou após { $minutes } minutos. { $key } para continuar.
     }
 playback-repeat-slower = Repetindo mais devagar, a { $rate } palavras por minuto.
+playback-recall-prompt = Diga o que lembra de { $section }. { $key } para continuar.
 
 ## The title line and Say Status.
 
@@ -526,8 +527,21 @@ help-the-command = o comando { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Comando desconhecido: { $text }.
-help-shortcuts-intro = Atalhos de teclado, { $n } comandos. Seta para cima e para baixo move, Enter executa, Escape fecha.
+help-shortcuts-intro = Atalhos de teclado, { $n } comandos. Digite para filtrar. Page Down vai para o próximo grupo, F1 explica um comando, Enter o executa, Escape fecha.
 help-shortcuts-title = Atalhos de teclado
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = Atalhos de teclado que correspondem a { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } de { $total } comandos correspondem.
+help-shortcuts-filter-none = Nenhum comando corresponde a { $query }. Backspace remove letras.
+help-shortcuts-filter-cleared = Filtro limpo, { $n } comandos.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }, { $n ->
+        [one] 1 comando
+       *[other] { $n } comandos
+    }. { $item }
 help-title = Ajuda
 help-intro = Ajuda. Seta para cima e para baixo move, Escape fecha.
 
@@ -551,7 +565,7 @@ help-rate = Mais rápido e mais devagar: { $faster } e { $slower }.
 help-where = Onde estou: { $key }.
 help-repeat = Ouvir a última mensagem novamente: { $repeat }. A última mensagem e o status: modo, velocidade, motor e posição: { $status }.
 help-notes = Notas: adicionar { $add }, listar { $list }, próxima e anterior { $next } e { $previous }, excluir a do cursor { $delete }. Na lista, Delete exclui e F2 edita.
-help-highlights = Realçar a seleção ou a frase, ou remover um realce: { $highlight }. Listar realces: { $list }.
+help-highlights = Realçar a seleção ou a frase, ou remover um realce: { $highlight }. Com um nome: { $first } a { $fifth }, ou a lista: { $named }. Listar realces: { $list }.
 help-bookmarks-list = Lista de marcadores: Delete exclui um marcador, F2 o renomeia.
 help-edit = Editar o documento: { $edit }. Salvar: { $save }. Salvar como: { $saveas }. Novo documento: { $new }.
 help-editing = Durante a edição: desfazer { $undo }, refazer { $redo }, negrito { $bold }. Todo comando de formatação está nos atalhos de teclado.
@@ -765,7 +779,23 @@ action-next-note = Mover para a próxima nota
 action-previous-note = Mover para a nota anterior
 action-delete-note = Excluir a nota ou o realce no cursor
 action-highlight-selection = Realçar a seleção, ou a frase no cursor
+action-highlight-as = Realçar a seleção ou a frase com um nome escolhido da paleta de realce
+action-highlight-name-1 = Realçar com o primeiro nome da paleta, ou remover esse realce
+action-highlight-name-2 = Realçar com o segundo nome da paleta, ou remover esse realce
+action-highlight-name-3 = Realçar com o terceiro nome da paleta, ou remover esse realce
+action-highlight-name-4 = Realçar com o quarto nome da paleta, ou remover esse realce
+action-highlight-name-5 = Realçar com o quinto nome da paleta, ou remover esse realce
+action-collect-highlights = Escrever os realces de um nome como uma lista em Markdown
 action-export-study-sheet = Exportar as notas e realces como uma folha de estudo em Markdown, agrupada por cabeçalho
+action-export-study-sheet-by-name = Exportar a folha de estudo com os realces agrupados por nome
+action-self-test = Testar-se nas notas e realces: Enter mostra cada resposta
+action-make-cards = Criar cartões de estudo a partir das notas, dos realces e de seus títulos
+action-study-cards = Estudar os cartões: Enter mostra a resposta, 1 a 4 a avaliam
+action-list-cards = Listar os cartões de estudo: Enter vai até a origem de um cartão, Delete o remove
+action-grade-again = Avaliar o cartão em estudo: De novo, não lembrado
+action-grade-hard = Avaliar o cartão em estudo: Difícil, lembrado com esforço
+action-grade-good = Avaliar o cartão em estudo: Bom, lembrado
+action-grade-easy = Avaliar o cartão em estudo: Fácil, lembrado na hora
 action-open = Abrir um documento
 action-open-path = Abrir um documento digitando o caminho
 action-open-library = Abrir a biblioteca: documentos nas suas pastas de biblioteca e arquivos recentes
@@ -781,6 +811,7 @@ action-export-pdf = Exportar o documento como um PDF com marcação (tagged) ao 
 action-export-docx = Exportar o documento como um arquivo do Word (DOCX) ao lado dele
 action-export-epub = Exportar o documento como um livro EPUB ao lado dele
 action-export-brf = Exportar o documento como braille (BRF) ao lado dele
+action-export-knowledge-graph = Exportar o grafo de conhecimento: cada ligação entre notas, como lista Markdown, JSON, DOT, GraphML, Mermaid, PlantUML ou CSV
 action-preview-in-browser = Pré-visualizar o documento no navegador web, com matemática; cada salvamento reescreve a pré-visualização
 action-toggle-preview-auto-reload = Ligar ou desligar a recarga automática da pré-visualização no navegador
 action-toggle-preview-live = Ligar ou desligar a pré-visualização ao vivo: com a recarga automática, a pré-visualização também recarrega quando a digitação pausa
@@ -812,7 +843,9 @@ action-cycle-typing-echo = Alternar o eco de digitação: caracteres e palavras,
 action-select-all = Selecionar todo o texto
 action-delete-word-before = Excluir a palavra antes do cursor
 action-delete-word-after = Excluir a palavra depois do cursor
-action-paste = Colar o último texto copiado ou recortado no textweaver; a colagem do terminal também funciona
+action-paste = Colar a área de transferência; o texto formatado de um navegador ou processador de texto vira Markdown
+action-paste-plain-text = Colar a área de transferência como texto simples, sem nada da formatação
+action-context-menu = Abrir o menu de contexto: recortar, copiar, colar e os comandos para onde o cursor está
 action-insert-citation = Inserir uma citação: escolha uma referência, depois informe uma página ou outro localizador
 action-add-reference = Adicionar uma referência à sua biblioteca por DOI ou ISBN
 action-insert-bibliography = Inserir a bibliografia das obras citadas, no cursor
@@ -1168,8 +1201,8 @@ notes-none = Nenhuma nota. Para adicionar uma: { $key }.
 notes-list-title = Notas
 notes-list-intro =
     { $n ->
-        [one] Notas, 1 item. Enter vai até uma nota, Delete a exclui, F2 a edita, Espaço abre suas ligações.
-       *[other] Notas, { $n } itens. Enter vai até uma nota, Delete a exclui, F2 a edita, Espaço abre suas ligações.
+        [one] Notas, 1 item. Enter vai até uma nota, Delete a exclui, F2 a edita, Espaço abre suas ligações. C cria um cartão.
+       *[other] Notas, { $n } itens. Enter vai até uma nota, Delete a exclui, F2 a edita, Espaço abre suas ligações. C cria um cartão.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. Em: { $anchor }
@@ -1181,24 +1214,59 @@ notes-unchanged = Nota inalterada.
 notes-updated = Nota atualizada.
 notes-nothing-to-highlight = Nada aqui para realçar.
 notes-highlight-removed = Realce removido: { $text }
-notes-highlighted-at = Realçado em { $pct } por cento: { $text }
-notes-highlighted = Realçado: { $text }
-# An item in the highlights list. $color is the highlight's color name;
+notes-highlighted-at = Realçado, { $name }, em { $pct } por cento: { $text }
+notes-highlighted = Realçado, { $name }: { $text }
+# An item in the highlights list. $name is the highlight's palette name;
 # $lost is yes when the text was not found after the file changed.
 notes-highlight-item =
     { $lost ->
-        [yes] { $text }, linha { $line }, { $color }, não encontrado depois que o arquivo mudou
-       *[no] { $text }, linha { $line }, { $color }
+        [yes] { $name }: { $text }, linha { $line }, não encontrado depois que o arquivo mudou
+       *[no] { $name }: { $text }, linha { $line }
     }
 notes-no-highlights = Nenhum realce. Para criar um: { $key }.
 notes-highlights-title = Realces
 notes-highlights-intro =
     { $n ->
-        [one] Realces, 1 item. Enter vai até um, Delete o remove.
-       *[other] Realces, { $n } itens. Enter vai até um, Delete o remove.
+        [one] Realces, 1 item. Enter vai até um, Delete o remove, F2 muda seu nome, Espaço mostra só seu nome. C cria um cartão.
+       *[other] Realces, { $n } itens. Enter vai até um, Delete o remove, F2 muda seu nome, Espaço mostra só seu nome. C cria um cartão.
     }
 # The label said before a highlight's text on jumping to it.
-notes-highlight-label = Realçar
+notes-highlight-label = Realce, { $name }
+notes-highlight-changed = Realce mudado para { $name }: { $text }
+# $n is the palette entry's number, $key the keys of Highlight with a name.
+notes-palette-no-entry = Não há nome de realce { $n } na paleta. Para escolher um nome: { $key }.
+notes-highlights-named-title = Realces: { $name }
+notes-highlights-named-intro =
+    { $n ->
+        [one] Realces chamados { $name }, 1 item. Espaço mostra todos os realces.
+       *[other] Realces chamados { $name }, { $n } itens. Espaço mostra todos os realces.
+    }
+notes-palette-title = Nomes de realce
+# A palette name: the name, how many highlights have it, its shape and its color.
+notes-palette-row =
+    { $count ->
+        [one] { $name }, 1 realce, { $shape }, { $color }
+       *[other] { $name }, { $count } realces, { $shape }, { $color }
+    }
+notes-palette-intro-highlight = Realçar com qual nome? { $n } nomes. Enter escolhe um.
+notes-palette-intro-change = Mudar o realce para qual nome? { $n } nomes. Enter escolhe um.
+notes-palette-intro-collect = Reunir os realces de qual nome? { $n } nomes. Enter os escreve como lista.
+notes-collect-none = Nenhum realce chamado { $name }.
+# The collected list's own title (Markdown).
+notes-collect-title = Realces chamados { $name }: { $title }
+notes-collect-line = (linha { $line })
+# Keep the letters y and n: they are the keys that answer.
+notes-collect-saved =
+    { $n ->
+        [one] 1 realce chamado { $name } salvo como { $file }. Abrir? y ou n. Em { $folder }.
+       *[other] { $n } realces chamados { $name } salvos como { $file }. Abrir? y ou n. Em { $folder }.
+    }
+palette-shape-underline = sublinhado
+palette-shape-double-underline = sublinhado duplo
+palette-shape-bold = negrito
+palette-shape-dotted = sublinhado pontilhado
+palette-shape-brackets = colchetes
+palette-shape-symbol = símbolo
 # Shown while reading reaches a note's passage.
 notes-signal = Nota: { $text }
 # Said after moving onto a note's passage.
@@ -1270,6 +1338,21 @@ relations-filter-cleared = Filtro limpo, { $n } mostrados.
 relations-filter-none = Nada corresponde a { $filter }.
 relations-filter-matched = Filtro { $filter }: { $n } mostrados.
 
+## Exportar o grafo de conhecimento (B1-g2).
+
+graph-export-title = Exportar o grafo de conhecimento como
+graph-export-intro = Grafo de conhecimento, ligações: { $links }. Escolha um formato; a lista Markdown é o texto para ler.
+graph-export-empty = Não há ligações entre notas para exportar. Adicione uma na lista de ligações de uma nota.
+graph-format-md = Lista Markdown, o texto para ler
+graph-format-json = JSON, para Gephi e Cytoscape
+graph-format-dot = DOT, para Graphviz
+graph-format-graphml = GraphML, para Gephi, Cytoscape e yEd
+graph-format-mermaid = Diagrama Mermaid
+graph-format-plantuml = Diagrama PlantUML
+graph-format-csv = Lista de arestas CSV, para planilhas
+graph-export-saved = Grafo de conhecimento salvo como { $file }. Abrir? y ou n. Em { $folder }.
+graph-export-failed = Não foi possível escrever o grafo de conhecimento: { $error } Verifique se a pasta pode ser gravada.
+
 ## Bookmarks: rename and delete.
 
 notes-choose-bookmark-delete = Escolha um marcador e pressione Delete.
@@ -1311,8 +1394,108 @@ notes-sheet-exported = Exportado do { -brand } em { $date }.
 notes-sheet-before-first-heading = Antes do primeiro cabeçalho
 # After a note's text: its tags, joined with commas.
 notes-sheet-tags = (tags: { $tags })
-# $color is the highlight's color name.
-notes-sheet-highlighted = Realçado, { $color }.
+# $name is the highlight's palette name.
+notes-sheet-highlighted = Realçado, { $name }.
+# On the study sheet grouped by name: the heading a highlight falls under.
+notes-sheet-under = Sob: { $heading }
+# The study sheet's section of notes, after the names.
+notes-sheet-notes = Notas
+
+## O autoteste: perguntas com respostas ocultas (crate::reveal).
+
+reveal-self-test-title = Autoteste: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] Autoteste, 1 pergunta. Enter mostra a resposta. Espaço para responder em voz alta.
+       *[other] Autoteste, { $n } perguntas. Enter mostra cada resposta. Espaço para responder em voz alta.
+    }
+reveal-nothing-to-test = Nenhuma nota ou realce para testar. Adicione antes uma nota ou um realce.
+reveal-prompt-note = { $note } (em { $section })
+reveal-prompt-highlight = O que você realçou em { $section }?
+reveal-row-shown = { $prompt } Resposta: { $answer }
+reveal-answer = Resposta: { $answer }
+reveal-listening = Responda em voz alta agora. Espaço para parar.
+reveal-you-said = Você disse: { $words }. Enter mostra a resposta.
+reveal-heard-nothing = Nenhuma resposta ouvida. Espaço para tentar de novo.
+reveal-no-dictation = Responder em voz alta precisa do ditado, que não está nesta versão.
+
+## Cartões de estudo e a sessão de estudo (crate::cards).
+
+cards-blank = lacuna
+cards-recall-question = O que diz “{ $heading }”?
+cards-no-document = Abra um documento para criar ou estudar cartões.
+cards-nothing-to-make = Nenhuma nota ou realce para criar cartões. Adicione primeiro uma nota ou um realce.
+cards-made =
+    { $added ->
+        [0] Nenhum cartão novo. { $total } cartões ao todo.
+        [one] Cartões criados: 1 novo, { $total } ao todo.
+       *[other] Cartões criados: { $added } novos, { $total } ao todo.
+    }
+cards-none-from-item = Nenhum cartão deste item: ele precisa de texto sobre um trecho.
+cards-made-one = Cartão criado: { $question }
+cards-updated-one = Cartão atualizado: { $question }
+cards-none = Ainda não há cartões. Para criá-los: { $key }.
+cards-study-title = Estudar cartões: { $title }
+cards-study-intro =
+    { $n ->
+        [one] Estudar cartões, 1 cartão. Enter mostra a resposta, 1 a 4 a avaliam. Espaço para responder em voz alta.
+       *[other] Estudar cartões, { $n } cartões. Enter mostra cada resposta, 1 a 4 a avaliam. Espaço para responder em voz alta.
+    }
+cards-no-session = Nenhuma sessão de estudo. Para começar uma: { $key }.
+cards-card-gone = Esse cartão foi removido.
+cards-grade-again = De novo
+cards-grade-hard = Difícil
+cards-grade-good = Bom
+cards-grade-easy = Fácil
+cards-graded = { $grade }. Cartão { $i } de { $n }. Pergunta: { $question }
+# Said when a grade from the palette opens the session again on the next card.
+cards-graded-reopen = { $grade }. Estudar cartões, cartão { $i } de { $n }.
+cards-session-done =
+    { $n ->
+        [one] { $grade }. Pronto: o cartão foi avaliado.
+       *[other] { $grade }. Pronto: os { $n } cartões foram avaliados.
+    }
+cards-reversed = Invertido. Pergunta: { $question }
+cards-unreversed = Como criado. Pergunta: { $question }
+cards-not-reversible = Só cartões de pergunta podem ser invertidos.
+cards-kind-cloze = Preencher a lacuna
+cards-kind-question = Pergunta
+cards-kind-recall = Lembrar
+cards-not-graded = ainda não avaliado
+cards-last-grade = última avaliação: { $grade }
+cards-item = { $kind }: { $question }, { $grade }
+cards-list-title = Cartões
+cards-list-intro =
+    { $n ->
+        [one] Cartões, 1 item. Enter vai até a origem, Delete o remove.
+       *[other] Cartões, { $n } itens. Enter vai até a origem de um cartão, Delete o remove.
+    }
+cards-source-label = Origem do cartão
+cards-remove-question = Remover este cartão e suas avaliações? y ou n
+cards-removed = Cartão removido.
+cards-save-failed = Não foi possível salvar os cartões: { $error } Verifique se a pasta de dados pode ser gravada.
+# Said first in the study session and the Cards list (B1-f2). $due is how
+# many graded cards are due, $new how many were never graded.
+cards-due-summary =
+    { $due ->
+        [one] Para hoje: 1 cartão, { $new } novos.
+       *[other] Para hoje: { $due } cartões, { $new } novos.
+    }
+# When a card is next due, after a grade. $days is whole days, at least 1.
+cards-next-in =
+    { $days ->
+        [one] de novo amanhã
+       *[other] de novo em { $days } dias
+    }
+cards-due-now = para hoje
+# A grade or last grade, then when the card is next due: "Good, next in 3 days".
+cards-grade-next = { $grade }, { $next }
+# Study cards when no card is due and none is new: every card is asked.
+cards-nothing-due =
+    { $days ->
+        [one] Nada para hoje; o próximo cartão é para amanhã. Estudando todos os cartões antecipadamente.
+       *[other] Nada para hoje; o próximo cartão é daqui a { $days } dias. Estudando todos os cartões antecipadamente.
+    }
 
 ## Find, bookmarks, and selection.
 
@@ -1859,6 +2042,8 @@ setting-highlight-color = Cor do realce de palavra
 setting-highlight-color-help = A cor atrás da palavra sendo lida. Escolha um nome ou digite um código hexadecimal. Padrão: a cor do tema.
 setting-highlight-sentence-color = Cor do realce de frase
 setting-highlight-sentence-color-help = A cor atrás da frase sendo lida. Escolha um nome ou digite um código hexadecimal. Padrão: a cor do tema.
+setting-highlight-palette = Nomes de realce
+setting-highlight-palette-help = Até oito nomes para seus realces, cada um com uma cor e uma forma. Os cinco primeiros têm teclas próprias.
 setting-normalization-math = Falar matemática
 setting-normalization-math-help = Falar notação matemática em palavras.
 setting-normalization-math-verbosity = Verbosidade da matemática
@@ -1957,6 +2142,8 @@ choice-reading-stop-at-heading = próximo título
 choice-reading-stop-at-chapter = próximo capítulo
 setting-reading-stop-after-minutes = Temporizador de leitura
 setting-reading-stop-after-minutes-help = A leitura contínua para no fim da frase após estes minutos de leitura, e avisa. Pausar para o relógio; parar recomeça a contagem. 0 desliga o temporizador.
+setting-reading-recall-prompts = Perguntas de recordação
+setting-reading-recall-prompts-help = No fim de uma seção, a leitura pede que você diga o que lembra. Se Parar no fim da seção for nunca, a leitura para no próximo cabeçalho para isso. A leitura continua com a tecla de ler.
 setting-display-theme = Tema
 setting-display-theme-help = O tema de cores.
 setting-display-follow-os-theme = Seguir o tema do sistema
@@ -2297,6 +2484,7 @@ section-normalization = Como o texto é falado
 section-reading = Leitura
 section-display = Exibição
 section-editing = Edição
+section-authoring = Autoria
 section-library = Biblioteca
 section-keyboard = Teclado
 section-accessibility = Acessibilidade
@@ -2367,6 +2555,12 @@ edit-pasted-start =
        *[other] Colou { $n } caracteres: { $start }
     }
 edit-insert-failed = Não foi possível inserir: { $error } O texto não foi alterado.
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] 1 linha colada: { $start }
+       *[other] { $n } linhas coladas: { $start }
+    }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = Não é possível alterar os caracteres { $start } a { $end }: o texto tem { $len }.
 edit-change-failed = Não foi possível alterar o texto: { $error } O texto não foi alterado.
@@ -2739,6 +2933,46 @@ authoring-space-deleted = Espaço excluído.
 authoring-deleted = { $text } excluída.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = Nada copiado no { -brand } ainda. Use a colagem do seu terminal, por exemplo { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = Colado como Markdown: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] 1 título
+       *[other] { $n } títulos
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] 1 parágrafo
+       *[other] { $n } parágrafos
+    }
+paste-part-list =
+    { $n ->
+        [one] 1 lista
+       *[other] { $n } listas
+    }
+paste-part-table =
+    { $n ->
+        [one] 1 tabela
+       *[other] { $n } tabelas
+    }
+paste-part-code =
+    { $n ->
+        [one] 1 bloco de código
+       *[other] { $n } blocos de código
+    }
+paste-part-quote =
+    { $n ->
+        [one] 1 citação
+       *[other] { $n } citações
+    }
+paste-part-link =
+    { $n ->
+        [one] 1 link
+       *[other] { $n } links
+    }
+paste-empty = Nada para colar: a área de transferência está vazia.
+paste-converting = Convertendo o texto formatado para colar.
+paste-failed = Não foi possível colar: { $error } Tente Colar como texto simples.
 authoring-verbosity =
     { $level ->
         [low] Verbosidade: baixa.
@@ -3061,6 +3295,11 @@ define-still-loading = O dicionário ainda está carregando.
 # Configurações.
 setting-speech-dectalk-library = Biblioteca do DECtalk
 setting-speech-dectalk-library-help = A biblioteca do DECtalk a carregar; não definido procura nos locais de costume.
+setting-speech-espeak-helper = Programa auxiliar do eSpeak NG
+setting-speech-espeak-helper-help = Executar o eSpeak NG no seu próprio programa auxiliar, para que uma falha do motor não feche o textweaver. Automático usa o programa auxiliar no Windows quando está instalado e, nos outros sistemas, executa o eSpeak NG dentro do textweaver.
+choice-speech-espeak-helper-auto = automático
+choice-speech-espeak-helper-always = sempre o programa auxiliar
+choice-speech-espeak-helper-never = dentro do textweaver
 setting-speech-piper-voices = Pasta de vozes do Piper
 setting-speech-piper-voices-help = A pasta de vozes do Piper; não definido usa a pasta piper na pasta de dados do textweaver.
 setting-speech-piper-voice = Voz do Piper
@@ -3072,8 +3311,10 @@ choice-speech-piper-phonemizer-library = biblioteca espeak-ng
 choice-speech-piper-phonemizer-rust = o do textweaver
 setting-speech-voice-params = Velocidade e tom por voz
 setting-speech-voice-params-help = A velocidade e o tom com que cada voz foi usada por último. Escolher a voz de novo os traz de volta.
-setting-editing-author = Autor
-setting-editing-author-help = O autor escrito nos novos documentos feitos a partir de um modelo; vazio deixa em branco.
+setting-authoring-author = Autor
+setting-authoring-author-help = O nome que o { -brand } escreve em comentários, respostas e documentos feitos a partir de um modelo. Vazio significa { -brand } nos comentários e nenhum autor nos modelos. Nunca é tirado do computador.
+setting-authoring-track-changes = Controlar alterações em arquivos Word
+setting-authoring-track-changes-help = Guardar as edições de um arquivo do Word como alterações controladas que um revisor pode aceitar. Desligado as guarda como Markdown com outro nome.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -3084,6 +3325,21 @@ gui-answer-delete = Excluir
 gui-answer-remove = Remover
 gui-answer-replace = Substituir
 gui-question-hint = Y responde sim, N responde não, Escape responde não.
+gui-find-title = Localizar e substituir
+gui-find-what = Localizar
+gui-find-with = Substituir por
+gui-find-match-case = Diferenciar maiúsculas
+gui-find-whole-words = Palavras inteiras
+gui-find-regex = Expressão regular
+gui-find-across-lines = Entre linhas
+gui-find-next = Localizar próxima
+gui-find-next-help = Seleciona a próxima ocorrência.
+gui-find-replace = Substituir
+gui-find-replace-help = Substitui a ocorrência mostrada e vai para a próxima. O primeiro toque localiza uma ocorrência.
+gui-find-replace-all = Substituir tudo
+gui-find-replace-all-help = Diz quantas ocorrências há e pergunta uma vez. Um único desfazer reverte todas.
+gui-find-hint = Enter em Localizar acha a próxima ocorrência; Enter em Substituir por a substitui. Seta para cima traz textos anteriores. Escape fecha.
+gui-find-empty = Nada a localizar: digite o texto em Localizar.
 gui-button-open = Abrir…
 gui-button-font = Fonte…
 gui-button-edit = Começar a editar
@@ -3124,6 +3380,8 @@ gui-sidebar-no-headings = Nenhum título.
 gui-sidebar-no-notes = Nenhuma nota.
 gui-sidebar-current = { $item }, atual
 gui-sidebar-hint = Enter vai até lá. { $leave } vai e volta. Escape volta.
+gui-sidebar-hint-notes = Enter vai até lá. Espaço mostra suas ligações. { $leave } vai e volta. Escape volta.
+gui-sidebar-notes-keys = Espaço mostra as ligações de uma nota.
 gui-settings-sections = Seções
 gui-settings-form = Configurações: { $section }
 gui-settings-saved-hint = As alterações entram em vigor e são salvas na hora.
@@ -3137,7 +3395,7 @@ gui-prompt-path-hint = Digite o caminho de um documento e pressione Enter. Tab o
 gui-prompt-hint = Pressione Enter para aceitar, ou Escape para cancelar. Seta para cima e para baixo recuperam respostas anteriores.
 gui-palette-filter = Digite para filtrar os comandos
 gui-palette-list = Comandos
-gui-palette-hint = Enter executa a primeira correspondência; Tab vai para a lista.
+gui-palette-hint = Enter executa a primeira correspondência; Tab vai para a lista; F1 explica um comando.
 gui-open-failed = Não foi possível abrir { $name }: { $error }
 gui-uia-unavailable = As notificações do UI Automation só existem no Windows; usando a região dinâmica.
 gui-graphics-failed = A janela não conseguiu iniciar os gráficos. O leitor de terminal, textweaver, não precisa deles.
@@ -3242,6 +3500,7 @@ menu-headings = Títulos
 menu-go-to = Ir para
 menu-cursor = Cursor e seleção
 menu-bookmarks = Marcadores e notas
+menu-highlights = Realces
 menu-tables = Tabelas
 menu-speech-cursor = Cursor de fala
 
@@ -3375,6 +3634,22 @@ name-previous-note = Nota anterior
 name-delete-note = Excluir nota ou destaque
 name-highlight-selection = Destacar
 name-export-study-sheet = Exportar folha de estudo
+name-highlight-as = Realçar com um nome
+name-highlight-name-1 = Realçar com o nome 1
+name-highlight-name-2 = Realçar com o nome 2
+name-highlight-name-3 = Realçar com o nome 3
+name-highlight-name-4 = Realçar com o nome 4
+name-highlight-name-5 = Realçar com o nome 5
+name-collect-highlights = Reunir realces
+name-export-study-sheet-by-name = Exportar folha de estudo por nome
+name-self-test = Autoteste
+name-make-cards = Criar cartões
+name-study-cards = Estudar cartões
+name-list-cards = Cartões
+name-grade-again = Avaliar de novo
+name-grade-hard = Avaliar difícil
+name-grade-good = Avaliar bom
+name-grade-easy = Avaliar fácil
 name-open = Abrir
 name-open-path = Abrir pelo caminho
 name-open-library = Biblioteca
@@ -3390,6 +3665,7 @@ name-export-pdf = Exportar PDF
 name-export-docx = Exportar Word
 name-export-epub = Exportar EPUB
 name-export-brf = Exportar braille
+name-export-knowledge-graph = Exportar grafo de conhecimento
 name-preview-in-browser = Visualizar no navegador
 name-toggle-preview-auto-reload = Recarregar a prévia sozinha
 name-toggle-preview-live = Prévia ao vivo
@@ -3425,6 +3701,8 @@ name-select-all = Selecionar tudo
 name-delete-word-before = Excluir palavra anterior
 name-delete-word-after = Excluir próxima palavra
 name-paste = Colar
+name-paste-plain-text = Colar como texto simples
+name-context-menu = Menu de contexto
 name-insert-citation = Inserir citação
 name-add-reference = Adicionar referência
 name-insert-bibliography = Inserir bibliografia
@@ -3474,6 +3752,8 @@ menu-recent-none = Nenhum documento recente
 menu-not-available = { $name } não está disponível nesta versão.
 menu-no-access-key = Nenhum item com a tecla { $letter }.
 menu-closed = Menus fechados.
+menu-context = Menu de contexto
+menu-context-closed = Menu de contexto fechado.
 menu-press-a-key = Pressione uma tecla para ouvir o que ela faz.
 menu-key-described = { $name }: { $help }. Teclas: { $keys }. Nos menus: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Teclas: { $keys }.
@@ -3491,17 +3771,17 @@ choice-accessibility-interface-announcements-off = desativados
 choice-accessibility-interface-announcements-minimal = mínimos
 choice-accessibility-interface-announcements-normal = normais
 choice-accessibility-interface-announcements-full = completos
-palette-item = { $name }, { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }, { $category }: { $help }.
-palette-item-recent = { $name }, recente, { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }, recente, { $category }: { $help }.
+palette-item = { $name }, { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }, { $keys }, recente
+palette-item-recent-no-keys = { $name }, recente
 palette-list-title = Comandos que correspondem a { $query }
 palette-list-title-all = Comandos
 palette-list-intro =
     { $title }, { $n ->
         [one] 1 comando
        *[other] { $n } comandos
-    }. Enter executa um.
+    }. Enter executa um, F1 o explica.
 action-browse-files = Navegar por arquivos e pacotes: Enter abre uma pasta, um pacote ou um documento; Backspace sobe um nível
 action-batch-convert = Converter uma pasta de documentos para outro formato, em segundo plano
 action-export-audio = Exportar o documento como áudio falado: MP3, FLAC, Opus, WAV ou um audiolivro M4B
@@ -3545,6 +3825,8 @@ color-name-skyblue = azul-celeste
 color-name-teal = azul-petróleo
 color-name-gold = dourado
 color-name-yellow = amarelo
+color-name-green = verde
+color-name-cyan = ciano
 color-name-purple = roxo
 color-name-pink = rosa
 color-name-brown = marrom
@@ -3965,6 +4247,7 @@ sync-already-off = A sincronização já está desligada aqui.
 sync-stopped = Sincronização desligada aqui. A pasta fica como está.
 prompt-sync-computer-name = Nome deste computador, Enter o mantém
 menu-sync = Sincronização
+menu-cards = Cartões de estudo
 name-sync-setup = Configurar a sincronização
 name-sync-status = Estado da sincronização
 name-sync-now = Sincronizar agora
@@ -4348,3 +4631,51 @@ brf-original-not-brf = Não é um arquivo braille. Mostrar o braille original fu
 brf-original-unreadable = Não é possível ler o arquivo braille: { $reason }
 brf-no-liblouis = Braille mostrado como braille: falta o liblouis. Para ler como texto impresso, instale o liblouis de liblouis.io ou dos pacotes do seu sistema e abra o arquivo de novo.
 ## End of B1-r5
+
+## B1-t2: guardar a revisão no arquivo do Word.
+name-save-changes-to-word = Guardar alterações no arquivo Word
+action-save-changes-to-word = Guardar as alterações aceitas e rejeitadas e os comentários no arquivo do Word, mantendo antes uma cópia do original
+changes-accept-all-question =
+    { $n ->
+        [one] Aceitar a alteração? y ou n
+       *[other] Aceitar as { $n } alterações? y ou n
+    }
+changes-reject-all-question =
+    { $n ->
+        [one] Rejeitar a alteração? y ou n
+       *[other] Rejeitar as { $n } alterações? y ou n
+    }
+changes-save-not-word = Não é um arquivo do Word. As alterações só voltam para arquivos .docx; a exportação escreve o texto decidido em outros formatos.
+changes-save-nothing = Nada a guardar: nenhuma alteração foi aceita ou rejeitada, e nenhum comentário mudou.
+changes-saved-backup = Alterações guardadas em { $file }. O original fica como { $backup }.
+changes-saved = Alterações guardadas em { $file }.
+changes-save-unplaced =
+    { $n ->
+        [one] 1 comentário novo está no início: o texto dele não foi encontrado.
+       *[other] { $n } comentários novos estão no início: o texto deles não foi encontrado.
+    }
+changes-save-failed = Não foi possível guardar as alterações em { $file }: { $error }. O arquivo continua como estava; feche-o no Word se estiver aberto e tente de novo.
+changes-save-not-in-build = Guardar as alterações no arquivo do Word não está nesta versão do { -brand }. tw changes --in-place ainda faz isso.
+changes-in-place-accepted =
+    { $n ->
+        [one] 1 alteração aceita em { $path }. O original fica como { $backup }.
+       *[other] { $n } alterações aceitas em { $path }. O original fica como { $backup }.
+    }
+changes-in-place-rejected =
+    { $n ->
+        [one] 1 alteração rejeitada em { $path }. O original fica como { $backup }.
+       *[other] { $n } alterações rejeitadas em { $path }. O original fica como { $backup }.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] 1 alteração controlada guardada em { $file }.
+       *[other] { $n } alterações controladas guardadas em { $file }.
+    }
+changes-original-kept = O original fica como { $backup }.
+changes-tracked-refused =
+    { $n ->
+        [one] Não guardado: 1 alteração em { $file } atravessa um parágrafo ou está num link ou campo, e não pode ser controlada. Guardar como mantém as suas edições em Markdown.
+       *[other] Não guardado: { $n } alterações em { $file } atravessam um parágrafo ou estão num link ou campo, e não podem ser controladas. Guardar como mantém as suas edições em Markdown.
+    }
+## End of B1-t2

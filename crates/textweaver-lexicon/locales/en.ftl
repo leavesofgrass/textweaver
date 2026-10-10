@@ -422,6 +422,7 @@ playback-time-up =
        *[other] Time is up after { $minutes } minutes. { $key } to go on.
     }
 playback-repeat-slower = Repeating slower, at { $rate } words per minute.
+playback-recall-prompt = Say what you remember from { $section }. { $key } to go on.
 
 ## The title line and Say Status.
 
@@ -515,8 +516,21 @@ help-the-command = the command { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = Unknown command: { $text }.
-help-shortcuts-intro = Keyboard shortcuts, { $n } commands. Up and Down move, Enter runs, Escape closes.
+help-shortcuts-intro = Keyboard shortcuts, { $n } commands. Type to filter. Page Down moves to the next group, F1 explains a command, Enter runs it, Escape closes.
 help-shortcuts-title = Keyboard shortcuts
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = Keyboard shortcuts matching { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } of { $total } commands match.
+help-shortcuts-filter-none = No commands match { $query }. Backspace removes letters.
+help-shortcuts-filter-cleared = Filter cleared, { $n } commands.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }, { $n ->
+        [one] 1 command
+       *[other] { $n } commands
+    }. { $item }
 help-title = Help
 help-intro = Help. Up and Down move, Escape closes.
 
@@ -540,7 +554,7 @@ help-rate = Faster and slower: { $faster } and { $slower }.
 help-where = Where am I: { $key }.
 help-repeat = Hear the last message again: { $repeat }. The last message and the status: mode, rate, engine, and position: { $status }.
 help-notes = Notes: add { $add }, list { $list }, next and previous { $next } and { $previous }, delete the one at the cursor { $delete }. In the list, Delete deletes and F2 edits.
-help-highlights = Highlight the selection or sentence, or remove a highlight: { $highlight }. List highlights: { $list }.
+help-highlights = Highlight the selection or sentence, or remove a highlight: { $highlight }. With a name: { $first } to { $fifth }, or the list: { $named }. List highlights: { $list }.
 help-bookmarks-list = Bookmarks list: Delete deletes a bookmark, F2 renames it.
 help-edit = Edit the document: { $edit }. Save: { $save }. Save as: { $saveas }. New document: { $new }.
 help-editing = While editing: undo { $undo }, redo { $redo }, bold { $bold }. Every formatting command is in the keyboard shortcuts.
@@ -754,7 +768,23 @@ action-next-note = Move to the next note
 action-previous-note = Move to the previous note
 action-delete-note = Delete the note or highlight at the cursor
 action-highlight-selection = Highlight the selection, or the sentence at the cursor
+action-highlight-as = Highlight the selection or the sentence with a name chosen from the highlight palette
+action-highlight-name-1 = Highlight with the palette's first name, or remove that highlight
+action-highlight-name-2 = Highlight with the palette's second name, or remove that highlight
+action-highlight-name-3 = Highlight with the palette's third name, or remove that highlight
+action-highlight-name-4 = Highlight with the palette's fourth name, or remove that highlight
+action-highlight-name-5 = Highlight with the palette's fifth name, or remove that highlight
+action-collect-highlights = Write the highlights of one name as a Markdown list
 action-export-study-sheet = Export the notes and highlights as a Markdown study sheet, grouped by heading
+action-export-study-sheet-by-name = Export the study sheet with the highlights grouped by name
+action-self-test = Test yourself on the notes and highlights: Enter shows each answer
+action-make-cards = Make study cards from the notes, the highlights, and their headings
+action-study-cards = Study the cards: Enter shows the answer, 1 to 4 grade it
+action-list-cards = List the study cards: Enter goes to a card's source, Delete removes it
+action-grade-again = Grade the card being studied: Again, not recalled
+action-grade-hard = Grade the card being studied: Hard, recalled with effort
+action-grade-good = Grade the card being studied: Good, recalled
+action-grade-easy = Grade the card being studied: Easy, recalled at once
 action-open = Open a document
 action-open-path = Open a document by typing its path
 action-open-library = Open the library: documents in your library folders and recent files
@@ -770,6 +800,7 @@ action-export-pdf = Export the document as a tagged PDF next to it
 action-export-docx = Export the document as a Word file (DOCX) next to it
 action-export-epub = Export the document as an EPUB book next to it
 action-export-brf = Export the document as braille (BRF) next to it
+action-export-knowledge-graph = Export the knowledge graph: every link between notes, as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or CSV
 action-preview-in-browser = Preview the document in the web browser, with math; each save rewrites the preview
 action-toggle-preview-auto-reload = Turn automatic reloading of the browser preview on or off
 action-toggle-preview-live = Turn live preview on or off: with automatic reloading, the preview also reloads when typing pauses
@@ -801,7 +832,9 @@ action-cycle-typing-echo = Cycle typing echo: characters and words, characters, 
 action-select-all = Select all the text
 action-delete-word-before = Delete the word before the cursor
 action-delete-word-after = Delete the word after the cursor
-action-paste = Paste the text last copied or cut in textweaver; the terminal paste works too
+action-paste = Paste the clipboard; formatted text from a browser or word processor becomes Markdown
+action-paste-plain-text = Paste the clipboard as plain text, keeping none of its formatting
+action-context-menu = Open the context menu: cut, copy, paste, and the commands for where the cursor is
 action-insert-citation = Insert a citation: pick a reference, then give a page or other locator
 action-add-reference = Add a reference to your library by DOI or ISBN
 action-insert-bibliography = Insert the bibliography of the works cited, at the cursor
@@ -1157,8 +1190,8 @@ notes-none = No notes. To add one: { $key }.
 notes-list-title = Notes
 notes-list-intro =
     { $n ->
-        [one] Notes, 1 item. Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links.
-       *[other] Notes, { $n } items. Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links.
+        [one] Notes, 1 item. Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links. C makes a card.
+       *[other] Notes, { $n } items. Enter goes to a note, Delete deletes it, F2 edits it, Space opens its links. C makes a card.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. On: { $anchor }
@@ -1170,24 +1203,59 @@ notes-unchanged = Note unchanged.
 notes-updated = Note updated.
 notes-nothing-to-highlight = Nothing here to highlight.
 notes-highlight-removed = Highlight removed: { $text }
-notes-highlighted-at = Highlighted at { $pct } percent: { $text }
-notes-highlighted = Highlighted: { $text }
-# An item in the highlights list. $color is the highlight's color name;
+notes-highlighted-at = Highlighted, { $name }, at { $pct } percent: { $text }
+notes-highlighted = Highlighted, { $name }: { $text }
+# An item in the highlights list. $name is the highlight's palette name;
 # $lost is yes when the text was not found after the file changed.
 notes-highlight-item =
     { $lost ->
-        [yes] { $text }, line { $line }, { $color }, not found after the file changed
-       *[no] { $text }, line { $line }, { $color }
+        [yes] { $name }: { $text }, line { $line }, not found after the file changed
+       *[no] { $name }: { $text }, line { $line }
     }
 notes-no-highlights = No highlights. To make one: { $key }.
 notes-highlights-title = Highlights
 notes-highlights-intro =
     { $n ->
-        [one] Highlights, 1 item. Enter goes to one, Delete removes it.
-       *[other] Highlights, { $n } items. Enter goes to one, Delete removes it.
+        [one] Highlights, 1 item. Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name. C makes a card.
+       *[other] Highlights, { $n } items. Enter goes to one, Delete removes it, F2 changes its name, Space shows only its name. C makes a card.
     }
 # The label said before a highlight's text on jumping to it.
-notes-highlight-label = Highlight
+notes-highlight-label = Highlight, { $name }
+notes-highlight-changed = Highlight changed to { $name }: { $text }
+# $n is the palette entry's number, $key the keys of Highlight with a name.
+notes-palette-no-entry = No highlight name { $n } in the palette. To choose a name: { $key }.
+notes-highlights-named-title = Highlights: { $name }
+notes-highlights-named-intro =
+    { $n ->
+        [one] Highlights named { $name }, 1 item. Space shows every highlight.
+       *[other] Highlights named { $name }, { $n } items. Space shows every highlight.
+    }
+notes-palette-title = Highlight names
+# A palette name: the name, how many highlights have it, its shape and its color.
+notes-palette-row =
+    { $count ->
+        [one] { $name }, 1 highlight, { $shape }, { $color }
+       *[other] { $name }, { $count } highlights, { $shape }, { $color }
+    }
+notes-palette-intro-highlight = Highlight with which name? { $n } names. Enter chooses one.
+notes-palette-intro-change = Change the highlight to which name? { $n } names. Enter chooses one.
+notes-palette-intro-collect = Collect the highlights of which name? { $n } names. Enter writes them as a list.
+notes-collect-none = No highlights named { $name }.
+# The collected list's own title (Markdown).
+notes-collect-title = Highlights named { $name }: { $title }
+notes-collect-line = (line { $line })
+# Keep the letters y and n: they are the keys that answer.
+notes-collect-saved =
+    { $n ->
+        [one] 1 highlight named { $name } saved as { $file }. Open it? y or n. In { $folder }.
+       *[other] { $n } highlights named { $name } saved as { $file }. Open it? y or n. In { $folder }.
+    }
+palette-shape-underline = underline
+palette-shape-double-underline = double underline
+palette-shape-bold = bold
+palette-shape-dotted = dotted underline
+palette-shape-brackets = brackets
+palette-shape-symbol = symbol
 # Shown while reading reaches a note's passage.
 notes-signal = Note: { $text }
 # Said after moving onto a note's passage.
@@ -1268,6 +1336,24 @@ relations-filter-cleared = Filter cleared, { $n } shown.
 relations-filter-none = Nothing matches { $filter }.
 relations-filter-matched = Filter { $filter }: { $n } shown.
 
+## Export the knowledge graph (B1-g2).
+
+graph-export-title = Export the knowledge graph as
+# $links is the number of links between notes in the library.
+graph-export-intro = Knowledge graph, links: { $links }. Choose a format; the Markdown list is the text to read.
+graph-export-empty = No links between notes to export. Add one from a note's links list.
+graph-format-md = Markdown list, the text to read
+graph-format-json = JSON, for Gephi and Cytoscape
+graph-format-dot = DOT, for Graphviz
+graph-format-graphml = GraphML, for Gephi, Cytoscape and yEd
+graph-format-mermaid = Mermaid diagram
+graph-format-plantuml = PlantUML diagram
+graph-format-csv = CSV edge list, for spreadsheets
+# Keep the letters y and n: they are the keys that answer. $file is the
+# file name, $folder the folder it was saved in.
+graph-export-saved = Knowledge graph saved as { $file }. Open it? y or n. In { $folder }.
+graph-export-failed = Could not write the knowledge graph: { $error } Check that the folder can be written to.
+
 ## Bookmarks: rename and delete.
 
 notes-choose-bookmark-delete = Choose a bookmark and press Delete.
@@ -1309,8 +1395,113 @@ notes-sheet-exported = Exported from { -brand } on { $date }.
 notes-sheet-before-first-heading = Before the first heading
 # After a note's text: its tags, joined with commas.
 notes-sheet-tags = (tags: { $tags })
-# $color is the highlight's color name.
-notes-sheet-highlighted = Highlighted, { $color }.
+# $name is the highlight's palette name.
+notes-sheet-highlighted = Highlighted, { $name }.
+# On the study sheet grouped by name: the heading a highlight falls under.
+notes-sheet-under = Under: { $heading }
+# The study sheet's section of notes, after the names.
+notes-sheet-notes = Notes
+
+## The self-test: prompts with hidden answers (crate::reveal).
+
+reveal-self-test-title = Self-test: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] Self-test, 1 prompt. Enter shows the answer. Space to answer aloud.
+       *[other] Self-test, { $n } prompts. Enter shows each answer. Space to answer aloud.
+    }
+reveal-nothing-to-test = No notes or highlights to test. Add a note or highlight first.
+reveal-prompt-note = { $note } (in { $section })
+reveal-prompt-highlight = What did you highlight in { $section }?
+reveal-row-shown = { $prompt } Answer: { $answer }
+reveal-answer = Answer: { $answer }
+reveal-listening = Answer aloud now. Space to stop.
+reveal-you-said = You said: { $words }. Enter shows the answer.
+reveal-heard-nothing = No answer heard. Space to try again.
+reveal-no-dictation = Answering aloud needs dictation, which is not in this version.
+
+## Study cards and the study session (crate::cards).
+
+# The word said in place of the blanked words of a cloze card.
+cards-blank = blank
+# A recall card's question. $heading is the heading's text.
+cards-recall-question = What does “{ $heading }” say?
+cards-no-document = Open a document to make or study cards.
+cards-nothing-to-make = No notes or highlights to make cards from. Add a note or highlight first.
+# $added is how many cards are new, $total how many the document has.
+cards-made =
+    { $added ->
+        [0] No new cards. { $total } cards in all.
+        [one] Cards made: 1 new, { $total } in all.
+       *[other] Cards made: { $added } new, { $total } in all.
+    }
+cards-none-from-item = No card from this item: it needs text on a passage.
+cards-made-one = Card made: { $question }
+cards-updated-one = Card updated: { $question }
+cards-none = No cards yet. To make them: { $key }.
+cards-study-title = Study cards: { $title }
+cards-study-intro =
+    { $n ->
+        [one] Study cards, 1 card. Enter shows the answer, 1 to 4 grade it. Space to answer aloud.
+       *[other] Study cards, { $n } cards. Enter shows each answer, 1 to 4 grade it. Space to answer aloud.
+    }
+cards-no-session = No study session. To start one: { $key }.
+cards-card-gone = That card was removed.
+cards-grade-again = Again
+cards-grade-hard = Hard
+cards-grade-good = Good
+cards-grade-easy = Easy
+# Said after grading: the grade, then the next card.
+cards-graded = { $grade }. Card { $i } of { $n }. Question: { $question }
+# Said when a grade from the palette opens the session again on the next card.
+cards-graded-reopen = { $grade }. Study cards, card { $i } of { $n }.
+cards-session-done =
+    { $n ->
+        [one] { $grade }. Done: the card is graded.
+       *[other] { $grade }. Done: all { $n } cards graded.
+    }
+cards-reversed = Reversed. Question: { $question }
+cards-unreversed = As made. Question: { $question }
+cards-not-reversible = Only question cards can be reversed.
+cards-kind-cloze = Fill in the blank
+cards-kind-question = Question
+cards-kind-recall = Recall
+cards-not-graded = not graded yet
+cards-last-grade = last graded { $grade }
+# An item in the Cards list.
+cards-item = { $kind }: { $question }, { $grade }
+cards-list-title = Cards
+cards-list-intro =
+    { $n ->
+        [one] Cards, 1 item. Enter goes to its source, Delete removes it.
+       *[other] Cards, { $n } items. Enter goes to a card's source, Delete removes it.
+    }
+cards-source-label = Card source
+cards-remove-question = Remove this card and its grades? y or n
+cards-removed = Card removed.
+cards-save-failed = Could not save the cards: { $error } Check that the data folder can be written to.
+# Said first in the study session and the Cards list (B1-f2). $due is how
+# many graded cards are due, $new how many were never graded.
+cards-due-summary =
+    { $due ->
+        [one] Due today: 1 card, { $new } new.
+       *[other] Due today: { $due } cards, { $new } new.
+    }
+# When a card is next due, after a grade. $days is whole days, at least 1.
+cards-next-in =
+    { $days ->
+        [one] next tomorrow
+       *[other] next in { $days } days
+    }
+cards-due-now = due today
+# A grade or last grade, then when the card is next due: "Good, next in 3 days".
+cards-grade-next = { $grade }, { $next }
+# Study cards when no card is due and none is new: every card is asked.
+cards-nothing-due =
+    { $days ->
+        [one] Nothing due today; the next card is due tomorrow. Studying every card ahead.
+       *[other] Nothing due today; the next card is due in { $days } days. Studying every card ahead.
+    }
 
 ## Find, bookmarks, and selection.
 
@@ -1859,6 +2050,8 @@ setting-highlight-color = Word highlight color
 setting-highlight-color-help = The color behind the word being read. Choose a name, or type a hex code. Default: the theme's color.
 setting-highlight-sentence-color = Sentence highlight color
 setting-highlight-sentence-color-help = The color behind the sentence being read. Choose a name, or type a hex code. Default: the theme's color.
+setting-highlight-palette = Highlight names
+setting-highlight-palette-help = Up to eight names for your highlights, each with a color and a shape. The first five have keys of their own.
 setting-normalization-math = Speak math
 setting-normalization-math-help = Speak math notation in words.
 setting-normalization-math-verbosity = Math verbosity
@@ -1957,6 +2150,8 @@ choice-reading-stop-at-heading = next heading
 choice-reading-stop-at-chapter = next chapter
 setting-reading-stop-after-minutes = Reading timer
 setting-reading-stop-after-minutes-help = Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.
+setting-reading-recall-prompts = Recall prompts
+setting-reading-recall-prompts-help = At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key.
 setting-display-theme = Theme
 setting-display-theme-help = The color theme.
 setting-display-follow-os-theme = Follow the system theme
@@ -2297,6 +2492,7 @@ section-normalization = Speaking text
 section-reading = Reading
 section-display = Display
 section-editing = Editing
+section-authoring = Authoring
 section-library = Library
 section-keyboard = Keyboard
 section-accessibility = Accessibility
@@ -2367,6 +2563,12 @@ edit-pasted-start =
        *[other] Pasted { $n } characters: { $start }
     }
 edit-insert-failed = Could not insert: { $error } The text is unchanged.
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] Pasted 1 line: { $start }
+       *[other] Pasted { $n } lines: { $start }
+    }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = Cannot change characters { $start } to { $end }: the text has { $len }.
 edit-change-failed = Could not change the text: { $error } The text is unchanged.
@@ -2739,6 +2941,46 @@ authoring-space-deleted = Space deleted.
 authoring-deleted = { $text } deleted.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = Nothing copied in { -brand } yet. Use your terminal's paste, for example { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = Pasted as Markdown: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] 1 heading
+       *[other] { $n } headings
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] 1 paragraph
+       *[other] { $n } paragraphs
+    }
+paste-part-list =
+    { $n ->
+        [one] 1 list
+       *[other] { $n } lists
+    }
+paste-part-table =
+    { $n ->
+        [one] 1 table
+       *[other] { $n } tables
+    }
+paste-part-code =
+    { $n ->
+        [one] 1 code block
+       *[other] { $n } code blocks
+    }
+paste-part-quote =
+    { $n ->
+        [one] 1 quote
+       *[other] { $n } quotes
+    }
+paste-part-link =
+    { $n ->
+        [one] 1 link
+       *[other] { $n } links
+    }
+paste-empty = Nothing to paste: the clipboard is empty.
+paste-converting = Converting the formatted text to paste.
+paste-failed = Could not paste: { $error } Try Paste as plain text.
 authoring-verbosity =
     { $level ->
         [low] Verbosity: low.
@@ -3079,6 +3321,11 @@ define-still-loading = Dictionary still loading.
 # Settings: the DECtalk and Piper sections, the rate and pitch per voice, and the template author.
 setting-speech-dectalk-library = DECtalk library
 setting-speech-dectalk-library-help = The DECtalk library to load; not set searches the usual places.
+setting-speech-espeak-helper = eSpeak NG helper program
+setting-speech-espeak-helper-help = Run eSpeak NG in its own helper program, so an engine crash cannot close textweaver. Automatic uses the helper on Windows when it is installed, and runs eSpeak NG inside textweaver elsewhere.
+choice-speech-espeak-helper-auto = automatic
+choice-speech-espeak-helper-always = always the helper
+choice-speech-espeak-helper-never = inside textweaver
 setting-speech-piper-voices = Piper voices folder
 setting-speech-piper-voices-help = The folder of Piper voices; not set uses the piper folder in textweaver's data folder.
 setting-speech-piper-voice = Piper voice
@@ -3090,8 +3337,10 @@ choice-speech-piper-phonemizer-library = espeak-ng library
 choice-speech-piper-phonemizer-rust = textweaver's own
 setting-speech-voice-params = Rate and pitch per voice
 setting-speech-voice-params-help = The rate and pitch each voice was last used at. Choosing a voice again brings them back.
-setting-editing-author = Author
-setting-editing-author-help = The author written into new documents made from a template; empty leaves it blank.
+setting-authoring-author = Author
+setting-authoring-author-help = The name { -brand } writes on comments, replies, and documents from a template. Empty means { -brand } on comments and no author in templates. Never taken from the computer.
+setting-authoring-track-changes = Track changes in Word files
+setting-authoring-track-changes-help = Save edits to a Word file as tracked changes a reviewer can accept. Off saves them as Markdown under a new name.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -3102,6 +3351,21 @@ gui-answer-delete = Delete
 gui-answer-remove = Remove
 gui-answer-replace = Replace
 gui-question-hint = Y answers yes, N answers no, Escape answers no.
+gui-find-title = Find and replace
+gui-find-what = Find what
+gui-find-with = Replace with
+gui-find-match-case = Match case
+gui-find-whole-words = Whole words
+gui-find-regex = Regular expression
+gui-find-across-lines = Across lines
+gui-find-next = Find next
+gui-find-next-help = Selects the next match.
+gui-find-replace = Replace
+gui-find-replace-help = Replaces the match shown and goes to the next. The first press finds a match.
+gui-find-replace-all = Replace all
+gui-find-replace-all-help = Says how many matches there are and asks once. One undo takes them all back.
+gui-find-hint = Enter in Find what finds the next match; Enter in Replace with replaces it. Up brings back earlier text. Escape closes.
+gui-find-empty = Nothing to find: type the text in Find what.
 gui-button-open = Open…
 gui-button-font = Font…
 gui-button-edit = Start editing
@@ -3144,6 +3408,8 @@ gui-sidebar-no-headings = No headings.
 gui-sidebar-no-notes = No notes.
 gui-sidebar-current = { $item }, current
 gui-sidebar-hint = Enter goes there. { $leave } goes and returns. Escape returns.
+gui-sidebar-hint-notes = Enter goes there. Space shows its links. { $leave } goes and returns. Escape returns.
+gui-sidebar-notes-keys = Space shows a note's links.
 gui-settings-sections = Sections
 gui-settings-form = { $section } settings
 gui-settings-saved-hint = Changes take effect and are saved at once.
@@ -3157,7 +3423,7 @@ gui-prompt-path-hint = Type the path of a document, then press Enter. Tab comple
 gui-prompt-hint = Press Enter to accept, or Escape to cancel. Up and Down recall earlier answers.
 gui-palette-filter = Type to filter the commands
 gui-palette-list = Commands
-gui-palette-hint = Enter runs the first match; Tab moves to the list.
+gui-palette-hint = Enter runs the first match; Tab moves to the list; F1 explains a command.
 gui-open-failed = Could not open { $name }: { $error }
 gui-uia-unavailable = UI Automation notifications exist only on Windows; using the live region.
 gui-graphics-failed = The window could not start its graphics. The terminal reader, textweaver, needs none.
@@ -3262,6 +3528,7 @@ menu-headings = Headings
 menu-go-to = Go to
 menu-cursor = Cursor and selection
 menu-bookmarks = Bookmarks and notes
+menu-highlights = Highlights
 menu-tables = Tables
 menu-speech-cursor = Speech Cursor
 
@@ -3395,6 +3662,22 @@ name-previous-note = Previous note
 name-delete-note = Delete note or highlight
 name-highlight-selection = Highlight
 name-export-study-sheet = Export study sheet
+name-highlight-as = Highlight with a name
+name-highlight-name-1 = Highlight with name 1
+name-highlight-name-2 = Highlight with name 2
+name-highlight-name-3 = Highlight with name 3
+name-highlight-name-4 = Highlight with name 4
+name-highlight-name-5 = Highlight with name 5
+name-collect-highlights = Collect highlights
+name-export-study-sheet-by-name = Export study sheet by name
+name-self-test = Self-test
+name-make-cards = Make cards
+name-study-cards = Study cards
+name-list-cards = Cards
+name-grade-again = Grade again
+name-grade-hard = Grade hard
+name-grade-good = Grade good
+name-grade-easy = Grade easy
 name-open = Open
 name-open-path = Open by path
 name-open-library = Library
@@ -3410,6 +3693,7 @@ name-export-pdf = Export PDF
 name-export-docx = Export Word
 name-export-epub = Export EPUB
 name-export-brf = Export braille
+name-export-knowledge-graph = Export knowledge graph
 name-preview-in-browser = Preview in browser
 name-toggle-preview-auto-reload = Reload preview automatically
 name-toggle-preview-live = Live preview
@@ -3445,6 +3729,8 @@ name-select-all = Select all
 name-delete-word-before = Delete word before
 name-delete-word-after = Delete word after
 name-paste = Paste
+name-paste-plain-text = Paste as plain text
+name-context-menu = Context menu
 name-insert-citation = Insert citation
 name-add-reference = Add reference
 name-insert-bibliography = Insert bibliography
@@ -3494,6 +3780,8 @@ menu-recent-none = No recent documents
 menu-not-available = { $name } is not available in this version.
 menu-no-access-key = No item with the key { $letter }.
 menu-closed = Menus closed.
+menu-context = Context menu
+menu-context-closed = Context menu closed.
 menu-press-a-key = Press a key to hear what it does.
 menu-key-described = { $name }: { $help }. Keys: { $keys }. In the menus: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. Keys: { $keys }.
@@ -3511,17 +3799,17 @@ choice-accessibility-interface-announcements-off = off
 choice-accessibility-interface-announcements-minimal = minimal
 choice-accessibility-interface-announcements-normal = normal
 choice-accessibility-interface-announcements-full = full
-palette-item = { $name }, { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }, { $category }: { $help }.
-palette-item-recent = { $name }, recent, { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }, recent, { $category }: { $help }.
+palette-item = { $name }, { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }, { $keys }, recent
+palette-item-recent-no-keys = { $name }, recent
 palette-list-title = Commands matching { $query }
 palette-list-title-all = Commands
 palette-list-intro =
     { $title }, { $n ->
         [one] 1 command
        *[other] { $n } commands
-    }. Enter runs one.
+    }. Enter runs one, F1 explains it.
 action-browse-files = Browse files and archives: Enter opens a folder, an archive, or a document; Backspace goes up
 action-batch-convert = Convert a folder of documents to another format, in the background
 action-export-audio = Export the document as spoken audio: MP3, FLAC, Opus, WAV, or an M4B audiobook
@@ -3565,6 +3853,8 @@ color-name-skyblue = sky blue
 color-name-teal = teal
 color-name-gold = gold
 color-name-yellow = yellow
+color-name-green = green
+color-name-cyan = cyan
 color-name-purple = purple
 color-name-pink = pink
 color-name-brown = brown
@@ -3993,6 +4283,7 @@ sync-already-off = Sync is already off here.
 sync-stopped = Sync off here. The folder is left as it is.
 prompt-sync-computer-name = Name this computer, Enter keeps it
 menu-sync = Sync
+menu-cards = Study cards
 name-sync-setup = Set up sync
 name-sync-status = Sync status
 name-sync-now = Sync now
@@ -4392,3 +4683,55 @@ brf-original-not-brf = Not a braille file. Show original Braille works on BRF fi
 brf-original-unreadable = Cannot read the braille file: { $reason }
 brf-no-liblouis = Braille shown as braille: liblouis is missing. To read it as print, install liblouis from liblouis.io or your system's packages, then open the file again.
 ## End of B1-r5
+
+## B1-t2: saving the review into the Word file. $file is the Word file's
+## name, $backup the copy of the original kept beside it.
+name-save-changes-to-word = Save changes to the Word file
+action-save-changes-to-word = Save the accepted and rejected changes and the comments into the Word file, keeping a copy of the original first
+# Asked before Accept all changes; $n is how many changes.
+changes-accept-all-question =
+    { $n ->
+        [one] Accept the 1 change? y or n
+       *[other] Accept all { $n } changes? y or n
+    }
+changes-reject-all-question =
+    { $n ->
+        [one] Reject the 1 change? y or n
+       *[other] Reject all { $n } changes? y or n
+    }
+changes-save-not-word = Not a Word file. Changes are saved back only into .docx files; export writes the decided text in other formats.
+changes-save-nothing = Nothing to save: no change was accepted or rejected, and no comment changed.
+changes-saved-backup = Saved the changes in { $file }. The original is kept as { $backup }.
+changes-saved = Saved the changes in { $file }.
+changes-save-unplaced =
+    { $n ->
+        [one] 1 new comment is at the start: its text was not found.
+       *[other] { $n } new comments are at the start: their text was not found.
+    }
+changes-save-failed = Could not save the changes in { $file }: { $error }. The file is as it was; close it in Word if it is open, then try again.
+changes-save-not-in-build = Saving changes to the Word file is not in this version of { -brand }. tw changes --in-place still does it.
+# tw changes --in-place: $path is the Word file, $backup the copy of the
+# original, $n how many changes.
+changes-in-place-accepted =
+    { $n ->
+        [one] Accepted 1 change in { $path }. The original is kept as { $backup }.
+       *[other] Accepted { $n } changes in { $path }. The original is kept as { $backup }.
+    }
+changes-in-place-rejected =
+    { $n ->
+        [one] Rejected 1 change in { $path }. The original is kept as { $backup }.
+       *[other] Rejected { $n } changes in { $path }. The original is kept as { $backup }.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] Saved 1 tracked change in { $file }.
+       *[other] Saved { $n } tracked changes in { $file }.
+    }
+changes-original-kept = The original is kept as { $backup }.
+changes-tracked-refused =
+    { $n ->
+        [one] Not saved: 1 change in { $file } crosses a paragraph or sits in a link or field, so it cannot be tracked. Save As keeps your edits as Markdown.
+       *[other] Not saved: { $n } changes in { $file } cross a paragraph or sit in a link or field, so they cannot be tracked. Save As keeps your edits as Markdown.
+    }
+## End of B1-t2

@@ -256,6 +256,13 @@ impl Tui {
         log::info!("{}", info.log_line());
         let mut tui = Self::with_color_support(app, info.color);
         tui.clipboard_route = info.clipboard;
+        // Paste reads the system clipboard where it is the listener's
+        // (not over SSH or in tmux), so formatted text becomes Markdown.
+        #[cfg(feature = "clipboard")]
+        if info.clipboard != crate::clipboard::Route::Osc52 {
+            tui.app
+                .set_clipboard(Box::new(crate::clipboard::SystemReader));
+        }
         tui.terminal = info;
         tui
     }
@@ -288,7 +295,7 @@ impl Tui {
     pub fn with_color_support(mut app: App, support: ColorSupport) -> Self {
         // F4 in a prompt for a path browses for it, and the prompt says so.
         app.set_prompt_browse_key(Some(textweaver_app::path_prompt::browse_key()));
-        let theme = Theme::from_theme(&app.reading_theme(), support).with_marks(&app.mark_colors());
+        let theme = Theme::from_theme(&app.reading_theme(), support);
         let theme_key = app.reading_theme_key();
         Tui {
             app,
@@ -396,8 +403,7 @@ impl Tui {
     fn refresh_theme(&mut self) {
         let key = self.app.reading_theme_key();
         if key != self.theme_key {
-            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support)
-                .with_marks(&self.app.mark_colors());
+            self.theme = Theme::from_theme(&self.app.reading_theme(), self.support);
             self.theme_key = key;
         }
     }
@@ -565,6 +571,14 @@ impl Tui {
                 _ => Confirm::Repeat,
             };
             self.dispatch(Command::Confirm(answer));
+            return;
+        }
+        // The Applications key, where the terminal reports it (with the
+        // kitty keyboard protocol): the context menu, as in the window.
+        if k.code == KeyCode::Menu && self.app.prompt_model().is_none() {
+            if self.app.list_model().is_none() {
+                self.dispatch(Command::Action(ActionId::ContextMenu));
+            }
             return;
         }
         if self.app.list_model().is_some() {
@@ -912,6 +926,8 @@ impl Tui {
             s.notes.len().hash(&mut h);
             s.bookmarks.len().hash(&mut h);
             s.highlights.len().hash(&mut h);
+            // A highlight given another name is stamped anew.
+            s.highlights.iter().map(|x| x.ts).max().hash(&mut h);
         }
         if let Some(l) = app.list_model() {
             (l.title.len(), l.items.len(), l.selected).hash(&mut h);
@@ -1504,7 +1520,7 @@ impl Tui {
             let mut style = highlights
                 .iter()
                 .filter(|h| h.range.contains(pos))
-                .fold(base, |st, h| st.patch(theme.highlight(h.kind)));
+                .fold(base, |st, h| st.patch(theme.mark(h)));
             while b < bold.len() && bold[b].end <= pos {
                 b += 1;
             }
@@ -1753,6 +1769,22 @@ impl Tui {
         for (i, item) in list.items.iter().enumerate() {
             if i == list.selected {
                 first_row = rows.len();
+            }
+            // A command row ("Find next, F3") draws its key at the right
+            // edge when the name and the key fit on one line; the line
+            // still starts with the name. With the Braille-first layout the
+            // row stays "Find next, F3", so the key is on the display
+            // without panning across the gap.
+            if let Some((name, key)) = list.columns.get(i).filter(|(_, k)| !k.is_empty())
+                && !rtl
+                && !braille
+            {
+                let used = name.chars().count() + key.chars().count();
+                if used + 2 <= width {
+                    let gap = width - used;
+                    rows.push((i, format!("{name}{:gap$}{key}", "")));
+                    continue;
+                }
             }
             let chars: Vec<char> = item.chars().collect();
             for (a, b) in layout::wrap(&chars, width, 4) {

@@ -124,7 +124,17 @@ fn process(lines: &[&str], blocks: Blocks, out: &mut String, depth: usize) -> bo
                 j += 1;
             }
             let pad = " ".repeat(head.indent);
-            let title = escape_html(&head.title());
+            // The type word comes first ("Tip: Remember"), so a reader
+            // hears what kind of note it is before its title; a title that
+            // already starts with the word is kept as written.
+            let word = head.type_word();
+            let custom = head.custom_title.trim();
+            let title =
+                if custom.is_empty() || custom.to_lowercase().starts_with(&word.to_lowercase()) {
+                    escape_html(&head.title())
+                } else {
+                    escape_html(&format!("{word}: {custom}"))
+                };
             let class = escape_html(&head.kind);
             if head.fold.is_some() {
                 let open = if head.fold == Some(Fold::Expanded) {
@@ -235,7 +245,11 @@ mod tests {
     fn callout_becomes_div_with_title() {
         let out = rewrite("> [!tip] Remember\n> Body *text*.\n\nAfter\n", OBSIDIAN).unwrap();
         assert!(out.contains("<div class=\"callout callout-tip\" role=\"note\">"));
-        assert!(out.contains("<strong>Remember</strong>"));
+        assert!(out.contains("<strong>Tip: Remember</strong>"));
+        let plain = rewrite("> [!tip]\n> x\n", OBSIDIAN).unwrap();
+        assert!(plain.contains("<strong>Tip</strong>"), "{plain}");
+        let kept = rewrite("> [!tip] Tip of the day\n> x\n", OBSIDIAN).unwrap();
+        assert!(kept.contains("<strong>Tip of the day</strong>"), "{kept}");
         assert!(out.contains("\nBody *text*.\n"));
         assert!(out.contains("</div>"));
         assert!(out.ends_with("After\n"));
@@ -245,7 +259,7 @@ mod tests {
     fn foldable_callout_is_details() {
         let out = rewrite("> [!faq]- Why?\n> Because.\n", OBSIDIAN).unwrap();
         assert!(out.contains("<details class=\"callout callout-faq\">"));
-        assert!(out.contains("<summary class=\"callout-title\">Why?</summary>"));
+        assert!(out.contains("<summary class=\"callout-title\">FAQ: Why?</summary>"));
     }
 
     #[test]

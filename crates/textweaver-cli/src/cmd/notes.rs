@@ -3,14 +3,19 @@
 //! links, then its links out ("supports: Chapter 3 note") and what links
 //! to it ("cites this, from: Week 4 note"), from the library's saved
 //! notes. Reads only; never writes state.
-//! Owner: B1-g1.
+//!
+//! `tw notes graph [--to FORMAT] [--out FILE]`: the whole library's graph
+//! as JSON, DOT, GraphML, Mermaid, PlantUML, a CSV edge list or a
+//! Markdown list (B1-g2, [`Graph`]).
+//! Owner: B1-g1, B1-g2.
 
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use textweaver_app::store::notes::{collapse, doc_key};
 use textweaver_app::store::{
-    Backlinks, DocKey, Library, Note, NotedDoc, Paths, Relation, RelationType, StateStore,
+    Backlinks, DocKey, Graph, GraphFormat, Library, Note, NotedDoc, Paths, Relation, RelationType,
+    StateStore,
 };
 
 /// Arguments for `tw notes`.
@@ -26,6 +31,27 @@ pub struct Args {
 pub enum Command {
     /// List a document's links between notes: out, and what links here.
     Links(LinksArgs),
+    /// Write the library's knowledge graph: every note with links.
+    Graph(GraphArgs),
+}
+
+/// Arguments for `tw notes graph`.
+#[derive(clap::Args, Debug)]
+pub struct GraphArgs {
+    /// The format: md (a Markdown list, the default), json, dot, graphml,
+    /// mermaid, plantuml or csv. Without it, the extension of the output
+    /// file decides.
+    #[arg(long, value_name = "FORMAT")]
+    pub to: Option<String>,
+    /// The same as --to json.
+    #[arg(long, conflicts_with = "to")]
+    pub json: bool,
+    /// Write to this file instead of the standard output.
+    #[arg(short = 'o', long, value_name = "FILE")]
+    pub out: Option<PathBuf>,
+    /// Read the state under this directory (like `TEXTWEAVER_HOME`).
+    #[arg(long, value_name = "DIR")]
+    pub home: Option<PathBuf>,
 }
 
 /// Arguments for `tw notes links`.
@@ -209,7 +235,55 @@ fn render(r: &Report) -> String {
 pub fn run(args: Args) -> anyhow::Result<()> {
     match args.command {
         Command::Links(a) => links(a),
+        Command::Graph(a) => graph(a),
     }
+}
+
+/// The format `tw notes graph` writes: `--to` (or `--json`), else the
+/// extension of `--out`, else the Markdown list.
+fn graph_format(args: &GraphArgs) -> anyhow::Result<GraphFormat> {
+    if args.json {
+        return Ok(GraphFormat::Json);
+    }
+    if let Some(name) = &args.to {
+        return GraphFormat::parse(name).ok_or_else(|| {
+            let names: Vec<&str> = GraphFormat::ALL.iter().map(|f| f.as_str()).collect();
+            anyhow::anyhow!(
+                "Unknown graph format {name}. Use one of: {}.",
+                names.join(", ")
+            )
+        });
+    }
+    Ok(args
+        .out
+        .as_deref()
+        .and_then(GraphFormat::from_path)
+        .unwrap_or(GraphFormat::Markdown))
+}
+
+fn graph(args: GraphArgs) -> anyhow::Result<()> {
+    let format = graph_format(&args)?;
+    let paths = match &args.home {
+        Some(home) => Paths::under(home),
+        None => Paths::platform()?,
+    };
+    let states = StateStore::new(paths.state_dir());
+    let docs = Library::load(&paths.library_file())?.noted_documents(&states);
+    let g = Graph::build(&docs);
+    let text = g.render(format);
+    match &args.out {
+        Some(out) => {
+            textweaver_app::store::atomic_write(out, text.as_bytes())
+                .map_err(|e| anyhow::anyhow!("Could not write the knowledge graph: {e}"))?;
+            crate::cmd::outln!(
+                "Knowledge graph written: {} File: {}",
+                g.counts(),
+                out.display()
+            );
+        }
+        None => crate::cmd::out!("{text}"),
+    }
+    Ok(())
 }
 
 fn links(args: LinksArgs) -> anyhow::Result<()> {
@@ -314,6 +388,59 @@ mod tests {
         assert_eq!(
             render(&build(&file, &[], &[], None)),
             "No links in this document.\n"
+        );
+    }
+
+    #[test]
+    fn graph_format_from_to_json_or_the_file_name() {
+        let args = |to: Option<&str>, json: bool, out: Option<&str>| GraphArgs {
+            to: to.map(Into::into),
+            json,
+            out: out.map(PathBuf::from),
+            home: None,
+        };
+        let f = |a: GraphArgs| graph_format(&a).unwrap();
+        assert_eq!(f(args(None, false, None)), GraphFormat::Markdown);
+        assert_eq!(f(args(Some("dot"), false, Some("g.csv"))), GraphFormat::Dot);
+        assert_eq!(f(args(None, true, None)), GraphFormat::Json);
+        assert_eq!(
+            f(args(None, false, Some("g.graphml"))),
+            GraphFormat::GraphMl
+        );
+        assert_eq!(f(args(None, false, Some("g.txt"))), GraphFormat::Markdown);
+        assert!(graph_format(&args(Some("svg"), false, None)).is_err());
+    }
+
+    #[test]
+    fn graph_writes_the_library_to_a_file() {
+        let home = tempfile::tempdir().unwrap();
+        let paths = Paths::under(home.path());
+        let a = home.path().join("a.md");
+        let mut lib = Library::default();
+        lib.record_open(&a, "Alpha", "markdown");
+        lib.save(&paths.library_file()).unwrap();
+        let st = textweaver_app::store::DocState {
+            notes: vec![
+                note("x", "First", vec![rel("SUPPORTS", "", "y")]),
+                note("y", "Second", vec![]),
+            ],
+            ..Default::default()
+        };
+        StateStore::new(paths.state_dir())
+            .save(&DocKey::for_path(&a), &st)
+            .unwrap();
+        let out = home.path().join("graph.csv");
+        graph(GraphArgs {
+            to: None,
+            json: false,
+            out: Some(out.clone()),
+            home: Some(home.path().to_owned()),
+        })
+        .unwrap();
+        let text = std::fs::read_to_string(&out).unwrap();
+        assert_eq!(
+            text,
+            "source,type,target\r\n\"First, in Alpha\",supports,\"Second, in Alpha\"\r\n"
         );
     }
 }

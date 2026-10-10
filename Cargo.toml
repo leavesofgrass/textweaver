@@ -37,6 +37,7 @@ members = [
     "crates/textweaver-summary",
     "crates/textweaver-sync",
     "crates/textweaver-components",
+    "crates/textweaver-espeak",
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027);
@@ -78,6 +79,7 @@ default-members = [
     "crates/textweaver-summary",
     "crates/textweaver-sync",
     "crates/textweaver-components",
+    "crates/textweaver-espeak",
 ]
 
 [workspace.package]
@@ -127,6 +129,7 @@ textweaver-cite = { path = "crates/textweaver-cite" }
 textweaver-theme = { path = "crates/textweaver-theme" }
 textweaver-aids = { path = "crates/textweaver-aids" }
 textweaver-dectalk = { path = "crates/textweaver-dectalk" }
+textweaver-espeak = { path = "crates/textweaver-espeak" }
 textweaver-fonts = { path = "crates/textweaver-fonts", default-features = false }
 textweaver-lexicon = { path = "crates/textweaver-lexicon" }
 textweaver-engines = { path = "crates/textweaver-engines" }
@@ -302,7 +305,7 @@ mathcat = { version = "=0.7.6-rc.3", default-features = false, features = ["incl
 # `wayland-data-control` in textweaver-tui (x11rb and wl-clipboard-rs,
 # both pure Rust).
 arboard = { version = "3.6.1", default-features = false }
-# Code blocks highlighted in the terminal view. syntect's defaults build
+# Code blocks highlighted in the terminal view and in HTML pages (textweaver-render). syntect's defaults build
 # the Oniguruma C library, so default features are off. Only `parsing`
 # (which loads two-face's syntax dumps) and the pure-Rust `regex-fancy`
 # are on: `default-fancy` would add YAML and plist loading (yaml-rust,

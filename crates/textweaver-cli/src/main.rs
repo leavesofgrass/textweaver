@@ -4,7 +4,7 @@
 //! `search`, `speak`, `voices`, `backends`, `eloquence`, `convert` (with
 //! `convert_layout` for the PDF and EPUB layout flags), `export-audio`,
 //! `library`, `vault`, `dictate`, `marks`, `notes`, `lint`, `migrate-star`, `cite`,
-//! `settings` (with `profile`), `define`, `stats`, `summarize`, `changes`, `serve`, `ocr`, and `components`. Each module's docs name the ADR and crate it
+//! `settings` (with `profile`), `define`, `stats`, `study`, `summarize`, `changes`, `serve`, `ocr`, and `components`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
 use std::process::ExitCode;
@@ -81,6 +81,8 @@ enum Cmd {
     Define(cmd::define::Args),
     /// Reading statistics: time read aloud, the furthest point, and sessions per document.
     Stats(cmd::stats::Args),
+    /// Study cards: how many are due today, and how many are new.
+    Study(cmd::study::Args),
     /// Summarize a document: its most central sentences, one per line, without a model.
     Summarize(cmd::summarize::Args),
     /// List a document's tracked changes and comments, or write it with every change accepted or rejected.
@@ -137,6 +139,7 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Settings(a) => cmd::settings::run(a),
         Cmd::Define(a) => cmd::define::run(a),
         Cmd::Stats(a) => cmd::stats::run(a),
+        Cmd::Study(a) => cmd::study::run(a),
         Cmd::Summarize(a) => cmd::summarize::run(a),
         Cmd::Changes(a) => cmd::changes::run(a),
         Cmd::Sync(a) => cmd::sync::run(a),

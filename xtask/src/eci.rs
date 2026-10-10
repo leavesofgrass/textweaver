@@ -4,9 +4,11 @@
 //! - `cargo xtask hosts [--dest DIR]` builds every host for this platform
 //!   and is what CI and the release job call: on Windows the ECI hosts
 //!   (`textweaver-eci-host.exe` for OpenEVV's x86_64 `eci.dll`,
-//!   `textweaver-eci-host-x86.exe` for Code Factory's 32-bit `eci.dll`) and
+//!   `textweaver-eci-host-x86.exe` for Code Factory's 32-bit `eci.dll`),
 //!   the SAPI5 hosts (`textweaver-sapi-host.exe`,
-//!   `textweaver-sapi-host-x86.exe`); elsewhere the native ECI host
+//!   `textweaver-sapi-host-x86.exe`), the DECtalk hosts, and the eSpeak NG
+//!   hosts (`textweaver-espeak-host.exe`, `textweaver-espeak-host-x86.exe`);
+//!   elsewhere the native ECI host
 //!   (`textweaver-eci-host`, for Voxin). All are release builds without
 //!   default features (a host needs no audio output), installed with the
 //!   community pronunciation dictionaries (`ibmtts-dictionaries/`) into
@@ -31,6 +33,8 @@ const SAPI_PACKAGE: &str = "textweaver-sapi";
 const SAPI_BIN: &str = "textweaver-sapi-host";
 const DECTALK_PACKAGE: &str = "textweaver-dectalk";
 const DECTALK_BIN: &str = "textweaver-dectalk-host";
+const ESPEAK_PACKAGE: &str = "textweaver-espeak";
+const ESPEAK_BIN: &str = "textweaver-espeak-host";
 /// The 32-bit Windows target.
 pub(crate) const X86_TARGET: &str = "i686-pc-windows-msvc";
 
@@ -120,6 +124,14 @@ pub(crate) fn all_hosts() -> Vec<HostBuild> {
             bin: DECTALK_BIN,
             target: Some(X86_TARGET),
         });
+        // eSpeak NG's helper, on Windows only: the x64 host for the x64
+        // installer's library, the x86 host for a 32-bit one. Linux and
+        // macOS keep eSpeak NG in process.
+        v.extend([None, Some(X86_TARGET)].map(|target| HostBuild {
+            package: ESPEAK_PACKAGE,
+            bin: ESPEAK_BIN,
+            target,
+        }));
     }
     v
 }
@@ -263,6 +275,8 @@ mod tests {
                     "textweaver-sapi-host-x86.exe",
                     "textweaver-dectalk-host.exe",
                     "textweaver-dectalk-host-x86.exe",
+                    "textweaver-espeak-host.exe",
+                    "textweaver-espeak-host-x86.exe",
                 ]
             );
         } else {

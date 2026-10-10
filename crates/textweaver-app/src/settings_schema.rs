@@ -493,6 +493,16 @@ pub const INFO: &[Info] = &[
         "DECtalk library",
         "The DECtalk library to load; not set searches the usual places.",
     ),
+    choice(
+        "speech.espeak.helper",
+        "eSpeak NG helper program",
+        "Run eSpeak NG in its own helper program, so an engine crash cannot close textweaver. Automatic uses the helper on Windows when it is installed, and runs eSpeak NG inside textweaver elsewhere.",
+        &[
+            ("auto", "automatic"),
+            ("always", "always the helper"),
+            ("never", "inside textweaver"),
+        ],
+    ),
     optional(
         "speech.piper.voices",
         "Piper voices folder",
@@ -559,6 +569,11 @@ pub const INFO: &[Info] = &[
         "Sentence highlight color",
         "The color behind the sentence being read. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
+    ),
+    table(
+        "highlight.palette",
+        "Highlight names",
+        "Up to eight names for your highlights, each with a color and a shape. The first five have keys of their own.",
     ),
     // [normalization]
     toggle(
@@ -748,6 +763,11 @@ pub const INFO: &[Info] = &[
         (0.0, 240.0, 5.0),
         "minutes",
     ),
+    toggle(
+        "reading.recall_prompts",
+        "Recall prompts",
+        "At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key.",
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The color theme.", &[]),
     toggle(
@@ -842,10 +862,16 @@ pub const INFO: &[Info] = &[
         (1.0, 4096.0, 16.0),
         "megabytes",
     ),
+    // [authoring]
     text(
-        "editing.author",
+        "authoring.author",
         "Author",
-        "The author written into new documents made from a template; empty leaves it blank.",
+        "The name textweaver writes on comments, replies, and documents from a template. Empty means textweaver on comments and no author in templates. Never taken from the computer.",
+    ),
+    toggle(
+        "authoring.track_changes",
+        "Track changes in Word files",
+        "Save edits to a Word file as tracked changes a reviewer can accept. Off saves them as Markdown under a new name.",
     ),
     // [library]
     number(
@@ -1573,6 +1599,7 @@ fn section_title(key: &str) -> &'static str {
         "reading" => "Reading",
         "display" => "Display",
         "editing" => "Editing",
+        "authoring" => "Authoring",
         "library" => "Library",
         "keyboard" => "Keyboard",
         "accessibility" => "Accessibility",
@@ -2275,27 +2302,33 @@ impl App {
     /// choices.
     pub fn settings_schema(&self) -> SettingsSchema {
         let mut schema = base_schema().clone();
-        let themes: Vec<Choice> = self
+        let mut themes: Vec<(bool, Choice)> = self
             .themes
             .names()
             .into_iter()
             .map(|name| {
-                // Grouped in words (W9b-d): the themes that meet AA come
-                // first in the cycle and say so; the rest say "below AA".
+                // Grouped by AA, in words (W9b-d): the themes that meet AA
+                // say so, the rest say "below AA".
                 let theme = self.themes.resolve(name).0;
                 let shown = self.theme_name_in_words(name, &theme.meta.display_name);
-                let id = if textweaver_theme::check(theme).failures().count() == 0 {
+                let meets = textweaver_theme::check(theme).failures().count() == 0;
+                let id = if meets {
                     "themes-choice-aa"
                 } else {
                     "themes-choice-below-aa"
                 };
                 let label = self.msg_args(id, &args!["theme" => shown.as_str()]);
-                Choice {
+                let choice = Choice {
                     value: Value::String(name.to_owned()),
                     label,
-                }
+                };
+                (meets, choice)
             })
             .collect();
+        // Every theme that meets AA comes first, the reader's own themes
+        // too (they load after the built-ins), each group in cycle order.
+        themes.sort_by_key(|(meets, _)| !meets);
+        let themes: Vec<Choice> = themes.into_iter().map(|(_, c)| c).collect();
         let window = self.uses_window_modes();
         for s in &mut schema.settings {
             if window && s.path == "accessibility.mode" {
@@ -2850,6 +2883,7 @@ fn restart_note(path: &str) -> Option<&'static str> {
         | "speech.sapi.onecore"
         | "speech.apple.backend"
         | "speech.dectalk.library"
+        | "speech.espeak.helper"
         | "speech.piper.voices"
         | "speech.piper.voice"
         | "speech.piper.phonemizer" => Some("settings-restart-speech"),

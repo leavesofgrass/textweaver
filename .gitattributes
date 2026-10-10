@@ -18,3 +18,5 @@ third_party/mathcat/** -text
 *.brf binary
 *.ico binary
 *.res binary
+# RFC 4180 CSV golden file: its CRLF line ends are the content.
+fixtures/graph/graph.csv -text

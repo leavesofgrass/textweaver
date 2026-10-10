@@ -9384,6 +9384,7 @@ dependencies = [
  "textweaver-sync",
  "textweaver-text",
  "textweaver-theme",
+ "textweaver-writers",
  "thiserror 2.0.21",
  "toml 1.1.6+spec-1.1.0",
  "windows 0.62.2",
@@ -9586,10 +9587,22 @@ dependencies = [
  "textweaver-dectalk",
  "textweaver-eci",
  "textweaver-enginehost",
+ "textweaver-espeak",
  "textweaver-piper",
  "textweaver-sapi",
  "textweaver-speech",
  "textweaver-store",
+]
+
+[[package]]
+name = "textweaver-espeak"
+version = "0.1.0-alpha.9"
+dependencies = [
+ "log",
+ "tempfile",
+ "textweaver-core",
+ "textweaver-enginehost",
+ "textweaver-speech",
 ]
 
 [[package]]
@@ -9766,12 +9779,14 @@ dependencies = [
  "pulldown-cmark",
  "serde",
  "serde_json",
+ "syntect",
  "tempfile",
  "textweaver-formats",
  "textweaver-math",
  "textweaver-text",
  "textweaver-theme",
  "thiserror 2.0.21",
+ "two-face",
 ]
 
 [[package]]
@@ -9889,13 +9904,12 @@ dependencies = [
  "ctrlc",
  "log",
  "ratatui",
- "syntect",
  "tempfile",
  "textweaver-aids",
  "textweaver-app",
  "textweaver-engines",
+ "textweaver-render",
  "textweaver-theme",
- "two-face",
  "unicode-bidi",
  "windows 0.62.2",
 ]

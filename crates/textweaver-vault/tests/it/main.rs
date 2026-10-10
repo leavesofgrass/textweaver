@@ -5,4 +5,5 @@
 //! one (W7t). Add a new integration test as a module in this folder,
 //! never as a new file directly in `tests/`.
 
+mod graph_roundtrip;
 mod roundtrip;

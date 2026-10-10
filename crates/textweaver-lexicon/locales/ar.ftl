@@ -511,6 +511,7 @@ playback-time-up =
        *[other] انتهى الوقت بعد { $minutes } دقيقة. { $key } للمتابعة.
     }
 playback-repeat-slower = إعادة أبطأ، بسرعة { $rate } كلمة في الدقيقة.
+playback-recall-prompt = قل ما تتذكره من { $section }. { $key } للمتابعة.
 
 ## سطر العنوان وقول الحالة.
 
@@ -606,8 +607,21 @@ help-the-command = الأمر { $name }
 # action-* help, and its category-* title.
 help-entry = { $name }: { $keys }. { $help }. { $category }
 help-unknown-command = أمر غير معروف: { $text }.
-help-shortcuts-intro = اختصارات لوحة المفاتيح، { $n } أمرًا. السهمان لأعلى ولأسفل للتنقل، Enter للتشغيل، Escape للإغلاق.
+help-shortcuts-intro = اختصارات لوحة المفاتيح، { $n } أمرًا. اكتب للتصفية. ينتقل Page Down إلى المجموعة التالية، ويشرح F1 الأمر، ويشغّله Enter، ويغلق Escape.
 help-shortcuts-title = اختصارات لوحة المفاتيح
+# The keyboard shortcuts list, filtered: $filter is what was typed.
+help-shortcuts-title-matching = اختصارات لوحة المفاتيح المطابقة لـ { $filter }
+# $n commands of $total match the filter.
+help-shortcuts-filter-match = { $n } من { $total } أمرًا مطابقة.
+help-shortcuts-filter-none = لا يطابق أي أمر { $query }. يزيل Backspace الأحرف.
+help-shortcuts-filter-cleared = مُسح عامل التصفية، { $n } أمرًا.
+# Moving into a group of the keyboard shortcuts list: its name, its
+# size, then the row ($item, with its place in the list).
+help-shortcuts-group-item =
+    { $group }، { $n ->
+        [one] أمر واحد
+       *[other] { $n } أوامر
+    }. { $item }
 help-title = مساعدة
 help-intro = مساعدة. السهمان لأعلى ولأسفل للتنقل، Escape للإغلاق.
 
@@ -631,7 +645,7 @@ help-rate = أسرع وأبطأ: { $faster } و{ $slower }.
 help-where = أين أنا: { $key }.
 help-repeat = سماع الرسالة الأخيرة مجددًا: { $repeat }. الرسالة الأخيرة والحالة: الوضع والسرعة والمحرك والموضع: { $status }.
 help-notes = الملاحظات: إضافة { $add }، سرد { $list }، التالية والسابقة { $next } و{ $previous }، حذف التي عند المؤشر { $delete }. في القائمة، Delete للحذف وF2 للتحرير.
-help-highlights = تمييز التحديد أو الجملة، أو إزالة تمييز: { $highlight }. سرد أشرطة التمييز: { $list }.
+help-highlights = تمييز التحديد أو الجملة، أو إزالة تمييز: { $highlight }. باسم: من { $first } إلى { $fifth }، أو القائمة: { $named }. سرد أشرطة التمييز: { $list }.
 help-bookmarks-list = قائمة الإشارات المرجعية: Delete لحذف إشارة، F2 لإعادة تسميتها.
 help-edit = تحرير المستند: { $edit }. حفظ: { $save }. حفظ باسم: { $saveas }. مستند جديد: { $new }.
 help-editing = أثناء التحرير: تراجع { $undo }، إعادة { $redo }، عريض { $bold }. كل أمر تنسيق موجود في اختصارات لوحة المفاتيح.
@@ -845,7 +859,23 @@ action-next-note = الانتقال إلى الملاحظة التالية
 action-previous-note = الانتقال إلى الملاحظة السابقة
 action-delete-note = حذف الملاحظة أو التمييز عند المؤشر
 action-highlight-selection = تمييز التحديد، أو الجملة عند المؤشر
+action-highlight-as = تمييز التحديد أو الجملة باسم يُختار من لوحة التمييز
+action-highlight-name-1 = التمييز بالاسم الأول في اللوحة، أو إزالة ذلك التمييز
+action-highlight-name-2 = التمييز بالاسم الثاني في اللوحة، أو إزالة ذلك التمييز
+action-highlight-name-3 = التمييز بالاسم الثالث في اللوحة، أو إزالة ذلك التمييز
+action-highlight-name-4 = التمييز بالاسم الرابع في اللوحة، أو إزالة ذلك التمييز
+action-highlight-name-5 = التمييز بالاسم الخامس في اللوحة، أو إزالة ذلك التمييز
+action-collect-highlights = كتابة تمييزات اسم واحد كقائمة ماركداون
 action-export-study-sheet = تصدير الملاحظات والتمييزات كورقة دراسة بصيغة ماركداون، مجمّعة حسب العنوان
+action-export-study-sheet-by-name = تصدير ورقة الدراسة مع تجميع التمييزات حسب الاسم
+action-self-test = اختبر نفسك في الملاحظات والتمييزات: Enter يُظهر كل إجابة
+action-make-cards = إنشاء بطاقات دراسة من الملاحظات والتمييزات وعناوينها
+action-study-cards = دراسة البطاقات: Enter يُظهر الإجابة، ومن 1 إلى 4 لتقييمها
+action-list-cards = عرض بطاقات الدراسة: Enter للانتقال إلى مصدر بطاقة، Delete لإزالتها
+action-grade-again = تقييم البطاقة قيد الدراسة: مرة أخرى، لم تُستذكر
+action-grade-hard = تقييم البطاقة قيد الدراسة: صعبة، استُذكرت بجهد
+action-grade-good = تقييم البطاقة قيد الدراسة: جيدة، استُذكرت
+action-grade-easy = تقييم البطاقة قيد الدراسة: سهلة، استُذكرت فورًا
 action-open = فتح مستند
 action-open-path = فتح مستند بكتابة مساره
 action-open-library = فتح المكتبة: مستندات مجلدات مكتبتك والملفات الأخيرة
@@ -861,6 +891,7 @@ action-export-pdf = تصدير المستند كملف PDF موسوم بجانب
 action-export-docx = تصدير المستند كملف Word ‏(DOCX) بجانبه
 action-export-epub = تصدير المستند ككتاب EPUB بجانبه
 action-export-brf = تصدير المستند كبرايل (BRF) بجانبه
+action-export-knowledge-graph = تصدير مخطط المعرفة: كل رابط بين الملاحظات، كقائمة ماركداون أو JSON أو DOT أو GraphML أو Mermaid أو PlantUML أو CSV
 action-preview-in-browser = معاينة المستند في متصفح الويب، مع الرياضيات؛ كل حفظ يعيد كتابة المعاينة
 action-toggle-preview-auto-reload = تشغيل أو إيقاف إعادة التحميل التلقائي لمعاينة المتصفح
 action-toggle-preview-live = تشغيل أو إيقاف المعاينة الحية: مع إعادة التحميل التلقائي، تُعاد المعاينة أيضًا عند توقف الكتابة
@@ -892,7 +923,9 @@ action-cycle-typing-echo = التنقل بين ترديد الكتابة: الح
 action-select-all = تحديد كل النص
 action-delete-word-before = حذف الكلمة قبل المؤشر
 action-delete-word-after = حذف الكلمة بعد المؤشر
-action-paste = لصق آخر نص نُسخ أو قُصّ في textweaver؛ يعمل لصق الطرفية أيضًا
+action-paste = لصق الحافظة؛ يصبح النص المنسق من متصفح أو معالج نصوص بتنسيق Markdown
+action-paste-plain-text = لصق الحافظة نصًا عاديًا دون أي من تنسيقه
+action-context-menu = فتح قائمة السياق: القص والنسخ واللصق والأوامر المناسبة لموضع المؤشر
 action-insert-citation = إدراج استشهاد: اختيار مرجع، ثم إعطاء رقم صفحة أو موضع آخر
 action-add-reference = إضافة مرجع إلى مكتبتك بـDOI أو ISBN
 action-insert-bibliography = إدراج قائمة مراجع الأعمال المستشهد بها، عند المؤشر
@@ -1262,11 +1295,11 @@ notes-none = لا ملاحظات. لإضافة واحدة: { $key }.
 notes-list-title = الملاحظات
 notes-list-intro =
     { $n ->
-        [one] الملاحظات، عنصر واحد. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
-        [two] الملاحظات، عنصران. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
-        [few] الملاحظات، { $n } عناصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
-        [many] الملاحظات، { $n } عنصرًا. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
-       *[other] الملاحظات، { $n } عنصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها.
+        [one] الملاحظات، عنصر واحد. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها. C لإنشاء بطاقة.
+        [two] الملاحظات، عنصران. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها. C لإنشاء بطاقة.
+        [few] الملاحظات، { $n } عناصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها. C لإنشاء بطاقة.
+        [many] الملاحظات، { $n } عنصرًا. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها. C لإنشاء بطاقة.
+       *[other] الملاحظات، { $n } عنصر. Enter للانتقال إلى ملاحظة، Delete لحذفها، F2 لتحريرها، Space لفتح روابطها. C لإنشاء بطاقة.
     }
 # Said on jumping to a note: its text, then the passage it is on.
 notes-note-content = { $note }. عند: { $anchor }
@@ -1278,27 +1311,71 @@ notes-unchanged = لم تتغيّر الملاحظة.
 notes-updated = تحدّثت الملاحظة.
 notes-nothing-to-highlight = لا شيء هنا لتمييزه.
 notes-highlight-removed = أُزيل التمييز: { $text }
-notes-highlighted-at = مُيِّز عند { $pct } بالمئة: { $text }
-notes-highlighted = مُيِّز: { $text }
-# An item in the highlights list. $color is the highlight's color name;
+notes-highlighted-at = مُيِّز، { $name }، عند { $pct } بالمئة: { $text }
+notes-highlighted = مُيِّز، { $name }: { $text }
+# An item in the highlights list. $name is the highlight's palette name;
 # $lost is yes when the text was not found after the file changed.
 notes-highlight-item =
     { $lost ->
-        [yes] { $text }، السطر { $line }، { $color }، لم يُعثر عليه بعد تغيّر الملف
-       *[no] { $text }، السطر { $line }، { $color }
+        [yes] { $name }: { $text }، السطر { $line }، لم يُعثر عليه بعد تغيّر الملف
+       *[no] { $name }: { $text }، السطر { $line }
     }
 notes-no-highlights = لا تمييزات. لإنشاء تمييز: { $key }.
 notes-highlights-title = التمييزات
 notes-highlights-intro =
     { $n ->
-        [one] التمييزات، عنصر واحد. Enter للانتقال إلى أحدها، Delete لإزالته.
-        [two] التمييزات، عنصران. Enter للانتقال إلى أحدها، Delete لإزالته.
-        [few] التمييزات، { $n } عناصر. Enter للانتقال إلى أحدها، Delete لإزالته.
-        [many] التمييزات، { $n } عنصرًا. Enter للانتقال إلى أحدها، Delete لإزالته.
-       *[other] التمييزات، { $n } عنصر. Enter للانتقال إلى أحدها، Delete لإزالته.
+        [one] التمييزات، عنصر واحد. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط. C لإنشاء بطاقة.
+        [two] التمييزات، عنصران. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط. C لإنشاء بطاقة.
+        [few] التمييزات، { $n } عناصر. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط. C لإنشاء بطاقة.
+        [many] التمييزات، { $n } عنصرًا. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط. C لإنشاء بطاقة.
+       *[other] التمييزات، { $n } عنصر. Enter للانتقال إلى أحدها، Delete لإزالته، F2 لتغيير اسمه، Space لعرض اسمه فقط. C لإنشاء بطاقة.
     }
 # The label said before a highlight's text on jumping to it.
-notes-highlight-label = تمييز
+notes-highlight-label = تمييز، { $name }
+notes-highlight-changed = تغيّر التمييز إلى { $name }: { $text }
+# $n is the palette entry's number, $key the keys of Highlight with a name.
+notes-palette-no-entry = لا يوجد اسم تمييز رقم { $n } في اللوحة. لاختيار اسم: { $key }.
+notes-highlights-named-title = التمييزات: { $name }
+notes-highlights-named-intro =
+    { $n ->
+        [one] التمييزات باسم { $name }، عنصر واحد. Space لعرض كل التمييزات.
+        [two] التمييزات باسم { $name }، عنصران. Space لعرض كل التمييزات.
+        [few] التمييزات باسم { $name }، { $n } عناصر. Space لعرض كل التمييزات.
+        [many] التمييزات باسم { $name }، { $n } عنصرًا. Space لعرض كل التمييزات.
+       *[other] التمييزات باسم { $name }، { $n } عنصر. Space لعرض كل التمييزات.
+    }
+notes-palette-title = أسماء التمييز
+# A palette name: the name, how many highlights have it, its shape and its color.
+notes-palette-row =
+    { $count ->
+        [one] { $name }، تمييز واحد، { $shape }، { $color }
+        [two] { $name }، تمييزان، { $shape }، { $color }
+        [few] { $name }، { $count } تمييزات، { $shape }، { $color }
+        [many] { $name }، { $count } تمييزًا، { $shape }، { $color }
+       *[other] { $name }، { $count } تمييز، { $shape }، { $color }
+    }
+notes-palette-intro-highlight = التمييز بأي اسم؟ عدد الأسماء { $n }. Enter لاختيار اسم.
+notes-palette-intro-change = تغيير التمييز إلى أي اسم؟ عدد الأسماء { $n }. Enter لاختيار اسم.
+notes-palette-intro-collect = جمع تمييزات أي اسم؟ عدد الأسماء { $n }. Enter لكتابتها كقائمة.
+notes-collect-none = لا توجد تمييزات باسم { $name }.
+# The collected list's own title (Markdown).
+notes-collect-title = التمييزات باسم { $name }: { $title }
+notes-collect-line = (السطر { $line })
+# Keep the letters y and n: they are the keys that answer.
+notes-collect-saved =
+    { $n ->
+        [one] تمييز واحد باسم { $name } حُفظ بعنوان { $file }. فتحه؟ y أو n. في { $folder }.
+        [two] تمييزان باسم { $name } حُفظا بعنوان { $file }. فتحه؟ y أو n. في { $folder }.
+        [few] { $n } تمييزات باسم { $name } حُفظت بعنوان { $file }. فتحه؟ y أو n. في { $folder }.
+        [many] { $n } تمييزًا باسم { $name } حُفظت بعنوان { $file }. فتحه؟ y أو n. في { $folder }.
+       *[other] { $n } تمييز باسم { $name } حُفظت بعنوان { $file }. فتحه؟ y أو n. في { $folder }.
+    }
+palette-shape-underline = تسطير
+palette-shape-double-underline = تسطير مزدوج
+palette-shape-bold = غامق
+palette-shape-dotted = تسطير منقط
+palette-shape-brackets = أقواس
+palette-shape-symbol = رمز
 # Shown while reading reaches a note's passage.
 notes-signal = ملاحظة: { $text }
 # Said after moving onto a note's passage.
@@ -1371,6 +1448,21 @@ relations-filter-cleared = تم مسح التصفية، { $n } معروضة.
 relations-filter-none = لا شيء يطابق { $filter }.
 relations-filter-matched = التصفية { $filter }: { $n } معروضة.
 
+## تصدير مخطط المعرفة (B1-g2).
+
+graph-export-title = تصدير مخطط المعرفة بصيغة
+graph-export-intro = مخطط المعرفة، الروابط: { $links }. اختر صيغة؛ قائمة ماركداون هي النص المخصّص للقراءة.
+graph-export-empty = لا روابط بين الملاحظات للتصدير. أضف رابطًا من قائمة روابط إحدى الملاحظات.
+graph-format-md = قائمة ماركداون، النص المخصّص للقراءة
+graph-format-json = JSON، لبرنامجي Gephi وCytoscape
+graph-format-dot = DOT، لبرنامج Graphviz
+graph-format-graphml = GraphML، لبرامج Gephi وCytoscape وyEd
+graph-format-mermaid = مخطط Mermaid
+graph-format-plantuml = مخطط PlantUML
+graph-format-csv = قائمة حواف CSV، لجداول البيانات
+graph-export-saved = حُفظ مخطط المعرفة باسم { $file }. فتحه؟ y أو n. في { $folder }.
+graph-export-failed = تعذّرت كتابة مخطط المعرفة: { $error } تحقّق من إمكانية الكتابة في المجلد.
+
 ## الإشارات المرجعية: إعادة التسمية والحذف.
 
 notes-choose-bookmark-delete = اختر إشارة مرجعية واضغط Delete.
@@ -1424,8 +1516,118 @@ notes-sheet-exported = صُدِّرت من { -brand } في { $date }.
 notes-sheet-before-first-heading = قبل العنوان الأول
 # After a note's text: its tags, joined with commas.
 notes-sheet-tags = (الوسوم: { $tags })
-# $color is the highlight's color name.
-notes-sheet-highlighted = مُيِّز، { $color }.
+# $name is the highlight's palette name.
+notes-sheet-highlighted = مُيِّز، { $name }.
+# On the study sheet grouped by name: the heading a highlight falls under.
+notes-sheet-under = تحت: { $heading }
+# The study sheet's section of notes, after the names.
+notes-sheet-notes = ملاحظات
+
+## الاختبار الذاتي: أسئلة بإجابات مخفية (crate::reveal).
+
+reveal-self-test-title = اختبار ذاتي: { $title }
+reveal-self-test-intro =
+    { $n ->
+        [one] اختبار ذاتي، سؤال واحد. Enter يُظهر الإجابة. مسافة للإجابة بصوت عالٍ.
+        [two] اختبار ذاتي، سؤالان. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+        [few] اختبار ذاتي، { $n } أسئلة. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+        [zero] اختبار ذاتي، { $n } سؤال. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+       *[other] اختبار ذاتي، { $n } سؤالًا. Enter يُظهر كل إجابة. مسافة للإجابة بصوت عالٍ.
+    }
+reveal-nothing-to-test = لا ملاحظات أو تمييزات للاختبار. أضف ملاحظة أو تمييزًا أولًا.
+reveal-prompt-note = { $note } (في { $section })
+reveal-prompt-highlight = ماذا ميّزت في { $section }؟
+reveal-row-shown = { $prompt } الإجابة: { $answer }
+reveal-answer = الإجابة: { $answer }
+reveal-listening = أجب بصوت عالٍ الآن. مسافة للإيقاف.
+reveal-you-said = قلت: { $words }. Enter يُظهر الإجابة.
+reveal-heard-nothing = لم تُسمع إجابة. مسافة للمحاولة مرة أخرى.
+reveal-no-dictation = الإجابة بصوت عالٍ تحتاج الإملاء، وهو غير موجود في هذا الإصدار.
+
+## بطاقات الدراسة وجلسة الدراسة (crate::cards).
+
+cards-blank = فراغ
+cards-recall-question = ماذا يقول «{ $heading }»؟
+cards-no-document = افتح مستندًا لإنشاء البطاقات أو دراستها.
+cards-nothing-to-make = لا ملاحظات أو تمييزات لإنشاء البطاقات. أضف ملاحظة أو تمييزًا أولًا.
+cards-made =
+    { $added ->
+        [0] لا بطاقات جديدة. { $total } بطاقة في المجموع.
+        [one] أُنشئت البطاقات: واحدة جديدة، { $total } في المجموع.
+        [two] أُنشئت البطاقات: اثنتان جديدتان، { $total } في المجموع.
+       *[other] أُنشئت البطاقات: { $added } جديدة، { $total } في المجموع.
+    }
+cards-none-from-item = لا بطاقة من هذا العنصر: يحتاج إلى نص على مقطع.
+cards-made-one = أُنشئت بطاقة: { $question }
+cards-updated-one = حُدّثت بطاقة: { $question }
+cards-none = لا بطاقات بعد. لإنشائها: { $key }.
+cards-study-title = دراسة البطاقات: { $title }
+cards-study-intro =
+    { $n ->
+        [one] دراسة البطاقات، بطاقة واحدة. Enter يُظهر الإجابة، ومن 1 إلى 4 لتقييمها. مسافة للإجابة بصوت عالٍ.
+        [two] دراسة البطاقات، بطاقتان. Enter يُظهر كل إجابة، ومن 1 إلى 4 لتقييمها. مسافة للإجابة بصوت عالٍ.
+        [few] دراسة البطاقات، { $n } بطاقات. Enter يُظهر كل إجابة، ومن 1 إلى 4 لتقييمها. مسافة للإجابة بصوت عالٍ.
+        [many] دراسة البطاقات، { $n } بطاقة. Enter يُظهر كل إجابة، ومن 1 إلى 4 لتقييمها. مسافة للإجابة بصوت عالٍ.
+       *[other] دراسة البطاقات، { $n } بطاقة. Enter يُظهر كل إجابة، ومن 1 إلى 4 لتقييمها. مسافة للإجابة بصوت عالٍ.
+    }
+cards-no-session = لا جلسة دراسة. لبدء واحدة: { $key }.
+cards-card-gone = أُزيلت تلك البطاقة.
+cards-grade-again = مرة أخرى
+cards-grade-hard = صعبة
+cards-grade-good = جيدة
+cards-grade-easy = سهلة
+cards-graded = { $grade }. البطاقة { $i } من { $n }. السؤال: { $question }
+# Said when a grade from the palette opens the session again on the next card.
+cards-graded-reopen = { $grade }. دراسة البطاقات، البطاقة { $i } من { $n }.
+cards-session-done =
+    { $n ->
+        [one] { $grade }. انتهى: قُيّمت البطاقة.
+       *[other] { $grade }. انتهى: قُيّمت كل البطاقات، وعددها { $n }.
+    }
+cards-reversed = معكوسة. السؤال: { $question }
+cards-unreversed = كما أُنشئت. السؤال: { $question }
+cards-not-reversible = بطاقات الأسئلة وحدها يمكن عكسها.
+cards-kind-cloze = املأ الفراغ
+cards-kind-question = سؤال
+cards-kind-recall = استذكار
+cards-not-graded = لم تُقيَّم بعد
+cards-last-grade = آخر تقييم: { $grade }
+cards-item = { $kind }: { $question }، { $grade }
+cards-list-title = البطاقات
+cards-list-intro =
+    { $n ->
+        [one] البطاقات، عنصر واحد. Enter للانتقال إلى مصدرها، Delete لإزالتها.
+        [two] البطاقات، عنصران. Enter للانتقال إلى مصدر بطاقة، Delete لإزالتها.
+        [few] البطاقات، { $n } عناصر. Enter للانتقال إلى مصدر بطاقة، Delete لإزالتها.
+        [many] البطاقات، { $n } عنصرًا. Enter للانتقال إلى مصدر بطاقة، Delete لإزالتها.
+       *[other] البطاقات، { $n } عنصر. Enter للانتقال إلى مصدر بطاقة، Delete لإزالتها.
+    }
+cards-source-label = مصدر البطاقة
+cards-remove-question = إزالة هذه البطاقة وتقييماتها؟ y أو n
+cards-removed = أُزيلت البطاقة.
+cards-save-failed = تعذّر حفظ البطاقات: { $error } تحقّق من إمكانية الكتابة في مجلد البيانات.
+# Said first in the study session and the Cards list (B1-f2). $due is how
+# many graded cards are due, $new how many were never graded.
+cards-due-summary =
+    { $due ->
+        [one] المستحق اليوم: بطاقة واحدة، { $new } جديدة.
+       *[other] المستحق اليوم: { $due } بطاقة، { $new } جديدة.
+    }
+# When a card is next due, after a grade. $days is whole days, at least 1.
+cards-next-in =
+    { $days ->
+        [one] التالية غدًا
+       *[other] التالية بعد { $days } يوم
+    }
+cards-due-now = مستحقة اليوم
+# A grade or last grade, then when the card is next due: "Good, next in 3 days".
+cards-grade-next = { $grade }، { $next }
+# Study cards when no card is due and none is new: every card is asked.
+cards-nothing-due =
+    { $days ->
+        [one] لا شيء مستحق اليوم؛ البطاقة التالية مستحقة غدًا. ستُدرس كل البطاقات مسبقًا.
+       *[other] لا شيء مستحق اليوم؛ البطاقة التالية مستحقة بعد { $days } يوم. ستُدرس كل البطاقات مسبقًا.
+    }
 
 ## البحث، والإشارات المرجعية، والتحديد.
 
@@ -2028,6 +2230,8 @@ setting-highlight-color = لون تمييز الكلمة
 setting-highlight-color-help = اللون خلف الكلمة المقروءة. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
 setting-highlight-sentence-color = لون تمييز الجملة
 setting-highlight-sentence-color-help = اللون خلف الجملة المقروءة. اختر اسمًا، أو اكتب رمزًا سداسيًا عشريًا. الافتراضي: لون السمة.
+setting-highlight-palette = أسماء التمييز
+setting-highlight-palette-help = حتى ثمانية أسماء لتمييزاتك، لكل منها لون وشكل. للأسماء الخمسة الأولى مفاتيح خاصة بها.
 setting-normalization-math = نطق الرياضيات
 setting-normalization-math-help = نطق رموز الرياضيات بالكلمات.
 setting-normalization-math-verbosity = تفصيل الرياضيات
@@ -2126,6 +2330,8 @@ choice-reading-stop-at-heading = العنوان التالي
 choice-reading-stop-at-chapter = الفصل التالي
 setting-reading-stop-after-minutes = مؤقت القراءة
 setting-reading-stop-after-minutes-help = تتوقف القراءة المستمرة عند نهاية الجملة بعد هذا العدد من دقائق القراءة، وتقول ذلك. الإيقاف المؤقت يوقف الساعة، والإيقاف يبدأها من جديد. 0 يطفئ المؤقت.
+setting-reading-recall-prompts = أسئلة التذكر
+setting-reading-recall-prompts-help = عند نهاية القسم، تطلب منك القراءة أن تقول ما تتذكره. إذا كان التوقف عند نهاية القسم على أبدًا، تتوقف القراءة لذلك عند العنوان التالي. تتابع القراءة بمفتاح القراءة.
 setting-display-theme = السمة
 setting-display-theme-help = السمة اللونية.
 setting-display-follow-os-theme = اتباع سمة النظام
@@ -2493,6 +2699,7 @@ section-normalization = نطق النص
 section-reading = القراءة
 section-display = العرض
 section-editing = التحرير
+section-authoring = التأليف
 section-library = المكتبة
 section-keyboard = لوحة المفاتيح
 section-accessibility = إمكانية الوصول
@@ -2569,6 +2776,15 @@ edit-pasted-start =
        *[other] لُصق { $n } حرف: { $start }
     }
 edit-insert-failed = تعذّر الإدراج: { $error } لم يتغيّر النص.
+# $start is the first words of the pasted text.
+edit-pasted-lines =
+    { $n ->
+        [one] لُصق سطر واحد: { $start }
+        [two] لُصق سطران: { $start }
+        [few] لُصقت { $n } أسطر: { $start }
+        [many] لُصق { $n } سطرًا: { $start }
+       *[other] لُصق { $n } سطر: { $start }
+    }
 # $start and $end are character positions, $len the text's length.
 edit-range-out-of-text = لا يمكن تغيير الحروف من { $start } إلى { $end }: النص يحتوي { $len }.
 edit-change-failed = تعذّر تغيير النص: { $error } لم يتغيّر النص.
@@ -2981,6 +3197,67 @@ authoring-space-deleted = حُذفت المسافة.
 authoring-deleted = حُذفت { $text }.
 # $key is the terminal's own paste key.
 authoring-nothing-copied = لا شيء منسوخ في { -brand } بعد. استخدم لصق طرفيتك، مثل { $key }.
+# $parts lists what came in, from the paste-part messages.
+paste-markdown = لُصق بتنسيق Markdown: { $parts }
+paste-part-heading =
+    { $n ->
+        [one] عنوان واحد
+        [two] عنوانان
+        [few] { $n } عناوين
+        [many] { $n } عنوانًا
+       *[other] { $n } عنوان
+    }
+paste-part-paragraph =
+    { $n ->
+        [one] فقرة واحدة
+        [two] فقرتان
+        [few] { $n } فقرات
+        [many] { $n } فقرة
+       *[other] { $n } فقرة
+    }
+paste-part-list =
+    { $n ->
+        [one] قائمة واحدة
+        [two] قائمتان
+        [few] { $n } قوائم
+        [many] { $n } قائمة
+       *[other] { $n } قائمة
+    }
+paste-part-table =
+    { $n ->
+        [one] جدول واحد
+        [two] جدولان
+        [few] { $n } جداول
+        [many] { $n } جدولًا
+       *[other] { $n } جدول
+    }
+paste-part-code =
+    { $n ->
+        [one] كتلة برمجية واحدة
+        [two] كتلتان برمجيتان
+        [few] { $n } كتل برمجية
+        [many] { $n } كتلة برمجية
+       *[other] { $n } كتلة برمجية
+    }
+paste-part-quote =
+    { $n ->
+        [one] اقتباس واحد
+        [two] اقتباسان
+        [few] { $n } اقتباسات
+        [many] { $n } اقتباسًا
+       *[other] { $n } اقتباس
+    }
+paste-part-link =
+    { $n ->
+        [one] رابط واحد
+        [two] رابطان
+        [few] { $n } روابط
+        [many] { $n } رابطًا
+       *[other] { $n } رابط
+    }
+paste-empty = لا شيء للصق: الحافظة فارغة.
+paste-converting = جارٍ تحويل النص المنسق للصقه.
+paste-failed = تعذّر اللصق: { $error } جرّب اللصق كنص عادي.
 authoring-verbosity =
     { $level ->
         [low] مستوى التفصيل: منخفض.
@@ -3339,6 +3616,11 @@ define-still-loading = ما زال القاموس قيد التحميل.
 # إعدادات.
 setting-speech-dectalk-library = مكتبة DECtalk
 setting-speech-dectalk-library-help = مكتبة DECtalk المراد تحميلها؛ عدم الضبط يبحث في الأماكن المعتادة.
+setting-speech-espeak-helper = البرنامج المساعد لـ eSpeak NG
+setting-speech-espeak-helper-help = تشغيل eSpeak NG في برنامجه المساعد الخاص، حتى لا يُغلق تعطّل المحرك textweaver. الوضع التلقائي يستخدم البرنامج المساعد على Windows عند تثبيته، ويشغّل eSpeak NG داخل textweaver في غيره.
+choice-speech-espeak-helper-auto = تلقائي
+choice-speech-espeak-helper-always = البرنامج المساعد دائمًا
+choice-speech-espeak-helper-never = داخل textweaver
 setting-speech-piper-voices = مجلد أصوات Piper
 setting-speech-piper-voices-help = مجلد أصوات Piper؛ عدم الضبط يستخدم مجلد piper في مجلد بيانات textweaver.
 setting-speech-piper-voice = صوت Piper
@@ -3350,8 +3632,10 @@ choice-speech-piper-phonemizer-library = مكتبة espeak-ng
 choice-speech-piper-phonemizer-rust = محوِّل textweaver
 setting-speech-voice-params = السرعة وطبقة الصوت لكل صوت
 setting-speech-voice-params-help = السرعة وطبقة الصوت اللتان استُخدم بهما كل صوت آخر مرة. اختيار الصوت مجددًا يعيدهما.
-setting-editing-author = المؤلف
-setting-editing-author-help = المؤلف الذي يُكتب في المستندات الجديدة المنشأة من قالب؛ تركه فارغًا يبقيه خاليًا.
+setting-authoring-author = المؤلف
+setting-authoring-author-help = الاسم الذي يكتبه { -brand } على التعليقات والردود والمستندات المنشأة من قالب. الفارغ يعني { -brand } في التعليقات وعدم وجود مؤلف في القوالب. لا يؤخذ أبدًا من الحاسوب.
+setting-authoring-track-changes = تتبع التغييرات في ملفات Word
+setting-authoring-track-changes-help = حفظ التعديلات على ملف Word كتغييرات متتبعة يستطيع المراجع قبولها. عند الإيقاف تُحفظ بصيغة Markdown باسم جديد.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -3362,6 +3646,21 @@ gui-answer-delete = حذف
 gui-answer-remove = إزالة
 gui-answer-replace = استبدال
 gui-question-hint = Y للإجابة بنعم، وN للإجابة بلا، وEscape للإجابة بلا.
+gui-find-title = بحث واستبدال
+gui-find-what = البحث عن
+gui-find-with = الاستبدال بـ
+gui-find-match-case = مطابقة حالة الأحرف
+gui-find-whole-words = كلمات كاملة
+gui-find-regex = تعبير نمطي
+gui-find-across-lines = عبر الأسطر
+gui-find-next = البحث عن التالي
+gui-find-next-help = يحدد التطابق التالي.
+gui-find-replace = استبدال
+gui-find-replace-help = يستبدل التطابق المعروض وينتقل إلى التالي. الضغطة الأولى تبحث عن تطابق.
+gui-find-replace-all = استبدال الكل
+gui-find-replace-all-help = يذكر عدد التطابقات ويسأل مرة واحدة. تراجع واحد يعيدها كلها.
+gui-find-hint = Enter في حقل البحث يجد التطابق التالي، وEnter في حقل الاستبدال يستبدله. السهم لأعلى يستعيد النصوص السابقة. Escape يغلق.
+gui-find-empty = لا شيء للبحث عنه: اكتب النص في حقل البحث عن.
 gui-button-open = فتح…
 gui-button-font = الخط…
 gui-button-edit = بدء التحرير
@@ -3402,6 +3701,8 @@ gui-sidebar-no-headings = لا توجد عناوين.
 gui-sidebar-no-notes = لا توجد ملاحظات.
 gui-sidebar-current = { $item }، الحالي
 gui-sidebar-hint = Enter ينتقل إليه. { $leave } ينتقل ويعود. Escape يعود.
+gui-sidebar-hint-notes = Enter ينتقل إليه. Space يعرض روابطها. { $leave } ينتقل ويعود. Escape يعود.
+gui-sidebar-notes-keys = Space يعرض روابط الملاحظة.
 gui-settings-sections = الأقسام
 gui-settings-form = إعدادات { $section }
 gui-settings-saved-hint = تسري التغييرات وتُحفظ فورًا.
@@ -3415,7 +3716,7 @@ gui-prompt-path-hint = اكتب مسار مستند، ثم اضغط Enter. يك�
 gui-prompt-hint = اضغط Enter للقبول، أو Escape للإلغاء. يستعيد السهمان لأعلى ولأسفل الإجابات السابقة.
 gui-palette-filter = اكتب لتصفية الأوامر
 gui-palette-list = الأوامر
-gui-palette-hint = يشغّل Enter أول نتيجة مطابقة، وينتقل Tab إلى القائمة.
+gui-palette-hint = يشغّل Enter أول نتيجة مطابقة، وينتقل Tab إلى القائمة، ويشرح F1 الأمر.
 gui-open-failed = تعذّر فتح { $name }: { $error }
 gui-uia-unavailable = إشعارات UI Automation متاحة في Windows فقط؛ ستُستخدم المنطقة الحية.
 gui-graphics-failed = تعذّر على النافذة تشغيل الرسوميات. قارئ الطرفية textweaver لا يحتاج إليها.
@@ -3539,6 +3840,7 @@ menu-headings = العناوين
 menu-go-to = انتقال
 menu-cursor = المؤشر والتحديد
 menu-bookmarks = العلامات والملاحظات
+menu-highlights = التمييزات
 menu-tables = الجداول
 menu-speech-cursor = مؤشر النطق
 
@@ -3672,6 +3974,22 @@ name-previous-note = الملاحظة السابقة
 name-delete-note = حذف الملاحظة أو التمييز
 name-highlight-selection = تمييز
 name-export-study-sheet = تصدير ورقة الدراسة
+name-highlight-as = تمييز باسم
+name-highlight-name-1 = تمييز بالاسم 1
+name-highlight-name-2 = تمييز بالاسم 2
+name-highlight-name-3 = تمييز بالاسم 3
+name-highlight-name-4 = تمييز بالاسم 4
+name-highlight-name-5 = تمييز بالاسم 5
+name-collect-highlights = جمع التمييزات
+name-export-study-sheet-by-name = تصدير ورقة الدراسة حسب الاسم
+name-self-test = اختبار ذاتي
+name-make-cards = إنشاء البطاقات
+name-study-cards = دراسة البطاقات
+name-list-cards = البطاقات
+name-grade-again = تقييم: مرة أخرى
+name-grade-hard = تقييم: صعبة
+name-grade-good = تقييم: جيدة
+name-grade-easy = تقييم: سهلة
 name-open = فتح
 name-open-path = فتح بالمسار
 name-open-library = المكتبة
@@ -3687,6 +4005,7 @@ name-export-pdf = تصدير PDF
 name-export-docx = تصدير Word
 name-export-epub = تصدير EPUB
 name-export-brf = تصدير برايل
+name-export-knowledge-graph = تصدير مخطط المعرفة
 name-preview-in-browser = معاينة في المتصفح
 name-toggle-preview-auto-reload = إعادة تحميل المعاينة تلقائيًا
 name-toggle-preview-live = معاينة مباشرة
@@ -3722,6 +4041,8 @@ name-select-all = تحديد الكل
 name-delete-word-before = حذف الكلمة السابقة
 name-delete-word-after = حذف الكلمة التالية
 name-paste = لصق
+name-paste-plain-text = لصق كنص عادي
+name-context-menu = قائمة السياق
 name-insert-citation = إدراج استشهاد
 name-add-reference = إضافة مرجع
 name-insert-bibliography = إدراج قائمة المراجع
@@ -3771,6 +4092,8 @@ menu-recent-none = لا توجد مستندات حديثة
 menu-not-available = { $name } غير متاح في هذا الإصدار.
 menu-no-access-key = لا يوجد عنصر بالمفتاح { $letter }.
 menu-closed = أُغلقت القوائم.
+menu-context = قائمة السياق
+menu-context-closed = أُغلقت قائمة السياق.
 menu-press-a-key = اضغط مفتاحًا لتسمع ما يفعله.
 menu-key-described = { $name }: { $help }. المفاتيح: { $keys }. في القوائم: { $path }.
 menu-key-described-no-menu = { $name }: { $help }. المفاتيح: { $keys }.
@@ -3788,17 +4111,17 @@ choice-accessibility-interface-announcements-off = متوقفة
 choice-accessibility-interface-announcements-minimal = في حدها الأدنى
 choice-accessibility-interface-announcements-normal = عادية
 choice-accessibility-interface-announcements-full = كاملة
-palette-item = { $name }، { $category }: { $help }. { $keys }
-palette-item-no-keys = { $name }، { $category }: { $help }.
-palette-item-recent = { $name }، حديث، { $category }: { $help }. { $keys }
-palette-item-recent-no-keys = { $name }، حديث، { $category }: { $help }.
+palette-item = { $name }، { $keys }
+palette-item-no-keys = { $name }
+palette-item-recent = { $name }، { $keys }، حديث
+palette-item-recent-no-keys = { $name }، حديث
 palette-list-title = الأوامر المطابقة لـ { $query }
 palette-list-title-all = الأوامر
 palette-list-intro =
     { $title }، { $n ->
         [one] أمر واحد
        *[other] { $n } أوامر
-    }. يشغّل Enter أحدها.
+    }. يشغّل Enter أحدها، ويشرحه F1.
 action-browse-files = تصفح الملفات والأرشيفات: يفتح Enter مجلدًا أو أرشيفًا أو مستندًا، ويصعد Backspace مستوى
 action-batch-convert = تحويل مجلد من المستندات إلى صيغة أخرى في الخلفية
 action-export-audio = تصدير المستند صوتًا منطوقًا: MP3 أو FLAC أو Opus أو WAV أو كتاب صوتي M4B
@@ -3842,6 +4165,8 @@ color-name-skyblue = أزرق سماوي
 color-name-teal = أزرق مخضر
 color-name-gold = ذهبي
 color-name-yellow = أصفر
+color-name-green = أخضر
+color-name-cyan = سماوي
 color-name-purple = بنفسجي
 color-name-pink = وردي
 color-name-brown = بني
@@ -4254,6 +4579,7 @@ sync-already-off = المزامنة متوقفة هنا بالفعل.
 sync-stopped = أُوقفت المزامنة هنا. يبقى المجلد كما هو.
 prompt-sync-computer-name = اسم هذا الحاسوب، Enter يبقيه
 menu-sync = المزامنة
+menu-cards = بطاقات الدراسة
 name-sync-setup = إعداد المزامنة
 name-sync-status = حالة المزامنة
 name-sync-now = المزامنة الآن
@@ -4640,3 +4966,51 @@ brf-original-not-brf = ليس ملف برايل. عرض برايل الأصلي 
 brf-original-unreadable = تعذرت قراءة ملف برايل: { $reason }
 brf-no-liblouis = برايل معروض كبرايل: liblouis غير موجود. لقراءته كنص مطبوع، ثبّت liblouis من liblouis.io أو من حزم نظامك، ثم افتح الملف مرة أخرى.
 ## End of B1-r5
+
+## B1-t2: حفظ المراجعة في ملف Word.
+name-save-changes-to-word = حفظ التغييرات في ملف Word
+action-save-changes-to-word = حفظ التغييرات المقبولة والمرفوضة والتعليقات في ملف Word، بعد الاحتفاظ بنسخة من الأصل
+changes-accept-all-question =
+    { $n ->
+        [one] قبول التغيير الوحيد؟ y أو n
+       *[other] قبول كل التغييرات وعددها { $n }؟ y أو n
+    }
+changes-reject-all-question =
+    { $n ->
+        [one] رفض التغيير الوحيد؟ y أو n
+       *[other] رفض كل التغييرات وعددها { $n }؟ y أو n
+    }
+changes-save-not-word = ليس ملف Word. لا تُحفظ التغييرات إلا في ملفات .docx؛ ويكتب التصدير النص المقرر بتنسيقات أخرى.
+changes-save-nothing = لا شيء للحفظ: لم يُقبل أي تغيير ولم يُرفض، ولم يتغير أي تعليق.
+changes-saved-backup = حُفظت التغييرات في { $file }. الأصل محفوظ باسم { $backup }.
+changes-saved = حُفظت التغييرات في { $file }.
+changes-save-unplaced =
+    { $n ->
+        [one] تعليق جديد واحد في البداية: لم يُعثر على نصه.
+       *[other] { $n } تعليقات جديدة في البداية: لم يُعثر على نصها.
+    }
+changes-save-failed = تعذّر حفظ التغييرات في { $file }: { $error }. الملف كما كان؛ أغلقه في Word إن كان مفتوحًا، ثم حاول مرة أخرى.
+changes-save-not-in-build = حفظ التغييرات في ملف Word غير متوفر في نسخة { -brand } هذه. ما زال tw changes --in-place يقوم بذلك.
+changes-in-place-accepted =
+    { $n ->
+        [one] قُبل تغيير واحد في { $path }. الأصل محفوظ باسم { $backup }.
+       *[other] قُبلت { $n } تغييرات في { $path }. الأصل محفوظ باسم { $backup }.
+    }
+changes-in-place-rejected =
+    { $n ->
+        [one] رُفض تغيير واحد في { $path }. الأصل محفوظ باسم { $backup }.
+       *[other] رُفضت { $n } تغييرات في { $path }. الأصل محفوظ باسم { $backup }.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] حُفظ تغيير متتبع واحد في { $file }.
+       *[other] حُفظت { $n } تغييرات متتبعة في { $file }.
+    }
+changes-original-kept = الأصل محفوظ باسم { $backup }.
+changes-tracked-refused =
+    { $n ->
+        [one] لم يُحفظ: تغيير واحد في { $file } يعبر فقرة أو يقع في رابط أو حقل، فلا يمكن تتبعه. الحفظ باسم يحتفظ بتعديلاتك بصيغة Markdown.
+       *[other] لم يُحفظ: { $n } تغييرات في { $file } تعبر فقرة أو تقع في رابط أو حقل، فلا يمكن تتبعها. الحفظ باسم يحتفظ بتعديلاتك بصيغة Markdown.
+    }
+## End of B1-t2

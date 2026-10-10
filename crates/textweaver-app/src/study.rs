@@ -234,6 +234,9 @@ impl App {
     /// language; `None` for actions that run at once.
     pub(crate) fn confirmation_question(&self, a: textweaver_keymap::ActionId) -> Option<String> {
         use textweaver_keymap::ActionId as A;
+        if matches!(a, A::AcceptAllChanges | A::RejectAllChanges) {
+            return self.decide_all_question(a == A::AcceptAllChanges);
+        }
         a.confirmation_prompt()?;
         Some(self.msg(match a {
             A::Quit => "confirm-quit",

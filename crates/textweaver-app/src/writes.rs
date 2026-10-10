@@ -181,6 +181,12 @@ impl App {
     /// follows once it is written. Saving on the way out to quit waits for
     /// it here, so the quit happens in this call.
     pub(crate) fn start_save(&mut self, save_as: Option<PathBuf>, then: SaveThen) -> Vec<Effect> {
+        // A Word file's edits as tracked changes (crate::changes, B1-t3).
+        if save_as.is_none()
+            && let Some(effects) = self.save_tracked(then.clone())
+        {
+            return effects;
+        }
         let force = std::mem::take(&mut self.overwrite_confirmed);
         // In place, the writer checks the file is still the version this
         // app knows before writing over it.
@@ -241,6 +247,14 @@ impl App {
             Report::Disk { path, stamp } => {
                 self.disk_check_pending = false;
                 self.disk_checked(path, stamp)
+            }
+            Report::CardsFailed(e) => {
+                let m = self.msg_args(
+                    "cards-save-failed",
+                    &textweaver_lexicon::args!["error" => e],
+                );
+                self.error(&m);
+                Vec::new()
             }
             Report::ProfilesFailed(e) => {
                 let m = self.msg_args(

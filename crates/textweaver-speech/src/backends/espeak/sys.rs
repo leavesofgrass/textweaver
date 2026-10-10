@@ -258,19 +258,38 @@ unsafe fn symbol<T: Copy>(lib: &Library, name: &str) -> Result<T, String> {
         .map_err(|e| format!("libespeak-ng lacks {name}: {e}"))
 }
 
+/// The one library to load, when [`choose_library`] named it.
+static CHOSEN: OnceLock<std::path::PathBuf> = OnceLock::new();
+
+/// Loads libespeak-ng from `path` and nowhere else (with the data beside
+/// it, when there is an `espeak-ng-data` folder there). The eSpeak NG
+/// helper program calls it with the library textweaver chose for it.
+/// False when a library was already chosen or loaded.
+pub fn choose_library(path: std::path::PathBuf) -> bool {
+    API.get().is_none() && CHOSEN.set(path).is_ok()
+}
+
 impl Api {
     fn open() -> Result<Self, String> {
-        let from_components = component_library();
+        let chosen = CHOSEN.get();
+        let from_components = match chosen {
+            Some(p) => Some(p.clone()),
+            None => component_library(),
+        };
         let data_dir = from_components.as_deref().and_then(data_dir_beside);
         let from_env = std::env::var_os(LIBRARY_ENV).filter(|v| !v.is_empty());
+        let others = chosen.is_none().then(|| {
+            from_env
+                .into_iter()
+                .chain(library_candidates().iter().map(OsString::from))
+        });
         let mut tried = Vec::new();
         let mut library = None;
         let mut data = None;
         for (i, name) in from_components
             .map(OsString::from)
             .into_iter()
-            .chain(from_env)
-            .chain(library_candidates().iter().map(OsString::from))
+            .chain(others.into_iter().flatten())
             .enumerate()
         {
             // SAFETY: loading libespeak-ng runs its initializers, which set
@@ -278,7 +297,8 @@ impl Api {
             match unsafe { Library::new(&name) } {
                 Ok(lib) => {
                     library = Some(lib);
-                    // Only the components folder's copy brings its data.
+                    // Only the components folder's copy (or the chosen
+                    // library) brings its data.
                     if i == 0 {
                         data = data_dir.clone();
                     }

@@ -38,9 +38,11 @@ static INLINE_TAG: LazyLock<Regex> =
 /// One link found in a note body.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Link {
-    /// The relation named by a Dataview field (`supports:: [[X]]`); `None`
-    /// for a plain wikilink.
-    pub rel_type: Option<RelationType>,
+    /// The relation named by a Dataview field, as stored (`SUPPORTS` for
+    /// `supports:: [[X]]`); `None` for a plain wikilink. A type textweaver
+    /// does not know is kept when written in the stored form (`LIKES::
+    /// [[X]]`), as textweaver exports it, so it survives a round trip.
+    pub rel_type: Option<String>,
     /// The linked note's name, as written (heading and alias removed).
     pub target: String,
     /// For a typed field, the rest of its line after the link (a comment
@@ -170,6 +172,23 @@ fn field_relation(key: &str) -> Option<RelationType> {
     field_relation_at(key).map(|(rt, _)| rt)
 }
 
+/// The stored relation type a Dataview field name gives: a known type's
+/// name ([`field_relation`]), else the field's last word when it is in the
+/// stored form, capitals, digits and underscores (`LIKES`), a type from a
+/// newer version. Any other unknown name (`related`) leaves the link
+/// untyped, as in star.
+fn field_type(key: &str) -> Option<String> {
+    if let Some(rt) = field_relation(key) {
+        return Some(rt.as_str().to_owned());
+    }
+    let word = key.split_whitespace().last()?;
+    let stored = word.starts_with(|c: char| c.is_ascii_uppercase())
+        && word
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_');
+    stored.then(|| word.to_owned())
+}
+
 /// Like [`field_relation`], also returning the byte offset in `key` where
 /// the relation's name begins (what precedes it is prose).
 fn field_relation_at(key: &str) -> Option<(RelationType, usize)> {
@@ -194,7 +213,7 @@ pub fn extract_links(body: &str) -> Vec<Link> {
         let (Some(whole), Some(key), Some(target)) = (m.get(0), m.get(1), m.get(2)) else {
             continue;
         };
-        if let Some(rt) = field_relation(key.as_str()) {
+        if let Some(rt) = field_type(key.as_str()) {
             links.push(Link {
                 rel_type: Some(rt),
                 target: target.as_str().trim().to_owned(),
@@ -349,7 +368,7 @@ mod tests {
 
     fn link(rel: Option<RelationType>, t: &str) -> Link {
         Link {
-            rel_type: rel,
+            rel_type: rel.map(|r| r.as_str().to_owned()),
             target: t.to_owned(),
             note: String::new(),
         }
@@ -364,11 +383,17 @@ mod tests {
 
     #[test]
     fn plain_typed_and_embedded_links() {
-        let body = "See [[Alpha]] and [[Beta#Part|the beta]].\n![[picture.png]]\n- supports:: [[Gamma]]\n- related:: [[Delta]]\n";
+        let body = "See [[Alpha]] and [[Beta#Part|the beta]].\n![[picture.png]]\n- supports:: [[Gamma]]\n- related:: [[Delta]]\n- LIKES:: [[Epsilon]]\n";
         assert_eq!(
             extract_links(body),
             vec![
                 link(Some(RelationType::Supports), "Gamma"),
+                // A type in the stored form is kept though unknown.
+                Link {
+                    rel_type: Some("LIKES".into()),
+                    target: "Epsilon".into(),
+                    note: String::new(),
+                },
                 link(None, "Alpha"),
                 link(None, "Beta"),
                 // An unknown field name leaves the link untyped (star).

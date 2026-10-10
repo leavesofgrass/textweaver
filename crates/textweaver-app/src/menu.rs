@@ -57,9 +57,26 @@ pub const PENDING: &[ActionId] = &[
     ActionId::DownloadDictationModel,
 ];
 
-/// Commands that are deliberately in no menu: the key that opens the
-/// menus.
-pub const NOT_IN_MENUS: &[ActionId] = &[ActionId::Menu];
+/// Commands that are deliberately in no menu: the keys that open the
+/// menus and the context menu.
+pub const NOT_IN_MENUS: &[ActionId] = &[ActionId::Menu, ActionId::ContextMenu];
+
+/// The context menu's commands, in order (beta 1, B1-cm): each is in one
+/// menu of the bar as well, so the context menu repeats no definition;
+/// it only picks the commands that fit where the cursor is. Cut and the
+/// pastes show in edit mode, and Open link on a link.
+pub const CONTEXT_MENU: &[ActionId] = &[
+    ActionId::Cut,
+    ActionId::Copy,
+    ActionId::Paste,
+    ActionId::PastePlainText,
+    ActionId::SelectAll,
+    ActionId::AddNote,
+    ActionId::HighlightSelection,
+    ActionId::DefineWord,
+    ActionId::ReadFromCursor,
+    ActionId::FollowLink,
+];
 
 /// How many recent commands are kept.
 pub const RECENT_COMMANDS: usize = 8;
@@ -120,12 +137,16 @@ pub enum MenuId {
     Cursor,
     /// Reading, Bookmarks and notes.
     Bookmarks,
+    /// Reading, Bookmarks and notes, Highlights.
+    Highlights,
     /// Reading, Tables.
     Tables,
     /// Reading, Speech Cursor.
     SpeechCursor,
     /// Tools, Sync.
     Sync,
+    /// Reading, Bookmarks and notes, Study cards.
+    Cards,
 }
 
 /// One entry of a menu's definition.
@@ -153,7 +174,7 @@ impl MenuId {
     ];
 
     /// Every menu and submenu.
-    pub const ALL: [MenuId; 28] = [
+    pub const ALL: [MenuId; 30] = [
         MenuId::File,
         MenuId::Edit,
         MenuId::View,
@@ -179,9 +200,11 @@ impl MenuId {
         MenuId::GoTo,
         MenuId::Cursor,
         MenuId::Bookmarks,
+        MenuId::Highlights,
         MenuId::Tables,
         MenuId::SpeechCursor,
         MenuId::Sync,
+        MenuId::Cards,
     ];
 
     /// The stable id, used in catalog ids (`menu-export-as`) and JSON-RPC.
@@ -212,9 +235,11 @@ impl MenuId {
             MenuId::GoTo => "go-to",
             MenuId::Cursor => "cursor",
             MenuId::Bookmarks => "bookmarks",
+            MenuId::Highlights => "highlights",
             MenuId::Tables => "tables",
             MenuId::SpeechCursor => "speech-cursor",
             MenuId::Sync => "sync",
+            MenuId::Cards => "cards",
         }
     }
 
@@ -263,6 +288,8 @@ impl MenuId {
                 Do(A::ExportBrf),
                 Sep,
                 Do(A::ExportStudySheet),
+                Do(A::ExportKnowledgeGraph),
+                Do(A::ExportStudySheetByName),
             ],
             MenuId::Preview => &[
                 Do(A::PreviewInBrowser),
@@ -284,6 +311,7 @@ impl MenuId {
                 Do(A::Cut),
                 Do(A::Copy),
                 Do(A::Paste),
+                Do(A::PastePlainText),
                 Do(A::SelectAll),
                 Do(A::DeleteWordBefore),
                 Do(A::DeleteWordAfter),
@@ -493,13 +521,26 @@ impl MenuId {
                 Do(A::ListNotes),
                 Do(A::NextNote),
                 Do(A::PreviousNote),
-                Do(A::HighlightSelection),
+                Sub(MenuId::Highlights),
                 Do(A::DeleteNote),
                 Sep,
                 Do(A::ListChanges),
                 Do(A::AcceptAllChanges),
                 Do(A::RejectAllChanges),
                 Do(A::AddComment),
+                Do(A::SelfTest),
+                Do(A::SaveChangesToWord),
+                Sub(MenuId::Cards),
+            ],
+            MenuId::Highlights => &[
+                Do(A::HighlightSelection),
+                Do(A::HighlightAs),
+                Do(A::HighlightName1),
+                Do(A::HighlightName2),
+                Do(A::HighlightName3),
+                Do(A::HighlightName4),
+                Do(A::HighlightName5),
+                Do(A::CollectHighlights),
             ],
             MenuId::Tables => &[
                 Do(A::NextTable),
@@ -549,6 +590,16 @@ impl MenuId {
                 Do(A::ForgetGitHubToken),
                 Do(A::DownloadDictationModel),
                 Do(A::AskFirstRunAgain),
+            ],
+            MenuId::Cards => &[
+                Do(A::MakeCards),
+                Do(A::StudyCards),
+                Do(A::ListCards),
+                Sep,
+                Do(A::GradeAgain),
+                Do(A::GradeHard),
+                Do(A::GradeGood),
+                Do(A::GradeEasy),
             ],
             MenuId::Sync => &[
                 Do(A::SyncSetup),
@@ -868,6 +919,8 @@ pub(crate) struct MenuList {
     path: Vec<MenuId>,
     /// The rows shown.
     rows: Vec<MenuItem>,
+    /// The context menu, not the menu bar.
+    context: bool,
 }
 
 impl App {
@@ -1143,9 +1196,65 @@ impl App {
     /// the menus are shown as a list.
     pub fn menu_path(&self) -> Option<&[MenuId]> {
         match &self.list {
-            Some(ListKind::Menu) => self.menu.list.as_ref().map(|l| l.path.as_slice()),
+            Some(ListKind::Menu) => self
+                .menu
+                .list
+                .as_ref()
+                .filter(|l| !l.context)
+                .map(|l| l.path.as_slice()),
             _ => None,
         }
+    }
+
+    /// The context menu's items for where the cursor is, with their keys
+    /// from the live keymap: the list the terminal shows on its context
+    /// menu key, and the items a window's native context menu shows.
+    pub fn context_menu(&self) -> Vec<MenuItem> {
+        let editing = self.edit.is_some();
+        let on_link = self.session.as_ref().is_some_and(|s| {
+            s.doc
+                .marker_index()
+                .enclosing(textweaver_core::MarkerKind::Link, s.cursor)
+                .is_some()
+        });
+        let mut items: Vec<MenuItem> = CONTEXT_MENU
+            .iter()
+            .copied()
+            .filter(|&a| self.is_available(a))
+            .filter(|&a| match a {
+                A::Cut | A::Paste | A::PastePlainText => editing,
+                A::FollowLink => on_link,
+                _ => true,
+            })
+            .map(|a| self.action_item(a))
+            .collect();
+        let labels: Vec<(String, Option<char>)> =
+            items.iter().map(|i| split_access(&i.label)).collect();
+        let keys = assign_access_keys(&labels, &[]);
+        for ((item, (plain, _)), key) in items.iter_mut().zip(labels).zip(keys) {
+            item.label = plain;
+            item.access = key;
+        }
+        items
+    }
+
+    /// The context menu command (Shift+F10 in the window): the context
+    /// menu as a list, "Context menu, 1 of 6, Copy, Ctrl+C". Escape
+    /// closes it, and the cursor is where it was.
+    pub(crate) fn open_context_menu(&mut self) -> Vec<Effect> {
+        let c = self.catalog();
+        let rows = self.context_menu();
+        let title = c.tr("menu-context");
+        let items: Vec<String> = rows.iter().map(|r| r.line(&c)).collect();
+        self.menu.list = Some(MenuList {
+            path: Vec::new(),
+            rows,
+            context: true,
+        });
+        self.list = Some(ListKind::Menu);
+        self.pending_list_focus = Some(0);
+        self.say_result(&title);
+        vec![Effect::ShowList { title, items }]
     }
 
     fn show_menu_list(&mut self, path: Vec<MenuId>, focus: usize) -> Vec<Effect> {
@@ -1187,7 +1296,11 @@ impl App {
                 }
             })
             .collect();
-        self.menu.list = Some(MenuList { path, rows });
+        self.menu.list = Some(MenuList {
+            path,
+            rows,
+            context: false,
+        });
         self.list = Some(ListKind::Menu);
         self.pending_list_focus = Some(focus);
         self.say_result(&title);
@@ -1312,9 +1425,14 @@ impl App {
 
     /// Escape: the menus close; the reader is where it was.
     fn close_menu(&mut self) -> Vec<Effect> {
+        let context = self.menu.list.as_ref().is_some_and(|l| l.context);
         self.leave_menu();
         self.list_model = None;
-        let msg = self.msg("menu-closed");
+        let msg = self.msg(if context {
+            "menu-context-closed"
+        } else {
+            "menu-closed"
+        });
         self.say_dialog(&msg);
         vec![Effect::Redraw]
     }
@@ -1596,6 +1714,26 @@ mod tests {
                     "{m:?} hangs from no menu"
                 );
             }
+        }
+    }
+
+    /// The context menu repeats no definition: each of its commands has
+    /// its one place in the menu bar, and shows its key from the keymap
+    /// (the owner's no-redundancy rule, B1-cm).
+    #[test]
+    fn context_menu_items_come_from_the_menu_bar() {
+        let listed = actions_in_menus();
+        for a in CONTEXT_MENU {
+            assert!(listed.contains(a), "{a:?} is in no menu of the bar");
+        }
+        let mut seen = CONTEXT_MENU.to_vec();
+        seen.sort();
+        seen.dedup();
+        assert_eq!(seen.len(), CONTEXT_MENU.len(), "a context item twice");
+        let app = App::new(crate::AppConfig::for_tests());
+        for item in app.context_menu() {
+            assert!(item.keys.is_some(), "{} has no key", item.label);
+            assert!(item.access.is_some(), "{} has no access key", item.label);
         }
     }
 

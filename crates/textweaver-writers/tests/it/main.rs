@@ -9,6 +9,7 @@ mod brf_formats;
 mod common;
 mod docx;
 mod docx_math;
+mod docx_update;
 mod epub;
 mod lists;
 mod math;

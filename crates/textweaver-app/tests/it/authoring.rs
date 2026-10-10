@@ -1053,6 +1053,328 @@ fn notes_export_as_a_study_sheet_grouped_by_heading() {
     assert_eq!(r.opened(), [out.display().to_string()]);
 }
 
+/// The highlight palette (B1-h1): a key per name, and each highlight said
+/// by its name; the list leads with names, Space shows one name's, F2
+/// gives another name; Collect writes one name's highlights; the study
+/// sheet groups by name; the names are saved with the highlights.
+#[test]
+fn highlights_take_palette_names_and_are_filtered_and_collected() {
+    use textweaver_app::{ListKey, NoteCommand};
+    let mut r = Rig::new();
+    let path = r.open("essay.md", ESSAY);
+    r.go("Intro");
+    r.act(ActionId::HighlightName2);
+    assert!(
+        r.said.any("Highlighted, define: Intro"),
+        "{:?}",
+        r.said.all()
+    );
+    r.go("We measured");
+    r.act(ActionId::HighlightName1);
+    r.go("first item");
+    r.act(ActionId::HighlightName2);
+    // A name the palette does not have.
+    let mut four = serde_json::to_value(&r.app.settings().highlight.palette).unwrap();
+    four.as_array_mut().unwrap().truncate(4);
+    r.app.set_setting("highlight.palette", four).unwrap();
+    r.act(ActionId::HighlightName5);
+    assert!(
+        r.status()
+            .starts_with("No highlight name 5 in the palette."),
+        "{}",
+        r.status()
+    );
+
+    r.send(Command::Notes(NoteCommand::ListHighlights));
+    let list = r.app.list_model().unwrap().clone();
+    assert_eq!(list.items.len(), 3, "{:?}", list.items);
+    assert!(
+        list.items[0].starts_with("define: Intro"),
+        "{:?}",
+        list.items
+    );
+    assert!(
+        list.items[1].starts_with("important: We measured"),
+        "{:?}",
+        list.items
+    );
+    r.send(Command::ListKey(ListKey::Char(' ')));
+    let list = r.app.list_model().unwrap().clone();
+    assert_eq!(list.title, "Highlights: define");
+    assert_eq!(list.items.len(), 2, "{:?}", list.items);
+
+    // F2 on the second gives it the third name.
+    r.send(Command::ListKey(ListKey::Down));
+    r.send(Command::ListKey(ListKey::Rename));
+    let names = r.app.list_model().unwrap().clone();
+    assert_eq!(names.title, "Highlight names");
+    assert_eq!(names.items[0], "important, 1 highlight, underline, yellow");
+    assert_eq!(
+        names.items[1],
+        "define, 2 highlights, double underline, green"
+    );
+    assert_eq!(names.items[2], "question, 0 highlights, brackets, cyan");
+    r.send(Command::ListKey(ListKey::Down));
+    r.send(Command::ListKey(ListKey::Down));
+    r.said.clear();
+    r.send(Command::ListKey(ListKey::Enter));
+    assert!(
+        r.said.any("Highlight changed to question: first item"),
+        "{:?}",
+        r.said.all()
+    );
+    r.send(Command::ListKey(ListKey::Escape));
+
+    // Collect the one highlight still named define.
+    r.act(ActionId::CollectHighlights);
+    r.send(Command::ListKey(ListKey::Down));
+    r.send(Command::ListKey(ListKey::Enter));
+    let out = path.with_file_name("essay-highlights-define.md");
+    let text = std::fs::read_to_string(&out).unwrap();
+    assert!(
+        text.starts_with("# Highlights named define: Essay\n"),
+        "{text}"
+    );
+    assert!(
+        text.contains("\n- Intro paragraph with bold words. (line "),
+        "{text}"
+    );
+    assert!(!text.contains("first item"), "{text}");
+    assert!(
+        r.status()
+            .starts_with("1 highlight named define saved as essay-highlights-define.md."),
+        "{}",
+        r.status()
+    );
+    r.send(Command::Confirm(Confirm::No));
+
+    // The study sheet grouped by name, in the palette's order.
+    r.act(ActionId::ExportStudySheetByName);
+    let sheet =
+        std::fs::read_to_string(path.with_file_name("essay-study-sheet-by-name.md")).unwrap();
+    let important = sheet.find("\n## important\n").unwrap();
+    let define = sheet.find("\n## define\n").unwrap();
+    let question = sheet.find("\n## question\n").unwrap();
+    assert!(important < define && define < question, "{sheet}");
+    assert!(
+        sheet.contains("- > We measured things carefully.\n\n  Under: Methods"),
+        "{sheet}"
+    );
+    r.send(Command::Confirm(Confirm::No));
+
+    // The names are saved with the highlights.
+    let s = r.app.session().unwrap();
+    let names: Vec<_> = s
+        .highlights
+        .iter()
+        .map(|h| h.palette_name().unwrap_or_default().to_owned())
+        .collect();
+    assert_eq!(names, ["define", "important", "question"]);
+}
+
+/// The self-test (B1-s1): the study sheet's note and highlight as prompts;
+/// Enter reveals and says the answer, and the list stays on the prompt.
+#[test]
+fn the_self_test_asks_then_reveals_the_passage() {
+    use textweaver_app::ListKey;
+    let mut r = Rig::new();
+    r.open("essay.md", ESSAY);
+    r.go("We measured");
+    r.act(ActionId::AddNote);
+    r.send(Command::Answer("How was it measured?".into()));
+    r.go("Intro");
+    r.act(ActionId::HighlightSelection);
+    r.said.clear();
+    r.act(ActionId::SelfTest);
+    assert!(
+        r.said.any("Self-test, 2 prompts. Enter shows each answer."),
+        "{:?}",
+        r.said.all()
+    );
+    let list = r.app.list_model().unwrap().clone();
+    assert_eq!(list.title, "Self-test: Essay");
+    assert_eq!(
+        list.items,
+        [
+            "What did you highlight in Essay?",
+            "How was it measured? (in Methods)"
+        ]
+    );
+    r.send(Command::ListKey(ListKey::Down));
+    r.said.clear();
+    r.send(Command::ListKey(ListKey::Enter));
+    assert!(
+        r.said.any("Answer: We measured things carefully."),
+        "{:?}",
+        r.said.all()
+    );
+    // Said once: the row is not read again after the answer.
+    assert_eq!(r.said.all().len(), 1, "{:?}", r.said.all());
+    let list = r.app.list_model().unwrap();
+    assert_eq!(list.selected, 1);
+    assert_eq!(
+        list.items[1],
+        "How was it measured? (in Methods) Answer: We measured things carefully."
+    );
+    assert_eq!(list.items[0], "What did you highlight in Essay?");
+}
+
+/// Study cards (B1-f1): a note and its heading become cards; the session
+/// asks, reveals, takes grades in words with 1 to 4, reverses a question
+/// card, and stores each grade; the Cards list goes to a card's source.
+#[test]
+fn cards_are_made_studied_and_graded() {
+    use textweaver_app::ListKey;
+    let mut r = Rig::new();
+    r.open("essay.md", ESSAY);
+    r.act(ActionId::StudyCards);
+    assert!(r.status().starts_with("No cards yet."), "{}", r.status());
+    r.go("We measured");
+    r.act(ActionId::AddNote);
+    r.send(Command::Answer("How was it measured?".into()));
+    r.act(ActionId::MakeCards);
+    assert_eq!(r.status(), "Cards made: 2 new, 2 in all.");
+    r.act(ActionId::MakeCards);
+    assert_eq!(r.status(), "No new cards. 2 cards in all.");
+    r.said.clear();
+    r.act(ActionId::StudyCards);
+    assert!(
+        r.said.any(
+            "Due today: 0 cards, 2 new. Study cards, 2 cards. Enter shows each answer, 1 to 4 grade it. Space to answer aloud."
+        ),
+        "{:?}",
+        r.said.all()
+    );
+    let list = r.app.list_model().unwrap().clone();
+    assert_eq!(list.title, "Study cards: Essay");
+    assert_eq!(
+        list.items,
+        [
+            "What does \u{201c}Methods\u{201d} say?",
+            "How was it measured?"
+        ]
+    );
+    r.send(Command::ListKey(ListKey::Enter));
+    assert!(r.said.any("Answer: We measured things carefully."));
+    r.said.clear();
+    r.send(Command::ListKey(ListKey::Char('3')));
+    assert_eq!(
+        r.said.all(),
+        ["Good, next tomorrow. Card 2 of 2. Question: How was it measured?"]
+    );
+    assert_eq!(r.app.list_model().unwrap().selected, 1);
+    r.send(Command::ListKey(ListKey::Char('r')));
+    assert!(
+        r.said
+            .any("Reversed. Question: We measured things carefully.")
+    );
+    r.send(Command::ListKey(ListKey::Char('1')));
+    assert!(
+        r.said
+            .any("Again, next tomorrow. Done: all 2 cards graded.")
+    );
+    assert!(r.app.list_model().is_none());
+    // Nothing is due until tomorrow: every card is asked ahead.
+    r.said.clear();
+    r.act(ActionId::StudyCards);
+    assert!(
+        r.said.any("Nothing due today; the next card is due tomorrow. Studying every card ahead. Study cards, 2 cards."),
+        "{:?}",
+        r.said.all()
+    );
+    r.send(Command::ListKey(ListKey::Escape));
+    // The grades are stored with their times, and the direction kept.
+    let dir = r.paths.cards_dir();
+    let files: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap()
+        .filter_map(Result::ok)
+        .collect();
+    assert_eq!(files.len(), 1);
+    let deck: textweaver_store::CardDeck =
+        serde_json::from_str(&std::fs::read_to_string(files[0].path()).unwrap()).unwrap();
+    let grades: Vec<Vec<&str>> = deck
+        .cards
+        .iter()
+        .map(|c| c.reviews.iter().map(|g| g.grade.as_str()).collect())
+        .collect();
+    assert_eq!(grades, [vec!["good"], vec!["again"]]);
+    assert!(deck.cards[1].reversed);
+    assert!(deck.cards[1].reviews[0].ts > 0);
+    // The Cards list, and Enter on a card's source.
+    r.act(ActionId::ListCards);
+    let items = r.app.list_model().unwrap().items.clone();
+    assert_eq!(
+        items[0],
+        "Recall: What does \u{201c}Methods\u{201d} say?, last graded Good, next tomorrow"
+    );
+    r.act(ActionId::SkipNextHeading);
+    r.act(ActionId::ListCards);
+    r.send(Command::ListKey(ListKey::Down));
+    r.send(Command::ListKey(ListKey::Enter));
+    assert_eq!(r.at_cursor(11), "We measured");
+}
+
+/// A grade from the palette, with the session's list closed, grades the
+/// card the reader was on and opens the list again on the next one.
+#[test]
+fn a_grade_from_the_palette_reopens_the_session() {
+    use textweaver_app::ListKey;
+    let mut r = Rig::new();
+    r.open("essay.md", ESSAY);
+    r.go("We measured");
+    r.act(ActionId::AddNote);
+    r.send(Command::Answer("How was it measured?".into()));
+    r.act(ActionId::GradeGood);
+    assert!(
+        r.status().starts_with("No study session."),
+        "{}",
+        r.status()
+    );
+    r.act(ActionId::MakeCards);
+    r.act(ActionId::StudyCards);
+    r.send(Command::ListKey(ListKey::Escape));
+    assert!(r.app.list_model().is_none());
+    r.said.clear();
+    r.act(ActionId::GradeGood);
+    assert!(
+        r.said.any("Good, next tomorrow. Study cards, card 2 of 2."),
+        "{:?}",
+        r.said.all()
+    );
+    assert_eq!(r.app.list_model().unwrap().selected, 1);
+}
+
+/// `c` in the highlights list makes a cloze card from the highlight.
+#[test]
+fn a_highlight_becomes_a_cloze_card_from_its_list() {
+    use textweaver_app::ListKey;
+    let mut r = Rig::new();
+    r.open("essay.md", ESSAY);
+    r.go("Intro paragraph");
+    r.send(Command::Select(CharRange::new(
+        r.cursor(),
+        r.cursor().saturating_add(5),
+    )));
+    r.act(ActionId::HighlightSelection);
+    r.send(Command::Notes(textweaver_app::NoteCommand::ListHighlights));
+    assert!(r.app.list_model().is_some());
+    r.send(Command::ListKey(ListKey::Char('c')));
+    assert_eq!(r.status(), "Card made: blank paragraph with bold words.");
+    assert!(r.app.list_model().is_some(), "the list stays");
+}
+
+#[test]
+fn the_self_test_says_when_there_is_nothing_to_test() {
+    let mut r = Rig::new();
+    r.open("essay.md", ESSAY);
+    r.act(ActionId::SelfTest);
+    assert!(r.app.list_model().is_none());
+    assert_eq!(
+        r.status(),
+        "No notes or highlights to test. Add a note or highlight first."
+    );
+}
+
 #[test]
 fn a_note_is_signalled_while_reading_and_on_word_moves() {
     let tmp = tempfile::tempdir().unwrap();

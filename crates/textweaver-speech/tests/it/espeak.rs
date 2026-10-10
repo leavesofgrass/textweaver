@@ -2,7 +2,9 @@
 //! CI). There is no sound device there, so these tests use the `Virtual`
 //! output: real synthesis and real event timing, audio discarded.
 
-#![cfg(feature = "espeak")]
+// Linux only: CI installs libespeak-ng there; the helper crate turns the
+// feature on workspace-wide, and other runners have no library.
+#![cfg(all(feature = "espeak", target_os = "linux"))]
 
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};

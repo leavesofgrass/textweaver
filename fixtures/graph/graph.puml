@@ -1,0 +1,11 @@
+@startuml
+title Knowledge graph
+rectangle "Mitochondria <U+0022>make<U+0022> energy" as n1
+rectangle "Cells & <tissues>, #3 <U+005C> more" as n2
+rectangle "=SUM(proteins)" as n3
+rectangle "Note not found" as n4
+n1 --> n2 : supports
+n1 --> n3 : cites
+n3 --> n2 : likes
+n3 --> n4 : see also
+@enduml

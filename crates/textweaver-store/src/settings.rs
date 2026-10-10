@@ -94,6 +94,8 @@ pub struct SpeechSettings {
     pub apple: AppleSettings,
     /// `[speech.dectalk]`: the DECtalk engine (ADR-0021).
     pub dectalk: DectalkSettings,
+    /// `[speech.espeak]`: eSpeak NG, in process or in its helper program.
+    pub espeak: EspeakSettings,
     /// `[speech.piper]`: Piper neural voices (ADR-0023).
     pub piper: PiperSettings,
     /// `[speech.voice_params]`: the rate and pitch each voice was last used
@@ -242,6 +244,32 @@ pub struct DectalkSettings {
     pub extra: toml::Table,
 }
 
+/// Where eSpeak NG runs.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EspeakHelper {
+    /// The helper program on Windows when it and the library are found,
+    /// else in process; in process elsewhere, else the helper.
+    #[default]
+    Auto,
+    /// Always the helper program.
+    Always,
+    /// Never: always in process.
+    Never,
+}
+
+/// `[speech.espeak]`: eSpeak NG.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EspeakSettings {
+    /// Whether eSpeak NG runs in its helper program
+    /// (`textweaver-espeak-host`) or inside textweaver.
+    pub helper: EspeakHelper,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
+}
+
 /// How Piper turns text into phonemes.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -317,6 +345,7 @@ impl Default for SpeechSettings {
             sapi: SapiSettings::default(),
             apple: AppleSettings::default(),
             dectalk: DectalkSettings::default(),
+            espeak: EspeakSettings::default(),
             piper: PiperSettings::default(),
             voice_params: BTreeMap::new(),
             extra: toml::Table::new(),
@@ -364,8 +393,13 @@ pub const REMOVED_SETTINGS: &[(&str, &str)] = &[(
 /// - `reading.sync_conflict_policy` became `sync.position_policy` (the sync
 ///   wave, ADR-0049); its old values `highest_progress` and `manual` read
 ///   as `furthest` and `ask`.
-pub const RENAMED_SETTINGS: &[(&str, &str)] =
-    &[("reading.sync_conflict_policy", "sync.position_policy")];
+/// - `editing.author` became `authoring.author` (task B1-t2), when the
+///   name came to be written on comments and changes saved to Word files
+///   as well as on documents made from a template.
+pub const RENAMED_SETTINGS: &[(&str, &str)] = &[
+    ("reading.sync_conflict_policy", "sync.position_policy"),
+    ("editing.author", "authoring.author"),
+];
 
 /// Moves the [`RENAMED_SETTINGS`] in a parsed `settings.toml` to their new
 /// keys; returns each rename done. A value already under the new key wins.
@@ -457,6 +491,11 @@ pub struct HighlightSettings {
     /// Sentence highlight color laid over the theme's spoken-sentence
     /// style; `None` (or `"theme"`) keeps the theme's own.
     pub sentence_color: Option<String>,
+    /// The named highlight palette (`[[highlight.palette]]`): up to
+    /// [`PALETTE_MAX`] entries, each a name the reader writes, a color and
+    /// a shape. The first five have keys of their own (Alt+1 to Alt+5
+    /// by default).
+    pub palette: Vec<PaletteEntry>,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -471,9 +510,104 @@ impl Default for HighlightSettings {
             speed: 1.0,
             color: "theme".into(),
             sentence_color: None,
+            palette: default_palette(),
             extra: toml::Table::new(),
         }
     }
+}
+
+/// The most entries the highlight palette keeps.
+pub const PALETTE_MAX: usize = 8;
+
+/// How a palette entry's highlights are drawn besides their color, so no
+/// two entries differ by color alone: the terminal gives each shape its
+/// own text attributes, the window its own mark, and BRF each entry its
+/// own typeform.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HighlightShape {
+    /// A single underline.
+    #[default]
+    Underline,
+    /// A double underline.
+    DoubleUnderline,
+    /// Bold text.
+    Bold,
+    /// A dotted underline.
+    Dotted,
+    /// A bracket at each end.
+    Brackets,
+    /// A symbol before the highlighted text.
+    Symbol,
+}
+
+impl HighlightShape {
+    /// Every shape, in the order the palette's defaults use them.
+    pub const ALL: [HighlightShape; 6] = [
+        HighlightShape::Underline,
+        HighlightShape::DoubleUnderline,
+        HighlightShape::Brackets,
+        HighlightShape::Dotted,
+        HighlightShape::Bold,
+        HighlightShape::Symbol,
+    ];
+
+    /// The stored name: `double_underline`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            HighlightShape::Underline => "underline",
+            HighlightShape::DoubleUnderline => "double_underline",
+            HighlightShape::Bold => "bold",
+            HighlightShape::Dotted => "dotted",
+            HighlightShape::Brackets => "brackets",
+            HighlightShape::Symbol => "symbol",
+        }
+    }
+}
+
+/// One entry of the highlight palette.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PaletteEntry {
+    /// The name the reader gave it ("important", "ask the professor"),
+    /// said with each of its highlights.
+    pub name: String,
+    /// A color name (`yellow`, `skyblue`) or `#rrggbb`.
+    pub color: String,
+    /// How it is drawn besides its color.
+    pub shape: HighlightShape,
+}
+
+impl Default for PaletteEntry {
+    fn default() -> Self {
+        PaletteEntry {
+            name: String::new(),
+            color: "yellow".into(),
+            shape: HighlightShape::Underline,
+        }
+    }
+}
+
+/// The starting palette: star's five highlight colors (yellow, green,
+/// cyan, pink, orange, in its Ctrl+Shift+1 to 5 order), each with a study
+/// name and a shape of its own. A highlight made before the palette (its
+/// color only) takes the entry of its color.
+pub fn default_palette() -> Vec<PaletteEntry> {
+    [
+        ("important", "yellow"),
+        ("define", "green"),
+        ("question", "cyan"),
+        ("example", "pink"),
+        ("review", "orange"),
+    ]
+    .into_iter()
+    .zip(HighlightShape::ALL)
+    .map(|((name, color), shape)| PaletteEntry {
+        name: name.into(),
+        color: color.into(),
+        shape,
+    })
+    .collect()
 }
 
 /// How tables are read aloud.
@@ -758,6 +892,11 @@ pub struct ReadingSettings {
     /// sentence once it has read this many minutes, and says so. 0, the
     /// default, is off.
     pub stop_after_minutes: u16,
+    /// Recall prompts: where continuous reading stops at a section end,
+    /// it asks the reader to say what they remember from the section
+    /// before going on. With `stop_at` off, reading stops at the next
+    /// heading for them. Off by default.
+    pub recall_prompts: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -808,6 +947,7 @@ impl Default for ReadingSettings {
             revisions: RevisionReading::Auto,
             stop_at: StopAt::Off,
             stop_after_minutes: 0,
+            recall_prompts: false,
             extra: toml::Table::new(),
         }
     }
@@ -952,9 +1092,6 @@ pub struct EditingSettings {
     pub undo_steps: usize,
     /// Most memory the undo history may use, in megabytes (at least 1).
     pub undo_memory_mb: usize,
-    /// The author written into new documents made from a template (their
-    /// front matter's `author`); empty leaves it blank.
-    pub author: String,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -971,10 +1108,30 @@ impl Default for EditingSettings {
             echo_lines_on_move: true,
             undo_steps: 1000,
             undo_memory_mb: 50,
-            author: String::new(),
             extra: toml::Table::new(),
         }
     }
+}
+
+/// Authoring settings: who textweaver says wrote what it adds to a
+/// document.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AuthoringSettings {
+    /// The name written as the author of comments, replies, and changes
+    /// saved to Word files (empty: "textweaver"), and into new documents
+    /// made from a template (their front matter's `author`; empty leaves
+    /// it blank). Never taken from the computer or the account. Was
+    /// `[editing] author`, which still loads.
+    pub author: String,
+    /// Edits saved from edit mode into a Word file are written as tracked
+    /// changes (`w:ins`, `w:del`) with [`author`](Self::author) and the
+    /// time, for a reviewer in Word (task B1-t3). Off: a Word file's edits
+    /// are saved as Markdown under a new name, as before.
+    pub track_changes: bool,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
 }
 
 /// Library settings.
@@ -1809,6 +1966,8 @@ pub struct Settings {
     pub display: DisplaySettings,
     /// `[editing]`
     pub editing: EditingSettings,
+    /// `[authoring]`
+    pub authoring: AuthoringSettings,
     /// `[library]`
     pub library: LibrarySettings,
     /// `[keyboard]`
@@ -1967,11 +2126,13 @@ impl Settings {
         };
         let (eci, sapi, apple) = (sub("eci"), sub("sapi"), sub("apple"));
         let (dectalk, piper, voice_params) = (sub("dectalk"), sub("piper"), sub("voice_params"));
+        let espeak = sub("espeak");
         let mut speech: SpeechSettings = lenient_section("speech", speech_table, &mut w);
         speech.eci = lenient_section("speech.eci", eci, &mut w);
         speech.sapi = lenient_section("speech.sapi", sapi, &mut w);
         speech.apple = lenient_section("speech.apple", apple, &mut w);
         speech.dectalk = lenient_section("speech.dectalk", dectalk, &mut w);
+        speech.espeak = lenient_section("speech.espeak", espeak, &mut w);
         speech.piper = lenient_section("speech.piper", piper, &mut w);
         speech.voice_params = voice_params_leniently(voice_params, &mut w);
         let mut normalization_table = table.remove("normalization");
@@ -1994,6 +2155,7 @@ impl Settings {
             reading: lenient_section("reading", table.remove("reading"), &mut w),
             display: lenient_section("display", table.remove("display"), &mut w),
             editing: lenient_section("editing", table.remove("editing"), &mut w),
+            authoring: lenient_section("authoring", table.remove("authoring"), &mut w),
             library: lenient_section("library", table.remove("library"), &mut w),
             keyboard: lenient_section("keyboard", table.remove("keyboard"), &mut w),
             accessibility: lenient_section("accessibility", table.remove("accessibility"), &mut w),
@@ -2127,6 +2289,36 @@ impl Settings {
             );
             self.highlight.speed = fixed;
         }
+        if self.highlight.palette.len() > PALETTE_MAX {
+            fix(
+                "highlight.palette".into(),
+                format!(
+                    "has {} entries, more than {PALETTE_MAX}",
+                    self.highlight.palette.len()
+                ),
+                format!("the first {PALETTE_MAX}"),
+            );
+            self.highlight.palette.truncate(PALETTE_MAX);
+        }
+        if self.highlight.palette.is_empty() {
+            fix(
+                "highlight.palette".into(),
+                "is empty".into(),
+                "the starting palette".into(),
+            );
+            self.highlight.palette = default_palette();
+        }
+        for (i, e) in self.highlight.palette.iter_mut().enumerate() {
+            if e.name.trim().is_empty() {
+                let name = e.color.trim().to_owned();
+                fix(
+                    format!("highlight.palette entry {}", i + 1),
+                    "has no name".into(),
+                    format!("\"{name}\""),
+                );
+                e.name = name;
+            }
+        }
         let mut at_least = |value: &mut usize, min: usize, name: &str| {
             if *value < min {
                 fix(
@@ -2246,7 +2438,7 @@ pub(crate) struct RangeFix {
 /// Tables whose own keys are compared one by one with the defaults. Every
 /// other table-valued setting (`speed_presets`, `pronunciations`, ...) is a
 /// map that replaces its default as a whole, so it is stored whole.
-pub(crate) const STRUCT_TABLES: [&str; 35] = [
+pub(crate) const STRUCT_TABLES: [&str; 37] = [
     "keyboard",
     "colors",
     "sync",
@@ -2275,12 +2467,14 @@ pub(crate) const STRUCT_TABLES: [&str; 35] = [
     "speech.sapi",
     "speech.apple",
     "speech.dectalk",
+    "speech.espeak",
     "speech.piper",
     "highlight",
     "normalization",
     "reading",
     "display",
     "editing",
+    "authoring",
     "library",
 ];
 
@@ -3057,6 +3251,74 @@ wrap_navigation = true
         assert_eq!(loaded.warnings.len(), 4, "{:?}", loaded.warnings);
     }
 
+    /// The highlight palette: an older file without one gets the starting
+    /// palette (star's five colors, five different shapes); a written one
+    /// loads, keeps its order, and round-trips; more than eight entries
+    /// keep the first eight, and a nameless entry takes its color's name.
+    #[test]
+    fn highlight_palette_loads_and_is_kept_in_bounds() {
+        let (_d, store) = store();
+        write(
+            &store,
+            "[highlight]
+color = \"yellow\"
+",
+        );
+        let s = store.load_detailed().settings;
+        assert_eq!(s.highlight.palette, default_palette());
+        let shapes: std::collections::HashSet<_> =
+            s.highlight.palette.iter().map(|e| e.shape).collect();
+        assert_eq!(shapes.len(), 5, "no two starting entries share a shape");
+        let colors: Vec<&str> = s
+            .highlight
+            .palette
+            .iter()
+            .map(|e| e.color.as_str())
+            .collect();
+        assert_eq!(colors, ["yellow", "green", "cyan", "pink", "orange"]);
+
+        let mut file = String::from(
+            "[highlight]
+",
+        );
+        for i in 0..10 {
+            file.push_str(&format!(
+                "[[highlight.palette]]
+name = \"n{i}\"
+color = \"#00008{i}\"
+shape = \"dotted\"
+"
+            ));
+        }
+        file.push_str(
+            "[[highlight.palette]]
+color = \"blue\"
+",
+        );
+        write(&store, &file);
+        let loaded = store.load_detailed();
+        let p = &loaded.settings.highlight.palette;
+        assert_eq!(p.len(), PALETTE_MAX);
+        assert_eq!(p[0].name, "n0");
+        assert_eq!(p[0].shape, HighlightShape::Dotted);
+        assert_eq!(loaded.warnings.len(), 1, "{:?}", loaded.warnings);
+
+        write(
+            &store,
+            "[[highlight.palette]]
+color = \"blue\"
+shape = \"brackets\"
+",
+        );
+        let loaded = store.load_detailed();
+        assert_eq!(loaded.settings.highlight.palette[0].name, "blue");
+        store.save(&loaded.settings).unwrap();
+        assert_eq!(
+            store.load_detailed().settings.highlight.palette,
+            loaded.settings.highlight.palette
+        );
+    }
+
     /// `Volume` deserializes as a bare number, so 150 got through before.
     #[test]
     fn volume_above_100_is_clamped_and_reported() {
@@ -3271,6 +3533,7 @@ wrap_navigation = true
             &store,
             "[speech]\nrate = 300\n\
              [speech.dectalk]\nlibrary = \"C:/dectalk/DECtalk.dll\"\n\
+             [speech.espeak]\nhelper = \"never\"\n\
              [speech.piper]\nvoice = \"en_US-amy-medium\"\nphonemizer = \"rust\"\n\
              [speech.voice_params]\n\"sapi:David\" = { rate = 310, pitch = -1 }\n\"piper:x\" = { rate = 250 }\nbad = { rate = \"fast\" }\n\
              [reading_aids.font]\nsize_pt = 16\nfetch_missing = false\n\
@@ -3283,6 +3546,7 @@ wrap_navigation = true
             s.speech.dectalk.library.as_deref(),
             Some(std::path::Path::new("C:/dectalk/DECtalk.dll"))
         );
+        assert_eq!(s.speech.espeak.helper, EspeakHelper::Never);
         assert_eq!(s.speech.piper.voice.as_deref(), Some("en_US-amy-medium"));
         assert_eq!(s.speech.piper.phonemizer, PiperPhonemizer::Rust);
         assert_eq!(s.speech.piper.voices, None);
@@ -3301,12 +3565,17 @@ wrap_navigation = true
             vec!["speech.voice_params.bad has an invalid value"]
         );
         assert_eq!(s.reading_aids.font.size_pt, 16.0);
-        assert_eq!(s.editing.author, "Ada Example");
+        // The old key loads under its new name.
+        assert_eq!(s.authoring.author, "Ada Example");
         assert!(s.editing.extra.is_empty());
         store.save(s).unwrap();
         let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
         assert!(!text.contains("fetch_missing"), "{text}");
         assert!(text.contains("[speech.voice_params"), "{text}");
+        assert!(
+            text.contains("[authoring]") && !text.contains("[editing]"),
+            "{text}"
+        );
         assert_eq!(store.load().0, *s, "round trip");
 
         let mut t: toml::Table = "[reading_aids.font]\nfetch_missing = true\n[x]\ny = 1\n"

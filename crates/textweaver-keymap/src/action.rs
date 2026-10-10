@@ -448,8 +448,32 @@ actions! {
         gui [], term [], shared ["b:Delete"];
     HighlightSelection = "highlight_selection", Bookmarks, "Highlight the selection, or the sentence at the cursor",
         gui [], term [], shared ["b:y"];
+    HighlightAs = "highlight_as", Bookmarks,
+        "Highlight the selection or the sentence with a name chosen from the highlight palette",
+        gui [], term [], shared [];
+    HighlightName1 = "highlight_name_1", Bookmarks,
+        "Highlight with the palette's first name, or remove that highlight",
+        gui [], term [], shared ["b:Alt+1"];
+    HighlightName2 = "highlight_name_2", Bookmarks,
+        "Highlight with the palette's second name, or remove that highlight",
+        gui [], term [], shared ["b:Alt+2"];
+    HighlightName3 = "highlight_name_3", Bookmarks,
+        "Highlight with the palette's third name, or remove that highlight",
+        gui [], term [], shared ["b:Alt+3"];
+    HighlightName4 = "highlight_name_4", Bookmarks,
+        "Highlight with the palette's fourth name, or remove that highlight",
+        gui [], term [], shared ["b:Alt+4"];
+    HighlightName5 = "highlight_name_5", Bookmarks,
+        "Highlight with the palette's fifth name, or remove that highlight",
+        gui [], term [], shared ["b:Alt+5"];
+    CollectHighlights = "collect_highlights", Bookmarks,
+        "Write the highlights of one name as a Markdown list",
+        gui [], term [], shared [];
     ExportStudySheet = "export_study_sheet", Bookmarks,
         "Export the notes and highlights as a Markdown study sheet, grouped by heading",
+        gui [], term [], shared [];
+    ExportStudySheetByName = "export_study_sheet_by_name", Bookmarks,
+        "Export the study sheet with the highlights grouped by name",
         gui [], term [], shared [];
     ListChanges = "list_changes", Bookmarks,
         "List the tracked changes and comments: Enter goes to one, A accepts a change, R rejects it",
@@ -459,6 +483,29 @@ actions! {
     RejectAllChanges = "reject_all_changes", Bookmarks, "Reject every tracked change in the document",
         gui [], term [], shared [];
     AddComment = "add_comment", Bookmarks, "Add a comment to the selection or the sentence at the cursor",
+        gui [], term [], shared [];
+    SelfTest = "self_test", Bookmarks,
+        "Test yourself on the notes and highlights: Enter shows each answer",
+        gui [], term [], shared [];
+    SaveChangesToWord = "save_changes_to_word", Bookmarks,
+        "Save the accepted and rejected changes and the comments into the Word file, keeping a copy of the original first",
+        gui [], term [], shared [];
+    MakeCards = "make_cards", Bookmarks,
+        "Make study cards from the notes, the highlights, and their headings",
+        gui [], term [], shared [];
+    StudyCards = "study_cards", Bookmarks,
+        "Study the cards: Enter shows the answer, 1 to 4 grade it",
+        gui [], term [], shared [];
+    ListCards = "list_cards", Bookmarks,
+        "List the study cards: Enter goes to a card's source, Delete removes it",
+        gui [], term [], shared [];
+    GradeAgain = "grade_again", Bookmarks, "Grade the card being studied: Again, not recalled",
+        gui [], term [], shared [];
+    GradeHard = "grade_hard", Bookmarks, "Grade the card being studied: Hard, recalled with effort",
+        gui [], term [], shared [];
+    GradeGood = "grade_good", Bookmarks, "Grade the card being studied: Good, recalled",
+        gui [], term [], shared [];
+    GradeEasy = "grade_easy", Bookmarks, "Grade the card being studied: Easy, recalled at once",
         gui [], term [], shared [];
 
     // File
@@ -504,6 +551,9 @@ actions! {
     ExportEpub = "export_epub", File, "Export the document as an EPUB book next to it",
         gui [], term [], shared [];
     ExportBrf = "export_brf", File, "Export the document as braille (BRF) next to it",
+        gui [], term [], shared [];
+    ExportKnowledgeGraph = "export_knowledge_graph", File,
+        "Export the knowledge graph: every link between notes, as a Markdown list, JSON, DOT, GraphML, Mermaid, PlantUML, or CSV",
         gui [], term [], shared [];
     PreviewInBrowser = "preview_in_browser", File,
         "Preview the document in the web browser, with math; each save rewrites the preview",
@@ -603,8 +653,11 @@ actions! {
     DeleteWordAfter = "delete_word_after", Editing, "Delete the word after the cursor",
         gui ["e:Ctrl+Delete"], term ["e:Ctrl+Delete"], shared [];
     Paste = "paste", Editing,
-        "Paste the text last copied or cut in textweaver; the terminal paste works too",
+        "Paste the clipboard; formatted text from a browser or word processor becomes Markdown",
         gui ["e:Ctrl+V"], term ["e:Ctrl+V"], shared [];
+    PastePlainText = "paste_plain_text", Editing,
+        "Paste the clipboard as plain text, keeping none of its formatting",
+        gui ["e:Ctrl+Shift+M"], term ["e:Alt+Q"], shared [];
     InsertCitation = "insert_citation", Editing,
         "Insert a citation: pick a reference, then give a page or other locator",
         gui ["e:Alt+C"], term ["e:Alt+C"], shared [];
@@ -693,6 +746,9 @@ actions! {
         gui ["g:Ctrl+F9"], term ["g:Ctrl+F9"], shared [];
     Menu = "menu", View, "Open the menus: File, Edit, View, Reading, Speech, Tools, and Help",
         gui ["g:F10"], term ["g:F10"], shared [];
+    ContextMenu = "context_menu", View,
+        "Open the context menu: cut, copy, paste, and the commands for where the cursor is",
+        gui ["g:Shift+F10"], term ["g:Ctrl+F10"], shared [];
     CommandPalette = "command_palette", View, "Run any command by name",
         gui ["g:F2"], term ["g:F2", "g:Alt+X"], shared ["b::"];
     Settings = "settings", View,

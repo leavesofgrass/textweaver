@@ -1,0 +1,40 @@
+[package]
+name = "textweaver-espeak"
+description = "eSpeak NG in a helper program for textweaver: the engine host and the speech backend that drives it"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "textweaver-espeak-host"
+path = "src/bin/textweaver-espeak-host.rs"
+
+[features]
+default = ["playback"]
+# Audio output through rodio (in textweaver-enginehost). The host process
+# does not need it: `cargo xtask hosts` builds the host with
+# `--no-default-features`.
+playback = ["textweaver-enginehost/playback"]
+
+[dependencies]
+textweaver-core.workspace = true
+# libespeak-ng's run-time loader and its retrieval-mode synthesis, which
+# the host drives. `espeak-phonemes` compiles the loader without
+# registering the in-process backend, so this crate adds no engine to a
+# build that leaves the `espeak` feature off.
+textweaver-speech = { workspace = true, features = ["espeak-phonemes"] }
+textweaver-enginehost.workspace = true
+log.workspace = true
+
+[dev-dependencies]
+# The in-process backend, for the measurement against the helper
+# (`examples/measure.rs`) and the real-engine tests.
+textweaver-speech = { workspace = true, features = ["espeak"] }
+tempfile.workspace = true
+
+[lints]
+workspace = true

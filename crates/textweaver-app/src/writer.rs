@@ -126,6 +126,12 @@ pub(crate) enum Job {
         paths: Paths,
         deltas: Vec<StatsDelta>,
     },
+    /// Save a document's study cards (crate::cards).
+    Cards {
+        store: textweaver_store::CardStore,
+        key: DocKey,
+        deck: Box<textweaver_store::CardDeck>,
+    },
     /// Save `profiles.toml`.
     Profiles {
         paths: Paths,
@@ -191,6 +197,8 @@ pub(crate) enum Report {
     },
     /// Saving the settings profiles failed.
     ProfilesFailed(String),
+    /// Saving the study cards failed.
+    CardsFailed(String),
     /// A settings save finished; `Ok(true)` when settings another
     /// program wrote were kept.
     Settings { result: Result<bool, String> },
@@ -575,6 +583,10 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
             }
             None
         }
+        Job::Cards { store, key, deck } => store
+            .save(&key, &deck)
+            .err()
+            .map(|e| Report::CardsFailed(e.to_string())),
         Job::Profiles { paths, profiles } => profiles
             .save(&paths)
             .err()

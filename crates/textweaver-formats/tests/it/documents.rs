@@ -201,6 +201,9 @@ fn every_tracked_change_is_recorded_with_its_author_and_date() {
     assert_eq!(doc.slice(cs[3].range).to_string(), "check the labs first");
     assert_eq!(doc.slice(cs[4].range).to_string(), "Repeat tomorrow.");
     assert!(cs[4].date.is_empty(), "no date is invented");
+    // The halves of a move outside any move range pair in reading order.
+    assert_eq!((cs[2].pair.as_str(), cs[3].pair.as_str()), ("#1", "#1"));
+    assert!(cs[0].pair.is_empty());
     let threads = comments(&doc.meta);
     assert_eq!(threads.len(), 2);
     assert_eq!(doc.slice(threads[0].range).to_string(), "Call the family.");
@@ -249,4 +252,27 @@ fn rtf_revision_times_are_read_as_dates() {
     assert_eq!(cs[0].author, "Ada Example");
     assert_eq!(cs[0].date, "2026-03-03T09:15:00");
     assert_eq!(doc.slice(cs[0].range).to_string(), "new");
+}
+
+/// The halves of a move are paired by the name of Word's move ranges, so
+/// they are decided together (task B1-t2).
+#[test]
+fn the_halves_of_a_named_move_share_their_pair() {
+    use textweaver_formats::{ChangeKind, changes};
+    let source = Source::Path(t1_fixture("word-review.docx"));
+    let doc = Registry::with_builtins()
+        .load(&source, &LoadOptions::default())
+        .unwrap();
+    let moves: Vec<(ChangeKind, String)> = changes(&doc.meta)
+        .into_iter()
+        .filter(|c| matches!(c.kind, ChangeKind::MovedAway | ChangeKind::MovedHere))
+        .map(|c| (c.kind, c.pair))
+        .collect();
+    assert_eq!(
+        moves,
+        vec![
+            (ChangeKind::MovedAway, "move1".to_owned()),
+            (ChangeKind::MovedHere, "move1".to_owned()),
+        ]
+    );
 }

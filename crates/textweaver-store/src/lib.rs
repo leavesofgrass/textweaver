@@ -27,6 +27,10 @@
 //!   (it never does), and the portable values taken out of and put into
 //!   settings.
 //!
+//! - [`cards`]: study cards made from notes, highlights, and headings,
+//!   with the grades given them, in `cards/<doc-key>.json` (B1-f1).
+//! - [`schedule`]: when each card is due, by SM-2 from its grades (B1-f2).
+//!
 //! - [`reading_aids`]: the saved form of the `[reading_aids]` settings,
 //!   which `textweaver-aids` converts into its working types.
 //!
@@ -41,8 +45,10 @@
 //! Owner: Agent C.
 
 mod atomic;
+pub mod cards;
 mod doc_state;
 pub mod fulltext;
+pub mod graph;
 pub mod library;
 pub mod migrate;
 pub mod notes;
@@ -50,6 +56,7 @@ mod paths;
 pub mod profiles;
 pub mod reading_aids;
 mod recent;
+pub mod schedule;
 mod settings;
 pub mod settings_io;
 pub mod stats;
@@ -59,12 +66,14 @@ pub mod sync_scope;
 pub mod time;
 
 pub use atomic::atomic_write;
+pub use cards::{Card, CardDeck, CardKind, CardSource, CardStore, Grade, Review};
 pub use doc_state::{
     Anchor, Bookmark, ClockStamp, DEFAULT_DEBOUNCE, Deletion, Deletions, DocKey, DocState,
     LEGACY_STATE_FORMAT, MarkKind, MergeReport, NOTE_BACKUPS_MAX, NoteBackup, STATE_FORMAT,
     StateStore, TextStamp, percent,
 };
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
+pub use graph::{Graph, GraphEdge, GraphFormat, GraphNode};
 pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, NotedDoc, ScannedDoc};
 pub use notes::{
     Annotation, Backlink, Backlinks, Highlight, Note, NotesExport, Relation, RelationType,
@@ -74,17 +83,18 @@ pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, AudioExportFormat,
-    BrailleSettings, BrailleTableFormat, BrfCode, CitationReading, ColorSettings,
-    CommunityLexiconSettings, ComponentsSettings, CursorPlacement, DectalkSettings,
+    AuthoringSettings, BrailleSettings, BrailleTableFormat, BrfCode, CitationReading,
+    ColorSettings, CommunityLexiconSettings, ComponentsSettings, CursorPlacement, DectalkSettings,
     DictationSettings, DigitRow, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,
-    ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings, GuiSidebar, GuiWindow,
-    HighlightSettings, HintsLine, InterfaceAnnouncements, InterfaceSettings, KeyboardSettings,
-    KeymapOverrides, KeymapPreset, LexiconSettings, LibrarySettings, MathBrailleCode, MathDisplay,
-    MathEngine, MedicalLexiconSettings, NormalizationSettings, OcrEngine, PiperPhonemizer,
-    PiperSettings, PositionPolicy, PreviewSettings, QuietScreen, REMOVED_SETTINGS,
-    RESERVED_SETTINGS, ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings,
-    SayAll, Settings, SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, StopAt,
-    SubtitleFormat, SubtitleKaraoke, SummarySettings, SyncSettings, TableMode,
+    EspeakHelper, EspeakSettings, ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings,
+    GuiSidebar, GuiWindow, HighlightSettings, HighlightShape, HintsLine, InterfaceAnnouncements,
+    InterfaceSettings, KeyboardSettings, KeymapOverrides, KeymapPreset, LexiconSettings,
+    LibrarySettings, MathBrailleCode, MathDisplay, MathEngine, MedicalLexiconSettings,
+    NormalizationSettings, OcrEngine, PALETTE_MAX, PaletteEntry, PiperPhonemizer, PiperSettings,
+    PositionPolicy, PreviewSettings, QuietScreen, REMOVED_SETTINGS, RESERVED_SETTINGS,
+    ReadingSettings, RememberedVoice, RevisionReading, RtlDisplay, SapiSettings, SayAll, Settings,
+    SettingsLoad, SettingsStore, SpeechSettings, StatsSettings, StopAt, SubtitleFormat,
+    SubtitleKaraoke, SummarySettings, SyncSettings, TableMode, default_palette,
     drop_removed_settings,
 };
 pub use settings_io::{

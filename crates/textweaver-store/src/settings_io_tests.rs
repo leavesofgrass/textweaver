@@ -60,6 +60,7 @@ fn everything_changed() -> Settings {
     sp.sapi.onecore = false;
     sp.apple.backend = AppleBackend::AvSpeech;
     sp.dectalk.library = Some("C:/dectalk/DECtalk.dll".into());
+    sp.espeak.helper = crate::EspeakHelper::Always;
     sp.piper.voices = Some("D:/voices".into());
     sp.piper.voice = Some("en_US-amy-medium".into());
     sp.piper.phonemizer = crate::PiperPhonemizer::Rust;
@@ -79,6 +80,7 @@ fn everything_changed() -> Settings {
     h.speed = 0.7;
     h.color = "#ff8800".into();
     h.sentence_color = Some("yellow".into());
+    h.palette[0].name = "ask the professor".into();
     let n = &mut s.normalization;
     n.math = false;
     n.abbreviations = false;
@@ -102,6 +104,7 @@ fn everything_changed() -> Settings {
     r.revisions = crate::RevisionReading::Marked;
     r.stop_at = crate::StopAt::Chapter;
     r.stop_after_minutes = 25;
+    r.recall_prompts = true;
     let y = &mut s.sync;
     y.enabled = true;
     y.folder = Some(PathBuf::from("/media/stick/Sync"));
@@ -135,7 +138,8 @@ fn everything_changed() -> Settings {
     e.echo_lines_on_move = false;
     e.undo_steps = 200;
     e.undo_memory_mb = 10;
-    e.author = "Ada Example".into();
+    s.authoring.author = "Ada Example".into();
+    s.authoring.track_changes = true;
     s.library.recent_limit = 10;
     s.library.folders = vec!["C:/Books".into()];
     s.keyboard.character_keys = false;
