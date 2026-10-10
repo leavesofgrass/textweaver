@@ -2201,6 +2201,7 @@ impl App {
             A::AcceptAllChanges => return self.decide_all(true, None),
             A::RejectAllChanges => return self.decide_all(false, None),
             A::AddComment => return self.prompt(PromptPurpose::CommentText),
+            A::SaveChangesToWord => return self.save_changes_to_word(),
             A::NextNote => return self.notes_command(NoteCommand::Next),
             A::PreviousNote => return self.notes_command(NoteCommand::Previous),
             A::HighlightSelection => return self.notes_command(NoteCommand::ToggleHighlight),

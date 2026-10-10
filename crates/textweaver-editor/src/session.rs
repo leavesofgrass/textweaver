@@ -473,6 +473,24 @@ impl EditSession {
         }))
     }
 
+    /// [`begin_save`](Self::begin_save) for a caller that writes the
+    /// editor's text into `dest` its own way, in place, never adopting it
+    /// (task B1-t3: edits written into a Word file as tracked changes).
+    /// Call [`finish_save`](Self::finish_save) once the file is written.
+    pub fn begin_save_into(&mut self, dest: &Path) -> Result<SaveRequest, SessionError> {
+        let generation = self.generation;
+        let Some(editor) = &mut self.editor else {
+            return Err(SessionError::NotEditing { action: "save" });
+        };
+        Ok(SaveRequest {
+            dest: dest.to_owned(),
+            text: editor.text().clone(),
+            adopted: false,
+            point: editor.save_point(),
+            generation,
+        })
+    }
+
     /// The second half of a save: the request's `text` (the rope, as a
     /// string) was written to its file. The text as it was when the save
     /// began is now the saved text (edits made since stay unsaved), the

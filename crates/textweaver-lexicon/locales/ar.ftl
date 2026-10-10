@@ -2533,6 +2533,7 @@ section-normalization = نطق النص
 section-reading = القراءة
 section-display = العرض
 section-editing = التحرير
+section-authoring = التأليف
 section-library = المكتبة
 section-keyboard = لوحة المفاتيح
 section-accessibility = إمكانية الوصول
@@ -3465,8 +3466,10 @@ choice-speech-piper-phonemizer-library = مكتبة espeak-ng
 choice-speech-piper-phonemizer-rust = محوِّل textweaver
 setting-speech-voice-params = السرعة وطبقة الصوت لكل صوت
 setting-speech-voice-params-help = السرعة وطبقة الصوت اللتان استُخدم بهما كل صوت آخر مرة. اختيار الصوت مجددًا يعيدهما.
-setting-editing-author = المؤلف
-setting-editing-author-help = المؤلف الذي يُكتب في المستندات الجديدة المنشأة من قالب؛ تركه فارغًا يبقيه خاليًا.
+setting-authoring-author = المؤلف
+setting-authoring-author-help = الاسم الذي يكتبه { -brand } على التعليقات والردود والمستندات المنشأة من قالب. الفارغ يعني { -brand } في التعليقات وعدم وجود مؤلف في القوالب. لا يؤخذ أبدًا من الحاسوب.
+setting-authoring-track-changes = تتبع التغييرات في ملفات Word
+setting-authoring-track-changes-help = حفظ التعديلات على ملف Word كتغييرات متتبعة يستطيع المراجع قبولها. عند الإيقاف تُحفظ بصيغة Markdown باسم جديد.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -4765,3 +4768,51 @@ brf-original-not-brf = ليس ملف برايل. عرض برايل الأصلي 
 brf-original-unreadable = تعذرت قراءة ملف برايل: { $reason }
 brf-no-liblouis = برايل معروض كبرايل: liblouis غير موجود. لقراءته كنص مطبوع، ثبّت liblouis من liblouis.io أو من حزم نظامك، ثم افتح الملف مرة أخرى.
 ## End of B1-r5
+
+## B1-t2: حفظ المراجعة في ملف Word.
+name-save-changes-to-word = حفظ التغييرات في ملف Word
+action-save-changes-to-word = حفظ التغييرات المقبولة والمرفوضة والتعليقات في ملف Word، بعد الاحتفاظ بنسخة من الأصل
+changes-accept-all-question =
+    { $n ->
+        [one] قبول التغيير الوحيد؟ y أو n
+       *[other] قبول كل التغييرات وعددها { $n }؟ y أو n
+    }
+changes-reject-all-question =
+    { $n ->
+        [one] رفض التغيير الوحيد؟ y أو n
+       *[other] رفض كل التغييرات وعددها { $n }؟ y أو n
+    }
+changes-save-not-word = ليس ملف Word. لا تُحفظ التغييرات إلا في ملفات .docx؛ ويكتب التصدير النص المقرر بتنسيقات أخرى.
+changes-save-nothing = لا شيء للحفظ: لم يُقبل أي تغيير ولم يُرفض، ولم يتغير أي تعليق.
+changes-saved-backup = حُفظت التغييرات في { $file }. الأصل محفوظ باسم { $backup }.
+changes-saved = حُفظت التغييرات في { $file }.
+changes-save-unplaced =
+    { $n ->
+        [one] تعليق جديد واحد في البداية: لم يُعثر على نصه.
+       *[other] { $n } تعليقات جديدة في البداية: لم يُعثر على نصها.
+    }
+changes-save-failed = تعذّر حفظ التغييرات في { $file }: { $error }. الملف كما كان؛ أغلقه في Word إن كان مفتوحًا، ثم حاول مرة أخرى.
+changes-save-not-in-build = حفظ التغييرات في ملف Word غير متوفر في نسخة { -brand } هذه. ما زال tw changes --in-place يقوم بذلك.
+changes-in-place-accepted =
+    { $n ->
+        [one] قُبل تغيير واحد في { $path }. الأصل محفوظ باسم { $backup }.
+       *[other] قُبلت { $n } تغييرات في { $path }. الأصل محفوظ باسم { $backup }.
+    }
+changes-in-place-rejected =
+    { $n ->
+        [one] رُفض تغيير واحد في { $path }. الأصل محفوظ باسم { $backup }.
+       *[other] رُفضت { $n } تغييرات في { $path }. الأصل محفوظ باسم { $backup }.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] حُفظ تغيير متتبع واحد في { $file }.
+       *[other] حُفظت { $n } تغييرات متتبعة في { $file }.
+    }
+changes-original-kept = الأصل محفوظ باسم { $backup }.
+changes-tracked-refused =
+    { $n ->
+        [one] لم يُحفظ: تغيير واحد في { $file } يعبر فقرة أو يقع في رابط أو حقل، فلا يمكن تتبعه. الحفظ باسم يحتفظ بتعديلاتك بصيغة Markdown.
+       *[other] لم يُحفظ: { $n } تغييرات في { $file } تعبر فقرة أو تقع في رابط أو حقل، فلا يمكن تتبعها. الحفظ باسم يحتفظ بتعديلاتك بصيغة Markdown.
+    }
+## End of B1-t2

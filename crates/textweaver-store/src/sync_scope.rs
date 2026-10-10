@@ -156,8 +156,10 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // How much memory the computer has.
     ("editing.undo_steps", Machine),
     ("editing.undo_memory_mb", Machine),
-    // A person's name: never written to the sync folder.
-    ("editing.author", Machine),
+    // [authoring]: the name is a person's, never written to the sync
+    // folder; tracking changes is a preference that travels.
+    ("authoring.author", Machine),
+    ("authoring.track_changes", Portable),
     // [library]
     ("library.recent_limit", Portable),
     ("library.folders", Machine),
@@ -587,7 +589,7 @@ mod tests {
             "sync.folder",
             "sync.device_name",
             "display.wrap_width",
-            "editing.author",
+            "authoring.author",
         ] {
             assert_eq!(setting_scope(p), Some(Machine), "{p}");
             assert_eq!(sync_group_of(p), None, "{p}");

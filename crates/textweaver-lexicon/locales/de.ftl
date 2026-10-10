@@ -2342,6 +2342,7 @@ section-normalization = Text sprechen
 section-reading = Lesen
 section-display = Anzeige
 section-editing = Bearbeiten
+section-authoring = Verfassen
 section-library = Bibliothek
 section-keyboard = Tastatur
 section-accessibility = Zugänglichkeit
@@ -3168,8 +3169,10 @@ choice-speech-piper-phonemizer-library = espeak-ng-Bibliothek
 choice-speech-piper-phonemizer-rust = der von textweaver
 setting-speech-voice-params = Tempo und Tonhöhe je Stimme
 setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zuletzt genutzt wurde. Wird die Stimme wieder gewählt, kehren sie zurück.
-setting-editing-author = Autor
-setting-editing-author-help = Der Autor, der in neue Dokumente aus einer Vorlage geschrieben wird; leer lässt ihn frei.
+setting-authoring-author = Autor
+setting-authoring-author-help = Der Name, den { -brand } auf Kommentare, Antworten und Dokumente aus einer Vorlage schreibt. Leer bedeutet { -brand } bei Kommentaren und keinen Autor in Vorlagen. Nie vom Computer übernommen.
+setting-authoring-track-changes = Änderungen in Word-Dateien nachverfolgen
+setting-authoring-track-changes-help = Bearbeitungen in einer Word-Datei als nachverfolgte Änderungen speichern, die ein Prüfer annehmen kann. Aus speichert sie als Markdown unter neuem Namen.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -4454,3 +4457,51 @@ brf-original-not-brf = Keine Braille-Datei. Original-Braille anzeigen funktionie
 brf-original-unreadable = Die Braille-Datei kann nicht gelesen werden: { $reason }
 brf-no-liblouis = Braille als Braille angezeigt: liblouis fehlt. Um sie als Schwarzschrift zu lesen, installieren Sie liblouis von liblouis.io oder aus den Paketen Ihres Systems und öffnen Sie die Datei erneut.
 ## End of B1-r5
+
+## B1-t2: die Überprüfung in die Word-Datei speichern.
+name-save-changes-to-word = Änderungen in der Word-Datei speichern
+action-save-changes-to-word = Die angenommenen und abgelehnten Änderungen und die Kommentare in die Word-Datei speichern, nachdem eine Kopie des Originals behalten wurde
+changes-accept-all-question =
+    { $n ->
+        [one] Die 1 Änderung annehmen? y oder n
+       *[other] Alle { $n } Änderungen annehmen? y oder n
+    }
+changes-reject-all-question =
+    { $n ->
+        [one] Die 1 Änderung ablehnen? y oder n
+       *[other] Alle { $n } Änderungen ablehnen? y oder n
+    }
+changes-save-not-word = Keine Word-Datei. Änderungen werden nur in .docx-Dateien zurückgeschrieben; der Export schreibt den entschiedenen Text in andere Formate.
+changes-save-nothing = Nichts zu speichern: keine Änderung wurde angenommen oder abgelehnt, und kein Kommentar wurde geändert.
+changes-saved-backup = Änderungen in { $file } gespeichert. Das Original bleibt als { $backup } erhalten.
+changes-saved = Änderungen in { $file } gespeichert.
+changes-save-unplaced =
+    { $n ->
+        [one] 1 neuer Kommentar steht am Anfang: sein Text wurde nicht gefunden.
+       *[other] { $n } neue Kommentare stehen am Anfang: ihr Text wurde nicht gefunden.
+    }
+changes-save-failed = Die Änderungen in { $file } konnten nicht gespeichert werden: { $error }. Die Datei ist unverändert; schließen Sie sie in Word, falls sie geöffnet ist, und versuchen Sie es erneut.
+changes-save-not-in-build = Änderungen in der Word-Datei speichern ist in dieser Version von { -brand } nicht enthalten. tw changes --in-place kann es weiterhin.
+changes-in-place-accepted =
+    { $n ->
+        [one] 1 Änderung in { $path } angenommen. Das Original bleibt als { $backup } erhalten.
+       *[other] { $n } Änderungen in { $path } angenommen. Das Original bleibt als { $backup } erhalten.
+    }
+changes-in-place-rejected =
+    { $n ->
+        [one] 1 Änderung in { $path } abgelehnt. Das Original bleibt als { $backup } erhalten.
+       *[other] { $n } Änderungen in { $path } abgelehnt. Das Original bleibt als { $backup } erhalten.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] 1 nachverfolgte Änderung in { $file } gespeichert.
+       *[other] { $n } nachverfolgte Änderungen in { $file } gespeichert.
+    }
+changes-original-kept = Das Original bleibt als { $backup } erhalten.
+changes-tracked-refused =
+    { $n ->
+        [one] Nicht gespeichert: 1 Änderung in { $file } überschreitet einen Absatz oder liegt in einem Link oder Feld und kann nicht nachverfolgt werden. Speichern unter behält Ihre Bearbeitungen als Markdown.
+       *[other] Nicht gespeichert: { $n } Änderungen in { $file } überschreiten einen Absatz oder liegen in einem Link oder Feld und können nicht nachverfolgt werden. Speichern unter behält Ihre Bearbeitungen als Markdown.
+    }
+## End of B1-t2

@@ -2318,6 +2318,7 @@ section-normalization = Cómo se habla el texto
 section-reading = Lectura
 section-display = Pantalla
 section-editing = Edición
+section-authoring = Autoría
 section-library = Biblioteca
 section-keyboard = Teclado
 section-accessibility = Accesibilidad
@@ -3144,8 +3145,10 @@ choice-speech-piper-phonemizer-library = biblioteca espeak-ng
 choice-speech-piper-phonemizer-rust = el de textweaver
 setting-speech-voice-params = Velocidad y tono por voz
 setting-speech-voice-params-help = La velocidad y el tono con que se usó cada voz por última vez. Al elegir de nuevo una voz, vuelven.
-setting-editing-author = Autor
-setting-editing-author-help = El autor que se escribe en los documentos nuevos hechos con una plantilla; vacío lo deja en blanco.
+setting-authoring-author = Autor
+setting-authoring-author-help = El nombre que { -brand } escribe en comentarios, respuestas y documentos hechos con una plantilla. Vacío significa { -brand } en los comentarios y ningún autor en las plantillas. Nunca se toma del equipo.
+setting-authoring-track-changes = Control de cambios en archivos Word
+setting-authoring-track-changes-help = Guardar las ediciones de un archivo de Word como cambios controlados que un revisor puede aceptar. Desactivado las guarda como Markdown con otro nombre.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -4430,3 +4433,51 @@ brf-original-not-brf = No es un archivo braille. Mostrar el braille original fun
 brf-original-unreadable = No se puede leer el archivo braille: { $reason }
 brf-no-liblouis = Braille mostrado como braille: falta liblouis. Para leerlo como texto impreso, instale liblouis desde liblouis.io o los paquetes de su sistema y vuelva a abrir el archivo.
 ## End of B1-r5
+
+## B1-t2: guardar la revisión en el archivo de Word.
+name-save-changes-to-word = Guardar cambios en el archivo Word
+action-save-changes-to-word = Guardar los cambios aceptados y rechazados y los comentarios en el archivo de Word, conservando antes una copia del original
+changes-accept-all-question =
+    { $n ->
+        [one] ¿Aceptar el cambio? y o n
+       *[other] ¿Aceptar los { $n } cambios? y o n
+    }
+changes-reject-all-question =
+    { $n ->
+        [one] ¿Rechazar el cambio? y o n
+       *[other] ¿Rechazar los { $n } cambios? y o n
+    }
+changes-save-not-word = No es un archivo de Word. Los cambios solo se guardan de vuelta en archivos .docx; la exportación escribe el texto decidido en otros formatos.
+changes-save-nothing = Nada que guardar: no se aceptó ni rechazó ningún cambio y ningún comentario cambió.
+changes-saved-backup = Cambios guardados en { $file }. El original se conserva como { $backup }.
+changes-saved = Cambios guardados en { $file }.
+changes-save-unplaced =
+    { $n ->
+        [one] 1 comentario nuevo está al principio: no se encontró su texto.
+       *[other] { $n } comentarios nuevos están al principio: no se encontró su texto.
+    }
+changes-save-failed = No se pudieron guardar los cambios en { $file }: { $error }. El archivo sigue igual; ciérrelo en Word si está abierto y vuelva a intentarlo.
+changes-save-not-in-build = Guardar los cambios en el archivo de Word no está en esta versión de { -brand }. tw changes --in-place sigue haciéndolo.
+changes-in-place-accepted =
+    { $n ->
+        [one] 1 cambio aceptado en { $path }. El original se conserva como { $backup }.
+       *[other] { $n } cambios aceptados en { $path }. El original se conserva como { $backup }.
+    }
+changes-in-place-rejected =
+    { $n ->
+        [one] 1 cambio rechazado en { $path }. El original se conserva como { $backup }.
+       *[other] { $n } cambios rechazados en { $path }. El original se conserva como { $backup }.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] 1 cambio controlado guardado en { $file }.
+       *[other] { $n } cambios controlados guardados en { $file }.
+    }
+changes-original-kept = El original se conserva como { $backup }.
+changes-tracked-refused =
+    { $n ->
+        [one] No se guardó: 1 cambio en { $file } cruza un párrafo o está en un enlace o campo, y no se puede controlar. Guardar como conserva sus ediciones en Markdown.
+       *[other] No se guardó: { $n } cambios en { $file } cruzan un párrafo o están en un enlace o campo, y no se pueden controlar. Guardar como conserva sus ediciones en Markdown.
+    }
+## End of B1-t2

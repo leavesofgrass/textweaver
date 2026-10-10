@@ -2334,6 +2334,7 @@ section-normalization = Speaking text
 section-reading = Reading
 section-display = Display
 section-editing = Editing
+section-authoring = Authoring
 section-library = Library
 section-keyboard = Keyboard
 section-accessibility = Accessibility
@@ -3178,8 +3179,10 @@ choice-speech-piper-phonemizer-library = espeak-ng library
 choice-speech-piper-phonemizer-rust = textweaver's own
 setting-speech-voice-params = Rate and pitch per voice
 setting-speech-voice-params-help = The rate and pitch each voice was last used at. Choosing a voice again brings them back.
-setting-editing-author = Author
-setting-editing-author-help = The author written into new documents made from a template; empty leaves it blank.
+setting-authoring-author = Author
+setting-authoring-author-help = The name { -brand } writes on comments, replies, and documents from a template. Empty means { -brand } on comments and no author in templates. Never taken from the computer.
+setting-authoring-track-changes = Track changes in Word files
+setting-authoring-track-changes-help = Save edits to a Word file as tracked changes a reviewer can accept. Off saves them as Markdown under a new name.
 
 ## The window (GUI): drawn labels, hints, and questions.
 ## Keep the letters Y and N: they are the keys that answer.
@@ -4490,3 +4493,55 @@ brf-original-not-brf = Not a braille file. Show original Braille works on BRF fi
 brf-original-unreadable = Cannot read the braille file: { $reason }
 brf-no-liblouis = Braille shown as braille: liblouis is missing. To read it as print, install liblouis from liblouis.io or your system's packages, then open the file again.
 ## End of B1-r5
+
+## B1-t2: saving the review into the Word file. $file is the Word file's
+## name, $backup the copy of the original kept beside it.
+name-save-changes-to-word = Save changes to the Word file
+action-save-changes-to-word = Save the accepted and rejected changes and the comments into the Word file, keeping a copy of the original first
+# Asked before Accept all changes; $n is how many changes.
+changes-accept-all-question =
+    { $n ->
+        [one] Accept the 1 change? y or n
+       *[other] Accept all { $n } changes? y or n
+    }
+changes-reject-all-question =
+    { $n ->
+        [one] Reject the 1 change? y or n
+       *[other] Reject all { $n } changes? y or n
+    }
+changes-save-not-word = Not a Word file. Changes are saved back only into .docx files; export writes the decided text in other formats.
+changes-save-nothing = Nothing to save: no change was accepted or rejected, and no comment changed.
+changes-saved-backup = Saved the changes in { $file }. The original is kept as { $backup }.
+changes-saved = Saved the changes in { $file }.
+changes-save-unplaced =
+    { $n ->
+        [one] 1 new comment is at the start: its text was not found.
+       *[other] { $n } new comments are at the start: their text was not found.
+    }
+changes-save-failed = Could not save the changes in { $file }: { $error }. The file is as it was; close it in Word if it is open, then try again.
+changes-save-not-in-build = Saving changes to the Word file is not in this version of { -brand }. tw changes --in-place still does it.
+# tw changes --in-place: $path is the Word file, $backup the copy of the
+# original, $n how many changes.
+changes-in-place-accepted =
+    { $n ->
+        [one] Accepted 1 change in { $path }. The original is kept as { $backup }.
+       *[other] Accepted { $n } changes in { $path }. The original is kept as { $backup }.
+    }
+changes-in-place-rejected =
+    { $n ->
+        [one] Rejected 1 change in { $path }. The original is kept as { $backup }.
+       *[other] Rejected { $n } changes in { $path }. The original is kept as { $backup }.
+    }
+## B1-t3: edits saved into a Word file as tracked changes.
+changes-tracked-saved =
+    { $n ->
+        [one] Saved 1 tracked change in { $file }.
+       *[other] Saved { $n } tracked changes in { $file }.
+    }
+changes-original-kept = The original is kept as { $backup }.
+changes-tracked-refused =
+    { $n ->
+        [one] Not saved: 1 change in { $file } crosses a paragraph or sits in a link or field, so it cannot be tracked. Save As keeps your edits as Markdown.
+       *[other] Not saved: { $n } changes in { $file } cross a paragraph or sit in a link or field, so they cannot be tracked. Save As keeps your edits as Markdown.
+    }
+## End of B1-t2

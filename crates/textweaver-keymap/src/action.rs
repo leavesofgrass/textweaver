@@ -463,6 +463,9 @@ actions! {
     SelfTest = "self_test", Bookmarks,
         "Test yourself on the notes and highlights: Enter shows each answer",
         gui [], term [], shared [];
+    SaveChangesToWord = "save_changes_to_word", Bookmarks,
+        "Save the accepted and rejected changes and the comments into the Word file, keeping a copy of the original first",
+        gui [], term [], shared [];
 
     // File
     Open = "open", File, "Open a document",

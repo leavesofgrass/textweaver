@@ -393,8 +393,13 @@ pub const REMOVED_SETTINGS: &[(&str, &str)] = &[(
 /// - `reading.sync_conflict_policy` became `sync.position_policy` (the sync
 ///   wave, ADR-0049); its old values `highest_progress` and `manual` read
 ///   as `furthest` and `ask`.
-pub const RENAMED_SETTINGS: &[(&str, &str)] =
-    &[("reading.sync_conflict_policy", "sync.position_policy")];
+/// - `editing.author` became `authoring.author` (task B1-t2), when the
+///   name came to be written on comments and changes saved to Word files
+///   as well as on documents made from a template.
+pub const RENAMED_SETTINGS: &[(&str, &str)] = &[
+    ("reading.sync_conflict_policy", "sync.position_policy"),
+    ("editing.author", "authoring.author"),
+];
 
 /// Moves the [`RENAMED_SETTINGS`] in a parsed `settings.toml` to their new
 /// keys; returns each rename done. A value already under the new key wins.
@@ -987,9 +992,6 @@ pub struct EditingSettings {
     pub undo_steps: usize,
     /// Most memory the undo history may use, in megabytes (at least 1).
     pub undo_memory_mb: usize,
-    /// The author written into new documents made from a template (their
-    /// front matter's `author`); empty leaves it blank.
-    pub author: String,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -1006,10 +1008,30 @@ impl Default for EditingSettings {
             echo_lines_on_move: true,
             undo_steps: 1000,
             undo_memory_mb: 50,
-            author: String::new(),
             extra: toml::Table::new(),
         }
     }
+}
+
+/// Authoring settings: who textweaver says wrote what it adds to a
+/// document.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AuthoringSettings {
+    /// The name written as the author of comments, replies, and changes
+    /// saved to Word files (empty: "textweaver"), and into new documents
+    /// made from a template (their front matter's `author`; empty leaves
+    /// it blank). Never taken from the computer or the account. Was
+    /// `[editing] author`, which still loads.
+    pub author: String,
+    /// Edits saved from edit mode into a Word file are written as tracked
+    /// changes (`w:ins`, `w:del`) with [`author`](Self::author) and the
+    /// time, for a reviewer in Word (task B1-t3). Off: a Word file's edits
+    /// are saved as Markdown under a new name, as before.
+    pub track_changes: bool,
+    /// Unknown keys, preserved.
+    #[serde(flatten)]
+    pub extra: toml::Table,
 }
 
 /// Library settings.
@@ -1844,6 +1866,8 @@ pub struct Settings {
     pub display: DisplaySettings,
     /// `[editing]`
     pub editing: EditingSettings,
+    /// `[authoring]`
+    pub authoring: AuthoringSettings,
     /// `[library]`
     pub library: LibrarySettings,
     /// `[keyboard]`
@@ -2031,6 +2055,7 @@ impl Settings {
             reading: lenient_section("reading", table.remove("reading"), &mut w),
             display: lenient_section("display", table.remove("display"), &mut w),
             editing: lenient_section("editing", table.remove("editing"), &mut w),
+            authoring: lenient_section("authoring", table.remove("authoring"), &mut w),
             library: lenient_section("library", table.remove("library"), &mut w),
             keyboard: lenient_section("keyboard", table.remove("keyboard"), &mut w),
             accessibility: lenient_section("accessibility", table.remove("accessibility"), &mut w),
@@ -2319,6 +2344,7 @@ pub(crate) const STRUCT_TABLES: [&str; 36] = [
     "reading",
     "display",
     "editing",
+    "authoring",
     "library",
 ];
 
@@ -3341,12 +3367,17 @@ wrap_navigation = true
             vec!["speech.voice_params.bad has an invalid value"]
         );
         assert_eq!(s.reading_aids.font.size_pt, 16.0);
-        assert_eq!(s.editing.author, "Ada Example");
+        // The old key loads under its new name.
+        assert_eq!(s.authoring.author, "Ada Example");
         assert!(s.editing.extra.is_empty());
         store.save(s).unwrap();
         let text = std::fs::read_to_string(store.paths().settings_file()).unwrap();
         assert!(!text.contains("fetch_missing"), "{text}");
         assert!(text.contains("[speech.voice_params"), "{text}");
+        assert!(
+            text.contains("[authoring]") && !text.contains("[editing]"),
+            "{text}"
+        );
         assert_eq!(store.load().0, *s, "round trip");
 
         let mut t: toml::Table = "[reading_aids.font]\nfetch_missing = true\n[x]\ny = 1\n"

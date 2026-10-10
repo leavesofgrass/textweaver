@@ -378,6 +378,22 @@ Then run `preview in browser` again. The page now comes from a small web server 
 - The server stops when you open another document or quit textweaver. Turning automatic reloading off stops it at once; the browser then shows the last page it had.
 - Images and other files beside your document are served too, but nothing outside the document's folder.
 
+## Review a Word document's tracked changes
+
+Reviewing a colleague's tracked changes is reading work more than writing work, so it lives in the reader: open the Word document, press **Ctrl+Shift+J** (or **Alt+A** in the terminal reader), and accept, reject, reply, and resolve from the changes list. [Tracked changes and comments](reading.md#tracked-changes-and-comments-ctrlshiftj-or-alta) in the reading guide describes the list and its keys.
+
+When you are done, **Save changes to the Word file** writes your decisions into the original `.docx` in place, keeping a copy of the original beside it the first time (`report-original.docx`). textweaver changes only the marks your decisions touch, so the document's styles, numbering, headers, and anything else Word stored come back unaltered when your colleague opens it. Comments and replies you add are signed with `[authoring] author`, or "textweaver" while that setting is empty; textweaver never takes a name from your computer.
+
+The changes list does not accept or reject while edit mode is on. Leave edit mode to review.
+
+### Your own edits as tracked changes
+
+Edit mode can also hand your own edits back to a Word user as tracked changes. Turn on **Track changes in Word files** in the settings (the Authoring section, or `[authoring] track_changes = true`; F1 on the setting explains it). It is off by default, because most edits are meant to stand on their own.
+
+With it on, saving edit mode's work on a `.docx` file (**Ctrl+S**, or Save on leaving edit mode) no longer asks for a Markdown name. textweaver compares the text with what was last saved, word by word, and writes each change into the Word file itself: deleted words as a deletion and new words as an insertion, signed with `[authoring] author` (or "textweaver") and the time from your computer's clock. A reviewer opening the file in Word sees them in the Review tab and accepts or rejects them like any colleague's. The first save keeps a copy of the original beside it, as the review save does, and you hear "Saved 2 tracked changes in report.docx. The original is kept as report-original.docx."
+
+Edit mode works on the document's text as Markdown, so what is tracked is wording, not formatting: making a word bold is not recorded. A change that runs across a paragraph break, or that falls inside a link or a field, cannot be placed as a tracked change. In that case textweaver writes nothing at all, says how many changes could not be tracked, and leaves your edits in the editor; **Save As** (Alt+S) keeps them as a Markdown file.
+
 ## Start from a template
 
 Type `new from template` in the command palette. The list has three templates, Essay, Report, and Notes, and your own after them. Choose one, then type the title. textweaver starts a new document in edit mode with front matter, headings, and a References heading, for example:
@@ -397,9 +413,11 @@ date: 2026-09-26
 The date is today's date on your computer, in your time zone. The author comes from this setting, when you set it:
 
 ```toml
-[editing]
+[authoring]
 author = "Jo Writer"
 ```
+
+The same name signs the comments and replies you add to a Word document's review, and your edits saved to a Word file as tracked changes (see below). Older settings files that put it under `[editing]` still work: the name is read as `[authoring] author`.
 
 The cursor starts under the first section heading, and the document is new and unsaved: save it with **Ctrl+S**.
 

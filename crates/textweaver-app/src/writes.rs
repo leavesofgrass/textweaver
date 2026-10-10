@@ -181,6 +181,12 @@ impl App {
     /// follows once it is written. Saving on the way out to quit waits for
     /// it here, so the quit happens in this call.
     pub(crate) fn start_save(&mut self, save_as: Option<PathBuf>, then: SaveThen) -> Vec<Effect> {
+        // A Word file's edits as tracked changes (crate::changes, B1-t3).
+        if save_as.is_none()
+            && let Some(effects) = self.save_tracked(then.clone())
+        {
+            return effects;
+        }
         let force = std::mem::take(&mut self.overwrite_confirmed);
         // In place, the writer checks the file is still the version this
         // app knows before writing over it.

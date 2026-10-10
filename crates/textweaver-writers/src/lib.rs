@@ -31,6 +31,7 @@ use textweaver_text::Document;
 
 pub mod brf;
 pub mod docx;
+pub mod docx_update;
 pub mod epub;
 mod math;
 pub mod model;

@@ -311,9 +311,15 @@ Edit mode. See [Writing and editing](editing.md).
 - `echo_lines_on_move`, default `true`: speak the line when the cursor moves to another line.
 - `undo_steps`, default `1000`: the most undo steps kept while editing. The oldest are forgotten first. The smallest allowed value is 1.
 - `undo_memory_mb`, default `50`: the most memory, in megabytes, the undo steps may use. The oldest are forgotten first; the newest step is always kept. The smallest allowed value is 1.
-- `author`, default `""`: the author a new document from a template gets (`author = "Jo Writer"`). Empty leaves the author blank. See [Start from a template](editing.md#start-from-a-template).
 
 Your spelling word list is not a setting: it is `words.txt` in the data folder, one word per line. See [Spelling](editing.md#spelling).
+
+### [authoring]
+
+The name textweaver writes on what it adds to a document.
+
+- `author`, default `""`: the name on comments, replies, and changes saved to a Word file (see [Tracked changes and comments](reading.md#tracked-changes-and-comments-ctrlshiftj-or-alta)), and the author of a new document from a template (`author = "Jo Writer"`; see [Start from a template](editing.md#start-from-a-template)). Empty signs comments "textweaver" and leaves a template's author blank. textweaver never takes a name from your computer or your account, and the name never syncs. A settings file with the older `[editing] author` keeps its value: it is read as `[authoring] author`.
+- `track_changes`, default `false`: save edit mode's changes to a Word file (`.docx`) into the file itself as tracked changes, signed with `author` and the time, for a reviewer to accept or reject in Word. Off, a Word file's edits are saved as Markdown under a new name. See [Your own edits as tracked changes](editing.md#your-own-edits-as-tracked-changes).
 
 ### [library]
 
@@ -506,7 +512,7 @@ Optional components: the models, fonts, and voices textweaver can download. See 
 - `mirror`, default `""`: where components come from first, before their public sources: an `https` address or a folder on this computer, holding each component's files under its id. Empty uses the public sources. The `TEXTWEAVER_COMPONENTS_MIRROR` environment variable wins over it. Never put a password or token here.
 - `chooser_shown`, default `false`: set once the first-run list of optional components has been shown, so it is shown once.
 
-Every setting is either **portable**, which syncs, or **machine**, which never does. Portable settings are about you as a reader: the rate, punctuation, verbosity, capitals, the reading aids, the highlight, the theme and colors, the Braille and math codes, the interface language, speed presets, and the announcement level. Machine settings belong to one computer: the speech engine and voice, the volume, the sound device, the access mode and what goes with your screen reader, the NVDA or JAWS key preset, the keyboard layout, the wrap width, undo memory, every path (library folders, the glossary file, engine libraries, the sync folder), the author name written into new documents, and the sync settings themselves. The [settings reference](settings-reference.md) says for each setting whether it syncs.
+Every setting is either **portable**, which syncs, or **machine**, which never does. Portable settings are about you as a reader: the rate, punctuation, verbosity, capitals, the reading aids, the highlight, the theme and colors, the Braille and math codes, the interface language, speed presets, and the announcement level. Machine settings belong to one computer: the speech engine and voice, the volume, the sound device, the access mode and what goes with your screen reader, the NVDA or JAWS key preset, the keyboard layout, the wrap width, undo memory, every path (library folders, the glossary file, engine libraries, the sync folder), the author name written on comments and new documents, and the sync settings themselves. The [settings reference](settings-reference.md) says for each setting whether it syncs.
 
 ## Settings profiles
 
