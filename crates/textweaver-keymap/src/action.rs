@@ -735,6 +735,16 @@ actions! {
     ToggleToolbar = "toggle_toolbar", View,
         "Show or hide the toolbar, the bar of Play, Stop and the reading buttons",
         gui [], term [], shared [];
+    // Focus mode (B2): the bars and the panel fade while the mouse rests.
+    // No key; the View menu and the palette reach it.
+    ToggleFocusMode = "toggle_focus_mode", View,
+        "Turn focus mode on or off: the bars and the panel hide while the mouse rests",
+        gui [], term [], shared [];
+    // Full screen (B2). F11, the usual key on Windows and Linux, is Faster;
+    // Alt+Enter is free in every layer and is full screen in many programs.
+    FullScreen = "full_screen", View,
+        "Full screen on or off: the bars and the panel hide while the mouse rests",
+        gui ["g:Alt+Enter"], term [], shared [];
     CustomizeButtons = "customize_buttons", View,
         "Choose the buttons on the header and the toolbar, and their order",
         gui [], term [], shared [];
@@ -898,6 +908,7 @@ impl ActionId {
                 | ActionId::ShowPreview
                 | ActionId::NextRegion
                 | ActionId::PreviousRegion
+                | ActionId::FullScreen
         )
     }
 

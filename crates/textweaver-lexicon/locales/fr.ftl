@@ -891,6 +891,8 @@ action-contents-panel = Afficher le panneau Sommaire à côté du document et y 
 action-notes-panel = Afficher le panneau Notes à côté du document et y aller, ou le fermer depuis l'intérieur : Entrée va à une note
 action-toggle-header = Afficher ou masquer l'en-tête, la barre de commandes au-dessus du document
 action-toggle-toolbar = Afficher ou masquer la barre d'outils, la barre des boutons de lecture
+action-toggle-focus-mode = Activer ou désactiver le mode concentration : les barres et le panneau se masquent tant que la souris reste immobile
+action-full-screen = Activer ou désactiver le plein écran : les barres et le panneau se masquent tant que la souris reste immobile
 action-customize-buttons = Choisir les boutons de l'en-tête et de la barre d'outils, et leur ordre
 action-show-preview = Afficher ou masquer l'aperçu à côté de l'éditeur en mode édition : le document tel qu'il se lit, mis à jour quand la frappe fait une pause
 action-next-region = Aller à la partie suivante de la fenêtre : l'en-tête, le panneau, le document ou la barre d'outils
@@ -2441,6 +2443,8 @@ setting-gui-toolbar-buttons = Boutons de la barre d'outils
 setting-gui-toolbar-buttons-help = Les boutons de la barre d'outils, dans l'ordre, sous forme d'identifiants de commandes séparés par des virgules. Les indications de touches du lecteur en terminal les suivent. Personnaliser les boutons, dans le menu Affichage, les change un par un.
 setting-gui-auto-hide-menu = Masquer la barre de menus
 setting-gui-auto-hide-menu-help = Windows : masque la barre de menus de la fenêtre jusqu'à ce qu'Alt ou F10 l'affiche. Elle se masque de nouveau quand le menu se ferme. Sans effet sous Linux, dont les menus sont la liste F10, ni sous macOS.
+setting-gui-focus-mode = Mode concentration
+setting-gui-focus-mode-help = Masque les barres et le panneau quand la souris reste immobile quelques secondes. Le texte occupe alors toute la fenêtre. Bouger la souris les affiche ; les touches non. Les lecteurs d'écran trouvent toujours chaque contrôle.
 setting-gui-speak-messages = Dire les messages de textweaver
 setting-gui-speak-messages-help = Quand textweaver lit à voix haute, dire aussi ses messages, la frappe et les déplacements du curseur avec sa voix, pour lire à l'oreille sans lecteur d'écran.
 setting-gui-sidebar = Panneau à côté du document
@@ -3432,6 +3436,10 @@ gui-header-shown = En-tête affiché.
 gui-header-hidden = En-tête masqué. Ses commandes gardent leurs touches.
 gui-toolbar-shown = Barre d'outils affichée.
 gui-toolbar-hidden = Barre d'outils masquée. Ses commandes gardent leurs touches.
+gui-focus-mode-on = Mode concentration activé. Bouger la souris affiche les barres.
+gui-focus-mode-off = Mode concentration désactivé.
+gui-full-screen-on = Plein écran activé.
+gui-full-screen-off = Plein écran désactivé.
 
 ## Personnaliser les boutons (crate::buttons).
 
@@ -3838,6 +3846,8 @@ name-contents-panel = Panneau Sommaire
 name-notes-panel = Panneau Notes
 name-toggle-header = En-tête
 name-toggle-toolbar = Barre d'outils
+name-toggle-focus-mode = Mode concentration
+name-full-screen = Plein écran
 name-customize-buttons = Personnaliser les boutons
 name-show-preview = Afficher l'aperçu
 name-next-region = Région suivante

@@ -378,6 +378,8 @@ impl MenuId {
                 Do(A::PreviousRegion),
                 Do(A::ToggleHeader),
                 Do(A::ToggleToolbar),
+                Do(A::ToggleFocusMode),
+                Do(A::FullScreen),
                 Do(A::CyclePreviewFollow),
                 Do(A::CustomizeButtons),
                 Do(A::ShowPreview),
@@ -652,6 +654,7 @@ pub fn bound_setting(a: ActionId) -> Option<&'static str> {
         A::CyclePreviewFollow => "preview.follow",
         A::ToggleHeader => "gui.header",
         A::ToggleToolbar => "gui.toolbar",
+        A::ToggleFocusMode => "gui.focus_mode",
         A::ShowPreview => "preview.pane",
         _ => return None,
     })

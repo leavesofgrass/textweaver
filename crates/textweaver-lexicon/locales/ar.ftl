@@ -959,6 +959,8 @@ action-contents-panel = إظهار لوحة المحتويات بجانب الم
 action-notes-panel = إظهار لوحة الملاحظات بجانب المستند والانتقال إليها، أو إغلاقها من داخلها: Enter ينتقل إلى ملاحظة
 action-toggle-header = إظهار الترويسة أو إخفاؤها، شريط الأوامر فوق المستند
 action-toggle-toolbar = إظهار شريط الأدوات أو إخفاؤه، شريط أزرار القراءة
+action-toggle-focus-mode = تشغيل وضع التركيز أو إيقافه: تختفي الأشرطة واللوحة ما دامت الفأرة ساكنة
+action-full-screen = تشغيل ملء الشاشة أو إيقافه: تختفي الأشرطة واللوحة ما دامت الفأرة ساكنة
 action-customize-buttons = اختيار أزرار الترويسة وشريط الأدوات وترتيبها
 action-show-preview = إظهار المعاينة بجانب المحرر أو إخفاؤها في وضع التحرير: المستند كما يُقرأ، ويُحدَّث عند توقف الكتابة
 action-next-region = الانتقال إلى الجزء التالي من النافذة: الترويسة، أو اللوحة، أو المستند، أو شريط الأدوات
@@ -2617,6 +2619,8 @@ setting-gui-toolbar-buttons = أزرار شريط الأدوات
 setting-gui-toolbar-buttons-help = أزرار شريط الأدوات بالترتيب، معرّفات أوامر تفصل بينها فواصل. تتبعها تلميحات المفاتيح في قارئ الطرفية. يغيّرها أمر تخصيص الأزرار في قائمة عرض زرًا زرًا.
 setting-gui-auto-hide-menu = إخفاء شريط القوائم
 setting-gui-auto-hide-menu-help = Windows: يخفي شريط قوائم النافذة حتى يُظهره Alt أو F10، ويختفي مرة أخرى عند إغلاق القائمة. لا أثر له على Linux، حيث القوائم هي قائمة F10، ولا على macOS.
+setting-gui-focus-mode = وضع التركيز
+setting-gui-focus-mode-help = يخفي الأشرطة واللوحة عندما تسكن الفأرة بضع ثوانٍ. يشغل النص حينها النافذة كلها. تحريك الفأرة يُظهرها، والمفاتيح لا تُظهرها. تظل قارئات الشاشة تجد كل عنصر تحكم.
 setting-gui-speak-messages = نطق رسائل textweaver
 setting-gui-speak-messages-help = عندما يقرأ textweaver بصوت عالٍ، ينطق أيضًا رسائله والكتابة وحركات المؤشر بصوته، للقراءة بالسمع دون قارئ شاشة.
 setting-gui-sidebar = اللوحة بجانب المستند
@@ -3741,6 +3745,10 @@ gui-header-shown = الترويسة ظاهرة.
 gui-header-hidden = الترويسة مخفية. تحتفظ أوامرها بمفاتيحها.
 gui-toolbar-shown = شريط الأدوات ظاهر.
 gui-toolbar-hidden = شريط الأدوات مخفي. تحتفظ أوامره بمفاتيحها.
+gui-focus-mode-on = وضع التركيز مُشغَّل. تحريك الفأرة يُظهر الأشرطة.
+gui-focus-mode-off = وضع التركيز متوقف.
+gui-full-screen-on = ملء الشاشة مُشغَّل.
+gui-full-screen-off = ملء الشاشة متوقف.
 
 ## تخصيص الأزرار (crate::buttons).
 
@@ -4172,6 +4180,8 @@ name-contents-panel = لوحة المحتويات
 name-notes-panel = لوحة الملاحظات
 name-toggle-header = الترويسة
 name-toggle-toolbar = شريط الأدوات
+name-toggle-focus-mode = وضع التركيز
+name-full-screen = ملء الشاشة
 name-customize-buttons = تخصيص الأزرار
 name-show-preview = إظهار المعاينة
 name-next-region = المنطقة التالية

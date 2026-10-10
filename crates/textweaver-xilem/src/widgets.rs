@@ -27,7 +27,7 @@ use masonry::core::{
     TextEvent, Update, UpdateCtx, Widget, WidgetMut, WidgetPod,
 };
 use masonry::imaging::Painter;
-use masonry::kurbo::{Axis, Point, RoundedRect, Size, Stroke};
+use masonry::kurbo::{Axis, Point, Rect, RoundedRect, Size, Stroke};
 use masonry::layout::{LayoutSize, LenReq, Length, SizeDef};
 use masonry::widgets::Label;
 use textweaver_app::a11y::Priority;
@@ -267,6 +267,12 @@ pub struct Region {
     role: Role,
     label: String,
     hidden: bool,
+    /// Veiled by focus mode ([`crate::bars::Frame::set_veiled`]): nothing
+    /// of it is drawn, while it keeps its place, its bounds, the focus
+    /// order and its nodes in the accessibility tree.
+    veiled: bool,
+    /// The clip path the veil set is in place.
+    clipped: bool,
 }
 
 impl Region {
@@ -281,6 +287,17 @@ impl Region {
             role,
             label: label.into(),
             hidden: false,
+            veiled: false,
+            clipped: false,
+        }
+    }
+
+    /// Veils the region (focus mode) or lifts the veil: visual only, so
+    /// nothing changes for a screen reader or the keyboard.
+    pub fn set_veiled(this: &mut WidgetMut<'_, Self>, veiled: bool) {
+        if this.widget.veiled != veiled {
+            this.widget.veiled = veiled;
+            this.ctx.request_layout();
         }
     }
 
@@ -331,6 +348,26 @@ impl Widget for Region {
         ctx.run_layout(&mut self.child, size);
         ctx.place_child(&mut self.child, Point::ORIGIN);
         ctx.derive_baselines(&self.child);
+        // The veil clips the children's drawing away; their bounds, and so
+        // their nodes, stay where they are.
+        if self.veiled {
+            ctx.set_clip_path(Rect::ZERO);
+        } else if self.clipped {
+            ctx.clear_clip_path();
+        }
+        self.clipped = self.veiled;
+    }
+
+    fn pre_paint(
+        &mut self,
+        ctx: &mut PaintCtx<'_>,
+        props: &PropertiesRef<'_>,
+        p: &mut Painter<'_>,
+    ) {
+        // The card (background, border, shadow), unless veiled.
+        if !self.veiled {
+            masonry::core::pre_paint(ctx, props, p);
+        }
     }
 
     fn paint(&mut self, _ctx: &mut PaintCtx<'_>, _props: &PropertiesRef<'_>, _p: &mut Painter<'_>) {

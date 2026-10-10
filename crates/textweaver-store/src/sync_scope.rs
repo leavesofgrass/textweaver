@@ -267,6 +267,8 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     ("gui.announce", Machine),
     // Whether this computer's window hides its menu bar.
     ("gui.auto_hide_menu", Machine),
+    // Whether this computer's window fades its bars while the mouse rests.
+    ("gui.focus_mode", Machine),
     // Whether this computer's window voices its messages: it depends on
     // whether a screen reader runs here.
     ("gui.speak_messages", Machine),

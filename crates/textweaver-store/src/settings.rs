@@ -1788,6 +1788,12 @@ pub struct GuiSettings {
     /// shows the menus only as the F10 list, and macOS keeps them at the
     /// top of the screen. A saved `false` is kept.
     pub auto_hide_menu: bool,
+    /// Focus mode: the header, the toolbar, the status bar and the panel
+    /// fade from view when the mouse has been still a few seconds, and
+    /// come back when it moves. Visual only: the controls stay in the
+    /// accessibility tree and the focus order, and keys never show them.
+    /// Off by default; full screen does the same while it lasts.
+    pub focus_mode: bool,
     /// Speak textweaver's messages with its own voice as well as sending
     /// them to the screen reader (Wave 9, W9b-f): for someone who reads by
     /// ear without a screen reader. Off by default; with it on, "textweaver
@@ -1824,6 +1830,7 @@ impl Default for GuiSettings {
                 .collect(),
             announce: GuiAnnounce::default(),
             auto_hide_menu: true,
+            focus_mode: false,
             speak_messages: false,
             sidebar: GuiSidebar::default(),
             window: None,

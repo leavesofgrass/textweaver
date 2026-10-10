@@ -863,6 +863,8 @@ action-contents-panel = Mostrar el panel Contenido junto al documento e ir a él
 action-notes-panel = Mostrar el panel Notas junto al documento e ir a él, o cerrarlo desde dentro: Intro va a una nota
 action-toggle-header = Mostrar u ocultar la cabecera, la barra de comandos sobre el documento
 action-toggle-toolbar = Mostrar u ocultar la barra de herramientas, la barra de los botones de lectura
+action-toggle-focus-mode = Activar o desactivar el modo enfoque: las barras y el panel se ocultan mientras el ratón está quieto
+action-full-screen = Activar o desactivar la pantalla completa: las barras y el panel se ocultan mientras el ratón está quieto
 action-customize-buttons = Elegir los botones de la cabecera y de la barra de herramientas, y su orden
 action-show-preview = Mostrar u ocultar la vista previa junto al editor en el modo de edición: el documento tal como se lee, actualizado al hacer una pausa al escribir
 action-next-region = Ir a la siguiente parte de la ventana: la cabecera, el panel, el documento o la barra de herramientas
@@ -2413,6 +2415,8 @@ setting-gui-toolbar-buttons = Botones de la barra de herramientas
 setting-gui-toolbar-buttons-help = Los botones de la barra de herramientas, en orden, como identificadores de comandos separados por comas. Las pistas de teclas del lector de terminal los siguen. Personalizar botones, en el menú Ver, los cambia uno a uno.
 setting-gui-auto-hide-menu = Ocultar la barra de menús
 setting-gui-auto-hide-menu-help = Windows: oculta la barra de menús de la ventana hasta que Alt o F10 la muestra. Se oculta de nuevo al cerrar el menú. Sin efecto en Linux, cuyos menús son la lista de F10, ni en macOS.
+setting-gui-focus-mode = Modo enfoque
+setting-gui-focus-mode-help = Oculta las barras y el panel cuando el ratón está quieto unos segundos. El texto ocupa entonces toda la ventana. Mover el ratón los muestra; las teclas no. Los lectores de pantalla siguen encontrando cada control.
 setting-gui-speak-messages = Decir los mensajes de textweaver
 setting-gui-speak-messages-help = Cuando textweaver lee en voz alta, decir también sus mensajes, lo que se escribe y los movimientos del cursor con su voz, para leer de oído sin lector de pantalla.
 setting-gui-sidebar = Panel junto al documento
@@ -3404,6 +3408,10 @@ gui-header-shown = Cabecera mostrada.
 gui-header-hidden = Cabecera oculta. Sus comandos conservan sus teclas.
 gui-toolbar-shown = Barra de herramientas mostrada.
 gui-toolbar-hidden = Barra de herramientas oculta. Sus comandos conservan sus teclas.
+gui-focus-mode-on = Modo enfoque activado. Mover el ratón muestra las barras.
+gui-focus-mode-off = Modo enfoque desactivado.
+gui-full-screen-on = Pantalla completa activada.
+gui-full-screen-off = Pantalla completa desactivada.
 
 ## Personalizar botones (crate::buttons).
 
@@ -3810,6 +3818,8 @@ name-contents-panel = Panel Contenido
 name-notes-panel = Panel Notas
 name-toggle-header = Cabecera
 name-toggle-toolbar = Barra de herramientas
+name-toggle-focus-mode = Modo enfoque
+name-full-screen = Pantalla completa
 name-customize-buttons = Personalizar botones
 name-show-preview = Mostrar vista previa
 name-next-region = Siguiente región

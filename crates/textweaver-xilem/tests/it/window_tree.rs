@@ -1516,6 +1516,82 @@ fn the_header_and_toolbar_can_be_hidden() {
     assert_eq!(names.len(), 5, "{names:?}");
 }
 
+/// Focus mode (B2) hides on screen only: once the mouse has rested, the
+/// document takes the window, and every button and the panel's list keep
+/// their nodes, names and bounds inside the window, in the same order, and
+/// still take the focus. Keys, even those that move the focus, leave the
+/// veil down; a mouse move lifts it; with focus mode off it stays up.
+#[test]
+fn focus_mode_hides_the_bars_on_screen_only() {
+    use std::time::Instant;
+    use textweaver_app::keymap::ActionId;
+    use textweaver_app::store::GuiSidebar;
+    use textweaver_xilem::bars::{FRAME, Frame, VEIL_AFTER};
+    use textweaver_xilem::sidebar::{self, SidebarShown};
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    app.update_settings(|s| s.gui.sidebar = GuiSidebar::Contents)
+        .unwrap();
+    let mut h = harness(&app);
+    let _ = sidebar::sync(
+        &app,
+        &Palette::galaxy(),
+        &mut SidebarShown::default(),
+        &mut h,
+    );
+    let _ = h.redraw();
+    let seen = |h: &TestHarness<Root>| {
+        (
+            bar_buttons_of(h, Role::Banner),
+            bar_buttons_of(h, Role::Toolbar),
+            names_of(h, Role::ListBox),
+            names_of(h, Role::Status).len(),
+        )
+    };
+    let shown = seen(&h);
+    assert_eq!(shown.0.len() + shown.1.len(), 11, "{shown:?}");
+    assert!(!shown.2.is_empty(), "the Contents list");
+    let doc_shown = h.get_widget(DOC).ctx().bounding_box();
+
+    // Off, a long rest changes nothing.
+    let later = Instant::now() + VEIL_AFTER;
+    h.edit_widget(FRAME, |mut f| Frame::rest(&mut f, false, later));
+    assert!(!h.get_widget(FRAME).inner().is_veiled());
+    // On, the veil comes down once the mouse has rested.
+    h.edit_widget(FRAME, |mut f| Frame::rest(&mut f, true, Instant::now()));
+    assert!(!h.get_widget(FRAME).inner().is_veiled(), "not yet");
+    h.edit_widget(FRAME, |mut f| Frame::rest(&mut f, true, later));
+    let _ = h.redraw();
+    assert!(h.get_widget(FRAME).inner().is_veiled());
+    assert_eq!(seen(&h), shown, "the same controls, names and bounds");
+    let window = masonry::kurbo::Rect::new(0.0, 0.0, 1100.0, 780.0);
+    for (name, b) in shown.0.iter().chain(&shown.1) {
+        assert!(
+            b.x0 >= -0.5 && b.y0 >= -0.5 && b.x1 <= window.x1 + 0.5 && b.y1 <= window.y1 + 0.5,
+            "{name:?} at {b:?} leaves the window"
+        );
+    }
+    let doc = h.get_widget(DOC).ctx().bounding_box();
+    assert!(
+        doc.y0 < doc_shown.y0 && doc.x0 < doc_shown.x0 && doc.height() > doc_shown.height(),
+        "the document {doc:?} takes the window (was {doc_shown:?})"
+    );
+
+    // Hidden buttons still take the focus, and keys leave the veil down.
+    let play = h.get_widget(gui::PLAY).id();
+    h.focus_on(Some(play));
+    assert_eq!(h.focused_widget().map(|w| w.id()), Some(play));
+    let _ = press(&mut h, &app, ActionId::NextRegion, true);
+    let _ = h.redraw();
+    assert!(h.get_widget(FRAME).inner().is_veiled(), "keys never show");
+
+    // A mouse move lifts it.
+    h.mouse_move((400.0, 300.0));
+    let _ = h.redraw();
+    assert!(!h.get_widget(FRAME).inner().is_veiled());
+    assert_eq!(h.get_widget(DOC).ctx().bounding_box(), doc_shown);
+}
+
 /// The review harness's newer views (W8c-x) draw at the smallest review
 /// size: edit mode, the window with no document, the ruler alone, and
 /// each panel (the Notes panel with its sample notes).

@@ -34,7 +34,7 @@ use masonry_winit::app::{
     WindowId,
 };
 use masonry_winit::winit::dpi::{LogicalSize, PhysicalPosition};
-use masonry_winit::winit::window::Window as WinitWindow;
+use masonry_winit::winit::window::{Fullscreen, Window as WinitWindow};
 use textweaver_app::a11y::{Announcer as AppAnnouncer, Importance, Priority};
 use textweaver_app::buttons::{Bar, bar_actions};
 use textweaver_app::core::CharRange;
@@ -124,6 +124,9 @@ const HOLD_TICK: Duration = Duration::from_millis(200);
 /// How often the window looks again while a menu bar a key showed waits
 /// to hide (`gui.auto_hide_menu`).
 const MENU_TICK: Duration = Duration::from_millis(150);
+
+/// How often the window looks at the mouse's rest while focus mode is on.
+const VEIL_TICK: Duration = Duration::from_millis(500);
 /// Misspelled words are marked once typing pauses this long.
 const SPELL_PAUSE: Duration = Duration::from_millis(500);
 /// Misspelled words are marked in documents up to this many chars (about
@@ -2190,6 +2193,8 @@ impl Gui {
             | ActionId::NotesPanel
             | ActionId::ToggleHeader
             | ActionId::ToggleToolbar
+            | ActionId::ToggleFocusMode
+            | ActionId::FullScreen
             | ActionId::ShowPreview
             | ActionId::NextRegion
             | ActionId::PreviousRegion => true,
@@ -2274,6 +2279,53 @@ impl Gui {
         self.app
             .announce_as(&said, Priority::Polite, Importance::Result);
         self.refresh(ctx);
+    }
+
+    /// View, Focus mode (`[gui] focus_mode`): turns it on or off and says
+    /// so; the bars and the panel then hide after the mouse rests.
+    fn focus_mode_key(&mut self, ctx: &mut DriverCtx<'_>) {
+        let on = !self.app.settings().gui.focus_mode;
+        let _ = self.app.update_settings(|s| s.gui.focus_mode = on);
+        self.wake_veil(ctx);
+        let key = if on {
+            "gui-focus-mode-on"
+        } else {
+            "gui-focus-mode-off"
+        };
+        let said = self.app.catalog().tr(key);
+        self.app
+            .announce_as(&said, Priority::Polite, Importance::Result);
+        self.refresh(ctx);
+    }
+
+    /// View, Full screen (Alt+Enter): the window fills the screen, and
+    /// the bars and the panel hide after the mouse rests, as in focus mode.
+    fn full_screen_key(&mut self, ctx: &mut DriverCtx<'_>) {
+        let window = ctx.window(self.window_id).handle();
+        let on = window.fullscreen().is_none();
+        window.set_fullscreen(on.then_some(Fullscreen::Borderless(None)));
+        self.wake_veil(ctx);
+        let key = if on {
+            "gui-full-screen-on"
+        } else {
+            "gui-full-screen-off"
+        };
+        let said = self.app.catalog().tr(key);
+        self.app
+            .announce_as(&said, Priority::Polite, Importance::Result);
+        self.refresh(ctx);
+    }
+
+    /// Focus mode applies: the setting is on, or the window is full screen.
+    fn veil_active(&self, ctx: &mut DriverCtx<'_>) -> bool {
+        self.app.settings().gui.focus_mode
+            || ctx.window(self.window_id).handle().fullscreen().is_some()
+    }
+
+    /// Lifts focus mode's veil and starts the rest over.
+    fn wake_veil(&mut self, ctx: &mut DriverCtx<'_>) {
+        ctx.render_root(self.window_id)
+            .edit_widget_with_tag(FRAME, |mut f| Frame::wake(&mut f));
     }
 
     /// F6 (`forward`) or Shift+F6: the focus moves to the next region
@@ -2368,6 +2420,8 @@ impl Gui {
             ActionId::NotesPanel => self.panel_key(ctx, textweaver_app::Panel::Notes),
             ActionId::ToggleHeader => self.bar_key(ctx, true),
             ActionId::ToggleToolbar => self.bar_key(ctx, false),
+            ActionId::ToggleFocusMode => self.focus_mode_key(ctx),
+            ActionId::FullScreen => self.full_screen_key(ctx),
             ActionId::ShowPreview => self.preview_key(ctx),
             ActionId::NextRegion => self.region_key(ctx, true),
             ActionId::PreviousRegion => self.region_key(ctx, false),
@@ -5044,6 +5098,16 @@ impl AppDriver for Gui {
         if self.native.as_ref().is_some_and(|n| n.waiting()) {
             // A menu bar a key showed hides once its menu closes.
             wait = wait.min(MENU_TICK);
+        }
+        // Focus mode: the veil comes down once the mouse has rested (the
+        // frame lifts it on a move), and goes when focus mode is off.
+        let active = self.veil_active(ctx);
+        ctx.render_root(self.window_id)
+            .edit_widget_with_tag(FRAME, |mut f| Frame::rest(&mut f, active, Instant::now()));
+        if active {
+            // shortcut: polls while focus mode is on; a frame action on
+            // each move could schedule the tick instead if this costs.
+            wait = wait.min(VEIL_TICK);
         }
         self.tick_ms.store(
             u64::try_from(wait.as_millis()).unwrap_or(u64::MAX).max(10),

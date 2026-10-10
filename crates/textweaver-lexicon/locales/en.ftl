@@ -868,6 +868,8 @@ action-contents-panel = Show the Contents panel beside the document and go to it
 action-notes-panel = Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note
 action-toggle-header = Show or hide the header, the bar of Open, Font, Edit, Settings and Commands
 action-toggle-toolbar = Show or hide the toolbar, the bar of Play, Stop and the reading buttons
+action-toggle-focus-mode = Turn focus mode on or off: the bars and the panel hide while the mouse rests
+action-full-screen = Full screen on or off: the bars and the panel hide while the mouse rests
 action-customize-buttons = Choose the buttons on the header and the toolbar, and their order
 action-show-preview = Show or hide the preview beside the editor in edit mode: the document as it reads, updated when typing pauses
 action-next-region = Move to the next part of the window: the header, the panel, the document, or the toolbar
@@ -2439,6 +2441,8 @@ setting-gui-toolbar-buttons = Toolbar buttons
 setting-gui-toolbar-buttons-help = The toolbar's buttons, in order, as command ids separated by commas. The terminal reader's key hints follow them. Customize buttons in the View menu changes them one at a time.
 setting-gui-auto-hide-menu = Hide the menu bar
 setting-gui-auto-hide-menu-help = Windows: hide the window's menu bar until Alt or F10 shows it. It hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS.
+setting-gui-focus-mode = Focus mode
+setting-gui-focus-mode-help = Hide the bars and the panel when the mouse rests a few seconds. The text then has the whole window. Moving the mouse shows them; keys do not. Screen readers still find every control.
 setting-gui-speak-messages = Speak textweaver's messages
 setting-gui-speak-messages-help = When textweaver reads aloud, also say its messages, typing and cursor moves in its voice, for reading by ear without a screen reader.
 setting-gui-sidebar = Panel beside the document
@@ -3450,6 +3454,10 @@ gui-header-shown = Header shown.
 gui-header-hidden = Header hidden. Its commands keep their keys.
 gui-toolbar-shown = Toolbar shown.
 gui-toolbar-hidden = Toolbar hidden. Its commands keep their keys.
+gui-focus-mode-on = Focus mode on. Moving the mouse shows the bars.
+gui-focus-mode-off = Focus mode off.
+gui-full-screen-on = Full screen on.
+gui-full-screen-off = Full screen off.
 
 ## Customize buttons: the header's and the toolbar's buttons (crate::buttons).
 
@@ -3858,6 +3866,8 @@ name-contents-panel = Contents panel
 name-notes-panel = Notes panel
 name-toggle-header = Header
 name-toggle-toolbar = Toolbar
+name-toggle-focus-mode = Focus mode
+name-full-screen = Full screen
 name-customize-buttons = Customize buttons
 name-show-preview = Show preview
 name-next-region = Next region
