@@ -1219,6 +1219,139 @@ fn harness_at(app: &textweaver_app::App, size: (u32, u32), scale: f64) -> TestHa
     h
 }
 
+/// The buttons inside the first region with `role` (the header's Banner,
+/// the Toolbar), in tree order, which is the Tab order: each name and
+/// its bounds.
+fn bar_buttons_of(h: &TestHarness<Root>, role: Role) -> Vec<(String, masonry::accesskit::Rect)> {
+    let mut stack = vec![h.access_tree().state().root()];
+    let mut region = None;
+    while let Some(n) = stack.pop() {
+        if n.role() == role {
+            region = Some(n);
+            break;
+        }
+        stack.extend(n.children());
+    }
+    let mut out = Vec::new();
+    let Some(region) = region else {
+        return out;
+    };
+    let mut stack = vec![region];
+    while let Some(n) = stack.pop() {
+        if n.role() == Role::Button
+            && let Some(b) = n.bounding_box()
+        {
+            out.push((n.label().unwrap_or_default(), b));
+        }
+        let mut children: Vec<_> = n.children().collect();
+        children.reverse();
+        stack.extend(children);
+    }
+    out
+}
+
+/// Customize buttons (B1-cb, B1-g2c): with custom sets (a long header, a
+/// toolbar without Play, and an empty toolbar) at every review size,
+/// every button is inside the window and at least 24 by 24, and the Tab
+/// order follows what is drawn: row by row, left to right in each bar.
+#[test]
+fn custom_button_sets_fit_every_review_size_in_drawn_order() {
+    use textweaver_app::buttons::Bar;
+    use textweaver_app::keymap::ActionId;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    for a in [
+        ActionId::ListBookmarks,
+        ActionId::AddNote,
+        ActionId::ListNotes,
+        ActionId::StudyCards,
+        ActionId::SelfTest,
+    ] {
+        let _ = app.add_button(Bar::Header, a);
+    }
+    let _ = app.remove_button(Bar::Toolbar, 0);
+    assert_eq!(app.bar_buttons(Bar::Header).len(), 10);
+    assert!(!app.bar_buttons(Bar::Toolbar).contains(&ActionId::PlayPause));
+    let long = app.bar_buttons(Bar::Toolbar).len();
+    for set in ["long header, no Play", "empty toolbar"] {
+        if set == "empty toolbar" {
+            for _ in 0..long {
+                let _ = app.remove_button(Bar::Toolbar, 0);
+            }
+            assert!(app.bar_buttons(Bar::Toolbar).is_empty());
+        }
+        for (size, scale) in [
+            ((1100, 780), 1.0),
+            ((960, 540), 1.0),
+            ((683, 384), 2.0),
+            ((420, 320), 1.0),
+        ] {
+            let h = harness_at(&app, size, scale);
+            let at = format!("{set}, {}x{} at {}%", size.0, size.1, scale * 100.0);
+            let window = masonry::kurbo::Rect::new(
+                0.0,
+                0.0,
+                f64::from(size.0) * scale,
+                f64::from(size.1) * scale,
+            );
+            for role in [Role::Banner, Role::Toolbar] {
+                let buttons = bar_buttons_of(&h, role);
+                for (name, b) in &buttons {
+                    assert!(
+                        b.x0 >= window.x0 - 0.5
+                            && b.y0 >= window.y0 - 0.5
+                            && b.x1 <= window.x1 + 0.5
+                            && b.y1 <= window.y1 + 0.5,
+                        "{at}: {name:?} at {b:?} leaves the window {window:?}"
+                    );
+                    assert!(
+                        b.width() >= 24.0 * scale - 0.5 && b.height() >= 24.0 * scale - 0.5,
+                        "{at}: {name:?} is smaller than 24 by 24: {b:?}"
+                    );
+                }
+                for pair in buttons.windows(2) {
+                    let ((a, ra), (b, rb)) = (&pair[0], &pair[1]);
+                    let same_row = (ra.y0 - rb.y0).abs() < 2.0;
+                    assert!(
+                        (same_row && ra.x0 < rb.x0) || rb.y0 > ra.y0 + 2.0,
+                        "{at}: Tab goes from {a:?} at {ra:?} to {b:?} at {rb:?}"
+                    );
+                }
+            }
+            let header = bar_buttons_of(&h, Role::Banner);
+            assert!(
+                header.iter().any(|(n, _)| n == "Commands"),
+                "{at}: Commands stays: {header:?}"
+            );
+        }
+    }
+}
+
+/// A change in Customize buttons shows at once (B1-g2c): the window
+/// builds its bars again from the app's lists, in the order given.
+#[test]
+fn the_bars_are_built_again_when_their_buttons_change() {
+    use textweaver_app::buttons::Bar;
+    use textweaver_app::keymap::ActionId;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness_at(&app, (1100, 780), 1.0);
+    let before = bar_buttons_of(&h, Role::Toolbar).len();
+    assert_eq!(before, app.bar_buttons(Bar::Toolbar).len());
+    let _ = app.add_button(Bar::Toolbar, ActionId::ListNotes);
+    let _ = app.move_bar_button(Bar::Toolbar, before, true);
+    let _ = app.remove_button(Bar::Header, 0);
+    let built = gui::rebuild_bars(&mut h, &app, false, false);
+    let _ = h.redraw();
+    assert!(!built.differ_from(&app), "the drawn bars are the app's");
+    assert_eq!(built.toolbar.len(), before + 1);
+    let toolbar = bar_buttons_of(&h, Role::Toolbar);
+    assert_eq!(toolbar.len(), before + 1);
+    let header = bar_buttons_of(&h, Role::Banner);
+    assert_eq!(header.len(), app.bar_buttons(Bar::Header).len());
+    assert!(!header.iter().any(|(n, _)| n == "Open"), "{header:?}");
+}
+
 /// The bounds test (W9b-n): at the review sizes, from the largest to a
 /// 1366 by 768 laptop at 200 percent and the smallest window, every
 /// control is inside the window and at least 24 by 24 (WCAG 2.5.8), the

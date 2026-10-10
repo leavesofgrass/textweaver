@@ -87,6 +87,10 @@ pub const POSITION: WidgetTag<Label> = WidgetTag::named("tw-position");
 pub const HEADER: WidgetTag<Region> = WidgetTag::named("tw-header");
 /// The toolbar panel.
 pub const TOOLBAR: WidgetTag<Region> = WidgetTag::named("tw-toolbar");
+/// The header's buttons.
+pub const HEADER_BUTTONS: WidgetTag<Flow> = WidgetTag::named("tw-header-buttons");
+/// The toolbar's buttons.
+pub const TOOLBAR_BUTTONS: WidgetTag<Flow> = WidgetTag::named("tw-toolbar-buttons");
 /// The page behind the panels.
 pub const MAIN: WidgetTag<Region> = WidgetTag::named("tw-main");
 /// The field of an open prompt.
@@ -338,13 +342,81 @@ struct FindState {
     status: String,
 }
 
-/// The widget tree's toolbar buttons and what they do.
-struct Buttons {
-    by_id: HashMap<WidgetId, ActionId>,
+/// The widget tree's bar buttons and what they do.
+#[derive(Debug, Default)]
+pub struct Buttons {
+    /// Each button's command.
+    pub by_id: HashMap<WidgetId, ActionId>,
     /// The header's buttons, in order (F6 lands on the first).
-    header: Vec<WidgetId>,
+    pub header: Vec<WidgetId>,
     /// The toolbar's buttons, in order (F6 lands on Play).
-    toolbar: Vec<WidgetId>,
+    pub toolbar: Vec<WidgetId>,
+}
+
+impl Buttons {
+    /// The commands of `ids`, in order.
+    fn actions(&self, ids: &[WidgetId]) -> Vec<ActionId> {
+        ids.iter()
+            .filter_map(|i| self.by_id.get(i).copied())
+            .collect()
+    }
+
+    /// True when the app's bars (`[gui] header_buttons` and
+    /// `toolbar_buttons`) are not the buttons drawn.
+    pub fn differ_from(&self, app: &App) -> bool {
+        self.actions(&self.header) != app.bar_buttons(Bar::Header)
+            || self.actions(&self.toolbar) != app.bar_buttons(Bar::Toolbar)
+    }
+}
+
+/// Where Commands is among a bar's `actions`: the button a short window
+/// keeps, since it lists every command, those hidden too.
+fn commands_at(actions: &[ActionId]) -> Option<usize> {
+    actions.iter().position(|a| *a == ActionId::CommandPalette)
+}
+
+/// The toolbar's buttons from `actions`, with Slower and Faster at the
+/// right end when they are not first.
+fn toolbar_push_right(actions: &[ActionId]) -> Option<usize> {
+    actions
+        .iter()
+        .position(|a| matches!(a, ActionId::RateDown | ActionId::RateUp))
+        .filter(|&i| i > 0)
+}
+
+/// Builds the header's and the toolbar's buttons again from the app's
+/// lists (B1-g2c): the window shows a change made in Customize buttons at
+/// once, not only when it next opens. Labels follow `reading` (Play or
+/// Pause) and `editing` (Edit or Finish editing). Returns the new buttons.
+pub fn rebuild_bars(host: &mut impl Host, app: &App, reading: bool, editing: bool) -> Buttons {
+    let c = app.catalog();
+    let mut ids = HashMap::new();
+    let make = |actions: &[ActionId], ids: &mut HashMap<WidgetId, ActionId>| {
+        actions
+            .iter()
+            .map(|&a| {
+                let b = bar_button(&button_label(&c, a, reading, editing), a, Some(app), ids);
+                (b.id(), b)
+            })
+            .unzip::<_, _, Vec<WidgetId>, Vec<NewWidget<ActionButton>>>()
+    };
+    let header_actions = app.bar_buttons(Bar::Header);
+    let toolbar_actions = app.bar_buttons(Bar::Toolbar);
+    let (header, header_buttons) = make(&header_actions, &mut ids);
+    let (toolbar, toolbar_buttons) = make(&toolbar_actions, &mut ids);
+    host.edit(HEADER_BUTTONS, |mut f| {
+        Flow::set_buttons(&mut f, header_buttons, None);
+        Flow::set_keep(&mut f, commands_at(&header_actions));
+    });
+    let push = toolbar_push_right(&toolbar_actions);
+    host.edit(TOOLBAR_BUTTONS, |mut f| {
+        Flow::set_buttons(&mut f, toolbar_buttons, push);
+    });
+    Buttons {
+        by_id: ids,
+        header,
+        toolbar,
+    }
 }
 
 /// The driver: the app and the window's state.
@@ -716,10 +788,14 @@ pub fn build_tree(
     )
     // In a short, narrow window the buttons that do not fit are hidden;
     // Commands stays, and lists every command, those hidden too.
-    .with_keep_last();
-    let header = NewWidget::new(Region::new(NewWidget::new(header), Role::Banner, ""))
-        .with_tag(HEADER)
-        .with_props(panel(p, 10.0, 16.0));
+    .with_keep(commands_at(&bar_actions(&gui, Bar::Header)));
+    let header = NewWidget::new(Region::new(
+        NewWidget::new(header).with_tag(HEADER_BUTTONS),
+        Role::Banner,
+        "",
+    ))
+    .with_tag(HEADER)
+    .with_props(panel(p, 10.0, 16.0));
     // Widget ids are handed out in order, so sorting them is the order the
     // buttons were made in, which is their order on screen (for F6).
     let in_order = |ids: &HashMap<WidgetId, ActionId>, skip: &[WidgetId]| {
@@ -751,20 +827,18 @@ pub fn build_tree(
     // Toolbar: Play/Pause is the primary action; Slower and Faster sit at
     // the right end.
     let toolbar_actions = bar_actions(&gui, Bar::Toolbar);
-    let rate = toolbar_actions
-        .iter()
-        .position(|a| matches!(a, ActionId::RateDown | ActionId::RateUp));
+    let rate = toolbar_push_right(&toolbar_actions);
     let mut toolbar = Flow::new(
         toolbar_actions
             .iter()
             .map(|&a| bar_button(&l(a), a, app, &mut ids))
             .collect(),
     );
-    if let Some(i) = rate.filter(|&i| i > 0) {
+    if let Some(i) = rate {
         toolbar = toolbar.with_push_right(i);
     }
     let toolbar = NewWidget::new(Region::new(
-        NewWidget::new(toolbar),
+        NewWidget::new(toolbar).with_tag(TOOLBAR_BUTTONS),
         Role::Toolbar,
         c.tr("gui-toolbar-reading"),
     ))
@@ -1801,6 +1875,15 @@ impl Gui {
             }
             ctx.render_root(self.window_id)
                 .edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::release(&mut a));
+        }
+        // The bars' buttons changed (Customize buttons): built again.
+        if self.buttons.differ_from(&self.app) {
+            let (reading, editing) = (self.shown.reading, self.shown.edit_button);
+            let root = ctx.render_root(self.window_id);
+            self.buttons = rebuild_bars(root, &self.app, reading, editing);
+            if self.log {
+                crate::log::line("bars: buttons rebuilt");
+            }
         }
         // Single-key shortcuts turned on or off: each button names its key.
         let char_keys = self.app.keymap().character_keys();
