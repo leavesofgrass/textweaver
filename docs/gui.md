@@ -1,6 +1,6 @@
 # The textweaver app
 
-textweaver comes in two forms: the terminal reader, `textweaver`, and the textweaver app, the graphical version, `textweaver-gui`. They share the documents, the keys, the settings, the notes, and the voices. This page covers what is specific to the app: its screen, menus, dialogs, panels, and announcements. Where this guide says "the window", it means the app's own window; "the graphical version" and "the app" mean the program.
+textweaver comes in two forms: the terminal reader, `tw`, and the textweaver app, the graphical version, `textweaver-gui`. They share the documents, the keys, the settings, the notes, and the voices. This page covers what is specific to the app: its screen, menus, dialogs, panels, and announcements. Where this guide says "the window", it means the app's own window; "the graphical version" and "the app" mean the program.
 
 The app is written entirely in Rust (Xilem's Masonry widgets, Vello drawing, Parley text, and AccessKit for screen readers). It reads and it edits; see [Editing](#editing).
 
@@ -14,7 +14,7 @@ textweaver-gui path/to/document.md
 
 With no document, it opens empty and says which key opens one (Ctrl+O), at every announcement level but off.
 
-The first time textweaver runs (no settings yet), the app says a short welcome with the five keys that get you reading (open, play and pause, stop, the command palette, and help), and on Windows the keys that show the hidden menu bar (Alt or F10), before the hint that no document is open. Then come at most three steps, one at a time, each skipped with Escape: the language list, only when the system's language is not one of the six textweaver speaks (when it is, textweaver uses it without asking); if a screen reader is running, textweaver reads documents aloud and leaves its messages to the screen reader, and says so in one sentence with the key that changes it (it never asks); and the optional components, with nothing chosen and nothing downloaded unless you choose. The terminal reader does the same. Ask again about first-run choices (Tools) brings the last two back at the next start. If an earlier run left unsaved work, it offers it back. The speech engine starts in the background, so the app is ready at once; Restart Speech (Shift+F8) starts it again, and it restarts by itself once if it stops.
+The first time textweaver runs (no settings yet), the app says a short welcome with the five keys that get you reading (open, play and pause, stop, the command palette, and help), and on Windows the keys that show the hidden menu bar (Alt or F10), before the hint that no document is open. Then come at most three steps, one at a time, each skipped with Escape: the language list, only when the system's language is not one of the six textweaver speaks (when it is, textweaver uses it without asking); if a screen reader is running, textweaver reads documents aloud and leaves its messages to the screen reader, and says so in one sentence with the key that changes it (it never asks); and the optional components, with nothing chosen and nothing downloaded unless you choose; the same list holds the one question about checking for updates once a day ([Updates](updates.md)). The terminal reader does the same. Ask again about first-run choices (Tools) brings the last two back at the next start. If an earlier run left unsaved work, it offers it back. The speech engine starts in the background, so the app is ready at once; Restart Speech (Shift+F8) starts it again, and it restarts by itself once if it stops.
 
 Useful options:
 
@@ -58,7 +58,7 @@ The buttons on both bars are a choice rather than a fixed set. Any command that 
 
 View, Customize buttons (also in the command palette as "Customize buttons") opens a list of every button, the header's first, each named with its bar and its place there, as in "Stop, toolbar 2 of 6". Enter on a button offers Move up, Move down, and Remove; Delete removes the focused button at once. The last three rows add a button to the header, add one to the toolbar, or reset both bars to their defaults. Adding opens a list of the commands that are on neither bar, in alphabetical order, so a first letter jumps through it. Every change is said in words as it happens ("Find added, toolbar 7 of 7"), saved at once, and the list returns to the button that changed. The bars themselves change at the same moment, without restarting the app, and the Tab order through each bar always follows the order in which its buttons are drawn: left to right, then row by row when a bar wraps. In a small window, where a bar shows only the buttons that fit, Commands stays visible wherever you placed it, because it lists every command, including those whose buttons are hidden. The terminal reader offers the same list, and its key hints follow the toolbar's choice.
 
-The rules that keep the bars usable hold for any choice. Each button keeps its real name and its key in its accessible name, the keys are hidden on screen in a narrow window as before, and buttons that do not fit fold into Commands. A command never appears on both bars, nor twice on one. The app builds its bars as it opens, so a change made in the list shows on the bars the next time the app opens.
+The rules that keep the bars usable hold for any choice. Each button keeps its real name and its key in its accessible name, the keys are hidden on screen in a narrow window as before, and buttons that do not fit fold into Commands. A command never appears on both bars, nor twice on one.
 
 The choice is kept in the settings `gui.header_buttons` and `gui.toolbar_buttons`, as lists of command ids, and like the other window layout settings it stays on this computer rather than syncing. A command id that this version does not recognize, perhaps one written by a newer version, is kept in the setting but not shown, so moving between versions loses nothing.
 
@@ -369,14 +369,14 @@ Colors cannot be heard, so the color steps need a sighted helper, a screenshot r
 4. **Light theme, Windows light.** Expected: light, as in step 3.
 5. **High contrast.** Turn on a Contrast theme (Left Alt+Left Shift+Print Screen). Expected: "frame: system", and the title bar and menus in the contrast theme's colors, whatever textweaver's theme. Turn it off: the frame follows the theme again.
 6. **Menus still read.** In each step, Alt, then Down: NVDA and JAWS say "menu bar", then "File" and the first item with its key, as before. Escape twice leaves.
-7. **Hiding the menu bar.** In Settings, under Window, turn on "Hide the menu bar". Expected: the bar disappears and nothing is said beyond the setting's own message. Then:
+7. **Hiding the menu bar.** The bar is hidden by default. If you turned it off before, turn "Hide the menu bar" on in Settings, under Window. Expected: the bar disappears and nothing is said beyond the setting's own message. Then:
    - Alt alone: "menu bar" is said, as before, and the bar is shown. Escape: the bar hides again, silently.
    - F10: the same.
    - Alt+F, Alt+E, Alt+V, and each other menu's letter: that menu opens and is read.
    - Alt+Space: the window's system menu, as before.
    - A key the keymap gives Alt with another key (see the [keyboard reference](keyboard.md)) still does its command; the bar may appear for a moment and hides again.
    - Choose a command from a menu: it runs, and the bar hides.
-8. **Turn it off.** Expected: the bar is back at once, and stays.
+8. **Turn it off.** Expected: the bar is back at once, and stays. Turn it on again if you want the default back.
 
 Please note which steps did not behave as expected, with the screen reader and its version, and the Windows version.
 
