@@ -1482,6 +1482,29 @@ pub enum GuiAnnounce {
     Uia,
 }
 
+/// The header's buttons by default (`[gui] header_buttons`), as command
+/// ids: Open, Font, Edit, Settings and Commands. The app's `buttons`
+/// module turns them into commands for the window and the settings.
+pub const DEFAULT_HEADER_BUTTONS: &[&str] = &[
+    "open",
+    "choose_font",
+    "toggle_edit_mode",
+    "settings",
+    "command_palette",
+];
+
+/// The toolbar's buttons by default (`[gui] toolbar_buttons`), as command
+/// ids: Play, Stop, the previous and next paragraph (the owner's choice
+/// for beta 1, over sentences), Slower and Faster.
+pub const DEFAULT_TOOLBAR_BUTTONS: &[&str] = &[
+    "play_pause",
+    "stop",
+    "previous_paragraph",
+    "next_paragraph",
+    "rate_down",
+    "rate_up",
+];
+
 /// `[gui]`: settings only the windowed reader (`textweaver-xilem`) reads.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -1493,6 +1516,15 @@ pub struct GuiSettings {
     /// Show the toolbar, the bar of Play, Stop and the reading buttons
     /// (Wave 9, W9b-n). On by default, like the header.
     pub toolbar: bool,
+    /// The header's buttons, in order, as command ids (B1-cb):
+    /// [`DEFAULT_HEADER_BUTTONS`] by default. The app shows the ones it
+    /// knows; an id from an older or newer version is kept here but not
+    /// shown, and a command already on a bar is not shown twice.
+    pub header_buttons: Vec<String>,
+    /// The toolbar's buttons, in order, as command ids (B1-cb):
+    /// [`DEFAULT_TOOLBAR_BUTTONS`] by default. The terminal reader's key
+    /// hints follow it too.
+    pub toolbar_buttons: Vec<String>,
     /// How announcements reach the screen reader. The live region is the
     /// default, chosen in the owner's first screen reader session.
     pub announce: GuiAnnounce,
@@ -1525,6 +1557,14 @@ impl Default for GuiSettings {
         GuiSettings {
             header: true,
             toolbar: true,
+            header_buttons: DEFAULT_HEADER_BUTTONS
+                .iter()
+                .map(|&s| s.to_owned())
+                .collect(),
+            toolbar_buttons: DEFAULT_TOOLBAR_BUTTONS
+                .iter()
+                .map(|&s| s.to_owned())
+                .collect(),
             announce: GuiAnnounce::default(),
             auto_hide_menu: true,
             speak_messages: false,
@@ -3640,6 +3680,37 @@ wrap_navigation = true
         assert!(s.gui.header && !s.gui.toolbar);
         let text = s.to_minimal_toml().unwrap();
         assert!(text.contains("toolbar = false"), "{text}");
+        let (back, _) = Settings::from_table(text.parse().unwrap());
+        assert_eq!(back.gui, s.gui);
+    }
+
+    /// `[gui] header_buttons` and `toolbar_buttons` (B1-cb): the defaults
+    /// are not written; a choice, unknown ids included, is written and
+    /// read back in order.
+    #[test]
+    fn gui_button_lists_default_and_round_trip() {
+        let d = Settings::default();
+        assert_eq!(d.gui.header_buttons, DEFAULT_HEADER_BUTTONS);
+        assert_eq!(d.gui.toolbar_buttons, DEFAULT_TOOLBAR_BUTTONS);
+        assert!(d.gui.toolbar_buttons.contains(&"next_paragraph".to_owned()));
+        let text = d.to_minimal_toml().unwrap();
+        assert!(!text.contains("_buttons"), "{text}");
+        let (s, w) = Settings::from_table(
+            "[gui]
+toolbar_buttons = [\"stop\", \"from_the_future\", \"play_pause\"]
+"
+            .parse()
+            .unwrap(),
+        );
+        assert!(w.is_empty(), "{w:?}");
+        assert_eq!(
+            s.gui.toolbar_buttons,
+            ["stop", "from_the_future", "play_pause"]
+        );
+        assert_eq!(s.gui.header_buttons, DEFAULT_HEADER_BUTTONS);
+        let text = s.to_minimal_toml().unwrap();
+        assert!(text.contains("from_the_future"), "{text}");
+        assert!(!text.contains("header_buttons"), "{text}");
         let (back, _) = Settings::from_table(text.parse().unwrap());
         assert_eq!(back.gui, s.gui);
     }

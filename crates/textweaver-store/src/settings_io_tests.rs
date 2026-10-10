@@ -246,6 +246,8 @@ fn everything_changed() -> Settings {
     s.gui.speak_messages = true;
     s.gui.header = false;
     s.gui.toolbar = false;
+    s.gui.header_buttons = vec!["open".into()];
+    s.gui.toolbar_buttons = vec!["play_pause".into(), "next_sentence".into()];
     s.gui.sidebar = crate::GuiSidebar::Notes;
     s.gui.window = Some(crate::GuiWindow {
         x: 30,

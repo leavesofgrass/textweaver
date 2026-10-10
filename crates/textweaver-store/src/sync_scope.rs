@@ -263,6 +263,10 @@ pub const SETTING_SCOPES: &[(&str, SettingScope)] = &[
     // small screen hides them, a large one keeps them.
     ("gui.header", Machine),
     ("gui.toolbar", Machine),
+    // The buttons this computer's window shows on its bars, like the
+    // other window layout settings.
+    ("gui.header_buttons", Machine),
+    ("gui.toolbar_buttons", Machine),
     // The panel this computer's window shows beside the document.
     ("gui.sidebar", Machine),
     // Where this computer's window was and how big: screens differ.
