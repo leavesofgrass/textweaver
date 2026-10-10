@@ -555,11 +555,12 @@ help-shortcuts-group-item =
        *[other] { $n } commandes
     }. { $item }
 help-title = Aide
-help-intro = Aide. Haut et Bas déplacent, Échap ferme.
+help-intro = Aide. Tapez pour chercher dans toute l'aide ; Haut et Bas déplacent, Échap ferme.
 
 ## The help list. Each value is a key or keys from the keymap.
 
 help-about = textweaver lit les documents à voix haute. Les touches ci-dessous sont les raccourcis actuels.
+help-search = Cherchez dans toute l'aide en tapant ici : commandes, touches, réglages et les guides.
 help-open = Ouvrir un document : { $open }. Bibliothèque et fichiers récents : { $library }.
 help-play = Lecture ou pause : { $key }.
 help-read-from-cursor = Lire à partir du curseur : { $key }.
@@ -4437,11 +4438,11 @@ setting-components-mirror-help = D'où viennent d'abord les composants facultati
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.
 name-quick-start = Démarrage rapide
-name-documentation = Documentation…
+name-documentation = Documentation
 name-report-problem = Signaler un problème…
 name-ask-first-run-again = Reposer les questions de démarrage
 action-quick-start = Ouvrir le guide de démarrage rapide dans textweaver
-action-documentation = Afficher l'adresse web de la documentation, et demander avant de l'ouvrir dans un navigateur
+action-documentation = Ouvrir les guides fournis avec textweaver comme documents ; un lien vers un autre guide l'ouvre sur place, et Retour dans l'historique revient
 action-report-problem = Afficher où signaler un problème, et demander avant de l'ouvrir dans un navigateur ; rien n'est envoyé
 action-ask-first-run-again = Reposer les questions du premier démarrage : le mode hybride avec un lecteur d'écran, et les composants facultatifs
 about-title = À propos de textweaver
@@ -4465,6 +4466,37 @@ about-quick-start-online = Démarrage rapide introuvable à côté de textweaver
 about-docs-question = Documentation : { $address }. L'ouvrir dans le navigateur ? y ou n
 about-report-question = Signaler un problème : { $address }. Rien n'est envoyé. L'ouvrir dans le navigateur ? y ou n
 about-first-run-again = Questions du premier démarrage réinitialisées ; posées au prochain démarrage.
+
+## B1-hp : les guides fournis et Chercher dans l'aide.
+name-online-documentation = Documentation en ligne…
+name-search-help = Chercher dans l'aide
+action-online-documentation = Afficher l'adresse web de la documentation en ligne, et demander avant de l'ouvrir dans un navigateur
+action-search-help = Chercher dans toute l'aide : noms des commandes, touches, réglages, et titres et texte des guides
+docs-not-found = Documentation introuvable à côté de textweaver. Ouvrir { $address } dans le navigateur ? y ou n
+docs-guide-missing =
+    { $n ->
+        [one] Guide manquant : { $guides }. Les autres guides s'ouvrent.
+       *[other] { $n } guides manquants : { $guides }. Les autres guides s'ouvrent.
+    }
+helpsearch-title = Chercher dans l'aide
+helpsearch-title-matching = Aide sur { $filter }
+helpsearch-intro = Chercher dans l'aide, { $n } sujets. Tapez pour chercher commandes, touches, réglages et guides ; Entrée ouvre un sujet, F1 l'explique.
+helpsearch-match =
+    { $n ->
+        [one] 1 résultat.
+       *[other] { $n } résultats.
+    }
+helpsearch-none = Aucune aide sur { $query }. Retour arrière efface des lettres.
+helpsearch-cleared =
+    { $n ->
+        [one] Filtre effacé, 1 sujet.
+       *[other] Filtre effacé, { $n } sujets.
+    }
+helpsearch-command = { $row }, commande
+helpsearch-setting = { $label }, réglage dans { $section }
+helpsearch-guide = { $heading }, dans { $guide }
+helpsearch-at-heading = Sur { $heading }.
+## End of B1-hp
 
 ## W9b-x : les paramètres de lecture (Affichage, Paramètres de lecture).
 name-reading-form = Paramètres de lecture

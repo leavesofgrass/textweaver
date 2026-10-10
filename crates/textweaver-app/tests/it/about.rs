@@ -43,13 +43,13 @@ fn report_a_problem_shows_the_address_and_asks_before_any_browser_opens() {
 }
 
 #[test]
-fn documentation_asks_before_opening_the_site() {
+fn online_documentation_asks_before_opening_the_site() {
     let (mut app, opened) = rig();
-    app.dispatch(Command::Action(ActionId::Documentation));
+    app.dispatch(Command::Action(ActionId::OnlineDocumentation));
     assert!(app.status_text().starts_with("Documentation: https://"));
     app.dispatch(Command::Confirm(Confirm::No));
     assert!(opened.lock().unwrap().is_empty());
-    app.dispatch(Command::Action(ActionId::Documentation));
+    app.dispatch(Command::Action(ActionId::OnlineDocumentation));
     app.dispatch(Command::Confirm(Confirm::Yes));
     assert_eq!(
         opened.lock().unwrap().as_slice(),

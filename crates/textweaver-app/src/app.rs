@@ -325,6 +325,10 @@ pub(crate) enum ListKind {
     Reveal(crate::reveal::RevealList),
     /// The study cards, by id (crate::cards).
     Cards(Vec<String>),
+    /// F1's help: typing in it starts Search help (crate::help_docs).
+    Help,
+    /// Search help's topics, by row (crate::help_docs).
+    HelpSearch(Vec<crate::help_docs::HelpTopic>),
 }
 
 /// The application: the only owner of mutable state.
@@ -373,6 +377,13 @@ pub struct App {
     pub(crate) list_intro: Option<String>,
     /// The keyboard shortcuts list's filter (crate::command_list).
     pub(crate) keys_filter: String,
+    /// Search help's filter (crate::help_docs).
+    pub(crate) help_filter: String,
+    /// The guides split into sections for Search help, built on first use
+    /// (crate::help_docs).
+    pub(crate) help_index: Option<crate::help_docs::HelpIndex>,
+    /// A docs folder used instead of the packaged one (tests).
+    pub(crate) docs_override: Option<std::path::PathBuf>,
     pub(crate) pause_origin: Option<CharPos>,
     pub(crate) reading: ReadKind,
     /// Which sentences continuous reading says (crate::overview); for
@@ -592,6 +603,9 @@ impl App {
             messages_said: 0,
             list_intro: None,
             keys_filter: String::new(),
+            help_filter: String::new(),
+            help_index: None,
+            docs_override: None,
             pause_origin: None,
             reading: ReadKind::Continuous,
             reading_pass: textweaver_text::ReadingPass::Full,
@@ -1893,7 +1907,8 @@ impl App {
             Some(ListKind::Cards(ids)) => self.choose_card_row(&ids, n),
             Some(ListKind::Changes(rows)) => self.choose_change_row(&rows, n),
             Some(ListKind::Relations(l)) => return self.choose_relation(l, n),
-            Some(ListKind::Info) | None => {}
+            Some(ListKind::HelpSearch(topics)) => return self.choose_help_topic(&topics, n),
+            Some(ListKind::Info) | Some(ListKind::Help) | None => {}
         }
         vec![Effect::Redraw]
     }
@@ -2325,6 +2340,8 @@ impl App {
             A::About => return self.about(),
             A::QuickStart => return self.quick_start(),
             A::Documentation => return self.documentation(),
+            A::OnlineDocumentation => return self.online_documentation(),
+            A::SearchHelp => return self.search_help(),
             A::ReportProblem => return self.report_problem(),
             A::AskFirstRunAgain => self.ask_first_run_again(),
             A::ReadDocument => {

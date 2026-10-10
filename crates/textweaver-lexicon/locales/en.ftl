@@ -532,11 +532,12 @@ help-shortcuts-group-item =
        *[other] { $n } commands
     }. { $item }
 help-title = Help
-help-intro = Help. Up and Down move, Escape closes.
+help-intro = Help. Type to search all of help; Up and Down move, Escape closes.
 
 ## The help list. Each value is a key or keys from the keymap.
 
 help-about = textweaver reads documents aloud. Keys below are the current bindings.
+help-search = Search all of help by typing here: commands, keys, settings, and the guides.
 help-open = Open a document: { $open }. Library and recent files: { $library }.
 help-play = Play or pause: { $key }.
 help-read-from-cursor = Read from the cursor: { $key }.
@@ -4468,11 +4469,11 @@ setting-components-mirror-help = Where optional components come from first: an h
 ## again. $address is a web address; $path a folder; facts start with
 ## their name so each Braille line leads with it.
 name-quick-start = Quick start
-name-documentation = Documentation…
+name-documentation = Documentation
 name-report-problem = Report a problem…
 name-ask-first-run-again = Ask again about first-run choices
 action-quick-start = Open the quick start guide in textweaver
-action-documentation = Show the documentation's web address, and ask before opening it in a browser
+action-documentation = Open the guides that come with textweaver as documents; a link to another guide opens it in place, and History back returns
 action-report-problem = Show where to report a problem, and ask before opening it in a browser; nothing is sent
 action-ask-first-run-again = Ask again about first-run choices: hybrid mode with a screen reader, and the optional components
 about-title = About textweaver
@@ -4496,6 +4497,39 @@ about-quick-start-online = Quick start not found beside textweaver. Open { $addr
 about-docs-question = Documentation: { $address }. Open it in your browser? y or n
 about-report-question = Report a problem: { $address }. Nothing is sent. Open it in your browser? y or n
 about-first-run-again = First-run choices reset; asked at the next start.
+
+## B1-hp: the packaged guides and Search help. $n counts topics or
+## guides; $guides names guide files; $row is a command's row ("Find
+## next, F3"). Each row starts with the topic, so a Braille line does.
+name-online-documentation = Online documentation…
+name-search-help = Search help
+action-online-documentation = Show the online documentation's web address, and ask before opening it in a browser
+action-search-help = Search all of help: command names, keys, settings, and the guides' headings and text
+docs-not-found = Documentation not found beside textweaver. Open { $address } in your browser? y or n
+docs-guide-missing =
+    { $n ->
+        [one] Guide missing: { $guides }. The other guides open.
+       *[other] { $n } guides missing: { $guides }. The other guides open.
+    }
+helpsearch-title = Search help
+helpsearch-title-matching = Help matching { $filter }
+helpsearch-intro = Search help, { $n } topics. Type to search commands, keys, settings, and the guides; Enter opens a topic, F1 explains it.
+helpsearch-match =
+    { $n ->
+        [one] 1 match.
+       *[other] { $n } matches.
+    }
+helpsearch-none = No help matches { $query }. Backspace removes letters.
+helpsearch-cleared =
+    { $n ->
+        [one] Filter cleared, 1 topic.
+       *[other] Filter cleared, { $n } topics.
+    }
+helpsearch-command = { $row }, command
+helpsearch-setting = { $label }, setting in { $section }
+helpsearch-guide = { $heading }, in { $guide }
+helpsearch-at-heading = At { $heading }.
+## End of B1-hp
 
 ## W9b-x: the reading settings (View, Reading settings): the settings a
 ## reader changes most, in one form, with the two spacing presets. $n is a

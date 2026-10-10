@@ -691,8 +691,10 @@ Press **Shift+F1**, then any key: you hear what the key does, its keys, and wher
 
 ## The Help menu
 
+- **Search help** searches all of help at once; see [Search help](#search-help) below.
 - **Quick start** opens the quick start guide packaged with textweaver as a document. When there is none beside the program, it offers the online page.
-- **Documentation** and **Report a problem** say their web address and ask "y or n" before a browser opens. Nothing is sent from textweaver; you write the report yourself.
+- **Documentation** opens the complete user guides that come with textweaver, as documents in textweaver itself, so they work without a network connection. You start on the documentation index; its headings move as in any document, Follow link (**Alt+Shift+F**) on a link opens that guide in place, and **Backspace** or **Alt+Left** brings you back to where you were. If a guide the index lists is missing from your copy of textweaver, you hear which one ("Guide missing: dictation.md. The other guides open."); the rest of the documentation still opens. A copy of textweaver built from source reads the guides in the repository's `docs` folder.
+- **Online documentation** and **Report a problem** say their web address and ask "y or n" before a browser opens. Nothing is sent from textweaver; you write the report yourself.
 - **About textweaver** lists the facts a problem report needs, one per line: version, build, license, the speech engine in use and those found, how many optional components are installed, and the settings, data and cache folders. Include them in your report.
 
 ## The command palette: F2
@@ -733,7 +735,18 @@ For a file textweaver writes (Save as, and the exports), F4 chooses the folder i
 ## Help: ? and F1
 
 - **?**: list every keyboard shortcut with its current keys, including your own changes. Up and Down move, **Enter** runs the command, **Escape** closes. In the window, the Help menu opens it too.
-- **F1**: open the help, a short list of the most useful keys.
+- **F1**: open the help, a short list of the most useful keys. Typing in it starts Search help with what you typed.
+
+### Search help
+
+Search help, in the Help menu and the command palette, looks through everything help knows in one search: the name, keys and description of every command, every setting and its help, and the headings and text of the guides that come with textweaver. Typing a letter in the F1 help starts the same search.
+
+- Type words, and the list keeps only the topics that contain all of them, saying how many remain: "8 matches." **Backspace** removes a letter. You may type a question: in "how do I export audio", textweaver ignores the question words and searches for "export audio".
+- Commands come first, then settings, then sections of the guides, with the sections whose heading matches before those that only mention your words. Each row begins with the topic and ends with what kind it is: "Export audio, command", "Rate, setting in Speech", or "Subtitles, in Audio export".
+- **Enter** on a command says what it does and which keys run it, and keeps the list open. On a setting it opens Settings at that setting. On a guide section it opens the guide at that heading; **Backspace** or **Alt+Left** returns afterwards, as after following a link.
+- **F1** on a row says the topic's help, or the first words of a guide section, without leaving the list.
+
+The guides are divided into sections the first time you search, and the result is kept in textweaver's cache folder, so later searches start at once. When the guides change, for example after an update, the sections are rebuilt.
 
 In any list: **Up** and **Down** move, **PageUp** and **PageDown** move ten items, **Home** and **End** go to the first and last, a letter jumps to the next item starting with it, **Enter** chooses, and **Escape** or **Backspace** closes. At the ends you hear "Top of list." or "End of list."; with `cursor = "status"` the status line keeps the item after it, such as "End of list. 12 of 12, Conclusion", so your Braille display still shows where you are. **F1** or **Alt+End** says the list's introduction again (its name, how many items it has, and the keys it takes), then the item you are on, such as "3 of 12". **Alt+'** says the last message again.
 
