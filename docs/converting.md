@@ -436,7 +436,7 @@ Pandoc runs in its sandbox, so a document cannot make it read other files on you
 
 A damaged or deliberately odd file cannot stop a batch either. Content nested thousands of levels deep, in a web page, EPUB, Word, OpenDocument, or RTF document, is read as plain text below 256 levels, with the warning "Some content was nested too deeply to keep its structure, so it is read as plain text." List and page numbers that claim impossible values are capped. A file that is really a picture, a program, or another binary file is refused after its first 8 kilobytes, however large it is. Word, OpenDocument, EPUB, and PowerPoint files are zip packages; one with more than 50,000 files inside, with files that overlap, or with a file that claims to unpack to more than 1,000 times its size is refused, and no package is unpacked past 1 gigabyte.
 
-The reader, `textweaver`, does not use Pandoc. It opens RTF, OpenDocument text, Org, and reStructuredText itself. For a format only Pandoc reads, such as Textile, convert it to Markdown first, then open the Markdown:
+The reader (`tw`) does not use Pandoc. It opens RTF, OpenDocument text, Org, and reStructuredText itself. For a format only Pandoc reads, such as Textile, convert it to Markdown first, then open the Markdown:
 
 ```bash
 tw convert essay.textile --to md
