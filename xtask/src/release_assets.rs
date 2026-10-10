@@ -27,24 +27,21 @@ use anyhow::{Context, bail};
 /// The checksums file the release workflow writes once, at the end.
 pub const SUMS: &str = "SHA256SUMS.txt";
 
-/// Each platform job's files, without `textweaver-VERSION-`. The package
+/// Each platform job's files, without `textweaver-VERSION-`: one package
+/// per OS and CPU architecture holding both programs (B1-o2). The package
 /// names match `xtask/package-sizes.toml`'s, plus the AppImages' `.zsync`
-/// files for delta updates.
+/// files for delta updates, and on Linux a copy of each under the `-gui`
+/// name the app's older AppImages look for (`appimage.rs`).
 pub const PLATFORMS: [(&str, &[&str]); 4] = [
-    ("windows", &["windows-x86_64.zip", "windows-x86_64-gui.zip"]),
-    (
-        "macos",
-        &["macos-universal.tar.gz", "macos-universal-gui.zip"],
-    ),
+    ("windows", &["windows-x86_64.zip"]),
+    ("macos", &["macos-universal.zip"]),
     (
         "linux-x86_64",
         &[
             "linux-x86_64.AppImage",
             "linux-x86_64.AppImage.zsync",
-            "linux-x86_64.tar.gz",
-            "linux-x86_64-gui.AppImage",
             "linux-x86_64-gui.AppImage.zsync",
-            "linux-x86_64-gui.tar.gz",
+            "linux-x86_64.tar.gz",
         ],
     ),
     (
@@ -52,10 +49,8 @@ pub const PLATFORMS: [(&str, &[&str]); 4] = [
         &[
             "linux-aarch64.AppImage",
             "linux-aarch64.AppImage.zsync",
-            "linux-aarch64.tar.gz",
-            "linux-aarch64-gui.AppImage",
             "linux-aarch64-gui.AppImage.zsync",
-            "linux-aarch64-gui.tar.gz",
+            "linux-aarch64.tar.gz",
         ],
     ),
 ];
@@ -240,12 +235,17 @@ mod tests {
     }
 
     #[test]
-    fn a_complete_release_has_seventeen_files() {
+    fn a_complete_release_has_eleven_files() {
         let all = expected_release("1.2.3");
-        assert_eq!(all.len(), 17);
+        assert_eq!(all.len(), 11);
         assert!(all.contains("SHA256SUMS.txt"));
-        assert!(all.contains("textweaver-1.2.3-windows-x86_64-gui.zip"));
+        assert!(all.contains("textweaver-1.2.3-windows-x86_64.zip"));
+        assert!(all.contains("textweaver-1.2.3-macos-universal.zip"));
         assert!(all.contains("textweaver-1.2.3-linux-aarch64-gui.AppImage.zsync"));
+        // No separate app packages any more.
+        assert!(!all.iter().any(|f| f.ends_with("-gui.zip")
+            || f.ends_with("-gui.tar.gz")
+            || f.ends_with("-gui.AppImage")));
     }
 
     #[test]
@@ -253,13 +253,13 @@ mod tests {
         let expected = expected_for("windows", "1.0.0").unwrap();
         let mut actual = expected.clone();
         assert!(compare(&expected, &actual).is_empty());
-        actual.remove("textweaver-1.0.0-windows-x86_64-gui.zip");
-        actual.insert("textweaver-0.9.0-windows-x86_64.zip".into());
+        actual.remove("textweaver-1.0.0-windows-x86_64.zip");
+        actual.insert("textweaver-1.0.0-windows-x86_64-gui.zip".into());
         assert_eq!(
             compare(&expected, &actual),
             [
-                "Missing: textweaver-1.0.0-windows-x86_64-gui.zip",
-                "Extra: textweaver-0.9.0-windows-x86_64.zip"
+                "Missing: textweaver-1.0.0-windows-x86_64.zip",
+                "Extra: textweaver-1.0.0-windows-x86_64-gui.zip"
             ]
         );
         assert!(expected_for("solaris", "1.0.0").is_none());

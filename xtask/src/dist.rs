@@ -1,13 +1,20 @@
-//! `cargo xtask dist [--universal] [--out DIR]`: a release package for
-//! this platform (docs/dev/releasing.md).
+//! `cargo xtask dist [--universal] [--no-screenshot] [--out DIR]`: the
+//! release package for this platform (docs/dev/releasing.md). `cargo
+//! xtask gui-dist` is another name for it.
 //!
-//! Builds `textweaver` and `tw` with the `dist` profile (the release
-//! profile with fat LTO), each in a cargo run of its own so the reader
-//! gets only its own features, the engine hosts for the platform (Windows
-//! and Linux), and stages them with the pronunciation dictionaries, the
-//! licence, the copyright notice (`NOTICE`), the third-party notices and
-//! licence files, and the user guides in `target/dist/textweaver-VERSION-PLATFORM/`, then archives the folder:
-//! a `.zip` on Windows, a `.tar.gz` elsewhere. It fails if a notice is
+//! One package per OS and CPU architecture holds both programs (B1-o2):
+//! the terminal program `tw` (with `textweaver` as a second name: a link
+//! on Linux and macOS, a small launcher on Windows) and the app,
+//! `textweaver-gui` (`gui_dist.rs`). It builds them with the `dist`
+//! profile (the release profile with fat LTO), and the engine hosts for
+//! the platform (Windows and Linux), and stages them with the
+//! pronunciation dictionaries, the licence, the copyright notice
+//! (`NOTICE`), the third-party notices and licence files, and the
+//! complete user guides in `target/dist/textweaver-VERSION-PLATFORM/`,
+//! then archives the folder: a `.zip` on Windows and macOS (where the app
+//! is `textweaver.app`, beside `tw`), a `.tar.gz` on Linux. It fails if a
+//! program, an engine host, or a notice is missing from the staged
+//! folder. It fails if a notice is
 //! missing from the staged folder, or if the archive grew more than 10
 //! percent over the last release's without a note (`sizes.rs`). A user
 //! guide missing from the package only warns (`stage_user_docs`): the
@@ -30,8 +37,24 @@ use anyhow::{Context, bail};
 
 use crate::eci::{self, HostBuild};
 
-/// The user binaries: (package, binary).
-const BINARIES: [(&str, &str); 2] = [("textweaver-tui", "textweaver"), ("textweaver-cli", "tw")];
+/// The terminal program's package. Its `tw` binary is the program; its
+/// `textweaver` binary is the Windows launcher for the second name.
+const PACKAGE: &str = "textweaver-cli";
+/// The terminal program.
+const TW: &str = "tw";
+/// The terminal program's second name.
+const SECOND_NAME: &str = "textweaver";
+
+/// The terminal binaries built for the package: `tw`, and on Windows the
+/// `textweaver` launcher. Elsewhere `textweaver` is a link to `tw`
+/// ([`link_second_name`]), so nothing more is built.
+fn binaries() -> &'static [&'static str] {
+    if cfg!(windows) {
+        &[TW, SECOND_NAME]
+    } else {
+        &[TW]
+    }
+}
 /// Speech engines built into the user binaries on this platform. Nothing
 /// extra is linked: Omnivox is a subprocess, speech-dispatcher a socket,
 /// and espeak-ng is loaded at run time when it is installed. Linux gets all
@@ -240,14 +263,37 @@ fn append_summary(path: &Path, warnings: &[String]) -> std::io::Result<()> {
     Ok(())
 }
 
-/// Copies every file under `src` into `dest`, keeping the layout.
+/// Copies every file under `src` into `dest`, keeping the layout. A link
+/// (the `textweaver` link to `tw`) is made again as a link, never copied
+/// as a second program.
 pub(crate) fn copy_tree(src: &Path, dest: &Path) -> anyhow::Result<()> {
     let mut files = Vec::new();
     collect(src, &mut files)?;
     for f in files {
-        eci::copy(&f, &dest.join(f.strip_prefix(src)?))?;
+        let to = dest.join(f.strip_prefix(src)?);
+        if fs::symlink_metadata(&f)?.file_type().is_symlink() {
+            copy_link(&f, &to)?;
+        } else {
+            eci::copy(&f, &to)?;
+        }
     }
     Ok(())
+}
+
+/// Makes `to` a link with the same target as the link `from`.
+#[cfg(unix)]
+fn copy_link(from: &Path, to: &Path) -> anyhow::Result<()> {
+    let target = fs::read_link(from).with_context(|| format!("reading {}", from.display()))?;
+    if let Some(dir) = to.parent() {
+        fs::create_dir_all(dir)?;
+    }
+    std::os::unix::fs::symlink(&target, to).with_context(|| format!("linking {}", to.display()))
+}
+
+/// Windows packages hold no links; a link met here is copied as its file.
+#[cfg(not(unix))]
+fn copy_link(from: &Path, to: &Path) -> anyhow::Result<()> {
+    eci::copy(from, to)
 }
 
 /// Parsed arguments.
@@ -255,6 +301,8 @@ pub(crate) fn copy_tree(src: &Path, dest: &Path) -> anyhow::Result<()> {
 struct Args {
     universal: bool,
     out: Option<PathBuf>,
+    /// Leave the app's screenshot harness out (`gui_dist::SCREENSHOT`).
+    no_screenshot: bool,
 }
 
 fn parse(args: &[String]) -> anyhow::Result<Args> {
@@ -263,9 +311,10 @@ fn parse(args: &[String]) -> anyhow::Result<Args> {
     while let Some(a) = it.next() {
         match a.as_str() {
             "--universal" => out.universal = true,
+            "--no-screenshot" => out.no_screenshot = true,
             "--out" => out.out = Some(PathBuf::from(it.next().context("--out needs a directory")?)),
             other => bail!(
-                "unknown argument {other} (usage: cargo xtask dist [--universal] [--out DIR])"
+                "unknown argument {other} (usage: cargo xtask dist [--universal] [--no-screenshot] [--out DIR])"
             ),
         }
     }
@@ -294,7 +343,7 @@ fn package_name(version: &str, platform: &str) -> String {
 /// `cargo xtask dist`.
 pub fn run() -> anyhow::Result<()> {
     let args = parse(&std::env::args().skip(2).collect::<Vec<_>>())?;
-    let staged = stage(args.out.clone(), args.universal)?;
+    let staged = stage(args.out.clone(), args.universal, args.no_screenshot)?;
     let archive = archive(&staged)?;
     println!("package {}", archive.display());
     crate::sizes::check(&eci::root(), &[archive])
@@ -310,9 +359,13 @@ pub(crate) struct Staged {
     pub out: PathBuf,
 }
 
-/// Builds the binaries and hosts and stages the package folder (everything
+/// Builds the programs and hosts and stages the package folder (everything
 /// but the archive). `out` defaults to `target/dist`.
-pub(crate) fn stage(out: Option<PathBuf>, universal: bool) -> anyhow::Result<Staged> {
+pub(crate) fn stage(
+    out: Option<PathBuf>,
+    universal: bool,
+    no_screenshot: bool,
+) -> anyhow::Result<Staged> {
     let root = eci::root();
     let version = env!("CARGO_PKG_VERSION");
     let build_dir = build_dir(&root);
@@ -328,7 +381,7 @@ pub(crate) fn stage(out: Option<PathBuf>, universal: bool) -> anyhow::Result<Sta
         for t in MAC_TARGETS {
             build_binaries(&root, &build_dir, Some(t))?;
         }
-        for (_, bin) in BINARIES {
+        for bin in binaries() {
             let parts: Vec<PathBuf> = MAC_TARGETS
                 .iter()
                 .map(|t| build_dir.join(t).join(PROFILE).join(bin))
@@ -350,11 +403,15 @@ pub(crate) fn stage(out: Option<PathBuf>, universal: bool) -> anyhow::Result<Sta
         }
     } else {
         build_binaries(&root, &build_dir, None)?;
-        for (_, bin) in BINARIES {
+        for bin in binaries() {
             let file = format!("{bin}{}", std::env::consts::EXE_SUFFIX);
             eci::copy(&build_dir.join(PROFILE).join(&file), &stage.join(&file))?;
         }
     }
+    link_second_name(&stage)?;
+    // The app, built into the same folder so the two share their compiled
+    // dependencies.
+    crate::gui_dist::stage_gui(&root, &build_dir, &stage, universal, no_screenshot)?;
 
     // Engine hosts: Eloquence (ECI) and SAPI5 on Windows, ECI for Voxin on
     // Linux. macOS speaks through Apple's own voices in process.
@@ -393,8 +450,13 @@ pub(crate) fn stage(out: Option<PathBuf>, universal: bool) -> anyhow::Result<Sta
         for (src, dest) in LINUX_DESKTOP_FILES {
             eci::copy(&root.join(src), &stage.join(dest))?;
         }
+        fs::write(stage.join(GUI_DESKTOP), crate::gui_dist::desktop_entry())?;
+    }
+    if cfg!(target_os = "macos") {
+        crate::gui_dist::make_app(&stage, version)?;
     }
 
+    check_programs(&stage)?;
     check_notices(&stage)?;
     Ok(Staged {
         name,
@@ -429,12 +491,24 @@ pub(crate) fn absolute(path: PathBuf) -> anyhow::Result<PathBuf> {
     }
 }
 
-/// Archives a staged package: a `.zip` on Windows, a `.tar.gz` elsewhere.
+/// Archives a staged package: a `.zip` on Windows and macOS, a `.tar.gz`
+/// on Linux. The tarball and the macOS zip (made with `ditto`) keep the
+/// `textweaver` link.
 pub(crate) fn archive(staged: &Staged) -> anyhow::Result<PathBuf> {
     let Staged { name, dir, out } = staged;
     if cfg!(windows) {
         let zip = out.join(format!("{name}.zip"));
         zip_dir(dir, name, &zip)?;
+        Ok(zip)
+    } else if cfg!(target_os = "macos") {
+        let zip = out.join(format!("{name}.zip"));
+        let _ = fs::remove_file(&zip);
+        run_tool(
+            Command::new("ditto")
+                .args(["-c", "-k", "--keepParent"])
+                .arg(dir)
+                .arg(&zip),
+        )?;
         Ok(zip)
     } else {
         let tgz = out.join(format!("{name}.tar.gz"));
@@ -461,6 +535,52 @@ pub(crate) const LINUX_DESKTOP_FILES: [(&str, &str); 2] = [
         "share/icons/hicolor/scalable/apps/textweaver.svg",
     ),
 ];
+
+/// The app's menu entry in the Linux package, beside the terminal
+/// reader's ([`LINUX_DESKTOP_FILES`]).
+pub(crate) const GUI_DESKTOP: &str = "share/applications/textweaver-gui.desktop";
+
+/// Makes `textweaver` a link to `tw` in `stage`, on Linux and macOS. On
+/// Windows the launcher binary is staged instead (see [`binaries`]).
+#[cfg(unix)]
+fn link_second_name(stage: &Path) -> anyhow::Result<()> {
+    let link = stage.join(SECOND_NAME);
+    std::os::unix::fs::symlink(TW, &link)
+        .with_context(|| format!("linking {} to {TW}", link.display()))
+}
+
+#[cfg(not(unix))]
+fn link_second_name(_: &Path) -> anyhow::Result<()> {
+    Ok(())
+}
+
+/// The programs a package must hold, as paths in it: `tw`, its second
+/// name, the app, and every engine host for the platform.
+pub(crate) fn required_programs() -> Vec<String> {
+    let exe = std::env::consts::EXE_SUFFIX;
+    let mut out = vec![
+        format!("{TW}{exe}"),
+        format!("{SECOND_NAME}{exe}"),
+        crate::gui_dist::app_path(),
+    ];
+    if !cfg!(target_os = "macos") {
+        out.extend(eci::all_hosts().iter().map(|h| h.installed_name()));
+    }
+    out
+}
+
+/// Fails unless `stage` holds every program in [`required_programs`]. The
+/// `textweaver` link counts when it is a link, whatever it points at.
+pub(crate) fn check_programs(stage: &Path) -> anyhow::Result<()> {
+    let missing: Vec<String> = required_programs()
+        .into_iter()
+        .filter(|p| fs::symlink_metadata(stage.join(p)).is_err())
+        .collect();
+    if !missing.is_empty() {
+        bail!("the package lacks {}", missing.join(", "));
+    }
+    Ok(())
+}
 
 /// Copies textweaver's copyright notice, the third-party notices, and the
 /// data licence files into `stage`.
@@ -508,26 +628,19 @@ pub(crate) fn cargo(root: &Path, build_dir: &Path) -> Command {
     cmd
 }
 
-/// The cargo arguments that build one user binary. Each binary gets a
-/// cargo run of its own: built together, cargo would unify their features
-/// and give the reader `tw`'s, such as `textweaver-formats`' `url` and
-/// `textweaver-ocr`'s `download`, which the reader leaves out.
-fn binary_build_args(package: &str, bin: &str, target: Option<&str>) -> Vec<String> {
-    let mut args: Vec<String> = [
-        "build",
-        "--locked",
-        "--profile",
-        PROFILE,
-        "-p",
-        package,
-        "--bin",
-        bin,
-        "--features",
-    ]
-    .iter()
-    .map(|s| (*s).to_owned())
-    .collect();
-    args.push(features(package));
+/// The cargo arguments that build the terminal binaries ([`binaries`]) in
+/// one run, with the platform's engines. The app is built in a run of its
+/// own (`gui_dist::stage_gui`), so cargo never unifies the two programs'
+/// features.
+fn binary_build_args(target: Option<&str>) -> Vec<String> {
+    let mut args: Vec<String> = ["build", "--locked", "--profile", PROFILE, "-p", PACKAGE]
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect();
+    for bin in binaries() {
+        args.extend(["--bin".to_owned(), (*bin).to_owned()]);
+    }
+    args.extend(["--features".to_owned(), features(PACKAGE)]);
     if let Some(t) = target {
         args.extend(["--target".to_owned(), t.to_owned()]);
     }
@@ -535,12 +648,9 @@ fn binary_build_args(package: &str, bin: &str, target: Option<&str>) -> Vec<Stri
 }
 
 fn build_binaries(root: &Path, build_dir: &Path, target: Option<&str>) -> anyhow::Result<()> {
-    for (package, bin) in BINARIES {
-        let mut cmd = cargo(root, build_dir);
-        cmd.args(binary_build_args(package, bin, target));
-        run_tool(&mut cmd).with_context(|| format!("building {bin}"))?;
-    }
-    Ok(())
+    let mut cmd = cargo(root, build_dir);
+    cmd.args(binary_build_args(target));
+    run_tool(&mut cmd).context("building tw")
 }
 
 pub(crate) fn build_hosts(
@@ -612,7 +722,8 @@ pub(crate) fn zip_dir(dir: &Path, prefix: &str, zip_path: &Path) -> anyhow::Resu
 fn collect(dir: &Path, out: &mut Vec<PathBuf>) -> anyhow::Result<()> {
     for entry in fs::read_dir(dir)? {
         let path = entry?.path();
-        if path.is_dir() {
+        // A link is listed as itself, not followed.
+        if fs::symlink_metadata(&path)?.file_type().is_dir() {
             collect(&path, out)?;
         } else {
             out.push(path);
@@ -671,6 +782,7 @@ mod tests {
         let a = parse(&["--out".into(), "x".into()]).unwrap();
         assert_eq!(a.out, Some(PathBuf::from("x")));
         assert!(!a.universal);
+        assert!(parse(&["--no-screenshot".into()]).unwrap().no_screenshot);
         assert!(parse(&["--bogus".into()]).is_err());
         assert_eq!(
             parse(&["--universal".into()]).is_ok(),
@@ -680,36 +792,80 @@ mod tests {
 
     #[test]
     fn engines_follow_the_platform() {
-        let f = features("textweaver-tui");
-        assert!(f.contains("textweaver-tui/omnivox"), "{f}");
-        assert!(!f.contains("textweaver-cli"), "{f}");
+        let f = features(PACKAGE);
+        assert!(f.contains("textweaver-cli/omnivox"), "{f}");
         let linux = cfg!(target_os = "linux");
-        assert_eq!(f.contains("textweaver-tui/espeak"), linux, "{f}");
-        assert_eq!(
-            features("textweaver-cli").contains("textweaver-cli/speechd"),
-            linux
-        );
+        assert_eq!(f.contains("textweaver-cli/espeak"), linux, "{f}");
+        assert_eq!(f.contains("textweaver-cli/speechd"), linux, "{f}");
     }
 
-    /// Each user binary is built in a cargo run of its own, with only its
-    /// own package and features, so the reader never gets `tw`'s.
+    /// The terminal program is built in one cargo run of its own package:
+    /// `tw`, and the `textweaver` launcher on Windows only.
     #[test]
-    fn each_binary_is_built_on_its_own() {
-        for (package, bin) in BINARIES {
-            let args = binary_build_args(package, bin, Some("x86_64-apple-darwin"));
-            let packages: Vec<&str> = args
-                .windows(2)
-                .filter(|w| w[0] == "-p")
-                .map(|w| w[1].as_str())
-                .collect();
-            assert_eq!(packages, [package], "{args:?}");
-            let at = args.iter().position(|a| a == "--features").unwrap();
-            for (other, _) in BINARIES.iter().filter(|(p, _)| *p != package) {
-                assert!(!args[at + 1].contains(other), "{args:?}");
-            }
-            assert!(args.ends_with(&["--target".into(), "x86_64-apple-darwin".into()]));
-            assert!(args.iter().any(|a| a == PROFILE), "{args:?}");
+    fn the_terminal_program_is_built_in_one_run() {
+        let args = binary_build_args(Some("x86_64-apple-darwin"));
+        let after = |flag: &str| -> Vec<String> {
+            args.windows(2)
+                .filter(|w| w[0] == flag)
+                .map(|w| w[1].clone())
+                .collect()
+        };
+        assert_eq!(after("-p"), [PACKAGE], "{args:?}");
+        let bins = after("--bin");
+        assert_eq!(
+            bins.iter().any(|b| b == SECOND_NAME),
+            cfg!(windows),
+            "{args:?}"
+        );
+        assert!(bins.iter().any(|b| b == TW), "{args:?}");
+        assert!(args.ends_with(&["--target".into(), "x86_64-apple-darwin".into()]));
+        assert!(args.iter().any(|a| a == PROFILE), "{args:?}");
+    }
+
+    /// A package without the app, `tw`, its second name, or a host fails
+    /// the check, naming what is missing.
+    #[test]
+    fn a_package_must_hold_both_programs_and_the_hosts() {
+        let stage = std::env::temp_dir().join(format!("tw-dist-programs-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&stage);
+        fs::create_dir_all(&stage).unwrap();
+        let err = check_programs(&stage).unwrap_err().to_string();
+        assert!(err.contains(TW), "{err}");
+        assert!(err.contains(crate::gui_dist::INSTALLED), "{err}");
+        if cfg!(windows) {
+            assert!(err.contains("textweaver-espeak-host-x86.exe"), "{err}");
         }
+        for p in required_programs() {
+            let path = stage.join(p);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(path, "x").unwrap();
+        }
+        check_programs(&stage).unwrap();
+        let _ = fs::remove_dir_all(&stage);
+    }
+
+    /// On Linux and macOS, `textweaver` is a link to `tw`, and copying the
+    /// package (into the AppImage's folder) keeps it a link.
+    #[cfg(unix)]
+    #[test]
+    fn the_second_name_is_a_link_and_stays_one() {
+        let tmp = std::env::temp_dir().join(format!("tw-dist-link-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&tmp);
+        let stage = tmp.join("stage");
+        fs::create_dir_all(&stage).unwrap();
+        fs::write(stage.join(TW), "tw").unwrap();
+        link_second_name(&stage).unwrap();
+        let copy = tmp.join("copy");
+        copy_tree(&stage, &copy).unwrap();
+        let link = copy.join(SECOND_NAME);
+        assert!(
+            fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert_eq!(fs::read_link(&link).unwrap(), Path::new(TW));
+        let _ = fs::remove_dir_all(&tmp);
     }
 
     #[test]
