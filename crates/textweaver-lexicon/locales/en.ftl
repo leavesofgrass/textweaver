@@ -671,6 +671,7 @@ action-document-overview = Say the document's title, how many headings, tables, 
 action-reading-pass = Change what reading says: the full text, the first sentence of each paragraph with the headings, or the headings only
 action-define-word = Define the word at the cursor, or the selected words: senses, examples, synonyms, and pronunciation
 action-toggle-citations = Turn citations on or off in continuous reading: off skips them, on says them in words
+action-toggle-book-audio = Switch a talking book between its recorded narration and speech
 action-explore-math = Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves
 action-listen-rendered = Listen to the document as it will render, without leaving edit mode
 action-next-sentence = Move to the next sentence
@@ -1678,6 +1679,9 @@ links-footnote-no-note = Footnote { $label } has no note.
 
 citations-on = Citations on.
 citations-off = Citations off.
+book-audio-on = Book audio on. The recording plays where the book has one.
+book-audio-off = Book audio off. Speech reads the book.
+book-audio-rate = Rate changes do not apply to recorded audio.
 # $key names the Add Reference command's keys.
 citations-library-empty = Your reference library is empty. Add a reference by DOI or ISBN with { $key }, or run import references from the command palette.
 # $n is how many references the picker lists.
@@ -2153,6 +2157,10 @@ setting-reading-stop-after-minutes = Reading timer
 setting-reading-stop-after-minutes-help = Continuous reading stops at a sentence end after this many minutes of reading. It says so. Pausing stops the clock; stopping starts it over. 0 turns the timer off.
 setting-reading-recall-prompts = Recall prompts
 setting-reading-recall-prompts-help = At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key.
+setting-reading-book-audio = Book audio
+setting-reading-book-audio-help = What reads a DAISY talking book that has a recording. Its recorded narration, with the highlight following it and speech reading any text without audio, or speech only. Rate changes do not apply to the recording.
+choice-reading-book-audio-auto = recorded narration
+choice-reading-book-audio-speech = speech only
 setting-display-theme = Theme
 setting-display-theme-help = The color theme.
 setting-display-follow-os-theme = Follow the system theme
@@ -3564,6 +3572,7 @@ name-reading-pass = Reading pass
 name-define-word = Define word
 name-summarize = Summarize
 name-toggle-citations = Read citations
+name-toggle-book-audio = Book audio
 name-explore-math = Explore math
 name-listen-rendered = Listen as rendered
 name-next-sentence = Next sentence

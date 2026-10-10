@@ -77,6 +77,7 @@ use textweaver_text::{Document, DocumentMeta};
 
 pub mod annotations;
 pub mod archive;
+pub mod book_audio;
 pub mod brf;
 mod builder;
 pub mod cache;
@@ -122,6 +123,7 @@ pub use annotations::{
     REVISIONS_PROPERTY, changes, comments, revision_count, set_changes, set_comments,
 };
 pub use archive::ArchiveLoader;
+pub use book_audio::{AudioClip, AudioPar, BookAudio, book_audio};
 pub use brf::{BrfCode, BrfLoader};
 pub use cache::{CacheKey, DocumentCache};
 #[cfg(feature = "carta")]

@@ -428,6 +428,7 @@ impl MenuId {
                 Sep,
                 Do(A::ExploreMath),
                 Do(A::ToggleCitations),
+                Do(A::ToggleBookAudio),
                 Do(A::ListenRendered),
             ],
             MenuId::Say => &[
@@ -643,6 +644,7 @@ pub fn bound_setting(a: ActionId) -> Option<&'static str> {
         A::CycleVerbosity => "speech.verbosity",
         A::CyclePunctuation => "speech.punctuation",
         A::ToggleCitations => "reading.citations",
+        A::ToggleBookAudio => "reading.book_audio",
         A::TogglePreviewAutoReload => "preview.auto_reload",
         A::TogglePreviewLive => "preview.live",
         A::ToggleHeader => "gui.header",

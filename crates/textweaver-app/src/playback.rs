@@ -441,6 +441,7 @@ impl App {
         }
         self.track.clear();
         self.playback = Playback::Idle;
+        self.set_recorded(Vec::new());
         self.screen_say_all = None;
         self.continue_from = None;
         self.planned_end = None;
@@ -609,6 +610,12 @@ impl App {
             }
         }
         let citations = self.citation_speech_in(range);
+        // A talking book's recording plays in continuous reading.
+        let book = if kind == ReadKind::Continuous {
+            self.book_audio()
+        } else {
+            None
+        };
         let sp = &self.settings.speech;
         let pauses_on =
             sp.pause_heading_ms > 0 || sp.pause_paragraph_ms > 0 || sp.pause_list_item_ms > 0;
@@ -617,8 +624,13 @@ impl App {
         };
         let range = range.clamp_to(s.doc.len_chars());
         // Cut where the document has pauses written as markup.
-        let (mut utterances, written) =
-            plan_with_written_pauses(&s.doc, range, &policy, &citations);
+        let (mut utterances, written, recorded) = match &book {
+            Some(audio) => crate::book_audio::plan(&s.doc, range, &policy, &citations, audio),
+            None => {
+                let (u, w) = plan_with_written_pauses(&s.doc, range, &policy, &citations);
+                (u, w, Vec::new())
+            }
+        };
         // Where headings, paragraphs and list items end, for the speech
         // service's structural pauses; a written pause at the same place
         // comes later, so it wins.
@@ -627,6 +639,12 @@ impl App {
         } else {
             Vec::new()
         };
+        // The recording carries its own pauses.
+        pauses.retain(|p| {
+            !recorded
+                .iter()
+                .any(|r| r.range.start < p.after && p.after <= r.range.end)
+        });
         pauses.extend(written);
         if let Some(lead) = lead.filter(|_| !utterances.is_empty()) {
             utterances.insert(0, textweaver_core::Utterance::announcement(lead));
@@ -648,6 +666,7 @@ impl App {
         };
         s.spoken = None;
         s.spoken_sentence = None;
+        self.set_recorded(recorded);
         let generation = self.speech.read_with_pauses(utterances, pauses);
         self.track.follow(generation);
         self.playback = Playback::Reading;
@@ -684,13 +703,15 @@ impl App {
     /// the next one starts. False when there was nothing left to read.
     fn read_window(&mut self, start: CharPos) -> bool {
         let mut from = start;
+        // Found before the first window, which then ends at a phrase end.
+        let _ = self.book_audio();
         loop {
             let Some(s) = self.session.as_ref() else {
                 return false;
             };
             let doc_end = s.doc.end();
             let section = self.section_end.filter(|&e| e > from);
-            let window = window_end(&s.doc, from);
+            let window = self.window_end_at_phrase(window_end(&s.doc, from));
             let end = section.map_or(window, |e| window.min(e));
             let at_section = section == Some(end);
             if self.read_range(CharRange::new(from, end), ReadKind::Continuous) {

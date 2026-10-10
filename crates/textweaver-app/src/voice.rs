@@ -1145,7 +1145,12 @@ impl App {
             return;
         }
         self.set_rate(new);
-        let msg = self.msg_args("voice-rate", &args!["wpm" => new.wpm()]);
+        let mut msg = self.msg_args("voice-rate", &args!["wpm" => new.wpm()]);
+        // Said once: the recording keeps its own pace.
+        if self.reading_recorded() && !std::mem::replace(&mut self.book_rate_said, true) {
+            msg.push(' ');
+            msg.push_str(&self.msg("book-audio-rate"));
+        }
         self.tell(&msg);
     }
 

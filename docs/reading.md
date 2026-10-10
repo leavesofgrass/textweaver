@@ -85,7 +85,7 @@ The reader opens these formats itself:
 - PDF: `.pdf`, with comments as notes, links you can follow, and filled-in form fields read label first; scanned PDFs through text recognition (below).
 - Pictures of text: `.png`, `.jpg`, `.jpeg`, through text recognition.
 - DAISY 3 books and DTBook: `.opf`, `.xml`, `.dtbook`, and a DAISY book in a zip.
-- DAISY 2.02 books: open the book's `ncc.html`, or the zip it came in. The text is read, not the recorded audio.
+- DAISY 2.02 books: open the book's `ncc.html`, or the zip it came in. A book with a recorded narration plays it as you read; see [Talking books](#talking-books-the-recorded-narration).
 - Braille files: `.brf`, `.brl`, read as print through liblouis (below), and each volume of a braille book in a zip.
 - PowerPoint: `.pptx`, `.pptm`, `.ppsx`, `.potx`, with the speaker notes.
 - Spreadsheets, as tables: `.csv`, `.tsv`, `.tab`, `.ods`, `.xlsx`, `.xlsm`, `.xlsb`.
@@ -216,6 +216,22 @@ With **Recall prompts** on in Settings (`[reading] recall_prompts`, off by defau
 To read for a set time, set **Reading timer** in Settings (`[reading] stop_after_minutes`) to a number of minutes; 0, the default, turns it off. When that much reading time has passed, reading finishes the sentence it is in and stops, and you hear "Time is up after 20 minutes." and the key that goes on. The cursor is on the next sentence.
 
 Only reading time counts: pausing stops the clock, and resuming starts it again. Stopping with **Escape**, reaching the end of the document, or the timer running out starts the clock over at the next reading.
+
+### Talking books: the recorded narration
+
+Many DAISY books, from Bookshare, from national libraries for print-disabled readers, and from publishers, are full-text, full-audio books: alongside the text they carry a human narrator's recording, cut into short clips, together with SMIL files that pair each phrase of the text with the clip that says it. When you read such a book continuously (**Enter**, or **Shift+R**), textweaver plays the narrator's recording instead of a synthetic voice, and the reading highlight moves from phrase to phrase as the recording reaches each one. Pause, stop, the reading timer, and stopping at a section end work as they do with speech, and reading picks up from where it stopped. DAISY 3 and DAISY 2.02 books in MP3 or WAV are supported, whether opened from a folder or from the zip they came in.
+
+The recording and the text need not cover each other completely, and textweaver fills the gaps rather than failing:
+
+- **Text without audio.** Where the book has text that the narrator did not record, the speech engine reads it, then the recording resumes with the next recorded phrase. The two are never heard at once.
+- **Audio without text.** A book with no text at all, only its headings and its recording, opens as its list of headings. Reading plays the recording, one heading's section after another, with the highlight on the heading being played, so you can move by heading and listen from there.
+- **Reading one piece.** Reading a single word, sentence, or paragraph in place (the Say commands) uses speech, since a recorded phrase rarely matches those units.
+
+The highlight is exact at the start of each phrase, which is all the book itself records; within a phrase it moves through the words at an even pace, as an estimate. Phrases are usually a sentence or part of one.
+
+**Speed and the recording.** The rate keys change the synthetic voice only. A recording plays at the speed it was made, because changing its speed without changing its pitch takes audio processing that textweaver does not do. The first time you change the rate while a recording plays, textweaver says "Rate changes do not apply to recorded audio." Volume changes apply to both.
+
+**Choosing speech instead.** To hear the book in your own voice and at your own rate, set **Book audio** in Settings (`[reading] book_audio`) to **speech only**; the default, **recorded narration**, plays the recording wherever the book has one. **Book audio** in the Reading menu and the command palette switches between the two, and a reading in progress goes on from where it is, the new way. Protected talking books, such as those from NLS BARD, are not opened at all.
 
 ### Skim: reading passes, Shift+F
 

@@ -21,8 +21,8 @@
 //!   [`NO_TEXT_WARNING`].
 //!
 //! Open `ncc.html` (the HTML loader hands it here), or the zip the book
-//! came in (see [`ArchiveLoader`](crate::ArchiveLoader)). The audio is not
-//! played.
+//! came in (see [`ArchiveLoader`](crate::ArchiveLoader)). The recorded
+//! audio is found by [`crate::book_audio()`].
 
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -32,15 +32,14 @@ use scraper::{ElementRef, Html};
 use textweaver_text::{Document, DocumentMeta};
 
 use crate::builder::Builder;
-use crate::daisy::{MAX_FILES, ReadFile, decode_xml, read_beside, read_smil, smil_target};
+use crate::daisy::{Collect, MAX_FILES, ReadFile, decode_xml, read_beside, read_smil, smil_target};
 use crate::epub::{Sections, TocEntry, label_sections_by_heading};
 use crate::html::{Pages, is_daisy_page};
 use crate::package::{dir_of, parse_xml, resolve};
 use crate::{LoadError, LoadOptions, Source, title_from_path};
 
 /// The warning a DAISY 2.02 book with no text files carries.
-pub const NO_TEXT_WARNING: &str =
-    "This DAISY book has no text, only headings and audio, so its headings are read.";
+pub const NO_TEXT_WARNING: &str = "This DAISY book has no text, only headings and its recording.";
 
 /// The page number classes of DAISY 2.02.
 const PAGE_CLASSES: [&str; 3] = ["page-front", "page-normal", "page-special"];
@@ -85,7 +84,7 @@ pub(crate) fn load_source(
         _ => (String::from("ncc.html"), None),
     };
     let mut read = |rel: &str| read_beside(folder.as_deref(), rel);
-    let mut doc = load_ncc(&name, bytes, &mut read, options)?;
+    let mut doc = load_ncc(&name, bytes, &mut read, options, None)?;
     if let Source::Path(p) = source {
         doc.meta.path = Some(p.clone());
     }
@@ -214,6 +213,7 @@ pub(crate) fn load_ncc(
     ncc_bytes: &[u8],
     read: &mut ReadFile<'_>,
     options: &LoadOptions,
+    mut collect: Option<&mut Collect>,
 ) -> Result<Document, LoadError> {
     let ncc_text = decode_html(ncc_bytes);
     let ncc = parse_ncc(&ncc_text);
@@ -248,6 +248,9 @@ pub(crate) fn load_ncc(
         let Ok(xml) = parse_xml(&text) else { continue };
         let targets = read_smil(&xml, dir_of(file), &mut order, &mut seen);
         smil.insert(file.clone(), targets);
+        if let Some(c) = collect.as_deref_mut() {
+            c.smils.push((file.clone(), text.clone()));
+        }
     }
     // Only text files, and never the NCC again (a SMIL pointing back at it).
     order.retain(|f| is_content(f) && !f.eq_ignore_ascii_case(ncc_path));
@@ -299,10 +302,18 @@ pub(crate) fn load_ncc(
         let entries: Vec<&TocEntry> = toc.iter().filter(|e| &e.file == file).collect();
         let chapter = Chapter {
             text: &text,
+            file,
             toc: &entries,
             by_id,
         };
-        pages = chapter.read(&mut b, &mut sections, pages, options, &mut meta);
+        pages = chapter.read(
+            &mut b,
+            &mut sections,
+            pages,
+            options,
+            &mut meta,
+            collect.as_deref_mut(),
+        );
     }
     if !read_any {
         // No text: the NCC's own headings and pages.
@@ -318,12 +329,22 @@ pub(crate) fn load_ncc(
             })
             .collect();
         let entries: Vec<&TocEntry> = own.iter().collect();
+        if let Some(c) = collect.as_deref_mut() {
+            // Each heading leads to its place in the audio.
+            for h in &ncc.headings {
+                if let (Some(id), Some(href)) = (&h.id, &h.href) {
+                    c.nav
+                        .push(((ncc_path.to_owned(), id.clone()), resolve(&base, href)));
+                }
+            }
+        }
         let chapter = Chapter {
             text: &ncc_text,
+            file: ncc_path,
             toc: &entries,
             by_id: HashMap::new(),
         };
-        pages = chapter.read(&mut b, &mut sections, pages, options, &mut meta);
+        pages = chapter.read(&mut b, &mut sections, pages, options, &mut meta, collect);
     }
     pages.close(&mut b);
     let (text, mut markers) = b.finish();
@@ -332,8 +353,34 @@ pub(crate) fn load_ncc(
 }
 
 /// One text file of the book.
+/// Reads `html`, the content file `file`, as one chapter with no page
+/// list: `toc` entries open sections where their ids are, and `collect`
+/// notes where each id starts.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn read_chapter(
+    b: &mut Builder,
+    sections: &mut Sections,
+    html: &str,
+    file: &str,
+    toc: &[&TocEntry],
+    options: &LoadOptions,
+    meta: &mut DocumentMeta,
+    collect: Option<&mut Collect>,
+) {
+    let chapter = Chapter {
+        text: html,
+        file,
+        toc,
+        by_id: HashMap::new(),
+    };
+    let mut pages = chapter.read(b, sections, Pages::default(), options, meta, collect);
+    pages.close(b);
+}
+
 struct Chapter<'a> {
     text: &'a str,
+    /// Its path among the book's files.
+    file: &'a str,
     /// The sections that start in it.
     toc: &'a [&'a TocEntry],
     /// Page labels by element id, from the NCC.
@@ -343,7 +390,8 @@ struct Chapter<'a> {
 impl Chapter<'_> {
     /// Reads the file into `b` through the HTML loader's rules: its
     /// sections open at the elements they name (or at its start), and
-    /// `pages` carries the open print page on into the next file.
+    /// `pages` carries the open print page on into the next file;
+    /// `collect` notes where each id starts.
     fn read(
         self,
         b: &mut Builder,
@@ -351,6 +399,7 @@ impl Chapter<'_> {
         mut pages: Pages,
         options: &LoadOptions,
         meta: &mut DocumentMeta,
+        mut collect: Option<&mut Collect>,
     ) -> Pages {
         let ids = crate::html::anchor_ids(self.text);
         let mut anchored: HashMap<&str, Vec<&TocEntry>> = HashMap::new();
@@ -363,7 +412,11 @@ impl Chapter<'_> {
         }
         pages.by_id = self.by_id;
         let mut scratch = DocumentMeta::default();
+        let file = self.file;
         let mut hook = |id: &str, b: &mut Builder| {
+            if let Some(c) = collect.as_deref_mut() {
+                c.note(file, id, b.next_start());
+            }
             if let Some(es) = anchored.remove(id) {
                 for e in es {
                     sections.open(b, e);

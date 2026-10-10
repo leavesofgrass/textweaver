@@ -897,9 +897,25 @@ pub struct ReadingSettings {
     /// before going on. With `stop_at` off, reading stops at the next
     /// heading for them. Off by default.
     pub recall_prompts: bool,
+    /// What reads a DAISY book that has recorded audio: its recording
+    /// (`auto`, the default: the narration plays where the book has it,
+    /// with the highlight following, and speech reads the rest), or speech
+    /// only (`speech`).
+    pub book_audio: BookAudio,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
+}
+
+/// `[reading] book_audio`: what reads a DAISY book with recorded audio.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BookAudio {
+    /// The recording where the book has one, speech elsewhere.
+    #[default]
+    Auto,
+    /// Speech only.
+    Speech,
 }
 
 /// `[reading] stop_at`: where continuous reading stops by itself.
@@ -948,6 +964,7 @@ impl Default for ReadingSettings {
             stop_at: StopAt::Off,
             stop_after_minutes: 0,
             recall_prompts: false,
+            book_audio: BookAudio::Auto,
             extra: toml::Table::new(),
         }
     }

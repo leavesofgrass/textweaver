@@ -547,7 +547,7 @@ impl Loader for ArchiveLoader {
         let bad = |e: io::Error| LoadError::Parse(format!("{name}: {e}"));
         let entries = input.list().map_err(bad)?;
         // A DAISY book or an EPUB opens as itself.
-        if let Some(doc) = open_book(&input, &entries, source, options)? {
+        if let Some(doc) = open_book(&input, &entries, source, options, None)? {
             return Ok(doc);
         }
         let mut meta = meta_for(source, self.id());
@@ -652,12 +652,14 @@ fn group_digits(n: usize) -> String {
 
 /// A DAISY 3 book (its package file names a DTBook), a DAISY 2.02 book
 /// (its `ncc.html`), or an EPUB (its `mimetype` says so) inside the
-/// archive, loaded; `None` otherwise.
+/// archive, loaded; `None` otherwise. `collect`, when given, gathers what
+/// a DAISY book's audio needs ([`crate::book_audio()`]).
 fn open_book(
     input: &Input,
     entries: &[Entry],
     source: &Source,
     options: &LoadOptions,
+    mut collect: Option<&mut crate::daisy::Collect>,
 ) -> Result<Option<Document>, LoadError> {
     let bad = |e: io::Error| LoadError::Parse(e.to_string());
     if entries.iter().any(|e| e.name == "mimetype")
@@ -696,7 +698,13 @@ fn open_book(
                 Err(e) => Err(LoadError::Parse(e.to_string())),
             }
         };
-        let mut doc = crate::daisy::load_package(&opf.name, &text, &mut read, options)?;
+        let mut doc = crate::daisy::load_package(
+            &opf.name,
+            &text,
+            &mut read,
+            options,
+            collect.as_deref_mut(),
+        )?;
         restore_identity(&mut doc, source);
         return Ok(Some(doc));
     }
@@ -714,11 +722,30 @@ fn open_book(
                 Err(e) => Err(LoadError::Parse(e.to_string())),
             }
         };
-        let mut doc = crate::daisy2::load_ncc(&ncc.name, &text, &mut read, options)?;
+        let mut doc = crate::daisy2::load_ncc(&ncc.name, &text, &mut read, options, collect)?;
         restore_identity(&mut doc, source);
         return Ok(Some(doc));
     }
     Ok(None)
+}
+
+/// The DAISY book inside the archive at `path`, loaded again while
+/// `collect` gathers what its audio needs ([`crate::book_audio()`]); `None`
+/// when the archive holds none.
+pub(crate) fn load_daisy_collecting(
+    path: &Path,
+    options: &LoadOptions,
+    collect: &mut crate::daisy::Collect,
+) -> Result<Option<Document>, LoadError> {
+    let input = Input::File(path.to_owned());
+    let entries = input.list().map_err(|e| LoadError::Parse(e.to_string()))?;
+    open_book(
+        &input,
+        &entries,
+        &Source::Path(path.to_owned()),
+        options,
+        Some(collect),
+    )
 }
 
 /// A book found in an archive keeps the archive's path (for notes and

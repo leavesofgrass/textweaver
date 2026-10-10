@@ -231,6 +231,9 @@ actions! {
     ToggleCitations = "toggle_citations", Reading,
         "Turn citations on or off in continuous reading: off skips them, on says them in words",
         gui ["g:Alt+Shift+Q"], term ["g:Alt+Shift+Q"], shared [];
+    ToggleBookAudio = "toggle_book_audio", Reading,
+        "Switch a talking book between its recorded narration and speech",
+        gui [], term [], shared [];
     ExploreMath = "explore_math", Reading,
         "Explore the math at the cursor term by term: arrows move, Down goes into a part, Up comes out, Escape leaves",
         gui ["g:Alt+Shift+X"], term ["g:Alt+Shift+X"], shared [];

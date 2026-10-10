@@ -768,6 +768,12 @@ pub const INFO: &[Info] = &[
         "Recall prompts",
         "At a section end, reading asks you to say what you remember. Reading stops at the next heading for this when Stop at section end is never. Reading goes on with the read key.",
     ),
+    choice(
+        "reading.book_audio",
+        "Book audio",
+        "What reads a DAISY talking book that has a recording. Its recorded narration, with the highlight following it and speech reading any text without audio, or speech only. Rate changes do not apply to the recording.",
+        &[("auto", "recorded narration"), ("speech", "speech only")],
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The color theme.", &[]),
     toggle(

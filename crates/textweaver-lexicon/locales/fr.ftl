@@ -694,6 +694,7 @@ action-document-overview = Dire le titre du document, combien il a de titres, de
 action-reading-pass = Changer ce que dit la lecture : le texte entier, la première phrase de chaque paragraphe avec les titres, ou seulement les titres
 action-define-word = Définir le mot au curseur, ou les mots sélectionnés : sens, exemples, synonymes, et prononciation
 action-toggle-citations = Activer ou désactiver les citations en lecture continue : désactivé les ignore, activé les dit en mots
+action-toggle-book-audio = Basculer un livre audio entre sa narration enregistrée et la synthèse vocale
 action-explore-math = Explorer la formule mathématique au curseur terme par terme : les flèches déplacent, Bas entre dans une partie, Haut en sort, Échap quitte
 action-listen-rendered = Écouter le document tel qu'il sera rendu, sans quitter le mode édition
 action-next-sentence = Passer à la phrase suivante
@@ -1684,6 +1685,9 @@ links-footnote-no-note = La note de bas de page { $label } n'a pas de texte.
 
 citations-on = Citations activées.
 citations-off = Citations désactivées.
+book-audio-on = Audio du livre activé. L’enregistrement est lu là où le livre en a un.
+book-audio-off = Audio du livre désactivé. La synthèse vocale lit le livre.
+book-audio-rate = Les changements de débit ne s’appliquent pas à l’audio enregistré.
 # $key names the Add Reference command's keys.
 citations-library-empty = Votre bibliothèque de références est vide. Ajoutez une référence par DOI ou ISBN avec { $key }, ou exécutez import references depuis la palette de commandes.
 # $n is how many references the picker lists.
@@ -2157,6 +2161,10 @@ setting-reading-stop-after-minutes = Minuteur de lecture
 setting-reading-stop-after-minutes-help = La lecture continue s’arrête à la fin de la phrase après ce nombre de minutes de lecture, et le dit. La pause arrête l’horloge ; l’arrêt la remet à zéro. 0 désactive le minuteur.
 setting-reading-recall-prompts = Questions de rappel
 setting-reading-recall-prompts-help = À la fin d’une section, la lecture vous demande de dire ce dont vous vous souvenez. Si Arrêt en fin de section vaut jamais, la lecture s’arrête pour cela au titre suivant. La lecture reprend avec la touche de lecture.
+setting-reading-book-audio = Audio du livre
+setting-reading-book-audio-help = Ce qui lit un livre audio DAISY qui a un enregistrement. Sa narration enregistrée, avec la mise en évidence qui la suit et la synthèse vocale pour le texte sans audio, ou la synthèse vocale seule. Les changements de débit ne s’appliquent pas à l’enregistrement.
+choice-reading-book-audio-auto = narration enregistrée
+choice-reading-book-audio-speech = synthèse vocale seule
 setting-display-theme = Thème
 setting-display-theme-help = Le thème de couleur.
 setting-display-follow-os-theme = Suivre le thème du système
@@ -3548,6 +3556,7 @@ name-reading-pass = Passe de lecture
 name-define-word = Définir le mot
 name-summarize = Résumer
 name-toggle-citations = Lire les citations
+name-toggle-book-audio = Audio du livre
 name-explore-math = Explorer les maths
 name-listen-rendered = Écouter le rendu
 name-next-sentence = Phrase suivante

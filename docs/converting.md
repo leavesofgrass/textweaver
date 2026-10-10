@@ -307,7 +307,7 @@ textweaver reads these formats itself:
 - Email (EML) and web pages saved from a browser as one file (MHTML and MHT). See [Email and web archives](#email-and-web-archives).
 - Scanned PDFs and pictures (PNG, JPEG), by recognizing their text. See [Scanned pages](#scanned-pages-ocr).
 - DAISY 3 books and DTBook files, including Bookshare zips.
-- DAISY 2.02 books: open `ncc.html` in the book's folder, or the zip. Each heading in `ncc.html` starts a section, and the print page numbers are kept for "go to page" but not read aloud. The text files are read in the order the book's SMIL files give. A book with no text, only headings and audio, reads its headings and says so. The recorded audio is not played.
+- DAISY 2.02 books: open `ncc.html` in the book's folder, or the zip. Each heading in `ncc.html` starts a section, and the print page numbers are kept for "go to page" but not read aloud. The text files are read in the order the book's SMIL files give. A book with no text, only headings and audio, reads its headings and says so. Reading a book that has a recorded narration plays the recording; see [Talking books](reading.md#talking-books-the-recorded-narration). Conversion writes the text only.
 - Braille files (BRF and BRL), such as the braille books of the NLS BARD service, read back to print through liblouis. See [Braille files](reading.md#braille-files-brf).
 - PowerPoint (PPTX): slides in order, each with its speaker notes.
 - Spreadsheets: CSV, TSV, OpenDocument (ODS), and Excel (XLSX, XLSM, XLSB), as tables. Old binary Excel files (XLS) are not read.

@@ -21,6 +21,9 @@ textweaver-speech.workspace = true
 thiserror.workspace = true
 log.workspace = true
 rodio = { workspace = true, optional = true, features = ["playback"] }
+# Decodes the recorded audio of DAISY books (MP3 and WAV; MPL-2.0, approved
+# by the owner on Friday, October 9, 2026).
+symphonia.workspace = true
 
 # Hosts join a kill-on-close Job Object, so they never outlive textweaver.
 [target.'cfg(windows)'.dependencies]

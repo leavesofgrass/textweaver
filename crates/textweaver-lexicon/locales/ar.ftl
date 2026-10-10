@@ -762,6 +762,7 @@ action-document-overview = قول عنوان المستند، وعدد العن�
 action-reading-pass = تغيير ما تقوله القراءة: النص كاملًا، أو الجملة الأولى من كل فقرة مع العناوين، أو العناوين فقط
 action-define-word = تعريف الكلمة عند المؤشر، أو الكلمات المحددة: المعاني والأمثلة والمرادفات والنطق
 action-toggle-citations = تشغيل أو إيقاف الاستشهادات في القراءة المتواصلة: الإيقاف يتخطاها، والتشغيل ينطقها بالكلمات
+action-toggle-book-audio = التبديل في الكتاب الناطق بين تسجيله الصوتي والصوت المُركَّب
 action-explore-math = استكشاف الرياضيات عند المؤشر حدًا حدًا: الأسهم للتنقل، لأسفل للدخول في جزء، لأعلى للخروج منه، Escape للمغادرة
 action-listen-rendered = الاستماع إلى المستند كما سيظهر عند العرض، دون مغادرة وضع التحرير
 action-next-sentence = الانتقال إلى الجملة التالية
@@ -1837,6 +1838,9 @@ links-footnote-no-note = الحاشية { $label } بلا ملاحظة.
 
 citations-on = الاستشهادات مفعّلة.
 citations-off = الاستشهادات متوقفة.
+book-audio-on = صوت الكتاب مفعّل. يُشغَّل التسجيل حيث يوجد في الكتاب.
+book-audio-off = صوت الكتاب متوقف. الصوت المُركَّب يقرأ الكتاب.
+book-audio-rate = تغييرات السرعة لا تنطبق على الصوت المسجَّل.
 # $key names the Add Reference command's keys.
 citations-library-empty = مكتبة مراجعك فارغة. أضف مرجعًا بـDOI أو ISBN بـ{ $key }، أو شغّل استيراد مراجع من لوحة الأوامر.
 # $n is how many references the picker lists.
@@ -2333,6 +2337,10 @@ setting-reading-stop-after-minutes = مؤقت القراءة
 setting-reading-stop-after-minutes-help = تتوقف القراءة المستمرة عند نهاية الجملة بعد هذا العدد من دقائق القراءة، وتقول ذلك. الإيقاف المؤقت يوقف الساعة، والإيقاف يبدأها من جديد. 0 يطفئ المؤقت.
 setting-reading-recall-prompts = أسئلة التذكر
 setting-reading-recall-prompts-help = عند نهاية القسم، تطلب منك القراءة أن تقول ما تتذكره. إذا كان التوقف عند نهاية القسم على أبدًا، تتوقف القراءة لذلك عند العنوان التالي. تتابع القراءة بمفتاح القراءة.
+setting-reading-book-audio = صوت الكتاب
+setting-reading-book-audio-help = ما يقرأ كتاب DAISY الناطق الذي له تسجيل. سرده المسجَّل، مع تمييز يتبعه وصوت مُركَّب يقرأ النص الذي لا صوت له، أو الصوت المُركَّب وحده. تغييرات السرعة لا تنطبق على التسجيل.
+choice-reading-book-audio-auto = السرد المسجَّل
+choice-reading-book-audio-speech = الصوت المُركَّب فقط
 setting-display-theme = السمة
 setting-display-theme-help = السمة اللونية.
 setting-display-follow-os-theme = اتباع سمة النظام
@@ -3876,6 +3884,7 @@ name-reading-pass = نمط القراءة
 name-define-word = تعريف الكلمة
 name-summarize = تلخيص
 name-toggle-citations = قراءة الاستشهادات
+name-toggle-book-audio = صوت الكتاب
 name-explore-math = استكشاف الرياضيات
 name-listen-rendered = الاستماع كما سيُعرض
 name-next-sentence = الجملة التالية

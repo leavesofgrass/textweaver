@@ -15,6 +15,7 @@ mod app_core;
 mod authoring;
 mod authoring_extras;
 mod batch;
+mod book_audio;
 mod browse;
 #[cfg(feature = "publish")]
 mod citations_reading;

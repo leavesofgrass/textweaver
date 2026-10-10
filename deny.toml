@@ -53,6 +53,10 @@ allow = [
     # THIRD-PARTY-NOTICES.md states the relinking obligation.
     "LGPL-3.0",
     "MIT",
+    # MPL-2.0 (file-level copyleft, combines with GPL-3.0-or-later): among
+    # others symphonia, which decodes DAISY books' recorded audio (MP3 and
+    # WAV) as a normal dependency since the owner approved it on Friday,
+    # October 9, 2026 (B1-r3).
     "MPL-2.0",
     "Unicode-3.0",
     "Unicode-DFS-2016",
