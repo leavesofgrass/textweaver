@@ -605,6 +605,9 @@ impl MenuId {
                 Do(A::GradeHard),
                 Do(A::GradeGood),
                 Do(A::GradeEasy),
+                Sep,
+                Do(A::ExportCardsAnki),
+                Do(A::ImportCardsAnki),
             ],
             MenuId::Sync => &[
                 Do(A::SyncSetup),

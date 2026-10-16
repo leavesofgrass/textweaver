@@ -362,6 +362,28 @@ Cards are kept on this computer beside your notes, one file per document (`cards
 
 `tw study due` counts the cards due today in every document in your library that has cards, the total first: "Due today: 7 cards, 5 new, in 2 documents." followed by one line per document, such as "Due today: 3 cards, 1 new. Pharmacology". A document with nothing due says when its next card falls due: "Nothing due today, next in 3 days. Anatomy". Give a file to count only its cards: `tw study due chapter4.md`. `--json` prints the same counts as JSON for a script, and `--home DIR` reads the cards under another data folder. The command only reads; it never changes a card.
 
+#### Take cards to Anki and back
+
+[Anki](https://apps.ankiweb.net/) is a widely used flashcard program. textweaver writes and reads its package format, `.apkg`, so you can study your cards in Anki or study an Anki deck in textweaver. Nothing goes over the network, and Anki does not need to be running.
+
+**Export.** Type `export cards to Anki` in the palette, or choose **Export cards to Anki** in the **Study cards** submenu. textweaver writes the document's cards beside it as `NAME-cards.apkg` and says, for example, "Exported 12 cards to Anki: chapter4-cards.apkg, in Readings." Open that file in Anki (File, Import) to add them. In Anki:
+
+- Each card is a note of a Basic note type named "Basic (textweaver)", with the fields Front and Back. Front is what is asked, so a reversed card has its passage on the front. Text is plain; line breaks are kept.
+- The deck is named after the document. Each note is tagged with the document's title (spaces become underscores, as Anki tags hold no spaces) and with the card's kind: `textweaver::cloze`, `textweaver::question`, or `textweaver::recall`, and `textweaver::reversed` for a reversed card. A fill-in-the-blank card goes as a Basic card with the word "blank" in its question, not as an Anki cloze.
+- The schedule goes with the cards. A graded card arrives as a review card with its interval, ease, and due day, and every grade you gave it is in Anki's review history. A card you never graded arrives as a new card.
+- Exporting again gives each note the same identity (its GUID is the card's id), so Anki matches the notes it already has instead of adding copies.
+
+**Import.** Type `import Anki cards` in the palette, or choose **Import Anki cards** in the same submenu, and give the `.apkg` file (the graphical version opens a file chooser). The cards are added to the open document's cards, and you hear, for example, "Imported 120 cards. Skipped 4 cloze notes." What textweaver takes from a package:
+
+- **Basic notes** become question cards: the front is the question and the back the answer. The second card of a **Basic and reversed** note becomes a reversed card. A note type with more fields gives its first field as the question and the others, joined, as the answer.
+- **Text only.** Anki keeps fields as HTML; textweaver turns them into plain text, keeping line breaks. Pictures and sounds are left out. A note that is nothing but pictures or sound is skipped and counted.
+- **Cloze notes are skipped** and counted, as are notes with no text and the third and later cards of a note type that makes more than two.
+- **Grades** come from Anki's review history (Again, Hard, Good, and Easy, as in textweaver), and textweaver works out the schedule again from them with SM-2, so a card's next interval can differ from the one Anki showed. Anki grades a new card several times within minutes while you learn it; textweaver keeps only the last grade of each day for those. Cards Anki never reviewed arrive as new.
+- **Importing the same package again adds nothing.** Each card is matched on the Anki note's identity (its GUID), and a card already here keeps its own text and gains any grades it lacked. Cards that went out from textweaver and come back are matched to the cards they were made from.
+- A card from Anki has no place in the document, so **Enter** on it in the Cards list says "This card came from Anki; it has no place in the document."
+
+**From the command line.** `tw study export --anki cards.apkg` writes the cards of every document in your library that has cards, one deck per document; give a file to export only its cards (`tw study export --anki chapter4.apkg chapter4.md`), and `--deck NAME` to put every card in one deck. `tw study import deck.apkg chapter4.md` adds a package's cards to that document's. Without a document, each Anki deck goes to the library document whose title is the deck's name (or the last part of it, after `::`), and the command stops without changing anything when a deck has no such document. Both take `--home DIR` for another data folder.
+
 ### Recall prompts at section ends
 
 Turn on **Recall prompts** in Settings (`[reading] recall_prompts`, off by default). When continuous reading stops at the end of a section, it asks you to recall it, naming the section it just read: "Say what you remember from Renal clearance. Ctrl+Space to go on." The key you hear is your read key. Say or think what you remember, then press the key, and reading goes on with the next section.

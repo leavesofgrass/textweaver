@@ -510,6 +510,12 @@ actions! {
         gui [], term [], shared [];
     GradeEasy = "grade_easy", Bookmarks, "Grade the card being studied: Easy, recalled at once",
         gui [], term [], shared [];
+    ExportCardsAnki = "export_cards_anki", Bookmarks,
+        "Export the study cards as an Anki package, saved beside the document",
+        gui [], term [], shared [];
+    ImportCardsAnki = "import_cards_anki", Bookmarks,
+        "Import study cards from an Anki package into this document's cards",
+        gui [], term [], shared [];
 
     // File
     Open = "open", File, "Open a document",

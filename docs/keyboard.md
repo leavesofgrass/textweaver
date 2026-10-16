@@ -284,6 +284,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Grade the card being studied: Hard, recalled with effort | palette | palette | palette | `grade_hard` |
 | Grade the card being studied: Good, recalled | palette | palette | palette | `grade_good` |
 | Grade the card being studied: Easy, recalled at once | palette | palette | palette | `grade_easy` |
+| Export the study cards as an Anki package, saved beside the document | palette | palette | palette | `export_cards_anki` |
+| Import study cards from an Anki package into this document's cards | palette | palette | palette | `import_cards_anki` |
 
 ## File
 
@@ -582,6 +584,8 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Grade the card being studied: Hard, recalled with effort | `grade_hard` |
 | Grade the card being studied: Good, recalled | `grade_good` |
 | Grade the card being studied: Easy, recalled at once | `grade_easy` |
+| Export the study cards as an Anki package, saved beside the document | `export_cards_anki` |
+| Import study cards from an Anki package into this document's cards | `import_cards_anki` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |

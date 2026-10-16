@@ -51,7 +51,8 @@ These limits apply to the textweaver app (`textweaver-gui`). The terminal reader
 ## Study tools
 
 - **Study cards are scheduled with SM-2 only.** Cards are made from notes, highlights, and headings, studied, graded in words, and brought back when due ([Study with cards](notes.md#study-with-cards)). A card counts as due by the clock, from half a day before its interval ends, not by the calendar day in your time zone. FSRS scheduling is dropped on purpose.
-- **Anki import and export come in beta 3.** Until then, cards stay in textweaver and sync between your computers with your notes. AnkiConnect sync is dropped on purpose.
+- **Anki packages carry text and grades only.** Importing an `.apkg` skips cloze notes and leaves out pictures and sound, and textweaver works out each card's schedule again from its grades, so intervals can differ from Anki's ([Take cards to Anki and back](notes.md#take-cards-to-anki-and-back)). Fill-in-the-blank cards go to Anki as Basic cards, not as Anki clozes.
+- **AnkiConnect sync is dropped on purpose.** It needs Anki running with an add-on and a local network port; cards go to Anki and back as `.apkg` files instead.
 - **The reading queue comes in beta 3.** There is no list of documents to read next that carries from one session to the next. Next step: the library's recent files (Alt+L) and bookmarks.
 - **Knowledge graphs from notes are not drawn.** Links between notes are lists instead: each note's links, "What links here", and `tw notes links` ([notes guide](notes.md#links-between-notes)). The graph exports to files that other tools draw, with a Markdown list as their text equivalent ([Export the knowledge graph](notes.md#export-the-knowledge-graph)).
 

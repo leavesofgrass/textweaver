@@ -887,6 +887,8 @@ action-grade-again = تقييم البطاقة قيد الدراسة: مرة أ�
 action-grade-hard = تقييم البطاقة قيد الدراسة: صعبة، استُذكرت بجهد
 action-grade-good = تقييم البطاقة قيد الدراسة: جيدة، استُذكرت
 action-grade-easy = تقييم البطاقة قيد الدراسة: سهلة، استُذكرت فورًا
+action-export-cards-anki = تصدير بطاقات الدراسة حزمةَ Anki، تُحفظ بجانب المستند
+action-import-cards-anki = استيراد بطاقات دراسة من حزمة Anki إلى بطاقات هذا المستند
 action-open = فتح مستند
 action-open-path = فتح مستند بكتابة مساره
 action-open-library = فتح المكتبة: مستندات مجلدات مكتبتك والملفات الأخيرة
@@ -1633,6 +1635,39 @@ cards-source-label = مصدر البطاقة
 cards-remove-question = إزالة هذه البطاقة وتقييماتها؟ y أو n
 cards-removed = أُزيلت البطاقة.
 cards-save-failed = تعذّر حفظ البطاقات: { $error } تحقّق من إمكانية الكتابة في مجلد البيانات.
+cards-anki-exported =
+    { $n ->
+        [one] صُدّرت بطاقة واحدة إلى Anki: { $file }، في { $folder }.
+       *[other] صُدّرت { $n } بطاقة إلى Anki: { $file }، في { $folder }.
+    }
+cards-anki-export-failed = تعذّر تصدير البطاقات إلى Anki: { $error } تحقّق من إمكانية الكتابة في مجلد المستند.
+cards-anki-import-failed = تعذّر استيراد { $file }: { $error } تحقّق من أن الملف حزمة Anki بامتداد ‎.apkg.
+cards-anki-imported =
+    { $added ->
+        [one] استُوردت بطاقة واحدة.
+       *[other] استُوردت { $added } بطاقة.
+    }
+cards-anki-already =
+    { $n ->
+        [one] بطاقة واحدة موجودة من قبل؛ دُمجت تقييماتها.
+       *[other] { $n } بطاقة موجودة من قبل؛ دُمجت تقييماتها.
+    }
+cards-anki-skipped-cloze =
+    { $n ->
+        [one] تُخطّيت ملاحظة ملء فراغ واحدة.
+       *[other] تُخطّيت { $n } ملاحظة ملء فراغ.
+    }
+cards-anki-skipped-media =
+    { $n ->
+        [one] تُخطّيت ملاحظة واحدة ليست إلا صورًا أو صوتًا.
+       *[other] تُخطّيت { $n } ملاحظة ليست إلا صورًا أو صوتًا.
+    }
+cards-anki-skipped-other =
+    { $n ->
+        [one] تُخطّيت ملاحظة واحدة بلا نص أو بأكثر من بطاقتين.
+       *[other] تُخطّيت { $n } ملاحظة بلا نص أو بأكثر من بطاقتين.
+    }
+cards-from-anki = جاءت هذه البطاقة من Anki؛ ليس لها موضع في المستند.
 # Said first in the study session and the Cards list (B1-f2). $due is how
 # many graded cards are due, $new how many were never graded.
 cards-due-summary =
@@ -4103,6 +4138,8 @@ name-grade-again = تقييم: مرة أخرى
 name-grade-hard = تقييم: صعبة
 name-grade-good = تقييم: جيدة
 name-grade-easy = تقييم: سهلة
+name-export-cards-anki = تصدير البطاقات إلى Anki
+name-import-cards-anki = استيراد بطاقات Anki
 name-open = فتح
 name-open-path = فتح بالمسار
 name-open-library = المكتبة
@@ -4825,6 +4862,8 @@ chooser-image-title = إدراج صورة
 chooser-images = الصور
 chooser-references-title = استيراد المراجع
 chooser-reference-files = ملفات المراجع
+chooser-anki-title = استيراد بطاقات Anki
+chooser-anki-files = حزم Anki
 chooser-profiles-import-title = استيراد ملفات الإعدادات
 chooser-profiles-export-title = تصدير ملفات الإعدادات
 chooser-profile-files = ملفات تصدير الإعدادات
@@ -5073,6 +5112,7 @@ action-add-comment = إضافة تعليق على التحديد أو على ا�
 prompt-comment-reply = الرد
 prompt-comment-text = التعليق
 prompt-github-token = رمز GitHub لمصدر المكونات، Enter للتخطي
+prompt-import-cards = استيراد بطاقات الدراسة من حزمة Anki
 changes-title = التغييرات والتعليقات
 changes-intro =
     { $n ->

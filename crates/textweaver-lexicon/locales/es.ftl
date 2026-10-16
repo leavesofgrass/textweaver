@@ -791,6 +791,8 @@ action-grade-again = Calificar la tarjeta en estudio: Otra vez, no recordada
 action-grade-hard = Calificar la tarjeta en estudio: Difícil, recordada con esfuerzo
 action-grade-good = Calificar la tarjeta en estudio: Bien, recordada
 action-grade-easy = Calificar la tarjeta en estudio: Fácil, recordada al instante
+action-export-cards-anki = Exportar las tarjetas de estudio como paquete de Anki, guardado junto al documento
+action-import-cards-anki = Importar tarjetas de estudio de un paquete de Anki a las tarjetas de este documento
 action-open = Abrir un documento
 action-open-path = Abrir un documento escribiendo su ruta
 action-open-library = Abrir la biblioteca: documentos de sus carpetas de biblioteca y archivos recientes
@@ -1485,6 +1487,39 @@ cards-source-label = Origen de la tarjeta
 cards-remove-question = ¿Quitar esta tarjeta y sus calificaciones? y o n
 cards-removed = Tarjeta quitada.
 cards-save-failed = No se pudieron guardar las tarjetas: { $error } Compruebe que se puede escribir en la carpeta de datos.
+cards-anki-exported =
+    { $n ->
+        [one] Se exportó 1 tarjeta a Anki: { $file }, en { $folder }.
+       *[other] Se exportaron { $n } tarjetas a Anki: { $file }, en { $folder }.
+    }
+cards-anki-export-failed = No se pudieron exportar las tarjetas a Anki: { $error } Compruebe que se puede escribir en la carpeta del documento.
+cards-anki-import-failed = No se pudo importar { $file }: { $error } Compruebe que el archivo es un paquete de Anki, .apkg.
+cards-anki-imported =
+    { $added ->
+        [one] Se importó 1 tarjeta.
+       *[other] Se importaron { $added } tarjetas.
+    }
+cards-anki-already =
+    { $n ->
+        [one] 1 tarjeta ya estaba; se combinaron sus calificaciones.
+       *[other] { $n } tarjetas ya estaban; se combinaron sus calificaciones.
+    }
+cards-anki-skipped-cloze =
+    { $n ->
+        [one] Se omitió 1 nota de huecos.
+       *[other] Se omitieron { $n } notas de huecos.
+    }
+cards-anki-skipped-media =
+    { $n ->
+        [one] Se omitió 1 nota que solo tiene imágenes o sonido.
+       *[other] Se omitieron { $n } notas que solo tienen imágenes o sonido.
+    }
+cards-anki-skipped-other =
+    { $n ->
+        [one] Se omitió 1 nota sin texto o con más de dos tarjetas.
+       *[other] Se omitieron { $n } notas sin texto o con más de dos tarjetas.
+    }
+cards-from-anki = Esta tarjeta viene de Anki; no tiene un lugar en el documento.
 # Said first in the study session and the Cards list (B1-f2). $due is how
 # many graded cards are due, $new how many were never graded.
 cards-due-summary =
@@ -3741,6 +3776,8 @@ name-grade-again = Calificar otra vez
 name-grade-hard = Calificar difícil
 name-grade-good = Calificar bien
 name-grade-easy = Calificar fácil
+name-export-cards-anki = Exportar tarjetas a Anki
+name-import-cards-anki = Importar tarjetas de Anki
 name-open = Abrir
 name-open-path = Abrir por ruta
 name-open-library = Biblioteca
@@ -4471,6 +4508,8 @@ chooser-image-title = Insertar una imagen
 chooser-images = Imágenes
 chooser-references-title = Importar referencias
 chooser-reference-files = Archivos de referencias
+chooser-anki-title = Importar tarjetas de Anki
+chooser-anki-files = Paquetes de Anki
 chooser-profiles-import-title = Importar perfiles
 chooser-profiles-export-title = Exportar perfiles
 chooser-profile-files = Archivos de perfiles
@@ -4713,6 +4752,7 @@ action-add-comment = Añadir un comentario a la selección o a la oración del c
 prompt-comment-reply = Respuesta
 prompt-comment-text = Comentario
 prompt-github-token = Token de GitHub del origen de componentes, Intro lo omite
+prompt-import-cards = Importar tarjetas de estudio de un paquete de Anki
 changes-title = Cambios y comentarios
 changes-intro =
     { $n ->

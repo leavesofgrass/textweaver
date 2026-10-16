@@ -827,6 +827,8 @@ action-grade-again = Die gelernte Karte bewerten: Nochmal, nicht erinnert
 action-grade-hard = Die gelernte Karte bewerten: Schwer, mit Mühe erinnert
 action-grade-good = Die gelernte Karte bewerten: Gut, erinnert
 action-grade-easy = Die gelernte Karte bewerten: Leicht, sofort erinnert
+action-export-cards-anki = Die Lernkarten als Anki-Paket exportieren, neben dem Dokument gespeichert
+action-import-cards-anki = Lernkarten aus einem Anki-Paket in die Karten dieses Dokuments importieren
 action-open = Ein Dokument öffnen
 action-open-path = Ein Dokument öffnen, indem Sie seinen Pfad eingeben
 action-open-library = Die Bibliothek öffnen: Dokumente in Ihren Bibliotheksordnern und zuletzt verwendete Dateien
@@ -1521,6 +1523,39 @@ cards-source-label = Quelle der Karte
 cards-remove-question = Diese Karte und ihre Bewertungen entfernen? y oder n
 cards-removed = Karte entfernt.
 cards-save-failed = Die Karten konnten nicht gespeichert werden: { $error } Prüfen Sie, ob in den Datenordner geschrieben werden kann.
+cards-anki-exported =
+    { $n ->
+        [one] 1 Karte nach Anki exportiert: { $file }, in { $folder }.
+       *[other] { $n } Karten nach Anki exportiert: { $file }, in { $folder }.
+    }
+cards-anki-export-failed = Die Karten konnten nicht nach Anki exportiert werden: { $error } Prüfen Sie, ob in den Ordner des Dokuments geschrieben werden kann.
+cards-anki-import-failed = { $file } konnte nicht importiert werden: { $error } Prüfen Sie, ob die Datei ein Anki-Paket (.apkg) ist.
+cards-anki-imported =
+    { $added ->
+        [one] 1 Karte importiert.
+       *[other] { $added } Karten importiert.
+    }
+cards-anki-already =
+    { $n ->
+        [one] 1 Karte war schon da; ihre Bewertungen wurden zusammengeführt.
+       *[other] { $n } Karten waren schon da; ihre Bewertungen wurden zusammengeführt.
+    }
+cards-anki-skipped-cloze =
+    { $n ->
+        [one] 1 Lückentext-Notiz übersprungen.
+       *[other] { $n } Lückentext-Notizen übersprungen.
+    }
+cards-anki-skipped-media =
+    { $n ->
+        [one] 1 Notiz übersprungen, die nur aus Bildern oder Ton besteht.
+       *[other] { $n } Notizen übersprungen, die nur aus Bildern oder Ton bestehen.
+    }
+cards-anki-skipped-other =
+    { $n ->
+        [one] 1 Notiz ohne Text oder mit mehr als zwei Karten übersprungen.
+       *[other] { $n } Notizen ohne Text oder mit mehr als zwei Karten übersprungen.
+    }
+cards-from-anki = Diese Karte stammt aus Anki; sie hat keine Stelle im Dokument.
 # Said first in the study session and the Cards list (B1-f2). $due is how
 # many graded cards are due, $new how many were never graded.
 cards-due-summary =
@@ -3765,6 +3800,8 @@ name-grade-again = Bewerten: Nochmal
 name-grade-hard = Bewerten: Schwer
 name-grade-good = Bewerten: Gut
 name-grade-easy = Bewerten: Leicht
+name-export-cards-anki = Karten nach Anki exportieren
+name-import-cards-anki = Anki-Karten importieren
 name-open = Öffnen
 name-open-path = Über Pfad öffnen
 name-open-library = Bibliothek
@@ -4495,6 +4532,8 @@ chooser-image-title = Bild einfügen
 chooser-images = Bilder
 chooser-references-title = Literaturangaben importieren
 chooser-reference-files = Literaturdateien
+chooser-anki-title = Anki-Karten importieren
+chooser-anki-files = Anki-Pakete
 chooser-profiles-import-title = Profile importieren
 chooser-profiles-export-title = Profile exportieren
 chooser-profile-files = Profildateien
@@ -4737,6 +4776,7 @@ action-add-comment = Der Auswahl oder dem Satz am Cursor einen Kommentar hinzuf�
 prompt-comment-reply = Antwort
 prompt-comment-text = Kommentar
 prompt-github-token = GitHub-Token für die Komponentenquelle, Eingabe überspringt
+prompt-import-cards = Lernkarten aus Anki-Paket importieren
 changes-title = Änderungen und Kommentare
 changes-intro =
     { $n ->

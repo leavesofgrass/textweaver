@@ -796,6 +796,8 @@ action-grade-again = Grade the card being studied: Again, not recalled
 action-grade-hard = Grade the card being studied: Hard, recalled with effort
 action-grade-good = Grade the card being studied: Good, recalled
 action-grade-easy = Grade the card being studied: Easy, recalled at once
+action-export-cards-anki = Export the study cards as an Anki package, saved beside the document
+action-import-cards-anki = Import study cards from an Anki package into this document's cards
 action-open = Open a document
 action-open-path = Open a document by typing its path
 action-open-library = Open the library: documents in your library folders and recent files
@@ -1509,6 +1511,40 @@ cards-source-label = Card source
 cards-remove-question = Remove this card and its grades? y or n
 cards-removed = Card removed.
 cards-save-failed = Could not save the cards: { $error } Check that the data folder can be written to.
+# Anki packages (B1-f3). $file is the package's name, $folder where it is.
+cards-anki-exported =
+    { $n ->
+        [one] Exported 1 card to Anki: { $file }, in { $folder }.
+       *[other] Exported { $n } cards to Anki: { $file }, in { $folder }.
+    }
+cards-anki-export-failed = Could not export the cards to Anki: { $error } Check that the document's folder can be written to.
+cards-anki-import-failed = Could not import { $file }: { $error } Check that the file is an Anki package, .apkg.
+cards-anki-imported =
+    { $added ->
+        [one] Imported 1 card.
+       *[other] Imported { $added } cards.
+    }
+cards-anki-already =
+    { $n ->
+        [one] 1 card was here already; its grades were merged.
+       *[other] { $n } cards were here already; their grades were merged.
+    }
+cards-anki-skipped-cloze =
+    { $n ->
+        [one] Skipped 1 cloze note.
+       *[other] Skipped { $n } cloze notes.
+    }
+cards-anki-skipped-media =
+    { $n ->
+        [one] Skipped 1 note that is only pictures or sound.
+       *[other] Skipped { $n } notes that are only pictures or sound.
+    }
+cards-anki-skipped-other =
+    { $n ->
+        [one] Skipped 1 note with no text or with more than two cards.
+       *[other] Skipped { $n } notes with no text or with more than two cards.
+    }
+cards-from-anki = This card came from Anki; it has no place in the document.
 # Said first in the study session and the Cards list (B1-f2). $due is how
 # many graded cards are due, $new how many were never graded.
 cards-due-summary =
@@ -3789,6 +3825,8 @@ name-grade-again = Grade again
 name-grade-hard = Grade hard
 name-grade-good = Grade good
 name-grade-easy = Grade easy
+name-export-cards-anki = Export cards to Anki
+name-import-cards-anki = Import Anki cards
 name-open = Open
 name-open-path = Open by path
 name-open-library = Library
@@ -4536,6 +4574,8 @@ chooser-image-title = Insert an image
 chooser-images = Images
 chooser-references-title = Import references
 chooser-reference-files = Reference files
+chooser-anki-title = Import Anki cards
+chooser-anki-files = Anki packages
 chooser-profiles-import-title = Import profiles
 chooser-profiles-export-title = Export profiles
 chooser-profile-files = Profile files
@@ -4791,6 +4831,7 @@ action-add-comment = Add a comment to the selection or the sentence at the curso
 prompt-comment-reply = Reply
 prompt-comment-text = Comment
 prompt-github-token = GitHub token for your components source, Enter skips
+prompt-import-cards = Import study cards from Anki package
 changes-title = Changes and comments
 # Said when the list opens; $title is changes-title, $n how many rows.
 changes-intro =

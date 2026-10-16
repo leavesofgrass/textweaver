@@ -4,6 +4,10 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Study
+
+- **New: study cards go to Anki and back.** Export cards to Anki writes a document's cards as an Anki package (`.apkg`) beside it, in a deck named after the document, each note tagged with the document and the card's kind; graded cards keep their interval, ease, due day, and grades. Import Anki cards adds a package's Basic and Basic-and-reversed notes to the open document's cards as plain text, with their grades, and says what it skipped: "Imported 120 cards. Skipped 4 cloze notes." Importing the same package twice adds nothing. From the command line: `tw study export --anki FILE` and `tw study import FILE` ([Take cards to Anki and back](docs/notes.md#take-cards-to-anki-and-back)). AnkiConnect sync stays dropped.
+
 ### Packages and the build
 
 - **The app's shortcut is named "textweaver app".** The Start menu shortcut that `install-windows.ps1 -Gui` makes and the menu entry from `install-linux.sh --gui` were named "textweaver window". On Windows the script removes the old shortcut, `textweaver window.lnk`, when it makes or removes the new one, and only when that shortcut starts `textweaver-gui.exe`; on Linux the menu entry is rewritten in place. The documentation's navigation and the terminal's note for a command that only the app has say "the textweaver app" too.
