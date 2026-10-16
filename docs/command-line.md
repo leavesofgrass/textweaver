@@ -43,6 +43,7 @@ tw library search mitochondria
 tw stats clear
 tw dictate list --json
 tw changes accept draft.docx --out final.md
+tw study export --anki cards.apkg
 ```
 
 `tw library` alone still lists the library, `tw stats` alone still prints the statistics, and `tw changes FILE` alone still lists the changes. The older option spellings still work for now, and will be removed after beta 1: `tw library --add`, `--remove`, `--search` and `--continue`, `tw stats --clear`, `tw dictate --list`, and `tw changes --accept-all` and `--reject-all`.
@@ -106,6 +107,6 @@ Results are written so that `tw search essay.md word | head` ends quietly once `
 
 - [Quick start](quickstart.md)
 - [Settings](settings.md), for `tw settings path` and `--home`
-- [Updates](updates.md), for `tw update`; [Notes](notes.md), for `tw notes links` and `tw study due`; [Optional components](components.md), for `tw components`
+- [Updates](updates.md), for `tw update`; [Notes](notes.md), for `tw notes links`, `tw study due`, and `tw study export` and `tw study import` (Anki packages); [Optional components](components.md), for `tw components`
 - [Converting documents](converting.md), [Citations](citations.md) and [Dictation](dictation.md), for those commands' own options
 - [Troubleshooting](troubleshooting.md)
