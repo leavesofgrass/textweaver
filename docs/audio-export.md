@@ -1,8 +1,8 @@
 # Exporting audio and subtitles
 
-Export audio, in the reader's File menu, and `tw export-audio`, from a terminal, read a document aloud into an audio file, so you can listen to it later on a phone, a music player, or a book player. It can write a WAV file, a FLAC file, an MP3 file, an Opus file, an Ogg Vorbis file, or an M4B audiobook, each with one chapter for each heading, and an MP4 video that shows the text with the spoken word marked. It can also write subtitles: a caption file that shows each sentence, or each word, at the moment it is spoken. This is for anyone who wants to take a reading with them, for example a student who wants an audiobook of this week's chapters, or a teacher who wants captions that follow the spoken text.
+Export audio, in the reader's File menu, and `tw export-audio`, from a terminal, render a document as speech in an audio file for later listening on a phone, a music player, or an audiobook player. The output may be a WAV, FLAC, MP3, Opus, or Ogg Vorbis file, or an M4B audiobook; each carries one chapter per heading. An MP4 video that displays the text with the spoken word marked is also available. Subtitle files can accompany any export, with a caption for each sentence or each word at the moment it is spoken. Typical uses are an audiobook of a week's reading assignments, or captions that follow spoken text for a class.
 
-[Export audio from the reader](#export-audio-from-the-reader) comes first; the rest of the guide concerns `tw export-audio`, whose settings the reader shares. Each task section opens with the command, then explains it.
+[Export audio from the reader](#export-audio-from-the-reader) comes first. The rest of the guide concerns `tw export-audio`, whose settings the reader shares; each task section opens with the command and then explains it.
 
 ## Export audio from the reader
 
@@ -12,17 +12,17 @@ In the reader, open the File menu (F10 in the terminal) and choose Export audio,
 2. **Where.** "Where should the audio go?" The first choice puts the file beside the document, with the document's name, such as `essay.flac`. The second opens the file browser to choose another folder: press Ctrl+Enter on the folder, or Enter on its "Choose this folder" row (see [Choosing a folder](reading.md)).
 3. **The question.** "Export essay.flac with Microsoft David at 200 words per minute, into D:\Notes? y or n". It names the voice and the speed the export uses: your current voice and rate. Press y to start, or n to cancel.
 
-The export runs in the background, so you can keep reading. You hear "Exporting audio, 30 percent." in tens, at most every ten seconds; the interface announcements setting can quiet these. Nothing plays through your speakers.
+The export runs in the background, so reading can continue. Progress is announced in steps of ten percent, for example "Exporting audio, 30 percent.", at most once every ten seconds, and the interface announcements setting can quiet these. Nothing plays through the speakers.
 
 To stop, press Escape with no list or question open. You hear "Stop the export? No file is kept. y or n". Press y, and the export stops after the sentence being read; no file is left behind.
 
 At the end you hear, for example, "Wrote essay.flac: 42 minutes and 5 seconds, 12 chapters. Open it? y or n" Press y to open the file in your default player. If another list or question is open then, you hear the result without the question.
 
-Which engine it uses: your reading engine, when it can write audio files; otherwise the one in your `[speech] backend` setting, when it can; otherwise the best installed engine that can. Engines that can only speak aloud, such as Omnivox, are never used. The export reads the document as it was last opened, so in edit mode save and leave edit mode first to export your changes.
+The engine is chosen in this order: the current reading engine, when it can write audio files; otherwise the one in the `[speech] backend` setting, when it can; otherwise the best installed engine that can. Engines that can only speak aloud, such as Omnivox, are never used. The export uses the document as it was last opened, so in edit mode, save and leave edit mode first to include recent changes.
 
 ## Before you start
 
-You need two things: a voice that can write audio files, and, for M4B audiobooks and MP4 videos only, the free program ffmpeg. WAV, FLAC, MP3, Opus, and Ogg Vorbis need nothing else.
+Two things are required: a voice that can write audio files and, for M4B audiobooks and MP4 videos only, the free program ffmpeg. WAV, FLAC, MP3, Opus, and Ogg Vorbis need nothing further.
 
 ### Check that you have a voice that can write files
 
@@ -30,7 +30,7 @@ You need two things: a voice that can write audio files, and, for M4B audiobooks
 tw backends
 ```
 
-This lists the speech engines textweaver knows about. An engine that can write files has "audio files" in its list of what it supports. For example:
+This lists the speech engines textweaver knows about. An engine that can write files includes "audio files" among its supported capabilities, for example:
 
 ```text
 sapi: Windows SAPI5 voices. Available. Priority 500. Supports word highlighting, pause, pitch, volume, audio files, and tones. Word timing from the engine.
@@ -40,19 +40,19 @@ These engines can write files: ETI-Eloquence (`eci`), Windows SAPI5 voices (`sap
 
 ### WAV, FLAC, MP3, Opus, and Ogg Vorbis always work
 
-WAV, FLAC, MP3, Opus, and Ogg Vorbis files are written by textweaver itself. You do not need anything else.
+textweaver writes WAV, FLAC, MP3, Opus, and Ogg Vorbis files itself, with no external program.
 
 - WAV files are large, but every player can open them.
 - FLAC files are about half the size of WAV, with exactly the same sound (FLAC is lossless). Most music and audiobook players on phones and computers can open them.
-- MP3 files are the smallest, and every player can open them. textweaver encodes them with the LAME encoder, built in, at variable bit rate, quality 5, which suits a speaking voice. LAME is free software under the GNU LGPL; `THIRD-PARTY-NOTICES.md` says what that means for you.
+- MP3 files are small, and every player can open them. textweaver encodes them with the built-in LAME encoder at variable bit rate, quality 5, which suits a speaking voice. LAME is free software under the GNU LGPL; `THIRD-PARTY-NOTICES.md` describes the terms.
 - Opus files are the smallest of all: about 14 MB for an hour of speech, a quarter of the MP3. textweaver encodes them with libopus, the reference Opus encoder, built in: one channel at 32 kilobits per second, as an Ogg Opus file (`.opus`). Most phones, browsers, and VLC play them; some older car stereos and music players do not. libopus is free software under a BSD license.
 - Ogg Vorbis files (`.ogg`) are small, and use an open format that most players, browsers, and VLC open, including some that do not play Opus. textweaver encodes them with libvorbis, built in, at quality 3 (the usual default of the `oggenc` tool), keeping the voice's own sample rate and channels. libvorbis and libogg are free software under a BSD license.
 
 ### M4B needs ffmpeg
 
-To write `.m4b` or `.mp4`, textweaver first writes a WAV and then asks ffmpeg to convert it. textweaver does not bundle ffmpeg. Where its publisher makes a build for your computer (Windows and Linux), textweaver offers to fetch it for you when you start Export audio without it, names the size and license, and asks first ([Optional components](components.md#helper-programs)). On macOS, or if you prefer, install it yourself once, or get it from your own components source (see [Optional components](components.md#your-own-components-source)).
+To write `.m4b` or `.mp4`, textweaver first writes a WAV and then has ffmpeg convert it. textweaver does not bundle ffmpeg. Where its publisher provides a build for the platform (Windows and Linux), textweaver offers to fetch it when Export audio is started without it, naming the size and license and asking first ([Optional components](components.md#helper-programs)). On macOS, or if you prefer, install ffmpeg yourself, or obtain it from your own components source (see [Optional components](components.md#your-own-components-source)).
 
-textweaver looks for ffmpeg in three places, in this order:
+textweaver searches for ffmpeg in three places, in this order:
 
 1. The `TEXTWEAVER_FFMPEG` environment variable, if it is set. It must be the full path to the ffmpeg program.
 2. textweaver's components folder, `components` in the data folder, where a copy that textweaver fetched, or one from a components source, goes.
@@ -60,19 +60,19 @@ textweaver looks for ffmpeg in three places, in this order:
 
 ### Install ffmpeg on Windows
 
-If you said yes when textweaver offered to fetch ffmpeg, there is nothing to install. To install it yourself, you can use the Windows package manager, winget. For example:
+If textweaver fetched ffmpeg at your request, nothing more needs installing. To install it manually, use the Windows package manager, winget:
 
 ```powershell
 winget install Gyan.FFmpeg
 ```
 
-When it finishes, close the terminal window and open a new one, so the new `PATH` is read. Then check that ffmpeg is found:
+When the installation finishes, open a new terminal window so that the updated `PATH` is read, then confirm that ffmpeg is found:
 
 ```bash
 ffmpeg -version
 ```
 
-You hear a line that starts with "ffmpeg version". If you hear that the command is not recognized, see [If something goes wrong](#if-something-goes-wrong).
+The output begins with "ffmpeg version". If the command is not recognized, see [If something goes wrong](#if-something-goes-wrong).
 
 ### Install ffmpeg on macOS
 
@@ -92,7 +92,7 @@ sudo apt install ffmpeg
 
 ### Tell textweaver where ffmpeg is
 
-You only need this when ffmpeg is installed in a folder that is not on your `PATH`. In PowerShell, for the current window:
+This is needed only when ffmpeg is installed in a folder that is not on the `PATH`. In PowerShell, for the current session:
 
 ```powershell
 $env:TEXTWEAVER_FFMPEG = "C:\Tools\ffmpeg\bin\ffmpeg.exe"
@@ -104,7 +104,7 @@ In a Linux or macOS shell:
 export TEXTWEAVER_FFMPEG="$HOME/tools/ffmpeg"
 ```
 
-When `TEXTWEAVER_FFMPEG` is set, textweaver uses only that path and does not search `PATH`. If the path is wrong, textweaver says ffmpeg was not found, even when ffmpeg is on your `PATH`.
+When `TEXTWEAVER_FFMPEG` is set, textweaver uses only that path and does not search `PATH`. If the path is wrong, textweaver reports that ffmpeg was not found, even when ffmpeg is on the `PATH`.
 
 ## Export a document to a WAV file
 
@@ -112,9 +112,9 @@ When `TEXTWEAVER_FFMPEG` is set, textweaver uses only that path and does not sea
 tw export-audio reading.md --out reading.wav
 ```
 
-This reads `reading.md` aloud, silently, into `reading.wav`. Nothing plays through your speakers. You can export any document textweaver can open, not only Markdown.
+This renders `reading.md` as speech into `reading.wav` without playing it through the speakers. Any document textweaver can open may be exported, not only Markdown.
 
-The document is read exactly as textweaver would read it to you: with your rate, pitch, volume, and normalization settings, and with the same announcements, such as "heading level 1". Each sentence is written one after another into one file.
+The document is rendered exactly as textweaver would read it aloud: with the same rate, pitch, volume, and normalization settings and the same announcements, such as "heading level 1". The sentences are written in sequence into a single file.
 
 The output format comes from the file name you give with `--out`:
 
@@ -125,15 +125,15 @@ The output format comes from the file name you give with `--out`:
 - `.ogg`: an Ogg Vorbis file. Always works; textweaver encodes it itself with libvorbis, at quality 3, at the voice's own sample rate.
 - `.m4b`: an M4B audiobook (AAC audio at 64 kilobits per second). Needs ffmpeg.
 
-Capital letters in the extension are fine, so `.MP3` works too. Any other extension is refused before anything is read. A name with no extension, such as `--out reading`, gets the format in `[export] audio_format`, FLAC unless you change it, so `reading.flac` is written.
+The extension is not case-sensitive, so `.MP3` works too. Any other extension is refused before anything is read. A name with no extension, such as `--out reading`, receives the format in `[export] audio_format`, FLAC by default, so `reading.flac` is written.
 
 If the output file already exists, it is replaced without asking.
 
 ### What you hear while it works
 
-Progress messages come in whole tens of percent, one short sentence each, so your screen reader is not flooded. For example: "10 percent done." A message is given only when a new ten is reached after a sentence, so with a short document some tens are skipped.
+Progress is reported in steps of ten percent, one short sentence each, so that a screen reader is not flooded, for example "10 percent done." A message is issued only when a new step is reached at the end of a sentence, so a short document skips some steps.
 
-When the export is done, you hear one sentence, and a second one when subtitles were written. This is a real result from a short document with two headings:
+On completion, one sentence reports the result, followed by a second when subtitles were written. This is an actual result from a short document with two headings:
 
 ```text
 Wrote reading.wav: 9 seconds, 7 sentences, 2 chapters, with Recording (test double). Subtitles in reading.srt.
@@ -147,19 +147,19 @@ The sentence says:
 - How many chapters were found.
 - The engine used. "Recording (test double)" is textweaver's test engine; with a real voice you hear its engine name, such as "Windows SAPI5 voices", "ETI-Eloquence", "DECtalk", or "eSpeak NG".
 
-Progress messages go to the error output and the result sentence to the standard output, so you can redirect them separately.
+Progress messages go to the error output and the result sentence to the standard output, so the two can be redirected separately.
 
-To stop an export, press Control C. A partly written file may be left behind. Delete it and start again.
+Control C stops an export. A partly written file may remain; delete it and start again.
 
 ## Make a pocket review
 
-Your notes and highlights can go with you as audio. Export a study sheet first (press **F2** and type `export study sheet`; see [notes](notes.md#export-a-study-sheet)), which writes `essay-study-sheet.md` beside `essay.md`. Then read the sheet into a file:
+Notes and highlights can also be taken along as audio. First export a study sheet (press **F2** and type `export study sheet`; see [notes](notes.md#export-a-study-sheet)), which writes `essay-study-sheet.md` beside `essay.md`, then render the sheet as speech:
 
 ```bash
 tw export-audio essay-study-sheet.md --out essay-review.mp3
 ```
 
-MP3, FLAC, Opus, and Ogg Vorbis need nothing else. With ffmpeg installed, `--out essay-review.m4b` makes an audiobook with a chapter for each heading of the essay, so a book player can jump between sections. `tw convert essay-study-sheet.md --to brf` makes a braille copy of the same sheet. Thirty highlights come to about 3,000 words, or about 15 minutes of audio at 200 words a minute.
+MP3, FLAC, Opus, and Ogg Vorbis need nothing further. With ffmpeg installed, `--out essay-review.m4b` produces an audiobook with a chapter for each heading of the essay, so a book player can move between sections. `tw convert essay-study-sheet.md --to brf` produces a braille copy of the same sheet. Thirty highlights amount to about 3,000 words, or about 15 minutes of audio at 200 words a minute.
 
 ## Make an audiobook with chapters
 
@@ -167,7 +167,7 @@ MP3, FLAC, Opus, and Ogg Vorbis need nothing else. With ffmpeg installed, `--out
 tw export-audio "Chapter 3.docx" --out "Chapter 3.m4b"
 ```
 
-This writes an M4B audiobook: one file with chapters. Audiobook players can open it, remember your place, and jump from chapter to chapter.
+This writes an M4B audiobook, a single file with chapters. Audiobook players open it, remember the listening position, and navigate by chapter.
 
 The M4B file also carries:
 
@@ -176,7 +176,7 @@ The M4B file also carries:
 - The genre "Audiobook".
 - One chapter for each heading, with the heading as its name.
 
-While ffmpeg works, and while a FLAC, MP3, Opus, or Ogg Vorbis file is encoded, textweaver keeps the full WAV (and, for ffmpeg, a small metadata file) in a hidden folder next to the output, whose name starts with `.textweaver-export-`. The folder is removed when the export finishes. You need enough free disk space for the full WAV, which is much larger than the finished M4B.
+While ffmpeg runs, and while a FLAC, MP3, Opus, or Ogg Vorbis file is encoded, textweaver keeps the full WAV (and, for ffmpeg, a small metadata file) in a hidden folder beside the output whose name begins with `.textweaver-export-`. The folder is removed when the export finishes. Enough free disk space must be available for the full WAV, which is much larger than the finished M4B.
 
 ### How chapters are chosen
 
@@ -202,7 +202,7 @@ Every format carries the same title, author, and chapters as the M4B, each in it
 - MP3 files: as ID3 chapter tags (CHAP and CTOC), with the title, artist, album, and genre.
 - WAV files: as ID3 chapter tags too, in an extra part of the file that players without ID3 support skip.
 
-Players that read these chapters show them. Many simple players ignore them and play the file straight through. The JSON report lists each chapter's name, start, and end in every case (see [Get a report as JSON](#get-a-report-as-json)).
+Players that support these tags display the chapters; many simple players ignore them and play the file straight through. The JSON report lists each chapter's name, start, and end in every case (see [Get a report as JSON](#get-a-report-as-json)).
 
 ## Make a read-along page
 
@@ -210,9 +210,9 @@ Players that read these chapters show them. Many simple players ignore them and 
 tw export-audio essay.md --out essay.html
 ```
 
-An `.html` file name writes a read-along page instead of an audio file: one web page that holds the document as real text, its audio inside as MP3, and a mark on the sentence and the word being read as it plays. Open it in any web browser; it needs no internet connection and no other file, so you can send it, post it to a course site, or open it on a phone. In the reader, choose **File, Export as, Read-along page: text and audio**, or type `read-along` in the command palette; you are asked only where it goes. It is also "Read-along page: text and audio, one file", the last format in Export audio.
+An `.html` file name writes a read-along page instead of an audio file: a single web page that holds the document as real text, with its audio embedded as MP3 and a mark on the sentence and word being read as it plays. It opens in any web browser and needs no internet connection and no other file, so it can be sent, posted to a course site, or opened on a phone. In the reader, choose **File, Export as, Read-along page: text and audio**, or type `read-along` in the command palette; you are asked only where it goes. It is also "Read-along page: text and audio, one file", the last format in Export audio.
 
-The text stays text, so a screen reader, a Braille display, zoom, reflow, and your own fonts all work on it. The page uses your reading theme (`[display] theme`); with the default theme it follows the system's light or dark setting.
+The text remains text, so screen readers, Braille displays, zoom, reflow, and custom fonts all work with it. The page uses the reading theme (`[display] theme`); with the default theme it follows the system's light or dark setting.
 
 - **The audio control.** The browser's own player, at the top of the page.
 - **The buttons.** Play (Pause while playing), Back a sentence, Forward a sentence, and Follow along. Tab reaches each one; Enter or Space presses it.
@@ -232,7 +232,7 @@ The page is about a third larger than the MP3 would be on its own. The subtitle 
 tw export-audio essay.md --out essay.mp4
 ```
 
-An `.mp4` file name writes a karaoke video: the document read aloud, with the sentence being read on screen and the word being read in bold and underlined. Students asked for it, to play a reading on a class screen, post it to a course site, or watch it on a phone. In the reader, choose "Video with captions: MP4, needs ffmpeg" in Export audio. It needs ffmpeg, like M4B (see [M4B needs ffmpeg](#m4b-needs-ffmpeg)): without ffmpeg the format is not listed, and you hear "M4B, MP4 need ffmpeg, which was not found."
+An `.mp4` file name writes a karaoke video: the document read aloud, with the current sentence on screen and the current word in bold and underlined. It suits playing a reading on a class screen, posting it to a course site, or watching it on a phone. In the reader, choose "Video with captions: MP4, needs ffmpeg" in Export audio. It needs ffmpeg, like M4B (see [M4B needs ffmpeg](#m4b-needs-ffmpeg)): without ffmpeg the format is not listed, and you hear "M4B, MP4 need ffmpeg, which was not found."
 
 - **What you see.** A 1280 by 720 picture in your reading theme's page and text colors (`[display] theme`), in the bundled Atkinson Hyperlegible Next font. The whole sentence is shown, wrapped to fit; a very long sentence shows the lines around the word being read. The spoken word is bold and underlined, so the mark is a shape, never a color.
 - **The captions.** The video carries the WebVTT captions as a soft subtitle track, which players can turn on and off and screen readers in some players can read. They are the same caption lines as `--subtitles essay.vtt`.
@@ -249,7 +249,7 @@ An `.mp4` file name writes a karaoke video: the document read aloud, with the se
 tw export-audio reading.md --out reading.wav --subtitles reading.srt
 ```
 
-This writes the audio and a subtitle file next to it. The format comes from the extension you give with `--subtitles`:
+This writes the audio and, beside it, a subtitle file. The format is determined by the extension given to `--subtitles`:
 
 - `.srt`: SubRip, the most widely supported format.
 - `.vtt`: WebVTT, the format web pages use. The file starts with the line `WEBVTT`.
@@ -257,7 +257,7 @@ This writes the audio and a subtitle file next to it. The format comes from the 
 
 Any other extension is refused with a message, before any audio is made.
 
-Subtitles work with every audio format, so you can combine `--subtitles` with `.wav`, `.flac`, `.mp3`, or `.m4b`. Give the subtitle file the same name as the audio file, with its own extension, and most players load it by themselves.
+Subtitles work with every audio format, so `--subtitles` can be combined with `.wav`, `.flac`, `.mp3`, or `.m4b`. If the subtitle file has the same name as the audio file apart from its extension, most players load it automatically.
 
 This is the start of the real SRT file from the example above:
 
@@ -289,7 +289,7 @@ How captions are made:
 tw export-audio reading.md --out reading.wav --subtitles reading.vtt --word-level
 ```
 
-`--word-level` gives each word its own cue, instead of whole caption lines. This suits tools that highlight one word at a time. This is the start of the real WebVTT file from the example document, without its `NOTE` block (see [The note in each subtitle file](#the-note-in-each-subtitle-file)):
+`--word-level` gives each word its own cue instead of whole caption lines, which suits tools that highlight one word at a time. The following is the start of the actual WebVTT file from the example document, without its `NOTE` block (see [The note in each subtitle file](#the-note-in-each-subtitle-file)):
 
 ```text
 WEBVTT
@@ -308,7 +308,7 @@ Punctuation stays with its word, so the last word of a sentence reads "light." r
 
 ### Which engines time each word exactly
 
-Some engines report the exact moment each word sounds in the file. With them, word cues are exact. They are:
+Some engines report the exact moment each word sounds in the file, and with them word cues are exact. These engines are:
 
 - ETI-Eloquence through textweaver's own Eloquence support (`eci`).
 - Windows SAPI5 voices (`sapi`), except Code Factory's Eloquence voices through SAPI, which report no word times.
@@ -316,11 +316,11 @@ Some engines report the exact moment each word sounds in the file. With them, wo
 - eSpeak NG (`espeak`).
 - Apple's AVSpeechSynthesizer (`avspeech`) on macOS 14 and later, which reports where each word starts in the audio it writes.
 
-The classic Apple engine (`nsspeech`) and the SAPI Eloquence voices can write files but do not report word times. With them, word cues are estimated. Each sentence's start and end are still measured. The time between them is shared among its words by length, so longer words get more time. Sentence captions from these engines are just as accurate as from any other engine, because they depend only on the measured sentence times.
+The classic Apple engine (`nsspeech`) and the SAPI Eloquence voices can write files but do not report word times, so their word cues are estimated: each sentence's start and end are still measured, and the interval is divided among its words in proportion to their length. Sentence captions from these engines are as accurate as from any other, because they depend only on the measured sentence times.
 
 ## Karaoke subtitles
 
-Karaoke subtitles show the whole caption line and mark the word being read. The mark is always a shape: an underline, bold and underline, or an outline. It never depends on color alone. There are three ways to get them.
+Karaoke subtitles show the whole caption line and mark the word being read. The mark is always a shape (an underline, bold and underline, or an outline) and never depends on color alone. There are three styles.
 
 **Underline as spoken** (`--karaoke tags`, WebVTT only):
 
@@ -358,7 +358,7 @@ Plants <b><u>make</u></b> food from light.
 
 **ASS karaoke** (`--subtitles essay.ass`): an Advanced SubStation Alpha file for players built on libass, such as mpv and VLC. Unread words are white with no outline; each word gains a 3 pixel black outline and turns yellow as it is reached. The `\ko` tag carries each word's time in hundredths of a second.
 
-`--word-level` wins over `--karaoke`: one word per cue, with no line around it.
+`--word-level` takes precedence over `--karaoke`: each cue holds one word, with no surrounding line.
 
 ### The note in each subtitle file
 
@@ -370,7 +370,7 @@ Every WebVTT file textweaver writes now starts with a `NOTE` block that players 
 tw export-audio essay.md --out essay.mp3 --subtitles essay.vtt --chapters essay.chapters.vtt
 ```
 
-This also writes a WebVTT chapters file: one cue per chapter, with the chapter's title as its text. Web players use it for a chapter menu. The chapters are the same ones written into an M4B. A document with no headings has one chapter named after its title. When it has no title either, the chapter is named in the interface language ("Audiobook", "Hörbuch", "Audiolibro" and so on), and untitled chapters are numbered the same way ("Chapter 2", "Kapitel 2").
+This additionally writes a WebVTT chapters file with one cue per chapter, the chapter's title being its text; web players use it for a chapter menu. The chapters are the same ones written into an M4B. A document with no headings has one chapter named after its title. When it has no title either, the chapter is named in the interface language ("Audiobook", "Hörbuch", "Audiolibro" and so on), and untitled chapters are numbered the same way ("Chapter 2", "Kapitel 2").
 
 ## Choose the engine, voice, rate, and pitch
 
@@ -396,7 +396,7 @@ Without `--voice`, textweaver uses your `[speech] voice` setting, but only when 
 
 ### Settings the export reads
 
-`tw export-audio` reads your settings, so the audio sounds the way textweaver reads to you. These settings are used:
+`tw export-audio` reads the settings, so the audio sounds as textweaver reads aloud. These settings are used:
 
 - `[speech] backend` and `[speech] voice`, as described above.
 - `[speech] rate` and `[speech] pitch`. The `--rate` and `--pitch` options override them for this export.
@@ -418,7 +418,7 @@ See [the settings guide](settings.md) for how to look at, export, and import you
 tw settings import export-settings.toml
 ```
 
-The `[export]` settings let you have subtitles without typing `--subtitles` each time. Put them in a small TOML file, such as `export-settings.toml`, and import it. Import changes only the settings the file names. Add `--dry-run` first to hear what would change.
+The `[export]` settings produce subtitles without requiring `--subtitles` on each run. Place them in a small TOML file, such as `export-settings.toml`, and import it; import changes only the settings the file names. Adding `--dry-run` first reports what would change.
 
 ```toml
 [export]
@@ -447,7 +447,7 @@ These settings are used by `tw export-audio` and by Export audio in the reader, 
 tw export-audio reading.md --out reading.wav --json
 ```
 
-`--json` prints a full report instead of the result sentence, for scripts and other programs. Progress messages are left out, as with `--quiet`. The report has two parts.
+`--json` prints a full report instead of the result sentence, for scripts and other programs. Progress messages are omitted, as with `--quiet`. The report has two parts.
 
 `backend` says which engine was used:
 
@@ -458,9 +458,9 @@ tw export-audio reading.md --out reading.wav --json
 `export` says what was written:
 
 - `out`: the audio file.
-- `format`: `wav`, `flac`, `mp3`, or `m4b`.
+- `format`: `wav`, `flac`, `mp3`, `opus`, `ogg`, `m4b`, or `mp4`.
 - `subtitles`: the subtitle file, or `null`.
-- `ffmpeg`: the ffmpeg program used for M4B, or `null`.
+- `ffmpeg`: the ffmpeg program used for M4B or MP4, or `null`.
 - `timeline`: everything about the audio.
 
 `timeline` holds:
@@ -477,7 +477,7 @@ tw export-audio reading.md --out reading.wav --json
 tw export-audio reading.md --out reading.m4b --quiet
 ```
 
-`--quiet` leaves out the progress messages. You still hear the result sentence at the end, and any error.
+`--quiet` omits the progress messages; the result sentence and any error are still reported.
 
 ## Use settings from another folder
 
@@ -485,11 +485,11 @@ tw export-audio reading.md --out reading.m4b --quiet
 tw export-audio reading.md --out reading.wav --home "E:\textweaver"
 ```
 
-`--home` reads settings from that folder instead of your usual settings, in the same way as the `TEXTWEAVER_HOME` environment variable. The settings file is `config\settings.toml` inside that folder. Use it for a portable copy of textweaver on a USB stick, or to try settings without changing your own.
+`--home` reads settings from the named folder instead of the usual location, in the same way as the `TEXTWEAVER_HOME` environment variable. The settings file is `config\settings.toml` inside that folder. This suits a portable copy of textweaver on a USB stick, or trying settings without changing the usual ones.
 
 ## If something goes wrong
 
-Every problem is reported as one sentence starting with "Error:". These are the messages you may hear, and what to do.
+Every problem is reported as one sentence beginning with "Error:". The messages below are the ones most likely to occur, with the remedy for each.
 
 - "Error: writing M4B needs ffmpeg, which was not found; install ffmpeg, set TEXTWEAVER_FFMPEG to its path, or export to .flac, .mp3, .opus, .ogg, or .wav". This is said before anything is read aloud. ffmpeg is not installed, or textweaver cannot find it. Install it as described in [Before you start](#before-you-start). If you just installed it, open a new terminal window. If `TEXTWEAVER_FFMPEG` is set, check that it is the full path to the program, including `ffmpeg.exe` on Windows, or remove the variable. Or export to `.flac`, `.mp3`, `.opus`, `.ogg`, or `.wav`, which need nothing.
 - "Error: cannot write notes.aac: use a .wav, .flac, .mp3, .opus, .ogg, or .m4b file name". Only WAV, FLAC, MP3, Opus, Ogg Vorbis, and M4B can be written. For a small file of speech, use `.opus` or `.ogg`.

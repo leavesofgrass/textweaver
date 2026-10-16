@@ -1,6 +1,6 @@
 # Converting documents
 
-`tw convert` turns documents into other formats: one file, a whole folder of files, or every file that arrives in a folder you are watching. It uses every processor core, and it skips files that are already converted, so running it again on a large folder takes a moment.
+`tw convert` converts documents from one format to another. It accepts a single file, a folder of files, or a folder that it watches for new arrivals. Conversion runs across all processor cores, and files whose output is already current are skipped, so repeating a run over a large folder finishes quickly.
 
 ## Convert one file
 
@@ -8,12 +8,12 @@
 tw convert notes.md --to html
 ```
 
-This writes `notes.html` next to `notes.md`. When it finishes, textweaver announces a one-sentence summary, for example: "Converted 1 file to HTML in 32 milliseconds, 31.6 files per second. No failures."
+The output, `notes.html`, is written beside the source. On completion textweaver announces a one-sentence summary, for example: "Converted 1 file to HTML in 32 milliseconds, 31.6 files per second. No failures."
 
-The formats you can ask for with `--to`:
+The `--to` option accepts these formats:
 
 - `md`: Markdown (the default).
-- `html`: a web page you can open in any browser. Headings, lists, tables, and math are real HTML structure, so screen readers can move by heading, table, and list.
+- `html`: a web page for any browser. Headings, lists, tables, and math are written as real HTML structure, so screen readers can move by heading, table, and list.
 - `txt`: plain text, the same text textweaver reads aloud.
 - `epub`: an EPUB 3 book with a table of contents, real headings, and accessibility metadata.
 - `docx`: a Word document with Word's own heading styles, numbered lists, and tables whose header row repeats.
@@ -25,9 +25,9 @@ The formats you can ask for with `--to`:
 - `pdf`: a tagged PDF that screen readers can move through by heading, list, and table.
 - `adoc`, `typ`, `tex`, `wiki`, and `org`: AsciiDoc, Typst, LaTeX, MediaWiki, and Org mode, written by carta. See [AsciiDoc, Typst, LaTeX, MediaWiki, and Org](#asciidoc-typst-latex-mediawiki-and-org).
 
-Some outputs come with warnings, for example "The image cat.png was not found, so its description was written instead." Each warning is read out with its file name, and the summary says how many files had warnings.
+Some conversions produce warnings, for example "The image cat.png was not found, so its description was written instead." Each warning is announced with the name of its file, and the summary reports how many files had warnings.
 
-PDF output uses fonts that come with textweaver, so it works on every computer with nothing installed. [PDF and EPUB layout](#pdf-and-epub-layout) explains how to choose another font.
+PDF output uses fonts bundled with textweaver, so it needs nothing installed on the computer. [PDF and EPUB layout](#pdf-and-epub-layout) describes how to choose a different font.
 
 ## Convert a folder
 
@@ -35,27 +35,27 @@ PDF output uses fonts that come with textweaver, so it works on every computer w
 tw convert "Biology notes" --to html --out "Biology site"
 ```
 
-Every document in the folder and in all of its subfolders is converted. The output folder mirrors the input: `Biology notes/week 1/cells.md` becomes `Biology site/week 1/cells.html`. Hidden files and folders, whose names start with a dot, are left alone.
+Every document in the folder and its subfolders is converted, and the output folder mirrors the structure of the input: `Biology notes/week 1/cells.md` becomes `Biology site/week 1/cells.html`. Hidden files and folders, whose names begin with a dot, are ignored.
 
-Without `--out`, each output is written next to its source. In that case files that already have the output's extension are treated as earlier outputs, not as sources, so converting a folder to HTML twice does not convert the HTML files it made the first time.
+Without `--out`, each output is written beside its source. In that case, files that already carry the output's extension are treated as earlier outputs rather than sources, so converting a folder to HTML twice does not reconvert the HTML files produced by the first run.
 
-You can name several files and folders in one command.
+A single command may name any number of files and folders.
 
 ## Only what changed is converted again
 
-When you run the same command again, a file is skipped when its output is newer than the source. Edit one note, run the command, and only that note is converted. The summary tells you how many files were skipped.
+When a command is repeated, a file is skipped if its output is newer than its source. After editing a single note, only that note is converted again, and the summary reports how many files were skipped.
 
-To convert everything anyway, for example after changing the template, add `--force`:
+To convert everything regardless, for example after changing the template, add `--force`:
 
 ```bash
 tw convert "Biology notes" --to html --out "Biology site" --force
 ```
 
-Outputs are written to a temporary file first and then renamed, so stopping a conversion part way never leaves a half-written file behind.
+Each output is written to a temporary file and then renamed, so interrupting a conversion never leaves a partly written file.
 
 ## Convert a folder from the reader
 
-In the reader, File, Batch convert (also in the command palette as "batch convert") converts a folder without leaving textweaver. It asks three short questions, each with its usual answer first:
+In the reader, File, Batch convert (also in the command palette as "batch convert") converts a folder without leaving textweaver. It asks three questions, each listing the usual answer first:
 
 1. **The folder.** The file browser opens on your places, with the open document's folder first. Choose a folder with the browser's choose key, or with Enter on the "Choose this folder" row inside it.
 2. **The format.** Markdown, PDF, HTML, plain text, EPUB, Word, or braille. HTML then asks "Theme for the HTML page?", as [export](#export-from-inside-the-reader) does.
@@ -77,21 +77,21 @@ A file whose output is newer than the file itself is skipped, as with `tw conver
 tw convert Inbox --to txt --watch
 ```
 
-This is a hot folder. Files already in `Inbox` are converted first, then each new file as it arrives. Converted files go to `Inbox/converted` (or to the folder you give with `--out`). Each event is spoken as one line, for example "Converted chapter 3.docx." Press Control C to stop.
+This sets up a hot folder. Files already in `Inbox` are converted first, and each new file is converted as it arrives. Output goes to `Inbox/converted`, or to the folder given with `--out`. Each event is announced as a single line, for example "Converted chapter 3.docx." Press Control C to stop.
 
-It follows star's hot-folder rules:
+The watcher follows star's hot-folder rules:
 
-- A file is converted only after its size has stayed the same for 2 seconds, so a file that is still being copied is never read half-way. Change the wait with `--stable-seconds 5`.
-- After a successful conversion the source moves to `Inbox/processed`. Add `--keep-sources` to leave it where it is.
-- A file that fails moves to `Inbox/failed`, so it is not tried again and again. A name that is already taken in either folder gets the date and time added; nothing is overwritten.
-- Files textweaver cannot read, such as pictures, stay where they are, and you hear "Ignored" once.
-- Everything that happens is also written, with the time, to `textweaver-watch.log` in the output folder.
+- A file is converted only after its size has remained unchanged for 2 seconds, so a file still being copied is never read partway. The wait is set with `--stable-seconds 5`.
+- After a successful conversion the source moves to `Inbox/processed`; `--keep-sources` leaves it in place.
+- A file that fails moves to `Inbox/failed`, so it is not retried indefinitely. If a name is already taken in either folder, the date and time are appended to it; nothing is overwritten.
+- Files textweaver cannot read, such as pictures, stay where they are, and "Ignored" is announced once for each.
+- Every event is also logged with its time to `textweaver-watch.log` in the output folder.
 
 Only the folder itself is watched, not its subfolders.
 
 ## Markdown flavors
 
-Markdown comes in dialects. Choose yours with `--flavor`:
+Markdown exists in several dialects. Select one with `--flavor`:
 
 - `gfm`, the default: GitHub Flavored Markdown. Tables, task lists, strikethrough, web addresses that become links by themselves, footnotes, and alerts such as `> [!NOTE]`.
 - `obsidian`: everything in GFM, plus Obsidian's own syntax. `[[Note]]` links to `Note.html`, `[[Note#Heading]]` links to that heading, and `[[Note|text]]` shows your own link text. `![[picture.png|description]]` shows a picture with that description as its alternative text. `![[Note]]` is a link to the note, or, with `--embeds inline`, the note's text itself. Callouts such as `> [!tip] Remember` become labeled notes; a callout with a minus sign after the type becomes a section you can expand and collapse. `#tags`, `==highlights==`, and block references (`^id`) work too.
@@ -102,14 +102,14 @@ In every flavor except `commonmark`, a YAML block at the top of the file (betwee
 
 ## Math
 
-Math written in LaTeX between dollar signs, `$x^2$` inside a sentence or `$$ … $$` on its own lines, becomes MathML. Screen readers that read math (NVDA with MathCAT, JAWS, VoiceOver) can then speak it and let you explore it term by term. The LaTeX source travels with it, as the formula's text alternative and as an annotation, so copying still gives you the LaTeX. A formula that cannot be read is shown as its LaTeX source. Add `--no-math` to keep all math as LaTeX. Prices such as "$5 and $10" are not taken for math. The Markdown engine decides what is math, though, so a few forms, such as "$5-$10" with no spaces, can still become a formula; write `\$` for a dollar sign that must stay one.
+Math written in LaTeX between dollar signs, `$x^2$` within a sentence or `$$ … $$` on lines of its own, is converted to MathML. Screen readers that support math (NVDA with MathCAT, JAWS, VoiceOver) can speak a formula and let the reader explore it term by term. The LaTeX source is kept with the formula, both as its text alternative and as an annotation, so copying recovers the LaTeX. A formula that cannot be parsed is shown as its LaTeX source. `--no-math` keeps all math as LaTeX. Prices such as "$5 and $10" are not taken for math. The Markdown engine decides what is math, though, so a few forms, such as "$5-$10" with no spaces, can still become a formula; write `\$` for a dollar sign that must stay one.
 
 ASCIIMath works too. A code block that starts with three backticks and the word `asciimath` (or `am`) becomes one formula. Course material written for MathJax often puts ASCIIMath between single backticks, like `` `x^2/2` ``; add `--asciimath` to read those as math instead of code.
 
-The other outputs never print the dollar signs and LaTeX commands either:
+The other outputs likewise avoid printing dollar signs and raw LaTeX commands:
 
-- EPUB: MathML, as in a web page. Reading apps draw it, and screen readers read it and let you explore it.
-- Word: Word's own equations. Word draws them, and Narrator, NVDA, and JAWS can read them.
+- EPUB: MathML, as in a web page. Reading apps render it, and screen readers can read and explore it.
+- Word: native Word equations, which Word renders and Narrator, NVDA, and JAWS can read.
 - PDF: the formula in print form, such as πr² or (a + b)/2, marked as a formula whose description is how it is read aloud, for example "pi r squared".
 - Braille: math braille, Nemeth by default or UEB mathematics with `--math-code ueb`, in a build with MathCAT; otherwise the formula as it is read aloud, "pi r squared". See [Math in braille files](math.md#math-in-braille-files).
 
@@ -121,9 +121,9 @@ The other outputs never print the dollar signs and LaTeX commands either:
 tw convert essay.md --to docx
 ```
 
-Citations written the way Pandoc writes them, such as `[@doe2020, p. 12]` or `@doe2020 says`, are formatted in a citation style, and a References section listing the works you cited is added at the end. This works for web pages, Word, PDF, EPUB, braille, and plain text. Markdown output keeps your citations as you wrote them. You do not need Pandoc.
+Citations in Pandoc's syntax, such as `[@doe2020, p. 12]` or `@doe2020 says`, are formatted in a citation style, and a References section listing the cited works is appended. This applies to web pages, Word, PDF, EPUB, braille, and plain text; Markdown output keeps citations exactly as written. Pandoc itself is not required.
 
-A real example, converted to plain text in the default style, APA:
+The following example was converted to plain text in the default style, APA:
 
 ```text
 The area of a circle is $\pi r^2$ (see Doe, 2020, p. 12). As Müller (2019, p. 40) argues, reading aloud helps (2020).
@@ -148,23 +148,23 @@ A citation key that is in none of the libraries is written as "missing reference
 
 ## Templates
 
-HTML output is a complete web page made from a template. Three are built in; choose one with `--template`:
+HTML output is a complete web page generated from a template. Three templates are built in, selected with `--template`:
 
-- `default`: an accessible page. It declares its language, starts with a "Skip to content" link, puts the document in a main landmark, adds a table of contents when there are two or more headings, and uses a readable style that follows your system's dark mode, high contrast, and reduced-motion settings.
-- `print`: for printing or saving as PDF from a browser.
-- `fragment`: only the converted HTML, for pasting into another page.
+- `default`: an accessible page. It declares its language, begins with a "Skip to content" link, places the document in a main landmark, adds a table of contents when there are two or more headings, and uses a readable style that follows the system's dark mode, high contrast, and reduced-motion settings.
+- `print`: a layout for printing, or for saving as PDF from a browser.
+- `fragment`: the converted HTML alone, for embedding in another page.
 
-Use `--no-toc` to leave out the table of contents.
+`--no-toc` omits the table of contents.
 
-The page's colors come from a [theme](themes.md). Use `--theme NAME` to choose one, for example `--theme sepia` or `--theme galaxy-light` for printing and sharing. Without it, `tw convert` uses the theme in your settings and never asks. With Galaxy, the usual theme, the page also follows the reader's system to Galaxy Light or High Contrast.
+The page's colors come from a [theme](themes.md). `--theme NAME` selects one, for example `--theme sepia`, or `--theme galaxy-light` for printing and sharing. Without it, `tw convert` uses the theme in the settings and never prompts. With Galaxy, the usual theme, the page also follows the reader's system to Galaxy Light or High Contrast.
 
-You can write your own templates. They are HTML files with MiniJinja placeholders such as `{{ title }}` and `{{ content }}`. Put them in a folder and pass `--templates FOLDER --template NAME`, where the name is the file name without its extension, or give a file directly with `--template my-page.html`. Your template can start with `{% extends "default" %}` to reuse the built-in page. The placeholders are listed in the rustdoc of `textweaver_render::template`.
+Custom templates are HTML files containing MiniJinja placeholders such as `{{ title }}` and `{{ content }}`. Place them in a folder and pass `--templates FOLDER --template NAME`, where the name is the file name without its extension, or name a file directly with `--template my-page.html`. Your template can start with `{% extends "default" %}` to reuse the built-in page. The placeholders are listed in the rustdoc of `textweaver_render::template`.
 
 ### How the page is set
 
-The page takes its typography from your reading settings at the moment you convert, so that a document read in the browser looks like the same document read in textweaver. The font, its size and weight come from `[reading_aids.font]`; line height, paragraph spacing, and letter and word spacing come from `[reading_aids.spacing]`; and the length of a line comes from `[display] measure`, the number of characters a line may hold (0 lets the text fill the browser's width). Change any of these in Settings and the next page you convert follows. The size is written relative to the browser's own default size, so the reader's browser zoom and minimum font size still apply. Themes carry colors only, which is why an older theme file keeps working unchanged. A user template that prints `{{ stylesheet }}` gets the same settings.
+The page takes its typography from the reading settings in force at conversion time, so that a document read in a browser resembles the same document read in textweaver. The font, its size and weight come from `[reading_aids.font]`; line height, paragraph spacing, and letter and word spacing come from `[reading_aids.spacing]`; and the length of a line comes from `[display] measure`, the number of characters a line may hold (0 lets the text fill the browser's width). A change to any of these in Settings applies to the next page converted. The size is written relative to the browser's own default size, so the reader's browser zoom and minimum font size still apply. Themes carry colors only, which is why an older theme file keeps working unchanged. A user template that prints `{{ stylesheet }}` gets the same settings.
 
-The rest of the page follows a few rules, each chosen so that nothing depends on color alone:
+The remainder of the page follows these rules, each designed so that nothing depends on color alone:
 
 - **Headings** use one scale, each level 1.2 times the size of the level below it, with the space around a heading measured in the heading's own size. Levels 5 and 6 share the body size; level 6 is set in italics.
 - **Code blocks** that name their language (a fence that opens with three backticks and `rust`, for example) are highlighted with the same syntax definitions and token kinds the terminal reader uses. Each kind takes a color from the theme's text roles, and the two that matter most also change their type: keywords are bold and comments are italic, so a black-and-white printout or a contrast theme keeps them apart. Strings keep their quotation marks and numbers their digits. A block in an unknown language, or without one, stays plain. Code blocks sit on the page's own background inside a border, because several token colors fall short of the 4.5 to 1 contrast floor on the darker code background.
@@ -188,7 +188,7 @@ The same templates serve `tw convert`, Export from inside the reader, the batch 
 tw convert essay.md --to docx --template apa
 ```
 
-A publishing template gives an EPUB book, a Word document, or a PDF the look a kind of document needs. Choose one with `--template`:
+A publishing template gives an EPUB book, a Word document, or a PDF the conventions of a particular kind of document. Select one with `--template`:
 
 - `apa`: an APA 7 student paper. A title page, double spacing, paragraphs with a first-line indent, APA's heading levels, the page number at the top right of every page, and references with hanging indents.
 - `ama`: an AMA 11 manuscript. A title page with the word count, double spacing, and page numbers.
@@ -197,7 +197,7 @@ A publishing template gives an EPUB book, a Word document, or a PDF the look a k
 - `high-contrast`: in EPUB, white text on black with yellow, underlined links; in Word and PDF, heavy black text on white, because a page color does not print.
 - `manuscript`: standard manuscript format. A title page with a rounded word count, double spacing, a running head with your surname, the short title, and the page number, and a centered number sign for each scene break.
 
-A template changes how the document looks, never how it is read. Headings stay real headings at their levels, lists stay lists, tables keep their header rows, and images keep their descriptions, so a screen reader moves through a templated paper exactly as through any other. The layout options in the next section still apply on top of a template: `--template apa --line-spacing 1.5` keeps the APA look with one-and-a-half spacing.
+A template changes how a document looks, never how it is read. Headings remain real headings at their original levels, lists remain lists, tables keep their header rows, and images keep their descriptions, so a screen reader navigates a templated paper exactly as it would any other document. The layout options in the next section still apply on top of a template: `--template apa --line-spacing 1.5` keeps the APA look with one-and-a-half spacing.
 
 For HTML, `--template` still names a page template (see [Templates](#templates)); a publishing template name there uses the default page and says so. Braille keeps its own layout.
 
@@ -220,7 +220,7 @@ date: October 5, 2026
 - AMA uses the title, author, and affiliation, then `corresponding:` (the corresponding author) if you give one, and the word count of the running text. The count leaves out headings, tables, footnotes, and the abstract and reference sections.
 - Manuscript uses the title, "by" and the author, and the word count to the nearest hundred.
 
-`institution` or `university` can stand for `affiliation`, `professor` for `instructor`, and `due-date` for `date`. A field you leave out is left off the page. textweaver never guesses the date; `--date "October 5, 2026"` gives one on the command line.
+`institution` or `university` may be used in place of `affiliation`, `professor` in place of `instructor`, and `due-date` in place of `date`. A field that is omitted is left off the page. textweaver never infers the date; `--date "October 5, 2026"` supplies one on the command line.
 
 When a paper's only level 1 heading is its title, as in a Markdown file that starts with `# Title`, APA's first heading look goes to the level 2 headings, so your sections look like APA level 1 headings while a screen reader still hears the title as level 1 and each section as level 2.
 
@@ -242,9 +242,9 @@ When a document has print page numbers, as a DAISY book, a scanned PDF, or an EP
 tw convert "Chapter 3.md" --to pdf --large-print --title-page --contents
 ```
 
-PDF output uses fonts that come with textweaver, so a PDF looks the same on every computer and never fails for lack of a font. The text font is chosen in this order: `--pdf-font` (a font file), then `--font` (a name or a file), then the `TEXTWEAVER_PDF_FONT` environment variable (a font file), then the bundled Atkinson Hyperlegible Next. The text is in Atkinson Hyperlegible Next and code is in Atkinson Hyperlegible Mono, both from the Braille Institute and made so that letters that look alike are easy to tell apart.
+PDF output uses fonts bundled with textweaver, so a PDF looks the same on every computer and never fails for lack of a font. The text font is resolved in this order: `--pdf-font` (a font file), then `--font` (a name or a file), then the `TEXTWEAVER_PDF_FONT` environment variable (a font file), then the bundled Atkinson Hyperlegible Next. The text is in Atkinson Hyperlegible Next and code is in Atkinson Hyperlegible Mono, both from the Braille Institute and made so that letters that look alike are easy to tell apart.
 
-These options change how a PDF looks. None of them changes what a screen reader hears: every PDF is tagged, has a title and a language, and passes the PDF/UA check textweaver runs while writing.
+These options affect only the appearance of a PDF. None changes what a screen reader hears: every PDF is tagged, carries a title and a language, and passes the PDF/UA check that textweaver runs while writing.
 
 - `--font NAME`: the text font. The fonts that come with textweaver are "Atkinson Hyperlegible Next", "Atkinson Hyperlegible Mono", and "OpenDyslexic". You can also name any font installed on your computer, such as "Verdana", or give a font file. If the name is not found, textweaver says so and converts nothing, so a typing mistake is never silently replaced.
 - `--code-font NAME`: the font for code, in the same way.
