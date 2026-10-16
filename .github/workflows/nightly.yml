@@ -31,12 +31,10 @@
 
 name: Nightly
 
+# No schedule since Friday, October 16, 2026, by the owner's decision:
+# development is not moving fast enough to need nightly runs. Run it by
+# hand (Actions, Nightly, Run workflow) before a release or after risky work.
 on:
-  schedule:
-    # Every night at 03:17 UTC.
-    - cron: '17 3 * * *'
-    # Mondays at 04:41 UTC: the weekly feature matrix.
-    - cron: '41 4 * * 1'
   workflow_dispatch:
     inputs:
       weekly:
@@ -364,7 +362,7 @@ jobs:
 
   features:
     name: each feature (weekly)
-    if: github.event.schedule == '41 4 * * 1' || github.event.inputs.weekly == 'true'
+    if: github.event.inputs.weekly == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:

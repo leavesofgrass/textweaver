@@ -44,7 +44,7 @@ Each target feeds random input to one part of textweaver. A loader may refuse th
 
 The loaders are built with the formats crate's `images` feature instead of `ocr`: the picture and scanned-page loaders are fuzzed with OCR off, so the in-process OCR engine, which took 45 minutes to compile under the sanitizer, is left out. The `rpc` target links the app, which still brings it.
 
-CI runs every target for 10 minutes each night (`.github/workflows/nightly.yml`) and keeps any crash as an artifact named `fuzz-crash-TARGET`. Download it from the run's page and replay it as below.
+The Nightly workflow (`.github/workflows/nightly.yml`), run by hand, runs every target for 10 minutes and keeps any crash as an artifact named `fuzz-crash-TARGET`. Download it from the run's page and replay it as below.
 
 ## Run a target
 
