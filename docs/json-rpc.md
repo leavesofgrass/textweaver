@@ -321,7 +321,7 @@ The notes commands return `status` and `effects` but no `pending`.
 
 #### Prompt purposes
 
-A prompt's `purpose` is one of these 31 values. The names are fixed: within protocol version 1 a purpose may be added but none is renamed or removed. A client should treat an unknown purpose as an ordinary text question, presenting the `label` and sending what the user types.
+A prompt's `purpose` is one of these 31 purposes. The names are fixed: within protocol version 1 a purpose may be added but none is renamed or removed. A client should treat an unknown purpose as an ordinary text question, presenting the `label` and sending what the user types.
 
 - `find`: the text to find.
 - `go_to`: a line, a percentage, `start`, or `end`.
