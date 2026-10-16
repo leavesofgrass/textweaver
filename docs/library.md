@@ -1,6 +1,6 @@
 # The library
 
-This guide covers textweaver's library: the folders of documents you read from, the list of recent files, "Continue reading", searching the text of every document at once, and the older way of keeping your reading place in step between computers through a library folder. It also covers where textweaver keeps its files, and importing your data from star. It is for anyone with more than a few documents, and for anyone moving from star. Syncing notes, highlights, bookmarks, places, and library details between your computers has [a guide of its own](sync.md).
+This guide covers textweaver's library: the folders of documents you read from, the list of recent files, "Continue reading", full-text search across every document, and the older method of keeping reading places synchronized between computers through a library folder. It also covers where textweaver stores its files and how to import your data from star. It is intended for anyone with a sizable collection of documents and for anyone migrating from star. Synchronizing notes, highlights, bookmarks, places, and library details between computers has [a guide of its own](sync.md).
 
 ## Open the library in the reader: Alt+L
 

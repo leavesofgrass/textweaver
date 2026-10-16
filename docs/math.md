@@ -1,15 +1,15 @@
 # Reading and writing math
 
-textweaver reads math aloud in plain English, and it turns math in your Markdown into MathML, the web's own math format, so screen readers can read it. You write formulas in LaTeX, such as `$x^2$`, or in ASCIIMath. When textweaver reads, it says "x squared", not "dollar x caret 2 dollar", and it highlights the part of the formula each word comes from. When `tw convert` makes a web page, each formula becomes real MathML, with the LaTeX kept inside it so you can still copy it. This guide is for students and teachers who read or write math by ear, with or without a screen reader.
+textweaver reads mathematics aloud in ordinary English, and it converts math in Markdown to MathML, the web's native math markup, so that screen readers can interpret it. Formulas are written in LaTeX, such as `$x^2$`, or in ASCIIMath. When textweaver reads a formula it says "x squared", not "dollar x caret 2 dollar", and it highlights the part of the formula that each spoken word comes from. When `tw convert` produces a web page, each formula becomes MathML, with the LaTeX source preserved inside it so that it can still be copied. This guide is for students and instructors who read or write mathematics by ear, with or without a screen reader.
 
-This guide is written to be read with a screen reader. Each task section starts with the command, then explains it.
+The guide is written to be read with a screen reader. Each task section begins with the command, then explains it.
 
-## Before you start
+## Prerequisites
 
-- Install textweaver. The [installation guide](install.md) explains how.
-- Have a document with math in it. A Markdown file (`.md`) or a plain text file (`.txt`) works best.
-- Math reading is on by default. You do not need to change anything to hear math.
-- To change how math is spoken, you edit your settings file, `settings.toml`, in a text editor. The section "Choose how math is spoken" below shows how to find it.
+- textweaver installed; see the [installation guide](install.md).
+- A document containing math. A Markdown file (`.md`) or a plain text file (`.txt`) works best.
+- Math reading is on by default, so hearing math requires no configuration.
+- Changing how math is spoken means editing the settings file, `settings.toml`, in a text editor. The section "Choose how math is spoken" below explains where to find it.
 
 ## Hear the math in a document
 
@@ -17,9 +17,9 @@ This guide is written to be read with a screen reader. Each task section starts 
 tw open "Calculus notes.md"
 ```
 
-This opens the document in the terminal reader. Read it the way you read anything else; the [reading guide](reading.md) explains the keys. When the reading reaches a formula, you hear the formula in words. For example, the sentence "The area is `$\pi r^2$`." is read as "The area is pi r squared."
+This opens the document in the terminal reader. Read it as you would any other document; the [reading guide](reading.md) describes the keys. When reading reaches a formula, you hear the formula in words. For example, the sentence "The area is `$\pi r^2$`." is read as "The area is pi r squared."
 
-The dollar signs and other delimiters are never spoken. The words around the formula are read as usual.
+The dollar signs and other delimiters are never spoken. The text around the formula is read as usual.
 
 The `textweaver` command opens the same terminal reader:
 
@@ -48,7 +48,7 @@ A few rules apply to every mark:
 
 ### Why prices are not math
 
-A single dollar sign follows the same rule as Pandoc, a popular document converter. All three of these must be true for `$…$` to be math:
+A single dollar sign follows the rule that Pandoc, the document converter, uses. All three of these must be true for `$…$` to be math:
 
 - The character right after the opening `$` is not a space, a tab, or a line break.
 - The character right before the closing `$` is not a space, a tab, or a line break.

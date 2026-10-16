@@ -1,6 +1,6 @@
 # Bookmarks, notes, and highlights
 
-This guide covers the three ways to mark what you read: bookmarks (named places), notes (your own text attached to a passage), and highlights (passages marked in color). It is for students and anyone who studies with textweaver. It also covers where they are kept, how to list them from the command line, and how to take them to Obsidian.
+This guide covers the three ways to annotate what you read: bookmarks (named places), notes (your own text attached to a passage), and highlights (passages marked with a named color). It is intended for students and for anyone who studies with textweaver. It also covers where annotations are stored, how to list them from the command line, and how to export them to Obsidian.
 
 Keys are the terminal defaults. Most are single browse keys, which work while reading. Where the graphical version uses a different key, this guide says so. With single-key shortcuts turned off (**F9**), run these commands from the command palette (**F2**) by the names given here.
 
