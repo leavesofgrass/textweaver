@@ -2,15 +2,13 @@
 
 `tw convert` turns documents into other formats: one file, a whole folder of files, or every file that arrives in a folder you are watching. It uses every processor core, and it skips files that are already converted, so running it again on a large folder takes a moment.
 
-This guide is written to be read with a screen reader. Each section starts with the command, then explains it.
-
 ## Convert one file
 
 ```bash
 tw convert notes.md --to html
 ```
 
-This writes `notes.html` next to `notes.md`. When it finishes, you hear one sentence, for example: "Converted 1 file to HTML in 32 milliseconds, 31.6 files per second. No failures."
+This writes `notes.html` next to `notes.md`. When it finishes, textweaver announces a one-sentence summary, for example: "Converted 1 file to HTML in 32 milliseconds, 31.6 files per second. No failures."
 
 The formats you can ask for with `--to`:
 

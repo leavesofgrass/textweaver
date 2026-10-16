@@ -1,8 +1,8 @@
 # Driving textweaver from another program (JSON-RPC)
 
-`tw serve --stdio` runs textweaver as a server that another program controls. The other program, called the client, starts `tw serve` as a child process, writes requests to its standard input, and reads answers from its standard output. The client can open a document, move through it by sentence, heading, line, or any other textweaver unit, have it read aloud with textweaver's voices, run any keyboard action by name, and follow along as each word is spoken. This guide is for people writing an editor plugin, a web page, or any other tool that wants textweaver's reading without rebuilding it. You do not need to know much about JSON-RPC to follow it.
+`tw serve --stdio` runs textweaver as a server that another program controls. The other program, called the client, starts `tw serve` as a child process, writes requests to its standard input, and reads answers from its standard output. The client can open a document, move through it by sentence, heading, line, or any other textweaver unit, have it read aloud with textweaver's voices, run any keyboard action by name, and follow along as each word is spoken. This guide is for people writing an editor plugin, a web page, or any other tool that wants textweaver's reading without rebuilding it. Prior knowledge of JSON-RPC is not required; the parts of the protocol that matter are explained where they arise.
 
-This guide is written to be read with a screen reader. Each message is shown in its own code block, with a sentence before it saying what it is.
+Each message is shown in its own code block, preceded by a sentence that says what it is.
 
 ## Before you start
 

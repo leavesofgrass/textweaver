@@ -2,8 +2,6 @@
 
 textweaver can keep itself current. When you allow it, it looks once a day for a newer release, tells you the version and the size, and downloads it only if you say yes. Before anything is installed, the download is checked against the checksum the release publishes. Your settings, notes, library, reading positions, and optional components are never touched by an update.
 
-This guide is written to be read with a screen reader. Each section starts with what you do, then explains it.
-
 ## Turning the check on or off
 
 The first time textweaver starts, the list of optional components ends with one more row: "Check for updates automatically, once a day, from GitHub". It starts as "Not chosen". Press Space or Enter on it to choose it; textweaver says "Updates: checked once a day." Press it again to take it back. The answer takes effect at once, whether you then download components, skip them, or press Escape.
