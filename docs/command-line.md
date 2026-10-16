@@ -43,7 +43,10 @@ tw library search mitochondria
 tw stats clear
 tw dictate list --json
 tw changes accept draft.docx --out final.md
+tw library queue add week4.pdf
 ```
+
+An action can have actions of its own: `tw library queue` lists the reading queue, and `tw library queue add FILE`, `remove FILE` and `next` change it and read it; `tw library review` prints the review list ([The library](library.md#the-reading-queue)).
 
 `tw library` alone still lists the library, `tw stats` alone still prints the statistics, and `tw changes FILE` alone still lists the changes. The older option spellings still work for now, and will be removed after beta 1: `tw library --add`, `--remove`, `--search` and `--continue`, `tw stats --clear`, `tw dictate --list`, and `tw changes --accept-all` and `--reject-all`.
 
