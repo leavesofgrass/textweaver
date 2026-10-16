@@ -2,11 +2,9 @@
 
 `tw vault` moves your study notes between textweaver and an Obsidian vault. `tw vault export` writes the notes and highlights you made while reading into the vault as ordinary Markdown notes, linked to each other so they show up in Obsidian's graph. `tw vault import` reads a vault back: it brings your edits to those notes back onto their documents, and it turns your own Obsidian notes and their `[[links]]` into textweaver notes you can list and move through. Use it if you read in textweaver and organize or review in Obsidian, or if you keep a vault and want its links inside textweaver.
 
-This guide is written to be read with a screen reader. Each section starts with the command, then explains it.
-
 ## Before you start
 
-- A vault is simply a folder of Markdown files. Obsidian keeps its own settings in a folder called `.obsidian` inside it. `tw vault` works on the folder; Obsidian does not need to be open or even installed.
+- A vault is a folder of Markdown files. Obsidian keeps its own settings in a folder called `.obsidian` inside it. `tw vault` works on the folder; Obsidian does not need to be open or even installed.
 - The vault commands are part of `tw`, the command-line tool. Neither the terminal reader nor the app has a vault menu yet.
 - Notes and highlights are made while you read. See [the notes guide](notes.md) for how to add them. To check what a document has, run `tw marks` with the document's file name. It lists the document's notes and highlights.
 - textweaver keeps each document's notes and highlights in its own data folder, never inside the document. On Windows that is `%APPDATA%\leavesofgrass\textweaver\data\state`. On macOS it is `~/Library/Application Support/org.leavesofgrass.textweaver/state`, and on Linux `~/.local/share/textweaver/state`. If the `TEXTWEAVER_HOME` environment variable is set, it is `data\state` inside that folder.
@@ -45,7 +43,7 @@ To export several documents at once, repeat `--document`:
 tw vault export "D:\Notes\Biology" --document "D:\Courses\lecture.md" --document "D:\Courses\lab.md"
 ```
 
-When it finishes, you hear one sentence, for example:
+When it finishes, textweaver announces a one-sentence summary, for example:
 
 "Exported 2 notes and 1 highlight to Biology."
 
@@ -181,7 +179,7 @@ Running the same export again updates the notes it wrote before instead of addin
 tw vault import "D:\Notes\Biology"
 ```
 
-This reads every note in the vault and stores what it finds in textweaver. When it finishes, you hear one sentence, for example:
+This reads every note in the vault and stores what it finds in textweaver. When it finishes, textweaver announces a one-sentence summary, for example:
 
 "Imported 3 notes from Biology: 3 documents added to the library, 4 links; 2 linked notes could not be found."
 

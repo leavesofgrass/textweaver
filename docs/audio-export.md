@@ -2,7 +2,7 @@
 
 Export audio, in the reader's File menu, and `tw export-audio`, from a terminal, read a document aloud into an audio file, so you can listen to it later on a phone, a music player, or a book player. It can write a WAV file, a FLAC file, an MP3 file, an Opus file, an Ogg Vorbis file, or an M4B audiobook, each with one chapter for each heading, and an MP4 video that shows the text with the spoken word marked. It can also write subtitles: a caption file that shows each sentence, or each word, at the moment it is spoken. This is for anyone who wants to take a reading with them, for example a student who wants an audiobook of this week's chapters, or a teacher who wants captions that follow the spoken text.
 
-This guide is written to be read with a screen reader. Each task section starts with the command, then explains it. [Export audio from the reader](#export-audio-from-the-reader) comes first; the rest of the guide is about `tw export-audio`, whose settings the reader shares.
+[Export audio from the reader](#export-audio-from-the-reader) comes first; the rest of the guide concerns `tw export-audio`, whose settings the reader shares. Each task section opens with the command, then explains it.
 
 ## Export audio from the reader
 
