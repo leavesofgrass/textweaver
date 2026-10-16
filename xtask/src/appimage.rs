@@ -4,7 +4,8 @@
 //! Stages the Linux package exactly as `cargo xtask dist` does (the `dist`
 //! profile; the app, `textweaver-gui`, and `tw`, with `textweaver` a link
 //! to it, with Omnivox, speech-dispatcher, and espeak-ng loaded at run
-//! time; the ECI and DECtalk hosts; the dictionaries, notices, licences,
+//! time; the programs run the engine hosts themselves, in host mode; the
+//! dictionaries, notices, licences,
 //! and guides; the menu entries and icon), writes the plain tarball, then
 //! wraps the same folder in one AppImage holding both programs (B1-o2):
 //!
@@ -24,8 +25,8 @@
 //!   the single image, which sits beside it in the release.
 //!
 //! The AppDir keeps the package folder whole under `usr/lib/textweaver/`,
-//! so the programs find the engine hosts and dictionaries beside them as
-//! they do in the tarball.
+//! so the programs find the dictionaries beside them as they do in the
+//! tarball.
 //!
 //! Tools: `appimagetool` and the type 2 runtime, downloaded and checked by
 //! `docker/appimage/fetch-tools.sh`. The task finds them through

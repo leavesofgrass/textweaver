@@ -193,7 +193,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           rustup target add i686-pc-windows-msvc
-          cargo build --locked -p textweaver-eci -p textweaver-sapi -p textweaver-dectalk --bins --target i686-pc-windows-msvc
+          cargo build --locked -p textweaver-eci -p textweaver-sapi -p textweaver-dectalk -p textweaver-host --bins --target i686-pc-windows-msvc
       # The fake-engine tests against the 32-bit hosts: the 64-bit ECI
       # backend drives the 32-bit ECI host (as it does for Code Factory's
       # eci.dll), and the SAPI and DECtalk tests run as 32-bit programs
@@ -206,6 +206,9 @@ jobs:
           TEXTWEAVER_ECI_TEST_HOST="$(pwd -W)/target/i686-pc-windows-msvc/debug/textweaver-eci-host.exe" \
             cargo test --locked -p textweaver-eci --test it -- fake_host::
           cargo test --locked --target i686-pc-windows-msvc -p textweaver-sapi -p textweaver-dectalk --test it -- fake_host::
+          # The combined 32-bit host, textweaver-host-x86.exe in the
+          # packages: every engine's fake starts in it.
+          cargo test --locked --target i686-pc-windows-msvc -p textweaver-host --test it
       - name: Docs
         run: cargo doc --locked --workspace --exclude textweaver-xilem --no-deps ${{ matrix.features }}
 

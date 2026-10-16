@@ -52,15 +52,15 @@ is missing (so AppImages cannot run), the plain tarball. Nothing is built.
 Without --release, it builds from source: it installs the build dependencies
 with your package manager, installs Rust with rustup if cargo is missing,
 builds textweaver and tw in release mode with the Linux speech engines
-(espeak-ng, speech-dispatcher, and Omnivox), builds the engine hosts, and
-installs everything under a prefix.
+(espeak-ng, speech-dispatcher, and Omnivox), and installs everything under
+a prefix. tw runs the engine hosts itself, so there are none to build.
 
 Every step is announced before it runs. The script asks before it uses sudo,
 installs Rust, or changes your PATH. Running it again updates the install.
 
 Options:
   --prefix DIR           Install under DIR (default: ~/.local). Programs go
-                         in DIR/bin, the engine hosts and dictionaries in
+                         in DIR/bin, the programs and dictionaries in
                          DIR/lib/textweaver, and the guides in
                          DIR/share/doc/textweaver.
   --from-source          Build from source (the default).
@@ -645,7 +645,6 @@ build() {
   say "Building textweaver and tw in release mode. The first build takes several minutes."
   if [ "$DRY_RUN" = 1 ]; then
     say "Would run in $SRC: cargo build --release --locked -p textweaver-tui -p textweaver-cli --bin textweaver --bin tw --features $FEATURES"
-    say "Would run in $SRC: cargo xtask hosts"
     return 0
   fi
   if ! (cd "$SRC" && run cargo build --release --locked -p textweaver-tui -p textweaver-cli \
@@ -664,8 +663,8 @@ build() {
       || die "The build failed again. The error is above. scripts/doctor.sh collects what a bug report needs."
     say "Built without espeak-ng. Speech engines built in: $ENGINES."
   fi
-  say "Building the engine hosts: the helper programs that run Eloquence (Voxin) and DECtalk in their own processes."
-  (cd "$SRC" && run cargo xtask hosts)
+  # No separate engine hosts: tw runs Eloquence (Voxin) and DECtalk in a
+  # copy of itself (tw --engine-host).
 }
 
 # -------------------------------------------------------------- install --
@@ -701,7 +700,7 @@ install_files() {
   section "Install"
   say "Installing into $PREFIX:"
   say "- the programs textweaver and tw, linked from $BINDIR;"
-  say "- the programs, engine hosts, and pronunciation dictionaries in $LIBDIR;"
+  say "- the programs and pronunciation dictionaries in $LIBDIR;"
   say "- the guides and a help file in $DOCDIR, and manual pages in $MANDIR;"
   say "- a menu entry in $APPDIR."
 
@@ -722,7 +721,7 @@ install_files() {
 
   ir mkdir -p "$BINDIR" "$LIBDIR" "$DOCDIR" "$MANDIR" "$APPDIR" "$DATADIR/scripts"
   local f
-  for f in textweaver tw textweaver-eci-host textweaver-dectalk-host; do
+  for f in textweaver tw; do
     if [ "$DRY_RUN" = 1 ] || [ -f "$rel/$f" ]; then
       ir install -m 0755 "$rel/$f" "$LIBDIR/$f"
     else
