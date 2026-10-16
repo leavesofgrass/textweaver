@@ -223,6 +223,54 @@ continue-ago-days =
     }
 name-continue-reading = Weiterlesen
 action-continue-reading = Weiterlesen: die Dokumente auf diesem Computer mit gespeicherter Stelle, von jedem Computer, neueste zuerst
+
+## Die Leseliste und die Wiederholungsliste (Beta 3).
+
+queue-title = Leseliste
+queue-intro =
+    { $n ->
+        [one] Leseliste, 1 Dokument. Eingabetaste öffnet es, Entf nimmt es heraus.
+       *[other] Leseliste, { $n } Dokumente. Eingabetaste öffnet eines, Entf nimmt es heraus.
+    }
+queue-empty = Die Leseliste ist leer. In der Bibliothek fügt { $key } ein Dokument hinzu.
+queue-item-missing = { $title }, nicht gefunden
+queue-added =
+    { $n ->
+        [one] Zur Leseliste hinzugefügt: { $title }. 1 Dokument in der Liste.
+       *[other] Zur Leseliste hinzugefügt: { $title }. { $n } Dokumente in der Liste.
+    }
+queue-removed = Aus der Leseliste genommen: { $title }.
+queue-no-file = Nur ein als Datei gespeichertes Dokument kann in die Leseliste.
+queue-read-failed = Die Bibliothek konnte für die Leseliste nicht gelesen werden: { $error }. Prüfen Sie library.json im Datenordner; tw settings path nennt ihn.
+queue-next-ask = Als Nächstes: { $title }. { $key } zum Lesen.
+queue-next-reading = Als Nächstes: { $title }.
+review-title = Wiederholungsliste
+review-intro =
+    { $n ->
+        [one] Wiederholungsliste, 1 Dokument, am längsten nicht gelesen zuerst. Eingabetaste öffnet es.
+       *[other] Wiederholungsliste, { $n } Dokumente, am längsten nicht gelesen zuerst. Eingabetaste öffnet eines.
+    }
+review-empty = Noch nichts zu wiederholen. Vorgelesene Dokumente erscheinen hier.
+review-stats-off = Die Wiederholungsliste braucht die Lesestatistik, die aus ist. Schalten Sie Lesestatistik in den Einstellungen ein.
+review-item = { $title }, { $days }, { $pct } Prozent, { $notes }
+review-days =
+    { $n ->
+        [0] heute
+        [one] 1 Tag
+       *[other] { $n } Tage
+    }
+review-notes =
+    { $n ->
+        [0] keine Notizen
+        [one] 1 Notiz
+       *[other] { $n } Notizen
+    }
+name-review-list = Wiederholungsliste
+action-review-list = Wiederholungsliste: die gelesenen Dokumente, das am längsten nicht gelesene zuerst
+name-reading-queue = Leseliste
+action-reading-queue = Leseliste: die als Nächstes zu lesenden Dokumente, in Reihenfolge
+name-queue-document = Zur Leseliste hinzufügen
+action-queue-document = Das Dokument zur Leseliste hinzufügen oder herausnehmen
 name-add-library-folder = Ordner zur Bibliothek hinzufügen
 action-add-library-folder = Einen Ordner zur Bibliothek hinzufügen: im Dateibrowser auswählen
 name-edit-document-details = Details bearbeiten
@@ -1682,8 +1730,8 @@ library-folder-added = { $name } wurde zur Bibliothek hinzugefügt. Öffnen Sie 
 library-folder-already = { $name } ist bereits in der Bibliothek.
 library-intro =
     { $n ->
-        [one] Bibliothek, { $n } Dokument. Tippen filtert, Eingabetaste öffnet eines, F2 bearbeitet Details.
-       *[other] Bibliothek, { $n } Dokumente. Tippen filtert, Eingabetaste öffnet eines, F2 bearbeitet Details.
+        [one] Bibliothek, { $n } Dokument. Tippen filtert, Eingabetaste öffnet eines, F2 bearbeitet Details, { $queue } setzt es auf die Leseliste.
+       *[other] Bibliothek, { $n } Dokumente. Tippen filtert, Eingabetaste öffnet eines, F2 bearbeitet Details, { $queue } setzt es auf die Leseliste.
     }
 library-title = Bibliothek
 
@@ -2198,6 +2246,11 @@ setting-reading-book-audio = Hörbuchaufnahme
 setting-reading-book-audio-help = Was ein DAISY-Hörbuch mit Aufnahme liest. Seine aufgenommene Sprecherstimme, mit der Hervorhebung dazu und der Sprachausgabe für Text ohne Audio, oder nur die Sprachausgabe. Das Tempo gilt nicht für die Aufnahme.
 choice-reading-book-audio-auto = Aufnahme
 choice-reading-book-audio-speech = nur Sprachausgabe
+setting-reading-after-end = Nach dem Ende eines Dokuments
+setting-reading-after-end-help = Was nach dem Ende eines Dokuments folgt, wenn die Leseliste ein weiteres hat. Nichts, das nächste Dokument wird genannt und die Lesetaste liest es, oder das nächste Dokument wird sofort gelesen. Ein Dokument beginnt nie ungefragt.
+choice-reading-after-end-stop = anhalten
+choice-reading-after-end-ask = erst fragen
+choice-reading-after-end-next = das nächste lesen
 setting-display-theme = Design
 setting-display-theme-help = Das Farbdesign.
 setting-display-follow-os-theme = Dem Systemdesign folgen

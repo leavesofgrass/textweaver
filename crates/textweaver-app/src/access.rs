@@ -543,7 +543,10 @@ impl App {
                     s.spoken_sentence = None;
                 }
                 let msg = self.msg("nav-end-of-document-stop");
-                self.tell(&msg);
+                // The reading queue (`[reading] after_end`, crate::queue).
+                if !self.queue_after_end(&msg) {
+                    self.tell(&msg);
+                }
             }
         }
         true

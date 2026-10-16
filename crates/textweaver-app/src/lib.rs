@@ -224,6 +224,7 @@ mod publish;
 #[cfg(not(feature = "publish"))]
 #[path = "lean/publish.rs"]
 mod publish;
+mod queue;
 mod reading_aids;
 mod reading_form;
 mod relations;

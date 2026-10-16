@@ -380,7 +380,7 @@ fn an_edit_from_the_library_syncs_to_a_second_home() {
     let effects = laptop.act(ActionId::OpenLibrary);
     assert_eq!(list_items(&effects).len(), 1);
     assert!(
-        laptop.said.any("F2 edits details."),
+        laptop.said.any("F2 edits details, Ctrl+Enter queues it."),
         "the list says how: {:?}",
         laptop.said.all()
     );

@@ -600,6 +600,9 @@ impl App {
         if let Some(effects) = self.browse_list_key(key) {
             return effects;
         }
+        if let Some(effects) = self.queue_list_key(key) {
+            return effects;
+        }
         if self.settings_screen.is_some()
             && let Some(effects) = self.settings_list_key(key)
         {
