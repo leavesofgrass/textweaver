@@ -1336,6 +1336,39 @@ pub(crate) mod tests {
         assert_eq!(s.runs, 0);
     }
 
+    /// Pausing the live audio closes the utterance in progress at once,
+    /// with no end of the audio, and what is said while paused is never
+    /// heard; resumed, speech is heard again.
+    #[test]
+    fn a_pause_finishes_the_utterance_and_drops_the_rest() {
+        let live = LiveAudio::new();
+        let signals = Arc::new(Signals::default());
+        let (rx, listener) =
+            spawn_listener(live.clone(), Box::new(loud_finder()), Arc::clone(&signals)).unwrap();
+        let wait_closed = |rx: &Receiver<Msg>| loop {
+            match rx.recv_timeout(Duration::from_secs(5)) {
+                Ok(Msg::Speech(SpeechEvent::Closed(r))) => return r,
+                Ok(Msg::End(_)) | Err(_) => panic!("no pause found"),
+                Ok(_) => {}
+            }
+        };
+        // Speech with no pause after it, then the pause (one second of
+        // silence, as the backend adds).
+        live.push(&speak(100, &[(&[0, 1, 2], 0)]));
+        live.pause(16_000);
+        let first = wait_closed(&rx);
+        let heard = live.total();
+        // Said while paused: dropped.
+        live.push(&speak(0, &[(&[3, 4], 0)]));
+        assert_eq!(live.total(), heard);
+        live.resume();
+        live.push(&speak(0, &[(&[5, 6], 800)]));
+        let second = wait_closed(&rx);
+        assert!(second.start >= first.end, "{first:?} {second:?}");
+        live.end();
+        listener.join().unwrap();
+    }
+
     /// The fake recognizer in real time: sleeps its cost, and stops early
     /// when cancelled.
     pub(crate) struct SleepyRecognizer {

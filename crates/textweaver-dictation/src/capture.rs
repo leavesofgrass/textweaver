@@ -125,6 +125,8 @@ struct LiveBuffer {
     /// Added in all.
     total: usize,
     ended: bool,
+    /// Paused: what the capture adds is dropped until resumed.
+    paused: bool,
 }
 
 impl std::fmt::Debug for LiveAudio {
@@ -134,6 +136,7 @@ impl std::fmt::Debug for LiveAudio {
             .field("total", &b.total)
             .field("waiting", &b.samples.len())
             .field("ended", &b.ended)
+            .field("paused", &b.paused)
             .finish()
     }
 }
@@ -148,13 +151,14 @@ impl LiveAudio {
         self.inner.0.lock().unwrap_or_else(|e| e.into_inner())
     }
 
-    /// Adds recorded samples; ignored once the audio has ended.
+    /// Adds recorded samples; ignored while paused and once the audio
+    /// has ended.
     pub fn push(&self, samples: &[f32]) {
         if samples.is_empty() {
             return;
         }
         let mut b = self.lock();
-        if b.ended {
+        if b.ended || b.paused {
             return;
         }
         b.samples.extend_from_slice(samples);
@@ -168,6 +172,33 @@ impl LiveAudio {
     pub fn end(&self) {
         self.lock().ended = true;
         self.inner.1.notify_all();
+    }
+
+    /// Pauses the audio: `closing` samples of silence are added at once,
+    /// so a voice detector closes the utterance in progress at its pause
+    /// and no words are lost, and what the capture adds from then on is
+    /// dropped until [`resume`](Self::resume). Pausing twice, or after
+    /// the end, does nothing.
+    pub fn pause(&self, closing: usize) {
+        let mut b = self.lock();
+        if b.ended || b.paused {
+            return;
+        }
+        b.samples.extend(std::iter::repeat_n(0.0, closing));
+        b.total += closing;
+        b.paused = true;
+        drop(b);
+        self.inner.1.notify_all();
+    }
+
+    /// Takes what the capture adds again, after [`pause`](Self::pause).
+    pub fn resume(&self) {
+        self.lock().paused = false;
+    }
+
+    /// True while paused.
+    pub fn is_paused(&self) -> bool {
+        self.lock().paused
     }
 
     /// Samples added so far.
@@ -413,6 +444,29 @@ mod tests {
         assert_eq!(&wav[36..40], b"data");
         assert_eq!(u32::from_le_bytes([wav[40], wav[41], wav[42], wav[43]]), 8);
         assert_eq!(&wav[50..52], &i16::MAX.to_le_bytes());
+    }
+
+    #[test]
+    fn paused_audio_is_dropped_after_closing_silence() {
+        let live = LiveAudio::new();
+        live.push(&[0.5; 4]);
+        live.pause(3);
+        assert!(live.is_paused());
+        live.push(&[0.5; 10]);
+        // Pausing again adds no more silence.
+        live.pause(3);
+        let (taken, ended) = live.take(Duration::ZERO);
+        assert_eq!(taken, [0.5, 0.5, 0.5, 0.5, 0.0, 0.0, 0.0]);
+        assert!(!ended);
+        live.resume();
+        assert!(!live.is_paused());
+        live.push(&[0.25; 2]);
+        live.end();
+        live.pause(3);
+        let (taken, ended) = live.take(Duration::ZERO);
+        assert_eq!(taken, [0.25, 0.25]);
+        assert!(ended);
+        assert_eq!(live.total(), 9);
     }
 
     #[test]
