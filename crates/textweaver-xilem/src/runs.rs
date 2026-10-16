@@ -39,6 +39,9 @@ pub enum RunMark {
     SpokenWord,
     /// A search match.
     FindHit,
+    /// A highlight with a palette name: its band, its line, and its name
+    /// as the run's description.
+    Highlight(crate::document::NamedMark),
 }
 
 /// One paragraph of the window: canonical text between line breaks.

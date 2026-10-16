@@ -1,23 +1,26 @@
 //! Engine hosts (ADR-0012): building them and installing them next to the
 //! workspace's binaries, where the backends look for them.
 //!
-//! - `cargo xtask hosts [--dest DIR]` builds every host for this platform
-//!   and is what CI and the release job call: on Windows the ECI hosts
-//!   (`textweaver-eci-host.exe` for OpenEVV's x86_64 `eci.dll`,
-//!   `textweaver-eci-host-x86.exe` for Code Factory's 32-bit `eci.dll`),
-//!   the SAPI5 hosts (`textweaver-sapi-host.exe`,
-//!   `textweaver-sapi-host-x86.exe`), the DECtalk hosts, and the eSpeak NG
-//!   hosts (`textweaver-espeak-host.exe`, `textweaver-espeak-host-x86.exe`);
-//!   elsewhere the native ECI host
-//!   (`textweaver-eci-host`, for Voxin). All are release builds without
-//!   default features (a host needs no audio output), installed with the
-//!   community pronunciation dictionaries (`ibmtts-dictionaries/`) into
-//!   both `target/debug` and `target/release`, and into `DIR` when given
-//!   (for packaging).
-//! - `cargo xtask eci-host` builds and installs the ECI hosts only (the
-//!   Wave 1 task, kept).
+//! Since Friday, October 16, 2026 (ADR-0007 addendum) the programs run
+//! the native-architecture hosts as a copy of themselves
+//! (`--engine-host <engine>`), so there is nothing separate to build for
+//! them. The one host program left is the combined 32-bit host for
+//! Windows, `textweaver-host-x86.exe` (the `textweaver-host` binary built
+//! for `i686-pc-windows-msvc`), which runs every engine's 32-bit library:
+//! Code Factory's `eci.dll`, the usual `DECtalk.dll`, 32-bit SAPI 5
+//! voices, and a 32-bit libespeak-ng.
 //!
-//! The 32-bit builds need `rustup target add i686-pc-windows-msvc`.
+//! - `cargo xtask hosts [--dest DIR]` builds it (on Windows; elsewhere
+//!   there is no host to build) and is what CI and the release job call. It
+//!   is a release build without default features (a host needs no audio
+//!   output), installed with the community pronunciation dictionaries
+//!   (`ibmtts-dictionaries/`, which the Eloquence host reads beside the
+//!   program that runs it) into both `target/debug` and `target/release`,
+//!   and into `DIR` when given (for packaging).
+//! - `cargo xtask eci-host` is another name for `hosts` (the Wave 1 task,
+//!   kept).
+//!
+//! The 32-bit build needs `rustup target add i686-pc-windows-msvc`.
 //!
 //! Wiring (orchestrator, `xtask/src/main.rs`): the match arm
 //! `"hosts" => eci::hosts(),` and `hosts` in the usage line.
@@ -27,14 +30,9 @@ use std::process::Command;
 
 use anyhow::{Context, bail};
 
-const ECI_PACKAGE: &str = "textweaver-eci";
-const ECI_BIN: &str = "textweaver-eci-host";
-const SAPI_PACKAGE: &str = "textweaver-sapi";
-const SAPI_BIN: &str = "textweaver-sapi-host";
-const DECTALK_PACKAGE: &str = "textweaver-dectalk";
-const DECTALK_BIN: &str = "textweaver-dectalk-host";
-const ESPEAK_PACKAGE: &str = "textweaver-espeak";
-const ESPEAK_BIN: &str = "textweaver-espeak-host";
+/// The combined host's package and binary.
+pub(crate) const HOST_PACKAGE: &str = "textweaver-host";
+const HOST_BIN: &str = "textweaver-host";
 /// The 32-bit Windows target.
 pub(crate) const X86_TARGET: &str = "i686-pc-windows-msvc";
 
@@ -92,48 +90,21 @@ fn exe_suffix(target: Option<&str>) -> &'static str {
     }
 }
 
-/// Every host this platform uses.
+/// The combined 32-bit host, `textweaver-host-x86.exe`.
+pub(crate) const X86_HOST: HostBuild = HostBuild {
+    package: HOST_PACKAGE,
+    bin: HOST_BIN,
+    target: Some(X86_TARGET),
+};
+
+/// Every host program this platform ships: the combined 32-bit host on
+/// Windows, none elsewhere (the programs are their own native hosts).
 pub(crate) fn all_hosts() -> Vec<HostBuild> {
-    let mut v = vec![HostBuild {
-        package: ECI_PACKAGE,
-        bin: ECI_BIN,
-        target: None,
-    }];
     if cfg!(windows) {
-        v.push(HostBuild {
-            package: ECI_PACKAGE,
-            bin: ECI_BIN,
-            target: Some(X86_TARGET),
-        });
-        v.extend([None, Some(X86_TARGET)].map(|target| HostBuild {
-            package: SAPI_PACKAGE,
-            bin: SAPI_BIN,
-            target,
-        }));
+        vec![X86_HOST]
+    } else {
+        Vec::new()
     }
-    // DECtalk (ADR-0021): the native host everywhere, and on Windows the
-    // 32-bit host for the usual 32-bit DECtalk.dll.
-    v.push(HostBuild {
-        package: DECTALK_PACKAGE,
-        bin: DECTALK_BIN,
-        target: None,
-    });
-    if cfg!(windows) {
-        v.push(HostBuild {
-            package: DECTALK_PACKAGE,
-            bin: DECTALK_BIN,
-            target: Some(X86_TARGET),
-        });
-        // eSpeak NG's helper, on Windows only: the x64 host for the x64
-        // installer's library, the x86 host for a 32-bit one. Linux and
-        // macOS keep eSpeak NG in process.
-        v.extend([None, Some(X86_TARGET)].map(|target| HostBuild {
-            package: ESPEAK_PACKAGE,
-            bin: ESPEAK_BIN,
-            target,
-        }));
-    }
-    v
 }
 
 /// Builds `hosts` in `profile` without default features, one cargo run per
@@ -243,72 +214,45 @@ pub fn hosts() -> anyhow::Result<()> {
     build_and_install(&all_hosts(), &extra)
 }
 
-/// `cargo xtask eci-host`: the ECI hosts only.
+/// `cargo xtask eci-host`: another name for `hosts` (every engine's
+/// 32-bit host is one program now).
 pub fn run() -> anyhow::Result<()> {
-    let eci: Vec<HostBuild> = all_hosts()
-        .into_iter()
-        .filter(|h| h.package == ECI_PACKAGE)
-        .collect();
-    build_and_install(&eci, &[])
+    build_and_install(&all_hosts(), &[])
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    /// One host program on Windows, the combined 32-bit host, under the
+    /// name the backends look for; none elsewhere.
     #[test]
     fn hosts_cover_the_platform() {
-        let all = all_hosts();
-        assert!(all.contains(&HostBuild {
-            package: ECI_PACKAGE,
-            bin: ECI_BIN,
-            target: None
-        }));
+        let names: Vec<String> = all_hosts().iter().map(HostBuild::installed_name).collect();
         if cfg!(windows) {
-            let names: Vec<String> = all.iter().map(HostBuild::installed_name).collect();
-            assert_eq!(
-                names,
-                [
-                    "textweaver-eci-host.exe",
-                    "textweaver-eci-host-x86.exe",
-                    "textweaver-sapi-host.exe",
-                    "textweaver-sapi-host-x86.exe",
-                    "textweaver-dectalk-host.exe",
-                    "textweaver-dectalk-host-x86.exe",
-                    "textweaver-espeak-host.exe",
-                    "textweaver-espeak-host-x86.exe",
-                ]
-            );
+            assert_eq!(names, ["textweaver-host-x86.exe"]);
         } else {
-            let names: Vec<String> = all.iter().map(HostBuild::installed_name).collect();
-            assert_eq!(names, ["textweaver-eci-host", "textweaver-dectalk-host"]);
+            assert!(names.is_empty(), "{names:?}");
         }
     }
 
     #[test]
     fn built_paths_follow_cargo_layout() {
         let t = Path::new("t");
-        let x86 = HostBuild {
-            package: SAPI_PACKAGE,
-            bin: SAPI_BIN,
-            target: Some(X86_TARGET),
-        };
         assert_eq!(
-            x86.built(t, "release"),
+            X86_HOST.built(t, "release"),
             t.join(X86_TARGET)
                 .join("release")
-                .join("textweaver-sapi-host.exe")
+                .join("textweaver-host.exe")
         );
         let native = HostBuild {
             target: None,
-            ..x86
+            ..X86_HOST
         };
         assert_eq!(
             native.built(t, "debug"),
-            t.join("debug").join(format!(
-                "textweaver-sapi-host{}",
-                std::env::consts::EXE_SUFFIX
-            ))
+            t.join("debug")
+                .join(format!("textweaver-host{}", std::env::consts::EXE_SUFFIX))
         );
     }
 

@@ -239,7 +239,7 @@ Color never tells the names apart on its own. Every highlight is said by its nam
 
 - In the terminal reader, the highlight's color is the band behind the text, with black or white text, whichever reads better on it, and the shape is a set of text attributes of its own: underline; underline and bold; bold; underline and italic; italic; italic and bold. With colors off, the attributes still tell the names apart.
 - In a BRF file, each of the first five names has its own transcriber-defined typeform, and a transcriber's note at the start says which typeform is which name. This happens when you export the document you highlighted (**File**, **Export as**, **BRF**). UEB has five transcriber-defined typeforms, so highlights with the sixth to eighth names are not marked in braille, and the export report says so.
-- The graphical version draws every highlight with the same mark, whatever its name. The name is kept and is said by the highlights list; the shapes appear in the terminal reader. See [Known limits](known-limits.md#the-graphical-version).
+- In the textweaver app, the color is the band behind the text, again with black or white text, whichever reads better (at least 4.5 to 1 on any color), and the shape is drawn: a line under the text; a double line; the text in bold; a dotted line; a bracket at each end; or a small square at the start. A high contrast theme keeps its own colors, and the shapes still tell the names apart. A screen reader is given the name in words ("Highlight, important") as the description of the text it covers, with the band and the line as text attributes, which NVDA and JAWS report when they are set to read colors and underlines.
 
 Highlights made before the palette, in textweaver or in star, have only a color. Each takes the name of the first palette entry with its color, so star's yellow highlights are "important". If you rename an entry, its highlights follow the same rule: they take the name of the entry with their color. A highlight whose color is in no entry is said by its color and drawn with a shape no entry uses, when one is free.
 
@@ -297,7 +297,7 @@ Press **F2** for the command palette and type `self test`, or choose **Self-test
 Each prompt is said and its answer is hidden. In the list:
 
 - **Up** and **Down** move between prompts, which are said with their position, such as "2 of 12".
-- Answer silently or aloud, then press **Enter**. You hear "Answer:" and the passage. The prompt now shows its answer, and the list stays on it. **Enter** again says the answer again.
+- Answer silently or aloud, then press **Enter**. You hear "Answer:" and the passage, once. The prompt now shows its answer, and the list stays on it. **Enter** again says the answer again. In the textweaver app, a screen reader is not told the prompt's new text while you stay on it, so the answer is not said twice; when you come back to the prompt, it is read with its answer.
 - **Space** answers aloud (see below).
 - **Escape** closes the list. Opening the self-test again starts with every answer hidden.
 
@@ -361,6 +361,28 @@ Cards are kept on this computer beside your notes, one file per document (`cards
 #### Count due cards from the command line: tw study due
 
 `tw study due` counts the cards due today in every document in your library that has cards, the total first: "Due today: 7 cards, 5 new, in 2 documents." followed by one line per document, such as "Due today: 3 cards, 1 new. Pharmacology". A document with nothing due says when its next card falls due: "Nothing due today, next in 3 days. Anatomy". Give a file to count only its cards: `tw study due chapter4.md`. `--json` prints the same counts as JSON for a script, and `--home DIR` reads the cards under another data folder. The command only reads; it never changes a card.
+
+#### Take cards to Anki and back
+
+[Anki](https://apps.ankiweb.net/) is a widely used flashcard program. textweaver writes and reads its package format, `.apkg`, so you can study your cards in Anki or study an Anki deck in textweaver. Nothing goes over the network, and Anki does not need to be running.
+
+**Export.** Type `export cards to Anki` in the palette, or choose **Export cards to Anki** in the **Study cards** submenu. textweaver writes the document's cards beside it as `NAME-cards.apkg` and says, for example, "Exported 12 cards to Anki: chapter4-cards.apkg, in Readings." Open that file in Anki (File, Import) to add them. In Anki:
+
+- Each card is a note of a Basic note type named "Basic (textweaver)", with the fields Front and Back. Front is what is asked, so a reversed card has its passage on the front. Text is plain; line breaks are kept.
+- The deck is named after the document. Each note is tagged with the document's title (spaces become underscores, as Anki tags hold no spaces) and with the card's kind: `textweaver::cloze`, `textweaver::question`, or `textweaver::recall`, and `textweaver::reversed` for a reversed card. A fill-in-the-blank card goes as a Basic card with the word "blank" in its question, not as an Anki cloze.
+- The schedule goes with the cards. A graded card arrives as a review card with its interval, ease, and due day, and every grade you gave it is in Anki's review history. A card you never graded arrives as a new card.
+- Exporting again gives each note the same identity (its GUID is the card's id), so Anki matches the notes it already has instead of adding copies.
+
+**Import.** Type `import Anki cards` in the palette, or choose **Import Anki cards** in the same submenu, and give the `.apkg` file (the graphical version opens a file chooser). The cards are added to the open document's cards, and you hear, for example, "Imported 120 cards. Skipped 4 cloze notes." What textweaver takes from a package:
+
+- **Basic notes** become question cards: the front is the question and the back the answer. The second card of a **Basic and reversed** note becomes a reversed card. A note type with more fields gives its first field as the question and the others, joined, as the answer.
+- **Text only.** Anki keeps fields as HTML; textweaver turns them into plain text, keeping line breaks. Pictures and sounds are left out. A note that is nothing but pictures or sound is skipped and counted.
+- **Cloze notes are skipped** and counted, as are notes with no text and the third and later cards of a note type that makes more than two.
+- **Grades** come from Anki's review history (Again, Hard, Good, and Easy, as in textweaver), and textweaver works out the schedule again from them with SM-2, so a card's next interval can differ from the one Anki showed. Anki grades a new card several times within minutes while you learn it; textweaver keeps only the last grade of each day for those. Cards Anki never reviewed arrive as new.
+- **Importing the same package again adds nothing.** Each card is matched on the Anki note's identity (its GUID), and a card already here keeps its own text and gains any grades it lacked. Cards that went out from textweaver and come back are matched to the cards they were made from.
+- A card from Anki has no place in the document, so **Enter** on it in the Cards list says "This card came from Anki; it has no place in the document."
+
+**From the command line.** `tw study export --anki cards.apkg` writes the cards of every document in your library that has cards, one deck per document; give a file to export only its cards (`tw study export --anki chapter4.apkg chapter4.md`), and `--deck NAME` to put every card in one deck. `tw study import deck.apkg chapter4.md` adds a package's cards to that document's. Without a document, each Anki deck goes to the library document whose title is the deck's name (or the last part of it, after `::`), and the command stops without changing anything when a deck has no such document. Both take `--home DIR` for another data folder.
 
 ### Recall prompts at section ends
 

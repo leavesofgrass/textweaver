@@ -274,17 +274,7 @@ report() {
     indent "$TW" ocr status
 
     say ""
-    say "Engine hosts beside the programs, in $(tilde "$dir"):"
-    local hosts h
-    if [ "$OS" = Darwin ]; then
-      hosts=""
-      say "  None are needed on macOS: Apple's voices, including Eloquence, run in process."
-    else
-      hosts="textweaver-eci-host textweaver-dectalk-host"
-    fi
-    for h in $hosts; do
-      if [ -x "$dir/$h" ]; then say "  $h: present"; else say "  $h: missing"; fi
-    done
+    say "Engine hosts: tw runs them itself, as a copy started with --engine-host."
     local dict="$dir/ibmtts-dictionaries"
     if [ -d "$dict" ]; then
       say "Pronunciation dictionaries: present, $(find "$dict" -type f | wc -l | tr -d ' ') files."

@@ -1,28 +1,42 @@
 //! The system clipboard the app's Paste reads (B1-cm), so formatted text
-//! pastes as Markdown in the window as it does in the terminal reader.
+//! pastes as Markdown in the textweaver app as it does in the terminal
+//! reader.
 //!
 //! - **Windows:** [`System`] reads the clipboard's plain text
 //!   (`CF_UNICODETEXT`), HTML (`HTML Format`, CF_HTML, with its header,
-//!   which the app skips), and Rich Text Format, and the window gives it to
-//!   the app with `App::set_clipboard`. Ctrl+V, the context menu's Paste,
-//!   and Paste as plain text all read it.
-//! - **Linux and macOS:** the clipboard crate Masonry's window uses reads
-//!   plain text only, so Ctrl+V pastes the text it hands the window
-//!   (`DocAction::Paste`), and the menu's Paste uses the text last copied
-//!   in textweaver.
+//!   which the app skips), and Rich Text Format.
+//! - **macOS and Linux:** [`System`] reads the plain text and the HTML
+//!   through `arboard`, as the terminal reader does: `public.html` from
+//!   the macOS pasteboard, and `text/html` from the Wayland (data-control)
+//!   or X11 clipboard. RTF is not read there; word processors put HTML
+//!   beside it.
 //!
-//! shortcut: HTML and RTF are read on Windows only; reading them on Linux
-//! and macOS needs a clipboard crate with those formats in the window.
+//! The app is given it with `App::set_clipboard`, so Ctrl+V (Cmd+V), the
+//! context menu's Paste, and Paste as plain text all read it. Without
+//! HTML, the plain text is pasted.
 
 use textweaver_app::{Clipboard, ClipboardContents};
 
-/// The Windows clipboard, read each time the app pastes.
+/// The system clipboard, read each time the app pastes.
 #[derive(Debug, Default)]
 pub struct System;
 
 impl Clipboard for System {
     fn read(&mut self) -> ClipboardContents {
         imp::read()
+    }
+}
+
+/// What the paste key pastes: the clipboard as [`System`] read it, with
+/// the plain text the window handed over when the read has none (the
+/// clipboard could not be opened, or holds no text form textweaver reads).
+pub fn with_window_text(read: ClipboardContents, window_text: String) -> ClipboardContents {
+    if read.text.as_deref().is_some_and(|t| !t.is_empty()) {
+        return read;
+    }
+    ClipboardContents {
+        text: Some(window_text),
+        ..read
     }
 }
 
@@ -131,9 +145,17 @@ mod imp {
 mod imp {
     use textweaver_app::ClipboardContents;
 
-    /// Not read here: the window hands the app the text it pastes.
+    /// The clipboard's text and HTML through `arboard`. Empty when the
+    /// clipboard cannot be opened (with no display, for one).
     pub fn read() -> ClipboardContents {
-        ClipboardContents::default()
+        let Ok(mut c) = arboard::Clipboard::new() else {
+            return ClipboardContents::default();
+        };
+        ClipboardContents {
+            text: c.get_text().ok(),
+            html: c.get().html().ok().filter(|h| !h.trim().is_empty()),
+            rtf: None,
+        }
     }
 }
 
@@ -147,5 +169,26 @@ mod tests {
         assert_eq!(until_nul(b"<p>Hi</p>\0\0junk"), "<p>Hi</p>");
         assert_eq!(until_nul(b"{\rtf1 Hi}"), "{\rtf1 Hi}");
         assert_eq!(until_nul(b""), "");
+    }
+
+    /// The paste key keeps the clipboard's HTML, and takes the window's
+    /// plain text only when the read has none.
+    #[test]
+    fn window_text_fills_in_a_missing_plain_text() {
+        let read = ClipboardContents {
+            text: None,
+            html: Some("<h1>Hi</h1>".into()),
+            rtf: None,
+        };
+        let merged = with_window_text(read, "Hi".into());
+        assert_eq!(merged.text.as_deref(), Some("Hi"));
+        assert_eq!(merged.html.as_deref(), Some("<h1>Hi</h1>"));
+
+        let read = ClipboardContents::text("from the clipboard");
+        let merged = with_window_text(read.clone(), "from the window".into());
+        assert_eq!(merged, read);
+
+        let merged = with_window_text(ClipboardContents::default(), "plain".into());
+        assert_eq!(merged, ClipboardContents::text("plain"));
     }
 }

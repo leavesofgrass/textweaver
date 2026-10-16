@@ -1,5 +1,5 @@
 //! The ECI messages of the engine-host protocol between
-//! [`EciBackend`](crate::EciBackend) and `textweaver-eci-host` (ADR-0012).
+//! [`EciBackend`](crate::EciBackend) and its host process (ADR-0012).
 //!
 //! Framing, the shared messages (Speak, Stop, Quit, the `Ready` header,
 //! Audio, End, Error), and the version rule live in

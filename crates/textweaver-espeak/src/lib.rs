@@ -3,9 +3,9 @@
 //! textweaver can run eSpeak NG two ways. The in-process backend
 //! (`textweaver_speech::backends::espeak`, the `espeak` feature) loads
 //! libespeak-ng into textweaver itself and lets it play the audio. This
-//! crate runs it instead in its own helper program,
-//! `textweaver-espeak-host`, beside the Eloquence, DECtalk, and SAPI 5
-//! hosts and speaking the same engine-host protocol (ADR-0012,
+//! crate runs it instead in its own host process (textweaver started in
+//! host mode, `--engine-host espeak`), like the Eloquence, DECtalk, and
+//! SAPI 5 hosts and speaking the same engine-host protocol (ADR-0012,
 //! [`protocol`]): the host has libespeak-ng synthesize into memory and
 //! streams the audio and each word's position back; [`EspeakHostBackend`]
 //! plays the audio in textweaver and raises each word event when that

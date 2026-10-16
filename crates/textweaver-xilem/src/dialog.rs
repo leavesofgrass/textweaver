@@ -462,6 +462,10 @@ pub struct ChoiceList {
     /// The row where the reader is (the Contents panel's heading at the
     /// caret): drawn with a bar and named with its own label (", current").
     current: Option<(usize, String)>,
+    /// The focused row's name for screen readers before a change the app
+    /// has just said ([`sync_after_said`](Self::sync_after_said)), kept
+    /// until the focus moves, so the change is not said a second time.
+    held: Option<(usize, String)>,
     /// Shift+Enter is left to the widget around the list (the panel's "go
     /// there and return to the document").
     shift_enter_to_parent: bool,
@@ -491,6 +495,7 @@ impl ChoiceList {
             focus_actions: false,
             platform: Platform::current(),
             current: None,
+            held: None,
             shift_enter_to_parent: false,
         }
     }
@@ -557,6 +562,7 @@ impl ChoiceList {
     /// keeping the layouts when the items did not change.
     pub fn sync(this: &mut WidgetMut<'_, Self>, items: &[String], selected: usize) {
         let w = &mut *this.widget;
+        w.held = None;
         if w.items != items {
             w.layouts = (0..items.len()).map(|_| None).collect();
             w.items = items.to_vec();
@@ -569,6 +575,43 @@ impl ChoiceList {
         }
         w.set_selected(selected);
         this.ctx.request_render();
+    }
+
+    /// Shows `items` as [`sync`](Self::sync) does, after a change to the
+    /// focused row that the app has just said (the self-test's revealed
+    /// answer, a graded card): the row is drawn with its new text, but
+    /// keeps its name for screen readers until the focus moves. A screen
+    /// reader says a change to the focused row's name, so the new name
+    /// would repeat what the app said; on the row's next visit it is read
+    /// whole.
+    pub fn sync_after_said(this: &mut WidgetMut<'_, Self>, items: &[String], selected: usize) {
+        let w = &*this.widget;
+        let held = match &w.held {
+            Some((i, name)) if *i == selected => Some(name.clone()),
+            _ if w.selected == selected => w
+                .items
+                .get(selected)
+                .map(|item| w.names.get(selected).unwrap_or(item).clone()),
+            _ => None,
+        };
+        Self::sync(this, items, selected);
+        let w = &mut *this.widget;
+        w.held = held
+            .filter(|name| w.items.get(selected).is_some_and(|item| item != name))
+            .map(|name| (selected, name));
+    }
+
+    /// The name a screen reader has for row `i`.
+    pub fn accessible_name(&self, i: usize) -> Option<&str> {
+        match (&self.current, &self.held) {
+            (Some((c, label)), _) if *c == i => Some(label),
+            (_, Some((h, name))) if *h == i => Some(name),
+            _ => self
+                .names
+                .get(i)
+                .or_else(|| self.items.get(i))
+                .map(String::as_str),
+        }
     }
 
     /// Names each row for screen readers with `names` (same order as the
@@ -687,6 +730,9 @@ impl ChoiceList {
             return;
         }
         self.selected = i.min(self.items.len() - 1);
+        if self.held.as_ref().is_some_and(|(h, _)| *h != self.selected) {
+            self.held = None;
+        }
         if self.selected < self.top {
             self.top = self.selected;
         } else if self.selected >= self.top + self.visible_rows {
@@ -1089,10 +1135,7 @@ impl Widget for ChoiceList {
         let n = self.items.len();
         for (i, item) in self.items.iter().enumerate() {
             let mut o = Node::new(Role::ListBoxOption);
-            match &self.current {
-                Some((c, label)) if *c == i => o.set_label(label.as_str()),
-                _ => o.set_label(self.names.get(i).unwrap_or(item).as_str()),
-            }
+            o.set_label(self.accessible_name(i).unwrap_or(item));
             if let Some(d) = self.descriptions.get(i).filter(|d| !d.is_empty()) {
                 o.set_description(d.as_str());
             }

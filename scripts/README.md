@@ -28,7 +28,7 @@ With `--release TAG` (a tag such as `v0.1.0-beta.1`, or `latest` for the newest 
 
 - It downloads the AppImage and `SHA256SUMS.txt` from the release with curl (or wget), and checks the AppImage against its line there. A mismatch stops the install.
 - It installs the AppImage as `~/.local/bin/textweaver.AppImage` (or under `--prefix DIR`), links `textweaver` and `tw` to it, and adds a menu entry, an icon, and the quick start.
-- Where FUSE is missing, so AppImages cannot run, it installs the plain tarball instead, checked the same way, into `lib/textweaver/` with `textweaver` and `tw` linked from `bin/`. `--tarball` asks for the tarball anyway; `--appimage` asks for the AppImage anyway. `--gui` also links the app, `textweaver-gui`, from `bin/` (since beta 1 it is in the same AppImage or tarball as `tw`; older releases had a GUI package of the same kind), with a menu entry named "textweaver window"; later runs keep it, and `--no-gui` removes it.
+- Where FUSE is missing, so AppImages cannot run, it installs the plain tarball instead, checked the same way, into `lib/textweaver/` with `textweaver` and `tw` linked from `bin/`. `--tarball` asks for the tarball anyway; `--appimage` asks for the AppImage anyway. `--gui` also links the app, `textweaver-gui`, from `bin/` (since beta 1 it is in the same AppImage or tarball as `tw`; older releases had a GUI package of the same kind), with a menu entry named "textweaver app"; later runs keep it, and `--no-gui` removes it.
 - It is for x86_64 and aarch64 (arm64) computers. Elsewhere, build from source.
 - It needs a release with Linux packages: 0.1.0-alpha.4 is the first, with the AppImage and tarball for both x86_64 and aarch64. Earlier releases (0.1.0-alpha.3 and before) shipped Windows and macOS packages only; build from source for those.
 - `--uninstall` removes either kind of install; `scripts/update.sh` installs the newest release of the same kind.
@@ -43,8 +43,8 @@ Without `--release`, it builds textweaver from source:
 - It installs the build dependencies: a C toolchain, pkg-config, the ALSA headers, espeak-ng, and speech-dispatcher, with their development files.
 - It offers ffmpeg and pandoc, and says where to get whisper.cpp for dictation.
 - It installs rustup if cargo is missing, after asking. The Rust version comes from `rust-toolchain.toml`.
-- It builds `textweaver` and `tw` in release mode with the espeak-ng, speech-dispatcher, and Omnivox engines, and builds the engine hosts with `cargo xtask hosts`. If the espeak-ng engine does not build on your distribution, it builds again without it (`--no-espeak` skips it from the start).
-- It installs under `~/.local`, or `--prefix DIR`: the programs are linked from `bin/`, and the programs, engine hosts, and dictionaries live in `lib/textweaver/`. The guides, a `HELP.txt` with every command's help, manual pages, a menu entry, and these helper scripts are installed too.
+- It builds `textweaver` and `tw` in release mode with the espeak-ng, speech-dispatcher, and Omnivox engines. There are no separate engine hosts to build: `tw` runs Eloquence (Voxin) and DECtalk in a copy of itself. If the espeak-ng engine does not build on your distribution, it builds again without it (`--no-espeak` skips it from the start).
+- It installs under `~/.local`, or `--prefix DIR`: the programs are linked from `bin/`, and the programs and dictionaries live in `lib/textweaver/`. The guides, a `HELP.txt` with every command's help, manual pages, a menu entry, and these helper scripts are installed too.
 - It offers to add `~/.local/bin` to your PATH.
 
 To install:
@@ -85,7 +85,7 @@ Installs textweaver on Windows.
 - By default it downloads the newest release zip, checks its SHA-256 against `SHA256SUMS.txt`, and extracts it to `%LOCALAPPDATA%\Programs\textweaver`.
 - It offers to add that folder to your user PATH, and to create a Start menu shortcut that opens textweaver in Windows Terminal, or in a command prompt.
 - `-FromSource` checks for the MSVC build tools, rustup, and the `i686-pc-windows-msvc` target, then runs `cargo xtask dist` and installs the result.
-- `-Gui` offers a Start menu shortcut named "textweaver window" for the app, `textweaver-gui.exe`. Since beta 1 the app is in the same package as `tw` and is installed beside it; for older releases, `-Gui` installs it in a `gui` folder inside the install, from the release's GUI zip. Later runs keep the shortcut; `-NoGui` removes it.
+- `-Gui` offers a Start menu shortcut named "textweaver app" for the app, `textweaver-gui.exe`. Since beta 1 the app is in the same package as `tw` and is installed beside it; for older releases, `-Gui` installs it in a `gui` folder inside the install, from the release's GUI zip. Later runs keep the shortcut; `-NoGui` removes it. Releases up to beta 2 named the shortcut "textweaver window"; the script removes that shortcut when it makes or removes the new one, and only when it starts `textweaver-gui.exe`.
 - `-Uninstall` removes the folder, the PATH entry, and the shortcuts. Settings are kept.
 
 ### update.sh and update.ps1
@@ -128,7 +128,7 @@ One plain-text report to paste into a bug report. It covers:
 - the Rust toolchain;
 - where textweaver is installed, the app's version when it is installed, and `tw settings path`;
 - `tw backends`, `tw components list` (ending with "Components: 3 of 12 installed"), and `tw ocr status`;
-- whether the engine hosts and dictionaries sit beside the programs;
+- whether the dictionaries sit beside the programs, and on Windows the 32-bit engine host, `textweaver-host-x86.exe`;
 - the optional tools.
 
 It reads no file contents and dumps no environment: only the names of `TEXTWEAVER_` variables that are set. Your home folder is shown as `~`. `--out FILE` also writes the report to a file.

@@ -223,6 +223,54 @@ continue-ago-days =
     }
 name-continue-reading = Reprendre la lecture
 action-continue-reading = Reprendre la lecture : les documents de cet ordinateur avec une position enregistrée, sur n'importe quel ordinateur, les plus récents d'abord
+
+## La file de lecture et la liste de révision (bêta 3).
+
+queue-title = File de lecture
+queue-intro =
+    { $n ->
+        [one] File de lecture, 1 document. Entrée l’ouvre, Suppr le retire.
+       *[other] File de lecture, { $n } documents. Entrée en ouvre un, Suppr le retire.
+    }
+queue-empty = La file de lecture est vide. Dans la bibliothèque, { $key } ajoute un document.
+queue-item-missing = { $title }, introuvable
+queue-added =
+    { $n ->
+        [one] Ajouté à la file de lecture : { $title }. 1 document dans la file.
+       *[other] Ajouté à la file de lecture : { $title }. { $n } documents dans la file.
+    }
+queue-removed = Retiré de la file de lecture : { $title }.
+queue-no-file = Seul un document enregistré dans un fichier peut entrer dans la file de lecture.
+queue-read-failed = Impossible de lire la bibliothèque pour la file de lecture : { $error }. Vérifiez library.json dans le dossier de données ; tw settings path l’indique.
+queue-next-ask = Ensuite : { $title }. { $key } pour lire.
+queue-next-reading = Ensuite : { $title }.
+review-title = Liste de révision
+review-intro =
+    { $n ->
+        [one] Liste de révision, 1 document, le plus anciennement lu d’abord. Entrée l’ouvre.
+       *[other] Liste de révision, { $n } documents, le plus anciennement lu d’abord. Entrée en ouvre un.
+    }
+review-empty = Rien à revoir pour l’instant. Les documents lus à voix haute apparaissent ici.
+review-stats-off = La liste de révision a besoin des statistiques de lecture, qui sont désactivées. Activez Statistiques de lecture dans les réglages.
+review-item = { $title }, { $days }, { $pct } pour cent, { $notes }
+review-days =
+    { $n ->
+        [0] aujourd’hui
+        [one] 1 jour
+       *[other] { $n } jours
+    }
+review-notes =
+    { $n ->
+        [0] aucune note
+        [one] 1 note
+       *[other] { $n } notes
+    }
+name-review-list = Liste de révision
+action-review-list = Liste de révision : les documents lus, le plus anciennement lu d’abord
+name-reading-queue = File de lecture
+action-reading-queue = File de lecture : les documents à lire ensuite, dans l’ordre
+name-queue-document = Ajouter à la file de lecture
+action-queue-document = Ajouter le document à la file de lecture, ou l’en retirer
 name-add-library-folder = Ajouter un dossier à la bibliothèque
 action-add-library-folder = Ajouter un dossier à la bibliothèque : le choisir dans le navigateur de fichiers
 name-edit-document-details = Modifier les détails
@@ -489,7 +537,7 @@ list-nothing-to-mark = Rien à marquer dans cette liste.
 notes-editing = Modification de la note : { $text }
 # $key opens a document.
 app-no-document-open = Aucun document n'est ouvert. Appuyez sur { $key } pour en ouvrir un.
-app-window-only = Cette commande fonctionne dans la fenêtre de textweaver.
+app-window-only = Cette commande fonctionne dans l'application textweaver.
 app-terminal-only = Cette commande fonctionne dans le lecteur en mode terminal.
 settings-save-failed = Impossible d'enregistrer les paramètres : { $error } Vos changements restent actifs jusqu'à la fermeture.
 settings-outside-kept = Les paramètres modifiés en dehors de textweaver ont été conservés.
@@ -819,6 +867,8 @@ action-grade-again = Noter la carte étudiée : À revoir, pas retenue
 action-grade-hard = Noter la carte étudiée : Difficile, retrouvée avec effort
 action-grade-good = Noter la carte étudiée : Bien, retrouvée
 action-grade-easy = Noter la carte étudiée : Facile, retrouvée aussitôt
+action-export-cards-anki = Exporter les cartes d’étude en paquet Anki, enregistré à côté du document
+action-import-cards-anki = Importer des cartes d’étude d’un paquet Anki dans les cartes de ce document
 action-open = Ouvrir un document
 action-open-path = Ouvrir un document en tapant son chemin
 action-open-library = Ouvrir la bibliothèque : documents dans vos dossiers de bibliothèque et fichiers récents
@@ -1513,6 +1563,39 @@ cards-source-label = Source de la carte
 cards-remove-question = Supprimer cette carte et ses notes ? y ou n
 cards-removed = Carte supprimée.
 cards-save-failed = Impossible d’enregistrer les cartes : { $error } Vérifiez que le dossier des données est accessible en écriture.
+cards-anki-exported =
+    { $n ->
+        [one] 1 carte exportée vers Anki : { $file }, dans { $folder }.
+       *[other] { $n } cartes exportées vers Anki : { $file }, dans { $folder }.
+    }
+cards-anki-export-failed = Impossible d’exporter les cartes vers Anki : { $error } Vérifiez que le dossier du document est accessible en écriture.
+cards-anki-import-failed = Impossible d’importer { $file } : { $error } Vérifiez que le fichier est un paquet Anki, .apkg.
+cards-anki-imported =
+    { $added ->
+        [one] 1 carte importée.
+       *[other] { $added } cartes importées.
+    }
+cards-anki-already =
+    { $n ->
+        [one] 1 carte était déjà là ; ses notes ont été fusionnées.
+       *[other] { $n } cartes étaient déjà là ; leurs notes ont été fusionnées.
+    }
+cards-anki-skipped-cloze =
+    { $n ->
+        [one] 1 note à trous ignorée.
+       *[other] { $n } notes à trous ignorées.
+    }
+cards-anki-skipped-media =
+    { $n ->
+        [one] 1 note faite seulement d’images ou de son ignorée.
+       *[other] { $n } notes faites seulement d’images ou de son ignorées.
+    }
+cards-anki-skipped-other =
+    { $n ->
+        [one] 1 note sans texte ou à plus de deux cartes ignorée.
+       *[other] { $n } notes sans texte ou à plus de deux cartes ignorées.
+    }
+cards-from-anki = Cette carte vient d’Anki ; elle n’a pas de place dans le document.
 # Said first in the study session and the Cards list (B1-f2). $due is how
 # many graded cards are due, $new how many were never graded.
 cards-due-summary =
@@ -1674,8 +1757,8 @@ library-folder-added = { $name } a été ajouté à la bibliothèque. Ouvrez la 
 library-folder-already = { $name } est déjà dans la bibliothèque.
 library-intro =
     { $n ->
-        [one] Bibliothèque, { $n } document. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails.
-       *[other] Bibliothèque, { $n } documents. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails.
+        [one] Bibliothèque, { $n } document. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails, { $queue } le met dans la file.
+       *[other] Bibliothèque, { $n } documents. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails, { $queue } le met dans la file.
     }
 library-title = Bibliothèque
 
@@ -2190,6 +2273,11 @@ setting-reading-book-audio = Audio du livre
 setting-reading-book-audio-help = Ce qui lit un livre audio DAISY qui a un enregistrement. Sa narration enregistrée, avec la mise en évidence qui la suit et la synthèse vocale pour le texte sans audio, ou la synthèse vocale seule. Les changements de débit ne s’appliquent pas à l’enregistrement.
 choice-reading-book-audio-auto = narration enregistrée
 choice-reading-book-audio-speech = synthèse vocale seule
+setting-reading-after-end = À la fin d’un document
+setting-reading-after-end-help = Ce qui suit la fin d’un document quand la file de lecture en a un autre. Rien, le document suivant est annoncé et la touche de lecture le lit, ou le document suivant est lu aussitôt. Un document ne commence jamais sans que vous le demandiez.
+choice-reading-after-end-stop = s’arrêter
+choice-reading-after-end-ask = demander d’abord
+choice-reading-after-end-next = lire le suivant
 setting-display-theme = Thème
 setting-display-theme-help = Le thème de couleur.
 setting-display-follow-os-theme = Suivre le thème du système
@@ -3413,6 +3501,9 @@ gui-button-previous-sentence = Phrase précédente
 gui-button-next-sentence = Phrase suivante
 gui-button-slower = Plus lent
 gui-button-faster = Plus rapide
+gui-button-pause-dictation = Suspendre la dictée
+gui-button-resume-dictation = Reprendre la dictée
+gui-button-stop-dictation = Arrêter la dictée
 gui-hint-open = Choisir un document à lire.
 gui-hint-font = Choisir la police du texte.
 gui-hint-edit = Passer de la lecture à l'édition.
@@ -3769,6 +3860,8 @@ name-grade-again = Noter à revoir
 name-grade-hard = Noter difficile
 name-grade-good = Noter bien
 name-grade-easy = Noter facile
+name-export-cards-anki = Exporter les cartes vers Anki
+name-import-cards-anki = Importer des cartes Anki
 name-open = Ouvrir
 name-open-path = Ouvrir par chemin
 name-open-library = Bibliothèque
@@ -3829,6 +3922,7 @@ name-insert-bibliography = Insérer la bibliographie
 name-check-citations = Vérifier les citations
 name-import-references = Importer des références
 name-dictate = Dicter
+name-pause-dictation = Suspendre ou reprendre la dictée
 name-next-theme = Thème suivant
 name-toggle-line-numbers = Numéros de ligne
 name-toggle-character-keys = Raccourcis à une touche
@@ -3911,6 +4005,7 @@ action-batch-convert = Convertir un dossier de documents dans un autre format, e
 action-export-audio = Exporter le document en audio parlé : MP3, FLAC, Opus, WAV ou un livre audio M4B
 action-export-read-along = Exporter une page de lecture : un fichier HTML avec le texte et son audio, le mot prononcé marqué pendant la lecture
 action-dictate = Démarrer ou arrêter la dictée : les mots prononcés s'écrivent au curseur en mode édition
+action-pause-dictation = Suspendre le micro pendant la dictée, en gardant la session et les mots déjà dictés, ou la reprendre
 action-color-settings = Ouvrir les paramètres des couleurs : le surlignage de lecture, la règle, les marques et chaque partie de l'écran, avec leur contraste
 action-cycle-interface-announcements = Changer ce que textweaver annonce de lui-même : désactivées, minimales, normales ou complètes ; les erreurs et les réponses sont toujours dites
 action-menu = Ouvrir les menus : Fichier, Édition, Affichage, Lecture, Parole, Outils et Aide
@@ -3998,6 +4093,10 @@ dictation-failed = La dictée a échoué : { $error } Voir Dictation dans la doc
 dictation-no-words = Aucun mot reconnu dans cette phrase.
 dictation-lost = La dictée s’est arrêtée avant que ses derniers mots soient écrits.
 dictation-not-typed = Mots dictés non écrits, le mode édition est désactivé : { $text }
+dictation-paused = Dictée suspendue.
+dictation-resumed = Dictée reprise.
+dictation-not-active = Aucune dictée en cours.
+dictation-cannot-pause = Cette dictée ne peut pas être suspendue ; arrêtez-la plutôt.
 setting-dictation-speak-while-recording = Parler pendant la dictée
 setting-dictation-speak-while-recording-help = Dire les mots dictés à mesure qu’ils arrivent. Désactivé, ils s’affichent dans la ligne d’état et sont dits à chaque pause, pour que le micro n’entende pas la voix.
 setting-dictation-model-dir = Dossier du modèle de dictée
@@ -4499,6 +4598,8 @@ chooser-image-title = Insérer une image
 chooser-images = Images
 chooser-references-title = Importer des références
 chooser-reference-files = Fichiers de références
+chooser-anki-title = Importer des cartes Anki
+chooser-anki-files = Paquets Anki
 chooser-profiles-import-title = Importer des profils
 chooser-profiles-export-title = Exporter les profils
 chooser-profile-files = Fichiers de profils
@@ -4741,6 +4842,7 @@ action-add-comment = Ajouter un commentaire à la sélection ou à la phrase du 
 prompt-comment-reply = Réponse
 prompt-comment-text = Commentaire
 prompt-github-token = Jeton GitHub de la source de composants, Entrée pour passer
+prompt-import-cards = Importer des cartes d’étude d’un paquet Anki
 changes-title = Modifications et commentaires
 changes-intro =
     { $n ->

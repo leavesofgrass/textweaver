@@ -391,7 +391,7 @@ actions! {
     CycleSpeedPreset = "cycle_speed_preset", Voice, "Cycle the speed presets (skim, normal, study, slow)",
         gui ["g:F8"], term ["g:F8"], shared [];
     ChooseVoice = "choose_voice", Voice, "Choose a voice",
-        gui ["g:Ctrl+Shift+V"], term ["g:Alt+V"], shared [];
+        gui ["g:Ctrl+Alt+V"], term ["g:Alt+V", "g:Ctrl+Alt+V"], shared [];
     RestartSpeech = "restart_speech", Voice,
         "Restart speech with the current settings (after the speech engine stopped working)",
         gui ["g:Shift+F8"], term ["g:Shift+F8"], shared [];
@@ -510,6 +510,12 @@ actions! {
         gui [], term [], shared [];
     GradeEasy = "grade_easy", Bookmarks, "Grade the card being studied: Easy, recalled at once",
         gui [], term [], shared [];
+    ExportCardsAnki = "export_cards_anki", Bookmarks,
+        "Export the study cards as an Anki package, saved beside the document",
+        gui [], term [], shared [];
+    ImportCardsAnki = "import_cards_anki", Bookmarks,
+        "Import study cards from an Anki package into this document's cards",
+        gui [], term [], shared [];
 
     // File
     Open = "open", File, "Open a document",
@@ -520,6 +526,17 @@ actions! {
         gui ["g:Ctrl+Shift+B"], term ["g:Alt+L"], shared [];
     ContinueReading = "continue_reading", File,
         "Continue reading: the documents on this computer with a saved place, from any computer, newest first",
+        gui [], term [], shared [];
+    // Beta 3 (B1-s3): no keys of their own; the File menu and the palette
+    // reach them in both frontends.
+    ReviewList = "review_list", File,
+        "Review list: the documents you have read, the one read longest ago first",
+        gui [], term [], shared [];
+    ReadingQueue = "reading_queue", File,
+        "Reading queue: the documents to read next, in order",
+        gui [], term [], shared [];
+    QueueDocument = "queue_document", File,
+        "Add the document to the reading queue, or take it out",
         gui [], term [], shared [];
     // W9a-c (completeness rank 16): no key of its own; the File menu and
     // the palette reach it in both frontends.
@@ -660,7 +677,7 @@ actions! {
         gui ["e:Ctrl+V"], term ["e:Ctrl+V"], shared [];
     PastePlainText = "paste_plain_text", Editing,
         "Paste the clipboard as plain text, keeping none of its formatting",
-        gui ["e:Ctrl+Shift+M"], term ["e:Alt+Q"], shared [];
+        gui ["e:Ctrl+Shift+V", "e:Ctrl+Shift+M"], term ["e:Alt+Q"], shared [];
     InsertCitation = "insert_citation", Editing,
         "Insert a citation: pick a reference, then give a page or other locator",
         gui ["e:Alt+C"], term ["e:Alt+C"], shared [];
@@ -678,6 +695,12 @@ actions! {
     Dictate = "dictate", Editing,
         "Start or stop dictation: spoken words are typed at the cursor in edit mode",
         gui ["g:Ctrl+Shift+F9"], term ["g:Ctrl+Shift+F9"], shared [];
+    // Beside Dictate on F9. Alt+Shift+F9 is free in NVDA, JAWS, Windows,
+    // Windows Terminal, GNOME, KDE and macOS (Alt+F9 minimizes a window
+    // in some Linux desktops, and Ctrl+Alt+F9 switches the Linux console).
+    PauseDictation = "pause_dictation", Editing,
+        "Pause the microphone while dictating, keeping the session and the words so far, or resume it",
+        gui ["g:Alt+Shift+F9"], term ["g:Alt+Shift+F9"], shared [];
     DownloadDictationModel = "download_dictation_model", Editing,
         "Download the dictation model chosen in the settings, after saying its size and license",
         gui [], term [], shared [];

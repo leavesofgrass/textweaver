@@ -3495,14 +3495,14 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Voice",
    "gui": [
     {
-     "key": "Ctrl+Shift+V",
+     "key": "Ctrl+Alt+V",
      "layer": "global"
     }
    ],
    "id": "choose_voice",
    "mac": [
     {
-     "key": "Cmd+Shift+V",
+     "key": "Cmd+Alt+V",
      "layer": "global"
     }
    ],
@@ -3511,6 +3511,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": [
     {
      "key": "Alt+V",
+     "layer": "global"
+    },
+    {
+     "key": "Ctrl+Alt+V",
      "layer": "global"
     }
    ]
@@ -4517,6 +4521,26 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": []
   },
   {
+   "action": "Export the study cards as an Anki package, saved beside the document",
+   "category": "Bookmarks and notes",
+   "gui": [],
+   "id": "export_cards_anki",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Import study cards from an Anki package into this document's cards",
+   "category": "Bookmarks and notes",
+   "gui": [],
+   "id": "import_cards_anki",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
    "action": "Open a document",
    "category": "File",
    "gui": [
@@ -4594,6 +4618,36 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "File",
    "gui": [],
    "id": "continue_reading",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Review list: the documents you have read, the one read longest ago first",
+   "category": "File",
+   "gui": [],
+   "id": "review_list",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Reading queue: the documents to read next, in order",
+   "category": "File",
+   "gui": [],
+   "id": "reading_queue",
+   "mac": [],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": []
+  },
+  {
+   "action": "Add the document to the reading queue, or take it out",
+   "category": "File",
+   "gui": [],
+   "id": "queue_document",
    "mac": [],
    "palette_when_off": null,
    "source": "keymap",
@@ -5720,12 +5774,20 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Editing",
    "gui": [
     {
+     "key": "Ctrl+Shift+V",
+     "layer": "edit"
+    },
+    {
      "key": "Ctrl+Shift+M",
      "layer": "edit"
     }
    ],
    "id": "paste_plain_text",
    "mac": [
+    {
+     "key": "Cmd+Shift+V",
+     "layer": "edit"
+    },
     {
      "key": "Cmd+Shift+M",
      "layer": "edit"
@@ -5841,6 +5903,31 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "terminal": [
     {
      "key": "Ctrl+Shift+F9",
+     "layer": "global"
+    }
+   ]
+  },
+  {
+   "action": "Pause the microphone while dictating, keeping the session and the words so far, or resume it",
+   "category": "Editing",
+   "gui": [
+    {
+     "key": "Alt+Shift+F9",
+     "layer": "global"
+    }
+   ],
+   "id": "pause_dictation",
+   "mac": [
+    {
+     "key": "Alt+Shift+F9",
+     "layer": "global"
+    }
+   ],
+   "palette_when_off": null,
+   "source": "keymap",
+   "terminal": [
+    {
+     "key": "Alt+Shift+F9",
      "layer": "global"
     }
    ]

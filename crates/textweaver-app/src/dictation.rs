@@ -22,6 +22,14 @@
 //! as quitting waits for the writer), and only then does the command go
 //! on. If the model takes longer, the session is ended and that is said.
 //!
+//! **Pausing** (beta 3): Pause dictation (Alt+Shift+F9) pauses the
+//! microphone and resumes it. The phrase being spoken is finished at its
+//! pause and typed, the session and its words stay, and what the
+//! microphone hears meanwhile is dropped (`textweaver-dictation`'s live
+//! audio). "Dictation paused." and "Dictation resumed." are said;
+//! [`App::dictation_status`] tells the frontends, which show Pause
+//! dictation and Stop dictation buttons while a session is active.
+//!
 //! Outside edit mode the command asks whether to turn edit mode on first.
 //! Without the `dictation` feature the command stays hidden (it is a
 //! pending command until [`register`] gives it a handler).
@@ -49,6 +57,30 @@ pub(crate) const FINISH_WAIT: std::time::Duration = std::time::Duration::from_se
 #[cfg_attr(not(feature = "dictation"), allow(dead_code))]
 const STATUS_CELLS: usize = 40;
 
+/// Where dictation is, for the frontends: the graphical version shows its
+/// buttons while it is active, and the terminal reader's status line
+/// says "Dictation paused" while it is paused.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum DictationStatus {
+    /// No dictation.
+    #[default]
+    Off,
+    /// Recording and transcribing as the speaker talks.
+    Listening,
+    /// Recording is paused: the microphone's audio is dropped, and the
+    /// session and its words stay.
+    Paused,
+    /// Recording has stopped and the last words are being typed.
+    Finishing,
+}
+
+impl DictationStatus {
+    /// True while a session records, is paused, or finishes.
+    pub fn is_active(self) -> bool {
+        self != DictationStatus::Off
+    }
+}
+
 impl App {
     /// Finishes a dictation under way, then runs `then`: for the commands
     /// that end edit mode.
@@ -67,6 +99,9 @@ pub(crate) fn register(app: &mut App) {
     #[cfg(feature = "dictation")]
     {
         app.register_handler(textweaver_keymap::ActionId::Dictate, handler);
+        app.register_handler(textweaver_keymap::ActionId::PauseDictation, |app| {
+            app.pause_dictation()
+        });
         app.register_handler(
             textweaver_keymap::ActionId::DownloadDictationModel,
             download_handler,
@@ -140,6 +175,11 @@ mod off {
     }
 
     impl App {
+        /// Where dictation is: never on without the feature.
+        pub fn dictation_status(&self) -> DictationStatus {
+            DictationStatus::Off
+        }
+
         pub(crate) fn dictation_tick(&mut self) -> Vec<Effect> {
             Vec::new()
         }
@@ -291,6 +331,70 @@ mod on {
                 return vec![Effect::Redraw];
             }
             self.start_dictation()
+        }
+
+        /// Where dictation is.
+        pub fn dictation_status(&self) -> DictationStatus {
+            match self.dictation.state() {
+                DictationState::Idle => DictationStatus::Off,
+                DictationState::Transcribing => DictationStatus::Finishing,
+                DictationState::Recording
+                    if self
+                        .dictation
+                        .backend
+                        .as_ref()
+                        .is_some_and(|b| b.is_paused()) =>
+                {
+                    DictationStatus::Paused
+                }
+                DictationState::Recording => DictationStatus::Listening,
+            }
+        }
+
+        /// The Pause dictation command: pauses the microphone while
+        /// dictating, or resumes it. The phrase being spoken is finished
+        /// and typed; the session and its words stay. Said in words when
+        /// there is no dictation to pause.
+        pub(crate) fn pause_dictation(&mut self) -> Vec<Effect> {
+            match self.dictation.state() {
+                DictationState::Idle => {
+                    let msg = self.msg("dictation-not-active");
+                    self.tell(&msg);
+                    return vec![Effect::Redraw];
+                }
+                DictationState::Transcribing => {
+                    let msg = self.msg("dictation-busy");
+                    self.tell(&msg);
+                    return vec![Effect::Redraw];
+                }
+                DictationState::Recording => {}
+            }
+            let Some(b) = self.dictation.backend.as_mut() else {
+                return vec![Effect::Redraw];
+            };
+            let resuming = b.is_paused();
+            let done = if resuming { b.resume() } else { b.pause() };
+            match done {
+                Ok(()) => {
+                    let key = if resuming {
+                        "dictation-resumed"
+                    } else {
+                        "dictation-paused"
+                    };
+                    let msg = self.msg(key);
+                    self.announce_as(&msg, Priority::Polite, Importance::Result);
+                }
+                Err(textweaver_dictation::DictationError::CannotPause) => {
+                    let msg = self.msg("dictation-cannot-pause");
+                    self.error(&msg);
+                }
+                Err(e) => {
+                    let msg = self.msg_args("dictation-failed", &args!["error" => e.to_string()]);
+                    self.error(&msg);
+                }
+            }
+            self.take_dictation_events();
+            vec![Effect::Redraw]
         }
 
         /// The answer to "turn edit mode on and dictate?".
@@ -604,8 +708,11 @@ mod on {
         /// phrase's newest words as fit in 40 cells. Shown, not said:
         /// the words are said by [`on_dictation_event`](Self::on_dictation_event)
         /// when the setting allows, and the Braille display follows the
-        /// status line.
+        /// status line. Not while paused: the status line keeps saying so.
         fn show_dictation_line(&mut self) {
+            if self.dictation_status() == DictationStatus::Paused {
+                return;
+            }
             let label = self.msg_args("dictation-status", &args!["words" => ""]);
             let room = STATUS_CELLS.saturating_sub(label.trim_end().chars().count() + 1);
             let words = tail_words(&self.dictation.words, room.max(8));
@@ -742,6 +849,10 @@ mod on {
             state: Option<DictationState>,
             starts: usize,
             shutdowns: usize,
+            /// Recording is paused.
+            paused: bool,
+            /// The backend cannot pause (as a batch recording cannot).
+            no_pause: bool,
         }
 
         #[derive(Clone, Default)]
@@ -767,8 +878,25 @@ mod on {
                 s.events.push_back(DictationEvent::Recording);
                 Ok(())
             }
+            fn pause(&mut self) -> Result<(), DictationError> {
+                let mut s = self.0.lock().unwrap();
+                if s.no_pause {
+                    return Err(DictationError::CannotPause);
+                }
+                s.paused = true;
+                Ok(())
+            }
+            fn resume(&mut self) -> Result<(), DictationError> {
+                self.0.lock().unwrap().paused = false;
+                Ok(())
+            }
+            fn is_paused(&self) -> bool {
+                let s = self.0.lock().unwrap();
+                s.paused && s.state == Some(DictationState::Recording)
+            }
             fn stop(&mut self) -> Result<(), DictationError> {
                 let mut s = self.0.lock().unwrap();
+                s.paused = false;
                 s.state = Some(DictationState::Transcribing);
                 s.events.push_back(DictationEvent::Transcribing);
                 let rest = std::mem::take(&mut s.at_stop);
@@ -1086,6 +1214,123 @@ mod on {
                 "{}",
                 app.status_text()
             );
+        }
+
+        /// Start, pause, resume, stop: the phrase being spoken is typed
+        /// after the pause, the session stays, each change is said, and
+        /// the window's Pause and Stop buttons come and go with it.
+        #[test]
+        fn pausing_keeps_the_session_and_its_words() {
+            use crate::buttons::Bar;
+            let (mut app, fake, said) = editing("Notes");
+            let buttons = |app: &App| app.shown_bar_buttons(Bar::Toolbar);
+            assert!(!buttons(&app).contains(&ActionId::PauseDictation));
+            assert_eq!(app.dictation_status(), DictationStatus::Off);
+            app.dispatch(Command::Action(ActionId::Dictate));
+            assert_eq!(app.dictation_status(), DictationStatus::Listening);
+            let shown = buttons(&app);
+            let at = shown
+                .iter()
+                .position(|a| *a == ActionId::PauseDictation)
+                .expect("Pause dictation is shown");
+            assert_eq!(shown.get(at + 1), Some(&ActionId::Dictate), "{shown:?}");
+            // Before Slower and Faster, after the rest.
+            assert!(
+                shown[at + 2..]
+                    .iter()
+                    .all(|a| matches!(a, ActionId::RateDown | ActionId::RateUp)),
+                "{shown:?}"
+            );
+            assert_eq!(app.bar_buttons(Bar::Toolbar).len() + 2, shown.len());
+            assert!(
+                !app.shown_bar_buttons(Bar::Header)
+                    .contains(&ActionId::Dictate)
+            );
+            fake.push(committed("for Monday", 0));
+            tick(&mut app);
+
+            app.dispatch(Command::Action(ActionId::PauseDictation));
+            assert_eq!(app.dictation_status(), DictationStatus::Paused);
+            assert_eq!(app.status_text(), "Dictation paused.");
+            assert!(said.all().iter().any(|t| t == "Dictation paused."));
+            // The phrase in progress is finished at the pause and typed;
+            // the status line keeps saying the dictation is paused.
+            fake.push(committed("period", 0));
+            fake.push(phrase("for Monday period"));
+            tick(&mut app);
+            assert_eq!(source(&app), "Notes for Monday.");
+            assert!(!app.status_text().starts_with("Dictating"));
+            assert!(buttons(&app).contains(&ActionId::PauseDictation));
+            assert_eq!(fake.0.lock().unwrap().starts, 1, "the same session");
+
+            app.dispatch(Command::Action(ActionId::PauseDictation));
+            assert_eq!(app.dictation_status(), DictationStatus::Listening);
+            assert_eq!(app.status_text(), "Dictation resumed.");
+            fake.push(committed("Lunch", 1));
+            fake.push(phrase("Lunch"));
+            tick(&mut app);
+            assert_eq!(source(&app), "Notes for Monday. Lunch");
+
+            // Paused again, then stopped: Dictate stops a paused session.
+            app.dispatch(Command::Action(ActionId::PauseDictation));
+            fake.at_stop(vec![final_event()]);
+            app.dispatch(Command::Action(ActionId::Dictate));
+            tick(&mut app);
+            assert_eq!(app.dictation_status(), DictationStatus::Off);
+            assert_eq!(app.status_text(), "Dictation done.");
+            assert!(!buttons(&app).contains(&ActionId::PauseDictation));
+            assert!(!buttons(&app).contains(&ActionId::Dictate));
+        }
+
+        #[test]
+        fn pause_without_dictation_says_so() {
+            let (mut app, _fake, _said) = reading("Hello");
+            app.dispatch(Command::Action(ActionId::PauseDictation));
+            assert_eq!(app.status_text(), "Not dictating.");
+            assert_eq!(app.dictation_status(), DictationStatus::Off);
+            assert!(app.is_available(ActionId::PauseDictation));
+        }
+
+        #[test]
+        fn pause_while_finishing_says_so() {
+            let (mut app, _fake, _said) = editing("A");
+            app.dispatch(Command::Action(ActionId::Dictate));
+            app.dispatch(Command::Action(ActionId::Dictate));
+            assert_eq!(app.dictation_status(), DictationStatus::Finishing);
+            app.dispatch(Command::Action(ActionId::PauseDictation));
+            assert_eq!(
+                app.status_text(),
+                "Dictation is finishing. Try again in a moment."
+            );
+        }
+
+        #[test]
+        fn a_recognizer_that_cannot_pause_says_so() {
+            let (mut app, fake, _said) = editing("A");
+            fake.0.lock().unwrap().no_pause = true;
+            app.dispatch(Command::Action(ActionId::Dictate));
+            app.dispatch(Command::Action(ActionId::PauseDictation));
+            assert_eq!(
+                app.status_text(),
+                "Error: This dictation cannot pause; stop it instead."
+            );
+            assert_eq!(app.dictation_status(), DictationStatus::Listening);
+        }
+
+        /// A hidden toolbar puts the buttons on the header, and a command
+        /// already on a bar is not shown twice.
+        #[test]
+        fn the_buttons_follow_the_bars() {
+            use crate::buttons::Bar;
+            let (mut app, _fake, _said) = editing("A");
+            app.settings.gui.toolbar = false;
+            app.settings.gui.toolbar_buttons.push("dictate".into());
+            app.dispatch(Command::Action(ActionId::Dictate));
+            let header = app.shown_bar_buttons(Bar::Header);
+            assert!(header.contains(&ActionId::PauseDictation), "{header:?}");
+            assert!(!header.contains(&ActionId::Dictate), "{header:?}");
+            let toolbar = app.shown_bar_buttons(Bar::Toolbar);
+            assert!(!toolbar.contains(&ActionId::PauseDictation), "{toolbar:?}");
         }
 
         #[test]

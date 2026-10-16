@@ -96,7 +96,7 @@ jobs:
           $out
           # Since beta 1 the app is in the package (B1-o2): -Gui adds the
           # manifest line and the shortcut, and downloads nothing more.
-          foreach ($want in 'gui=package', 'textweaver window.lnk') {
+          foreach ($want in 'gui=package', 'textweaver app.lnk') {
             if (-not ($out | Select-String -SimpleMatch $want)) { throw "install-windows.ps1 --gui did not mention $want" }
           }
       - name: Dry runs in PowerShell 7
@@ -135,7 +135,6 @@ jobs:
           grep -F -- '${{ matrix.manager }}' dry-run.txt
           grep -F -- '${{ matrix.packages }}' dry-run.txt
           grep -F -- 'cargo build --release --locked -p textweaver-tui -p textweaver-cli --bin textweaver --bin tw --features textweaver-cli/espeak' dry-run.txt
-          grep -F -- 'cargo xtask hosts' dry-run.txt
       - name: Uninstall dry run, and the other scripts
         shell: bash
         run: |

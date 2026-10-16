@@ -272,9 +272,9 @@ In the terminal reader, textweaver sends copied text to the terminal, which plac
 
 A very long formatted passage is converted in the background, so the keyboard keeps responding; you hear "Converting the formatted text to paste." and the text appears when the conversion is done. Whatever its size, every paste is one undo step: **Ctrl+Z** removes the whole paste at once, and **Ctrl+Y** puts it back.
 
-### Paste as plain text: Alt+Q, or Ctrl+Shift+M in the graphical version
+### Paste as plain text: Ctrl+Shift+V
 
-When you want the words without their formatting, use **Paste as plain text**. It inserts only the clipboard's plain text, with no Markdown added. It is in the Edit menu, in the context menu, and in the command palette as "paste plain text". Many programs use **Ctrl+Shift+V** for this, but the keymap lists that key for choosing a voice in the graphical version, and a terminal cannot tell **Ctrl+Shift+V** from **Ctrl+V**, so textweaver uses the nearest free keys instead. You can move the command to any key you prefer in `keymap.toml`; the [keyboard guide](keyboard.md) explains how.
+When you want the words without their formatting, use **Paste as plain text**. It inserts only the clipboard's plain text, with no Markdown added. It is in the Edit menu, in the context menu, and in the command palette as "paste plain text". In the graphical version the key is **Ctrl+Shift+V** (**Cmd+Shift+V** on macOS), as in most programs; **Ctrl+Shift+M** also works. In the terminal reader, **Ctrl+Shift+V** is normally the terminal's own paste, which always arrives as plain text (see below). A terminal cannot tell **Ctrl+Shift+V** from **Ctrl+V** when it passes the key on, so the terminal reader also has **Alt+Q** for Paste as plain text. You can move the command to any key you prefer in `keymap.toml`; the [keyboard guide](keyboard.md) explains how.
 
 ### Where the clipboard comes from in the terminal
 
@@ -282,7 +282,7 @@ Most terminals keep **Ctrl+V** or **Ctrl+Shift+V** (or a right-click) as their o
 
 When the terminal passes **Ctrl+V** through to textweaver instead of pasting, textweaver reads the system clipboard itself, and formatted text from a browser or word processor becomes Markdown as described above. Over SSH and in tmux, where the system clipboard belongs to the other computer, textweaver pastes the text you last copied or cut in textweaver; when there is none, it says "Nothing copied in textweaver yet. Use your terminal's paste, for example Control Shift V."
 
-In the app on Windows, **Ctrl+V** converts formatted text to Markdown as the terminal reader does. In the app on macOS and Linux, **Ctrl+V** pastes only the clipboard's plain text for now, and the conversion is planned for beta 2; paste in the terminal reader until then. See [Known limits](known-limits.md#the-graphical-version).
+In the app, **Ctrl+V** (**Cmd+V** on macOS) converts formatted text to Markdown as the terminal reader does, on Windows, macOS, and Linux. On macOS it reads the pasteboard's HTML; on Linux, the HTML on the Wayland or X11 clipboard. When the clipboard holds no HTML, the plain text is pasted.
 
 ### The context menu: Ctrl+F10 in the terminal
 

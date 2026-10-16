@@ -234,10 +234,9 @@ if ($Tw) {
     Add-Output $Tw @('ocr', 'status')
 
     Add-Line
-    Add-Line "Engine hosts beside tw.exe, in ${dir}:"
-    foreach ($h in 'textweaver-eci-host.exe', 'textweaver-eci-host-x86.exe', 'textweaver-sapi-host.exe', 'textweaver-sapi-host-x86.exe', 'textweaver-dectalk-host.exe', 'textweaver-dectalk-host-x86.exe', 'textweaver-espeak-host.exe', 'textweaver-espeak-host-x86.exe') {
-        if (Test-Path -LiteralPath (Join-Path $dir $h)) { Add-Line "  ${h}: present" } else { Add-Line "  ${h}: missing" }
-    }
+    Add-Line 'Engine hosts: tw.exe runs 64-bit engines itself, as a copy started with --engine-host.'
+    $h = 'textweaver-host-x86.exe'
+    if (Test-Path -LiteralPath (Join-Path $dir $h)) { Add-Line "  ${h} (32-bit engines): present" } else { Add-Line "  ${h} (32-bit engines): missing" }
     $dict = Join-Path $dir 'ibmtts-dictionaries'
     if (Test-Path -LiteralPath $dict) {
         Add-Line "Pronunciation dictionaries: present, $(@(Get-ChildItem -LiteralPath $dict -File).Count) files."

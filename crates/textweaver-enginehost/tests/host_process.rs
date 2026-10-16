@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use std::process::{Command, ExitCode, Stdio};
 use std::time::{Duration, Instant};
 
+use textweaver_enginehost::hostmode;
 use textweaver_enginehost::protocol::{
     self, EndStatus, FrameReader, FrameWriter, MAX_FRAME, ProtocolError, ReadyHeader, encode_audio,
     encode_end, tag,
@@ -229,6 +230,22 @@ fn ready(h: &mut HostProcess<Reply>) -> ReadyHeader {
         HostMsg::Reply(Reply::Ready(r)) => r,
         other => panic!("expected Ready, got {other:?}"),
     }
+}
+
+/// A program that runs its own hosts ([`hostmode::enable_self`]) starts
+/// itself with `--engine-host <engine>` first, and host mode is chosen by
+/// that argument.
+fn this_program_runs_its_own_host_in_host_mode() {
+    hostmode::enable_self();
+    assert_eq!(hostmode::self_host(), Some(me()));
+    assert_eq!(
+        hostmode::engine_args(&me(), "echo"),
+        [hostmode::FLAG, "echo"].map(std::ffi::OsString::from)
+    );
+    let mut h = HostProcess::<Reply>::spawn_engine(&me(), "echo", Vec::<String>::new())
+        .expect("the toy host starts in host mode");
+    ready(&mut h);
+    assert_eq!(h.shutdown(), Ended::Exited);
 }
 
 fn speaks_and_shuts_down_cleanly() {
@@ -576,7 +593,13 @@ fn main() -> ExitCode {
     if let Some(i) = args.iter().position(|a| a == "--as-host") {
         return run_host(args.get(i + 1).map_or("echo", String::as_str));
     }
-    let tests: [(&str, fn()); 14] = [
+    // Host mode as textweaver's programs take it: `--engine-host <mode>`
+    // first.
+    let rest: Vec<std::ffi::OsString> = args.iter().skip(1).map(Into::into).collect();
+    if let Some(Ok(r)) = hostmode::parse(&rest) {
+        return run_host(&r.engine);
+    }
+    let tests: [(&str, fn()); 15] = [
         (
             "speaks_and_shuts_down_cleanly",
             speaks_and_shuts_down_cleanly,
@@ -626,6 +649,10 @@ fn main() -> ExitCode {
         (
             "a_started_host_takes_the_start_clock",
             a_started_host_takes_the_start_clock,
+        ),
+        (
+            "this_program_runs_its_own_host_in_host_mode",
+            this_program_runs_its_own_host_in_host_mode,
         ),
     ];
     let filter = name_filters(&args);

@@ -54,6 +54,12 @@ const EXAMPLE_FILES: [&str; 6] = [
     ".github/workflows/release.yml",
 ];
 
+/// The mark a line in [`EXAMPLE_FILES`] carries when it records history,
+/// such as "the sizes recorded for 0.1.0-beta.1 are the first", so the
+/// release leaves its version as it is. An HTML comment, which Markdown
+/// does not show.
+const HISTORY_MARK: &str = "<!-- history -->";
+
 /// The repository, for the changelog link.
 const REPO_URL: &str = "https://github.com/leavesofgrass/textweaver";
 
@@ -249,7 +255,7 @@ pub fn run() -> anyhow::Result<()> {
         let Ok(text) = fs::read_to_string(&path) else {
             continue;
         };
-        let new = text.replace(old, &args.version);
+        let new = rewrite_examples(&text, old, &args.version);
         if new != text {
             writes.push((path, new));
         }
@@ -454,6 +460,21 @@ fn add_sizes_section(changelog: &str, version: &str, section: &str) -> anyhow::R
     let mut text = out.join("\n");
     text.push('\n');
     Ok(text)
+}
+
+/// `text` with `old` turned into `new`, except on lines that record
+/// history: those carrying [`HISTORY_MARK`], and the "Last listening
+/// check" line, which only `--listened` writes.
+fn rewrite_examples(text: &str, old: &str, new: &str) -> String {
+    text.split_inclusive('\n')
+        .map(|line| {
+            if line.contains(HISTORY_MARK) || line.trim_start().starts_with(LISTENED) {
+                line.to_string()
+            } else {
+                line.replace(old, new)
+            }
+        })
+        .collect()
 }
 
 /// Files the release rewrites or that record history by design, never
@@ -903,6 +924,34 @@ mod tests {
             ["docs/settings.md, line 369: `x` was removed in 0.1.0: see: this"]
         );
         assert!(left_behind("").is_empty());
+    }
+
+    #[test]
+    fn history_lines_keep_their_version() {
+        let text = "   cargo xtask release 0.1.0-beta.1 --dry-run\r\n\
+                    **Last listening check:** 2026-09-29 (Tuesday, September 29, 2026), for 0.1.0-beta.1.\n\
+                    The sizes recorded for 0.1.0-beta.1 are the first for the single packages. <!-- history -->\n\
+                    gh attestation verify textweaver-0.1.0-beta.1-windows-x86_64.zip";
+        assert_eq!(
+            rewrite_examples(text, "0.1.0-beta.1", "0.1.0-beta.2"),
+            "   cargo xtask release 0.1.0-beta.2 --dry-run\r\n\
+             **Last listening check:** 2026-09-29 (Tuesday, September 29, 2026), for 0.1.0-beta.1.\n\
+             The sizes recorded for 0.1.0-beta.1 are the first for the single packages. <!-- history -->\n\
+             gh attestation verify textweaver-0.1.0-beta.2-windows-x86_64.zip"
+        );
+    }
+
+    #[test]
+    fn the_real_history_lines_are_marked() {
+        // Both lines the beta 2 release rewrote by mistake.
+        let guide = fs::read_to_string(crate::eci::root().join(GUIDE)).unwrap();
+        let sizes = guide
+            .lines()
+            .find(|l| l.contains("The sizes recorded for"))
+            .unwrap();
+        assert!(sizes.contains(HISTORY_MARK), "{sizes}");
+        let out = rewrite_examples(&guide, "0.1.0-alpha.9", "9.9.9");
+        assert!(out.contains("for 0.1.0-alpha.9."));
     }
 
     #[test]

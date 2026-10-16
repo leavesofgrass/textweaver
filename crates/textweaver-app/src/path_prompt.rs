@@ -38,6 +38,9 @@ pub const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "gif", "svg", "web
 /// Reference files Import References reads: BibTeX, RIS and CSL-JSON.
 pub const REFERENCE_EXTENSIONS: &[&str] = &["bib", "ris", "json"];
 
+/// Anki packages, which Import Anki cards reads.
+pub const ANKI_EXTENSIONS: &[&str] = &["apkg"];
+
 /// Settings and profile files: TOML and JSON.
 pub const SETTINGS_EXTENSIONS: &[&str] = &["toml", "json"];
 
@@ -74,6 +77,7 @@ impl PromptPurpose {
             P::Open => PathKind::Read(&[]),
             P::ImagePath => PathKind::Read(IMAGE_EXTENSIONS),
             P::ImportReferences => PathKind::Read(REFERENCE_EXTENSIONS),
+            P::ImportCards => PathKind::Read(ANKI_EXTENSIONS),
             P::ImportSettings | P::ImportProfiles => PathKind::Read(SETTINGS_EXTENSIONS),
             P::SaveAs | P::ExportAs => PathKind::Write(&[]),
             P::ExportSettings | P::ExportProfiles => PathKind::Write(SETTINGS_EXTENSIONS),
@@ -209,6 +213,12 @@ impl App {
             PromptPurpose::ImportReferences => (
                 c.tr("chooser-references-title"),
                 c.tr("chooser-reference-files"),
+                None,
+                doc_folder,
+            ),
+            PromptPurpose::ImportCards => (
+                c.tr("chooser-anki-title"),
+                c.tr("chooser-anki-files"),
                 None,
                 doc_folder,
             ),
@@ -356,6 +366,7 @@ mod tests {
             P::SaveAs,
             P::ImagePath,
             P::ImportReferences,
+            P::ImportCards,
             P::ImportSettings,
             P::ExportSettings,
             P::ImportProfiles,

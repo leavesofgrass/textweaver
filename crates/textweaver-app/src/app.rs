@@ -309,6 +309,10 @@ pub(crate) enum ListKind {
     Sync(crate::sync::SyncList),
     /// "Continue reading": the documents, by row (crate::library, S6).
     Continue(Vec<std::path::PathBuf>),
+    /// The reading queue, by row (crate::queue).
+    Queue(Vec<std::path::PathBuf>),
+    /// The review list, by row (crate::queue).
+    Review(Vec<std::path::PathBuf>),
     /// Manage optional components, one component's actions, or the
     /// first-run list (crate::components).
     Components(crate::components::ComponentsList),
@@ -405,6 +409,9 @@ pub struct App {
     /// `[reading] stop_at`: where the current continuous reading stops
     /// (the next heading or chapter), set as it starts.
     pub(crate) section_end: Option<CharPos>,
+    /// The reading queue's offer and the document it opens to read
+    /// (crate::queue, `[reading] after_end`).
+    pub(crate) queue: crate::queue::QueueState,
     /// Set while a sentence is repeated slower; the usual rate comes back
     /// when that reading ends.
     pub(crate) slow_repeat: bool,
@@ -633,6 +640,7 @@ impl App {
             continue_from: None,
             planned_end: None,
             section_end: None,
+            queue: crate::queue::QueueState::default(),
             slow_repeat: false,
             reading_timer: crate::playback::ReadingTimer::default(),
             book_audio: None,
@@ -1375,7 +1383,11 @@ impl App {
         {
             self.sync_ask_sidecar_place(other);
         }
-        if self.settings.speech.auto_play {
+        // The reading queue opened this document to read it (`[reading]
+        // after_end`, crate::queue); any other open drops its offer.
+        let opened = self.session.as_ref().and_then(|s| s.doc.meta.path.clone());
+        let queued = self.queue_opened(opened.as_deref());
+        if self.settings.speech.auto_play || queued {
             self.read_from_cursor();
         }
         vec![Effect::Redraw]
@@ -1890,6 +1902,7 @@ impl App {
             PromptPurpose::DocumentDetails => return self.answer_details(text),
             PromptPurpose::CommentReply => return self.answer_comment_reply(text),
             PromptPurpose::CommentText => return self.answer_new_comment(text),
+            PromptPurpose::ImportCards => return self.answer_import_cards(text),
             PromptPurpose::GitHubToken => return self.answer_github_token(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
@@ -1940,6 +1953,9 @@ impl App {
             Some(ListKind::Frontend) => self.choose_frontend_item(n),
             Some(ListKind::Sync(l)) => return self.choose_sync(l, n),
             Some(ListKind::Continue(paths)) => return self.choose_continue(&paths, n),
+            Some(ListKind::Queue(paths) | ListKind::Review(paths)) => {
+                return self.choose_continue(&paths, n);
+            }
             Some(ListKind::Components(l)) => return self.choose_component_row(l, n),
             Some(ListKind::HtmlTheme(purpose, names)) => {
                 return self.choose_html_theme(purpose, &names, n);
@@ -2003,6 +2019,7 @@ impl App {
                 vec![Effect::Redraw]
             }
             Some(ListKind::Buttons(l)) => self.delete_buttons_item(l, n),
+            Some(ListKind::Queue(paths)) => self.unqueue_row(&paths, n),
             _ => {
                 let msg = self.msg("study-nothing-to-delete");
                 self.tell(&msg);
@@ -2133,6 +2150,11 @@ impl App {
         match a {
             A::Quit => return self.dictation_finish_then(Self::quit),
             // Reading
+            // At the end of a document, the read keys take up the reading
+            // queue's offer (crate::queue).
+            A::PlayPause | A::ReadFromCursor if self.queue_offer_here() => {
+                return self.accept_queue_offer();
+            }
             A::PlayPause => self.play_pause(),
             A::Stop => self.stop_action(),
             A::ReadFromCursor => {
@@ -2318,7 +2340,9 @@ impl App {
             | A::GradeAgain
             | A::GradeHard
             | A::GradeGood
-            | A::GradeEasy => return self.cards_action(a),
+            | A::GradeEasy
+            | A::ExportCardsAnki
+            | A::ImportCardsAnki => return self.cards_action(a),
             A::AcceptAllChanges => return self.decide_all(true, None),
             A::RejectAllChanges => return self.decide_all(false, None),
             A::AddComment => return self.prompt(PromptPurpose::CommentText),
@@ -2345,6 +2369,9 @@ impl App {
             A::Open | A::OpenPath => return self.prompt(PromptPurpose::Open),
             A::OpenLibrary => return self.open_library(),
             A::ContinueReading => return self.open_continue_reading(),
+            A::ReviewList => return self.open_review_list(),
+            A::ReadingQueue => return self.open_reading_queue(),
+            A::QueueDocument => return self.queue_document(),
             A::AddLibraryFolder => return self.add_library_folder(),
             A::EditDocumentDetails => return self.edit_document_details(),
             A::ExportSettings => return self.settings_file_prompt(false),
@@ -2386,6 +2413,7 @@ impl App {
             | A::ExportAudio
             | A::ExportReadAlong
             | A::Dictate
+            | A::PauseDictation
             | A::DownloadDictationModel
             | A::ManageComponents
             | A::CheckForUpdates

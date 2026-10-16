@@ -110,6 +110,12 @@ textweaver-dictation = { workspace = true, optional = true, features = ["rten", 
 # Agent W6v: audio export from the reader.
 textweaver-export = { workspace = true, optional = true }
 pulldown-cmark.workspace = true
+# Anki packages (B1-f3): the SQLite collection, the zip, and the newest
+# format's zstd collection; sha1 for the checksum Anki keeps per note.
+rusqlite.workspace = true
+zip.workspace = true
+ruzstd.workspace = true
+sha1.workspace = true
 harper-core = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true

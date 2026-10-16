@@ -1000,11 +1000,17 @@ impl App {
 
     /// The list key for `chord` while the browser is shown: the browser's
     /// own keys ([`BrowseKey`]), in the form this keymap's commands use.
+    /// In the library list, the Choose Folder chord (Ctrl+Enter) adds the
+    /// focused document to the reading queue (crate::queue).
     pub fn browse_list_key_for(&self, chord: &KeyChord) -> Option<ListKey> {
+        let command = command_modifier(&self.keymap);
+        if matches!(self.list, Some(ListKind::Library(_))) {
+            return (BrowseKey::ChooseFolder.chord(command) == *chord)
+                .then_some(ListKey::ChooseHere);
+        }
         if self.list != Some(ListKind::Browse) {
             return None;
         }
-        let command = command_modifier(&self.keymap);
         BrowseKey::ALL
             .into_iter()
             .find(|k| k.chord(command) == *chord)
@@ -1638,7 +1644,7 @@ impl App {
     }
 
     /// A browser key named for a message, in both forms.
-    fn browse_key_named(&self, key: BrowseKey) -> String {
+    pub(crate) fn browse_key_named(&self, key: BrowseKey) -> String {
         crate::help::mark_chord(self.cat(), &key.chord(command_modifier(&self.keymap)))
     }
 

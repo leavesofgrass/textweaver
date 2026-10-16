@@ -34,6 +34,7 @@ mod path_choosers;
 mod pseudo_locale;
 mod quick_wins;
 mod reading_generation;
+mod reading_queue;
 mod reading_stops;
 mod recovery;
 mod reliability;

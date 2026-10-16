@@ -365,6 +365,9 @@ pub enum PromptPurpose {
     /// Answer is a GitHub token for a private components source; empty
     /// skips. It is secret ([`PromptPurpose::is_secret`]).
     GitHubToken,
+    /// Answer is an Anki package (`.apkg`) whose cards to import into the
+    /// open document's cards.
+    ImportCards,
 }
 
 impl PromptPurpose {
@@ -407,6 +410,7 @@ impl PromptPurpose {
             PromptPurpose::CommentReply => "Reply",
             PromptPurpose::CommentText => "Comment",
             PromptPurpose::GitHubToken => "GitHub token for your components source, Enter skips",
+            PromptPurpose::ImportCards => "Import study cards from Anki package",
         }
     }
 

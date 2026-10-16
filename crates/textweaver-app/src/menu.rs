@@ -55,6 +55,7 @@ pub const PENDING: &[ActionId] = &[
     ActionId::ExportAudio,
     ActionId::ExportReadAlong,
     ActionId::Dictate,
+    ActionId::PauseDictation,
     ActionId::DownloadDictationModel,
 ];
 
@@ -263,6 +264,9 @@ impl MenuId {
                 Do(A::OpenLibrary),
                 Do(A::AddLibraryFolder),
                 Do(A::ContinueReading),
+                Do(A::ReviewList),
+                Do(A::ReadingQueue),
+                Do(A::QueueDocument),
                 Do(A::EditDocumentDetails),
                 Sub(MenuId::Recent),
                 Sep,
@@ -322,6 +326,7 @@ impl MenuId {
                 Sub(MenuId::Citations),
                 Sep,
                 Do(A::Dictate),
+                Do(A::PauseDictation),
             ],
             MenuId::Find => &[
                 Do(A::Find),
@@ -605,6 +610,9 @@ impl MenuId {
                 Do(A::GradeHard),
                 Do(A::GradeGood),
                 Do(A::GradeEasy),
+                Sep,
+                Do(A::ExportCardsAnki),
+                Do(A::ImportCardsAnki),
             ],
             MenuId::Sync => &[
                 Do(A::SyncSetup),

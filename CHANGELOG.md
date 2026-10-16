@@ -4,6 +4,45 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Changed
+
+- **Fewer programs in the package, the same engines.** An antivirus program flagged two of textweaver's small engine host programs with a heuristic detection. The separate host for each engine is gone: `tw` and the app now run Eloquence, SAPI 5 voices, DECtalk, and eSpeak NG in a copy of themselves, started in a hidden host mode (`--engine-host`), and on Windows one 32-bit host, `textweaver-host-x86.exe`, runs every 32-bit engine and voice. The Windows package holds four programs instead of eleven, and the Linux package no host programs. Engines still run in their own process, so a crash cannot close textweaver, and word timing is as exact as before.
+- `TEXTWEAVER_ECI_HOST`, `TEXTWEAVER_SAPI_HOST`, `TEXTWEAVER_SAPI_HOST_X86`, `TEXTWEAVER_DECTALK_HOST`, and `TEXTWEAVER_ESPEAK_HOST` still work. They may name a separate host from an earlier release, which is used as before, or any other program, which is started in host mode. The old host programs (`textweaver-eci-host.exe` and the like) are no longer needed; an update may leave them in the folder, and they can be deleted.
+- `cargo xtask hosts` builds only the 32-bit host (Windows); elsewhere there is no host to build. The Linux install script no longer runs it.
+- **Ctrl+Shift+V now pastes as plain text in edit mode, and Choose a voice moved to Ctrl+Alt+V.** In the textweaver app, Ctrl+Shift+V (Cmd+Shift+V on macOS) pastes the clipboard's plain text, as in most programs; Ctrl+Shift+M still works. Choose a voice is Ctrl+Alt+V in the app (Cmd+Option+V on macOS) and also in the terminal reader, where Alt+V keeps working. In the terminal reader, Ctrl+Shift+V stays the terminal's own paste, which is always plain text. If you moved either command in `keymap.toml`, your keys are unchanged.
+
+### Dictation
+
+- **New: pause and resume dictation.** Pause dictation (Alt+Shift+F9, in the Edit menu and the command palette) pauses the microphone during a dictation and resumes it. The phrase being spoken is finished and typed first, so no words are lost; what the microphone hears while paused is discarded, and the session, the loaded model and the text stay. "Dictation paused." and "Dictation resumed." are said, and the terminal reader's status line begins "Dictation paused." while it lasts.
+- **New: dictation buttons in the textweaver app.** While a dictation is under way, the toolbar shows Pause dictation (Resume dictation while paused) and Stop dictation beside the other buttons, before Slower and Faster, or on the header when the toolbar is hidden. They leave when the dictation ends, and the focus moves to the document if it was on one of them.
+
+### Study
+
+- **New: study cards go to Anki and back.** Export cards to Anki writes a document's cards as an Anki package (`.apkg`) beside it, in a deck named after the document, each note tagged with the document and the card's kind; graded cards keep their interval, ease, due day, and grades. Import Anki cards adds a package's Basic and Basic-and-reversed notes to the open document's cards as plain text, with their grades, and says what it skipped: "Imported 120 cards. Skipped 4 cloze notes." Importing the same package twice adds nothing. From the command line: `tw study export --anki FILE` and `tw study import FILE` ([Take cards to Anki and back](docs/notes.md#take-cards-to-anki-and-back)). AnkiConnect sync stays dropped.
+
+### Library
+
+- **New: the reading queue.** A list of documents to read next, kept with the bookshelf, so it is there the next time textweaver starts. **Ctrl+Enter** in the library list adds the focused document or takes it out; **Add to reading queue** in the File menu does the same for the open document; **Reading queue** in the File menu lists it, where **Enter** opens a document and **Delete** takes one out. A document leaves the queue when it is read to the end. The setting **After a document ends** (`[reading] after_end`) decides what follows the end of a document: nothing (`"stop"`, the default), the next document named, "Next: Week 4. Enter to read." (`"ask"`), or the next document read at once (`"next"`). A document is never started unless you ask. From the command line: `tw library queue`, with `add`, `remove` and `next`.
+- **New: the review list,** beside Continue reading: the documents you have read aloud, the one read longest ago first, such as "Pharmacology 2, 21 days, 80 percent, 3 notes". It is a convenience for finding older readings, not a study method. From the command line: `tw library review`.
+
+### The app
+
+- **Each highlight name has its own color and shape in the textweaver app,** as in the terminal reader: the name's color as the band, with black or white text, whichever reads better, and its shape drawn (a line, a double line, bold text, a dotted line, brackets, or a small square at the start), so no two names differ by color alone. A screen reader is given the name in words ("Highlight, important") on the text it covers, with the band and the line as text attributes ([Highlight colors](docs/notes.md#highlight-colors)).
+- **The self-test's answer is said once.** After Enter revealed an answer, the app said it, and a screen reader then said the prompt's new text, with the answer, a second time. The prompt now keeps the text the screen reader knows until the focus moves; coming back to it reads the answer. The same holds for other changes the app says on a list's focused row, such as reversing a study card.
+- **Formatted text pastes as Markdown on macOS and Linux too.** Ctrl+V (Cmd+V) in edit mode reads the clipboard's HTML (the pasteboard's on macOS, the Wayland or X11 clipboard's on Linux) and pastes headings, lists, emphasis, links, tables, and code as Markdown, as on Windows and in the terminal reader. Without HTML, the plain text is pasted.
+
+### Help and documentation
+
+- The troubleshooting guide explains antivirus warnings that name a heuristic detection: what they mean, how to check the package against `SHA256SUMS.txt`, and how to report a false positive to the vendor.
+
+### Packages and the build
+
+- **The app's shortcut is named "textweaver app".** The Start menu shortcut that `install-windows.ps1 -Gui` makes and the menu entry from `install-linux.sh --gui` were named "textweaver window". On Windows the script removes the old shortcut, `textweaver window.lnk`, when it makes or removes the new one, and only when that shortcut starts `textweaver-gui.exe`; on Linux the menu entry is rewritten in place. The documentation's navigation and the terminal's note for a command that only the app has say "the textweaver app" too.
+
+### For contributors
+
+- `cargo xtask release` no longer rewrites lines that record history. A line ending with the comment `<!-- history -->`, and the "Last listening check" line, keep the version they name. The beta 2 release changed such lines by mistake, and they had to be restored by hand; one, about the app AppImages of 0.1.0-alpha.9 and earlier, is corrected now. The release guide says how to mark a history line.
+
 ## [0.1.0-beta.2] - 2026-10-10
 
 In short: beta 2 fixes the speech rate, and brings every document up to date.

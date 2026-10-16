@@ -223,6 +223,54 @@ continue-ago-days =
     }
 name-continue-reading = Seguir leyendo
 action-continue-reading = Seguir leyendo: los documentos de este equipo con una posición guardada, de cualquier equipo, los más recientes primero
+
+## La cola de lectura y la lista de repaso (beta 3).
+
+queue-title = Cola de lectura
+queue-intro =
+    { $n ->
+        [one] Cola de lectura, 1 documento. Intro lo abre, Suprimir lo quita.
+       *[other] Cola de lectura, { $n } documentos. Intro abre uno, Suprimir lo quita.
+    }
+queue-empty = La cola de lectura está vacía. En la biblioteca, { $key } añade un documento.
+queue-item-missing = { $title }, no encontrado
+queue-added =
+    { $n ->
+        [one] Añadido a la cola de lectura: { $title }. 1 documento en la cola.
+       *[other] Añadido a la cola de lectura: { $title }. { $n } documentos en la cola.
+    }
+queue-removed = Quitado de la cola de lectura: { $title }.
+queue-no-file = Solo un documento guardado como archivo puede entrar en la cola de lectura.
+queue-read-failed = No se pudo leer la biblioteca para la cola de lectura: { $error }. Revise library.json en la carpeta de datos; tw settings path la indica.
+queue-next-ask = Siguiente: { $title }. { $key } para leer.
+queue-next-reading = Siguiente: { $title }.
+review-title = Lista de repaso
+review-intro =
+    { $n ->
+        [one] Lista de repaso, 1 documento, el leído hace más tiempo primero. Intro lo abre.
+       *[other] Lista de repaso, { $n } documentos, el leído hace más tiempo primero. Intro abre uno.
+    }
+review-empty = Aún no hay nada que repasar. Aquí aparecen los documentos leídos en voz alta.
+review-stats-off = La lista de repaso necesita las estadísticas de lectura, que están desactivadas. Active Estadísticas de lectura en la configuración.
+review-item = { $title }, { $days }, { $pct } por ciento, { $notes }
+review-days =
+    { $n ->
+        [0] hoy
+        [one] 1 día
+       *[other] { $n } días
+    }
+review-notes =
+    { $n ->
+        [0] sin notas
+        [one] 1 nota
+       *[other] { $n } notas
+    }
+name-review-list = Lista de repaso
+action-review-list = Lista de repaso: los documentos que ha leído, el leído hace más tiempo primero
+name-reading-queue = Cola de lectura
+action-reading-queue = Cola de lectura: los documentos que leer a continuación, en orden
+name-queue-document = Añadir a la cola de lectura
+action-queue-document = Añadir el documento a la cola de lectura, o quitarlo
 name-add-library-folder = Añadir una carpeta a la biblioteca
 action-add-library-folder = Añadir una carpeta a la biblioteca: elíjala en el explorador de archivos
 name-edit-document-details = Editar detalles
@@ -461,7 +509,7 @@ list-nothing-to-mark = Nada que marcar en esta lista.
 notes-editing = Editando la nota: { $text }
 # $key opens a document.
 app-no-document-open = No hay ningún documento abierto. Pulse { $key } para abrir uno.
-app-window-only = Esta orden funciona en la ventana de textweaver.
+app-window-only = Esta orden funciona en la aplicación textweaver.
 app-terminal-only = Esta orden funciona en el lector del terminal.
 settings-save-failed = No se pudo guardar la configuración: { $error } Sus cambios siguen en uso hasta que salga.
 settings-outside-kept = Se conservó la configuración cambiada fuera de textweaver.
@@ -791,6 +839,8 @@ action-grade-again = Calificar la tarjeta en estudio: Otra vez, no recordada
 action-grade-hard = Calificar la tarjeta en estudio: Difícil, recordada con esfuerzo
 action-grade-good = Calificar la tarjeta en estudio: Bien, recordada
 action-grade-easy = Calificar la tarjeta en estudio: Fácil, recordada al instante
+action-export-cards-anki = Exportar las tarjetas de estudio como paquete de Anki, guardado junto al documento
+action-import-cards-anki = Importar tarjetas de estudio de un paquete de Anki a las tarjetas de este documento
 action-open = Abrir un documento
 action-open-path = Abrir un documento escribiendo su ruta
 action-open-library = Abrir la biblioteca: documentos de sus carpetas de biblioteca y archivos recientes
@@ -1485,6 +1535,39 @@ cards-source-label = Origen de la tarjeta
 cards-remove-question = ¿Quitar esta tarjeta y sus calificaciones? y o n
 cards-removed = Tarjeta quitada.
 cards-save-failed = No se pudieron guardar las tarjetas: { $error } Compruebe que se puede escribir en la carpeta de datos.
+cards-anki-exported =
+    { $n ->
+        [one] Se exportó 1 tarjeta a Anki: { $file }, en { $folder }.
+       *[other] Se exportaron { $n } tarjetas a Anki: { $file }, en { $folder }.
+    }
+cards-anki-export-failed = No se pudieron exportar las tarjetas a Anki: { $error } Compruebe que se puede escribir en la carpeta del documento.
+cards-anki-import-failed = No se pudo importar { $file }: { $error } Compruebe que el archivo es un paquete de Anki, .apkg.
+cards-anki-imported =
+    { $added ->
+        [one] Se importó 1 tarjeta.
+       *[other] Se importaron { $added } tarjetas.
+    }
+cards-anki-already =
+    { $n ->
+        [one] 1 tarjeta ya estaba; se combinaron sus calificaciones.
+       *[other] { $n } tarjetas ya estaban; se combinaron sus calificaciones.
+    }
+cards-anki-skipped-cloze =
+    { $n ->
+        [one] Se omitió 1 nota de huecos.
+       *[other] Se omitieron { $n } notas de huecos.
+    }
+cards-anki-skipped-media =
+    { $n ->
+        [one] Se omitió 1 nota que solo tiene imágenes o sonido.
+       *[other] Se omitieron { $n } notas que solo tienen imágenes o sonido.
+    }
+cards-anki-skipped-other =
+    { $n ->
+        [one] Se omitió 1 nota sin texto o con más de dos tarjetas.
+       *[other] Se omitieron { $n } notas sin texto o con más de dos tarjetas.
+    }
+cards-from-anki = Esta tarjeta viene de Anki; no tiene un lugar en el documento.
 # Said first in the study session and the Cards list (B1-f2). $due is how
 # many graded cards are due, $new how many were never graded.
 cards-due-summary =
@@ -1646,8 +1729,8 @@ library-folder-added = { $name } se añadió a la biblioteca. Abra la biblioteca
 library-folder-already = { $name } ya está en la biblioteca.
 library-intro =
     { $n ->
-        [one] Biblioteca, { $n } documento. Escriba para filtrar, Intro abre uno, F2 edita los detalles.
-       *[other] Biblioteca, { $n } documentos. Escriba para filtrar, Intro abre uno, F2 edita los detalles.
+        [one] Biblioteca, { $n } documento. Escriba para filtrar, Intro abre uno, F2 edita los detalles, { $queue } lo pone en la cola.
+       *[other] Biblioteca, { $n } documentos. Escriba para filtrar, Intro abre uno, F2 edita los detalles, { $queue } lo pone en la cola.
     }
 library-title = Biblioteca
 
@@ -2162,6 +2245,11 @@ setting-reading-book-audio = Audio del libro
 setting-reading-book-audio-help = Qué lee un libro hablado DAISY que tiene grabación. Su narración grabada, con el resaltado siguiéndola y la voz leyendo el texto sin audio, o solo la voz. Los cambios de velocidad no se aplican a la grabación.
 choice-reading-book-audio-auto = narración grabada
 choice-reading-book-audio-speech = solo voz
+setting-reading-after-end = Al terminar un documento
+setting-reading-after-end-help = Qué sigue al final de un documento cuando la cola de lectura tiene otro. Nada, se nombra el siguiente documento y la tecla de leer lo lee, o se lee el siguiente documento enseguida. Un documento nunca empieza sin que lo pida.
+choice-reading-after-end-stop = detenerse
+choice-reading-after-end-ask = preguntar antes
+choice-reading-after-end-next = leer el siguiente
 setting-display-theme = Tema
 setting-display-theme-help = El tema de color.
 setting-display-follow-os-theme = Seguir el tema del sistema
@@ -3385,6 +3473,9 @@ gui-button-previous-sentence = Frase anterior
 gui-button-next-sentence = Frase siguiente
 gui-button-slower = Más lento
 gui-button-faster = Más rápido
+gui-button-pause-dictation = Pausar dictado
+gui-button-resume-dictation = Reanudar dictado
+gui-button-stop-dictation = Detener dictado
 gui-hint-open = Elegir un documento para leer.
 gui-hint-font = Elegir la fuente del texto.
 gui-hint-edit = Cambiar entre leer y editar.
@@ -3741,6 +3832,8 @@ name-grade-again = Calificar otra vez
 name-grade-hard = Calificar difícil
 name-grade-good = Calificar bien
 name-grade-easy = Calificar fácil
+name-export-cards-anki = Exportar tarjetas a Anki
+name-import-cards-anki = Importar tarjetas de Anki
 name-open = Abrir
 name-open-path = Abrir por ruta
 name-open-library = Biblioteca
@@ -3801,6 +3894,7 @@ name-insert-bibliography = Insertar bibliografía
 name-check-citations = Revisar citas
 name-import-references = Importar referencias
 name-dictate = Dictar
+name-pause-dictation = Pausar o reanudar el dictado
 name-next-theme = Tema siguiente
 name-toggle-line-numbers = Números de línea
 name-toggle-character-keys = Atajos de una tecla
@@ -3883,6 +3977,7 @@ action-batch-convert = Convertir una carpeta de documentos a otro formato, en se
 action-export-audio = Exportar el documento como audio hablado: MP3, FLAC, Opus, WAV o un audiolibro M4B
 action-export-read-along = Exportar una página de lectura: un archivo HTML con el texto y su audio, con la palabra hablada marcada al reproducirse
 action-dictate = Iniciar o detener el dictado: las palabras habladas se escriben en el cursor en modo de edición
+action-pause-dictation = Pausar el micrófono durante el dictado, conservando la sesión y las palabras hasta ahora, o reanudarlo
 action-color-settings = Abrir las opciones de color: el resaltado de lectura, la regla, las marcas y cada parte de la pantalla, con su contraste
 action-cycle-interface-announcements = Cambiar cuánto anuncia textweaver de sí mismo: desactivados, mínimos, normales o completos; los errores y las respuestas se dicen siempre
 action-menu = Abrir los menús: Archivo, Edición, Ver, Lectura, Voz, Herramientas y Ayuda
@@ -3970,6 +4065,10 @@ dictation-failed = El dictado falló: { $error } Consulte Dictation en la docume
 dictation-no-words = No se reconocieron palabras en esa frase.
 dictation-lost = El dictado se detuvo antes de escribir sus últimas palabras.
 dictation-not-typed = Palabras dictadas sin escribir, el modo de edición está desactivado: { $text }
+dictation-paused = Dictado en pausa.
+dictation-resumed = Dictado reanudado.
+dictation-not-active = No se está dictando.
+dictation-cannot-pause = Este dictado no puede pausarse; deténgalo en su lugar.
 setting-dictation-speak-while-recording = Hablar mientras se dicta
 setting-dictation-speak-while-recording-help = Decir las palabras dictadas según llegan. Desactivado, se muestran en la línea de estado y se dicen en cada pausa, para que el micrófono no oiga la voz.
 setting-dictation-model-dir = Carpeta del modelo de dictado
@@ -4471,6 +4570,8 @@ chooser-image-title = Insertar una imagen
 chooser-images = Imágenes
 chooser-references-title = Importar referencias
 chooser-reference-files = Archivos de referencias
+chooser-anki-title = Importar tarjetas de Anki
+chooser-anki-files = Paquetes de Anki
 chooser-profiles-import-title = Importar perfiles
 chooser-profiles-export-title = Exportar perfiles
 chooser-profile-files = Archivos de perfiles
@@ -4713,6 +4814,7 @@ action-add-comment = Añadir un comentario a la selección o a la oración del c
 prompt-comment-reply = Respuesta
 prompt-comment-text = Comentario
 prompt-github-token = Token de GitHub del origen de componentes, Intro lo omite
+prompt-import-cards = Importar tarjetas de estudio de un paquete de Anki
 changes-title = Cambios y comentarios
 changes-intro =
     { $n ->

@@ -762,8 +762,22 @@ impl Tui {
 
     /// What the status line shows: the pending question while one waits for
     /// a yes or no (so it stays in view whatever else is announced), else
-    /// the latest announcement.
+    /// the latest announcement. While dictation is paused, "Dictation
+    /// paused." comes first, in words, whatever else is announced.
     pub fn status_line(&self) -> String {
+        let line = self.status_line_without_dictation();
+        if self.app.dictation_status() != textweaver_app::DictationStatus::Paused {
+            return line;
+        }
+        let paused = self.app.catalog().tr("dictation-paused");
+        if line.starts_with(&paused) {
+            line
+        } else {
+            format!("{paused}  {line}").trim_end().to_owned()
+        }
+    }
+
+    fn status_line_without_dictation(&self) -> String {
         match self.app.pending_question() {
             Some(question) if self.app.status_text() != question => {
                 format!("{question}  {}", self.app.status_text())

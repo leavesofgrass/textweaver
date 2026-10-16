@@ -7,6 +7,9 @@
 //!   question and the passage the answer, or the reverse
 //!   ([`Card::reversed`]).
 //! - A heading with its first sentence becomes a **recall** card.
+//! - A card imported from an Anki package keeps the Anki note's GUID as
+//!   its source ([`CardSource::Anki`], B1-f3), and [`CardDeck::add_imported`]
+//!   never adds the same card twice.
 //!
 //! Each card keeps where it came from ([`Card::source`],
 //! [`Card::source_id`], [`Card::range`]) so a list can go to the place, and
@@ -62,6 +65,9 @@ pub enum CardSource {
     Note,
     /// A heading, by an id made from its text.
     Heading,
+    /// An Anki package (B1-f3), by the Anki note's GUID; such a card has
+    /// no place in the document.
+    Anki,
 }
 
 impl CardSource {
@@ -71,6 +77,7 @@ impl CardSource {
             CardSource::Highlight => "highlight",
             CardSource::Note => "note",
             CardSource::Heading => "heading",
+            CardSource::Anki => "anki",
         }
     }
 }
@@ -302,6 +309,40 @@ impl CardDeck {
     }
 }
 
+/// What [`CardDeck::add_imported`] did.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Imported {
+    /// Cards new to the deck.
+    pub added: usize,
+    /// Cards the deck already held (the same id), their grades merged.
+    pub already: usize,
+}
+
+impl CardDeck {
+    /// Adds cards read from another program's package (B1-f3): a card the
+    /// deck already holds (the same id) is kept as it is, with the grades
+    /// it lacks added ([`Card::merge_reviews`]), so importing the same
+    /// package twice adds nothing; the others are added at the end, even
+    /// one removed here before, since importing it again asks for it.
+    pub fn add_imported(&mut self, cards: Vec<Card>) -> Imported {
+        let mut out = Imported::default();
+        for card in cards {
+            match self.cards.iter_mut().find(|c| c.id == card.id) {
+                Some(old) => {
+                    old.merge_reviews(&card.reviews);
+                    out.already += 1;
+                }
+                None => {
+                    out.added += 1;
+                    self.removed.retain(|id| *id != card.id);
+                    self.cards.push(card);
+                }
+            }
+        }
+        out
+    }
+}
+
 /// Reads and writes `cards/<doc-key>.json`.
 #[derive(Clone, Debug)]
 pub struct CardStore {
@@ -441,6 +482,37 @@ mod tests {
         assert_eq!(ts, vec![10, 20, 30]);
         assert_eq!(a.last_grade(), Some(Grade::Hard));
         assert!(!a.merge_reviews(&theirs));
+    }
+
+    #[test]
+    fn importing_twice_adds_nothing_and_merges_grades() {
+        let mut deck = CardDeck::default();
+        let mut a = card("a", 1, "Q?");
+        a.reviews.push(Review {
+            grade: Grade::Good,
+            ts: 5,
+        });
+        assert_eq!(
+            deck.add_imported(vec![a.clone(), card("b", 2, "R?")]),
+            Imported {
+                added: 2,
+                already: 0
+            }
+        );
+        a.reviews.push(Review {
+            grade: Grade::Easy,
+            ts: 9,
+        });
+        assert_eq!(
+            deck.add_imported(vec![a, card("b", 2, "Changed?")]),
+            Imported {
+                added: 0,
+                already: 2
+            }
+        );
+        assert_eq!(deck.cards.len(), 2);
+        assert_eq!(deck.cards[0].reviews.len(), 2);
+        assert_eq!(deck.cards[1].question, "R?");
     }
 
     #[test]

@@ -1,4 +1,5 @@
-//! The host side of the protocol: the loop `textweaver-espeak-host` runs.
+//! The host side of the protocol: the loop an espeak host runs ([`main`],
+//! started as `<program> --engine-host espeak`).
 //!
 //! The loop is generic over [`Engine`], so the same code drives the real
 //! libespeak-ng ([`real::EspeakEngine`]) and the deterministic
@@ -16,8 +17,11 @@
 //! audio reaches textweaver after the first block, not after the whole
 //! utterance, and a `Stop` takes effect within a block.
 
+mod entry;
 pub mod fake;
 pub mod real;
+
+pub use entry::main;
 
 use std::io::{Read, Write};
 use std::ops::Range;

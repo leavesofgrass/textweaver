@@ -1371,6 +1371,11 @@ fn the_self_test_asks_then_reveals_the_passage() {
         "How was it measured? (in Methods) Answer: We measured things carefully."
     );
     assert_eq!(list.items[0], "What did you highlight in Essay?");
+    // The frontend is told the change was said, so the graphical version
+    // does not let a screen reader say the row's new name as well.
+    assert!(list.change_said, "the reveal was said");
+    r.send(Command::ListKey(ListKey::Up));
+    assert!(!r.app.list_model().unwrap().change_said, "a move is not");
 }
 
 /// Study cards (B1-f1): a note and its heading become cards; the session

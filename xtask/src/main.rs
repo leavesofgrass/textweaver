@@ -10,12 +10,14 @@
 //!   `--update-baseline --reason TEXT` writes the baseline.
 //! - `deps [--check]`: the dependency direction between workspace crates
 //!   (see `deps.rs`).
-//! - `hosts`: build every speech-engine host for this platform and install
-//!   them with the dictionaries (`--dest DIR` for a package directory).
+//! - `hosts`: build the combined 32-bit engine host (Windows; the programs
+//!   are their own native hosts) and install it with the dictionaries
+//!   (`--dest DIR` for a package directory).
 //! - `dist`: build the release package for this platform, one holding the
 //!   app and `tw` (`--universal` on macOS); see `docs/dev/releasing.md`. It fails when the package grew
 //!   more than 10 percent over the last release's without a note.
-//! - `eci-host`, `sapi-host`: build one engine's hosts.
+//! - `eci-host`: another name for `hosts`; `sapi-host`: the SAPI 5 hosts
+//!   for development (see `sapi.rs`).
 //! - `frames [--seconds N] [--json PATH]`: the GUI frame-time probe, the
 //!   median and worst frame while the spoken word moves, with no window on
 //!   screen (see `frames.rs`).

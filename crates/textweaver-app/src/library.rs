@@ -408,7 +408,13 @@ impl App {
             self.tell(&msg);
             return vec![Effect::Redraw];
         }
-        let msg = self.msg_args("library-intro", &args!["n" => list.items.len()]);
+        // Ctrl+Enter puts the focused document in the reading queue
+        // (crate::queue).
+        let queue = self.browse_key_named(crate::browse::BrowseKey::ChooseFolder);
+        let msg = self.msg_args(
+            "library-intro",
+            &args!["n" => list.items.len(), "queue" => queue],
+        );
         self.tell(&msg);
         self.list_library(list)
     }

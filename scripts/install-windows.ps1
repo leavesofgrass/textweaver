@@ -195,7 +195,9 @@ if ($Help) {
 if (-not $InstallDir) { $InstallDir = Join-Path $env:LOCALAPPDATA 'Programs\textweaver' }
 $InstallDir = [IO.Path]::GetFullPath($InstallDir)
 $ShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver.lnk'
-$GuiShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver window.lnk'
+$GuiShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver app.lnk'
+# The app's shortcut as releases up to beta 2 named it; removed in its place.
+$OldGuiShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver window.lnk'
 $Manifest = Join-Path $InstallDir 'install-manifest.txt'
 $GuiDir = Join-Path $InstallDir 'gui'
 $RepoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -371,7 +373,7 @@ function Add-GuiShortcut {
     if ($NoShortcut) { return }
     Write-Section 'Start menu, GUI'
     $exe = Join-Path $GuiDir 'textweaver-gui.exe'
-    Write-Line 'A Start menu shortcut named textweaver window can start the GUI.'
+    Write-Line 'A Start menu shortcut named textweaver app can start the GUI.'
     if (Test-Path -LiteralPath $GuiShortcutPath) { Write-Line 'The shortcut exists already; it will be updated.' }
     if (-not (Confirm-Choice 'Create the Start menu shortcut for the GUI?')) { Write-Line 'No GUI shortcut created.'; return }
     Invoke-Step "create the shortcut $GuiShortcutPath" {
@@ -383,12 +385,26 @@ function Add-GuiShortcut {
         $link.IconLocation = "$exe,0"
         $link.Save()
     }
+    Remove-OldGuiShortcut
 }
 
 function Undo-GuiShortcut {
     if (Test-Path -LiteralPath $GuiShortcutPath) {
         Invoke-Step "remove the shortcut $GuiShortcutPath" { Remove-Item -LiteralPath $GuiShortcutPath -Force }
     }
+    Remove-OldGuiShortcut
+}
+
+# Removes the shortcut "textweaver window", which this script made up to
+# beta 2: only that one file, and only when it starts textweaver-gui.exe.
+function Remove-OldGuiShortcut {
+    if (-not (Test-Path -LiteralPath $OldGuiShortcutPath -PathType Leaf)) { return }
+    $target = (New-Object -ComObject WScript.Shell).CreateShortcut($OldGuiShortcutPath).TargetPath
+    if ([IO.Path]::GetFileName($target) -ne 'textweaver-gui.exe') {
+        Write-Line "Left as it is: $OldGuiShortcutPath, which does not start textweaver-gui.exe."
+        return
+    }
+    Invoke-Step "remove the old shortcut $OldGuiShortcutPath" { Remove-Item -LiteralPath $OldGuiShortcutPath -Force }
 }
 
 # ------------------------------------------------------------- release --
@@ -612,6 +628,7 @@ function Uninstall-Textweaver {
     if ((Test-Path -LiteralPath $GuiShortcutPath) -or $DryRun) {
         Invoke-Step "remove the shortcut $GuiShortcutPath" { Remove-Item -LiteralPath $GuiShortcutPath -Force }
     }
+    Remove-OldGuiShortcut
     Write-Line
     Write-Line 'textweaver is removed.'
 }
@@ -684,5 +701,5 @@ if ($DryRun) {
 Write-Line "textweaver $($package.Version) is installed in $InstallDir."
 Write-Line "Check your speech engines: & `"$InstallDir\tw.exe`" backends"
 Write-Line "Read the quick start aloud: & `"$InstallDir\textweaver.exe`" `"$InstallDir\QUICKSTART.md`""
-if ($guiInstalled) { Write-Line "Start the GUI from the Start menu (textweaver window), or run $GuiDir\textweaver-gui.exe" }
+if ($guiInstalled) { Write-Line "Start the GUI from the Start menu (textweaver app), or run $GuiDir\textweaver-gui.exe" }
 Write-Line 'To remove textweaver, run this script with -Uninstall.'

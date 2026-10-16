@@ -24,10 +24,6 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 These limits apply to the textweaver app (`textweaver-gui`). The terminal reader does not have them, unless stated.
 
-- **Every highlight name is drawn the same way.** In the terminal reader, each name in your highlight palette has its own color and its own shape, so a name never depends on color alone. The graphical version draws all highlights with one mark. The names are still kept, listed, filtered, and exported, and they show as shapes in the terminal reader and as typeforms in braille files. Next step: use the highlights list (Shift+Y), which says each name, or the terminal reader, to see the shapes. Drawing each shape in the graphical version is planned ([Highlight colors](notes.md#highlight-colors)).
-- **A screen reader may say the answer twice in the self-test.** After you press Enter on a prompt in the self-test, the graphical version reveals the answer, and a screen reader may announce the revealed answer twice. The answer is correct both times. Next step: use the self-test in the terminal reader if the repeat gets in the way; a fix for the graphical version is planned.
-- **Ctrl+Shift+V pastes instead of opening Choose a voice.** The keyboard reference lists Ctrl+Shift+V for Choose a voice in the graphical version, but in the app the key pastes. Next step: open the voice manager from the menus (F10) or the command palette (F2, then type `voice`), or give the command another key in `keymap.toml` (see the [keyboard reference](keyboard.md)).
-- **Formatted text pastes as plain text in the graphical version on macOS and Linux.** On Windows, Ctrl+V in edit mode turns formatted text from a browser or word processor into Markdown. On macOS and Linux the graphical version pastes the clipboard's plain text. Next step: paste in the terminal reader, which converts it; beta 2 brings the conversion to the graphical version on macOS and Linux.
 - **Some commands exist only in the terminal reader.** The app says "This command works in the terminal reader." when you press the key for one ([What only the terminal reader does](gui.md#what-only-the-terminal-reader-does)).
 
 ## Reading and speech
@@ -51,8 +47,9 @@ These limits apply to the textweaver app (`textweaver-gui`). The terminal reader
 ## Study tools
 
 - **Study cards are scheduled with SM-2 only.** Cards are made from notes, highlights, and headings, studied, graded in words, and brought back when due ([Study with cards](notes.md#study-with-cards)). A card counts as due by the clock, from half a day before its interval ends, not by the calendar day in your time zone. FSRS scheduling is dropped on purpose.
-- **Anki import and export come in beta 3.** Until then, cards stay in textweaver and sync between your computers with your notes. AnkiConnect sync is dropped on purpose.
-- **The reading queue comes in beta 3.** There is no list of documents to read next that carries from one session to the next. Next step: the library's recent files (Alt+L) and bookmarks.
+- **Anki packages carry text and grades only.** Importing an `.apkg` skips cloze notes and leaves out pictures and sound, and textweaver works out each card's schedule again from its grades, so intervals can differ from Anki's ([Take cards to Anki and back](notes.md#take-cards-to-anki-and-back)). Fill-in-the-blank cards go to Anki as Basic cards, not as Anki clozes.
+- **AnkiConnect sync is dropped on purpose.** It needs Anki running with an add-on and a local network port; cards go to Anki and back as `.apkg` files instead.
+- **The reading queue stays on one computer.** The queue is kept in this computer's library and does not yet sync to your other computers, as notes and cards do. Add documents to the queue on each computer where you read.
 - **Knowledge graphs from notes are not drawn.** Links between notes are lists instead: each note's links, "What links here", and `tw notes links` ([notes guide](notes.md#links-between-notes)). The graph exports to files that other tools draw, with a Markdown list as their text equivalent ([Export the knowledge graph](notes.md#export-the-knowledge-graph)).
 
 ## Documentation

@@ -293,6 +293,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `stop_after_minutes`, default `0`: stop at the end of a sentence after this many minutes of reading, from 0 to 240 in steps of 5. Pausing stops the clock. 0 turns the timer off.
 - `recall_prompts`, default `false`: at a section end, ask you to say what you remember before going on. It stops at the next heading for this when `stop_at` is `"off"`. See [Study with textweaver](notes.md#study-with-textweaver).
 - `book_audio`, default `"auto"`: what reads a DAISY talking book that has a recording. `"auto"` plays its recorded narration and uses speech for text without audio; `"speech"` reads everything with speech. Rate changes do not apply to a recording ([Talking books](reading.md#talking-books-the-recorded-narration)).
+- `after_end`, default `"stop"`: what follows the end of a document when the reading queue has another. `"stop"` does nothing more; `"ask"` names the next document, and the read key opens and reads it; `"next"` opens and reads it at once. A document is never started unless you ask ([The reading queue](library.md#the-reading-queue)).
 
 ### [display]
 

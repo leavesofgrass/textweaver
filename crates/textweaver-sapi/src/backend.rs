@@ -147,7 +147,7 @@ pub(crate) fn list_tokens(
     if fake {
         args.extend(["--engine", "fake", "--report-arch", arch.as_str()]);
     }
-    let mut host = HostProcess::<Reply>::spawn(path, &args, "sapi")?;
+    let mut host = HostProcess::<Reply>::spawn_engine(path, "sapi", &args)?;
     let result = (|| {
         await_ready(&mut host, arch)?;
         let deadline = Instant::now() + LIST_TIMEOUT;
@@ -392,7 +392,7 @@ impl SapiBackend {
         self.starting[i] = Some(HostStart::begin(
             candidates,
             READY_TIMEOUT,
-            Box::new(move |path: &Path| HostProcess::spawn(path, &args, "sapi")),
+            Box::new(move |path: &Path| HostProcess::spawn_engine(path, "sapi", &args)),
         ));
         Ok(())
     }

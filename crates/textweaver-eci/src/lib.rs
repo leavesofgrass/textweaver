@@ -3,8 +3,9 @@
 //! Eloquence's engine is the ECI library the user installed: Code Factory's
 //! `eci.dll` on Windows (32-bit), OpenEVV's `eci.dll` (x86_64), or Voxin's
 //! `libibmeci.so` on Linux (64-bit). It is loaded at run time, never
-//! linked, and always runs in a separate host process,
-//! `textweaver-eci-host`, which synthesizes into a buffer and reports each
+//! linked, and always runs in a separate host process (the program itself
+//! in host mode, `--engine-host eci`, or the combined 32-bit host
+//! `textweaver-host-x86.exe` for a 32-bit library), which synthesizes into a buffer and reports each
 //! index mark with its sample offset over a framed pipe protocol
 //! ([`protocol`]). [`EciBackend`] plays the audio in the main process and
 //! turns those offsets into audio-clock word events, so the highlight

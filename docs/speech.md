@@ -6,13 +6,13 @@ This guide covers how textweaver speaks: the speech engines it can use, how it c
 
 Each speech engine has a short id, used by `--backend` and by the `backend` setting.
 
-- `eci`: ETI-Eloquence, through its engine library (ECI). Windows and Linux. It runs in a small helper program, the ECI host, so a 32-bit Eloquence works with 64-bit textweaver. textweaver does not include Eloquence; the [Eloquence guide](eloquence.md) explains how to get it. Eloquence reads numbers, dates, and abbreviations itself.
-- `sapi`: Windows SAPI5 voices, including the OneCore voices (Microsoft David, Zira, Mark). Windows only. Each voice runs in a helper program: the 64-bit host for 64-bit voices, and the 32-bit host for older 32-bit-only voices.
+- `eci`: ETI-Eloquence, through its engine library (ECI). Windows and Linux. It runs in a process of its own, the ECI host, and a 32-bit Eloquence runs in the 32-bit host, so it works with 64-bit textweaver. textweaver does not include Eloquence; the [Eloquence guide](eloquence.md) explains how to get it. Eloquence reads numbers, dates, and abbreviations itself.
+- `sapi`: Windows SAPI5 voices, including the OneCore voices (Microsoft David, Zira, Mark). Windows only. Each voice runs in a process of its own: a copy of textweaver in host mode for 64-bit voices, and the 32-bit host, `textweaver-host-x86.exe`, for older 32-bit-only voices.
 - `dectalk`: DECtalk, from a copy you installed. See the [DECtalk guide](dectalk.md).
 - `piper`: Piper neural voices, run inside textweaver on RTen, a speech model runtime written in Rust. Every platform. It is available once you download a voice in the voice manager (Alt+V). Words are highlighted from the voice's own timing. See [Piper voices](#piper-voices) below.
 - `nsspeech`: Apple's system voices through the classic engine. macOS only. It answers fastest.
 - `avspeech`: Apple's system voices through AVSpeechSynthesizer. macOS only. It highlights words most exactly. On macOS 13 and later the system voices include Eloquence (Reed, Shelley, and others).
-- `espeak`: eSpeak NG, from a copy you installed. It runs in one of two ways. On Linux and macOS it runs inside textweaver itself, in builds made with it (the Linux AppImage and tarball, and the Linux install script): install the `espeak-ng` package to use it. On Windows it runs in a small helper program, `textweaver-espeak-host`, which the package includes: install eSpeak NG with its Windows installer, 64-bit or 32-bit, and textweaver starts the helper built for that copy. Either way, without eSpeak NG the backend is simply not available. `TEXTWEAVER_ESPEAK_LIBRARY` names the library file to load instead, and a copy in textweaver's components folder, from your own components source, is loaded first (see [Optional components](components.md#your-own-components-source)). The setting `[speech.espeak] helper` chooses between the two ways; see [below](#speechespeak-espeak-ng).
+- `espeak`: eSpeak NG, from a copy you installed. It runs in one of two ways. On Linux and macOS it runs inside textweaver itself, in builds made with it (the Linux AppImage and tarball, and the Linux install script): install the `espeak-ng` package to use it. On Windows it runs in a helper process, a copy of textweaver started in host mode: install eSpeak NG with its Windows installer, 64-bit or 32-bit, and textweaver starts the helper built for that copy. Either way, without eSpeak NG the backend is simply not available. `TEXTWEAVER_ESPEAK_LIBRARY` names the library file to load instead, and a copy in textweaver's components folder, from your own components source, is loaded first (see [Optional components](components.md#your-own-components-source)). The setting `[speech.espeak] helper` chooses between the two ways; see [below](#speechespeak-espeak-ng).
 - `speechd`: Speech Dispatcher, the speech service Orca uses on Linux. In builds made with it; the Linux install script includes it.
 - `omnivox`: an Omnivox speech server, a separate program found on your `PATH`. It supports rate and tones, but not pitch, volume, or voices.
 - `null`: silent. Used when nothing else works, and by `--no-speech`.
@@ -110,7 +110,7 @@ To write a whole document to an audio file with subtitles, use `tw export-audio`
 
 ## Choose a voice in the reader: Alt+V
 
-Press **Alt+V**. The graphical version lists **Ctrl+Shift+V** (which pastes in edit mode in this release; choose the command from the Speech menu or the palette instead, see [Known limits](known-limits.md#the-graphical-version)), and shows the filters and the actions as buttons beside the list (see [the app guide](gui.md#voices)). This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Alt+End previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes." Alt+End is the Say Status key; if you changed it in `keymap.toml`, the voice manager names your key.
+Press **Alt+V** (or **Ctrl+Alt+V**, except in a macOS terminal, where VoiceOver keeps it). The graphical version uses **Ctrl+Alt+V** (**Cmd+Option+V** on macOS), and shows the filters and the actions as buttons beside the list (see [the app guide](gui.md#voices)). This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Alt+End previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes." Alt+End is the Say Status key; if you changed it in `keymap.toml`, the voice manager names your key.
 
 This is the voice for reading documents. textweaver's own words (messages, lists, help, and settings) have a separate choice, the interface language, in six languages: English, Spanish, French, German, Brazilian Portuguese, and Arabic. `[speech.voices_by_language]` picks which voice speaks each interface language, so switching the interface to Spanish can switch to a Spanish voice automatically. See [`[interface] language`](settings.md#interface) in the settings guide for how to choose it and how textweaver falls back when no voice exists for it.
 
@@ -456,16 +456,14 @@ How closely the highlight follows the voice depends on what the engine tells tex
 
 Some SAPI voices, such as Code Factory's, report no word times. textweaver tells you when you choose one: "This voice does not report words, so the word highlight is estimated."
 
-## Keep the helper programs next to textweaver
+## Engine hosts: how the engines run
 
-Eloquence, SAPI voices, DECtalk, and on Windows eSpeak NG run in small helper programs, called engine hosts. They must stay in the same folder as `textweaver` and `tw`, with the dictionaries folder `ibmtts-dictionaries`:
+Eloquence, SAPI voices, DECtalk, and on Windows eSpeak NG run in processes of their own, called engine hosts, so a crash in an engine never takes textweaver down and each word's timing is exact. There is no separate program per engine:
 
-- `textweaver-eci-host`, and on Windows `textweaver-eci-host-x86.exe`;
-- on Windows, `textweaver-sapi-host.exe` and `textweaver-sapi-host-x86.exe`;
-- `textweaver-dectalk-host`, and on Windows `textweaver-dectalk-host-x86.exe`;
-- on Windows, `textweaver-espeak-host.exe` and `textweaver-espeak-host-x86.exe`.
+- For an engine library of the same architecture as textweaver (64-bit on a 64-bit computer), textweaver starts a copy of itself in a hidden host mode, `--engine-host` followed by the engine's name. You see a second `tw.exe` or `textweaver-gui.exe` in Task Manager while that engine speaks; it ends when textweaver does.
+- On Windows, a 32-bit engine library (Code Factory's Eloquence, most DECtalk libraries, older 32-bit-only SAPI voices, a 32-bit eSpeak NG) runs in the one 32-bit host, `textweaver-host-x86.exe`. It must stay in the same folder as `tw.exe` and the app. Without it, 32-bit voices are not listed and a 32-bit library is refused in words.
 
-If you copy only `textweaver` and `tw` somewhere else, those engines show as not available. The SAPI engine is available only when its 64-bit host is found. Environment variables can point to hosts elsewhere; see below.
+The dictionaries folder, `ibmtts-dictionaries`, must stay beside the programs too. Environment variables can point to a host elsewhere; see below.
 
 ## Choose the sound device
 
@@ -500,15 +498,15 @@ If speech itself stops working (an internal error in textweaver's speech thread)
 These variables change how the engines are found for one run. They win over the settings.
 
 - `TEXTWEAVER_ECI_LIBRARY`: the Eloquence engine library to load, instead of searching.
-- `TEXTWEAVER_ECI_HOST`: the ECI host program to use, instead of the one next to textweaver.
+- `TEXTWEAVER_ECI_HOST`: a host program to run Eloquence in, instead of textweaver itself or `textweaver-host-x86.exe`. It may be a separate host from an earlier release, such as `textweaver-eci-host.exe`, or the 32-bit host.
 - `TEXTWEAVER_ECI_DICTIONARIES`: `off`, or a folder of pronunciation dictionaries to use instead of the included ones. The community lexicon looks here too.
 - `TEXTWEAVER_ECI_CODE_FACTORY`: set to `1` to use Code Factory's Eloquence for Windows, and to list Code Factory's SAPI voices. Only if you bought it.
-- `TEXTWEAVER_SAPI_HOST`: the 64-bit SAPI host program.
-- `TEXTWEAVER_SAPI_HOST_X86`: the 32-bit SAPI host program.
+- `TEXTWEAVER_SAPI_HOST`: a host program for 64-bit SAPI voices, instead of textweaver itself.
+- `TEXTWEAVER_SAPI_HOST_X86`: a host program for 32-bit SAPI voices, instead of the `textweaver-host-x86.exe` beside textweaver.
 - `TEXTWEAVER_DECTALK_LIBRARY`: the DECtalk library to load.
-- `TEXTWEAVER_DECTALK_HOST`: the DECtalk host program.
+- `TEXTWEAVER_DECTALK_HOST`: a host program to run DECtalk in, instead of textweaver itself or `textweaver-host-x86.exe`.
 - `TEXTWEAVER_ESPEAK_LIBRARY`: the eSpeak NG library to load, after the components folder's copy.
-- `TEXTWEAVER_ESPEAK_HOST`: the eSpeak NG helper program, instead of the one next to textweaver.
+- `TEXTWEAVER_ESPEAK_HOST`: a host program to run eSpeak NG in, instead of textweaver itself or `textweaver-host-x86.exe`.
 - `TEXTWEAVER_ESPEAK_OUTPUT`: set to `virtual` to have eSpeak NG make the audio and throw it away, keeping real timing, in either way of running it. For machines with no sound device.
 - `TEXTWEAVER_OMNIVOX`: the Omnivox server program, instead of `omnivox` on your `PATH`.
 - `TEXTWEAVER_OMNIVOX_ARGS`: extra arguments for the Omnivox server, separated by spaces.

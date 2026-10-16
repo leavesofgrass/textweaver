@@ -227,6 +227,38 @@ impl App {
         bar_actions(&self.settings.gui, bar)
     }
 
+    /// The commands `bar` draws now: [`bar_buttons`](Self::bar_buttons),
+    /// and while dictation is active, Pause dictation and Dictate (which
+    /// then stops it), on the toolbar before Slower and Faster, or on the
+    /// header when the toolbar is hidden. They go when dictation ends, are
+    /// not saved, and are never shown twice.
+    pub fn shown_bar_buttons(&self, bar: Bar) -> Vec<ActionId> {
+        let mut actions = self.bar_buttons(bar);
+        let home = if self.settings.gui.toolbar || !self.settings.gui.header {
+            Bar::Toolbar
+        } else {
+            Bar::Header
+        };
+        if bar != home || !self.dictation_status().is_active() {
+            return actions;
+        }
+        let other = self.bar_buttons(match bar {
+            Bar::Header => Bar::Toolbar,
+            Bar::Toolbar => Bar::Header,
+        });
+        let extra: Vec<ActionId> = [ActionId::PauseDictation, ActionId::Dictate]
+            .into_iter()
+            .filter(|a| !actions.contains(a) && !other.contains(a))
+            .collect();
+        let at = actions
+            .iter()
+            .position(|a| matches!(a, ActionId::RateDown | ActionId::RateUp))
+            .filter(|&i| i > 0)
+            .unwrap_or(actions.len());
+        actions.splice(at..at, extra);
+        actions
+    }
+
     /// Adds `action` to the end of `bar`, saves, and returns what to say
     /// ("Find added, toolbar 7 of 7."), or why not.
     pub fn add_button(&mut self, bar: Bar, action: ActionId) -> String {

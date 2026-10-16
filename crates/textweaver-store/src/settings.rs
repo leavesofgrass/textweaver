@@ -262,8 +262,8 @@ pub enum EspeakHelper {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct EspeakSettings {
-    /// Whether eSpeak NG runs in its helper program
-    /// (`textweaver-espeak-host`) or inside textweaver.
+    /// Whether eSpeak NG runs in its helper process (textweaver started
+    /// in host mode, `--engine-host espeak`) or inside textweaver.
     pub helper: EspeakHelper,
     /// Unknown keys, preserved.
     #[serde(flatten)]
@@ -902,6 +902,12 @@ pub struct ReadingSettings {
     /// with the highlight following, and speech reads the rest), or speech
     /// only (`speech`).
     pub book_audio: BookAudio,
+    /// What happens when continuous reading reaches the end of a document
+    /// and the reading queue has another: nothing (`stop`, the default),
+    /// a question naming it (`ask`: "Next: Week 4. Enter to read."), or
+    /// the next document opens and is read (`next`). A document is never
+    /// started unless this is `next` or the reader asks for it.
+    pub after_end: AfterEnd,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -916,6 +922,21 @@ pub enum BookAudio {
     Auto,
     /// Speech only.
     Speech,
+}
+
+/// `[reading] after_end`: what follows the end of a document when the
+/// reading queue has another.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AfterEnd {
+    /// Reading stops; the queue waits.
+    #[default]
+    Stop,
+    /// Reading stops and names the next document; the read key opens and
+    /// reads it.
+    Ask,
+    /// The next document opens and is read.
+    Next,
 }
 
 /// `[reading] stop_at`: where continuous reading stops by itself.
@@ -965,6 +986,7 @@ impl Default for ReadingSettings {
             stop_after_minutes: 0,
             recall_prompts: false,
             book_audio: BookAudio::Auto,
+            after_end: AfterEnd::Stop,
             extra: toml::Table::new(),
         }
     }

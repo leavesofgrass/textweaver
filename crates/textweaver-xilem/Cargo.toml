@@ -70,6 +70,8 @@ omnivox = ["textweaver-app/omnivox"]
 
 [dependencies]
 textweaver-app.workspace = true
+# Host mode: the app runs speech-engine hosts as a copy of itself.
+textweaver-host.workspace = true
 textweaver-theme.workspace = true
 textweaver-fonts = { workspace = true, features = ["bundled-fonts"] }
 masonry.workspace = true
@@ -107,6 +109,15 @@ windows = { workspace = true, features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 windows-core.workspace = true
+
+# Paste reads the clipboard's HTML on macOS (public.html) and Linux
+# (text/html from Wayland's data-control or X11), as the terminal reader
+# does, so formatted text pastes as Markdown. Windows reads it directly.
+[target.'cfg(not(windows))'.dependencies]
+arboard.workspace = true
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+arboard = { workspace = true, features = ["wayland-data-control"] }
 
 # The session ending on Linux and macOS: SIGTERM, SIGHUP (the terminal
 # closed, or the session ended), and Ctrl+C in the terminal it was started

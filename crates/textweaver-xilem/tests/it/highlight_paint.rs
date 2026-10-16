@@ -386,3 +386,118 @@ fn the_bold_word_moves_nothing_on_the_line() {
         .expect("bold word");
     assert_eq!(clip, band.inflate(3.0, 1.0));
 }
+
+/// The default highlight palette as the window draws it: entry `i`'s
+/// color and shape, as the terminal reader resolves them.
+fn named(i: usize) -> textweaver_xilem::document::NamedMark {
+    let palette = textweaver_app::store::default_palette();
+    let m = textweaver_app::palette::entry_mark(&palette, i).expect("an entry");
+    textweaver_xilem::document::NamedMark {
+        color: m.look.color,
+        shape: m.look.shape,
+        name: u16::try_from(i).expect("a small palette"),
+    }
+}
+
+/// Each name in the highlight palette is drawn in its own color with its
+/// own shape, so no two names differ by color alone (the owner cannot
+/// tell red from green): every pair of shapes draws different lines.
+#[test]
+fn each_palette_name_has_its_own_shape() {
+    use masonry::kurbo::Rect;
+    use textweaver_xilem::document::named_shape;
+    let n = textweaver_app::store::default_palette().len();
+    let band = Rect::new(10.0, 20.0, 110.0, 44.0);
+    let drawn: Vec<_> = (0..n)
+        .map(|i| {
+            let m = named(i);
+            assert!(m.color.is_some(), "entry {i} has a color");
+            // Bold has no line: its text is drawn bold.
+            (m.shape, named_shape(m.shape, band, true, true))
+        })
+        .collect();
+    for (a, (sa, la)) in drawn.iter().enumerate() {
+        for (sb, lb) in drawn.iter().skip(a + 1) {
+            assert_ne!(sa, sb, "two names share a shape");
+            assert_ne!(la, lb, "{sa:?} and {sb:?} draw the same lines");
+        }
+        // Every line stays inside the band, on the band's ink.
+        for r in la {
+            assert!(r.x0 >= band.x0 && r.y0 >= band.y0, "{sa:?}: {r:?}");
+            assert!(r.x1 <= band.x1 && r.y1 <= band.y1, "{sa:?}: {r:?}");
+        }
+    }
+    // A highlight over two lines: the brackets open on the first and
+    // close on the last, and the symbol is at the start only.
+    use textweaver_app::store::HighlightShape as S;
+    let first = named_shape(S::Brackets, band, true, false);
+    let last = named_shape(S::Brackets, band, false, true);
+    assert!(first.iter().all(|r| r.x0 < band.center().x));
+    assert!(last.iter().all(|r| r.x1 > band.center().x));
+    assert!(named_shape(S::Symbol, band, false, true).is_empty());
+}
+
+/// The text and shape on a palette color are black or white, whichever
+/// reads better: at least 4.5 to 1 on every color of the default palette,
+/// in Galaxy and in Galaxy Light. A high contrast theme keeps its own
+/// colors.
+#[test]
+fn palette_colors_keep_the_text_readable() {
+    use textweaver_theme::color::contrast_ratio;
+    use textweaver_xilem::document::named_colors;
+    let n = textweaver_app::store::default_palette().len();
+    for theme_name in ["galaxy", "galaxy-light"] {
+        let p = Palette::named(theme_name);
+        for i in 0..n {
+            let m = named(i);
+            let (band, ink) = named_colors(&p, m);
+            assert_eq!(Some(band), m.color, "{theme_name}: entry {i}'s band");
+            let ink = ink.expect("ink on a palette color");
+            let r = contrast_ratio(ink, band);
+            assert!(r >= 4.5, "{theme_name}: entry {i} is {r:.2} to 1");
+        }
+    }
+    let hc = Palette::named("high-contrast");
+    assert_eq!(named_colors(&hc, named(0)), (hc.user_highlight, None));
+}
+
+/// A named highlight paints its band in its palette color and its shape
+/// over the text, after the bands, as the other marks do.
+#[test]
+fn named_highlights_are_painted_with_their_shapes() {
+    let p = Palette::galaxy();
+    let mut h = harness(&p);
+    let n = textweaver_app::store::default_palette().len();
+    let marks: Vec<_> = (0..n)
+        .map(|i| {
+            let at = 4 + i * 6;
+            (CharRange::new(at, at + 4), DocMark::Named(named(i)))
+        })
+        .collect();
+    h.edit_root_widget(|mut d| DocumentView::set_marks(&mut d, marks.clone()));
+    let steps = read(&mut h);
+    for (_, mark) in &marks {
+        assert!(
+            steps
+                .iter()
+                .any(|s| matches!(s, PaintStep::MarkBand(m, _) if m == mark)),
+            "{mark:?} band"
+        );
+        assert!(
+            steps
+                .iter()
+                .any(|s| matches!(s, PaintStep::MarkShape(m, _) if m == mark)),
+            "{mark:?} shape"
+        );
+    }
+    let last_band = steps
+        .iter()
+        .rposition(|s| matches!(s, PaintStep::MarkBand(..)))
+        .expect("bands");
+    let first_shape = steps
+        .iter()
+        .position(|s| matches!(s, PaintStep::MarkShape(..)))
+        .expect("shapes");
+    assert!(last_band < first_shape);
+    let _ = h.render();
+}
