@@ -239,7 +239,7 @@ Color never tells the names apart on its own. Every highlight is said by its nam
 
 - In the terminal reader, the highlight's color is the band behind the text, with black or white text, whichever reads better on it, and the shape is a set of text attributes of its own: underline; underline and bold; bold; underline and italic; italic; italic and bold. With colors off, the attributes still tell the names apart.
 - In a BRF file, each of the first five names has its own transcriber-defined typeform, and a transcriber's note at the start says which typeform is which name. This happens when you export the document you highlighted (**File**, **Export as**, **BRF**). UEB has five transcriber-defined typeforms, so highlights with the sixth to eighth names are not marked in braille, and the export report says so.
-- The graphical version draws every highlight with the same mark, whatever its name. The name is kept and is said by the highlights list; the shapes appear in the terminal reader. See [Known limits](known-limits.md#the-graphical-version).
+- In the textweaver app, the color is the band behind the text, again with black or white text, whichever reads better (at least 4.5 to 1 on any color), and the shape is drawn: a line under the text; a double line; the text in bold; a dotted line; a bracket at each end; or a small square at the start. A high contrast theme keeps its own colors, and the shapes still tell the names apart. A screen reader is given the name in words ("Highlight, important") as the description of the text it covers, with the band and the line as text attributes, which NVDA and JAWS report when they are set to read colors and underlines.
 
 Highlights made before the palette, in textweaver or in star, have only a color. Each takes the name of the first palette entry with its color, so star's yellow highlights are "important". If you rename an entry, its highlights follow the same rule: they take the name of the entry with their color. A highlight whose color is in no entry is said by its color and drawn with a shape no entry uses, when one is free.
 
@@ -297,7 +297,7 @@ Press **F2** for the command palette and type `self test`, or choose **Self-test
 Each prompt is said and its answer is hidden. In the list:
 
 - **Up** and **Down** move between prompts, which are said with their position, such as "2 of 12".
-- Answer silently or aloud, then press **Enter**. You hear "Answer:" and the passage. The prompt now shows its answer, and the list stays on it. **Enter** again says the answer again.
+- Answer silently or aloud, then press **Enter**. You hear "Answer:" and the passage, once. The prompt now shows its answer, and the list stays on it. **Enter** again says the answer again. In the textweaver app, a screen reader is not told the prompt's new text while you stay on it, so the answer is not said twice; when you come back to the prompt, it is read with its answer.
 - **Space** answers aloud (see below).
 - **Escape** closes the list. Opening the self-test again starts with every answer hidden.
 

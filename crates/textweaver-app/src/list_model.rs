@@ -74,6 +74,11 @@ pub struct ListModel {
     /// The position is said after the item ("notes.md, Markdown, 3 of
     /// 40"), so a Braille line starts with the name (the file browser).
     position_last: bool,
+    /// Shown again after a change to the focused item that the app has
+    /// just said (the self-test's revealed answer): a frontend whose
+    /// screen reader says a changed name keeps the item's old name until
+    /// the focus moves, so the change is said once.
+    pub change_said: bool,
 }
 
 impl ListModel {
@@ -99,6 +104,7 @@ impl ListModel {
             descriptions: Vec::new(),
             said,
             position_last: false,
+            change_said: false,
         }
     }
 
@@ -115,6 +121,9 @@ impl ListModel {
         let next = self.selected.saturating_add_signed(delta).min(last);
         let moved = next != self.selected;
         self.selected = next;
+        if moved {
+            self.change_said = false;
+        }
         moved
     }
 
@@ -551,6 +560,7 @@ impl App {
                     if let Some(i) = self.pending_list_focus.take().or(keep) {
                         view.selected = i.min(view.items.len().saturating_sub(1));
                     }
+                    view.change_said = quiet;
                     let item = (self.announce_list_focus && !quiet)
                         .then(|| view.spoken_item_text(self.cat()))
                         .flatten();

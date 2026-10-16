@@ -24,8 +24,6 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 These limits apply to the textweaver app (`textweaver-gui`). The terminal reader does not have them, unless stated.
 
-- **Every highlight name is drawn the same way.** In the terminal reader, each name in your highlight palette has its own color and its own shape, so a name never depends on color alone. The graphical version draws all highlights with one mark. The names are still kept, listed, filtered, and exported, and they show as shapes in the terminal reader and as typeforms in braille files. Next step: use the highlights list (Shift+Y), which says each name, or the terminal reader, to see the shapes. Drawing each shape in the graphical version is planned ([Highlight colors](notes.md#highlight-colors)).
-- **A screen reader may say the answer twice in the self-test.** After you press Enter on a prompt in the self-test, the graphical version reveals the answer, and a screen reader may announce the revealed answer twice. The answer is correct both times. Next step: use the self-test in the terminal reader if the repeat gets in the way; a fix for the graphical version is planned.
 - **Some commands exist only in the terminal reader.** The app says "This command works in the terminal reader." when you press the key for one ([What only the terminal reader does](gui.md#what-only-the-terminal-reader-does)).
 
 ## Reading and speech

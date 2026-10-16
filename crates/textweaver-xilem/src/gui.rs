@@ -238,6 +238,8 @@ struct Shown {
     edit_button: bool,
     /// The notes, bookmarks, highlights, and search matches drawn.
     marks: Vec<(CharRange, crate::document::DocMark)>,
+    /// What a screen reader is told of each highlight drawn.
+    mark_names: Vec<String>,
     /// The caret keys the view leaves to the keymap in the app's mode.
     yielded: Option<Vec<textweaver_app::keymap::KeyChord>>,
 }
@@ -1518,24 +1520,53 @@ pub fn tick_signature(app: &App) -> u64 {
 
 /// The notes, bookmarks, the reader's highlights, and the search matches in
 /// `window`, as the document view draws them (the selection and the spoken
-/// word and sentence are its own).
-pub fn marks_in(app: &App, window: CharRange) -> Vec<(CharRange, crate::document::DocMark)> {
-    use crate::document::DocMark;
+/// word and sentence are its own), and what a screen reader is told of
+/// each highlight ("Highlight, important"), by [`NamedMark::name`].
+///
+/// [`NamedMark::name`]: crate::document::NamedMark::name
+pub fn marks_in(
+    app: &App,
+    window: CharRange,
+) -> (Vec<(CharRange, crate::document::DocMark)>, Vec<String>) {
+    use crate::document::{DocMark, NamedMark};
     use textweaver_app::HighlightKind as K;
-    app.highlights(window)
-        .into_iter()
-        .filter_map(|h| {
-            let mark = match h.kind {
-                K::UserHighlight => DocMark::Highlight,
-                K::Note => DocMark::Note,
-                K::Bookmark => DocMark::Bookmark,
-                K::FindHit => DocMark::FindHit,
-                K::CurrentFindHit => DocMark::CurrentFindHit,
-                K::Selection | K::SpokenSentence | K::SpokenWord => return None,
+    let mut marks = Vec::new();
+    let mut names: Vec<String> = Vec::new();
+    if let Some(s) = app.session() {
+        let c = app.catalog();
+        for h in &s.highlights {
+            let r = h.range;
+            if !(r.intersects(window) || (r.is_empty() && window.contains(r.start))) {
+                continue;
+            }
+            // Its name, color and shape, as the terminal reader draws it.
+            let m = app.highlight_mark(h);
+            let said = c.fmt("notes-highlight-label", &args!["name" => m.name.as_str()]);
+            let name = names.iter().position(|n| *n == said).unwrap_or_else(|| {
+                names.push(said);
+                names.len() - 1
+            });
+            let mark = NamedMark {
+                color: m.look.color,
+                shape: m.look.shape,
+                name: u16::try_from(name).unwrap_or(u16::MAX),
             };
-            Some((h.range, mark))
-        })
-        .collect()
+            marks.push((r, DocMark::Named(mark)));
+        }
+    }
+    let rest = app.highlights(window).into_iter().filter_map(|h| {
+        let mark = match h.kind {
+            K::UserHighlight => return None,
+            K::Note => DocMark::Note,
+            K::Bookmark => DocMark::Bookmark,
+            K::FindHit => DocMark::FindHit,
+            K::CurrentFindHit => DocMark::CurrentFindHit,
+            K::Selection | K::SpokenSentence | K::SpokenWord => return None,
+        };
+        Some((h.range, mark))
+    });
+    marks.extend(rest);
+    (marks, names)
 }
 
 /// What the reading highlight draws (`[highlight] enabled`, `granularity`,
@@ -1720,10 +1751,16 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
         shown.editing = editing;
     }
     // The reader's marks and the search matches in the window.
-    let marks = shown
+    let (marks, names) = shown
         .window
         .map(|w| marks_in(app, w.range()))
         .unwrap_or_default();
+    if names != shown.mark_names {
+        host.edit(DOC, |mut d| {
+            DocumentView::set_mark_names(&mut d, names.clone())
+        });
+        shown.mark_names = names;
+    }
     if marks != shown.marks {
         host.edit(DOC, |mut d| DocumentView::set_marks(&mut d, marks.clone()));
         shown.marks = marks;
@@ -4021,11 +4058,14 @@ impl Gui {
                 }
             }
             Some(m) => {
-                let (items, selected) = (m.items.clone(), m.selected);
+                let (items, selected, said) = (m.items.clone(), m.selected, m.change_said);
                 let rows = dialog::Rows::from_model(m);
                 let root = ctx.render_root(self.window_id);
                 root.edit_widget_with_tag(LIST, |mut l| match rows {
                     Some(rows) => ChoiceList::sync_rows(&mut l, rows, selected),
+                    // A change the app just said (the self-test's answer):
+                    // said once, not again as the row's new name.
+                    None if said => ChoiceList::sync_after_said(&mut l, &items, selected),
                     None => ChoiceList::sync(&mut l, &items, selected),
                 });
                 // The filter buttons say what the list shows now.
