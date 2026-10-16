@@ -57,7 +57,9 @@ env:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 90
+    # A cold cache (it expires after a week unused) takes longer than 90
+    # minutes on Windows; the room lets the run finish and save it.
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install
