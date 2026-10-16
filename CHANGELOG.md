@@ -4,6 +4,11 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### The app
+
+- **Each highlight name has its own color and shape in the textweaver app,** as in the terminal reader: the name's color as the band, with black or white text, whichever reads better, and its shape drawn (a line, a double line, bold text, a dotted line, brackets, or a small square at the start), so no two names differ by color alone. A screen reader is given the name in words ("Highlight, important") on the text it covers, with the band and the line as text attributes ([Highlight colors](docs/notes.md#highlight-colors)).
+- **The self-test's answer is said once.** After Enter revealed an answer, the app said it, and a screen reader then said the prompt's new text, with the answer, a second time. The prompt now keeps the text the screen reader knows until the focus moves; coming back to it reads the answer. The same holds for other changes the app says on a list's focused row, such as reversing a study card.
+
 ## [0.1.0-beta.2] - 2026-10-10
 
 In short: beta 2 fixes the speech rate, and brings every document up to date.
