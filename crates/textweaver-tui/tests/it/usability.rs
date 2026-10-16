@@ -154,7 +154,7 @@ fn the_help_names_the_keys_a_new_user_needs() {
         "{items:?}"
     );
     assert!(
-        has("Choose a voice: Alt+V. Restart speech if it stops: Shift+F8."),
+        has("Choose a voice: Alt+V or Ctrl+Alt+V. Restart speech if it stops: Shift+F8."),
         "{items:?}"
     );
 }
