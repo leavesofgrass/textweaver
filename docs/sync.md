@@ -1,6 +1,6 @@
 # Syncing between computers
 
-This guide covers syncing your notes, highlights, study cards, bookmarks, reading places, reading statistics, settings, profiles, key overrides, word list, glossary, pronunciations, and favorite voices between computers, through a folder you choose. There is no account, no server, and no network code inside textweaver: textweaver only reads and writes files in the folder, and something else, such as Syncthing or a USB stick you carry, moves them between computers.
+This guide covers syncing your notes, highlights, study cards, bookmarks, reading places, the reading queue, reading statistics, settings, profiles, key overrides, word list, glossary, pronunciations, and favorite voices between computers, through a folder you choose. There is no account, no server, and no network code inside textweaver: textweaver only reads and writes files in the folder, and something else, such as Syncthing or a USB stick you carry, moves them between computers.
 
 Documents sync wherever they are on disk, not only inside a library folder: textweaver recognizes the same document on each computer by its contents, even under a different name or path.
 
@@ -8,7 +8,7 @@ Documents sync wherever they are on disk, not only inside a library folder: text
 
 Each group has its own switch, so you can turn one off without turning off the rest. Turning a group off stops that group only: this computer neither sends nor takes its items.
 
-- **Places**: where you are in each document, one place per computer.
+- **Places**: where you are in each document, one place per computer, and with them the [reading queue](#the-reading-queue), the documents you mean to read next.
 - **Notes**, and with them your [study cards](notes.md#study-with-cards) and every grade you gave them.
 - **Highlights.**
 - **Bookmarks.**
@@ -65,7 +65,7 @@ Set up sync writes these under `[sync]` in `settings.toml`; you can also change 
 - `enabled`: sync on this computer.
 - `folder`: the sync folder.
 - `device_name`: this computer's name; empty uses "Computer 1", "Computer 2", and so on.
-- `places`, `notes`, `highlights`, `bookmarks`, `statistics`, `settings`, `profiles`, `key_overrides`, `words`, `glossary`, `favorite_voices`: one switch per group, all on by default. Turning one off stops that group only.
+- `places`, `notes`, `highlights`, `bookmarks`, `statistics`, `settings`, `profiles`, `key_overrides`, `words`, `glossary`, `favorite_voices`: one switch per group, all on by default. Turning one off stops that group only. `places` covers the reading queue too.
 - `position_policy`: which place a document opens at when another computer has one too: `newest` (the default), `furthest`, or `ask`. It replaces `[reading] sync_conflict_policy`; a value you set there moves here on its own (`highest_progress` becomes `furthest`, `manual` becomes `ask`), and it also decides between places in a library folder's old progress file.
 
 ## What you hear
@@ -98,6 +98,21 @@ The text that lost is not discarded: it goes into this computer's backup of repl
 Study cards travel with the Notes group. A card's question, answer, and direction follow the newest edit, as a note does, but its grades are never replaced: when the same card was graded on two computers while they were apart, the next sync keeps every grade from both, in the order they were given, and each computer works out the same schedule from them. Nothing is spoken when cards arrive; the next study session and the Cards list simply include them. Taking a card out of the Cards list takes it out on the other computers too; making cards again from the same notes afterwards brings it back, without the old grades.
 
 The cards were added to the sync record without changing its format, so a sync folder written by an earlier version is read as before, and an earlier version reading a folder written by this one ignores the cards.
+
+### The reading queue
+
+The [reading queue](library.md) travels with the places group. Each document in it is sent as the document itself, recognized by its contents as notes are (below), with the time it joined the queue; never its path or file name. A document you queue from the library list need not have been opened first: textweaver recognizes it in the background, the way it does when you edit a document's details.
+
+How two computers' queues are settled:
+
+- **Adding wins over silence.** A document added on either computer joins the queue on both. Nothing added is ever dropped without a removal you made.
+- **Removing is remembered.** Taking a document out, with Delete in the queue list or by reading it to the end, takes it out on the other computers too, and it does not come back from a computer that had not heard yet.
+- **The newest change wins.** When one computer removed a document and the other added it again later, the later add wins, and it is back on both. When both added the same document while apart, it is in the queue once.
+- **Order is by when each document was added,** on every computer, so both list the queue the same way. Taking a document out and adding it again moves it to the end, everywhere.
+
+A document queued on another computer that is not found on this one keeps its place. The queue list says so, "Week 4, not on this computer", using the title another computer knows, or "A document from another computer" when none does; Enter on it only says that it is not here, and Delete takes it out of the queue on every computer. Reading on from the queue passes it over. Once you open the document here, from wherever it is on this computer, it is recognized, and the queue entry becomes an ordinary one. Documents arriving in the queue are taken in quietly: no message is said, and the queue list simply includes them.
+
+The queue is a file of its own in the sync folder, `queue.json`, beside the settings and word lists. A textweaver from before the queue synced never reads that file and never changes it, so it neither loses nor damages anything: its own queue simply stays on that computer until it is updated, and nothing it writes undoes a removal made on an updated computer.
 
 ### Deleted notes, and edits that bring them back
 
