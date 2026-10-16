@@ -32,13 +32,16 @@ Beta 1 follows the last alpha with the features below. Each is described in its 
 - **Updates and packages.** One download per system holding the app and `tw`; an update check that asks first, `tw update`, and Help, Check for updates ([Updates](updates.md), [Installing textweaver](install.md)).
 - **Components.** ffmpeg, liblouis, and Pandoc fetched for you; a components folder searched first for helper programs, your own components source (including a private GitHub repository), and an unpack action for archives ([Optional components](components.md)).
 
-## Moved to beta 3
+## What beta 3 adds
 
-These were planned for earlier betas and are now in beta 3:
+These were planned for earlier betas and arrive in beta 3:
 
-- Anki import and export.
-- The reading queue.
-- The app's shortcut name.
+- Anki import and export: study cards travel as `.apkg` packages ([Take cards to Anki and back](notes.md#take-cards-to-anki-and-back)).
+- The reading queue and the review list ([The library](library.md#the-reading-queue)).
+- Pause and resume for dictation, with dictation buttons in the textweaver app.
+- A color and a shape for each highlight name in the textweaver app, and Markdown paste on macOS and Linux.
+- One engine host built into `tw` and the app, in place of separate helper programs for each engine.
+- The shortcut name "textweaver app".
 - The full rewrite of the guides. Beta 1 and beta 2 correct wording and keep every guide current; beta 3 rewrites them for a university-level reader throughout.
 
 ## Being built next
