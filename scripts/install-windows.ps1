@@ -385,19 +385,19 @@ function Add-GuiShortcut {
         $link.IconLocation = "$exe,0"
         $link.Save()
     }
-    Remove-OldGuiShortcut
+    Invoke-OldGuiShortcutCleanup
 }
 
 function Undo-GuiShortcut {
     if (Test-Path -LiteralPath $GuiShortcutPath) {
         Invoke-Step "remove the shortcut $GuiShortcutPath" { Remove-Item -LiteralPath $GuiShortcutPath -Force }
     }
-    Remove-OldGuiShortcut
+    Invoke-OldGuiShortcutCleanup
 }
 
 # Removes the shortcut "textweaver window", which this script made up to
 # beta 2: only that one file, and only when it starts textweaver-gui.exe.
-function Remove-OldGuiShortcut {
+function Invoke-OldGuiShortcutCleanup {
     if (-not (Test-Path -LiteralPath $OldGuiShortcutPath -PathType Leaf)) { return }
     $target = (New-Object -ComObject WScript.Shell).CreateShortcut($OldGuiShortcutPath).TargetPath
     if ([IO.Path]::GetFileName($target) -ne 'textweaver-gui.exe') {
@@ -628,7 +628,7 @@ function Uninstall-Textweaver {
     if ((Test-Path -LiteralPath $GuiShortcutPath) -or $DryRun) {
         Invoke-Step "remove the shortcut $GuiShortcutPath" { Remove-Item -LiteralPath $GuiShortcutPath -Force }
     }
-    Remove-OldGuiShortcut
+    Invoke-OldGuiShortcutCleanup
     Write-Line
     Write-Line 'textweaver is removed.'
 }
