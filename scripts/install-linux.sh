@@ -1102,7 +1102,7 @@ write_gui_desktop() {
   {
     say "[Desktop Entry]"
     say "Type=Application"
-    say "Name=textweaver window"
+    say "Name=textweaver app"
     say "GenericName=Talking document reader"
     say "Comment=Read documents aloud in a window, with a highlight that follows the spoken word"
     say "Exec=\"$exe\" %f"
@@ -1331,7 +1331,7 @@ install_release() {
   say "Check your speech engines: $BINDIR/tw backends"
   say "Read the quick start aloud: $BINDIR/textweaver $DOCDIR/QUICKSTART.md"
   if [ -n "$GUI_INSTALLED" ]; then
-    say "Start the GUI from the menu entry textweaver window, or run $BINDIR/textweaver-gui"
+    say "Start the GUI from the menu entry textweaver app, or run $BINDIR/textweaver-gui"
   fi
   if [ "$kind" = tarball ]; then
     say "The guides are in $LIBDIR/docs."

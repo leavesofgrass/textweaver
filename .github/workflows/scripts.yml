@@ -96,7 +96,7 @@ jobs:
           $out
           # Since beta 1 the app is in the package (B1-o2): -Gui adds the
           # manifest line and the shortcut, and downloads nothing more.
-          foreach ($want in 'gui=package', 'textweaver window.lnk') {
+          foreach ($want in 'gui=package', 'textweaver app.lnk') {
             if (-not ($out | Select-String -SimpleMatch $want)) { throw "install-windows.ps1 --gui did not mention $want" }
           }
       - name: Dry runs in PowerShell 7

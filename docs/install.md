@@ -54,7 +54,7 @@ The scripts are in a copy of the repository. To get one:
 git clone https://github.com/leavesofgrass/textweaver
 ```
 
-To set up the app as well, add `--gui` (`-Gui` also works on Windows). Since beta 1 the app is in the same package as `tw`, so nothing more is downloaded: the script adds a shortcut or menu entry named "textweaver window", and on macOS copies `textweaver.app` into `~/Applications` and on Linux links `textweaver-gui` into `~/.local/bin`. On Windows the app is installed beside `tw.exe` either way. For releases up to 0.1.0-alpha.9, `--gui` downloads their separate app package instead. Running the script again, or the update script, keeps the app set up; `--no-gui` removes the shortcut, menu entry, link, or copy. On Linux `--gui` goes with `--release`.
+To set up the app as well, add `--gui` (`-Gui` also works on Windows). Since beta 1 the app is in the same package as `tw`, so nothing more is downloaded: the script adds a shortcut or menu entry named "textweaver app" (releases up to beta 2 named it "textweaver window"; on Windows the script removes that old shortcut), and on macOS copies `textweaver.app` into `~/Applications` and on Linux links `textweaver-gui` into `~/.local/bin`. On Windows the app is installed beside `tw.exe` either way. For releases up to 0.1.0-alpha.9, `--gui` downloads their separate app package instead. Running the script again, or the update script, keeps the app set up; `--no-gui` removes the shortcut, menu entry, link, or copy. On Linux `--gui` goes with `--release`.
 
 ```bash
 bash scripts/install-linux.sh --release latest --gui

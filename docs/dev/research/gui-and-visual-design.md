@@ -290,7 +290,7 @@ What not to do: no gradients or blur behind text, no animated scrolling in the d
 ## See also
 
 - [Research index](README.md)
-- [The textweaver window](../../gui.md)
+- [The textweaver app](../../gui.md)
 - [Themes](../../themes.md)
 - [ADR-0020: Themes](../../adr/0020-themes.md)
 - [ADR-0027: Xilem GUI](../../adr/0027-xilem-gui.md)

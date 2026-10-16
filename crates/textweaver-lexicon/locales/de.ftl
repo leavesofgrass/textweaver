@@ -497,7 +497,7 @@ list-nothing-to-mark = Nichts zu markieren in dieser Liste.
 notes-editing = Notiz wird bearbeitet: { $text }
 # $key opens a document.
 app-no-document-open = Kein Dokument ist geöffnet. Drücken Sie { $key }, um eines zu öffnen.
-app-window-only = Dieser Befehl funktioniert im textweaver-Fenster.
+app-window-only = Dieser Befehl funktioniert in der textweaver-App.
 app-terminal-only = Dieser Befehl funktioniert im Terminal-Reader.
 settings-save-failed = Einstellungen konnten nicht gespeichert werden: { $error } Ihre Änderungen gelten, bis Sie beenden.
 settings-outside-kept = Außerhalb von textweaver geänderte Einstellungen wurden beibehalten.
