@@ -4052,11 +4052,14 @@ impl Gui {
                 }
             }
             Some(m) => {
-                let (items, selected) = (m.items.clone(), m.selected);
+                let (items, selected, said) = (m.items.clone(), m.selected, m.change_said);
                 let rows = dialog::Rows::from_model(m);
                 let root = ctx.render_root(self.window_id);
                 root.edit_widget_with_tag(LIST, |mut l| match rows {
                     Some(rows) => ChoiceList::sync_rows(&mut l, rows, selected),
+                    // A change the app just said (the self-test's answer):
+                    // said once, not again as the row's new name.
+                    None if said => ChoiceList::sync_after_said(&mut l, &items, selected),
                     None => ChoiceList::sync(&mut l, &items, selected),
                 });
                 // The filter buttons say what the list shows now.
