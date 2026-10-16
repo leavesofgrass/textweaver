@@ -4,6 +4,11 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Dictation
+
+- **New: pause and resume dictation.** Pause dictation (Alt+Shift+F9, in the Edit menu and the command palette) pauses the microphone during a dictation and resumes it. The phrase being spoken is finished and typed first, so no words are lost; what the microphone hears while paused is discarded, and the session, the loaded model and the text stay. "Dictation paused." and "Dictation resumed." are said, and the terminal reader's status line begins "Dictation paused." while it lasts.
+- **New: dictation buttons in the textweaver app.** While a dictation is under way, the toolbar shows Pause dictation (Resume dictation while paused) and Stop dictation beside the other buttons, before Slower and Faster, or on the header when the toolbar is hidden. They leave when the dictation ends, and the focus moves to the document if it was on one of them.
+
 ## [0.1.0-beta.2] - 2026-10-10
 
 In short: beta 2 fixes the speech rate, and brings every document up to date.
