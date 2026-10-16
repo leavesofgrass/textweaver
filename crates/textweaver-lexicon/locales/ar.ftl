@@ -557,7 +557,7 @@ list-nothing-to-mark = لا شيء لتحديده في هذه القائمة.
 notes-editing = تحرير ملاحظة: { $text }
 # $key opens a document.
 app-no-document-open = لا يوجد مستند مفتوح. اضغط { $key } لفتح واحد.
-app-window-only = يعمل هذا الأمر في نافذة textweaver.
+app-window-only = يعمل هذا الأمر في تطبيق textweaver.
 app-terminal-only = يعمل هذا الأمر في قارئ الطرفية.
 settings-save-failed = تعذّر حفظ الإعدادات: { $error } تبقى تغييراتك سارية حتى تخرج.
 settings-outside-kept = تم الاحتفاظ بالإعدادات التي تغيّرت خارج textweaver.

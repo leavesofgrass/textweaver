@@ -60,6 +60,6 @@ Description: after Start editing, the document's frame turns dashed and an "Edit
 
 ## See also
 
-- [The textweaver window](gui.md)
+- [The textweaver app](gui.md)
 - [Reading aids](reading-aids.md)
 - [Themes](themes.md)

@@ -209,7 +209,7 @@ GUIDE_TITLES = {
     "install.md": "Installation guide",
     "screen-readers.md": "Screen reader guide",
     "roadmap.md": "Roadmap",
-    "gui.md": "The textweaver window (GUI)",
+    "gui.md": "The textweaver app (GUI)",
     "adr/0014-gui-toolkit.md": "ADR-0014: GUI toolkit (wxDragon)",
 }
 

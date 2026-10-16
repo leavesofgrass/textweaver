@@ -4,6 +4,10 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Packages and the build
+
+- **The app's shortcut is named "textweaver app".** The Start menu shortcut that `install-windows.ps1 -Gui` makes and the menu entry from `install-linux.sh --gui` were named "textweaver window". On Windows the script removes the old shortcut, `textweaver window.lnk`, when it makes or removes the new one, and only when that shortcut starts `textweaver-gui.exe`; on Linux the menu entry is rewritten in place. The documentation's navigation and the terminal's note for a command that only the app has say "the textweaver app" too.
+
 ### For contributors
 
 - `cargo xtask release` no longer rewrites lines that record history. A line ending with the comment `<!-- history -->`, and the "Last listening check" line, keep the version they name. The beta 2 release changed such lines by mistake, and they had to be restored by hand; one, about the app AppImages of 0.1.0-alpha.9 and earlier, is corrected now. The release guide says how to mark a history line.
