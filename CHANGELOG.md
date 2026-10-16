@@ -4,6 +4,16 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Changed
+
+- **Fewer programs in the package, the same engines.** An antivirus program flagged two of textweaver's small engine host programs with a heuristic detection. The separate host for each engine is gone: `tw` and the app now run Eloquence, SAPI 5 voices, DECtalk, and eSpeak NG in a copy of themselves, started in a hidden host mode (`--engine-host`), and on Windows one 32-bit host, `textweaver-host-x86.exe`, runs every 32-bit engine and voice. The Windows package holds four programs instead of eleven, and the Linux package no host programs. Engines still run in their own process, so a crash cannot close textweaver, and word timing is as exact as before.
+- `TEXTWEAVER_ECI_HOST`, `TEXTWEAVER_SAPI_HOST`, `TEXTWEAVER_SAPI_HOST_X86`, `TEXTWEAVER_DECTALK_HOST`, and `TEXTWEAVER_ESPEAK_HOST` still work. They may name a separate host from an earlier release, which is used as before, or any other program, which is started in host mode. The old host programs (`textweaver-eci-host.exe` and the like) are no longer needed; an update may leave them in the folder, and they can be deleted.
+- `cargo xtask hosts` builds only the 32-bit host (Windows); elsewhere there is no host to build. The Linux install script no longer runs it.
+
+### Help and documentation
+
+- The troubleshooting guide explains antivirus warnings that name a heuristic detection: what they mean, how to check the package against `SHA256SUMS.txt`, and how to report a false positive to the vendor.
+
 ## [0.1.0-beta.2] - 2026-10-10
 
 In short: beta 2 fixes the speech rate, and brings every document up to date.
