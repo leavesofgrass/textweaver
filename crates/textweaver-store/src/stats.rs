@@ -12,7 +12,7 @@
 //! so a later version can go to it.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -188,32 +188,52 @@ impl ReadingStats {
         v
     }
 
-    /// The review list: the documents read before, the one read longest
+    /// The review list: the documents read before whose file `keep`
+    /// accepts (the caller checks that it is there), the one read longest
     /// ago first, at most [`REVIEW_MAX`]. `now` is Unix seconds; `notes`
-    /// counts a document's notes by its key. Documents without a file (a
-    /// web page read once) and those never read aloud are left out.
+    /// counts a document's notes by its key, and is asked only for the rows
+    /// listed. Documents without a file (a web page read once) are left
+    /// out.
     ///
     /// A convenience for coming back to old readings, not a study method:
     /// nothing here schedules reviews.
-    pub fn review(&self, now: i64, notes: &dyn Fn(&str) -> usize) -> Vec<ReviewItem> {
-        let mut v: Vec<ReviewItem> = self
+    pub fn review(
+        &self,
+        now: i64,
+        keep: &dyn Fn(&Path) -> bool,
+        notes: &dyn Fn(&str) -> usize,
+    ) -> Vec<ReviewItem> {
+        let mut v: Vec<(&str, ReviewItem)> = self
             .documents
             .iter()
             .filter(|(_, d)| d.last_read > 0)
             .filter_map(|(k, d)| {
-                Some(ReviewItem {
-                    path: d.path.clone()?,
-                    title: d.title.clone(),
-                    days: (now - d.last_read).max(0) / 86_400,
-                    last_read: d.last_read,
-                    percent: d.furthest_percent.min(100),
-                    notes: notes(k),
-                })
+                let path = d.path.clone().filter(|p| keep(p))?;
+                Some((
+                    k.as_str(),
+                    ReviewItem {
+                        path,
+                        title: d.title.clone(),
+                        days: (now - d.last_read).max(0) / 86_400,
+                        last_read: d.last_read,
+                        percent: d.furthest_percent.min(100),
+                        notes: 0,
+                    },
+                ))
             })
             .collect();
-        v.sort_by(|a, b| a.last_read.cmp(&b.last_read).then(a.path.cmp(&b.path)));
+        v.sort_by(|a, b| {
+            a.1.last_read
+                .cmp(&b.1.last_read)
+                .then_with(|| a.1.path.cmp(&b.1.path))
+        });
         v.truncate(REVIEW_MAX);
-        v
+        v.into_iter()
+            .map(|(k, mut item)| {
+                item.notes = notes(k);
+                item
+            })
+            .collect()
     }
 
     /// Seconds read across every document.
@@ -286,12 +306,19 @@ mod tests {
         let mut web = delta("web", 10.0, 5, true, now - 50 * day);
         web.path = None;
         s.add(&web);
-        let rows = s.review(now, &|k| if k == "old" { 3 } else { 0 });
+        let rows = s.review(now, &|_| true, &|k| if k == "old" { 3 } else { 0 });
         let keys: Vec<&str> = rows.iter().map(|r| r.title.as_str()).collect();
         assert_eq!(keys, ["Title old", "Title new", "Title today"]);
         assert_eq!((rows[0].days, rows[0].percent, rows[0].notes), (21, 80, 3));
         assert_eq!(rows[2].days, 0);
-        assert!(ReadingStats::default().review(now, &|_| 0).is_empty());
+        // A file the caller cannot find is left out.
+        let here = s.review(now, &|p| !p.ends_with("new.md"), &|_| 0);
+        assert_eq!(here.len(), 2);
+        assert!(
+            ReadingStats::default()
+                .review(now, &|_| true, &|_| 0)
+                .is_empty()
+        );
     }
 
     #[test]
