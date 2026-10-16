@@ -108,6 +108,15 @@ windows = { workspace = true, features = [
 ] }
 windows-core.workspace = true
 
+# Paste reads the clipboard's HTML on macOS (public.html) and Linux
+# (text/html from Wayland's data-control or X11), as the terminal reader
+# does, so formatted text pastes as Markdown. Windows reads it directly.
+[target.'cfg(not(windows))'.dependencies]
+arboard.workspace = true
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+arboard = { workspace = true, features = ["wayland-data-control"] }
+
 # The session ending on Linux and macOS: SIGTERM, SIGHUP (the terminal
 # closed, or the session ended), and Ctrl+C in the terminal it was started
 # from, as the terminal reader catches them.

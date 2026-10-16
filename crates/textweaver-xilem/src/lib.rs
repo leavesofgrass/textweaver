@@ -16,8 +16,8 @@
 //! - [`dialog`]: in-window dialogs: prompts and lists.
 //! - [`menus`]: the menus, native on Windows and macOS, from the app's model,
 //!   and the context menu.
-//! - [`clipboard`]: the system clipboard Paste reads (HTML and RTF on
-//!   Windows), so formatted text pastes as Markdown.
+//! - [`clipboard`]: the system clipboard Paste reads (HTML everywhere, RTF
+//!   on Windows), so formatted text pastes as Markdown.
 //! - [`file_chooser`]: Open with the system's own file chooser.
 //! - [`settings_dialog`]: the settings dialog, built from the app's schema.
 //! - [`voices`]: the voice manager, every engine's voices.
