@@ -234,6 +234,9 @@ queue-intro =
     }
 queue-empty = La file de lecture est vide. Dans la bibliothèque, { $key } ajoute un document.
 queue-item-missing = { $title }, introuvable
+queue-item-elsewhere = { $title }, pas sur cet ordinateur
+queue-untitled = Un document d'un autre ordinateur
+queue-elsewhere-chosen = { $title } n'est pas sur cet ordinateur. Il reste dans la file de lecture, et sera trouvé dès que vous l'ouvrirez ici.
 queue-added =
     { $n ->
         [one] Ajouté à la file de lecture : { $title }. 1 document dans la file.
@@ -4504,7 +4507,7 @@ setting-sync-folder-help = Le dossier que vos ordinateurs partagent. Un dossier 
 setting-sync-device-name = Nom de l'ordinateur
 setting-sync-device-name-help = Le nom de cet ordinateur dans les messages de synchro, comme portable ou labo. Vide donne Computer 1, Computer 2, etc.
 setting-sync-places = Synchroniser les positions
-setting-sync-places-help = Partager où vous en êtes dans chaque document.
+setting-sync-places-help = Partager où vous en êtes dans chaque document, et la file de lecture.
 setting-sync-notes = Synchroniser les notes
 setting-sync-notes-help = Partager les notes.
 setting-sync-highlights = Synchroniser les surlignages

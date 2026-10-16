@@ -676,18 +676,111 @@ pub struct NotedDoc {
     pub notes: Vec<crate::Note>,
 }
 
+/// One document in the reading queue.
+///
+/// The queue syncs between computers with the places group: each entry is
+/// a document's sync id with the time it joined the queue, and the queue
+/// is in that order on every computer. A document another computer queued
+/// that is not found here keeps its place with no path, and is found here
+/// once it is opened here.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+pub struct QueueEntry {
+    /// The document on this computer (resolved); `None` for one another
+    /// computer queued that is not found here.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path: Option<PathBuf>,
+    /// When it joined the queue, on whichever computer (milliseconds since
+    /// 1970, UTC). The queue is in this order.
+    #[serde(default)]
+    pub added_ms: u64,
+    /// Its sync id, for one not found here.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sync_id: Option<String>,
+    /// Its title as another computer knows it, for one not found here;
+    /// empty when no computer knows one.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub title: String,
+}
+
+impl QueueEntry {
+    /// The entry for a document on this computer.
+    pub fn local(path: &Path, added_ms: u64) -> Self {
+        QueueEntry {
+            path: Some(resolve_path(path)),
+            added_ms,
+            ..QueueEntry::default()
+        }
+    }
+}
+
+/// A queue entry as written: an object, or a bare path from an earlier
+/// beta 3 build.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum QueueEntryFile {
+    Path(PathBuf),
+    Entry {
+        #[serde(default)]
+        path: Option<PathBuf>,
+        #[serde(default)]
+        added_ms: u64,
+        #[serde(default)]
+        sync_id: Option<String>,
+        #[serde(default)]
+        title: String,
+    },
+}
+
+fn read_queue<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<QueueEntry>, D::Error> {
+    let entries: Vec<QueueEntryFile> = Vec::deserialize(d)?;
+    Ok(entries
+        .into_iter()
+        .enumerate()
+        .map(|(i, e)| match e {
+            // An earlier build kept only the order.
+            QueueEntryFile::Path(path) => QueueEntry {
+                path: Some(path),
+                added_ms: u64::try_from(i).unwrap_or(u64::MAX),
+                ..QueueEntry::default()
+            },
+            QueueEntryFile::Entry {
+                path,
+                added_ms,
+                sync_id,
+                title,
+            } => QueueEntry {
+                path,
+                added_ms,
+                sync_id,
+                title,
+            },
+        })
+        .collect())
+}
+
+/// Now, in milliseconds since 1970 (UTC).
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+}
+
 /// The bookshelf, `library.json`: every document opened, newest first,
 /// and the reading queue.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Library {
     /// The entries, most recently opened first.
     pub entries: Vec<LibraryEntry>,
-    /// The reading queue: documents to read next, in order (resolved
-    /// paths). A document leaves it when it is read to the end or removed
-    /// from the bookshelf. Absent from the file while empty, so an older
+    /// The reading queue: documents to read next, in the order they joined
+    /// it. A document leaves it when it is read to the end or removed from
+    /// the bookshelf. Absent from the file while empty, so an older
     /// textweaver reads the file unchanged.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub queue: Vec<PathBuf>,
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        deserialize_with = "read_queue"
+    )]
+    pub queue: Vec<QueueEntry>,
 }
 
 impl Library {
@@ -865,43 +958,83 @@ impl Library {
         let key = resolve_path(path);
         let before = self.entries.len();
         self.entries.retain(|e| e.path != key);
-        self.queue.retain(|q| *q != key);
+        self.queue.retain(|q| q.path.as_ref() != Some(&key));
         self.entries.len() != before
     }
 
     /// Adds `path` to the end of the reading queue. Returns false when it
     /// was queued already (it keeps its place).
     pub fn queue_add(&mut self, path: &Path) -> bool {
-        let key = resolve_path(path);
-        if self.queue.contains(&key) {
+        let now = now_ms();
+        let at = self
+            .queue
+            .iter()
+            .map(|q| q.added_ms)
+            .max()
+            .map_or(now, |last| now.max(last.saturating_add(1)));
+        self.queue_add_at(path, at)
+    }
+
+    /// [`queue_add`](Self::queue_add) at a given time (sync, tests).
+    pub fn queue_add_at(&mut self, path: &Path, added_ms: u64) -> bool {
+        if self.queued(path) {
             return false;
         }
-        self.queue.push(key);
+        self.queue_insert(QueueEntry::local(path, added_ms));
         true
+    }
+
+    /// Puts `entry` in the queue in its place by the time it was added.
+    pub fn queue_insert(&mut self, entry: QueueEntry) {
+        let at = self.queue.partition_point(|q| q.added_ms <= entry.added_ms);
+        self.queue.insert(at, entry);
     }
 
     /// Takes `path` out of the reading queue. Returns whether it was there.
     pub fn queue_remove(&mut self, path: &Path) -> bool {
         let key = resolve_path(path);
         let before = self.queue.len();
-        self.queue.retain(|q| *q != key);
+        self.queue.retain(|q| q.path.as_ref() != Some(&key));
+        self.queue.len() != before
+    }
+
+    /// Takes the document another computer queued as `sync_id`, and not
+    /// found here, out of the reading queue. Returns whether it was there.
+    pub fn queue_remove_elsewhere(&mut self, sync_id: &str) -> bool {
+        let before = self.queue.len();
+        self.queue
+            .retain(|q| q.path.is_some() || q.sync_id.as_deref() != Some(sync_id));
         self.queue.len() != before
     }
 
     /// True when `path` is in the reading queue.
     pub fn queued(&self, path: &Path) -> bool {
-        self.queue.contains(&resolve_path(path))
+        let key = resolve_path(path);
+        self.queue.iter().any(|q| q.path.as_ref() == Some(&key))
+    }
+
+    /// The documents in the queue that are on this computer, in order.
+    pub fn queue_paths(&self) -> impl Iterator<Item = &Path> {
+        self.queue.iter().filter_map(|q| q.path.as_deref())
     }
 
     /// The document to read after `current`: the first in the queue that
     /// is not `current` and whose file is there. A queued file that is
-    /// missing (a drive not plugged in) keeps its place and is passed over.
+    /// missing (a drive not plugged in), and a document queued on another
+    /// computer and not found here, keep their places and are passed over.
     pub fn queue_next(&self, current: Option<&Path>) -> Option<&Path> {
         let current = current.map(resolve_path);
-        self.queue
-            .iter()
-            .find(|q| Some(*q) != current.as_ref() && q.is_file())
-            .map(PathBuf::as_path)
+        self.queue_paths()
+            .find(|q| Some(*q) != current.as_deref() && q.is_file())
+    }
+
+    /// The title the queue shows for `entry`: the bookshelf's for a document
+    /// here, else the title another computer knows (empty when none does).
+    pub fn queue_title(&self, entry: &QueueEntry) -> String {
+        entry
+            .path
+            .as_deref()
+            .map_or_else(|| entry.title.clone(), |p| self.title_of(p))
     }
 
     /// The title the library shows for `path`: the bookshelf's, else the
@@ -1336,6 +1469,19 @@ mod tests {
         lib.remove(&b);
         assert!(!lib.queued(&b));
         assert_eq!(lib.queue_next(None), None);
+        // A queue written by an earlier beta 3 build, as bare paths, keeps
+        // its order.
+        std::fs::write(
+            &file,
+            serde_json::json!({ "entries": [], "queue": [a, b] }).to_string(),
+        )
+        .unwrap();
+        let old = Library::load(&file).unwrap();
+        assert_eq!(
+            old.queue_paths().collect::<Vec<_>>(),
+            [a.as_path(), b.as_path()]
+        );
+        assert!(old.queue[0].added_ms < old.queue[1].added_ms);
         // An empty queue is not written, so older versions read the file
         // as before.
         lib.queue.clear();

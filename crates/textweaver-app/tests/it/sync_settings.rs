@@ -564,6 +564,7 @@ fn cycle(e: &mut SyncEngine, paths: &Paths, system: KeySystem) -> usize {
         settings: Box::new(settings.clone()),
         settings_ms: 0,
         force: true,
+        applied: Vec::new(),
     });
     apply_groups(paths, &mut settings, &o.arrivals, system);
     o.status.kept_key_overrides
@@ -582,6 +583,7 @@ fn settings_that_arrived_survive_a_crash_before_they_were_saved() {
         settings: Box::new(s.clone()),
         settings_ms: ms,
         force: true,
+        applied: Vec::new(),
     };
     let rate_arrival = |o: &textweaver_app::sync_groups::GroupsOutcome| {
         o.arrivals

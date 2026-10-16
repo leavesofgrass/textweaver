@@ -166,6 +166,8 @@ pub(crate) struct SyncState {
     pub(crate) settings_saved_ms: u64,
     /// Group arrivals held while reading aloud.
     held_groups: Option<GroupsOutcome>,
+    /// Group arrivals applied since the last merge, sent with the next.
+    applied_groups: Vec<crate::sync_groups::AppliedKey>,
 }
 
 impl std::fmt::Debug for SyncState {
@@ -453,10 +455,12 @@ impl App {
             self.sync.last_groups = Some(now);
             let force = std::mem::take(&mut self.sync.groups_force);
             let settings_ms = self.sync.settings_saved_ms;
+            let applied = std::mem::take(&mut self.sync.applied_groups);
             self.sync_send(SyncRequest::Groups(Box::new(GroupsRequest {
                 settings: Box::new(self.settings.clone()),
                 settings_ms,
                 force,
+                applied,
             })));
             // The open document's merge goes out in the same tick, so
             // neither waits on the other.
@@ -554,8 +558,18 @@ impl App {
             .configured
             .as_ref()
             .map_or_else(KeySystem::current, |c| c.system);
+        if o.arrivals
+            .iter()
+            .any(|a| a.file == textweaver_sync::GroupFile::Queue)
+        {
+            // The queue is in library.json, which the writer saves too.
+            self.writer.flush(crate::queue::WRITER_WAIT);
+        }
         let old = self.settings.clone();
         let applied = apply_groups(&paths, &mut self.settings, &o.arrivals, system);
+        self.sync
+            .applied_groups
+            .extend(applied.applied.iter().cloned());
         if !applied.settings_paths.is_empty() {
             for path in &applied.settings_paths {
                 self.settings_changed(&old, path);

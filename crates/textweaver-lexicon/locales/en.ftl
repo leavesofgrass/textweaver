@@ -241,6 +241,12 @@ queue-intro =
 queue-empty = The reading queue is empty. In the library, { $key } adds a document.
 # A queued document whose file is not there (a drive not plugged in).
 queue-item-missing = { $title }, not found
+# A document another computer queued that is not on this computer.
+queue-item-elsewhere = { $title }, not on this computer
+# The title of such a document when no computer knows one.
+queue-untitled = A document from another computer
+# Enter on such a document in the reading queue.
+queue-elsewhere-chosen = { $title } is not on this computer. It stays in the reading queue, and is found once you open it here.
 # $n is how many documents the queue holds now.
 queue-added =
     { $n ->
@@ -4546,7 +4552,7 @@ setting-sync-folder-help = The folder your computers share. One kept in step by 
 setting-sync-device-name = Computer name
 setting-sync-device-name-help = This computer's name in sync messages, such as laptop or lab. Empty uses Computer 1, Computer 2, and so on.
 setting-sync-places = Sync places
-setting-sync-places-help = Share where you are in each document.
+setting-sync-places-help = Share where you are in each document, and the reading queue.
 setting-sync-notes = Sync notes
 setting-sync-notes-help = Share notes.
 setting-sync-highlights = Sync highlights

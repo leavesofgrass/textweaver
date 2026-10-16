@@ -234,6 +234,9 @@ queue-intro =
     }
 queue-empty = La cola de lectura está vacía. En la biblioteca, { $key } añade un documento.
 queue-item-missing = { $title }, no encontrado
+queue-item-elsewhere = { $title }, no está en este equipo
+queue-untitled = Un documento de otro equipo
+queue-elsewhere-chosen = { $title } no está en este equipo. Sigue en la cola de lectura, y se encuentra en cuanto lo abra aquí.
 queue-added =
     { $n ->
         [one] Añadido a la cola de lectura: { $title }. 1 documento en la cola.
@@ -4476,7 +4479,7 @@ setting-sync-folder-help = La carpeta que comparten sus equipos. Una que Syncthi
 setting-sync-device-name = Nombre del equipo
 setting-sync-device-name-help = El nombre de este equipo en los mensajes de sincronización, como portátil o laboratorio. Vacío usa Computer 1, Computer 2 y así sucesivamente.
 setting-sync-places = Sincronizar lugares
-setting-sync-places-help = Compartir dónde está en cada documento.
+setting-sync-places-help = Compartir dónde está en cada documento, y la cola de lectura.
 setting-sync-notes = Sincronizar notas
 setting-sync-notes-help = Compartir notas.
 setting-sync-highlights = Sincronizar resaltados

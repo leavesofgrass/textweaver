@@ -6,7 +6,9 @@
 //! with the `queue_document` command on the open document; it leaves when
 //! it is read to the end, when Delete takes it out of the queue list, or
 //! when it is removed from the bookshelf. Changes go through the writer, as
-//! the bookshelf's do.
+//! the bookshelf's do. With sync on, the queue syncs with the places group
+//! (crate::sync_groups); a document another computer queued that is not
+//! found here is listed as such, and Enter on it only says so.
 //!
 //! When continuous reading reaches the end of a document, `[reading]
 //! after_end` decides what follows: nothing (`stop`, the default), a
@@ -28,7 +30,7 @@ use std::time::Duration;
 use textweaver_core::CharPos;
 use textweaver_lexicon::args;
 use textweaver_store::library::resolve_path;
-use textweaver_store::{AfterEnd, DocKey, Library, ReadingStats};
+use textweaver_store::{AfterEnd, DocKey, Library, QueueEntry, ReadingStats};
 
 use crate::app::{App, ListKind};
 use crate::browse::BrowseKey;
@@ -37,7 +39,7 @@ use crate::list_model::ListKey;
 
 /// How long reading the queue waits for the writer's queued bookshelf
 /// changes.
-const WRITER_WAIT: Duration = Duration::from_secs(1);
+pub(crate) const WRITER_WAIT: Duration = Duration::from_secs(1);
 
 /// The reading queue's state in the app.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -152,12 +154,12 @@ impl App {
         let rows = lib
             .queue
             .iter()
-            .map(|p| {
-                let title = lib.title_of(p);
-                if p.is_file() {
-                    title
-                } else {
-                    self.msg_args("queue-item-missing", &args!["title" => title])
+            .map(|q| match &q.path {
+                Some(p) if p.is_file() => lib.title_of(p),
+                Some(p) => self.msg_args("queue-item-missing", &args!["title" => lib.title_of(p)]),
+                None => {
+                    let title = self.elsewhere_title(&lib, q);
+                    self.msg_args("queue-item-elsewhere", &args!["title" => title])
                 }
             })
             .collect();
@@ -169,19 +171,62 @@ impl App {
         vec![Effect::ShowList { title, items: rows }]
     }
 
-    /// Delete on a row of the reading queue: takes the document out, and
-    /// shows what is left.
-    pub(crate) fn unqueue_row(&mut self, paths: &[PathBuf], n: usize) -> Vec<Effect> {
-        let Some(path) = paths.get(n) else {
+    /// The title of a document another computer queued and not found here:
+    /// the one the records give it, else "a document from another
+    /// computer".
+    fn elsewhere_title(&self, lib: &Library, q: &QueueEntry) -> String {
+        let title = lib.queue_title(q);
+        if title.is_empty() {
+            self.msg("queue-untitled")
+        } else {
+            title
+        }
+    }
+
+    /// Enter on a row of the reading queue: opens the document, or, for one
+    /// another computer queued and not found here, says so; it keeps its
+    /// place.
+    pub(crate) fn choose_queue_row(&mut self, entries: &[QueueEntry], n: usize) -> Vec<Effect> {
+        let Some(q) = entries.get(n) else {
             return vec![Effect::Redraw];
         };
-        let title = self
-            .shelf()
-            .map_or_else(|| path.display().to_string(), |l| l.title_of(path));
-        self.queue_job(path, false);
+        if let Some(p) = &q.path {
+            return self.open_command(p.clone());
+        }
+        let title = match self.shelf() {
+            Some(lib) => self.elsewhere_title(&lib, q),
+            None => self.msg("queue-untitled"),
+        };
+        let msg = self.msg_args("queue-elsewhere-chosen", &args!["title" => title]);
+        self.tell(&msg);
+        vec![Effect::Redraw]
+    }
+
+    /// Delete on a row of the reading queue: takes the document out, and
+    /// shows what is left.
+    pub(crate) fn unqueue_row(&mut self, entries: &[QueueEntry], n: usize) -> Vec<Effect> {
+        let Some(q) = entries.get(n) else {
+            return vec![Effect::Redraw];
+        };
+        let title = match (self.shelf(), &q.path) {
+            (Some(lib), None) => self.elsewhere_title(&lib, q),
+            (Some(lib), Some(p)) => lib.title_of(p),
+            (None, Some(p)) => p.display().to_string(),
+            (None, None) => self.msg("queue-untitled"),
+        };
+        match (&q.path, &q.sync_id, &self.paths) {
+            (Some(p), _, _) => self.queue_job(p, false),
+            (None, Some(id), Some(paths)) => {
+                self.writer.send(crate::writer::Job::Unqueue {
+                    library_file: paths.library_file(),
+                    sync_id: id.clone(),
+                });
+            }
+            _ => {}
+        }
         let msg = self.msg_args("queue-removed", &args!["title" => title]);
         self.tell(&msg);
-        if paths.len() <= 1 {
+        if entries.len() <= 1 {
             self.list = None;
             return vec![Effect::Redraw];
         }

@@ -45,6 +45,7 @@ mod startup_speech;
 mod sync;
 mod sync_ids;
 mod sync_library;
+mod sync_queue;
 mod sync_settings;
 mod tests_ask_the_keymap;
 mod wiring;

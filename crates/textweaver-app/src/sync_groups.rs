@@ -38,6 +38,15 @@
 //! access mode, and other machine settings a profile was saved with stay
 //! on this computer, and are kept when another computer's version of the
 //! profile arrives.
+//!
+//! The reading queue syncs with the places switch, as a map from each
+//! queued document's sync id to when it joined the queue: the newest add
+//! or removal of a document wins, a removal is a record that an older add
+//! never undoes, and every computer orders the queue by the time each
+//! document was added. A queued document is identified as when its
+//! details are edited (it need not have been opened here); one queued on
+//! another computer and not found on this one keeps its place, with the
+//! title the records give it, until it is opened here.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -45,11 +54,13 @@ use std::time::SystemTime;
 
 use serde_json::{Value, json};
 use textweaver_store::settings_io::{json_to_toml, toml_to_json};
+use textweaver_store::sync_ids::SyncIds;
 use textweaver_store::sync_scope::{
     portable_settings, profile_portable, profile_with_machine, sync_group_of, with_portable,
 };
-use textweaver_store::{Paths, Profiles, Settings, SettingsStore};
-use textweaver_sync::{DeviceId, GroupFile, GroupRecord};
+use textweaver_store::{DocKey, Library, Paths, Profiles, QueueEntry, Settings, SettingsStore};
+use textweaver_sync::docid::Details;
+use textweaver_sync::{DeviceId, GroupFile, GroupRecord, Identify, SyncId};
 
 use crate::sync_engine::{EngineStatus, Groups, Notice, SyncEngine};
 use crate::sync_pending::PendingItem;
@@ -68,6 +79,9 @@ pub const GLOSSARY_MAP: &str = "glossary";
 pub const PRONUNCIATIONS_MAP: &str = "pronunciations";
 /// The favorite voices' set.
 pub const VOICES_SET: &str = "voices";
+/// The reading queue's map, by document sync id; each value is `{"added":
+/// ms}`, when the document joined the queue.
+pub const QUEUE_MAP: &str = "queue";
 
 /// The personal word list's file name, in the data folder.
 pub const WORDS_FILE: &str = "words.txt";
@@ -124,6 +138,9 @@ pub fn group_on(groups: Groups, file: GroupFile) -> bool {
         GroupFile::Words => groups.words,
         GroupFile::Glossary => groups.glossary,
         GroupFile::Voices => groups.favorite_voices,
+        // The reading queue goes with the places: where you are, and what
+        // you read next.
+        GroupFile::Queue => groups.places,
     }
 }
 
@@ -146,6 +163,9 @@ fn in_scope(name: &str, key: &str, system: KeySystem) -> bool {
 fn same(name: &str, a: Option<&Value>, b: Option<&Value>) -> bool {
     match (a, b) {
         (Some(a), Some(b)) if name == KEYMAP_MAP => a.get("chords") == b.get("chords"),
+        // An arrival carries this computer's path or a title too; only the
+        // time added is synced.
+        (Some(a), Some(b)) if name == QUEUE_MAP => a.get("added") == b.get("added"),
         (a, b) => a == b,
     }
 }
@@ -297,8 +317,51 @@ pub fn read_local(
             );
             g.wall.insert(VOICES_SET, settings_ms);
         }
+        GroupFile::Queue => {
+            let file = paths.library_file();
+            let lib = match Library::load(&file) {
+                Ok(l) => l,
+                Err(e) => {
+                    log::warn!("sync: reading queue not synced ({e})");
+                    return None;
+                }
+            };
+            let ids = SyncIds::load(&paths.sync_ids_file());
+            let map = lib
+                .queue
+                .iter()
+                .filter_map(|q| Some((queue_sync_id(q, &ids)?, json!({ "added": q.added_ms }))))
+                .collect();
+            g.maps.insert(QUEUE_MAP, map);
+            g.wall.insert(QUEUE_MAP, mtime_ms(&file));
+        }
     }
     Some(g)
+}
+
+/// A queued document's sync id: the one `sync-ids.json` gives its path
+/// here, else the one it arrived with. `None` for a document not
+/// identified yet, which is published once it is.
+pub fn queue_sync_id(entry: &QueueEntry, ids: &SyncIds) -> Option<String> {
+    let known = entry.path.as_ref().and_then(|p| {
+        ids.get(&DocKey::for_path(p))
+            .map(|e| e.sync_id.clone())
+            .filter(|id| !id.is_empty())
+    });
+    known.or_else(|| entry.sync_id.clone())
+}
+
+/// The document with `sync_id` on this computer: a bookshelf document
+/// `sync-ids.json` gives that id (one opened here). `None` when it is not
+/// found here.
+pub fn queue_local_path(sync_id: &str, lib: &Library, ids: &SyncIds) -> Option<PathBuf> {
+    lib.entries
+        .iter()
+        .find(|e| {
+            ids.get(&DocKey::for_path(&e.path))
+                .is_some_and(|i| i.sync_id == sync_id)
+        })
+        .map(|e| e.path.clone())
 }
 
 // ----- The glossary file ---------------------------------------------------
@@ -496,7 +559,14 @@ pub struct GroupsRequest {
     pub settings_ms: u64,
     /// Merge even when nothing seems changed.
     pub force: bool,
+    /// Arrivals the app applied since the last merge
+    /// ([`GroupsApplied::applied`]): a change made here after them is then
+    /// an edit, even when it puts back what the app had before.
+    pub applied: Vec<AppliedKey>,
 }
+
+/// An arrival the app applied: its group, its map or set, and its key.
+pub type AppliedKey = (GroupFile, String, String);
 
 /// One group's merged view, as this session knows it.
 #[derive(Debug, Default)]
@@ -542,6 +612,9 @@ impl SyncEngine {
             if !group_on(config.groups, file) {
                 continue;
             }
+            if file == GroupFile::Queue {
+                self.prepare_queue(&config.paths, &request.settings.library.folders);
+            }
             let Some(local) = read_local(
                 file,
                 &config.paths,
@@ -551,18 +624,107 @@ impl SyncEngine {
             ) else {
                 continue;
             };
-            out.arrivals.extend(self.group_cycle(
+            let mut arrivals = self.group_cycle(
                 file,
                 &local,
                 config.system,
-                request.force,
+                (request.force, &request.applied),
                 &mut notices,
-            ));
+            );
+            if file == GroupFile::Queue {
+                self.describe_queue_arrivals(&config.paths, &mut arrivals, &mut notices);
+            }
+            out.arrivals.extend(arrivals);
         }
         self.count_kept_keys(config.system);
         out.notices = notices;
         out.status = self.status.clone();
         out
+    }
+
+    /// Readies the reading queue for a merge, on the writer: a queued
+    /// document not identified yet is identified and its record published,
+    /// as when its details are edited, so the other computers can find it;
+    /// and a document another computer queued that has since been opened
+    /// here takes its path.
+    fn prepare_queue(&mut self, paths: &Paths, library_folders: &[PathBuf]) {
+        let file = paths.library_file();
+        let Ok(mut lib) = Library::load(&file) else {
+            return;
+        };
+        let ids_file = paths.sync_ids_file();
+        let ids = SyncIds::load(&ids_file);
+        let unknown: Vec<PathBuf> = lib
+            .queue_paths()
+            .filter(|p| p.is_file() && queue_sync_id(&QueueEntry::local(p, 0), &ids).is_none())
+            .map(Path::to_path_buf)
+            .collect();
+        for path in unknown {
+            let identify = Identify {
+                ids_file: ids_file.clone(),
+                path,
+                library_folders: library_folders.to_vec(),
+                // What the document states is not known without reading
+                // it; it is published when the document opens.
+                details: Details::default(),
+            };
+            self.edit_details(&identify, &[]);
+        }
+        let ids = SyncIds::load(&ids_file);
+        let found: Vec<(usize, PathBuf)> = lib
+            .queue
+            .iter()
+            .enumerate()
+            .filter(|(_, q)| q.path.is_none())
+            .filter_map(|(i, q)| Some((i, queue_local_path(q.sync_id.as_deref()?, &lib, &ids)?)))
+            .collect();
+        if found.is_empty() {
+            return;
+        }
+        for (i, path) in found {
+            let q = &mut lib.queue[i];
+            q.path = Some(path);
+            q.sync_id = None;
+            q.title.clear();
+        }
+        if let Err(e) = lib.save(&file) {
+            log::warn!("sync: cannot save the reading queue ({e})");
+        }
+    }
+
+    /// Adds to each document the reading queue gained what the app needs
+    /// to show it: its path here when it is found here, else the title the
+    /// records give it. Neither goes to the sync folder.
+    fn describe_queue_arrivals(
+        &mut self,
+        paths: &Paths,
+        arrivals: &mut [GroupArrival],
+        notices: &mut Vec<Notice>,
+    ) {
+        if arrivals.iter().all(|a| a.value.is_none()) {
+            return;
+        }
+        let lib = Library::load(&paths.library_file()).unwrap_or_default();
+        let ids = SyncIds::load(&paths.sync_ids_file());
+        let index = self.identity_index(notices);
+        for a in arrivals {
+            let Some(Value::Object(v)) = &mut a.value else {
+                continue;
+            };
+            if let Some(p) = queue_local_path(&a.key, &lib, &ids) {
+                v.insert("path".into(), Value::from(p.to_string_lossy().into_owned()));
+                continue;
+            }
+            let title = a.key.parse::<SyncId>().ok().and_then(|id| {
+                index
+                    .as_ref()
+                    .and_then(|ix| ix.title(id))
+                    .map(str::to_owned)
+            });
+            if let Some(t) = title {
+                v.insert("title".into(), Value::from(t));
+            }
+        }
     }
 
     /// The overrides of the other kind of system in the merged view, for
@@ -623,7 +785,7 @@ impl SyncEngine {
         file: GroupFile,
         local: &LocalGroup,
         system: KeySystem,
-        force: bool,
+        (force, applied): (bool, &[AppliedKey]),
         notices: &mut Vec<Notice>,
     ) -> Vec<GroupArrival> {
         let Some(folder) = self.folder.as_ref() else {
@@ -634,6 +796,11 @@ impl SyncEngine {
         let Some(slot) = self.group_slot(file) else {
             return Vec::new();
         };
+        // Applied: what differs from the merged view now is this computer's
+        // own change.
+        for (_, name, key) in applied.iter().filter(|(f, _, _)| *f == file) {
+            slot.pending.remove(&(name.clone(), key.clone()));
+        }
         if !force && slot.others == others && slot.last_local.as_ref() == Some(local) {
             return Vec::new();
         }
@@ -880,6 +1047,10 @@ pub struct GroupsApplied {
     pub words_changed: bool,
     /// Arrivals not applied because the value changed here meanwhile.
     pub skipped: usize,
+    /// The arrivals applied, for the next [`GroupsRequest::applied`]. Only
+    /// the reading queue's are listed: a queued document is often taken
+    /// out moments after it arrives.
+    pub applied: Vec<AppliedKey>,
 }
 
 impl GroupsApplied {
@@ -963,6 +1134,7 @@ pub fn apply_groups(
     apply_profiles(paths, by(GroupFile::Profiles), &mut out);
     apply_keys(paths, by(GroupFile::Keymap), system, &mut out);
     apply_words(paths, by(GroupFile::Words), &mut out);
+    apply_queue(paths, by(GroupFile::Queue), &mut out);
     let glossary: Vec<&GroupArrival> = by(GroupFile::Glossary)
         .filter(|a| a.name == GLOSSARY_MAP)
         .collect();
@@ -1120,6 +1292,69 @@ fn apply_words<'a>(
             Ok(()) => out.words_changed = true,
             Err(e) => log::warn!("sync: cannot save the word list ({e})"),
         }
+    }
+}
+
+/// Applies the reading queue's arrivals to `library.json`. They are taken
+/// in quietly, not counted in the settings summary: the queue list simply
+/// shows them.
+fn apply_queue<'a>(
+    paths: &Paths,
+    arrivals: impl Iterator<Item = &'a GroupArrival>,
+    out: &mut GroupsApplied,
+) {
+    let arrivals: Vec<&GroupArrival> = arrivals.filter(|a| a.name == QUEUE_MAP).collect();
+    if arrivals.is_empty() {
+        return;
+    }
+    let file = paths.library_file();
+    let Ok(mut lib) = Library::load(&file) else {
+        out.skipped += arrivals.len();
+        return;
+    };
+    let ids = SyncIds::load(&paths.sync_ids_file());
+    let mut changed = false;
+    for a in arrivals {
+        let here: Vec<usize> = (0..lib.queue.len())
+            .filter(|&i| queue_sync_id(&lib.queue[i], &ids).as_deref() == Some(a.key.as_str()))
+            .collect();
+        let now = here
+            .first()
+            .map(|&i| json!({ "added": lib.queue[i].added_ms }));
+        if !same(QUEUE_MAP, now.as_ref(), a.previous.as_ref()) {
+            out.skipped += 1;
+            continue;
+        }
+        let mut taken: Vec<QueueEntry> = here.iter().rev().map(|&i| lib.queue.remove(i)).collect();
+        if let Some(v) = &a.value {
+            let added_ms = v.get("added").and_then(Value::as_u64).unwrap_or(0);
+            let entry = match taken.pop() {
+                Some(mut e) => {
+                    e.added_ms = added_ms;
+                    e
+                }
+                None => match v.get("path").and_then(Value::as_str) {
+                    Some(p) => QueueEntry::local(Path::new(p), added_ms),
+                    None => QueueEntry {
+                        path: None,
+                        added_ms,
+                        sync_id: Some(a.key.clone()),
+                        title: v
+                            .get("title")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_owned(),
+                    },
+                },
+            };
+            lib.queue_insert(entry);
+        }
+        out.applied
+            .push((GroupFile::Queue, a.name.clone(), a.key.clone()));
+        changed = true;
+    }
+    if changed && let Err(e) = lib.save(&file) {
+        log::warn!("sync: cannot save the reading queue ({e})");
     }
 }
 

@@ -310,7 +310,7 @@ pub(crate) enum ListKind {
     /// "Continue reading": the documents, by row (crate::library, S6).
     Continue(Vec<std::path::PathBuf>),
     /// The reading queue, by row (crate::queue).
-    Queue(Vec<std::path::PathBuf>),
+    Queue(Vec<textweaver_store::QueueEntry>),
     /// The review list, by row (crate::queue).
     Review(Vec<std::path::PathBuf>),
     /// Manage optional components, one component's actions, or the
@@ -1953,9 +1953,8 @@ impl App {
             Some(ListKind::Frontend) => self.choose_frontend_item(n),
             Some(ListKind::Sync(l)) => return self.choose_sync(l, n),
             Some(ListKind::Continue(paths)) => return self.choose_continue(&paths, n),
-            Some(ListKind::Queue(paths) | ListKind::Review(paths)) => {
-                return self.choose_continue(&paths, n);
-            }
+            Some(ListKind::Queue(entries)) => return self.choose_queue_row(&entries, n),
+            Some(ListKind::Review(paths)) => return self.choose_continue(&paths, n),
             Some(ListKind::Components(l)) => return self.choose_component_row(l, n),
             Some(ListKind::HtmlTheme(purpose, names)) => {
                 return self.choose_html_theme(purpose, &names, n);
@@ -2019,7 +2018,7 @@ impl App {
                 vec![Effect::Redraw]
             }
             Some(ListKind::Buttons(l)) => self.delete_buttons_item(l, n),
-            Some(ListKind::Queue(paths)) => self.unqueue_row(&paths, n),
+            Some(ListKind::Queue(entries)) => self.unqueue_row(&entries, n),
             _ => {
                 let msg = self.msg("study-nothing-to-delete");
                 self.tell(&msg);

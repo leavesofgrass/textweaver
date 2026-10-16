@@ -234,6 +234,9 @@ queue-intro =
     }
 queue-empty = Die Leseliste ist leer. In der Bibliothek fügt { $key } ein Dokument hinzu.
 queue-item-missing = { $title }, nicht gefunden
+queue-item-elsewhere = { $title }, nicht auf diesem Computer
+queue-untitled = Ein Dokument von einem anderen Computer
+queue-elsewhere-chosen = { $title } ist nicht auf diesem Computer. Es bleibt in der Leseliste und wird gefunden, sobald Sie es hier öffnen.
 queue-added =
     { $n ->
         [one] Zur Leseliste hinzugefügt: { $title }. 1 Dokument in der Liste.
@@ -4500,7 +4503,7 @@ setting-sync-folder-help = Der Ordner, den Ihre Computer teilen. Einer, den Sync
 setting-sync-device-name = Computername
 setting-sync-device-name-help = Der Name dieses Computers in Sync-Meldungen, etwa Laptop oder Labor. Leer ergibt Computer 1, Computer 2 und so weiter.
 setting-sync-places = Stellen synchronisieren
-setting-sync-places-help = Teilen, wo Sie in jedem Dokument sind.
+setting-sync-places-help = Teilen, wo Sie in jedem Dokument sind, und die Leseliste.
 setting-sync-notes = Notizen synchronisieren
 setting-sync-notes-help = Notizen teilen.
 setting-sync-highlights = Markierungen synchronisieren

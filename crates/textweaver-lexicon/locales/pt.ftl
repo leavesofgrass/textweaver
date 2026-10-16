@@ -234,6 +234,9 @@ queue-intro =
     }
 queue-empty = A fila de leitura está vazia. Na biblioteca, { $key } adiciona um documento.
 queue-item-missing = { $title }, não encontrado
+queue-item-elsewhere = { $title }, não está neste computador
+queue-untitled = Um documento de outro computador
+queue-elsewhere-chosen = { $title } não está neste computador. Continua na fila de leitura, e será encontrado assim que você o abrir aqui.
 queue-added =
     { $n ->
         [one] Adicionado à fila de leitura: { $title }. 1 documento na fila.
@@ -4492,7 +4495,7 @@ setting-sync-folder-help = A pasta que seus computadores compartilham. Uma manti
 setting-sync-device-name = Nome do computador
 setting-sync-device-name-help = O nome deste computador nas mensagens de sincronização, como notebook ou laboratório. Vazio usa Computer 1, Computer 2 e assim por diante.
 setting-sync-places = Sincronizar posições
-setting-sync-places-help = Compartilhar onde você está em cada documento.
+setting-sync-places-help = Compartilhar onde você está em cada documento, e a fila de leitura.
 setting-sync-notes = Sincronizar notas
 setting-sync-notes-help = Compartilhar notas.
 setting-sync-highlights = Sincronizar destaques

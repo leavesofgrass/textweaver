@@ -253,7 +253,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `sync.enabled`: default off (`false`). Sync. Sync notes, highlights, bookmarks, and places with your other computers through the sync folder. Tools, Sync, Set up sync turns it on. On or off: `true` or `false`. Stays on this computer.
 - `sync.folder`: default not set. Sync folder. The folder your computers share. One kept in step by Syncthing, a cloud folder, or a USB stick. Text; empty means not set. Stays on this computer.
 - `sync.device_name`: default empty (`""`). Computer name. This computer's name in sync messages, such as laptop or lab. Empty uses Computer 1, Computer 2, and so on. Text. Stays on this computer.
-- `sync.places`: default on (`true`). Sync places. Share where you are in each document. On or off: `true` or `false`. Stays on this computer.
+- `sync.places`: default on (`true`). Sync places. Share where you are in each document, and the reading queue. On or off: `true` or `false`. Stays on this computer.
 - `sync.notes`: default on (`true`). Sync notes. Share notes. On or off: `true` or `false`. Stays on this computer.
 - `sync.highlights`: default on (`true`). Sync highlights. Share highlights. On or off: `true` or `false`. Stays on this computer.
 - `sync.bookmarks`: default on (`true`). Sync bookmarks. Share bookmarks. On or off: `true` or `false`. Stays on this computer.
