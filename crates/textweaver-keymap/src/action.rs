@@ -527,6 +527,17 @@ actions! {
     ContinueReading = "continue_reading", File,
         "Continue reading: the documents on this computer with a saved place, from any computer, newest first",
         gui [], term [], shared [];
+    // Beta 3 (B1-s3): no keys of their own; the File menu and the palette
+    // reach them in both frontends.
+    ReviewList = "review_list", File,
+        "Review list: the documents you have read, the one read longest ago first",
+        gui [], term [], shared [];
+    ReadingQueue = "reading_queue", File,
+        "Reading queue: the documents to read next, in order",
+        gui [], term [], shared [];
+    QueueDocument = "queue_document", File,
+        "Add the document to the reading queue, or take it out",
+        gui [], term [], shared [];
     // W9a-c (completeness rank 16): no key of its own; the File menu and
     // the palette reach it in both frontends.
     AddLibraryFolder = "add_library_folder", File,

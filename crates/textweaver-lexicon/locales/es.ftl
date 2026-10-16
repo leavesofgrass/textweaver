@@ -223,6 +223,54 @@ continue-ago-days =
     }
 name-continue-reading = Seguir leyendo
 action-continue-reading = Seguir leyendo: los documentos de este equipo con una posición guardada, de cualquier equipo, los más recientes primero
+
+## La cola de lectura y la lista de repaso (beta 3).
+
+queue-title = Cola de lectura
+queue-intro =
+    { $n ->
+        [one] Cola de lectura, 1 documento. Intro lo abre, Suprimir lo quita.
+       *[other] Cola de lectura, { $n } documentos. Intro abre uno, Suprimir lo quita.
+    }
+queue-empty = La cola de lectura está vacía. En la biblioteca, { $key } añade un documento.
+queue-item-missing = { $title }, no encontrado
+queue-added =
+    { $n ->
+        [one] Añadido a la cola de lectura: { $title }. 1 documento en la cola.
+       *[other] Añadido a la cola de lectura: { $title }. { $n } documentos en la cola.
+    }
+queue-removed = Quitado de la cola de lectura: { $title }.
+queue-no-file = Solo un documento guardado como archivo puede entrar en la cola de lectura.
+queue-read-failed = No se pudo leer la biblioteca para la cola de lectura: { $error }. Revise library.json en la carpeta de datos; tw settings path la indica.
+queue-next-ask = Siguiente: { $title }. { $key } para leer.
+queue-next-reading = Siguiente: { $title }.
+review-title = Lista de repaso
+review-intro =
+    { $n ->
+        [one] Lista de repaso, 1 documento, el leído hace más tiempo primero. Intro lo abre.
+       *[other] Lista de repaso, { $n } documentos, el leído hace más tiempo primero. Intro abre uno.
+    }
+review-empty = Aún no hay nada que repasar. Aquí aparecen los documentos leídos en voz alta.
+review-stats-off = La lista de repaso necesita las estadísticas de lectura, que están desactivadas. Active Estadísticas de lectura en la configuración.
+review-item = { $title }, { $days }, { $pct } por ciento, { $notes }
+review-days =
+    { $n ->
+        [0] hoy
+        [one] 1 día
+       *[other] { $n } días
+    }
+review-notes =
+    { $n ->
+        [0] sin notas
+        [one] 1 nota
+       *[other] { $n } notas
+    }
+name-review-list = Lista de repaso
+action-review-list = Lista de repaso: los documentos que ha leído, el leído hace más tiempo primero
+name-reading-queue = Cola de lectura
+action-reading-queue = Cola de lectura: los documentos que leer a continuación, en orden
+name-queue-document = Añadir a la cola de lectura
+action-queue-document = Añadir el documento a la cola de lectura, o quitarlo
 name-add-library-folder = Añadir una carpeta a la biblioteca
 action-add-library-folder = Añadir una carpeta a la biblioteca: elíjala en el explorador de archivos
 name-edit-document-details = Editar detalles
@@ -1681,8 +1729,8 @@ library-folder-added = { $name } se añadió a la biblioteca. Abra la biblioteca
 library-folder-already = { $name } ya está en la biblioteca.
 library-intro =
     { $n ->
-        [one] Biblioteca, { $n } documento. Escriba para filtrar, Intro abre uno, F2 edita los detalles.
-       *[other] Biblioteca, { $n } documentos. Escriba para filtrar, Intro abre uno, F2 edita los detalles.
+        [one] Biblioteca, { $n } documento. Escriba para filtrar, Intro abre uno, F2 edita los detalles, { $queue } lo pone en la cola.
+       *[other] Biblioteca, { $n } documentos. Escriba para filtrar, Intro abre uno, F2 edita los detalles, { $queue } lo pone en la cola.
     }
 library-title = Biblioteca
 
@@ -2197,6 +2245,11 @@ setting-reading-book-audio = Audio del libro
 setting-reading-book-audio-help = Qué lee un libro hablado DAISY que tiene grabación. Su narración grabada, con el resaltado siguiéndola y la voz leyendo el texto sin audio, o solo la voz. Los cambios de velocidad no se aplican a la grabación.
 choice-reading-book-audio-auto = narración grabada
 choice-reading-book-audio-speech = solo voz
+setting-reading-after-end = Al terminar un documento
+setting-reading-after-end-help = Qué sigue al final de un documento cuando la cola de lectura tiene otro. Nada, se nombra el siguiente documento y la tecla de leer lo lee, o se lee el siguiente documento enseguida. Un documento nunca empieza sin que lo pida.
+choice-reading-after-end-stop = detenerse
+choice-reading-after-end-ask = preguntar antes
+choice-reading-after-end-next = leer el siguiente
 setting-display-theme = Tema
 setting-display-theme-help = El tema de color.
 setting-display-follow-os-theme = Seguir el tema del sistema

@@ -94,6 +94,14 @@ pub(crate) enum Job {
         meta: textweaver_store::library::DocMetadata,
         recent_limit: usize,
     },
+    /// Add a document to the reading queue in `library.json`, or take it
+    /// out (crate::queue).
+    Queue {
+        library_file: PathBuf,
+        path: PathBuf,
+        /// True to add, false to take out.
+        add: bool,
+    },
     /// Save the owner's hand edits of a document's details on the
     /// bookshelf (W7m).
     EditDetails {
@@ -544,6 +552,14 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
             );
             None
         }
+        Job::Queue {
+            library_file,
+            path,
+            add,
+        } => {
+            record_queue(&library_file, &path, add);
+            None
+        }
         Job::EditDetails {
             library_file,
             path,
@@ -689,6 +705,24 @@ fn record_open(
             }
         }
         // An unreadable library is left alone rather than overwritten.
+        Err(e) => log::warn!("cannot read the library: {e}"),
+    }
+}
+
+/// Adds `path` to the reading queue or takes it out. An unreadable
+/// bookshelf is left alone rather than overwritten.
+fn record_queue(library_file: &Path, path: &Path, add: bool) {
+    match Library::load(library_file) {
+        Ok(mut lib) => {
+            let changed = if add {
+                lib.queue_add(path)
+            } else {
+                lib.queue_remove(path)
+            };
+            if changed && let Err(e) = lib.save(library_file) {
+                log::warn!("cannot save the reading queue: {e}");
+            }
+        }
         Err(e) => log::warn!("cannot read the library: {e}"),
     }
 }

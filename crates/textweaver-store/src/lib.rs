@@ -84,7 +84,7 @@ pub use paths::{COMPONENTS_DIR, MEDICAL_OVERLAY_FILE, Paths, components_dir, fin
 pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
-    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, AudioExportFormat,
+    AccessMode, AccessibilitySettings, AfterEnd, AppleBackend, AppleSettings, AudioExportFormat,
     AuthoringSettings, BookAudio, BrailleSettings, BrailleTableFormat, BrfCode, CitationReading,
     ColorSettings, CommunityLexiconSettings, ComponentsSettings, CursorPlacement,
     DEFAULT_HEADER_BUTTONS, DEFAULT_TOOLBAR_BUTTONS, DectalkSettings, DictationSettings, DigitRow,
@@ -104,7 +104,7 @@ pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,
     SettingsIoError,
 };
-pub use stats::{DocStats, ReadingStats, StatsDelta};
+pub use stats::{DocStats, ReadingStats, ReviewItem, StatsDelta};
 pub use sync::{ConflictPolicy, SidecarStore};
 pub use sync_ids::{SyncIdEntry, SyncIds};
 pub use sync_scope::SettingScope;

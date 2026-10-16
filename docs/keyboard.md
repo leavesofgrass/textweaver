@@ -295,6 +295,9 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Open a document by typing its path | none | `Ctrl+Shift+G` | `Cmd+Shift+G` | `open_path` |
 | Open the library: documents in your library folders and recent files | `Alt+L` | `Ctrl+Shift+B` | `Cmd+Shift+B` | `open_library` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | palette | palette | palette | `continue_reading` |
+| Review list: the documents you have read, the one read longest ago first | palette | palette | palette | `review_list` |
+| Reading queue: the documents to read next, in order | palette | palette | palette | `reading_queue` |
+| Add the document to the reading queue, or take it out | palette | palette | palette | `queue_document` |
 | Add a folder to the library: choose it in the file browser | palette | palette | palette | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | palette | palette | palette | `edit_document_details` |
 | Start a new document in edit mode | `Ctrl+N` | `Ctrl+N` | `Cmd+N` | `new_document` |
@@ -588,6 +591,9 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Export the study cards as an Anki package, saved beside the document | `export_cards_anki` |
 | Import study cards from an Anki package into this document's cards | `import_cards_anki` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
+| Review list: the documents you have read, the one read longest ago first | `review_list` |
+| Reading queue: the documents to read next, in order | `reading_queue` |
+| Add the document to the reading queue, or take it out | `queue_document` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |
 | Start a new document from a template, with a title, author, date, and References heading | `new_from_template` |

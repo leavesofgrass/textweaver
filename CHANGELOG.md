@@ -4,6 +4,11 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Library
+
+- **New: the reading queue.** A list of documents to read next, kept with the bookshelf, so it is there the next time textweaver starts. **Ctrl+Enter** in the library list adds the focused document or takes it out; **Add to reading queue** in the File menu does the same for the open document; **Reading queue** in the File menu lists it, where **Enter** opens a document and **Delete** takes one out. A document leaves the queue when it is read to the end. The setting **After a document ends** (`[reading] after_end`) decides what follows the end of a document: nothing (`"stop"`, the default), the next document named, "Next: Week 4. Enter to read." (`"ask"`), or the next document read at once (`"next"`). A document is never started unless you ask. From the command line: `tw library queue`, with `add`, `remove` and `next`.
+- **New: the review list,** beside Continue reading: the documents you have read aloud, the one read longest ago first, such as "Pharmacology 2, 21 days, 80 percent, 3 notes". It is a convenience for finding older readings, not a study method. From the command line: `tw library review`.
+
 ### The app
 
 - **Each highlight name has its own color and shape in the textweaver app,** as in the terminal reader: the name's color as the band, with black or white text, whichever reads better, and its shape drawn (a line, a double line, bold text, a dotted line, brackets, or a small square at the start), so no two names differ by color alone. A screen reader is given the name in words ("Highlight, important") on the text it covers, with the band and the line as text attributes ([Highlight colors](docs/notes.md#highlight-colors)).

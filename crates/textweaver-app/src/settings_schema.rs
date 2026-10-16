@@ -776,6 +776,16 @@ pub const INFO: &[Info] = &[
         "What reads a DAISY talking book that has a recording. Its recorded narration, with the highlight following it and speech reading any text without audio, or speech only. Rate changes do not apply to the recording.",
         &[("auto", "recorded narration"), ("speech", "speech only")],
     ),
+    choice(
+        "reading.after_end",
+        "After a document ends",
+        "What follows the end of a document when the reading queue has another. Nothing, the next document named with the read key to read it, or the next document read at once. A document never starts unless you ask.",
+        &[
+            ("stop", "stop"),
+            ("ask", "ask first"),
+            ("next", "read the next"),
+        ],
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The color theme.", &[]),
     toggle(

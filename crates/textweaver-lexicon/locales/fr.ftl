@@ -223,6 +223,54 @@ continue-ago-days =
     }
 name-continue-reading = Reprendre la lecture
 action-continue-reading = Reprendre la lecture : les documents de cet ordinateur avec une position enregistrée, sur n'importe quel ordinateur, les plus récents d'abord
+
+## La file de lecture et la liste de révision (bêta 3).
+
+queue-title = File de lecture
+queue-intro =
+    { $n ->
+        [one] File de lecture, 1 document. Entrée l’ouvre, Suppr le retire.
+       *[other] File de lecture, { $n } documents. Entrée en ouvre un, Suppr le retire.
+    }
+queue-empty = La file de lecture est vide. Dans la bibliothèque, { $key } ajoute un document.
+queue-item-missing = { $title }, introuvable
+queue-added =
+    { $n ->
+        [one] Ajouté à la file de lecture : { $title }. 1 document dans la file.
+       *[other] Ajouté à la file de lecture : { $title }. { $n } documents dans la file.
+    }
+queue-removed = Retiré de la file de lecture : { $title }.
+queue-no-file = Seul un document enregistré dans un fichier peut entrer dans la file de lecture.
+queue-read-failed = Impossible de lire la bibliothèque pour la file de lecture : { $error }. Vérifiez library.json dans le dossier de données ; tw settings path l’indique.
+queue-next-ask = Ensuite : { $title }. { $key } pour lire.
+queue-next-reading = Ensuite : { $title }.
+review-title = Liste de révision
+review-intro =
+    { $n ->
+        [one] Liste de révision, 1 document, le plus anciennement lu d’abord. Entrée l’ouvre.
+       *[other] Liste de révision, { $n } documents, le plus anciennement lu d’abord. Entrée en ouvre un.
+    }
+review-empty = Rien à revoir pour l’instant. Les documents lus à voix haute apparaissent ici.
+review-stats-off = La liste de révision a besoin des statistiques de lecture, qui sont désactivées. Activez Statistiques de lecture dans les réglages.
+review-item = { $title }, { $days }, { $pct } pour cent, { $notes }
+review-days =
+    { $n ->
+        [0] aujourd’hui
+        [one] 1 jour
+       *[other] { $n } jours
+    }
+review-notes =
+    { $n ->
+        [0] aucune note
+        [one] 1 note
+       *[other] { $n } notes
+    }
+name-review-list = Liste de révision
+action-review-list = Liste de révision : les documents lus, le plus anciennement lu d’abord
+name-reading-queue = File de lecture
+action-reading-queue = File de lecture : les documents à lire ensuite, dans l’ordre
+name-queue-document = Ajouter à la file de lecture
+action-queue-document = Ajouter le document à la file de lecture, ou l’en retirer
 name-add-library-folder = Ajouter un dossier à la bibliothèque
 action-add-library-folder = Ajouter un dossier à la bibliothèque : le choisir dans le navigateur de fichiers
 name-edit-document-details = Modifier les détails
@@ -1709,8 +1757,8 @@ library-folder-added = { $name } a été ajouté à la bibliothèque. Ouvrez la 
 library-folder-already = { $name } est déjà dans la bibliothèque.
 library-intro =
     { $n ->
-        [one] Bibliothèque, { $n } document. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails.
-       *[other] Bibliothèque, { $n } documents. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails.
+        [one] Bibliothèque, { $n } document. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails, { $queue } le met dans la file.
+       *[other] Bibliothèque, { $n } documents. Tapez pour filtrer, Entrée en ouvre un, F2 modifie les détails, { $queue } le met dans la file.
     }
 library-title = Bibliothèque
 
@@ -2225,6 +2273,11 @@ setting-reading-book-audio = Audio du livre
 setting-reading-book-audio-help = Ce qui lit un livre audio DAISY qui a un enregistrement. Sa narration enregistrée, avec la mise en évidence qui la suit et la synthèse vocale pour le texte sans audio, ou la synthèse vocale seule. Les changements de débit ne s’appliquent pas à l’enregistrement.
 choice-reading-book-audio-auto = narration enregistrée
 choice-reading-book-audio-speech = synthèse vocale seule
+setting-reading-after-end = À la fin d’un document
+setting-reading-after-end-help = Ce qui suit la fin d’un document quand la file de lecture en a un autre. Rien, le document suivant est annoncé et la touche de lecture le lit, ou le document suivant est lu aussitôt. Un document ne commence jamais sans que vous le demandiez.
+choice-reading-after-end-stop = s’arrêter
+choice-reading-after-end-ask = demander d’abord
+choice-reading-after-end-next = lire le suivant
 setting-display-theme = Thème
 setting-display-theme-help = Le thème de couleur.
 setting-display-follow-os-theme = Suivre le thème du système

@@ -227,6 +227,63 @@ continue-ago-days =
     }
 name-continue-reading = Continue reading
 action-continue-reading = Continue reading: the documents on this computer with a saved place, from any computer, newest first
+
+## The reading queue and the review list (beta 3).
+
+queue-title = Reading queue
+# $n is the number of documents in the queue.
+queue-intro =
+    { $n ->
+        [one] Reading queue, 1 document. Enter opens it, Delete takes it out.
+       *[other] Reading queue, { $n } documents. Enter opens one, Delete takes it out.
+    }
+# $key adds a document from the library list (Ctrl+Enter).
+queue-empty = The reading queue is empty. In the library, { $key } adds a document.
+# A queued document whose file is not there (a drive not plugged in).
+queue-item-missing = { $title }, not found
+# $n is how many documents the queue holds now.
+queue-added =
+    { $n ->
+        [one] Added to the reading queue: { $title }. 1 document in the queue.
+       *[other] Added to the reading queue: { $title }. { $n } documents in the queue.
+    }
+queue-removed = Removed from the reading queue: { $title }.
+queue-no-file = Only a document saved as a file can join the reading queue.
+queue-read-failed = Could not read the library for the reading queue: { $error }. Check library.json in the data folder; tw settings path names it.
+# At the end of a document, [reading] after_end = "ask". $key is the read key.
+queue-next-ask = Next: { $title }. { $key } to read.
+# At the end of a document, [reading] after_end = "next".
+queue-next-reading = Next: { $title }.
+review-title = Review list
+# $n is the number of documents listed.
+review-intro =
+    { $n ->
+        [one] Review list, 1 document, read longest ago first. Enter opens it.
+       *[other] Review list, { $n } documents, read longest ago first. Enter opens one.
+    }
+review-empty = Nothing to review yet. Documents you read aloud are listed here.
+review-stats-off = The review list needs reading statistics, which are off. Turn on Reading statistics in Settings.
+# One row, meaning first: the title, how long ago it was read
+# (review-days), how far, and its notes (review-notes).
+review-item = { $title }, { $days }, { $pct } percent, { $notes }
+review-days =
+    { $n ->
+        [0] today
+        [one] 1 day
+       *[other] { $n } days
+    }
+review-notes =
+    { $n ->
+        [0] no notes
+        [one] 1 note
+       *[other] { $n } notes
+    }
+name-review-list = Review list
+action-review-list = Review list: the documents you have read, the one read longest ago first
+name-reading-queue = Reading queue
+action-reading-queue = Reading queue: the documents to read next, in order
+name-queue-document = Add to reading queue
+action-queue-document = Add the document to the reading queue, or take it out
 name-add-library-folder = Add a folder to the library
 action-add-library-folder = Add a folder to the library: choose it in the file browser
 name-edit-document-details = Edit details
@@ -1706,8 +1763,8 @@ library-folder-added = Added { $name } to the library. Open the library to see i
 library-folder-already = { $name } is already in the library.
 library-intro =
     { $n ->
-        [one] Library, { $n } document. Type to filter, Enter opens one, F2 edits details.
-       *[other] Library, { $n } documents. Type to filter, Enter opens one, F2 edits details.
+        [one] Library, { $n } document. Type to filter, Enter opens one, F2 edits details, { $queue } queues it.
+       *[other] Library, { $n } documents. Type to filter, Enter opens one, F2 edits details, { $queue } queues it.
     }
 library-title = Library
 
@@ -2224,6 +2281,11 @@ setting-reading-book-audio = Book audio
 setting-reading-book-audio-help = What reads a DAISY talking book that has a recording. Its recorded narration, with the highlight following it and speech reading any text without audio, or speech only. Rate changes do not apply to the recording.
 choice-reading-book-audio-auto = recorded narration
 choice-reading-book-audio-speech = speech only
+setting-reading-after-end = After a document ends
+setting-reading-after-end-help = What follows the end of a document when the reading queue has another. Nothing, the next document named with the read key to read it, or the next document read at once. A document never starts unless you ask.
+choice-reading-after-end-stop = stop
+choice-reading-after-end-ask = ask first
+choice-reading-after-end-next = read the next
 setting-display-theme = Theme
 setting-display-theme-help = The color theme.
 setting-display-follow-os-theme = Follow the system theme

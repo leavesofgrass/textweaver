@@ -1263,7 +1263,12 @@ impl App {
                         s.spoken_sentence = None;
                     }
                     let msg = self.msg("playback-done-reading");
-                    self.say_at(&msg, Verbosity::High, Priority::Polite);
+                    // The end of the document: the reading queue
+                    // (`[reading] after_end`, crate::queue).
+                    let queued = self.reading == ReadKind::Continuous && self.queue_after_end(&msg);
+                    if !queued {
+                        self.say_at(&msg, Verbosity::High, Priority::Polite);
+                    }
                     return true;
                 }
                 false

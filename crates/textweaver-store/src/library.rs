@@ -676,11 +676,18 @@ pub struct NotedDoc {
     pub notes: Vec<crate::Note>,
 }
 
-/// The bookshelf, `library.json`: every document opened, newest first.
+/// The bookshelf, `library.json`: every document opened, newest first,
+/// and the reading queue.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Library {
     /// The entries, most recently opened first.
     pub entries: Vec<LibraryEntry>,
+    /// The reading queue: documents to read next, in order (resolved
+    /// paths). A document leaves it when it is read to the end or removed
+    /// from the bookshelf. Absent from the file while empty, so an older
+    /// textweaver reads the file unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub queue: Vec<PathBuf>,
 }
 
 impl Library {
@@ -852,12 +859,58 @@ impl Library {
         changed
     }
 
-    /// Removes `path`. Returns whether it was there.
+    /// Removes `path`, from the reading queue too. Returns whether it was
+    /// on the bookshelf.
     pub fn remove(&mut self, path: &Path) -> bool {
         let key = resolve_path(path);
         let before = self.entries.len();
         self.entries.retain(|e| e.path != key);
+        self.queue.retain(|q| *q != key);
         self.entries.len() != before
+    }
+
+    /// Adds `path` to the end of the reading queue. Returns false when it
+    /// was queued already (it keeps its place).
+    pub fn queue_add(&mut self, path: &Path) -> bool {
+        let key = resolve_path(path);
+        if self.queue.contains(&key) {
+            return false;
+        }
+        self.queue.push(key);
+        true
+    }
+
+    /// Takes `path` out of the reading queue. Returns whether it was there.
+    pub fn queue_remove(&mut self, path: &Path) -> bool {
+        let key = resolve_path(path);
+        let before = self.queue.len();
+        self.queue.retain(|q| *q != key);
+        self.queue.len() != before
+    }
+
+    /// True when `path` is in the reading queue.
+    pub fn queued(&self, path: &Path) -> bool {
+        self.queue.contains(&resolve_path(path))
+    }
+
+    /// The document to read after `current`: the first in the queue that
+    /// is not `current` and whose file is there. A queued file that is
+    /// missing (a drive not plugged in) keeps its place and is passed over.
+    pub fn queue_next(&self, current: Option<&Path>) -> Option<&Path> {
+        let current = current.map(resolve_path);
+        self.queue
+            .iter()
+            .find(|q| Some(*q) != current.as_ref() && q.is_file())
+            .map(PathBuf::as_path)
+    }
+
+    /// The title the library shows for `path`: the bookshelf's, else the
+    /// file's name without its extension.
+    pub fn title_of(&self, path: &Path) -> String {
+        self.get(path)
+            .map(LibraryEntry::shown_title)
+            .filter(|t| !t.is_empty())
+            .map_or_else(|| stem(path), str::to_owned)
     }
 }
 
@@ -1247,6 +1300,47 @@ mod tests {
 
     fn supported(ext: &str) -> bool {
         matches!(ext, "md" | "txt" | "html")
+    }
+
+    #[test]
+    fn the_queue_keeps_order_skips_missing_files_and_survives_saving() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("library.json");
+        let a = dir.path().join("week3.md");
+        let b = dir.path().join("week4.md");
+        let gone = dir.path().join("gone.md");
+        touch(&a, "a");
+        touch(&b, "b");
+        let mut lib = Library::default();
+        lib.record_open_at(&b, "Week 4", "markdown", 5);
+        assert!(lib.queue_add(&gone));
+        assert!(lib.queue_add(&a));
+        assert!(lib.queue_add(&b));
+        assert!(
+            !lib.queue_add(&dir.path().join(".").join("week3.md")),
+            "once"
+        );
+        assert_eq!(lib.queue.len(), 3);
+        assert!(lib.queued(&a));
+        // The missing file is passed over, not removed; the current
+        // document is never the next one.
+        assert_eq!(lib.queue_next(None), Some(resolve_path(&a).as_path()));
+        assert_eq!(lib.queue_next(Some(&a)), Some(resolve_path(&b).as_path()));
+        assert_eq!(lib.title_of(&b), "Week 4");
+        assert_eq!(lib.title_of(&a), "week3");
+        lib.save(&file).unwrap();
+        assert_eq!(Library::load(&file).unwrap(), lib);
+        assert!(lib.queue_remove(&a));
+        assert!(!lib.queue_remove(&a));
+        // Removing from the bookshelf takes it out of the queue.
+        lib.remove(&b);
+        assert!(!lib.queued(&b));
+        assert_eq!(lib.queue_next(None), None);
+        // An empty queue is not written, so older versions read the file
+        // as before.
+        lib.queue.clear();
+        lib.save(&file).unwrap();
+        assert!(!std::fs::read_to_string(&file).unwrap().contains("queue"));
     }
 
     fn touch(p: &Path, text: &str) {

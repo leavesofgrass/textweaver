@@ -223,6 +223,54 @@ continue-ago-days =
     }
 name-continue-reading = Continuar a ler
 action-continue-reading = Continuar a ler: os documentos deste computador com uma posição guardada, de qualquer computador, os mais recentes primeiro
+
+## A fila de leitura e a lista de revisão (beta 3).
+
+queue-title = Fila de leitura
+queue-intro =
+    { $n ->
+        [one] Fila de leitura, 1 documento. Enter abre-o, Delete tira-o da fila.
+       *[other] Fila de leitura, { $n } documentos. Enter abre um, Delete tira-o da fila.
+    }
+queue-empty = A fila de leitura está vazia. Na biblioteca, { $key } adiciona um documento.
+queue-item-missing = { $title }, não encontrado
+queue-added =
+    { $n ->
+        [one] Adicionado à fila de leitura: { $title }. 1 documento na fila.
+       *[other] Adicionado à fila de leitura: { $title }. { $n } documentos na fila.
+    }
+queue-removed = Retirado da fila de leitura: { $title }.
+queue-no-file = Só um documento guardado como arquivo pode entrar na fila de leitura.
+queue-read-failed = Não foi possível ler a biblioteca para a fila de leitura: { $error }. Verifique library.json na pasta de dados; tw settings path indica-a.
+queue-next-ask = A seguir: { $title }. { $key } para ler.
+queue-next-reading = A seguir: { $title }.
+review-title = Lista de revisão
+review-intro =
+    { $n ->
+        [one] Lista de revisão, 1 documento, o lido há mais tempo primeiro. Enter abre-o.
+       *[other] Lista de revisão, { $n } documentos, o lido há mais tempo primeiro. Enter abre um.
+    }
+review-empty = Nada para rever ainda. Os documentos lidos em voz alta aparecem aqui.
+review-stats-off = A lista de revisão precisa das estatísticas de leitura, que estão desligadas. Ligue Estatísticas de leitura nas configurações.
+review-item = { $title }, { $days }, { $pct } por cento, { $notes }
+review-days =
+    { $n ->
+        [0] hoje
+        [one] 1 dia
+       *[other] { $n } dias
+    }
+review-notes =
+    { $n ->
+        [0] sem notas
+        [one] 1 nota
+       *[other] { $n } notas
+    }
+name-review-list = Lista de revisão
+action-review-list = Lista de revisão: os documentos que leu, o lido há mais tempo primeiro
+name-reading-queue = Fila de leitura
+action-reading-queue = Fila de leitura: os documentos a ler a seguir, por ordem
+name-queue-document = Adicionar à fila de leitura
+action-queue-document = Adicionar o documento à fila de leitura, ou tirá-lo
 name-add-library-folder = Adicionar uma pasta à biblioteca
 action-add-library-folder = Adicionar uma pasta à biblioteca: escolha-a no navegador de arquivos
 name-edit-document-details = Editar detalhes
@@ -1697,8 +1745,8 @@ library-folder-added = { $name } foi adicionada à biblioteca. Abra a biblioteca
 library-folder-already = { $name } já está na biblioteca.
 library-intro =
     { $n ->
-        [one] Biblioteca, { $n } documento. Digite para filtrar, Enter abre um, F2 edita os detalhes.
-       *[other] Biblioteca, { $n } documentos. Digite para filtrar, Enter abre um, F2 edita os detalhes.
+        [one] Biblioteca, { $n } documento. Digite para filtrar, Enter abre um, F2 edita os detalhes, { $queue } põe-no na fila.
+       *[other] Biblioteca, { $n } documentos. Digite para filtrar, Enter abre um, F2 edita os detalhes, { $queue } põe-no na fila.
     }
 library-title = Biblioteca
 
@@ -2213,6 +2261,11 @@ setting-reading-book-audio = Áudio do livro
 setting-reading-book-audio-help = O que lê um livro falado DAISY que tem gravação. A narração gravada, com o destaque acompanhando e a voz lendo o texto sem áudio, ou só a voz. As mudanças de velocidade não se aplicam à gravação.
 choice-reading-book-audio-auto = narração gravada
 choice-reading-book-audio-speech = só voz
+setting-reading-after-end = Ao terminar um documento
+setting-reading-after-end-help = O que segue o fim de um documento quando a fila de leitura tem outro. Nada, o próximo documento é anunciado e a tecla de ler o lê, ou o próximo documento é lido logo. Um documento nunca começa sem você pedir.
+choice-reading-after-end-stop = parar
+choice-reading-after-end-ask = perguntar antes
+choice-reading-after-end-next = ler o próximo
 setting-display-theme = Tema
 setting-display-theme-help = O tema de cores.
 setting-display-follow-os-theme = Seguir o tema do sistema

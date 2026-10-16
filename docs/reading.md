@@ -217,6 +217,16 @@ To read for a set time, set **Reading timer** in Settings (`[reading] stop_after
 
 Only reading time counts: pausing stops the clock, and resuming starts it again. Stopping with **Escape**, reaching the end of the document, or the timer running out starts the clock over at the next reading.
 
+### At the end of a document: the reading queue
+
+When continuous reading reaches the end of a document, you hear "Done reading." If the document was in the [reading queue](library.md#the-reading-queue), it leaves the queue. What follows is set by **After a document ends** in Settings (`[reading] after_end`):
+
+- **stop** (`"stop"`, the default): nothing more. The next document in the queue waits.
+- **ask first** (`"ask"`): you hear the next document's title and your read key, such as "Done reading. Next: Week 4. Ctrl+Space to read." Press the read key there and the next document opens and is read; move first, and the key reads the document you are in.
+- **read the next** (`"next"`): the next document opens and is read at once, from its saved place.
+
+A document is never started unless you ask: by the read key, or by choosing **read the next**.
+
 ### Talking books: the recorded narration
 
 Many DAISY books, from Bookshare, from national libraries for print-disabled readers, and from publishers, are full-text, full-audio books: alongside the text they carry a human narrator's recording, cut into short clips, together with SMIL files that pair each phrase of the text with the clip that says it. When you read such a book continuously (**Enter**, or **Shift+R**), textweaver plays the narrator's recording instead of a synthetic voice, and the reading highlight moves from phrase to phrase as the recording reaches each one. Pause, stop, the reading timer, and stopping at a section end work as they do with speech, and reading picks up from where it stopped. DAISY 3 and DAISY 2.02 books in MP3 or WAV are supported, whether opened from a folder or from the zip they came in.
