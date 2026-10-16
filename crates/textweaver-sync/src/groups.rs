@@ -17,6 +17,13 @@
 //! - `words.json`: set `words`.
 //! - `glossary.json`: maps `glossary` and `pronunciations`, by term.
 //! - `voices.json`: set `voices`, by voice id.
+//! - `queue.json`: map `queue`, the reading queue, by document sync id;
+//!   each value holds `added`, when the document joined the queue
+//!   (milliseconds since 1970), which orders it. Removing a document is a
+//!   deletion record, so it does not come back from a computer that had
+//!   not heard; adding it again later wins over the removal. A textweaver
+//!   from before the queue synced never reads this file, and never
+//!   touches it.
 
 use std::collections::BTreeMap;
 
@@ -42,17 +49,20 @@ pub enum GroupFile {
     Glossary,
     /// `voices.json`: favorite voices.
     Voices,
+    /// `queue.json`: the reading queue.
+    Queue,
 }
 
 impl GroupFile {
     /// Every group file.
-    pub const ALL: [GroupFile; 6] = [
+    pub const ALL: [GroupFile; 7] = [
         GroupFile::Settings,
         GroupFile::Profiles,
         GroupFile::Keymap,
         GroupFile::Words,
         GroupFile::Glossary,
         GroupFile::Voices,
+        GroupFile::Queue,
     ];
 
     /// The file's name in a computer's folder.
@@ -64,6 +74,7 @@ impl GroupFile {
             GroupFile::Words => "words.json",
             GroupFile::Glossary => "glossary.json",
             GroupFile::Voices => "voices.json",
+            GroupFile::Queue => "queue.json",
         }
     }
 }

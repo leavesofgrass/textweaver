@@ -21,7 +21,8 @@
 //!   makes sync read-only.
 //! - [`groups`]: the groups that are not about one document (portable
 //!   settings, profiles, key overrides, the word list, the glossary and
-//!   pronunciations, favorite voices), one file per group and computer.
+//!   pronunciations, favorite voices, the reading queue), one file per
+//!   group and computer.
 //! - [`docid`]: document identity. Each document gets a random sync id,
 //!   found by the file's SHA-256, then the SHA-256 of its text, then its
 //!   library folder's id and path inside it; a DOI or ISBN is only

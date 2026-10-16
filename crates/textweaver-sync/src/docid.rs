@@ -421,6 +421,15 @@ impl IdentityIndex {
         self.docs.contains_key(&sync_id)
     }
 
+    /// The title the records give `sync_id` (the owner's hand-edited one
+    /// where some computer has it), when any does.
+    pub fn title(&self, sync_id: SyncId) -> Option<&str> {
+        self.docs
+            .get(&sync_id)?
+            .identity
+            .shown_detail(detail::TITLE)
+    }
+
     /// How many documents it knows.
     pub fn len(&self) -> usize {
         self.docs.len()
