@@ -102,6 +102,12 @@ pub(crate) enum Job {
         /// True to add, false to take out.
         add: bool,
     },
+    /// Take a document another computer queued, and not found here, out
+    /// of the reading queue (crate::queue).
+    Unqueue {
+        library_file: PathBuf,
+        sync_id: String,
+    },
     /// Save the owner's hand edits of a document's details on the
     /// bookshelf (W7m).
     EditDetails {
@@ -558,6 +564,18 @@ fn do_job(job: Job, reports: &Sender<Report>, state: &mut WriterState, supersede
             add,
         } => {
             record_queue(&library_file, &path, add);
+            None
+        }
+        Job::Unqueue {
+            library_file,
+            sync_id,
+        } => {
+            if let Ok(mut lib) = Library::load(&library_file)
+                && lib.queue_remove_elsewhere(&sync_id)
+                && let Err(e) = lib.save(&library_file)
+            {
+                log::warn!("cannot save the reading queue: {e}");
+            }
             None
         }
         Job::EditDetails {

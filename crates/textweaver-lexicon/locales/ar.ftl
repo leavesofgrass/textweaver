@@ -294,6 +294,9 @@ queue-intro =
     }
 queue-empty = قائمة القراءة فارغة. في المكتبة، { $key } يضيف مستندًا.
 queue-item-missing = { $title }، غير موجود
+queue-item-elsewhere = { $title }، ليس على هذا الحاسوب
+queue-untitled = مستند من حاسوب آخر
+queue-elsewhere-chosen = { $title } ليس على هذا الحاسوب. يبقى في قائمة القراءة، ويُعثر عليه حين تفتحه هنا.
 queue-added =
     { $n ->
         [one] أُضيف إلى قائمة القراءة: { $title }. مستند واحد في القائمة.
@@ -4845,7 +4848,7 @@ setting-sync-folder-help = المجلد الذي تتشاركه حواسيبك. 
 setting-sync-device-name = اسم الحاسوب
 setting-sync-device-name-help = اسم هذا الحاسوب في رسائل المزامنة، مثل laptop أو lab. الفارغ يستخدم Computer 1 وComputer 2 وهكذا.
 setting-sync-places = مزامنة المواضع
-setting-sync-places-help = مشاركة موضعك في كل مستند.
+setting-sync-places-help = مشاركة موضعك في كل مستند، وقائمة القراءة.
 setting-sync-notes = مزامنة الملاحظات
 setting-sync-notes-help = مشاركة الملاحظات.
 setting-sync-highlights = مزامنة التظليلات

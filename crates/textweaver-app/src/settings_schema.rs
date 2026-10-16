@@ -1579,7 +1579,7 @@ pub const INFO: &[Info] = &[
     toggle(
         "sync.places",
         "Sync places",
-        "Share where you are in each document.",
+        "Share where you are in each document, and the reading queue.",
     ),
     toggle("sync.notes", "Sync notes", "Share notes."),
     toggle("sync.highlights", "Sync highlights", "Share highlights."),

@@ -646,3 +646,52 @@ fn group_files_merge_and_damaged_ones_are_skipped() {
         "{problems:?}"
     );
 }
+
+/// The reading queue's group file (beta 3) round-trips between computers,
+/// and a group file a computer does not know, as `queue.json` is to a
+/// textweaver from before the queue synced, is never read, reported, or
+/// changed by it.
+#[test]
+fn the_queue_file_round_trips_and_an_unknown_group_file_is_left_alone() {
+    use textweaver_sync::{FolderView, GroupFile, GroupRecord};
+    let mut laptop = Computer::new("laptop");
+    let mut lab = Computer::new("lab");
+    let mut queue = GroupRecord::new();
+    let s = laptop.stamp(wall_ms());
+    queue
+        .map_mut("queue")
+        .set(DOC.to_string(), s, serde_json::json!({ "added": 5 }));
+    let s = laptop.stamp(wall_ms());
+    queue
+        .map_mut("queue")
+        .delete(SyncId::from_u128(7).to_string(), s);
+    laptop.folder.write_group(GroupFile::Queue, &queue).unwrap();
+    // A group from a later textweaver, which this one does not know.
+    let later = laptop.own_dir().join("later.json");
+    let later_bytes = b"{\"format\": 99, \"maps\": {\"later\": {}}}\n";
+    std::fs::write(&later, later_bytes).unwrap();
+    propagate(&[&laptop, &lab]);
+
+    let (records, problems) = lab.folder.read_group(GroupFile::Queue);
+    assert!(problems.is_empty(), "{problems:?}");
+    let (_, back) = records
+        .into_iter()
+        .find(|(d, _)| *d == laptop.folder.device())
+        .unwrap();
+    assert_eq!(back, queue);
+    for group in GroupFile::ALL {
+        let (_, problems) = lab.folder.read_group(group);
+        assert!(problems.is_empty(), "{group:?}: {problems:?}");
+    }
+    let (_, problems) = lab.folder.identity_index();
+    assert!(problems.is_empty(), "{problems:?}");
+    assert_eq!(FolderView::read(&lab.sync_dir).unwrap().skipped, 0);
+    lab.sync();
+    let lab_copy = lab
+        .sync_dir
+        .join(SYNC_DIR)
+        .join(DEVICES_DIR)
+        .join(laptop.folder.device().to_string())
+        .join("later.json");
+    assert_eq!(std::fs::read(lab_copy).unwrap(), later_bytes);
+}

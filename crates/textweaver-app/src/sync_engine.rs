@@ -931,7 +931,7 @@ impl SyncEngine {
 
     /// The other computers' records, as an index for recognizing
     /// documents; read again only when a file changed.
-    fn identity_index(&mut self, notices: &mut Vec<Notice>) -> Option<IdentityIndex> {
+    pub(crate) fn identity_index(&mut self, notices: &mut Vec<Notice>) -> Option<IdentityIndex> {
         let sig = all_docs_signature(folder_root(self.config.as_ref()?).as_path());
         let stale = self.index.as_ref().is_none_or(|(s, _)| *s != sig);
         if stale {

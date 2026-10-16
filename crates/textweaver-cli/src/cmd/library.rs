@@ -609,7 +609,10 @@ fn edit(paths: &Paths, settings: &Settings, a: &EditArgs) -> anyhow::Result<Edit
 /// One document in the reading queue.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 struct QueuedDoc {
-    path: PathBuf,
+    /// The document here; absent for one another computer queued that is
+    /// not found here.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    path: Option<PathBuf>,
     title: String,
     /// The file is there.
     found: bool,
@@ -618,10 +621,10 @@ struct QueuedDoc {
 fn queued_docs(lib: &Library) -> Vec<QueuedDoc> {
     lib.queue
         .iter()
-        .map(|p| QueuedDoc {
-            path: p.clone(),
-            title: lib.title_of(p),
-            found: p.is_file(),
+        .map(|q| QueuedDoc {
+            path: q.path.clone(),
+            title: lib.queue_title(q),
+            found: q.path.as_deref().is_some_and(Path::is_file),
         })
         .collect()
 }
@@ -633,12 +636,17 @@ fn render_queue(docs: &[QueuedDoc]) -> String {
     }
     let mut out = format!("Reading queue, {}, in order:\n", documents(docs.len()));
     for d in docs {
+        let Some(path) = &d.path else {
+            let title = if d.title.is_empty() {
+                "A document from another computer"
+            } else {
+                d.title.as_str()
+            };
+            out.push_str(&format!("  {title}, not on this computer\n"));
+            continue;
+        };
         let missing = if d.found { "" } else { ", not found" };
-        out.push_str(&format!(
-            "  {}{missing}\n    {}\n",
-            d.title,
-            d.path.display()
-        ));
+        out.push_str(&format!("  {}{missing}\n    {}\n", d.title, path.display()));
     }
     out
 }
@@ -698,12 +706,12 @@ fn queue(
         }
         Some(QueueCommand::Next) => {
             let next = lib.queue_next(None).map(|p| QueuedDoc {
-                path: p.to_owned(),
+                path: Some(p.to_owned()),
                 title: lib.title_of(p),
                 found: true,
             });
-            let text = match &next {
-                Some(d) => format!("{}\n", d.path.display()),
+            let text = match next.as_ref().and_then(|d| d.path.as_ref()) {
+                Some(p) => format!("{}\n", p.display()),
                 None => "The reading queue has nothing to read next.\n".to_owned(),
             };
             (text, serde_json::json!({ "next": next }))
@@ -1462,7 +1470,10 @@ mod tests {
         let gone = queue_cmd(&paths, Some(QueueCommand::Remove { file: week3 }), false);
         assert_eq!(gone, "week3 is not in the reading queue.\n");
         let lib = Library::load(&paths.library_file()).unwrap();
-        assert_eq!(lib.queue, vec![library::resolve_path(&week4)]);
+        assert_eq!(
+            lib.queue_paths().collect::<Vec<_>>(),
+            [library::resolve_path(&week4).as_path()]
+        );
 
         let missing = run_with(
             &Args {

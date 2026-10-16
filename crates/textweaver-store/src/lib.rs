@@ -76,7 +76,9 @@ pub use doc_state::{
 pub use fulltext::{FullTextIndex, SearchHit, SimpleIndex};
 pub use graph::{Graph, GraphEdge, GraphFormat, GraphNode};
 pub use helpers::{find_helper, find_helper_in, lou_translate};
-pub use library::{Library, LibraryEntry, LibraryItem, LibrarySync, NotedDoc, ScannedDoc};
+pub use library::{
+    Library, LibraryEntry, LibraryItem, LibrarySync, NotedDoc, QueueEntry, ScannedDoc,
+};
 pub use notes::{
     Annotation, Backlink, Backlinks, Highlight, Note, NotesExport, Relation, RelationType,
 };

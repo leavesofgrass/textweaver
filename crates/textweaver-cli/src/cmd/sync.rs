@@ -320,6 +320,7 @@ fn execute(paths: &Paths, command: &SyncCommand, out: &mut dyn Write) -> anyhow:
                     settings: Box::new(settings.clone()),
                     settings_ms: saved_ms,
                     force: true,
+                    applied: Vec::new(),
                 });
                 notices.append(&mut groups.notices);
                 let applied =
