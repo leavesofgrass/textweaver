@@ -80,6 +80,21 @@ impl<R> std::fmt::Debug for HostProcess<R> {
 }
 
 impl<R: Message + Send + 'static> HostProcess<R> {
+    /// Starts `path` as `engine`'s host with `args`, putting host mode's
+    /// arguments first when `path` is a combined host (this program, or
+    /// the 32-bit `textweaver-host-x86.exe`; see
+    /// [`hostmode::engine_args`](crate::hostmode::engine_args)). The
+    /// engine's name labels its log lines.
+    pub fn spawn_engine<I, S>(path: &Path, engine: &'static str, args: I) -> Result<Self, String>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        let mut all = crate::hostmode::engine_args(path, engine);
+        all.extend(args.into_iter().map(|a| a.as_ref().to_os_string()));
+        Self::spawn(path, all, engine)
+    }
+
     /// Starts `path` with `args`. Its stderr goes to the log (debug level,
     /// prefixed with `label`); its replies are decoded on a reader thread.
     /// On Windows no console window opens for it.
