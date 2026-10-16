@@ -1,15 +1,15 @@
 # Driving textweaver from another program (JSON-RPC)
 
-`tw serve --stdio` runs textweaver as a server that another program controls. The other program, called the client, starts `tw serve` as a child process, writes requests to its standard input, and reads answers from its standard output. The client can open a document, move through it by sentence, heading, line, or any other textweaver unit, have it read aloud with textweaver's voices, run any keyboard action by name, and follow along as each word is spoken. This guide is for people writing an editor plugin, a web page, or any other tool that wants textweaver's reading without rebuilding it. Prior knowledge of JSON-RPC is not required; the parts of the protocol that matter are explained where they arise.
+`tw serve --stdio` runs textweaver as a server controlled by another program. That program, the client, starts `tw serve` as a child process, writes requests to its standard input, and reads responses from its standard output. Through the protocol a client can open a document, navigate it by sentence, heading, line, or any other textweaver unit, have it read aloud with textweaver's voices, invoke any keyboard action by name, and follow playback word by word. This reference is intended for developers of editor plugins, web front ends, and other tools that want textweaver's reading engine without reimplementing it. The protocol is JSON-RPC 2.0, and the aspects that matter here are described where they arise.
 
-Each message is shown in its own code block, preceded by a sentence that says what it is.
+Each message in the examples appears in its own code block, preceded by a sentence identifying it.
 
 ## Before you start
 
-- You need `tw` on your computer. Check with `tw --version`. See [the install guide](install.md) if you do not have it.
-- The protocol is JSON-RPC 2.0. Every message is one JSON object. You do not need a JSON-RPC library: any language that can start a process, write a line, and read a line is enough.
-- Positions are character offsets counted from the start of the document, starting at 0. They count Unicode characters (code points), the way Python counts string indexes. JavaScript and VS Code count UTF-16 units, so a client written in those must convert.
-- Every example in this guide was run against the real `tw` program with `--no-speech`, so nothing was spoken aloud.
+- `tw` must be installed; `tw --version` confirms it, and [the install guide](install.md) covers installation.
+- The protocol is JSON-RPC 2.0, and every message is a single JSON object. No JSON-RPC library is required: any language that can start a process and write and read lines is sufficient.
+- Positions are zero-based character offsets from the start of the document, counted in Unicode characters (code points), as Python counts string indexes. JavaScript and VS Code count UTF-16 code units, so clients written for them must convert.
+- Every example was produced by running the real `tw` program with `--no-speech`, so nothing was spoken aloud.
 
 ## Start the server
 
@@ -19,7 +19,7 @@ This starts the server and speaks, like the terminal reader:
 tw serve --stdio
 ```
 
-Nothing is printed for a person to read. The server waits for JSON messages on standard input and writes only JSON messages on standard output. A person does not normally type at it. A program starts it.
+The server prints nothing intended for a person. It waits for JSON messages on standard input and writes only JSON messages on standard output; it is meant to be started by a program, not typed at.
 
 `--stdio` is required. Without it, `tw serve` stops at once with an error and exit code 1:
 
@@ -27,7 +27,7 @@ Nothing is printed for a person to read. The server waits for JSON messages on s
 tw serve
 ```
 
-You get "Error: `tw serve` needs a transport; use --stdio". There is no network or socket mode. A client that wants a long-running server keeps the child process open.
+This produces "Error: `tw serve` needs a transport; use --stdio". There is no network or socket mode; a client that needs a long-running server keeps the child process open.
 
 ### Stay silent with --no-speech
 
@@ -35,7 +35,7 @@ You get "Error: `tw serve` needs a transport; use --stdio". There is no network 
 tw serve --stdio --no-speech
 ```
 
-Nothing is spoken. The client still receives every announcement and every playback change as a message, so it can show them or send them to a screen reader. Use this when the client already has a voice, for example a screen reader user's editor. See [Speech: who does the talking](#speech-who-does-the-talking).
+Nothing is spoken, but the client still receives every announcement and playback change as a message and can display them or forward them to a screen reader. Use this option when the client has a voice of its own, as an editor used with a screen reader does. See [Speech: who does the talking](#speech-who-does-the-talking).
 
 ### Choose a speech engine with --backend
 
@@ -43,13 +43,13 @@ Nothing is spoken. The client still receives every announcement and every playba
 tw serve --stdio --backend sapi
 ```
 
-The value is a speech engine id, such as `eci` (ETI-Eloquence), `sapi`, `dectalk`, or `null`. See the list your computer has:
+The value is a speech engine id, such as `eci` (ETI-Eloquence), `sapi`, `dectalk`, or `null`. The engines available on the current machine are listed by:
 
 ```bash
 tw backends
 ```
 
-Without `--backend`, the server uses the `[speech] backend` setting, which is normally `auto`. If the speech engine you name is not available, the server uses the automatic choice and tells the client with the announcement "Speech engine sapi is not available; using …", naming the one it chose. `--backend` does nothing together with `--no-speech`.
+Without `--backend`, the server uses the `[speech] backend` setting, normally `auto`. If the named engine is unavailable, the server falls back to the automatic choice and informs the client with the announcement "Speech engine sapi is not available; using …", naming the engine it selected. `--backend` has no effect together with `--no-speech`.
 
 ### Keep settings in another folder with --home
 
@@ -57,7 +57,7 @@ Without `--backend`, the server uses the `[speech] backend` setting, which is no
 tw serve --stdio --home "C:\textweaver-test"
 ```
 
-Settings, reading positions, bookmarks, and notes are read from and saved under this folder instead of your usual ones. This is useful while you build a client, so your tests never change your real reading positions. Setting the `TEXTWEAVER_HOME` environment variable to a folder does the same.
+Settings, reading positions, bookmarks, and notes are read from and saved under this folder instead of the usual locations, so that testing a client never alters real reading positions. Setting the `TEXTWEAVER_HOME` environment variable to a folder has the same effect.
 
 ### Open a document at start with --open
 
@@ -65,13 +65,13 @@ Settings, reading positions, bookmarks, and notes are read from and saved under 
 tw serve --stdio --open notes.md
 ```
 
-The document is open before the first request arrives, and the client hears "Opened" and the title as an announcement. If it cannot be opened, the server keeps running with no document and sends an announcement that starts "Could not open". You can always open a document later with the `open` method.
+The document is open before the first request arrives, and the client receives "Opened" and the title as an announcement. If it cannot be opened, the server keeps running with no document and sends an announcement beginning "Could not open". A document can always be opened later with the `open` method.
 
 ## How messages travel
 
 ### One message per line
 
-The simplest way is one JSON object per line. Write the object, then a newline. The server answers the same way: one JSON object per line. Blank lines are ignored.
+The simplest framing is one JSON object per line, terminated by a newline. The server responds in the same way, and blank lines are ignored.
 
 ### Content-Length framing, like the Language Server Protocol
 
@@ -83,11 +83,11 @@ Content-Length: 42
 {"jsonrpc":"2.0","id":2,"method":"status"}
 ```
 
-The header line ends with a carriage return and a line feed, and a blank line (another carriage return and line feed) comes before the message. The length is the number of bytes of the message in UTF-8. The header name may be in any case. Put `Content-Length` first: header lines after it, such as `Content-Type`, are skipped, but a line before it is read as a message of its own and fails.
+The header line ends with a carriage return and line feed, and a blank line (another carriage return and line feed) precedes the message. The length is the size of the message in bytes, in UTF-8, and the header name is case-insensitive. `Content-Length` must come first: header lines after it, such as `Content-Type`, are skipped, but a line before it is read as a message of its own and fails.
 
-The server works out the framing for each message it reads: a line that starts with `Content-Length:` means a framed message, and anything else is a message on its own line. It answers in the framing of the last message it received, and sends its own notifications in that framing too. Framed answers carry only a `Content-Length` header. Before the first message, the server uses one message per line.
+The server determines the framing of each incoming message: a line beginning with `Content-Length:` introduces a framed message, and any other line is a complete message. It responds, and sends its own notifications, in the framing of the last message received; before the first message it uses one message per line. Framed responses carry only a `Content-Length` header.
 
-Pick one framing and keep to it. If you switch in the middle, a framed answer is not followed by a newline, so the next one-per-line answer can end up on the same line.
+A client should choose one framing and keep to it. A framed response is not followed by a newline, so switching in mid-session can place the next line-delimited response on the same line.
 
 ### What every message looks like
 
@@ -96,30 +96,30 @@ Every message is a JSON-RPC 2.0 object:
 - `jsonrpc` must be the string `"2.0"`. A message without it is refused.
 - `method` is the name of the method, such as `open`.
 - `params` is an object with the method's parameters. Leave it out when a method has none.
-- `id` is a number or string you choose. The answer carries the same `id`, so you can match them. A message without an `id` is a notification: the server carries it out but sends no answer.
+- `id` is a number or string chosen by the client. The response carries the same `id` so that the two can be matched. A message without an `id` is a notification: the server executes it but sends no response.
 
-An answer has either `result` (success) or `error` (failure), never both. The server answers requests in the order they arrive.
+A response contains either `result` (success) or `error` (failure), never both. Requests are answered in the order received.
 
-A message can also be a JSON array of requests, called a batch. The server handles each one in order, but it sends the answers one by one, as separate messages, not as one array.
+A message may also be a JSON array of requests, a batch. The server handles the requests in order but sends the responses individually, as separate messages rather than as one array.
 
-Messages from the server that have `method` and no `id` are notifications. They can arrive at any time: before the answer to the request that caused them, and also between requests, while speech is going on. Your client must be ready to read them whenever it reads.
+Server messages that have `method` and no `id` are notifications. They may arrive at any time: before the response to the request that caused them, and between requests while speech continues. A client must therefore be prepared to read them whenever it reads.
 
 ## Speech: who does the talking
 
-Without `--no-speech`, the server speaks, exactly like the terminal reader. It uses the same settings, the same engine choice, and the same voices. It reads the document aloud and also speaks its own announcements, such as "Opened Cell biology." The client never receives audio.
+Without `--no-speech`, the server speaks exactly as the terminal reader does, with the same settings, engine selection, and voices. It reads the document aloud and also speaks its own announcements, such as "Opened Cell biology." The client never receives audio.
 
-Every announcement is also sent to the client as an `announcement` notification, with its text and how urgent it is. So there are two ways to work:
+Every announcement is also sent to the client as an `announcement` notification carrying its text and priority. A client therefore has two modes of operation:
 
-- Let textweaver talk. The client shows the announcements, or ignores them.
-- Start the server with `--no-speech`. The client gets the announcements and passes them to its own voice or to the user's screen reader. Use this for screen reader users, so they do not hear two voices at once.
+- Let textweaver speak. The client displays the announcements or ignores them.
+- Start the server with `--no-speech`. The client receives the announcements and passes them to its own voice or to the user's screen reader. This is the appropriate choice for screen reader users, who would otherwise hear two voices at once.
 
-The server does not follow the reader's accessibility mode (`[accessibility] mode`, see [Using textweaver with a screen reader](screen-readers.md)). It always speaks for itself, unless you start it with `--no-speech`, so a client that chose one way of working gets it whatever mode the terminal reader was left in.
+The server does not follow the reader's accessibility mode (`[accessibility] mode`; see [Using textweaver with a screen reader](screen-readers.md)). It always speaks for itself unless started with `--no-speech`, so a client gets the mode it chose regardless of how the terminal reader was last configured.
 
-With `--no-speech`, reading does not take any time. When you ask the server to read, you get "reading", one `position` notification, and "stopped" almost at once.
+With `--no-speech`, reading takes no time. A request to read yields "reading", one `position` notification, and "stopped" almost immediately.
 
 ## Methods
 
-The server has 29 methods. `initialize` lists them all, so a client can check. Parameters marked optional may be left out.
+The server has 29 methods, all listed by `initialize`. Parameters marked optional may be omitted.
 
 ### initialize: say hello and learn the version
 
@@ -129,22 +129,22 @@ The result is an object with:
 
 - `server`: always `"textweaver"`.
 - `version`: the textweaver version, such as `"0.1.0-beta.1"`.
-- `protocol`: the protocol version, a number. It is `1`.
+- `protocol`: the protocol version, a number, currently `1`.
 - `methods`: the names of every method.
 - `notifications`: the names of every notification.
 
-You do not have to call `initialize` first. Every method works without it.
+Calling `initialize` first is not required; every method works without it.
 
 ### open: open a document
 
 Parameters:
 
-- `path` (string, required): what to open, as `tw open` takes it: a file, a file inside an archive (`book.zip!chapter.pdf`), or a web address. A relative path is taken from the folder the server was started in.
+- `path` (string, required): what to open, in any form `tw open` accepts: a file, a file inside an archive (`book.zip!chapter.pdf`), or a web address. A relative path is resolved against the folder in which the server was started.
 
 The result is an object with:
 
 - `document`: facts about the document (see below).
-- `position`: where reading starts (the same shape as the `position` method's result). If you read this document before, this is the saved position, and the announcement says "Resumed at" and a percentage.
+- `position`: where reading starts, in the same shape as the result of the `position` method. If the document was read before, this is the saved position, and the announcement says "Resumed at" and a percentage.
 
 The `document` object has:
 
@@ -156,7 +156,7 @@ The `document` object has:
 - `editing`: true while edit mode is on.
 - `dirty`: true when there are unsaved edits.
 
-If edit mode is on when you call `open`, textweaver leaves edit mode first. The result then has `document` and `effects` instead of `document` and `position`, so call `position` afterwards.
+If edit mode is on when `open` is called, textweaver leaves edit mode first. The result then contains `document` and `effects` instead of `document` and `position`, so the client should call `position` afterwards.
 
 Errors: `-32602` when `path` is missing, and `-32002` when the file does not exist, is a folder, or cannot be read.
 
@@ -172,7 +172,7 @@ The result is an object with:
 - `position`: the same object `position` returns, or null.
 - `rate`: the reading rate in words per minute.
 - `backend`: the speech engine id, or `"silent"` with `--no-speech`.
-- `status`: the last status message, the same text the terminal reader shows on its status line. It is empty at first.
+- `status`: the last status message, identical to the text on the terminal reader's status line. It is empty initially.
 - `pending`: the yes-or-no question waiting for an answer, or null. See [action](#action-run-any-command-by-name).
 
 ### position: where the cursor is
@@ -191,16 +191,16 @@ The result is an object with:
 
 It needs an open document. Give one of these parameters:
 
-- `action` (string): the id of a movement action, such as `next_sentence`, `previous_paragraph`, `next_heading`, `skip_next_heading`, or `next_bookmark`. Actions from four groups of the [keyboard reference](keyboard.md) are allowed: [Navigation](keyboard.md#navigation), [Speech Cursor](keyboard.md#speech-cursor), [Search](keyboard.md#search), and [Bookmarks and notes](keyboard.md#bookmarks-and-notes).
-- `goto` (string): a place to go to. It accepts a line number (`"12"` or `"line 12"`), a percentage (`"50%"` or `"50 percent"`), a character offset (`"char 120"`), `"start"` (also `"top"` or `"beginning"`), or `"end"` (also `"bottom"`). Headings (`"heading 2"`) are not accepted here.
+- `action` (string): the id of a movement action, such as `next_sentence`, `previous_paragraph`, `next_heading`, `skip_next_heading`, or `next_bookmark`. Actions from four groups of the [keyboard reference](keyboard.md) are accepted: [Navigation](keyboard.md#navigation), [Speech Cursor](keyboard.md#speech-cursor), [Search](keyboard.md#search), and [Bookmarks and notes](keyboard.md#bookmarks-and-notes).
+- `goto` (string): a destination. It accepts a line number (`"12"` or `"line 12"`), a percentage (`"50%"` or `"50 percent"`), a character offset (`"char 120"`), `"start"` (also `"top"` or `"beginning"`), or `"end"` (also `"bottom"`). Headings (`"heading 2"`) are not accepted here.
 
 When both are given, `goto` is used.
 
-The result is the new position, the same shape as the `position` method's result. The move is also announced, usually by saying the text you arrived at.
+The result is the new position, in the same shape as the result of the `position` method. The move is also announced, usually by speaking the text at the destination.
 
 Errors: `-32602` "Not a navigation action" for an action from another group, and "Not a go-to target" for a `goto` value it cannot understand.
 
-Some actions in these groups open a prompt or a list, for example `find` and `list_bookmarks`. With `navigate`, the client only hears the announcement. Use the `action` method for those instead, so the prompt or list comes back in the result.
+Some actions in these groups open a prompt or a list, for example `find` and `list_bookmarks`. Through `navigate`, the client receives only the announcement; for these, use the `action` method, which returns the prompt or list in its result.
 
 ### read: read aloud
 
@@ -214,7 +214,7 @@ It needs an open document. Parameters:
   - `selection`: read the selected text. With nothing selected you hear "No selection."
 - `from` (number, optional): a character offset to move to before reading.
 
-The result is `{playback}`, the playback state right after the request: `"reading"`, `"paused"`, or `"stopped"`. For a short unit it may already be `"stopped"`. Then `playback` and `position` notifications follow as the reading goes on.
+The result is `{playback}`, the playback state immediately after the request: `"reading"`, `"paused"`, or `"stopped"`. For a short unit it may already be `"stopped"`. `playback` and `position` notifications follow as reading proceeds.
 
 Errors: `-32602` "Cannot read" and the word you gave, for anything not in the list above.
 
@@ -222,8 +222,8 @@ Errors: `-32602` "Cannot read" and the word you gave, for anything not in the li
 
 Parameters: none. The result of each is `{playback}`.
 
-- `pause` pauses reading. It does nothing unless reading is going on.
-- `resume` carries on after a pause. It does nothing unless reading is paused.
+- `pause` pauses reading and has no effect unless reading is in progress.
+- `resume` continues after a pause and has no effect unless reading is paused.
 - `stop` stops reading.
 
 `pause` and `resume` need an open document. `stop` works without one.
@@ -235,14 +235,14 @@ It needs an open document. Parameters:
 - `pattern` (string, required): the text to find.
 - `regex` (true or false, optional): treat the pattern as a regular expression. The default is false.
 
-Matching follows the same rules as Find in the reader. In testing, a lowercase pattern also matched a capitalized word.
+Matching follows the same rules as Find in the reader; in testing, a lowercase pattern also matched a capitalized word.
 
 The result is an object with:
 
 - `matches`: every match, each `{start, end, line}` (character offsets and a line number starting at 1).
 - `current`: the index in `matches` of the match the cursor moved to, or null.
 
-The cursor moves to the first match at or after it, wrapping round to the top when needed. You hear, for example, "Match 1 of 2: The nucleus".
+The cursor moves to the first match at or after its position, wrapping to the top when necessary, and the announcement is, for example, "Match 1 of 2: The nucleus".
 
 ### text: get the document's text
 
@@ -251,11 +251,11 @@ It needs an open document. Parameters:
 - `start` (number, optional): the first character offset. The default is 0.
 - `end` (number, optional): the offset just after the last character. The default is the end of the document.
 
-Offsets past the end are treated as the end, and an `end` before `start` gives empty text. The result is `{text, start, end}`. The text is the same canonical text that `tw text` prints and that textweaver reads aloud.
+Offsets past the end are treated as the end, and an `end` before `start` yields empty text. The result is `{text, start, end}`. The text is the canonical text that `tw text` prints and that textweaver reads aloud.
 
 ### outline, notes, highlights, and info: read what the reader knows
 
-These four methods only read; they change nothing and say nothing aloud. Each needs an open document and takes no parameters. Offsets are characters in the canonical text, as for `text`, and `line` counts from 1.
+These four methods are read-only: they change nothing and speak nothing. Each requires an open document and takes no parameters. Offsets are characters in the canonical text, as for `text`, and `line` counts from 1.
 
 - `outline` returns `{items, pages}`. Each item is `{level, text, char, line}`: a heading, its level from 1 to 6, its text on one line, and where it starts. In a paged document without headings, such as a PDF, the items are its pages, each with level 0, and `pages` is true.
 - `notes` returns `{notes}`, in document order. Each note is `{id, start, end, line, anchor, text, tags, color}`: `anchor` is the noted text, `text` is what the user wrote, `tags` the words written as `#tag`, and `color` a color name or null.
@@ -293,7 +293,7 @@ Errors: `-32001` when no document is open.
 
 ### insert: type text at the cursor in edit mode
 
-It needs an open document and edit mode on. This is how a client, such as a dictation front end, types text as if it had been typed at the keyboard: it is one undo step and is echoed as typing is. Parameters:
+It requires an open document and edit mode. This is the means by which a client, such as a dictation front end, enters text as though typed at the keyboard: the insertion is a single undo step and is echoed as typing is. Parameters:
 
 - `text` (string, required): the text to insert at the cursor.
 
@@ -303,7 +303,7 @@ Errors: `-32602` when `text` is missing, and `-32004` "insert needs edit mode; r
 
 ### action: run any command by name
 
-This is how a client does anything a key can do. Parameters:
+This method lets a client perform anything a key can do. Parameters:
 
 - `id` (string, required): any action id from the [keyboard reference](keyboard.md), such as `add_bookmark`, `go_to`, `toggle_edit_mode`, `save`, or `quit`. It can also be one of the notes commands: `add_note`, `list_notes`, `next_note`, `previous_note`, `toggle_highlight`, `list_highlights`, `rename_bookmark`, `delete_bookmark`, or `note_links`.
 - `confirm` (true or false, optional): the answer to give if the action asks a yes-or-no question first, as `quit` and `delete_note` do. `true` answers yes and `false` answers no.
@@ -321,7 +321,7 @@ The notes commands return `status` and `effects` but no `pending`.
 
 #### Prompt purposes
 
-A prompt's `purpose` is one of these 31 purposes. The names are fixed: a new purpose may be added, but none is renamed or removed within protocol version 1. Treat a purpose you do not know like any other text question: show the `label` and send what the user types.
+A prompt's `purpose` is one of these 31 values. The names are fixed: within protocol version 1 a purpose may be added but none is renamed or removed. A client should treat an unknown purpose as an ordinary text question, presenting the `label` and sending what the user types.
 
 - `find`: the text to find.
 - `go_to`: a line, a percentage, `start`, or `end`.
@@ -355,7 +355,7 @@ A prompt's `purpose` is one of these 31 purposes. The names are fixed: a new pur
 - `import_cards`: an Anki package (`.apkg`) whose cards to add to the open document's cards.
 - `github_token`: a GitHub token for a private components source; empty skips. It is secret: `text` in the prompt state is one star per character, and a client should mask what it shows and never log it.
 
-The reader writes files in the background (saves, bookmarks, notes, positions). The server waits for those writes before it answers, so when an `action` such as `save` or `add_bookmark` returns, the file is on disk.
+The reader writes files in the background (saves, bookmarks, notes, positions). The server waits for those writes before responding, so when an `action` such as `save` or `add_bookmark` returns, the file is on disk.
 
 Errors: `-32602` "No action" and the id, for an id that does not exist, and "confirm must be true or false".
 
@@ -369,7 +369,7 @@ Each returns `{status, effects}`, the same as `action` without `pending`.
 
 ### list_state and list_key: move through a list as the reader does
 
-The list shown and its focused item are kept by textweaver itself, the same for the terminal reader, the app, and a client. These methods let a client move through a list with the reader's own keys and hear the same "item, 2 of 5" announcements.
+textweaver itself keeps the displayed list and its focused item, identically for the terminal reader, the app, and a client. These methods let a client move through a list with the reader's own keys and receive the same "item, 2 of 5" announcements.
 
 - `list_state` takes no parameters. It returns the list shown as `{title, items, selected, filter}`, or null when no list is shown. `selected` counts from 0; `filter` is the text typed so far in a list that filters as you type (the outline, the citation picker, the settings), else null.
 - `list_key` takes `key` (string, required): `up`, `down`, `page_up`, `page_down`, `home`, `end`, `left`, `right`, `enter`, `escape`, `backspace`, `delete`, `rename`, `introduce` (the list's introduction again), `details` (the Say Status key: in the file browser, a preview of the focused row), the file browser's `choose_here`, `sort`, and `show_all`, or one character. A character filters a list that filters, chooses by a list's own letter (`s`, `d`, `c` in Save, Discard, Cancel), or moves to the next item starting with it; a space marks an item (a favorite voice). `left` and `right` change a value in the settings list. It returns `{status, effects, list}`, where `list` is the list after the key, as `list_state` gives it.
@@ -402,21 +402,21 @@ Errors: `-32602` "There is no setting" and the path, or a sentence saying why th
 
 Closing the server's standard input also stops it, and saves the position too. So a client that is killed or crashes does not lose the reader's place.
 
-The server does not poll on a timer. The speech engine wakes it as each word is heard, so `position` notifications go out at once; otherwise it looks for work about four times a second.
+The server does not poll on a timer. The speech engine wakes it as each word is spoken, so `position` notifications are sent immediately; otherwise it checks for work about four times a second.
 
 ## Notifications from the server
 
 These arrive without an `id`:
 
-- `announcement`, with `{text, priority}`: something the app said, the same thing a screen reader user of the terminal reader would hear. `priority` is `"polite"` or `"assertive"`. Assertive ones are urgent, such as errors, and should interrupt.
+- `announcement`, with `{text, priority}`: something the app said, identical to what a screen reader user of the terminal reader would hear. `priority` is `"polite"` or `"assertive"`; assertive announcements are urgent, such as errors, and should interrupt.
 - `playback`, with `{state}`: reading started (`"reading"`), paused (`"paused"`), or ended (`"stopped"`).
-- `position`, with `{start, end, line}`: the word being spoken right now, as character offsets and a line number starting at 1. Use it to highlight or scroll. One arrives for each word the speech engine reports.
+- `position`, with `{start, end, line}`: the word being spoken at that moment, as character offsets and a line number starting at 1, suitable for highlighting or scrolling. One is sent for each word the speech engine reports.
 
-`initialize` also lists `prompt`, `list`, and `quit` as notifications. In this version the server does not send them on their own. They arrive only inside the `effects` of the result of `action`, `answer`, `choose`, and `cancel`, as described under [action](#action-run-any-command-by-name).
+`initialize` also lists `prompt`, `list`, and `quit` as notifications. In this version the server does not send them independently; they arrive only inside the `effects` of the results of `action`, `answer`, `choose`, and `cancel`, as described under [action](#action-run-any-command-by-name).
 
 ## Errors
 
-An error answer looks like this:
+An error response has this form:
 
 ```json
 {"error":{"code":-32001,"message":"No document is open; call open first"},"id":3,"jsonrpc":"2.0"}
@@ -438,9 +438,9 @@ The server's own codes:
 
 ## Versions
 
-`initialize` reports `protocol`, which is `1`. The design record, [ADR-0015](adr/0015-json-rpc.md), sets the rule: adding methods, notifications, parameters, or result fields keeps version 1, so a client must ignore fields it does not know. Renaming or removing anything, or changing what something means, raises the version. Check `protocol` when you connect, and refuse to go on if it is a version you do not know.
+`initialize` reports `protocol`, currently `1`. The design record, [ADR-0015](adr/0015-json-rpc.md), sets the compatibility rule: adding methods, notifications, parameters, or result fields keeps version 1, so a client must ignore fields it does not recognize, while renaming or removing anything, or changing the meaning of anything, raises the version. A client should check `protocol` on connecting and refuse to continue if the version is unknown.
 
-The server sends the fields of each object in alphabetical order. Do not depend on the order.
+The server emits the fields of each object in alphabetical order; clients must not depend on field order.
 
 ## A complete example session
 
@@ -462,7 +462,7 @@ Cells are the smallest units of life. Every living thing is made of cells.
 The nucleus holds the cell's DNA. It controls growth and division.
 ```
 
-Each message went on one line. The answers are shown here with line breaks added so they are easier to read. The real folder of the file is replaced with `C:\Users\you\Documents`.
+Each message was sent on one line. Responses are shown here with line breaks added for readability, and the actual folder of the file is replaced with `C:\Users\you\Documents`.
 
 ### Say hello
 
@@ -707,7 +707,7 @@ The next time this document is opened, the announcement is "Opened Cell biology.
 
 ## A minimal client in Python
 
-This client uses only Python's standard library. It starts the server without speech, opens the file you name, moves to the next sentence, prints every announcement, and finishes cleanly. It reads one line at a time and skips notifications until the answer to its request arrives.
+This client uses only Python's standard library. It starts the server without speech, opens the named file, moves to the next sentence, prints every announcement, and shuts down cleanly. It reads one line at a time and skips notifications until the response to its request arrives.
 
 ```python
 import json
@@ -775,7 +775,7 @@ Announcement: Cells are the smallest units of life.
 Now at line 3 column 1
 ```
 
-This client only reads while it waits for an answer. A real client, such as an editor plugin, should read the server's output all the time, on its own thread or with an event loop, because `position` and `playback` notifications keep arriving while speech goes on.
+This client reads only while it waits for a response. A production client, such as an editor plugin, should read the server's output continuously, on its own thread or in an event loop, because `position` and `playback` notifications keep arriving while speech continues.
 
 ## If something goes wrong
 
