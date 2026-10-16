@@ -18,6 +18,11 @@
 //! document's own, and with sync on they reach the other computers, newest
 //! wins per field. An empty value (`--author ""`) clears the hand edit, so
 //! the document's own value shows again.
+//!
+//! `tw library queue` (beta 3) lists the reading queue, and `add FILE`,
+//! `remove FILE`, and `next` change and read it; the queue is the reader's,
+//! kept in `library.json`. `tw library review` prints the review list: the
+//! documents read before, the one read longest ago first.
 
 use std::path::{Path, PathBuf};
 
@@ -92,6 +97,37 @@ pub enum LibraryCommand {
     /// Edit a document's details by hand: its title, author, DOI, and ISBN.
     /// An empty value clears your edit, so the document's own shows again.
     Edit(EditArgs),
+    /// The reading queue: the documents to read next, in order. Without a
+    /// command, lists it.
+    Queue {
+        /// What to do instead of listing.
+        #[command(subcommand)]
+        command: Option<QueueCommand>,
+    },
+    /// The review list: the documents you have read, the one read longest
+    /// ago first, with how long ago, how far, and how many notes. A
+    /// convenience for coming back to old readings, not a study method.
+    Review,
+}
+
+/// `tw library queue` commands.
+#[derive(clap::Subcommand, Debug, Clone, PartialEq, Eq)]
+pub enum QueueCommand {
+    /// List the queue, in order (what `tw library queue` alone prints).
+    List,
+    /// Add a document to the end of the queue.
+    Add {
+        /// The document.
+        file: PathBuf,
+    },
+    /// Take a document out of the queue (the file is not touched).
+    Remove {
+        /// The document.
+        file: PathBuf,
+    },
+    /// Print the next document to read: the first in the queue whose file
+    /// is there.
+    Next,
 }
 
 /// Arguments for `tw library edit`.
@@ -570,7 +606,172 @@ fn edit(paths: &Paths, settings: &Settings, a: &EditArgs) -> anyhow::Result<Edit
     })
 }
 
+/// One document in the reading queue.
+#[derive(Debug, Serialize, PartialEq, Eq)]
+struct QueuedDoc {
+    path: PathBuf,
+    title: String,
+    /// The file is there.
+    found: bool,
+}
+
+fn queued_docs(lib: &Library) -> Vec<QueuedDoc> {
+    lib.queue
+        .iter()
+        .map(|p| QueuedDoc {
+            path: p.clone(),
+            title: lib.title_of(p),
+            found: p.is_file(),
+        })
+        .collect()
+}
+
+fn render_queue(docs: &[QueuedDoc]) -> String {
+    if docs.is_empty() {
+        return "The reading queue is empty. Add a document with tw library queue add FILE.\n"
+            .to_owned();
+    }
+    let mut out = format!("Reading queue, {}, in order:\n", documents(docs.len()));
+    for d in docs {
+        let missing = if d.found { "" } else { ", not found" };
+        out.push_str(&format!(
+            "  {}{missing}\n    {}\n",
+            d.title,
+            d.path.display()
+        ));
+    }
+    out
+}
+
+/// `tw library queue`: lists the queue, or changes it.
+fn queue(
+    paths: &Paths,
+    settings: &Settings,
+    command: Option<&QueueCommand>,
+    json: bool,
+) -> anyhow::Result<String> {
+    let file = paths.library_file();
+    let mut lib = Library::load(&file)?;
+    let (c, _) = Catalog::for_language(&settings.interface.language, Some(&paths.locales_dir()));
+    let (text, value) = match command {
+        None | Some(QueueCommand::List) => {
+            let docs = queued_docs(&lib);
+            (render_queue(&docs), serde_json::json!({ "queue": docs }))
+        }
+        Some(QueueCommand::Add { file: doc }) => {
+            anyhow::ensure!(doc.is_file(), "{} is not a file", doc.display());
+            let added = lib.queue_add(doc);
+            if added {
+                lib.save(&file)?;
+            }
+            let title = lib.title_of(doc);
+            let msg = if added {
+                c.fmt(
+                    "queue-added",
+                    &args!["title" => title.as_str(), "n" => lib.queue.len()],
+                )
+            } else {
+                format!("{title} is in the reading queue already.")
+            };
+            let value = serde_json::json!({
+                "added": { "path": library::resolve_path(doc), "changed": added, "message": msg },
+                "queue": queued_docs(&lib),
+            });
+            (format!("{msg}\n"), value)
+        }
+        Some(QueueCommand::Remove { file: doc }) => {
+            let removed = lib.queue_remove(doc);
+            if removed {
+                lib.save(&file)?;
+            }
+            let title = lib.title_of(doc);
+            let msg = if removed {
+                c.fmt("queue-removed", &args!["title" => title.as_str()])
+            } else {
+                format!("{title} is not in the reading queue.")
+            };
+            let value = serde_json::json!({
+                "removed": { "path": library::resolve_path(doc), "changed": removed, "message": msg },
+                "queue": queued_docs(&lib),
+            });
+            (format!("{msg}\n"), value)
+        }
+        Some(QueueCommand::Next) => {
+            let next = lib.queue_next(None).map(|p| QueuedDoc {
+                path: p.to_owned(),
+                title: lib.title_of(p),
+                found: true,
+            });
+            let text = match &next {
+                Some(d) => format!("{}\n", d.path.display()),
+                None => "The reading queue has nothing to read next.\n".to_owned(),
+            };
+            (text, serde_json::json!({ "next": next }))
+        }
+    };
+    Ok(if json {
+        format!("{}\n", serde_json::to_string_pretty(&value)?)
+    } else {
+        text
+    })
+}
+
+/// `tw library review`: the review list.
+fn review(paths: &Paths, settings: &Settings, json: bool) -> anyhow::Result<String> {
+    use textweaver_app::store::ReadingStats;
+    let (c, _) = Catalog::for_language(&settings.interface.language, Some(&paths.locales_dir()));
+    let stats = ReadingStats::load(paths).unwrap_or_default();
+    let states = StateStore::new(paths.state_dir());
+    let rows = stats.review(textweaver_app::store::now_ts(), &Path::is_file, &|key| {
+        states
+            .load(&DocKey(key.to_owned()))
+            .map_or(0, |s| s.notes.len())
+    });
+    if json {
+        return Ok(format!(
+            "{}\n",
+            serde_json::to_string_pretty(&serde_json::json!({ "review": rows }))?
+        ));
+    }
+    if rows.is_empty() {
+        let id = if settings.stats.enabled {
+            "review-empty"
+        } else {
+            "review-stats-off"
+        };
+        return Ok(format!("{}\n", c.tr(id)));
+    }
+    let mut out = format!(
+        "Review list, {}, read longest ago first:\n",
+        documents(rows.len())
+    );
+    for r in &rows {
+        let line = c.fmt(
+            "review-item",
+            &args![
+                "title" => r.title.as_str(),
+                "days" => c.fmt("review-days", &args!["n" => r.days]),
+                "pct" => r.percent,
+                "notes" => c.fmt("review-notes", &args!["n" => r.notes])
+            ],
+        );
+        out.push_str(&format!("  {line}\n    {}\n", r.path.display()));
+    }
+    Ok(out)
+}
+
 fn run_with(args: &Args, paths: &Paths) -> anyhow::Result<String> {
+    match &args.command {
+        Some(LibraryCommand::Queue { command }) => {
+            let settings = SettingsStore::new(paths.clone()).load().0;
+            return queue(paths, &settings, command.as_ref(), args.json);
+        }
+        Some(LibraryCommand::Review) => {
+            let settings = SettingsStore::new(paths.clone()).load().0;
+            return review(paths, &settings, args.json);
+        }
+        _ => {}
+    }
     if let Some(LibraryCommand::Edit(a)) = &args.command {
         let settings = SettingsStore::new(paths.clone()).load().0;
         let r = edit(paths, &settings, a)?;
@@ -634,7 +835,9 @@ fn normalize(mut args: Args) -> Args {
         Some(LibraryCommand::Search { text }) => args.search = Some(text),
         Some(LibraryCommand::Continue) => args.continue_reading = true,
         Some(LibraryCommand::List) | None => {}
-        edit @ Some(LibraryCommand::Edit(_)) => args.command = edit,
+        own @ Some(
+            LibraryCommand::Edit(_) | LibraryCommand::Queue { .. } | LibraryCommand::Review,
+        ) => args.command = own,
     }
     args
 }
@@ -1174,6 +1377,156 @@ mod tests {
             found.contains("Cell Energy, revised, by Ada Example, in Course papers"),
             "{found}"
         );
+    }
+
+    fn queue_cmd(paths: &Paths, command: Option<QueueCommand>, json: bool) -> String {
+        run_with(
+            &Args {
+                json,
+                command: Some(LibraryCommand::Queue { command }),
+                ..args()
+            },
+            paths,
+        )
+        .unwrap()
+    }
+
+    /// Beta 3 (B1-s3): `tw library queue` adds, lists, names the next
+    /// document, and removes; a file is never touched.
+    #[test]
+    fn the_queue_adds_lists_names_the_next_and_removes() {
+        let dir = TempDir::new("queue");
+        let paths = Paths::under(&dir.0.join("tw"));
+        let week3 = dir.0.join("week3.md");
+        let week4 = dir.0.join("week4.md");
+        std::fs::write(&week3, "# Week 3\n").unwrap();
+        std::fs::write(&week4, "# Week 4\n").unwrap();
+
+        assert_eq!(
+            queue_cmd(&paths, None, false),
+            "The reading queue is empty. Add a document with tw library queue add FILE.\n"
+        );
+        assert_eq!(
+            queue_cmd(&paths, Some(QueueCommand::Next), false),
+            "The reading queue has nothing to read next.\n"
+        );
+        let added = queue_cmd(
+            &paths,
+            Some(QueueCommand::Add {
+                file: week3.clone(),
+            }),
+            false,
+        );
+        assert_eq!(
+            added,
+            "Added to the reading queue: week3. 1 document in the queue.\n"
+        );
+        queue_cmd(
+            &paths,
+            Some(QueueCommand::Add {
+                file: week4.clone(),
+            }),
+            false,
+        );
+        let again = queue_cmd(
+            &paths,
+            Some(QueueCommand::Add {
+                file: week4.clone(),
+            }),
+            false,
+        );
+        assert_eq!(again, "week4 is in the reading queue already.\n");
+        let listed = queue_cmd(&paths, Some(QueueCommand::List), false);
+        assert!(
+            listed.starts_with("Reading queue, 2 documents, in order:\n  week3\n"),
+            "{listed}"
+        );
+        let next = queue_cmd(&paths, Some(QueueCommand::Next), false);
+        assert_eq!(
+            next.trim_end(),
+            library::resolve_path(&week3).display().to_string()
+        );
+        let json: serde_json::Value = serde_json::from_str(&queue_cmd(&paths, None, true)).unwrap();
+        assert_eq!(json["queue"][1]["title"], "week4");
+        assert_eq!(json["queue"][1]["found"], true);
+
+        let removed = queue_cmd(
+            &paths,
+            Some(QueueCommand::Remove {
+                file: week3.clone(),
+            }),
+            false,
+        );
+        assert_eq!(removed, "Removed from the reading queue: week3.\n");
+        assert!(week3.is_file(), "the file is not touched");
+        let gone = queue_cmd(&paths, Some(QueueCommand::Remove { file: week3 }), false);
+        assert_eq!(gone, "week3 is not in the reading queue.\n");
+        let lib = Library::load(&paths.library_file()).unwrap();
+        assert_eq!(lib.queue, vec![library::resolve_path(&week4)]);
+
+        let missing = run_with(
+            &Args {
+                command: Some(LibraryCommand::Queue {
+                    command: Some(QueueCommand::Add {
+                        file: dir.0.join("nope.md"),
+                    }),
+                }),
+                ..args()
+            },
+            &paths,
+        );
+        assert!(missing.is_err());
+    }
+
+    /// Beta 3 (B1-s3): `tw library review` lists documents read before,
+    /// the one read longest ago first.
+    #[test]
+    fn review_lists_the_oldest_reading_first() {
+        use textweaver_app::store::{ReadingStats, StatsDelta};
+        let dir = TempDir::new("review");
+        let paths = Paths::under(&dir.0.join("tw"));
+        let review_args = |json| Args {
+            json,
+            command: Some(LibraryCommand::Review),
+            ..args()
+        };
+        let empty = run_with(&review_args(false), &paths).unwrap();
+        assert!(empty.starts_with("Nothing to review yet."), "{empty}");
+        let doc = dir.0.join("pharm2.md");
+        std::fs::write(&doc, "# Pharmacology 2\n").unwrap();
+        let mut st = DocState::default();
+        for _ in 0..3 {
+            st.add_note(textweaver_app::core::CharRange::new(0, 1), "P", "n", "");
+        }
+        StateStore::new(paths.state_dir())
+            .save(&DocKey::for_path(&doc), &st)
+            .unwrap();
+        let now = textweaver_app::store::now_ts();
+        ReadingStats::add_to_file(
+            &paths,
+            &[StatsDelta {
+                key: DocKey::for_path(&doc).0,
+                title: "Pharmacology 2".into(),
+                path: Some(doc.clone()),
+                seconds: 30.0,
+                new_session: true,
+                furthest_percent: 80,
+                furthest_char: 10,
+                at: now - 21 * 86_400 - 60,
+            }],
+        )
+        .unwrap();
+        let out = run_with(&review_args(false), &paths).unwrap();
+        assert!(
+            out.starts_with(
+                "Review list, 1 document, read longest ago first:\n  Pharmacology 2, 21 days, 80 percent, 3 notes\n"
+            ),
+            "{out}"
+        );
+        let json: serde_json::Value =
+            serde_json::from_str(&run_with(&review_args(true), &paths).unwrap()).unwrap();
+        assert_eq!(json["review"][0]["days"], 21);
+        assert_eq!(json["review"][0]["notes"], 3);
     }
 
     #[test]

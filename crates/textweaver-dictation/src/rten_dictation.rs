@@ -452,6 +452,43 @@ impl Dictation for RtenDictation {
         self.state
     }
 
+    /// Live sessions only: silence long enough for the voice detector to
+    /// close the utterance in progress is added (its pause plus 400 ms),
+    /// then the microphone's audio is dropped. A batch recording cannot
+    /// pause.
+    fn pause(&mut self) -> Result<(), DictationError> {
+        if self.state != DictationState::Recording {
+            return Err(DictationError::NotRecording);
+        }
+        let Some((live, _)) = &self.session else {
+            return Err(DictationError::CannotPause);
+        };
+        let ms = self.config.vad.as_ref().map_or(600, |v| v.min_silence_ms) + 400;
+        let closing = usize::try_from(u64::from(ms) * u64::from(WHISPER_SAMPLE_RATE) / 1000)
+            .unwrap_or(usize::MAX);
+        live.pause(closing);
+        Ok(())
+    }
+
+    fn resume(&mut self) -> Result<(), DictationError> {
+        if self.state != DictationState::Recording {
+            return Err(DictationError::NotRecording);
+        }
+        let Some((live, _)) = &self.session else {
+            return Err(DictationError::CannotPause);
+        };
+        live.resume();
+        Ok(())
+    }
+
+    fn is_paused(&self) -> bool {
+        self.state == DictationState::Recording
+            && self
+                .session
+                .as_ref()
+                .is_some_and(|(live, _)| live.is_paused())
+    }
+
     fn shutdown(&mut self, wait: Duration) -> bool {
         RtenDictation::shutdown(self, wait)
     }

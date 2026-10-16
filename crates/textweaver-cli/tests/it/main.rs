@@ -7,3 +7,4 @@
 
 mod closed_pipe;
 mod command_line;
+mod host_mode;

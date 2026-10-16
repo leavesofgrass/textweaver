@@ -7,7 +7,7 @@ textweaver's DECtalk support has been tested against a stand-in library that beh
 ## What you need
 
 - A licensed DECtalk for your system: DECtalk Software for Windows (from DEC, Force Computers, Fonix, or Access Solutions), or a DECtalk SDK or runtime for Linux. On Windows its library is usually `DECtalk.dll` or `dectalk.dll`, with the dictionary `dtalk_us.dic` in the same folder. On Linux it is usually `libtts.so`.
-- textweaver's DECtalk hosts, the small helper programs that run DECtalk. They come with textweaver's release package. If you build textweaver yourself, `cargo xtask hosts` builds and installs them.
+- a host to run DECtalk in. A 64-bit DECtalk runs in a copy of `tw` or the app, started in host mode. A 32-bit DECtalk, the usual one on Windows, runs in `textweaver-host-x86.exe`, which comes with textweaver's release package; if you build textweaver yourself, `cargo xtask hosts` builds and installs it.
 
 ## Letting textweaver find DECtalk
 
@@ -49,7 +49,7 @@ To check what textweaver found, run this. The DECtalk line says whether it is av
 tw backends
 ```
 
-The DECtalk hosts must sit next to `tw` and `textweaver`, as the release package puts them. To use a host from somewhere else, name it with the `TEXTWEAVER_DECTALK_HOST` environment variable.
+The 32-bit host, `textweaver-host-x86.exe`, must sit next to `tw` and `textweaver`, as the release package puts it. To use a host from somewhere else, name it with the `TEXTWEAVER_DECTALK_HOST` environment variable.
 
 ## Choosing DECtalk and a voice
 
@@ -93,7 +93,7 @@ Rate is in words per minute, DECtalk's own unit, from 75 to 600. Pitch raises or
 - "no DECtalk found": textweaver did not find a library. Name it as shown above.
 - "does not look like a DECtalk library": the file you named is not DECtalk's library. Check the path.
 - "DECtalk did not start": DECtalk loaded but refused to start. Make sure it is licensed on this computer and that its dictionary, `dtalk_us.dic`, is in the same folder as the library.
-- "textweaver-dectalk-host-x86.exe not found": your DECtalk is a 32-bit library, which runs in the 32-bit host. Install textweaver's hosts with the release package, or build them with `cargo xtask hosts`.
+- "textweaver-host-x86.exe not found": your DECtalk is a 32-bit library, which runs in the 32-bit host. Keep `textweaver-host-x86.exe` from the release package beside `tw.exe`, or build it with `cargo xtask hosts`.
 
 ## About the free DECtalk source
 

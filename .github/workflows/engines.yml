@@ -185,19 +185,20 @@ jobs:
         with:
           key: engines-windows
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      # tw, the 64-bit host beside it, and the 32-bit host (for 32-bit SAPI
-      # voices), as the release packages them.
-      - name: Build tw and both SAPI hosts
+      # tw, which runs 64-bit voices in a copy of itself, and the combined
+      # 32-bit host beside it (for 32-bit SAPI voices), as the release
+      # packages them.
+      - name: Build tw and the 32-bit host
         run: |
           cargo build --locked -p textweaver-cli --bin tw
-          cargo build --locked -p textweaver-sapi --bins
-          cargo build --locked -p textweaver-sapi --bins --target i686-pc-windows-msvc --no-default-features
+          cargo build --locked -p textweaver-host --target i686-pc-windows-msvc
+          cp target/i686-pc-windows-msvc/debug/textweaver-host.exe target/debug/textweaver-host-x86.exe
       - name: The 32-bit host starts and lists its voices
         run: |
           set -u
           out="$RUNNER_TEMP/out"
           mkdir -p "$out"
-          if target/i686-pc-windows-msvc/debug/textweaver-sapi-host.exe --list-voices > "$out/host32-voices.bin"; then
+          if target/debug/textweaver-host-x86.exe sapi --list-voices > "$out/host32-voices.bin"; then
             echo "Pass: the 32-bit SAPI host started and listed voices ($(wc -c < "$out/host32-voices.bin") bytes)." | tee -a "$out/summary.txt"
           else
             echo "Fail: the 32-bit SAPI host did not start (exit status $?)." | tee -a "$out/summary.txt"
@@ -206,9 +207,6 @@ jobs:
       - name: The voices tw sees
         run: |
           set -u
-          root="$(pwd -W)"
-          export TEXTWEAVER_SAPI_HOST="$root/target/debug/textweaver-sapi-host.exe"
-          export TEXTWEAVER_SAPI_HOST_X86="$root/target/i686-pc-windows-msvc/debug/textweaver-sapi-host.exe"
           target/debug/tw voices --backend sapi --home "$RUNNER_TEMP/tw-home"
           target/debug/tw voices --backend sapi --json --home "$RUNNER_TEMP/tw-home" > "$RUNNER_TEMP/out/voices.json"
       # One step per kind of voice, each run even when one before failed,

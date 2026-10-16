@@ -1430,3 +1430,22 @@ index d9a428c3..1bd51430 100644
      #[cfg(not(target_arch = "wasm32"))]
      #[test]
      fn dense_log_only_where_asked() {
+diff --git a/third_party/xilem/masonry_winit/src/event_loop_runner.rs b/third_party/xilem/masonry_winit/src/event_loop_runner.rs
+index 2fb54f68..21b80cf0 100644
+--- a/third_party/xilem/masonry_winit/src/event_loop_runner.rs
++++ b/third_party/xilem/masonry_winit/src/event_loop_runner.rs
+@@ -876,9 +876,14 @@ impl MasonryState {
+                     } else {
+                         k.modifiers.ctrl()
+                     };
++                    // textweaver patch: only the plain paste chord (Ctrl+V,
++                    // Cmd+V) reads the clipboard; with Shift or Alt it is a
++                    // key the app binds (paste as plain text, a command).
+                     if let Key::Character(c) = &k.key
+                         && c.as_str().eq_ignore_ascii_case("v")
+                         && action_mod
++                        && !k.modifiers.shift()
++                        && !k.modifiers.alt()
+                         && k.state == KeyState::Down
+                     {
+                         match self.clipboard_cx.get_contents() {

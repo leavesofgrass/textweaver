@@ -220,7 +220,7 @@ impl EspeakHostBackend {
         let start = HostStart::begin(
             candidates,
             READY_TIMEOUT,
-            Box::new(move |path: &Path| HostProcess::spawn(path, &args, "espeak")),
+            Box::new(move |path: &Path| HostProcess::spawn_engine(path, "espeak", &args)),
         );
         self.starting = Some((start, library));
         Ok(())

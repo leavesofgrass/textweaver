@@ -54,7 +54,7 @@ The scripts are in a copy of the repository. To get one:
 git clone https://github.com/leavesofgrass/textweaver
 ```
 
-To set up the app as well, add `--gui` (`-Gui` also works on Windows). Since beta 1 the app is in the same package as `tw`, so nothing more is downloaded: the script adds a shortcut or menu entry named "textweaver window", and on macOS copies `textweaver.app` into `~/Applications` and on Linux links `textweaver-gui` into `~/.local/bin`. On Windows the app is installed beside `tw.exe` either way. For releases up to 0.1.0-alpha.9, `--gui` downloads their separate app package instead. Running the script again, or the update script, keeps the app set up; `--no-gui` removes the shortcut, menu entry, link, or copy. On Linux `--gui` goes with `--release`.
+To set up the app as well, add `--gui` (`-Gui` also works on Windows). Since beta 1 the app is in the same package as `tw`, so nothing more is downloaded: the script adds a shortcut or menu entry named "textweaver app" (releases up to beta 2 named it "textweaver window"; on Windows the script removes that old shortcut), and on macOS copies `textweaver.app` into `~/Applications` and on Linux links `textweaver-gui` into `~/.local/bin`. On Windows the app is installed beside `tw.exe` either way. For releases up to 0.1.0-alpha.9, `--gui` downloads their separate app package instead. Running the script again, or the update script, keeps the app set up; `--no-gui` removes the shortcut, menu entry, link, or copy. On Linux `--gui` goes with `--release`.
 
 ```bash
 bash scripts/install-linux.sh --release latest --gui
@@ -106,14 +106,16 @@ powershell -ExecutionPolicy Bypass -File scripts\speech-check.ps1
 
 To start the app, run `textweaver-gui.exe`; to open the terminal reader, run `tw` (or `textweaver`) in a terminal.
 
-Keep the files in the folder together. The engine hosts must stay next to `textweaver-gui.exe`, `tw.exe` and `textweaver.exe`:
+Keep the files in the folder together. The package holds four programs:
 
-- `textweaver-eci-host.exe` and `textweaver-eci-host-x86.exe`, for Eloquence;
-- `textweaver-sapi-host.exe` and `textweaver-sapi-host-x86.exe`, for SAPI5 voices;
-- `textweaver-dectalk-host.exe` and `textweaver-dectalk-host-x86.exe`, for DECtalk;
-- `textweaver-espeak-host.exe` and `textweaver-espeak-host-x86.exe`, for eSpeak NG (install eSpeak NG itself with its Windows installer).
+- `textweaver-gui.exe`, the app;
+- `tw.exe`, the terminal program;
+- `textweaver.exe`, a second name for `tw.exe`;
+- `textweaver-host-x86.exe`, the 32-bit engine host, which must stay next to the other three.
 
-The `ibmtts-dictionaries` folder must stay there too. The hosts run speech engines in their own processes, so a crash in an engine never takes the reader down. They also let 32-bit voices work with 64-bit textweaver.
+The `ibmtts-dictionaries` folder must stay there too. Eloquence, SAPI5 voices, DECtalk, and eSpeak NG run in processes of their own, so a crash in an engine never takes the reader down. For a 64-bit engine, that process is a copy of the program you are using, started in a hidden host mode; for a 32-bit engine (Code Factory's Eloquence, most DECtalk libraries, older SAPI5 voices), it is `textweaver-host-x86.exe`, which lets 32-bit voices work with 64-bit textweaver. Install eSpeak NG itself with its Windows installer.
+
+Packages before 0.1.0-beta.3 had a separate host program for each engine, such as `textweaver-eci-host.exe` and `textweaver-sapi-host-x86.exe`. They are no longer used; if an update left them in the folder, you can delete them.
 
 - **SAPI5 voices**, the Windows voices, work straight away. That includes OneCore voices, and any SAPI5 voices you have installed.
 - **Eloquence** needs an Eloquence library you have a right to use. See [the Eloquence guide](eloquence.md) (`docs/eloquence.md` in the package), or run `tw eloquence --guide`.
@@ -151,7 +153,7 @@ tw voices
 
 ## Linux
 
-The Linux package is an AppImage: one file that holds the app (`textweaver-gui`), `tw` and its second name `textweaver`, the engine hosts for Eloquence (Voxin) and DECtalk, the pronunciation dictionaries, the guides, and the licenses. It is built on Ubuntu 22.04, so it runs on distributions from 2022 on, including Debian 12 and 13, Ubuntu 22.04 and later, Fedora, Arch, and openSUSE. There is one for x86_64 computers and one for 64-bit ARM (aarch64) computers; the install script picks the one for your computer. In the steps below, write `aarch64` where they say `x86_64` if `uname -m` says `aarch64`.
+The Linux package is an AppImage: one file that holds the app (`textweaver-gui`), `tw` and its second name `textweaver`, the pronunciation dictionaries, the guides, and the licenses. It is built on Ubuntu 22.04, so it runs on distributions from 2022 on, including Debian 12 and 13, Ubuntu 22.04 and later, Fedora, Arch, and openSUSE. There is one for x86_64 computers and one for 64-bit ARM (aarch64) computers; the install script picks the one for your computer. In the steps below, write `aarch64` where they say `x86_64` if `uname -m` says `aarch64`.
 
 The easiest way is the install script, which checks the download for you (see [Install with a script](#install-with-a-script)):
 
@@ -197,7 +199,7 @@ To install it by hand:
 
 - **espeak-ng** speaks inside textweaver when it is installed: install the `espeak-ng` package. Without it, the same AppImage still works and speaks through the other engines.
 - **speech-dispatcher** works when its server is installed and running, as it is on most desktops.
-- **Eloquence** through Voxin, and a licensed **DECtalk**, work through the bundled engine hosts; see [the Eloquence guide](eloquence.md) and [the DECtalk guide](dectalk.md). A host loads the engine's library for its own architecture, so on an aarch64 computer it needs an aarch64 build of the engine.
+- **Eloquence** through Voxin, and a licensed **DECtalk**, run in a copy of `tw` or the app started in host mode; see [the Eloquence guide](eloquence.md) and [the DECtalk guide](dectalk.md). The host loads the engine's library for its own architecture, so on an aarch64 computer it needs an aarch64 build of the engine.
 
 Run `tw backends` to see which engines textweaver found.
 
@@ -209,7 +211,7 @@ To build from source instead, run the install script without `--release`; it wor
 
 The app, `textweaver-gui`, is for reading and writing with a mouse as well as the keyboard, for people who prefer it to a terminal. Its guide is [docs/gui.md](gui.md), also in the package as `GUI.md`. It is supported on Windows. The macOS and Linux builds are built and checked automatically on every release, but no one has listened to them with a screen reader yet.
 
-The app is in every package, beside `tw`, with the same engine hosts and dictionaries. Keep the folder's files together. The app and the terminal reader share their settings, reading positions, and notes.
+The app is in every package, beside `tw`, with the same dictionaries (and on Windows the same 32-bit engine host). Keep the folder's files together. The app and the terminal reader share their settings, reading positions, and notes.
 
 - **Windows.** Extract `textweaver-VERSION-windows-x86_64.zip` to a folder of your own, and run `textweaver-gui.exe`. The program is not code-signed, so Windows SmartScreen warns the first time you start it from File Explorer: choose "More info", then "Run anyway".
 - **macOS.** Extract the zip and remove the quarantine flag once, as in [macOS](#macos). Then open `textweaver.app`.

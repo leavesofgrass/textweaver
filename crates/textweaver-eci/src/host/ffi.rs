@@ -473,7 +473,7 @@ impl Engine for EciEngine {
                     let started = std::time::Instant::now();
                     let mut status = load(&file);
                     log_line(&format!(
-                        "textweaver-eci-host: dictionary {} (volume {}) loaded in {} ms, status {status}",
+                        "dictionary {} (volume {}) loaded in {} ms, status {status}",
                         file.display(),
                         volume as u8,
                         started.elapsed().as_millis()

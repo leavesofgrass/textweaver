@@ -150,6 +150,7 @@ mod about;
 mod access;
 mod actions;
 pub mod align;
+pub mod anki;
 mod app;
 mod audio_export;
 mod authoring;
@@ -224,6 +225,7 @@ mod publish;
 #[cfg(not(feature = "publish"))]
 #[path = "lean/publish.rs"]
 mod publish;
+mod queue;
 mod reading_aids;
 mod reading_form;
 mod relations;
@@ -279,6 +281,7 @@ pub use command::{
     CaretMove, Command, Confirm, DestructiveVerb, Effect, NoteCommand, PromptPurpose,
 };
 pub use command_list::CommandRow;
+pub use dictation::DictationStatus;
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_command, extra_lookup};
 pub use font_download::{InstalledCheck, fonts_folder, use_downloaded_fonts};

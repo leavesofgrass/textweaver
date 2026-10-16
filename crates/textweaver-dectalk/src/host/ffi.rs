@@ -632,10 +632,7 @@ impl DectalkEngine {
         if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty())
             && let Err(e) = std::env::set_current_dir(dir)
         {
-            log_line(&format!(
-                "textweaver-dectalk-host: cannot enter {}: {e}",
-                dir.display()
-            ));
+            log_line(&format!("cannot enter {}: {e}", dir.display()));
         }
         let lib = open_library(path)?;
         #[cfg(all(windows, target_arch = "x86"))]

@@ -227,7 +227,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Louder | `F7`, `0` (browse) | `F7`, `0` (browse) | `F7`, `0` (browse) | `volume_up` |
 | Quieter | `Shift+F7`, `9` (browse) | `Shift+F7`, `9` (browse) | `Shift+F7`, `9` (browse) | `volume_down` |
 | Cycle the speed presets (skim, normal, study, slow) | `F8` | `F8` | `F8` | `cycle_speed_preset` |
-| Choose a voice | `Alt+V` | `Ctrl+Shift+V` | `Cmd+Shift+V` | `choose_voice` |
+| Choose a voice | `Alt+V`, `Ctrl+Alt+V` | `Ctrl+Alt+V` | `Cmd+Option+V` | `choose_voice` |
 | Restart speech with the current settings (after the speech engine stopped working) | `Shift+F8` | `Shift+F8` | `Shift+F8` | `restart_speech` |
 | Cycle how much textweaver says: low, normal, high | `Alt+Shift+V` | `Alt+Shift+V` | `Cmd+Option+Shift+V` | `cycle_verbosity` |
 | Cycle how much punctuation is spoken: none, some, all | `Alt+Shift+N` | `Alt+Shift+N` | `Cmd+Option+Shift+N` | `cycle_punctuation` |
@@ -284,6 +284,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Grade the card being studied: Hard, recalled with effort | palette | palette | palette | `grade_hard` |
 | Grade the card being studied: Good, recalled | palette | palette | palette | `grade_good` |
 | Grade the card being studied: Easy, recalled at once | palette | palette | palette | `grade_easy` |
+| Export the study cards as an Anki package, saved beside the document | palette | palette | palette | `export_cards_anki` |
+| Import study cards from an Anki package into this document's cards | palette | palette | palette | `import_cards_anki` |
 
 ## File
 
@@ -293,6 +295,9 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Open a document by typing its path | none | `Ctrl+Shift+G` | `Cmd+Shift+G` | `open_path` |
 | Open the library: documents in your library folders and recent files | `Alt+L` | `Ctrl+Shift+B` | `Cmd+Shift+B` | `open_library` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | palette | palette | palette | `continue_reading` |
+| Review list: the documents you have read, the one read longest ago first | palette | palette | palette | `review_list` |
+| Reading queue: the documents to read next, in order | palette | palette | palette | `reading_queue` |
+| Add the document to the reading queue, or take it out | palette | palette | palette | `queue_document` |
 | Add a folder to the library: choose it in the file browser | palette | palette | palette | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | palette | palette | palette | `edit_document_details` |
 | Start a new document in edit mode | `Ctrl+N` | `Ctrl+N` | `Cmd+N` | `new_document` |
@@ -354,13 +359,14 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Delete the word before the cursor | `Alt+Backspace` (edit) | `Ctrl+Backspace` (edit) | `Option+Backspace` (edit) | `delete_word_before` |
 | Delete the word after the cursor | `Ctrl+Delete` (edit) | `Ctrl+Delete` (edit) | `Option+Delete` (edit) | `delete_word_after` |
 | Paste the clipboard; formatted text from a browser or word processor becomes Markdown | `Ctrl+V` (edit) | `Ctrl+V` (edit) | `Cmd+V` (edit) | `paste` |
-| Paste the clipboard as plain text, keeping none of its formatting | `Alt+Q` (edit) | `Ctrl+Shift+M` (edit) | `Cmd+Shift+M` (edit) | `paste_plain_text` |
+| Paste the clipboard as plain text, keeping none of its formatting | `Alt+Q` (edit) | `Ctrl+Shift+V` (edit), `Ctrl+Shift+M` (edit) | `Cmd+Shift+V` (edit), `Cmd+Shift+M` (edit) | `paste_plain_text` |
 | Insert a citation: pick a reference, then give a page or other locator | `Alt+C` (edit) | `Alt+C` (edit) | `Cmd+Option+C` (edit) | `insert_citation` |
 | Add a reference to your library by DOI or ISBN | `Alt+B` | `Alt+Shift+D` | `Cmd+Option+Shift+D` | `add_reference` |
 | Insert the bibliography of the works cited, at the cursor | palette | palette | palette | `insert_bibliography` |
 | Check the citations: how many there are, and which keys are not in your library | palette | palette | palette | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | palette | palette | palette | `import_references` |
 | Start or stop dictation: spoken words are typed at the cursor in edit mode | `Ctrl+Shift+F9` | `Ctrl+Shift+F9` | `Cmd+Shift+F9` | `dictate` |
+| Pause the microphone while dictating, keeping the session and the words so far, or resume it | `Alt+Shift+F9` | `Alt+Shift+F9` | `Option+Shift+F9` | `pause_dictation` |
 | Download the dictation model chosen in the settings, after saying its size and license | palette | palette | palette | `download_dictation_model` |
 
 ## View and help
@@ -426,6 +432,7 @@ A terminal never passes the Command key, so on a Mac the terminal keeps the keys
 | In a table, move up a row in the same column | `Ctrl+Alt+Up` | `Ctrl+Shift+Up` (browse) | `table_previous_row` |
 | In a table, move to the next cell in the row | `Ctrl+Alt+Right` | `Ctrl+Shift+Right` (browse) | `table_next_column` |
 | In a table, move to the previous cell in the row | `Ctrl+Alt+Left` | `Ctrl+Shift+Left` (browse) | `table_previous_column` |
+| Choose a voice | `Alt+V`, `Ctrl+Alt+V` | `Option+V` | `choose_voice` |
 | Move to the next grammar problem, and say it and its fix | `Ctrl+F7` | `Option+F7` | `next_grammar_problem` |
 | Move to the previous grammar problem, and say it and its fix | `Ctrl+Shift+F7` | `Option+Shift+F7` | `previous_grammar_problem` |
 | In edit mode, move to the next Markdown lint problem, and say it | `Ctrl+F8` | `Option+F8` | `next_lint_problem` |
@@ -582,7 +589,12 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Grade the card being studied: Hard, recalled with effort | `grade_hard` |
 | Grade the card being studied: Good, recalled | `grade_good` |
 | Grade the card being studied: Easy, recalled at once | `grade_easy` |
+| Export the study cards as an Anki package, saved beside the document | `export_cards_anki` |
+| Import study cards from an Anki package into this document's cards | `import_cards_anki` |
 | Continue reading: the documents on this computer with a saved place, from any computer, newest first | `continue_reading` |
+| Review list: the documents you have read, the one read longest ago first | `review_list` |
+| Reading queue: the documents to read next, in order | `reading_queue` |
+| Add the document to the reading queue, or take it out | `queue_document` |
 | Add a folder to the library: choose it in the file browser | `add_library_folder` |
 | Edit the document's details: title, author, DOI, and ISBN | `edit_document_details` |
 | Start a new document from a template, with a title, author, date, and References heading | `new_from_template` |

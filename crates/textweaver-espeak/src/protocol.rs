@@ -1,6 +1,6 @@
 //! The eSpeak NG messages of the engine-host protocol between
 //! [`EspeakHostBackend`](crate::EspeakHostBackend) and
-//! `textweaver-espeak-host` (ADR-0012).
+//! its host process (ADR-0012).
 //!
 //! Framing, the shared messages (Speak, Stop, Quit, the `Ready` header,
 //! Audio, End, Error), and the version rule live in

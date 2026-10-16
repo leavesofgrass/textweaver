@@ -1,10 +1,10 @@
 # The library
 
-This guide covers textweaver's library: the folders of documents you read from, the list of recent files, "Continue reading", searching the text of every document at once, and the older way of keeping your reading place in step between computers through a library folder. It also covers where textweaver keeps its files, and importing your data from star. It is for anyone with more than a few documents, and for anyone moving from star. Syncing notes, highlights, bookmarks, places, and library details between your computers has [a guide of its own](sync.md).
+This guide covers textweaver's library: the folders of documents you read from, the list of recent files, "Continue reading", the reading queue, the review list, searching the text of every document at once, and the older way of keeping your reading place in step between computers through a library folder. It also covers where textweaver keeps its files, and importing your data from star. It is for anyone with more than a few documents, and for anyone moving from star. Syncing notes, highlights, bookmarks, places, and library details between your computers has [a guide of its own](sync.md).
 
 ## Open the library in the reader: Alt+L
 
-Press **Alt+L** in the terminal reader. The app uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Type to filter, Enter opens one, F2 edits details."
+Press **Alt+L** in the terminal reader. The app uses **Ctrl+Shift+B**. You hear "Library", the number of documents, then "Type to filter, Enter opens one, F2 edits details, Ctrl+Enter queues it."
 
 The folders are read in the background, so a large library (up to 20,000 files) never holds up the keyboard. While it is read you may hear "Scanning the library.", and the status line counts the documents found every second; the list opens when the scan is done. Pressing **Alt+L** again meanwhile says how many have been found so far.
 
@@ -17,7 +17,7 @@ The list has every document in your library folders, then the files you opened r
 
 For example: "Cells, 25 percent, in Readings".
 
-Use **Up** and **Down** to move, **Enter** to open, **F2** to edit a document's details (below), and **Escape** to close. With nothing to show you hear: "The library is empty. Add a folder in Settings, under Library folders, or open a file with Ctrl+O."
+Use **Up** and **Down** to move, **Enter** to open, **F2** to edit a document's details (below), **Ctrl+Enter** to add a document to the reading queue or take it out (below; **Cmd+Enter** in the Mac app), and **Escape** to close. With nothing to show you hear: "The library is empty. Add a folder in Settings, under Library folders, or open a file with Ctrl+O."
 
 ### Filter the list as you type
 
@@ -139,13 +139,63 @@ tw library continue --json
 
 `--continue` prints the same rows, each with its path on the next line. With `--json`, each document has its `path`, `title`, `pct`, the `device` name, `this_computer`, and `when_ms` (when the place was saved, in milliseconds since 1970, UTC).
 
+## The reading queue
+
+The reading queue is a list of documents to read next, in the order you add them: this week's readings, say, or the chapters assigned before an exam. It is kept on the bookshelf (`library.json`, below), so it is there the next time you start textweaver.
+
+**To add a document:**
+
+- **From the library list:** move to it and press **Ctrl+Enter**. You hear "Added to the reading queue", the title, and how many documents the queue holds. The list stays open, so you can add several. **Ctrl+Enter** on a queued document takes it out again: "Removed from the reading queue", then the title.
+- **For the open document:** choose **Add to reading queue** in the File menu, or type "reading queue" in the command palette (F2). The same command takes it out again.
+
+Only a document saved as a file can join the queue; a web page or a document you have not saved is refused, and you are told so.
+
+**To see the queue,** choose **Reading queue** in the File menu, or in the command palette. You hear "Reading queue", the number of documents, then "Enter opens one, Delete takes it out." The rows are the titles, in order. A document whose file cannot be found, such as one on a drive that is not plugged in, says "not found"; it keeps its place and is passed over until it is back. **Enter** opens a document; reading starts only when you press the read key. **Delete** takes one out of the queue, and the file is not touched.
+
+**A document leaves the queue by itself** when continuous reading reaches its end, and when it is removed from the bookshelf.
+
+### What happens at the end of a document
+
+By default, nothing: reading stops at the end of a document as it always has, and the next document in the queue waits for you. The setting **After a document ends** (`[reading] after_end` in `settings.toml`, in the Reading section of Settings) changes that:
+
+- **stop** (`"stop"`, the default): reading stops and you hear "Done reading."
+- **ask first** (`"ask"`): reading stops and names the next document: "Done reading. Next: Week 4. Enter to read." The key you hear is your read key, the one that reads from the cursor, such as Enter or Ctrl+Space. Press it there, at the end of the document, and the next document opens and is read. Move anywhere else first, and the read key reads the document you are in, as usual.
+- **read the next** (`"next"`): the next document opens at once and is read from its saved place: "Done reading. Next: Week 4."
+
+textweaver never starts a document you did not ask for: with **stop** and **ask first**, the next document is opened only by your key press, and **read the next** is itself the request. The next document is the first in the queue that is not the one you just finished and whose file is there.
+
+### From the command line
+
+```bash
+tw library queue
+tw library queue add week4.pdf
+tw library queue remove week4.pdf
+tw library queue next
+```
+
+`tw library queue` (or `tw library queue list`) prints the queue in order, each document with its path on the next line. `add` puts a document at the end, and `remove` takes it out; the file is never touched. `next` prints the path of the next document to read, so a script can open it. With `--json`, each command prints the queue as `path`, `title`, and `found`; `next` prints `next`, which is null when there is nothing to read.
+
+## The review list
+
+**The review list** sits beside Continue reading: the documents you have read aloud before, the one read longest ago first. It is in the File menu under Continue reading, and in the command palette (F2). You hear how many documents it lists, then each row, meaning first:
+
+"Pharmacology 2, 21 days, 80 percent, 3 notes"
+
+That is the title, how many whole days ago you last read it ("today" for under a day), the furthest point you reached, and how many notes it has. **Enter** opens a document. At most 50 documents are listed, and only those whose files are on this computer.
+
+The list comes from your reading statistics (`stats.json`, see [Reading statistics](reading.md)), so a document appears once you have read it aloud. With statistics off (`[stats] enabled = false`), the list stays empty and says so.
+
+The review list is a convenience for finding your way back to older readings. It is not a study method: rereading is not well supported by the research on learning, and nothing here schedules reviews. For practice that is, see the self-test and the study cards in [Study with textweaver](notes.md#study-with-textweaver).
+
+From the command line, `tw library review` prints the same rows, each with its path on the next line; `--json` gives each document's `path`, `title`, `days`, `last_read` (Unix seconds), `percent`, and `notes`.
+
 ## Recent files
 
 Every document you open goes to the front of the recent list, `recent.json` in the data folder. The list keeps `recent_limit` files. A file opened again moves to the front instead of appearing twice. Save As adds the new file too.
 
 ## The bookshelf
 
-Every document you open is also recorded on the bookshelf, `library.json` in the data folder. Each entry holds the document's full path, its title, the kind of file, when you first opened it, when you last opened it, its author, DOI, and ISBN when known, and the details you typed yourself (under `edited`). The bookshelf keeps up to 500 documents; past that, the ones opened longest ago are dropped. `tw migrate-star` fills it from star's library.
+Every document you open is also recorded on the bookshelf, `library.json` in the data folder. Each entry holds the document's full path, its title, the kind of file, when you first opened it, when you last opened it, its author, DOI, and ISBN when known, and the details you typed yourself (under `edited`). The reading queue is kept in the same file, under `queue`, as a list of paths; it is left out while empty. The bookshelf keeps up to 500 documents; past that, the ones opened longest ago are dropped. `tw migrate-star` fills it from star's library.
 
 ## Search every document: tw library search
 

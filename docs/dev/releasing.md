@@ -39,7 +39,7 @@ The `Release` workflow (`.github/workflows/release.yml`) builds the packages, at
    - stops unless the tree is clean and on `main` and the changelog is grouped by area (below), and notes an old or missing listening check without stopping;
    - sets `version` in `[workspace.package]` in the root `Cargo.toml` and runs `cargo update -w`;
    - turns `## [Unreleased]` in `CHANGELOG.md` into `## [0.1.0-beta.2] - YYYY-MM-DD`, keeps an empty `[Unreleased]` above it, and adds the release link. The date comes from the machine's clock in local time, and the weekday is computed and printed so you can check it. It is never typed in;
-   - updates the version examples in this guide, `docs/install.md`, the README, the crate map (`docs/site/architecture.html`), and the workflows, and lists every other line that still names the old version, so a file that should follow the release is seen in the dry run (lines that record history stay as they are);
+   - updates the version examples in this guide, `docs/install.md`, the README, the crate map (`docs/site/architecture.html`), and the workflows, and lists every other line that still names the old version, so a file that should follow the release is seen in the dry run. In the files it updates, a line that records history keeps its version: a line that ends with the comment `<!-- history -->`, which Markdown does not show, and the "Last listening check" line, which only `--listened` writes. When you write a line that names a past release as history, such as "the sizes recorded for 0.1.0-beta.1 are the first", put it on a line of its own and end it with that comment;
    - runs the checks CI runs: fmt, clippy, the tests, `cargo xtask keyboard --check`, and `cargo xtask deps --check` (`--no-checks` skips them, for a rerun after a failure you have fixed);
    - commits "Release 0.1.0-beta.2" and makes the annotated tag `v0.1.0-beta.2`. It pushes nothing.
 
@@ -115,7 +115,7 @@ Optional. When you want to listen, do this on the machine you use every day, wit
    - Change the rate and pitch; then choose another voice (Alt+V) and back. The first voice comes back with its own rate and pitch.
    - In the voice manager (Alt+V), move the language and engine filters with Enter on their rows.
    - In the voice manager, press Alt+End on a voice of this engine and on one of another engine: each says its name and a sample in its own voice, and the voice in use stays as it was.
-   - In the GUI's voice manager (Ctrl+Shift+V), Tab through the Language and Engine buttons, the list, and Use voice, Preview, Favorite, Remove, and Close: each is read with its name, role, and key. Press Engine and check the list and the button's name change.
+   - In the GUI's voice manager (Ctrl+Alt+V), Tab through the Language and Engine buttons, the list, and Use voice, Preview, Favorite, Remove, and Close: each is read with its name, role, and key. Press Engine and check the list and the button's name change.
 
 5. **Piper.** With a Piper voice installed:
    - `tw backends` lists `piper` as available and says it supports word highlighting.
@@ -157,7 +157,7 @@ Releases up to 0.1.0-alpha.9 had the app in packages of its own, named like the 
 
 ## The Linux packages
 
-`cargo xtask appimage` stages the Linux package as `cargo xtask dist` does, writes the tarball, and then wraps the same folder in an AppImage with `appimagetool`. The folder sits whole under `usr/lib/textweaver/` inside the AppImage, so the programs find the hosts and dictionaries beside them, as in the tarball. `scripts/linux/AppRun` is the entry point: it starts the app by default (or with `--gui` first), `tw` when started through a link named `tw` or `textweaver` or with `--tw` or `--textweaver` first, and it offers `--install` and `--uninstall`, which link all three names and add menu entries for the app and the terminal reader. The AppImage carries `gh-releases-zsync` update information pointing at the newest release or pre-release, under the same name the terminal AppImages always had, so they update to the single image. The app AppImages of 0.1.0-beta.2 and earlier look for `textweaver-*-linux-ARCH-gui.AppImage.zsync`; `cargo xtask appimage` writes a copy of the `.zsync` file under that name. Its `URL` line names the single image, which is beside it in the release, so they update to it too.
+`cargo xtask appimage` stages the Linux package as `cargo xtask dist` does, writes the tarball, and then wraps the same folder in an AppImage with `appimagetool`. The folder sits whole under `usr/lib/textweaver/` inside the AppImage, so the programs find the hosts and dictionaries beside them, as in the tarball. `scripts/linux/AppRun` is the entry point: it starts the app by default (or with `--gui` first), `tw` when started through a link named `tw` or `textweaver` or with `--tw` or `--textweaver` first, and it offers `--install` and `--uninstall`, which link all three names and add menu entries for the app and the terminal reader. The AppImage carries `gh-releases-zsync` update information pointing at the newest release or pre-release, under the same name the terminal AppImages always had, so they update to the single image. The app AppImages of 0.1.0-alpha.9 and earlier look for `textweaver-*-linux-ARCH-gui.AppImage.zsync`; `cargo xtask appimage` writes a copy of the `.zsync` file under that name. Its `URL` line names the single image, which is beside it in the release, so they update to it too.
 
 Build on an old glibc, so the packages run on older distributions. The `docker/appimage` image is Ubuntu 22.04 (glibc 2.35), with Rust from rustup, the AppImage tools, and, for the GUI build, `libfontconfig1-dev` (`yeslogic-fontconfig-sys` needs its headers). `docker/appimage/fetch-tools.sh` downloads appimagetool 1.9.1 and the type 2 runtime 20251108, for x86_64 or aarch64, from their GitHub releases, and checks each against the SHA-256 digest GitHub publishes for it; a changed file stops the build. The image builds for the machine it runs on, so the aarch64 packages are built on an arm64 machine: the release workflow uses GitHub's `ubuntu-22.04-arm` runner. To build locally on any system with Docker:
 
@@ -190,7 +190,9 @@ When a package is meant to grow, say why under `[notes]` in the file, in the sam
 "windows-x86_64.zip" = "Opus encoding in process for Export audio"
 ```
 
-A note named `"all"` covers every package. The sizes recorded for 0.1.0-beta.1 are the first for the single packages; they replace the alpha.9 terminal and app packages, which were two downloads. The release step (`cargo xtask release VERSION --sizes`, step 6 above) writes the new sizes and clears the notes, so each note covers one release. The sizes also go into the release notes, as a "Package sizes" list in the version's section of `CHANGELOG.md`. MB there, as in the release workflow's summaries, is 1,048,576 bytes.
+A note named `"all"` covers every package.
+The sizes recorded for 0.1.0-beta.1 are the first for the single packages; they replace the alpha.9 terminal and app packages, which were two downloads. <!-- history -->
+The release step (`cargo xtask release VERSION --sizes`, step 6 above) writes the new sizes and clears the notes, so each note covers one release. The sizes also go into the release notes, as a "Package sizes" list in the version's section of `CHANGELOG.md`. MB there, as in the release workflow's summaries, is 1,048,576 bytes.
 
 ## Building a package by hand (fallback)
 

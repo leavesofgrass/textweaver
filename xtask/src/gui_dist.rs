@@ -41,7 +41,8 @@ const PACKAGE: (&str, &str) = ("textweaver-xilem", "textweaver-xilem");
 /// The name the binary is installed under.
 pub(crate) const INSTALLED: &str = "textweaver-gui";
 /// The app's own files in the package: (source, path in the package). The
-/// rest (the licence, notices, quick start, guides, hosts, dictionaries)
+/// rest (the licence, notices, quick start, guides, the 32-bit host,
+/// dictionaries)
 /// is the package's, staged once by `cargo xtask dist`.
 const FILES: [(&str, &str); 2] = [
     // How to start the app, its keys, and its settings.

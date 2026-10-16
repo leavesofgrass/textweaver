@@ -202,7 +202,8 @@ See [VoiceOver](#voiceover-macos) and [Orca](#orca-linux) above.
 - **The screen reader key.** NVDA, JAWS, and Orca use **Insert**, or **Caps Lock** if you choose, as their own modifier key. textweaver uses neither, so your screen reader's commands pass through to it as usual.
 - **Single-letter keys.** textweaver's reading keys are single letters and punctuation, such as `.`, `h`, and `t`, like a screen reader's browse mode in a web page. Screen readers do not use their own browse mode in a terminal, so these keys reach textweaver. If a letter does nothing, check that your screen reader is not in a special mode, such as a virtual or review mode.
 - **Dictation and speech recognition.** Dictation software types letters, and a letter is a command in textweaver. Press **F9** to turn single-key shortcuts off. You hear "Single-key shortcuts off." Chords with **Ctrl** or **Alt**, the arrow keys, the function keys, and the command palette (**F2**) keep working. Press **F9** again to turn them back on.
-- **VoiceOver** uses **Control+Option** as its modifier. textweaver's terminal keys use no **Ctrl+Alt** chords, so there is no clash by default.
+- **VoiceOver** uses **Control+Option** as its modifier. textweaver's terminal keys use no **Ctrl+Alt** chords on macOS, so there is no clash by default.
+- **Ctrl+Alt+V** chooses a voice, and **Ctrl+Shift+V** pastes as plain text in edit mode. Neither is a default command of NVDA or JAWS. Most terminals keep **Ctrl+Shift+V** as their own paste, which reaches textweaver as plain text anyway.
 - **Windows Terminal**: see [the keys it keeps](#windows-terminal-keys-that-clash).
 
 Any key can be changed in `keymap.toml`. The [keyboard reference](keyboard.md) explains how, and lists what terminals cannot send.

@@ -1,5 +1,5 @@
 //! A deterministic stand-in for ECI, selected with
-//! `textweaver-eci-host --engine fake`. Tests use it to exercise the real
+//! `--engine-host eci --engine fake`. Tests use it to exercise the real
 //! host binary, the protocol, and the backend without the proprietary
 //! engine (for example in the Linux container).
 //!

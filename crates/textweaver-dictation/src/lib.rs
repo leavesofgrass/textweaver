@@ -116,6 +116,25 @@ pub trait Dictation: Send {
     /// What the backend is doing.
     fn state(&self) -> DictationState;
 
+    /// Pauses the input while recording: the utterance in progress is
+    /// finished at its pause, its words still arrive, and the audio from
+    /// then on is dropped until [`resume`](Self::resume). The session
+    /// stays [`DictationState::Recording`]. Fails when not recording, or
+    /// when the backend cannot pause (the default).
+    fn pause(&mut self) -> Result<(), DictationError> {
+        Err(DictationError::CannotPause)
+    }
+
+    /// Takes the input again after [`pause`](Self::pause).
+    fn resume(&mut self) -> Result<(), DictationError> {
+        Err(DictationError::CannotPause)
+    }
+
+    /// True while recording is paused.
+    fn is_paused(&self) -> bool {
+        false
+    }
+
     /// Ends any session, as [`cancel`](Self::cancel) does, and stops the
     /// backend's background work, waiting at most `wait`. True when it
     /// stopped in time. For quitting and closing a document.
@@ -152,6 +171,9 @@ pub enum DictationError {
     /// Stop was asked of a capture that was not recording.
     #[error("Not recording")]
     NotRecording,
+    /// Pause was asked of a backend or session that cannot pause.
+    #[error("This dictation cannot pause; stop it instead")]
+    CannotPause,
     /// The microphone or other capture failed.
     #[error("Recording failed: {0}")]
     Capture(String),

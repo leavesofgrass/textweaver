@@ -28,8 +28,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use masonry::accesskit::{
-    Action, ActionData, Color as AkColor, Node, NodeId, Role, TextDirection, TextPosition,
-    TextSelection,
+    Action, ActionData, Color as AkColor, Node, NodeId, Role, TextDecoration, TextDecorationStyle,
+    TextDirection, TextPosition, TextSelection,
 };
 use masonry::core::keyboard::{Key, KeyState, NamedKey};
 use masonry::core::{
@@ -47,6 +47,9 @@ use textweaver_app::aids::{RowMark, RulerMode, RulerSettings, TextSpacing, ViewR
 use textweaver_app::core::{CharPos, CharRange};
 use textweaver_app::keymap::KeyChord;
 use textweaver_app::keymap::Platform;
+use textweaver_app::store::HighlightShape;
+use textweaver_theme::color::contrast_ratio;
+use textweaver_theme::{Rgb, ThemeKind};
 
 use crate::caret::{self, CharBytes};
 use crate::keys::{self, CaretStep};
@@ -200,11 +203,16 @@ impl DocModel {
 /// terminal draws them). Each has a shape as well as a color, so no color
 /// carries it alone: a reader's highlight has a solid line under it, a note
 /// a dashed one, a bookmark a bar at its start, a search match a box around
-/// it, and the match at the caret a heavier box.
+/// it, and the match at the caret a heavier box. A highlight with a name
+/// from the reader's palette has that name's color and shape
+/// ([`NamedMark`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DocMark {
-    /// A highlight the reader made.
+    /// A highlight the reader made, without a palette look: the theme's
+    /// highlight band and a solid line under it.
     Highlight,
+    /// A highlight with a name from the reader's palette.
+    Named(NamedMark),
     /// Text with a note.
     Note,
     /// A bookmark.
@@ -213,6 +221,94 @@ pub enum DocMark {
     FindHit,
     /// The search match at the caret.
     CurrentFindHit,
+}
+
+/// How a highlight with a name from the palette is drawn: the name's color
+/// and shape, as `textweaver_app::palette::resolve` gives them to the
+/// terminal reader too, so each name has a shape of its own and no two
+/// names differ by color alone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct NamedMark {
+    /// Its color, when it is one textweaver knows; else the theme's
+    /// highlight band.
+    pub color: Option<Rgb>,
+    /// Its shape ([`named_shape`]).
+    pub shape: HighlightShape,
+    /// Its name's place in the names given with
+    /// [`DocumentView::set_mark_names`], which a screen reader is given.
+    pub name: u16,
+}
+
+/// The band of highlight `m` in `p`, and the color of its text and shape
+/// on that band when the band is the palette's color: black or white,
+/// whichever reads better on it (at least 4.5 to 1 on any color), as the
+/// terminal reader chooses. `None`: the text keeps its own colors on the
+/// theme's highlight band (a color textweaver does not know, or a high
+/// contrast theme, whose own colors are kept), and the shape is drawn in
+/// the text color.
+pub fn named_colors(p: &Palette, m: NamedMark) -> (Rgb, Option<Rgb>) {
+    match m.color {
+        Some(c) if p.kind != ThemeKind::HighContrast => {
+            let ink = if contrast_ratio(Rgb::BLACK, c) >= contrast_ratio(Rgb::WHITE, c) {
+                Rgb::BLACK
+            } else {
+                Rgb::WHITE
+            };
+            (c, Some(ink))
+        }
+        _ => (p.user_highlight, None),
+    }
+}
+
+/// The rectangles that draw `shape` on one line of a highlight, whose band
+/// there is `band`; `first` and `last` say whether the line holds its
+/// start and its end. All inside the band, so they take the band's ink:
+///
+/// - underline: a 2 px line at the foot;
+/// - double underline: two 2 px lines, 2 px apart;
+/// - bold: none (the text itself is drawn bold);
+/// - dotted: 2 px dots, 3 px apart, at the foot;
+/// - brackets: an opening bracket at the start, a closing one at the end;
+/// - symbol: a small square at the start's top corner.
+pub fn named_shape(shape: HighlightShape, band: Rect, first: bool, last: bool) -> Vec<Rect> {
+    let Rect { x0, y0, x1, y1 } = band;
+    match shape {
+        HighlightShape::Underline => vec![Rect::new(x0, y1 - 2.0, x1, y1)],
+        HighlightShape::DoubleUnderline => vec![
+            Rect::new(x0, y1 - 6.0, x1, y1 - 4.0),
+            Rect::new(x0, y1 - 2.0, x1, y1),
+        ],
+        HighlightShape::Bold => Vec::new(),
+        HighlightShape::Dotted => {
+            let mut dots = Vec::new();
+            let mut x = x0;
+            while x + 2.0 <= x1 {
+                dots.push(Rect::new(x, y1 - 2.0, x + 2.0, y1));
+                x += 5.0;
+            }
+            dots
+        }
+        HighlightShape::Brackets => {
+            let mut out = Vec::new();
+            if first {
+                out.extend([
+                    Rect::new(x0, y0, x0 + 2.0, y1),
+                    Rect::new(x0, y0, x0 + 5.0, y0 + 2.0),
+                    Rect::new(x0, y1 - 2.0, x0 + 5.0, y1),
+                ]);
+            }
+            if last {
+                out.extend([
+                    Rect::new(x1 - 2.0, y0, x1, y1),
+                    Rect::new(x1 - 5.0, y0, x1, y0 + 2.0),
+                    Rect::new(x1 - 5.0, y1 - 2.0, x1, y1),
+                ]);
+            }
+            out
+        }
+        HighlightShape::Symbol if first => vec![Rect::new(x0, y0, x0 + 5.0, y0 + 5.0)],
+        HighlightShape::Symbol => Vec::new(),
+    }
 }
 
 /// One step of the reading highlights in the last paint, in the order it
@@ -483,8 +579,12 @@ pub struct DocumentView {
     /// only: the text, its layout, and its runs do not change.
     misspelled: Vec<CharRange>,
     /// Notes, bookmarks, the reader's highlights, and search matches
-    /// ([`DocMark`]), drawn only.
+    /// ([`DocMark`]). Drawn; a highlight with a palette name is also its
+    /// own text runs, which carry its name for screen readers.
     marks: Vec<(CharRange, DocMark)>,
+    /// What a screen reader is told of each palette highlight
+    /// ("Highlight, important"), by [`NamedMark::name`].
+    mark_names: Vec<String>,
     /// Writing suggestions (edit mode, Markdown lint), drawn with a double
     /// underline. Paint only.
     lint: Vec<CharRange>,
@@ -601,6 +701,7 @@ impl DocumentView {
             label: "Document".to_owned(),
             misspelled: Vec::new(),
             marks: Vec::new(),
+            mark_names: Vec::new(),
             lint: Vec::new(),
             shown: None,
             advance: None,
@@ -1133,13 +1234,46 @@ impl DocumentView {
         }
     }
 
-    /// The notes, bookmarks, highlights, and search matches to mark. Only
-    /// drawn, each with a shape of its own besides its color (see
-    /// [`DocMark`]); a screen reader finds them with their keys and lists.
+    /// The notes, bookmarks, highlights, and search matches to mark, each
+    /// with a shape of its own besides its color (see [`DocMark`]); a
+    /// screen reader finds them with their keys and lists. A highlight
+    /// with a palette name is also its own text runs, whose description is
+    /// its name ([`set_mark_names`](Self::set_mark_names)), with its band
+    /// and line as text attributes.
     pub fn set_marks(this: &mut WidgetMut<'_, Self>, marks: Vec<(CharRange, DocMark)>) {
-        if this.widget.marks != marks {
-            this.widget.marks = marks;
-            this.ctx.request_render();
+        if this.widget.marks == marks {
+            return;
+        }
+        let named = |m: &[(CharRange, DocMark)]| -> Vec<(CharRange, NamedMark)> {
+            m.iter()
+                .filter_map(|(r, d)| match d {
+                    DocMark::Named(n) => Some((*r, *n)),
+                    _ => None,
+                })
+                .collect()
+        };
+        let (old, new) = (named(&this.widget.marks), named(&marks));
+        this.widget.marks = marks;
+        if old != new {
+            // The runs change only where a named highlight came or went.
+            let w = &mut *this.widget;
+            for (r, n) in old.iter().chain(&new) {
+                if !(old.contains(&(*r, *n)) && new.contains(&(*r, *n))) {
+                    w.mark_dirty(*r);
+                }
+            }
+            this.ctx.request_accessibility_update();
+        }
+        this.ctx.request_render();
+    }
+
+    /// What a screen reader is told of each palette highlight, by
+    /// [`NamedMark::name`] ("Highlight, important").
+    pub fn set_mark_names(this: &mut WidgetMut<'_, Self>, names: Vec<String>) {
+        if this.widget.mark_names != names {
+            this.widget.mark_names = names;
+            this.widget.dirty_paras.iter_mut().for_each(|d| *d = true);
+            this.ctx.request_accessibility_update();
         }
     }
 
@@ -1217,10 +1351,14 @@ impl DocumentView {
 
     /// The highlights the text runs carry (the spoken word).
     fn run_marks(&self) -> Vec<(CharRange, RunMark)> {
-        self.state
-            .spoken
-            .map(|r| (r, RunMark::SpokenWord))
-            .into_iter()
+        // The spoken word last: where it is, it wins.
+        self.marks
+            .iter()
+            .filter_map(|(r, m)| match m {
+                DocMark::Named(n) => Some((*r, RunMark::Highlight(*n))),
+                _ => None,
+            })
+            .chain(self.state.spoken.map(|r| (r, RunMark::SpokenWord)))
             .collect()
     }
 
@@ -2282,9 +2420,40 @@ impl DocumentView {
         let p = &self.palette;
         let fg = run.heading.map_or(p.text, |l| p.heading(l));
         node.set_foreground_color(ak_color(fg));
-        if let Some(RunMark::SpokenWord) = run.mark {
-            node.set_background_color(ak_color(p.spoken_word.1));
-            node.set_foreground_color(ak_color(p.spoken_word.0));
+        match run.mark {
+            Some(RunMark::SpokenWord) => {
+                node.set_background_color(ak_color(p.spoken_word.1));
+                node.set_foreground_color(ak_color(p.spoken_word.0));
+            }
+            Some(RunMark::Highlight(m)) => {
+                // Its name in words, and its band and shape as the text
+                // attributes a screen reader reports.
+                if let Some(name) = self.mark_names.get(usize::from(m.name)) {
+                    node.set_description(name.as_str());
+                }
+                let (band, ink) = named_colors(p, m);
+                node.set_background_color(ak_color(band));
+                if let Some(ink) = ink {
+                    node.set_foreground_color(ak_color(ink));
+                }
+                let line = match m.shape {
+                    HighlightShape::Underline => Some(TextDecorationStyle::Solid),
+                    HighlightShape::DoubleUnderline => Some(TextDecorationStyle::Double),
+                    HighlightShape::Dotted => Some(TextDecorationStyle::Dotted),
+                    HighlightShape::Bold => {
+                        node.set_font_weight(700.0);
+                        None
+                    }
+                    HighlightShape::Brackets | HighlightShape::Symbol => None,
+                };
+                if let Some(style) = line {
+                    node.set_underline(TextDecoration {
+                        style,
+                        color: ak_color(ink.unwrap_or(fg)),
+                    });
+                }
+            }
+            Some(RunMark::FindHit) | None => {}
         }
         if let Some(n) = next {
             node.set_next_on_line(n);
@@ -2766,6 +2935,7 @@ impl Widget for DocumentView {
             for (mark, rects) in &mark_rects {
                 let fill = match mark {
                     DocMark::Highlight => p.user_highlight,
+                    DocMark::Named(m) => named_colors(&p, *m).0,
                     DocMark::Note => p.note,
                     DocMark::Bookmark => p.bookmark,
                     DocMark::FindHit => p.find_hit.1,
@@ -2793,6 +2963,31 @@ impl Widget for DocumentView {
             // The text, with its links' and difficult words' underlines.
             render_lines(painter, tf, &pl.layout, &brushes, on_screen);
             painted.push(PaintStep::Text(i));
+            // Text on a palette color again in that color's ink, and a
+            // bold highlight's text bold, clipped to its band.
+            for (mark, rects) in &mark_rects {
+                let DocMark::Named(m) = mark else {
+                    continue;
+                };
+                let ink = named_colors(&p, *m).1;
+                let bold = m.shape == HighlightShape::Bold;
+                if ink.is_none() && !bold {
+                    continue;
+                }
+                let fg = theme::color(ink.unwrap_or(p.text));
+                for r in rects {
+                    painter.push_fill_clip(*r);
+                    let ys = (r.y0 - origin.y, r.y1 - origin.y);
+                    if bold {
+                        render_emphasis(painter, tf, &pl.layout, &fg.into(), (true, false), ys);
+                    } else {
+                        let ink: [masonry::peniko::Brush; BRUSHES] =
+                            std::array::from_fn(|_| fg.into());
+                        render_lines(painter, tf, &pl.layout, &ink, ys);
+                    }
+                    painter.pop_clip();
+                }
+            }
             // A list item's bullet or number, in the hanging indent.
             if let (Some((m, at)), Some(item)) = (&pl.marker, &para.list) {
                 let r = Rect::new(0.0, 0.0, f64::from(m.full_width()), f64::from(m.height()))
@@ -2885,6 +3080,13 @@ impl Widget for DocumentView {
                             painter
                                 .fill(Rect::new(rect.x0, rect.y1 - 2.0, rect.x1, rect.y1), line)
                                 .draw();
+                        }
+                        DocMark::Named(m) => {
+                            let ink = named_colors(&p, *m).1.map_or(line, theme::color);
+                            let (first, last) = (k == 0, k + 1 == rects.len());
+                            for s in named_shape(m.shape, *rect, first, last) {
+                                painter.fill(s, ink).draw();
+                            }
                         }
                         DocMark::Note => {
                             let mut x = rect.x0;

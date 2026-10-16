@@ -217,6 +217,7 @@ pub(crate) fn prompt_label(c: &Catalog, purpose: PromptPurpose) -> String {
         P::CommentReply => "prompt-comment-reply",
         P::CommentText => "prompt-comment-text",
         P::GitHubToken => "prompt-github-token",
+        P::ImportCards => "prompt-import-cards",
     })
 }
 

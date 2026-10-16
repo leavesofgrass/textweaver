@@ -290,7 +290,8 @@ fn register_engines(registry: &mut BackendRegistry, settings: &Settings) {
 pub enum EspeakPath {
     /// The in-process backend (the `espeak` feature).
     InProcess,
-    /// The helper program, `textweaver-espeak-host`.
+    /// The helper process (textweaver started in host mode,
+    /// `--engine-host espeak`).
     Helper,
 }
 

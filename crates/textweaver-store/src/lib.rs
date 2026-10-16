@@ -67,7 +67,7 @@ pub mod sync_scope;
 pub mod time;
 
 pub use atomic::atomic_write;
-pub use cards::{Card, CardDeck, CardKind, CardSource, CardStore, Grade, Review};
+pub use cards::{Card, CardDeck, CardKind, CardSource, CardStore, Grade, Imported, Review};
 pub use doc_state::{
     Anchor, Bookmark, ClockStamp, DEFAULT_DEBOUNCE, Deletion, Deletions, DocKey, DocState,
     LEGACY_STATE_FORMAT, MarkKind, MergeReport, NOTE_BACKUPS_MAX, NoteBackup, STATE_FORMAT,
@@ -84,7 +84,7 @@ pub use paths::{COMPONENTS_DIR, MEDICAL_OVERLAY_FILE, Paths, components_dir, fin
 pub use profiles::{ProfileError, ProfileImport, Profiles};
 pub use recent::{Recent, RecentEntry};
 pub use settings::{
-    AccessMode, AccessibilitySettings, AppleBackend, AppleSettings, AudioExportFormat,
+    AccessMode, AccessibilitySettings, AfterEnd, AppleBackend, AppleSettings, AudioExportFormat,
     AuthoringSettings, BookAudio, BrailleSettings, BrailleTableFormat, BrfCode, CitationReading,
     ColorSettings, CommunityLexiconSettings, ComponentsSettings, CursorPlacement,
     DEFAULT_HEADER_BUTTONS, DEFAULT_TOOLBAR_BUTTONS, DectalkSettings, DictationSettings, DigitRow,
@@ -104,7 +104,7 @@ pub use settings_io::{
     Applied, Change, ChangeArea, ExportFormat, ExportOptions, ImportMode, ImportPlan,
     SettingsIoError,
 };
-pub use stats::{DocStats, ReadingStats, StatsDelta};
+pub use stats::{DocStats, ReadingStats, ReviewItem, StatsDelta};
 pub use sync::{ConflictPolicy, SidecarStore};
 pub use sync_ids::{SyncIdEntry, SyncIds};
 pub use sync_scope::SettingScope;

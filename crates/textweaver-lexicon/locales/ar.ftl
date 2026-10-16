@@ -280,6 +280,69 @@ continue-ago-days =
     }
 name-continue-reading = متابعة القراءة
 action-continue-reading = متابعة القراءة: المستندات على هذا الحاسوب التي لها موضع محفوظ، من أي حاسوب، الأحدث أولًا
+
+## قائمة القراءة وقائمة المراجعة (الإصدار التجريبي 3).
+
+queue-title = قائمة القراءة
+queue-intro =
+    { $n ->
+        [one] قائمة القراءة، مستند واحد. Enter لفتحه، Delete لإخراجه.
+        [two] قائمة القراءة، مستندان. Enter لفتح واحد، Delete لإخراجه.
+        [few] قائمة القراءة، { $n } مستندات. Enter لفتح واحد، Delete لإخراجه.
+        [many] قائمة القراءة، { $n } مستندًا. Enter لفتح واحد، Delete لإخراجه.
+       *[other] قائمة القراءة، { $n } مستند. Enter لفتح واحد، Delete لإخراجه.
+    }
+queue-empty = قائمة القراءة فارغة. في المكتبة، { $key } يضيف مستندًا.
+queue-item-missing = { $title }، غير موجود
+queue-added =
+    { $n ->
+        [one] أُضيف إلى قائمة القراءة: { $title }. مستند واحد في القائمة.
+        [two] أُضيف إلى قائمة القراءة: { $title }. مستندان في القائمة.
+        [few] أُضيف إلى قائمة القراءة: { $title }. { $n } مستندات في القائمة.
+        [many] أُضيف إلى قائمة القراءة: { $title }. { $n } مستندًا في القائمة.
+       *[other] أُضيف إلى قائمة القراءة: { $title }. { $n } مستند في القائمة.
+    }
+queue-removed = أُخرج من قائمة القراءة: { $title }.
+queue-no-file = لا يدخل قائمة القراءة إلا مستند محفوظ في ملف.
+queue-read-failed = تعذّرت قراءة المكتبة لقائمة القراءة: { $error }. افحص library.json في مجلد البيانات؛ يذكره الأمر tw settings path.
+queue-next-ask = التالي: { $title }. { $key } للقراءة.
+queue-next-reading = التالي: { $title }.
+review-title = قائمة المراجعة
+review-intro =
+    { $n ->
+        [one] قائمة المراجعة، مستند واحد، الأقدم قراءةً أولًا. Enter لفتحه.
+        [two] قائمة المراجعة، مستندان، الأقدم قراءةً أولًا. Enter لفتح واحد.
+        [few] قائمة المراجعة، { $n } مستندات، الأقدم قراءةً أولًا. Enter لفتح واحد.
+        [many] قائمة المراجعة، { $n } مستندًا، الأقدم قراءةً أولًا. Enter لفتح واحد.
+       *[other] قائمة المراجعة، { $n } مستند، الأقدم قراءةً أولًا. Enter لفتح واحد.
+    }
+review-empty = لا شيء للمراجعة بعد. تظهر هنا المستندات التي قُرئت بصوت عالٍ.
+review-stats-off = تحتاج قائمة المراجعة إلى إحصاءات القراءة، وهي متوقفة. شغّل إحصاءات القراءة في الإعدادات.
+review-item = { $title }، { $days }، { $pct } بالمئة، { $notes }
+review-days =
+    { $n ->
+        [0] اليوم
+        [one] يوم واحد
+        [two] يومان
+        [few] { $n } أيام
+        [many] { $n } يومًا
+       *[other] { $n } يوم
+    }
+review-notes =
+    { $n ->
+        [0] لا ملاحظات
+        [one] ملاحظة واحدة
+        [two] ملاحظتان
+        [few] { $n } ملاحظات
+        [many] { $n } ملاحظة
+       *[other] { $n } ملاحظة
+    }
+name-review-list = قائمة المراجعة
+action-review-list = قائمة المراجعة: المستندات التي قرأتها، الأقدم قراءةً أولًا
+name-reading-queue = قائمة القراءة
+action-reading-queue = قائمة القراءة: المستندات التي ستُقرأ تاليًا، بالترتيب
+name-queue-document = إضافة إلى قائمة القراءة
+action-queue-document = إضافة المستند إلى قائمة القراءة، أو إخراجه منها
 name-add-library-folder = إضافة مجلد إلى المكتبة
 action-add-library-folder = إضافة مجلد إلى المكتبة: اختره في مستعرض الملفات
 name-edit-document-details = تعديل التفاصيل
@@ -557,7 +620,7 @@ list-nothing-to-mark = لا شيء لتحديده في هذه القائمة.
 notes-editing = تحرير ملاحظة: { $text }
 # $key opens a document.
 app-no-document-open = لا يوجد مستند مفتوح. اضغط { $key } لفتح واحد.
-app-window-only = يعمل هذا الأمر في نافذة textweaver.
+app-window-only = يعمل هذا الأمر في تطبيق textweaver.
 app-terminal-only = يعمل هذا الأمر في قارئ الطرفية.
 settings-save-failed = تعذّر حفظ الإعدادات: { $error } تبقى تغييراتك سارية حتى تخرج.
 settings-outside-kept = تم الاحتفاظ بالإعدادات التي تغيّرت خارج textweaver.
@@ -887,6 +950,8 @@ action-grade-again = تقييم البطاقة قيد الدراسة: مرة أ�
 action-grade-hard = تقييم البطاقة قيد الدراسة: صعبة، استُذكرت بجهد
 action-grade-good = تقييم البطاقة قيد الدراسة: جيدة، استُذكرت
 action-grade-easy = تقييم البطاقة قيد الدراسة: سهلة، استُذكرت فورًا
+action-export-cards-anki = تصدير بطاقات الدراسة حزمةَ Anki، تُحفظ بجانب المستند
+action-import-cards-anki = استيراد بطاقات دراسة من حزمة Anki إلى بطاقات هذا المستند
 action-open = فتح مستند
 action-open-path = فتح مستند بكتابة مساره
 action-open-library = فتح المكتبة: مستندات مجلدات مكتبتك والملفات الأخيرة
@@ -1633,6 +1698,39 @@ cards-source-label = مصدر البطاقة
 cards-remove-question = إزالة هذه البطاقة وتقييماتها؟ y أو n
 cards-removed = أُزيلت البطاقة.
 cards-save-failed = تعذّر حفظ البطاقات: { $error } تحقّق من إمكانية الكتابة في مجلد البيانات.
+cards-anki-exported =
+    { $n ->
+        [one] صُدّرت بطاقة واحدة إلى Anki: { $file }، في { $folder }.
+       *[other] صُدّرت { $n } بطاقة إلى Anki: { $file }، في { $folder }.
+    }
+cards-anki-export-failed = تعذّر تصدير البطاقات إلى Anki: { $error } تحقّق من إمكانية الكتابة في مجلد المستند.
+cards-anki-import-failed = تعذّر استيراد { $file }: { $error } تحقّق من أن الملف حزمة Anki بامتداد ‎.apkg.
+cards-anki-imported =
+    { $added ->
+        [one] استُوردت بطاقة واحدة.
+       *[other] استُوردت { $added } بطاقة.
+    }
+cards-anki-already =
+    { $n ->
+        [one] بطاقة واحدة موجودة من قبل؛ دُمجت تقييماتها.
+       *[other] { $n } بطاقة موجودة من قبل؛ دُمجت تقييماتها.
+    }
+cards-anki-skipped-cloze =
+    { $n ->
+        [one] تُخطّيت ملاحظة ملء فراغ واحدة.
+       *[other] تُخطّيت { $n } ملاحظة ملء فراغ.
+    }
+cards-anki-skipped-media =
+    { $n ->
+        [one] تُخطّيت ملاحظة واحدة ليست إلا صورًا أو صوتًا.
+       *[other] تُخطّيت { $n } ملاحظة ليست إلا صورًا أو صوتًا.
+    }
+cards-anki-skipped-other =
+    { $n ->
+        [one] تُخطّيت ملاحظة واحدة بلا نص أو بأكثر من بطاقتين.
+       *[other] تُخطّيت { $n } ملاحظة بلا نص أو بأكثر من بطاقتين.
+    }
+cards-from-anki = جاءت هذه البطاقة من Anki؛ ليس لها موضع في المستند.
 # Said first in the study session and the Cards list (B1-f2). $due is how
 # many graded cards are due, $new how many were never graded.
 cards-due-summary =
@@ -1824,11 +1922,11 @@ library-folder-added = أُضيف { $name } إلى المكتبة. افتح ال
 library-folder-already = { $name } موجود في المكتبة بالفعل.
 library-intro =
     { $n ->
-        [one] المكتبة، مستند واحد. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
-        [two] المكتبة، مستندان. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
-        [few] المكتبة، { $n } مستندات. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
-        [many] المكتبة، { $n } مستندًا. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
-       *[other] المكتبة، { $n } مستند. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل.
+        [one] المكتبة، مستند واحد. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل، { $queue } لإضافته إلى قائمة القراءة.
+        [two] المكتبة، مستندان. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل، { $queue } لإضافته إلى قائمة القراءة.
+        [few] المكتبة، { $n } مستندات. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل، { $queue } لإضافته إلى قائمة القراءة.
+        [many] المكتبة، { $n } مستندًا. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل، { $queue } لإضافته إلى قائمة القراءة.
+       *[other] المكتبة، { $n } مستند. اكتب للتصفية، Enter لفتح واحد، F2 لتعديل التفاصيل، { $queue } لإضافته إلى قائمة القراءة.
     }
 library-title = المكتبة
 
@@ -2366,6 +2464,11 @@ setting-reading-book-audio = صوت الكتاب
 setting-reading-book-audio-help = ما يقرأ كتاب DAISY الناطق الذي له تسجيل. سرده المسجَّل، مع تمييز يتبعه وصوت مُركَّب يقرأ النص الذي لا صوت له، أو الصوت المُركَّب وحده. تغييرات السرعة لا تنطبق على التسجيل.
 choice-reading-book-audio-auto = السرد المسجَّل
 choice-reading-book-audio-speech = الصوت المُركَّب فقط
+setting-reading-after-end = بعد انتهاء المستند
+setting-reading-after-end-help = ما يلي نهاية المستند حين يكون في قائمة القراءة مستند آخر. لا شيء، أو يُذكر المستند التالي ومفتاح القراءة يقرؤه، أو يُقرأ المستند التالي فورًا. لا يبدأ مستند أبدًا دون طلبك.
+choice-reading-after-end-stop = التوقف
+choice-reading-after-end-ask = السؤال أولًا
+choice-reading-after-end-next = قراءة التالي
 setting-display-theme = السمة
 setting-display-theme-help = السمة اللونية.
 setting-display-follow-os-theme = اتباع سمة النظام
@@ -3722,6 +3825,9 @@ gui-button-previous-sentence = الجملة السابقة
 gui-button-next-sentence = الجملة التالية
 gui-button-slower = أبطأ
 gui-button-faster = أسرع
+gui-button-pause-dictation = إيقاف الإملاء مؤقتًا
+gui-button-resume-dictation = استئناف الإملاء
+gui-button-stop-dictation = إيقاف الإملاء
 gui-hint-open = اختيار مستند للقراءة.
 gui-hint-font = اختيار خط نص المستند.
 gui-hint-edit = التبديل بين القراءة والتحرير.
@@ -4103,6 +4209,8 @@ name-grade-again = تقييم: مرة أخرى
 name-grade-hard = تقييم: صعبة
 name-grade-good = تقييم: جيدة
 name-grade-easy = تقييم: سهلة
+name-export-cards-anki = تصدير البطاقات إلى Anki
+name-import-cards-anki = استيراد بطاقات Anki
 name-open = فتح
 name-open-path = فتح بالمسار
 name-open-library = المكتبة
@@ -4163,6 +4271,7 @@ name-insert-bibliography = إدراج قائمة المراجع
 name-check-citations = فحص الاستشهادات
 name-import-references = استيراد المراجع
 name-dictate = إملاء
+name-pause-dictation = إيقاف الإملاء مؤقتًا أو استئنافه
 name-next-theme = السمة التالية
 name-toggle-line-numbers = أرقام الأسطر
 name-toggle-character-keys = اختصارات المفتاح الواحد
@@ -4245,6 +4354,7 @@ action-batch-convert = تحويل مجلد من المستندات إلى صيغ
 action-export-audio = تصدير المستند صوتًا منطوقًا: MP3 أو FLAC أو Opus أو WAV أو كتاب صوتي M4B
 action-export-read-along = تصدير صفحة قراءة: ملف HTML واحد فيه النص وصوته، مع تمييز الكلمة المنطوقة أثناء التشغيل
 action-dictate = بدء الإملاء أو إيقافه: تُكتب الكلمات المنطوقة عند المؤشر في وضع التحرير
+action-pause-dictation = إيقاف الميكروفون مؤقتًا أثناء الإملاء مع الإبقاء على الجلسة والكلمات حتى الآن، أو استئنافه
 action-color-settings = فتح إعدادات الألوان: تمييز القراءة والمسطرة والعلامات وكل جزء من الشاشة، مع تباينها
 action-cycle-interface-announcements = التبديل بين مقادير ما يعلنه textweaver عن نفسه: متوقفة أو في حدها الأدنى أو عادية أو كاملة؛ تُقال الأخطاء والإجابات دائمًا
 action-menu = فتح القوائم: ملف وتحرير وعرض وقراءة والنطق وأدوات ومساعدة
@@ -4332,6 +4442,10 @@ dictation-failed = فشل الإملاء: { $error } راجع Dictation في ا�
 dictation-no-words = لم تُعرف أي كلمات في تلك العبارة.
 dictation-lost = توقف الإملاء قبل كتابة كلماته الأخيرة.
 dictation-not-typed = كلمات مُملاة لم تُكتب، وضع التحرير متوقف: { $text }
+dictation-paused = الإملاء متوقف مؤقتًا.
+dictation-resumed = استُؤنف الإملاء.
+dictation-not-active = لا يوجد إملاء جارٍ.
+dictation-cannot-pause = لا يمكن إيقاف هذا الإملاء مؤقتًا؛ أوقفه بدلًا من ذلك.
 setting-dictation-speak-while-recording = النطق أثناء الإملاء
 setting-dictation-speak-while-recording-help = نطق الكلمات المُملاة عند وصولها. عند الإيقاف تظهر في سطر الحالة وتُنطق عند كل توقف، كي لا يسمع الميكروفون الصوت.
 setting-dictation-model-dir = مجلد نموذج الإملاء
@@ -4825,6 +4939,8 @@ chooser-image-title = إدراج صورة
 chooser-images = الصور
 chooser-references-title = استيراد المراجع
 chooser-reference-files = ملفات المراجع
+chooser-anki-title = استيراد بطاقات Anki
+chooser-anki-files = حزم Anki
 chooser-profiles-import-title = استيراد ملفات الإعدادات
 chooser-profiles-export-title = تصدير ملفات الإعدادات
 chooser-profile-files = ملفات تصدير الإعدادات
@@ -5073,6 +5189,7 @@ action-add-comment = إضافة تعليق على التحديد أو على ا�
 prompt-comment-reply = الرد
 prompt-comment-text = التعليق
 prompt-github-token = رمز GitHub لمصدر المكونات، Enter للتخطي
+prompt-import-cards = استيراد بطاقات الدراسة من حزمة Anki
 changes-title = التغييرات والتعليقات
 changes-intro =
     { $n ->

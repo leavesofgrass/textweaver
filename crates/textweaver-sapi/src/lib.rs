@@ -1,9 +1,10 @@
 //! Windows SAPI5 voices for textweaver (ADR-0009).
 //!
-//! Each voice runs in a host process, `textweaver-sapi-host`, built for the
-//! voice's architecture: x64 for 64-bit voices (Microsoft David, Zira, and
-//! the OneCore voices) and x86 for 32-bit-only voices (VW Paul, Kate,
-//! James; eSpeak SAPI). The host synthesizes into a stream it forwards as it
+//! Each voice runs in a host process built for the voice's architecture:
+//! for 64-bit voices (Microsoft David, Zira, and the OneCore voices) the
+//! program itself in host mode (`--engine-host sapi`), and for
+//! 32-bit-only voices (VW Paul, Kate, James; eSpeak SAPI) the combined
+//! 32-bit host, `textweaver-host-x86.exe`. The host synthesizes into a stream it forwards as it
 //! is written, and reports each word boundary with its audio offset over a
 //! framed pipe protocol ([`protocol`]). `SapiBackend` plays the audio in
 //! the main process and turns the offsets into audio-clock word events, so
@@ -23,13 +24,14 @@
 //! Voice ids are `"<arch>:<SAPI token id>"` ([`voices::VoiceId`]).
 //!
 //! Finding the hosts:
-//! - x64: [`SapiConfig::host_x64`], else `TEXTWEAVER_SAPI_HOST`, else
-//!   `textweaver-sapi-host.exe` next to the running executable (or its
+//! - x64: [`SapiConfig::host_x64`], else `TEXTWEAVER_SAPI_HOST`, else this
+//!   program in host mode, else a separate development host,
+//!   `textweaver-sapi-host.exe`, next to the running executable (or its
 //!   parent directory, for test binaries in `target/<profile>/deps`);
 //! - x86: [`SapiConfig::host_x86`], else `TEXTWEAVER_SAPI_HOST_X86`, else
-//!   `textweaver-sapi-host-x86.exe` next to the executable (where
+//!   `textweaver-host-x86.exe` next to the executable (where
 //!   `cargo xtask hosts` puts it), else a cargo
-//!   `i686-pc-windows-msvc` build under the target directory.
+//!   `i686-pc-windows-msvc` build of it under the target directory.
 //!
 //! On other platforms the crate holds only its platform-neutral parts
 //! (protocol, position mapping, voice metadata); [`available`] is false and
@@ -74,10 +76,13 @@ pub const HOST_ENV: &str = "TEXTWEAVER_SAPI_HOST";
 /// Environment variable naming the 32-bit host.
 pub const HOST_ENV_X86: &str = "TEXTWEAVER_SAPI_HOST_X86";
 
-/// File name of the 64-bit host.
+/// File name of the separate 64-bit host: a development build (`cargo
+/// build -p textweaver-sapi`), still found beside the program. The
+/// packages ship none; the programs run the host as a copy of themselves.
 pub const HOST_NAME: &str = "textweaver-sapi-host.exe";
-/// File name `cargo xtask hosts` gives the 32-bit host.
-pub const HOST_NAME_X86: &str = "textweaver-sapi-host-x86.exe";
+/// File name of the combined 32-bit host every engine shares (`cargo
+/// xtask hosts` installs it next to the binaries).
+pub const HOST_NAME_X86: &str = textweaver_enginehost::hostmode::X86_HOST_NAME;
 
 /// True when this build can use SAPI5 (Windows only).
 pub fn available() -> bool {
@@ -148,18 +153,16 @@ pub fn host_candidates(config: &SapiConfig, arch: Arch) -> Vec<PathBuf> {
     if let Some(h) = std::env::var_os(host_env(arch)).filter(|v| !v.is_empty()) {
         out.push(PathBuf::from(h));
     }
-    if let Some(dir) = std::env::current_exe()
-        .ok()
-        .and_then(|e| e.parent().map(PathBuf::from))
-    {
-        for d in dir.ancestors().take(2) {
-            out.push(d.join(host_file_name(arch)));
-        }
-        if arch == Arch::X86 {
-            // A development build: target/i686-pc-windows-msvc/<profile>/.
-            for d in dir.ancestors().take(4) {
-                for profile in ["debug", "release"] {
-                    out.push(d.join("i686-pc-windows-msvc").join(profile).join(HOST_NAME));
+    match arch {
+        Arch::X86 => out.extend(textweaver_enginehost::hostmode::x86_hosts()),
+        Arch::X64 => {
+            out.extend(textweaver_enginehost::hostmode::self_host());
+            if let Some(dir) = std::env::current_exe()
+                .ok()
+                .and_then(|e| e.parent().map(PathBuf::from))
+            {
+                for d in dir.ancestors().take(2) {
+                    out.push(d.join(HOST_NAME));
                 }
             }
         }

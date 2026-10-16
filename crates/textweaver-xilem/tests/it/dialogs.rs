@@ -576,6 +576,64 @@ fn dialog_controls_closed(h: &TestHarness<Root>) -> bool {
     true
 }
 
+/// The names a screen reader has for a list's options.
+fn option_names(h: &TestHarness<textweaver_xilem::dialog::ChoiceList>) -> Vec<String> {
+    let mut stack = vec![h.access_tree().state().root()];
+    let mut out = Vec::new();
+    while let Some(n) = stack.pop() {
+        if n.role() == Role::ListBoxOption {
+            out.push((n.data().position_in_set(), n.label().unwrap_or_default()));
+        }
+        stack.extend(n.children());
+    }
+    out.sort();
+    out.into_iter().map(|(_, l)| l).collect()
+}
+
+/// The self-test's answer is said once (a known limit of beta 2). Enter
+/// reveals it: the app says "Answer: ..." and shows the row with the
+/// answer. A screen reader says a change to the focused row's name, so
+/// the row keeps its old name until the focus moves; on its next visit it
+/// is read with the answer. A change the app did not say is a new name at
+/// once.
+#[test]
+fn a_change_the_app_said_is_not_said_again_as_the_rows_name() {
+    use textweaver_xilem::dialog::ChoiceList;
+    let p = Palette::galaxy();
+    let asked = vec!["First?".to_owned(), "Second?".to_owned()];
+    let shown = vec!["First?".to_owned(), "Second? Answer: Two.".to_owned()];
+    let list = ChoiceList::new("Self-test", asked.clone(), p.clone());
+    let mut h = TestHarness::create_with(
+        theme::default_properties(&p),
+        NewWidget::new(list),
+        TestHarnessParams::default(),
+    );
+    h.edit_root_widget(|mut l| ChoiceList::sync(&mut l, &asked, 1));
+    let _ = h.redraw();
+    assert_eq!(option_names(&h), asked);
+    // Enter on the second row: drawn with the answer, named as before.
+    h.edit_root_widget(|mut l| ChoiceList::sync_after_said(&mut l, &shown, 1));
+    let _ = h.redraw();
+    assert_eq!(h.root_widget().items(), shown);
+    assert_eq!(option_names(&h), asked, "the answer is not said again");
+    // Enter again: still the name the screen reader had.
+    h.edit_root_widget(|mut l| ChoiceList::sync_after_said(&mut l, &shown, 1));
+    let _ = h.redraw();
+    assert_eq!(option_names(&h), asked);
+    // Up, then Down: the row is read whole, with its answer.
+    h.edit_root_widget(|mut l| ChoiceList::sync(&mut l, &shown, 0));
+    let _ = h.redraw();
+    assert_eq!(option_names(&h), shown);
+    h.edit_root_widget(|mut l| ChoiceList::sync(&mut l, &shown, 1));
+    let _ = h.redraw();
+    assert_eq!(option_names(&h), shown);
+    // A change the app did not say is the row's new name at once.
+    let renamed = vec!["First?".to_owned(), "Renamed".to_owned()];
+    h.edit_root_widget(|mut l| ChoiceList::sync(&mut l, &renamed, 1));
+    let _ = h.redraw();
+    assert_eq!(option_names(&h), renamed);
+}
+
 /// The links and the changes lists (B1-g1, B1-t1): a screen reader reads
 /// each option as the app's row, whole, so its meaning comes first ("supports",
 /// "Inserted", "Comment by"), within the 40 cells of a Braille line, even

@@ -24,6 +24,11 @@
 //! - **Cards** (`list_cards`) lists them with their last grade and when
 //!   each is due; Enter goes to a card's source, Delete removes a card
 //!   after asking.
+//! - **Export cards to Anki** (`export_cards_anki`) writes the document's
+//!   cards beside it as `NAME-cards.apkg`, and **Import Anki cards**
+//!   (`import_cards_anki`) asks for an `.apkg` and adds its cards to the
+//!   document's ([`crate::anki`], B1-f3). A card from Anki has no place in
+//!   the document, and Enter on it in the Cards list says so.
 
 use textweaver_core::{CharPos, CharRange, MarkerKind, Unit};
 use textweaver_keymap::ActionId;
@@ -37,7 +42,7 @@ use textweaver_text::Document;
 use textweaver_text::units::unit_at;
 
 use crate::app::{App, ListKind};
-use crate::command::Effect;
+use crate::command::{Effect, PromptPurpose};
 use crate::list_model::ListKey;
 use crate::nav::ReadAfter;
 use crate::reveal::{RevealItem, RevealList};
@@ -280,6 +285,29 @@ fn due_summary(c: &Catalog, counts: DueCounts) -> String {
     )
 }
 
+/// What an import did, meaning first: "Imported 120 cards. Skipped 4
+/// cloze notes."
+fn import_summary(
+    c: &Catalog,
+    pkg: &crate::anki::Package,
+    result: textweaver_store::Imported,
+) -> String {
+    let mut parts = vec![c.fmt("cards-anki-imported", &args!["added" => result.added])];
+    if result.already > 0 {
+        parts.push(c.fmt("cards-anki-already", &args!["n" => result.already]));
+    }
+    for (id, n) in [
+        ("cards-anki-skipped-cloze", pkg.skipped_cloze),
+        ("cards-anki-skipped-media", pkg.skipped_media),
+        ("cards-anki-skipped-other", pkg.skipped_other),
+    ] {
+        if n > 0 {
+            parts.push(c.fmt(id, &args!["n" => n]));
+        }
+    }
+    parts.join(" ")
+}
+
 fn reveal_item(card: &Card) -> RevealItem {
     RevealItem {
         prompt: card.prompt().to_owned(),
@@ -298,6 +326,13 @@ impl App {
             ActionId::GradeHard => self.grade_card(Grade::Hard),
             ActionId::GradeGood => self.grade_card(Grade::Good),
             ActionId::GradeEasy => self.grade_card(Grade::Easy),
+            ActionId::ExportCardsAnki => self.export_cards_anki(),
+            ActionId::ImportCardsAnki => {
+                if self.cards_doc().is_none() {
+                    return vec![Effect::Redraw];
+                }
+                self.prompt(PromptPurpose::ImportCards)
+            }
             _ => vec![Effect::Redraw],
         }
     }
@@ -481,6 +516,102 @@ impl App {
             at: 0,
         });
         self.show_reveal_list(&intro, list)
+    }
+
+    /// The palette's `export_cards_anki`: the document's cards as an Anki
+    /// package beside it, `NAME-cards.apkg`, in a deck named after the
+    /// document.
+    fn export_cards_anki(&mut self) -> Vec<Effect> {
+        let Some(key) = self.cards_doc() else {
+            return vec![Effect::Redraw];
+        };
+        let deck = self.deck(&key).clone();
+        if deck.cards.is_empty() {
+            let make = self.key(ActionId::MakeCards);
+            let msg = self.msg_args("cards-none", &args!["key" => make]);
+            self.tell(&msg);
+            return vec![Effect::Redraw];
+        }
+        let (folder, stem) = self.sheet_place();
+        let title = self
+            .session
+            .as_ref()
+            .map(|s| s.title.trim().to_owned())
+            .filter(|t| !t.is_empty())
+            .unwrap_or_else(|| stem.clone());
+        let out = folder.join(format!("{stem}-cards.apkg"));
+        let decks = [crate::anki::ExportDeck {
+            name: title.clone(),
+            document: title,
+            cards: &deck.cards,
+        }];
+        let written = crate::anki::export_apkg(&decks, textweaver_store::now_ts())
+            .map_err(|e| e.to_string())
+            .and_then(|bytes| {
+                textweaver_store::atomic_write(&out, &bytes).map_err(|e| e.to_string())
+            });
+        match written {
+            Ok(()) => {
+                let msg = self.msg_args(
+                    "cards-anki-exported",
+                    &args![
+                        "n" => deck.cards.len(),
+                        "file" => crate::authoring_state::file_name(&out),
+                        "folder" => folder.display().to_string()
+                    ],
+                );
+                self.tell(&msg);
+            }
+            Err(e) => {
+                let msg = self.msg_args("cards-anki-export-failed", &args!["error" => e]);
+                self.error(&msg);
+            }
+        }
+        vec![Effect::Redraw]
+    }
+
+    /// The answer to Import Anki cards: the package's cards added to the
+    /// open document's, none twice, then what was imported and skipped.
+    pub(crate) fn answer_import_cards(&mut self, text: &str) -> Vec<Effect> {
+        let file = text.trim().trim_matches('"');
+        if file.is_empty() {
+            let msg = self.msg("common-cancelled");
+            self.note(&msg);
+            return vec![Effect::Redraw];
+        }
+        let Some(key) = self.cards_doc() else {
+            return vec![Effect::Redraw];
+        };
+        let mut path = std::path::PathBuf::from(file);
+        if path.is_relative() {
+            let beside = self.sheet_place().0.join(&path);
+            if beside.is_file() {
+                path = beside;
+            }
+        }
+        let read = std::fs::read(&path)
+            .map_err(|e| e.to_string())
+            .and_then(|bytes| {
+                crate::anki::read_apkg(&bytes, textweaver_store::now_ts())
+                    .map_err(|e| e.to_string())
+            });
+        let pkg = match read {
+            Ok(pkg) => pkg,
+            Err(e) => {
+                let msg = self.msg_args(
+                    "cards-anki-import-failed",
+                    &args!["file" => path.display().to_string(), "error" => e],
+                );
+                self.error(&msg);
+                return vec![Effect::Redraw];
+            }
+        };
+        let cards = pkg.cards.iter().map(|c| c.card.clone()).collect();
+        let result = self.deck(&key).add_imported(cards);
+        self.save_deck();
+        let msg = import_summary(self.cat(), &pkg, result);
+        self.tell(&msg);
+        vec![Effect::Redraw]
     }
 
     /// True when `list` is the study session's.
@@ -730,6 +861,11 @@ impl App {
                 .find(|x| x.id == card.source_id)
                 .map(|x| x.range),
             CardSource::Heading => None,
+            CardSource::Anki => {
+                let msg = self.msg("cards-from-anki");
+                self.tell(&msg);
+                return;
+            }
         };
         let range = now.unwrap_or(card.range).clamp_to(s.doc.len_chars());
         let text = collapse(&s.doc.slice(range), 200);
