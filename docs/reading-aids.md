@@ -1,8 +1,8 @@
 # Reading aids
 
-textweaver has aids that change how text looks, never what it says; try each one and keep the ones that help you. Speech, search, bookmarks, and notes always use the real text.
+textweaver offers aids that change how text is displayed, never what it says. Speech, search, bookmarks, and notes always operate on the underlying text. The evidence for each aid is mixed and readers differ, so treat each one as an option to evaluate, not as a recommendation.
 
-Every aid can be turned on and off, and textweaver says when it changes. The keys, in both the terminal reader and the app, are:
+Every aid can be switched on and off, and textweaver announces each change. The keys, in both the terminal reader and the app, are:
 
 - **Alt+Shift+R**: show or hide RSVP, starting from the cursor.
 - **Alt+Shift+P**: start or pause RSVP.
@@ -22,39 +22,39 @@ To try RSVP, bionic reading, and the ruler in a web browser first, open the [rea
 
 ## RSVP: one word at a time
 
-RSVP shows one word at a time in the same place on the screen, so your eyes do not have to track a line of text. Studies of RSVP find that it raises reading speed while lowering understanding of what is implied rather than stated, more so as the rate climbs, and that it helps readers with low vision only when their central vision is intact. Use it for skimming or for short passages, and slow it down when you need to follow an argument.
+RSVP (rapid serial visual presentation) shows one word at a time in a fixed place on the screen, which removes the eye movements that tracking a line of text requires. Studies of RSVP find that it raises reading speed while lowering understanding of what is implied rather than stated, more so as the rate climbs, and that it helps readers with low vision only when their central vision is intact. It suits skimming and short passages; reduce the rate when you need to follow an argument.
 
-- One letter of each word is marked, a little left of center. Look at that letter. It is where the eye reads a word fastest, and it stays in the same column from word to word.
+- One letter of each word, slightly left of center, is marked as the fixation point. It is the position from which the eye recognizes a word fastest, and it stays in the same column from word to word.
 - The word before and the word after are shown above and below, in normal type. You can hide either one.
 - RSVP can run on its own timer, or follow speech.
   - On its own, it shows 300 words a minute. You can go faster or slower, from 50 to 1,500.
-  - It pauses a little longer after a comma, longer after a sentence, and longer again after a paragraph. Long words stay a little longer too.
+  - It pauses briefly after a comma, longer after a sentence, and longer again after a paragraph. Long words are displayed slightly longer.
   - Following speech, it shows the word being spoken.
 - You can pause and resume. You can move by word, sentence, or paragraph. Going back a sentence goes to the start of this sentence if you are more than three words in. Otherwise it goes to the sentence before.
 - The word can sit in one of nine places: top, middle, or bottom, and left, center, or right. The default is top center. If the word would cover the line you are on, it moves out of the way.
 - A word too long for the box ends with `…`, so you know part of it is hidden.
 - The status line says where you are: for example, "Word 12 of 300, 3 percent. Sentence 2 of 20. 300 words per minute. Paused."
 
-A note on safety: fast RSVP changes the screen many times a second. textweaver changes only the word, never the whole box: the box never goes blank or moves between words. WCAG 2.3.1 allows at most three flashes a second over an area bigger than about a quarter of what the eye takes in at once. A test checks the fastest rate, 1,500 words a minute, against that limit: the terminal box (with a terminal font up to about 24 points) and the app's RSVP panel stay well under it, because only the letters change. A frontend that ever draws much larger words has a cap ready that slows those changes to three flashes a second ([ADR-0037](adr/0037-extractive-summaries.md)). If flicker bothers you, slow down or use a smaller word size.
+Photosensitivity: fast RSVP changes the screen many times a second. textweaver changes only the word, never the whole box: the box never goes blank or moves between words. WCAG 2.3.1 (Three Flashes or Below Threshold) allows at most three flashes a second over an area larger than a defined fraction of the visual field. A test checks the fastest rate, 1,500 words a minute, against that limit: the terminal box (with a terminal font up to about 24 points) and the app's RSVP panel stay well under it, because only the letters change. A frontend that ever draws much larger words has a cap ready that slows those changes to three flashes a second ([ADR-0037](adr/0037-extractive-summaries.md)). If flicker is a problem for you, lower the rate or use a smaller word size.
 
 ## Bionic reading
 
-Bionic reading makes the first part of each word bold. Four independent studies found no gain in reading speed or understanding from it, though some readers like how it looks; try it and see. By default, the first 40 percent of each word is bold. You can choose from 10 to 90 percent.
+Bionic reading renders the first part of each word in bold, so that the eye can anchor on a word's opening letters. Four independent studies found no gain in reading speed or understanding from it, though some readers prefer how it looks. By default, the first 40 percent of each word is bold. You can choose from 10 to 90 percent.
 
 Numbers, web addresses, email addresses, and code are left alone.
 
 ## Text spacing
 
-You can set four kinds of space. Each is a multiple of the font size.
+Four kinds of spacing can be set. Each is expressed as a multiple of the font size.
 
-- **Line height**: the space from one line to the next. 1.5 is a good start.
+- **Line height**: the distance from one line to the next. WCAG 1.4.12 asks for at least 1.5.
 - **Paragraph spacing**: extra space after each paragraph.
 - **Letter spacing**: extra space between letters.
 - **Word spacing**: extra space between words.
 
-The WCAG text spacing guideline's values are line height 1.5, paragraph spacing 2, letter spacing 0.12, and word spacing 0.16; the example below sets them. textweaver does not warn about values below them: use what reads best for you. It says one thing when a change leaves letters spaced wider than words, "Raise word spacing with letter spacing.", because words then run into one another; WCAG's own values keep word spacing above letter spacing.
+The WCAG text spacing guideline's values are line height 1.5, paragraph spacing 2, letter spacing 0.12, and word spacing 0.16; the example below sets them. textweaver does not warn about values below them; use whatever reads best for you. It says one thing when a change leaves letters spaced wider than words, "Raise word spacing with letter spacing.", because words then run into one another; WCAG's own values keep word spacing above letter spacing.
 
-In the terminal, textweaver cannot change letter spacing or line height exactly. It uses blank lines and extra spaces instead.
+A terminal cannot adjust letter spacing or line height continuously, so textweaver approximates them there with blank lines and extra spaces.
 
 Set the spacing in `settings.toml`. For example, the WCAG values:
 
@@ -102,10 +102,10 @@ All three are free, under the SIL Open Font License. Their licenses are in `thir
 The choices in settings (and in HTML views) are:
 
 - **System font**: the font your computer uses for menus.
-- **Sans serif**: a plain font without small strokes on the letters. This is the default.
-- **Serif**: a font with small strokes on the letters.
-- **Monospace**: every letter the same width.
-- **Reading fonts**, made to be easy to read:
+- **Sans serif**: a typeface without serifs (the small finishing strokes on letters). This is the default.
+- **Serif**: a typeface with serifs.
+- **Monospace**: a typeface in which every character has the same width.
+- **Reading fonts**, designed for legibility:
   - **OpenDyslexic**: a font some readers prefer, with letters heavier at the bottom. Studies found no gain in reading speed or accuracy from it. Home page: https://opendyslexic.org/
   - **Atkinson Hyperlegible**: from the Braille Institute, for readers with low vision. Letters that look alike are made different. Home page: https://www.brailleinstitute.org/freefont/
   - **Lexend**: a font with wide letter spacing. The study behind it is small and has not been repeated. Home page: https://www.lexend.com/
@@ -150,7 +150,7 @@ In the terminal, the current line is underlined with a bar in the left margin. L
 
 ## Difficult words
 
-textweaver can mark rare words, so you can look them up before you read. A word is rare when it is uncommon in everyday English.
+textweaver can mark rare words, so that you can look them up before or while reading. A word counts as rare when it is uncommon in everyday English.
 
 Press **Alt+Shift+J** (or run `difficult words toggle` from the palette) to mark them. You hear "Difficult words underlined." In the terminal, each difficult word is underlined, never shown by color alone; the app underlines them with a thick line, the same rule. When verbosity is high (**Alt+Shift+V**), moving onto one with the Right or Left arrow adds "difficult word" after it: "mitochondria, difficult word". The choice is saved as `difficult_words = true` under `[reading_aids]`. See also [The textweaver app](gui.md#reading-aids).
 
@@ -174,19 +174,19 @@ Short words (under four letters), names, web addresses, and code are never marke
 
 ## Reading level
 
-textweaver can estimate how hard a document, or a part of it, is to read. It gives:
+textweaver can estimate the reading difficulty of a document, or of a selection. It reports:
 
-- a **grade level** (Flesch-Kincaid): about the school year a reader needs;
+- a **grade level** (Flesch-Kincaid): the approximate US school grade at which the text is readable;
 - a **reading ease** score from 0 to 100 (Flesch): higher is easier;
 - how many words and sentences it counted.
 
 For example: "Grade 8.2, middle school. Reading ease 64 out of 100. 1,234 words in 56 sentences."
 
-These are estimates. Other tools may give a slightly different grade.
+Both formulas rest on sentence length and syllable counts alone, so they are rough estimates. Other tools may report a slightly different grade.
 
 ## Syllables
 
-textweaver can show long words split into syllables, like `read·a·bil·i·ty`. Press **Alt+Shift+Z** (or run `syllables toggle` from the palette); you hear "Syllables shown." It shows where a long word breaks into syllables; no study of adult readers has tested it. Only the screen changes. Speech, search, bookmarks, and positions use the word as it is.
+textweaver can display long words divided into syllables, for example `read·a·bil·i·ty`. Press **Alt+Shift+Z** (or run `syllables toggle` from the palette); you hear "Syllables shown." It shows where a long word breaks into syllables; no study of adult readers has tested it. Only the screen changes. Speech, search, bookmarks, and positions use the word as it is.
 
 The separator is drawn between the letters, so the reading highlight still covers exactly the word being spoken, separators and all, and the cursor stays on the right letter. The choice is saved as `syllables = true` under `[reading_aids]`; `[reading_aids.syllable_options]` sets the separator (a middle dot by default) and which words are split. Both the terminal reader and the app draw the split; only the letters shown change, so your screen reader and Braille display still read the word whole. See also [The textweaver app](gui.md#reading-aids).
 
