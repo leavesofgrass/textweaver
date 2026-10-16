@@ -9619,9 +9619,12 @@ dependencies = [
  "textweaver-cite",
  "textweaver-convert",
  "textweaver-dictation",
+ "textweaver-enginehost",
  "textweaver-engines",
+ "textweaver-espeak",
  "textweaver-export",
  "textweaver-formats",
+ "textweaver-host",
  "textweaver-ocr",
  "textweaver-render",
  "textweaver-tui",
@@ -9861,6 +9864,17 @@ dependencies = [
  "toml 1.1.6+spec-1.1.0",
  "ureq",
  "zip 8.6.0",
+]
+
+[[package]]
+name = "textweaver-host"
+version = "0.1.0-beta.2"
+dependencies = [
+ "textweaver-dectalk",
+ "textweaver-eci",
+ "textweaver-enginehost",
+ "textweaver-espeak",
+ "textweaver-sapi",
 ]
 
 [[package]]
@@ -10154,6 +10168,7 @@ dependencies = [
  "tempfile",
  "textweaver-app",
  "textweaver-fonts",
+ "textweaver-host",
  "textweaver-theme",
  "toml 1.1.6+spec-1.1.0",
  "unicode-segmentation",

@@ -19,9 +19,11 @@
               docs\site data, and the docs indexes and crate counts; one
               line each; cargo xtask regen rebuilds them). -Only keyboard
               or -Only site selects this step.
-    hosts32   cargo build -p textweaver-eci -p textweaver-sapi
-              -p textweaver-dectalk -p textweaver-espeak --bins
-              --target i686-pc-windows-msvc (the 32-bit engine hosts)
+    hosts32   cargo build -p textweaver-host -p textweaver-eci
+              -p textweaver-sapi -p textweaver-dectalk -p textweaver-espeak
+              --bins --target i686-pc-windows-msvc (the combined 32-bit
+              host, textweaver-host-x86.exe in the packages, and the
+              separate development hosts the 32-bit tests use)
     scripts   PSScriptAnalyzer on scripts\*.ps1, when the module is installed
 
   The espeak feature needs libespeak-ng, which Windows does not have, so the
@@ -219,7 +221,7 @@ foreach ($pyStep in @('links', 'site-a11y')) {
         Invoke-CheckStep 'site-a11y' 'static accessibility checks of docs\site' ($python + @('tools\check_site_a11y.py'))
     }
 }
-Invoke-CheckStep 'hosts32' 'the 32-bit engine hosts build' @('cargo', 'build', '-p', 'textweaver-eci', '-p', 'textweaver-sapi', '-p', 'textweaver-dectalk', '-p', 'textweaver-espeak', '--bins', '--target', 'i686-pc-windows-msvc')
+Invoke-CheckStep 'hosts32' 'the 32-bit engine hosts build' @('cargo', 'build', '-p', 'textweaver-host', '-p', 'textweaver-eci', '-p', 'textweaver-sapi', '-p', 'textweaver-dectalk', '-p', 'textweaver-espeak', '--bins', '--target', 'i686-pc-windows-msvc')
 
 if (Test-Wanted 'scripts') {
     if (Get-Module -ListAvailable -Name PSScriptAnalyzer) {

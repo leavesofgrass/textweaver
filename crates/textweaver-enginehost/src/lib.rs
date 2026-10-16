@@ -22,6 +22,9 @@
 //!   rodio with the `playback` feature, or a silent timed output);
 //! - [`wav`]: WAV writing;
 //! - [`arch`]: a library's machine architecture, for choosing its host;
+//! - [`hostmode`]: host mode, how the programs run engine hosts as a copy
+//!   of themselves (`--engine-host <engine>`), and the combined 32-bit
+//!   host;
 //! - [`recorded`]: the clip player for recorded audio (a DAISY book's
 //!   narration), MP3 and WAV decoded and played through [`Playback`];
 //! - [`serve`]: the host side's request reader with its stop epoch, and a
@@ -37,6 +40,7 @@
 pub mod arch;
 pub mod audio;
 pub mod clock;
+pub mod hostmode;
 mod orphan;
 pub mod playback;
 pub mod process;

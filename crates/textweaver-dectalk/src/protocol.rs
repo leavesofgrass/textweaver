@@ -1,5 +1,5 @@
 //! The DECtalk messages of the engine-host protocol between
-//! [`DectalkBackend`](crate::DectalkBackend) and `textweaver-dectalk-host`
+//! [`DectalkBackend`](crate::DectalkBackend) and its host process
 //! (ADR-0012, ADR-0021).
 //!
 //! Framing, the shared messages (Speak, Stop, Quit, the `Ready` header,

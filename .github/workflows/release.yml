@@ -106,7 +106,7 @@ jobs:
           if (-not $zip) { throw 'no package' }
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $names = [IO.Compression.ZipFile]::OpenRead($zip.FullName).Entries.FullName
-          foreach ($want in 'tw.exe', 'textweaver.exe', 'textweaver-gui.exe', 'textweaver-eci-host.exe', 'textweaver-eci-host-x86.exe', 'textweaver-sapi-host.exe', 'textweaver-sapi-host-x86.exe', 'textweaver-dectalk-host.exe', 'textweaver-dectalk-host-x86.exe', 'textweaver-espeak-host.exe', 'textweaver-espeak-host-x86.exe', 'GUI.md', 'lexicon/lexicon-en.twlex', 'THIRD-PARTY-NOTICES.md', 'licenses/scowl/Copyright', 'licenses/fonts/opendyslexic/OFL.txt', 'licenses/xilem/LICENSE') {
+          foreach ($want in 'tw.exe', 'textweaver.exe', 'textweaver-gui.exe', 'textweaver-host-x86.exe', 'GUI.md', 'lexicon/lexicon-en.twlex', 'THIRD-PARTY-NOTICES.md', 'licenses/scowl/Copyright', 'licenses/fonts/opendyslexic/OFL.txt', 'licenses/xilem/LICENSE') {
             if (-not ($names | Where-Object { $_ -like "*/$want" })) { throw "the package lacks $want" }
           }
           "Windows package: $($zip.Name), $([math]::Round($zip.Length / 1MB, 1)) MB" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
@@ -298,7 +298,7 @@ jobs:
             textweaver-appimage bash -euc '
               for dir in target/dist/textweaver-*-linux-"$ARCH"; do
                 test -d "$dir" || { echo "Fail: no package folder for $ARCH"; exit 1; }
-                for want in tw textweaver textweaver-gui textweaver-eci-host textweaver-dectalk-host GUI.md lexicon/lexicon-en.twlex share/applications/textweaver.desktop share/applications/textweaver-gui.desktop THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/xilem/LICENSE; do
+                for want in tw textweaver textweaver-gui GUI.md lexicon/lexicon-en.twlex share/applications/textweaver.desktop share/applications/textweaver-gui.desktop THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/xilem/LICENSE; do
                   test -e "$dir/$want" || { echo "Fail: the package lacks $want"; exit 1; }
                 done
                 test "$(readlink "$dir/textweaver")" = tw || { echo "Fail: textweaver is not a link to tw"; exit 1; }

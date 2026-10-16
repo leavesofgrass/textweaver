@@ -24,7 +24,7 @@ textweaver-app = { workspace = true, optional = true }
 textweaver-sync = { workspace = true, optional = true }
 # Stop-to-first-audio with real engines on a silent output (--engine).
 textweaver-piper = { workspace = true, optional = true }
-textweaver-sapi = { workspace = true, optional = true }
+textweaver-sapi = { workspace = true, optional = true, features = ["playback"] }
 textweaver-enginehost = { workspace = true, optional = true }
 textweaver-keymap.workspace = true
 textweaver-text.workspace = true

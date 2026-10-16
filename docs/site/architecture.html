@@ -417,6 +417,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-engines",
     "textweaver-export",
     "textweaver-formats",
+    "textweaver-host",
     "textweaver-ocr",
     "textweaver-render",
     "textweaver-tui",
@@ -424,7 +425,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-writers"
    ],
    "description": "tw: textweaver's terminal program, the terminal reader and the command line (extract, search, speak, convert, export audio, cite, library, vault, dictate, settings, JSON-RPC), as a library with thin binaries",
-   "dev_deps": [],
+   "dev_deps": [
+    "textweaver-enginehost",
+    "textweaver-espeak"
+   ],
    "job": "Builds tw, the scripting command-line tool: text, search, speak, convert, export audio, cite, serve, and more.",
    "layer": "frontends",
    "name": "textweaver-cli",
@@ -451,6 +455,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "deps": [
     "textweaver-app",
     "textweaver-fonts",
+    "textweaver-host",
     "textweaver-theme"
    ],
    "description": "textweaver's all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit (ADR-0027)",
@@ -1129,6 +1134,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-eci",
     "textweaver-engines",
     "textweaver-espeak",
+    "textweaver-host",
     "textweaver-piper",
     "textweaver-sapi",
     "xtask"
@@ -1162,12 +1168,53 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "bins": [
+    "textweaver-host"
+   ],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-cli",
+    "textweaver-xilem"
+   ],
+   "deps": [
+    "textweaver-dectalk",
+    "textweaver-eci",
+    "textweaver-enginehost",
+    "textweaver-espeak",
+    "textweaver-sapi"
+   ],
+   "description": "Host mode for textweaver's programs (`--engine-host <engine>`) and the combined 32-bit engine host, textweaver-host-x86.exe",
+   "dev_deps": [],
+   "job": "Host mode: tw and the app run each speech engine in a copy of themselves, and one 32-bit program, textweaver-host-x86.exe, runs every 32-bit engine on Windows.",
+   "layer": "speech",
+   "name": "textweaver-host",
+   "path": "crates/textweaver-host",
+   "short": "host",
+   "tool": false,
+   "version": "0.1.0-beta.2"
+  },
+  {
+   "adr_note": null,
+   "adrs": [
+    {
+     "href": "../adr/0007-eloquence-via-eci-host.md",
+     "number": "0007",
+     "title": "ADR-0007: ETI-Eloquence through an ECI host process"
+    },
+    {
+     "href": "../adr/0012-engine-host.md",
+     "number": "0012",
+     "title": "ADR-0012: One engine-host protocol and playback client"
+    }
+   ],
+   "bins": [
     "textweaver-eci-host"
    ],
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-engines"
+    "textweaver-engines",
+    "textweaver-host"
    ],
    "deps": [
     "textweaver-core",
@@ -1206,6 +1253,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "default_member": true,
    "dependents": [
     "textweaver-engines",
+    "textweaver-host",
     "xtask"
    ],
    "deps": [
@@ -1272,7 +1320,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-engines"
+    "textweaver-engines",
+    "textweaver-host"
    ],
    "deps": [
     "textweaver-core",
@@ -1304,7 +1353,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-engines"
+    "textweaver-engines",
+    "textweaver-host"
    ],
    "deps": [
     "textweaver-core",
@@ -1313,7 +1363,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ],
    "description": "eSpeak NG in a helper program for textweaver: the engine host and the speech backend that drives it",
    "dev_deps": [],
-   "job": "Runs an installed eSpeak NG in a helper program built for its architecture, so an engine crash cannot close the reader.",
+   "job": "Runs an installed eSpeak NG in a host process built for its architecture, so an engine crash cannot close the reader.",
    "layer": "speech",
    "name": "textweaver-espeak",
    "path": "crates/textweaver-espeak",
@@ -1765,6 +1815,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-speech",
     "textweaver-engines",
     "textweaver-enginehost",
+    "textweaver-host",
     "textweaver-eci",
     "textweaver-sapi",
     "textweaver-apple",

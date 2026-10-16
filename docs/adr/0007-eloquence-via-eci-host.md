@@ -39,6 +39,17 @@ vdaddons\openevv\synthDrivers\_openevv\lib_64\eci.dll`); Code Factory's `eci.
 - Eloquence is proprietary. textweaver ships no part of it and links nothing: the user supplies a licensed ECI library, found at its default install location or named in `TEXTWEAVER_ECI_LIBRARY`. Whether a given product's license permits use by other programs is between the user and that vendor; a copy bundled with another application is often licensed for that application only.
 - Engine output (audio made with Eloquence or Voxin) is never committed to this repository. Local samples go to git-ignored paths.
 
+## Addendum, Friday, October 16, 2026: fewer host executables
+
+On a work computer, an antivirus program flagged `textweaver-eci-host.exe` and `textweaver-espeak-host.exe` with a heuristic detection (`Gen:Heur.Mint.Titirez.BuW`): small unsigned helpers that talk over pipes look unusual to scanners. The owner decided to combine the helper programs, keeping every engine, feature and option. Code signing is deferred.
+
+- **Engines still run in their own process.** Crash isolation and exact word timing, the reasons for this decision, are unchanged; so are the protocol (ADR-0012) and the backends. Only the number of executables changed.
+- **Native-architecture hosts are the programs themselves.** `tw` and the app (`textweaver-gui`) check for `--engine-host <engine>` as their first argument before any other parsing or start-up (`textweaver_host::host_mode`), and then run that engine's host and nothing else. Each engine's host `main` is a library function (`textweaver_eci::host::main` and so on). A backend starts the running program as its native host (`textweaver_enginehost::hostmode::self_host`), with the host-mode arguments in front of the host's own (`HostProcess::spawn_engine`).
+- **One 32-bit host on Windows.** 32-bit engine libraries (Code Factory's `eci.dll`, the usual `DECtalk.dll`, 32-bit SAPI 5 voices, a 32-bit libespeak-ng) still need a 32-bit process. `textweaver-host-x86.exe`, the `textweaver-host` binary built for `i686-pc-windows-msvc` by `cargo xtask hosts`, runs any of them: `textweaver-host-x86.exe <engine> [arguments]`.
+- **Paths named by the user keep working.** `TEXTWEAVER_ECI_HOST`, `TEXTWEAVER_SAPI_HOST`, `TEXTWEAVER_SAPI_HOST_X86`, `TEXTWEAVER_DECTALK_HOST`, `TEXTWEAVER_ESPEAK_HOST`, and the backends' host options may still name a separate per-engine host from an earlier release, which is started as before; any other program is given the host-mode arguments. A separate host beside the program is still found after the program itself, but is no longer needed or shipped.
+- **Packages** hold `tw`, `textweaver`, and `textweaver-gui`, plus `textweaver-host-x86.exe` on Windows: eleven executables on Windows became four, and the Linux package has no host programs at all.
+- Each engine crate keeps a separate host binary (`textweaver-eci-host` and so on) as a three-line wrapper for its own integration tests, because a test can start only binaries of its own package. Development tools (`cargo xtask soak`, `cargo xtask sapi-host`) use them too.
+
 ## See also
 
 - [Getting ETI-Eloquence](../eloquence.md): the user guide.

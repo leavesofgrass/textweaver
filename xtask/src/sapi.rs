@@ -1,15 +1,19 @@
-//! `cargo xtask sapi-host [--release]`: builds both SAPI5 hosts (ADR-0009)
-//! in the chosen profile and places them next to that profile's workspace
-//! binaries, where `textweaver-sapi` looks for them:
+//! `cargo xtask sapi-host [--release]`: builds the hosts SAPI 5 voices
+//! run in (ADR-0009) for development, in the chosen profile, and places
+//! them next to that profile's workspace binaries, where `textweaver-sapi`
+//! looks for them:
 //!
-//! - `target/<profile>/textweaver-sapi-host.exe` (x64, built in place);
-//! - `target/<profile>/textweaver-sapi-host-x86.exe` (built for
-//!   `i686-pc-windows-msvc`, then copied).
+//! - `target/<profile>/textweaver-sapi-host.exe`: the separate x64 host,
+//!   for test binaries and `cargo xtask bench`, which cannot run hosts
+//!   themselves (the programs run theirs in host mode, `--engine-host
+//!   sapi`, and ship no such file);
+//! - `target/<profile>/textweaver-host-x86.exe`: the combined 32-bit host
+//!   (built for `i686-pc-windows-msvc`, then copied), as the packages ship
+//!   it.
 //!
 //! Both are built without default features (a host needs no audio
-//! output). `cargo xtask hosts` (in [`crate::eci`]) builds every host,
-//! these included, for both profiles; this task remains for a quick
-//! debug-profile rebuild. Needs the `i686-pc-windows-msvc` target
+//! output). `cargo xtask hosts` (in [`crate::eci`]) builds the 32-bit
+//! host for both profiles. Needs the `i686-pc-windows-msvc` target
 //! (`rustup target add i686-pc-windows-msvc`). On other platforms it does
 //! nothing: SAPI5 is Windows-only.
 
@@ -27,10 +31,14 @@ pub fn run() -> anyhow::Result<()> {
     let profile = if release { "release" } else { "debug" };
     let root = eci::root();
     let target_dir = eci::target_dir(&root);
-    let hosts: Vec<HostBuild> = eci::all_hosts()
-        .into_iter()
-        .filter(|h| h.package == "textweaver-sapi")
-        .collect();
+    let hosts = [
+        HostBuild {
+            package: "textweaver-sapi",
+            bin: "textweaver-sapi-host",
+            target: None,
+        },
+        eci::X86_HOST,
+    ];
     eci::build(&root, &hosts, release).context(format!(
         "building the SAPI hosts (is the target installed? rustup target add {})",
         eci::X86_TARGET

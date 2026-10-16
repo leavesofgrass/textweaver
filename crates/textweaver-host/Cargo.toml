@@ -1,0 +1,29 @@
+[package]
+name = "textweaver-host"
+description = "Host mode for textweaver's programs (`--engine-host <engine>`) and the combined 32-bit engine host, textweaver-host-x86.exe"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# The combined host: every engine's host in one program. `cargo xtask
+# hosts` builds it for i686-pc-windows-msvc and installs it as
+# textweaver-host-x86.exe, for 32-bit engine libraries. The native hosts
+# are the programs themselves, in host mode.
+[[bin]]
+name = "textweaver-host"
+path = "src/main.rs"
+
+[dependencies]
+# Default features (audio output) off: a host needs none.
+textweaver-enginehost.workspace = true
+textweaver-eci.workspace = true
+textweaver-espeak.workspace = true
+textweaver-dectalk.workspace = true
+textweaver-sapi.workspace = true
+
+[lints]
+workspace = true

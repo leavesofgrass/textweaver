@@ -6,8 +6,8 @@
 //! the terminal program `tw` (with `textweaver` as a second name: a link
 //! on Linux and macOS, a small launcher on Windows) and the app,
 //! `textweaver-gui` (`gui_dist.rs`). It builds them with the `dist`
-//! profile (the release profile with fat LTO), and the engine hosts for
-//! the platform (Windows and Linux), and stages them with the
+//! profile (the release profile with fat LTO), and the combined 32-bit
+//! engine host on Windows, and stages them with the
 //! pronunciation dictionaries, the licence, the copyright notice
 //! (`NOTICE`), the third-party notices and licence files, and the
 //! complete user guides in `target/dist/textweaver-VERSION-PLATFORM/`,
@@ -413,11 +413,15 @@ pub(crate) fn stage(
     // dependencies.
     crate::gui_dist::stage_gui(&root, &build_dir, &stage, universal, no_screenshot)?;
 
-    // Engine hosts: Eloquence (ECI) and SAPI5 on Windows, ECI for Voxin on
-    // Linux. macOS speaks through Apple's own voices in process.
+    // Engine hosts: the programs run them as a copy of themselves; the
+    // one host program is the combined 32-bit host on Windows. The
+    // Eloquence dictionaries go beside the programs on Windows and Linux
+    // (Voxin). macOS speaks through Apple's own voices in process.
     if !cfg!(target_os = "macos") {
         let hosts = eci::all_hosts();
-        build_hosts(&root, &build_dir, &hosts)?;
+        if !hosts.is_empty() {
+            build_hosts(&root, &build_dir, &hosts)?;
+        }
         for h in &hosts {
             eci::copy(
                 &h.built(&build_dir, PROFILE),
@@ -555,7 +559,7 @@ fn link_second_name(_: &Path) -> anyhow::Result<()> {
 }
 
 /// The programs a package must hold, as paths in it: `tw`, its second
-/// name, the app, and every engine host for the platform.
+/// name, the app, and the combined 32-bit engine host on Windows.
 pub(crate) fn required_programs() -> Vec<String> {
     let exe = std::env::consts::EXE_SUFFIX;
     let mut out = vec![
@@ -833,7 +837,7 @@ mod tests {
         assert!(err.contains(TW), "{err}");
         assert!(err.contains(crate::gui_dist::INSTALLED), "{err}");
         if cfg!(windows) {
-            assert!(err.contains("textweaver-espeak-host-x86.exe"), "{err}");
+            assert!(err.contains("textweaver-host-x86.exe"), "{err}");
         }
         for p in required_programs() {
             let path = stage.join(p);

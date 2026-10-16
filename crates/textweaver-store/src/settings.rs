@@ -262,8 +262,8 @@ pub enum EspeakHelper {
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct EspeakSettings {
-    /// Whether eSpeak NG runs in its helper program
-    /// (`textweaver-espeak-host`) or inside textweaver.
+    /// Whether eSpeak NG runs in its helper process (textweaver started
+    /// in host mode, `--engine-host espeak`) or inside textweaver.
     pub helper: EspeakHelper,
     /// Unknown keys, preserved.
     #[serde(flatten)]

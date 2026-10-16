@@ -9,7 +9,9 @@
 #   tools/engines/windows-export.sh KIND LABEL
 #
 # Run from the repository's root in Git Bash on a Windows runner, after
-# the workflow built tw and both SAPI hosts and wrote voices.json.
+# the workflow built tw and the 32-bit host (textweaver-host-x86.exe
+# beside tw, as the release packages them) and wrote voices.json. tw runs
+# 64-bit voices in a copy of itself.
 set -euo pipefail
 
 kind="${1:?usage: windows-export.sh KIND LABEL}"
@@ -17,10 +19,6 @@ label="${2:?usage: windows-export.sh KIND LABEL}"
 out="${RUNNER_TEMP:?}/out"
 summary="$out/summary.txt"
 doc="${DOC:-fixtures/t/reading.md}"
-
-root="$(pwd -W)"
-export TEXTWEAVER_SAPI_HOST="$root/target/debug/textweaver-sapi-host.exe"
-export TEXTWEAVER_SAPI_HOST_X86="$root/target/i686-pc-windows-msvc/debug/textweaver-sapi-host.exe"
 
 status=0
 voice="$(python tools/engines/pick_voice.py "$kind" "$out/voices.json")" || status=$?

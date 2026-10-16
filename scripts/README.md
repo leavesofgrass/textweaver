@@ -43,8 +43,8 @@ Without `--release`, it builds textweaver from source:
 - It installs the build dependencies: a C toolchain, pkg-config, the ALSA headers, espeak-ng, and speech-dispatcher, with their development files.
 - It offers ffmpeg and pandoc, and says where to get whisper.cpp for dictation.
 - It installs rustup if cargo is missing, after asking. The Rust version comes from `rust-toolchain.toml`.
-- It builds `textweaver` and `tw` in release mode with the espeak-ng, speech-dispatcher, and Omnivox engines, and builds the engine hosts with `cargo xtask hosts`. If the espeak-ng engine does not build on your distribution, it builds again without it (`--no-espeak` skips it from the start).
-- It installs under `~/.local`, or `--prefix DIR`: the programs are linked from `bin/`, and the programs, engine hosts, and dictionaries live in `lib/textweaver/`. The guides, a `HELP.txt` with every command's help, manual pages, a menu entry, and these helper scripts are installed too.
+- It builds `textweaver` and `tw` in release mode with the espeak-ng, speech-dispatcher, and Omnivox engines. There are no separate engine hosts to build: `tw` runs Eloquence (Voxin) and DECtalk in a copy of itself. If the espeak-ng engine does not build on your distribution, it builds again without it (`--no-espeak` skips it from the start).
+- It installs under `~/.local`, or `--prefix DIR`: the programs are linked from `bin/`, and the programs and dictionaries live in `lib/textweaver/`. The guides, a `HELP.txt` with every command's help, manual pages, a menu entry, and these helper scripts are installed too.
 - It offers to add `~/.local/bin` to your PATH.
 
 To install:
@@ -128,7 +128,7 @@ One plain-text report to paste into a bug report. It covers:
 - the Rust toolchain;
 - where textweaver is installed, the app's version when it is installed, and `tw settings path`;
 - `tw backends`, `tw components list` (ending with "Components: 3 of 12 installed"), and `tw ocr status`;
-- whether the engine hosts and dictionaries sit beside the programs;
+- whether the dictionaries sit beside the programs, and on Windows the 32-bit engine host, `textweaver-host-x86.exe`;
 - the optional tools.
 
 It reads no file contents and dumps no environment: only the names of `TEXTWEAVER_` variables that are set. Your home folder is shown as `~`. `--out FILE` also writes the report to a file.

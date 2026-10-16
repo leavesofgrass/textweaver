@@ -38,6 +38,7 @@ members = [
     "crates/textweaver-sync",
     "crates/textweaver-components",
     "crates/textweaver-espeak",
+    "crates/textweaver-host",
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027);
@@ -80,6 +81,7 @@ default-members = [
     "crates/textweaver-sync",
     "crates/textweaver-components",
     "crates/textweaver-espeak",
+    "crates/textweaver-host",
 ]
 
 [workspace.package]
@@ -112,9 +114,11 @@ textweaver-editor = { path = "crates/textweaver-editor" }
 # (the lean reader); crates that want it say `features = ["publish"]`.
 textweaver-app = { path = "crates/textweaver-app", default-features = false }
 textweaver-tui = { path = "crates/textweaver-tui" }
-textweaver-eci = { path = "crates/textweaver-eci" }
+# The engine crates: default features (audio output) off, so the combined
+# 32-bit host links no audio stack; textweaver-engines turns `playback` on.
+textweaver-eci = { path = "crates/textweaver-eci", default-features = false }
 textweaver-apple = { path = "crates/textweaver-apple" }
-textweaver-sapi = { path = "crates/textweaver-sapi" }
+textweaver-sapi = { path = "crates/textweaver-sapi", default-features = false }
 textweaver-enginehost = { path = "crates/textweaver-enginehost" }
 # Default features off: each user picks the in-process encoders, so a build
 # without the `opus` feature needs no cmake (W7o).
@@ -128,8 +132,11 @@ textweaver-math = { path = "crates/textweaver-math" }
 textweaver-cite = { path = "crates/textweaver-cite" }
 textweaver-theme = { path = "crates/textweaver-theme" }
 textweaver-aids = { path = "crates/textweaver-aids" }
-textweaver-dectalk = { path = "crates/textweaver-dectalk" }
-textweaver-espeak = { path = "crates/textweaver-espeak" }
+textweaver-dectalk = { path = "crates/textweaver-dectalk", default-features = false }
+textweaver-espeak = { path = "crates/textweaver-espeak", default-features = false }
+# Host mode: the programs run engine hosts as a copy of themselves, and the
+# combined 32-bit host (ADR-0007 addendum).
+textweaver-host = { path = "crates/textweaver-host" }
 textweaver-fonts = { path = "crates/textweaver-fonts", default-features = false }
 textweaver-lexicon = { path = "crates/textweaver-lexicon" }
 textweaver-engines = { path = "crates/textweaver-engines" }

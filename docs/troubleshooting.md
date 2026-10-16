@@ -58,7 +58,7 @@ These three commands read your `settings.toml`, as the reader does, so they use 
 
 The `scripts` folder has two checking scripts. The [scripts guide](../scripts/README.md) describes every option.
 
-The doctor writes one plain-text report to paste into a bug report: your system, your terminal, the screen reader if one is running, where textweaver and the app are installed, `tw backends`, the optional components with one line such as "Components: 3 of 12 installed", text recognition, whether the engine hosts sit beside the programs, and the optional tools. It reads no file contents and shows only the names of `TEXTWEAVER_` variables that are set. On Windows:
+The doctor writes one plain-text report to paste into a bug report: your system, your terminal, the screen reader if one is running, where textweaver and the app are installed, `tw backends`, the optional components with one line such as "Components: 3 of 12 installed", text recognition, whether the 32-bit engine host and the dictionaries sit beside the programs, and the optional tools. It reads no file contents and shows only the names of `TEXTWEAVER_` variables that are set. On Windows:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\doctor.ps1 -Out doctor.txt
@@ -88,7 +88,7 @@ scripts/speech-check.sh
 
 1. Look at the title line. Its last part is the speech engine. If it says `silent`, textweaver was started with `--no-speech`, or no engine could start.
 2. Look at the status line when textweaver starts. "Speech engine X is not available; using Y." means the engine you asked for was not found. "X could not start; Y is speaking instead." means an engine was found but failed, and textweaver moved on to the next one; the log says why. textweaver is silent only when every engine on the computer failed, and then says which ones did.
-3. Run `tw backends`. It lists the engines that can run on your system; an engine marked "Not installed" was not found. If only `null` is available, textweaver found no engine. On Windows, check that the engine hosts are next to the programs (see [A voice or engine is missing](#a-voice-or-engine-is-missing)). On Linux, install espeak-ng or Speech Dispatcher, or use the install script, which does.
+3. Run `tw backends`. It lists the engines that can run on your system; an engine marked "Not installed" was not found. If only `null` is available, textweaver found no engine. On Windows, check that `textweaver-host-x86.exe` is next to the programs (see [A voice or engine is missing](#a-voice-or-engine-is-missing)). On Linux, install espeak-ng or Speech Dispatcher, or use the install script, which does.
 4. Check the volume: press **F7** a few times. "Full volume." means it is at the top. Check your system's volume too.
 5. Run `tw speak "Hello"`. If that speaks but the reader does not, check `[speech] backend` in `settings.toml`, or start with `--backend` and an engine id.
 6. Start with `--log debug`, try again, and read `textweaver.log`.
@@ -147,17 +147,16 @@ The [speech guide](speech.md) explains how each engine is highlighted.
 2. textweaver does not include Eloquence. The [Eloquence guide](eloquence.md) explains how to get a licensed copy for Windows, macOS, and Linux.
 3. With Code Factory's Eloquence for Windows, textweaver uses it only after you say you own it: set `TEXTWEAVER_ECI_CODE_FACTORY` to 1, or `[speech.eci] code_factory = true`.
 4. If your Eloquence is somewhere unusual, name its library with `TEXTWEAVER_ECI_LIBRARY`, or `[speech.eci] library`.
-5. Eloquence runs in a helper program, `textweaver-eci-host`. It must be in the same folder as `tw` and the app.
+5. Eloquence runs in a process of its own: a copy of `tw` or the app for a 64-bit library, and `textweaver-host-x86.exe` for a 32-bit one. The 32-bit host must be in the same folder as `tw` and the app.
 
 ### A voice or engine is missing
 
-Eloquence, SAPI voices, DECtalk, and on Windows eSpeak NG run in helper programs, called engine hosts. On Windows these are `textweaver-eci-host.exe`, `textweaver-sapi-host.exe`, `textweaver-dectalk-host.exe`, `textweaver-espeak-host.exe`, and their 32-bit versions ending in `-x86.exe`.
+Eloquence, SAPI voices, DECtalk, and on Windows eSpeak NG run in processes of their own, called engine hosts. A 64-bit engine runs in a copy of `tw` or the app, started in host mode; a 32-bit engine runs in the one 32-bit host, `textweaver-host-x86.exe`.
 
-1. Check that the host files are in the same folder as `textweaver.exe` and `tw.exe`. If you copied only the two programs somewhere else, copy the hosts and the `ibmtts-dictionaries` folder too. The doctor script checks this.
-2. A 32-bit SAPI voice (such as older VW or eSpeak SAPI voices) needs `textweaver-sapi-host-x86.exe`. Without it, 32-bit voices are not listed.
-3. The whole `sapi` engine is available only when the 64-bit host, `textweaver-sapi-host.exe`, is found.
-4. If the hosts are elsewhere, name them with `TEXTWEAVER_SAPI_HOST`, `TEXTWEAVER_SAPI_HOST_X86`, `TEXTWEAVER_ECI_HOST`, or `TEXTWEAVER_DECTALK_HOST`. The [speech guide](speech.md) lists them.
-5. OneCore voices (Microsoft Mark, David, Zira) are listed only when `[speech.sapi] onecore` is `true`, the default.
+1. Check that `textweaver-host-x86.exe` and the `ibmtts-dictionaries` folder are in the same folder as `textweaver.exe` and `tw.exe`. If you copied only the programs somewhere else, copy those too. The doctor script checks this.
+2. A 32-bit SAPI voice (such as older VW or eSpeak SAPI voices) needs `textweaver-host-x86.exe`. Without it, 32-bit voices are not listed.
+3. If a program other than textweaver's own runs the hosts (an older separate host, for example), name it with `TEXTWEAVER_SAPI_HOST`, `TEXTWEAVER_SAPI_HOST_X86`, `TEXTWEAVER_ECI_HOST`, or `TEXTWEAVER_DECTALK_HOST`. The [speech guide](speech.md) lists them.
+4. OneCore voices (Microsoft Mark, David, Zira) are listed only when `[speech.sapi] onecore` is `true`, the default.
 
 ### Windows says "Windows protected your PC", or macOS will not open the program
 
@@ -171,6 +170,16 @@ The programs are not code-signed.
   ```
 
 The [install guide](install.md) has the details.
+
+### An antivirus program flags textweaver
+
+Some antivirus programs flag a textweaver program, such as `tw.exe` or `textweaver-host-x86.exe`, with a heuristic detection: a name that starts with `Gen:Heur`, `Heur`, or `HEUR`, or says "suspicious" or "generic". A heuristic detection means the program looks unusual to the scanner, not that it matched known malware. Small unsigned programs that start other copies of themselves and talk to them over pipes, as textweaver's engine hosts do, are a common cause. Since 0.1.0-beta.3 the package ships fewer such programs: the separate host for each engine is gone, and the one host left is the 32-bit host.
+
+1. Check that your copy is genuine: compare the package's checksum with `SHA256SUMS.txt` from the release page (see [Checking a download](install.md#checking-a-download)). If they match, the files are the ones the release published.
+2. Report the false positive to your antivirus vendor. Most vendors have a web form for false positives (search the vendor's site for "false positive" or "submit a sample"). Name the file, the detection name, and the textweaver version, and say where you downloaded it.
+3. Until it is cleared, ask whoever runs the computer to allow the textweaver folder in the antivirus program. On a work computer, that is your IT department; do not turn the antivirus off.
+
+If the flagged file is `textweaver-host-x86.exe`, textweaver still works without it, except for 32-bit engines and voices. If it is `tw.exe` or `textweaver-gui.exe`, speech engines that run in a host process also stop working while the file is blocked.
 
 ### On macOS, tw speak with avspeech says nothing
 

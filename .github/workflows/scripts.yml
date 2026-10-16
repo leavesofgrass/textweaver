@@ -135,7 +135,6 @@ jobs:
           grep -F -- '${{ matrix.manager }}' dry-run.txt
           grep -F -- '${{ matrix.packages }}' dry-run.txt
           grep -F -- 'cargo build --release --locked -p textweaver-tui -p textweaver-cli --bin textweaver --bin tw --features textweaver-cli/espeak' dry-run.txt
-          grep -F -- 'cargo xtask hosts' dry-run.txt
       - name: Uninstall dry run, and the other scripts
         shell: bash
         run: |
