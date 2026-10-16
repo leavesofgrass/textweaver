@@ -1880,7 +1880,7 @@ pub struct GuiWindow {
     pub maximized: bool,
 }
 
-/// The panel the window shows beside the document (`[gui] sidebar`).
+/// The panel the textweaver app shows beside the document (`[gui] sidebar`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GuiSidebar {

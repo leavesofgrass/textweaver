@@ -1425,7 +1425,7 @@ pub const INFO: &[Info] = &[
     internal(
         "gui.last_version",
         "Version last run",
-        "The version the window last ran on this computer, so it says Updated to once after an update. Never synced.",
+        "The version of the textweaver app last run on this computer, so it says Updated to once after an update. Never synced.",
     ),
     choice(
         "gui.announce",
@@ -1474,7 +1474,7 @@ pub const INFO: &[Info] = &[
     choice(
         "gui.sidebar",
         "Panel beside the document",
-        "The panel the window shows beside the document. None, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one.",
+        "The panel the textweaver app shows beside the document. None, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one.",
         &[
             ("off", "none"),
             ("contents", "Contents"),

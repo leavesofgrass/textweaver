@@ -230,7 +230,7 @@ This page is generated from the settings schema by `cargo xtask settings-doc`. D
 - `gui.auto_hide_menu`: default on (`true`). Hide the menu bar. Windows: hide the window's menu bar until Alt or F10 shows it. It hides again when the menu closes. No effect on Linux, whose menus are the F10 list, or on macOS. On or off: `true` or `false`. Stays on this computer.
 - `gui.focus_mode`: default off (`false`). Focus mode. Hide the bars and the panel when the mouse rests a few seconds. The text then has the whole window. Moving the mouse shows them; keys do not. Screen readers still find every control. On or off: `true` or `false`. Stays on this computer.
 - `gui.speak_messages`: default off (`false`). Speak textweaver's messages. When textweaver reads aloud, also say its messages, typing and cursor moves in its voice, for reading by ear without a screen reader. On or off: `true` or `false`. Stays on this computer.
-- `gui.sidebar`: default none (`"off"`). Panel beside the document. The panel the window shows beside the document. None, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one. Choices: `"off"` (none), `"contents"` (Contents), `"notes"` (Notes). Stays on this computer.
+- `gui.sidebar`: default none (`"off"`). Panel beside the document. The panel the textweaver app shows beside the document. None, the Contents (the headings), or the Notes. The panel keys change it, and the window remembers the last one. Choices: `"off"` (none), `"contents"` (Contents), `"notes"` (Notes). Stays on this computer.
 
 ## Colors: the `[colors]` section
 
@@ -283,7 +283,7 @@ textweaver writes these itself, such as a question already asked. They are in th
 - `accessibility.hybrid_offered`: default off (`false`). Hybrid mode offered. Set once textweaver has asked whether to use hybrid mode. On or off: `true` or `false`. Stays on this computer.
 - `interface.recent_settings`: default an empty list. Recently changed settings. The settings changed last on the settings screen, listed at its top. Text; empty means not set. Stays on this computer.
 - `gui.window`: default not set. Window place and size. Where the window was and how large, kept on this computer and never synced. Text; empty means not set. Stays on this computer.
-- `gui.last_version`: default not set. Version last run. The version the window last ran on this computer, so it says Updated to once after an update. Never synced. Text; empty means not set. Stays on this computer.
+- `gui.last_version`: default not set. Version last run. The version of the textweaver app last run on this computer, so it says Updated to once after an update. Never synced. Text; empty means not set. Stays on this computer.
 - `components.chooser_shown`: default off (`false`). Components list shown. The first-run list of optional components was shown. On or off: `true` or `false`. Stays on this computer.
 - `updates.asked`: default off (`false`). Updates question asked. The first-run question about updates was asked. On or off: `true` or `false`. Stays on this computer.
 - `updates.last_check`: default 0. Last update check. When the last automatic check for updates ran, in seconds since 1970. Text; empty means not set. Stays on this computer.
