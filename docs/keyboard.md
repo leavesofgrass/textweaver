@@ -366,6 +366,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Check the citations: how many there are, and which keys are not in your library | palette | palette | palette | `check_citations` |
 | Import references from a BibTeX, RIS, or CSL-JSON file into your library | palette | palette | palette | `import_references` |
 | Start or stop dictation: spoken words are typed at the cursor in edit mode | `Ctrl+Shift+F9` | `Ctrl+Shift+F9` | `Cmd+Shift+F9` | `dictate` |
+| Pause the microphone while dictating, keeping the session and the words so far, or resume it | `Alt+Shift+F9` | `Alt+Shift+F9` | `Option+Shift+F9` | `pause_dictation` |
 | Download the dictation model chosen in the settings, after saying its size and license | palette | palette | palette | `download_dictation_model` |
 
 ## View and help

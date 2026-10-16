@@ -1159,6 +1159,8 @@ mod tests {
                         | ActionId::AddReference
                         // Outside edit mode, dictation offers to enter it.
                         | ActionId::Dictate
+                        // A spoken answer records in any mode.
+                        | ActionId::PauseDictation
                 ) {
                     continue;
                 }

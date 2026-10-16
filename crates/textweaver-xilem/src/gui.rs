@@ -43,8 +43,8 @@ use textweaver_app::lexicon::args;
 use textweaver_app::lexicon::i18n::Catalog;
 use textweaver_app::store::{DocKey, GuiSettings};
 use textweaver_app::{
-    App, AppError, Command, DocWindow, Effect, Playback, PromptKey, PromptPurpose, WindowChange,
-    extra_command,
+    App, AppError, Command, DictationStatus, DocWindow, Effect, Playback, PromptKey, PromptPurpose,
+    WindowChange, extra_command,
 };
 
 use crate::bars::{FRAME, Flow, Frame, StatusRow};
@@ -77,6 +77,10 @@ pub const ROOT: WidgetTag<Root> = WidgetTag::named("tw-root");
 pub const PLAY: WidgetTag<ActionButton> = WidgetTag::named("tw-play");
 /// The Edit button (edit mode on or off).
 pub const EDIT: WidgetTag<ActionButton> = WidgetTag::named("tw-edit");
+/// The Dictate button: "Stop dictation" while dictation is active.
+pub const DICTATE: WidgetTag<ActionButton> = WidgetTag::named("tw-dictate");
+/// The Pause dictation button: "Resume dictation" while paused.
+pub const PAUSE_DICTATION: WidgetTag<ActionButton> = WidgetTag::named("tw-pause-dictation");
 /// The status text.
 pub const STATUS: WidgetTag<Label> = WidgetTag::named("tw-status");
 /// The status bar region (named by its text).
@@ -236,6 +240,8 @@ struct Shown {
     editing: bool,
     /// Edit mode, as the Edit button says it.
     edit_button: bool,
+    /// Dictation, as the Dictate and Pause dictation buttons say it.
+    dictation: DictationStatus,
     /// The notes, bookmarks, highlights, and search matches drawn.
     marks: Vec<(CharRange, crate::document::DocMark)>,
     /// What a screen reader is told of each highlight drawn.
@@ -372,10 +378,11 @@ impl Buttons {
     }
 
     /// True when the app's bars (`[gui] header_buttons` and
-    /// `toolbar_buttons`) are not the buttons drawn.
+    /// `toolbar_buttons`, with the dictation buttons while dictation is
+    /// active) are not the buttons drawn.
     pub fn differ_from(&self, app: &App) -> bool {
-        self.actions(&self.header) != app.bar_buttons(Bar::Header)
-            || self.actions(&self.toolbar) != app.bar_buttons(Bar::Toolbar)
+        self.actions(&self.header) != app.shown_bar_buttons(Bar::Header)
+            || self.actions(&self.toolbar) != app.shown_bar_buttons(Bar::Toolbar)
     }
 }
 
@@ -397,21 +404,25 @@ fn toolbar_push_right(actions: &[ActionId]) -> Option<usize> {
 /// Builds the header's and the toolbar's buttons again from the app's
 /// lists (B1-g2c): the window shows a change made in Customize buttons at
 /// once, not only when it next opens. Labels follow `reading` (Play or
-/// Pause) and `editing` (Edit or Finish editing). Returns the new buttons.
+/// Pause) and `editing` (Edit or Finish editing), and the dictation
+/// buttons come and go with dictation (`App::shown_bar_buttons`). Returns
+/// the new buttons.
 pub fn rebuild_bars(host: &mut impl Host, app: &App, reading: bool, editing: bool) -> Buttons {
     let c = app.catalog();
+    let dictation = app.dictation_status();
     let mut ids = HashMap::new();
     let make = |actions: &[ActionId], ids: &mut HashMap<WidgetId, ActionId>| {
         actions
             .iter()
             .map(|&a| {
-                let b = bar_button(&button_label(&c, a, reading, editing), a, Some(app), ids);
+                let text = state_label(&c, a, reading, editing, dictation);
+                let b = bar_button(&text, a, Some(app), ids);
                 (b.id(), b)
             })
             .unzip::<_, _, Vec<WidgetId>, Vec<NewWidget<ActionButton>>>()
     };
-    let header_actions = app.bar_buttons(Bar::Header);
-    let toolbar_actions = app.bar_buttons(Bar::Toolbar);
+    let header_actions = app.shown_bar_buttons(Bar::Header);
+    let toolbar_actions = app.shown_bar_buttons(Bar::Toolbar);
     let (header, header_buttons) = make(&header_actions, &mut ids);
     let (toolbar, toolbar_buttons) = make(&toolbar_actions, &mut ids);
     host.edit(HEADER_BUTTONS, |mut f| {
@@ -619,6 +630,8 @@ fn bar_button(
             .with_tag(PLAY)
             .with_class("primary"),
         ActionId::ToggleEditMode => button(text, action, app, ids).with_tag(EDIT),
+        ActionId::Dictate => button(text, action, app, ids).with_tag(DICTATE),
+        ActionId::PauseDictation => button(text, action, app, ids).with_tag(PAUSE_DICTATION),
         _ => button(text, action, app, ids),
     }
 }
@@ -666,6 +679,27 @@ pub fn button_label(c: &Catalog, action: ActionId, reading: bool, editing: bool)
         _ => return textweaver_app::menu::action_name(c, action),
     };
     c.tr(id)
+}
+
+/// The drawn label of the button for `action` as [`button_label`] gives
+/// it, with the dictation buttons following `dictation`: Dictate says
+/// "Stop dictation" while dictation is active, and Pause dictation says
+/// "Resume dictation" while paused.
+pub fn state_label(
+    c: &Catalog,
+    action: ActionId,
+    reading: bool,
+    editing: bool,
+    dictation: DictationStatus,
+) -> String {
+    match action {
+        ActionId::Dictate if dictation.is_active() => c.tr("gui-button-stop-dictation"),
+        ActionId::PauseDictation if dictation == DictationStatus::Paused => {
+            c.tr("gui-button-resume-dictation")
+        }
+        ActionId::PauseDictation => c.tr("gui-button-pause-dictation"),
+        _ => button_label(c, action, reading, editing),
+    }
 }
 
 /// The short description of the button for `action` (`gui-hint-*`, at
@@ -1495,6 +1529,7 @@ pub fn tick_signature(app: &App) -> u64 {
     app.opening().hash(&mut h);
     app.minutes_left().hash(&mut h);
     app.font_downloads().hash(&mut h);
+    app.dictation_status().hash(&mut h);
     if let Some(s) = app.session() {
         s.revision.hash(&mut h);
         s.cursor.0.hash(&mut h);
@@ -1832,6 +1867,22 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
         }
         shown.edit_button = editing;
     }
+    let dictation = app.dictation_status();
+    if dictation != shown.dictation {
+        // The buttons themselves come and go in `Gui::refresh`; here the
+        // ones drawn change their names ("Resume dictation").
+        let c = app.catalog();
+        for (tag, action) in [
+            (DICTATE, ActionId::Dictate),
+            (PAUSE_DICTATION, ActionId::PauseDictation),
+        ] {
+            if host.id_of(tag).is_some() {
+                let text = state_label(&c, action, false, false, dictation);
+                host.edit(tag, |mut b| ActionButton::set_label(&mut b, text));
+            }
+        }
+        shown.dictation = dictation;
+    }
     let status = app.status_text().to_owned();
     if status != shown.status {
         host.edit(STATUS, |mut l| Label::set_text(&mut l, status.clone()));
@@ -2003,11 +2054,21 @@ impl Gui {
             ctx.render_root(self.window_id)
                 .edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::release(&mut a));
         }
-        // The bars' buttons changed (Customize buttons): built again.
+        // The bars' buttons changed (Customize buttons, or dictation
+        // started or ended): built again. When the focus was on a button
+        // that went (Stop dictation once dictation ends), it moves to the
+        // document, never to nowhere.
         if self.buttons.differ_from(&self.app) {
             let (reading, editing) = (self.shown.reading, self.shown.edit_button);
             let root = ctx.render_root(self.window_id);
+            let focused = root.focus_now();
             self.buttons = rebuild_bars(root, &self.app, reading, editing);
+            if let Some(f) = focused
+                && !root.has_widget(f)
+            {
+                let doc = root.id_of(DOC);
+                root.move_focus(doc);
+            }
             if self.log {
                 crate::log::line("bars: buttons rebuilt");
             }
@@ -2035,7 +2096,7 @@ impl Gui {
                 let (reading, editing) = (self.shown.reading, self.shown.edit_button);
                 let root = ctx.render_root(self.window_id);
                 for (id, action) in &self.buttons.by_id {
-                    let text = button_label(&c, *action, reading, editing);
+                    let text = state_label(&c, *action, reading, editing, self.shown.dictation);
                     let help = button_description(&c, *action);
                     root.edit_widget(*id, |mut w| {
                         let mut b = w.downcast::<ActionButton>();
