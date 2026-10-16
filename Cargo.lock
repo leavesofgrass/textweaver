@@ -10139,6 +10139,7 @@ name = "textweaver-xilem"
 version = "0.1.0-beta.2"
 dependencies = [
  "accesskit_consumer",
+ "arboard",
  "clap",
  "ctrlc",
  "log",

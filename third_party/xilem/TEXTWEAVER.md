@@ -48,6 +48,8 @@ textweaver's own fixes, each small, each a candidate for its own pull request:
 
 20. `masonry_core`: `app::try_init_tracing_with_span_times(name, report)` installs the same trace output as `try_init_tracing`, plus a layer that calls `report` with how long each span named `name` lasted, from its creation to its close (beta 1, G1-a). The layer has its own filter, so it turns on no other span or event. textweaver times `masonry_winit`'s `redraw` span under `--log` and writes the median, the 95th percentile, and the worst frame time every 200 frames. The appended part of `textweaver.patch` holds it.
 
+21. `masonry_winit`: only the plain paste chord (Ctrl+V, or Cmd+V on macOS) is turned into a `ClipboardPaste` event (beta 3). Upstream took Ctrl (or Cmd) with V and any other modifier, so Ctrl+Shift+V and Ctrl+Alt+V never reached the app as keys. With Shift or Alt the key now arrives as a keyboard event, so textweaver can bind Ctrl+Shift+V to Paste as plain text and Ctrl+Alt+V to Choose a voice. The appended part of `textweaver.patch` holds it.
+
 ## Updating
 
 1. Pick a new upstream revision and copy the crates listed above over this folder, leaving out the same things.

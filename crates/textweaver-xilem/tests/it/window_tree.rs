@@ -903,7 +903,7 @@ fn a_destructive_question_starts_on_no_with_a_verb() {
     }
 }
 
-/// The voice manager (Ctrl+Shift+V in the window) is the app's list, with
+/// The voice manager (Ctrl+Alt+V in the app) is the app's list, with
 /// only voices in it: the language and engine filters are buttons beside
 /// it (W7v). In its dialog, Enter, Space (a favorite), and Delete (a
 /// downloaded voice) go to the app's list model, as in the terminal.
@@ -914,8 +914,8 @@ fn the_voice_manager_is_the_apps_list_with_its_keys() {
     use textweaver_xilem::dialog::DialogAction;
     let dir = tempfile::tempdir().unwrap();
     let mut app = app_with_sample(dir.path());
-    // The keymap's key for the platform (Cmd+Shift+V on macOS,
-    // Ctrl+Shift+V elsewhere), from the keymap itself.
+    // The keymap's key for the platform (Cmd+Option+V on macOS,
+    // Ctrl+Alt+V elsewhere), from the keymap itself.
     let chord: KeyChord = app
         .keymap()
         .chords_for(ActionId::ChooseVoice)

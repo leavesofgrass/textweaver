@@ -2470,22 +2470,28 @@ impl Gui {
     }
 
     /// The platform's paste key (Ctrl+V), with the clipboard's text as
-    /// Masonry's window read it: the app's Paste, which on Windows reads
-    /// the clipboard's HTML and RTF itself (`crate::clipboard`) and pastes
-    /// formatted text as Markdown, as one undo step. Elsewhere the text
-    /// handed over is pasted (plain text is all that clipboard reads).
+    /// Masonry's window read it: the clipboard's HTML (and RTF on Windows)
+    /// read by `crate::clipboard`, pasted as Markdown as one undo step. On
+    /// Windows that is the app's Paste; on macOS and Linux the window's
+    /// text stands in when the clipboard read has no plain text.
     fn paste_key(&mut self, ctx: &mut DriverCtx<'_>, text: String) {
         if cfg!(windows) || !self.app.is_editing() {
             // Out of edit mode, the app says pasting needs it.
             self.dispatch(ctx, Command::Action(ActionId::Paste));
             return;
         }
+        let contents = crate::clipboard::with_window_text(
+            textweaver_app::Clipboard::read(&mut crate::clipboard::System),
+            text,
+        );
         if self.log {
-            crate::log::line(&format!("paste: {} chars", text.chars().count()));
+            crate::log::line(&format!(
+                "paste: {} chars, HTML {}",
+                contents.text.as_deref().map_or(0, |t| t.chars().count()),
+                if contents.html.is_some() { "yes" } else { "no" }
+            ));
         }
-        let effects = self
-            .app
-            .paste_contents(textweaver_app::ClipboardContents::text(text), false);
+        let effects = self.app.paste_contents(contents, false);
         self.run_effects(ctx, effects);
         self.refresh(ctx);
     }
@@ -5238,9 +5244,8 @@ pub fn run(opts: GuiOptions) -> Result<(), String> {
         }
     }
     app.set_announce_list_focus(opts.experiments.app_list_announcements);
-    // Paste reads the system clipboard's HTML and RTF (Windows), so
+    // Paste reads the system clipboard's HTML (and RTF on Windows), so
     // formatted text pastes as Markdown.
-    #[cfg(windows)]
     app.set_clipboard(Box::new(crate::clipboard::System));
     let mut experiments = opts.experiments;
     let wanted = experiments

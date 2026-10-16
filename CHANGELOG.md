@@ -4,6 +4,14 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Changed
+
+- **Ctrl+Shift+V now pastes as plain text in edit mode, and Choose a voice moved to Ctrl+Alt+V.** In the textweaver app, Ctrl+Shift+V (Cmd+Shift+V on macOS) pastes the clipboard's plain text, as in most programs; Ctrl+Shift+M still works. Choose a voice is Ctrl+Alt+V in the app (Cmd+Option+V on macOS) and also in the terminal reader, where Alt+V keeps working. In the terminal reader, Ctrl+Shift+V stays the terminal's own paste, which is always plain text. If you moved either command in `keymap.toml`, your keys are unchanged.
+
+### The app
+
+- **Formatted text pastes as Markdown on macOS and Linux too.** Ctrl+V (Cmd+V) in edit mode reads the clipboard's HTML (the pasteboard's on macOS, the Wayland or X11 clipboard's on Linux) and pastes headings, lists, emphasis, links, tables, and code as Markdown, as on Windows and in the terminal reader. Without HTML, the plain text is pasted.
+
 ### Study
 
 - **New: study cards go to Anki and back.** Export cards to Anki writes a document's cards as an Anki package (`.apkg`) beside it, in a deck named after the document, each note tagged with the document and the card's kind; graded cards keep their interval, ease, due day, and grades. Import Anki cards adds a package's Basic and Basic-and-reversed notes to the open document's cards as plain text, with their grades, and says what it skipped: "Imported 120 cards. Skipped 4 cloze notes." Importing the same package twice adds nothing. From the command line: `tw study export --anki FILE` and `tw study import FILE` ([Take cards to Anki and back](docs/notes.md#take-cards-to-anki-and-back)). AnkiConnect sync stays dropped.

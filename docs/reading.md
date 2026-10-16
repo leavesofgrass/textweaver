@@ -621,7 +621,7 @@ For more help reading, such as one word at a time (RSVP), bionic reading, and a 
 
 - **+** or **=**: faster. **-**: slower. Each step is 20 words per minute. The graphical version also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size.
 - **F8**: cycle the speed presets: skim, normal, study, slow.
-- **Alt+V**: choose a voice. The graphical version lists **Ctrl+Shift+V**, which pastes in edit mode in this release; use the Speech menu or the command palette there ([Known limits](known-limits.md#the-graphical-version)).
+- **Alt+V**: choose a voice. **Ctrl+Alt+V** also works, except in a macOS terminal, where VoiceOver keeps it. The graphical version uses **Ctrl+Alt+V** (**Cmd+Option+V** on macOS).
 
 The [speech guide](speech.md) covers rate, pitch, volume, and voices.
 

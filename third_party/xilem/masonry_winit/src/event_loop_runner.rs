@@ -876,9 +876,14 @@ impl MasonryState {
                     } else {
                         k.modifiers.ctrl()
                     };
+                    // textweaver patch: only the plain paste chord (Ctrl+V,
+                    // Cmd+V) reads the clipboard; with Shift or Alt it is a
+                    // key the app binds (paste as plain text, a command).
                     if let Key::Character(c) = &k.key
                         && c.as_str().eq_ignore_ascii_case("v")
                         && action_mod
+                        && !k.modifiers.shift()
+                        && !k.modifiers.alt()
                         && k.state == KeyState::Down
                     {
                         match self.clipboard_cx.get_contents() {

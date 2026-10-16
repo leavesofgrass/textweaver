@@ -104,6 +104,8 @@ pub(crate) fn terminal_keys(action: ActionId) -> Option<&'static [&'static str]>
         A::NextParagraph => &["g:Ctrl+P", "b:p", "b:]", "s:PageDown"],
         A::PreviousParagraph => &["b:Shift+P", "b:[", "s:PageUp"],
         A::ReadFromCursor => &["b:Enter"],
+        // Ctrl+Option+V is VoiceOver's (VO+V, the verbosity rotor).
+        A::ChooseVoice => &["g:Alt+V"],
         A::NextGrammarProblem => &["g:Alt+F7"],
         A::PreviousGrammarProblem => &["g:Alt+Shift+F7"],
         A::NextLintProblem => &["g:Alt+F8"],
@@ -401,7 +403,7 @@ mod tests {
             ("Cmd+]", ActionId::HistoryForward),
             ("Cmd+T", ActionId::ChooseFont),
             ("Cmd+;", ActionId::NextMisspelling),
-            ("Cmd+Shift+V", ActionId::ChooseVoice),
+            ("Cmd+Alt+V", ActionId::ChooseVoice),
         ] {
             assert_eq!(
                 gui.lookup(&k(chord), Layer::Browse),
@@ -409,6 +411,10 @@ mod tests {
                 "{chord}"
             );
         }
+        assert_eq!(
+            gui.lookup(&k("Cmd+Shift+V"), Layer::Edit),
+            Some(ActionId::PastePlainText)
+        );
         assert_eq!(
             gui.lookup(&k("Alt+Right"), Layer::Browse),
             Some(ActionId::CaretNextWord)

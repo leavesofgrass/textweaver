@@ -121,7 +121,7 @@ On its first run with a screen reader, textweaver offers hybrid mode once. [Usin
 
 ### The wrong voice speaks
 
-1. Press **Alt+V** in the terminal reader, or **Ctrl+Shift+V** in the app (where the key may paste instead; use Speech, Choose a voice, or the command palette; see [Known limits](known-limits.md#the-graphical-version)), and choose the voice. The one in use says "current". The choice is saved.
+1. Press **Alt+V** in the terminal reader, or **Ctrl+Alt+V** in the app (**Cmd+Option+V** on macOS), and choose the voice. The one in use says "current". The choice is saved.
 2. Check `[speech] voice` in `settings.toml`. A voice name that matches nothing leaves the engine's default voice in use.
 3. With no voice chosen, `[speech] prefer_voice` (default `"eloquence"`) picks one whose name contains it. Set it to part of the name you want, or to `""`.
 4. Check the engine. Your voice may belong to another engine: `tw voices --backend sapi`, for example. Set `[speech] backend` to that engine.
