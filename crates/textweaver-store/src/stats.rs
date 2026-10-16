@@ -59,6 +59,26 @@ pub struct ReadingStats {
     pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
+/// Most documents the review list holds.
+pub const REVIEW_MAX: usize = 50;
+
+/// One row of the review list ([`ReadingStats::review`]).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ReviewItem {
+    /// The document's file.
+    pub path: PathBuf,
+    /// Its title when last read.
+    pub title: String,
+    /// Whole days since it was last read.
+    pub days: i64,
+    /// When it was last read (Unix seconds, UTC).
+    pub last_read: i64,
+    /// The furthest point read, in percent.
+    pub percent: u8,
+    /// How many notes it has.
+    pub notes: usize,
+}
+
 /// Reading to add to a document's statistics.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct StatsDelta {
@@ -168,6 +188,34 @@ impl ReadingStats {
         v
     }
 
+    /// The review list: the documents read before, the one read longest
+    /// ago first, at most [`REVIEW_MAX`]. `now` is Unix seconds; `notes`
+    /// counts a document's notes by its key. Documents without a file (a
+    /// web page read once) and those never read aloud are left out.
+    ///
+    /// A convenience for coming back to old readings, not a study method:
+    /// nothing here schedules reviews.
+    pub fn review(&self, now: i64, notes: &dyn Fn(&str) -> usize) -> Vec<ReviewItem> {
+        let mut v: Vec<ReviewItem> = self
+            .documents
+            .iter()
+            .filter(|(_, d)| d.last_read > 0)
+            .filter_map(|(k, d)| {
+                Some(ReviewItem {
+                    path: d.path.clone()?,
+                    title: d.title.clone(),
+                    days: (now - d.last_read).max(0) / 86_400,
+                    last_read: d.last_read,
+                    percent: d.furthest_percent.min(100),
+                    notes: notes(k),
+                })
+            })
+            .collect();
+        v.sort_by(|a, b| a.last_read.cmp(&b.last_read).then(a.path.cmp(&b.path)));
+        v.truncate(REVIEW_MAX);
+        v
+    }
+
     /// Seconds read across every document.
     pub fn total_seconds(&self) -> f64 {
         self.documents.values().map(|d| d.seconds).sum()
@@ -225,6 +273,25 @@ mod tests {
         assert_eq!(s.total_sessions(), 3);
         assert_eq!(hms(3725.4), (1, 2, 5));
         assert_eq!(hms(-3.0), (0, 0, 0));
+    }
+
+    #[test]
+    fn the_review_list_is_oldest_first_with_days_percent_and_notes() {
+        let mut s = ReadingStats::default();
+        let day = 86_400;
+        let now = 100 * day;
+        s.add(&delta("new", 10.0, 30, true, now - 2 * day));
+        s.add(&delta("old", 10.0, 80, true, now - 21 * day - 5));
+        s.add(&delta("today", 10.0, 5, true, now - 60));
+        let mut web = delta("web", 10.0, 5, true, now - 50 * day);
+        web.path = None;
+        s.add(&web);
+        let rows = s.review(now, &|k| if k == "old" { 3 } else { 0 });
+        let keys: Vec<&str> = rows.iter().map(|r| r.title.as_str()).collect();
+        assert_eq!(keys, ["Title old", "Title new", "Title today"]);
+        assert_eq!((rows[0].days, rows[0].percent, rows[0].notes), (21, 80, 3));
+        assert_eq!(rows[2].days, 0);
+        assert!(ReadingStats::default().review(now, &|_| 0).is_empty());
     }
 
     #[test]
