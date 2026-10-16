@@ -236,11 +236,13 @@ fn the_library_list_queues_with_ctrl_enter_and_the_queue_list_removes() {
     let effects = l.act(ActionId::ReadingQueue);
     assert_eq!(list_of(&effects, "Reading queue"), ["week3", "week4"]);
     l.app.dispatch(Command::ListKey(ListKey::Delete));
-    assert!(
-        l.said("Removed from the reading queue: week3."),
-        "{:?}",
-        l.log.texts()
-    );
+    // Speech is said on its own thread; wait for it, as above.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while !l.said("Removed from the reading queue: week3.") {
+        l.app.poll_speech();
+        assert!(Instant::now() < deadline, "{:?}", l.log.texts());
+        std::thread::sleep(Duration::from_millis(1));
+    }
     let shelf = l.shelf();
     assert_eq!(shelf.queue.len(), 1);
     assert!(shelf.queued(&l.week4));

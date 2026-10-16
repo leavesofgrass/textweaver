@@ -153,8 +153,12 @@ fn the_help_names_the_keys_a_new_user_needs() {
         has("Single-key shortcuts on or off, for dictation: F9. Settings: Shift+F10."),
         "{items:?}"
     );
+    // Ctrl+Alt+V is left off in a macOS terminal, where VoiceOver has it.
+    let voice_key = textweaver_app::short_chords_text(tui.app().keymap(), ActionId::ChooseVoice);
     assert!(
-        has("Choose a voice: Alt+V or Ctrl+Alt+V. Restart speech if it stops: Shift+F8."),
+        has(&format!(
+            "Choose a voice: {voice_key}. Restart speech if it stops: Shift+F8."
+        )),
         "{items:?}"
     );
 }
