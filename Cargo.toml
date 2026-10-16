@@ -275,6 +275,10 @@ sevenz-rust2 = { version = "0.23.0", default-features = false }
 # blocks, both pure Rust (the Wave 3 research, kept outside the repository).
 fst = "0.4.7"
 ruzstd = "0.9"
+# Anki packages (B1-f3): an `.apkg` holds an SQLite collection. rusqlite
+# (MIT) with SQLite (public domain) built in, so no system library is
+# needed; `serialize` reads and writes the database in memory.
+rusqlite = { version = "0.37", default-features = false, features = ["bundled", "serialize"] }
 # Wave 3, Agent W3f: Piper voices and Whisper dictation in-process on RTen,
 # the pure-Rust ONNX runtime (ADR-0023).
 # `rten_format` (RTen's own model files) is off: the models are ONNX.

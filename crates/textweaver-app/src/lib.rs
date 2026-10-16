@@ -150,6 +150,7 @@ mod about;
 mod access;
 mod actions;
 pub mod align;
+pub mod anki;
 mod app;
 mod audio_export;
 mod authoring;

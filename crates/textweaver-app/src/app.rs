@@ -1890,6 +1890,7 @@ impl App {
             PromptPurpose::DocumentDetails => return self.answer_details(text),
             PromptPurpose::CommentReply => return self.answer_comment_reply(text),
             PromptPurpose::CommentText => return self.answer_new_comment(text),
+            PromptPurpose::ImportCards => return self.answer_import_cards(text),
             PromptPurpose::GitHubToken => return self.answer_github_token(text),
             PromptPurpose::NoteText => self.add_note(text),
             PromptPurpose::EditNote => {
@@ -2318,7 +2319,9 @@ impl App {
             | A::GradeAgain
             | A::GradeHard
             | A::GradeGood
-            | A::GradeEasy => return self.cards_action(a),
+            | A::GradeEasy
+            | A::ExportCardsAnki
+            | A::ImportCardsAnki => return self.cards_action(a),
             A::AcceptAllChanges => return self.decide_all(true, None),
             A::RejectAllChanges => return self.decide_all(false, None),
             A::AddComment => return self.prompt(PromptPurpose::CommentText),
