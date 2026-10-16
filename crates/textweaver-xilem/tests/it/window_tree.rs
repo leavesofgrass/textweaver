@@ -1863,10 +1863,41 @@ fn notes_highlights_and_matches_are_drawn() {
         .iter()
         .map(|(_, m)| *m)
         .collect();
-    assert!(marks.contains(&DocMark::Highlight), "{marks:?}");
+    // The highlight in its palette name's color and shape, as the
+    // terminal reader draws it.
+    let named = marks.iter().find_map(|m| match m {
+        DocMark::Named(n) => Some(*n),
+        _ => None,
+    });
+    let named = named.unwrap_or_else(|| panic!("a named highlight: {marks:?}"));
+    let palette = app.highlight_palette();
+    assert_eq!(named.shape, palette[0].shape, "the first name's shape");
+    assert!(named.color.is_some(), "the first name's color");
     assert!(marks.contains(&DocMark::Note), "{marks:?}");
     // They are drawn without a panic.
     let _ = h.render();
+    // A screen reader is given the highlight's name in words, on the
+    // text runs that hold it.
+    let _ = h.redraw();
+    let mut said = Vec::new();
+    let mut stack = vec![h.access_tree().state().root()];
+    while let Some(n) = stack.pop() {
+        if n.role() == Role::TextRun
+            && let Some(d) = n.description()
+        {
+            said.push((d, n.value().unwrap_or_default()));
+        }
+        stack.extend(n.children());
+    }
+    let expected = format!("Highlight, {}", palette[0].name);
+    assert!(
+        said.iter().any(|(d, _)| *d == expected),
+        "{expected:?} in {said:?}"
+    );
+    assert!(
+        said.iter().all(|(_, text)| text.chars().count() <= 6),
+        "only the highlighted text carries the name: {said:?}"
+    );
 }
 
 /// A document named on the command line that cannot be opened is said as
