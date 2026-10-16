@@ -1,29 +1,29 @@
 # Speech engines and voices
 
-This guide covers how textweaver speaks: the speech engines it can use, how it chooses one, how to pick a voice, and how to set the rate, pitch, and volume. It also covers how text is prepared for speech, how exactly each engine's words are highlighted, and every speech setting and environment variable. It is for anyone who wants a different voice, a faster rate, or a speech problem fixed.
+This guide describes how textweaver speaks. It covers the speech engines, the way one is chosen, voice selection, and the controls for rate, pitch, and volume. It also explains how text is prepared before an engine receives it, how closely each engine's word highlight follows the audio, and every speech setting and environment variable. Read it when you want a different voice or a faster rate, or when speech is not behaving as expected.
 
 ## The engines
 
 Each speech engine has a short id, used by `--backend` and by the `backend` setting.
 
-- `eci`: ETI-Eloquence, through its engine library (ECI). Windows and Linux. It runs in a process of its own, the ECI host, and a 32-bit Eloquence runs in the 32-bit host, so it works with 64-bit textweaver. textweaver does not include Eloquence; the [Eloquence guide](eloquence.md) explains how to get it. Eloquence reads numbers, dates, and abbreviations itself.
-- `sapi`: Windows SAPI5 voices, including the OneCore voices (Microsoft David, Zira, Mark). Windows only. Each voice runs in a process of its own: a copy of textweaver in host mode for 64-bit voices, and the 32-bit host, `textweaver-host-x86.exe`, for older 32-bit-only voices.
+- `eci`: ETI-Eloquence, through its engine library (ECI). Windows and Linux. It runs in an engine host (see [Engine hosts](#engine-hosts-how-the-engines-run)), and a 32-bit Eloquence runs in the 32-bit host, so it works with 64-bit textweaver. textweaver does not include Eloquence; the [Eloquence guide](eloquence.md) explains how to obtain it. Eloquence reads numbers, dates, and abbreviations itself.
+- `sapi`: Windows SAPI5 voices, including the OneCore voices (Microsoft David, Zira, Mark). Windows only. Voices run in an engine host: a copy of textweaver started in its hidden `--engine-host` mode for 64-bit voices, and the 32-bit host, `textweaver-host-x86.exe`, for older 32-bit-only voices.
 - `dectalk`: DECtalk, from a copy you installed. See the [DECtalk guide](dectalk.md).
-- `piper`: Piper neural voices, run inside textweaver on RTen, a speech model runtime written in Rust. Every platform. It is available once you download a voice in the voice manager (Alt+V). Words are highlighted from the voice's own timing. See [Piper voices](#piper-voices) below.
-- `nsspeech`: Apple's system voices through the classic engine. macOS only. It answers fastest.
-- `avspeech`: Apple's system voices through AVSpeechSynthesizer. macOS only. It highlights words most exactly. On macOS 13 and later the system voices include Eloquence (Reed, Shelley, and others).
-- `espeak`: eSpeak NG, from a copy you installed. It runs in one of two ways. On Linux and macOS it runs inside textweaver itself, in builds made with it (the Linux AppImage and tarball, and the Linux install script): install the `espeak-ng` package to use it. On Windows it runs in a helper process, a copy of textweaver started in host mode: install eSpeak NG with its Windows installer, 64-bit or 32-bit, and textweaver starts the helper built for that copy. Either way, without eSpeak NG the backend is simply not available. `TEXTWEAVER_ESPEAK_LIBRARY` names the library file to load instead, and a copy in textweaver's components folder, from your own components source, is loaded first (see [Optional components](components.md#your-own-components-source)). The setting `[speech.espeak] helper` chooses between the two ways; see [below](#speechespeak-espeak-ng).
+- `piper`: Piper neural voices, run inside textweaver on RTen, a model runtime written in Rust. Every platform. It becomes available once you download a voice in the voice manager (Alt+V), and it highlights words from the voice's own timing. See [Piper voices](#piper-voices) below.
+- `nsspeech`: Apple's system voices through the classic engine. macOS only. It responds fastest.
+- `avspeech`: Apple's system voices through AVSpeechSynthesizer. macOS only. It highlights words most precisely. On macOS 13 and later the system voices include Eloquence (Reed, Shelley, and others).
+- `espeak`: eSpeak NG, from a copy you installed. It runs in one of two ways. On Linux and macOS it runs inside textweaver, in builds made with it (the Linux AppImage and tarball, and the Linux install script); install the `espeak-ng` package to use it. On Windows it runs in an engine host: install eSpeak NG with its Windows installer, 64-bit or 32-bit, and textweaver starts the host that matches that copy. Without eSpeak NG, the backend is not available. `TEXTWEAVER_ESPEAK_LIBRARY` names the library file to load instead, and a copy in textweaver's components folder, from your own components source, is loaded first (see [Optional components](components.md#your-own-components-source)). The setting `[speech.espeak] helper` chooses between the two ways; see [below](#speechespeak-espeak-ng).
 - `speechd`: Speech Dispatcher, the speech service Orca uses on Linux. In builds made with it; the Linux install script includes it.
-- `omnivox`: an Omnivox speech server, a separate program found on your `PATH`. It supports rate and tones, but not pitch, volume, or voices.
-- `null`: silent. Used when nothing else works, and by `--no-speech`.
+- `omnivox`: an Omnivox speech server, a separate program found on your `PATH`. It supports rate and tones, but not pitch, volume, or voice selection.
+- `null`: silent. It is used when no other engine works, and by `--no-speech`.
 
-There is also `recording`, a silent engine for automated tests. It is used only when named.
+A further engine, `recording`, is silent and exists for automated tests; it is used only when named.
 
 ## How textweaver chooses an engine
 
 The setting `[speech] backend` names the engine. Its default is `"auto"`.
 
-With `"auto"`, textweaver uses the available engine with the highest priority. From highest to lowest:
+With `"auto"`, textweaver uses the available engine with the highest priority. The order, from highest to lowest, is:
 
 1. `eci`, 1000;
 2. `sapi`, 500;
@@ -35,17 +35,17 @@ With `"auto"`, textweaver uses the available engine with the highest priority. F
 8. `omnivox`, 40;
 9. `null`, last.
 
-So an installed, licensed Eloquence is always the first choice. On macOS, `[speech.apple] backend` can put `avspeech` above `nsspeech`, or the other way round.
+An installed, licensed Eloquence is therefore always the first choice. On macOS, `[speech.apple] backend` can put `avspeech` above `nsspeech`, or the other way round.
 
-When you name an engine, with `--backend` or in the settings, textweaver uses it if it is available. If it is not, textweaver does not fall silent: it makes the automatic choice instead and tells you. The reader says "Speech engine", the id, "is not available; using", and the engine it chose. If the chosen engine then fails to start, the reader says "Speech could not start", the reason, then "running silently."
+When you name an engine, with `--backend` or in the settings, textweaver uses it if it is available. If it is not, textweaver does not fall silent; it makes the automatic choice instead and tells you. The reader says "Speech engine", the id, "is not available; using", and the engine it chose. If the chosen engine then fails to start, the reader says "Speech could not start", the reason, then "running silently."
 
-A voice saved for one engine is never an error with another. When speech falls back to Windows SAPI 5 and later returns to Eloquence or DECtalk, the saved SAPI voice is set aside quietly: the engine keeps its own voice, and your rate, pitch, and volume still apply. Choose a voice for the engine in the voice manager to keep it.
+A voice saved for one engine is never an error with another. If speech falls back to Windows SAPI 5 and later returns to Eloquence or DECtalk, the saved SAPI voice is set aside quietly; the engine keeps its own voice, and your rate, pitch, and volume still apply. To make a voice permanent for an engine, choose it in the voice manager.
 
 `--no-speech` always means silent.
 
 ### Who speaks: the accessibility mode
 
-With a screen reader running, you may not want textweaver to speak everything. `[accessibility] mode` decides:
+When a screen reader is running, you may not want textweaver to speak everything. `[accessibility] mode` determines the division of labor:
 
 - `"self-voicing"` (the default): textweaver speaks everything.
 - `"hybrid"`: textweaver reads documents aloud; your screen reader speaks messages, typing, and cursor moves from the status line.
@@ -59,13 +59,13 @@ With a screen reader running, you may not want textweaver to speak everything. `
 tw backends
 ```
 
-It prints one line per engine: its id and name, whether it is available here, its priority, what it supports, and where the word highlight's timing comes from: "Word timing from the engine" when the engine says where each word is (Piper's comes from the voice model itself), or "Word timing estimated" when textweaver paces it. The engine the automatic choice picks says "Chosen automatically". For example:
+It prints one line per engine: its id and name, whether it is available here, its priority, and what it supports. The line also states where the word highlight's timing comes from. "Word timing from the engine" means the engine reports where each word falls (Piper's comes from the voice model itself); "Word timing estimated" means textweaver paces the highlight. The engine the automatic choice picks says "Chosen automatically". For example:
 
 ```text
 eci: ETI-Eloquence. Available. Priority 1000. Supports word highlighting, pause, pitch, volume, audio files, tones, and reads numbers and abbreviations itself. Word timing from the engine. Chosen automatically.
 ```
 
-For a program or script, print JSON; it includes the automatic choice as `auto`:
+For use in a script, print JSON, which includes the automatic choice as `auto`:
 
 ```bash
 tw backends --json
@@ -79,13 +79,13 @@ tw backends --json
 tw voices
 ```
 
-It lists the voices of the engine in your settings (`[speech] backend`), or of the automatic choice: "Windows SAPI5 voices has 6 voices." then one line per voice, with the voice id, name, languages, gender, and tags. Name an engine with `--backend`:
+It lists the voices of the engine named in your settings (`[speech] backend`), or of the automatic choice. The output begins with a count, such as "Windows SAPI5 voices has 6 voices.", followed by one line per voice giving its id, name, languages, gender, and tags. To list another engine's voices, name it with `--backend`:
 
 ```bash
 tw voices --backend sapi
 ```
 
-Add `--json` for JSON. Listing voices starts the engine, which can take a few seconds.
+Add `--json` for JSON output. Listing voices starts the engine, which can take a few seconds.
 
 ## Hear a voice: tw speak
 
@@ -93,9 +93,9 @@ Add `--json` for JSON. Listing voices starts the engine, which can take a few se
 tw speak "The quick brown fox."
 ```
 
-`tw speak` speaks the text and says afterwards, for example, "Spoke 1 sentence with Windows SAPI5 voices." Its options:
+`tw speak` speaks the text and then reports, for example, "Spoke 1 sentence with Windows SAPI5 voices." It accepts these arguments:
 
-- `TEXT`: the text to speak. Leave it out when you use `--file`. A `-` reads the text from standard input, so a pipe can feed it. To hear the clipboard: `Get-Clipboard | tw speak -` in PowerShell, `pbpaste | tw speak -` on macOS, and `wl-paste | tw speak -` (or `xclip -o -selection clipboard | tw speak -`) on Linux.
+- `TEXT`: the text to speak. Leave it out when you use `--file`. A `-` reads standard input, so a pipe can supply the text. To hear the clipboard, use: `Get-Clipboard | tw speak -` in PowerShell, `pbpaste | tw speak -` on macOS, and `wl-paste | tw speak -` (or `xclip -o -selection clipboard | tw speak -`) on Linux.
 - `--file FILE`: speak a document instead. Any file the reader opens works.
 - `--backend ID`: the engine. The default is the automatic choice. An engine that is not available falls back to the automatic choice, with a note.
 - `--voice VOICE`: the voice, by id or by plain name, such as `Zira` or `Reed`.
@@ -104,55 +104,53 @@ tw speak "The quick brown fox."
 - `--out FILE`: write the audio to a file instead of playing it. The engine must be able to write audio files.
 - `--json`: print the prepared text, its offset maps, and every status the engine reported, as JSON.
 
-`tw speak`, `tw voices`, and `tw backends` read your `settings.toml`, as the reader does. `tw speak` uses your engine, voice, rate, pitch, and volume, and your normalization, punctuation, table, footnote, and math settings; the options you give win over them. Your voice is used only with your engine: with `--backend` naming another engine, that engine's default voice speaks unless you give `--voice`. `--home FOLDER` reads the settings from another folder, like `TEXTWEAVER_HOME`.
+`tw speak`, `tw voices`, and `tw backends` read your `settings.toml`, as the reader does. `tw speak` applies your engine, voice, rate, pitch, and volume, together with your normalization, punctuation, table, footnote, and math settings; options given on the command line take precedence. Your saved voice belongs to your saved engine: when `--backend` names a different engine, that engine's default voice speaks unless you also give `--voice`. `--home FOLDER` reads the settings from another folder, like `TEXTWEAVER_HOME`.
 
 To write a whole document to an audio file with subtitles, use `tw export-audio`. See [the audio export guide](audio-export.md).
 
 ## Choose a voice in the reader: Alt+V
 
-Press **Alt+V** (or **Ctrl+Alt+V**, except in a macOS terminal, where VoiceOver keeps it). The graphical version uses **Ctrl+Alt+V** (**Cmd+Option+V** on macOS), and shows the filters and the actions as buttons beside the list (see [the app guide](gui.md#voices)). This opens the voice manager. You hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Alt+End previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes." Alt+End is the Say Status key; if you changed it in `keymap.toml`, the voice manager names your key.
+Press **Alt+V** (or **Ctrl+Alt+V**, except in a macOS terminal, where VoiceOver keeps it) to open the voice manager. The graphical version uses **Ctrl+Alt+V** (**Cmd+Option+V** on macOS) and presents the filters and actions as buttons beside the list (see [the app guide](gui.md#voices)). On opening, you hear "Voice manager", how many voices are shown and which language and engine, then "Enter uses a voice and speaks a sample, or downloads one; Alt+End previews a voice; Space marks a favorite; Delete removes a downloaded voice; Escape closes." Alt+End is the Say Status key; if you changed it in `keymap.toml`, the voice manager names your key.
 
-This is the voice for reading documents. textweaver's own words (messages, lists, help, and settings) have a separate choice, the interface language, in six languages: English, Spanish, French, German, Brazilian Portuguese, and Arabic. `[speech.voices_by_language]` picks which voice speaks each interface language, so switching the interface to Spanish can switch to a Spanish voice automatically. See [`[interface] language`](settings.md#interface) in the settings guide for how to choose it and how textweaver falls back when no voice exists for it.
+The voice chosen here reads documents. textweaver's own words (messages, lists, help, and settings) follow a separate choice, the interface language, available in six languages: English, Spanish, French, German, Brazilian Portuguese, and Arabic. `[speech.voices_by_language]` picks which voice speaks each interface language, so switching the interface to Spanish can also switch to a Spanish voice. See [`[interface] language`](settings.md#interface) in the settings guide for how to choose it and how textweaver falls back when no voice exists for it.
 
 The list holds:
 
-- **Language: all languages.** Press Enter to show only the next language, then the next, and back to all. You hear, for example, "3 voices: English, all engines."
-- **Engine: all engines.** Press Enter to show only one engine's voices, in the same way.
-- **The voices.** Each says its name, language, engine, and tags; a favorite says "favorite", and the one in use says "current". Favorites come first. The list holds the running engine's voices and the Piper voices you have downloaded. Once you have fetched the Piper voice list, it also holds the Piper voices you can download, each with its size and "non-commercial" when its license says so.
-- **Fetch the Piper voice list from the internet.** Press Enter, then y, to download the list of Piper voices (about 250 KB).
+- **Language: all languages.** Press Enter to restrict the list to one language, then the next, and so on until it returns to all. You hear, for example, "3 voices: English, all engines."
+- **Engine: all engines.** This row filters by engine and works the same way.
+- **The voices.** Each says its name, language, engine, and tags; a favorite says "favorite", and the one in use says "current". Favorites come first. The list holds the running engine's voices and the Piper voices you have downloaded. After you fetch the Piper voice list, it also includes the Piper voices available for download, each with its size and, where its license requires, "non-commercial".
+- **Fetch the Piper voice list from the internet.** Press Enter, then y, to download the catalog of Piper voices (about 250 KB).
 
-Press **Enter** on a voice. You hear "Voice", its name, then a sample: "The quick brown fox jumps over the lazy dog." The choice is saved in `[speech] voice`. A voice of another engine switches engine: you hear "Switching engine", and speech restarts with that voice.
+Press **Enter** on a voice. You hear "Voice", its name, then a sample: "The quick brown fox jumps over the lazy dog." The choice is saved in `[speech] voice`. Choosing a voice that belongs to another engine switches engines: you hear "Switching engine", and speech restarts with that voice.
 
-**Each voice keeps its own rate and pitch**, as screen readers do. Change the rate on one voice, choose another, and come back: the first voice has its rate again. They are saved in `[speech.voice_params]`.
+**Each voice keeps its own rate and pitch**, as screen readers do: change the rate on one voice, switch to another, and return, and the first voice has the rate you gave it. The values are saved in `[speech.voice_params]`.
 
-Press **Space** on a voice to make it a favorite, or to stop it being one. You hear, for example, "Microsoft Zira added to favorites." Favorites are listed first, in the order you added them, and are saved in `[speech] favorite_voices`.
+Press **Space** on a voice to add it to, or remove it from, your favorites. You hear, for example, "Microsoft Zira added to favorites." Favorites are listed first, in the order you added them, and are saved in `[speech] favorite_voices`.
 
-An engine that offers no voices adds none to the list; the count you hear when the list opens says how many there are.
+Each engine lists its voices once, when it starts, and keeps the list, so the manager opens at once. Windows voices are enumerated in the background (a helper program reads each registry); if you press **Alt+V** before that finishes, you hear "The voices are still loading. The list opens when they are ready.", and it opens by itself when they arrive.
 
-Each engine lists its voices once, when it starts, and keeps the list, so the list opens at once. The Windows voices are listed in the background (a helper program reads each registry); if you press **Alt+V** before that is done, you hear "The voices are still loading. The list opens when they are ready.", and it opens by itself when they arrive.
-
-When a voice changes what the engine can do, textweaver tells you. For example: "This voice does not report words, so the word highlight is estimated." or "Pitch cannot be changed with this voice."
+When a voice changes what the engine can do, textweaver says so. For example: "This voice does not report words, so the word highlight is estimated." or "Pitch cannot be changed with this voice."
 
 ### Piper voices
 
-Piper voices are neural voices: natural-sounding, and each a file of 20 to 140 MB. textweaver runs them itself, with no other program. Nothing is downloaded until you say yes.
+Piper voices are neural voices, each a file of 20 to 140 MB, with a natural sound. textweaver runs them itself and needs no other program. Nothing is downloaded until you agree.
 
 1. Press **Alt+V**, go to "Fetch the Piper voice list from the internet", press Enter, and answer y.
 2. Press Alt+V again. Use the language row to show your language.
-3. Press Enter on a voice to download. textweaver reads the voice's details and says, for example: "Download Joe, English (United States), medium quality, 63 MB? License: CC0. Free to use for anything. y or n". Answer y. You hear progress at each quarter, then "Joe is installed."
+3. Press Enter on a voice to download. textweaver reads the voice's details and says, for example: "Download Joe, English (United States), medium quality, 63 MB? License: CC0. Free to use for anything. y or n". Answer y. Progress is announced at each quarter, followed by "Joe is installed."
 4. Press Enter on the new voice to use it.
 
-**Licenses differ from voice to voice.** Some are free for anything (`joe` is CC0; `kristin`, `norman`, and `cori` are public domain), some ask for credit (`libritts_r` is CC BY), and some are for personal, non-commercial use only (`lessac`, `ryan`, `hfc_female`). textweaver says the license before every download and does not ship any voice itself.
+**Licenses differ from voice to voice.** Some voices are free for any use (`joe` is CC0; `kristin`, `norman`, and `cori` are public domain), some require attribution (`libritts_r` is CC BY), and some are limited to personal, non-commercial use (`lessac`, `ryan`, `hfc_female`). textweaver states the license before every download and ships no voice itself.
 
-Every file is checked against the hash Hugging Face publishes for it; a file that does not match is deleted and nothing is installed. Voices are kept in `<data>/piper/voices/`. To remove one, press Delete on it in the voice manager and answer y.
+Every file is verified against the hash Hugging Face publishes for it; a file that does not match is discarded and nothing is installed. Voices are kept in `<data>/piper/voices/`. To remove one, press Delete on it in the voice manager and answer y.
 
-To read words into phonemes, Piper uses eSpeak NG: the installed library when there is one, otherwise a copy written in Rust that is built into textweaver (English only). Piper voices in other languages need eSpeak NG installed.
+To convert words to phonemes, Piper uses eSpeak NG: the installed library when there is one, otherwise a Rust implementation built into textweaver (English only). Piper voices in other languages require eSpeak NG to be installed.
 
 ### Voice names
 
-Wherever textweaver takes a voice, you can give its id or a plain name. `Zira`, `Reed`, or `David` is enough. textweaver looks for, in order: the exact id, a voice with exactly that name, then a voice whose name and id contain every word you gave. When several voices match, a US English one is preferred.
+Wherever textweaver accepts a voice, you may give its id or a plain name; `Zira`, `Reed`, or `David` is enough. textweaver matches, in order: the exact id, a voice with exactly that name, then a voice whose name and id contain every word you gave. When several voices match, a US English one is preferred.
 
-With no voice chosen, `[speech] prefer_voice` picks one: the first voice whose name or id contains it, again preferring US English. Its default is `"eloquence"`, so an Eloquence voice is used when the engine has one. Set it to `""` for no preference.
+When no voice is chosen, `[speech] prefer_voice` selects one: the first voice whose name or id contains that text, again preferring US English. Its default is `"eloquence"`, so an Eloquence voice is used when the engine offers one. Set it to `""` for no preference.
 
 ## Rate, pitch, and volume
 
@@ -163,18 +161,18 @@ The rate is in words per minute, from 50 to 900. The default is 265.
 - **+** or **=**: faster by 20.
 - **-**: slower by 20.
 
-The graphical version also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size. You hear the new rate, for example "285 words per minute." At the limits you hear "Fastest rate." or "Slowest rate." Each engine turns words per minute into its own scale, so the same rate sounds about the same on every engine.
+The graphical version also provides **F11** and **Shift+F11**; in it, **Ctrl+=** and **Ctrl+-** change the text size instead. Each change is announced, for example "285 words per minute.", and at the limits you hear "Fastest rate." or "Slowest rate." Each engine converts words per minute to its own scale, so a given rate sounds approximately the same on every engine.
 
 ### Speed presets: F8
 
-Press **F8** to go through four preset rates, from fastest to slowest:
+**F8** steps through four preset rates, from fastest to slowest:
 
 - skim, 350;
 - normal, 265;
 - study, 200;
 - slow, 150.
 
-You hear the preset first, then its rate, for example "Study, rate 200." You can change the presets, or add your own, in `[speech.speed_presets]`:
+You hear the preset name and then its rate, for example "Study, rate 200." Change the presets, or add your own, in `[speech.speed_presets]`:
 
 ```toml
 [speech.speed_presets]
@@ -184,16 +182,16 @@ study = 200
 slow = 150
 ```
 
-Setting this table replaces all four presets, so list every preset you want.
+Setting this table replaces all four presets, so list every one you want to keep.
 
 ### Pitch
 
-Pitch is a change from the voice's own pitch, in semitones, from 12 below to 12 above. The default is 0.
+Pitch is an offset from the voice's own pitch, in semitones, from 12 below to 12 above. The default is 0.
 
 - **Alt+=** or **)**: higher by one semitone.
 - **Alt+-** or **(**: lower by one semitone.
 
-You hear "Pitch plus 2.", "Pitch minus 1.", or "Normal pitch." At the limits you hear "Highest pitch." or "Lowest pitch."
+You hear "Pitch plus 2.", "Pitch minus 1.", or "Normal pitch.", and at the limits "Highest pitch." or "Lowest pitch."
 
 ### Volume
 
@@ -202,13 +200,13 @@ Volume is a percentage from 0 to 100. The default is 100.
 - **F7** or **0**: louder by 10.
 - **Shift+F7** or **9**: quieter by 10.
 
-You hear, for example, "Volume 90 percent." At the limits you hear "Full volume." or "Volume off."
+You hear, for example, "Volume 90 percent.", and at the limits "Full volume." or "Volume off."
 
-Every change is saved at once.
+Every change is saved immediately.
 
 ## The speech settings
 
-These are the `[speech]` settings in `settings.toml`, with their defaults. To see every setting and its value, run `tw settings export`. The [settings guide](settings.md) explains the file.
+This section lists the `[speech]` settings in `settings.toml` with their defaults. `tw settings export` prints every setting and its current value, and the [settings guide](settings.md) describes the file itself.
 
 ```toml
 [speech]
@@ -236,23 +234,21 @@ verbosity = "normal"
 - `volume`: 0 to 100.
 - `pitch`: semitones, -12 to 12.
 - `voice`: the voice, by id or name. It has no default; it is left out until you choose one.
-- `prefer_voice`: part of a voice name to prefer when no voice is chosen. `""` means no preference.
-- `favorite_voices`: your favorite voices, by id or name, listed first by Choose voice (**Alt+V**).
-- `punctuation`: how much punctuation is spoken. `"none"` speaks none; it only shapes the voice. `"some"` speaks marks that carry meaning in prose, such as `@`, `#`, and `/`. `"all"` speaks every mark. **Alt+Shift+N** cycles it while textweaver runs.
-- `split_caps`: speak the parts of words written in mixed capitals separately: "camelCase" as "camel Case", "XMLHttpRequest" as "XML Http Request".
+- `prefer_voice`: part of a voice name to prefer when no voice is chosen; `""` means no preference.
+- `favorite_voices`: your favorite voices, by id or name, listed first in the voice manager (**Alt+V**).
+- `punctuation`: how much punctuation is spoken. `"none"` speaks no marks and only shapes the intonation; `"some"` speaks marks that carry meaning in prose, such as `@`, `#`, and `/`; `"all"` speaks every mark. **Alt+Shift+N** cycles the level while textweaver runs.
+- `split_caps`: speak the parts of mixed-capital words separately: "camelCase" as "camel Case", "XMLHttpRequest" as "XML Http Request".
 - `caps`: how a capital letter is marked when a single character is spoken: `"pitch"`, `"tone"`, `"say_cap"`, or `"none"`. See [Writing and editing](editing.md).
 - `auto_play`: start reading as soon as a document opens.
-- `skip_code`: do not read code blocks aloud. Off by default: code blocks are read.
+- `skip_code`: omit code blocks from reading. Off by default, so code blocks are read.
 - `speed_presets`: the presets for **F8**, as above.
-- `latency_offset_ms`: how many milliseconds to delay the highlight behind an engine's reported word time. See [How exactly words are highlighted](#how-exactly-words-are-highlighted).
-- `pause_heading_ms`, `pause_paragraph_ms`, `pause_list_item_ms`: how long speech pauses after a heading, a paragraph and a list item, in milliseconds, from 0 to 3000. 0 turns that pause off. See [Pauses at headings, paragraphs and list items](#pauses-at-headings-paragraphs-and-list-items).
-- `markup_pauses`, default `true`: read pause markup in a document, such as `<break time="1s"/>`, as a pause. See [Pauses written in the text](#pauses-written-in-the-text).
-- `output_device`: the sound device speech plays on, by its id. Not set by default: speech plays on the system's default device. See [Choose the sound device](#choose-the-sound-device).
-- `verbosity`: how much textweaver says about what it does: `"low"`, `"normal"`, or `"high"`. **Alt+Shift+V** cycles it while textweaver runs. See [Reading and moving around](reading.md).
+- `latency_offset_ms`: the delay, in milliseconds, between an engine's reported word time and the highlight. See [How exactly words are highlighted](#how-exactly-words-are-highlighted).
+- `pause_heading_ms`, `pause_paragraph_ms`, `pause_list_item_ms`: the length of the pause after a heading, a paragraph, and a list item, in milliseconds, from 0 to 3000. A value of 0 turns that pause off. See [Pauses at headings, paragraphs and list items](#pauses-at-headings-paragraphs-and-list-items).
+- `markup_pauses`, default `true`: treat pause markup in a document, such as `<break time="1s"/>`, as a pause. See [Pauses written in the text](#pauses-written-in-the-text).
+- `output_device`: the id of the sound device speech plays on. It is unset by default, so speech uses the system's default device. See [Choose the sound device](#choose-the-sound-device).
+- `verbosity`: how much textweaver says about its own actions: `"low"`, `"normal"`, or `"high"`. **Alt+Shift+V** cycles it while textweaver runs. See [Reading and moving around](reading.md).
 
-Both cycling keys say the new level and save it.
-
-A value out of range is set to the nearest allowed value, and textweaver says which setting it changed.
+Both cycling keys announce the new level and save it. A value outside its range is set to the nearest allowed value, and textweaver says which setting it changed.
 
 ### [speech.eci]: Eloquence
 
@@ -262,9 +258,9 @@ dictionaries = true
 code_factory = false
 ```
 
-- `dictionaries`: load the community IBMTTS pronunciation dictionaries that come with textweaver. `true` (the default) loads them, `false` turns them off, and a folder path loads your own copy instead.
+- `dictionaries`: controls the community IBMTTS pronunciation dictionaries that come with textweaver. `true` (the default) loads them, `false` disables them, and a folder path loads your own copy instead.
 - `library`: the Eloquence engine library to load. It has no default; textweaver searches the usual places.
-- `code_factory`: also use Code Factory's Eloquence for Windows. Off by default, because a copy on a computer is not necessarily licensed for use with other programs. Turn it on only if you bought it.
+- `code_factory`: also use Code Factory's Eloquence for Windows. It is off by default, because an installed copy is not necessarily licensed for use with other programs; enable it only if you bought it.
 
 ### [speech.sapi]: Windows voices
 
@@ -291,7 +287,7 @@ backend = "auto"
 library = "C:\\Path\\To\\DECtalk.dll"
 ```
 
-- `library`: the DECtalk library to use. It has no default; textweaver searches the usual places. `TEXTWEAVER_DECTALK_LIBRARY` overrides it for one run. The [DECtalk guide](dectalk.md) explains it.
+- `library`: the DECtalk library to use. It has no default; textweaver searches the usual places. `TEXTWEAVER_DECTALK_LIBRARY` overrides it for one run. See the [DECtalk guide](dectalk.md).
 
 ### [speech.piper]: Piper voices
 
@@ -321,7 +317,7 @@ The two ways differ in what happens around the engine, not in what you hear. In 
 
 ## How text is prepared for speech
 
-Before text reaches the engine, textweaver prepares it: it expands abbreviations, turns numbers into words, applies your pronunciations, and reads tables and footnotes the way you choose. The highlight still lands on the right word, because textweaver keeps a map from every spoken word back to the document.
+Before text reaches the engine, textweaver prepares it: it expands abbreviations, converts numbers to words, applies your pronunciations, and renders tables and footnotes as you have configured. The highlight still lands on the correct word, because textweaver keeps a map from every spoken word back to the document.
 
 These are the `[normalization]` settings, with their defaults:
 
@@ -358,7 +354,7 @@ SQL = "sequel"
 
 ### Clinical and scientific text
 
-Some things on the page must be read exactly as written, because a wrong guess changes the meaning. textweaver handles four of them:
+Some content must be read exactly as written, because a wrong interpretation changes the meaning. textweaver treats four kinds of it specially:
 
 - **Identifiers are read digit by digit.** A number after CPT, PMID, NCT, ZIP, DOI, ISBN, or phone (also telephone, tel, and fax) is an identifier, not an amount. "PMID 31769816" is "PMID three one seven six nine eight one six", not "thirty-one million ...". A US phone number in its usual forms, such as "503-555-0123" or "(503) 555-0123", is read the same way without a label. Dots inside an identifier are read as "dot". The highlight moves digit by digit.
 - **Error-prone medical abbreviations are spelled, never expanded.** These are the abbreviations on The Joint Commission's "Do Not Use" list and the ISMP list of error-prone abbreviations, because they are misread and have caused harm: U, IU, QD, QOD (and q.d., q.o.d.), MS, MSO4, MgSO4, cc, SC, SQ, HS, TIW, AD, AS, AU, OD, OS, OU, and drug-name abbreviations such as TPA and HCTZ. "QD" is read "Q D" and "MgSO4" is "M G S O 4". Neither the built-in abbreviations nor your own `abbrev_expansions` can replace them. "µg" is read "micrograms", because the symbol itself is the hazard. "AS" and "AD" in text set in capitals ("SUCH AS") stay words.
@@ -414,9 +410,9 @@ Eloquence reads numbers, dates, times, and abbreviations itself, and does it wel
 
 ## Pauses at headings, paragraphs and list items
 
-When textweaver reads a document, it leaves a short silence after each heading, paragraph and list item, so you can hear where one ends and the next begins. At high rates this is often the first thing a listener loses. No words are added.
+When textweaver reads a document, it leaves a short silence after each heading, paragraph, and list item, so the boundaries between them are audible. At high rates this cue is often the first to be lost. No words are added.
 
-The pauses are 400 milliseconds after a heading, 300 after a paragraph and 150 after a list item. Each is set in `[speech]` (`pause_heading_ms`, `pause_paragraph_ms`, `pause_list_item_ms`, from 0 to 3000), or in Settings as "Pause after headings", "Pause after paragraphs" and "Pause after list items". 0 turns a pause off. The lengths are for the default rate, 265 words per minute. Faster, they shorten in proportion: at 530 words per minute they are half as long, and never shorter than a quarter.
+By default the pauses are 400 milliseconds after a heading, 300 after a paragraph, and 150 after a list item. Each is set in `[speech]` (`pause_heading_ms`, `pause_paragraph_ms`, `pause_list_item_ms`, from 0 to 3000), or in Settings as "Pause after headings", "Pause after paragraphs" and "Pause after list items". 0 turns a pause off. The lengths are for the default rate, 265 words per minute. Faster, they shorten in proportion: at 530 words per minute they are half as long, and never shorter than a quarter.
 
 How the pause is made depends on who plays the sound:
 
@@ -434,7 +430,7 @@ Either way:
 
 ## Pauses written in the text
 
-A document can ask for a pause itself, with SSML-style markup in its text:
+A document can request a pause itself, using SSML-style markup in its text:
 
 - `<break time="500ms"/>` or `<break time="1s"/>`: a pause of that length, up to 10 seconds.
 - `<break strength="medium"/>`: a pause by strength. `x-weak` is 250 milliseconds, `weak` 500, `medium` 750, `strong` 1000 and `x-strong` 1250. `none` is no pause. A bare `<break/>` is `medium`.
@@ -443,11 +439,11 @@ textweaver reads each break as a pause of that length where it stands, with ever
 
 The markup is never spoken and never shown: the reading view and the Braille display show the text without it, and the highlight stays on the right words. Breaks are read in plain text, Markdown and HTML files. In Edit mode you see and edit the markup as written, and saving keeps it.
 
-For a document that quotes SSML as an example, turn this off: `markup_pauses = false` in `[speech]`, or "Pauses written as markup" in Settings. Plain text then shows and reads the markup as text; Markdown and HTML leave the tag out, as other unknown tags. Reopen the document after changing it.
+For a document that quotes SSML as an example, disable this: `markup_pauses = false` in `[speech]`, or "Pauses written as markup" in Settings. Plain text then shows and reads the markup as text; Markdown and HTML leave the tag out, as other unknown tags. Reopen the document after changing it.
 
 ## How exactly words are highlighted
 
-How closely the highlight follows the voice depends on what the engine tells textweaver.
+How closely the highlight follows the voice depends on what the engine reports to textweaver.
 
 - **Eloquence, DECtalk, and eSpeak NG in its helper program.** textweaver plays their audio itself and learns the moment each word is heard. The highlight is exact.
 - **SAPI, eSpeak NG inside textweaver, and avspeech.** Each word comes with its time in the audio. textweaver shows it at that time plus `[speech] latency_offset_ms`, 120 ms by default, to allow for the sound card's delay. If the highlight runs ahead of what you hear, raise the offset; if it lags, lower it.
@@ -458,16 +454,16 @@ Some SAPI voices, such as Code Factory's, report no word times. textweaver tells
 
 ## Engine hosts: how the engines run
 
-Eloquence, SAPI voices, DECtalk, and on Windows eSpeak NG run in processes of their own, called engine hosts, so a crash in an engine never takes textweaver down and each word's timing is exact. There is no separate program per engine:
+Eloquence, SAPI voices, DECtalk, and (on Windows) eSpeak NG run in separate processes called engine hosts, so a crash in an engine cannot take textweaver down and each word's timing is exact. There is no separate program per engine:
 
-- For an engine library of the same architecture as textweaver (64-bit on a 64-bit computer), textweaver starts a copy of itself in a hidden host mode, `--engine-host` followed by the engine's name. You see a second `tw.exe` or `textweaver-gui.exe` in Task Manager while that engine speaks; it ends when textweaver does.
+- For an engine library of the same architecture as textweaver (64-bit on a 64-bit computer), textweaver starts a copy of itself in a hidden host mode, `--engine-host` followed by the engine's name. A second `tw.exe` or `textweaver-gui.exe` therefore appears in Task Manager while that engine speaks, and it ends when textweaver does.
 - On Windows, a 32-bit engine library (Code Factory's Eloquence, most DECtalk libraries, older 32-bit-only SAPI voices, a 32-bit eSpeak NG) runs in the one 32-bit host, `textweaver-host-x86.exe`. It must stay in the same folder as `tw.exe` and the app. Without it, 32-bit voices are not listed and a 32-bit library is refused in words.
 
 The dictionaries folder, `ibmtts-dictionaries`, must stay beside the programs too. Environment variables can point to a host elsewhere; see below.
 
 ## Choose the sound device
 
-Speech plays on the system's default sound device unless you choose another. To choose one:
+Speech plays on the system's default sound device unless you select another. To select one:
 
 1. Run `tw backends --devices`. It prints one line per connected device, its name first and its id last, such as "Headset, chosen by your settings. Id: wasapi:..." The default comes first.
 2. Copy the id into `[speech] output_device` in your settings, or set "Output device" in the settings screen.
@@ -477,9 +473,9 @@ Speech plays on the system's default sound device unless you choose another. To 
 output_device = "the id from tw backends --devices"
 ```
 
-The id stays the same when you restart or plug the device in again. A change in the settings screen moves speech to the new device at once.
+The id is stable across restarts and reconnections. A change in the settings screen moves speech to the new device at once.
 
-When the chosen device is not connected, speech plays on the default, and `tw backends --devices` ends with a line that says so. When the device in use goes away, such as a headset unplugged or switched off, textweaver opens the sound output again at once, on the chosen device if it is back, else on the current default, and the reading goes on from where it was.
+When the chosen device is not connected, speech plays on the default, and `tw backends --devices` ends with a line that says so. When the device in use goes away, such as a headset unplugged or switched off, textweaver reopens the sound output immediately, on the chosen device if it has returned and otherwise on the current default, and reading continues from where it was.
 
 The setting applies to the engines whose audio textweaver plays itself: Eloquence, the Windows SAPI and OneCore voices, DECtalk, Piper, and eSpeak NG in its helper program. eSpeak NG inside textweaver, Speech Dispatcher, and the Apple voices play on the system's default device. The setting belongs to this computer and never syncs.
 
@@ -489,13 +485,13 @@ If an engine crashes, or plays nothing for 12 seconds while reading, textweaver 
 
 If it goes silent again right away, reading stops with "Speech error: no speech for 12 seconds, even after restarting the voice, so reading stopped. Check the audio device". After three failed sentences in a row, reading stops too, instead of failing through the whole document.
 
-A helper program that is starting again (after a crash, or the first time you use a 32-bit voice) does not hold anything up: Stop and Pause work at once, and the sentence is spoken when the engine is ready. The audio device is opened in the background too.
+A host that is starting (after a crash, or the first time you use a 32-bit voice) does not block anything: Stop and Pause work immediately, and the sentence is spoken once the engine is ready. The audio device is also opened in the background.
 
-If speech itself stops working (an internal error in textweaver's speech thread), textweaver goes silent at once and restarts speech by itself, once, with your current settings: "Speech stopped working", the reason, then "Restarting speech.", and a moment later "Speech restarted." After that, and at any time, **Shift+F8** (Restart speech) starts speech again with your current settings. The command palette (F2) has it as "Restart speech".
+If speech itself stops working (an internal error in textweaver's speech thread), textweaver goes silent at once and restarts speech once on its own, with your current settings: "Speech stopped working", the reason, then "Restarting speech.", and a moment later "Speech restarted." After that, and at any time, **Shift+F8** (Restart speech) starts speech again with your current settings. The command palette (F2) has it as "Restart speech".
 
 ## Environment variables
 
-These variables change how the engines are found for one run. They win over the settings.
+These variables change how engines are located for a single run, and they take precedence over the settings.
 
 - `TEXTWEAVER_ECI_LIBRARY`: the Eloquence engine library to load, instead of searching.
 - `TEXTWEAVER_ECI_HOST`: a host program to run Eloquence in, instead of textweaver itself or `textweaver-host-x86.exe`. It may be a separate host from an earlier release, such as `textweaver-eci-host.exe`, or the 32-bit host.
