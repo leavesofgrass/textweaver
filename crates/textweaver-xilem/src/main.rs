@@ -176,7 +176,18 @@ fn unbuilt_message(flag: &str) -> String {
     )
 }
 
-fn main() {
+fn main() -> std::process::ExitCode {
+    // Host mode (`--engine-host <engine>`) before anything else: the
+    // program is then a speech engine's host, with no window or console.
+    if let Some(status) = textweaver_host::host_mode() {
+        return status;
+    }
+    run();
+    std::process::ExitCode::SUCCESS
+}
+
+/// The textweaver app.
+fn run() {
     // Before anything is printed: connect to the terminal, if any.
     console::attach();
     let args = parse_args();

@@ -9,9 +9,10 @@
 //! `[speech.dectalk] library` setting), then the usual install folders.
 //!
 //! The library is loaded at run time with `libloading`, never linked, and
-//! always in a separate host process, `textweaver-dectalk-host`, built for
-//! the library's architecture (DECtalk for Windows is usually a 32-bit DLL:
-//! `textweaver-dectalk-host-x86.exe`). The host has DECtalk synthesize into
+//! always in a separate host process built for the library's architecture:
+//! the program itself in host mode (`--engine-host dectalk`) for a 64-bit
+//! library, the combined 32-bit host `textweaver-host-x86.exe` for a
+//! 32-bit one (DECtalk for Windows is usually a 32-bit DLL). The host has DECtalk synthesize into
 //! memory with an `[:index mark]` before every word and streams the PCM and
 //! each mark's sample offset over the shared engine-host protocol
 //! (ADR-0012, [`protocol`]). [`DectalkBackend`] plays the audio in the main

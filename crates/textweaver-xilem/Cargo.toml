@@ -70,6 +70,8 @@ omnivox = ["textweaver-app/omnivox"]
 
 [dependencies]
 textweaver-app.workspace = true
+# Host mode: the app runs speech-engine hosts as a copy of itself.
+textweaver-host.workspace = true
 textweaver-theme.workspace = true
 textweaver-fonts = { workspace = true, features = ["bundled-fonts"] }
 masonry.workspace = true

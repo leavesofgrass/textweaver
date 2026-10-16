@@ -227,7 +227,7 @@ pub type RetrievalSink = Box<dyn FnMut(&[i16], &[WordTiming]) -> bool + Send>;
 
 /// Initializes libespeak-ng in retrieval mode (synthesis comes back
 /// through a [`RetrievalSink`]; nothing is played) and returns its sample
-/// rate. For the eSpeak NG helper program (`textweaver-espeak-host`),
+/// rate. For the eSpeak NG helper process (`--engine-host espeak`),
 /// which streams the audio to textweaver instead of playing it.
 pub fn retrieval_start() -> Result<u32, String> {
     ensure(ffi::Mode::Retrieval)

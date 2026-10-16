@@ -4,29 +4,34 @@
 //! (`textweaver_speech::backends::espeak`): textweaver's components
 //! folder first, then `TEXTWEAVER_ESPEAK_LIBRARY`, then the usual install
 //! paths. The first file that exists is the library, and its header says
-//! its architecture ([`Arch`]). The helper must match it: the native host
-//! (`textweaver-espeak-host`) for a library of this program's own
-//! architecture, `textweaver-espeak-host-x86.exe` for a 32-bit one,
-//! `textweaver-espeak-host-x64.exe` for an x86-64 library under an ARM64
-//! program (Windows runs it under emulation), and so on.
+//! its architecture ([`Arch`]). The host must match it: for a library of
+//! this program's own architecture, the program itself in host mode
+//! (`--engine-host espeak`); for a 32-bit one, the combined 32-bit host
+//! `textweaver-host-x86.exe`; for an x86-64 library under an ARM64 program
+//! (Windows runs it under emulation), a separately built
+//! `textweaver-espeak-host-x64.exe`, and so on.
 
 use std::path::PathBuf;
 
 pub use textweaver_enginehost::arch::{Arch, library_arch};
+use textweaver_enginehost::hostmode;
 use textweaver_speech::backends::espeak;
 
 use crate::EspeakHostConfig;
 
-/// The native host's file name.
+/// The separate native host's file name: a development build of the host
+/// (`cargo build -p textweaver-espeak`), still found beside the program.
+/// The packages ship none; the programs run the host as a copy of
+/// themselves ([`hostmode`]).
 pub const HOST_NAME: &str = if cfg!(windows) {
     "textweaver-espeak-host.exe"
 } else {
     "textweaver-espeak-host"
 };
 
-/// The 32-bit host's file name (`cargo xtask hosts` installs it next to
-/// the binaries on Windows).
-pub const HOST_NAME_X86: &str = "textweaver-espeak-host-x86.exe";
+/// The 32-bit host's file name: the combined host every engine shares
+/// (`cargo xtask hosts` installs it next to the binaries on Windows).
+pub const HOST_NAME_X86: &str = hostmode::X86_HOST_NAME;
 
 /// The library to load, and its architecture.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -69,10 +74,12 @@ pub fn choose_library(candidates: &[PathBuf]) -> Option<LibraryChoice> {
 }
 
 /// The host's file name for a library of architecture `arch` when this
-/// program is `program`: the native host for the same architecture (or
-/// an unknown one), else the host named for the library's.
+/// program is `program`: the separate native host for the same
+/// architecture (or an unknown one), the combined 32-bit host for a
+/// 32-bit library, else the host named for the library's.
 pub fn host_name(arch: Option<Arch>, program: Arch) -> String {
     match arch {
+        Some(Arch::X86) if program != Arch::X86 => HOST_NAME_X86.to_owned(),
         Some(a) if a != program && a != Arch::Other => {
             let suffix = match a {
                 Arch::X86 => "x86",
@@ -86,11 +93,12 @@ pub fn host_name(arch: Option<Arch>, program: Arch) -> String {
 }
 
 /// Host executables that can run a library of architecture `arch`, in
-/// order: [`EspeakHostConfig::host`], `TEXTWEAVER_ESPEAK_HOST`, then the
-/// host for that architecture beside the running executable (and in its
-/// parent folder, for test binaries in `deps/`), and on Windows a cargo
-/// `i686-pc-windows-msvc` build under the target folder for a 32-bit
-/// library. Only existing files are returned.
+/// order: [`EspeakHostConfig::host`], `TEXTWEAVER_ESPEAK_HOST`, then for a
+/// library of this program's architecture the program itself in host mode
+/// ([`hostmode::self_host`]), for a 32-bit one the combined 32-bit host
+/// ([`hostmode::x86_hosts`]), and the separate host named for the
+/// architecture beside the running executable (and in its parent folder,
+/// for test binaries in `deps/`). Only existing files are returned.
 pub fn host_candidates(config: &EspeakHostConfig, arch: Option<Arch>) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = Vec::new();
     if let Some(h) = &config.host {
@@ -101,18 +109,18 @@ pub fn host_candidates(config: &EspeakHostConfig, arch: Option<Arch>) -> Vec<Pat
     }
     let arch = if config.fake_engine { None } else { arch };
     let name = host_name(arch, Arch::current());
-    if let Some(dir) = std::env::current_exe()
-        .ok()
-        .and_then(|e| e.parent().map(PathBuf::from))
-    {
-        for d in dir.ancestors().take(2) {
-            out.push(d.join(&name));
+    if name == HOST_NAME_X86 {
+        out.extend(hostmode::x86_hosts());
+    } else {
+        if name == HOST_NAME {
+            out.extend(hostmode::self_host());
         }
-        if cfg!(windows) && arch == Some(Arch::X86) && Arch::current() != Arch::X86 {
-            for d in dir.ancestors().take(4) {
-                for profile in ["release", "debug"] {
-                    out.push(d.join("i686-pc-windows-msvc").join(profile).join(HOST_NAME));
-                }
+        if let Some(dir) = std::env::current_exe()
+            .ok()
+            .and_then(|e| e.parent().map(PathBuf::from))
+        {
+            for d in dir.ancestors().take(2) {
+                out.push(d.join(&name));
             }
         }
     }

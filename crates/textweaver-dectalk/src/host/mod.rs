@@ -1,4 +1,5 @@
-//! The host side of the protocol: the loop `textweaver-dectalk-host` runs.
+//! The host side of the protocol: the loop an dectalk host runs ([`main`],
+//! started as `<program> --engine-host dectalk`).
 //!
 //! The loop is generic over [`Engine`], so the same code drives the real
 //! DECtalk library ([`ffi::DectalkEngine`]) and the deterministic
@@ -18,9 +19,12 @@
 //! boundary): each part's audio goes out as soon as it is made, and a
 //! `Stop` takes effect at the next part (Phase 2).
 
+mod entry;
 pub mod fake;
 pub mod ffi;
 pub mod input;
+
+pub use entry::main;
 
 use std::io::{Read, Write};
 

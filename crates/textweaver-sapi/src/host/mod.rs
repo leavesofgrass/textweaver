@@ -1,12 +1,11 @@
-//! The host process, `textweaver-sapi-host` (ADR-0009).
-//!
-//! One binary, built twice: x64 for 64-bit voices and x86 for 32-bit-only
-//! voices. It speaks the [`crate::protocol`] on stdin and stdout
+//! The host process (ADR-0009): [`main`], started as `<program>
+//! --engine-host sapi` for 64-bit voices and as `textweaver-host-x86.exe
+//! sapi` (the combined 32-bit host) for 32-bit-only voices. It speaks the [`crate::protocol`] on stdin and stdout
 //! and logs to stderr.
 //!
 //! ```text
-//! textweaver-sapi-host [--engine sapi|fake] [--list-voices] [--category sapi|onecore|<registry path>]
-//!                      [--report-arch x64|x86]
+//! <program> --engine-host sapi [--engine sapi|fake] [--list-voices] [--category sapi|onecore|<registry path>]
+//!                               [--report-arch x64|x86]
 //! ```
 //!
 //! - `--engine fake`: a deterministic test engine (no SAPI): each
@@ -110,7 +109,7 @@ struct Args {
     unloadable: Option<String>,
 }
 
-fn parse_args() -> Result<Args, String> {
+fn parse_args(raw: Vec<std::ffi::OsString>) -> Result<Args, String> {
     let mut a = Args {
         fake: false,
         list: false,
@@ -119,7 +118,7 @@ fn parse_args() -> Result<Args, String> {
         start_delay_ms: 0,
         unloadable: None,
     };
-    let mut it = std::env::args().skip(1);
+    let mut it = raw.into_iter().map(|a| a.to_string_lossy().into_owned());
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--engine" => match it.next().as_deref() {
@@ -156,10 +155,12 @@ fn parse_args() -> Result<Args, String> {
     Ok(a)
 }
 
-/// Entry point of `textweaver-sapi-host`.
-pub fn main() -> ExitCode {
+/// Runs the SAPI host with `args` (the host's own arguments, after the
+/// program name and host mode's) until its input ends or it is told to
+/// quit; the exit status says how it ended.
+pub fn main(args: Vec<std::ffi::OsString>) -> ExitCode {
     let out = Arc::new(Out::new());
-    let args = match parse_args() {
+    let args = match parse_args(args) {
         Ok(a) => a,
         Err(e) => {
             out.send(&Reply::Error {

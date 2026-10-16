@@ -1,5 +1,5 @@
 //! The SAPI messages of the engine-host protocol between `SapiBackend` and
-//! `textweaver-sapi-host` (ADR-0012).
+//! its host process (ADR-0012).
 //!
 //! Framing, the shared messages (Speak, Stop, Quit, the `Ready` header,
 //! Audio, End, Error), and the version rule live in
@@ -28,7 +28,7 @@
 //!    [`EndStatus::Aborted`]).
 //! 4. The host exits cleanly on [`Request::Quit`] or end of input.
 //!
-//! Voice listing is a separate one-shot run: `textweaver-sapi-host
+//! Voice listing is a separate one-shot run: `<program> --engine-host sapi
 //! --list-voices [--category onecore]` writes `Ready`, one [`Reply::Voice`]
 //! per voice token, and exits. Listing reads the registry only; it never
 //! loads an engine.

@@ -1,5 +1,5 @@
 //! A deterministic stand-in for DECtalk, selected with
-//! `textweaver-dectalk-host --engine fake`. The backend's tests use it to
+//! `--engine-host dectalk --engine fake`. The backend's tests use it to
 //! exercise the real host binary, the protocol, and the playback client
 //! without DECtalk (in any environment, including the Linux container).
 //!

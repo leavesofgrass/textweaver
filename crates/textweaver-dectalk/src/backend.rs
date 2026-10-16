@@ -236,7 +236,7 @@ impl DectalkBackend {
         let start = HostStart::begin(
             candidates,
             READY_TIMEOUT,
-            Box::new(move |path: &Path| HostProcess::spawn(path, &args, "dectalk")),
+            Box::new(move |path: &Path| HostProcess::spawn_engine(path, "dectalk", &args)),
         );
         self.starting = Some((start, library));
         Ok(())

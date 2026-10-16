@@ -17,9 +17,9 @@
 //!
 //! **Architecture.** The library's own header decides which host runs it
 //! ([`library_arch`]: PE `Machine` on Windows, ELF class on Linux): a
-//! 32-bit x86 DLL runs in `textweaver-eci-host-x86.exe` (built for
-//! `i686-pc-windows-msvc`), a 64-bit one in the native
-//! `textweaver-eci-host[.exe]`. A 64-bit textweaver runs a 32-bit
+//! 32-bit x86 DLL runs in the combined 32-bit host,
+//! `textweaver-host-x86.exe` (built for `i686-pc-windows-msvc`), a 64-bit
+//! one in the program itself, started in host mode (`--engine-host eci`). A 64-bit textweaver runs a 32-bit
 //! library only through that 32-bit host, on Windows; without one, the
 //! library is refused in words ([`check_arch`]).
 //!
@@ -115,6 +115,7 @@ pub struct LibraryCandidate {
 }
 
 pub use textweaver_enginehost::arch::{Arch, arch_from_header, library_arch};
+use textweaver_enginehost::hostmode;
 
 /// Where the standard install locations live (injectable for tests).
 #[derive(Clone, Debug, Default)]
@@ -325,22 +326,26 @@ pub fn check_arch(
     ))
 }
 
-/// The native host's file name.
+/// The separate native host's file name: a development build of the host
+/// (`cargo build -p textweaver-eci`), still found beside the program. The
+/// packages ship none; the programs run the host as a copy of themselves
+/// ([`hostmode`]).
 pub const HOST_NAME: &str = if cfg!(windows) {
     "textweaver-eci-host.exe"
 } else {
     "textweaver-eci-host"
 };
 
-/// The 32-bit Windows host's file name (`cargo xtask hosts` installs it
-/// next to the binaries).
-pub const HOST_NAME_X86: &str = "textweaver-eci-host-x86.exe";
+/// The 32-bit Windows host's file name: the combined host every engine
+/// shares (`cargo xtask hosts` installs it next to the binaries).
+pub const HOST_NAME_X86: &str = hostmode::X86_HOST_NAME;
 
 /// Host executables that can run a library of architecture `arch` (`None`:
-/// any), in order: [`EciConfig::host`], `TEXTWEAVER_ECI_HOST`, beside the
-/// running executable (and its parent directory, for test binaries in
-/// `deps/`), and on Windows a cargo `i686-pc-windows-msvc` build under the
-/// target directory. Only existing files are returned.
+/// any), in order: [`EciConfig::host`], `TEXTWEAVER_ECI_HOST`, on Windows
+/// the combined 32-bit host ([`hostmode::x86_hosts`]), this program in
+/// host mode ([`hostmode::self_host`]), then a separate development host
+/// beside the running executable (or in its parent directory, for test
+/// binaries in `deps/`). Only existing files are returned.
 pub fn host_candidates(config: &EciConfig, arch: Option<Arch>) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = Vec::new();
     if let Some(h) = &config.host {
@@ -351,23 +356,17 @@ pub fn host_candidates(config: &EciConfig, arch: Option<Arch>) -> Vec<PathBuf> {
     }
     let want_x86 = cfg!(windows) && !config.fake_engine && arch != Some(Arch::X64);
     let want_native = config.fake_engine || !cfg!(windows) || arch != Some(Arch::X86);
-    if let Some(dir) = std::env::current_exe()
-        .ok()
-        .and_then(|e| e.parent().map(PathBuf::from))
-    {
-        for d in dir.ancestors().take(2) {
-            if want_x86 {
-                out.push(d.join(HOST_NAME_X86));
-            }
-            if want_native {
+    if want_x86 {
+        out.extend(hostmode::x86_hosts());
+    }
+    if want_native {
+        out.extend(hostmode::self_host());
+        if let Some(dir) = std::env::current_exe()
+            .ok()
+            .and_then(|e| e.parent().map(PathBuf::from))
+        {
+            for d in dir.ancestors().take(2) {
                 out.push(d.join(HOST_NAME));
-            }
-        }
-        if want_x86 {
-            for d in dir.ancestors().take(4) {
-                for profile in ["release", "debug"] {
-                    out.push(d.join("i686-pc-windows-msvc").join(profile).join(HOST_NAME));
-                }
             }
         }
     }

@@ -320,7 +320,7 @@ impl EciBackend {
         };
         if candidates.is_empty() {
             return Err(unavailable(
-                "textweaver-eci-host not found (run `cargo xtask hosts`, or set TEXTWEAVER_ECI_HOST)",
+                "no Eloquence host was found (a 32-bit library needs textweaver-host-x86.exe beside textweaver; or set TEXTWEAVER_ECI_HOST)",
             ));
         }
         let lib_path = library.as_ref().map(|c| c.candidate.path.clone());
@@ -329,10 +329,10 @@ impl EciBackend {
             candidates,
             self.config.ready_timeout.unwrap_or(READY_TIMEOUT),
             Box::new(move |path: &Path| {
-                HostProcess::spawn(
+                HostProcess::spawn_engine(
                     path,
-                    host_args(&config, lib_path.as_deref(), path, false),
                     "eci",
+                    host_args(&config, lib_path.as_deref(), path, false),
                 )
             }),
         );
@@ -363,7 +363,7 @@ impl EciBackend {
             vec![host],
             FULL_DICTIONARY_TIMEOUT,
             Box::new(move |path: &Path| {
-                HostProcess::spawn(path, host_args(&config, Some(&lib), path, true), "eci")
+                HostProcess::spawn_engine(path, "eci", host_args(&config, Some(&lib), path, true))
             }),
         );
         self.full = Some((start, Instant::now()));

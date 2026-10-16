@@ -1,4 +1,5 @@
-//! The host side of the protocol: the loop `textweaver-eci-host` runs.
+//! The host side of the protocol: the loop an eci host runs ([`main`],
+//! started as `<program> --engine-host eci`).
 //!
 //! The loop is generic over [`Engine`] so the same code drives the real ECI
 //! library ([`ffi::EciEngine`]) and the deterministic [`fake::FakeEngine`]
@@ -12,8 +13,11 @@
 //! and skipped if a `Stop` followed it. The main thread owns the engine and
 //! writes replies.
 
+mod entry;
 pub mod fake;
 pub mod ffi;
+
+pub use entry::main;
 
 use std::io::{Read, Write};
 
