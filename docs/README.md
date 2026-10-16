@@ -2,23 +2,23 @@
 
 <img src="assets/textweaver-logo.svg" alt="textweaver logo: the letters t and w woven on a loom" width="128" height="128">
 
-textweaver is a document reader and writer that speaks for itself. It reads aloud with a highlight that follows the spoken word, works from the keyboard in a terminal and in a graphical app, and converts, exports, and edits documents. It is its own project, with roots in star, the Python reader that came before it.
+textweaver is a document reader and writer that speaks. It reads aloud with a highlight that follows the spoken word, is fully operable from the keyboard in both a terminal and a graphical app, and converts, exports, and edits documents. It is an independent project descended from star, the Python reader that preceded it.
 
-This is the index of every textweaver document. It is grouped for three audiences:
+This is the index of every textweaver document, grouped by audience:
 
 - [People who use textweaver](#for-users): reading, writing, speech, and the tools.
 - [People who work on textweaver](#for-contributors): how it is built, tested, and released.
 - [The design decisions](#decisions): the architecture decision records (ADRs).
 
-New here? Start with the [quick start](quickstart.md).
+If you are new, begin with the [quick start](quickstart.md).
 
-There are also [interactive pages](#interactive-pages) that explain textweaver with diagrams you can explore by keyboard. They work offline in any browser.
+There are also [interactive pages](#interactive-pages) that explain textweaver with diagrams operable from the keyboard. They work offline in any browser.
 
 ## Start here
 
 - [For students](start-students.md): from download to hearing a document.
 - [For accommodation staff](start-staff.md): converting course material, preparing computers, and working without internet.
-- [What is new](whats-new.md): each release in plain words.
+- [What is new](whats-new.md): a summary of each release.
 - [Known limits](known-limits.md): what does not work yet, and what has not been tested.
 - [Privacy](privacy.md): what stays on your computer, and when textweaver uses the network.
 - [Accessibility statement](accessibility.md): what has been tested, how, and what has not.
@@ -27,7 +27,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 ### Getting started
 
-- [Quick start](quickstart.md): your first 30 seconds on Windows, macOS, and Linux.
+- [Quick start](quickstart.md): installation, a first reading, and navigation on Windows, macOS, and Linux.
 - [Installing textweaver](install.md): the packages, the install scripts, and checking a download.
 - [Using textweaver with a screen reader](screen-readers.md): the three accessibility modes (self-voicing, hybrid, and screen reader), settings for NVDA and JAWS, and terminal keys that clash.
 - [Troubleshooting](troubleshooting.md): the log file, diagnosing speech, and common problems.
@@ -162,4 +162,4 @@ The pages in `docs/site/` explain textweaver with diagrams and demonstrations. E
 ## See also
 
 - [README](../README.md): what textweaver is, and how to build it.
-- [Quick start](quickstart.md): the fastest way in.
+- [Quick start](quickstart.md): the shortest route to a first reading.

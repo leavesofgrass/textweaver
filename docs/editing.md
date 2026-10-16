@@ -1,6 +1,6 @@
 # Writing and editing
 
-This guide covers edit mode in the terminal reader: typing with spoken feedback, Markdown formatting commands, undo, find and replace, saving, and getting back unsaved work after a crash. It is for anyone who writes or corrects documents in textweaver.
+This guide covers edit mode in the terminal reader: typing with spoken feedback, Markdown formatting commands, undo, find and replace, saving, and recovering unsaved work after a crash. It is intended for anyone who writes or revises documents in textweaver.
 
 Keys are the terminal defaults. Where the graphical version uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key.
 

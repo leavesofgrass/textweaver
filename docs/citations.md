@@ -1,23 +1,23 @@
 # Citations and references
 
-`tw cite` keeps a list of the books and articles you cite, called a reference library. You can add a reference by typing its DOI or ISBN, import references from other programs, format them in a citation style such as APA or MLA, and check that every citation in your essay points to a reference you have. It is for students and writers who work by keyboard and speech. Every message is a full sentence, so it reads well with a screen reader or with textweaver's own voice. Citations in your writing use Pandoc's Markdown syntax, such as `[@doe2020, p. 12]`, so the same files work with Pandoc and other academic tools.
+`tw cite` maintains a reference library: the books and articles you cite. You can add a reference from its DOI or ISBN, import references from other programs, format them in a citation style such as APA or MLA, and verify that every citation in a manuscript resolves to a reference in the library. It is intended for students and writers who work by keyboard and speech, and every message is a complete sentence, so that it reads well with a screen reader or with textweaver's own voice. Citations in your writing use Pandoc's Markdown syntax, such as `[@doe2020, p. 12]`, so the same files work with Pandoc and other academic tools.
 
-## Before you start
+## Prerequisites
 
-- You need `tw`, which comes with textweaver. See [the install guide](install.md).
-- Adding a reference by DOI or ISBN needs an internet connection the first time. Everything else works offline.
-- You do not need Pandoc, Zotero, or any other program.
+- `tw`, which is included with textweaver. See [the install guide](install.md).
+- An internet connection the first time you add a reference by DOI or ISBN. Everything else works offline.
+- No other software is required: neither Pandoc nor Zotero is needed.
 
 ## What a reference library is
 
-A reference library is one file called `references.json`. It holds your references in CSL-JSON, the format Zotero, Pandoc, and doi.org use. You can open it in any text editor, and Pandoc can read it directly.
+A reference library is a single file, `references.json`. It holds your references in CSL-JSON, the format used by Zotero, Pandoc, and doi.org. It can be opened in any text editor, and Pandoc can read it directly.
 
 textweaver uses two kinds of library:
 
 - **Your personal library.** This is `references.json` in textweaver's data folder. Every `tw cite` command uses it unless you say otherwise.
 - **A folder library.** This is `references.json` inside a folder of documents, such as a folder for one essay or one course. It keeps a project self-contained: copy the folder, and its references go with it. Choose it with `--folder FOLDER`.
 
-When `tw cite format` or `tw cite check` looks up a key, it looks in the folder library first, then in your personal library. So a folder library can hold just the references for one project, and still use the rest from your personal library. The other commands (`add`, `import`, `export`, `list`, and `remove`) work on the folder library alone.
+When `tw cite format` or `tw cite check` looks up a key, it looks in the folder library first, then in your personal library. A folder library can therefore hold only the references for one project and still draw on the rest of your personal library. The other commands (`add`, `import`, `export`, `list`, and `remove`) work on the folder library alone.
 
 You can also use any library file with `--library FILE`. Like a folder library, it is searched first, and your personal library second, when formatting and checking. You cannot give `--folder` and `--library` together.
 

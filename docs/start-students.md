@@ -1,49 +1,49 @@
 # Start here: students
 
-textweaver reads your course documents aloud, and follows along with a highlight. This page is the shortest path from download to hearing a document.
+textweaver reads your course documents aloud and follows along with a highlight. This page is the shortest route from download to hearing a document, followed by pointers to the options most relevant to coursework.
 
 ## Get it
 
 1. On Windows, download the package from the [releases page](https://github.com/leavesofgrass/textweaver/releases). Its name ends in `windows-x86_64.zip`.
-2. Right-click the zip, choose Extract All, and pick a folder of your own.
+2. Right-click the zip, choose Extract All, and select a folder of your own.
 3. Open the folder and run `textweaver-gui.exe`.
-4. Windows warns once, because the program is not code-signed. Choose "More info", then "Run anyway".
+4. Windows warns on first launch because the program is not code-signed. Choose "More info", then "Run anyway".
 
-Other systems: see [Installing textweaver](install.md).
+For other systems, see [Installing textweaver](install.md).
 
 ## Hear a document
 
-1. Press **Ctrl+O**, and choose a file.
+1. Press **Ctrl+O** and choose a file.
 2. Press **Space** to start and pause reading.
-3. Press **F1** for help. Press **?** for every key.
+3. Press **F1** for help. Press **?** for a list of every key.
 
 ## What it opens
 
-Text, Markdown, HTML, PDF, EPUB, Word, PowerPoint, spreadsheets, and more. Scanned pages are read by OCR after a download you agree to. See [Converting documents](converting.md).
+Plain text, Markdown, HTML, PDF, EPUB, Word, PowerPoint, spreadsheets, and a number of other formats. Scanned pages are read through optical character recognition (OCR), which requires a download you approve first. [Converting documents](converting.md) lists the formats and explains OCR.
 
 ## Move around
 
-- **h** goes to the next heading.
+- **h** moves to the next heading.
 - [Reading and moving around](reading.md) lists the keys for moving by word, sentence, and paragraph.
-- **F10** opens the menus. **F2** opens the command palette, where you type a command's name.
+- **F10** opens the menus. **F2** opens the command palette, where you type the name of a command.
 
-## Make it yours
+## Adjust it to your needs
 
-- Pick a voice and a speed: [Speech engines and voices](speech.md).
-- Pick a theme, a font, and spacing: [Themes](themes.md) and [Reading aids](reading-aids.md).
-- Mark your place and your thoughts: [Bookmarks, notes, and highlights](notes.md).
+- Voice and speaking rate: [Speech engines and voices](speech.md).
+- Theme, font, and spacing: [Themes](themes.md) and [Reading aids](reading-aids.md).
+- Marking your place and recording your own thoughts: [Bookmarks, notes, and highlights](notes.md).
 
-The reading aids are options to try. Keep the ones that help you.
+The reading aids are options, and the research on several of them is mixed. Evaluate each against your own reading and keep only those that help.
 
 ## If something goes wrong
 
 - [Troubleshooting](troubleshooting.md)
 - [Known limits](known-limits.md)
-- [Privacy](privacy.md): what textweaver sends over the network, which is nothing unless you ask.
+- [Privacy](privacy.md): what textweaver sends over the network. Without a request from you, it sends nothing.
 
 ## If you use a screen reader
 
-Read [Using textweaver with a screen reader](screen-readers.md) first. It explains how to stop hearing things twice.
+Read [Using textweaver with a screen reader](screen-readers.md) first. It explains how to avoid hearing every announcement twice, once from textweaver and once from your screen reader.
 
 ## See also
 
