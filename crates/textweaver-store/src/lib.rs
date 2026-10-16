@@ -67,7 +67,7 @@ pub mod sync_scope;
 pub mod time;
 
 pub use atomic::atomic_write;
-pub use cards::{Card, CardDeck, CardKind, CardSource, CardStore, Grade, Review};
+pub use cards::{Card, CardDeck, CardKind, CardSource, CardStore, Grade, Imported, Review};
 pub use doc_state::{
     Anchor, Bookmark, ClockStamp, DEFAULT_DEBOUNCE, Deletion, Deletions, DocKey, DocState,
     LEGACY_STATE_FORMAT, MarkKind, MergeReport, NOTE_BACKUPS_MAX, NoteBackup, STATE_FORMAT,
