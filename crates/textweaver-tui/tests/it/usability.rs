@@ -183,3 +183,74 @@ fn the_no_document_message_names_the_open_key() {
         log.texts()
     );
 }
+
+/// A recognizer that is recording and can pause, with no microphone.
+#[cfg(feature = "dictation")]
+#[derive(Default)]
+struct Recording {
+    paused: bool,
+}
+
+#[cfg(feature = "dictation")]
+impl textweaver_app::voice_typing::Dictation for Recording {
+    fn name(&self) -> &str {
+        "recording"
+    }
+    fn start(
+        &mut self,
+        _input: textweaver_app::voice_typing::DictationInput,
+    ) -> Result<(), textweaver_app::voice_typing::DictationError> {
+        Ok(())
+    }
+    fn stop(&mut self) -> Result<(), textweaver_app::voice_typing::DictationError> {
+        Ok(())
+    }
+    fn cancel(&mut self) {}
+    fn poll(&mut self) -> Vec<textweaver_app::voice_typing::DictationEvent> {
+        Vec::new()
+    }
+    fn state(&self) -> textweaver_app::voice_typing::DictationState {
+        textweaver_app::voice_typing::DictationState::Recording
+    }
+    fn pause(&mut self) -> Result<(), textweaver_app::voice_typing::DictationError> {
+        self.paused = true;
+        Ok(())
+    }
+    fn resume(&mut self) -> Result<(), textweaver_app::voice_typing::DictationError> {
+        self.paused = false;
+        Ok(())
+    }
+    fn is_paused(&self) -> bool {
+        self.paused
+    }
+}
+
+/// While dictation is paused, the status line says so first, in words,
+/// whatever else is announced; Alt+Shift+F9 pauses and resumes.
+#[cfg(feature = "dictation")]
+#[test]
+fn the_status_line_says_dictation_is_paused() {
+    let (mut tui, _log) = voiced("Notes.\n");
+    tui.app_mut()
+        .set_dictation_backend(Box::new(Recording::default()));
+    // The keys come from the keymap.
+    let keymap = tui.app().keymap().clone();
+    let key = |a: ActionId| {
+        let chord = keymap
+            .chords_for(a)
+            .into_iter()
+            .find(|c| !c.is_text_input())
+            .unwrap_or_else(|| panic!("{a:?} has a chord"));
+        textweaver_tui::key_event(&chord)
+    };
+    let pause = key(ActionId::PauseDictation);
+    tui.handle_key(pause);
+    assert_eq!(tui.status_line(), "Dictation paused.");
+    // Another announcement (single-key shortcuts off) follows it.
+    tui.handle_key(key(ActionId::ToggleCharacterKeys));
+    let line = tui.status_line();
+    assert!(line.starts_with("Dictation paused.  "), "{line}");
+    assert!(line.len() > "Dictation paused.  ".len(), "{line}");
+    tui.handle_key(pause);
+    assert_eq!(tui.status_line(), "Dictation resumed.");
+}

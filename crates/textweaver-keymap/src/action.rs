@@ -678,6 +678,12 @@ actions! {
     Dictate = "dictate", Editing,
         "Start or stop dictation: spoken words are typed at the cursor in edit mode",
         gui ["g:Ctrl+Shift+F9"], term ["g:Ctrl+Shift+F9"], shared [];
+    // Beside Dictate on F9. Alt+Shift+F9 is free in NVDA, JAWS, Windows,
+    // Windows Terminal, GNOME, KDE and macOS (Alt+F9 minimizes a window
+    // in some Linux desktops, and Ctrl+Alt+F9 switches the Linux console).
+    PauseDictation = "pause_dictation", Editing,
+        "Pause the microphone while dictating, keeping the session and the words so far, or resume it",
+        gui ["g:Alt+Shift+F9"], term ["g:Alt+Shift+F9"], shared [];
     DownloadDictationModel = "download_dictation_model", Editing,
         "Download the dictation model chosen in the settings, after saying its size and license",
         gui [], term [], shared [];

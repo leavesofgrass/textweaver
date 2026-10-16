@@ -2386,6 +2386,7 @@ impl App {
             | A::ExportAudio
             | A::ExportReadAlong
             | A::Dictate
+            | A::PauseDictation
             | A::DownloadDictationModel
             | A::ManageComponents
             | A::CheckForUpdates

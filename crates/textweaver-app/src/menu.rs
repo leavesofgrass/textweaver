@@ -55,6 +55,7 @@ pub const PENDING: &[ActionId] = &[
     ActionId::ExportAudio,
     ActionId::ExportReadAlong,
     ActionId::Dictate,
+    ActionId::PauseDictation,
     ActionId::DownloadDictationModel,
 ];
 
@@ -322,6 +323,7 @@ impl MenuId {
                 Sub(MenuId::Citations),
                 Sep,
                 Do(A::Dictate),
+                Do(A::PauseDictation),
             ],
             MenuId::Find => &[
                 Do(A::Find),

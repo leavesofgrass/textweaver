@@ -483,7 +483,10 @@ impl Dictation for RtenDictation {
 
     fn is_paused(&self) -> bool {
         self.state == DictationState::Recording
-            && self.session.as_ref().is_some_and(|(live, _)| live.is_paused())
+            && self
+                .session
+                .as_ref()
+                .is_some_and(|(live, _)| live.is_paused())
     }
 
     fn shutdown(&mut self, wait: Duration) -> bool {
