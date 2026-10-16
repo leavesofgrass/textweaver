@@ -1,53 +1,53 @@
 # Settings
 
-This guide says where textweaver keeps its settings, lists every setting with its default, and explains how to export, share, import, and reset them.
+This guide describes where textweaver stores its settings, lists every setting with its default, and explains how to export, share, import, and reset them.
 
-textweaver can copy all of your settings and key changes into one JSON file. You can keep that file as a backup, move it to another computer, or share it with someone. Importing it checks everything first and keeps a backup of what it replaces.
+textweaver can export all settings and key changes to a single JSON file, which serves as a backup, as a means of moving settings to another computer, or as something to share. Importing a file validates everything before writing and keeps a backup of whatever it replaces.
 
-You can also edit `settings.toml` yourself in any text editor. Close textweaver first, because it saves its settings when they change. Key changes go in `keymap.toml`; the [keyboard reference](keyboard.md#changing-keys) explains how to write them.
+Settings can also be edited directly in `settings.toml` with any text editor. textweaver should be closed first, because it saves its settings whenever they change. Key changes belong in `keymap.toml`; the [keyboard reference](keyboard.md#changing-keys) explains the syntax.
 
 ## The settings screen
 
-Change settings without leaving textweaver: press `Shift+F10` in the terminal reader (`Ctrl+comma` in the graphical version), or type `settings` in the command palette (`F2`).
+Settings can be changed without leaving textweaver: press `Shift+F10` in the terminal reader (`Ctrl+comma` in the graphical version), or type `settings` in the command palette (`F2`).
 
-- Every setting is listed as its name and value, such as "Rate: 265 words per minute", speech first.
-- In the terminal reader, type to filter: "rate" leaves the settings with "rate" in their name, section, or help. Backspace removes a letter.
+- Each setting is listed as its name and value, such as "Rate: 265 words per minute", with speech settings first.
+- In the terminal reader, typing filters the list: "rate" keeps the settings with "rate" in their name, section, or help, and Backspace removes a letter.
 - Up and Down move from setting to setting.
 - Left and Right change the value: a smaller or larger number, the previous or next choice, or off and on.
-- Enter turns a switch on or off, takes the next choice, or asks you to type a value, starting from the current one. Enter with the value unchanged, or empty, keeps it, and so does Escape; for a setting that may be left unset, such as the voice, an empty answer unsets it.
-- Delete puts the default back, and says it: "Rate back to its default, 265 words per minute."
-- In the terminal reader, F1 says the setting's value, its default, and its help.
-- In the terminal reader, the five settings you changed last are at the top, each said as "recently changed", so a setting you are tuning is one key away.
-
-The graphical version's Settings dialog is described in [the guide to the textweaver app](gui.md); it has no filter and no recent settings yet.
+- Enter toggles a switch, takes the next choice, or asks for a typed value, starting from the current one. Enter with the value unchanged or empty keeps it, as does Escape; for a setting that may be left unset, such as the voice, an empty answer unsets it.
+- Delete restores the default and announces it: "Rate back to its default, 265 words per minute."
+- In the terminal reader, F1 announces the setting's value, its default, and its help.
+- In the terminal reader, the five settings changed most recently appear at the top, each announced as "recently changed", so a setting under adjustment is one key away.
 - Escape closes the screen.
 
-View, Colors (or `color settings` in the command palette) shows only the colors: the word and sentence highlights, the reading ruler, difficult words, syllable marks, misspellings, lint marks, search matches, the selection, the focus, links, headings, the status bar, notes, and bookmarks. Left and Right go through named colors, blue and orange first (they are told apart by people who confuse red and green); Enter types a name or a `#rrggbb` value; Delete puts the theme's color back. Each row says its contrast, such as "Links: orange, contrast 6.2 to 1, good". A color under 3 to 1 is used and you are told it is hard to see. Every mark keeps its underline, bold, or spoken word whatever its color, so no color carries meaning alone.
+The Settings dialog of the graphical version is described in [the guide to the textweaver app](gui.md); it has no filter and no recent settings yet.
 
-Every change is said, such as "Rate, 285 words per minute.", takes effect at once, and is saved. A number outside its range is set to the nearest value that fits, and textweaver says so. Choosing a speech engine switches to it at once: textweaver restarts speech with the new engine. A few other settings (such as the keys preset and an engine's library or dictionaries) are used from the next start, or after Restart Speech (`Shift+F8`), and textweaver says which. Tables of names and values, such as pronunciations, are edited in `settings.toml`.
+View, Colors (or `color settings` in the command palette) shows only the colors: the word and sentence highlights, the reading ruler, difficult words, syllable marks, misspellings, lint marks, search matches, the selection, the focus, links, headings, the status bar, notes, and bookmarks. Left and Right step through named colors, beginning with blue and orange, which people who confuse red and green can tell apart; Enter accepts a typed name or `#rrggbb` value; Delete restores the theme's color. Each row announces its contrast, such as "Links: orange, contrast 6.2 to 1, good". A color below 3 to 1 is still applied, with a warning that it is hard to see. Every mark keeps its underline, bold, or spoken word whatever its color, so no color carries meaning alone.
+
+Every change is announced, such as "Rate, 285 words per minute.", takes effect immediately, and is saved. A number outside its range is set to the nearest value that fits, and textweaver says so. Choosing a speech engine switches to it at once by restarting speech with the new engine. A few other settings (such as the keys preset and an engine's library or dictionaries) apply from the next start, or after Restart Speech (`Shift+F8`), and textweaver says which. Tables of names and values, such as pronunciations, are edited in `settings.toml`.
 
 ## Where settings live
 
 textweaver keeps two files in its settings folder:
 
-- `settings.toml` holds your settings. Only values you changed are stored, so the file stays short.
-- `keymap.toml` holds your key changes (key overrides).
+- `settings.toml` holds the settings. Only values that differ from the defaults are stored, so the file stays short.
+- `keymap.toml` holds key changes (key overrides).
 
-To find the folder, type:
+The folder is found with:
 
 ```bash
 tw settings path
 ```
 
-It prints the settings folder and both files, saying whether each file exists yet, then the data, state and recovery folders and the log file. `--json` prints the same paths as JSON. The usual places are:
+The command prints the settings folder and both files, stating whether each exists yet, followed by the data, state, and recovery folders and the log file. `--json` prints the same paths as JSON. The usual locations are:
 
 - Windows: `%APPDATA%\leavesofgrass\textweaver\config`
 - macOS: `~/Library/Application Support/org.leavesofgrass.textweaver`
 - Linux: `~/.config/textweaver`
 
-If the `TEXTWEAVER_HOME` environment variable is set, everything lives under that folder instead, in `config`, `data`, and `cache` subfolders. That is useful for a portable install on a USB stick. Every `tw settings` command also takes `--home FOLDER` for the same purpose.
+If the `TEXTWEAVER_HOME` environment variable is set, everything lives under that folder instead, in `config`, `data`, and `cache` subfolders, which suits a portable installation on a USB stick. Every `tw settings` command also accepts `--home FOLDER` for the same purpose.
 
-Your reading positions, bookmarks, notes, recent files, and library live in the data folder, not with the settings. [The library](library.md) lists every folder.
+Reading positions, bookmarks, notes, recent files, and the library live in the data folder, apart from the settings. [The library](library.md) lists every folder.
 
 ## Export
 
@@ -57,12 +57,12 @@ Save every setting and key override to a file:
 tw settings export my-settings.json
 ```
 
-Without a file name, the export is printed instead. Other ways to export:
+Without a file name, the export is printed instead. Two options modify it:
 
-- `--changed-only` saves only the values that differ from the defaults. This is the easiest file to read and share.
-- `--to toml` writes TOML instead of JSON. A file name ending in `.toml` does the same.
+- `--changed-only` saves only the values that differ from the defaults, which gives the file that is easiest to read and share.
+- `--to toml` writes TOML instead of JSON; a file name ending in `.toml` has the same effect.
 
-A full export lists every setting. A setting that is not set, such as a voice you never chose, appears as `null`.
+A full export lists every setting, and a setting that is not set, such as a voice never chosen, appears as `null`.
 
 ## Import
 
@@ -72,7 +72,7 @@ Load settings from a file:
 tw settings import my-settings.json
 ```
 
-To see what would change first, without writing anything, add `--dry-run`. It prints one line per setting, for example:
+`--dry-run` shows what would change without writing anything, printing one line per setting, for example:
 
 ```text
 Dry run: nothing was written. Importing my-settings.json would make these changes. 2 settings change.
@@ -82,16 +82,16 @@ Keys for next_sentence change from the default keys to Alt+N, b:..
 
 How import works:
 
-- **Only what the file names changes.** A file that sets only `speech.rate` leaves every other setting alone. To make your settings exactly the file's instead, add `--replace`.
-- **`null` means "use the default".** For example, `"voice": null` goes back to choosing a voice automatically.
-- **A list or a map is one setting.** Importing `speed_presets` or `pronunciations` replaces the whole list, not single entries.
-- **Everything is checked before anything is written.** A value of the wrong kind, or one out of range, stops the import. The message names each problem by its place in the file, such as `settings.speech.rate: 5000 is outside 50 to 900 words per minute`.
-- **Unknown settings are kept.** A setting this version does not know, perhaps from a newer textweaver, is reported and saved as it is.
-- **Your old files are backed up.** Before replacing `settings.toml` or `keymap.toml`, import copies it to a file such as `settings.toml.bak-20260925-140307` (the time is UTC). Import writes each file in one step, so an interrupted import never leaves half a file.
-- **Other files work too.** You can import a TOML export, or a `settings.toml` copied from another computer.
-- **star settings need `tw migrate-star`.** A star `settings.json` is recognized, and import tells you to use `tw migrate-star` instead.
+- **Only what the file names changes.** A file that sets only `speech.rate` leaves every other setting alone. `--replace` makes the settings exactly those of the file instead.
+- **`null` means "use the default".** For example, `"voice": null` returns to automatic voice selection.
+- **A list or a map is one setting.** Importing `speed_presets` or `pronunciations` replaces the whole list, not individual entries.
+- **Everything is validated before anything is written.** A value of the wrong kind or out of range stops the import, and the message names each problem by its place in the file, such as `settings.speech.rate: 5000 is outside 50 to 900 words per minute`.
+- **Unknown settings are kept.** A setting this version does not recognize, perhaps from a newer textweaver, is reported and saved unchanged.
+- **Existing files are backed up.** Before replacing `settings.toml` or `keymap.toml`, import copies it to a file such as `settings.toml.bak-20260925-140307` (the time is UTC). Each file is written in one step, so an interrupted import never leaves a partial file.
+- **Other files are accepted.** A TOML export, or a `settings.toml` copied from another computer, can be imported.
+- **star settings need `tw migrate-star`.** A star `settings.json` is recognized, and import directs you to `tw migrate-star` instead.
 
-Close textweaver before you import from the command line. Otherwise the running reader may save its own settings over the imported ones when you next change something.
+textweaver should be closed before importing from the command line; otherwise the running reader may save its own settings over the imported ones at its next change.
 
 ## Reset
 
@@ -101,7 +101,7 @@ Return settings to their defaults:
 tw settings reset
 ```
 
-It says how many settings will change and asks you to type `y` first. `--yes` skips the question. To reset only one section, add `--section` and the section name. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `speech.dectalk`, `speech.espeak`, `speech.piper`, `highlight`, `normalization`, `normalization.community_lexicon`, `normalization.medical_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `braille`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, `preview`, `lexicon`, `stats`, `summary`, `dictation`, `interface`, `gui`, `colors`, and `keymap` (your key overrides). Sections not in this list, added by a newer textweaver or a build with extra features, can be reset by name too. A reset is backed up like an import.
+The command reports how many settings will change and asks for `y` to confirm; `--yes` skips the question. `--section` followed by a section name resets only that section. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `speech.dectalk`, `speech.espeak`, `speech.piper`, `highlight`, `normalization`, `normalization.community_lexicon`, `normalization.medical_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `braille`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, `preview`, `lexicon`, `stats`, `summary`, `dictation`, `interface`, `gui`, `colors`, and `keymap` (your key overrides). Sections not in this list, added by a newer textweaver or a build with extra features, can be reset by name too. A reset is backed up in the same way as an import.
 
 ## Example file
 
@@ -134,22 +134,22 @@ This is what `tw settings export --changed-only` might print:
 
 What each part means:
 
-- `textweaver_settings` is the file format number, now 1. A file from a newer format is refused, so nothing is misread.
-- `exported` is when the file was made, in UTC. Import ignores it.
+- `textweaver_settings` is the file format number, currently 1. A file in a newer format is refused, so nothing is misread.
+- `exported` is the time the file was made, in UTC; import ignores it.
 - `settings` has one section per group, named as in `settings.toml`.
-- `keymap` maps a command to its keys. An empty list, `[]`, removes all of a command's keys. `null` restores the default keys.
+- `keymap` maps a command to its keys. An empty list, `[]`, removes all of a command's keys, and `null` restores the default keys.
 
 Keys are sorted and indented by two spaces, so two exports can be compared line by line.
 
 ## Every setting
 
-This section lists every setting in `settings.toml`, section by section. Each entry gives the name, the default, the values it takes, and what it does. You only need to write the settings you change. To see all of them with their current values, export them:
+This section lists every setting in `settings.toml`, section by section. Each entry gives the name, the default, the values it accepts, and its effect. Only settings that differ from their defaults need to be written. All settings with their current values can be listed by exporting them:
 
 ```bash
 tw settings export --to toml
 ```
 
-A setting marked "not used yet" is stored and exported, but no part of textweaver reads it at present.
+A setting marked "not used yet" is stored and exported, but nothing in textweaver currently reads it.
 
 ### [speech]
 
@@ -227,7 +227,7 @@ A change to `[speech.dectalk]`, `[speech.espeak]`, or `[speech.piper]` takes eff
 
 ### [speech.voice_params]
 
-The rate and pitch each voice was last used at, so choosing a voice again brings them back. textweaver writes this table when you change voices; you do not need to edit it. Each entry is keyed by engine and voice, such as `"sapi:David" = { rate = 310, pitch = -1 }`.
+The rate and pitch each voice was last used at, so choosing a voice again brings them back. textweaver writes this table whenever the voice changes, so it needs no manual editing. Each entry is keyed by engine and voice, such as `"sapi:David" = { rate = 310, pitch = -1 }`.
 
 ### [highlight]
 
@@ -548,7 +548,7 @@ Every setting is either **portable**, which syncs, or **machine**, which never d
 
 ## Settings profiles
 
-A profile is a named set of the settings you change together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; the access mode; and the audio export format. Keep one for studying and one for skimming, or one for each person who shares the computer.
+A profile is a named set of the settings that are usually changed together: the speech engine, voice, rate, pitch, and volume; the theme; the font and text spacing; bionic reading and the ruler; the highlight; the access mode; and the audio export format. One profile might serve for study and another for skimming, or each person who shares a computer might have their own.
 
 - In the reader, **Ctrl+Shift+U** in the graphical version or **Alt+U** in the terminal lists your profiles. Enter switches to one; its settings take effect at once and are saved. F2 renames a profile, and Delete deletes one after a yes or no. The last items save the current settings as a new profile, save them into the profile in use, and import and export profiles.
 - From the command line:
@@ -563,11 +563,11 @@ A profile is a named set of the settings you change together: the speech engine,
   tw settings profile delete "Exam"
   ```
 
-Profiles are kept in `profiles.toml`, beside `settings.toml`, so exporting your settings does not include them. A profile export works in any version of textweaver: settings a version does not know are left out, and it says which. With sync on, your profiles travel to your other computers (`[sync] profiles`); which one is in use stays on each.
+Profiles are stored in `profiles.toml`, beside `settings.toml`, so a settings export does not include them. A profile export works in any version of textweaver: settings that version does not recognize are left out, and it says which. With sync on, profiles travel to the other computers (`[sync] profiles`), while the profile in use stays specific to each.
 
 ### Starter recipes
 
-Four starting points, each with exact values. None is a treatment for any condition, and no one setting suits every reader: try a recipe, then change what does not help. To use one, save your current settings as a profile first (`tw settings profile save "My settings"`), put the recipe in a file such as `larger-print.toml`, check it with `tw settings import larger-print.toml --dry-run`, which lists each change and refuses a value out of range, then import it without `--dry-run` and save the result as a profile of its own.
+These are four starting points with exact values. None is a treatment for any condition, and no single configuration suits every reader; apply a recipe, then adjust whatever does not help. To use one, first save the current settings as a profile (`tw settings profile save "My settings"`). Put the recipe in a file such as `larger-print.toml` and check it with `tw settings import larger-print.toml --dry-run`, which lists each change and refuses any value out of range. Then import it without `--dry-run` and save the result as a profile of its own.
 
 **Larger print.** Bigger letters and more room between lines and words:
 
@@ -623,7 +623,7 @@ wrap_width = 60
 
 ### Developer profile (example)
 
-An example profile, `docs/examples/developer-profile.toml`, comes with the source and every package, beside the guides. It is never used unless you import it and switch to it. It sets:
+An example profile, `docs/examples/developer-profile.toml`, ships with the source and every package, beside the guides. It is used only if imported and switched to, and it sets:
 
 - the Eloquence engine (`speech.backend = "eci"`) with the Reed voice (`speech.voice = "Reed"`);
 - 400 words per minute (`speech.rate = 400`);
@@ -639,7 +639,7 @@ tw settings profile import docs/examples/developer-profile.toml
 tw settings profile switch "Developer"
 ```
 
-Saving your own settings as a profile first means `tw settings profile switch "My settings"` puts them back. Importing only adds the profile; nothing changes until you switch. In the reader, the profile list (Ctrl+Shift+U in the graphical version, Alt+U in the terminal) imports and switches the same way.
+Saving the current settings as a profile first means `tw settings profile switch "My settings"` restores them. Importing only adds the profile; nothing changes until a switch. In the reader, the profile list (Ctrl+Shift+U in the graphical version, Alt+U in the terminal) imports and switches in the same way.
 
 Eloquence must be installed for the Reed voice; see [the Eloquence guide](eloquence.md). Without it, textweaver says so and uses another engine.
 
