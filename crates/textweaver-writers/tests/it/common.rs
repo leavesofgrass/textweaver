@@ -41,7 +41,7 @@ pub fn unzip(bytes: &[u8]) -> Vec<(String, Vec<u8>)> {
         let mut f = archive.by_index(i).expect("an entry");
         let mut data = Vec::new();
         f.read_to_end(&mut data).expect("entry data");
-        out.push((f.name().to_owned(), data));
+        out.push((f.name().expect("a name").into_owned(), data));
     }
     out
 }

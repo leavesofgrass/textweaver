@@ -55,7 +55,8 @@ fn the_nesting_is_kept_in_the_epub() {
     let mut xhtml = String::new();
     for i in 0..zip.len() {
         let mut f = zip.by_index(i).unwrap();
-        if f.name().ends_with(".xhtml") && !f.name().ends_with("nav.xhtml") {
+        let name = f.name().unwrap().into_owned();
+        if name.ends_with(".xhtml") && !name.ends_with("nav.xhtml") {
             std::io::Read::read_to_string(&mut f, &mut xhtml).unwrap();
         }
     }

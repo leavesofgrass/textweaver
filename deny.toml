@@ -26,6 +26,9 @@ ignore = [
     { id = "RUSTSEC-2026-0195", reason = "quick-xml 0.38 (NsReader namespace allocation) through citationberg 0.7 and hayagriva 0.10, as above." },
     { id = "RUSTSEC-2024-0436", reason = "paste is unmaintained: a proc-macro used at build time by biblatex and hayagriva; no code of it runs in textweaver." },
     { id = "RUSTSEC-2026-0206", reason = "rustybuzz is unmaintained: text shaping in krilla 0.8, the PDF writer. Move when krilla does." },
+    # Checked on Friday, October 16, 2026.
+    { id = "RUSTSEC-2024-0449", reason = "unsafe-libyaml is unmaintained: through serde_yaml 0.9 in hayagriva 0.10, which reads YAML bibliographies. No maintained replacement upstream yet; move when hayagriva does." },
+    { crate = "zip@8.6.0", reason = "Yanked, like every zip 8.x; calamine 0.36.1 (spreadsheets), its newest release, still requires zip 8. textweaver itself uses zip 9.0.4. Remove when calamine moves to zip 9." },
     { id = "RUSTSEC-2026-0192", reason = "ttf-parser is unmaintained: through rustybuzz in krilla 0.8, as above." },
     # Approved by the owner on Sunday, September 27, 2026 (W4c1).
     # Approved by the owner on Monday, September 28, 2026 (W4g).

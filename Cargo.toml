@@ -160,7 +160,7 @@ scraper = "0.27"
 # through libbz2-rs-sys (the `bzip2` feature; `bzip2-rs` is the C library),
 # and PPMd through ppmd-rust. calamine and mathcat still turn on `deflate`,
 # which adds the pure-Rust zopfli compressor.
-zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs", "lzma", "xz", "bzip2", "ppmd"] }
+zip = { version = "9.0.4", default-features = false, features = ["deflate-flate2-zlib-rs", "lzma", "xz", "bzip2", "ppmd"] }
 roxmltree = "0.21"
 
 # persistence

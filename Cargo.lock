@@ -215,9 +215,9 @@ dependencies = [
 
 [[package]]
 name = "ammonia"
-version = "4.1.4"
+version = "4.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc6d763210e2eb7670d1a5183a08bebefa3f97db2a738a684f2ce00bd49f681d"
+checksum = "36322ccf536de7b7afd259098615203e4cc5caca1b78482b58334a720c66e40a"
 dependencies = [
  "cssparser",
  "html5ever",
@@ -5376,18 +5376,18 @@ checksum = "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f"
 
 [[package]]
 name = "lzma-rust2"
-version = "0.16.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca93e534d1142d1d0dcca6d25fe302508a5dfb40b302802904577725ea0b695b"
-dependencies = [
- "sha2 0.11.0",
-]
-
-[[package]]
-name = "lzma-rust2"
 version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fde178a3caf126c440fa15628147772d8ee590a39477d711353fbe2e58a73a5b"
+
+[[package]]
+name = "lzma-rust2"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7277c9742229dc25243236d578b6471a798c554512c6f6a04365ec2e87c2a3bb"
+dependencies = [
+ "sha2 0.11.0",
+]
 
 [[package]]
 name = "mac_address"
@@ -8308,9 +8308,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.45"
+version = "0.23.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
+checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
 dependencies = [
  "log",
  "once_cell",
@@ -8380,9 +8380,9 @@ dependencies = [
 
 [[package]]
 name = "ruzstd"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a252f5e20f038fe7b4ea53e073e65398d652c864cc162fc77c56c2f13717b888"
+checksum = "69e4ce4a039f42bf25920b95667e4d789e98749ab11bbb8d2c2936f788421bb5"
 dependencies = [
  "twox-hash",
 ]
@@ -9523,7 +9523,7 @@ dependencies = [
  "toml 1.1.6+spec-1.1.0",
  "unicode-segmentation",
  "unicode-width",
- "zip 8.6.0",
+ "zip 9.0.4",
 ]
 
 [[package]]
@@ -9569,7 +9569,7 @@ dependencies = [
  "thiserror 2.0.21",
  "toml 1.1.6+spec-1.1.0",
  "windows 0.62.2",
- "zip 8.6.0",
+ "zip 9.0.4",
 ]
 
 [[package]]
@@ -9649,7 +9649,7 @@ dependencies = [
  "thiserror 2.0.21",
  "toml 1.1.6+spec-1.1.0",
  "ureq",
- "zip 8.6.0",
+ "zip 9.0.4",
 ]
 
 [[package]]
@@ -9863,7 +9863,7 @@ dependencies = [
  "thiserror 2.0.21",
  "toml 1.1.6+spec-1.1.0",
  "ureq",
- "zip 8.6.0",
+ "zip 9.0.4",
 ]
 
 [[package]]
@@ -10145,7 +10145,7 @@ dependencies = [
  "textweaver-store",
  "textweaver-text",
  "thiserror 2.0.21",
- "zip 8.6.0",
+ "zip 9.0.4",
 ]
 
 [[package]]
@@ -12779,7 +12779,7 @@ dependencies = [
  "textweaver-sapi",
  "textweaver-sync",
  "textweaver-text",
- "zip 8.6.0",
+ "zip 9.0.4",
 ]
 
 [[package]]
@@ -13052,11 +13052,26 @@ dependencies = [
  "crc32fast",
  "flate2",
  "indexmap",
- "lzma-rust2 0.16.5",
  "memchr",
- "ppmd-rust",
  "typed-path",
  "zopfli",
+]
+
+[[package]]
+name = "zip"
+version = "9.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a954114b47a54df49f83d2722814e86b23d4bb1b54a1b90fb7d92b41619ddc22"
+dependencies = [
+ "bzip2",
+ "crc32fast",
+ "flate2",
+ "indexmap",
+ "lzma-rust2 0.22.0",
+ "memchr",
+ "nix 0.31.3",
+ "ppmd-rust",
+ "typed-path",
 ]
 
 [[package]]

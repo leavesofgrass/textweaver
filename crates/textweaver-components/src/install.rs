@@ -230,7 +230,13 @@ fn zip_candidates(
         if entry.is_dir() {
             continue;
         }
-        let raw = entry.name().to_owned();
+        let raw = match entry.name() {
+            Ok(n) => n.into_owned(),
+            Err(e) => {
+                refused.push(("(an unreadable name)".to_owned(), e.to_string()));
+                continue;
+            }
+        };
         let path = Path::new(&raw);
         let unsafe_path = raw.contains('\\')
             || path.components().any(|p| {

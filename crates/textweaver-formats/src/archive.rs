@@ -173,8 +173,9 @@ pub fn list<R: Read + Seek>(kind: ArchiveKind, r: R) -> io::Result<Vec<Entry>> {
                 if f.is_dir() {
                     continue;
                 }
+                let Ok(name) = f.name() else { continue };
                 out.push(Entry {
-                    name: normalize(f.name()),
+                    name: normalize(&name),
                     size: f.size(),
                 });
             }
@@ -227,8 +228,9 @@ pub fn read_member<R: Read + Seek>(kind: ArchiveKind, r: R, name: &str) -> io::R
                 // Stored as `./a`, `\a`, or in another case.
                 let lower = want.to_lowercase();
                 zip.file_names()
+                    .filter_map(Result::ok)
                     .find(|n| normalize(n).to_lowercase() == lower)
-                    .map(str::to_owned)
+                    .map(|n| n.into_owned())
             };
             let real = real.ok_or_else(|| not_found(&want))?;
             let f = zip.by_name(&real).map_err(io_err)?;

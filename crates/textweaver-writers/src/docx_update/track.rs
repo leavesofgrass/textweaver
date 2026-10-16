@@ -58,7 +58,11 @@ pub fn track_edits(
     date: &str,
 ) -> Result<(Vec<u8>, TrackReport), WriteError> {
     let mut zip = ZipArchive::new(Cursor::new(package)).map_err(zip_err)?;
-    let names: Vec<String> = zip.file_names().map(str::to_owned).collect();
+    let names: Vec<String> = zip
+        .file_names()
+        .map(|n| n.map(|n| n.into_owned()))
+        .collect::<Result<_, _>>()
+        .map_err(zip_err)?;
     if !names.iter().any(|n| n == DOCUMENT) {
         return Err(WriteError::Zip(
             "this is not a Word document: it has no word/document.xml".into(),

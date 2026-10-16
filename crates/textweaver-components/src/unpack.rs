@@ -268,7 +268,13 @@ fn unzip(
         if entry.is_dir() {
             continue;
         }
-        let raw = entry.name().to_owned();
+        let raw = match entry.name() {
+            Ok(n) => n.into_owned(),
+            Err(e) => {
+                left_out.push(("(an unreadable name)".to_owned(), e.to_string()));
+                continue;
+            }
+        };
         if entry.is_symlink() {
             left_out.push((raw, "a link, not a file".to_owned()));
             continue;

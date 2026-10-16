@@ -23,7 +23,7 @@ fn parts(pkg: &[u8]) -> BTreeMap<String, Vec<u8>> {
             let mut f = z.by_index(i).unwrap();
             let mut b = Vec::new();
             f.read_to_end(&mut b).unwrap();
-            (f.name().to_owned(), b)
+            (f.name().unwrap().into_owned(), b)
         })
         .collect()
 }

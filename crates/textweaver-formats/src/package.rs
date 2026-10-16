@@ -68,8 +68,9 @@ impl Package {
         }
         let names = zip
             .file_names()
-            .map(|n| (n.to_lowercase(), n.to_owned()))
-            .collect();
+            .map(|n| n.map(|n| (n.to_lowercase(), n.into_owned())))
+            .collect::<Result<_, _>>()
+            .map_err(|e| LoadError::Parse(format!("not a valid {what} (zip) file: {e}")))?;
         Ok(Package {
             zip,
             names,

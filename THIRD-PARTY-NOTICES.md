@@ -1173,7 +1173,7 @@ textweaver is built from these Rust crates. Each licence below lists the crates 
 Licences, with the number of crates under each:
 
 - Apache License 2.0: 580
-- MIT License: 189
+- MIT License: 190
 - BSD 3-Clause "New" or "Revised" License: 31
 - Unicode License v3: 27
 - ISC License: 24
@@ -5821,8 +5821,8 @@ Used by:
 
 Used by:
 
-- lzma-rust2 0.16.5, https://github.com/hasenbanck/lzma-rust2/
 - lzma-rust2 0.21.0, https://github.com/hasenbanck/lzma-rust2/
+- lzma-rust2 0.22.0, https://github.com/hasenbanck/lzma-rust2/
 - sevenz-rust2 0.23.0, https://github.com/hasenbanck/sevenz-rust
 - sevenz-rust2 0.23.0, https://github.com/hasenbanck/sevenz-rust
 
@@ -7110,7 +7110,7 @@ Used by:
 
 Used by:
 
-- ammonia 4.1.4, https://github.com/rust-ammonia/ammonia
+- ammonia 4.1.7, https://github.com/rust-ammonia/ammonia
 - anstream 1.0.0, https://github.com/rust-cli/anstyle.git
 - anstyle-parse 1.0.0, https://github.com/rust-cli/anstyle.git
 - anstyle-query 1.1.5, https://github.com/rust-cli/anstyle.git
@@ -13814,7 +13814,7 @@ Used by:
 - rustc-hash 1.1.0, https://github.com/rust-lang-nursery/rustc-hash
 - rustix 0.38.44, https://github.com/bytecodealliance/rustix
 - rustix 1.1.5, https://github.com/bytecodealliance/rustix
-- rustls 0.23.45, https://github.com/rustls/rustls
+- rustls 0.23.46, https://github.com/rustls/rustls
 - scoped-tls 1.0.1, https://github.com/alexcrichton/scoped-tls
 - scopeguard 1.2.0, https://github.com/bluss/scopeguard
 - secret-service 5.2.0, https://github.com/hwchen/secret-service-rs.git
@@ -22599,7 +22599,7 @@ SOFTWARE.
 
 Used by:
 
-- ruzstd 0.9.0, https://github.com/KillingSpark/zstd-rs
+- ruzstd 0.9.1, https://github.com/KillingSpark/zstd-rs
 
 ```text
 MIT License
@@ -23538,6 +23538,7 @@ Used by:
 
 - tracing-core 0.1.36, https://github.com/tokio-rs/tracing
 - zip 8.6.0, https://github.com/zip-rs/zip2
+- zip 9.0.4, https://github.com/zip-rs/zip2
 
 ```text
 The MIT License (MIT)

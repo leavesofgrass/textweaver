@@ -140,7 +140,11 @@ pub fn update_docx(
     update: &DocxUpdate,
 ) -> Result<(Vec<u8>, UpdateReport), WriteError> {
     let mut zip = ZipArchive::new(Cursor::new(package)).map_err(zip_err)?;
-    let names: Vec<String> = zip.file_names().map(str::to_owned).collect();
+    let names: Vec<String> = zip
+        .file_names()
+        .map(|n| n.map(|n| n.into_owned()))
+        .collect::<Result<_, _>>()
+        .map_err(zip_err)?;
     let mut parts = Parts::default();
     for name in &names {
         let wanted = revisable(name)

@@ -89,10 +89,11 @@ fn unpack_zip(file: std::fs::File, into: &Path) -> Result<(), UpdateError> {
     let mut zip = zip::ZipArchive::new(file).map_err(bad)?;
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i).map_err(bad)?;
+        let name = entry.name().map_err(bad)?.into_owned();
         if entry.is_symlink() {
-            return Err(UpdateError::Unpack(format!("{} is a link", entry.name())));
+            return Err(UpdateError::Unpack(format!("{name} is a link")));
         }
-        let raw = PathBuf::from(entry.name());
+        let raw = PathBuf::from(name);
         let Some(rel) = member_path(&raw)? else {
             continue;
         };
