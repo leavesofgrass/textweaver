@@ -25,6 +25,10 @@ A probe on 2026-09-25 (`System.Speech`, 64-bit and 32-bit PowerShell, output to 
 - The host protocol duplicates the ECI host's from an earlier stage of the project; the two are merged into one shared engine-host protocol at integration.
 - Automated real-voice tests use Microsoft David, Zira, and eSpeak; voices bundled with other products are the user's to enable.
 
+## Addendum, 0.1.0-beta.3
+
+The separate `textweaver-sapi-host` programs described above are gone from the packages. A 64-bit voice now runs in a copy of `tw` or the app started in its hidden `--engine-host` mode, and a 32-bit voice runs in the one 32-bit host, `textweaver-host-x86.exe`. See the addendum to [ADR-0007](0007-eloquence-via-eci-host.md).
+
 ## See also
 
 - [Speech engines and voices](../speech.md): SAPI5 and OneCore voices.

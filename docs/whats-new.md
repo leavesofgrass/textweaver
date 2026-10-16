@@ -2,6 +2,25 @@
 
 This page summarizes what each release brought, for readers who want the changes without the full record. The [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) has every detail, and it is the record to trust if the two differ.
 
+## 0.1.0-beta.3
+
+Not yet released.
+
+Summary: study cards go to Anki and back, a reading queue that follows you between computers, dictation you can pause, and fewer programs in the package.
+
+- **Anki.** Export cards to Anki writes a document's study cards as an Anki package (`.apkg`), keeping each card's grades and schedule. Import Anki cards adds a package's Basic and Basic-and-reversed notes to the open document and says what it skipped. From the command line: `tw study export --anki FILE` and `tw study import FILE`. See [Take cards to Anki and back](notes.md#take-cards-to-anki-and-back).
+- **The reading queue.** A list of documents to read next, kept with the bookshelf. Ctrl+Enter in the library list adds or removes a document, and Reading queue in the File menu lists it. A document leaves the queue when you read it to the end. The setting After a document ends decides whether textweaver stops, names the next document, or reads it at once; it never starts a document you did not ask for. Also `tw library queue`. See [The library](library.md#the-reading-queue).
+- **The queue syncs between computers,** with the places switch. A document added on one computer joins the queue on the others, and one taken out leaves it everywhere. A document another computer queued and this one lacks keeps its place, listed as "not on this computer". See [Syncing between computers](sync.md#the-reading-queue).
+- **The review list,** beside Continue reading: documents you have read aloud, the one read longest ago first. Also `tw library review`.
+- **Pause and resume dictation** (Alt+Shift+F9). The phrase being spoken is finished and typed first; what the microphone hears while paused is discarded. The textweaver app shows Pause dictation and Stop dictation buttons during a dictation. See [Dictating](dictation.md).
+- **Each highlight name has its own color and shape in the textweaver app,** as in the terminal reader, so no two names differ by color alone. A screen reader hears the name in words on the text it covers.
+- **Formatted text pastes as Markdown on macOS and Linux too,** as it already did on Windows.
+- **Keys changed.** Ctrl+Shift+V (Cmd+Shift+V on macOS) now pastes as plain text in the textweaver app, as in most programs. Choose a voice moved to Ctrl+Alt+V (Cmd+Option+V on macOS); in the terminal reader Alt+V keeps working. Keys you moved in `keymap.toml` are unchanged.
+- **Fewer programs in the package.** An antivirus program had flagged two small engine helper programs. Eloquence, SAPI 5, DECtalk, and eSpeak NG now run in a copy of `tw` or the app, and one 32-bit host, `textweaver-host-x86.exe`, runs 32-bit engines on Windows. The Windows package holds four programs instead of eleven. Engines still run in their own process, and word timing is as exact as before. Old helper programs left by an update can be deleted. See [Installing textweaver](install.md) and [Troubleshooting](troubleshooting.md).
+- **The self-test's answer is said once** by a screen reader, instead of twice.
+- **The app's shortcut is named "textweaver app"** instead of "textweaver window"; the install script removes the old Windows shortcut.
+- **Guides rewritten** for a university-level reader, and the troubleshooting guide now explains antivirus heuristic warnings and how to check a package against `SHA256SUMS.txt`.
+
 ## 0.1.0-beta.2
 
 Released on Saturday, October 10, 2026.
@@ -31,7 +50,7 @@ Summary: one download per system, study tools, richer marks and review, more for
 - eSpeak NG runs in its own helper program on Windows. Speech never stays silent while any engine can work.
 - The app has buttons you can customize, the guides stored inside it, and one search over commands, keys, settings, and guides. Its menu bar is hidden by default on Windows (Alt or F10 shows it). Export asks where to save.
 - Code blocks are read by default, and there is a developer profile example.
-- Known limits: the app draws every highlight name the same way, and on macOS and Linux it pastes plain text. Anki import and export and the reading queue come in beta 3. A native Windows ARM64 package is not planned. See [Known limits](known-limits.md).
+- Known limits: the app draws every highlight name the same way, and on macOS and Linux it pastes plain text. Anki import and export and the reading queue were planned for beta 3. A native Windows ARM64 package is not planned. See [Known limits](known-limits.md).
 
 ## 0.1.0-alpha.9
 

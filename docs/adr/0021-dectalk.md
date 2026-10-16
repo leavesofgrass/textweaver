@@ -38,6 +38,10 @@ DECtalk support was requested, "like we did in star". textweaver already runs tw
 - Not yet verified against a licensed DECtalk: the structure layouts, the callback's signature and thread, and the index sample numbering follow DECtalk's published API reference; no licensed DECtalk is installed on the development machine. The live tests are the check when one is.
 - Export (ADR-0011) gets exact word cues from DECtalk through `synthesize_utterance`.
 
+## Addendum, 0.1.0-beta.3
+
+The separate `textweaver-dectalk-host` and `textweaver-dectalk-host-x86` programs, and the two extra hosts named under Consequences, are no longer built into the packages. DECtalk runs in a copy of `tw` or the app started in its hidden `--engine-host` mode, or, for a 32-bit library, in `textweaver-host-x86.exe`. See the addendum to [ADR-0007](0007-eloquence-via-eci-host.md).
+
 ## See also
 
 - [Using DECtalk](../dectalk.md): the user guide.

@@ -141,7 +141,7 @@ tw library continue --json
 
 ## The reading queue
 
-The reading queue is an ordered list of documents to read next, in the order you add them: this week's readings, for example, or the chapters assigned before an exam. It is kept on the bookshelf (`library.json`, below), so it is there the next time you start textweaver.
+The reading queue is an ordered list of documents to read next, in the order you add them: this week's readings, for example, or the chapters assigned before an exam. It is kept on the bookshelf (`library.json`, below), so it is there the next time you start textweaver. With sync on, the queue also syncs with the places group, so the same queue is there on your other computers ([the reading queue in syncing](sync.md#the-reading-queue)).
 
 **To add a document:**
 
@@ -150,7 +150,7 @@ The reading queue is an ordered list of documents to read next, in the order you
 
 Only a document saved as a file can join the queue; a web page or an unsaved document is refused, and you are told so.
 
-**To see the queue,** choose **Reading queue** in the File menu or in the command palette. You hear "Reading queue", the number of documents, then "Enter opens one, Delete takes it out." The rows are the titles, in order. A document whose file cannot be found, such as one on a drive that is not connected, is announced as "not found"; it keeps its place and is passed over until it returns. **Enter** opens a document, and reading begins only when you press the read key. **Delete** removes a document from the queue without touching the file.
+**To see the queue,** choose **Reading queue** in the File menu or in the command palette. You hear "Reading queue", the number of documents, then "Enter opens one, Delete takes it out." The rows are the titles, in order. A document whose file cannot be found, such as one on a drive that is not connected, is announced as "not found"; it keeps its place and is passed over until it returns. A row such as "Week 4, not on this computer" is a document that another computer queued and that is not found here; it keeps its place too, **Enter** on it only says so, and **Delete** removes the document from the queue on every computer. **Enter** opens a document, and reading begins only when you press the read key. **Delete** removes a document from the queue without touching the file.
 
 **A document leaves the queue automatically** when continuous reading reaches its end, and when it is removed from the bookshelf.
 
@@ -173,7 +173,7 @@ tw library queue remove week4.pdf
 tw library queue next
 ```
 
-`tw library queue` (or `tw library queue list`) prints the queue in order, each document followed by its path on the next line. `add` appends a document and `remove` takes one out; the file is never touched. `next` prints the path of the next document to read, so that a script can open it. With `--json`, each command prints the queue as `path`, `title`, and `found`; `next` prints `next`, which is null when there is nothing to read.
+`tw library queue` (or `tw library queue list`) prints the queue in order, each document followed by its path on the next line. `add` appends a document and `remove` takes one out; the file is never touched. `next` prints the path of the next document to read, so that a script can open it. With `--json`, each command prints the queue as `path`, `title`, and `found` (`path` is absent for a document that another computer queued and that is not found here); `next` prints `next`, which is null when there is nothing to read.
 
 ## The review list
 

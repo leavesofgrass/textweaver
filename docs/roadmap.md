@@ -15,7 +15,7 @@ This page summarizes where the project stands. For the full history of decisions
 - **Reading aids.** RSVP, bionic reading, a reading ruler, text spacing, dyslexia-friendly fonts, difficult-word marking, reading level, and syllable display, all drawn in the terminal reader and the textweaver app.
 - **Accessibility.** Three accessibility modes (self-voicing, hybrid, and screen-reader), listened to with NVDA and JAWS and a Braille display on Windows, with automated accessibility checks on Windows and Linux on every release. VoiceOver on macOS and Orca on Linux have had some basic testing, and more extensive testing is planned. See the [accessibility statement](accessibility.md). Six interface languages, including right-to-left layout. Braille output carries typeform and capitals indicators, and tables in three layouts.
 - **Study tools.** Offline dictionary lookups, reading statistics, settings profiles, extractive summaries with no downloaded model, notes and highlights with Obsidian vault export and import, and a document's title, author, DOI, and ISBN editable by hand.
-- **Sync between computers.** Notes, highlights, bookmarks, reading places, statistics, settings, and word lists stay in step through a folder you choose, such as Syncthing or a USB stick, with no account and no server ([Syncing between computers](sync.md)).
+- **Sync between computers.** Notes, highlights, bookmarks, reading places, the reading queue, statistics, settings, and word lists stay in step through a folder you choose, such as Syncthing or a USB stick, with no account and no server ([Syncing between computers](sync.md)).
 
 See the [features page](site/features.html) for the full, current list with each item's status, and [star features not yet planned](star-gaps.md) for a detailed comparison with textweaver's predecessor.
 
@@ -37,17 +37,17 @@ Beta 1 follows the last alpha with the features below. Each is described in its 
 These were planned for earlier betas and arrive in beta 3:
 
 - Anki import and export: study cards travel as `.apkg` packages ([Take cards to Anki and back](notes.md#take-cards-to-anki-and-back)).
-- The reading queue and the review list ([The library](library.md#the-reading-queue)).
+- The reading queue, which syncs between computers, and the review list ([The library](library.md#the-reading-queue)).
 - Pause and resume for dictation, with dictation buttons in the textweaver app.
 - A color and a shape for each highlight name in the textweaver app, and Markdown paste on macOS and Linux.
 - One engine host built into `tw` and the app, in place of separate helper programs for each engine.
+- Ctrl+Shift+V pastes as plain text in the app, and Choose a voice moves to Ctrl+Alt+V.
 - The shortcut name "textweaver app".
 - The full rewrite of the guides. Beta 1 and beta 2 correct wording and keep every guide current; beta 3 rewrites them for a university-level reader throughout.
 
 ## Being built next
 
-- **Stabilization:** fixes from hands-on test sessions, a long soak test, a week of clean nightly runs, and native-speaker review of the German, French, Portuguese, and Arabic translations (English and Spanish are checked).
-- **The graphical version catching up to the terminal reader:** drawing each highlight name's own shape, and converting pasted formatted text to Markdown ([Known limits](known-limits.md#the-graphical-version)).
+- **Stabilization:** fixes from hands-on test sessions, a long soak test, a clean run of the nightly workflow, and native-speaker review of the German, French, Portuguese, and Arabic translations (English and Spanish are checked).
 
 ## Not in the 0.1 series
 
