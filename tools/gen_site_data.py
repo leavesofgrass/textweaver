@@ -331,7 +331,7 @@ FEATURES = [
          "done", "Shift+F8 restarts speech at any time.", "troubleshooting.md"),
         ("Piper neural voices and a voice manager",
          "Download and use Piper voices, and manage every engine's voices in one list.",
-         "done", "Alt+V in the terminal, Ctrl+Shift+V in the GUI; Piper voices download on request, with model-accurate word timing.", "speech.md"),
+         "done", "Alt+V in the terminal, Ctrl+Alt+V in the GUI; Piper voices download on request, with model-accurate word timing.", "speech.md"),
     ]),
     ("Math and citations", [
         ("Math read aloud",

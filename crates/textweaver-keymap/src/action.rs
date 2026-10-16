@@ -391,7 +391,7 @@ actions! {
     CycleSpeedPreset = "cycle_speed_preset", Voice, "Cycle the speed presets (skim, normal, study, slow)",
         gui ["g:F8"], term ["g:F8"], shared [];
     ChooseVoice = "choose_voice", Voice, "Choose a voice",
-        gui ["g:Ctrl+Shift+V"], term ["g:Alt+V"], shared [];
+        gui ["g:Ctrl+Alt+V"], term ["g:Alt+V", "g:Ctrl+Alt+V"], shared [];
     RestartSpeech = "restart_speech", Voice,
         "Restart speech with the current settings (after the speech engine stopped working)",
         gui ["g:Shift+F8"], term ["g:Shift+F8"], shared [];
@@ -660,7 +660,7 @@ actions! {
         gui ["e:Ctrl+V"], term ["e:Ctrl+V"], shared [];
     PastePlainText = "paste_plain_text", Editing,
         "Paste the clipboard as plain text, keeping none of its formatting",
-        gui ["e:Ctrl+Shift+M"], term ["e:Alt+Q"], shared [];
+        gui ["e:Ctrl+Shift+V", "e:Ctrl+Shift+M"], term ["e:Alt+Q"], shared [];
     InsertCitation = "insert_citation", Editing,
         "Insert a citation: pick a reference, then give a page or other locator",
         gui ["e:Alt+C"], term ["e:Alt+C"], shared [];
