@@ -1,6 +1,6 @@
 [package]
 name = "textweaver-xilem"
-description = "textweaver's all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit (ADR-0027)"
+description = "textweaver, the one program: the app, its all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit (ADR-0027), with the terminal program behind --tw"
 version.workspace = true
 edition.workspace = true
 rust-version = "1.96"
@@ -9,12 +9,15 @@ repository.workspace = true
 authors.workspace = true
 publish.workspace = true
 
-# Not a default member yet: Vello and wgpu add a few minutes to a cold build.
-# Build with `cargo build -p textweaver-xilem`. It becomes `textweaver-gui`
-# once it passes the UI Automation report (ADR-0027).
-
+# Not a default member: Vello and wgpu add a few minutes to a cold build.
+# Build with `cargo build -p textweaver-xilem`.
+#
+# `textweaver`, the one program the packages ship (beta 3): the app by
+# default; the terminal program (textweaver-cli's library) with `--tw` or
+# `--cli` first, when started as `tw`, or when the first argument is a
+# `tw` command (src/dispatch.rs).
 [[bin]]
-name = "textweaver-xilem"
+name = "textweaver"
 path = "src/main.rs"
 
 # Draws the loom logo into `assets/icons/` (the PNGs, the .ico files, and
@@ -27,15 +30,17 @@ required-features = ["screenshot"]
 default = ["screenshot", "renderer-vello", "publish", "lint", "grammar", "dictation", "audio-export", "opus", "carta"]
 # Dictation in edit mode (textweaver-app's `dictation`, ADR-0042).
 dictation = ["textweaver-app/dictation"]
+# Every feature below that the terminal program shares is passed to
+# textweaver-cli too, so `textweaver --tw` has what `tw` had.
 # File, Export audio (textweaver-app's `audio-export`, W6v): without it the
 # command is hidden from the menus and the palette.
 audio-export = ["textweaver-app/audio-export"]
 # Opus in process in Export audio (textweaver-app's `opus`, W7o; building
 # it needs cmake).
-opus = ["textweaver-app/opus"]
+opus = ["textweaver-app/opus", "textweaver-cli/opus"]
 # More formats to open (textweaver-app's `carta`, B1-k2): Org, reStructuredText,
 # MediaWiki, DokuWiki and Jira, read through the pure-Rust carta.
-carta = ["textweaver-app/carta"]
+carta = ["textweaver-app/carta", "textweaver-cli/carta"]
 # The renderer: Vello's GPU compute renderer (the default), or Vello's
 # hybrid renderer (CPU strips, simple GPU shaders), which suits software
 # GPUs such as Mesa's llvmpipe under Xvfb in CI. With both, Vello wins.
@@ -59,17 +64,19 @@ lint = ["textweaver-app/lint"]
 # Ctrl+Shift+F7), on by default as in the terminal reader.
 grammar = ["textweaver-app/grammar"]
 # MathCAT math speech and navigation (ADR-0029), as in the terminal reader.
-mathcat = ["textweaver-app/mathcat"]
+mathcat = ["textweaver-app/mathcat", "textweaver-cli/mathcat"]
 # Speech engines that need a system library, passed through to the app's
 # engines as the terminal reader's features are: eSpeak NG, Speech
 # Dispatcher (Linux), and Omnivox. Release packages turn them on where the
 # library is found (`cargo xtask gui-dist`).
-espeak = ["textweaver-app/espeak"]
-speechd = ["textweaver-app/speechd"]
-omnivox = ["textweaver-app/omnivox"]
+espeak = ["textweaver-app/espeak", "textweaver-cli/espeak"]
+speechd = ["textweaver-app/speechd", "textweaver-cli/speechd"]
+omnivox = ["textweaver-app/omnivox", "textweaver-cli/omnivox"]
 
 [dependencies]
 textweaver-app.workspace = true
+# The terminal program, run by `textweaver --tw` and `tw`.
+textweaver-cli.workspace = true
 # Host mode: the app runs speech-engine hosts as a copy of itself.
 textweaver-host.workspace = true
 textweaver-theme.workspace = true
@@ -118,6 +125,10 @@ arboard.workspace = true
 
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 arboard = { workspace = true, features = ["wayland-data-control"] }
+# Fontconfig loaded when the app starts rather than linked, so the one
+# program, and `tw` with it, starts on a server or in a container without
+# it; the app then uses its bundled fonts.
+fontique = { workspace = true, features = ["fontconfig-dlopen"] }
 
 # The session ending on Linux and macOS: SIGTERM, SIGHUP (the terminal
 # closed, or the session ended), and Ctrl+C in the terminal it was started

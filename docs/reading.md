@@ -1,6 +1,6 @@
 # Reading and moving around
 
-This guide covers the terminal reader, started with `tw` (or its second name, `textweaver`): opening a document, reading it aloud, and moving through it by sentence, paragraph, heading, and more. It is for anyone who reads with textweaver, with or without a screen reader.
+This guide covers the terminal reader, started with `tw` (or `textweaver --tw`): opening a document, reading it aloud, and moving through it by sentence, paragraph, heading, and more. It is for anyone who reads with textweaver, with or without a screen reader.
 
 Keys are the terminal defaults. Where the graphical version uses a different key, this guide says so. The [keyboard reference](keyboard.md) lists every key in both frontends. Many keys are single keys, such as `h` for the next heading. Those are called browse keys. They work while you read, not while you edit or type in a prompt.
 
@@ -811,7 +811,7 @@ If you are editing and have unsaved changes, textweaver asks whether to save the
 tw --help
 ```
 
-`tw` takes one optional argument, the document to open, and these options. (`textweaver` is a second name for `tw`.) `tw open` takes the same options, but needs the document. With a command word instead of a document, `tw` runs that command without the reader; see [The command line](command-line.md).
+`tw` takes one optional argument, the document to open, and these options. (`textweaver --tw` takes them too; `textweaver` alone opens the app.) `tw open` takes the same options, but needs the document. With a command word instead of a document, `tw` runs that command without the reader; see [The command line](command-line.md).
 
 - `--no-speech`: do not speak at all, in screen-reader mode. There is no self-voicing and no reading aloud. Use it when your screen reader should do all the talking; it reads the status line and follows the cursor. See [Using textweaver with a screen reader](screen-readers.md).
 - `--mode MODE`: the accessibility mode for this run, not saved: `self-voicing`, `hybrid` (textweaver reads documents aloud and your screen reader speaks messages and typing), or `screen-reader` (textweaver is silent). **Alt+Shift+A** changes the mode and saves it. See [Using textweaver with a screen reader](screen-readers.md#three-modes).

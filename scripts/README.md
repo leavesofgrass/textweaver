@@ -27,8 +27,9 @@ Installs textweaver on any Linux distribution: a published release, or a build f
 With `--release TAG` (a tag such as `v0.1.0-beta.1`, or `latest` for the newest release or pre-release), nothing is built:
 
 - It downloads the AppImage and `SHA256SUMS.txt` from the release with curl (or wget), and checks the AppImage against its line there. A mismatch stops the install.
-- It installs the AppImage as `~/.local/bin/textweaver.AppImage` (or under `--prefix DIR`), links `textweaver` and `tw` to it, and adds a menu entry, an icon, and the quick start.
-- Where FUSE is missing, so AppImages cannot run, it installs the plain tarball instead, checked the same way, into `lib/textweaver/` with `textweaver` and `tw` linked from `bin/`. `--tarball` asks for the tarball anyway; `--appimage` asks for the AppImage anyway. `--gui` also links the app, `textweaver-gui`, from `bin/` (since beta 1 it is in the same AppImage or tarball as `tw`; older releases had a GUI package of the same kind), with a menu entry named "textweaver app"; later runs keep it, and `--no-gui` removes it.
+- It installs the AppImage as `~/.local/bin/textweaver.AppImage` (or under `--prefix DIR`), links `textweaver` (the app) and `tw` (the terminal reader and commands) to it, and adds menu entries for both, an icon, and the quick start.
+- Where FUSE is missing, so AppImages cannot run, it installs the plain tarball instead, checked the same way, into `lib/textweaver/` with `textweaver` and `tw` linked from `bin/`. `--tarball` asks for the tarball anyway; `--appimage` asks for the AppImage anyway.
+- Since beta 3 textweaver is one program that is also the app, so the app is always installed, and the script removes the `textweaver-gui` link, folder, or AppImage and the menu entry an earlier run made for it. `--gui` is not needed; with a release up to beta 2 it still installs that release's separate app, and `--no-gui` leaves it out.
 - It is for x86_64 and aarch64 (arm64) computers. Elsewhere, build from source.
 - It needs a release with Linux packages: 0.1.0-alpha.4 is the first, with the AppImage and tarball for both x86_64 and aarch64. Earlier releases (0.1.0-alpha.3 and before) shipped Windows and macOS packages only; build from source for those.
 - `--uninstall` removes either kind of install; `scripts/update.sh` installs the newest release of the same kind.
@@ -43,8 +44,8 @@ Without `--release`, it builds textweaver from source:
 - It installs the build dependencies: a C toolchain, pkg-config, the ALSA headers, espeak-ng, and speech-dispatcher, with their development files.
 - It offers ffmpeg and pandoc, and says where to get whisper.cpp for dictation.
 - It installs rustup if cargo is missing, after asking. The Rust version comes from `rust-toolchain.toml`.
-- It builds `textweaver` and `tw` in release mode with the espeak-ng, speech-dispatcher, and Omnivox engines. There are no separate engine hosts to build: `tw` runs Eloquence (Voxin) and DECtalk in a copy of itself. If the espeak-ng engine does not build on your distribution, it builds again without it (`--no-espeak` skips it from the start).
-- It installs under `~/.local`, or `--prefix DIR`: the programs are linked from `bin/`, and the programs and dictionaries live in `lib/textweaver/`. The guides, a `HELP.txt` with every command's help, manual pages, a menu entry, and these helper scripts are installed too.
+- It builds `textweaver`, the app and the terminal program in one, in release mode with the espeak-ng, speech-dispatcher, and Omnivox engines. There are no separate engine hosts to build: `textweaver` runs Eloquence (Voxin) and DECtalk in a copy of itself. If the espeak-ng engine does not build on your distribution, it builds again without it (`--no-espeak` skips it from the start).
+- It installs under `~/.local`, or `--prefix DIR`: `textweaver` and `tw` are linked from `bin/`, and the program, its `tw` link, and the dictionaries live in `lib/textweaver/`. The guides, a `HELP.txt` with every command's help, manual pages, menu entries for the app and the terminal reader, and these helper scripts are installed too.
 - It offers to add `~/.local/bin` to your PATH.
 
 To install:
@@ -71,11 +72,11 @@ scripts/install-linux.sh --uninstall
 
 Installs textweaver on a Mac.
 
-- By default it downloads the newest release, the universal package for Apple silicon and Intel, with curl. It checks it against `SHA256SUMS.txt` with `shasum -a 256`, extracts it, removes the quarantine flag, and installs `textweaver` and `tw` into `~/.local/bin`, or `--prefix DIR`.
+- By default it downloads the newest release, the universal package for Apple silicon and Intel, with curl. It checks it against `SHA256SUMS.txt` with `shasum -a 256`, extracts it, removes the quarantine flag, copies the app, `textweaver.app`, into `~/Applications`, and links `textweaver` and `tw` to the program inside it from `~/.local/bin`, or `--prefix DIR`.
 - `--release TAG` installs a given release.
 - `--from-source` checks for the Xcode command line tools, installs rustup if needed (it asks first), and builds with `cargo xtask dist`.
 - It offers ffmpeg and pandoc from Homebrew when Homebrew is installed. It never installs Homebrew itself.
-- `--gui` also installs the app, `textweaver.app`, into `~/Applications`, with the quarantine flag removed. Since beta 1 it comes from the same zip as `tw`; for older releases, from the release's GUI package. Later runs keep it; `--no-gui` removes it.
+- Since beta 3 the program is inside `textweaver.app`, so the app is always installed. `--gui` is not needed; with a release up to beta 2 it still installs that release's app, and `--no-gui` removes it.
 - `--uninstall` removes it, and `textweaver.app` if the script installed it.
 
 ### install-windows.ps1
@@ -83,9 +84,10 @@ Installs textweaver on a Mac.
 Installs textweaver on Windows.
 
 - By default it downloads the newest release zip, checks its SHA-256 against `SHA256SUMS.txt`, and extracts it to `%LOCALAPPDATA%\Programs\textweaver`.
-- It offers to add that folder to your user PATH, and to create a Start menu shortcut that opens textweaver in Windows Terminal, or in a command prompt.
+- It offers to add that folder to your user PATH, and to create two Start menu shortcuts: "textweaver app", which starts the app, `textweaver.exe`, and "textweaver terminal", which opens the terminal reader, `tw.exe`, in Windows Terminal, or in a command prompt.
 - `-FromSource` checks for the MSVC build tools, rustup, and the `i686-pc-windows-msvc` target, then runs `cargo xtask dist` and installs the result.
-- `-Gui` offers a Start menu shortcut named "textweaver app" for the app, `textweaver-gui.exe`. Since beta 1 the app is in the same package as `tw` and is installed beside it; for older releases, `-Gui` installs it in a `gui` folder inside the install, from the release's GUI zip. Later runs keep the shortcut; `-NoGui` removes it. Releases up to beta 2 named the shortcut "textweaver window"; the script removes that shortcut when it makes or removes the new one, and only when it starts `textweaver-gui.exe`.
+- Running it again replaces the install folder's files with the new package's, which removes an earlier release's app, `textweaver-gui.exe`, and records the programs it installed in `install-manifest.txt`. It removes the shortcuts earlier versions made under other names, and only when they start a program in the install folder: "textweaver", the terminal reader's up to beta 2, and "textweaver window", the app's before that.
+- `-NoGui` leaves out the app's shortcut. `-Gui` is not needed since beta 3; for releases up to 0.1.0-alpha.9 it installs the app in a `gui` folder inside the install, from the release's GUI zip.
 - `-Uninstall` removes the folder, the PATH entry, and the shortcuts. Settings are kept.
 
 ### update.sh and update.ps1
@@ -176,9 +178,9 @@ scripts/convert-folder.sh notes --watch
 
 Formats are html (the default), epub, pdf, docx, brf (braille), txt, and md. Anything after `--` goes to `tw convert`. In PowerShell, use `-TwArgs "--flavor obsidian"` instead.
 
-### linux/textweaver.desktop
+### linux/textweaver.desktop and linux/textweaver-terminal.desktop
 
-The menu entry that `install-linux.sh` installs. It opens the terminal reader, `tw`, in a terminal (`Terminal=true`) for text, Markdown, HTML, EPUB, DOCX, and PDF files. The app's own menu entry is written by the script too (see `--gui` above).
+The menu entries that `install-linux.sh` installs and the packages carry. `textweaver.desktop` starts the app, `textweaver`, for text, Markdown, HTML, EPUB, DOCX, and PDF files. `textweaver-terminal.desktop` opens the terminal reader, `tw`, in a terminal (`Terminal=true`).
 
 ## See also
 

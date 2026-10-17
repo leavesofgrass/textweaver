@@ -3,8 +3,10 @@
 //! file is new or every file is as it was.
 //!
 //! - [`unpack`] reads the zip or tarball into a folder, refusing absolute
-//!   paths, `..`, links, and names that are not plain, and drops the
-//!   package's top folder (`textweaver-VERSION-PLATFORM/`).
+//!   paths, `..`, and names that are not plain, and drops the package's
+//!   top folder (`textweaver-VERSION-PLATFORM/`). A link is made again only
+//!   on Linux and macOS, and only when it points at a plain path inside
+//!   its own folder (`tw -> textweaver`); any other link is refused.
 //! - [`install_dir`] finds the folder the running program came from and
 //!   checks it is a release package (its `NOTICE` file, or the app bundle
 //!   on macOS); a build from source or a system package is refused.
@@ -13,7 +15,9 @@
 //!   (`NAME.update-old`) and the new one into place; if any step fails,
 //!   what was done is undone. Only the package's own entries are touched:
 //!   settings, notes, the library, state, and components live in the data
-//!   and configuration folders, never in the install folder.
+//!   and configuration folders, never in the install folder. A program an
+//!   earlier release put there and the new package no longer has
+//!   ([`RETIRED`], the app before beta 3) is moved aside too.
 //! - Windows cannot replace a running program, so [`start_finisher`]
 //!   starts the new package's `tw update --finish`, which waits for
 //!   textweaver to close ([`wait_until_closed`]), swaps, and starts it
@@ -33,6 +37,19 @@ const OLD: &str = "update-old";
 
 /// The marker of a release package's folder.
 const MARKER: &str = "NOTICE";
+
+/// Programs that earlier releases put in the install folder and that are
+/// gone since: the app, `textweaver-gui`, which `textweaver` replaced in
+/// beta 3. [`swap_in`] moves one aside when the new package lacks it, and
+/// [`current_program`] starts `textweaver` in its place.
+pub const RETIRED: [&str; 2] = ["textweaver-gui.exe", "textweaver-gui"];
+
+/// The program that replaced the retired ones.
+const PROGRAM: &str = if cfg!(windows) {
+    "textweaver.exe"
+} else {
+    "textweaver"
+};
 
 /// The relative path of an archive member without the package's top
 /// folder, when every part is plain; `Ok(None)` for the top folder itself.
@@ -60,6 +77,44 @@ fn member_path(raw: &Path) -> Result<Option<PathBuf>, UpdateError> {
         }
     }
     Ok((parts.len() > 1).then(|| parts[1..].iter().collect()))
+}
+
+/// The target of a link in a package, when it is a relative path of plain
+/// names that stays inside the link's own folder (`textweaver`, or
+/// `textweaver.app/Contents/MacOS/textweaver`).
+fn link_target(raw: &Path, target: &Path) -> Result<PathBuf, UpdateError> {
+    let plain = target.components().all(|p| match p {
+        PathPart::Normal(s) => s.to_str().is_some_and(is_plain_name),
+        _ => false,
+    });
+    if plain && target.components().next().is_some() {
+        Ok(target.to_owned())
+    } else {
+        Err(UpdateError::Unpack(format!(
+            "{} is a link to {}, outside its folder",
+            raw.display(),
+            target.display()
+        )))
+    }
+}
+
+/// Makes the link `dest` to `target` (checked by [`link_target`]). Windows
+/// packages hold no links, so one there is refused.
+fn make_link(raw: &Path, target: &Path, dest: &Path) -> Result<(), UpdateError> {
+    let target = link_target(raw, target)?;
+    if let Some(parent) = dest.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| UpdateError::install(parent, e))?;
+    }
+    #[cfg(unix)]
+    {
+        let _ = remove_any(dest);
+        std::os::unix::fs::symlink(&target, dest).map_err(|e| UpdateError::install(dest, e))
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (target, dest);
+        Err(UpdateError::Unpack(format!("{} is a link", raw.display())))
+    }
 }
 
 /// Unpacks `package` (a `.zip` or `.tar.gz`) into `into`, without the
@@ -90,14 +145,18 @@ fn unpack_zip(file: std::fs::File, into: &Path) -> Result<(), UpdateError> {
     for i in 0..zip.len() {
         let mut entry = zip.by_index(i).map_err(bad)?;
         let name = entry.name().map_err(bad)?.into_owned();
-        if entry.is_symlink() {
-            return Err(UpdateError::Unpack(format!("{name} is a link")));
-        }
         let raw = PathBuf::from(name);
         let Some(rel) = member_path(&raw)? else {
             continue;
         };
         let dest = into.join(rel);
+        if entry.is_symlink() {
+            let mut target = String::new();
+            std::io::Read::read_to_string(&mut entry, &mut target)
+                .map_err(|e| UpdateError::Unpack(e.to_string()))?;
+            make_link(&raw, Path::new(&target), &dest)?;
+            continue;
+        }
         if entry.is_dir() {
             std::fs::create_dir_all(&dest).map_err(|e| UpdateError::install(&dest, e))?;
             continue;
@@ -124,9 +183,9 @@ fn unpack_tar(file: std::fs::File, into: &Path) -> Result<(), UpdateError> {
         let mut entry = entry.map_err(bad)?;
         let kind = entry.header().entry_type();
         let raw = entry.path().map_err(bad)?.into_owned();
-        if !(kind.is_file() || kind.is_dir()) {
+        if !(kind.is_file() || kind.is_dir() || kind.is_symlink()) {
             return Err(UpdateError::Unpack(format!(
-                "{} is not a file or a folder",
+                "{} is not a file, a folder, or a link",
                 raw.display()
             )));
         }
@@ -134,6 +193,15 @@ fn unpack_tar(file: std::fs::File, into: &Path) -> Result<(), UpdateError> {
             continue;
         };
         let dest = into.join(rel);
+        if kind.is_symlink() {
+            let target = entry
+                .link_name()
+                .map_err(bad)?
+                .ok_or_else(|| UpdateError::Unpack(format!("{} has no target", raw.display())))?
+                .into_owned();
+            make_link(&raw, &target, &dest)?;
+            continue;
+        }
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent).map_err(|e| UpdateError::install(parent, e))?;
         }
@@ -178,6 +246,12 @@ fn beside(dir: &Path, name: &str, suffix: &str) -> PathBuf {
 }
 
 fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
+    // A link is copied as a link (`tw -> textweaver`), never as a second
+    // copy of the program.
+    #[cfg(unix)]
+    if std::fs::symlink_metadata(from)?.file_type().is_symlink() {
+        return std::os::unix::fs::symlink(std::fs::read_link(from)?, to);
+    }
     if from.is_dir() {
         std::fs::create_dir_all(to)?;
         for e in std::fs::read_dir(from)? {
@@ -260,7 +334,7 @@ pub fn swap_in(new_root: &Path, install: &Path, only_existing: bool) -> Result<u
             beside(install, n, NEW),
             beside(install, n, OLD),
         );
-        let had = cur.exists();
+        let had = std::fs::symlink_metadata(&cur).is_ok();
         let step = if had {
             std::fs::rename(&cur, &old)
         } else {
@@ -279,9 +353,40 @@ pub fn swap_in(new_root: &Path, install: &Path, only_existing: bool) -> Result<u
         }
         done.push((n, had));
     }
-    // 3. The old entries go; one still open stays until the next update.
+    // 3. Programs of earlier releases the package no longer has go aside.
+    retire(new_root, install);
+    // 4. The old entries go; one still open stays until the next update.
     clear_leftovers(install);
     Ok(names.len())
+}
+
+/// Moves each [`RETIRED`] program in `install` aside (`NAME.update-old`,
+/// removed with the other leftovers) when the package at `new_root` does
+/// not have it. Best effort: one that cannot be moved stays, unused.
+fn retire(new_root: &Path, install: &Path) {
+    for name in RETIRED {
+        let cur = install.join(name);
+        if cur.is_file() && !new_root.join(name).exists() {
+            let old = beside(install, name, OLD);
+            let _ = remove_any(&old);
+            let _ = std::fs::rename(&cur, &old);
+        }
+    }
+}
+
+/// The program to start again after an update: `start` itself, or, when
+/// it is a [`RETIRED`] program (the app before beta 3), `textweaver` in
+/// `install`, which replaced it.
+pub fn current_program(start: &Path, install: &Path) -> PathBuf {
+    let retired = start
+        .file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|n| RETIRED.iter().any(|r| r.eq_ignore_ascii_case(n)));
+    if retired {
+        install.join(PROGRAM)
+    } else {
+        start.to_owned()
+    }
 }
 
 /// Replaces one file (an AppImage) with `new`: copied beside it, made
@@ -430,6 +535,72 @@ fn ps_quote(s: &str) -> String {
     const Q: char = '\u{27}';
     let doubled = s.replace(Q, "\u{27}\u{27}");
     format!("{Q}{doubled}{Q}")
+}
+
+/// The PowerShell script [`retarget_shortcuts`] runs for the install
+/// folder `install`: each `textweaver*.lnk` in the user's Start menu
+/// programs folder that starts the retired app in `install` is pointed at
+/// `textweaver.exe` there, and each one that ran the old `textweaver.exe`
+/// in a terminal (the terminal reader before beta 3) at `tw.exe`. No other
+/// shortcut is changed.
+pub fn retarget_script(install: &Path) -> String {
+    let dir = install.display().to_string();
+    let q = |s: &str| ps_quote(s);
+    format!(
+        "$ErrorActionPreference = 'Stop'; \
+         $dir = {dir}; \
+         $old = Join-Path $dir 'textweaver-gui.exe'; \
+         $new = Join-Path $dir 'textweaver.exe'; \
+         $tw = Join-Path $dir 'tw.exe'; \
+         $shell = New-Object -ComObject WScript.Shell; \
+         $menu = [Environment]::GetFolderPath('Programs'); \
+         foreach ($f in Get-ChildItem -LiteralPath $menu -Filter 'textweaver*.lnk') {{ \
+           $l = $shell.CreateShortcut($f.FullName); \
+           if ($l.TargetPath -ieq $old) {{ $l.TargetPath = $new; $l.IconLocation = \"$new,0\"; $l.Save() }} \
+           elseif ($l.Arguments.IndexOf(\"`\"$new`\"\", [StringComparison]::OrdinalIgnoreCase) -ge 0) {{ \
+             $l.Arguments = $l.Arguments.Replace(\"`\"$new`\"\", \"`\"$tw`\"\"); $l.IconLocation = \"$tw,0\"; $l.Save() }} \
+         }}",
+        dir = q(&dir)
+    )
+}
+
+/// Windows, after an update from before beta 3: points the Start menu
+/// shortcuts that `install-windows.ps1` made at the programs that replaced
+/// the old ones ([`retarget_script`]). Best effort: a shortcut that cannot
+/// be changed is left, and the error returned for the log. Elsewhere it
+/// does nothing.
+pub fn retarget_shortcuts(install: &Path) -> Result<(), UpdateError> {
+    if !cfg!(windows) {
+        return Ok(());
+    }
+    let status = textweaver_core::process::command("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            &retarget_script(install),
+        ])
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map_err(|e| UpdateError::install(install, e))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(UpdateError::install(
+            install,
+            std::io::Error::other(format!(
+                "the Start menu shortcuts were not changed ({status})"
+            )),
+        ))
+    }
+}
+
+/// True when `install` holds a [`RETIRED`] program: an install from before
+/// beta 3, whose shortcuts [`retarget_shortcuts`] updates.
+pub fn holds_retired(install: &Path) -> bool {
+    RETIRED.iter().any(|r| install.join(r).is_file())
 }
 
 /// Starts `tw` from the unpacked package (`new_root`) to finish the update

@@ -456,8 +456,8 @@ Some SAPI voices, such as Code Factory's, report no word times. textweaver tells
 
 Eloquence, SAPI voices, DECtalk, and (on Windows) eSpeak NG run in separate processes called engine hosts, so a crash in an engine cannot take textweaver down and each word's timing is exact. There is no separate program per engine:
 
-- For an engine library of the same architecture as textweaver (64-bit on a 64-bit computer), textweaver starts a copy of itself in a hidden host mode, `--engine-host` followed by the engine's name. A second `tw.exe` or `textweaver-gui.exe` therefore appears in Task Manager while that engine speaks, and it ends when textweaver does.
-- On Windows, a 32-bit engine library (Code Factory's Eloquence, most DECtalk libraries, older 32-bit-only SAPI voices, a 32-bit eSpeak NG) runs in the one 32-bit host, `textweaver-host-x86.exe`. It must stay in the same folder as `tw.exe` and the app. Without it, 32-bit voices are not listed and a 32-bit library is refused in words.
+- For an engine library of the same architecture as textweaver (64-bit on a 64-bit computer), textweaver starts a copy of itself in a hidden host mode, `--engine-host` followed by the engine's name. A second `textweaver.exe` therefore appears in Task Manager while that engine speaks, and it ends when textweaver does.
+- On Windows, a 32-bit engine library (Code Factory's Eloquence, most DECtalk libraries, older 32-bit-only SAPI voices, a 32-bit eSpeak NG) runs in the one 32-bit host, `textweaver-host-x86.exe`. It must stay in the same folder as `textweaver.exe` and `tw.exe`. Without it, 32-bit voices are not listed and a 32-bit library is refused in words.
 
 The dictionaries folder, `ibmtts-dictionaries`, must stay beside the programs too. Environment variables can point to a host elsewhere; see below.
 

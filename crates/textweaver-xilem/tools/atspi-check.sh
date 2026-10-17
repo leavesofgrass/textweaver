@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The AT-SPI check for the Xilem GUI on Linux, with no display and no
 # screen reader: Xvfb, a private D-Bus session, the AT-SPI bus, and Mesa's
-# software Vulkan/GL for Vello. It launches textweaver-xilem reading
+# software Vulkan/GL for Vello. It launches textweaver reading
 # fixtures/sample.md with the silent `paced` backend and runs
 # atspi-dump.py against it.
 #
@@ -21,7 +21,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/../../.." && pwd)"
 target="${CARGO_TARGET_DIR:-$repo/target}"
-exe="${EXE:-$target/debug/textweaver-xilem}"
+exe="${EXE:-$target/debug/textweaver}"
 doc="${DOC:-$repo/fixtures/sample.md}"
 seconds="${SECONDS_TO_READ:-6}"
 

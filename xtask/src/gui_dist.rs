@@ -1,25 +1,24 @@
-//! The app's part of the single package (B1-o2; ADR-0027, "Packaging";
-//! docs/dev/releasing.md).
+//! The program's part of the single package (B1-o2; ADR-0027,
+//! "Packaging"; docs/dev/releasing.md).
 //!
-//! Since beta 1 each release has one package per OS and CPU architecture
-//! holding both programs, the app (`textweaver-gui`) and the terminal
-//! program (`tw`, with `textweaver` as a second name), with the complete
-//! docs. `cargo xtask dist` builds it; `cargo xtask gui-dist` is kept as
+//! Since beta 3 each package holds one program, `textweaver`: the app by
+//! default, and the terminal program with `--tw` or `--cli`, or when
+//! started as `tw` (the owner's decision, Friday, October 16, 2026).
+//! `cargo xtask dist` builds the package; `cargo xtask gui-dist` is kept as
 //! another name for the same task, so older notes and scripts still work.
 //!
-//! This module builds `textweaver-xilem` with the `dist` profile into the
-//! same build folder as `tw` (the static C runtime on Windows), so the two
-//! share their compiled dependencies, and stages it as `textweaver-gui`
-//! with its guide (`GUI.md`) and the vendored Xilem's licence
+//! This module builds the `textweaver` binary of `textweaver-xilem` with
+//! the `dist` profile (the static C runtime on Windows), and stages it with
+//! the app's guide (`GUI.md`) and the vendored Xilem's licence
 //! ([`stage_gui`]). On macOS [`make_app`] wraps it in `textweaver.app` (an
-//! `Info.plist`, signed ad hoc as Apple silicon requires), beside `tw` in
-//! the same zip; with `--universal` the app joins the Apple silicon and
-//! Intel builds with `lipo`, as `tw` does.
+//! `Info.plist`, signed ad hoc as Apple silicon requires), with `tw` and
+//! `textweaver` beside the bundle as links to the program inside it; with
+//! `--universal` the program joins the Apple silicon and Intel builds with
+//! `lipo`.
 //!
-//! The app is built with the speech engines `cargo xtask dist` builds into
-//! `tw` for the platform (espeak-ng, speech-dispatcher, and Omnivox on
-//! Linux; Omnivox elsewhere), for each engine feature the GUI crate
-//! declares. A feature the crate does not declare yet is named in the
+//! The program is built with the platform's speech engines
+//! (`dist::engines`: espeak-ng, speech-dispatcher, and Omnivox on Linux;
+//! Omnivox elsewhere), for each engine feature its crate declares. A feature the crate does not declare yet is named in the
 //! output and left out, so the package still builds. `--no-screenshot`
 //! builds it without the screenshot harness (see [`SCREENSHOT`] for why
 //! the package keeps it for now).
@@ -36,10 +35,10 @@ use anyhow::Context;
 
 use crate::{dist, eci};
 
-/// The package the GUI is built from, and its binary.
-const PACKAGE: (&str, &str) = ("textweaver-xilem", "textweaver-xilem");
-/// The name the binary is installed under.
-pub(crate) const INSTALLED: &str = "textweaver-gui";
+/// The package the program is built from, and its binary.
+pub(crate) const PACKAGE: (&str, &str) = ("textweaver-xilem", "textweaver");
+/// The name the program is installed under.
+pub(crate) const INSTALLED: &str = "textweaver";
 /// The app's own files in the package: (source, path in the package). The
 /// rest (the licence, notices, quick start, guides, the 32-bit host,
 /// dictionaries)
@@ -65,7 +64,7 @@ pub(crate) const SCREENSHOT: &str = "screenshot";
 pub(crate) const APP: &str = "textweaver.app";
 
 /// `cargo xtask gui-dist`: another name for `cargo xtask dist`, which
-/// builds the one package holding the app and `tw`.
+/// builds the one package.
 pub fn run() -> anyhow::Result<()> {
     println!("gui-dist builds the single package, the same as cargo xtask dist.");
     dist::run()
@@ -140,8 +139,8 @@ fn gui_features(
     (out, true)
 }
 
-/// The platform's engines (as in the terminal package) split into those
-/// the GUI crate declares, as `--features` entries, and those it does not.
+/// The platform's engines split into those the program's crate declares,
+/// as `--features` entries, and those it does not.
 fn engine_features(declared: &[String], engines: &[&str]) -> (Vec<String>, Vec<String>) {
     let (on, missing): (Vec<&str>, Vec<&str>) = engines
         .iter()
@@ -153,8 +152,8 @@ fn engine_features(declared: &[String], engines: &[&str]) -> (Vec<String>, Vec<S
     )
 }
 
-/// Builds the app and stages it into `stage` as [`INSTALLED`], with its
-/// own [`FILES`]. `universal` (macOS) joins the Apple silicon and Intel
+/// Builds the program and stages it into `stage` as [`INSTALLED`], with
+/// the app's own [`FILES`]. `universal` (macOS) joins the Apple silicon and Intel
 /// builds with `lipo`.
 pub(crate) fn stage_gui(
     root: &Path,
@@ -167,7 +166,7 @@ pub(crate) fn stage_gui(
         fs::read_to_string(root.join(MANIFEST)).with_context(|| format!("reading {MANIFEST}"))?;
     let (features, missing) = engine_features(&declared_features(&manifest), dist::engines());
     if !features.is_empty() {
-        println!("App engines: {}", features.join(", "));
+        println!("Engines: {}", features.join(", "));
     }
     if !missing.is_empty() {
         println!(
@@ -201,7 +200,7 @@ pub(crate) fn stage_gui(
         if let Some(t) = target {
             cmd.args(["--target", t]);
         }
-        dist::run_tool(&mut cmd).context("building the app")
+        dist::run_tool(&mut cmd).context("building textweaver")
     };
     let exe = std::env::consts::EXE_SUFFIX;
     let bin = stage.join(format!("{INSTALLED}{exe}"));
@@ -234,9 +233,10 @@ pub(crate) fn stage_gui(
     Ok(())
 }
 
-/// macOS: moves the staged app into `textweaver.app` (the binary in
-/// `Contents/MacOS`, an `Info.plist`) and signs the bundle ad hoc. `tw`
-/// and everything else stay beside it in the package folder.
+/// macOS: moves the staged program into `textweaver.app` (the binary in
+/// `Contents/MacOS`, an `Info.plist`) and signs the bundle ad hoc.
+/// Everything else stays beside it in the package folder, where `dist`
+/// links `tw` and `textweaver` to the program inside it.
 pub(crate) fn make_app(stage: &Path, version: &str) -> anyhow::Result<()> {
     let app = stage.join(APP);
     let contents = app.join("Contents");
@@ -254,7 +254,7 @@ pub(crate) fn make_app(stage: &Path, version: &str) -> anyhow::Result<()> {
     )
 }
 
-/// Where the app is in a staged package on this platform.
+/// Where the program is in a staged package on this platform.
 pub(crate) fn app_path() -> String {
     if cfg!(target_os = "macos") {
         format!("{APP}/Contents/MacOS/{INSTALLED}")
@@ -284,14 +284,6 @@ fn info_plist(version: &str) -> String {
 </plist>
 "#
     )
-}
-
-/// The app's Linux menu entry, in the tarball and the AppImage.
-pub(crate) fn desktop_entry() -> &'static str {
-    "[Desktop Entry]\nType=Application\nName=textweaver\nGenericName=Talking document reader\n\
-     Comment=Read documents aloud, with a highlight that follows the spoken word\n\
-     Exec=textweaver-gui %f\nTerminal=false\nIcon=textweaver\n\
-     Categories=Utility;Accessibility;TextTools;\n"
 }
 
 #[cfg(test)]
@@ -359,15 +351,9 @@ mod tests {
     #[test]
     fn the_app_bundle_names_its_executable() {
         let p = info_plist("1.2.3");
-        assert!(p.contains("<key>CFBundleExecutable</key><string>textweaver-gui</string>"));
+        assert!(p.contains("<key>CFBundleExecutable</key><string>textweaver</string>"));
         assert!(p.contains("<string>1.2.3</string>"));
         assert!(p.contains("NSHighResolutionCapable"));
-    }
-
-    #[test]
-    fn the_desktop_entry_starts_the_app() {
-        assert!(desktop_entry().contains("Exec=textweaver-gui %f"));
-        assert!(desktop_entry().contains("Terminal=false"));
     }
 
     #[test]

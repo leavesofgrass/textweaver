@@ -66,21 +66,20 @@ fn info_ends_quietly_on_a_closed_pipe() {
 
 /// `tw` with no arguments opens the terminal reader (B1-o1). With standard
 /// output not a terminal, as here, it refuses in one error line with exit
-/// status 1 instead of drawing into the pipe, under either name; `tw
-/// --help` keeps the full list.
+/// status 1 instead of drawing into the pipe; `tw --help` keeps the full
+/// list.
 #[test]
 fn no_arguments_without_a_terminal_is_one_error_line() {
-    for exe in [env!("CARGO_BIN_EXE_tw"), env!("CARGO_BIN_EXE_textweaver")] {
-        let out = Command::new(exe).stdin(Stdio::null()).output().unwrap();
-        assert_eq!(out.status.code(), Some(1), "{exe}: {out:?}");
-        assert!(out.stdout.is_empty(), "{exe}: {out:?}");
-        let err = String::from_utf8(out.stderr).unwrap();
-        assert_eq!(err.lines().count(), 1, "{err}");
-        assert!(
-            err.starts_with("Error: The terminal reader needs a terminal"),
-            "{err}"
-        );
-    }
+    let exe = env!("CARGO_BIN_EXE_tw");
+    let out = Command::new(exe).stdin(Stdio::null()).output().unwrap();
+    assert_eq!(out.status.code(), Some(1), "{exe}: {out:?}");
+    assert!(out.stdout.is_empty(), "{exe}: {out:?}");
+    let err = String::from_utf8(out.stderr).unwrap();
+    assert_eq!(err.lines().count(), 1, "{err}");
+    assert!(
+        err.starts_with("Error: The terminal reader needs a terminal"),
+        "{err}"
+    );
     let help = Command::new(env!("CARGO_BIN_EXE_tw"))
         .arg("--help")
         .output()

@@ -13,7 +13,7 @@
 #   tree.txt      the normalized tree (tools/a11y/tree_report.py)
 #   gui.log       the GUI's log
 #
-# Environment: EXE (default target/debug/textweaver-xilem), DOC, A11Y_CLI
+# Environment: EXE (default target/debug/textweaver), DOC, A11Y_CLI
 # (default accessibility-cli on the PATH), WAIT_SECONDS (default 40: the
 # longest it waits for the tree). Runs on CI runners; it plays no audio.
 set -euo pipefail
@@ -21,7 +21,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/../.." && pwd)"
 out="${1:?usage: tree-dump.sh OUT_DIR}"
-exe="${EXE:-${CARGO_TARGET_DIR:-$repo/target}/debug/textweaver-xilem}"
+exe="${EXE:-${CARGO_TARGET_DIR:-$repo/target}/debug/textweaver}"
 doc="${DOC:-$repo/fixtures/t/reading.md}"
 cli="${A11Y_CLI:-accessibility-cli}"
 wait_seconds="${WAIT_SECONDS:-40}"

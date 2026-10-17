@@ -1,11 +1,17 @@
-//! `textweaver-xilem`: the textweaver GUI on Masonry, Vello, Parley,
-//! AccessKit, and winit (ADR-0027). It becomes `textweaver-gui` once it
-//! passes the UI Automation report the wxDragon spike passes.
+//! `textweaver`: the one program. The app (the GUI on Masonry, Vello,
+//! Parley, AccessKit, and winit; ADR-0027) by default, and the terminal
+//! program (`textweaver_cli`) with `--tw` or `--cli` first, when started
+//! as `tw`, or when the first argument is a `tw` command
+//! ([`textweaver_xilem::dispatch`]). Host mode (`--engine-host`) is
+//! checked before either.
 //!
 //! On Windows it is a GUI-subsystem program, so no console window opens
 //! beside it (the owner's session 2, ADR-0033). Started from a terminal,
-//! it attaches to that terminal to print `--help`, `--version`, and
-//! errors ([`textweaver_xilem::console`]).
+//! the app attaches to that terminal to print `--help`, `--version`, and
+//! errors, and the terminal program attaches to it to run there
+//! ([`textweaver_xilem::console`]). In terminals on Windows, `tw.exe`
+//! (crates/textweaver-launcher) runs it with `--tw` and waits for it, as a
+//! shell waits for a console program.
 
 #![windows_subsystem = "windows"]
 
@@ -15,6 +21,7 @@ use std::time::Duration;
 use clap::Parser;
 use clap::error::ErrorKind;
 use textweaver_xilem::console;
+use textweaver_xilem::dispatch::{self, Mode};
 use textweaver_xilem::graphics::{self, GraphicsBackend};
 use textweaver_xilem::gui::{self, GuiOptions};
 use textweaver_xilem::safety::{self, StartupMessages};
@@ -30,9 +37,21 @@ fn parse_announce(s: &str) -> Result<AnnounceMode, String> {
     AnnounceMode::parse(s).ok_or_else(|| format!("use {}", AnnounceMode::NAMES.join(" or ")))
 }
 
-/// Read documents aloud in a window.
+/// The description at the top of `textweaver --help`.
+const ABOUT: &str =
+    "Read documents aloud in the textweaver app, with a highlight that follows the spoken word.";
+
+/// The terminal program's names, at the end of `textweaver --help`.
+const TERMINAL_HELP: &str = "The terminal reader and the commands: run tw, or textweaver --tw (also --cli). For example, tw FILE opens the terminal reader, tw convert converts, and tw --help lists every command.";
+
+/// Read documents aloud in the textweaver app.
 #[derive(Parser, Debug)]
-#[command(name = "textweaver-gui", version = textweaver_app::VERSION_TEXT, about)]
+#[command(
+    name = "textweaver",
+    version = textweaver_app::VERSION_TEXT,
+    about = ABOUT,
+    after_help = TERMINAL_HELP
+)]
 struct Args {
     /// Document to open.
     file: Option<PathBuf>,
@@ -171,7 +190,7 @@ fn harness_flag(args: &Args) -> Option<&'static str> {
 /// failed first, then why, then that no window opened.
 fn unbuilt_message(flag: &str) -> String {
     format!(
-        "{flag} is not in this build: textweaver-gui was built without the screenshot \
+        "{flag} is not in this build: textweaver was built without the screenshot \
          feature. No window was opened."
     )
 }
@@ -182,8 +201,20 @@ fn main() -> std::process::ExitCode {
     if let Some(status) = textweaver_host::host_mode() {
         return status;
     }
-    run();
-    std::process::ExitCode::SUCCESS
+    let mut argv = std::env::args_os();
+    let argv0 = argv.next().unwrap_or_default();
+    let args: Vec<std::ffi::OsString> = argv.collect();
+    match dispatch::mode(&argv0, &args, textweaver_cli::is_command) {
+        Mode::Terminal(rest) => {
+            // Before the terminal program touches the console.
+            console::attach_terminal();
+            textweaver_cli::main_with(rest)
+        }
+        Mode::App => {
+            run();
+            std::process::ExitCode::SUCCESS
+        }
+    }
 }
 
 /// The textweaver app.
@@ -349,7 +380,7 @@ mod tests {
     use super::*;
 
     fn parse(args: &[&str]) -> Args {
-        Args::try_parse_from(std::iter::once("textweaver-gui").chain(args.iter().copied()))
+        Args::try_parse_from(std::iter::once("textweaver").chain(args.iter().copied()))
             .expect("the arguments parse")
     }
 
@@ -386,13 +417,16 @@ mod tests {
         assert!(version.contains(textweaver_app::COPYRIGHT), "{version}");
     }
 
-    /// The window's command line is textweaver-gui's, and the flags for
-    /// automated checks and listening experiments stay out of `--help`.
+    /// The app's command line is textweaver's, names the terminal
+    /// program's flags, and keeps the flags for automated checks and
+    /// listening experiments out of `--help`.
     #[test]
-    fn help_names_textweaver_gui_and_hides_the_test_flags() {
+    fn help_names_textweaver_and_hides_the_test_flags() {
         use clap::CommandFactory;
         let help = Args::command().render_long_help().to_string();
-        assert!(help.contains("textweaver-gui"), "{help}");
+        assert!(help.contains("Usage: textweaver"), "{help}");
+        assert!(!help.contains("textweaver-gui"), "{help}");
+        assert!(help.contains("textweaver --tw (also --cli)"), "{help}");
         for hidden in [
             "--exit-after",
             "--background",

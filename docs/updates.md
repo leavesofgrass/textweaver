@@ -51,7 +51,9 @@ textweaver updates the same package you installed, and only that package. It fin
 
 - **Windows.** A running program cannot replace its own files, so textweaver unpacks the new package and says "Update verified. It installs when textweaver closes." When you close textweaver, a small step in the new package waits for it to close, puts the new files in place, and starts the app again. If textweaver is installed under Program Files, Windows asks once for administrator permission.
 - **Linux.** A tarball install is replaced in place, and an AppImage is replaced by the new image as one file. textweaver says "Update verified and installed. Restart textweaver to use it." The copy already running keeps working until you close it.
-- **macOS.** The `textweaver.app` bundle and `tw` are replaced together, wherever they sit side by side, and textweaver asks you to restart.
+- **macOS.** The `textweaver.app` bundle and the `tw` and `textweaver` beside it are replaced together, wherever they sit side by side, and textweaver asks you to restart.
+
+**From beta 2 or earlier.** Since beta 3, textweaver is one program: `textweaver` opens the app and `tw` runs the terminal reader. An update from an earlier release removes the old app, `textweaver-gui`, from the install folder, and starts `textweaver` where it would have started the old app. On Windows it also points the Start menu shortcuts that the install script made at the new programs: the app's shortcut at `textweaver.exe`, and the terminal reader's at `tw.exe`. No other shortcut is changed. Running the install script again names them "textweaver app" and "textweaver terminal".
 
 The new files are first copied beside the old ones and only then renamed into place, so if any step fails, the old files are put back and the message ends "Nothing changed." Files that are not part of the package, such as `install-manifest.txt` written by the install scripts, are left as they are.
 

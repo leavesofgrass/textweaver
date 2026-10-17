@@ -31,7 +31,7 @@ $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 if (-not $Exe) {
     $target = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $repo 'target' }
-    $Exe = Join-Path $target 'debug\textweaver-xilem.exe'
+    $Exe = Join-Path $target 'debug\textweaver.exe'
 }
 if (-not $Document) { $Document = Join-Path $repo 'fixtures\t\reading.md' }
 if (-not (Test-Path -LiteralPath $Exe)) { throw "Not built: $Exe (cargo build -p textweaver-xilem)." }

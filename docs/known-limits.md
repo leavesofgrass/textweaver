@@ -16,13 +16,14 @@ See [the accessibility statement](accessibility.md) for the full record.
 - **Not code-signed.** Windows warns the first time you start it. On a Mac you remove the quarantine flag once. See [Installing textweaver](install.md).
 - **No native Windows ARM64 package is planned.** On a Windows computer with an ARM processor, use the x86-64 package: Windows runs it under emulation.
 - **Updates are your choice.** textweaver checks for a new release only if you say yes, at most once a day, and never downloads without asking. You can also update with `tw update`, the scripts, or a new download ([Updates](updates.md)). Packages are not code-signed or notarized, so each is checked against the release checksums instead.
+- **On Windows, use `tw` in a terminal, not `textweaver.exe --tw`.** `textweaver.exe` is a windowed program, so a terminal does not wait for it: `textweaver.exe --tw` runs the terminal reader in that terminal, but the prompt returns at once and competes with it for the keyboard. `tw.exe` starts it and waits, as a terminal expects ([The command line](command-line.md#one-program)).
 - **No guided first-run tour.** The [quick start](quickstart.md) is a document you open and read.
 - **Some translations are not reviewed.** The interface has six languages. Native speakers have checked English and Spanish. German, French, Portuguese, and Arabic have not been checked yet. Feedback on any translation is welcome: use Help, Report a problem, or the [issue tracker](https://github.com/leavesofgrass/textweaver/issues).
 - **Settings, keys, and file formats may still change** between releases. Read the [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) before you update.
 
 ## The graphical version
 
-These limits apply to the textweaver app (`textweaver-gui`). The terminal reader does not have them, unless stated.
+These limits apply to the textweaver app (`textweaver`). The terminal reader does not have them, unless stated.
 
 - **Some commands exist only in the terminal reader.** The app says "This command works in the terminal reader." when you press the key for one ([What only the terminal reader does](gui.md#what-only-the-terminal-reader-does)).
 

@@ -39,6 +39,7 @@ members = [
     "crates/textweaver-components",
     "crates/textweaver-espeak",
     "crates/textweaver-host",
+    "crates/textweaver-launcher",
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027);
@@ -82,6 +83,7 @@ default-members = [
     "crates/textweaver-components",
     "crates/textweaver-espeak",
     "crates/textweaver-host",
+    "crates/textweaver-launcher",
 ]
 
 [workspace.package]
@@ -114,6 +116,10 @@ textweaver-editor = { path = "crates/textweaver-editor" }
 # (the lean reader); crates that want it say `features = ["publish"]`.
 textweaver-app = { path = "crates/textweaver-app", default-features = false }
 textweaver-tui = { path = "crates/textweaver-tui" }
+# The terminal program's library; the one program, `textweaver`, runs it
+# with `--tw`. Default features (Opus, carta) off, so the GUI crate passes
+# its own on.
+textweaver-cli = { path = "crates/textweaver-cli", default-features = false }
 # The engine crates: default features (audio output) off, so the combined
 # 32-bit host links no audio stack; textweaver-engines turns `playback` on.
 textweaver-eci = { path = "crates/textweaver-eci", default-features = false }
@@ -240,6 +246,11 @@ live-region = "0.3"
 masonry = { path = "third_party/xilem/masonry", default-features = false }
 masonry_winit = { path = "third_party/xilem/masonry_winit", default-features = false }
 masonry_testing = { path = "third_party/xilem/masonry_testing" }
+# Parley's font database, already in the tree through Parley: named so the
+# one program can load Fontconfig at run time on Linux (its
+# `fontconfig-dlopen` feature), and `tw` keeps running headless where
+# Fontconfig is not installed (beta 3).
+fontique = { version = "0.11.1", default-features = false }
 # W4s (GUI session prep): the xilem crate's tests check options against
 # AccessKit's own filter, the one the platform adapters use. Already in the
 # tree through masonry_testing; a dev-dependency only.

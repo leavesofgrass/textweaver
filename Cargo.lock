@@ -9888,6 +9888,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-launcher"
+version = "0.1.0-beta.2"
+dependencies = [
+ "tempfile",
+]
+
+[[package]]
 name = "textweaver-lexicon"
 version = "0.1.0-beta.2"
 dependencies = [
@@ -10156,6 +10163,7 @@ dependencies = [
  "arboard",
  "clap",
  "ctrlc",
+ "fontique",
  "log",
  "masonry",
  "masonry_testing",
@@ -10167,6 +10175,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "textweaver-app",
+ "textweaver-cli",
  "textweaver-fonts",
  "textweaver-host",
  "textweaver-theme",

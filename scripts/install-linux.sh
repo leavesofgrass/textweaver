@@ -33,9 +33,9 @@ DEPS_ONLY=0
 ESPEAK=1
 OPTIONAL="ask"
 UNINSTALL=0
-# The GUI (textweaver-gui), from the release's -gui package: "ask" keeps
-# what an earlier install chose (the manifest's gui= line), else leaves it
-# out.
+# The app of releases up to beta 2 (textweaver-gui): "ask" keeps what an
+# earlier install chose (the manifest's gui= line), else leaves it out.
+# Since beta 3 textweaver is the app itself, always installed.
 GUI="ask"
 
 usage() {
@@ -44,6 +44,9 @@ Usage: scripts/install-linux.sh [options]
 
 Installs textweaver for you, on any Linux distribution, in one of two ways.
 
+textweaver is one program: textweaver starts the app, and tw (a link to it)
+runs the terminal reader and the commands.
+
 With --release, it downloads a published release, checks it against the
 release's SHA256SUMS.txt, and installs it: the AppImage, one file that runs
 on most distributions, with textweaver and tw linked to it; or, where FUSE
@@ -51,9 +54,10 @@ is missing (so AppImages cannot run), the plain tarball. Nothing is built.
 
 Without --release, it builds from source: it installs the build dependencies
 with your package manager, installs Rust with rustup if cargo is missing,
-builds textweaver and tw in release mode with the Linux speech engines
-(espeak-ng, speech-dispatcher, and Omnivox), and installs everything under
-a prefix. tw runs the engine hosts itself, so there are none to build.
+builds textweaver in release mode with the Linux speech engines (espeak-ng,
+speech-dispatcher, and Omnivox), and installs everything under a prefix,
+with tw linked to it. The program runs the engine hosts itself, so there
+are none to build.
 
 Every step is announced before it runs. The script asks before it uses sudo,
 installs Rust, or changes your PATH. Running it again updates the install.
@@ -73,13 +77,13 @@ Options:
   --appimage             With --release: install the AppImage even when
                          FUSE seems to be missing. It then runs with
                          APPIMAGE_EXTRACT_AND_RUN=1 set.
-  --gui                  With --release: also install the GUI,
-                         textweaver-gui, from the release's GUI package (the
-                         same kind as the reader: AppImage or tarball),
-                         with a menu entry. Running the script again keeps
-                         the GUI installed.
-  --no-gui               With --release: do not install the GUI, and remove
-                         it if an earlier run installed it.
+  --gui                  With --release of 0.1.0-beta.2 or earlier: also
+                         install that release's app, textweaver-gui, with
+                         its menu entry. Since beta 3 textweaver is the
+                         app, so this is not needed.
+  --no-gui               With --release of 0.1.0-beta.2 or earlier: leave
+                         out that release's app, and remove it if an
+                         earlier run installed it.
   --source DIR           Use the textweaver checkout in DIR. Without it, the
                          checkout this script sits in is used, or the
                          repository is cloned to ~/.local/src/textweaver.
@@ -101,7 +105,6 @@ Options:
 
 Examples:
   scripts/install-linux.sh --release latest
-  scripts/install-linux.sh --release latest --gui
   scripts/install-linux.sh
   scripts/install-linux.sh --dry-run
   scripts/install-linux.sh --prefix /usr/local
@@ -357,24 +360,25 @@ detect_pm() {
 
 # Build dependencies for each package manager: a C toolchain, pkg-config,
 # cmake (it builds libopus, for Opus export), ALSA headers (audio output), espeak-ng with its headers,
-# speech-dispatcher with its headers, and git and curl. No clang: nothing
-# in the terminal build uses bindgen.
+# speech-dispatcher with its headers, Fontconfig's headers (the app's
+# font lookup), and git and curl. No clang: nothing in the build uses
+# bindgen.
 packages_for() {
   case $1 in
     apt)
-      echo "build-essential pkg-config cmake libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev git curl ca-certificates"
+      echo "build-essential pkg-config cmake libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev libfontconfig1-dev git curl ca-certificates"
       ;;
     dnf | yum)
-      echo "gcc gcc-c++ make cmake pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel git curl ca-certificates"
+      echo "gcc gcc-c++ make cmake pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel fontconfig-devel git curl ca-certificates"
       ;;
     pacman)
-      echo "base-devel pkgconf cmake alsa-lib espeak-ng speech-dispatcher git curl ca-certificates"
+      echo "base-devel pkgconf cmake alsa-lib espeak-ng speech-dispatcher fontconfig git curl ca-certificates"
       ;;
     zypper)
-      echo "gcc gcc-c++ make cmake pkgconf-pkg-config alsa-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-module-espeak libspeechd-devel git curl ca-certificates"
+      echo "gcc gcc-c++ make cmake pkgconf-pkg-config alsa-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-module-espeak libspeechd-devel fontconfig-devel git curl ca-certificates"
       ;;
     apk)
-      echo "build-base pkgconf cmake alsa-lib-dev espeak-ng espeak-ng-dev speech-dispatcher speech-dispatcher-dev git curl ca-certificates"
+      echo "build-base pkgconf cmake alsa-lib-dev espeak-ng espeak-ng-dev speech-dispatcher speech-dispatcher-dev fontconfig-dev git curl ca-certificates"
       ;;
     *)
       echo ""
@@ -436,6 +440,7 @@ print_generic_packages() {
   say "- the ALSA development files (often alsa-lib-devel or libasound2-dev)"
   say "- espeak-ng and its development files"
   say "- speech-dispatcher and its development files, and its espeak-ng module"
+  say "- the Fontconfig development files (often fontconfig-devel or libfontconfig1-dev)"
   say "- git and curl"
   say "Optional: ffmpeg and pandoc."
 }
@@ -623,14 +628,15 @@ choose_features() {
   say "Speech engines built in: $engines."
 }
 
-# FEATURES for the engines in ENGINES, for both programs.
+# The package and binary of the one program, textweaver.
+PROGRAM_PACKAGE="textweaver-xilem"
+
+# FEATURES for the engines in ENGINES, for the program.
 set_features() {
-  local f pkg
+  local f
   FEATURES=""
-  for pkg in textweaver-cli textweaver-tui; do
-    for f in $ENGINES; do
-      FEATURES="$FEATURES${FEATURES:+,}$pkg/$f"
-    done
+  for f in $ENGINES; do
+    FEATURES="$FEATURES${FEATURES:+,}$PROGRAM_PACKAGE/$f"
   done
 }
 
@@ -642,13 +648,13 @@ build() {
     check_build_tools
   fi
   choose_features
-  say "Building textweaver and tw in release mode. The first build takes several minutes."
+  say "Building textweaver, the app and the terminal program in one, in release mode. The first build takes several minutes."
   if [ "$DRY_RUN" = 1 ]; then
-    say "Would run in $SRC: cargo build --release --locked -p textweaver-tui -p textweaver-cli --bin textweaver --bin tw --features $FEATURES"
+    say "Would run in $SRC: cargo build --release --locked -p $PROGRAM_PACKAGE --bin textweaver --features $FEATURES"
     return 0
   fi
-  if ! (cd "$SRC" && run cargo build --release --locked -p textweaver-tui -p textweaver-cli \
-    --bin textweaver --bin tw --features "$FEATURES"); then
+  if ! (cd "$SRC" && run cargo build --release --locked -p "$PROGRAM_PACKAGE" \
+    --bin textweaver --features "$FEATURES"); then
     case " $ENGINES " in
       *" espeak "*) ;;
       *) die "The build failed. The error is above. scripts/doctor.sh collects what a bug report needs." ;;
@@ -658,13 +664,13 @@ build() {
     say "Building again without the in-process espeak-ng engine, in case it is the cause. textweaver can still speak with espeak-ng through speech-dispatcher. Use --no-espeak to skip the first attempt next time."
     ENGINES="$(printf '%s' "$ENGINES" | sed 's/espeak //')"
     set_features
-    (cd "$SRC" && run cargo build --release --locked -p textweaver-tui -p textweaver-cli \
-      --bin textweaver --bin tw --features "$FEATURES") \
+    (cd "$SRC" && run cargo build --release --locked -p "$PROGRAM_PACKAGE" \
+      --bin textweaver --features "$FEATURES") \
       || die "The build failed again. The error is above. scripts/doctor.sh collects what a bug report needs."
     say "Built without espeak-ng. Speech engines built in: $ENGINES."
   fi
-  # No separate engine hosts: tw runs Eloquence (Voxin) and DECtalk in a
-  # copy of itself (tw --engine-host).
+  # No separate engine hosts: textweaver runs Eloquence (Voxin) and DECtalk
+  # in a copy of itself (textweaver --engine-host).
 }
 
 # -------------------------------------------------------------- install --
@@ -699,10 +705,10 @@ INSTALL_SUDO=""
 install_files() {
   section "Install"
   say "Installing into $PREFIX:"
-  say "- the programs textweaver and tw, linked from $BINDIR;"
-  say "- the programs and pronunciation dictionaries in $LIBDIR;"
+  say "- textweaver, the app, and tw, the terminal reader and commands, linked from $BINDIR;"
+  say "- the program and pronunciation dictionaries in $LIBDIR, with tw a link to textweaver;"
   say "- the guides and a help file in $DOCDIR, and manual pages in $MANDIR;"
-  say "- a menu entry in $APPDIR."
+  say "- menu entries for the app and the terminal reader in $APPDIR."
 
   local parent="$PREFIX"
   while [ ! -e "$parent" ]; do parent="$(dirname "$parent")"; done
@@ -716,18 +722,16 @@ install_files() {
 
   local rel="$TARGET_DIR/release"
   if [ "$DRY_RUN" = 0 ]; then
-    [ -x "$rel/tw" ] || die "The build did not produce $rel/tw."
+    [ -x "$rel/textweaver" ] || die "The build did not produce $rel/textweaver."
   fi
 
   ir mkdir -p "$BINDIR" "$LIBDIR" "$DOCDIR" "$MANDIR" "$APPDIR" "$DATADIR/scripts"
   local f
-  for f in textweaver tw; do
-    if [ "$DRY_RUN" = 1 ] || [ -f "$rel/$f" ]; then
-      ir install -m 0755 "$rel/$f" "$LIBDIR/$f"
-    else
-      warn "$rel/$f was not built, so it is not installed."
-    fi
-  done
+  ir install -m 0755 "$rel/textweaver" "$LIBDIR/textweaver"
+  # tw is the same program, started under the name tw.
+  ir ln -sfn textweaver "$LIBDIR/tw"
+  # The app before beta 3, when an earlier install linked it.
+  remove_gui
   ir rm -rf "$LIBDIR/ibmtts-dictionaries"
   ir cp -R "$SRC/third_party/ibmtts-dictionaries" "$LIBDIR/ibmtts-dictionaries"
   for f in textweaver tw; do
@@ -760,6 +764,14 @@ install_files() {
   install_help
   install_desktop
   write_manifest
+}
+
+# The menu entries of a source install: the app's and the terminal
+# reader's, from scripts/linux beside this script.
+install_source_desktop() {
+  install_entry "$SCRIPT_DIR/linux/textweaver.desktop" textweaver.desktop textweaver
+  install_entry "$SCRIPT_DIR/linux/textweaver-terminal.desktop" textweaver-terminal.desktop tw
+  install_icon "$SCRIPT_DIR/linux/textweaver.svg"
 }
 
 # Runs an install step, through sudo when the prefix needs it.
@@ -810,26 +822,30 @@ install_help() {
       "$tw" "$sub" --help
     done
   } | iw "$DOCDIR/HELP.txt"
-  man_page textweaver "read documents aloud in the terminal" "$("$tv" --help)" | iw "$MANDIR/textweaver.1"
+  man_page textweaver "read documents aloud in the textweaver app" "$("$tv" --help)" | iw "$MANDIR/textweaver.1"
   man_page tw "read, convert, and speak documents from the command line" "$("$tw" --help)" | iw "$MANDIR/tw.1"
 }
 
-# Installs the menu entry and icon: from $1 and $2 when given (a release
-# package), else from scripts/linux beside this script.
-install_desktop() {
-  local template="${1:-$SCRIPT_DIR/linux/textweaver.desktop}"
+# Installs the menu entry template $1 as $APPDIR/$2, with its Exec and
+# TryExec lines pointing at $BINDIR/$3.
+install_entry() {
+  local template="$1" name="$2" prog="$3"
   if [ ! -f "$template" ] && [ "$DRY_RUN" = 1 ]; then
-    say "Would write $APPDIR/textweaver.desktop and $ICONDIR/textweaver.svg"
+    say "Would write $APPDIR/$name"
     return 0
   fi
   if [ ! -f "$template" ]; then
-    warn "The menu entry template $template is missing, so no menu entry is installed."
+    warn "The menu entry template $template is missing, so $name is not installed."
     return 0
   fi
-  local exe="$BINDIR/textweaver"
-  sed -e "s|^Exec=textweaver|Exec=\"$exe\"|" -e "s|^TryExec=textweaver|TryExec=$exe|" "$template" \
-    | iw "$APPDIR/textweaver.desktop"
-  local icon="${2:-$SCRIPT_DIR/linux/textweaver.svg}"
+  local exe="$BINDIR/$prog"
+  sed -e "s|^Exec=$prog |Exec=\"$exe\" |" -e "s|^TryExec=$prog\$|TryExec=$exe|" "$template" \
+    | iw "$APPDIR/$name"
+}
+
+# Installs the icon $1 and refreshes the menu.
+install_icon() {
+  local icon="$1"
   if [ -f "$icon" ] || [ "$DRY_RUN" = 1 ]; then
     ir mkdir -p "$ICONDIR"
     ir install -m 0644 "$icon" "$ICONDIR/textweaver.svg"
@@ -837,6 +853,24 @@ install_desktop() {
   if have update-desktop-database && [ -z "$INSTALL_SUDO" ]; then
     run update-desktop-database "$APPDIR" || true
   fi
+}
+
+# Installs the menu entries and icon of a source install, or of a release
+# package whose entries are in the folder $1 (with the icon $2). Since
+# beta 3, textweaver.desktop is the app's entry and
+# textweaver-terminal.desktop the terminal reader's; up to beta 2,
+# textweaver.desktop was the terminal reader's and textweaver started it.
+install_desktop() {
+  if [ -z "${1:-}" ]; then
+    install_source_desktop
+    return 0
+  fi
+  local dir="$1" icon="$2"
+  install_entry "$dir/textweaver.desktop" textweaver.desktop textweaver
+  if [ -f "$dir/textweaver-terminal.desktop" ] || [ "$DRY_RUN" = 1 ]; then
+    install_entry "$dir/textweaver-terminal.desktop" textweaver-terminal.desktop tw
+  fi
+  install_icon "$icon"
 }
 
 write_manifest() {
@@ -934,7 +968,7 @@ remove_path_line() {
 # ------------------------------------------------------------ uninstall --
 
 uninstall() {
-  say "This removes textweaver from $PREFIX: the programs (or the AppImage), the GUI if installed, engine hosts, dictionaries, guides, manual pages, menu entry, and icon."
+  say "This removes textweaver from $PREFIX: the program and its tw link (or the AppImage), an earlier release's app, engine hosts, dictionaries, guides, manual pages, menu entries, and icon."
   say "It keeps your settings, reading positions, and notes, and it does not remove system packages or Rust."
   local tw=""
   if [ -x "$LIBDIR/tw" ]; then
@@ -978,7 +1012,8 @@ uninstall() {
     if [ -e "$f" ] || [ "$DRY_RUN" = 1 ]; then ir rm -rf "$f"; fi
   done
   for f in "$BINDIR/textweaver.AppImage" "$BINDIR/textweaver-gui.AppImage" "$MANDIR/textweaver.1" "$MANDIR/tw.1" \
-    "$APPDIR/textweaver.desktop" "$APPDIR/textweaver-gui.desktop" "$ICONDIR/textweaver.svg"; do
+    "$APPDIR/textweaver.desktop" "$APPDIR/textweaver-terminal.desktop" "$APPDIR/textweaver-gui.desktop" \
+    "$ICONDIR/textweaver.svg"; do
     if [ -e "$f" ] || [ "$DRY_RUN" = 1 ]; then ir rm -f "$f"; fi
   done
   remove_path_line
@@ -1040,8 +1075,8 @@ resolve_tag() {
   say "The newest release is $RELEASE_TAG."
 }
 
-# Decides whether this run installs the GUI: --gui or --no-gui, else what
-# the manifest of an earlier install says.
+# Decides whether this run installs the app of a release up to beta 2:
+# --gui or --no-gui, else what the manifest of an earlier install says.
 decide_gui() {
   if [ "$GUI" = ask ]; then
     GUI=0
@@ -1052,8 +1087,9 @@ decide_gui() {
   fi
 }
 
-# Removes an installed GUI (the AppImage or the folder, its link, and its
-# menu entry).
+# Removes the app of a release up to beta 2 (the AppImage or the folder,
+# its textweaver-gui link, and its menu entry). Since beta 3 textweaver is
+# the app.
 remove_gui() {
   local f="$BINDIR/textweaver-gui"
   if [ -L "$f" ]; then
@@ -1255,19 +1291,19 @@ install_release() {
     for f in textweaver tw; do
       ir ln -sfn textweaver.AppImage "$BINDIR/$f"
     done
-    # The menu entry and icon come from inside the AppImage; extracting
-    # them needs no FUSE.
-    # The terminal reader's entry is in usr/share/applications in every
-    # AppImage; since beta 1 the entry at the top is the app's.
-    desktop="$WORK/squashfs-root/usr/share/applications/textweaver.desktop"
+    # The menu entries and icon come from inside the AppImage; extracting
+    # them needs no FUSE. Since beta 3, textweaver.desktop is the app's
+    # entry and textweaver-terminal.desktop the terminal reader's.
+    desktop="$WORK/squashfs-root/usr/share/applications"
     icon="$WORK/squashfs-root/textweaver.svg"
     if [ "$DRY_RUN" = 1 ]; then
-      say "Would extract textweaver.desktop, textweaver.svg, and QUICKSTART.md from the AppImage"
+      say "Would extract textweaver.desktop, textweaver-terminal.desktop, textweaver.svg, and QUICKSTART.md from the AppImage"
     else
       chmod +x "$WORK/$file"
       (cd "$WORK" && "./$file" --appimage-extract usr/share/applications/textweaver.desktop > /dev/null 2>&1 \
         && "./$file" --appimage-extract textweaver.svg > /dev/null 2>&1) \
         || warn "Could not read the menu entry from the AppImage, so none is installed."
+      (cd "$WORK" && "./$file" --appimage-extract usr/share/applications/textweaver-terminal.desktop > /dev/null 2>&1) || true
       if (cd "$WORK" && "./$file" --appimage-extract usr/lib/textweaver/QUICKSTART.md > /dev/null 2>&1); then
         ir mkdir -p "$DOCDIR"
         ir install -m 0644 "$WORK/squashfs-root/usr/lib/textweaver/QUICKSTART.md" "$DOCDIR/QUICKSTART.md"
@@ -1282,7 +1318,7 @@ install_release() {
     for f in textweaver tw; do
       ir ln -sfn "../lib/textweaver/$f" "$BINDIR/$f"
     done
-    desktop="$LIBDIR/share/applications/textweaver.desktop"
+    desktop="$LIBDIR/share/applications"
     icon="$LIBDIR/share/icons/hicolor/scalable/apps/textweaver.svg"
     ir mkdir -p "$DOCDIR"
     ir install -m 0644 "$LIBDIR/QUICKSTART.md" "$DOCDIR/QUICKSTART.md"
@@ -1290,11 +1326,24 @@ install_release() {
   install_desktop "$desktop" "$icon"
 
   GUI_INSTALLED=""
-  decide_gui
-  if [ "$GUI" = 1 ]; then
-    install_gui "$base" "$name" "$kind"
-  else
+  # Since beta 3 (its package has the terminal reader's own menu entry)
+  # textweaver is the app, and an earlier release's app goes.
+  local one_program=0
+  if [ "$DRY_RUN" = 1 ] || [ -f "$desktop/textweaver-terminal.desktop" ]; then
+    one_program=1
+  fi
+  if [ "$one_program" = 1 ]; then
+    if [ "$GUI" = 1 ]; then
+      say "--gui is not needed: textweaver is the app since beta 3."
+    fi
     remove_gui
+  else
+    decide_gui
+    if [ "$GUI" = 1 ]; then
+      install_gui "$base" "$name" "$kind"
+    else
+      remove_gui
+    fi
   fi
 
   {
@@ -1327,11 +1376,14 @@ install_release() {
   if [ "$kind" = appimage ] && ! fuse_works; then
     say "FUSE seems to be missing, so set APPIMAGE_EXTRACT_AND_RUN=1 before running textweaver or tw, or install again with --tarball."
   fi
-  say "Check your speech engines: $BINDIR/tw backends"
-  say "Read the quick start aloud: $BINDIR/textweaver $DOCDIR/QUICKSTART.md"
-  if [ -n "$GUI_INSTALLED" ]; then
-    say "Start the GUI from the menu entry textweaver app, or run $BINDIR/textweaver-gui"
+  if [ "$one_program" = 1 ]; then
+    say "Start the app from the menu entry textweaver, or run $BINDIR/textweaver"
+    say "In a terminal, use tw: the terminal reader, and commands such as tw convert."
+  elif [ -n "$GUI_INSTALLED" ]; then
+    say "Start the app from the menu entry textweaver app, or run $BINDIR/textweaver-gui"
   fi
+  say "Check your speech engines: $BINDIR/tw backends"
+  say "Read the quick start aloud in the terminal reader: $BINDIR/tw $DOCDIR/QUICKSTART.md"
   if [ "$kind" = tarball ]; then
     say "The guides are in $LIBDIR/docs."
   fi
@@ -1355,7 +1407,7 @@ if [ "$MODE" = release ]; then
 fi
 
 if [ "$GUI" = 1 ]; then
-  die "The GUI is installed from release packages: add --release latest (or a tag) to --gui. Building it from source is described in docs/gui.md."
+  say "--gui is not needed: textweaver, built from source, is the app."
 fi
 
 say "This script builds textweaver from source and installs it under $PREFIX."
@@ -1380,7 +1432,9 @@ if [ "$DRY_RUN" = 1 ]; then
   exit 0
 fi
 say "textweaver is installed in $PREFIX."
+say "Start the app from the menu entry textweaver, or run $BINDIR/textweaver"
+say "In a terminal, use tw: the terminal reader, and commands such as tw convert."
 say "Check your speech engines: $BINDIR/tw backends"
-say "Read the quick start aloud: $BINDIR/textweaver $DOCDIR/QUICKSTART.md"
+say "Read the quick start aloud in the terminal reader: $BINDIR/tw $DOCDIR/QUICKSTART.md"
 say "Help for every command is in $DOCDIR/HELP.txt."
 say "To update later, run $DATADIR/scripts/update.sh. To remove textweaver, run this script with --uninstall."

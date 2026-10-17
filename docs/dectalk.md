@@ -93,7 +93,7 @@ The rate is measured in words per minute, DECtalk's native unit, from 75 to 600.
 - "no DECtalk found": textweaver did not find a library. Name it as described above.
 - "does not look like a DECtalk library": the file you named is not a DECtalk library. Check the path.
 - "DECtalk did not start": the library loaded but refused to start. Confirm that it is licensed on this computer and that its dictionary, `dtalk_us.dic`, is in the same folder as the library.
-- "textweaver-host-x86.exe not found": your DECtalk is a 32-bit library, which requires the 32-bit host. Keep `textweaver-host-x86.exe` from the release package beside `tw.exe`, or build it with `cargo xtask hosts`.
+- "textweaver-host-x86.exe not found": your DECtalk is a 32-bit library, which requires the 32-bit host. Keep `textweaver-host-x86.exe` from the release package beside `textweaver.exe`, or build it with `cargo xtask hosts`.
 
 ## About the free DECtalk source
 

@@ -1,4 +1,6 @@
-//! textweaver's GUI on Masonry, Xilem's widget layer (ADR-0027).
+//! textweaver's app, the GUI on Masonry, Xilem's widget layer (ADR-0027).
+//! Its binary is `textweaver`, the one program the packages ship, which
+//! also runs the terminal program ([`dispatch`]).
 //!
 //! The stack is all Rust: Masonry widgets, Vello rendering, Parley text
 //! layout, AccessKit accessibility, and winit windows. The app core
@@ -35,6 +37,8 @@
 //! - [`background`]: `--background` windows that never take the
 //!   foreground (Windows).
 //! - [`console`]: the terminal the program was started from, on Windows.
+//! - [`dispatch`]: whether the one program runs the app or the terminal
+//!   program (`--tw`, the name `tw`, a `tw` command).
 //! - [`graphics`]: which graphics API the window draws with (opt-in).
 //! - `screenshot` (feature `screenshot`): the window drawn to a PNG.
 //! - `frames` (feature `screenshot`): the frame-time probe,
@@ -50,6 +54,7 @@ pub mod clipboard;
 pub mod console;
 pub mod dark_mode;
 pub mod dialog;
+pub mod dispatch;
 pub mod document;
 pub mod file_chooser;
 pub mod find_panel;

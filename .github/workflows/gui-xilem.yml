@@ -175,7 +175,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         with:
-          name: textweaver-gui-windows
+          name: textweaver-package-windows
           path: gui-dist/*.zip
 
   macos:
@@ -195,7 +195,7 @@ jobs:
         run: |
           home=$(mktemp -d)
           status=0
-          ./target/debug/textweaver-xilem fixtures/sample.md --backend paced --read --background \
+          ./target/debug/textweaver fixtures/sample.md --backend paced --read --background \
             --exit-after 6 --home "$home" --log-file gui.log || status=$?
           cat gui.log
           test "$status" -eq 0
@@ -284,7 +284,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         with:
-          name: textweaver-gui-macos
+          name: textweaver-package-macos
           path: gui-dist/*.zip
 
   linux:
@@ -398,7 +398,7 @@ jobs:
             a11y-tree/gui.log
           if-no-files-found: warn
       - name: Review screenshots (100% and 200%)
-        run: ./target/debug/textweaver-xilem --review-screenshots screenshots fixtures/sample.md
+        run: ./target/debug/textweaver --review-screenshots screenshots fixtures/sample.md
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -420,7 +420,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         with:
-          name: textweaver-gui-linux
+          name: textweaver-package-linux
           path: |
             gui-dist/*.tar.gz
             gui-dist/*.AppImage

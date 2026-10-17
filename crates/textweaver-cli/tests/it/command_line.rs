@@ -1,7 +1,8 @@
 //! The command-line rules (the "Command line" guide, `docs/command-line.md`),
-//! checked over `tw --help` and a few runs: one test per rule. The option
-//! rules are checked under both names, `tw` and `textweaver`, its second
-//! name (the launcher binary here; a link in the Linux and macOS packages).
+//! checked over `tw --help` and a few runs: one test per rule, on this
+//! crate's terminal-only `tw`. The one program, `textweaver`, runs the
+//! same library with `--tw`; its dispatch is tested in textweaver-xilem,
+//! and the packaged `tw` by `tools/package-smoke.sh`.
 //!
 //! - Output is `--out`, with `-o` and `--output` hidden aliases; no option
 //!   list shows `--output`, `--format`, `--export` or `--language`.
@@ -16,8 +17,8 @@
 use std::io::Write as _;
 use std::process::{Command, Output, Stdio};
 
-/// The program under its two names.
-const NAMES: [&str; 2] = [env!("CARGO_BIN_EXE_tw"), env!("CARGO_BIN_EXE_textweaver")];
+/// The program.
+const NAMES: [&str; 1] = [env!("CARGO_BIN_EXE_tw")];
 
 /// Runs `tw` with `args`, standard input empty and not a terminal, the
 /// data folder in `home`, and speech never played.
@@ -150,36 +151,6 @@ fn the_option_rules_hold_for_every_command() {
     let home = tempfile::tempdir().unwrap();
     for exe in NAMES {
         option_rules(exe, home.path());
-    }
-}
-
-/// `tw --help` and `textweaver --help` print the same text, every
-/// command's help included.
-#[test]
-fn both_names_print_the_same_help() {
-    let home = tempfile::tempdir().unwrap();
-    assert_eq!(
-        all_help(NAMES[0], home.path()),
-        all_help(NAMES[1], home.path())
-    );
-}
-
-/// The second name passes on the exit status and the one-line error.
-#[test]
-fn the_second_name_keeps_exit_codes_and_error_lines() {
-    let home = tempfile::tempdir().unwrap();
-    let missing = home.path().join("missing.md");
-    let missing = missing.to_str().unwrap();
-    for args in [
-        vec!["text", "--no-such-option"],
-        vec!["speak", "--file", missing],
-        vec!["--version"],
-    ] {
-        let a = run_in(NAMES[0], home.path(), &args, "");
-        let b = run_in(NAMES[1], home.path(), &args, "");
-        assert_eq!(a.status.code(), b.status.code(), "{args:?}");
-        assert_eq!(a.stdout, b.stdout, "{args:?}");
-        assert_eq!(a.stderr, b.stderr, "{args:?}");
     }
 }
 

@@ -94,6 +94,7 @@ CRATE_ADRS = {
     "dictation": ["0013", "0023"],
     "gui": ["0014"],
     "xilem": ["0027"],
+    "launcher": [],  # no ADR; the owner's decision of Friday, October 16, 2026
     "render": ["0016", "0018"],
     "convert": ["0016"],
     "writers": ["0017"],
@@ -118,6 +119,7 @@ CRATE_NO_ADR_NOTE = {
     "editor": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
     "sync": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
     "components": ("Optional components", "../components.md#for-developers"),
+    "launcher": ("Architecture guide: the crates", "../dev/architecture.md#the-crates"),
 }
 
 # ---------------------------------------------------------------------------
@@ -129,8 +131,8 @@ CRATE_NO_ADR_NOTE = {
 LAYERS = [
     # (id, heading, one sentence, crates)
     ("tools", "Tools", "Maintenance tasks for developers; not part of the program.", ["xtask"]),
-    ("frontends", "Frontends", "What you run: the terminal reader, the command-line tool, and the GUI.",
-     ["tui", "cli", "gui", "xilem"]),
+    ("frontends", "Frontends", "What you run: textweaver, the app and the terminal program in one, and tw.",
+     ["tui", "cli", "gui", "xilem", "launcher"]),
     ("application", "Application", "The application core that every frontend drives.", ["app"]),
     ("output", "Output and aids", "Writing other formats, and what changes how text looks.",
      ["render", "convert", "writers", "fonts", "theme", "aids", "summary", "lexicon", "vault", "dictation"]),
@@ -155,11 +157,11 @@ JOB_OVERRIDES = {
     "summary": "Extractive summaries without a model: LexRank over the document's own sentences.",
     "apple": "Speaks with Apple's system voices on macOS, through the nsspeech and avspeech backends.",
     "cite": "Citations: a reference library, DOI and ISBN lookup, BibTeX, RIS, and CSL-JSON, and CSL styles.",
-    "cli": "Builds tw, the scripting command-line tool: text, search, speak, convert, export audio, cite, serve, and more.",
+    "cli": "The terminal program, which textweaver runs as tw: the terminal reader, and the commands text, search, speak, convert, export audio, cite, serve, and more.",
     "convert": "Converts files and whole folder trees on all cores; the engine behind tw convert.",
     "dectalk": "Speaks with a DECtalk the user installed and licensed, through a separate host process.",
     "espeak": "Runs an installed eSpeak NG in a host process built for its architecture, so an engine crash cannot close the reader.",
-    "host": "Host mode: tw and the app run each speech engine in a copy of themselves, and one 32-bit program, textweaver-host-x86.exe, runs every 32-bit engine on Windows.",
+    "host": "Host mode: textweaver runs each speech engine in a copy of itself, and one 32-bit program, textweaver-host-x86.exe, runs every 32-bit engine on Windows.",
     "piper": "Speaks with Piper neural voices inside textweaver, on the pure-Rust RTen runtime, and finds, downloads, and checks the voices.",
     "dictation": "Voice typing: transcribes speech through a Whisper program and applies spoken commands.",
     "eci": "Speaks with ETI-Eloquence through the ECI library the user installed, in a separate host process.",
@@ -170,7 +172,8 @@ JOB_OVERRIDES = {
     "formats": "Document loaders that turn text, Markdown, HTML, EPUB, DOCX, PDF (with OCR of scans), DAISY, PowerPoint, spreadsheets, archives, and web pages into a document.",
     "ocr": "Text recognition for scanned pages: the ocrs engine in process, Tesseract as a separate program, model downloads checked by SHA-256, and page images.",
     "gui": "The native GUI reader window on wxDragon; a feasibility spike, not built by default, kept as a fallback while Wave 3 builds the GUI on Xilem.",
-    "xilem": "The all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit, with its own screen-reader document view; not built by default yet.",
+    "xilem": "Builds textweaver, the one program: the all-Rust app on Masonry, Vello, Parley, AccessKit, and winit, with its own screen-reader document view, and the terminal program with --tw.",
+    "launcher": "tw.exe on Windows: a small console program that runs textweaver.exe in terminal mode and waits for it.",
     "keymap": "The keyboard vocabulary: every action, its default keys, layers, user overrides, and conflicts.",
     "lexicon": "Define word offline (your glossary, Open English WordNet, CMUdict pronunciations), and the message catalog for interface translations.",
     "math": "Math: LaTeX and ASCIIMath parsed into one tree, written as MathML, and spoken as natural English.",

@@ -239,15 +239,14 @@ report() {
       say "tw links to: $(tilde "$real")"
     fi
     say "tw version: $(first_line "$TW" --version)"
+    # Since beta 3 tw is a link to textweaver, the one program.
     if [ -x "$dir/textweaver" ]; then
-      say "textweaver version: $(first_line "$dir/textweaver" --version)"
+      say "textweaver (the app) version: $(first_line "$dir/textweaver" --version)"
     else
       say "textweaver: not found beside tw"
     fi
     if [ -x "$dir/textweaver-gui" ]; then
-      say "Window version: $(first_line "$dir/textweaver-gui" --version)"
-    else
-      say "Window (textweaver-gui): not installed beside tw"
+      say "Old app from before beta 3: $(tilde "$dir/textweaver-gui") is unused; textweaver replaced it. Run the installer again to remove it."
     fi
     local manifest
     for manifest in "$dir/../../share/textweaver/install-manifest.txt" "$dir/../share/textweaver/install-manifest.txt"; do

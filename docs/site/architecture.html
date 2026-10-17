@@ -403,12 +403,13 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "bins": [
-    "textweaver",
     "tw"
    ],
    "build_deps": [],
    "default_member": true,
-   "dependents": [],
+   "dependents": [
+    "textweaver-xilem"
+   ],
    "deps": [
     "textweaver-app",
     "textweaver-cite",
@@ -424,12 +425,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-vault",
     "textweaver-writers"
    ],
-   "description": "tw: textweaver's terminal program, the terminal reader and the command line (extract, search, speak, convert, export audio, cite, library, vault, dictate, settings, JSON-RPC), as a library with thin binaries",
+   "description": "tw: textweaver's terminal program, the terminal reader and the command line (extract, search, speak, convert, export audio, cite, library, vault, dictate, settings, JSON-RPC), as a library that the textweaver program runs, with a terminal-only binary for development",
    "dev_deps": [
     "textweaver-enginehost",
     "textweaver-espeak"
    ],
-   "job": "Builds tw, the scripting command-line tool: text, search, speak, convert, export audio, cite, serve, and more.",
+   "job": "The terminal program, which textweaver runs as tw: the terminal reader, and the commands text, search, speak, convert, export audio, cite, serve, and more.",
    "layer": "frontends",
    "name": "textweaver-cli",
    "path": "crates/textweaver-cli",
@@ -447,24 +448,48 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "bins": [
-    "textweaver-xilem"
+    "textweaver"
    ],
    "build_deps": [],
    "default_member": false,
    "dependents": [],
    "deps": [
     "textweaver-app",
+    "textweaver-cli",
     "textweaver-fonts",
     "textweaver-host",
     "textweaver-theme"
    ],
-   "description": "textweaver's all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit (ADR-0027)",
+   "description": "textweaver, the one program: the app, its all-Rust GUI on Masonry (Xilem's widget layer), Vello, Parley, AccessKit, and winit (ADR-0027), with the terminal program behind --tw",
    "dev_deps": [],
-   "job": "The all-Rust GUI on Masonry, Vello, Parley, AccessKit, and winit, with its own screen-reader document view; not built by default yet.",
+   "job": "Builds textweaver, the one program: the all-Rust app on Masonry, Vello, Parley, AccessKit, and winit, with its own screen-reader document view, and the terminal program with --tw.",
    "layer": "frontends",
    "name": "textweaver-xilem",
    "path": "crates/textweaver-xilem",
    "short": "xilem",
+   "tool": false,
+   "version": "0.1.0-beta.2"
+  },
+  {
+   "adr_note": {
+    "href": "../dev/architecture.md#the-crates",
+    "text": "Architecture guide: the crates"
+   },
+   "adrs": [],
+   "bins": [
+    "tw-launcher"
+   ],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [],
+   "deps": [],
+   "description": "tw's launcher on Windows: a small console program that runs textweaver.exe beside it in terminal mode (--tw), with the same arguments, standard handles, and exit status",
+   "dev_deps": [],
+   "job": "tw.exe on Windows: a small console program that runs textweaver.exe in terminal mode and waits for it.",
+   "layer": "frontends",
+   "name": "textweaver-launcher",
+   "path": "crates/textweaver-launcher",
+   "short": "launcher",
    "tool": false,
    "version": "0.1.0-beta.2"
   },
@@ -1185,7 +1210,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    ],
    "description": "Host mode for textweaver's programs (`--engine-host <engine>`) and the combined 32-bit engine host, textweaver-host-x86.exe",
    "dev_deps": [],
-   "job": "Host mode: tw and the app run each speech engine in a copy of themselves, and one 32-bit program, textweaver-host-x86.exe, runs every 32-bit engine on Windows.",
+   "job": "Host mode: textweaver runs each speech engine in a copy of itself, and one 32-bit program, textweaver-host-x86.exe, runs every 32-bit engine on Windows.",
    "layer": "speech",
    "name": "textweaver-host",
    "path": "crates/textweaver-host",
@@ -1763,11 +1788,12 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "name": "Tools"
   },
   {
-   "about": "What you run: the terminal reader, the command-line tool, and the GUI.",
+   "about": "What you run: textweaver, the app and the terminal program in one, and tw.",
    "crates": [
     "textweaver-tui",
     "textweaver-cli",
-    "textweaver-xilem"
+    "textweaver-xilem",
+    "textweaver-launcher"
    ],
    "id": "frontends",
    "name": "Frontends"

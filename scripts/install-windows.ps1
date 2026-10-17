@@ -7,21 +7,24 @@
   By default the script downloads the newest release zip from GitHub, checks
   its SHA-256 against SHA256SUMS.txt, and extracts it to
   %LOCALAPPDATA%\Programs\textweaver. It then offers to add that folder to
-  your user PATH and to create a Start menu shortcut that opens textweaver in
-  a terminal. With -FromSource it builds the package with cargo xtask dist
-  instead, after checking for the MSVC build tools, rustup, and the 32-bit
-  Rust target.
+  your user PATH and to create two Start menu shortcuts: textweaver app,
+  which starts the app (textweaver.exe), and textweaver terminal, which
+  opens the terminal reader (tw.exe) in Windows Terminal. With -FromSource
+  it builds the package with cargo xtask dist instead, after checking for
+  the MSVC build tools, rustup, and the 32-bit Rust target.
 
   Every step is announced before it runs. The script asks before it changes
   your PATH, installs Rust, or creates a shortcut; -Yes answers yes. Running
-  it again updates the install. It works in Windows PowerShell 5.1 and in
-  PowerShell 7.
+  it again updates the install, and removes what an earlier version left
+  that this one does not use: the old app, textweaver-gui.exe, and the
+  shortcuts an earlier run made under other names. It works in Windows
+  PowerShell 5.1 and in PowerShell 7.
 
-  Since beta 1 the app, textweaver-gui, is in the same package as tw and is
-  always installed beside it; -Gui adds its Start menu shortcut. For older
-  releases, -Gui installs the app from the release's GUI package (or builds
-  it with cargo xtask gui-dist), in a gui folder inside
-  the install, and offers a second Start menu shortcut for it.
+  Since beta 3 textweaver is one program: textweaver.exe starts the app,
+  and tw.exe runs the terminal reader and the commands. -Gui and -NoGui
+  are kept for older scripts and releases: for releases up to 0.1.0-alpha.9,
+  -Gui installs the app from the release's GUI package, in a gui folder
+  inside the install; -NoGui leaves out the app's shortcut.
 
   GNU-style options work too: --help, --dry-run, --yes, --from-source,
   --uninstall, --release TAG, --install-dir DIR, --gui, --no-gui.
@@ -40,17 +43,17 @@
   Where to install (default: %LOCALAPPDATA%\Programs\textweaver).
 
 .PARAMETER Gui
-  Also install the GUI, textweaver-gui. Running the script again keeps it
-  installed.
+  For releases up to 0.1.0-alpha.9: also install the app from the release's
+  GUI package. Later releases always hold the app.
 
 .PARAMETER NoGui
-  Do not install the GUI, and remove it if an earlier run installed it.
+  Do not offer the app's Start menu shortcut, textweaver app.
 
 .PARAMETER NoShortcut
-  Do not offer the Start menu shortcut.
+  Do not offer the Start menu shortcuts.
 
 .PARAMETER Uninstall
-  Remove textweaver, its PATH entry, and its shortcut. Settings are kept.
+  Remove textweaver, its PATH entry, and its shortcuts. Settings are kept.
 
 .PARAMETER DryRun
   Print each step instead of doing it.
@@ -170,19 +173,20 @@ if ($Help) {
     Write-Line
     Write-Line 'Installs textweaver from the newest GitHub release: downloads the zip, checks its'
     Write-Line 'SHA-256 against SHA256SUMS.txt, and extracts it to %LOCALAPPDATA%\Programs\textweaver.'
-    Write-Line 'Then it offers to add that folder to your user PATH and to create a Start menu'
-    Write-Line 'shortcut. -FromSource builds the package with cargo xtask dist instead.'
+    Write-Line 'Then it offers to add that folder to your user PATH and to create the Start menu'
+    Write-Line 'shortcuts textweaver app (textweaver.exe) and textweaver terminal (tw.exe).'
+    Write-Line '-FromSource builds the package with cargo xtask dist instead.'
     Write-Line
     Write-Line 'Options:'
     Write-Line '  -Release TAG     Install this release, such as v0.1.0-alpha.3.'
     Write-Line '  -FromSource      Build from source (needs the MSVC build tools and rustup).'
     Write-Line '  -Source DIR      The checkout to build (default: the one this script is in).'
     Write-Line '  -InstallDir DIR  Where to install (default: %LOCALAPPDATA%\Programs\textweaver).'
-    Write-Line '  -Gui             Also install the GUI, textweaver-gui, with its own shortcut.'
-    Write-Line '                   Running the script again keeps the GUI installed.'
-    Write-Line '  -NoGui           Do not install the GUI; remove it if it was installed.'
+    Write-Line '  -Gui             Releases up to 0.1.0-alpha.9 only: also install the app from the'
+    Write-Line '                   release''s GUI package. Later releases always hold the app.'
+    Write-Line '  -NoGui           Do not offer the app''s shortcut, textweaver app.'
     Write-Line '  -NoShortcut      Do not offer the Start menu shortcuts.'
-    Write-Line '  -Uninstall       Remove textweaver, its PATH entry, and its shortcut. Settings are kept.'
+    Write-Line '  -Uninstall       Remove textweaver, its PATH entry, and its shortcuts. Settings are kept.'
     Write-Line '  -DryRun          Print each step instead of doing it.'
     Write-Line '  -Yes             Answer yes to every question.'
     Write-Line '  -Help            Show this help. --help, --dry-run, --yes and the other GNU-style'
@@ -194,10 +198,16 @@ if ($Help) {
 
 if (-not $InstallDir) { $InstallDir = Join-Path $env:LOCALAPPDATA 'Programs\textweaver' }
 $InstallDir = [IO.Path]::GetFullPath($InstallDir)
-$ShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver.lnk'
+$ShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver terminal.lnk'
 $GuiShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver app.lnk'
-# The app's shortcut as releases up to beta 2 named it; removed in its place.
+# The terminal reader's shortcut as this script named it up to beta 2;
+# removed in its place, since textweaver is the app now.
+$OldShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver.lnk'
+# The app's shortcut as older versions of this script named it; removed in its place.
 $OldGuiShortcutPath = Join-Path ([Environment]::GetFolderPath('Programs')) 'textweaver window.lnk'
+# The app's program: textweaver.exe since beta 3, textweaver-gui.exe in
+# beta 1 and 2 (Get-AppProgram).
+$AppExe = 'textweaver.exe'
 $Manifest = Join-Path $InstallDir 'install-manifest.txt'
 $GuiDir = Join-Path $InstallDir 'gui'
 $RepoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -236,7 +246,7 @@ function Add-ToUserPath {
     }
     Write-Line "$InstallDir is not on your user PATH. Adding it lets you run textweaver and tw from any folder, in new terminals."
     if (-not (Confirm-Choice "Add $InstallDir to your user PATH?")) {
-        Write-Line "PATH unchanged. Run textweaver as $InstallDir\textweaver.exe."
+        Write-Line "PATH unchanged. Run the terminal reader as $InstallDir\tw.exe, and the app as $InstallDir\textweaver.exe."
         return
     }
     Invoke-Step "add $InstallDir to the user PATH (HKCU\Environment)" {
@@ -262,8 +272,8 @@ function Undo-UserPathEntry {
 
 function Add-StartMenuShortcut {
     if ($NoShortcut) { return }
-    Write-Section 'Start menu'
-    $exe = Join-Path $InstallDir 'textweaver.exe'
+    Write-Section 'Start menu, terminal reader'
+    $exe = Join-Path $InstallDir 'tw.exe'
     $wt = Get-Command 'wt.exe' -ErrorAction SilentlyContinue
     if ($wt) {
         $target = $wt.Source
@@ -274,19 +284,33 @@ function Add-StartMenuShortcut {
         $arguments = "/k `"`"$exe`"`""
         $how = 'a command prompt'
     }
-    Write-Line "A Start menu shortcut named textweaver can open $how running textweaver."
+    Write-Line "A Start menu shortcut named textweaver terminal can open $how running the terminal reader, tw."
     if (Test-Path -LiteralPath $ShortcutPath) { Write-Line 'The shortcut exists already; it will be updated.' }
-    if (-not (Confirm-Choice 'Create the Start menu shortcut?')) { Write-Line 'No shortcut created.'; return }
+    if (-not (Confirm-Choice 'Create the Start menu shortcut for the terminal reader?')) { Write-Line 'No terminal shortcut created.'; return }
     Invoke-Step "create the shortcut $ShortcutPath" {
         $shell = New-Object -ComObject WScript.Shell
         $link = $shell.CreateShortcut($ShortcutPath)
         $link.TargetPath = $target
         $link.Arguments = $arguments
         $link.WorkingDirectory = $env:USERPROFILE
-        $link.Description = 'Read documents aloud, with a highlight that follows the spoken word'
+        $link.Description = 'Read documents aloud in the terminal reader, with a highlight that follows the spoken word'
         $link.IconLocation = "$exe,0"
         $link.Save()
     }
+}
+
+# Removes the shortcut "textweaver", which this script made up to beta 2
+# for the terminal reader: only that one file, and only when it starts a
+# program in the install folder.
+function Invoke-OldShortcutCleanup {
+    if (-not (Test-Path -LiteralPath $OldShortcutPath -PathType Leaf)) { return }
+    $link = (New-Object -ComObject WScript.Shell).CreateShortcut($OldShortcutPath)
+    $ours = "$($link.TargetPath) $($link.Arguments)".IndexOf($InstallDir, [StringComparison]::OrdinalIgnoreCase) -ge 0
+    if (-not $ours) {
+        Write-Line "Left as it is: $OldShortcutPath, which does not start a program in $InstallDir."
+        return
+    }
+    Invoke-Step "remove the old shortcut $OldShortcutPath" { Remove-Item -LiteralPath $OldShortcutPath -Force }
 }
 
 # ----------------------------------------------------------------- GUI --
@@ -371,21 +395,31 @@ function Install-Gui([string] $Stage) {
 
 function Add-GuiShortcut {
     if ($NoShortcut) { return }
-    Write-Section 'Start menu, GUI'
-    $exe = Join-Path $GuiDir 'textweaver-gui.exe'
-    Write-Line 'A Start menu shortcut named textweaver app can start the GUI.'
+    Write-Section 'Start menu, app'
+    $exe = Join-Path $GuiDir $AppExe
+    Write-Line "A Start menu shortcut named textweaver app can start the app, $AppExe."
     if (Test-Path -LiteralPath $GuiShortcutPath) { Write-Line 'The shortcut exists already; it will be updated.' }
-    if (-not (Confirm-Choice 'Create the Start menu shortcut for the GUI?')) { Write-Line 'No GUI shortcut created.'; return }
+    if (-not (Confirm-Choice 'Create the Start menu shortcut for the app?')) { Write-Line 'No app shortcut created.'; return }
     Invoke-Step "create the shortcut $GuiShortcutPath" {
         $shell = New-Object -ComObject WScript.Shell
         $link = $shell.CreateShortcut($GuiShortcutPath)
         $link.TargetPath = $exe
         $link.WorkingDirectory = $env:USERPROFILE
-        $link.Description = 'Read documents aloud in a window, with a highlight that follows the spoken word'
+        $link.Description = 'Read documents aloud in the textweaver app, with a highlight that follows the spoken word'
         $link.IconLocation = "$exe,0"
         $link.Save()
     }
     Invoke-OldGuiShortcutCleanup
+}
+
+# The app's program in a staged package: textweaver.exe since beta 3 (the
+# package has the app's guide, GUI.md, and no textweaver-gui.exe),
+# textweaver-gui.exe in beta 1 and 2, or $null for the releases up to
+# 0.1.0-alpha.9, whose app was a package of its own.
+function Get-AppProgram([string] $Stage) {
+    if (Test-Path -LiteralPath (Join-Path $Stage 'textweaver-gui.exe')) { return 'textweaver-gui.exe' }
+    if (Test-Path -LiteralPath (Join-Path $Stage 'GUI.md')) { return 'textweaver.exe' }
+    return $null
 }
 
 function Undo-GuiShortcut {
@@ -601,12 +635,16 @@ function Install-Stage($Package) {
             $lines += "tag=$($Package.Tag)"
         }
         $lines += "version=$($Package.Version)"
+        # The programs this install put here, one line each.
+        foreach ($p in (Get-ChildItem -LiteralPath $InstallDir -Filter '*.exe' -File | Sort-Object Name)) {
+            $lines += "program=$($p.Name)"
+        }
         [IO.File]::WriteAllLines($Manifest, [string[]] $lines)
     }
 }
 
 function Uninstall-Textweaver {
-    Write-Line "This removes textweaver from $InstallDir (the GUI too, if installed), its user PATH entry, and its Start menu shortcuts."
+    Write-Line "This removes textweaver from $InstallDir, its user PATH entry, and its Start menu shortcuts."
     Write-Line 'It keeps your settings, reading positions, and notes, and it does not remove Rust.'
     $installed = (Test-Path -LiteralPath $InstallDir) -or (Test-Path -LiteralPath $ShortcutPath) -or (Test-PathEntry (Get-UserPath) $InstallDir)
     if (-not $installed -and -not $DryRun) {
@@ -628,6 +666,7 @@ function Uninstall-Textweaver {
     if ((Test-Path -LiteralPath $GuiShortcutPath) -or $DryRun) {
         Invoke-Step "remove the shortcut $GuiShortcutPath" { Remove-Item -LiteralPath $GuiShortcutPath -Force }
     }
+    Invoke-OldShortcutCleanup
     Invoke-OldGuiShortcutCleanup
     Write-Line
     Write-Line 'textweaver is removed.'
@@ -660,30 +699,31 @@ try {
         $package = Get-ReleasePackage
     }
     $withGui = Get-GuiChoice
+    # Before Install-Stage, which replaces the earlier install's files (the
+    # old app, textweaver-gui.exe, among them) with the package's.
+    $app = $null
+    if (-not $DryRun) { $app = Get-AppProgram $package.Stage }
     Install-Stage $package
-    if ($withGui) {
-        if ($DryRun -or (Test-Path -LiteralPath (Join-Path $package.Stage 'textweaver-gui.exe'))) {
-            # Since beta 1 the app is in the package itself, so Install-Stage
-            # has put it beside tw.exe; only the shortcut and the manifest
-            # line remain.
-            $script:GuiDir = $InstallDir
-            Write-Line "The app, textweaver-gui.exe, is installed in $InstallDir with tw."
-            Invoke-Step "add gui=package to $Manifest" {
-                Add-Content -LiteralPath $Manifest -Value 'gui=package' -Encoding ascii
-            }
+    if ($DryRun -or $app) {
+        # Since beta 1 the app is in the package itself, so Install-Stage
+        # has put it beside tw.exe; since beta 3 it is textweaver.exe.
+        if ($app) { $script:AppExe = $app }
+        $script:GuiDir = $InstallDir
+        Write-Line "The app, $AppExe, is installed in $InstallDir, with tw.exe for the terminal."
+        $guiInstalled = $true
+    } elseif ($withGui) {
+        # Releases up to 0.1.0-alpha.9 had the app in a package of its own.
+        $script:AppExe = 'textweaver-gui.exe'
+        if ($FromSource) { $guiStage = Build-GuiFromSource $package } else { $guiStage = Get-ReleaseGuiPackage $package }
+        if ($guiStage) {
+            Install-Gui $guiStage
             $guiInstalled = $true
-        } else {
-            # Releases up to 0.1.0-alpha.9 had the app in a package of its own.
-            if ($FromSource) { $guiStage = Build-GuiFromSource $package } else { $guiStage = Get-ReleaseGuiPackage $package }
-            if ($guiStage) {
-                Install-Gui $guiStage
-                $guiInstalled = $true
-            }
         }
     }
     Add-ToUserPath
     Add-StartMenuShortcut
-    if ($guiInstalled) { Add-GuiShortcut } else { Undo-GuiShortcut }
+    Invoke-OldShortcutCleanup
+    if ($guiInstalled -and -not $NoGui) { Add-GuiShortcut } else { Undo-GuiShortcut }
 } catch {
     Write-Line
     Write-Line "Error: $($_.Exception.Message)"
@@ -699,7 +739,8 @@ if ($DryRun) {
     exit 0
 }
 Write-Line "textweaver $($package.Version) is installed in $InstallDir."
+if ($guiInstalled) { Write-Line "Start the app from the Start menu (textweaver app), or run $GuiDir\$AppExe" }
+Write-Line "In a terminal, use tw: the terminal reader, and commands such as tw convert."
 Write-Line "Check your speech engines: & `"$InstallDir\tw.exe`" backends"
-Write-Line "Read the quick start aloud: & `"$InstallDir\textweaver.exe`" `"$InstallDir\QUICKSTART.md`""
-if ($guiInstalled) { Write-Line "Start the GUI from the Start menu (textweaver app), or run $GuiDir\textweaver-gui.exe" }
+Write-Line "Read the quick start aloud in the terminal reader: & `"$InstallDir\tw.exe`" `"$InstallDir\QUICKSTART.md`""
 Write-Line 'To remove textweaver, run this script with -Uninstall.'

@@ -7,7 +7,7 @@
 //
 // Runs only on a CI runner; it refuses to run anywhere else.
 //
-//   node tools/a11y/voiceover-session.mjs --exe target/debug/textweaver-xilem --out voiceover
+//   node tools/a11y/voiceover-session.mjs --exe target/debug/textweaver --out voiceover
 
 import { execFileSync } from "node:child_process";
 import guidepup from "@guidepup/guidepup";
@@ -17,7 +17,7 @@ import {
 
 requireRunner("voiceover-session.mjs");
 const { voiceOver } = guidepup;
-const args = parseArgs("textweaver-xilem");
+const args = parseArgs("textweaver");
 const expected = loadExpected(args.expected);
 
 const watchdog = setTimeout(() => {

@@ -2,21 +2,22 @@
 //! release package for this platform (docs/dev/releasing.md). `cargo
 //! xtask gui-dist` is another name for it.
 //!
-//! One package per OS and CPU architecture holds both programs (B1-o2):
-//! the terminal program `tw` (with `textweaver` as a second name: a link
-//! on Linux and macOS, a small launcher on Windows) and the app,
-//! `textweaver-gui` (`gui_dist.rs`). It builds them with the `dist`
-//! profile (the release profile with fat LTO), and the combined 32-bit
-//! engine host on Windows, and stages them with the
-//! pronunciation dictionaries, the licence, the copyright notice
+//! One package per OS and CPU architecture holds one program (beta 3):
+//! `textweaver`, the app by default and the terminal program with `--tw`
+//! (`gui_dist.rs`), with `tw` beside it: a link to it on Linux and macOS,
+//! and on Windows `tw.exe`, a small console launcher
+//! (`textweaver-launcher`) that runs `textweaver.exe --tw` and waits. It
+//! builds them with the `dist` profile (the release profile with fat
+//! LTO), and the combined 32-bit engine host on Windows, and stages them
+//! with the pronunciation dictionaries, the licence, the copyright notice
 //! (`NOTICE`), the third-party notices and licence files, and the
 //! complete user guides in `target/dist/textweaver-VERSION-PLATFORM/`,
-//! then archives the folder: a `.zip` on Windows and macOS (where the app
-//! is `textweaver.app`, beside `tw`), a `.tar.gz` on Linux. It fails if a
+//! then archives the folder: a `.zip` on Windows and macOS (where the
+//! program is in `textweaver.app`), a `.tar.gz` on Linux. It fails if a
 //! program, an engine host, or a notice is missing from the staged
-//! folder. It fails if a notice is
-//! missing from the staged folder, or if the archive grew more than 10
-//! percent over the last release's without a note (`sizes.rs`). A user
+//! folder, if the Windows package holds a program it should not (an
+//! earlier release's `textweaver-gui.exe`), or if the archive grew more
+//! than 10 percent over the last release's without a note (`sizes.rs`). A user
 //! guide missing from the package only warns (`stage_user_docs`): the
 //! build prints one warning line per missing file, adds it to the GitHub
 //! job summary, and goes on.
@@ -37,25 +38,15 @@ use anyhow::{Context, bail};
 
 use crate::eci::{self, HostBuild};
 
-/// The terminal program's package. Its `tw` binary is the program; its
-/// `textweaver` binary is the Windows launcher for the second name.
-const PACKAGE: &str = "textweaver-cli";
-/// The terminal program.
+/// The terminal program's name: on Windows the launcher, elsewhere a link
+/// to the program.
 const TW: &str = "tw";
-/// The terminal program's second name.
-const SECOND_NAME: &str = "textweaver";
-
-/// The terminal binaries built for the package: `tw`, and on Windows the
-/// `textweaver` launcher. Elsewhere `textweaver` is a link to `tw`
-/// ([`link_second_name`]), so nothing more is built.
-fn binaries() -> &'static [&'static str] {
-    if cfg!(windows) {
-        &[TW, SECOND_NAME]
-    } else {
-        &[TW]
-    }
-}
-/// Speech engines built into the user binaries on this platform. Nothing
+/// The Windows launcher's package and binary, staged as `tw.exe`.
+const LAUNCHER: (&str, &str) = ("textweaver-launcher", "tw-launcher");
+/// Programs of earlier releases that a Windows package must not hold:
+/// the app before beta 3 (now `textweaver.exe` itself).
+const RETIRED: [&str; 1] = ["textweaver-gui"];
+/// Speech engines built into the program on this platform. Nothing
 /// extra is linked: Omnivox is a subprocess, speech-dispatcher a socket,
 /// and espeak-ng is loaded at run time when it is installed. Linux gets all
 /// three (the AppImage and the tarball); Windows and macOS keep Omnivox
@@ -68,15 +59,6 @@ pub(crate) fn engines() -> &'static [&'static str] {
     }
 }
 
-/// The `--features` value for one user binary's package: the platform's
-/// engines, for that package only.
-pub(crate) fn features(package: &str) -> String {
-    engines()
-        .iter()
-        .map(|e| format!("{package}/{e}"))
-        .collect::<Vec<_>>()
-        .join(",")
-}
 /// The cargo profile for packages (root `Cargo.toml`, `[profile.dist]`).
 pub(crate) const PROFILE: &str = "dist";
 /// Where the licence files of bundled data go in the package: (source,
@@ -377,41 +359,18 @@ pub(crate) fn stage(
     }
     fs::create_dir_all(&stage)?;
 
-    if universal {
-        for t in MAC_TARGETS {
-            build_binaries(&root, &build_dir, Some(t))?;
-        }
-        for bin in binaries() {
-            let parts: Vec<PathBuf> = MAC_TARGETS
-                .iter()
-                .map(|t| build_dir.join(t).join(PROFILE).join(bin))
-                .collect();
-            let dest = stage.join(bin);
-            run_tool(
-                Command::new("lipo")
-                    .arg("-create")
-                    .args(&parts)
-                    .arg("-output")
-                    .arg(&dest),
-            )?;
-            run_tool(
-                Command::new("codesign")
-                    .args(["--force", "--sign", "-"])
-                    .arg(&dest),
-            )?;
-            println!("installed {} (universal)", dest.display());
-        }
-    } else {
-        build_binaries(&root, &build_dir, None)?;
-        for bin in binaries() {
-            let file = format!("{bin}{}", std::env::consts::EXE_SUFFIX);
-            eci::copy(&build_dir.join(PROFILE).join(&file), &stage.join(&file))?;
-        }
-    }
-    link_second_name(&stage)?;
-    // The app, built into the same folder so the two share their compiled
-    // dependencies.
+    // The one program, textweaver.
     crate::gui_dist::stage_gui(&root, &build_dir, &stage, universal, no_screenshot)?;
+    // tw: the launcher on Windows; a link elsewhere, made once the
+    // program is where it stays (inside textweaver.app on macOS).
+    if cfg!(windows) {
+        build_launcher(&root, &build_dir)?;
+        let exe = std::env::consts::EXE_SUFFIX;
+        eci::copy(
+            &build_dir.join(PROFILE).join(format!("{}{exe}", LAUNCHER.1)),
+            &stage.join(format!("{TW}{exe}")),
+        )?;
+    }
 
     // Engine hosts: the programs run them as a copy of themselves; the
     // one host program is the combined 32-bit host on Windows. The
@@ -454,11 +413,11 @@ pub(crate) fn stage(
         for (src, dest) in LINUX_DESKTOP_FILES {
             eci::copy(&root.join(src), &stage.join(dest))?;
         }
-        fs::write(stage.join(GUI_DESKTOP), crate::gui_dist::desktop_entry())?;
     }
     if cfg!(target_os = "macos") {
         crate::gui_dist::make_app(&stage, version)?;
     }
+    link_names(&stage)?;
 
     check_programs(&stage)?;
     check_notices(&stage)?;
@@ -471,8 +430,8 @@ pub(crate) fn stage(
 
 /// Where release builds go: `target/dist-build` on Windows, where the
 /// static C runtime would otherwise invalidate everyday builds, else the
-/// target directory. `cargo xtask gui-dist` builds there too, so the two
-/// packages share their compiled dependencies.
+/// target directory. Every build of the package (the program, the
+/// launcher, the hosts) goes there.
 pub(crate) fn build_dir(root: &Path) -> PathBuf {
     if cfg!(windows) {
         eci::target_dir(root).join("dist-build")
@@ -497,7 +456,7 @@ pub(crate) fn absolute(path: PathBuf) -> anyhow::Result<PathBuf> {
 
 /// Archives a staged package: a `.zip` on Windows and macOS, a `.tar.gz`
 /// on Linux. The tarball and the macOS zip (made with `ditto`) keep the
-/// `textweaver` link.
+/// `tw` link.
 pub(crate) fn archive(staged: &Staged) -> anyhow::Result<PathBuf> {
     let Staged { name, dir, out } = staged;
     if cfg!(windows) {
@@ -528,11 +487,16 @@ pub(crate) fn archive(staged: &Staged) -> anyhow::Result<PathBuf> {
     }
 }
 
-/// The Linux menu entry and icon: (source, path in the package).
-pub(crate) const LINUX_DESKTOP_FILES: [(&str, &str); 2] = [
+/// The Linux menu entries, the app's and the terminal reader's, and the
+/// icon: (source, path in the package).
+pub(crate) const LINUX_DESKTOP_FILES: [(&str, &str); 3] = [
     (
         "scripts/linux/textweaver.desktop",
         "share/applications/textweaver.desktop",
+    ),
+    (
+        "scripts/linux/textweaver-terminal.desktop",
+        "share/applications/textweaver-terminal.desktop",
     ),
     (
         "scripts/linux/textweaver.svg",
@@ -540,48 +504,87 @@ pub(crate) const LINUX_DESKTOP_FILES: [(&str, &str); 2] = [
     ),
 ];
 
-/// The app's menu entry in the Linux package, beside the terminal
-/// reader's ([`LINUX_DESKTOP_FILES`]).
-pub(crate) const GUI_DESKTOP: &str = "share/applications/textweaver-gui.desktop";
-
-/// Makes `textweaver` a link to `tw` in `stage`, on Linux and macOS. On
-/// Windows the launcher binary is staged instead (see [`binaries`]).
+/// The links in a Linux or macOS package, (name, target): `tw` beside the
+/// program on Linux; on macOS `tw` and `textweaver` beside
+/// `textweaver.app`, pointing at the program inside it.
 #[cfg(unix)]
-fn link_second_name(stage: &Path) -> anyhow::Result<()> {
-    let link = stage.join(SECOND_NAME);
-    std::os::unix::fs::symlink(TW, &link)
-        .with_context(|| format!("linking {} to {TW}", link.display()))
+fn links() -> Vec<(&'static str, String)> {
+    if cfg!(target_os = "macos") {
+        let app = crate::gui_dist::app_path();
+        vec![(TW, app.clone()), (crate::gui_dist::INSTALLED, app)]
+    } else {
+        vec![(TW, crate::gui_dist::INSTALLED.to_owned())]
+    }
 }
 
-#[cfg(not(unix))]
-fn link_second_name(_: &Path) -> anyhow::Result<()> {
+/// Makes the [`links`] in `stage`, on Linux and macOS. On Windows the
+/// launcher is staged as `tw.exe` instead.
+#[cfg(unix)]
+fn link_names(stage: &Path) -> anyhow::Result<()> {
+    for (name, target) in links() {
+        let link = stage.join(name);
+        std::os::unix::fs::symlink(&target, &link)
+            .with_context(|| format!("linking {} to {target}", link.display()))?;
+    }
     Ok(())
 }
 
-/// The programs a package must hold, as paths in it: `tw`, its second
-/// name, the app, and the combined 32-bit engine host on Windows.
+#[cfg(not(unix))]
+fn link_names(_: &Path) -> anyhow::Result<()> {
+    Ok(())
+}
+
+/// The programs a package must hold, as paths in it: `textweaver`, `tw`
+/// (the launcher on Windows, a link elsewhere), and the combined 32-bit
+/// engine host on Windows.
 pub(crate) fn required_programs() -> Vec<String> {
     let exe = std::env::consts::EXE_SUFFIX;
-    let mut out = vec![
-        format!("{TW}{exe}"),
-        format!("{SECOND_NAME}{exe}"),
-        crate::gui_dist::app_path(),
-    ];
-    if !cfg!(target_os = "macos") {
+    let mut out = vec![crate::gui_dist::app_path(), format!("{TW}{exe}")];
+    if cfg!(target_os = "macos") {
+        out.push(crate::gui_dist::INSTALLED.to_owned());
+    } else {
         out.extend(eci::all_hosts().iter().map(|h| h.installed_name()));
     }
     out
 }
 
-/// Fails unless `stage` holds every program in [`required_programs`]. The
-/// `textweaver` link counts when it is a link, whatever it points at.
+/// The programs at the top of a Windows package: every `.exe` there.
+fn top_programs(stage: &Path) -> anyhow::Result<Vec<String>> {
+    let mut out: Vec<String> = fs::read_dir(stage)?
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|n| n.to_ascii_lowercase().ends_with(".exe"))
+        .collect();
+    out.sort();
+    Ok(out)
+}
+
+/// Fails unless `stage` holds every program in [`required_programs`] (a
+/// link counts when it is a link, whatever it points at), and, on
+/// Windows, unless those are the only programs at its top: an earlier
+/// release's `textweaver-gui.exe`, or any other stray program, fails.
 pub(crate) fn check_programs(stage: &Path) -> anyhow::Result<()> {
-    let missing: Vec<String> = required_programs()
-        .into_iter()
+    let required = required_programs();
+    let missing: Vec<&String> = required
+        .iter()
         .filter(|p| fs::symlink_metadata(stage.join(p)).is_err())
         .collect();
     if !missing.is_empty() {
-        bail!("the package lacks {}", missing.join(", "));
+        let names: Vec<&str> = missing.iter().map(|s| s.as_str()).collect();
+        bail!("the package lacks {}", names.join(", "));
+    }
+    if cfg!(windows) {
+        let extra: Vec<String> = top_programs(stage)?
+            .into_iter()
+            .filter(|p| !required.iter().any(|r| r.eq_ignore_ascii_case(p)))
+            .collect();
+        if !extra.is_empty() {
+            bail!(
+                "the package holds programs it should not: {} (it holds textweaver.exe, tw.exe, and the hosts; {} retired in beta 3)",
+                extra.join(", "),
+                RETIRED.join(", ")
+            );
+        }
     }
     Ok(())
 }
@@ -632,29 +635,28 @@ pub(crate) fn cargo(root: &Path, build_dir: &Path) -> Command {
     cmd
 }
 
-/// The cargo arguments that build the terminal binaries ([`binaries`]) in
-/// one run, with the platform's engines. The app is built in a run of its
-/// own (`gui_dist::stage_gui`), so cargo never unifies the two programs'
-/// features.
-fn binary_build_args(target: Option<&str>) -> Vec<String> {
-    let mut args: Vec<String> = ["build", "--locked", "--profile", PROFILE, "-p", PACKAGE]
-        .iter()
-        .map(|s| (*s).to_owned())
-        .collect();
-    for bin in binaries() {
-        args.extend(["--bin".to_owned(), (*bin).to_owned()]);
-    }
-    args.extend(["--features".to_owned(), features(PACKAGE)]);
-    if let Some(t) = target {
-        args.extend(["--target".to_owned(), t.to_owned()]);
-    }
-    args
+/// The cargo arguments that build the Windows launcher, `tw.exe`, in a run
+/// of its own: it depends on nothing but the standard library.
+fn launcher_build_args() -> Vec<String> {
+    [
+        "build",
+        "--locked",
+        "--profile",
+        PROFILE,
+        "-p",
+        LAUNCHER.0,
+        "--bin",
+        LAUNCHER.1,
+    ]
+    .iter()
+    .map(|s| (*s).to_owned())
+    .collect()
 }
 
-fn build_binaries(root: &Path, build_dir: &Path, target: Option<&str>) -> anyhow::Result<()> {
+fn build_launcher(root: &Path, build_dir: &Path) -> anyhow::Result<()> {
     let mut cmd = cargo(root, build_dir);
-    cmd.args(binary_build_args(target));
-    run_tool(&mut cmd).context("building tw")
+    cmd.args(launcher_build_args());
+    run_tool(&mut cmd).context("building tw.exe, the launcher")
 }
 
 pub(crate) fn build_hosts(
@@ -794,42 +796,44 @@ mod tests {
         );
     }
 
+    /// The launcher is built in a cargo run of its own package, so it
+    /// links nothing but the standard library.
     #[test]
-    fn engines_follow_the_platform() {
-        let f = features(PACKAGE);
-        assert!(f.contains("textweaver-cli/omnivox"), "{f}");
-        let linux = cfg!(target_os = "linux");
-        assert_eq!(f.contains("textweaver-cli/espeak"), linux, "{f}");
-        assert_eq!(f.contains("textweaver-cli/speechd"), linux, "{f}");
-    }
-
-    /// The terminal program is built in one cargo run of its own package:
-    /// `tw`, and the `textweaver` launcher on Windows only.
-    #[test]
-    fn the_terminal_program_is_built_in_one_run() {
-        let args = binary_build_args(Some("x86_64-apple-darwin"));
+    fn the_launcher_is_built_on_its_own() {
+        let args = launcher_build_args();
         let after = |flag: &str| -> Vec<String> {
             args.windows(2)
                 .filter(|w| w[0] == flag)
                 .map(|w| w[1].clone())
                 .collect()
         };
-        assert_eq!(after("-p"), [PACKAGE], "{args:?}");
-        let bins = after("--bin");
-        assert_eq!(
-            bins.iter().any(|b| b == SECOND_NAME),
-            cfg!(windows),
-            "{args:?}"
-        );
-        assert!(bins.iter().any(|b| b == TW), "{args:?}");
-        assert!(args.ends_with(&["--target".into(), "x86_64-apple-darwin".into()]));
+        assert_eq!(after("-p"), [LAUNCHER.0], "{args:?}");
+        assert_eq!(after("--bin"), [LAUNCHER.1], "{args:?}");
         assert!(args.iter().any(|a| a == PROFILE), "{args:?}");
+        assert!(!args.iter().any(|a| a == "--features"), "{args:?}");
     }
 
-    /// A package without the app, `tw`, its second name, or a host fails
-    /// the check, naming what is missing.
+    /// The launcher's manifest names no dependency, so `tw.exe` stays
+    /// small.
     #[test]
-    fn a_package_must_hold_both_programs_and_the_hosts() {
+    fn the_launcher_depends_on_nothing() {
+        let toml =
+            fs::read_to_string(eci::root().join("crates/textweaver-launcher/Cargo.toml")).unwrap();
+        let deps: Vec<&str> = toml
+            .lines()
+            .skip_while(|l| l.trim() != "[dependencies]")
+            .skip(1)
+            .take_while(|l| !l.trim_start().starts_with('['))
+            .filter(|l| !l.trim().is_empty() && !l.trim_start().starts_with('#'))
+            .collect();
+        assert!(deps.is_empty(), "{deps:?}");
+    }
+
+    /// A package without textweaver, `tw`, or a host fails the check,
+    /// naming what is missing; on Windows so does one holding an earlier
+    /// release's app.
+    #[test]
+    fn a_package_must_hold_the_program_tw_and_the_hosts() {
         let stage = std::env::temp_dir().join(format!("tw-dist-programs-{}", std::process::id()));
         let _ = fs::remove_dir_all(&stage);
         fs::create_dir_all(&stage).unwrap();
@@ -838,6 +842,10 @@ mod tests {
         assert!(err.contains(crate::gui_dist::INSTALLED), "{err}");
         if cfg!(windows) {
             assert!(err.contains("textweaver-host-x86.exe"), "{err}");
+            assert_eq!(
+                required_programs(),
+                ["textweaver.exe", "tw.exe", "textweaver-host-x86.exe"]
+            );
         }
         for p in required_programs() {
             let path = stage.join(p);
@@ -845,30 +853,37 @@ mod tests {
             fs::write(path, "x").unwrap();
         }
         check_programs(&stage).unwrap();
+        if cfg!(windows) {
+            fs::write(stage.join("textweaver-gui.exe"), "x").unwrap();
+            let err = check_programs(&stage).unwrap_err().to_string();
+            assert!(err.contains("textweaver-gui.exe"), "{err}");
+        }
         let _ = fs::remove_dir_all(&stage);
     }
 
-    /// On Linux and macOS, `textweaver` is a link to `tw`, and copying the
+    /// On Linux and macOS, `tw` is a link to the program, and copying the
     /// package (into the AppImage's folder) keeps it a link.
     #[cfg(unix)]
     #[test]
-    fn the_second_name_is_a_link_and_stays_one() {
+    fn tw_is_a_link_and_stays_one() {
         let tmp = std::env::temp_dir().join(format!("tw-dist-link-{}", std::process::id()));
         let _ = fs::remove_dir_all(&tmp);
         let stage = tmp.join("stage");
         fs::create_dir_all(&stage).unwrap();
-        fs::write(stage.join(TW), "tw").unwrap();
-        link_second_name(&stage).unwrap();
+        link_names(&stage).unwrap();
         let copy = tmp.join("copy");
         copy_tree(&stage, &copy).unwrap();
-        let link = copy.join(SECOND_NAME);
+        let link = copy.join(TW);
         assert!(
             fs::symlink_metadata(&link)
                 .unwrap()
                 .file_type()
                 .is_symlink()
         );
-        assert_eq!(fs::read_link(&link).unwrap(), Path::new(TW));
+        assert_eq!(
+            fs::read_link(&link).unwrap(),
+            Path::new(&crate::gui_dist::app_path())
+        );
         let _ = fs::remove_dir_all(&tmp);
     }
 
@@ -878,9 +893,21 @@ mod tests {
         for (src, _) in LINUX_DESKTOP_FILES {
             assert!(root.join(src).is_file(), "{src} is packaged but missing");
         }
-        let desktop = fs::read_to_string(root.join(LINUX_DESKTOP_FILES[0].0)).unwrap();
-        assert!(desktop.lines().any(|l| l.trim_end() == "Terminal=true"));
-        assert!(desktop.lines().any(|l| l.trim_end() == "Icon=textweaver"));
+        let line = |file: &str, want: &str| {
+            let desktop = fs::read_to_string(root.join(file)).unwrap();
+            assert!(
+                desktop.lines().any(|l| l.trim_end() == want),
+                "{file} lacks {want}"
+            );
+        };
+        // The app's entry, then the terminal reader's.
+        let (app, terminal) = (LINUX_DESKTOP_FILES[0].0, LINUX_DESKTOP_FILES[1].0);
+        line(app, "Terminal=false");
+        line(app, "Exec=textweaver %f");
+        line(app, "Icon=textweaver");
+        line(terminal, "Terminal=true");
+        line(terminal, "Exec=tw %f");
+        line(terminal, "Icon=textweaver");
     }
 
     #[test]

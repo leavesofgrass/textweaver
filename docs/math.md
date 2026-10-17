@@ -21,7 +21,7 @@ This opens the document in the terminal reader. Read it as you would any other d
 
 The dollar signs and other delimiters are never spoken. The text around the formula is read as usual.
 
-The `textweaver` command opens the same terminal reader:
+The `textweaver` command opens the same document in the app instead, where formulas are read the same way:
 
 ```powershell
 textweaver "Calculus notes.md"
@@ -148,7 +148,7 @@ If a value is wrong, for example `math_verbosity = "loud"`, only that setting fa
 
 Where these settings apply:
 
-- The terminal reader (`textweaver` and `tw open`), the GUI, `tw speak`, and `tw export-audio` all follow the three settings, because they share the same reading and speech code.
+- The terminal reader (`tw` and `tw open`), the app, `tw speak`, and `tw export-audio` all follow the three settings, because they share the same reading and speech code.
 
 ## Hear math with MathCAT
 

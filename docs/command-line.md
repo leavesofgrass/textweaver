@@ -2,7 +2,7 @@
 
 `tw` is textweaver's terminal program. On its own it opens the terminal reader; with a command it does one job without the reader, such as `tw text`, `tw speak`, `tw convert` and `tw cite`. This page is for anyone who uses `tw` in a terminal or a script. It gives the rules every command follows, so that what you learn in one command works in the next. Each command's own options are in its guide and in `tw COMMAND --help`.
 
-## One program, two names
+## One program
 
 | You type | What happens |
 |---|---|
@@ -11,7 +11,15 @@
 | `tw convert essay.md --to html` | The command runs without the reader and ends. So do the other commands. |
 | `tw --help` | Every command, and the reader's options. |
 
-`textweaver` is a second name for `tw`, kept so that older shortcuts and scripts still work: `textweaver essay.md` and `tw essay.md` are the same, and `textweaver --help` prints the same help as `tw --help`. On Linux and macOS `textweaver` is a link to `tw`; on Windows it is a small launcher, `textweaver.exe`, that starts `tw.exe` beside it. The app itself is `textweaver-gui`, a separate program in the same download.
+`tw` and the app are one program, `textweaver`. On its own, or with a document, `textweaver` opens the app: `textweaver essay.md` opens `essay.md` in the app, not in the terminal reader. It runs the terminal program instead in three cases:
+
+| You type | What happens |
+|---|---|
+| `textweaver --tw essay.md` or `textweaver --cli essay.md` | The same as `tw essay.md`; `--tw` and `--cli` mean the same and come first. |
+| `textweaver convert essay.md --to html` | A command given to `textweaver` runs as `tw convert` does, so scripts written for earlier releases keep working. |
+| `tw` | The program started under the name `tw` is the terminal program. |
+
+On Linux and macOS `tw` is a link to `textweaver`. On Windows `tw.exe` is a small console program that starts `textweaver.exe --tw` with the same arguments and waits for it, passing on its exit status; `textweaver.exe` itself is a windowed program, which a terminal does not wait for, so use `tw` in terminals there. Releases up to beta 2 had a separate app, `textweaver-gui`, and `textweaver` was a second name for `tw` that opened the terminal reader.
 
 The reader's options go before the file: `tw --no-speech essay.md`, `tw --mode hybrid`, `tw --theme light essay.md`, `tw --backend espeak`, `tw --home DIR` and `tw --log`. They do not go with a command. A document whose name is also a command's name, such as a file called `convert`, opens with `tw open convert` or `tw ./convert`.
 

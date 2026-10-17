@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=textweaver terminal reader
+GenericName=Talking document reader in a terminal
+Comment=Read documents aloud in the terminal reader, with a highlight that follows the spoken word
+Exec=tw %f
+TryExec=tw
+Terminal=true
+Icon=textweaver
+Categories=Utility;Accessibility;TextTools;ConsoleOnly;
+Keywords=speech;screen reader;text to speech;read aloud;Markdown;EPUB;dyslexia;terminal;
+StartupNotify=false
