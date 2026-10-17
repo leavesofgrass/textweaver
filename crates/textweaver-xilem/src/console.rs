@@ -1,6 +1,6 @@
 //! The terminal a GUI program was started from (ADR-0033).
 //!
-//! On Windows `textweaver-xilem.exe` is a GUI-subsystem program, so no
+//! On Windows `textweaver.exe` is a GUI-subsystem program, so no
 //! console window opens with it. A GUI program started from a terminal is
 //! not connected to that terminal, though, so `--help`, `--version`, and
 //! startup errors would go nowhere. [`attach`] connects the program to the
@@ -9,6 +9,13 @@
 //! [`detach`] lets go of it once the window runs, so Control C in that
 //! terminal does not close the window; [`attach`] again reconnects it to
 //! print an error at the end.
+//!
+//! The terminal program inside it (`textweaver --tw`, which `tw.exe` runs)
+//! needs the console itself, not only its output: [`attach_terminal`]
+//! attaches to the parent's console whether or not the standard handles
+//! are set, and keeps any that were (a launcher's console handles, or a
+//! pipe), so the terminal reader's keys and output work as in a console
+//! program.
 //!
 //! With no terminal at all (started from Explorer or a shortcut), an error
 //! is shown in a message box, which screen readers read like any dialog,
@@ -22,6 +29,14 @@
 /// reaches a terminal or a file.
 pub fn attach() -> bool {
     imp::attach()
+}
+
+/// For the terminal program: attaches to the console of the program that
+/// started this one (`tw.exe`, or a shell), keeping standard handles that
+/// are already set, such as a pipe. Without a console to attach to (a
+/// pipe from a program with none), the handles stay as they were.
+pub fn attach_terminal() {
+    imp::attach_terminal();
 }
 
 /// Lets go of a terminal [`attach`] connected (standard output and error
@@ -39,7 +54,7 @@ pub fn report_error(text: &str, background: bool) {
         crate::log::line(&format!("error: {text}"));
     }
     if attach() {
-        eprintln!("textweaver-gui: {text}");
+        eprintln!("textweaver: {text}");
     } else if !background && !logged {
         imp::message_box("textweaver", text);
     }
@@ -90,6 +105,27 @@ mod imp {
         }
     }
 
+    pub(super) fn attach_terminal() {
+        if ATTACHED.load(Ordering::Acquire) {
+            return;
+        }
+        let saved = [STD_INPUT_HANDLE, STD_OUTPUT_HANDLE, STD_ERROR_HANDLE].map(|w| (w, handle(w)));
+        // SAFETY: as in `attach`. AttachConsole may point the standard
+        // handles at the console; SetStdHandle puts back each one that was
+        // set before, a handle this process already owns.
+        unsafe {
+            if AttachConsole(ATTACH_PARENT_PROCESS).is_err() {
+                return;
+            }
+            ATTACHED.store(true, Ordering::Release);
+            for (which, h) in saved {
+                if let Some(h) = h {
+                    let _ = SetStdHandle(which, h);
+                }
+            }
+        }
+    }
+
     pub(super) fn detach() {
         if !ATTACHED.swap(false, Ordering::AcqRel) {
             return;
@@ -121,6 +157,8 @@ mod imp {
     pub(super) fn attach() -> bool {
         true
     }
+
+    pub(super) fn attach_terminal() {}
 
     pub(super) fn detach() {}
 

@@ -190,7 +190,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let bin = tmp.path().join("bin");
         std::fs::create_dir_all(&bin).unwrap();
-        let exe = bin.join("textweaver-gui.exe");
+        let exe = bin.join("textweaver.exe");
         assert_eq!(packaged_quick_start(&exe), None);
         std::fs::write(tmp.path().join(QUICK_START_FILE), "# Quick start\n").unwrap();
         assert_eq!(

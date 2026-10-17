@@ -1,11 +1,13 @@
 //! `tw`: textweaver's terminal program, as a library (B1-o1).
 //!
 //! `tw` alone, or `tw FILE`, opens the terminal reader; `tw COMMAND` runs
-//! a command headless, with no terminal interface. `textweaver` is a
-//! second name for the same program: a link on Linux and macOS, and on
-//! Windows a small launcher (`src/bin/textweaver.rs`) that runs `tw.exe`
-//! beside it with the same arguments. Both binaries are thin; `tw` calls
-//! [`main`].
+//! a command headless, with no terminal interface. In the packages the
+//! terminal program is part of the one program, `textweaver`, which opens
+//! the app by default and runs this library with `textweaver --tw` (or
+//! `--cli`), when started as `tw`, or when its first argument is a
+//! command ([`is_command`]); it calls [`main_with`]. This crate's own `tw`
+//! binary is the terminal program alone, without the app, for development
+//! and the tests; it calls [`main`].
 //!
 //! A new subcommand goes here: a module in `cmd/`, a variant in `Cmd`
 //! below, and its arm in `run`.
@@ -17,6 +19,7 @@
 //! `settings` (with `profile`), `define`, `stats`, `study`, `summarize`, `changes`, `serve`, `ocr`, `components`, and `update`. Each module's docs name the ADR and crate it
 //! wraps; the user guides are listed in `docs/README.md`.
 
+use std::ffi::{OsStr, OsString};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -26,13 +29,13 @@ use clap::{Parser, Subcommand};
 mod cmd;
 
 /// The program's description at the top of `tw --help`.
-const ABOUT: &str = "Read documents aloud in the terminal reader, or run a command without it. tw FILE opens a document in the reader; tw COMMAND runs a command, such as tw convert. textweaver is a second name for tw.";
+const ABOUT: &str = "Read documents aloud in the terminal reader, or run a command without it. tw FILE opens a document in the reader; tw COMMAND runs a command, such as tw convert. textweaver --tw does the same as tw; textweaver alone opens the textweaver app.";
 
 /// The reader's main keys, at the end of `tw --help`.
 const READER_KEYS: &str = "In the reader, Space reads and pauses, Escape stops, h moves by heading, F1 opens the help, ? lists every key, and Ctrl+Q quits.";
 
 /// Read, extract, and speak documents, in the terminal reader or from the
-/// command line. The name is fixed, so `tw --help` and `textweaver
+/// command line. The name is fixed, so `tw --help` and `textweaver --tw
 /// --help` print the same text.
 #[derive(Parser, Debug)]
 #[command(
@@ -127,7 +130,19 @@ enum Cmd {
 /// error, "Error: what failed: why. What to do." (the "Command line"
 /// page).
 pub fn main() -> ExitCode {
-    match run(Cli::parse()) {
+    main_with(std::env::args_os().skip(1))
+}
+
+/// Runs `tw` with `args`, the arguments after the program's name, as
+/// [`main`] does: the combined program calls it with what follows `--tw`.
+/// Help and errors name the program `tw` whatever it was started as.
+pub fn main_with<I, T>(args: I) -> ExitCode
+where
+    I: IntoIterator<Item = T>,
+    T: Into<OsString>,
+{
+    let argv = std::iter::once(OsString::from("tw")).chain(args.into_iter().map(Into::into));
+    match run(Cli::parse_from(argv)) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) if e.downcast_ref::<cmd::NothingFound>().is_some() => ExitCode::FAILURE,
         Err(e) => {
@@ -135,6 +150,19 @@ pub fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// True when `name` is one of `tw`'s commands (`convert`, `text`, and the
+/// rest, or an alias of one), so `textweaver convert ...` runs the command
+/// line as `tw convert ...` does.
+pub fn is_command(name: &OsStr) -> bool {
+    use clap::CommandFactory as _;
+    let Some(name) = name.to_str() else {
+        return false;
+    };
+    Cli::command()
+        .get_subcommands()
+        .any(|c| c.get_name() == name || c.get_all_aliases().any(|a| a == name))
 }
 
 fn run(cli: Cli) -> Result<()> {
@@ -203,8 +231,8 @@ mod tests {
         assert!(Cli::try_parse_from(["tw", "--no-speech", "convert", "a.md"]).is_err());
     }
 
-    /// `textweaver` is the same program: started under either name, the
-    /// help names `tw`, so the two agree.
+    /// Started under any name (`textweaver --tw` passes it on), the help
+    /// names `tw`, so the two agree.
     #[test]
     fn the_help_is_the_same_under_either_name() {
         use clap::CommandFactory as _;
@@ -218,5 +246,26 @@ mod tests {
         assert_eq!(tw, help("textweaver"));
         assert_eq!(tw, help("/usr/local/bin/textweaver"));
         assert!(tw.contains("Usage: tw [OPTIONS] [FILE]"), "{tw}");
+    }
+
+    /// The commands are known by name; a file name or an option is not a
+    /// command.
+    #[test]
+    fn commands_are_known_by_name() {
+        use std::ffi::OsStr;
+        for c in [
+            "convert",
+            "text",
+            "speak",
+            "export-audio",
+            "migrate-star",
+            "serve",
+            "update",
+        ] {
+            assert!(super::is_command(OsStr::new(c)), "{c}");
+        }
+        for not in ["book.md", "--help", "", "Convert", "help"] {
+            assert!(!super::is_command(OsStr::new(not)), "{not}");
+        }
     }
 }

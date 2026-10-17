@@ -1,0 +1,23 @@
+[package]
+name = "textweaver-launcher"
+description = "tw's launcher on Windows: a small console program that runs textweaver.exe beside it in terminal mode (--tw), with the same arguments, standard handles, and exit status"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Installed as `tw.exe` in the Windows package (`cargo xtask dist`). It uses
+# only the standard library, so it stays a few hundred kilobytes: no
+# engine, app, or GUI dependency may be added here.
+[[bin]]
+name = "tw-launcher"
+path = "src/main.rs"
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true
