@@ -3500,6 +3500,7 @@ gui-button-previous-sentence = Vorheriger Satz
 gui-button-next-sentence = Nächster Satz
 gui-button-slower = Langsamer
 gui-button-faster = Schneller
+gui-button-start-dictation = Diktat starten
 gui-button-pause-dictation = Diktat anhalten
 gui-button-resume-dictation = Diktat fortsetzen
 gui-button-stop-dictation = Diktat beenden

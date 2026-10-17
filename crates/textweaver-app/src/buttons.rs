@@ -228,10 +228,11 @@ impl App {
     }
 
     /// The commands `bar` draws now: [`bar_buttons`](Self::bar_buttons),
-    /// and while dictation is active, Pause dictation and Dictate (which
-    /// then stops it), on the toolbar before Slower and Faster, or on the
-    /// header when the toolbar is hidden. They go when dictation ends, are
-    /// not saved, and are never shown twice.
+    /// and in edit mode Dictate ("Start dictation"); while dictation is
+    /// active, in any mode, Pause dictation and Dictate (which then stops
+    /// it). They go on the toolbar before Slower and Faster, or on the
+    /// header when the toolbar is hidden; they go when edit mode and
+    /// dictation end, are not saved, and are never shown twice.
     pub fn shown_bar_buttons(&self, bar: Bar) -> Vec<ActionId> {
         let mut actions = self.bar_buttons(bar);
         let home = if self.settings.gui.toolbar || !self.settings.gui.header {
@@ -239,15 +240,24 @@ impl App {
         } else {
             Bar::Header
         };
-        if bar != home || !self.dictation_status().is_active() {
+        let shown: &[ActionId] = if self.dictation_status().is_active() {
+            &[ActionId::PauseDictation, ActionId::Dictate]
+        } else if self.is_editing() && self.is_available(ActionId::Dictate) {
+            // Not in a build without dictation, where the command is hidden.
+            &[ActionId::Dictate]
+        } else {
+            &[]
+        };
+        if bar != home || shown.is_empty() {
             return actions;
         }
         let other = self.bar_buttons(match bar {
             Bar::Header => Bar::Toolbar,
             Bar::Toolbar => Bar::Header,
         });
-        let extra: Vec<ActionId> = [ActionId::PauseDictation, ActionId::Dictate]
-            .into_iter()
+        let extra: Vec<ActionId> = shown
+            .iter()
+            .copied()
             .filter(|a| !actions.contains(a) && !other.contains(a))
             .collect();
         let at = actions
