@@ -17,7 +17,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/../.." && pwd)"
 out="${1:?usage: orca-session.sh OUT_DIR}"
-exe="${EXE:-${CARGO_TARGET_DIR:-$repo/target}/debug/textweaver-xilem}"
+exe="${EXE:-${CARGO_TARGET_DIR:-$repo/target}/debug/textweaver}"
 orca="${ORCA:-1}"
 
 run() {

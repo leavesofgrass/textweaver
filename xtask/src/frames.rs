@@ -3,7 +3,7 @@
 //!
 //! It builds the Xilem GUI in release mode with the `alloc-count`
 //! feature, writes the 1 MB benchmark corpus and the 1 MB one-line corpus,
-//! and runs `textweaver-xilem --measure-frames 200` on each: plain and
+//! and runs `textweaver --measure-frames 200` on each: plain and
 //! with every reading aid on, at 100 and 200 percent (eight runs). Each
 //! run reads with no window on screen and measures 200 moves of the spoken
 //! word through the driver and the whole widget tree, with the sentence
@@ -151,7 +151,7 @@ fn build() -> anyhow::Result<PathBuf> {
             "-p",
             "textweaver-xilem",
             "--bin",
-            "textweaver-xilem",
+            "textweaver",
             "--features",
             "alloc-count",
         ])
@@ -162,7 +162,7 @@ fn build() -> anyhow::Result<PathBuf> {
     }
     Ok(crate::eci::target_dir(&root)
         .join("release")
-        .join(format!("textweaver-xilem{}", std::env::consts::EXE_SUFFIX)))
+        .join(format!("textweaver{}", std::env::consts::EXE_SUFFIX)))
 }
 
 /// The worst moves over `max`, one sentence each.

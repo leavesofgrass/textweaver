@@ -34,9 +34,9 @@ body:
     attributes:
       label: Where
       options:
-        - The terminal reader (textweaver)
-        - The command line (tw)
-        - The GUI (textweaver-xilem)
+        - The textweaver app (textweaver)
+        - The terminal reader (tw)
+        - The command line (tw COMMAND)
         - Exported files (PDF, EPUB, DOCX, HTML, braille)
         - The documentation
     validations:

@@ -28,10 +28,10 @@ use anyhow::{Context, bail};
 pub const SUMS: &str = "SHA256SUMS.txt";
 
 /// Each platform job's files, without `textweaver-VERSION-`: one package
-/// per OS and CPU architecture holding both programs (B1-o2). The package
-/// names match `xtask/package-sizes.toml`'s, plus the AppImages' `.zsync`
-/// files for delta updates, and on Linux a copy of each under the `-gui`
-/// name the app's older AppImages look for (`appimage.rs`).
+/// per OS and CPU architecture (B1-o2). The package names match
+/// `xtask/package-sizes.toml`'s, plus the AppImages' `.zsync` files for
+/// delta updates. Since beta 3 the `-gui` copies of the `.zsync` files,
+/// for the app AppImages of alpha.9 and earlier, are no longer made.
 pub const PLATFORMS: [(&str, &[&str]); 4] = [
     ("windows", &["windows-x86_64.zip"]),
     ("macos", &["macos-universal.zip"]),
@@ -40,7 +40,6 @@ pub const PLATFORMS: [(&str, &[&str]); 4] = [
         &[
             "linux-x86_64.AppImage",
             "linux-x86_64.AppImage.zsync",
-            "linux-x86_64-gui.AppImage.zsync",
             "linux-x86_64.tar.gz",
         ],
     ),
@@ -49,7 +48,6 @@ pub const PLATFORMS: [(&str, &[&str]); 4] = [
         &[
             "linux-aarch64.AppImage",
             "linux-aarch64.AppImage.zsync",
-            "linux-aarch64-gui.AppImage.zsync",
             "linux-aarch64.tar.gz",
         ],
     ),
@@ -235,17 +233,16 @@ mod tests {
     }
 
     #[test]
-    fn a_complete_release_has_eleven_files() {
+    fn a_complete_release_has_nine_files() {
         let all = expected_release("1.2.3");
-        assert_eq!(all.len(), 11);
+        assert_eq!(all.len(), 9);
         assert!(all.contains("SHA256SUMS.txt"));
         assert!(all.contains("textweaver-1.2.3-windows-x86_64.zip"));
         assert!(all.contains("textweaver-1.2.3-macos-universal.zip"));
-        assert!(all.contains("textweaver-1.2.3-linux-aarch64-gui.AppImage.zsync"));
-        // No separate app packages any more.
-        assert!(!all.iter().any(|f| f.ends_with("-gui.zip")
-            || f.ends_with("-gui.tar.gz")
-            || f.ends_with("-gui.AppImage")));
+        assert!(all.contains("textweaver-1.2.3-linux-aarch64.AppImage.zsync"));
+        assert!(all.contains("textweaver-1.2.3-linux-x86_64.tar.gz"));
+        // No separate app packages, and no -gui copies, any more.
+        assert!(!all.iter().any(|f| f.contains("-gui.")));
     }
 
     #[test]

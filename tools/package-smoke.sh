@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # The packaged tw, run as a user would on first use, before a release is
 # uploaded (release.yml) and in a clean container with no network
-# (tools/clean-install-smoke.sh):
+# (tools/clean-install-smoke.sh). Since beta 3, tw is a link to the one
+# program, textweaver (Linux and macOS), or tw.exe, the launcher that runs
+# textweaver.exe --tw (Windows):
 #
 #   bash tools/package-smoke.sh PATH/TO/tw [FIXTURE]
 #
@@ -14,7 +16,10 @@
 # - tw info prints the fixture's facts (its word count);
 # - tw components list runs with no components installed;
 # - tw backends lists the speech engines;
-# - tw convert writes the fixture as EPUB, a ZIP file that is not empty.
+# - tw convert writes the fixture as EPUB, a ZIP file that is not empty;
+# - with textweaver beside tw (not in the AppImage, which has no folder):
+#   textweaver --tw --version, and textweaver text, a command given to the
+#   program itself, which runs the command line instead of the app.
 # Exit status 1 when any check failed. More than --version: a package can
 # start and still be missing the data it needs to open a file.
 set -euo pipefail
@@ -67,6 +72,21 @@ else
     [ -e "$f" ] && echo "  found: $(basename "$f")"
   done
   fail=1
+fi
+
+# The program itself, when it is beside tw: the terminal flag, and a
+# command given to textweaver directly.
+dir="$(dirname "$tw")"
+program=""
+for name in textweaver.exe textweaver; do
+  if [ -e "$dir/$name" ] && [ ! -d "$dir/$name" ]; then
+    program="$dir/$name"
+    break
+  fi
+done
+if [ -n "$program" ]; then
+  check "textweaver --tw --version" '[0-9]+\.[0-9]+\.[0-9]+' "$program" --tw --version
+  check "textweaver text runs the command line" '[[:alpha:]]' "$program" text "$fixture"
 fi
 
 if [ "$fail" -ne 0 ]; then

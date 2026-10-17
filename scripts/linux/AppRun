@@ -1,21 +1,24 @@
 #!/bin/sh
 # AppRun: the entry point of the textweaver AppImage (docs/install.md).
 #
-# One AppImage holds both programs: the app, textweaver-gui, and the
-# terminal program, tw, with textweaver as a second name for it.
-#
-# Which program runs:
-# - the AppImage on its own, through a link named textweaver-gui, or with
-#   --gui first: the app;
-# - through a link named tw, or with --tw first: tw (the terminal reader
-#   with no command, a command such as tw convert otherwise);
-# - through a link named textweaver, or with --textweaver first: tw too,
-#   so textweaver FILE opens the terminal reader as it always has.
+# One AppImage holds one program, textweaver: the app by default, and the
+# terminal program (tw) with --tw or --cli first, when started as tw, or
+# when the first argument is a tw command such as convert. The program
+# decides that itself; this script only maps the AppImage's names:
+# - through a link named tw: the program as tw, so tw FILE opens the
+#   terminal reader and tw COMMAND runs a command;
+# - --gui or --app first: the app (kept for menu entries and scripts made
+#   before beta 3, which started the app as textweaver-gui);
+# - --textweaver first: the terminal program, for menu entries made by
+#   AppImages before beta 3, when textweaver opened the terminal reader;
+# - anything else, including links named textweaver or textweaver-gui:
+#   textweaver itself.
 #
 # Desktop integration:
-# - --install [--yes]: after asking, links textweaver-gui, textweaver and
-#   tw in ~/.local/bin to this AppImage, and adds menu entries for the app
-#   and the terminal reader, and an icon.
+# - --install [--yes]: after asking, links textweaver and tw in
+#   ~/.local/bin to this AppImage, and adds menu entries for the app and
+#   the terminal reader, and an icon. It removes the textweaver-gui link
+#   and menu entry an earlier --install made.
 # - --uninstall [--yes]: removes what --install made.
 #
 # The AppImage runtime's own options (--appimage-extract-and-run,
@@ -29,7 +32,7 @@ SELF="${APPIMAGE:-}"
 
 say() { printf '%s\n' "$*"; }
 
-# Warns when the ALSA library, which textweaver and tw need for sound, is
+# Warns when the ALSA library, which textweaver needs for sound, is
 # missing. Every desktop has it; a bare container may not.
 check_alsa() {
   if command -v ldconfig > /dev/null 2>&1 && ldconfig -p 2> /dev/null | grep -q 'libasound\.so\.2'; then
@@ -71,9 +74,13 @@ DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
 APPS_DIR="$DATA_DIR/applications"
 ICON_DIR="$DATA_DIR/icons/hicolor/scalable/apps"
 DESKTOP="$APPS_DIR/textweaver.desktop"
-GUI_DESKTOP="$APPS_DIR/textweaver-gui.desktop"
+TERMINAL_DESKTOP="$APPS_DIR/textweaver-terminal.desktop"
+# The app's menu entry as --install wrote it before beta 3.
+OLD_GUI_DESKTOP="$APPS_DIR/textweaver-gui.desktop"
 MARKER="X-textweaver-AppImage=true"
-NAMES="textweaver-gui textweaver tw"
+NAMES="textweaver tw"
+# The app's link as --install made it before beta 3.
+OLD_NAMES="textweaver-gui"
 
 need_appimage() {
   if [ -z "$SELF" ]; then
@@ -82,11 +89,35 @@ need_appimage() {
   fi
 }
 
+# Removes the link $BIN_DIR/$1 when it points at an AppImage; any other
+# file or link is left, and named.
+remove_link() {
+  link="$BIN_DIR/$1"
+  if [ -L "$link" ]; then
+    target="$(readlink "$link")"
+    case $target in
+      *.AppImage | "$SELF")
+        rm -f "$link"
+        say "Removed $link."
+        ;;
+      *) say "Leaving $link: it points at $target, not at an AppImage." ;;
+    esac
+  fi
+}
+
+# Removes the menu entry $1 when --install wrote it (it has the marker).
+remove_entry() {
+  if [ -f "$1" ] && grep -q "^$MARKER\$" "$1"; then
+    rm -f "$1"
+    say "Removed the menu entry $1."
+  fi
+}
+
 integrate() {
   need_appimage "--install"
-  say "This links textweaver-gui, textweaver and tw to this AppImage, $SELF:"
-  say "- the programs $BIN_DIR/textweaver-gui, $BIN_DIR/textweaver and $BIN_DIR/tw;"
-  say "- menu entries for the app and the terminal reader, $GUI_DESKTOP and $DESKTOP;"
+  say "This links textweaver and tw to this AppImage, $SELF:"
+  say "- the programs $BIN_DIR/textweaver (the app) and $BIN_DIR/tw (the terminal reader and commands);"
+  say "- menu entries for the app and the terminal reader, $DESKTOP and $TERMINAL_DESKTOP;"
   say "- the icon, $ICON_DIR/textweaver.svg."
   say "The links point at the AppImage where it is now. If you want to keep it somewhere else, move it first, then run --install again."
   if ! ask "Install?"; then
@@ -102,18 +133,23 @@ integrate() {
       say "Linked $BIN_DIR/$name."
     fi
   done
+  # textweaver is the app now; the textweaver-gui link and entry go.
+  for name in $OLD_NAMES; do
+    remove_link "$name"
+  done
+  remove_entry "$OLD_GUI_DESKTOP"
   cp "$HERE/textweaver.svg" "$ICON_DIR/textweaver.svg"
   say "Installed the icon."
-  sed -e "s|^Exec=.*|Exec=\"$SELF\" --gui %f|" -e '/^TryExec=/d' "$HERE/usr/share/applications/textweaver-gui.desktop" > "$GUI_DESKTOP"
-  printf '%s\n' "$MARKER" >> "$GUI_DESKTOP"
-  sed -e "s|^Exec=.*|Exec=\"$SELF\" --textweaver %f|" -e '/^TryExec=/d' "$HERE/usr/share/applications/textweaver.desktop" > "$DESKTOP"
+  sed -e "s|^Exec=.*|Exec=\"$SELF\" %f|" -e '/^TryExec=/d' "$HERE/usr/share/applications/textweaver.desktop" > "$DESKTOP"
   printf '%s\n' "$MARKER" >> "$DESKTOP"
+  sed -e "s|^Exec=.*|Exec=\"$SELF\" --tw %f|" -e '/^TryExec=/d' "$HERE/usr/share/applications/textweaver-terminal.desktop" > "$TERMINAL_DESKTOP"
+  printf '%s\n' "$MARKER" >> "$TERMINAL_DESKTOP"
   say "Wrote the menu entries."
   if command -v update-desktop-database > /dev/null 2>&1; then
     update-desktop-database "$APPS_DIR" > /dev/null 2>&1 || true
   fi
   case ":$PATH:" in
-    *":$BIN_DIR:"*) say "Done. Run textweaver-gui, textweaver or tw from any folder." ;;
+    *":$BIN_DIR:"*) say "Done. Run textweaver (the app) or tw (the terminal reader and commands) from any folder." ;;
     *)
       say "Done. $BIN_DIR is not on your PATH yet. Add this line to your shell's startup file, such as ~/.bashrc, then open a new terminal:"
       say "  export PATH=\"\$HOME/.local/bin:\$PATH\""
@@ -122,28 +158,15 @@ integrate() {
 }
 
 unintegrate() {
-  if ! ask "Remove the textweaver-gui, textweaver and tw links, the menu entries, and the icon that --install made?"; then
+  if ! ask "Remove the textweaver and tw links, the menu entries, and the icon that --install made?"; then
     say "Nothing changed."
     return 0
   fi
-  for name in $NAMES; do
-    link="$BIN_DIR/$name"
-    if [ -L "$link" ]; then
-      target="$(readlink "$link")"
-      case $target in
-        *.AppImage | "$SELF")
-          rm -f "$link"
-          say "Removed $link."
-          ;;
-        *) say "Leaving $link: it points at $target, not at an AppImage." ;;
-      esac
-    fi
+  for name in $NAMES $OLD_NAMES; do
+    remove_link "$name"
   done
-  for entry in "$GUI_DESKTOP" "$DESKTOP"; do
-    if [ -f "$entry" ] && grep -q "^$MARKER\$" "$entry"; then
-      rm -f "$entry"
-      say "Removed the menu entry $entry."
-    fi
+  for entry in "$DESKTOP" "$TERMINAL_DESKTOP" "$OLD_GUI_DESKTOP"; do
+    remove_entry "$entry"
   done
   if [ -f "$ICON_DIR/textweaver.svg" ]; then
     rm -f "$ICON_DIR/textweaver.svg"
@@ -153,22 +176,22 @@ unintegrate() {
 }
 
 # The name this was started as: the AppImage runtime passes the link or
-# file name in ARGV0.
+# file name in ARGV0. Started as tw, the program runs through its own tw
+# link, so it sees that name; --tw and --cli it handles itself.
 name="$(basename "${ARGV0:-$0}")"
-program=textweaver-gui
+program=textweaver
 case $name in
   tw | tw.*) program=tw ;;
-  textweaver) program=tw ;;
 esac
 
 case "${1:-}" in
-  --tw | --textweaver)
+  --gui | --app)
+    shift
+    program=textweaver
+    ;;
+  --textweaver)
     shift
     program=tw
-    ;;
-  --gui)
-    shift
-    program=textweaver-gui
     ;;
   --install | --uninstall)
     action="$1"

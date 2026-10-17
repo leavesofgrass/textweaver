@@ -3,7 +3,7 @@
 
 What atspi-dump.py (crates/textweaver-xilem/tools) checks once, this
 checks through a session, the way Orca would follow it (ADR-0039): it
-starts textweaver-xilem on fixtures/t/reading.md with the silent `paced`
+starts textweaver on fixtures/t/reading.md with the silent `paced`
 backend, sends keys with xdotool, and records the AT-SPI events at each
 step:
 

@@ -127,7 +127,7 @@ jobs:
         # remove this line and record the runs in ADR-0039.
         continue-on-error: true
         shell: pwsh
-        run: node tools/a11y/nvda-session.mjs --exe target/debug/textweaver-xilem.exe --out nvda
+        run: node tools/a11y/nvda-session.mjs --exe target/debug/textweaver.exe --out nvda
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -239,7 +239,7 @@ jobs:
         # macOS version, when its must checks pass three runs in a row on
         # main (ADR-0039).
         continue-on-error: true
-        run: node tools/a11y/voiceover-session.mjs --exe target/debug/textweaver-xilem --out voiceover
+        run: node tools/a11y/voiceover-session.mjs --exe target/debug/textweaver --out voiceover
       - uses: actions/upload-artifact@v7
         if: always()
         with:

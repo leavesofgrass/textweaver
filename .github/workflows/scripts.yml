@@ -54,7 +54,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q desktop-file-utils
-          desktop-file-validate scripts/linux/textweaver.desktop
+          desktop-file-validate scripts/linux/textweaver.desktop scripts/linux/textweaver-terminal.desktop
 
   psscriptanalyzer:
     runs-on: windows-latest
@@ -91,13 +91,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'install-windows.ps1 --from-source failed' }
           & powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1 -DryRun -Yes -Uninstall
           if ($LASTEXITCODE -ne 0) { throw 'install-windows.ps1 -Uninstall failed' }
-          $out = & powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1 --dry-run --yes --release v0.1.0-beta.2 --gui
-          if ($LASTEXITCODE -ne 0) { throw 'install-windows.ps1 --gui failed' }
+          $out = & powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-windows.ps1 --dry-run --yes --release v0.1.0-beta.3
+          if ($LASTEXITCODE -ne 0) { throw 'install-windows.ps1 --release failed' }
           $out
-          # Since beta 1 the app is in the package (B1-o2): -Gui adds the
-          # manifest line and the shortcut, and downloads nothing more.
-          foreach ($want in 'gui=package', 'textweaver app.lnk') {
-            if (-not ($out | Select-String -SimpleMatch $want)) { throw "install-windows.ps1 --gui did not mention $want" }
+          # Since beta 3 textweaver.exe is the app: the app's shortcut starts
+          # it, and the terminal shortcut opens tw.exe.
+          foreach ($want in 'textweaver app.lnk', 'textweaver terminal.lnk', 'The app, textweaver.exe, is installed') {
+            if (-not ($out | Select-String -SimpleMatch $want)) { throw "install-windows.ps1 did not mention $want" }
           }
       - name: Dry runs in PowerShell 7
         shell: pwsh
@@ -119,13 +119,13 @@ jobs:
         include:
           - image: debian:stable
             manager: 'Package manager: apt'
-            packages: 'apt-get install -y -q --no-install-recommends -o Dpkg::Progress-Fancy=0 build-essential pkg-config cmake libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev'
+            packages: 'apt-get install -y -q --no-install-recommends -o Dpkg::Progress-Fancy=0 build-essential pkg-config cmake libasound2-dev espeak-ng libespeak-ng-dev speech-dispatcher speech-dispatcher-espeak-ng libspeechd-dev libfontconfig1-dev'
           - image: fedora:latest
             manager: 'Package manager: dnf'
-            packages: 'dnf install -y gcc gcc-c++ make cmake pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel'
+            packages: 'dnf install -y gcc gcc-c++ make cmake pkgconf-pkg-config alsa-lib-devel espeak-ng espeak-ng-devel speech-dispatcher speech-dispatcher-espeak-ng speech-dispatcher-utils speech-dispatcher-devel fontconfig-devel'
           - image: archlinux:latest
             manager: 'Package manager: pacman'
-            packages: 'pacman -Syu --needed --noconfirm --noprogressbar base-devel pkgconf cmake alsa-lib espeak-ng speech-dispatcher'
+            packages: 'pacman -Syu --needed --noconfirm --noprogressbar base-devel pkgconf cmake alsa-lib espeak-ng speech-dispatcher fontconfig'
     steps:
       - uses: actions/checkout@v7
       - name: Dry run
@@ -134,7 +134,9 @@ jobs:
           bash scripts/install-linux.sh --dry-run --yes | tee dry-run.txt
           grep -F -- '${{ matrix.manager }}' dry-run.txt
           grep -F -- '${{ matrix.packages }}' dry-run.txt
-          grep -F -- 'cargo build --release --locked -p textweaver-tui -p textweaver-cli --bin textweaver --bin tw --features textweaver-cli/espeak' dry-run.txt
+          grep -F -- 'cargo build --release --locked -p textweaver-xilem --bin textweaver --features textweaver-xilem/espeak' dry-run.txt
+          grep -F -- 'ln -sfn textweaver' dry-run.txt
+          grep -F 'textweaver-terminal.desktop' dry-run.txt
       - name: Uninstall dry run, and the other scripts
         shell: bash
         run: |
@@ -144,14 +146,15 @@ jobs:
           grep -F 'SHA256SUMS.txt' release.txt
           bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-beta.2 --appimage | grep -F 'linux-x86_64.AppImage'
           bash scripts/install-linux.sh --dry-run --yes --release latest | grep -F 'api.github.com'
-          # --gui: since beta 1 the app is in the same package (B1-o2), so
-          # its link points into it, with its menu entry; and never from
-          # source.
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-beta.2 --tarball --gui | tee gui.txt
-          grep -F 'ln -sfn ../lib/textweaver/textweaver-gui' gui.txt
-          grep -F 'textweaver-gui.desktop' gui.txt
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-beta.2 --appimage --gui | grep -E 'ln -sfn textweaver.AppImage .*/textweaver-gui$'
-          if bash scripts/install-linux.sh --dry-run --yes --gui > /dev/null 2>&1; then echo 'Fail: --gui without --release should stop'; exit 1; fi
+          # Since beta 3 textweaver is the app: the tarball's textweaver
+          # and tw are linked, with the app's and the terminal reader's
+          # menu entries, and --gui is not needed.
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-beta.3 --tarball --gui | tee gui.txt
+          grep -F 'ln -sfn ../lib/textweaver/textweaver ' gui.txt
+          grep -F 'ln -sfn ../lib/textweaver/tw ' gui.txt
+          grep -F 'textweaver-terminal.desktop' gui.txt
+          grep -F -- '--gui is not needed' gui.txt
+          bash scripts/install-linux.sh --dry-run --yes --gui | grep -F -- '--gui is not needed'
           bash scripts/install-linux.sh --dry-run --yes --uninstall | grep -F 'textweaver-gui'
           bash scripts/doctor.sh --dry-run
           bash scripts/speech-check.sh --dry-run

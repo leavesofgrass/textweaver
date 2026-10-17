@@ -12,17 +12,16 @@
 #   tarball for systems without FUSE, for x86_64 and for aarch64 (on the
 #   ubuntu-22.04-arm runner), built on Ubuntu 22.04's glibc and checked on
 #   Debian and Fedora (and Arch on x86_64) before upload.
-# - One package per OS and CPU architecture (B1-o2) holds both programs:
-#   the app (textweaver-gui, ADR-0027; textweaver.app on macOS) and tw
-#   (with textweaver as a second name: a link on Linux and macOS, a small
-#   launcher on Windows), with the engine hosts, dictionaries, and the
-#   complete docs. `cargo xtask dist` (and `appimage` on Linux) builds it
-#   once. The app is checked (--version, a screenshot drawn on the CPU,
-#   and on macOS a silent reading) before upload. The Linux jobs also
-#   upload a copy of each .zsync file under the -gui name, so the app
-#   AppImages of 0.1.0-alpha.9 and earlier update to the single image.
+# - One package per OS and CPU architecture (B1-o2) holds one program
+#   (beta 3): textweaver, the app by default (ADR-0027; textweaver.app on
+#   macOS) and the terminal program with --tw, with tw beside it (a link
+#   on Linux and macOS, a small console launcher, tw.exe, on Windows), the
+#   engine hosts, dictionaries, and the complete docs. `cargo xtask dist`
+#   (and `appimage` on Linux) builds it once. The app is checked
+#   (--version, a screenshot drawn on the CPU, and on macOS a silent
+#   reading) before upload.
 #
-# The terminal packages are smoke-tested beyond --version before upload
+# The terminal program is smoke-tested beyond --version before upload
 # (tools/package-smoke.sh: open a fixture, tw info, tw components list,
 # convert one file), and the Linux tarball and AppImage again in a clean
 # container with no network (tools/clean-install-smoke.sh). Each job
@@ -89,7 +88,7 @@ jobs:
     name: Windows package
     needs: release
     runs-on: windows-latest
-    # tw, then the app (Vello and wgpu, fat LTO), in one package.
+    # textweaver (Vello and wgpu, fat LTO), the launcher, and the 32-bit host.
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
@@ -106,9 +105,12 @@ jobs:
           if (-not $zip) { throw 'no package' }
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $names = [IO.Compression.ZipFile]::OpenRead($zip.FullName).Entries.FullName
-          foreach ($want in 'tw.exe', 'textweaver.exe', 'textweaver-gui.exe', 'textweaver-host-x86.exe', 'GUI.md', 'lexicon/lexicon-en.twlex', 'THIRD-PARTY-NOTICES.md', 'licenses/scowl/Copyright', 'licenses/fonts/opendyslexic/OFL.txt', 'licenses/xilem/LICENSE') {
+          foreach ($want in 'tw.exe', 'textweaver.exe', 'textweaver-host-x86.exe', 'GUI.md', 'lexicon/lexicon-en.twlex', 'THIRD-PARTY-NOTICES.md', 'licenses/scowl/Copyright', 'licenses/fonts/opendyslexic/OFL.txt', 'licenses/xilem/LICENSE') {
             if (-not ($names | Where-Object { $_ -like "*/$want" })) { throw "the package lacks $want" }
           }
+          # Exactly three programs: textweaver.exe, tw.exe, and the host.
+          $programs = @($names | Where-Object { $_ -like '*.exe' } | ForEach-Object { ($_ -split '/')[-1] } | Sort-Object)
+          if (($programs -join ',') -ne 'textweaver-host-x86.exe,textweaver.exe,tw.exe') { throw "the package's programs are $($programs -join ', ')" }
           "Windows package: $($zip.Name), $([math]::Round($zip.Length / 1MB, 1)) MB" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
       # More than --version: open a fixture, tw info, tw components list,
       # and convert one file, on an empty TEXTWEAVER_HOME.
@@ -119,23 +121,26 @@ jobs:
             [ -d "$dir" ] && break
           done
           bash tools/package-smoke.sh "$dir/tw.exe" fixtures/sample.md | tee -a "$GITHUB_STEP_SUMMARY"
-          # The second name, through the launcher: the same help as tw.
-          diff <("$dir/tw.exe" --help) <("$dir/textweaver.exe" --help)
-          "$dir/textweaver.exe" --version
-      # textweaver-gui is a GUI-subsystem program: Start-Process waits for
+          # The launcher passes its arguments and exit status on.
+          "$dir/tw.exe" --version
+          status=0; "$dir/tw.exe" --no-such-flag > /dev/null 2>&1 || status=$?
+          test "$status" -eq 2 || { echo "Fail: tw.exe --no-such-flag ended with $status, not 2"; exit 1; }
+      # textweaver.exe is a GUI-subsystem program: Start-Process waits for
       # it and reads its exit code. No window opens: --version exits, and
       # --screenshot draws on the CPU (the runner's WARP device crashes on
       # Vello's GPU shaders; see gui-xilem.yml).
-      - name: Check the app in the package
+      - name: Check textweaver.exe in the package
         shell: pwsh
         run: |
           $dir = Get-ChildItem -Directory target/dist/textweaver-*-windows-x86_64 | Select-Object -First 1
-          $gui = Join-Path $dir.FullName 'textweaver-gui.exe'
-          $p = Start-Process -FilePath $gui -ArgumentList '--version' -Wait -PassThru -NoNewWindow
-          if ($p.ExitCode -ne 0) { throw "textweaver-gui --version failed ($($p.ExitCode))" }
+          $exe = Join-Path $dir.FullName 'textweaver.exe'
+          $p = Start-Process -FilePath $exe -ArgumentList '--version' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0) { throw "textweaver --version failed ($($p.ExitCode))" }
+          $p = Start-Process -FilePath $exe -ArgumentList '--tw', '--version' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0) { throw "textweaver --tw --version failed ($($p.ExitCode))" }
           $png = Join-Path $env:RUNNER_TEMP 'gui-check.png'
-          $p = Start-Process -FilePath $gui -ArgumentList '--screenshot', $png, 'fixtures/sample.md' -Wait -PassThru -NoNewWindow
-          if ($p.ExitCode -ne 0 -or -not (Test-Path $png)) { throw "textweaver-gui --screenshot failed ($($p.ExitCode))" }
+          $p = Start-Process -FilePath $exe -ArgumentList '--screenshot', $png, 'fixtures/sample.md' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0 -or -not (Test-Path $png)) { throw "textweaver --screenshot failed ($($p.ExitCode))" }
       # Exactly the files this job uploads: none missing, no stray one.
       - name: The package files are exactly the expected ones
         run: cargo xtask release-assets --dir target/dist --platform windows
@@ -174,18 +179,19 @@ jobs:
       - name: Check the package
         run: |
           dir=$(ls -d target/dist/textweaver-*-macos-universal)
-          lipo -info "$dir/tw"
-          codesign --verify --verbose "$dir/tw"
-          # textweaver is a link to tw, kept as a link in the zip.
-          test "$(readlink "$dir/textweaver")" = tw || { echo "Fail: textweaver is not a link to tw"; exit 1; }
+          # tw and textweaver are links to the program in textweaver.app,
+          # kept as links in the zip.
+          for link in tw textweaver; do
+            test "$(readlink "$dir/$link")" = textweaver.app/Contents/MacOS/textweaver || { echo "Fail: $link is not a link to the program"; exit 1; }
+          done
           # More than --version: open a fixture, tw info, tw components
           # list, and convert one file, on an empty TEXTWEAVER_HOME.
           set -o pipefail
           bash tools/package-smoke.sh "$dir/tw" fixtures/sample.md | tee -a "$GITHUB_STEP_SUMMARY"
-          diff <("$dir/tw" --help) <("$dir/textweaver" --help)
+          diff <("$dir/tw" --help) <("$dir/textweaver" --tw --help)
           zip=$(ls target/dist/textweaver-*-macos-universal.zip)
           listing=$(unzip -Z1 "$zip")
-          for want in tw textweaver textweaver.app/Contents/MacOS/textweaver-gui textweaver.app/Contents/Info.plist GUI.md lexicon/lexicon-en.twlex THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/fonts/opendyslexic/OFL.txt licenses/xilem/LICENSE; do
+          for want in tw textweaver textweaver.app/Contents/MacOS/textweaver textweaver.app/Contents/Info.plist GUI.md lexicon/lexicon-en.twlex THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/fonts/opendyslexic/OFL.txt licenses/xilem/LICENSE; do
             grep -q "/$want\$" <<< "$listing" || { echo "Fail: the package lacks $want"; exit 1; }
           done
           echo "macOS package: $(basename "$zip"), $(du -m "$zip" | cut -f1) MB" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -196,7 +202,7 @@ jobs:
         run: |
           for app in target/dist/textweaver-*-macos-universal/textweaver.app; do
             codesign --verify --deep --verbose "$app"
-            gui="$app/Contents/MacOS/textweaver-gui"
+            gui="$app/Contents/MacOS/textweaver"
             lipo -info "$gui"
             for arch in arm64 x86_64; do
               lipo "$gui" -verify_arch "$arch" || { echo "Fail: the GUI lacks $arch"; exit 1; }
@@ -287,7 +293,7 @@ jobs:
       # In the build image (it has the libraries the app links): the app
       # in the package runs --version and draws a screenshot on the CPU
       # (no display is needed), and the AppImage starts it by default.
-      # textweaver is a link to tw in the tarball. Not yet run on other
+      # tw is a link to textweaver in the tarball. Not yet run on other
       # distributions.
       - name: Check the app in the packages
         env:
@@ -298,24 +304,23 @@ jobs:
             textweaver-appimage bash -euc '
               for dir in target/dist/textweaver-*-linux-"$ARCH"; do
                 test -d "$dir" || { echo "Fail: no package folder for $ARCH"; exit 1; }
-                for want in tw textweaver textweaver-gui GUI.md lexicon/lexicon-en.twlex share/applications/textweaver.desktop share/applications/textweaver-gui.desktop THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/xilem/LICENSE; do
+                for want in tw textweaver GUI.md lexicon/lexicon-en.twlex share/applications/textweaver.desktop share/applications/textweaver-terminal.desktop THIRD-PARTY-NOTICES.md licenses/scowl/Copyright licenses/xilem/LICENSE; do
                   test -e "$dir/$want" || { echo "Fail: the package lacks $want"; exit 1; }
                 done
-                test "$(readlink "$dir/textweaver")" = tw || { echo "Fail: textweaver is not a link to tw"; exit 1; }
-                "$dir/textweaver-gui" --version
-                "$dir/textweaver-gui" --screenshot /tmp/gui-check.png fixtures/sample.md
+                if test -e "$dir/textweaver-gui"; then echo "Fail: the package holds textweaver-gui"; exit 1; fi
+                test "$(readlink "$dir/tw")" = textweaver || { echo "Fail: tw is not a link to textweaver"; exit 1; }
+                "$dir/textweaver" --version
+                "$dir/textweaver" --tw --version
+                "$dir/textweaver" --screenshot /tmp/gui-check.png fixtures/sample.md
                 test -s /tmp/gui-check.png
               done
               for tarball in target/dist/textweaver-*-linux-"$ARCH".tar.gz; do
-                tar -tzvf "$tarball" | grep -q "/textweaver -> tw$" || { echo "Fail: the tarball lacks the textweaver link"; exit 1; }
-                tar -tzf "$tarball" | grep -q "/textweaver-gui$" || { echo "Fail: the tarball lacks textweaver-gui"; exit 1; }
+                tar -tzvf "$tarball" | grep -q "/tw -> textweaver$" || { echo "Fail: the tarball lacks the tw link"; exit 1; }
               done
               for image in target/dist/textweaver-*-linux-"$ARCH".AppImage; do
                 "$image" --version
+                "$image" --tw --version
                 "$image" --gui --version
-              done
-              for zsync in target/dist/textweaver-*-linux-"$ARCH".AppImage.zsync; do
-                cmp "$zsync" "${zsync%.AppImage.zsync}-gui.AppImage.zsync"
               done
             '
       # The terminal tarball unpacked in a clean Debian container started
@@ -350,7 +355,6 @@ jobs:
           tools/release-upload.sh --no-sums "$TAG" \
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage \
             target/dist/textweaver-*-linux-${{ matrix.arch }}.AppImage.zsync \
-            target/dist/textweaver-*-linux-${{ matrix.arch }}-gui.AppImage.zsync \
             target/dist/textweaver-*-linux-${{ matrix.arch }}.tar.gz
       - name: Keep the packages (dry run)
         if: env.DRY_RUN == 'true'

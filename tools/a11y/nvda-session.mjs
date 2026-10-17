@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The Guidepup question (ADR-0039): can Guidepup's NVDA read the Xilem GUI,
 // a native winit window, on a Windows runner? It starts NVDA through
-// Guidepup, opens fixtures/t/reading.md in textweaver-xilem (silent paced
+// Guidepup, opens fixtures/t/reading.md in textweaver (silent paced
 // backend, in the foreground), and records what NVDA says at each step:
 // the window opening, reading three sentences, Pause, the next heading (h),
 // Settings (Ctrl+Comma), and Escape. The phrases are checked against
@@ -13,7 +13,7 @@
 // Runs only on a CI runner (`npx guidepup install nvda` first); it refuses
 // to run anywhere else, so it can never take over someone's own NVDA.
 //
-//   node tools/a11y/nvda-session.mjs --exe target/debug/textweaver-xilem.exe --out nvda
+//   node tools/a11y/nvda-session.mjs --exe target/debug/textweaver.exe --out nvda
 
 import { execFileSync } from "node:child_process";
 import guidepup from "@guidepup/guidepup";
@@ -23,7 +23,7 @@ import {
 
 requireRunner("nvda-session.mjs");
 const { nvda } = guidepup;
-const args = parseArgs("textweaver-xilem.exe");
+const args = parseArgs("textweaver.exe");
 const expected = loadExpected(args.expected);
 
 // Whole-run limit: the runner job has its own, but this ends the session

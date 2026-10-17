@@ -25,9 +25,9 @@ body:
       label: Where
       multiple: true
       options:
-        - The terminal reader (textweaver)
-        - The command line (tw)
-        - The GUI (textweaver-xilem)
+        - The textweaver app (textweaver)
+        - The terminal reader (tw)
+        - The command line (tw COMMAND)
         - Speech engines and voices
         - File formats and export
   - type: input

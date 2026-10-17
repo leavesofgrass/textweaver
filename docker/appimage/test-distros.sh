@@ -20,7 +20,8 @@
 # - `tw backends` through a link named tw (the argv0 dispatch), which must
 #   report espeak unavailable without libespeak-ng and available with it;
 # - `tw text` on a fixture, which must print the fixture's text;
-# - `textweaver --version` (the default program);
+# - `textweaver --version` (the app's command line, which needs no
+#   display to print its version);
 # - `--install --yes` and `--uninstall --yes` into a scratch home;
 # - the tarball's `tw --version` and `tw text`;
 # - scripts/install-linux.sh --release with the tarball and with the
@@ -121,9 +122,11 @@ run_round() {
   ln -s textweaver.AppImage "$work/tw"
   cd "$work"
   check "AppImage --tw --version" ./textweaver.AppImage --appimage-extract-and-run --tw --version
-  # On its own the AppImage starts the app (B1-o2), which needs a desktop
-  # session's libraries a bare container lacks; --textweaver runs tw, the
-  # terminal reader's program.
+  check "AppImage --cli --version" ./textweaver.AppImage --appimage-extract-and-run --cli --version
+  # On its own the AppImage starts the app, which prints its version with
+  # no display; --textweaver, which menu entries from before beta 3 use,
+  # still runs the terminal program.
+  check "AppImage --version (the app)" ./textweaver.AppImage --appimage-extract-and-run --version
   check "AppImage --textweaver --version" ./textweaver.AppImage --appimage-extract-and-run --textweaver --version
   backends="$(APPIMAGE_EXTRACT_AND_RUN=1 ./tw backends 2>&1)" || {
     echo "  FAILED: tw backends"
@@ -154,8 +157,8 @@ run_round() {
   fi
   home="$(mktemp -d)"
   check "--install --yes" env HOME="$home" APPIMAGE_EXTRACT_AND_RUN=1 ./textweaver.AppImage --install --yes
-  for f in .local/bin/textweaver .local/bin/tw .local/bin/textweaver-gui \
-    .local/share/applications/textweaver.desktop .local/share/applications/textweaver-gui.desktop \
+  for f in .local/bin/textweaver .local/bin/tw \
+    .local/share/applications/textweaver.desktop .local/share/applications/textweaver-terminal.desktop \
     .local/share/icons/hicolor/scalable/apps/textweaver.svg; do
     [ -e "$home/$f" ] || [ -L "$home/$f" ] || {
       echo "  FAILED: --install did not make ~/$f"
@@ -173,6 +176,8 @@ run_round() {
     tar -xzf "/pkg/$tarball" -C tar --strip-components=1
     check "tarball tw --version" ./tar/tw --version
     check "tarball tw text" ./tar/tw text /fixtures/sample.md
+    check "tarball textweaver --tw --version" ./tar/textweaver --tw --version
+    check "tarball textweaver text (a command)" ./tar/textweaver text /fixtures/sample.md
   fi
   cd /
   rm -rf "$work" "$home"
