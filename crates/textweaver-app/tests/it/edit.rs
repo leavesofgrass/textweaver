@@ -1402,3 +1402,47 @@ fn escape_closes_what_is_open_before_leaving_edit_mode() {
     r.act(ActionId::Stop);
     assert!(!r.app.is_editing());
 }
+
+/// Entering and leaving edit mode keep the cursor's place in a Markdown
+/// file: the editor's cursor starts at the reading position, and the
+/// reading cursor comes back to the block and word the editor's cursor
+/// was on, whether or not the text changed.
+#[test]
+fn edit_mode_keeps_the_cursor_both_ways_in_markdown() {
+    let mut r = rig();
+    let source = "# Title\n\nHello world. The end.\n\nSecond paragraph here.\n";
+    let file = r.file("note.md", source);
+    r.app.open(&file).unwrap();
+    let canon = r.text();
+    r.go(at(&canon, "world"));
+    r.act(ActionId::ToggleEditMode);
+    assert_eq!(r.app.session().unwrap().cursor, at(source, "world"));
+
+    // Unchanged: to "paragraph" in the source, then back to reading.
+    r.go(CharPos(at(source, "paragraph").0 + 3));
+    r.act(ActionId::ToggleEditMode);
+    assert!(!r.app.is_editing());
+    let canon = r.text();
+    assert_eq!(r.app.session().unwrap().cursor, at(&canon, "paragraph"));
+
+    // Escape does the same.
+    r.act(ActionId::ToggleEditMode);
+    assert_eq!(r.app.session().unwrap().cursor, at(source, "paragraph"));
+    r.go(at(source, "Title"));
+    r.act(ActionId::Stop);
+    assert!(!r.app.is_editing());
+    assert_eq!(r.app.session().unwrap().cursor, at(&canon, "Title"));
+
+    // Changed and saved: the cursor follows the edit to its word.
+    r.act(ActionId::ToggleEditMode);
+    r.go(at(source, "Hello"));
+    r.type_str("Oh, ");
+    let edited = "# Title\n\nOh, Hello world. The end.\n\nSecond paragraph here.\n";
+    assert_eq!(r.text(), edited);
+    r.go(at(edited, "end"));
+    r.act(ActionId::Save);
+    r.act(ActionId::ToggleEditMode);
+    assert!(!r.app.is_editing());
+    let canon = r.text();
+    assert_eq!(r.app.session().unwrap().cursor, at(&canon, "end"));
+}
