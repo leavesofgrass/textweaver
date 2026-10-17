@@ -901,13 +901,17 @@ impl App {
             s.selection = None;
             let msg = self.msg("playback-search-cleared");
             self.note(&msg);
-        } else if self.mode == Mode::Edit {
-            // Escape is Stop everywhere; in an editor people expect it to
-            // leave, so say how to (usability pass, item 5).
-            let finish = self.key(textweaver_keymap::ActionId::ToggleEditMode);
-            let msg = self.msg_args("playback-still-editing", &args!["key" => finish]);
-            self.tell(&msg);
         }
+    }
+
+    /// True when Stop (Escape) leaves edit mode, as Ctrl+E does: in edit
+    /// mode with nothing to stop, no reading and no search to clear. A
+    /// panel, menu, list, prompt, or dialog on top takes Escape before it
+    /// becomes Stop, and closes first.
+    pub(crate) fn stop_leaves_edit(&self) -> bool {
+        self.mode == Mode::Edit
+            && self.playback == Playback::Idle
+            && self.session.as_ref().is_none_or(|s| s.find.is_none())
     }
 
     pub(crate) fn read_current_character(&mut self) {

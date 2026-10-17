@@ -1165,6 +1165,23 @@ mod on {
             assert!(!app.dictation.active());
         }
 
+        /// Escape means nothing to dictation, so with nothing being read it
+        /// leaves edit mode as Ctrl+E does: the dictation is finished first.
+        #[test]
+        fn escape_during_dictation_finishes_it_and_leaves_edit_mode() {
+            let (mut app, fake, _said) = editing("A");
+            app.dispatch(Command::Action(ActionId::Dictate));
+            fake.at_stop(vec![phrase("kept words"), final_event()]);
+            app.dispatch(Command::Action(ActionId::Stop));
+            let text = text_now(&app);
+            assert!(text.contains("A kept words"), "{text:?}");
+            assert!(!app.dictation.active());
+            // The dictated words are unsaved: Ctrl+E's own question.
+            assert!(app.list_model().is_some());
+            app.dispatch(Command::Choose(1));
+            assert!(!app.is_editing());
+        }
+
         #[test]
         fn quitting_finishes_and_stops_the_recognizer() {
             let (mut app, fake, _said) = editing("A");

@@ -10,7 +10,9 @@ Open a document and press **Ctrl+E**. textweaver stops reading, says "Edit mode 
 
 Press **Ctrl+E** again to finish. textweaver says "Edit mode off." If there are unsaved changes it asks what to do first; see [Leaving with unsaved changes](#leaving-with-unsaved-changes).
 
-**Escape** stops reading, as it does everywhere. When nothing is being read, it leaves you in edit mode and reminds you how to finish: "Still editing. Ctrl+E finishes." (textweaver's own voice says the key as "Control E".)
+**Escape** also finishes, in the terminal reader and in the textweaver app alike, once nothing else needs it. If a menu, list, panel, prompt, find bar or dialog is open, Escape closes that first. If reading is under way, Escape stops it and you stay in edit mode. If a search's matches are marked, Escape clears them. Otherwise Escape does exactly what **Ctrl+E** does: your edits are kept (with the same question about unsaved changes), the cursor stays where it was, and you hear "Edit mode off." A dictation under way is finished first, as with Ctrl+E, so its last words are typed.
+
+In the textweaver app the toolbar's **Edit** button does the same as Ctrl+E. In edit mode it is named **Done editing**, with Ctrl+E and Escape as its keys, and it stands directly before Start dictation. Pressing either moves the focus to the document. See [What is in the app](gui.md#what-is-in-the-app).
 
 With no document open, **Ctrl+E** says "No document to edit. Press Ctrl+N for a new one." (spoken as "Control N").
 
