@@ -629,7 +629,7 @@ For more help reading, such as one word at a time (RSVP), bionic reading, and a 
 
 ## Faster, slower, and the voice
 
-- **+** or **=**: faster. **-**: slower. Each step is 20 words per minute. The graphical version also has **F11** and **Shift+F11**; there, **Ctrl+=** and **Ctrl+-** change the text size.
+- **+** or **=**: faster. **-**: slower. Each step is 20 words per minute. The graphical version uses the same keys while reading; there, **Ctrl+=** and **Ctrl+-** change the text size, and **F11** is full screen.
 - **F8**: cycle the speed presets: skim, normal, study, slow.
 - **Alt+V**: choose a voice. **Ctrl+Alt+V** also works, except in a macOS terminal, where VoiceOver keeps it. The graphical version uses **Ctrl+Alt+V** (**Cmd+Option+V** on macOS).
 
