@@ -149,9 +149,17 @@ fn finish(
             wait_for.display()
         );
     }
+    let from_before_one_program = swap::holds_retired(into);
     let n = swap::swap_in(new_root, into, false).map_err(|e| anyhow::anyhow!(not_installed(&e)))?;
     crate::cmd::outln!("Update installed: {n} entries replaced.");
+    // From before beta 3: the Start menu shortcuts named the app as
+    // textweaver-gui.exe, and the terminal reader as textweaver.exe.
+    if from_before_one_program && let Err(e) = swap::retarget_shortcuts(into) {
+        eprintln!("Note: {e}");
+    }
     if let Some(program) = start {
+        // The app before beta 3 starts again as textweaver.
+        let program = swap::current_program(program, into);
         textweaver_app::core::process::command(program).spawn()?;
     }
     Ok(())
