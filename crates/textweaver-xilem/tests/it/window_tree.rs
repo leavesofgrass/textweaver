@@ -1044,15 +1044,19 @@ fn plus_and_minus_change_the_rate_while_reading_and_f11_is_full_screen() {
             event(c("-"), Mods::empty(), Location::Numpad),
             Some(ActionId::RateDown),
         ),
-        (
+    ];
+    // F11 is full screen on Windows and Linux; macOS keeps F11 for itself.
+    let mut cases = cases.to_vec();
+    if !cfg!(target_os = "macos") {
+        cases.push((
             event(Key::Named(NamedKey::F11), Mods::empty(), Location::Standard),
             Some(ActionId::FullScreen),
-        ),
-        (
+        ));
+        cases.push((
             event(Key::Named(NamedKey::F11), Mods::SHIFT, Location::Standard),
             None,
-        ),
-    ];
+        ));
+    }
     let layer = app.mode().layer();
     for (ev, want) in cases {
         h.process_text_event(TextEvent::Keyboard(ev.clone()));
