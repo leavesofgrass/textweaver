@@ -148,18 +148,28 @@ def orca_tail(path, start):
     return [s for s in said if s.strip()], end
 
 
-def seeded_home():
-    """A new state folder that is not a first run.
+# The questions textweaver asks once, marked as asked. Without them the
+# first run's language list and optional components list, then the
+# question about checking for updates, take the focus from the document
+# (the cause of the failures from Saturday, October 3, 2026).
+SEED_SETTINGS = """[components]
+chooser_shown = true
 
-    An empty one is, and the first run's language list and optional
-    components list take the focus from the document (the cause of the
-    failures from Saturday, October 3, 2026). `--background`, which skips
-    them, cannot be used: with it the window is not found on the bus. An
-    empty settings file is the defaults, and marks the folder as used.
+[updates]
+asked = true
+"""
+
+
+def seeded_home():
+    """A new state folder that is not a first run and asks nothing.
+
+    `--background`, which skips the first run, cannot be used: with it the
+    window is not found on the bus. The rest of the settings are defaults.
     """
     home = tempfile.mkdtemp(prefix="tw-a11y-")
     os.makedirs(os.path.join(home, "config"))
-    open(os.path.join(home, "config", "settings.toml"), "w", encoding="utf-8").close()
+    with open(os.path.join(home, "config", "settings.toml"), "w", encoding="utf-8") as f:
+        f.write(SEED_SETTINGS)
     return home
 
 
