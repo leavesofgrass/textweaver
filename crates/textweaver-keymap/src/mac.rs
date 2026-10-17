@@ -65,7 +65,10 @@ pub(crate) fn gui_keys(action: ActionId) -> Option<&'static [&'static str]> {
         A::CaretPreviousWord => &["b:Left", "b:Alt+Left"],
         A::SelectNextWord => &["b:Shift+Right", "b:Alt+Shift+Right"],
         A::SelectPreviousWord => &["b:Shift+Left", "b:Alt+Shift+Left"],
-        // F11 shows the desktop.
+        // F11 shows the desktop; Ctrl+Cmd+F, the Mac's full-screen key, is
+        // macOS's own (the View menu's Enter Full Screen).
+        A::FullScreen => &["g:Alt+Enter"],
+        // The rate has no F key in the GUI on any system.
         A::RateUp => &["g:Cmd+Alt+]", "b:+", "b:="],
         A::RateDown => &["g:Cmd+Alt+[", "b:-"],
         // Cmd+Option+= and Cmd+Option+- are Zoom.
@@ -439,5 +442,24 @@ mod tests {
         assert_eq!(translate_gui(k("Ctrl+Alt+Down")), k("Cmd+Alt+Down"));
         assert!(is_voiceover_chord(&k("Ctrl+Alt+Right")));
         assert!(!is_voiceover_chord(&k("Cmd+Alt+Right")));
+    }
+
+    /// Full screen on a Mac is Option+Enter: F11 shows the desktop, and
+    /// Ctrl+Cmd+F is the View menu's own. The rate keeps Cmd+Option+] and
+    /// Cmd+Option+[ beside + and -.
+    #[test]
+    fn mac_full_screen_and_rate_keys() {
+        let gui = Keymap::defaults(Platform::MacOs, Frontend::Gui);
+        assert_eq!(
+            gui.lookup(&k("Alt+Enter"), Layer::Browse),
+            Some(ActionId::FullScreen)
+        );
+        assert_eq!(gui.lookup(&k("F11"), Layer::Browse), None);
+        assert_eq!(
+            gui.lookup(&k("Cmd+Alt+]"), Layer::Edit),
+            Some(ActionId::RateUp)
+        );
+        assert_eq!(gui.lookup(&k("+"), Layer::Browse), Some(ActionId::RateUp));
+        assert_eq!(gui.lookup(&k("-"), Layer::Browse), Some(ActionId::RateDown));
     }
 }

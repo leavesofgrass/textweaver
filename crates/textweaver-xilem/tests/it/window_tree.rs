@@ -997,6 +997,87 @@ fn press(
     app.keymap().lookup(&chord, layer)
 }
 
+/// The rate keys while reading, as in the terminal reader: plus (Shift
+/// with the equals key on a US keyboard, or the number pad's plus, which
+/// comes without Shift), equals, and minus (the main key or the number
+/// pad's) reach the driver from the document and name Speak faster and
+/// Speak slower. F11 is full screen, and Shift+F11 does nothing. In edit
+/// mode the same keys type, and reach no command.
+#[test]
+fn plus_and_minus_change_the_rate_while_reading_and_f11_is_full_screen() {
+    use masonry::core::keyboard::{KeyState, KeyboardEvent, Location, Modifiers as Mods};
+    use textweaver_app::Command;
+    use textweaver_app::keymap::{ActionId, Platform};
+    use textweaver_xilem::keys;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness(&app);
+    let doc = h.get_widget(DOC).id();
+    h.focus_on(Some(doc));
+    let platform = Platform::current();
+    let event = |key: Key, mods: Mods, location: Location| KeyboardEvent {
+        state: KeyState::Down,
+        key,
+        modifiers: mods,
+        location,
+        ..Default::default()
+    };
+    let c = |s: &str| Key::Character(s.into());
+    let cases = [
+        (
+            event(c("+"), Mods::SHIFT, Location::Standard),
+            Some(ActionId::RateUp),
+        ),
+        (
+            event(c("+"), Mods::empty(), Location::Numpad),
+            Some(ActionId::RateUp),
+        ),
+        (
+            event(c("="), Mods::empty(), Location::Standard),
+            Some(ActionId::RateUp),
+        ),
+        (
+            event(c("-"), Mods::empty(), Location::Standard),
+            Some(ActionId::RateDown),
+        ),
+        (
+            event(c("-"), Mods::empty(), Location::Numpad),
+            Some(ActionId::RateDown),
+        ),
+        (
+            event(Key::Named(NamedKey::F11), Mods::empty(), Location::Standard),
+            Some(ActionId::FullScreen),
+        ),
+        (
+            event(Key::Named(NamedKey::F11), Mods::SHIFT, Location::Standard),
+            None,
+        ),
+    ];
+    let layer = app.mode().layer();
+    for (ev, want) in cases {
+        h.process_text_event(TextEvent::Keyboard(ev.clone()));
+        let (KeyAction(k), _) = h
+            .pop_action::<KeyAction>()
+            .unwrap_or_else(|| panic!("{ev:?} reaches the driver"));
+        let chord = keys::chord(&k, platform).expect("a chord");
+        assert_eq!(app.keymap().lookup(&chord, layer), want, "{ev:?}");
+    }
+    // The actions change the rate.
+    let before = app.settings().speech.rate;
+    let _ = app.dispatch(Command::Action(ActionId::RateUp));
+    assert_ne!(app.settings().speech.rate, before);
+    let _ = app.dispatch(Command::Action(ActionId::RateDown));
+    assert_eq!(app.settings().speech.rate, before);
+    // In edit mode plus and minus are text, never the rate.
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    let edit = app.mode().layer();
+    for s in ["+", "=", "-"] {
+        let chord = keys::chord(&event(c(s), Mods::empty(), Location::Standard), platform)
+            .expect("a chord");
+        assert_eq!(app.keymap().lookup(&chord, edit), None, "{s}");
+    }
+}
+
 /// Parity with the terminal reader: the outline, the notes list, the
 /// access modes, and tables and links by key reach the app from the
 /// document, and do what they do in the terminal (the lists open as the
@@ -1356,6 +1437,61 @@ fn the_bars_are_built_again_when_their_buttons_change() {
     let header = bar_buttons_of(&h, Role::Banner);
     assert_eq!(header.len(), app.bar_buttons(Bar::Header).len());
     assert!(!header.iter().any(|(n, _)| n == "Open"), "{header:?}");
+}
+
+/// Edit mode shows Start dictation on the toolbar, a button with its key,
+/// reached in the bar's order before Slower and Faster; leaving edit mode
+/// hides it, and when the focus was on it, the focus goes to the document.
+#[cfg(feature = "dictation")]
+#[test]
+fn edit_mode_shows_start_dictation_and_leaving_it_hides_the_button() {
+    use textweaver_app::Command;
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::gui::DICTATE;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness_at(&app, (1100, 780), 1.0);
+    let names = |h: &TestHarness<Root>| -> Vec<String> {
+        bar_buttons_of(h, Role::Toolbar)
+            .into_iter()
+            .map(|(n, _)| n)
+            .collect()
+    };
+    assert!(!names(&h).iter().any(|n| n == "Start dictation"));
+
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    assert!(app.is_editing());
+    let built = gui::rebuild_bars(&mut h, &app, false, true);
+    let _ = h.redraw();
+    assert!(!built.differ_from(&app));
+    let toolbar = names(&h);
+    let at = toolbar
+        .iter()
+        .position(|n| n == "Start dictation")
+        .unwrap_or_else(|| panic!("Start dictation in {toolbar:?}"));
+    assert_eq!(&toolbar[at + 1..], ["Slower", "Faster"], "{toolbar:?}");
+    let id = h.get_widget(DICTATE).id();
+    let node = h.access_node(id).expect("the button's node");
+    assert_eq!(node.role(), Role::Button);
+    assert!(
+        !node
+            .data()
+            .keyboard_shortcut()
+            .unwrap_or_default()
+            .is_empty(),
+        "Start dictation names its key"
+    );
+
+    // The focus on the button, then edit mode ends: the button goes, and
+    // the focus is on the document.
+    h.focus_on(Some(id));
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    assert!(!app.is_editing());
+    let built = gui::rebuild_bars(&mut h, &app, false, false);
+    let _ = h.redraw();
+    assert!(!built.differ_from(&app));
+    assert!(!names(&h).iter().any(|n| n == "Start dictation"));
+    assert_eq!(h.focused_widget_id(), Some(h.get_widget(DOC).id()));
 }
 
 /// The bounds test (W9b-n): at the review sizes, from the largest to a
