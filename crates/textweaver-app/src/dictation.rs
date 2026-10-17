@@ -28,7 +28,8 @@
 //! microphone hears meanwhile is dropped (`textweaver-dictation`'s live
 //! audio). "Dictation paused." and "Dictation resumed." are said;
 //! [`App::dictation_status`] tells the frontends, which show Pause
-//! dictation and Stop dictation buttons while a session is active.
+//! dictation and Stop dictation buttons while a session is active, and a
+//! Start dictation button in edit mode ([`App::shown_bar_buttons`]).
 //!
 //! Outside edit mode the command asks whether to turn edit mode on first.
 //! Without the `dictation` feature the command stays hidden (it is a
@@ -1279,6 +1280,37 @@ mod on {
             assert_eq!(app.dictation_status(), DictationStatus::Off);
             assert_eq!(app.status_text(), "Dictation done.");
             assert!(!buttons(&app).contains(&ActionId::PauseDictation));
+            // Still editing: Dictate stays, as Start dictation.
+            assert!(buttons(&app).contains(&ActionId::Dictate));
+        }
+
+        /// Edit mode shows Dictate (Start dictation) on the toolbar, once
+        /// and before Slower and Faster; reading mode does not.
+        #[test]
+        fn edit_mode_shows_the_dictate_button() {
+            use crate::buttons::Bar;
+            let (mut app, _fake, _said) = reading("Hello");
+            let buttons = |app: &App| app.shown_bar_buttons(Bar::Toolbar);
+            assert!(!buttons(&app).contains(&ActionId::Dictate));
+            app.dispatch(Command::Action(ActionId::ToggleEditMode));
+            assert!(app.is_editing());
+            let shown = buttons(&app);
+            assert_eq!(
+                shown.iter().filter(|a| **a == ActionId::Dictate).count(),
+                1,
+                "{shown:?}"
+            );
+            assert!(!shown.contains(&ActionId::PauseDictation), "{shown:?}");
+            assert_eq!(app.bar_buttons(Bar::Toolbar).len() + 1, shown.len());
+            let at = shown.iter().position(|a| *a == ActionId::Dictate).unwrap();
+            assert!(
+                shown[at + 1..]
+                    .iter()
+                    .all(|a| matches!(a, ActionId::RateDown | ActionId::RateUp)),
+                "{shown:?}"
+            );
+            app.dispatch(Command::Action(ActionId::ToggleEditMode));
+            assert!(!app.is_editing());
             assert!(!buttons(&app).contains(&ActionId::Dictate));
         }
 

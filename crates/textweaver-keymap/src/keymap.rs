@@ -972,9 +972,13 @@ mod tests {
             ("Escape", ActionId::Stop),
             ("Ctrl+Space", ActionId::ReadFromCursor),
             // star's Ctrl+= and Ctrl+- for the rate became the text size
-            // keys (the owner's session 2); the rate is on F11.
-            ("F11", ActionId::RateUp),
-            ("Shift+F11", ActionId::RateDown),
+            // keys (the owner's session 2); the rate is on + and - while
+            // reading, and F11 is full screen (the owner, beta 3).
+            ("+", ActionId::RateUp),
+            ("=", ActionId::RateUp),
+            ("-", ActionId::RateDown),
+            ("F11", ActionId::FullScreen),
+            ("Alt+Enter", ActionId::FullScreen),
             ("Ctrl+=", ActionId::TextLarger),
             ("Ctrl+-", ActionId::TextSmaller),
             ("Ctrl+0", ActionId::TextSizeReset),
@@ -1024,6 +1028,15 @@ mod tests {
         ] {
             assert_eq!(map.lookup(&k(chord), Layer::Edit), Some(action), "{chord}");
         }
+        // Shift+F11 is free in the GUI, and the rate has no key while
+        // typing (the owner, beta 3).
+        assert_eq!(map.lookup(&k("Shift+F11"), Layer::Browse), None);
+        assert_eq!(
+            map.lookup(&k("F11"), Layer::Edit),
+            Some(ActionId::FullScreen)
+        );
+        assert_eq!(map.lookup(&k("+"), Layer::Edit), None);
+        assert_eq!(map.lookup(&k("-"), Layer::Edit), None);
     }
 
     /// star's terminal keys, in the classic preset.

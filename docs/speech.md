@@ -161,7 +161,7 @@ The rate is in words per minute, from 50 to 900. The default is 265.
 - **+** or **=**: faster by 20.
 - **-**: slower by 20.
 
-The graphical version also provides **F11** and **Shift+F11**; in it, **Ctrl+=** and **Ctrl+-** change the text size instead. Each change is announced, for example "285 words per minute.", and at the limits you hear "Fastest rate." or "Slowest rate." Each engine converts words per minute to its own scale, so a given rate sounds approximately the same on every engine.
+The graphical version uses the same keys while reading, including the number pad's plus and minus; in it, **Ctrl+=** and **Ctrl+-** change the text size instead, and in edit mode, where these keys type, the toolbar's Slower and Faster buttons change the rate (on macOS, **Cmd+Option+]** and **Cmd+Option+[** also work in edit mode). Each change is announced, for example "285 words per minute.", and at the limits you hear "Fastest rate." or "Slowest rate." Each engine converts words per minute to its own scale, so a given rate sounds approximately the same on every engine.
 
 ### Speed presets: F8
 

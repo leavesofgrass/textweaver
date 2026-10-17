@@ -77,7 +77,8 @@ pub const ROOT: WidgetTag<Root> = WidgetTag::named("tw-root");
 pub const PLAY: WidgetTag<ActionButton> = WidgetTag::named("tw-play");
 /// The Edit button (edit mode on or off).
 pub const EDIT: WidgetTag<ActionButton> = WidgetTag::named("tw-edit");
-/// The Dictate button: "Stop dictation" while dictation is active.
+/// The Dictate button: "Start dictation" in edit mode, "Stop dictation"
+/// while dictation is active.
 pub const DICTATE: WidgetTag<ActionButton> = WidgetTag::named("tw-dictate");
 /// The Pause dictation button: "Resume dictation" while paused.
 pub const PAUSE_DICTATION: WidgetTag<ActionButton> = WidgetTag::named("tw-pause-dictation");
@@ -405,9 +406,13 @@ fn toolbar_push_right(actions: &[ActionId]) -> Option<usize> {
 /// lists (B1-g2c): the window shows a change made in Customize buttons at
 /// once, not only when it next opens. Labels follow `reading` (Play or
 /// Pause) and `editing` (Edit or Finish editing), and the dictation
-/// buttons come and go with dictation (`App::shown_bar_buttons`). Returns
-/// the new buttons.
+/// buttons come and go with edit mode and dictation
+/// (`App::shown_bar_buttons`). When the focus was on a button that went
+/// (Start dictation on leaving edit mode, Stop dictation once dictation
+/// ends), it moves to the document, never to nowhere. Returns the new
+/// buttons.
 pub fn rebuild_bars(host: &mut impl Host, app: &App, reading: bool, editing: bool) -> Buttons {
+    let focused = host.focus_now();
     let c = app.catalog();
     let dictation = app.dictation_status();
     let mut ids = HashMap::new();
@@ -433,6 +438,12 @@ pub fn rebuild_bars(host: &mut impl Host, app: &App, reading: bool, editing: boo
     host.edit(TOOLBAR_BUTTONS, |mut f| {
         Flow::set_buttons(&mut f, toolbar_buttons, push);
     });
+    if let Some(f) = focused
+        && !host.has_widget(f)
+    {
+        let doc = host.id_of(DOC);
+        host.move_focus(doc);
+    }
     Buttons {
         by_id: ids,
         header,
@@ -683,7 +694,8 @@ pub fn button_label(c: &Catalog, action: ActionId, reading: bool, editing: bool)
 
 /// The drawn label of the button for `action` as [`button_label`] gives
 /// it, with the dictation buttons following `dictation`: Dictate says
-/// "Stop dictation" while dictation is active, and Pause dictation says
+/// "Start dictation", or "Stop dictation" while dictation is active, and
+/// Pause dictation says
 /// "Resume dictation" while paused.
 pub fn state_label(
     c: &Catalog,
@@ -694,6 +706,7 @@ pub fn state_label(
 ) -> String {
     match action {
         ActionId::Dictate if dictation.is_active() => c.tr("gui-button-stop-dictation"),
+        ActionId::Dictate => c.tr("gui-button-start-dictation"),
         ActionId::PauseDictation if dictation == DictationStatus::Paused => {
             c.tr("gui-button-resume-dictation")
         }
@@ -2054,21 +2067,13 @@ impl Gui {
             ctx.render_root(self.window_id)
                 .edit_widget_with_tag(ANNOUNCER, |mut a| Announcer::release(&mut a));
         }
-        // The bars' buttons changed (Customize buttons, or dictation
-        // started or ended): built again. When the focus was on a button
-        // that went (Stop dictation once dictation ends), it moves to the
-        // document, never to nowhere.
+        // The bars' buttons changed (Customize buttons, edit mode, or
+        // dictation started or ended): built again; a focused button that
+        // went leaves the focus on the document (`rebuild_bars`).
         if self.buttons.differ_from(&self.app) {
             let (reading, editing) = (self.shown.reading, self.shown.edit_button);
             let root = ctx.render_root(self.window_id);
-            let focused = root.focus_now();
             self.buttons = rebuild_bars(root, &self.app, reading, editing);
-            if let Some(f) = focused
-                && !root.has_widget(f)
-            {
-                let doc = root.id_of(DOC);
-                root.move_focus(doc);
-            }
             if self.log {
                 crate::log::line("bars: buttons rebuilt");
             }

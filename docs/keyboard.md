@@ -220,8 +220,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 
 | Action | Terminal | GUI | GUI on macOS | Id |
 |---|---|---|---|---|
-| Speak faster | `+` (browse), `=` (browse) | `F11`, `+` (browse), `=` (browse) | `Cmd+Option+]`, `+` (browse), `=` (browse) | `rate_up` |
-| Speak slower | `-` (browse) | `Shift+F11`, `-` (browse) | `Cmd+Option+[`, `-` (browse) | `rate_down` |
+| Speak faster | `+` (browse), `=` (browse) | `+` (browse), `=` (browse) | `Cmd+Option+]`, `+` (browse), `=` (browse) | `rate_up` |
+| Speak slower | `-` (browse) | `-` (browse) | `Cmd+Option+[`, `-` (browse) | `rate_down` |
 | Raise the pitch | `Alt+=`, `)` (browse) | `Alt+=`, `)` (browse) | `Cmd+Option+Shift+Up`, `)` (browse) | `pitch_up` |
 | Lower the pitch | `Alt+-`, `(` (browse) | `Alt+-`, `(` (browse) | `Cmd+Option+Shift+Down`, `(` (browse) | `pitch_down` |
 | Louder | `F7`, `0` (browse) | `F7`, `0` (browse) | `F7`, `0` (browse) | `volume_up` |
@@ -393,7 +393,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | palette | palette | palette | `toggle_header` |
 | Show or hide the toolbar, the bar of Play, Stop and the reading buttons | palette | palette | palette | `toggle_toolbar` |
 | Turn focus mode on or off: the bars and the panel hide while the mouse rests | palette | palette | palette | `toggle_focus_mode` |
-| Full screen on or off: the bars and the panel hide while the mouse rests | none | `Alt+Enter` | `Option+Enter` | `full_screen` |
+| Full screen on or off: the bars and the panel hide while the mouse rests | none | `F11`, `Alt+Enter` | `Option+Enter` | `full_screen` |
 | Choose the buttons on the header and the toolbar, and their order | palette | palette | palette | `customize_buttons` |
 | Show or hide the preview beside the editor in edit mode: the document as it reads, updated when typing pauses | none | `Alt+F5` | `Option+F5` | `show_preview` |
 | Move to the next part of the window: the header, the panel, the document, or the toolbar | none | `F6` | `F6` | `next_region` |
@@ -539,8 +539,8 @@ These actions have only single-key shortcuts by default. With single-key shortcu
 | Scroll down one line without moving the cursor | palette | palette | `scroll_down` |
 | Scroll up one line without moving the cursor | palette | palette | `scroll_up` |
 | Speech Cursor: read the current line again | palette | palette | `speech_cursor_reread_line` |
-| Speak faster | palette | has a chord | `rate_up` |
-| Speak slower | palette | has a chord | `rate_down` |
+| Speak faster | palette | palette | `rate_up` |
+| Speak slower | palette | palette | `rate_down` |
 | Add a bookmark at the cursor | palette | has a chord | `add_bookmark` |
 | List bookmarks | palette | palette | `list_bookmarks` |
 | Move to the next bookmark | palette | palette | `next_bookmark` |

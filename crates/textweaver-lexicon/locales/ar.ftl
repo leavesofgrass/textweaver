@@ -3828,6 +3828,7 @@ gui-button-previous-sentence = الجملة السابقة
 gui-button-next-sentence = الجملة التالية
 gui-button-slower = أبطأ
 gui-button-faster = أسرع
+gui-button-start-dictation = بدء الإملاء
 gui-button-pause-dictation = إيقاف الإملاء مؤقتًا
 gui-button-resume-dictation = استئناف الإملاء
 gui-button-stop-dictation = إيقاف الإملاء

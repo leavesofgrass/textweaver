@@ -3476,6 +3476,7 @@ gui-button-previous-sentence = Frase anterior
 gui-button-next-sentence = Frase siguiente
 gui-button-slower = Más lento
 gui-button-faster = Más rápido
+gui-button-start-dictation = Iniciar dictado
 gui-button-pause-dictation = Pausar dictado
 gui-button-resume-dictation = Reanudar dictado
 gui-button-stop-dictation = Detener dictado

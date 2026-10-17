@@ -3238,10 +3238,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Voice",
    "gui": [
     {
-     "key": "F11",
-     "layer": "global"
-    },
-    {
      "key": "+",
      "layer": "browse"
     },
@@ -3266,7 +3262,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "palette_when_off": {
-    "gui": false,
+    "gui": true,
     "terminal": true
    },
    "source": "keymap",
@@ -3286,10 +3282,6 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "category": "Voice",
    "gui": [
     {
-     "key": "Shift+F11",
-     "layer": "global"
-    },
-    {
      "key": "-",
      "layer": "browse"
     }
@@ -3306,7 +3298,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     }
    ],
    "palette_when_off": {
-    "gui": false,
+    "gui": true,
     "terminal": true
    },
    "source": "keymap",
@@ -6352,6 +6344,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "action": "Full screen on or off: the bars and the panel hide while the mouse rests",
    "category": "View and help",
    "gui": [
+    {
+     "key": "F11",
+     "layer": "global"
+    },
     {
      "key": "Alt+Enter",
      "layer": "global"

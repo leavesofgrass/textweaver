@@ -43,8 +43,9 @@
 //! Redo also answers to `Ctrl+Shift+Z` in the GUI (star used that chord for
 //! its preview pane, which textweaver does not have); in the GUI, `Ctrl+=`
 //! (Ctrl+Plus), `Ctrl+-`, and `Ctrl+0` size the text, as screen reader users
-//! expect (the owner's session 2, 2026-09-28), so star's rate chords moved
-//! from them to `F11` and `Shift+F11`, beside volume on `F7`.
+//! expect (the owner's session 2, 2026-09-28), so star's rate chords left
+//! them. The rate is on `+`, `=`, and `-` while reading, as in the terminal
+//! reader; `F11` is full screen in the GUI (the owner, beta 3).
 
 use serde::{Deserialize, Serialize};
 
@@ -377,9 +378,9 @@ actions! {
 
     // Voice
     RateUp = "rate_up", Voice, "Speak faster",
-        gui ["g:F11"], term [], shared ["b:+", "b:="];
+        gui [], term [], shared ["b:+", "b:="];
     RateDown = "rate_down", Voice, "Speak slower",
-        gui ["g:Shift+F11"], term [], shared ["b:-"];
+        gui [], term [], shared ["b:-"];
     PitchUp = "pitch_up", Voice, "Raise the pitch",
         gui ["g:Alt+="], term ["g:Alt+="], shared ["b:)"];
     PitchDown = "pitch_down", Voice, "Lower the pitch",
@@ -763,11 +764,12 @@ actions! {
     ToggleFocusMode = "toggle_focus_mode", View,
         "Turn focus mode on or off: the bars and the panel hide while the mouse rests",
         gui [], term [], shared [];
-    // Full screen (B2). F11, the usual key on Windows and Linux, is Faster;
-    // Alt+Enter is free in every layer and is full screen in many programs.
+    // Full screen (B2): F11, the usual key on Windows and Linux (the
+    // owner, beta 3), and Alt+Enter, full screen in many programs. The
+    // terminal leaves both to the terminal program.
     FullScreen = "full_screen", View,
         "Full screen on or off: the bars and the panel hide while the mouse rests",
-        gui ["g:Alt+Enter"], term [], shared [];
+        gui ["g:F11", "g:Alt+Enter"], term [], shared [];
     CustomizeButtons = "customize_buttons", View,
         "Choose the buttons on the header and the toolbar, and their order",
         gui [], term [], shared [];
