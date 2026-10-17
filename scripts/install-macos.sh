@@ -19,10 +19,13 @@ TAG=""
 SOURCE_DIR=""
 BREW="ask"
 UNINSTALL=0
-# The GUI (textweaver.app), from the release's -gui package: "ask" keeps
-# what an earlier install chose (the manifest's gui= line), else leaves it
-# out.
+# The app (textweaver.app) of releases up to beta 2: "ask" keeps what an
+# earlier install chose (the manifest's gui= line), else leaves it out.
+# Since beta 3 the one program is inside textweaver.app, always installed.
 GUI="ask"
+# 1 when the package holds one program, in textweaver.app, with tw a link
+# to it (beta 3 and later); set once the package is staged.
+ONE_PROGRAM=0
 # Where textweaver.app goes: the user's own Applications folder.
 APPSDIR="${TEXTWEAVER_APPS_DIR:-$HOME/Applications}"
 
@@ -32,8 +35,10 @@ Usage: scripts/install-macos.sh [options]
 
 Installs textweaver on a Mac. By default it downloads the newest release
 from GitHub (the universal package, for Apple silicon and Intel), checks it
-against SHA256SUMS.txt, removes the quarantine flag, and installs textweaver
-and tw into ~/.local/bin. With --from-source it builds textweaver instead.
+against SHA256SUMS.txt, removes the quarantine flag, and installs the app,
+textweaver.app, into ~/Applications, with textweaver (the app) and tw (the
+terminal reader and commands) linked to its program in ~/.local/bin. With
+--from-source it builds textweaver instead.
 
 Every step is announced before it runs. The script asks before it changes
 your PATH or installs anything outside the prefix. Running it again updates
@@ -50,11 +55,11 @@ Options:
   --source DIR      With --from-source, the textweaver checkout to build.
                     Without it, the checkout this script sits in is used, or
                     the repository is cloned to ~/.local/src/textweaver.
-  --gui             Also install the GUI, textweaver.app, from the release's
-                    GUI package into ~/Applications. Running the script
-                    again keeps the GUI installed. Releases only.
-  --no-gui          Do not install the GUI, and remove it if an earlier
-                    run installed it.
+  --gui             For releases up to 0.1.0-beta.2: also install that
+                    release's app, textweaver.app. Since beta 3 the app is
+                    always installed, so this is not needed.
+  --no-gui          For releases up to 0.1.0-beta.2: leave out the app,
+                    and remove it if an earlier run installed it.
   --brew            Install the optional Homebrew packages (ffmpeg, pandoc)
                     without asking, when Homebrew is installed.
   --no-brew         Do not offer the Homebrew packages.
@@ -67,7 +72,6 @@ Options:
 Examples:
   scripts/install-macos.sh
   scripts/install-macos.sh --release v0.1.0-alpha.3
-  scripts/install-macos.sh --gui
   scripts/install-macos.sh --from-source
   scripts/install-macos.sh --uninstall
 EOF
@@ -281,6 +285,21 @@ download_release() {
   else
     xattr -dr com.apple.quarantine "$STAGE" 2> /dev/null || true
   fi
+  detect_layout
+}
+
+# Since beta 3 the package's tw is a link to the program inside
+# textweaver.app; up to beta 2 it was a program of its own. A dry run shows
+# the current layout.
+detect_layout() {
+  if [ "$DRY_RUN" = 1 ] || [ -L "$STAGE/tw" ]; then
+    ONE_PROGRAM=1
+  fi
+}
+
+# The program inside the installed app, which textweaver and tw link to.
+app_program() {
+  printf '%s' "$APPSDIR/textweaver.app/Contents/MacOS/textweaver"
 }
 
 # ------------------------------------------------------------------ GUI --
@@ -485,6 +504,7 @@ build_from_source() {
   [ "$arch" = arm64 ] && arch=aarch64
   STAGE="${CARGO_TARGET_DIR:-$SRC/target}/dist/textweaver-$VERSION-macos-$arch"
   TAG="source"
+  detect_layout
 }
 
 # -------------------------------------------------------------- install --
@@ -501,18 +521,31 @@ write_file() {
 
 install_stage() {
   section "Install"
-  say "Installing textweaver and tw into $BINDIR, and the guides into $DOCDIR."
-  if [ "$DRY_RUN" = 0 ]; then
-    [ -x "$STAGE/tw" ] || die "$STAGE/tw is missing, so there is nothing to install."
-  fi
   run mkdir -p "$BINDIR" "$DOCDIR" "$DATADIR/scripts"
-  run install -m 0755 "$STAGE/tw" "$BINDIR/tw"
-  # Since beta 1 textweaver is a link to tw, made again here so it is not
-  # a second copy; older packages had a program of its own.
-  if [ -L "$STAGE/textweaver" ]; then
-    run ln -sfn tw "$BINDIR/textweaver"
+  if [ "$ONE_PROGRAM" = 1 ]; then
+    # Since beta 3: one program, inside textweaver.app; textweaver and tw
+    # are links to it, and started as tw it runs the terminal program.
+    local prog
+    prog="$(app_program)"
+    say "Linking textweaver and tw in $BINDIR to $prog, and installing the guides into $DOCDIR."
+    if [ "$DRY_RUN" = 0 ]; then
+      [ -x "$prog" ] || die "$prog is missing, so there is nothing to link."
+    fi
+    run ln -sfn "$prog" "$BINDIR/textweaver"
+    run ln -sfn "$prog" "$BINDIR/tw"
   else
-    run install -m 0755 "$STAGE/textweaver" "$BINDIR/textweaver"
+    say "Installing textweaver and tw into $BINDIR, and the guides into $DOCDIR."
+    if [ "$DRY_RUN" = 0 ]; then
+      [ -x "$STAGE/tw" ] || die "$STAGE/tw is missing, so there is nothing to install."
+    fi
+    run install -m 0755 "$STAGE/tw" "$BINDIR/tw"
+    # Beta 1 and 2: textweaver is a link to tw, made again here so it is
+    # not a second copy; older packages had a program of its own.
+    if [ -L "$STAGE/textweaver" ]; then
+      run ln -sfn tw "$BINDIR/textweaver"
+    else
+      run install -m 0755 "$STAGE/textweaver" "$BINDIR/textweaver"
+    fi
   fi
   local f
   for f in QUICKSTART.md README.md LICENSE CHANGELOG.md INSTALL.md; do
@@ -654,7 +687,7 @@ remove_path_line() {
 uninstall() {
   say "This removes textweaver from $PREFIX: the programs, the guides, and the helper scripts, and textweaver.app from $APPSDIR if this script installed it."
   say "It keeps your settings and reading positions, and it does not remove Rust or Homebrew packages."
-  if [ ! -e "$BINDIR/tw" ] && [ ! -e "$DOCDIR" ] && [ ! -e "$DATADIR" ] && [ "$DRY_RUN" = 0 ]; then
+  if [ ! -e "$BINDIR/tw" ] && [ ! -L "$BINDIR/tw" ] && [ ! -e "$DOCDIR" ] && [ ! -e "$DATADIR" ] && [ "$DRY_RUN" = 0 ]; then
     say "textweaver is not installed in $PREFIX, so there is nothing to remove."
     remove_path_line
     return 0
@@ -665,7 +698,7 @@ uninstall() {
   }
   local f
   for f in "$BINDIR/textweaver" "$BINDIR/tw"; do
-    if [ -e "$f" ] || [ "$DRY_RUN" = 1 ]; then run rm -f "$f"; fi
+    if [ -e "$f" ] || [ -L "$f" ] || [ "$DRY_RUN" = 1 ]; then run rm -f "$f"; fi
   done
   for f in "$DOCDIR" "$DATADIR"; do
     if [ -e "$f" ] || [ "$DRY_RUN" = 1 ]; then run rm -rf "$f"; fi
@@ -687,10 +720,6 @@ if [ "$UNINSTALL" = 1 ]; then
   exit 0
 fi
 
-if [ "$MODE" = source ] && [ "$GUI" = 1 ]; then
-  die "The GUI is installed from release packages: run without --from-source to use --gui. Building it from source is described in docs/gui.md."
-fi
-
 if [ "$MODE" = source ]; then
   say "This script builds textweaver from source and installs it under $PREFIX."
   build_from_source
@@ -698,6 +727,18 @@ else
   say "This script downloads the newest textweaver release for macOS, checks it, and installs it under $PREFIX."
   have curl || [ "$DRY_RUN" = 1 ] || die "curl is needed and is missing."
   download_release
+fi
+if [ "$ONE_PROGRAM" = 1 ]; then
+  # Since beta 3 the program is in textweaver.app: always installed.
+  if [ "$GUI" = 1 ]; then
+    say "--gui is not needed: textweaver is the app since beta 3."
+  fi
+  install_gui
+elif [ "$MODE" = source ]; then
+  if [ "$GUI" = 1 ]; then
+    die "The app of releases up to beta 2 is installed from release packages: run without --from-source to use --gui."
+  fi
+else
   decide_gui
   if [ "$GUI" = 1 ]; then
     install_gui
@@ -715,9 +756,10 @@ if [ "$DRY_RUN" = 1 ]; then
   exit 0
 fi
 say "textweaver $VERSION is installed in $PREFIX."
-say "Check your voices: $BINDIR/tw voices"
-say "Read the quick start aloud: $BINDIR/textweaver $DOCDIR/QUICKSTART.md"
 if [ -n "$GUI_INSTALLED" ]; then
-  say "The GUI is $APPSDIR/textweaver.app. Open it from Finder or Spotlight."
+  say "The app is $APPSDIR/textweaver.app. Open it from Finder or Spotlight, or run textweaver."
 fi
+say "In a terminal, use tw: the terminal reader, and commands such as tw convert."
+say "Check your voices: $BINDIR/tw voices"
+say "Read the quick start aloud in the terminal reader: $BINDIR/tw $DOCDIR/QUICKSTART.md"
 say "To remove textweaver, run this script with --uninstall."

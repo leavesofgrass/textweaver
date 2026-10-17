@@ -202,11 +202,13 @@ if ($Tw) {
     $dir = Split-Path -Parent $Tw
     Add-Line "tw: $Tw"
     Add-Line "tw version: $(Get-FirstLine $Tw @('--version'))"
+    # Since beta 3 textweaver.exe is the one program (the app, and the
+    # terminal program behind tw.exe, its launcher).
     $tv = Join-Path $dir 'textweaver.exe'
-    if (Test-Path -LiteralPath $tv) { Add-Line "textweaver version: $(Get-FirstLine $tv @('--version'))" } else { Add-Line 'textweaver.exe: not found beside tw.exe' }
-    # The window: beside tw.exe (the window's zip), or in gui\ (the installer's -Gui).
-    $gui = @((Join-Path $dir 'textweaver-gui.exe'), (Join-Path (Join-Path $dir 'gui') 'textweaver-gui.exe')) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-    if ($gui) { Add-Line "Window version: $(Get-FirstLine $gui @('--version')), at $gui" } else { Add-Line 'Window (textweaver-gui.exe): not installed beside tw.exe or in its gui folder' }
+    if (Test-Path -LiteralPath $tv) { Add-Line "textweaver (the app) version: $(Get-FirstLine $tv @('--version'))" } else { Add-Line 'textweaver.exe: not found beside tw.exe, so tw cannot start. Reinstall textweaver.' }
+    # The app before beta 3, left by an install that was not replaced.
+    $old = @((Join-Path $dir 'textweaver-gui.exe'), (Join-Path (Join-Path $dir 'gui') 'textweaver-gui.exe')) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if ($old) { Add-Line "Old app from before beta 3: $old is unused; textweaver.exe replaced it. Run the installer again to remove it." }
     $manifest = Join-Path $dir 'install-manifest.txt'
     if (Test-Path -LiteralPath $manifest) {
         $kind = (Select-String -LiteralPath $manifest -Pattern '^kind=(.*)$' | Select-Object -First 1).Matches.Groups[1].Value
@@ -234,7 +236,7 @@ if ($Tw) {
     Add-Output $Tw @('ocr', 'status')
 
     Add-Line
-    Add-Line 'Engine hosts: tw.exe runs 64-bit engines itself, as a copy started with --engine-host.'
+    Add-Line 'Engine hosts: textweaver.exe runs 64-bit engines itself, as a copy started with --engine-host.'
     $h = 'textweaver-host-x86.exe'
     if (Test-Path -LiteralPath (Join-Path $dir $h)) { Add-Line "  ${h} (32-bit engines): present" } else { Add-Line "  ${h} (32-bit engines): missing" }
     $dict = Join-Path $dir 'ibmtts-dictionaries'
