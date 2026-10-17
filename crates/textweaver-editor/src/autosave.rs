@@ -672,7 +672,10 @@ mod tests {
         let started = std::time::Instant::now();
         let e = rename_with_retry(&dir.path().join("missing"), &dir.path().join("x")).unwrap_err();
         assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
-        assert!(started.elapsed() < Duration::from_millis(20));
+        // A retried error would sleep through every delay, 375 ms in all;
+        // the bound sits well below that and well above runner noise.
+        let retries: u64 = textweaver_core::fs::RENAME_RETRY_DELAYS_MS.iter().sum();
+        assert!(started.elapsed() < Duration::from_millis(retries * 4 / 5));
     }
 
     #[cfg(unix)]
