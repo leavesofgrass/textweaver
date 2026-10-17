@@ -1758,24 +1758,21 @@ pub enum GuiAnnounce {
 }
 
 /// The header's buttons by default (`[gui] header_buttons`), as command
-/// ids: Open, Font, Edit, Settings and Commands. The app's `buttons`
-/// module turns them into commands for the window and the settings.
-pub const DEFAULT_HEADER_BUTTONS: &[&str] = &[
-    "open",
-    "choose_font",
-    "toggle_edit_mode",
-    "settings",
-    "command_palette",
-];
+/// ids: Open, Font, Settings and Commands. The app's `buttons` module
+/// turns them into commands for the window and the settings.
+pub const DEFAULT_HEADER_BUTTONS: &[&str] = &["open", "choose_font", "settings", "command_palette"];
 
 /// The toolbar's buttons by default (`[gui] toolbar_buttons`), as command
 /// ids: Play, Stop, the previous and next paragraph (the owner's choice
-/// for beta 1, over sentences), Slower and Faster.
+/// for beta 1, over sentences), Edit (on the toolbar since beta 3, the
+/// owner's choice, directly before Start dictation in edit mode), Slower
+/// and Faster.
 pub const DEFAULT_TOOLBAR_BUTTONS: &[&str] = &[
     "play_pause",
     "stop",
     "previous_paragraph",
     "next_paragraph",
+    "toggle_edit_mode",
     "rate_down",
     "rate_up",
 ];
@@ -1784,11 +1781,11 @@ pub const DEFAULT_TOOLBAR_BUTTONS: &[&str] = &[
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GuiSettings {
-    /// Show the header, the bar of Open, Font, Edit, Settings and
+    /// Show the header, the bar of Open, Font, Settings and
     /// Commands (Wave 9, W9b-n). On by default; the View menu turns it
     /// off, and every command keeps its key and its menu item.
     pub header: bool,
-    /// Show the toolbar, the bar of Play, Stop and the reading buttons
+    /// Show the toolbar, the bar of Play, Stop, the reading buttons and Edit
     /// (Wave 9, W9b-n). On by default, like the header.
     pub toolbar: bool,
     /// The header's buttons, in order, as command ids (B1-cb):

@@ -1439,12 +1439,12 @@ pub const INFO: &[Info] = &[
     toggle(
         "gui.header",
         "Show the header",
-        "Show the bar of Open, Font, Edit, Settings and Commands above the document. Off, the commands keep their keys and menu items.",
+        "Show the bar of Open, Font, Settings and Commands above the document. Off, the commands keep their keys and menu items.",
     ),
     toggle(
         "gui.toolbar",
         "Show the toolbar",
-        "Show the bar of Play, Stop and the reading buttons. Off, the commands keep their keys and menu items.",
+        "Show the bar of Play, Stop, the reading buttons and Edit. Off, the commands keep their keys and menu items.",
     ),
     list(
         "gui.header_buttons",
