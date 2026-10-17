@@ -61,6 +61,11 @@ export function withTimeout(promise, ms, what) {
 /** Starts the GUI in the foreground (a runner has no one to disturb), silent. */
 export function launchGui(args, extra = []) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "tw-a11y-"));
+  // An empty settings file (the defaults) means this is not a first run,
+  // whose language and optional-components lists would take the focus
+  // from the document; atspi-session.py does the same.
+  fs.mkdirSync(path.join(home, "config"));
+  fs.writeFileSync(path.join(home, "config", "settings.toml"), "");
   const guiArgs = [
     args.doc,
     "--backend", "paced",

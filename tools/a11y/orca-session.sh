@@ -42,6 +42,13 @@ run() {
   fi
   timeout 150 python3 "$here/atspi-session.py" --exe "$exe" --out "$out/atspi-session.md" \
     "${orca_args[@]}" || status=$?
+  # The script writes its report even when it breaks; this covers the
+  # cases it cannot (Python or pyatspi missing, or killed outright).
+  if [[ ! -s "$out/atspi-session.md" ]]; then
+    printf '%s\n\n%s\n' "## AT-SPI reading session (Linux, Xvfb)" \
+      "Fail: the session script ended with status $status and wrote no report; see the job log." \
+      >"$out/atspi-session.md"
+  fi
   if [[ -n $orca_pid ]]; then
     kill "$orca_pid" 2>/dev/null || true
     wait "$orca_pid" 2>/dev/null || true

@@ -107,6 +107,8 @@ New checks, in their own jobs, beside these (see [Testing](../dev/testing.md#bra
 
 **Update, Wave 8a.** For the failing "names the window or the document" check: the document's node is now named with the document's title first ("Reading check, document", not "Document"), so the name NVDA and JAWS say when the document takes the focus names it; the window's title and its node's name were already "Reading check - textweaver". Checked in the harness tree only. The NVDA session must pass three runs in a row before it becomes standing.
 
+**Update, beta 3.** The Orca session failed from Saturday, October 3, 2026: each session started the app with an empty state folder, which is a first run, and the first run's Language list and Optional components list took the focus from the document. The sessions now start with a state folder holding an empty settings file (the defaults), so they check the reading, not the first run. `--background` would also skip the first run, but with it the window is not found on the AT-SPI bus. The AT-SPI session writes its report even when it breaks or is stopped by its time limit, and `orca-session.sh` writes one if the script could not.
+
 ## See also
 
 - [Testing](../dev/testing.md#automated-screen-reader-checks): how to run the checks and read their reports.
