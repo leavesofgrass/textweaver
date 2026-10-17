@@ -110,10 +110,10 @@ Build it and open a document with:
 
 ```bash
 cargo build -p textweaver-xilem --release
-target/release/textweaver-xilem path/to/document.md
+target/release/textweaver path/to/document.md
 ```
 
-The program is `textweaver-xilem` (`textweaver-xilem.exe` on Windows) under `target/release/`; a release package renames the same program to `textweaver-gui`.
+The program is `textweaver` (`textweaver.exe` on Windows) under `target/release/`, the same program a release package ships: `target/release/textweaver --tw` runs the terminal program. `cargo build -p textweaver-cli` builds `tw`, the terminal program alone, without the app, which builds faster and is what the CLI tests run. On Windows, `cargo build -p textweaver-launcher` builds `tw-launcher.exe`, which a package installs as `tw.exe` beside `textweaver.exe`.
 
 Since beta 1 the terminal reader is part of `tw` (`textweaver-cli`), which always has export, preview, citations, grammar checking, and Export audio; there is no separate lean reader program. The reader's library still builds lean, and CI builds it that way so code behind those features stays sound:
 

@@ -14,7 +14,7 @@ Every aid can be switched on and off, and textweaver announces each change. The 
 - **Alt+Shift+Z**: syllables shown or hidden.
 - **Alt+Shift+J**: difficult words marked or not.
 
-In the app (`textweaver-gui`), RSVP has its own strip under the document, so it never covers the text, and the words before and after sit to its left and right; see [The textweaver app](gui.md#reading-aids).
+In the app (`textweaver`), RSVP has its own strip under the document, so it never covers the text, and the words before and after sit to its left and right; see [The textweaver app](gui.md#reading-aids).
 
 The [keyboard reference](keyboard.md) lists every key. Each aid's settings are in the `[reading_aids]` sections of `settings.toml`; [Settings](settings.md#reading_aids) lists them.
 

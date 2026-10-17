@@ -2,14 +2,14 @@
 
 textweaver reads documents aloud and highlights each word as it is spoken. This page covers the first few minutes: starting the program, reading a document, moving through it, and finding help. The full guides are listed at the end.
 
-textweaver comes in two forms that share the same documents, keys, settings, notes, and voices. The terminal reader runs inside a terminal. The textweaver app is the graphical version, with menus, buttons, and dialogs. Both work with a screen reader.
+textweaver is one program with two forms that share the same documents, keys, settings, notes, and voices. The textweaver app is the graphical version, with menus, buttons, and dialogs; `textweaver` starts it. The terminal reader runs inside a terminal; `tw` starts it. Both work with a screen reader.
 
 ## Start textweaver
 
 1. Download the package for your system from the [releases page](https://github.com/leavesofgrass/textweaver/releases). [Installing textweaver](install.md) describes every package.
-2. Windows, the app: unzip `textweaver-VERSION-windows-x86_64.zip` and run `textweaver-gui.exe`. Because the program is not code-signed, Windows warns on first launch; choose "More info", then "Run anyway".
+2. Windows, the app: unzip `textweaver-VERSION-windows-x86_64.zip` and run `textweaver.exe`. Because the program is not code-signed, Windows warns on first launch; choose "More info", then "Run anyway".
 3. macOS and Linux, the app: unpack the package and open `textweaver.app` on a Mac, or run the AppImage on Linux. See [Installing textweaver](install.md#the-app).
-4. The terminal reader is in the same package. Open a terminal in its folder and type `tw QUICKSTART.md` (`textweaver QUICKSTART.md` is equivalent).
+4. The terminal reader is the same program. Open a terminal in its folder and type `tw QUICKSTART.md` (`textweaver --tw QUICKSTART.md` is equivalent; `textweaver QUICKSTART.md` opens the file in the app).
 5. On first launch the app asks up to four questions: the interface language; who speaks, if a screen reader is running; which optional components to download; and whether textweaver may check for updates once a day. Each can be skipped, and nothing is downloaded without your consent. The terminal reader asks the same questions.
 
 ## Hear a document

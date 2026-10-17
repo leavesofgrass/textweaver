@@ -1,16 +1,18 @@
 # The textweaver app
 
-textweaver comes in two forms: the terminal reader, `tw`, and the textweaver app, the graphical version, `textweaver-gui`. Both share the same documents, keys, settings, notes, and voices. This page covers only what is specific to the app: its screen, menus, dialogs, panels, and announcements. In this guide "the window" always means the app's own window (its size, its title, closing it), while "the graphical version" and "the app" refer to the program.
+textweaver comes in two forms, both parts of one program: the textweaver app, the graphical version, which `textweaver` starts, and the terminal reader, which `tw` starts. Both share the same documents, keys, settings, notes, and voices. This page covers only what is specific to the app: its screen, menus, dialogs, panels, and announcements. In this guide "the window" always means the app's own window (its size, its title, closing it), while "the graphical version" and "the app" refer to the program.
 
 The app is written entirely in Rust, using Xilem's Masonry widgets, Vello for drawing, Parley for text, and AccessKit to communicate with screen readers. It both reads and edits; see [Editing](#editing).
 
-In a release package the program is `textweaver-gui`, beside `tw` in the same package; see [the app](install.md#the-app). A build from source with `cargo build` produces `textweaver-xilem` instead, and that name replaces `textweaver-gui` throughout this guide.
+In a release package the program is `textweaver` (`textweaver.exe` on Windows, and inside `textweaver.app` on macOS); see [the app](install.md#the-app). A build from source with `cargo build -p textweaver-xilem` produces the same program, `textweaver`. Releases up to beta 2 named the app `textweaver-gui`.
 
 ## Starting it
 
 ```sh
-textweaver-gui path/to/document.md
+textweaver path/to/document.md
 ```
+
+The program opens the app unless it is asked for the terminal program: with `--tw` or `--cli` first, when started as `tw`, or when the first word is one of `tw`'s commands, such as `textweaver convert`. A document whose name is also a command's name, such as a file called `convert`, opens in the app as `textweaver ./convert`.
 
 With no document, the app opens empty and says which key opens one (Ctrl+O), at every announcement level except off.
 
@@ -36,9 +38,9 @@ Useful options:
 - `--log` or `--log-file PATH`: record what the app announces and does, for a bug report. Every 200 frames it also writes a "frame times" line giving the median, the 95th percentile, and the worst time to draw a frame, so that a change to drawing can be measured in a real window. While a prompt for a secret is open (the GitHub token for a private components source), the log is paused: it records "log paused: a secret prompt is open" and then nothing until the prompt closes, so that no keystroke, no resulting command, and not the answer itself can reach the file.
 - `--version`: the version, then textweaver's copyright line.
 
-`textweaver-gui --help` lists every option.
+`textweaver --help` lists every option.
 
-On Windows the app opens its window without a console window beside it. Started from a terminal, `--help`, `--version`, and errors still appear in that terminal. PowerShell does not wait for a windowed program, so the output may arrive after the next prompt; `textweaver-gui --help | Out-Host` waits for it. Started from a shortcut or File Explorer, a startup error appears in a message box, and `--log-file PATH` keeps it in a file as well.
+On Windows the app opens its window without a console window beside it. Started from a terminal, `--help`, `--version`, and errors still appear in that terminal. PowerShell does not wait for a windowed program, so the output may arrive after the next prompt; `textweaver --help | Out-Host` waits for it. For the terminal reader and the commands, use `tw`, which a terminal waits for. Started from a shortcut or File Explorer, a startup error appears in a message box, and `--log-file PATH` keeps it in a file as well.
 
 ## What is in the app
 
@@ -338,7 +340,7 @@ In the terminal, the same command shows the settings screen with only these sett
 - **The app is idle when nothing changes.** It checks for work four times a second while you read or pause, and twenty times a second only while an edit waits to be parsed or the status line is reading; a check that finds nothing new does not redraw.
 - **The caret blinks as the system's does,** or not at all when the system is set that way.
 - **The app draws opaque on every graphics API.** It requests an opaque drawing surface, never one that blends with what is behind the window. Up to alpha.9, with `auto` on Windows (which picks Vulkan on an NVIDIA card), the menu bar was see-through because the driver offered a blended surface and the app accepted it; `--graphics dx12` hid the problem, since Direct3D 12 offers only opaque surfaces for a window. `--log` names the surface on the "graphics adapter" line ("surface opaque").
-- **The icon is the loom,** textweaver's logo, in the title bar, the taskbar, and on the programs in Explorer and their shortcuts (`textweaver-gui.exe`, `textweaver.exe` and `tw.exe` carry it). In Windows High Contrast the app uses the one-color loom, white on black. The Linux menu entry uses the same drawing.
+- **The icon is the loom,** textweaver's logo, in the title bar, the taskbar, and on the programs in Explorer and their shortcuts (`textweaver.exe` and `tw.exe` carry it). In Windows High Contrast the app uses the one-color loom, white on black. The Linux menu entry uses the same drawing.
 - **The app requests the integrated graphics adapter** when the computer has one, because it draws text just as fast and saves battery. To use the discrete adapter instead, set the environment variable `WGPU_POWER_PREF` to `high`.
 - **A log file.** The app writes warnings and errors to `textweaver.log` in the state folder, as the terminal reader does. [Troubleshooting](troubleshooting.md#the-log-file) says where it is.
 - **After a failure,** the app saves your unsaved edits as a recovery copy, along with your place and settings, and offers the work back at the next start (see [Recovering unsaved work](editing.md#recovering-unsaved-work)). Signing out, shutting down, or restarting does the same. On Linux and macOS, so does a termination signal: closing the terminal the app was started from, Ctrl+C in that terminal, or the system ending the program (SIGHUP, SIGINT, or SIGTERM). The app saves, then closes.
@@ -377,7 +379,7 @@ The command-line tools (`tw vault`, `tw convert`, `tw library`, and the rest) ar
 
 Colors cannot be heard, so the color steps need a sighted helper, a screenshot read by a color tool, or the `--log` lines above. Use a throwaway state folder (`--home %TEMP%\tw-frame`) and run the steps once with NVDA and once with JAWS.
 
-1. **Dark theme, Windows light.** In Windows Settings, Personalization, Colors, choose Light. Start `textweaver-gui --log --home %TEMP%\tw-frame`. Expected: the log says "frame: dark"; the title bar, the menu bar, and an opened File menu are dark, with light text.
+1. **Dark theme, Windows light.** In Windows Settings, Personalization, Colors, choose Light. Start `textweaver --log --home %TEMP%\tw-frame`. Expected: the log says "frame: dark"; the title bar, the menu bar, and an opened File menu are dark, with light text.
 2. **Dark theme, Windows dark.** Choose Dark in Windows and start again. Expected: the same, dark.
 3. **Light theme, Windows dark.** Press F5 until a light theme is chosen, such as Galaxy Light. Expected: "frame: light" in the log at once, and a light title bar, menu bar, and menus, though Windows is dark.
 4. **Light theme, Windows light.** Expected: light, as in step 3.

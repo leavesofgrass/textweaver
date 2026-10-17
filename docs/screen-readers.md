@@ -292,7 +292,7 @@ Run through this once with NVDA and once with JAWS, in Windows Terminal and, if 
 
 ### First run
 
-1. Delete the folder `%TEMP%\tw-check` if it exists. With your screen reader running, start `textweaver --home %TEMP%\tw-check fixtures/sample.md`.
+1. Delete the folder `%TEMP%\tw-check` if it exists. With your screen reader running, start `tw --home %TEMP%\tw-check fixtures/sample.md`.
 2. Expected: the question "NVDA is running. Use hybrid mode ...? y or n" (JAWS: "JAWS is running."). Your screen reader reads it from the status line, and textweaver speaks it too.
 3. Press **y**. Expected: "Hybrid mode. ..." is read once, by your screen reader. Quit with **Ctrl+Q**, then **y**, and start again: no question this time.
 

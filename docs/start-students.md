@@ -6,7 +6,7 @@ textweaver reads your course documents aloud and follows along with a highlight.
 
 1. On Windows, download the package from the [releases page](https://github.com/leavesofgrass/textweaver/releases). Its name ends in `windows-x86_64.zip`.
 2. Right-click the zip, choose Extract All, and select a folder of your own.
-3. Open the folder and run `textweaver-gui.exe`.
+3. Open the folder and run `textweaver.exe`.
 4. Windows warns on first launch because the program is not code-signed. Choose "More info", then "Run anyway".
 
 For other systems, see [Installing textweaver](install.md).

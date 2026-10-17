@@ -95,8 +95,8 @@ scripts/speech-check.sh
 
 ### The app does not open, or it is blank
 
-1. Start it from a terminal, so that any error appears there, and write a log: `textweaver-gui --log-file gui.log`. Started from a shortcut or File Explorer, a startup error is shown in a message box instead.
-2. Try another graphics interface for one run: `textweaver-gui --graphics vulkan`. The alternatives are `dx12` (Windows), `metal` (macOS), and `gl`. To keep the one that works, set `graphics = "vulkan"` under `[gui]` in `settings.toml`.
+1. Start it from a terminal, so that any error appears there, and write a log: `textweaver --log-file gui.log`. Started from a shortcut or File Explorer, a startup error is shown in a message box instead.
+2. Try another graphics interface for one run: `textweaver --graphics vulkan`. The alternatives are `dx12` (Windows), `metal` (macOS), and `gl`. To keep the one that works, set `graphics = "vulkan"` under `[gui]` in `settings.toml`.
 3. Attach `gui.log` to a bug report; see [Report a bug](#report-a-bug).
 
 ### Your screen reader does not read the app's messages
@@ -147,11 +147,11 @@ The [speech guide](speech.md) explains how each engine is highlighted.
 2. textweaver does not include Eloquence. The [Eloquence guide](eloquence.md) explains how to obtain a licensed copy for Windows, macOS, and Linux.
 3. textweaver uses Code Factory's Eloquence for Windows only after you declare that you own it: set `TEXTWEAVER_ECI_CODE_FACTORY` to 1, or `[speech.eci] code_factory = true`.
 4. If your Eloquence is installed in an unusual location, name its library with `TEXTWEAVER_ECI_LIBRARY`, or `[speech.eci] library`.
-5. Eloquence runs in an engine host: a copy of `tw` or the app started in its hidden `--engine-host` mode for a 64-bit library, and `textweaver-host-x86.exe` for a 32-bit one. The 32-bit host must be in the same folder as `tw` and the app.
+5. Eloquence runs in an engine host: a copy of `textweaver` started in its hidden `--engine-host` mode for a 64-bit library, and `textweaver-host-x86.exe` for a 32-bit one. The 32-bit host must be in the same folder as `textweaver` and `tw`.
 
 ### A voice or engine is missing
 
-Eloquence, SAPI voices, DECtalk, and (on Windows) eSpeak NG run in separate processes called engine hosts. A 64-bit engine runs in a copy of `tw` or the app started in its hidden `--engine-host` mode; a 32-bit engine runs in the single 32-bit host, `textweaver-host-x86.exe`.
+Eloquence, SAPI voices, DECtalk, and (on Windows) eSpeak NG run in separate processes called engine hosts. A 64-bit engine runs in a copy of `textweaver` started in its hidden `--engine-host` mode; a 32-bit engine runs in the single 32-bit host, `textweaver-host-x86.exe`.
 
 1. Check that `textweaver-host-x86.exe` and the `ibmtts-dictionaries` folder are in the same folder as `textweaver.exe` and `tw.exe`. If you copied only the programs somewhere else, copy those too. The doctor script checks this.
 2. A 32-bit SAPI voice (such as older VW or eSpeak SAPI voices) requires `textweaver-host-x86.exe`; without it, 32-bit voices are not listed.
@@ -179,7 +179,7 @@ Some antivirus programs flag a textweaver program, such as `tw.exe` or `textweav
 2. Report the false positive to your antivirus vendor. Most vendors provide a web form for this (search the vendor's site for "false positive" or "submit a sample"). Give the file name, the detection name, the textweaver version, and the place you downloaded it.
 3. Until the detection is cleared, ask whoever administers the computer to allow the textweaver folder in the antivirus program; on a work computer that is your IT department. Do not turn the antivirus off.
 
-If the flagged file is `textweaver-host-x86.exe`, textweaver still works without it, except for 32-bit engines and voices. If it is `tw.exe` or `textweaver-gui.exe`, the engines that run in a host also stop working while the file is blocked, because the host is a copy of that file.
+If the flagged file is `textweaver-host-x86.exe`, textweaver still works without it, except for 32-bit engines and voices. If it is `textweaver.exe`, textweaver does not start at all, and `tw.exe` cannot start it; the engines that run in a host stop too, because the host is a copy of that file. If it is `tw.exe`, only the terminal reader and the commands are blocked; the app still starts.
 
 ### On macOS, tw speak with avspeech says nothing
 

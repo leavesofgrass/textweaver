@@ -482,7 +482,7 @@ Dictating text, in edit mode, in the terminal reader and the graphical version. 
 
 ### [gui]
 
-Settings only the textweaver app (`textweaver-gui`) reads. In the settings dialog they are under "Window".
+Settings only the textweaver app reads. In the settings dialog they are under "Window".
 
 - `announce`, default `"live"`: how the graphical version's messages reach the screen reader, from the next start. `"live"` uses a live region, which NVDA and JAWS both speak. `"uia"` raises UI Automation notifications instead (Windows only; elsewhere the live region is used). `--announce live` or `--announce uia` on the command line wins over the setting for one run.
 - `header_buttons`, default `["open", "choose_font", "toggle_edit_mode", "settings", "command_palette"]`: the header's buttons, in order, as command ids. Any command with a short name can be a button; an id this version does not recognize is kept but not shown, and a command already on a bar is not shown a second time. View, Customize buttons changes the list one button at a time and says each change. It stays on this computer. See [Customizing the buttons](gui.md#customizing-the-buttons).

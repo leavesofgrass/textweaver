@@ -12,7 +12,7 @@ This page is for people who prepare documents and computers for students: conver
 
 ## Prepare a computer
 
-- Windows: use the Windows package, `textweaver-VERSION-windows-x86_64.zip`. It contains the app and the terminal program `tw`. Extract it to a folder the student can open, and run `textweaver-gui.exe`. The program is not code-signed, so Windows warns on first launch. A managed laptop may require your IT office to allow it. See [Installing textweaver](install.md).
+- Windows: use the Windows package, `textweaver-VERSION-windows-x86_64.zip`. It contains textweaver, the app, which also runs the terminal reader as `tw`. Extract it to a folder the student can open, and run `textweaver.exe`. The program is not code-signed, so Windows warns on first launch. A managed laptop may require your IT office to allow it. See [Installing textweaver](install.md).
 - The zip route only extracts files. textweaver keeps its settings and notes in the user's own folders and does not change system settings.
 - Settings can be exported and imported. See [Settings](settings.md).
 

@@ -10,7 +10,7 @@ Status: beta. The current release is 0.1.0-beta.2. It is suitable for wider test
 
 ## Get textweaver
 
-Each release on the [releases page](https://github.com/leavesofgrass/textweaver/releases) offers one download per platform, and each download is complete: it contains the app (`textweaver-gui`), the terminal program (`tw`, also installed as `textweaver`), the speech engine helpers, and the full documentation. Choose the file that matches your system.
+Each release on the [releases page](https://github.com/leavesofgrass/textweaver/releases) offers one download per platform, and each download is complete: it contains textweaver, one program that opens the app by default and runs the terminal reader and the commands as `tw`, with the full documentation. Choose the file that matches your system.
 
 | Platform | Download |
 | --- | --- |
@@ -23,16 +23,16 @@ Linux also has `.tar.gz` packages for systems where AppImages cannot run. Releas
 
 Each package is self-contained: unpack it, keep its files together, and run the program. Because the builds are not code-signed, each platform needs one first-run step:
 
-- **Linux:** make the AppImage executable with `chmod +x`, then run it. On its own it starts the app; with `--tw` it runs `tw`. The `--install` option links `textweaver-gui`, `tw`, and `textweaver` into `~/.local/bin` and adds menu entries.
-- **macOS:** the zip contains `textweaver.app` beside `tw`. Remove the quarantine attribute once with `xattr -dr com.apple.quarantine` on the unpacked folder, or choose "Open Anyway" under Privacy & Security.
-- **Windows:** run `textweaver-gui.exe` for the app, or `tw.exe` in a terminal. SmartScreen warns on first launch; choose "More info", then "Run anyway".
+- **Linux:** make the AppImage executable with `chmod +x`, then run it. On its own it starts the app; with `--tw` it runs the terminal program. The `--install` option links `textweaver` and `tw` into `~/.local/bin` and adds menu entries for the app and the terminal reader.
+- **macOS:** the zip contains `textweaver.app`, with `textweaver` and `tw` beside it as links to the program inside. Remove the quarantine attribute once with `xattr -dr com.apple.quarantine` on the unpacked folder, or choose "Open Anyway" under Privacy & Security.
+- **Windows:** run `textweaver.exe` for the app, or `tw.exe` in a terminal. SmartScreen warns on first launch; choose "More info", then "Run anyway".
 
-Alternatively, an install script does this for you. Clone the repository and run the script for your platform. Each script states what it will do, asks before changing your PATH, and accepts `--gui` to install the app as well:
+Alternatively, an install script does this for you. Clone the repository and run the script for your platform. Each script states what it will do and asks before changing your PATH:
 
 ```bash
-bash scripts/install-linux.sh --release latest --gui
-bash scripts/install-macos.sh --gui
-powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1 -Gui
+bash scripts/install-linux.sh --release latest
+bash scripts/install-macos.sh
+powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
 ```
 
 [Installing textweaver](docs/install.md) covers every package, verifying downloads, updates, and building from source.
@@ -53,13 +53,13 @@ textweaver records your position in each file and resumes there the next time yo
 
 ## The terminal reader
 
-The terminal reader is text only: it needs no mouse and draws no graphics, and many screen reader users prefer it. It is part of `tw`, which ships in the same package as the app. In a terminal, in the unpacked folder, run:
+The terminal reader is text only: it needs no mouse and draws no graphics, and many screen reader users prefer it. It is part of the same program as the app, and `tw` runs it. In a terminal, in the unpacked folder, run:
 
 ```bash
 tw QUICKSTART.md
 ```
 
-The reader reads its own quick start aloud. Space starts and pauses; `?` lists every key. Plain `tw` opens the reader with no document, and `textweaver QUICKSTART.md` is equivalent to `tw QUICKSTART.md`. Given a command instead of a file, `tw` runs without the reader, which suits scripts: `tw convert`, `tw speak`, and the others are described in [the command line guide](docs/command-line.md). The reader and the app share settings, reading positions, and notes.
+The reader reads its own quick start aloud. Space starts and pauses; `?` lists every key. Plain `tw` opens the reader with no document, and `textweaver --tw QUICKSTART.md` (or `--cli`) is equivalent to `tw QUICKSTART.md`; `textweaver QUICKSTART.md` opens the file in the app instead. Given a command instead of a file, `tw` runs without the reader, which suits scripts: `tw convert`, `tw speak`, and the others are described in [the command line guide](docs/command-line.md). The reader and the app share settings, reading positions, and notes.
 
 ## Screen readers
 
