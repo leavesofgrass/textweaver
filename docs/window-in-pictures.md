@@ -14,7 +14,7 @@ textweaver --review-screenshots target/review-screenshots fixtures/sample.md
 
 ![The reading view in the Galaxy theme: the sample document in a centered column, the spoken word highlighted](images/gui-galaxy.png)
 
-Description: dark gray window, the default Galaxy theme. The header has the buttons Open, Font, Start editing, Settings and Commands, each with its key. The document fills the middle in a centered column, framed in purple because it has the focus: the purple title "Sample Markdown Document", a paragraph with bold, italic, code and a link, the heading "Lists", bullets with a nested one, and a numbered list. The reading toolbar below has Play (filled purple, the main action), Stop, Previous sentence, Next sentence, Slower and Faster. The word "Jones" has a solid lilac band, and its sentence a paler band with a line under it. The status bar says "Opened Sample Markdown Document." on the left and "Line 3 of 34, 18%, Ready, 265 wpm, silent, under a minute left" on the right.
+Description: dark gray window, the default Galaxy theme. The header has the buttons Open, Font, Settings and Commands, each with its key. The document fills the middle in a centered column, framed in purple because it has the focus: the purple title "Sample Markdown Document", a paragraph with bold, italic, code and a link, the heading "Lists", bullets with a nested one, and a numbered list. The reading toolbar below has Play (filled purple, the main action), Stop, Previous paragraph, Next paragraph and Edit, with Slower and Faster at the right. The word "Jones" has a solid lilac band, and its sentence a paler band with a line under it. The status bar says "Opened Sample Markdown Document." on the left and "Line 3 of 34, 18%, Ready, 265 wpm, silent, under a minute left" on the right.
 
 ## Reading, in Galaxy Light
 
@@ -38,13 +38,13 @@ Description: the reading view in Lamplight, the soft dark theme: dark brown pane
 
 ![The window at 780 by 540 pixels: one folded bar with two rows of buttons above the document](images/gui-narrow-780x540.png)
 
-Description: the window at 780 by 540 pixels, just under the folding width. Below 800 pixels wide, the header and the toolbar fold into one bar above the document, and the buttons hide their keys. The bar holds two rows of buttons: Open, Font, Start editing, Settings and Commands, then Play, Stop, Previous sentence and Next sentence, with Slower and Faster at the right. The document shows the title, the first paragraph and the start of the list, and the status bar fits on one line.
+Description: the window at 780 by 540 pixels, just under the folding width. Below 800 pixels wide, the header and the toolbar fold into one bar above the document, and the buttons hide their keys. The bar holds three rows of buttons: Open, Font, Settings and Commands; then Play, Stop, Previous paragraph, Next paragraph and Edit; then Slower and Faster. The document shows the title, the first paragraph and the start of the list, and the status bar fits on one line.
 
 ## Settings, with a filter
 
 ![The Settings dialog with the filter "voice" typed: a section of 16 matching settings](images/gui-settings-filter.png)
 
-Description: the Settings dialog over the dimmed window, with "voice" typed as a filter. The first section in the list on the left is now "Matching voice, 16 settings", selected, and the other sections follow. On the right are the matching settings: Pitch (selected, "0 semitones"), Voice, Preferred voice, Favorite voices, Voices by language, OneCore voices ("on" with its switch), Piper voices folder, Piper voice, and Rate and pitch per voice. The section's name says what was typed.
+Description: the Settings dialog over the dimmed window, with "voice" typed as a filter. The first section in the list on the left is now "Matching voice", selected (a screen reader hears "Matching voice, 16 settings"), and the other sections follow. On the right are the matching settings: Pitch (selected, "0 semitones"), Voice, Preferred voice, Favorite voices, Voices by language, OneCore voices ("on" with its switch), Piper voices folder, Piper voice, and Rate and pitch per voice. The section's name says what was typed.
 
 ## The Reading settings dialog
 
@@ -56,7 +56,7 @@ Description: a dialog titled "Reading settings" with one list: Rate (selected, "
 
 ![Edit mode in Galaxy: the Markdown source in a dashed frame with an Editing badge](images/gui-edit-mode.png)
 
-Description: after Start editing, the document's frame turns dashed and an "Editing" badge sits in its top right corner. The document shows its Markdown source: the front matter between two lines of dashes, then "# Sample Markdown Document" with the caret after the number sign. Markup stays visible and styled (bold, italic, code and the link), and list lines start with their own dashes. The header's button now says "Finish editing (Ctrl+E)", and the status bar says "Edit mode on. Save: Ctrl+S. Finish: Ctrl+E." and "Line 6 of 45, Edit, Ready, 7%".
+Description: after Edit, the document's frame turns dashed and an "Editing" badge sits in its top right corner. The document shows its Markdown source: the front matter between two lines of dashes, then "# Sample Markdown Document" with the caret after the number sign. Markup stays visible and styled (bold, italic, code and the link), and list lines start with their own dashes. On the toolbar, the Edit button now says "Done editing (Ctrl+E, Escape)", and the toolbar wraps, with Slower and Faster on a second row. The status bar says "Edit mode on. Save: Ctrl+S. Finish: Ctrl+E." and the heading line, and on the right "Line 6 of 45, Edit, Ready, 7%". The picture has no Start dictation button, because the drawing harness does not set up dictation; in the app it stands directly after Done editing.
 
 ## See also
 

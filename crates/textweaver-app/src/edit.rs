@@ -750,6 +750,14 @@ impl App {
                     Some(m) if state.changed && !discarded => {
                         carry_marks(&m, &edited, &s.doc, false).put(s);
                     }
+                    Some(m) if !discarded => {
+                        // Unchanged text: the marks are as they were on
+                        // entry, and the cursor goes where the editor's
+                        // cursor was, the same block and word.
+                        let cursor = carry_marks(&m, &edited, &s.doc, false).cursor;
+                        state.entry.put(s);
+                        s.cursor = cursor.clamp_to(s.doc.len_chars());
+                    }
                     _ => state.entry.put(s),
                 }
             }

@@ -214,11 +214,11 @@ fn say_status_needs_no_document() {
     );
 }
 
-/// Deliverable 6: Escape in edit mode with nothing playing says how to
-/// finish, with the key from the keymap: spoken by name, written on the
-/// status line.
+/// Deliverable 6, as the owner changed it in beta 3: Escape in edit mode
+/// with nothing playing leaves edit mode, as Ctrl+E does, with Ctrl+E's
+/// own announcement, spoken and on the status line.
 #[test]
-fn escape_in_edit_mode_says_how_to_finish() {
+fn escape_in_edit_mode_finishes_editing() {
     let (mut tui, log) = voiced(
         "Some text to edit.
 ",
@@ -227,17 +227,16 @@ fn escape_in_edit_mode_says_how_to_finish() {
     assert_eq!(tui.app().mode(), textweaver_app::Mode::Edit);
     log.clear();
     tui.handle_key(key(KeyCode::Esc));
-    assert_eq!(tui.app().mode(), textweaver_app::Mode::Edit);
-    assert_eq!(
-        heard(&log, "Still editing").as_deref(),
-        Some("Still editing. Control E finishes.")
-    );
-    assert_eq!(tui.app().status_text(), "Still editing. Ctrl+E finishes.");
-    // Out of edit mode, Escape says nothing of the kind.
-    tui.handle_key(tui.key_for(ActionId::ToggleEditMode));
     assert_eq!(tui.app().mode(), textweaver_app::Mode::Browse);
+    assert!(heard(&log, "Edit mode off").is_some(), "{:?}", log.texts());
+    assert!(
+        tui.app().status_text().starts_with("Edit mode off."),
+        "{}",
+        tui.app().status_text()
+    );
+    // Out of edit mode, Escape does not enter it again.
     tui.handle_key(key(KeyCode::Esc));
-    assert!(!tui.app().status_text().contains("Still editing"));
+    assert_eq!(tui.app().mode(), textweaver_app::Mode::Browse);
 }
 
 /// Deliverable 7: the command palette's opening sentence says how to use

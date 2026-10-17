@@ -32,11 +32,11 @@ use crate::command::Effect;
 /// One of the window's two bars of buttons.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Bar {
-    /// The header, above the document (Open, Font, Edit, Settings,
-    /// Commands by default).
+    /// The header, above the document (Open, Font, Settings, Commands by
+    /// default).
     Header,
     /// The toolbar, below the document (Play, Stop, the previous and next
-    /// paragraph, Slower, Faster by default).
+    /// paragraph, Edit, Slower, Faster by default).
     Toolbar,
 }
 
@@ -232,22 +232,31 @@ impl App {
     /// active, in any mode, Pause dictation and Dictate (which then stops
     /// it). They go on the toolbar before Slower and Faster, or on the
     /// header when the toolbar is hidden; they go when edit mode and
-    /// dictation end, are not saved, and are never shown twice.
+    /// dictation end, are not saved, and are never shown twice. In edit
+    /// mode the edit toggle ("Done editing") is always on a shown bar: when
+    /// no shown bar has it, it goes first among these, so there is always a
+    /// button that leaves edit mode.
     pub fn shown_bar_buttons(&self, bar: Bar) -> Vec<ActionId> {
         let mut actions = self.bar_buttons(bar);
-        let home = if self.settings.gui.toolbar || !self.settings.gui.header {
+        let gui = &self.settings.gui;
+        let home = if gui.toolbar || !gui.header {
             Bar::Toolbar
         } else {
             Bar::Header
         };
-        let shown: &[ActionId] = if self.dictation_status().is_active() {
-            &[ActionId::PauseDictation, ActionId::Dictate]
+        let mut shown: Vec<ActionId> = Vec::new();
+        let toggle = ActionId::ToggleEditMode;
+        let on_a_shown_bar = (gui.header && self.bar_buttons(Bar::Header).contains(&toggle))
+            || (gui.toolbar && self.bar_buttons(Bar::Toolbar).contains(&toggle));
+        if self.is_editing() && !on_a_shown_bar {
+            shown.push(toggle);
+        }
+        if self.dictation_status().is_active() {
+            shown.extend([ActionId::PauseDictation, ActionId::Dictate]);
         } else if self.is_editing() && self.is_available(ActionId::Dictate) {
             // Not in a build without dictation, where the command is hidden.
-            &[ActionId::Dictate]
-        } else {
-            &[]
-        };
+            shown.push(ActionId::Dictate);
+        }
         if bar != home || shown.is_empty() {
             return actions;
         }
@@ -256,9 +265,8 @@ impl App {
             Bar::Toolbar => Bar::Header,
         });
         let extra: Vec<ActionId> = shown
-            .iter()
-            .copied()
-            .filter(|a| !actions.contains(a) && !other.contains(a))
+            .into_iter()
+            .filter(|a| !actions.contains(a) && (*a == toggle || !other.contains(a)))
             .collect();
         let at = actions
             .iter()
@@ -503,7 +511,6 @@ mod tests {
             [
                 ActionId::Open,
                 ActionId::ChooseFont,
-                ActionId::ToggleEditMode,
                 ActionId::Settings,
                 ActionId::CommandPalette,
             ]
@@ -516,6 +523,7 @@ mod tests {
                 ActionId::Stop,
                 ActionId::PreviousParagraph,
                 ActionId::NextParagraph,
+                ActionId::ToggleEditMode,
                 ActionId::RateDown,
                 ActionId::RateUp,
             ]
@@ -581,7 +589,7 @@ mod tests {
             Err(ButtonsRefusal::AlreadyFirst)
         );
         assert_eq!(
-            move_button(&mut gui, Bar::Toolbar, 5, false),
+            move_button(&mut gui, Bar::Toolbar, 6, false),
             Err(ButtonsRefusal::AlreadyLast)
         );
         assert_eq!(
@@ -594,12 +602,12 @@ mod tests {
             ActionId::PreviousParagraph
         );
         assert_eq!(remove(&mut gui, Bar::Header, 1), Ok(ActionId::ChooseFont));
-        assert_eq!(bar_actions(&gui, Bar::Header).len(), 4);
+        assert_eq!(bar_actions(&gui, Bar::Header).len(), 3);
         assert_eq!(
             remove(&mut gui, Bar::Header, 9),
             Err(ButtonsRefusal::NoSuchButton)
         );
-        assert_eq!(add(&mut gui, Bar::Header, ActionId::ChooseFont), Ok(4));
+        assert_eq!(add(&mut gui, Bar::Header, ActionId::ChooseFont), Ok(3));
         reset(&mut gui);
         assert_eq!(gui, GuiSettings::default());
     }
@@ -614,28 +622,28 @@ mod tests {
         let mut app = App::new(AppConfig::for_tests());
         app.dispatch(Command::Action(ActionId::CustomizeButtons));
         let items = app.list_model().unwrap().items.clone();
-        assert_eq!(items.len(), 5 + 6 + 3, "{items:?}");
-        assert_eq!(items[0], "Open, header 1 of 5");
-        assert_eq!(items[7], "Previous paragraph, toolbar 3 of 6");
+        assert_eq!(items.len(), 4 + 7 + 3, "{items:?}");
+        assert_eq!(items[0], "Open, header 1 of 4");
+        assert_eq!(items[6], "Previous paragraph, toolbar 3 of 7");
         assert_eq!(items[13], "Reset both bars to their defaults");
         // Enter on Stop, then Move up.
-        app.dispatch(Command::Choose(6));
+        app.dispatch(Command::Choose(5));
         assert_eq!(
             app.list_model().unwrap().items,
             ["Move up", "Move down", "Remove"]
         );
         app.dispatch(Command::Choose(0));
-        assert_eq!(app.status_text(), "Stop moved, 1 of 6.");
+        assert_eq!(app.status_text(), "Stop moved, 1 of 7.");
         assert_eq!(app.bar_buttons(Bar::Toolbar)[0], ActionId::Stop);
-        assert_eq!(app.list_model().unwrap().selected, 5);
+        assert_eq!(app.list_model().unwrap().selected, 4);
         // Already first: said, nothing changes.
-        app.dispatch(Command::Choose(5));
+        app.dispatch(Command::Choose(4));
         app.dispatch(Command::Choose(0));
         assert_eq!(app.status_text(), "Stop is already first.");
         // Delete removes the focused button.
         app.dispatch(Command::ListKey(ListKey::Delete));
         assert_eq!(app.status_text(), "Stop removed from the toolbar.");
-        assert_eq!(app.bar_buttons(Bar::Toolbar).len(), 5);
+        assert_eq!(app.bar_buttons(Bar::Toolbar).len(), 6);
         assert!(
             !app.settings()
                 .gui
@@ -643,13 +651,13 @@ mod tests {
                 .contains(&"stop".to_owned())
         );
         // Add a button to the toolbar: Stop is offered again, by name.
-        let add_row = 5 + 5 + 1;
+        let add_row = 4 + 6 + 1;
         app.dispatch(Command::Choose(add_row));
         let offered = app.list_model().unwrap().items.clone();
         let stop = offered.iter().position(|i| i == "Stop").unwrap();
         assert!(!offered.contains(&"Open".to_owned()), "{offered:?}");
         app.dispatch(Command::Choose(stop));
-        assert_eq!(app.status_text(), "Stop added, toolbar 6 of 6.");
+        assert_eq!(app.status_text(), "Stop added, toolbar 7 of 7.");
         assert_eq!(app.list_model().unwrap().selected, 10);
         // Reset both bars.
         app.dispatch(Command::Choose(13));
@@ -660,6 +668,52 @@ mod tests {
             app.add_button(Bar::Header, ActionId::Stop),
             "Stop is already on the toolbar."
         );
+    }
+
+    /// Edit is on the toolbar, directly before Start dictation in edit
+    /// mode and in the same place in reading mode. In edit mode there is
+    /// always a button that leaves it: with the toolbar hidden, Done
+    /// editing joins the header, once; in reading mode it does not.
+    #[test]
+    fn edit_mode_always_shows_the_edit_toggle() {
+        use crate::AppConfig;
+        use crate::command::Command;
+        let mut app = App::new(AppConfig::for_tests());
+        app.open_document(
+            textweaver_text::Document::from_plain_text("Hello."),
+            textweaver_store::DocKey::untitled(1),
+            "t".into(),
+        );
+        let toggle = ActionId::ToggleEditMode;
+        let count = |app: &App, bar| {
+            app.shown_bar_buttons(bar)
+                .iter()
+                .filter(|a| **a == toggle)
+                .count()
+        };
+        assert_eq!(count(&app, Bar::Toolbar), 1);
+        assert_eq!(count(&app, Bar::Header), 0);
+        app.dispatch(Command::Action(toggle));
+        assert!(app.is_editing());
+        let shown = app.shown_bar_buttons(Bar::Toolbar);
+        assert_eq!(count(&app, Bar::Toolbar), 1, "{shown:?}");
+        assert_eq!(count(&app, Bar::Header), 0);
+        let at = shown.iter().position(|a| *a == toggle).unwrap();
+        if let Some(d) = shown.iter().position(|a| *a == ActionId::Dictate) {
+            assert_eq!(d, at + 1, "{shown:?}");
+        }
+        // The toolbar hidden: Done editing joins the header.
+        let _ = app.update_settings(|s| s.gui.toolbar = false);
+        assert_eq!(
+            count(&app, Bar::Header),
+            1,
+            "{:?}",
+            app.shown_bar_buttons(Bar::Header)
+        );
+        // Reading mode keeps the bars as set.
+        app.dispatch(Command::Action(toggle));
+        assert!(!app.is_editing());
+        assert_eq!(count(&app, Bar::Header), 0);
     }
 
     #[test]

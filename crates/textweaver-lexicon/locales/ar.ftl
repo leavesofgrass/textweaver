@@ -558,8 +558,6 @@ playback-paused = متوقّف مؤقتًا.
 playback-stopped-speech-cursor-off = متوقّف. مؤشّر الكلام متوقف.
 playback-stopped = متوقّف.
 playback-search-cleared = مُسح البحث.
-# $key is the key that turns edit mode off.
-playback-still-editing = ما زلت في وضع التحرير. { $key } لإنهائه.
 playback-end-of-document-content = نهاية المستند
 playback-no-unit-here = لا { $what } هنا.
 playback-no-selection = لا تحديد.
@@ -810,7 +808,7 @@ keyname-end = End
 ## ولوحة الأوامر. تبقى معرّفاتها (play_pause) كما هي.
 
 action-play-pause = تشغيل أو إيقاف مؤقت للقراءة من الكلمة الحالية
-action-stop = إيقاف القراءة
+action-stop = إيقاف القراءة، أو إنهاء التحرير إن لم تكن هناك قراءة
 action-read-from-cursor = القراءة المتواصلة من المؤشر
 action-read-document = قراءة المستند كاملًا من البداية
 action-read-current-character = نطق الحرف عند المؤشر
@@ -3817,7 +3815,7 @@ gui-find-hint = Enter في حقل البحث يجد التطابق التالي�
 gui-find-empty = لا شيء للبحث عنه: اكتب النص في حقل البحث عن.
 gui-button-open = فتح…
 gui-button-font = الخط…
-gui-button-edit = بدء التحرير
+gui-button-edit = تحرير
 gui-button-finish-editing = إنهاء التحرير
 gui-button-settings = الإعدادات…
 gui-button-commands = الأوامر…

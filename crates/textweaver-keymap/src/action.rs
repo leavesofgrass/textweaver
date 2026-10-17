@@ -168,7 +168,7 @@ actions! {
     // Reading
     PlayPause = "play_pause", Reading, "Play or pause reading from the current word",
         gui ["g:Ctrl+Shift+Space"], term ["g:Alt+P"], shared ["b:Space"];
-    Stop = "stop", Reading, "Stop reading",
+    Stop = "stop", Reading, "Stop reading, or finish editing when nothing is being read",
         gui ["g:Escape"], term ["g:Escape", "b:Ctrl+X"], shared [];
     ReadFromCursor = "read_from_cursor", Reading, "Read continuously from the cursor",
         gui ["g:Ctrl+Space"], term ["g:Ctrl+Space"], shared ["b:Enter"];
@@ -754,10 +754,10 @@ actions! {
     // The window's bars (W9b-n): no keys of their own; the View menu and
     // the palette reach them, and every button's command keeps its key.
     ToggleHeader = "toggle_header", View,
-        "Show or hide the header, the bar of Open, Font, Edit, Settings and Commands",
+        "Show or hide the header, the bar of Open, Font, Settings and Commands",
         gui [], term [], shared [];
     ToggleToolbar = "toggle_toolbar", View,
-        "Show or hide the toolbar, the bar of Play, Stop and the reading buttons",
+        "Show or hide the toolbar, the bar of Play, Stop, the reading buttons and Edit",
         gui [], term [], shared [];
     // Focus mode (B2): the bars and the panel fade while the mouse rests.
     // No key; the View menu and the palette reach it.

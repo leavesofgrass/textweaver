@@ -1327,3 +1327,122 @@ fn the_knowledge_graph_exports_in_a_format_chosen_from_a_list() {
         r.said.last()
     );
 }
+
+/// Escape (Stop) in edit mode with nothing open and nothing being read
+/// leaves edit mode exactly as Ctrl+E does: the edits are kept, the cursor
+/// keeps its place, and the announcement is Ctrl+E's own.
+#[test]
+fn escape_with_nothing_to_stop_leaves_edit_mode() {
+    let mut r = rig();
+    let file = r.file("plain.txt", "one two three\nfour five\n");
+    r.app.open(&file).unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.go(CharPos(8));
+    r.act(ActionId::Save);
+    r.said.clear();
+    r.act(ActionId::Stop);
+    assert!(!r.app.is_editing());
+    assert_eq!(r.app.mode(), Mode::Browse);
+    assert_eq!(r.app.session().unwrap().cursor, CharPos(8));
+    assert!(r.said.any("Edit mode off."), "{:?}", r.said.all());
+    // In reading mode Escape stops, and nothing else.
+    r.act(ActionId::Stop);
+    assert!(!r.app.is_editing());
+
+    // Unsaved changes: Save / Discard / Cancel, as for Ctrl+E.
+    r.act(ActionId::ToggleEditMode);
+    r.go(CharPos(0));
+    r.type_str("zero ");
+    let effects = r.act(ActionId::Stop);
+    assert!(
+        matches!(effects.first(), Some(Effect::ShowList { items, .. }) if items.len() == 3),
+        "{effects:?}"
+    );
+    r.send(Command::Choose(2));
+    assert!(r.app.is_editing());
+    assert_eq!(r.text(), "zero one two three\nfour five\n");
+}
+
+/// While speech plays, Escape in edit mode only stops it.
+#[test]
+fn escape_while_reading_in_edit_mode_only_stops() {
+    let mut r = rig();
+    let file = r.file("plain.txt", "one two three. four five six.\n");
+    r.app.open(&file).unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.act(ActionId::ReadFromCursor);
+    assert_ne!(r.app.playback(), Playback::Idle);
+    r.act(ActionId::Stop);
+    assert_eq!(r.app.playback(), Playback::Idle);
+    assert!(r.app.is_editing());
+    assert_eq!(r.said.last(), "Stopped.");
+    // The next Escape, with nothing to stop, leaves.
+    r.act(ActionId::Stop);
+    assert!(!r.app.is_editing());
+}
+
+/// A list on top takes Escape and closes, and a search under way is
+/// cleared first; edit mode stays until the next Escape.
+#[test]
+fn escape_closes_what_is_open_before_leaving_edit_mode() {
+    let mut r = rig();
+    let file = r.file("plain.txt", "one two three\nfour two\n");
+    r.app.open(&file).unwrap();
+    r.act(ActionId::ToggleEditMode);
+    r.act(ActionId::Menu);
+    assert!(r.app.list_model().is_some());
+    r.send(Command::ListKey(textweaver_app::ListKey::Escape));
+    assert!(r.app.list_model().is_none());
+    assert!(r.app.is_editing());
+
+    r.send(Command::Find("two".into()));
+    r.act(ActionId::Stop);
+    assert!(r.app.is_editing());
+    assert_eq!(r.said.last(), "Search cleared.");
+    r.act(ActionId::Stop);
+    assert!(!r.app.is_editing());
+}
+
+/// Entering and leaving edit mode keep the cursor's place in a Markdown
+/// file: the editor's cursor starts at the reading position, and the
+/// reading cursor comes back to the block and word the editor's cursor
+/// was on, whether or not the text changed.
+#[test]
+fn edit_mode_keeps_the_cursor_both_ways_in_markdown() {
+    let mut r = rig();
+    let source = "# Title\n\nHello world. The end.\n\nSecond paragraph here.\n";
+    let file = r.file("note.md", source);
+    r.app.open(&file).unwrap();
+    let canon = r.text();
+    r.go(at(&canon, "world"));
+    r.act(ActionId::ToggleEditMode);
+    assert_eq!(r.app.session().unwrap().cursor, at(source, "world"));
+
+    // Unchanged: to "paragraph" in the source, then back to reading.
+    r.go(CharPos(at(source, "paragraph").0 + 3));
+    r.act(ActionId::ToggleEditMode);
+    assert!(!r.app.is_editing());
+    let canon = r.text();
+    assert_eq!(r.app.session().unwrap().cursor, at(&canon, "paragraph"));
+
+    // Escape does the same.
+    r.act(ActionId::ToggleEditMode);
+    assert_eq!(r.app.session().unwrap().cursor, at(source, "paragraph"));
+    r.go(at(source, "Title"));
+    r.act(ActionId::Stop);
+    assert!(!r.app.is_editing());
+    assert_eq!(r.app.session().unwrap().cursor, at(&canon, "Title"));
+
+    // Changed and saved: the cursor follows the edit to its word.
+    r.act(ActionId::ToggleEditMode);
+    r.go(at(source, "Hello"));
+    r.type_str("Oh, ");
+    let edited = "# Title\n\nOh, Hello world. The end.\n\nSecond paragraph here.\n";
+    assert_eq!(r.text(), edited);
+    r.go(at(edited, "end"));
+    r.act(ActionId::Save);
+    r.act(ActionId::ToggleEditMode);
+    assert!(!r.app.is_editing());
+    let canon = r.text();
+    assert_eq!(r.app.session().unwrap().cursor, at(&canon, "end"));
+}

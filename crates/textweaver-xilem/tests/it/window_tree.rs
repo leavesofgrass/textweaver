@@ -81,7 +81,7 @@ fn every_control_has_a_role_and_a_name() {
         "Previous paragraph",
         "Open",
         "Font",
-        "Start editing",
+        "Edit",
         "Settings",
         "Commands",
         "Slower",
@@ -166,7 +166,7 @@ fn every_button_has_its_key_from_the_keymap() {
     for (name, action) in [
         ("Open", ActionId::Open),
         ("Font", ActionId::ChooseFont),
-        ("Start editing", ActionId::ToggleEditMode),
+        ("Edit", ActionId::ToggleEditMode),
         ("Settings", ActionId::Settings),
         ("Commands", ActionId::CommandPalette),
         ("Play", ActionId::PlayPause),
@@ -1361,7 +1361,7 @@ fn custom_button_sets_fit_every_review_size_in_drawn_order() {
         let _ = app.add_button(Bar::Header, a);
     }
     let _ = app.remove_button(Bar::Toolbar, 0);
-    assert_eq!(app.bar_buttons(Bar::Header).len(), 10);
+    assert_eq!(app.bar_buttons(Bar::Header).len(), 9);
     assert!(!app.bar_buttons(Bar::Toolbar).contains(&ActionId::PlayPause));
     let long = app.bar_buttons(Bar::Toolbar).len();
     for set in ["long header, no Play", "empty toolbar"] {
@@ -1496,6 +1496,75 @@ fn edit_mode_shows_start_dictation_and_leaving_it_hides_the_button() {
     assert!(!built.differ_from(&app));
     assert!(!names(&h).iter().any(|n| n == "Start dictation"));
     assert_eq!(h.focused_widget_id(), Some(h.get_widget(DOC).id()));
+}
+
+/// The edit toggle is one button on the toolbar (the owner, beta 3):
+/// "Edit" (Ctrl+E) in reading mode, after Next paragraph; "Done editing"
+/// (Ctrl+E, Escape) in edit mode, in the same place, directly before
+/// Start dictation. The header has none. Pressing it moves the focus to
+/// the document, where Ctrl+E leaves it.
+#[test]
+fn the_edit_button_is_on_the_toolbar_and_names_its_mode() {
+    use textweaver_app::Command;
+    use textweaver_app::keymap::ActionId;
+    use textweaver_xilem::gui::EDIT;
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = app_with_sample(dir.path());
+    let mut h = harness_at(&app, (1100, 780), 1.0);
+    let names = |h: &TestHarness<Root>, role| -> Vec<String> {
+        bar_buttons_of(h, role)
+            .into_iter()
+            .map(|(n, _)| n)
+            .collect()
+    };
+    let toolbar = names(&h, Role::Toolbar);
+    let at = toolbar
+        .iter()
+        .position(|n| n == "Edit")
+        .unwrap_or_else(|| panic!("Edit in {toolbar:?}"));
+    assert_eq!(toolbar[at - 1], "Next paragraph", "{toolbar:?}");
+    assert_eq!(&toolbar[at + 1..], ["Slower", "Faster"], "{toolbar:?}");
+    let header = names(&h, Role::Banner);
+    assert!(!header.iter().any(|n| n == "Edit"), "{header:?}");
+    let id = h.get_widget(EDIT).id();
+    let key = |h: &TestHarness<Root>| {
+        h.access_node(h.get_widget(EDIT).id())
+            .and_then(|n| n.data().keyboard_shortcut().map(str::to_owned))
+            .unwrap_or_default()
+    };
+    assert_eq!(key(&h), gui::shortcut_for(&app, ActionId::ToggleEditMode));
+
+    // Pressed from the button: edit mode, and the focus on the document.
+    h.focus_on(Some(id));
+    let _ = app.dispatch(Command::Action(ActionId::ToggleEditMode));
+    assert!(app.is_editing());
+    let _ = gui::rebuild_bars(&mut h, &app, false, true);
+    gui::focus_document_after_mode_change(&mut h);
+    let _ = h.redraw();
+    assert_eq!(h.focused_widget_id(), Some(h.get_widget(DOC).id()));
+    let toolbar = names(&h, Role::Toolbar);
+    let done = toolbar
+        .iter()
+        .position(|n| n == "Done editing")
+        .unwrap_or_else(|| panic!("Done editing in {toolbar:?}"));
+    assert_eq!(
+        toolbar.iter().filter(|n| n.contains("edit")).count(),
+        1,
+        "one edit toggle: {toolbar:?}"
+    );
+    if let Some(d) = toolbar.iter().position(|n| n == "Start dictation") {
+        assert_eq!(d, done + 1, "{toolbar:?}");
+    }
+    let written = format!(
+        "{}, {}",
+        gui::shortcut_for(&app, ActionId::ToggleEditMode),
+        gui::shortcut_for(&app, ActionId::Stop)
+    );
+    assert_eq!(key(&h), written);
+    assert_eq!(
+        gui::bar_shortcut(&app, ActionId::ToggleEditMode, true),
+        written
+    );
 }
 
 /// The bounds test (W9b-n): at the review sizes, from the largest to a
@@ -1653,7 +1722,7 @@ fn the_header_and_toolbar_can_be_hidden() {
     let names = names_of(&h, Role::Button);
     assert!(names.iter().any(|n| n == "Open"), "{names:?}");
     assert!(!names.iter().any(|n| n == "Play"), "{names:?}");
-    assert_eq!(names.len(), 5, "{names:?}");
+    assert_eq!(names.len(), 4, "{names:?}");
 }
 
 /// Focus mode (B2) hides on screen only: once the mouse has rested, the

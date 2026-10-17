@@ -244,6 +244,48 @@ fn type_format_undo_save_and_reopen_through_keys() {
     assert!(h.screen().contains("Last."));
 }
 
+/// Escape in edit mode: a list on top closes first; then, with nothing
+/// being read, it leaves edit mode as Ctrl+E does, the cursor on the word
+/// the editor's cursor was on.
+#[test]
+fn escape_leaves_edit_mode_once_nothing_is_open() {
+    // Ctrl+E's result, from the same place, for comparison.
+    let (_dir, file, home) = setup();
+    let mut h = launch(&home);
+    h.tui.app_mut().open(&file).unwrap();
+    h.press(h.tui.key_for(ActionId::ToggleEditMode));
+    h.press(key(KeyCode::Down));
+    h.press(key(KeyCode::Down));
+    h.press(h.tui.key_for(ActionId::ToggleEditMode));
+    let by_ctrl_e = h.app().session().unwrap().cursor;
+    let s = h.app().session().unwrap();
+    let here = s.doc.slice(textweaver_app::core::CharRange::new(
+        by_ctrl_e,
+        CharPos(by_ctrl_e.0 + 5),
+    ));
+    assert_eq!(here, "Plain", "the editor's line, not the heading");
+
+    let (_dir, file, home) = setup();
+    let mut h = launch(&home);
+    h.tui.app_mut().open(&file).unwrap();
+    h.press(h.tui.key_for(ActionId::ToggleEditMode));
+    assert_eq!(h.app().mode(), Mode::Edit);
+    h.press(key(KeyCode::Down));
+    h.press(key(KeyCode::Down));
+    // The menus open as a list; Escape closes them, still editing.
+    h.press(h.tui.key_for(ActionId::Menu));
+    assert!(h.tui.list().is_some());
+    h.press(key(KeyCode::Esc));
+    assert!(h.tui.list().is_none());
+    assert_eq!(h.app().mode(), Mode::Edit);
+    // Nothing open, nothing being read: Escape leaves.
+    h.press(key(KeyCode::Esc));
+    assert_eq!(h.app().mode(), Mode::Browse);
+    assert!(h.status().contains("Edit mode off."), "{}", h.status());
+    assert!(!h.screen().contains("# Notes"));
+    assert_eq!(h.app().session().unwrap().cursor, by_ctrl_e);
+}
+
 #[test]
 fn quitting_with_unsaved_edits_asks_in_a_list() {
     let (_dir, file, home) = setup();

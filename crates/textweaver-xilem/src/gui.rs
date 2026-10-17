@@ -405,7 +405,7 @@ fn toolbar_push_right(actions: &[ActionId]) -> Option<usize> {
 /// Builds the header's and the toolbar's buttons again from the app's
 /// lists (B1-g2c): the window shows a change made in Customize buttons at
 /// once, not only when it next opens. Labels follow `reading` (Play or
-/// Pause) and `editing` (Edit or Finish editing), and the dictation
+/// Pause) and `editing` (Edit or Done editing), and the dictation
 /// buttons come and go with edit mode and dictation
 /// (`App::shown_bar_buttons`). When the focus was on a button that went
 /// (Start dictation on leaving edit mode, Stop dictation once dictation
@@ -449,6 +449,16 @@ pub fn rebuild_bars(host: &mut impl Host, app: &App, reading: bool, editing: boo
         header,
         toolbar,
     }
+}
+
+/// After the Edit or Done editing button switched modes: the focus goes
+/// to the document, unless a dialog took it (Save, Discard, or Cancel).
+pub fn focus_document_after_mode_change(host: &mut impl Host) {
+    if host.edit(ROOT, |r| r.widget.has_dialog()) {
+        return;
+    }
+    let doc = host.id_of(DOC);
+    host.move_focus(doc);
 }
 
 /// The driver: the app and the window's state.
@@ -654,7 +664,9 @@ fn styled_button(
     ids: &mut HashMap<WidgetId, ActionId>,
     accent_text: bool,
 ) -> NewWidget<ActionButton> {
-    let shortcut = app.map(|a| shortcut_for(a, action)).unwrap_or_default();
+    let shortcut = app
+        .map(|a| bar_shortcut(a, action, a.is_editing()))
+        .unwrap_or_default();
     let help = button_description(&catalog_of(app), action);
     let mut b = ActionButton::new(text)
         .with_shortcut(shortcut)
@@ -668,7 +680,7 @@ fn styled_button(
 }
 
 /// The drawn label of the button for `action`, in the catalog's language
-/// (W4d's six languages): "Open…", or "Pause" while reading, or "Finish
+/// (W4d's six languages): "Open…", or "Pause" while reading, or "Done
 /// editing" in edit mode. The accessible name is the label without its
 /// ellipsis ([`ActionButton::name`]).
 pub fn button_label(c: &Catalog, action: ActionId, reading: bool, editing: bool) -> String {
@@ -737,6 +749,20 @@ pub fn button_description(c: &Catalog, action: ActionId) -> String {
 /// screenshot tool's tree before an app exists).
 fn catalog_of(app: Option<&App>) -> std::sync::Arc<Catalog> {
     app.map_or_else(Catalog::english, App::catalog)
+}
+
+/// A bar button's keys as written: [`shortcut_for`], and for Done editing
+/// (the edit toggle in edit mode) Escape's key too, which also leaves
+/// edit mode: "Ctrl+E, Escape".
+pub fn bar_shortcut(app: &App, action: ActionId, editing: bool) -> String {
+    let keys = shortcut_for(app, action);
+    if action == ActionId::ToggleEditMode && editing {
+        let stop = shortcut_for(app, ActionId::Stop);
+        if !stop.is_empty() && !keys.is_empty() {
+            return format!("{keys}, {stop}");
+        }
+    }
+    keys
 }
 
 /// A control's shortcut for `action`, from the keymap (`named_key`), as
@@ -1875,8 +1901,12 @@ fn refresh_host(app: &App, shown: &mut Shown, host: &mut impl Host, log: bool) -
     }
     if editing != shown.edit_button {
         let text = button_label(&app.catalog(), ActionId::ToggleEditMode, false, editing);
+        let keys = bar_shortcut(app, ActionId::ToggleEditMode, editing);
         if host.id_of(EDIT).is_some() {
-            host.edit(EDIT, |mut b| ActionButton::set_label(&mut b, text));
+            host.edit(EDIT, |mut b| {
+                ActionButton::set_label(&mut b, text);
+                ActionButton::set_shortcut(&mut b, keys);
+            });
         }
         shown.edit_button = editing;
     }
@@ -2083,8 +2113,9 @@ impl Gui {
         if self.char_keys != Some(char_keys) {
             self.char_keys = Some(char_keys);
             let root = ctx.render_root(self.window_id);
+            let editing = self.app.is_editing();
             for (id, action) in &self.buttons.by_id {
-                let shortcut = shortcut_for(&self.app, *action);
+                let shortcut = bar_shortcut(&self.app, *action, editing);
                 root.edit_widget(*id, |mut w| {
                     let mut b = w.downcast::<ActionButton>();
                     ActionButton::set_shortcut(&mut b, shortcut);
@@ -4873,7 +4904,15 @@ impl AppDriver for Gui {
             {
                 self.find_button(ctx, b);
             } else if let Some(a) = self.buttons.by_id.get(&widget_id).copied() {
+                let editing = self.app.is_editing();
                 self.dispatch(ctx, Command::Action(a));
+                if a == ActionId::ToggleEditMode && self.app.is_editing() != editing {
+                    // Edit and Done editing: the focus goes to the
+                    // document, where Ctrl+E leaves it, so the mode change
+                    // is heard once, from the app, and typing goes in.
+                    let root = ctx.render_root(self.window_id);
+                    focus_document_after_mode_change(root);
+                }
             }
         } else if let Some(masonry::widgets::CheckboxToggled(on)) =
             action.downcast_ref::<masonry::widgets::CheckboxToggled>()

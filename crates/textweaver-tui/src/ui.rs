@@ -1657,11 +1657,14 @@ impl Tui {
         ];
         // Browse mode: the toolbar's buttons first, by their short names
         // (`[gui] toolbar_buttons`, B1-cb), then the terminal's own keys.
+        // Edit, on the app's toolbar since beta 3, is left out: the
+        // terminal's hint line stays as it was, and F1 lists Ctrl+E.
         let browse: Vec<(ActionId, String)> = {
             let mut v: Vec<(ActionId, String)> = self
                 .app
                 .bar_buttons(Bar::Toolbar)
                 .into_iter()
+                .filter(|a| *a != ActionId::ToggleEditMode)
                 .map(|a| (a, textweaver_app::menu::action_name(&c, a)))
                 .collect();
             for (a, label) in [

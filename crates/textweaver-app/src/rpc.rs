@@ -421,7 +421,11 @@ impl Server {
                 Ok(self.playback_result())
             }
             "stop" => {
-                self.dispatch(Command::Action(ActionId::Stop));
+                // Stops reading only: Escape's other meaning, leaving
+                // edit mode, is the `toggle_edit_mode` action's.
+                if !self.app.stop_leaves_edit() {
+                    self.dispatch(Command::Action(ActionId::Stop));
+                }
                 Ok(self.playback_result())
             }
             "search" => self.search(params),

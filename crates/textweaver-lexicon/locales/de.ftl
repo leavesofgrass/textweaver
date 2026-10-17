@@ -487,8 +487,6 @@ playback-paused = Pausiert.
 playback-stopped-speech-cursor-off = Gestoppt. Lesecursor aus.
 playback-stopped = Gestoppt.
 playback-search-cleared = Suche gelöscht.
-# $key is the key that turns edit mode off.
-playback-still-editing = Noch in Bearbeitung. { $key } beendet sie.
 playback-end-of-document-content = Ende des Dokuments
 playback-no-unit-here = { $what }: nichts hier.
 playback-no-selection = Keine Auswahl.
@@ -735,7 +733,7 @@ keyname-end = Ende
 ## the command palette. Their ids (play_pause) stay as they are.
 
 action-play-pause = Lesen ab dem aktuellen Wort abspielen oder pausieren
-action-stop = Lesen stoppen
+action-stop = Lesen stoppen, oder die Bearbeitung beenden, wenn nichts gelesen wird
 action-read-from-cursor = Fortlaufend ab dem Cursor lesen
 action-read-document = Das ganze Dokument von Anfang an lesen
 action-read-current-character = Das Zeichen am Cursor sagen
@@ -3489,8 +3487,8 @@ gui-find-hint = Enter in „Suchen nach“ sucht den nächsten Treffer, Enter in
 gui-find-empty = Nichts zu suchen: Text in „Suchen nach“ eingeben.
 gui-button-open = Öffnen…
 gui-button-font = Schriftart…
-gui-button-edit = Bearbeiten beginnen
-gui-button-finish-editing = Bearbeiten beenden
+gui-button-edit = Bearbeiten
+gui-button-finish-editing = Bearbeitung fertig
 gui-button-settings = Einstellungen…
 gui-button-commands = Befehle…
 gui-button-play = Abspielen

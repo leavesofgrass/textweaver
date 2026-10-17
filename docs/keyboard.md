@@ -110,7 +110,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Action | Terminal | GUI | GUI on macOS | Id |
 |---|---|---|---|---|
 | Play or pause reading from the current word | `Alt+P`, `Space` (browse) | `Ctrl+Shift+Space`, `Space` (browse) | `Cmd+Shift+Space`, `Space` (browse) | `play_pause` |
-| Stop reading | `Escape`, `Ctrl+X` (browse) | `Escape` | `Escape` | `stop` |
+| Stop reading, or finish editing when nothing is being read | `Escape`, `Ctrl+X` (browse) | `Escape` | `Escape` | `stop` |
 | Read continuously from the cursor | `Ctrl+Space`, `Enter` (browse) | `Ctrl+Space`, `Enter` (browse) | `Cmd+Enter`, `Enter` (browse) | `read_from_cursor` |
 | Read the whole document from the start | `Shift+R` (browse) | `Shift+R` (browse) | `Shift+R` (browse) | `read_document` |
 | Say the character at the cursor | `Alt+Shift+C`, `c` (browse) | `Ctrl+Shift+C`, `c` (browse) | `Cmd+Shift+C`, `c` (browse) | `read_current_character` |
@@ -390,8 +390,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Choose the font of the document text | none | `Ctrl+D` | `Cmd+T` | `choose_font` |
 | Show the Contents panel beside the document and go to it, or close it from inside it: Enter goes to a heading | none | `Ctrl+1` | `Cmd+1` | `contents_panel` |
 | Show the Notes panel beside the document and go to it, or close it from inside it: Enter goes to a note | none | `Ctrl+2` | `Cmd+2` | `notes_panel` |
-| Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | palette | palette | palette | `toggle_header` |
-| Show or hide the toolbar, the bar of Play, Stop and the reading buttons | palette | palette | palette | `toggle_toolbar` |
+| Show or hide the header, the bar of Open, Font, Settings and Commands | palette | palette | palette | `toggle_header` |
+| Show or hide the toolbar, the bar of Play, Stop, the reading buttons and Edit | palette | palette | palette | `toggle_toolbar` |
 | Turn focus mode on or off: the bars and the panel hide while the mouse rests | palette | palette | palette | `toggle_focus_mode` |
 | Full screen on or off: the bars and the panel hide while the mouse rests | none | `F11`, `Alt+Enter` | `Option+Enter` | `full_screen` |
 | Choose the buttons on the header and the toolbar, and their order | palette | palette | palette | `customize_buttons` |
@@ -620,8 +620,8 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | Download the dictation model chosen in the settings, after saying its size and license | `download_dictation_model` |
 | Choose what the browser preview follows: nothing, each save, or your typing | `cycle_preview_follow` |
 | Show the original braille of the page at the cursor, in a BRF file read as print | `show_original_braille` |
-| Show or hide the header, the bar of Open, Font, Edit, Settings and Commands | `toggle_header` |
-| Show or hide the toolbar, the bar of Play, Stop and the reading buttons | `toggle_toolbar` |
+| Show or hide the header, the bar of Open, Font, Settings and Commands | `toggle_header` |
+| Show or hide the toolbar, the bar of Play, Stop, the reading buttons and Edit | `toggle_toolbar` |
 | Turn focus mode on or off: the bars and the panel hide while the mouse rests | `toggle_focus_mode` |
 | Choose the buttons on the header and the toolbar, and their order | `customize_buttons` |
 | Open the color settings: the reading highlight, the ruler, marks, and each part of the screen, with their contrast | `color_settings` |

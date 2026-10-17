@@ -2155,6 +2155,11 @@ impl App {
                 return self.accept_queue_offer();
             }
             A::PlayPause => self.play_pause(),
+            // Escape in edit mode with nothing to stop: leaves edit mode,
+            // exactly as Ctrl+E does.
+            A::Stop if self.stop_leaves_edit() => {
+                return self.dictation_finish_then(Self::toggle_edit);
+            }
             A::Stop => self.stop_action(),
             A::ReadFromCursor => {
                 if self.mode == Mode::SpeechCursor {
