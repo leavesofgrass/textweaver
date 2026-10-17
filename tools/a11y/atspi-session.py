@@ -23,17 +23,21 @@ listed as what Orca said. They are reported, not checked: the events are
 the check.
 
 Run it with tools/a11y/orca-session.sh (Xvfb, D-Bus, the AT-SPI bus,
-xdotool, and Orca). It exits 1 when a must check fails.
+xdotool, and Orca). It exits 1 when a must check fails. It always writes
+its report, also when the session itself breaks or is stopped: the report
+then says why.
 """
 
 import argparse
 import importlib.util
 import os
 import re
+import signal
 import subprocess
 import sys
 import tempfile
 import time
+import traceback
 
 import pyatspi  # python3-pyatspi
 from gi.repository import GLib
@@ -144,6 +148,51 @@ def orca_tail(path, start):
     return [s for s in said if s.strip()], end
 
 
+# The questions textweaver asks once, marked as asked. Without them the
+# first run's language list and optional components list, then the
+# question about checking for updates, take the focus from the document
+# (the cause of the failures from Saturday, October 3, 2026).
+# Interface announcements are set to normal: with Orca running, automatic
+# means minimal (ADR-0043), which leaves out routine confirmations such as
+# "Paused.", and the pause step checks that announcement.
+SEED_SETTINGS = """[accessibility]
+interface_announcements = "normal"
+
+[components]
+chooser_shown = true
+
+[updates]
+asked = true
+"""
+
+
+def seeded_home():
+    """A new state folder that is not a first run and asks nothing.
+
+    `--background`, which skips the first run, cannot be used: with it the
+    window is not found on the bus. The rest of the settings are defaults.
+    """
+    home = tempfile.mkdtemp(prefix="tw-a11y-")
+    os.makedirs(os.path.join(home, "config"))
+    with open(os.path.join(home, "config", "settings.toml"), "w", encoding="utf-8") as f:
+        f.write(SEED_SETTINGS)
+    return home
+
+
+class Stopped(Exception):
+    """The session was told to stop (SIGTERM from `timeout`)."""
+
+
+def on_sigterm(signum, frame):
+    raise Stopped(f"signal {signum}: the session was stopped from outside, probably by its time limit")
+
+
+def write_report(path, text):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+    print(text)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--exe", required=True)
@@ -151,14 +200,33 @@ def main():
     ap.add_argument("--out", default="atspi-session.md")
     ap.add_argument("--orca-log")
     args = ap.parse_args()
+    signal.signal(signal.SIGTERM, on_sigterm)
+    gui = []
+    try:
+        return run(args, gui)
+    except BaseException as e:
+        if gui and gui[0].poll() is None:
+            gui[0].kill()
+        detail = traceback.format_exc()
+        events = "\n".join(f"{step:8} {t:7.2f} s  {kind:36} {d}" for step, t, kind, d in EVENTS)
+        write_report(args.out, "\n".join([
+            "## AT-SPI reading session (Linux, Xvfb)", "",
+            f"Fail: the session broke before its checks finished ({type(e).__name__}: {e}).", "",
+            "### Error", "", "```", detail.rstrip(), "```", "",
+            "### Every event", "", "```", events, "```", "",
+        ]))
+        return 1
 
+
+def run(args, gui_holder):
     for kind in EVENT_KINDS:
         pyatspi.Registry.registerEventListener(on_event, kind)
 
-    home = tempfile.mkdtemp(prefix="tw-a11y-")
+    home = seeded_home()
     log = os.path.join(os.path.dirname(os.path.abspath(args.out)), "gui.log")
     gui = subprocess.Popen([args.exe, args.doc, "--backend", "paced", "--home", home,
                             "--log-file", log, "--exit-after", "120"])
+    gui_holder.append(gui)
     dump.PID = gui.pid
 
     results = []   # (step, word, text)
@@ -325,10 +393,7 @@ def main():
     out.append("```")
     out.append("")
     out.append(f"Fail: {failed} must checks failed." if failed else "Pass: every must check passed.")
-    text = "\n".join(out) + "\n"
-    with open(args.out, "w", encoding="utf-8") as f:
-        f.write(text)
-    print(text)
+    write_report(args.out, "\n".join(out) + "\n")
     return 1 if failed else 0
 
 

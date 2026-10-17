@@ -61,6 +61,12 @@ export function withTimeout(promise, ms, what) {
 /** Starts the GUI in the foreground (a runner has no one to disturb), silent. */
 export function launchGui(args, extra = []) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "tw-a11y-"));
+  // Not a first run, and the questions asked once marked as asked, so no
+  // list or question takes the focus from the document (as in
+  // atspi-session.py).
+  fs.mkdirSync(path.join(home, "config"));
+  fs.writeFileSync(path.join(home, "config", "settings.toml"),
+    "[components]\nchooser_shown = true\n\n[updates]\nasked = true\n");
   const guiArgs = [
     args.doc,
     "--backend", "paced",

@@ -49,6 +49,7 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 ### For contributors
 
 - `cargo xtask release` no longer rewrites lines that record history. A line ending with the comment `<!-- history -->`, and the "Last listening check" line, keep the version they name. The beta 2 release changed such lines by mistake, and they had to be restored by hand; one, about the app AppImages of 0.1.0-alpha.9 and earlier, is corrected now. The release guide says how to mark a history line.
+- The Orca session in the screen-reader checks passes again. It had failed since Saturday, October 3, 2026, because the app started each session as a first run, and the first run's Language list and Optional components list took the focus from the document. The Orca, NVDA, and VoiceOver sessions now start with a state folder whose settings file marks the optional components list and the question about updates as already shown, so it is not a first run and nothing asks for the focus. The Orca session also sets interface announcements to normal, since with Orca running the automatic level is minimal, which leaves out the "Paused." its pause step checks. The AT-SPI session also writes its report when it breaks or is stopped, saying why, instead of leaving none.
 
 ## [0.1.0-beta.2] - 2026-10-10
 
