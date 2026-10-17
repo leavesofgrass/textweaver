@@ -92,13 +92,12 @@ mod tests {
 
     #[test]
     fn the_name_tw_runs_the_terminal_program_with_every_argument() {
-        for argv0 in [
-            "tw",
-            "tw.exe",
-            "TW.EXE",
-            "/usr/local/bin/tw",
-            r"C:\Programs\textweaver\Tw.exe",
-        ] {
+        let mut names = vec!["tw", "tw.exe", "TW.EXE", "/usr/local/bin/tw"];
+        // Backslashes separate folders only on Windows.
+        if cfg!(windows) {
+            names.push(r"C:\Programs\textweaver\Tw.exe");
+        }
+        for argv0 in names {
             assert!(started_as_tw(OsStr::new(argv0)), "{argv0}");
             assert_eq!(
                 decide(argv0, &["book.md"]),
