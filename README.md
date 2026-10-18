@@ -6,7 +6,7 @@ textweaver is a document reader and writer that speaks. It reads documents aloud
 
 It is designed first for people who use a screen reader or a Braille display, and for students with print disabilities. It runs on Linux, macOS, and Windows, in two forms that share documents, settings, and keys: a graphical app and a terminal reader.
 
-Status: beta. The current release is 0.1.0-beta.2. It is suitable for wider testing, and some parts are still changing. [Known limits](docs/known-limits.md) lists what does not work yet.
+Status: beta. The current release is 0.1.0-beta.3. It is suitable for wider testing, and some parts are still changing. [Known limits](docs/known-limits.md) lists what does not work yet.
 
 ## Get textweaver
 

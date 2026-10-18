@@ -4,6 +4,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+## [0.1.0-beta.3] - 2026-10-17
+
 ### Changed
 
 - **`textweaver` now opens the app; `tw` is the terminal.** textweaver is one program instead of three, so the download is simpler. `textweaver`, alone or with a file, opens the textweaver app. The terminal reader and the commands are the same program: use `tw`, or `textweaver --tw` (`--cli` means the same). A command given to `textweaver`, such as `textweaver convert`, still runs the command line, so scripts keep working, but `textweaver FILE` now opens the file in the app rather than the terminal reader. `textweaver-gui` is gone; the old launcher, `textweaver.exe`, that started `tw.exe` is gone too, since `textweaver.exe` is now the program. On Windows, `tw.exe` is a small console program that runs `textweaver.exe --tw` with the same arguments and waits for it, so terminals, screen readers, and Braille displays work with the terminal reader as before; in terminals there, use `tw`. On Linux and macOS `tw` is a link to `textweaver` (on macOS, to the program inside `textweaver.app`). Settings, data folders, and the JSON-RPC interface are unchanged ([The command line](docs/command-line.md#one-program)).
@@ -1062,6 +1064,7 @@ The first release with downloadable packages: Windows (x86_64) and macOS (univer
 - `tw`, the command-line tool: `text`, `info`, `search`, `speak`, `voices`, and `backends`.
 - Speech backends: espeak-ng (Linux), Omnivox, and a silent backend.
 
+[0.1.0-beta.3]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.3
 [0.1.0-beta.2]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-beta.1
 [0.1.0-alpha.9]: https://github.com/leavesofgrass/textweaver/releases/tag/v0.1.0-alpha.9

@@ -2,7 +2,7 @@
 
 The [quick start](quickstart.md) is the short version of this guide. On Windows, the fastest route is to download `textweaver-VERSION-windows-x86_64.zip`, extract it, and run `textweaver.exe`, the textweaver app (see [The app](#the-app)).
 
-textweaver is in beta. The newest release is 0.1.0-beta.2. Since beta 1, each release on GitHub provides one self-contained package for each system and processor:
+textweaver is in beta. The newest release is 0.1.0-beta.3. Since beta 1, each release on GitHub provides one self-contained package for each system and processor:
 
 - `textweaver-VERSION-windows-x86_64.zip`, for Windows on x86-64 computers (it also runs on Windows on ARM, under emulation)
 - `textweaver-VERSION-macos-universal.zip`, for Apple silicon and Intel Macs
@@ -135,7 +135,7 @@ The macOS build is not yet notarized by Apple, because notarization requires a p
 2. Remove the quarantine flag that the browser added, substituting the name of the folder you extracted:
 
    ```bash
-   xattr -dr com.apple.quarantine textweaver-0.1.0-beta.2-macos-universal
+   xattr -dr com.apple.quarantine textweaver-0.1.0-beta.3-macos-universal
    ```
 
    If you skip this step, macOS reports that the program "cannot be opened because Apple cannot check it for malicious software". In that case, open System Settings, go to Privacy & Security, choose "Open Anyway" next to the message about `textweaver.app` or `tw`, and run the program again.
@@ -225,13 +225,13 @@ A package does not contain every tool textweaver can use. ffmpeg (audio export),
 Each release has a `SHA256SUMS.txt` file. To check a download on Windows:
 
 ```powershell
-certutil -hashfile textweaver-0.1.0-beta.2-windows-x86_64.zip SHA256
+certutil -hashfile textweaver-0.1.0-beta.3-windows-x86_64.zip SHA256
 ```
 
 On macOS:
 
 ```bash
-shasum -a 256 textweaver-0.1.0-beta.2-macos-universal.zip
+shasum -a 256 textweaver-0.1.0-beta.3-macos-universal.zip
 ```
 
 On Linux:
@@ -245,7 +245,7 @@ Compare the result with the line for that file in `SHA256SUMS.txt`. textweaver's
 Every package also carries a build attestation, a signed record of the GitHub workflow that produced it. With the GitHub CLI installed, you can verify one with:
 
 ```bash
-gh attestation verify textweaver-0.1.0-beta.2-windows-x86_64.zip --repo leavesofgrass/textweaver
+gh attestation verify textweaver-0.1.0-beta.3-windows-x86_64.zip --repo leavesofgrass/textweaver
 ```
 
 ## Building from source

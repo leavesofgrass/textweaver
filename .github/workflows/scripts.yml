@@ -141,10 +141,10 @@ jobs:
         shell: bash
         run: |
           bash scripts/install-linux.sh --dry-run --yes --uninstall
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-beta.2 | tee release.txt
-          grep -F 'textweaver-0.1.0-beta.2-linux-x86_64' release.txt
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-beta.3 | tee release.txt
+          grep -F 'textweaver-0.1.0-beta.3-linux-x86_64' release.txt
           grep -F 'SHA256SUMS.txt' release.txt
-          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-beta.2 --appimage | grep -F 'linux-x86_64.AppImage'
+          bash scripts/install-linux.sh --dry-run --yes --release v0.1.0-beta.3 --appimage | grep -F 'linux-x86_64.AppImage'
           bash scripts/install-linux.sh --dry-run --yes --release latest | grep -F 'api.github.com'
           # Since beta 3 textweaver is the app: the tarball's textweaver
           # and tw are linked, with the app's and the terminal reader's
@@ -170,8 +170,8 @@ jobs:
         run: |
           /bin/bash --version | head -n 1
           /bin/bash scripts/install-macos.sh --dry-run --yes
-          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-beta.2
-          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-beta.2 --gui | tee gui.txt
+          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-beta.3
+          /bin/bash scripts/install-macos.sh --dry-run --yes --release v0.1.0-beta.3 --gui | tee gui.txt
           grep -F 'macos-universal.zip' gui.txt
           grep -F 'textweaver.app, from the package' gui.txt
           /bin/bash scripts/install-macos.sh --dry-run --yes --from-source
