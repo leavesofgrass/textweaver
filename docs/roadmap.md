@@ -27,7 +27,7 @@ Beta 1 follows the last alpha with the features below. Each is described in its 
 - **Marks.** Named highlights (Alt+1 to Alt+5), each with its own color and shape in the terminal reader and its own typeform in braille files; links between notes, `tw notes links`, and an export of the knowledge graph to JSON, DOT, GraphML, Mermaid, PlantUML, CSV, or a Markdown list ([Bookmarks, notes, and highlights](notes.md)).
 - **Review and editing.** Tracked changes and comments in a list, accepted or rejected one at a time or all at once, `tw changes`, and your own edits saved to a Word file as tracked changes; find and replace with regular expressions and a panel in the graphical version; paste as Markdown or as plain text, and a context menu; a preview of the reading view in the terminal reader ([Reading](reading.md#tracked-changes-and-comments-ctrlshiftj-or-alta), [Writing and editing](editing.md)).
 - **Formats.** Org, reStructuredText, MediaWiki, DokuWiki, and Jira markup read and written through carta; braille files (BRF) that open as books; DAISY 2.02 books opened from their folder, with the narrator's recording played where the book has one; polished HTML pages that take their typography from your reading settings ([Converting documents](converting.md)).
-- **Speech.** eSpeak NG runs in its own helper program on Windows, and a layer plays recorded audio in place of speech ([Speech engines and voices](speech.md)).
+- **Speech.** eSpeak NG runs in its own process on Windows, and a layer plays recorded audio in place of speech ([Speech engines and voices](speech.md)).
 - **The graphical version.** Customizable header and toolbar buttons, offline guides under Help with one search over commands, keys, settings and guides, and a keyboard list and command palette with a filter, groups, and short rows ([The textweaver app](gui.md)).
 - **Updates and packages.** One download per system holding the app and `tw`; an update check that asks first, `tw update`, and Help, Check for updates ([Updates](updates.md), [Installing textweaver](install.md)).
 - **Components.** ffmpeg, liblouis, and Pandoc fetched for you; a components folder searched first for helper programs, your own components source (including a private GitHub repository), and an unpack action for archives ([Optional components](components.md)).
@@ -36,6 +36,9 @@ Beta 1 follows the last alpha with the features below. Each is described in its 
 
 These were planned for earlier betas and arrive in beta 3:
 
+- One program: `textweaver` opens the textweaver app, `tw` runs the terminal reader and the commands, and `textweaver-gui` is gone ([Installing textweaver](install.md)).
+- F11 is full screen in the app, and the rate keys are + and - while reading, as in the terminal reader.
+- A Start dictation button in the app's edit mode; Escape leaves edit mode; the Edit button on the toolbar becomes Done editing while you edit, and leaving edit mode keeps the cursor's place ([Writing and editing](editing.md)).
 - Anki import and export: study cards travel as `.apkg` packages ([Take cards to Anki and back](notes.md#take-cards-to-anki-and-back)).
 - The reading queue, which syncs between computers, and the review list ([The library](library.md#the-reading-queue)).
 - Pause and resume for dictation, with dictation buttons in the textweaver app.
