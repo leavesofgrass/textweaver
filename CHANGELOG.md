@@ -58,6 +58,15 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - `cargo xtask release` no longer rewrites lines that record history. A line ending with the comment `<!-- history -->`, and the "Last listening check" line, keep the version they name. The beta 2 release changed such lines by mistake, and they had to be restored by hand; one, about the app AppImages of 0.1.0-alpha.9 and earlier, is corrected now. The release guide says how to mark a history line.
 - The Orca session in the screen-reader checks passes again. It had failed since Saturday, October 3, 2026, because the app started each session as a first run, and the first run's Language list and Optional components list took the focus from the document. The Orca, NVDA, and VoiceOver sessions now start with a state folder whose settings file marks the optional components list and the question about updates as already shown, so it is not a first run and nothing asks for the focus. The Orca session also sets interface announcements to normal, since with Orca running the automatic level is minimal, which leaves out the "Paused." its pause step checks. The AT-SPI session also writes its report when it breaks or is stopped, saying why, instead of leaving none.
 
+### Package sizes
+
+- `textweaver-0.1.0-beta.3-linux-aarch64.AppImage`: 42.9 MB (44,931,592 bytes)
+- `textweaver-0.1.0-beta.3-linux-aarch64.tar.gz`: 45.1 MB (47,309,223 bytes)
+- `textweaver-0.1.0-beta.3-linux-x86_64.AppImage`: 45.8 MB (48,056,824 bytes)
+- `textweaver-0.1.0-beta.3-linux-x86_64.tar.gz`: 48.3 MB (50,595,181 bytes)
+- `textweaver-0.1.0-beta.3-macos-universal.zip`: 75.8 MB (79,457,191 bytes)
+- `textweaver-0.1.0-beta.3-windows-x86_64.zip`: 48.8 MB (51,160,505 bytes)
+
 ## [0.1.0-beta.2] - 2026-10-10
 
 In short: beta 2 fixes the speech rate, and brings every document up to date.
