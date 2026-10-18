@@ -4,7 +4,7 @@ This page summarizes what each release brought, for readers who want the changes
 
 ## 0.1.0-beta.3
 
-Not yet released.
+Released on Saturday, October 17, 2026.
 
 Summary: one program, `textweaver`, that opens the app, with `tw` for the terminal; study cards go to Anki and back, a reading queue that follows you between computers, dictation you can pause, and fewer programs in the package.
 
