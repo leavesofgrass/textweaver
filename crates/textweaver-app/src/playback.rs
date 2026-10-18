@@ -839,8 +839,9 @@ impl App {
                 self.reading_timer.bank(Instant::now());
                 self.playback = Playback::Paused { resume_at };
                 self.pause_origin = resume_at;
+                // Said at every level, minimal included (the owner, beta 3).
                 let msg = self.msg("playback-paused");
-                self.note(&msg);
+                self.tell(&msg);
             }
             Playback::Paused { resume_at } => {
                 // Resume by re-reading from the last confirmed word: may

@@ -660,7 +660,7 @@ Change the level while textweaver runs with **Alt+Shift+V**: low, normal, high, 
 
 Your screen reader and Braille display already tell you when a list opens or a dialog closes. The interface announcements decide how much textweaver says about itself on top of that: lists and menus opening and closing, progress, hints, tips, and confirmations of routine changes. Reading speech and math are not affected.
 
-- **Off**: only errors, questions waiting for your answer, and answers to what you asked (where you are, a count, the item you moved to).
+- **Off**: only errors, questions waiting for your answer, answers to what you asked (where you are, a count, the item you moved to), and "Paused." when you pause reading.
 - **Minimal**: also the result of each command you run ("Bionic reading on", "Saved", the name of a list or menu you opened).
 - **Normal**: also routine confirmations, lists and dialogs closing, progress at a calm pace (at most every ten seconds), and tips.
 - **Full**: also hints about keys and counts in progress.

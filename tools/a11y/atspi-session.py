@@ -152,9 +152,9 @@ def orca_tail(path, start):
 # first run's language list and optional components list, then the
 # question about checking for updates, take the focus from the document
 # (the cause of the failures from Saturday, October 3, 2026).
-# Interface announcements are set to normal: with Orca running, automatic
-# means minimal (ADR-0043), which leaves out routine confirmations such as
-# "Paused.", and the pause step checks that announcement.
+# Interface announcements are set to normal, so the session hears the same
+# messages at every run whatever automatic picks with Orca running
+# (ADR-0043). "Paused." is said at every level since beta 3.
 SEED_SETTINGS = """[accessibility]
 interface_announcements = "normal"
 

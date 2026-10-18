@@ -457,10 +457,10 @@ fn verbosity_shapes_messages() {
     app.open_document(structured(), DocKey::untitled(2), "Low".into());
     app.dispatch(Command::Action(ActionId::SkipNextHeading));
     assert_eq!(said.last(), "Section A");
-    // Normal-level notes are dropped at Low.
+    // "Paused." is said at every level, Low included (the owner, beta 3).
     app.dispatch(Command::Action(ActionId::ReadFromCursor));
     app.dispatch(Command::Action(ActionId::PlayPause));
-    assert!(!said.any("Paused."));
+    assert!(said.any("Paused."));
 }
 
 #[test]

@@ -4,6 +4,10 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Reading and speech
+
+- "Paused." is said at every interface announcement level, minimal and off included, so pausing is always confirmed with a screen reader running.
+
 ## [0.1.0-beta.3] - 2026-10-17
 
 ### Changed

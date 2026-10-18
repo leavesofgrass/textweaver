@@ -566,8 +566,9 @@ impl App {
             s.spoken = None;
             s.spoken_sentence = None;
         }
+        // Said at every level, minimal included (the owner, beta 3).
         let msg = self.msg("playback-paused");
-        self.note(&msg);
+        self.tell(&msg);
         true
     }
 
