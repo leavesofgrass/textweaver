@@ -536,7 +536,7 @@ pub const INFO: &[Info] = &[
     number(
         "speech.cw.effective_wpm",
         "CW effective speed",
-        "The overall speed: the gaps between characters and words stretch so the text goes this fast (Farnsworth spacing). At or above the character speed, the spacing is standard.",
+        "The overall speed, set by stretching the gaps between characters and words (Farnsworth spacing). At or above the character speed, the spacing is standard.",
         (5.0, 50.0, 1.0),
         "words per minute",
     ),
@@ -557,12 +557,12 @@ pub const INFO: &[Info] = &[
     toggle(
         "speech.cw.prosigns",
         "CW prosigns",
-        "Send structure as prosigns: BT after headings and paragraphs, AR at the end of the document. Prosigns written in angle brackets, such as <BT>, are sent too.",
+        "Send structure as prosigns: BT after headings and paragraphs, AR at the end. Prosigns written in angle brackets, such as <BT>, are sent too.",
     ),
     toggle(
         "speech.cw.status_line",
         "CW characters on the status line",
-        "Show each character on the status line as it is sent, so a screen reader can show it on a Braille display. Nothing extra is said.",
+        "Show each character on the status line as it is sent, for a Braille display. Nothing extra is said.",
     ),
     table(
         "speech.voice_params",
