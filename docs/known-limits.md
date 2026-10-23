@@ -25,7 +25,7 @@ See [the accessibility statement](accessibility.md) for the full record.
 
 These limits apply to the textweaver app (`textweaver`). The terminal reader does not have them, unless stated.
 
-- **Some commands exist only in the terminal reader.** The app says "This command works in the terminal reader." when you press the key for one ([What only the terminal reader does](gui.md#what-only-the-terminal-reader-does)).
+- **Scrolling stops near the cursor in a very long document.** `j` and Shift+J scroll within the text the app holds around the cursor, about 120,000 characters; moving the cursor brings in the rest ([Scrolling and line numbers](gui.md#scrolling-and-line-numbers)).
 
 ## Reading and speech
 

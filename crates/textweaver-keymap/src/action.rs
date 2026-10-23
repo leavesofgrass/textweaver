@@ -968,10 +968,11 @@ impl ActionId {
     }
 
     /// True for commands only the terminal reader has keys for: line
-    /// numbers, which are the terminal's gutter, and the preview inside
-    /// edit mode, which the window shows as a pane beside the editor
-    /// instead. They have terminal keys and no window keys, so F6 is the
-    /// window's, for its regions; the window's palette leaves them out.
+    /// numbers (F6 there), and the preview inside edit mode, which the
+    /// window shows as a pane beside the editor instead. They have
+    /// terminal keys and no window keys, so F6 is the window's, for its
+    /// regions; the window still runs line numbers from its View menu and
+    /// its command palette.
     pub fn is_terminal_only(self) -> bool {
         matches!(self, ActionId::ToggleLineNumbers | ActionId::TogglePreview)
     }

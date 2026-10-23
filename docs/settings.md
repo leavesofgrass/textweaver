@@ -316,7 +316,7 @@ Reading and moving around. See [Reading and moving around](reading.md).
 - `wrap_width`, default `0`: wrap lines at this many columns. 0 means the width of the terminal.
 - `measure`, default `66`: the line length in the graphical version, in characters, from 25 to 90. The column is this many average characters of the reading font at its size and spacing, so it grows with the text; 0 fills the width of the app's window. The terminal uses `wrap_width` instead.
 - `tab_width`, default `4`: columns per tab.
-- `show_line_numbers`, default `false`: show line numbers. F6 turns them on and off.
+- `show_line_numbers`, default `false`: show line numbers, in the terminal reader's gutter and in the app's left margin. F6 turns them on and off in the terminal; in the app, View, Line numbers ([Scrolling and line numbers](gui.md#scrolling-and-line-numbers)).
 - `scroll_margin`, default `3`: lines kept visible above and below the cursor.
 - `hints`, default `"auto"`: the terminal reader's key hint line at the bottom of the screen. While reading, it begins with the toolbar's buttons from `gui.toolbar_buttons`, each by its short name, then the terminal's own keys. `"auto"` shows it when textweaver speaks for itself and hides it in hybrid and screen-reader modes, where the Braille display reads the screen; `"on"` always shows it; `"off"` never does. A prompt still uses that line. Stays on this computer. See [Braille-first layout](reading.md#braille-first-layout).
 

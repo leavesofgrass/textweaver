@@ -925,14 +925,17 @@ fn a_question_is_a_dialog_with_yes_and_no() {
     );
 }
 
-/// The window's command palette lists only commands the window runs: the
-/// terminal reader's scrolling and line numbers are left out, as the
-/// menus leave them out; a key for one says where it works (W8c-w).
+/// The terminal reader's scrolling and line numbers work in the app
+/// (beta 4): the command palette and the menus list them, `j` reaches
+/// Scroll Down from the document as in the terminal, F6 stays the app's
+/// regions key, and line numbers turned on are drawn from the window's
+/// first line. Every command the app lists is one the app runs.
 #[test]
-fn the_palette_leaves_out_terminal_only_commands() {
+fn the_palette_lists_scrolling_and_line_numbers_and_they_run() {
+    use textweaver_app::Command;
     use textweaver_app::keymap::ActionId;
     let dir = tempfile::tempdir().unwrap();
-    let app = app_with_sample(dir.path());
+    let mut app = app_with_sample(dir.path());
     let all = app.palette_candidates("");
     let shown = gui::window_palette(&app, "");
     for a in [
@@ -940,30 +943,37 @@ fn the_palette_leaves_out_terminal_only_commands() {
         ActionId::ScrollUp,
         ActionId::ToggleLineNumbers,
     ] {
-        assert!(!shown.iter().any(|(b, _)| *b == a), "{a:?} is listed");
+        assert!(shown.iter().any(|(b, _)| *b == a), "{a:?} is not listed");
+        assert!(textweaver_xilem::menus::in_window(a), "{a:?}");
     }
-    // Everything else the app lists is kept, in the same order.
-    let kept: Vec<_> = all
-        .iter()
-        .filter(|(a, _)| textweaver_xilem::menus::in_window(*a))
-        .cloned()
-        .collect();
-    assert_eq!(shown, kept);
-    assert!(shown.iter().any(|(a, _)| *a == ActionId::PlayPause));
+    // The window lists everything the app lists, in the same order.
+    assert_eq!(shown, all);
     assert!(
-        app.palette_candidates("scroll")
+        gui::window_palette(&app, "scroll")
             .iter()
             .any(|(a, _)| *a == ActionId::ScrollDown)
     );
-    assert!(
-        !gui::window_palette(&app, "scroll")
-            .iter()
-            .any(|(a, _)| *a == ActionId::ScrollDown)
-    );
+    // The keys: `j` from the document is Scroll Down, as in the terminal.
+    let mut h = harness(&app);
+    let doc = h.get_widget(DOC).id();
+    h.focus_on(Some(doc));
     assert_eq!(
-        app.catalog().tr("app-terminal-only"),
-        "This command works in the terminal reader."
+        press(&mut h, &app, ActionId::ScrollDown, false),
+        Some(ActionId::ScrollDown)
     );
+    // Line numbers have no key in the app: F6 moves between its regions.
+    assert!(
+        app.keymap()
+            .chords_for(ActionId::ToggleLineNumbers)
+            .is_empty()
+    );
+    // Turned on, the view draws them from the window's first line.
+    assert_eq!(h.get_widget(DOC).inner().line_numbers(), None);
+    let _ = app.dispatch(Command::Action(ActionId::ToggleLineNumbers));
+    assert!(app.settings().display.show_line_numbers);
+    gui::refresh_for_tests(&app, &mut h);
+    let _ = h.redraw();
+    assert_eq!(h.get_widget(DOC).inner().line_numbers(), Some(0));
 }
 
 /// A question that deletes, removes or replaces something starts on No,

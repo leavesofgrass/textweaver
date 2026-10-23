@@ -208,8 +208,8 @@ pub fn context_entries(app: &App) -> Vec<Entry> {
     entries(app, &app.context_menu(), 0)
 }
 
-/// True when the window runs `a` (every command but the few only the
-/// terminal has, [`crate::parity`]).
+/// True when the window runs `a`: every command, unless one is ever
+/// listed as only the terminal's in [`crate::parity`].
 pub fn in_window(a: ActionId) -> bool {
     !matches!(
         crate::parity::support(a),

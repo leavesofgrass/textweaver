@@ -44,6 +44,12 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **New: the braille grade setting.** `[braille] grade` chooses uncontracted (grade 1, the default) or contracted (grade 2) Unified English Braille for the Braille view and for BRF files exported from the reader; Alt+Shift+F3 switches it and says which. Contracted braille goes through liblouis with the BRF writer's table, and falls back to uncontracted, saying so, when liblouis is missing. Reader builds now include the BRF writer's liblouis support.
 - The native UEB translator can say which print character each braille cell stands for (`ueb::translate_mapped`), and the BRF writer's liblouis bridge can return Unicode braille with dots 7 and 8 (`louis_unicode`).
 
+### The textweaver app
+
+- **Scroll down and Scroll up work in the app.** `j` and Shift+J (and Reading, Go to, Scroll down and Scroll up) said "This command works in the terminal reader." They now move the document by one drawn line, a wrapped paragraph one line at a time, and leave the cursor where it is; the app says what the terminal reader says, through one shared method (`App::scrolled_to`): the line at the top at high verbosity, and "Top of document." or "Bottom of document." at the ends. The view keeps its place until the cursor or the spoken word moves (`DocumentView::scroll_line`).
+- **Line numbers work in the app.** View, Line numbers, and the command palette's "toggle line numbers", turn on `[display] show_line_numbers`, shared with the terminal reader, and the app draws each line's number in the left margin in the dimmed text color, left of the "reading from here" mark. They are drawn only; screen readers and Braille displays get the text without them. There is no key in the app, where F6 moves between regions. The setting now appears in the app's Settings dialog under Display ([Scrolling and line numbers](docs/gui.md#scrolling-and-line-numbers)).
+- No command is the terminal reader's alone any more: the app's menus and command palette list every command, and the parity test now fails if one is left out without a reason recorded in `docs/gui.md`.
+
 ## [0.1.0-beta.3] - 2026-10-17
 
 ### Changed
