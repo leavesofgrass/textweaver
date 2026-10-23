@@ -2,6 +2,14 @@
 
 This page summarizes what each release brought, for readers who want the changes without the full record. The [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) has every detail, and it is the record to trust if the two differ.
 
+## 0.1.0-beta.4
+
+Not yet released.
+
+- **Obsidian links reach the whole vault.** A note's links and embeds are found anywhere in its vault, the folder holding `.obsidian`, and never outside it: by path, by name (the nearest note when two share a name, said once), then by title or alias. A note in no vault keeps its own folder, as before. `[[Note#^block]]` now opens at the block, and `[[Note#A#B]]` at heading B. Web pages converted with `--flavor obsidian` link to the right page in another folder. See [Obsidian vaults](vault.md#read-vault-notes-in-textweaver).
+- **Properties.** Opening a note with front matter ends with "Properties: 4.", and **f** lists them, name first; lists of aliases and tags are read correctly everywhere. See [Properties](vault.md#properties-f).
+- **Notes that link here, links to notes that don't exist, and tags,** as lists in the terminal reader and the textweaver app: in the command palette and the Reading menu under Go to. Enter on a note opens it; Enter on a tag lists its notes. From the command line: `tw vault backlinks`, `unresolved`, `tags`, and `properties`, which also lists Dataview fields. See [Ask the vault](vault.md#ask-the-vault).
+
 ## 0.1.0-beta.3
 
 Released on Saturday, October 17, 2026.

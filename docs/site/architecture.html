@@ -546,6 +546,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-sync",
     "textweaver-text",
     "textweaver-theme",
+    "textweaver-vault",
     "textweaver-writers"
    ],
    "description": "textweaver application core: state, sessions, command dispatch, effects (UI-agnostic)",
@@ -620,7 +621,9 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-formats",
     "textweaver-math",
     "textweaver-render",
+    "textweaver-store",
     "textweaver-text",
+    "textweaver-vault",
     "textweaver-writers"
    ],
    "description": "Fast bulk document conversion for textweaver: parallel, incremental, mirrored output trees",
@@ -842,7 +845,10 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "build_deps": [],
    "default_member": true,
    "dependents": [
-    "textweaver-cli"
+    "textweaver-app",
+    "textweaver-cli",
+    "textweaver-convert",
+    "textweaver-formats"
    ],
    "deps": [
     "textweaver-core",
@@ -909,6 +915,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "dependents": [
     "textweaver-aids",
     "textweaver-app",
+    "textweaver-convert",
     "textweaver-eci",
     "textweaver-engines",
     "textweaver-export",
@@ -1544,7 +1551,8 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-core",
     "textweaver-ocr",
     "textweaver-store",
-    "textweaver-text"
+    "textweaver-text",
+    "textweaver-vault"
    ],
    "description": "textweaver document loaders: loader trait, registry, text, Markdown with Obsidian notes, HTML, EPUB, DOCX, RTF, ODT, LaTeX, email, web archives, PDF with OCR, DAISY, braille (BRF) files, PowerPoint, spreadsheets, archives, JSON and notebooks, SVG, MathML, web pages, and Pandoc for other formats",
    "dev_deps": [],

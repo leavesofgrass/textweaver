@@ -94,7 +94,7 @@ Only the folder itself is watched, not its subfolders.
 Markdown exists in several dialects. Select one with `--flavor`:
 
 - `gfm`, the default: GitHub Flavored Markdown. Tables, task lists, strikethrough, web addresses that become links by themselves, footnotes, and alerts such as `> [!NOTE]`.
-- `obsidian`: everything in GFM, plus Obsidian's own syntax. `[[Note]]` links to `Note.html`, `[[Note#Heading]]` links to that heading, and `[[Note|text]]` shows your own link text. `![[picture.png|description]]` shows a picture with that description as its alternative text. `![[Note]]` is a link to the note, or, with `--embeds inline`, the note's text itself. Callouts such as `> [!tip] Remember` become labeled notes; a callout with a minus sign after the type becomes a section you can expand and collapse. `#tags`, `==highlights==`, and block references (`^id`) work too.
+- `obsidian`: everything in GFM, plus Obsidian's own syntax. `[[Note]]` links to the page of the note it names, anywhere in the vault, as the reader finds it (`[[Plan]]` may become `../Projects/Plan.html`; a note that is not found, `Plan.html`), `[[Note#Heading]]` links to that heading, and `[[Note|text]]` shows your own link text. `![[picture.png|description]]` shows a picture with that description as its alternative text. `![[Note]]` is a link to the note, or, with `--embeds inline`, the note's text itself. Callouts such as `> [!tip] Remember` become labeled notes; a callout with a minus sign after the type becomes a section you can expand and collapse. `#tags`, `==highlights==`, and block references (`^id`) work too.
 - `pandoc`: Pandoc's Markdown. Definition lists, fenced divs (`::: warning`), spans with classes (`[text]{.smallcaps}`), heading ids (`# Title {#intro}`), citations such as `[@doe99, p. 33]` (see [Citations](#citations) below), `H~2~O` and `2^10^`, and a title block (`% Title`, `% Author`, `% Date`).
 - `commonmark`: plain CommonMark, with no extensions.
 
@@ -374,11 +374,12 @@ tw text "Vault/Physics/Waves.md"
 A note from an Obsidian vault reads the way Obsidian shows it:
 
 - A callout says its type first, in words: `> [!warning] Hot surface` reads "Warning: Hot surface", then its text. Any type works, including your own (`> [!recipe]` reads "Recipe:"). A foldable callout says whether it starts collapsed or expanded, once: "Tip, collapsed: A folded tip". Its text is always read.
-- An embedded note, `![[Other note]]`, is read in place, between "Embedded from Other note" and "End of embed". `![[Other note#Heading]]` reads only that section, and `![[Other note#^block]]` only that block. Embedded notes are found in the note's own folder and its subfolders, never anywhere else. An embed inside an embed is read too, but not deeper than that; a note that embeds itself, or one that embeds it, is not read again, and the text says so.
+- An embedded note, `![[Other note]]`, is read in place, between "Embedded from Other note" and "End of embed". `![[Other note#Heading]]` reads only that section, and `![[Other note#^block]]` only that block. Embedded notes are found anywhere in the note's vault, the nearest folder above it that holds a `.obsidian` folder, by path, by name (the nearest note when two share it), and then by front matter title or alias, never outside the vault. A note that is in no vault finds embedded notes in its own folder and its subfolders only. An embed inside an embed is read too, but not deeper than that; a note that embeds itself, or one that embeds it, is not read again, and the text says so.
 - An embedded picture, `![[diagram.png|300]]`, is a graphic named by its file.
 - Tags read as words: `#physics/waves` is "tag physics slash waves". A number such as `#12` stays as it is.
 - `==highlighted text==` is marked as a highlight, and `%%comments%%` are not read.
-- Block ids such as `^key-point` are not read, but a link to `Note#^key-point` still finds the block.
+- Block ids such as `^key-point` are not read, but they are kept, so an embed of `Note#^key-point` reads that block, and in the reader **Alt+Shift+F** on a link to `Note#^key-point` opens the note at it.
+- The front matter is not read as text. Its `title` becomes the document's title, and its properties, lists included, are kept; the reader lists them with **f** ([Obsidian vaults](vault.md#properties-f)).
 
 `tw convert` with the `obsidian` flavor writes the same callouts to HTML, with the same types, titles, and fold states, because the reader and the converter share one set of callout rules.
 

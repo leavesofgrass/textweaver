@@ -4,6 +4,16 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ## [Unreleased]
 
+### Obsidian vaults
+
+- **Links and embeds resolve across the vault, never outside it.** The vault is the nearest folder above a note holding `.obsidian`; one resolver in `textweaver-vault` serves the reader's links (Alt+Shift+F), its embeds, `tw convert --flavor obsidian`, and the vault commands. Order: a path from the note's folder, a path from the vault root, a name or path ending anywhere in the vault (the nearest note first; "2 notes named Dup; the nearest opened." is said once), then a front matter title or alias. A path leading outside the vault is refused. A note in no vault keeps its own folder and the folders below it, as before; the separate search depths (4 for links, 8 for embeds) are gone ([Obsidian vaults](docs/vault.md#read-vault-notes-in-textweaver)).
+- **Block links open at the block.** `[[Note#^id]]` and `[[#^id]]` go to the block (they said "No heading called ^id"); a missing block says "No block id in this document." `[[Note#A#B]]` opens at heading B. A link to a missing note says "Link to a note that doesn't exist:" and its name.
+- **One front matter parser.** The reader reads YAML front matter with the vault crate's parser, so block lists (`aliases:` then `- name` lines) and quoted values are kept; `alias`, `tag` and `cssclass` count as `aliases`, `tags` and `cssclasses`, and an alias with spaces stays one alias (import too). Cached documents are read again once.
+- **Properties.** Opening a note with front matter ends with "Properties: 4."; `note_properties` (**f**) lists them, name first, lists joined by commas, checkboxes as "checked" or "not checked" ([Properties](docs/vault.md#properties-f)).
+- **Notes that link here, links to notes that don't exist, tags in this note, and tags in the vault,** as lists in both frontends (command palette, and Reading, Go to): Enter opens a note or lists a tag's notes, nested tags included. A vault index (names, titles, aliases, tags, links; at most 20,000 notes, 4 MB a note, 256 MB in all) is built on first use and refreshed from file times before each.
+- **`tw vault backlinks`, `unresolved`, `tags` (with `--tag`), and `properties`,** read-only, each with `--json`; `properties` also lists Dataview `key::` fields, which only the vault commands read ([Ask the vault](docs/vault.md#ask-the-vault)).
+- **Converted web pages link across folders.** With `--flavor obsidian`, `[[Plan]]` links to the page of the note it resolves to, such as `../Projects/Plan.html`.
+
 ### Reading and speech
 
 - "Paused." is said at every interface announcement level, minimal and off included, so pausing is always confirmed with a screen reader running.
