@@ -19,7 +19,7 @@
 //! Pitch keys move the tone by semitones; the volume keys scale it.
 //!
 //! As each character starts to sound, it is recorded in
-//! [`textweaver_cw::sending`] for the status line.
+//! [`textweaver_cw::sending()`] for the status line.
 
 use std::collections::VecDeque;
 use std::ops::Range;

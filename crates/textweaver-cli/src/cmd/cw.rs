@@ -35,14 +35,13 @@ pub enum Command {
     /// time each arrived, until Escape (or for --seconds). For recording
     /// what a key adapter sends; nothing is played or sent.
     Monitor(MonitorArgs),
+    /// List the MIDI inputs the monitor can listen to.
+    Ports,
 }
 
 /// Arguments for `tw cw monitor`.
 #[derive(clap::Args, Debug)]
 pub struct MonitorArgs {
-    /// List the MIDI inputs and stop.
-    #[arg(long)]
-    pub list: bool,
     /// Listen to MIDI only, not to the keyboard.
     #[arg(long, conflicts_with = "no_midi")]
     pub no_keys: bool,
@@ -62,6 +61,7 @@ pub struct MonitorArgs {
 pub fn run(args: Args) -> anyhow::Result<()> {
     match args.command {
         Command::Monitor(a) => monitor(&a),
+        Command::Ports => list_midi(),
     }
 }
 
@@ -190,9 +190,6 @@ fn say(line: &str) {
 }
 
 fn monitor(args: &MonitorArgs) -> anyhow::Result<()> {
-    if args.list {
-        return list_midi();
-    }
     let start = Instant::now();
     let (tx, rx) = channel::<String>();
     let _midi = if args.no_midi {
@@ -375,7 +372,7 @@ fn connect_midi(
     }
     if opening == 0 {
         println!(
-            "MIDI: no inputs{}. Connect or pair the adapter first; tw cw monitor --list lists them.",
+            "MIDI: no inputs{}. Connect or pair the adapter first; tw cw ports lists them.",
             filter.map_or(String::new(), |f| format!(" named like {f}"))
         );
     } else {

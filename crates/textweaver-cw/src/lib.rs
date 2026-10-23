@@ -1,7 +1,7 @@
 //! CW (Morse code) for textweaver.
 //!
 //! Everything here is data in, data out: no audio device, no clock, no
-//! threads (apart from the small shared [`sending`] record that the speech
+//! threads (apart from the small shared [`sending()`] record that the speech
 //! backend writes and the status line reads). The speech backend in
 //! `textweaver-engines` plays what this crate renders, and audio export
 //! writes it to a file.
@@ -20,7 +20,7 @@
 //!   so it does not click. The arithmetic is plain IEEE floating point
 //!   with a sine of our own, so the samples are the same on every
 //!   platform.
-//! - [`sending`]: what is being sent now, for the status line (and so for
+//! - [`mod@sending`]: what is being sent now, for the status line (and so for
 //!   a Braille display through the screen reader).
 
 pub mod render;
