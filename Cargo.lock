@@ -9774,8 +9774,10 @@ dependencies = [
 name = "textweaver-engines"
 version = "0.1.0-beta.3"
 dependencies = [
+ "tempfile",
  "textweaver-apple",
  "textweaver-core",
+ "textweaver-cw",
  "textweaver-dectalk",
  "textweaver-eci",
  "textweaver-enginehost",
