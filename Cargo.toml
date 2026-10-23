@@ -40,6 +40,7 @@ members = [
     "crates/textweaver-espeak",
     "crates/textweaver-host",
     "crates/textweaver-launcher",
+    "crates/textweaver-cw",
     "xtask",
 ]
 # The vendored Xilem and Masonry snapshot is its own workspace (ADR-0027);
@@ -84,6 +85,7 @@ default-members = [
     "crates/textweaver-espeak",
     "crates/textweaver-host",
     "crates/textweaver-launcher",
+    "crates/textweaver-cw",
 ]
 
 [workspace.package]
@@ -154,6 +156,8 @@ textweaver-sync = { path = "crates/textweaver-sync" }
 # Wave 8, W8a-d: optional components and the one downloader. Default
 # features off; HTTP is its `download` feature.
 textweaver-components = { path = "crates/textweaver-components", default-features = false }
+# Beta 4: CW (Morse code) tables, timing and tone; pure.
+textweaver-cw = { path = "crates/textweaver-cw" }
 
 # text and formats
 ropey = "1.6"

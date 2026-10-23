@@ -9688,6 +9688,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "textweaver-cw"
+version = "0.1.0-beta.3"
+
+[[package]]
 name = "textweaver-dectalk"
 version = "0.1.0-beta.3"
 dependencies = [
