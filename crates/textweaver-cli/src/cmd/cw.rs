@@ -75,6 +75,8 @@ fn at(start: Instant) -> String {
 /// What the usual mappings make of MIDI note `note`: the TinyMIDI and the
 /// CTR2 MIDI send dit on 20 and dah on 21 (the CTR2's straight key on 30
 /// and PTT on 31); the Vail adapter sends straight key 0, dit 1, dah 2.
+// Unused when the cw-midi feature is off (the lean app build).
+#[cfg_attr(not(feature = "cw-midi"), allow(dead_code))]
 fn usual_role(note: u8) -> Option<&'static str> {
     Some(match note {
         20 => "dit in the usual mapping",
@@ -89,6 +91,8 @@ fn usual_role(note: u8) -> Option<&'static str> {
 }
 
 /// One MIDI message in words, meaning first.
+// Unused when the cw-midi feature is off (the lean app build).
+#[cfg_attr(not(feature = "cw-midi"), allow(dead_code))]
 pub fn describe_midi(bytes: &[u8]) -> String {
     let hex = || {
         bytes
