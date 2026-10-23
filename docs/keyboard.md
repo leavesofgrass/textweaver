@@ -376,6 +376,7 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Start or stop dictation: spoken words are typed at the cursor in edit mode | `Ctrl+Shift+F9` | `Ctrl+Shift+F9` | `Cmd+Shift+F9` | `dictate` |
 | Pause the microphone while dictating, keeping the session and the words so far, or resume it | `Alt+Shift+F9` | `Alt+Shift+F9` | `Option+Shift+F9` | `pause_dictation` |
 | Download the dictation model chosen in the settings, after saying its size and license | palette | palette | palette | `download_dictation_model` |
+| Turn CW keying on or off: Morse code from a key or paddle is typed at the cursor in edit mode | `Alt+Shift+F11` | `Alt+Shift+F11` | `Option+Shift+F11` | `cw_keying` |
 
 ## View and help
 
