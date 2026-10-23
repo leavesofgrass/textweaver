@@ -2,6 +2,12 @@
 
 This page summarizes what each release brought, for readers who want the changes without the full record. The [changelog](https://github.com/leavesofgrass/textweaver/blob/main/CHANGELOG.md) has every detail, and it is the record to trust if the two differ.
 
+## 0.1.0-beta.4
+
+Not yet released.
+
+- **Links to other documents open in textweaver.** Press Enter on a link while reading, as in a screen reader's browse mode, or Alt+Shift+F in any mode. A link to another document, such as the quick start's links to the other guides, opens it in textweaver at the heading the link names, and you hear where you arrived: "Opened Keyboard reference, at Edit mode." Back (Alt+Left or Backspace) returns to the link where you were reading, and Forward (Alt+Right) goes to the document again, as in a web browser. If your edits are unsaved, you are asked first. Ctrl+Space still always reads from the cursor. See [Follow a link or a footnote](reading.md#follow-a-link-or-a-footnote-enter-or-altshiftf).
+
 ## 0.1.0-beta.3
 
 Released on Saturday, October 17, 2026.

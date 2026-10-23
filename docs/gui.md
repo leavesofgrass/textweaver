@@ -160,7 +160,7 @@ The app uses the same keymap as the terminal reader, plus a few chords the termi
 - **F6** and **Shift+F6**: the next and previous region: the header, the panel, the document, the preview, and the toolbar.
 - **Alt+F5**: the preview pane beside the editor, on or off (see [The preview pane](#the-preview-pane)).
 - **Ctrl+T** and **Ctrl+Shift+T**: next and previous table. **Ctrl+Alt+arrows** move by cell in a table.
-- **k** and **Shift+K** (browse): next and previous link. **Alt+Shift+F** follows a link.
+- **k** and **Shift+K** (browse): next and previous link. **Enter** on a link while reading, or **Alt+Shift+F** in any mode, follows it; a link to another document opens it in the app, at the heading the link names. **Alt+Left** and **Alt+Right** go back and forward, across the documents links opened too (see [Follow a link or a footnote](reading.md#follow-a-link-or-a-footnote-enter-or-altshiftf)).
 - **Alt+Shift+A**: the app's mode, one of two: "textweaver reads aloud" (documents in textweaver's voice, its messages for your screen reader) or "my screen reader reads" (textweaver is silent, and your screen reader reads the text). The **Speak textweaver's messages** setting (Settings, Window), off by default, has textweaver say its messages, typing and cursor moves too, for reading by ear without a screen reader; `--self-voicing` turns it on for one run. The View menu and the Accessibility mode setting show the same two names. In `settings.toml` the mode keeps the terminal reader's three values: "textweaver reads aloud" is saved as `"hybrid"`, and "my screen reader reads" as `"screen-reader"`.
 - **F5**: the next color theme.
 - **F9**: single-key shortcuts off or on.
