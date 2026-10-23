@@ -5286,6 +5286,43 @@ choice-braille-brf-code-ueb = UEB
 choice-braille-brf-code-ebae = EBAE
 name-show-original-braille = عرض برايل الأصلي
 action-show-original-braille = عرض برايل الأصلي للصفحة عند المؤشر، في ملف BRF مقروء كنص مطبوع
+## Beta 4: the Braille view (braille dots at the bottom of the app)
+## and the braille grade. $n is the part shown, $total how many.
+name-braille-view-toggle = عرض برايل
+action-braille-view-toggle = إظهار عرض برايل أو إخفاؤه: السطر الحالي بنقاط برايل أسفل الشاشة، لتعلّم برايل وتعليمه
+name-braille-grade-toggle = درجة برايل
+action-braille-grade-toggle = التبديل بين برايل غير المختصر والمختصر، الدرجة 1 والدرجة 2، في عرض برايل وملفات BRF
+braille-view-shown = عرض برايل ظاهر.
+braille-view-hidden = عرض برايل مخفي.
+braille-view-not-in-build = عرض برايل غير متوفر في نسخة { -brand } هذه.
+braille-grade-uncontracted = برايل غير مختصر، الدرجة 1.
+braille-grade-contracted = برايل مختصر، الدرجة 2.
+braille-grade-contracted-no-liblouis = برايل مختصر، الدرجة 2. مكتبة liblouis غير موجودة، لذا يظهر برايل غير المختصر حتى تُثبَّت.
+setting-braille-grade = درجة برايل
+setting-braille-grade-help = برايل غير مختصر (الدرجة 1) أو مختصر (الدرجة 2)، في ملفات BRF وعرض برايل. يحتاج برايل المختصر إلى liblouis، ومن دونها يُستخدم برايل غير المختصر.
+choice-braille-grade-uncontracted = غير مختصر (الدرجة 1)
+choice-braille-grade-contracted = مختصر (الدرجة 2)
+setting-braille-display-cells = خلايا سطر برايل
+setting-braille-display-cells-help = عدد الخلايا في سطر برايل لديك. يعرض عرض برايل هذا العدد من الخلايا في كل مرة.
+setting-braille-viewer = عرض برايل
+setting-braille-viewer-help = إظهار السطر أو الجملة الحالية بنقاط برايل أسفل التطبيق. مرئي فقط: لا تتلقى قارئات الشاشة محتواه.
+setting-braille-viewer-print-line = سطر الطباعة في عرض برايل
+setting-braille-viewer-print-line-help = تحت كل خلية برايل، الحرف أو الاختصار المطبوع الذي تمثله.
+setting-braille-viewer-cell-outlines = حدود الخلايا في عرض برايل
+setting-braille-viewer-cell-outlines-help = رسم حدّ حول كل خلية برايل، لتظهر الخلايا الفارغة والمسافات.
+settings-unit-cells =
+    { $n ->
+        [one] خلية
+        [two] خليتان
+        [few] خلايا
+        [zero] خلايا
+       *[other] خلية
+    }
+gui-braille-view = عرض برايل
+gui-braille-view-description = مرئي فقط: السطر الحالي بنقاط برايل، للمبصرين الذين يتعلمون برايل أو يعلّمونه. يعرض قارئ الشاشة برايل على سطر برايل لديك.
+gui-braille-caption-uncontracted = برايل غير مختصر، { $n } من { $total }
+gui-braille-caption-contracted = برايل مختصر، { $n } من { $total }
+gui-braille-caption-fell-back = برايل غير مختصر (المختصر يحتاج إلى liblouis)، { $n } من { $total }
 brf-original-title = برايل الأصلي، الصفحة { $page }
 brf-original-intro =
     { $n ->

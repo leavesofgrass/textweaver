@@ -4935,6 +4935,40 @@ choice-braille-brf-code-ueb = UEB
 choice-braille-brf-code-ebae = EBAE
 name-show-original-braille = Original-Braille anzeigen
 action-show-original-braille = Das Original-Braille der Seite am Cursor anzeigen, in einer als Schwarzschrift gelesenen BRF-Datei
+## Beta 4: the Braille view (braille dots at the bottom of the app)
+## and the braille grade. $n is the part shown, $total how many.
+name-braille-view-toggle = Braille-Ansicht
+action-braille-view-toggle = Braille-Ansicht ein- oder ausblenden: die aktuelle Zeile als Braillepunkte unten auf dem Bildschirm, zum Lernen und Lehren von Braille
+name-braille-grade-toggle = Braille-Grad
+action-braille-grade-toggle = Braille zwischen Vollschrift und Kurzschrift umschalten, Grad 1 und Grad 2, in der Braille-Ansicht und in BRF-Dateien
+braille-view-shown = Braille-Ansicht eingeblendet.
+braille-view-hidden = Braille-Ansicht ausgeblendet.
+braille-view-not-in-build = Die Braille-Ansicht ist in dieser Version von { -brand } nicht enthalten.
+braille-grade-uncontracted = Braille-Vollschrift, Grad 1.
+braille-grade-contracted = Braille-Kurzschrift, Grad 2.
+braille-grade-contracted-no-liblouis = Braille-Kurzschrift, Grad 2. liblouis fehlt, daher wird Vollschrift gezeigt, bis es installiert ist.
+setting-braille-grade = Braille-Grad
+setting-braille-grade-help = Vollschrift (Grad 1) oder Kurzschrift (Grad 2), in BRF-Dateien und der Braille-Ansicht. Kurzschrift braucht liblouis; ohne liblouis wird Vollschrift verwendet.
+choice-braille-grade-uncontracted = Vollschrift (Grad 1)
+choice-braille-grade-contracted = Kurzschrift (Grad 2)
+setting-braille-display-cells = Module der Braillezeile
+setting-braille-display-cells-help = Wie viele Module Ihre Braillezeile hat. Die Braille-Ansicht zeigt so viele Zellen auf einmal.
+setting-braille-viewer = Braille-Ansicht
+setting-braille-viewer-help = Die aktuelle Zeile oder den aktuellen Satz als Braillepunkte unten in der App zeigen. Nur sichtbar: Bildschirmleser erhalten ihren Inhalt nicht.
+setting-braille-viewer-print-line = Schwarzschriftzeile der Braille-Ansicht
+setting-braille-viewer-print-line-help = Unter jeder Braillezelle der Buchstabe oder die Kürzung in Schwarzschrift, für die sie steht.
+setting-braille-viewer-cell-outlines = Zellumrisse der Braille-Ansicht
+setting-braille-viewer-cell-outlines-help = Einen Umriss um jede Braillezelle zeichnen, damit Leerzellen und Abstände sichtbar sind.
+settings-unit-cells =
+    { $n ->
+        [one] Zelle
+       *[other] Zellen
+    }
+gui-braille-view = Braille-Ansicht
+gui-braille-view-description = Nur sichtbar: die aktuelle Zeile als Braillepunkte, für sehende Menschen, die Braille lernen oder lehren. Ihr Bildschirmleser zeigt Braille auf Ihrer Braillezeile.
+gui-braille-caption-uncontracted = Vollschrift, { $n } von { $total }
+gui-braille-caption-contracted = Kurzschrift, { $n } von { $total }
+gui-braille-caption-fell-back = Vollschrift (Kurzschrift braucht liblouis), { $n } von { $total }
 brf-original-title = Original-Braille, Seite { $page }
 brf-original-intro =
     { $n ->

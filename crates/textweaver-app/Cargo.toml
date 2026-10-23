@@ -49,6 +49,8 @@ publish = [
     "dep:textweaver-convert",
     "dep:textweaver-render",
     "dep:textweaver-writers",
+    # Contracted braille in BRF files and the Braille view.
+    "textweaver-writers/liblouis",
     "textweaver-engines/piper-download",
     "textweaver-fonts/download",
     "textweaver-components/download",

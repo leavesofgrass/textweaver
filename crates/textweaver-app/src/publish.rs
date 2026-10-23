@@ -332,6 +332,10 @@ impl App {
             textweaver_store::MathBrailleCode::Ueb => textweaver_convert::MathCode::Ueb,
         };
         o.write.braille.table_format = braille_tables(&self.settings);
+        o.write.braille.grade = match self.settings.braille.grade {
+            textweaver_store::BrailleGrade::Uncontracted => textweaver_convert::BrailleGrade::One,
+            textweaver_store::BrailleGrade::Contracted => textweaver_convert::BrailleGrade::Two,
+        };
         // The reader's highlights go into BRF with their palette entries'
         // typeforms, when the file exported is the one they were made on
         // (an edited copy's text has moved; the writer checks each one's

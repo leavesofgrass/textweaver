@@ -4939,6 +4939,40 @@ choice-braille-brf-code-ueb = UEB
 choice-braille-brf-code-ebae = EBAE
 name-show-original-braille = Afficher le braille d'origine
 action-show-original-braille = Afficher le braille d'origine de la page au curseur, dans un fichier BRF lu en noir
+## Beta 4: the Braille view (braille dots at the bottom of the app)
+## and the braille grade. $n is the part shown, $total how many.
+name-braille-view-toggle = Vue braille
+action-braille-view-toggle = Afficher ou masquer la vue braille : la ligne courante en points braille en bas de l'écran, pour apprendre et enseigner le braille
+name-braille-grade-toggle = Grade du braille
+action-braille-grade-toggle = Passer du braille intégral au braille abrégé et inversement, grade 1 et grade 2, dans la vue braille et les fichiers BRF
+braille-view-shown = Vue braille affichée.
+braille-view-hidden = Vue braille masquée.
+braille-view-not-in-build = La vue braille n'est pas incluse dans cette version de { -brand }.
+braille-grade-uncontracted = Braille intégral, grade 1.
+braille-grade-contracted = Braille abrégé, grade 2.
+braille-grade-contracted-no-liblouis = Braille abrégé, grade 2. liblouis est absent : le braille intégral est affiché jusqu'à son installation.
+setting-braille-grade = Grade du braille
+setting-braille-grade-help = Braille intégral (grade 1) ou abrégé (grade 2), dans les fichiers BRF et la vue braille. Le braille abrégé demande liblouis ; sans lui, le braille intégral est utilisé.
+choice-braille-grade-uncontracted = intégral (grade 1)
+choice-braille-grade-contracted = abrégé (grade 2)
+setting-braille-display-cells = Cellules de l'afficheur braille
+setting-braille-display-cells-help = Le nombre de cellules de votre afficheur braille. La vue braille montre autant de cellules à la fois.
+setting-braille-viewer = Vue braille
+setting-braille-viewer-help = Afficher la ligne ou la phrase courante en points braille en bas de l'application. Visuel seulement : les lecteurs d'écran n'en reçoivent pas le contenu.
+setting-braille-viewer-print-line = Ligne en noir de la vue braille
+setting-braille-viewer-print-line-help = Sous chaque cellule braille, la lettre ou l'abréviation en noir qu'elle représente.
+setting-braille-viewer-cell-outlines = Contours des cellules de la vue braille
+setting-braille-viewer-cell-outlines-help = Tracer un contour autour de chaque cellule braille, pour voir les cellules vides et les espacements.
+settings-unit-cells =
+    { $n ->
+        [one] cellule
+       *[other] cellules
+    }
+gui-braille-view = Vue braille
+gui-braille-view-description = Visuel seulement : la ligne courante en points braille, pour les personnes voyantes qui apprennent ou enseignent le braille. Votre lecteur d'écran affiche le braille sur votre afficheur braille.
+gui-braille-caption-uncontracted = Braille intégral, { $n } sur { $total }
+gui-braille-caption-contracted = Braille abrégé, { $n } sur { $total }
+gui-braille-caption-fell-back = Braille intégral (l'abrégé demande liblouis), { $n } sur { $total }
 brf-original-title = Braille d'origine, page { $page }
 brf-original-intro =
     { $n ->

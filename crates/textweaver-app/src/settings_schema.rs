@@ -1043,6 +1043,37 @@ pub const INFO: &[Info] = &[
         "The braille code BRF files are read in. UEB is for books made since 2016; EBAE, English Braille American Edition, is for older books. Reading a BRF file as print needs liblouis. Open the file again after a change.",
         &[("ueb", "UEB"), ("ebae", "EBAE")],
     ),
+    choice(
+        "braille.grade",
+        "Braille grade",
+        "Uncontracted braille (grade 1) or contracted braille (grade 2), in BRF files and the Braille view. Contracted braille needs liblouis; without it, uncontracted braille is used.",
+        &[
+            ("uncontracted", "uncontracted (grade 1)"),
+            ("contracted", "contracted (grade 2)"),
+        ],
+    ),
+    number(
+        "braille.display_cells",
+        "Braille display cells",
+        "How many cells your Braille display has. The Braille view shows this many cells at a time.",
+        (8.0, 120.0, 1.0),
+        "cells",
+    ),
+    toggle(
+        "braille.viewer",
+        "Braille view",
+        "Show the current line or sentence as braille dots at the bottom of the app. Visual only: screen readers are not given its contents.",
+    ),
+    toggle(
+        "braille.viewer_print_line",
+        "Braille view print line",
+        "Under each braille cell, the print letter or contraction it stands for.",
+    ),
+    toggle(
+        "braille.viewer_cell_outlines",
+        "Braille view cell outlines",
+        "Draw an outline around each braille cell, so blank cells and spacing show.",
+    ),
     // [reading_aids]
     number(
         "reading_aids.rsvp.wpm",

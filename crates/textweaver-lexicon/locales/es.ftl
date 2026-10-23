@@ -4911,6 +4911,40 @@ choice-braille-brf-code-ueb = UEB
 choice-braille-brf-code-ebae = EBAE
 name-show-original-braille = Mostrar el braille original
 action-show-original-braille = Mostrar el braille original de la página del cursor, en un archivo BRF leído como texto impreso
+## Beta 4: the Braille view (braille dots at the bottom of the app)
+## and the braille grade. $n is the part shown, $total how many.
+name-braille-view-toggle = Vista braille
+action-braille-view-toggle = Mostrar u ocultar la vista braille: la línea actual en puntos braille al pie de la pantalla, para aprender y enseñar braille
+name-braille-grade-toggle = Grado del braille
+action-braille-grade-toggle = Cambiar el braille entre sin contraer y contraído, grado 1 y grado 2, en la vista braille y los archivos BRF
+braille-view-shown = Vista braille mostrada.
+braille-view-hidden = Vista braille oculta.
+braille-view-not-in-build = La vista braille no está en esta versión de { -brand }.
+braille-grade-uncontracted = Braille sin contraer, grado 1.
+braille-grade-contracted = Braille contraído, grado 2.
+braille-grade-contracted-no-liblouis = Braille contraído, grado 2. Falta liblouis, así que se muestra braille sin contraer hasta que se instale.
+setting-braille-grade = Grado del braille
+setting-braille-grade-help = Braille sin contraer (grado 1) o contraído (grado 2), en los archivos BRF y la vista braille. El braille contraído necesita liblouis; sin él, se usa braille sin contraer.
+choice-braille-grade-uncontracted = sin contraer (grado 1)
+choice-braille-grade-contracted = contraído (grado 2)
+setting-braille-display-cells = Celdas de la línea braille
+setting-braille-display-cells-help = Cuántas celdas tiene su línea braille. La vista braille muestra esa cantidad de celdas a la vez.
+setting-braille-viewer = Vista braille
+setting-braille-viewer-help = Mostrar la línea o la oración actual en puntos braille al pie de la aplicación. Solo visual: los lectores de pantalla no reciben su contenido.
+setting-braille-viewer-print-line = Línea en tinta de la vista braille
+setting-braille-viewer-print-line-help = Bajo cada celda braille, la letra o contracción en tinta que representa.
+setting-braille-viewer-cell-outlines = Contornos de celda de la vista braille
+setting-braille-viewer-cell-outlines-help = Dibujar un contorno alrededor de cada celda braille, para que se vean las celdas vacías y el espaciado.
+settings-unit-cells =
+    { $n ->
+        [one] celda
+       *[other] celdas
+    }
+gui-braille-view = Vista braille
+gui-braille-view-description = Solo visual: la línea actual en puntos braille, para personas videntes que aprenden o enseñan braille. Su lector de pantalla muestra el braille en su línea braille.
+gui-braille-caption-uncontracted = Braille sin contraer, { $n } de { $total }
+gui-braille-caption-contracted = Braille contraído, { $n } de { $total }
+gui-braille-caption-fell-back = Braille sin contraer (el contraído necesita liblouis), { $n } de { $total }
 brf-original-title = Braille original, página { $page }
 brf-original-intro =
     { $n ->

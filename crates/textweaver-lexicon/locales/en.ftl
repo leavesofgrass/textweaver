@@ -5006,6 +5006,40 @@ choice-braille-brf-code-ueb = UEB
 choice-braille-brf-code-ebae = EBAE
 name-show-original-braille = Show original Braille
 action-show-original-braille = Show the original braille of the page at the cursor, in a BRF file read as print
+## Beta 4: the Braille view (braille dots at the bottom of the app)
+## and the braille grade. $n is the part shown, $total how many.
+name-braille-view-toggle = Braille view
+action-braille-view-toggle = Show or hide the Braille view: the current line as braille dots at the bottom of the screen, for learning and teaching braille
+name-braille-grade-toggle = Braille grade
+action-braille-grade-toggle = Switch braille between uncontracted and contracted, grade 1 and grade 2, in the Braille view and BRF files
+braille-view-shown = Braille view shown.
+braille-view-hidden = Braille view hidden.
+braille-view-not-in-build = The Braille view is not in this version of { -brand }.
+braille-grade-uncontracted = Uncontracted braille, grade 1.
+braille-grade-contracted = Contracted braille, grade 2.
+braille-grade-contracted-no-liblouis = Contracted braille, grade 2. liblouis is missing, so uncontracted braille is shown until it is installed.
+setting-braille-grade = Braille grade
+setting-braille-grade-help = Uncontracted braille (grade 1) or contracted braille (grade 2), in BRF files and the Braille view. Contracted braille needs liblouis; without it, uncontracted braille is used.
+choice-braille-grade-uncontracted = uncontracted (grade 1)
+choice-braille-grade-contracted = contracted (grade 2)
+setting-braille-display-cells = Braille display cells
+setting-braille-display-cells-help = How many cells your Braille display has. The Braille view shows this many cells at a time.
+setting-braille-viewer = Braille view
+setting-braille-viewer-help = Show the current line or sentence as braille dots at the bottom of the app. Visual only: screen readers are not given its contents.
+setting-braille-viewer-print-line = Braille view print line
+setting-braille-viewer-print-line-help = Under each braille cell, the print letter or contraction it stands for.
+setting-braille-viewer-cell-outlines = Braille view cell outlines
+setting-braille-viewer-cell-outlines-help = Draw an outline around each braille cell, so blank cells and spacing show.
+settings-unit-cells =
+    { $n ->
+        [one] cell
+       *[other] cells
+    }
+gui-braille-view = Braille view
+gui-braille-view-description = Visual only: the current line as braille dots, for sighted readers learning or teaching braille. Your screen reader shows braille on your Braille display.
+gui-braille-caption-uncontracted = Uncontracted braille, { $n } of { $total }
+gui-braille-caption-contracted = Contracted braille, { $n } of { $total }
+gui-braille-caption-fell-back = Uncontracted braille (contracted needs liblouis), { $n } of { $total }
 brf-original-title = Original Braille, page { $page }
 brf-original-intro =
     { $n ->
