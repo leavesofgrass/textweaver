@@ -235,6 +235,10 @@ CW (Morse code). See [CW: reading in Morse code](cw.md).
 - `volume`, default `50`: the tone's level, 0 to 100 percent of full scale, before the speech volume.
 - `prosigns`, default `true`: send structure as prosigns (BT after headings and paragraphs, AR at the end of the document), and send prosigns written in angle brackets, such as `<BT>`.
 - `status_line`, default `true`: show the characters being sent on the status line, so a screen reader can show them on a Braille display. Nothing extra is announced.
+- `practice_threshold`, default `90`: in Morse code practice, the score of a Koch round, in percent (50 to 100), that adds the next character.
+- `practice_group`, default `5`: the characters in each practice group, 2 to 10.
+- `practice_groups`, default `10`: the groups in a practice round, 1 to 50.
+- `practice_delay_ms`, default `1000`: the quiet before each practice group is sent, 0 to 5000 milliseconds, after the time textweaver's spoken message is expected to take. See [Practice and training](cw.md#practice-and-training).
 
 A change to `[speech.cw]` applies from the next sentence; a reading in progress goes on from the last word with it.
 

@@ -237,6 +237,10 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 | Cycle the speed presets (skim, normal, study, slow) | `F8` | `F8` | `F8` | `cycle_speed_preset` |
 | Choose a voice | `Alt+V`, `Ctrl+Alt+V` | `Ctrl+Alt+V` | `Cmd+Option+V` | `choose_voice` |
 | Restart speech with the current settings (after the speech engine stopped working) | `Shift+F8` | `Shift+F8` | `Shift+F8` | `restart_speech` |
+| Morse code practice, Koch method: copy groups of the characters learned so far | palette | palette | palette | `cw_practice_koch` |
+| Morse code practice: copy groups of random characters | palette | palette | palette | `cw_practice_characters` |
+| Morse code practice: copy random words | palette | palette | palette | `cw_practice_words` |
+| Say the Morse code practice progress: the Koch lesson and the latest scores | palette | palette | palette | `cw_practice_progress` |
 | Cycle how much textweaver says: low, normal, high | `Alt+Shift+V` | `Alt+Shift+V` | `Cmd+Option+Shift+V` | `cycle_verbosity` |
 | Cycle how much punctuation is spoken: none, some, all | `Alt+Shift+N` | `Alt+Shift+N` | `Cmd+Option+Shift+N` | `cycle_punctuation` |
 
@@ -587,6 +591,10 @@ These commands have no keys by default. Run them from the command palette (F2, t
 | List this note's links to notes that don't exist | `unresolved_links` |
 | List the tags in this note; Enter lists the notes in the vault with that tag | `note_tags` |
 | List every tag in the vault with how many notes carry it; Enter lists those notes | `vault_tags` |
+| Morse code practice, Koch method: copy groups of the characters learned so far | `cw_practice_koch` |
+| Morse code practice: copy groups of random characters | `cw_practice_characters` |
+| Morse code practice: copy random words | `cw_practice_words` |
+| Say the Morse code practice progress: the Koch lesson and the latest scores | `cw_practice_progress` |
 | Choose how Find and Replace match: case, whole words, regular expression, across lines | `search_options` |
 | Highlight the selection or the sentence with a name chosen from the highlight palette | `highlight_as` |
 | Write the highlights of one name as a Markdown list | `collect_highlights` |
