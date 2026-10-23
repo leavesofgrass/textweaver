@@ -171,7 +171,10 @@ actions! {
     Stop = "stop", Reading, "Stop reading, or finish editing when nothing is being read",
         gui ["g:Escape"], term ["g:Escape", "b:Ctrl+X"], shared [];
     ReadFromCursor = "read_from_cursor", Reading, "Read continuously from the cursor",
-        gui ["g:Ctrl+Space"], term ["g:Ctrl+Space"], shared ["b:Enter"];
+        gui ["g:Ctrl+Space"], term ["g:Ctrl+Space"], shared [];
+    Activate = "activate", Reading,
+        "Follow the link or footnote at the cursor, or read continuously from the cursor anywhere else",
+        gui [], term [], shared ["b:Enter"];
     ReadDocument = "read_document", Reading, "Read the whole document from the start",
         gui [], term [], shared ["b:Shift+R"];
     ReadCurrentCharacter = "read_current_character", Reading, "Say the character at the cursor",

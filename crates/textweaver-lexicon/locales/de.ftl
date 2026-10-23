@@ -735,6 +735,7 @@ keyname-end = Ende
 action-play-pause = Lesen ab dem aktuellen Wort abspielen oder pausieren
 action-stop = Lesen stoppen, oder die Bearbeitung beenden, wenn nichts gelesen wird
 action-read-from-cursor = Fortlaufend ab dem Cursor lesen
+action-activate = Dem Link oder der Fußnote am Cursor folgen, sonst fortlaufend ab dem Cursor lesen
 action-read-document = Das ganze Dokument von Anfang an lesen
 action-read-current-character = Das Zeichen am Cursor sagen
 action-read-current-word = Das Wort am Cursor sagen
@@ -1852,9 +1853,15 @@ vault-tag-notes-intro =
        *[other] Tag { $tag }, { $n } Notizen. Die Eingabetaste öffnet eine.
     }
 vault-tag-no-notes = Keine Notiz trägt den Tag { $tag }.
-# $file is the file's name; $key names the History Back command's keys.
-links-followed = Dem Link zu { $file } gefolgt. Zurück: { $key }.
-links-back-in = Zurück in { $file }.
+# $title is the document's title; $heading is the heading arrived at, $anchor
+# the heading a link names; $key names the History Back command's keys;
+# $text is the first words at the position arrived at.
+links-opened = { $title } geöffnet. Zurück: { $key }.
+links-opened-at = { $title } geöffnet, bei { $heading }. Zurück: { $key }.
+links-opened-no-heading = { $title } geöffnet, am Anfang: keine Überschrift namens { $anchor }. Zurück: { $key }.
+links-opened-no-block = { $title } geöffnet, am Anfang: kein Block { $id }. Zurück: { $key }.
+links-back-in = Zurück in { $title }: { $text }
+links-forward-in = Vorwärts in { $title }: { $text }
 # $label is the footnote's label, such as 1.
 links-back-to-footnote-reference = Zurück zum Fußnotenverweis { $label }, Zeile { $line }.
 # $text is the start of the note.
@@ -2348,6 +2355,8 @@ choice-reading-book-audio-auto = Aufnahme
 choice-reading-book-audio-speech = nur Sprachausgabe
 setting-reading-after-end = Nach dem Ende eines Dokuments
 setting-reading-after-end-help = Was nach dem Ende eines Dokuments folgt, wenn die Leseliste ein weiteres hat. Nichts, das nächste Dokument wird genannt und die Lesetaste liest es, oder das nächste Dokument wird sofort gelesen. Ein Dokument beginnt nie ungefragt.
+setting-reading-read-comments = Obsidian-Kommentare lesen
+setting-reading-read-comments-help = Liest die Kommentare in Obsidian-Notizen, die zwischen %%-Zeichen stehen. Aus lässt sie weg, wie die Leseansicht von Obsidian.
 choice-reading-after-end-stop = anhalten
 choice-reading-after-end-ask = erst fragen
 choice-reading-after-end-next = das nächste lesen
@@ -3093,6 +3102,7 @@ authoring-language-cpp = C plus plus
 authoring-language-csharp = C Sharp
 authoring-language-diff = diff
 authoring-language-plain-text = einfacher Text
+authoring-language-mermaid = Mermaid-Diagramm
 authoring-grammar-not-in-build = Grammatikprüfung ist in dieser Version nicht enthalten.
 # $count is $n with thousands separators.
 authoring-word-count-selection =

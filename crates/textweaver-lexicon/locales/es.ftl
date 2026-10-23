@@ -699,6 +699,7 @@ keyname-end = Fin
 action-play-pause = Reproducir o pausar la lectura desde la palabra actual
 action-stop = Detener la lectura, o terminar de editar si no se está leyendo nada
 action-read-from-cursor = Leer de forma continua desde el cursor
+action-activate = Seguir el enlace o la nota al pie en el cursor, o leer de forma continua desde el cursor en cualquier otro lugar
 action-read-document = Leer todo el documento desde el principio
 action-read-current-character = Decir el carácter en el cursor
 action-read-current-word = Decir la palabra en el cursor
@@ -1816,9 +1817,15 @@ vault-tag-notes-intro =
        *[other] Etiqueta { $tag }, { $n } notas. Intro abre una.
     }
 vault-tag-no-notes = Ninguna nota lleva la etiqueta { $tag }.
-# $file is the file's name; $key names the History Back command's keys.
-links-followed = Se siguió el enlace a { $file }. Atrás: { $key }.
-links-back-in = Atrás en { $file }.
+# $title is the document's title; $heading is the heading arrived at, $anchor
+# the heading a link names; $key names the History Back command's keys;
+# $text is the first words at the position arrived at.
+links-opened = Se abrió { $title }. Atrás: { $key }.
+links-opened-at = Se abrió { $title }, en { $heading }. Atrás: { $key }.
+links-opened-no-heading = Se abrió { $title }, al principio: no hay ningún encabezado llamado { $anchor }. Atrás: { $key }.
+links-opened-no-block = Se abrió { $title }, al principio: no hay ningún bloque { $id }. Atrás: { $key }.
+links-back-in = Atrás en { $title }: { $text }
+links-forward-in = Adelante en { $title }: { $text }
 # $label is the footnote's label, such as 1.
 links-back-to-footnote-reference = Volver a la referencia de la nota al pie { $label }, línea { $line }.
 # $text is the start of the note.
@@ -2312,6 +2319,8 @@ choice-reading-book-audio-auto = narración grabada
 choice-reading-book-audio-speech = solo voz
 setting-reading-after-end = Al terminar un documento
 setting-reading-after-end-help = Qué sigue al final de un documento cuando la cola de lectura tiene otro. Nada, se nombra el siguiente documento y la tecla de leer lo lee, o se lee el siguiente documento enseguida. Un documento nunca empieza sin que lo pida.
+setting-reading-read-comments = Leer los comentarios de Obsidian
+setting-reading-read-comments-help = Lee los comentarios de las notas de Obsidian, escritos entre marcas %%. Desactivado los omite, como la vista de lectura de Obsidian.
 choice-reading-after-end-stop = detenerse
 choice-reading-after-end-ask = preguntar antes
 choice-reading-after-end-next = leer el siguiente
@@ -3069,6 +3078,7 @@ authoring-language-cpp = C más más
 authoring-language-csharp = C almohadilla
 authoring-language-diff = diff
 authoring-language-plain-text = texto sin formato
+authoring-language-mermaid = diagrama Mermaid
 authoring-grammar-not-in-build = La comprobación de gramática no está en esta compilación.
 # $count is $n with thousands separators.
 authoring-word-count-selection =

@@ -132,8 +132,7 @@ fn links_reach_another_folder_of_the_vault_and_its_headings() {
     r.follow_from_cell("Mitochondria", 0);
     assert_eq!(r.title(), "Mitochondria");
     assert!(
-        r.status()
-            .starts_with("Followed the link to Mitochondria.md."),
+        r.status().starts_with("Opened Mitochondria. Back:"),
         "{}",
         r.status()
     );

@@ -99,6 +99,7 @@ pub mod latex;
 pub mod markdown;
 mod mathml;
 pub mod obsidian;
+pub mod obsidian_source;
 pub mod odt;
 mod omml;
 mod package;
@@ -210,7 +211,7 @@ pub fn warnings(meta: &DocumentMeta) -> Vec<String> {
 
 /// Version of the canonical text the loaders produce. Bumped whenever a
 /// loader's output changes, which invalidates cached documents.
-pub const CANONICAL_VERSION: u32 = 10;
+pub const CANONICAL_VERSION: u32 = 11;
 
 /// Where a document comes from.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -345,6 +346,10 @@ pub struct LoadOptions {
     /// instead of reading it as a pause (`[speech] markup_pauses = false`,
     /// for documents that quote SSML). See [`pause_markup`].
     pub keep_pause_markup: bool,
+    /// Read Obsidian comments (`%%...%%`) in Markdown instead of leaving
+    /// them out (`[reading] read_comments`, `tw convert --keep-comments`).
+    /// Their `%%` marks are not read either way.
+    pub keep_comments: bool,
     /// The braille code BRF files are read in (`[braille] brf_code`).
     pub brf_code: BrfCode,
     /// Progress reports and cancelling (not part of the cache key).

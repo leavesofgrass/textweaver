@@ -810,6 +810,7 @@ keyname-end = End
 action-play-pause = تشغيل أو إيقاف مؤقت للقراءة من الكلمة الحالية
 action-stop = إيقاف القراءة، أو إنهاء التحرير إن لم تكن هناك قراءة
 action-read-from-cursor = القراءة المتواصلة من المؤشر
+action-activate = اتباع الرابط أو الحاشية عند المؤشر، أو القراءة المتواصلة من المؤشر في أي مكان آخر
 action-read-document = قراءة المستند كاملًا من البداية
 action-read-current-character = نطق الحرف عند المؤشر
 action-read-current-word = نطق الكلمة عند المؤشر
@@ -2012,9 +2013,15 @@ vault-tag-notes-intro =
        *[other] الوسم { $tag }، { $n } ملاحظات. Enter لفتح واحدة.
     }
 vault-tag-no-notes = لا ملاحظة تحمل الوسم { $tag }.
-# $file is the file's name; $key names the History Back command's keys.
-links-followed = اتُّبع الرابط إلى { $file }. الرجوع: { $key }.
-links-back-in = الرجوع في { $file }.
+# $title is the document's title; $heading is the heading arrived at, $anchor
+# the heading a link names; $key names the History Back command's keys;
+# $text is the first words at the position arrived at.
+links-opened = فُتح { $title }. الرجوع: { $key }.
+links-opened-at = فُتح { $title }، عند { $heading }. الرجوع: { $key }.
+links-opened-no-heading = فُتح { $title }، في البداية: لا عنوان باسم { $anchor }. الرجوع: { $key }.
+links-opened-no-block = فُتح { $title }، في البداية: لا توجد كتلة { $id }. الرجوع: { $key }.
+links-back-in = الرجوع في { $title }: { $text }
+links-forward-in = التقدّم في { $title }: { $text }
 # $label is the footnote's label, such as 1.
 links-back-to-footnote-reference = الرجوع إلى مرجع الحاشية { $label }، السطر { $line }.
 # $text is the start of the note.
@@ -2531,6 +2538,8 @@ choice-reading-book-audio-auto = السرد المسجَّل
 choice-reading-book-audio-speech = الصوت المُركَّب فقط
 setting-reading-after-end = بعد انتهاء المستند
 setting-reading-after-end-help = ما يلي نهاية المستند حين يكون في قائمة القراءة مستند آخر. لا شيء، أو يُذكر المستند التالي ومفتاح القراءة يقرؤه، أو يُقرأ المستند التالي فورًا. لا يبدأ مستند أبدًا دون طلبك.
+setting-reading-read-comments = قراءة تعليقات Obsidian
+setting-reading-read-comments-help = يقرأ التعليقات في ملاحظات Obsidian، المكتوبة بين علامتي %%. عند الإيقاف تُحذف، كما في عرض القراءة في Obsidian.
 choice-reading-after-end-stop = التوقف
 choice-reading-after-end-ask = السؤال أولًا
 choice-reading-after-end-next = قراءة التالي
@@ -3355,6 +3364,7 @@ authoring-language-cpp = سي بلس بلس
 authoring-language-csharp = سي شارب
 authoring-language-diff = فرق
 authoring-language-plain-text = نص عادي
+authoring-language-mermaid = مخطط Mermaid
 authoring-grammar-not-in-build = التدقيق النحوي غير متوفر في هذه النسخة.
 # $count is $n with thousands separators.
 authoring-word-count-selection =

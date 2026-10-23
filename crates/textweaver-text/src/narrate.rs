@@ -11,11 +11,13 @@
 //! | Ordered list item number | "2. " | "2. " | "2. " |
 //! | Block quote, code block, graphic (at their start) | — | "block quote, " … | same |
 //! | Graphic with no description (an empty `Image` marker) | — | "graphic, no description, " | same |
+//! | Mermaid diagram (a code block fenced `mermaid`) | — | "Mermaid diagram source, " | same |
 //! | Link (at its start) | — | — | "link, " |
+//! | Struck-through or highlighted (`==text==`) text | — | — | "strikethrough, " / "highlighted, " |
 //! | Footnote reference `[1]` | "footnote 1" | "footnote 1" | "footnote 1" |
 //! | Table, structured | "Name is Ada, …" | "Table with 3 columns: …" then "Row 1: Name is Ada, …" | "… and 2 rows: …", "Row 1 of 2: …" |
 //! | Table, flat | "Ada, Engineer, 98." | same | same |
-//! | Skipped table or code block | — | "table with 3 columns, skipped" / "code block skipped" | same |
+//! | Skipped table or code block | — | "table with 3 columns, skipped" / "code block skipped" ("Mermaid diagram skipped") | same |
 //!
 //! With `announce_structure` off nothing is inserted except the separators
 //! that keep table cells apart, and tables read flat. Table cell separators
@@ -385,7 +387,12 @@ impl<'a> Planner<'a> {
             && !code.range.contains(self.range.start)
         {
             if self.policy.announces(Verbosity::Normal) {
-                self.push_notice("code block skipped", code.range.start);
+                let notice = if is_mermaid(code) {
+                    "Mermaid diagram skipped"
+                } else {
+                    "code block skipped"
+                };
+                self.push_notice(notice, code.range.start);
             }
             self.done_until = code.range.end;
             return;
@@ -429,6 +436,13 @@ impl<'a> Planner<'a> {
                     continue;
                 }
                 MarkerKind::Quote if p.announces(Verbosity::Normal) => out.push_str("block quote"),
+                // A Mermaid diagram is only its source to a listener: say
+                // what the source is.
+                MarkerKind::Code
+                    if m.level == 1 && p.announces(Verbosity::Normal) && is_mermaid(m) =>
+                {
+                    out.push_str("Mermaid diagram source");
+                }
                 MarkerKind::Code if m.level == 1 && p.announces(Verbosity::Normal) => {
                     out.push_str("code block");
                 }
@@ -477,6 +491,11 @@ impl<'a> Planner<'a> {
                 // verbosity, before it.
                 MarkerKind::Strikethrough if p.announces(Verbosity::High) => {
                     pieces.push(Piece::Insert(m.range.start, "strikethrough, "));
+                }
+                // Highlighted text (`==text==`) likewise, as highlighted:
+                // its marker is an underline, but it is never said so.
+                MarkerKind::Underline if m.is_highlight() && p.announces(Verbosity::High) => {
+                    pieces.push(Piece::Insert(m.range.start, "highlighted, "));
                 }
                 MarkerKind::Footnote
                     if m.level == 0 && p.announce_structure && m.range.end <= clip.end =>
@@ -913,6 +932,14 @@ fn sub_utterance(text: &str, map: &OffsetMap, a: usize, b: usize) -> (String, Of
     (piece, map)
 }
 
+/// True for a code block holding a Mermaid diagram (fenced as
+/// `mermaid`).
+fn is_mermaid(code: &Marker) -> bool {
+    code.label
+        .as_deref()
+        .is_some_and(|l| l.eq_ignore_ascii_case("mermaid"))
+}
+
 fn to_u32(n: usize) -> u32 {
     u32::try_from(n).unwrap_or(u32::MAX)
 }
@@ -1284,6 +1311,62 @@ End.";
         assert_eq!(
             texts(&plan(&d, d.full_range(), &quiet)),
             ["Keep old text.", "After the rule."]
+        );
+    }
+
+    /// Highlighted text is said "highlighted" where struck-through text is
+    /// said (high verbosity), never "underline"; a plain underline is not
+    /// said at all.
+    #[test]
+    fn highlights_are_said_highlighted_at_high_verbosity() {
+        let text = "Keep this word. And that one.";
+        let r = |a: usize, b: usize| CharRange::new(a, b);
+        let markers = vec![
+            Marker::new(MarkerKind::Underline, r(5, 9)).with_label(crate::HIGHLIGHT_LABEL),
+            Marker::new(MarkerKind::Underline, r(20, 24)),
+        ];
+        let d = Document::new(DocumentMeta::default(), Rope::from_str(text), markers);
+        let us = plan(&d, d.full_range(), &NarrationPolicy::default());
+        assert_eq!(texts(&us), ["Keep this word.", "And that one."]);
+        let high = NarrationPolicy {
+            verbosity: Verbosity::High,
+            ..NarrationPolicy::default()
+        };
+        let us = plan(&d, d.full_range(), &high);
+        check(&us);
+        assert_eq!(
+            texts(&us),
+            ["Keep highlighted, this word.", "And that one."]
+        );
+        assert!(!texts(&us).concat().contains("underline"));
+    }
+
+    /// A Mermaid block says it is a diagram's source, and so does its
+    /// skip notice.
+    #[test]
+    fn mermaid_blocks_say_they_are_diagrams() {
+        let text = "Intro.\n\ngraph TD; A-->B\n\nAfter.";
+        let markers = vec![
+            Marker::new(MarkerKind::Code, CharRange::new(8, 24))
+                .with_level(1)
+                .with_label("mermaid"),
+        ];
+        let d = Document::new(DocumentMeta::default(), Rope::from_str(text), markers);
+        let us = plan(&d, d.full_range(), &NarrationPolicy::default());
+        assert!(
+            texts(&us).contains(&"Mermaid diagram source, graph TD; A-->B"),
+            "{:?}",
+            texts(&us)
+        );
+        let skip = NarrationPolicy {
+            skip_code: true,
+            ..NarrationPolicy::default()
+        };
+        let us = plan(&d, d.full_range(), &skip);
+        assert!(
+            texts(&us).contains(&"Mermaid diagram skipped"),
+            "{:?}",
+            texts(&us)
         );
     }
 

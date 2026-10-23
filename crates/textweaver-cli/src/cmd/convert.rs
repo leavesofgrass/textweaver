@@ -94,6 +94,10 @@ pub struct Args {
     /// Obsidian embeds of notes: link or inline.
     #[arg(long, default_value = "link", value_parser = parse_embeds)]
     pub embeds: EmbedMode,
+    /// Keep Obsidian comments (%%...%%) in the output. By default they are
+    /// left out of every converted file, as private notes.
+    #[arg(long)]
+    pub keep_comments: bool,
     /// Remove scripts and unsafe HTML from the output (for Markdown from
     /// untrusted sources).
     #[arg(long)]
@@ -261,7 +265,12 @@ fn command_options(args: &Args) -> ConvertOptions {
             sanitize: args.sanitize,
             smart_punctuation: args.smart,
             embeds: args.embeds,
+            keep_comments: args.keep_comments,
             ..RenderOptions::default()
+        },
+        load: textweaver_formats::LoadOptions {
+            keep_comments: args.keep_comments,
+            ..textweaver_formats::LoadOptions::default()
         },
         template: match Template::parse(&args.template) {
             Some(_) => TemplateChoice::default(),

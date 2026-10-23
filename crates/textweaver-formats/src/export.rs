@@ -170,6 +170,10 @@ fn inserts(doc: &Document, flavor: Flavor, page_marks: bool) -> Vec<Insert> {
         let (open, close) = match (flavor, m.kind) {
             (Flavor::Markdown, MarkerKind::Bold) => ("**".to_owned(), "**".to_owned()),
             (Flavor::Markdown, MarkerKind::Italic) => ("*".to_owned(), "*".to_owned()),
+            // A highlight (`==text==`) stays one, in Obsidian's syntax.
+            (Flavor::Markdown, MarkerKind::Underline) if m.is_highlight() => {
+                ("==".to_owned(), "==".to_owned())
+            }
             (Flavor::Markdown, MarkerKind::Underline) => ("<u>".to_owned(), "</u>".to_owned()),
             (Flavor::Markdown, MarkerKind::Code) if m.level == 0 => {
                 // Backslash escapes are literal inside a code span, so the
@@ -217,6 +221,9 @@ fn inserts(doc: &Document, flavor: Flavor, page_marks: bool) -> Vec<Insert> {
             }
             (Flavor::Html, MarkerKind::Bold) => ("<strong>".to_owned(), "</strong>".to_owned()),
             (Flavor::Html, MarkerKind::Italic) => ("<em>".to_owned(), "</em>".to_owned()),
+            (Flavor::Html, MarkerKind::Underline) if m.is_highlight() => {
+                ("<mark>".to_owned(), "</mark>".to_owned())
+            }
             (Flavor::Html, MarkerKind::Underline) => ("<u>".to_owned(), "</u>".to_owned()),
             (Flavor::Html, MarkerKind::Code) if m.level == 0 => {
                 ("<code>".to_owned(), "</code>".to_owned())
@@ -406,7 +413,10 @@ fn md_escape(out: &mut String, c: char, prev: char, next: char, in_cell: bool) {
         '_' => !(prev.is_alphanumeric() && next.is_alphanumeric()),
         '<' => next.is_ascii_alphabetic() || matches!(next, '/' | '!' | '?'),
         '&' => next.is_ascii_alphanumeric() || next == '#',
+        // Doubled, these mark a strikethrough, an Obsidian highlight, or
+        // an Obsidian comment.
         '~' => next == '~' || prev == '~',
+        '=' | '%' => next == c || prev == c,
         '|' => in_cell,
         _ => false,
     };

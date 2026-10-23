@@ -136,6 +136,8 @@ The in-app keyboard help shows the same table with your own overrides applied.
 
 ## What changed
 
+In 0.1.0-beta.4: **Enter on a link follows it** in reading mode, as in the browse mode of NVDA and JAWS (the `activate` command); elsewhere Enter still reads from the cursor. `Ctrl+Space` always reads from the cursor, and in the terminal on macOS, where Enter alone was the read key, `Option+Space` does. `Alt+Left` and `Alt+Right` go back and forward across the documents links open.
+
 In 0.1.0-alpha.6: **F10 opens the menus** in the terminal, as F10 does in Windows programs (File, Edit, View, Reading, Speech, Tools, and Help). Previous chapter keeps `Alt+PageUp` and `Shift+D`; next chapter keeps `F11`, `Alt+PageDown`, and `d`. **On macOS the GUI uses Mac keys**, not Ctrl renamed: Option with the arrows moves by word and paragraph, Command with the arrows goes to the ends of the line and the document, Command runs commands, and nothing takes VoiceOver's Ctrl+Option (see the GUI on macOS column). New keys: `Ctrl+F9` cycles the interface announcements (off, minimal, normal, full), `Ctrl+Shift+F9` starts and stops dictation, and `Shift+F1` says what the next key does.
 
 In 0.1.0-alpha.4 the default keys became the quick navigation keys of NVDA's and JAWS's browse mode. To keep the earlier keys, set `preset = \"classic\"` under `[keyboard]` in `settings.toml` (see [the classic preset](#the-classic-preset)). Old key, then where its command went, in the terminal:

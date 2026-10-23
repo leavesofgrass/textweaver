@@ -716,6 +716,7 @@ keyname-end = End
 action-play-pause = Play or pause reading from the current word
 action-stop = Stop reading, or finish editing when nothing is being read
 action-read-from-cursor = Read continuously from the cursor
+action-activate = Follow the link or footnote at the cursor, or read continuously from the cursor anywhere else
 action-read-document = Read the whole document from the start
 action-read-current-character = Say the character at the cursor
 action-read-current-word = Say the word at the cursor
@@ -1853,9 +1854,15 @@ vault-tag-notes-intro =
        *[other] Tag { $tag }, { $n } notes. Enter opens one.
     }
 vault-tag-no-notes = No notes carry the tag { $tag }.
-# $file is the file's name; $key names the History Back command's keys.
-links-followed = Followed the link to { $file }. Back: { $key }.
-links-back-in = Back in { $file }.
+# $title is the document's title; $heading is the heading arrived at, $anchor
+# the heading a link names; $key names the History Back command's keys;
+# $text is the first words at the position arrived at.
+links-opened = Opened { $title }. Back: { $key }.
+links-opened-at = Opened { $title }, at { $heading }. Back: { $key }.
+links-opened-no-heading = Opened { $title }, at the start: no heading called { $anchor }. Back: { $key }.
+links-opened-no-block = Opened { $title }, at the start: no block { $id }. Back: { $key }.
+links-back-in = Back in { $title }: { $text }
+links-forward-in = Forward in { $title }: { $text }
 # $label is the footnote's label, such as 1.
 links-back-to-footnote-reference = Back to footnote reference { $label }, line { $line }.
 # $text is the start of the note.
@@ -2351,6 +2358,8 @@ choice-reading-book-audio-auto = recorded narration
 choice-reading-book-audio-speech = speech only
 setting-reading-after-end = After a document ends
 setting-reading-after-end-help = What follows the end of a document when the reading queue has another. Nothing, the next document named with the read key to read it, or the next document read at once. A document never starts unless you ask.
+setting-reading-read-comments = Read Obsidian comments
+setting-reading-read-comments-help = Read the comments in Obsidian notes, written between %% marks. Off leaves them out, as Obsidian's reading view does.
 choice-reading-after-end-stop = stop
 choice-reading-after-end-ask = ask first
 choice-reading-after-end-next = read the next
@@ -3108,6 +3117,7 @@ authoring-language-cpp = C plus plus
 authoring-language-csharp = C sharp
 authoring-language-diff = diff
 authoring-language-plain-text = plain text
+authoring-language-mermaid = Mermaid diagram
 authoring-grammar-not-in-build = Grammar checking is not in this version.
 # $count is $n with thousands separators.
 authoring-word-count-selection =

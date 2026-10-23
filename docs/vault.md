@@ -405,7 +405,7 @@ A note's vault is found as in the reader: the nearest folder above it holding `.
 tw convert "D:\Notes\Biology" --to html --flavor obsidian --out "D:\Notes\Biology-web"
 ```
 
-This converts every note in the vault to an HTML page in `Biology-web`, preserving the vault's folder structure and skipping the `.obsidian` folder. With `--flavor obsidian`, `[[Note]]` becomes a link to the page of the note it names, found as the reader finds it: `[[Plan]]` in `Notes\Main.md` links to `../Projects/Plan.html` when the note is `Projects\Plan.md`. `[[Note#Heading]]` links to that heading, and `[[Note|text]]` shows the given link text. Callouts, `#tags`, `==highlights==`, and block ids are supported as well.
+This converts every note in the vault to an HTML page in `Biology-web`, preserving the vault's folder structure and skipping the `.obsidian` folder. With `--flavor obsidian`, `[[Note]]` becomes a link to the page of the note it names, found as the reader finds it: `[[Plan]]` in `Notes\Main.md` links to `../Projects/Plan.html` when the note is `Projects\Plan.md`. `[[Note#Heading]]` links to that heading, and `[[Note|text]]` shows the given link text. Callouts, `#tags`, `==highlights==`, inline footnotes, and block ids are supported as well. Comments (`%%...%%`) are private notes and are left out of the pages, including those that span several paragraphs; `--keep-comments` keeps them.
 
 An embedded note, `![[Note]]`, becomes a link by default; `--embeds inline` places the note's text there instead:
 

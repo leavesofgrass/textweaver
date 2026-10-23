@@ -1043,14 +1043,14 @@ fn links_open_local_files_and_come_back() {
     r.go("the other");
     r.act(ActionId::FollowLink);
     assert!(
-        r.status().starts_with("Followed the link to b.md."),
+        r.status().starts_with("Opened B, at Part two. Back: "),
         "{}",
         r.status()
     );
     assert_eq!(r.app.session().unwrap().title, "B");
     assert_eq!(r.at_cursor(8), "Part two");
     r.act(ActionId::HistoryBack);
-    assert!(r.status().starts_with("Back in a.md"), "{}", r.status());
+    assert!(r.status().starts_with("Back in A: "), "{}", r.status());
     assert_eq!(r.at_cursor(9), "the other");
     // A link to a heading here.
     r.go("up");
@@ -1070,6 +1070,150 @@ fn links_open_local_files_and_come_back() {
     r.act(ActionId::DocumentStart);
     r.act(ActionId::FollowLink);
     assert_eq!(r.status(), "No link or footnote at the cursor.");
+}
+
+/// Two linked guides, as the quick start links to the keyboard reference.
+fn linked_guides(r: &mut Rig) -> PathBuf {
+    std::fs::write(
+        r.dir.join("keyboard.md"),
+        "# Keyboard reference
+
+All the keys.
+
+## Reading mode
+
+Keys to read.
+
+## Edit mode
+
+Keys to edit.
+",
+    )
+    .unwrap();
+    r.open(
+        "quickstart.md",
+        "# Quick start
+
+Read the [keys](keyboard.md#edit-mode) and the [missing guide](gone.md) and [whole guide](keyboard.md).
+",
+    )
+}
+
+/// Enter in reading mode (Activate) follows a link, as in a screen
+/// reader's browse mode: to a heading in another document, saying where it
+/// arrived; to a document's start; to a heading here. A missing file says
+/// so and stays; a web link asks first, as before.
+#[test]
+fn enter_on_a_link_follows_it() {
+    let mut r = Rig::new();
+    linked_guides(&mut r);
+    r.go("keys");
+    r.act(ActionId::Activate);
+    assert_eq!(r.app.session().unwrap().title, "Keyboard reference");
+    assert_eq!(r.at_cursor(9), "Edit mode");
+    assert_eq!(
+        r.status(),
+        "Opened Keyboard reference, at Edit mode. Back: Alt+Left or Backspace."
+    );
+    r.act(ActionId::HistoryBack);
+    assert_eq!(r.app.session().unwrap().title, "Quick start");
+    assert!(
+        r.status().starts_with("Back in Quick start: keys"),
+        "{}",
+        r.status()
+    );
+    // A link without a heading opens the document at its start.
+    r.go("whole guide");
+    r.act(ActionId::Activate);
+    assert_eq!(r.app.session().unwrap().title, "Keyboard reference");
+    assert_eq!(r.cursor(), CharPos(0));
+    assert!(
+        r.status().starts_with("Opened Keyboard reference. Back: "),
+        "{}",
+        r.status()
+    );
+    r.act(ActionId::HistoryBack);
+    // A missing file: said with its path, and the document stays.
+    r.go("missing guide");
+    r.act(ActionId::Activate);
+    assert_eq!(r.app.session().unwrap().title, "Quick start");
+    assert_eq!(r.status(), "The link goes to gone.md, which was not found.");
+    // Off a link, Enter reads from the cursor as before.
+    r.act(ActionId::DocumentStart);
+    r.act(ActionId::Activate);
+    assert_eq!(r.app.session().unwrap().title, "Quick start");
+    assert_ne!(r.status(), "No link or footnote at the cursor.");
+}
+
+#[test]
+fn a_missing_heading_opens_the_document_at_its_start_and_says_so() {
+    let mut r = Rig::new();
+    std::fs::write(
+        r.dir.join("b.md"),
+        "# B
+
+Text.
+",
+    )
+    .unwrap();
+    r.open(
+        "a.md",
+        "# A
+
+See [b](b.md#nowhere).
+",
+    );
+    r.go("b.");
+    r.act(ActionId::FollowLink);
+    assert_eq!(r.app.session().unwrap().title, "B");
+    assert_eq!(r.cursor(), CharPos(0));
+    assert!(
+        r.status()
+            .starts_with("Opened B, at the start: no heading called nowhere."),
+        "{}",
+        r.status()
+    );
+}
+
+#[test]
+fn back_and_forward_cross_documents_after_moving_around() {
+    let mut r = Rig::new();
+    linked_guides(&mut r);
+    r.go("keys");
+    let link = r.cursor();
+    r.act(ActionId::FollowLink);
+    assert_eq!(r.at_cursor(9), "Edit mode");
+    // A jump in the new guide, then back twice: the heading, then the link.
+    r.act(ActionId::DocumentStart);
+    r.act(ActionId::HistoryBack);
+    assert_eq!(r.at_cursor(9), "Edit mode");
+    r.act(ActionId::HistoryBack);
+    assert_eq!(r.app.session().unwrap().title, "Quick start");
+    assert_eq!(r.cursor(), link);
+    // Forward reopens the guide where it was left.
+    r.act(ActionId::HistoryForward);
+    assert_eq!(r.app.session().unwrap().title, "Keyboard reference");
+    assert_eq!(r.at_cursor(9), "Edit mode");
+}
+
+#[test]
+fn a_link_followed_from_unsaved_edits_asks_then_arrives_at_the_heading() {
+    let mut r = Rig::new();
+    linked_guides(&mut r);
+    r.act(ActionId::ToggleEditMode);
+    r.go("Read the");
+    r.type_text("Now ");
+    r.go("keys");
+    let effects = r.act(ActionId::FollowLink);
+    assert!(
+        matches!(effects.first(), Some(Effect::ShowList { .. })),
+        "the unsaved-changes question: {effects:?}"
+    );
+    r.send(Command::Choose(1));
+    assert_eq!(r.app.session().unwrap().title, "Keyboard reference");
+    assert_eq!(r.at_cursor(9), "Edit mode");
+    r.act(ActionId::HistoryBack);
+    assert_eq!(r.app.session().unwrap().title, "Quick start");
 }
 
 /// Opening links safely (W8a, the R4 review's first finding): a web

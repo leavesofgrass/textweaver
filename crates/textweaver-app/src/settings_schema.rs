@@ -786,6 +786,11 @@ pub const INFO: &[Info] = &[
             ("next", "read the next"),
         ],
     ),
+    toggle(
+        "reading.read_comments",
+        "Read Obsidian comments",
+        "Read the comments in Obsidian notes, written between %% marks. Off leaves them out, as Obsidian's reading view does.",
+    ),
     // [display]
     open_choice("display.theme", "Theme", "The color theme.", &[]),
     toggle(

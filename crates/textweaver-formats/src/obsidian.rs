@@ -46,6 +46,27 @@ const IMAGE_EXTENSIONS: &[&str] = &[
     "png", "jpg", "jpeg", "gif", "svg", "webp", "bmp", "avif", "tif", "tiff",
 ];
 
+/// Extensions Obsidian plays as sound when embedded.
+const AUDIO_EXTENSIONS: &[&str] = &[
+    "mp3", "wav", "m4a", "ogg", "oga", "flac", "3gp", "aac", "opus",
+];
+
+/// Extensions Obsidian plays as video when embedded.
+const VIDEO_EXTENSIONS: &[&str] = &["mp4", "webm", "ogv", "mov", "mkv", "m4v"];
+
+/// What kind of file an embed that is neither a note nor a picture names.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum FileKind {
+    /// A PDF, perhaps at a page (`#page=3`).
+    Pdf,
+    /// A sound.
+    Audio,
+    /// A video.
+    Video,
+    /// Anything else.
+    Other,
+}
+
 /// What an embed names.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum EmbedTarget {
@@ -58,8 +79,9 @@ pub(crate) enum EmbedTarget {
         /// `Heading`, `^id`, or nothing for the whole note.
         part: Option<String>,
     },
-    /// Anything else (a PDF, a sound): a link.
-    Other,
+    /// A file of another kind (a PDF, a sound): a link, said with its
+    /// kind.
+    File(FileKind),
 }
 
 /// Reads an embed's target (`note#Heading`, `image.png`).
@@ -87,8 +109,72 @@ pub(crate) fn embed_target(target: &str) -> EmbedTarget {
                 part,
             }
         }
-        Some(_) => EmbedTarget::Other,
+        Some("pdf") => EmbedTarget::File(FileKind::Pdf),
+        Some(e) if AUDIO_EXTENSIONS.contains(&e) => EmbedTarget::File(FileKind::Audio),
+        Some(e) if VIDEO_EXTENSIONS.contains(&e) => EmbedTarget::File(FileKind::Video),
+        Some(_) => EmbedTarget::File(FileKind::Other),
     }
+}
+
+/// How an embedded file is read: its kind, its name, and a PDF's page
+/// ("Embedded PDF, slides, page 3", "Embedded audio, talk", "Embedded
+/// file, report.docx"). Sounds, videos and PDFs are named without their
+/// extension, which the kind already says.
+pub(crate) fn file_embed_words(target: &str, kind: FileKind) -> String {
+    let (file, part) = target.split_once('#').unwrap_or((target, ""));
+    let path = Path::new(file.trim());
+    let name = match kind {
+        FileKind::Other => path.file_name(),
+        _ => path.file_stem(),
+    }
+    .map_or_else(
+        || file.trim().to_owned(),
+        |n| n.to_string_lossy().into_owned(),
+    );
+    let what = match kind {
+        FileKind::Pdf => "PDF",
+        FileKind::Audio => "audio",
+        FileKind::Video => "video",
+        FileKind::Other => "file",
+    };
+    let page = part
+        .split('&')
+        .find_map(|p| p.trim().strip_prefix("page="))
+        .map(str::trim)
+        .filter(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()));
+    match page {
+        Some(n) if kind == FileKind::Pdf => format!("Embedded {what}, {name}, page {n}"),
+        _ => format!("Embedded {what}, {name}"),
+    }
+}
+
+/// A picture embed's alias (`![[map.png|300]]`, `![[map.png|100x80]]`,
+/// `![[map.png|Campus map]]`, `![[map.png|Campus map|300]]`): its
+/// description, and its size in words ("300 pixels wide", "100 by 80
+/// pixels").
+pub(crate) fn image_alias(alias: &str) -> (Option<String>, Option<String>) {
+    let number = |s: &str| {
+        let s = s.trim();
+        (!s.is_empty() && s.len() <= 6 && s.chars().all(|c| c.is_ascii_digit()))
+            .then(|| s.trim_start_matches('0').to_owned())
+            .filter(|n| !n.is_empty())
+    };
+    let mut description = None;
+    let mut size = None;
+    for part in alias.split('|').map(str::trim).filter(|p| !p.is_empty()) {
+        let parsed = match part.split_once(['x', 'X']) {
+            Some((w, h)) => number(w)
+                .zip(number(h))
+                .map(|(w, h)| format!("{w} by {h} pixels")),
+            None => number(part).map(|w| format!("{w} pixels wide")),
+        };
+        match parsed {
+            Some(s) => size = Some(s),
+            None if description.is_none() => description = Some(part.to_owned()),
+            None => {}
+        }
+    }
+    (description, size)
 }
 
 /// The embeds read so far in one document, and where they may come from.
@@ -495,7 +581,28 @@ mod tests {
                 part: None
             }
         );
-        assert_eq!(embed_target("slides.pdf"), EmbedTarget::Other);
+        assert_eq!(embed_target("slides.pdf"), EmbedTarget::File(FileKind::Pdf));
+        assert_eq!(embed_target("a.MP3"), EmbedTarget::File(FileKind::Audio));
+        assert_eq!(embed_target("b.webm"), EmbedTarget::File(FileKind::Video));
+        assert_eq!(embed_target("c.docx"), EmbedTarget::File(FileKind::Other));
+        assert_eq!(
+            file_embed_words("Notes/slides.pdf#page=12", FileKind::Pdf),
+            "Embedded PDF, slides, page 12"
+        );
+        assert_eq!(
+            file_embed_words("slides.pdf#height=400", FileKind::Pdf),
+            "Embedded PDF, slides"
+        );
+        assert_eq!(
+            image_alias("Campus map|300"),
+            (Some("Campus map".into()), Some("300 pixels wide".into()))
+        );
+        assert_eq!(
+            image_alias("640x480"),
+            (None, Some("640 by 480 pixels".into()))
+        );
+        assert_eq!(image_alias("x"), (Some("x".into()), None));
+        assert_eq!(image_alias(""), (None, None));
     }
 
     #[test]

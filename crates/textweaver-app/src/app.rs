@@ -1365,16 +1365,20 @@ impl App {
         self.scroll_to_cursor();
         // A large Markdown file's source structure, for a quick Ctrl+E.
         self.prefetch_structure();
-        let msg = match resumed {
-            Some((p, r)) if r.synced => self.msg_args(
+        // Opened by a link, Back, or Forward: at the heading or the place
+        // left, said as such (crate::links).
+        let arrived = self.link_arrival();
+        let msg = match (arrived, resumed) {
+            (Some(said), _) => said,
+            (None, Some((p, r))) if r.synced => self.msg_args(
                 "open-resumed-synced",
                 &args!["title" => title.as_str(), "pct" => p],
             ),
-            Some((p, _)) => self.msg_args(
+            (None, Some((p, _))) => self.msg_args(
                 "open-resumed",
                 &args!["title" => title.as_str(), "pct" => p],
             ),
-            None => self.msg_args("open-opened", &args!["title" => title.as_str()]),
+            (None, None) => self.msg_args("open-opened", &args!["title" => title.as_str()]),
         };
         let msg = match relocated {
             Some(moved) => format!("{msg} {moved}"),
@@ -2164,7 +2168,7 @@ impl App {
             // Reading
             // At the end of a document, the read keys take up the reading
             // queue's offer (crate::queue).
-            A::PlayPause | A::ReadFromCursor if self.queue_offer_here() => {
+            A::PlayPause | A::ReadFromCursor | A::Activate if self.queue_offer_here() => {
                 return self.accept_queue_offer();
             }
             A::PlayPause => self.play_pause(),
@@ -2174,7 +2178,12 @@ impl App {
                 return self.dictation_finish_then(Self::toggle_edit);
             }
             A::Stop => self.stop_action(),
-            A::ReadFromCursor => {
+            // Enter in reading mode: follows a link or footnote, as in a
+            // screen reader's browse mode, and reads anywhere else.
+            A::Activate if self.mode == Mode::Browse && self.link_or_footnote_here() => {
+                return self.follow_link();
+            }
+            A::ReadFromCursor | A::Activate => {
                 if self.mode == Mode::SpeechCursor {
                     self.speech_cursor_exit_and_read();
                 } else {
@@ -2299,8 +2308,8 @@ impl App {
             ),
             A::NextChapter => self.chapter(textweaver_core::Direction::Forward),
             A::PreviousChapter => self.chapter(textweaver_core::Direction::Backward),
-            A::HistoryBack => self.history_back(),
-            A::HistoryForward => self.history_forward(),
+            A::HistoryBack => return self.history_back(),
+            A::HistoryForward => return self.history_forward(),
             A::GoTo => return self.prompt(PromptPurpose::GoTo),
             A::DocumentStart => self.document_edge(textweaver_core::Direction::Backward),
             A::DocumentEnd => self.document_edge(textweaver_core::Direction::Forward),
