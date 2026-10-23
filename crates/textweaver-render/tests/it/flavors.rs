@@ -219,3 +219,38 @@ fn title_and_values_are_escaped() {
         .expect("render");
     assert!(page.contains("<title>&lt;script&gt;x&lt;&#x2f;script&gt;</title>"));
 }
+
+/// Obsidian comments are left out of the page (inline, across blocks, and
+/// unclosed to the end), never in code, the same by both engines; kept
+/// when asked. Inline footnotes become endnotes.
+#[test]
+fn obsidian_comments_are_private_and_inline_footnotes_are_notes() {
+    let src = "Shown %%private%% text.^[An inline note.]\n\n%%\n# Secret heading\n\nsecret para\n%%\n\nCode `%%kept%%` and\n\n```\n%%fenced%%\n```\n\nTail %%unclosed\n\nhidden too\n";
+    let r = render_both(src, Flavor::Obsidian, EmbedMode::Link);
+    for gone in ["private", "Secret", "secret", "unclosed", "hidden too"] {
+        assert!(!r.html.contains(gone), "{gone:?} in {}", r.html);
+    }
+    assert!(r.html.contains("<code>%%kept%%</code>"), "{}", r.html);
+    assert!(r.html.contains("%%fenced%%"), "{}", r.html);
+    assert!(r.html.contains("role=\"doc-endnotes\""), "{}", r.html);
+    assert!(r.html.contains("An inline note."), "{}", r.html);
+    assert!(!r.html.contains("^["), "{}", r.html);
+    assert!(r.toc.is_empty(), "{:?}", r.toc);
+    let kept = textweaver_render::render(
+        src,
+        &RenderOptions {
+            flavor: Flavor::Obsidian,
+            keep_comments: true,
+            ..RenderOptions::default()
+        },
+    );
+    assert!(
+        kept.html.contains("Shown %%private%% text."),
+        "{}",
+        kept.html
+    );
+    assert!(kept.html.contains("hidden too"), "{}", kept.html);
+    // Other flavors leave `%%` alone.
+    let gfm = render_both(src, Flavor::Gfm, EmbedMode::Link);
+    assert!(gfm.html.contains("%%private%%"), "{}", gfm.html);
+}

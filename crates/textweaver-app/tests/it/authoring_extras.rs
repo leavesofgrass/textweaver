@@ -127,6 +127,43 @@ fn a_code_block_names_its_language_on_its_first_line() {
     assert_eq!(r.status(), "code, print(2)");
 }
 
+/// A Mermaid block names itself as a diagram on its first line.
+#[test]
+fn a_mermaid_block_is_named_a_diagram() {
+    let mut r = Rig::new();
+    r.open(
+        "diagram.md",
+        "Before.\n\n```mermaid\ngraph TD\nA-->B\n```\n\nAfter.\n",
+    );
+    r.act(ActionId::DocumentStart);
+    r.act(ActionId::CaretNextLine);
+    let mut said = r.status();
+    if !said.starts_with("code") {
+        r.act(ActionId::CaretNextLine);
+        said = r.status();
+    }
+    assert_eq!(said, "code, Mermaid diagram, graph TD");
+}
+
+/// Obsidian comments are left out of the text read, unless the setting
+/// says to read them.
+#[test]
+fn obsidian_comments_are_read_only_when_the_setting_says() {
+    let note = "Shown %%a private aside%% text.\n\n%%\nA private paragraph.\n%%\n\nEnd.\n";
+    let mut r = Rig::new();
+    r.open("note.md", note);
+    let text = r.app.session().unwrap().doc.text().to_string();
+    assert_eq!(text, "Shown text.\n\nEnd.");
+    r.app
+        .set_setting("reading.read_comments", serde_json::json!(true))
+        .unwrap();
+    r.open("note2.md", note);
+    let text = r.app.session().unwrap().doc.text().to_string();
+    assert!(text.contains("a private aside"), "{text}");
+    assert!(text.contains("A private paragraph."), "{text}");
+    assert!(!text.contains("%%"), "{text}");
+}
+
 /// The items of the list an effect shows.
 #[cfg(feature = "grammar")]
 fn list_items(effects: &[Effect]) -> Vec<String> {

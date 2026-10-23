@@ -19,9 +19,10 @@
 //! **Flavors.** [`Flavor::CommonMark`] (the bare spec), [`Flavor::Gfm`]
 //! (tables, task lists, strikethrough, autolinks, footnotes, alerts),
 //! [`Flavor::Obsidian`] (GFM plus wikilinks, embeds, callouts, tags, block
-//! references, highlights), and [`Flavor::Pandoc`] (definition lists, fenced
-//! divs, bracketed spans, heading attributes, citations, sub- and
-//! superscript, title blocks). YAML front matter is read in every flavor but
+//! references, highlights, inline footnotes, and comments, which are left
+//! out unless [`RenderOptions::keep_comments`]), and [`Flavor::Pandoc`]
+//! (definition lists, fenced divs, bracketed spans, heading attributes,
+//! citations, sub- and superscript, inline footnotes, title blocks). YAML front matter is read in every flavor but
 //! CommonMark and becomes template variables.
 //!
 //! **Accessibility.** Headings get ids for navigation and a table of
@@ -175,6 +176,11 @@ pub struct RenderOptions {
     pub embeds: EmbedMode,
     /// Added to wikilink targets that have no extension.
     pub wikilink_extension: String,
+    /// Keep Obsidian comments (`%%...%%`) in the Obsidian flavor, as the
+    /// text they are written as. Off (the default), they are left out of
+    /// the page, inline or across blocks, and an unclosed `%%` hides the
+    /// rest of the note, as in Obsidian.
+    pub keep_comments: bool,
 }
 
 impl Default for RenderOptions {
@@ -190,6 +196,7 @@ impl Default for RenderOptions {
             front_matter: true,
             embeds: EmbedMode::default(),
             wikilink_extension: ".html".to_owned(),
+            keep_comments: false,
         }
     }
 }
@@ -401,6 +408,17 @@ pub(crate) fn render_at(
     } else {
         (Map::new(), src)
     };
+    // Obsidian's comments are private notes: left out of the page (outside
+    // code) unless asked for. Inline footnotes (`^[note]`, Obsidian and
+    // Pandoc) become ordinary ones, numbered after the note's own.
+    let uncommented = (opts.flavor == Flavor::Obsidian && !opts.keep_comments)
+        .then(|| textweaver_formats::obsidian_source::strip_comments(body))
+        .flatten();
+    let body = uncommented.as_deref().unwrap_or(body);
+    let noted = matches!(opts.flavor, Flavor::Obsidian | Flavor::Pandoc)
+        .then(|| textweaver_formats::obsidian_source::inline_footnotes(body))
+        .flatten();
+    let body = noted.as_deref().unwrap_or(body);
     let blocks = preprocess::Blocks {
         callouts: opts.flavor == Flavor::Obsidian,
         alerts_only: opts.flavor == Flavor::Gfm,

@@ -388,3 +388,59 @@ fn skip_or_fail(tool: &str, why: &str) {
     );
     eprintln!("SKIPPED, not checked: {why}");
 }
+
+/// Obsidian comments are left out of every output in the Obsidian flavor
+/// (Markdown, text, HTML, Word), and kept when asked.
+#[test]
+fn obsidian_comments_are_left_out_of_converted_files() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let input = dir.path().join("in");
+    let note = write(
+        &input,
+        "note.md",
+        "# Note\n\nShared %%private aside%% text.\n\n%%\nA private paragraph.\n%%\n\nEnd %%unclosed\n\nrest\n",
+    );
+    let obsidian = |to, out: &Path, keep: bool| {
+        let mut o = options(to, Some(out));
+        o.render.flavor = textweaver_render::Flavor::Obsidian;
+        o.render.keep_comments = keep;
+        o.load.keep_comments = keep;
+        Converter::new(o)
+            .expect("converter")
+            .run(std::slice::from_ref(&note))
+            .expect("run");
+    };
+    for (to, ext) in [
+        (OutputFormat::Markdown, "md"),
+        (OutputFormat::Text, "txt"),
+        (OutputFormat::Html, "html"),
+    ] {
+        let out = dir.path().join(ext);
+        obsidian(to, &out, false);
+        let text = fs::read_to_string(out.join(format!("note.{ext}"))).expect("read");
+        assert!(text.contains("Shared"), "{ext}: {text}");
+        for gone in ["private", "unclosed", "rest"] {
+            assert!(!text.contains(gone), "{ext}: {gone:?} in {text}");
+        }
+        let kept = dir.path().join(format!("{ext}-kept"));
+        obsidian(to, &kept, true);
+        let text = fs::read_to_string(kept.join(format!("note.{ext}"))).expect("read");
+        assert!(text.contains("private aside"), "{ext} kept: {text}");
+        assert!(text.contains("rest"), "{ext} kept: {text}");
+    }
+    let docx = dir.path().join("docx");
+    obsidian(OutputFormat::Docx, &docx, false);
+    let bytes = fs::read(docx.join("note.docx")).expect("read");
+    let back = textweaver_formats::Registry::with_builtins()
+        .load(
+            &textweaver_formats::Source::Bytes {
+                data: bytes,
+                hint: "docx".into(),
+            },
+            &textweaver_formats::LoadOptions::default(),
+        )
+        .expect("docx loads");
+    let text = back.text().to_string();
+    assert!(text.contains("Shared text."), "{text}");
+    assert!(!text.contains("private"), "{text}");
+}

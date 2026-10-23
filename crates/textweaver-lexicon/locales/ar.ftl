@@ -2467,6 +2467,8 @@ choice-reading-book-audio-auto = السرد المسجَّل
 choice-reading-book-audio-speech = الصوت المُركَّب فقط
 setting-reading-after-end = بعد انتهاء المستند
 setting-reading-after-end-help = ما يلي نهاية المستند حين يكون في قائمة القراءة مستند آخر. لا شيء، أو يُذكر المستند التالي ومفتاح القراءة يقرؤه، أو يُقرأ المستند التالي فورًا. لا يبدأ مستند أبدًا دون طلبك.
+setting-reading-read-comments = قراءة تعليقات Obsidian
+setting-reading-read-comments-help = يقرأ التعليقات في ملاحظات Obsidian، المكتوبة بين علامتي %%. عند الإيقاف تُحذف، كما في عرض القراءة في Obsidian.
 choice-reading-after-end-stop = التوقف
 choice-reading-after-end-ask = السؤال أولًا
 choice-reading-after-end-next = قراءة التالي
@@ -3291,6 +3293,7 @@ authoring-language-cpp = سي بلس بلس
 authoring-language-csharp = سي شارب
 authoring-language-diff = فرق
 authoring-language-plain-text = نص عادي
+authoring-language-mermaid = مخطط Mermaid
 authoring-grammar-not-in-build = التدقيق النحوي غير متوفر في هذه النسخة.
 # $count is $n with thousands separators.
 authoring-word-count-selection =

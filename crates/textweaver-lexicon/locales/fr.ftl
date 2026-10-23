@@ -2276,6 +2276,8 @@ choice-reading-book-audio-auto = narration enregistrée
 choice-reading-book-audio-speech = synthèse vocale seule
 setting-reading-after-end = À la fin d’un document
 setting-reading-after-end-help = Ce qui suit la fin d’un document quand la file de lecture en a un autre. Rien, le document suivant est annoncé et la touche de lecture le lit, ou le document suivant est lu aussitôt. Un document ne commence jamais sans que vous le demandiez.
+setting-reading-read-comments = Lire les commentaires Obsidian
+setting-reading-read-comments-help = Lit les commentaires des notes Obsidian, écrits entre des marques %%. Désactivé les omet, comme le mode lecture d’Obsidian.
 choice-reading-after-end-stop = s’arrêter
 choice-reading-after-end-ask = demander d’abord
 choice-reading-after-end-next = lire le suivant
@@ -3033,6 +3035,7 @@ authoring-language-cpp = C plus plus
 authoring-language-csharp = C sharp
 authoring-language-diff = diff
 authoring-language-plain-text = texte brut
+authoring-language-mermaid = diagramme Mermaid
 authoring-grammar-not-in-build = La vérification grammaticale n'est pas incluse dans cette version.
 # $count is $n with thousands separators.
 authoring-word-count-selection =
