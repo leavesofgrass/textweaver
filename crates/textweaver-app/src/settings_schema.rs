@@ -1635,19 +1635,19 @@ pub const INFO: &[Info] = &[
     open_choice(
         "colors.ruler",
         "Reading ruler color",
-        "The band of the reading ruler and the marked current line. The ruler keeps its underline or bold. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.",
+        "The band of the reading ruler and the marked current line. The ruler keeps its underline or bold. Both the terminal reader and the textweaver app use it. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.difficult_words",
         "Difficult words color",
-        "The underline of difficult words; they stay underlined and are named at high verbosity. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.",
+        "The underline of difficult words; they stay underlined and are named at high verbosity. Both the terminal reader and the textweaver app use it. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
         "colors.syllables",
         "Syllable marks color",
-        "The middle dots between syllables. The terminal reader uses it; the window does not yet. Choose a name, or type a hex code. Default: the theme's color.",
+        "The middle dots between syllables. Both the terminal reader and the textweaver app use it. Choose a name, or type a hex code. Default: the theme's color.",
         crate::colors::COLOR_CHOICES,
     ),
     open_choice(
