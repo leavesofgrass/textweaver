@@ -500,7 +500,7 @@ pub fn convert(v: &Json) -> (String, Vec<Marker>) {
 }
 
 /// Reads the source as text, refusing one past [`MAX_BYTES`].
-fn text_of(source: &Source) -> Result<crate::encoding::Decoded, LoadError> {
+pub(crate) fn text_of(source: &Source) -> Result<crate::encoding::Decoded, LoadError> {
     let head = source.read_head(MAX_BYTES + 1)?;
     if head.len() > MAX_BYTES {
         return Err(LoadError::Parse(format!(
