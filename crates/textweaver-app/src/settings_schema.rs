@@ -1051,7 +1051,7 @@ pub const INFO: &[Info] = &[
     choice(
         "braille.grade",
         "Braille grade",
-        "Uncontracted braille (grade 1) or contracted braille (grade 2), in BRF files and the Braille view. Contracted braille needs liblouis; without it, uncontracted braille is used.",
+        "Uncontracted (grade 1) or contracted (grade 2) braille, in BRF files and the Braille view. Contracted braille needs liblouis; without it, uncontracted braille is used.",
         &[
             ("uncontracted", "uncontracted (grade 1)"),
             ("contracted", "contracted (grade 2)"),
