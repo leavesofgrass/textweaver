@@ -15,6 +15,7 @@ Not yet released.
 - **Obsidian links reach the whole vault.** A note's links and embeds are found anywhere in its vault, the folder holding `.obsidian`, and never outside it: by path, by name (the nearest note when two share a name, said once), then by title or alias. A note in no vault keeps its own folder, as before. `[[Note#^block]]` now opens at the block, and `[[Note#A#B]]` at heading B. Web pages converted with `--flavor obsidian` link to the right page in another folder. See [Obsidian vaults](vault.md#read-vault-notes-in-textweaver).
 - **Properties.** Opening a note with front matter ends with "Properties: 4.", and **f** lists them, name first; lists of aliases and tags are read correctly everywhere. See [Properties](vault.md#properties-f).
 - **Notes that link here, links to notes that don't exist, and tags,** as lists in the terminal reader and the textweaver app: in the command palette and the Reading menu under Go to. Enter on a note opens it; Enter on a tag lists its notes. From the command line: `tw vault backlinks`, `unresolved`, `tags`, and `properties`, which also lists Dataview fields. See [Ask the vault](vault.md#ask-the-vault).
+- **Every command works in the textweaver app.** Scroll down and Scroll up (`j` and Shift+J) move the document one line without moving the cursor, as in the terminal reader, and line numbers (View, Line numbers) are drawn in the app's left margin. The app no longer answers "This command works in the terminal reader." See [Scrolling and line numbers](gui.md#scrolling-and-line-numbers).
 
 ## 0.1.0-beta.3
 
