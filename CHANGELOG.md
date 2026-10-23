@@ -57,6 +57,10 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 - **Line numbers work in the app.** View, Line numbers, and the command palette's "toggle line numbers", turn on `[display] show_line_numbers`, shared with the terminal reader, and the app draws each line's number in the left margin in the dimmed text color, left of the "reading from here" mark. They are drawn only; screen readers and Braille displays get the text without them. There is no key in the app, where F6 moves between regions. The setting now appears in the app's Settings dialog under Display ([Scrolling and line numbers](docs/gui.md#scrolling-and-line-numbers)).
 - No command is the terminal reader's alone any more: the app's menus and command palette list every command, and the parity test now fails if one is left out without a reason recorded in `docs/gui.md`.
 
+### For contributors
+
+- **The Windows accessibility tree dump retries again.** `tools/a11y/tree-dump.ps1` asks accessibility-cli for the tree every two seconds for up to 40 seconds, but Windows PowerShell made the tool's first error fatal, so one try made before the textweaver app showed its window ended the script and left the app running. The script now checks the tool's exit code, keeps trying, always stops the app, and on failure prints the end of the app's log. accessibility-cli's "Could not find window for PID n (found m top-level windows)" means the app had no window yet; m counts every top-level window on the desktop.
+
 ## [0.1.0-beta.3] - 2026-10-17
 
 ### Changed

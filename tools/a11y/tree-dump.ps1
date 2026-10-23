@@ -46,6 +46,11 @@ $errors = Join-Path $Out 'cli-errors.txt'
 $guiArgs = @("`"$Document`"", '--backend', 'paced', '--background', '--exit-after', ($WaitSeconds + 30),
     '--home', "`"$home_dir`"", '--log-file', "`"$log`"")
 $gui = Start-Process -FilePath $Exe -ArgumentList $guiArgs -PassThru
+# Windows PowerShell turns a native command's redirected stderr into an
+# error record, which 'Stop' makes fatal: the first try, made before the
+# window is shown, ended the script and left the GUI running. The tool's
+# exit code is checked instead.
+$ErrorActionPreference = 'Continue'
 $found = $false
 $deadline = (Get-Date).AddSeconds($WaitSeconds)
 while ((Get-Date) -lt $deadline) {
@@ -64,9 +69,17 @@ if (-not $gui.HasExited) {
     & $Cli --platform win --pid $gui.Id 2>&1 | Out-File -Encoding utf8 -FilePath (Join-Path $Out 'raw-tree.txt')
     Stop-Process -Id $gui.Id -ErrorAction SilentlyContinue
 }
+$ErrorActionPreference = 'Stop'
 if (-not $found) {
+    # "Could not find window for PID n (found m top-level windows)" means
+    # the GUI had no window in UI Automation yet: m counts every top-level
+    # window on the desktop, not the GUI's. The log shows how far it got.
     Write-Output "Fail: no tree with the document in $WaitSeconds seconds. accessibility-cli said:"
     if (Test-Path -LiteralPath $errors) { Get-Content -LiteralPath $errors }
+    if (Test-Path -LiteralPath $log) {
+        Write-Output "The GUI log ends:"
+        Get-Content -LiteralPath $log -Tail 5
+    }
     exit 1
 }
 $py = if (Get-Command python -ErrorAction SilentlyContinue) { 'python' } else { 'py' }
