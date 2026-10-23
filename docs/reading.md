@@ -168,7 +168,7 @@ When textweaver pauses, it says "Paused."
 
 ### Read from the cursor: Enter
 
-Press **Enter**, or **Ctrl+Space**, to read continuously from the cursor.
+Press **Enter**, or **Ctrl+Space**, to read continuously from the cursor. On a link or a footnote, **Enter** follows it instead, as it does in a screen reader's browse mode (see [Follow a link or a footnote](#follow-a-link-or-a-footnote-enter-or-altshiftf)); **Ctrl+Space** always reads. In the terminal reader on a Mac, where macOS keeps Ctrl+Space, **Option+Space** always reads.
 
 ### Read the whole document: Shift+R
 
@@ -326,15 +326,20 @@ Each move says the column's header with the cell, for example "Row 3, Age: 41" f
 
 Some desktops keep **Ctrl+Alt** with the arrows for switching workspaces; give the four commands other keys in `keymap.toml` if yours does (`table_next_row`, `table_previous_row`, `table_next_column`, `table_previous_column`).
 
-### Follow a link or a footnote: Alt+Shift+F
+### Follow a link or a footnote: Enter or Alt+Shift+F
 
-Put the cursor on a link and press **Alt+Shift+F**:
+Move to a link (**k** finds the next one) and press **Enter**, as in a screen reader's browse mode. **Alt+Shift+F** does the same in every mode, edit mode included, where Enter starts a new line.
 
 - A link to a heading in the same document, such as `[see Methods](#methods)`, goes to that heading.
-- A link to another file, such as `[chapter 2](chapter-2.md)` or `[part](notes/a.md#part-two)`, opens it (at the heading, when the link names one). An Obsidian wiki link such as `[[chapter 2]]` finds `chapter 2.md` in the folder or below it. You hear "Followed the link to chapter-2.md. Back: Alt+Left." Press **Alt+Left** before jumping anywhere else in the new file, and you are back at the link in the first file.
-- A web or mail link is said, with a question: "Web link: https://example.org. Open it? y or n." Press **y** to open it in your browser.
+- A link to another document opens it in textweaver, in place of the current one: `[keyboard reference](keyboard.md)`, `[part](notes/a.md#part-two)`, or an absolute path. A relative path is read from the folder of the document the link is in. Any format textweaver opens can be a link's target, not only Markdown, and so can a file inside a zip (`book.zip!volume1.brf`). An Obsidian wiki link such as `[[chapter 2]]` finds `chapter 2.md` in the folder or below it.
+- When the link names a heading (the part after `#`), the document opens at that heading; otherwise it opens at its start. A heading is named by its anchor, the GitHub rule the documentation site also uses: lowercase, spaces become hyphens, and punctuation is dropped, so `#edit-mode` names "Edit mode". The heading's own text works too. You hear where you arrived and the key that goes back: "Opened Keyboard reference, at Edit mode. Back: Alt+Left or Backspace." When no heading matches, you hear so, and the document opens at its start.
+- If the document you are editing has unsaved changes, you are asked first, exactly as when you open another file: save, discard, or cancel. After you answer, the link's document opens at its heading.
+- A link to a file that does not exist says so with the path as the link gives it ("The link goes to gone.md, which was not found."), and you stay where you were.
+- A web or mail link is said, with a question: "Web link: https://example.org. Open it? y or n." Press **y** to open it in your browser. Links of any other kind, such as `javascript:`, are refused.
 
-On a footnote reference, **Alt+Shift+F** goes to the note; on the note, it goes back to the reference. When footnotes are read in place (the default, `[normalization] footnote_mode = "inline"`), it says the note instead.
+Documents opened by links form one history, as pages do in a web browser. **Backspace** or **Alt+Left** goes back to the link you followed, at the exact place you were reading: at once, if you have not jumped anywhere in the new document, or after you have gone back through the jumps you made there. You hear "Back in Quick start:" and the words at the link. **\** or **Alt+Right** then goes forward to the document you left, at the place you left it. Following a new link clears the way forward, as in a browser. See [Go back and forward](#go-back-and-forward).
+
+On a footnote reference, **Enter** or **Alt+Shift+F** goes to the note; on the note, it goes back to the reference. When footnotes are read in place (the default, `[normalization] footnote_mode = "inline"`), it says the note instead.
 
 **Alt+Shift+K** says a link's address without following it.
 
@@ -569,6 +574,8 @@ textweaver keeps a history of your jumps, like the Back button of a web browser.
 - **\\** (backslash) or **Alt+Right**: go forward again.
 
 You hear "Back, line", the number, and a preview. With nothing to go back to, you hear "No earlier history."
+
+The history crosses documents opened by following a link. Going back past the first place you jumped from in such a document returns to the document the link was in, at the link; going forward past the last place returns to the document you went back from. See [Follow a link or a footnote](#follow-a-link-or-a-footnote-enter-or-altshiftf).
 
 There is one rule for what counts as a jump. Every move by a sentence or anything larger records the place you left, once. That includes paragraphs, headings, tables, lists, list items, links, chapters, finds, go to, the start or end of the document, bookmarks, and notes. Moves by word, line, or page, scrolling, and Speech Cursor line moves are not recorded. Going back and forward are not recorded either.
 

@@ -18,6 +18,7 @@ use textweaver_lexicon::args;
 use textweaver_lexicon::i18n::Catalog;
 
 use crate::app::{App, Mode};
+use crate::command::Effect;
 use crate::playback::Playback;
 use crate::text_util::{self, preview};
 use crate::words::{dir_key, kind_name, unit_key, unit_name};
@@ -538,17 +539,20 @@ impl App {
         }
     }
 
-    pub(crate) fn history_back(&mut self) {
+    /// Back to the last place jumped from; past the first one in this
+    /// document, back to the document a link was followed from
+    /// (`crate::links`).
+    pub(crate) fn history_back(&mut self) -> Vec<Effect> {
         // Back across a followed link first, when nothing was jumped to
         // since arriving.
-        if self.link_history_back() {
-            return;
+        if let Some(effects) = self.link_history_back(false) {
+            return effects;
         }
         let Some(current) = self.reading_position() else {
-            return;
+            return vec![Effect::Redraw];
         };
         let Some(s) = self.session.as_mut() else {
-            return;
+            return vec![Effect::Redraw];
         };
         match s.history.back(current) {
             Some(p) => {
@@ -556,15 +560,21 @@ impl App {
                 self.jump(p, false, ReadAfter::Follow, &msg);
             }
             None => {
+                if let Some(effects) = self.link_history_back(true) {
+                    return effects;
+                }
                 let msg = self.msg("nav-no-earlier-history");
                 self.tell(&msg);
             }
         }
+        vec![Effect::Redraw]
     }
 
-    pub(crate) fn history_forward(&mut self) {
+    /// Forward again after going back; past the last place in this
+    /// document, forward to the document going back left.
+    pub(crate) fn history_forward(&mut self) -> Vec<Effect> {
         let Some(s) = self.session.as_mut() else {
-            return;
+            return vec![Effect::Redraw];
         };
         match s.history.forward() {
             Some(p) => {
@@ -572,10 +582,14 @@ impl App {
                 self.jump(p, false, ReadAfter::Follow, &msg);
             }
             None => {
+                if let Some(effects) = self.link_history_forward() {
+                    return effects;
+                }
                 let msg = self.msg("nav-no-forward-history");
                 self.tell(&msg);
             }
         }
+        vec![Effect::Redraw]
     }
 
     /// "Label, line N: preview" (verbosity-shaped).

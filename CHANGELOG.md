@@ -6,6 +6,8 @@ All notable changes to textweaver. Versions follow [Semantic Versioning](https:/
 
 ### Reading and speech
 
+- **Links to other documents open in textweaver, with Back and Forward.** Enter on a link in reading mode now follows it, as in a screen reader's browse mode; Ctrl+Space still always reads from the cursor (Option+Space in the terminal reader on macOS, where Enter alone used to be the read key), and Alt+Shift+F follows in every mode as before. A link to a local file, relative to the document or absolute and in any format textweaver opens, opens it in the same reading view at the heading the link's anchor names (`keyboard.md#edit-mode`, by the GitHub anchor rule or the heading's text), or at its start. Arriving is said in words: "Opened Keyboard reference, at Edit mode. Back: Alt+Left or Backspace." A link followed from unsaved edits asks first, as opening a file does, and then arrives at the heading; before, the heading and the way back were lost. Documents opened by links form one history, like a browser's: Back (Alt+Left, Backspace) returns to the link at the exact reading position, once no earlier jump is left in the new document rather than only before any jump there, and says "Back in Quick start:" with the words there; Forward (Alt+Right, backslash) returns to the document left. A missing file is named and the document stays; web and mail links still ask before opening in the browser ([Follow a link or a footnote](docs/reading.md#follow-a-link-or-a-footnote-enter-or-altshiftf)).
+
 - "Paused." is said at every interface announcement level, minimal and off included, so pausing is always confirmed with a screen reader running.
 
 ## [0.1.0-beta.3] - 2026-10-17

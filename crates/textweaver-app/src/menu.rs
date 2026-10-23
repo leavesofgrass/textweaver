@@ -60,8 +60,9 @@ pub const PENDING: &[ActionId] = &[
 ];
 
 /// Commands that are deliberately in no menu: the keys that open the
-/// menus and the context menu.
-pub const NOT_IN_MENUS: &[ActionId] = &[ActionId::Menu, ActionId::ContextMenu];
+/// menus and the context menu, and Enter in reading mode (Activate), whose
+/// two halves are Follow link and Read from cursor, each in a menu.
+pub const NOT_IN_MENUS: &[ActionId] = &[ActionId::Menu, ActionId::ContextMenu, ActionId::Activate];
 
 /// The context menu's commands, in order (beta 1, B1-cm): each is in one
 /// menu of the bar as well, so the context menu repeats no definition;

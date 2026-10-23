@@ -37,7 +37,7 @@ pub(crate) fn gui_keys(action: ActionId) -> Option<&'static [&'static str]> {
     use ActionId as A;
     Some(match action {
         // Cmd+Space is Spotlight.
-        A::ReadFromCursor => &["g:Cmd+Enter", "b:Enter"],
+        A::ReadFromCursor => &["g:Cmd+Enter"],
         // Cmd+H hides the application.
         A::NextHeading => &["g:Cmd+Alt+PageDown", "b:>"],
         A::PreviousHeading => &["g:Cmd+Shift+H", "g:Cmd+Alt+PageUp", "b:<"],
@@ -106,7 +106,9 @@ pub(crate) fn terminal_keys(action: ActionId) -> Option<&'static [&'static str]>
         A::TablePreviousColumn => &["b:Ctrl+Shift+Left"],
         A::NextParagraph => &["g:Ctrl+P", "b:p", "b:]", "s:PageDown"],
         A::PreviousParagraph => &["b:Shift+P", "b:[", "s:PageUp"],
-        A::ReadFromCursor => &["b:Enter"],
+        // Enter in reading mode is Activate, which reads where there is
+        // no link; Option+Space reads from the cursor anywhere.
+        A::ReadFromCursor => &["g:Alt+Space"],
         // Ctrl+Option+V is VoiceOver's (VO+V, the verbosity rotor).
         A::ChooseVoice => &["g:Alt+V"],
         A::NextGrammarProblem => &["g:Alt+F7"],

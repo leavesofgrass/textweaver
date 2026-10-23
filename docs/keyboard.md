@@ -5,6 +5,8 @@ The in-app keyboard help shows the same table with your own overrides applied.
 
 ## What changed
 
+In 0.1.0-beta.4: **Enter on a link follows it** in reading mode, as in the browse mode of NVDA and JAWS (the `activate` command); elsewhere Enter still reads from the cursor. `Ctrl+Space` always reads from the cursor, and in the terminal on macOS, where Enter alone was the read key, `Option+Space` does. `Alt+Left` and `Alt+Right` go back and forward across the documents links open.
+
 In 0.1.0-alpha.6: **F10 opens the menus** in the terminal, as F10 does in Windows programs (File, Edit, View, Reading, Speech, Tools, and Help). Previous chapter keeps `Alt+PageUp` and `Shift+D`; next chapter keeps `F11`, `Alt+PageDown`, and `d`. **On macOS the GUI uses Mac keys**, not Ctrl renamed: Option with the arrows moves by word and paragraph, Command with the arrows goes to the ends of the line and the document, Command runs commands, and nothing takes VoiceOver's Ctrl+Option (see the GUI on macOS column). New keys: `Ctrl+F9` cycles the interface announcements (off, minimal, normal, full), `Ctrl+Shift+F9` starts and stops dictation, and `Shift+F1` says what the next key does.
 
 In 0.1.0-alpha.4 the default keys became the quick navigation keys of NVDA's and JAWS's browse mode. To keep the earlier keys, set `preset = "classic"` under `[keyboard]` in `settings.toml` (see [the classic preset](#the-classic-preset)). Old key, then where its command went, in the terminal:
@@ -111,7 +113,8 @@ textweaver warns about unknown actions, keys it cannot read, and keys a terminal
 |---|---|---|---|---|
 | Play or pause reading from the current word | `Alt+P`, `Space` (browse) | `Ctrl+Shift+Space`, `Space` (browse) | `Cmd+Shift+Space`, `Space` (browse) | `play_pause` |
 | Stop reading, or finish editing when nothing is being read | `Escape`, `Ctrl+X` (browse) | `Escape` | `Escape` | `stop` |
-| Read continuously from the cursor | `Ctrl+Space`, `Enter` (browse) | `Ctrl+Space`, `Enter` (browse) | `Cmd+Enter`, `Enter` (browse) | `read_from_cursor` |
+| Read continuously from the cursor | `Ctrl+Space` | `Ctrl+Space` | `Cmd+Enter` | `read_from_cursor` |
+| Follow the link or footnote at the cursor, or read continuously from the cursor anywhere else | `Enter` (browse) | `Enter` (browse) | `Enter` (browse) | `activate` |
 | Read the whole document from the start | `Shift+R` (browse) | `Shift+R` (browse) | `Shift+R` (browse) | `read_document` |
 | Say the character at the cursor | `Alt+Shift+C`, `c` (browse) | `Ctrl+Shift+C`, `c` (browse) | `Cmd+Shift+C`, `c` (browse) | `read_current_character` |
 | Say the word at the cursor | `Alt+Shift+W`, `w` (browse) | `Ctrl+Shift+W`, `w` (browse) | `Cmd+Shift+W`, `w` (browse) | `read_current_word` |
@@ -425,7 +428,7 @@ A terminal never passes the Command key, so on a Mac the terminal keeps the keys
 
 | Action | Terminal | Terminal on macOS | Id |
 |---|---|---|---|
-| Read continuously from the cursor | `Ctrl+Space`, `Enter` (browse) | `Enter` (browse) | `read_from_cursor` |
+| Read continuously from the cursor | `Ctrl+Space` | `Option+Space` | `read_from_cursor` |
 | Move to the next paragraph | `Ctrl+P`, `p` (browse), `]` (browse), `Ctrl+Down` (browse), `PageDown` (speech cursor) | `Ctrl+P`, `p` (browse), `]` (browse), `PageDown` (speech cursor) | `next_paragraph` |
 | Move to the previous paragraph | `Shift+P` (browse), `[` (browse), `Ctrl+Up` (browse), `PageUp` (speech cursor) | `Shift+P` (browse), `[` (browse), `PageUp` (speech cursor) | `previous_paragraph` |
 | In a table, move down a row in the same column | `Ctrl+Alt+Down` | `Ctrl+Shift+Down` (browse) | `table_next_row` |

@@ -716,6 +716,7 @@ keyname-end = End
 action-play-pause = Play or pause reading from the current word
 action-stop = Stop reading, or finish editing when nothing is being read
 action-read-from-cursor = Read continuously from the cursor
+action-activate = Follow the link or footnote at the cursor, or read continuously from the cursor anywhere else
 action-read-document = Read the whole document from the start
 action-read-current-character = Say the character at the cursor
 action-read-current-word = Say the word at the cursor
@@ -1789,9 +1790,14 @@ links-heading-label = Heading
 links-no-heading = No heading called { $anchor } in this document.
 # $file is the file the link names.
 links-file-not-found = The link goes to { $file }, which was not found.
-# $file is the file's name; $key names the History Back command's keys.
-links-followed = Followed the link to { $file }. Back: { $key }.
-links-back-in = Back in { $file }.
+# $title is the document's title; $heading is the heading arrived at, $anchor
+# the heading a link names; $key names the History Back command's keys;
+# $text is the first words at the position arrived at.
+links-opened = Opened { $title }. Back: { $key }.
+links-opened-at = Opened { $title }, at { $heading }. Back: { $key }.
+links-opened-no-heading = Opened { $title }, at the start: no heading called { $anchor }. Back: { $key }.
+links-back-in = Back in { $title }: { $text }
+links-forward-in = Forward in { $title }: { $text }
 # $label is the footnote's label, such as 1.
 links-back-to-footnote-reference = Back to footnote reference { $label }, line { $line }.
 # $text is the start of the note.

@@ -241,6 +241,11 @@ pub(crate) struct Authoring {
     pub(crate) listening: Option<Listening>,
     /// Links followed into other files, for going back.
     pub(crate) link_back: Vec<LinkBack>,
+    /// Documents gone back from across a link, for going forward again.
+    pub(crate) link_forward: Vec<LinkForward>,
+    /// A document opening because of a link, Back, or Forward: where to
+    /// put the cursor and what to say once it is open (`crate::links`).
+    pub(crate) link_pending: Option<crate::links::LinkArrival>,
     /// The citation being inserted: its key, waiting for the locator.
     pub(crate) citing: Option<String>,
     /// The personal word list, loaded on first use.
@@ -286,6 +291,16 @@ pub(crate) struct LinkBack {
     /// The file it opened, and its history length on arrival.
     pub(crate) to: PathBuf,
     pub(crate) history_len: usize,
+}
+
+/// A document gone back from across a link.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct LinkForward {
+    /// The document going back arrived in.
+    pub(crate) here: PathBuf,
+    /// The document left, and the reading position in it.
+    pub(crate) to: PathBuf,
+    pub(crate) pos: textweaver_core::CharPos,
 }
 
 impl std::fmt::Debug for Authoring {

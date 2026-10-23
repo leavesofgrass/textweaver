@@ -715,6 +715,7 @@ keyname-end = End
 action-play-pause = Reproduzir ou pausar a leitura a partir da palavra atual
 action-stop = Parar a leitura, ou concluir a edição se nada estiver sendo lido
 action-read-from-cursor = Ler continuamente a partir do cursor
+action-activate = Seguir o link ou a nota de rodapé no cursor, ou ler continuamente a partir do cursor em qualquer outro lugar
 action-read-document = Ler o documento inteiro desde o início
 action-read-current-character = Dizer o caractere no cursor
 action-read-current-word = Dizer a palavra no cursor
@@ -1768,9 +1769,14 @@ links-heading-label = Cabeçalho
 links-no-heading = Nenhum cabeçalho chamado { $anchor } neste documento.
 # $file is the file the link names.
 links-file-not-found = O link vai para { $file }, que não foi encontrado.
-# $file is the file's name; $key names the History Back command's keys.
-links-followed = Seguiu o link até { $file }. Voltar: { $key }.
-links-back-in = De volta em { $file }.
+# $title is the document's title; $heading is the heading arrived at, $anchor
+# the heading a link names; $key names the History Back command's keys;
+# $text is the first words at the position arrived at.
+links-opened = { $title } aberto. Voltar: { $key }.
+links-opened-at = { $title } aberto, em { $heading }. Voltar: { $key }.
+links-opened-no-heading = { $title } aberto, no início: nenhum título chamado { $anchor }. Voltar: { $key }.
+links-back-in = De volta em { $title }: { $text }
+links-forward-in = Avançou para { $title }: { $text }
 # $label is the footnote's label, such as 1.
 links-back-to-footnote-reference = De volta à referência da nota de rodapé { $label }, linha { $line }.
 # $text is the start of the note.
