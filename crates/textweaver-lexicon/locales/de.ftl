@@ -842,6 +842,10 @@ action-volume-down = Leiser
 action-cycle-speed-preset = Durch die Geschwindigkeitsvorgaben wechseln (überfliegen, normal, lernen, langsam)
 action-choose-voice = Eine Stimme wählen
 action-restart-speech = Die Sprachausgabe mit den aktuellen Einstellungen neu starten (nachdem sie aufgehört hat zu arbeiten)
+action-cw-practice-koch = Morsecode üben, Koch-Methode: Gruppen aus den bisher gelernten Zeichen mitschreiben
+action-cw-practice-characters = Morsecode üben: Gruppen zufälliger Zeichen mitschreiben
+action-cw-practice-words = Morsecode üben: zufällige Wörter mitschreiben
+action-cw-practice-progress = Den Übungsfortschritt im Morsecode ansagen: die Koch-Lektion und die letzten Ergebnisse
 action-cycle-verbosity = Durch die Ausführlichkeit wechseln: niedrig, normal, hoch
 action-cycle-punctuation = Durch die Interpunktionsstufe wechseln: keine, etwas, alle
 action-find = Text im Dokument suchen
@@ -2662,6 +2666,11 @@ settings-unit-columns =
         [one] Spalte
        *[other] Spalten
     }
+settings-unit-groups =
+    { $n ->
+        [one] Gruppe
+       *[other] Gruppen
+    }
 settings-unit-characters =
     { $n ->
         [one] Zeichen
@@ -3546,6 +3555,14 @@ setting-speech-cw-prosigns = CW-Betriebszeichen
 setting-speech-cw-prosigns-help = Struktur als Betriebszeichen senden: BT nach Überschriften und Absätzen, AR am Ende des Dokuments. In spitzen Klammern geschriebene Betriebszeichen wie <BT> werden auch gesendet.
 setting-speech-cw-status-line = CW-Zeichen in der Statuszeile
 setting-speech-cw-status-line-help = Jedes Zeichen beim Senden in der Statuszeile zeigen, damit ein Screenreader es auf einer Braillezeile zeigen kann. Es wird nichts zusätzlich gesagt.
+setting-speech-cw-practice-threshold = CW-Übung: Bestehensgrenze
+setting-speech-cw-practice-threshold-help = Das Ergebnis einer Koch-Übungsrunde in Prozent, ab dem das nächste Zeichen hinzukommt. Die Koch-Methode verwendet 90.
+setting-speech-cw-practice-group = CW-Übung: Gruppengröße
+setting-speech-cw-practice-group-help = Wie viele Zeichen jede Übungsgruppe hat.
+setting-speech-cw-practice-groups = CW-Übung: Rundenlänge
+setting-speech-cw-practice-groups-help = Wie viele Gruppen eine Übungsrunde hat. Nach der letzten wird das Ergebnis der Runde angesagt und gespeichert.
+setting-speech-cw-practice-delay-ms = CW-Übung: Startverzögerung
+setting-speech-cw-practice-delay-ms-help = Die Stille, bevor jede Gruppe gesendet wird. Sie folgt auf die Zeit, die die eigenen Ansagen von { -brand } voraussichtlich brauchen.
 setting-speech-voice-params = Tempo und Tonhöhe je Stimme
 setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zuletzt genutzt wurde. Wird die Stimme wieder gewählt, kehren sie zurück.
 setting-authoring-author = Autor
@@ -3915,6 +3932,10 @@ name-volume-down = Leiser
 name-cycle-speed-preset = Tempovorgabe
 name-choose-voice = Stimmen
 name-restart-speech = Sprache neu starten
+name-cw-practice-koch = Koch-Übung
+name-cw-practice-characters = Übung mit Zufallszeichen
+name-cw-practice-words = Übung mit Zufallswörtern
+name-cw-practice-progress = Übungsfortschritt
 name-cycle-verbosity = Ausführlichkeit
 name-cycle-punctuation = Satzzeichen
 name-find = Suchen
@@ -4579,6 +4600,7 @@ sync-stopped = Sync hier aus. Der Ordner bleibt, wie er ist.
 prompt-sync-computer-name = Name dieses Computers, Enter behält ihn
 menu-sync = Sync
 menu-cards = Lernkarten
+menu-cw-practice = Morsecode üben
 name-sync-setup = Sync einrichten
 name-sync-status = Sync-Status
 name-sync-now = Jetzt synchronisieren
@@ -4938,6 +4960,7 @@ prompt-comment-reply = Antwort
 prompt-comment-text = Kommentar
 prompt-github-token = GitHub-Token für die Komponentenquelle, Eingabe überspringt
 prompt-import-cards = Lernkarten aus Anki-Paket importieren
+prompt-cw-copy = Schreiben Sie, was Sie gehört haben
 changes-title = Änderungen und Kommentare
 changes-intro =
     { $n ->
@@ -5134,3 +5157,28 @@ cw-skipped =
         [one] 1 Zeichen nicht als Morsecode gesendet.
        *[other] { $count } Zeichen nicht als Morsecode gesendet.
     }
+## Beta 4: CW practice (Koch method, random drills, copy checking).
+cw-practice-koch-start = Koch-Lektion { $lesson } von 40, { $count } Zeichen, neu: { $new }.
+cw-practice-characters-start = Zufallszeichen, { $groups } Gruppen.
+cw-practice-words-start = Zufallswörter, { $groups } Gruppen.
+cw-practice-group = Gruppe { $n } von { $groups }.
+cw-practice-again = Noch einmal, Gruppe { $n } von { $groups }.
+cw-practice-perfect = { $correct } von { $total }, alles richtig.
+cw-practice-score = { $correct } von { $total }. Fehler: { $missed }. Gesendet: { $sent }.
+cw-practice-wrong = { $sent } als { $typed }
+cw-practice-missing = { $sent } nicht mitgeschrieben
+cw-practice-extra = { $typed } zu viel
+cw-practice-round = Runde: { $correct } von { $total }, { $percent } Prozent.
+cw-practice-added = Lektion { $lesson }: { $new } hinzugefügt.
+cw-practice-not-yet = Ab { $threshold } Prozent kommt das nächste Zeichen hinzu.
+cw-practice-all-learned = Alle Zeichen gelernt.
+cw-practice-stopped = Übung beendet.
+cw-practice-progress = Koch-Lektion { $lesson } von 40, neu: { $new }. { $recent }
+cw-practice-recent = Letzte Runden: { $scores } Prozent.
+cw-practice-no-rounds = Noch keine Runden.
+cw-practice-unavailable = Die CW-Ausgabe ist nicht gestartet, daher kann die Übung nicht senden.
+cw-char-period = Punkt
+cw-char-comma = Komma
+cw-char-equals = Gleichheitszeichen
+cw-char-slash = Schrägstrich
+cw-char-question = Fragezeichen

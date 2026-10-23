@@ -917,6 +917,10 @@ action-volume-down = أخفض صوتًا
 action-cycle-speed-preset = التنقل بين إعدادات السرعة الجاهزة (سريعة، عادية، دراسة، بطيئة)
 action-choose-voice = اختيار صوت
 action-restart-speech = إعادة تشغيل الكلام بالإعدادات الحالية (بعد توقف محرك الكلام عن العمل)
+action-cw-practice-koch = تمرين شفرة مورس بطريقة كوخ: انسخ مجموعات من الأحرف التي تعلمتها حتى الآن
+action-cw-practice-characters = تمرين شفرة مورس: انسخ مجموعات من أحرف عشوائية
+action-cw-practice-words = تمرين شفرة مورس: انسخ كلمات عشوائية
+action-cw-practice-progress = اذكر تقدم تمرين شفرة مورس: درس كوخ وآخر النتائج
 action-cycle-verbosity = التنقل بين مستويات ما يقوله textweaver: منخفض، عادي، مرتفع
 action-cycle-punctuation = التنقل بين مقدار علامات الترقيم المنطوقة: لا شيء، بعضها، كلها
 action-find = البحث عن نص في المستند
@@ -2849,6 +2853,14 @@ settings-unit-columns =
         [zero] أعمدة
        *[other] عمود
     }
+settings-unit-groups =
+    { $n ->
+        [one] مجموعة
+        [two] مجموعتان
+        [few] مجموعات
+        [zero] مجموعات
+       *[other] مجموعة
+    }
 settings-unit-characters =
     { $n ->
         [one] حرف
@@ -3874,6 +3886,14 @@ setting-speech-cw-prosigns = الإشارات الإجرائية في CW
 setting-speech-cw-prosigns-help = إرسال البنية إشاراتٍ إجرائية: BT بعد العناوين والفقرات، وAR في نهاية المستند. وتُرسل أيضًا الإشارات المكتوبة بين قوسين زاويين مثل <BT>.
 setting-speech-cw-status-line = أحرف CW في سطر الحالة
 setting-speech-cw-status-line-help = إظهار كل حرف في سطر الحالة عند إرساله، ليعرضه قارئ الشاشة على سطر برايل. لا يُقال شيء إضافي.
+setting-speech-cw-practice-threshold = تمرين CW: درجة النجاح
+setting-speech-cw-practice-threshold-help = النتيجة في جولة تمرين كوخ، بالنسبة المئوية، التي تضيف الحرف التالي. تستخدم طريقة كوخ 90.
+setting-speech-cw-practice-group = تمرين CW: حجم المجموعة
+setting-speech-cw-practice-group-help = عدد الأحرف في كل مجموعة تمرين.
+setting-speech-cw-practice-groups = تمرين CW: طول الجولة
+setting-speech-cw-practice-groups-help = عدد المجموعات في جولة التمرين. بعد آخر مجموعة تُذكر نتيجة الجولة وتُحفظ.
+setting-speech-cw-practice-delay-ms = تمرين CW: مهلة البدء
+setting-speech-cw-practice-delay-ms-help = الصمت قبل إرسال كل مجموعة. يأتي بعد الوقت المتوقع لرسائل { -brand } المنطوقة.
 setting-speech-voice-params = السرعة وطبقة الصوت لكل صوت
 setting-speech-voice-params-help = السرعة وطبقة الصوت اللتان استُخدم بهما كل صوت آخر مرة. اختيار الصوت مجددًا يعيدهما.
 setting-authoring-author = المؤلف
@@ -4268,6 +4288,10 @@ name-volume-down = صوت أخفض
 name-cycle-speed-preset = سرعة مسبقة
 name-choose-voice = الأصوات
 name-restart-speech = إعادة تشغيل النطق
+name-cw-practice-koch = تمرين كوخ
+name-cw-practice-characters = تمرين الأحرف العشوائية
+name-cw-practice-words = تمرين الكلمات العشوائية
+name-cw-practice-progress = تقدم التمرين
 name-cycle-verbosity = مستوى التفصيل
 name-cycle-punctuation = علامات الترقيم
 name-find = بحث
@@ -4924,6 +4948,7 @@ sync-stopped = أُوقفت المزامنة هنا. يبقى المجلد كم�
 prompt-sync-computer-name = اسم هذا الحاسوب، Enter يبقيه
 menu-sync = المزامنة
 menu-cards = بطاقات الدراسة
+menu-cw-practice = تمرين شفرة مورس
 name-sync-setup = إعداد المزامنة
 name-sync-status = حالة المزامنة
 name-sync-now = المزامنة الآن
@@ -5289,6 +5314,7 @@ prompt-comment-reply = الرد
 prompt-comment-text = التعليق
 prompt-github-token = رمز GitHub لمصدر المكونات، Enter للتخطي
 prompt-import-cards = استيراد بطاقات الدراسة من حزمة Anki
+prompt-cw-copy = اكتب ما سمعته
 changes-title = التغييرات والتعليقات
 changes-intro =
     { $n ->
@@ -5491,3 +5517,28 @@ cw-skipped =
         [one] حرف واحد لم يُرسل بشفرة مورس.
        *[other] { $count } من الأحرف لم تُرسل بشفرة مورس.
     }
+## Beta 4: CW practice (Koch method, random drills, copy checking).
+cw-practice-koch-start = درس كوخ { $lesson } من 40، { $count } حرفًا، الجديد: { $new }.
+cw-practice-characters-start = أحرف عشوائية، { $groups } مجموعات.
+cw-practice-words-start = كلمات عشوائية، { $groups } مجموعات.
+cw-practice-group = المجموعة { $n } من { $groups }.
+cw-practice-again = مرة أخرى، المجموعة { $n } من { $groups }.
+cw-practice-perfect = { $correct } من { $total }، كلها صحيحة.
+cw-practice-score = { $correct } من { $total }. الأخطاء: { $missed }. المرسل: { $sent }.
+cw-practice-wrong = { $sent } كُتب { $typed }
+cw-practice-missing = { $sent } لم يُنسخ
+cw-practice-extra = { $typed } زائد
+cw-practice-round = الجولة: { $correct } من { $total }، { $percent } بالمئة.
+cw-practice-added = الدرس { $lesson }: أضيف { $new }.
+cw-practice-not-yet = { $threshold } بالمئة تضيف الحرف التالي.
+cw-practice-all-learned = تم تعلم كل الأحرف.
+cw-practice-stopped = توقف التمرين.
+cw-practice-progress = درس كوخ { $lesson } من 40، الجديد: { $new }. { $recent }
+cw-practice-recent = آخر الجولات: { $scores } بالمئة.
+cw-practice-no-rounds = لا جولات بعد.
+cw-practice-unavailable = لم يبدأ محرك CW، لذا لا يمكن للتمرين الإرسال.
+cw-char-period = نقطة
+cw-char-comma = فاصلة
+cw-char-equals = يساوي
+cw-char-slash = شرطة مائلة
+cw-char-question = علامة استفهام
