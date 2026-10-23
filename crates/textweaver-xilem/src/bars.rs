@@ -17,7 +17,7 @@
 //! - Focus mode (`[gui] focus_mode`, and full screen): after
 //!   [`VEIL_AFTER`] without a mouse move, [`Frame::set_veiled`] lays the
 //!   document over the whole window and draws nothing of the header, the
-//!   toolbar, the status bar or the panel. Visual only: they keep their
+//!   toolbar, the status bar, the Braille view or the panel. Visual only: they keep their
 //!   bounds, their nodes and the Tab order, and nothing is announced.
 //!   Only moving the mouse lifts the veil; keys never do, so reading keys
 //!   keep the text alone on screen.
@@ -418,12 +418,13 @@ impl Widget for Flow {
 pub const VEIL_AFTER: Duration = Duration::from_secs(3);
 
 /// The window's column: the header, the document's row, the RSVP strip,
-/// the toolbar, the status bar, and the live region. See the module
-/// documentation.
+/// the Braille view, the toolbar, the status bar, and the live region.
+/// See the module documentation.
 pub struct Frame {
     header: WidgetPod<Region>,
     body: WidgetPod<dyn Widget>,
     rsvp: WidgetPod<dyn Widget>,
+    braille: WidgetPod<crate::braille::BrailleBar>,
     toolbar: WidgetPod<Region>,
     status: WidgetPod<dyn Widget>,
     announcer: WidgetPod<dyn Widget>,
@@ -447,10 +448,12 @@ pub struct Frame {
 impl Frame {
     /// The column, wide (header above the document, toolbar below) until
     /// its first layout says otherwise.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         header: NewWidget<Region>,
         body: NewWidget<impl Widget + ?Sized>,
         rsvp: NewWidget<impl Widget + ?Sized>,
+        braille: NewWidget<crate::braille::BrailleBar>,
         toolbar: NewWidget<Region>,
         status: NewWidget<impl Widget + ?Sized>,
         announcer: NewWidget<impl Widget + ?Sized>,
@@ -460,6 +463,7 @@ impl Frame {
             header: header.to_pod(),
             body: body.erased().to_pod(),
             rsvp: rsvp.erased().to_pod(),
+            braille: braille.to_pod(),
             toolbar: toolbar.to_pod(),
             status: status.erased().to_pod(),
             announcer: announcer.erased().to_pod(),
@@ -480,7 +484,7 @@ impl Frame {
     }
 
     /// Lowers focus mode's veil or lifts it: the header, the toolbar, the
-    /// status bar and the panel are drawn as nothing, and the document
+    /// status bar, the Braille view and the panel are drawn as nothing, and the document
     /// takes the whole window. Visual only: every control keeps its
     /// bounds, its node and its place in the Tab order, and the focus
     /// stays where it is. Nothing is announced.
@@ -497,6 +501,10 @@ impl Frame {
             Region::set_veiled(&mut r, veiled);
         }
         drop(status);
+        crate::braille::BrailleBar::set_veiled(
+            &mut this.ctx.get_mut(&mut this.widget.braille),
+            veiled,
+        );
         let mut body = this.ctx.get_mut(&mut this.widget.body);
         if let Some(mut s) = body.try_downcast::<crate::sidebar::Sidebar>() {
             crate::sidebar::Sidebar::set_veiled(&mut s, veiled);
@@ -703,6 +711,7 @@ impl Widget for Frame {
         ctx.register_child(&mut self.header);
         ctx.register_child(&mut self.body);
         ctx.register_child(&mut self.rsvp);
+        ctx.register_child(&mut self.braille);
         ctx.register_child(&mut self.toolbar);
         ctx.register_child(&mut self.status);
         ctx.register_child(&mut self.announcer);
@@ -789,7 +798,8 @@ impl Widget for Frame {
         }
 
         // The bottom, from the window's foot up: the live region (no
-        // size), the status bar, the toolbar while unfolded, the RSVP strip.
+        // size), the status bar, the toolbar while unfolded, the Braille
+        // view, the RSVP strip.
         let announcer_h = Self::height_at(ctx, &mut self.announcer, w);
         let status_h = Self::height_at(ctx, &mut self.status, w);
         let toolbar_h = if !self.folded && self.show_toolbar {
@@ -798,9 +808,12 @@ impl Widget for Frame {
             0.0
         };
         let rsvp_h = Self::height_at(ctx, &mut self.rsvp, w);
+        let braille_h = Self::height_at(ctx, &mut self.braille, w);
         let gap_after = |h: f64| if h > 0.0 { GAP } else { 0.0 };
         let bottom = rsvp_h
             + gap_after(rsvp_h)
+            + braille_h
+            + gap_after(braille_h)
             + toolbar_h
             + gap_after(toolbar_h)
             + status_h
@@ -827,6 +840,11 @@ impl Widget for Frame {
         };
         ctx.place_child(&mut self.rsvp, Point::new(0.0, rsvp_y));
         y += rsvp_h + gap_after(rsvp_h);
+        // The Braille view keeps its place under a veil, drawn as nothing
+        // (the document lies over it).
+        ctx.run_layout(&mut self.braille, Size::new(w, braille_h));
+        ctx.place_child(&mut self.braille, Point::new(0.0, y));
+        y += braille_h + gap_after(braille_h);
         if !self.folded && self.show_toolbar {
             ctx.run_layout(&mut self.toolbar, Size::new(w, toolbar_h));
             ctx.place_child(&mut self.toolbar, Point::new(0.0, y));
@@ -861,6 +879,7 @@ impl Widget for Frame {
                 self.toolbar.id(),
                 self.body.id(),
                 self.rsvp.id(),
+                self.braille.id(),
                 self.status.id(),
                 self.announcer.id(),
             ]
@@ -869,6 +888,7 @@ impl Widget for Frame {
                 self.header.id(),
                 self.body.id(),
                 self.rsvp.id(),
+                self.braille.id(),
                 self.toolbar.id(),
                 self.status.id(),
                 self.announcer.id(),

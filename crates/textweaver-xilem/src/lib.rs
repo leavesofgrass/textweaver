@@ -11,6 +11,8 @@
 //! - [`document`]: the `DocumentView` widget, with the reading aids it
 //!   draws (text spacing, the ruler, bionic reading, difficult words).
 //! - [`rsvp`]: the RSVP panel, one word at a time under the document.
+//! - [`braille`]: the Braille view, the current line drawn as braille dots
+//!   in a bar under RSVP.
 //! - [`sidebar`]: the Contents and Notes panels beside the document, and
 //!   F6 between the window's regions.
 //! - [`preview`]: the preview pane beside the editor in edit mode.
@@ -49,6 +51,7 @@
 pub mod background;
 pub mod bars;
 pub mod blink;
+pub mod braille;
 pub mod caret;
 pub mod clipboard;
 pub mod console;

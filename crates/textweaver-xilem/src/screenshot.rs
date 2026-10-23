@@ -44,7 +44,8 @@ pub struct ShotOptions {
     /// Keep settings under this directory.
     pub home: Option<PathBuf>,
     /// Turn the reading aids on first (bionic reading, difficult words,
-    /// the ruler with its band, WCAG's text spacing, and RSVP). They are
+    /// the ruler with its band, WCAG's text spacing, RSVP, and the Braille
+    /// view). They are
     /// saved like any setting, so this needs `home`.
     pub aids: bool,
     /// Draw the Colors dialog (W6a6), with a few colors chosen so their
@@ -86,7 +87,8 @@ fn choose_review_colors(app: &mut textweaver_app::App) -> Result<(), String> {
 }
 
 /// Every reading aid on, for review: bionic reading, difficult words, the
-/// ruler band, WCAG 1.4.12's text spacing, and RSVP on the cursor's word.
+/// ruler band, WCAG 1.4.12's text spacing, RSVP on the cursor's word, and
+/// the Braille view with its print line and cell outlines.
 pub(crate) fn turn_on_aids(app: &mut textweaver_app::App) -> Result<(), String> {
     use textweaver_app::Command;
     use textweaver_app::keymap::ActionId;
@@ -103,6 +105,9 @@ pub(crate) fn turn_on_aids(app: &mut textweaver_app::App) -> Result<(), String> 
             letter_spacing: 0.12,
             word_spacing: 0.16,
         };
+        s.braille.viewer = true;
+        s.braille.viewer_print_line = true;
+        s.braille.viewer_cell_outlines = true;
     })
     .map_err(|e| format!("cannot save the reading aids: {e}"))?;
     let _ = app.dispatch(Command::Action(ActionId::RsvpToggle));
