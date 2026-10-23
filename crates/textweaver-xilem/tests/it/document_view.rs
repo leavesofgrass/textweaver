@@ -940,3 +940,91 @@ fn edit_mode_draws_the_word_editing_and_reading_mode_marks_where_play_starts() {
     let node = h.access_node(h.root_id()).unwrap();
     assert_eq!(node.role(), Role::MultilineTextInput);
 }
+
+/// Scroll Down and Scroll Up (`j` and Shift+J, beta 4): the view moves one
+/// drawn line, the caret stays, and the first char at the top comes back;
+/// `None` at the first line and with the last line at the top.
+#[test]
+fn scroll_line_moves_the_view_by_one_drawn_line_and_keeps_the_caret() {
+    let text = "Alpha line.\nBravo line.\nCharlie line.";
+    let doc = Document::from_plain_text(text);
+    let (mut h, _) = harness_with(&doc, CharPos::ZERO);
+    let at = |s: &str| CharPos(text.find(s).unwrap());
+    let step = |h: &mut TestHarness<DocumentView>, down: bool| {
+        let top = h.edit_root_widget(|mut d| DocumentView::scroll_line(&mut d, down));
+        let _ = h.redraw();
+        top
+    };
+    assert_eq!(step(&mut h, false), None, "already at the top");
+    assert_eq!(step(&mut h, true), Some(at("Bravo")));
+    assert_eq!(h.root_widget().visible_paragraphs()[0].0, 1);
+    assert_eq!(step(&mut h, true), Some(at("Charlie")));
+    assert_eq!(step(&mut h, true), None, "the last line is at the top");
+    assert_eq!(h.root_widget().state().caret, CharPos::ZERO);
+    assert_eq!(step(&mut h, false), Some(at("Bravo")));
+    assert_eq!(step(&mut h, false), Some(CharPos::ZERO));
+    assert_eq!(h.root_widget().visible_paragraphs()[0].0, 0);
+}
+
+/// A long line wraps: Scroll Down moves through its drawn lines, not past
+/// the whole line at once.
+#[test]
+fn scroll_line_steps_through_a_wrapped_line() {
+    let text = "word ".repeat(400) + "\nNext line.";
+    let doc = Document::from_plain_text(&text);
+    let (mut h, _) = harness_with(&doc, CharPos::ZERO);
+    let top = h.edit_root_widget(|mut d| DocumentView::scroll_line(&mut d, true));
+    let top = top.expect("moved");
+    assert!(
+        top.0 > 0 && top.0 < 2000,
+        "{top:?} is inside the first line"
+    );
+    let _ = h.redraw();
+    let back = h.edit_root_widget(|mut d| DocumentView::scroll_line(&mut d, false));
+    assert_eq!(back, Some(CharPos::ZERO));
+}
+
+/// Line numbers (`[display] show_line_numbers`, beta 4): drawn in the
+/// left margin from the window's first line, never in the text a screen
+/// reader gets; off draws none.
+#[test]
+fn line_numbers_are_drawn_in_the_margin_and_not_read() {
+    use textweaver_xilem::document::PaintStep;
+    let text = "One two three.\nFour five.\nSix.";
+    let doc = Document::from_plain_text(text);
+    let (mut h, _) = harness_with(&doc, CharPos::ZERO);
+    let numbers = |h: &TestHarness<DocumentView>| -> Vec<(usize, f64)> {
+        h.root_widget()
+            .painted()
+            .iter()
+            .filter_map(|s| match s {
+                PaintStep::LineNumber(n, r) => Some((*n, r.x1)),
+                _ => None,
+            })
+            .collect()
+    };
+    assert!(numbers(&h).is_empty(), "off by default");
+    h.edit_root_widget(|mut d| DocumentView::set_line_numbers(&mut d, Some(0)));
+    let _ = h.redraw();
+    let shown = numbers(&h);
+    assert_eq!(shown.iter().map(|n| n.0).collect::<Vec<_>>(), vec![1, 2, 3]);
+    // Left of the "reading from here" mark, which is left of the text.
+    let mark = h
+        .root_widget()
+        .painted()
+        .iter()
+        .find_map(|s| match s {
+            PaintStep::ReadingFrom(r) => Some(*r),
+            _ => None,
+        })
+        .expect("the mark");
+    assert!(shown.iter().all(|n| n.1 <= mark.x0), "{shown:?} {mark:?}");
+    assert_eq!(doc_text(&h), text, "the numbers are not read");
+    // A window that starts further down numbers from its first line.
+    h.edit_root_widget(|mut d| DocumentView::set_line_numbers(&mut d, Some(41)));
+    let _ = h.redraw();
+    assert_eq!(numbers(&h).first().map(|n| n.0), Some(42));
+    h.edit_root_widget(|mut d| DocumentView::set_line_numbers(&mut d, None));
+    let _ = h.redraw();
+    assert!(numbers(&h).is_empty());
+}

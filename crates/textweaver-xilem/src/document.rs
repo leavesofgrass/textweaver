@@ -59,6 +59,10 @@ use crate::window::{SpanStyle, StyledSpan};
 
 /// Space around the text column (design system C3: on the 4 px scale).
 const INSET: f64 = 24.0;
+/// Space between a line number's right edge and the column, less 6: room
+/// for the "reading from here" mark (14 pixels from the column, up to 12
+/// wide) and a gap.
+const NUMBER_GAP: f64 = 34.0;
 /// The narrowest column the measure gives, in logical pixels (a window
 /// narrower than this keeps its own width).
 const MIN_COLUMN: f64 = 200.0;
@@ -77,6 +81,7 @@ const WHEEL_LINE: f64 = 48.0;
 
 // Brush indices into the palette ([`DocumentView::brushes`]).
 const B_TEXT: usize = 0;
+const B_DIM: usize = 1;
 const B_H1: usize = 2;
 const B_LINK: usize = 8;
 const B_CODE: usize = 9;
@@ -352,6 +357,10 @@ pub enum PaintStep {
     /// The "reading from here" mark: a play-shaped triangle in the left
     /// margin on the caret's line while not reading, where Play starts.
     ReadingFrom(Rect),
+    /// A line number (`[display] show_line_numbers`), 1-based, in the
+    /// left margin beside its line's first drawn line: the box it is
+    /// drawn in.
+    LineNumber(usize, Rect),
     /// The spoken word's text again in its own color, inside `clip`, with
     /// its attribute. Bold is drawn by thickening the glyphs' outlines in
     /// place, so the line never reflows.
@@ -648,6 +657,13 @@ pub struct DocumentView {
     empty_hint: String,
     /// The hint laid out, while no document is open.
     hint_layout: Option<Layout<BrushIndex>>,
+    /// Line numbers (`[display] show_line_numbers`): the 0-based document
+    /// line of the model's first paragraph, or `None` when they are off.
+    line_numbers: Option<usize>,
+    /// The line numbers' margin left of the column (0 when they are off),
+    /// and each visible paragraph's number, laid out with the view.
+    gutter: f64,
+    number_layouts: Vec<(usize, Layout<BrushIndex>)>,
     /// The word drawn in the corner in edit mode ("Editing").
     editing_word: String,
     /// The word laid out, in edit mode.
@@ -729,6 +745,9 @@ impl DocumentView {
             last_nodes_sent: 0,
             empty_hint: String::new(),
             hint_layout: None,
+            line_numbers: None,
+            gutter: 0.0,
+            number_layouts: Vec::new(),
             editing_word: String::new(),
             badge_layout: None,
             preview: false,
@@ -1157,6 +1176,119 @@ impl DocumentView {
             this.ctx.request_layout();
         }
         this.ctx.request_render();
+    }
+
+    /// Scroll Down (`down`) or Scroll Up: moves the view by one drawn
+    /// line, leaving the caret where it is, as `j` and Shift+J scroll the
+    /// terminal reader's screen. Returns the first char now at the top, or
+    /// `None` when the view is already at the window's first line (up) or
+    /// has its last line at the top (down). The view keeps this place until
+    /// the caret or the spoken word moves.
+    pub fn scroll_line(this: &mut WidgetMut<'_, Self>, down: bool) -> Option<CharPos> {
+        let (fcx, lcx) = this.ctx.text_contexts();
+        let top = this.widget.step_line(down, fcx, lcx);
+        if top.is_some() {
+            this.ctx.request_layout();
+            this.ctx.request_render();
+        }
+        top
+    }
+
+    /// Paragraph `i`'s drawn lines: each one's top, as the scroll anchor
+    /// counts it (0 for the first), and its first char.
+    fn line_tops(
+        &mut self,
+        i: usize,
+        fcx: &mut FontContext,
+        lcx: &mut LayoutContext<BrushIndex>,
+    ) -> Vec<(f64, CharPos)> {
+        self.ensure_layout(i, fcx, lcx);
+        let start = self.model.paragraphs[i].start;
+        let Some(pl) = self.layouts.get(&i) else {
+            return vec![(0.0, start)];
+        };
+        let mut tops: Vec<(f64, CharPos)> = pl
+            .layout
+            .lines()
+            .zip(&pl.lines)
+            .enumerate()
+            .map(|(k, (line, &(a, _)))| {
+                let y = if k == 0 {
+                    0.0
+                } else {
+                    pl.top_gap + f64::from(line.metrics().block_min_coord)
+                };
+                (y, CharPos(start.0 + a))
+            })
+            .collect();
+        if tops.is_empty() {
+            tops.push((0.0, start));
+        }
+        tops
+    }
+
+    /// Moves the scroll anchor one drawn line (see [`Self::scroll_line`]).
+    fn step_line(
+        &mut self,
+        down: bool,
+        fcx: &mut FontContext,
+        lcx: &mut LayoutContext<BrushIndex>,
+    ) -> Option<CharPos> {
+        let n = self.para_count();
+        if n == 0 {
+            return None;
+        }
+        self.normalize_top(fcx, lcx);
+        let (i, off) = self.top;
+        let tops = self.line_tops(i, fcx, lcx);
+        let to = if down {
+            match tops.iter().find(|t| t.0 > off + 0.5) {
+                Some(&t) => Some((i, t)),
+                None if i + 1 < n => Some((i + 1, (0.0, self.model.paragraphs[i + 1].start))),
+                None => None,
+            }
+        } else {
+            match tops.iter().rev().find(|t| t.0 < off - 0.5) {
+                Some(&t) => Some((i, t)),
+                None if i > 0 => self.line_tops(i - 1, fcx, lcx).last().map(|&t| (i - 1, t)),
+                None => None,
+            }
+        };
+        let (para, (y, pos)) = to?;
+        self.top = (para, y);
+        self.scrolled_down = down;
+        self.follow = false;
+        Some(pos)
+    }
+
+    /// Line numbers on (`Some`, with the 0-based document line of the
+    /// model's first paragraph) or off, as the terminal reader draws them
+    /// in its gutter. They are drawn only, in the left margin: the text a
+    /// screen reader gets is unchanged, and the status bar and Say
+    /// Position say the line.
+    pub fn set_line_numbers(this: &mut WidgetMut<'_, Self>, first_line: Option<usize>) {
+        if this.widget.line_numbers != first_line {
+            this.widget.line_numbers = first_line;
+            this.ctx.request_layout();
+            this.ctx.request_render();
+        }
+    }
+
+    /// The 0-based document line of the first paragraph when line numbers
+    /// are drawn, else `None`.
+    pub fn line_numbers(&self) -> Option<usize> {
+        self.line_numbers
+    }
+
+    /// The margin the line numbers take left of the column: the widest
+    /// number in the window, and room for the "reading from here" mark.
+    fn gutter_for(&self, fcx: &mut FontContext, lcx: &mut LayoutContext<BrushIndex>) -> f64 {
+        let Some(first) = self.line_numbers.filter(|_| !self.preview) else {
+            return 0.0;
+        };
+        let digits = (first + self.para_count().max(1)).to_string().len();
+        let widest = number_layout(fcx, lcx, &"0".repeat(digits), &self.font);
+        f64::from(widest.full_width()).ceil() + NUMBER_GAP
     }
 
     /// Edit mode on or off: the view becomes a multi-line edit that takes
@@ -1781,7 +1913,7 @@ impl DocumentView {
         fcx: &mut FontContext,
         lcx: &mut LayoutContext<BrushIndex>,
     ) -> f64 {
-        let room = (width - 2.0 * INSET).max(80.0);
+        let room = (width - 2.0 * INSET - self.gutter).max(80.0);
         if self.aids.measure == 0 {
             return room;
         }
@@ -2698,7 +2830,7 @@ impl Widget for DocumentView {
             (m, None) => f64::from(m) * f64::from(self.font.size) * 0.5,
         };
         let want = match axis {
-            Axis::Horizontal => column.max(MIN_COLUMN) + 2.0 * INSET,
+            Axis::Horizontal => column.max(MIN_COLUMN) + 2.0 * INSET + self.gutter,
             Axis::Vertical => 400.0,
         };
         match len_req {
@@ -2710,6 +2842,7 @@ impl Widget for DocumentView {
 
     fn layout(&mut self, ctx: &mut LayoutCtx<'_>, _props: &PropertiesRef<'_>, size: Size) {
         let (fcx, lcx) = ctx.text_contexts();
+        self.gutter = self.gutter_for(fcx, lcx);
         let column = self.column_for(size.width, fcx, lcx);
         if (column - self.column).abs() > 0.5 {
             self.column = column;
@@ -2719,7 +2852,9 @@ impl Widget for DocumentView {
             self.dirty_paras.iter_mut().for_each(|d| *d = true);
             self.follow = true;
         }
-        self.column_x = ((size.width - column) / 2.0).max(INSET).floor();
+        self.column_x = ((size.width - column) / 2.0)
+            .max(INSET + self.gutter)
+            .floor();
         self.size = size;
         // No document: the hint, in the reading font, wrapped to the column.
         self.hint_layout =
@@ -2746,6 +2881,15 @@ impl Widget for DocumentView {
             )
         });
         self.layout_view(fcx, lcx);
+        // The visible lines' numbers, in the reading font, dimmed.
+        self.number_layouts.clear();
+        if let Some(first) = self.line_numbers.filter(|_| self.gutter > 0.0) {
+            for &(i, _) in &self.visible {
+                let n = (first + i + 1).to_string();
+                let l = number_layout(fcx, lcx, &n, &self.font);
+                self.number_layouts.push((i, l));
+            }
+        }
         ctx.set_clip_path(size.to_rect());
     }
 
@@ -3231,6 +3375,35 @@ impl Widget for DocumentView {
                 }
             }
         }
+        // Line numbers: right-aligned in the margin, left of the "reading
+        // from here" mark, on each line's first baseline.
+        let first = self.line_numbers.unwrap_or(0);
+        for (i, l) in &self.number_layouts {
+            let Some(&(_, y)) = self.visible.iter().find(|v| v.0 == *i) else {
+                continue;
+            };
+            let Some(pl) = self.layouts.get(i) else {
+                continue;
+            };
+            let base = pl
+                .layout
+                .lines()
+                .next()
+                .map_or(0.0, |m| f64::from(m.metrics().baseline));
+            let own = l
+                .lines()
+                .next()
+                .map_or(0.0, |m| f64::from(m.metrics().baseline));
+            let w = f64::from(l.full_width());
+            let x = self.column_x - NUMBER_GAP + 6.0 - w;
+            if x < 2.0 {
+                continue;
+            }
+            let at = Vec2::new(x, y + pl.top_gap + base - own);
+            render_text(painter, Affine::translate(at), l, &brushes, false);
+            let r = Rect::new(0.0, 0.0, w, f64::from(l.height())) + at;
+            painted.push(PaintStep::LineNumber(first + i + 1, r));
+        }
         // No document: how to open one, where the text would start.
         if let Some(h) = self
             .hint_layout
@@ -3509,6 +3682,25 @@ fn line_span_within(layout: &Layout<BrushIndex>, ys: (f64, f64)) -> (usize, usiz
 
 /// `text` laid out in one style in the text color, wrapped at `width` when
 /// given: the empty window's hint and the edit-mode badge.
+/// A line number's layout: `text` in the reading font, in the dimmed
+/// text brush.
+fn number_layout(
+    fcx: &mut FontContext,
+    lcx: &mut LayoutContext<BrushIndex>,
+    text: &str,
+    font: &DocFont,
+) -> Layout<BrushIndex> {
+    let mut b = lcx.ranged_builder(fcx, text, 1.0, true);
+    b.push_default(StyleProperty::FontFamily(FontFamily::Source(
+        font.family.clone().into(),
+    )));
+    b.push_default(StyleProperty::FontSize(font.size));
+    b.push_default(StyleProperty::Brush(BrushIndex(B_DIM)));
+    let mut layout = b.build(text);
+    layout.break_all_lines(None);
+    layout
+}
+
 fn plain_layout(
     fcx: &mut FontContext,
     lcx: &mut LayoutContext<BrushIndex>,

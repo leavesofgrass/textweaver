@@ -152,7 +152,6 @@ impl Frontend {
 pub const TERMINAL_ONLY: &[&str] = &[
     "display.wrap_width",
     "display.tab_width",
-    "display.show_line_numbers",
     "display.scroll_margin",
     "display.hints",
     "keyboard.digit_row",

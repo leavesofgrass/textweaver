@@ -6,8 +6,10 @@
 //! and the window shows its lists, prompts, and questions as dialogs and
 //! its messages through the announcer. A few the window does itself (the
 //! text size and font, the system's file chooser, the settings dialog, the
-//! command palette), and a few only mean something in a terminal; those
-//! are listed with the reason, and in `docs/gui.md`.
+//! command palette, scrolling its own lines). A command that could only
+//! mean something in a terminal would be listed here with the reason, and
+//! in `docs/gui.md`; none is at present (beta 4 brought the scrolling and
+//! line numbers to the window).
 //!
 //! The test in this module fails when an action is added without a place
 //! here, so a new terminal command cannot quietly be missing from the
@@ -49,14 +51,13 @@ pub fn support(action: ActionId) -> Support {
         | A::Settings
         | A::ColorSettings
         | A::ReadingForm
-        | A::CommandPalette => Support::Window,
-        A::ScrollDown | A::ScrollUp => Support::TerminalOnly(
-            "the terminal scrolls its screen by lines; the window scrolls with the wheel \
-             and keeps the caret in view",
-        ),
-        A::ToggleLineNumbers => Support::TerminalOnly(
-            "line numbers are the terminal's gutter; the window's status bar says the line",
-        ),
+        | A::CommandPalette
+        // The view lays out its own lines, so it scrolls itself by one;
+        // the app says what the terminal's scrolling says.
+        | A::ScrollDown
+        | A::ScrollUp => Support::Window,
+        // The app turns the setting over and says so; the view draws the
+        // numbers in its margin.
         _ => Support::App,
     }
 }
@@ -73,24 +74,26 @@ mod tests {
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/gui.md"),
         )
         .expect("docs/gui.md");
+        // The guide's section on what only the terminal reader does, if
+        // it has one.
         let section = guide
             .split("## What only the terminal reader does")
             .nth(1)
-            .expect("the section in docs/gui.md");
-        let section = section.split("\n## ").next().unwrap_or(section);
+            .map(|s| s.split("\n## ").next().unwrap_or(s));
         let mut terminal_only = Vec::new();
         for &a in ActionId::ALL {
             if let Support::TerminalOnly(reason) = support(a) {
                 assert!(!reason.is_empty(), "{a:?}");
                 assert!(
-                    section.contains(&format!("`{}`", a.id())),
+                    section.is_some_and(|s| s.contains(&format!("`{}`", a.id()))),
                     "{} is terminal-only but not in docs/gui.md",
                     a.id()
                 );
                 terminal_only.push(a);
             }
         }
-        // The window's own list stays short: parity is the rule.
+        // The window's own list stays short: parity is the rule, and since
+        // beta 4 the list is empty.
         assert!(terminal_only.len() <= 5, "{terminal_only:?}");
         // Each window action is one the window's driver takes before the
         // app (or the app's own prompt the window answers).
@@ -110,6 +113,10 @@ mod tests {
                                 | ActionId::ToggleHeader
                                 | ActionId::ToggleToolbar
                                 | ActionId::ToggleFocusMode
+                                // The view scrolls its own lines, from the
+                                // terminal's keys.
+                                | ActionId::ScrollDown
+                                | ActionId::ScrollUp
                         ),
                     "{a:?}"
                 );
