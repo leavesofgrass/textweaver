@@ -88,7 +88,8 @@ pub use recent::{Recent, RecentEntry};
 pub use settings::{
     AccessMode, AccessibilitySettings, AfterEnd, AppleBackend, AppleSettings, AudioExportFormat,
     AuthoringSettings, BookAudio, BrailleGrade, BrailleSettings, BrailleTableFormat, BrfCode,
-    CitationReading, ColorSettings, CommunityLexiconSettings, ComponentsSettings, CursorPlacement,
+    CW_MAX_WPM, CW_MIN_WPM, CW_TONE_RANGE_HZ, CitationReading, ColorSettings,
+    CommunityLexiconSettings, ComponentsSettings, CursorPlacement, CwSettings,
     DEFAULT_HEADER_BUTTONS, DEFAULT_TOOLBAR_BUTTONS, DISPLAY_CELLS_RANGE, DectalkSettings,
     DictationSettings, DigitRow, DisplaySettings, EciDictionaries, EciSettings, EditingSettings,
     EspeakHelper, EspeakSettings, ExportSettings, FootnoteMode, GuiAnnounce, GuiSettings,

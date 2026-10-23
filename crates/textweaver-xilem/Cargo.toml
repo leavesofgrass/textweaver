@@ -27,7 +27,7 @@ name = "icons"
 required-features = ["screenshot"]
 
 [features]
-default = ["screenshot", "renderer-vello", "publish", "lint", "grammar", "dictation", "audio-export", "opus", "carta"]
+default = ["screenshot", "renderer-vello", "publish", "lint", "grammar", "dictation", "audio-export", "opus", "carta", "cw-midi"]
 # Dictation in edit mode (textweaver-app's `dictation`, ADR-0042).
 dictation = ["textweaver-app/dictation"]
 # Every feature below that the terminal program shares is passed to
@@ -41,6 +41,8 @@ opus = ["textweaver-app/opus", "textweaver-cli/opus"]
 # More formats to open (textweaver-app's `carta`, B1-k2): Org, reStructuredText,
 # MediaWiki, DokuWiki and Jira, read through the pure-Rust carta.
 carta = ["textweaver-app/carta", "textweaver-cli/carta"]
+# `textweaver --tw cw monitor` reads MIDI key adapters (beta 4).
+cw-midi = ["textweaver-cli/cw-midi"]
 # The renderer: Vello's GPU compute renderer (the default), or Vello's
 # hybrid renderer (CPU strips, simple GPU shaders), which suits software
 # GPUs such as Mesa's llvmpipe under Xvfb in CI. With both, Vello wins.

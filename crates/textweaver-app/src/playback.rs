@@ -426,7 +426,13 @@ impl App {
     }
 
     pub(crate) fn narration_policy(&self) -> NarrationPolicy {
-        narration_policy(&self.settings)
+        let mut policy = narration_policy(&self.settings);
+        // CW sends the text exactly: structure goes as prosigns, not as
+        // words spelled out in Morse (crate::cw).
+        if self.cw_engine() {
+            policy.announce_structure = false;
+        }
+        policy
     }
 
     pub(crate) fn load_options(&self) -> textweaver_formats::LoadOptions {
@@ -618,8 +624,11 @@ impl App {
             None
         };
         let sp = &self.settings.speech;
-        let pauses_on =
-            sp.pause_heading_ms > 0 || sp.pause_paragraph_ms > 0 || sp.pause_list_item_ms > 0;
+        let prosigns = self.cw_prosigns();
+        let pauses_on = prosigns
+            || sp.pause_heading_ms > 0
+            || sp.pause_paragraph_ms > 0
+            || sp.pause_list_item_ms > 0;
         let Some(s) = self.session.as_mut() else {
             return false;
         };
@@ -640,6 +649,11 @@ impl App {
         } else {
             Vec::new()
         };
+        // CW: BT after headings and paragraphs, AR at the document's end.
+        if prosigns {
+            let ends = range.end.0 >= s.doc.len_chars();
+            utterances = crate::cw::prosign_structure(utterances, &pauses, ends);
+        }
         // The recording carries its own pauses.
         pauses.retain(|p| {
             !recorded
@@ -668,6 +682,7 @@ impl App {
         s.spoken = None;
         s.spoken_sentence = None;
         self.set_recorded(recorded);
+        self.cw_reading_starts();
         let generation = self.speech.read_with_pauses(utterances, pauses);
         self.track.follow(generation);
         self.playback = Playback::Reading;

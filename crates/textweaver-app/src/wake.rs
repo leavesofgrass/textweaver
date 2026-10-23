@@ -108,7 +108,11 @@ impl App {
     /// line, else [`IDLE_TICK`]. Speech statuses and finished background
     /// work ring the waker instead.
     pub fn tick_interval(&self, now: Instant) -> Duration {
-        let base = if self.edit_work_pending() || self.screen_say_all.is_some() || self.opening() {
+        let base = if self.edit_work_pending()
+            || self.screen_say_all.is_some()
+            || self.opening()
+            || self.cw_status_active()
+        {
             BUSY_TICK
         } else {
             IDLE_TICK

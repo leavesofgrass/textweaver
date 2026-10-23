@@ -22,6 +22,7 @@ mod citations_reading;
 mod clipboard;
 mod command_list;
 mod components_registry;
+mod cw;
 mod details;
 mod edit;
 mod fonts;

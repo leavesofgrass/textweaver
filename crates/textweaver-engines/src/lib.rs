@@ -27,6 +27,8 @@ pub use textweaver_espeak as espeak;
 pub use textweaver_piper as piper;
 pub use textweaver_sapi as sapi;
 
+pub mod cw;
+
 use std::path::PathBuf;
 
 use textweaver_eci::EciConfig;
@@ -273,6 +275,17 @@ fn register_engines(registry: &mut BackendRegistry, settings: &Settings) {
         Some(format!("DECtalk ({})", choice.candidate.path.display()))
     });
     register_espeak(registry, settings);
+    // CW (Morse code): chosen, never fallen back to (opt-in).
+    cw::set_options(cw::CwOptions::from_settings(settings));
+    registry.register(
+        cw::backend_description(),
+        || true,
+        || {
+            Ok(Box::new(cw::CwBackend::new(
+                textweaver_enginehost::AudioOutput::default(),
+            )) as Box<dyn SpeechBackend>)
+        },
+    );
     // Piper neural voices (ADR-0023), in-process on RTen: available once a
     // voice is installed, below DECtalk and above the built-in engines.
     let piper = piper_config(settings);

@@ -51,6 +51,11 @@ bitflags::bitflags! {
         /// engine's audio. Without it the service holds the next utterance
         /// back for the pause instead (see [`crate::pauses`]).
         const SILENCE = 1 << 12;
+        /// The engine takes the text exactly as written (CW sends each
+        /// character as it is): the service applies no normalization at
+        /// all, not even punctuation verbosity, so word positions map
+        /// one to one onto the document.
+        const RAW_TEXT = 1 << 13;
     }
 }
 

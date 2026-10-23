@@ -101,7 +101,7 @@ Return settings to their defaults:
 tw settings reset
 ```
 
-The command reports how many settings will change and asks for `y` to confirm; `--yes` skips the question. `--section` followed by a section name resets only that section. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `speech.dectalk`, `speech.espeak`, `speech.piper`, `highlight`, `normalization`, `normalization.community_lexicon`, `normalization.medical_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `braille`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, `preview`, `lexicon`, `stats`, `summary`, `dictation`, `interface`, `gui`, `colors`, and `keymap` (your key overrides). Sections not in this list, added by a newer textweaver or a build with extra features, can be reset by name too. A reset is backed up in the same way as an import.
+The command reports how many settings will change and asks for `y` to confirm; `--yes` skips the question. `--section` followed by a section name resets only that section. The sections are `speech`, `speech.eci`, `speech.sapi`, `speech.apple`, `speech.dectalk`, `speech.espeak`, `speech.piper`, `speech.cw`, `highlight`, `normalization`, `normalization.community_lexicon`, `normalization.medical_lexicon`, `reading`, `display`, `editing`, `library`, `keyboard`, `accessibility`, `export`, `braille`, `reading_aids`, `reading_aids.rsvp`, `reading_aids.bionic_options`, `reading_aids.spacing`, `reading_aids.font`, `reading_aids.ruler`, `reading_aids.syllable_options`, `preview`, `lexicon`, `stats`, `summary`, `dictation`, `interface`, `gui`, `colors`, and `keymap` (your key overrides). Sections not in this list, added by a newer textweaver or a build with extra features, can be reset by name too. A reset is backed up in the same way as an import.
 
 ## Example file
 
@@ -224,6 +224,19 @@ Piper neural voices.
 - `phonemizer`, default `"auto"`: how Piper turns text into sounds. `"library"` uses the espeak-ng library, `"rust"` textweaver's own, and `"auto"` the library when it is installed.
 
 A change to `[speech.dectalk]`, `[speech.espeak]`, or `[speech.piper]` takes effect when speech restarts.
+
+### [speech.cw]
+
+CW (Morse code). See [CW: reading in Morse code](cw.md).
+
+- `wpm`, default `20`: the character speed, 5 to 50 words per minute. While CW is the engine, the rate keys change it by one, and `effective_wpm` with it in proportion.
+- `effective_wpm`, default `10`: the effective (Farnsworth) speed, 5 to 50 words per minute. The gaps between characters and words stretch so the text goes at this speed; at or above `wpm`, the spacing is standard.
+- `tone_hz`, default `600`: the tone, 200 to 1500 hertz. The pitch keys move it by semitones.
+- `volume`, default `50`: the tone's level, 0 to 100 percent of full scale, before the speech volume.
+- `prosigns`, default `true`: send structure as prosigns (BT after headings and paragraphs, AR at the end of the document), and send prosigns written in angle brackets, such as `<BT>`.
+- `status_line`, default `true`: show the characters being sent on the status line, so a screen reader can show them on a Braille display. Nothing extra is announced.
+
+A change to `[speech.cw]` applies from the next sentence; a reading in progress goes on from the last word with it.
 
 ### [speech.voice_params]
 

@@ -528,6 +528,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-components",
     "textweaver-convert",
     "textweaver-core",
+    "textweaver-cw",
     "textweaver-dictation",
     "textweaver-editor",
     "textweaver-engines",
@@ -1130,6 +1131,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "deps": [
     "textweaver-apple",
     "textweaver-core",
+    "textweaver-cw",
     "textweaver-dectalk",
     "textweaver-eci",
     "textweaver-enginehost",
@@ -1437,6 +1439,30 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
    "name": "textweaver-piper",
    "path": "crates/textweaver-piper",
    "short": "piper",
+   "tool": false,
+   "version": "0.1.0-beta.3"
+  },
+  {
+   "adr_note": {
+    "href": "../cw.md",
+    "text": "CW: reading in Morse code"
+   },
+   "adrs": [],
+   "bins": [],
+   "build_deps": [],
+   "default_member": true,
+   "dependents": [
+    "textweaver-app",
+    "textweaver-engines"
+   ],
+   "deps": [],
+   "description": "CW (Morse code) for textweaver: ITU Morse tables and prosigns, PARIS and Farnsworth timing, a schedule of elements with exact word boundaries, and a click-free tone renderer",
+   "dev_deps": [],
+   "job": "CW (Morse code) for textweaver.",
+   "layer": "speech",
+   "name": "textweaver-cw",
+   "path": "crates/textweaver-cw",
+   "short": "cw",
    "tool": false,
    "version": "0.1.0-beta.3"
   },
@@ -1856,6 +1882,7 @@ mark { background: var(--mark-bg); color: var(--mark-fg); }
     "textweaver-dectalk",
     "textweaver-espeak",
     "textweaver-piper",
+    "textweaver-cw",
     "textweaver-export"
    ],
    "id": "speech",

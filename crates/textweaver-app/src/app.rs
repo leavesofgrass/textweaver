@@ -561,6 +561,8 @@ pub struct App {
     pub(crate) menu: crate::menu::MenuState,
     /// Dictation in edit mode (crate::dictation).
     pub(crate) dictation: crate::dictation::DictationSlot,
+    /// CW on the status line (crate::cw).
+    pub(crate) cw: crate::cw::CwState,
     /// The file browser's place, rows, and preview (crate::browse).
     pub(crate) browse: crate::browse::BrowseState,
     /// Batch conversion: its questions and the run (File, Batch convert).
@@ -719,6 +721,7 @@ impl App {
             cards: crate::cards::CardsState::default(),
             menu: crate::menu::MenuState::default(),
             dictation: crate::dictation::DictationSlot::default(),
+            cw: crate::cw::CwState::default(),
             browse: crate::browse::BrowseState::new(),
             batch: crate::batch::BatchState::default(),
             audio: crate::audio_export::AudioState::default(),
@@ -1774,7 +1777,7 @@ impl App {
         effects.extend(self.components_tick());
         effects.extend(self.updates_tick());
         self.reading_timer_tick(now);
-        let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now);
+        let rsvp_moved = self.rsvp_tick(now) | self.screen_say_all_tick(now) | self.cw_tick();
         effects.extend(self.authoring_tick(now));
         if rsvp_moved && effects.is_empty() {
             effects.push(Effect::Redraw);

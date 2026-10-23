@@ -111,6 +111,7 @@ pub struct RecordingBackend {
     log: SpeechLog,
     params: VoiceParams,
     id: &'static str,
+    extra_caps: Caps,
 }
 
 impl RecordingBackend {
@@ -120,6 +121,7 @@ impl RecordingBackend {
             log,
             params: VoiceParams::default(),
             id: "test-recording",
+            extra_caps: Caps::empty(),
         }
     }
 
@@ -127,6 +129,13 @@ impl RecordingBackend {
     /// stand in for a second engine.
     pub fn with_id(mut self, id: &'static str) -> Self {
         self.id = id;
+        self
+    }
+
+    /// The backend with `caps` added to its capabilities (as
+    /// [`Caps::RAW_TEXT`] for a stand-in of CW).
+    pub fn with_caps(mut self, caps: Caps) -> Self {
+        self.extra_caps = caps;
         self
     }
 }
@@ -170,6 +179,7 @@ impl SpeechBackend for RecordingBackend {
             | Caps::VOLUME
             | Caps::LIVE_RATE
             | Caps::SILENCE
+            | self.extra_caps
     }
 
     fn silence_after(&mut self, id: UtteranceId, ms: u32) {
@@ -241,10 +251,25 @@ pub fn recording_service() -> Result<(SpeechService, SpeechLog), SpeechError> {
 
 /// [`recording_service`] with the backend under the id `id`.
 pub fn recording_service_as(id: &'static str) -> Result<(SpeechService, SpeechLog), SpeechError> {
+    recording_service_with(id, Caps::empty())
+}
+
+/// [`recording_service_as`] with `caps` added to the backend's
+/// capabilities.
+pub fn recording_service_with(
+    id: &'static str,
+    caps: Caps,
+) -> Result<(SpeechService, SpeechLog), SpeechError> {
     let log = SpeechLog::default();
     let backend_log = log.clone();
     let service = SpeechService::spawn(
-        Box::new(move || Ok(Box::new(RecordingBackend::new(backend_log).with_id(id)) as _)),
+        Box::new(move || {
+            Ok(Box::new(
+                RecordingBackend::new(backend_log)
+                    .with_id(id)
+                    .with_caps(caps),
+            ) as _)
+        }),
         ServiceConfig::default(),
     )?;
     Ok((service, log))

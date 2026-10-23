@@ -177,6 +177,7 @@ mod colors;
 mod command;
 mod command_list;
 pub mod components;
+mod cw;
 mod details_form;
 mod dictation;
 pub mod disk;

@@ -29,6 +29,7 @@ const SECTIONS: &[(&str, &str)] = &[
     ("DectalkSettings", "dectalk"),
     ("EspeakSettings", "espeak"),
     ("PiperSettings", "piper"),
+    ("CwSettings", "cw"),
     ("HighlightSettings", "highlight"),
     ("NormalizationSettings", "normalization"),
     ("CommunityLexiconSettings", "community_lexicon"),

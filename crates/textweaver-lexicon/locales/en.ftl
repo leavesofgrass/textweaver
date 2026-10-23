@@ -2169,6 +2169,7 @@ choice-speech-backend-nsspeech = Apple NSSpeech
 choice-speech-backend-avspeech = Apple AVSpeech
 choice-speech-backend-dectalk = DECtalk
 choice-speech-backend-omnivox = Omnivox
+choice-speech-backend-cw = CW (Morse code)
 choice-speech-backend-null = silent
 setting-speech-rate = Rate
 setting-speech-rate-help = How fast textweaver speaks.
@@ -2632,6 +2633,11 @@ settings-unit-words-per-minute =
     { $n ->
         [one] word per minute
        *[other] words per minute
+    }
+settings-unit-hertz =
+    { $n ->
+        [one] hertz
+       *[other] hertz
     }
 settings-unit-percent = percent
 settings-unit-semitones =
@@ -3561,6 +3567,18 @@ setting-speech-piper-phonemizer-help = How Piper turns text into sounds. The esp
 choice-speech-piper-phonemizer-auto = automatic
 choice-speech-piper-phonemizer-library = espeak-ng library
 choice-speech-piper-phonemizer-rust = textweaver's own
+setting-speech-cw-wpm = CW character speed
+setting-speech-cw-wpm-help = How fast each Morse character is sent, in words per minute. While CW is the engine, the rate keys change it by one, and the effective speed with it.
+setting-speech-cw-effective-wpm = CW effective speed
+setting-speech-cw-effective-wpm-help = The overall speed: the gaps between characters and words stretch so the text goes this fast (Farnsworth spacing). At or above the character speed, the spacing is standard.
+setting-speech-cw-tone-hz = CW tone
+setting-speech-cw-tone-hz-help = The pitch of the Morse tone. The pitch keys move it by semitones.
+setting-speech-cw-volume = CW tone level
+setting-speech-cw-volume-help = How loud the Morse tone is, before the speech volume.
+setting-speech-cw-prosigns = CW prosigns
+setting-speech-cw-prosigns-help = Send structure as prosigns: BT after headings and paragraphs, AR at the end of the document. Prosigns written in angle brackets, such as <BT>, are sent too.
+setting-speech-cw-status-line = CW characters on the status line
+setting-speech-cw-status-line-help = Show each character on the status line as it is sent, so a screen reader can show it on a Braille display. Nothing extra is said.
 setting-speech-voice-params = Rate and pitch per voice
 setting-speech-voice-params-help = The rate and pitch each voice was last used at. Choosing a voice again brings them back.
 setting-authoring-author = Author
@@ -5184,3 +5202,11 @@ changes-tracked-refused =
        *[other] Not saved: { $n } changes in { $file } cross a paragraph or sit in a link or field, so they cannot be tracked. Save As keeps your edits as Markdown.
     }
 ## End of B1-t2
+## Beta 4: CW (Morse code) as a speech engine.
+cw-sending = CW: { $text }
+cw-speed = Character speed { $wpm }, effective { $effective } words per minute.
+cw-skipped =
+    { $count ->
+        [one] 1 character not sent in Morse code.
+       *[other] { $count } characters not sent in Morse code.
+    }

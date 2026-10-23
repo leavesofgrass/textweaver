@@ -442,6 +442,7 @@ enum Command {
     SetPacing(PacingConfig),
     SetPauses(PauseConfig),
     SetRecorded(Option<Arc<RecordedPlan>>),
+    Respeak,
     SpeakChar(char, Option<CharPos>),
     Preview(String, String),
     Tone(f32, u32),
@@ -754,6 +755,13 @@ impl SpeechService {
     /// uses it. See [`crate::recorded`].
     pub fn set_recorded(&self, plan: Option<Arc<RecordedPlan>>) {
         self.post(Command::SetRecorded(plan));
+    }
+    /// Engine options changed outside the voice parameters (CW's speeds
+    /// and tone, which the engine reads at each utterance): the reading
+    /// in progress restarts from the last confirmed word, so the change is
+    /// heard at once, as a new rate is.
+    pub fn respeak(&self) {
+        self.post(Command::Respeak);
     }
     /// Speaks one character (scaled rate, caps indication), optionally
     /// mapped to a document position.
@@ -1124,12 +1132,16 @@ impl ServiceCore {
         let voices = backend
             .voice_cache()
             .unwrap_or_else(|| VoiceCache::ready(backend.voices()));
-        let pipeline = Pipeline::for_settings(
-            &config.normalize,
-            config.punctuation,
-            config.split_caps,
-            caps.contains(Caps::NATIVE_NORMALIZATION),
-        );
+        let pipeline = if caps.contains(Caps::RAW_TEXT) {
+            Pipeline::new()
+        } else {
+            Pipeline::for_settings(
+                &config.normalize,
+                config.punctuation,
+                config.split_caps,
+                caps.contains(Caps::NATIVE_NORMALIZATION),
+            )
+        };
         let mut core = ServiceCore {
             backend: Mixed::new(backend),
             caps,
@@ -1319,6 +1331,7 @@ impl ServiceCore {
             Command::SetPacing(p) => self.set_pacing(p),
             Command::SetPauses(p) => self.set_pauses(p),
             Command::SetRecorded(plan) => self.set_recorded(plan),
+            Command::Respeak => self.respeak_with_new_params(),
             Command::SpeakChar(c, at) => self.speak_char(c, at),
             Command::Preview(voice, text) => self.preview(&voice, &text),
             Command::Tone(hz, ms) => self.tone(hz, ms),
@@ -1835,6 +1848,10 @@ impl ServiceCore {
     }
 
     fn rebuild_pipeline(&mut self) {
+        if self.caps.contains(Caps::RAW_TEXT) {
+            self.pipeline = Pipeline::new();
+            return;
+        }
         self.pipeline = Pipeline::for_settings(
             &self.config.normalize,
             self.config.punctuation,
@@ -1863,7 +1880,8 @@ impl ServiceCore {
         if caps == self.caps {
             return;
         }
-        let native_changed = (caps ^ self.caps).contains(Caps::NATIVE_NORMALIZATION);
+        let native_changed =
+            (caps ^ self.caps).intersects(Caps::NATIVE_NORMALIZATION | Caps::RAW_TEXT);
         self.caps = caps;
         if native_changed {
             self.rebuild_pipeline();

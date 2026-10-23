@@ -1,0 +1,17 @@
+[package]
+name = "textweaver-cw"
+description = "CW (Morse code) for textweaver: ITU Morse tables and prosigns, PARIS and Farnsworth timing, a schedule of elements with exact word boundaries, and a click-free tone renderer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Pure: no audio device, no clock, no other crate. The speech backend
+# (textweaver-engines) plays what this crate renders.
+[dependencies]
+
+[lints]
+workspace = true

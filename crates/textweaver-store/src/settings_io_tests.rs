@@ -64,6 +64,15 @@ fn everything_changed() -> Settings {
     sp.piper.voices = Some("D:/voices".into());
     sp.piper.voice = Some("en_US-amy-medium".into());
     sp.piper.phonemizer = crate::PiperPhonemizer::Rust;
+    sp.cw = crate::CwSettings {
+        wpm: 25,
+        effective_wpm: 18,
+        tone_hz: 700,
+        volume: 30,
+        prosigns: false,
+        status_line: false,
+        ..crate::CwSettings::default()
+    };
     sp.voice_params = BTreeMap::from([(
         "sapi:David".to_owned(),
         crate::RememberedVoice {

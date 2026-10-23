@@ -260,16 +260,27 @@ fn synthesize_inner(
         return Err(ExportError::NoFileSynthesis(backend.id().to_owned()));
     }
     let range = opts.range.unwrap_or_else(|| doc.full_range());
-    let planned = plan(doc, range, &opts.narration);
+    // An engine that takes the text exactly as written (CW) gets no
+    // structure spelled out in words and no normalization.
+    let raw = caps.contains(Caps::RAW_TEXT);
+    let mut narration = opts.narration.clone();
+    if raw {
+        narration.announce_structure = false;
+    }
+    let planned = plan(doc, range, &narration);
     if planned.iter().all(|u| u.text.trim().is_empty()) {
         return Err(ExportError::Empty);
     }
-    let pipeline = Pipeline::for_settings(
-        &opts.normalize,
-        opts.punctuation,
-        opts.split_caps,
-        caps.contains(Caps::NATIVE_NORMALIZATION),
-    );
+    let pipeline = if raw {
+        Pipeline::new()
+    } else {
+        Pipeline::for_settings(
+            &opts.normalize,
+            opts.punctuation,
+            opts.split_caps,
+            caps.contains(Caps::NATIVE_NORMALIZATION),
+        )
+    };
     let tmp = tempfile::Builder::new()
         .prefix("textweaver-export-")
         .tempdir()

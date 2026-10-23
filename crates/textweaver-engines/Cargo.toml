@@ -39,6 +39,11 @@ textweaver-apple.workspace = true
 # installed libespeak-ng, else the built-in pure-Rust port. Downloads
 # (checked by hash) are the `piper-download` feature.
 textweaver-piper = { workspace = true, features = ["playback", "espeak-lib", "espeak-rs"] }
+# CW (Morse code) as an engine: tables, timing and tone (pure), played here.
+textweaver-cw.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

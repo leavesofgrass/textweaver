@@ -2166,6 +2166,7 @@ choice-speech-backend-nsspeech = Apple NSSpeech
 choice-speech-backend-avspeech = Apple AVSpeech
 choice-speech-backend-dectalk = DECtalk
 choice-speech-backend-omnivox = Omnivox
+choice-speech-backend-cw = CW (Morsecode)
 choice-speech-backend-null = stumm
 setting-speech-rate = Geschwindigkeit
 setting-speech-rate-help = Wie schnell textweaver spricht.
@@ -2629,6 +2630,11 @@ settings-unit-words-per-minute =
     { $n ->
         [one] Wort pro Minute
        *[other] Wörter pro Minute
+    }
+settings-unit-hertz =
+    { $n ->
+        [one] Hertz
+       *[other] Hertz
     }
 settings-unit-percent = Prozent
 settings-unit-semitones =
@@ -3528,6 +3534,18 @@ setting-speech-piper-phonemizer-help = Wie Piper Text in Laute umwandelt. Die es
 choice-speech-piper-phonemizer-auto = automatisch
 choice-speech-piper-phonemizer-library = espeak-ng-Bibliothek
 choice-speech-piper-phonemizer-rust = der von textweaver
+setting-speech-cw-wpm = CW-Zeichentempo
+setting-speech-cw-wpm-help = Wie schnell jedes Morsezeichen gesendet wird, in Wörtern pro Minute. Solange CW das Sprachmodul ist, ändern die Tempotasten es um eins und das effektive Tempo mit.
+setting-speech-cw-effective-wpm = CW-Effektivtempo
+setting-speech-cw-effective-wpm-help = Das Gesamttempo: Die Pausen zwischen Zeichen und Wörtern werden so gedehnt, dass der Text so schnell läuft (Farnsworth-Abstände). Ab dem Zeichentempo gelten die normalen Abstände.
+setting-speech-cw-tone-hz = CW-Ton
+setting-speech-cw-tone-hz-help = Die Tonhöhe des Morsetons. Die Tonhöhentasten verschieben sie in Halbtönen.
+setting-speech-cw-volume = CW-Tonpegel
+setting-speech-cw-volume-help = Wie laut der Morseton ist, vor der Sprachlautstärke.
+setting-speech-cw-prosigns = CW-Betriebszeichen
+setting-speech-cw-prosigns-help = Struktur als Betriebszeichen senden: BT nach Überschriften und Absätzen, AR am Ende des Dokuments. In spitzen Klammern geschriebene Betriebszeichen wie <BT> werden auch gesendet.
+setting-speech-cw-status-line = CW-Zeichen in der Statuszeile
+setting-speech-cw-status-line-help = Jedes Zeichen beim Senden in der Statuszeile zeigen, damit ein Screenreader es auf einer Braillezeile zeigen kann. Es wird nichts zusätzlich gesagt.
 setting-speech-voice-params = Tempo und Tonhöhe je Stimme
 setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zuletzt genutzt wurde. Wird die Stimme wieder gewählt, kehren sie zurück.
 setting-authoring-author = Autor
@@ -5108,3 +5126,11 @@ changes-tracked-refused =
        *[other] Nicht gespeichert: { $n } Änderungen in { $file } überschreiten einen Absatz oder liegen in einem Link oder Feld und können nicht nachverfolgt werden. Speichern unter behält Ihre Bearbeitungen als Markdown.
     }
 ## End of B1-t2
+## Beta 4: CW (Morse code) as a speech engine.
+cw-sending = CW: { $text }
+cw-speed = Zeichentempo { $wpm }, effektiv { $effective } Wörter pro Minute.
+cw-skipped =
+    { $count ->
+        [one] 1 Zeichen nicht als Morsecode gesendet.
+       *[other] { $count } Zeichen nicht als Morsecode gesendet.
+    }

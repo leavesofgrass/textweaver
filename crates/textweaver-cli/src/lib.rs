@@ -122,6 +122,8 @@ enum Cmd {
     Components(cmd::components::Args),
     /// Check for a newer textweaver on GitHub, or download, check, and install it.
     Update(cmd::update::Args),
+    /// CW (Morse code) tools: monitor what a key adapter sends (MIDI and keys), in words.
+    Cw(cmd::cw::Args),
 }
 
 /// Runs `tw` and turns the result into its exit status: 0 done, 1 failed
@@ -198,6 +200,7 @@ fn run(cli: Cli) -> Result<()> {
         Cmd::Serve(a) => cmd::serve::run(a),
         Cmd::Ocr(a) => cmd::ocr::run(a),
         Cmd::Components(a) => cmd::components::run(a),
+        Cmd::Cw(a) => cmd::cw::run(a),
         Cmd::Update(a) => cmd::update::run(a),
     }
 }
