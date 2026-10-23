@@ -536,7 +536,7 @@ pub const INFO: &[Info] = &[
     number(
         "speech.cw.effective_wpm",
         "CW effective speed",
-        "The overall speed: the gaps between characters and words stretch so the text goes this fast (Farnsworth spacing). At or above the character speed, the spacing is standard.",
+        "The overall speed, with Farnsworth spacing. The gaps between characters and words stretch so the text goes this fast; at or above the character speed, the spacing is standard.",
         (5.0, 50.0, 1.0),
         "words per minute",
     ),
@@ -557,12 +557,60 @@ pub const INFO: &[Info] = &[
     toggle(
         "speech.cw.prosigns",
         "CW prosigns",
-        "Send structure as prosigns: BT after headings and paragraphs, AR at the end of the document. Prosigns written in angle brackets, such as <BT>, are sent too.",
+        "Send document structure as prosigns. BT follows headings and paragraphs, and AR ends the document. Prosigns written in angle brackets, such as <BT>, are sent too.",
     ),
     toggle(
         "speech.cw.status_line",
         "CW characters on the status line",
-        "Show each character on the status line as it is sent, so a screen reader can show it on a Braille display. Nothing extra is said.",
+        "Show each character on the status line as it is sent. A screen reader can then show it on a Braille display; nothing extra is said.",
+    ),
+    choice(
+        "speech.cw.keyer",
+        "CW keyer",
+        "How a paddle's contacts become dits and dahs when keying Morse code. Iambic B adds the opposite element when a squeeze is released during an element; iambic A does not; both remember a contact pressed during an element. Straight keys the tone from either contact.",
+        &[
+            ("iambic_b", "iambic B"),
+            ("iambic_a", "iambic A"),
+            ("straight", "straight key"),
+        ],
+    ),
+    toggle(
+        "speech.cw.swap_paddles",
+        "Swap CW paddles",
+        "Swap dit and dah, for a paddle used with the other hand. MIDI and keyboard adapters both follow it.",
+    ),
+    toggle(
+        "speech.cw.sidetone",
+        "CW sidetone",
+        "Play the CW tone while the key is down when keying Morse code.",
+    ),
+    number(
+        "speech.cw.dit_note",
+        "CW dit MIDI note",
+        "The MIDI note of the dit contact. 20 for the N6ARA TinyMIDI and the CTR2 MIDI.",
+        (0.0, 127.0, 1.0),
+        "",
+    ),
+    number(
+        "speech.cw.dah_note",
+        "CW dah MIDI note",
+        "The MIDI note of the dah contact. 21 for the N6ARA TinyMIDI and the CTR2 MIDI.",
+        (0.0, 127.0, 1.0),
+        "",
+    ),
+    number(
+        "speech.cw.straight_note",
+        "CW straight key MIDI note",
+        "The MIDI note of a straight key. 30 for the CTR2 MIDI in extended paddle mode.",
+        (0.0, 127.0, 1.0),
+        "",
+    ),
+    number(
+        "speech.cw.midi_channel",
+        "CW MIDI channel",
+        "The MIDI channel keying listens to, 1 to 16, or 0 for any. The CTR2 MIDI always uses channel 1.",
+        (0.0, 16.0, 1.0),
+        "",
     ),
     table(
         "speech.voice_params",

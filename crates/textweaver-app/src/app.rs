@@ -563,6 +563,8 @@ pub struct App {
     pub(crate) dictation: crate::dictation::DictationSlot,
     /// CW on the status line (crate::cw).
     pub(crate) cw: crate::cw::CwState,
+    /// CW keying while it is on (crate::cw_keying).
+    pub(crate) cw_keying: Option<crate::cw_keying::Keying>,
     /// The file browser's place, rows, and preview (crate::browse).
     pub(crate) browse: crate::browse::BrowseState,
     /// Batch conversion: its questions and the run (File, Batch convert).
@@ -722,6 +724,7 @@ impl App {
             menu: crate::menu::MenuState::default(),
             dictation: crate::dictation::DictationSlot::default(),
             cw: crate::cw::CwState::default(),
+            cw_keying: None,
             browse: crate::browse::BrowseState::new(),
             batch: crate::batch::BatchState::default(),
             audio: crate::audio_export::AudioState::default(),
@@ -1770,6 +1773,7 @@ impl App {
         effects.extend(self.define_tick());
         effects.extend(self.voices_tick());
         effects.extend(self.dictation_tick());
+        effects.extend(self.cw_keying_tick());
         effects.extend(self.batch_tick(now));
         effects.extend(self.audio_tick(now));
         effects.extend(self.sync_tick(now));
@@ -2421,6 +2425,7 @@ impl App {
             A::DifficultWordsToggle => self.difficult_words_toggle(),
             A::BrailleViewToggle => self.braille_view_toggle(),
             A::BrailleGradeToggle => self.braille_grade_toggle(),
+            A::CwKeying => return self.cw_keying_toggle(),
             // The window's text size and font (the GUI handles them first).
             A::TextLarger
             | A::TextSmaller

@@ -3546,6 +3546,23 @@ setting-speech-cw-prosigns = CW-Betriebszeichen
 setting-speech-cw-prosigns-help = Struktur als Betriebszeichen senden: BT nach Überschriften und Absätzen, AR am Ende des Dokuments. In spitzen Klammern geschriebene Betriebszeichen wie <BT> werden auch gesendet.
 setting-speech-cw-status-line = CW-Zeichen in der Statuszeile
 setting-speech-cw-status-line-help = Jedes Zeichen beim Senden in der Statuszeile zeigen, damit ein Screenreader es auf einer Braillezeile zeigen kann. Es wird nichts zusätzlich gesagt.
+setting-speech-cw-keyer = CW-Keyer
+setting-speech-cw-keyer-help = Wie die Kontakte einer Paddle-Taste beim Morsegeben zu Punkten und Strichen werden. Iambic B fügt das Gegenelement hinzu, wenn ein Squeeze während eines Elements losgelassen wird; Iambic A nicht; beide merken sich einen Kontakt, der während eines Elements gedrückt wird. Handtaste tastet den Ton mit jedem Kontakt.
+choice-speech-cw-keyer-iambic-b = Iambic B
+choice-speech-cw-keyer-iambic-a = Iambic A
+choice-speech-cw-keyer-straight = Handtaste
+setting-speech-cw-swap-paddles = CW-Paddles tauschen
+setting-speech-cw-swap-paddles-help = Punkt und Strich tauschen, über MIDI und über Tastatur-Adapter, für eine Paddle-Taste, die mit der anderen Hand bedient wird.
+setting-speech-cw-sidetone = CW-Mithörton
+setting-speech-cw-sidetone-help = Beim Morsegeben den CW-Ton spielen, solange die Taste gedrückt ist.
+setting-speech-cw-dit-note = CW-MIDI-Note für Punkt
+setting-speech-cw-dit-note-help = Die MIDI-Note des Punktkontakts. 20 beim N6ARA TinyMIDI und beim CTR2 MIDI.
+setting-speech-cw-dah-note = CW-MIDI-Note für Strich
+setting-speech-cw-dah-note-help = Die MIDI-Note des Strichkontakts. 21 beim N6ARA TinyMIDI und beim CTR2 MIDI.
+setting-speech-cw-straight-note = CW-MIDI-Note für Handtaste
+setting-speech-cw-straight-note-help = Die MIDI-Note einer Handtaste. 30 beim CTR2 MIDI im erweiterten Paddle-Modus.
+setting-speech-cw-midi-channel = CW-MIDI-Kanal
+setting-speech-cw-midi-channel-help = Der MIDI-Kanal, auf den das Morsegeben hört, 1 bis 16, oder 0 für jeden. Das CTR2 MIDI nutzt immer Kanal 1.
 setting-speech-voice-params = Tempo und Tonhöhe je Stimme
 setting-speech-voice-params-help = Tempo und Tonhöhe, mit denen jede Stimme zuletzt genutzt wurde. Wird die Stimme wieder gewählt, kehren sie zurück.
 setting-authoring-author = Autor
@@ -5134,3 +5151,20 @@ cw-skipped =
         [one] 1 Zeichen nicht als Morsecode gesendet.
        *[other] { $count } Zeichen nicht als Morsecode gesendet.
     }
+## Beta 4: CW keying, Morse code typed with a key or paddle. $key is a
+## key name, $name a MIDI input's name.
+name-cw-keying = CW-Morsegeben
+action-cw-keying = CW-Morsegeben ein- oder ausschalten: Morsecode von einer Taste oder Paddle-Taste wird im Bearbeitungsmodus an der Cursorposition geschrieben
+cw-keying-on = CW-Morsegeben ein. Morsecode geben, um an der Cursorposition zu schreiben; { $key } schaltet es aus.
+cw-keying-off = CW-Morsegeben aus.
+cw-keying-ended = CW-Morsegeben aus, weil der Bearbeitungsmodus beendet wurde.
+cw-keying-needs-edit = CW-Morsegeben schreibt im Bearbeitungsmodus. Zuerst den Bearbeitungsmodus einschalten, mit { $key }.
+cw-keying-listening = CW-Morsegeben: hört auf { $name }.
+cw-keying-midi-failed = CW-Morsegeben kann { $name } nicht öffnen: { $error } Prüfen Sie die Verbindung und schalten Sie das Morsegeben erneut ein.
+cw-keying-no-midi = Kein MIDI-Tastenadapter gefunden; verbinden oder koppeln Sie ihn und schalten Sie das Morsegeben erneut ein. Tastatur-Adapter funktionieren in der { -brand }-App.
+cw-keying-midi-not-in-build = MIDI ist in dieser Version von { -brand } nicht enthalten. Tastatur-Adapter funktionieren in der { -brand }-App.
+cw-keying-no-sidetone = Kein Mithörton: { $error } Das Morsegeben geht ohne ihn weiter; nutzen Sie den Mithörton des Adapters oder Funkgeräts.
+cw-keying-unknown = Kein Morsezeichen.
+cw-keying-erased = Irrungszeichen: { $text } gelöscht.
+cw-keying-nothing-erased = Irrungszeichen: nichts Gegebenes zu löschen.
+cw-keying-rsvp-on = RSVP zeigt die gegebenen Wörter.

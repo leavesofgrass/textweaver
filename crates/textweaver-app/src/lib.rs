@@ -178,6 +178,8 @@ mod command;
 mod command_list;
 pub mod components;
 mod cw;
+mod cw_keying;
+pub mod cw_midi;
 mod details_form;
 mod dictation;
 pub mod disk;
@@ -284,6 +286,7 @@ pub use command::{
     CaretMove, Command, Confirm, DestructiveVerb, Effect, NoteCommand, PromptPurpose,
 };
 pub use command_list::CommandRow;
+pub use cw_keying::CwAdapterKey;
 pub use dictation::DictationStatus;
 pub use export::{SubtitlePlan, subtitle_plan};
 pub use extra::{extra_bindings, extra_chords, extra_command, extra_lookup};

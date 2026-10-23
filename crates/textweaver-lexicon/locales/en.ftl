@@ -3570,15 +3570,32 @@ choice-speech-piper-phonemizer-rust = textweaver's own
 setting-speech-cw-wpm = CW character speed
 setting-speech-cw-wpm-help = How fast each Morse character is sent, in words per minute. While CW is the engine, the rate keys change it by one, and the effective speed with it.
 setting-speech-cw-effective-wpm = CW effective speed
-setting-speech-cw-effective-wpm-help = The overall speed: the gaps between characters and words stretch so the text goes this fast (Farnsworth spacing). At or above the character speed, the spacing is standard.
+setting-speech-cw-effective-wpm-help = The overall speed, with Farnsworth spacing. The gaps between characters and words stretch so the text goes this fast; at or above the character speed, the spacing is standard.
 setting-speech-cw-tone-hz = CW tone
 setting-speech-cw-tone-hz-help = The pitch of the Morse tone. The pitch keys move it by semitones.
 setting-speech-cw-volume = CW tone level
 setting-speech-cw-volume-help = How loud the Morse tone is, before the speech volume.
 setting-speech-cw-prosigns = CW prosigns
-setting-speech-cw-prosigns-help = Send structure as prosigns: BT after headings and paragraphs, AR at the end of the document. Prosigns written in angle brackets, such as <BT>, are sent too.
+setting-speech-cw-prosigns-help = Send document structure as prosigns. BT follows headings and paragraphs, and AR ends the document. Prosigns written in angle brackets, such as <BT>, are sent too.
 setting-speech-cw-status-line = CW characters on the status line
-setting-speech-cw-status-line-help = Show each character on the status line as it is sent, so a screen reader can show it on a Braille display. Nothing extra is said.
+setting-speech-cw-status-line-help = Show each character on the status line as it is sent. A screen reader can then show it on a Braille display; nothing extra is said.
+setting-speech-cw-keyer = CW keyer
+setting-speech-cw-keyer-help = How a paddle's contacts become dits and dahs when keying Morse code. Iambic B adds the opposite element when a squeeze is released during an element; iambic A does not; both remember a contact pressed during an element. Straight keys the tone from either contact.
+choice-speech-cw-keyer-iambic-b = iambic B
+choice-speech-cw-keyer-iambic-a = iambic A
+choice-speech-cw-keyer-straight = straight key
+setting-speech-cw-swap-paddles = Swap CW paddles
+setting-speech-cw-swap-paddles-help = Swap dit and dah, for a paddle used with the other hand. MIDI and keyboard adapters both follow it.
+setting-speech-cw-sidetone = CW sidetone
+setting-speech-cw-sidetone-help = Play the CW tone while the key is down when keying Morse code.
+setting-speech-cw-dit-note = CW dit MIDI note
+setting-speech-cw-dit-note-help = The MIDI note of the dit contact. 20 for the N6ARA TinyMIDI and the CTR2 MIDI.
+setting-speech-cw-dah-note = CW dah MIDI note
+setting-speech-cw-dah-note-help = The MIDI note of the dah contact. 21 for the N6ARA TinyMIDI and the CTR2 MIDI.
+setting-speech-cw-straight-note = CW straight key MIDI note
+setting-speech-cw-straight-note-help = The MIDI note of a straight key. 30 for the CTR2 MIDI in extended paddle mode.
+setting-speech-cw-midi-channel = CW MIDI channel
+setting-speech-cw-midi-channel-help = The MIDI channel keying listens to, 1 to 16, or 0 for any. The CTR2 MIDI always uses channel 1.
 setting-speech-voice-params = Rate and pitch per voice
 setting-speech-voice-params-help = The rate and pitch each voice was last used at. Choosing a voice again brings them back.
 setting-authoring-author = Author
@@ -5210,3 +5227,20 @@ cw-skipped =
         [one] 1 character not sent in Morse code.
        *[other] { $count } characters not sent in Morse code.
     }
+## Beta 4: CW keying, Morse code typed with a key or paddle. $key is a
+## key name, $name a MIDI input's name.
+name-cw-keying = CW keying
+action-cw-keying = Turn CW keying on or off: Morse code from a key or paddle is typed at the cursor in edit mode
+cw-keying-on = CW keying on. Key Morse code to type it at the cursor; { $key } turns keying off.
+cw-keying-off = CW keying off.
+cw-keying-ended = CW keying off, because edit mode ended.
+cw-keying-needs-edit = CW keying types in edit mode. Turn on edit mode first, with { $key }.
+cw-keying-listening = CW keying: listening to { $name }.
+cw-keying-midi-failed = CW keying cannot open { $name }: { $error } Check that it is connected, then turn keying on again.
+cw-keying-no-midi = No MIDI key adapter was found; connect or pair it, then turn keying on again. Keyboard adapters work in the { -brand } app.
+cw-keying-midi-not-in-build = MIDI is not in this version of { -brand }. Keyboard adapters work in the { -brand } app.
+cw-keying-no-sidetone = No sidetone: { $error } Keying goes on without it; use your adapter's or radio's sidetone.
+cw-keying-unknown = Not a Morse character.
+cw-keying-erased = Error sign: { $text } erased.
+cw-keying-nothing-erased = Error sign: nothing keyed to erase.
+cw-keying-rsvp-on = RSVP shows the words you key.

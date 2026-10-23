@@ -272,6 +272,9 @@ mod tests {
             // The characters CW is sending, on the status line for the
             // Braille display: content being read, shown and never said.
             ("cw.rs", "fn cw_tick"),
+            // The characters keyed in Morse code, likewise: shown for the
+            // Braille display while the sidetone is the audible feedback.
+            ("cw_keying.rs", "fn show_keyed_line"),
         ];
         let mut bad = Vec::new();
         for entry in std::fs::read_dir(&dir).unwrap() {

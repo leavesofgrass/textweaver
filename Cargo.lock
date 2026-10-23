@@ -9639,6 +9639,7 @@ version = "0.1.0-beta.3"
 dependencies = [
  "harper-core",
  "log",
+ "midir",
  "pulldown-cmark",
  "regex",
  "ropey",
@@ -9721,7 +9722,6 @@ version = "0.1.0-beta.3"
 dependencies = [
  "anyhow",
  "clap",
- "midir",
  "ratatui",
  "serde",
  "serde_json",

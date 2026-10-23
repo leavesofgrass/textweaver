@@ -3550,6 +3550,23 @@ setting-speech-cw-prosigns = Procédures CW
 setting-speech-cw-prosigns-help = Envoyer la structure en signes de procédure : BT après les titres et les paragraphes, AR à la fin du document. Les signes écrits entre chevrons, comme <BT>, sont aussi envoyés.
 setting-speech-cw-status-line = Caractères CW dans la ligne d'état
 setting-speech-cw-status-line-help = Afficher chaque caractère dans la ligne d'état au moment de l'envoi, pour qu'un lecteur d'écran l'affiche sur une plage braille. Rien de plus n'est dit.
+setting-speech-cw-keyer = Manipulateur CW
+setting-speech-cw-keyer-help = Comment les contacts d'un manipulateur double contact deviennent des points et des traits en manipulant le morse. Iambique B ajoute l'élément opposé quand une pression des deux palettes est relâchée pendant un élément ; iambique A non ; les deux retiennent un contact pressé pendant un élément. Pioche manipule la tonalité avec l'un ou l'autre contact.
+choice-speech-cw-keyer-iambic-b = iambique B
+choice-speech-cw-keyer-iambic-a = iambique A
+choice-speech-cw-keyer-straight = pioche
+setting-speech-cw-swap-paddles = Inverser les palettes CW
+setting-speech-cw-swap-paddles-help = Inverser point et trait, en MIDI et avec les adaptateurs clavier, pour un manipulateur utilisé de l'autre main.
+setting-speech-cw-sidetone = Tonalité locale CW
+setting-speech-cw-sidetone-help = Jouer la tonalité CW tant que la clé est enfoncée en manipulant le morse.
+setting-speech-cw-dit-note = Note MIDI du point CW
+setting-speech-cw-dit-note-help = La note MIDI du contact de point. 20 pour le N6ARA TinyMIDI et le CTR2 MIDI.
+setting-speech-cw-dah-note = Note MIDI du trait CW
+setting-speech-cw-dah-note-help = La note MIDI du contact de trait. 21 pour le N6ARA TinyMIDI et le CTR2 MIDI.
+setting-speech-cw-straight-note = Note MIDI de la pioche CW
+setting-speech-cw-straight-note-help = La note MIDI d'une pioche. 30 pour le CTR2 MIDI en mode palettes étendu.
+setting-speech-cw-midi-channel = Canal MIDI CW
+setting-speech-cw-midi-channel-help = Le canal MIDI qu'écoute la manipulation, de 1 à 16, ou 0 pour tous. Le CTR2 MIDI utilise toujours le canal 1.
 setting-speech-voice-params = Débit et hauteur par voix
 setting-speech-voice-params-help = Le débit et la hauteur de la dernière utilisation de chaque voix. Choisir à nouveau une voix les rétablit.
 setting-authoring-author = Auteur
@@ -5138,3 +5155,20 @@ cw-skipped =
         [one] 1 caractère non envoyé en morse.
        *[other] { $count } caractères non envoyés en morse.
     }
+## Beta 4: CW keying, Morse code typed with a key or paddle. $key is a
+## key name, $name a MIDI input's name.
+name-cw-keying = Manipulation CW
+action-cw-keying = Activer ou désactiver la manipulation CW : le morse d'une clé ou d'un manipulateur est écrit au curseur en mode édition
+cw-keying-on = Manipulation CW activée. Manipulez du morse pour l'écrire au curseur ; { $key } la désactive.
+cw-keying-off = Manipulation CW désactivée.
+cw-keying-ended = Manipulation CW désactivée, car le mode édition a pris fin.
+cw-keying-needs-edit = La manipulation CW écrit en mode édition. Activez d'abord le mode édition, avec { $key }.
+cw-keying-listening = Manipulation CW : écoute de { $name }.
+cw-keying-midi-failed = La manipulation CW ne peut pas ouvrir { $name } : { $error } Vérifiez qu'il est connecté, puis réactivez la manipulation.
+cw-keying-no-midi = Aucun adaptateur MIDI de manipulateur trouvé ; connectez-le ou appairez-le, puis réactivez la manipulation. Les adaptateurs clavier fonctionnent dans l'application { -brand }.
+cw-keying-midi-not-in-build = Le MIDI n'est pas dans cette version de { -brand }. Les adaptateurs clavier fonctionnent dans l'application { -brand }.
+cw-keying-no-sidetone = Pas de tonalité locale : { $error } La manipulation continue sans elle ; utilisez la tonalité locale de l'adaptateur ou de la radio.
+cw-keying-unknown = Pas un caractère morse.
+cw-keying-erased = Signal d'erreur : { $text } effacé.
+cw-keying-nothing-erased = Signal d'erreur : rien de manipulé à effacer.
+cw-keying-rsvp-on = Le RSVP montre les mots que vous manipulez.

@@ -3874,6 +3874,23 @@ setting-speech-cw-prosigns = الإشارات الإجرائية في CW
 setting-speech-cw-prosigns-help = إرسال البنية إشاراتٍ إجرائية: BT بعد العناوين والفقرات، وAR في نهاية المستند. وتُرسل أيضًا الإشارات المكتوبة بين قوسين زاويين مثل <BT>.
 setting-speech-cw-status-line = أحرف CW في سطر الحالة
 setting-speech-cw-status-line-help = إظهار كل حرف في سطر الحالة عند إرساله، ليعرضه قارئ الشاشة على سطر برايل. لا يُقال شيء إضافي.
+setting-speech-cw-keyer = مُبرِق CW
+setting-speech-cw-keyer-help = كيف تصبح تلامسات مفتاح المجداف نقاطًا وشرطات عند الإبراق بشفرة مورس. الوضع B المتناوب يضيف العنصر المقابل عند ترك الضغط المزدوج أثناء عنصر؛ والوضع A لا يضيفه؛ وكلاهما يتذكر تلامسًا ضُغط أثناء عنصر. المفتاح المستقيم يُصدر النغمة من أي تلامس.
+choice-speech-cw-keyer-iambic-b = متناوب B
+choice-speech-cw-keyer-iambic-a = متناوب A
+choice-speech-cw-keyer-straight = مفتاح مستقيم
+setting-speech-cw-swap-paddles = تبديل مجدافي CW
+setting-speech-cw-swap-paddles-help = تبديل النقطة والشرطة، من MIDI ومن محوّلات لوحة المفاتيح، لمجداف يُستخدم باليد الأخرى.
+setting-speech-cw-sidetone = نغمة المراقبة في CW
+setting-speech-cw-sidetone-help = تشغيل نغمة CW ما دام المفتاح مضغوطًا عند الإبراق بشفرة مورس.
+setting-speech-cw-dit-note = نوتة MIDI للنقطة في CW
+setting-speech-cw-dit-note-help = نوتة MIDI لتلامس النقطة. 20 في N6ARA TinyMIDI وCTR2 MIDI.
+setting-speech-cw-dah-note = نوتة MIDI للشرطة في CW
+setting-speech-cw-dah-note-help = نوتة MIDI لتلامس الشرطة. 21 في N6ARA TinyMIDI وCTR2 MIDI.
+setting-speech-cw-straight-note = نوتة MIDI للمفتاح المستقيم في CW
+setting-speech-cw-straight-note-help = نوتة MIDI لمفتاح مستقيم. 30 في CTR2 MIDI في وضع المجداف الموسّع.
+setting-speech-cw-midi-channel = قناة MIDI في CW
+setting-speech-cw-midi-channel-help = قناة MIDI التي يستمع إليها الإبراق، من 1 إلى 16، أو 0 لأي قناة. يستخدم CTR2 MIDI القناة 1 دائمًا.
 setting-speech-voice-params = السرعة وطبقة الصوت لكل صوت
 setting-speech-voice-params-help = السرعة وطبقة الصوت اللتان استُخدم بهما كل صوت آخر مرة. اختيار الصوت مجددًا يعيدهما.
 setting-authoring-author = المؤلف
@@ -5491,3 +5508,20 @@ cw-skipped =
         [one] حرف واحد لم يُرسل بشفرة مورس.
        *[other] { $count } من الأحرف لم تُرسل بشفرة مورس.
     }
+## Beta 4: CW keying, Morse code typed with a key or paddle. $key is a
+## key name, $name a MIDI input's name.
+name-cw-keying = الإبراق بـCW
+action-cw-keying = تشغيل الإبراق بـCW أو إيقافه: تُكتب شفرة مورس من مفتاح أو مجداف عند المؤشر في وضع التحرير
+cw-keying-on = الإبراق بـCW يعمل. أبرق بشفرة مورس لتُكتب عند المؤشر؛ { $key } يوقف الإبراق.
+cw-keying-off = الإبراق بـCW متوقف.
+cw-keying-ended = الإبراق بـCW متوقف، لأن وضع التحرير انتهى.
+cw-keying-needs-edit = الإبراق بـCW يكتب في وضع التحرير. شغّل وضع التحرير أولًا، بـ{ $key }.
+cw-keying-listening = الإبراق بـCW: يستمع إلى { $name }.
+cw-keying-midi-failed = لا يستطيع الإبراق بـCW فتح { $name }: { $error } تحقق من توصيله، ثم شغّل الإبراق مرة أخرى.
+cw-keying-no-midi = لم يُعثر على محوّل مفتاح MIDI؛ وصّله أو اقرنه، ثم شغّل الإبراق مرة أخرى. محوّلات لوحة المفاتيح تعمل في تطبيق { -brand }.
+cw-keying-midi-not-in-build = MIDI غير متوفر في نسخة { -brand } هذه. محوّلات لوحة المفاتيح تعمل في تطبيق { -brand }.
+cw-keying-no-sidetone = لا نغمة مراقبة: { $error } يستمر الإبراق من دونها؛ استخدم نغمة المراقبة في المحوّل أو جهاز الراديو.
+cw-keying-unknown = ليس حرفًا من شفرة مورس.
+cw-keying-erased = إشارة الخطأ: مُحي { $text }.
+cw-keying-nothing-erased = إشارة الخطأ: لا شيء مُبرَق لمحوه.
+cw-keying-rsvp-on = العرض السريع يُظهر الكلمات التي تبرقها.

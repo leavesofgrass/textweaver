@@ -3538,6 +3538,23 @@ setting-speech-cw-prosigns = Pró-sinais CW
 setting-speech-cw-prosigns-help = Enviar a estrutura como pró-sinais: BT depois de títulos e parágrafos, AR no fim do documento. Pró-sinais escritos entre colchetes angulares, como <BT>, também são enviados.
 setting-speech-cw-status-line = Caracteres CW na linha de status
 setting-speech-cw-status-line-help = Mostrar cada caractere na linha de status ao ser enviado, para que um leitor de tela o mostre num display braille. Nada mais é dito.
+setting-speech-cw-keyer = Manipulador CW
+setting-speech-cw-keyer-help = Como os contactos de um manipulador de pás se tornam pontos e traços ao manipular Morse. Iâmbico B acrescenta o elemento oposto quando um aperto é solto durante um elemento; iâmbico A não; ambos lembram um contacto premido durante um elemento. Vertical manipula o tom com qualquer contacto.
+choice-speech-cw-keyer-iambic-b = iâmbico B
+choice-speech-cw-keyer-iambic-a = iâmbico A
+choice-speech-cw-keyer-straight = manipulador vertical
+setting-speech-cw-swap-paddles = Trocar as pás CW
+setting-speech-cw-swap-paddles-help = Trocar ponto e traço, por MIDI e por adaptadores de teclado, para um manipulador usado com a outra mão.
+setting-speech-cw-sidetone = Tom local CW
+setting-speech-cw-sidetone-help = Tocar o tom CW enquanto a chave está premida ao manipular Morse.
+setting-speech-cw-dit-note = Nota MIDI do ponto CW
+setting-speech-cw-dit-note-help = A nota MIDI do contacto de ponto. 20 no N6ARA TinyMIDI e no CTR2 MIDI.
+setting-speech-cw-dah-note = Nota MIDI do traço CW
+setting-speech-cw-dah-note-help = A nota MIDI do contacto de traço. 21 no N6ARA TinyMIDI e no CTR2 MIDI.
+setting-speech-cw-straight-note = Nota MIDI do manipulador vertical CW
+setting-speech-cw-straight-note-help = A nota MIDI de um manipulador vertical. 30 no CTR2 MIDI em modo de pás estendido.
+setting-speech-cw-midi-channel = Canal MIDI CW
+setting-speech-cw-midi-channel-help = O canal MIDI que a manipulação escuta, de 1 a 16, ou 0 para qualquer. O CTR2 MIDI usa sempre o canal 1.
 setting-speech-voice-params = Velocidade e tom por voz
 setting-speech-voice-params-help = A velocidade e o tom com que cada voz foi usada por último. Escolher a voz de novo os traz de volta.
 setting-authoring-author = Autor
@@ -5126,3 +5143,20 @@ cw-skipped =
         [one] 1 caractere não enviado em código Morse.
        *[other] { $count } caracteres não enviados em código Morse.
     }
+## Beta 4: CW keying, Morse code typed with a key or paddle. $key is a
+## key name, $name a MIDI input's name.
+name-cw-keying = Manipulação CW
+action-cw-keying = Ligar ou desligar a manipulação CW: o Morse de uma chave ou de um manipulador de pás é escrito no cursor no modo de edição
+cw-keying-on = Manipulação CW ligada. Manipule Morse para o escrever no cursor; { $key } desliga-a.
+cw-keying-off = Manipulação CW desligada.
+cw-keying-ended = Manipulação CW desligada, porque o modo de edição terminou.
+cw-keying-needs-edit = A manipulação CW escreve no modo de edição. Ligue primeiro o modo de edição, com { $key }.
+cw-keying-listening = Manipulação CW: a ouvir { $name }.
+cw-keying-midi-failed = A manipulação CW não consegue abrir { $name }: { $error } Verifique se está ligado e volte a ligar a manipulação.
+cw-keying-no-midi = Nenhum adaptador MIDI de manipulador encontrado; ligue-o ou emparelhe-o e volte a ligar a manipulação. Os adaptadores de teclado funcionam na aplicação { -brand }.
+cw-keying-midi-not-in-build = O MIDI não está nesta versão de { -brand }. Os adaptadores de teclado funcionam na aplicação { -brand }.
+cw-keying-no-sidetone = Sem tom local: { $error } A manipulação continua sem ele; use o tom local do adaptador ou do rádio.
+cw-keying-unknown = Não é um caractere Morse.
+cw-keying-erased = Sinal de erro: { $text } apagado.
+cw-keying-nothing-erased = Sinal de erro: nada manipulado para apagar.
+cw-keying-rsvp-on = O RSVP mostra as palavras que manipula.

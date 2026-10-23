@@ -726,6 +726,13 @@ actions! {
     DownloadDictationModel = "download_dictation_model", Editing,
         "Download the dictation model chosen in the settings, after saying its size and license",
         gui [], term [], shared [];
+    // CW keying (beta 4). Alt+Shift+F11 is free in NVDA, JAWS, Windows,
+    // Windows Terminal, GNOME, KDE and macOS, and in textweaver on every
+    // platform (on the Mac terminal, Option+Shift with F7 and F8 are the
+    // grammar and lint keys; Alt+Shift+F12 suspends compositing in KDE).
+    CwKeying = "cw_keying", Editing,
+        "Turn CW keying on or off: Morse code from a key or paddle is typed at the cursor in edit mode",
+        gui ["g:Alt+Shift+F11"], term ["g:Alt+Shift+F11"], shared [];
 
     // View and help
     CyclePreviewFollow = "cycle_preview_follow", View,

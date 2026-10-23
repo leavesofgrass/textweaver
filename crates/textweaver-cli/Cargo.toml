@@ -20,10 +20,11 @@ path = "src/bin/tw.rs"
 
 [features]
 default = ["opus", "carta", "cw-midi"]
-# `tw cw monitor` reads MIDI key adapters (the TinyMIDI, the CTR2 MIDI)
-# through midir; on Windows through its WinRT backend, which also sees
-# Bluetooth LE MIDI devices. On in releases.
-cw-midi = ["dep:midir"]
+# `tw cw monitor` and CW keying in the reader read MIDI key adapters (the
+# TinyMIDI, the CTR2 MIDI) through midir, in textweaver-app; on Windows
+# through its WinRT backend, which also sees Bluetooth LE MIDI devices.
+# On in releases.
+cw-midi = ["textweaver-app/cw-midi"]
 # carta (B1-k2): `tw convert`, `tw text`, and the reader read Org,
 # reStructuredText, MediaWiki, DokuWiki (`--from dokuwiki`), and Jira
 # (`--from jira`) in process, ahead of Pandoc, and `tw convert --to` writes
@@ -70,14 +71,8 @@ clap.workspace = true
 anyhow.workspace = true
 # crossterm, through ratatui: `tw cw monitor` reads key presses and releases.
 ratatui.workspace = true
-midir = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
-
-# WinRT MIDI on Windows: the only Windows MIDI path that lists Bluetooth
-# LE MIDI devices (the TinyMIDI).
-[target.'cfg(windows)'.dependencies]
-midir = { workspace = true, optional = true, features = ["winrt"] }
 
 [dev-dependencies]
 tempfile.workspace = true

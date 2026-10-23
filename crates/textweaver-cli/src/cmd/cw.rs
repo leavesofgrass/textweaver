@@ -3,9 +3,10 @@
 //! with the time each arrived, so the messages of an adapter can be
 //! recorded once. It only prints: nothing is keyed, sent, or played.
 //!
-//! MIDI comes through midir (the `cw-midi` feature, on in releases): on
-//! Windows through its WinRT backend, which also lists Bluetooth LE MIDI
-//! devices such as the N6ARA TinyMIDI; ALSA on Linux; CoreMIDI on macOS.
+//! MIDI comes through the reader's MIDI inputs (textweaver_app::cw_midi,
+//! the `cw-midi` feature, on in releases): on Windows through midir's
+//! WinRT backend, which also lists Bluetooth LE MIDI devices such as the
+//! N6ARA TinyMIDI; ALSA on Linux; CoreMIDI on macOS.
 //! Keys come from the terminal: the Windows console reports releases; on
 //! Linux and macOS only terminals with the kitty keyboard protocol
 //! (kitty, foot, WezTerm, Alacritty) do, and the command says which.
@@ -19,6 +20,7 @@ use ratatui::crossterm::event::{
     ModifierKeyCode, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
 use ratatui::crossterm::{execute, terminal};
+use textweaver_app::cw_midi::{MidiListener, MidiStatus};
 
 /// Arguments for `tw cw`.
 #[derive(clap::Args, Debug)]
@@ -273,103 +275,49 @@ fn run_loop(
     }
 }
 
-#[cfg(feature = "cw-midi")]
 fn list_midi() -> anyhow::Result<()> {
-    let input = midir::MidiInput::new("textweaver monitor")?;
-    let ports = input.ports();
+    if !textweaver_app::cw_midi::AVAILABLE {
+        println!("MIDI is not in this build of textweaver (the cw-midi feature).");
+        return Ok(());
+    }
+    let ports = textweaver_app::cw_midi::port_names().map_err(anyhow::Error::msg)?;
     if ports.is_empty() {
         println!("No MIDI inputs. Connect or pair the adapter, then try again.");
     }
-    for (i, p) in ports.iter().enumerate() {
-        let name = input.port_name(p).unwrap_or_else(|_| "unnamed".into());
+    for (i, name) in ports.iter().enumerate() {
         println!("MIDI input {}: {name}", i + 1);
     }
     Ok(())
 }
 
-#[cfg(not(feature = "cw-midi"))]
-fn list_midi() -> anyhow::Result<()> {
-    println!("MIDI is not in this build of textweaver (the cw-midi feature).");
-    Ok(())
-}
-
-/// Keeps the MIDI connections open; dropping it closes them.
-struct MidiGuard(std::sync::Arc<std::sync::atomic::AtomicBool>);
-
-impl Drop for MidiGuard {
-    fn drop(&mut self) {
-        self.0.store(true, std::sync::atomic::Ordering::SeqCst);
-    }
-}
-
-/// Connects to every MIDI input (or those whose name contains `filter`),
-/// each on its own thread, since opening a Bluetooth device that is out
-/// of range can take a long time. Each message goes to `tx` in words, as
-/// do "listening" and failures. The connections stay open until the
-/// guard is dropped.
-#[cfg(feature = "cw-midi")]
+/// Connects to every MIDI input (or those whose name contains `filter`)
+/// through the reader's MIDI inputs (textweaver_app::cw_midi). Each
+/// message goes to `tx` in words, as do "listening" and failures. The
+/// connections stay open until the listener is dropped.
 fn connect_midi(
     filter: Option<&str>,
     tx: &Sender<String>,
     start: Instant,
-) -> anyhow::Result<MidiGuard> {
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicBool, Ordering};
-    let names: Vec<String> = {
-        let input = midir::MidiInput::new("textweaver monitor")?;
-        input
-            .ports()
-            .iter()
-            .map(|p| input.port_name(p).unwrap_or_else(|_| "unnamed".into()))
-            .collect()
-    };
-    let wanted =
-        |name: &str| filter.is_none_or(|f| name.to_lowercase().contains(&f.to_lowercase()));
-    let stop = Arc::new(AtomicBool::new(false));
-    let mut opening = 0;
-    for (i, name) in names.iter().enumerate() {
-        if !wanted(name) {
-            continue;
-        }
-        opening += 1;
-        let (tx, name, stop) = (tx.clone(), name.clone(), Arc::clone(&stop));
-        std::thread::spawn(move || {
-            let mut input = match midir::MidiInput::new("textweaver monitor") {
-                Ok(i) => i,
-                Err(e) => {
-                    let _ = tx.send(format!("MIDI: cannot open {name}: {e}."));
-                    return;
-                }
-            };
-            input.ignore(midir::Ignore::None);
-            let Some(port) = input.ports().get(i).cloned() else {
-                let _ = tx.send(format!("MIDI: {name} is gone."));
-                return;
-            };
-            let (events, label) = (tx.clone(), name.clone());
-            let connection = input.connect(
-                &port,
-                "textweaver-cw-monitor",
-                move |_stamp, bytes, _| {
-                    let line = format!("{}, at {}, from {label}", describe_midi(bytes), at(start));
-                    let _ = events.send(line);
-                },
-                (),
-            );
-            match connection {
-                Ok(c) => {
-                    let _ = tx.send(format!("MIDI: listening to {name}."));
-                    while !stop.load(Ordering::SeqCst) {
-                        std::thread::sleep(Duration::from_millis(20));
-                    }
-                    drop(c);
-                }
-                Err(e) => {
-                    let _ = tx.send(format!("MIDI: cannot open {name}: {e}."));
-                }
-            }
-        });
+) -> anyhow::Result<MidiListener> {
+    if !textweaver_app::cw_midi::AVAILABLE {
+        println!("MIDI: not in this build of textweaver (the cw-midi feature); keys only.");
+        return Ok(MidiListener::none());
     }
+    let (events, status) = (tx.clone(), tx.clone());
+    let (listener, opening) = textweaver_app::cw_midi::listen(
+        filter,
+        move |name, bytes| {
+            let line = format!("{}, at {}, from {name}", describe_midi(bytes), at(start));
+            let _ = events.send(line);
+        },
+        move |s| {
+            let _ = status.send(match s {
+                MidiStatus::Listening(name) => format!("MIDI: listening to {name}."),
+                MidiStatus::Failed(name, e) => format!("MIDI: cannot open {name}: {e}."),
+            });
+        },
+    )
+    .map_err(anyhow::Error::msg)?;
     if opening == 0 {
         println!(
             "MIDI: no inputs{}. Connect or pair the adapter first; tw cw ports lists them.",
@@ -379,17 +327,7 @@ fn connect_midi(
         let inputs = if opening == 1 { "input" } else { "inputs" };
         println!("MIDI: opening {opening} {inputs}; each says when it is listening.");
     }
-    Ok(MidiGuard(stop))
-}
-
-#[cfg(not(feature = "cw-midi"))]
-fn connect_midi(
-    _filter: Option<&str>,
-    _tx: &Sender<String>,
-    _start: Instant,
-) -> anyhow::Result<MidiGuard> {
-    println!("MIDI: not in this build of textweaver (the cw-midi feature); keys only.");
-    Ok(MidiGuard(std::sync::Arc::default()))
+    Ok(listener)
 }
 
 #[cfg(test)]
