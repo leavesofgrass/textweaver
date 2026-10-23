@@ -26,6 +26,7 @@ textweaver records your place in each document and returns to it the next time y
 - **h**: next heading. **1** to **6**: next heading at that level.
 - **Plus** and **Minus**: faster and slower speech.
 - **Ctrl+F**, then **F3**: search, then move to the next match.
+- **k**: next link. **Enter** on a link follows it. A link to another document, such as the ones on this page, opens it in textweaver, and you hear where you arrived. **Alt+Left** or **Backspace** goes back to where you were reading, and **Alt+Right** goes forward again. **Ctrl+Space** always reads from the cursor.
 
 ## Help and keys
 
@@ -33,6 +34,12 @@ textweaver records your place in each document and returns to it the next time y
 - **F1** opens the help. Typing there searches the commands, keys, settings, and guides.
 - **F2** opens the command palette, a list of every command. Type part of a name, then press Enter.
 - **Ctrl+Q** quits. Press **y** when asked to confirm.
+
+## More to try
+
+- **Alt+Shift+F2** shows or hides the Braille view in the textweaver app: the line you are reading as braille dots, for learning and teaching braille ([The Braille view](reading-aids.md#the-braille-view)).
+- **CW** is a speech engine that reads a document in Morse code, and Tools, Morse code practice teaches it ([CW: reading in Morse code](cw.md)).
+- Obsidian notes, links between notes in a vault, and canvases open as documents ([Obsidian vaults](vault.md)).
 
 ## Who speaks
 

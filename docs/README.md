@@ -34,25 +34,25 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 
 ### Reading
 
-- [Reading and moving around](reading.md): opening files, reading aloud, moving by unit, Speech Cursor, find, go to, and history.
+- [Reading and moving around](reading.md): opening files, reading aloud, moving by unit, following links to other documents, Speech Cursor, find, go to, and history.
 - [Keyboard reference](keyboard.md): every key in the terminal and the GUI, generated from the keymap.
-- [The textweaver app (graphical version)](gui.md): starting it, what is on screen, the menus, buttons and panels, its keys, announcements, and the reading aids it draws.
+- [The textweaver app (graphical version)](gui.md): starting it, what is on screen, the menus, buttons and panels, its keys, scrolling and line numbers, announcements, and the reading aids it draws.
 - [The app in pictures](window-in-pictures.md): eight pictures of the graphical version, each with a text description of what it shows.
 - [Bookmarks, notes, and highlights](notes.md): marking your place and your thoughts; the named highlight palette; links between notes and graph exports; and study cards, the self-test, and recall prompts.
-- [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, and reading level.
+- [Reading aids](reading-aids.md): RSVP, bionic reading, the reading ruler, text spacing, fonts, reading level, and the Braille view.
 - [Themes](themes.md): the 24 built-in color themes, following your system, and writing your own.
 - [Math](math.md): hearing math read aloud, and writing it in Markdown.
 
 ### Writing
 
-- [Writing and editing](editing.md): edit mode, typing echo, Markdown commands, undo, saving, the outline, spell check, clipboard and Markdown paste, templates, find and replace with regular expressions, the preview pane, and tracked changes in Word files.
+- [Writing and editing](editing.md): edit mode, typing echo, Markdown commands, Obsidian wiki links, tasks, and callouts, undo, saving, the outline, spell check, clipboard and Markdown paste, templates, find and replace with regular expressions, the preview pane, and tracked changes in Word files.
 - [Citations](citations.md): inserting citations while writing, `tw cite`, the reference library, DOI and ISBN lookup, and citation styles.
 - [Dictation](dictation.md): `tw dictate`, turning speech in an audio file into text.
 
 ### Speech
 
 - [Speech engines and voices](speech.md): the engines, choosing a voice, rate, pitch, and volume.
-- [CW: reading in Morse code](cw.md): Morse code as a speech engine, Farnsworth speeds, prosigns, the characters on a Braille display, and `tw cw monitor` for key adapters.
+- [CW: reading in Morse code](cw.md): Morse code as a speech engine, Farnsworth speeds, prosigns, the characters on a Braille display, keying Morse code into a document, practice, and `tw cw monitor` and `tw cw ports` for key adapters.
 - [Getting ETI-Eloquence](eloquence.md): Eloquence on macOS, Linux, and Windows.
 - [Using DECtalk](dectalk.md): a DECtalk you have installed and licensed.
 - [Audio export](audio-export.md): `tw export-audio`, audiobooks with chapters, and subtitles.
@@ -64,7 +64,7 @@ There are also [interactive pages](#interactive-pages) that explain textweaver w
 - [Optional components](components.md): the models, fonts, and voices textweaver downloads only when you agree; Manage optional components, the first-run list, `tw components`, installing from a file, and a mirror.
 - [Updates](updates.md): the daily check and Help, Check for updates; the question before downloading; how a download is checked and installed; and `tw update`.
 - [Syncing between computers](sync.md): notes, highlights, bookmarks, places, statistics, and settings through a folder you choose; what never syncs, setting it up, what you hear, and privacy.
-- [The Obsidian vault](vault.md): exporting notes and highlights to a vault, and importing them back.
+- [Obsidian vaults](vault.md): exporting notes and highlights to a vault and importing them back; reading vault notes with links, properties, backlinks, tags, and canvases; and `tw vault` questions.
 - [Settings](settings.md): where settings live, every setting, and export, import, and reset.
 - [Settings reference](settings-reference.md): every setting with its default, label, help, and values, generated from the settings schema.
 - [The command line](command-line.md): the rules every `tw` command follows: `--out`, `--to`, `--json`, `--home`, questions and `--yes`, exit codes, and error lines.
