@@ -908,6 +908,11 @@ pub struct ReadingSettings {
     /// the next document opens and is read (`next`). A document is never
     /// started unless this is `next` or the reader asks for it.
     pub after_end: AfterEnd,
+    /// Read Obsidian comments (`%%...%%`) in Markdown notes. Off, the
+    /// default, leaves them out, as Obsidian's reading view does; their
+    /// `%%` marks are never read. What is exported from the reader follows
+    /// the same choice.
+    pub read_comments: bool,
     /// Unknown keys, preserved.
     #[serde(flatten)]
     pub extra: toml::Table,
@@ -987,6 +992,7 @@ impl Default for ReadingSettings {
             recall_prompts: false,
             book_audio: BookAudio::Auto,
             after_end: AfterEnd::Stop,
+            read_comments: false,
             extra: toml::Table::new(),
         }
     }

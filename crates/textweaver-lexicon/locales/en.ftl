@@ -2293,6 +2293,8 @@ choice-reading-book-audio-auto = recorded narration
 choice-reading-book-audio-speech = speech only
 setting-reading-after-end = After a document ends
 setting-reading-after-end-help = What follows the end of a document when the reading queue has another. Nothing, the next document named with the read key to read it, or the next document read at once. A document never starts unless you ask.
+setting-reading-read-comments = Read Obsidian comments
+setting-reading-read-comments-help = Read the comments in Obsidian notes, written between %% marks. Off leaves them out, as Obsidian's reading view does.
 choice-reading-after-end-stop = stop
 choice-reading-after-end-ask = ask first
 choice-reading-after-end-next = read the next
@@ -3050,6 +3052,7 @@ authoring-language-cpp = C plus plus
 authoring-language-csharp = C sharp
 authoring-language-diff = diff
 authoring-language-plain-text = plain text
+authoring-language-mermaid = Mermaid diagram
 authoring-grammar-not-in-build = Grammar checking is not in this version.
 # $count is $n with thousands separators.
 authoring-word-count-selection =

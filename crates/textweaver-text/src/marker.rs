@@ -15,6 +15,11 @@ use textweaver_core::{CharPos, CharRange, Direction, EditOutcome, MarkerKind};
 /// Label carried by the header row of a table (`MarkerKind::TableRow`).
 pub const HEADER_ROW_LABEL: &str = "header";
 
+/// Label carried by the `MarkerKind::Underline` marker of highlighted text
+/// (Markdown's `==text==`): it is read "highlighted" and written as a
+/// highlight (`<mark>`, a Word highlight), never as an underline.
+pub const HIGHLIGHT_LABEL: &str = "highlight";
+
 /// A structural or inline annotation on a range of canonical text.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Marker {
@@ -96,6 +101,11 @@ impl Marker {
             | MarkerKind::Rule
             | MarkerKind::Math => false,
         }
+    }
+
+    /// True for highlighted text ([`HIGHLIGHT_LABEL`]).
+    pub fn is_highlight(&self) -> bool {
+        self.kind == MarkerKind::Underline && self.label.as_deref() == Some(HIGHLIGHT_LABEL)
     }
 
     /// True for the header row of a table.

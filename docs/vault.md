@@ -334,7 +334,7 @@ The links that an import stores with textweaver notes are a separate matter. An 
 tw convert "D:\Notes\Biology" --to html --flavor obsidian --out "D:\Notes\Biology-web"
 ```
 
-This converts every note in the vault to an HTML page in `Biology-web`, preserving the vault's folder structure and skipping the `.obsidian` folder. With `--flavor obsidian`, `[[Note]]` becomes a link to `Note.html`, `[[Note#Heading]]` a link to that heading, and `[[Note|text]]` shows the given link text. Callouts, `#tags`, `==highlights==`, and block ids are supported as well.
+This converts every note in the vault to an HTML page in `Biology-web`, preserving the vault's folder structure and skipping the `.obsidian` folder. With `--flavor obsidian`, `[[Note]]` becomes a link to `Note.html`, `[[Note#Heading]]` a link to that heading, and `[[Note|text]]` shows the given link text. Callouts, `#tags`, `==highlights==`, inline footnotes, and block ids are supported as well. Comments (`%%...%%`) are private notes and are left out of the pages, including those that span several paragraphs; `--keep-comments` keeps them.
 
 An embedded note, `![[Note]]`, becomes a link by default; `--embeds inline` places the note's text there instead:
 

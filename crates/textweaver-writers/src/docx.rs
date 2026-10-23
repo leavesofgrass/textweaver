@@ -339,6 +339,9 @@ struct Props {
     strike: bool,
     code: bool,
     link: bool,
+    /// Highlighted (`==text==`): Word's highlight, which Word and screen
+    /// readers report as highlighted text.
+    highlight: bool,
 }
 
 struct Body<'a> {
@@ -695,6 +698,10 @@ impl Body<'_> {
         if p.strike {
             rpr.push_str("<w:strike/>");
         }
+        // `w:highlight` comes before `w:u` in a run's properties.
+        if p.highlight {
+            rpr.push_str("<w:highlight w:val=\"yellow\"/>");
+        }
         if plain_underline && !self.look.no_italic {
             rpr.push_str("<w:u w:val=\"single\"/>");
         }
@@ -774,6 +781,14 @@ impl Body<'_> {
                 children,
                 Props {
                     underline: true,
+                    ..p
+                },
+                ctx,
+            ),
+            Style::Highlight => self.inlines(
+                children,
+                Props {
+                    highlight: true,
                     ..p
                 },
                 ctx,

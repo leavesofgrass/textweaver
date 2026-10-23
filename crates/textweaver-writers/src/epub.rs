@@ -753,6 +753,7 @@ impl Html<'_> {
             Style::Bold => wrap(self, "<strong>", "</strong>"),
             Style::Italic => wrap(self, "<em>", "</em>"),
             Style::Underline => wrap(self, "<u>", "</u>"),
+            Style::Highlight => wrap(self, "<mark>", "</mark>"),
             Style::Code => wrap(self, "<code>", "</code>"),
             Style::Strikethrough => wrap(self, "<del>", "</del>"),
             // MathML with the source as alt text; reading systems draw it

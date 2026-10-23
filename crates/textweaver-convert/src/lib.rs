@@ -961,6 +961,13 @@ impl Converter {
     }
 
     fn convert_markdown_text(&self, job: &Job, text: &str) -> Result<Output, String> {
+        // In the Obsidian flavor, comments (`%%...%%`) are private notes:
+        // left out of every output, Markdown included, unless kept.
+        let uncommented = (self.options.render.flavor == textweaver_render::Flavor::Obsidian
+            && !self.options.render.keep_comments)
+            .then(|| textweaver_formats::obsidian_source::strip_comments(text))
+            .flatten();
+        let text = uncommented.as_deref().unwrap_or(text);
         match self.options.to {
             OutputFormat::Markdown => Ok(Output {
                 issues: self.markdown_issues(text),

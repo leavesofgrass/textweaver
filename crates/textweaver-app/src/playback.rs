@@ -232,6 +232,7 @@ pub fn load_options(settings: &textweaver_store::Settings) -> textweaver_formats
         revisions: revision_mode(settings),
         name_skipped_commands: settings.speech.verbosity >= Verbosity::High,
         keep_pause_markup: !settings.speech.markup_pauses,
+        keep_comments: settings.reading.read_comments,
         brf_code: match settings.braille.brf_code {
             textweaver_store::BrfCode::Ueb => textweaver_formats::BrfCode::Ueb,
             textweaver_store::BrfCode::Ebae => textweaver_formats::BrfCode::Ebae,

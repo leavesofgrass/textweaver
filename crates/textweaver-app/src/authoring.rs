@@ -138,6 +138,8 @@ pub(crate) fn language_name(c: &textweaver_lexicon::i18n::Catalog, fence: &str) 
         "tex" | "latex" => "LaTeX",
         "diff" | "patch" => return c.tr("authoring-language-diff"),
         "text" | "txt" | "plain" | "plaintext" => return c.tr("authoring-language-plain-text"),
+        // A diagram written as text: the block is its source.
+        "mermaid" => return c.tr("authoring-language-mermaid"),
         "hs" | "haskell" => "Haskell",
         "lua" => "Lua",
         "pl" | "perl" => "Perl",

@@ -236,6 +236,28 @@ fn hostile_obsidian_notes() {
     assert!(!d.text().to_string().contains("OUTSIDE"), "{}", d.text());
 }
 
+/// Comments, inline footnotes, task statuses, and file embeds in hostile
+/// numbers: unclosed, nested, and runs of backticks that never match.
+#[test]
+fn hostile_obsidian_grammar() {
+    hostile("^[".repeat(50_000), "md", QUICK);
+    hostile("^[x] ".repeat(50_000), "md", QUICK);
+    hostile(format!("^[{}", "[".repeat(100_000)), "md", QUICK);
+    let ticks: String = (1..400).map(|n| format!("{} %% ", "`".repeat(n))).collect();
+    hostile(ticks, "md", QUICK);
+    hostile("a `b %%".repeat(50_000), "md", QUICK);
+    hostile("```\n%%\n".repeat(20_000), "md", QUICK);
+    hostile("- [/] x\n".repeat(20_000), "md", QUICK);
+    hostile(
+        "![[a.pdf#page=1]] ![[b.png|9x9|alt]] ".repeat(20_000),
+        "md",
+        QUICK,
+    );
+    let unclosed = format!("Kept %%{}", "open\n\n# heading\n\n".repeat(10_000));
+    let d = hostile(unclosed, "md", QUICK).expect("it loads");
+    assert_eq!(d.text().to_string(), "Kept");
+}
+
 #[test]
 fn hostile_latex_past_w5c3() {
     // star's crash: a lone trailing backslash.

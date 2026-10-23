@@ -655,7 +655,7 @@ There are three levels. Each one says everything the level below it says.
 
 - `"low"`: only what you need. Errors, the ends of the document, the text you moved to, and answers to what you asked (your position, the rate, a search result). A move to a heading says just the heading text: "Methods".
 - `"normal"` (the default): adds structure names and state changes. The same move says "Heading level 2: Methods". You also hear "Paused.", "Stopped.", "Cancelled.", and "Speech Cursor off."
-- `"high"`: adds the line and percentage to every move, and the title and mode to Where am I. The same move says "Heading level 2, line 12, 4 percent: Methods". You also hear "Done reading." when the document ends.
+- `"high"`: adds the line and percentage to every move, and the title and mode to Where am I. The same move says "Heading level 2, line 12, 4 percent: Methods". You also hear "Done reading." when the document ends. Continuous reading says "link" before a link, "strikethrough" before struck-out text, and "highlighted" before highlighted text, such as an Obsidian note's `==highlight==`.
 
 Announcements never interrupt reading, except errors. While reading, they go to the status line.
 

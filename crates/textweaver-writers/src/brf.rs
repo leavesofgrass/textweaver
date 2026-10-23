@@ -79,10 +79,11 @@ impl Writer for BrfWriter {
         let mut report = WriteReport::default();
         let marked;
         let mut forms = Vec::new();
-        let doc = if options.braille.highlights.is_empty() {
+        let (highlights, names) = with_marked_highlights(doc, &options.braille, &mut report);
+        let doc = if highlights.is_empty() {
             doc
         } else {
-            let (d, used) = with_highlights(doc, &options.braille.highlights, &mut report);
+            let (d, used) = with_highlights(doc, &highlights, &mut report);
             marked = d;
             forms = used;
             &marked
@@ -105,7 +106,7 @@ impl Writer for BrfWriter {
             report: &mut report,
         };
         if !forms.is_empty() {
-            let note = highlights_note(&forms, &options.braille.highlight_names);
+            let note = highlights_note(&forms, &names);
             for item in note_items(vec![(note, 6, 4)]) {
                 flat.push(item);
             }
@@ -232,6 +233,53 @@ fn text_item(text: String, first: usize, runover: usize) -> Item {
         after: "",
         join: Join::Fresh,
     }
+}
+
+/// What a highlight written in the document (Markdown's `==text==`) is
+/// called in the transcriber's note.
+const MARKED_HIGHLIGHT_NAME: &str = "highlighted text";
+
+/// The highlights to mark in braille: the reader's own, from `options`,
+/// and the document's highlighted text (Markdown's `==text==`), which
+/// takes the first transcriber-defined typeform no highlight name uses,
+/// named "highlighted text" in the note; and the names for the note. With
+/// all five typeforms in use, highlighted text is not marked and the
+/// report says so.
+fn with_marked_highlights(
+    doc: &Document,
+    options: &BrailleOptions,
+    report: &mut WriteReport,
+) -> (Vec<crate::BrailleHighlight>, Vec<String>) {
+    let mut highlights = options.highlights.clone();
+    let mut names = options.highlight_names.clone();
+    let marked: Vec<_> = doc
+        .markers()
+        .iter()
+        .filter(|m| m.is_highlight() && !m.range.is_empty())
+        .map(|m| m.range)
+        .collect();
+    if marked.is_empty() {
+        return (highlights, names);
+    }
+    let free = (0..Typeform::TRANSCRIBER.len())
+        .find(|e| !options.highlights.iter().any(|h| h.entry == *e));
+    let Some(entry) = free else {
+        report.warn(format!(
+            "{} highlighted passages are not marked: highlight names use all five transcriber-defined typeforms.",
+            marked.len()
+        ));
+        return (highlights, names);
+    };
+    if names.len() <= entry {
+        names.resize(entry + 1, String::new());
+    }
+    names[entry] = MARKED_HIGHLIGHT_NAME.to_owned();
+    highlights.extend(marked.into_iter().map(|range| crate::BrailleHighlight {
+        range,
+        entry,
+        text: String::new(),
+    }));
+    (highlights, names)
 }
 
 /// `doc` with the typeform marks of each highlight in its text, the
@@ -1271,7 +1319,7 @@ mod tests {
         };
         let (out, report) = brf(&doc, &options);
         assert!(out.starts_with("      @.<"), "{out}");
-        assert!(out.contains("`#1"), "first typeform: {out}");
+        assert!(out.contains("@#1"), "first typeform: {out}");
         assert_eq!(
             out.matches("^#1").count(),
             2,
@@ -1291,6 +1339,76 @@ mod tests {
             highlights_note(&[0, 1], &options.braille.highlight_names),
             "Highlights are shown with the first transcriber-defined typeform, important; \
              the second transcriber-defined typeform, define."
+        );
+    }
+
+    /// Highlighted text in the document (Markdown's `==text==`) takes the
+    /// first transcriber-defined typeform no highlight name uses, never
+    /// the underline, and the note names it.
+    #[test]
+    fn highlighted_text_takes_a_free_transcriber_typeform() {
+        let text = "Read this. Then that.";
+        let doc = Document::new(
+            DocumentMeta::default(),
+            Rope::from_str(text),
+            vec![
+                Marker::new(MarkerKind::Paragraph, CharRange::new(0, 21)),
+                Marker::new(MarkerKind::Underline, CharRange::new(16, 20))
+                    .with_label(textweaver_text::HIGHLIGHT_LABEL),
+            ],
+        );
+        let plain = WriteOptions {
+            braille: BrailleOptions {
+                page_numbers: false,
+                ..BrailleOptions::default()
+            },
+            ..WriteOptions::default()
+        };
+        let (out, report) = brf(&doc, &plain);
+        assert!(out.contains("@#1"), "first typeform: {out}");
+        assert!(!out.contains("_1"), "no underline: {out}");
+        assert!(report.warnings.is_empty(), "{:?}", report.warnings);
+        let mut named = plain.clone();
+        named.braille.highlights = vec![crate::BrailleHighlight {
+            range: CharRange::new(5, 9),
+            entry: 0,
+            text: "this".into(),
+        }];
+        named.braille.highlight_names = vec!["important".into()];
+        let (out, _) = brf(&doc, &named);
+        assert!(out.contains("@#1"), "the name keeps the first: {out}");
+        assert!(
+            out.contains("^#1"),
+            "highlighted text takes the second: {out}"
+        );
+        let (description, _) =
+            with_marked_highlights(&doc, &named.braille, &mut WriteReport::default());
+        assert_eq!(description.len(), 2);
+        assert_eq!(
+            highlights_note(
+                &[0, 1],
+                &with_marked_highlights(&doc, &named.braille, &mut WriteReport::default()).1
+            ),
+            "Highlights are shown with the first transcriber-defined typeform, important; \
+             the second transcriber-defined typeform, highlighted text."
+        );
+        // All five in use: not marked, and said.
+        let mut full = named.clone();
+        full.braille.highlights = (0..5)
+            .map(|entry| crate::BrailleHighlight {
+                range: CharRange::new(0, 4),
+                entry,
+                text: String::new(),
+            })
+            .collect();
+        let (_, report) = brf(&doc, &full);
+        assert!(
+            report
+                .warnings
+                .iter()
+                .any(|w| w.contains("highlighted passages are not marked")),
+            "{:?}",
+            report.warnings
         );
     }
 
